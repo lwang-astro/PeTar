@@ -157,55 +157,39 @@ class Energy{
 public:
     PS::F64 kin;
     PS::F64 pot;
-    PS::F64 pot_planet;
     PS::F64 tot;
-    PS::F64 disp_merge;
-    PS::F64 disp_aero;
     Energy(){
-        kin = pot = tot = disp_merge = pot_planet = disp_aero = 0.0;
+        kin = pot = tot = 0.0;
     }
     void clear(){
-        kin = pot = tot = disp_merge = pot_planet = disp_aero = 0.0;
+        kin = pot = tot = 0.0;
     }
     void dump(std::ostream & fout=std::cout){
         fout<<"tot= "<<tot<<" kin= "<<kin<<" pot= "<<pot
-            <<" kin+pot= "<<kin+pot
-            <<" pot_planet= "<<pot_planet
-            <<" disp_merge= "<<disp_merge
-            <<" disp_aero= "<<disp_aero<<std::endl;
+            <<std::endl;
     }
     template<class Tsys>
     void calc(const Tsys & sys,
-              const PS::F64    disp_merge_loc,
-              const PS::F64    disp_aero_loc,
               bool clear=true){
-        PS::F64 disp_merge_cum_glb = this->disp_merge;
-        PS::F64 disp_aero_cum_glb  = this->disp_aero;
         if(clear){
-            kin = pot = pot_planet = tot = 0.0;
+            kin = pot = tot = 0.0;
         }
         PS::S32 n = sys.getNumberOfParticleLocal();
-        PS::F64 pot_planet_loc = 0.0;
         PS::F64 pot_loc = 0.0;
         PS::F64 kin_loc = 0.0;
         for(PS::S32 i=0; i<n; i++){
-            pot_planet_loc += 0.5 * sys[i].mass * sys[i].pot_tot;
+            pot_loc += 0.5 * sys[i].mass * sys[i].pot_tot;
             kin_loc += 0.5 * sys[i].mass * sys[i].vel * sys[i].vel;
         }
-        pot_loc += pot_planet_loc;
-        this->pot_planet += PS::Comm::getSum(pot_planet_loc);
         this->kin += PS::Comm::getSum(kin_loc);
         this->pot += PS::Comm::getSum(pot_loc);
-        this->disp_merge = PS::Comm::getSum(disp_merge_loc) + disp_merge_cum_glb;
-        this->disp_aero  = PS::Comm::getSum(disp_aero_loc)  + disp_aero_cum_glb;
-        this->tot = this->kin + this->pot + this->disp_merge + this->disp_aero;
+        this->tot = this->kin + this->pot;
     }
 
     Energy calcDiff(const Energy & eng){
         Energy diff;
         diff.kin = kin - eng.kin;
         diff.pot = pot - eng.pot;
-        diff.pot_planet = pot_planet - eng.pot_planet;
         diff.tot = tot - eng.tot;
         return diff;
     }
@@ -227,7 +211,7 @@ struct CalcForceEpEpWithLinearCutoffNoSIMD{
         const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
         const PS::F64 r_crit2 = EPJSoft::r_search * EPJSoft::r_search * SAFTY_FACTOR_FOR_SEARCH_SQ;
         const PS::F64 r_out = EPISoft::r_out; 
-        const PS::F64 r_in = EPISoft::r_in;
+        //        const PS::F64 r_in = EPISoft::r_in;
         //std::cerr<<"r_out= "<<r_out<<" r_in= "<<r_in<<" eps2= "<<eps2<<" r_crit2= "<<r_crit2<<std::endl;
         for(PS::S32 i=0; i<n_ip; i++){
             const PS::F64vec xi = ep_i[i].pos;

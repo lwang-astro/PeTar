@@ -1,5 +1,6 @@
 
 #include<particle_simulator.hpp>
+#include<map>
 
 template<class Tdinfo, class Tsystem, class Ttree>
 class Profile{
@@ -255,3 +256,14 @@ PS::F64 Wtime::hard_merge_offset;
 
 PS::F64 Wtime::hard_2body_select_system;
 PS::F64 Wtime::hard_2body_select_system_offset;
+
+//! for event counts (L.Wang)
+class Counts{
+public:
+  std::map<PS::S32,PS::S32> Ncluster; ///<Histogram of number of particles in clusters
+
+  void Ncluster_count(const PS::S32 n) {
+    if (Ncluster.count(n)) Ncluster[n]++;
+    else Ncluster[n]=1;
+  }
+};

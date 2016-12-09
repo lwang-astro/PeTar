@@ -49,10 +49,13 @@ CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -fopenmp
 CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
 CXXFLAGS += -std=c++11
 CXXFLAGS += -DMPICH_IGNORE_CXX_SEEK
+CXXFLAGS += -D ARC_WARN
 #CXXFLAGS += -D DEBUG
 #CXXFLAGS += -DINTRINSIC_X86
 #CXXFLAGS += -DUSE_GNU_PARALLEL_SORT
 endif
+
+VPATH=./src
 
 SRC = main.cc hard.hpp class.hpp force.hpp io.hpp kepler.hpp phantomquad_for_p3t_x86.hpp domain.hpp profile.hpp cluster_list.hpp
 

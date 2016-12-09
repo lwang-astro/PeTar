@@ -43,7 +43,6 @@
 #include"AR.h" /// include AR.h (L.Wang)
 //#include"cluster.hpp"
 #include"cluster_list.hpp"
-//#include"aero.hpp"
 
 /*
 template<class Tsys, class Ttree>
@@ -124,13 +123,6 @@ PS::F64 GetRootFullLenght(const Tpsys & psys, const PS::F64vec & cen){
     return 2.1*fabs(PS::Comm::getMaxValue(len_loc_max));
 }
 
-template<class T>
-void Print(const T str, std::ostream & fout){
-#ifdef DEBUG_PRINT_PLANET
-    fout<<str<<std::endl;
-#endif
-}
-
 class FileHeader{
 public:
     PS::S64 n_body;
@@ -172,18 +164,18 @@ public:
 	eng_now = e_n;
     }
     PS::S32 readAscii(FILE * fp){
-        fscanf(fp, "%lld%lf %lf%lf%lf%lf%lf %lf%lf%lf%lf%lf\n", 
+        fscanf(fp, "%lld%lf %lf%lf%lf %lf%lf%lf\n", 
 	       &n_body, &time, 
-	       &eng_init.kin, &eng_init.pot, &eng_init.pot_planet, &eng_init.tot, &eng_init.disp_merge,
-	       &eng_now.kin,  &eng_now.pot,  &eng_now.pot_planet,  &eng_now.tot,  &eng_now.disp_merge);
+	       &eng_init.kin, &eng_init.pot, &eng_init.tot,
+	       &eng_now.kin,  &eng_now.pot,  &eng_now.tot);
 	std::cout<<"n_body="<<n_body<<" time="<<time<<std::endl;
         return n_body;
     }
     void writeAscii(FILE* fp) const{
-        fprintf(fp, "%lld\t%lf\t%.15e\t%.15e\t%.15e\t%.15e\t%.15e\t%.15e\t%.15e\t%.15e\t%.15e\t%.15e\n", 
+        fprintf(fp, "%lld\t%lf\t%.15e\t%.15e\t%.15e\t%.15e\t%.15e\t%.15e\n", 
 		n_body, time, 
-		eng_init.kin, eng_init.pot, eng_init.pot_planet, eng_init.tot, eng_init.disp_merge,
-		eng_now.kin,  eng_now.pot,  eng_now.pot_planet,  eng_now.tot,  eng_now.disp_merge);
+		eng_init.kin, eng_init.pot, eng_init.tot,
+		eng_now.kin,  eng_now.pot,  eng_now.tot);
     }
 
 };
@@ -195,20 +187,6 @@ PS::F64 GetMassMax(const Tpsys & system, const PS::S64 n){
         if(m_max_loc < system[i].mass) m_max_loc = system[i].mass;
     }
     return PS::Comm::getMaxValue(m_max_loc);
-}
-
-template<class Tpsys, class Ttree, class Tforce, class Tforce_func>
-void CalcForceDirectFromAllPlanet(const Tpsys & psys, 
-				  const PS::DomainInfo & dinfo,
-				  Ttree & tree,
-				  Tforce force[],
-				  Tforce_func func){
-
-    const PS::S32 n = psys.getNumberOfParticleLocal();
-    for(PS::S32 i=0; i<n; i++){
-	force[i].clear();
-    }
-    tree.calcForceDirect(func, force, dinfo, true);
 }
 
 template<class Tpsys, class Ttree>
@@ -276,25 +254,25 @@ int main(int argc, char *argv[]){
     std::cerr<<std::setprecision(15);
     PS::Initialize(argc, argv);
 
-    PS::F64 wtime_tot = 0.0;
-    PS::F64 wtime_tot_offset = 0.0;
-    PS::F64 wtime_hard_tot = 0.0;
-    PS::F64 wtime_hard_tot_offset = 0.0;
-    PS::F64 wtime_hard_1st_block = 0.0;
-    PS::F64 wtime_hard_1st_block_offset = 0.0;
-    PS::F64 wtime_hard_2nd_block = 0.0;
-    PS::F64 wtime_hard_2nd_block_offset = 0.0;
-    PS::F64 wtime_hard_3rd_block = 0.0;
-    PS::F64 wtime_hard_3rd_block_offset = 0.0;
-    PS::F64 wtime_soft_tot = 0.0;
-    PS::F64 wtime_soft_tot_offset = 0.0;
-    PS::F64 wtime_soft_force = 0.0;
-    PS::F64 wtime_soft_search_neighbor_offset = 0.0;
-    PS::F64 wtime_soft_search_neighbor = 0.0;
+	PS::F64 wtime_tot = 0.0;
+	PS::F64 wtime_tot_offset = 0.0;
+	PS::F64 wtime_hard_tot = 0.0;
+	PS::F64 wtime_hard_tot_offset = 0.0;
+	PS::F64 wtime_hard_1st_block = 0.0;
+	PS::F64 wtime_hard_1st_block_offset = 0.0;
+	PS::F64 wtime_hard_2nd_block = 0.0;
+	PS::F64 wtime_hard_2nd_block_offset = 0.0;
+	PS::F64 wtime_hard_3rd_block = 0.0;
+	PS::F64 wtime_hard_3rd_block_offset = 0.0;
+	PS::F64 wtime_soft_tot = 0.0;
+	PS::F64 wtime_soft_tot_offset = 0.0;
+	PS::F64 wtime_soft_force = 0.0;
+	PS::F64 wtime_soft_search_neighbor_offset = 0.0;
+	PS::F64 wtime_soft_search_neighbor = 0.0;
 
-    PS::S64 n_ptcl_hard_one_cluster = 0;
-    PS::S64 n_ptcl_hard_isolated_cluster = 0;
-    PS::S64 n_ptcl_hard_nonisolated_cluster = 0;
+	PS::S64 n_ptcl_hard_one_cluster = 0;
+	PS::S64 n_ptcl_hard_isolated_cluster = 0;
+	PS::S64 n_ptcl_hard_nonisolated_cluster = 0;
 
 #ifdef CALC_HARD_ENERGY
     PS::F64 dEerr_1body_loc = 0.0;
@@ -513,13 +491,13 @@ int main(int argc, char *argv[]){
                                        dinfo);
 
     SystemHard system_hard_one_cluster;
-    system_hard_one_cluster.setParam(r_out, r_in, dt_soft/dt_limit_hard_factor, eta, eta_s, time_sys, EPISoft::eps*EPISoft::eps);
+    system_hard_one_cluster.setParam(r_out, r_in, dt_soft/dt_limit_hard_factor, time_sys);
     system_hard_one_cluster.setARCParam();
     SystemHard system_hard_isolated;
-    system_hard_isolated.setParam(r_out, r_in, dt_soft/dt_limit_hard_factor, eta, eta_s, time_sys, EPISoft::eps*EPISoft::eps);
+    system_hard_isolated.setParam(r_out, r_in, dt_soft/dt_limit_hard_factor, time_sys);
     system_hard_isolated.setARCParam();
     SystemHard system_hard_conected;
-    system_hard_conected.setParam(r_out, r_in, dt_soft/dt_limit_hard_factor, eta, eta_s, time_sys, EPISoft::eps*EPISoft::eps);
+    system_hard_conected.setParam(r_out, r_in, dt_soft/dt_limit_hard_factor, time_sys);
     system_hard_conected.setARCParam();
 
     SearchCluster search_cluster;
@@ -529,16 +507,21 @@ int main(int argc, char *argv[]){
 
     Energy eng_init, eng_now;
 #ifndef READ_FILE
-    eng_init.calc(system_soft, 0.0, 0.0, true);
+    eng_init.calc(system_soft, true);
 #endif
     eng_init.dump(std::cerr);
     eng_now = eng_init;
 
     PS::S32 n_loop = 0;
+    PS::S32 dn_loop = 0;
     while(time_sys < time_end){
+        wtime_tot_offset = PS::GetWtime();
         ////////////////
         ////// 1st kick
         Kick(system_soft, tree_soft, dt_soft*0.5);
+
+        wtime_hard_tot_offset = PS::GetWtime();
+        
         system_hard_one_cluster.setTimeOrigin(time_sys);
         system_hard_isolated.setTimeOrigin(time_sys);
         system_hard_conected.setTimeOrigin(time_sys);
@@ -557,22 +540,33 @@ int main(int argc, char *argv[]){
 
         ////////////////
         ////// integrater one cluster
+        wtime_hard_1st_block_offset = PS::GetWtime();
+
         system_hard_one_cluster.initializeForOneCluster(search_cluster.getAdrSysOneCluster().size());
+
         system_hard_one_cluster.setPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
         system_hard_one_cluster.driveForOneCluster(dt_soft);
         system_hard_one_cluster.writeBackPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
+
+        wtime_hard_1st_block += PS::GetWtime() - wtime_hard_1st_block_offset;
+
         ////// integrater one cluster
         ////////////////
+
 
         //std::cerr<<"check a"<<std::endl;
 
         /////////////
         // integrate multi cluster A
+        wtime_hard_2nd_block_offset = PS::GetWtime();
+
         system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft,
                                                             search_cluster.adr_sys_multi_cluster_isolated_,
                                                             search_cluster.n_ptcl_in_multi_cluster_isolated_);
         system_hard_isolated.driveForMultiCluster(dt_soft);
         system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_);
+
+        wtime_hard_2nd_block += PS::GetWtime() - wtime_hard_2nd_block_offset;
         // integrate multi cluster A
         /////////////
 
@@ -580,19 +574,29 @@ int main(int argc, char *argv[]){
 
         /////////////
         // integrate multi cluster B
+        wtime_hard_3rd_block_offset = PS::GetWtime();
+
         system_hard_conected.setPtclForConectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
         system_hard_conected.driveForMultiClusterOMP(dt_soft);
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_conected.getPtcl());
+
+        wtime_hard_3rd_block += PS::GetWtime() - wtime_hard_3rd_block_offset;
         // integrate multi cluster B
         /////////////
 
         //std::cerr<<"check c"<<std::endl;
 
+        wtime_hard_tot += PS::GetWtime() - wtime_hard_tot_offset;
         /////////////
         // Domain decomposition, parrticle exchange and force calculation
+
+        wtime_soft_tot_offset = PS::GetWtime();
+
         if(n_loop % 16 == 0) dinfo.decomposeDomainAll(system_soft);
         system_soft.exchangeParticle(dinfo);
         n_loc = system_soft.getNumberOfParticleLocal();
+        
+
 #pragma omp parallel for
         for(PS::S32 i=0; i<n_loc; i++){
             system_soft[i].rank_org = my_rank;
@@ -602,8 +606,15 @@ int main(int argc, char *argv[]){
                                            CalcForceEpSpNoSIMD(),
                                            system_soft,
                                            dinfo);
+        wtime_soft_search_neighbor_offset = PS::GetWtime();
+        
         search_cluster.searchNeighborAndCalcHardForceOMP<SystemSoft, Tree, EPJSoft>
             (system_soft, tree_soft, r_out, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
+        
+        wtime_soft_search_neighbor += PS::GetWtime() - wtime_soft_search_neighbor_offset;
+        
+        wtime_soft_tot += PS::GetWtime() - wtime_soft_tot_offset;
+
         // Domain decomposition, parrticle exchange and force calculation
         /////////////
 
@@ -616,11 +627,43 @@ int main(int argc, char *argv[]){
         ////// 2nd kick
         ////////////////
 
-        eng_now.calc(system_soft, 0.0, 0.0, true);
+        eng_now.calc(system_soft, true);
+        
+        wtime_tot += PS::GetWtime() - wtime_tot_offset;
+
         Energy eng_diff = eng_now.calcDiff(eng_init);
+        PS::S64 n_glb = system_soft.getNumberOfParticleGlobal();
+        PS::S32 n_one_cluster         = system_hard_one_cluster.getPtcl().size();
+        PS::S32 n_isolated_cluster    = system_hard_isolated.getPtcl().size();
+        PS::S32 n_nonisolated_cluster = system_hard_conected.getPtcl().size();
+        n_ptcl_hard_one_cluster         += PS::Comm::getSum(n_one_cluster);
+        n_ptcl_hard_isolated_cluster    += PS::Comm::getSum(n_isolated_cluster);
+        n_ptcl_hard_nonisolated_cluster += PS::Comm::getSum(n_nonisolated_cluster);
+        
+        dn_loop++;
+
         if( fmod(time_sys, dt_snp) == 0.0 ){
             //eng_diff.dump(std::cerr);
+            std::cerr<<"n_loop= "<<n_loop<<std::endl;
+            std::cerr<<"n_glb= "<<n_glb<<std::endl;
             std::cerr<<"time_sys= "<<time_sys<<" (Enow-Einit)/Einit= "<<eng_diff.tot/eng_init.tot<<std::endl;
+            eng_now.dump(std::cerr);
+            std::cerr<<"wtime_tot/dn_loop= "<<wtime_tot/dn_loop<<" dn_loop= "<<dn_loop<<std::endl;
+            std::cerr<<"wtime_hard_tot/dn_loop= "<<wtime_hard_tot/dn_loop<<std::endl
+                     <<"wtime_hard_1st_block/dn_loop= "<<wtime_hard_1st_block/dn_loop<<std::endl
+                     <<"wtime_hard_2nd_block/dn_loop= "<<wtime_hard_2nd_block/dn_loop<<std::endl
+                     <<"wtime_hard_3rd_block/dn_loop= "<<wtime_hard_3rd_block/dn_loop<<std::endl;
+            std::cerr<<"wtime_soft_tot/dn_loop= "<<wtime_soft_tot/dn_loop<<std::endl
+                     <<"wtime_soft_search_neighbor/dn_loop= "<<wtime_soft_search_neighbor/dn_loop<<std::endl;
+            std::cerr<<"n_ptcl_hard_one_cluster/dn_loop= "         <<(PS::F64)n_ptcl_hard_one_cluster/dn_loop<<std::endl
+                     <<"n_ptcl_hard_isolated_cluster/dn_loop= "   <<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop<<std::endl
+                     <<"n_ptcl_hard_nonisolated_cluster/dn_loop= "<<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop<<std::endl;
+            wtime_tot = 0.0;
+            wtime_hard_tot = wtime_hard_1st_block = wtime_hard_2nd_block = wtime_hard_3rd_block = 0.0;
+            wtime_soft_tot = wtime_soft_search_neighbor = 0.0;
+            n_ptcl_hard_one_cluster = n_ptcl_hard_isolated_cluster = n_ptcl_hard_nonisolated_cluster = 0;
+
+            dn_loop=0;
         }
 
         n_loop++;
