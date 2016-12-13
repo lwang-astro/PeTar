@@ -651,14 +651,15 @@ int main(int argc, char *argv[]){
 #ifdef DEBUG        
         //output
         PS::S32 ntot = system_soft.getNumberOfParticleLocal();
+        fout<<std::setprecision(17)<<time_sys<<" ";
         for (PS::S32 i=0;i<ntot;i++){
           fout<<system_soft[i].mass<<" ";
           for (PS::S32 k=0;k<3;k++) fout<<system_soft[i].pos[k]<<" ";
           for (PS::S32 k=0;k<3;k++) fout<<system_soft[i].vel[k]<<" ";
-          fout<<system_soft[i].pot_tot;
-          fout<<0.5*system_soft[i].mass*system_soft[i].vel*system_soft[i].vel;
+          fout<<system_soft[i].pot_tot<<" ";
+          fout<<0.5*system_soft[i].mass*system_soft[i].vel*system_soft[i].vel<<" ";
         }
-        fout<<std::endl
+        fout<<std::endl;
 #endif
         
         if( fmod(time_sys, dt_snp) == 0.0 ){

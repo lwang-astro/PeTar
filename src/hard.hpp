@@ -165,10 +165,11 @@ private:
       c.addP(n_ptcl,ptcl_org);
       c.Int_pars=ARC_int_pars;
       c.init(time_sys);
-
+        
       PS::F64 dt_up_limit = calcDtLimit(time_sys, dt_limit_hard_)/c.calc_dt_X(1.0);
       //      PS::F64 dt_low_limit = dt_up_limit/256.0;
       PS::F64 dt_use = 0.05*c.calc_next_step_XVA();
+      
       if (dt_use>dt_up_limit) dt_use = dt_up_limit;
       //      if (dt_use<dt_low_limit) dt_use = dt_low_limit;
       
@@ -182,10 +183,15 @@ private:
 //            std::cout<<ptcl_org[i].getMass()<<" "<<ptcl_org[i].getPos()[0]<<" "<<ptcl_org[i].getPos()[1]<<" "<<ptcl_org[i].getPos()[2]<<" "<<ptcl_org[i].getVel()[0]<<" "<<ptcl_org[i].getVel()[1]<<" "<<ptcl_org[i].getVel()[2]<<std::endl;
 //        }
         PS::F64 dsf=c.extrapolation_integration(dt_use,time_end);
-        std::cerr<<"Particle="<<ptcl_org[0].id<<" n="<<n_ptcl<<" Time_end="<<time_end<<" ctime="<<c.getTime()<<" diff="<<time_end-c.getTime()<<" ds="<<dt_use<<" dsf="<<dsf<<std::endl;
-//		 if (ptcl_org[0].id==8&&time_origin_==0.0078125) abort();
+        //        std::cerr<<"Particle="<<ptcl_org[0].id<<" n="<<n_ptcl<<" Time_end="<<time_end<<" ctime="<<c.getTime()<<" diff="<<time_end-c.getTime()<<" ds="<<dt_use<<" dsf="<<dsf<<std::endl;
         if (dsf<0) dt_use *= -dsf;
       }
+
+      // integration of center-of-mass
+      c.cm.setPos(c.cm.getPos()[0] + c.cm.getVel()[0]*time_end,
+				  c.cm.getPos()[1] + c.cm.getVel()[1]*time_end,
+				  c.cm.getPos()[2] + c.cm.getVel()[2]*time_end);
+      
 
       c.center_shift_inverse();
       /// end ARC (L.Wang)
@@ -201,7 +207,7 @@ public:
     ///
     void setARCParam(const PS::F64 energy_error=1e-12, const PS::F64 dterr=1e-10, const PS::F64 dtmin=1e-24, const PS::S32 exp_method=1, const PS::S32 exp_itermax=20, const PS::S32 exp_fix_iter=0) {
       chain_control.setA(Newtonian_cut_AW,Newtonian_cut_Ap);
-      chain_control.setabg(1,0,0);
+      chain_control.setabg(1,0,1);
       chain_control.setEXP(energy_error,dtmin,dterr,exp_itermax,exp_method,3,(bool)exp_fix_iter);
     }
     /// end set Chainpars (L.Wang)

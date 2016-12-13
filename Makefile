@@ -44,7 +44,7 @@ CXX = time mpicxx
 CXXFLAGS = -O3 
 CXXFLAGS += -Wall
 CXXFLAGS += -march=core-avx2
-#CXXFLAGS += -ffast-math -funroll-loops
+CXXFLAGS += -ffast-math -funroll-loops
 CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -fopenmp
 CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
 CXXFLAGS += -std=c++11
