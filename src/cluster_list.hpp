@@ -324,7 +324,7 @@ public:
         ptcl_outer = new PS::ReallocatableArray<PtclOuter>[n_thread];
         id_ngb_multi_cluster = new PS::ReallocatableArray< std::pair<PS::S32, PS::S32> >[n_thread];
         const PS::S32 my_rank = PS::Comm::getRank();
-        const PS::S32 n_proc_tot = PS::Comm::getNumberOfProc();
+        //        const PS::S32 n_proc_tot = PS::Comm::getNumberOfProc();
         const PS::S32 n_loc = sys.getNumberOfParticleLocal();
 #pragma omp parallel
         {
@@ -595,7 +595,7 @@ public:
     }
 
     void setIdClusterGlobalIteration(){
-        const PS::S32 my_rank = PS::Comm::getRank();
+      //        const PS::S32 my_rank = PS::Comm::getRank();
         const PS::S32 n_proc_tot = PS::Comm::getNumberOfProc();
         id_cluster_send_.resizeNoInitialize(n_cluster_disp_send_.back());
         id_cluster_recv_.resizeNoInitialize(n_cluster_disp_recv_.back());
@@ -869,8 +869,8 @@ public:
     template<class Tsys, class Tphard>
     void writeAndSendBackPtcl(Tsys & sys,
                               const PS::ReallocatableArray<Tphard> & ptcl_hard){
-        const PS::S32 my_rank = PS::Comm::getRank();
-        const PS::S32 n_proc  = PS::Comm::getNumberOfProc();
+        //  const PS::S32 my_rank = PS::Comm::getRank();
+        //  const PS::S32 n_proc  = PS::Comm::getNumberOfProc();
         const PS::S32 n = ptcl_hard.size();
         for(PS::S32 i=0; i<n; i++){
             const PS::S32 adr = ptcl_hard[i].adr_org;

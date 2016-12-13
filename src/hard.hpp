@@ -10,6 +10,8 @@
 #include"kepler.hpp"
 #include"force.hpp"
 #include"AR.h" /// include AR.h (L.Wang)
+#include"cstdlib"
+//#include"stdio.h" /// for debug (L.Wang)
 
 std::ofstream fout_debug;
 
@@ -107,10 +109,8 @@ class SystemHard{
 public:
     PS::ReallocatableArray<PtclHard> ptcl_hard_;
     ARC::chainpars chain_control; ///chain controller (L.Wang)
-    PS::F64 ARC_int_pars[2]; /// ARC integration parameters, rout_, rin_ (L.Wang)
 private:
-    PS::F64 rin_;
-    PS::F64 rout_;
+    PS::F64 ARC_int_pars[2]; /// ARC integration parameters, rout_, rin_ (L.Wang)
     PS::F64 dt_limit_hard_;
     //PS::ReallocatableArray<PtclHard> ptcl_hard_;
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_;
@@ -161,20 +161,30 @@ private:
       /// start ARC (L.Wang)
       ARC::chain<Tptcl> c((std::size_t)n_ptcl,chain_control);
       static thread_local PS::F64 time_sys = 0.0;
-      static thread_local PS::F64 dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
 
       c.addP(n_ptcl,ptcl_org);
       c.Int_pars=ARC_int_pars;
       c.init(time_sys);
-      PS::F64 dt_use = 0.2*c.calc_next_step_XVA();
-      if (dt_use>dt_limit) dt_use = dt_limit;
+
+      PS::F64 dt_up_limit = calcDtLimit(time_sys, dt_limit_hard_)/c.calc_dt_X(1.0);
+      //      PS::F64 dt_low_limit = dt_up_limit/256.0;
+      PS::F64 dt_use = 0.05*c.calc_next_step_XVA();
+      if (dt_use>dt_up_limit) dt_use = dt_up_limit;
+      //      if (dt_use<dt_low_limit) dt_use = dt_low_limit;
       
       while(time_end-c.getTime()>chain_control.dterr) {
-        //        std::cerr<<"Before ARC: N"<<n_ptcl<<" tend"<<time_end<<std::endl;
+//        if (ptcl_org[0].id==8&&time_origin_==0.0078125) {
+//          std::cout<<"ds= "<<dt_use<<" toff= "<<time_end<<std::endl;
+//          FILE* fout=fopen("data","w");
+//          fwrite(ptcl_org,sizeof(Tptcl),n_ptcl,fout);
+//          fclose(fout);
+//          for (PS::S32 i=0; i<n_ptcl; i++) 
+//            std::cout<<ptcl_org[i].getMass()<<" "<<ptcl_org[i].getPos()[0]<<" "<<ptcl_org[i].getPos()[1]<<" "<<ptcl_org[i].getPos()[2]<<" "<<ptcl_org[i].getVel()[0]<<" "<<ptcl_org[i].getVel()[1]<<" "<<ptcl_org[i].getVel()[2]<<std::endl;
+//        }
         PS::F64 dsf=c.extrapolation_integration(dt_use,time_end);
-        //        std::cerr<<"After ARC: N"<<n_ptcl<<" t"<<c.getTime()<<" tend"<<time_end<<std::endl;        
+        std::cerr<<"Particle="<<ptcl_org[0].id<<" n="<<n_ptcl<<" Time_end="<<time_end<<" ctime="<<c.getTime()<<" diff="<<time_end-c.getTime()<<" ds="<<dt_use<<" dsf="<<dsf<<std::endl;
+//		 if (ptcl_org[0].id==8&&time_origin_==0.0078125) abort();
         if (dsf<0) dt_use *= -dsf;
-        //        else dt_use *= dsf;
       }
 
       c.center_shift_inverse();
@@ -191,7 +201,7 @@ public:
     ///
     void setARCParam(const PS::F64 energy_error=1e-12, const PS::F64 dterr=1e-10, const PS::F64 dtmin=1e-24, const PS::S32 exp_method=1, const PS::S32 exp_itermax=20, const PS::S32 exp_fix_iter=0) {
       chain_control.setA(Newtonian_cut_AW,Newtonian_cut_Ap);
-      chain_control.setabg(0,1,0);
+      chain_control.setabg(1,0,0);
       chain_control.setEXP(energy_error,dtmin,dterr,exp_itermax,exp_method,3,(bool)exp_fix_iter);
     }
     /// end set Chainpars (L.Wang)
@@ -259,11 +269,9 @@ public:
                   const PS::F64 _rin, 
                   const PS::F64 _dt_limit_hard,
                   const PS::F64 _time_origin){
-        rout_ = _rout;
-        rin_  = _rin;
         /// Set chain pars (L.Wang)
-        ARC_int_pars[0] = rout_; 
-        ARC_int_pars[1] = rin_;
+        ARC_int_pars[0] = _rout; 
+        ARC_int_pars[1] = _rin;
         /// Set chain pars (L.Wang)        
         dt_limit_hard_ = _dt_limit_hard;
         time_origin_ = _time_origin;

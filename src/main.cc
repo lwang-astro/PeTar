@@ -266,7 +266,7 @@ int main(int argc, char *argv[]){
 	PS::F64 wtime_hard_3rd_block_offset = 0.0;
 	PS::F64 wtime_soft_tot = 0.0;
 	PS::F64 wtime_soft_tot_offset = 0.0;
-	PS::F64 wtime_soft_force = 0.0;
+    //	PS::F64 wtime_soft_force = 0.0;
 	PS::F64 wtime_soft_search_neighbor_offset = 0.0;
 	PS::F64 wtime_soft_search_neighbor = 0.0;
 
@@ -290,18 +290,18 @@ int main(int argc, char *argv[]){
     PS::S32 n_smp_ave = 100;
     PS::F64 time_end = 1000.0;
     PS::F64 dt_soft = 1.0/256.0;
-    PS::F64 eta = 0.1;
-    PS::F64 eta_s = eta * 0.1;
+    //    PS::F64 eta = 0.1;
+    //    PS::F64 eta_s = eta * 0.1;
     char dir_name[1024];
     PS::S64 n_glb = 16384;
     PS::F64 dt_snp = 1.0 / 16.0;
     PS::F64 search_factor = 3.0; 
     PS::F64 dt_limit_hard_factor = 4.0;
-    PS::S64 snp_id = 0;
     PS::F64 r_out = 1.0 / 256.0;
     PS::F64 eps = 1.0 / 64.0;
     int c;
 #ifdef READ_FILE
+    PS::S64 snp_id = 0;
     char sinput[2048];
     while((c=getopt(argc,argv,"i:I:o:d:D:E:t:T:n:s:S:l:X:h")) != -1){
         switch(c){
@@ -325,10 +325,10 @@ int main(int argc, char *argv[]){
             dt_snp = atof(optarg);
             std::cerr<<"dt_snp="<<dt_snp<<std::endl;
             break;
-        case 'E':
-            eta = atof(optarg);
-            std::cerr<<"eta="<<eta<<std::endl;
-            break;
+//        case 'E':
+//            eta = atof(optarg);
+//            std::cerr<<"eta="<<eta<<std::endl;
+//            break;
         case 't':
             theta = atof(optarg);
             std::cerr<<"theta="<<theta<<std::endl;
@@ -364,7 +364,7 @@ int main(int argc, char *argv[]){
             std::cerr<<"o: dir name of output"<<std::endl;
             std::cerr<<"d: inv_dt (dafult 16 ~ 0.01yr  )"<<std::endl;
             std::cerr<<"D: dt_snp (dafult 100 ~ 16yr  )"<<std::endl;
-            std::cerr<<"E: eta (dafult 0.1)"<<std::endl;
+            //            std::cerr<<"E: eta (dafult 0.1)"<<std::endl;
             std::cerr<<"t: theta (dafult: 0.5)"<<std::endl;
             std::cerr<<"T: time_end (dafult: 6000 ~ 1000yr)"<<std::endl;
             std::cerr<<"n: n_group_limit (dafult: 64.0)"<<std::endl;
@@ -377,7 +377,7 @@ int main(int argc, char *argv[]){
         }
     }
 #else // not READ_FILE
-    PS::S32 seed = 0;
+    //    PS::S32 seed = 0;
     while((c=getopt(argc,argv,"e:o:d:D:E:t:T:n:N:s:S:l:r:r:x:X:h")) != -1){
         switch(c){
         case 'e':
@@ -392,9 +392,9 @@ int main(int argc, char *argv[]){
         case 'D':
             dt_snp = atof(optarg);
             break;
-        case 'E':
-            eta = atof(optarg);
-            break;
+//        case 'E':
+//            eta = atof(optarg);
+//            break;
         case 't':
             theta = atof(optarg);
             break;
@@ -418,9 +418,9 @@ int main(int argc, char *argv[]){
             break;
         case 'r':
             r_out = atof(optarg);
-        case 'x':
-            seed = atoi(optarg);
-            break;
+//        case 'x':
+//            seed = atoi(optarg);
+//            break;
         case 'X':
             dt_limit_hard_factor = atof(optarg);
 	    assert(dt_limit_hard_factor > 0.0);
@@ -430,7 +430,7 @@ int main(int argc, char *argv[]){
             std::cerr<<"o: dir name of output"<<std::endl;
             std::cerr<<"d: inv_dt (dafult 16 ~ 0.01yr  )"<<std::endl;
             std::cerr<<"D: dt_snp (dafult 100 ~ 16yr  )"<<std::endl;
-            std::cerr<<"E: eta (dafult 0.1)"<<std::endl;
+            //            std::cerr<<"E: eta (dafult 0.1)"<<std::endl;
             std::cerr<<"t: theta (dafult: 0.5)"<<std::endl;
             std::cerr<<"T: time_end (dafult: 8000 ~ 1yr)"<<std::endl;
             std::cerr<<"n: n_group_limit (dafult: 64.0)"<<std::endl;
@@ -439,7 +439,7 @@ int main(int argc, char *argv[]){
             std::cerr<<"S: search_factor (dafult: 3.0)"<<std::endl;
             std::cerr<<"l: n_leaf_limit (dafult: 8)"<<std::endl;
             std::cerr<<"r: r_out (dafult: 1/256)"<<std::endl;
-            std::cerr<<"x: seed (dafult: 0)"<<std::endl;
+            //            std::cerr<<"x: seed (dafult: 0)"<<std::endl;
             std::cerr<<"X: dt_limit_hard_factor(dafult: 4.0 -> dt_limit_hard = dt_soft/4.0)"<<std::endl;
             PS::Finalize();
             return 0;
@@ -512,9 +512,15 @@ int main(int argc, char *argv[]){
     eng_init.dump(std::cerr);
     eng_now = eng_init;
 
+#ifdef DEBUG
+    std::ofstream fout;
+	fout.open("pdata");
+#endif
+
     PS::S32 n_loop = 0;
     PS::S32 dn_loop = 0;
     while(time_sys < time_end){
+      //      std::cerr<<"Time_sys = "<<time_sys<<std::endl;
         wtime_tot_offset = PS::GetWtime();
         ////////////////
         ////// 1st kick
@@ -642,6 +648,19 @@ int main(int argc, char *argv[]){
         
         dn_loop++;
 
+#ifdef DEBUG        
+        //output
+        PS::S32 ntot = system_soft.getNumberOfParticleLocal();
+        for (PS::S32 i=0;i<ntot;i++){
+          fout<<system_soft[i].mass<<" ";
+          for (PS::S32 k=0;k<3;k++) fout<<system_soft[i].pos[k]<<" ";
+          for (PS::S32 k=0;k<3;k++) fout<<system_soft[i].vel[k]<<" ";
+          fout<<system_soft[i].pot_tot;
+          fout<<0.5*system_soft[i].mass*system_soft[i].vel*system_soft[i].vel;
+        }
+        fout<<std::endl
+#endif
+        
         if( fmod(time_sys, dt_snp) == 0.0 ){
             //eng_diff.dump(std::cerr);
             std::cerr<<"n_loop= "<<n_loop<<std::endl;
