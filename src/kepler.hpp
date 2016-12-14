@@ -19,9 +19,12 @@ double keplereq_dot(const double e, const double u){
 // return eccentric anomaly
 double solve_keplereq(const double l,
                       const double e){
-    double u0 = l;
+    double twpi=atan(1.0)*8;
+    double u0 = fmod(l,twpi);
+    //    if(e>0.8) u0 = 3.14159265;
     double u1;
     int loop = 0;
+    //    std::cerr<<"l="<<u0<<" e="<<e<<std::endl;
     while(1){
         loop++;
         double su0 = sin(u0);
@@ -29,7 +32,14 @@ double solve_keplereq(const double l,
         //u1 = u0 - keplereq(l, e, u0)/keplereq_dot(e, u0);
         u1 = u0 - ((u0-e*su0-l)/(1.0 - e*cu0));
         //if( fabs(u1-u0) < 1e-13 ){ return u1; }
-        if( fabs(u1-u0) < 1e-15 ){ return u1; }
+        //        std::cerr<<"u1="<<u1<<"; u0="<<u0<<std::endl;
+        //if( fabs(u1-u0) < 1e-15 ){ return u1; }
+        //if( fabs(fmod(u1,twpi)-fmod(u0,twpi)) < 1e-15 ){ return u1; }
+        double utmp = u1-u0;
+        utmp /= twpi;
+        utmp -= round(utmp);
+        utmp *= twpi;
+        if(utmp < 1e-13){ return u1; }
         else{ u0 = u1; }
     }
 }
@@ -74,12 +84,7 @@ double PosVel2OrbParam(double & ax,    double & ecc,
     double inv_dr = 1.0 / r;
     double v_sq = vel_red * vel_red;
     ax = 1.0 / (2.0*inv_dr - v_sq / m_tot);
-    assert(ax > 0.0);
-#ifdef DEBUG_PRINT_PLANET
-    if(ax <= 0.0){
-        std::cerr<<"ax="<<ax<<" pos1="<<pos1<<" vel1="<<vel1<<" mass1"<<mass1<<std::endl;
-    }
-#endif
+    //    assert(ax > 0.0);
     PS::F64vec AM = pos_red ^ vel_red;
     inc = atan2( sqrt(AM.x*AM.x+AM.y*AM.y), AM.z);
     OMG = atan2(AM.x, -AM.y);

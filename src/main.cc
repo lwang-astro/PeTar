@@ -145,49 +145,49 @@ public:
     }
 };
 
-class FileHeaderWithEnergy{
-public:
-    PS::S64 n_body;
-    PS::F64 time;
-    Energy eng_init;
-    Energy eng_now;
-    FileHeaderWithEnergy(){
-        n_body = 0;
-        time = 0.0;
-        eng_init.clear();
-        eng_now.clear();
-    }
-    FileHeaderWithEnergy(const PS::S64 n, const PS::F64 t, const Energy & e_i, const Energy & e_n){
-        n_body = n;
-        time = t;
-	eng_init = e_i;
-	eng_now = e_n;
-    }
-    PS::S32 readAscii(FILE * fp){
-        fscanf(fp, "%lld%lf %lf%lf%lf %lf%lf%lf\n", 
-	       &n_body, &time, 
-	       &eng_init.kin, &eng_init.pot, &eng_init.tot,
-	       &eng_now.kin,  &eng_now.pot,  &eng_now.tot);
-	std::cout<<"n_body="<<n_body<<" time="<<time<<std::endl;
-        return n_body;
-    }
-    void writeAscii(FILE* fp) const{
-        fprintf(fp, "%lld\t%lf\t%.15e\t%.15e\t%.15e\t%.15e\t%.15e\t%.15e\n", 
-		n_body, time, 
-		eng_init.kin, eng_init.pot, eng_init.tot,
-		eng_now.kin,  eng_now.pot,  eng_now.tot);
-    }
+//class FileHeaderWithEnergy{
+//public:
+//    PS::S64 n_body;
+//    PS::F64 time;
+//    Energy eng_init;
+//    Energy eng_now;
+//    FileHeaderWithEnergy(){
+//        n_body = 0;
+//        time = 0.0;
+//        eng_init.clear();
+//        eng_now.clear();
+//    }
+//    FileHeaderWithEnergy(const PS::S64 n, const PS::F64 t, const Energy & e_i, const Energy & e_n){
+//        n_body = n;
+//        time = t;
+//    eng_init = e_i;
+//    eng_now = e_n;
+//    }
+//    PS::S32 readAscii(FILE * fp){
+//        fscanf(fp, "%lld%lf %lf%lf%lf %lf%lf%lf\n", 
+//           &n_body, &time, 
+//           &eng_init.kin, &eng_init.pot, &eng_init.tot,
+//           &eng_now.kin,  &eng_now.pot,  &eng_now.tot);
+//    std::cout<<"n_body="<<n_body<<" time="<<time<<std::endl;
+//        return n_body;
+//    }
+//    void writeAscii(FILE* fp) const{
+//        fprintf(fp, "%lld\t%lf\t%.15e\t%.15e\t%.15e\t%.15e\t%.15e\t%.15e\n", 
+//    	n_body, time, 
+//    	eng_init.kin, eng_init.pot, eng_init.tot,
+//    	eng_now.kin,  eng_now.pot,  eng_now.tot);
+//    }
+// 
+//};
 
-};
-
-template<class Tpsys>
-PS::F64 GetMassMax(const Tpsys & system, const PS::S64 n){
-    PS::F64 m_max_loc = -1.0;
-    for(PS::S64 i=0; i<n; i++){
-        if(m_max_loc < system[i].mass) m_max_loc = system[i].mass;
-    }
-    return PS::Comm::getMaxValue(m_max_loc);
-}
+//template<class Tpsys>
+//PS::F64 GetMassMax(const Tpsys & system, const PS::S64 n){
+//    PS::F64 m_max_loc = -1.0;
+//    for(PS::S64 i=0; i<n; i++){
+//        if(m_max_loc < system[i].mass) m_max_loc = system[i].mass;
+//    }
+//    return PS::Comm::getMaxValue(m_max_loc);
+//}
 
 template<class Tpsys, class Ttree>
 void Kick(Tpsys & system,
@@ -274,14 +274,14 @@ int main(int argc, char *argv[]){
 	PS::S64 n_ptcl_hard_isolated_cluster = 0;
 	PS::S64 n_ptcl_hard_nonisolated_cluster = 0;
 
-#ifdef CALC_HARD_ENERGY
-    PS::F64 dEerr_1body_loc = 0.0;
-    PS::F64 dEerr_1body_glb = 0.0;
-    PS::F64 dEerr_2body_loc = 0.0;
-    PS::F64 dEerr_2body_glb = 0.0;
-    PS::F64 dEerr_mbody_loc = 0.0;
-    PS::F64 dEerr_mbody_glb = 0.0;
-#endif
+//#ifdef CALC_HARD_ENERGY
+//    PS::F64 dEerr_1body_loc = 0.0;
+//    PS::F64 dEerr_1body_glb = 0.0;
+//    PS::F64 dEerr_2body_loc = 0.0;
+//    PS::F64 dEerr_2body_glb = 0.0;
+//    PS::F64 dEerr_mbody_loc = 0.0;
+//    PS::F64 dEerr_mbody_glb = 0.0;
+//#endif
     PS::F64 ratio_r_cut = 0.1;
     PS::F64 time_sys = 0.0;
     PS::F64 theta = 0.4;
@@ -298,13 +298,16 @@ int main(int argc, char *argv[]){
     PS::F64 search_factor = 3.0; 
     PS::F64 dt_limit_hard_factor = 4.0;
     PS::F64 r_out = 1.0 / 256.0;
-    PS::F64 eps = 1.0 / 64.0;
+    PS::F64 eps = 0;
     int c;
 #ifdef READ_FILE
     PS::S64 snp_id = 0;
     char sinput[2048];
-    while((c=getopt(argc,argv,"i:I:o:d:D:E:t:T:n:s:S:l:X:h")) != -1){
+    while((c=getopt(argc,argv,"i:I:d:t:T:n:s:S:l:r:X:h")) != -1){
         switch(c){
+//        case 'e':
+//            eps = atof(optarg);
+//            break;
         case 'i':
             sprintf(sinput, optarg);
             std::cerr<<"sinput="<<sinput<<std::endl;
@@ -313,18 +316,18 @@ int main(int argc, char *argv[]){
             snp_id = atoi(optarg);
             std::cerr<<"snp_id="<<snp_id<<std::endl;
             break;
-        case 'o':
-            sprintf(dir_name, optarg);
-            std::cerr<<"dir_name="<<dir_name<<std::endl;
-            break;
+//        case 'o':
+//            sprintf(dir_name, optarg);
+//            std::cerr<<"dir_name="<<dir_name<<std::endl;
+//            break;
         case 'd':
             dt_soft = 1.0 / atof(optarg);
             std::cerr<<"dt_soft="<<dt_soft<<std::endl;
             break;
-        case 'D':
-            dt_snp = atof(optarg);
-            std::cerr<<"dt_snp="<<dt_snp<<std::endl;
-            break;
+//        case 'D':
+//            dt_snp = atof(optarg);
+//            std::cerr<<"dt_snp="<<dt_snp<<std::endl;
+//            break;
 //        case 'E':
 //            eta = atof(optarg);
 //            std::cerr<<"eta="<<eta<<std::endl;
@@ -353,17 +356,20 @@ int main(int argc, char *argv[]){
             n_leaf_limit = atoi(optarg);
             std::cerr<<"n_leaf_limit="<<n_leaf_limit<<std::endl;
             break;
+        case 'r':
+            r_out = atof(optarg);
+            break;
         case 'X':
-	    dt_limit_hard_factor = atof(optarg);
+          dt_limit_hard_factor = atof(optarg);
             std::cerr<<"dt_limit_hard_factor="<<dt_limit_hard_factor<<std::endl;
 	    assert(dt_limit_hard_factor > 0.0);
             break;
         case 'h':
             std::cerr<<"i: input_file"<<std::endl;
             std::cerr<<"I: snp_id"<<std::endl;
-            std::cerr<<"o: dir name of output"<<std::endl;
+            //            std::cerr<<"o: dir name of output"<<std::endl;
             std::cerr<<"d: inv_dt (dafult 16 ~ 0.01yr  )"<<std::endl;
-            std::cerr<<"D: dt_snp (dafult 100 ~ 16yr  )"<<std::endl;
+            //            std::cerr<<"D: dt_snp (dafult 100 ~ 16yr  )"<<std::endl;
             //            std::cerr<<"E: eta (dafult 0.1)"<<std::endl;
             std::cerr<<"t: theta (dafult: 0.5)"<<std::endl;
             std::cerr<<"T: time_end (dafult: 6000 ~ 1000yr)"<<std::endl;
@@ -371,6 +377,7 @@ int main(int argc, char *argv[]){
             std::cerr<<"s: n_smp_ave (dafult: 100)"<<std::endl;
             std::cerr<<"S: search_factor (dafult: 3.0)"<<std::endl;
             std::cerr<<"l: n_leaf_limit (dafult: 8)"<<std::endl;
+            std::cerr<<"r: r_out (dafult: 1/256)"<<std::endl;
             std::cerr<<"X: dt_limit_hard_factor(dafult: 4.0 -> dt_limit_hard = dt_soft/4.0)"<<std::endl;
             PS::Finalize();
             return 0;
@@ -378,20 +385,20 @@ int main(int argc, char *argv[]){
     }
 #else // not READ_FILE
     //    PS::S32 seed = 0;
-    while((c=getopt(argc,argv,"e:o:d:D:E:t:T:n:N:s:S:l:r:r:x:X:h")) != -1){
+    while((c=getopt(argc,argv,"d:t:T:n:N:s:S:l:r:X:h")) != -1){
         switch(c){
-        case 'e':
-            eps = atof(optarg);
-            break;
-        case 'o':
-            sprintf(dir_name,optarg);
-            break;
+//        case 'e':
+//            eps = atof(optarg);
+//            break;
+//        case 'o':
+//            sprintf(dir_name,optarg);
+//            break;
         case 'd':
             dt_soft = 1.0 / atof(optarg);
             break;
-        case 'D':
-            dt_snp = atof(optarg);
-            break;
+//        case 'D':
+//            dt_snp = atof(optarg);
+//            break;
 //        case 'E':
 //            eta = atof(optarg);
 //            break;
@@ -418,6 +425,7 @@ int main(int argc, char *argv[]){
             break;
         case 'r':
             r_out = atof(optarg);
+            break;
 //        case 'x':
 //            seed = atoi(optarg);
 //            break;
@@ -426,10 +434,10 @@ int main(int argc, char *argv[]){
 	    assert(dt_limit_hard_factor > 0.0);
             break;
         case 'h':
-	    std::cerr<<"e: softening (dafule 1/64)"<<std::endl;
-            std::cerr<<"o: dir name of output"<<std::endl;
-            std::cerr<<"d: inv_dt (dafult 16 ~ 0.01yr  )"<<std::endl;
-            std::cerr<<"D: dt_snp (dafult 100 ~ 16yr  )"<<std::endl;
+          //	    std::cerr<<"e: softening (dafule 1/64)"<<std::endl;
+          //            std::cerr<<"o: dir name of output"<<std::endl;
+            std::cerr<<"d: inv_dt (dafult 256 )"<<std::endl;
+            //            std::cerr<<"D: dt_snp (dafult 100 )"<<std::endl;
             //            std::cerr<<"E: eta (dafult 0.1)"<<std::endl;
             std::cerr<<"t: theta (dafult: 0.5)"<<std::endl;
             std::cerr<<"T: time_end (dafult: 8000 ~ 1yr)"<<std::endl;
@@ -452,8 +460,23 @@ int main(int argc, char *argv[]){
     system_soft.setAverageTargetNumberOfSampleParticlePerProcess(n_smp_ave);
     PS::S32 n_loc;
 
+#ifdef READ_FILE
+    FileHeader file_header_read;
+    system_soft.readParticleAscii(sinput, file_header_read);
+    time_sys = file_header_read.time;
+    PS::Comm::broadcast(&time_sys, 1, 0);
+    std::cerr<<"system_soft[0].mass= "<<system_soft[0].mass<<"system_soft[0].pos= "<<system_soft[0].pos<<std::endl;
+    n_glb = system_soft.getNumberOfParticleGlobal();
+    std::cerr<<"n_glb= "<<n_glb<<std::endl;
+    n_loc = system_soft.getNumberOfParticleLocal();
+    std::cerr<<"n_loc= "<<n_loc<<std::endl;
+    for(PS::S32 i=0; i<n_loc; i++){
+      system_soft[i].id = i;
+    }
+#else    
     SetParticlePlummer(system_soft, n_glb, n_loc, time_sys);
-
+#endif
+    
     PS::Comm::barrier();
 
     PS::F64 r_in = r_out * ratio_r_cut;
@@ -492,7 +515,7 @@ int main(int argc, char *argv[]){
 
     SystemHard system_hard_one_cluster;
     system_hard_one_cluster.setParam(r_out, r_in, dt_soft/dt_limit_hard_factor, time_sys);
-    system_hard_one_cluster.setARCParam();
+    // system_hard_one_cluster.setARCParam();
     SystemHard system_hard_isolated;
     system_hard_isolated.setParam(r_out, r_in, dt_soft/dt_limit_hard_factor, time_sys);
     system_hard_isolated.setARCParam();
@@ -506,9 +529,9 @@ int main(int argc, char *argv[]){
 	(system_soft, tree_soft, r_out, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
 
     Energy eng_init, eng_now;
-#ifndef READ_FILE
+    //#ifndef READ_FILE
     eng_init.calc(system_soft, true);
-#endif
+    //#endif
     eng_init.dump(std::cerr);
     eng_now = eng_init;
 
@@ -516,6 +539,8 @@ int main(int argc, char *argv[]){
     std::ofstream fout;
 	fout.open("pdata");
 #endif
+    std::ofstream fprofile;
+    fprofile.open("profile.out");
 
     PS::S32 n_loop = 0;
     PS::S32 dn_loop = 0;
@@ -569,7 +594,7 @@ int main(int argc, char *argv[]){
         system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft,
                                                             search_cluster.adr_sys_multi_cluster_isolated_,
                                                             search_cluster.n_ptcl_in_multi_cluster_isolated_);
-        system_hard_isolated.driveForMultiCluster(dt_soft);
+        system_hard_isolated.driveForMultiClusterOMP(dt_soft);
         system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_);
 
         wtime_hard_2nd_block += PS::GetWtime() - wtime_hard_2nd_block_offset;
@@ -647,7 +672,11 @@ int main(int argc, char *argv[]){
         n_ptcl_hard_nonisolated_cluster += PS::Comm::getSum(n_nonisolated_cluster);
         
         dn_loop++;
-
+        
+#ifdef ARC_ERROR
+        system_hard_isolated.N_count[0] += PS::Comm::getSum(n_one_cluster);
+#endif
+        
 #ifdef DEBUG        
         //output
         PS::S32 ntot = system_soft.getNumberOfParticleLocal();
@@ -666,7 +695,11 @@ int main(int argc, char *argv[]){
             //eng_diff.dump(std::cerr);
             std::cerr<<"n_loop= "<<n_loop<<std::endl;
             std::cerr<<"n_glb= "<<n_glb<<std::endl;
-            std::cerr<<"time_sys= "<<time_sys<<" (Enow-Einit)/Einit= "<<eng_diff.tot/eng_init.tot<<std::endl;
+            std::cerr<<"Time= "<<time_sys<<" Enow-Einit="<<eng_diff.tot<<" (Enow-Einit)/Einit= "<<eng_diff.tot/eng_init.tot
+#ifdef ARC_ERROR
+                     <<" ARC_error_relative="<<system_hard_isolated.ARC_error_relative+system_hard_conected.ARC_error_relative<<" ARC_error="<<system_hard_isolated.ARC_error+system_hard_conected.ARC_error
+#endif
+                     <<std::endl;
             eng_now.dump(std::cerr);
             std::cerr<<"wtime_tot/dn_loop= "<<wtime_tot/dn_loop<<" dn_loop= "<<dn_loop<<std::endl;
             std::cerr<<"wtime_hard_tot/dn_loop= "<<wtime_hard_tot/dn_loop<<std::endl
@@ -678,6 +711,28 @@ int main(int argc, char *argv[]){
             std::cerr<<"n_ptcl_hard_one_cluster/dn_loop= "         <<(PS::F64)n_ptcl_hard_one_cluster/dn_loop<<std::endl
                      <<"n_ptcl_hard_isolated_cluster/dn_loop= "   <<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop<<std::endl
                      <<"n_ptcl_hard_nonisolated_cluster/dn_loop= "<<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop<<std::endl;
+
+            
+
+            fprofile<<time_sys<<" "
+                    <<n_loop<<" "
+                    <<n_glb<<" "
+                    <<wtime_tot/dn_loop<<" "
+                    <<wtime_hard_tot/dn_loop<<" "
+                    <<wtime_hard_1st_block/dn_loop<<" "
+                    <<wtime_hard_2nd_block/dn_loop<<" "
+                    <<wtime_hard_3rd_block/dn_loop<<" "
+                    <<wtime_soft_tot/dn_loop<<" "
+                    <<wtime_soft_search_neighbor/dn_loop<<" "
+                    <<(PS::F64)n_ptcl_hard_one_cluster/dn_loop<<" "
+                    <<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop<<" "
+                    <<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop<<" "
+                    <<eng_diff.tot/eng_init.tot<<" "
+#ifdef ARC_ERROR
+                    <<system_hard_isolated.ARC_error+system_hard_conected.ARC_error<<" "
+#endif              
+                    <<std::endl;
+
             wtime_tot = 0.0;
             wtime_hard_tot = wtime_hard_1st_block = wtime_hard_2nd_block = wtime_hard_3rd_block = 0.0;
             wtime_soft_tot = wtime_soft_search_neighbor = 0.0;
@@ -689,6 +744,11 @@ int main(int argc, char *argv[]){
         n_loop++;
     }
 
+#ifdef ARC_ERROR    
+    std::cout<<"NHist: ";
+    for (PS::S32 i=0;i<20;i++) std::cout<<system_hard_isolated.N_count[i]/(PS::F64)n_loop<<" ";
+    std::cout<<std::endl;
+#endif
 
     PS::Finalize();
     return 0;

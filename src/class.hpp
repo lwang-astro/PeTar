@@ -71,12 +71,12 @@ public:
     }
 
     void readAscii(FILE* fp) {
-        fscanf(fp, "%lld %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d \n", 
-                &this->id, &this->mass, 
-		&this->pos.x, &this->pos.y, &this->pos.z,  // 3-5
-		&this->vel.x, &this->vel.y, &this->vel.z,  // 6-8
-		&this->acc.x, &this->acc.y, &this->acc.z,  // 9-11
-		&this->pot_tot, &this->n_ngb);
+        fscanf(fp, "%lf %lf %lf %lf %lf %lf %lf \n", 
+               &this->mass, 
+               &this->pos.x, &this->pos.y, &this->pos.z,  // 3-5
+               &this->vel.x, &this->vel.y, &this->vel.z);  // 6-8
+//    	&this->acc.x, &this->acc.y, &this->acc.z,  // 9-11
+//    	&this->pot_tot, &this->n_ngb);
     }
     void dump(std::ofstream & fout){
 	fout<<"id= "<<id<<std::endl;

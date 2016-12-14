@@ -108,7 +108,12 @@ public:
 class SystemHard{
 public:
     PS::ReallocatableArray<PtclHard> ptcl_hard_;
-    ARC::chainpars chain_control; ///chain controller (L.Wang)
+    ARC::chainpars ARC_control; ///chain controller (L.Wang)
+#ifdef ARC_ERROR
+    PS::F64 ARC_error_relative;
+    PS::F64 ARC_error;  
+    PS::S32 N_count[20];  // counting number of particles in one cluster
+#endif
 private:
     PS::F64 ARC_int_pars[2]; /// ARC integration parameters, rout_, rin_ (L.Wang)
     PS::F64 dt_limit_hard_;
@@ -157,23 +162,40 @@ private:
     void driveForMultiClusterImpl(Tptcl * ptcl_org,
                                   const PS::S32 n_ptcl,
                                   const PS::F64 time_end){
+
+      // kepler motion test
+      if (n_ptcl==2) {
+        PS::F64 ax,ecc,inc,OMG,omg,tperi;
+        PosVel2OrbParam(ax,ecc,inc,OMG,omg,tperi,ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel, ptcl_org[0].mass, ptcl_org[1].mass);
+        if (ax>0.0&&2.0*ax<ARC_int_pars[1]) {
+          //          std::cerr<<"n_ptcl="<<n_ptcl<<"; ax="<<ax<<"; ecc="<<ecc<<"; pid"<<ptcl_org[0].id<<std::endl;
+          DriveKepler(ptcl_org[0].mass, ptcl_org[1].mass,ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel,time_end);
+//          PosVel2OrbParam(ax,ecc,inc,OMG,omg,tperi,ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel, ptcl_org[0].mass, ptcl_org[1].mass);
+//          std::cerr<<"A:n_ptcl="<<n_ptcl<<"; ax="<<ax<<"; ecc="<<ecc<<"; pid"<<ptcl_org[0].id<<std::endl;
+          return;
+        }
+      }
       
       /// start ARC (L.Wang)
-      ARC::chain<Tptcl> c((std::size_t)n_ptcl,chain_control);
+      ARC::chain<Tptcl> c((std::size_t)n_ptcl,ARC_control);
       static thread_local PS::F64 time_sys = 0.0;
 
       c.addP(n_ptcl,ptcl_org);
       c.Int_pars=ARC_int_pars;
       c.init(time_sys);
-        
+#ifdef ARC_ERROR
+      PS::F64 ARC_error_once = c.getPot()+c.getEkin();
+      N_count[n_ptcl-1]++;
+#endif
+      
       PS::F64 dt_up_limit = calcDtLimit(time_sys, dt_limit_hard_)/c.calc_dt_X(1.0);
       //      PS::F64 dt_low_limit = dt_up_limit/256.0;
-      PS::F64 dt_use = 0.05*c.calc_next_step_XVA();
+      PS::F64 dt_use = 0.5*c.calc_next_step_XVA();
       
       if (dt_use>dt_up_limit) dt_use = dt_up_limit;
       //      if (dt_use<dt_low_limit) dt_use = dt_low_limit;
       
-      while(time_end-c.getTime()>chain_control.dterr) {
+      while(time_end-c.getTime()>ARC_control.dterr) {
 //        if (ptcl_org[0].id==8&&time_origin_==0.0078125) {
 //          std::cout<<"ds= "<<dt_use<<" toff= "<<time_end<<std::endl;
 //          FILE* fout=fopen("data","w");
@@ -185,8 +207,16 @@ private:
         PS::F64 dsf=c.extrapolation_integration(dt_use,time_end);
         //        std::cerr<<"Particle="<<ptcl_org[0].id<<" n="<<n_ptcl<<" Time_end="<<time_end<<" ctime="<<c.getTime()<<" diff="<<time_end-c.getTime()<<" ds="<<dt_use<<" dsf="<<dsf<<std::endl;
         if (dsf<0) dt_use *= -dsf;
+        else dt_use *= dsf;
       }
 
+      // error record
+#ifdef ARC_ERROR
+      PS::F64 ARC_error_temp = (c.getPot()+c.getEkin()-ARC_error_once);
+      ARC_error += ARC_error_temp;
+      ARC_error_relative += ARC_error_temp/ARC_error_once;
+#endif
+      
       // integration of center-of-mass
       c.cm.setPos(c.cm.getPos()[0] + c.cm.getVel()[0]*time_end,
 				  c.cm.getPos()[1] + c.cm.getVel()[1]*time_end,
@@ -200,15 +230,21 @@ private:
 public:
 
     SystemHard(){
+#ifdef ARC_ERROR
+      ARC_error = 0.0;
+      ARC_error_relative = 0.0;
+      for(PS::S32 i=0;i<20;i++) N_count[i]=0;
+#endif
       //        PS::S32 n_threads = PS::Comm::getNumberOfThread();
     }
 
     /// start set Chainpars (L.Wang)
     ///
     void setARCParam(const PS::F64 energy_error=1e-12, const PS::F64 dterr=1e-10, const PS::F64 dtmin=1e-24, const PS::S32 exp_method=1, const PS::S32 exp_itermax=20, const PS::S32 exp_fix_iter=0) {
-      chain_control.setA(Newtonian_cut_AW,Newtonian_cut_Ap);
-      chain_control.setabg(1,0,1);
-      chain_control.setEXP(energy_error,dtmin,dterr,exp_itermax,exp_method,3,(bool)exp_fix_iter);
+      ARC_control.setA(Newtonian_cut_AW,Newtonian_cut_Ap);
+      ARC_control.setabg(1,0,1);
+      ARC_control.setEXP(energy_error,dtmin,dterr,exp_itermax,exp_method,3,(bool)exp_fix_iter);
+      ARC_control.setAutoStep(3);
     }
     /// end set Chainpars (L.Wang)
 
