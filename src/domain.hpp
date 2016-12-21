@@ -52,21 +52,21 @@ inline void DomainDecision(PS::DomainInfo & dinfo,
 	PS::F64vec * pos_glb_tmp = new PS::F64vec[n_glb_tmp];
 	PS::Comm::allGatherV(pos_loc_tmp, n_loc_tmp, pos_glb_tmp, n_recv_tmp, n_recv_disp_tmp);
 	PS::S32 n_proc_quat = n_proc / 4;
-	fout_debug<<"n_proc, n_proc_quat="<<n_proc<<" "<<n_proc_quat<<std::endl;
+    //	fout_debug<<"n_proc, n_proc_quat="<<n_proc<<" "<<n_proc_quat<<std::endl;
 	PS::S32 nx_quat = sqrt((PS::F64)n_proc_quat-0.000001)+1;
 	while( n_proc_quat % nx_quat != 0) nx_quat++;
 	PS::S32 ny_quat = n_proc_quat / nx_quat;
 	PS::S32 nx = nx_quat*2;
 	PS::S32 ny = ny_quat*2;
 	PS::S32 nz = 1;
-	if(PS::Comm::getRank() == 0){
-	    fout_debug<<"nx_quat, ny_quat, nx, ny, nz= "
-		      <<nx_quat<<" "<<ny_quat<<" "<<nx<<" "<<ny<<" "<<nz<<std::endl;
-	}
+//    if(PS::Comm::getRank() == 0){
+//        fout_debug<<"nx_quat, ny_quat, nx, ny, nz= "
+//    	      <<nx_quat<<" "<<ny_quat<<" "<<nx<<" "<<ny<<" "<<nz<<std::endl;
+//    }
 	dinfo.setNumberOfDomainMultiDimension(nx, ny, nz);
 	PS::F64ort * pos_domain_tmp = new PS::F64ort[n_proc];
 	if(PS::Comm::getRank() == 0){
-	    fout_debug<<"n_glb_tmp="<<n_glb_tmp<<std::endl;
+      //	    fout_debug<<"n_glb_tmp="<<n_glb_tmp<<std::endl;
 	    PS::S32 * istart = new PS::S32[n_proc_quat];
 	    PS::S32 * iend   = new PS::S32[n_proc_quat];
 	    PS::F64ort pos_root_domain_tmp = PS::F64ort( PS::F64vec(0.0, 0.0, -PS::LARGE_FLOAT), PS::F64vec(PS::LARGE_FLOAT, PS::LARGE_FLOAT, PS::LARGE_FLOAT));
@@ -77,7 +77,7 @@ inline void DomainDecision(PS::DomainInfo & dinfo,
 		      [](const PS::F64vec & l, const PS::F64vec & r)->bool{return l.x < r.x;}
 		      );
 #endif
-	    fout_debug<<"pos_glb_tmp[n_glb_tmp-1].x="<<pos_glb_tmp[n_glb_tmp-1].x<<std::endl;
+        //	    fout_debug<<"pos_glb_tmp[n_glb_tmp-1].x="<<pos_glb_tmp[n_glb_tmp-1].x<<std::endl;
 	    for(PS::S32 i = 0; i < n_proc_quat; i++) {
 		istart[i] = ((PS::S64)(i) * (PS::S64)(n_glb_tmp)) / (PS::S64)(n_proc_quat);
 		if(i > 0) iend[i-1] = istart[i] - 1;

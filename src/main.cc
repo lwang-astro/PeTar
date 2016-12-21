@@ -292,7 +292,7 @@ int main(int argc, char *argv[]){
     PS::F64 dt_soft = 1.0/256.0;
     //    PS::F64 eta = 0.1;
     //    PS::F64 eta_s = eta * 0.1;
-    char dir_name[1024];
+    //    char dir_name[1024];
     PS::S64 n_glb = 16384;
     PS::F64 dt_snp = 1.0 / 16.0;
     PS::F64 search_factor = 3.0; 
@@ -360,9 +360,9 @@ int main(int argc, char *argv[]){
             r_out = atof(optarg);
             break;
         case 'X':
-          dt_limit_hard_factor = atof(optarg);
+            dt_limit_hard_factor = atof(optarg);
             std::cerr<<"dt_limit_hard_factor="<<dt_limit_hard_factor<<std::endl;
-	    assert(dt_limit_hard_factor > 0.0);
+            assert(dt_limit_hard_factor > 0.0);
             break;
         case 'h':
             std::cerr<<"i: input_file"<<std::endl;
@@ -465,11 +465,11 @@ int main(int argc, char *argv[]){
     system_soft.readParticleAscii(sinput, file_header_read);
     time_sys = file_header_read.time;
     PS::Comm::broadcast(&time_sys, 1, 0);
-    std::cerr<<"system_soft[0].mass= "<<system_soft[0].mass<<"system_soft[0].pos= "<<system_soft[0].pos<<std::endl;
+//    std::cerr<<"system_soft[0].mass= "<<system_soft[0].mass<<"system_soft[0].pos= "<<system_soft[0].pos<<std::endl;
     n_glb = system_soft.getNumberOfParticleGlobal();
-    std::cerr<<"n_glb= "<<n_glb<<std::endl;
+//    std::cerr<<"n_glb= "<<n_glb<<std::endl;
     n_loc = system_soft.getNumberOfParticleLocal();
-    std::cerr<<"n_loc= "<<n_loc<<std::endl;
+//    std::cerr<<"n_loc= "<<n_loc<<std::endl;
     for(PS::S32 i=0; i<n_loc; i++){
       system_soft[i].id = i;
     }
@@ -535,7 +535,7 @@ int main(int argc, char *argv[]){
     eng_init.dump(std::cerr);
     eng_now = eng_init;
 
-#ifdef DEBUG
+#ifdef DEBUG_OUTPUT
     std::ofstream fout;
 	fout.open("pdata");
 #endif
@@ -677,7 +677,7 @@ int main(int argc, char *argv[]){
         system_hard_isolated.N_count[0] += PS::Comm::getSum(n_one_cluster);
 #endif
         
-#ifdef DEBUG        
+#ifdef DEBUG_OUTPUT
         //output
         PS::S32 ntot = system_soft.getNumberOfParticleLocal();
         fout<<std::setprecision(17)<<time_sys<<" ";

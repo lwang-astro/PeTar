@@ -273,3 +273,74 @@ void DriveKeplerRestricted(PS::F64 mass0,
                            PS::F64 dt){
     DriveKepler(mass0, (PS::F64)0.0, pos0, pos1, vel0, vel1, dt);
 }
+
+  //! Calculate the center-of-mass for a group of particles
+  /*! Calculate the center-of-mass information for a group of particles. Also the particles can be shifted to their center-of-mass frame.
+    The particle class should contain member functions setPos(), setVel(), setMass(), getPos(), getVel(), getMass()
+    @param[in] cm: particle type data for storing the center-of-mass information
+    @param[in] p: particle list
+    @param[in] num: number of particles
+    @param[in] fshift: shifting flag to indicate whether particle \a p should be shifted to their center-of-mass. If false (defaulted), no shifting.
+   */
+template <class particle>
+void calc_center_of_mass(particle &cm, particle p[], const int num, const bool fshift=false) {
+  double cmr[3]={};
+  double cmv[3]={};
+  double cmm = 0;
+  for (std::size_t i=0;i<num;i++) {
+    const double *ri = p[i].getPos();
+    const double *vi = p[i].getVel();
+    const double mi = p[i].getMass();
+    cmr[0] += ri[0] * mi;
+    cmr[1] += ri[1] * mi;
+    cmr[2] += ri[2] * mi;
+
+    cmv[0] += vi[0] * mi;
+    cmv[1] += vi[1] * mi;
+    cmv[2] += vi[2] * mi;
+
+    cmm += mi;
+  }
+  cmr[0] /= cmm; 
+  cmr[1] /= cmm; 
+  cmr[2] /= cmm; 
+
+  cmv[0] /= cmm; 
+  cmv[1] /= cmm; 
+  cmv[2] /= cmm;
+      
+  cm.setMass(cmm);
+  cm.setPos(cmr[0],cmr[1],cmr[2]);
+  cm.setVel(cmv[0],cmv[1],cmv[2]);
+
+  // shifting
+  if (fshift) {
+    for (std::size_t i=0;i<num;i++) {
+      const double *ri = p[i].getPos();
+      const double *vi = p[i].getVel();
+      p[i].setPos(ri[0] - cmr[0],
+                  ri[1] - cmr[1],
+                  ri[2] - cmr[2]);
+      p[i].setVel(vi[0] - cmv[0],
+                  vi[1] - cmv[1],
+                  vi[2] - cmv[2]);
+    }
+  }
+}
+
+// correct the particle p position and velocity by adding center-of-mass information
+template <class particle>
+void center_of_mass_correction(particle &cm, particle p[], const int num) {
+  const double *rc = cm.getPos();
+  const double *vc = cm.getVel();
+  for (std::size_t i=0;i<num;i++) {
+    const double *ri = p[i].getPos();
+    p[i].setPos(ri[0] + rc[0],
+                ri[1] + rc[1],
+                ri[2] + rc[2]);
+    const double *vi = p[i].getVel();
+    p[i].setVel(vi[0] + vc[0],
+                vi[1] + vc[1],
+                vi[2] + vc[2]);
+  }
+}

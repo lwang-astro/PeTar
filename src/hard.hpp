@@ -13,11 +13,11 @@
 #include"cstdlib"
 //#include"stdio.h" /// for debug (L.Wang)
 
-std::ofstream fout_debug;
-
 template<class T>
 void Print(const T str, std::ostream & fout);
 
+//std::ofstream kout;
+//std::ofstream arout;
 
 class PtclHard{
 public:
@@ -167,11 +167,25 @@ private:
       if (n_ptcl==2) {
         PS::F64 ax,ecc,inc,OMG,omg,tperi;
         PosVel2OrbParam(ax,ecc,inc,OMG,omg,tperi,ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel, ptcl_org[0].mass, ptcl_org[1].mass);
+        //        std::cerr<<"n_ptcl="<<n_ptcl<<"; ax="<<ax<<"; ecc="<<ecc<<"; peri="<<tperi<<"; pid="<<ptcl_org[0].id<<std::endl;
         if (ax>0.0&&2.0*ax<ARC_int_pars[1]) {
-          //          std::cerr<<"n_ptcl="<<n_ptcl<<"; ax="<<ax<<"; ecc="<<ecc<<"; pid"<<ptcl_org[0].id<<std::endl;
+          // center-of-mass
+          Tptcl pcm;
+          calc_center_of_mass(pcm, ptcl_org, n_ptcl, true);
+          
           DriveKepler(ptcl_org[0].mass, ptcl_org[1].mass,ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel,time_end);
-//          PosVel2OrbParam(ax,ecc,inc,OMG,omg,tperi,ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel, ptcl_org[0].mass, ptcl_org[1].mass);
-//          std::cerr<<"A:n_ptcl="<<n_ptcl<<"; ax="<<ax<<"; ecc="<<ecc<<"; pid"<<ptcl_org[0].id<<std::endl;
+          
+          // integration of center-of-mass
+          pcm.setPos(pcm.getPos()[0] + pcm.getVel()[0]*time_end,
+                     pcm.getPos()[1] + pcm.getVel()[1]*time_end,
+                     pcm.getPos()[2] + pcm.getVel()[2]*time_end);
+
+          center_of_mass_correction(pcm, ptcl_org, n_ptcl);
+          
+          //          PosVel2OrbParam(ax,ecc,inc,OMG,omg,tperi,ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel, ptcl_org[0].mass, ptcl_org[1].mass);
+          //          std::cerr<<"A:n_ptcl="<<n_ptcl<<"; ax="<<ax<<"; ecc="<<ecc<<"; peri="<<tperi<<"; pid"<<ptcl_org[0].id<<std::endl;
+//          if (!kout.is_open()) kout.open("kout");
+//          for (int i=0;i<n_ptcl;i++) kout<<std::setprecision(17)<<time_origin_<<" "<<ptcl_org[i].mass<<" "<<ptcl_org[i].pos<<" "<<ptcl_org[i].vel<<std::endl;
           return;
         }
       }
@@ -188,26 +202,29 @@ private:
       N_count[n_ptcl-1]++;
 #endif
       
-      PS::F64 dt_up_limit = calcDtLimit(time_sys, dt_limit_hard_)/c.calc_dt_X(1.0);
-      //      PS::F64 dt_low_limit = dt_up_limit/256.0;
-      PS::F64 dt_use = 0.5*c.calc_next_step_XVA();
+      PS::F64 ds_up_limit = calcDtLimit(time_sys, dt_limit_hard_)/c.calc_dt_X(1.0);
+      //      PS::F64 dt_low_limit = ds_up_limit/256.0;
+      PS::F64 ds_use = c.calc_next_step_peri();
+      //      std::cerr<<"ds_use="<<ds_use<<std::endl;
       
-      if (dt_use>dt_up_limit) dt_use = dt_up_limit;
-      //      if (dt_use<dt_low_limit) dt_use = dt_low_limit;
+      if (ds_use>ds_up_limit) ds_use = ds_up_limit;
+      //      if (ds_use<dt_low_limit) ds_use = dt_low_limit;
       
       while(time_end-c.getTime()>ARC_control.dterr) {
 //        if (ptcl_org[0].id==8&&time_origin_==0.0078125) {
-//          std::cout<<"ds= "<<dt_use<<" toff= "<<time_end<<std::endl;
+//          std::cout<<"ds= "<<ds_use<<" toff= "<<time_end<<std::endl;
+        
 //          FILE* fout=fopen("data","w");
 //          fwrite(ptcl_org,sizeof(Tptcl),n_ptcl,fout);
 //          fclose(fout);
 //          for (PS::S32 i=0; i<n_ptcl; i++) 
 //            std::cout<<ptcl_org[i].getMass()<<" "<<ptcl_org[i].getPos()[0]<<" "<<ptcl_org[i].getPos()[1]<<" "<<ptcl_org[i].getPos()[2]<<" "<<ptcl_org[i].getVel()[0]<<" "<<ptcl_org[i].getVel()[1]<<" "<<ptcl_org[i].getVel()[2]<<std::endl;
 //        }
-        PS::F64 dsf=c.extrapolation_integration(dt_use,time_end);
-        //        std::cerr<<"Particle="<<ptcl_org[0].id<<" n="<<n_ptcl<<" Time_end="<<time_end<<" ctime="<<c.getTime()<<" diff="<<time_end-c.getTime()<<" ds="<<dt_use<<" dsf="<<dsf<<std::endl;
-        if (dsf<0) dt_use *= -dsf;
-        else dt_use *= dsf;
+        PS::F64 dsf=c.extrapolation_integration(ds_use,time_end);
+        //        std::cerr<<"Particle="<<ptcl_org[0].id<<" n="<<n_ptcl<<" Time_end="<<time_end<<" ctime="<<c.getTime()<<" diff="<<time_end-c.getTime()<<" ds="<<ds_use<<" dsf="<<dsf<<std::endl;
+        if (dsf<0) ds_use *= -dsf;
+        else if (n_ptcl==2) ds_use *= dsf;
+        else ds_use = dsf*c.calc_next_step_peri();
       }
 
       // error record
@@ -224,6 +241,8 @@ private:
       
 
       c.center_shift_inverse();
+//      if (!arout.is_open()) arout.open("arout");
+//      for (int i=0;i<n_ptcl;i++) arout<<std::setprecision(17)<<time_origin_<<" "<<ptcl_org[i].mass<<" "<<ptcl_org[i].pos<<" "<<ptcl_org[i].vel<<std::endl;
       /// end ARC (L.Wang)
     }
 
@@ -240,9 +259,9 @@ public:
 
     /// start set Chainpars (L.Wang)
     ///
-    void setARCParam(const PS::F64 energy_error=1e-12, const PS::F64 dterr=1e-10, const PS::F64 dtmin=1e-24, const PS::S32 exp_method=1, const PS::S32 exp_itermax=20, const PS::S32 exp_fix_iter=0) {
+    void setARCParam(const PS::F64 energy_error=1e-10, const PS::F64 dterr=1e-9, const PS::F64 dtmin=1e-24, const PS::S32 exp_method=1, const PS::S32 exp_itermax=20, const PS::S32 exp_fix_iter=0) {
       ARC_control.setA(Newtonian_cut_AW,Newtonian_cut_Ap);
-      ARC_control.setabg(1,0,1);
+      ARC_control.setabg(0,1,0);
       ARC_control.setEXP(energy_error,dtmin,dterr,exp_itermax,exp_method,3,(bool)exp_fix_iter);
       ARC_control.setAutoStep(3);
     }
@@ -259,7 +278,7 @@ public:
 				   const PS::ReallocatableArray<Tmediator> & med,
 				   const PS::ReallocatableArray<Tptcl> & ptcl_recv){
         ptcl_hard_.clearSize();
-	n_ptcl_in_cluster_.clearSize(); // clear befor break this function
+        n_ptcl_in_cluster_.clearSize(); // clear befor break this function
         for(PS::S32 i=0; i<med.size(); i++){
             if(med[i].adr_sys_ < 0) continue;
             if(med[i].rank_send_ != PS::Comm::getRank()) continue;
@@ -267,13 +286,13 @@ public:
             ptcl_hard_.push_back(PtclHard(p.id, p.mass, p.pos, p.vel, 
                                           med[i].id_cluster_, med[i].adr_sys_));
         }
-	//fout_debug<<"(in setPtcl 1)ptcl_hard_.size()= "<<ptcl_hard_.size()<<std::endl;
+
         for(PS::S32 i=0; i<ptcl_recv.size(); i++){
             const Tptcl & p = ptcl_recv[i];
             ptcl_hard_.push_back(PtclHard(p.id_, p.mass_, p.pos_, p.vel_, 
                                           p.id_cluster_, -(i+1)));
         }
-	//fout_debug<<"(in setPtcl 2)ptcl_hard_.size()= "<<ptcl_hard_.size()<<std::endl;
+
         if(ptcl_hard_.size() == 0) return;
         std::sort(ptcl_hard_.getPointer(), ptcl_hard_.getPointer(ptcl_hard_.size()), 
                   OPLessIDCluster());
