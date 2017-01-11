@@ -1,3 +1,4 @@
+#pragma once
 #ifdef INTRINSIC_K
 #include"phantomquad_for_p3t_k.hpp"
 #endif
@@ -43,11 +44,6 @@ public:
     PS::F64vec pos;
     PS::F64vec vel;
     PS::F64vec acc; // soft
-#ifdef AERO_DRAG
-    PS::F64vec acc_gd; // aero drag
-    PS::F64vec vel_prev; // for energy check
-    PS::F64vec acc_gd_prev; // aero drag
-#endif
     PS::F64 pot_tot; // soft + hard
     PS::S32 rank_org;
     PS::S32 n_ngb;
@@ -62,21 +58,25 @@ public:
     }
 
     void writeAscii(FILE* fp) const{
-        fprintf(fp, "%lld %20.15e %20.15e %20.15e %20.15e %20.15e %20.15e %20.15e %20.15e %20.15e %20.15e %20.15e %d \n", 
+        fprintf(fp, "%lld %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %d\n", 
                 this->id, this->mass, 
-		this->pos.x, this->pos.y, this->pos.z,  // 3-5
-		this->vel.x, this->vel.y, this->vel.z,  // 6-8
-		this->acc.x, this->acc.y, this->acc.z,  // 9-11
-		this->pot_tot, this->n_ngb);
+                this->pos.x, this->pos.y, this->pos.z,  // 3-5
+                this->vel.x, this->vel.y, this->vel.z,  // 6-8
+                this->acc.x, this->acc.y, this->acc.z,  // 9-11
+                this->pot_tot, this->n_ngb);
     }
 
     void readAscii(FILE* fp) {
-        fscanf(fp, "%lf %lf %lf %lf %lf %lf %lf \n", 
-               &this->mass, 
-               &this->pos.x, &this->pos.y, &this->pos.z,  // 3-5
-               &this->vel.x, &this->vel.y, &this->vel.z);  // 6-8
-//    	&this->acc.x, &this->acc.y, &this->acc.z,  // 9-11
-//    	&this->pot_tot, &this->n_ngb);
+        PS::S64 rcount=fscanf(fp, "%lld %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d\n",
+                              &this->id, &this->mass, 
+                              &this->pos.x, &this->pos.y, &this->pos.z,  // 3-5
+                              &this->vel.x, &this->vel.y, &this->vel.z,  // 6-8
+                              &this->acc.x, &this->acc.y, &this->acc.z,  // 9-11
+                              &this->pot_tot, &this->n_ngb);
+        if (rcount<7) {
+          std::cerr<<"Error: Data reading fails! requiring data number is 7, only obtain "<<rcount<<".\n";
+          abort();
+        }
     }
     void dump(std::ofstream & fout){
 	fout<<"id= "<<id<<std::endl;
@@ -272,3 +272,4 @@ struct CalcForceEpSpNoSIMD{
         }
     }
 };
+

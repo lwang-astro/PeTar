@@ -13,8 +13,6 @@ use_x86 = yes
 ifeq ($(use_k_computer),yes)
 CXX = time mpiFCCpx
 #CXXFLAGS = -Kfast
-CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -Kopenmp
-CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
 CXXFLAGS += -x32
 CXXFLAGS += -Xg
 CXXFLAGS += -DFAST_ALL_TO_ALL_FOR_K
@@ -32,8 +30,6 @@ CXXFLAGS = -O3
 CXXFLAGS += -Wall
 CXXFLAGS += -march=core-avx2
 CXXFLAGS += -ffast-math -funroll-loops
-CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -fopenmp
-CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
 CXXFLAGS += -std=c++11
 CXXFLAGS += -DINTRINSIC_X86
 #CXXFLAGS += -DUSE_GNU_PARALLEL_SORT
@@ -45,26 +41,31 @@ CXXFLAGS = -O3
 CXXFLAGS += -Wall
 CXXFLAGS += -march=core-avx2
 CXXFLAGS += -ffast-math -funroll-loops
-CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -fopenmp
-CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
 CXXFLAGS += -std=c++11
 CXXFLAGS += -DMPICH_IGNORE_CXX_SEEK
-#CXXFLAGS += -D ARC_WARN
-CXXFLAGS += -DREAD_FILE
-#CXXFLAGS += -D DEBUG
-#CXXFLAGS += -D DEBUG_OUTPUT
 #CXXFLAGS += -DINTRINSIC_X86
 #CXXFLAGS += -DUSE_GNU_PARALLEL_SORT
 endif
+
+CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -fopenmp
+CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
+CXXFLAGS += -DUSE_QUAD -DDIV_FIX -DP3T_64BIT
+CXXFLAGS += -DARC_ERROR
+#CXXFLAGS += -D ARC_WARN
+#CXXFLAGS += -D DEBUG
+#CXXFLAGS += -D DEBUG_OUTPUT
 
 VPATH=./src
 
 SRC = main.cc hard.hpp class.hpp force.hpp io.hpp kepler.hpp phantomquad_for_p3t_x86.hpp domain.hpp profile.hpp cluster_list.hpp
 
-all:nbody.out
+all: nbody.out
 
-nbody.out:$(SRC)
-	$(CXX) -DUSE_QUAD -DDIV_FIX -DP3T_64BIT $(PS_PATH) $(ARC_PATH) $(CXXFLAGS) -o $@ $<
+nbody.out: $(SRC)
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(CXXFLAGS) -o $@ $<
+
+ARC_debug.out: chain_debug.cxx force.hpp
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(CXXFLAGS) -D DEBUG -o $@ $<
 
 clean:
 	rm *.out *.o

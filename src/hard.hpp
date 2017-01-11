@@ -19,6 +19,33 @@ void Print(const T str, std::ostream & fout);
 //std::ofstream kout;
 //std::ofstream arout;
 
+// period of two-body motion
+double Newtonian_timescale(const double m1, const double m2, const double dx[], const double dv[], const ARC_int_pars* par) {
+    const double dr2  = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
+    const double dv2  = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
+    const double dr   = std::sqrt(dr2);
+    const double m    = m1+m2;
+
+    const double semi = 1.0/(2.0/dr - dv2/m);
+
+    if (semi<0) {
+      const double peri = 0.1*std::sqrt(dr2*dr/(2.0*m));
+      //      std::cout<<"dr="<<dr<<" semi="<<semi<<" peri="<<peri<<std::endl;
+      return peri;
+    }
+    else {
+      const double rdot = dx[0]*dv[0] + dx[1]*dv[1] + dx[2]*dv[2];
+      const double dr_semi = 1.0 - dr/semi;
+      const double ecc  = std::sqrt(dr_semi*dr_semi + rdot*rdot/(m*semi));
+
+      const double twopi= 6.28;
+      const double peri = twopi*std::abs(semi)*std::sqrt(std::abs(semi)/m);
+
+      //      std::cout<<"dr="<<dr<<" semi="<<semi<<" ecc="<<ecc<<" peri="<<peri<<std::endl;
+      return std::max(std::sqrt(std::abs(1.0-ecc)),0.01)*peri;
+    }
+}
+
 class PtclHard{
 public:
     PS::S64 id;
@@ -108,14 +135,14 @@ public:
 class SystemHard{
 public:
     PS::ReallocatableArray<PtclHard> ptcl_hard_;
-    ARC::chainpars ARC_control; ///chain controller (L.Wang)
+    ARC::chainpars<ARC_int_pars> ARC_control; ///chain controller (L.Wang)
 #ifdef ARC_ERROR
     PS::F64 ARC_error_relative;
     PS::F64 ARC_error;  
     PS::S32 N_count[20];  // counting number of particles in one cluster
 #endif
 private:
-    PS::F64 ARC_int_pars[2]; /// ARC integration parameters, rout_, rin_ (L.Wang)
+    ARC_int_pars Int_pars; /// ARC integration parameters, rout_, rin_ (L.Wang)
     PS::F64 dt_limit_hard_;
     //PS::ReallocatableArray<PtclHard> ptcl_hard_;
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_;
@@ -164,16 +191,22 @@ private:
                                   const PS::F64 time_end){
 
       // kepler motion test
+      PS::F64 ax=0,ecc;
       if (n_ptcl==2) {
-        PS::F64 ax,ecc,inc,OMG,omg,tperi;
-        PosVel2OrbParam(ax,ecc,inc,OMG,omg,tperi,ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel, ptcl_org[0].mass, ptcl_org[1].mass);
-        //        std::cerr<<"n_ptcl="<<n_ptcl<<"; ax="<<ax<<"; ecc="<<ecc<<"; peri="<<tperi<<"; pid="<<ptcl_org[0].id<<std::endl;
-        if (ax>0.0&&2.0*ax<ARC_int_pars[1]) {
+        PS::F64 inc,OMG,omg,tperi;
+        PS::F64 ecc_anomaly_old = PosVel2OrbParam(ax, ecc, inc, OMG, omg, tperi,
+                                                  ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel, ptcl_org[0].mass, ptcl_org[1].mass);
+#ifdef HARD_DEBUG
+        std::cerr<<"n_ptcl="<<n_ptcl<<"; ax="<<ax<<"; ecc="<<ecc<<"; peri="<<tperi<<"; pid="<<ptcl_org[0].id<<std::endl;
+#endif
+        if (ax>0.0&&2.0*ax<Int_pars.rin) {
           // center-of-mass
           Tptcl pcm;
           calc_center_of_mass(pcm, ptcl_org, n_ptcl, true);
+
+          DriveKeplerAxEcc(ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel,
+                           ptcl_org[0].mass, ptcl_org[1].mass, time_end, ax, ecc, inc, OMG, omg, ecc_anomaly_old);
           
-          DriveKepler(ptcl_org[0].mass, ptcl_org[1].mass,ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel,time_end);
           
           // integration of center-of-mass
           pcm.setPos(pcm.getPos()[0] + pcm.getVel()[0]*time_end,
@@ -183,48 +216,105 @@ private:
           center_of_mass_correction(pcm, ptcl_org, n_ptcl);
           
           //          PosVel2OrbParam(ax,ecc,inc,OMG,omg,tperi,ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel, ptcl_org[0].mass, ptcl_org[1].mass);
-          //          std::cerr<<"A:n_ptcl="<<n_ptcl<<"; ax="<<ax<<"; ecc="<<ecc<<"; peri="<<tperi<<"; pid"<<ptcl_org[0].id<<std::endl;
+          //std::cerr<<"A:n_ptcl="<<n_ptcl<<"; ax="<<ax<<"; ecc="<<ecc<<"; peri="<<tperi<<"; pid"<<ptcl_org[0].id<<std::endl;
 //          if (!kout.is_open()) kout.open("kout");
 //          for (int i=0;i<n_ptcl;i++) kout<<std::setprecision(17)<<time_origin_<<" "<<ptcl_org[i].mass<<" "<<ptcl_org[i].pos<<" "<<ptcl_org[i].vel<<std::endl;
           return;
         }
       }
       
-      /// start ARC (L.Wang)
-      ARC::chain<Tptcl> c((std::size_t)n_ptcl,ARC_control);
+      ARC::chain<Tptcl,ARC_int_pars> c((std::size_t)n_ptcl,ARC_control);
       static thread_local PS::F64 time_sys = 0.0;
 
       c.addP(n_ptcl,ptcl_org);
-      c.Int_pars=ARC_int_pars;
+      c.link_int_par(Int_pars);
       c.init(time_sys);
 #ifdef ARC_ERROR
       PS::F64 ARC_error_once = c.getPot()+c.getEkin();
       N_count[n_ptcl-1]++;
 #endif
       
-      PS::F64 ds_up_limit = calcDtLimit(time_sys, dt_limit_hard_)/c.calc_dt_X(1.0);
-      //      PS::F64 dt_low_limit = ds_up_limit/256.0;
-      PS::F64 ds_use = c.calc_next_step_peri();
+      PS::F64 dscoff=1.0;
+      PS::F64 ds_up_limit = 0.25*calcDtLimit(time_sys, dt_limit_hard_)/c.calc_dt_X(1.0);
+      PS::F64 ds_use = c.calc_next_step_custom();
       //      std::cerr<<"ds_use="<<ds_use<<std::endl;
       
       if (ds_use>ds_up_limit) ds_use = ds_up_limit;
-      //      if (ds_use<dt_low_limit) ds_use = dt_low_limit;
+
+      // convergency check
+      PS::S32 converge_count=0;
+      bool once_flag=false;
+      bool final_flag=false;
       
       while(time_end-c.getTime()>ARC_control.dterr) {
+
 //        if (ptcl_org[0].id==8&&time_origin_==0.0078125) {
 //          std::cout<<"ds= "<<ds_use<<" toff= "<<time_end<<std::endl;
         
 //          FILE* fout=fopen("data","w");
 //          fwrite(ptcl_org,sizeof(Tptcl),n_ptcl,fout);
 //          fclose(fout);
-//          for (PS::S32 i=0; i<n_ptcl; i++) 
-//            std::cout<<ptcl_org[i].getMass()<<" "<<ptcl_org[i].getPos()[0]<<" "<<ptcl_org[i].getPos()[1]<<" "<<ptcl_org[i].getPos()[2]<<" "<<ptcl_org[i].getVel()[0]<<" "<<ptcl_org[i].getVel()[1]<<" "<<ptcl_org[i].getVel()[2]<<std::endl;
+//        for (PS::S32 i=0; i<n_ptcl; i++) 
+//          std::cout<<ptcl_org[i].getMass()<<" "<<ptcl_org[i].getPos()[0]<<" "<<ptcl_org[i].getPos()[1]<<" "<<ptcl_org[i].getPos()[2]<<" "<<ptcl_org[i].getVel()[0]<<" "<<ptcl_org[i].getVel()[1]<<" "<<ptcl_org[i].getVel()[2]<<std::endl;
 //        }
+
         PS::F64 dsf=c.extrapolation_integration(ds_use,time_end);
-        //        std::cerr<<"Particle="<<ptcl_org[0].id<<" n="<<n_ptcl<<" Time_end="<<time_end<<" ctime="<<c.getTime()<<" diff="<<time_end-c.getTime()<<" ds="<<ds_use<<" dsf="<<dsf<<std::endl;
-        if (dsf<0) ds_use *= -dsf;
-        else if (n_ptcl==2) ds_use *= dsf;
-        else ds_use = dsf*c.calc_next_step_peri();
+
+//        std::cerr<<"Particle=";
+//        for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<ptcl_org[i].id<<" ";
+//        std::cerr<<"n="<<n_ptcl<<" Time_end="<<time_end<<" ctime="<<c.getTime()<<" diff="<<time_end-c.getTime()<<" ds="<<ds_use<<" dsf="<<dsf<<std::endl;
+
+        if (dsf<0) {
+          final_flag=true;
+          converge_count++;
+          if (converge_count>5&&time_end-c.getTime()>ARC_control.dterr*100) {
+            std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c.getTime()<<"\nR_in: "<<Int_pars.rin<<"\nR_out: "<<Int_pars.rout<<"\n";
+//    		ds_use = 0.1*c.calc_next_step_custom();
+//            std::cerr<<"New step size: "<<ds_use<<std::endl;
+//    		once_flag=true;
+//			converge_count=0;
+			c.dump("ARC_dump.dat");
+			ARC_control.dump("ARC_dump.par");
+            c.print(std::cerr);
+			abort();
+          }
+          else ds_use *= -dsf;
+          // debuging
+//          if (ptcl_org[0].id==267) {
+//              c.dump("ARC_dump.dat");
+//              ARC_control.dump("ARC_dump.par");
+//              c.print(std::cerr);
+//              abort();
+//          }
+        }
+        else if (dsf==0) {
+          //          char collerr[50]="two particle overlap!";
+          c.info->ErrMessage(std::cerr);
+          if (c.info->status==5) {
+            dscoff = 0.25;
+            ds_use *= dscoff;
+          }
+          //          else if (c.info->status==6) ds_use *= 0.001;
+          else if (c.info->status==4) ds_use = std::min(dscoff*c.calc_next_step_custom(),ds_up_limit);
+          else ds_use *= 0.1;
+          once_flag=true;
+        }
+        else  {
+          if (final_flag) {
+            if (converge_count>6&&time_end-c.getTime()>ARC_control.dterr*100) {
+              std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c.getTime()<<"\nR_in: "<<Int_pars.rin<<"\nR_out: "<<Int_pars.rout<<"\n";
+              c.dump("ARC_dump.dat");
+              ARC_control.dump("ARC_dump.par");
+              c.print(std::cerr);
+              abort();
+            }
+            converge_count++;
+          }
+          else if (n_ptcl>2||ax<0||once_flag) {
+            ds_use = std::min(dscoff*c.calc_next_step_custom(),ds_up_limit);
+            once_flag=false;
+          }
+        }
       }
 
       // error record
@@ -241,9 +331,9 @@ private:
       
 
       c.center_shift_inverse();
+
 //      if (!arout.is_open()) arout.open("arout");
 //      for (int i=0;i<n_ptcl;i++) arout<<std::setprecision(17)<<time_origin_<<" "<<ptcl_org[i].mass<<" "<<ptcl_org[i].pos<<" "<<ptcl_org[i].vel<<std::endl;
-      /// end ARC (L.Wang)
     }
 
 public:
@@ -259,10 +349,13 @@ public:
 
     /// start set Chainpars (L.Wang)
     ///
-    void setARCParam(const PS::F64 energy_error=1e-10, const PS::F64 dterr=1e-9, const PS::F64 dtmin=1e-24, const PS::S32 exp_method=1, const PS::S32 exp_itermax=20, const PS::S32 exp_fix_iter=0) {
-      ARC_control.setA(Newtonian_cut_AW,Newtonian_cut_Ap);
+    void setARCParam(const PS::F64 energy_error=1e-10, const PS::F64 dterr=1e-9, const PS::F64 dtmin=1e-24, const PS::S32 exp_method=1, const PS::S32 exp_itermax=20, const PS::S32 den_intpmax=20, const PS::S32 exp_fix_iter=0) {
+      ARC_control.setA(Newtonian_cut_AW,Newtonian_cut_Ap,Newtonian_timescale);
       ARC_control.setabg(0,1,0);
-      ARC_control.setEXP(energy_error,dtmin,dterr,exp_itermax,exp_method,3,(bool)exp_fix_iter);
+      ARC_control.setErr(energy_error,dtmin,dterr);
+      ARC_control.setIterSeq(exp_itermax,3,den_intpmax);
+      ARC_control.setIntp(exp_method);
+      ARC_control.setIterConst((bool)exp_fix_iter);
       ARC_control.setAutoStep(3);
     }
     /// end set Chainpars (L.Wang)
@@ -327,12 +420,14 @@ public:
     }
 
     void setParam(const PS::F64 _rout, 
-                  const PS::F64 _rin, 
+                  const PS::F64 _rin,
+                  const PS::F64 _eps,
                   const PS::F64 _dt_limit_hard,
                   const PS::F64 _time_origin){
         /// Set chain pars (L.Wang)
-        ARC_int_pars[0] = _rout; 
-        ARC_int_pars[1] = _rin;
+        Int_pars.rout = _rout; 
+		Int_pars.rin  = _rin;
+        Int_pars.eps2  = _eps*_eps;
         /// Set chain pars (L.Wang)        
         dt_limit_hard_ = _dt_limit_hard;
         time_origin_ = _time_origin;

@@ -44,150 +44,33 @@
 //#include"cluster.hpp"
 #include"cluster_list.hpp"
 
-/*
-template<class Tsys, class Ttree>
-void CalcForce(PS::DomainInfo & dinfo, Tsys & system, Ttree & tree){
-    const PS::F64vec root_cen(0.0);
-    const PS::F64 root_len = GetRootFullLenght(system, root_cen);
-    tree.setParticleLocalTree(system);
-    tree.setRootCell(root_len, root_cen);
-    tree.mortonSortLocalTreeOnly();
-    tree.linkCellLocalTreeOnly();
-    tree.calcMomentLocalTreeOnly();
-    tree.exchangeLocalEssentialTree(dinfo);
-    tree.setLocalEssentialTreeToGlobalTree();
-    tree.mortonSortGlobalTreeOnly();
-    tree.linkCellGlobalTreeOnly();
-    tree.calcMomentGlobalTreeOnly();
-    tree.makeIPGroup();
-#ifdef USE_QUAD
-    tree.calcForce(CalcForceEpEpWithLinearCutoff(), CalcForceEPSPQuad(), true);
-#else
-    tree.calcForce(CalcForceEpEpWithLinearCutoff(), CalcForceEPSPMono(), true);
-#endif
-    const PS::S32 n_loc = system.getNumberOfParticleLocal();
-#pragma omp parallel for
-    for(PS::S32 i=0; i<n_loc; i++){
-        system[i].copyFromForce(tree.getForce(i));
-    }
-}
-*/
-
-PS::F64 GetQuantizedValue(const PS::F64 & val){
-    static const PS::F64 inv_log2 = 1.0 / log(2.0);
-    PS::F64 log2val = log(val) * inv_log2;
-    log2val = (log2val > 0.0) ? log2val : log2val - 1.0;
-    PS::S32 power = (PS::S32)(log2val);
-    return pow(2.0, (PS::F64)(power));
-
-}
-
-bool GetFlagSnpWithEnergy(const char sinput[]){
-    bool flag = true;
-    if(PS::Comm::getRank() == 0){
-	std::ifstream fin;
-	fin.open(sinput);
-	std::cout<<"sinput:"<<sinput<<std::endl;
-	std::string line;
-	getline(fin, line);
-	std::stringstream ss(line);
-	std::string str;
-	PS::S32 ncnt = 0;
-	while(ss>>str){
-	    std::cout<<"str: "<<str<<std::endl;
-	    ncnt++;
-	}
-	std::cout<<"line="<<line<<std::endl;
-	std::cout<<"ncnt="<<ncnt<<std::endl;
-	if(ncnt == 2){ flag = false; }
-	else if(ncnt == 12){ flag = true; }
-	else{
-	    std::cerr<<"input file is wrong format"<<std::endl;
-	    PS::Abort();
-	}
-    }
-    PS::Comm::broadcast(&flag, 1, 0);
-    return flag;
-}
-
-template<class Tpsys>
-PS::F64 GetRootFullLenght(const Tpsys & psys, const PS::F64vec & cen){
-    PS::S64 nloc = psys.getNumberOfParticleLocal();
-    PS::F64 len_loc_max = 0.0;
-    for(PS::S32 i=0; i<nloc; i++){
-	PS::F64vec dr = psys[i].pos - cen;
-	for(PS::S32 k=0; k<3; k++){
-	    if(len_loc_max < dr[k]) len_loc_max = dr[k];
-	}
-    }
-    return 2.1*fabs(PS::Comm::getMaxValue(len_loc_max));
-}
-
 class FileHeader{
 public:
+    PS::S64 nfile;  // file id
     PS::S64 n_body;
     PS::F64 time;
     FileHeader(){
         n_body = 0;
         time = 0.0;
     }
-    FileHeader(const PS::S64 n, const PS::F64 t){
+    FileHeader(const PS::S64 ni, const PS::S64 n, const PS::F64 t){
+        nfile = ni;
         n_body = n;
         time = t;
     }
     PS::S32 readAscii(FILE * fp){
-        fscanf(fp, "%lld\t%lf\n", &n_body, &time);
-	std::cout<<"n_body="<<n_body<<" time="<<time<<std::endl;
+        PS::S32 rcount=fscanf(fp, "%lld\t%lld\t%lf\n", &nfile, &n_body, &time);
+        if (rcount<3) {
+          std::cerr<<"Error: cannot read header, please check your data file header!\n";
+          abort();
+        }
+        std::cout<<"Number of particles ="<<n_body<<";  Time="<<time<<std::endl;
         return n_body;
     }
     void writeAscii(FILE* fp) const{
-        fprintf(fp, "%lld\t%lf\n", n_body, time);
+        fprintf(fp, "%lld\t%lld\t%lf\n", nfile, n_body, time);
     }
 };
-
-//class FileHeaderWithEnergy{
-//public:
-//    PS::S64 n_body;
-//    PS::F64 time;
-//    Energy eng_init;
-//    Energy eng_now;
-//    FileHeaderWithEnergy(){
-//        n_body = 0;
-//        time = 0.0;
-//        eng_init.clear();
-//        eng_now.clear();
-//    }
-//    FileHeaderWithEnergy(const PS::S64 n, const PS::F64 t, const Energy & e_i, const Energy & e_n){
-//        n_body = n;
-//        time = t;
-//    eng_init = e_i;
-//    eng_now = e_n;
-//    }
-//    PS::S32 readAscii(FILE * fp){
-//        fscanf(fp, "%lld%lf %lf%lf%lf %lf%lf%lf\n", 
-//           &n_body, &time, 
-//           &eng_init.kin, &eng_init.pot, &eng_init.tot,
-//           &eng_now.kin,  &eng_now.pot,  &eng_now.tot);
-//    std::cout<<"n_body="<<n_body<<" time="<<time<<std::endl;
-//        return n_body;
-//    }
-//    void writeAscii(FILE* fp) const{
-//        fprintf(fp, "%lld\t%lf\t%.15e\t%.15e\t%.15e\t%.15e\t%.15e\t%.15e\n", 
-//    	n_body, time, 
-//    	eng_init.kin, eng_init.pot, eng_init.tot,
-//    	eng_now.kin,  eng_now.pot,  eng_now.tot);
-//    }
-// 
-//};
-
-//template<class Tpsys>
-//PS::F64 GetMassMax(const Tpsys & system, const PS::S64 n){
-//    PS::F64 m_max_loc = -1.0;
-//    for(PS::S64 i=0; i<n; i++){
-//        if(m_max_loc < system[i].mass) m_max_loc = system[i].mass;
-//    }
-//    return PS::Comm::getMaxValue(m_max_loc);
-//}
 
 template<class Tpsys, class Ttree>
 void Kick(Tpsys & system,
@@ -214,12 +97,15 @@ void Drift(Tpsys & system,
     }
 }
 
-
+// Obtain Radius parameters
 template<class Tpsys>
-PS::F64 GetRSearch(const Tpsys & system_soft,
-		   const PS::F64 r_out,
-		   const PS::F64 search_factor,
-		   const PS::F64 dt){
+void GetR(PS::F64 &r_in,
+          PS::F64 &r_out,
+          PS::F64 &r_search,
+          PS::F64 &dt,
+          const Tpsys & system_soft,
+          const PS::F64 ratio_r_cut,
+          const PS::F64 search_factor){
     const PS::S32 n_loc = system_soft.getNumberOfParticleLocal();
     PS::F64vec vel_cm_loc = 0.0;
     PS::F64 mass_cm_loc = 0.0;
@@ -231,14 +117,27 @@ PS::F64 GetRSearch(const Tpsys & system_soft,
     PS::F64vec vel_cm_glb  = PS::Comm::getSum(vel_cm_loc);
     vel_cm_glb /= mass_cm_glb;
     PS::F64 vel_sq_loc = 0.0;
-    for(PS::S32 i=0; i<n_loc; i++){
-	PS::F64vec dv = system_soft[i].vel - vel_cm_glb;
-	vel_sq_loc += dv * dv;
+    for (PS::S32 i=0; i<n_loc; i++){
+      PS::F64vec dv = system_soft[i].vel - vel_cm_glb;
+      vel_sq_loc += dv * dv;
     }
+
     const PS::S32    n_glb      = PS::Comm::getSum(n_loc);
-    const PS::F64 vel_sq_glb = PS::Comm::getSum(vel_sq_loc);
-    const PS::F64    vel_disp   = sqrt(vel_sq_glb) / n_glb;
-    return r_out + vel_disp*dt*search_factor;
+    const PS::F64    vel_sq_glb = PS::Comm::getSum(vel_sq_loc);
+    const PS::F64    vel_disp   = sqrt(vel_sq_glb / 3.0 / (PS::F64)n_glb);
+
+    PS::F64 average_mass_glb = mass_cm_glb/(PS::F64)n_glb;
+
+    r_in = 3.0*average_mass_glb / (vel_disp*vel_disp);
+    r_out = r_in / ratio_r_cut;
+    r_search = r_out*(1.0 + search_factor);
+    PS::F64 dt_origin = r_out / vel_disp;
+    dt = 1.0;
+    if (dt_origin<1) while (dt>dt_origin) dt *= 0.5;
+    else {
+      while (dt<=dt_origin) dt *= 2.0;
+      dt *= 0.5;
+    }
 }
 
 #ifdef USE_QUAD
@@ -282,7 +181,7 @@ int main(int argc, char *argv[]){
 //    PS::F64 dEerr_mbody_loc = 0.0;
 //    PS::F64 dEerr_mbody_glb = 0.0;
 //#endif
-    PS::F64 ratio_r_cut = 0.1;
+    PS::F64 ratio_r_cut = 0.5;
     PS::F64 time_sys = 0.0;
     PS::F64 theta = 0.4;
     PS::S32 n_leaf_limit = 8;
@@ -294,55 +193,51 @@ int main(int argc, char *argv[]){
     //    PS::F64 eta_s = eta * 0.1;
     //    char dir_name[1024];
     PS::S64 n_glb = 16384;
+    PS::S64 n_bin = 0;
     PS::F64 dt_snp = 1.0 / 16.0;
-    PS::F64 search_factor = 3.0; 
+    PS::F64 search_factor = 0.1; 
     PS::F64 dt_limit_hard_factor = 4.0;
-    PS::F64 r_out = 1.0 / 256.0;
-    PS::F64 eps = 0;
+    PS::F64 eps = 1e-8;
+    //    PS::F64 r_out = 1.0 / 256.0;
     int c;
-#ifdef READ_FILE
-    PS::S64 snp_id = 0;
-    char sinput[2048];
-    while((c=getopt(argc,argv,"i:I:d:t:T:n:s:S:l:r:X:h")) != -1){
+    bool reading_flag=false;
+
+    while((c=getopt(argc,argv,"id:t:T:e:n:N:b:s:S:l:r:X:h")) != -1){
         switch(c){
-//        case 'e':
-//            eps = atof(optarg);
-//            break;
         case 'i':
-            sprintf(sinput, optarg);
-            std::cerr<<"sinput="<<sinput<<std::endl;
-            break;
-        case 'I':
-            snp_id = atoi(optarg);
-            std::cerr<<"snp_id="<<snp_id<<std::endl;
+            reading_flag=true;
             break;
 //        case 'o':
 //            sprintf(dir_name, optarg);
 //            std::cerr<<"dir_name="<<dir_name<<std::endl;
 //            break;
-        case 'd':
-            dt_soft = 1.0 / atof(optarg);
-            std::cerr<<"dt_soft="<<dt_soft<<std::endl;
-            break;
-//        case 'D':
-//            dt_snp = atof(optarg);
-//            std::cerr<<"dt_snp="<<dt_snp<<std::endl;
-//            break;
-//        case 'E':
-//            eta = atof(optarg);
-//            std::cerr<<"eta="<<eta<<std::endl;
+//        case 'd':
+//            dt_soft = 1.0 / atof(optarg);
+//            std::cerr<<"tree time step="<<dt_soft<<std::endl;
 //            break;
         case 't':
             theta = atof(optarg);
-            std::cerr<<"theta="<<theta<<std::endl;
+            std::cerr<<"tree openning angle theta="<<theta<<std::endl;
             break;
         case 'T':
             time_end = atof(optarg);
-            std::cerr<<"time_end="<<time_end<<std::endl;
+            std::cerr<<"finishing time="<<time_end<<std::endl;
+            break;
+        case 'e':
+            eps = atof(optarg);
+            std::cerr<<"softening="<<eps<<std::endl;
             break;
         case 'n':
             n_group_limit = atoi(optarg);
             std::cerr<<"n_group_limit="<<n_group_limit<<std::endl;
+            break;
+        case 'N':
+            n_glb = atol(optarg);
+            std::cerr<<"Total number of particles="<<n_glb<<std::endl;
+            break;
+        case 'b':
+            n_bin = atol(optarg);
+            std::cerr<<"Binary number="<<n_bin<<std::endl;
             break;
         case 's':
             n_smp_ave = atoi(optarg);
@@ -350,138 +245,63 @@ int main(int argc, char *argv[]){
             break;
         case 'S':
             search_factor = atoi(optarg);
-            std::cerr<<"search_factor="<<search_factor<<std::endl;
+            std::cerr<<"neighbor searching factor="<<search_factor<<std::endl;
             break;
         case 'l':
             n_leaf_limit = atoi(optarg);
             std::cerr<<"n_leaf_limit="<<n_leaf_limit<<std::endl;
             break;
         case 'r':
-            r_out = atof(optarg);
+            ratio_r_cut = atof(optarg);
+            std::cerr<<"r_in/r_out="<<ratio_r_cut<<std::endl;
             break;
         case 'X':
             dt_limit_hard_factor = atof(optarg);
-            std::cerr<<"dt_limit_hard_factor="<<dt_limit_hard_factor<<std::endl;
+            std::cerr<<"soft (tree) time step/hard time step="<<dt_limit_hard_factor<<std::endl;
             assert(dt_limit_hard_factor > 0.0);
             break;
         case 'h':
-            std::cerr<<"i: input_file"<<std::endl;
-            std::cerr<<"I: snp_id"<<std::endl;
-            //            std::cerr<<"o: dir name of output"<<std::endl;
-            std::cerr<<"d: inv_dt (dafult 16 ~ 0.01yr  )"<<std::endl;
-            //            std::cerr<<"D: dt_snp (dafult 100 ~ 16yr  )"<<std::endl;
-            //            std::cerr<<"E: eta (dafult 0.1)"<<std::endl;
-            std::cerr<<"t: theta (dafult: 0.5)"<<std::endl;
-            std::cerr<<"T: time_end (dafult: 6000 ~ 1000yr)"<<std::endl;
-            std::cerr<<"n: n_group_limit (dafult: 64.0)"<<std::endl;
-            std::cerr<<"s: n_smp_ave (dafult: 100)"<<std::endl;
-            std::cerr<<"S: search_factor (dafult: 3.0)"<<std::endl;
-            std::cerr<<"l: n_leaf_limit (dafult: 8)"<<std::endl;
-            std::cerr<<"r: r_out (dafult: 1/256)"<<std::endl;
-            std::cerr<<"X: dt_limit_hard_factor(dafult: 4.0 -> dt_limit_hard = dt_soft/4.0)"<<std::endl;
+            std::cerr<<"  -i:     enable reading data file (default: disabled with Plummer model)"<<std::endl;
+            //              std::cerr<<"o: dir name of output"<<std::endl;
+            //            std::cerr<<"  -d: [F] tree time step (default: "<<dt_soft<<")"<<std::endl;
+            std::cerr<<"  -t: [F] openning angle theta (default: "<<theta<<")"<<std::endl;
+            std::cerr<<"  -T: [F] finishing time (default: "<<time_end<<")"<<std::endl;
+            std::cerr<<"  -e: [F] softening parameter (default: "<<eps<<")"<<std::endl;
+            std::cerr<<"  -n: [I] n_group_limit (default: "<<n_group_limit<<")"<<std::endl;
+            std::cerr<<"  -N: [I] total number of particles if no -i used (default: "<<n_glb<<")"<<std::endl;
+            std::cerr<<"  -b: [I] binary number (default: "<<n_bin<<")"<<std::endl;
+            std::cerr<<"  -s: [I] n_smp_ave (default: "<<n_smp_ave<<")"<<std::endl;
+            std::cerr<<"  -S: [F] neighbor searching factor (default: "<<search_factor<<")"<<std::endl;
+            std::cerr<<"  -l: [I] n_leaf_limit (default: "<<n_leaf_limit<<")"<<std::endl;
+            std::cerr<<"  -r: [F] r_in / r_out (default: "<<ratio_r_cut<<")"<<std::endl;
+            std::cerr<<"  -X: [F] soft (tree) time step/hard time step (default: "<<dt_limit_hard_factor<<")"<<std::endl;
             PS::Finalize();
             return 0;
         }
     }
-#else // not READ_FILE
-    //    PS::S32 seed = 0;
-    while((c=getopt(argc,argv,"d:t:T:n:N:s:S:l:r:X:h")) != -1){
-        switch(c){
-//        case 'e':
-//            eps = atof(optarg);
-//            break;
-//        case 'o':
-//            sprintf(dir_name,optarg);
-//            break;
-        case 'd':
-            dt_soft = 1.0 / atof(optarg);
-            break;
-//        case 'D':
-//            dt_snp = atof(optarg);
-//            break;
-//        case 'E':
-//            eta = atof(optarg);
-//            break;
-        case 't':
-            theta = atof(optarg);
-            break;
-        case 'T':
-            time_end = atof(optarg);
-            break;
-        case 'n':
-            n_group_limit = atoi(optarg);
-            break;
-        case 'N':
-            n_glb = atol(optarg);
-            break;
-        case 's':
-            n_smp_ave = atoi(optarg);
-            break;
-        case 'S':
-            search_factor = atoi(optarg);
-            break;
-        case 'l':
-            n_leaf_limit = atoi(optarg);
-            break;
-        case 'r':
-            r_out = atof(optarg);
-            break;
-//        case 'x':
-//            seed = atoi(optarg);
-//            break;
-        case 'X':
-            dt_limit_hard_factor = atof(optarg);
-	    assert(dt_limit_hard_factor > 0.0);
-            break;
-        case 'h':
-          //	    std::cerr<<"e: softening (dafule 1/64)"<<std::endl;
-          //            std::cerr<<"o: dir name of output"<<std::endl;
-            std::cerr<<"d: inv_dt (dafult 256 )"<<std::endl;
-            //            std::cerr<<"D: dt_snp (dafult 100 )"<<std::endl;
-            //            std::cerr<<"E: eta (dafult 0.1)"<<std::endl;
-            std::cerr<<"t: theta (dafult: 0.5)"<<std::endl;
-            std::cerr<<"T: time_end (dafult: 8000 ~ 1yr)"<<std::endl;
-            std::cerr<<"n: n_group_limit (dafult: 64.0)"<<std::endl;
-            std::cerr<<"N: n_glb (dafult: 16384)"<<std::endl;
-            std::cerr<<"s: n_smp_ave (dafult: 100)"<<std::endl;
-            std::cerr<<"S: search_factor (dafult: 3.0)"<<std::endl;
-            std::cerr<<"l: n_leaf_limit (dafult: 8)"<<std::endl;
-            std::cerr<<"r: r_out (dafult: 1/256)"<<std::endl;
-            //            std::cerr<<"x: seed (dafult: 0)"<<std::endl;
-            std::cerr<<"X: dt_limit_hard_factor(dafult: 4.0 -> dt_limit_hard = dt_soft/4.0)"<<std::endl;
-            PS::Finalize();
-            return 0;
-        }
-    }
-#endif//READ_FILE
 
     SystemSoft system_soft;
     system_soft.initialize();
     system_soft.setAverageTargetNumberOfSampleParticlePerProcess(n_smp_ave);
     PS::S32 n_loc;
-
-#ifdef READ_FILE
-    FileHeader file_header_read;
-    system_soft.readParticleAscii(sinput, file_header_read);
-    time_sys = file_header_read.time;
-    PS::Comm::broadcast(&time_sys, 1, 0);
-//    std::cerr<<"system_soft[0].mass= "<<system_soft[0].mass<<"system_soft[0].pos= "<<system_soft[0].pos<<std::endl;
-    n_glb = system_soft.getNumberOfParticleGlobal();
-//    std::cerr<<"n_glb= "<<n_glb<<std::endl;
-    n_loc = system_soft.getNumberOfParticleLocal();
-//    std::cerr<<"n_loc= "<<n_loc<<std::endl;
-    for(PS::S32 i=0; i<n_loc; i++){
-      system_soft[i].id = i;
-    }
-#else    
-    SetParticlePlummer(system_soft, n_glb, n_loc, time_sys);
-#endif
     
+    FileHeader file_header;
+    if (reading_flag) {
+      char* sinput=argv[argc-1];
+      system_soft.readParticleAscii(sinput, file_header);
+      time_sys = file_header.time;
+      PS::Comm::broadcast(&time_sys, 1, 0);
+      n_glb = system_soft.getNumberOfParticleGlobal();
+      n_loc = system_soft.getNumberOfParticleLocal();
+      //      for(PS::S32 i=0; i<n_loc; i++) system_soft[i].id = i;
+    }
+    else SetParticlePlummer(system_soft, n_glb, n_loc, time_sys);
+
     PS::Comm::barrier();
 
-    PS::F64 r_in = r_out * ratio_r_cut;
-    PS::F64 r_search = GetRSearch(system_soft, r_out, search_factor, dt_soft);
-    std::cerr<<"r_search= "<<r_search<<std::endl;
+    PS::F64 r_in, r_out, r_search;
+    GetR(r_in, r_out, r_search, dt_soft, system_soft, ratio_r_cut, search_factor);
+    std::cerr<<"r_search= "<<r_search<<" r_out="<<r_out<<" r_in="<<r_in<<" dt_soft="<<dt_soft<<std::endl;
     EPJSoft::r_search = r_search;
     EPISoft::r_out    = r_out;
     EPISoft::r_in     = r_in;
@@ -514,24 +334,24 @@ int main(int argc, char *argv[]){
                                        dinfo);
 
     SystemHard system_hard_one_cluster;
-    system_hard_one_cluster.setParam(r_out, r_in, dt_soft/dt_limit_hard_factor, time_sys);
+    system_hard_one_cluster.setParam(r_out, r_in, eps, dt_soft/dt_limit_hard_factor, time_sys);
     // system_hard_one_cluster.setARCParam();
     SystemHard system_hard_isolated;
-    system_hard_isolated.setParam(r_out, r_in, dt_soft/dt_limit_hard_factor, time_sys);
+    system_hard_isolated.setParam(r_out, r_in, eps,  dt_soft/dt_limit_hard_factor, time_sys);
     system_hard_isolated.setARCParam();
     SystemHard system_hard_conected;
-    system_hard_conected.setParam(r_out, r_in, dt_soft/dt_limit_hard_factor, time_sys);
+    system_hard_conected.setParam(r_out, r_in, eps, dt_soft/dt_limit_hard_factor, time_sys);
     system_hard_conected.setARCParam();
 
     SearchCluster search_cluster;
     search_cluster.initialize();
     search_cluster.searchNeighborAndCalcHardForceOMP<SystemSoft, Tree, EPJSoft>
-	(system_soft, tree_soft, r_out, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
+      (system_soft, tree_soft, r_out, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
 
     Energy eng_init, eng_now;
-    //#ifndef READ_FILE
+
     eng_init.calc(system_soft, true);
-    //#endif
+
     eng_init.dump(std::cerr);
     eng_now = eng_init;
 
@@ -640,7 +460,7 @@ int main(int argc, char *argv[]){
         wtime_soft_search_neighbor_offset = PS::GetWtime();
         
         search_cluster.searchNeighborAndCalcHardForceOMP<SystemSoft, Tree, EPJSoft>
-            (system_soft, tree_soft, r_out, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
+          (system_soft, tree_soft, r_out, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
         
         wtime_soft_search_neighbor += PS::GetWtime() - wtime_soft_search_neighbor_offset;
         
@@ -712,8 +532,12 @@ int main(int argc, char *argv[]){
                      <<"n_ptcl_hard_isolated_cluster/dn_loop= "   <<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop<<std::endl
                      <<"n_ptcl_hard_nonisolated_cluster/dn_loop= "<<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop<<std::endl;
 
+#ifdef ARC_ERROR
+            std::cerr<<"NHist: ";
+            for (PS::S32 i=0;i<20;i++) std::cerr<<system_hard_isolated.N_count[i]<<" ";
+            std::cerr<<std::endl;
+#endif
             
-
             fprofile<<time_sys<<" "
                     <<n_loop<<" "
                     <<n_glb<<" "
@@ -732,7 +556,33 @@ int main(int argc, char *argv[]){
                     <<system_hard_isolated.ARC_error+system_hard_conected.ARC_error<<" "
 #endif              
                     <<std::endl;
+            
+            file_header.time = time_sys;
+            file_header.nfile++;
+            char sout[99] = "data.";
+            sprintf(&sout[5],"%lld",file_header.nfile);
+            system_soft.writeParticleAscii(sout, file_header);
 
+            if (n_bin>0) {
+              char bout[99] = "bin.";
+              sprintf(&bout[4],"%lld",file_header.nfile);
+              FILE* bfout=fopen(bout,"w");
+              for (PS::S64 k=0; k<n_bin; k++) {
+                PS::F64 ax,ecc,inc,OMG,omg,tperi,anomaly;
+                anomaly=PosVel2OrbParam(ax,ecc,inc,OMG,omg,tperi,
+                                        system_soft[2*k].pos, system_soft[2*k+1].pos,
+                                        system_soft[2*k].vel, system_soft[2*k+1].vel,
+                                        system_soft[2*k].mass,system_soft[2*k+1].mass);
+                FPSoft pcm;
+                calc_center_of_mass(pcm, &(system_soft[2*k]), 2);
+                
+                fprintf(bfout,"%lld %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e\n",
+                        k, ax, ecc, inc, OMG, omg, tperi, anomaly, system_soft[2*k].mass, system_soft[2*k+1].mass,
+                        pcm.pos[0],pcm.pos[1],pcm.pos[2],pcm.vel[0],pcm.vel[1],pcm.vel[2]);
+              }
+              fclose(bfout);
+            }
+            
             wtime_tot = 0.0;
             wtime_hard_tot = wtime_hard_1st_block = wtime_hard_2nd_block = wtime_hard_3rd_block = 0.0;
             wtime_soft_tot = wtime_soft_search_neighbor = 0.0;
