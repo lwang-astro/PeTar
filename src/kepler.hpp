@@ -1,6 +1,5 @@
 #pragma once
 
-#include"class.hpp"
 #include"matrix3.hpp"
 
 // a: semi-major axis

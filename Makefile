@@ -57,7 +57,7 @@ CXXFLAGS += -DARC_ERROR
 
 VPATH=./src
 
-SRC = main.cc hard.hpp class.hpp force.hpp io.hpp kepler.hpp phantomquad_for_p3t_x86.hpp domain.hpp profile.hpp cluster_list.hpp
+SRC = main.cc hard.hpp soft.hpp force.hpp io.hpp kepler.hpp phantomquad_for_p3t_x86.hpp domain.hpp profile.hpp cluster_list.hpp
 
 all: nbody.out
 

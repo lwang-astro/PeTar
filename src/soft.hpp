@@ -176,13 +176,21 @@ public:
         }
         PS::S32 n = sys.getNumberOfParticleLocal();
         PS::F64 pot_loc = 0.0;
+        //        PS::F64 pot_d   = 0.0;
         PS::F64 kin_loc = 0.0;
+        //#pragma omp parallel for reduction(+:pot_d) reduction (+:pot_loc) reduction(+:kin_loc)
         for(PS::S32 i=0; i<n; i++){
-            pot_loc += 0.5 * sys[i].mass * sys[i].pot_tot;
-            kin_loc += 0.5 * sys[i].mass * sys[i].vel * sys[i].vel;
+          pot_loc += 0.5 * sys[i].mass * sys[i].pot_tot;
+//          for (PS::S32 j=0; j<i; j++)  {
+//            PS::F64vec dr = sys[i].pos-sys[j].pos;
+//            PS::F64 drm = 1.0/sqrt(dr[0]*dr[0]+dr[1]*dr[1]+dr[2]*dr[2]+EPISoft::eps*EPISoft::eps);
+//            pot_d += - sys[i].mass * sys[j].mass * drm;
+//          }
+          kin_loc += 0.5 * sys[i].mass * sys[i].vel * sys[i].vel;
         }
         this->kin += PS::Comm::getSum(kin_loc);
         this->pot += PS::Comm::getSum(pot_loc);
+        //        std::cerr<<"Pot diff="<<PS::Comm::getSum(pot_loc)-pot<<std::endl;
         this->tot = this->kin + this->pot;
     }
 

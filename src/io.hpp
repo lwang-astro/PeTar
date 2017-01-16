@@ -355,20 +355,18 @@ void SetParticlePlummer(Tpsys & psys,
 
 }
 
-template<class Tpsys, class Tpsoft>
+template<class Tpsys, class Fheader, class Tpsoft>
 void WriteFile(const Tpsys & psys,
                const char * file_name,
-               const PS::F64 time_sys){
+               const Fheader & file_header){
     PS::S32 my_rank = PS::Comm::getRank();
     PS::S32 n_proc = PS::Comm::getNumberOfProc();
     const PS::S64 n_glb = psys.getNumberOfParticleGlobal();
     const PS::S32 n_loc = psys.getNumberOfParticleLocal();
-    std::ofstream fout;
+    FILE* fout;
     if(my_rank == 0){
-        fout.open(file_name);
-        fout<<std::setprecision(15);
-        fout<<n_glb<<std::endl;
-        fout<<time_sys<<std::endl;
+      fout=fopen(file_name,"w");
+      file_header.writeAscii(fout);
     }
     const PS::S32 n_tmp = 10;
     //FPSoft * ptcl_loc = new FPSoft[n_tmp];
@@ -378,38 +376,38 @@ void WriteFile(const Tpsys & psys,
     PS::S32 * n_ptcl_array = new PS::S32[n_proc];
     PS::S32 * n_ptcl_disp = new PS::S32[n_proc+1];
     for(PS::S32 i=0; i<(n_glb-1)/n_tmp+1; i++){
-	PS::S32 i_head = i * n_tmp;
-	PS::S32 i_tail = (i+1) * n_tmp;
-	PS::S32 n_cnt = 0;
-	for(PS::S32 j=0; j<n_loc; j++){
+      PS::S32 i_head = i * n_tmp;
+      PS::S32 i_tail = (i+1) * n_tmp;
+      PS::S32 n_cnt = 0;
+      for(PS::S32 j=0; j<n_loc; j++){
 	    if( i_head<=psys[j].id && psys[j].id<i_tail){
-		ptcl_loc[n_cnt].id = psys[j].id;
-		ptcl_loc[n_cnt].mass = psys[j].mass;
-		ptcl_loc[n_cnt].pos = psys[j].pos;
-		ptcl_loc[n_cnt].vel = psys[j].vel;
-		n_cnt++;
+          ptcl_loc[n_cnt].id = psys[j].id;
+          ptcl_loc[n_cnt].mass = psys[j].mass;
+          ptcl_loc[n_cnt].pos = psys[j].pos;
+          ptcl_loc[n_cnt].vel = psys[j].vel;
+          ptcl_loc[n_cnt].acc = psys[j].acc;
+          ptcl_loc[n_cnt].pot_tot = psys[j].pot_tot;
+          ptcl_loc[n_cnt].n_ngb = psys[j].n_ngb;
+          n_cnt++;
 	    }
-	}
-	PS::Comm::allGather(&n_cnt, 1, n_ptcl_array);
-	n_ptcl_disp[0] = 0;
-	for(PS::S32 j=0; j<n_proc; j++){
+      }
+      PS::Comm::allGather(&n_cnt, 1, n_ptcl_array);
+      n_ptcl_disp[0] = 0;
+      for(PS::S32 j=0; j<n_proc; j++){
 	    n_ptcl_disp[j+1] = n_ptcl_disp[j] + n_ptcl_array[j];
-	}
-	PS::Comm::gatherV(ptcl_loc, n_cnt, ptcl_glb, n_ptcl_array, n_ptcl_disp);
-	if(my_rank == 0){
+      }
+      PS::Comm::gatherV(ptcl_loc, n_cnt, ptcl_glb, n_ptcl_array, n_ptcl_disp);
+      if(my_rank == 0){
 	    const PS::S32 n = n_ptcl_disp[n_proc];
 	    //std::sort(ptcl_glb, ptcl_glb+n, SortID());
 	    std::sort(ptcl_glb, ptcl_glb+n,
 		      //[](const FPSoft & left, const FPSoft & right)->bool{return left.id < right.id;}
 		      [](const Tpsoft & left, const Tpsoft & right)->bool{return left.id < right.id;}
 		      );
-	    for(PS::S32 j=0; j<n; j++){
-		fout<<ptcl_glb[j].id<<"   "<<ptcl_glb[j].mass<<"   "<<ptcl_glb[j].pos<<"   "<<ptcl_glb[j].vel<<std::endl;
-		//fout<<ptcl_glb[j].mass<<"   "<<ptcl_glb[j].pos<<"   "<<ptcl_glb[j].vel<<std::endl;
-	    }
-	}
+	    for(PS::S32 j=0; j<n; j++) ptcl_glb[j].writeAscii(fout);
+      }
     }
-    fout.close();
+    if(my_rank==0) fclose(fout);
 }
 
 /*

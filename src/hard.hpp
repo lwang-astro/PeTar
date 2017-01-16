@@ -209,9 +209,7 @@ private:
           
           
           // integration of center-of-mass
-          pcm.setPos(pcm.getPos()[0] + pcm.getVel()[0]*time_end,
-                     pcm.getPos()[1] + pcm.getVel()[1]*time_end,
-                     pcm.getPos()[2] + pcm.getVel()[2]*time_end);
+          pcm.pos += pcm.vel * time_end;
 
           center_of_mass_correction(pcm, ptcl_org, n_ptcl);
           
@@ -325,10 +323,7 @@ private:
 #endif
       
       // integration of center-of-mass
-      c.cm.setPos(c.cm.getPos()[0] + c.cm.getVel()[0]*time_end,
-				  c.cm.getPos()[1] + c.cm.getVel()[1]*time_end,
-				  c.cm.getPos()[2] + c.cm.getVel()[2]*time_end);
-      
+      c.cm.pos += c.cm.vel * time_end;
 
       c.center_shift_inverse();
 

@@ -34,7 +34,7 @@
 #include<unordered_map>
 #endif //USE_C03
 #include<particle_simulator.hpp>
-#include"class.hpp"
+#include"soft.hpp"
 #include"hard.hpp"
 #include"kepler.hpp"
 #include"io.hpp"
@@ -105,16 +105,24 @@ void GetR(PS::F64 &r_in,
           PS::F64 &dt,
           const Tpsys & system_soft,
           const PS::F64 ratio_r_cut,
+          const PS::F64 gmin,
           const PS::F64 search_factor){
     const PS::S32 n_loc = system_soft.getNumberOfParticleLocal();
     PS::F64vec vel_cm_loc = 0.0;
     PS::F64 mass_cm_loc = 0.0;
+    PS::F64 mmax_loc = system_soft[0].mass;
+    //    PS::F64 mmin_loc = mmax_loc;
     for(PS::S32 i=0; i<n_loc; i++){
-	mass_cm_loc += system_soft[i].mass;
-	vel_cm_loc += system_soft[i].mass * system_soft[i].vel;
+      mass_cm_loc += system_soft[i].mass;
+      vel_cm_loc += system_soft[i].mass * system_soft[i].vel;
+      if (system_soft[i].mass>mmax_loc) mmax_loc = system_soft[i].mass;
+      //      if (system_soft[i].mass<mmin_loc) mmin_loc = system_soft[i].mass;
     }
     PS::F64    mass_cm_glb = PS::Comm::getSum(mass_cm_loc);
     PS::F64vec vel_cm_glb  = PS::Comm::getSum(vel_cm_loc);
+    PS::F64    mmax = PS::Comm::getMaxValue(mmax_loc);
+    //    PS::F64    mmin = PS::Comm::getMaxValue(mmin_loc);
+      
     vel_cm_glb /= mass_cm_glb;
     PS::F64 vel_sq_loc = 0.0;
     for (PS::S32 i=0; i<n_loc; i++){
@@ -128,10 +136,15 @@ void GetR(PS::F64 &r_in,
 
     PS::F64 average_mass_glb = mass_cm_glb/(PS::F64)n_glb;
 
-    r_in = 3.0*average_mass_glb / (vel_disp*vel_disp);
-    r_out = r_in / ratio_r_cut;
+    if (r_out>0) {
+      r_in = r_out * ratio_r_cut;
+    }
+    else {
+      r_in = 3.0*average_mass_glb / (vel_disp*vel_disp);
+      r_out = 2.33 * r_in *pow(mmax/average_mass_glb/gmin,1.0/7.0);
+    }
     r_search = r_out*(1.0 + search_factor);
-    PS::F64 dt_origin = r_out / vel_disp;
+    PS::F64 dt_origin = 0.5*r_in / vel_disp;
     dt = 1.0;
     if (dt_origin<1) while (dt>dt_origin) dt *= 0.5;
     else {
@@ -198,11 +211,12 @@ int main(int argc, char *argv[]){
     PS::F64 search_factor = 0.1; 
     PS::F64 dt_limit_hard_factor = 4.0;
     PS::F64 eps = 1e-8;
-    //    PS::F64 r_out = 1.0 / 256.0;
+    PS::F64 r_out = 0.0;
+    PS::F64 g_min = 1e-6;
     int c;
     bool reading_flag=false;
 
-    while((c=getopt(argc,argv,"id:t:T:e:n:N:b:s:S:l:r:X:h")) != -1){
+    while((c=getopt(argc,argv,"id:t:T:e:n:N:b:s:S:g:l:r:R:X:h")) != -1){
         switch(c){
         case 'i':
             reading_flag=true;
@@ -244,8 +258,12 @@ int main(int argc, char *argv[]){
             std::cerr<<"n_smp_ave="<<n_smp_ave<<std::endl;
             break;
         case 'S':
-            search_factor = atoi(optarg);
+            search_factor = atof(optarg);
             std::cerr<<"neighbor searching factor="<<search_factor<<std::endl;
+            break;
+        case 'g':
+            g_min = atof(optarg);
+            std::cerr<<"Perturber parameter gamma minimum="<<g_min<<std::endl;
             break;
         case 'l':
             n_leaf_limit = atoi(optarg);
@@ -254,6 +272,10 @@ int main(int argc, char *argv[]){
         case 'r':
             ratio_r_cut = atof(optarg);
             std::cerr<<"r_in/r_out="<<ratio_r_cut<<std::endl;
+            break;
+        case 'R':
+            r_out = atof(optarg);
+            std::cerr<<"r_out="<<r_out<<std::endl;
             break;
         case 'X':
             dt_limit_hard_factor = atof(optarg);
@@ -272,8 +294,10 @@ int main(int argc, char *argv[]){
             std::cerr<<"  -b: [I] binary number (default: "<<n_bin<<")"<<std::endl;
             std::cerr<<"  -s: [I] n_smp_ave (default: "<<n_smp_ave<<")"<<std::endl;
             std::cerr<<"  -S: [F] neighbor searching factor (default: "<<search_factor<<")"<<std::endl;
+            std::cerr<<"  -g: [F} perturber parameter gamma minimum (default: "<<g_min<<")"<<std::endl;
             std::cerr<<"  -l: [I] n_leaf_limit (default: "<<n_leaf_limit<<")"<<std::endl;
             std::cerr<<"  -r: [F] r_in / r_out (default: "<<ratio_r_cut<<")"<<std::endl;
+            std::cerr<<"  -R: [F] r_out (default: autodetermine)"<<std::endl;
             std::cerr<<"  -X: [F] soft (tree) time step/hard time step (default: "<<dt_limit_hard_factor<<")"<<std::endl;
             PS::Finalize();
             return 0;
@@ -299,13 +323,14 @@ int main(int argc, char *argv[]){
 
     PS::Comm::barrier();
 
-    PS::F64 r_in, r_out, r_search;
-    GetR(r_in, r_out, r_search, dt_soft, system_soft, ratio_r_cut, search_factor);
-    std::cerr<<"r_search= "<<r_search<<" r_out="<<r_out<<" r_in="<<r_in<<" dt_soft="<<dt_soft<<std::endl;
+    PS::F64 r_in, r_search;
+    GetR(r_in, r_out, r_search, dt_soft, system_soft, ratio_r_cut, g_min, search_factor);
+    EPISoft::r_out = r_out;
+    EPISoft::r_in  = r_in;
     EPJSoft::r_search = r_search;
-    EPISoft::r_out    = r_out;
-    EPISoft::r_in     = r_in;
     EPISoft::eps      = eps;
+    
+    std::cerr<<"r_search= "<<EPJSoft::r_search<<" r_out="<<EPISoft::r_out<<" r_in="<<EPISoft::r_in<<" dt_soft="<<dt_soft<<std::endl;
 
     const PS::F32 coef_ema = 0.2;
     PS::DomainInfo dinfo;
@@ -334,19 +359,19 @@ int main(int argc, char *argv[]){
                                        dinfo);
 
     SystemHard system_hard_one_cluster;
-    system_hard_one_cluster.setParam(r_out, r_in, eps, dt_soft/dt_limit_hard_factor, time_sys);
+    system_hard_one_cluster.setParam(EPISoft::r_out, EPISoft::r_in, eps, dt_soft/dt_limit_hard_factor, time_sys);
     // system_hard_one_cluster.setARCParam();
     SystemHard system_hard_isolated;
-    system_hard_isolated.setParam(r_out, r_in, eps,  dt_soft/dt_limit_hard_factor, time_sys);
+    system_hard_isolated.setParam(EPISoft::r_out, EPISoft::r_in, eps,  dt_soft/dt_limit_hard_factor, time_sys);
     system_hard_isolated.setARCParam();
     SystemHard system_hard_conected;
-    system_hard_conected.setParam(r_out, r_in, eps, dt_soft/dt_limit_hard_factor, time_sys);
+    system_hard_conected.setParam(EPISoft::r_out, EPISoft::r_in, eps, dt_soft/dt_limit_hard_factor, time_sys);
     system_hard_conected.setARCParam();
 
     SearchCluster search_cluster;
     search_cluster.initialize();
     search_cluster.searchNeighborAndCalcHardForceOMP<SystemSoft, Tree, EPJSoft>
-      (system_soft, tree_soft, r_out, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
+      (system_soft, tree_soft, EPISoft::r_out, EPISoft::r_in, pos_domain, EPISoft::eps*EPISoft::eps);
 
     Energy eng_init, eng_now;
 
@@ -460,7 +485,7 @@ int main(int argc, char *argv[]){
         wtime_soft_search_neighbor_offset = PS::GetWtime();
         
         search_cluster.searchNeighborAndCalcHardForceOMP<SystemSoft, Tree, EPJSoft>
-          (system_soft, tree_soft, r_out, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
+          (system_soft, tree_soft, EPISoft::r_out, EPISoft::r_in, pos_domain, EPISoft::eps*EPISoft::eps);
         
         wtime_soft_search_neighbor += PS::GetWtime() - wtime_soft_search_neighbor_offset;
         
@@ -561,7 +586,8 @@ int main(int argc, char *argv[]){
             file_header.nfile++;
             char sout[99] = "data.";
             sprintf(&sout[5],"%lld",file_header.nfile);
-            system_soft.writeParticleAscii(sout, file_header);
+            WriteFile<SystemSoft, FileHeader, FPSoft>(system_soft, sout, file_header);
+//            system_soft.writeParticleAscii(sout, file_header);
 
             if (n_bin>0) {
               char bout[99] = "bin.";
