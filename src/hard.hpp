@@ -9,6 +9,7 @@
 
 #include"kepler.hpp"
 #include"force.hpp"
+#include"soft.hpp"
 #include"AR.h" /// include AR.h (L.Wang)
 #include"cstdlib"
 //#include"stdio.h" /// for debug (L.Wang)
@@ -52,6 +53,7 @@ public:
     PS::F64 mass;
     PS::F64vec pos;
     PS::F64vec vel;
+    PS::F64 r_search;
     PS::S32 id_cluster;
     PS::S32 adr_org;
     static PS::F64 r_factor;
@@ -61,8 +63,9 @@ public:
              const PS::F64 _mass, 
              const PS::F64vec & _pos, 
              const PS::F64vec & _vel,
+             const PS::F64 _r_search,
              const PS::S32 _id_cluster,
-             const PS::S32 _adr_org): id(_id), mass(_mass), pos(_pos), vel(_vel), 
+             const PS::S32 _adr_org): id(_id), mass(_mass), pos(_pos), vel(_vel), r_search(_r_search),
                                      id_cluster(_id_cluster), adr_org(_adr_org){}
 
   /// start Particle member function (L.Wang)
@@ -148,6 +151,7 @@ private:
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_;
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_disp_;
     PS::F64 time_origin_;
+    PS::F64 gamma_;
 
     ///////////
     /// functor
@@ -204,7 +208,7 @@ private:
           Tptcl pcm;
           calc_center_of_mass(pcm, ptcl_org, n_ptcl, true);
 
-          DriveKeplerAxEcc(ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel,
+          DriveKeplerOrbParam(ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel,
                            ptcl_org[0].mass, ptcl_org[1].mass, time_end, ax, ecc, inc, OMG, omg, ecc_anomaly_old);
           
           
@@ -217,8 +221,15 @@ private:
           //std::cerr<<"A:n_ptcl="<<n_ptcl<<"; ax="<<ax<<"; ecc="<<ecc<<"; peri="<<tperi<<"; pid"<<ptcl_org[0].id<<std::endl;
 //          if (!kout.is_open()) kout.open("kout");
 //          for (int i=0;i<n_ptcl;i++) kout<<std::setprecision(17)<<time_origin_<<" "<<ptcl_org[i].mass<<" "<<ptcl_org[i].pos<<" "<<ptcl_org[i].vel<<std::endl;
+
+          PS::F64 peri = ax*(1+ecc)*gamma_;
+          if (peri>1.2*ptcl_org[0].r_search || peri<0.8*ptcl_org[0].r_search || ptcl_org[0].r_search!= ptcl_org[1].r_search)
+            ptcl_org[0].r_search = ptcl_org[1].r_search = peri;
           return;
         }
+      }
+      else if(n_ptcl==3) {
+        
       }
       
       ARC::chain<Tptcl,ARC_int_pars> c((std::size_t)n_ptcl,ARC_control);
@@ -315,6 +326,15 @@ private:
         }
       }
 
+      // update Rsearch
+      PS::S32* list=new PS::S32[n_ptcl];
+      Tptcl** plist=new Tptcl*[n_ptcl];
+      c.getList(list);
+      for (PS::S32 i=0; i<n_ptcl; i++) plist[i] = &(ptcl_org[list[i]]);
+      updateRsearch(plist,n_ptcl,Int_pars.rin,gamma_);
+      delete[] list;
+      delete[] plist;
+
       // error record
 #ifdef ARC_ERROR
       PS::F64 ARC_error_temp = (c.getPot()+c.getEkin()-ARC_error_once);
@@ -371,13 +391,13 @@ public:
             if(med[i].adr_sys_ < 0) continue;
             if(med[i].rank_send_ != PS::Comm::getRank()) continue;
             const FPSoft & p = sys[med[i].adr_sys_];
-            ptcl_hard_.push_back(PtclHard(p.id, p.mass, p.pos, p.vel, 
+            ptcl_hard_.push_back(PtclHard(p.id, p.mass, p.pos, p.vel, p.r_search,
                                           med[i].id_cluster_, med[i].adr_sys_));
         }
 
         for(PS::S32 i=0; i<ptcl_recv.size(); i++){
             const Tptcl & p = ptcl_recv[i];
-            ptcl_hard_.push_back(PtclHard(p.id_, p.mass_, p.pos_, p.vel_, 
+            ptcl_hard_.push_back(PtclHard(p.id_, p.mass_, p.pos_, p.vel_, p.r_search_,
                                           p.id_cluster_, -(i+1)));
         }
 
@@ -418,7 +438,8 @@ public:
                   const PS::F64 _rin,
                   const PS::F64 _eps,
                   const PS::F64 _dt_limit_hard,
-                  const PS::F64 _time_origin){
+                  const PS::F64 _time_origin,
+                  const PS::F64 _gmin){
         /// Set chain pars (L.Wang)
         Int_pars.rout = _rout; 
 		Int_pars.rin  = _rin;
@@ -426,6 +447,7 @@ public:
         /// Set chain pars (L.Wang)        
         dt_limit_hard_ = _dt_limit_hard;
         time_origin_ = _time_origin;
+        gamma_ = std::pow(1.0/_gmin,0.33333);
     }
 
 
@@ -444,6 +466,7 @@ public:
             ptcl_hard_[i].mass = sys[adr].mass;
             ptcl_hard_[i].pos  = sys[adr].pos;
             ptcl_hard_[i].vel  = sys[adr].vel;
+            ptcl_hard_[i].r_search = sys[adr].r_search;
             //n_ptcl_in_cluster_[i] = 1;
         }
     }
@@ -462,6 +485,7 @@ public:
             ptcl_hard_[i].mass = sys[adr].mass;
             ptcl_hard_[i].pos  = sys[adr].pos;
             ptcl_hard_[i].vel  = sys[adr].vel;
+            ptcl_hard_[i].r_search = sys[adr].r_search;
             //n_ptcl_in_cluster_[i] = 1;
         }
     }
@@ -470,6 +494,7 @@ public:
         const PS::S32 n = ptcl_hard_.size();
         for(PS::S32 i=0; i<n; i++){
             ptcl_hard_[i].pos += ptcl_hard_[i].vel * dt;
+            ptcl_hard_[i].r_search = Int_pars.rin;
 	    /*
             DriveKeplerRestricted(mass_sun_, 
                                   pos_sun_, ptcl_hard_[i].pos, 
@@ -483,6 +508,7 @@ public:
 #pragma omp for schedule(dynamic)
         for(PS::S32 i=0; i<n; i++){
             ptcl_hard_[i].pos += ptcl_hard_[i].vel * dt;
+            ptcl_hard_[i].r_search = Int_pars.rin;
 	    /*
             DriveKeplerRestricted(mass_sun_, 
                                   pos_sun_, ptcl_hard_[i].pos, 
@@ -501,6 +527,7 @@ public:
             sys[adr].mass = ptcl_hard_[i].mass;
             sys[adr].pos  = ptcl_hard_[i].pos;
             sys[adr].vel  = ptcl_hard_[i].vel;
+            sys[adr].r_search = ptcl_hard_[i].r_search;
         }
     }
 
@@ -515,6 +542,7 @@ public:
             sys[adr].mass = ptcl_hard_[i].mass;
             sys[adr].pos  = ptcl_hard_[i].pos;
             sys[adr].vel  = ptcl_hard_[i].vel;
+            sys[adr].r_search = ptcl_hard_[i].r_search;
         }
     }
 // for one cluster
@@ -535,6 +563,7 @@ public:
             ptcl_hard_[i].mass = sys[adr].mass;
             ptcl_hard_[i].pos  = sys[adr].pos;
             ptcl_hard_[i].vel  = sys[adr].vel;
+            ptcl_hard_[i].r_search = sys[adr].r_search;
         }
         const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
         n_ptcl_in_cluster_.resizeNoInitialize(n_cluster);
@@ -571,6 +600,7 @@ public:
             ptcl_hard_[i].mass = sys[adr].mass;
             ptcl_hard_[i].pos  = sys[adr].pos;
             ptcl_hard_[i].vel  = sys[adr].vel;
+            ptcl_hard_[i].r_search = sys[adr].r_search;
         }
     }
 
@@ -616,3 +646,52 @@ public:
 	}
     }
 };
+
+template<class Tptcl>
+void updateRsearch(Tptcl** p, const PS::S32 n, const PS::F64 rin, const PS::F64 gamma) {
+  PS::S32 istart=0,icount=0,ioff[n];
+  PS::F64 apomax=0;
+  Tptcl* plist[n];
+  for(PS::S32 i=0; i<n; i++) {
+    PS::F64 ax,ecc,apo=0;
+    if(i<n-1) {
+      PosVel2AxEcc(ax,ecc,
+                 p[i]->pos, p[i+1]->pos,
+				 p[i]->vel, p[i+1]->vel,
+				 p[i]->mass,p[i+1]->mass);
+      apo=ax*(1.0+ecc);
+    }
+    if (apo>rin||i==n-1) {
+      if (i==istart) {
+        p[i]->r_search=rin;
+        plist[icount]=p[i];
+      }
+      else {
+        Tptcl** ptemp=new Tptcl*[i-istart+1];
+        apomax *=gamma;
+        for(PS::S32 j=istart; j<=i; j++) {
+          if(apomax>1.2*p[j]->r_search||apomax<0.8*p[j]->r_search) p[j]->r_search = apomax;
+          ptemp[j-istart]=p[j];
+        }
+        apomax = 0.0;
+        plist[icount]=new Tptcl;
+        calc_center_of_mass(*(plist[icount]),ptemp,i-istart+1);
+        delete[] ptemp;
+      }
+      istart = i+1;
+      ioff[icount] = istart;
+      icount++;
+    }
+    else if (apo>apomax) apomax=apo;
+  }
+  if (n>icount) {
+    updateRsearch(plist, icount, rin, gamma);
+    if(plist[0]->r_search>1.2*p[0]->r_search)
+      for (PS::S32 j=0; j<ioff[0]; j++) p[j]->r_search = plist[0]->r_search;
+    for (PS::S32 i=1; i<icount; i++) {
+      if (plist[i]->r_search>1.2*p[ioff[i-1]]->r_search)
+         for (PS::S32 j=ioff[i-1];j<ioff[i];j++) p[j]->r_search = plist[i]->r_search;
+      if (ioff[i]-ioff[i-1]>1) delete plist[i];
+    }
+  }
+}

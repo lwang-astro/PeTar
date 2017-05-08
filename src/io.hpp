@@ -1,5 +1,33 @@
 #pragma once
 
+class FileHeader{
+public:
+    PS::S64 nfile;  // file id
+    PS::S64 n_body;
+    PS::F64 time;
+    FileHeader(){
+        n_body = 0;
+        time = 0.0;
+    }
+    FileHeader(const PS::S64 ni, const PS::S64 n, const PS::F64 t){
+        nfile = ni;
+        n_body = n;
+        time = t;
+    }
+    PS::S32 readAscii(FILE * fp){
+        PS::S32 rcount=fscanf(fp, "%lld\t%lld\t%lf\n", &nfile, &n_body, &time);
+        if (rcount<3) {
+          std::cerr<<"Error: cannot read header, please check your data file header!\n";
+          abort();
+        }
+        std::cout<<"Number of particles ="<<n_body<<";  Time="<<time<<std::endl;
+        return n_body;
+    }
+    void writeAscii(FILE* fp) const{
+        fprintf(fp, "%lld\t%lld\t%lf\n", nfile, n_body, time);
+    }
+};
+
 // f(x) = x/sigma^2*exp(-x^2/(2sigma^2))
 // F(x) = 1.0 - exp(-x^2/(2sigma^2))
 // x = sqrt(-2*sigma^2*ln(1-F))

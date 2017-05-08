@@ -38,39 +38,12 @@
 #include"hard.hpp"
 #include"kepler.hpp"
 #include"io.hpp"
+#include"init.hpp"
 #include"profile.hpp"
 #include"domain.hpp"
 #include"AR.h" /// include AR.h (L.Wang)
 //#include"cluster.hpp"
 #include"cluster_list.hpp"
-
-class FileHeader{
-public:
-    PS::S64 nfile;  // file id
-    PS::S64 n_body;
-    PS::F64 time;
-    FileHeader(){
-        n_body = 0;
-        time = 0.0;
-    }
-    FileHeader(const PS::S64 ni, const PS::S64 n, const PS::F64 t){
-        nfile = ni;
-        n_body = n;
-        time = t;
-    }
-    PS::S32 readAscii(FILE * fp){
-        PS::S32 rcount=fscanf(fp, "%lld\t%lld\t%lf\n", &nfile, &n_body, &time);
-        if (rcount<3) {
-          std::cerr<<"Error: cannot read header, please check your data file header!\n";
-          abort();
-        }
-        std::cout<<"Number of particles ="<<n_body<<";  Time="<<time<<std::endl;
-        return n_body;
-    }
-    void writeAscii(FILE* fp) const{
-        fprintf(fp, "%lld\t%lld\t%lf\n", nfile, n_body, time);
-    }
-};
 
 template<class Tpsys, class Ttree>
 void Kick(Tpsys & system,
@@ -94,62 +67,6 @@ void Drift(Tpsys & system,
 	if(system[i].n_ngb <= 0){
             system[i].pos  += system[i].vel * dt;
         }
-    }
-}
-
-// Obtain Radius parameters
-template<class Tpsys>
-void GetR(PS::F64 &r_in,
-          PS::F64 &r_out,
-          PS::F64 &r_search,
-          PS::F64 &dt,
-          const Tpsys & system_soft,
-          const PS::F64 ratio_r_cut,
-          const PS::F64 gmin,
-          const PS::F64 search_factor){
-    const PS::S32 n_loc = system_soft.getNumberOfParticleLocal();
-    PS::F64vec vel_cm_loc = 0.0;
-    PS::F64 mass_cm_loc = 0.0;
-    PS::F64 mmax_loc = system_soft[0].mass;
-    //    PS::F64 mmin_loc = mmax_loc;
-    for(PS::S32 i=0; i<n_loc; i++){
-      mass_cm_loc += system_soft[i].mass;
-      vel_cm_loc += system_soft[i].mass * system_soft[i].vel;
-      if (system_soft[i].mass>mmax_loc) mmax_loc = system_soft[i].mass;
-      //      if (system_soft[i].mass<mmin_loc) mmin_loc = system_soft[i].mass;
-    }
-    PS::F64    mass_cm_glb = PS::Comm::getSum(mass_cm_loc);
-    PS::F64vec vel_cm_glb  = PS::Comm::getSum(vel_cm_loc);
-    PS::F64    mmax = PS::Comm::getMaxValue(mmax_loc);
-    //    PS::F64    mmin = PS::Comm::getMaxValue(mmin_loc);
-      
-    vel_cm_glb /= mass_cm_glb;
-    PS::F64 vel_sq_loc = 0.0;
-    for (PS::S32 i=0; i<n_loc; i++){
-      PS::F64vec dv = system_soft[i].vel - vel_cm_glb;
-      vel_sq_loc += dv * dv;
-    }
-
-    const PS::S32    n_glb      = PS::Comm::getSum(n_loc);
-    const PS::F64    vel_sq_glb = PS::Comm::getSum(vel_sq_loc);
-    const PS::F64    vel_disp   = sqrt(vel_sq_glb / 3.0 / (PS::F64)n_glb);
-
-    PS::F64 average_mass_glb = mass_cm_glb/(PS::F64)n_glb;
-
-    if (r_out>0) {
-      r_in = r_out * ratio_r_cut;
-    }
-    else {
-      r_in = 3.0*average_mass_glb / (vel_disp*vel_disp);
-      r_out = 2.33 * r_in *pow(mmax/average_mass_glb/gmin,1.0/7.0);
-    }
-    r_search = r_out*(1.0 + search_factor);
-    PS::F64 dt_origin = 0.5*r_in / vel_disp;
-    dt = 1.0;
-    if (dt_origin<1) while (dt>dt_origin) dt *= 0.5;
-    else {
-      while (dt<=dt_origin) dt *= 2.0;
-      dt *= 0.5;
     }
 }
 
@@ -323,14 +240,23 @@ int main(int argc, char *argv[]){
 
     PS::Comm::barrier();
 
-    PS::F64 r_in, r_search;
-    GetR(r_in, r_out, r_search, dt_soft, system_soft, ratio_r_cut, g_min, search_factor);
+    PS::F64 r_in, m_average, v_disp;
+    GetR(r_in, r_out, m_average, dt_soft, v_disp, system_soft, ratio_r_cut);
     EPISoft::r_out = r_out;
     EPISoft::r_in  = r_in;
-    EPJSoft::r_search = r_search;
-    EPISoft::eps      = eps;
+    EPISoft::eps   = eps;
+    EPJSoft::r_search_min = r_out*search_factor;
+    EPJSoft::m_average = m_average;
     
-    std::cerr<<"r_search= "<<EPJSoft::r_search<<" r_out="<<EPISoft::r_out<<" r_in="<<EPISoft::r_in<<" dt_soft="<<dt_soft<<std::endl;
+    std::cerr<<"m_average= "<<EPJSoft::m_average<<" r_out="<<EPISoft::r_out<<" r_in="<<EPISoft::r_in<<" dt_soft="<<dt_soft<<std::endl;
+
+    PS::S32 my_rank = PS::Comm::getRank();
+
+    // set r_search
+    if (my_rank==0) {
+      if(n_bin>0) SetBinaryRsearch(system_soft, n_bin, g_min, r_in);
+      SetSingleRsearch(system_soft, n_glb, n_bin, r_in);
+    }
 
     const PS::F32 coef_ema = 0.2;
     PS::DomainInfo dinfo;
@@ -344,7 +270,6 @@ int main(int argc, char *argv[]){
 
     n_loc = system_soft.getNumberOfParticleLocal();
 
-    PS::S32 my_rank = PS::Comm::getRank();
 #pragma omp parallel for
     for(PS::S32 i=0; i<n_loc; i++){
         system_soft[i].rank_org = my_rank;
@@ -359,13 +284,13 @@ int main(int argc, char *argv[]){
                                        dinfo);
 
     SystemHard system_hard_one_cluster;
-    system_hard_one_cluster.setParam(EPISoft::r_out, EPISoft::r_in, eps, dt_soft/dt_limit_hard_factor, time_sys);
+    system_hard_one_cluster.setParam(EPISoft::r_out, EPISoft::r_in, eps, dt_soft/dt_limit_hard_factor, time_sys, g_min);
     // system_hard_one_cluster.setARCParam();
     SystemHard system_hard_isolated;
-    system_hard_isolated.setParam(EPISoft::r_out, EPISoft::r_in, eps,  dt_soft/dt_limit_hard_factor, time_sys);
+    system_hard_isolated.setParam(EPISoft::r_out, EPISoft::r_in, eps,  dt_soft/dt_limit_hard_factor, time_sys, g_min);
     system_hard_isolated.setARCParam();
     SystemHard system_hard_conected;
-    system_hard_conected.setParam(EPISoft::r_out, EPISoft::r_in, eps, dt_soft/dt_limit_hard_factor, time_sys);
+    system_hard_conected.setParam(EPISoft::r_out, EPISoft::r_in, eps, dt_soft/dt_limit_hard_factor, time_sys, g_min);
     system_hard_conected.setARCParam();
 
     SearchCluster search_cluster;
@@ -390,20 +315,23 @@ int main(int argc, char *argv[]){
     PS::S32 n_loop = 0;
     PS::S32 dn_loop = 0;
     while(time_sys < time_end){
-      //      std::cerr<<"Time_sys = "<<time_sys<<std::endl;
+      
         wtime_tot_offset = PS::GetWtime();
         ////////////////
         ////// 1st kick
         Kick(system_soft, tree_soft, dt_soft*0.5);
-
-        wtime_hard_tot_offset = PS::GetWtime();
+        ////// 1st kick
+        ////////////////
         
+        ////////////////
+        wtime_hard_tot_offset = PS::GetWtime();
+        ////// set time
         system_hard_one_cluster.setTimeOrigin(time_sys);
         system_hard_isolated.setTimeOrigin(time_sys);
         system_hard_conected.setTimeOrigin(time_sys);
-        ////// 1st kick
+        ////// set time
         ////////////////
-
+        
         ////////////////
         ////// search cluster
         search_cluster.searchClusterLocal();
@@ -415,63 +343,47 @@ int main(int argc, char *argv[]){
         ////////////////
 
         ////////////////
-        ////// integrater one cluster
         wtime_hard_1st_block_offset = PS::GetWtime();
-
+        ////// integrater one cluster
         system_hard_one_cluster.initializeForOneCluster(search_cluster.getAdrSysOneCluster().size());
-
         system_hard_one_cluster.setPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
         system_hard_one_cluster.driveForOneCluster(dt_soft);
         system_hard_one_cluster.writeBackPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
-
-        wtime_hard_1st_block += PS::GetWtime() - wtime_hard_1st_block_offset;
-
         ////// integrater one cluster
+        wtime_hard_1st_block += PS::GetWtime() - wtime_hard_1st_block_offset;
         ////////////////
 
 
-        //std::cerr<<"check a"<<std::endl;
-
         /////////////
-        // integrate multi cluster A
         wtime_hard_2nd_block_offset = PS::GetWtime();
-
+        // integrate multi cluster A
         system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft,
                                                             search_cluster.adr_sys_multi_cluster_isolated_,
                                                             search_cluster.n_ptcl_in_multi_cluster_isolated_);
         system_hard_isolated.driveForMultiClusterOMP(dt_soft);
         system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_);
-
-        wtime_hard_2nd_block += PS::GetWtime() - wtime_hard_2nd_block_offset;
         // integrate multi cluster A
+        wtime_hard_2nd_block += PS::GetWtime() - wtime_hard_2nd_block_offset;
         /////////////
 
-        //std::cerr<<"check b"<<std::endl;
-
         /////////////
-        // integrate multi cluster B
         wtime_hard_3rd_block_offset = PS::GetWtime();
-
+        // integrate multi cluster B
         system_hard_conected.setPtclForConectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
         system_hard_conected.driveForMultiClusterOMP(dt_soft);
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_conected.getPtcl());
-
-        wtime_hard_3rd_block += PS::GetWtime() - wtime_hard_3rd_block_offset;
         // integrate multi cluster B
-        /////////////
-
-        //std::cerr<<"check c"<<std::endl;
-
+        wtime_hard_3rd_block += PS::GetWtime() - wtime_hard_3rd_block_offset;
         wtime_hard_tot += PS::GetWtime() - wtime_hard_tot_offset;
         /////////////
-        // Domain decomposition, parrticle exchange and force calculation
 
+        /////////////
         wtime_soft_tot_offset = PS::GetWtime();
+        // Domain decomposition, parrticle exchange and force calculation
 
         if(n_loop % 16 == 0) dinfo.decomposeDomainAll(system_soft);
         system_soft.exchangeParticle(dinfo);
         n_loc = system_soft.getNumberOfParticleLocal();
-        
 
 #pragma omp parallel for
         for(PS::S32 i=0; i<n_loc; i++){
@@ -494,8 +406,6 @@ int main(int argc, char *argv[]){
         // Domain decomposition, parrticle exchange and force calculation
         /////////////
 
-        //std::cerr<<"check d"<<std::endl;
-
         ////////////////
         ////// 2nd kick
         Kick(system_soft, tree_soft, dt_soft*0.5);
@@ -506,6 +416,7 @@ int main(int argc, char *argv[]){
         eng_now.calc(system_soft, true);
         
         wtime_tot += PS::GetWtime() - wtime_tot_offset;
+        /////////////
 
         Energy eng_diff = eng_now.calcDiff(eng_init);
         PS::S64 n_glb = system_soft.getNumberOfParticleGlobal();
@@ -589,25 +500,25 @@ int main(int argc, char *argv[]){
             WriteFile<SystemSoft, FileHeader, FPSoft>(system_soft, sout, file_header);
 //            system_soft.writeParticleAscii(sout, file_header);
 
-            if (n_bin>0) {
-              char bout[99] = "bin.";
-              sprintf(&bout[4],"%lld",file_header.nfile);
-              FILE* bfout=fopen(bout,"w");
-              for (PS::S64 k=0; k<n_bin; k++) {
-                PS::F64 ax,ecc,inc,OMG,omg,tperi,anomaly;
-                anomaly=PosVel2OrbParam(ax,ecc,inc,OMG,omg,tperi,
-                                        system_soft[2*k].pos, system_soft[2*k+1].pos,
-                                        system_soft[2*k].vel, system_soft[2*k+1].vel,
-                                        system_soft[2*k].mass,system_soft[2*k+1].mass);
-                FPSoft pcm;
-                calc_center_of_mass(pcm, &(system_soft[2*k]), 2);
-                
-                fprintf(bfout,"%lld %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e\n",
-                        k, ax, ecc, inc, OMG, omg, tperi, anomaly, system_soft[2*k].mass, system_soft[2*k+1].mass,
-                        pcm.pos[0],pcm.pos[1],pcm.pos[2],pcm.vel[0],pcm.vel[1],pcm.vel[2]);
-              }
-              fclose(bfout);
-            }
+//            if (n_bin>0) {
+//              char bout[99] = "bin.";
+//              sprintf(&bout[4],"%lld",file_header.nfile);
+//              FILE* bfout=fopen(bout,"w");
+//              for (PS::S64 k=0; k<n_bin; k++) {
+//                PS::F64 ax,ecc,inc,OMG,omg,tperi,anomaly;
+//                anomaly=PosVel2OrbParam(ax,ecc,inc,OMG,omg,tperi,
+//                                        system_soft[2*k].pos, system_soft[2*k+1].pos,
+//                                        system_soft[2*k].vel, system_soft[2*k+1].vel,
+//                                        system_soft[2*k].mass,system_soft[2*k+1].mass);
+//                FPSoft pcm;
+//                calc_center_of_mass(pcm, &(system_soft[2*k]), 2);
+//                
+//                fprintf(bfout,"%lld %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e\n",
+//                        k, ax, ecc, inc, OMG, omg, tperi, anomaly, system_soft[2*k].mass, system_soft[2*k+1].mass,
+//                        pcm.pos[0],pcm.pos[1],pcm.pos[2],pcm.vel[0],pcm.vel[1],pcm.vel[2]);
+//              }
+//              fclose(bfout);
+//            }
             
             wtime_tot = 0.0;
             wtime_hard_tot = wtime_hard_1st_block = wtime_hard_2nd_block = wtime_hard_3rd_block = 0.0;

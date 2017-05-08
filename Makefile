@@ -37,7 +37,7 @@ endif
 
 ifeq ($(use_x86),yes)
 CXX = time mpicxx
-CXXFLAGS = -O3 
+CXXFLAGS = -O3
 CXXFLAGS += -Wall
 CXXFLAGS += -march=core-avx2
 CXXFLAGS += -ffast-math -funroll-loops
@@ -66,6 +66,9 @@ nbody.out: $(SRC)
 
 ARC_debug.out: chain_debug.cxx force.hpp
 	$(CXX) $(PS_PATH) $(ARC_PATH) $(CXXFLAGS) -D DEBUG -o $@ $<
+
+rsearchtest: rsearchtest.cxx
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(CXXFLAGS) -o $@ $<
 
 clean:
 	rm *.out *.o

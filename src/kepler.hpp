@@ -118,11 +118,61 @@ double PosVel2OrbParam(double & ax,    double & ecc,
 
 
 
-void PosVel2AxEccInc(double & ax,    double & ecc,
-                     double & inc,   
-                     const PS::F64vec & pos0, const PS::F64vec & pos1,
-                     const PS::F64vec & vel0, const PS::F64vec & vel1,
-                     const double mass0, const double mass1){
+//void PosVel2AxEccInc(double & ax,    double & ecc,
+//                     double & inc,   
+//                     const PS::F64vec & pos0, const PS::F64vec & pos1,
+//                     const PS::F64vec & vel0, const PS::F64vec & vel1,
+//                     const double mass0, const double mass1){
+//    double m_tot = mass0 + mass1;
+//    PS::F64vec pos_red = pos1 - pos0;
+//    PS::F64vec vel_red = vel1 - vel0;
+//    double r_sq = pos_red * pos_red;
+//    double r = sqrt(r_sq);
+//    double inv_dr = 1.0 / r;
+//    double v_sq = vel_red * vel_red;
+//    ax = 1.0 / (2.0*inv_dr - v_sq / m_tot);
+//    PS::F64vec AM = pos_red ^ vel_red;
+//    inc = atan2( sqrt(AM.x*AM.x+AM.y*AM.y), AM.z);
+//    PS::F64 OMG = atan2(AM.x, -AM.y);
+//    PS::F64vec pos_bar, vel_bar;
+//    double cosOMG = cos(OMG);
+//    double sinOMG = sin(OMG);
+//    double cosinc = cos(inc);
+//    double sininc = sin(inc);
+//    pos_bar.x =   pos_red.x*cosOMG + pos_red.y*sinOMG;
+//    pos_bar.y = (-pos_red.x*sinOMG + pos_red.y*cosOMG)*cosinc + pos_red.z*sininc;
+//    pos_bar.z = 0.0;
+//    vel_bar.x =   vel_red.x*cosOMG + vel_red.y*sinOMG;
+//    vel_bar.y = (-vel_red.x*sinOMG + vel_red.y*cosOMG)*cosinc + vel_red.z*sininc;
+//    vel_bar.z = 0.0;
+//    double h = sqrt(AM*AM);
+//    double ecccosomg =  h/m_tot*vel_bar.y - pos_bar.x*inv_dr;
+//    double eccsinomg = -h/m_tot*vel_bar.x - pos_bar.y*inv_dr;
+//    ecc = sqrt( ecccosomg*ecccosomg + eccsinomg*eccsinomg );
+//}
+// 
+//// return semi major axis
+//double PosVel2Ax(const PS::F64vec & pos0, const PS::F64vec & pos1,
+//                 const PS::F64vec & vel0, const PS::F64vec & vel1,
+//                 const double mass0, const double mass1){
+//    //static const PS::F64 PI = 4.0 * atan(1.0);
+//    double m_tot = mass0 + mass1;
+//    //double m_red = (mass0*mass1)/m_tot;
+//    PS::F64vec pos_red = pos1 - pos0;
+//    PS::F64vec vel_red = vel1 - vel0;
+//    double r_sq = pos_red * pos_red;
+//    double r = sqrt(r_sq);
+//    double inv_dr = 1.0 / r;
+//    double v_sq = vel_red * vel_red;
+//    double ax = 1.0 / (2.0*inv_dr - v_sq / m_tot);
+//    return ax;
+//}
+
+void PosVel2AxEcc(double & ax,
+                  double & ecc,
+                  const PS::F64vec & pos0, const PS::F64vec & pos1,
+                  const PS::F64vec & vel0, const PS::F64vec & vel1,
+                  const double mass0, const double mass1) {
     double m_tot = mass0 + mass1;
     PS::F64vec pos_red = pos1 - pos0;
     PS::F64vec vel_red = vel1 - vel0;
@@ -131,44 +181,13 @@ void PosVel2AxEccInc(double & ax,    double & ecc,
     double inv_dr = 1.0 / r;
     double v_sq = vel_red * vel_red;
     ax = 1.0 / (2.0*inv_dr - v_sq / m_tot);
-    PS::F64vec AM = pos_red ^ vel_red;
-    inc = atan2( sqrt(AM.x*AM.x+AM.y*AM.y), AM.z);
-    PS::F64 OMG = atan2(AM.x, -AM.y);
-    PS::F64vec pos_bar, vel_bar;
-    double cosOMG = cos(OMG);
-    double sinOMG = sin(OMG);
-    double cosinc = cos(inc);
-    double sininc = sin(inc);
-    pos_bar.x =   pos_red.x*cosOMG + pos_red.y*sinOMG;
-    pos_bar.y = (-pos_red.x*sinOMG + pos_red.y*cosOMG)*cosinc + pos_red.z*sininc;
-    pos_bar.z = 0.0;
-    vel_bar.x =   vel_red.x*cosOMG + vel_red.y*sinOMG;
-    vel_bar.y = (-vel_red.x*sinOMG + vel_red.y*cosOMG)*cosinc + vel_red.z*sininc;
-    vel_bar.z = 0.0;
-    double h = sqrt(AM*AM);
-    double ecccosomg =  h/m_tot*vel_bar.y - pos_bar.x*inv_dr;
-    double eccsinomg = -h/m_tot*vel_bar.x - pos_bar.y*inv_dr;
-    ecc = sqrt( ecccosomg*ecccosomg + eccsinomg*eccsinomg );
+
+    double rs = 1.0 - r/ax;
+    double rv = pos_red * vel_red;
+    ecc = std::sqrt(rs*rs + rv*rv/(m_tot*ax));
 }
 
-// return semi major axis
-double PosVel2Ax(const PS::F64vec & pos0, const PS::F64vec & pos1,
-                 const PS::F64vec & vel0, const PS::F64vec & vel1,
-                 const double mass0, const double mass1){
-    //static const PS::F64 PI = 4.0 * atan(1.0);
-    double m_tot = mass0 + mass1;
-    //double m_red = (mass0*mass1)/m_tot;
-    PS::F64vec pos_red = pos1 - pos0;
-    PS::F64vec vel_red = vel1 - vel0;
-    double r_sq = pos_red * pos_red;
-    double r = sqrt(r_sq);
-    double inv_dr = 1.0 / r;
-    double v_sq = vel_red * vel_red;
-    double ax = 1.0 / (2.0*inv_dr - v_sq / m_tot);
-    return ax;
-}
-
-void DriveKeplerAxEcc(PS::F64vec & pos0,
+void DriveKeplerOrbParam(PS::F64vec & pos0,
                  PS::F64vec & pos1,
                  PS::F64vec & vel0,
                  PS::F64vec & vel1,
@@ -199,7 +218,7 @@ void DriveKepler(const PS::F64 mass0,
     PS::F64 ax, ecc, inc, OMG, omg, tperi, E;
     E = PosVel2OrbParam(ax, ecc, inc, OMG, omg, tperi,
                             pos0, pos1, vel0, vel1, mass0, mass1);
-    DriveKeplerAxEcc(pos0, pos1, vel0, vel1, mass0, mass1, dt, ax, ecc, inc, OMG, omg, E);
+    DriveKeplerOrbParam(pos0, pos1, vel0, vel1, mass0, mass1, dt, ax, ecc, inc, OMG, omg, E);
 }
 
 
@@ -242,6 +261,32 @@ void calc_center_of_mass(particle &cm, particle p[], const int num, const bool f
     for (std::size_t i=0;i<num;i++) {
       p[i].pos = p[i].pos - cmr;
       p[i].vel = p[i].vel - cmv;
+    }
+  }
+}
+
+template <class particle>
+void calc_center_of_mass(particle &cm, particle* p[], const int num, const bool fshift=false) {
+  PS::F64vec cmr=0;
+  PS::F64vec cmv=0;
+  PS::F64 cmm = 0;
+  for (std::size_t i=0;i<num;i++) {
+    cmr += p[i]->pos * p[i]->mass;
+    cmv += p[i]->vel * p[i]->mass;
+    cmm += p[i]->mass;
+  }
+  cmr /= cmm; 
+  cmv /= cmm; 
+      
+  cm.mass = cmm;
+  cm.pos = cmr;
+  cm.vel = cmv;
+
+  // shifting
+  if (fshift) {
+    for (std::size_t i=0;i<num;i++) {
+      p[i]->pos = p[i]->pos - cmr;
+      p[i]->vel = p[i]->vel - cmv;
     }
   }
 }

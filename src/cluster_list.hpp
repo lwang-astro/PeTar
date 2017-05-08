@@ -122,14 +122,16 @@ public:
     PS::F64 mass_;
     PS::F64vec pos_;
     PS::F64vec vel_;
+    PS::F64 r_search_;
     PS::S32 id_cluster_;
-    PtclComm(): id_(-1), mass_(0.0), pos_(0.0), vel_(0.0){}
-    PtclComm(const PS::S32 _id, const PS::F64 _mass, const PS::F64vec _pos, const PS::F64vec _vel):
-        id_(_id), mass_(_mass), pos_(_pos), vel_(_vel) {}
+  PtclComm(): id_(-1), mass_(0.0), pos_(0.0), vel_(0.0), r_search_(0.0) {}
+  PtclComm(const PS::S32 _id, const PS::F64 _mass, const PS::F64vec _pos, const PS::F64vec _vel, const PS::F64 _r_search):
+      id_(_id), mass_(_mass), pos_(_pos), vel_(_vel), r_search_(_r_search) {}
     void dump(){
         std::cout<<" id="<<id_<<" mass="<<mass_
                  <<" pos="<<pos_<<" vel="<<vel_
                  <<" id_cluster_="<<id_cluster_
+                 <<" r_search_="<<r_search_
                  <<std::endl;
     }
 };
@@ -773,7 +775,7 @@ public:
 		    mediator_sorted_id_cluster_[cluster_loc[i].adr_head_+ii].rank_send_ = rank_send_ref; // 2006.09.06
                     const auto &p = sys[adr_sys];
                     adr_sys_ptcl_send_.push_back(adr_sys);
-                    ptcl_send_.push_back(PtclComm(p.id, p.mass, p.pos, p.vel));
+                    ptcl_send_.push_back(PtclComm(p.id, p.mass, p.pos, p.vel, p.r_search));
                     ptcl_send_.back().id_cluster_ = cluster_loc[i].id_;
                     n_ptcl_send_.back()++;
                     n_cnt++;
