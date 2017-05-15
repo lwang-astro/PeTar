@@ -11,20 +11,6 @@ const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ = SAFTY_FACTOR_FOR_SEARCH * SAFTY_FACTO
 const PS::F64 SAFTY_OFFSET_FOR_SEARCH = 1e-7;
 //const PS::F64 SAFTY_OFFSET_FOR_SEARCH = 0.0;
 
-inline PS::F64 CalcK(const PS::F64 rij,
-                     const PS::F64 rout,
-                     const PS::F64 rin){
-    PS::F64 inv_dr = 1.0 / (rout-rin);
-    PS::F64 x = (rij - rin)*inv_dr;
-    x = (x < 1.0) ? x : 1.0;
-    x = (x > 0.0) ? x : 0.0;
-    PS::F64 x2 = x*x;
-    PS::F64 x4 = x2*x2;
-    PS::F64 k = (((-20.0*x+70.0)*x-84.0)*x+35.0)*x4;
-    std::max( std::min(k, 1.0), 0.0);
-    return k;
-}
-
 class ForceSoft{
 public:
     PS::F64vec acc; // soft
@@ -75,19 +61,19 @@ public:
                               &this->acc.x, &this->acc.y, &this->acc.z,  // 9-11
                               &this->pot_tot, &this->r_search, &this->n_ngb);
         if (rcount<14) {
-          std::cerr<<"Error: Data reading fails! requiring data number is 14, only obtain "<<rcount<<".\n";
-          abort();
+            std::cerr<<"Error: Data reading fails! requiring data number is 14, only obtain "<<rcount<<".\n";
+            abort();
         }
     }
     void dump(std::ofstream & fout){
-	fout<<"id= "<<id<<std::endl;
-	fout<<"adr= "<<adr<<std::endl;
-	fout<<"mass= "<<mass<<std::endl;
-	fout<<"pos= "<<pos<<std::endl;
-	fout<<"vel= "<<vel<<std::endl;
-	fout<<"acc= "<<acc<<std::endl;
-	fout<<"pot_tot= "<<pot_tot<<std::endl;
-    fout<<"r_search= "<<r_search<<std::endl;
+        fout<<"id= "<<id<<std::endl;
+        fout<<"adr= "<<adr<<std::endl;
+        fout<<"mass= "<<mass<<std::endl;
+        fout<<"pos= "<<pos<<std::endl;
+        fout<<"vel= "<<vel<<std::endl;
+        fout<<"acc= "<<acc<<std::endl;
+        fout<<"pot_tot= "<<pot_tot<<std::endl;
+        fout<<"r_search= "<<r_search<<std::endl;
     }
 };
 
@@ -95,14 +81,18 @@ class EPISoft{
 public:
     PS::S64 id;
     PS::F64vec pos;
+    PS::F64 r_search;
+    PS::S32 rank_org;
     static PS::F64 eps;
     static PS::F64 r_out;
     static PS::F64 r_in;
-    PS::S32 rank_org;
+//    static PS::F64 m_average;
+//    static PS::F64 r_search_min;
     PS::F64vec getPos() const { return pos;}
     void copyFromFP(const FPSoft & fp){ 
-        pos = fp.pos;
         id = fp.id;
+        pos = fp.pos;
+        r_search = fp.r_search;
         rank_org = fp.rank_org;
     }
     void dump(std::ostream & fout=std::cout) const {
@@ -111,6 +101,10 @@ public:
         fout<<"pos="<<pos<<std::endl;
         fout<<"eps="<<eps<<std::endl;
     }
+    PS::F64 getRSearch() const {
+//        return std::max(r_search * std::pow(2.0*mass/m_average,0.3333),r_search_min) * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+        return r_search * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+
 };
 
 PS::F64 EPISoft::eps = 1.0/1024.0;
@@ -126,14 +120,14 @@ public:
     PS::F64 r_search;
     PS::S32 rank_org;
     PS::S32 adr_org;
-    static PS::F64 m_average;
-    static PS::F64 r_search_min;
+//    static PS::F64 m_average;
+//    static PS::F64 r_search_min;
     void copyFromFP(const FPSoft & fp){
+        id = fp.id;
         mass = fp.mass;
         pos = fp.pos;
-        id = fp.id;
         vel = fp.vel;
-        r_search = std::max(fp.r_search * std::pow(2.0*mass/m_average,0.3333),r_search_min);
+        r_search = fp.r_search;
         rank_org = fp.rank_org;
         adr_org = fp.adr;
     }
@@ -141,8 +135,8 @@ public:
     void setPos(const PS::F64vec & pos_new){ pos = pos_new;}
     PS::F64 getCharge() const { return mass; }
     PS::F64 getRSearch() const {
-      //return std::max(r_search * std::pow(2.0*mass/m_average,0.3333),r_search_min) + SAFTY_OFFSET_FOR_SEARCH;
-      return (r_search * SAFTY_FACTOR_FOR_SEARCH) + SAFTY_OFFSET_FOR_SEARCH;
+//        return std::max(r_search * std::pow(2.0*mass/m_average,0.3333),r_search_min) * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+        return (r_search * SAFTY_FACTOR_FOR_SEARCH) + SAFTY_OFFSET_FOR_SEARCH;
     }
     // FORDEBUG
     void dump(std::ostream & fout=std::cout) const {
@@ -161,8 +155,10 @@ public:
     }
 };
 
-PS::F64 EPJSoft::m_average;
-PS::F64 EPJSoft::r_search_min;
+//PS::F64 EPJSoft::m_average;
+//PS::F64 EPJSoft::r_search_min;
+//PS::F64 EPISoft::m_average;
+//PS::F64 EPISoft::r_search_min;
 
 class Energy{
 public:
@@ -191,13 +187,13 @@ public:
         PS::F64 kin_loc = 0.0;
         //#pragma omp parallel for reduction(+:pot_d) reduction (+:pot_loc) reduction(+:kin_loc)
         for(PS::S32 i=0; i<n; i++){
-          pot_loc += 0.5 * sys[i].mass * sys[i].pot_tot;
+            pot_loc += 0.5 * sys[i].mass * sys[i].pot_tot;
 //          for (PS::S32 j=0; j<i; j++)  {
 //            PS::F64vec dr = sys[i].pos-sys[j].pos;
 //            PS::F64 drm = 1.0/sqrt(dr[0]*dr[0]+dr[1]*dr[1]+dr[2]*dr[2]+EPISoft::eps*EPISoft::eps);
 //            pot_d += - sys[i].mass * sys[j].mass * drm;
 //          }
-          kin_loc += 0.5 * sys[i].mass * sys[i].vel * sys[i].vel;
+            kin_loc += 0.5 * sys[i].mass * sys[i].vel * sys[i].vel;
         }
         this->kin += PS::Comm::getSum(kin_loc);
         this->pot += PS::Comm::getSum(pot_loc);

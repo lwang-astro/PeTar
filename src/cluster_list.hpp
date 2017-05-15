@@ -32,7 +32,7 @@ struct Cluster{
         id_(_id), n_ptcl_(_n_ptcl), n_ptcl_stored_(_n_ptcl_stored), 
         adr_head_(_adr_head), rank_(_rank){}
     void clear(){
-	id_ = -1; n_ptcl_ = 0; n_ptcl_stored_ = 0; adr_head_ = -1; rank_ = -1;
+        id_ = -1; n_ptcl_ = 0; n_ptcl_stored_ = 0; adr_head_ = -1; rank_ = -1;
     }
     void dump(){
         std::cout<<" id="<<id_<<" n_ptcl="<<n_ptcl_
@@ -60,8 +60,8 @@ struct PtclCluster{
         n_ngb_(_n_ngb), flag_searched_(_flag_searched), next_(_next), rank_org_(_rank_org), 
         id_cluster_(_id){}
     void clear(){
-	id_ = -1; adr_sys_ = -1; adr_ngb_head_ = -1; n_ngb_ = 0; 
-	flag_searched_ = false; next_ = NULL; rank_org_ = -1; id_cluster_ = id_;
+        id_ = -1; adr_sys_ = -1; adr_ngb_head_ = -1; n_ngb_ = 0; 
+        flag_searched_ = false; next_ = NULL; rank_org_ = -1; id_cluster_ = id_;
     }
     void dump(){
         std::cout<<" id="<<id_<<" adr_sys="<<adr_sys_<<" adr_ngb_head_="<<adr_ngb_head_
@@ -86,7 +86,7 @@ public:
     PtclOuter(const PS::S32 _id, const PS::S32 _id_ngb, const PS::S32 _rank_org): 
         id_(_id), id_ngb_(_id_ngb), rank_org_(_rank_org){}
     void clear(){
-	id_ = -1; id_ngb_ = -1; rank_org_ = -1;
+        id_ = -1; id_ngb_ = -1; rank_org_ = -1;
     }
     void dump(){
         std::cout<<" id="<<id_<<" id_ngb_="<<id_ngb_<<" rank_org_="<<rank_org_<<std::endl;
@@ -103,16 +103,16 @@ public:
     Mediator():id_(-1), adr_sys_(-1), adr_pcluster_(-1), id_cluster_(-1), rank_send_(-1){} 
     Mediator(const PS::S32 _id, const PS::S32 _adr_sys, 
              const PS::S32 _adr_pcluster, const PS::S32 _id_cluster,
-	     const PS::S32 _rank_send):
-	id_(_id), adr_sys_(_adr_sys), adr_pcluster_(_adr_pcluster), id_cluster_(_id_cluster),
-	rank_send_(_rank_send){}
+             const PS::S32 _rank_send):
+        id_(_id), adr_sys_(_adr_sys), adr_pcluster_(_adr_pcluster), id_cluster_(_id_cluster),
+        rank_send_(_rank_send){}
     void clear(){
-	id_ = -1; adr_sys_ = -1; adr_pcluster_ = -1; id_cluster_ = -1; rank_send_ = -1;
+        id_ = -1; adr_sys_ = -1; adr_pcluster_ = -1; id_cluster_ = -1; rank_send_ = -1;
     }
     void dump(){
         std::cout<<" id="<<id_<<" adr_sys="<<adr_sys_
                  <<" adr_pcluster_="<<adr_pcluster_<<" id_cluster="<<id_cluster_
-		 <<" rank_send_="<<rank_send_<<std::endl;
+                 <<" rank_send_="<<rank_send_<<std::endl;
     }
 };
 
@@ -124,9 +124,9 @@ public:
     PS::F64vec vel_;
     PS::F64 r_search_;
     PS::S32 id_cluster_;
-  PtclComm(): id_(-1), mass_(0.0), pos_(0.0), vel_(0.0), r_search_(0.0) {}
-  PtclComm(const PS::S32 _id, const PS::F64 _mass, const PS::F64vec _pos, const PS::F64vec _vel, const PS::F64 _r_search):
-      id_(_id), mass_(_mass), pos_(_pos), vel_(_vel), r_search_(_r_search) {}
+    PtclComm(): id_(-1), mass_(0.0), pos_(0.0), vel_(0.0), r_search_(0.0) {}
+    PtclComm(const PS::S32 _id, const PS::F64 _mass, const PS::F64vec _pos, const PS::F64vec _vel, const PS::F64 _r_search):
+        id_(_id), mass_(_mass), pos_(_pos), vel_(_vel), r_search_(_r_search) {}
     void dump(){
         std::cout<<" id="<<id_<<" mass="<<mass_
                  <<" pos="<<pos_<<" vel="<<vel_
@@ -137,18 +137,18 @@ public:
 };
 
 /*
-class exchangeInfo{
-    PS::ReallocatableArray<PS::S32> n_send_;
-    PS::ReallocatableArray<PS::S32> n_recv_;
-    PS::ReallocatableArray<PS::S32> n_disp_send_;
-    PS::ReallocatableArray<PS::S32> n_disp_recv_;
-    void set(const PS::S32 n_proc_send, const PS::S32 n_proc_recv){
-	n_send_.resizeNoInitialize(n_proc_send);
-	n_disp_send_.resizeNoInitialize(n_proc_send+1);
-	n_recv_.resizeNoInitialize(n_proc_recv);
-	n_disp_recv_.resizeNoInitialize(n_proc_recv+1);
-    }
-};
+  class exchangeInfo{
+  PS::ReallocatableArray<PS::S32> n_send_;
+  PS::ReallocatableArray<PS::S32> n_recv_;
+  PS::ReallocatableArray<PS::S32> n_disp_send_;
+  PS::ReallocatableArray<PS::S32> n_disp_recv_;
+  void set(const PS::S32 n_proc_send, const PS::S32 n_proc_recv){
+  n_send_.resizeNoInitialize(n_proc_send);
+  n_disp_send_.resizeNoInitialize(n_proc_send+1);
+  n_recv_.resizeNoInitialize(n_proc_recv);
+  n_disp_recv_.resizeNoInitialize(n_proc_recv+1);
+  }
+  };
 */
 
 class SearchCluster{
@@ -238,7 +238,7 @@ private:
     }
 
     void mergePtclCluster(const PS::ReallocatableArray<PtclOuter> ptcl_outer[],
-			  PS::ReallocatableArray< std::pair<PS::S32, PS::S32> > id_ngb_multi_cluster[]){
+                          PS::ReallocatableArray< std::pair<PS::S32, PS::S32> > id_ngb_multi_cluster[]){
         if(ptcl_outer[0].size() == 0) return;
         const PS::S32 size = ptcl_outer[0].size();
         PS::S32 id_tmp = ptcl_outer[0][0].id_;
@@ -254,8 +254,8 @@ private:
                 n_cnt = 0;
             }
             id_ngb_multi_cluster[0].push_back( std::pair<PS::S32, PS::S32>
-						(ptcl_outer[0][i].id_,
-						 ptcl_outer[0][i].id_ngb_));
+                                               (ptcl_outer[0][i].id_,
+                                                ptcl_outer[0][i].id_ngb_));
             n_cnt++;
         }
         ptcl_cluster_[0].push_back( PtclCluster(id_tmp, -1, adr_ngb_head, n_cnt, false, NULL, rank_tmp) );
@@ -364,7 +364,7 @@ public:
                              r_out,         r_in);
                         if( (nbl+ii)->rank_org != my_rank ){
                             ptcl_outer[ith].push_back(PtclOuter((nbl+ii)->id, sys[i].id, (nbl+ii)->rank_org));
-			    //n_tmp3++;
+                            //n_tmp3++;
                         }
                     }
                 }
@@ -423,15 +423,17 @@ public:
     void searchClusterLocal(){
         const PS::S32 my_rank = PS::Comm::getRank();
         const PS::S32 n_loc = ptcl_cluster_[0].size();
+
         adr_sys_multi_cluster_isolated_.clearSize();
-	for(PS::S32 i=0; i<mediator_sorted_id_cluster_.size(); i++){
-	    mediator_sorted_id_cluster_[i].clear();
-	}
+        for(PS::S32 i=0; i<mediator_sorted_id_cluster_.size(); i++){
+            mediator_sorted_id_cluster_[i].clear();
+        }
         mediator_sorted_id_cluster_.clearSize();
-	static PS::ReallocatableArray<Cluster> cluster_isolated;
-	for(PS::S32 i=0; i<cluster_isolated.size(); i++) cluster_isolated[i].clear();
+        static PS::ReallocatableArray<Cluster> cluster_isolated;
+        for(PS::S32 i=0; i<cluster_isolated.size(); i++) cluster_isolated[i].clear();
         cluster_isolated.clearSize();
         n_ptcl_in_multi_cluster_isolated_.clearSize();
+
         for(PS::S32 i=0; i<n_loc; i++){
             bool flag_isolated = true;
             if(ptcl_cluster_[0][i].flag_searched_ == false){
@@ -499,7 +501,7 @@ public:
         static PS::ReallocatableArray<MPI_Request> req_recv;
         static PS::ReallocatableArray<MPI_Status> stat_send;
         static PS::ReallocatableArray<MPI_Status> stat_recv;
-	rank_neighbor.clearSize();
+        rank_neighbor.clearSize();
         n_send.resizeNoInitialize(n_proc_tot);
         n_recv.resizeNoInitialize(n_proc_tot);
         n_send_disp.resizeNoInitialize(n_proc_tot+1);
@@ -577,15 +579,15 @@ public:
         for(PS::S32 i=0; i<n_send_disp.back(); i++){
             auto itr = id_to_adr_pcluster_.find(id_send[i]);
             assert(itr != id_to_adr_pcluster_.end());
-	    /*
-	    if(id_to_adr_pcluster_[id_send[i]] < n_pcluster_self_node_ && my_rank == 0){
-		std::cout<<"my_rank= "<<my_rank
-			 <<" id_send[i]= "<<id_send[i]
-			 <<" id_to_adr_pcluster_[id_send[i]]= "<<id_to_adr_pcluster_[id_send[i]]
-			 <<" n_pcluster_self_node_= "<<n_pcluster_self_node_
-			 <<std::endl;
-	    }
-	    */
+            /*
+              if(id_to_adr_pcluster_[id_send[i]] < n_pcluster_self_node_ && my_rank == 0){
+              std::cout<<"my_rank= "<<my_rank
+              <<" id_send[i]= "<<id_send[i]
+              <<" id_to_adr_pcluster_[id_send[i]]= "<<id_to_adr_pcluster_[id_send[i]]
+              <<" n_pcluster_self_node_= "<<n_pcluster_self_node_
+              <<std::endl;
+              }
+            */
             assert(id_to_adr_pcluster_[id_send[i]] >= n_pcluster_self_node_);
             adr_pcluster_recv_.push_back(id_to_adr_pcluster_[id_send[i]]);
         }
@@ -597,7 +599,7 @@ public:
     }
 
     void setIdClusterGlobalIteration(){
-      //        const PS::S32 my_rank = PS::Comm::getRank();
+        //        const PS::S32 my_rank = PS::Comm::getRank();
         const PS::S32 n_proc_tot = PS::Comm::getNumberOfProc();
         id_cluster_send_.resizeNoInitialize(n_cluster_disp_send_.back());
         id_cluster_recv_.resizeNoInitialize(n_cluster_disp_recv_.back());
@@ -668,7 +670,7 @@ public:
         PS::S32 my_rank = PS::Comm::getRank();
         PS::S32 n_proc = PS::Comm::getNumberOfProc();
         static PS::ReallocatableArray<Cluster> cluster_loc;
-	cluster_loc.clearSize();
+        cluster_loc.clearSize();
         if(mediator_sorted_id_cluster_.size() > 0){
             PS::S32 id_cluster_ref = mediator_sorted_id_cluster_[0].id_cluster_;
             cluster_loc.push_back( Cluster(id_cluster_ref, 0, 0, 0, my_rank) );
@@ -681,7 +683,7 @@ public:
                 cluster_loc.back().n_ptcl_++;
             }
         }
-	//std::cerr<<"sendAndRecvCluster 0: "<<my_rank<<std::endl;
+        //std::cerr<<"sendAndRecvCluster 0: "<<my_rank<<std::endl;
 
         static PS::ReallocatableArray<PS::S32> n_cluster_recv;
         static PS::ReallocatableArray<PS::S32> n_cluster_recv_disp;
@@ -708,10 +710,10 @@ public:
                                  n_cluster_recv.getPointer(), n_cluster_recv_disp.getPointer());
         }
 
-	//std::cerr<<"sendAndRecvCluster 1: "<<my_rank<<std::endl;
+        //std::cerr<<"sendAndRecvCluster 1: "<<my_rank<<std::endl;
 
-	// exchange cluster info
-	//////////////////////////
+        // exchange cluster info
+        //////////////////////////
 
         for(PS::S32 i0=0; i0<n_cluster_tot_loc; i0++){
             const PS::S32 id_cluster = cluster_loc[i0].id_;
@@ -720,23 +722,23 @@ public:
             PS::S32 n_ptcl_max = n_ptcl_in_cluster;
             for(PS::S32 i1=0; i1<n_proc; i1++){
                 if(i1 == my_rank) continue;
-		/*
-                if(my_rank == 0){
-                    std::cout<<"i1="<<i1<<std::endl;
-                    std::cout<<"n_cluster_recv_disp[i1]="<<n_cluster_recv_disp[i1]
-                             <<" n_cluster_recv_disp[i1+1]="<<n_cluster_recv_disp[i1+1]<<std::endl;
-                }
-		*/
+                /*
+                  if(my_rank == 0){
+                  std::cout<<"i1="<<i1<<std::endl;
+                  std::cout<<"n_cluster_recv_disp[i1]="<<n_cluster_recv_disp[i1]
+                  <<" n_cluster_recv_disp[i1+1]="<<n_cluster_recv_disp[i1+1]<<std::endl;
+                  }
+                */
                 for(PS::S32 i2=n_cluster_recv_disp[i1]; i2<n_cluster_recv_disp[i1+1]; i2++){
                     if(id_cluster == cluster_recv[i2].id_){
-			/*
-                        if(my_rank == 0){
-                            std::cout<<"cluster_recv[i2].id_="<<cluster_recv[i2].id_<<std::endl;
-                            std::cout<<"n_ptcl_in_cluster="<<n_ptcl_in_cluster<<std::endl;
-                            std::cout<<"cluster_recv[i2].n_ptcl_stored_="<<cluster_recv[i2].n_ptcl_stored_<<std::endl;
-                        }
-			*/
-			if( (n_ptcl_max < cluster_recv[i2].n_ptcl_stored_) ||
+                        /*
+                          if(my_rank == 0){
+                          std::cout<<"cluster_recv[i2].id_="<<cluster_recv[i2].id_<<std::endl;
+                          std::cout<<"n_ptcl_in_cluster="<<n_ptcl_in_cluster<<std::endl;
+                          std::cout<<"cluster_recv[i2].n_ptcl_stored_="<<cluster_recv[i2].n_ptcl_stored_<<std::endl;
+                          }
+                        */
+                        if( (n_ptcl_max < cluster_recv[i2].n_ptcl_stored_) ||
                             (n_ptcl_max == cluster_recv[i2].n_ptcl_stored_ && rank_send_tmp > i1) ){
                             rank_send_tmp = i1;
                             n_ptcl_max = cluster_recv[i2].n_ptcl_stored_;
@@ -747,10 +749,10 @@ public:
             cluster_loc[i0].rank_ = rank_send_tmp;
         }
         std::sort(cluster_loc.getPointer(), cluster_loc.getPointer(cluster_loc.size()), OPLessRank());
-	//std::cerr<<"sendAndRecvCluster 2: "<<my_rank<<std::endl;
+        //std::cerr<<"sendAndRecvCluster 2: "<<my_rank<<std::endl;
 
-	////////////
-	// pack and send particles
+        ////////////
+        // pack and send particles
         ptcl_send_.clearSize();
         rank_send_ptcl_.clearSize();
         n_ptcl_send_.clearSize();
@@ -770,9 +772,9 @@ public:
                 for(PS::S32 ii=0; ii<n_tmp; ii++){
                     PS::S32 adr_sys = mediator_sorted_id_cluster_[cluster_loc[i].adr_head_+ii].adr_sys_;
                     if(adr_sys < 0){
-			continue;
-		    }
-		    mediator_sorted_id_cluster_[cluster_loc[i].adr_head_+ii].rank_send_ = rank_send_ref; // 2006.09.06
+                        continue;
+                    }
+                    mediator_sorted_id_cluster_[cluster_loc[i].adr_head_+ii].rank_send_ = rank_send_ref; // 2006.09.06
                     const auto &p = sys[adr_sys];
                     adr_sys_ptcl_send_.push_back(adr_sys);
                     ptcl_send_.push_back(PtclComm(p.id, p.mass, p.pos, p.vel, p.r_search));
@@ -780,18 +782,18 @@ public:
                     n_ptcl_send_.back()++;
                     n_cnt++;
                 }
-		/*
-                if(cluster_loc[i].n_ptcl_stored_ != n_cnt){
-                    std::cerr<<"cluster_loc[i].n_ptcl_stored_="<<cluster_loc[i].n_ptcl_stored_
-                             <<" n_cnt="<<n_cnt
-                             <<std::endl;
-                }
-		*/
+                /*
+                  if(cluster_loc[i].n_ptcl_stored_ != n_cnt){
+                  std::cerr<<"cluster_loc[i].n_ptcl_stored_="<<cluster_loc[i].n_ptcl_stored_
+                  <<" n_cnt="<<n_cnt
+                  <<std::endl;
+                  }
+                */
                 assert(cluster_loc[i].n_ptcl_stored_ == n_cnt);
             }
         }
 
-	//std::cerr<<"sendAndRecvCluster 3: "<<my_rank<<std::endl;
+        //std::cerr<<"sendAndRecvCluster 3: "<<my_rank<<std::endl;
 	
         //static PS::ReallocatableArray<PS::S32> n_ptcl_disp_send;
         n_ptcl_disp_send_.resizeNoInitialize(rank_send_ptcl_.size()+1);
@@ -811,12 +813,12 @@ public:
                       rank, 0, MPI_COMM_WORLD, req_send.getPointer(i));
         }
 
-	//std::cerr<<"sendAndRecvCluster 4: "<<my_rank<<std::endl;
-	// pack and send particles
-	////////////
+        //std::cerr<<"sendAndRecvCluster 4: "<<my_rank<<std::endl;
+        // pack and send particles
+        ////////////
 	
-	////////////
-	// make and recv particles
+        ////////////
+        // make and recv particles
         rank_recv_ptcl_.clearSize();
         n_ptcl_recv_.clearSize();
         for(PS::S32 i0=0; i0<n_proc; i0++){
@@ -845,7 +847,7 @@ public:
         for(PS::S32 i=0; i<n_ptcl_recv_.size(); i++){
             n_ptcl_disp_recv_[i+1] = n_ptcl_disp_recv_[i] + n_ptcl_recv_[i];
         }
-	//std::cerr<<"sendAndRecvCluster 4.5: "<<my_rank<<std::endl;
+        //std::cerr<<"sendAndRecvCluster 4.5: "<<my_rank<<std::endl;
 	
         static PS::ReallocatableArray<MPI_Request> req_recv;
         static PS::ReallocatableArray<MPI_Status> stat_recv;
@@ -858,14 +860,14 @@ public:
                       PS::GetDataType<PtclComm>(),
                       rank, 0, MPI_COMM_WORLD, req_recv.getPointer(i));
         }
-	//std::cerr<<"sendAndRecvCluster 4.7: "<<my_rank<<std::endl;
+        //std::cerr<<"sendAndRecvCluster 4.7: "<<my_rank<<std::endl;
         MPI_Waitall(rank_send_ptcl_.size(), req_send.getPointer(), stat_send.getPointer());
         MPI_Waitall(rank_recv_ptcl_.size(), req_recv.getPointer(), stat_recv.getPointer());
 
-	//std::cerr<<"sendAndRecvCluster 5: "<<my_rank<<std::endl;
+        //std::cerr<<"sendAndRecvCluster 5: "<<my_rank<<std::endl;
 
-	// make and recv particles
-	////////////
+        // make and recv particles
+        ////////////
     }
 
     template<class Tsys, class Tphard>
@@ -878,17 +880,19 @@ public:
             const PS::S32 adr = ptcl_hard[i].adr_org;
             if( adr >= 0){
                 assert( sys[adr].id == ptcl_hard[i].id);
-                sys[adr].id    = ptcl_hard[i].id;
-                sys[adr].mass  = ptcl_hard[i].mass;
-                sys[adr].pos   = ptcl_hard[i].pos;
-                sys[adr].vel   = ptcl_hard[i].vel;
+                sys[adr].id       = ptcl_hard[i].id;
+                sys[adr].mass     = ptcl_hard[i].mass;
+                sys[adr].pos      = ptcl_hard[i].pos;
+                sys[adr].vel      = ptcl_hard[i].vel;
+                sys[ard].r_search = ptcl_hard[i].r_search;
             }
             else{
                 assert( ptcl_recv_[-(adr+1)].id_ == ptcl_hard[i].id );
-                ptcl_recv_[-(adr+1)].id_   = ptcl_hard[i].id;
-                ptcl_recv_[-(adr+1)].mass_ = ptcl_hard[i].mass;
-                ptcl_recv_[-(adr+1)].pos_  = ptcl_hard[i].pos;
-                ptcl_recv_[-(adr+1)].vel_  = ptcl_hard[i].vel;
+                ptcl_recv_[-(adr+1)].id_       = ptcl_hard[i].id;
+                ptcl_recv_[-(adr+1)].mass_     = ptcl_hard[i].mass;
+                ptcl_recv_[-(adr+1)].pos_      = ptcl_hard[i].pos;
+                ptcl_recv_[-(adr+1)].vel_      = ptcl_hard[i].vel;
+                ptcl_recv_[-(adr+1)].r_search_ = ptcl_hard[i].r_search;
             }
         }
         static PS::ReallocatableArray<MPI_Request> req_recv;
@@ -916,12 +920,13 @@ public:
         MPI_Waitall(rank_recv_ptcl_.size(), req_recv.getPointer(), stat_recv.getPointer());
 
         for(PS::S32 i=0; i<ptcl_send_.size(); i++){
-	    PS::S32 adr = adr_sys_ptcl_send_[i];
-	    assert(sys[adr].id == ptcl_send_[i].id_);
-	    sys[adr].mass = ptcl_send_[i].mass_;
-	    sys[adr].pos  = ptcl_send_[i].pos_;
-	    sys[adr].vel  = ptcl_send_[i].vel_;
-	}
+            PS::S32 adr = adr_sys_ptcl_send_[i];
+            assert(sys[adr].id == ptcl_send_[i].id_);
+            sys[adr].mass     = ptcl_send_[i].mass_;
+            sys[adr].pos      = ptcl_send_[i].pos_;
+            sys[adr].vel      = ptcl_send_[i].vel_;
+            sys[adr].r_search = ptcl_send_[i].r_search_;
+        }
     }
 
 

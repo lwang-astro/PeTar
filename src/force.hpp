@@ -1,5 +1,20 @@
 #pragma once
 
+//inline PS::F64 CalcK(const PS::F64 rij,
+//                     const PS::F64 rout,
+//                     const PS::F64 rin){
+//    PS::F64 inv_dr = 1.0 / (rout-rin);
+//    PS::F64 x = (rij - rin)*inv_dr;
+//    x = (x < 1.0) ? x : 1.0;
+//    x = (x > 0.0) ? x : 0.0;
+//    PS::F64 x2 = x*x;
+//    PS::F64 x4 = x2*x2;
+//    PS::F64 k = (((-20.0*x+70.0)*x-84.0)*x+35.0)*x4;
+//    std::max( std::min(k, 1.0), 0.0);
+//    return k;
+//}
+
+
 inline PS::F64 cutoff_poly_3rd(const PS::F64 rij,
                                const PS::F64 rout,
                                const PS::F64 rin){
@@ -220,3 +235,30 @@ void Newtonian_cut_Ap (double Aij[3], double &Pij, const double xi[3], const dou
 }
 /// end Newtonian cut force (L.Wang)
 
+
+// period of two-body motion
+double Newtonian_timescale(const double m1, const double m2, const double dx[], const double dv[], const ARC_int_pars* par) {
+    const double dr2  = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
+    const double dv2  = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
+    const double dr   = std::sqrt(dr2);
+    const double m    = m1+m2;
+
+    const double semi = 1.0/(2.0/dr - dv2/m);
+
+    if (semi<0) {
+        const double peri = 0.1*std::sqrt(dr2*dr/(2.0*m));
+        //      std::cout<<"dr="<<dr<<" semi="<<semi<<" peri="<<peri<<std::endl;
+        return peri;
+    }
+    else {
+        const double rdot = dx[0]*dv[0] + dx[1]*dv[1] + dx[2]*dv[2];
+        const double dr_semi = 1.0 - dr/semi;
+        const double ecc  = std::sqrt(dr_semi*dr_semi + rdot*rdot/(m*semi));
+
+        const double twopi= 6.28;
+        const double peri = twopi*std::abs(semi)*std::sqrt(std::abs(semi)/m);
+
+        //      std::cout<<"dr="<<dr<<" semi="<<semi<<" ecc="<<ecc<<" peri="<<peri<<std::endl;
+        return std::max(std::sqrt(std::abs(1.0-ecc)),0.01)*peri;
+    }
+}

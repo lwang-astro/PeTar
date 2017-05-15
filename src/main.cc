@@ -38,42 +38,19 @@
 #include"hard.hpp"
 #include"kepler.hpp"
 #include"io.hpp"
-#include"init.hpp"
+#include"rsearch.hpp"
+#include"integrate.hpp"
 #include"profile.hpp"
 #include"domain.hpp"
 #include"AR.h" /// include AR.h (L.Wang)
 //#include"cluster.hpp"
 #include"cluster_list.hpp"
 
-template<class Tpsys, class Ttree>
-void Kick(Tpsys & system,
-          const Ttree & tree,
-          const PS::F64 dt){
-    const PS::S32 n = system.getNumberOfParticleLocal();
-#pragma omp parallel for
-    for(int i=0; i<n; i++){
-	system[i].vel  += system[i].acc * dt;
-    }
-}
-
-template<class Tpsys, class Ttree>
-void Drift(Tpsys & system,
-           const Ttree & tree,
-           const PS::F64 dt){
-    const PS::S32 n = system.getNumberOfParticleLocal();
-#pragma omp parallel for
-    for(int i=0; i<n; i++){
-        //if(tree.getForce(i).n_ngb <= 0){
-	if(system[i].n_ngb <= 0){
-            system[i].pos  += system[i].vel * dt;
-        }
-    }
-}
-
 #ifdef USE_QUAD
 typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::QuadrupoleWithScatterSearch Tree; 
 #else
-typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::MonopoleWithScatterSearch Tree;
+typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::MonopoleWithSymmetrySearch Tree;
+//typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::MonopoleWithScatterSearch Tree;
 #endif
 typedef PS::ParticleSystem<FPSoft> SystemSoft;
 

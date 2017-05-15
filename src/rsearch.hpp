@@ -1,5 +1,6 @@
 #pragma once
 
+//initializaton-------------------------------------------------------
 // Obtain Radius parameters
 template<class Tpsys>
 void GetR(PS::F64 &r_in,
@@ -74,4 +75,55 @@ void SetBinaryRsearch(Tpsys & psys, const PS::S32 n_bin, const PS::F64 g_min, co
 template<class Tpsys>
 void SetSingleRsearch(Tpsys & psys, const PS::S32 n, const PS::S32 n_off, const PS::F64 r_search) {
   for (PS::S32 i=n_off; i<n; i++) if(psys[i].r_search<=0) psys[i].r_search = r_search;
+}
+
+//! update r_search function
+template<class Tptcl>
+void updateRsearch(Tptcl** p, const PS::S32 n, const PS::F64 rin, const PS::F64 rout, const PS::F64 gamma) {
+    PS::S32 istart=0,icount=0,ioff[n];
+    PS::F64 apomax=0;
+    Tptcl* plist[n];
+    for(PS::S32 i=0; i<n; i++) {
+        PS::F64 ax,ecc,apo=0;
+        if(i<n-1) {
+            PosVel2AxEcc(ax,ecc,
+                         p[i]->pos, p[i+1]->pos,
+                         p[i]->vel, p[i+1]->vel,
+                         p[i]->mass,p[i+1]->mass);
+            //apo=ax*(1.0+ecc);
+            apo=ax*(1.0+ecc)*std::pow((p[i]->mass+p[i+1]->mass)/m_average,0.3333);
+        }
+        if (apo>rin||i==n-1) {
+            if (i==istart) {
+                p[i]->r_search=rout;
+                plist[icount]=p[i];
+            }
+            else {
+                Tptcl** ptemp=new Tptcl*[i-istart+1];
+                apomax *=gamma;
+                for(PS::S32 j=istart; j<=i; j++) {
+                    if(apomax>1.2*p[j]->r_search||apomax<0.8*p[j]->r_search) p[j]->r_search = apomax;
+                    ptemp[j-istart]=p[j];
+                }
+                apomax = 0.0;
+                plist[icount]=new Tptcl;
+                calc_center_of_mass(*(plist[icount]),ptemp,i-istart+1);
+                delete[] ptemp;
+            }
+            istart = i+1;
+            ioff[icount] = istart;
+            icount++;
+        }
+        else if (apo>apomax) apomax=apo;
+    }
+    if (n>icount) {
+        updateRsearch(plist, icount, rin, rout, gamma);
+        if(plist[0]->r_search>1.2*p[0]->r_search)
+            for (PS::S32 j=0; j<ioff[0]; j++) p[j]->r_search = plist[0]->r_search;
+        for (PS::S32 i=1; i<icount; i++) {
+            if (plist[i]->r_search>1.2*p[ioff[i-1]]->r_search)
+                for (PS::S32 j=ioff[i-1];j<ioff[i];j++) p[j]->r_search = plist[i]->r_search;
+            if (ioff[i]-ioff[i-1]>1) delete plist[i];
+        }
+    }
 }
