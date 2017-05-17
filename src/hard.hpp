@@ -28,7 +28,7 @@ public:
     PS::F64 mass;
     PS::F64vec pos;
     PS::F64vec vel;
-    PS::F64 r_search;
+    PS::F64 r_out;
     PS::S32 id_cluster;
     PS::S32 adr_org;
     static PS::F64 r_factor;
@@ -38,9 +38,9 @@ public:
              const PS::F64 _mass, 
              const PS::F64vec & _pos, 
              const PS::F64vec & _vel,
-             const PS::F64 _r_search,
+             const PS::F64 _r_out,
              const PS::S32 _id_cluster,
-             const PS::S32 _adr_org): id(_id), mass(_mass), pos(_pos), vel(_vel), r_search(_r_search),
+             const PS::S32 _adr_org): id(_id), mass(_mass), pos(_pos), vel(_vel), r_out(_r_out),
                                       id_cluster(_id_cluster), adr_org(_adr_org){}
 
     /// start Particle member function (L.Wang)
@@ -127,6 +127,8 @@ private:
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_disp_;
     PS::F64 time_origin_;
     PS::F64 gamma_;
+    PS::F64 r_out_single_;
+    PS::F64 m_average_;
 
     ///////////
     /// functor
@@ -198,8 +200,8 @@ private:
 //          for (int i=0;i<n_ptcl;i++) kout<<std::setprecision(17)<<time_origin_<<" "<<ptcl_org[i].mass<<" "<<ptcl_org[i].pos<<" "<<ptcl_org[i].vel<<std::endl;
 
                 PS::F64 peri = ax*(1+ecc)*gamma_;
-                if (peri>1.2*ptcl_org[0].r_search || peri<0.8*ptcl_org[0].r_search || ptcl_org[0].r_search!= ptcl_org[1].r_search)
-                    ptcl_org[0].r_search = ptcl_org[1].r_search = peri;
+                if (peri>1.2*ptcl_org[0].r_out || peri<0.8*ptcl_org[0].r_out || ptcl_org[0].r_out!= ptcl_org[1].r_out)
+                    ptcl_org[0].r_out = ptcl_org[1].r_out = peri;
                 return;
             }
         }
@@ -211,6 +213,9 @@ private:
         static thread_local PS::F64 time_sys = 0.0;
 
         c.addP(n_ptcl,ptcl_org);
+
+        Int_pars.rout = ptcl_org[0].r_out;
+
         c.link_int_par(Int_pars);
         c.init(time_sys);
 #ifdef ARC_ERROR
@@ -301,12 +306,12 @@ private:
             }
         }
 
-        // update Rsearch
+        // update Rout
         PS::S32* list=new PS::S32[n_ptcl];
         Tptcl** plist=new Tptcl*[n_ptcl];
         c.getList(list);
         for (PS::S32 i=0; i<n_ptcl; i++) plist[i] = &(ptcl_org[list[i]]);
-        updateRsearch(plist,n_ptcl,Int_pars.rin,Int_pars.rout,gamma_);
+        updateRout(plist,n_ptcl,Int_pars.rin,r_out_single_,gamma_,m_average_);
         delete[] list;
         delete[] plist;
 
@@ -366,13 +371,13 @@ public:
             if(med[i].adr_sys_ < 0) continue;
             if(med[i].rank_send_ != PS::Comm::getRank()) continue;
             const FPSoft & p = sys[med[i].adr_sys_];
-            ptcl_hard_.push_back(PtclHard(p.id, p.mass, p.pos, p.vel, p.r_search,
+            ptcl_hard_.push_back(PtclHard(p.id, p.mass, p.pos, p.vel, p.r_out,
                                           med[i].id_cluster_, med[i].adr_sys_));
         }
 
         for(PS::S32 i=0; i<ptcl_recv.size(); i++){
             const Tptcl & p = ptcl_recv[i];
-            ptcl_hard_.push_back(PtclHard(p.id_, p.mass_, p.pos_, p.vel_, p.r_search_,
+            ptcl_hard_.push_back(PtclHard(p.id_, p.mass_, p.pos_, p.vel_, p.r_out_,
                                           p.id_cluster_, -(i+1)));
         }
 
@@ -414,15 +419,17 @@ public:
                   const PS::F64 _eps,
                   const PS::F64 _dt_limit_hard,
                   const PS::F64 _time_origin,
-                  const PS::F64 _gmin){
+                  const PS::F64 _gmin,
+                  const PS::F64 _m_avarage){
         /// Set chain pars (L.Wang)
-        Int_pars.rout = _rout; 
 		Int_pars.rin  = _rin;
         Int_pars.eps2  = _eps*_eps;
         /// Set chain pars (L.Wang)        
         dt_limit_hard_ = _dt_limit_hard;
         time_origin_ = _time_origin;
         gamma_ = std::pow(1.0/_gmin,0.33333);
+        r_out_single_ = _rout; 
+        m_average_ = _m_avarage;
     }
 
 
@@ -441,7 +448,7 @@ public:
             ptcl_hard_[i].mass = sys[adr].mass;
             ptcl_hard_[i].pos  = sys[adr].pos;
             ptcl_hard_[i].vel  = sys[adr].vel;
-            ptcl_hard_[i].r_search = sys[adr].r_search;
+            ptcl_hard_[i].r_out= sys[adr].r_out;
             //n_ptcl_in_cluster_[i] = 1;
         }
     }
@@ -460,7 +467,7 @@ public:
             ptcl_hard_[i].mass = sys[adr].mass;
             ptcl_hard_[i].pos  = sys[adr].pos;
             ptcl_hard_[i].vel  = sys[adr].vel;
-            ptcl_hard_[i].r_search = sys[adr].r_search;
+            ptcl_hard_[i].r_out= sys[adr].r_out;
             //n_ptcl_in_cluster_[i] = 1;
         }
     }
@@ -469,7 +476,7 @@ public:
         const PS::S32 n = ptcl_hard_.size();
         for(PS::S32 i=0; i<n; i++){
             ptcl_hard_[i].pos += ptcl_hard_[i].vel * dt;
-            ptcl_hard_[i].r_search = Int_pars.rin;
+            ptcl_hard_[i].r_out= r_out_single_;
             /*
               DriveKeplerRestricted(mass_sun_, 
               pos_sun_, ptcl_hard_[i].pos, 
@@ -483,7 +490,7 @@ public:
 #pragma omp for schedule(dynamic)
         for(PS::S32 i=0; i<n; i++){
             ptcl_hard_[i].pos += ptcl_hard_[i].vel * dt;
-            ptcl_hard_[i].r_search = Int_pars.rin;
+            ptcl_hard_[i].r_out= r_out_single_;
             /*
               DriveKeplerRestricted(mass_sun_, 
               pos_sun_, ptcl_hard_[i].pos, 
@@ -502,7 +509,7 @@ public:
             sys[adr].mass = ptcl_hard_[i].mass;
             sys[adr].pos  = ptcl_hard_[i].pos;
             sys[adr].vel  = ptcl_hard_[i].vel;
-            sys[adr].r_search = ptcl_hard_[i].r_search;
+            sys[adr].r_out = ptcl_hard_[i].r_out;
         }
     }
 
@@ -517,7 +524,7 @@ public:
             sys[adr].mass = ptcl_hard_[i].mass;
             sys[adr].pos  = ptcl_hard_[i].pos;
             sys[adr].vel  = ptcl_hard_[i].vel;
-            sys[adr].r_search = ptcl_hard_[i].r_search;
+            sys[adr].r_out = ptcl_hard_[i].r_out;
         }
     }
 // for one cluster
@@ -538,7 +545,7 @@ public:
             ptcl_hard_[i].mass = sys[adr].mass;
             ptcl_hard_[i].pos  = sys[adr].pos;
             ptcl_hard_[i].vel  = sys[adr].vel;
-            ptcl_hard_[i].r_search = sys[adr].r_search;
+            ptcl_hard_[i].r_out = sys[adr].r_out;
         }
         const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
         n_ptcl_in_cluster_.resizeNoInitialize(n_cluster);
@@ -571,11 +578,11 @@ public:
 #pragma omp for schedule(dynamic)
         for(PS::S32 i=0; i<n_ptcl; i++){
             PS::S32 adr = _adr_array[i];
-            ptcl_hard_[i].id   = sys[adr].id;
-            ptcl_hard_[i].mass = sys[adr].mass;
-            ptcl_hard_[i].pos  = sys[adr].pos;
-            ptcl_hard_[i].vel  = sys[adr].vel;
-            ptcl_hard_[i].r_search = sys[adr].r_search;
+            ptcl_hard_[i].id    = sys[adr].id;
+            ptcl_hard_[i].mass  = sys[adr].mass;
+            ptcl_hard_[i].pos   = sys[adr].pos;
+            ptcl_hard_[i].vel   = sys[adr].vel;
+            ptcl_hard_[i].r_out = sys[adr].r_out;
         }
     }
 

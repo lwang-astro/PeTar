@@ -31,10 +31,11 @@ public:
     PS::F64vec vel;
     PS::F64vec acc; // soft
     PS::F64 pot_tot; // soft + hard
-    PS::F64 r_search;
+    PS::F64 r_out;
     PS::S32 rank_org;
     PS::S32 n_ngb;
     PS::S32 adr;
+    static PS::F64 r_search_offset;
 
     PS::F64vec getPos() const { return pos; }
     void setPos(const PS::F64vec & p) { pos = p; }
@@ -44,13 +45,18 @@ public:
         n_ngb = force.n_ngb;
     }
 
+    PS::F64 getRSearch() const {
+//        return std::max(r_out * std::pow(2.0*mass/m_average,0.3333),r_out_min) * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+        return r_out + r_search_offset * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+    }
+
     void writeAscii(FILE* fp) const{
         fprintf(fp, "%lld %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %d\n", 
                 this->id, this->mass, 
                 this->pos.x, this->pos.y, this->pos.z,  // 3-5
                 this->vel.x, this->vel.y, this->vel.z,  // 6-8
                 this->acc.x, this->acc.y, this->acc.z,  // 9-11
-                this->pot_tot, this->r_search, this->n_ngb);
+                this->pot_tot, this->r_out, this->n_ngb);
     }
 
     void readAscii(FILE* fp) {
@@ -59,7 +65,7 @@ public:
                               &this->pos.x, &this->pos.y, &this->pos.z,  // 3-5
                               &this->vel.x, &this->vel.y, &this->vel.z,  // 6-8
                               &this->acc.x, &this->acc.y, &this->acc.z,  // 9-11
-                              &this->pot_tot, &this->r_search, &this->n_ngb);
+                              &this->pot_tot, &this->r_out, &this->n_ngb);
         if (rcount<14) {
             std::cerr<<"Error: Data reading fails! requiring data number is 14, only obtain "<<rcount<<".\n";
             abort();
@@ -73,7 +79,7 @@ public:
         fout<<"vel= "<<vel<<std::endl;
         fout<<"acc= "<<acc<<std::endl;
         fout<<"pot_tot= "<<pot_tot<<std::endl;
-        fout<<"r_search= "<<r_search<<std::endl;
+        fout<<"r_out= "<<r_out<<std::endl;
     }
 };
 
@@ -81,18 +87,19 @@ class EPISoft{
 public:
     PS::S64 id;
     PS::F64vec pos;
-    PS::F64 r_search;
+    PS::F64 r_out;
     PS::S32 rank_org;
     static PS::F64 eps;
-    static PS::F64 r_out;
-    static PS::F64 r_in;
+    static PS::F64 r_search_offset;
+//    static PS::F64 r_out;
+//    static PS::F64 r_in;
 //    static PS::F64 m_average;
-//    static PS::F64 r_search_min;
+//    static PS::F64 r_out_min;
     PS::F64vec getPos() const { return pos;}
     void copyFromFP(const FPSoft & fp){ 
         id = fp.id;
         pos = fp.pos;
-        r_search = fp.r_search;
+        r_out = fp.r_out;
         rank_org = fp.rank_org;
     }
     void dump(std::ostream & fout=std::cout) const {
@@ -102,14 +109,12 @@ public:
         fout<<"eps="<<eps<<std::endl;
     }
     PS::F64 getRSearch() const {
-//        return std::max(r_search * std::pow(2.0*mass/m_average,0.3333),r_search_min) * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
-        return r_search * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+//        return std::max(r_out * std::pow(2.0*mass/m_average,0.3333),r_out_min) * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+        return r_out + r_search_offset * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+    }
 
 };
 
-PS::F64 EPISoft::eps = 1.0/1024.0;
-PS::F64 EPISoft::r_out = 0.0;
-PS::F64 EPISoft::r_in = 0.0;
 
 class EPJSoft{
 public:
@@ -117,17 +122,18 @@ public:
     PS::F64 mass;
     PS::F64vec pos;
     PS::F64vec vel;
-    PS::F64 r_search;
+    PS::F64 r_out;
     PS::S32 rank_org;
     PS::S32 adr_org;
+    static PS::F64 r_search_offset;
 //    static PS::F64 m_average;
-//    static PS::F64 r_search_min;
+//    static PS::F64 r_out_min;
     void copyFromFP(const FPSoft & fp){
         id = fp.id;
         mass = fp.mass;
         pos = fp.pos;
         vel = fp.vel;
-        r_search = fp.r_search;
+        r_out = fp.r_out;
         rank_org = fp.rank_org;
         adr_org = fp.adr;
     }
@@ -135,8 +141,8 @@ public:
     void setPos(const PS::F64vec & pos_new){ pos = pos_new;}
     PS::F64 getCharge() const { return mass; }
     PS::F64 getRSearch() const {
-//        return std::max(r_search * std::pow(2.0*mass/m_average,0.3333),r_search_min) * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
-        return (r_search * SAFTY_FACTOR_FOR_SEARCH) + SAFTY_OFFSET_FOR_SEARCH;
+//        return std::max(r_out * std::pow(2.0*mass/m_average,0.3333),r_out_min) * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+        return r_out + r_search_offset * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
     }
     // FORDEBUG
     void dump(std::ostream & fout=std::cout) const {
@@ -145,20 +151,26 @@ public:
         fout<<"mass="<<mass<<std::endl;
         fout<<"pos="<<pos<<std::endl;
         fout<<"vel="<<vel<<std::endl;
-        fout<<"r_search="<<r_search<<std::endl;
+        fout<<"r_out="<<r_out<<std::endl;
     }
     void clear(){
         mass = 0.0;
         pos = vel = 0.0;
-        r_search = 0.0;
+        r_out = 0.0;
         id = rank_org = adr_org = -1;
     }
 };
 
+PS::F64 EPISoft::eps = 1.0/1024.0;
+PS::F64 EPISoft::r_search_offset = 0.0;
+PS::F64 EPJSoft::r_search_offset = 0.0;
+PS::F64  FPSoft::r_search_offset = 0.0;
+
+//PS::F64 EPISoft::r_in; = 0.0;
 //PS::F64 EPJSoft::m_average;
-//PS::F64 EPJSoft::r_search_min;
+//PS::F64 EPJSoft::r_out_min;
 //PS::F64 EPISoft::m_average;
-//PS::F64 EPISoft::r_search_min;
+//PS::F64 EPISoft::r_out_min;
 
 class Energy{
 public:
@@ -224,9 +236,10 @@ struct CalcForceEpEpWithLinearCutoffNoSIMD{
                       const PS::S32 n_jp,
                       ForceSoft * force){
         const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
+        const PS::F64 r_off = EPISoft::r_search_offset;
         //        const PS::F64 r_crit2 = EPJSoft::r_search * EPJSoft::r_search * SAFTY_FACTOR_FOR_SEARCH_SQ;
-        const PS::F64 r_out = EPISoft::r_out; 
-        //        const PS::F64 r_in = EPISoft::r_in;
+        // const PS::F64 r_out = EPISoft::r_out; 
+        // const PS::F64 r_in = EPISoft::r_in;
         //std::cerr<<"r_out= "<<r_out<<" r_in= "<<r_in<<" eps2= "<<eps2<<" r_crit2= "<<r_crit2<<std::endl;
         for(PS::S32 i=0; i<n_ip; i++){
             const PS::F64vec xi = ep_i[i].pos;
@@ -235,6 +248,8 @@ struct CalcForceEpEpWithLinearCutoffNoSIMD{
             PS::F64 poti = 0.0;
             PS::S32 n_ngb_i = 0;
             for(PS::S32 j=0; j<n_jp; j++){
+                const PS::F64 r_out = std::max(ep_i[i].r_out,ep_j[j].r_out);
+                const PS::F64 r_search = r_out + r_off;
                 if(id_i == ep_j[j].id){
                     n_ngb_i++;
                     continue;
@@ -242,7 +257,7 @@ struct CalcForceEpEpWithLinearCutoffNoSIMD{
                 const PS::F64vec rij = xi - ep_j[j].pos;
                 const PS::F64 r2 = rij * rij;
                 const PS::F64 r2_eps = rij * rij + eps2;
-                if(r2 < ep_j[j].r_search*ep_j[j].r_search*SAFTY_FACTOR_FOR_SEARCH_SQ){
+                if(r2 < r_search*r_search*SAFTY_FACTOR_FOR_SEARCH_SQ){
                     n_ngb_i++;
                 }
                 const PS::F64 r2_tmp = (r2_eps > r_out*r_out) ? r2_eps : r_out*r_out;

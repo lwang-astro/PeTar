@@ -2,19 +2,24 @@
 #include<particle_simulator.hpp>
 #include"force.hpp"
 
-void SetRankComm(const PS::F64ort pos_domain[],
+template <class Ttree>
+void SetRankComm(const PS::F64ort pos_domain[], Ttree &tree,
                  PS::ReallocatableArray<PS::S32> & rank_neighbor,
                  const PS::F64 eps_sq = 0.0){
     rank_neighbor.clearSize();
-    static const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ = 1.01;
+//    static const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ = 1.01;
     const PS::S32 my_rank = PS::Comm::getRank();
     const PS::S32 n_proc = PS::Comm::getNumberOfProc();
-    const PS::F64ort pos_my_domain = pos_domain[my_rank];
-    const PS::F64 r_crit_sq = (EPJSoft::r_search * EPJSoft::r_search + eps_sq)*SAFTY_FACTOR_FOR_SEARCH_SQ*1.01;
+//    const PS::F64ort pos_my_domain = pos_domain[my_rank];
+    const PS::F64ort pos_my_domain = tree.getOuterBoundaryOfLocalTree();
+    const PS::F64ort pos_my_domain_in = tree.getInnerBoundaryOfLocalTree();
+//    const PS::F64 r_crit_sq = (EPJSoft::r_search * EPJSoft::r_search + eps_sq)*SAFTY_FACTOR_FOR_SEARCH_SQ*1.01;
+//    pos_domain[my_rank].getOuterBoundaryOfLocalTree
     rank_neighbor.clearSize();
     for(int i=0; i<n_proc; i++){
         if(i==my_rank) continue;
-        else if( r_crit_sq >= pos_my_domain.getDistanceMinSQ(pos_domain[i]) ){
+        //else if( r_crit_sq >= pos_my_domain.getDistanceMinSQ(pos_domain[i]) ){
+        else if( pos_my_domain.contained(pos_my_domain_in) ){
             rank_neighbor.push_back(i);
         }
     }
@@ -122,16 +127,16 @@ public:
     PS::F64 mass_;
     PS::F64vec pos_;
     PS::F64vec vel_;
-    PS::F64 r_search_;
+    PS::F64 r_out_;
     PS::S32 id_cluster_;
-    PtclComm(): id_(-1), mass_(0.0), pos_(0.0), vel_(0.0), r_search_(0.0) {}
-    PtclComm(const PS::S32 _id, const PS::F64 _mass, const PS::F64vec _pos, const PS::F64vec _vel, const PS::F64 _r_search):
-        id_(_id), mass_(_mass), pos_(_pos), vel_(_vel), r_search_(_r_search) {}
+    PtclComm(): id_(-1), mass_(0.0), pos_(0.0), vel_(0.0), r_out_(0.0) {}
+    PtclComm(const PS::S32 _id, const PS::F64 _mass, const PS::F64vec _pos, const PS::F64vec _vel, const PS::F64 _r_out):
+        id_(_id), mass_(_mass), pos_(_pos), vel_(_vel), r_out_(_r_out) {}
     void dump(){
         std::cout<<" id="<<id_<<" mass="<<mass_
                  <<" pos="<<pos_<<" vel="<<vel_
                  <<" id_cluster_="<<id_cluster_
-                 <<" r_search_="<<r_search_
+                 <<" r_out_="<<r_out_
                  <<std::endl;
     }
 };
@@ -487,7 +492,8 @@ public:
         }
     }
 
-    void conectNodes(PS::F64ort pos_domain[]){
+    template <class Ttree>
+    void conectNodes(PS::F64ort pos_domain[], Ttree & tree){
         const PS::S32 n_proc_tot = PS::Comm::getNumberOfProc();
         const PS::S32 my_rank = PS::Comm::getRank();
         static PS::ReallocatableArray<PS::S32> rank_neighbor;
@@ -510,7 +516,7 @@ public:
         req_recv.resizeNoInitialize(n_proc_tot);
         stat_send.resizeNoInitialize(n_proc_tot);
         stat_recv.resizeNoInitialize(n_proc_tot);
-        SetRankComm(pos_domain, rank_neighbor);
+        SetRankComm(pos_domain, tree, rank_neighbor);
         for(PS::S32 i=0; i<n_proc_tot; i++){
             n_send[i] = n_recv[i] = 0;
         }
@@ -777,7 +783,7 @@ public:
                     mediator_sorted_id_cluster_[cluster_loc[i].adr_head_+ii].rank_send_ = rank_send_ref; // 2006.09.06
                     const auto &p = sys[adr_sys];
                     adr_sys_ptcl_send_.push_back(adr_sys);
-                    ptcl_send_.push_back(PtclComm(p.id, p.mass, p.pos, p.vel, p.r_search));
+                    ptcl_send_.push_back(PtclComm(p.id, p.mass, p.pos, p.vel, p.r_out));
                     ptcl_send_.back().id_cluster_ = cluster_loc[i].id_;
                     n_ptcl_send_.back()++;
                     n_cnt++;
@@ -884,7 +890,7 @@ public:
                 sys[adr].mass     = ptcl_hard[i].mass;
                 sys[adr].pos      = ptcl_hard[i].pos;
                 sys[adr].vel      = ptcl_hard[i].vel;
-                sys[ard].r_search = ptcl_hard[i].r_search;
+                sys[adr].r_out    = ptcl_hard[i].r_out;
             }
             else{
                 assert( ptcl_recv_[-(adr+1)].id_ == ptcl_hard[i].id );
@@ -892,7 +898,7 @@ public:
                 ptcl_recv_[-(adr+1)].mass_     = ptcl_hard[i].mass;
                 ptcl_recv_[-(adr+1)].pos_      = ptcl_hard[i].pos;
                 ptcl_recv_[-(adr+1)].vel_      = ptcl_hard[i].vel;
-                ptcl_recv_[-(adr+1)].r_search_ = ptcl_hard[i].r_search;
+                ptcl_recv_[-(adr+1)].r_out_    = ptcl_hard[i].r_out;
             }
         }
         static PS::ReallocatableArray<MPI_Request> req_recv;
@@ -925,7 +931,7 @@ public:
             sys[adr].mass     = ptcl_send_[i].mass_;
             sys[adr].pos      = ptcl_send_[i].pos_;
             sys[adr].vel      = ptcl_send_[i].vel_;
-            sys[adr].r_search = ptcl_send_[i].r_search_;
+            sys[adr].r_out    = ptcl_send_[i].r_out_;
         }
     }
 

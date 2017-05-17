@@ -321,7 +321,7 @@ void MakePlummerModel(const double mass_glb,
             r_max_sq = pos[i] * pos[i];
         }
     }
-    std::cout<<"r_max= "<<sqrt(r_max_sq)<<std::endl;
+//    std::cout<<"r_max= "<<sqrt(r_max_sq)<<std::endl;
 }
 
 

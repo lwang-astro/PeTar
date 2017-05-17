@@ -244,7 +244,7 @@ void calc_center_of_mass(particle &cm, particle p[], const int num, const bool f
   PS::F64vec cmr=0;
   PS::F64vec cmv=0;
   PS::F64 cmm = 0;
-  for (std::size_t i=0;i<num;i++) {
+  for (int i=0;i<num;i++) {
     cmr += p[i].pos * p[i].mass;
     cmv += p[i].vel * p[i].mass;
     cmm += p[i].mass;
@@ -258,7 +258,7 @@ void calc_center_of_mass(particle &cm, particle p[], const int num, const bool f
 
   // shifting
   if (fshift) {
-    for (std::size_t i=0;i<num;i++) {
+    for (int i=0;i<num;i++) {
       p[i].pos = p[i].pos - cmr;
       p[i].vel = p[i].vel - cmv;
     }
@@ -270,7 +270,7 @@ void calc_center_of_mass(particle &cm, particle* p[], const int num, const bool 
   PS::F64vec cmr=0;
   PS::F64vec cmv=0;
   PS::F64 cmm = 0;
-  for (std::size_t i=0;i<num;i++) {
+  for (int i=0;i<num;i++) {
     cmr += p[i]->pos * p[i]->mass;
     cmv += p[i]->vel * p[i]->mass;
     cmm += p[i]->mass;
@@ -284,7 +284,7 @@ void calc_center_of_mass(particle &cm, particle* p[], const int num, const bool 
 
   // shifting
   if (fshift) {
-    for (std::size_t i=0;i<num;i++) {
+    for (int i=0;i<num;i++) {
       p[i]->pos = p[i]->pos - cmr;
       p[i]->vel = p[i]->vel - cmv;
     }
@@ -294,7 +294,7 @@ void calc_center_of_mass(particle &cm, particle* p[], const int num, const bool 
 // correct the particle p position and velocity by adding center-of-mass information
 template <class particle>
 void center_of_mass_correction(particle &cm, particle p[], const int num) {
-  for (std::size_t i=0;i<num;i++) {
+  for (int i=0;i<num;i++) {
     p[i].pos += cm.pos;
     p[i].vel += cm.vel;
   }

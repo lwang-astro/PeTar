@@ -169,7 +169,7 @@ int main(int argc, char *argv[]){
             break;
         case 'R':
             r_out = atof(optarg);
-            std::cerr<<"r_out="<<r_out<<std::endl;
+            std::cerr<<"r_out_single="<<r_out<<std::endl;
             break;
         case 'X':
             dt_limit_hard_factor = atof(optarg);
@@ -217,22 +217,29 @@ int main(int argc, char *argv[]){
 
     PS::Comm::barrier();
 
-    PS::F64 r_in, m_average, v_disp;
-    GetR(r_in, r_out, m_average, dt_soft, v_disp, system_soft, ratio_r_cut);
-    EPISoft::r_out = r_out;
-    EPISoft::r_in  = r_in;
+    PS::F64 r_in, m_average, v_disp, r_search_offset;
+    GetR(system_soft, r_in, r_out, r_search_offset, m_average, dt_soft, v_disp, search_factor, ratio_r_cut);
+//    EPISoft::r_out = r_out;
+//    EPISoft::r_in  = r_in;
     EPISoft::eps   = eps;
-    EPJSoft::r_search_min = r_out*search_factor;
-    EPJSoft::m_average = m_average;
+    EPISoft::r_search_offset = EPJSoft::r_search_offset = FPSoft::r_search_offset = r_search_offset;
+//    EPJSoft::r_search_min = r_out*search_factor;
+//    EPJSoft::m_average = m_average;
     
-    std::cerr<<"m_average= "<<EPJSoft::m_average<<" r_out="<<EPISoft::r_out<<" r_in="<<EPISoft::r_in<<" dt_soft="<<dt_soft<<std::endl;
+    std::cerr<<" m_average    = "<<m_average      <<std::endl
+             <<" r_in         = "<<r_in           <<std::endl
+             <<" r_out_single = "<<r_out          <<std::endl
+             <<" r_search_off = "<<r_search_offset<<std::endl
+             <<" vel_disp     = "<<v_disp         <<std::endl
+             <<" dt_soft      = "<<dt_soft        <<std::endl;
+    
 
     PS::S32 my_rank = PS::Comm::getRank();
 
     // set r_search
     if (my_rank==0) {
-      if(n_bin>0) SetBinaryRsearch(system_soft, n_bin, g_min, r_in);
-      SetSingleRsearch(system_soft, n_glb, n_bin, r_in);
+        if(n_bin>0) SetBinaryRout(system_soft, n_bin, g_min, r_out, m_average);
+      SetSingleRout(system_soft, n_glb, n_bin, r_out);
     }
 
     const PS::F32 coef_ema = 0.2;
@@ -261,19 +268,19 @@ int main(int argc, char *argv[]){
                                        dinfo);
 
     SystemHard system_hard_one_cluster;
-    system_hard_one_cluster.setParam(EPISoft::r_out, EPISoft::r_in, eps, dt_soft/dt_limit_hard_factor, time_sys, g_min);
+    system_hard_one_cluster.setParam(r_out, r_in, eps, dt_soft/dt_limit_hard_factor, time_sys, g_min, m_average);
     // system_hard_one_cluster.setARCParam();
     SystemHard system_hard_isolated;
-    system_hard_isolated.setParam(EPISoft::r_out, EPISoft::r_in, eps,  dt_soft/dt_limit_hard_factor, time_sys, g_min);
+    system_hard_isolated.setParam(r_out, r_in, eps,  dt_soft/dt_limit_hard_factor, time_sys, g_min, m_average);
     system_hard_isolated.setARCParam();
     SystemHard system_hard_conected;
-    system_hard_conected.setParam(EPISoft::r_out, EPISoft::r_in, eps, dt_soft/dt_limit_hard_factor, time_sys, g_min);
+    system_hard_conected.setParam(r_out, r_in, eps, dt_soft/dt_limit_hard_factor, time_sys, g_min, m_average);
     system_hard_conected.setARCParam();
 
     SearchCluster search_cluster;
     search_cluster.initialize();
     search_cluster.searchNeighborAndCalcHardForceOMP<SystemSoft, Tree, EPJSoft>
-      (system_soft, tree_soft, EPISoft::r_out, EPISoft::r_in, pos_domain, EPISoft::eps*EPISoft::eps);
+      (system_soft, tree_soft, r_out, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
 
     Energy eng_init, eng_now;
 
@@ -313,7 +320,7 @@ int main(int argc, char *argv[]){
         ////// search cluster
         search_cluster.searchClusterLocal();
         search_cluster.setIdClusterLocal();
-        search_cluster.conectNodes(pos_domain);
+        search_cluster.conectNodes(pos_domain,tree_soft);
         search_cluster.setIdClusterGlobalIteration();
         search_cluster.sendAndRecvCluster(system_soft);
         ////// search cluster
@@ -374,7 +381,7 @@ int main(int argc, char *argv[]){
         wtime_soft_search_neighbor_offset = PS::GetWtime();
         
         search_cluster.searchNeighborAndCalcHardForceOMP<SystemSoft, Tree, EPJSoft>
-          (system_soft, tree_soft, EPISoft::r_out, EPISoft::r_in, pos_domain, EPISoft::eps*EPISoft::eps);
+          (system_soft, tree_soft, r_out, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
         
         wtime_soft_search_neighbor += PS::GetWtime() - wtime_soft_search_neighbor_offset;
         
