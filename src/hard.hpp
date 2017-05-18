@@ -208,9 +208,9 @@ private:
 //          if (!kout.is_open()) kout.open("kout");
 //          for (int i=0;i<n_ptcl;i++) kout<<std::setprecision(17)<<time_origin_<<" "<<ptcl_org[i].mass<<" "<<ptcl_org[i].pos<<" "<<ptcl_org[i].vel<<std::endl;
 
-//                PS::F64 peri = ax*(1+ecc)*gamma_;
-//                if (peri>1.2*ptcl_org[0].r_out || peri<0.8*ptcl_org[0].r_out || ptcl_org[0].r_out!= ptcl_org[1].r_out)
-//                    ptcl_org[0].r_out = ptcl_org[1].r_out = peri;
+                PS::F64 peri = ax*(1+ecc)*gamma_*std::pow(pcm.mass/m_average_,0.3333);
+                if (peri>1.2*ptcl_org[0].r_out || peri<0.8*ptcl_org[0].r_out || ptcl_org[0].r_out!= ptcl_org[1].r_out)
+                    ptcl_org[0].r_out = ptcl_org[1].r_out = peri;
                 return;
             }
         }
