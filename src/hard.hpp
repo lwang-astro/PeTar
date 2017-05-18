@@ -220,7 +220,8 @@ private:
         c.init(time_sys);
 #ifdef ARC_ERROR
         PS::F64 ARC_error_once = c.getPot()+c.getEkin();
-        N_count[n_ptcl-1]++;
+        if(n_ptcl<=20) N_count[n_ptcl-1]++;
+        else std::cerr<<"Large cluster formed, t="<<time_origin_<<" n="<<n_ptcl<<std::endl;
 #endif
       
         PS::F64 dscoff=1.0;
@@ -307,11 +308,25 @@ private:
         }
 
         // update Rout
-        PS::S32* list=new PS::S32[n_ptcl];
+        std::size_t* list=new std::size_t[n_ptcl];
         Tptcl** plist=new Tptcl*[n_ptcl];
         c.getList(list);
+#ifdef DEBUG_TEMP
+        std::cerr<<"Curren r_out: n="<<n_ptcl;
+        for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<list[i]<<" ";
+        std::cerr<<std::endl;
+        for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<ptcl_org[list[i]]<<" ";
+        std::cerr<<std::endl;
+#endif
         for (PS::S32 i=0; i<n_ptcl; i++) plist[i] = &(ptcl_org[list[i]]);
         updateRout(plist,n_ptcl,Int_pars.rin,r_out_single_,gamma_,m_average_);
+#ifdef DEBUG_TEMP
+        std::cerr<<"new r_out: n="<<n_ptcl;
+        for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<list[i]<<" ";
+        std::cerr<<std::endl;
+        for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<ptcl_org[list[i]]<<" ";
+        std::cerr<<std::endl;
+#endif
         delete[] list;
         delete[] plist;
 

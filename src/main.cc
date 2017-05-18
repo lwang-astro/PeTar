@@ -88,7 +88,7 @@ int main(int argc, char *argv[]){
 //    PS::F64 dEerr_mbody_loc = 0.0;
 //    PS::F64 dEerr_mbody_glb = 0.0;
 //#endif
-    PS::F64 ratio_r_cut = 0.5;
+    PS::F64 ratio_r_cut = 0.3;
     PS::F64 time_sys = 0.0;
     PS::F64 theta = 0.4;
     PS::S32 n_leaf_limit = 8;
@@ -110,6 +110,8 @@ int main(int argc, char *argv[]){
     int c;
     bool reading_flag=false;
 
+    PS::S32 my_rank = PS::Comm::getRank();
+
     while((c=getopt(argc,argv,"id:t:T:e:n:N:b:s:S:g:l:r:R:X:h")) != -1){
         switch(c){
         case 'i':
@@ -125,55 +127,55 @@ int main(int argc, char *argv[]){
 //            break;
         case 't':
             theta = atof(optarg);
-            std::cerr<<"tree openning angle theta="<<theta<<std::endl;
+            if(my_rank == 0) std::cerr<<"tree openning angle theta="<<theta<<std::endl;
             break;
         case 'T':
             time_end = atof(optarg);
-            std::cerr<<"finishing time="<<time_end<<std::endl;
+            if(my_rank == 0) std::cerr<<"finishing time="<<time_end<<std::endl;
             break;
         case 'e':
             eps = atof(optarg);
-            std::cerr<<"softening="<<eps<<std::endl;
+            if(my_rank == 0) std::cerr<<"softening="<<eps<<std::endl;
             break;
         case 'n':
             n_group_limit = atoi(optarg);
-            std::cerr<<"n_group_limit="<<n_group_limit<<std::endl;
+            if(my_rank == 0) std::cerr<<"n_group_limit="<<n_group_limit<<std::endl;
             break;
         case 'N':
             n_glb = atol(optarg);
-            std::cerr<<"Total number of particles="<<n_glb<<std::endl;
+            if(my_rank == 0) std::cerr<<"Total number of particles="<<n_glb<<std::endl;
             break;
         case 'b':
             n_bin = atol(optarg);
-            std::cerr<<"Binary number="<<n_bin<<std::endl;
+            if(my_rank == 0) std::cerr<<"Binary number="<<n_bin<<std::endl;
             break;
         case 's':
             n_smp_ave = atoi(optarg);
-            std::cerr<<"n_smp_ave="<<n_smp_ave<<std::endl;
+            if(my_rank == 0) std::cerr<<"n_smp_ave="<<n_smp_ave<<std::endl;
             break;
         case 'S':
             search_factor = atof(optarg);
-            std::cerr<<"neighbor searching factor="<<search_factor<<std::endl;
+            if(my_rank == 0) std::cerr<<"neighbor searching factor="<<search_factor<<std::endl;
             break;
         case 'g':
             g_min = atof(optarg);
-            std::cerr<<"Perturber parameter gamma minimum="<<g_min<<std::endl;
+            if(my_rank == 0) std::cerr<<"Perturber parameter gamma minimum="<<g_min<<std::endl;
             break;
         case 'l':
             n_leaf_limit = atoi(optarg);
-            std::cerr<<"n_leaf_limit="<<n_leaf_limit<<std::endl;
+            if(my_rank == 0) std::cerr<<"n_leaf_limit="<<n_leaf_limit<<std::endl;
             break;
         case 'r':
             ratio_r_cut = atof(optarg);
-            std::cerr<<"r_in/r_out="<<ratio_r_cut<<std::endl;
+            if(my_rank == 0) std::cerr<<"r_in/r_out="<<ratio_r_cut<<std::endl;
             break;
         case 'R':
             r_out = atof(optarg);
-            std::cerr<<"r_out_single="<<r_out<<std::endl;
+            if(my_rank == 0) std::cerr<<"r_out_single="<<r_out<<std::endl;
             break;
         case 'X':
             dt_limit_hard_factor = atof(optarg);
-            std::cerr<<"soft (tree) time step/hard time step="<<dt_limit_hard_factor<<std::endl;
+            if(my_rank == 0) std::cerr<<"soft (tree) time step/hard time step="<<dt_limit_hard_factor<<std::endl;
             assert(dt_limit_hard_factor > 0.0);
             break;
         case 'h':
@@ -226,15 +228,14 @@ int main(int argc, char *argv[]){
 //    EPJSoft::r_search_min = r_out*search_factor;
 //    EPJSoft::m_average = m_average;
     
-    std::cerr<<" m_average    = "<<m_average      <<std::endl
-             <<" r_in         = "<<r_in           <<std::endl
-             <<" r_out_single = "<<r_out          <<std::endl
-             <<" r_search_off = "<<r_search_offset<<std::endl
-             <<" vel_disp     = "<<v_disp         <<std::endl
-             <<" dt_soft      = "<<dt_soft        <<std::endl;
+    if(my_rank == 0)
+        std::cerr<<" m_average    = "<<m_average      <<std::endl
+                 <<" r_in         = "<<r_in           <<std::endl
+                 <<" r_out_single = "<<r_out          <<std::endl
+                 <<" r_search_off = "<<r_search_offset<<std::endl
+                 <<" vel_disp     = "<<v_disp         <<std::endl
+                              <<" dt_soft      = "<<dt_soft        <<std::endl;
     
-
-    PS::S32 my_rank = PS::Comm::getRank();
 
     // set r_search
     if (my_rank==0) {
@@ -431,7 +432,7 @@ int main(int argc, char *argv[]){
         fout<<std::endl;
 #endif
         
-        if( fmod(time_sys, dt_snp) == 0.0 ){
+        if( fmod(time_sys, dt_snp) == 0.0 && my_rank == 0){
             //eng_diff.dump(std::cerr);
             std::cerr<<"n_loop= "<<n_loop<<std::endl;
             std::cerr<<"n_glb= "<<n_glb<<std::endl;
@@ -515,10 +516,12 @@ int main(int argc, char *argv[]){
         n_loop++;
     }
 
-#ifdef ARC_ERROR    
-    std::cout<<"NHist: ";
-    for (PS::S32 i=0;i<20;i++) std::cout<<system_hard_isolated.N_count[i]/(PS::F64)n_loop<<" ";
-    std::cout<<std::endl;
+#ifdef ARC_ERROR
+    if(my_rank==0) {
+        std::cout<<"NHist: ";
+        for (PS::S32 i=0;i<20;i++) std::cout<<system_hard_isolated.N_count[i]/(PS::F64)n_loop<<" ";
+        std::cout<<std::endl;
+    }
 #endif
 
     PS::Finalize();
