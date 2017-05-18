@@ -239,7 +239,7 @@ int main(int argc, char *argv[]){
 
     // set r_search
     if (my_rank==0) {
-        if(n_bin>0) SetBinaryRout(system_soft, n_bin, g_min, r_out, m_average);
+        if(n_bin>0) SetBinaryRout(system_soft, n_bin, g_min, r_in, r_out, m_average);
       SetSingleRout(system_soft, n_glb, n_bin, r_out);
     }
 

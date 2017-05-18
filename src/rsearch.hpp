@@ -63,13 +63,14 @@ void GetR(const Tpsys & system_soft,
 }
 
 template<class Tpsys>
-void SetBinaryRout(Tpsys & psys, const PS::S32 n_bin, const PS::F64 g_min, const PS::F64 r_out, const PS::F64 m_average) {
+void SetBinaryRout(Tpsys & psys, const PS::S32 n_bin, const PS::F64 g_min, const PS::F64 r_in, const PS::F64 r_out, const PS::F64 m_average) {
     double gamma = std::pow(1.0/g_min,0.33333);
     for (PS::S32 i=0; i<2*n_bin; i+=2) {
         if (psys[i].r_out<=0||psys[i+i].r_out<=0) {
             double a,ecc;
             PosVel2AxEcc(a,ecc,psys[i].pos, psys[i+1].pos, psys[i].vel, psys[i+1].vel, psys[i].mass, psys[i+1].mass);
-            if(a>0) psys[i+1].r_out = psys[i].r_out = a*(1+ecc)*gamma*(psys[i].mass+psys[i+1].mass)/m_average;
+            double apo = a*(1+ecc);
+            if(apo>0&&apo<r_in) psys[i+1].r_out = psys[i].r_out = apo*gamma*std::pow((psys[i].mass+psys[i+1].mass)/m_average,0.3333);
             else psys[i+1].r_out = psys[i].r_out = r_out;
         }
     }

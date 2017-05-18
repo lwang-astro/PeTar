@@ -415,6 +415,7 @@ void WriteFile(const Tpsys & psys,
           ptcl_loc[n_cnt].vel = psys[j].vel;
           ptcl_loc[n_cnt].acc = psys[j].acc;
           ptcl_loc[n_cnt].pot_tot = psys[j].pot_tot;
+          ptcl_loc[n_cnt].r_out = psys[j].r_out;
           ptcl_loc[n_cnt].n_ngb = psys[j].n_ngb;
           n_cnt++;
 	    }
