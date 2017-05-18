@@ -308,27 +308,29 @@ private:
         }
 
         // update Rout
-        std::size_t* list=new std::size_t[n_ptcl];
-        Tptcl** plist=new Tptcl*[n_ptcl];
-        c.getList(list);
+        if(n_ptcl>2) {
+            std::size_t* list=new std::size_t[n_ptcl];
+            Tptcl** plist=new Tptcl*[n_ptcl];
+            c.getList(list);
 #ifdef DEBUG_TEMP
-        std::cerr<<"Curren r_out: n="<<n_ptcl;
-        for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<list[i]<<" ";
-        std::cerr<<std::endl;
-        for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<ptcl_org[list[i]]<<" ";
-        std::cerr<<std::endl;
+            std::cerr<<"Curren r_out: n="<<n_ptcl;
+            for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<list[i]<<" ";
+            std::cerr<<std::endl;
+            for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<ptcl_org[list[i]].r_out<<" ";
+            std::cerr<<std::endl;
 #endif
-        for (PS::S32 i=0; i<n_ptcl; i++) plist[i] = &(ptcl_org[list[i]]);
-        updateRout(plist,n_ptcl,Int_pars.rin,r_out_single_,gamma_,m_average_);
+            for (PS::S32 i=0; i<n_ptcl; i++) plist[i] = &(ptcl_org[list[i]]);
+            updateRout(plist,n_ptcl,Int_pars.rin,r_out_single_,gamma_,m_average_);
 #ifdef DEBUG_TEMP
-        std::cerr<<"new r_out: n="<<n_ptcl;
-        for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<list[i]<<" ";
-        std::cerr<<std::endl;
-        for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<ptcl_org[list[i]]<<" ";
-        std::cerr<<std::endl;
+            std::cerr<<"new r_out: n="<<n_ptcl;
+            for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<list[i]<<" ";
+            std::cerr<<std::endl;
+            for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<ptcl_org[list[i]].r_out<<" ";
+            std::cerr<<std::endl;
 #endif
-        delete[] list;
-        delete[] plist;
+            delete[] list;
+            delete[] plist;
+        }
 
         // error record
 #ifdef ARC_ERROR
