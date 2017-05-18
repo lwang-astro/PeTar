@@ -11,6 +11,62 @@ struct params{
     double rin,rout,gmin;
 };
 
+PtclHard kepler_print(const std::size_t id, const std::size_t ib, PtclHard* c[2], params& ppars){
+    const double* x[2];
+    const double* v[2];
+    double m[2];
+    for (std::size_t i=0; i<2; i++) {
+      x[i]=c[i]->getPos();
+      v[i]=c[i]->getVel();
+      m[i]=c[i]->getMass();
+    }
+        
+    double ax,per,ecc,angle[3],true_anomaly,ecc_anomaly,mean_anomaly; 
+    double dx[3] = {x[1][0]-x[0][0], x[1][1]-x[0][1], x[1][2]-x[0][2]};
+    double dv[3] = {v[1][0]-v[0][0], v[1][1]-v[0][1], v[1][2]-v[0][2]};
+    double mt = m[0]+m[1];
+    
+    NTA::calc_kepler_orbit_par(ax,per,ecc,angle,true_anomaly,ecc_anomaly,mean_anomaly,mt,dx,dv);
+    std::cout<<std::setw(12)<<id
+             <<std::setw(12)<<ib
+             <<std::setw(12)<<ax
+             <<std::setw(12)<<ecc
+             <<std::setw(12)<<per
+             <<std::setw(12)<<angle[0]
+             <<std::setw(12)<<angle[1]
+             <<std::setw(12)<<angle[2]
+             <<std::setw(12)<<ecc_anomaly
+             <<std::setw(12)<<true_anomaly
+             <<std::setw(12)<<mean_anomaly
+             <<std::endl;
+    if(id==0&&ib==0) 
+        std::cout<<"      " 
+                 <<std::setw(12)<<"id          " 
+                 <<std::setw(12)<<"ib          " 
+                 <<std::setw(12)<<"ax          " 
+                 <<std::setw(12)<<"ecc         " 
+                 <<std::setw(12)<<"per         " 
+                 <<std::setw(12)<<"angle[0]    " 
+                 <<std::setw(12)<<"angle[1]    " 
+                 <<std::setw(12)<<"angle[2]    " 
+                 <<std::setw(12)<<"ecc_anomaly " 
+                 <<std::setw(12)<<"true_anomaly" 
+                 <<std::setw(12)<<"mean_anomaly" 
+                 <<std::endl;                 
+            
+
+    PS::F64vec xcm((x[0][0]*m[0]+x[1][0]*m[1])/mt, 
+                   (x[0][1]*m[0]+x[1][1]*m[1])/mt, 
+                   (x[0][2]*m[0]+x[1][2]*m[1])/mt);
+
+    PS::F64vec vcm((v[0][0]*m[0]+v[1][0]*m[1])/mt, 
+                   (v[0][1]*m[0]+v[1][1]*m[1])/mt, 
+                   (v[0][2]*m[0]+v[1][2]*m[1])/mt);
+
+    return PtclHard(ib,mt,xcm,vcm,ppars.rout,0,0);
+}
+
+
 int main(int argc, char** argv)
 {
   // data file name
@@ -66,6 +122,7 @@ int main(int argc, char** argv)
   }
   
   //  plist.kepler_print(0,0,18,10);
+  plist.pair_process(0,0,kepler_print,par);
 
   updateRout(p, N, par.rin, par.rout, par.gmin, m_average);
   for (int i=0; i<N; i++) {
