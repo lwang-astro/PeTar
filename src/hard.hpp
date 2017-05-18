@@ -34,6 +34,15 @@ public:
     static PS::F64 r_factor;
     static PS::F64 dens;
     PtclHard():id(-1), mass(-1.0){}
+//    PtclHard(const PtclHard &p) {
+//        id         = p.id;
+//        mass       = p.mass;
+//        pos        = p.pos;
+//        vel        = p.vel;
+//        r_out      = p.r_out;
+//        id_cluster = p.id_cluster;
+//        adr_org    = p.adr_org;
+//    }
     PtclHard(const PS::S64 _id, 
              const PS::F64 _mass, 
              const PS::F64vec & _pos, 
@@ -199,9 +208,9 @@ private:
 //          if (!kout.is_open()) kout.open("kout");
 //          for (int i=0;i<n_ptcl;i++) kout<<std::setprecision(17)<<time_origin_<<" "<<ptcl_org[i].mass<<" "<<ptcl_org[i].pos<<" "<<ptcl_org[i].vel<<std::endl;
 
-                PS::F64 peri = ax*(1+ecc)*gamma_;
-                if (peri>1.2*ptcl_org[0].r_out || peri<0.8*ptcl_org[0].r_out || ptcl_org[0].r_out!= ptcl_org[1].r_out)
-                    ptcl_org[0].r_out = ptcl_org[1].r_out = peri;
+//                PS::F64 peri = ax*(1+ecc)*gamma_;
+//                if (peri>1.2*ptcl_org[0].r_out || peri<0.8*ptcl_org[0].r_out || ptcl_org[0].r_out!= ptcl_org[1].r_out)
+//                    ptcl_org[0].r_out = ptcl_org[1].r_out = peri;
                 return;
             }
         }

@@ -87,7 +87,7 @@ void updateRout(Tptcl** p, const PS::S32 n, const PS::F64 r_in, const PS::F64 r_
     PS::F64 apomax=0;
     Tptcl* plist[n];
     for(PS::S32 i=0; i<n; i++) {
-        PS::F64 ax,ecc,apo=0;
+        PS::F64 ax=0.0,ecc,apo=0.0;
         if(i<n-1) {
             PosVel2AxEcc(ax,ecc,
                          p[i]->pos, p[i+1]->pos,
@@ -96,7 +96,7 @@ void updateRout(Tptcl** p, const PS::S32 n, const PS::F64 r_in, const PS::F64 r_
             //apo=ax*(1.0+ecc);
             apo=ax*(1.0+ecc)*std::pow((p[i]->mass+p[i+1]->mass)/m_average,0.3333);
         }
-        if (apo>r_in||i==n-1) {
+        if (ax<0.0||apo>r_in||i==n-1) {
             if (i==istart) {
                 p[i]->r_out=r_out;
                 plist[icount]=p[i];
@@ -105,7 +105,7 @@ void updateRout(Tptcl** p, const PS::S32 n, const PS::F64 r_in, const PS::F64 r_
                 Tptcl** ptemp=new Tptcl*[i-istart+1];
                 apomax *=gamma;
                 for(PS::S32 j=istart; j<=i; j++) {
-                    if(apomax>1.2*p[j]->r_out||apomax<0.8*p[j]->r_out) p[j]->r_out = apomax;
+                    if(apomax>0.0&&(apomax>1.2*p[j]->r_out||apomax<0.8*p[j]->r_out)) p[j]->r_out = apomax;
                     ptemp[j-istart]=p[j];
                 }
                 apomax = 0.0;

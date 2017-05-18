@@ -11,14 +11,20 @@ struct params{
     double rin,rout,gmin;
 };
 
+PtclHard pshift(const PtclHard& a, const PtclHard& ref) {
+    PtclHard p(a);
+    p.pos += ref.pos;
+    p.vel += ref.vel;
+    return p;
+}
+
 PtclHard kepler_print(const std::size_t id, const std::size_t ib, PtclHard* c[2], params& ppars){
-    const double* x[2];
-    const double* v[2];
+    PS::F64vec x[2],v[2];
     double m[2];
     for (std::size_t i=0; i<2; i++) {
-      x[i]=c[i]->getPos();
-      v[i]=c[i]->getVel();
-      m[i]=c[i]->getMass();
+      x[i]=c[i]->pos;
+      v[i]=c[i]->vel;
+      m[i]=c[i]->mass;
     }
         
     double ax,per,ecc,angle[3],true_anomaly,ecc_anomaly,mean_anomaly; 
@@ -29,6 +35,8 @@ PtclHard kepler_print(const std::size_t id, const std::size_t ib, PtclHard* c[2]
     NTA::calc_kepler_orbit_par(ax,per,ecc,angle,true_anomaly,ecc_anomaly,mean_anomaly,mt,dx,dv);
     std::cout<<std::setw(12)<<id
              <<std::setw(12)<<ib
+             <<std::setw(12)<<m[0]
+             <<std::setw(12)<<m[1]
              <<std::setw(12)<<ax
              <<std::setw(12)<<ecc
              <<std::setw(12)<<per
@@ -43,6 +51,8 @@ PtclHard kepler_print(const std::size_t id, const std::size_t ib, PtclHard* c[2]
         std::cout<<"      " 
                  <<std::setw(12)<<"id          " 
                  <<std::setw(12)<<"ib          " 
+                 <<std::setw(12)<<"m[0]        " 
+                 <<std::setw(12)<<"m[1]        " 
                  <<std::setw(12)<<"ax          " 
                  <<std::setw(12)<<"ecc         " 
                  <<std::setw(12)<<"per         " 
@@ -98,17 +108,39 @@ int main(int argc, char** argv)
     double x1[3],x2[3],v1[3],v2[3];
     NTA::kepler_orbit_generator(x1,x2,v1,v2,m1,m2,ax,ecc,angle,ecc_anomaly);
 
+//#ifdef DEBUG
+//    std::cout<<ax<<" "<<ecc<<" "<<angle[0]<<" "<<angle[1]<<" "<<angle[2]<<" "<<ecc_anomaly<<std::endl;
+//#endif
+    
     PS::F64vec xx1(x1[0],x1[1],x1[2]);
     PS::F64vec xx2(x2[0],x2[1],x2[2]);
     PS::F64vec vv1(v1[0],v1[1],v1[2]);
     PS::F64vec vv2(v2[0],v2[1],v2[2]);    
+
+//#ifdef DEBUG
+//    double dx[3],dv[3];
+//    for(int i=0;i<3;i++) {
+//        dx[i] = x2[i] - x1[i];
+//        dv[i] = v2[i] - v1[i];
+//    }
+//    double per, true_anomaly, mean_anomaly;
+//    NTA::calc_kepler_orbit_par(ax,per,ecc,angle,true_anomaly,ecc_anomaly,mean_anomaly,m1+m2,dx,dv);
+//    std::cout<<ax<<" "<<ecc<<" "<<angle[0]<<" "<<angle[1]<<" "<<angle[2]<<" "<<ecc_anomaly<<std::endl;
+//#endif
+
     PtclHard a(i,m1,xx1,vv1,par.rout,0,0);
     PtclHard b(-i,m2,xx2,vv2,par.rout,0,0);
-    bool flag=plist.link(id,ib,a,b);
+
+    bool flag=plist.link(id,ib,a,b,pshift);
     if (!flag) {
       std::cerr<<"Error: particle id "<<id<<", ib "<<ib<<" are inconsistent with global particle tree structure, cannot created pairs!\n";
       abort();
     }
+//#ifdef DEBUG
+//    std::cout<<"a.mass="<<a.mass<<std::endl;
+//    plist.pair_process(0,0,kepler_print,par);
+//#endif
+
   }
 
   int count=plist.collect(p,N);
