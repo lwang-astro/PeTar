@@ -287,7 +287,7 @@ int main(int argc, char *argv[]){
 
     eng_init.calc(system_soft, true);
 
-    eng_init.dump(std::cerr);
+    if(my_rank==0) eng_init.dump(std::cerr);
     eng_now = eng_init;
 
 #ifdef DEBUG_OUTPUT
@@ -295,7 +295,7 @@ int main(int argc, char *argv[]){
 	fout.open("pdata");
 #endif
     std::ofstream fprofile;
-    fprofile.open("profile.out");
+    if(my_rank==0) fprofile.open("profile.out");
 
     PS::S32 n_loop = 0;
     PS::S32 dn_loop = 0;
@@ -431,52 +431,62 @@ int main(int argc, char *argv[]){
         }
         fout<<std::endl;
 #endif
-        
-        if( fmod(time_sys, dt_snp) == 0.0 && my_rank == 0){
+
+        if( fmod(time_sys, dt_snp) == 0.0){
             //eng_diff.dump(std::cerr);
-            std::cerr<<"n_loop= "<<n_loop<<std::endl;
-            std::cerr<<"n_glb= "<<n_glb<<std::endl;
-            std::cerr<<"Time= "<<time_sys<<" Enow-Einit="<<eng_diff.tot<<" (Enow-Einit)/Einit= "<<eng_diff.tot/eng_init.tot
+            if(my_rank==0) {
+                std::cerr<<"n_loop= "<<n_loop<<std::endl;
+                std::cerr<<"n_glb= "<<n_glb<<std::endl;
+                std::cerr<<"Time= "<<time_sys<<" Enow-Einit="<<eng_diff.tot<<" (Enow-Einit)/Einit= "<<eng_diff.tot/eng_init.tot
 #ifdef ARC_ERROR
-                     <<" ARC_error_relative="<<system_hard_isolated.ARC_error_relative+system_hard_conected.ARC_error_relative<<" ARC_error="<<system_hard_isolated.ARC_error+system_hard_conected.ARC_error
+                         <<" ARC_error_relative="<<system_hard_isolated.ARC_error_relative+system_hard_conected.ARC_error_relative<<" ARC_error="<<system_hard_isolated.ARC_error+system_hard_conected.ARC_error
 #endif
-                     <<std::endl;
-            eng_now.dump(std::cerr);
-            std::cerr<<"wtime_tot/dn_loop= "<<wtime_tot/dn_loop<<" dn_loop= "<<dn_loop<<std::endl;
-            std::cerr<<"wtime_hard_tot/dn_loop= "<<wtime_hard_tot/dn_loop<<std::endl
-                     <<"wtime_hard_1st_block/dn_loop= "<<wtime_hard_1st_block/dn_loop<<std::endl
-                     <<"wtime_hard_2nd_block/dn_loop= "<<wtime_hard_2nd_block/dn_loop<<std::endl
-                     <<"wtime_hard_3rd_block/dn_loop= "<<wtime_hard_3rd_block/dn_loop<<std::endl;
-            std::cerr<<"wtime_soft_tot/dn_loop= "<<wtime_soft_tot/dn_loop<<std::endl
-                     <<"wtime_soft_search_neighbor/dn_loop= "<<wtime_soft_search_neighbor/dn_loop<<std::endl;
-            std::cerr<<"n_ptcl_hard_one_cluster/dn_loop= "         <<(PS::F64)n_ptcl_hard_one_cluster/dn_loop<<std::endl
-                     <<"n_ptcl_hard_isolated_cluster/dn_loop= "   <<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop<<std::endl
-                     <<"n_ptcl_hard_nonisolated_cluster/dn_loop= "<<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop<<std::endl;
+                         <<std::endl;
+                eng_now.dump(std::cerr);
+                std::cerr<<"wtime_tot/dn_loop= "<<wtime_tot/dn_loop<<" dn_loop= "<<dn_loop<<std::endl;
+                std::cerr<<"wtime_hard_tot/dn_loop= "<<wtime_hard_tot/dn_loop<<std::endl
+                         <<"wtime_hard_1st_block/dn_loop= "<<wtime_hard_1st_block/dn_loop<<std::endl
+                         <<"wtime_hard_2nd_block/dn_loop= "<<wtime_hard_2nd_block/dn_loop<<std::endl
+                         <<"wtime_hard_3rd_block/dn_loop= "<<wtime_hard_3rd_block/dn_loop<<std::endl;
+                std::cerr<<"wtime_soft_tot/dn_loop= "<<wtime_soft_tot/dn_loop<<std::endl
+                         <<"wtime_soft_search_neighbor/dn_loop= "<<wtime_soft_search_neighbor/dn_loop<<std::endl;
+                std::cerr<<"n_ptcl_hard_one_cluster/dn_loop= "         <<(PS::F64)n_ptcl_hard_one_cluster/dn_loop<<std::endl
+                         <<"n_ptcl_hard_isolated_cluster/dn_loop= "   <<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop<<std::endl
+                         <<"n_ptcl_hard_nonisolated_cluster/dn_loop= "<<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop<<std::endl;
+            }
 
 #ifdef ARC_ERROR
-            std::cerr<<"NHist: ";
-            for (PS::S32 i=0;i<20;i++) std::cerr<<system_hard_isolated.N_count[i]<<" ";
-            std::cerr<<std::endl;
+            for (int i=1;i<20;i++)  system_hard_isolated.N_count[i] = PS::Comm::getSum(system_hard_isolated.N_count[i]);
+            if(my_rank==0) {
+                std::cerr<<"NHist: ";
+                for (PS::S32 i=0;i<20;i++) {
+                    std::cerr<<system_hard_isolated.N_count[i]<<" ";
+                    system_hard_isolated.N_count[i] = 0;
+                }
+                std::cerr<<std::endl;
+            }
 #endif
             
-            fprofile<<time_sys<<" "
-                    <<n_loop<<" "
-                    <<n_glb<<" "
-                    <<wtime_tot/dn_loop<<" "
-                    <<wtime_hard_tot/dn_loop<<" "
-                    <<wtime_hard_1st_block/dn_loop<<" "
-                    <<wtime_hard_2nd_block/dn_loop<<" "
-                    <<wtime_hard_3rd_block/dn_loop<<" "
-                    <<wtime_soft_tot/dn_loop<<" "
-                    <<wtime_soft_search_neighbor/dn_loop<<" "
-                    <<(PS::F64)n_ptcl_hard_one_cluster/dn_loop<<" "
-                    <<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop<<" "
-                    <<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop<<" "
-                    <<eng_diff.tot/eng_init.tot<<" "
+            if(my_rank==0) {
+                fprofile<<time_sys<<" "
+                        <<n_loop<<" "
+                        <<n_glb<<" "
+                        <<wtime_tot/dn_loop<<" "
+                        <<wtime_hard_tot/dn_loop<<" "
+                        <<wtime_hard_1st_block/dn_loop<<" "
+                        <<wtime_hard_2nd_block/dn_loop<<" "
+                        <<wtime_hard_3rd_block/dn_loop<<" "
+                        <<wtime_soft_tot/dn_loop<<" "
+                        <<wtime_soft_search_neighbor/dn_loop<<" "
+                        <<(PS::F64)n_ptcl_hard_one_cluster/dn_loop<<" "
+                        <<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop<<" "
+                        <<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop<<" "
+                        <<eng_diff.tot/eng_init.tot<<" "
 #ifdef ARC_ERROR
-                    <<system_hard_isolated.ARC_error+system_hard_conected.ARC_error<<" "
+                        <<system_hard_isolated.ARC_error+system_hard_conected.ARC_error<<" "
 #endif              
-                    <<std::endl;
+                        <<std::endl;
+            }
             
             file_header.time = time_sys;
             file_header.nfile++;
@@ -513,10 +523,13 @@ int main(int argc, char *argv[]){
             dn_loop=0;
         }
 
+
         n_loop++;
     }
 
 #ifdef ARC_ERROR
+    std::cout<<"Hist[1]"<<system_hard_isolated.N_count[1]/(PS::F64)n_loop<<std::endl;
+    for (int i=1;i<20;i++)  system_hard_isolated.N_count[i] = PS::Comm::getSum(system_hard_isolated.N_count[i]);
     if(my_rank==0) {
         std::cout<<"NHist: ";
         for (PS::S32 i=0;i<20;i++) std::cout<<system_hard_isolated.N_count[i]/(PS::F64)n_loop<<" ";

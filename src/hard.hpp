@@ -227,6 +227,7 @@ private:
 
         c.link_int_par(Int_pars);
         c.init(time_sys);
+
 #ifdef ARC_ERROR
         PS::F64 ARC_error_once = c.getPot()+c.getEkin();
         if(n_ptcl<=20) N_count[n_ptcl-1]++;
@@ -236,7 +237,12 @@ private:
         PS::F64 dscoff=1.0;
         PS::F64 ds_up_limit = 0.25*calcDtLimit(time_sys, dt_limit_hard_)/c.calc_dt_X(1.0);
         PS::F64 ds_use = c.calc_next_step_custom();
-        //      std::cerr<<"ds_use="<<ds_use<<std::endl;
+#ifdef DEBUG
+        if(n_ptcl==2) {
+            c.print(std::cerr,15,18);
+            abort();
+        }
+#endif
       
         if (ds_use>ds_up_limit) ds_use = ds_up_limit;
 
