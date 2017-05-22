@@ -137,21 +137,24 @@ public:
              @param[out] pWij: TTL time transformation function partial derivates (component from j to i) \f$\partial W_{ij}/\partial \mathbf{x}_i\f$ (used for TTL method). \f$pWij[1:3] = mm_{ij} xij[1:3] /|xij|^3 \f$. (Total value is \f$\frac{\partial W}{\partial \mathbf{x}_i} = \sum_{j} mm_{ij} \mathbf{x}_{ij}/|\mathbf{x}_{ij}|^3\f$)
              @param[out] Wij: TTL time transformation function component with i,j (used for TTL method) \f$Wij = mm_{ij} /|xij|^3\f$ total value is \f$ W = \sum_{i<j} mm_{ij} /|xij| \f$
              @param[in] xij: relative position vector [1:3] \f$ \mathbf{x_j} - \mathbf{x_i} \f$
-             @param[in] mi: particle i mass.
-             @param[in] mj: particle j mass.
+             @param[in] pi: particle i.
+             @param[in] pj: particle j.
              @param[in] smpars: array of double[2]; First element is rcut_out, second element is rcut_in.
              \return status 0
 */
-int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, const double xij[3], const double &mi, const double &mj, const ARC_int_pars* pars) {
+template <class PtclHard>
+int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, const double xij[3], const PtclHard &pi, const PtclHard &pj, const ARC_int_pars* pars) {
   // distance
   const double rij = std::sqrt(xij[0]*xij[0]+xij[1]*xij[1]+xij[2]*xij[2]+pars->eps2);
+  const double mi = pi.mass;
+  const double mj = pj.mass;
 
   // smpars[2:3]: rcut_out, rcut_in
 //  const double k   = cutoff_poly_3rd(rij, smpars[0], smpars[1]);
 //  const double kdx = cutoff_poly_3rd_dr(rij, xij[0], smpars[0], smpars[1]);
 //  const double kdy = cutoff_poly_3rd_dr(rij, xij[1], smpars[0], smpars[1]);
 //  const double kdz = cutoff_poly_3rd_dr(rij, xij[2], smpars[0], smpars[1]);
-  const double r_out = pars->rout;
+  const double r_out = std::max(pi.r_out,pj.r_out);
   const double r_in  = pars->rin;
   const double k = CalcW(rij/r_out, r_in/r_out);
   const double kdot = cutoff_poly_3rd(rij, r_out, r_in);
@@ -203,14 +206,17 @@ int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, c
   @param[out]  Pij: potential. \f$ Pij = - m_i m_p /|xp-xi|^3\f$
   @param[in]  xi: position vector i.
   @param[in]  xp: position vector p.
-  @param[in]  mi: particle mass i.
-  @param[in]  mp: particle mass p.
+  @param[in]  pi: particle i.
+  @param[in]  pp: particle p.
   @param[in] smpars: array of double[2]; First element is rcut_out, second element is rcut_in.
  */
-void Newtonian_cut_Ap (double Aij[3], double &Pij, const double xi[3], const double xp[3], const double &mi, const double &mp, const ARC_int_pars* pars){
+template<class PtclHard>
+void Newtonian_cut_Ap (double Aij[3], double &Pij, const double xi[3], const double xp[3], const PtclHard &pi, const PtclHard &pp, const ARC_int_pars* pars){
   double dx = xp[0] - xi[0];
   double dy = xp[1] - xi[1];
   double dz = xp[2] - xi[2];
+  double mi = pi.mass;
+  double mp = pp.mass;
 
   double dr2 = dx*dx + dy*dy + dz*dz + pars->eps2;
   double dr  = std::sqrt(dr2);
@@ -221,7 +227,8 @@ void Newtonian_cut_Ap (double Aij[3], double &Pij, const double xi[3], const dou
 //  const double kdx = cutoff_poly_3rd_dr(dr, dx, smpars[0], smpars[1]);
 //  const double kdy = cutoff_poly_3rd_dr(dr, dy, smpars[0], smpars[1]);
 //  const double kdz = cutoff_poly_3rd_dr(dr, dz, smpars[0], smpars[1]);  
-  const double r_out = pars->rout;
+//  const double r_out = pars->rout;
+  const double r_out = std::max(pi.r_out, pp.r_out);
   const double r_in  = pars->rin;
   const double k = CalcW(dr/r_out, r_in/r_out);
   const double kdot = cutoff_poly_3rd(dr, r_out, r_in);

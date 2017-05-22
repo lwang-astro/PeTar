@@ -1,6 +1,6 @@
 #pragma once
 #include<particle_simulator.hpp>
-#include"force.hpp"
+//#include"hard_force.hpp"
 
 template <class Ttree>
 void SetRankComm(const PS::F64ort pos_domain[], Ttree &tree,

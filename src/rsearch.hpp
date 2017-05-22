@@ -106,7 +106,7 @@ void updateRout(Tptcl** p, const PS::S32 n, const PS::F64 r_in, const PS::F64 r_
                 Tptcl** ptemp=new Tptcl*[i-istart+1];
                 apomax *=gamma;
                 for(PS::S32 j=istart; j<=i; j++) {
-                    if(apomax>0.0&&(apomax>1.2*p[j]->r_out||apomax<0.8*p[j]->r_out)) p[j]->r_out = apomax;
+                    if(apomax>0.0&&(apomax>1.2*p[j]->r_out||apomax<0.8*p[j]->r_out)) p[j]->r_out = std::max(apomax,r_out);
                     ptemp[j-istart]=p[j];
                 }
                 apomax = 0.0;

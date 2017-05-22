@@ -8,7 +8,7 @@
 #endif
 
 #include"kepler.hpp"
-#include"force.hpp"
+#include"hard_force.hpp"
 #include"soft.hpp"
 #include"rsearch.hpp"
 #include"AR.h" /// include AR.h (L.Wang)
@@ -122,7 +122,7 @@ public:
 class SystemHard{
 public:
     PS::ReallocatableArray<PtclHard> ptcl_hard_;
-    ARC::chainpars<ARC_int_pars> ARC_control; ///chain controller (L.Wang)
+    ARC::chainpars<PtclHard,ARC_int_pars> ARC_control; ///chain controller (L.Wang)
 #ifdef ARC_ERROR
     PS::F64 ARC_error_relative;
     PS::F64 ARC_error;  
@@ -209,8 +209,8 @@ private:
 //          for (int i=0;i<n_ptcl;i++) kout<<std::setprecision(17)<<time_origin_<<" "<<ptcl_org[i].mass<<" "<<ptcl_org[i].pos<<" "<<ptcl_org[i].vel<<std::endl;
 
                 PS::F64 peri = ax*(1+ecc)*gamma_*std::pow(pcm.mass/m_average_,0.3333);
-                if (peri>1.2*ptcl_org[0].r_out || peri<0.8*ptcl_org[0].r_out || ptcl_org[0].r_out!= ptcl_org[1].r_out)
-                    ptcl_org[0].r_out = ptcl_org[1].r_out = peri;
+                if (peri>1.2*ptcl_org[0].r_out || (peri>0 && peri<0.8*ptcl_org[0].r_out) || ptcl_org[0].r_out!= ptcl_org[1].r_out)
+                    ptcl_org[0].r_out = ptcl_org[1].r_out = std::max(peri,r_out_single_);
                 return;
             }
         }
@@ -223,7 +223,14 @@ private:
 
         c.addP(n_ptcl,ptcl_org);
 
-        Int_pars.rout = ptcl_org[0].r_out;
+//        Int_pars.rout = ptcl_org[0].r_out;
+#ifdef SAFETY_CHECK
+        for (PS::S32 i=0; i<n_ptcl; i++) 
+            if (ptcl_org[i].r_out<Int_pars.rin) {
+                std::cerr<<"Error, updated p["<<i<<"].rout ("<<ptcl_org[i].r_out<<") < r_in ("<<Int_pars.rin<<")"<<std::endl;
+                abort();
+            }
+#endif
 
         c.link_int_par(Int_pars);
         c.init(time_sys);
@@ -354,6 +361,13 @@ private:
             for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<ptcl_org[list[i]].r_out<<" ";
             std::cerr<<std::endl;
 #endif
+#ifdef SAFETY_CHECK
+            for (PS::S32 i=0; i<n_ptcl; i++) 
+                if (ptcl_org[list[i]].r_out<Int_pars.rin) {
+                    std::cerr<<"Error, updated p["<<list[i]<<"].rout ("<<ptcl_org[list[i]].r_out<<") < r_in ("<<Int_pars.rin<<")"<<std::endl;
+                    abort();
+                }
+#endif
             delete[] list;
             delete[] plist;
         }
@@ -388,7 +402,7 @@ public:
     /// start set Chainpars (L.Wang)
     ///
     void setARCParam(const PS::F64 energy_error=1e-10, const PS::F64 dterr=1e-9, const PS::F64 dtmin=1e-24, const PS::S32 exp_method=1, const PS::S32 exp_itermax=20, const PS::S32 den_intpmax=20, const PS::S32 exp_fix_iter=0) {
-        ARC_control.setA(Newtonian_cut_AW,Newtonian_cut_Ap,Newtonian_timescale);
+        ARC_control.setA(Newtonian_cut_AW<PtclHard>,Newtonian_cut_Ap<PtclHard>,Newtonian_timescale);
         ARC_control.setabg(0,1,0);
         ARC_control.setErr(energy_error,dtmin,dterr);
         ARC_control.setIterSeq(exp_itermax,3,den_intpmax);

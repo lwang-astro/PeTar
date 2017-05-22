@@ -1,6 +1,6 @@
 #PS_PATH = -I../../fdps/src/
-PS_PATH = -I../fdps/src/
-#PS_PATH = -I../../../fdps/src/
+#PS_PATH = -I../fdps/src/
+PS_PATH = -I../../../fdps/src/
 #PS_PATH = -I../../fdps/src/
 #PS_PATH = -I../../../../project/fdps/src
 #PS_PATH = -I../FDPS/src
@@ -53,13 +53,14 @@ CXXFLAGS += -DDIV_FIX -DP3T_64BIT
 #CXXFLAGS += -DUSE_QUAD 
 CXXFLAGS += -DARC_ERROR
 CXXFLAGS += -D ARC_WARN
+CXXFLAGS += -D SAFETY_CHECK
 #CXXFLAGS += -D DEBUG
 #CXXFLAGS += -D DEBUG_TEMP
 #CXXFLAGS += -D DEBUG_OUTPUT
 
 VPATH=./src ./test
 
-SRC = main.cc hard.hpp soft.hpp force.hpp io.hpp kepler.hpp phantomquad_for_p3t_x86.hpp domain.hpp profile.hpp cluster_list.hpp
+SRC = main.cc hard.hpp soft.hpp hard_force.hpp io.hpp kepler.hpp phantomquad_for_p3t_x86.hpp domain.hpp profile.hpp cluster_list.hpp
 
 all: nbody.out
 
@@ -76,3 +77,6 @@ clean:
 	rm *.out *.o
 cleanall:
 	rm *.out *.hpp~ *.cc~ *.h~
+
+run: nbody.out
+	mpiexec -n 1 ./nbody.out -i input.dat.14
