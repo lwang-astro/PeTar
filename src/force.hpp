@@ -173,6 +173,9 @@ int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, c
 //  }
   
   Pij = - mimj / rij * (1-k);  // Potential energy
+//#ifdef DEBUG
+//  std::cerr<<"Pij = "<<Pij<<" rij = "<<rij<<" k="<<k<<" r_in="<<r_in<<" r_out="<<r_out<<std::endl;
+//#endif
   Wij = mmij / rij;   // Transformation coefficient
         
   // Acceleration

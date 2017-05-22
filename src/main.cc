@@ -214,6 +214,8 @@ int main(int argc, char *argv[]){
       n_glb = system_soft.getNumberOfParticleGlobal();
       n_loc = system_soft.getNumberOfParticleLocal();
       //      for(PS::S32 i=0; i<n_loc; i++) system_soft[i].id = i;
+      std::cerr<<"Reading file "<<sinput<<std::endl
+               <<"N_tot = "<<n_glb<<"\nN_loc = "<<n_loc<<std::endl;
     }
     else SetParticlePlummer(system_soft, n_glb, n_loc, time_sys);
 
@@ -238,10 +240,19 @@ int main(int argc, char *argv[]){
     
 
     // set r_search
-    if (my_rank==0) {
-        if(n_bin>0) SetBinaryRout(system_soft, n_bin, g_min, r_in, r_out, m_average);
-      SetSingleRout(system_soft, n_glb, n_bin, r_out);
+    if(n_bin>n_loc) {
+        if (n_loc%2) std::cerr<<"Warning! Binary number is larger than local particle numbers, but n_loc is odd, which means the last binary is splitted to two nodes"<<std::endl;
+        int ndiv = 2*n_bin/n_loc;
+        if(my_rank<ndiv) n_bin = n_loc/2;
+        else if(my_rank==ndiv) n_bin = 2*n_bin % n_loc;
+        else n_bin = 0;
     }
+    else {
+        if(my_rank>0) n_bin = 0;
+    }
+
+    if(n_bin>0) SetBinaryRout(system_soft, n_bin, g_min, r_in, r_out, m_average);
+    SetSingleRout(system_soft, n_loc, 2*n_bin, r_out);
 
     const PS::F32 coef_ema = 0.2;
     PS::DomainInfo dinfo;
