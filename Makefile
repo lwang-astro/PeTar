@@ -1,9 +1,9 @@
 #PS_PATH = -I../../fdps/src/
-#PS_PATH = -I../fdps/
+PS_PATH = -I../fdps/src/
 #PS_PATH = -I../../../fdps/src/
 #PS_PATH = -I../../fdps/src/
 #PS_PATH = -I../../../../project/fdps/src
-PS_PATH = -I../FDPS/src
+#PS_PATH = -I../FDPS/src
 ARC_PATH = -I../ARC/include
 
 #use_k_computer = yes
@@ -49,13 +49,15 @@ endif
 
 CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -fopenmp
 CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
-CXXFLAGS += -DUSE_QUAD -DDIV_FIX -DP3T_64BIT
+CXXFLAGS += -DDIV_FIX -DP3T_64BIT
+#CXXFLAGS += -DUSE_QUAD 
 CXXFLAGS += -DARC_ERROR
-#CXXFLAGS += -D ARC_WARN
+CXXFLAGS += -D ARC_WARN
 #CXXFLAGS += -D DEBUG
+#CXXFLAGS += -D DEBUG_TEMP
 #CXXFLAGS += -D DEBUG_OUTPUT
 
-VPATH=./src
+VPATH=./src ./test
 
 SRC = main.cc hard.hpp soft.hpp force.hpp io.hpp kepler.hpp phantomquad_for_p3t_x86.hpp domain.hpp profile.hpp cluster_list.hpp
 
@@ -65,10 +67,10 @@ nbody.out: $(SRC)
 	$(CXX) $(PS_PATH) $(ARC_PATH) $(CXXFLAGS) -o $@ $<
 
 ARC_debug.out: chain_debug.cxx force.hpp
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(CXXFLAGS) -D DEBUG -o $@ $<
+	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -D DEBUG -o $@ $<
 
 rsearchtest: rsearchtest.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(CXXFLAGS) -o $@ $<
+	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $<
 
 clean:
 	rm *.out *.o
