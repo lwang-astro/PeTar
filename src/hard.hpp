@@ -248,7 +248,8 @@ private:
 
         // convergency check
         PS::S32 converge_count=0;
-        bool once_flag=false;
+        PS::S32 error_count=0;
+        bool modify_step_flag=false;
         bool final_flag=false;
       
         while(time_end-c.getTime()>ARC_control.dterr) {
@@ -276,7 +277,7 @@ private:
                     std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c.getTime()<<"\nR_in: "<<Int_pars.rin<<"\nR_out: "<<Int_pars.rout<<"\n";
 //    		ds_use = 0.1*c.calc_next_step_custom();
 //            std::cerr<<"New step size: "<<ds_use<<std::endl;
-//    		once_flag=true;
+//    		modify_step_flag=true;
 //			converge_count=0;
                     c.dump("ARC_dump.dat");
                     ARC_control.dump("ARC_dump.par");
@@ -295,6 +296,14 @@ private:
             else if (dsf==0) {
                 //          char collerr[50]="two particle overlap!";
                 c.info->ErrMessage(std::cerr);
+                error_count++;
+                if(error_count>4) {
+                    std::cerr<<"Error: Too much error appear!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c.getTime()<<"\nR_in: "<<Int_pars.rin<<"\nR_out: "<<Int_pars.rout<<"\n";
+                    c.dump("ARC_dump.dat");
+                    ARC_control.dump("ARC_dump.par");
+                    c.print(std::cerr);
+                    abort();
+                }
                 if (c.info->status==5) {
                     dscoff = 0.25;
                     ds_use *= dscoff;
@@ -302,7 +311,7 @@ private:
                 //          else if (c.info->status==6) ds_use *= 0.001;
                 else if (c.info->status==4) ds_use = std::min(dscoff*c.calc_next_step_custom(),ds_up_limit);
                 else ds_use *= 0.1;
-                once_flag=true;
+                modify_step_flag=true;
             }
             else  {
                 if (final_flag) {
@@ -315,10 +324,12 @@ private:
                     }
                     converge_count++;
                 }
-                else if (n_ptcl>2||ax<0||once_flag) {
+                else if (n_ptcl>2||ax<0||(modify_step_flag&&error_count==0)) {
                     ds_use = std::min(dscoff*c.calc_next_step_custom(),ds_up_limit);
-                    once_flag=false;
+                    modify_step_flag=false;
                 }
+                // reducing error counter if integration success, this is to avoid the significant change of step may cause some issue
+                if(error_count>0) error_count--;
             }
         }
 
