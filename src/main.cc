@@ -96,7 +96,7 @@ int main(int argc, char *argv[]){
     PS::S32 n_smp_ave = 100;
     PS::F64 time_end = 1000.0;
     PS::F64 dt_soft = 1.0/256.0;
-    //    PS::F64 eta = 0.1;
+    PS::F64 eta = 0.1;
     //    PS::F64 eta_s = eta * 0.1;
     //    char dir_name[1024];
     PS::S64 n_glb = 16384;
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]){
 
     PS::S32 my_rank = PS::Comm::getRank();
 
-    while((c=getopt(argc,argv,"id:t:T:e:n:N:b:s:S:g:l:r:R:X:h")) != -1){
+    while((c=getopt(argc,argv,"id:t:T:e:E:n:N:b:s:S:g:l:r:R:X:h")) != -1){
         switch(c){
         case 'i':
             reading_flag=true;
@@ -136,6 +136,10 @@ int main(int argc, char *argv[]){
         case 'e':
             eps = atof(optarg);
             if(my_rank == 0) std::cerr<<"softening="<<eps<<std::endl;
+            break;
+        case 'E':
+            eta = atof(optarg);
+            if(my_rank == 0) std::cerr<<"eta="<<eta<<std::endl;
             break;
         case 'n':
             n_group_limit = atoi(optarg);
@@ -185,6 +189,7 @@ int main(int argc, char *argv[]){
             std::cerr<<"  -t: [F] openning angle theta (default: "<<theta<<")"<<std::endl;
             std::cerr<<"  -T: [F] finishing time (default: "<<time_end<<")"<<std::endl;
             std::cerr<<"  -e: [F] softening parameter (default: "<<eps<<")"<<std::endl;
+            std::cerr<<"  -E: [F] Hermite time step parameter (default: "<<eta<<")"<<std::endl;
             std::cerr<<"  -n: [I] n_group_limit (default: "<<n_group_limit<<")"<<std::endl;
             std::cerr<<"  -N: [I] total number of particles if no -i used (default: "<<n_glb<<")"<<std::endl;
             std::cerr<<"  -b: [I] binary number (default: "<<n_bin<<")"<<std::endl;
@@ -280,13 +285,13 @@ int main(int argc, char *argv[]){
                                        dinfo);
 
     SystemHard system_hard_one_cluster;
-    system_hard_one_cluster.setParam(r_out, r_in, eps, dt_soft/dt_limit_hard_factor, time_sys, g_min, m_average);
+    system_hard_one_cluster.setParam(r_out, r_in, eps, dt_soft/dt_limit_hard_factor, eta, time_sys, g_min, m_average);
     // system_hard_one_cluster.setARCParam();
     SystemHard system_hard_isolated;
-    system_hard_isolated.setParam(r_out, r_in, eps,  dt_soft/dt_limit_hard_factor, time_sys, g_min, m_average);
+    system_hard_isolated.setParam(r_out, r_in, eps,  dt_soft/dt_limit_hard_factor, eta, time_sys, g_min, m_average);
     system_hard_isolated.setARCParam();
     SystemHard system_hard_conected;
-    system_hard_conected.setParam(r_out, r_in, eps, dt_soft/dt_limit_hard_factor, time_sys, g_min, m_average);
+    system_hard_conected.setParam(r_out, r_in, eps, dt_soft/dt_limit_hard_factor, eta, time_sys, g_min, m_average);
     system_hard_conected.setARCParam();
 
     SearchCluster search_cluster;

@@ -70,7 +70,7 @@ void SetBinaryRout(Tpsys & psys, const PS::S32 n_bin, const PS::F64 g_min, const
             double a,ecc;
             PosVel2AxEcc(a,ecc,psys[i].pos, psys[i+1].pos, psys[i].vel, psys[i+1].vel, psys[i].mass, psys[i+1].mass);
             double apo = a*(1+ecc);
-            if(apo>0&&apo<r_in) psys[i+1].r_out = psys[i].r_out = apo*gamma*std::pow((psys[i].mass+psys[i+1].mass)/m_average,0.3333);
+            if(apo>0&&apo<r_in) psys[i+1].r_out = psys[i].r_out = std::max(apo*gamma*std::pow((psys[i].mass+psys[i+1].mass)/m_average,0.3333),r_out);
             else psys[i+1].r_out = psys[i].r_out = r_out;
         }
     }
@@ -126,7 +126,12 @@ void updateRout(Tptcl** p, const PS::S32 n, const PS::F64 r_in, const PS::F64 r_
             for (PS::S32 j=0; j<ioff[0]; j++) p[j]->r_out = plist[0]->r_out;
         for (PS::S32 i=1; i<icount; i++) {
             if (plist[i]->r_out>1.2*p[ioff[i-1]]->r_out)
-                for (PS::S32 j=ioff[i-1];j<ioff[i];j++) p[j]->r_out = plist[i]->r_out;
+                for (PS::S32 j=ioff[i-1];j<ioff[i];j++) {
+                    p[j]->r_out = plist[i]->r_out;
+#ifdef HARD_DEBUG
+                    assert(p[j]->r_out<r_out);
+#endif
+                }
             if (ioff[i]-ioff[i-1]>1) delete plist[i];
         }
     }

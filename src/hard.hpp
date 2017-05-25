@@ -7,11 +7,8 @@
 #define NAN_CHECK(val) assert((val) == (val));
 #endif
 
-#include"kepler.hpp"
-#include"hard_force.hpp"
+#include"integrate.hpp"
 #include"soft.hpp"
-#include"rsearch.hpp"
-#include"AR.h" /// include AR.h (L.Wang)
 #include"cstdlib"
 //#include"stdio.h" /// for debug (L.Wang)
 
@@ -131,6 +128,7 @@ public:
 private:
     ARC_int_pars Int_pars; /// ARC integration parameters, rout_, rin_ (L.Wang)
     PS::F64 dt_limit_hard_;
+    PS::F64 eta_s_;
     //PS::ReallocatableArray<PtclHard> ptcl_hard_;
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_;
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_disp_;
@@ -141,32 +139,21 @@ private:
 
     ///////////
     /// functor
-//    struct OPSortClusterID{
-//        template<class T> bool operator() (const T & left, const T & right) const {
-//            return left.id_cluster < right.id_cluster;
-//        }
-//    };
-//    struct OPSortFirst{
-//        template<class T> bool operator() (const T & left, const T & right) const {
-//            return left.first < right.first;
-//        }
-//    };
-//    struct OPSortSecond{
-//        template<class T> bool operator() (const T & left, const T & right) const {
-//            return left.second < right.second;
-//        }
-//    };
-
-    PS::F64 calcDtLimit(const PS::F64 time_sys,
-                        const PS::F64 dt_limit_org,
-                        const PS::F64 time_offset = 0.0){
-        PS::F64 dt_limit_ret = dt_limit_org;
-        PS::F64 s = (time_sys-time_offset) / dt_limit_ret;
-        PS::F64 time_head = ((PS::S64)(s)) * dt_limit_org;
-        PS::F64 time_shifted = time_sys - time_head;
-        while( fmod(time_shifted, dt_limit_ret) != 0.0) dt_limit_ret *= 0.5;
-        return dt_limit_ret;
-    }
+    //    struct OPSortClusterID{
+    //        template<class T> bool operator() (const T & left, const T & right) const {
+    //            return left.id_cluster < right.id_cluster;
+    //        }
+    //    };
+    //    struct OPSortFirst{
+    //        template<class T> bool operator() (const T & left, const T & right) const {
+    //            return left.first < right.first;
+    //        }
+    //    };
+    //    struct OPSortSecond{
+    //        template<class T> bool operator() (const T & left, const T & right) const {
+    //            return left.second < right.second;
+    //        }
+    //    };
 
     struct OPLessIDCluster{
         template<class T> bool operator() (const T & left, const T & right) const {
@@ -180,212 +167,20 @@ private:
                                   const PS::S32 n_ptcl,
                                   const PS::F64 time_end){
 
-        // kepler motion test
-        PS::F64 ax=0,ecc;
-        if (n_ptcl==2) {
-            PS::F64 inc,OMG,omg,tperi;
-            PS::F64 ecc_anomaly_old = PosVel2OrbParam(ax, ecc, inc, OMG, omg, tperi,
-                                                      ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel, ptcl_org[0].mass, ptcl_org[1].mass);
-#ifdef HARD_DEBUG
-            std::cerr<<"n_ptcl="<<n_ptcl<<"; ax="<<ax<<"; ecc="<<ecc<<"; peri="<<tperi<<"; pid="<<ptcl_org[0].id<<std::endl;
-#endif
-            if (ax>0.0&&2.0*ax<Int_pars.rin) {
-                // center-of-mass
-                Tptcl pcm;
-                calc_center_of_mass(pcm, ptcl_org, n_ptcl, true);
-
-                DriveKeplerOrbParam(ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel,
-                                    ptcl_org[0].mass, ptcl_org[1].mass, time_end, ax, ecc, inc, OMG, omg, ecc_anomaly_old);
-          
-          
-                // integration of center-of-mass
-                pcm.pos += pcm.vel * time_end;
-
-                center_of_mass_correction(pcm, ptcl_org, n_ptcl);
-          
-                //          PosVel2OrbParam(ax,ecc,inc,OMG,omg,tperi,ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel, ptcl_org[0].mass, ptcl_org[1].mass);
-                //std::cerr<<"A:n_ptcl="<<n_ptcl<<"; ax="<<ax<<"; ecc="<<ecc<<"; peri="<<tperi<<"; pid"<<ptcl_org[0].id<<std::endl;
-//          if (!kout.is_open()) kout.open("kout");
-//          for (int i=0;i<n_ptcl;i++) kout<<std::setprecision(17)<<time_origin_<<" "<<ptcl_org[i].mass<<" "<<ptcl_org[i].pos<<" "<<ptcl_org[i].vel<<std::endl;
-
-                PS::F64 peri = ax*(1+ecc)*gamma_*std::pow(pcm.mass/m_average_,0.3333);
-                if (peri>1.2*ptcl_org[0].r_out || (peri>0 && peri<0.8*ptcl_org[0].r_out) || ptcl_org[0].r_out!= ptcl_org[1].r_out)
-                    ptcl_org[0].r_out = ptcl_org[1].r_out = std::max(peri,r_out_single_);
-                return;
-            }
+#ifdef HERMITE
+        if(n_ptcl>5) {
+            Hermite_integrator(ptcl_org, n_ptcl, time_end, dt_limit_hard_, eta_s_, Int_pars.rin, Int_pars.eps2);
         }
-        else if(n_ptcl==3) {
-        
-        }
-      
-        ARC::chain<Tptcl,ARC_int_pars> c((std::size_t)n_ptcl,ARC_control);
-        static thread_local PS::F64 time_sys = 0.0;
-
-        c.addP(n_ptcl,ptcl_org);
-
-//        Int_pars.rout = ptcl_org[0].r_out;
-#ifdef SAFETY_CHECK
-        for (PS::S32 i=0; i<n_ptcl; i++) 
-            if (ptcl_org[i].r_out<Int_pars.rin) {
-                std::cerr<<"Error, updated p["<<i<<"].rout ("<<ptcl_org[i].r_out<<") < r_in ("<<Int_pars.rin<<")"<<std::endl;
-                abort();
-            }
+        else 
 #endif
-
-        c.link_int_par(Int_pars);
-        c.init(time_sys);
-
+            Multiple_integrator(ptcl_org, n_ptcl, time_end, dt_limit_hard_,
+                                r_out_single_, gamma_, m_average_,
 #ifdef ARC_ERROR
-        PS::F64 ARC_error_once = c.getPot()+c.getEkin();
-        if(n_ptcl<=20) N_count[n_ptcl-1]++;
-        else std::cerr<<"Large cluster formed, t="<<time_origin_<<" n="<<n_ptcl<<std::endl;
+                                ARC_error_relative,
+                                ARC_error,
+                                N_count,
 #endif
-      
-        PS::F64 dscoff=1.0;
-        PS::F64 ds_up_limit = 0.25*calcDtLimit(time_sys, dt_limit_hard_)/c.calc_dt_X(1.0);
-        PS::F64 ds_use = c.calc_next_step_custom();
-#ifdef DEBUG
-        if(n_ptcl==2) {
-            c.print(std::cerr,15,18);
-            abort();
-        }
-#endif
-      
-        if (ds_use>ds_up_limit) ds_use = ds_up_limit;
-
-        // convergency check
-        PS::S32 converge_count=0;
-        PS::S32 error_count=0;
-        bool modify_step_flag=false;
-        bool final_flag=false;
-      
-        while(time_end-c.getTime()>ARC_control.dterr) {
-
-//        if (ptcl_org[0].id==8&&time_origin_==0.0078125) {
-//          std::cout<<"ds= "<<ds_use<<" toff= "<<time_end<<std::endl;
-        
-//          FILE* fout=fopen("data","w");
-//          fwrite(ptcl_org,sizeof(Tptcl),n_ptcl,fout);
-//          fclose(fout);
-//        for (PS::S32 i=0; i<n_ptcl; i++) 
-//          std::cout<<ptcl_org[i].getMass()<<" "<<ptcl_org[i].getPos()[0]<<" "<<ptcl_org[i].getPos()[1]<<" "<<ptcl_org[i].getPos()[2]<<" "<<ptcl_org[i].getVel()[0]<<" "<<ptcl_org[i].getVel()[1]<<" "<<ptcl_org[i].getVel()[2]<<std::endl;
-//        }
-
-            PS::F64 dsf=c.extrapolation_integration(ds_use,time_end);
-
-//        std::cerr<<"Particle=";
-//        for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<ptcl_org[i].id<<" ";
-//        std::cerr<<"n="<<n_ptcl<<" Time_end="<<time_end<<" ctime="<<c.getTime()<<" diff="<<time_end-c.getTime()<<" ds="<<ds_use<<" dsf="<<dsf<<std::endl;
-
-            if (dsf<0) {
-                final_flag=true;
-                converge_count++;
-                if (converge_count>5&&time_end-c.getTime()>ARC_control.dterr*100) {
-                    std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c.getTime()<<"\nR_in: "<<Int_pars.rin<<"\nR_out: "<<Int_pars.rout<<"\n";
-//    		ds_use = 0.1*c.calc_next_step_custom();
-//            std::cerr<<"New step size: "<<ds_use<<std::endl;
-//    		modify_step_flag=true;
-//			converge_count=0;
-                    c.dump("ARC_dump.dat");
-                    ARC_control.dump("ARC_dump.par");
-                    c.print(std::cerr);
-                    abort();
-                }
-                else ds_use *= -dsf;
-                // debuging
-//          if (ptcl_org[0].id==267) {
-//              c.dump("ARC_dump.dat");
-//              ARC_control.dump("ARC_dump.par");
-//              c.print(std::cerr);
-//              abort();
-//          }
-            }
-            else if (dsf==0) {
-                //          char collerr[50]="two particle overlap!";
-                c.info->ErrMessage(std::cerr);
-                error_count++;
-                if(error_count>4) {
-                    std::cerr<<"Error: Too much error appear!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c.getTime()<<"\nR_in: "<<Int_pars.rin<<"\nR_out: "<<Int_pars.rout<<"\n";
-                    c.dump("ARC_dump.dat");
-                    ARC_control.dump("ARC_dump.par");
-                    c.print(std::cerr);
-                    abort();
-                }
-                if (c.info->status==5) {
-                    dscoff = 0.25;
-                    ds_use *= dscoff;
-                }
-                //          else if (c.info->status==6) ds_use *= 0.001;
-                else if (c.info->status==4) ds_use = std::min(dscoff*c.calc_next_step_custom(),ds_up_limit);
-                else ds_use *= 0.1;
-                modify_step_flag=true;
-            }
-            else  {
-                if (final_flag) {
-                    if (converge_count>6&&time_end-c.getTime()>ARC_control.dterr*100) {
-                        std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c.getTime()<<"\nR_in: "<<Int_pars.rin<<"\nR_out: "<<Int_pars.rout<<"\n";
-                        c.dump("ARC_dump.dat");
-                        ARC_control.dump("ARC_dump.par");
-                        c.print(std::cerr);
-                        abort();
-                    }
-                    converge_count++;
-                }
-                else if (n_ptcl>2||ax<0||(modify_step_flag&&error_count==0)) {
-                    ds_use = std::min(dscoff*c.calc_next_step_custom(),ds_up_limit);
-                    modify_step_flag=false;
-                }
-                // reducing error counter if integration success, this is to avoid the significant change of step may cause some issue
-                if(error_count>0) error_count--;
-            }
-        }
-
-        // update Rout
-        if(n_ptcl>2) {
-            std::size_t* list=new std::size_t[n_ptcl];
-            Tptcl** plist=new Tptcl*[n_ptcl];
-            c.getList(list);
-#ifdef DEBUG_TEMP
-            std::cerr<<"Curren r_out: n="<<n_ptcl;
-            for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<list[i]<<" ";
-            std::cerr<<std::endl;
-            for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<ptcl_org[list[i]].r_out<<" ";
-            std::cerr<<std::endl;
-#endif
-            for (PS::S32 i=0; i<n_ptcl; i++) plist[i] = &(ptcl_org[list[i]]);
-            updateRout(plist,n_ptcl,Int_pars.rin,r_out_single_,gamma_,m_average_);
-#ifdef DEBUG_TEMP
-            std::cerr<<"new r_out: n="<<n_ptcl;
-            for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<list[i]<<" ";
-            std::cerr<<std::endl;
-            for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<ptcl_org[list[i]].r_out<<" ";
-            std::cerr<<std::endl;
-#endif
-#ifdef SAFETY_CHECK
-            for (PS::S32 i=0; i<n_ptcl; i++) 
-                if (ptcl_org[list[i]].r_out<Int_pars.rin) {
-                    std::cerr<<"Error, updated p["<<list[i]<<"].rout ("<<ptcl_org[list[i]].r_out<<") < r_in ("<<Int_pars.rin<<")"<<std::endl;
-                    abort();
-                }
-#endif
-            delete[] list;
-            delete[] plist;
-        }
-
-        // error record
-#ifdef ARC_ERROR
-        PS::F64 ARC_error_temp = (c.getPot()+c.getEkin()-ARC_error_once);
-        ARC_error += ARC_error_temp;
-        ARC_error_relative += ARC_error_temp/ARC_error_once;
-#endif
-      
-        // integration of center-of-mass
-        c.cm.pos += c.cm.vel * time_end;
-
-        c.center_shift_inverse();
-
-//      if (!arout.is_open()) arout.open("arout");
-//      for (int i=0;i<n_ptcl;i++) arout<<std::setprecision(17)<<time_origin_<<" "<<ptcl_org[i].mass<<" "<<ptcl_org[i].pos<<" "<<ptcl_org[i].vel<<std::endl;
+                                ARC_control, Int_pars);
     }
 
 public:
@@ -475,6 +270,7 @@ public:
                   const PS::F64 _rin,
                   const PS::F64 _eps,
                   const PS::F64 _dt_limit_hard,
+                  const PS::F64 _eta,
                   const PS::F64 _time_origin,
                   const PS::F64 _gmin,
                   const PS::F64 _m_avarage){
@@ -483,6 +279,7 @@ public:
         Int_pars.eps2  = _eps*_eps;
         /// Set chain pars (L.Wang)        
         dt_limit_hard_ = _dt_limit_hard;
+        eta_s_ = _eta*_eta;
         time_origin_ = _time_origin;
         gamma_ = std::pow(1.0/_gmin,0.33333);
         r_out_single_ = _rout; 

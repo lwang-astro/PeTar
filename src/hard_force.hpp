@@ -28,6 +28,31 @@ inline PS::F64 cutoff_poly_3rd(const PS::F64 rij,
     return k;
 }
 
+inline PS::F64 cutoff_poly_3rd_dot(const PS::F64 &rij,
+                                   const PS::F64 &rijvij,
+                                   const PS::F64 &_rout,
+                                   const PS::F64 &_rin){
+    PS::F64 rout = _rout;
+    PS::F64 rin = _rin;
+    PS::F64 inv_dr = 1.0/(rout-rin);
+    PS::F64 x = (rij - rin)*inv_dr;
+    PS::F64 xdot = rijvij/rij*inv_dr;
+    PS::F64 Kdot = 0.0;
+    if(x <= 0.0)
+        Kdot = 0.0;
+    else if(1.0 <= x)
+        Kdot = 0.0;
+    else{
+        PS::F64 x2 = x*x;
+        PS::F64 x3 = x2*x;
+        PS::F64 x4 = x2*x2;
+        PS::F64 x5 = x4*x;
+        PS::F64 x6 = x4*x2;
+        Kdot = (-140.0*x6 + 420.0*x5 - 420.0*x4 + 140.0*x3) * xdot;
+    }
+    return Kdot;
+}
+
 
 //inline PS::F64 cutoff_poly_3rd(const PS::F64 rij,
 //                               const PS::F64 rout,
@@ -142,8 +167,8 @@ public:
              @param[in] smpars: array of double[2]; First element is rcut_out, second element is rcut_in.
              \return status 0
 */
-template <class PtclHard>
-int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, const double xij[3], const PtclHard &pi, const PtclHard &pj, const ARC_int_pars* pars) {
+template <class Tptcl>
+int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, const double xij[3], const Tptcl &pi, const Tptcl &pj, const ARC_int_pars* pars) {
   // distance
   const double rij = std::sqrt(xij[0]*xij[0]+xij[1]*xij[1]+xij[2]*xij[2]+pars->eps2);
   const double mi = pi.mass;
@@ -210,8 +235,8 @@ int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, c
   @param[in]  pp: particle p.
   @param[in] smpars: array of double[2]; First element is rcut_out, second element is rcut_in.
  */
-template<class PtclHard>
-void Newtonian_cut_Ap (double Aij[3], double &Pij, const double xi[3], const double xp[3], const PtclHard &pi, const PtclHard &pp, const ARC_int_pars* pars){
+template<class Tptcl>
+void Newtonian_cut_Ap (double Aij[3], double &Pij, const double xi[3], const double xp[3], const Tptcl &pi, const Tptcl &pp, const ARC_int_pars* pars){
   double dx = xp[0] - xi[0];
   double dy = xp[1] - xi[1];
   double dz = xp[2] - xi[2];
@@ -270,5 +295,42 @@ double Newtonian_timescale(const double m1, const double m2, const double dx[], 
 
         //      std::cout<<"dr="<<dr<<" semi="<<semi<<" ecc="<<ecc<<" peri="<<peri<<std::endl;
         return std::max(std::sqrt(std::abs(1.0-ecc)),0.01)*peri;
+    }
+}
+
+inline void CalcAcc0Acc1R2Cutoff(const PS::F64vec posi,
+                                 const PS::F64vec veli,
+                                 PS::F64vec & acci,
+                                 PS::F64vec & jrki,
+                                 PS::F64 & r2,
+                                 const PS::F64vec posj, 
+                                 const PS::F64vec velj,
+                                 const PS::F64 massj,
+                                 const PS::F64 eps2,
+                                 const PS::F64 rcut_out,
+                                 const PS::F64 rcut_in){
+    const PS::F64vec rij = posi - posj;
+    r2 = rij*rij;
+    const PS::F64 r2_eps = r2 + eps2;
+    if(r2_eps <= rcut_out*rcut_out){
+        const PS::F64vec vij = veli - velj;
+        const PS::F64 rijvij = rij * vij;
+        const PS::F64 r_eps = sqrt(r2_eps);
+        const PS::F64 R = 1.0/r_eps;
+        //const PS::F64 R = 1.0 / sqrt(r2_eps);
+        const PS::F64 R2 = R*R;
+        const PS::F64 R3 = R2*R;
+        const PS::F64 A = (rijvij)*R2;
+#ifdef FORDEBUG
+        PS::F64 K = 0.0; // for debug
+        PS::F64 Kdot = 0.0; // for debug
+#else
+        const PS::F64 K = cutoff_poly_3rd(r_eps, rcut_out, rcut_in);
+        const PS::F64 Kdot = cutoff_poly_3rd_dot(r_eps, rijvij, rcut_out, rcut_in);
+#endif
+        const PS::F64vec F0 = -massj*R3*rij*(1.0-K);
+        const PS::F64vec F1 = -massj*R3*vij*(1.0-K) - 3.0*A*F0 + massj*R3*rij*Kdot;
+        acci += F0;
+        jrki += F1;
     }
 }
