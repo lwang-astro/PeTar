@@ -7,6 +7,8 @@
 #define NAN_CHECK(val) assert((val) == (val));
 #endif
 
+const PS::F64 SAFTY_OFFSET_FOR_SEARCH = 1e-7;
+
 #include"integrate.hpp"
 #include"soft.hpp"
 #include"cstdlib"
@@ -26,6 +28,7 @@ public:
     PS::F64vec pos;
     PS::F64vec vel;
     PS::F64 r_out;
+    PS::S32 n_ngb;
     PS::S32 id_cluster;
     PS::S32 adr_org;
     static PS::F64 r_factor;
@@ -45,8 +48,9 @@ public:
              const PS::F64vec & _pos, 
              const PS::F64vec & _vel,
              const PS::F64 _r_out,
+             const PS::S32 _n_ngb,
              const PS::S32 _id_cluster,
-             const PS::S32 _adr_org): id(_id), mass(_mass), pos(_pos), vel(_vel), r_out(_r_out),
+             const PS::S32 _adr_org): id(_id), mass(_mass), pos(_pos), vel(_vel), r_out(_r_out), n_ngb(_n_ngb),
                                       id_cluster(_id_cluster), adr_org(_adr_org){}
 
     /// start Particle member function (L.Wang)
@@ -223,13 +227,13 @@ public:
             if(med[i].adr_sys_ < 0) continue;
             if(med[i].rank_send_ != PS::Comm::getRank()) continue;
             const FPSoft & p = sys[med[i].adr_sys_];
-            ptcl_hard_.push_back(PtclHard(p.id, p.mass, p.pos, p.vel, p.r_out,
+            ptcl_hard_.push_back(PtclHard(p.id, p.mass, p.pos, p.vel, p.r_out, p.n_ngb,
                                           med[i].id_cluster_, med[i].adr_sys_));
         }
 
         for(PS::S32 i=0; i<ptcl_recv.size(); i++){
             const Tptcl & p = ptcl_recv[i];
-            ptcl_hard_.push_back(PtclHard(p.id_, p.mass_, p.pos_, p.vel_, p.r_out_,
+            ptcl_hard_.push_back(PtclHard(p.id_, p.mass_, p.pos_, p.vel_, p.r_out_, p.n_ngb_,
                                           p.id_cluster_, -(i+1)));
         }
 
@@ -399,7 +403,8 @@ public:
             ptcl_hard_[i].mass = sys[adr].mass;
             ptcl_hard_[i].pos  = sys[adr].pos;
             ptcl_hard_[i].vel  = sys[adr].vel;
-            ptcl_hard_[i].r_out = sys[adr].r_out;
+            ptcl_hard_[i].r_out= sys[adr].r_out;
+            ptcl_hard_[i].n_ngb= sys[adr].n_ngb;
         }
         const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
         n_ptcl_in_cluster_.resizeNoInitialize(n_cluster);
@@ -437,6 +442,7 @@ public:
             ptcl_hard_[i].pos   = sys[adr].pos;
             ptcl_hard_[i].vel   = sys[adr].vel;
             ptcl_hard_[i].r_out = sys[adr].r_out;
+            ptcl_hard_[i].n_ngb = sys[adr].n_ngb;
         }
     }
 
@@ -481,5 +487,7 @@ public:
             driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, dt);
         }
     }
+
+
 };
 
