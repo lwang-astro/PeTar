@@ -173,7 +173,34 @@ private:
 
 #ifdef HERMITE
         if(n_ptcl>5) {
-            Hermite_integrator(ptcl_org, n_ptcl, time_end, dt_limit_hard_, eta_s_, Int_pars.rin, Int_pars.eps2);
+            SearchClusterHard cluster;
+            cluster.searchaAndMerge(ptcl_org, n_ptcl, Int_pars.rin);
+            Kickcorrect(ptcl_org, cluster.getRoutChangeList());
+            cluster.generatelist(ptcl_org, n_ptcl);
+
+            HermiteIntegrator Hint(cluster.getNPtcl());
+            Hint.setPtclList(cluster.getPtcl(),cluster.getNPtcl(),cluster.getPerts());
+            Hint.setParams(dt_limit_hard_, eta_s_, Int_pars.rin, Int_pars.eps2);
+            
+            ARCIntegrator Aint();
+            Aint.initialize(cluster.getPGroups(), cluster.getNGroup(), cluster.getPtcl(), cluster.getPerts(), ARC_control, Int_pars);
+            
+            PS::S32 time_sys=0.0;
+            PS::F64 dt_limit;
+            ReallocatableArray<PS::S32> group_act_list;
+            PS::S32 group_act_n = 0;
+            group_act_list.resizeNoInitialize(cluster.getNGroup());
+            Hint.initialize(group_act_list.getPointer(), group_act_n, cluster.getNGroup(), dt_limit);
+            while(time_sys<time_end) {
+                time_sys = Hint.getNextTime();
+                Aint.integrateOneStepList(group_act_list.getPointer(), group_act_n, time_sys, dt_limit);
+                Hint.integrateOneStep(group_act_list.getPointer(), group_act_n, dt_limit);
+                Aint.updateCM(cluster.getPtcl(), group_act_list.getPointer(), group_act_n);
+            }
+            Aint.CMshiftreverse();
+            
+            cluster.reverseCopy(ptcl_org, n_ptcl);
+//            Hermite_integrator(ptcl_org, n_ptcl, time_end, dt_limit_hard_, eta_s_, Int_pars.rin, Int_pars.eps2);
         }
         else 
 #endif

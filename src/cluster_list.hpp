@@ -956,12 +956,15 @@ public:
 template<class Tptcl>
 class SearchClusterHard{
 private:
+    typedef std::pair<PS::S32, PS::S32> PLinker;
+    typedef std::pair<PS::S32, PS::F64> RCList;
+
     ReallocatableArray<Tptcl> ptcl_;               ///new ptcl with c.m.
     ReallocatableArray<PS::S32> ptcl_map_;      ///map from new ptcl_ to original ptcl
     ReallocatableArray<ReallocatableArray<Tptcl>> group_ptcl_;        ///partner group ptcl
     ReallocatableArray<ReallocatableArray<PS::S32>> pert_list_;       ///perturber list
     ReallocatableArray<ReallocatableArray<PS::S32>> group_list_;   /// partner_group member list
-    
+    ReallocatableArray<RCList> Rout_change_list_;  /// Rout change list
 
 ///    void searchPerturber() {
 ///        // perturber list
@@ -1029,6 +1032,7 @@ private:
 
     void searchPartner(ReallocatableArray<ReallocatableArray<PS::S32>> & ptr_list,
                        Tptcl *ptcl,
+                       PS::S32 n_tpcl,
                        PS::F64 r_crit2) {
         ptr_list.resizeNoInitialize(n_ptcl);
         
@@ -1084,7 +1088,7 @@ private:
     void mergeCluster(ReallocatableArray<ReallocatableArray<PS::S32>> & group_list,
                       ReallocatableArray<ReallocatableArray<PS::S32>> & part_list) {
         // partner index with marker
-        ReallocatableArray<std::pair<PS::S32,PS::S32>> partner_index; 
+        ReallocatableArray<PLinker> partner_index; 
         // map index from ptcl_org to partner_index
         ReallocatableArray<PS::S32> reverse_list; 
         reverse_list.resizeNoInitialize(n_ptcl);
@@ -1097,10 +1101,7 @@ private:
         for(int i=0; i<n_ptcl; i++) {
             if(part_list[i].size()>0) {
                 reverse_list[i] = partner_index.size();
-                std:::pair<PS::S32,PS::S32> ipart;
-                ipart.first = i;
-                ipart.second = -1;
-                partner_index.push_back(ipart);
+                partner_index.push_back(PLinker(i,-1));
             }
 #ifdef HARD_DEBUG
             else {
@@ -1134,7 +1135,7 @@ private:
     PS::S32 connectGroups(const PS::S32 ip,
                           const PS::S32 iend,
                           ReallocatableArray<ReallocatableArray<PS::S32>> & part_list,
-                          ReallocatableArray<std::pair<PS::S32,PS::S32>> & partner_index,
+                          ReallocatableArray<PLinker> & partner_index,
                           ReallocatableArray<PS::S32> & reverse_list) {
         PS::S32 n_connected = 0;
         PS::S32 jst,inow;
@@ -1161,12 +1162,12 @@ private:
         return n_connected;
     }
 
-    void generateNewPtcl(ReallocatableArray<Tptcl> ptcl,
-                         ReallocatableArray<PS::S32> ptcl_map,
+    void generateNewPtcl(ReallocatableArray<Tptcl> & ptcl,
+                         ReallocatableArray<PS::S32> & ptcl_map,
                          Tptcl* ptcl_org,
                          const PS::S32 n_ptcl,
-                         ReallocatableArray<ReallocatableArray<Tptcl>> group_ptcl,
-                         ReallocatableArray<ReallocatableArray<PS::S32>> group_list) {
+                         ReallocatableArray<ReallocatableArray<Tptcl>> & group_ptcl,
+                         ReallocatableArray<ReallocatableArray<PS::S32>> & group_list) {
 #ifdef HARD_DEBUG
         assert(ptcl.size()==0);
         assert(group_ptcl.size()==0);
@@ -1181,7 +1182,7 @@ private:
             PS::S32 n_group = group_list[i].size();
             group_ptcl[i].resizeNoInitialize(n_group);
             for (int j=0; j<n_group; j++) {
-                PS::S32 k = group_list[i][j]
+                PS::S32 k = group_list[i][j];
                 group_ptcl[i][j] = ptcl_org[k];
                 n_group_tot++;
                 masks[k] = 1;
@@ -1210,6 +1211,28 @@ private:
 #endif
     };
 
+    void checkRoutChange(ReallocatableArray<RCList> & r_out_change_list,
+                         ReallocatableArray<ReallocatableArray<PS::S32>> & group_list,
+                         Tptcl* ptcl){
+        for (int i=0; i<group_list.size(); i++) {
+            PS::S64 r_out_max = 0.0;
+            for (int j=0; j<group_list[i].size(); i++) {
+                PS::S32 k = group_list[i][j];
+                r_out_max = std::max(r_out_max,ptcl[k].r_out);
+            }
+            for (int j=0; j<group_list[i].size(); i++) {
+                PS::S32 k = group_list[i][j];
+                if(ptcl[k].r_out != r_out_max) {
+                    r_out_change_list.push_back(RCList(k,ptcl[k].r_out));
+#ifdef HARD_DEBUG
+                    std::cerr<<"Rout change detected, p["<<k<<"].r_out: "<<ptcl[k].r_out<<" -> "<<r_out_max<<std::endl;
+#endif
+                    ptcl[k].r_out = r_out_max;
+                }
+            }
+        }
+    }
+
     void getCenterOfMass(Tptcl &cm, Tptcl* ptcl, const PS::S32 n_ptcl) {
         PS::F64vec cmr=0;
         PS::F64vec cmv=0;
@@ -1220,9 +1243,6 @@ private:
             cmr += p[i].pos * p[i].mass;
             cmv += p[i].vel * p[i].mass;
             cmm += p[i].mass;
-#ifdef HARD_DEBUG
-            assert(cm.r_out==p[i].r_out);
-#endif
         }
         cmr /= cmm; 
         cmv /= cmm; 
@@ -1251,13 +1271,53 @@ private:
 //    }
 
 public:
-    void generatelist(Tptcl *ptcl_org, const PS::S32 n_ptcl, const PS::F64 rin){
+    void searchAndMerge(Tptcl *ptcl_org, const PS::S32 n_ptcl, const PS::F64 rin){
         ReallocatableArray<ReallocatableArray<PS::S32>> part_list;      ///partner list
         
-        searchPartner(part_list, ptcl_org, rin_*rin_);
+        searchPartner(part_list, ptcl_org, n_ptcl, rin*rin);
         mergeCluster(group_list_, part_list);
+#ifdef HARD_DEBUG
+        assert(Rout_change_list_.size()==0);
+#endif
+        checkRoutChange(Rout_change_list_, group_list, ptcl_org);
+
+    }
+
+    void generateList(Tptcl *ptcl_org, const PS::S32 n_ptcl) {
         generateNewPtcl(ptcl_, ptcl_map_, ptcl_org, n_ptcl, group_ptcl_, group_list_);
         searchPerturber(pert_list_, ptcl_);
+    }
+
+    Tptcl* getPtcl() {
+        return ptcl_.getPointer();
+    };
+
+    ReallocatableArray<PS::S32> *getPerts() {
+        return pert_list_.getPointer();
+    }
+
+    PS::S32 getNPtcl() const {
+        return ptcl_.size();
+    }
+
+    ReallocatableArray<Tptcl> *getPGroups() {
+        return group_ptcl_.getPointer();
+    }
+
+    Tptcl* getPGroup(const std::size_t i) {
+        return group_ptcl_[i].getPointer();
+    }
+
+    PS::S32 getNGroup() const {
+        return group_ptcl_.size();
+    }
+
+    PS::S32 getPGroupNum(const std::size_t i) const {
+        return group_ptcl_[i].size();
+    }
+
+    RCList* getRoutChangeList() {
+        return Rout_change_list_.getPointer();
     }
 
     void reverseCopy(Tptcl *ptcl_org, const PS::S32 n_ptcl) {
