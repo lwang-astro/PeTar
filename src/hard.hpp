@@ -20,7 +20,6 @@ void Print(const T str, std::ostream & fout);
 //std::ofstream kout;
 //std::ofstream arout;
 
-
 class PtclHard{
 public:
     PS::S64 id;
@@ -28,29 +27,30 @@ public:
     PS::F64vec pos;
     PS::F64vec vel;
     PS::F64 r_out;
-    PS::S32 n_ngb;
+    // PS::S32 n_ngb;
     PS::S32 id_cluster;
     PS::S32 adr_org;
     static PS::F64 r_factor;
     static PS::F64 dens;
     PtclHard():id(-1), mass(-1.0){}
-//    PtclHard(const PtclHard &p) {
-//        id         = p.id;
-//        mass       = p.mass;
-//        pos        = p.pos;
-//        vel        = p.vel;
-//        r_out      = p.r_out;
-//        id_cluster = p.id_cluster;
-//        adr_org    = p.adr_org;
-//    }
+    //    PtclHard(const PtclHard &p) {
+    //        id         = p.id;
+    //        mass       = p.mass;
+    //        pos        = p.pos;
+    //        vel        = p.vel;
+    //        r_out      = p.r_out;
+    //        id_cluster = p.id_cluster;
+    //        adr_org    = p.adr_org;
+    //    }
     PtclHard(const PS::S64 _id, 
              const PS::F64 _mass, 
              const PS::F64vec & _pos, 
              const PS::F64vec & _vel,
              const PS::F64 _r_out,
-             const PS::S32 _n_ngb,
+             //  const PS::S32 _n_ngb,
              const PS::S32 _id_cluster,
-             const PS::S32 _adr_org): id(_id), mass(_mass), pos(_pos), vel(_vel), r_out(_r_out), n_ngb(_n_ngb),
+             //  const PS::S32 _adr_org): id(_id), mass(_mass), pos(_pos), vel(_vel), r_out(_r_out), n_ngb(_n_ngb),
+             const PS::S32 _adr_org): id(_id), mass(_mass), pos(_pos), vel(_vel), r_out(_r_out),
                                       id_cluster(_id_cluster), adr_org(_adr_org){}
 
     /// start Particle member function (L.Wang)
@@ -254,13 +254,15 @@ public:
             if(med[i].adr_sys_ < 0) continue;
             if(med[i].rank_send_ != PS::Comm::getRank()) continue;
             const FPSoft & p = sys[med[i].adr_sys_];
-            ptcl_hard_.push_back(PtclHard(p.id, p.mass, p.pos, p.vel, p.r_out, p.n_ngb,
+            // ptcl_hard_.push_back(PtclHard(p.id, p.mass, p.pos, p.vel, p.r_out, p.n_ngb,
+            ptcl_hard_.push_back(PtclHard(p.id, p.mass, p.pos, p.vel, p.r_out,
                                           med[i].id_cluster_, med[i].adr_sys_));
         }
 
         for(PS::S32 i=0; i<ptcl_recv.size(); i++){
             const Tptcl & p = ptcl_recv[i];
-            ptcl_hard_.push_back(PtclHard(p.id_, p.mass_, p.pos_, p.vel_, p.r_out_, p.n_ngb_,
+            //  ptcl_hard_.push_back(PtclHard(p.id_, p.mass_, p.pos_, p.vel_, p.r_out_, p.n_ngb_,
+            ptcl_hard_.push_back(PtclHard(p.id_, p.mass_, p.pos_, p.vel_, p.r_out_, 
                                           p.id_cluster_, -(i+1)));
         }
 
@@ -431,7 +433,7 @@ public:
             ptcl_hard_[i].pos  = sys[adr].pos;
             ptcl_hard_[i].vel  = sys[adr].vel;
             ptcl_hard_[i].r_out= sys[adr].r_out;
-            ptcl_hard_[i].n_ngb= sys[adr].n_ngb;
+            //  ptcl_hard_[i].n_ngb= sys[adr].n_ngb;
         }
         const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
         n_ptcl_in_cluster_.resizeNoInitialize(n_cluster);
@@ -469,7 +471,7 @@ public:
             ptcl_hard_[i].pos   = sys[adr].pos;
             ptcl_hard_[i].vel   = sys[adr].vel;
             ptcl_hard_[i].r_out = sys[adr].r_out;
-            ptcl_hard_[i].n_ngb = sys[adr].n_ngb;
+            //  ptcl_hard_[i].n_ngb = sys[adr].n_ngb;
         }
     }
 

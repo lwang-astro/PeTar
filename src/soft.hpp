@@ -35,6 +35,7 @@ public:
     PS::S32 rank_org;
     PS::S32 n_ngb;
     PS::S32 adr;
+    PS::S32 group_id;
     static PS::F64 r_search_offset;
 
     PS::F64vec getPos() const { return pos; }
@@ -80,6 +81,7 @@ public:
         fout<<"acc= "<<acc<<std::endl;
         fout<<"pot_tot= "<<pot_tot<<std::endl;
         fout<<"r_out= "<<r_out<<std::endl;
+        fout<<"group_id= "<<group_id<<std::endl;
     }
 };
 
