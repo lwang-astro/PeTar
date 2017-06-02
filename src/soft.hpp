@@ -34,8 +34,8 @@ public:
     PS::F64 r_out;
     PS::S32 rank_org;
     PS::S32 n_ngb;
+    PS::S32 adr_group;
     PS::S32 adr;
-    PS::S32 group_id;
     static PS::F64 r_search_offset;
 
     PS::F64vec getPos() const { return pos; }
@@ -52,21 +52,22 @@ public:
     }
 
     void writeAscii(FILE* fp) const{
-        fprintf(fp, "%lld %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %d\n", 
+        fprintf(fp, "%lld %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %d %d\n", 
                 this->id, this->mass, 
                 this->pos.x, this->pos.y, this->pos.z,  // 3-5
                 this->vel.x, this->vel.y, this->vel.z,  // 6-8
                 this->acc.x, this->acc.y, this->acc.z,  // 9-11
-                this->pot_tot, this->r_out, this->n_ngb);
+                this->pot_tot, this->r_out, this->n_ngb, //12-14
+                this->adr_group);
     }
 
     void readAscii(FILE* fp) {
-        PS::S64 rcount=fscanf(fp, "%lld %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d\n",
+        PS::S64 rcount=fscanf(fp, "%lld %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d %d\n",
                               &this->id, &this->mass, 
                               &this->pos.x, &this->pos.y, &this->pos.z,  // 3-5
                               &this->vel.x, &this->vel.y, &this->vel.z,  // 6-8
                               &this->acc.x, &this->acc.y, &this->acc.z,  // 9-11
-                              &this->pot_tot, &this->r_out, &this->n_ngb);
+                              &this->pot_tot, &this->r_out, &this->n_ngb, this->adr_group);
         if (rcount<14) {
             std::cerr<<"Error: Data reading fails! requiring data number is 14, only obtain "<<rcount<<".\n";
             abort();
@@ -81,7 +82,7 @@ public:
         fout<<"acc= "<<acc<<std::endl;
         fout<<"pot_tot= "<<pot_tot<<std::endl;
         fout<<"r_out= "<<r_out<<std::endl;
-        fout<<"group_id= "<<group_id<<std::endl;
+        fout<<"adr_group= "<<adr_group<<std::endl;
     }
 };
 

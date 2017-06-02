@@ -30,6 +30,7 @@ public:
     // PS::S32 n_ngb;
     PS::S32 id_cluster;
     PS::S32 adr_org;
+    PS::S32 group_id;
     static PS::F64 r_factor;
     static PS::F64 dens;
     PtclHard():id(-1), mass(-1.0){}
@@ -169,38 +170,49 @@ private:
     template<class Tptcl>
     void driveForMultiClusterImpl(Tptcl * ptcl_org,
                                   const PS::S32 n_ptcl,
-                                  const PS::F64 time_end){
+                                  const PS::F64 time_end,
+                                  ReallocatableArray<ReallocatableArray<Tptcl>> & group_ptcl_glb,
+                                  ReallocatableArray<ReallocatableArray<Tptcl>> & group_ptcl_loc,
+                                  PS::S32 & n_shift;
+                                  ReallocatableArray<PS::S32> & group_map){
 
 #ifdef HERMITE
         if(n_ptcl>5) {
-            SearchClusterHard cluster;
-            cluster.searchaAndMerge(ptcl_org, n_ptcl, Int_pars.rin);
-            Kickcorrect(ptcl_org, cluster.getRoutChangeList());
-            cluster.generatelist(ptcl_org, n_ptcl);
+            SearchGroup group;
+            group.searchPerturber(ptcl_org, n_ptcl);
 
-            HermiteIntegrator Hint(cluster.getNPtcl());
-            Hint.setPtclList(cluster.getPtcl(),cluster.getNPtcl(),cluster.getPerts());
+            HermiteIntegrator Hint(n_ptcl);
+            Hint.setPtclList(ptcl_org,n_ptcl,group.getPerts());
             Hint.setParams(dt_limit_hard_, eta_s_, Int_pars.rin, Int_pars.eps2);
+            PS::S32 group_act_n = 0;
+            ReallocatableArray<PS::S32> group_act_list; //active group_list act adr
+            ReallocatableArray<PS::S32> group_list;     //group.adr list
+            ReallocatableArray<PS::S32> adr_group;      //ptcl.cm -> group.adr
+            ReallocatableArray<PS::S32> adr_group_map;  //ptcl.cm -> group_list
+            ReallocatableArray<PS::S32> adr_cm;
+            group.findGroups(group_list, adr_group, adr_group_map,  adr_cm, group_act_n, ptcl_org, n_ptcl);
+            group_act_list.resizeNoInitialize(group_act_n);
             
             ARCIntegrator Aint();
-            Aint.initialize(cluster.getPGroups(), cluster.getNGroup(), cluster.getPtcl(), cluster.getPerts(), ARC_control, Int_pars);
+            Aint.initialize(group_list.getPointer(), group_ptcl_glb.getPointer(), group_act_n, ptcl_org, adr_cm.getPointer(), group.getPerts(), ARC_control, Int_pars); // here act_list used as adr_list
             
             PS::S32 time_sys=0.0;
             PS::F64 dt_limit;
-            ReallocatableArray<PS::S32> group_act_list;
-            PS::S32 group_act_n = 0;
-            group_act_list.resizeNoInitialize(cluster.getNGroup());
-            Hint.initialize(group_act_list.getPointer(), group_act_n, cluster.getNGroup(), dt_limit);
+            Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, adr_group.getPointer(), adr_group_map.getPointer());
             while(time_sys<time_end) {
                 time_sys = Hint.getNextTime();
                 Aint.integrateOneStepList(group_act_list.getPointer(), group_act_n, time_sys, dt_limit);
-                Hint.integrateOneStep(group_act_list.getPointer(), group_act_n, dt_limit);
-                Aint.updateCM(cluster.getPtcl(), group_act_list.getPointer(), group_act_n);
+                Hint.integrateOneStep(dt_limit, group_act_list.getPointer(), group_act_n, adr_group.getPointer(), adr_group_map.getPointer());
+                Aint.updateCM(ptcl_org, group_act_list.getPointer(), adr_cm.getPointer(), group_act_n);
             }
             Aint.CMshiftreverse();
             
-            cluster.reverseCopy(ptcl_org, n_ptcl);
-//            Hermite_integrator(ptcl_org, n_ptcl, time_end, dt_limit_hard_, eta_s_, Int_pars.rin, Int_pars.eps2);
+            group.resolveGroups(ptcl_org, group_ptcl_glb.getPointer(), group_list.size(), group_list.getPointer(), adr_cm.getPointer());
+            group.searchaAndMerge(ptcl_org, n_ptcl, Int_pars.rin);
+            // Kickcorrect(ptcl_org, group.getRoutChangeList());
+            group.generatelist(ptcl_org, n_ptcl, group_list.getPointer(), group_list.size(), n_shift, group_ptcl_glb, group_ptcl_loc, group_map);
+
+            // group.reverseCopy(ptcl_org, n_ptcl);
         }
         else 
 #endif
@@ -520,3 +532,10 @@ public:
 
 };
 
+template <class Tptcl>
+class systemGroup{
+public:
+    ReallocatableArray<ReallocatableArray<Tptcl>> groups;     //data
+    ReallocatableArray<PS::S32> cm_adr;                       //c.m. index in original particle array
+    
+};
