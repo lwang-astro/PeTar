@@ -30,10 +30,10 @@ public:
     // PS::S32 n_ngb;
     PS::S32 id_cluster;
     PS::S32 adr_org;
-    PS::S32 group_id;
+    PS::S32 adr_group;
     static PS::F64 r_factor;
     static PS::F64 dens;
-    PtclHard():id(-1), mass(-1.0){}
+    PtclHard():id(-1), mass(-1.0), adr_group(-1) {}
     //    PtclHard(const PtclHard &p) {
     //        id         = p.id;
     //        mass       = p.mass;
@@ -50,9 +50,10 @@ public:
              const PS::F64 _r_out,
              //  const PS::S32 _n_ngb,
              const PS::S32 _id_cluster,
-             //  const PS::S32 _adr_org): id(_id), mass(_mass), pos(_pos), vel(_vel), r_out(_r_out), n_ngb(_n_ngb),
-             const PS::S32 _adr_org): id(_id), mass(_mass), pos(_pos), vel(_vel), r_out(_r_out),
-                                      id_cluster(_id_cluster), adr_org(_adr_org){}
+             const PS::S32 _adr_org,
+             const PS::S32 _adr_group=-1): id(_id), mass(_mass), pos(_pos), vel(_vel), r_out(_r_out),
+                                        id_cluster(_id_cluster), adr_org(_adr_org), adr_group(_adr_group) {}
+
 
     /// start Particle member function (L.Wang)
     //! Get mass (required for \ref ARC::chain)
@@ -171,25 +172,23 @@ private:
     void driveForMultiClusterImpl(Tptcl * ptcl_org,
                                   const PS::S32 n_ptcl,
                                   const PS::F64 time_end,
-                                  ReallocatableArray<ReallocatableArray<Tptcl>> & group_ptcl_glb,
-                                  ReallocatableArray<ReallocatableArray<Tptcl>> & group_ptcl_loc,
-                                  PS::S32 & n_shift;
-                                  ReallocatableArray<PS::S32> & group_map){
+                                  ReallocatableArray<std::vector<Tptcl>> & group_ptcl_glb,
+                                  ReallocatableArray<PS::S32> & group_ptcl_glb_empty_list) {
 
 #ifdef HERMITE
         if(n_ptcl>5) {
             SearchGroup group;
             group.searchPerturber(ptcl_org, n_ptcl);
-
+            
             HermiteIntegrator Hint(n_ptcl);
             Hint.setPtclList(ptcl_org,n_ptcl,group.getPerts());
             Hint.setParams(dt_limit_hard_, eta_s_, Int_pars.rin, Int_pars.eps2);
             PS::S32 group_act_n = 0;
             ReallocatableArray<PS::S32> group_act_list; //active group_list act adr
             ReallocatableArray<PS::S32> group_list;     //group.adr list
-            ReallocatableArray<PS::S32> adr_group;      //ptcl.cm -> group.adr
-            ReallocatableArray<PS::S32> adr_group_map;  //ptcl.cm -> group_list
-            ReallocatableArray<PS::S32> adr_cm;
+            ReallocatableArray<PS::S32> adr_group;      //ptcl -> group.adr [non cm is -1] (value of Ptcl.adr_group)
+            ReallocatableArray<PS::S32> adr_group_map;  //ptcl -> group_list index [non cm is -1]
+            ReallocatableArray<PS::S32> adr_cm;         //group_list index -> ptcl.cm
             group.findGroups(group_list, adr_group, adr_group_map,  adr_cm, group_act_n, ptcl_org, n_ptcl);
             group_act_list.resizeNoInitialize(group_act_n);
             
@@ -207,10 +206,10 @@ private:
             }
             Aint.CMshiftreverse();
             
-            group.resolveGroups(ptcl_org, group_ptcl_glb.getPointer(), group_list.size(), group_list.getPointer(), adr_cm.getPointer());
+            group.resolveGroups(ptcl_org, n_ptcl, group_ptcl_glb.getPointer(), group_list.size(), group_list.getPointer(), adr_cm.getPointer());
             group.searchaAndMerge(ptcl_org, n_ptcl, Int_pars.rin);
             // Kickcorrect(ptcl_org, group.getRoutChangeList());
-            group.generatelist(ptcl_org, n_ptcl, group_list.getPointer(), group_list.size(), n_shift, group_ptcl_glb, group_ptcl_loc, group_map);
+            group.generatelist(ptcl_org, n_ptcl, group_list,  group_ptcl_glb, group_ptcl_glb_empty_list);
 
             // group.reverseCopy(ptcl_org, n_ptcl);
         }
@@ -502,7 +501,8 @@ public:
 
 //////////////////
 // for multi cluster
-    void driveForMultiCluster(const PS::F64 dt){
+    void driveForMultiCluster(const PS::F64 dt,
+                              ReallocatableArray<std::vector<PtclHard> & group_ptcl_glb){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         /*
           for(PS::S32 ith=0; ith<PS::Comm::getNumberOfThread(); ith++){
@@ -513,11 +513,13 @@ public:
         for(PS::S32 i=0; i<n_cluster; i++){
             const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
-            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, dt);
+            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, dt,group_ptcl_glb, group_ptcl_glb_empty_list);
         }
     }
 
-    void driveForMultiClusterOMP(const PS::F64 dt){
+    void driveForMultiClusterOMP(const PS::F64 dt,
+                                 ReallocatableArray<std::vector<PtclHard>> & group_ptcl_glb,
+                                 ReallocatableArray<PS::S32> & group_ptcl_glb_empty_list){
 
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         //	const PS::S32 ith = PS::Comm::getThreadNum();
@@ -525,7 +527,8 @@ public:
         for(PS::S32 i=0; i<n_cluster; i++){
             const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
-            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, dt);
+            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, dt, group_ptcl_glb, group_ptcl_glb_empty_list);
+            
         }
     }
 

@@ -1,0 +1,300 @@
+#include <iostream>
+#include <fstream>
+#include <iomanip>
+#include <unordered_map>
+#include <particle_simulator.hpp>
+#include "Newtonian_acceleration.h"
+#include "ptree.h"
+#include "kepler.hpp"
+#include "rsearch.hpp"
+#include "cluster_list.hpp"
+
+
+#ifndef NAN_CHECK
+#define NAN_CHECK(val) assert((val) == (val));
+#endif
+
+class PtclHard{
+public:
+    PS::S64 id;
+    PS::F64 mass;
+    PS::F64vec pos;
+    PS::F64vec vel;
+    PS::F64 r_out;
+    // PS::S32 n_ngb;
+    PS::S32 id_cluster;
+    PS::S32 adr_org;
+    PS::S32 adr_group;
+    static PS::F64 r_factor;
+    static PS::F64 dens;
+    PtclHard():id(-1), mass(-1.0), adr_group(-1) {}
+    //    PtclHard(const PtclHard &p) {
+    //        id         = p.id;
+    //        mass       = p.mass;
+    //        pos        = p.pos;
+    //        vel        = p.vel;
+    //        r_out      = p.r_out;
+    //        id_cluster = p.id_cluster;
+    //        adr_org    = p.adr_org;
+    //    }
+    PtclHard(const PS::S64 _id, 
+             const PS::F64 _mass, 
+             const PS::F64vec & _pos, 
+             const PS::F64vec & _vel,
+             const PS::F64 _r_out,
+             //  const PS::S32 _n_ngb,
+             const PS::S32 _id_cluster,
+             const PS::S32 _adr_org,
+             const PS::S32 _adr_group=-1): id(_id), mass(_mass), pos(_pos), vel(_vel), r_out(_r_out),
+                                        id_cluster(_id_cluster), adr_org(_adr_org), adr_group(_adr_group) {}
+
+
+    /// start Particle member function (L.Wang)
+    //! Get mass (required for \ref ARC::chain)
+    /*! \return mass
+     */
+    const PS::F64 getMass() const{
+        return mass;
+    }
+  
+    //! Get position (required for \ref ARC::chain)
+    /*! \return position vector (PS::F64[3])
+     */
+    const PS::F64* getPos() const{
+        return &pos[0];
+    }
+
+    //! Get velocity (required for \ref ARC::chain)
+    /*! \return velocity vector (PS::F64[3])
+     */
+    const PS::F64* getVel() const{
+        return &vel[0];
+    }
+
+    //!Set position (required for \ref ARC::chain)
+    /*! NAN check will be done
+      @param [in] x: particle position in x axis
+      @param [in] y: particle position in y axis
+      @param [in] z: particle position in z axis
+    */
+    void setPos(const PS::F64 x, const PS::F64 y, const PS::F64 z) {
+        NAN_CHECK(x);
+        NAN_CHECK(y);
+        NAN_CHECK(z);
+    
+        pos[0] = x;
+        pos[1] = y;
+        pos[2] = z;
+    }
+  
+    //!Set velocity (required for \ref ARC::chain)
+    /*! NAN check will be done
+      @param [in] vx: particle velocity in x axis
+      @param [in] vy: particle velocity in y axis 
+      @param [in] vz: particle velocity in z axis 
+    */
+    void setVel(const PS::F64 vx, const PS::F64 vy, const PS::F64 vz) {
+        NAN_CHECK(vx);
+        NAN_CHECK(vy);
+        NAN_CHECK(vz);
+    
+        vel[0] = vx;
+        vel[1] = vy;
+        vel[2] = vz;
+    }
+
+    //!Set mass (required for \ref ARC::chain)
+    /*! NAN check will be done
+      @param [in] m: particle mass
+    */
+    void setMass(const PS::F64 m) {
+        NAN_CHECK(m);
+
+        mass = m;
+    }
+    /// end Particle member function (L.Wang)
+
+};
+
+
+struct params{
+    double rin,rout,gmin;
+};
+
+PtclHard pshift(const PtclHard& a, const PtclHard& ref) {
+    PtclHard p(a);
+    p.pos += ref.pos;
+    p.vel += ref.vel;
+    return p;
+}
+
+PtclHard kepler_print(const std::size_t id, const std::size_t ib, PtclHard* c[2], params& ppars){
+    PS::F64vec x[2],v[2];
+    double m[2];
+    for (std::size_t i=0; i<2; i++) {
+      x[i]=c[i]->pos;
+      v[i]=c[i]->vel;
+      m[i]=c[i]->mass;
+    }
+        
+    double ax,per,ecc,angle[3],true_anomaly,ecc_anomaly,mean_anomaly; 
+    double dx[3] = {x[1][0]-x[0][0], x[1][1]-x[0][1], x[1][2]-x[0][2]};
+    double dv[3] = {v[1][0]-v[0][0], v[1][1]-v[0][1], v[1][2]-v[0][2]};
+    double mt = m[0]+m[1];
+    
+    NTA::calc_kepler_orbit_par(ax,per,ecc,angle,true_anomaly,ecc_anomaly,mean_anomaly,mt,dx,dv);
+    std::cout<<std::setw(12)<<id
+             <<std::setw(12)<<ib
+             <<std::setw(12)<<m[0]
+             <<std::setw(12)<<m[1]
+             <<std::setw(12)<<ax
+             <<std::setw(12)<<ecc
+             <<std::setw(12)<<per
+             <<std::setw(12)<<angle[0]
+             <<std::setw(12)<<angle[1]
+             <<std::setw(12)<<angle[2]
+             <<std::setw(12)<<ecc_anomaly
+             <<std::setw(12)<<true_anomaly
+             <<std::setw(12)<<mean_anomaly
+             <<std::endl;
+    if(id==0&&ib==0) 
+        std::cout<<"      " 
+                 <<std::setw(12)<<"id          " 
+                 <<std::setw(12)<<"ib          " 
+                 <<std::setw(12)<<"m[0]        " 
+                 <<std::setw(12)<<"m[1]        " 
+                 <<std::setw(12)<<"ax          " 
+                 <<std::setw(12)<<"ecc         " 
+                 <<std::setw(12)<<"per         " 
+                 <<std::setw(12)<<"angle[0]    " 
+                 <<std::setw(12)<<"angle[1]    " 
+                 <<std::setw(12)<<"angle[2]    " 
+                 <<std::setw(12)<<"ecc_anomaly " 
+                 <<std::setw(12)<<"true_anomaly" 
+                 <<std::setw(12)<<"mean_anomaly" 
+                 <<std::endl;                 
+            
+
+    PS::F64vec xcm((x[0][0]*m[0]+x[1][0]*m[1])/mt, 
+                   (x[0][1]*m[0]+x[1][1]*m[1])/mt, 
+                   (x[0][2]*m[0]+x[1][2]*m[1])/mt);
+
+    PS::F64vec vcm((v[0][0]*m[0]+v[1][0]*m[1])/mt, 
+                   (v[0][1]*m[0]+v[1][1]*m[1])/mt, 
+                   (v[0][2]*m[0]+v[1][2]*m[1])/mt);
+
+    return PtclHard(ib,mt,xcm,vcm,ppars.rout,0,0);
+}
+
+
+void print_p(PtclHard* p, const int n) {
+    std::cout<<std::setw(12)<<"mass"
+             <<std::setw(12)<<"x1"
+             <<std::setw(12)<<"x2"
+             <<std::setw(12)<<"x3"
+             <<std::setw(12)<<"v1"
+             <<std::setw(12)<<"v2"
+             <<std::setw(12)<<"v3"
+             <<std::setw(12)<<"rout"
+             <<std::setw(12)<<"adr_group"
+             <<std::setw(12)<<"id"
+             <<std::endl;
+    for (int i=0; i<n; i++) {
+        std::cout<<std::setw(12)<<p[i].mass
+                 <<std::setw(12)<<p[i].pos[0]
+                 <<std::setw(12)<<p[i].pos[1]
+                 <<std::setw(12)<<p[i].pos[2]
+                 <<std::setw(12)<<p[i].vel[0]
+                 <<std::setw(12)<<p[i].vel[1]
+                 <<std::setw(12)<<p[i].vel[2]
+                 <<std::setw(12)<<p[i].r_out
+                 <<std::setw(12)<<p[i].adr_group
+                 <<std::setw(12)<<p[i].id
+                 <<std::endl;
+    }
+}
+
+int main(int argc, char** argv)
+{
+  // data file name
+  char* filename = argv[argc-1];
+  // open data file
+  std::fstream fs;
+  fs.open(filename,std::fstream::in);
+  if(!fs.is_open()) {
+    std::cerr<<"Error: Filename "<<filename<<" not found\n";
+    abort();
+  }
+
+  int N;
+  params par;
+  fs>>N>>par.rin>>par.rout>>par.gmin;
+  PtclHard p[N];
+  
+  ptree<PtclHard,params> plist;
+  double m_average=0.0;
+  for(int i=0;i<N-1;i++) {
+    int id,ib;
+    double m1,m2,ax,ecc,angle[3],ecc_anomaly;
+    fs>>id>>ib>>m1>>m2>>ax>>ecc>>angle[0]>>angle[1]>>angle[2]>>ecc_anomaly;
+    if (fs.eof()) {
+      std::cerr<<"Error: data file reach end when reading pairs (current loaded pair number is "<<i<<"; required pair number "<<N-1<<std::endl;
+      abort();
+    }
+    
+    double x1[3],x2[3],v1[3],v2[3];
+    NTA::kepler_orbit_generator(x1,x2,v1,v2,m1,m2,ax,ecc,angle,ecc_anomaly);
+    
+    PS::F64vec xx1(x1[0],x1[1],x1[2]);
+    PS::F64vec xx2(x2[0],x2[1],x2[2]);
+    PS::F64vec vv1(v1[0],v1[1],v1[2]);
+    PS::F64vec vv2(v2[0],v2[1],v2[2]);    
+
+    PtclHard a(i,m1,xx1,vv1,par.rout,0,0,-1);
+    PtclHard b(-i,m2,xx2,vv2,par.rout,0,0,-1);
+
+    bool flag=plist.link(id,ib,a,b,pshift);
+    if (!flag) {
+      std::cerr<<"Error: particle id "<<id<<", ib "<<ib<<" are inconsistent with global particle tree structure, cannot created pairs!\n";
+      abort();
+    }
+  }
+
+  int count=plist.collect_and_store(p,N);
+
+  for(int i=0;i<N;i++) m_average += p[i].mass;
+  m_average /=N;
+  
+  if (count<0) {
+    std::cerr<<"Error: particle number mismatched particle tree!\n";
+    abort();
+  }
+  
+  //  plist.kepler_print(0,0,18,10);
+  plist.pair_process(0,0,kepler_print,par);
+  SearchGroup<PtclHard> group;
+  print_p(p,N);
+
+  group.searchAndMerge(p, N, par.rin);
+
+  PS::ReallocatableArray<PS::S32> adr_group_glb;
+  PS::ReallocatableArray<std::vector<PtclHard>> group_ptcl_glb; 
+  PS::ReallocatableArray<PS::S32> group_ptcl_glb_empty_list;
+
+  group.generateList(p, N, adr_group_glb, group_ptcl_glb, group_ptcl_glb_empty_list);
+  
+  std::cout<<"SearchAndMerge\n";
+  print_p(p,N);
+
+  std::cout<<"adr_group_glb: ";
+  for(int i=0; i<adr_group_glb.size(); i++) std::cout<<std::setw(6)<<adr_group_glb[i];
+  std::cout<<std::endl;
+  
+  std::cout<<"group ptcl:\n ";
+  for(int i=0; i<group_ptcl_glb.size(); i++) {
+      std::cout<<"group i ="<<i<<std::endl;
+      print_p(group_ptcl_glb[i].data(),group_ptcl_glb[i].size());
+  }
+
+  return 0;
+}

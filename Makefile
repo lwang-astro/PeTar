@@ -37,7 +37,7 @@ endif
 
 ifeq ($(use_x86),yes)
 CXX = time mpicxx
-CXXFLAGS = -O3
+CXXFLAGS = -g
 CXXFLAGS += -Wall
 CXXFLAGS += -march=core-avx2
 CXXFLAGS += -ffast-math -funroll-loops
@@ -54,6 +54,7 @@ CXXFLAGS += -DDIV_FIX -DP3T_64BIT
 CXXFLAGS += -DARC_ERROR
 CXXFLAGS += -D ARC_WARN
 CXXFLAGS += -D SAFETY_CHECK
+CXXFLAGS += -D HARD_DEBUG
 #CXXFLAGS += -D DEBUG
 #CXXFLAGS += -D DEBUG_TEMP
 #CXXFLAGS += -D DEBUG_OUTPUT
@@ -71,6 +72,12 @@ ARC_debug.out: chain_debug.cxx force.hpp
 	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -D DEBUG -o $@ $<
 
 rsearchtest: rsearchtest.cxx
+	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $<
+
+test.out: test.cxx
+	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $<
+
+searchgrouptest: searchgroup.cxx
 	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $<
 
 clean:
