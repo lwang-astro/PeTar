@@ -1128,6 +1128,7 @@ private:
             PS::S32 npart = connectGroups(i,i,part_list,partner_index,reverse_list);
             group_list.push_back(std::vector<PS::S32>());
             group_list.back().resize(npart);
+            group_list.back()[0] = partner_index[i].first;
             PS::S32 inext=partner_index[i].second;
             PS::S32 k=1;
             while (inext!=i) {
