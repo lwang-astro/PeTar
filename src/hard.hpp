@@ -22,7 +22,12 @@ void Print(const T str, std::ostream & fout);
 
 class PtclHard{
 public:
-    PS::S64 id;
+    /*
+                single       c.m.              members       fake members   unused
+      id         id      -(id+1) of first member  id              id         -1
+      states      0       number of members     c.m. id        phase order   -1
+     */
+    PS::S64 id;   
     PS::F64 mass;
     PS::F64vec pos;
     PS::F64vec vel;
@@ -30,10 +35,10 @@ public:
     // PS::S32 n_ngb;
     PS::S32 id_cluster;
     PS::S32 adr_org;
-    PS::S32 adr_group;
+    PS::S32 status;
     static PS::F64 r_factor;
     static PS::F64 dens;
-    PtclHard():id(-1), mass(-1.0), adr_group(-1) {}
+    PtclHard():id(-1), mass(-1.0), status(-1) {}
     //    PtclHard(const PtclHard &p) {
     //        id         = p.id;
     //        mass       = p.mass;
@@ -51,8 +56,8 @@ public:
              //  const PS::S32 _n_ngb,
              const PS::S32 _id_cluster,
              const PS::S32 _adr_org,
-             const PS::S32 _adr_group=-1): id(_id), mass(_mass), pos(_pos), vel(_vel), r_out(_r_out),
-                                        id_cluster(_id_cluster), adr_org(_adr_org), adr_group(_adr_group) {}
+             const PS::S32 _status=-1): id(_id), mass(_mass), pos(_pos), vel(_vel), r_out(_r_out),
+                                        id_cluster(_id_cluster), adr_org(_adr_org), status(_status) {}
 
 
     /// start Particle member function (L.Wang)
@@ -168,48 +173,67 @@ private:
     };
 
 
+    PS::F64 calcDtLimit(const PS::F64 time_sys,
+                        const PS::F64 dt_limit_org,
+                        const PS::F64 time_offset = 0.0){
+        PS::F64 dt_limit_ret = dt_limit_org;
+        PS::F64 s = (time_sys-time_offset) / dt_limit_ret;
+        PS::F64 time_head = ((PS::S64)(s)) * dt_limit_org;
+        PS::F64 time_shifted = time_sys - time_head;
+        while( fmod(time_shifted, dt_limit_ret) != 0.0) dt_limit_ret *= 0.5;
+        return dt_limit_ret;
+    }
+
     template<class Tptcl>
     void driveForMultiClusterImpl(Tptcl * ptcl_org,
                                   const PS::S32 n_ptcl,
-                                  const PS::F64 time_end,
-                                  ReallocatableArray<std::vector<Tptcl>> & group_ptcl_glb,
-                                  ReallocatableArray<PS::S32> & group_ptcl_glb_empty_list) {
-
+                                  const PS::F64 time_end) {
 #ifdef HERMITE
         if(n_ptcl>5) {
-            SearchGroup group;
-            group.searchPerturber(ptcl_org, n_ptcl);
+            SearchGroup group();
             
-            HermiteIntegrator Hint(n_ptcl);
-            Hint.setPtclList(ptcl_org,n_ptcl,group.getPerts());
+            group.findGroups(ptcl_org, n_ptcl);
+            
+            HermiteIntegrator Hint();
             Hint.setParams(dt_limit_hard_, eta_s_, Int_pars.rin, Int_pars.eps2);
+            Hint.setPtcl(ptcl_org,n_ptcl,group.getPtclList(),getPtclN());
+            Hint.searchPerturber();
+            
             PS::S32 group_act_n = 0;
             ReallocatableArray<PS::S32> group_act_list; //active group_list act adr
-            ReallocatableArray<PS::S32> group_list;     //group.adr list
-            ReallocatableArray<PS::S32> adr_group;      //ptcl -> group.adr [non cm is -1] (value of Ptcl.adr_group)
-            ReallocatableArray<PS::S32> adr_group_map;  //ptcl -> group_list index [non cm is -1]
-            ReallocatableArray<PS::S32> adr_cm;         //group_list index -> ptcl.cm
-            group.findGroups(group_list, adr_group, adr_group_map,  adr_cm, group_act_n, ptcl_org, n_ptcl);
-            group_act_list.resizeNoInitialize(group_act_n);
+            // ReallocatableArray<PS::S32> group_list;     //group.adr list
+            // ReallocatableArray<PS::S32> status;      //ptcl -> group.adr [non cm is -1] (value of Ptcl.status)
+            // ReallocatableArray<PS::S32> status_map;  //ptcl -> group_list index [non cm is -1]
+            // ReallocatableArray<PS::S32> adr_cm;         //group_list index -> ptcl.cm
+            // group.findGroups(group_list, status, status_map,  adr_cm, group_act_n, ptcl_org, n_ptcl);
+            group_act_list.resizeNoInitialize(group.getPtclN());
             
-            ARCIntegrator Aint();
-            Aint.initialize(group_list.getPointer(), group_ptcl_glb.getPointer(), group_act_n, ptcl_org, adr_cm.getPointer(), group.getPerts(), ARC_control, Int_pars); // here act_list used as adr_list
+            ARCIntegrator Aint(ARC_control, Int_pars);
+
+            // first particles in Hint.Ptcl are c.m.
+            PS::S32 n_groups = group.getNGroups()
+            for (int i=0; i<n_groups; i++) 
+                Aint.addGroup(group.getGroup(i), group.getGroupN(i), ptcl_org, n_ptcl, Hint.getPertList(i), Hint.getPertN(i), Hint.getPtcl(), Hint.getPtclN()); 
             
             PS::S32 time_sys=0.0;
-            PS::F64 dt_limit;
-            Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, adr_group.getPointer(), adr_group_map.getPointer());
+            PS::F64 dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
+            Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups);
             while(time_sys<time_end) {
                 time_sys = Hint.getNextTime();
+                dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
                 Aint.integrateOneStepList(group_act_list.getPointer(), group_act_n, time_sys, dt_limit);
-                Hint.integrateOneStep(dt_limit, group_act_list.getPointer(), group_act_n, adr_group.getPointer(), adr_group_map.getPointer());
-                Aint.updateCM(ptcl_org, group_act_list.getPointer(), adr_cm.getPointer(), group_act_n);
+                Hint.integrateOneStep(time_sys,dt_limit);
+                Aint.updateCM(Hint.getPtcl(), group_act_list.getPointer(), group_act_n);
+                Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
             }
             Aint.CMshiftreverse();
+            Hint.writeBackPtcl(ptcl_org,n_ptcl,group.getPtclList(),getPtclN());
             
-            group.resolveGroups(ptcl_org, n_ptcl, group_ptcl_glb.getPointer(), group_list.size(), group_list.getPointer(), adr_cm.getPointer());
-            group.searchaAndMerge(ptcl_org, n_ptcl, Int_pars.rin);
+            //group.resolveGroups(ptcl_org, n_ptcl, group_ptcl_glb.getPointer(), group_list.size(), group_list.getPointer(), adr_cm.getPointer());
+            group.resolveGroups();
+            group.searchAndMerge(ptcl_org, n_ptcl, Int_pars.rin);
             // Kickcorrect(ptcl_org, group.getRoutChangeList());
-            group.generatelist(ptcl_org, n_ptcl, group_list,  group_ptcl_glb, group_ptcl_glb_empty_list);
+            group.generatelist(ptcl_org, n_ptcl);
 
             // group.reverseCopy(ptcl_org, n_ptcl);
         }

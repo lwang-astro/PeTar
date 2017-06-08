@@ -61,18 +61,6 @@ public:
     }
 };
 
-PS::F64 calcDtLimit(const PS::F64 time_sys,
-                    const PS::F64 dt_limit_org,
-                    const PS::F64 time_offset = 0.0){
-    PS::F64 dt_limit_ret = dt_limit_org;
-    PS::F64 s = (time_sys-time_offset) / dt_limit_ret;
-    PS::F64 time_head = ((PS::S64)(s)) * dt_limit_org;
-    PS::F64 time_shifted = time_sys - time_head;
-    while( fmod(time_shifted, dt_limit_ret) != 0.0) dt_limit_ret *= 0.5;
-    return dt_limit_ret;
-}
-
-
 
 template<class Tptcl>
 class HermiteIntegrator{
@@ -82,8 +70,12 @@ private:
     PS::ReallocatableArray<PS::S32> adr_sorted_;
     PS::ReallocatableArray<PS::F64> time_next_;
 
+    PS::ReallocatableArray<Tptcl> ptcl_;   // first c.m.; second single
+    PS::ReallocatableArray<PS::S32> Jlist_;
+    PS::ReallocatableArray<PS::S32> Jlist_disp_;
+    PS::ReallocatableArray<PS::S32> Jlist_n_;
+
     PS::F64 a0_offset_sq_; /// time step parameter
-    PS::F64 time_sys_;     /// current time
     PS::S32 n_act_;        /// active particle number
 
     //  import parameter
@@ -91,11 +83,6 @@ private:
     PS::F64 eta_s_;         // time step parameter 
     PS::F64 r_in_;          // force parameter     
     PS::F64 eps_sq_;        // softening parameter 
-    
-    // import data
-    Tptcl * ptcl_org_;
-    PS::S32 n_ptcl_;
-    ReallocatableArray<PS::S32> *Jlist_;
 
     PS::F64 CalcDt2nd(const PS::F64vec & acc0, 
                       const PS::F64vec & acc1, 
@@ -196,9 +183,7 @@ private:
                          PS::S32 & n_act,
                          PS::S32 group_list[],
                          PS::S32 & group_n,
-                         const PS::S32 adr_group[],
-                         const PS::S32 adr_group_map[],
-                         const PS::S32 n_tot){
+                         const PS::F64 n_limit){
         // const PS::S32 n_tot = time_next.size();
         //std::cerr<<"before sort"<<std::endl;
         /*
@@ -212,13 +197,10 @@ private:
         const PS::F64 time_ref = time_next[adr_sorted[0]];
         group_n = 0;
         for(n_act=1; n_act<n_tot; n_act++){
-            PS::S32 adr = adr_sorted[n_act]
-            if(time_ref < time_next[adr]) {
+            if(time_ref < time_next[adr_sorted[n_act]]) {
                 break;
             }
-            if(adr_group[adr]>=0) {
-                group_list[group_n++] = adr_group_map[adr];
-            }
+            if(n_act<n_limit) group_list[group_n++] = n_act;
         }
     }
 
@@ -315,33 +297,97 @@ private:
 
 public:
 
-    HermiteIntegrator(const PS::S32 n) {
-#ifdef HARD_DEBUG
-        assert(pred_.size()==0);
-        assert(force_.size()==0);
-        assert(adr_sorted_.size()==0);
-        assert(time_next_.size()==0);
-#endif
-        resizeArray(n);
-    }
+//    HermiteIntegrator(const PS::S32 n) {
+//#ifdef HARD_DEBUG
+//        assert(pred_.size()==0);
+//        assert(force_.size()==0);
+//        assert(adr_sorted_.size()==0);
+//        assert(time_next_.size()==0);
+//#endif
+//        resizeArray(n);
+//    }
 
     void resizeArray(const PS::S32 n) {
-        pred_.resizeNoInitialize(n);
-        force_.resizeNoInitialize(n);
-        adr_sorted_.resizeNoInitialize(n);
-        time_next_.resizeNoInitialize(n);
+        ptcl_.reserve(n);
+        Jlist_disp_.reserve(n);
+        Jlist_n_.reserve(n);
+        pred_.reserve(n);
+        force_.reserve(n);
+        adr_sorted_.reserve(n);
+        time_next_.reserve(n);
     }
 
-    void setPtclList(Tptcl * ptcl_org, 
-                     const PS::S32 n_ptcl, 
-                     ReallocatableArray<PS::S32> Jlist[]) {
-        ptcl_org_ = ptcl_org;
-        n_ptcl_   = n_ptcl;
-        Jlist_    = Jlist;
-        if(n_ptcl_>pred_.size()) {
-            std::cerr<<"Error, array size not enough! "<<pred_.size()<<" < "<<n_ptcl_<<std::endl;
-            abort();
+    void setPtcl(Tptcl * ptcl_org, 
+                 const PS::S32 n_org, 
+                 const PS::S32 ptcl_list[],
+                 const PS::S32 ptcl_n) {
+#ifdef HARD_DEBUG
+        assert(ptcl_n<=n_org);
+#endif
+        resizeArray(ptcl_n);
+        for (int i=0; i<ptcl_n; i++) {
+            ptcl_.pushBackNoCheck(ptcl_org[ptcl_list[i]]);
         }
+    }
+
+    void writeBackPtcl(Tptcl * ptcl_org, 
+                 const PS::S32 n_org, 
+                 const PS::S32 ptcl_list[],
+                 const PS::S32 ptcl_n) {
+#ifdef HARD_DEBUG
+        assert(ptcl_n<=n_org);
+#endif
+        for (int i=0; i<ptcl_n; i++) {
+            ptcl_org[ptcl_list[i]] = ptcl_[i];
+        }
+    }
+
+    void searchPerturber() {
+        // find perturber
+        PS::S32 n = ptcl_.size();
+        PS::S32 nj_tot = 0;
+        for(int i=0; i<n; i++) {
+#ifdef HARD_DEBUG
+            assert(Jlist_disp_.size()==i);
+            assert(Jlist_n_.size()==i);
+#endif
+            Jlist_disp_.pushBackNoCheck(nj_tot);
+            Jlist_n_.pushBackNoCheck(0);
+            for(int j=0; j<n; j++) {
+                PS::F64vec dr = ptcl_[i].pos-ptcl_[j].pos;
+                PS::F64 r2 = dr*dr;
+                PS::F64 rout = std::max(ptcl_[i].r_out,ptcl_[j].r_out);
+                PS::F64 rout2 = rout*rout+SAFTY_OFFSET_FOR_SEARCH;
+                if (r2<rout2) {
+                    Jlist_.push_back(j);
+                    Jlist_n_[i]++;
+                    nj_tot++;
+                }
+            }
+        }
+#ifdef HARD_DEBUG
+        for(int i=0; i<n-1; i++) {
+            assert(Jlist_n_[i]==Jlist_disp_[i+1]-Jlist_disp_[i]);
+            assert(Jlist_n_[i]<=n);
+        }
+        assert(Jlist_disp_[i]+Jlist_n_[i]==Jlist_.size());
+#endif
+    }
+
+    PS::S32* getPertList(const PS::S32 i) const {
+        return &Jlist_[Jlist_disp_[i]];
+    }
+
+    PS::S32 getPertN(const PS::S32 i) const {
+        return Jlist_n_[i];
+    }
+
+    Tptcl* getPtcl() {
+        return ptcl_.getPointer();
+    }
+
+    PS::S32 getPtclN() const {
+        return ptcl_.size();
     }
 
     void setParams(const PS::F64 dt_limit_hard,  // time step limit
@@ -354,33 +400,37 @@ public:
         eps_sq_       = eps_sq;
     }
 
-    void initialize(PS::F64 &dt_limit,
+    void initialize(PS::F64 dt_limit,
                     PS::S32 group_act_list[],
                     PS::S32 &group_act_n,
-                    const PS::S32 adr_group[],
-                    const PS::S32 adr_group_map[]) {
+                    const PS::S32 n_groups) {
+        PS::S32 n_ptcl = ptcl_.size();
+        pred_.resizeNoInitialize(n_ptcl);
+        force_.resizeNoInitialize(n_ptcl);
+        adr_sorted_.resizeNoInitialize(n_ptcl);
+        time_next_.resizeNoInitialize(n_ptcl);
+        
         PS::F64 mass_min = PS::LARGE_FLOAT;
         PS::F64 rout_min = PS::LARGE_FLOAT;
-        for(PS::S32 i=0; i<n_ptcl_; i++){
+        for(PS::S32 i=0; i<n_ptcl; i++){
             // pred[i].mass = ptcl[i].mass = ptcl_org[i].mass;
             // pred[i].pos  = ptcl[i].pos  = ptcl_org[i].pos;
             // pred[i].vel  = ptcl[i].vel  = ptcl_org[i].vel;
             // ptcl[i].setRMerge();
             // pred[i].r_merge = ptcl[i].r_merge;
             // ptcl[i].id = ptcl_org[i].id;
-            pred_[i].r_out = ptcl_org_[i].r_out;
+            pred_[i].r_out = ptcl_[i].r_out;
             adr_sorted_[i] = i;
             pred_[i].time = pred_[i].dt = 0.0;
             time_next_[i] = 0.0;
-            if(mass_min > ptcl_org_[i].mass)  mass_min = ptcl_org_[i].mass;
-            if(rout_min > ptcl_org_[i].r_out) rout_min = ptcl_org_[i].r_out;
+            if(mass_min > ptcl_[i].mass)  mass_min = ptcl_[i].mass;
+            if(rout_min > ptcl_[i].r_out) rout_min = ptcl_[i].r_out;
         }
 
-        time_sys_ = 0.0;
         a0_offset_sq_ = 0.1 * mass_min / (rout_min * rout_min);
         n_act_ = n_ptcl_;
 
-        CalcAcc0Acc1Act(force.getPointer(), ptcl_org_, n_act_, adr_sorted.getPointer(), Jlist_, r_in_, eps_sq_);
+        CalcAcc0Acc1Act(force.getPointer(), ptcl_, n_act_, adr_sorted.getPointer(), Jlist_, r_in_, eps_sq_);
     
         // store predicted force
         for(PS::S32 i=0; i<n_ptcl; i++){
@@ -388,51 +438,42 @@ public:
             pred_[i].acc1 = force_[i].acc1;
         }
 
-        dt_limit = calcDtLimit(time_sys_, dt_limit_hard_);
         CalcBlockDt2ndAct(pred_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, eta_s_, dt_limit, a0_offset_sq_);
 
         for(PS::S32 i=0; i<n_ptcl; i++){
             time_next_[i] = pred_[i].time + pred_[i].dt;
         }
-        SortAndSelectIp(adr_sorted_.getPointer(), time_next_.getPointer(), n_act_, group_act_list, group_act_n, adr_group, adr_group_map, n_ptcl_);
+        SortAndSelectIp(adr_sorted_.getPointer(), time_next_.getPointer(), n_act_, group_act_list, group_act_n, n_groups);
         
     }
     
     void CalcEnergyHard(Energy & eng) {
-        CalcEnergyHard(ptcl_org_, n_ptcl_, eng, r_in_, eps_sq_);
+        CalcEnergyHard(ptcl_, n_ptcl_, eng, r_in_, eps_sq_);
     }
 
     PS::F64 getNextTime() {
         return time_next_[adr_sorted[0]];
     }
 
-    void integrateOneStep(PS::F64 &dt_limit,
-                          PS::S32 group_act_list[],
-                          PS::S32 &group_act_n,
-                          const PS::S32 adr_group[],
-                          const PS::S32 adr_group_map[]) {
-        // begin integration loop
-        time_sys_ = time_next_[adr_sorted[0]];
-        dt_limit = calcDtLimit(time_sys_, dt_limit_hard_);
+    void integrateOneStep(const PS::F64 time_sys,
+                          const PS::F64 dt_limit) {
         // pred::mass,pos,vel updated
-        PredictAll(pred_.getPointer(), ptcl_org_, n_ptcl_, time_sys_);
+        PredictAll(pred_.getPointer(), ptcl_, n_ptcl_, time_sys);
         // force::acc0,acc1 updated
         CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), n_act_, adr_sorted_.getPointer(), Jlist_, r_in_, eps_sq_);
         // ptcl_org::pos,vel; pred::time,dt,acc0,acc1,acc2,acc3 updated
-        CorrectAndCalcDt4thAct(ptcl_org_, pred_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, dt_limit, a0_offset_sq_, eta_s_);
+        CorrectAndCalcDt4thAct(ptcl_, pred_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, dt_limit, a0_offset_sq_, eta_s_);
 
         for(PS::S32 i=0; i<n_act; i++){
             PS::S32 adr = adr_sorted_[i];
             time_next_[adr] = pred_[adr].time + pred_[adr].dt;
         }
-        SortAndSelectIp(adr_sorted_.getPointer(), time_next_.getPointer(), n_act_, group_act_list, group_act_n, adr_group, adr_group_map, n_ptcl_);
+    }
 
-        // for(PS::S32 i=0; i<n_ptcl; i++){
-        //     ptcl_org[i].mass = ptcl[i].mass;
-        //     ptcl_org[i].pos  = ptcl[i].pos;
-        //     ptcl_org[i].vel  = ptcl[i].vel;
-        // }
-        return time_sys_;
+    void SortAndSelectIp(PS::S32 group_act_list[],
+                         PS::S32 &group_act_n,
+                         const PS::S32 n_groups) {
+        SortAndSelectIp(adr_sorted_.getPointer(), time_next_.getPointer(), n_act_, group_act_list, group_act_n, n_groups);
     }
 
     const PS::S32 getNact() const{
@@ -662,36 +703,65 @@ void Isolated_Multiple_integrator(Tptcl * ptcl_org,
     // for (int i=0;i<n_ptcl;i++) arout<<std::setprecision(17)<<time_origin_<<" "<<ptcl_org[i].mass<<" "<<ptcl_org[i].pos<<" "<<ptcl_org[i].vel<<std::endl;
 }
 
-template<class Tptcl>
+template<class Tptcl, class ARC_par>
 class ARCIntegrator{
 private:
-    typedef ARC::chain<Tptcl,ARC_int_pars> ARChain;
+    typedef ARC::chain<Tptcl,ARC_par> ARChain;
+    typedef ARC::chainpars<Tptcl,ARC_par> ARControl;
     ReallocatableArray<ARChain> clist_;
 
-    ARC::chainpars<Tptcl, ARC_par> *ARC_control_;
-    ARC_int_pars *Int_pars_;
+    ARControl *ARC_control_;
+    ARC_par *Int_pars_;
 
 public:
-    void initialize(PS::S32 group_list[];
-                    ReallocatableArray<Tptcl> groups[],
-                    const PS::S32 n_groups,
-                    Tptcl* ptcl,
-                    PS::S32 adr_cm[],
-                    ReallocatableArray<PS::S32> pertlist[],
-                    ARC::chainpars<Tptcl, ARC_par> &control,
-                    ARC_int_pars &Int_pars) {
-        for(int i=0; i<n_groups; i++) {
-            PS::S32 icm = adr_cm[i];
-            PS::S32 ig = group_list[i];
-            PS::S32 ni = groups[ig].size();
-            clist_.push_back(ARChain(ni,control));
-            clist_[i].addP(ni,groups[ig].getPointer());
-            clist_[i].link_int_par(Int_pars);
-            for(int j=0; j<pertlist[icm].size(); j++) clist_[i].addPext(ptcl[pertlist[icm][j]]);
-            clist_[i].init(0);
+    ARCIntegrator() {};
+    ARCIntegrator(ARControl &contr, ARC_par &par): ARC_control_(&contr), Int_pars_(&par) {}
+
+    //void initialize(PS::S32 group_list[];
+    //                ReallocatableArray<Tptcl> groups[],
+    //                const PS::S32 n_groups,
+    //                Tptcl* ptcl,
+    //                PS::S32 adr_cm[],
+    //                ReallocatableArray<PS::S32> pertlist[],
+    //                ARControl &control,
+    //                ARC_int_pars &Int_pars) {
+    //    for(int i=0; i<n_groups; i++) {
+    //        PS::S32 icm = adr_cm[i];
+    //        PS::S32 ig = group_list[i];
+    //        PS::S32 ni = groups[ig].size();
+    //        clist_.push_back(ARChain(ni,control));
+    //        clist_[i].addP(ni,groups[ig].getPointer());
+    //        clist_[i].link_int_par(Int_pars);
+    //        for(int j=0; j<pertlist[icm].size(); j++) clist_[i].addPext(ptcl[pertlist[icm][j]]);
+    //        clist_[i].init(0);
+    //    }
+    //    ARC_control_ = &control;
+    //    Int_pars_ = &Int_pars;
+    //}
+
+    void addGroup(PS::S32* group_list,
+                  const PS::S32 n_group,
+                  Tptcl* ptcl_org,
+                  const PS::S32 n_ptcl,
+                  PS::S32* pert_list,
+                  const ps::S32 n_pert,
+                  Tptcl* ptcl_pert,
+                  const PS::S32 n_ptcl_pert) {
+        clist_.push_back(ARChain(n_group,ARC_control_));
+        clist_.back().link_int_par(Int_pars_);
+        for(int i=0; i<n_group; i++) {
+#ifdef HARD_DEBUG
+            assert(group_list[i]<n_ptcl);
+#endif
+            clist_.back().addP(ptcl_org[group_list[i]]);
         }
-        ARC_control_ = &control;
-        Int_pars_ = &Int_pars;
+        for(int i=0; i<n_pert; i++) {
+#ifdef HARD_DEBUG
+            assert(pert_list[i]<n_ptcl_pert);
+#endif
+            clist_.back().addPext(ptcl_pert[pert_list[i]]);
+            clist_.back().init(0);
+        }
     }
 
     void IntegrateOneStep(const PS::S32 ic,
@@ -774,15 +844,13 @@ public:
 
     void updateCM(Tptcl ptcl[],
                   PS::S32 act_list[];
-                  PS::S32 adr_cm[];
                   PS::S32 n_act;) {
         for(int i=0; i<n_act; i++) {
             PS::S32 iact = act_list[i];
-            PS::S32 icm  = adr_cm[iact];
-            clist_[iact].cm.pos = ptcl[icm].pos;
-            clist_[iact].cm.vel = ptcl[icm].vel;
+            clist_[iact].cm.pos = ptcl[iact].pos;
+            clist_[iact].cm.vel = ptcl[iact].vel;
 #ifdef HARD_DEBUG
-            assert(clist_[iact].cm.mass==ptcl[icm].mass);
+            assert(clist_[iact].cm.mass==ptcl[iact].mass);
 #endif
         }
     }

@@ -965,11 +965,17 @@ private:
     typedef std::pair<PS::S32, PS::S32> PLinker;
 //    typedef std::pair<PS::S32, PS::F64> RCList;
 
+    PS::ReallocatableArray<PS::S32> p_list_;
+    // group member list
+    PS::ReallocatableArray<PS::S32> group_list_;
+    PS::ReallocatableArray<PS::S32> group_list_disp_;
+    // fake particle list
+    PS::ReallocatableArray<PS::S32> soft_pert_list_;
+    PS::ReallocatableArray<PS::S32> soft_pert_list_disp_;
+
 //    PS::ReallocatableArray<Tptcl> ptcl_;               ///new ptcl with c.m.
 //    PS::ReallocatableArray<PS::S32> ptcl_map_;      ///map from new ptcl_ to original ptcl
 //    PS::ReallocatableArray<PS::ReallocatableArray<Tptcl>> group_ptcl_;        ///partner group ptcl
-    PS::ReallocatableArray<std::vector<PS::S32>> pert_list_;       ///perturber list
-    PS::ReallocatableArray<std::vector<PS::S32>> group_list_;   /// partner_group member list
 //    PS::ReallocatableArray<RCList> Rout_change_list_;  /// Rout change list
 
 ///    void searchPerturber() {
@@ -1062,37 +1068,6 @@ private:
         }
     }
 
-    void searchPerturber(PS::ReallocatableArray<std::vector<PS::S32>> & ptr_list,
-                         Tptcl *ptcl,
-                         const PS::S32 n_ptcl) {
-        // perturber list
-        ptr_list.resizeNoInitialize(n_ptcl);
-        
-#ifdef HARD_DEBUG
-        for(int i=0; i<n_ptcl; i++) {
-            assert(ptr_list[i].size()==0);
-        }
-#endif
-        
-        // find perturber
-        for(int i=0; i<n_ptcl; i++) {
-            Tptcl* pi = &ptcl[i];
-            if(ptcl[i].mass == 0.0) continue;
-            
-            for(int j=i+1; j<n_ptcl; j++) {
-                if(ptcl[j].mass == 0.0) continue;
-                PS::F64vec dr = ptcl[i].pos-ptcl[j].pos;
-                PS::F64 r2 = dr*dr;
-                PS::F64 rout = std::max(ptcl[i].r_out,ptcl[j].r_out);
-                PS::F64 rout2 = rout*rout+SAFTY_OFFSET_FOR_SEARCH;
-                if (r2<rout2) {
-                    ptr_list[i].push_back(j);
-                    ptr_list[j].push_back(i);
-                }
-            }
-        }
-    }
-    
     void mergeCluster(PS::ReallocatableArray<std::vector<PS::S32>> & group_list,
                       PS::ReallocatableArray<std::vector<PS::S32>> & part_list) {
         // partner index with marker
@@ -1180,48 +1155,53 @@ private:
     }
 
     void generateNewPtcl(Tptcl* ptcl_org,
-                         const PS::S32 n_ptcl,
-                         PS::ReallocatableArray<PS::S32> & adr_group_glb,
-                         PS::ReallocatableArray<std::vector<Tptcl>> & group_ptcl_glb,
-                         PS::ReallocatableArray<PS::S32> & group_ptcl_glb_free_list,
-                         PS::ReallocatableArray<std::vector<PS::S32>> & group_list ){
+                         const PS::S32 n_ptcl_org,
+                         PS::S32 & n_ptcl,
+                         PS::ReallocatableArray<Tptcl> & group_ptcl,
+//                         PS::ReallocatableArray<PS::S32> & id_group_glb,
+//                         PS::ReallocatableArray<std::vector<Tptcl>> & group_ptcl_glb,
+//                         PS::ReallocatableArray<PS::S32> & group_ptcl_glb_free_list,
+                         PS::ReallocatableArray<std::vector<PS::S32>> & group_list,
+                         const PS::S32 n_split = 8){
 #ifdef HARD_DEBUG
 //        assert(ptcl.size()==0);
-//        assert(group_ptcl.size()==0);
+        assert(group_ptcl.size()==0);
+        assert(n_ptcl<=n_ptcl_org);
 //        assert(ptcl_map.size()==0);
 #endif
-        std::vector<Tptcl> * gnow;
-        const PS::S32 n_groups_glb = adr_group_glb.size();
-        adr_group_glb.resizeNoInitialize(n_ptcl);
+        group_ptcl.reserve((n_split+2)*group_list.size()*2);
+        // std::vector<Tptcl> * gnow;
+        // const PS::S32 n_groups_glb = id_group_glb.size();
+        // id_group_glb.resizeNoInitialize(n_ptcl);
 
         PS::S32 n_group_tot = 0;
-        PS::S32 masks[n_ptcl]={0};
+        // PS::S32 masks[n_ptcl]={0};
         //if (group_list.size()>n_groups_glb) {
         // PS::S32 n_ext = group_list.size()-n_groups_glb;
             // group_ptcl_loc.resizeNoInitialize(n_ext);
             // group_map.resizeNoInitialize(n_ext);
             
         // }
-        for (int i=group_list.size(); i<n_groups_glb; i++) {
-            group_ptcl_glb[adr_group_glb[i]].clear();
-        }
-#pragma omp critical
-        {
-            for (int i=group_list.size(); i<n_groups_glb; i++) 
-                group_ptcl_glb_free_list.push_back(adr_group_glb[i]);
-            PS::S32 freesize = group_ptcl_glb_free_list.size();
-            for (int i=n_groups_glb; i<group_list.size(); i++) {
-                if(freesize>0) {
-                    adr_group_glb[i] = group_ptcl_glb_free_list.back();
-                    group_ptcl_glb_free_list.decreaseSize(1);
-                    freesize--;
-                }
-                else {
-                    adr_group_glb[i] = group_ptcl_glb.size();
-                    group_ptcl_glb.push_back(std::vector<Tptcl>());
-                }
-            }
-        }
+        //for (int i=group_list.size(); i<n_groups_glb; i++) {
+        //    group_ptcl_glb[id_group_glb[i]].clear();
+        //}
+        //#pragma omp critical
+        //{
+        //    for (int i=group_list.size(); i<n_groups_glb; i++) 
+        //        group_ptcl_glb_free_list.push_back(id_group_glb[i]);
+        //    PS::S32 freesize = group_ptcl_glb_free_list.size();
+        //    for (int i=n_groups_glb; i<group_list.size(); i++) {
+        //        if(freesize>0) {
+        //            id_group_glb[i] = group_ptcl_glb_free_list.back();
+        //            group_ptcl_glb_free_list.decreaseSize(1);
+        //            freesize--;
+        //        }
+        //        else {
+        //            id_group_glb[i] = group_ptcl_glb.size();
+        //            group_ptcl_glb.push_back(std::vector<Tptcl>());
+        //        }
+        //    }
+        //}
         
         for (int i=0; i<group_list.size(); i++) {
 #ifdef HARD_DEBUG
@@ -1229,27 +1209,35 @@ private:
 #endif
             PS::S32 n_group = group_list[i].size();
             PS::S32 ifirst = group_list[i][0];
-            gnow = &group_ptcl_glb[adr_group_glb[i]];
-            ptcl_org[ifirst].adr_group = adr_group_glb[i];
+            // gnow = &group_ptcl_glb[id_group_glb[i]];
+            //ptcl_org[ifirst].id_group = id_group_glb[i];
             //gnow->resize(n_group);
-            for (int j=0; j<n_group; j++) {
-                PS::S32 k = group_list[i][j];
-                gnow->push_back(ptcl_org[k]);
-                n_group_tot++;
-                masks[k] = 1;
+            //for (int j=0; j<n_group; j++) {
+            //  PS::S32 k = group_list[i][j];
+                //gnow->push_back(ptcl_org[k]);
+            //n_group_tot++;
+            //  masks[k] = 1;
+            //}
+            //getCenterOfMass(ptcl_org[ifirst],gnow->data(),gnow->size());
+            Tptcl *ip;
+            if(n_ptcl<n_ptcl_org) ip = &ptcl_org[n_ptcl];
+            else {
+                group_ptcl.increaseSize(1);
+                ip = &group_ptcl.back();
             }
-            getCenterOfMass(ptcl_org[ifirst],gnow->data(),gnow->size());
-            
-            for (int j=1; j<n_group; j++) {
-                PS::S32 k = group_list[i][j];
-                ptcl_org[k] = ptcl_org[ifirst];
-                ptcl_org[k].adr_group = -2;
-                ptcl_org[k].mass = 0.0;
-            }
+            getCenterOfMass(&ip,ptcl_org,group_list[i].data(),n_group);
+            checkGroupAndGenerateFakeParticles(group_ptcl,ptcl_org,n_ptcl,n_ptcl_org,group_list[i].data(),n_group);
+
+            //for (int j=1; j<n_group; j++) {
+            //    PS::S32 k = group_list[i][j];
+            //    ptcl_org[k] = ptcl_org[ifirst];
+            //    ptcl_org[k].id_group = -2;
+            //    ptcl_org[k].mass = 0.0;
+            //}
         }
 
         for (int i=0; i<n_ptcl; i++) {
-            if(masks[i] == 0) ptcl_org[i].adr_group = -1;
+            if(masks[i] == 0) ptcl_org[i].id_group = -1;
         }
 
 #ifdef HARD_DEBUG
@@ -1270,7 +1258,7 @@ private:
         //            assert(nnext>=n_ptcl);
         //        }
         //        ptcl_org[nnext] = ptcl_org[i];
-        //        ptcl_org[nnext].adr_group = -1;
+        //        ptcl_org[nnext].id_group = -1;
         //        nnext++;
         //    }
         //}
@@ -1280,15 +1268,15 @@ private:
         //        while(masks[nend]>0) nend--;
         //        if(nnext<nend) {
         //            ptcl_org[nnext] = ptcl_org[nend];
-        //            ptcl_org[nnext].adr_group = -1;
+        //            ptcl_org[nnext].id_group = -1;
         //        }
         //    }
-        //    else ptcl_org[i].adr_group = -1;
+        //    else ptcl_org[i].id_group = -1;
         //}
 //#ifdef HARD_DEBUG
 //        for (int i=group_list.size(); i<n_ptcl_new; i++) {
 //            assert(masks[i]==0);
-//            assert(ptcl_org[i].adr_group==-1);
+//            assert(ptcl_org[i].id_group==-1);
 //        }
 //#endif
         //nnext = n_ptcl_new;
@@ -1296,8 +1284,8 @@ private:
         //    if(masks[i]>=0) {
         //    
         //        if (i<n_groups_glb) {
-        //            gnow = &group_ptcl_glb[adr_group_glb[i]];
-        //        ptcl_org[i].adr_group = adr_group_glb[i];
+        //            gnow = &group_ptcl_glb[id_group_glb[i]];
+        //        ptcl_org[i].id_group = id_group_glb[i];
         //    }
         //    else {
         //        gnow = &group_ptcl_loc[i-n_groups_glb];
@@ -1346,16 +1334,19 @@ private:
 //        }
 //    }
 
-    void getCenterOfMass(Tptcl &cm, Tptcl* p, const PS::S32 num) {
+    void getCenterOfMass(Tptcl &cm, Tptcl* p, const PS::S32 adr[], const PS::S32 num) {
+        const PS::S32 ist=adr[0];
         PS::F64vec cmr=0;
         PS::F64vec cmv=0;
         PS::F64 cmm = 0;
-        cm.r_out = p[0].r_out;
-        cm.id = p[0].id;
-        cm.id_cluster = p[0].id_cluster;
-        cm.adr_org = p[0].adr_org;
+        cm.r_out = p[ist].r_out;
+        cm.id = -p[ist].id;
+        // cm.id_cluster = p[ist].id_cluster;
+        // cm.adr_org = p[ist].adr_org;
+        cm.id_group = -p[ist].id;
         
-        for (int i=0;i<num;i++) {
+        for (int k=0;k<num;k++) {
+            const PS::S32 i = adr[k];
             cmr += p[i].pos * p[i].mass;
             cmv += p[i].vel * p[i].mass;
             cmm += p[i].mass;
@@ -1387,37 +1378,157 @@ private:
 //    }
 
 public:
-    void findGroups(PS::ReallocatableArray<PS::S32> &group_list,
-                    PS::ReallocatableArray<PS::S32> &adr_group,
-                    PS::ReallocatableArray<PS::S32> &adr_group_map,
-                    PS::ReallocatableArray<PS::S32> &adr_cm,
-                    PS::S32 & n_groups,
-                    Tptcl* ptcl_org,
-                    const PS::S32 n_ptcl) {
+    void findGroups(Tptcl* ptcl_org,
+                    const PS::S32 n_ptcl,
+                    const PS::S32 n_split) {
+        p_list_.reserve(n_ptcl);
+        p_list_.clearSize();
+
+        group_list_disp_.reserve(n_groups);
+        group_list_disp_.clearSize();
+
+        ReallocatableArray<PS::S32>  group_list_n;
+        group_list_n.reserve(n_ptcl);
+
+        std::map<PS::S32,PS::S32> id_adr;
+
 #ifdef HARD_DEBUG
-        assert(group_list.size()==0);
-        assert(adr_cm.size()==0);
+        ReallocatableArray<PS::S32> icount;
+        icount.reserve(n_ptcl);
+        for (int i=0; i<n_ptcl; i++) icount.pushBackNoCheck(0);
 #endif
-        n_groups = 0;
-        adr_group.resizeNoInitialize(n_ptcl);
-        adr_group_map.resizeNoInitialize(n_ptcl);
+
+        // find cm
+        PS::S32 n_members = 0;
+        PS::S32 n_unused = 0;
         for (int i=0; i<n_ptcl; i++) {
-            adr_group[i] = ptcl_org[i].adr_group;
-            if(adr_group[i]>=0) {
-                adr_group_map[i] = n_groups;
-                group_list.push_back(adr_group[i]);
-                adr_cm.push_back(i);
-                n_groups++;
-            }
-            else {
-                adr_group_map[i] = -1;
+            if(ptcl_org[i].id<0) {
+                if(ptcl_org[i].status>0) {
+                    p_list_.pushBackNoCheck(i);
+                    id_adr[ptcl_org[i].id] = i;
+                    group_list_disp_.pushBackNoCheck(n_members);
+                    group_list_n.pushBackNoCheck(0);
+                    n_members += ptcl_org[i].status;
+#ifdef HARD_DEBUG
+                    icount[i]++;
+#endif
+                }
+                else n_unused++;
             }
         }
+
+        PS::S32 n_groups = p_list_.size();  // group number
+
+        group_list_.reserve(n_members);
+        group_list_.resizeNoInitialize(n_members);
+
+        std::map<PS::S32,std::pair<PS::S32,PS::S32>> mem_order;
+        gloffset.reserve(n_members);
+
+        PS::S32 soft_size = n_groups*2*n_split+n_unused;
+        PS::S32 i_unused = n_groups*2*n_split;
+        soft_pert_list_.reserve(soft_size);
+        soft_pert_list_.resizeNoInitialize(soft_size);
+
+        soft_pert_list_disp_.reserve(n_groups);
+        soft_pert_list_disp_.resizeNoInitialize(n_groups);
+        for (int i=0; i<n_groups; i++) soft_pert_list_disp_[i] = i*n_split*2;
+
+#ifdef HARD_DEBUG
+        ReallocatableArray<PS::S32> scount;
+        scount.reserve(soft_size);
+        for (int i=0; i<soft_size; i++) scount.pushBackNoCheck(0);
+        ReallocatableArray<PS::S32> gcount;
+        gcount.reserve(n_members);
+        for (int i=0; i<n_members; i++) gcount.pushBackNoCheck(0);
+#endif
+        
+        for (int i=0; i<n_ptcl; i++) {
+            if(ptcl_org[i].id>=0) {
+                if(ptcl_org[i].status==0) {
+                    p_list_.pushBackNoCheck(i); //single
+#ifdef HARD_DEBUG
+                    icount[i]++;
+#endif
+                }
+                else if(ptcl_org[i].status<0) {  // members
+                    PS::S32 id_cm = id_adr.at(ptcl_org[i].status);
+                    group_list_[group_list_disp_[id_cm]+group_list_n[id_cm]] = i;
+                    mem_order[ptcl_org[i].id] = std::pair(id_cm, group_list_n[id_cm]);  // record cm index and member id order
+                    group_list_n[id_cm]++;
+#ifdef HARD_DEBUG
+                    icount[i]++;
+                    gcount[group_list_disp_[id_cm]+group_list_n[id_cm]]++;
+#endif
+                }
+            }
+            else if(ptcl_org[i].status<0){
+                soft_pert_list_[i_unused++] = i; // unused 
+#ifdef HARD_DEBUG
+                icount[i]++;
+                scount[i_unused-1]++;
+#endif
+            }
+        }
+
+        for (int i=0; i<n_ptcl; i++) {
+            if(ptcl_org[i].id>=0&&ptcl_org[i].status>0) { // fake members
+                std::pair* iadr = &mem_order[ptcl_org[i].id];
+                PS::S32 icm = iadr->first;
+                PS::S32 iorder = iadr->second;
+                PS::S32 iphase = ptcl_org[i].status;
+                soft_pert_list_[soft_pert_list_disp_[icm]+(iphase-1)*group_list_n[icm]+iorder] = i;
+#ifdef HARD_DEBUG
+                icount[i]++;
+                scount[soft_pert_list_disp_[icm]+(iphase-1)*group_list_n[icm]+iorder]++;
+#endif
+            }
+        }
+
+#ifdef HARD_DEBUG
+        assert(i_unused==n_unused);
+        assert(p_list_.size()+n_members+soft_size==n_ptcl);
+        for(int i=0; i<icount.size(); i++) assert(icount[i]==1);
+        for(int i=0; i<gcount.size(); i++) assert(gcount[i]==1);
+        for(int i=0; i<scount.size(); i++) assert(scount[i]==1);
+#endif
+        
+        for (int i=0; i<n_groups; i++) { // get correct mass
+            PS::F64 masscm = 0.0;
+            for (int j=0; j<group_list_n[j]; j++) {
+                PS::S32 i_mem  = group_list_[group_list_disp_[i]+j];
+                PS::S32 i_fake = soft_pert_list_[soft_pert_list_disp_[i]+j];
+                ptcl_org[i_mem].mass = ptcl_org[i_fake].mass*n_split;
+                masscm += ptcl_org[i_mem].mass;
+            }
+            ptcl_org[p_list_[i]].mass = masscm;
+        }
+        
+        // get 
+//#ifdef HARD_DEBUG
+//        assert(group_list.size()==0);
+//        assert(adr_cm.size()==0);
+//#endif
+//        n_groups = 0;
+//        id_group.resizeNoInitialize(n_ptcl);
+//        id_group_map.resizeNoInitialize(n_ptcl);
+//        for (int i=0; i<n_ptcl; i++) {
+//            id_group[i] = ptcl_org[i].id_group;
+//            if(id_group[i]>=0) {
+//                id_group_map[i] = n_groups;
+//                group_list.push_back(id_group[i]);
+//                adr_cm.push_back(i);
+//                n_groups++;
+//            }
+//            else {
+//                id_group_map[i] = -1;
+//            }
+//        }
     }
 
-    void searchPerturber(Tptcl *ptcl_org, const PS::S32 n_ptcl) {
-        searchPerturber(pert_list_, ptcl_org, n_ptcl);
-    }
+    //void searchPerturber(Tptcl *ptcl_org, const PS::S32 n_ptcl) {
+    //    searchPerturber(pert_list_, ptcl_org, n_ptcl);
+    //}
 
     void searchAndMerge(Tptcl *ptcl_org, const PS::S32 n_ptcl, const PS::F64 rin){
         PS::ReallocatableArray<std::vector<PS::S32>> part_list;      ///partner list
@@ -1433,10 +1544,10 @@ public:
 
     void generateList(Tptcl *ptcl_org, 
                       const PS::S32 n_ptcl, 
-                      PS::ReallocatableArray<PS::S32> & adr_group_glb, 
+                      PS::ReallocatableArray<PS::S32> & id_group_glb, 
                       PS::ReallocatableArray<std::vector<Tptcl>> & group_ptcl_glb, 
                       PS::ReallocatableArray<PS::S32> & group_ptcl_glb_empty_list) {
-        generateNewPtcl(ptcl_org, n_ptcl, adr_group_glb, group_ptcl_glb, group_ptcl_glb_empty_list, group_list_);
+        generateNewPtcl(ptcl_org, n_ptcl, id_group_glb, group_ptcl_glb, group_ptcl_glb_empty_list, group_list_);
         //searchPerturber(pert_list_, ptcl_org, n_ptcl);
     }
 
@@ -1450,9 +1561,9 @@ public:
             PS::ReallocatableArray<Tptcl>* gnow = &group_ptcl_glb[group_list[i]];
             PS::S32 ip = adr_cm[i];
             ptcl_org[ip] = gnow[0];
-            ptcl_org[ip].adr_group = -1;
+            ptcl_org[ip].id_group = -1;
             for (int j=1; j<gnow.size(); j++) {
-                while(ptcl_org[inext].adr_group!=-2) {
+                while(ptcl_org[inext].id_group!=-2) {
                     inext++;
 #ifdef HARD_DEBUG
                     if (inext>=n_ptcl) {
@@ -1466,7 +1577,7 @@ public:
         }
 #ifdef HARD_DEBUG
         for (int i=0; i<n_ptcl; i++) {
-            assert(ptcl_org[i].adr_group==-1);
+            assert(ptcl_org[i].id_group==-1);
             assert(ptcl_org[i].mass>0.0);
         }
 #endif
@@ -1480,9 +1591,9 @@ public:
         return pert_list_.getPointer();
     }
 
-//    PS::S32 getNPtcl() const {
-//        return ptcl_.size();
-//    }
+    PS::S32 getNPtcl() const {
+        return p_list_.size();
+    }
 
 //    PS::ReallocatableArray<Tptcl> *getPGroups() {
 //        return group_ptcl_.getPointer();
