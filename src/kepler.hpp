@@ -300,3 +300,108 @@ void center_of_mass_correction(particle &cm, particle p[], const int num) {
   }
 }
 
+//void getCenterOfMass(Tptcl &cm, Tptcl* p, const PS::S32 adr[], const PS::S32 num) {
+//    const PS::S32 ist=adr[0];
+//    PS::F64vec cmr=0;
+//    PS::F64vec cmv=0;
+//    PS::F64 cmm = 0;
+//    cm.r_out = p[ist].r_out;
+//    cm.id = -p[ist].id;
+//    // cm.id_cluster = p[ist].id_cluster;
+//    // cm.adr_org = p[ist].adr_org;
+//    cm.id_group = -p[ist].id;
+//        
+//    for (int k=0;k<num;k++) {
+//        const PS::S32 i = adr[k];
+//        cmr += p[i].pos * p[i].mass;
+//        cmv += p[i].vel * p[i].mass;
+//        cmm += p[i].mass;
+//    }
+//    cmr /= cmm; 
+//    cmv /= cmm; 
+//      
+//    cm.mass = cmm;
+//    cm.pos = cmr;
+//    cm.vel = cmv;
+// 
+//}
+
+template <class Tptcl>
+void calcMinDisList(PS::S32 member_list[], 
+                    std::pair<PS::S32, PS::S32> r2_list[],
+                    const PS::S32 n,
+                    Tptcl* ptcl_org) {
+    for (int i=0; i<n-1; i++) {
+        PS::S32 k = member_list[i];
+        PS::S32 jc;
+        PS::F64 r2min = PS::LARGE_FLOAT;
+        for(int j=i+1; j<n; i++) {
+            PS::F64vec dr = ptcl_org[k].pos - ptcl_org[member_list[j]].pos;
+            PS::F64 r2 = dr*dr;
+            if(r2<r2min) {
+                r2min = r2;
+                jc = j;
+            }
+        }
+        if (jc!=i+1) {
+            PS::S32 jtmp = member_list[i+1];
+            member_list[i+1] = member_list[jc];
+            member_list[jc]  = jtmp;
+        }
+        r2_list[i].first = r2min;
+        r2_list[i].second = i;
+    }
+}
+
+bool pairLess(const std::pair<PS::S32,PS::S32> & a, const std::pair<PS::S32,PS::S32> & b)  {
+    return a.first < b.first;
+}
+
+template<class Tptcl, class Tptree>
+void keplerTreeGenerator(Tptree bins[],   // make sure bins.size = n_members!
+                         PS::S32 member_list[], // make sure list.size = n_members!
+                         const PS::S32 n_members,
+                         Tptcl* ptcl_org){
+
+    std::pair<PS::S32,PS::S32> r2_list[n_members];
+    calcMinDisList(member_list,r2_list, n_members, ptcl_org);
+    std::sort(r2_list, r2_list+n_members-1, pairLess);
+
+    Tptree* bin_host[n_members]={NULL};
+    
+    for(int i=0; i<n_members-1; i++) {
+        PS::S32 k = r2_list[i].second;
+        Tptcl* p[2];
+        if(bin_host[k]==NULL) {
+            p[0] = &ptcl_org[member_list[k]];
+            bin_host[k] = &bins[i];
+        }
+        else {
+            p[0] = bin_host[k];
+            PS::S32 ki = k;
+            while(bin_host[ki]==p[0]&&ki>=0) bin_host[ki--] = &bins[i];
+        }
+
+        if(bin_host[k+1]==NULL) {
+            p[1] = &ptcl_org[member_list[k+1]];
+            bin_host[k+1] = &bins[i];
+        }
+        else {
+            p[1] = bin_host[k+1];
+            PS::S32 ki = k+1;
+            while(bin_host[ki]==p[1]&&ki>=0) bin_host[ki++] = &bins[i];
+        }
+        
+        bins[i].ecca=PosVel2OrbParam(bins[i].ax, bins[i].ecc, bins[i].inc, bins[i].OMG, bins[i].omg, bins[i].tperi, p[0]->pos, p[1]->pos, p[0]->vec, p[1]->vec, p[0]->mass, p[1]->mass);
+        calc_center_of_mass(bins[i].cm, p, 2);
+    }
+
+#ifdef HARD_DEBUG
+    for(int i=0; i<n_members; i++) assert(bin_host[i]==&bins[n_members-2]);
+#endif
+}
+
+
+
+
+

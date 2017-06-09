@@ -127,6 +127,11 @@ public:
 
 };
 
+class ptclTree: public PtclHard{
+    PS::F64 semi, ecc, inc, OMG, omg, tperi, ecca;
+    PtclHard* member[2];
+};
+
 class SystemHard{
 public:
     PS::ReallocatableArray<PtclHard> ptcl_hard_;
@@ -187,7 +192,8 @@ private:
     template<class Tptcl>
     void driveForMultiClusterImpl(Tptcl * ptcl_org,
                                   const PS::S32 n_ptcl,
-                                  const PS::F64 time_end) {
+                                  const PS::F64 time_end,
+                                  PS::ReallocatableArray<Tptcl> & ptcl_new) {
 #ifdef HERMITE
         if(n_ptcl>5) {
             SearchGroup group();
@@ -200,7 +206,7 @@ private:
             Hint.searchPerturber();
             
             PS::S32 group_act_n = 0;
-            ReallocatableArray<PS::S32> group_act_list; //active group_list act adr
+            PS::ReallocatableArray<PS::S32> group_act_list; //active group_list act adr
             // ReallocatableArray<PS::S32> group_list;     //group.adr list
             // ReallocatableArray<PS::S32> status;      //ptcl -> group.adr [non cm is -1] (value of Ptcl.status)
             // ReallocatableArray<PS::S32> status_map;  //ptcl -> group_list index [non cm is -1]
@@ -233,7 +239,7 @@ private:
             group.resolveGroups();
             group.searchAndMerge(ptcl_org, n_ptcl, Int_pars.rin);
             // Kickcorrect(ptcl_org, group.getRoutChangeList());
-            group.generatelist(ptcl_org, n_ptcl);
+            group.generatelist(ptcl_org, n_ptcl, ptcl_new);
 
             // group.reverseCopy(ptcl_org, n_ptcl);
         }
