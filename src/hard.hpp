@@ -7,8 +7,6 @@
 #define NAN_CHECK(val) assert((val) == (val));
 #endif
 
-const PS::F64 SAFTY_OFFSET_FOR_SEARCH = 1e-7;
-
 #include"integrate.hpp"
 #include"soft.hpp"
 #include"cstdlib"
@@ -531,8 +529,8 @@ public:
 
 //////////////////
 // for multi cluster
-    void driveForMultiCluster(const PS::F64 dt,
-                              ReallocatableArray<std::vector<PtclHard> & group_ptcl_glb){
+    template<class Tptcl>
+    void driveForMultiCluster(const PS::F64 dt){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         /*
           for(PS::S32 ith=0; ith<PS::Comm::getNumberOfThread(); ith++){
@@ -543,13 +541,16 @@ public:
         for(PS::S32 i=0; i<n_cluster; i++){
             const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
-            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, dt,group_ptcl_glb, group_ptcl_glb_empty_list);
+            PS::ReallocatableArray<Tptcl> extra_ptcl;
+            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, dt, extra_ptcl);
+            {
+                
+            }
         }
     }
 
-    void driveForMultiClusterOMP(const PS::F64 dt,
-                                 ReallocatableArray<std::vector<PtclHard>> & group_ptcl_glb,
-                                 ReallocatableArray<PS::S32> & group_ptcl_glb_empty_list){
+    template<class Tptcl>
+    void driveForMultiClusterOMP(const PS::F64 dt){
 
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         //	const PS::S32 ith = PS::Comm::getThreadNum();
@@ -557,7 +558,12 @@ public:
         for(PS::S32 i=0; i<n_cluster; i++){
             const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
-            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, dt, group_ptcl_glb, group_ptcl_glb_empty_list);
+            PS::ReallocatableArray<Tptcl> extra_ptcl;
+            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, dt, extra_ptcl);
+#pragma omp critical
+            {
+                
+            }
             
         }
     }
@@ -565,10 +571,3 @@ public:
 
 };
 
-template <class Tptcl>
-class systemGroup{
-public:
-    ReallocatableArray<ReallocatableArray<Tptcl>> groups;     //data
-    ReallocatableArray<PS::S32> cm_adr;                       //c.m. index in original particle array
-    
-};

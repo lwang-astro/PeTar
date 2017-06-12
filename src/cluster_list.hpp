@@ -2,7 +2,7 @@
 #include<particle_simulator.hpp>
 //#include"hard_force.hpp"
 
-const PS::F64 SAFTY_OFFSET_FOR_SEARCH = 1e-7;
+extern const PS::F64 SAFTY_OFFSET_FOR_SEARCH;
 
 template <class Ttree>
 void SetRankComm(const PS::F64ort pos_domain[], Ttree &tree,
@@ -1051,7 +1051,7 @@ private:
                        const PS::S32 n_ptcl,
                        const PS::F64 r_crit2) {
         PS::S32 n = p_list.size();
-        part_list.clearSize;
+        part_list.clearSize();
         part_list_disp.reserve(n);
         part_list_disp.resizeNoInitialize(n);
         part_list_n.reserve(n);
@@ -1068,7 +1068,7 @@ private:
                 PS::F64vec dr = ptcl[ip].pos-ptcl[jp].pos;
                 PS::F64 r2 = dr*dr;
                 if (r2<r_crit2) {
-                    part_list[i].push_back(j);
+                    part_list.push_back(j);
                     part_list_n[i]++;
                     offset++;
                 }
@@ -1147,7 +1147,7 @@ private:
                           const PS::U32 iend,
                           PS::S32 part_list[],
                           PS::S32 part_list_disp[],
-                          PS::S32 pars_list_n[],
+                          PS::S32 part_list_n[],
                           PS::ReallocatableArray<PLinker> & partner_index,
                           PS::ReallocatableArray<PS::S32> & reverse_list) {
         PS::S32 n_connected = 0;
@@ -1207,6 +1207,7 @@ private:
         
     }
 
+    template<class Tptree>
     void generateNewPtcl(Tptcl* ptcl_org,
                          const PS::S32 n_ptcl,
                          PS::ReallocatableArray<PS::S32> & p_list,
@@ -1226,7 +1227,7 @@ private:
 
         const PS::S32 n_groups = group_list_n.size();
         for (int i=0; i<n_groups; i++) {
-            ReallocatableArray<ptclTree> bins;
+            PS::ReallocatableArray<Tptree> bins;
             bins.reserve(n_groups);
             bins.resizeNoInitialize(group_list_n[i]-1);
             keplerTreeGenerator(bins.getPointer(), &group_list[group_list_disp[i]], group_list_n[i], ptcl_org);
@@ -1242,13 +1243,13 @@ private:
             ptcl_org[ik].status = -1;
         }
 
-#ifdef HARD_DEBUG
-        PS::S32 n_ptcl_new = n_ptcl-n_group_tot+group_list.size();
-        if(n_ptcl_new<=0) {
-            std::cerr<<"Error: data size unmatch! n_ptcl = "<<n_ptcl<<" n_group_tot = "<<n_group_tot<<" group_list.size = "<<group_list.size()<<std::endl;
-            abort();
-        }
-#endif
+//#ifdef HARD_DEBUG
+//        PS::S32 n_ptcl_new = n_ptcl-n_group_tot+group_list.size();
+//        if(n_ptcl_new<=0) {
+//            std::cerr<<"Error: data size unmatch! n_ptcl = "<<n_ptcl<<" n_group_tot = "<<n_group_tot<<" group_list.size = "<<group_list.size()<<std::endl;
+//            abort();
+//        }
+//#endif
         // ptcl.resizeNoInitialize(n_ptcl_new);
         // ptcl_map.resizeNoInitialize(n_ptcl_new);
         //PS::S32 nstart = 0;
@@ -1360,7 +1361,7 @@ public:
         p_list_.reserve(n_ptcl);
         p_list_.clearSize();
 
-        group_list_disp_.reserve(n_groups);
+        group_list_disp_.reserve(n_ptcl);
         group_list_disp_.clearSize();
 
         group_list_n_.reserve(n_ptcl);
@@ -1398,7 +1399,7 @@ public:
         group_list_.resizeNoInitialize(n_members);
 
         std::map<PS::S32,std::pair<PS::S32,PS::S32>> mem_order;
-        gloffset.reserve(n_members);
+        //gloffset.reserve(n_members);
 
         PS::S32 soft_size = n_groups*2*n_split+n_unused;
         PS::S32 i_unused = n_groups*2*n_split;
@@ -1410,10 +1411,10 @@ public:
         for (int i=0; i<n_groups; i++) soft_pert_list_disp_[i] = i*n_split*2;
 
 #ifdef HARD_DEBUG
-        ReallocatableArray<PS::S32> scount;
+        PS::ReallocatableArray<PS::S32> scount;
         scount.reserve(soft_size);
         for (int i=0; i<soft_size; i++) scount.pushBackNoCheck(0);
-        ReallocatableArray<PS::S32> gcount;
+        PS::ReallocatableArray<PS::S32> gcount;
         gcount.reserve(n_members);
         for (int i=0; i<n_members; i++) gcount.pushBackNoCheck(0);
 #endif
@@ -1429,7 +1430,7 @@ public:
                 else if(ptcl_org[i].status<0) {  // members
                     PS::S32 id_cm = id_adr.at(ptcl_org[i].status);
                     group_list_[group_list_disp_[id_cm]+group_list_n_[id_cm]] = i;
-                    mem_order[ptcl_org[i].id] = std::pair(id_cm, group_list_n_[id_cm]);  // record cm index and member id order
+                    mem_order[ptcl_org[i].id] = std::pair<PS::S32, PS::S32>(id_cm, group_list_n_[id_cm]);  // record cm index and member id order
                     group_list_n_[id_cm]++;
 #ifdef HARD_DEBUG
                     icount[i]++;
@@ -1448,7 +1449,7 @@ public:
 
         for (int i=0; i<n_ptcl; i++) {
             if(ptcl_org[i].id>=0&&ptcl_org[i].status>0) { // fake members
-                std::pair* iadr = &mem_order[ptcl_org[i].id];
+                std::pair<PS::S32,PS::S32>* iadr = &mem_order[ptcl_org[i].id];
                 PS::S32 icm = iadr->first;
                 PS::S32 iorder = iadr->second;
                 PS::S32 iphase = ptcl_org[i].status;
@@ -1511,7 +1512,7 @@ public:
         PS::ReallocatableArray<PS::S32> part_list_n;      ///partner list
         
         searchPartner(part_list, part_list_disp, part_list_n, p_list_, ptcl_org, n_ptcl, rin*rin);
-        mergeCluster(group_list_, group_list_disp_, group_list_n_, p_list_, part_list.getPointer(), part_list_disp.getPointer(), pars_list_n.getPointer());
+        mergeCluster(group_list_, group_list_disp_, group_list_n_, p_list_, part_list.getPointer(), part_list_disp.getPointer(), part_list_n.getPointer());
         // #ifdef HARD_DEBUG
         // assert(Rout_change_list_.size()==0);
         // #endif
@@ -1521,8 +1522,9 @@ public:
 
     void generateList(Tptcl *ptcl_org, 
                       const PS::S32 n_ptcl, 
-                      PS::ReallocatableArray<Tptcl> & ptcl_extra) {
-        generateNewPtcl(ptcl_org, n_ptcl, id_group_glb, group_ptcl_glb, group_ptcl_glb_empty_list, group_list_);
+                      PS::ReallocatableArray<Tptcl> & ptcl_extra,
+                      const PS::S32 n_split = 8) {
+        generateNewPtcl(ptcl_org, n_ptcl, p_list_, ptcl_extra, group_list_, group_list_disp_, group_list_n_, soft_pert_list_,n_split);
         //searchPerturber(pert_list_, ptcl_org, n_ptcl);
     }
 

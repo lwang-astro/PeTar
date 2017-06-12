@@ -8,113 +8,12 @@
 #include "kepler.hpp"
 #include "rsearch.hpp"
 #include "cluster_list.hpp"
+#include "hard.hpp"
 
 
 #ifndef NAN_CHECK
 #define NAN_CHECK(val) assert((val) == (val));
 #endif
-
-class PtclHard{
-public:
-    PS::S64 id;
-    PS::F64 mass;
-    PS::F64vec pos;
-    PS::F64vec vel;
-    PS::F64 r_out;
-    // PS::S32 n_ngb;
-    PS::S32 id_cluster;
-    PS::S32 adr_org;
-    PS::S32 adr_group;
-    static PS::F64 r_factor;
-    static PS::F64 dens;
-    PtclHard():id(-1), mass(-1.0), adr_group(-1) {}
-    //    PtclHard(const PtclHard &p) {
-    //        id         = p.id;
-    //        mass       = p.mass;
-    //        pos        = p.pos;
-    //        vel        = p.vel;
-    //        r_out      = p.r_out;
-    //        id_cluster = p.id_cluster;
-    //        adr_org    = p.adr_org;
-    //    }
-    PtclHard(const PS::S64 _id, 
-             const PS::F64 _mass, 
-             const PS::F64vec & _pos, 
-             const PS::F64vec & _vel,
-             const PS::F64 _r_out,
-             //  const PS::S32 _n_ngb,
-             const PS::S32 _id_cluster,
-             const PS::S32 _adr_org,
-             const PS::S32 _adr_group=-1): id(_id), mass(_mass), pos(_pos), vel(_vel), r_out(_r_out),
-                                        id_cluster(_id_cluster), adr_org(_adr_org), adr_group(_adr_group) {}
-
-
-    /// start Particle member function (L.Wang)
-    //! Get mass (required for \ref ARC::chain)
-    /*! \return mass
-     */
-    const PS::F64 getMass() const{
-        return mass;
-    }
-  
-    //! Get position (required for \ref ARC::chain)
-    /*! \return position vector (PS::F64[3])
-     */
-    const PS::F64* getPos() const{
-        return &pos[0];
-    }
-
-    //! Get velocity (required for \ref ARC::chain)
-    /*! \return velocity vector (PS::F64[3])
-     */
-    const PS::F64* getVel() const{
-        return &vel[0];
-    }
-
-    //!Set position (required for \ref ARC::chain)
-    /*! NAN check will be done
-      @param [in] x: particle position in x axis
-      @param [in] y: particle position in y axis
-      @param [in] z: particle position in z axis
-    */
-    void setPos(const PS::F64 x, const PS::F64 y, const PS::F64 z) {
-        NAN_CHECK(x);
-        NAN_CHECK(y);
-        NAN_CHECK(z);
-    
-        pos[0] = x;
-        pos[1] = y;
-        pos[2] = z;
-    }
-  
-    //!Set velocity (required for \ref ARC::chain)
-    /*! NAN check will be done
-      @param [in] vx: particle velocity in x axis
-      @param [in] vy: particle velocity in y axis 
-      @param [in] vz: particle velocity in z axis 
-    */
-    void setVel(const PS::F64 vx, const PS::F64 vy, const PS::F64 vz) {
-        NAN_CHECK(vx);
-        NAN_CHECK(vy);
-        NAN_CHECK(vz);
-    
-        vel[0] = vx;
-        vel[1] = vy;
-        vel[2] = vz;
-    }
-
-    //!Set mass (required for \ref ARC::chain)
-    /*! NAN check will be done
-      @param [in] m: particle mass
-    */
-    void setMass(const PS::F64 m) {
-        NAN_CHECK(m);
-
-        mass = m;
-    }
-    /// end Particle member function (L.Wang)
-
-};
 
 
 struct params{
@@ -196,7 +95,7 @@ void print_p(PtclHard* p, const int n) {
              <<std::setw(12)<<"v2"
              <<std::setw(12)<<"v3"
              <<std::setw(12)<<"rout"
-             <<std::setw(12)<<"adr_group"
+             <<std::setw(12)<<"status"
              <<std::setw(12)<<"id"
              <<std::endl;
     for (int i=0; i<n; i++) {
@@ -208,7 +107,7 @@ void print_p(PtclHard* p, const int n) {
                  <<std::setw(12)<<p[i].vel[1]
                  <<std::setw(12)<<p[i].vel[2]
                  <<std::setw(12)<<p[i].r_out
-                 <<std::setw(12)<<p[i].adr_group
+                 <<std::setw(12)<<p[i].status
                  <<std::setw(12)<<p[i].id
                  <<std::endl;
     }

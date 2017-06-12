@@ -117,7 +117,6 @@ private:
     }
 
 
-    template<class Tptcl>
     void CalcBlockDt2ndAct(Tptcl ptcl[],
                            const PtclForce force[],
                            const PS::S32 adr_array[],
@@ -137,12 +136,11 @@ private:
         }
     }
 
-    template<class Tptcl>
     void CalcAcc0Acc1Act(PtclForce force[],
                          const Tptcl ptcl[],
                          const PS::S32 n_act,
                          const PS::S32 Ilist[],
-                         const ReallocatableArray<PS::S32> Jlist[],
+                         const PS::ReallocatableArray<PS::S32> Jlist[],
                          const PS::F64 rin,
                          const PS::F64 eps2) {
         // PS::ReallocatableArray< std::pair<PS::S32, PS::S32> > & merge_pair ){
@@ -157,10 +155,10 @@ private:
                 assert(iadr!=jadr);
 #endif
                 PS::F64 r2 = 0.0;
-                PS::F64 rout = std::max(ptcl[i].r_out, ptcl[j].r_out);
-                CalcAcc0Acc1R2Cutoff(ptcl[adr].pos, ptcl[adr].vel,
-                                     force[adr].acc0, force[adr].acc1, r2,
-                                     ptcl[j].pos, ptcl[j].vel, ptcl[j].mass,
+                PS::F64 rout = std::max(ptcl[iadr].r_out, ptcl[jadr].r_out);
+                CalcAcc0Acc1R2Cutoff(ptcl[iadr].pos, ptcl[iadr].vel,
+                                     force[iadr].acc0, force[iadr].acc1, r2,
+                                     ptcl[jadr].pos, ptcl[jadr].vel, ptcl[jadr].mass,
                                      eps2, rout, rin);
                 // if(r2 < ((ptcl[adr].r_merge + ptcl[j].r_merge)*(ptcl[adr].r_merge + ptcl[j].r_merge)) && ptcl[j].mass > 0.0){
                 //     merge_pair.push_back( std::make_pair(adr, j) );
@@ -181,6 +179,7 @@ private:
     void SortAndSelectIp(PS::S32 adr_sorted[],
                          PS::F64 time_next[],
                          PS::S32 & n_act,
+                         const PS::S32 n_tot,
                          PS::S32 group_list[],
                          PS::S32 & group_n,
                          const PS::F64 n_limit){
@@ -204,7 +203,6 @@ private:
         }
     }
 
-    template<class Tptcl>
     void PredictAll(PtclH4 pred[],
                     const Tptcl ptcl[],
                     const PS::S32 n_tot,
@@ -229,7 +227,6 @@ private:
     */
     }
 
-    template<class Tptcl>
     void CorrectAndCalcDt4thAct(Tptcl ptcl[],
                                 PtclH4 pred[],
                                 const PtclForce force[],
@@ -370,7 +367,7 @@ public:
             assert(Jlist_n_[i]==Jlist_disp_[i+1]-Jlist_disp_[i]);
             assert(Jlist_n_[i]<=n);
         }
-        assert(Jlist_disp_[i]+Jlist_n_[i]==Jlist_.size());
+        assert(Jlist_disp_[n-1]+Jlist_n_[n-1]==Jlist_.size());
 #endif
     }
 
@@ -428,9 +425,9 @@ public:
         }
 
         a0_offset_sq_ = 0.1 * mass_min / (rout_min * rout_min);
-        n_act_ = n_ptcl_;
+        n_act_ = n_ptcl;
 
-        CalcAcc0Acc1Act(force.getPointer(), ptcl_, n_act_, adr_sorted.getPointer(), Jlist_, r_in_, eps_sq_);
+        CalcAcc0Acc1Act(force_.getPointer(), ptcl_, n_act_, adr_sorted_.getPointer(), Jlist_, r_in_, eps_sq_);
     
         // store predicted force
         for(PS::S32 i=0; i<n_ptcl; i++){
@@ -443,28 +440,29 @@ public:
         for(PS::S32 i=0; i<n_ptcl; i++){
             time_next_[i] = pred_[i].time + pred_[i].dt;
         }
-        SortAndSelectIp(adr_sorted_.getPointer(), time_next_.getPointer(), n_act_, group_act_list, group_act_n, n_groups);
+        SortAndSelectIp(adr_sorted_.getPointer(), time_next_.getPointer(), n_act_, time_next_.size(), group_act_list, group_act_n, n_groups);
         
     }
     
+    template<class Energy>
     void CalcEnergyHard(Energy & eng) {
-        CalcEnergyHard(ptcl_, n_ptcl_, eng, r_in_, eps_sq_);
+        CalcEnergyHard(ptcl_, ptcl_.size(), eng, r_in_, eps_sq_);
     }
 
     PS::F64 getNextTime() {
-        return time_next_[adr_sorted[0]];
+        return time_next_[adr_sorted_[0]];
     }
 
     void integrateOneStep(const PS::F64 time_sys,
                           const PS::F64 dt_limit) {
         // pred::mass,pos,vel updated
-        PredictAll(pred_.getPointer(), ptcl_, n_ptcl_, time_sys);
+        PredictAll(pred_.getPointer(), ptcl_, ptcl_.size(), time_sys);
         // force::acc0,acc1 updated
         CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), n_act_, adr_sorted_.getPointer(), Jlist_, r_in_, eps_sq_);
         // ptcl_org::pos,vel; pred::time,dt,acc0,acc1,acc2,acc3 updated
         CorrectAndCalcDt4thAct(ptcl_, pred_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, dt_limit, a0_offset_sq_, eta_s_);
 
-        for(PS::S32 i=0; i<n_act; i++){
+        for(PS::S32 i=0; i<n_act_; i++){
             PS::S32 adr = adr_sorted_[i];
             time_next_[adr] = pred_[adr].time + pred_[adr].dt;
         }
@@ -473,11 +471,11 @@ public:
     void SortAndSelectIp(PS::S32 group_act_list[],
                          PS::S32 &group_act_n,
                          const PS::S32 n_groups) {
-        SortAndSelectIp(adr_sorted_.getPointer(), time_next_.getPointer(), n_act_, group_act_list, group_act_n, n_groups);
+        SortAndSelectIp(adr_sorted_.getPointer(), time_next_.getPointer(), n_act_, time_next_.size(), group_act_list, group_act_n, n_groups);
     }
 
     const PS::S32 getNact() const{
-        return N_act_;
+        return n_act_;
     }
 
     const PS::S32* getActList() const{
@@ -708,7 +706,7 @@ class ARCIntegrator{
 private:
     typedef ARC::chain<Tptcl,ARC_par> ARChain;
     typedef ARC::chainpars<Tptcl,ARC_par> ARControl;
-    ReallocatableArray<ARChain> clist_;
+    PS::ReallocatableArray<ARChain> clist_;
 
     ARControl *ARC_control_;
     ARC_par *Int_pars_;
@@ -744,7 +742,7 @@ public:
                   Tptcl* ptcl_org,
                   const PS::S32 n_ptcl,
                   PS::S32* pert_list,
-                  const ps::S32 n_pert,
+                  const PS::S32 n_pert,
                   Tptcl* ptcl_pert,
                   const PS::S32 n_ptcl_pert) {
         clist_.push_back(ARChain(n_group,ARC_control_));
@@ -823,7 +821,7 @@ public:
                     }
                     converge_count++;
                 }
-                else if (n_ptcl>2||(modify_step_flag&&error_count==0)) {
+                else if (modify_step_flag&&error_count==0) {
                     ds_use = std::min(dscoff*c->calc_next_step_custom(),ds_up_limit);
                     modify_step_flag=false;
                 }
@@ -833,8 +831,8 @@ public:
         }
     }
 
-    void integrateOneStepList(PS::S32 act_list[];
-                              PS::S32 n_act;
+    void integrateOneStepList(PS::S32 act_list[],
+                              PS::S32 n_act,
                               const PS::F64 time_end,
                               const PS::F64 dt_limit) {
         for(int i=0; i<n_act; i++) {
@@ -843,8 +841,8 @@ public:
     }
 
     void updateCM(Tptcl ptcl[],
-                  PS::S32 act_list[];
-                  PS::S32 n_act;) {
+                  PS::S32 act_list[],
+                  PS::S32 n_act) {
         for(int i=0; i<n_act; i++) {
             PS::S32 iact = act_list[i];
             clist_[iact].cm.pos = ptcl[iact].pos;
@@ -863,7 +861,7 @@ public:
 
 #ifdef ARC_ERROR
     void ErrorRecord(PS::F64 &ARC_error) {
-        ARC_error = 0.0
+        ARC_error = 0.0;
         for(int i=0; i<clist_.size(); i++) {
             ARC_error += clist_[i].getPot()+clist_[i].getEkin();
         }
