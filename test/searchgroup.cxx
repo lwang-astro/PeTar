@@ -131,6 +131,7 @@ int main(int argc, char** argv)
   PtclHard p[N];
   
   ptree<PtclHard,params> plist;
+  int idc=1;
   double m_average=0.0;
   for(int i=0;i<N-1;i++) {
     int id,ib;
@@ -149,8 +150,8 @@ int main(int argc, char** argv)
     PS::F64vec vv1(v1[0],v1[1],v1[2]);
     PS::F64vec vv2(v2[0],v2[1],v2[2]);    
 
-    PtclHard a(i,m1,xx1,vv1,par.rout,0,0,-1);
-    PtclHard b(-i,m2,xx2,vv2,par.rout,0,0,-1);
+    PtclHard a(idc++,m1,xx1,vv1,par.rout,0,0,0);
+    PtclHard b(idc++,m2,xx2,vv2,par.rout,0,0,0);
 
     bool flag=plist.link(id,ib,a,b,pshift);
     if (!flag) {
@@ -174,26 +175,46 @@ int main(int argc, char** argv)
   SearchGroup<PtclHard> group;
   print_p(p,N);
 
+  group.findGroups(p, N);
+  group.resolveGroups();
+
   group.searchAndMerge(p, N, par.rin);
-
-  PS::ReallocatableArray<PS::S32> adr_group_glb;
-  PS::ReallocatableArray<std::vector<PtclHard>> group_ptcl_glb; 
-  PS::ReallocatableArray<PS::S32> group_ptcl_glb_empty_list;
-
-  group.generateList(p, N, adr_group_glb, group_ptcl_glb, group_ptcl_glb_empty_list);
-  
   std::cout<<"SearchAndMerge\n";
   print_p(p,N);
 
-  std::cout<<"adr_group_glb: ";
-  for(int i=0; i<adr_group_glb.size(); i++) std::cout<<std::setw(6)<<adr_group_glb[i];
-  std::cout<<std::endl;
-  
-  std::cout<<"group ptcl:\n ";
-  for(int i=0; i<group_ptcl_glb.size(); i++) {
-      std::cout<<"group i ="<<i<<std::endl;
-      print_p(group_ptcl_glb[i].data(),group_ptcl_glb[i].size());
+  for(int i=0; i<group.getNGroups(); i++) {
+      std::cout<<"group["<<i<<"]: ";
+      for(int j=0; j<group.getGroupN(i); j++) {
+          std::cout<<std::setw(10)<<group.getGroup(i)[j];
+      }
+      std::cout<<std::endl;
   }
+
+  std::cout<<"Ptcl List:";
+  for(int i=0; i<group.getNPtcl(); i++) {
+      std::cout<<std::setw(10)<<group.getPtclList()[i];
+  }
+  std::cout<<std::endl;
+
+  //PS::ReallocatableArray<PS::S32> adr_group_glb;
+  //PS::ReallocatableArray<std::vector<PtclHard>> group_ptcl_glb; 
+  //PS::ReallocatableArray<PS::S32> group_ptcl_glb_empty_list;
+  PS::ReallocatableArray<PtclHard> ptcl_new;
+
+  //group.generateList(p, N, adr_group_glb, group_ptcl_glb, group_ptcl_glb_empty_list);
+  group.generateList<ptclTree>(p, N, ptcl_new, par.rin);
+  std::cout<<"GenerateList\n";
+  print_p(p,N);
+  
+  //std::cout<<"adr_group_glb: ";
+  //for(int i=0; i<adr_group_glb.size(); i++) std::cout<<std::setw(6)<<adr_group_glb[i];
+  //std::cout<<std::endl;
+  
+  std::cout<<"new ptcl:\n ";
+  print_p(ptcl_new.getPointer(),ptcl_new.size());
+  //for(int i=0; i<ptcl_new.size(); i++) {
+  //    print_p(group_ptcl_glb[i].data(),group_ptcl_glb[i].size());
+  //}
 
   return 0;
 }

@@ -328,14 +328,14 @@ void center_of_mass_correction(particle &cm, particle p[], const int num) {
 
 template <class Tptcl>
 void calcMinDisList(PS::S32 member_list[], 
-                    std::pair<PS::S32, PS::S32> r2_list[],
+                    std::pair<PS::F32, PS::S32> r2_list[],
                     const PS::S32 n,
                     Tptcl* ptcl_org) {
     for (int i=0; i<n-1; i++) {
         PS::S32 k = member_list[i];
         PS::S32 jc;
         PS::F64 r2min = PS::LARGE_FLOAT;
-        for(int j=i+1; j<n; i++) {
+        for(int j=i+1; j<n; j++) {
             PS::F64vec dr = ptcl_org[k].pos - ptcl_org[member_list[j]].pos;
             PS::F64 r2 = dr*dr;
             if(r2<r2min) {
@@ -353,7 +353,7 @@ void calcMinDisList(PS::S32 member_list[],
     }
 }
 
-bool pairLess(const std::pair<PS::S32,PS::S32> & a, const std::pair<PS::S32,PS::S32> & b)  {
+bool pairLess(const std::pair<PS::F32,PS::S32> & a, const std::pair<PS::F32,PS::S32> & b)  {
     return a.first < b.first;
 }
 
@@ -363,9 +363,9 @@ void keplerTreeGenerator(Tptree bins[],   // make sure bins.size = n_members!
                          const PS::S32 n_members,
                          Tptcl* ptcl_org){
 
-    std::pair<PS::S32,PS::S32> r2_list[n_members];
+    std::pair<PS::F32,PS::S32> r2_list[n_members];
     calcMinDisList(member_list,r2_list, n_members, ptcl_org);
-    std::sort(r2_list, r2_list+n_members-1, pairLess);
+    if(n_members>2) std::sort(r2_list, r2_list+n_members-1, pairLess);
 
     Tptree* bin_host[n_members]={NULL};
     
@@ -392,8 +392,12 @@ void keplerTreeGenerator(Tptree bins[],   // make sure bins.size = n_members!
             while(bin_host[ki]==p[1]&&ki>=0) bin_host[ki++] = &bins[i];
         }
         
-        bins[i].ecca=PosVel2OrbParam(bins[i].ax, bins[i].ecc, bins[i].inc, bins[i].OMG, bins[i].omg, bins[i].tperi, p[0]->pos, p[1]->pos, p[0]->vec, p[1]->vec, p[0]->mass, p[1]->mass);
-        calc_center_of_mass(bins[i].cm, p, 2);
+        bins[i].ecca=PosVel2OrbParam(bins[i].ax, bins[i].ecc, bins[i].inc, bins[i].OMG, bins[i].omg, bins[i].tperi, p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass);
+        calc_center_of_mass(*(Tptcl*)&bins[i], p, 2);
+        bins[i].member[0] = p[0];
+        bins[i].member[1] = p[1];
+        bins[i].id = p[0]->id;
+        bins[i].status = bins[i].id;
     }
 
 #ifdef HARD_DEBUG
@@ -401,7 +405,64 @@ void keplerTreeGenerator(Tptree bins[],   // make sure bins.size = n_members!
 #endif
 }
 
+template<class Tptree>
+bool stab2check(const Tptree &bin, const PS::F64 rmax) {
+    if(bin.ax<0) return false;
+    if(bin.ax*(1.0+bin.ecc)>rmax) return false;
+    return true;
+}
 
+template<class Tptree>
+bool stab3check(const Tptree &bout, const Tptree &bin, const PS::F64 rmax) {
+    if(!stab2check(bout,rmax)) return false;
+    if(!stab2check(bin ,rmax)) return false;
+    return true;
+}
+
+template<class Tptree>
+bool stab4check(const Tptree &bout, const Tptree &bin1, const Tptree &bin2, const PS::F64 rmax) {
+    if(!stab2check(bout,rmax)) return false;
+    if(!stab2check(bin1,rmax)) return false;
+    if(!stab2check(bin2,rmax)) return false;
+    return true;
+}
+
+
+template<class Tptree, class Tptcl>
+bool stabilityCheck(PS::ReallocatableArray<Tptree*> &nbin, 
+                    Tptree &bins, const PS::F64 rmax) {
+    nbin.clearSize();
+    bool fstab=true;
+    if(bins.member[0]->status!=0) {
+        if(bins.member[1]->status!=0) {
+            fstab = stab4check(bins, *(Tptree*)bins.member[0], *(Tptree*)bins.member[1], rmax);
+            bool fs1 = stabilityCheck<Tptree, Tptcl>(nbin, *(Tptree*)bins.member[0], rmax);
+            bool fs2 = stabilityCheck<Tptree, Tptcl>(nbin, *(Tptree*)bins.member[1], rmax);
+            fstab &= fs1 & fs2;
+            if(!fstab) {
+                if(fs1) nbin.push_back((Tptree*)bins.member[0]);
+                if(fs2) nbin.push_back((Tptree*)bins.member[1]);
+            }
+        }
+        else {
+            fstab = stab3check(bins, *(Tptree*)bins.member[0], rmax);
+            bool fs = stabilityCheck<Tptree, Tptcl>(nbin, *(Tptree*)bins.member[0], rmax);
+            fstab &= fs;
+            if(!fstab&fs) nbin.push_back((Tptree*)bins.member[0]);
+        }
+    }
+    else {
+        if(bins.member[1]->status!=0) {
+            fstab = stab3check(bins, *(Tptree*)bins.member[1], rmax);
+            bool fs = stabilityCheck<Tptree, Tptcl>(nbin, *(Tptree*)bins.member[1], rmax);
+            fstab &= fs;
+            if(!fstab&fs) nbin.push_back((Tptree*)bins.member[1]);
+        }
+        else fstab = stab2check(bins, rmax);
+    }
+    
+    return fstab;
+}
 
 
 

@@ -21,9 +21,12 @@ void Print(const T str, std::ostream & fout);
 class PtclHard{
 public:
     /*
-                single       c.m.              members       fake members   unused
-      id         id      -(id+1) of first member  id              id         -1
-      states      0       number of members     c.m. id        phase order   -1
+                single           c.m.                       members            
+      id         id          id of first member (-)            id
+      states      0           number of members             fake pert id (-)
+                 fake members                  unused
+                      id                         -1
+                 c.m. id+phase order(+)          -1
      */
     PS::S64 id;   
     PS::F64 mass;
@@ -33,7 +36,7 @@ public:
     // PS::S32 n_ngb;
     PS::S32 id_cluster;
     PS::S32 adr_org;
-    PS::S32 status;
+    PS::S64 status;
     static PS::F64 r_factor;
     static PS::F64 dens;
     PtclHard():id(-1), mass(-1.0), status(-1) {}
@@ -54,7 +57,7 @@ public:
              //  const PS::S32 _n_ngb,
              const PS::S32 _id_cluster,
              const PS::S32 _adr_org,
-             const PS::S32 _status=-1): id(_id), mass(_mass), pos(_pos), vel(_vel), r_out(_r_out),
+             const PS::S32 _status=0): id(_id), mass(_mass), pos(_pos), vel(_vel), r_out(_r_out),
                                         id_cluster(_id_cluster), adr_org(_adr_org), status(_status) {}
 
 
@@ -126,7 +129,8 @@ public:
 };
 
 class ptclTree: public PtclHard{
-    PS::F64 semi, ecc, inc, OMG, omg, tperi, ecca;
+public:
+    PS::F64 ax, ecc, inc, OMG, omg, tperi, ecca;
     PtclHard* member[2];
 };
 
@@ -194,7 +198,7 @@ private:
                                   PS::ReallocatableArray<Tptcl> & ptcl_new) {
 #ifdef HERMITE
         if(n_ptcl>5) {
-            SearchGroup group();
+            SearchGroup<Tptcl> group();
             
             group.findGroups(ptcl_org, n_ptcl);
             
@@ -243,7 +247,8 @@ private:
         }
         else 
 #endif
-            Multiple_integrator(ptcl_org, n_ptcl, time_end, dt_limit_hard_,
+            PS::F64 dt_limit = calcDtLimit(0.0, dt_limit_hard_);
+            Multiple_integrator(ptcl_org, n_ptcl, time_end, dt_limit,
                                 r_out_single_, gamma_, m_average_,
 #ifdef ARC_ERROR
                                 ARC_error_relative,

@@ -67,7 +67,7 @@ public:
                               &this->pos.x, &this->pos.y, &this->pos.z,  // 3-5
                               &this->vel.x, &this->vel.y, &this->vel.z,  // 6-8
                               &this->acc.x, &this->acc.y, &this->acc.z,  // 9-11
-                              &this->pot_tot, &this->r_out, &this->n_ngb, this->status);
+                              &this->pot_tot, &this->r_out, &this->n_ngb, &this->status);
         if (rcount<14) {
             std::cerr<<"Error: Data reading fails! requiring data number is 14, only obtain "<<rcount<<".\n";
             abort();

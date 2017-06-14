@@ -489,7 +489,7 @@ template<class Tptcl, class ARC_par>
 void Isolated_Multiple_integrator(Tptcl * ptcl_org,
                                   const PS::S32 n_ptcl,
                                   const PS::F64 time_end,
-                                  const PS::F64 dt_limit_hard,
+                                  const PS::F64 dt_limit,
                                   const PS::F64 rout_single,
                                   const PS::F64 gamma,
                                   const PS::F64 m_average,
@@ -561,7 +561,7 @@ void Isolated_Multiple_integrator(Tptcl * ptcl_org,
 #endif
       
     PS::F64 dscoff=1.0;
-    PS::F64 ds_up_limit = 0.25*calcDtLimit(time_sys, dt_limit_hard)/c.calc_dt_X(1.0);
+    PS::F64 ds_up_limit = 0.25*dt_limit/c.calc_dt_X(1.0);
     PS::F64 ds_use = c.calc_next_step_custom();
       
     if (ds_use>ds_up_limit) ds_use = ds_up_limit;
