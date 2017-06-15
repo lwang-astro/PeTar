@@ -291,12 +291,29 @@ void calc_center_of_mass(particle &cm, particle* p[], const int num, const bool 
   }
 }
 
+// center of mass shift
+template <class particle>
+void center_of_mass_shift(particle &cm, particle* p[], const int num) {
+  for (int i=0;i<num;i++) {
+    p[i]->pos -= cm.pos;
+    p[i]->vel -= cm.vel;
+  }
+}
+
 // correct the particle p position and velocity by adding center-of-mass information
 template <class particle>
 void center_of_mass_correction(particle &cm, particle p[], const int num) {
   for (int i=0;i<num;i++) {
     p[i].pos += cm.pos;
     p[i].vel += cm.vel;
+  }
+}
+
+template <class particle>
+void center_of_mass_correction(particle &cm, particle* p[], const int num) {
+  for (int i=0;i<num;i++) {
+    p[i]->pos += cm.pos;
+    p[i]->vel += cm.vel;
   }
 }
 
@@ -398,6 +415,7 @@ void keplerTreeGenerator(Tptree bins[],   // make sure bins.size = n_members!
         bins[i].member[1] = p[1];
         bins[i].id = p[0]->id;
         bins[i].status = bins[i].id;
+        bins[i].r_out = std::max(p[0]->r_out,p[1]->r_out);
     }
 
 #ifdef HARD_DEBUG
