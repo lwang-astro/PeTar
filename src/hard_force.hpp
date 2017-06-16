@@ -179,7 +179,8 @@ int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, c
 //  const double kdx = cutoff_poly_3rd_dr(rij, xij[0], smpars[0], smpars[1]);
 //  const double kdy = cutoff_poly_3rd_dr(rij, xij[1], smpars[0], smpars[1]);
 //  const double kdz = cutoff_poly_3rd_dr(rij, xij[2], smpars[0], smpars[1]);
-  const double r_out = std::max(pi.r_out,pj.r_out);
+  //const double r_out = std::max(pi.r_out,pj.r_out);
+  const double r_out = pars->rout;
   const double r_in  = pars->rin;
   const double k = CalcW(rij/r_out, r_in/r_out);
   const double kdot = cutoff_poly_3rd(rij, r_out, r_in);
@@ -252,8 +253,8 @@ void Newtonian_cut_Ap (double Aij[3], double &Pij, const double xi[3], const dou
 //  const double kdx = cutoff_poly_3rd_dr(dr, dx, smpars[0], smpars[1]);
 //  const double kdy = cutoff_poly_3rd_dr(dr, dy, smpars[0], smpars[1]);
 //  const double kdz = cutoff_poly_3rd_dr(dr, dz, smpars[0], smpars[1]);  
-//  const double r_out = pars->rout;
-  const double r_out = std::max(pi.r_out, pp.r_out);
+  const double r_out = pars->rout;
+//  const double r_out = std::max(pi.r_out, pp.r_out);
   const double r_in  = pars->rin;
   const double k = CalcW(dr/r_out, r_in/r_out);
   const double kdot = cutoff_poly_3rd(dr, r_out, r_in);

@@ -9,7 +9,7 @@
 #define DEBUG_ENERGY_LIMIT 1e-6
 #endif
 
-extern const PS::F64 SAFTY_OFFSET_FOR_SEARCH;
+extern const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ;
 
 //leap frog----------------------------------------------
 template<class Tpsys, class Ttree>
@@ -47,7 +47,7 @@ public:
     PS::F64 mass;
     PS::F64 time;
     PS::F64 dt;
-    PS::F64 r_out;
+    PS::F64 r_search;
 #ifdef HARD_DEBUG
     PS::F64vec acc2; // for debug
     PS::F64vec acc3; // for debug
@@ -84,6 +84,7 @@ private:
     PS::F64 dt_limit_hard_; // time step limit     
     PS::F64 eta_s_;         // time step parameter 
     PS::F64 r_in_;          // force parameter     
+    PS::F64 r_out_;         // force parameter     
     PS::F64 eps_sq_;        // softening parameter 
 
     PS::F64 CalcDt2nd(const PS::F64vec & acc0, 
@@ -148,6 +149,7 @@ private:
                          const PS::S32 Jlist_disp[],
                          const PS::S32 Jlist_n[],
                          const PS::F64 rin,
+                         const PS::F64 rout,
                          const PS::F64 eps2) {
         // PS::ReallocatableArray< std::pair<PS::S32, PS::S32> > & merge_pair ){
         // active particles
@@ -163,7 +165,7 @@ private:
                 assert(iadr!=jadr);
 #endif
                 PS::F64 r2 = 0.0;
-                PS::F64 rout = std::max(ptcl[iadr].r_out, ptcl[jadr].r_out);
+                //PS::F64 rout = std::max(ptcl[iadr].r_out, ptcl[jadr].r_out);
                 CalcAcc0Acc1R2Cutoff(ptcl[iadr].pos, ptcl[iadr].vel,
                                      force[iadr].acc0, force[iadr].acc1, r2,
                                      ptcl[jadr].pos, ptcl[jadr].vel, ptcl[jadr].mass,
@@ -182,6 +184,7 @@ private:
                          const PS::S32 Ilist[],
                          const PS::S32 n_act,
                          const PS::F64 rin,
+                         const PS::F64 rout,
                          const PS::F64 eps2) {
         // PS::ReallocatableArray< std::pair<PS::S32, PS::S32> > & merge_pair ){
         // active particles
@@ -191,11 +194,8 @@ private:
             // all
             for(PS::S32 j=0; j<n_tot; j++){
                 if(iadr==j) continue;
-#ifdef HARD_DEBUG
-                assert(iadr!=jadr);
-#endif
                 PS::F64 r2 = 0.0;
-                PS::F64 rout = std::max(ptcl[iadr].r_out, ptcl[j].r_out);
+                //PS::F64 rout = std::max(ptcl[iadr].r_out, ptcl[j].r_out);
                 CalcAcc0Acc1R2Cutoff(ptcl[iadr].pos, ptcl[iadr].vel,
                                      force[iadr].acc0, force[iadr].acc1, r2,
                                      ptcl[j].pos, ptcl[j].vel, ptcl[j].mass,
@@ -317,13 +317,13 @@ private:
 
     template<class Teng>
     void CalcEnergyHard(const Tptcl ptcl[], const PS::S32 n_tot, Teng & eng, 
-                        const PS::F64 r_in,  const PS::F64 eps_sq = 0.0){
+                        const PS::F64 r_in, const PS::F64 r_out, const PS::F64 eps_sq = 0.0){
         eng.kin = eng.pot = eng.tot = 0.0;
         for(PS::S32 i=0; i<n_tot; i++){
             eng.kin += 0.5 * ptcl[i].mass * ptcl[i].vel * ptcl[i].vel;
 
             for(PS::S32 j=i+1; j<n_tot; j++){
-                PS::F64 r_out = std::max(ptcl[i].r_out,ptcl[j].r_out);
+                //PS::F64 r_out = std::max(ptcl[i].r_out,ptcl[j].r_out);
                 PS::F64vec rij = ptcl[i].pos - ptcl[j].pos;
                 PS::F64 dr = sqrt(rij*rij + eps_sq);
                 eng.pot -= ptcl[j].mass*ptcl[i].mass/dr*(1.0 - CalcW(dr/r_out, r_in/r_out));
@@ -393,9 +393,9 @@ public:
             for(int j=0; j<n; j++) {
                 PS::F64vec dr = ptcl_[i].pos-ptcl_[j].pos;
                 PS::F64 r2 = dr*dr;
-                PS::F64 rout = std::max(ptcl_[i].r_out,ptcl_[j].r_out);
-                PS::F64 rout2 = rout*rout+SAFTY_OFFSET_FOR_SEARCH;
-                if (r2<rout2&&i!=j) {
+                PS::F64 r_search = std::max(ptcl_[i].r_search,ptcl_[j].r_search);
+                PS::F64 r_search2 = r_search*r_search*SAFTY_FACTOR_FOR_SEARCH_SQ;
+                if (r2<r_search2&&i!=j) {
                     Jlist_.push_back(j);
                     Jlist_n_[i]++;
                     nj_tot++;
@@ -430,10 +430,12 @@ public:
     void setParams(const PS::F64 dt_limit_hard,  // time step limit
                    const PS::F64 eta_s,          // time step parameter
                    const PS::F64 r_in,           // force parameter
+                   const PS::F64 r_out,          // force parameter
                    const PS::F64 eps_sq){        // softening parameter
         dt_limit_hard_= dt_limit_hard; 
         eta_s_        = eta_s;         
         r_in_         = r_in;          
+        r_out_        = r_out;
         eps_sq_       = eps_sq;
     }
 
@@ -448,7 +450,7 @@ public:
         time_next_.resizeNoInitialize(n_ptcl);
         
         PS::F64 mass_min = PS::LARGE_FLOAT;
-        PS::F64 rout_min = PS::LARGE_FLOAT;
+        //PS::F64 rout_min = PS::LARGE_FLOAT;
         for(PS::S32 i=0; i<n_ptcl; i++){
             // pred[i].mass = ptcl[i].mass = ptcl_org[i].mass;
             // pred[i].pos  = ptcl[i].pos  = ptcl_org[i].pos;
@@ -456,18 +458,18 @@ public:
             // ptcl[i].setRMerge();
             // pred[i].r_merge = ptcl[i].r_merge;
             // ptcl[i].id = ptcl_org[i].id;
-            pred_[i].r_out = ptcl_[i].r_out;
+            pred_[i].r_search = ptcl_[i].r_search;
             adr_sorted_[i] = i;
             pred_[i].time = pred_[i].dt = 0.0;
             time_next_[i] = 0.0;
             if(mass_min > ptcl_[i].mass)  mass_min = ptcl_[i].mass;
-            if(rout_min > ptcl_[i].r_out) rout_min = ptcl_[i].r_out;
+            //if(rout_min > ptcl_[i].r_out) rout_min = ptcl_[i].r_out;
         }
 
-        a0_offset_sq_ = 0.1 * mass_min / (rout_min * rout_min);
+        a0_offset_sq_ = 0.1 * mass_min / (r_out_ * r_out_);
         n_act_ = n_ptcl;
 
-        CalcAcc0Acc1Act(force_.getPointer(), ptcl_.getPointer(), n_act_, adr_sorted_.getPointer(), Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, eps_sq_);
+        CalcAcc0Acc1Act(force_.getPointer(), ptcl_.getPointer(), n_act_, adr_sorted_.getPointer(), Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, r_out_, eps_sq_);
     
         // store predicted force
         for(PS::S32 i=0; i<n_ptcl; i++){
@@ -486,7 +488,7 @@ public:
     
     template<class Energy>
     void CalcEnergyHard(Energy & eng) {
-        CalcEnergyHard(ptcl_.getPointer(), ptcl_.size(), eng, r_in_, eps_sq_);
+        CalcEnergyHard(ptcl_.getPointer(), ptcl_.size(), eng, r_in_, r_out_, eps_sq_);
     }
 
     PS::F64 getNextTime() {
@@ -498,7 +500,7 @@ public:
         // pred::mass,pos,vel updated
         PredictAll(pred_.getPointer(), ptcl_.getPointer(), ptcl_.size(), time_sys);
         // force::acc0,acc1 updated
-        CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), n_act_, adr_sorted_.getPointer(), Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, eps_sq_);
+        CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), n_act_, adr_sorted_.getPointer(), Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, r_out_, eps_sq_);
         // ptcl_org::pos,vel; pred::time,dt,acc0,acc1,acc2,acc3 updated
         CorrectAndCalcDt4thAct(ptcl_.getPointer(), pred_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, dt_limit, a0_offset_sq_, eta_s_);
 

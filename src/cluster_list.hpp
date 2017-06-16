@@ -1,9 +1,9 @@
 #pragma once
 #include<particle_simulator.hpp>
 #include<unordered_map>
-//#include"hard_force.hpp"
+#include"ptcl.hpp"
 
-extern const PS::F64 SAFTY_OFFSET_FOR_SEARCH;
+//extern const PS::F64 SAFTY_OFFSET_FOR_SEARCH;
 
 #define ID_PHASE_SHIFT 4
 #define ID_PHASE_MASKER 0xF
@@ -134,28 +134,16 @@ public:
     }
 };
 
-class PtclComm{
+class PtclComm: public Ptcl{
 public:
-    PS::S32 id_;
-    PS::F64 mass_;
-    PS::F64vec pos_;
-    PS::F64vec vel_;
-    PS::F64 r_out_;
-    // PS::S32 n_ngb_;
-    PS::S32 id_cluster_;
-    // PtclComm(): id_(-1), mass_(0.0), pos_(0.0), vel_(0.0), r_out_(0.0), n_ngb_(0) {}
-    PtclComm(): id_(-1), mass_(0.0), pos_(0.0), vel_(0.0), r_out_(0.0) {}
-    // PtclComm(const PS::S32 _id, const PS::F64 _mass, const PS::F64vec _pos, const PS::F64vec _vel, const PS::F64 _r_out, const PS::S32 _n_ngb):
-    //     id_(_id), mass_(_mass), pos_(_pos), vel_(_vel), r_out_(_r_out), n_ngb_(_n_ngb) {}
-    PtclComm(const PS::S32 _id, const PS::F64 _mass, const PS::F64vec _pos, const PS::F64vec _vel, const PS::F64 _r_out):
-        id_(_id), mass_(_mass), pos_(_pos), vel_(_vel), r_out_(_r_out) {}
-    void dump(){
-        std::cout<<" id="<<id_<<" mass="<<mass_
-                 <<" pos="<<pos_<<" vel="<<vel_
-                 <<" id_cluster_="<<id_cluster_
-                 <<" r_out_="<<r_out_
-                 // <<" n_ngb_="<<n_ngb_
-                 <<std::endl;
+    PS::S32 id_cluster;
+
+    template <class Tp>
+    PtclComm(const Tp &p): Ptcl(p) {}
+
+    void dump(std::ofstream & fout){
+        Ptcl::dump(fout);
+        fout<<" id_cluster="<<id_cluster<<std::endl;
     }
 };
 
@@ -801,9 +789,8 @@ public:
                     mediator_sorted_id_cluster_[cluster_loc[i].adr_head_+ii].rank_send_ = rank_send_ref; // 2006.09.06
                     const auto &p = sys[adr_sys];
                     adr_sys_ptcl_send_.push_back(adr_sys);
-                    // ptcl_send_.push_back(PtclComm(p.id, p.mass, p.pos, p.vel, p.r_out, p.n_ngb));
-                    ptcl_send_.push_back(PtclComm(p.id, p.mass, p.pos, p.vel, p.r_out));
-                    ptcl_send_.back().id_cluster_ = cluster_loc[i].id_;
+                    ptcl_send_.push_back(PtclComm(p));
+                    ptcl_send_.back().id_cluster = cluster_loc[i].id_;
                     n_ptcl_send_.back()++;
                     n_cnt++;
                 }
@@ -905,19 +892,11 @@ public:
             const PS::S32 adr = ptcl_hard[i].adr_org;
             if( adr >= 0){
                 assert( sys[adr].id == ptcl_hard[i].id);
-                sys[adr].id       = ptcl_hard[i].id;
-                sys[adr].mass     = ptcl_hard[i].mass;
-                sys[adr].pos      = ptcl_hard[i].pos;
-                sys[adr].vel      = ptcl_hard[i].vel;
-                sys[adr].r_out    = ptcl_hard[i].r_out;
+                sys[adr].DataCopy(ptcl_hard[i]);
             }
             else{
-                assert( ptcl_recv_[-(adr+1)].id_ == ptcl_hard[i].id );
-                ptcl_recv_[-(adr+1)].id_       = ptcl_hard[i].id;
-                ptcl_recv_[-(adr+1)].mass_     = ptcl_hard[i].mass;
-                ptcl_recv_[-(adr+1)].pos_      = ptcl_hard[i].pos;
-                ptcl_recv_[-(adr+1)].vel_      = ptcl_hard[i].vel;
-                ptcl_recv_[-(adr+1)].r_out_    = ptcl_hard[i].r_out;
+                assert( ptcl_recv_[-(adr+1)].id == ptcl_hard[i].id );
+                ptcl_recv_[-(adr+1)].DataCopy(ptcl_hard[i]);
             }
         }
         static PS::ReallocatableArray<MPI_Request> req_recv;
@@ -946,11 +925,8 @@ public:
 
         for(PS::S32 i=0; i<ptcl_send_.size(); i++){
             PS::S32 adr = adr_sys_ptcl_send_[i];
-            assert(sys[adr].id == ptcl_send_[i].id_);
-            sys[adr].mass     = ptcl_send_[i].mass_;
-            sys[adr].pos      = ptcl_send_[i].pos_;
-            sys[adr].vel      = ptcl_send_[i].vel_;
-            sys[adr].r_out    = ptcl_send_[i].r_out_;
+            assert(sys[adr].id == ptcl_send_[i].id);
+            sys[adr].DataCopy(ptcl_send_[i]);
         }
     }
 
@@ -1221,7 +1197,7 @@ private:
                 }
                 p[j]->mass = bin.member[j]->mass;
                 p[j]->id = bin.member[j]->id;
-                p[j]->r_out = bin.member[j]->r_out;
+                p[j]->r_search = bin.member[j]->r_search;
                 p[j]->status = (bin.id<<ID_PHASE_SHIFT)|i;
             }
             center_of_mass_shift(*(Tptcl*)&bin,p,2);
@@ -1246,7 +1222,7 @@ private:
         pcm->pos = bin.pos;
         pcm->vel = bin.vel;
         pcm->id  = - std::abs(bin.id);
-        pcm->r_out = bin.r_out;
+        pcm->r_search = bin.r_search;
         pcm->status = nbin;
     }
 

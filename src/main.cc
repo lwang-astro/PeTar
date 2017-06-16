@@ -102,7 +102,7 @@ int main(int argc, char *argv[]){
     PS::S64 n_glb = 16384;
     PS::S64 n_bin = 0;
     PS::F64 dt_snp = 1.0 / 16.0;
-    PS::F64 search_factor = 0.1; 
+    PS::F64 search_factor = 1.0; 
     PS::F64 dt_limit_hard_factor = 4.0;
     PS::F64 eps = 1e-8;
     PS::F64 r_out = 0.0;
@@ -159,7 +159,7 @@ int main(int argc, char *argv[]){
             break;
         case 'S':
             search_factor = atof(optarg);
-            if(my_rank == 0) std::cerr<<"neighbor searching factor="<<search_factor<<std::endl;
+            if(my_rank == 0) std::cerr<<"neighbor searching factor cofficient="<<search_factor<<std::endl;
             break;
         case 'g':
             g_min = atof(optarg);
@@ -226,12 +226,14 @@ int main(int argc, char *argv[]){
 
     PS::Comm::barrier();
 
-    PS::F64 r_in, m_average, v_disp, r_search_offset;
-    GetR(system_soft, r_in, r_out, r_search_offset, m_average, dt_soft, v_disp, search_factor, ratio_r_cut);
+    PS::F64 r_in, m_average, v_disp, r_search_min;
+    GetR(system_soft, r_in, r_out, r_search_min, m_average, dt_soft, v_disp, search_factor, ratio_r_cut);
 //    EPISoft::r_out = r_out;
 //    EPISoft::r_in  = r_in;
     EPISoft::eps   = eps;
-    EPISoft::r_search_offset = EPJSoft::r_search_offset = FPSoft::r_search_offset = r_search_offset;
+    EPISoft::r_out = EPJSoft::r_out = FPSoft::r_out = r_out;
+    PtclHard::search_factor = search_factor;
+    PtclHard::r_search_min = r_search_min;
 //    EPJSoft::r_search_min = r_out*search_factor;
 //    EPJSoft::m_average = m_average;
     

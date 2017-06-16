@@ -6,6 +6,8 @@
 #include"phantomquad_for_p3t_x86.hpp"
 #endif
 
+#include"ptcl.hpp"
+
 const PS::F64 SAFTY_FACTOR_FOR_SEARCH = 1.05;
 const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ = SAFTY_FACTOR_FOR_SEARCH * SAFTY_FACTOR_FOR_SEARCH;
 const PS::F64 SAFTY_OFFSET_FOR_SEARCH = 1e-7;
@@ -23,23 +25,15 @@ public:
     }
 };
 
-class FPSoft{
+class FPSoft: public Ptcl{
 public:
-    PS::S64 id;
-    PS::F64 mass;
-    PS::F64vec pos;
-    PS::F64vec vel;
     PS::F64vec acc; // soft
     PS::F64 pot_tot; // soft + hard
-    PS::F64 r_out;
-    PS::S32 rank_org;
     PS::S32 n_ngb;
-    PS::S32 status;
+    PS::S32 rank_org;
     PS::S32 adr;
-    static PS::F64 r_search_offset;
+    static PS::F64 r_out;
 
-    PS::F64vec getPos() const { return pos; }
-    void setPos(const PS::F64vec & p) { pos = p; }
     void copyFromForce(const ForceSoft & force){
         acc = force.acc;
         pot_tot = force.pot;
@@ -47,62 +41,55 @@ public:
     }
 
     PS::F64 getRSearch() const {
-//        return std::max(r_out * std::pow(2.0*mass/m_average,0.3333),r_out_min) * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
-        return r_out + r_search_offset * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+//        return std::max(r_search * std::pow(2.0*mass/m_average,0.3333),r_search_min) * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+        return r_out + this->r_search * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
     }
 
     void writeAscii(FILE* fp) const{
-        fprintf(fp, "%lld %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %d %d\n", 
-                this->id, this->mass, 
-                this->pos.x, this->pos.y, this->pos.z,  // 3-5
-                this->vel.x, this->vel.y, this->vel.z,  // 6-8
+        ParticleBase::writeAscii(fp);
+        fprintf(fp, "%26.17e %26.17e %26.17e %26.17e %26.17e %d %lld %lld\n", 
                 this->acc.x, this->acc.y, this->acc.z,  // 9-11
-                this->pot_tot, this->r_out, this->n_ngb, //12-14
-                this->status);
+                this->pot_tot, this->r_search, this->n_ngb, //12-14
+                this->id, this->status);
     }
 
     void readAscii(FILE* fp) {
-        PS::S64 rcount=fscanf(fp, "%lld %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %d %d\n",
-                              &this->id, &this->mass, 
-                              &this->pos.x, &this->pos.y, &this->pos.z,  // 3-5
-                              &this->vel.x, &this->vel.y, &this->vel.z,  // 6-8
+        ParticleBase::readAscii(fp);
+        PS::S64 rcount=fscanf(fp, "%lf %lf %lf %lf %lf %d %lld %lld\n",
                               &this->acc.x, &this->acc.y, &this->acc.z,  // 9-11
-                              &this->pot_tot, &this->r_out, &this->n_ngb, &this->status);
-        if (rcount<14) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 14, only obtain "<<rcount<<".\n";
+                              &this->pot_tot, &this->r_search, &this->n_ngb, 
+                              &this->id, &this->status);
+        if (rcount<8) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 8, only obtain "<<rcount<<".\n";
             abort();
         }
     }
     void dump(std::ofstream & fout){
-        fout<<"id= "<<id<<std::endl;
+        Ptcl::dump(fout);
         fout<<"adr= "<<adr<<std::endl;
-        fout<<"mass= "<<mass<<std::endl;
-        fout<<"pos= "<<pos<<std::endl;
-        fout<<"vel= "<<vel<<std::endl;
         fout<<"acc= "<<acc<<std::endl;
         fout<<"pot_tot= "<<pot_tot<<std::endl;
-        fout<<"r_out= "<<r_out<<std::endl;
-        fout<<"status= "<<status<<std::endl;
     }
+
 };
 
 class EPISoft{
 public:
     PS::S64 id;
     PS::F64vec pos;
-    PS::F64 r_out;
+    PS::F64 r_search;
     PS::S32 rank_org;
     static PS::F64 eps;
-    static PS::F64 r_search_offset;
-//    static PS::F64 r_out;
+    static PS::F64 r_out;
+//    static PS::F64 r_search;
 //    static PS::F64 r_in;
 //    static PS::F64 m_average;
-//    static PS::F64 r_out_min;
+//    static PS::F64 r_search_min;
     PS::F64vec getPos() const { return pos;}
     void copyFromFP(const FPSoft & fp){ 
         id = fp.id;
         pos = fp.pos;
-        r_out = fp.r_out;
+        r_search = fp.r_search;
         rank_org = fp.rank_org;
     }
     void dump(std::ostream & fout=std::cout) const {
@@ -112,8 +99,8 @@ public:
         fout<<"eps="<<eps<<std::endl;
     }
     PS::F64 getRSearch() const {
-//        return std::max(r_out * std::pow(2.0*mass/m_average,0.3333),r_out_min) * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
-        return r_out + r_search_offset * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+//        return std::max(r_search * std::pow(2.0*mass/m_average,0.3333),r_search_min) * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+        return r_out + r_search * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
     }
 
 };
@@ -125,18 +112,18 @@ public:
     PS::F64 mass;
     PS::F64vec pos;
     PS::F64vec vel;
-    PS::F64 r_out;
+    PS::F64 r_search;
     PS::S32 rank_org;
     PS::S32 adr_org;
-    static PS::F64 r_search_offset;
+    static PS::F64 r_out;
 //    static PS::F64 m_average;
-//    static PS::F64 r_out_min;
+//    static PS::F64 r_search_min;
     void copyFromFP(const FPSoft & fp){
         id = fp.id;
         mass = fp.mass;
         pos = fp.pos;
         vel = fp.vel;
-        r_out = fp.r_out;
+        r_search = fp.r_search;
         rank_org = fp.rank_org;
         adr_org = fp.adr;
     }
@@ -144,8 +131,8 @@ public:
     void setPos(const PS::F64vec & pos_new){ pos = pos_new;}
     PS::F64 getCharge() const { return mass; }
     PS::F64 getRSearch() const {
-//        return std::max(r_out * std::pow(2.0*mass/m_average,0.3333),r_out_min) * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
-        return r_out + r_search_offset * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+//        return std::max(r_search * std::pow(2.0*mass/m_average,0.3333),r_search_min) * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+        return r_out + r_search * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
     }
     // FORDEBUG
     void dump(std::ostream & fout=std::cout) const {
@@ -154,26 +141,26 @@ public:
         fout<<"mass="<<mass<<std::endl;
         fout<<"pos="<<pos<<std::endl;
         fout<<"vel="<<vel<<std::endl;
-        fout<<"r_out="<<r_out<<std::endl;
+        fout<<"r_search="<<r_search<<std::endl;
     }
     void clear(){
         mass = 0.0;
         pos = vel = 0.0;
-        r_out = 0.0;
+        r_search = 0.0;
         id = rank_org = adr_org = -1;
     }
 };
 
 PS::F64 EPISoft::eps = 1.0/1024.0;
-PS::F64 EPISoft::r_search_offset = 0.0;
-PS::F64 EPJSoft::r_search_offset = 0.0;
-PS::F64  FPSoft::r_search_offset = 0.0;
+PS::F64 EPISoft::r_out = 0.0;
+PS::F64 EPJSoft::r_out = 0.0;
+PS::F64  FPSoft::r_out = 0.0;
 
 //PS::F64 EPISoft::r_in; = 0.0;
 //PS::F64 EPJSoft::m_average;
-//PS::F64 EPJSoft::r_out_min;
+//PS::F64 EPJSoft::r_search_min;
 //PS::F64 EPISoft::m_average;
-//PS::F64 EPISoft::r_out_min;
+//PS::F64 EPISoft::r_search_min;
 
 class Energy{
 public:
@@ -239,7 +226,7 @@ struct CalcForceEpEpWithLinearCutoffNoSIMD{
                       const PS::S32 n_jp,
                       ForceSoft * force){
         const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
-        const PS::F64 r_off = EPISoft::r_search_offset;
+        const PS::F64 r_out = EPISoft::r_out;
         //        const PS::F64 r_crit2 = EPJSoft::r_search * EPJSoft::r_search * SAFTY_FACTOR_FOR_SEARCH_SQ;
         // const PS::F64 r_out = EPISoft::r_out; 
         // const PS::F64 r_in = EPISoft::r_in;
@@ -251,8 +238,7 @@ struct CalcForceEpEpWithLinearCutoffNoSIMD{
             PS::F64 poti = 0.0;
             PS::S32 n_ngb_i = 0;
             for(PS::S32 j=0; j<n_jp; j++){
-                const PS::F64 r_out = std::max(ep_i[i].r_out,ep_j[j].r_out);
-                const PS::F64 r_search = r_out + r_off;
+                const PS::F64 r_search = std::max(ep_i[i].r_search,ep_j[j].r_search) + r_out;
                 if(id_i == ep_j[j].id){
                     n_ngb_i++;
                     continue;

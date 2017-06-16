@@ -8,8 +8,8 @@
 #endif
 
 #include"integrate.hpp"
-#include"soft.hpp"
 #include"cstdlib"
+#include"ptcl.hpp"
 //#include"stdio.h" /// for debug (L.Wang)
 
 template<class T>
@@ -18,113 +18,21 @@ void Print(const T str, std::ostream & fout);
 //std::ofstream kout;
 //std::ofstream arout;
 
-class PtclHard{
+class PtclHard: public Ptcl{
 public:
-    /*
-                single           c.m.                       members            
-      id         id          id of first member (-)            id
-      states      0           number of members             fake pert id (-)
-                 fake members                  unused
-                      id                         -1
-                 c.m. id+phase order(+)          -1
-     */
-    PS::S64 id;   
-    PS::F64 mass;
-    PS::F64vec pos;
-    PS::F64vec vel;
-    PS::F64 r_out;
-    // PS::S32 n_ngb;
     PS::S32 id_cluster;
     PS::S32 adr_org;
-    PS::S64 status;
-    static PS::F64 r_factor;
-    static PS::F64 dens;
-    PtclHard():id(-1), mass(-1.0), status(-1) {}
-    //    PtclHard(const PtclHard &p) {
-    //        id         = p.id;
-    //        mass       = p.mass;
-    //        pos        = p.pos;
-    //        vel        = p.vel;
-    //        r_out      = p.r_out;
-    //        id_cluster = p.id_cluster;
-    //        adr_org    = p.adr_org;
-    //    }
-    PtclHard(const PS::S64 _id, 
-             const PS::F64 _mass, 
-             const PS::F64vec & _pos, 
-             const PS::F64vec & _vel,
-             const PS::F64 _r_out,
-             //  const PS::S32 _n_ngb,
-             const PS::S32 _id_cluster,
-             const PS::S32 _adr_org,
-             const PS::S32 _status=0): id(_id), mass(_mass), pos(_pos), vel(_vel), r_out(_r_out),
-                                        id_cluster(_id_cluster), adr_org(_adr_org), status(_status) {}
+    static PS::F64 search_factor;
+    static PS::F64 r_search_min;
 
+    PtclHard() {}
 
-    /// start Particle member function (L.Wang)
-    //! Get mass (required for \ref ARC::chain)
-    /*! \return mass
-     */
-    const PS::F64 getMass() const{
-        return mass;
-    }
-  
-    //! Get position (required for \ref ARC::chain)
-    /*! \return position vector (PS::F64[3])
-     */
-    const PS::F64* getPos() const{
-        return &pos[0];
-    }
+    template<class Tp>
+    PtclHard(const Tp &p): Ptcl(p) {}
 
-    //! Get velocity (required for \ref ARC::chain)
-    /*! \return velocity vector (PS::F64[3])
-     */
-    const PS::F64* getVel() const{
-        return &vel[0];
-    }
-
-    //!Set position (required for \ref ARC::chain)
-    /*! NAN check will be done
-      @param [in] x: particle position in x axis
-      @param [in] y: particle position in y axis
-      @param [in] z: particle position in z axis
-    */
-    void setPos(const PS::F64 x, const PS::F64 y, const PS::F64 z) {
-        NAN_CHECK(x);
-        NAN_CHECK(y);
-        NAN_CHECK(z);
-    
-        pos[0] = x;
-        pos[1] = y;
-        pos[2] = z;
-    }
-  
-    //!Set velocity (required for \ref ARC::chain)
-    /*! NAN check will be done
-      @param [in] vx: particle velocity in x axis
-      @param [in] vy: particle velocity in y axis 
-      @param [in] vz: particle velocity in z axis 
-    */
-    void setVel(const PS::F64 vx, const PS::F64 vy, const PS::F64 vz) {
-        NAN_CHECK(vx);
-        NAN_CHECK(vy);
-        NAN_CHECK(vz);
-    
-        vel[0] = vx;
-        vel[1] = vy;
-        vel[2] = vz;
-    }
-
-    //!Set mass (required for \ref ARC::chain)
-    /*! NAN check will be done
-      @param [in] m: particle mass
-    */
-    void setMass(const PS::F64 m) {
-        NAN_CHECK(m);
-
-        mass = m;
-    }
-    /// end Particle member function (L.Wang)
+    template<class Tp>
+    PtclHard(const Tp &p, const PS::S32 _id_cluster, const PS::S32 _adr_org): 
+        Ptcl(p), id_cluster(_id_cluster), adr_org(_adr_org) {}
 
 };
 
@@ -152,7 +60,7 @@ private:
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_disp_;
     PS::F64 time_origin_;
     PS::F64 gamma_;
-    PS::F64 r_out_single_;
+    PS::F64 r_search_single_;
     PS::F64 m_average_;
 
     ///////////
@@ -198,13 +106,13 @@ private:
                                   PS::ReallocatableArray<Tptcl> & ptcl_new) {
 #ifdef HERMITE
         if(n_ptcl>5) {
-            SearchGroup<Tptcl> group();
+            SearchGroup<Tptcl> group;
             
             group.findGroups(ptcl_org, n_ptcl);
             
-            HermiteIntegrator Hint();
-            Hint.setParams(dt_limit_hard_, eta_s_, Int_pars.rin, Int_pars.eps2);
-            Hint.setPtcl(ptcl_org,n_ptcl,group.getPtclList(),getPtclN());
+            HermiteIntegrator<Tptcl> Hint;
+            Hint.setParams(dt_limit_hard_, eta_s_, Int_pars.rin, Int_pars.rout, Int_pars.eps2);
+            Hint.setPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getNPtcl());
             Hint.searchPerturber();
             
             PS::S32 group_act_n = 0;
@@ -214,14 +122,14 @@ private:
             // ReallocatableArray<PS::S32> status_map;  //ptcl -> group_list index [non cm is -1]
             // ReallocatableArray<PS::S32> adr_cm;         //group_list index -> ptcl.cm
             // group.findGroups(group_list, status, status_map,  adr_cm, group_act_n, ptcl_org, n_ptcl);
-            group_act_list.resizeNoInitialize(group.getPtclN());
+            group_act_list.resizeNoInitialize(group.getNPtcl());
             
             ARCIntegrator Aint(ARC_control, Int_pars);
 
             // first particles in Hint.Ptcl are c.m.
             PS::S32 n_groups = group.getNGroups()
             for (int i=0; i<n_groups; i++) 
-                Aint.addGroup(group.getGroup(i), group.getGroupN(i), ptcl_org, n_ptcl, Hint.getPertList(i), Hint.getPertN(i), Hint.getPtcl(), Hint.getPtclN()); 
+                Aint.addGroup(group.getGroup(i), group.getGroupN(i), ptcl_org, n_ptcl, Hint.getPertList(i), Hint.getPertN(i), Hint.getPtcl(), Hint.getNPtcl()); 
             
             PS::S32 time_sys=0.0;
             PS::F64 dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
@@ -235,7 +143,7 @@ private:
                 Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
             }
             Aint.CMshiftreverse();
-            Hint.writeBackPtcl(ptcl_org,n_ptcl,group.getPtclList(),getPtclN());
+            Hint.writeBackPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getNPtcl());
             
             //group.resolveGroups(ptcl_org, n_ptcl, group_ptcl_glb.getPointer(), group_list.size(), group_list.getPointer(), adr_cm.getPointer());
             group.resolveGroups();
@@ -249,7 +157,7 @@ private:
 #endif
             PS::F64 dt_limit = calcDtLimit(0.0, dt_limit_hard_);
             Multiple_integrator(ptcl_org, n_ptcl, time_end, dt_limit,
-                                r_out_single_, gamma_, m_average_,
+                                r_search_single_, gamma_, m_average_,
 #ifdef ARC_ERROR
                                 ARC_error_relative,
                                 ARC_error,
@@ -297,17 +205,13 @@ public:
         for(PS::S32 i=0; i<med.size(); i++){
             if(med[i].adr_sys_ < 0) continue;
             if(med[i].rank_send_ != PS::Comm::getRank()) continue;
-            const FPSoft & p = sys[med[i].adr_sys_];
-            // ptcl_hard_.push_back(PtclHard(p.id, p.mass, p.pos, p.vel, p.r_out, p.n_ngb,
-            ptcl_hard_.push_back(PtclHard(p.id, p.mass, p.pos, p.vel, p.r_out,
-                                          med[i].id_cluster_, med[i].adr_sys_));
+            const auto & p = sys[med[i].adr_sys_];
+            ptcl_hard_.push_back(PtclHard(p, med[i].id_cluster_, med[i].adr_sys_));
         }
 
         for(PS::S32 i=0; i<ptcl_recv.size(); i++){
             const Tptcl & p = ptcl_recv[i];
-            //  ptcl_hard_.push_back(PtclHard(p.id_, p.mass_, p.pos_, p.vel_, p.r_out_, p.n_ngb_,
-            ptcl_hard_.push_back(PtclHard(p.id_, p.mass_, p.pos_, p.vel_, p.r_out_, 
-                                          p.id_cluster_, -(i+1)));
+            ptcl_hard_.push_back(PtclHard(p, p.id_cluster_, -(i+1)));
         }
 
         if(ptcl_hard_.size() == 0) return;
@@ -343,7 +247,7 @@ public:
         time_origin_ = _time_origin;
     }
 
-    void setParam(const PS::F64 _rout, 
+    void setParam(const PS::F64 _rsearch, 
                   const PS::F64 _rin,
                   const PS::F64 _eps,
                   const PS::F64 _dt_limit_hard,
@@ -359,7 +263,7 @@ public:
         eta_s_ = _eta*_eta;
         time_origin_ = _time_origin;
         gamma_ = std::pow(1.0/_gmin,0.33333);
-        r_out_single_ = _rout; 
+        r_search_single_ = _rsearch; 
         m_average_ = _m_avarage;
     }
 
@@ -375,11 +279,7 @@ public:
         //n_ptcl_in_cluster_.resizeNoInitialize(n);
         for(PS::S32 i=0; i<n; i++){
             PS::S32 adr = adr_array[i];
-            ptcl_hard_[i].id   = sys[adr].id;
-            ptcl_hard_[i].mass = sys[adr].mass;
-            ptcl_hard_[i].pos  = sys[adr].pos;
-            ptcl_hard_[i].vel  = sys[adr].vel;
-            ptcl_hard_[i].r_out= sys[adr].r_out;
+            ptcl_hard_[i].DataCopy(sys[adr]);
             //n_ptcl_in_cluster_[i] = 1;
         }
     }
@@ -394,11 +294,7 @@ public:
 #pragma omp for schedule(dynamic)
         for(PS::S32 i=0; i<n; i++){
             PS::S32 adr = adr_array[i];
-            ptcl_hard_[i].id   = sys[adr].id;
-            ptcl_hard_[i].mass = sys[adr].mass;
-            ptcl_hard_[i].pos  = sys[adr].pos;
-            ptcl_hard_[i].vel  = sys[adr].vel;
-            ptcl_hard_[i].r_out= sys[adr].r_out;
+            ptcl_hard_[i].DataCopy(sys[adr]);
             //n_ptcl_in_cluster_[i] = 1;
         }
     }
@@ -406,8 +302,10 @@ public:
     void driveForOneCluster(const PS::F64 dt){
         const PS::S32 n = ptcl_hard_.size();
         for(PS::S32 i=0; i<n; i++){
-            ptcl_hard_[i].pos += ptcl_hard_[i].vel * dt;
-            ptcl_hard_[i].r_out= r_out_single_;
+            PS::F64vec dr = ptcl_hard_[i].vel * dt;
+            ptcl_hard_[i].pos += dr;
+            ptcl_hard_[i].r_search = std::max(std::sqrt(dr*dr)*PtclHard::search_factor, PtclHard::r_search_min);
+            // ptcl_hard_[i].r_search= r_search_single_;
             /*
               DriveKeplerRestricted(mass_sun_, 
               pos_sun_, ptcl_hard_[i].pos, 
@@ -420,8 +318,9 @@ public:
         const PS::S32 n = ptcl_hard_.size();
 #pragma omp for schedule(dynamic)
         for(PS::S32 i=0; i<n; i++){
-            ptcl_hard_[i].pos += ptcl_hard_[i].vel * dt;
-            ptcl_hard_[i].r_out= r_out_single_;
+            PS::F64vec dr = ptcl_hard_[i].vel * dt;
+            ptcl_hard_[i].pos += dr;
+            ptcl_hard_[i].r_search = std::max(std::sqrt(dr*dr)*PtclHard::search_factor, PtclHard::r_search_min);
             /*
               DriveKeplerRestricted(mass_sun_, 
               pos_sun_, ptcl_hard_[i].pos, 
@@ -437,10 +336,7 @@ public:
         for(PS::S32 i=0; i<n; i++){
             PS::S32 adr = adr_array[i];
             assert(sys[adr].id == ptcl_hard_[i].id);
-            sys[adr].mass = ptcl_hard_[i].mass;
-            sys[adr].pos  = ptcl_hard_[i].pos;
-            sys[adr].vel  = ptcl_hard_[i].vel;
-            sys[adr].r_out = ptcl_hard_[i].r_out;
+            sys[adr].DataCopy(ptcl_hard_[i]);
         }
     }
 
@@ -452,10 +348,7 @@ public:
         for(PS::S32 i=0; i<n; i++){
             PS::S32 adr = adr_array[i];
             assert(sys[adr].id == ptcl_hard_[i].id);
-            sys[adr].mass = ptcl_hard_[i].mass;
-            sys[adr].pos  = ptcl_hard_[i].pos;
-            sys[adr].vel  = ptcl_hard_[i].vel;
-            sys[adr].r_out = ptcl_hard_[i].r_out;
+            sys[adr].DataCopy(ptcl_hard_[i]);
         }
     }
 // for one cluster
@@ -472,11 +365,7 @@ public:
         ptcl_hard_.resizeNoInitialize(n_ptcl);
         for(PS::S32 i=0; i<n_ptcl; i++){
             PS::S32 adr = _adr_array[i];
-            ptcl_hard_[i].id   = sys[adr].id;
-            ptcl_hard_[i].mass = sys[adr].mass;
-            ptcl_hard_[i].pos  = sys[adr].pos;
-            ptcl_hard_[i].vel  = sys[adr].vel;
-            ptcl_hard_[i].r_out= sys[adr].r_out;
+            ptcl_hard_[i].DataCopy(sys[adr]);
             //  ptcl_hard_[i].n_ngb= sys[adr].n_ngb;
         }
         const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
@@ -510,11 +399,7 @@ public:
 #pragma omp for schedule(dynamic)
         for(PS::S32 i=0; i<n_ptcl; i++){
             PS::S32 adr = _adr_array[i];
-            ptcl_hard_[i].id    = sys[adr].id;
-            ptcl_hard_[i].mass  = sys[adr].mass;
-            ptcl_hard_[i].pos   = sys[adr].pos;
-            ptcl_hard_[i].vel   = sys[adr].vel;
-            ptcl_hard_[i].r_out = sys[adr].r_out;
+            ptcl_hard_[i].DataCopy(sys[adr]);
             //  ptcl_hard_[i].n_ngb = sys[adr].n_ngb;
         }
     }

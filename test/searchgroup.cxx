@@ -82,7 +82,7 @@ PtclHard kepler_print(const std::size_t id, const std::size_t ib, PtclHard* c[2]
                    (v[0][1]*m[0]+v[1][1]*m[1])/mt, 
                    (v[0][2]*m[0]+v[1][2]*m[1])/mt);
 
-    return PtclHard(ib,mt,xcm,vcm,ppars.rout,0,0);
+    return PtclHard(Ptcl(ParticleBase(mt, xcm, vcm), ib, 0, ppars.rout));
 }
 
 
@@ -94,7 +94,7 @@ void print_p(PtclHard* p, const int n) {
              <<std::setw(12)<<"v1"
              <<std::setw(12)<<"v2"
              <<std::setw(12)<<"v3"
-             <<std::setw(12)<<"rout"
+             <<std::setw(12)<<"rsearch"
              <<std::setw(12)<<"status"
              <<std::setw(12)<<"id"
              <<std::endl;
@@ -106,7 +106,7 @@ void print_p(PtclHard* p, const int n) {
                  <<std::setw(12)<<p[i].vel[0]
                  <<std::setw(12)<<p[i].vel[1]
                  <<std::setw(12)<<p[i].vel[2]
-                 <<std::setw(12)<<p[i].r_out
+                 <<std::setw(12)<<p[i].r_search
                  <<std::setw(12)<<p[i].status
                  <<std::setw(12)<<p[i].id
                  <<std::endl;
@@ -151,8 +151,8 @@ int main(int argc, char** argv)
     PS::F64vec vv1(v1[0],v1[1],v1[2]);
     PS::F64vec vv2(v2[0],v2[1],v2[2]);    
 
-    PtclHard a(idc++,m1,xx1,vv1,par.rout,0,0,0);
-    PtclHard b(idc++,m2,xx2,vv2,par.rout,0,0,0);
+    PtclHard a(Ptcl(ParticleBase(m1,xx1,vv1),idc++,0,par.rout));
+    PtclHard b(Ptcl(ParticleBase(m2,xx2,vv2),idc++,0,par.rout));
 
     bool flag=plist.link(id,ib,a,b,pshift);
     if (!flag) {
@@ -198,7 +198,7 @@ int main(int argc, char** argv)
   std::cout<<std::endl;
 
   //PS::ReallocatableArray<PS::S32> adr_group_glb;
-  //PS::ReallocatableArray<std::vector<PtclHard>> group_ptcl_glb; 
+  //PS::ReallocatableArray<std::vector<Ptcl>> group_ptcl_glb; 
   //PS::ReallocatableArray<PS::S32> group_ptcl_glb_empty_list;
   PS::ReallocatableArray<PtclHard> ptcl_new;
 

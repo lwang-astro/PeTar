@@ -415,7 +415,7 @@ void keplerTreeGenerator(Tptree bins[],   // make sure bins.size = n_members!
         bins[i].member[1] = p[1];
         bins[i].id = p[0]->id;
         bins[i].status = bins[i].id;
-        bins[i].r_out = std::max(p[0]->r_out,p[1]->r_out);
+        bins[i].r_search = std::max(p[0]->r_search,p[1]->r_search);
     }
 
 #ifdef HARD_DEBUG
