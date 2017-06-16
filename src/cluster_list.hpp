@@ -1,5 +1,6 @@
 #pragma once
 #include<particle_simulator.hpp>
+#include<unordered_map>
 //#include"hard_force.hpp"
 
 extern const PS::F64 SAFTY_OFFSET_FOR_SEARCH;

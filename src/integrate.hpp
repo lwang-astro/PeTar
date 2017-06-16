@@ -9,6 +9,8 @@
 #define DEBUG_ENERGY_LIMIT 1e-6
 #endif
 
+extern const PS::F64 SAFTY_OFFSET_FOR_SEARCH;
+
 //leap frog----------------------------------------------
 template<class Tpsys, class Ttree>
 void Kick(Tpsys & system,
@@ -117,7 +119,8 @@ private:
     }
 
 
-    void CalcBlockDt2ndAct(Tptcl ptcl[],
+    template <class Tp>
+    void CalcBlockDt2ndAct(Tp ptcl[],
                            const PtclForce force[],
                            const PS::S32 adr_array[],
                            const PS::S32 n_act, 
@@ -136,21 +139,26 @@ private:
         }
     }
 
+    template <class Tp>
     void CalcAcc0Acc1Act(PtclForce force[],
-                         const Tptcl ptcl[],
+                         const Tp ptcl[],
                          const PS::S32 n_act,
                          const PS::S32 Ilist[],
-                         const PS::ReallocatableArray<PS::S32> Jlist[],
+                         const PS::S32 Jlist[],
+                         const PS::S32 Jlist_disp[],
+                         const PS::S32 Jlist_n[],
                          const PS::F64 rin,
                          const PS::F64 eps2) {
         // PS::ReallocatableArray< std::pair<PS::S32, PS::S32> > & merge_pair ){
         // active particles
         for(PS::S32 i=0; i<n_act; i++){
-            PS::S32 iadr = Ilist[i];
+            const PS::S32 iadr = Ilist[i];
             force[iadr].acc0 = force[iadr].acc1 = 0.0;
             // all
-            for(PS::S32 j=0; j<Jlist[i].size(); j++){
-                PS::S32 jadr = Jlist[i][j];
+            const PS::S32 joff = Jlist_disp[iadr];
+            const PS::S32 jn = Jlist_n[iadr];
+            for(PS::S32 j=0; j<jn; j++){
+                PS::S32 jadr = Jlist[joff+j];
 #ifdef HARD_DEBUG
                 assert(iadr!=jadr);
 #endif
@@ -167,6 +175,38 @@ private:
         }
     }
 
+    template <class Tp>
+    void CalcAcc0Acc1Act(PtclForce force[],
+                         const Tp ptcl[],
+                         const PS::S32 n_tot,
+                         const PS::S32 Ilist[],
+                         const PS::S32 n_act,
+                         const PS::F64 rin,
+                         const PS::F64 eps2) {
+        // PS::ReallocatableArray< std::pair<PS::S32, PS::S32> > & merge_pair ){
+        // active particles
+        for(PS::S32 i=0; i<n_act; i++){
+            const PS::S32 iadr = Ilist[i];
+            force[iadr].acc0 = force[iadr].acc1 = 0.0;
+            // all
+            for(PS::S32 j=0; j<n_tot; j++){
+                if(iadr==j) continue;
+#ifdef HARD_DEBUG
+                assert(iadr!=jadr);
+#endif
+                PS::F64 r2 = 0.0;
+                PS::F64 rout = std::max(ptcl[iadr].r_out, ptcl[j].r_out);
+                CalcAcc0Acc1R2Cutoff(ptcl[iadr].pos, ptcl[iadr].vel,
+                                     force[iadr].acc0, force[iadr].acc1, r2,
+                                     ptcl[j].pos, ptcl[j].vel, ptcl[j].mass,
+                                     eps2, rout, rin);
+                // if(r2 < ((ptcl[adr].r_merge + ptcl[j].r_merge)*(ptcl[adr].r_merge + ptcl[j].r_merge)) && ptcl[j].mass > 0.0){
+                //     merge_pair.push_back( std::make_pair(adr, j) );
+                // }
+            }
+        }
+    }
+    
     class SortAdr{
     public:
         PS::F64 * time;
@@ -286,7 +326,7 @@ private:
                 PS::F64 r_out = std::max(ptcl[i].r_out,ptcl[j].r_out);
                 PS::F64vec rij = ptcl[i].pos - ptcl[j].pos;
                 PS::F64 dr = sqrt(rij*rij + eps_sq);
-                eng.pot -= ptcl[i].mass/dr*(1.0 - CalcW(dr/r_out, r_in/r_out));
+                eng.pot -= ptcl[j].mass*ptcl[i].mass/dr*(1.0 - CalcW(dr/r_out, r_in/r_out));
             }
         }
         eng.tot = eng.kin + eng.pot;
@@ -355,7 +395,7 @@ public:
                 PS::F64 r2 = dr*dr;
                 PS::F64 rout = std::max(ptcl_[i].r_out,ptcl_[j].r_out);
                 PS::F64 rout2 = rout*rout+SAFTY_OFFSET_FOR_SEARCH;
-                if (r2<rout2) {
+                if (r2<rout2&&i!=j) {
                     Jlist_.push_back(j);
                     Jlist_n_[i]++;
                     nj_tot++;
@@ -427,7 +467,7 @@ public:
         a0_offset_sq_ = 0.1 * mass_min / (rout_min * rout_min);
         n_act_ = n_ptcl;
 
-        CalcAcc0Acc1Act(force_.getPointer(), ptcl_, n_act_, adr_sorted_.getPointer(), Jlist_, r_in_, eps_sq_);
+        CalcAcc0Acc1Act(force_.getPointer(), ptcl_.getPointer(), n_act_, adr_sorted_.getPointer(), Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, eps_sq_);
     
         // store predicted force
         for(PS::S32 i=0; i<n_ptcl; i++){
@@ -446,7 +486,7 @@ public:
     
     template<class Energy>
     void CalcEnergyHard(Energy & eng) {
-        CalcEnergyHard(ptcl_, ptcl_.size(), eng, r_in_, eps_sq_);
+        CalcEnergyHard(ptcl_.getPointer(), ptcl_.size(), eng, r_in_, eps_sq_);
     }
 
     PS::F64 getNextTime() {
@@ -456,11 +496,11 @@ public:
     void integrateOneStep(const PS::F64 time_sys,
                           const PS::F64 dt_limit) {
         // pred::mass,pos,vel updated
-        PredictAll(pred_.getPointer(), ptcl_, ptcl_.size(), time_sys);
+        PredictAll(pred_.getPointer(), ptcl_.getPointer(), ptcl_.size(), time_sys);
         // force::acc0,acc1 updated
-        CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), n_act_, adr_sorted_.getPointer(), Jlist_, r_in_, eps_sq_);
+        CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), n_act_, adr_sorted_.getPointer(), Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, eps_sq_);
         // ptcl_org::pos,vel; pred::time,dt,acc0,acc1,acc2,acc3 updated
-        CorrectAndCalcDt4thAct(ptcl_, pred_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, dt_limit, a0_offset_sq_, eta_s_);
+        CorrectAndCalcDt4thAct(ptcl_.getPointer(), pred_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, dt_limit, a0_offset_sq_, eta_s_);
 
         for(PS::S32 i=0; i<n_act_; i++){
             PS::S32 adr = adr_sorted_[i];
