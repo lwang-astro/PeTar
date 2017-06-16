@@ -143,8 +143,8 @@ private:
     template <class Tp>
     void CalcAcc0Acc1Act(PtclForce force[],
                          const Tp ptcl[],
-                         const PS::S32 n_act,
                          const PS::S32 Ilist[],
+                         const PS::S32 n_act,
                          const PS::S32 Jlist[],
                          const PS::S32 Jlist_disp[],
                          const PS::S32 Jlist_n[],
@@ -290,8 +290,9 @@ private:
             const PS::F64vec A1p = (fpi->acc1 + pri->acc1)*h;
             const PS::F64vec A1m = (fpi->acc1 - pri->acc1)*h;
 
-            pti->vel = pri->vel + h*( A0p - inv3*A1m );
-            pti->pos = pri->pos + h*( (pri->vel + pti->vel) + h*(-inv3*A0m));
+            const PS::F64vec vel_new = pti->vel + h*( A0p - inv3*A1m );
+            pti->pos += h*( (pti->vel + vel_new) + h*(-inv3*A0m));
+            pti->vel = vel_new;
 
             pri->acc0 = fpi->acc0;
             pri->acc1 = fpi->acc1;
@@ -442,7 +443,8 @@ public:
     void initialize(PS::F64 dt_limit,
                     PS::S32 group_act_list[],
                     PS::S32 &group_act_n,
-                    const PS::S32 n_groups) {
+                    const PS::S32 n_groups,
+                    const bool calc_full_flag = true) {
         PS::S32 n_ptcl = ptcl_.size();
         pred_.resizeNoInitialize(n_ptcl);
         force_.resizeNoInitialize(n_ptcl);
@@ -469,7 +471,8 @@ public:
         a0_offset_sq_ = 0.1 * mass_min / (r_out_ * r_out_);
         n_act_ = n_ptcl;
 
-        CalcAcc0Acc1Act(force_.getPointer(), ptcl_.getPointer(), n_act_, adr_sorted_.getPointer(), Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, r_out_, eps_sq_);
+        if(calc_full_flag) CalcAcc0Acc1Act(force_.getPointer(), ptcl_.getPointer(), ptcl_.size(), adr_sorted_.getPointer(), n_act_, r_in_, r_out_, eps_sq_);
+        else CalcAcc0Acc1Act(force_.getPointer(), ptcl_.getPointer(), adr_sorted_.getPointer(), n_act_, Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, r_out_, eps_sq_);
     
         // store predicted force
         for(PS::S32 i=0; i<n_ptcl; i++){
@@ -477,7 +480,7 @@ public:
             pred_[i].acc1 = force_[i].acc1;
         }
 
-        CalcBlockDt2ndAct(pred_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, eta_s_, dt_limit, a0_offset_sq_);
+        CalcBlockDt2ndAct(pred_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, 0.01*eta_s_, dt_limit, a0_offset_sq_);
 
         for(PS::S32 i=0; i<n_ptcl; i++){
             time_next_[i] = pred_[i].time + pred_[i].dt;
@@ -496,11 +499,13 @@ public:
     }
 
     void integrateOneStep(const PS::F64 time_sys,
-                          const PS::F64 dt_limit) {
+                          const PS::F64 dt_limit,
+                          const bool calc_full_flag = true) {
         // pred::mass,pos,vel updated
         PredictAll(pred_.getPointer(), ptcl_.getPointer(), ptcl_.size(), time_sys);
         // force::acc0,acc1 updated
-        CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), n_act_, adr_sorted_.getPointer(), Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, r_out_, eps_sq_);
+        if(calc_full_flag) CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), ptcl_.size(), adr_sorted_.getPointer(), n_act_, r_in_, r_out_, eps_sq_);
+        else CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), adr_sorted_.getPointer(), n_act_, Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, r_out_, eps_sq_);
         // ptcl_org::pos,vel; pred::time,dt,acc0,acc1,acc2,acc3 updated
         CorrectAndCalcDt4thAct(ptcl_.getPointer(), pred_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, dt_limit, a0_offset_sq_, eta_s_);
 
@@ -523,6 +528,26 @@ public:
     const PS::S32* getActList() const{
         return adr_sorted_.getPointer();
     }
+
+#ifdef HARD_DEBUG
+    void printStepHist(){
+        std::map<PS::F64, PS::S32> stephist;
+        for(int i=0; i<pred_.size(); i++) {
+            std::map<PS::F64, PS::S32>::iterator p = stephist.find(pred_[i].dt);
+            if (p==stephist.end()) stephist[pred_[i].dt]=1;
+            else stephist[pred_[i].dt]++;
+        }
+        std::cerr<<"Step hist:\n";
+        for(auto i=stephist.begin(); i!=stephist.end(); i++) {
+            std::cerr<<std::setw(14)<<i->first;
+        }
+        std::cerr<<std::endl;
+        for(auto i=stephist.begin(); i!=stephist.end(); i++) {
+            std::cerr<<std::setw(14)<<i->second;
+        }
+        std::cerr<<std::endl;
+    }
+#endif
 
 };
 
