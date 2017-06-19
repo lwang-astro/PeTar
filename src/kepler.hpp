@@ -482,5 +482,18 @@ bool stabilityCheck(PS::ReallocatableArray<Tptree*> &nbin,
     return fstab;
 }
 
+class keplerSplineFit{
+public:
+    const gsl_interp_type *t;
+    gsl_interp_accel *acc;
+    gsl_spline *spline;
 
+    keplerSplineFit(): t(gsl_interp_cspline_periodic) {};
+    
 
+    // first the data position should be center-of-mass-corrected
+    template<class Tptcl> 
+    void fit(Tptcl* data, const PS::S32 n_split) {
+        PS::F64 pos
+    }
+};
