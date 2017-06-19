@@ -1,6 +1,8 @@
 #pragma once
 
 #include"matrix3.hpp"
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_spline.h>
 
 // a: semi-major axis
 // l: mean anomaly
@@ -485,15 +487,45 @@ bool stabilityCheck(PS::ReallocatableArray<Tptree*> &nbin,
 class keplerSplineFit{
 public:
     const gsl_interp_type *t;
-    gsl_interp_accel *acc;
-    gsl_spline *spline;
+    gsl_interp_accel *acc[3];
+    gsl_spline *spline[3];
 
-    keplerSplineFit(): t(gsl_interp_cspline_periodic) {};
+    keplerSplineFit(): t(gsl_interp_cspline_periodic), acc({NULL}), spline({NULL}) {};
     
-
-    // first the data position should be center-of-mass-corrected
     template<class Tptcl> 
-    void fit(Tptcl* data, const PS::S32 n_split) {
-        PS::F64 pos
+    void fit(Tptcl* data, const PS::S32 n_split =8) {
+#ifdef HARD_DEBUG
+        assert(n_split>=4);
+#endif
+        PS::F64 peri=data[0].mass;
+        const PS::U32 np = n_split+1;
+        PS::F64 time[np],x[3][np];
+        for(int i=0;i<np;i++) {
+            time[i] = PS::F64(i)/n_split*peri;
+            for(int j=0; j<3; j++)
+                x[j][i] = data[i].vel[j];
+        }
+        for(int i=0; i<3; i++) {
+            if(acc[i]!=NULL) gsl_interp_accel_free(acc[i]);
+            acc[i] = gsl_interp_accel_alloc();
+            if(spline[i]!=NULL) gsl_spline_free(spline[i]);
+            spline[i] =  gsl_spline_alloc(t, np);
+            
+            gsl_spline_init(spline[i], time, x[i], np);
+        }
+    }
+
+    PS::F64vec eval(const PS::F64 time) const {
+        PS::F64vec res;
+        for(int i=0; i<3; i++)
+            res[0] = gsl_spline_eval(spline[i],time,acc[i]);
+        return res;
+    }
+
+    ~keplerSplineFit() {
+        for(int i=0;i<3;i++) {
+            if(acc[i]!=NULL) gsl_interp_accel_free(acc[i]);
+            if(spline[i]!=NULL) gsl_spline_free(spline[i]);
+        }
     }
 };

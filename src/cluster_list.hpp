@@ -1183,6 +1183,25 @@ private:
                               const PS::S32 n_split = 8) {
         const PS::F64 peri = 8.0*std::atan(1.0)*std::abs(bin.ax)*std::sqrt(std::abs(bin.ax)/bin.mass);
         const PS::F64 dt = peri/n_split;
+        if (n_split<4) {
+            std::cerr<<"N_SPLIT to small to save binary parameters, should be larger than 4!";
+            abort();
+        }
+        PS::F64 bindata[4][2];
+        /*
+          acc, ecc
+          peri, inc
+          OMG, omg
+          ecca
+         */
+        bindata[0][0] = bin.ax;
+        bindata[0][1] = bin.ecc;
+        bindata[1][0] = peri;
+        bindata[1][1] = bin.inc;
+        bindata[2][0] = bin.OMG;
+        bindata[2][1] = bin.omg;
+        bindata[3][0] = bin.ecca;
+        
         for (int i=0; i<n_split; i++) {
             Tptcl* p[2];
             for(int j=0; j<2; j++) {
@@ -1206,6 +1225,10 @@ private:
             for(int j=0; j<2; j++) {
                 if(i==0) p[j]->mass /= 2.0*n_split;
                 else p[j]->mass /= n_split;
+            }
+            if(i<4) {
+                p[0]->vel[0] = bindata[i][0];
+                p[1]->vel[0] = bindata[i][1];
             }
         }
         PS::S32 nbin = setGroupMemberPars(bin, n_split, true);
