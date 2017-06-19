@@ -237,11 +237,12 @@ int main(int argc, char** argv)
       for(int j=0;j<group.getGroupN(i);j++) 
           pg.push_back(p[group.getGroup(i)[j]]);
       print_p(pg.getPointer(),pg.size());
-      for(int j=0;j<group.getGroupN(i);j++) {
-          std::cout<<"Member "<<j<<": ";
-          for(int k=0;k<8;k++) std::cout<<std::setw(10)<<group.getGroupPertAdr(i,j,k);
-          std::cout<<std::endl;
-      }
+      //for(int j=0;j<group.getGroupN(i);j++) {
+      //    std::cout<<"Member "<<j<<": ";
+      //    for(int k=0;k<8;k++) std::cout<<std::setw(10)<<group.getGroupPertAdr(i,j,k);
+      //    std::cout<<std::endl;
+      //}
+      pp.clearSize();
       for(int j=0;j<16;j++) {
           pp.push_back(p[group.getGroupPertList(i)[j]]);
       }

@@ -1,9 +1,10 @@
 #PS_PATH = -I../../fdps/src/
-PS_PATH = -I../fdps/src/
+#PS_PATH = -I../fdps/src/
 #PS_PATH = -I../../../fdps/src/
 #PS_PATH = -I../../fdps/src/
 #PS_PATH = -I../../../../project/fdps/src
 #PS_PATH = -I../FDPS/src
+PS_PATH  = -I/home/lwang/code/fdps/src
 ARC_PATH = -I../ARC/include
 
 #use_k_computer = yes
@@ -42,9 +43,11 @@ CXXFLAGS += -Wall
 CXXFLAGS += -march=core-avx2
 CXXFLAGS += -ffast-math -funroll-loops
 CXXFLAGS += -std=c++11
+CXXFLAGS += ${shell gsl-config --cflags}
 CXXFLAGS += -DMPICH_IGNORE_CXX_SEEK
 #CXXFLAGS += -DINTRINSIC_X86
 #CXXFLAGS += -DUSE_GNU_PARALLEL_SORT
+CXXLIBS += ${shell gsl-config --libs}
 endif
 
 CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -fopenmp
@@ -66,19 +69,25 @@ SRC = main.cc hard.hpp soft.hpp hard_force.hpp io.hpp kepler.hpp phantomquad_for
 all: nbody.out
 
 nbody.out: $(SRC)
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(CXXFLAGS) -o $@ $<
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
 ARC_debug.out: chain_debug.cxx force.hpp
-	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -D DEBUG -o $@ $<
+	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -D DEBUG -o $@ $< $(CXXLIBS)
 
 rsearchtest: rsearchtest.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $<
+	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
 test.out: test.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $<
+	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
 searchgrouptest: searchgroup.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $<
+	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $< $(CXXLIBS)
+
+hermitetest: hermite.cxx
+	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $< $(CXXLIBS)
+
+splinetest: spline.cxx
+	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
 clean:
 	rm *.out *.o

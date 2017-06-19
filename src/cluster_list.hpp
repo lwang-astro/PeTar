@@ -950,7 +950,7 @@ private:
     PS::ReallocatableArray<PS::S32> group_list_;
     PS::ReallocatableArray<PS::S32> group_list_disp_;
     PS::ReallocatableArray<PS::S32> group_list_n_;
-    PS::ReallocatableArray<PS::S32> group_list_pert_adr_; // soft pert adr in soft_pert_list_
+    //PS::ReallocatableArray<PS::S32> group_list_pert_adr_; // soft pert adr in soft_pert_list_
     // fake particle list
     PS::ReallocatableArray<PS::S32> soft_pert_list_;
     // PS::ReallocatableArray<PS::S32> soft_pert_list_disp_;
@@ -1396,6 +1396,7 @@ public:
         std::map<PS::S32,PS::S32> cm_adr;
         std::map<PS::S32,PS::S32> fake_cm;
         std::map<PS::S32,PS::S32> fake_adr;
+        std::map<PS::S32,PS::S32> fake_order;
 
 #ifdef HARD_DEBUG
         PS::ReallocatableArray<PS::S32> icount;
@@ -1426,8 +1427,8 @@ public:
 
         group_list_.reserve(n_members);
         group_list_.resizeNoInitialize(n_members);
-        group_list_pert_adr_.reserve(n_members);
-        group_list_pert_adr_.resizeNoInitialize(n_members);
+        //group_list_pert_adr_.reserve(n_members);
+        //group_list_pert_adr_.resizeNoInitialize(n_members);
 
         //std::map<PS::S32,std::pair<PS::S32,PS::S32>> mem_order;
         //gloffset.reserve(n_members);
@@ -1466,6 +1467,7 @@ public:
                 PS::S32 icm = cm_adr.at(-idcm);
                 if(phase==0) {
                     fake_cm[ptcl_org[i].id] = idcm;
+                    fake_order[ptcl_org[i].id] = soft_pert_list_n[icm];
                     PS::S32 ipos = soft_pert_list_disp[icm] + soft_pert_list_n[icm]++;
                     fake_adr[ptcl_org[i].id] = ipos;
                     soft_pert_list_[ipos] = i;
@@ -1501,7 +1503,9 @@ public:
                     PS::S32 iadr_cm   = cm_adr.at(-fake_cm.at(id_fake));
                     PS::S32 ilst    = group_list_disp_[iadr_cm]+group_list_n_[iadr_cm]++;
                     group_list_[ilst] = i;
-                    group_list_pert_adr_[ilst] = fake_adr.at(id_fake);
+                    //group_list_pert_adr_[ilst] = fake_adr.at(id_fake);
+                    ptcl_org[i].status = fake_order.at(id_fake);
+                    
                     //mem_order[ptcl_org[i].id] = std::pair<PS::S32, PS::S32>(iadr_cm, group_list_n_[iadr_cm]);  // record cm index and member id order
 #ifdef HARD_DEBUG
                     assert(ilst<group_list_.size());
@@ -1645,12 +1649,12 @@ public:
         return group_list_n_[i];
     }
 
-    PS::S32 getGroupPertAdr(const std::size_t i, const std::size_t j, const std::size_t iphase) const {
-        return soft_pert_list_[group_list_pert_adr_[group_list_disp_[i]+j]+2*iphase];
+    PS::S32 getGroupPertAdr(const std::size_t i, const std::size_t j, const std::size_t iphase, const PS::S32 n_split =8) const {
+        return soft_pert_list_[i*2*n_split+j+2*iphase];
     }
-
-    const PS::S32* getGroupPertList(const std::size_t i) const {
-        return &soft_pert_list_[group_list_pert_adr_[group_list_disp_[i]]];
+    // 
+    const PS::S32* getGroupPertList(const std::size_t i, const PS::S32 n_split = 8) const {
+        return &soft_pert_list_[i*2*n_split];
     }
     
 //    RCList* getRoutChangeList() {
