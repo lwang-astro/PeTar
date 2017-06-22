@@ -1181,8 +1181,7 @@ private:
                               PS::ReallocatableArray<PS::S32> & empty_list,
                               Tptree &bin,
                               const PS::S32 n_split = 8) {
-        const PS::F64 peri = 8.0*std::atan(1.0)*std::abs(bin.ax)*std::sqrt(std::abs(bin.ax)/bin.mass);
-        const PS::F64 dt = peri/n_split;
+        const PS::F64 dt = bin.peri/n_split;
         if (n_split<4) {
             std::cerr<<"N_SPLIT to small to save binary parameters, should be larger than 4!";
             abort();
@@ -1190,17 +1189,18 @@ private:
         PS::F64 bindata[4][2];
         /*
           acc, ecc
-          peri, inc
-          OMG, omg
-          ecca
+          peri, tperi,
+          inc, OMG,
+          omg, ecca
          */
         bindata[0][0] = bin.ax;
         bindata[0][1] = bin.ecc;
-        bindata[1][0] = peri;
-        bindata[1][1] = bin.inc;
-        bindata[2][0] = bin.OMG;
-        bindata[2][1] = bin.omg;
-        bindata[3][0] = bin.ecca;
+        bindata[1][0] = bin.peri;
+        bindata[1][1] = bin.tperi;
+        bindata[2][0] = bin.inc; 
+        bindata[2][1] = bin.OMG; 
+        bindata[3][0] = bin.omg; 
+        bindata[3][1] = bin.ecca;
         
         for (int i=0; i<n_split; i++) {
             Tptcl* p[2];
@@ -1220,7 +1220,7 @@ private:
                 p[j]->status = (bin.id<<ID_PHASE_SHIFT)|i;
             }
             center_of_mass_shift(*(Tptcl*)&bin,p,2);
-            DriveKeplerOrbParam(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass, (i+1)*dt, bin.ax, bin.ecc, bin.inc, bin.OMG, bin.omg, bin.ecca);
+            DriveKeplerOrbParam(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass, (i+1)*dt, bin.ax, bin.ecc, bin.inc, bin.OMG, bin.omg, bin.peri, bin.ecca);
             center_of_mass_correction(*(Tptcl*)&bin,p,2);
             for(int j=0; j<2; j++) {
                 if(i==0) p[j]->mass /= 2.0*n_split;
@@ -1276,7 +1276,7 @@ private:
             stab_bins.reserve(n_groups);
             bins.resizeNoInitialize(group_list_n[i]-1);
             keplerTreeGenerator(bins.getPointer(), &group_list[group_list_disp[i]], group_list_n[i], ptcl_org);
-            bool istab = stabilityCheck<Tptree,Tptcl>(stab_bins,bins.back(),rmax);
+            bool istab = stabilityCheck<Tptcl>(stab_bins,bins.back(),rmax);
             if (istab) {
                 keplerOrbitGenerator(ptcl_org, ptcl_extra, empty_list, bins.back(), n_split);
             }
@@ -1607,7 +1607,6 @@ public:
 
     }
 
-    template<class Tptree>
     void generateList(Tptcl *ptcl_org, 
                       const PS::S32 n_ptcl, 
                       PS::ReallocatableArray<Tptcl> & ptcl_extra,
@@ -1617,7 +1616,7 @@ public:
             std::cerr<<"Error! ID_PHASE_SHIFT is too small for phase split! shift bit: "<<ID_PHASE_SHIFT<<" n_split: "<<n_split<<std::endl;
             abort();
         }
-        generateNewPtcl<Tptree>(ptcl_org, n_ptcl, p_list_, ptcl_extra, group_list_, group_list_disp_, group_list_n_, soft_pert_list_, rmax, n_split);
+        generateNewPtcl<PtclTree<Tptcl>>(ptcl_org, n_ptcl, p_list_, ptcl_extra, group_list_, group_list_disp_, group_list_n_, soft_pert_list_, rmax, n_split);
         //searchPerturber(pert_list_, ptcl_org, n_ptcl);
     }
 

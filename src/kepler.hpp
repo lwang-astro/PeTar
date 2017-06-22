@@ -10,6 +10,13 @@
 // u: eccentric anomaly
 // n: mean mortion
 
+template <class Tptcl>
+class PtclTree: public Tptcl{
+public:
+    PS::F64 ax, ecc, inc, OMG, omg, tperi, peri,ecca;
+    Tptcl* member[2];
+};
+
 double keplereq(const double l,  const double e, const double u){
     return (u - e*sin(u) - l);
 }
@@ -21,12 +28,9 @@ double keplereq_dot(const double e, const double u){
 // return eccentric anomaly
 double solve_keplereq(const double l,
                       const double e){
-    double twpi=atan(1.0)*8;
-    double u0 = fmod(l,twpi);
-    //    if(e>0.8) u0 = 3.14159265;
+    double u0 = l;
     double u1;
     int loop = 0;
-    //    std::cerr<<"l="<<u0<<" e="<<e<<std::endl;
     while(1){
         loop++;
         double su0 = sin(u0);
@@ -34,17 +38,36 @@ double solve_keplereq(const double l,
         //u1 = u0 - keplereq(l, e, u0)/keplereq_dot(e, u0);
         u1 = u0 - ((u0-e*su0-l)/(1.0 - e*cu0));
         //if( fabs(u1-u0) < 1e-13 ){ return u1; }
-        //        std::cerr<<"u1="<<u1<<"; u0="<<u0<<std::endl;
-        //if( fabs(u1-u0) < 1e-15 ){ return u1; }
-        //if( fabs(fmod(u1,twpi)-fmod(u0,twpi)) < 1e-15 ){ return u1; }
-        double utmp = u1-u0;
-        utmp /= twpi;
-        utmp -= round(utmp);
-        utmp *= twpi;
-        if(utmp < 1e-13){ return u1; }
+        if( fabs(u1-u0) < 1e-15 ){ return u1; }
         else{ u0 = u1; }
     }
 }
+//double solve_keplereq(const double l,
+//                      const double e){
+//    double twpi=atan(1.0)*8;
+//    double u0 = fmod(l,twpi);
+//    //    if(e>0.8) u0 = 3.14159265;
+//    double u1;
+//    int loop = 0;
+//    //    std::cerr<<"l="<<u0<<" e="<<e<<std::endl;
+//    while(1){
+//        loop++;
+//        double su0 = sin(u0);
+//        double cu0 = sqrt(1.0 - su0*su0);
+//        //u1 = u0 - keplereq(l, e, u0)/keplereq_dot(e, u0);
+//        u1 = u0 - ((u0-e*su0-l)/(1.0 - e*cu0));
+//        //if( fabs(u1-u0) < 1e-13 ){ return u1; }
+//        //        std::cerr<<"u1="<<u1<<"; u0="<<u0<<std::endl;
+//        //if( fabs(u1-u0) < 1e-15 ){ return u1; }
+//        //if( fabs(fmod(u1,twpi)-fmod(u0,twpi)) < 1e-15 ){ return u1; }
+//        double utmp = u1-u0;
+//        utmp /= twpi;
+//        utmp -= round(utmp);
+//        utmp *= twpi;
+//        if(utmp < 1e-13){ return u1; }
+//        else{ u0 = u1; }
+//    }
+//}
 
 void OrbParam2PosVel(PS::F64vec & pos0,       PS::F64vec & pos1,
                      PS::F64vec & vel0,       PS::F64vec & vel1,
@@ -71,10 +94,11 @@ void OrbParam2PosVel(PS::F64vec & pos0,       PS::F64vec & pos1,
 }
 
 // return eccentric anomayl
-// tperi is not just tperi
+// tperi is time to reach pericenter
 double PosVel2OrbParam(double & ax,    double & ecc,
                        double & inc,   double & OMG,
                        double & omg,   double & tperi,
+                       double & peri,
                        const PS::F64vec & pos0, const PS::F64vec & pos1,
                        const PS::F64vec & vel0, const PS::F64vec & vel1,
                        const double mass0, const double mass1){
@@ -112,7 +136,8 @@ double PosVel2OrbParam(double & ax,    double & ecc,
     double sinu = r*sin(f) / (ax*sqrt(1.0 - ecc*ecc));
     double cosu = (r*cos(f) / ax) + ecc;
     double u = atan2(sinu, cosu); // eccentric anomaly
-    double n = sqrt(m_tot/ax*ax*ax); // mean mortion
+    double n = sqrt(m_tot/(ax*ax*ax)); // mean mortion
+    peri = 8.0*std::atan(1.0)/n;
     double l = u - ecc*sin(u);
     tperi = l / n;
     return u;
@@ -201,10 +226,12 @@ void DriveKeplerOrbParam(PS::F64vec & pos0,
                  const PS::F64 inc,
                  const PS::F64 OMG,
                  const PS::F64 omg,
+                 const PS::F64 peri,
                  const PS::F64 ecc_anomaly) {
   PS::F64 freq = sqrt( (mass0+mass1) / (ax*ax*ax) );
   PS::F64 mean_anomaly_old = ecc_anomaly - ecc*sin(ecc_anomaly);
-  PS::F64 mean_anomaly_new = freq * dt + mean_anomaly_old; // mean anomaly
+  PS::F64 dt_tmp = dt - (int)(dt/peri)*peri;
+  PS::F64 mean_anomaly_new = freq * dt_tmp + mean_anomaly_old; // mean anomaly
   PS::F64 ecc_anomaly_new =  solve_keplereq(mean_anomaly_new, ecc); // eccentric anomaly
   OrbParam2PosVel(pos0, pos1, vel0, vel1, mass0, mass1,
                     ax, ecc, inc, OMG, omg, ecc_anomaly_new);
@@ -217,10 +244,10 @@ void DriveKepler(const PS::F64 mass0,
                  PS::F64vec & vel0,
                  PS::F64vec & vel1,
                  const PS::F64 dt){
-    PS::F64 ax, ecc, inc, OMG, omg, tperi, E;
-    E = PosVel2OrbParam(ax, ecc, inc, OMG, omg, tperi,
+    PS::F64 ax, ecc, inc, OMG, omg, tperi, peri, E;
+    E = PosVel2OrbParam(ax, ecc, inc, OMG, omg, tperi, peri,
                             pos0, pos1, vel0, vel1, mass0, mass1);
-    DriveKeplerOrbParam(pos0, pos1, vel0, vel1, mass0, mass1, dt, ax, ecc, inc, OMG, omg, E);
+    DriveKeplerOrbParam(pos0, pos1, vel0, vel1, mass0, mass1, dt, ax, ecc, inc, OMG, omg, peri, E);
 }
 
 
@@ -376,8 +403,8 @@ bool pairLess(const std::pair<PS::F32,PS::S32> & a, const std::pair<PS::F32,PS::
     return a.first < b.first;
 }
 
-template<class Tptcl, class Tptree>
-void keplerTreeGenerator(Tptree bins[],   // make sure bins.size = n_members!
+template<class Tptcl>
+void keplerTreeGenerator(PtclTree<Tptcl> bins[],   // make sure bins.size = n_members!
                          PS::S32 member_list[], // make sure list.size = n_members!
                          const PS::S32 n_members,
                          Tptcl* ptcl_org){
@@ -386,7 +413,7 @@ void keplerTreeGenerator(Tptree bins[],   // make sure bins.size = n_members!
     calcMinDisList(member_list,r2_list, n_members, ptcl_org);
     if(n_members>2) std::sort(r2_list, r2_list+n_members-1, pairLess);
 
-    Tptree* bin_host[n_members]={NULL};
+    PtclTree<Tptcl>* bin_host[n_members]={NULL};
     
     for(int i=0; i<n_members-1; i++) {
         PS::S32 k = r2_list[i].second;
@@ -411,7 +438,7 @@ void keplerTreeGenerator(Tptree bins[],   // make sure bins.size = n_members!
             while(bin_host[ki]==p[1]&&ki>=0) bin_host[ki++] = &bins[i];
         }
         
-        bins[i].ecca=PosVel2OrbParam(bins[i].ax, bins[i].ecc, bins[i].inc, bins[i].OMG, bins[i].omg, bins[i].tperi, p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass);
+        bins[i].ecca=PosVel2OrbParam(bins[i].ax, bins[i].ecc, bins[i].inc, bins[i].OMG, bins[i].omg, bins[i].tperi, bins[i].peri, p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass);
         calc_center_of_mass(*(Tptcl*)&bins[i], p, 2);
         bins[i].member[0] = p[0];
         bins[i].member[1] = p[1];
@@ -425,22 +452,22 @@ void keplerTreeGenerator(Tptree bins[],   // make sure bins.size = n_members!
 #endif
 }
 
-template<class Tptree>
-bool stab2check(const Tptree &bin, const PS::F64 rmax) {
+template<class Tptcl>
+bool stab2check(const PtclTree<Tptcl> &bin, const PS::F64 rmax) {
     if(bin.ax<0) return false;
     if(bin.ax*(1.0+bin.ecc)>rmax) return false;
     return true;
 }
 
-template<class Tptree>
-bool stab3check(const Tptree &bout, const Tptree &bin, const PS::F64 rmax) {
+template<class Tptcl>
+bool stab3check(const PtclTree<Tptcl> &bout, const PtclTree<Tptcl> &bin, const PS::F64 rmax) {
     if(!stab2check(bout,rmax)) return false;
     if(!stab2check(bin ,rmax)) return false;
     return true;
 }
 
-template<class Tptree>
-bool stab4check(const Tptree &bout, const Tptree &bin1, const Tptree &bin2, const PS::F64 rmax) {
+template<class Tptcl>
+bool stab4check(const PtclTree<Tptcl> &bout, const PtclTree<Tptcl> &bin1, const PtclTree<Tptcl> &bin2, const PS::F64 rmax) {
     if(!stab2check(bout,rmax)) return false;
     if(!stab2check(bin1,rmax)) return false;
     if(!stab2check(bin2,rmax)) return false;
@@ -448,35 +475,35 @@ bool stab4check(const Tptree &bout, const Tptree &bin1, const Tptree &bin2, cons
 }
 
 
-template<class Tptree, class Tptcl>
-bool stabilityCheck(PS::ReallocatableArray<Tptree*> &nbin, 
-                    Tptree &bins, const PS::F64 rmax) {
+template<class Tptcl>
+bool stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &nbin, 
+                    PtclTree<Tptcl> &bins, const PS::F64 rmax) {
     nbin.clearSize();
     bool fstab=true;
     if(bins.member[0]->status!=0) {
         if(bins.member[1]->status!=0) {
-            fstab = stab4check(bins, *(Tptree*)bins.member[0], *(Tptree*)bins.member[1], rmax);
-            bool fs1 = stabilityCheck<Tptree, Tptcl>(nbin, *(Tptree*)bins.member[0], rmax);
-            bool fs2 = stabilityCheck<Tptree, Tptcl>(nbin, *(Tptree*)bins.member[1], rmax);
+            fstab = stab4check(bins, *(PtclTree<Tptcl>*)bins.member[0], *(PtclTree<Tptcl>*)bins.member[1], rmax);
+            bool fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[0], rmax);
+            bool fs2 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[1], rmax);
             fstab &= fs1 & fs2;
             if(!fstab) {
-                if(fs1) nbin.push_back((Tptree*)bins.member[0]);
-                if(fs2) nbin.push_back((Tptree*)bins.member[1]);
+                if(fs1) nbin.push_back((PtclTree<Tptcl>*)bins.member[0]);
+                if(fs2) nbin.push_back((PtclTree<Tptcl>*)bins.member[1]);
             }
         }
         else {
-            fstab = stab3check(bins, *(Tptree*)bins.member[0], rmax);
-            bool fs = stabilityCheck<Tptree, Tptcl>(nbin, *(Tptree*)bins.member[0], rmax);
+            fstab = stab3check(bins, *(PtclTree<Tptcl>*)bins.member[0], rmax);
+            bool fs = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[0], rmax);
             fstab &= fs;
-            if(!fstab&fs) nbin.push_back((Tptree*)bins.member[0]);
+            if(!fstab&fs) nbin.push_back((PtclTree<Tptcl>*)bins.member[0]);
         }
     }
     else {
         if(bins.member[1]->status!=0) {
-            fstab = stab3check(bins, *(Tptree*)bins.member[1], rmax);
-            bool fs = stabilityCheck<Tptree, Tptcl>(nbin, *(Tptree*)bins.member[1], rmax);
+            fstab = stab3check(bins, *(PtclTree<Tptcl>*)bins.member[1], rmax);
+            bool fs = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[1], rmax);
             fstab &= fs;
-            if(!fstab&fs) nbin.push_back((Tptree*)bins.member[1]);
+            if(!fstab&fs) nbin.push_back((PtclTree<Tptcl>*)bins.member[1]);
         }
         else fstab = stab2check(bins, rmax);
     }
@@ -490,7 +517,10 @@ public:
     gsl_interp_accel *acc[3];
     gsl_spline *spline[3];
 
-    keplerSplineFit(): t(gsl_interp_cspline_periodic), acc({NULL}), spline({NULL}) {};
+    keplerSplineFit(): t(gsl_interp_cspline_periodic) {
+        acc[0]=acc[1]=acc[2]=NULL;
+        spline[0]=spline[1]=spline[2]=NULL;
+    }
     
     template<class Tptcl> 
     void fit(Tptcl* data, const PS::S32 n_split =8) {

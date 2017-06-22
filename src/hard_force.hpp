@@ -1,5 +1,6 @@
 #pragma once
 
+typedef double double3[3];
 //inline PS::F64 CalcK(const PS::F64 rij,
 //                     const PS::F64 rout,
 //                     const PS::F64 rin){
@@ -149,12 +150,6 @@ inline PS::F64 CalcW(const PS::F64 y, const PS::F64 q=0.1){
 }
 //#endif
 
-class ARC_int_pars{
-public:
-  PS::F64 rout,rin, eps2;
-};
-
-
 /// start Newtonian cut force (L.Wang)
 //! Newtonian acceleration with cutoff function and \f$\partial W_{ij}/\partial \mathbf{x}_i\f$ from particle j to particle i (function type of \link #ARC::pair_AW \endlink) 
 /*!          @param[out] Aij: Newtonian acceleration vector for i particle from particle j. \f$Aij[1:3] = m_i m_j xij[1:3] / |xij|^3 (1-k) + Pij (1-kdot[1:3])\f$.
@@ -167,8 +162,8 @@ public:
              @param[in] smpars: array of double[2]; First element is rcut_out, second element is rcut_in.
              \return status 0
 */
-template <class Tptcl>
-int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, const double xij[3], const Tptcl &pi, const Tptcl &pj, const ARC_int_pars* pars) {
+template <class Tptcl, class extpar>
+int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, const double xij[3], const Tptcl &pi, const Tptcl &pj, extpar* pars) {
   // distance
   const double rij = std::sqrt(xij[0]*xij[0]+xij[1]*xij[1]+xij[2]*xij[2]+pars->eps2);
   const double mi = pi.mass;
@@ -228,52 +223,63 @@ int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, c
 
 //! Newtonian acceleration from particle p to particle i (function type of ::ARC::pair_Ap)
 /*! 
-  @param[out]  Aij: acceleration vector. \f$Aij[1:3] = m_i m_p (xp[1:3]-xi[1:3]) / |xp-xi|^3 \f$.
-  @param[out]  Pij: potential. \f$ Pij = - m_i m_p /|xp-xi|^3\f$
-  @param[in]  xi: position vector i.
-  @param[in]  xp: position vector p.
-  @param[in]  pi: particle i.
-  @param[in]  pp: particle p.
-  @param[in] smpars: array of double[2]; First element is rcut_out, second element is rcut_in.
+  @param[out] Ai: acceleration vector. \f$Aij[1:3] = m_i m_p (xp[1:3]-xi[1:3]) / |xp-xi|^3 \f$.
+  @param[in]  dt: predict time interval
+  @param[in]  p:  chain particle list
+  @param[in]  np: chain particle number
+  @param[in]  pert: perturber address list
+  @param[in]  pf:  perturber force array
+  @param[in]  pars: ARC pars including rin, rout and perturbation kepler spline interpolation class
  */
-template<class Tptcl>
-void Newtonian_cut_Ap (double Aij[3], double &Pij, const double xi[3], const double xp[3], const Tptcl &pi, const Tptcl &pp, const ARC_int_pars* pars){
-  double dx = xp[0] - xi[0];
-  double dy = xp[1] - xi[1];
-  double dz = xp[2] - xi[2];
-  double mi = pi.mass;
-  double mp = pp.mass;
+template<class Tptcl, class Tpert, class Tforce, class extpar>
+void Newtonian_extA (double3* acc, const PS::F64 dt, Tptcl* p, const PS::S32 np, Tpert* pert, Tforce* pf, const PS::S32 npert, extpar* pars){
+    static const PS::F64 inv3 = 1.0 / 3.0;
+    PS::F64vec xp[npert];
+    for(int i=0; i<npert; i++) 
+        xp[i] = pert[i]->pos + dt*(pert[i]->vel* + 0.5*dt*(pf[i]->acc0 + inv3*dt*pf[i]->acc1));
 
-  double dr2 = dx*dx + dy*dy + dz*dz + pars->eps2;
-  double dr  = std::sqrt(dr2);
-  double dr3 = dr*dr2;
+    for(int i=0; i<np; i++) {
+        PS::F64vec& xi = p[i].pos;
+        acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
+        for(int j=0; j<npert; j++) {
+            
+            PS::F64vec dx = xp[j] - xi;
+            //PS::F64 mi = p[i].mass;
+            PS::F64 mp = pert[j]->mass;
+            PS::F64 dr2 = dx*dx + pars->eps2;
+            PS::F64 dr  = std::sqrt(dr2);
+            PS::F64 dr3 = dr*dr2;
 
-  // smpars[2:3]: rcut_out, rcut_in
-//  const double k   = cutoff_poly_3rd(dr, smpars[0], smpars[1]);
-//  const double kdx = cutoff_poly_3rd_dr(dr, dx, smpars[0], smpars[1]);
-//  const double kdy = cutoff_poly_3rd_dr(dr, dy, smpars[0], smpars[1]);
-//  const double kdz = cutoff_poly_3rd_dr(dr, dz, smpars[0], smpars[1]);  
-  const double r_out = pars->rout;
-//  const double r_out = std::max(pi.r_out, pp.r_out);
-  const double r_in  = pars->rin;
-  const double k = CalcW(dr/r_out, r_in/r_out);
-  const double kdot = cutoff_poly_3rd(dr, r_out, r_in);
+            // smpars[2:3]: rcut_out, rcut_in
+            //  const double k   = cutoff_poly_3rd(dr, smpars[0], smpars[1]);
+            //  const double kdx = cutoff_poly_3rd_dr(dr, dx, smpars[0], smpars[1]);
+            //  const double kdy = cutoff_poly_3rd_dr(dr, dy, smpars[0], smpars[1]);
+            //  const double kdz = cutoff_poly_3rd_dr(dr, dz, smpars[0], smpars[1]);  
+            const PS::F64 r_out = pars->rout;
+            //  const PS::F64 r_out = std::max(pi.r_out, pp.r_out);
+            const PS::F64 r_in  = pars->rin;
+            //const PS::F64 k     = CalcW(dr/r_out, r_in/r_out);
+            const PS::F64 kdot  = cutoff_poly_3rd(dr, r_out, r_in);
 
-  Pij = - mi*mp / dr * (1-k);
+            //Pij = - mi*mp / dr * (1-k);
 
-//  Aij[0] = mp * dx / dr3 * (1-k) + Pij * (1-kdx);
-//  Aij[1] = mp * dy / dr3 * (1-k) + Pij * (1-kdy);
-//  Aij[2] = mp * dz / dr3 * (1-k) + Pij * (1-kdz);
-  Aij[0] = mp * dx / dr3 * (1-kdot);
-  Aij[1] = mp * dy / dr3 * (1-kdot);
-  Aij[2] = mp * dz / dr3 * (1-kdot);
+            // Aij[0] = mp * dx / dr3 * (1-k) + Pij * (1-kdx);
+            // Aij[1] = mp * dy / dr3 * (1-k) + Pij * (1-kdy);
+            // Aij[2] = mp * dz / dr3 * (1-k) + Pij * (1-kdz);
+            acc[i][0] += mp * dx[0] / dr3 * (1-kdot);
+            acc[i][1] += mp * dx[1] / dr3 * (1-kdot);
+            acc[i][2] += mp * dx[2] / dr3 * (1-kdot);
+        }
+    }
 
+    // soft perturbation
 }
 /// end Newtonian cut force (L.Wang)
 
 
 // period of two-body motion
-double Newtonian_timescale(const double m1, const double m2, const double dx[], const double dv[], const ARC_int_pars* par) {
+template<class extpar>
+double Newtonian_timescale(const double m1, const double m2, const double dx[], const double dv[], extpar* par) {
     const double dr2  = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2];
     const double dv2  = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
     const double dr   = std::sqrt(dr2);

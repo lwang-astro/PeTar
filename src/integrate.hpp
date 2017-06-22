@@ -565,8 +565,8 @@ void Isolated_Multiple_integrator(Tptcl * ptcl_org,
                                   PS::F64 &ARC_error,
                                   PS::S32 N_count[20],
 #endif                         
-                                  const ARC::chainpars<Tptcl, ARC_par> &ARC_control,
-                                  ARC_int_pars &Int_pars) {
+                                  const ARC::chainpars &ARC_control,
+                                  ARC_par &Int_pars) {
     // kepler motion test
     if (n_ptcl==2) {
         PS::F64 ax=0,ecc;
@@ -605,7 +605,7 @@ void Isolated_Multiple_integrator(Tptcl * ptcl_org,
         // Not yet implementd
     }
       
-    ARC::chain<Tptcl,ARC_int_pars> c((std::size_t)n_ptcl,ARC_control);
+    ARC::chain<Tptcl> c((std::size_t)n_ptcl);
     static thread_local PS::F64 time_sys = 0.0;
 
     c.addP(n_ptcl,ptcl_org);
@@ -618,8 +618,8 @@ void Isolated_Multiple_integrator(Tptcl * ptcl_org,
         }
 #endif
 
-    c.link_int_par(Int_pars);
-    c.init(time_sys);
+    //c.link_int_par(Int_pars);
+    c.init(time_sys,ARC_control,Int_pars);
 
 #ifdef ARC_ERROR
     PS::F64 ARC_error_once = c.getPot()+c.getEkin();
@@ -651,7 +651,7 @@ void Isolated_Multiple_integrator(Tptcl * ptcl_org,
         //	 std::cout<<ptcl_org[i].getMass()<<" "<<ptcl_org[i].getPos()[0]<<" "<<ptcl_org[i].getPos()[1]<<" "<<ptcl_org[i].getPos()[2]<<" "<<ptcl_org[i].getVel()[0]<<" "<<ptcl_org[i].getVel()[1]<<" "<<ptcl_org[i].getVel()[2]<<std::endl;
         // }
 
-        PS::F64 dsf=c.extrapolation_integration(ds_use,time_end);
+        PS::F64 dsf=c.extrapolation_integration(ds_use,ARC_control,time_end,Int_pars);
 
         // std::cerr<<"Particle=";
         // for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<ptcl_org[i].id<<" ";
@@ -771,8 +771,8 @@ void Isolated_Multiple_integrator(Tptcl * ptcl_org,
 template<class Tptcl, class ARC_par>
 class ARCIntegrator{
 private:
-    typedef ARC::chain<Tptcl,ARC_par> ARChain;
-    typedef ARC::chainpars<Tptcl,ARC_par> ARControl;
+    typedef ARC::chain<Tptcl> ARChain;
+    typedef ARC::chainpars ARControl;
     PS::ReallocatableArray<ARChain> clist_;
 
     ARControl *ARC_control_;

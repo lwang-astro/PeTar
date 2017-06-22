@@ -5,7 +5,7 @@
 #PS_PATH = -I../../../../project/fdps/src
 #PS_PATH = -I../FDPS/src
 PS_PATH  = -I/home/lwang/code/fdps/src
-ARC_PATH = -I../ARC/include
+ARC_PATH = -I/home/lwang/GitHub/ARC/include
 
 #use_k_computer = yes
 #use_xc30_naoj = yes
@@ -71,7 +71,7 @@ all: nbody.out
 nbody.out: $(SRC)
 	$(CXX) $(PS_PATH) $(ARC_PATH) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
-ARC_debug.out: chain_debug.cxx force.hpp
+ARC_debug.out: chain_debug.cxx
 	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -D DEBUG -o $@ $< $(CXXLIBS)
 
 rsearchtest: rsearchtest.cxx
@@ -89,6 +89,8 @@ hermitetest: hermite.cxx
 splinetest: spline.cxx
 	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
+keplersolvertest: keplersolver.cxx
+	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 clean:
 	rm *.out *.o
 cleanall:

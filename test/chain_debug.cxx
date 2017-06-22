@@ -13,104 +13,18 @@
 #endif //USE_C03
 #include<particle_simulator.hpp>
 #include"AR.h"
-#include"force.hpp"
-#include"soft.hpp"
+#include"hard_force.hpp"
 #include"kepler.hpp"
+#include"hard.hpp"
 
 #ifndef NAN_CHECK
 #define NAN_CHECK(val) assert((val) == (val));
 #endif
 
-class PtclHard{
-public:
-    PS::S64 id;
-    PS::F64 mass;
-    PS::F64vec pos;
-    PS::F64vec vel;
-    PS::S32 id_cluster;
-    PS::S32 adr_org;
-    PS::F64 r_factor;
-    PS::F64 dens;
-    PtclHard():id(-1), mass(-1.0){}
-    PtclHard(const PS::S64 _id, 
-             const PS::F64 _mass, 
-             const PS::F64vec & _pos, 
-             const PS::F64vec & _vel,
-             const PS::S32 _id_cluster,
-             const PS::S32 _adr_org): id(_id), mass(_mass), pos(_pos), vel(_vel), 
-                                      id_cluster(_id_cluster), adr_org(_adr_org){}
-
-  /// start Particle member function (L.Wang)
-  //! Get mass (required for \ref ARC::chain)
-  /*! \return mass
-   */
-  const PS::F64 getMass() const{
-    return mass;
-  }
-  
-  //! Get position (required for \ref ARC::chain)
-  /*! \return position vector (PS::F64[3])
-   */
-  const PS::F64* getPos() const{
-    return &pos[0];
-  }
-
-  //! Get velocity (required for \ref ARC::chain)
-  /*! \return velocity vector (PS::F64[3])
-   */
-  const PS::F64* getVel() const{
-    return &vel[0];
-  }
-
-  //!Set position (required for \ref ARC::chain)
-  /*! NAN check will be done
-      @param [in] x: particle position in x axis
-      @param [in] y: particle position in y axis
-      @param [in] z: particle position in z axis
-   */
-  void setPos(const PS::F64 x, const PS::F64 y, const PS::F64 z) {
-    NAN_CHECK(x);
-    NAN_CHECK(y);
-    NAN_CHECK(z);
-    
-    pos[0] = x;
-    pos[1] = y;
-    pos[2] = z;
-  }
-  
-  //!Set velocity (required for \ref ARC::chain)
-  /*! NAN check will be done
-      @param [in] vx: particle velocity in x axis
-      @param [in] vy: particle velocity in y axis 
-      @param [in] vz: particle velocity in z axis 
-  */
-  void setVel(const PS::F64 vx, const PS::F64 vy, const PS::F64 vz) {
-    NAN_CHECK(vx);
-    NAN_CHECK(vy);
-    NAN_CHECK(vz);
-    
-    vel[0] = vx;
-    vel[1] = vy;
-    vel[2] = vz;
-  }
-
-  //!Set mass (required for \ref ARC::chain)
-  /*! NAN check will be done
-      @param [in] m: particle mass
-   */
-  void setMass(const PS::F64 m) {
-    NAN_CHECK(m);
-
-    mass = m;
-  }
-  /// end Particle member function (L.Wang)
-
-};
-
-void chain_print(const ARC::chain<PtclHard,ARC_int_pars> &c, const double ds, const double w, const double pre) {
+void chain_print(const ARC::chain<PtclHard> &c, const double ds, const double w, const double pre) {
   // printing digital precision
   std::cout<<std::setprecision(pre);
-
+ 
   std::cout<<c.getTime()
            <<std::setw(w)<<(c.getEkin()+c.getPot()+c.getPt())/c.getPt()
            <<std::setw(w)<<c.getEkin()
@@ -232,9 +146,10 @@ int main(int argc, char **argv){
 //  const PS::S32 exp_itermax=20;
 //  const PS::S32 exp_fix_iter=0;
   
-  ARC::chainpars<ARC_int_pars> chain_control; ///chain controller (L.Wang)
-  chain_control.setA(Newtonian_cut_AW,Newtonian_cut_Ap,Newtonian_timescale);
-  chain_control.load(parname.c_str());
+  ARC::chainpars chain_control; ///chain controller (L.Wang)
+  ARC_pert_pars int_par;
+  chain_control.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA<PtclHard,PtclHard*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+  chain_control.read(parname.c_str());
 //  else {
 //    chain_control.setabg(0,1,0);
 //    chain_control.setEXP(energy_error,dtmin,dterr,exp_itermax,exp_method,3,(bool)exp_fix_iter);
@@ -242,17 +157,17 @@ int main(int argc, char **argv){
 
   chain_control.print(std::cerr);
   
-  ARC::chain<PtclHard,ARC_int_pars> c(chain_control);
+  ARC::chain<PtclHard> c;
   
   //  c.addP(n,p);
   //  c.Int_pars=ARC_int_pars;
   //  c.init(0);
-  c.load(filename.c_str());
+  c.read(filename.c_str());
   c.print(std::cerr);
 
   bool err_ignore=false;
-  if (rout>0) c.get_int_par().rout = rout;
-  if (rin>0)  c.get_int_par().rin = rin;
+  if (rout>0) int_par.rout = rout;
+  if (rin>0)  int_par.rin = rin;
   if (iter>0) {
     int seq=chain_control.getSeq();
     chain_control.setIterSeq(iter,seq);
@@ -261,14 +176,14 @@ int main(int argc, char **argv){
   }
   if (intp>0) chain_control.setDenIntpmax(intp);
   
-  std::cerr<<"rout = "<<c.get_int_par().rout<<"; rin = "<<c.get_int_par().rin<<std::endl;
+  std::cerr<<"rout = "<<int_par.rout<<"; rin = "<<int_par.rin<<std::endl;
 
-  double nds = c.calc_next_step_custom();
+  double nds = c.calc_next_step_custom(Newtonian_timescale<ARC_pert_pars>,&int_par,0.25);
   std::cerr<<"New ds approx ="<<nds<<std::endl;
 
   int count=0;
   while(toff-c.getTime()>chain_control.dterr||n>0) {
-    PS::F64 dsf=c.extrapolation_integration(ds,toff,NULL,err_ignore);
+    PS::F64 dsf=c.extrapolation_integration<PtclHard*, PtclForce*, ARC_pert_pars>(ds,chain_control,toff,&int_par,NULL,NULL,0,err_ignore);
     //    std::cerr<<" Time="<<c.getTime()<<" Tdiff="<<toff-c.getTime()<<" ds="<<ds<<" dsf="<<dsf<<std::endl;
     chain_print(c,ds,24,16);
 

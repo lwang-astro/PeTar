@@ -203,7 +203,7 @@ int main(int argc, char** argv)
   PS::ReallocatableArray<PtclHard> ptcl_new;
 
   //group.generateList(p, N, adr_group_glb, group_ptcl_glb, group_ptcl_glb_empty_list);
-  group.generateList<ptclTree>(p.getPointer(), N, ptcl_new, par.rin);
+  group.generateList(p.getPointer(), N, ptcl_new, par.rin);
   std::cout<<"GenerateList\n";
   print_p(p.getPointer(),N);
   

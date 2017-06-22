@@ -36,16 +36,17 @@ public:
 
 };
 
-class ptclTree: public PtclHard{
+class ARC_int_pars{
 public:
-    PS::F64 ax, ecc, inc, OMG, omg, tperi, ecca;
-    PtclHard* member[2];
+  PS::F64 rout,rin, eps2;
 };
+
+class ARC_pert_pars: public ARC_int_pars, public keplerSplineFit{ };
 
 class SystemHard{
 public:
     PS::ReallocatableArray<PtclHard> ptcl_hard_;
-    ARC::chainpars<PtclHard,ARC_int_pars> ARC_control; ///chain controller (L.Wang)
+    ARC::chainpars ARC_control; ///chain controller (L.Wang)
 #ifdef ARC_ERROR
     PS::F64 ARC_error_relative;
     PS::F64 ARC_error;  
@@ -180,7 +181,7 @@ public:
     /// start set Chainpars (L.Wang)
     ///
     void setARCParam(const PS::F64 energy_error=1e-10, const PS::F64 dterr=1e-9, const PS::F64 dtmin=1e-24, const PS::S32 exp_method=1, const PS::S32 exp_itermax=20, const PS::S32 den_intpmax=20, const PS::S32 exp_fix_iter=0) {
-        ARC_control.setA(Newtonian_cut_AW<PtclHard>,Newtonian_cut_Ap<PtclHard>,Newtonian_timescale);
+        ARC_control.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA<PtclHard,PtclHard*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
         ARC_control.setabg(0,1,0);
         ARC_control.setErr(energy_error,dtmin,dterr);
         ARC_control.setIterSeq(exp_itermax,3,den_intpmax);
