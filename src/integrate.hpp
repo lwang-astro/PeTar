@@ -423,6 +423,10 @@ public:
     Tptcl* getPtcl() {
         return ptcl_.getPointer();
     }
+    
+    PtclForce* getForce() {
+        return force_.getPointer();
+    }
 
     PS::S32 getPtclN() const {
         return ptcl_.size();
@@ -768,20 +772,36 @@ void Isolated_Multiple_integrator(Tptcl * ptcl_org,
     // for (int i=0;i<n_ptcl;i++) arout<<std::setprecision(17)<<time_origin_<<" "<<ptcl_org[i].mass<<" "<<ptcl_org[i].pos<<" "<<ptcl_org[i].vel<<std::endl;
 }
 
-template<class Tptcl, class ARC_par>
+template<class Tptcl, class Tpert, class Tpforce, class ARC_par_common, class ARC_par>
 class ARCIntegrator{
 private:
     typedef ARC::chain<Tptcl> ARChain;
     typedef ARC::chainpars ARControl;
     PS::ReallocatableArray<ARChain> clist_;
+    PS::ReallocatableArray<ARC_par> par_list_;
+    PS::ReallocatableArray<Tpert*> pert_;
+    PS::ReallocatableArray<Tpforce*> pforce_;
+    PS::ReallocatableArray<PS::S32> npert_;
+    PS::ReallocatableArray<PS::S32> npert_disp_;
 
     ARControl *ARC_control_;
-    ARC_par *Int_pars_;
+    ARC_par_common *Int_pars_;
 
 public:
     ARCIntegrator() {};
-    ARCIntegrator(ARControl &contr, ARC_par &par): ARC_control_(&contr), Int_pars_(&par) {}
+    ARCIntegrator(ARControl &contr, ARC_par_common &par): ARC_control_(&contr), Int_pars_(&par) {}
 
+    void reserveARMem(const PS::S32 n) {
+        clist_.reserve(n);
+        par_list_.reserve(n);
+        npert_.reserve(n);
+        npert_disp_.reserve(n);
+    }
+
+    void reservePertMem(const PS::S32 n) {
+        pert_.reserve(n);
+        pforce_.reserve(n);
+    }
     //void initialize(PS::S32 group_list[];
     //                ReallocatableArray<Tptcl> groups[],
     //                const PS::S32 n_groups,
@@ -804,16 +824,20 @@ public:
     //    Int_pars_ = &Int_pars;
     //}
 
-    void addGroup(PS::S32* group_list,
-                  const PS::S32 n_group,
-                  Tptcl* ptcl_org,
-                  const PS::S32 n_ptcl,
-                  PS::S32* pert_list,
-                  const PS::S32 n_pert,
-                  Tptcl* ptcl_pert,
-                  const PS::S32 n_ptcl_pert) {
-        clist_.push_back(ARChain(n_group,ARC_control_));
-        clist_.back().link_int_par(Int_pars_);
+    void addOneGroup(Tptcl* ptcl_org,
+                     PS::S32* group_list,
+                     const PS::S32 n_group,
+                     PS::S32* soft_pert_list,
+                     const PS::S32 n_split,
+                     Tpert* ptcl_pert,
+                     Tpforce* pert_force,
+                     PS::S32* pert_list,
+                     const PS::S32 n_pert) {
+        const PS::S32 igroup = clist_.size();
+        const PS::S32 ioff = pert_.size();
+        pert_disp_[igroup] = ioff;
+        npert_[igroup] = 0;
+        clist_.push_back(ARChain(n_group));
         for(int i=0; i<n_group; i++) {
 #ifdef HARD_DEBUG
             assert(group_list[i]<n_ptcl);
@@ -821,21 +845,23 @@ public:
             clist_.back().addP(ptcl_org[group_list[i]]);
         }
         for(int i=0; i<n_pert; i++) {
-#ifdef HARD_DEBUG
-            assert(pert_list[i]<n_ptcl_pert);
-#endif
-            clist_.back().addPext(ptcl_pert[pert_list[i]]);
-            clist_.back().init(0);
+            const PS::S32  k = pert_list[i];
+            const PS::S32 ik = ioff+npert_[igroup]++;
+            pert_[ik]   = &ptcl_pert[k];
+            pforce_[ik] = &pert_force[k];
         }
+        par_list_.push_back(ARC_par(*Int_pars));
+        par_list_.back().fit(Tptcl,soft_pert_list,n_split);
     }
 
     void IntegrateOneStep(const PS::S32 ic,
                           const PS::F64 time_end,
                           const PS::F64 dt_limit) {
         ARChain* c = &clist_[ic];
+        ARC_pars* par = &par_list_[ic];
         PS::F64 dscoff=1.0;
         PS::F64 ds_up_limit = 0.25*dt_limit/c->calc_dt_X(1.0);
-        PS::F64 ds_use = c->calc_next_step_custom();
+        PS::F64 ds_use = c->calc_next_step_custom(ARC_control_,par);
         
         if (ds_use>ds_up_limit) ds_use = ds_up_limit;
 
@@ -846,7 +872,8 @@ public:
         bool final_flag=false;
 
         while(time_end-c->getTime()>ARC_control_->dterr) {
-            PS::F64 dsf=c->extrapolation_integration(ds_use,time_end);
+            const PS::S32 ipert = pert_disp_[ic];
+            PS::F64 dsf=c->extrapolation_integration(ds_use, ARC_control_, time_end, par, &pert_[ipert], &pforce_[ipert], npert_[ic]);
             if (dsf<0) {
                 final_flag=true;
                 converge_count++;
@@ -873,7 +900,7 @@ public:
                     dscoff = 0.25;
                     ds_use *= dscoff;
                 }
-                else if (c->info->status==4) ds_use = std::min(dscoff*c->calc_next_step_custom(),ds_up_limit);
+                else if (c->info->status==4) ds_use = std::min(dscoff*c->calc_next_step_custom(ARC_control_, par),ds_up_limit);
                 else ds_use *= 0.1;
                 modify_step_flag=true;
             }
@@ -889,7 +916,7 @@ public:
                     converge_count++;
                 }
                 else if (modify_step_flag&&error_count==0) {
-                    ds_use = std::min(dscoff*c->calc_next_step_custom(),ds_up_limit);
+                    ds_use = std::min(dscoff*c->calc_next_step_custom(ARC_control_, par),ds_up_limit);
                     modify_step_flag=false;
                 }
                 // reducing error counter if integration success, this is to avoid the significant change of step may cause some issue
@@ -912,17 +939,17 @@ public:
                   PS::S32 n_act) {
         for(int i=0; i<n_act; i++) {
             PS::S32 iact = act_list[i];
-            clist_[iact].cm.pos = ptcl[iact].pos;
-            clist_[iact].cm.vel = ptcl[iact].vel;
+            clist_[iact].pos = ptcl[iact].pos;
+            clist_[iact].vel = ptcl[iact].vel;
 #ifdef HARD_DEBUG
-            assert(clist_[iact].cm.mass==ptcl[iact].mass);
+            assert(clist_[iact].mass==ptcl[iact].mass);
 #endif
         }
     }
 
-    void CMshiftreverse() {
+    void resolve() {
         for(int i=0; i<clist_.size(); i++) {
-            clist_[i].center_shift_inverse();
+            clist_[i].resolve();
         }
     }
 

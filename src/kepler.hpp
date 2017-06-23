@@ -523,17 +523,17 @@ public:
     }
     
     template<class Tptcl> 
-    void fit(Tptcl* data, const PS::S32 n_split =8) {
+    void fit(Tptcl* data, PS::S32* list, const PS::S32 n_split =8) {
 #ifdef HARD_DEBUG
         assert(n_split>=4);
 #endif
-        PS::F64 peri=data[0].mass;
+        PS::F64 peri=data[list[0]].mass;
         const PS::U32 np = n_split+1;
         PS::F64 time[np],x[3][np];
         for(int i=0;i<np;i++) {
             time[i] = PS::F64(i)/n_split*peri;
             for(int j=0; j<3; j++)
-                x[j][i] = data[i].vel[j];
+                x[j][i] = data[list[i]].vel[j];
         }
         for(int i=0; i<3; i++) {
             if(acc[i]!=NULL) gsl_interp_accel_free(acc[i]);

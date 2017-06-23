@@ -38,10 +38,19 @@ public:
 
 class ARC_int_pars{
 public:
-  PS::F64 rout,rin, eps2;
+    static PS::F64 rout, rin, eps2;
+    
+    ARC_int_pars() {}
+    ARC_int_pars(const ARC_int_pars& in_) {
+        rout = in_.rout;
+        rin  = in_.rin;
+        eps2 = in_.eps2;
+    }
 };
 
-class ARC_pert_pars: public ARC_int_pars, public keplerSplineFit{ };
+class ARC_pert_pars: public ARC_int_pars, public keplerSplineFit{
+    ARC_pert_pars(const ARC_int_pars& in_): ARC_int_pars(in_) {}
+};
 
 class SystemHard{
 public:
@@ -63,6 +72,7 @@ private:
     PS::F64 gamma_;
     PS::F64 r_search_single_;
     PS::F64 m_average_;
+    PS::S32 n_split_;
 
     ///////////
     /// functor
@@ -115,6 +125,11 @@ private:
             Hint.setParams(dt_limit_hard_, eta_s_, Int_pars.rin, Int_pars.rout, Int_pars.eps2);
             Hint.setPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getNPtcl());
             Hint.searchPerturber();
+
+#ifdef HARD_DEBUG
+            Energy E0, E1;
+            Hint.CalcEnergyHard(E0);
+#endif
             
             PS::S32 group_act_n = 0;
             PS::ReallocatableArray<PS::S32> group_act_list; //active group_list act adr
@@ -130,7 +145,7 @@ private:
             // first particles in Hint.Ptcl are c.m.
             PS::S32 n_groups = group.getNGroups()
             for (int i=0; i<n_groups; i++) 
-                Aint.addGroup(group.getGroup(i), group.getGroupN(i), ptcl_org, n_ptcl, Hint.getPertList(i), Hint.getPertN(i), Hint.getPtcl(), Hint.getNPtcl()); 
+                Aint.addOneGroup(ptcl_org, group.getGroup(i), group.getGroupN(i), group.getGroupPertList(i,n_split_), Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i)); 
             
             PS::S32 time_sys=0.0;
             PS::F64 dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
@@ -143,7 +158,7 @@ private:
                 Aint.updateCM(Hint.getPtcl(), group_act_list.getPointer(), group_act_n);
                 Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
             }
-            Aint.CMshiftreverse();
+            Aint.resolve();
             Hint.writeBackPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getNPtcl());
             
             //group.resolveGroups(ptcl_org, n_ptcl, group_ptcl_glb.getPointer(), group_list.size(), group_list.getPointer(), adr_cm.getPointer());
@@ -255,7 +270,8 @@ public:
                   const PS::F64 _eta,
                   const PS::F64 _time_origin,
                   const PS::F64 _gmin,
-                  const PS::F64 _m_avarage){
+                  const PS::F64 _m_avarage,
+                  const PS::S32 _n_split = 8){
         /// Set chain pars (L.Wang)
 		Int_pars.rin  = _rin;
         Int_pars.eps2  = _eps*_eps;
@@ -266,6 +282,7 @@ public:
         gamma_ = std::pow(1.0/_gmin,0.33333);
         r_search_single_ = _rsearch; 
         m_average_ = _m_avarage;
+        n_split_ = _n_split;
     }
 
 
