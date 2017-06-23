@@ -82,7 +82,7 @@ PtclHard kepler_print(const std::size_t id, const std::size_t ib, PtclHard* c[2]
                    (v[0][1]*m[0]+v[1][1]*m[1])/mt, 
                    (v[0][2]*m[0]+v[1][2]*m[1])/mt);
 
-    return PtclHard(Ptcl(ParticleBase(mt, xcm, vcm), ib, 0, ppars.rout));
+    return PtclHard(Ptcl(ParticleBase(mt, xcm, vcm), ppars.rout, 0, ib, 0));
 }
 
 
@@ -95,8 +95,11 @@ void print_p(PtclHard* p, const int n) {
              <<std::setw(12)<<"v2"
              <<std::setw(12)<<"v3"
              <<std::setw(12)<<"rsearch"
+             <<std::setw(12)<<"mass_bk"
              <<std::setw(12)<<"status"
              <<std::setw(12)<<"id"
+             <<std::setw(12)<<"id_cluster"
+             <<std::setw(12)<<"adr"
              <<std::endl;
     for (int i=0; i<n; i++) {
         std::cout<<std::setw(12)<<p[i].mass
@@ -107,8 +110,11 @@ void print_p(PtclHard* p, const int n) {
                  <<std::setw(12)<<p[i].vel[1]
                  <<std::setw(12)<<p[i].vel[2]
                  <<std::setw(12)<<p[i].r_search
+                 <<std::setw(12)<<p[i].mass_bk
                  <<std::setw(12)<<p[i].status
                  <<std::setw(12)<<p[i].id
+                 <<std::setw(12)<<p[i].id_cluster
+                 <<std::setw(12)<<p[i].adr_org
                  <<std::endl;
     }
 }
@@ -151,8 +157,8 @@ int main(int argc, char** argv)
     PS::F64vec vv1(v1[0],v1[1],v1[2]);
     PS::F64vec vv2(v2[0],v2[1],v2[2]);    
 
-    PtclHard a(Ptcl(ParticleBase(m1,xx1,vv1),idc++,0,par.rout));
-    PtclHard b(Ptcl(ParticleBase(m2,xx2,vv2),idc++,0,par.rout));
+    PtclHard a(Ptcl(ParticleBase(m1,xx1,vv1),par.rout,0,idc++,0));
+    PtclHard b(Ptcl(ParticleBase(m2,xx2,vv2),par.rout,0,idc++,0));
 
     bool flag=plist.link(id,ib,a,b,pshift);
     if (!flag) {
@@ -205,13 +211,13 @@ int main(int argc, char** argv)
   //group.generateList(p, N, adr_group_glb, group_ptcl_glb, group_ptcl_glb_empty_list);
   group.generateList(p.getPointer(), N, ptcl_new, par.rin);
   std::cout<<"GenerateList\n";
-  print_p(p.getPointer(),N);
+  print_p(p.getPointer(),p.size());
   
   //std::cout<<"adr_group_glb: ";
   //for(int i=0; i<adr_group_glb.size(); i++) std::cout<<std::setw(6)<<adr_group_glb[i];
   //std::cout<<std::endl;
   
-  std::cout<<"new ptcl:\n ";
+  std::cout<<"new ptcl: "<<ptcl_new.size()<<"\n ";
   print_p(ptcl_new.getPointer(),ptcl_new.size());
   //for(int i=0; i<ptcl_new.size(); i++) {
   //    print_p(group_ptcl_glb[i].data(),group_ptcl_glb[i].size());
@@ -252,6 +258,84 @@ int main(int argc, char** argv)
   }
   group.resolveGroups();
   std::cout<<"resolvegroups\n";
+  pn.clearSize();
+  for(int i=0;i<group.getNPtcl();i++) pn.push_back(p[group.getPtclList()[i]]);
+  print_p(pn.getPointer(),pn.size());
+
+  // second try
+  group.searchAndMerge(p.getPointer(), N, par.rin);
+  std::cout<<"SearchAndMerge 2nd\n";
+  print_p(p.getPointer(),N);
+
+  for(int i=0; i<group.getNGroups(); i++) {
+      std::cout<<"group["<<i<<"]: ";
+      for(int j=0; j<group.getGroupN(i); j++) {
+          std::cout<<std::setw(10)<<group.getGroup(i)[j];
+      }
+      std::cout<<std::endl;
+  }
+
+  std::cout<<"Ptcl List 2nd:";
+  for(int i=0; i<group.getNPtcl(); i++) {
+      std::cout<<std::setw(10)<<group.getPtclList()[i];
+  }
+  std::cout<<std::endl;
+
+  //PS::ReallocatableArray<PS::S32> adr_group_glb;
+  //PS::ReallocatableArray<std::vector<Ptcl>> group_ptcl_glb; 
+  //PS::ReallocatableArray<PS::S32> group_ptcl_glb_empty_list;
+  ptcl_new.clearSize();
+
+  //group.generateList(p, N, adr_group_glb, group_ptcl_glb, group_ptcl_glb_empty_list);
+  group.generateList(p.getPointer(), N, ptcl_new, par.rin);
+  std::cout<<"GenerateList 2nd\n";
+  print_p(p.getPointer(),p.size());
+  
+  //std::cout<<"adr_group_glb: ";
+  //for(int i=0; i<adr_group_glb.size(); i++) std::cout<<std::setw(6)<<adr_group_glb[i];
+  //std::cout<<std::endl;
+  
+  std::cout<<"new ptcl 2nd: "<<ptcl_new.size()<<"\n ";
+  print_p(ptcl_new.getPointer(),ptcl_new.size());
+  //for(int i=0; i<ptcl_new.size(); i++) {
+  //    print_p(group_ptcl_glb[i].data(),group_ptcl_glb[i].size());
+  //}
+  //p.reserveEmptyAreaAtLeast(ptcl_new.size());
+  //for(int i=0;i<ptcl_new.size();i++) p.pushBackNoCheck(ptcl_new[i]);
+
+  group.findGroups(p.getPointer(),p.size());
+
+  pn.clearSize();
+  pg.clearSize();
+  pp.clearSize();
+  std::cout<<"find groups 2nd\n";
+  for(int i=0;i<group.getNPtcl();i++) pn.push_back(p[group.getPtclList()[i]]);
+  print_p(pn.getPointer(),pn.size());
+  
+  for(int i=0;i<group.getNGroups();i++)  {
+      pg.clearSize();
+      std::cout<<"Group["<<i<<"]: ";
+      for(int j=0;j<group.getGroupN(i);j++) 
+          std::cout<<std::setw(10)<<group.getGroup(i)[j];
+      std::cout<<std::endl;
+      for(int j=0;j<group.getGroupN(i);j++) 
+          pg.push_back(p[group.getGroup(i)[j]]);
+      print_p(pg.getPointer(),pg.size());
+      //for(int j=0;j<group.getGroupN(i);j++) {
+      //    std::cout<<"Member "<<j<<": ";
+      //    for(int k=0;k<8;k++) std::cout<<std::setw(10)<<group.getGroupPertAdr(i,j,k);
+      //    std::cout<<std::endl;
+      //}
+      pp.clearSize();
+      for(int j=0;j<16;j++) {
+          pp.push_back(p[group.getGroupPertList(i)[j]]);
+      }
+      std::cout<<"Pert force:"<<std::endl;
+      print_p(pp.getPointer(),pp.size());
+
+  }
+  group.resolveGroups();
+  std::cout<<"resolvegroups 2nd\n";
   pn.clearSize();
   for(int i=0;i<group.getNPtcl();i++) pn.push_back(p[group.getPtclList()[i]]);
   print_p(pn.getPointer(),pn.size());

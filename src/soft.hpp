@@ -46,20 +46,18 @@ public:
     }
 
     void writeAscii(FILE* fp) const{
-        ParticleBase::writeAscii(fp);
-        fprintf(fp, "%26.17e %26.17e %26.17e %26.17e %26.17e %d %lld %lld\n", 
+        Ptcl::writeAscii(fp);
+        fprintf(fp, "%26.17e %26.17e %26.17e %26.17e %d\n", 
                 this->acc.x, this->acc.y, this->acc.z,  // 9-11
-                this->pot_tot, this->r_search, this->n_ngb, //12-14
-                this->id, this->status);
+                this->pot_tot, this->n_ngb);
     }
 
     void readAscii(FILE* fp) {
-        ParticleBase::readAscii(fp);
-        PS::S64 rcount=fscanf(fp, "%lf %lf %lf %lf %lf %d %lld %lld\n",
+        Ptcl::readAscii(fp);
+        PS::S64 rcount=fscanf(fp, "%lf %lf %lf %lf %d\n",
                               &this->acc.x, &this->acc.y, &this->acc.z,  // 9-11
-                              &this->pot_tot, &this->r_search, &this->n_ngb, 
-                              &this->id, &this->status);
-        if (rcount<8) {
+                              &this->pot_tot, &this->n_ngb);
+        if (rcount<5) {
             std::cerr<<"Error: Data reading fails! requiring data number is 8, only obtain "<<rcount<<".\n";
             abort();
         }

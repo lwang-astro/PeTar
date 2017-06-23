@@ -1168,7 +1168,8 @@ private:
             else {
                 if(is_top) bin.member[i]->status = -std::abs(bin.member[i]->id);
                 else bin.member[i]->status = -std::abs(bin.id);
-                bin.member[i]->mass /= 2.0*n_split;
+                bin.member[i]->mass_bk = bin.member[i]->mass;
+                bin.member[i]->mass    = 0.0;
                 nloc += 1;
             }
         }
@@ -1181,12 +1182,15 @@ private:
                               PS::ReallocatableArray<PS::S32> & empty_list,
                               Tptree &bin,
                               const PS::S32 n_split = 8) {
-        const PS::F64 dt = bin.peri/n_split;
+        const PS::F64 dE = 8.0*atan(1.0)/n_split;
+        //const PS::F64 dt = bin.peri/n_split;
         if (n_split<4) {
             std::cerr<<"N_SPLIT to small to save binary parameters, should be larger than 4!";
             abort();
         }
         PS::F64 bindata[4][2];
+        PS::F64* pm[n_split][2];
+        //Tptcl* plist[n_split][2];
         /*
           acc, ecc
           peri, tperi,
@@ -1202,6 +1206,9 @@ private:
         bindata[3][0] = bin.omg; 
         bindata[3][1] = bin.ecca;
         
+        PS::F64 mfactor;
+        PS::F64 mnormal=0.0;
+
         for (int i=0; i<n_split; i++) {
             Tptcl* p[2];
             for(int j=0; j<2; j++) {
@@ -1218,19 +1225,32 @@ private:
                 p[j]->id = bin.member[j]->id;
                 p[j]->r_search = bin.member[j]->r_search;
                 p[j]->status = (bin.id<<ID_PHASE_SHIFT)|i;
+                pm[i][j] = &(p[j]->mass);
             }
-            center_of_mass_shift(*(Tptcl*)&bin,p,2);
-            DriveKeplerOrbParam(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass, (i+1)*dt, bin.ax, bin.ecc, bin.inc, bin.OMG, bin.omg, bin.peri, bin.ecca);
+            // center_of_mass_shift(*(Tptcl*)&bin,p,2);
+            OrbParam2PosVel(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass,
+                            bin.ax, bin.ecc, bin.inc, bin.OMG, bin.omg, dE*i);
+            //DriveKeplerOrbParam(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass, (i+1)*dt, bin.ax, bin.ecc, bin.inc, bin.OMG, bin.omg, bin.peri, bin.ecca);
+            PS::F64vec dvvec= p[0]->vel - p[1]->vel;
+            PS::F64 odv = 1.0/std::sqrt(dvvec*dvvec);
+            for(int j=0; j<2; j++) p[j]->mass *= odv;
+                //if(i==0) p[j]->mass /= 2.0*n_split;
+                //else p[j]->mass /= n_split;
+            mnormal += odv;
             center_of_mass_correction(*(Tptcl*)&bin,p,2);
-            for(int j=0; j<2; j++) {
-                if(i==0) p[j]->mass /= 2.0*n_split;
-                else p[j]->mass /= n_split;
-            }
             if(i<4) {
                 p[0]->vel[0] = bindata[i][0];
                 p[1]->vel[0] = bindata[i][1];
             }
         }
+        mfactor = 1.0/mnormal;
+        for (int i=0; i<n_split; i++) 
+            for (int j=0; j<2; j++) 
+                *pm[i][j] *= mfactor;
+        //mfactor *= 0.5;
+        //*pm[0][0] *= mfactor;
+        //*pm[0][1] *= mfactor;
+        //mfactor /= n_split;
         PS::S32 nbin = setGroupMemberPars(bin, n_split, true);
         Tptcl* pcm;
         if(empty_list.size()>0) {
@@ -1241,6 +1261,7 @@ private:
             ptcl_extra.push_back(Tptcl());
             pcm = &ptcl_extra.back();
         }
+        pcm->mass_bk = pcm->mass;
         pcm->mass = 0.0;
         pcm->pos = bin.pos;
         pcm->vel = bin.vel;
@@ -1488,15 +1509,16 @@ public:
                 PS::S32 idcm = (ptcl_org[i].status>>ID_PHASE_SHIFT);
                 PS::S32 phase = ptcl_org[i].status&ID_PHASE_MASKER;
                 PS::S32 icm = cm_adr.at(-idcm);
-                if(phase==0) {
+                auto itr = fake_cm.find(ptcl_org[i].id);
+                if(itr==fake_cm.end()) {
                     fake_cm[ptcl_org[i].id] = idcm;
                     fake_order[ptcl_org[i].id] = soft_pert_list_n[icm];
                     PS::S32 ipos = soft_pert_list_disp[icm] + soft_pert_list_n[icm]++;
                     fake_adr[ptcl_org[i].id] = ipos;
-                    soft_pert_list_[ipos] = i;
+                    soft_pert_list_[ipos+phase*2] = i;
 #ifdef HARD_DEBUG
                     icount[i]++;
-                    scount[ipos]++;
+                    scount[ipos+phase*2]++;
 #endif
                 }
                 else {
@@ -1557,14 +1579,15 @@ public:
 #endif
         
         for (int i=0; i<n_groups; i++) { // get correct mass
-            PS::F64 masscm = 0.0;
+            //PS::F64 masscm = 0.0;
             for (int j=0; j<group_list_n_[i]; j++) {
                 PS::S32 i_mem  = group_list_[group_list_disp_[i]+j];
                 //PS::S32 i_fake = soft_pert_list_[soft_pert_list_disp_[i]+j];
-                ptcl_org[i_mem].mass *= n_split*2.0;
-                masscm += ptcl_org[i_mem].mass;
+                ptcl_org[i_mem].mass = ptcl_org[i_mem].mass_bk;
+                //masscm += ptcl_org[i_mem].mass;
             }
-            ptcl_org[p_list_[i]].mass = masscm;
+            const PS::S32 pid = p_list_[i];
+            ptcl_org[pid].mass = ptcl_org[pid].mass_bk;
         }
         
         // get 

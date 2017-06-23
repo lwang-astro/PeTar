@@ -136,10 +136,15 @@ int main(int argc, char** argv)
   printf("original:\n");
   print_p(p,2);
 
-  double dt = peri/8.0;
+  //double dt = peri/8.0;
+  const double dE = atan(1.0);
   for(int i=0; i<8; i++) {
-      DriveKeplerOrbParam(p[0].pos, p[1].pos, p[0].vel, p[1].vel, p[0].mass, p[1].mass, (i+1)*dt, ax, ecc, inc, OMG, omg, peri, ecca);      
-      printf("peri = %e, t = %e\n",peri,(i+1)*dt);
+      //DriveKeplerOrbParam(p[0].pos, p[1].pos, p[0].vel, p[1].vel, p[0].mass, p[1].mass, (i+1)*dt, ax, ecc, inc, OMG, omg, peri, ecca);      
+      double enow = dE*i+ecca;
+      OrbParam2PosVel(p[0].pos, p[1].pos, p[0].vel, p[1].vel, p[0].mass, p[1].mass,
+                      ax, ecc, inc, OMG, omg, enow);
+      //printf("peri = %e, t = %e\n",peri,(i+1)*dt);
+      printf("ecc_a = %e\n",enow);
       print_p(p,2);
       kepler_print(0,0,p);
   }
