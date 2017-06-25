@@ -38,7 +38,7 @@ public:
 
 class ARC_int_pars{
 public:
-    static PS::F64 rout, rin, eps2;
+    PS::F64 rout, rin, eps2;
     
     ARC_int_pars() {}
     ARC_int_pars(const ARC_int_pars& in_) {
@@ -49,8 +49,17 @@ public:
 };
 
 class ARC_pert_pars: public ARC_int_pars, public keplerSplineFit{
+public:
+    ARC_pert_pars() {}
     ARC_pert_pars(const ARC_int_pars& in_): ARC_int_pars(in_) {}
 };
+
+#ifdef HARD_DEBUG
+class HardEnergy {
+public:
+    PS::F64 kin, pot, tot;
+};
+#endif
 
 class SystemHard{
 public:
@@ -110,76 +119,85 @@ private:
         return dt_limit_ret;
     }
 
-    template<class Tptcl>
-    void driveForMultiClusterImpl(Tptcl * ptcl_org,
+    void driveForMultiClusterImpl(PtclHard * ptcl_org,
                                   const PS::S32 n_ptcl,
                                   const PS::F64 time_end,
-                                  PS::ReallocatableArray<Tptcl> & ptcl_new) {
-#ifdef HERMITE
-        if(n_ptcl>5) {
-            SearchGroup<Tptcl> group;
+                                  PS::ReallocatableArray<PtclHard> & ptcl_new) {
+//#ifdef HERMITE
+//        if(n_ptcl>5) {
+        SearchGroup<PtclHard> group;
             
-            group.findGroups(ptcl_org, n_ptcl);
+        group.findGroups(ptcl_org, n_ptcl);
             
-            HermiteIntegrator<Tptcl> Hint;
-            Hint.setParams(dt_limit_hard_, eta_s_, Int_pars.rin, Int_pars.rout, Int_pars.eps2);
-            Hint.setPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getNPtcl());
-            Hint.searchPerturber();
+        HermiteIntegrator<PtclHard> Hint;
+        Hint.setParams(dt_limit_hard_, eta_s_, Int_pars.rin, Int_pars.rout, Int_pars.eps2);
+        Hint.setPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getNPtcl());
+        Hint.searchPerturber();
 
 #ifdef HARD_DEBUG
-            Energy E0, E1;
-            Hint.CalcEnergyHard(E0);
+        HardEnergy E0, E1;
+        Hint.CalcEnergyHard(E0);
 #endif
             
-            PS::S32 group_act_n = 0;
-            PS::ReallocatableArray<PS::S32> group_act_list; //active group_list act adr
-            // ReallocatableArray<PS::S32> group_list;     //group.adr list
-            // ReallocatableArray<PS::S32> status;      //ptcl -> group.adr [non cm is -1] (value of Ptcl.status)
-            // ReallocatableArray<PS::S32> status_map;  //ptcl -> group_list index [non cm is -1]
-            // ReallocatableArray<PS::S32> adr_cm;         //group_list index -> ptcl.cm
-            // group.findGroups(group_list, status, status_map,  adr_cm, group_act_n, ptcl_org, n_ptcl);
-            group_act_list.resizeNoInitialize(group.getNPtcl());
+        PS::S32 group_act_n = 0;
+        PS::ReallocatableArray<PS::S32> group_act_list; //active group_list act adr
+        // ReallocatableArray<PS::S32> group_list;     //group.adr list
+        // ReallocatableArray<PS::S32> status;      //ptcl -> group.adr [non cm is -1] (value of Ptcl.status)
+        // ReallocatableArray<PS::S32> status_map;  //ptcl -> group_list index [non cm is -1]
+        // ReallocatableArray<PS::S32> adr_cm;         //group_list index -> ptcl.cm
+        // group.findGroups(group_list, status, status_map,  adr_cm, group_act_n, ptcl_org, n_ptcl);
+        group_act_list.resizeNoInitialize(group.getNPtcl());
             
-            ARCIntegrator Aint(ARC_control, Int_pars);
+        ARCIntegrator<PtclHard, PtclHard, PtclForce, ARC_int_pars, ARC_pert_pars> Aint(ARC_control, Int_pars);
 
-            // first particles in Hint.Ptcl are c.m.
-            PS::S32 n_groups = group.getNGroups()
-            for (int i=0; i<n_groups; i++) 
-                Aint.addOneGroup(ptcl_org, group.getGroup(i), group.getGroupN(i), group.getGroupPertList(i,n_split_), Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i)); 
+        // first particles in Hint.Ptcl are c.m.
+        PS::S32 n_groups = group.getNGroups();
+        Aint.reserveARMem(n_groups);
+        Aint.reservePertMem(Hint.getPertNtot());
+        for (int i=0; i<n_groups; i++) 
+            Aint.addOneGroup(ptcl_org, group.getGroup(i), group.getGroupN(i), group.getGroupPertList(i,n_split_), n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i)); 
             
-            PS::S32 time_sys=0.0;
-            PS::F64 dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
-            Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups);
-            while(time_sys<time_end) {
-                time_sys = Hint.getNextTime();
-                dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
-                Aint.integrateOneStepList(group_act_list.getPointer(), group_act_n, time_sys, dt_limit);
-                Hint.integrateOneStep(time_sys,dt_limit);
-                Aint.updateCM(Hint.getPtcl(), group_act_list.getPointer(), group_act_n);
-                Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
-            }
-            Aint.resolve();
-            Hint.writeBackPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getNPtcl());
+        PS::S32 time_sys=0.0;
+        PS::F64 dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
+        Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups);
+        while(time_sys<time_end) {
+            time_sys = Hint.getNextTime();
+            dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
+            Aint.integrateOneStepList(group_act_list.getPointer(), group_act_n, time_sys, dt_limit);
+            Hint.integrateOneStep(time_sys,dt_limit);
+            Aint.updateCM(Hint.getPtcl(), group_act_list.getPointer(), group_act_n);
+            Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
+        }
+        Aint.resolve();
+        Hint.writeBackPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getNPtcl());
+
+#ifdef HARD_DEBUG
+        Hint.CalcEnergyHard(E1);
+#ifdef HARD_ERROR
+        fprintf(stderr,"Hard Energy: init =%e, end =%e, error =%e, kin =%e pot =%e\n", E0.tot, E1.tot, (E1.tot-E0.tot)/E0.tot, E1.kin, E1.pot);
+#endif
+#endif
             
-            //group.resolveGroups(ptcl_org, n_ptcl, group_ptcl_glb.getPointer(), group_list.size(), group_list.getPointer(), adr_cm.getPointer());
-            group.resolveGroups();
-            group.searchAndMerge(ptcl_org, n_ptcl, Int_pars.rin);
-            // Kickcorrect(ptcl_org, group.getRoutChangeList());
-            group.generatelist(ptcl_org, n_ptcl, ptcl_new);
+        //group.resolveGroups(ptcl_org, n_ptcl, group_ptcl_glb.getPointer(), group_list.size(), group_list.getPointer(), adr_cm.getPointer());
+        group.resolveGroups();
+        group.searchAndMerge(ptcl_org, n_ptcl, Int_pars.rin);
+        // Kickcorrect(ptcl_org, group.getRoutChangeList());
+        group.generateList(ptcl_org, n_ptcl, ptcl_new, Int_pars.rin, n_split_);
 
             // group.reverseCopy(ptcl_org, n_ptcl);
-        }
-        else 
-#endif
-            PS::F64 dt_limit = calcDtLimit(0.0, dt_limit_hard_);
-            Multiple_integrator(ptcl_org, n_ptcl, time_end, dt_limit,
-                                r_search_single_, gamma_, m_average_,
-#ifdef ARC_ERROR
-                                ARC_error_relative,
-                                ARC_error,
-                                N_count,
-#endif
-                                ARC_control, Int_pars);
+//        }
+//        else {
+//#endif
+//            PS::F64 dt_limit = calcDtLimit(0.0, dt_limit_hard_);
+//            Multiple_integrator(ptcl_org, n_ptcl, time_end, dt_limit,
+//                                r_search_single_, gamma_, m_average_,
+//#ifdef ARC_ERROR
+//                                ARC_error_relative,
+//                                ARC_error,
+//                                N_count,
+//#endif
+//                                ARC_control, Int_pars);
+//        }
     }
 
 public:
@@ -437,7 +455,6 @@ public:
 
 //////////////////
 // for multi cluster
-    template<class Tptcl>
     void driveForMultiCluster(const PS::F64 dt){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         /*
@@ -449,7 +466,7 @@ public:
         for(PS::S32 i=0; i<n_cluster; i++){
             const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
-            PS::ReallocatableArray<Tptcl> extra_ptcl;
+            PS::ReallocatableArray<PtclHard> extra_ptcl;
             driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, dt, extra_ptcl);
             {
                 
@@ -457,7 +474,6 @@ public:
         }
     }
 
-    template<class Tptcl>
     void driveForMultiClusterOMP(const PS::F64 dt){
 
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
@@ -466,7 +482,7 @@ public:
         for(PS::S32 i=0; i<n_cluster; i++){
             const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
-            PS::ReallocatableArray<Tptcl> extra_ptcl;
+            PS::ReallocatableArray<PtclHard> extra_ptcl;
             driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, dt, extra_ptcl);
 #pragma omp critical
             {

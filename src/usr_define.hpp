@@ -12,6 +12,9 @@ public:
     //! defaulted constructor 
     ParticleBase() {}
 
+    template<class Tp>
+    ParticleBase(const Tp &p) { DataCopy(p);}
+
     //! constructor 
     ParticleBase(const PS::F64 _mass, 
                  const PS::F64vec & _pos, 

@@ -530,7 +530,7 @@ public:
         PS::F64 peri=data[list[0]].mass;
         const PS::U32 np = n_split+1;
         PS::F64 time[np],x[3][np];
-        for(int i=0;i<np;i++) {
+        for(PS::U32 i=0;i<np;i++) {
             time[i] = PS::F64(i)/n_split*peri;
             for(int j=0; j<3; j++)
                 x[j][i] = data[list[i]].vel[j];

@@ -1698,7 +1698,7 @@ public:
         return soft_pert_list_[i*2*n_split+j+2*iphase];
     }
     // 
-    const PS::S32* getGroupPertList(const std::size_t i, const PS::S32 n_split = 8) const {
+    PS::S32* getGroupPertList(const std::size_t i, const PS::S32 n_split = 8) {
         return &soft_pert_list_[i*2*n_split];
     }
     

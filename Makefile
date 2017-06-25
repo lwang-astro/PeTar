@@ -54,10 +54,11 @@ CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -fopenmp
 CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
 CXXFLAGS += -DDIV_FIX -DP3T_64BIT
 #CXXFLAGS += -DUSE_QUAD 
-CXXFLAGS += -DARC_ERROR
+CXXFLAGS += -D ARC_ERROR
 CXXFLAGS += -D ARC_WARN
 CXXFLAGS += -D SAFETY_CHECK
 CXXFLAGS += -D HARD_DEBUG
+CXXFLAGS += -D HARD_ERROR
 #CXXFLAGS += -D DEBUG
 #CXXFLAGS += -D DEBUG_TEMP
 #CXXFLAGS += -D DEBUG_OUTPUT
@@ -91,6 +92,10 @@ splinetest: spline.cxx
 
 keplersolvertest: keplersolver.cxx
 	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $< $(CXXLIBS)
+
+hardtest: hard.cxx
+	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $< $(CXXLIBS)
+
 clean:
 	rm *.out *.o
 cleanall:

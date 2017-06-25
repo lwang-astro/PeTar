@@ -412,12 +412,16 @@ public:
 #endif
     }
 
-    PS::S32* getPertList(const PS::S32 i) const {
+    PS::S32* getPertList(const PS::S32 i) {
         return &Jlist_[Jlist_disp_[i]];
     }
 
     PS::S32 getPertN(const PS::S32 i) const {
         return Jlist_n_[i];
+    }
+
+    PS::S32 getPertNtot() const {
+        return Jlist_.size();
     }
 
     Tptcl* getPtcl() {
@@ -781,8 +785,8 @@ private:
     PS::ReallocatableArray<ARC_par> par_list_;
     PS::ReallocatableArray<Tpert*> pert_;
     PS::ReallocatableArray<Tpforce*> pforce_;
-    PS::ReallocatableArray<PS::S32> npert_;
-    PS::ReallocatableArray<PS::S32> npert_disp_;
+    PS::ReallocatableArray<PS::S32> pert_n_;
+    PS::ReallocatableArray<PS::S32> pert_disp_;
 
     ARControl *ARC_control_;
     ARC_par_common *Int_pars_;
@@ -794,8 +798,8 @@ public:
     void reserveARMem(const PS::S32 n) {
         clist_.reserve(n);
         par_list_.reserve(n);
-        npert_.reserve(n);
-        npert_disp_.reserve(n);
+        pert_n_.reserve(n);
+        pert_disp_.reserve(n);
     }
 
     void reservePertMem(const PS::S32 n) {
@@ -835,33 +839,30 @@ public:
                      const PS::S32 n_pert) {
         const PS::S32 igroup = clist_.size();
         const PS::S32 ioff = pert_.size();
-        pert_disp_[igroup] = ioff;
-        npert_[igroup] = 0;
+        pert_disp_.push_back(ioff);
+        pert_n_.push_back(0);
         clist_.push_back(ARChain(n_group));
         for(int i=0; i<n_group; i++) {
-#ifdef HARD_DEBUG
-            assert(group_list[i]<n_ptcl);
-#endif
             clist_.back().addP(ptcl_org[group_list[i]]);
         }
         for(int i=0; i<n_pert; i++) {
             const PS::S32  k = pert_list[i];
-            const PS::S32 ik = ioff+npert_[igroup]++;
+            const PS::S32 ik = ioff+pert_n_[igroup]++;
             pert_[ik]   = &ptcl_pert[k];
             pforce_[ik] = &pert_force[k];
         }
-        par_list_.push_back(ARC_par(*Int_pars));
-        par_list_.back().fit(Tptcl,soft_pert_list,n_split);
+        par_list_.push_back(ARC_par(*Int_pars_));
+        par_list_.back().fit(ptcl_org,soft_pert_list,n_split);
     }
 
     void IntegrateOneStep(const PS::S32 ic,
                           const PS::F64 time_end,
                           const PS::F64 dt_limit) {
         ARChain* c = &clist_[ic];
-        ARC_pars* par = &par_list_[ic];
+        ARC_par* par = &par_list_[ic];
         PS::F64 dscoff=1.0;
-        PS::F64 ds_up_limit = 0.25*dt_limit/c->calc_dt_X(1.0);
-        PS::F64 ds_use = c->calc_next_step_custom(ARC_control_,par);
+        PS::F64 ds_up_limit = 0.25*dt_limit/c->calc_dt_X(1.0,*ARC_control_);
+        PS::F64 ds_use = c->calc_next_step_custom(*ARC_control_,par);
         
         if (ds_use>ds_up_limit) ds_use = ds_up_limit;
 
@@ -873,7 +874,7 @@ public:
 
         while(time_end-c->getTime()>ARC_control_->dterr) {
             const PS::S32 ipert = pert_disp_[ic];
-            PS::F64 dsf=c->extrapolation_integration(ds_use, ARC_control_, time_end, par, &pert_[ipert], &pforce_[ipert], npert_[ic]);
+            PS::F64 dsf=c->extrapolation_integration(ds_use, *ARC_control_, time_end, par, &pert_[ipert], &pforce_[ipert], pert_n_[ic]);
             if (dsf<0) {
                 final_flag=true;
                 converge_count++;
@@ -900,7 +901,7 @@ public:
                     dscoff = 0.25;
                     ds_use *= dscoff;
                 }
-                else if (c->info->status==4) ds_use = std::min(dscoff*c->calc_next_step_custom(ARC_control_, par),ds_up_limit);
+                else if (c->info->status==4) ds_use = std::min(dscoff*c->calc_next_step_custom(*ARC_control_, par),ds_up_limit);
                 else ds_use *= 0.1;
                 modify_step_flag=true;
             }
@@ -916,7 +917,7 @@ public:
                     converge_count++;
                 }
                 else if (modify_step_flag&&error_count==0) {
-                    ds_use = std::min(dscoff*c->calc_next_step_custom(ARC_control_, par),ds_up_limit);
+                    ds_use = std::min(dscoff*c->calc_next_step_custom(*ARC_control_, par),ds_up_limit);
                     modify_step_flag=false;
                 }
                 // reducing error counter if integration success, this is to avoid the significant change of step may cause some issue

@@ -22,8 +22,10 @@ public:
     Ptcl(): id(-1), status(-1) {}
 
     template<class Tp>
-    Ptcl(const Tp& p, const PS::F64 r_search_, const PS::F64 mass_bk_, const PS::S64 id_, const PS::S64 status_):
-        r_search(r_search_), mass_bk(mass_bk_), id(id_), status(status_)  {ParticleBase::DataCopy(p);}
+    Ptcl(const Tp& p_): ParticleBase(p_), id(-1), status(-1) {}
+
+    template<class Tp>
+    Ptcl(const Tp& p_, const PS::F64 r_search_, const PS::F64 mass_bk_, const PS::S64 id_, const PS::S64 status_): ParticleBase(p_), r_search(r_search_), mass_bk(mass_bk_), id(id_), status(status_)  {}
 
     template<class Tp>
     void DataCopy(const Tp& p) {
