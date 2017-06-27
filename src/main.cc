@@ -287,13 +287,13 @@ int main(int argc, char *argv[]){
                                        dinfo);
 
     SystemHard system_hard_one_cluster;
-    system_hard_one_cluster.setParam(r_out, r_in, eps, dt_soft/dt_limit_hard_factor, eta, time_sys, g_min, m_average);
+    system_hard_one_cluster.setParam(r_search_min, r_out, r_in, eps, dt_soft/dt_limit_hard_factor, eta, time_sys, g_min, m_average);
     // system_hard_one_cluster.setARCParam();
     SystemHard system_hard_isolated;
-    system_hard_isolated.setParam(r_out, r_in, eps,  dt_soft/dt_limit_hard_factor, eta, time_sys, g_min, m_average);
+    system_hard_isolated.setParam(r_search_min, r_out, r_in, eps,  dt_soft/dt_limit_hard_factor, eta, time_sys, g_min, m_average);
     system_hard_isolated.setARCParam();
     SystemHard system_hard_conected;
-    system_hard_conected.setParam(r_out, r_in, eps, dt_soft/dt_limit_hard_factor, eta, time_sys, g_min, m_average);
+    system_hard_conected.setParam(r_search_min, r_out, r_in, eps, dt_soft/dt_limit_hard_factor, eta, time_sys, g_min, m_average);
     system_hard_conected.setARCParam();
 
     SearchCluster search_cluster;

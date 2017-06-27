@@ -1111,33 +1111,36 @@ private:
                 group_list.push_back(p_list[partner_index[inext].first]);
                 inext=partner_index[inext].second;
                 k++;
-#ifdef HARD_DEBUG
-                assert(k<=npart);
-                if(npart>n_ptcl) {
-                    std::cerr<<"Error mismatch: npart ="<<npart<<" ; n_ptcl = "<<n_ptcl<<std::endl;
-                    abort();
-                }
-#endif
             }
+#ifdef HARD_DEBUG
+            assert(k==npart);
+            if(npart>n_ptcl) {
+                std::cerr<<"Error: connect group particle number mismatch: npart ="<<npart<<" ; n_ptcl = "<<n_ptcl<<std::endl;
+                abort();
+            }
+#endif
+
             //n_group.push_back(npart);
             //n_groups++;
         }
     }
 
-    PS::S32 connectGroups(const PS::U32 ip,
-                          const PS::U32 iend,
+    PS::S32 connectGroups(const PS::S32 ip,
+                          const PS::S32 iend,
                           PS::S32 part_list[],
                           PS::S32 part_list_disp[],
                           PS::S32 part_list_n[],
                           PS::ReallocatableArray<PLinker> & partner_index,
                           PS::ReallocatableArray<PS::S32> & reverse_list) {
         PS::S32 n_connected = 0;
+        PS::S32 n_reduce = 0;
         PS::U32 inow=ip;
         PS::S32 kp = partner_index[ip].first;
         std::vector<PS::U32> rlist;
         for(PS::S32 j=0; j<part_list_n[kp]; j++) {
-            PS::U32 inext = reverse_list[part_list[part_list_disp[kp]+j]];
+            PS::S32 inext = reverse_list[part_list[part_list_disp[kp]+j]];
             if(partner_index[inext].second<0&&inext!=iend) {
+                if(partner_index[inow].second>=0) n_reduce++;
                 partner_index[inow].second = inext;
                 rlist.push_back(inext);
                 n_connected++;
@@ -1154,7 +1157,7 @@ private:
             PS::U32 inext = partner_index[inow].second;
             n_connected += connectGroups(inow,inext,part_list,part_list_disp,part_list_n,partner_index,reverse_list);
         }
-        return n_connected;
+        return n_connected - n_reduce;
     }
 
 
@@ -1261,7 +1264,7 @@ private:
             ptcl_extra.push_back(Tptcl());
             pcm = &ptcl_extra.back();
         }
-        pcm->mass_bk = pcm->mass;
+        pcm->mass_bk = bin.mass;
         pcm->mass = 0.0;
         pcm->pos = bin.pos;
         pcm->vel = bin.vel;

@@ -312,6 +312,10 @@ private:
             pri->dt = dt_limit;
             while(pri->dt > dt_ref) pri->dt *= 0.5;
             pri->dt = dt_old*2 < pri->dt ?  dt_old*2 : pri->dt;
+#ifdef HARD_DEBUG
+            assert(pri->dt != 0.0);
+            assert(pri->dt >1.0e-12);
+#endif
         }
     }
 
@@ -364,7 +368,9 @@ public:
 #endif
         resizeArray(ptcl_n);
         for (int i=0; i<ptcl_n; i++) {
-            ptcl_.pushBackNoCheck(ptcl_org[ptcl_list[i]]);
+            ptcl_.increaseSize(1);
+            ptcl_.back().DataCopy(ptcl_org[ptcl_list[i]]);
+            //ptcl_.pushBackNoCheck(ptcl_org[ptcl_list[i]]);
         }
     }
 
@@ -494,7 +500,6 @@ public:
             time_next_[i] = pred_[i].time + pred_[i].dt;
         }
         SortAndSelectIp(adr_sorted_.getPointer(), time_next_.getPointer(), n_act_, time_next_.size(), group_act_list, group_act_n, n_groups);
-        
     }
     
     template<class Energy>
@@ -797,9 +802,13 @@ public:
 
     void reserveARMem(const PS::S32 n) {
         clist_.reserve(n);
+        //clist_.resizeNoInitialize(n);
         par_list_.reserve(n);
+        //par_list_.resizeNoInitialize(n);
         pert_n_.reserve(n);
+        //pert_n_.resizeNoInitialize(n);
         pert_disp_.reserve(n);
+        //pert_disp_.resizeNoInitialize(n);
     }
 
     void reservePertMem(const PS::S32 n) {
@@ -841,7 +850,8 @@ public:
         const PS::S32 ioff = pert_.size();
         pert_disp_.push_back(ioff);
         pert_n_.push_back(0);
-        clist_.push_back(ARChain(n_group));
+        clist_.increaseSize(1);
+        clist_.back().allocate(n_group);
         for(int i=0; i<n_group; i++) {
             clist_.back().addP(ptcl_org[group_list[i]]);
         }
@@ -853,9 +863,11 @@ public:
         }
         par_list_.push_back(ARC_par(*Int_pars_));
         par_list_.back().fit(ptcl_org,soft_pert_list,n_split);
+        clist_.back().init(0.0, *ARC_control_, &(par_list_.back()));
+        return;
     }
 
-    void IntegrateOneStep(const PS::S32 ic,
+    void integrateOneStep(const PS::S32 ic,
                           const PS::F64 time_end,
                           const PS::F64 dt_limit) {
         ARChain* c = &clist_[ic];
@@ -931,7 +943,7 @@ public:
                               const PS::F64 time_end,
                               const PS::F64 dt_limit) {
         for(int i=0; i<n_act; i++) {
-            IntegrateOneStep(act_list[i], time_end, dt_limit);
+            integrateOneStep(act_list[i], time_end, dt_limit);
         }
     }
 
@@ -955,10 +967,12 @@ public:
     }
 
 #ifdef ARC_ERROR
-    void ErrorRecord(PS::F64 &ARC_error) {
-        ARC_error = 0.0;
+    void EnergyRecord(PS::F64 &energy, PS::F64 &pt) {
+        energy = 0.0;
+        pt = 0.0;
         for(int i=0; i<clist_.size(); i++) {
-            ARC_error += clist_[i].getPot()+clist_[i].getEkin();
+            energy += clist_[i].getPot()+clist_[i].getEkin();
+            pt     += clist_[i].getPt();
         }
     }
 #endif                         

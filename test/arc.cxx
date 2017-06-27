@@ -51,16 +51,6 @@ void print_p(PtclHard* p, const int n) {
     }
 }
 
-void write_p(FILE* fout, const PS::F64 time, const PtclHard* p, const int n) {
-    fprintf(fout,"%e ",time);
-    for (int i=0; i<n; i++) {
-        fprintf(fout,"%e %e %e %e %e %e %e ", 
-                p[i].mass, p[i].pos[0], p[i].pos[1], p[i].pos[2], 
-                p[i].vel[0], p[i].vel[1], p[i].vel[2]);
-    }
-    fprintf(fout,"\n");
-}
-
 int main(int argc, char** argv)
 {
   // data file name
@@ -104,34 +94,35 @@ int main(int argc, char** argv)
 
   print_p(p.getPointer(),N);
 
-  SearchGroup<PtclHard> group;
-  group.findGroups(p.getPointer(), N);
-  group.searchAndMerge(p.getPointer(), N, rin);
-  std::cerr<<"SearchAndMerge\n";
-  //print_p(p.getPointer(),N);
-  
-  for(int i=0; i<group.getNGroups(); i++) {
-      std::cerr<<"group["<<i<<"]: ";
-      for(int j=0; j<group.getGroupN(i); j++) {
-          std::cerr<<std::setw(10)<<group.getGroup(i)[j];
-      }
-      std::cerr<<std::endl;
-  }
+  const PS::S32 n_split = 8;
 
-  std::cerr<<"Ptcl List:";
-  for(int i=0; i<group.getNPtcl(); i++) {
-      std::cerr<<std::setw(10)<<group.getPtclList()[i];
-  }
-  std::cerr<<std::endl;
+  SearchGroup<PtclHard> group;
+  group.findGroups(p.getPointer(), N, n_split);
+  group.searchAndMerge(p.getPointer(), N, rin);
+  //std::cout<<"SearchAndMerge\n";
+  // 
+  //for(int i=0; i<group.getNGroups(); i++) {
+  //    std::cout<<"group["<<i<<"]: ";
+  //    for(int j=0; j<group.getGroupN(i); j++) {
+  //        std::cout<<std::setw(10)<<group.getGroup(i)[j];
+  //    }
+  //    std::cout<<std::endl;
+  //}
+
+  //std::cout<<"Ptcl List:";
+  //for(int i=0; i<group.getNPtcl(); i++) {
+  //    std::cout<<std::setw(10)<<group.getPtclList()[i];
+  //}
+  //std::cout<<std::endl;
   
   PS::ReallocatableArray<PtclHard> ptcl_new;
 
-  group.generateList(p.getPointer(), N, ptcl_new, rin);
-  std::cerr<<"GenerateList\n";
-  print_p(p.getPointer(),p.size());
+  group.generateList(p.getPointer(), N, ptcl_new, rin, n_split);
+  //std::cout<<"GenerateList\n";
+  //print_p(p.getPointer(),p.size());
 
-  std::cerr<<"new ptcl: "<<ptcl_new.size()<<"\n ";
-  print_p(ptcl_new.getPointer(),ptcl_new.size());
+  //std::cout<<"new ptcl: "<<ptcl_new.size()<<"\n ";
+  //print_p(ptcl_new.getPointer(),ptcl_new.size());
 
   p.reserveEmptyAreaAtLeast(ptcl_new.size());
   for(int i=0;i<ptcl_new.size();i++) {
@@ -141,33 +132,37 @@ int main(int argc, char** argv)
 
   np.push_back(p.size());
 
-  std::cerr<<"new p: "<<p.size()<<"\n ";
+  std::cout<<"new p: "<<p.size()<<"\n ";
   print_p(p.getPointer(),np[0]);
-    
-  SystemHard sys;
-  PS::F64 time_sys = 0.0;
-  sys.setParam(rout*1.2, rout, rin, eps, dt_limit, eta, time_sys, gmin, m_average);
-  sys.setARCParam();
+
+  group.findGroups(p.getPointer(),p.size(),n_split);
+
+  ARC::chainpars ARC_control;
+  ARC_control.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA<PtclHard,PtclHard*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+  ARC_control.setabg(0,1,0);
+  ARC_control.setErr(1e-10,1e-24,1e-9);
+  ARC_control.setIterSeq(20,20);
+  ARC_control.setIntp(1);
+  ARC_control.setIterConst(0);
+  ARC_control.setAutoStep(3);
+
+  ARC_int_pars Int_pars;
+  Int_pars.rin = rin;
+  Int_pars.rout = rout;
+  Int_pars.eps2 = eps*eps;
+
+  ARCIntegrator<PtclHard, PtclHard, PtclForce, ARC_int_pars, ARC_pert_pars> Aint(ARC_control, Int_pars);
+  Aint.reserveARMem(1);
+  Aint.reservePertMem(10);
+  Aint.addOneGroup(p.getPointer(),group.getGroup(0), group.getGroupN(0),group.getGroupPertList(0,n_split), n_split, NULL, NULL, NULL, 0);
   
-  sys.setPtclForIsolatedMultiCluster(p,adr,np);
+  PS::F64 e0,e1;
+  Aint.ErrorRecord(e0);
+  Aint.integrateOneStep(0, time, dt_limit);
+  Aint.ErrorRecord(e1);
 
-  FILE* fout;
-  if ( (fout = fopen("hard.dat","w")) == NULL) {
-    fprintf(stderr,"Error: Cannot open file hard.dat.\n");
-    abort();
-  }
-
-  while(time_sys < time){
-      fprintf(stderr,"Time = %e\n", time_sys);
-      sys.driveForMultiCluster(dt_limit);
-      //print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
-      write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),N);
-      time_sys += dt_limit;
-  }
-
-  fclose(fin);
-  fclose(fout);
+  printf("Energy error: %e, init: %e, end: %e\n",(e1-e0)/e0, e0, e1);
   
   return 0;
-}
 
+}

@@ -13,6 +13,17 @@
 #define NAN_CHECK(val) assert((val) == (val));
 #endif
 
+void write_p(FILE* fout, const PS::F64 time, const PtclHard* p, const int n) {
+    fprintf(fout,"%e ",time);
+    for (int i=0; i<n; i++) {
+        fprintf(fout,"%e %e %e %e %e %e %e ", 
+                p[i].mass, p[i].pos[0], p[i].pos[1], p[i].pos[2], 
+                p[i].vel[0], p[i].vel[1], p[i].vel[2]);
+    }
+    fprintf(fout,"\n");
+}
+
+
 PS::F64 calcDtLimit(const PS::F64 time_sys,
                     const PS::F64 dt_limit_org,
                     const PS::F64 time_offset = 0.0){
@@ -74,6 +85,9 @@ int main(int argc, char** argv)
     Energy E0,E1;
 
     fs>>time_end>>N>>par.rin>>par.rout>>par.dt_limit_hard>>par.eta>>par.eps;
+
+    fprintf(stderr,"t_end = %e\nN = %d\nr_in = %e\nr_out = %e\neta = %e\ndt_limit = %e\neps = %e\n",time_end,N,par.rin,par.rout,par.eta,par.dt_limit_hard,par.eps);
+
     PS::ReallocatableArray<PtclHard> p;
     p.resizeNoInitialize(N);
 
@@ -115,6 +129,12 @@ int main(int argc, char** argv)
     PS::F64 dt_limit = calcDtLimit(time_sys, par.dt_limit_hard);
     Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups);
 
+    FILE* fout;
+    if ( (fout = fopen("hard.dat","w")) == NULL) {
+        fprintf(stderr,"Error: Cannot open file hard.dat.\n");
+        abort();
+    }
+    
     PS::F64 time_pre=0.0;
     while(time_sys<time_end) {
         time_pre = time_sys;
@@ -124,6 +144,7 @@ int main(int argc, char** argv)
         Hint.integrateOneStep(time_sys,dt_limit);
         Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
         if(fmod(time_sys,time_end/16.0)==0) std::cout<<"Time = "<<time_sys<<std::endl;
+        write_p(fout,time_sys,Hint.getPtcl(),Hint.getPtclN());
     }
     Hint.writeBackPtcl(p.getPointer(),p.size(),group.getPtclList(),group.getNPtcl());
     

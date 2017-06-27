@@ -6,6 +6,7 @@
 #PS_PATH = -I../FDPS/src
 PS_PATH  = -I/home/lwang/code/fdps/src
 ARC_PATH = -I/home/lwang/GitHub/ARC/include
+INCLUDE  = -I./src -I../src
 
 #use_k_computer = yes
 #use_xc30_naoj = yes
@@ -54,11 +55,12 @@ CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -fopenmp
 CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
 CXXFLAGS += -DDIV_FIX -DP3T_64BIT
 #CXXFLAGS += -DUSE_QUAD 
+CXXFLAGS += -D ARC_DEBUG
 CXXFLAGS += -D ARC_ERROR
 CXXFLAGS += -D ARC_WARN
 CXXFLAGS += -D SAFETY_CHECK
 CXXFLAGS += -D HARD_DEBUG
-CXXFLAGS += -D HARD_ERROR
+CXXFLAGS += -D HARD_DEBUG_PRINT
 #CXXFLAGS += -D DEBUG
 #CXXFLAGS += -D DEBUG_TEMP
 #CXXFLAGS += -D DEBUG_OUTPUT
@@ -73,28 +75,31 @@ nbody.out: $(SRC)
 	$(CXX) $(PS_PATH) $(ARC_PATH) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
 ARC_debug.out: chain_debug.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -D DEBUG -o $@ $< $(CXXLIBS)
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -D DEBUG -o $@ $< $(CXXLIBS)
 
 rsearchtest: rsearchtest.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
 test.out: test.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
 searchgrouptest: searchgroup.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
 hermitetest: hermite.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
 splinetest: spline.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
 keplersolvertest: keplersolver.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
 hardtest: hard.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) -I./src $(CXXFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
+
+arctest: arc.cxx
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
 clean:
 	rm *.out *.o
