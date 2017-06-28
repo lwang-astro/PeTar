@@ -1046,6 +1046,7 @@ private:
             part_list_disp[i] = offset;
             for(int j=0; j<n; j++) {
                 PS::S32 jp = p_list[j];
+                if(ip==jp) continue;
                 PS::F64vec dr = ptcl[ip].pos-ptcl[jp].pos;
                 PS::F64 r2 = dr*dr;
                 if (r2<r_crit2) {
@@ -1102,6 +1103,9 @@ private:
 
             PS::S32 npart = connectGroups(i,i,part_list, part_list_disp, part_list_n,partner_index,reverse_list);
             group_list_n.push_back(npart);
+#ifdef HARD_DEBUG
+            assert(npart>0);
+#endif
             group_list_disp_.push_back(n_mem);
             n_mem += npart;
             group_list.push_back(p_list[partner_index[i].first]);
@@ -1111,6 +1115,9 @@ private:
                 group_list.push_back(p_list[partner_index[inext].first]);
                 inext=partner_index[inext].second;
                 k++;
+#ifdef HARD_DEBUG
+                assert(k<=npart);
+#endif
             }
 #ifdef HARD_DEBUG
             assert(k==npart);
@@ -1162,15 +1169,16 @@ private:
 
 
     template<class Tptree>
-    PS::S32 setGroupMemberPars(Tptree &bin, const PS::S32 n_split, const bool is_top) {
+    PS::S32 setGroupMemberPars(Tptree &bin, const PS::S32 n_split, const PS::S32 bid, const bool is_top) {
         PS::S32 nloc = 0;
         for(int i=0; i<2; i++) {
             if(bin.member[i]->status!=0) {
-                nloc += setGroupMemberPars(*(Tptree*)bin.member[i], n_split, false);
+                if(is_top) nloc += setGroupMemberPars(*(Tptree*)bin.member[i], n_split, bin.member[i]->id, false);
+                else nloc += setGroupMemberPars(*(Tptree*)bin.member[i], n_split, bid, false);
             }
             else {
                 if(is_top) bin.member[i]->status = -std::abs(bin.member[i]->id);
-                else bin.member[i]->status = -std::abs(bin.id);
+                else bin.member[i]->status = -std::abs(bid);
                 bin.member[i]->mass_bk = bin.member[i]->mass;
                 bin.member[i]->mass    = 0.0;
                 nloc += 1;
@@ -1254,7 +1262,7 @@ private:
         //*pm[0][0] *= mfactor;
         //*pm[0][1] *= mfactor;
         //mfactor /= n_split;
-        PS::S32 nbin = setGroupMemberPars(bin, n_split, true);
+        PS::S32 nbin = setGroupMemberPars(bin, n_split, bin.id, true);
         Tptcl* pcm;
         if(empty_list.size()>0) {
             pcm = &ptcl_org[empty_list.back()];
@@ -1290,7 +1298,7 @@ private:
 //        assert(n_ptcl<=n_ptcl_org);
 //        assert(ptcl_map.size()==0);
 #endif
-        for (int i=0; i<p_list.size(); i++) ptcl_org[p_list[i]].status=0;
+        for (int i=0; i<p_list.size(); i++) ptcl_org[p_list[i]].status = 0;
 
         const PS::S32 n_groups = group_list_n.size();
         for (int i=0; i<n_groups; i++) {
@@ -1658,6 +1666,9 @@ public:
         assert(n+p_list_.size()-ng<=p_list_.capacity());
 #endif
         for (int i=ng; i<n; i++) {
+#ifdef HARD_DEBUG
+            assert(p_list_.size()<p_list_.capacity());
+#endif
             p_list_.pushBackNoCheck(group_list_[i]);
         }
         group_list_.clearSize();

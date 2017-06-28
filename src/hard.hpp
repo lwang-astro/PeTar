@@ -11,6 +11,7 @@
 #include"cstdlib"
 #include"ptcl.hpp"
 #include"cluster_list.hpp"
+#include"soft.hpp"
 //#include"stdio.h" /// for debug (L.Wang)
 
 template<class T>
@@ -479,7 +480,8 @@ public:
 
 //////////////////
 // for multi cluster
-    void driveForMultiCluster(const PS::F64 dt){
+    template<class Tsys>
+    void driveForMultiCluster(const PS::F64 dt, Tsys & sys){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         /*
           for(PS::S32 ith=0; ith<PS::Comm::getNumberOfThread(); ith++){
@@ -495,11 +497,16 @@ public:
 #ifdef HARD_DEBUG
             if(extra_ptcl.size()>0) fprintf(stderr,"New particle number = %d\n",extra_ptcl.size());
 #endif
+            for (PS::S32 j=0; j<extra_ptcl.size(); j++) {
+                PS::S32 adr = sys.getNumberOfParticleLocal();
+                PS::S32 rank = PS::Comm::getRank();
+                sys.addOneParticle(FPSoft(extra_ptcl[j],rank,adr));
+            }
         }
     }
 
-    void driveForMultiClusterOMP(const PS::F64 dt){
-
+    template<class Tsys>
+    void driveForMultiClusterOMP(const PS::F64 dt, Tsys & sys){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         //	const PS::S32 ith = PS::Comm::getThreadNum();
 #pragma omp for schedule(dynamic)
@@ -510,13 +517,17 @@ public:
             driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, dt, extra_ptcl);
 #pragma omp critical
             {
-                
+                for (PS::S32 j=0; j<extra_ptcl.size(); j++) {
+                    PS::S32 adr = sys.getNumberOfParticleLocal();
+                    PS::S32 rank = PS::Comm::getRank();
+                    sys.addOneParticle(FPSoft(extra_ptcl[j],rank,adr));
+                }
             }
-            
         }
     }
 
-    void initialMultiCluserOMP(){
+    template<class Tsys>
+    void initialMultiCluserOMP(Tsys & sys){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         //	const PS::S32 ith = PS::Comm::getThreadNum();
 #pragma omp for schedule(dynamic)
@@ -524,12 +535,17 @@ public:
             const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
             SearchGroup<PtclHard> group;
+            group.findGroups(ptcl_hard_.getPointer(adr_head), n_ptcl, n_split_);
             group.searchAndMerge(ptcl_hard_.getPointer(adr_head), n_ptcl, Int_pars_.rin);
             PS::ReallocatableArray<PtclHard> ptcl_new;
             group.generateList(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_new, Int_pars_.rin);
 #pragma omp critical
             {
-                
+                for (PS::S32 j=0; j<ptcl_new.size(); j++) {
+                    PS::S32 adr = sys.getNumberOfParticleLocal();
+                    PS::S32 rank = PS::Comm::getRank();
+                    sys.addOneParticle(FPSoft(ptcl_new[j],rank,adr));
+                }
             }
             
         }        
@@ -537,4 +553,3 @@ public:
 
 
 };
-

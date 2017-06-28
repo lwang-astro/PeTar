@@ -34,6 +34,18 @@ public:
     PS::S32 adr;
     static PS::F64 r_out;
 
+    FPSoft() {}
+    
+    template<class Tptcl>
+    FPSoft(const Tptcl& p, const PS::S32 rank_, const PS::S32 adr_) {
+        Ptcl::DataCopy(p);
+        rank_org = rank_;
+        adr = adr_;
+        acc = 0;
+        pot_tot = 0;
+        n_ngb = 0;
+    }
+
     void copyFromForce(const ForceSoft & force){
         acc = force.acc;
         pot_tot = force.pot;

@@ -10,9 +10,9 @@
 #include "cluster_list.hpp"
 #include "hard.hpp"
 
-const PS::F64 SAFTY_FACTOR_FOR_SEARCH = 1.05;
-const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ = SAFTY_FACTOR_FOR_SEARCH * SAFTY_FACTOR_FOR_SEARCH;
-const PS::F64 SAFTY_OFFSET_FOR_SEARCH = 1e-7;
+//const PS::F64 SAFTY_FACTOR_FOR_SEARCH = 1.05;
+//const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ = SAFTY_FACTOR_FOR_SEARCH * SAFTY_FACTOR_FOR_SEARCH;
+//const PS::F64 SAFTY_OFFSET_FOR_SEARCH = 1e-7;
 
 #ifndef NAN_CHECK
 #define NAN_CHECK(val) assert((val) == (val));
@@ -145,6 +145,7 @@ int main(int argc, char** argv)
   print_p(p.getPointer(),np[0]);
     
   SystemHard sys;
+  PS::ParticleSystem<FPSoft> fp;
   PS::F64 time_sys = 0.0;
   sys.setParam(rout*1.2, rout, rin, eps, dt_limit, eta, time_sys, gmin, m_average);
   sys.setARCParam();
@@ -159,8 +160,8 @@ int main(int argc, char** argv)
 
   while(time_sys < time){
       fprintf(stderr,"Time = %e\n", time_sys);
-      sys.driveForMultiCluster(dt_limit);
-      //print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
+      sys.driveForMultiCluster(dt_limit, fp);
+      print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
       write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),N);
       time_sys += dt_limit;
   }
