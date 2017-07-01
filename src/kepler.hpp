@@ -10,10 +10,14 @@
 // u: eccentric anomaly
 // n: mean mortion
 
-template <class Tptcl>
-class PtclTree: public Tptcl{
+class Binary{
 public:
-    PS::F64 ax, ecc, inc, OMG, omg, tperi, peri,ecca;
+    PS::F64 ax, ecc, inc, OMG, omg, tperi, peri, ecca, m1, m2;
+};
+
+template <class Tptcl>
+class PtclTree: public Binary, public Tptcl {
+public:
     Tptcl* member[2];
 };
 

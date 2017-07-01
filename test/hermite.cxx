@@ -13,7 +13,8 @@
 #define NAN_CHECK(val) assert((val) == (val));
 #endif
 
-void write_p(FILE* fout, const PS::F64 time, const PtclHard* p, const int n) {
+template <class Tptcl>
+void write_p(FILE* fout, const PS::F64 time, const Tptcl* p, const int n) {
     fprintf(fout,"%e ",time);
     for (int i=0; i<n; i++) {
         fprintf(fout,"%e %e %e %e %e %e %e ", 
@@ -127,7 +128,8 @@ int main(int argc, char** argv)
     PS::S32 n_groups = 0;
     PS::F64 time_sys=0.0;
     PS::F64 dt_limit = calcDtLimit(time_sys, par.dt_limit_hard);
-    Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups);
+    ARCIntegrator<PtclHard, PtclH4, PtclForce, ARC_int_pars, ARC_pert_pars>* arcint = NULL;
+    Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups, arcint);
 
     FILE* fout;
     if ( (fout = fopen("hard.dat","w")) == NULL) {
@@ -141,7 +143,7 @@ int main(int argc, char** argv)
         time_sys = Hint.getNextTime();
         assert(time_sys>time_pre);
         dt_limit = calcDtLimit(time_sys, par.dt_limit_hard);
-        Hint.integrateOneStep(time_sys,dt_limit);
+        Hint.integrateOneStep(time_sys,dt_limit,true,arcint);
         Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
         if(fmod(time_sys,time_end/16.0)==0) std::cout<<"Time = "<<time_sys<<std::endl;
         write_p(fout,time_sys,Hint.getPtcl(),Hint.getPtclN());

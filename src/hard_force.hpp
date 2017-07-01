@@ -227,7 +227,7 @@ int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, c
   @param[in]  dt: predict time interval
   @param[in]  p:  chain particle list
   @param[in]  np: chain particle number
-  @param[in]  pert: perturber address list
+  @param[in]  pert: perturber address list (first should be center-of-mass of AR)
   @param[in]  pf:  perturber force array
   @param[in]  pars: ARC pars including rin, rout and perturbation kepler spline interpolation class
  */
@@ -241,7 +241,7 @@ void Newtonian_extA (double3* acc, const PS::F64 dt, Tptcl* p, const PS::S32 np,
     for(int i=0; i<np; i++) {
         PS::F64vec& xi = p[i].pos;
         acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
-        for(int j=0; j<npert; j++) {
+        for(int j=1; j<npert; j++) {
             
             PS::F64vec dx = xp[j] - xi;
             //PS::F64 mi = p[i].mass;
@@ -266,9 +266,9 @@ void Newtonian_extA (double3* acc, const PS::F64 dt, Tptcl* p, const PS::S32 np,
             // Aij[0] = mp * dx / dr3 * (1-k) + Pij * (1-kdx);
             // Aij[1] = mp * dy / dr3 * (1-k) + Pij * (1-kdy);
             // Aij[2] = mp * dz / dr3 * (1-k) + Pij * (1-kdz);
-            acc[i][0] += mp * dx[0] / dr3 * (1-kdot);
-            acc[i][1] += mp * dx[1] / dr3 * (1-kdot);
-            acc[i][2] += mp * dx[2] / dr3 * (1-kdot);
+            acc[i][0] += mp * dx[0] / dr3 * (1-kdot) - pf[0]->acc0[0];
+            acc[i][1] += mp * dx[1] / dr3 * (1-kdot) - pf[0]->acc0[1];
+            acc[i][2] += mp * dx[2] / dr3 * (1-kdot) - pf[0]->acc0[2];
         }
     }
 

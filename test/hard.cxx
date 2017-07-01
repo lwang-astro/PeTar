@@ -9,6 +9,7 @@
 #include "rsearch.hpp"
 #include "cluster_list.hpp"
 #include "hard.hpp"
+#include "soft.hpp"
 
 //const PS::F64 SAFTY_FACTOR_FOR_SEARCH = 1.05;
 //const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ = SAFTY_FACTOR_FOR_SEARCH * SAFTY_FACTOR_FOR_SEARCH;
@@ -160,7 +161,7 @@ int main(int argc, char** argv)
 
   while(time_sys < time){
       fprintf(stderr,"Time = %e\n", time_sys);
-      sys.driveForMultiCluster(dt_limit, fp);
+      sys.driveForMultiCluster<PS::ParticleSystem<FPSoft>,FPSoft>(dt_limit, fp);
       print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
       write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),N);
       time_sys += dt_limit;

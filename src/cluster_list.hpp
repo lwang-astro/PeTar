@@ -2,6 +2,7 @@
 #include<particle_simulator.hpp>
 #include<unordered_map>
 #include"ptcl.hpp"
+#include"kepler.hpp"
 
 //extern const PS::F64 SAFTY_OFFSET_FOR_SEARCH;
 
@@ -1187,6 +1188,7 @@ private:
         return nloc;
     }
 
+    // generate kepler sampling artificial particles, also store the binary parameters in mass_bk of first 4 pairs
     template<class Tptree>
     void keplerOrbitGenerator(Tptcl* ptcl_org,
                               PS::ReallocatableArray<Tptcl> & ptcl_extra,
@@ -1242,6 +1244,14 @@ private:
             OrbParam2PosVel(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass,
                             bin.ax, bin.ecc, bin.inc, bin.OMG, bin.omg, dE*i);
             //DriveKeplerOrbParam(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass, (i+1)*dt, bin.ax, bin.ecc, bin.inc, bin.OMG, bin.omg, bin.peri, bin.ecca);
+            if(i<4) {
+                p[0]->mass_bk = bindata[i][0];
+                p[1]->mass_bk = bindata[i][1];
+            }
+            if(i==4) {
+                p[0]->mass_bk = p[0]->mass;
+                p[1]->mass_bk = p[1]->mass;
+            }
             PS::F64vec dvvec= p[0]->vel - p[1]->vel;
             PS::F64 odv = 1.0/std::sqrt(dvvec*dvvec);
             for(int j=0; j<2; j++) p[j]->mass *= odv;
@@ -1249,10 +1259,6 @@ private:
                 //else p[j]->mass /= n_split;
             mnormal += odv;
             center_of_mass_correction(*(Tptcl*)&bin,p,2);
-            if(i<4) {
-                p[0]->vel[0] = bindata[i][0];
-                p[1]->vel[0] = bindata[i][1];
-            }
         }
         mfactor = 1.0/mnormal;
         for (int i=0; i<n_split; i++) 
@@ -1714,6 +1720,21 @@ public:
     // 
     PS::S32* getGroupPertList(const std::size_t i, const PS::S32 n_split = 8) {
         return &soft_pert_list_[i*2*n_split];
+    }
+
+    // assume the binary information stored in artificial star mass_bk
+    void getBinPars(Binary &bin, const Tptcl ptcl_org[], const std::size_t i, const PS::S32 n_split = 8) {
+        const PS::S32 ioff = i*2*n_split;
+        bin.ax   = ptcl_org[soft_pert_list_[ioff  ]].mass_bk;
+        bin.ecc  = ptcl_org[soft_pert_list_[ioff+1]].mass_bk;
+        bin.peri = ptcl_org[soft_pert_list_[ioff+2]].mass_bk;
+        bin.tperi= ptcl_org[soft_pert_list_[ioff+3]].mass_bk;
+        bin.inc  = ptcl_org[soft_pert_list_[ioff+4]].mass_bk;
+        bin.OMG  = ptcl_org[soft_pert_list_[ioff+5]].mass_bk;
+        bin.omg  = ptcl_org[soft_pert_list_[ioff+6]].mass_bk;
+        bin.ecca = ptcl_org[soft_pert_list_[ioff+7]].mass_bk;
+        bin.m1   = ptcl_org[soft_pert_list_[ioff+8]].mass_bk;
+        bin.m2   = ptcl_org[soft_pert_list_[ioff+9]].mass_bk;
     }
     
 //    RCList* getRoutChangeList() {

@@ -11,7 +11,6 @@
 #include"cstdlib"
 #include"ptcl.hpp"
 #include"cluster_list.hpp"
-#include"soft.hpp"
 //#include"stdio.h" /// for debug (L.Wang)
 
 template<class T>
@@ -165,30 +164,38 @@ private:
         // group.findGroups(group_list, status, status_map,  adr_cm, group_act_n, ptcl_org, n_ptcl);
         group_act_list.resizeNoInitialize(group.getNPtcl());
             
-        ARCIntegrator<PtclHard, PtclHard, PtclForce, ARC_int_pars, ARC_pert_pars> Aint(ARC_control_, Int_pars_);
+        ARCIntegrator<PtclHard, PtclH4, PtclForce, ARC_int_pars, ARC_pert_pars> Aint(ARC_control_, Int_pars_);
 
         // first particles in Hint.Ptcl are c.m.
         PS::S32 n_groups = group.getNGroups();
         Aint.reserveARMem(n_groups);
         Aint.reservePertMem(Hint.getPertNtot());
-        for (int i=0; i<n_groups; i++) 
+        for (int i=0; i<n_groups; i++) {
+            group.getBinPars(Aint.bininfo[i],ptcl_org,i,n_split_);
             Aint.addOneGroup(ptcl_org, group.getGroup(i), group.getGroupN(i), group.getGroupPertList(i,n_split_), n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i)); 
+        }
+        Aint.initialSlowDown(time_end);
+        Aint.initial();
+
+        PS::F64 time_sys=0.0;
+        PS::F64 dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
+        Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups, &Aint);
+
 
 #ifdef HARD_DEBUG
         PS::F64 AE0,AE1,PT0,PT1;
         Aint.EnergyRecord(AE0,PT0);
 #endif
-            
-        PS::F64 time_sys=0.0;
-        PS::F64 dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
-        Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups);
+
         while(time_sys<time_end) {
             time_sys = Hint.getNextTime();
             dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
-            Aint.integrateOneStepList(group_act_list.getPointer(), group_act_n, time_sys, dt_limit);
-            Hint.integrateOneStep(time_sys,dt_limit);
+            //Aint.integrateOneStepList(group_act_list.getPointer(), group_act_n, time_sys, dt_limit);
+            Aint.integrateOneStepList(time_sys, dt_limit);
+            Hint.integrateOneStep(time_sys,dt_limit,true,&Aint);
             Aint.updateCM(Hint.getPtcl(), group_act_list.getPointer(), group_act_n);
-            Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
+            //Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
+            Hint.SortAndSelectIp();
         }
         Aint.resolve();
         Hint.writeBackPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getNPtcl());
@@ -480,7 +487,7 @@ public:
 
 //////////////////
 // for multi cluster
-    template<class Tsys>
+    template<class Tsys, class Tsptcl>
     void driveForMultiCluster(const PS::F64 dt, Tsys & sys){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         /*
@@ -500,12 +507,12 @@ public:
             for (PS::S32 j=0; j<extra_ptcl.size(); j++) {
                 PS::S32 adr = sys.getNumberOfParticleLocal();
                 PS::S32 rank = PS::Comm::getRank();
-                sys.addOneParticle(FPSoft(extra_ptcl[j],rank,adr));
+                sys.addOneParticle(Tsptcl(extra_ptcl[j],rank,adr));
             }
         }
     }
 
-    template<class Tsys>
+    template<class Tsys, class Tsptcl>
     void driveForMultiClusterOMP(const PS::F64 dt, Tsys & sys){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         //	const PS::S32 ith = PS::Comm::getThreadNum();
@@ -520,13 +527,13 @@ public:
                 for (PS::S32 j=0; j<extra_ptcl.size(); j++) {
                     PS::S32 adr = sys.getNumberOfParticleLocal();
                     PS::S32 rank = PS::Comm::getRank();
-                    sys.addOneParticle(FPSoft(extra_ptcl[j],rank,adr));
+                    sys.addOneParticle(Tsptcl(extra_ptcl[j],rank,adr));
                 }
             }
         }
     }
 
-    template<class Tsys>
+    template<class Tsys, class Tsptcl>
     void initialMultiCluserOMP(Tsys & sys){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         //	const PS::S32 ith = PS::Comm::getThreadNum();
@@ -544,7 +551,7 @@ public:
                 for (PS::S32 j=0; j<ptcl_new.size(); j++) {
                     PS::S32 adr = sys.getNumberOfParticleLocal();
                     PS::S32 rank = PS::Comm::getRank();
-                    sys.addOneParticle(FPSoft(ptcl_new[j],rank,adr));
+                    sys.addOneParticle(Tsptcl(ptcl_new[j],rank,adr));
                 }
             }
             
