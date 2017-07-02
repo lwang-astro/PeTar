@@ -965,7 +965,7 @@ public:
                 p[1].mass = bininfo[i].m2;
                 PS::F64 acc[2][3];
                 const PS::S32 ipert = pert_disp_[i];
-                Newtonian_extA(acc, bininfo[i].tperi+bininfo[i].peri, p, 2, &pert_[ipert], &pforce_[ipert], pert_n_[ipert], &par_list_[ipert]);
+                Newtonian_extA(acc, bininfo[i].tperi+bininfo[i].peri, p, 2, &pert_[ipert], &pforce_[ipert], pert_n_[i], &par_list_[i]);
                 PS::F64 fpertsq = 0.0;
                 for(int k=0; k<3; k++) {
                     PS::F64 dacc = acc[0][k]-acc[1][k];
@@ -979,7 +979,7 @@ public:
     
     void initial() {
         for (int i=0; i<clist_.size(); i++) {
-            clist_.back().init(0.0, *ARC_control_, &(par_list_.back()));
+            clist_[i].init(0.0, *ARC_control_, &(par_list_.back()));
         }
     }
 

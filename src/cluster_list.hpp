@@ -1248,9 +1248,13 @@ private:
                 p[0]->mass_bk = bindata[i][0];
                 p[1]->mass_bk = bindata[i][1];
             }
-            if(i==4) {
+            else if(i==4) {
                 p[0]->mass_bk = p[0]->mass;
                 p[1]->mass_bk = p[1]->mass;
+            }
+            else if(i==5) {
+                p[0]->mass_bk = 0.0; // indicate the order
+                p[1]->mass_bk = 1.0;
             }
             PS::F64vec dvvec= p[0]->vel - p[1]->vel;
             PS::F64 odv = 1.0/std::sqrt(dvvec*dvvec);
@@ -1443,6 +1447,20 @@ private:
 //    }
 
 public:
+
+    //! Find groups
+    /* Algorithm:
+       1. Find c.m. and create cm_adr (map<c.m.id, p_list.index>)
+       2. Find artificial members and create: 
+               fake_cm   (map<fake.id, positive c.m.id>)
+               fake_order(map<fake.id, order in soft_pert_list_ (0,1)>)
+               fake_adr  (map<fake.id, position index in soft_pert_list_)
+               soft_pert_list_ (fake order depend on which is found first)
+       3. Find single and group members
+               group member order depend on which is found first
+               group member status is updated to fake_order
+       4. correct mass of c.m. and members
+     */
     void findGroups(Tptcl* ptcl_org,
                     const PS::S32 n_ptcl,
                     const PS::S32 n_split=8) {
@@ -1566,7 +1584,9 @@ public:
                     PS::S32 ilst    = group_list_disp_[iadr_cm]+group_list_n_[iadr_cm]++;
                     group_list_[ilst] = i;
                     //group_list_pert_adr_[ilst] = fake_adr.at(id_fake);
-                    ptcl_org[i].status = fake_order.at(id_fake);
+
+                    // give status the order of fake member order saved in soft_pert_list
+                    ptcl_org[i].status = fake_order.at(id_fake); 
                     
                     //mem_order[ptcl_org[i].id] = std::pair<PS::S32, PS::S32>(iadr_cm, group_list_n_[iadr_cm]);  // record cm index and member id order
 #ifdef HARD_DEBUG
@@ -1725,16 +1745,30 @@ public:
     // assume the binary information stored in artificial star mass_bk
     void getBinPars(Binary &bin, const Tptcl ptcl_org[], const std::size_t i, const PS::S32 n_split = 8) {
         const PS::S32 ioff = i*2*n_split;
-        bin.ax   = ptcl_org[soft_pert_list_[ioff  ]].mass_bk;
-        bin.ecc  = ptcl_org[soft_pert_list_[ioff+1]].mass_bk;
-        bin.peri = ptcl_org[soft_pert_list_[ioff+2]].mass_bk;
-        bin.tperi= ptcl_org[soft_pert_list_[ioff+3]].mass_bk;
-        bin.inc  = ptcl_org[soft_pert_list_[ioff+4]].mass_bk;
-        bin.OMG  = ptcl_org[soft_pert_list_[ioff+5]].mass_bk;
-        bin.omg  = ptcl_org[soft_pert_list_[ioff+6]].mass_bk;
-        bin.ecca = ptcl_org[soft_pert_list_[ioff+7]].mass_bk;
-        bin.m1   = ptcl_org[soft_pert_list_[ioff+8]].mass_bk;
-        bin.m2   = ptcl_org[soft_pert_list_[ioff+9]].mass_bk;
+        if (ptcl_org[soft_pert_list_[ioff+10]].mass_bk==0.0) {
+            bin.ax   = ptcl_org[soft_pert_list_[ioff  ]].mass_bk;
+            bin.ecc  = ptcl_org[soft_pert_list_[ioff+1]].mass_bk;
+            bin.peri = ptcl_org[soft_pert_list_[ioff+2]].mass_bk;
+            bin.tperi= ptcl_org[soft_pert_list_[ioff+3]].mass_bk;
+            bin.inc  = ptcl_org[soft_pert_list_[ioff+4]].mass_bk;
+            bin.OMG  = ptcl_org[soft_pert_list_[ioff+5]].mass_bk;
+            bin.omg  = ptcl_org[soft_pert_list_[ioff+6]].mass_bk;
+            bin.ecca = ptcl_org[soft_pert_list_[ioff+7]].mass_bk;
+            bin.m1   = ptcl_org[soft_pert_list_[ioff+8]].mass_bk;
+            bin.m2   = ptcl_org[soft_pert_list_[ioff+9]].mass_bk;
+        }
+        else {
+            bin.ax   = ptcl_org[soft_pert_list_[ioff+1]].mass_bk;
+            bin.ecc  = ptcl_org[soft_pert_list_[ioff  ]].mass_bk;
+            bin.peri = ptcl_org[soft_pert_list_[ioff+3]].mass_bk;
+            bin.tperi= ptcl_org[soft_pert_list_[ioff+2]].mass_bk;
+            bin.inc  = ptcl_org[soft_pert_list_[ioff+5]].mass_bk;
+            bin.OMG  = ptcl_org[soft_pert_list_[ioff+4]].mass_bk;
+            bin.omg  = ptcl_org[soft_pert_list_[ioff+7]].mass_bk;
+            bin.ecca = ptcl_org[soft_pert_list_[ioff+6]].mass_bk;
+            bin.m1   = ptcl_org[soft_pert_list_[ioff+9]].mass_bk;
+            bin.m2   = ptcl_org[soft_pert_list_[ioff+8]].mass_bk;
+        }
     }
     
 //    RCList* getRoutChangeList() {
