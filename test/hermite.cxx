@@ -13,9 +13,9 @@
 #define NAN_CHECK(val) assert((val) == (val));
 #endif
 
-template <class Tptcl>
-void write_p(FILE* fout, const PS::F64 time, const Tptcl* p, const int n) {
-    fprintf(fout,"%e ",time);
+template <class Tptcl, class TEnergy>
+void write_p(FILE* fout, const PS::F64 time, const TEnergy &E, const TEnergy &Ediff, const Tptcl* p, const int n) {
+    fprintf(fout,"%e %e %e %e %e ",time, Ediff.tot, E.kin, E.pot, E.tot);
     for (int i=0; i<n; i++) {
         fprintf(fout,"%e %e %e %e %e %e %e ", 
                 p[i].mass, p[i].pos[0], p[i].pos[1], p[i].pos[2], 
@@ -132,7 +132,7 @@ int main(int argc, char** argv)
     Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups, arcint);
 
     FILE* fout;
-    if ( (fout = fopen("hard.dat","w")) == NULL) {
+    if ( (fout = fopen("hermit.dat","w")) == NULL) {
         fprintf(stderr,"Error: Cannot open file hard.dat.\n");
         abort();
     }
@@ -145,8 +145,12 @@ int main(int argc, char** argv)
         dt_limit = calcDtLimit(time_sys, par.dt_limit_hard);
         Hint.integrateOneStep(time_sys,dt_limit,true,arcint);
         Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
-        if(fmod(time_sys,time_end/16.0)==0) std::cout<<"Time = "<<time_sys<<std::endl;
-        write_p(fout,time_sys,Hint.getPtcl(),Hint.getPtclN());
+        if(fmod(time_sys,dt_limit)==0) {
+            //std::cout<<"Time = "<<time_sys<<std::endl;
+            Hint.CalcEnergyHard(E1);
+            Energy Edif = E1.calcDiff(E0);
+            write_p(fout,time_sys,E1,Edif,Hint.getPtcl(),Hint.getPtclN());
+        }
     }
     Hint.writeBackPtcl(p.getPointer(),p.size(),group.getPtclList(),group.getNPtcl());
     

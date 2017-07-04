@@ -237,9 +237,17 @@ void Newtonian_extA (double3* acc, const PS::F64 dt, Tptcl* p, const PS::S32 np,
     PS::F64vec xp[npert];
     for(int i=0; i<npert; i++) 
         xp[i] = pert[i]->pos + dt*(pert[i]->vel* + 0.5*dt*(pf[i]->acc0 + inv3*dt*pf[i]->acc1));
+#ifdef HARD_DEBUG
+    PS::F64 mt = 0.0;
+    for(int i=0; i<np; i++) mt += p[i].mass;
+    assert(mt==pert[0]->mass);
+#endif
 
     for(int i=0; i<np; i++) {
         PS::F64vec& xi = p[i].pos;
+        acc[i][0] = -pf[0]->acc0[0]; 
+        acc[i][1] = -pf[0]->acc0[1];        
+        acc[i][2] = -pf[0]->acc0[2]; 
         acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
         for(int j=1; j<npert; j++) {
             
@@ -266,9 +274,9 @@ void Newtonian_extA (double3* acc, const PS::F64 dt, Tptcl* p, const PS::S32 np,
             // Aij[0] = mp * dx / dr3 * (1-k) + Pij * (1-kdx);
             // Aij[1] = mp * dy / dr3 * (1-k) + Pij * (1-kdy);
             // Aij[2] = mp * dz / dr3 * (1-k) + Pij * (1-kdz);
-            acc[i][0] += mp * dx[0] / dr3 * (1-kdot) - pf[0]->acc0[0];
-            acc[i][1] += mp * dx[1] / dr3 * (1-kdot) - pf[0]->acc0[1];
-            acc[i][2] += mp * dx[2] / dr3 * (1-kdot) - pf[0]->acc0[2];
+            acc[i][0] += mp * dx[0] / dr3 * (1-kdot);
+            acc[i][1] += mp * dx[1] / dr3 * (1-kdot);
+            acc[i][2] += mp * dx[2] / dr3 * (1-kdot);
         }
     }
 

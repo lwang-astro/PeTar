@@ -177,7 +177,7 @@ private:
         Aint.initialSlowDown(time_end);
         Aint.initial();
 
-        PS::F64 time_sys=0.0;
+        PS::F64 time_sys=0.0, time_now;
         PS::F64 dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
         Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups, &Aint);
 
@@ -188,12 +188,23 @@ private:
 #endif
 
         while(time_sys<time_end) {
+            time_now = time_sys;
             time_sys = Hint.getNextTime();
             dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
+#ifdef HARD_DEBUG
+            assert(time_sys>time_now);
+#endif
+            Aint.updateSlowDown(time_sys, time_sys-time_now);
+//#ifdef HARD_DEBUG_PRINT
+//            for(int k=0; k<n_groups; k++) 
+//                fprintf(stderr,"kappa[%d] = %e; ",k,Aint.getSlowDown(k));
+//            std::cerr<<std::endl;
+//#endif            
             //Aint.integrateOneStepList(group_act_list.getPointer(), group_act_n, time_sys, dt_limit);
             Aint.integrateOneStepList(time_sys, dt_limit);
             Hint.integrateOneStep(time_sys,dt_limit,true,&Aint);
-            Aint.updateCM(Hint.getPtcl(), group_act_list.getPointer(), group_act_n);
+            Aint.updateCM(Hint.getPtcl());
+            //Aint.updateCM(Hint.getPtcl(), group_act_list.getPointer(), group_act_n);
             //Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
             Hint.SortAndSelectIp();
         }

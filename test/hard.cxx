@@ -75,10 +75,10 @@ int main(int argc, char** argv)
   }
 
   int N;
-  PS::F64 rin, rout, rsearch, gmin, eps, eta, dt_limit, time, m_average=0;
-  PS::S32 rcount = fscanf(fin, "%lf %d %lf %lf %lf %lf %lf %lf\n", 
-                          &time, &N, &rin, &rout, &dt_limit, &eta, &eps, &gmin);
-  if (rcount<8) {
+  PS::F64 rin, rout, rsearch, gmin=0.0, eps, eta, dt_limit, time, m_average=0;
+  PS::S32 rcount = fscanf(fin, "%lf %d %lf %lf %lf %lf %lf\n", 
+                          &time, &N, &rin, &rout, &dt_limit, &eta, &eps);
+  if (rcount<7) {
       std::cerr<<"Error: parameter reading fail!\n";
       abort();
   }
@@ -152,13 +152,16 @@ int main(int argc, char** argv)
   sys.setARCParam();
   
   sys.setPtclForIsolatedMultiCluster(p,adr,np);
+  //sys.initialMultiCluserOMP(fp);
 
   FILE* fout;
   if ( (fout = fopen("hard.dat","w")) == NULL) {
     fprintf(stderr,"Error: Cannot open file hard.dat.\n");
     abort();
   }
-
+  
+  print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
+  write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),N);
   while(time_sys < time){
       fprintf(stderr,"Time = %e\n", time_sys);
       sys.driveForMultiCluster<PS::ParticleSystem<FPSoft>,FPSoft>(dt_limit, fp);

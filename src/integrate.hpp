@@ -574,9 +574,13 @@ public:
     void integrateOneStep(const PS::F64 time_sys,
                           const PS::F64 dt_limit,
                           const bool calc_full_flag = true,
-                          const ARCint* Aint = NULL) {
+                          ARCint* Aint = NULL) {
         // pred::mass,pos,vel updated
         PredictAll(pred_.getPointer(), ptcl_.getPointer(), ptcl_.size(), time_sys);
+        if(Aint!=NULL) {
+            Aint->updateCM(pred_.getPointer());
+            Aint->resolve();
+        }
         // force::acc0,acc1 updated
         if(calc_full_flag) CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), ptcl_.size(), adr_sorted_.getPointer(), n_act_, r_in_, r_out_, eps_sq_, Aint);
         else CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), adr_sorted_.getPointer(), n_act_, Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, r_out_, eps_sq_, Aint);
@@ -587,6 +591,8 @@ public:
             PS::S32 adr = adr_sorted_[i];
             time_next_[adr] = ptcl_[adr].time + ptcl_[adr].dt;
         }
+
+        if(Aint!=NULL) Aint->shift();
     }
 
     void SortAndSelectIp(PS::S32 group_act_list[],
@@ -976,6 +982,13 @@ public:
             }
         }
     }
+
+    void updateSlowDown(const PS::F64 tend, const PS::F64 dt) {
+        for (int i=0; i<clist_.size(); i++) {
+            clist_[i].slowdown.updatekappa(clist_[i].getTime(),tend);
+            clist_[i].slowdown.adjustkappa(dt);
+        }
+    }
     
     void initial() {
         for (int i=0; i<clist_.size(); i++) {
@@ -1081,6 +1094,23 @@ public:
 #ifdef HARD_DEBUG
             assert(clist_[iact].mass==ptcl[iact].mass);
 #endif
+        }
+    }
+
+    template <class Tp>
+    void updateCM(Tp ptcl[]) {
+        for(int i=0; i<clist_.size(); i++) {
+            clist_[i].pos = ptcl[i].pos;
+            clist_[i].vel = ptcl[i].vel;
+#ifdef HARD_DEBUG
+            assert(clist_[i].mass==ptcl[i].mass);
+#endif
+        }
+    }
+
+    void shift() {
+        for(int i=0; i<clist_.size(); i++) {
+            clist_[i].center_shift();
         }
     }
 
