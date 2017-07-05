@@ -10,7 +10,7 @@
 #define DEBUG_ENERGY_LIMIT 1e-6
 #endif
 
-extern const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ;
+//const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ;
 const PS::F64 pi = 4.0*atan(1.0);
 
 //leap frog----------------------------------------------
@@ -171,6 +171,7 @@ private:
                 PS::S32 jadr = Jlist[joff+j];
 #ifdef HARD_DEBUG
                 assert(iadr!=jadr);
+                PS::F64 mcmcheck =0.0;
 #endif
                 if (jadr<nbin) {
                     const Tptcl* pj = Aint->getGroupPtcl(jadr);
@@ -179,9 +180,17 @@ private:
                         PS::F64 r2 = 0.0;
                         CalcAcc0Acc1R2Cutoff(ptcl[iadr].pos, ptcl[iadr].vel,
                                              force[iadr].acc0, force[iadr].acc1, r2,
-                                             pj[k].pos, pj[k].vel/sd, ptcl[j].mass,
+                                             pj[k].pos, pj[k].vel/sd, pj[k].mass,
                                              eps2, rout, rin);
+#ifdef HARD_DEBUG
+                        mcmcheck += pj[k].mass;
+                        //std::cerr<<k<<" P "<<pj[k].pos<<" v "<<pj[k].vel<<" sd "<<sd<<std::endl;
+#endif
                     }
+#ifdef HARD_DEBUG
+                    assert(mcmcheck==ptcl[jadr].mass);
+                    assert(mcmcheck>0.0);
+#endif                    
                 }
                 else {
                     PS::F64 r2 = 0.0;
@@ -218,15 +227,25 @@ private:
             // all
             for(PS::S32 j=0; j<nbin; j++) {
                 if(iadr==j) continue;
+#ifdef HARD_DEBUG
+                PS::F64 mcmcheck =0.0;
+#endif
                 const Tptcl* pj = Aint->getGroupPtcl(j);
                 PS::F64 sd = Aint->getSlowDown(j);
                 for(PS::S32 k=0; k<Aint->getGroupN(j); k++) {
                     PS::F64 r2 = 0.0;
                     CalcAcc0Acc1R2Cutoff(ptcl[iadr].pos, ptcl[iadr].vel,
                                          force[iadr].acc0, force[iadr].acc1, r2,
-                                         pj[k].pos, pj[k].vel/sd, ptcl[j].mass,
+                                         pj[k].pos, pj[k].vel/sd, pj[k].mass,
                                          eps2, rout, rin);
+#ifdef HARD_DEBUG
+                    mcmcheck += pj[k].mass;
+#endif
                 }
+#ifdef HARD_DEBUG
+                assert(mcmcheck==ptcl[j].mass);
+                assert(mcmcheck>0.0);
+#endif                    
             }
             for(PS::S32 j=nbin; j<n_tot; j++){
                 if(iadr==j) continue;
@@ -370,7 +389,7 @@ private:
             pti->dt = dt_old*2 < pti->dt ?  dt_old*2 : pti->dt;
 #ifdef HARD_DEBUG
             assert(pti->dt != 0.0);
-            assert(pti->dt >1.0e-12);
+//            assert(pti->dt >1.0e-12);
 #endif
         }
     }
@@ -945,6 +964,7 @@ public:
             //const PS::S32 ik = ioff+pert_n_[igroup]++;
             pert_.push_back(&ptcl_pert[k]);
             pforce_.push_back(&pert_force[k]);
+            pert_n_[igroup]++;
         }
         par_list_.push_back(ARC_par(*Int_pars_));
         par_list_.back().fit(ptcl_org,soft_pert_list,n_split);

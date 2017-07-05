@@ -138,6 +138,8 @@ int main(int argc, char** argv)
     }
     
     PS::F64 time_pre=0.0;
+    Energy Edif = E0.calcDiff(E0);
+    write_p(fout,time_sys,E0,Edif,Hint.getPtcl(),Hint.getPtclN());
     while(time_sys<time_end) {
         time_pre = time_sys;
         time_sys = Hint.getNextTime();
@@ -145,10 +147,10 @@ int main(int argc, char** argv)
         dt_limit = calcDtLimit(time_sys, par.dt_limit_hard);
         Hint.integrateOneStep(time_sys,dt_limit,true,arcint);
         Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
-        if(fmod(time_sys,dt_limit)==0) {
+        if(fmod(time_sys,par.dt_limit_hard)==0) {
             //std::cout<<"Time = "<<time_sys<<std::endl;
             Hint.CalcEnergyHard(E1);
-            Energy Edif = E1.calcDiff(E0);
+            Edif = E1.calcDiff(E0);
             write_p(fout,time_sys,E1,Edif,Hint.getPtcl(),Hint.getPtclN());
         }
     }

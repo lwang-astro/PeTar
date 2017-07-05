@@ -216,6 +216,7 @@ private:
         Hint.CalcEnergyHard(E1);
 #ifdef HARD_DEBUG_PRINT
         fprintf(stderr,"Hard Energy: init =%e, end =%e, error =%e, kin =%e pot =%e\nARC  Energy: init =%e, end =%e, diff =%e, error = %e\n", E0.tot, E1.tot, (E1.tot-E0.tot)/E0.tot, E1.kin, E1.pot, AE0, AE1, (AE1-AE0)/AE0, (AE1+PT1-AE0-PT0)/PT0);
+        Hint.printStepHist();
 #endif
 #endif
             

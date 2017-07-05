@@ -241,6 +241,7 @@ void Newtonian_extA (double3* acc, const PS::F64 dt, Tptcl* p, const PS::S32 np,
     PS::F64 mt = 0.0;
     for(int i=0; i<np; i++) mt += p[i].mass;
     assert(mt==pert[0]->mass);
+    assert(npert>1);
 #endif
 
     for(int i=0; i<np; i++) {

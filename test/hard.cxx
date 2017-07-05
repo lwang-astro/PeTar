@@ -11,6 +11,24 @@
 #include "hard.hpp"
 #include "soft.hpp"
 
+
+template<class Teng>
+void CalcEnergyHard(const PtclHard ptcl[], const PS::S32 n_tot, Teng & eng, 
+                    const PS::F64 r_in, const PS::F64 r_out, const PS::F64 eps_sq = 0.0){
+    eng.kin = eng.pot = eng.tot = 0.0;
+    for(PS::S32 i=0; i<n_tot; i++){
+        eng.kin += 0.5 * ptcl[i].mass_bk * ptcl[i].vel * ptcl[i].vel;
+
+        for(PS::S32 j=i+1; j<n_tot; j++){
+            //PS::F64 r_out = std::max(ptcl[i].r_out,ptcl[j].r_out);
+            PS::F64vec rij = ptcl[i].pos - ptcl[j].pos;
+            PS::F64 dr = sqrt(rij*rij + eps_sq);
+            eng.pot -= ptcl[j].mass_bk*ptcl[i].mass_bk/dr*(1.0 - CalcW(dr/r_out, r_in/r_out));
+        }
+    }
+    eng.tot = eng.kin + eng.pot;
+}
+
 //const PS::F64 SAFTY_FACTOR_FOR_SEARCH = 1.05;
 //const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ = SAFTY_FACTOR_FOR_SEARCH * SAFTY_FACTOR_FOR_SEARCH;
 //const PS::F64 SAFTY_OFFSET_FOR_SEARCH = 1e-7;
@@ -52,9 +70,20 @@ void print_p(PtclHard* p, const int n) {
     }
 }
 
-void write_p(FILE* fout, const PS::F64 time, const PtclHard* p, const int n) {
+// flag: 1: c.m; 2: individual; 
+template<class Teng>
+void write_p(FILE* fout, const PS::F64 time, const PtclHard* p, const int n, Teng &et, const PS::F64 rin, const PS::F64 rout, const PS::F64 eps2, const PS::F64 et0=0, const int flag=2) {
     fprintf(fout,"%e ",time);
+    PS::ReallocatableArray<PtclHard> pp;
     for (int i=0; i<n; i++) {
+        if(flag==2&&(p[i].status>0||p[i].id<0)) continue;
+        if(flag==1&&(p[i].id>=0||p[i].status<0)) continue;
+        pp.push_back(p[i]);
+    }
+    CalcEnergyHard(pp.getPointer(),pp.size(),et,rin,rout,eps2);
+    PS::F64 err = et0==0?0:(et.tot-et0)/et0;
+    fprintf(fout,"%e %e %e %e ",err,et.kin,et.pot,et.tot);
+    for (int i=0; i<pp.size(); i++) {
         fprintf(fout,"%e %e %e %e %e %e %e ", 
                 p[i].mass, p[i].pos[0], p[i].pos[1], p[i].pos[2], 
                 p[i].vel[0], p[i].vel[1], p[i].vel[2]);
@@ -159,19 +188,31 @@ int main(int argc, char** argv)
     fprintf(stderr,"Error: Cannot open file hard.dat.\n");
     abort();
   }
+
+  FILE* fout2;
+  if ( (fout2 = fopen("hardcm.dat","w")) == NULL) {
+    fprintf(stderr,"Error: Cannot open file hardcm.dat.\n");
+    abort();
+  }
   
+  Energy et0,et;
+  PS::F64 eps2 = eps*eps;
   print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
-  write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),N);
+  write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),et0,rin,rout,eps2);
+  write_p(fout2,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),et0,rin,rout,eps2,1);
   while(time_sys < time){
       fprintf(stderr,"Time = %e\n", time_sys);
       sys.driveForMultiCluster<PS::ParticleSystem<FPSoft>,FPSoft>(dt_limit, fp);
-      print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
-      write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),N);
       time_sys += dt_limit;
+      print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
+      write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),et,rin,rout,eps2,et0.tot);
+      write_p(fout2,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),et,rin,rout,eps2,et0.tot,1);
   }
+  
 
   fclose(fin);
   fclose(fout);
+  fclose(fout2);
   
   return 0;
 }
