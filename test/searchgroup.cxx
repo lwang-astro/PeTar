@@ -56,23 +56,6 @@ PtclHard kepler_print(const std::size_t id, const std::size_t ib, PtclHard* c[2]
              <<std::setw(12)<<true_anomaly
              <<std::setw(12)<<mean_anomaly
              <<std::endl;
-    if(id==0&&ib==0) 
-        std::cout<<"      " 
-                 <<std::setw(12)<<"id          " 
-                 <<std::setw(12)<<"ib          " 
-                 <<std::setw(12)<<"m[0]        " 
-                 <<std::setw(12)<<"m[1]        " 
-                 <<std::setw(12)<<"ax          " 
-                 <<std::setw(12)<<"ecc         " 
-                 <<std::setw(12)<<"per         " 
-                 <<std::setw(12)<<"angle[0]    " 
-                 <<std::setw(12)<<"angle[1]    " 
-                 <<std::setw(12)<<"angle[2]    " 
-                 <<std::setw(12)<<"ecc_anomaly " 
-                 <<std::setw(12)<<"true_anomaly" 
-                 <<std::setw(12)<<"mean_anomaly" 
-                 <<std::endl;                 
-            
 
     PS::F64vec xcm((x[0][0]*m[0]+x[1][0]*m[1])/mt, 
                    (x[0][1]*m[0]+x[1][1]*m[1])/mt, 
@@ -178,6 +161,23 @@ int main(int argc, char** argv)
   }
   
   //  plist.kepler_print(0,0,18,10);
+  // header
+  std::cout<<"        " 
+           <<std::setw(12)<<"id          " 
+           <<std::setw(12)<<"ib          " 
+           <<std::setw(12)<<"m[0]        " 
+           <<std::setw(12)<<"m[1]        " 
+           <<std::setw(12)<<"ax          " 
+           <<std::setw(12)<<"ecc         " 
+           <<std::setw(12)<<"per         " 
+           <<std::setw(12)<<"angle[0]    " 
+           <<std::setw(12)<<"angle[1]    " 
+           <<std::setw(12)<<"angle[2]    " 
+           <<std::setw(12)<<"ecc_anomaly " 
+           <<std::setw(12)<<"true_anomaly" 
+           <<std::setw(12)<<"mean_anomaly" 
+           <<std::endl;                 
+
   plist.pair_process(0,0,kepler_print,par);
   SearchGroup<PtclHard> group;
   print_p(p.getPointer(),N);

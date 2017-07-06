@@ -233,52 +233,57 @@ int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, c
  */
 template<class Tptcl, class Tpert, class Tforce, class extpar>
 void Newtonian_extA (double3* acc, const PS::F64 dt, Tptcl* p, const PS::S32 np, Tpert* pert, Tforce* pf, const PS::S32 npert, extpar* pars){
-    static const PS::F64 inv3 = 1.0 / 3.0;
-    PS::F64vec xp[npert];
-    for(int i=0; i<npert; i++) 
-        xp[i] = pert[i]->pos + dt*(pert[i]->vel* + 0.5*dt*(pf[i]->acc0 + inv3*dt*pf[i]->acc1));
+    if(npert>1) {
+        static const PS::F64 inv3 = 1.0 / 3.0;
+        PS::F64vec xp[npert];
+
+        for(int i=0; i<npert; i++) 
+            xp[i] = pert[i]->pos + dt*(pert[i]->vel* + 0.5*dt*(pf[i]->acc0 + inv3*dt*pf[i]->acc1));
 #ifdef HARD_DEBUG
-    PS::F64 mt = 0.0;
-    for(int i=0; i<np; i++) mt += p[i].mass;
-    assert(mt==pert[0]->mass);
-    assert(npert>1);
+        PS::F64 mt = 0.0;
+        for(int i=0; i<np; i++) mt += p[i].mass;
+        assert(mt==pert[0]->mass);
 #endif
 
-    for(int i=0; i<np; i++) {
-        PS::F64vec& xi = p[i].pos;
-        acc[i][0] = -pf[0]->acc0[0]; 
-        acc[i][1] = -pf[0]->acc0[1];        
-        acc[i][2] = -pf[0]->acc0[2]; 
-        acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
-        for(int j=1; j<npert; j++) {
+        for(int i=0; i<np; i++) {
+            PS::F64vec& xi = p[i].pos;
+            acc[i][0] = -pf[0]->acc0[0]; 
+            acc[i][1] = -pf[0]->acc0[1];        
+            acc[i][2] = -pf[0]->acc0[2]; 
+            //else acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
+            for(int j=1; j<npert; j++) {
             
-            PS::F64vec dx = xp[j] - xi;
-            //PS::F64 mi = p[i].mass;
-            PS::F64 mp = pert[j]->mass;
-            PS::F64 dr2 = dx*dx + pars->eps2;
-            PS::F64 dr  = std::sqrt(dr2);
-            PS::F64 dr3 = dr*dr2;
+                PS::F64vec dx = xp[j] - xi;
+                //PS::F64 mi = p[i].mass;
+                PS::F64 mp = pert[j]->mass;
+                PS::F64 dr2 = dx*dx + pars->eps2;
+                PS::F64 dr  = std::sqrt(dr2);
+                PS::F64 dr3 = dr*dr2;
 
-            // smpars[2:3]: rcut_out, rcut_in
-            //  const double k   = cutoff_poly_3rd(dr, smpars[0], smpars[1]);
-            //  const double kdx = cutoff_poly_3rd_dr(dr, dx, smpars[0], smpars[1]);
-            //  const double kdy = cutoff_poly_3rd_dr(dr, dy, smpars[0], smpars[1]);
-            //  const double kdz = cutoff_poly_3rd_dr(dr, dz, smpars[0], smpars[1]);  
-            const PS::F64 r_out = pars->rout;
-            //  const PS::F64 r_out = std::max(pi.r_out, pp.r_out);
-            const PS::F64 r_in  = pars->rin;
-            //const PS::F64 k     = CalcW(dr/r_out, r_in/r_out);
-            const PS::F64 kdot  = cutoff_poly_3rd(dr, r_out, r_in);
+                // smpars[2:3]: rcut_out, rcut_in
+                //  const double k   = cutoff_poly_3rd(dr, smpars[0], smpars[1]);
+                //  const double kdx = cutoff_poly_3rd_dr(dr, dx, smpars[0], smpars[1]);
+                //  const double kdy = cutoff_poly_3rd_dr(dr, dy, smpars[0], smpars[1]);
+                //  const double kdz = cutoff_poly_3rd_dr(dr, dz, smpars[0], smpars[1]);  
+                const PS::F64 r_out = pars->rout;
+                //  const PS::F64 r_out = std::max(pi.r_out, pp.r_out);
+                const PS::F64 r_in  = pars->rin;
+                //const PS::F64 k     = CalcW(dr/r_out, r_in/r_out);
+                const PS::F64 kdot  = cutoff_poly_3rd(dr, r_out, r_in);
 
-            //Pij = - mi*mp / dr * (1-k);
+                //Pij = - mi*mp / dr * (1-k);
 
-            // Aij[0] = mp * dx / dr3 * (1-k) + Pij * (1-kdx);
-            // Aij[1] = mp * dy / dr3 * (1-k) + Pij * (1-kdy);
-            // Aij[2] = mp * dz / dr3 * (1-k) + Pij * (1-kdz);
-            acc[i][0] += mp * dx[0] / dr3 * (1-kdot);
-            acc[i][1] += mp * dx[1] / dr3 * (1-kdot);
-            acc[i][2] += mp * dx[2] / dr3 * (1-kdot);
+                // Aij[0] = mp * dx / dr3 * (1-k) + Pij * (1-kdx);
+                // Aij[1] = mp * dy / dr3 * (1-k) + Pij * (1-kdy);
+                // Aij[2] = mp * dz / dr3 * (1-k) + Pij * (1-kdz);
+                acc[i][0] += mp * dx[0] / dr3 * (1-kdot);
+                acc[i][1] += mp * dx[1] / dr3 * (1-kdot);
+                acc[i][2] += mp * dx[2] / dr3 * (1-kdot);
+            }
         }
+    }
+    else {
+        for(int i=0; i<np; i++) acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
     }
 
     // soft perturbation

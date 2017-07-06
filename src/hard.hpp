@@ -149,6 +149,7 @@ private:
 
 #ifdef HARD_DEBUG
         HardEnergy E0, E1;
+        HardEnergy AE0, AE1;
         Hint.CalcEnergyHard(E0);
 //#ifdef HARD_DEBUG_PRINT
 //        fprintf(stderr,"Hard Energy: init =%e, kin =%e pot =%e\n", E0.tot, E0.kin, E0.pot);
@@ -183,8 +184,7 @@ private:
 
 
 #ifdef HARD_DEBUG
-        PS::F64 AE0,AE1,PT0,PT1;
-        Aint.EnergyRecord(AE0,PT0);
+        Aint.EnergyRecord(AE0);
 #endif
 
         while(time_sys<time_end) {
@@ -212,10 +212,10 @@ private:
         Hint.writeBackPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getNPtcl());
 
 #ifdef HARD_DEBUG
-        Aint.EnergyRecord(AE1,PT1);
+        Aint.EnergyRecord(AE1);
         Hint.CalcEnergyHard(E1);
 #ifdef HARD_DEBUG_PRINT
-        fprintf(stderr,"Hard Energy: init =%e, end =%e, error =%e, kin =%e pot =%e\nARC  Energy: init =%e, end =%e, diff =%e, error = %e\n", E0.tot, E1.tot, (E1.tot-E0.tot)/E0.tot, E1.kin, E1.pot, AE0, AE1, (AE1-AE0)/AE0, (AE1+PT1-AE0-PT0)/PT0);
+        fprintf(stderr,"Hard Energy: init =%e, end =%e, error =%e, kin =%e pot =%e\nARC  Energy: init =%e, end =%e, diff =%e, error = %e\n", E0.tot, E1.tot, (E1.tot-E0.tot)/E0.tot, E1.kin, E1.pot, AE0.tot, AE1.tot, (AE1.kin+AE1.pot-AE0.kin-AE0.pot)/(AE0.kin+AE0.pot), (AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot)/AE0.tot);
         Hint.printStepHist();
 #endif
 #endif
@@ -255,7 +255,7 @@ public:
 
     /// start set Chainpars (L.Wang)
     ///
-    void setARCParam(const PS::F64 energy_error=1e-10, const PS::F64 dterr=1e-9, const PS::F64 dtmin=1e-24, const PS::S32 exp_method=1, const PS::S32 exp_itermax=20, const PS::S32 den_intpmax=20, const PS::S32 exp_fix_iter=0) {
+    void setARCParam(const PS::F64 energy_error=1e-10, const PS::F64 dterr=1e-6, const PS::F64 dtmin=1e-24, const PS::S32 exp_method=1, const PS::S32 exp_itermax=20, const PS::S32 den_intpmax=20, const PS::S32 exp_fix_iter=0) {
         ARC_control_.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
         ARC_control_.setabg(0,1,0);
         ARC_control_.setErr(energy_error,dtmin,dterr);

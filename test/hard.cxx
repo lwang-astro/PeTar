@@ -79,14 +79,15 @@ void write_p(FILE* fout, const PS::F64 time, const PtclHard* p, const int n, Ten
         if(flag==2&&(p[i].status>0||p[i].id<0)) continue;
         if(flag==1&&(p[i].id>=0||p[i].status<0)) continue;
         pp.push_back(p[i]);
+        if((flag==2&&p[i].status!=0)||flag==1) pp.back().mass = pp.back().mass_bk;
     }
     CalcEnergyHard(pp.getPointer(),pp.size(),et,rin,rout,eps2);
     PS::F64 err = et0==0?0:(et.tot-et0)/et0;
     fprintf(fout,"%e %e %e %e ",err,et.kin,et.pot,et.tot);
     for (int i=0; i<pp.size(); i++) {
         fprintf(fout,"%e %e %e %e %e %e %e ", 
-                p[i].mass, p[i].pos[0], p[i].pos[1], p[i].pos[2], 
-                p[i].vel[0], p[i].vel[1], p[i].vel[2]);
+                pp[i].mass, pp[i].pos[0], pp[i].pos[1], pp[i].pos[2], 
+                pp[i].vel[0], pp[i].vel[1], pp[i].vel[2]);
     }
     fprintf(fout,"\n");
 }

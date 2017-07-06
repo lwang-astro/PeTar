@@ -983,12 +983,14 @@ public:
         for (int i=0; i<clist_.size(); i++) {
             if (bininfo[i].ax>0) {
                 PS::F64 finner = bininfo[i].ax*(1.0+bininfo[i].ecc);
+                finner = clist_[i].mass/(finner*finner);
                 finner = finner*finner;
                 clist_[i].slowdown.setSlowDownPars(finner, bininfo[i].peri);
                 Tptcl p[2];
                 OrbParam2PosVel(p[0].pos, p[1].pos, p[0].vel, p[1].vel, bininfo[i].m1, bininfo[i].m2, bininfo[i].ax, bininfo[i].ecc, bininfo[i].inc, bininfo[i].OMG, bininfo[i].omg, pi);
                 p[0].mass = bininfo[i].m1;
                 p[1].mass = bininfo[i].m2;
+                center_of_mass_correction(*(Tptcl*)&clist_[i], p, 2);
                 PS::F64 acc[2][3];
                 const PS::S32 ipert = pert_disp_[i];
                 Newtonian_extA(acc, bininfo[i].tperi+bininfo[i].peri, p, 2, &pert_[ipert], &pforce_[ipert], pert_n_[i], &par_list_[i]);
@@ -1160,12 +1162,13 @@ public:
     }
 
 #ifdef ARC_ERROR
-    void EnergyRecord(PS::F64 &energy, PS::F64 &pt) {
-        energy = 0.0;
-        pt = 0.0;
+    template <class Teng>
+    void EnergyRecord(Teng &energy) {
+        energy.kin = energy.pot = energy.tot = 0.0;
         for(int i=0; i<clist_.size(); i++) {
-            energy += clist_[i].getPot()+clist_[i].getEkin();
-            pt     += clist_[i].getPt();
+            energy.kin += clist_[i].getEkin();
+            energy.pot += clist_[i].getPot();
+            energy.tot += clist_[i].getPt();
         }
     }
 #endif                         
