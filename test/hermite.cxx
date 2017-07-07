@@ -132,7 +132,7 @@ int main(int argc, char** argv)
     Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups, arcint);
 
     FILE* fout;
-    if ( (fout = fopen("hermit.dat","w")) == NULL) {
+    if ( (fout = fopen("hermite.dat","w")) == NULL) {
         fprintf(stderr,"Error: Cannot open file hard.dat.\n");
         abort();
     }

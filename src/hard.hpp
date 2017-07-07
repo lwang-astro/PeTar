@@ -215,7 +215,7 @@ private:
         Aint.EnergyRecord(AE1);
         Hint.CalcEnergyHard(E1);
 #ifdef HARD_DEBUG_PRINT
-        fprintf(stderr,"Hard Energy: init =%e, end =%e, error =%e, kin =%e pot =%e\nARC  Energy: init =%e, end =%e, diff =%e, error = %e\n", E0.tot, E1.tot, (E1.tot-E0.tot)/E0.tot, E1.kin, E1.pot, AE0.tot, AE1.tot, (AE1.kin+AE1.pot-AE0.kin-AE0.pot)/(AE0.kin+AE0.pot), (AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot)/AE0.tot);
+        fprintf(stderr,"Hard Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e\nARC  Energy: init =%e, end =%e, diff =%e, error = %e\n", E0.tot, E1.tot, E1.tot-E0.tot, E1.kin, E1.pot, AE0.tot, AE1.tot, AE1.kin+AE1.pot-AE0.kin-AE0.pot, (AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot)/AE0.tot);
         Hint.printStepHist();
 #endif
 #endif
