@@ -72,7 +72,7 @@ void print_p(PtclHard* p, const int n) {
 
 // flag: 1: c.m; 2: individual; 
 template<class Teng>
-void write_p(FILE* fout, const PS::F64 time, const PtclHard* p, const int n, Teng &et, const PS::F64 rin, const PS::F64 rout, const PS::F64 eps2, const PS::F64 et0=0, const int flag=2) {
+void write_p(FILE* fout, const PS::F64 time, const PtclHard* p, const int n, PtclHard & pcm, Teng &et, const PS::F64 rin, const PS::F64 rout, const PS::F64 eps2, const PS::F64 et0=0, const int flag=2) {
     fprintf(fout,"%e ",time);
     PS::ReallocatableArray<PtclHard> pp;
     for (int i=0; i<n; i++) {
@@ -81,6 +81,7 @@ void write_p(FILE* fout, const PS::F64 time, const PtclHard* p, const int n, Ten
         pp.push_back(p[i]);
         if((flag==2||flag==1)&&p[i].status!=0) pp.back().mass = pp.back().mass_bk;
     }
+    calc_center_of_mass(pcm, pp.getPointer(), pp.size());
     //printf("n = %d\n",pp.size());
     CalcEnergyHard(pp.getPointer(),pp.size(),et,rin,rout,eps2);
     PS::F64 err = et0==0?0:(et.tot-et0)/et0;
@@ -199,17 +200,20 @@ int main(int argc, char** argv)
   
   Energy et0,et,etcm0,etcm;
   PS::F64 eps2 = eps*eps;
+  PtclHard pcm0,pcm1,ppcm0,ppcm1;
   fprintf(stderr,"Time = %e\n", time_sys);
   print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
-  write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),et0,rin,rout,eps2);
-  write_p(fout2,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),etcm0,rin,rout,eps2,0.0,1);
+  write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),pcm0,et0,rin,rout,eps2);
+  write_p(fout2,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),ppcm0,etcm0,rin,rout,eps2,0.0,1);
   while(time_sys < time){
       fprintf(stderr,"Time = %e\n", time_sys+dt_limit);
       sys.driveForMultiCluster<PS::ParticleSystem<FPSoft>,FPSoft>(dt_limit, fp);
       time_sys += dt_limit;
-      print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
-      write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),et,rin,rout,eps2,et0.tot);
-      write_p(fout2,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),etcm,rin,rout,eps2,etcm0.tot,1);
+      //print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
+      write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),pcm1,et,rin,rout,eps2,et0.tot);
+      write_p(fout2,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),ppcm1,etcm,rin,rout,eps2,etcm0.tot,1);
+      std::cerr<<"CM: pos="<<pcm1.pos<<" vel="<<pcm1.vel<<" shift pos="<<pcm1.pos-pcm0.pos<<" shift vel="<<pcm1.vel-pcm0.vel<<std::endl;
+      std::cerr<<"CMHint: pos="<<ppcm1.pos<<" vel="<<ppcm1.vel<<" shift pos="<<ppcm1.pos-ppcm0.pos<<" shift vel="<<ppcm1.vel-ppcm0.vel<<std::endl;
   }
   
 

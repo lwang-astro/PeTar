@@ -139,6 +139,8 @@ int main(int argc, char** argv)
     
     PS::F64 time_pre=0.0;
     Energy Edif = E0.calcDiff(E0);
+    PtclH4 pcm0,pcm1;
+    calc_center_of_mass(pcm0, Hint.getPtcl(), Hint.getPtclN());
     write_p(fout,time_sys,E0,Edif,Hint.getPtcl(),Hint.getPtclN());
     while(time_sys<time_end) {
         time_pre = time_sys;
@@ -151,7 +153,10 @@ int main(int argc, char** argv)
             //std::cout<<"Time = "<<time_sys<<std::endl;
             Hint.CalcEnergyHard(E1);
             Edif = E1.calcDiff(E0);
+            calc_center_of_mass(pcm1, Hint.getPtcl(), Hint.getPtclN());
             write_p(fout,time_sys,E1,Edif,Hint.getPtcl(),Hint.getPtclN());
+            std::cerr<<"CM: pos="<<pcm1.pos<<" vel="<<pcm1.vel<<" shift pos="<<pcm1.pos-pcm0.pos<<" shift vel="<<pcm1.vel-pcm0.vel<<std::endl;
+            
         }
     }
     Hint.writeBackPtcl(p.getPointer(),p.size(),group.getPtclList(),group.getNPtcl());

@@ -207,6 +207,57 @@ private:
         }
     }
 
+    template <class Tpi, class Tp, class ARCint>
+    void CalcAcc0Acc1AllJ(PtclForce &force, 
+                          const Tpi &pi,
+                          const PS::S32 iadr,
+                          const PS::F64 sdi,
+                          const Tp ptcl[],
+                          const PS::S32 n_tot,
+                          const PS::S32 nbin,
+                          const PS::F64 rin,
+                          const PS::F64 rout,
+                          const PS::F64 eps2,
+                          const ARCint* Aint = NULL) {
+
+        for(PS::S32 j=0; j<nbin; j++) {
+            if(iadr==j) continue;
+#ifdef HARD_DEBUG
+            PS::F64 mcmcheck =0.0;
+#endif
+            const Tptcl* pj = Aint->getGroupPtcl(j);
+            PS::F64 sd = 1.0/Aint->getSlowDown(j);
+            for(PS::S32 k=0; k<Aint->getGroupN(j); k++) {
+                PS::F64 r2 = 0.0;
+                CalcAcc0Acc1R2Cutoff(pi.pos, pi.vel*sdi,
+                                     force.acc0, force.acc1, r2,
+                                     pj[k].pos, pj[k].vel*sd, pj[k].mass,
+                                     eps2, rout, rin);
+#ifdef HARD_DEBUG
+                mcmcheck += pj[k].mass;
+#endif
+            }
+#ifdef HARD_DEBUG
+            assert(mcmcheck==ptcl[j].mass);
+            assert(mcmcheck>0.0);
+#endif                    
+        }
+        for(PS::S32 j=nbin; j<n_tot; j++){
+            if(iadr==j) continue;
+            PS::F64 r2 = 0.0;
+            //PS::F64 rout = std::max(ptcl[iadr].r_out, ptcl[j].r_out);
+            CalcAcc0Acc1R2Cutoff(pi.pos, pi.vel*sdi,
+                                 force.acc0, force.acc1, r2,
+                                 ptcl[j].pos, ptcl[j].vel, ptcl[j].mass,
+                                 eps2, rout, rin);
+                // if(r2 < ((ptcl[adr].r_merge + ptcl[j].r_merge)*(ptcl[adr].r_merge + ptcl[j].r_merge)) && ptcl[j].mass > 0.0){
+                //     merge_pair.push_back( std::make_pair(adr, j) );
+                // }
+        }
+        
+    }
+
+
     template <class Tp, class ARCint>
     void CalcAcc0Acc1Act(PtclForce force[],
                          const Tp ptcl[],
@@ -224,41 +275,32 @@ private:
         for(PS::S32 i=0; i<n_act; i++){
             const PS::S32 iadr = Ilist[i];
             force[iadr].acc0 = force[iadr].acc1 = 0.0;
-            // all
-            for(PS::S32 j=0; j<nbin; j++) {
-                if(iadr==j) continue;
+            
+            if (iadr<nbin) {
 #ifdef HARD_DEBUG
                 PS::F64 mcmcheck =0.0;
 #endif
-                const Tptcl* pj = Aint->getGroupPtcl(j);
-                PS::F64 sd = Aint->getSlowDown(j);
-                for(PS::S32 k=0; k<Aint->getGroupN(j); k++) {
-                    PS::F64 r2 = 0.0;
-                    CalcAcc0Acc1R2Cutoff(ptcl[iadr].pos, ptcl[iadr].vel,
-                                         force[iadr].acc0, force[iadr].acc1, r2,
-                                         pj[k].pos, pj[k].vel/sd, pj[k].mass,
-                                         eps2, rout, rin);
+                const PS::S32 ni = Aint->getGroupN(iadr);
+                const Tptcl* pi = Aint->getGroupPtcl(iadr);
+                const PS::F64 sdi = 1.0/Aint->getSlowDown(iadr);
+                PtclForce fp[ni];
+                for (PS::S32 j=0; j<ni; j++) {
+                    fp[j].acc0 = fp[j].acc1 = 0.0;
+                    CalcAcc0Acc1AllJ(fp[j], pi[j], iadr, sdi, ptcl, n_tot, nbin, rin, rout, eps2, Aint);
+                    force[iadr].acc0 += pi[j].mass*fp[j].acc0;
+                    force[iadr].acc1 += pi[j].mass*fp[j].acc1;
 #ifdef HARD_DEBUG
-                    mcmcheck += pj[k].mass;
+                    mcmcheck += pi[j].mass;
 #endif
                 }
 #ifdef HARD_DEBUG
-                assert(mcmcheck==ptcl[j].mass);
+                assert(mcmcheck==ptcl[iadr].mass);
                 assert(mcmcheck>0.0);
 #endif                    
+                force[iadr].acc0 /= ptcl[iadr].mass;
+                force[iadr].acc1 /= ptcl[iadr].mass;
             }
-            for(PS::S32 j=nbin; j<n_tot; j++){
-                if(iadr==j) continue;
-                PS::F64 r2 = 0.0;
-                //PS::F64 rout = std::max(ptcl[iadr].r_out, ptcl[j].r_out);
-                CalcAcc0Acc1R2Cutoff(ptcl[iadr].pos, ptcl[iadr].vel,
-                                     force[iadr].acc0, force[iadr].acc1, r2,
-                                     ptcl[j].pos, ptcl[j].vel, ptcl[j].mass,
-                                     eps2, rout, rin);
-                // if(r2 < ((ptcl[adr].r_merge + ptcl[j].r_merge)*(ptcl[adr].r_merge + ptcl[j].r_merge)) && ptcl[j].mass > 0.0){
-                //     merge_pair.push_back( std::make_pair(adr, j) );
-                // }
-            }
+            else CalcAcc0Acc1AllJ(force[iadr], ptcl[iadr], iadr, 1.0, ptcl, n_tot, nbin, rin, rout, eps2, Aint);
         }
     }
     
@@ -534,7 +576,7 @@ public:
                     PS::S32 group_act_list[],
                     PS::S32 &group_act_n,
                     const PS::S32 n_groups,
-                    const ARCint* Aint = NULL,
+                    ARCint* Aint = NULL,
                     const bool calc_full_flag = true) {
         PS::S32 n_ptcl = ptcl_.size();
         pred_.resizeNoInitialize(n_ptcl);
@@ -562,6 +604,8 @@ public:
         a0_offset_sq_ = 0.1 * mass_min / (r_out_ * r_out_);
         n_act_ = n_ptcl;
 
+        if(Aint!=NULL) Aint->resolve();
+
         if(calc_full_flag) CalcAcc0Acc1Act(force_.getPointer(), ptcl_.getPointer(), ptcl_.size(), adr_sorted_.getPointer(), n_act_, r_in_, r_out_, eps_sq_, Aint);
         else CalcAcc0Acc1Act(force_.getPointer(), ptcl_.getPointer(), adr_sorted_.getPointer(), n_act_, Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, r_out_, eps_sq_, Aint);
     
@@ -570,6 +614,8 @@ public:
             ptcl_[i].acc0 = force_[i].acc0;
             ptcl_[i].acc1 = force_[i].acc1;
         }
+
+        if(Aint!=NULL) Aint->shift();
 
         CalcBlockDt2ndAct(ptcl_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, 0.01*eta_s_, dt_limit, a0_offset_sq_);
 
