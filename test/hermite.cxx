@@ -122,7 +122,7 @@ int main(int argc, char** argv)
     Hint.setPtcl(p.getPointer(),p.size(),group.getPtclList(),group.getNPtcl());
     Hint.searchPerturber();
             
-    Hint.CalcEnergyHard(E0);
+    Hint.CalcEnergy(E0);
     
     std::cerr<<"Energy: init: ";
     E0.dump(std::cerr);
@@ -159,7 +159,7 @@ int main(int argc, char** argv)
         Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
         if(fmod(time_sys,par.dt_limit_hard)==0) {
             //std::cout<<"Time = "<<time_sys<<std::endl;
-            Hint.CalcEnergyHard(E1);
+            Hint.CalcEnergy(E1);
             Edif = E1.calcDiff(E0);
             calc_center_of_mass(pcm1, Hint.getPtcl(), Hint.getPtclN());
             write_p(fout,time_sys,E1,Edif,Hint.getPtcl(),Hint.getPtclN());
@@ -169,7 +169,7 @@ int main(int argc, char** argv)
     }
     Hint.writeBackPtcl(p.getPointer(),p.size(),group.getPtclList(),group.getNPtcl());
     
-    Hint.CalcEnergyHard(E1);
+    Hint.CalcEnergy(E1);
 
     Energy Ediff = E1.calcDiff(E0);
     

@@ -250,7 +250,7 @@ void Newtonian_extA (double3* acc, const PS::F64 dt, Tptcl* p, const PS::S32 np,
             acc[i][0] = -pf[0]->acc0[0]; 
             acc[i][1] = -pf[0]->acc0[1];        
             acc[i][2] = -pf[0]->acc0[2]; 
-            acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
+            //acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
             for(int j=1; j<npert; j++) {
             
                 PS::F64vec dx = xp[j] - xi;

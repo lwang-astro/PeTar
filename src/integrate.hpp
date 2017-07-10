@@ -448,7 +448,8 @@ private:
                 //PS::F64 r_out = std::max(ptcl[i].r_out,ptcl[j].r_out);
                 PS::F64vec rij = ptcl[i].pos - ptcl[j].pos;
                 PS::F64 dr = sqrt(rij*rij + eps_sq);
-                eng.pot -= ptcl[j].mass*ptcl[i].mass/dr*(1.0 - CalcW(dr/r_out, r_in/r_out));
+                PS::F64 k  = CalcW(dr/r_out, r_in/r_out);
+                eng.pot -= ptcl[j].mass*ptcl[i].mass/dr*(1.0 - k);
             }
         }
         eng.tot = eng.kin + eng.pot;
