@@ -177,8 +177,8 @@ int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, c
   //const double r_out = std::max(pi.r_out,pj.r_out);
   const double r_out = pars->rout;
   const double r_in  = pars->rin;
-  // const double k = CalcW(rij/r_out, r_in/r_out);
-  const double k = cutoff_poly_3rd(rij, r_out, r_in);
+  const double k = CalcW(rij/r_out, r_in/r_out);
+  const double kdot = cutoff_poly_3rd(rij, r_out, r_in);
 
   // smooth coefficients
 //  const double mm2=smpars[0];
@@ -208,9 +208,9 @@ int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, c
 //  Aij[0] = mor3 * xij[0] * (1-k) + Pij*(1-kdx);
 //  Aij[1] = mor3 * xij[1] * (1-k) + Pij*(1-kdy);
 //  Aij[2] = mor3 * xij[2] * (1-k) + Pij*(1-kdz);
-  Aij[0] = mor3 * xij[0] * (1-k);   
-  Aij[1] = mor3 * xij[1] * (1-k); 
-  Aij[2] = mor3 * xij[2] * (1-k); 
+  Aij[0] = mor3 * xij[0] * (1-kdot);   
+  Aij[1] = mor3 * xij[1] * (1-kdot); 
+  Aij[2] = mor3 * xij[2] * (1-kdot); 
 
   // dW/dr
   mor3 = mmij / rij3;
@@ -271,16 +271,16 @@ void Newtonian_extA (double3* acc, const PS::F64 dt, Tptcl* p, const PS::S32 np,
                 //  const PS::F64 r_out = std::max(pi.r_out, pp.r_out);
                 const PS::F64 r_in  = pars->rin;
                 //const PS::F64 k     = CalcW(dr/r_out, r_in/r_out);
-                const PS::F64 k  = cutoff_poly_3rd(dr, r_out, r_in);
+                const PS::F64 kdot  = cutoff_poly_3rd(dr, r_out, r_in);
 
                 //Pij = - mi*mp / dr * (1-k);
 
                 // Aij[0] = mp * dx / dr3 * (1-k) + Pij * (1-kdx);
                 // Aij[1] = mp * dy / dr3 * (1-k) + Pij * (1-kdy);
                 // Aij[2] = mp * dz / dr3 * (1-k) + Pij * (1-kdz);
-                acc[i][0] += mor3 * dx[0] * (1-k);
-                acc[i][1] += mor3 * dx[1] * (1-k);
-                acc[i][2] += mor3 * dx[2] * (1-k);
+                acc[i][0] += mor3 * dx[0] * (1-kdot);
+                acc[i][1] += mor3 * dx[1] * (1-kdot);
+                acc[i][2] += mor3 * dx[2] * (1-kdot);
             }
         }
     }

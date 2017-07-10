@@ -326,6 +326,15 @@ void calc_center_of_mass(particle &cm, particle* p[], const int num, const bool 
 
 // center of mass shift
 template <class particle>
+void center_of_mass_shift(particle &cm, particle p[], const int num) {
+  for (int i=0;i<num;i++) {
+    p[i].pos -= cm.pos;
+    p[i].vel -= cm.vel;
+  }
+}
+
+// center of mass shift
+template <class particle>
 void center_of_mass_shift(particle &cm, particle* p[], const int num) {
   for (int i=0;i<num;i++) {
     p[i]->pos -= cm.pos;

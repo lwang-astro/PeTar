@@ -9,15 +9,6 @@
 #include "kepler.hpp"
 
 
-// center of mass shift
-template <class particle>
-void center_of_mass_shift(particle &cm, particle p[], const int num) {
-  for (int i=0;i<num;i++) {
-    p[i].pos -= cm.pos;
-    p[i].vel -= cm.vel;
-  }
-}
-
 void print_p(ParticleBase* p, const int n) {
     std::cout<<std::setw(12)<<"mass"
              <<std::setw(12)<<"x1"

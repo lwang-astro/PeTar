@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstdio>
 #include <iomanip>
+#include <string>
 #include <unordered_map>
 #include <particle_simulator.hpp>
 #include "Newtonian_acceleration.h"
@@ -97,7 +98,8 @@ void write_p(FILE* fout, const PS::F64 time, const PtclHard* p, const int n, Ptc
 int main(int argc, char** argv)
 {
   // data file name
-  char* filename = argv[argc-1];
+  char* filename = argv[argc-2];
+  char* foutname = argv[argc-1];
   // open data file
 
   FILE* fin;
@@ -107,14 +109,14 @@ int main(int argc, char** argv)
   }
 
   int N;
-  PS::F64 rin, rout, rsearch, gmin=0.0, eps, eta, dt_limit, time, m_average=0;
-  PS::S32 rcount = fscanf(fin, "%lf %d %lf %lf %lf %lf %lf\n", 
-                          &time, &N, &rin, &rout, &dt_limit, &eta, &eps);
-  if (rcount<7) {
+  PS::F64 rin, rout, rbin, rsearch, gmin=0.0, eps, eta, dt_limit, time, m_average=0;
+  PS::S32 rcount = fscanf(fin, "%lf %d %lf %lf %lf %lf %lf %lf %lf\n", 
+                          &time, &N, &rin, &rout, &rsearch, &rbin, &dt_limit, &eta, &eps);
+  if (rcount<8) {
       std::cerr<<"Error: parameter reading fail!\n";
       abort();
   }
-  rsearch = rout;
+  //rsearch = rout;
 
   fprintf(stderr,"t_end = %e\nN = %d\nr_in = %e\nr_out = %e\neta = %e\ndt_limit = %e\neps = %e\n",time,N,rin,rout,eta,dt_limit,eps);
 
@@ -135,11 +137,15 @@ int main(int argc, char** argv)
   }
   m_average /= N;
 
+  PtclHard pcm;
+  calc_center_of_mass(pcm, p.getPointer(), p.size());
+  center_of_mass_shift(pcm, p.getPointer(), p.size());
+
   print_p(p.getPointer(),N);
 
   SearchGroup<PtclHard> group;
   group.findGroups(p.getPointer(), N);
-  group.searchAndMerge(p.getPointer(), N, rin);
+  group.searchAndMerge(p.getPointer(), N, rbin);
   std::cerr<<"SearchAndMerge\n";
   //print_p(p.getPointer(),N);
   
@@ -159,7 +165,7 @@ int main(int argc, char** argv)
   
   PS::ReallocatableArray<PtclHard> ptcl_new;
 
-  group.generateList(p.getPointer(), N, ptcl_new, rin);
+  group.generateList(p.getPointer(), N, ptcl_new, rbin);
   std::cerr<<"GenerateList\n";
   print_p(p.getPointer(),p.size());
 
@@ -180,20 +186,22 @@ int main(int argc, char** argv)
   SystemHard sys;
   PS::ParticleSystem<FPSoft> fp;
   PS::F64 time_sys = 0.0;
-  sys.setParam(rout*1.2, rout, rin, eps, dt_limit, eta, time_sys, gmin, m_average);
+  sys.setParam(rsearch, rbin, rout, rin, eps, dt_limit, eta, time_sys, gmin, m_average);
   sys.setARCParam();
   
   sys.setPtclForIsolatedMultiCluster(p,adr,np);
   //sys.initialMultiCluserOMP(fp);
 
   FILE* fout;
-  if ( (fout = fopen("hard.dat","w")) == NULL) {
+  std::string fname="hard.dat.";
+  if ( (fout = fopen((fname+foutname).c_str(),"w")) == NULL) {
     fprintf(stderr,"Error: Cannot open file hard.dat.\n");
     abort();
   }
 
   FILE* fout2;
-  if ( (fout2 = fopen("hardcm.dat","w")) == NULL) {
+  fname = "hardc.dat.";
+  if ( (fout2 = fopen((fname+foutname).c_str(),"w")) == NULL) {
     fprintf(stderr,"Error: Cannot open file hardcm.dat.\n");
     abort();
   }

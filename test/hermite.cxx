@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <string>
 #include <iomanip>
 #include <particle_simulator.hpp>
 #include "Newtonian_acceleration.h"
@@ -64,13 +65,15 @@ void print_p(PtclHard* p, const int n) {
 }
 
 struct params{
-    double rin,rout,dt_limit_hard,eta,eps;
+    double rin,rout,rsearch,rbin,dt_limit_hard,eta,eps;
 };
 
 int main(int argc, char** argv)
 {
     // data file name
-    char* filename = argv[argc-1];
+    char* filename = argv[argc-2];
+    char* foutname = argv[argc-1];
+
     // open data file
     std::fstream fs;
     fs.open(filename,std::fstream::in);
@@ -85,9 +88,9 @@ int main(int argc, char** argv)
 
     Energy E0,E1;
 
-    fs>>time_end>>N>>par.rin>>par.rout>>par.dt_limit_hard>>par.eta>>par.eps;
+    fs>>time_end>>N>>par.rin>>par.rout>>par.rsearch>>par.rbin>>par.dt_limit_hard>>par.eta>>par.eps;
 
-    fprintf(stderr,"t_end = %e\nN = %d\nr_in = %e\nr_out = %e\neta = %e\ndt_limit = %e\neps = %e\n",time_end,N,par.rin,par.rout,par.eta,par.dt_limit_hard,par.eps);
+    fprintf(stderr,"t_end = %e\nN = %d\nr_in = %e\nr_out = %e\nr_search = %e\neta = %e\ndt_limit = %e\neps = %e\n",time_end,N,par.rin,par.rout,par.rsearch,par.eta,par.dt_limit_hard,par.eps);
 
     PS::ReallocatableArray<PtclHard> p;
     p.resizeNoInitialize(N);
@@ -98,13 +101,17 @@ int main(int argc, char** argv)
           >>p[i].vel[0]>>p[i].vel[1]>>p[i].vel[2];
         p[i].id = i;
         p[i].status = 0;
-        p[i].r_search = par.rout*10;
+        p[i].r_search = par.rsearch;
       
         if (fs.eof()) {
             std::cerr<<"Error: data file reach end when reading pairs (current loaded pair number is "<<i<<"; required pair number "<<N-1<<std::endl;
             abort();
         }
     }    
+
+    PtclHard pcm;
+    calc_center_of_mass(pcm, p.getPointer(), p.size());
+    center_of_mass_shift(pcm, p.getPointer(), p.size());
 
     SearchGroup<PtclHard> group;
             
@@ -132,7 +139,8 @@ int main(int argc, char** argv)
     Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups, arcint);
 
     FILE* fout;
-    if ( (fout = fopen("hermite.dat","w")) == NULL) {
+    std::string fname="hermite.dat.";
+    if ( (fout = fopen((fname+foutname).c_str(),"w")) == NULL) {
         fprintf(stderr,"Error: Cannot open file hard.dat.\n");
         abort();
     }

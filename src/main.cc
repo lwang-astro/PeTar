@@ -226,7 +226,7 @@ int main(int argc, char *argv[]){
 
     PS::Comm::barrier();
 
-    PS::F64 r_in, m_average, v_disp, r_search_min;
+    PS::F64 r_in, m_average, v_disp, r_search_min, r_bin;
     GetR(system_soft, r_in, r_out, r_search_min, m_average, dt_soft, v_disp, search_factor, ratio_r_cut);
 //    EPISoft::r_out = r_out;
 //    EPISoft::r_in  = r_in;
@@ -234,16 +234,18 @@ int main(int argc, char *argv[]){
     EPISoft::r_out = EPJSoft::r_out = FPSoft::r_out = r_out;
     PtclHard::search_factor = search_factor;
     PtclHard::r_search_min = r_search_min;
+    r_bin = r_in;
 //    EPJSoft::r_search_min = r_out*search_factor;
 //    EPJSoft::m_average = m_average;
     
     if(my_rank == 0)
         std::cerr<<" m_average    = "<<m_average      <<std::endl
                  <<" r_in         = "<<r_in           <<std::endl
-                 <<" r_out_single = "<<r_out          <<std::endl
-                 <<" r_search_off = "<<r_search_offset<<std::endl
+                 <<" r_out        = "<<r_out          <<std::endl
+                 <<" r_search_min = "<<r_search_min   <<std::endl
+                 <<" r_bin        = "<<r_bin          <<std::endl
                  <<" vel_disp     = "<<v_disp         <<std::endl
-                              <<" dt_soft      = "<<dt_soft        <<std::endl;
+                 <<" dt_soft      = "<<dt_soft        <<std::endl;
     
 
     // set r_search
@@ -287,13 +289,13 @@ int main(int argc, char *argv[]){
                                        dinfo);
 
     SystemHard system_hard_one_cluster;
-    system_hard_one_cluster.setParam(r_search_min, r_out, r_in, eps, dt_soft/dt_limit_hard_factor, eta, time_sys, g_min, m_average);
+    system_hard_one_cluster.setParam(r_search_min, r_bin, r_out, r_in, eps, dt_soft/dt_limit_hard_factor, eta, time_sys, g_min, m_average);
     // system_hard_one_cluster.setARCParam();
     SystemHard system_hard_isolated;
-    system_hard_isolated.setParam(r_search_min, r_out, r_in, eps,  dt_soft/dt_limit_hard_factor, eta, time_sys, g_min, m_average);
+    system_hard_isolated.setParam(r_search_min, r_bin, r_out, r_in, eps,  dt_soft/dt_limit_hard_factor, eta, time_sys, g_min, m_average);
     system_hard_isolated.setARCParam();
     SystemHard system_hard_conected;
-    system_hard_conected.setParam(r_search_min, r_out, r_in, eps, dt_soft/dt_limit_hard_factor, eta, time_sys, g_min, m_average);
+    system_hard_conected.setParam(r_search_min, r_bin, r_out, r_in, eps, dt_soft/dt_limit_hard_factor, eta, time_sys, g_min, m_average);
     system_hard_conected.setARCParam();
 
     SearchCluster search_cluster;

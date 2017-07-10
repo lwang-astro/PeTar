@@ -1,14 +1,15 @@
 #include <iostream>
 #include <cstdio>
+#include <string>
 #include <iomanip>
 #include <unordered_map>
 #include <particle_simulator.hpp>
-#include "Newtonian_acceleration.h"
+//#include "Newtonian_acceleration.h"
+#include "hard.hpp"
 #include "ptree.h"
 #include "kepler.hpp"
-#include "rsearch.hpp"
+//#include "rsearch.hpp"
 #include "cluster_list.hpp"
-#include "hard.hpp"
 
 //const PS::F64 SAFTY_FACTOR_FOR_SEARCH = 1.05;
 //const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ = SAFTY_FACTOR_FOR_SEARCH * SAFTY_FACTOR_FOR_SEARCH;
@@ -73,7 +74,8 @@ void print_p(PtclHard* p, const int n) {
 int main(int argc, char** argv)
 {
   // data file name
-  char* filename = argv[argc-1];
+  char* filename = argv[argc-2];
+  char* foutname = argv[argc-1];
   // open data file
 
   FILE* fin;
@@ -83,14 +85,14 @@ int main(int argc, char** argv)
   }
 
   int N;
-  PS::F64 rin, rout, rsearch, eps, eta, dt_limit, time, m_average=0;
-  PS::S32 rcount = fscanf(fin, "%lf %d %lf %lf %lf %lf %lf\n", 
-                          &time, &N, &rin, &rout, &dt_limit, &eta, &eps);
-  if (rcount<7) {
+  PS::F64 rin, rout, rsearch, rbin, eps, eta, dt_limit, time, m_average=0;
+  PS::S32 rcount = fscanf(fin, "%lf %d %lf %lf %lf %lf %lf %lf %lf\n", 
+                          &time, &N, &rin, &rout, &rsearch, &rbin, &dt_limit, &eta, &eps);
+  if (rcount<8) {
       std::cerr<<"Error: parameter reading fail!\n";
       abort();
   }
-  rsearch = 10*rout;
+  //rsearch = rout;
 
   fprintf(stderr,"t_end = %e\nN = %d\nr_in = %e\nr_out = %e\neta = %e\ndt_limit = %e\neps = %e\n",time,N,rin,rout,eta,dt_limit,eps);
 
@@ -110,6 +112,10 @@ int main(int argc, char** argv)
       adr.push_back(i);
   }
   m_average /= N;
+
+  PtclHard pcm;
+  calc_center_of_mass(pcm, p.getPointer(), N);
+  center_of_mass_shift(pcm, p.getPointer(), N);
 
   print_p(p.getPointer(),N);
 
@@ -160,7 +166,7 @@ int main(int argc, char** argv)
   ARC_control.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA<PtclHard,PtclHard*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
   ARC_control.setabg(0,1,0);
   ARC_control.setErr(1e-10,1e-24,1e-6);
-  ARC_control.setIterSeq(20,20);
+  ARC_control.setIterSeq(20,3,20);
   ARC_control.setIntp(1);
   ARC_control.setIterConst(0);
   ARC_control.setAutoStep(3);
@@ -171,7 +177,7 @@ int main(int argc, char** argv)
   Int_pars.eps2 = eps*eps;
 
   ARCIntegrator<PtclHard, PtclHard, PtclForce, ARC_int_pars, ARC_pert_pars> Aint(ARC_control, Int_pars);
-  PtclHard pcm = p[group.getPtclList()[0]];
+  pcm = p[group.getPtclList()[0]];
   Aint.reserveARMem(1);
   Aint.reservePertMem(10);
   Aint.addOneGroup(p.getPointer(),group.getGroup(0), group.getGroupN(0),group.getGroupPertList(0,n_split), n_split, &pcm, NULL, NULL, 0);
@@ -183,8 +189,9 @@ int main(int argc, char** argv)
   HardEnergy e0,e1;
 
   FILE* fout;
-  if ( (fout = fopen("arc.dat","w")) == NULL) {
-    fprintf(stderr,"Error: Cannot open file hard.dat.\n");
+  std::string fname="arc.dat.";
+  if ( (fout = fopen((fname+foutname).c_str(),"w")) == NULL) {
+    fprintf(stderr,"Error: Cannot open file arc.dat.\n");
     abort();
   }
   
@@ -192,6 +199,8 @@ int main(int argc, char** argv)
   PS::F64 time_i = 0.0;
   PS::F64 err;
 
+  std::cerr<<"Time = "<<time_i<<std::endl;
+  print_p(p.getPointer(),p.size());
   Aint.EnergyRecord(e0);
   write_p(fout,0.0,e0,0.0,p.getPointer(),N);
   for (int i=0; i<nstep; i++) {
@@ -201,8 +210,8 @@ int main(int argc, char** argv)
       Aint.EnergyRecord(e1);
       err = (e1.kin + e1.pot - (e0.kin + e0.pot))/(e0.kin + e0.pot);
       write_p(fout,time_i,e1,err,p.getPointer(),N);
-      //std::cerr<<"Time = "<<time_i<<std::endl;
-      //print_p(p.getPointer(),p.size());
+      std::cerr<<"Time = "<<time_i<<std::endl;
+      print_p(p.getPointer(),p.size());
       Aint.shift();
   }
 

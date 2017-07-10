@@ -93,6 +93,7 @@ private:
     PS::F64 time_origin_;
     PS::F64 gamma_;
     PS::F64 r_search_single_;
+    PS::F64 r_bin_;
     PS::F64 m_average_;
     PS::S32 n_split_;
 
@@ -222,9 +223,9 @@ private:
             
         //group.resolveGroups(ptcl_org, n_ptcl, group_ptcl_glb.getPointer(), group_list.size(), group_list.getPointer(), adr_cm.getPointer());
         group.resolveGroups();
-        group.searchAndMerge(ptcl_org, n_ptcl, Int_pars_.rin);
+        group.searchAndMerge(ptcl_org, n_ptcl, r_bin_);
         // Kickcorrect(ptcl_org, group.getRoutChangeList());
-        group.generateList(ptcl_org, n_ptcl, ptcl_new, Int_pars_.rin, n_split_);
+        group.generateList(ptcl_org, n_ptcl, ptcl_new, r_bin_, n_split_);
 
             // group.reverseCopy(ptcl_org, n_ptcl);
 //        }
@@ -324,6 +325,7 @@ public:
     }
 
     void setParam(const PS::F64 _rsearch, 
+                  const PS::F64 _rbin,
                   const PS::F64 _rout,
                   const PS::F64 _rin,
                   const PS::F64 _eps,
@@ -343,6 +345,7 @@ public:
         time_origin_ = _time_origin;
         gamma_ = std::pow(1.0/_gmin,0.33333);
         r_search_single_ = _rsearch; 
+        r_bin_           = _rbin;
         m_average_ = _m_avarage;
         n_split_ = _n_split;
     }
@@ -555,9 +558,9 @@ public:
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
             SearchGroup<PtclHard> group;
             group.findGroups(ptcl_hard_.getPointer(adr_head), n_ptcl, n_split_);
-            group.searchAndMerge(ptcl_hard_.getPointer(adr_head), n_ptcl, Int_pars_.rin);
+            group.searchAndMerge(ptcl_hard_.getPointer(adr_head), n_ptcl, r_bin_);
             PS::ReallocatableArray<PtclHard> ptcl_new;
-            group.generateList(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_new, Int_pars_.rin);
+            group.generateList(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_new, r_bin_, n_split_);
 #pragma omp critical
             {
                 for (PS::S32 j=0; j<ptcl_new.size(); j++) {
