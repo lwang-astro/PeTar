@@ -1730,6 +1730,10 @@ public:
         return &group_list_[group_list_disp_[i]];
     }
 
+    PS::S32 getGroupSize() const {
+        return group_list_.size();
+    }
+
     PS::S32 getGroupN(const std::size_t i) const {
         return group_list_n_[i];
     }

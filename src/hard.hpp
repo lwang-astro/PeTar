@@ -151,7 +151,9 @@ private:
 #ifdef HARD_DEBUG
         HardEnergy E0, E1;
         HardEnergy AE0, AE1;
-        Hint.CalcEnergyHard(E0);
+        HardEnergy ET0, ET1;
+        Hint.CalcEnergy(E0);
+        CalcEnergyHard(ET0, group.getPtclList(), group.getNPtcl(), group.getGroup(0), group.getGroupSize(), group.getNGroups());
 //#ifdef HARD_DEBUG_PRINT
 //        fprintf(stderr,"Hard Energy: init =%e, kin =%e pot =%e\n", E0.tot, E0.kin, E0.pot);
 //#endif
@@ -214,9 +216,14 @@ private:
 
 #ifdef HARD_DEBUG
         Aint.EnergyRecord(AE1);
-        Hint.CalcEnergyHard(E1);
+        Hint.CalcEnergy(E1);
+        CalcEnergyHard(ET1, group.getPtclList(), group.getNPtcl(), group.getGroup(0), group.getGroupSize(), group.getNGroups());
+        
 #ifdef HARD_DEBUG_PRINT
-        fprintf(stderr,"Hard Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e\nARC  Energy: init =%e, end =%e, diff =%e, error = %e\n", E0.tot, E1.tot, E1.tot-E0.tot, E1.kin, E1.pot, AE0.tot, AE1.tot, AE1.kin+AE1.pot-AE0.kin-AE0.pot, (AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot)/AE0.tot);
+        fprintf(stderr,"H4  Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e\nARC Energy: init =%e, end =%e, diff =%e, error = %e\nTot Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e, Tot-H4-ARC =%e\n", 
+                E0.tot, E1.tot, E1.tot-E0.tot, E1.kin, E1.pot, 
+                AE0.kin+AE0.pot, AE1.kin+AE1.pot, AE1.kin+AE1.pot-AE0.kin-AE0.pot, (AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot)/AE0.tot,
+                ET0.tot, ET1.tot, ET1.tot-ET0.tot, ET1.kin, ET1.pot, ET1.tot-E1.tot-AE1.kin-AE1.pot);
         Hint.printStepHist();
 #endif
 #endif
@@ -348,6 +355,43 @@ public:
         r_bin_           = _rbin;
         m_average_ = _m_avarage;
         n_split_ = _n_split;
+    }
+
+    template<class Teng>
+    void CalcEnergyHard(Teng & eng,  const PS::S32* ptcl_list, const PS::S32 ptcl_n, const PS::S32* group_list, const PS::S32 group_n, const PS::S32 nbin){
+        eng.kin = eng.pot = eng.tot = 0.0;
+        
+        for(PS::S32 i=nbin; i<ptcl_n; i++){
+            PtclHard* pi = &ptcl_hard_[ptcl_list[i]];
+            eng.kin += 0.5 * pi->mass * pi->vel * pi->vel;
+
+            for(PS::S32 j=i+1; j<ptcl_n; j++){
+                PtclHard* pj = &ptcl_hard_[ptcl_list[j]];
+                PS::F64vec rij = pi->pos - pj->pos;
+                PS::F64 dr = sqrt(rij*rij + Int_pars_.eps2);
+                eng.pot -= pj->mass*pi->mass/dr*(1.0 - CalcW(dr/Int_pars_.rout, Int_pars_.rin/Int_pars_.rout));
+            }
+
+            for(PS::S32 j=0; j<group_n; j++){
+                PtclHard* pj = &ptcl_hard_[group_list[j]];
+                PS::F64vec rij = pi->pos - pj->pos;
+                PS::F64 dr = sqrt(rij*rij + Int_pars_.eps2);
+                eng.pot -= pj->mass*pi->mass/dr*(1.0 - CalcW(dr/Int_pars_.rout, Int_pars_.rin/Int_pars_.rout));
+            }
+        }
+
+        for(PS::S32 i=0; i<group_n; i++){
+            PtclHard* pi = &ptcl_hard_[group_list[i]];
+            eng.kin += 0.5 * pi->mass * pi->vel * pi->vel;
+
+            for(PS::S32 j=i+1; j<group_n; j++){
+                PtclHard* pj = &ptcl_hard_[group_list[j]];
+                PS::F64vec rij = pi->pos - pj->pos;
+                PS::F64 dr = sqrt(rij*rij + Int_pars_.eps2);
+                eng.pot -= pj->mass*pi->mass/dr*(1.0 - CalcW(dr/Int_pars_.rout, Int_pars_.rin/Int_pars_.rout));
+            }
+        }
+        eng.tot = eng.kin + eng.pot;
     }
 
 

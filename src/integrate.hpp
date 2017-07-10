@@ -438,8 +438,8 @@ private:
 
 
     template<class Teng>
-    void CalcEnergyHard(const PtclH4 ptcl[], const PS::S32 n_tot, Teng & eng, 
-                        const PS::F64 r_in, const PS::F64 r_out, const PS::F64 eps_sq = 0.0){
+    void CalcEnergy(const PtclH4 ptcl[], const PS::S32 n_tot, Teng & eng, 
+                    const PS::F64 r_in, const PS::F64 r_out, const PS::F64 eps_sq = 0.0){
         eng.kin = eng.pot = eng.tot = 0.0;
         for(PS::S32 i=0; i<n_tot; i++){
             eng.kin += 0.5 * ptcl[i].mass * ptcl[i].vel * ptcl[i].vel;
@@ -627,8 +627,8 @@ public:
     }
     
     template<class Energy>
-    void CalcEnergyHard(Energy & eng) {
-        CalcEnergyHard(ptcl_.getPointer(), ptcl_.size(), eng, r_in_, r_out_, eps_sq_);
+    void CalcEnergy(Energy & eng) {
+        CalcEnergy(ptcl_.getPointer(), ptcl_.size(), eng, r_in_, r_out_, eps_sq_);
     }
 
     PS::F64 getNextTime() {
