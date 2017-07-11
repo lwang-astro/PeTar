@@ -10,6 +10,10 @@
 #define DEBUG_ENERGY_LIMIT 1e-6
 #endif
 
+#ifdef FIX_STEP_DEBUG
+#define STEP_DIVIDER 32.0
+#endif
+
 //const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ;
 const PS::F64 pi = 4.0*atan(1.0);
 
@@ -137,11 +141,15 @@ private:
             const PS::S32 adr = adr_array[i];
             const PS::F64vec a0 = force[adr].acc0;
             const PS::F64vec a1 = force[adr].acc1;
-        
+
+#ifdef FIX_STEP_DEBUG
+            ptcl[adr].dt = dt_limit/STEP_DIVIDER;
+#else        
             const PS::F64 dt_ref = CalcDt2nd(a0, a1, eta, a0_offset_sq);
             PS::F64 dt = dt_limit;
             while(dt > dt_ref) dt *= 0.5;
             ptcl[adr].dt = dt;
+#endif
         }
     }
 
@@ -427,8 +435,14 @@ private:
             pti->acc3 = acc3;
 #endif
             pti->dt = dt_limit;
+
+#ifdef FIX_STEP_DEBUG
+            pti->dt /= STEP_DIVIDER;
+#else
             while(pti->dt > dt_ref) pti->dt *= 0.5;
             pti->dt = dt_old*2 < pti->dt ?  dt_old*2 : pti->dt;
+#endif
+
 #ifdef HARD_DEBUG
             assert(pti->dt != 0.0);
 //            assert(pti->dt >1.0e-12);
@@ -658,7 +672,11 @@ public:
             time_next_[adr] = ptcl_[adr].time + ptcl_[adr].dt;
         }
 
-        if(Aint!=NULL) Aint->shift();
+        if(Aint!=NULL) {
+            Aint->shift();
+            //Aint->updateCM(ptcl_.getPointer());
+            //Aint.updateCM(Hint.getPtcl(), group_act_list.getPointer(), group_act_n);
+        }
     }
 
     void SortAndSelectIp(PS::S32 group_act_list[],
@@ -1037,10 +1055,11 @@ public:
                 OrbParam2PosVel(p[0].pos, p[1].pos, p[0].vel, p[1].vel, bininfo[i].m1, bininfo[i].m2, bininfo[i].ax, bininfo[i].ecc, bininfo[i].inc, bininfo[i].OMG, bininfo[i].omg, pi);
                 p[0].mass = bininfo[i].m1;
                 p[1].mass = bininfo[i].m2;
-                center_of_mass_correction(*(Tptcl*)&clist_[i], p, 2);
+                //center_of_mass_correction(*(Tptcl*)&clist_[i], p, 2);
                 PS::F64 acc[2][3];
                 const PS::S32 ipert = pert_disp_[i];
-                Newtonian_extA(acc, bininfo[i].tperi+bininfo[i].peri, p, 2, &pert_[ipert], &pforce_[ipert], pert_n_[i], &par_list_[i]);
+                //Newtonian_extA(acc, bininfo[i].tperi+bininfo[i].peri, p, 2, &pert_[ipert], &pforce_[ipert], pert_n_[i], &par_list_[i]);
+                Newtonian_extA(acc, 0.0, p, 2, &pert_[ipert], &pforce_[ipert], pert_n_[i], &par_list_[i]);
                 PS::F64 fpertsq = 0.0;
                 for(int k=0; k<3; k++) {
                     PS::F64 dacc = acc[0][k]-acc[1][k];

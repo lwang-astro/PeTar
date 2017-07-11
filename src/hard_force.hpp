@@ -224,7 +224,7 @@ int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, c
 //! Newtonian acceleration from particle p to particle i (function type of ::ARC::pair_Ap)
 /*! 
   @param[out] Ai: acceleration vector. \f$Aij[1:3] = m_i m_p (xp[1:3]-xi[1:3]) / |xp-xi|^3 \f$.
-  @param[in]  dt: predict time interval
+  @param[in]  time: next time
   @param[in]  p:  chain particle list
   @param[in]  np: chain particle number
   @param[in]  pert: perturber address list (first should be center-of-mass of AR)
@@ -232,13 +232,16 @@ int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, c
   @param[in]  pars: ARC pars including rin, rout and perturbation kepler spline interpolation class
  */
 template<class Tptcl, class Tpert, class Tforce, class extpar>
-void Newtonian_extA (double3* acc, const PS::F64 dt, Tptcl* p, const PS::S32 np, Tpert* pert, Tforce* pf, const PS::S32 npert, extpar* pars){
+void Newtonian_extA (double3* acc, const PS::F64 time, Tptcl* p, const PS::S32 np, Tpert* pert, Tforce* pf, const PS::S32 npert, extpar* pars){
     if(npert>1) {
         static const PS::F64 inv3 = 1.0 / 3.0;
         PS::F64vec xp[npert];
 
-        for(int i=0; i<npert; i++) 
+        for(int i=0; i<npert; i++) {
+            PS::F64 dt = time - pert[i]->time;
             xp[i] = pert[i]->pos + dt*(pert[i]->vel* + 0.5*dt*(pf[i]->acc0 + inv3*dt*pf[i]->acc1));
+        }
+
 #ifdef HARD_DEBUG
         PS::F64 mt = 0.0;
         for(int i=0; i<np; i++) mt += p[i].mass;
@@ -250,7 +253,7 @@ void Newtonian_extA (double3* acc, const PS::F64 dt, Tptcl* p, const PS::S32 np,
             acc[i][0] = -pf[0]->acc0[0]; 
             acc[i][1] = -pf[0]->acc0[1];        
             acc[i][2] = -pf[0]->acc0[2]; 
-            //acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
+//            acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
             for(int j=1; j<npert; j++) {
             
                 PS::F64vec dx = xp[j] - xi;
@@ -284,9 +287,9 @@ void Newtonian_extA (double3* acc, const PS::F64 dt, Tptcl* p, const PS::S32 np,
             }
         }
     }
-    else {
+   else {
         for(int i=0; i<np; i++) acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
-    }
+   }
 
     // soft perturbation
 }
