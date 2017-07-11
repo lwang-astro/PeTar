@@ -18,7 +18,7 @@
 template <class Tptcl>
 void write_p(FILE* fout, const PS::F64 time, const HardEnergy &E, const PS::F64 err, const Tptcl* p, const int n) {
     fprintf(fout,"%e %e %e %e %e ",time, err, E.kin, E.pot, E.tot);
-    //PS::ReallocatableArray<PtclHard> pp;
+    //PS::ReallocatableArray<PtclH4> pp;
     //for (int i=0; i<n; i++) {
     //    if(flag==2&&(p[i].status>0||p[i].id<0)) continue;
     //    if(flag==1&&(p[i].id>=0||p[i].status<0)) continue;
@@ -38,7 +38,7 @@ void write_p(FILE* fout, const PS::F64 time, const HardEnergy &E, const PS::F64 
 #define NAN_CHECK(val) assert((val) == (val));
 #endif
 
-void print_p(PtclHard* p, const int n) {
+void print_p(PtclH4* p, const int n) {
     std::cout<<std::setw(12)<<"mass"
              <<std::setw(12)<<"x1"
              <<std::setw(12)<<"x2"
@@ -50,8 +50,6 @@ void print_p(PtclHard* p, const int n) {
              <<std::setw(12)<<"mass_bk"
              <<std::setw(12)<<"status"
              <<std::setw(12)<<"id"
-             <<std::setw(12)<<"id_cluster"
-             <<std::setw(12)<<"adr"
              <<std::endl;
     for (int i=0; i<n; i++) {
         std::cout<<std::setw(12)<<p[i].mass
@@ -65,8 +63,6 @@ void print_p(PtclHard* p, const int n) {
                  <<std::setw(12)<<p[i].mass_bk
                  <<std::setw(12)<<p[i].status
                  <<std::setw(12)<<p[i].id
-                 <<std::setw(12)<<p[i].id_cluster
-                 <<std::setw(12)<<p[i].adr_org
                  <<std::endl;
     }
 }
@@ -97,13 +93,13 @@ int main(int argc, char** argv)
   fprintf(stderr,"t_end = %e\nN = %d\nr_in = %e\nr_out = %e\neta = %e\ndt_limit = %e\neps = %e\n",time,N,rin,rout,eta,dt_limit,eps);
 
   PS::ReallocatableArray<ParticleBase> pin;
-  PS::ReallocatableArray<PtclHard> p;
+  PS::ReallocatableArray<PtclH4> p;
   PS::ReallocatableArray<PS::S32> adr;
   PS::ReallocatableArray<PS::S32> np;
   pin.resizeNoInitialize(N);
   for (int i=0; i<N; i++) {
       pin[i].readAscii(fin);
-      p.push_back(PtclHard(pin[i]));
+      p.push_back(PtclH4(pin[i]));
       p.back().r_search = rsearch;
       //p.back().mass_bk = 0.0;
       p.back().id = i+1;
@@ -113,7 +109,7 @@ int main(int argc, char** argv)
   }
   m_average /= N;
 
-  PtclHard pcm;
+  PtclH4 pcm;
   calc_center_of_mass(pcm, p.getPointer(), N);
   center_of_mass_shift(pcm, p.getPointer(), N);
 
@@ -121,7 +117,7 @@ int main(int argc, char** argv)
 
   const PS::S32 n_split = 8;
 
-  SearchGroup<PtclHard> group;
+  SearchGroup<PtclH4> group;
   group.findGroups(p.getPointer(), N, n_split);
   group.searchAndMerge(p.getPointer(), N, rsearch);
   //std::cout<<"SearchAndMerge\n";
@@ -140,7 +136,7 @@ int main(int argc, char** argv)
   //}
   //std::cout<<std::endl;
   
-  PS::ReallocatableArray<PtclHard> ptcl_new;
+  PS::ReallocatableArray<PtclH4> ptcl_new;
 
   group.generateList(p.getPointer(), N, ptcl_new, rsearch, n_split);
   //std::cout<<"GenerateList\n";
@@ -163,7 +159,7 @@ int main(int argc, char** argv)
   group.findGroups(p.getPointer(),p.size(),n_split);
 
   ARC::chainpars ARC_control;
-  ARC_control.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA<PtclHard,PtclHard*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+  ARC_control.setA(Newtonian_cut_AW<PtclH4,ARC_pert_pars>,Newtonian_extA<PtclH4,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
   ARC_control.setabg(0,1,0);
   ARC_control.setErr(1e-10,1e-24,1e-6);
   ARC_control.setIterSeq(20,3,20);
@@ -176,7 +172,7 @@ int main(int argc, char** argv)
   Int_pars.rout = rout;
   Int_pars.eps2 = eps*eps;
 
-  ARCIntegrator<PtclHard, PtclHard, PtclForce, ARC_int_pars, ARC_pert_pars> Aint(ARC_control, Int_pars);
+  ARCIntegrator<PtclH4, PtclH4, PtclForce, ARC_int_pars, ARC_pert_pars> Aint(ARC_control, Int_pars);
   pcm = p[group.getPtclList()[0]];
   Aint.reserveARMem(1);
   Aint.reservePertMem(10);

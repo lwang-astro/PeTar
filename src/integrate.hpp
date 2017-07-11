@@ -54,6 +54,11 @@ public:
     PS::F64vec acc2; // for debug
     PS::F64vec acc3; // for debug
 #endif
+
+    PtclH4() {}
+    
+    template<class Tp>
+    PtclH4(const Tp &p): Ptcl(p) {}
 };
 
 class PtclPred{
