@@ -1,4 +1,7 @@
 #pragma once
+#ifdef HARD_DEBUG_DEEP_CHECK
+#include "AR.h"
+#endif
 
 typedef double double3[3];
 //inline PS::F64 CalcK(const PS::F64 rij,
@@ -187,6 +190,9 @@ int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, c
   // mass parameters
   const double mimj = mi*mj; // m_i*m_i
   const double mmij = mimj;
+//#ifdef HARD_DEBUG
+//  if(mmij==0.5) mmij = 0.0;
+//#endif
 //  if (mm2>0 && epi>0) {
 //    // Wij = mm2 if m_i*m_i < epi*m'^2; 0 otherwise;
 //    if (mimj<epi*mm2) mmij = mm2;
@@ -239,7 +245,13 @@ void Newtonian_extA (double3* acc, const PS::F64 time, Tptcl* p, const PS::S32 n
 
         for(int i=0; i<npert; i++) {
             PS::F64 dt = time - pert[i]->time;
-            xp[i] = pert[i]->pos + dt*(pert[i]->vel* + 0.5*dt*(pf[i]->acc0 + inv3*dt*pf[i]->acc1));
+            xp[i] = pert[i]->pos + dt*(pert[i]->vel + 0.5*dt*(pert[i]->acc0 + inv3*dt*pert[i]->acc1));
+            //xp[i] = pert[i]->pos + dt*
+            //    (pert[i]->vel* + 0.5*dt*(
+            //        pert[i]->acc0 + inv3*dt*(
+            //            pert[i]->acc1 + 0.25*dt*(
+            //                pert[i]->acc2 + 0.2*dt*pert[i]->acc3))));
+            //xp[i] = pert[i]->pos;
         }
 
 #ifdef HARD_DEBUG
@@ -288,7 +300,7 @@ void Newtonian_extA (double3* acc, const PS::F64 time, Tptcl* p, const PS::S32 n
         }
     }
    else {
-        for(int i=0; i<np; i++) acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
+       for(int i=0; i<np; i++) acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
    }
 
     // soft perturbation
@@ -360,3 +372,168 @@ inline void CalcAcc0Acc1R2Cutoff(const PS::F64vec posi,
         jrki += F1;
     }
 }
+
+#ifdef HARD_DEBUG_DEEP_CHECK
+template<class Tptcl, class Tpert, class Tforce, class extpar>
+void Newtonian_extA_test (double3* acc, const PS::F64 time, Tptcl* p, const PS::S32 np, Tpert* pert, Tforce* pf, const PS::S32 npert, extpar* pars){
+    if(npert>1) {
+        static const PS::F64 inv3 = 1.0 / 3.0;
+        PS::F64vec xp[npert];
+
+        ARC::chainpars ARC_control;
+        ARC_control.setA(Newtonian_cut_AW<Tptcl,extpar>,Newtonian_extA<Tptcl,Tpert,Tforce,extpar>,Newtonian_timescale<extpar>);
+        ARC_control.setabg(0,1,0);
+        ARC_control.setErr(1e-10,1e-24,1e-6);
+        ARC_control.setIterSeq(20,3,20);
+        ARC_control.setIntp(1);
+        ARC_control.setIterConst(0);
+        ARC_control.setAutoStep(3);
+
+        extpar Int_pars;
+        Int_pars.rin = pars->rin;
+        Int_pars.rout = pars->rout;
+        Int_pars.eps2 = pars->eps2;
+        
+        ARC::chain<Tptcl> c(3);
+        Tptcl pc[3];
+        pc[0] = p[0];
+        pc[1] = p[1];
+        pc[2] = Tptcl(*pert[1]);
+        c.linkP(3,pc);
+
+        pc[0].pos += pert[0]->pos;
+        pc[1].pos += pert[0]->pos;
+
+        c.init(pert[0]->time,ARC_control,&Int_pars);
+        PS::F64 ds_up_limit = 0.25*(time-pert[0]->time)/c.calc_dt_X(1.0,ARC_control);
+        PS::F64 ds = std::min(ds_up_limit,c.calc_next_step_custom(ARC_control, &Int_pars));
+        
+        Tpert* tp;
+        Tforce* tf;
+        PS::F64 dscoff=1.0;
+        PS::S32 converge_count=0;
+        PS::S32 error_count=0;
+        bool modify_step_flag=false;
+        bool final_flag=false;
+
+        while(time-c.getTime()>ARC_control.dterr*c.getTime()) {
+            PS::F64 dsf = c.extrapolation_integration(ds, ARC_control, time, &Int_pars, tp, tf, 0);
+            if (dsf<0) {
+                final_flag=true;
+                converge_count++;
+                if (converge_count>5&&time-c.getTime()>ARC_control.dterr*100) {
+                    std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds<<"\nEnding physical time: "<<time<<"\nTime difference: "<<time-c.getTime()<<"\nR_in: "<<Int_pars.rin<<"\nR_out: "<<Int_pars.rout<<"\n";
+                    c.dump("ARC_dump.dat");
+                    ARC_control.dump("ARC_dump.par");
+                    c.print(std::cerr);
+                    abort();
+                }
+                else ds *= -dsf;
+            }
+            else if (dsf==0) {
+                c.info->ErrMessage(std::cerr);
+                error_count++;
+                if(error_count>4) {
+                    std::cerr<<"Error: Too much error appear!\nStep size ds: "<<ds<<"\nEnding physical time: "<<time<<"\nTime difference: "<<time-c.getTime()<<"\nR_in: "<<Int_pars.rin<<"\nR_out: "<<Int_pars.rout<<"\n";
+                    c.dump("ARC_dump.dat");
+                    ARC_control.dump("ARC_dump.par");
+                    c.print(std::cerr);
+                    abort();
+                }
+                if (c.info->status==5) {
+                    dscoff = 0.25;
+                    ds *= dscoff;
+                }
+                else if (c.info->status==4) ds = std::min(dscoff*c.calc_next_step_custom(ARC_control, &Int_pars),ds_up_limit);
+                else ds *= 0.1;
+                modify_step_flag=true;
+            }
+            else  {
+                if (final_flag) {
+                    if (converge_count>6&&time-c.getTime()>ARC_control.dterr*100) {
+                        std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds<<"\nEnding physical time: "<<time<<"\nTime difference: "<<time-c.getTime()<<"\nR_in: "<<Int_pars.rin<<"\nR_out: "<<Int_pars.rout<<"\n";
+                        c.dump("ARC_dump.dat");
+                        ARC_control.dump("ARC_dump.par");
+                        c.print(std::cerr);
+                        abort();
+                    }
+                    converge_count++;
+                }
+                else if (modify_step_flag&&error_count==0) {
+                    ds = std::min(dscoff*c.calc_next_step_custom(ARC_control, &Int_pars),ds_up_limit);
+                    modify_step_flag=false;
+                }
+                // reducing error counter if integration success, this is to avoid the significant change of step may cause some issue
+                if(error_count>0) error_count--;
+            }
+        }
+
+            
+        c.resolve();
+        xp[0] = (pc[0].pos*pc[0].mass + pc[1].pos*pc[1].mass)/(pc[0].mass + pc[1].mass);
+        xp[1] = pc[2].pos;
+
+        for(int i=0; i<npert; i++) {
+            PS::F64 dt = time - pert[i]->time;
+            xp[i] = pert[i]->pos + dt*(pert[i]->vel + 0.5*dt*(pert[i]->acc0 + inv3*dt*pert[i]->acc1));
+            //xp[i] = pert[i]->pos + dt*
+            //    (pert[i]->vel* + 0.5*dt*(
+            //        pert[i]->acc0 + inv3*dt*(
+            //            pert[i]->acc1 + 0.25*dt*(
+            //                pert[i]->acc2 + 0.2*dt*pert[i]->acc3))));
+            //xp[i] = pert[i]->pos;
+        }
+
+#ifdef HARD_DEBUG
+        PS::F64 mt = 0.0;
+        for(int i=0; i<np; i++) mt += p[i].mass;
+        assert(mt==pert[0]->mass);
+#endif
+
+        for(int i=0; i<np; i++) {
+            PS::F64vec xi = p[i].pos + xp[0];
+            acc[i][0] = -pf[0]->acc0[0]; 
+            acc[i][1] = -pf[0]->acc0[1];        
+            acc[i][2] = -pf[0]->acc0[2]; 
+//            acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
+            for(int j=1; j<npert; j++) {
+            
+                PS::F64vec dx = xp[j] - xi;
+                //std::cerr<<"i = "<<i<<" j = "<<j<<" dx = "<<dx<<std::endl;
+                //PS::F64 mi = p[i].mass;
+                PS::F64 mp = pert[j]->mass;
+                PS::F64 dr2 = dx*dx + pars->eps2;
+                PS::F64 dr  = std::sqrt(dr2);
+                PS::F64 dr3 = dr*dr2;
+                PS::F64 mor3 = mp/dr3;
+
+                // smpars[2:3]: rcut_out, rcut_in
+                //  const double k   = cutoff_poly_3rd(dr, smpars[0], smpars[1]);
+                //  const double kdx = cutoff_poly_3rd_dr(dr, dx, smpars[0], smpars[1]);
+                //  const double kdy = cutoff_poly_3rd_dr(dr, dy, smpars[0], smpars[1]);
+                //  const double kdz = cutoff_poly_3rd_dr(dr, dz, smpars[0], smpars[1]);  
+                const PS::F64 r_out = pars->rout;
+                //  const PS::F64 r_out = std::max(pi.r_out, pp.r_out);
+                const PS::F64 r_in  = pars->rin;
+                //const PS::F64 k     = CalcW(dr/r_out, r_in/r_out);
+                const PS::F64 kdot  = cutoff_poly_3rd(dr, r_out, r_in);
+
+                //Pij = - mi*mp / dr * (1-k);
+
+                // Aij[0] = mp * dx / dr3 * (1-k) + Pij * (1-kdx);
+                // Aij[1] = mp * dy / dr3 * (1-k) + Pij * (1-kdy);
+                // Aij[2] = mp * dz / dr3 * (1-k) + Pij * (1-kdz);
+                acc[i][0] += mor3 * dx[0] * (1-kdot);
+                acc[i][1] += mor3 * dx[1] * (1-kdot);
+                acc[i][2] += mor3 * dx[2] * (1-kdot);
+            }
+        }
+    }
+    else {
+        for(int i=0; i<np; i++) acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
+    }
+
+    // soft perturbation
+}
+#endif
+

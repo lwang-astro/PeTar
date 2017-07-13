@@ -205,7 +205,7 @@ int main(int argc, char** argv)
     fprintf(stderr,"Error: Cannot open file hardcm.dat.\n");
     abort();
   }
-  
+
   Energy et0,et,etcm0,etcm;
   PS::F64 eps2 = eps*eps;
   PtclHard pcm0,pcm1,ppcm0,ppcm1;

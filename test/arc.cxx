@@ -11,9 +11,30 @@
 //#include "rsearch.hpp"
 #include "cluster_list.hpp"
 
+#ifndef FIX_STEP_DEBUG
+#define STEP_DIVIDER 1
+#endif  
+
 //const PS::F64 SAFTY_FACTOR_FOR_SEARCH = 1.05;
 //const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ = SAFTY_FACTOR_FOR_SEARCH * SAFTY_FACTOR_FOR_SEARCH;
 //const PS::F64 SAFTY_OFFSET_FOR_SEARCH = 1e-7;
+
+template<class Tptcl, class Teng>
+void CalcEnergyHard(const Tptcl ptcl[], const PS::S32 n_tot, Teng & eng, 
+                    const PS::F64 r_in, const PS::F64 r_out, const PS::F64 eps_sq = 0.0){
+    eng.kin = eng.pot = eng.tot = 0.0;
+    for(PS::S32 i=0; i<n_tot; i++){
+        eng.kin += 0.5 * ptcl[i].mass * ptcl[i].vel * ptcl[i].vel;
+
+        for(PS::S32 j=i+1; j<n_tot; j++){
+            //PS::F64 r_out = std::max(ptcl[i].r_out,ptcl[j].r_out);
+            PS::F64vec rij = ptcl[i].pos - ptcl[j].pos;
+            PS::F64 dr = sqrt(rij*rij + eps_sq);
+            eng.pot -= ptcl[j].mass*ptcl[i].mass/dr*(1.0 - CalcW(dr/r_out, r_in/r_out));
+        }
+    }
+    eng.tot = eng.kin + eng.pot;
+}
 
 template <class Tptcl>
 void write_p(FILE* fout, const PS::F64 time, const HardEnergy &E, const PS::F64 err, const Tptcl* p, const int n) {
@@ -190,25 +211,30 @@ int main(int argc, char** argv)
     fprintf(stderr,"Error: Cannot open file arc.dat.\n");
     abort();
   }
-  
-  PS::S32 nstep = time/dt_limit;
+
+  PS::S32 nstep = time/dt_limit*STEP_DIVIDER;
   PS::F64 time_i = 0.0;
   PS::F64 err;
 
   std::cerr<<"Time = "<<time_i<<std::endl;
   print_p(p.getPointer(),p.size());
-  Aint.EnergyRecord(e0);
+  CalcEnergyHard(p.getPointer(),N,e0,rin,rout,eps*eps);
+  //Aint.EnergyRecord(e0);
   write_p(fout,0.0,e0,0.0,p.getPointer(),N);
   for (int i=0; i<nstep; i++) {
-      time_i += dt_limit;
-      Aint.integrateOneStep(0, time_i, dt_limit);
-      Aint.resolve();
-      Aint.EnergyRecord(e1);
-      err = (e1.kin + e1.pot - (e0.kin + e0.pot))/(e0.kin + e0.pot);
-      write_p(fout,time_i,e1,err,p.getPointer(),N);
-      std::cerr<<"Time = "<<time_i<<std::endl;
-      print_p(p.getPointer(),p.size());
-      Aint.shift();
+      time_i += dt_limit/STEP_DIVIDER;
+      Aint.integrateOneStep(0, time_i, dt_limit/STEP_DIVIDER);
+      if((i+1)%(int)STEP_DIVIDER==0) {
+          printf("step_d=%d, i=%d\n",(int)STEP_DIVIDER,i);
+          Aint.resolve();
+      //Aint.EnergyRecord(e1);
+          CalcEnergyHard(p.getPointer(),N,e1,rin,rout,eps*eps);
+          err = (e1.kin + e1.pot - (e0.kin + e0.pot))/(e0.kin + e0.pot);
+          write_p(fout,time_i,e1,err,p.getPointer(),N);
+          std::cerr<<"Time = "<<time_i<<std::endl;
+          print_p(p.getPointer(),p.size());
+          Aint.shift();
+      }
   }
 
   printf("Energy error: %e, kin: %e, pot: %e, init: %e, end: %e\n",err, e1.kin, e1.pot, e0.tot, e1.tot);

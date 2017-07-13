@@ -219,6 +219,7 @@ private:
             //Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
             Hint.SortAndSelectIp();
         }
+        Aint.updateCM(Hint.getPtcl());
         Aint.resolve();
         Hint.writeBackPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getNPtcl());
 
@@ -272,7 +273,11 @@ public:
     /// start set Chainpars (L.Wang)
     ///
     void setARCParam(const PS::F64 energy_error=1e-10, const PS::F64 dterr=1e-6, const PS::F64 dtmin=1e-24, const PS::S32 exp_method=1, const PS::S32 exp_itermax=20, const PS::S32 den_intpmax=20, const PS::S32 exp_fix_iter=0) {
+#ifdef HARD_DEBUG_DEEP_CHECK
+        ARC_control_.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_test<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+#else
         ARC_control_.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+#endif
         ARC_control_.setabg(0,1,0);
         ARC_control_.setErr(energy_error,dtmin,dterr);
         ARC_control_.setIterSeq(exp_itermax,3,den_intpmax);
