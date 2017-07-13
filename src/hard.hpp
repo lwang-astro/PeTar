@@ -208,11 +208,6 @@ private:
 #endif
             PS::F64 dt_h = time_sys-time_now;
             Aint.updateSlowDown(time_sys, dt_h);
-//#ifdef HARD_DEBUG_PRINT
-//            for(int k=0; k<n_groups; k++) 
-//                fprintf(stderr,"kappa[%d] = %e; ",k,Aint.getSlowDown(k));
-//            std::cerr<<std::endl;
-//#endif            
             //Aint.integrateOneStepList(group_act_list.getPointer(), group_act_n, time_sys, dt_limit);
             Aint.integrateOneStepList(time_sys, std::min(dt_limit,dt_h));
             Hint.integrateOneStep(time_sys,dt_limit,true,&Aint);
@@ -229,6 +224,10 @@ private:
         CalcEnergyHard(ET1, group.getPtclList(), group.getNPtcl(), group.getGroup(0), group.getGroupSize(), group.getNGroups());
         
 #ifdef HARD_DEBUG_PRINT
+        fprintf(stderr,"Slowdown factor = ");
+        for(int k=0; k<n_groups; k++) 
+            fprintf(stderr,"%e; ",Aint.getSlowDown(k));
+        fprintf(stderr,"\n");
         fprintf(stderr,"H4  Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e\nARC Energy: init =%e, end =%e, diff =%e, error = %e\nTot Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e, Tot-H4-ARC =%e\n", 
                 E0.tot, E1.tot, E1.tot-E0.tot, E1.kin, E1.pot, 
                 AE0.kin+AE0.pot, AE1.kin+AE1.pot, AE1.kin+AE1.pot-AE0.kin-AE0.pot, (AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot)/AE0.tot,
