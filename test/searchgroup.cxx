@@ -42,19 +42,19 @@ PtclHard kepler_print(const std::size_t id, const std::size_t ib, PtclHard* c[2]
     double mt = m[0]+m[1];
     
     NTA::calc_kepler_orbit_par(ax,per,ecc,angle,true_anomaly,ecc_anomaly,mean_anomaly,mt,dx,dv);
-    std::cout<<std::setw(12)<<id
-             <<std::setw(12)<<ib
-             <<std::setw(12)<<m[0]
-             <<std::setw(12)<<m[1]
-             <<std::setw(12)<<ax
-             <<std::setw(12)<<ecc
-             <<std::setw(12)<<per
-             <<std::setw(12)<<angle[0]
-             <<std::setw(12)<<angle[1]
-             <<std::setw(12)<<angle[2]
-             <<std::setw(12)<<ecc_anomaly
-             <<std::setw(12)<<true_anomaly
-             <<std::setw(12)<<mean_anomaly
+    std::cout<<std::setw(20)<<id
+             <<std::setw(20)<<ib
+             <<std::setw(20)<<m[0]
+             <<std::setw(20)<<m[1]
+             <<std::setw(20)<<ax
+             <<std::setw(20)<<ecc
+             <<std::setw(20)<<per
+             <<std::setw(20)<<angle[0]
+             <<std::setw(20)<<angle[1]
+             <<std::setw(20)<<angle[2]
+             <<std::setw(20)<<ecc_anomaly
+             <<std::setw(20)<<true_anomaly
+             <<std::setw(20)<<mean_anomaly
              <<std::endl;
 
     PS::F64vec xcm((x[0][0]*m[0]+x[1][0]*m[1])/mt, 
@@ -70,34 +70,34 @@ PtclHard kepler_print(const std::size_t id, const std::size_t ib, PtclHard* c[2]
 
 
 void print_p(PtclHard* p, const int n) {
-    std::cout<<std::setw(12)<<"mass"
-             <<std::setw(12)<<"x1"
-             <<std::setw(12)<<"x2"
-             <<std::setw(12)<<"x3"
-             <<std::setw(12)<<"v1"
-             <<std::setw(12)<<"v2"
-             <<std::setw(12)<<"v3"
-             <<std::setw(12)<<"rsearch"
-             <<std::setw(12)<<"mass_bk"
-             <<std::setw(12)<<"status"
-             <<std::setw(12)<<"id"
-             <<std::setw(12)<<"id_cluster"
-             <<std::setw(12)<<"adr"
+    std::cout<<std::setw(20)<<"mass"
+             <<std::setw(20)<<"x1"
+             <<std::setw(20)<<"x2"
+             <<std::setw(20)<<"x3"
+             <<std::setw(20)<<"v1"
+             <<std::setw(20)<<"v2"
+             <<std::setw(20)<<"v3"
+             <<std::setw(20)<<"rsearch"
+             <<std::setw(20)<<"mass_bk"
+             <<std::setw(20)<<"status"
+             <<std::setw(20)<<"id"
+             <<std::setw(20)<<"id_cluster"
+             <<std::setw(20)<<"adr"
              <<std::endl;
     for (int i=0; i<n; i++) {
-        std::cout<<std::setw(12)<<p[i].mass
-                 <<std::setw(12)<<p[i].pos[0]
-                 <<std::setw(12)<<p[i].pos[1]
-                 <<std::setw(12)<<p[i].pos[2]
-                 <<std::setw(12)<<p[i].vel[0]
-                 <<std::setw(12)<<p[i].vel[1]
-                 <<std::setw(12)<<p[i].vel[2]
-                 <<std::setw(12)<<p[i].r_search
-                 <<std::setw(12)<<p[i].mass_bk
-                 <<std::setw(12)<<p[i].status
-                 <<std::setw(12)<<p[i].id
-                 <<std::setw(12)<<p[i].id_cluster
-                 <<std::setw(12)<<p[i].adr_org
+        std::cout<<std::setw(20)<<p[i].mass
+                 <<std::setw(20)<<p[i].pos[0]
+                 <<std::setw(20)<<p[i].pos[1]
+                 <<std::setw(20)<<p[i].pos[2]
+                 <<std::setw(20)<<p[i].vel[0]
+                 <<std::setw(20)<<p[i].vel[1]
+                 <<std::setw(20)<<p[i].vel[2]
+                 <<std::setw(20)<<p[i].r_search
+                 <<std::setw(20)<<p[i].mass_bk
+                 <<std::setw(20)<<p[i].status
+                 <<std::setw(20)<<p[i].id
+                 <<std::setw(20)<<p[i].id_cluster
+                 <<std::setw(20)<<p[i].adr_org
                  <<std::endl;
     }
 }
@@ -160,22 +160,23 @@ int main(int argc, char** argv)
     abort();
   }
   
+  std::cout<<std::setprecision(13);
   //  plist.kepler_print(0,0,18,10);
   // header
   std::cout<<"        " 
-           <<std::setw(12)<<"id          " 
-           <<std::setw(12)<<"ib          " 
-           <<std::setw(12)<<"m[0]        " 
-           <<std::setw(12)<<"m[1]        " 
-           <<std::setw(12)<<"ax          " 
-           <<std::setw(12)<<"ecc         " 
-           <<std::setw(12)<<"per         " 
-           <<std::setw(12)<<"angle[0]    " 
-           <<std::setw(12)<<"angle[1]    " 
-           <<std::setw(12)<<"angle[2]    " 
-           <<std::setw(12)<<"ecc_anomaly " 
-           <<std::setw(12)<<"true_anomaly" 
-           <<std::setw(12)<<"mean_anomaly" 
+           <<std::setw(20)<<"id          " 
+           <<std::setw(20)<<"ib          " 
+           <<std::setw(20)<<"m[0]        " 
+           <<std::setw(20)<<"m[1]        " 
+           <<std::setw(20)<<"ax          " 
+           <<std::setw(20)<<"ecc         " 
+           <<std::setw(20)<<"per         " 
+           <<std::setw(20)<<"angle[0]    " 
+           <<std::setw(20)<<"angle[1]    " 
+           <<std::setw(20)<<"angle[2]    " 
+           <<std::setw(20)<<"ecc_anomaly " 
+           <<std::setw(20)<<"true_anomaly" 
+           <<std::setw(20)<<"mean_anomaly" 
            <<std::endl;                 
 
   plist.pair_process(0,0,kepler_print,par);

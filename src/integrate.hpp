@@ -224,6 +224,7 @@ private:
     void CalcAcc0Acc1AllJ(PtclForce &force, 
                           const Tpi &pi,
                           const PS::S32 iadr,
+                          const PS::F64vec &vcmsdi,
                           const PS::F64 sdi,
                           const Tp ptcl[],
                           const PS::S32 n_tot,
@@ -239,12 +240,13 @@ private:
             PS::F64 mcmcheck =0.0;
 #endif
             const Tptcl* pj = Aint->getGroupPtcl(j);
-            PS::F64 sd = 1.0/Aint->getSlowDown(j);
+            PS::F64 sdj = 1.0/Aint->getSlowDown(j);
+            PS::F64vec vcmsdj = (1.0-sdj)*ptcl[j].vel;
             for(PS::S32 k=0; k<Aint->getGroupN(j); k++) {
                 PS::F64 r2 = 0.0;
-                CalcAcc0Acc1R2Cutoff(pi.pos, pi.vel*sdi,
+                CalcAcc0Acc1R2Cutoff(pi.pos, pi.vel*sdi+vcmsdi,
                                      force.acc0, force.acc1, r2,
-                                     pj[k].pos, pj[k].vel*sd, pj[k].mass,
+                                     pj[k].pos, pj[k].vel*sdj+vcmsdj, pj[k].mass,
                                      eps2, rout, rin);
 #ifdef HARD_DEBUG
                 mcmcheck += pj[k].mass;
@@ -259,7 +261,7 @@ private:
             if(iadr==j) continue;
             PS::F64 r2 = 0.0;
             //PS::F64 rout = std::max(ptcl[iadr].r_out, ptcl[j].r_out);
-            CalcAcc0Acc1R2Cutoff(pi.pos, pi.vel*sdi,
+            CalcAcc0Acc1R2Cutoff(pi.pos, pi.vel*sdi+vcmsdi,
                                  force.acc0, force.acc1, r2,
                                  ptcl[j].pos, ptcl[j].vel, ptcl[j].mass,
                                  eps2, rout, rin);
@@ -283,6 +285,7 @@ private:
                          const ARCint* Aint=NULL) {
         PS::S32 nbin = 0;
         if (Aint!=NULL) nbin = Aint->getN();
+        static thread_local const PS::F64vec vzero = PS::F64vec(0.0);
         // PS::ReallocatableArray< std::pair<PS::S32, PS::S32> > & merge_pair ){
         // active particles
         for(PS::S32 i=0; i<n_act; i++){
@@ -296,10 +299,11 @@ private:
                 const PS::S32 ni = Aint->getGroupN(iadr);
                 const Tptcl* pi = Aint->getGroupPtcl(iadr);
                 const PS::F64 sdi = 1.0/Aint->getSlowDown(iadr);
+                const PS::F64vec vcmsdi = (1.0-sdi)*ptcl[iadr].vel;
                 PtclForce fp[ni];
                 for (PS::S32 j=0; j<ni; j++) {
                     fp[j].acc0 = fp[j].acc1 = 0.0;
-                    CalcAcc0Acc1AllJ(fp[j], pi[j], iadr, sdi, ptcl, n_tot, nbin, rin, rout, eps2, Aint);
+                    CalcAcc0Acc1AllJ(fp[j], pi[j], iadr, vcmsdi, sdi, ptcl, n_tot, nbin, rin, rout, eps2, Aint);
                     force[iadr].acc0 += pi[j].mass*fp[j].acc0;
                     force[iadr].acc1 += pi[j].mass*fp[j].acc1;
 #ifdef HARD_DEBUG
@@ -313,7 +317,7 @@ private:
                 force[iadr].acc0 /= ptcl[iadr].mass;
                 force[iadr].acc1 /= ptcl[iadr].mass;
             }
-            else CalcAcc0Acc1AllJ(force[iadr], ptcl[iadr], iadr, 1.0, ptcl, n_tot, nbin, rin, rout, eps2, Aint);
+            else CalcAcc0Acc1AllJ(force[iadr], ptcl[iadr], iadr, vzero, 1.0, ptcl, n_tot, nbin, rin, rout, eps2, Aint);
         }
     }
     
@@ -379,7 +383,7 @@ private:
                     const PtclH4 ptcl[],
                     const PS::S32 n_tot,
                     const PS::F64 time_next){
-        static const PS::F64 inv3 = 1.0 / 3.0;
+        static thread_local const PS::F64 inv3 = 1.0 / 3.0;
         for(PS::S32 i=0; i<n_tot; i++){
             const PS::F64 dt = time_next - ptcl[i].time;
             pred[i].pos = ptcl[i].pos + dt*(ptcl[i].vel  + 0.5*dt*(ptcl[i].acc0 + inv3*dt*ptcl[i].acc1));
@@ -406,7 +410,7 @@ private:
                                 const PS::F64 dt_limit,
                                 const PS::F64 a0_offset_sq,
                                 const PS::F64 eta){
-        static const PS::F64 inv3 = 1.0 / 3.0;
+        static thread_local const PS::F64 inv3 = 1.0 / 3.0;
         for(PS::S32 i=0; i<n_act; i++){
             const PS::S32 adr = adr_sorted[i];
             PtclH4*     pti = &ptcl[adr];
@@ -1009,10 +1013,10 @@ public:
                      const PS::S32 n_group,
                      PS::S32* soft_pert_list,
                      const PS::S32 n_split,
-                     Tpert* ptcl_pert,
-                     Tpforce* pert_force,
-                     PS::S32* pert_list,
-                     const PS::S32 n_pert) {
+                     Tpert* ptcl_pert = NULL,
+                     Tpforce* pert_force = NULL,
+                     PS::S32* pert_list = NULL,
+                     const PS::S32 n_pert = 0) {
         const PS::S32 igroup = clist_.size();
         const PS::S32 ioff = pert_.size();
         pert_disp_.push_back(ioff);
@@ -1024,9 +1028,11 @@ public:
         }
 
         // c.m.
-        pert_.push_back(&ptcl_pert[igroup]);
-        pforce_.push_back(&pert_force[igroup]);
-        pert_n_[igroup]++;
+        if(ptcl_pert!=NULL) {
+            pert_.push_back(&ptcl_pert[igroup]);
+            pforce_.push_back(&pert_force[igroup]);
+            pert_n_[igroup]++;
+        }
 
         // perturber
         for(int i=0; i<n_pert; i++) {
@@ -1076,9 +1082,14 @@ public:
         }
     }
 
-    void updateSlowDown(const PS::F64 tend, const PS::F64 dt) {
+    void updateSlowDown(const PS::F64 tend) {
         for (int i=0; i<clist_.size(); i++) {
             clist_[i].slowdown.updatekappa(clist_[i].getTime(),tend);
+        }
+    }
+
+    void adjustSlowDown(const PS::F64 dt) {
+        for (int i=0; i<clist_.size(); i++) {
             clist_[i].slowdown.adjustkappa(dt);
         }
     }

@@ -142,99 +142,121 @@ private:
         SearchGroup<PtclHard> group;
             
         group.findGroups(ptcl_org, n_ptcl, n_split_);
+
+        if(group.getNPtcl()==1) {
+            ARCIntegrator<PtclHard, PtclH4, PtclForce, ARC_int_pars, ARC_pert_pars> Aint(ARC_control_, Int_pars_);
+            Aint.reserveARMem(1);
+            // Aint.reservePertMem(1);
+            Aint.addOneGroup(p.getPointer(),group.getGroup(0), group.getGroupN(0),group.getGroupPertList(0,n_split), n_split);
+            Aint.integrateOneStep(0, time_end, dt_limit_hard_);
             
-        HermiteIntegrator<PtclHard> Hint;
-        Hint.setParams(dt_limit_hard_, eta_s_, Int_pars_.rin, Int_pars_.rout, Int_pars_.eps2);
-        Hint.setPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getNPtcl());
-        Hint.searchPerturber();
+            PtclHard* pcm = &ptcl_org[group.getPtclList()];
+            pcm->pos += pcm->vel * time_end;
+            PS::S32 iact = 0;
+            Aint.updateCM(pcm, &iact, 1);
+            Aint.resolve();
+#ifdef HARD_DEBUG
+            fprintf(stderr,"Slowdown factor = %e\n", Aint.getSlowDown(0));
+#endif
+
+        }
+        else {
+            
+            HermiteIntegrator<PtclHard> Hint;
+            Hint.setParams(dt_limit_hard_, eta_s_, Int_pars_.rin, Int_pars_.rout, Int_pars_.eps2);
+            Hint.setPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getNPtcl());
+            Hint.searchPerturber();
 
 #ifdef HARD_DEBUG
-        HardEnergy E0, E1;
-        HardEnergy AE0, AE1;
-        HardEnergy ET0, ET1;
-        Hint.CalcEnergy(E0);
-        CalcEnergyHard(ET0, group.getPtclList(), group.getNPtcl(), group.getGroup(0), group.getGroupSize(), group.getNGroups());
+            HardEnergy E0, E1;
+            HardEnergy AE0, AE1;
+            HardEnergy ET0, ET1;
+            Hint.CalcEnergy(E0);
+            CalcEnergyHard(ET0, group.getPtclList(), group.getNPtcl(), group.getGroup(0), group.getGroupSize(), group.getNGroups());
 //#ifdef HARD_DEBUG_PRINT
 //        fprintf(stderr,"Hard Energy: init =%e, kin =%e pot =%e\n", E0.tot, E0.kin, E0.pot);
 //#endif
 #endif
             
-        PS::S32 group_act_n = 0;
-        PS::ReallocatableArray<PS::S32> group_act_list; //active group_list act adr
-        // ReallocatableArray<PS::S32> group_list;     //group.adr list
-        // ReallocatableArray<PS::S32> status;      //ptcl -> group.adr [non cm is -1] (value of Ptcl.status)
-        // ReallocatableArray<PS::S32> status_map;  //ptcl -> group_list index [non cm is -1]
-        // ReallocatableArray<PS::S32> adr_cm;         //group_list index -> ptcl.cm
-        // group.findGroups(group_list, status, status_map,  adr_cm, group_act_n, ptcl_org, n_ptcl);
-        group_act_list.resizeNoInitialize(group.getNPtcl());
+            PS::S32 group_act_n = 0;
+            PS::ReallocatableArray<PS::S32> group_act_list; //active group_list act adr
+            // ReallocatableArray<PS::S32> group_list;     //group.adr list
+            // ReallocatableArray<PS::S32> status;      //ptcl -> group.adr [non cm is -1] (value of Ptcl.status)
+            // ReallocatableArray<PS::S32> status_map;  //ptcl -> group_list index [non cm is -1]
+            // ReallocatableArray<PS::S32> adr_cm;         //group_list index -> ptcl.cm
+            // group.findGroups(group_list, status, status_map,  adr_cm, group_act_n, ptcl_org, n_ptcl);
+            group_act_list.resizeNoInitialize(group.getNPtcl());
             
-        ARCIntegrator<PtclHard, PtclH4, PtclForce, ARC_int_pars, ARC_pert_pars> Aint(ARC_control_, Int_pars_);
+            ARCIntegrator<PtclHard, PtclH4, PtclForce, ARC_int_pars, ARC_pert_pars> Aint(ARC_control_, Int_pars_);
 
-        // first particles in Hint.Ptcl are c.m.
-        PS::S32 n_groups = group.getNGroups();
-        Aint.reserveARMem(n_groups);
-        Aint.reservePertMem(Hint.getPertNtot());
-        for (int i=0; i<n_groups; i++) {
-            group.getBinPars(Aint.bininfo[i],ptcl_org,i,n_split_);
-            Aint.addOneGroup(ptcl_org, group.getGroup(i), group.getGroupN(i), group.getGroupPertList(i,n_split_), n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i)); 
-        }
-        Aint.initialSlowDown(time_end);
-        Aint.initial();
+            // first particles in Hint.Ptcl are c.m.
+            PS::S32 n_groups = group.getNGroups();
+            Aint.reserveARMem(n_groups);
+            Aint.reservePertMem(Hint.getPertNtot());
+            for (int i=0; i<n_groups; i++) {
+                group.getBinPars(Aint.bininfo[i],ptcl_org,i,n_split_);
+                Aint.addOneGroup(ptcl_org, group.getGroup(i), group.getGroupN(i), group.getGroupPertList(i,n_split_), n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i)); 
+            }
+            Aint.initialSlowDown(time_end);
+            Aint.initial();
 
-        PS::F64 time_sys=0.0, time_now;
+
+            PS::F64 time_sys=0.0, time_now;
 #ifdef FIX_STEP_DEBUG
-        PS::F64 dt_limit = dt_limit_hard_;
+            PS::F64 dt_limit = dt_limit_hard_;
 #else
-        PS::F64 dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
+            PS::F64 dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
 #endif
-        Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups, &Aint);
+            Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups, &Aint);
 
 
 #ifdef HARD_DEBUG
-        Aint.EnergyRecord(AE0);
+            Aint.EnergyRecord(AE0);
 #endif
 
-        while(time_sys<time_end) {
-            time_now = time_sys;
-            time_sys = Hint.getNextTime();
+            while(time_sys<time_end) {
+                time_now = time_sys;
+                time_sys = Hint.getNextTime();
 #ifdef FIX_STEP_DEBUG
-            dt_limit = dt_limit_hard_;
+                dt_limit = dt_limit_hard_;
 #else
-            dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
+                dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
 #endif
 
 #ifdef HARD_DEBUG
-            assert(time_sys>time_now);
+                assert(time_sys>time_now);
 #endif
-            PS::F64 dt_h = time_sys-time_now;
-            Aint.updateSlowDown(time_sys, dt_h);
-            //Aint.integrateOneStepList(group_act_list.getPointer(), group_act_n, time_sys, dt_limit);
-            Aint.integrateOneStepList(time_sys, std::min(dt_limit,dt_h));
-            Hint.integrateOneStep(time_sys,dt_limit,true,&Aint);
-            //Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
-            Hint.SortAndSelectIp();
-        }
-        Aint.updateCM(Hint.getPtcl());
-        Aint.resolve();
-        Hint.writeBackPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getNPtcl());
+                PS::F64 dt_h = time_sys-time_now;
+                Aint.updateSlowDown(time_sys);
+                //Aint.integrateOneStepList(group_act_list.getPointer(), group_act_n, time_sys, dt_limit);
+                Aint.integrateOneStepList(time_sys, std::min(dt_limit,dt_h));
+                Hint.integrateOneStep(time_sys,dt_limit,true,&Aint);
+                //Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
+                Hint.SortAndSelectIp();
+            }
+        
+            Aint.updateCM(Hint.getPtcl());
+            Aint.resolve();
+            Hint.writeBackPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getNPtcl());
 
 #ifdef HARD_DEBUG
-        Aint.EnergyRecord(AE1);
-        Hint.CalcEnergy(E1);
-        CalcEnergyHard(ET1, group.getPtclList(), group.getNPtcl(), group.getGroup(0), group.getGroupSize(), group.getNGroups());
+            Aint.EnergyRecord(AE1);
+            Hint.CalcEnergy(E1);
+            CalcEnergyHard(ET1, group.getPtclList(), group.getNPtcl(), group.getGroup(0), group.getGroupSize(), group.getNGroups());
         
 #ifdef HARD_DEBUG_PRINT
-        fprintf(stderr,"Slowdown factor = ");
-        for(int k=0; k<n_groups; k++) 
-            fprintf(stderr,"%e; ",Aint.getSlowDown(k));
-        fprintf(stderr,"\n");
-        fprintf(stderr,"H4  Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e\nARC Energy: init =%e, end =%e, diff =%e, error = %e\nTot Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e, Tot-H4-ARC =%e\n", 
-                E0.tot, E1.tot, E1.tot-E0.tot, E1.kin, E1.pot, 
-                AE0.kin+AE0.pot, AE1.kin+AE1.pot, AE1.kin+AE1.pot-AE0.kin-AE0.pot, (AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot)/AE0.tot,
-                ET0.tot, ET1.tot, ET1.tot-ET0.tot, ET1.kin, ET1.pot, ET1.tot-E1.tot-AE1.kin-AE1.pot);
-        Hint.printStepHist();
+            fprintf(stderr,"Slowdown factor = ");
+            for(int k=0; k<n_groups; k++) 
+                fprintf(stderr,"%e; ",Aint.getSlowDown(k));
+            fprintf(stderr,"\n");
+            fprintf(stderr,"H4  Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e\nARC Energy: init =%e, end =%e, diff =%e, error = %e\nTot Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e, Tot-H4-ARC =%e\n", 
+                    E0.tot, E1.tot, E1.tot-E0.tot, E1.kin, E1.pot, 
+                    AE0.kin+AE0.pot, AE1.kin+AE1.pot, AE1.kin+AE1.pot-AE0.kin-AE0.pot, (AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot)/AE0.tot,
+                    ET0.tot, ET1.tot, ET1.tot-ET0.tot, ET1.kin, ET1.pot, ET1.tot-E1.tot-AE1.kin-AE1.pot);
+            Hint.printStepHist();
 #endif
 #endif
+        }
             
         //group.resolveGroups(ptcl_org, n_ptcl, group_ptcl_glb.getPointer(), group_list.size(), group_list.getPointer(), adr_cm.getPointer());
         group.resolveGroups();
