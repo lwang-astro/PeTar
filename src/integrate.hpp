@@ -1044,10 +1044,12 @@ public:
         }
         par_list_.push_back(ARC_par(*Int_pars_));
         par_list_.back().fit(ptcl_org,soft_pert_list,n_split);
-        
-        clist_.back().pos = ptcl_pert[igroup].pos;
-        clist_.back().vel = ptcl_pert[igroup].vel;
-        clist_.back().mass = ptcl_pert[igroup].mass;
+
+        if(ptcl_pert!=NULL) {
+            clist_.back().pos = ptcl_pert[igroup].pos;
+            clist_.back().vel = ptcl_pert[igroup].vel;
+            clist_.back().mass = ptcl_pert[igroup].mass;
+        }
 
         // dt.push_back(0.0);
 
@@ -1190,13 +1192,15 @@ public:
     template <class Tp>
     void updateCM(Tp ptcl[],
                   PS::S32 act_list[],
-                  PS::S32 n_act) {
+                  PS::S32 n_act,
+                  const bool updatemass_flag=false) {
         for(int i=0; i<n_act; i++) {
             PS::S32 iact = act_list[i];
             clist_[iact].pos = ptcl[iact].pos;
             clist_[iact].vel = ptcl[iact].vel;
+            if(updatemass_flag) clist_[iact].mass = ptcl[iact].mass;
 #ifdef HARD_DEBUG
-            assert(clist_[iact].mass==ptcl[iact].mass);
+            else assert(clist_[iact].mass==ptcl[iact].mass);
 #endif
         }
     }

@@ -144,15 +144,25 @@ private:
         group.findGroups(ptcl_org, n_ptcl, n_split_);
 
         if(group.getNPtcl()==1) {
+            PtclHard* pcm = &ptcl_org[group.getPtclList()[0]];
+            PS::S32 iact = 0;
+            
             ARCIntegrator<PtclHard, PtclH4, PtclForce, ARC_int_pars, ARC_pert_pars> Aint(ARC_control_, Int_pars_);
             Aint.reserveARMem(1);
             // Aint.reservePertMem(1);
-            Aint.addOneGroup(p.getPointer(),group.getGroup(0), group.getGroupN(0),group.getGroupPertList(0,n_split), n_split);
+            group.getBinPars(Aint.bininfo[0],ptcl_org,0,n_split_);
+            Aint.addOneGroup(ptcl_org, group.getGroup(0), group.getGroupN(0),group.getGroupPertList(0,n_split_), n_split_);
+            Aint.updateCM(pcm, &iact, 1, true);
+
+            Aint.initialSlowDown(time_end);
+            Aint.initial();
+
+            Aint.adjustSlowDown(time_end);
+
             Aint.integrateOneStep(0, time_end, dt_limit_hard_);
             
-            PtclHard* pcm = &ptcl_org[group.getPtclList()];
             pcm->pos += pcm->vel * time_end;
-            PS::S32 iact = 0;
+
             Aint.updateCM(pcm, &iact, 1);
             Aint.resolve();
 #ifdef HARD_DEBUG
@@ -177,6 +187,13 @@ private:
 //        fprintf(stderr,"Hard Energy: init =%e, kin =%e pot =%e\n", E0.tot, E0.kin, E0.pot);
 //#endif
 #endif
+
+            PS::F64 time_sys=0.0, time_now;
+#ifdef FIX_STEP_DEBUG
+            PS::F64 dt_limit = dt_limit_hard_;
+#else
+            PS::F64 dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
+#endif
             
             PS::S32 group_act_n = 0;
             PS::ReallocatableArray<PS::S32> group_act_list; //active group_list act adr
@@ -185,6 +202,7 @@ private:
             // ReallocatableArray<PS::S32> status_map;  //ptcl -> group_list index [non cm is -1]
             // ReallocatableArray<PS::S32> adr_cm;         //group_list index -> ptcl.cm
             // group.findGroups(group_list, status, status_map,  adr_cm, group_act_n, ptcl_org, n_ptcl);
+
             group_act_list.resizeNoInitialize(group.getNPtcl());
             
             ARCIntegrator<PtclHard, PtclH4, PtclForce, ARC_int_pars, ARC_pert_pars> Aint(ARC_control_, Int_pars_);
@@ -197,21 +215,17 @@ private:
                 group.getBinPars(Aint.bininfo[i],ptcl_org,i,n_split_);
                 Aint.addOneGroup(ptcl_org, group.getGroup(i), group.getGroupN(i), group.getGroupPertList(i,n_split_), n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i)); 
             }
-            Aint.initialSlowDown(time_end);
+            Aint.initialSlowDown(dt_limit);
             Aint.initial();
 
 
-            PS::F64 time_sys=0.0, time_now;
-#ifdef FIX_STEP_DEBUG
-            PS::F64 dt_limit = dt_limit_hard_;
-#else
-            PS::F64 dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
-#endif
             Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups, &Aint);
 
 
 #ifdef HARD_DEBUG
             Aint.EnergyRecord(AE0);
+            PS::ReallocatableArray<PS::F64> slowdownrecord;
+            slowdownrecord.resizeNoInitialize(n_groups);
 #endif
 
             while(time_sys<time_end) {
@@ -228,6 +242,12 @@ private:
 #endif
                 PS::F64 dt_h = time_sys-time_now;
                 Aint.updateSlowDown(time_sys);
+#ifdef HARD_DEBUG
+                for(int k=0; k<n_groups; k++) {
+                    slowdownrecord[k] = std::max(slowdownrecord[k], Aint.getSlowDown(k));
+                    assert(Aint.getSlowDown(k)>=1.0);
+                }
+#endif
                 //Aint.integrateOneStepList(group_act_list.getPointer(), group_act_n, time_sys, dt_limit);
                 Aint.integrateOneStepList(time_sys, std::min(dt_limit,dt_h));
                 Hint.integrateOneStep(time_sys,dt_limit,true,&Aint);
@@ -247,7 +267,7 @@ private:
 #ifdef HARD_DEBUG_PRINT
             fprintf(stderr,"Slowdown factor = ");
             for(int k=0; k<n_groups; k++) 
-                fprintf(stderr,"%e; ",Aint.getSlowDown(k));
+                fprintf(stderr,"%e; ",slowdownrecord[k]);
             fprintf(stderr,"\n");
             fprintf(stderr,"H4  Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e\nARC Energy: init =%e, end =%e, diff =%e, error = %e\nTot Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e, Tot-H4-ARC =%e\n", 
                     E0.tot, E1.tot, E1.tot-E0.tot, E1.kin, E1.pot, 
