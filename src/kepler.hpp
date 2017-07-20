@@ -536,7 +536,7 @@ public:
     }
     
     template<class Tptcl> 
-    void fit(Tptcl* data, PS::S32* list, const PS::S32 n_split =8) {
+    void fit(Tptcl* data, const PS::S32* list, const PS::S32 n_split =8) {
 #ifdef HARD_DEBUG
         assert(n_split>=4);
 #endif

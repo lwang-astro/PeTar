@@ -1726,7 +1726,7 @@ public:
         return group_list_n_.size();
     }
 
-    PS::S32* getGroup(const std::size_t i) {
+    const PS::S32* getGroup(const std::size_t i) const {
         return &group_list_[group_list_disp_[i]];
     }
 

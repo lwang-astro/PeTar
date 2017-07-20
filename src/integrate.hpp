@@ -1009,13 +1009,13 @@ public:
     //}
 
     void addOneGroup(Tptcl* ptcl_org,
-                     PS::S32* group_list,
+                     const PS::S32* group_list,
                      const PS::S32 n_group,
-                     PS::S32* soft_pert_list,
+                     const PS::S32* soft_pert_list,
                      const PS::S32 n_split,
                      Tpert* ptcl_pert = NULL,
                      Tpforce* pert_force = NULL,
-                     PS::S32* pert_list = NULL,
+                     const PS::S32* pert_list = NULL,
                      const PS::S32 n_pert = 0) {
         const PS::S32 igroup = clist_.size();
         const PS::S32 ioff = pert_.size();
@@ -1063,7 +1063,7 @@ public:
                 PS::F64 finner = bininfo[i].ax*(1.0+bininfo[i].ecc);
                 finner = clist_[i].mass/(finner*finner);
                 finner = finner*finner;
-                clist_[i].slowdown.setSlowDownPars(finner, bininfo[i].peri);
+                clist_[i].slowdown.setSlowDownPars(finner, bininfo[i].peri, 1.0e-8);
                 Tptcl p[2];
                 OrbParam2PosVel(p[0].pos, p[1].pos, p[0].vel, p[1].vel, bininfo[i].m1, bininfo[i].m2, bininfo[i].ax, bininfo[i].ecc, bininfo[i].inc, bininfo[i].OMG, bininfo[i].omg, pi);
                 p[0].mass = bininfo[i].m1;
@@ -1249,12 +1249,15 @@ public:
 
 #ifdef ARC_ERROR
     template <class Teng>
-    void EnergyRecord(Teng &energy) {
+    void EnergyRecord(Teng &energy, const PS::S32 sdflag=false) {
         energy.kin = energy.pot = energy.tot = 0.0;
+        PS::F64 sd;
         for(int i=0; i<clist_.size(); i++) {
-            energy.kin += clist_[i].getEkin();
-            energy.pot += clist_[i].getPot();
-            energy.tot += clist_[i].getPt();
+            if (sdflag) sd = 1.0/clist_[i].slowdown.getkappa();
+            else sd = 1.0;
+            energy.kin += sd*clist_[i].getEkin();
+            energy.pot += sd*clist_[i].getPot();
+            energy.tot += sd*clist_[i].getPt();
         }
     }
 #endif                         

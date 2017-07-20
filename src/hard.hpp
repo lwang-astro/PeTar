@@ -83,6 +83,13 @@ public:
     PS::F64 ARC_error;  
     PS::S32 N_count[20];  // counting number of particles in one cluster
 #endif
+#ifdef HARD_DEBUG
+    HardEnergy E0, E1;
+    HardEnergy AE0, AE1;
+    HardEnergy HE0, HE1;
+    HardEnergy ESD0, ESD1;
+#endif
+
 private:
     ARC_int_pars Int_pars_; /// ARC integration parameters, rout_, rin_ (L.Wang)
     PS::F64 dt_limit_hard_;
@@ -177,17 +184,6 @@ private:
             Hint.setPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getNPtcl());
             Hint.searchPerturber();
 
-#ifdef HARD_DEBUG
-            HardEnergy E0, E1;
-            HardEnergy AE0, AE1;
-            HardEnergy ET0, ET1;
-            Hint.CalcEnergy(E0);
-            CalcEnergyHard(ET0, group.getPtclList(), group.getNPtcl(), group.getGroup(0), group.getGroupSize(), group.getNGroups());
-//#ifdef HARD_DEBUG_PRINT
-//        fprintf(stderr,"Hard Energy: init =%e, kin =%e pot =%e\n", E0.tot, E0.kin, E0.pot);
-//#endif
-#endif
-
             PS::F64 time_sys=0.0, time_now;
 #ifdef FIX_STEP_DEBUG
             PS::F64 dt_limit = dt_limit_hard_;
@@ -223,7 +219,7 @@ private:
 
 
 #ifdef HARD_DEBUG
-            Aint.EnergyRecord(AE0);
+            CalcEnergyHardFull(E0, AE0, HE0, ESD0, Hint, Aint, group);
             PS::ReallocatableArray<PS::F64> slowdownrecord;
             slowdownrecord.resizeNoInitialize(n_groups);
 #endif
@@ -241,7 +237,7 @@ private:
                 assert(time_sys>time_now);
 #endif
                 PS::F64 dt_h = time_sys-time_now;
-                Aint.updateSlowDown(time_sys);
+                //Aint.updateSlowDown(time_sys);
 #ifdef HARD_DEBUG
                 for(int k=0; k<n_groups; k++) {
                     slowdownrecord[k] = std::max(slowdownrecord[k], Aint.getSlowDown(k));
@@ -260,19 +256,18 @@ private:
             Hint.writeBackPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getNPtcl());
 
 #ifdef HARD_DEBUG
-            Aint.EnergyRecord(AE1);
-            Hint.CalcEnergy(E1);
-            CalcEnergyHard(ET1, group.getPtclList(), group.getNPtcl(), group.getGroup(0), group.getGroupSize(), group.getNGroups());
+            CalcEnergyHardFull(E1, AE1, HE1, ESD1, Hint, Aint, group);
         
 #ifdef HARD_DEBUG_PRINT
             fprintf(stderr,"Slowdown factor = ");
             for(int k=0; k<n_groups; k++) 
                 fprintf(stderr,"%e; ",slowdownrecord[k]);
             fprintf(stderr,"\n");
-            fprintf(stderr,"H4  Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e\nARC Energy: init =%e, end =%e, diff =%e, error = %e\nTot Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e, Tot-H4-ARC =%e\n", 
-                    E0.tot, E1.tot, E1.tot-E0.tot, E1.kin, E1.pot, 
+            fprintf(stderr,"H4  Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e\nARC Energy: init =%e, end =%e, diff =%e, error = %e\nTot Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e, Tot-H4-ARC =%e\nTSD Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e\n", 
+                    HE0.tot, HE1.tot, HE1.tot-HE0.tot, HE1.kin, HE1.pot, 
                     AE0.kin+AE0.pot, AE1.kin+AE1.pot, AE1.kin+AE1.pot-AE0.kin-AE0.pot, (AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot)/AE0.tot,
-                    ET0.tot, ET1.tot, ET1.tot-ET0.tot, ET1.kin, ET1.pot, ET1.tot-E1.tot-AE1.kin-AE1.pot);
+                    E0.tot, E1.tot, E1.tot-E0.tot, E1.kin, E1.pot, E1.tot-HE1.tot-AE1.kin-AE1.pot,
+                    ESD0.tot, ESD1.tot, ESD1.tot-ESD0.tot, ESD1.kin, ESD1.pot);
             Hint.printStepHist();
 #endif
 #endif
@@ -411,6 +406,7 @@ public:
         n_split_ = _n_split;
     }
 
+#ifdef HARD_DEBUG
     template<class Teng>
     void CalcEnergyHard(Teng & eng,  const PS::S32* ptcl_list, const PS::S32 ptcl_n, const PS::S32* group_list, const PS::S32 group_n, const PS::S32 nbin){
         eng.kin = eng.pot = eng.tot = 0.0;
@@ -448,6 +444,18 @@ public:
         eng.tot = eng.kin + eng.pot;
     }
 
+    template<class Teng, class TH4, class TARC, class Tgroup>
+    void CalcEnergyHardFull(Teng& E, Teng& AE, Teng& HE, Teng& ESD, TH4 &Hint, TARC& Aint, const Tgroup& group){
+        Hint.CalcEnergy(HE);
+        Teng TMP;
+        Aint.EnergyRecord(TMP,true);
+        Aint.EnergyRecord(AE);
+        CalcEnergyHard(E, group.getPtclList(), group.getNPtcl(), group.getGroup(0), group.getGroupSize(), group.getNGroups());
+        ESD.tot = (E.tot - AE.kin-AE.pot) + (TMP.kin+TMP.pot);
+        ESD.kin = (E.kin - AE.kin) + TMP.kin;
+        ESD.pot = (E.pot - AE.pot) + TMP.pot;
+    }
+#endif
 
 //////////////////
 // for one cluster

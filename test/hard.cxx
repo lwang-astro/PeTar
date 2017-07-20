@@ -38,35 +38,36 @@ void CalcEnergyHard(const PtclHard ptcl[], const PS::S32 n_tot, Teng & eng,
 #define NAN_CHECK(val) assert((val) == (val));
 #endif
 
-void print_p(PtclHard* p, const int n) {
-    std::cout<<std::setw(12)<<"mass"
-             <<std::setw(12)<<"x1"
-             <<std::setw(12)<<"x2"
-             <<std::setw(12)<<"x3"
-             <<std::setw(12)<<"v1"
-             <<std::setw(12)<<"v2"
-             <<std::setw(12)<<"v3"
-             <<std::setw(12)<<"rsearch"
-             <<std::setw(12)<<"mass_bk"
-             <<std::setw(12)<<"status"
-             <<std::setw(12)<<"id"
-             <<std::setw(12)<<"id_cluster"
-             <<std::setw(12)<<"adr"
+void print_p(PtclHard* p, const int n, const int width = 20, const int precision = 14) {
+    std::cout<<std::setprecision(precision);
+    std::cout<<std::setw(width)<<"mass"
+             <<std::setw(width)<<"x1"
+             <<std::setw(width)<<"x2"
+             <<std::setw(width)<<"x3"
+             <<std::setw(width)<<"v1"
+             <<std::setw(width)<<"v2"
+             <<std::setw(width)<<"v3"
+             <<std::setw(width)<<"rsearch"
+             <<std::setw(width)<<"mass_bk"
+             <<std::setw(width)<<"status"
+             <<std::setw(width)<<"id"
+             <<std::setw(width)<<"id_cluster"
+             <<std::setw(width)<<"adr"
              <<std::endl;
     for (int i=0; i<n; i++) {
-        std::cout<<std::setw(12)<<p[i].mass
-                 <<std::setw(12)<<p[i].pos[0]
-                 <<std::setw(12)<<p[i].pos[1]
-                 <<std::setw(12)<<p[i].pos[2]
-                 <<std::setw(12)<<p[i].vel[0]
-                 <<std::setw(12)<<p[i].vel[1]
-                 <<std::setw(12)<<p[i].vel[2]
-                 <<std::setw(12)<<p[i].r_search
-                 <<std::setw(12)<<p[i].mass_bk
-                 <<std::setw(12)<<p[i].status
-                 <<std::setw(12)<<p[i].id
-                 <<std::setw(12)<<p[i].id_cluster
-                 <<std::setw(12)<<p[i].adr_org
+        std::cout<<std::setw(width)<<p[i].mass
+                 <<std::setw(width)<<p[i].pos[0]
+                 <<std::setw(width)<<p[i].pos[1]
+                 <<std::setw(width)<<p[i].pos[2]
+                 <<std::setw(width)<<p[i].vel[0]
+                 <<std::setw(width)<<p[i].vel[1]
+                 <<std::setw(width)<<p[i].vel[2]
+                 <<std::setw(width)<<p[i].r_search
+                 <<std::setw(width)<<p[i].mass_bk
+                 <<std::setw(width)<<p[i].status
+                 <<std::setw(width)<<p[i].id
+                 <<std::setw(width)<<p[i].id_cluster
+                 <<std::setw(width)<<p[i].adr_org
                  <<std::endl;
     }
 }
@@ -74,21 +75,45 @@ void print_p(PtclHard* p, const int n) {
 // flag: 1: c.m; 2: individual; 
 template<class Teng>
 void write_p(FILE* fout, const PS::F64 time, const PtclHard* p, const int n, PtclHard & pcm, Teng &et, const PS::F64 rin, const PS::F64 rout, const PS::F64 eps2, const PS::F64 et0=0, const int flag=2) {
-    fprintf(fout,"%e ",time);
+    fprintf(fout,"%20.14e ",time);
     PS::ReallocatableArray<PtclHard> pp;
     for (int i=0; i<n; i++) {
         if(flag==2&&(p[i].status>0||p[i].id<0)) continue;
         if(flag==1&&((p[i].id>0&&p[i].status!=0)||(p[i].id<=0&&p[i].status<0))) continue;
         pp.push_back(p[i]);
-        if((flag==2||flag==1)&&p[i].status!=0) pp.back().mass = pp.back().mass_bk;
+        if((flag==2||flag==1)&&p[i].status!=0) {
+            pp.back().mass = pp.back().mass_bk;
+        }
+        
     }
     calc_center_of_mass(pcm, pp.getPointer(), pp.size());
     //printf("n = %d\n",pp.size());
+    Teng etb;
     CalcEnergyHard(pp.getPointer(),pp.size(),et,rin,rout,eps2);
     PS::F64 err = et0==0?0:(et.tot-et0)/et0;
-    fprintf(fout,"%e %e %e %e ",err,et.kin,et.pot,et.tot);
+    fprintf(fout,"%20.14e %20.14e %20.14e %20.14e ",err,et.kin,et.pot,et.tot);
     for (int i=0; i<pp.size(); i++) {
-        fprintf(fout,"%e %e %e %e %e %e %e ", 
+        fprintf(fout,"%20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e ", 
+                pp[i].mass, pp[i].pos[0], pp[i].pos[1], pp[i].pos[2], 
+                pp[i].vel[0], pp[i].vel[1], pp[i].vel[2]);
+    }
+    fprintf(fout,"\n");
+}
+
+// flag: 1: c.m; 2: individual; 
+template<class Teng>
+void write_p(FILE* fout, const PS::F64 time, const PtclHard* p, const int n, const Teng *E, const Teng *E0=NULL) {
+    fprintf(fout,"%20.14e ",time);
+    PS::ReallocatableArray<PtclHard> pp;
+    for (int i=0; i<n; i++) {
+        if(p[i].status>0||p[i].id<0) continue;
+        pp.push_back(p[i]);
+        if(p[i].status!=0) pp.back().mass = pp.back().mass_bk;
+    }
+    PS::F64 err = E0==NULL?0:(E->tot-E0->tot)/E0->tot;
+    fprintf(fout,"%20.14e %20.14e %20.14e %20.14e ",err,E->kin,E->pot,E->tot);
+    for (int i=0; i<pp.size(); i++) {
+        fprintf(fout,"%20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e ", 
                 pp[i].mass, pp[i].pos[0], pp[i].pos[1], pp[i].pos[2], 
                 pp[i].vel[0], pp[i].vel[1], pp[i].vel[2]);
     }
@@ -211,14 +236,16 @@ int main(int argc, char** argv)
   PtclHard pcm0,pcm1,ppcm0,ppcm1;
   fprintf(stderr,"Time = %e\n", time_sys);
   print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
-  write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),pcm0,et0,rin,rout,eps2);
+  //write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),pcm0,et0,rin,rout,eps2);
+  write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(), &sys.ESD0);
   write_p(fout2,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),ppcm0,etcm0,rin,rout,eps2,0.0,1);
   while(time_sys < time){
       fprintf(stderr,"Time = %e\n", time_sys+dt_limit);
       sys.driveForMultiCluster<PS::ParticleSystem<FPSoft>,FPSoft>(dt_limit, fp);
       time_sys += dt_limit;
       //print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
-      write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),pcm1,et,rin,rout,eps2,et0.tot);
+      write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(), &sys.ESD1, &sys.ESD0);
+      //write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),pcm1,et,rin,rout,eps2,et0.tot);
       write_p(fout2,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),ppcm1,etcm,rin,rout,eps2,etcm0.tot,1);
       std::cerr<<"CM: pos="<<pcm1.pos<<" vel="<<pcm1.vel<<" shift pos="<<pcm1.pos-pcm0.pos<<" shift vel="<<pcm1.vel-pcm0.vel<<std::endl;
       std::cerr<<"CMHint: pos="<<ppcm1.pos<<" vel="<<ppcm1.vel<<" shift pos="<<ppcm1.pos-ppcm0.pos<<" shift vel="<<ppcm1.vel-ppcm0.vel<<std::endl;
