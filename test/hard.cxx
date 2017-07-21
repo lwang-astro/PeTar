@@ -7,7 +7,6 @@
 #include "Newtonian_acceleration.h"
 #include "ptree.h"
 #include "kepler.hpp"
-#include "rsearch.hpp"
 #include "cluster_list.hpp"
 #include "hard.hpp"
 #include "soft.hpp"
@@ -134,7 +133,7 @@ int main(int argc, char** argv)
   }
 
   int N;
-  PS::F64 rin, rout, rbin, rsearch, gmin=0.0, eps, eta, dt_limit, time, m_average=0;
+  PS::F64 rin, rout, rbin, rsearch, eps, eta, dt_limit, time, m_average=0;
   PS::S32 rcount = fscanf(fin, "%lf %d %lf %lf %lf %lf %lf %lf %lf\n", 
                           &time, &N, &rin, &rout, &rsearch, &rbin, &dt_limit, &eta, &eps);
   if (rcount<8) {
@@ -211,7 +210,7 @@ int main(int argc, char** argv)
   SystemHard sys;
   PS::ParticleSystem<FPSoft> fp;
   PS::F64 time_sys = 0.0;
-  sys.setParam(rbin, rout, rin, eps, dt_limit, eta, time_sys, gmin, m_average);
+  sys.setParam(rbin, rout, rin, eps, dt_limit, eta, time_sys);
   sys.setARCParam();
   
   sys.setPtclForIsolatedMultiCluster(p,adr,np);

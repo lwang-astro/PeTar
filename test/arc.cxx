@@ -109,7 +109,7 @@ int main(int argc, char** argv)
       std::cerr<<"Error: parameter reading fail!\n";
       abort();
   }
-  //rsearch = rout;
+  Ptcl::r_search_min = rout;
 
   fprintf(stderr,"t_end = %e\nN = %d\nr_in = %e\nr_out = %e\neta = %e\ndt_limit = %e\neps = %e\n",time,N,rin,rout,eta,dt_limit,eps);
 
@@ -140,7 +140,7 @@ int main(int argc, char** argv)
 
   SearchGroup<PtclH4> group;
   group.findGroups(p.getPointer(), N, n_split);
-  group.searchAndMerge(p.getPointer(), N, rsearch);
+  group.searchAndMerge(p.getPointer(), rsearch);
   //std::cout<<"SearchAndMerge\n";
   // 
   //for(int i=0; i<group.getNGroups(); i++) {
@@ -159,7 +159,7 @@ int main(int argc, char** argv)
   
   PS::ReallocatableArray<PtclH4> ptcl_new;
 
-  group.generateList(p.getPointer(), N, ptcl_new, rsearch, n_split);
+  group.generateList(p.getPointer(), ptcl_new, rsearch, dt_limit, n_split);
   //std::cout<<"GenerateList\n";
   //print_p(p.getPointer(),p.size());
 
