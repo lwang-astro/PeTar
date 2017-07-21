@@ -23,6 +23,8 @@ public:
     PS::F64 mass_bk;
     PS::S64 id;
     PS::S64 status;
+    static PS::F64 search_factor;
+    static PS::F64 r_search_min;
 
     Ptcl(): id(-1), status(-1) {}
 
@@ -65,4 +67,14 @@ public:
         }
     }
 
+    void calcRSearch(const PS::F64 dt_tree) {
+        r_search = std::max(std::sqrt(vel*vel)*dt_tree*search_factor, r_search_min);
+#ifdef HARD_DEBUG
+        assert(r_search>0);
+#endif
+    }
+
 };
+
+PS::F64 Ptcl::r_search_min = 0.0;
+PS::F64 Ptcl::search_factor= 0.0;

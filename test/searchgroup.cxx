@@ -6,7 +6,6 @@
 #include "Newtonian_acceleration.h"
 #include "ptree.h"
 #include "kepler.hpp"
-#include "rsearch.hpp"
 #include "cluster_list.hpp"
 #include "hard.hpp"
 
@@ -17,7 +16,7 @@
 
 
 struct params{
-    double rin,rout,gmin;
+    double rin,rsearch,dt_tree;
 };
 
 PtclHard pshift(const PtclHard& a, const PtclHard& ref) {
@@ -65,7 +64,7 @@ PtclHard kepler_print(const std::size_t id, const std::size_t ib, PtclHard* c[2]
                    (v[0][1]*m[0]+v[1][1]*m[1])/mt, 
                    (v[0][2]*m[0]+v[1][2]*m[1])/mt);
 
-    return PtclHard(Ptcl(ParticleBase(mt, xcm, vcm), ppars.rout, 0, ib, 0));
+    return PtclHard(Ptcl(ParticleBase(mt, xcm, vcm), ppars.rsearch, 0, ib, 0));
 }
 
 
@@ -116,7 +115,9 @@ int main(int argc, char** argv)
 
   int N;
   params par;
-  fs>>N>>par.rin>>par.rout>>par.gmin;
+  fs>>N>>par.rin>>par.rsearch>>par.dt_tree;
+  Ptcl::r_search_min = par.rsearch;
+
   PS::ReallocatableArray<PtclHard> p;
   p.resizeNoInitialize(N);
   
@@ -140,8 +141,8 @@ int main(int argc, char** argv)
     PS::F64vec vv1(v1[0],v1[1],v1[2]);
     PS::F64vec vv2(v2[0],v2[1],v2[2]);    
 
-    PtclHard a(Ptcl(ParticleBase(m1,xx1,vv1),par.rout,0,idc++,0));
-    PtclHard b(Ptcl(ParticleBase(m2,xx2,vv2),par.rout,0,idc++,0));
+    PtclHard a(Ptcl(ParticleBase(m1,xx1,vv1),par.rsearch,0,idc++,0));
+    PtclHard b(Ptcl(ParticleBase(m2,xx2,vv2),par.rsearch,0,idc++,0));
 
     bool flag=plist.link(id,ib,a,b,pshift);
     if (!flag) {
@@ -186,11 +187,11 @@ int main(int argc, char** argv)
   group.findGroups(p.getPointer(), N);
   group.resolveGroups();
 
-  group.searchAndMerge(p.getPointer(), N, par.rin);
+  group.searchAndMerge(p.getPointer(), par.rin);
   std::cout<<"SearchAndMerge\n";
   print_p(p.getPointer(),N);
 
-  for(int i=0; i<group.getNGroups(); i++) {
+  for(int i=0; i<group.getNumOfGroups(); i++) {
       std::cout<<"group["<<i<<"]: ";
       for(int j=0; j<group.getGroupN(i); j++) {
           std::cout<<std::setw(10)<<group.getGroup(i)[j];
@@ -199,7 +200,7 @@ int main(int argc, char** argv)
   }
 
   std::cout<<"Ptcl List:";
-  for(int i=0; i<group.getNPtcl(); i++) {
+  for(int i=0; i<group.getPtclN(); i++) {
       std::cout<<std::setw(10)<<group.getPtclList()[i];
   }
   std::cout<<std::endl;
@@ -210,7 +211,7 @@ int main(int argc, char** argv)
   PS::ReallocatableArray<PtclHard> ptcl_new;
 
   //group.generateList(p, N, adr_group_glb, group_ptcl_glb, group_ptcl_glb_empty_list);
-  group.generateList(p.getPointer(), N, ptcl_new, par.rin);
+  group.generateList(p.getPointer(), ptcl_new, par.rin, par.dt_tree);
   std::cout<<"GenerateList\n";
   print_p(p.getPointer(),p.size());
   
@@ -232,10 +233,10 @@ int main(int argc, char** argv)
   PS::ReallocatableArray<PtclHard> pg;
   PS::ReallocatableArray<PtclHard> pp;
   std::cout<<"find groups\n";
-  for(int i=0;i<group.getNPtcl();i++) pn.push_back(p[group.getPtclList()[i]]);
+  for(int i=0;i<group.getPtclN();i++) pn.push_back(p[group.getPtclList()[i]]);
   print_p(pn.getPointer(),pn.size());
   
-  for(int i=0;i<group.getNGroups();i++)  {
+  for(int i=0;i<group.getNumOfGroups();i++)  {
       pg.clearSize();
       std::cout<<"Group["<<i<<"]: ";
       for(int j=0;j<group.getGroupN(i);j++) 
@@ -260,15 +261,15 @@ int main(int argc, char** argv)
   group.resolveGroups();
   std::cout<<"resolvegroups\n";
   pn.clearSize();
-  for(int i=0;i<group.getNPtcl();i++) pn.push_back(p[group.getPtclList()[i]]);
+  for(int i=0;i<group.getPtclN();i++) pn.push_back(p[group.getPtclList()[i]]);
   print_p(pn.getPointer(),pn.size());
 
   // second try
-  group.searchAndMerge(p.getPointer(), N, par.rin);
+  group.searchAndMerge(p.getPointer(), par.rin);
   std::cout<<"SearchAndMerge 2nd\n";
   print_p(p.getPointer(),N);
 
-  for(int i=0; i<group.getNGroups(); i++) {
+  for(int i=0; i<group.getNumOfGroups(); i++) {
       std::cout<<"group["<<i<<"]: ";
       for(int j=0; j<group.getGroupN(i); j++) {
           std::cout<<std::setw(10)<<group.getGroup(i)[j];
@@ -277,7 +278,7 @@ int main(int argc, char** argv)
   }
 
   std::cout<<"Ptcl List 2nd:";
-  for(int i=0; i<group.getNPtcl(); i++) {
+  for(int i=0; i<group.getPtclN(); i++) {
       std::cout<<std::setw(10)<<group.getPtclList()[i];
   }
   std::cout<<std::endl;
@@ -288,7 +289,7 @@ int main(int argc, char** argv)
   ptcl_new.clearSize();
 
   //group.generateList(p, N, adr_group_glb, group_ptcl_glb, group_ptcl_glb_empty_list);
-  group.generateList(p.getPointer(), N, ptcl_new, par.rin);
+  group.generateList(p.getPointer(), ptcl_new, par.rin, par.dt_tree);
   std::cout<<"GenerateList 2nd\n";
   print_p(p.getPointer(),p.size());
   
@@ -310,10 +311,10 @@ int main(int argc, char** argv)
   pg.clearSize();
   pp.clearSize();
   std::cout<<"find groups 2nd\n";
-  for(int i=0;i<group.getNPtcl();i++) pn.push_back(p[group.getPtclList()[i]]);
+  for(int i=0;i<group.getPtclN();i++) pn.push_back(p[group.getPtclList()[i]]);
   print_p(pn.getPointer(),pn.size());
   
-  for(int i=0;i<group.getNGroups();i++)  {
+  for(int i=0;i<group.getNumOfGroups();i++)  {
       pg.clearSize();
       std::cout<<"Group["<<i<<"]: ";
       for(int j=0;j<group.getGroupN(i);j++) 
@@ -338,7 +339,7 @@ int main(int argc, char** argv)
   group.resolveGroups();
   std::cout<<"resolvegroups 2nd\n";
   pn.clearSize();
-  for(int i=0;i<group.getNPtcl();i++) pn.push_back(p[group.getPtclList()[i]]);
+  for(int i=0;i<group.getPtclN();i++) pn.push_back(p[group.getPtclList()[i]]);
   print_p(pn.getPointer(),pn.size());
       
   

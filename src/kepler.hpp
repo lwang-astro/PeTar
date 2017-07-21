@@ -420,7 +420,8 @@ template<class Tptcl>
 void keplerTreeGenerator(PtclTree<Tptcl> bins[],   // make sure bins.size = n_members!
                          PS::S32 member_list[], // make sure list.size = n_members!
                          const PS::S32 n_members,
-                         Tptcl* ptcl_org){
+                         Tptcl* ptcl_org,
+                         const PS::F64 dt_tree){
 
     std::pair<PS::F32,PS::S32> r2_list[n_members];
     calcMinDisList(member_list,r2_list, n_members, ptcl_org);
@@ -457,7 +458,8 @@ void keplerTreeGenerator(PtclTree<Tptcl> bins[],   // make sure bins.size = n_me
         bins[i].member[1] = p[1];
         bins[i].id = p[0]->id;
         bins[i].status = bins[i].id;
-        bins[i].r_search = std::max(p[0]->r_search,p[1]->r_search);
+        //bins[i].r_search = std::max(p[0]->r_search,p[1]->r_search);
+        bins[i].calcRSearch(dt_tree);
     }
 
 #ifdef HARD_DEBUG

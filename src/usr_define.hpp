@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef NAN_CHECK
+#define NAN_CHECK(val) assert((val) == (val));
+#endif
+
 /// Basic particle class
 class ParticleBase{
 public:

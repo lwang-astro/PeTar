@@ -141,7 +141,7 @@ int main(int argc, char** argv)
       std::cerr<<"Error: parameter reading fail!\n";
       abort();
   }
-  //rsearch = rout;
+  Ptcl::r_search_min = rsearch;
 
   fprintf(stderr,"t_end = %e\nN = %d\nr_in = %e\nr_out = %e\neta = %e\ndt_limit = %e\neps = %e\n",time,N,rin,rout,eta,dt_limit,eps);
 
@@ -170,11 +170,11 @@ int main(int argc, char** argv)
 
   SearchGroup<PtclHard> group;
   group.findGroups(p.getPointer(), N);
-  group.searchAndMerge(p.getPointer(), N, rbin);
+  group.searchAndMerge(p.getPointer(), rbin);
   std::cerr<<"SearchAndMerge\n";
   //print_p(p.getPointer(),N);
   
-  for(int i=0; i<group.getNGroups(); i++) {
+  for(int i=0; i<group.getNumOfGroups(); i++) {
       std::cerr<<"group["<<i<<"]: ";
       for(int j=0; j<group.getGroupN(i); j++) {
           std::cerr<<std::setw(10)<<group.getGroup(i)[j];
@@ -183,14 +183,14 @@ int main(int argc, char** argv)
   }
 
   std::cerr<<"Ptcl List:";
-  for(int i=0; i<group.getNPtcl(); i++) {
+  for(int i=0; i<group.getPtclN(); i++) {
       std::cerr<<std::setw(10)<<group.getPtclList()[i];
   }
   std::cerr<<std::endl;
   
   PS::ReallocatableArray<PtclHard> ptcl_new;
 
-  group.generateList(p.getPointer(), N, ptcl_new, rbin);
+  group.generateList(p.getPointer(), ptcl_new, rbin, dt_limit);
   std::cerr<<"GenerateList\n";
   print_p(p.getPointer(),p.size());
 
@@ -211,7 +211,7 @@ int main(int argc, char** argv)
   SystemHard sys;
   PS::ParticleSystem<FPSoft> fp;
   PS::F64 time_sys = 0.0;
-  sys.setParam(rsearch, rbin, rout, rin, eps, dt_limit, eta, time_sys, gmin, m_average);
+  sys.setParam(rbin, rout, rin, eps, dt_limit, eta, time_sys, gmin, m_average);
   sys.setARCParam();
   
   sys.setPtclForIsolatedMultiCluster(p,adr,np);
@@ -243,7 +243,7 @@ int main(int argc, char** argv)
       fprintf(stderr,"Time = %e\n", time_sys+dt_limit);
       sys.driveForMultiCluster<PS::ParticleSystem<FPSoft>,FPSoft>(dt_limit, fp);
       time_sys += dt_limit;
-      //print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
+      print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
       write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(), &sys.ESD1, &sys.ESD0);
       //write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),pcm1,et,rin,rout,eps2,et0.tot);
       write_p(fout2,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),ppcm1,etcm,rin,rout,eps2,etcm0.tot,1);

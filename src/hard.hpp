@@ -13,8 +13,8 @@
 #include"cluster_list.hpp"
 //#include"stdio.h" /// for debug (L.Wang)
 
-template<class T>
-void Print(const T str, std::ostream & fout);
+//template<class T>
+//void Print(const T str, std::ostream & fout);
 
 //std::ofstream kout;
 //std::ofstream arout;
@@ -23,8 +23,6 @@ class PtclHard: public Ptcl{
 public:
     PS::S32 id_cluster;
     PS::S32 adr_org;
-    static PS::F64 search_factor;
-    static PS::F64 r_search_min;
 
     PtclHard() {}
 
@@ -98,10 +96,10 @@ private:
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_;
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_disp_;
     PS::F64 time_origin_;
-    PS::F64 gamma_;
-    PS::F64 r_search_single_;
+    // PS::F64 gamma_;
+    // PS::F64 r_search_single_;
     PS::F64 r_bin_;
-    PS::F64 m_average_;
+    // PS::F64 m_average_;
     PS::S32 n_split_;
 
     ///////////
@@ -150,7 +148,7 @@ private:
             
         group.findGroups(ptcl_org, n_ptcl, n_split_);
 
-        if(group.getNPtcl()==1) {
+        if(group.getPtclN()==1) {
             PtclHard* pcm = &ptcl_org[group.getPtclList()[0]];
             PS::S32 iact = 0;
             
@@ -181,7 +179,7 @@ private:
             
             HermiteIntegrator<PtclHard> Hint;
             Hint.setParams(dt_limit_hard_, eta_s_, Int_pars_.rin, Int_pars_.rout, Int_pars_.eps2);
-            Hint.setPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getNPtcl());
+            Hint.setPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getPtclN());
             Hint.searchPerturber();
 
             PS::F64 time_sys=0.0, time_now;
@@ -199,14 +197,14 @@ private:
             // ReallocatableArray<PS::S32> adr_cm;         //group_list index -> ptcl.cm
             // group.findGroups(group_list, status, status_map,  adr_cm, group_act_n, ptcl_org, n_ptcl);
 
-            group_act_list.resizeNoInitialize(group.getNPtcl());
+            group_act_list.resizeNoInitialize(group.getPtclN());
             
             ARCIntegrator<PtclHard, PtclH4, PtclForce, ARC_int_pars, ARC_pert_pars> Aint(ARC_control_, Int_pars_);
 
             // first particles in Hint.Ptcl are c.m.
-            PS::S32 n_groups = group.getNGroups();
+            PS::S32 n_groups = group.getNumOfGroups();
             Aint.reserveARMem(n_groups);
-            Aint.reservePertMem(Hint.getPertNtot());
+            Aint.reservePertMem(Hint.getPertListSize());
             for (int i=0; i<n_groups; i++) {
                 group.getBinPars(Aint.bininfo[i],ptcl_org,i,n_split_);
                 Aint.addOneGroup(ptcl_org, group.getGroup(i), group.getGroupN(i), group.getGroupPertList(i,n_split_), n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i)); 
@@ -253,7 +251,7 @@ private:
         
             Aint.updateCM(Hint.getPtcl());
             Aint.resolve();
-            Hint.writeBackPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getNPtcl());
+            Hint.writeBackPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getPtclN());
 
 #ifdef HARD_DEBUG
             CalcEnergyHardFull(E1, AE1, HE1, ESD1, Hint, Aint, group);
@@ -275,9 +273,11 @@ private:
             
         //group.resolveGroups(ptcl_org, n_ptcl, group_ptcl_glb.getPointer(), group_list.size(), group_list.getPointer(), adr_cm.getPointer());
         group.resolveGroups();
-        group.searchAndMerge(ptcl_org, n_ptcl, r_bin_);
+        updateRSearch(ptcl_org, group.getPtclList(), group.getPtclN(), time_end);
+
+        group.searchAndMerge(ptcl_org, r_bin_);
         // Kickcorrect(ptcl_org, group.getRoutChangeList());
-        group.generateList(ptcl_org, n_ptcl, ptcl_new, r_bin_, n_split_);
+        group.generateList(ptcl_org, ptcl_new, r_bin_, time_end, n_split_);
 
             // group.reverseCopy(ptcl_org, n_ptcl);
 //        }
@@ -344,7 +344,7 @@ public:
 
         for(PS::S32 i=0; i<ptcl_recv.size(); i++){
             const Tptcl & p = ptcl_recv[i];
-            ptcl_hard_.push_back(PtclHard(p, p.id_cluster_, -(i+1)));
+            ptcl_hard_.push_back(PtclHard(p, p.id_cluster, -(i+1)));
         }
 
         if(ptcl_hard_.size() == 0) return;
@@ -380,16 +380,15 @@ public:
         time_origin_ = _time_origin;
     }
 
-    void setParam(const PS::F64 _rsearch, 
-                  const PS::F64 _rbin,
+    void setParam(const PS::F64 _rbin,
                   const PS::F64 _rout,
                   const PS::F64 _rin,
                   const PS::F64 _eps,
                   const PS::F64 _dt_limit_hard,
                   const PS::F64 _eta,
                   const PS::F64 _time_origin,
-                  const PS::F64 _gmin,
-                  const PS::F64 _m_avarage,
+                  // const PS::F64 _gmin,
+                  // const PS::F64 _m_avarage,
                   const PS::S32 _n_split = 8){
         /// Set chain pars (L.Wang)
 		Int_pars_.rin  = _rin;
@@ -399,11 +398,20 @@ public:
         dt_limit_hard_ = _dt_limit_hard;
         eta_s_ = _eta*_eta;
         time_origin_ = _time_origin;
-        gamma_ = std::pow(1.0/_gmin,0.33333);
-        r_search_single_ = _rsearch; 
+//        gamma_ = std::pow(1.0/_gmin,0.33333);
+        // r_search_single_ = _rsearch; 
         r_bin_           = _rbin;
-        m_average_ = _m_avarage;
+        // m_average_ = _m_avarage;
         n_split_ = _n_split;
+    }
+
+    void updateRSearch(PtclHard* ptcl_org,
+                       const PS::S32* ptcl_list,
+                       const PS::S32 n_ptcl,
+                       const PS::F64 dt_tree) {
+        for (PS::S32 i=0; i<n_ptcl; i++) {
+            ptcl_org[ptcl_list[i]].calcRSearch(dt_tree);
+        }
     }
 
 #ifdef HARD_DEBUG
@@ -450,7 +458,7 @@ public:
         Teng TMP;
         Aint.EnergyRecord(TMP,true);
         Aint.EnergyRecord(AE);
-        CalcEnergyHard(E, group.getPtclList(), group.getNPtcl(), group.getGroup(0), group.getGroupSize(), group.getNGroups());
+        CalcEnergyHard(E, group.getPtclList(), group.getPtclN(), group.getGroup(0), group.getGroupListSize(), group.getNumOfGroups());
         ESD.tot = (E.tot - AE.kin-AE.pot) + (TMP.kin+TMP.pot);
         ESD.kin = (E.kin - AE.kin) + TMP.kin;
         ESD.pot = (E.pot - AE.pot) + TMP.pot;
@@ -493,7 +501,7 @@ public:
         for(PS::S32 i=0; i<n; i++){
             PS::F64vec dr = ptcl_hard_[i].vel * dt;
             ptcl_hard_[i].pos += dr;
-            ptcl_hard_[i].r_search = std::max(std::sqrt(dr*dr)*PtclHard::search_factor, PtclHard::r_search_min);
+            ptcl_hard_[i].calcRSearch(dt);
             // ptcl_hard_[i].r_search= r_search_single_;
             /*
               DriveKeplerRestricted(mass_sun_, 
@@ -509,7 +517,7 @@ public:
         for(PS::S32 i=0; i<n; i++){
             PS::F64vec dr = ptcl_hard_[i].vel * dt;
             ptcl_hard_[i].pos += dr;
-            ptcl_hard_[i].r_search = std::max(std::sqrt(dr*dr)*PtclHard::search_factor, PtclHard::r_search_min);
+            ptcl_hard_[i].calcRSearch(dt);
             /*
               DriveKeplerRestricted(mass_sun_, 
               pos_sun_, ptcl_hard_[i].pos, 
@@ -655,7 +663,7 @@ public:
     }
 
     template<class Tsys, class Tsptcl>
-    void initialMultiCluserOMP(Tsys & sys){
+    void initialMultiClusterOMP(Tsys & sys, const PS::F64 dt_tree){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         //	const PS::S32 ith = PS::Comm::getThreadNum();
 #pragma omp for schedule(dynamic)
@@ -664,9 +672,9 @@ public:
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
             SearchGroup<PtclHard> group;
             group.findGroups(ptcl_hard_.getPointer(adr_head), n_ptcl, n_split_);
-            group.searchAndMerge(ptcl_hard_.getPointer(adr_head), n_ptcl, r_bin_);
+            group.searchAndMerge(ptcl_hard_.getPointer(adr_head), r_bin_);
             PS::ReallocatableArray<PtclHard> ptcl_new;
-            group.generateList(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_new, r_bin_, n_split_);
+            group.generateList(ptcl_hard_.getPointer(adr_head), ptcl_new, r_bin_, dt_tree, n_split_);
 #pragma omp critical
             {
                 for (PS::S32 j=0; j<ptcl_new.size(); j++) {

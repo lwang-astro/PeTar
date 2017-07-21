@@ -141,6 +141,7 @@ public:
 
     template <class Tp>
     PtclComm(const Tp &p): Ptcl(p) {}
+    PtclComm() {}
 
     void dump(std::ofstream & fout){
         Ptcl::dump(fout);
@@ -1030,7 +1031,7 @@ private:
                        PS::ReallocatableArray<PS::S32> & part_list_n,
                        PS::ReallocatableArray<PS::S32> & p_list,
                        Tptcl *ptcl,
-                       const PS::S32 n_ptcl,
+//                       const PS::S32 n_ptcl,
                        const PS::F64 r_crit2) {
         PS::S32 n = p_list.size();
         part_list.clearSize();
@@ -1293,7 +1294,7 @@ private:
 
     template<class Tptree>
     void generateNewPtcl(Tptcl* ptcl_org,
-                         const PS::S32 n_ptcl,
+//                         const PS::S32 n_ptcl,
                          PS::ReallocatableArray<PS::S32> & p_list,
                          PS::ReallocatableArray<Tptcl> & ptcl_extra,
                          PS::ReallocatableArray<PS::S32> & group_list,
@@ -1301,6 +1302,7 @@ private:
                          PS::ReallocatableArray<PS::S32> & group_list_n,
                          PS::ReallocatableArray<PS::S32> & empty_list,
                          const PS::F64 rmax,
+                         const PS::F64 dt_tree,
                          const PS::S32 n_split = 8){
 #ifdef HARD_DEBUG
 //        assert(ptcl.size()==0);
@@ -1317,7 +1319,7 @@ private:
             bins.reserve(n_groups);
             stab_bins.reserve(n_groups);
             bins.resizeNoInitialize(group_list_n[i]-1);
-            keplerTreeGenerator(bins.getPointer(), &group_list[group_list_disp[i]], group_list_n[i], ptcl_org);
+            keplerTreeGenerator(bins.getPointer(), &group_list[group_list_disp[i]], group_list_n[i], ptcl_org, dt_tree);
             bool istab = stabilityCheck<Tptcl>(stab_bins,bins.back(),rmax);
             if (istab) {
                 keplerOrbitGenerator(ptcl_org, ptcl_extra, empty_list, bins.back(), n_split);
@@ -1331,6 +1333,7 @@ private:
 
         for (int i=0; i<empty_list.size(); i++) {
             PS::S32 ik = empty_list[i];
+            ptcl_org[ik].mass = 0.0;
             ptcl_org[ik].id = -1;
             ptcl_org[ik].status = -1;
         }
@@ -1653,12 +1656,12 @@ public:
     //    searchPerturber(pert_list_, ptcl_org, n_ptcl);
     //}
 
-    void searchAndMerge(Tptcl *ptcl_org, const PS::S32 n_ptcl, const PS::F64 rin){
+    void searchAndMerge(Tptcl *ptcl_org, const PS::F64 rin){
         PS::ReallocatableArray<PS::S32> part_list;      ///partner list
         PS::ReallocatableArray<PS::S32> part_list_disp;      ///partner list
         PS::ReallocatableArray<PS::S32> part_list_n;      ///partner list
         
-        searchPartner(part_list, part_list_disp, part_list_n, p_list_, ptcl_org, n_ptcl, rin*rin);
+        searchPartner(part_list, part_list_disp, part_list_n, p_list_, ptcl_org, rin*rin);
         mergeCluster(group_list_, group_list_disp_, group_list_n_, p_list_, part_list.getPointer(), part_list_disp.getPointer(), part_list_n.getPointer());
         // #ifdef HARD_DEBUG
         // assert(Rout_change_list_.size()==0);
@@ -1667,16 +1670,19 @@ public:
 
     }
 
+    /* rmax: maximum binary radius
+       dt_tree: tree time step
+    */
     void generateList(Tptcl *ptcl_org, 
-                      const PS::S32 n_ptcl, 
                       PS::ReallocatableArray<Tptcl> & ptcl_extra,
                       const PS::F64 rmax,
+                      const PS::F64 dt_tree,
                       const PS::S32 n_split = 8) {
         if (n_split>(1<<ID_PHASE_SHIFT)) {
             std::cerr<<"Error! ID_PHASE_SHIFT is too small for phase split! shift bit: "<<ID_PHASE_SHIFT<<" n_split: "<<n_split<<std::endl;
             abort();
         }
-        generateNewPtcl<PtclTree<Tptcl>>(ptcl_org, n_ptcl, p_list_, ptcl_extra, group_list_, group_list_disp_, group_list_n_, soft_pert_list_, rmax, n_split);
+        generateNewPtcl<PtclTree<Tptcl>>(ptcl_org, p_list_, ptcl_extra, group_list_, group_list_disp_, group_list_n_, soft_pert_list_, rmax, dt_tree, n_split);
         //searchPerturber(pert_list_, ptcl_org, n_ptcl);
     }
 
@@ -1710,7 +1716,7 @@ public:
     //    return pert_list_.getPointer();
     //}
 
-    PS::S32 getNPtcl() const {
+    const PS::S32 getPtclN() const {
         return p_list_.size();
     }
 
@@ -1722,33 +1728,33 @@ public:
 //        return group_ptcl_.getPointer();
 //    }
 
-    PS::S32 getNGroups() const {
+    const PS::S32 getNumOfGroups() const {
         return group_list_n_.size();
     }
 
-    const PS::S32* getGroup(const std::size_t i) const {
-        return &group_list_[group_list_disp_[i]];
+    const PS::S32* getGroup(const std::size_t igroup) const {
+        return &group_list_[group_list_disp_[igroup]];
     }
 
-    PS::S32 getGroupSize() const {
+    PS::S32 getGroupListSize() const {
         return group_list_.size();
     }
 
-    PS::S32 getGroupN(const std::size_t i) const {
-        return group_list_n_[i];
+    PS::S32 getGroupN(const std::size_t igroup) const {
+        return group_list_n_[igroup];
     }
 
-    PS::S32 getGroupPertAdr(const std::size_t i, const std::size_t j, const std::size_t iphase, const PS::S32 n_split =8) const {
-        return soft_pert_list_[i*2*n_split+j+2*iphase];
+    PS::S32 getGroupPertAdr(const std::size_t igroup, const std::size_t imember, const std::size_t iphase, const PS::S32 n_split =8) const {
+        return soft_pert_list_[igroup*2*n_split+imember+2*iphase];
     }
     // 
-    PS::S32* getGroupPertList(const std::size_t i, const PS::S32 n_split = 8) {
-        return &soft_pert_list_[i*2*n_split];
+    PS::S32* getGroupPertList(const std::size_t igroup, const PS::S32 n_split = 8) {
+        return &soft_pert_list_[igroup*2*n_split];
     }
 
     // assume the binary information stored in artificial star mass_bk
-    void getBinPars(Binary &bin, const Tptcl ptcl_org[], const std::size_t i, const PS::S32 n_split = 8) {
-        const PS::S32 ioff = i*2*n_split;
+    void getBinPars(Binary &bin, const Tptcl ptcl_org[], const std::size_t igroup, const PS::S32 n_split = 8) {
+        const PS::S32 ioff = igroup*2*n_split;
         if (ptcl_org[soft_pert_list_[ioff+10]].mass_bk==0.0) {
             bin.ax   = ptcl_org[soft_pert_list_[ioff  ]].mass_bk;
             bin.ecc  = ptcl_org[soft_pert_list_[ioff+1]].mass_bk;

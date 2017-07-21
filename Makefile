@@ -68,7 +68,7 @@ CXXFLAGS += -D HARD_DEBUG_PRINT
 
 VPATH=./src ./test
 
-SRC = main.cc hard.hpp soft.hpp hard_force.hpp io.hpp kepler.hpp phantomquad_for_p3t_x86.hpp domain.hpp profile.hpp cluster_list.hpp integrate.hpp rsearch.hpp
+SRC = main.cc hard.hpp soft.hpp hard_force.hpp io.hpp kepler.hpp phantomquad_for_p3t_x86.hpp domain.hpp profile.hpp cluster_list.hpp integrate.hpp init.hpp
 
 all: nbody.out
 

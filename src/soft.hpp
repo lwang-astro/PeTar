@@ -31,6 +31,20 @@ public:
     static PS::F64 r_out;
 
     FPSoft() {}
+
+    //! Get position (required for \ref ARC::chain)
+    /*! \return position vector (PS::F64[3])
+     */
+    PS::F64vec getPos() const{
+        return pos;
+    }
+
+    //! Get velocity (required for \ref ARC::chain)
+    /*! \return velocity vector (PS::F64[3])
+     */
+    PS::F64vec getVel() const{
+        return vel;
+    }
     
     template<class Tptcl>
     FPSoft(const Tptcl& p, const PS::S32 rank_, const PS::S32 adr_) {

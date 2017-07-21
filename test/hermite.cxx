@@ -119,7 +119,7 @@ int main(int argc, char** argv)
     
     HermiteIntegrator<PtclHard> Hint;
     Hint.setParams(par.dt_limit_hard, par.eta, par.rin, par.rout, par.eps*par.eps);
-    Hint.setPtcl(p.getPointer(),p.size(),group.getPtclList(),group.getNPtcl());
+    Hint.setPtcl(p.getPointer(),p.size(),group.getPtclList(),group.getPtclN());
     Hint.searchPerturber();
             
     Hint.CalcEnergy(E0);
@@ -130,7 +130,7 @@ int main(int argc, char** argv)
     PS::S32 group_act_n = 0;
     PS::ReallocatableArray<PS::S32> group_act_list; //active group_list act adr
 
-    group_act_list.resizeNoInitialize(group.getNPtcl());
+    group_act_list.resizeNoInitialize(group.getPtclN());
             
     PS::S32 n_groups = 0;
     PS::F64 time_sys=0.0;
@@ -175,7 +175,7 @@ int main(int argc, char** argv)
             
         }
     }
-    Hint.writeBackPtcl(p.getPointer(),p.size(),group.getPtclList(),group.getNPtcl());
+    Hint.writeBackPtcl(p.getPointer(),p.size(),group.getPtclList(),group.getPtclN());
     
     Hint.CalcEnergy(E1);
 

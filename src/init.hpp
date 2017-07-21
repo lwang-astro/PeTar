@@ -6,7 +6,7 @@ template<class Tpsys>
 void GetR(const Tpsys & system_soft,
           PS::F64 &r_in,
           PS::F64 &r_out,
-          PS::F64 &r_search_offset,
+          PS::F64 &r_search_min,
           PS::F64 &m_average,
           PS::F64 &dt,
           PS::F64 &vel_disp,
@@ -59,8 +59,10 @@ void GetR(const Tpsys & system_soft,
         while (dt<=dt_origin) dt *= 2.0;
         dt *= 0.5;
     }
-    r_search_offset = search_factor*vel_disp*dt;
+    r_search_min = search_factor*vel_disp*dt;
 }
+
+#ifdef MUTIL_ROUT
 
 template<class Tpsys>
 void SetBinaryRout(Tpsys & psys, const PS::S32 n_bin, const PS::F64 g_min, const PS::F64 r_in, const PS::F64 r_out, const PS::F64 m_average) {
@@ -75,6 +77,7 @@ void SetBinaryRout(Tpsys & psys, const PS::S32 n_bin, const PS::F64 g_min, const
         }
     }
 }
+
 
 template<class Tpsys>
 void SetSingleRout(Tpsys & psys, const PS::S32 n, const PS::S32 n_off, const PS::F64 r_out) {
@@ -136,3 +139,6 @@ void updateRout(Tptcl** p, const PS::S32 n, const PS::F64 r_in, const PS::F64 r_
         }
     }
 }
+
+#endif
+

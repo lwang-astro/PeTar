@@ -1,5 +1,7 @@
-
 #include<particle_simulator.hpp>
+#include<iomanip>
+#include<iostream>
+#include<fstream>
 #include<map>
 
 template<class Tdinfo, class Tsystem, class Ttree>
@@ -166,96 +168,78 @@ public:
 
 };
 
-class Wtime{
-public:
-    static PS::F64 cum;
-    static PS::F64 interval;
-    static PS::F64 take_snp;
-    static PS::F64 soft;
-    static PS::F64 soft_force;
-    static PS::F64 hard;
-    static PS::F64 hard_1body;
-    static PS::F64 hard_2body;
-    static PS::F64 hard_multi;
-    static PS::F64 hard_gather_data;
-    static PS::F64 hard_scatter_data;
-    static PS::F64 hard_copy_h2s;
-    static PS::F64 hard_merge;
-
-    static PS::F64 cum_offset;
-    static PS::F64 interval_offset;
-    static PS::F64 take_snp_offset;
-    static PS::F64 soft_offset;
-    static PS::F64 soft_force_offset;
-    static PS::F64 hard_offset;
-    static PS::F64 hard_1body_offset;
-    static PS::F64 hard_2body_offset;
-    static PS::F64 hard_multi_offset;
-    static PS::F64 hard_gather_data_offset;
-    static PS::F64 hard_scatter_data_offset;
-    static PS::F64 hard_copy_h2s_offset;
-    static PS::F64 hard_merge_offset;
-
-    static PS::F64 hard_2body_select_system;
-    static PS::F64 hard_2body_select_system_offset;
-
-    static void dump(std::ofstream & fout, const PS::F64 time_sys, const PS::S64 n_loop){
-	fout<<"time_sys= "<<time_sys
-	    <<" wtime_cum= "<<cum
-	    <<" wtime_interval= "<<interval<<" "<<interval / n_loop
-	    <<" wtime_hard= "<<hard<<" "<<hard / n_loop
-	    <<" wtime_soft= "<<soft<<" "<<soft / n_loop
-	    <<" wtime_soft_force= "<<soft_force<<" "<<soft_force / n_loop
-	    <<" wtime_hard_1body= "<<hard_1body<<" "<<hard_1body / n_loop
-	    <<" wtime_hard_2body_select_system= "<<hard_2body_select_system<<" "<<hard_2body_select_system / n_loop
-	    <<" wtime_hard_2body= "<<hard_2body<<" "<<hard_2body / n_loop
-	    <<" wtime_hard_multi= "<<hard_multi<<" "<<hard_multi / n_loop
-	    <<" wtime_hard_gather_data= "<<hard_gather_data<<" "<<hard_gather_data / n_loop
-	    <<" wtime_copy_h2s= "<<hard_copy_h2s<<" "<<hard_copy_h2s / n_loop
-	    <<" wtime_hard_merge= "<<hard_merge<<" "<<hard_merge / n_loop
-	    <<" wtime_hard_scatter_data= "<<hard_scatter_data<<" "<<hard_scatter_data/n_loop
-	    <<" take_snp= "<<take_snp<<std::endl;
+struct Tprofile{
+    PS::F64 time;
+    const char* name;
+    
+    Tprofile(const char* name_): time(0.0), name(name_) {}
+    
+    void start(){
+        time -= PS::GetWtime();
     }
 
-    static void clear(){
-	cum = interval = take_snp 
-	    = soft = soft_force = hard = hard_1body = hard_2body = hard_multi 
-	    = hard_gather_data = hard_scatter_data = hard_copy_h2s = hard_merge 
-	    = hard_2body_select_system = 0.0;
+    void end(){
+        time += PS::GetWtime();
+    }
+    
+    void print(std::ostream & fout, const PS::S64 divider=1){
+        fout<<name<<": "<<time/divider<<std::endl;
+    }
+
+    void dump(std::ostream & fout, const PS::F64 width=20, const PS::S64 divider=1){
+        fout<<std::setw(width)<<time/divider;
+    }
+
+    void reset() {
+        time = 0.0;
     }
 
 };
-PS::F64 Wtime::cum;
-PS::F64 Wtime::interval;
-PS::F64 Wtime::take_snp;
-PS::F64 Wtime::soft;
-PS::F64 Wtime::soft_force;
-PS::F64 Wtime::hard;
-PS::F64 Wtime::hard_1body;
-PS::F64 Wtime::hard_2body;
-PS::F64 Wtime::hard_multi;
-PS::F64 Wtime::hard_gather_data;
-PS::F64 Wtime::hard_scatter_data;
-PS::F64 Wtime::hard_copy_h2s;
-PS::F64 Wtime::hard_merge;
 
-PS::F64 Wtime::cum_offset;
-PS::F64 Wtime::interval_offset;
-PS::F64 Wtime::take_snp_offset;
-PS::F64 Wtime::soft_offset;
-PS::F64 Wtime::soft_force_offset;
-PS::F64 Wtime::hard_offset;
-PS::F64 Wtime::hard_1body_offset;
-PS::F64 Wtime::hard_2body_offset;
-PS::F64 Wtime::hard_multi_offset;
-PS::F64 Wtime::hard_gather_data_offset;
-PS::F64 Wtime::hard_scatter_data_offset;
-PS::F64 Wtime::hard_copy_h2s_offset;
-PS::F64 Wtime::hard_merge_offset;
+class Wtime{
+public:
+	Tprofile tot;		   
+	Tprofile hard_tot;	   
+	Tprofile hard_single;	   
+	Tprofile hard_isolated;
+	Tprofile hard_connected;
+	Tprofile soft_tot;	   
+	Tprofile search_cluster;
+    const PS::S32 n_profile;
+    
+    Wtime(): tot           (Tprofile("Total         ")),
+             hard_tot      (Tprofile("Hard total    ")),
+             hard_single   (Tprofile("Hard single   ")),
+             hard_isolated (Tprofile("Hard isolated ")),
+             hard_connected(Tprofile("Hard connected")),
+             soft_tot      (Tprofile("Soft total    ")),
+             search_cluster(Tprofile("Search cluster")),
+             n_profile(7) {}
 
+	void print(std::ostream & fout, const PS::F64 time_sys, const PS::S64 n_loop=1){
+        fout<<"Time: "<<time_sys<<std::endl;
+        
+        for(PS::S32 i=0; i<n_profile; i++) {
+            Tprofile* iptr = (Tprofile*)this+i;
+            iptr->print(fout, n_loop);
+        }
+    }
 
-PS::F64 Wtime::hard_2body_select_system;
-PS::F64 Wtime::hard_2body_select_system_offset;
+    void dump(std::ofstream & fout, const PS::F64 width=20, const PS::S64 n_loop=1){
+        for(PS::S32 i=0; i<n_profile; i++) {
+            Tprofile* iptr = (Tprofile*)this+i;
+            iptr->dump(fout, width, n_loop);
+        }
+    }
+
+    void clear(){
+        for(PS::S32 i=0; i<n_profile; i++) {
+            Tprofile* iptr = (Tprofile*)this+i;
+            iptr->reset();
+        }
+    }
+
+};
 
 //! for event counts (L.Wang)
 class Counts{

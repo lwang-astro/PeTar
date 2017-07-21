@@ -1,5 +1,8 @@
 #pragma once
 
+#define PRINT_WIDTH 20
+#define PRINT_PRECISION 14
+
 class FileHeader{
 public:
     PS::S64 nfile;  // file id

@@ -10,10 +10,6 @@
 #define RSQRT_NR_EPJ_X2
 #endif //P3T_64BIT
 
-#ifdef ENERGY_CHECK
-//#define ENERGY_DIRECT
-#endif
-
 #ifdef FORCE_CHECK
 #define FORCE_DIRECT
 #endif
@@ -38,7 +34,7 @@
 #include"hard.hpp"
 #include"kepler.hpp"
 #include"io.hpp"
-#include"rsearch.hpp"
+#include"init.hpp"
 #include"integrate.hpp"
 #include"profile.hpp"
 #include"domain.hpp"
@@ -54,161 +50,165 @@ typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::MonopoleWithSymmetryS
 #endif
 typedef PS::ParticleSystem<FPSoft> SystemSoft;
 
+template <class Type>
+struct params{
+    Type value;
+    const char* name;
+
+    params(const Type& _value, const char* _name): value(_value), name(_name) {}
+};
+
+template <class Type>
+std::ostream& operator <<(std::ostream& os, const params<Type>& par) {
+    os<<par.name<<": "<<par.value;
+    return os;
+}
+
 
 int main(int argc, char *argv[]){
     std::cout<<std::setprecision(15);
     std::cerr<<std::setprecision(15);
     PS::Initialize(argc, argv);
 
-	PS::F64 wtime_tot = 0.0;
-	PS::F64 wtime_tot_offset = 0.0;
-	PS::F64 wtime_hard_tot = 0.0;
-	PS::F64 wtime_hard_tot_offset = 0.0;
-	PS::F64 wtime_hard_1st_block = 0.0;
-	PS::F64 wtime_hard_1st_block_offset = 0.0;
-	PS::F64 wtime_hard_2nd_block = 0.0;
-	PS::F64 wtime_hard_2nd_block_offset = 0.0;
-	PS::F64 wtime_hard_3rd_block = 0.0;
-	PS::F64 wtime_hard_3rd_block_offset = 0.0;
-	PS::F64 wtime_soft_tot = 0.0;
-	PS::F64 wtime_soft_tot_offset = 0.0;
-    //	PS::F64 wtime_soft_force = 0.0;
-	PS::F64 wtime_soft_search_neighbor_offset = 0.0;
-	PS::F64 wtime_soft_search_neighbor = 0.0;
+    PS::S32 my_rank = PS::Comm::getRank();
+
+    Wtime profile;
 
 	PS::S64 n_ptcl_hard_one_cluster = 0;
 	PS::S64 n_ptcl_hard_isolated_cluster = 0;
 	PS::S64 n_ptcl_hard_nonisolated_cluster = 0;
 
-//#ifdef CALC_HARD_ENERGY
-//    PS::F64 dEerr_1body_loc = 0.0;
-//    PS::F64 dEerr_1body_glb = 0.0;
-//    PS::F64 dEerr_2body_loc = 0.0;
-//    PS::F64 dEerr_2body_glb = 0.0;
-//    PS::F64 dEerr_mbody_loc = 0.0;
-//    PS::F64 dEerr_mbody_glb = 0.0;
-//#endif
-    PS::F64 ratio_r_cut = 0.3;
-    PS::F64 time_sys = 0.0;
-    PS::F64 theta = 0.4;
-    PS::S32 n_leaf_limit = 8;
-    PS::S32 n_group_limit = 64;
-    PS::S32 n_smp_ave = 100;
-    PS::F64 time_end = 1000.0;
-    PS::F64 dt_soft = 1.0/256.0;
-    PS::F64 eta = 0.1;
-    //    PS::F64 eta_s = eta * 0.1;
-    //    char dir_name[1024];
-    PS::S64 n_glb = 16384;
-    PS::S64 n_bin = 0;
-    PS::F64 dt_snp = 1.0 / 16.0;
-    PS::F64 search_factor = 1.0; 
-    PS::F64 dt_limit_hard_factor = 4.0;
-    PS::F64 eps = 1e-8;
-    PS::F64 r_out = 0.0;
-    PS::F64 g_min = 1e-6;
+    // initial parameters
+    params<PS::F64> ratio_r_cut  (0.3,  "r_in / r_out");
+    params<PS::F64> theta        (0.4,  "openning angle theta");
+    params<PS::S32> n_leaf_limit (8,    "tree leaf number limit");
+    params<PS::S32> n_group_limit(64,   "tree group number limit");
+    params<PS::S32> n_smp_ave    (100,  "average target number of sample particles per process");
+    params<PS::S32> n_split      (8,    "number of binary sample points for tree perturbation force");
+    params<PS::F64> time_end     (100.0,"finishing time");
+    params<PS::F64> eta          (0.1,  "Hermite time step coefficient eta");
+    params<PS::S64> n_glb        (16384,"Total number of particles");
+    params<PS::F64> dt_snp       (0.0625,"Output time interval of snapshot");
+    params<PS::F64> search_factor(1.0,  "neighbor searching coefficient");
+    params<PS::F64> dt_limit_hard_factor(4.0, "limit of tree time step/hard time step");
+    params<PS::F64> eps          (1e-8, "softerning eps");
+    params<PS::F64> r_out        (0.0,  "transit function outer boundary radius (if not set, autodetermined)");
+    params<PS::F64> r_bin        (0.0,  "maximum binary radius criterion (if not set, autodetermined)");
+
+    // params<PS::F64> dt_soft      (0.0,  "tree time step");
+
+    // PS::S32 n_bin;
+    // PS::F64 g_min = 1e-6;
+
+    // reading parameters
     int c;
     bool reading_flag=false;
 
-    PS::S32 my_rank = PS::Comm::getRank();
-
-    while((c=getopt(argc,argv,"id:t:T:e:E:n:N:b:s:S:g:l:r:R:X:h")) != -1){
+    while((c=getopt(argc,argv,"i:b:T:t:e:E:n:N:s:S:l:r:R:X:p:h")) != -1){
         switch(c){
         case 'i':
             reading_flag=true;
             break;
-//        case 'o':
-//            sprintf(dir_name, optarg);
-//            std::cerr<<"dir_name="<<dir_name<<std::endl;
-//            break;
-//        case 'd':
-//            dt_soft = 1.0 / atof(optarg);
-//            std::cerr<<"tree time step="<<dt_soft<<std::endl;
-//            break;
-        case 't':
-            theta = atof(optarg);
-            if(my_rank == 0) std::cerr<<"tree openning angle theta="<<theta<<std::endl;
+        case 'b':
+            r_bin.value = atof(optarg);
+            if(my_rank == 0) std::cerr<<r_bin<<std::endl;
+            assert(r_bin.value>0.0);
             break;
         case 'T':
-            time_end = atof(optarg);
-            if(my_rank == 0) std::cerr<<"finishing time="<<time_end<<std::endl;
+            theta.value = atof(optarg);
+            if(my_rank == 0) std::cerr<<theta<<std::endl;
+            assert(theta.value>0.0);
+            break;
+        case 't':
+            time_end.value = atof(optarg);
+            if(my_rank == 0) std::cerr<<time_end<<std::endl;
+            assert(time_end.value>=0.0);
             break;
         case 'e':
-            eps = atof(optarg);
-            if(my_rank == 0) std::cerr<<"softening="<<eps<<std::endl;
+            eps.value = atof(optarg);
+            if(my_rank == 0) std::cerr<<eps<<std::endl;
+            assert(eps.value>=0.0);
             break;
         case 'E':
-            eta = atof(optarg);
-            if(my_rank == 0) std::cerr<<"eta="<<eta<<std::endl;
+            eta.value = atof(optarg);
+            if(my_rank == 0) std::cerr<<eta<<std::endl;
+            assert(eta.value>0.0);
             break;
         case 'n':
-            n_group_limit = atoi(optarg);
-            if(my_rank == 0) std::cerr<<"n_group_limit="<<n_group_limit<<std::endl;
+            n_group_limit.value = atoi(optarg);
+            if(my_rank == 0) std::cerr<<n_group_limit<<std::endl;
+            assert(n_group_limit.value>0);
             break;
         case 'N':
-            n_glb = atol(optarg);
-            if(my_rank == 0) std::cerr<<"Total number of particles="<<n_glb<<std::endl;
-            break;
-        case 'b':
-            n_bin = atol(optarg);
-            if(my_rank == 0) std::cerr<<"Binary number="<<n_bin<<std::endl;
+            n_glb.value = atol(optarg);
+            if(my_rank == 0) std::cerr<<n_glb<<std::endl;
+            assert(n_glb.value>0);
             break;
         case 's':
-            n_smp_ave = atoi(optarg);
-            if(my_rank == 0) std::cerr<<"n_smp_ave="<<n_smp_ave<<std::endl;
+            n_smp_ave.value = atoi(optarg);
+            if(my_rank == 0) std::cerr<<n_smp_ave<<std::endl;
+            assert(n_smp_ave.value>0.0);
             break;
         case 'S':
-            search_factor = atof(optarg);
-            if(my_rank == 0) std::cerr<<"neighbor searching factor cofficient="<<search_factor<<std::endl;
-            break;
-        case 'g':
-            g_min = atof(optarg);
-            if(my_rank == 0) std::cerr<<"Perturber parameter gamma minimum="<<g_min<<std::endl;
+            search_factor.value = atof(optarg);
+            if(my_rank == 0) std::cerr<<search_factor<<std::endl;
+            assert(search_factor.value>0.0);
             break;
         case 'l':
-            n_leaf_limit = atoi(optarg);
-            if(my_rank == 0) std::cerr<<"n_leaf_limit="<<n_leaf_limit<<std::endl;
+            n_leaf_limit.value = atoi(optarg);
+            if(my_rank == 0) std::cerr<<n_leaf_limit<<std::endl;
+            assert(n_leaf_limit.value>0);
             break;
         case 'r':
-            ratio_r_cut = atof(optarg);
-            if(my_rank == 0) std::cerr<<"r_in/r_out="<<ratio_r_cut<<std::endl;
+            ratio_r_cut.value = atof(optarg);
+            if(my_rank == 0) std::cerr<<ratio_r_cut<<std::endl;
+            assert(ratio_r_cut.value>0.0);
+            assert(ratio_r_cut.value<1.0);
             break;
         case 'R':
-            r_out = atof(optarg);
-            if(my_rank == 0) std::cerr<<"r_out_single="<<r_out<<std::endl;
+            r_out.value = atof(optarg);
+            if(my_rank == 0) std::cerr<<r_out<<std::endl;
+            assert(r_out.value>0.0);
             break;
         case 'X':
-            dt_limit_hard_factor = atof(optarg);
-            if(my_rank == 0) std::cerr<<"soft (tree) time step/hard time step="<<dt_limit_hard_factor<<std::endl;
-            assert(dt_limit_hard_factor > 0.0);
+            dt_limit_hard_factor.value = atof(optarg);
+            if(my_rank == 0) std::cerr<<dt_limit_hard_factor<<std::endl;
+            assert(dt_limit_hard_factor.value > 0.0);
+            break;
+        case 'p':
+            n_split.value = atoi(optarg);
+            if(my_rank == 0) std::cerr<<n_split<<std::endl;
+            assert(n_split.value>=8);
             break;
         case 'h':
+            std::cerr<<"Usage: nbody.out [option] [filename]"<<std::endl;
+            std::cerr<<"       Option defaulted values are shown\n"<<std::endl;
             std::cerr<<"  -i:     enable reading data file (default: disabled with Plummer model)"<<std::endl;
-            //              std::cerr<<"o: dir name of output"<<std::endl;
-            //            std::cerr<<"  -d: [F] tree time step (default: "<<dt_soft<<")"<<std::endl;
-            std::cerr<<"  -t: [F] openning angle theta (default: "<<theta<<")"<<std::endl;
-            std::cerr<<"  -T: [F] finishing time (default: "<<time_end<<")"<<std::endl;
-            std::cerr<<"  -e: [F] softening parameter (default: "<<eps<<")"<<std::endl;
-            std::cerr<<"  -E: [F] Hermite time step parameter (default: "<<eta<<")"<<std::endl;
-            std::cerr<<"  -n: [I] n_group_limit (default: "<<n_group_limit<<")"<<std::endl;
-            std::cerr<<"  -N: [I] total number of particles if no -i used (default: "<<n_glb<<")"<<std::endl;
-            std::cerr<<"  -b: [I] binary number (default: "<<n_bin<<")"<<std::endl;
-            std::cerr<<"  -s: [I] n_smp_ave (default: "<<n_smp_ave<<")"<<std::endl;
-            std::cerr<<"  -S: [F] neighbor searching factor (default: "<<search_factor<<")"<<std::endl;
-            std::cerr<<"  -g: [F} perturber parameter gamma minimum (default: "<<g_min<<")"<<std::endl;
-            std::cerr<<"  -l: [I] n_leaf_limit (default: "<<n_leaf_limit<<")"<<std::endl;
-            std::cerr<<"  -r: [F] r_in / r_out (default: "<<ratio_r_cut<<")"<<std::endl;
-            std::cerr<<"  -R: [F] r_out (default: autodetermine)"<<std::endl;
-            std::cerr<<"  -X: [F] soft (tree) time step/hard time step (default: "<<dt_limit_hard_factor<<")"<<std::endl;
+            std::cerr<<"  -b: [F] "<<r_bin<<std::endl;
+            std::cerr<<"  -t: [F] "<<theta<<std::endl;
+            std::cerr<<"  -T: [F] "<<time_end<<std::endl;
+            std::cerr<<"  -e: [F] "<<eps<<std::endl;
+            std::cerr<<"  -E: [F] "<<eta<<std::endl;
+            std::cerr<<"  -n: [I] "<<n_group_limit<<std::endl;
+            std::cerr<<"  -N: [I] "<<n_glb<<std::endl;
+            std::cerr<<"  -s: [I] "<<n_smp_ave<<std::endl;
+            std::cerr<<"  -S: [F] "<<search_factor<<std::endl;
+            std::cerr<<"  -l: [I] "<<n_leaf_limit<<std::endl;
+            std::cerr<<"  -r: [F] "<<ratio_r_cut<<std::endl;
+            std::cerr<<"  -R: [F] "<<r_out<<std::endl;
+            std::cerr<<"  -X: [F] "<<dt_limit_hard_factor<<std::endl;
+            std::cerr<<"  -p: [I] "<<n_split<<std::endl;
             PS::Finalize();
             return 0;
         }
     }
 
+    PS::F64 time_sys = 0.0;
+    PS::S32 n_loc;
+
     SystemSoft system_soft;
     system_soft.initialize();
-    system_soft.setAverageTargetNumberOfSampleParticlePerProcess(n_smp_ave);
-    PS::S32 n_loc;
+    system_soft.setAverageTargetNumberOfSampleParticlePerProcess(n_smp_ave.value);
     
     FileHeader file_header;
     if (reading_flag) {
@@ -216,52 +216,53 @@ int main(int argc, char *argv[]){
       system_soft.readParticleAscii(sinput, file_header);
       time_sys = file_header.time;
       PS::Comm::broadcast(&time_sys, 1, 0);
-      n_glb = system_soft.getNumberOfParticleGlobal();
+      n_glb.value = system_soft.getNumberOfParticleGlobal();
       n_loc = system_soft.getNumberOfParticleLocal();
       //      for(PS::S32 i=0; i<n_loc; i++) system_soft[i].id = i;
       std::cerr<<"Reading file "<<sinput<<std::endl
-               <<"N_tot = "<<n_glb<<"\nN_loc = "<<n_loc<<std::endl;
+               <<"N_tot = "<<n_glb.value<<"\nN_loc = "<<n_loc<<std::endl;
     }
-    else SetParticlePlummer(system_soft, n_glb, n_loc, time_sys);
+    else SetParticlePlummer(system_soft, n_glb.value, n_loc, time_sys);
+
+    bool restart_flag = file_header.nfile; // nfile = 0 is assumed as initial data file
 
     PS::Comm::barrier();
 
-    PS::F64 r_in, m_average, v_disp, r_search_min, r_bin;
-    GetR(system_soft, r_in, r_out, r_search_min, m_average, dt_soft, v_disp, search_factor, ratio_r_cut);
+    PS::F64 r_in, m_average, v_disp, r_search_min, dt_soft;
+    GetR(system_soft, r_in, r_out.value, r_search_min, m_average, dt_soft, v_disp, search_factor.value, ratio_r_cut.value);
 //    EPISoft::r_out = r_out;
 //    EPISoft::r_in  = r_in;
-    EPISoft::eps   = eps;
-    EPISoft::r_out = EPJSoft::r_out = FPSoft::r_out = r_out;
-    PtclHard::search_factor = search_factor;
-    PtclHard::r_search_min = r_search_min;
-    r_bin = r_in;
+    EPISoft::eps   = eps.value;
+    EPISoft::r_out = EPJSoft::r_out = FPSoft::r_out = r_out.value;
+    Ptcl::search_factor = search_factor.value;
+    Ptcl::r_search_min = r_search_min;
 //    EPJSoft::r_search_min = r_out*search_factor;
 //    EPJSoft::m_average = m_average;
     
-    if(my_rank == 0)
+    if(my_rank == 0) {
+        std::cerr<<"Parameter list:\n";
         std::cerr<<" m_average    = "<<m_average      <<std::endl
                  <<" r_in         = "<<r_in           <<std::endl
-                 <<" r_out        = "<<r_out          <<std::endl
+                 <<" r_out        = "<<r_out.value    <<std::endl
                  <<" r_search_min = "<<r_search_min   <<std::endl
-                 <<" r_bin        = "<<r_bin          <<std::endl
                  <<" vel_disp     = "<<v_disp         <<std::endl
                  <<" dt_soft      = "<<dt_soft        <<std::endl;
-    
+    }
 
     // set r_search
-    if(n_bin>n_loc) {
-        if (n_loc%2) std::cerr<<"Warning! Binary number is larger than local particle numbers, but n_loc is odd, which means the last binary is splitted to two nodes"<<std::endl;
-        int ndiv = 2*n_bin/n_loc;
-        if(my_rank<ndiv) n_bin = n_loc/2;
-        else if(my_rank==ndiv) n_bin = 2*n_bin % n_loc;
-        else n_bin = 0;
-    }
-    else {
-        if(my_rank>0) n_bin = 0;
-    }
+    //if(n_bin>n_loc) {
+    //    if (n_loc%2) std::cerr<<"Warning! Binary number is larger than local particle numbers, but n_loc is odd, which means the last binary is splitted to two nodes"<<std::endl;
+    //    int ndiv = 2*n_bin/n_loc;
+    //    if(my_rank<ndiv) n_bin = n_loc/2;
+    //    else if(my_rank==ndiv) n_bin = 2*n_bin % n_loc;
+    //    else n_bin = 0;
+    //}
+    //else {
+    //    if(my_rank>0) n_bin = 0;
+    //}
 
-    if(n_bin>0) SetBinaryRout(system_soft, n_bin, g_min, r_in, r_out, m_average);
-    SetSingleRout(system_soft, n_loc, 2*n_bin, r_out);
+    //if(n_bin>0) SetBinaryRout(system_soft, n_bin, g_min, r_in, r_out, m_average);
+    //SetSingleRout(system_soft, n_loc, 2*n_bin, r_out);
 
     const PS::F32 coef_ema = 0.2;
     PS::DomainInfo dinfo;
@@ -282,26 +283,56 @@ int main(int argc, char *argv[]){
     }
 
     Tree tree_soft;
-    tree_soft.initialize(n_glb, theta, n_leaf_limit, n_group_limit);
+    tree_soft.initialize(n_glb.value, theta.value, n_leaf_limit.value, n_group_limit.value);
     tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSIMD(),
                                        CalcForceEpSpNoSIMD(),
                                        system_soft,
                                        dinfo);
 
     SystemHard system_hard_one_cluster;
-    system_hard_one_cluster.setParam(r_search_min, r_bin, r_out, r_in, eps, dt_soft/dt_limit_hard_factor, eta, time_sys, g_min, m_average);
+    PS::F64 dt_limit_hard = dt_soft/dt_limit_hard_factor.value;
+    system_hard_one_cluster.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, eta.value, time_sys, n_split.value);
     // system_hard_one_cluster.setARCParam();
     SystemHard system_hard_isolated;
-    system_hard_isolated.setParam(r_search_min, r_bin, r_out, r_in, eps,  dt_soft/dt_limit_hard_factor, eta, time_sys, g_min, m_average);
+    system_hard_isolated.setParam(r_bin.value, r_out.value, r_in, eps.value,  dt_limit_hard, eta.value, time_sys, n_split.value);
     system_hard_isolated.setARCParam();
     SystemHard system_hard_conected;
-    system_hard_conected.setParam(r_search_min, r_bin, r_out, r_in, eps, dt_soft/dt_limit_hard_factor, eta, time_sys, g_min, m_average);
+    system_hard_conected.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, eta.value, time_sys, n_split.value);
     system_hard_conected.setARCParam();
 
     SearchCluster search_cluster;
     search_cluster.initialize();
     search_cluster.searchNeighborAndCalcHardForceOMP<SystemSoft, Tree, EPJSoft>
-      (system_soft, tree_soft, r_out, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
+      (system_soft, tree_soft, r_out.value, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
+
+    if(!restart_flag) {
+        search_cluster.searchClusterLocal();
+        search_cluster.setIdClusterLocal();
+        search_cluster.conectNodes(pos_domain,tree_soft);
+        search_cluster.setIdClusterGlobalIteration();
+        search_cluster.sendAndRecvCluster(system_soft);
+
+        system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
+        system_hard_isolated.initialMultiClusterOMP<SystemSoft,FPSoft>(system_soft, dt_soft);
+        system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_);
+    
+        system_hard_conected.setPtclForConectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
+        system_hard_conected.initialMultiClusterOMP<SystemSoft,FPSoft>(system_soft, dt_soft);
+        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_conected.getPtcl());
+
+#pragma omp parallel for
+        for(PS::S32 i=0; i<n_loc; i++){
+            system_soft[i].rank_org = my_rank;
+            system_soft[i].adr = i;
+        }
+        tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSIMD(),
+                                           CalcForceEpSpNoSIMD(),
+                                           system_soft,
+                                           dinfo);
+
+        search_cluster.searchNeighborAndCalcHardForceOMP<SystemSoft, Tree, EPJSoft>
+            (system_soft, tree_soft, r_out.value, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
+    }    
 
     Energy eng_init, eng_now;
 
@@ -317,11 +348,11 @@ int main(int argc, char *argv[]){
     std::ofstream fprofile;
     if(my_rank==0) fprofile.open("profile.out");
 
-    PS::S32 n_loop = 0;
-    PS::S32 dn_loop = 0;
-    while(time_sys < time_end){
+    PS::S64 n_loop = 0;
+    PS::S64 dn_loop = 0;
+    while(time_sys < time_end.value){
       
-        wtime_tot_offset = PS::GetWtime();
+        profile.tot.start();
         ////////////////
         ////// 1st kick
         Kick(system_soft, tree_soft, dt_soft*0.5);
@@ -329,7 +360,7 @@ int main(int argc, char *argv[]){
         ////////////////
         
         ////////////////
-        wtime_hard_tot_offset = PS::GetWtime();
+        profile.hard_tot.start();
         ////// set time
         system_hard_one_cluster.setTimeOrigin(time_sys);
         system_hard_isolated.setTimeOrigin(time_sys);
@@ -348,42 +379,39 @@ int main(int argc, char *argv[]){
         ////////////////
 
         ////////////////
-        wtime_hard_1st_block_offset = PS::GetWtime();
+        profile.hard_single.start();
         ////// integrater one cluster
         system_hard_one_cluster.initializeForOneCluster(search_cluster.getAdrSysOneCluster().size());
         system_hard_one_cluster.setPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
         system_hard_one_cluster.driveForOneCluster(dt_soft);
         system_hard_one_cluster.writeBackPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
         ////// integrater one cluster
-        wtime_hard_1st_block += PS::GetWtime() - wtime_hard_1st_block_offset;
+        profile.hard_single.end();
         ////////////////
 
-
         /////////////
-        wtime_hard_2nd_block_offset = PS::GetWtime();
+        profile.hard_isolated.start();
         // integrate multi cluster A
-        system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft,
-                                                            search_cluster.adr_sys_multi_cluster_isolated_,
-                                                            search_cluster.n_ptcl_in_multi_cluster_isolated_);
-        system_hard_isolated.driveForMultiClusterOMP(dt_soft);
+        system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
+        system_hard_isolated.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft,system_soft);
         system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_);
         // integrate multi cluster A
-        wtime_hard_2nd_block += PS::GetWtime() - wtime_hard_2nd_block_offset;
+        profile.hard_isolated.end();
         /////////////
 
         /////////////
-        wtime_hard_3rd_block_offset = PS::GetWtime();
+        profile.hard_connected.start();
         // integrate multi cluster B
         system_hard_conected.setPtclForConectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
-        system_hard_conected.driveForMultiClusterOMP(dt_soft);
+        system_hard_conected.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft,system_soft);
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_conected.getPtcl());
         // integrate multi cluster B
-        wtime_hard_3rd_block += PS::GetWtime() - wtime_hard_3rd_block_offset;
-        wtime_hard_tot += PS::GetWtime() - wtime_hard_tot_offset;
+        profile.hard_connected.end();
+        profile.hard_tot.end();
         /////////////
 
         /////////////
-        wtime_soft_tot_offset = PS::GetWtime();
+        profile.soft_tot.start();
         // Domain decomposition, parrticle exchange and force calculation
 
         if(n_loop % 16 == 0) dinfo.decomposeDomainAll(system_soft);
@@ -399,14 +427,12 @@ int main(int argc, char *argv[]){
                                            CalcForceEpSpNoSIMD(),
                                            system_soft,
                                            dinfo);
-        wtime_soft_search_neighbor_offset = PS::GetWtime();
-        
+        profile.search_cluster.start();
         search_cluster.searchNeighborAndCalcHardForceOMP<SystemSoft, Tree, EPJSoft>
-          (system_soft, tree_soft, r_out, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
+          (system_soft, tree_soft, r_out.value, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
+        profile.search_cluster.end();
         
-        wtime_soft_search_neighbor += PS::GetWtime() - wtime_soft_search_neighbor_offset;
-        
-        wtime_soft_tot += PS::GetWtime() - wtime_soft_tot_offset;
+        profile.soft_tot.end();
 
         // Domain decomposition, parrticle exchange and force calculation
         /////////////
@@ -420,7 +446,7 @@ int main(int argc, char *argv[]){
 
         eng_now.calc(system_soft, true);
         
-        wtime_tot += PS::GetWtime() - wtime_tot_offset;
+        profile.tot.end();
         /////////////
 
         Energy eng_diff = eng_now.calcDiff(eng_init);
@@ -452,7 +478,7 @@ int main(int argc, char *argv[]){
         fout<<std::endl;
 #endif
 
-        if( fmod(time_sys, dt_snp) == 0.0){
+        if( fmod(time_sys, dt_snp.value) == 0.0){
             //eng_diff.dump(std::cerr);
             if(my_rank==0) {
                 std::cerr<<"n_loop= "<<n_loop<<std::endl;
@@ -463,16 +489,7 @@ int main(int argc, char *argv[]){
 #endif
                          <<std::endl;
                 eng_now.dump(std::cerr);
-                std::cerr<<"wtime_tot/dn_loop= "<<wtime_tot/dn_loop<<" dn_loop= "<<dn_loop<<std::endl;
-                std::cerr<<"wtime_hard_tot/dn_loop= "<<wtime_hard_tot/dn_loop<<std::endl
-                         <<"wtime_hard_1st_block/dn_loop= "<<wtime_hard_1st_block/dn_loop<<std::endl
-                         <<"wtime_hard_2nd_block/dn_loop= "<<wtime_hard_2nd_block/dn_loop<<std::endl
-                         <<"wtime_hard_3rd_block/dn_loop= "<<wtime_hard_3rd_block/dn_loop<<std::endl;
-                std::cerr<<"wtime_soft_tot/dn_loop= "<<wtime_soft_tot/dn_loop<<std::endl
-                         <<"wtime_soft_search_neighbor/dn_loop= "<<wtime_soft_search_neighbor/dn_loop<<std::endl;
-                std::cerr<<"n_ptcl_hard_one_cluster/dn_loop= "         <<(PS::F64)n_ptcl_hard_one_cluster/dn_loop<<std::endl
-                         <<"n_ptcl_hard_isolated_cluster/dn_loop= "   <<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop<<std::endl
-                         <<"n_ptcl_hard_nonisolated_cluster/dn_loop= "<<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop<<std::endl;
+                profile.print(std::cerr,time_sys,dn_loop);
             }
 
 #ifdef ARC_ERROR
@@ -488,22 +505,17 @@ int main(int argc, char *argv[]){
 #endif
             
             if(my_rank==0) {
-                fprofile<<time_sys<<" "
-                        <<n_loop<<" "
-                        <<n_glb<<" "
-                        <<wtime_tot/dn_loop<<" "
-                        <<wtime_hard_tot/dn_loop<<" "
-                        <<wtime_hard_1st_block/dn_loop<<" "
-                        <<wtime_hard_2nd_block/dn_loop<<" "
-                        <<wtime_hard_3rd_block/dn_loop<<" "
-                        <<wtime_soft_tot/dn_loop<<" "
-                        <<wtime_soft_search_neighbor/dn_loop<<" "
-                        <<(PS::F64)n_ptcl_hard_one_cluster/dn_loop<<" "
-                        <<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop<<" "
-                        <<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop<<" "
-                        <<eng_diff.tot/eng_init.tot<<" "
+                fprofile<<std::setprecision(PRINT_PRECISION);
+                fprofile<<std::setw(PRINT_WIDTH)<<time_sys
+                        <<std::setw(PRINT_WIDTH)<<n_loop
+                        <<std::setw(PRINT_WIDTH)<<n_glb;
+                profile.dump(fprofile, PRINT_WIDTH, dn_loop);
+                fprofile<<std::setw(PRINT_WIDTH)<<(PS::F64)n_ptcl_hard_one_cluster/dn_loop
+                        <<std::setw(PRINT_WIDTH)<<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop
+                        <<std::setw(PRINT_WIDTH)<<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop
+                        <<std::setw(PRINT_WIDTH)<<eng_diff.tot/eng_init.tot
 #ifdef ARC_ERROR
-                        <<system_hard_isolated.ARC_error+system_hard_conected.ARC_error<<" "
+                        <<std::setw(PRINT_WIDTH)<<system_hard_isolated.ARC_error+system_hard_conected.ARC_error
 #endif              
                         <<std::endl;
             }
@@ -535,9 +547,7 @@ int main(int argc, char *argv[]){
 //              fclose(bfout);
 //            }
             
-            wtime_tot = 0.0;
-            wtime_hard_tot = wtime_hard_1st_block = wtime_hard_2nd_block = wtime_hard_3rd_block = 0.0;
-            wtime_soft_tot = wtime_soft_search_neighbor = 0.0;
+            profile.clear();
             n_ptcl_hard_one_cluster = n_ptcl_hard_isolated_cluster = n_ptcl_hard_nonisolated_cluster = 0;
 
             dn_loop=0;

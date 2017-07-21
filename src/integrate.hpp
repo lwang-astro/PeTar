@@ -2,7 +2,6 @@
 
 #include "kepler.hpp"
 #include "hard_force.hpp"
-#include "rsearch.hpp"
 #include "AR.h" /// include AR.h (L.Wang)
 #include "ptcl.hpp"
 
@@ -563,23 +562,23 @@ public:
         return &Jlist_[Jlist_disp_[i]];
     }
 
-    PS::S32 getPertN(const PS::S32 i) const {
+    const PS::S32 getPertN(const PS::S32 i) const {
         return Jlist_n_[i];
     }
 
-    PS::S32 getPertNtot() const {
+    const PS::S32 getPertListSize() const {
         return Jlist_.size();
     }
 
-    PtclH4* getPtcl() {
+    PtclH4* getPtcl() const {
         return ptcl_.getPointer();
     }
     
-    PtclForce* getForce() {
+    PtclForce* getForce() const {
         return force_.getPointer();
     }
 
-    PS::S32 getPtclN() const {
+    const PS::S32 getPtclN() const {
         return ptcl_.size();
     }
 
@@ -729,6 +728,7 @@ public:
 
 };
 
+#ifdef ISOLATED
 //few-body----------------------------------------------
 template<class Tptcl, class ARC_par>
 void Isolated_Multiple_integrator(Tptcl * ptcl_org,
@@ -945,6 +945,7 @@ void Isolated_Multiple_integrator(Tptcl * ptcl_org,
     // if (!arout.is_open()) arout.open("arout");
     // for (int i=0;i<n_ptcl;i++) arout<<std::setprecision(17)<<time_origin_<<" "<<ptcl_org[i].mass<<" "<<ptcl_org[i].pos<<" "<<ptcl_org[i].vel<<std::endl;
 }
+#endif
 
 template<class Tptcl, class Tpert, class Tpforce, class ARC_par_common, class ARC_par>
 class ARCIntegrator{
