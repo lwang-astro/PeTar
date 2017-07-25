@@ -6,6 +6,8 @@
 #PS_PATH = -I../FDPS/src
 PS_PATH  = -I/home/lwang/code/fdps/src
 ARC_PATH = -I/home/lwang/GitHub/ARC/include
+
+#ROOT_PATH= ${shell pwd -P}
 INCLUDE  = -I./src -I../src
 
 #use_k_computer = yes
@@ -66,14 +68,14 @@ CXXFLAGS += -D HARD_DEBUG_PRINT
 #CXXFLAGS += -D DEBUG_TEMP
 #CXXFLAGS += -D DEBUG_OUTPUT
 
-VPATH=./src ./test
+VPATH=./src ./test ../src
 
 SRC = main.cc hard.hpp soft.hpp hard_force.hpp io.hpp kepler.hpp phantomquad_for_p3t_x86.hpp domain.hpp profile.hpp cluster_list.hpp integrate.hpp init.hpp
 
 all: nbody.out
 
 nbody.out: $(SRC)
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
 ARC_debug.out: chain_debug.cxx
 	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -D DEBUG -o $@ $< $(CXXLIBS)

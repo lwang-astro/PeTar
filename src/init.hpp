@@ -59,7 +59,7 @@ void GetR(const Tpsys & system_soft,
         while (dt<=dt_origin) dt *= 2.0;
         dt *= 0.5;
     }
-    r_search_min = search_factor*vel_disp*dt;
+    r_search_min = search_factor*vel_disp*dt + r_out;
 }
 
 #ifdef MUTIL_ROUT

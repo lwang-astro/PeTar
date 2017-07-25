@@ -46,6 +46,15 @@ public:
         return vel;
     }
     
+    //template<class Tptcl>
+    //FPSoft& operator = (const FPSoft& p) {
+    //    Ptcl::DataCopy(p);
+    //    acc = p.acc;
+    //    pot_tot = p.pot_tot;
+    //    n_ngb = p.n_ngb;
+    //    return *this;
+    //}
+
     template<class Tptcl>
     FPSoft(const Tptcl& p, const PS::S32 rank_, const PS::S32 adr_) {
         Ptcl::DataCopy(p);
@@ -120,7 +129,7 @@ public:
     }
     PS::F64 getRSearch() const {
 //        return std::max(r_search * std::pow(2.0*mass/m_average,0.3333),r_search_min) * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
-        return r_out + r_search * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+        return r_search * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
     }
 
 };
@@ -152,7 +161,7 @@ public:
     PS::F64 getCharge() const { return mass; }
     PS::F64 getRSearch() const {
 //        return std::max(r_search * std::pow(2.0*mass/m_average,0.3333),r_search_min) * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
-        return r_out + r_search * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+        return r_search * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
     }
     // FORDEBUG
     void dump(std::ostream & fout=std::cout) const {
@@ -258,7 +267,7 @@ struct CalcForceEpEpWithLinearCutoffNoSIMD{
             PS::F64 poti = 0.0;
             PS::S32 n_ngb_i = 0;
             for(PS::S32 j=0; j<n_jp; j++){
-                const PS::F64 r_search = std::max(ep_i[i].r_search,ep_j[j].r_search) + r_out;
+                const PS::F64 r_search = std::max(ep_i[i].r_search,ep_j[j].r_search);
                 if(id_i == ep_j[j].id){
                     n_ngb_i++;
                     continue;

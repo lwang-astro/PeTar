@@ -7,6 +7,7 @@ class FileHeader{
 public:
     PS::S64 nfile;  // file id
     PS::S64 n_body;
+    PS::S64 id_offset; // file id offset for add new artificial particles, should be larger than the maximum file id
     PS::F64 time;
     FileHeader(){
         n_body = 0;
@@ -18,8 +19,8 @@ public:
         time = t;
     }
     PS::S32 readAscii(FILE * fp){
-        PS::S32 rcount=fscanf(fp, "%lld\t%lld\t%lf\n", &nfile, &n_body, &time);
-        if (rcount<3) {
+        PS::S32 rcount=fscanf(fp, "%lld %lld %lld %lf\n", &nfile, &n_body, &id_offset, &time);
+        if (rcount<4) {
           std::cerr<<"Error: cannot read header, please check your data file header!\n";
           abort();
         }
@@ -27,7 +28,7 @@ public:
         return n_body;
     }
     void writeAscii(FILE* fp) const{
-        fprintf(fp, "%lld\t%lld\t%lf\n", nfile, n_body, time);
+        fprintf(fp, "%lld %lld %lld %lf\n", nfile, n_body, id_offset, time);
     }
 };
 
@@ -412,15 +413,8 @@ void WriteFile(const Tpsys & psys,
       PS::S32 n_cnt = 0;
       for(PS::S32 j=0; j<n_loc; j++){
 	    if( i_head<=psys[j].id && psys[j].id<i_tail){
-          ptcl_loc[n_cnt].id = psys[j].id;
-          ptcl_loc[n_cnt].mass = psys[j].mass;
-          ptcl_loc[n_cnt].pos = psys[j].pos;
-          ptcl_loc[n_cnt].vel = psys[j].vel;
-          ptcl_loc[n_cnt].acc = psys[j].acc;
-          ptcl_loc[n_cnt].pot_tot = psys[j].pot_tot;
-          ptcl_loc[n_cnt].r_out = psys[j].r_out;
-          ptcl_loc[n_cnt].n_ngb = psys[j].n_ngb;
-          n_cnt++;
+            ptcl_loc[n_cnt] = psys[j];
+            n_cnt++;
 	    }
       }
       PS::Comm::allGather(&n_cnt, 1, n_ptcl_array);

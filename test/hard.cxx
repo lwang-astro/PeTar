@@ -189,7 +189,7 @@ int main(int argc, char** argv)
   
   PS::ReallocatableArray<PtclHard> ptcl_new;
 
-  group.generateList(p.getPointer(), ptcl_new, rbin, dt_limit);
+  group.generateList(p.getPointer(), ptcl_new, rbin, dt_limit, N);
   std::cerr<<"GenerateList\n";
   print_p(p.getPointer(),p.size());
 
@@ -210,7 +210,7 @@ int main(int argc, char** argv)
   SystemHard sys;
   PS::ParticleSystem<FPSoft> fp;
   PS::F64 time_sys = 0.0;
-  sys.setParam(rbin, rout, rin, eps, dt_limit, eta, time_sys);
+  sys.setParam(rbin, rout, rin, eps, dt_limit, eta, time_sys, N);
   sys.setARCParam();
   
   sys.setPtclForIsolatedMultiCluster(p,adr,np);

@@ -100,6 +100,7 @@ private:
     // PS::F64 r_search_single_;
     PS::F64 r_bin_;
     // PS::F64 m_average_;
+    PS::S64 id_offset_;
     PS::S32 n_split_;
 
     ///////////
@@ -277,7 +278,7 @@ private:
 
         group.searchAndMerge(ptcl_org, r_bin_);
         // Kickcorrect(ptcl_org, group.getRoutChangeList());
-        group.generateList(ptcl_org, ptcl_new, r_bin_, time_end, n_split_);
+        group.generateList(ptcl_org, ptcl_new, r_bin_, time_end, id_offset_, n_split_);
 
             // group.reverseCopy(ptcl_org, n_ptcl);
 //        }
@@ -389,6 +390,7 @@ public:
                   const PS::F64 _time_origin,
                   // const PS::F64 _gmin,
                   // const PS::F64 _m_avarage,
+                  const PS::S64 _id_offset,
                   const PS::S32 _n_split = 8){
         /// Set chain pars (L.Wang)
 		Int_pars_.rin  = _rin;
@@ -403,6 +405,7 @@ public:
         r_bin_           = _rbin;
         // m_average_ = _m_avarage;
         n_split_ = _n_split;
+        id_offset_ = _id_offset;
     }
 
     void updateRSearch(PtclHard* ptcl_org,
@@ -532,7 +535,7 @@ public:
         const PS::S32 n = ptcl_hard_.size();
         for(PS::S32 i=0; i<n; i++){
             PS::S32 adr = adr_array[i];
-            assert(sys[adr].id == ptcl_hard_[i].id);
+            // assert(sys[adr].id == ptcl_hard_[i].id);
             sys[adr].DataCopy(ptcl_hard_[i]);
         }
     }
@@ -544,7 +547,7 @@ public:
 #pragma omp for schedule(dynamic)
         for(PS::S32 i=0; i<n; i++){
             PS::S32 adr = adr_array[i];
-            assert(sys[adr].id == ptcl_hard_[i].id);
+            // assert(sys[adr].id == ptcl_hard_[i].id);
             sys[adr].DataCopy(ptcl_hard_[i]);
         }
     }
@@ -674,7 +677,7 @@ public:
             group.findGroups(ptcl_hard_.getPointer(adr_head), n_ptcl, n_split_);
             group.searchAndMerge(ptcl_hard_.getPointer(adr_head), r_bin_);
             PS::ReallocatableArray<PtclHard> ptcl_new;
-            group.generateList(ptcl_hard_.getPointer(adr_head), ptcl_new, r_bin_, dt_tree, n_split_);
+            group.generateList(ptcl_hard_.getPointer(adr_head), ptcl_new, r_bin_, dt_tree, id_offset_, n_split_);
 #pragma omp critical
             {
                 for (PS::S32 j=0; j<ptcl_new.size(); j++) {

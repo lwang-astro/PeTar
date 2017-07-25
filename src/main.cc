@@ -92,8 +92,8 @@ int main(int argc, char *argv[]){
     params<PS::F64> search_factor(1.0,  "neighbor searching coefficient");
     params<PS::F64> dt_limit_hard_factor(4.0, "limit of tree time step/hard time step");
     params<PS::F64> eps          (1e-8, "softerning eps");
-    params<PS::F64> r_out        (0.0,  "transit function outer boundary radius (if not set, autodetermined)");
-    params<PS::F64> r_bin        (0.0,  "maximum binary radius criterion (if not set, autodetermined)");
+    params<PS::F64> r_out        (0.0,  "transit function outer boundary radius (if not set, auto determined)");
+    params<PS::F64> r_bin        (0.0,  "maximum binary radius criterion (if not set, auto determined)");
 
     // params<PS::F64> dt_soft      (0.0,  "tree time step");
 
@@ -236,8 +236,21 @@ int main(int argc, char *argv[]){
     EPISoft::r_out = EPJSoft::r_out = FPSoft::r_out = r_out.value;
     Ptcl::search_factor = search_factor.value;
     Ptcl::r_search_min = r_search_min;
+    r_bin.value = r_in;
 //    EPJSoft::r_search_min = r_out*search_factor;
 //    EPJSoft::m_average = m_average;
+
+    // ID safety check
+    if (!restart_flag) {
+        for (PS::S32 i=0; i<n_loc; i++) {
+            if(system_soft[i].id<=0) {
+                std::cerr<<"Error: for initial data, the id should always larger than zero. current index i = "<<i<<", id = "<<system_soft[i].id<<"!"<<std::endl;
+                abort();
+            }
+            
+            system_soft[i].calcRSearch(dt_soft);
+        }
+    }
     
     if(my_rank == 0) {
         std::cerr<<"Parameter list:\n";
@@ -291,13 +304,13 @@ int main(int argc, char *argv[]){
 
     SystemHard system_hard_one_cluster;
     PS::F64 dt_limit_hard = dt_soft/dt_limit_hard_factor.value;
-    system_hard_one_cluster.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, eta.value, time_sys, n_split.value);
+    system_hard_one_cluster.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, eta.value, time_sys, file_header.id_offset, n_split.value);
     // system_hard_one_cluster.setARCParam();
     SystemHard system_hard_isolated;
-    system_hard_isolated.setParam(r_bin.value, r_out.value, r_in, eps.value,  dt_limit_hard, eta.value, time_sys, n_split.value);
+    system_hard_isolated.setParam(r_bin.value, r_out.value, r_in, eps.value,  dt_limit_hard, eta.value, time_sys, file_header.id_offset, n_split.value);
     system_hard_isolated.setARCParam();
     SystemHard system_hard_conected;
-    system_hard_conected.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, eta.value, time_sys, n_split.value);
+    system_hard_conected.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, eta.value, time_sys, file_header.id_offset, n_split.value);
     system_hard_conected.setARCParam();
 
     SearchCluster search_cluster;
@@ -524,8 +537,8 @@ int main(int argc, char *argv[]){
             file_header.nfile++;
             char sout[99] = "data.";
             sprintf(&sout[5],"%lld",file_header.nfile);
-            WriteFile<SystemSoft, FileHeader, FPSoft>(system_soft, sout, file_header);
-//            system_soft.writeParticleAscii(sout, file_header);
+//            WriteFile<SystemSoft, FileHeader, FPSoft>(system_soft, sout, file_header);
+            system_soft.writeParticleAscii(sout, file_header);
 
 //            if (n_bin>0) {
 //              char bout[99] = "bin.";

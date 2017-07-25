@@ -24,7 +24,10 @@ void Kick(Tpsys & system,
     const PS::S32 n = system.getNumberOfParticleLocal();
 #pragma omp parallel for
     for(int i=0; i<n; i++){
-	system[i].vel  += system[i].acc * dt;
+        if(system[i].status==0||(system[i].id<0&&system[i].status>0))  //single & c.m.
+            system[i].vel  += system[i].acc * dt;
+        if(system[i].status>0&&system[i].id>0)  // backup acceleration to velocity for fake members
+            system[i].vel = system[i].acc;
     }
 }
 
