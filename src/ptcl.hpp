@@ -12,10 +12,10 @@ public:
     /*
                 single           c.m.                       members            
       id         id          id of first member (-)            id
-      states      0           number of members             fake pert id (-)
+      states      0           number of members             fake pert id with iphase=0 (-)
       mass_bk   unknown         mass                         mass
                  fake members                  unused
-                      id                         -1
+                id_offset+id*n_split+iphase      -1
                  c.m. id+phase order(+)          -1
                     unknown                    unknown
      */
