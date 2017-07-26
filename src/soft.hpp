@@ -203,7 +203,7 @@ public:
         kin = pot = tot = 0.0;
     }
     void dump(std::ostream & fout=std::cout){
-        fout<<"tot= "<<tot<<" kin= "<<kin<<" pot= "<<pot
+        fout<<"Energy: total = "<<tot<<" kin = "<<kin<<" pot = "<<pot
             <<std::endl;
     }
     template<class Tsys>
@@ -217,14 +217,27 @@ public:
         //        PS::F64 pot_d   = 0.0;
         PS::F64 kin_loc = 0.0;
         //#pragma omp parallel for reduction(+:pot_d) reduction (+:pot_loc) reduction(+:kin_loc)
+        PS::ReallocatableArray<PS::S32> plist;
+        plist.reserve(n);
         for(PS::S32 i=0; i<n; i++){
-            pot_loc += 0.5 * sys[i].mass * sys[i].pot_tot;
-//          for (PS::S32 j=0; j<i; j++)  {
-//            PS::F64vec dr = sys[i].pos-sys[j].pos;
-//            PS::F64 drm = 1.0/sqrt(dr[0]*dr[0]+dr[1]*dr[1]+dr[2]*dr[2]+EPISoft::eps*EPISoft::eps);
-//            pot_d += - sys[i].mass * sys[j].mass * drm;
-//          }
-            kin_loc += 0.5 * sys[i].mass * sys[i].vel * sys[i].vel;
+            if(sys[i].id<0||sys[i].status>0) continue;
+            plist.push_back(i);
+        }
+        for(PS::S32 ki=0; ki<plist.size(); ki++){
+            PS::S32 i = plist[ki];
+            PS::F64 mi = sys[i].mass;
+            if(sys[i].status!=0) mi = sys[i].mass_bk;
+            //pot_loc += 0.5 * mi * sys[i].pot_tot;
+            for (PS::S32 kj=0; kj<ki; kj++)  {
+                PS::S32 j = plist[kj];
+                PS::F64 mj = sys[j].mass;
+                if(sys[j].status!=0) mj = sys[j].mass_bk;
+                PS::F64vec dr = sys[i].pos-sys[j].pos;
+                PS::F64 dr2 = dr*dr;
+                PS::F64 drm = 1.0/sqrt(dr2 + EPISoft::eps*EPISoft::eps);
+                pot_loc += - mi * mj * drm;
+            }
+            kin_loc += 0.5 * mi * sys[i].vel * sys[i].vel;
         }
         this->kin += PS::Comm::getSum(kin_loc);
         this->pot += PS::Comm::getSum(pot_loc);

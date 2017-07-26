@@ -235,8 +235,8 @@ int main(int argc, char** argv)
   PtclHard pcm0,pcm1,ppcm0,ppcm1;
   fprintf(stderr,"Time = %e\n", time_sys);
   print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
-  //write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),pcm0,et0,rin,rout,eps2);
-  write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(), &sys.ESD0);
+  write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),pcm0,et0,rin,rout,eps2,0.0);
+  //write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(), &sys.ESD0);
   write_p(fout2,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),ppcm0,etcm0,rin,rout,eps2,0.0,1);
   while(time_sys < time){
       fprintf(stderr,"Time = %e\n", time_sys+dt_limit);

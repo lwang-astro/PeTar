@@ -64,6 +64,24 @@ std::ostream& operator <<(std::ostream& os, const params<Type>& par) {
     return os;
 }
 
+#ifdef MAIN_DEBUG
+// flag: 1: c.m; 2: individual; 
+template<class Teng, class Tsys>
+void write_p(FILE* fout, const PS::F64 time, const Tsys& p, const Teng &et, const PS::F64 et0=0) {
+    fprintf(fout,"%20.14e ",time);
+    PS::F64 err = et0==0?0:(et.tot-et0)/et0;
+    fprintf(fout,"%20.14e %20.14e %20.14e %20.14e ",err,et.kin,et.pot,et.tot);
+    for (int i=0; i<p.getNumberOfParticleLocal(); i++) {
+        if(p[i].status>0||p[i].id<0) continue;
+        PS::F64 mi = p[i].mass;
+        if(p[i].status!=0) mi = p[i].mass_bk;
+        fprintf(fout,"%20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e ", 
+                mi, p[i].pos[0], p[i].pos[1], p[i].pos[2], 
+                p[i].vel[0], p[i].vel[1], p[i].vel[2]);
+    }
+    fprintf(fout,"\n");
+}
+#endif
 
 int main(int argc, char *argv[]){
     std::cout<<std::setprecision(15);
@@ -354,9 +372,13 @@ int main(int argc, char *argv[]){
     if(my_rank==0) eng_init.dump(std::cerr);
     eng_now = eng_init;
 
-#ifdef DEBUG_OUTPUT
-    std::ofstream fout;
-	fout.open("pdata");
+#ifdef MAIN_DEBUG
+    FILE* fout;
+    if ( (fout = fopen("nbody.dat","w")) == NULL) {
+        fprintf(stderr,"Error: Cannot open file nbody.dat\n");
+        abort();
+    }
+    write_p(fout, time_sys, system_soft, eng_now);
 #endif
     std::ofstream fprofile;
     if(my_rank==0) fprofile.open("profile.out");
@@ -472,23 +494,24 @@ int main(int argc, char *argv[]){
         n_ptcl_hard_nonisolated_cluster += PS::Comm::getSum(n_nonisolated_cluster);
         
         dn_loop++;
+
+//#ifdef ARC_ERROR
+//        system_hard_isolated.N_count[0] += PS::Comm::getSum(n_one_cluster);
+//#endif
         
-#ifdef ARC_ERROR
-        system_hard_isolated.N_count[0] += PS::Comm::getSum(n_one_cluster);
-#endif
-        
-#ifdef DEBUG_OUTPUT
-        //output
-        PS::S32 ntot = system_soft.getNumberOfParticleLocal();
-        fout<<std::setprecision(17)<<time_sys<<" ";
-        for (PS::S32 i=0;i<ntot;i++){
-          fout<<system_soft[i].mass<<" ";
-          for (PS::S32 k=0;k<3;k++) fout<<system_soft[i].pos[k]<<" ";
-          for (PS::S32 k=0;k<3;k++) fout<<system_soft[i].vel[k]<<" ";
-          fout<<system_soft[i].pot_tot<<" ";
-          fout<<0.5*system_soft[i].mass*system_soft[i].vel*system_soft[i].vel<<" ";
-        }
-        fout<<std::endl;
+#ifdef MAIN_DEBUG
+        write_p(fout, time_sys, system_soft, eng_now, eng_init.tot);
+//        //output
+//        PS::S32 ntot = system_soft.getNumberOfParticleLocal();
+//        fout<<std::setprecision(17)<<time_sys<<" ";
+//        for (PS::S32 i=0;i<ntot;i++){
+//          fout<<system_soft[i].mass<<" ";
+//          for (PS::S32 k=0;k<3;k++) fout<<system_soft[i].pos[k]<<" ";
+//          for (PS::S32 k=0;k<3;k++) fout<<system_soft[i].vel[k]<<" ";
+//          fout<<system_soft[i].pot_tot<<" ";
+//          fout<<0.5*system_soft[i].mass*system_soft[i].vel*system_soft[i].vel<<" ";
+//        }
+//        fout<<std::endl;
 #endif
 
         if( fmod(time_sys, dt_snp.value) == 0.0){
@@ -497,25 +520,25 @@ int main(int argc, char *argv[]){
                 std::cerr<<"n_loop= "<<n_loop<<std::endl;
                 std::cerr<<"n_glb= "<<n_glb<<std::endl;
                 std::cerr<<"Time= "<<time_sys<<" Enow-Einit="<<eng_diff.tot<<" (Enow-Einit)/Einit= "<<eng_diff.tot/eng_init.tot
-#ifdef ARC_ERROR
-                         <<" ARC_error_relative="<<system_hard_isolated.ARC_error_relative+system_hard_conected.ARC_error_relative<<" ARC_error="<<system_hard_isolated.ARC_error+system_hard_conected.ARC_error
-#endif
+//#ifdef ARC_ERROR
+//                         <<" ARC_error_relative="<<system_hard_isolated.ARC_error_relative+system_hard_conected.ARC_error_relative<<" ARC_error="<<system_hard_isolated.ARC_error+system_hard_conected.ARC_error
+//#endif
                          <<std::endl;
                 eng_now.dump(std::cerr);
                 profile.print(std::cerr,time_sys,dn_loop);
             }
 
-#ifdef ARC_ERROR
-            for (int i=1;i<20;i++)  system_hard_isolated.N_count[i] = PS::Comm::getSum(system_hard_isolated.N_count[i]);
-            if(my_rank==0) {
-                std::cerr<<"NHist: ";
-                for (PS::S32 i=0;i<20;i++) {
-                    std::cerr<<system_hard_isolated.N_count[i]<<" ";
-                    system_hard_isolated.N_count[i] = 0;
-                }
-                std::cerr<<std::endl;
-            }
-#endif
+//#ifdef ARC_ERROR
+//            for (int i=1;i<20;i++)  system_hard_isolated.N_count[i] = PS::Comm::getSum(system_hard_isolated.N_count[i]);
+//            if(my_rank==0) {
+//                std::cerr<<"NHist: ";
+//                for (PS::S32 i=0;i<20;i++) {
+//                    std::cerr<<system_hard_isolated.N_count[i]<<" ";
+//                    system_hard_isolated.N_count[i] = 0;
+//                }
+//                std::cerr<<std::endl;
+//            }
+//#endif
             
             if(my_rank==0) {
                 fprofile<<std::setprecision(PRINT_PRECISION);
@@ -527,9 +550,9 @@ int main(int argc, char *argv[]){
                         <<std::setw(PRINT_WIDTH)<<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop
                         <<std::setw(PRINT_WIDTH)<<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop
                         <<std::setw(PRINT_WIDTH)<<eng_diff.tot/eng_init.tot
-#ifdef ARC_ERROR
-                        <<std::setw(PRINT_WIDTH)<<system_hard_isolated.ARC_error+system_hard_conected.ARC_error
-#endif              
+//#ifdef ARC_ERROR
+//                        <<std::setw(PRINT_WIDTH)<<system_hard_isolated.ARC_error+system_hard_conected.ARC_error
+//#endif              
                         <<std::endl;
             }
             
@@ -570,14 +593,17 @@ int main(int argc, char *argv[]){
         n_loop++;
     }
 
-#ifdef ARC_ERROR
-    std::cout<<"Hist[1]"<<system_hard_isolated.N_count[1]/(PS::F64)n_loop<<std::endl;
-    for (int i=1;i<20;i++)  system_hard_isolated.N_count[i] = PS::Comm::getSum(system_hard_isolated.N_count[i]);
-    if(my_rank==0) {
-        std::cout<<"NHist: ";
-        for (PS::S32 i=0;i<20;i++) std::cout<<system_hard_isolated.N_count[i]/(PS::F64)n_loop<<" ";
-        std::cout<<std::endl;
-    }
+//#ifdef ARC_ERROR
+//    std::cout<<"Hist[1]"<<system_hard_isolated.N_count[1]/(PS::F64)n_loop<<std::endl;
+//    for (int i=1;i<20;i++)  system_hard_isolated.N_count[i] = PS::Comm::getSum(system_hard_isolated.N_count[i]);
+//    if(my_rank==0) {
+//        std::cout<<"NHist: ";
+//        for (PS::S32 i=0;i<20;i++) std::cout<<system_hard_isolated.N_count[i]/(PS::F64)n_loop<<" ";
+//        std::cout<<std::endl;
+//    }
+//#endif
+#ifdef MAIN_DEBUG
+    fclose(fout);
 #endif
 
     PS::Finalize();

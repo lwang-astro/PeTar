@@ -76,12 +76,11 @@ class SystemHard{
 public:
     PS::ReallocatableArray<PtclHard> ptcl_hard_;
     ARC::chainpars ARC_control_; ///chain controller (L.Wang)
-#ifdef ARC_ERROR
-    PS::F64 ARC_error_relative;
-    PS::F64 ARC_error;  
-    PS::S32 N_count[20];  // counting number of particles in one cluster
-#endif
+//#ifdef ARC_ERROR
+//    PS::F64 ARC_error_relative;
+//    PS::F64 ARC_error;  
 #ifdef HARD_DEBUG
+    std::map<PS::S32, PS::S32> N_count;  // counting number of particles in one cluster
     HardEnergy E0, E1;
     HardEnergy AE0, AE1;
     HardEnergy HE0, HE1;
@@ -143,6 +142,10 @@ private:
                                   const PS::S32 n_ptcl,
                                   const PS::F64 time_end,
                                   PS::ReallocatableArray<PtclHard> & ptcl_new) {
+
+#ifdef HARD_DEBUG
+        N_count[n_ptcl]++;
+#endif
 //#ifdef HERMITE
 //        if(n_ptcl>5) {
         SearchGroup<PtclHard> group;
@@ -165,6 +168,10 @@ private:
 
             Aint.adjustSlowDown(time_end);
 
+#ifdef HARD_DEBUG
+            Aint.EnergyRecord(AE0);
+#endif 
+            
             Aint.integrateOneStep(0, time_end, dt_limit_hard_);
             
             pcm->pos += pcm->vel * time_end;
@@ -172,7 +179,12 @@ private:
             Aint.updateCM(pcm, &iact, 1);
             Aint.resolve();
 #ifdef HARD_DEBUG
+            Aint.EnergyRecord(AE1);
+#ifdef HARD_DEBUG_PRINT
             fprintf(stderr,"Slowdown factor = %e\n", Aint.getSlowDown(0));
+            fprintf(stderr,"ARC Energy: init =%e, end =%e, diff =%e, error = %e\n", 
+                    AE0.kin+AE0.pot, AE1.kin+AE1.pot, AE1.kin+AE1.pot-AE0.kin-AE0.pot, (AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot)/AE0.tot);
+#endif
 #endif
 
         }
@@ -299,9 +311,7 @@ private:
 public:
 
     SystemHard(){
-#ifdef ARC_ERROR
-        ARC_error = 0.0;
-        ARC_error_relative = 0.0;
+#ifdef HARD_DEBUG
         for(PS::S32 i=0;i<20;i++) N_count[i]=0;
 #endif
         //        PS::S32 n_threads = PS::Comm::getNumberOfThread();
