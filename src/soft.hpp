@@ -142,6 +142,8 @@ public:
     PS::F64vec pos;
     PS::F64vec vel;
     PS::F64 r_search;
+    PS::F64 mass_bk;
+    PS::S64 status;
     PS::S32 rank_org;
     PS::S32 adr_org;
     static PS::F64 r_out;
@@ -153,6 +155,8 @@ public:
         pos = fp.pos;
         vel = fp.vel;
         r_search = fp.r_search;
+        mass_bk  = fp.mass_bk;
+        status   = fp.status;
         rank_org = fp.rank_org;
         adr_org = fp.adr;
     }
@@ -208,6 +212,7 @@ public:
     }
     template<class Tsys>
     void calc(const Tsys & sys,
+              const PS::F64 dt_soft,
               bool clear=true){
         if(clear){
             kin = pot = tot = 0.0;
@@ -226,18 +231,22 @@ public:
         for(PS::S32 ki=0; ki<plist.size(); ki++){
             PS::S32 i = plist[ki];
             PS::F64 mi = sys[i].mass;
-            if(sys[i].status!=0) mi = sys[i].mass_bk;
-            //pot_loc += 0.5 * mi * sys[i].pot_tot;
-            for (PS::S32 kj=0; kj<ki; kj++)  {
-                PS::S32 j = plist[kj];
-                PS::F64 mj = sys[j].mass;
-                if(sys[j].status!=0) mj = sys[j].mass_bk;
-                PS::F64vec dr = sys[i].pos-sys[j].pos;
-                PS::F64 dr2 = dr*dr;
-                PS::F64 drm = 1.0/sqrt(dr2 + EPISoft::eps*EPISoft::eps);
-                pot_loc += - mi * mj * drm;
+            PS::F64vec vi = sys[i].vel;
+            if(sys[i].status!=0) {
+                mi = sys[i].mass_bk;
+                vi += sys[i].acc * dt_soft;
             }
-            kin_loc += 0.5 * mi * sys[i].vel * sys[i].vel;
+            pot_loc += 0.5 * mi * sys[i].pot_tot;
+            //for (PS::S32 kj=0; kj<ki; kj++)  {
+            //    PS::S32 j = plist[kj];
+            //    PS::F64 mj = sys[j].mass;
+            //    if(sys[j].status!=0) mj = sys[j].mass_bk;
+            //    PS::F64vec dr = sys[i].pos-sys[j].pos;
+            //    PS::F64 dr2 = dr*dr;
+            //    PS::F64 drm = 1.0/sqrt(dr2 + EPISoft::eps*EPISoft::eps);
+            //    pot_loc += - mi * mj * drm;
+            //}
+            kin_loc += 0.5 * mi * vi * vi;
         }
         this->kin += PS::Comm::getSum(kin_loc);
         this->pot += PS::Comm::getSum(pot_loc);

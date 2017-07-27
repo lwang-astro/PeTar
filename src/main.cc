@@ -112,6 +112,7 @@ int main(int argc, char *argv[]){
     params<PS::F64> eps          (1e-8, "softerning eps");
     params<PS::F64> r_out        (0.0,  "transit function outer boundary radius (if not set, auto determined)");
     params<PS::F64> r_bin        (0.0,  "maximum binary radius criterion (if not set, auto determined)");
+    params<PS::F64> sd_factor    (1e-8, "Slowdown perturbation criterion");
 
     // params<PS::F64> dt_soft      (0.0,  "tree time step");
 
@@ -122,7 +123,7 @@ int main(int argc, char *argv[]){
     int c;
     bool reading_flag=false;
 
-    while((c=getopt(argc,argv,"i:b:T:t:e:E:n:N:s:S:l:r:R:X:p:h")) != -1){
+    while((c=getopt(argc,argv,"i:b:T:t:e:E:n:N:s:S:d:l:r:R:X:p:h")) != -1){
         switch(c){
         case 'i':
             reading_flag=true;
@@ -135,7 +136,7 @@ int main(int argc, char *argv[]){
         case 'T':
             theta.value = atof(optarg);
             if(my_rank == 0) std::cerr<<theta<<std::endl;
-            assert(theta.value>0.0);
+            assert(theta.value>=0.0);
             break;
         case 't':
             time_end.value = atof(optarg);
@@ -172,6 +173,11 @@ int main(int argc, char *argv[]){
             if(my_rank == 0) std::cerr<<search_factor<<std::endl;
             assert(search_factor.value>0.0);
             break;
+        case 'd':
+            sd_factor.value = atof(optarg);
+            if(my_rank == 0) std::cerr<<sd_factor<<std::endl;
+            assert(sd_factor.value>0.0);
+            break;
         case 'l':
             n_leaf_limit.value = atoi(optarg);
             if(my_rank == 0) std::cerr<<n_leaf_limit<<std::endl;
@@ -203,14 +209,15 @@ int main(int argc, char *argv[]){
             std::cerr<<"       Option defaulted values are shown\n"<<std::endl;
             std::cerr<<"  -i:     enable reading data file (default: disabled with Plummer model)"<<std::endl;
             std::cerr<<"  -b: [F] "<<r_bin<<std::endl;
-            std::cerr<<"  -t: [F] "<<theta<<std::endl;
-            std::cerr<<"  -T: [F] "<<time_end<<std::endl;
+            std::cerr<<"  -T: [F] "<<theta<<std::endl;
+            std::cerr<<"  -t: [F] "<<time_end<<std::endl;
             std::cerr<<"  -e: [F] "<<eps<<std::endl;
             std::cerr<<"  -E: [F] "<<eta<<std::endl;
             std::cerr<<"  -n: [I] "<<n_group_limit<<std::endl;
             std::cerr<<"  -N: [I] "<<n_glb<<std::endl;
             std::cerr<<"  -s: [I] "<<n_smp_ave<<std::endl;
             std::cerr<<"  -S: [F] "<<search_factor<<std::endl;
+            std::cerr<<"  -d: [F] "<<sd_factor<<std::endl;
             std::cerr<<"  -l: [I] "<<n_leaf_limit<<std::endl;
             std::cerr<<"  -r: [F] "<<ratio_r_cut<<std::endl;
             std::cerr<<"  -R: [F] "<<r_out<<std::endl;
@@ -322,13 +329,13 @@ int main(int argc, char *argv[]){
 
     SystemHard system_hard_one_cluster;
     PS::F64 dt_limit_hard = dt_soft/dt_limit_hard_factor.value;
-    system_hard_one_cluster.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, eta.value, time_sys, file_header.id_offset, n_split.value);
+    system_hard_one_cluster.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
     // system_hard_one_cluster.setARCParam();
     SystemHard system_hard_isolated;
-    system_hard_isolated.setParam(r_bin.value, r_out.value, r_in, eps.value,  dt_limit_hard, eta.value, time_sys, file_header.id_offset, n_split.value);
+    system_hard_isolated.setParam(r_bin.value, r_out.value, r_in, eps.value,  dt_limit_hard, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
     system_hard_isolated.setARCParam();
     SystemHard system_hard_conected;
-    system_hard_conected.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, eta.value, time_sys, file_header.id_offset, n_split.value);
+    system_hard_conected.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
     system_hard_conected.setARCParam();
 
     SearchCluster search_cluster;
@@ -367,7 +374,7 @@ int main(int argc, char *argv[]){
 
     Energy eng_init, eng_now;
 
-    eng_init.calc(system_soft, true);
+    eng_init.calc(system_soft, 0.0, true);
 
     if(my_rank==0) eng_init.dump(std::cerr);
     eng_now = eng_init;
@@ -385,6 +392,7 @@ int main(int argc, char *argv[]){
 
     PS::S64 n_loop = 0;
     PS::S64 dn_loop = 0;
+    bool first_step_flag = true;
     while(time_sys < time_end.value){
       
         profile.tot.start();
@@ -428,7 +436,7 @@ int main(int argc, char *argv[]){
         profile.hard_isolated.start();
         // integrate multi cluster A
         system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
-        system_hard_isolated.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft,system_soft);
+        system_hard_isolated.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft,system_soft,first_step_flag);
         system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_);
         // integrate multi cluster A
         profile.hard_isolated.end();
@@ -438,10 +446,12 @@ int main(int argc, char *argv[]){
         profile.hard_connected.start();
         // integrate multi cluster B
         system_hard_conected.setPtclForConectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
-        system_hard_conected.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft,system_soft);
+        system_hard_conected.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft,system_soft,first_step_flag);
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_conected.getPtcl());
         // integrate multi cluster B
         profile.hard_connected.end();
+
+        first_step_flag = false;
         profile.hard_tot.end();
         /////////////
 
@@ -479,7 +489,7 @@ int main(int argc, char *argv[]){
         ////// 2nd kick
         ////////////////
 
-        eng_now.calc(system_soft, true);
+        eng_now.calc(system_soft, dt_soft*0.5,true);
         
         profile.tot.end();
         /////////////

@@ -207,10 +207,17 @@ int main(int argc, char** argv)
   std::cerr<<"new p: "<<p.size()<<"\n ";
   print_p(p.getPointer(),np[0]);
     
+  for(PS::S32 i=0; i<p.size(); i++) {
+      if (p[i].id>0&&p[i].status>0) {
+          p[i].vel = PS::F64vec(0.0);
+      }
+  }
+
+
   SystemHard sys;
   PS::ParticleSystem<FPSoft> fp;
   PS::F64 time_sys = 0.0;
-  sys.setParam(rbin, rout, rin, eps, dt_limit, eta, time_sys, N);
+  sys.setParam(rbin, rout, rin, eps, dt_limit, eta, time_sys, 1e-8, N);
   sys.setARCParam();
   
   sys.setPtclForIsolatedMultiCluster(p,adr,np);
@@ -242,6 +249,11 @@ int main(int argc, char** argv)
       fprintf(stderr,"Time = %e\n", time_sys+dt_limit);
       sys.driveForMultiCluster<PS::ParticleSystem<FPSoft>,FPSoft>(dt_limit, fp);
       time_sys += dt_limit;
+      for(PS::S32 i=0; i<sys.ptcl_hard_.size(); i++) {
+          if (sys.ptcl_hard_[i].id>0&&sys.ptcl_hard_[i].status>0) {
+              sys.ptcl_hard_[i].vel = PS::F64vec(0.0);
+          }
+      }
       print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
       write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(), &sys.ESD1, &sys.ESD0);
       //write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),pcm1,et,rin,rout,eps2,et0.tot);

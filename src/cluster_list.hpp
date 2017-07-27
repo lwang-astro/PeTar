@@ -371,10 +371,18 @@ public:
                             continue;
                         }
                         id_ngb_multi_cluster[ith].push_back( std::pair<PS::S32, PS::S32>(sys[i].id, (nbl+ii)->id) );
-                        CalcAccPotShortWithLinearCutoff
-                            (sys[i].pos,    sys[i].acc,      sys[i].pot_tot,
-                             (nbl+ii)->pos, (nbl+ii)->mass,  eps_sq,
-                             r_out,         r_in);
+                        PS::S32 pot_control_flag;
+                        Tepj* nj = nbl+ii;
+                        if (nj->id>0) {
+                            if (nj->status==0) pot_control_flag = 0; // single
+                            else if (nj->status<0) pot_control_flag = 1; // member
+                            else pot_control_flag = 2; // fake
+
+                            CalcAccPotShortWithLinearCutoff
+                                (sys[i].pos,    sys[i].acc,      sys[i].pot_tot,
+                                 (nbl+ii)->pos, (nbl+ii)->mass,  (nbl+ii)->mass_bk,  pot_control_flag, eps_sq,
+                                 r_out,         r_in);
+                        }
                         if( (nbl+ii)->rank_org != my_rank ){
                             ptcl_outer[ith].push_back(PtclOuter((nbl+ii)->id, sys[i].id, (nbl+ii)->rank_org));
                             //n_tmp3++;

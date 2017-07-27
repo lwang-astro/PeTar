@@ -12,6 +12,8 @@ inline void CalcAccPotShortWithLinearCutoff(const PS::F64vec & posi,
 					    PS::F64 & poti_tot,
 					    const PS::F64vec & posj,
 					    const PS::F64 massj,
+                        const PS::F64 mass_bkj,
+                        const PS::S32 pot_control_flag,
 					    const PS::F64 eps2,
 					    const PS::F64 rcut_out,
 					    const PS::F64 rcut_in){
@@ -30,7 +32,9 @@ inline void CalcAccPotShortWithLinearCutoff(const PS::F64vec & posi,
     const PS::F64 Rm_max = massj * R_max;
     const PS::F64 R2_max = R_max * R_max;
     const PS::F64 Rm3_max = Rm_max * R2_max;
-    poti_tot -= (Rm - Rm_max);
+    if(pot_control_flag==0) poti_tot -= (Rm - Rm_max);   // single
+    else if(pot_control_flag==1) poti_tot -= (mass_bkj * R - Rm_max); // member
+    else poti_tot += Rm_max; // fake
     acci_pla -= (Rm3*k - Rm3_max)*rij;
 }
 

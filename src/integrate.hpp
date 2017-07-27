@@ -24,7 +24,11 @@ void Kick(Tpsys & system,
     const PS::S32 n = system.getNumberOfParticleLocal();
 #pragma omp parallel for
     for(int i=0; i<n; i++){
-        if(system[i].status==0||(system[i].id<0&&system[i].status>0))  //single & c.m.
+#ifdef HARD_CM_KICK
+        if(system[i].status==0)  //only single stars have kick, c.m. are kicked in hard part
+#else
+        if(system[i].status==0||(system[i].id<0&&system[i].status>0)) // single and c.m.
+#endif
             system[i].vel  += system[i].acc * dt;
         if(system[i].status>0&&system[i].id>0)  // backup acceleration to velocity for fake members
             system[i].vel = system[i].acc;
@@ -1061,13 +1065,13 @@ public:
         return;
     }
 
-    void initialSlowDown(const PS::F64 tend) {
+    void initialSlowDown(const PS::F64 tend, const PS::F64 sdfactor = 1.0e-8) {
         for (int i=0; i<clist_.size(); i++) {
             if (bininfo[i].ax>0) {
                 PS::F64 finner = bininfo[i].ax*(1.0+bininfo[i].ecc);
                 finner = clist_[i].mass/(finner*finner);
                 finner = finner*finner;
-                clist_[i].slowdown.setSlowDownPars(finner, bininfo[i].peri, 1.0e-8);
+                clist_[i].slowdown.setSlowDownPars(finner, bininfo[i].peri, sdfactor);
                 Tptcl p[2];
                 OrbParam2PosVel(p[0].pos, p[1].pos, p[0].vel, p[1].vel, bininfo[i].m1, bininfo[i].m2, bininfo[i].ax, bininfo[i].ecc, bininfo[i].inc, bininfo[i].OMG, bininfo[i].omg, pi);
                 p[0].mass = bininfo[i].m1;
