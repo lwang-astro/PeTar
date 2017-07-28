@@ -142,8 +142,8 @@ double PosVel2OrbParam(double & ax,    double & ecc,
     double u = atan2(sinu, cosu); // eccentric anomaly
     double n = sqrt(m_tot/(ax*ax*ax)); // mean mortion
     peri = 8.0*std::atan(1.0)/n;
-    double l = u - ecc*sin(u);
-    tperi = l / n;
+    double l = u - ecc*sin(u);  // mean anomaly
+    tperi = l / n; 
     return u;
 }
 

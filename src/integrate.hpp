@@ -996,50 +996,60 @@ void Isolated_Multiple_integrator(Tptcl * ptcl_org,
 #endif
 
 class keplerSplineFit{
+private:
+    const gsl_interp_type *t_;
+    PS::F64 peri_;
+    PS::F64 tperi_;
+    gsl_interp_accel *acc_[3];
+    gsl_spline *spline_[3];
 public:
-    const gsl_interp_type *t;
-    gsl_interp_accel *acc[3];
-    gsl_spline *spline[3];
 
-    keplerSplineFit(): t(gsl_interp_cspline_periodic) {
-        acc[0]=acc[1]=acc[2]=NULL;
-        spline[0]=spline[1]=spline[2]=NULL;
+    keplerSplineFit(): t_(gsl_interp_cspline_periodic), peri_(0.0) {
+        acc_[0]=acc_[1]=acc_[2]=NULL;
+        spline_[0]=spline_[1]=spline_[2]=NULL;
     }
     
-    // xbase_flag: 0: use eccentricity_anomaly as x, 1: use time as x;
     template<class Tptcl> 
-    void fit(Tptcl* data, const PS::S32* list, const Binary& bin, const PS::S32 xbase_flag, const PS::S32 n_split =8) {
+    void fit(Tptcl* data, const PS::S32* list, const Binary& bin, const PS::S32 n_split =8) {
 #ifdef HARD_DEBUG
         assert(n_split>=4);
 #endif
+        const PS::F64 twopi = PI*2.0;
+        peri_  = bin.peri;
+        tperi_ = bin.tperi - twopi;  // make sure tperi_ is negative
         const PS::U32 np = n_split+1;
         PS::F64 x[np],y[3][np];
         for(PS::U32 i=0;i<np;i++) {
-            x[i] = PS::F64(i)/n_split*2.0*PI;
-            for(int j=0; j<3; j++)
-                y[j][i] = data[list[i]].vel[j];
+            x[i] = PS::F64(i)/n_split*twopi;
+            x[i] = bin.peri/twopi * (x[i] - bin.ecc*std::sin(x[i]));
         }
-        for(int i=0; i<3; i++) {
-            if(acc[i]!=NULL) gsl_interp_accel_free(acc[i]);
-            acc[i] = gsl_interp_accel_alloc();
-            if(spline[i]!=NULL) gsl_spline_free(spline[i]);
-            spline[i] =  gsl_spline_alloc(t, np);
+        for(PS::S32 i=0; i<n_split; i++) {            
+            for(PS::S32 j=0; j<3; j++)
+                y[j][i] = data[list[2*i+1]].vel[j] - data[list[2*i]].vel[j];  // acc1 - acc0
+        }
+        for(PS::S32 i=0; i<3; i++) {
+            y[i][n_split] = y[i][0];
+
+            if(acc_[i]!=NULL) gsl_interp_accel_free(acc_[i]);
+            acc_[i] = gsl_interp_accel_alloc();
+            if(spline_[i]!=NULL) gsl_spline_free(spline_[i]);
+            spline_[i] =  gsl_spline_alloc(t_, np);
             
-            gsl_spline_init(spline[i], x, y[i], np);
+            gsl_spline_init(spline_[i], x, y[i], np);
         }
     }
 
-    PS::F64vec eval(const PS::F64 time) const {
-        PS::F64vec res;
+    void eval(double* acc, const PS::F64 time) const {
+        PS::F64 dt = time - tperi_;
+        dt = dt - (int)(dt/peri_)*peri_;
         for(int i=0; i<3; i++)
-            res[i] = gsl_spline_eval(spline[i],time,acc[i]);
-        return res;
+            acc[i] = gsl_spline_eval(spline_[i],dt,acc_[i]);
     }
 
     ~keplerSplineFit() {
         for(int i=0;i<3;i++) {
-            if(acc[i]!=NULL) gsl_interp_accel_free(acc[i]);
-            if(spline[i]!=NULL) gsl_spline_free(spline[i]);
+            if(acc_[i]!=NULL) gsl_interp_accel_free(acc_[i]);
+            if(spline_[i]!=NULL) gsl_spline_free(spline_[i]);
         }
     }
 };

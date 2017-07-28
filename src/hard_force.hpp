@@ -185,11 +185,13 @@ void Newtonian_extA (double3* acc, const PS::F64 time, Tptcl* p, const PS::S32 n
             }
         }
     }
-   else {
-       for(int i=0; i<np; i++) acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
-   }
+    else {
+        for(int i=0; i<np; i++) acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
+    }
 
     // soft perturbation
+    for(int i=0; i<np; i++) 
+        if(p[i].status==0) pars->eval(acc[i], time);
 }
 /// end Newtonian cut force (L.Wang)
 
