@@ -47,24 +47,6 @@ public:
 
 };
 
-class ARC_int_pars{
-public:
-    PS::F64 rout, rin, eps2;
-    
-    ARC_int_pars() {}
-    ARC_int_pars(const ARC_int_pars& in_) {
-        rout = in_.rout;
-        rin  = in_.rin;
-        eps2 = in_.eps2;
-    }
-};
-
-class ARC_pert_pars: public ARC_int_pars, public keplerSplineFit{
-public:
-    ARC_pert_pars() {}
-    ARC_pert_pars(const ARC_int_pars& in_): ARC_int_pars(in_) {}
-};
-
 #ifdef HARD_DEBUG
 class HardEnergy {
 public:
@@ -125,52 +107,11 @@ private:
         }
     };
 
-
-    PS::F64 calcDtLimit(const PS::F64 time_sys,
-                        const PS::F64 dt_limit_org,
-                        const PS::F64 time_offset = 0.0){
-        PS::F64 dt_limit_ret = dt_limit_org;
-        PS::F64 s = (time_sys-time_offset) / dt_limit_ret;
-        PS::F64 time_head = ((PS::S64)(s)) * dt_limit_org;
-        PS::F64 time_shifted = time_sys - time_head;
-        while( fmod(time_shifted, dt_limit_ret) != 0.0) dt_limit_ret *= 0.5;
-        return dt_limit_ret;
-    }
-
-    void softKickForCM(PtclHard * ptcl_org,
-                       const PS::S32* cm_list,
-                       const PS::S32  n_cm,
-                       const PS::S32* soft_pert_list,
-                       const PS::F64  dt_soft,
-                       const PS::S32  n_split=8) {
-        PS::S32 offset = 2*n_split;
-        for (PS::S32 i=0; i<n_cm; i++) {
-            PtclHard* pi = &ptcl_org[cm_list[i]];
-            PS::F64vec fi= PS::F64vec(0.0);
-            const PS::S32* isoft = &soft_pert_list[i*offset];
-            PS::F64 micum = 0.0;
-            for (PS::S32 j=0; j<2*n_split; j++) {
-                PtclHard* pj = &ptcl_org[isoft[j]];
-                fi += pj->mass*pj->vel; // here pj->vel store the soft force of fake members
-                micum += pj->mass;
-#ifdef HARD_DEBUG
-                assert(((pj->status)>>ID_PHASE_SHIFT)==-pi->id);
-#endif
-            }
-#ifdef HARD_DEBUG
-            assert(abs(micum-pi->mass)<1e-10);
-#endif
-            pi->vel += fi/micum * dt_soft;
-        }
-    }
-                       
-
     void driveForMultiClusterImpl(PtclHard * ptcl_org,
                                   const PS::S32 n_ptcl,
                                   const PS::F64 time_end,
                                   PS::ReallocatableArray<PtclHard> & ptcl_new,
                                   const bool first_int_flag=false) {
-
 #ifdef HARD_DEBUG
         N_count[n_ptcl]++;
 #endif
@@ -186,7 +127,7 @@ private:
             PtclHard* pcm = &ptcl_org[group_.getPtclList()[0]];
             PS::S32 iact = 0;
             
-            ARCIntegrator<PtclHard, PtclH4, PtclForce, ARC_int_pars, ARC_pert_pars> Aint(ARC_control_, Int_pars_);
+            ARCIntegrator<PtclHard, PtclH4, PtclForce> Aint(ARC_control_, Int_pars_);
             Aint.reserveARMem(1);
             // Aint.reservePertMem(1);
             group_.getBinPars(Aint.bininfo[0],ptcl_org,0,n_split_);
@@ -242,7 +183,7 @@ private:
 
             group_act_list.resizeNoInitialize(group_.getPtclN());
             
-            ARCIntegrator<PtclHard, PtclH4, PtclForce, ARC_int_pars, ARC_pert_pars> Aint(ARC_control_, Int_pars_);
+            ARCIntegrator<PtclHard, PtclH4, PtclForce> Aint(ARC_control_, Int_pars_);
 
             // first particles in Hint.Ptcl are c.m.
             PS::S32 n_groups = group_.getNumOfGroups();

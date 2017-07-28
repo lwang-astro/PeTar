@@ -26,17 +26,6 @@ void write_p(FILE* fout, const PS::F64 time, const TEnergy &E, const TEnergy &Ed
 }
 
 
-PS::F64 calcDtLimit(const PS::F64 time_sys,
-                    const PS::F64 dt_limit_org,
-                    const PS::F64 time_offset = 0.0){
-    PS::F64 dt_limit_ret = dt_limit_org;
-    PS::F64 s = (time_sys-time_offset) / dt_limit_ret;
-    PS::F64 time_head = ((PS::S64)(s)) * dt_limit_org;
-    PS::F64 time_shifted = time_sys - time_head;
-    while( fmod(time_shifted, dt_limit_ret) != 0.0) dt_limit_ret *= 0.5;
-    return dt_limit_ret;
-}
-
 void print_p(PtclHard* p, const int n) {
     std::cout<<std::setw(12)<<"mass"
              <<std::setw(12)<<"x1"
@@ -139,7 +128,7 @@ int main(int argc, char** argv)
 #else
     PS::F64 dt_limit = calcDtLimit(time_sys, par.dt_limit_hard);
 #endif
-    ARCIntegrator<PtclHard, PtclH4, PtclForce, ARC_int_pars, ARC_pert_pars>* arcint = NULL;
+    ARCIntegrator<PtclHard, PtclH4, PtclForce>* arcint = NULL;
     Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups, arcint);
 
     FILE* fout;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_spline.h>
 #include "kepler.hpp"
 #include "hard_force.hpp"
 #include "AR.h" /// include AR.h (L.Wang)
@@ -7,6 +9,7 @@
 
 #ifdef HARD_DEBUG
 #define DEBUG_ENERGY_LIMIT 1e-6
+#define ID_PHASE_SHIFT 4
 #endif
 
 #ifdef FIX_STEP_DEBUG
@@ -14,7 +17,6 @@
 #endif
 
 //const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ;
-const PS::F64 pi = 4.0*atan(1.0);
 
 //leap frog----------------------------------------------
 template<class Tpsys, class Ttree>
@@ -50,6 +52,45 @@ void Drift(Tpsys & system,
 }
 
 //Hermite----------------------------------------------
+PS::F64 calcDtLimit(const PS::F64 time_sys,
+                    const PS::F64 dt_limit_org,
+                    const PS::F64 time_offset = 0.0){
+    PS::F64 dt_limit_ret = dt_limit_org;
+    PS::F64 s = (time_sys-time_offset) / dt_limit_ret;
+    PS::F64 time_head = ((PS::S64)(s)) * dt_limit_org;
+    PS::F64 time_shifted = time_sys - time_head;
+    while( fmod(time_shifted, dt_limit_ret) != 0.0) dt_limit_ret *= 0.5;
+    return dt_limit_ret;
+}
+
+template <class Tptcl>
+void softKickForCM(Tptcl * ptcl_org,
+                   const PS::S32* cm_list,
+                   const PS::S32  n_cm,
+                   const PS::S32* soft_pert_list,
+                   const PS::F64  dt_soft,
+                   const PS::S32  n_split=8) {
+    PS::S32 offset = 2*n_split;
+    for (PS::S32 i=0; i<n_cm; i++) {
+        Tptcl* pi = &ptcl_org[cm_list[i]];
+        PS::F64vec fi= PS::F64vec(0.0);
+        const PS::S32* isoft = &soft_pert_list[i*offset];
+        PS::F64 micum = 0.0;
+        for (PS::S32 j=0; j<2*n_split; j++) {
+            Tptcl* pj = &ptcl_org[isoft[j]];
+            fi += pj->mass*pj->vel; // here pj->vel store the soft force of fake members
+            micum += pj->mass;
+#ifdef HARD_DEBUG
+            assert(((pj->status)>>ID_PHASE_SHIFT)==-pi->id);
+#endif
+        }
+#ifdef HARD_DEBUG
+        assert(abs(micum-pi->mass)<1e-10);
+#endif
+        pi->vel += fi/micum * dt_soft;
+    }
+}
+
 class PtclH4: public Ptcl{
 public:
     PS::F64vec acc0;
@@ -954,27 +995,94 @@ void Isolated_Multiple_integrator(Tptcl * ptcl_org,
 }
 #endif
 
-template<class Tptcl, class Tpert, class Tpforce, class ARC_par_common, class ARC_par>
+class keplerSplineFit{
+public:
+    const gsl_interp_type *t;
+    gsl_interp_accel *acc[3];
+    gsl_spline *spline[3];
+
+    keplerSplineFit(): t(gsl_interp_cspline_periodic) {
+        acc[0]=acc[1]=acc[2]=NULL;
+        spline[0]=spline[1]=spline[2]=NULL;
+    }
+    
+    // xbase_flag: 0: use eccentricity_anomaly as x, 1: use time as x;
+    template<class Tptcl> 
+    void fit(Tptcl* data, const PS::S32* list, const Binary& bin, const PS::S32 xbase_flag, const PS::S32 n_split =8) {
+#ifdef HARD_DEBUG
+        assert(n_split>=4);
+#endif
+        const PS::U32 np = n_split+1;
+        PS::F64 x[np],y[3][np];
+        for(PS::U32 i=0;i<np;i++) {
+            x[i] = PS::F64(i)/n_split*2.0*PI;
+            for(int j=0; j<3; j++)
+                y[j][i] = data[list[i]].vel[j];
+        }
+        for(int i=0; i<3; i++) {
+            if(acc[i]!=NULL) gsl_interp_accel_free(acc[i]);
+            acc[i] = gsl_interp_accel_alloc();
+            if(spline[i]!=NULL) gsl_spline_free(spline[i]);
+            spline[i] =  gsl_spline_alloc(t, np);
+            
+            gsl_spline_init(spline[i], x, y[i], np);
+        }
+    }
+
+    PS::F64vec eval(const PS::F64 time) const {
+        PS::F64vec res;
+        for(int i=0; i<3; i++)
+            res[i] = gsl_spline_eval(spline[i],time,acc[i]);
+        return res;
+    }
+
+    ~keplerSplineFit() {
+        for(int i=0;i<3;i++) {
+            if(acc[i]!=NULL) gsl_interp_accel_free(acc[i]);
+            if(spline[i]!=NULL) gsl_spline_free(spline[i]);
+        }
+    }
+};
+
+class ARC_int_pars{
+public:
+    PS::F64 rout, rin, eps2;
+    
+    ARC_int_pars() {}
+    ARC_int_pars(const ARC_int_pars& in_) {
+        rout = in_.rout;
+        rin  = in_.rin;
+        eps2 = in_.eps2;
+    }
+};
+
+class ARC_pert_pars: public ARC_int_pars, public keplerSplineFit{
+public:
+    ARC_pert_pars() {}
+    ARC_pert_pars(const ARC_int_pars& in_): ARC_int_pars(in_) {}
+};
+
+template<class Tptcl, class Tpert, class Tpforce>
 class ARCIntegrator{
 private:
     typedef ARC::chain<Tptcl> ARChain;
     typedef ARC::chainpars ARControl;
     PS::ReallocatableArray<ARChain> clist_;
-    PS::ReallocatableArray<ARC_par> par_list_;
+    PS::ReallocatableArray<ARC_pert_pars> par_list_;
     PS::ReallocatableArray<Tpert*> pert_;
     PS::ReallocatableArray<Tpforce*> pforce_;
     PS::ReallocatableArray<PS::S32> pert_n_;
     PS::ReallocatableArray<PS::S32> pert_disp_;
 
     ARControl *ARC_control_;
-    ARC_par_common *Int_pars_;
+    ARC_int_pars *Int_pars_;
 
 public:
     PS::ReallocatableArray<Binary> bininfo;
     //PS::ReallocatableArray<PS::F64> dt;
 
     ARCIntegrator() {};
-    ARCIntegrator(ARControl &contr, ARC_par_common &par): ARC_control_(&contr), Int_pars_(&par) {}
+    ARCIntegrator(ARControl &contr, ARC_int_pars &par): ARC_control_(&contr), Int_pars_(&par) {}
 
     void reserveARMem(const PS::S32 n) {
         clist_.reserve(n);
@@ -1037,7 +1145,7 @@ public:
 
         // c.m.
         if(ptcl_pert!=NULL) {
-            pert_.push_back(&ptcl_pert[igroup]);
+            pert_.push_back(&ptcl_pert[igroup]);   // c.m. position is in igroup
             pforce_.push_back(&pert_force[igroup]);
             pert_n_[igroup]++;
         }
@@ -1050,8 +1158,8 @@ public:
             pforce_.push_back(&pert_force[k]);
             pert_n_[igroup]++;
         }
-        par_list_.push_back(ARC_par(*Int_pars_));
-        par_list_.back().fit(ptcl_org,soft_pert_list,n_split);
+        par_list_.push_back(ARC_pert_pars(*Int_pars_));
+        par_list_.back().fit(ptcl_org,soft_pert_list,bininfo[igroup],n_split);
 
         if(ptcl_pert!=NULL) {
             clist_.back().pos = ptcl_pert[igroup].pos;
@@ -1073,7 +1181,7 @@ public:
                 finner = finner*finner;
                 clist_[i].slowdown.setSlowDownPars(finner, bininfo[i].peri, sdfactor);
                 Tptcl p[2];
-                OrbParam2PosVel(p[0].pos, p[1].pos, p[0].vel, p[1].vel, bininfo[i].m1, bininfo[i].m2, bininfo[i].ax, bininfo[i].ecc, bininfo[i].inc, bininfo[i].OMG, bininfo[i].omg, pi);
+                OrbParam2PosVel(p[0].pos, p[1].pos, p[0].vel, p[1].vel, bininfo[i].m1, bininfo[i].m2, bininfo[i].ax, bininfo[i].ecc, bininfo[i].inc, bininfo[i].OMG, bininfo[i].omg, PI);
                 p[0].mass = bininfo[i].m1;
                 p[1].mass = bininfo[i].m2;
                 //center_of_mass_correction(*(Tptcl*)&clist_[i], p, 2);
@@ -1114,7 +1222,7 @@ public:
                           const PS::F64 time_end,
                           const PS::F64 dt_limit) {
         ARChain* c = &clist_[ic];
-        ARC_par* par = &par_list_[ic];
+        ARC_pert_pars* par = &par_list_[ic];
         PS::F64 dscoff=1.0;
         PS::F64 ds_up_limit = 0.25*dt_limit/c->calc_dt_X(1.0,*ARC_control_);
         PS::F64 ds_use = c->calc_next_step_custom(*ARC_control_,par);

@@ -193,7 +193,7 @@ int main(int argc, char** argv)
   Int_pars.rout = rout;
   Int_pars.eps2 = eps*eps;
 
-  ARCIntegrator<PtclH4, PtclH4, PtclForce, ARC_int_pars, ARC_pert_pars> Aint(ARC_control, Int_pars);
+  ARCIntegrator<PtclH4, PtclH4, PtclForce> Aint(ARC_control, Int_pars);
   pcm = p[group.getPtclList()[0]];
   Aint.reserveARMem(1);
   Aint.reservePertMem(10);
