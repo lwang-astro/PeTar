@@ -374,7 +374,7 @@ public:
                   // const PS::F64 _gmin,
                   // const PS::F64 _m_avarage,
                   const PS::S64 _id_offset,
-                  const PS::S32 _n_split = 8){
+                  const PS::S32 _n_split){
         /// Set chain pars (L.Wang)
 		Int_pars_.rin  = _rin;
         Int_pars_.rout = _rout;

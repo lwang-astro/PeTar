@@ -43,7 +43,7 @@
 #include"cluster_list.hpp"
 
 #ifdef USE_QUAD
-typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::QuadrupoleWithScatterSearch Tree; 
+typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::QuadrupoleWithSymmetrySearch Tree; 
 #else
 typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::MonopoleWithSymmetrySearch Tree;
 //typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::MonopoleWithScatterSearch Tree;
@@ -67,17 +67,21 @@ std::ostream& operator <<(std::ostream& os, const params<Type>& par) {
 #ifdef MAIN_DEBUG
 // flag: 1: c.m; 2: individual; 
 template<class Teng, class Tsys>
-void write_p(FILE* fout, const PS::F64 time, const Tsys& p, const Teng &et, const PS::F64 et0=0) {
+void write_p(FILE* fout, const PS::F64 time, const PS::F64 dt_soft, const Tsys& p, const Teng &et, const PS::F64 et0=0) {
     fprintf(fout,"%20.14e ",time);
     PS::F64 err = et0==0?0:(et.tot-et0)/et0;
     fprintf(fout,"%20.14e %20.14e %20.14e %20.14e ",err,et.kin,et.pot,et.tot);
     for (int i=0; i<p.getNumberOfParticleLocal(); i++) {
         if(p[i].status>0||p[i].id<0) continue;
         PS::F64 mi = p[i].mass;
-        if(p[i].status!=0) mi = p[i].mass_bk;
+        PS::F64vec vi = p[i].vel;
+        if(p[i].status!=0) {
+            mi = p[i].mass_bk;
+            vi += p[i].acc * dt_soft;
+        }
         fprintf(fout,"%20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e ", 
                 mi, p[i].pos[0], p[i].pos[1], p[i].pos[2], 
-                p[i].vel[0], p[i].vel[1], p[i].vel[2]);
+                vi[0], vi[1], vi[2]);
     }
     fprintf(fout,"\n");
 }
@@ -323,7 +327,11 @@ int main(int argc, char *argv[]){
     Tree tree_soft;
     tree_soft.initialize(n_glb.value, theta.value, n_leaf_limit.value, n_group_limit.value);
     tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSIMD(),
+#ifdef USE_QUAD
+                                       CalcForceEpSpQuadNoSimd(),
+#else
                                        CalcForceEpSpNoSIMD(),
+#endif
                                        system_soft,
                                        dinfo);
 
@@ -364,7 +372,11 @@ int main(int argc, char *argv[]){
             system_soft[i].adr = i;
         }
         tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSIMD(),
+#ifdef USE_QUAD
+                                           CalcForceEpSpQuadNoSimd(),
+#else
                                            CalcForceEpSpNoSIMD(),
+#endif
                                            system_soft,
                                            dinfo);
 
@@ -385,7 +397,7 @@ int main(int argc, char *argv[]){
         fprintf(stderr,"Error: Cannot open file nbody.dat\n");
         abort();
     }
-    write_p(fout, time_sys, system_soft, eng_now);
+    write_p(fout, time_sys, 0.0, system_soft, eng_now);
 #endif
     std::ofstream fprofile;
     if(my_rank==0) fprofile.open("profile.out");
@@ -469,7 +481,11 @@ int main(int argc, char *argv[]){
             system_soft[i].adr = i;
         }
         tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSIMD(),
+#ifdef USE_QUAD
+                                           CalcForceEpSpQuadNoSimd(),
+#else
                                            CalcForceEpSpNoSIMD(),
+#endif
                                            system_soft,
                                            dinfo);
         profile.search_cluster.start();
@@ -510,7 +526,7 @@ int main(int argc, char *argv[]){
 //#endif
         
 #ifdef MAIN_DEBUG
-        write_p(fout, time_sys, system_soft, eng_now, eng_init.tot);
+        write_p(fout, time_sys, dt_soft*0.5, system_soft, eng_now, eng_init.tot);
 //        //output
 //        PS::S32 ntot = system_soft.getNumberOfParticleLocal();
 //        fout<<std::setprecision(17)<<time_sys<<" ";

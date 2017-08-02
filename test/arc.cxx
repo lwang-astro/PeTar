@@ -38,7 +38,7 @@ void CalcEnergyHard(const Tptcl ptcl[], const PS::S32 n_tot, Teng & eng,
 
 template <class Tptcl>
 void write_p(FILE* fout, const PS::F64 time, const HardEnergy &E, const PS::F64 err, const Tptcl* p, const int n) {
-    fprintf(fout,"%e %e %e %e %e ",time, err, E.kin, E.pot, E.tot);
+    fprintf(fout,"%20.14e %20.14e %20.14e %20.14e %20.14e ",time, err, E.kin, E.pot, E.tot);
     //PS::ReallocatableArray<PtclH4> pp;
     //for (int i=0; i<n; i++) {
     //    if(flag==2&&(p[i].status>0||p[i].id<0)) continue;
@@ -48,7 +48,7 @@ void write_p(FILE* fout, const PS::F64 time, const HardEnergy &E, const PS::F64 
     //}
     //for (int i=0; i<pp.size(); i++) {
     for (int i=0; i<n; i++) {
-        fprintf(fout,"%e %e %e %e %e %e %e ", 
+        fprintf(fout,"%20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e ", 
                 p[i].mass, p[i].pos[0], p[i].pos[1], p[i].pos[2], 
                 p[i].vel[0], p[i].vel[1], p[i].vel[2]);
     }

@@ -69,7 +69,7 @@ void softKickForCM(Tptcl * ptcl_org,
                    const PS::S32  n_cm,
                    const PS::S32* soft_pert_list,
                    const PS::F64  dt_soft,
-                   const PS::S32  n_split=8) {
+                   const PS::S32  n_split) {
     PS::S32 offset = 2*n_split;
     for (PS::S32 i=0; i<n_cm; i++) {
         Tptcl* pi = &ptcl_org[cm_list[i]];
@@ -1010,7 +1010,7 @@ public:
     }
     
     template<class Tptcl> 
-    void fit(Tptcl* data, const PS::S32* list, const Binary& bin, const PS::S32 n_split =8) {
+    void fit(Tptcl* data, const PS::S32* list, const Binary& bin, const PS::S32 n_split) {
 #ifdef HARD_DEBUG
         assert(n_split>=4);
 #endif
@@ -1043,7 +1043,7 @@ public:
         PS::F64 dt = time - tperi_;
         dt = dt - (int)(dt/peri_)*peri_;
         for(int i=0; i<3; i++)
-            acc[i] = gsl_spline_eval(spline_[i],dt,acc_[i]);
+            acc[i] -= gsl_spline_eval(spline_[i],dt,acc_[i]);
     }
 
     ~keplerSplineFit() {
@@ -1194,6 +1194,8 @@ public:
                 OrbParam2PosVel(p[0].pos, p[1].pos, p[0].vel, p[1].vel, bininfo[i].m1, bininfo[i].m2, bininfo[i].ax, bininfo[i].ecc, bininfo[i].inc, bininfo[i].OMG, bininfo[i].omg, PI);
                 p[0].mass = bininfo[i].m1;
                 p[1].mass = bininfo[i].m2;
+                p[0].status = 0;
+                p[1].status = 1;
                 //center_of_mass_correction(*(Tptcl*)&clist_[i], p, 2);
                 PS::F64 acc[2][3];
                 const PS::S32 ipert = pert_disp_[i];

@@ -1210,7 +1210,7 @@ private:
                               PS::ReallocatableArray<PS::S32> & empty_list,
                               Tptree &bin,
                               const PS::S64 id_offset,
-                              const PS::S32 n_split = 8) {
+                              const PS::S32 n_split) {
         const PS::F64 dE = 8.0*atan(1.0)/n_split;
         //const PS::F64 dt = bin.peri/n_split;
         if (n_split<4) {
@@ -1319,7 +1319,7 @@ private:
                          const PS::F64 rmax,
                          const PS::F64 dt_tree,
                          const PS::S64 id_offset,
-                         const PS::S32 n_split = 8){
+                         const PS::S32 n_split){
 #ifdef HARD_DEBUG
 //        assert(ptcl.size()==0);
 //        assert(group_ptcl.size()==0);
@@ -1482,7 +1482,7 @@ public:
      */
     void findGroups(Tptcl* ptcl_org,
                     const PS::S32 n_ptcl,
-                    const PS::S32 n_split=8) {
+                    const PS::S32 n_split) {
         p_list_.reserve(n_ptcl);
         p_list_.clearSize();
 
@@ -1695,7 +1695,7 @@ public:
                       const PS::F64 rmax,
                       const PS::F64 dt_tree,
                       const PS::S64 id_offset,
-                      const PS::S32 n_split = 8) {
+                      const PS::S32 n_split) {
         if (n_split>(1<<ID_PHASE_SHIFT)) {
             std::cerr<<"Error! ID_PHASE_SHIFT is too small for phase split! shift bit: "<<ID_PHASE_SHIFT<<" n_split: "<<n_split<<std::endl;
             abort();
@@ -1762,16 +1762,16 @@ public:
         return group_list_n_[igroup];
     }
 
-    PS::S32 getGroupPertAdr(const std::size_t igroup, const std::size_t imember, const std::size_t iphase, const PS::S32 n_split =8) const {
+    PS::S32 getGroupPertAdr(const std::size_t igroup, const std::size_t imember, const std::size_t iphase, const PS::S32 n_split) const {
         return soft_pert_list_[igroup*2*n_split+imember+2*iphase];
     }
     // 
-    PS::S32* getGroupPertList(const std::size_t igroup, const PS::S32 n_split = 8) {
+    PS::S32* getGroupPertList(const std::size_t igroup, const PS::S32 n_split) {
         return &soft_pert_list_[igroup*2*n_split];
     }
 
     // assume the binary information stored in artificial star mass_bk
-    void getBinPars(Binary &bin, const Tptcl ptcl_org[], const std::size_t igroup, const PS::S32 n_split = 8) {
+    void getBinPars(Binary &bin, const Tptcl ptcl_org[], const std::size_t igroup, const PS::S32 n_split) {
         const PS::S32 ioff = igroup*2*n_split;
         if (ptcl_org[soft_pert_list_[ioff+10]].mass_bk==0.0) {
             bin.ax   = ptcl_org[soft_pert_list_[ioff  ]].mass_bk;

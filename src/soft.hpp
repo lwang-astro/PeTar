@@ -343,3 +343,42 @@ struct CalcForceEpSpNoSIMD{
     }
 };
 
+struct CalcForceEpSpQuadNoSimd{
+    template<class Tsp>
+    void operator () (const EPISoft * ep_i,
+                      const PS::S32 n_ip,
+                      const Tsp * sp_j,
+                      const PS::S32 n_jp,
+                      ForceSoft * force){
+        const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
+        for(PS::S32 ip=0; ip<n_ip; ip++){
+            PS::F64vec xi = ep_i[ip].pos;
+            PS::F64vec ai = 0.0;
+            PS::F64 poti = 0.0;
+            for(PS::S32 jp=0; jp<n_jp; jp++){
+                PS::F64 mj = sp_j[jp].mass;
+                PS::F64vec xj= sp_j[jp].pos;
+                PS::F64vec rij= xi - xj;
+                PS::F64 r2 = rij * rij + eps2;
+                PS::F64mat qj = sp_j[jp].quad;
+                PS::F64 tr = qj.getTrace();
+                PS::F64vec qr( (qj.xx*rij.x + qj.xy*rij.y + qj.xz*rij.z),
+                               (qj.yy*rij.y + qj.yz*rij.z + qj.xy*rij.x),
+                               (qj.zz*rij.z + qj.xz*rij.x + qj.yz*rij.y) );
+                PS::F64 qrr = qr * rij;
+                PS::F64 r_inv = 1.0f/sqrt(r2);
+                PS::F64 r2_inv = r_inv * r_inv;
+                PS::F64 r3_inv = r2_inv * r_inv;
+                PS::F64 r5_inv = r2_inv * r3_inv * 1.5;
+                PS::F64 qrr_r5 = r5_inv * qrr;
+                PS::F64 qrr_r7 = r2_inv * qrr_r5;
+                PS::F64 A = mj*r3_inv - tr*r5_inv + 5*qrr_r7;
+                PS::F64 B = -2.0*r5_inv;
+                ai -= A*rij + B*qr;
+                poti -= mj*r_inv - 0.5*tr*r3_inv + qrr_r5;
+            }
+            force[ip].acc += ai;
+            force[ip].pot += poti;
+        }
+    }
+};
