@@ -67,10 +67,12 @@ std::ostream& operator <<(std::ostream& os, const params<Type>& par) {
 #ifdef MAIN_DEBUG
 // flag: 1: c.m; 2: individual; 
 template<class Teng, class Tsys>
-void write_p(FILE* fout, const PS::F64 time, const PS::F64 dt_soft, const Tsys& p, const Teng &et, const PS::F64 et0=0) {
+void write_p(FILE* fout, const PS::F64 time, const PS::F64 dt_soft, const Tsys& p, const Teng &et, const Teng &ediff) {
     fprintf(fout,"%20.14e ",time);
-    PS::F64 err = et0==0?0:(et.tot-et0)/et0;
-    fprintf(fout,"%20.14e %20.14e %20.14e %20.14e ",err,et.kin,et.pot,et.tot);
+    fprintf(fout,"%20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e ",
+            ediff.tot/et.tot, et.kin, et.pot, et.tot,
+            ediff.Lt/et.Lt, ediff.L[0]/et.Lt, ediff.L[1]/et.Lt, ediff.L[2]/et.Lt,
+               et.Lt,    et.L[0],    et.L[1],    et.L[2]);
     for (int i=0; i<p.getNumberOfParticleLocal(); i++) {
         if(p[i].status>0||p[i].id<0) continue;
         PS::F64 mi = p[i].mass;
@@ -110,6 +112,7 @@ int main(int argc, char *argv[]){
     params<PS::F64> time_end     (100.0,"finishing time");
     params<PS::F64> eta          (0.1,  "Hermite time step coefficient eta");
     params<PS::S64> n_glb        (16384,"Total number of particles");
+    params<PS::F64> dt_soft      (0.0,  "Tree timestep (if not set, auto determined)");
     params<PS::F64> dt_snp       (0.0625,"Output time interval of snapshot");
     params<PS::F64> search_factor(1.0,  "neighbor searching coefficient");
     params<PS::F64> dt_limit_hard_factor(4.0, "limit of tree time step/hard time step");
@@ -127,7 +130,7 @@ int main(int argc, char *argv[]){
     int c;
     bool reading_flag=false;
 
-    while((c=getopt(argc,argv,"i:b:T:t:e:E:n:N:s:S:d:l:r:R:X:p:h")) != -1){
+    while((c=getopt(argc,argv,"i:b:T:t:e:E:n:N:s:S:d:D:l:r:R:X:p:h")) != -1){
         switch(c){
         case 'i':
             reading_flag=true;
@@ -181,6 +184,11 @@ int main(int argc, char *argv[]){
             sd_factor.value = atof(optarg);
             if(my_rank == 0) std::cerr<<sd_factor<<std::endl;
             assert(sd_factor.value>0.0);
+            break;
+        case 'D':
+            dt_soft.value = atof(optarg);
+            if(my_rank == 0) std::cerr<<dt_soft<<std::endl;
+            assert(dt_soft.value>0.0);
             break;
         case 'l':
             n_leaf_limit.value = atoi(optarg);
@@ -257,8 +265,8 @@ int main(int argc, char *argv[]){
 
     PS::Comm::barrier();
 
-    PS::F64 r_in, m_average, v_disp, r_search_min, dt_soft;
-    GetR(system_soft, r_in, r_out.value, r_search_min, m_average, dt_soft, v_disp, search_factor.value, ratio_r_cut.value);
+    PS::F64 r_in, m_average, v_disp, r_search_min;
+    GetR(system_soft, r_in, r_out.value, r_search_min, m_average, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value);
 //    EPISoft::r_out = r_out;
 //    EPISoft::r_in  = r_in;
     EPISoft::eps   = eps.value;
@@ -277,7 +285,7 @@ int main(int argc, char *argv[]){
                 abort();
             }
             
-            system_soft[i].calcRSearch(dt_soft);
+            system_soft[i].calcRSearch(dt_soft.value);
         }
     }
     
@@ -288,7 +296,7 @@ int main(int argc, char *argv[]){
                  <<" r_out        = "<<r_out.value    <<std::endl
                  <<" r_search_min = "<<r_search_min   <<std::endl
                  <<" vel_disp     = "<<v_disp         <<std::endl
-                 <<" dt_soft      = "<<dt_soft        <<std::endl;
+                 <<" dt_soft      = "<<dt_soft.value  <<std::endl;
     }
 
     // set r_search
@@ -336,7 +344,7 @@ int main(int argc, char *argv[]){
                                        dinfo);
 
     SystemHard system_hard_one_cluster;
-    PS::F64 dt_limit_hard = dt_soft/dt_limit_hard_factor.value;
+    PS::F64 dt_limit_hard = dt_soft.value/dt_limit_hard_factor.value;
     system_hard_one_cluster.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
     // system_hard_one_cluster.setARCParam();
     SystemHard system_hard_isolated;
@@ -359,11 +367,11 @@ int main(int argc, char *argv[]){
         search_cluster.sendAndRecvCluster(system_soft);
 
         system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
-        system_hard_isolated.initialMultiClusterOMP<SystemSoft,FPSoft>(system_soft, dt_soft);
+        system_hard_isolated.initialMultiClusterOMP<SystemSoft,FPSoft>(system_soft, dt_soft.value);
         system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_);
     
         system_hard_conected.setPtclForConectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
-        system_hard_conected.initialMultiClusterOMP<SystemSoft,FPSoft>(system_soft, dt_soft);
+        system_hard_conected.initialMultiClusterOMP<SystemSoft,FPSoft>(system_soft, dt_soft.value);
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_conected.getPtcl());
 
 #pragma omp parallel for
@@ -384,7 +392,7 @@ int main(int argc, char *argv[]){
             (system_soft, tree_soft, r_out.value, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
     }    
 
-    Energy eng_init, eng_now;
+    EnergyAndMomemtum eng_init, eng_now, eng_diff;
 
     eng_init.calc(system_soft, 0.0, true);
 
@@ -397,7 +405,7 @@ int main(int argc, char *argv[]){
         fprintf(stderr,"Error: Cannot open file nbody.dat\n");
         abort();
     }
-    write_p(fout, time_sys, 0.0, system_soft, eng_now);
+    write_p(fout, time_sys, 0.0, system_soft, eng_now, eng_diff);
 #endif
     std::ofstream fprofile;
     if(my_rank==0) fprofile.open("profile.out");
@@ -410,7 +418,7 @@ int main(int argc, char *argv[]){
         profile.tot.start();
         ////////////////
         ////// 1st kick
-        Kick(system_soft, tree_soft, dt_soft*0.5);
+        Kick(system_soft, tree_soft, dt_soft.value*0.5);
         ////// 1st kick
         ////////////////
         
@@ -438,7 +446,7 @@ int main(int argc, char *argv[]){
         ////// integrater one cluster
         system_hard_one_cluster.initializeForOneCluster(search_cluster.getAdrSysOneCluster().size());
         system_hard_one_cluster.setPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
-        system_hard_one_cluster.driveForOneCluster(dt_soft);
+        system_hard_one_cluster.driveForOneCluster(dt_soft.value);
         system_hard_one_cluster.writeBackPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
         ////// integrater one cluster
         profile.hard_single.end();
@@ -448,7 +456,7 @@ int main(int argc, char *argv[]){
         profile.hard_isolated.start();
         // integrate multi cluster A
         system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
-        system_hard_isolated.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft,system_soft,first_step_flag);
+        system_hard_isolated.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft.value,system_soft,first_step_flag);
         system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_);
         // integrate multi cluster A
         profile.hard_isolated.end();
@@ -458,7 +466,7 @@ int main(int argc, char *argv[]){
         profile.hard_connected.start();
         // integrate multi cluster B
         system_hard_conected.setPtclForConectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
-        system_hard_conected.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft,system_soft,first_step_flag);
+        system_hard_conected.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft.value,system_soft,first_step_flag);
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_conected.getPtcl());
         // integrate multi cluster B
         profile.hard_connected.end();
@@ -500,17 +508,17 @@ int main(int argc, char *argv[]){
 
         ////////////////
         ////// 2nd kick
-        Kick(system_soft, tree_soft, dt_soft*0.5);
-        time_sys += dt_soft;
+        Kick(system_soft, tree_soft, dt_soft.value*0.5);
+        time_sys += dt_soft.value;
         ////// 2nd kick
         ////////////////
 
-        eng_now.calc(system_soft, dt_soft*0.5,true);
+        eng_now.calc(system_soft, dt_soft.value*0.5,true);
         
         profile.tot.end();
         /////////////
 
-        Energy eng_diff = eng_now.calcDiff(eng_init);
+        eng_diff = eng_now - eng_init;
         PS::S64 n_glb = system_soft.getNumberOfParticleGlobal();
         PS::S32 n_one_cluster         = system_hard_one_cluster.getPtcl().size();
         PS::S32 n_isolated_cluster    = system_hard_isolated.getPtcl().size();
@@ -525,8 +533,9 @@ int main(int argc, char *argv[]){
 //        system_hard_isolated.N_count[0] += PS::Comm::getSum(n_one_cluster);
 //#endif
         
+        if( fmod(time_sys, dt_snp.value) == 0.0){
 #ifdef MAIN_DEBUG
-        write_p(fout, time_sys, dt_soft*0.5, system_soft, eng_now, eng_init.tot);
+            write_p(fout, time_sys, dt_soft.value*0.5, system_soft, eng_now, eng_diff);
 //        //output
 //        PS::S32 ntot = system_soft.getNumberOfParticleLocal();
 //        fout<<std::setprecision(17)<<time_sys<<" ";
@@ -540,7 +549,6 @@ int main(int argc, char *argv[]){
 //        fout<<std::endl;
 #endif
 
-        if( fmod(time_sys, dt_snp.value) == 0.0){
             //eng_diff.dump(std::cerr);
             if(my_rank==0) {
                 std::cerr<<"n_loop= "<<n_loop<<std::endl;

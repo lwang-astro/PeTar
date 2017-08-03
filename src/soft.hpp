@@ -195,32 +195,36 @@ PS::F64  FPSoft::r_out = 0.0;
 //PS::F64 EPISoft::m_average;
 //PS::F64 EPISoft::r_search_min;
 
-class Energy{
+class EnergyAndMomemtum{
 public:
     PS::F64 kin;
     PS::F64 pot;
     PS::F64 tot;
-    Energy(){
-        kin = pot = tot = 0.0;
+    PS::F64vec L; // angular momentum
+    PS::F64 Lt; // total angular momemtum
+
+    EnergyAndMomemtum() {
+        clear();
     }
+
     void clear(){
-        kin = pot = tot = 0.0;
+        kin = pot = tot = Lt = 0.0;
+        L = PS::F64vec(0.0);
     }
     void dump(std::ostream & fout=std::cout){
         fout<<"Energy: total = "<<tot<<" kin = "<<kin<<" pot = "<<pot
+            <<"\nAngular Momentum: L = "<<L<<" |L| = "<<Lt
             <<std::endl;
     }
     template<class Tsys>
     void calc(const Tsys & sys,
               const PS::F64 dt_soft,
-              bool clear=true){
-        if(clear){
-            kin = pot = tot = 0.0;
-        }
+              bool clear_flag=true){
+        if(clear_flag) clear();
         PS::S32 n = sys.getNumberOfParticleLocal();
         PS::F64 pot_loc = 0.0;
-        //        PS::F64 pot_d   = 0.0;
         PS::F64 kin_loc = 0.0;
+        PS::F64vec L_loc = PS::F64vec(0.0);
         //#pragma omp parallel for reduction(+:pot_d) reduction (+:pot_loc) reduction(+:kin_loc)
         PS::ReallocatableArray<PS::S32> plist;
         plist.reserve(n);
@@ -247,25 +251,26 @@ public:
             //    pot_loc += - mi * mj * drm;
             //}
             kin_loc += 0.5 * mi * vi * vi;
+            L_loc += sys[i].pos ^ (mi*vi);
         }
         this->kin += PS::Comm::getSum(kin_loc);
         this->pot += PS::Comm::getSum(pot_loc);
+        this->L   += PS::Comm::getSum(L_loc);
+        this->Lt   = std::sqrt(L*L);
         //        std::cerr<<"Pot diff="<<PS::Comm::getSum(pot_loc)-pot<<std::endl;
         this->tot = this->kin + this->pot;
     }
 
-    Energy calcDiff(const Energy & eng){
-        Energy diff;
-        diff.kin = kin - eng.kin;
-        diff.pot = pot - eng.pot;
-        diff.tot = tot - eng.tot;
+    EnergyAndMomemtum operator -(const EnergyAndMomemtum& eng){
+        EnergyAndMomemtum diff;
+        diff.kin = this->kin - eng.kin;
+        diff.pot = this->pot - eng.pot;
+        diff.tot = this->tot - eng.tot;
+        diff.L   = this->L   - eng.L;
+        diff.Lt  = std::sqrt(diff.L*diff.L);
         return diff;
     }
 };
-
-
-
-
 
 
 ////////////////////

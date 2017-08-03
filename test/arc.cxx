@@ -19,12 +19,41 @@
 //const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ = SAFTY_FACTOR_FOR_SEARCH * SAFTY_FACTOR_FOR_SEARCH;
 //const PS::F64 SAFTY_OFFSET_FOR_SEARCH = 1e-7;
 
+class EnergyAndMomemtum{
+public:
+    PS::F64 kin;
+    PS::F64 pot;
+    PS::F64 tot;
+    PS::F64vec L; // angular momentum
+    PS::F64 Lt; // total angular momemtum
+
+    EnergyAndMomemtum() {
+        clear();
+    }
+
+    void clear(){
+        kin = pot = tot = Lt = 0.0;
+        L = PS::F64vec(0.0);
+    }
+
+    EnergyAndMomemtum operator -(const EnergyAndMomemtum& eng){
+        EnergyAndMomemtum diff;
+        diff.kin = this->kin - eng.kin;
+        diff.pot = this->pot - eng.pot;
+        diff.tot = this->tot - eng.tot;
+        diff.L   = this->L   - eng.L;
+        diff.Lt  = std::sqrt(diff.L*diff.L);
+        return diff;
+    }
+};
+
 template<class Tptcl, class Teng>
 void CalcEnergyHard(const Tptcl ptcl[], const PS::S32 n_tot, Teng & eng, 
                     const PS::F64 r_in, const PS::F64 r_out, const PS::F64 eps_sq = 0.0){
-    eng.kin = eng.pot = eng.tot = 0.0;
+    eng.clear();
     for(PS::S32 i=0; i<n_tot; i++){
         eng.kin += 0.5 * ptcl[i].mass * ptcl[i].vel * ptcl[i].vel;
+        eng.L   += ptcl[i].pos ^ (ptcl[i].mass*ptcl[i].vel);
 
         for(PS::S32 j=i+1; j<n_tot; j++){
             //PS::F64 r_out = std::max(ptcl[i].r_out,ptcl[j].r_out);
@@ -34,11 +63,15 @@ void CalcEnergyHard(const Tptcl ptcl[], const PS::S32 n_tot, Teng & eng,
         }
     }
     eng.tot = eng.kin + eng.pot;
+    eng.Lt  = std::sqrt(eng.L*eng.L);
 }
 
-template <class Tptcl>
-void write_p(FILE* fout, const PS::F64 time, const HardEnergy &E, const PS::F64 err, const Tptcl* p, const int n) {
-    fprintf(fout,"%20.14e %20.14e %20.14e %20.14e %20.14e ",time, err, E.kin, E.pot, E.tot);
+template <class Tptcl, class Teng>
+void write_p(FILE* fout, const PS::F64 time, const Teng &E, const Teng &Ediff, const Tptcl* p, const int n) {
+    fprintf(fout,"%20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e ",
+            time, Ediff.tot/E.tot, E.kin, E.pot, E.tot,
+            Ediff.Lt/E.Lt, Ediff.L[0]/E.Lt, Ediff.L[1]/E.Lt, Ediff.L[2]/E.Lt,
+            E.Lt,    E.L[0],    E.L[1],    E.L[2]);
     //PS::ReallocatableArray<PtclH4> pp;
     //for (int i=0; i<n; i++) {
     //    if(flag==2&&(p[i].status>0||p[i].id<0)) continue;
@@ -159,7 +192,7 @@ int main(int argc, char** argv)
   
   PS::ReallocatableArray<PtclH4> ptcl_new;
 
-  group.generateList(p.getPointer(), ptcl_new, rsearch, dt_limit, n_split);
+  group.generateList(p.getPointer(), ptcl_new, rsearch, dt_limit, N, n_split);
   //std::cout<<"GenerateList\n";
   //print_p(p.getPointer(),p.size());
 
@@ -203,7 +236,7 @@ int main(int argc, char** argv)
   
   Aint.initial();
   
-  HardEnergy e0,e1;
+  EnergyAndMomemtum e0,e1,ediff;
 
   FILE* fout;
   std::string fname="arc.dat.";
@@ -214,13 +247,13 @@ int main(int argc, char** argv)
 
   PS::S32 nstep = time/dt_limit*STEP_DIVIDER;
   PS::F64 time_i = 0.0;
-  PS::F64 err;
+  // PS::F64 err;
 
   std::cerr<<"Time = "<<time_i<<std::endl;
   print_p(p.getPointer(),p.size());
   CalcEnergyHard(p.getPointer(),N,e0,rin,rout,eps*eps);
   //Aint.EnergyRecord(e0);
-  write_p(fout,0.0,e0,0.0,p.getPointer(),N);
+  write_p(fout,0.0,e0,ediff,p.getPointer(),N);
   for (int i=0; i<nstep; i++) {
       time_i += dt_limit/STEP_DIVIDER;
       Aint.integrateOneStep(0, time_i, dt_limit/STEP_DIVIDER);
@@ -229,15 +262,16 @@ int main(int argc, char** argv)
           Aint.resolve();
       //Aint.EnergyRecord(e1);
           CalcEnergyHard(p.getPointer(),N,e1,rin,rout,eps*eps);
-          err = (e1.kin + e1.pot - (e0.kin + e0.pot))/(e0.kin + e0.pot);
-          write_p(fout,time_i,e1,err,p.getPointer(),N);
+          //err = (e1.kin + e1.pot - (e0.kin + e0.pot))/(e0.kin + e0.pot);
+          ediff = e1 - e0;
+          write_p(fout,time_i,e1,ediff,p.getPointer(),N);
           std::cerr<<"Time = "<<time_i<<std::endl;
           print_p(p.getPointer(),p.size());
           Aint.shift();
       }
   }
 
-  printf("Energy error: %e, kin: %e, pot: %e, init: %e, end: %e\n",err, e1.kin, e1.pot, e0.tot, e1.tot);
+  printf("Energy error: %e, kin: %e, pot: %e, init: %e, end: %e\n",ediff.tot/e1.tot, e1.kin, e1.pot, e0.tot, e1.tot);
 
   fclose(fout);
   
