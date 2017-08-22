@@ -1213,10 +1213,14 @@ private:
                               Tptree &bin,
                               const PS::S64 id_offset,
                               const PS::S32 n_split) {
+#ifdef TIDAL_TENSOR
+        const PS::F64 dE = 8.0*atan(1.0)/(n_split-4);
+#else
         const PS::F64 dE = 8.0*atan(1.0)/n_split;
+#endif
         //const PS::F64 dt = bin.peri/n_split;
-        if (n_split<4) {
-            std::cerr<<"N_SPLIT to small to save binary parameters, should be larger than 4!";
+        if (n_split<8) {
+            std::cerr<<"N_SPLIT to small to save binary parameters, should be >= 8!";
             abort();
         }
         PS::F64 bindata[4][2];
@@ -1242,6 +1246,8 @@ private:
         PS::F64 mnormal=0.0;
 #endif
 
+        // First 4 is used for tidal tensor points
+        // remaining is used for sample points
         for (int i=0; i<n_split; i++) {
             Tptcl* p[2];
             for(int j=0; j<2; j++) {
@@ -1259,13 +1265,53 @@ private:
                 p[j]->r_search = bin.member[j]->r_search;
                 p[j]->status = (bin.id<<ID_PHASE_SHIFT)|i;
 #ifdef SPLIT_MASS
-                pm[i][j] = &(p[j]->mass);
+#ifdef TIDAL_TENSOR
+                if(i>=4) 
+#endif
+                    pm[i][j] = &(p[j]->mass);
 #endif
             }
+#ifdef TIDAL_TENSOR
+            if (i>=4) {
+                PS::S32 iph = i-4;
+#else 
+                PS::S32 iph = i;
+#endif
             // center_of_mass_shift(*(Tptcl*)&bin,p,2);
-            OrbParam2PosVel(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass,
-                            bin.ax, bin.ecc, bin.inc, bin.OMG, bin.omg, dE*i);
+                OrbParam2PosVel(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass,
+                                bin.ax, bin.ecc, bin.inc, bin.OMG, bin.omg, dE*iph);
             //DriveKeplerOrbParam(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass, (i+1)*dt, bin.ax, bin.ecc, bin.inc, bin.OMG, bin.omg, bin.peri, bin.ecca);
+#ifdef TIDAL_TENSOR
+            }
+            else {
+                // 8 points box 
+                switch(i) {
+                case 0:
+                    p[0]->pos = PS::F64vec(bin.ax, 0,      -bin.ax) + bin.pos;
+                    p[1]->pos = PS::F64vec(0,      bin.ax, -bin.ax) + bin.pos;
+                    break;
+                case 1:
+                    p[0]->pos = PS::F64vec(-bin.ax, 0,      -bin.ax) + bin.pos;
+                    p[1]->pos = PS::F64vec(0,      -bin.ax, -bin.ax) + bin.pos;
+                    break;
+                case 2:
+                    p[0]->pos = PS::F64vec(bin.ax, 0,      bin.ax) + bin.pos;
+                    p[1]->pos = PS::F64vec(0,      bin.ax, bin.ax) + bin.pos;
+                    break;
+                case 3:
+                    p[0]->pos = PS::F64vec(-bin.ax, 0,      bin.ax) + bin.pos;
+                    p[1]->pos = PS::F64vec(0,      -bin.ax, bin.ax) + bin.pos;
+                    break;
+                default:
+                    std::cerr<<"Error: index >= 4!\n";
+                    abort();
+                }
+                p[0]->vel = bin.vel;
+                p[1]->vel = bin.vel;
+                p[0]->mass = p[1]->mass = 0.0;
+            }
+#endif
+            // binary parameters
             if(i<4) {
                 p[0]->mass_bk = bindata[i][0];
                 p[1]->mass_bk = bindata[i][1];
@@ -1278,21 +1324,33 @@ private:
                 p[0]->mass_bk = 0.0; // indicate the order
                 p[1]->mass_bk = 1.0;
             }
+#ifdef TIDAL_TENSOR
+            if(i>=4) {
+#endif
 #ifdef SPLIT_MASS
-            PS::F64vec dvvec= p[0]->vel - p[1]->vel;
-            PS::F64 odv = 1.0/std::sqrt(dvvec*dvvec);
-            for(int j=0; j<2; j++) p[j]->mass *= odv;
+                PS::F64vec dvvec= p[0]->vel - p[1]->vel;
+                PS::F64 odv = 1.0/std::sqrt(dvvec*dvvec);
+                for(int j=0; j<2; j++) p[j]->mass *= odv;
                 //if(i==0) p[j]->mass /= 2.0*n_split;
                 //else p[j]->mass /= n_split;
-            mnormal += odv;
+                mnormal += odv;
 #else
-            for(int j=0; j<2; j++) p[j]->mass = 0;
+                for(int j=0; j<2; j++) p[j]->mass = 0;
 #endif
-            center_of_mass_correction(*(Tptcl*)&bin,p,2);
+                center_of_mass_correction(*(Tptcl*)&bin,p,2);
+             
+#ifdef TIDAL_TENSOR
+            }
+#endif
         }
+
 #ifdef SPLIT_MASS
         mfactor = 1.0/mnormal;
+#ifdef TIDAL_TENSOR
+        for (int i=4; i<n_split; i++) 
+#else
         for (int i=0; i<n_split; i++) 
+#endif
             for (int j=0; j<2; j++) 
                 *pm[i][j] *= mfactor;
 #endif
@@ -1752,6 +1810,10 @@ public:
 
     PS::S32* getPtclList() const {
         return p_list_.getPointer();
+    }
+
+    const PS::S32 getPtclIndex(const std::size_t i) const {
+        return p_list_.getPointer()[i];
     }
 
 //    PS::ReallocatableArray<Tptcl> *getPGroups() {

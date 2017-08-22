@@ -118,13 +118,19 @@ private:
 //#ifdef HERMITE
 //        if(n_ptcl>5) {
         group_.findGroups(ptcl_org, n_ptcl, n_split_);
+
+#ifdef TIDAL_TENSOR
+        for (PS::S32 i=0; i<group_.getNumOfGroups(); i++) 
+            subtractFcmAndRecoverCMVec(ptcl_org, group_.getPtclIndex(i), group_.getGroup(i), group_.getGroupN(i), group_.getGroupPertList(i,n_split_));
+#endif
+
 #ifdef HARD_CM_KICK
         if(first_int_flag) softKickForCM(ptcl_org, group_.getPtclList(), group_.getNumOfGroups(),group_.getGroupPertList(0,n_split_),time_end*0.5, n_split_);
         else softKickForCM(ptcl_org, group_.getPtclList(), group_.getNumOfGroups(),group_.getGroupPertList(0,n_split_),time_end, n_split_);
 #endif
 
         if(group_.getPtclN()==1) {
-            PtclHard* pcm = &ptcl_org[group_.getPtclList()[0]];
+            PtclHard* pcm = &ptcl_org[group_.getPtclIndex(0)];
             PS::S32 iact = 0;
             
             ARCIntegrator<PtclHard, PtclH4, PtclForce> Aint(ARC_control_, Int_pars_);

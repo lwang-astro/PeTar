@@ -192,7 +192,11 @@ void Newtonian_extA (double3* acc, const PS::F64 time, Tptcl* p, const PS::S32 n
 #ifdef SOFT_PERT
     // soft perturbation
     for(int i=0; i<np; i++) 
+#ifdef TIDAL_TENSOR
+        if(p[i].status==0) pars->eval(acc[i], p[i].pos);
+#else
         if(p[i].status==0) pars->eval(acc[i], time);
+#endif
 #endif
 }
 /// end Newtonian cut force (L.Wang)
