@@ -1196,7 +1196,9 @@ private:
                 if(is_top) bin.member[i]->status = -std::abs(id_offset+bin.member[i]->id*n_split);
                 else bin.member[i]->status = -std::abs(id_offset+bid*n_split);
                 bin.member[i]->mass_bk = bin.member[i]->mass;
+#ifdef SPLIT_MASS
                 bin.member[i]->mass    = 0.0;
+#endif
                 nloc += 1;
             }
         }
@@ -1218,7 +1220,6 @@ private:
             abort();
         }
         PS::F64 bindata[4][2];
-        PS::F64* pm[n_split][2];
         //Tptcl* plist[n_split][2];
         /*
           acc, ecc
@@ -1234,9 +1235,12 @@ private:
         bindata[2][1] = bin.OMG; 
         bindata[3][0] = bin.omg; 
         bindata[3][1] = bin.ecca;
-        
+
+#ifdef SPLIT_MASS        
+        PS::F64* pm[n_split][2];
         PS::F64 mfactor;
         PS::F64 mnormal=0.0;
+#endif
 
         for (int i=0; i<n_split; i++) {
             Tptcl* p[2];
@@ -1254,7 +1258,9 @@ private:
                 p[j]->id = id_offset + (bin.member[j]->id)*n_split + i;
                 p[j]->r_search = bin.member[j]->r_search;
                 p[j]->status = (bin.id<<ID_PHASE_SHIFT)|i;
+#ifdef SPLIT_MASS
                 pm[i][j] = &(p[j]->mass);
+#endif
             }
             // center_of_mass_shift(*(Tptcl*)&bin,p,2);
             OrbParam2PosVel(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass,
@@ -1272,18 +1278,24 @@ private:
                 p[0]->mass_bk = 0.0; // indicate the order
                 p[1]->mass_bk = 1.0;
             }
+#ifdef SPLIT_MASS
             PS::F64vec dvvec= p[0]->vel - p[1]->vel;
             PS::F64 odv = 1.0/std::sqrt(dvvec*dvvec);
             for(int j=0; j<2; j++) p[j]->mass *= odv;
                 //if(i==0) p[j]->mass /= 2.0*n_split;
                 //else p[j]->mass /= n_split;
             mnormal += odv;
+#else
+            for(int j=0; j<2; j++) p[j]->mass = 0;
+#endif
             center_of_mass_correction(*(Tptcl*)&bin,p,2);
         }
+#ifdef SPLIT_MASS
         mfactor = 1.0/mnormal;
         for (int i=0; i<n_split; i++) 
             for (int j=0; j<2; j++) 
                 *pm[i][j] *= mfactor;
+#endif
         //mfactor *= 0.5;
         //*pm[0][0] *= mfactor;
         //*pm[0][1] *= mfactor;

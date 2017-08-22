@@ -17,6 +17,7 @@
 
 struct params{
     double rin,rsearch,dt_tree;
+    int n_split;
 };
 
 PtclHard pshift(const PtclHard& a, const PtclHard& ref) {
@@ -115,7 +116,7 @@ int main(int argc, char** argv)
 
   int N;
   params par;
-  fs>>N>>par.rin>>par.rsearch>>par.dt_tree;
+  fs>>N>>par.rin>>par.rsearch>>par.dt_tree>>par.n_split;
   Ptcl::r_search_min = par.rsearch;
 
   PS::ReallocatableArray<PtclHard> p;
@@ -184,7 +185,7 @@ int main(int argc, char** argv)
   SearchGroup<PtclHard> group;
   print_p(p.getPointer(),N);
 
-  group.findGroups(p.getPointer(), N);
+  group.findGroups(p.getPointer(), N, par.n_split);
   group.resolveGroups();
 
   group.searchAndMerge(p.getPointer(), par.rin);
@@ -211,7 +212,7 @@ int main(int argc, char** argv)
   PS::ReallocatableArray<PtclHard> ptcl_new;
 
   //group.generateList(p, N, adr_group_glb, group_ptcl_glb, group_ptcl_glb_empty_list);
-  group.generateList(p.getPointer(), ptcl_new, par.rin, par.dt_tree,N);
+  group.generateList(p.getPointer(), ptcl_new, par.rin, par.dt_tree, N, par.n_split);
   std::cout<<"GenerateList\n";
   print_p(p.getPointer(),p.size());
   
@@ -227,7 +228,7 @@ int main(int argc, char** argv)
   p.reserveEmptyAreaAtLeast(ptcl_new.size());
   for(int i=0;i<ptcl_new.size();i++) p.pushBackNoCheck(ptcl_new[i]);
 
-  group.findGroups(p.getPointer(),p.size());
+  group.findGroups(p.getPointer(),p.size(), par.n_split);
 
   PS::ReallocatableArray<PtclHard> pn;
   PS::ReallocatableArray<PtclHard> pg;
@@ -252,7 +253,7 @@ int main(int argc, char** argv)
       //}
       pp.clearSize();
       for(int j=0;j<16;j++) {
-          pp.push_back(p[group.getGroupPertList(i)[j]]);
+          pp.push_back(p[group.getGroupPertList(i,par.n_split)[j]]);
       }
       std::cout<<"Pert force:"<<std::endl;
       print_p(pp.getPointer(),pp.size());
@@ -289,7 +290,7 @@ int main(int argc, char** argv)
   ptcl_new.clearSize();
 
   //group.generateList(p, N, adr_group_glb, group_ptcl_glb, group_ptcl_glb_empty_list);
-  group.generateList(p.getPointer(), ptcl_new, par.rin, par.dt_tree,N);
+  group.generateList(p.getPointer(), ptcl_new, par.rin, par.dt_tree,N,par.n_split);
   std::cout<<"GenerateList 2nd\n";
   print_p(p.getPointer(),p.size());
   
@@ -305,7 +306,7 @@ int main(int argc, char** argv)
   //p.reserveEmptyAreaAtLeast(ptcl_new.size());
   //for(int i=0;i<ptcl_new.size();i++) p.pushBackNoCheck(ptcl_new[i]);
 
-  group.findGroups(p.getPointer(),p.size());
+  group.findGroups(p.getPointer(),p.size(),par.n_split);
 
   pn.clearSize();
   pg.clearSize();
@@ -330,7 +331,7 @@ int main(int argc, char** argv)
       //}
       pp.clearSize();
       for(int j=0;j<16;j++) {
-          pp.push_back(p[group.getGroupPertList(i)[j]]);
+          pp.push_back(p[group.getGroupPertList(i,par.n_split)[j]]);
       }
       std::cout<<"Pert force:"<<std::endl;
       print_p(pp.getPointer(),pp.size());

@@ -1064,6 +1064,24 @@ public:
         rin  = in_.rin;
         eps2 = in_.eps2;
     }
+
+    void dump(const char* filename) {
+        std::FILE* pout = std::fopen(filename,"w");
+        if (pout==NULL) std::cerr<<"Error: filename "<<filename<<" cannot be open!\n";
+        else {
+            fwrite(this, sizeof(ARC_int_pars),1,pout);
+            fclose(pout);
+        }
+    }
+
+    void read(const char* filename) {
+        std::FILE* pin = std::fopen(filename,"r");
+        if (pin==NULL) std::cerr<<"Error: filename "<<filename<<" cannot be open!\n";
+        else {
+            fread(this, sizeof(ARC_int_pars),1,pin);
+            fclose(pin);
+        }
+    }
 };
 
 class ARC_pert_pars: public ARC_int_pars, public keplerSplineFit{
@@ -1230,6 +1248,13 @@ public:
         }
     }
 
+    void dump(ARChain* c, ARC_pert_pars* par) {
+        c->dump("ARC_dump.dat");
+        ARC_control_->dump("ARC_dump.control");
+        par->dump("ARC_dump.extpar");
+        c->print(std::cerr);
+    }
+
     void integrateOneStep(const PS::S32 ic,
                           const PS::F64 time_end,
                           const PS::F64 dt_limit) {
@@ -1253,11 +1278,9 @@ public:
             if (dsf<0) {
                 final_flag=true;
                 converge_count++;
-                if (converge_count>5&&time_end-c->getTime()>ARC_control_->dterr*100) {
+                if (converge_count>10&&time_end-c->getTime()>ARC_control_->dterr*100) {
                     std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c->getTime()<<"\nR_in: "<<Int_pars_->rin<<"\nR_out: "<<Int_pars_->rout<<"\n";
-                    c->dump("ARC_dump.dat");
-                    ARC_control_->dump("ARC_dump.par");
-                    c->print(std::cerr);
+                    dump(c,par);
                     abort();
                 }
                 else ds_use *= -dsf;
@@ -1267,9 +1290,7 @@ public:
                 error_count++;
                 if(error_count>4) {
                     std::cerr<<"Error: Too much error appear!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c->getTime()<<"\nR_in: "<<Int_pars_->rin<<"\nR_out: "<<Int_pars_->rout<<"\n";
-                    c->dump("ARC_dump.dat");
-                    ARC_control_->dump("ARC_dump.par");
-                    c->print(std::cerr);
+                    dump(c,par);
                     abort();
                 }
                 if (c->info->status==5) {
@@ -1282,11 +1303,9 @@ public:
             }
             else  {
                 if (final_flag) {
-                    if (converge_count>6&&time_end-c->getTime()>ARC_control_->dterr*100) {
+                    if (converge_count>10&&time_end-c->getTime()>ARC_control_->dterr*100) {
                         std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c->getTime()<<"\nR_in: "<<Int_pars_->rin<<"\nR_out: "<<Int_pars_->rout<<"\n";
-                        c->dump("ARC_dump.dat");
-                        ARC_control_->dump("ARC_dump.par");
-                        c->print(std::cerr);
+                        dump(c,par);
                         abort();
                     }
                     converge_count++;

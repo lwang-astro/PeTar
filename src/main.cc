@@ -130,7 +130,7 @@ int main(int argc, char *argv[]){
     int c;
     bool reading_flag=false;
 
-    while((c=getopt(argc,argv,"i:b:T:t:e:E:n:N:s:S:d:D:l:r:R:X:p:h")) != -1){
+    while((c=getopt(argc,argv,"ib:T:t:e:E:n:N:s:S:d:D:o:l:r:R:X:p:h")) != -1){
         switch(c){
         case 'i':
             reading_flag=true;
@@ -190,6 +190,11 @@ int main(int argc, char *argv[]){
             if(my_rank == 0) std::cerr<<dt_soft<<std::endl;
             assert(dt_soft.value>0.0);
             break;
+        case 'o':
+            dt_snp.value = atof(optarg);
+            if(my_rank == 0) std::cerr<<dt_snp<<std::endl;
+            assert(dt_snp.value>0.0);
+            break;
         case 'l':
             n_leaf_limit.value = atoi(optarg);
             if(my_rank == 0) std::cerr<<n_leaf_limit<<std::endl;
@@ -220,6 +225,24 @@ int main(int argc, char *argv[]){
             std::cerr<<"Usage: nbody.out [option] [filename]"<<std::endl;
             std::cerr<<"       Option defaulted values are shown\n"<<std::endl;
             std::cerr<<"  -i:     enable reading data file (default: disabled with Plummer model)"<<std::endl;
+            std::cerr<<"          File format:\n"
+                     <<"            First line: \n"
+                     <<"             1. File_ID: 0 for initialization, else for restarting\n"
+                     <<"             2. N_particle \n"
+                     <<"             3. N_offset: for naming special particle ID, should be > N_particle\n"
+                     <<"             4. Time\n"
+                     <<"            Following lines:\n"
+                     <<"             1. mass\n"
+                     <<"             2. position[3]\n"
+                     <<"             5. velocity[3]\n"
+                     <<"             8. r_search (0.0)\n"
+                     <<"             9. mass_backup (0.0)\n"
+                     <<"             10. ID (>0,unique)\n"
+                     <<"             11. status (0)\n"
+                     <<"             12. Acceleration[3] (0.0)\n"
+                     <<"             15. Potential (0.0)\n"
+                     <<"             16. N_neighbor (0)\n"
+                     <<"             (*) show initialization values which should be used together with FILE_ID = 0"<<std::endl;
             std::cerr<<"  -b: [F] "<<r_bin<<std::endl;
             std::cerr<<"  -T: [F] "<<theta<<std::endl;
             std::cerr<<"  -t: [F] "<<time_end<<std::endl;
@@ -230,6 +253,8 @@ int main(int argc, char *argv[]){
             std::cerr<<"  -s: [I] "<<n_smp_ave<<std::endl;
             std::cerr<<"  -S: [F] "<<search_factor<<std::endl;
             std::cerr<<"  -d: [F] "<<sd_factor<<std::endl;
+            std::cerr<<"  -D: [F] "<<dt_soft<<std::endl;
+            std::cerr<<"  -o: [F] "<<dt_snp<<std::endl;
             std::cerr<<"  -l: [I] "<<n_leaf_limit<<std::endl;
             std::cerr<<"  -r: [F] "<<ratio_r_cut<<std::endl;
             std::cerr<<"  -R: [F] "<<r_out<<std::endl;

@@ -53,7 +53,7 @@ void GetR(const Tpsys & system_soft,
     }
     //    r_search = r_out*(1.0 + search_factor);
     //PS::F64 dt_origin = 0.125*sqrt(r_out*r_out+r_in*r_in) / vel_disp;
-    if (dt!=0.0) {
+    if (dt==0.0) {
         PS::F64 dt_origin = 0.125*r_in / vel_disp;
         dt = 1.0;
         if (dt_origin<1) while (dt>dt_origin) dt *= 0.5;
