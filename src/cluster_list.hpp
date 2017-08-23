@@ -1284,23 +1284,24 @@ private:
 #ifdef TIDAL_TENSOR
             }
             else {
+                PS::F64 lscale = bin.ax*(1+bin.ecc)*0.35;
                 // 8 points box 
                 switch(i) {
                 case 0:
-                    p[0]->pos = PS::F64vec(bin.ax, 0,      -bin.ax) + bin.pos;
-                    p[1]->pos = PS::F64vec(0,      bin.ax, -bin.ax) + bin.pos;
+                    p[0]->pos = PS::F64vec(lscale, 0,      -lscale) + bin.pos;
+                    p[1]->pos = PS::F64vec(0,      lscale, -lscale) + bin.pos;
                     break;
                 case 1:
-                    p[0]->pos = PS::F64vec(-bin.ax, 0,      -bin.ax) + bin.pos;
-                    p[1]->pos = PS::F64vec(0,      -bin.ax, -bin.ax) + bin.pos;
+                    p[0]->pos = PS::F64vec(-lscale, 0,      -lscale) + bin.pos;
+                    p[1]->pos = PS::F64vec(0,      -lscale, -lscale) + bin.pos;
                     break;
                 case 2:
-                    p[0]->pos = PS::F64vec(bin.ax, 0,      bin.ax) + bin.pos;
-                    p[1]->pos = PS::F64vec(0,      bin.ax, bin.ax) + bin.pos;
+                    p[0]->pos = PS::F64vec(lscale, 0,      lscale) + bin.pos;
+                    p[1]->pos = PS::F64vec(0,      lscale, lscale) + bin.pos;
                     break;
                 case 3:
-                    p[0]->pos = PS::F64vec(-bin.ax, 0,      bin.ax) + bin.pos;
-                    p[1]->pos = PS::F64vec(0,      -bin.ax, bin.ax) + bin.pos;
+                    p[0]->pos = PS::F64vec(-lscale, 0,      lscale) + bin.pos;
+                    p[1]->pos = PS::F64vec(0,      -lscale, lscale) + bin.pos;
                     break;
                 default:
                     std::cerr<<"Error: index >= 4!\n";

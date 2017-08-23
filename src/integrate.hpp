@@ -32,7 +32,11 @@ void Kick(Tpsys & system,
         if(system[i].status==0||(system[i].id<0&&system[i].status>0)) // single and c.m.
 #endif
             system[i].vel  += system[i].acc * dt;
+#ifdef TIDAL_TENSOR
+        if(system[i].status>0)   // backup acceleration to velocity for fake members and c.m.
+#else
         if(system[i].status>0&&system[i].id>0)  // backup acceleration to velocity for fake members
+#endif
             system[i].vel = system[i].acc;
     }
 }
@@ -1054,7 +1058,7 @@ public:
                 +    0.062500000000000*fi[6][0] +  0.125000000000000*fi[6][2] +  0.062500000000000*fi[7][1] +  0.125000000000000*fi[7][2];
         }
         // Rescale
-        PS::F64 T2S = 1.0/bin.ax;
+        PS::F64 T2S = 1.0/(bin.ax*(1+bin.ecc)*0.175);
         PS::F64 T3S = T2S*T2S;
         for (PS::S32 i=0; i<6;  i++) T2[i] *= T2S;
         for (PS::S32 i=0; i<10; i++) T3[i] *= T3S;
