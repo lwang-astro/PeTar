@@ -83,16 +83,33 @@ public:
                 this->pot_tot, this->n_ngb);
     }
 
+    void writeBinary(FILE* fp) const{
+        Ptcl::writeBinary(fp);
+        fwrite(&(this->acc), sizeof(PS::F64), 4, fp);
+        fwrite(&(this->n_ngb), sizeof(PS::S32), 1, fp);
+    }
+
     void readAscii(FILE* fp) {
         Ptcl::readAscii(fp);
         PS::S64 rcount=fscanf(fp, "%lf %lf %lf %lf %d\n",
                               &this->acc.x, &this->acc.y, &this->acc.z,  // 9-11
                               &this->pot_tot, &this->n_ngb);
         if (rcount<5) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 8, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Data reading fails! requiring data number is 5, only obtain "<<rcount<<".\n";
             abort();
         }
     }
+
+    void readBinary(FILE* fp) {
+        Ptcl::readBinary(fp);
+        size_t rcount = fread(&(this->acc), sizeof(PS::F64), 4, fp);
+        rcount += fread(&(this->n_ngb), sizeof(PS::S32), 1, fp);
+        if (rcount<5) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 5, only obtain "<<rcount<<".\n";
+            abort();
+        }
+    }
+
     void dump(std::ofstream & fout){
         Ptcl::dump(fout);
         fout<<"adr= "<<adr<<std::endl;
@@ -216,12 +233,19 @@ public:
             <<"\nAngular Momentum: L = "<<L<<" |L| = "<<Lt
             <<std::endl;
     }
-    template<class Tsys>
-    void calc(const Tsys & sys,
-              const PS::F64 dt_soft,
-              bool clear_flag=true){
-        if(clear_flag) clear();
-        PS::S32 n = sys.getNumberOfParticleLocal();
+    void  writeAscii(FILE* fout) {
+        fprintf(fout, "%26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e ",
+                this->kin, this->pot, this->tot, this->L[0], this->L[1], this->L[2], this->Lt);
+    }
+    void writeBinary(FILE* fout) {
+        fwrite(&this->kin, sizeof(EnergyAndMomemtum), 1, fout);
+    }
+
+    template<class Tptcl>
+    void calc(const Tptcl* sys,
+              const PS::S32 n,
+              const PS::F64 dt_soft){
+        // PS::S32 n = sys.getNumberOfParticleLocal();
         PS::F64 pot_loc = 0.0;
         PS::F64 kin_loc = 0.0;
         PS::F64vec L_loc = PS::F64vec(0.0);
@@ -253,11 +277,41 @@ public:
             kin_loc += 0.5 * mi * vi * vi;
             L_loc += sys[i].pos ^ (mi*vi);
         }
-        this->kin += PS::Comm::getSum(kin_loc);
-        this->pot += PS::Comm::getSum(pot_loc);
-        this->L   += PS::Comm::getSum(L_loc);
+        this->kin += kin_loc;
+        this->pot += pot_loc;
+        this->L   += L_loc;
         this->Lt   = std::sqrt(L*L);
-        //        std::cerr<<"Pot diff="<<PS::Comm::getSum(pot_loc)-pot<<std::endl;
+        this->tot = this->kin + this->pot;
+    }
+
+    template<class Tptcl> 
+    void calc(const Tptcl* sys,
+              const PS::S32* p_list,
+              const PS::S32 n) {
+        PS::F64 pot_loc = 0.0;
+        PS::F64 kin_loc = 0.0;
+        PS::F64vec L_loc = PS::F64vec(0.0);
+        for(PS::S32 k=0; k<n; k++){
+            PS::S32 i = p_list[k];
+            PS::F64 mi = sys[i].mass;
+            PS::F64vec vi = sys[i].vel;
+            pot_loc += 0.5 * mi * sys[i].pot_tot;
+            kin_loc += 0.5 * mi * vi * vi;
+            L_loc += sys[i].pos ^ (mi*vi);
+        }
+        this->kin += kin_loc;
+        this->pot += pot_loc;
+        this->L   += L_loc;
+        this->Lt   = std::sqrt(L*L);
+        this->tot  = this->kin + this->pot;
+    }
+              
+
+    void getSumMultiNodes() {
+        this->kin = PS::Comm::getSum(this->kin);
+        this->pot = PS::Comm::getSum(this->pot);
+        this->L   = PS::Comm::getSum(this->L);
+        this->Lt  = std::sqrt(L*L);
         this->tot = this->kin + this->pot;
     }
 

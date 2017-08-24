@@ -125,8 +125,9 @@ private:
 #endif
 
 #ifdef HARD_CM_KICK
-        if(first_int_flag) softKickForCM(ptcl_org, group_.getPtclList(), group_.getNumOfGroups(),group_.getGroupPertList(0,n_split_),time_end*0.5, n_split_);
-        else softKickForCM(ptcl_org, group_.getPtclList(), group_.getNumOfGroups(),group_.getGroupPertList(0,n_split_),time_end, n_split_);
+        PS::F64 dt_soft = time_end;
+        if(first_int_flag) dt_soft *=0.5;
+        softKickForCM(ptcl_org, group_.getPtclList(), group_.getNumOfGroups(),group_.getGroupPertList(0,n_split_), dt_soft, n_split_);
 #endif
 
         if(group_.getPtclN()==1) {

@@ -69,6 +69,7 @@ CXXFLAGS += -D ARC_WARN
 CXXFLAGS += -D SAFETY_CHECK
 CXXFLAGS += -D HARD_DEBUG
 CXXFLAGS += -D HARD_DEBUG_PRINT
+CXXFLAGS += -D DATA_DEBUG
 #CXXFLAGS += -D FIX_STEP_DEBUG
 #CXXFLAGS += -D DEBUG
 #CXXFLAGS += -D DEBUG_TEMP
@@ -81,6 +82,9 @@ SRC = main.cc hard.hpp soft.hpp hard_force.hpp io.hpp kepler.hpp phantomquad_for
 all: nbody.out
 
 nbody.out: $(SRC)
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
+
+getdata: data.cc
 	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
 ARC_debug.out: chain_debug.cxx

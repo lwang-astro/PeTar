@@ -32,6 +32,10 @@ public:
                 this->vel.x, this->vel.y, this->vel.z);
     }
 
+    void writeBinary(FILE* fp) const{
+        fwrite(&(this->mass), sizeof(ParticleBase), 1, fp);
+    }
+
     //! for data read
     void readAscii(FILE* fp) {
         PS::S64 rcount=fscanf(fp, "%lf %lf %lf %lf %lf %lf %lf ",
@@ -40,6 +44,14 @@ public:
                               &this->vel.x, &this->vel.y, &this->vel.z);
         if(rcount<7) {
             std::cerr<<"Error: Data reading fails! requiring data number is 7, only obtain "<<rcount<<".\n";
+            abort();
+        }
+    }
+
+    void readBinary(FILE* fp) {
+        size_t rcount=fread(&(this->mass), sizeof(ParticleBase), 1, fp);
+        if(rcount<1) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
             abort();
         }
     }

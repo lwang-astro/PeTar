@@ -80,7 +80,11 @@ void softKickForCM(Tptcl * ptcl_org,
         PS::F64vec fi= PS::F64vec(0.0);
         const PS::S32* isoft = &soft_pert_list[i*offset];
         PS::F64 micum = 0.0;
+#ifdef TIDAL_TENSOR
+        for (PS::S32 j=8; j<2*n_split; j++) {
+#else
         for (PS::S32 j=0; j<2*n_split; j++) {
+#endif
             Tptcl* pj = &ptcl_org[isoft[j]];
             fi += pj->mass*pj->vel; // here pj->vel store the soft force of fake members
             micum += pj->mass;
@@ -93,6 +97,41 @@ void softKickForCM(Tptcl * ptcl_org,
 #endif
         pi->vel += fi/micum * dt_soft;
     }
+}
+
+template <class Tptcl>
+void softKickForOneGroup(Tptcl * ptcl_org,
+                         const PS::S32  i_cm,
+                         const PS::S32* group_list,
+                         const PS::S32  group_n,
+                         const PS::S32* soft_pert_list,
+                         const PS::F64  dt_soft,
+                         const PS::S32  n_split) {
+    Tptcl* pi = &ptcl_org[i_cm];
+    PS::F64vec fi= PS::F64vec(0.0);
+    PS::F64 micum = 0.0;
+#ifdef TIDAL_TENSOR
+    for (PS::S32 j=8; j<2*n_split; j++) {
+#else
+    for (PS::S32 j=0; j<2*n_split; j++) {
+#endif
+        Tptcl* pj = &ptcl_org[soft_pert_list[j]];
+        fi += pj->mass*pj->vel; // here pj->vel store the soft force of fake members
+        micum += pj->mass;
+#ifdef HARD_DEBUG
+        assert(((pj->status)>>ID_PHASE_SHIFT)==-pi->id);
+#endif
+    }
+    PS::F64vec vkick = fi/micum * dt_soft;
+
+#ifdef HARD_DEBUG
+    assert(abs(micum-pi->mass)<1e-10);
+#endif
+    for (PS::S32 i=0; i<group_n; i++) {
+        Tptcl* pk = &ptcl_org[group_list[i]];
+        pk->vel += vkick;
+    }
+    pi->vel += vkick;
 }
 
 class PtclH4: public Ptcl{

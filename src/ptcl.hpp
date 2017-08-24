@@ -57,12 +57,26 @@ public:
                 this->r_search, this->mass_bk, this->id, this->status);
     }
 
+    void writeBinary(FILE* fp) const{
+        ParticleBase::writeBinary(fp);
+        fwrite(&(this->r_search), sizeof(PS::F64), 4, fp);
+    }
+
     void readAscii(FILE* fp) {
         ParticleBase::readAscii(fp);
         PS::S64 rcount=fscanf(fp, "%lf %lf %lld %lld ",
                               &this->r_search, &this->mass_bk, &this->id, &this->status);
         if (rcount<4) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 8, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
+            abort();
+        }
+    }
+
+    void readBinary(FILE* fp) {
+        ParticleBase::readBinary(fp);
+        size_t rcount = fread(&(this->r_search), sizeof(PS::F64), 4, fp);
+        if (rcount<4) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
             abort();
         }
     }

@@ -50,20 +50,6 @@ typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::MonopoleWithSymmetryS
 #endif
 typedef PS::ParticleSystem<FPSoft> SystemSoft;
 
-template <class Type>
-struct params{
-    Type value;
-    const char* name;
-
-    params(const Type& _value, const char* _name): value(_value), name(_name) {}
-};
-
-template <class Type>
-std::ostream& operator <<(std::ostream& os, const params<Type>& par) {
-    os<<par.name<<": "<<par.value;
-    return os;
-}
-
 #ifdef MAIN_DEBUG
 // flag: 1: c.m; 2: individual; 
 template<class Teng, class Tsys>
@@ -103,25 +89,24 @@ int main(int argc, char *argv[]){
 	PS::S64 n_ptcl_hard_nonisolated_cluster = 0;
 
     // initial parameters
-    params<PS::F64> ratio_r_cut  (0.3,  "r_in / r_out");
-    params<PS::F64> theta        (0.4,  "openning angle theta");
-    params<PS::S32> n_leaf_limit (8,    "tree leaf number limit");
-    params<PS::S32> n_group_limit(64,   "tree group number limit");
-    params<PS::S32> n_smp_ave    (100,  "average target number of sample particles per process");
-    params<PS::S32> n_split      (8,    "number of binary sample points for tree perturbation force");
-    params<PS::F64> time_end     (100.0,"finishing time");
-    params<PS::F64> eta          (0.1,  "Hermite time step coefficient eta");
-    params<PS::S64> n_glb        (16384,"Total number of particles");
-    params<PS::F64> dt_soft      (0.0,  "Tree timestep (if not set, auto determined)");
-    params<PS::F64> dt_snp       (0.0625,"Output time interval of snapshot");
-    params<PS::F64> search_factor(1.0,  "neighbor searching coefficient");
-    params<PS::F64> dt_limit_hard_factor(4.0, "limit of tree time step/hard time step");
-    params<PS::F64> eps          (1e-8, "softerning eps");
-    params<PS::F64> r_out        (0.0,  "transit function outer boundary radius (if not set, auto determined)");
-    params<PS::F64> r_bin        (0.0,  "maximum binary radius criterion (if not set, auto determined)");
-    params<PS::F64> sd_factor    (1e-8, "Slowdown perturbation criterion");
-
-    // params<PS::F64> dt_soft      (0.0,  "tree time step");
+    IOParams<PS::F64> ratio_r_cut  (0.3,  "r_in / r_out");
+    IOParams<PS::F64> theta        (0.4,  "openning angle theta");
+    IOParams<PS::S32> n_leaf_limit (8,    "tree leaf number limit");
+    IOParams<PS::S32> n_group_limit(64,   "tree group number limit");
+    IOParams<PS::S32> n_smp_ave    (100,  "average target number of sample particles per process");
+    IOParams<PS::S32> n_split      (8,    "number of binary sample points for tree perturbation force");
+    IOParams<PS::F64> time_end     (100.0,"finishing time");
+    IOParams<PS::F64> eta          (0.1,  "Hermite time step coefficient eta");
+    IOParams<PS::S64> n_glb        (16384,"Total number of particles");
+    IOParams<PS::F64> dt_soft      (0.0,  "Tree timestep (if not set, auto determined)");
+    IOParams<PS::F64> dt_snp       (0.0625,"Output time interval of snapshot");
+    IOParams<PS::F64> search_factor(1.0,  "neighbor searching coefficient");
+    IOParams<PS::F64> dt_limit_hard_factor(4.0, "limit of tree time step/hard time step");
+    IOParams<PS::F64> eps          (1e-8, "softerning eps");
+    IOParams<PS::F64> r_out        (0.0,  "transit function outer boundary radius (if not set, auto determined)");
+    IOParams<PS::F64> r_bin        (0.0,  "maximum binary radius criterion (if not set, auto determined)");
+    IOParams<PS::F64> sd_factor    (1e-8, "Slowdown perturbation criterion");
+    IOParams<PS::S32> data_format   (1, "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0)");
 
     // PS::S32 n_bin;
     // PS::F64 g_min = 1e-6;
@@ -130,10 +115,13 @@ int main(int argc, char *argv[]){
     int c;
     bool reading_flag=false;
 
-    while((c=getopt(argc,argv,"ib:T:t:e:E:n:N:s:S:d:D:o:l:r:R:X:p:h")) != -1){
+    while((c=getopt(argc,argv,"i:b:T:t:e:E:n:N:s:S:d:D:o:l:r:R:X:p:h")) != -1){
         switch(c){
         case 'i':
             reading_flag=true;
+            data_format.value = atoi(optarg);
+            if(my_rank == 0) std::cerr<<data_format<<std::endl;
+            assert(data_format.value>=0||data_format.value<=3);
             break;
         case 'b':
             r_bin.value = atof(optarg);
@@ -224,8 +212,9 @@ int main(int argc, char *argv[]){
         case 'h':
             std::cerr<<"Usage: nbody.out [option] [filename]"<<std::endl;
             std::cerr<<"       Option defaulted values are shown\n"<<std::endl;
-            std::cerr<<"  -i:     enable reading data file (default: disabled with Plummer model)"<<std::endl;
-            std::cerr<<"          File format:\n"
+            std::cerr<<"  -i: [I] enable reading data file (default: disabled with Plummer model)"<<std::endl;
+            std::cerr<<"          "<<data_format<<std::endl;
+            std::cerr<<"          File content:\n"
                      <<"            First line: \n"
                      <<"             1. File_ID: 0 for initialization, else for restarting\n"
                      <<"             2. N_particle \n"
@@ -275,7 +264,10 @@ int main(int argc, char *argv[]){
     FileHeader file_header;
     if (reading_flag) {
       char* sinput=argv[argc-1];
-      system_soft.readParticleAscii(sinput, file_header);
+      if(data_format.value==1||data_format.value==2)
+          system_soft.readParticleAscii(sinput, file_header);
+      else
+          system_soft.readParticleBinary(sinput, file_header);
       time_sys = file_header.time;
       PS::Comm::broadcast(&time_sys, 1, 0);
       n_glb.value = system_soft.getNumberOfParticleGlobal();
@@ -290,6 +282,20 @@ int main(int argc, char *argv[]){
 
     PS::Comm::barrier();
 
+    // tree time step and n_split
+    if (restart_flag) {
+        if(dt_soft.value!=file_header.dt_soft) 
+            std::cerr<<"Warning: tree time step cannot be changed for restarting, the value from the data file ("<<file_header.dt_soft<<") will be used\n";
+        if(n_split.value!=file_header.n_split)
+            std::cerr<<"Warning: n_split cannot be changed for restarting, the value from the data file ("<<file_header.n_split<<") will be used\n";
+        dt_soft.value = file_header.dt_soft;
+        n_split.value = file_header.n_split;
+    }
+    else {
+        file_header.dt_soft = dt_soft.value;
+        file_header.n_split = n_split.value;        
+    }
+    
     PS::F64 r_in, m_average, v_disp, r_search_min;
     GetR(system_soft, r_in, r_out.value, r_search_min, m_average, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value);
 //    EPISoft::r_out = r_out;
@@ -301,7 +307,7 @@ int main(int argc, char *argv[]){
     r_bin.value = r_in;
 //    EPJSoft::r_search_min = r_out*search_factor;
 //    EPJSoft::m_average = m_average;
-
+  
     // ID safety check
     if (!restart_flag) {
         for (PS::S32 i=0; i<n_loc; i++) {
@@ -419,7 +425,9 @@ int main(int argc, char *argv[]){
 
     EnergyAndMomemtum eng_init, eng_now, eng_diff;
 
-    eng_init.calc(system_soft, 0.0, true);
+    eng_init.clear();
+    eng_init.calc(&system_soft[0], system_soft.getNumberOfParticleLocal(), 0.0);
+    eng_init.getSumMultiNodes();
 
     if(my_rank==0) eng_init.dump(std::cerr);
     eng_now = eng_init;
@@ -538,7 +546,9 @@ int main(int argc, char *argv[]){
         ////// 2nd kick
         ////////////////
 
-        eng_now.calc(system_soft, dt_soft.value*0.5,true);
+        eng_now.clear();
+        eng_now.calc(&system_soft[0], system_soft.getNumberOfParticleLocal(), dt_soft.value*0.5);
+        eng_now.getSumMultiNodes();
         
         profile.tot.end();
         /////////////
@@ -615,12 +625,16 @@ int main(int argc, char *argv[]){
                         <<std::endl;
             }
             
+            file_header.n_body = system_soft.getNumberOfParticleGlobal();
             file_header.time = time_sys;
             file_header.nfile++;
             char sout[99] = "data.";
             sprintf(&sout[5],"%lld",file_header.nfile);
 //            WriteFile<SystemSoft, FileHeader, FPSoft>(system_soft, sout, file_header);
-            system_soft.writeParticleAscii(sout, file_header);
+            if (data_format.value==1||data_format.value==3)
+                system_soft.writeParticleAscii(sout, file_header);
+            else
+                system_soft.writeParticleBinary(sout, file_header);
 
 //            if (n_bin>0) {
 //              char bout[99] = "bin.";
