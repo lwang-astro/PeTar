@@ -20,7 +20,7 @@ public:
         fprintf(fout, "%26.17e %lld ", this->Time, this->N);
         energy.writeAscii(fout);
         energy_error.writeAscii(fout);
-        fprintf(fout,"\n");
+//        fprintf(fout,"\n");
     }
     
     void writeBinary(FILE* fout) {
@@ -39,7 +39,7 @@ int main(int argc, char *argv[]){
     
     int c,optcount=0;
     bool reading_flag=false;
-    while((c=getopt(argc,argv,"i:p:h")) != -1) {
+    while((c=getopt(argc,argv,"i:f:g:h")) != -1) {
         switch(c){
         case 'i':
             data_format.value = atoi(optarg);
@@ -93,7 +93,7 @@ int main(int argc, char *argv[]){
     FILE* fin;
     FILE* gout;
 
-    if ( (gout = fopen(global_file_name.value.c_str(), "w+")) == NULL) {
+    if ( (gout = fopen(global_file_name.value.c_str(), "a+")) == NULL) {
        std::cerr<<"Error: Cannot open file "<<global_file_name.value<<std::endl;
        abort();
     }
@@ -143,11 +143,11 @@ int main(int argc, char *argv[]){
             softKickForOneGroup(particle_data.getPointer(), groups.getPtclIndex(i), groups.getGroup(i), groups.getGroupN(i), groups.getGroupPertList(i,file_header.n_split), 0.5*file_header.dt_soft, file_header.n_split);
         
         // Debug
-#ifdef DATA_DEBUG
-        for(int i=0; i<particle_data.size(); i++) {
-            particle_data[i].writeAscii(stdout);
-        }
-#endif
+//#ifdef DATA_DEBUG
+//        for(int i=0; i<particle_data.size(); i++) {
+//            particle_data[i].writeAscii(stdout);
+//        }
+//#endif
 
         // Check energy
         gnow.Time = file_header.time;
@@ -158,12 +158,38 @@ int main(int argc, char *argv[]){
             gnow.energy.calc(particle_data.getPointer(), groups.getGroup(i), groups.getGroupN(i));
         if (i==0)  g0 = gnow;
         else gnow.energy_error = gnow.energy - g0.energy;
+        gnow.energy_error.relative(g0.energy);
         
         if(data_format.value==0||data_format.value==2) {
             gnow.writeBinary(gout);
+#ifdef DATA_DEBUG
+            for(int i=0; i<groups.getNumOfGroups(); i++) {
+                const PS::S32* glist=groups.getGroup(i);
+                for(int j=0; j<groups.getGroupN(i); j++) {
+                    particle_data[glist[j]].ParticleBase::writeBinary(gout);
+                }
+            }
+            for(int i=groups.getNumOfGroups(); i<groups.getPtclN(); i++) {
+                particle_data[groups.getPtclIndex(i)].ParticleBase::writeBinary(gout);
+            }
+#endif
         }
         else {
             gnow.writeAscii(gout);
+#ifdef DATA_DEBUG
+            for(int i=0; i<gnow.N; i++) 
+                particle_data[i].ParticleBase::writeAscii(gout);
+//            for(int i=0; i<groups.getNumOfGroups(); i++) {
+//                const PS::S32* glist=groups.getGroup(i);
+//                for(int j=0; j<groups.getGroupN(i); j++) {
+//                    particle_data[glist[j]].ParticleBase::writeAscii(gout);
+//                }
+//            }
+//            for(int i=groups.getNumOfGroups(); i<groups.getPtclN(); i++) {
+//                particle_data[groups.getPtclIndex(i)].ParticleBase::writeAscii(gout);
+//            }
+#endif
+            fprintf(gout,"\n");
         }
         
     }

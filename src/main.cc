@@ -99,7 +99,7 @@ int main(int argc, char *argv[]){
     IOParams<PS::F64> eta          (0.1,  "Hermite time step coefficient eta");
     IOParams<PS::S64> n_glb        (16384,"Total number of particles");
     IOParams<PS::F64> dt_soft      (0.0,  "Tree timestep (if not set, auto determined)");
-    IOParams<PS::F64> dt_snp       (0.0625,"Output time interval of snapshot");
+    IOParams<PS::F64> dt_snp       (0.0625,"Output time interval of particle dataset");
     IOParams<PS::F64> search_factor(1.0,  "neighbor searching coefficient");
     IOParams<PS::F64> dt_limit_hard_factor(4.0, "limit of tree time step/hard time step");
     IOParams<PS::F64> eps          (1e-8, "softerning eps");
@@ -107,6 +107,7 @@ int main(int argc, char *argv[]){
     IOParams<PS::F64> r_bin        (0.0,  "maximum binary radius criterion (if not set, auto determined)");
     IOParams<PS::F64> sd_factor    (1e-8, "Slowdown perturbation criterion");
     IOParams<PS::S32> data_format   (1, "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0)");
+    IOParams<std::string> fname_snp    ("data","Prefix filename of dataset: [prefix].[File ID]");
 
     // PS::S32 n_bin;
     // PS::F64 g_min = 1e-6;
@@ -115,7 +116,7 @@ int main(int argc, char *argv[]){
     int c;
     bool reading_flag=false;
 
-    while((c=getopt(argc,argv,"i:b:T:t:e:E:n:N:s:S:d:D:o:l:r:R:X:p:h")) != -1){
+    while((c=getopt(argc,argv,"i:b:T:t:e:E:n:N:s:S:d:D:o:l:r:R:X:p:f:h")) != -1){
         switch(c){
         case 'i':
             reading_flag=true;
@@ -209,6 +210,10 @@ int main(int argc, char *argv[]){
             if(my_rank == 0) std::cerr<<n_split<<std::endl;
             assert(n_split.value>=8);
             break;
+        case 'f':
+            fname_snp.value = optarg;
+            if(my_rank == 0) std::cerr<<fname_snp<<std::endl;
+            break;
         case 'h':
             std::cerr<<"Usage: nbody.out [option] [filename]"<<std::endl;
             std::cerr<<"       Option defaulted values are shown\n"<<std::endl;
@@ -249,6 +254,7 @@ int main(int argc, char *argv[]){
             std::cerr<<"  -R: [F] "<<r_out<<std::endl;
             std::cerr<<"  -X: [F] "<<dt_limit_hard_factor<<std::endl;
             std::cerr<<"  -p: [I] "<<n_split<<std::endl;
+            std::cerr<<"  -f: [S] "<<fname_snp<<std::endl;
             PS::Finalize();
             return 0;
         }
@@ -421,6 +427,15 @@ int main(int argc, char *argv[]){
 
         search_cluster.searchNeighborAndCalcHardForceOMP<SystemSoft, Tree, EPJSoft>
             (system_soft, tree_soft, r_out.value, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
+
+        file_header.n_body = system_soft.getNumberOfParticleGlobal();
+        file_header.dt_soft= 0.0;
+        std::string fname = fname_snp.value+"."+std::to_string(file_header.nfile);
+        if (data_format.value==1||data_format.value==3)
+            system_soft.writeParticleAscii(fname.c_str(), file_header);
+        else
+            system_soft.writeParticleBinary(fname.c_str(), file_header);
+        file_header.dt_soft= dt_soft.value;
     }    
 
     EnergyAndMomemtum eng_init, eng_now, eng_diff;
@@ -431,6 +446,7 @@ int main(int argc, char *argv[]){
 
     if(my_rank==0) eng_init.dump(std::cerr);
     eng_now = eng_init;
+
 
 #ifdef MAIN_DEBUG
     FILE* fout;
@@ -628,13 +644,11 @@ int main(int argc, char *argv[]){
             file_header.n_body = system_soft.getNumberOfParticleGlobal();
             file_header.time = time_sys;
             file_header.nfile++;
-            char sout[99] = "data.";
-            sprintf(&sout[5],"%lld",file_header.nfile);
-//            WriteFile<SystemSoft, FileHeader, FPSoft>(system_soft, sout, file_header);
+            std::string fname = fname_snp.value+"."+std::to_string(file_header.nfile);
             if (data_format.value==1||data_format.value==3)
-                system_soft.writeParticleAscii(sout, file_header);
+                system_soft.writeParticleAscii(fname.c_str(), file_header);
             else
-                system_soft.writeParticleBinary(sout, file_header);
+                system_soft.writeParticleBinary(fname.c_str(), file_header);
 
 //            if (n_bin>0) {
 //              char bout[99] = "bin.";

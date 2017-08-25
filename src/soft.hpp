@@ -324,6 +324,14 @@ public:
         diff.Lt  = std::sqrt(diff.L*diff.L);
         return diff;
     }
+
+    void relative(const EnergyAndMomemtum& ref) {
+        this->kin /= ref.kin;
+        this->pot /= ref.pot;
+        this->tot /= ref.tot;
+        this->L   /= ref.Lt;
+        this->Lt  /= ref.Lt;
+    }
 };
 
 
