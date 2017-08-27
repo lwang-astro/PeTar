@@ -89,7 +89,7 @@ int main(int argc, char *argv[]){
 	PS::S64 n_ptcl_hard_nonisolated_cluster = 0;
 
     // initial parameters
-    IOParams<PS::F64> ratio_r_cut  (0.3,  "r_in / r_out");
+    IOParams<PS::F64> ratio_r_cut  (0.1,  "r_in / r_out");
     IOParams<PS::F64> theta        (0.4,  "openning angle theta");
     IOParams<PS::S32> n_leaf_limit (8,    "tree leaf number limit");
     IOParams<PS::S32> n_group_limit(64,   "tree group number limit");
