@@ -36,6 +36,7 @@ int main(int argc, char *argv[]){
     IOParams<PS::S32> data_format     (1, "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0)");
     IOParams<std::string> file_list   ("filelist", "reading filelist from file");
     IOParams<std::string> global_file_name ("global.dat", "global parameter data file name");
+    IOParams<PS::S32> snp_style       (1, "Output snapshot style: multiple systems are splitted to individual files (0); All data in one files (1)");
     
     int c,optcount=0;
     bool reading_flag=false;
@@ -58,12 +59,18 @@ int main(int argc, char *argv[]){
             std::cerr<<global_file_name<<std::endl;
             optcount +=2;
             break;
+        case 's':
+            snp_style.value = atoi(optarg);
+            std::cerr<<snp_style<<std::endl;
+            optcount +=2;
+            break;
         case 'h':
             std::cerr<<"Usage: getdata [option] file_list"<<std::endl;
             std::cerr<<"       Option defaulted values are shown\n"<<std::endl;
             std::cerr<<"  -i: [I] "<<data_format<<std::endl;
             std::cerr<<"  -f: [I] "<<file_list<<std::endl;
             std::cerr<<"  -g: [I] "<<global_file_name<<std::endl;
+            std::cerr<<"  -s: [I] "<<snp_style<<std::endl;
             return 0;
         }
     }
@@ -173,6 +180,73 @@ int main(int argc, char *argv[]){
                 particle_data[groups.getPtclIndex(i)].ParticleBase::writeBinary(gout);
             }
 #endif
+            if (snp_style.value==0) { // individual files
+                FILE *dout;
+                std::string new_file_name = "snp.M1."+std::to_string(file_header.nfile);
+                if ( (dout = fopen(new_file_name.c_str(),"w")) == NULL) {
+                    std::cerr<<"Error: Cannot open file "<<new_file_name<<std::endl;
+                    abort();
+                }
+                PS::S32 n_group_max = 0;
+                PS::S32 n_groups = groups.getNumOfGroups();
+                for(PS::S32 i=0; i<groups.getPtclN(); i++) {
+                    FPSoft &pi = particle_data[groups.getPtclIndex(i)];
+                    pi.Ptcl::writeBinary(dout);
+                    fwrite(&pi.pot_tot,sizeof(PS::F64),1,dout);
+                    if(i<n_groups && n_group_max<pi.status) n_group_max = pi.status;
+                }
+                fclose(dout);
+                
+                PS::ReallocatableArray<FILE*> mout;
+                mout.resizeNoInitialize(n_group_max);
+                for(PS::S32 i=2; i<=n_group_max; i++) {
+                    std::string new_file_name = "snp.M"+std::to_string(i)+"."+std::to_string(file_header.nfile);
+                    if ( (mout[i-2] = fopen(new_file_name.c_str(),"w")) == NULL) {
+                        std::cerr<<"Error: Cannot open file "<<new_file_name<<std::endl;
+                        abort();
+                    }
+                }
+                for(PS::S32 i=0; i<n_groups; i++) {
+                    const PS::S32 ni_group = groups.getGroupN(i);
+                    const PS::S32 fi = ni_group - 2;
+
+                    FPSoft &pi = particle_data[groups.getPtclIndex(i)];
+                    pi.Ptcl::writeBinary(mout[fi]);
+                    fwrite(&pi.pot_tot,sizeof(PS::F64),1,mout[fi]);
+
+                    const PS::S32* glist=groups.getGroup(i);
+                    for(PS::S32 j=0; j<ni_group; j++) {
+                        FPSoft &pj = particle_data[glist[j]];
+                        pj.Ptcl::writeBinary(mout[fi]);
+                        fwrite(&pj.pot_tot,sizeof(PS::F64),1,mout[fi]);
+                    }
+                }
+                for (PS::S32 i=0;i<n_group_max-1;i++) fclose(mout[i]);
+            }
+            else {
+                FILE *dout;
+                std::string new_file_name = "snp."+std::to_string(file_header.nfile);
+                if ( (dout = fopen(new_file_name.c_str(),"w")) == NULL) {
+                    std::cerr<<"Error: Cannot open file "<<new_file_name<<std::endl;
+                    abort();
+                }
+                for(int i=0; i<groups.getNumOfGroups(); i++) {
+                    const PS::S32* glist=groups.getGroup(i);
+                    for(int j=0; j<groups.getGroupN(i); j++) {
+                        FPSoft &pj = particle_data[glist[j]];
+                        pj.Ptcl::writeBinary(dout);
+                        fwrite(&pj.pot_tot,sizeof(PS::F64),1,dout);
+                    }
+                }
+                for(int i=groups.getNumOfGroups(); i<groups.getPtclN(); i++) {
+                    FPSoft &pi = particle_data[groups.getPtclIndex(i)];
+                    pi.Ptcl::writeBinary(dout);
+                    fwrite(&pi.pot_tot,sizeof(PS::F64),1,dout);
+                }
+
+                fclose(dout);
+            }
+            
         }
         else {
             gnow.writeAscii(gout);
@@ -190,6 +264,74 @@ int main(int argc, char *argv[]){
 //            }
 #endif
             fprintf(gout,"\n");
+            if (snp_style.value==0) { // individual files
+                FILE *dout;
+                std::string new_file_name = "snp.M1."+std::to_string(file_header.nfile);
+                if ( (dout = fopen(new_file_name.c_str(),"w")) == NULL) {
+                    std::cerr<<"Error: Cannot open file "<<new_file_name<<std::endl;
+                    abort();
+                }
+                PS::S32 n_group_max = 0;
+                PS::S32 n_groups = groups.getNumOfGroups();
+                for(PS::S32 i=0; i<groups.getPtclN(); i++) {
+                    FPSoft &pi = particle_data[groups.getPtclIndex(i)];
+                    pi.Ptcl::writeAscii(dout);
+                    fprintf(dout, "%26.17e\n", pi.pot_tot);
+                    if(i<n_groups && n_group_max<pi.status) n_group_max = pi.status;
+                }
+                fclose(dout);
+                
+                PS::ReallocatableArray<FILE*> mout;
+                mout.resizeNoInitialize(n_group_max);
+                for(PS::S32 i=2; i<=n_group_max; i++) {
+                    std::string new_file_name = "snp.M"+std::to_string(i)+"."+std::to_string(file_header.nfile);
+                    if ( (mout[i-2] = fopen(new_file_name.c_str(),"w")) == NULL) {
+                        std::cerr<<"Error: Cannot open file "<<new_file_name<<std::endl;
+                        abort();
+                    }
+                }
+                for(PS::S32 i=0; i<n_groups; i++) {
+                    const PS::S32 ni_group = groups.getGroupN(i);
+                    const PS::S32 fi = ni_group - 2;
+
+                    FPSoft &pi = particle_data[groups.getPtclIndex(i)];
+                    pi.Ptcl::writeAscii(mout[fi]);
+                    fprintf(mout[fi], "%26.17e ", pi.pot_tot);
+
+                    const PS::S32* glist=groups.getGroup(i);
+                    for(PS::S32 j=0; j<ni_group; j++) {
+                        FPSoft &pj = particle_data[glist[j]];
+                        pj.Ptcl::writeAscii(mout[fi]);
+                        fprintf(mout[fi], "%26.17e ", pj.pot_tot);
+                    }
+                    fprintf(mout[i],"\n");
+                }
+                for (PS::S32 i=0;i<n_group_max-1;i++) fclose(mout[i]);
+            }
+            else {
+                FILE *dout;
+                std::string new_file_name = "snp."+std::to_string(file_header.nfile);
+                if ( (dout = fopen(new_file_name.c_str(),"w")) == NULL) {
+                    std::cerr<<"Error: Cannot open file "<<new_file_name<<std::endl;
+                    abort();
+                }
+                for(int i=0; i<groups.getNumOfGroups(); i++) {
+                    const PS::S32* glist=groups.getGroup(i);
+                    for(int j=0; j<groups.getGroupN(i); j++) {
+                        FPSoft &pj = particle_data[glist[j]];
+                        pj.Ptcl::writeAscii(dout);
+                        fprintf(dout, "%26.17e\n", pj.pot_tot);
+                    }
+                }
+                for(int i=groups.getNumOfGroups(); i<groups.getPtclN(); i++) {
+                    FPSoft &pi = particle_data[groups.getPtclIndex(i)];
+                    pi.Ptcl::writeAscii(dout);
+                    fprintf(dout, "%26.17e\n", pi.pot_tot);
+                }
+
+                fclose(dout);
+            }
+            
         }
         
     }

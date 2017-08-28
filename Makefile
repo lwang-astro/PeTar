@@ -46,11 +46,11 @@ CXXFLAGS += -Wall
 CXXFLAGS += -march=core-avx2
 CXXFLAGS += -ffast-math -funroll-loops
 CXXFLAGS += -std=c++11
-CXXFLAGS += ${shell gsl-config --cflags}
+#CXXFLAGS += ${shell gsl-config --cflags}
 CXXFLAGS += -DMPICH_IGNORE_CXX_SEEK
 #CXXFLAGS += -DINTRINSIC_X86
 #CXXFLAGS += -DUSE_GNU_PARALLEL_SORT
-CXXLIBS += ${shell gsl-config --libs}
+#CXXLIBS += ${shell gsl-config --libs}
 endif
 
 CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -fopenmp
@@ -68,7 +68,7 @@ CXXFLAGS += -D ARC_ERROR
 CXXFLAGS += -D ARC_WARN
 CXXFLAGS += -D SAFETY_CHECK
 CXXFLAGS += -D HARD_DEBUG
-CXXFLAGS += -D HARD_DEBUG_PRINT
+#CXXFLAGS += -D HARD_DEBUG_PRINT
 CXXFLAGS += -D DATA_DEBUG
 #CXXFLAGS += -D FIX_STEP_DEBUG
 #CXXFLAGS += -D DEBUG

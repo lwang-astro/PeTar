@@ -1,7 +1,9 @@
 #pragma once
 
+#ifndef TIDAL_TENSOR
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_spline.h>
+#endif
 #include "kepler.hpp"
 #include "hard_force.hpp"
 #include "AR.h" /// include AR.h (L.Wang)
