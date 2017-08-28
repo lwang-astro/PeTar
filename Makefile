@@ -5,6 +5,7 @@
 #PS_PATH = -I../../../../project/fdps/src
 #PS_PATH = -I../FDPS/src
 PS_PATH  = -I/home/lwang/code/fdps/src
+#ARC_PATH = -I/home/lwang/code/ARC/include
 ARC_PATH = -I/home/lwang/GitHub/ARC/include
 
 #ROOT_PATH= ${shell pwd -P}

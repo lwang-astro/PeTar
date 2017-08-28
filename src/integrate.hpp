@@ -4,6 +4,7 @@
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_spline.h>
 #endif
+#include <map>
 #include "kepler.hpp"
 #include "hard_force.hpp"
 #include "AR.h" /// include AR.h (L.Wang)

@@ -427,7 +427,8 @@ void keplerTreeGenerator(PtclTree<Tptcl> bins[],   // make sure bins.size = n_me
     calcMinDisList(member_list,r2_list, n_members, ptcl_org);
     if(n_members>2) std::sort(r2_list, r2_list+n_members-1, pairLess);
 
-    PtclTree<Tptcl>* bin_host[n_members]={NULL};
+    PtclTree<Tptcl>* bin_host[n_members];
+    for(auto &p : bin_host) p=NULL;
     
     for(int i=0; i<n_members-1; i++) {
         PS::S32 k = r2_list[i].second;
