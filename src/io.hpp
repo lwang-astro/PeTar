@@ -9,13 +9,19 @@ template <class Type>
 struct IOParams{
     Type value;
     const char* name;
+    const char* defaulted;
 
-    IOParams(const Type& _value, const char* _name): value(_value), name(_name) {}
+    IOParams(const Type& _value, const char* _name, const char* _defaulted=NULL): value(_value), name(_name), defaulted(_defaulted)  {}
+
+    void print(std::ostream& os) const{
+        os<<name<<": "<<value<<std::endl;
+    }
 };
 
 template <class Type>
 std::ostream& operator <<(std::ostream& os, const IOParams<Type>& par) {
-    os<<par.name<<": "<<par.value;
+    if (par.defaulted!=NULL) os<<par.name<<": "<<par.defaulted;
+    else os<<par.name<<": "<<par.value;
     return os;
 }
 

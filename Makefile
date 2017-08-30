@@ -5,8 +5,8 @@
 #PS_PATH = -I../../../../project/fdps/src
 #PS_PATH = -I../FDPS/src
 PS_PATH  = -I/home/lwang/code/fdps/src
-#ARC_PATH = -I/home/lwang/code/ARC/include
-ARC_PATH = -I/home/lwang/GitHub/ARC/include
+ARC_PATH = -I/home/lwang/code/ARC/include
+#ARC_PATH = -I/home/lwang/GitHub/ARC/include
 
 #ROOT_PATH= ${shell pwd -P}
 INCLUDE  = -I./src -I../src
@@ -42,7 +42,8 @@ endif
 
 ifeq ($(use_x86),yes)
 CXX = time mpicxx
-CXXFLAGS = -g
+#CXXFLAGS = -g
+CXXFLAGS += -O2
 CXXFLAGS += -Wall
 CXXFLAGS += -march=core-avx2
 CXXFLAGS += -ffast-math -funroll-loops
@@ -64,17 +65,17 @@ CXXFLAGS += -D TIDAL_TENSOR # Must use HARD_CM_KICK together
 CXXFLAGS += -D SOFT_PERT
 CXXFLAGS += -D SPLIT_MASS
 
-CXXFLAGS += -D ARC_DEBUG
-CXXFLAGS += -D ARC_ERROR
-CXXFLAGS += -D ARC_WARN
-CXXFLAGS += -D SAFETY_CHECK
-CXXFLAGS += -D HARD_DEBUG
+#CXXFLAGS += -D ARC_DEBUG
+#CXXFLAGS += -D ARC_ERROR
+#CXXFLAGS += -D ARC_WARN
+#CXXFLAGS += -D SAFETY_CHECK
+#CXXFLAGS += -D HARD_DEBUG
 #CXXFLAGS += -D HARD_DEBUG_PRINT
-CXXFLAGS += -D DATA_DEBUG
+#CXXFLAGS += -D DATA_DEBUG
 #CXXFLAGS += -D FIX_STEP_DEBUG
 #CXXFLAGS += -D DEBUG
 #CXXFLAGS += -D DEBUG_TEMP
-CXXFLAGS += -D MAIN_DEBUG
+#CXXFLAGS += -D MAIN_DEBUG
 
 VPATH=./src ./test ../src
 

@@ -6,6 +6,7 @@ template<class Tpsys>
 void GetR(const Tpsys & system_soft,
           PS::F64 &r_in,
           PS::F64 &r_out,
+          PS::F64 &r_bin,
           PS::F64 &r_search_min,
           PS::F64 &m_average,
           PS::F64 &dt,
@@ -51,10 +52,12 @@ void GetR(const Tpsys & system_soft,
         // r_out = r_in * pow(mmax/average_mass_glb/gmin,1.0/7.0);
         r_in = r_out * ratio_r_cut;
     }
-    //    r_search = r_out*(1.0 + search_factor);
-    //PS::F64 dt_origin = 0.125*sqrt(r_out*r_out+r_in*r_in) / vel_disp;
+    
+    if (r_bin==0.0) r_bin = 0.1*r_in;
+
     if (dt==0.0) {
-        PS::F64 dt_origin = 0.125*r_out / vel_disp;
+        //PS::F64 dt_origin = 0.125*sqrt(r_out*r_out+r_in*r_in) / vel_disp;
+        PS::F64 dt_origin = 0.1*r_in / vel_disp;
         dt = 1.0;
         if (dt_origin<1) while (dt>dt_origin) dt *= 0.5;
         else {

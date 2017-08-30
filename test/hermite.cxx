@@ -75,7 +75,7 @@ int main(int argc, char** argv)
     PS::F64 time_end;
     params par;
 
-    Energy E0,E1;
+    EnergyAndMomemtum E0,E1;
 
     fs>>time_end>>N>>par.rin>>par.rout>>par.rsearch>>par.rbin>>par.dt_limit_hard>>par.eta>>par.eps;
 
@@ -93,7 +93,7 @@ int main(int argc, char** argv)
         p[i].r_search = par.rsearch;
       
         if (fs.eof()) {
-            std::cerr<<"Error: data file reach end when reading pairs (current loaded pair number is "<<i<<"; required pair number "<<N-1<<std::endl;
+            std::cerr<<"Error: data file reach end when reading pairs (current loaded pair number is "<<i<<"; required pair number "<<N<<std::endl;
             abort();
         }
     }    
@@ -104,7 +104,7 @@ int main(int argc, char** argv)
 
     SearchGroup<PtclHard> group;
             
-    group.findGroups(p.getPointer(), N);
+    group.findGroups(p.getPointer(), N, 8);
     
     HermiteIntegrator<PtclHard> Hint;
     Hint.setParams(par.dt_limit_hard, par.eta, par.rin, par.rout, par.eps*par.eps);
@@ -139,7 +139,7 @@ int main(int argc, char** argv)
     }
     
     PS::F64 time_pre=0.0;
-    Energy Edif = E0.calcDiff(E0);
+    EnergyAndMomemtum Edif;
     PtclH4 pcm0,pcm1;
     calc_center_of_mass(pcm0, Hint.getPtcl(), Hint.getPtclN());
     write_p(fout,time_sys,E0,Edif,Hint.getPtcl(),Hint.getPtclN());
@@ -157,7 +157,7 @@ int main(int argc, char** argv)
         if(fmod(time_sys,par.dt_limit_hard)==0) {
             //std::cout<<"Time = "<<time_sys<<std::endl;
             Hint.CalcEnergy(E1);
-            Edif = E1.calcDiff(E0);
+            Edif = E1-E0;
             calc_center_of_mass(pcm1, Hint.getPtcl(), Hint.getPtclN());
             write_p(fout,time_sys,E1,Edif,Hint.getPtcl(),Hint.getPtclN());
             std::cerr<<"CM: pos="<<pcm1.pos<<" vel="<<pcm1.vel<<" shift pos="<<pcm1.pos-pcm0.pos<<" shift vel="<<pcm1.vel-pcm0.vel<<std::endl;
@@ -168,7 +168,7 @@ int main(int argc, char** argv)
     
     Hint.CalcEnergy(E1);
 
-    Energy Ediff = E1.calcDiff(E0);
+    EnergyAndMomemtum Ediff = E1-E0;
     
     std::cerr<<"final: ";
     E1.dump(std::cerr);

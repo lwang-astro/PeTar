@@ -90,24 +90,24 @@ int main(int argc, char *argv[]){
 
     // initial parameters
     IOParams<PS::F64> ratio_r_cut  (0.1,  "r_in / r_out");
-    IOParams<PS::F64> theta        (0.4,  "openning angle theta");
+    IOParams<PS::F64> theta        (0.3,  "openning angle theta");
     IOParams<PS::S32> n_leaf_limit (8,    "tree leaf number limit");
     IOParams<PS::S32> n_group_limit(64,   "tree group number limit");
     IOParams<PS::S32> n_smp_ave    (100,  "average target number of sample particles per process");
     IOParams<PS::S32> n_split      (8,    "number of binary sample points for tree perturbation force");
-    IOParams<PS::F64> time_end     (100.0,"finishing time");
+    IOParams<PS::F64> time_end     (10.0, "finishing time");
     IOParams<PS::F64> eta          (0.1,  "Hermite time step coefficient eta");
     IOParams<PS::S64> n_glb        (16384,"Total number of particles");
-    IOParams<PS::F64> dt_soft      (0.0,  "Tree timestep (if not set, auto determined)");
+    IOParams<PS::F64> dt_soft      (0.0,  "Tree timestep","0.1*r_in/sigma");
     IOParams<PS::F64> dt_snp       (0.0625,"Output time interval of particle dataset");
     IOParams<PS::F64> search_factor(1.0,  "neighbor searching coefficient");
     IOParams<PS::F64> dt_limit_hard_factor(4.0, "limit of tree time step/hard time step");
-    IOParams<PS::F64> eps          (1e-8, "softerning eps");
-    IOParams<PS::F64> r_out        (0.0,  "transit function outer boundary radius (if not set, auto determined)");
-    IOParams<PS::F64> r_bin        (0.0,  "maximum binary radius criterion (if not set, auto determined)");
+    IOParams<PS::F64> eps          (0.0,  "softerning eps");
+    IOParams<PS::F64> r_out        (0.0,  "transit function outer boundary radius", "3.0*<m>/sigma^2");
+    IOParams<PS::F64> r_bin        (0.0,  "maximum binary radius criterion", "0.1*r_in");
     IOParams<PS::F64> sd_factor    (1e-8, "Slowdown perturbation criterion");
-    IOParams<PS::S32> data_format   (1, "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0)");
-    IOParams<std::string> fname_snp    ("data","Prefix filename of dataset: [prefix].[File ID]");
+    IOParams<PS::S32> data_format  (1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A)","r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0)");
+    IOParams<std::string> fname_snp("data","Prefix filename of dataset: [prefix].[File ID]");
 
     // PS::S32 n_bin;
     // PS::F64 g_min = 1e-6;
@@ -121,103 +121,103 @@ int main(int argc, char *argv[]){
         case 'i':
             reading_flag=true;
             data_format.value = atoi(optarg);
-            if(my_rank == 0) std::cerr<<data_format<<std::endl;
+            if(my_rank == 0) data_format.print(std::cerr);
             assert(data_format.value>=0||data_format.value<=3);
             break;
         case 'b':
             r_bin.value = atof(optarg);
-            if(my_rank == 0) std::cerr<<r_bin<<std::endl;
+            if(my_rank == 0) r_bin.print(std::cerr);
             assert(r_bin.value>0.0);
             break;
         case 'T':
             theta.value = atof(optarg);
-            if(my_rank == 0) std::cerr<<theta<<std::endl;
+            if(my_rank == 0) theta.print(std::cerr);
             assert(theta.value>=0.0);
             break;
         case 't':
             time_end.value = atof(optarg);
-            if(my_rank == 0) std::cerr<<time_end<<std::endl;
+            if(my_rank == 0) time_end.print(std::cerr);
             assert(time_end.value>=0.0);
             break;
         case 'e':
             eps.value = atof(optarg);
-            if(my_rank == 0) std::cerr<<eps<<std::endl;
+            if(my_rank == 0) eps.print(std::cerr);
             assert(eps.value>=0.0);
             break;
         case 'E':
             eta.value = atof(optarg);
-            if(my_rank == 0) std::cerr<<eta<<std::endl;
+            if(my_rank == 0) eta.print(std::cerr);
             assert(eta.value>0.0);
             break;
         case 'n':
             n_group_limit.value = atoi(optarg);
-            if(my_rank == 0) std::cerr<<n_group_limit<<std::endl;
+            if(my_rank == 0) n_group_limit.print(std::cerr);
             assert(n_group_limit.value>0);
             break;
         case 'N':
             n_glb.value = atol(optarg);
-            if(my_rank == 0) std::cerr<<n_glb<<std::endl;
+            if(my_rank == 0) n_glb.print(std::cerr);
             assert(n_glb.value>0);
             break;
         case 's':
             n_smp_ave.value = atoi(optarg);
-            if(my_rank == 0) std::cerr<<n_smp_ave<<std::endl;
+            if(my_rank == 0) n_smp_ave.print(std::cerr);
             assert(n_smp_ave.value>0.0);
             break;
         case 'S':
             search_factor.value = atof(optarg);
-            if(my_rank == 0) std::cerr<<search_factor<<std::endl;
+            if(my_rank == 0) search_factor.print(std::cerr);
             assert(search_factor.value>0.0);
             break;
         case 'd':
             sd_factor.value = atof(optarg);
-            if(my_rank == 0) std::cerr<<sd_factor<<std::endl;
+            if(my_rank == 0) sd_factor.print(std::cerr);
             assert(sd_factor.value>0.0);
             break;
         case 'D':
             dt_soft.value = atof(optarg);
-            if(my_rank == 0) std::cerr<<dt_soft<<std::endl;
+            if(my_rank == 0) dt_soft.print(std::cerr);
             assert(dt_soft.value>0.0);
             break;
         case 'o':
             dt_snp.value = atof(optarg);
-            if(my_rank == 0) std::cerr<<dt_snp<<std::endl;
+            if(my_rank == 0) dt_snp.print(std::cerr);
             assert(dt_snp.value>0.0);
             break;
         case 'l':
             n_leaf_limit.value = atoi(optarg);
-            if(my_rank == 0) std::cerr<<n_leaf_limit<<std::endl;
+            if(my_rank == 0) n_leaf_limit.print(std::cerr);
             assert(n_leaf_limit.value>0);
             break;
         case 'r':
             ratio_r_cut.value = atof(optarg);
-            if(my_rank == 0) std::cerr<<ratio_r_cut<<std::endl;
+            if(my_rank == 0) ratio_r_cut.print(std::cerr);
             assert(ratio_r_cut.value>0.0);
             assert(ratio_r_cut.value<1.0);
             break;
         case 'R':
             r_out.value = atof(optarg);
-            if(my_rank == 0) std::cerr<<r_out<<std::endl;
+            if(my_rank == 0) r_out.print(std::cerr);
             assert(r_out.value>0.0);
             break;
         case 'X':
             dt_limit_hard_factor.value = atof(optarg);
-            if(my_rank == 0) std::cerr<<dt_limit_hard_factor<<std::endl;
+            if(my_rank == 0) dt_limit_hard_factor.print(std::cerr);
             assert(dt_limit_hard_factor.value > 0.0);
             break;
         case 'p':
             n_split.value = atoi(optarg);
-            if(my_rank == 0) std::cerr<<n_split<<std::endl;
+            if(my_rank == 0) n_split.print(std::cerr);
             assert(n_split.value>=8);
             break;
         case 'f':
             fname_snp.value = optarg;
-            if(my_rank == 0) std::cerr<<fname_snp<<std::endl;
+            if(my_rank == 0) fname_snp.print(std::cerr);
             break;
         case 'h':
             std::cerr<<"Usage: nbody.out [option] [filename]"<<std::endl;
-            std::cerr<<"       Option defaulted values are shown\n"<<std::endl;
-            std::cerr<<"  -i: [I] enable reading data file (default: disabled with Plummer model)"<<std::endl;
+            std::cerr<<"       Option defaulted values are shown after ':'\n"<<std::endl;
+            std::cerr<<"  -i: [I] enable reading data file: disabled with Plummer model"<<std::endl;
             std::cerr<<"          "<<data_format<<std::endl;
             std::cerr<<"          File content:\n"
                      <<"            First line: \n"
@@ -255,6 +255,10 @@ int main(int argc, char *argv[]){
             std::cerr<<"  -X: [F] "<<dt_limit_hard_factor<<std::endl;
             std::cerr<<"  -p: [I] "<<n_split<<std::endl;
             std::cerr<<"  -f: [S] "<<fname_snp<<std::endl;
+            std::cerr<<"*** PS: r_in : transit function inner boundary radius\n"
+                     <<"        r_out: transit function outer boundary radius\n"
+                     <<"        sigma: half-mass radius velocity dispersion\n"
+                     <<"        <m>  : averaged mass"<<std::endl;
             PS::Finalize();
             return 0;
         }
@@ -303,14 +307,13 @@ int main(int argc, char *argv[]){
     }
     
     PS::F64 r_in, m_average, v_disp, r_search_min;
-    GetR(system_soft, r_in, r_out.value, r_search_min, m_average, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value);
+    GetR(system_soft, r_in, r_out.value, r_bin.value, r_search_min, m_average, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value);
 //    EPISoft::r_out = r_out;
 //    EPISoft::r_in  = r_in;
     EPISoft::eps   = eps.value;
     EPISoft::r_out = EPJSoft::r_out = FPSoft::r_out = r_out.value;
     Ptcl::search_factor = search_factor.value;
     Ptcl::r_search_min = r_search_min;
-    r_bin.value = r_in;
 //    EPJSoft::r_search_min = r_out*search_factor;
 //    EPJSoft::m_average = m_average;
   

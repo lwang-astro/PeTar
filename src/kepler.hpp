@@ -392,7 +392,7 @@ void calcMinDisList(PS::S32 member_list[],
                     Tptcl* ptcl_org) {
     for (int i=0; i<n-1; i++) {
         PS::S32 k = member_list[i];
-        PS::S32 jc;
+        PS::S32 jc=-1;
         PS::F64 r2min = PS::LARGE_FLOAT;
         for(int j=i+1; j<n; j++) {
             PS::F64vec dr = ptcl_org[k].pos - ptcl_org[member_list[j]].pos;
@@ -402,6 +402,9 @@ void calcMinDisList(PS::S32 member_list[],
                 jc = j;
             }
         }
+#ifdef HARD_DEBUG
+        assert(jc>=0);
+#endif
         if (jc!=i+1) {
             PS::S32 jtmp = member_list[i+1];
             member_list[i+1] = member_list[jc];

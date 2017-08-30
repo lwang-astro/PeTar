@@ -44,24 +44,24 @@ int main(int argc, char *argv[]){
         switch(c){
         case 'i':
             data_format.value = atoi(optarg);
-            std::cerr<<data_format<<std::endl;
+            data_format.print(std::cerr);
             assert(data_format.value>=0||data_format.value<=3);
             optcount +=2;
             break;
         case 'f':
             reading_flag=true;
             file_list.value=optarg;
-            std::cerr<<file_list<<std::endl;
+            file_list.print(std::cerr);
             optcount +=2;
             break;
         case 'g':
             global_file_name.value=optarg;
-            std::cerr<<global_file_name<<std::endl;
+            global_file_name.print(std::cerr);
             optcount +=2;
             break;
         case 's':
             snp_style.value = atoi(optarg);
-            std::cerr<<snp_style<<std::endl;
+            snp_style.print(std::cerr);
             optcount +=2;
             break;
         case 'h':
