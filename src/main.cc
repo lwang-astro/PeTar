@@ -95,6 +95,7 @@ int main(int argc, char *argv[]){
     IOParams<PS::S32> n_group_limit(64,   "tree group number limit");
     IOParams<PS::S32> n_smp_ave    (100,  "average target number of sample particles per process");
     IOParams<PS::S32> n_split      (8,    "number of binary sample points for tree perturbation force");
+    IOParams<PS::S64> n_bin        (0,    "number of primordial binaries (assume binaries ID=1,2*n_bin)");
     IOParams<PS::F64> time_end     (10.0, "finishing time");
     IOParams<PS::F64> eta          (0.1,  "Hermite time step coefficient eta");
     IOParams<PS::S64> n_glb        (16384,"Total number of particles");
@@ -109,14 +110,13 @@ int main(int argc, char *argv[]){
     IOParams<PS::S32> data_format  (1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A)","r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0)");
     IOParams<std::string> fname_snp("data","Prefix filename of dataset: [prefix].[File ID]");
 
-    // PS::S32 n_bin;
     // PS::F64 g_min = 1e-6;
 
     // reading parameters
     int c;
     bool reading_flag=false;
 
-    while((c=getopt(argc,argv,"i:b:T:t:e:E:n:N:s:S:d:D:o:l:r:R:X:p:f:h")) != -1){
+    while((c=getopt(argc,argv,"i:b:B:T:t:e:E:n:N:s:S:d:D:o:l:r:R:X:p:f:h")) != -1){
         switch(c){
         case 'i':
             reading_flag=true;
@@ -128,6 +128,11 @@ int main(int argc, char *argv[]){
             r_bin.value = atof(optarg);
             if(my_rank == 0) r_bin.print(std::cerr);
             assert(r_bin.value>0.0);
+            break;
+        case 'B':
+            n_bin.value = atoi(optarg);
+            if(my_rank == 0) n_bin.print(std::cerr);
+            assert(n_bin.value>=0);
             break;
         case 'T':
             theta.value = atof(optarg);
@@ -238,6 +243,7 @@ int main(int argc, char *argv[]){
                      <<"             16. N_neighbor (0)\n"
                      <<"             (*) show initialization values which should be used together with FILE_ID = 0"<<std::endl;
             std::cerr<<"  -b: [F] "<<r_bin<<std::endl;
+            std::cerr<<"  -B: [I] "<<n_bin<<std::endl;
             std::cerr<<"  -T: [F] "<<theta<<std::endl;
             std::cerr<<"  -t: [F] "<<time_end<<std::endl;
             std::cerr<<"  -e: [F] "<<eps<<std::endl;
@@ -258,6 +264,7 @@ int main(int argc, char *argv[]){
             std::cerr<<"*** PS: r_in : transit function inner boundary radius\n"
                      <<"        r_out: transit function outer boundary radius\n"
                      <<"        sigma: half-mass radius velocity dispersion\n"
+                     <<"        n_bin: number of primordial binaries\n"
                      <<"        <m>  : averaged mass"<<std::endl;
             PS::Finalize();
             return 0;
@@ -307,7 +314,7 @@ int main(int argc, char *argv[]){
     }
     
     PS::F64 r_in, m_average, v_disp, r_search_min;
-    GetR(system_soft, r_in, r_out.value, r_bin.value, r_search_min, m_average, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value);
+    GetR(system_soft, r_in, r_out.value, r_bin.value, r_search_min, m_average, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value, n_bin.value);
 //    EPISoft::r_out = r_out;
 //    EPISoft::r_in  = r_in;
     EPISoft::eps   = eps.value;

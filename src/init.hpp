@@ -12,13 +12,15 @@ void GetR(const Tpsys & system_soft,
           PS::F64 &dt,
           PS::F64 &vel_disp,
           const PS::F64 search_factor,
-          const PS::F64 ratio_r_cut){
-    const PS::S32 n_loc = system_soft.getNumberOfParticleLocal();
+          const PS::F64 ratio_r_cut,
+          const PS::S64 n_bin){
+    //const PS::S32 my_rank=PS::Comm::getRank();
+    const PS::S64 n_loc = system_soft.getNumberOfParticleLocal();
     PS::F64vec vel_cm_loc = 0.0;
     PS::F64 mass_cm_loc = 0.0;
     //    PS::F64 mmax_loc = system_soft[0].mass;
     //    PS::F64 mmin_loc = mmax_loc;
-    for(PS::S32 i=0; i<n_loc; i++){
+    for(PS::S64 i=0; i<n_loc; i++){
         mass_cm_loc += system_soft[i].mass;
         vel_cm_loc += system_soft[i].mass * system_soft[i].vel;
         //      if (system_soft[i].mass>mmax_loc) mmax_loc = system_soft[i].mass;
@@ -31,14 +33,32 @@ void GetR(const Tpsys & system_soft,
       
     vel_cm_glb /= mass_cm_glb;
     PS::F64 vel_sq_loc = 0.0;
-    for (PS::S32 i=0; i<n_loc; i++){
+    PS::S64 n_vel_loc_count = 0;
+    PS::S64 is_start = 0;
+    const PS::S64 bin_last_id = 2*n_bin;
+    if (system_soft[0].id<bin_last_id) {
+        is_start = std::min(bin_last_id - system_soft[0].id + 1,n_loc);
+        if(is_start%2!=0) is_start--;
+    }
+    const PS::S64 ib_start = (system_soft[0].id%2==0)?1:0;
+    for (PS::S64 i=ib_start; i<is_start; i+=2) {
+        PS::F64 m1 = system_soft[i].mass;
+        PS::F64 m2 = system_soft[i+1].mass;
+        PS::F64vec dv = (m1*system_soft[i].vel + m2*system_soft[i+1].vel)/(m1+m2) - vel_cm_glb;
+        vel_sq_loc += dv * dv;
+        n_vel_loc_count++;
+    }
+        
+    for (PS::S64 i=is_start; i<n_loc; i++){
         PS::F64vec dv = system_soft[i].vel - vel_cm_glb;
         vel_sq_loc += dv * dv;
+        n_vel_loc_count++;
     }
 
-    const PS::S32    n_glb      = PS::Comm::getSum(n_loc);
-    const PS::F64    vel_sq_glb = PS::Comm::getSum(vel_sq_loc);
-    vel_disp   = sqrt(vel_sq_glb / 3.0 / (PS::F64)n_glb);
+    const PS::S64    n_vel_glb_count= PS::Comm::getSum(n_vel_loc_count);
+    const PS::S64    n_glb          = PS::Comm::getSum(n_loc);
+    const PS::F64    vel_sq_glb     = PS::Comm::getSum(vel_sq_loc);
+    vel_disp   = sqrt(vel_sq_glb / 3.0 / (PS::F64)n_vel_glb_count);
 
     PS::F64 average_mass_glb = mass_cm_glb/(PS::F64)n_glb;
     m_average = average_mass_glb;
