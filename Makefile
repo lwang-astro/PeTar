@@ -42,7 +42,8 @@ endif
 
 ifeq ($(use_x86),yes)
 CXX = time mpicxx
-#CXXFLAGS = -g
+#CXX = tau_cxx.sh  -tau_makefile=/opt/tau-2.26.3/x86_64/lib/Makefile.tau-mpi-openmp -tau_options=-optCompInst 
+#CXXFLAGS = -g -O0
 CXXFLAGS += -O2
 CXXFLAGS += -Wall
 CXXFLAGS += -march=core-avx2
@@ -64,6 +65,7 @@ CXXFLAGS += -D HARD_CM_KICK
 CXXFLAGS += -D TIDAL_TENSOR # Must use HARD_CM_KICK together
 CXXFLAGS += -D SOFT_PERT
 CXXFLAGS += -D SPLIT_MASS
+CXXFLAGS += -D PROFILE
 
 #CXXFLAGS += -D ARC_DEBUG
 #CXXFLAGS += -D ARC_ERROR

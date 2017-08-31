@@ -36,11 +36,13 @@
 #include"io.hpp"
 #include"init.hpp"
 #include"integrate.hpp"
-#include"profile.hpp"
 #include"domain.hpp"
 #include"AR.h" /// include AR.h (L.Wang)
 //#include"cluster.hpp"
 #include"cluster_list.hpp"
+#ifdef PROFILE
+#include"profile.hpp"
+#endif
 
 #ifdef USE_QUAD
 typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::QuadrupoleWithSymmetrySearch Tree; 
@@ -82,12 +84,11 @@ int main(int argc, char *argv[]){
 
     PS::S32 my_rank = PS::Comm::getRank();
 
-    Wtime profile;
-
-	PS::S64 n_ptcl_hard_one_cluster = 0;
-	PS::S64 n_ptcl_hard_isolated_cluster = 0;
-	PS::S64 n_ptcl_hard_nonisolated_cluster = 0;
-
+#ifdef PROFILE
+    SysProfile profile;
+    SysCounts  n_count;
+#endif
+    
     // initial parameters
     IOParams<PS::F64> ratio_r_cut  (0.1,  "r_in / r_out");
     IOParams<PS::F64> theta        (0.3,  "openning angle theta");
@@ -287,6 +288,7 @@ int main(int argc, char *argv[]){
           system_soft.readParticleBinary(sinput, file_header);
       time_sys = file_header.time;
       PS::Comm::broadcast(&time_sys, 1, 0);
+      PS::Comm::broadcast(&file_header, 1, 0);
       n_glb.value = system_soft.getNumberOfParticleGlobal();
       n_loc = system_soft.getNumberOfParticleLocal();
       //      for(PS::S32 i=0; i<n_loc; i++) system_soft[i].id = i;
@@ -397,9 +399,9 @@ int main(int argc, char *argv[]){
     SystemHard system_hard_isolated;
     system_hard_isolated.setParam(r_bin.value, r_out.value, r_in, eps.value,  dt_limit_hard, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
     system_hard_isolated.setARCParam();
-    SystemHard system_hard_conected;
-    system_hard_conected.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
-    system_hard_conected.setARCParam();
+    SystemHard system_hard_connected;
+    system_hard_connected.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
+    system_hard_connected.setARCParam();
 
     SearchCluster search_cluster;
     search_cluster.initialize();
@@ -409,17 +411,34 @@ int main(int argc, char *argv[]){
     if(!restart_flag) {
         search_cluster.searchClusterLocal();
         search_cluster.setIdClusterLocal();
-        search_cluster.conectNodes(pos_domain,tree_soft);
+        search_cluster.connectNodes(pos_domain,tree_soft);
         search_cluster.setIdClusterGlobalIteration();
         search_cluster.sendAndRecvCluster(system_soft);
 
         system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
         system_hard_isolated.initialMultiClusterOMP<SystemSoft,FPSoft>(system_soft, dt_soft.value);
         system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_);
+#ifdef MAIN_DEBUG
+        for(PS::S32 i=0; i<n_loc; i++){
+            if(system_soft[i].id<0&&system_soft[i].status<0) {
+                std::cerr<<"Error! Ghost detected in system_soft after system_hard_isolated, i="<<i<<std::endl;
+                abort();
+            }
+        }
+#endif
     
-        system_hard_conected.setPtclForConectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
-        system_hard_conected.initialMultiClusterOMP<SystemSoft,FPSoft>(system_soft, dt_soft.value);
-        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_conected.getPtcl());
+        system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
+        system_hard_connected.initialMultiClusterOMP<SystemSoft,FPSoft>(system_soft, dt_soft.value);
+        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl());
+
+#ifdef MAIN_DEBUG
+        for(PS::S32 i=0; i<n_loc; i++){
+            if(system_soft[i].id<0&&system_soft[i].status<0) {
+                std::cerr<<"Error! Ghost detected in system_soft after system_hard_connected, i="<<i<<std::endl;
+                abort();
+            }
+        }
+#endif
 
 #pragma omp parallel for
         for(PS::S32 i=0; i<n_loc; i++){
@@ -466,15 +485,19 @@ int main(int argc, char *argv[]){
     }
     write_p(fout, time_sys, 0.0, system_soft, eng_now, eng_diff);
 #endif
+#ifdef PROFILE
     std::ofstream fprofile;
     if(my_rank==0) fprofile.open("profile.out");
+    PS::S64 dn_loop = 0;
+#endif
 
     PS::S64 n_loop = 0;
-    PS::S64 dn_loop = 0;
     bool first_step_flag = true;
     while(time_sys < time_end.value){
       
+#ifdef PROFILE
         profile.tot.start();
+#endif
         ////////////////
         ////// 1st kick
         Kick(system_soft, tree_soft, dt_soft.value*0.5);
@@ -482,11 +505,13 @@ int main(int argc, char *argv[]){
         ////////////////
         
         ////////////////
+#ifdef PROFILE
         profile.hard_tot.start();
+#endif
         ////// set time
         system_hard_one_cluster.setTimeOrigin(time_sys);
         system_hard_isolated.setTimeOrigin(time_sys);
-        system_hard_conected.setTimeOrigin(time_sys);
+        system_hard_connected.setTimeOrigin(time_sys);
         ////// set time
         ////////////////
         
@@ -494,48 +519,82 @@ int main(int argc, char *argv[]){
         ////// search cluster
         search_cluster.searchClusterLocal();
         search_cluster.setIdClusterLocal();
-        search_cluster.conectNodes(pos_domain,tree_soft);
+        search_cluster.connectNodes(pos_domain,tree_soft);
         search_cluster.setIdClusterGlobalIteration();
         search_cluster.sendAndRecvCluster(system_soft);
         ////// search cluster
         ////////////////
 
         ////////////////
+#ifdef PROFILE
         profile.hard_single.start();
+#endif
         ////// integrater one cluster
         system_hard_one_cluster.initializeForOneCluster(search_cluster.getAdrSysOneCluster().size());
         system_hard_one_cluster.setPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
         system_hard_one_cluster.driveForOneCluster(dt_soft.value);
         system_hard_one_cluster.writeBackPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
         ////// integrater one cluster
+#ifdef PROFILE
         profile.hard_single.end();
+#endif
         ////////////////
 
         /////////////
+#ifdef PROFILE
         profile.hard_isolated.start();
+#endif
         // integrate multi cluster A
         system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
         system_hard_isolated.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft.value,system_soft,first_step_flag);
         system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_);
         // integrate multi cluster A
+#ifdef PROFILE
         profile.hard_isolated.end();
+#endif
         /////////////
+#ifdef MAIN_DEBUG
+        for(PS::S32 i=0; i<n_loc; i++){
+            if(system_soft[i].id<0&&system_soft[i].status<0) {
+                std::cerr<<"Error! Ghost detected in system_soft after system_hard_isolated, i="<<i<<std::endl;
+                abort();
+            }
+        }
+#endif
 
+        
         /////////////
+#ifdef PROFILE
         profile.hard_connected.start();
+#endif
         // integrate multi cluster B
-        system_hard_conected.setPtclForConectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
-        system_hard_conected.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft.value,system_soft,first_step_flag);
-        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_conected.getPtcl());
+        system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
+        system_hard_connected.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft.value,system_soft,first_step_flag);
+        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl());
         // integrate multi cluster B
+#ifdef PROFILE
         profile.hard_connected.end();
+#endif        
 
+#ifdef MAIN_DEBUG
+        for(PS::S32 i=0; i<n_loc; i++){
+            if(system_soft[i].id<0&&system_soft[i].status<0) {
+                std::cerr<<"Error! Ghost detected in system_soft after system_hard_connected, i="<<i<<std::endl;
+                abort();
+            }
+        }
+#endif
+        
         first_step_flag = false;
+#ifdef PROFILE
         profile.hard_tot.end();
+#endif
         /////////////
 
         /////////////
+#ifdef PROFILE
         profile.soft_tot.start();
+#endif
         // Domain decomposition, parrticle exchange and force calculation
 
         if(n_loop % 16 == 0) dinfo.decomposeDomainAll(system_soft);
@@ -555,12 +614,16 @@ int main(int argc, char *argv[]){
 #endif
                                            system_soft,
                                            dinfo);
+#ifdef PROFILE
         profile.search_cluster.start();
+#endif
         search_cluster.searchNeighborAndCalcHardForceOMP<SystemSoft, Tree, EPJSoft>
           (system_soft, tree_soft, r_out.value, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
+
+#ifdef PROFILE
         profile.search_cluster.end();
-        
         profile.soft_tot.end();
+#endif
 
         // Domain decomposition, parrticle exchange and force calculation
         /////////////
@@ -576,19 +639,34 @@ int main(int argc, char *argv[]){
         eng_now.calc(&system_soft[0], system_soft.getNumberOfParticleLocal(), dt_soft.value*0.5);
         eng_now.getSumMultiNodes();
         
+#ifdef PROFILE
         profile.tot.end();
+#endif
         /////////////
 
         eng_diff = eng_now - eng_init;
         PS::S64 n_glb = system_soft.getNumberOfParticleGlobal();
-        PS::S32 n_one_cluster         = system_hard_one_cluster.getPtcl().size();
-        PS::S32 n_isolated_cluster    = system_hard_isolated.getPtcl().size();
-        PS::S32 n_nonisolated_cluster = system_hard_conected.getPtcl().size();
-        n_ptcl_hard_one_cluster         += PS::Comm::getSum(n_one_cluster);
-        n_ptcl_hard_isolated_cluster    += PS::Comm::getSum(n_isolated_cluster);
-        n_ptcl_hard_nonisolated_cluster += PS::Comm::getSum(n_nonisolated_cluster);
-        
+#ifdef PROFILE
+        PS::S32 n_hard_single     = system_hard_one_cluster.getPtcl().size();
+        PS::S32 n_hard_isolated   = system_hard_isolated.getPtcl().size();
+        PS::S32 n_hard_connected  = system_hard_connected.getPtcl().size();
+        n_count.hard_single      += PS::Comm::getSum(n_hard_single);
+        n_count.hard_isolated    += PS::Comm::getSum(n_hard_isolated);
+        n_count.hard_connected   += PS::Comm::getSum(n_hard_connected);
+
+        n_count.cluster_count(1, n_hard_single);
+        const PS::S32  n_isolated_cluster = system_hard_isolated.getNCluster();
+        n_count.cluster_isolated += n_isolated_cluster;
+        const PS::S32* isolated_cluster_n_list = system_hard_isolated.getClusterNList();
+        for (PS::S32 i=0; i<n_isolated_cluster; i++) n_count.cluster_count(isolated_cluster_n_list[i]);
+
+        const PS::S32  n_connected_cluster = system_hard_connected.getNCluster();
+        n_count.cluster_connected += n_connected_cluster;
+        const PS::S32* connected_cluster_n_list = system_hard_connected.getClusterNList();
+        for (PS::S32 i=0; i<n_connected_cluster; i++) n_count.cluster_count(connected_cluster_n_list[i]);
+
         dn_loop++;
+#endif
 
 //#ifdef ARC_ERROR
 //        system_hard_isolated.N_count[0] += PS::Comm::getSum(n_one_cluster);
@@ -616,11 +694,20 @@ int main(int argc, char *argv[]){
                 std::cerr<<"n_glb= "<<n_glb<<std::endl;
                 std::cerr<<"Time= "<<time_sys<<" Enow-Einit="<<eng_diff.tot<<" (Enow-Einit)/Einit= "<<eng_diff.tot/eng_init.tot
 //#ifdef ARC_ERROR
-//                         <<" ARC_error_relative="<<system_hard_isolated.ARC_error_relative+system_hard_conected.ARC_error_relative<<" ARC_error="<<system_hard_isolated.ARC_error+system_hard_conected.ARC_error
+//                         <<" ARC_error_relative="<<system_hard_isolated.ARC_error_relative+system_hard_connected.ARC_error_relative<<" ARC_error="<<system_hard_isolated.ARC_error+system_hard_connected.ARC_error
 //#endif
                          <<std::endl;
                 eng_now.dump(std::cerr);
+#ifdef PROFILE
+                std::cerr<<"Wtime per loop:\n";
                 profile.print(std::cerr,time_sys,dn_loop);
+                std::cerr<<"Number per loop:\n";
+//                std::cerr<<"\nHard single    "<<(PS::F64)n_ptcl_hard_one_cluster/dn_loop
+//                         <<"\nHard isolated :"<<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop
+//                         <<"\nHard connected:"<<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop
+//                         <<std::endl;
+                n_count.print(std::cerr,20,dn_loop);
+#endif
             }
 
 //#ifdef ARC_ERROR
@@ -635,21 +722,24 @@ int main(int argc, char *argv[]){
 //            }
 //#endif
             
+#ifdef PROFILE
             if(my_rank==0) {
                 fprofile<<std::setprecision(PRINT_PRECISION);
                 fprofile<<std::setw(PRINT_WIDTH)<<time_sys
                         <<std::setw(PRINT_WIDTH)<<n_loop
                         <<std::setw(PRINT_WIDTH)<<n_glb;
                 profile.dump(fprofile, PRINT_WIDTH, dn_loop);
-                fprofile<<std::setw(PRINT_WIDTH)<<(PS::F64)n_ptcl_hard_one_cluster/dn_loop
-                        <<std::setw(PRINT_WIDTH)<<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop
-                        <<std::setw(PRINT_WIDTH)<<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop
-                        <<std::setw(PRINT_WIDTH)<<eng_diff.tot/eng_init.tot
+                n_count.dump(fprofile, PRINT_WIDTH, dn_loop);
+//                fprofile<<std::setw(PRINT_WIDTH)<<(PS::F64)n_ptcl_hard_one_cluster/dn_loop
+//                        <<std::setw(PRINT_WIDTH)<<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop
+//                        <<std::setw(PRINT_WIDTH)<<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop
+//                        <<std::setw(PRINT_WIDTH)<<eng_diff.tot/eng_init.tot
 //#ifdef ARC_ERROR
-//                        <<std::setw(PRINT_WIDTH)<<system_hard_isolated.ARC_error+system_hard_conected.ARC_error
+//                        <<std::setw(PRINT_WIDTH)<<system_hard_isolated.ARC_error+system_hard_connected.ARC_error
 //#endif              
-                        <<std::endl;
+                fprofile<<std::endl;
             }
+#endif
             
             file_header.n_body = system_soft.getNumberOfParticleGlobal();
             file_header.time = time_sys;
@@ -679,11 +769,12 @@ int main(int argc, char *argv[]){
 //              }
 //              fclose(bfout);
 //            }
-            
-            profile.clear();
-            n_ptcl_hard_one_cluster = n_ptcl_hard_isolated_cluster = n_ptcl_hard_nonisolated_cluster = 0;
 
+#ifdef PROFILE            
+            profile.clear();
+            n_count.clear();
             dn_loop=0;
+#endif
         }
 
 

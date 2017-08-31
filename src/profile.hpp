@@ -4,6 +4,7 @@
 #include<fstream>
 #include<map>
 
+/*
 template<class Tdinfo, class Tsystem, class Ttree>
 class Profile{
 
@@ -167,6 +168,7 @@ public:
     }
 
 };
+*/
 
 struct Tprofile{
     PS::F64 time;
@@ -182,11 +184,11 @@ struct Tprofile{
         time += PS::GetWtime();
     }
     
-    void print(std::ostream & fout, const PS::S64 divider=1){
+    void print(std::ostream & fout, const PS::S32 divider=1){
         fout<<name<<": "<<time/divider<<std::endl;
     }
 
-    void dump(std::ostream & fout, const PS::F64 width=20, const PS::S64 divider=1){
+    void dump(std::ostream & fout, const PS::S32 width=20, const PS::S32 divider=1){
         fout<<std::setw(width)<<time/divider;
     }
 
@@ -196,7 +198,38 @@ struct Tprofile{
 
 };
 
-class Wtime{
+struct NumCounter{
+    PS::S64 n_;
+    const char* name_;
+    
+    NumCounter(const char* name): n_(0), name_(name) {}
+
+    NumCounter &operator++() {
+        (this->n_)++;
+        return *this;
+    }
+
+    NumCounter &operator+=(const PS::S64 n) {
+        this->n_ += n;
+        return *this;
+    }
+
+    NumCounter &operator=(const PS::S64 n) {
+        this->n_ = n;
+        return *this;
+    }
+
+    void print(std::ostream & fout, const PS::S32 divider=1){
+        fout<<name_<<": "<<((divider==1)?n_:(PS::F64)n_/divider)<<std::endl;
+    }
+
+    void dump(std::ostream & fout, const PS::S32 width=20, const PS::S32 divider=1){
+        fout<<std::setw(width)<<((divider==1)?n_:(PS::F64)n_/divider);
+    }
+
+};
+
+class SysProfile{
 public:
 	Tprofile tot;		   
 	Tprofile hard_tot;	   
@@ -207,14 +240,14 @@ public:
 	Tprofile search_cluster;
     const PS::S32 n_profile;
     
-    Wtime(): tot           (Tprofile("Total         ")),
-             hard_tot      (Tprofile("Hard total    ")),
-             hard_single   (Tprofile("Hard single   ")),
-             hard_isolated (Tprofile("Hard isolated ")),
-             hard_connected(Tprofile("Hard connected")),
-             soft_tot      (Tprofile("Soft total    ")),
-             search_cluster(Tprofile("Search cluster")),
-             n_profile(7) {}
+    SysProfile(): tot           (Tprofile("Total         ")),
+                  hard_tot      (Tprofile("Hard total    ")),
+                  hard_single   (Tprofile("Hard single   ")),
+                  hard_isolated (Tprofile("Hard isolated ")),
+                  hard_connected(Tprofile("Hard connected")),
+                  soft_tot      (Tprofile("Soft total    ")),
+                  search_cluster(Tprofile("Search cluster")),
+                  n_profile(7) {}
 
 	void print(std::ostream & fout, const PS::F64 time_sys, const PS::S64 n_loop=1){
         fout<<"Time: "<<time_sys<<std::endl;
@@ -225,7 +258,7 @@ public:
         }
     }
 
-    void dump(std::ofstream & fout, const PS::F64 width=20, const PS::S64 n_loop=1){
+    void dump(std::ofstream & fout, const PS::S32 width=20, const PS::S64 n_loop=1){
         for(PS::S32 i=0; i<n_profile; i++) {
             Tprofile* iptr = (Tprofile*)this+i;
             iptr->dump(fout, width, n_loop);
@@ -241,13 +274,53 @@ public:
 
 };
 
-//! for event counts (L.Wang)
-class Counts{
+class SysCounts{
 public:
-  std::map<PS::S32,PS::S32> Ncluster; ///<Histogram of number of particles in clusters
+    NumCounter hard_single;
+    NumCounter hard_isolated;
+    NumCounter hard_connected;
+    NumCounter cluster_isolated;
+    NumCounter cluster_connected;
+    const PS::S32 n_counter;
+    std::map<PS::S32,PS::S32> n_cluster; ///<Histogram of number of particles in clusters
 
-  void Ncluster_count(const PS::S32 n) {
-    if (Ncluster.count(n)) Ncluster[n]++;
-    else Ncluster[n]=1;
-  }
+    SysCounts(): hard_single     (NumCounter("Hard single   ")),
+                 hard_isolated   (NumCounter("Hard isolated ")),
+                 hard_connected  (NumCounter("Hard connected")),
+                 cluster_isolated (NumCounter("Cluster isolated ")),
+                 cluster_connected(NumCounter("Cluster connected")),
+                 n_counter(5) {}
+
+    void cluster_count(const PS::S32 n, const PS::S32 ntimes=1) {
+        if (n_cluster.count(n)) n_cluster[n] += ntimes;
+        else n_cluster[n]=ntimes;
+    }
+
+    void print(std::ostream & fout, const PS::S32 width=20, const PS::S64 n_loop=1) {
+        for(PS::S32 i=0; i<n_counter; i++) {
+            NumCounter* iptr = (NumCounter*)this+i;
+            iptr->print(fout, n_loop);
+        }
+        fout<<"Number of members in clusters:\n";
+        for(auto i=n_cluster.begin(); i!=n_cluster.end(); ++i) fout<<std::setw(width)<<i->first;
+        fout<<std::endl;
+        for(auto i=n_cluster.begin(); i!=n_cluster.end(); ++i) fout<<std::setw(width)<<i->second/((n_loop==1)?1:(PS::F64)n_loop);
+        fout<<std::endl;
+    }
+
+    void dump(std::ofstream & fout, const PS::S32 width=20, const PS::S64 n_loop=1){
+        for(PS::S32 i=0; i<n_counter; i++) {
+            NumCounter* iptr = (NumCounter*)this+i;
+            iptr->dump(fout, width, n_loop);
+        }
+        for(auto i=n_cluster.begin(); i!=n_cluster.end(); ++i)
+            fout<<std::setw(width)<<i->first<<std::setw(width)<<i->second/((n_loop==1)?1:(PS::F64)n_loop);
+    }
+
+    void clear() {
+        hard_single = 0;
+        hard_isolated = 0;
+        hard_connected = 0;
+        n_cluster.clear();
+    }
 };

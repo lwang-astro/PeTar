@@ -119,6 +119,11 @@ private:
 //        if(n_ptcl>5) {
         group_.findGroups(ptcl_org, n_ptcl, n_split_);
 
+#ifdef HARD_DEBUG
+        // If only ghost particle exist, this assertion happen
+        assert(group_.getPtclN()>0);
+#endif
+
 #ifdef TIDAL_TENSOR
         for (PS::S32 i=0; i<group_.getNumOfGroups(); i++) 
             subtractFcmAndRecoverCMVec(ptcl_org, group_.getPtclIndex(i), group_.getGroup(i), group_.getGroupN(i), group_.getGroupPertList(i,n_split_));
@@ -320,7 +325,7 @@ public:
     ////////////////////////
     // for NON-ISOLATED CLUSTER
     template<class Tsys, class Tptcl, class Tmediator>
-    void setPtclForConectedCluster(const Tsys & sys,
+    void setPtclForConnectedCluster(const Tsys & sys,
                                    const PS::ReallocatableArray<Tmediator> & med,
                                    const PS::ReallocatableArray<Tptcl> & ptcl_recv){
         ptcl_hard_.clearSize();
@@ -364,6 +369,14 @@ public:
 
     const PS::ReallocatableArray<PtclHard> & getPtcl() const {
         return ptcl_hard_;
+    }
+
+    const PS::S32 getNCluster() const{
+        return n_ptcl_in_cluster_.size();
+    }
+
+    const PS::S32* getClusterNList() const{
+        return n_ptcl_in_cluster_.getPointer();
     }
 
     void setTimeOrigin(const PS::F64 _time_origin){
@@ -524,11 +537,21 @@ public:
     void writeBackPtclForOneCluster(Tsys & sys, 
                                     const PS::ReallocatableArray<PS::S32> & adr_array){
         const PS::S32 n = ptcl_hard_.size();
+//        PS::ReallocatableArray<PS::S32> removelist;
+//        removelist.reserve(n);
         for(PS::S32 i=0; i<n; i++){
             PS::S32 adr = adr_array[i];
             // assert(sys[adr].id == ptcl_hard_[i].id);
             sys[adr].DataCopy(ptcl_hard_[i]);
+#ifdef HARD_DEBUG
+            if(sys[adr].id<0&&sys[adr].status<0) {
+                std::cerr<<"Error! ghost particle appear in writeback for single! adr="<<adr<<std::endl;
+                abort();
+            }
+#endif
+//            if(sys[adr].id<0&&sys[adr].status<0) removelist.push_back(adr);
         }
+//        sys.removeParticle(removelist.getPointer(), removelist.size());
     }
 
     template<class Tsys>
@@ -638,20 +661,31 @@ public:
     template<class Tsys, class Tsptcl>
     void driveForMultiClusterOMP(const PS::F64 dt, Tsys & sys, const bool first_step_flag=false){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
-        //	const PS::S32 ith = PS::Comm::getThreadNum();
+        const PS::S32 num_thread = PS::Comm::getNumberOfThread();
+        PS::ReallocatableArray<PtclHard> extra_ptcl[num_thread];
+        
 #pragma omp for schedule(dynamic)
         for(PS::S32 i=0; i<n_cluster; i++){
+            //PS::F64 tstart = PS::GetWtime();
+            const PS::S32 ith = PS::Comm::getThreadNum();
             const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
-            PS::ReallocatableArray<PtclHard> extra_ptcl;
-            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, dt, extra_ptcl, first_step_flag);
-#pragma omp critical
-            {
-                for (PS::S32 j=0; j<extra_ptcl.size(); j++) {
-                    PS::S32 adr = sys.getNumberOfParticleLocal();
-                    PS::S32 rank = PS::Comm::getRank();
-                    sys.addOneParticle(Tsptcl(extra_ptcl[j],rank,adr));
+            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, dt, extra_ptcl[ith], first_step_flag);
+            //PS::F64 tend = PS::GetWtime();
+            //std::cerr<<"Hard time: "<<i<<" "<<tend-tstart<<std::endl;
+        }
+        
+        for(PS::S32 i=0; i<num_thread; i++) {
+            for (PS::S32 j=0; j<extra_ptcl[i].size(); j++) {
+                PS::S32 adr = sys.getNumberOfParticleLocal();
+                PS::S32 rank = PS::Comm::getRank();
+                sys.addOneParticle(Tsptcl(extra_ptcl[i][j],rank,adr));
+#ifdef HARD_DEBUG
+                if(extra_ptcl[i][j].id<0&&extra_ptcl[i][j].status<0) {
+                    std::cerr<<"Error: extra particle list contain ghost particle! i_thread="<<i<<" index="<<j<<" rank="<<rank<<" adr="<<adr<<std::endl;
+                    abort();
                 }
+#endif
             }
         }
     }

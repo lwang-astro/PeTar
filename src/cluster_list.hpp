@@ -509,7 +509,7 @@ public:
     }
 
     template <class Ttree>
-    void conectNodes(PS::F64ort pos_domain[], Ttree & tree){
+    void connectNodes(PS::F64ort pos_domain[], Ttree & tree){
         const PS::S32 n_proc_tot = PS::Comm::getNumberOfProc();
         const PS::S32 my_rank = PS::Comm::getRank();
         static PS::ReallocatableArray<PS::S32> rank_neighbor;
@@ -1700,10 +1700,13 @@ public:
 
 #ifdef HARD_DEBUG
         assert(i_unused-n_groups*2*n_split==n_unused);
-        assert(p_list_.size()+n_members+soft_size==n_ptcl);
+        if(p_list_.size()+n_members+soft_size!=n_ptcl) {
+            std::cerr<<"Rank: "<<PS::Comm::getRank()<<" n_members="<<n_members<<" p_list_.size="<<p_list_.size()<<" soft_size="<<soft_size<<" n_ptcl="<<n_ptcl<<" n_groups="<<n_groups<<std::endl;
+        }
         for(int i=0; i<icount.size(); i++) assert(icount[i]==1);
         for(int i=0; i<gcount.size(); i++) assert(gcount[i]==1);
         for(int i=0; i<scount.size(); i++) assert(scount[i]==1);
+        assert(p_list_.size()+n_members+soft_size==n_ptcl);
 #endif
         
         for (int i=0; i<n_groups; i++) { // get correct mass
