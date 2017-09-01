@@ -666,13 +666,17 @@ public:
         
 #pragma omp for schedule(dynamic)
         for(PS::S32 i=0; i<n_cluster; i++){
-            //PS::F64 tstart = PS::GetWtime();
             const PS::S32 ith = PS::Comm::getThreadNum();
             const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
+#ifdef HARD_DEBUG_PROFILE
+            PS::F64 tstart = PS::GetWtime();
+#endif
             driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, dt, extra_ptcl[ith], first_step_flag);
-            //PS::F64 tend = PS::GetWtime();
-            //std::cerr<<"Hard time: "<<i<<" "<<tend-tstart<<std::endl;
+#ifdef HARD_DEBUG_PROFILE
+            PS::F64 tend = PS::GetWtime();
+            std::cerr<<"HT: "<<n_cluster<<" "<<n_ptcl<<" "<<tend-tstart<<std::endl;
+#endif
         }
         
         for(PS::S32 i=0; i<num_thread; i++) {

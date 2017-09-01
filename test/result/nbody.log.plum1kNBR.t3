@@ -1,0 +1,26 @@
+     //==================================\\
+     ||                                  ||
+     || ::::::: ::::::. ::::::. .::::::. ||
+     || ::      ::    : ::    : ::       ||
+     || ::::::  ::    : ::::::'  `:::::. ||
+     || ::      ::::::' ::      `......' ||
+     ||     Framework for Developing     ||
+     ||        Particle Simulator        ||
+     ||     Version 3.0a (2017/08)       ||
+     \\==================================//
+
+       Home   : https://github.com/fdps/fdps 
+       E-mail : fdps-support@mail.jmlab.jp
+       Licence: MIT (see, https://github.com/FDPS/FDPS/blob/master/LICENSE)
+       Note   : Please cite Iwasawa et al. (in press.)
+
+       Copyright (C) 2015 
+         Masaki Iwasawa, Ataru Tanikawa, Natsuki Hosono,
+         Keigo Nitadori, Takayuki Muranushi, Daisuke Namekata
+         Junichiro Makino and many others
+******** FDPS has successfully begun. ********
+Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0): 2
+finishing time: 10
+maximum binary radius criterion (if not set, auto determined): 1e-07
+transit function outer boundary radius (if not set, auto determined): 0
+nbody.out: ../src/main.cc:201: int main(int, char**): Assertion `r_out.value>0.0' failed.

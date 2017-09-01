@@ -9,6 +9,7 @@
 #define ID_PHASE_SHIFT 4
 #define ID_PHASE_MASKER 0xF
 
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
 template <class Ttree>
 void SetRankComm(const PS::F64ort pos_domain[], Ttree &tree,
                  PS::ReallocatableArray<PS::S32> & rank_neighbor,
@@ -38,6 +39,7 @@ void SetRankComm(const PS::F64ort pos_domain[], Ttree &tree,
 //        rank_neighbor.push_back(i);
     }
 }
+#endif
 
 struct Cluster{
     PS::S32 id_;
@@ -508,6 +510,7 @@ public:
         }
     }
 
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL    
     template <class Ttree>
     void connectNodes(PS::F64ort pos_domain[], Ttree & tree){
         const PS::S32 n_proc_tot = PS::Comm::getNumberOfProc();
@@ -945,6 +948,7 @@ public:
         // remove empty particles
         sys.removeParticle(removelist.getPointer(), removelist.size());
     }
+#endif
 
 
     const PS::ReallocatableArray<PS::S32> & getAdrSysOneCluster(){

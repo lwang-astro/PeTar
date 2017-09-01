@@ -411,9 +411,11 @@ int main(int argc, char *argv[]){
     if(!restart_flag) {
         search_cluster.searchClusterLocal();
         search_cluster.setIdClusterLocal();
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         search_cluster.connectNodes(pos_domain,tree_soft);
         search_cluster.setIdClusterGlobalIteration();
         search_cluster.sendAndRecvCluster(system_soft);
+#endif
 
         system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
         system_hard_isolated.initialMultiClusterOMP<SystemSoft,FPSoft>(system_soft, dt_soft.value);
@@ -426,11 +428,11 @@ int main(int argc, char *argv[]){
             }
         }
 #endif
-    
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
         system_hard_connected.initialMultiClusterOMP<SystemSoft,FPSoft>(system_soft, dt_soft.value);
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl());
-
 #ifdef MAIN_DEBUG
         for(PS::S32 i=0; i<n_loc; i++){
             if(system_soft[i].id<0&&system_soft[i].status<0) {
@@ -438,6 +440,7 @@ int main(int argc, char *argv[]){
                 abort();
             }
         }
+#endif
 #endif
 
 #pragma omp parallel for
@@ -519,9 +522,11 @@ int main(int argc, char *argv[]){
         ////// search cluster
         search_cluster.searchClusterLocal();
         search_cluster.setIdClusterLocal();
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         search_cluster.connectNodes(pos_domain,tree_soft);
         search_cluster.setIdClusterGlobalIteration();
         search_cluster.sendAndRecvCluster(system_soft);
+#endif
         ////// search cluster
         ////////////////
 
@@ -553,6 +558,11 @@ int main(int argc, char *argv[]){
         profile.hard_isolated.end();
 #endif
         /////////////
+
+#ifdef HARD_DEBUG_PROFILE
+        std::cerr<<"HT: Time break t="<<time_sys<<std::endl;
+#endif
+        
 #ifdef MAIN_DEBUG
         for(PS::S32 i=0; i<n_loc; i++){
             if(system_soft[i].id<0&&system_soft[i].status<0) {
@@ -562,7 +572,7 @@ int main(int argc, char *argv[]){
         }
 #endif
 
-        
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         /////////////
 #ifdef PROFILE
         profile.hard_connected.start();
@@ -575,7 +585,7 @@ int main(int argc, char *argv[]){
 #ifdef PROFILE
         profile.hard_connected.end();
 #endif        
-
+        
 #ifdef MAIN_DEBUG
         for(PS::S32 i=0; i<n_loc; i++){
             if(system_soft[i].id<0&&system_soft[i].status<0) {
@@ -583,6 +593,7 @@ int main(int argc, char *argv[]){
                 abort();
             }
         }
+#endif
 #endif
         
         first_step_flag = false;

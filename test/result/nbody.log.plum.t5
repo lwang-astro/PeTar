@@ -1,0 +1,43 @@
+     //==================================\\
+     ||                                  ||
+     || ::::::: ::::::. ::::::. .::::::. ||
+     || ::      ::    : ::    : ::       ||
+     || ::::::  ::    : ::::::'  `:::::. ||
+     || ::      ::::::' ::      `......' ||
+     ||     Framework for Developing     ||
+     ||        Particle Simulator        ||
+     ||     Version 3.0a (2017/08)       ||
+     \\==================================//
+
+       Home   : https://github.com/fdps/fdps 
+       E-mail : fdps-support@mail.jmlab.jp
+       Licence: MIT (see, https://github.com/FDPS/FDPS/blob/master/LICENSE)
+       Note   : Please cite Iwasawa et al. (in press.)
+
+       Copyright (C) 2015 
+         Masaki Iwasawa, Ataru Tanikawa, Natsuki Hosono,
+         Keigo Nitadori, Takayuki Muranushi, Daisuke Namekata
+         Junichiro Makino and many others
+******** FDPS has successfully begun. ********
+Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0): 2
+finishing time: 10
+transit function outer boundary radius (if not set, auto determined): 0.07
+Output time interval of particle dataset: 0.0625
+Tree timestep (if not set, auto determined): 0.0004882812
+softerning eps: 0
+Number of particles =120;  Time=0
+Reading file input/plum100imf.input
+N_tot = 120
+N_loc = 120
+Parameter list:
+ m_average    = 0.00850000000000001
+ r_in         = 0.007
+ r_out        = 0.07
+ r_search_min = 0.0702985469757203
+ vel_disp     = 0.611424268885005
+ dt_soft      = 0.0004882812
+np_ave=120
+used mem size for tree(3)=0.007926848[GB]
+Energy: total = -0.827178773076445 kin = 0.277306630442759 pot = -1.1044854035192
+Angular Momentum: L = 0.0183902306910156   -0.0605859567765932    -0.0968665181919544 |L| = 0.115723727428891
+nbody.out: ../src/hard.hpp:227: void SystemHard::driveForMultiClusterImpl(PtclHard*, ParticleSimulator::S32, ParticleSimulator::F64, ParticleSimulator::ReallocatableArray<PtclHard>&, bool): Assertion `time_sys>time_now' failed.

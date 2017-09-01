@@ -1,0 +1,34 @@
+     //==================================\\
+     ||                                  ||
+     || ::::::: ::::::. ::::::. .::::::. ||
+     || ::      ::    : ::    : ::       ||
+     || ::::::  ::    : ::::::'  `:::::. ||
+     || ::      ::::::' ::      `......' ||
+     ||     Framework for Developing     ||
+     ||        Particle Simulator        ||
+     ||     Version 3.0a (2017/08)       ||
+     \\==================================//
+
+       Home   : https://github.com/fdps/fdps 
+       E-mail : fdps-support@mail.jmlab.jp
+       Licence: MIT (see, https://github.com/FDPS/FDPS/blob/master/LICENSE)
+       Note   : Please cite Iwasawa et al. (in press.)
+
+       Copyright (C) 2015 
+         Masaki Iwasawa, Ataru Tanikawa, Natsuki Hosono,
+         Keigo Nitadori, Takayuki Muranushi, Daisuke Namekata
+         Junichiro Makino and many others
+******** FDPS has successfully begun. ********
+Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0): 2
+finishing time: 10
+maximum binary radius criterion (if not set, auto determined): 1e-07
+transit function outer boundary radius (if not set, auto determined): 1000
+r_in / r_out: 0.1
+Output time interval of particle dataset: 0.0625
+openning angle theta: 0
+Tree timestep (if not set, auto determined): 0.001953125
+softerning eps: 0
+PS_ERROR: can not open input file  
+function: readParticleImpl, line: 152, file: /home/lwang/code/fdps/src/particle_system.hpp
+filename: input/plum1000imf.input
+application called MPI_Abort(MPI_COMM_WORLD, -1) - process 0

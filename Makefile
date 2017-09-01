@@ -6,6 +6,7 @@
 #PS_PATH = -I../FDPS/src
 PS_PATH  = -I/home/lwang/code/fdps/src
 ARC_PATH = -I/home/lwang/code/ARC/include
+GPREF_PATH = -L/opt/gperftools-2.6.1/lib
 #ARC_PATH = -I/home/lwang/GitHub/ARC/include
 
 #ROOT_PATH= ${shell pwd -P}
@@ -42,6 +43,7 @@ endif
 
 ifeq ($(use_x86),yes)
 CXX = time mpicxx
+#CXX = kinst-ompp mpicxx
 #CXX = tau_cxx.sh  -tau_makefile=/opt/tau-2.26.3/x86_64/lib/Makefile.tau-mpi-openmp -tau_options=-optCompInst 
 #CXXFLAGS = -g -O0
 CXXFLAGS += -O2
@@ -73,11 +75,14 @@ CXXFLAGS += -D PROFILE
 #CXXFLAGS += -D SAFETY_CHECK
 #CXXFLAGS += -D HARD_DEBUG
 #CXXFLAGS += -D HARD_DEBUG_PRINT
+#CXXFLAGS += -D HARD_DEBUG_PROFILE
 #CXXFLAGS += -D DATA_DEBUG
 #CXXFLAGS += -D FIX_STEP_DEBUG
 #CXXFLAGS += -D DEBUG
 #CXXFLAGS += -D DEBUG_TEMP
 #CXXFLAGS += -D MAIN_DEBUG
+
+CXXLIBS += $(GPREF_PATH) -lprofiler -ltcmalloc 
 
 VPATH=./src ./test ../src
 
