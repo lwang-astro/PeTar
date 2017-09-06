@@ -15,7 +15,8 @@ inline void CalcAccPotShortWithLinearCutoff(const PS::F64vec & posi,
                         const PS::F64 mass_bkj,
                         const PS::S32 pot_control_flag,
 					    const PS::F64 eps2,
-					    const PS::F64 rcut_out,
+					    const PS::F64 rcut_oi_inv,
+                        const PS::F64 rcut_out,
 					    const PS::F64 rcut_in){
     const PS::F64vec rij = posi - posj;
     const PS::F64 r2 = rij * rij;
@@ -26,7 +27,7 @@ inline void CalcAccPotShortWithLinearCutoff(const PS::F64vec & posi,
     const PS::F64 R2 = R * R;
     const PS::F64 Rm3 = Rm * R2;
     const PS::F64 r_eps = R * r2_eps;
-    const PS::F64 k = cutoff_poly_3rd(r_eps, rcut_out, rcut_in);
+    const PS::F64 k = cutoff_poly_3rd(r_eps, rcut_oi_inv, rcut_in);
     const PS::F64 r2_max = (r2_eps > rcut2_out) ? r2_eps : rcut2_out;
     const PS::F64 R_max = 1.0/sqrt(r2_max);
     const PS::F64 Rm_max = massj * R_max;
@@ -66,8 +67,9 @@ int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, c
   //const double r_out = std::max(pi.r_out,pj.r_out);
   const double r_out = pars->rout;
   const double r_in  = pars->rin;
+  const double r_oi_inv = pars->r_oi_inv;
   const double k = CalcW(rij/r_out, r_in/r_out);
-  const double kdot = cutoff_poly_3rd(rij, r_out, r_in);
+  const double kdot = cutoff_poly_3rd(rij, r_oi_inv, r_in);
 
   // smooth coefficients
 //  const double mm2=smpars[0];
@@ -168,11 +170,12 @@ void Newtonian_extA (double3* acc, const PS::F64 time, Tptcl* p, const PS::S32 n
                 //  const double kdx = cutoff_poly_3rd_dr(dr, dx, smpars[0], smpars[1]);
                 //  const double kdy = cutoff_poly_3rd_dr(dr, dy, smpars[0], smpars[1]);
                 //  const double kdz = cutoff_poly_3rd_dr(dr, dz, smpars[0], smpars[1]);  
-                const PS::F64 r_out = pars->rout;
+                // const PS::F64 r_out = pars->rout;
                 //  const PS::F64 r_out = std::max(pi.r_out, pp.r_out);
                 const PS::F64 r_in  = pars->rin;
+                const PS::F64 r_oi_inv = pars->r_oi_inv;
                 //const PS::F64 k     = CalcW(dr/r_out, r_in/r_out);
-                const PS::F64 kdot  = cutoff_poly_3rd(dr, r_out, r_in);
+                const PS::F64 kdot  = cutoff_poly_3rd(dr, r_oi_inv, r_in);
 
                 //Pij = - mi*mp / dr * (1-k);
 
@@ -240,7 +243,8 @@ inline void CalcAcc0Acc1R2Cutoff(const PS::F64vec posi,
                                  const PS::F64 massj,
                                  const PS::F64 eps2,
                                  const PS::F64 rcut_out,
-                                 const PS::F64 rcut_in){
+                                 const PS::F64 rcut_in,
+                                 const PS::F64 rcut_oi_inv){
     const PS::F64vec rij = posi - posj;
     r2 = rij*rij;
     const PS::F64 r2_eps = r2 + eps2;
@@ -257,8 +261,8 @@ inline void CalcAcc0Acc1R2Cutoff(const PS::F64vec posi,
         PS::F64 K = 0.0; // for debug
         PS::F64 Kdot = 0.0; // for debug
 #else
-        const PS::F64 K = cutoff_poly_3rd(r_eps, rcut_out, rcut_in);
-        const PS::F64 Kdot = cutoff_poly_3rd_dot(r_eps, rijvij, rcut_out, rcut_in);
+        const PS::F64 K = cutoff_poly_3rd(r_eps, rcut_oi_inv, rcut_in);
+        const PS::F64 Kdot = cutoff_poly_3rd_dot(r_eps, rijvij, rcut_oi_inv, rcut_in);
 #endif
         const PS::F64vec F0 = -massj*R3*rij*(1.0-K);
         const PS::F64vec F1 = -massj*R3*vij*(1.0-K) - 3.0*A*F0 + massj*R3*rij*Kdot;
@@ -409,8 +413,9 @@ void Newtonian_extA_test (double3* acc, const PS::F64 time, Tptcl* p, const PS::
                 const PS::F64 r_out = pars->rout;
                 //  const PS::F64 r_out = std::max(pi.r_out, pp.r_out);
                 const PS::F64 r_in  = pars->rin;
+                const PS::F64 r_oi_inv = pars->r_oi_inv;
                 //const PS::F64 k     = CalcW(dr/r_out, r_in/r_out);
-                const PS::F64 kdot  = cutoff_poly_3rd(dr, r_out, r_in);
+                const PS::F64 kdot  = cutoff_poly_3rd(dr, r_oi_inv, r_in);
 
                 //Pij = - mi*mp / dr * (1-k);
 

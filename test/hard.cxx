@@ -141,6 +141,7 @@ int main(int argc, char** argv)
       abort();
   }
   Ptcl::r_search_min = rsearch;
+  const PS::F64 n_split = 8;
 
   fprintf(stderr,"t_end = %e\nN = %d\nr_in = %e\nr_out = %e\neta = %e\ndt_limit = %e\neps = %e\n",time,N,rin,rout,eta,dt_limit,eps);
 
@@ -168,7 +169,7 @@ int main(int argc, char** argv)
   print_p(p.getPointer(),N);
 
   SearchGroup<PtclHard> group;
-  group.findGroups(p.getPointer(), N);
+  group.findGroups(p.getPointer(), N, n_split);
   group.searchAndMerge(p.getPointer(), rbin);
   std::cerr<<"SearchAndMerge\n";
   //print_p(p.getPointer(),N);
@@ -189,7 +190,7 @@ int main(int argc, char** argv)
   
   PS::ReallocatableArray<PtclHard> ptcl_new;
 
-  group.generateList(p.getPointer(), ptcl_new, rbin, dt_limit, N);
+  group.generateList(p.getPointer(), ptcl_new, rbin, dt_limit, N, n_split);
   std::cerr<<"GenerateList\n";
   print_p(p.getPointer(),p.size());
 
@@ -217,7 +218,7 @@ int main(int argc, char** argv)
   SystemHard sys;
   PS::ParticleSystem<FPSoft> fp;
   PS::F64 time_sys = 0.0;
-  sys.setParam(rbin, rout, rin, eps, dt_limit, eta, time_sys, 1e-8, N);
+  sys.setParam(rbin, rout, rin, eps, dt_limit, eta, time_sys, 1e-8, N, n_split);
   sys.setARCParam();
   
   sys.setPtclForIsolatedMultiCluster(p,adr,np);
@@ -237,7 +238,7 @@ int main(int argc, char** argv)
     abort();
   }
 
-  Energy et0,et,etcm0,etcm;
+  EnergyAndMomemtum et0,et,etcm0,etcm;
   PS::F64 eps2 = eps*eps;
   PtclHard pcm0,pcm1,ppcm0,ppcm1;
   fprintf(stderr,"Time = %e\n", time_sys);

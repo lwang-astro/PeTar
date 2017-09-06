@@ -331,7 +331,7 @@ public:
     template<class Tsys, class Ttree, class Tepj>
     void searchNeighborAndCalcHardForceOMP(Tsys & sys,
                                            Ttree & tree,
-                                           const PS::F64 r_out,
+                                           const PS::F64 r_out,  // 1/(r_out-r_in)
                                            const PS::F64 r_in,
                                            const PS::F64ort pos_domain[],
                                            const PS::F64 eps_sq=0.0){
@@ -343,6 +343,7 @@ public:
         const PS::S32 my_rank = PS::Comm::getRank();
         //        const PS::S32 n_proc_tot = PS::Comm::getNumberOfProc();
         const PS::S32 n_loc = sys.getNumberOfParticleLocal();
+        const PS::F64 r_oi_inv = 1.0/(r_out-r_in);
 #pragma omp parallel
         {
             const PS::S32 ith = PS::Comm::getThreadNum();
@@ -383,7 +384,7 @@ public:
                             CalcAccPotShortWithLinearCutoff
                                 (sys[i].pos,    sys[i].acc,      sys[i].pot_tot,
                                  (nbl+ii)->pos, (nbl+ii)->mass,  (nbl+ii)->mass_bk,  pot_control_flag, eps_sq,
-                                 r_out,         r_in);
+                                 r_oi_inv,       r_out,  r_in);
                         }
                         if( (nbl+ii)->rank_org != my_rank ){
                             ptcl_outer[ith].push_back(PtclOuter((nbl+ii)->id, sys[i].id, (nbl+ii)->rank_org));

@@ -29,6 +29,7 @@ public:
     Ptcl(): id(-10), status(-10) {}
 
     Ptcl(const Ptcl& p_) { Ptcl::DataCopy(p_);  }
+    Ptcl(const ParticleBase& p_) { ParticleBase::DataCopy(p_); }
 
     // Unsafe, suppressed!
     //template<class Tp>

@@ -16,10 +16,10 @@
 
 
 inline PS::F64 cutoff_poly_3rd(const PS::F64 rij,
-                               const PS::F64 rout,
+                               const PS::F64 r_oi_inv,   // rA = 1/(r_out-r_in)
                                const PS::F64 rin){
-    PS::F64 inv_dr = 1.0 / (rout-rin);
-    PS::F64 x = (rij - rin)*inv_dr;
+    //PS::F64 inv_dr = 1.0 / (rout-rin);
+    PS::F64 x = (rij - rin)*r_oi_inv;
     x = (x < 1.0) ? x : 1.0;
     x = (x > 0.0) ? x : 0.0;
     PS::F64 x2 = x*x;
@@ -28,15 +28,15 @@ inline PS::F64 cutoff_poly_3rd(const PS::F64 rij,
     return k;
 }
 
-inline PS::F64 cutoff_poly_3rd_dot(const PS::F64 &rij,
-                                   const PS::F64 &rijvij,
-                                   const PS::F64 &_rout,
-                                   const PS::F64 &_rin){
-    PS::F64 rout = _rout;
-    PS::F64 rin = _rin;
-    PS::F64 inv_dr = 1.0/(rout-rin);
-    PS::F64 x = (rij - rin)*inv_dr;
-    PS::F64 xdot = rijvij/rij*inv_dr;
+inline PS::F64 cutoff_poly_3rd_dot(const PS::F64 rij,
+                                   const PS::F64 rijvij,
+                                   const PS::F64 r_oi_inv,
+                                   const PS::F64 rin){
+    //PS::F64 rout = _rout;
+    //PS::F64 rin = _rin;
+    //PS::F64 inv_dr = 1.0/(rout-rin);
+    PS::F64 x = (rij - rin)*r_oi_inv;
+    PS::F64 xdot = rijvij/rij*r_oi_inv;
     PS::F64 Kdot = 0.0;
     if(x <= 0.0)
         Kdot = 0.0;
@@ -97,6 +97,7 @@ public:
 
 //#ifdef CALC_HARD_ENERGY
 // y: reps/rout [reps: sqrt(r^2+eps^2)], q: rin/rout
+#ifdef INTEGRATED_CUTOFF_FUNCTION
 inline PS::F64 CalcW(const PS::F64 y, const PS::F64 q=0.1){
      PS::F64 q2 = q*q;
      PS::F64 q3 = q2*q;
@@ -120,4 +121,21 @@ inline PS::F64 CalcW(const PS::F64 y, const PS::F64 q=0.1){
      else if(y >= 1.0) return 1.0;
      else return (((((((A7*y + A6)*y + A5)*y + A4)*y + A3)*y + A2)*y + A1*log(y) + B1)*y) + A0;
 }
-//#endif
+
+#else
+inline PS::F64 CalcW(const PS::F64 rij, 
+                     const PS::F64 r_io_inv, 
+                     const PS::F64 r_in, 
+                     const PS::F64 rA){    // rA = (r_out-r_in)/(r_out+r_in)
+    PS::F64 x = (rij - r_in)*r_io_inv;
+    PS::F64 k = 1.0;
+    if(x >= 1.0 ) k += rA;
+    else if(x > 0) {
+        PS::F64 x2 = x*x;
+        PS::F64 x3 = x2*x;
+        PS::F64 x5 = x2*x3;
+        k -= rA*x5*(5.0*x3 - 20.0*x2 + 28.0*x - 14.0);
+    }
+    return k;
+}
+#endif

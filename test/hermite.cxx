@@ -54,7 +54,7 @@ void print_p(PtclHard* p, const int n) {
 }
 
 struct params{
-    double rin,rout,rsearch,rbin,dt_limit_hard,eta,eps;
+    double rin,rout,r_oi_inv,rsearch,rbin,dt_limit_hard,eta,eps;
 };
 
 int main(int argc, char** argv)
@@ -78,6 +78,7 @@ int main(int argc, char** argv)
     EnergyAndMomemtum E0,E1;
 
     fs>>time_end>>N>>par.rin>>par.rout>>par.rsearch>>par.rbin>>par.dt_limit_hard>>par.eta>>par.eps;
+    par.r_oi_inv = 1.0/(par.rout-par.rin);
 
     fprintf(stderr,"t_end = %e\nN = %d\nr_in = %e\nr_out = %e\nr_search = %e\neta = %e\ndt_limit = %e\neps = %e\n",time_end,N,par.rin,par.rout,par.rsearch,par.eta,par.dt_limit_hard,par.eps);
 
@@ -107,7 +108,7 @@ int main(int argc, char** argv)
     group.findGroups(p.getPointer(), N, 8);
     
     HermiteIntegrator<PtclHard> Hint;
-    Hint.setParams(par.dt_limit_hard, par.eta, par.rin, par.rout, par.eps*par.eps);
+    Hint.setParams(par.dt_limit_hard, par.eta, par.rin, par.rout, par.r_oi_inv, par.eps*par.eps);
     Hint.setPtcl(p.getPointer(),p.size(),group.getPtclList(),group.getPtclN());
     Hint.searchPerturber();
             

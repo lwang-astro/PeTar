@@ -323,6 +323,7 @@ int main(int argc, char *argv[]){
     EPISoft::r_out = EPJSoft::r_out = FPSoft::r_out = r_out.value;
     Ptcl::search_factor = search_factor.value;
     Ptcl::r_search_min = r_search_min;
+//    const PS::F64 r_oi_inv = 1.0/(r_out - r_in);
 //    EPJSoft::r_search_min = r_out*search_factor;
 //    EPJSoft::m_average = m_average;
   

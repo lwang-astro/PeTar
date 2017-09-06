@@ -344,7 +344,7 @@ struct CalcForceEpEpWithLinearCutoffNoSIMD{
                       const PS::S32 n_jp,
                       ForceSoft * force){
         const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
-        const PS::F64 r_out = EPISoft::r_out;
+        const PS::F64 r_out2 = EPISoft::r_out*EPISoft::r_out;
         //        const PS::F64 r_crit2 = EPJSoft::r_search * EPJSoft::r_search * SAFTY_FACTOR_FOR_SEARCH_SQ;
         // const PS::F64 r_out = EPISoft::r_out; 
         // const PS::F64 r_in = EPISoft::r_in;
@@ -367,7 +367,7 @@ struct CalcForceEpEpWithLinearCutoffNoSIMD{
                 if(r2 < r_search*r_search*SAFTY_FACTOR_FOR_SEARCH_SQ){
                     n_ngb_i++;
                 }
-                const PS::F64 r2_tmp = (r2_eps > r_out*r_out) ? r2_eps : r_out*r_out;
+                const PS::F64 r2_tmp = (r2_eps > r_out2) ? r2_eps : r_out2;
                 const PS::F64 r_inv = 1.0/sqrt(r2_tmp);
                 const PS::F64 m_r = ep_j[j].mass * r_inv;
                 const PS::F64 m_r3 = m_r * r_inv * r_inv;

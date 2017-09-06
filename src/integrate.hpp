@@ -192,6 +192,7 @@ private:
     PS::F64 eta_s_;         // time step parameter 
     PS::F64 r_in_;          // force parameter     
     PS::F64 r_out_;         // force parameter     
+    PS::F64 r_oi_inv_;      // 1.0/(r_out-r_in)
     PS::F64 eps_sq_;        // softening parameter 
 
     PS::F64 CalcDt2nd(const PS::F64vec & acc0, 
@@ -261,6 +262,7 @@ private:
                          const PS::S32 Jlist_n[],
                          const PS::F64 rin,
                          const PS::F64 rout,
+                         const PS::F64 r_oi_inv,
                          const PS::F64 eps2,
                          const ARCint *Aint) {
         PS::S32 nbin = 0;
@@ -287,7 +289,7 @@ private:
                         CalcAcc0Acc1R2Cutoff(ptcl[iadr].pos, ptcl[iadr].vel,
                                              force[iadr].acc0, force[iadr].acc1, r2,
                                              pj[k].pos, pj[k].vel/sd, pj[k].mass,
-                                             eps2, rout, rin);
+                                             eps2, rout, rin, r_oi_inv);
 #ifdef HARD_DEBUG
                         mcmcheck += pj[k].mass;
                         //std::cerr<<k<<" P "<<pj[k].pos<<" v "<<pj[k].vel<<" sd "<<sd<<std::endl;
@@ -304,7 +306,7 @@ private:
                     CalcAcc0Acc1R2Cutoff(ptcl[iadr].pos, ptcl[iadr].vel,
                                          force[iadr].acc0, force[iadr].acc1, r2,
                                          ptcl[jadr].pos, ptcl[jadr].vel, ptcl[jadr].mass,
-                                         eps2, rout, rin);
+                                         eps2, rout, rin, r_oi_inv);
                 }
                 // if(r2 < ((ptcl[adr].r_merge + ptcl[j].r_merge)*(ptcl[adr].r_merge + ptcl[j].r_merge)) && ptcl[j].mass > 0.0){
                 //     merge_pair.push_back( std::make_pair(adr, j) );
@@ -314,7 +316,7 @@ private:
     }
 
     template <class Tpi, class Tp, class ARCint>
-    void CalcAcc0Acc1AllJ(PtclForce &force, 
+    inline void CalcAcc0Acc1AllJ(PtclForce &force, 
                           const Tpi &pi,
                           const PS::S32 iadr,
                           const PS::F64vec &vcmsdi,
@@ -324,6 +326,7 @@ private:
                           const PS::S32 nbin,
                           const PS::F64 rin,
                           const PS::F64 rout,
+                          const PS::F64 r_oi_inv,
                           const PS::F64 eps2,
                           const ARCint* Aint = NULL) {
 
@@ -340,7 +343,7 @@ private:
                 CalcAcc0Acc1R2Cutoff(pi.pos, pi.vel*sdi+vcmsdi,
                                      force.acc0, force.acc1, r2,
                                      pj[k].pos, pj[k].vel*sdj+vcmsdj, pj[k].mass,
-                                     eps2, rout, rin);
+                                     eps2, rout, rin, r_oi_inv);
 #ifdef HARD_DEBUG
                 mcmcheck += pj[k].mass;
 #endif
@@ -357,7 +360,7 @@ private:
             CalcAcc0Acc1R2Cutoff(pi.pos, pi.vel*sdi+vcmsdi,
                                  force.acc0, force.acc1, r2,
                                  ptcl[j].pos, ptcl[j].vel, ptcl[j].mass,
-                                 eps2, rout, rin);
+                                 eps2, rout, rin, r_oi_inv);
                 // if(r2 < ((ptcl[adr].r_merge + ptcl[j].r_merge)*(ptcl[adr].r_merge + ptcl[j].r_merge)) && ptcl[j].mass > 0.0){
                 //     merge_pair.push_back( std::make_pair(adr, j) );
                 // }
@@ -374,6 +377,7 @@ private:
                          const PS::S32 n_act,
                          const PS::F64 rin,
                          const PS::F64 rout,
+                         const PS::F64 r_oi_inv,
                          const PS::F64 eps2,
                          const ARCint* Aint=NULL) {
         PS::S32 nbin = 0;
@@ -396,7 +400,7 @@ private:
                 PtclForce fp[ni];
                 for (PS::S32 j=0; j<ni; j++) {
                     fp[j].acc0 = fp[j].acc1 = 0.0;
-                    CalcAcc0Acc1AllJ(fp[j], pi[j], iadr, vcmsdi, sdi, ptcl, n_tot, nbin, rin, rout, eps2, Aint);
+                    CalcAcc0Acc1AllJ(fp[j], pi[j], iadr, vcmsdi, sdi, ptcl, n_tot, nbin, rin, rout, r_oi_inv, eps2, Aint);
                     force[iadr].acc0 += pi[j].mass*fp[j].acc0;
                     force[iadr].acc1 += pi[j].mass*fp[j].acc1;
 #ifdef HARD_DEBUG
@@ -410,7 +414,7 @@ private:
                 force[iadr].acc0 /= ptcl[iadr].mass;
                 force[iadr].acc1 /= ptcl[iadr].mass;
             }
-            else CalcAcc0Acc1AllJ(force[iadr], ptcl[iadr], iadr, vzero, 1.0, ptcl, n_tot, nbin, rin, rout, eps2, Aint);
+            else CalcAcc0Acc1AllJ(force[iadr], ptcl[iadr], iadr, vzero, 1.0, ptcl, n_tot, nbin, rin, rout, r_oi_inv, eps2, Aint);
         }
     }
     
@@ -680,12 +684,14 @@ public:
                    const PS::F64 eta_s,          // time step parameter
                    const PS::F64 r_in,           // force parameter
                    const PS::F64 r_out,          // force parameter
+                   const PS::F64 r_oi_inv,       // 1.0/(r_out-r_in)
                    const PS::F64 eps_sq){        // softening parameter
         dt_limit_hard_= dt_limit_hard; 
         eta_s_        = eta_s;         
         r_in_         = r_in;          
         r_out_        = r_out;
         eps_sq_       = eps_sq;
+        r_oi_inv_     = r_oi_inv;
     }
 
     template <class ARCint>
@@ -723,8 +729,8 @@ public:
 
         if(Aint!=NULL) Aint->resolve();
 
-        if(calc_full_flag) CalcAcc0Acc1Act(force_.getPointer(), ptcl_.getPointer(), ptcl_.size(), adr_sorted_.getPointer(), n_act_, r_in_, r_out_, eps_sq_, Aint);
-        else CalcAcc0Acc1Act(force_.getPointer(), ptcl_.getPointer(), adr_sorted_.getPointer(), n_act_, Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, r_out_, eps_sq_, Aint);
+        if(calc_full_flag) CalcAcc0Acc1Act(force_.getPointer(), ptcl_.getPointer(), ptcl_.size(), adr_sorted_.getPointer(), n_act_, r_in_, r_out_, r_oi_inv_, eps_sq_, Aint);
+        else CalcAcc0Acc1Act(force_.getPointer(), ptcl_.getPointer(), adr_sorted_.getPointer(), n_act_, Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, r_out_, r_oi_inv_, eps_sq_, Aint);
     
         // store predicted force
         for(PS::S32 i=0; i<n_ptcl; i++){
@@ -764,8 +770,8 @@ public:
             Aint->resolve();
         }
         // force::acc0,acc1 updated
-        if(calc_full_flag) CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), ptcl_.size(), adr_sorted_.getPointer(), n_act_, r_in_, r_out_, eps_sq_, Aint);
-        else CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), adr_sorted_.getPointer(), n_act_, Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, r_out_, eps_sq_, Aint);
+        if(calc_full_flag) CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), ptcl_.size(), adr_sorted_.getPointer(), n_act_, r_in_, r_out_, r_oi_inv_, eps_sq_, Aint);
+        else CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), adr_sorted_.getPointer(), n_act_, Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, r_out_, r_oi_inv_, eps_sq_, Aint);
         // ptcl_org::pos,vel; pred::time,dt,acc0,acc1,acc2,acc3 updated
         CorrectAndCalcDt4thAct(ptcl_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, dt_limit, a0_offset_sq_, eta_s_);
 
@@ -1238,12 +1244,13 @@ public:
 
 class ARC_int_pars{
 public:
-    PS::F64 rout, rin, eps2;
+    PS::F64 rout, rin, r_oi_inv, eps2;
     
     ARC_int_pars() {}
     ARC_int_pars(const ARC_int_pars& in_) {
         rout = in_.rout;
         rin  = in_.rin;
+        r_oi_inv = in_.r_oi_inv;
         eps2 = in_.eps2;
     }
 

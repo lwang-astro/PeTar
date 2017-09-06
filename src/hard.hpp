@@ -26,8 +26,8 @@ public:
 
     PtclHard() {}
 
-    template<class Tp>
-    PtclHard(const Tp &p): Ptcl(p) {}
+    PtclHard(const Ptcl &p): Ptcl(p) {}
+    PtclHard(const ParticleBase &p): Ptcl(p) {}
 
     template<class Tp>
     PtclHard(const Tp &p, const PS::S32 _id_cluster, const PS::S32 _adr_org): 
@@ -174,7 +174,7 @@ private:
         else {
             
             HermiteIntegrator<PtclHard> Hint;
-            Hint.setParams(dt_limit_hard_, eta_s_, Int_pars_.rin, Int_pars_.rout, Int_pars_.eps2);
+            Hint.setParams(dt_limit_hard_, eta_s_, Int_pars_.rin, Int_pars_.rout, Int_pars_.r_oi_inv, Int_pars_.eps2);
             Hint.setPtcl(ptcl_org,n_ptcl,group_.getPtclList(),group_.getPtclN());
             Hint.searchPerturber();
 
@@ -398,6 +398,7 @@ public:
         /// Set chain pars (L.Wang)
 		Int_pars_.rin  = _rin;
         Int_pars_.rout = _rout;
+        Int_pars_.r_oi_inv = 1.0/(_rout-_rin);
         Int_pars_.eps2  = _eps*_eps;
         /// Set chain pars (L.Wang)        
         dt_limit_hard_ = _dt_limit_hard;

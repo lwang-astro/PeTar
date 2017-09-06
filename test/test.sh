@@ -5,7 +5,7 @@ for i in `seq 7`
 do
     echo $i' s='$k
     rm -f data.* global.dat
-    ./nbody.out -i 2 -t 100.0 -R 0.1 -o 0.0625 -D $k -e 0.0 input/p3t.input 1>result/nbody.log.p3t.$sub$i 2>&1 
+    ./nbody.out -i 2 -t 100.0 -R 0.1 -r 0.3 -b 0.3 -o 0.0625 -D $k -e 0.0 input/p3t.input 1>result/nbody.log.p3t.$sub$i 2>&1 
     #echo 'input/p3t.input' >datalist
     ls data.*|sort -n -k1.6 > datalist
     #./getdata -i 1 input/p3t.input 1>getdata.log 2>&1
