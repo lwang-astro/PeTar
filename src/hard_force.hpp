@@ -16,6 +16,7 @@ inline void CalcAccPotShortWithLinearCutoff(const PS::F64vec & posi,
                         const PS::S32 pot_control_flag,
 					    const PS::F64 eps2,
 					    const PS::F64 rcut_oi_inv,
+                        const PS::F64 rcut_A,
                         const PS::F64 rcut_out,
 					    const PS::F64 rcut_in){
     const PS::F64vec rij = posi - posj;
@@ -27,7 +28,7 @@ inline void CalcAccPotShortWithLinearCutoff(const PS::F64vec & posi,
     const PS::F64 R2 = R * R;
     const PS::F64 Rm3 = Rm * R2;
     const PS::F64 r_eps = R * r2_eps;
-    const PS::F64 k = cutoff_poly_3rd(r_eps, rcut_oi_inv, rcut_in);
+    const PS::F64 k = cutoff_poly_3rd(r_eps, rcut_oi_inv, rcut_A, rcut_in);
     const PS::F64 r2_max = (r2_eps > rcut2_out) ? r2_eps : rcut2_out;
     const PS::F64 R_max = 1.0/sqrt(r2_max);
     const PS::F64 Rm_max = massj * R_max;
@@ -36,7 +37,7 @@ inline void CalcAccPotShortWithLinearCutoff(const PS::F64vec & posi,
     if(pot_control_flag==0) poti_tot -= (Rm - Rm_max);   // single
     else if(pot_control_flag==1) poti_tot -= (mass_bkj * R - Rm_max); // member
     else poti_tot += Rm_max; // fake
-    acci_pla -= (Rm3*k - Rm3_max)*rij;
+    acci_pla -= (Rm3*(1-k) - Rm3_max)*rij;
 }
 
 
@@ -68,8 +69,15 @@ int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, c
   const double r_out = pars->rout;
   const double r_in  = pars->rin;
   const double r_oi_inv = pars->r_oi_inv;
-  const double k = CalcW(rij/r_out, r_in/r_out);
-  const double kdot = cutoff_poly_3rd(rij, r_oi_inv, r_in);
+  const double r_A   = pars->r_A;
+
+#ifdef INTEGRATED_CUTOFF_FUNCTION
+  const double kpot  = 1.0-CalcW(rij/r_out, r_in/r_out);
+#else
+  const double pot_off = pars->pot_off;
+  const double kpot  = cutoff_pot(rij, r_oi_inv, r_A, r_in);
+#endif
+  const double k     = cutoff_poly_3rd(rij, r_oi_inv, r_A, r_in);
 
   // smooth coefficients
 //  const double mm2=smpars[0];
@@ -90,7 +98,12 @@ int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, c
 //    mmij = mimj;    // Wij = m_i*m_i
 //  }
   
-  Pij = - mimj / rij * (1-k);  // Potential energy
+#ifdef INTEGRATED_CUTOFF_FUNCTION
+  Pij = - mimj / rij * kpot;  // Potential energy
+#else
+  Pij = - mimj*(1.0/ rij * kpot - pot_off);
+  if (rij>r_out) Pij = 0.0;
+#endif
 //#ifdef DEBUG
 //  std::cerr<<"Pij = "<<Pij<<" rij = "<<rij<<" k="<<k<<" r_in="<<r_in<<" r_out="<<r_out<<std::endl;
 //#endif
@@ -102,9 +115,9 @@ int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, c
 //  Aij[0] = mor3 * xij[0] * (1-k) + Pij*(1-kdx);
 //  Aij[1] = mor3 * xij[1] * (1-k) + Pij*(1-kdy);
 //  Aij[2] = mor3 * xij[2] * (1-k) + Pij*(1-kdz);
-  Aij[0] = mor3 * xij[0] * (1-kdot);   
-  Aij[1] = mor3 * xij[1] * (1-kdot); 
-  Aij[2] = mor3 * xij[2] * (1-kdot); 
+  Aij[0] = mor3 * xij[0] * k;   
+  Aij[1] = mor3 * xij[1] * k; 
+  Aij[2] = mor3 * xij[2] * k; 
 
   // dW/dr
   mor3 = mmij / rij3;
@@ -174,17 +187,18 @@ void Newtonian_extA (double3* acc, const PS::F64 time, Tptcl* p, const PS::S32 n
                 //  const PS::F64 r_out = std::max(pi.r_out, pp.r_out);
                 const PS::F64 r_in  = pars->rin;
                 const PS::F64 r_oi_inv = pars->r_oi_inv;
+                const PS::F64 r_A   = pars->r_A;
                 //const PS::F64 k     = CalcW(dr/r_out, r_in/r_out);
-                const PS::F64 kdot  = cutoff_poly_3rd(dr, r_oi_inv, r_in);
+                const PS::F64 k  = cutoff_poly_3rd(dr, r_oi_inv, r_A, r_in);
 
                 //Pij = - mi*mp / dr * (1-k);
 
                 // Aij[0] = mp * dx / dr3 * (1-k) + Pij * (1-kdx);
                 // Aij[1] = mp * dy / dr3 * (1-k) + Pij * (1-kdy);
                 // Aij[2] = mp * dz / dr3 * (1-k) + Pij * (1-kdz);
-                acc[i][0] += mor3 * dx[0] * (1-kdot);
-                acc[i][1] += mor3 * dx[1] * (1-kdot);
-                acc[i][2] += mor3 * dx[2] * (1-kdot);
+                acc[i][0] += mor3 * dx[0] * k;
+                acc[i][1] += mor3 * dx[1] * k;
+                acc[i][2] += mor3 * dx[2] * k;
             }
         }
     }
@@ -244,7 +258,8 @@ inline void CalcAcc0Acc1R2Cutoff(const PS::F64vec posi,
                                  const PS::F64 eps2,
                                  const PS::F64 rcut_out,
                                  const PS::F64 rcut_in,
-                                 const PS::F64 rcut_oi_inv){
+                                 const PS::F64 rcut_oi_inv,
+                                 const PS::F64 rcut_A){
     const PS::F64vec rij = posi - posj;
     r2 = rij*rij;
     const PS::F64 r2_eps = r2 + eps2;
@@ -258,14 +273,15 @@ inline void CalcAcc0Acc1R2Cutoff(const PS::F64vec posi,
         const PS::F64 R3 = R2*R;
         const PS::F64 A = (rijvij)*R2;
 #ifdef FORDEBUG
-        PS::F64 K = 0.0; // for debug
-        PS::F64 Kdot = 0.0; // for debug
+        PS::F64 K = 1.0; // for debug
+        PS::F64 Kdot = 1.0; // for debug
 #else
-        const PS::F64 K = cutoff_poly_3rd(r_eps, rcut_oi_inv, rcut_in);
-        const PS::F64 Kdot = cutoff_poly_3rd_dot(r_eps, rijvij, rcut_oi_inv, rcut_in);
+        const PS::F64 K = cutoff_poly_3rd(r_eps, rcut_oi_inv, rcut_A, rcut_in);
+        const PS::F64 Kdot = cutoff_poly_3rd_dot(r_eps, rijvij, rcut_oi_inv, rcut_A, rcut_in);
 #endif
-        const PS::F64vec F0 = -massj*R3*rij*(1.0-K);
-        const PS::F64vec F1 = -massj*R3*vij*(1.0-K) - 3.0*A*F0 + massj*R3*rij*Kdot;
+        const PS::F64 MR3 = massj*R3;
+        const PS::F64vec F0 = -MR3*rij*K;
+        const PS::F64vec F1 = -MR3*vij*K - 3.0*A*F0 - MR3*rij*Kdot;
         acci += F0;
         jrki += F1;
     }
@@ -414,17 +430,18 @@ void Newtonian_extA_test (double3* acc, const PS::F64 time, Tptcl* p, const PS::
                 //  const PS::F64 r_out = std::max(pi.r_out, pp.r_out);
                 const PS::F64 r_in  = pars->rin;
                 const PS::F64 r_oi_inv = pars->r_oi_inv;
+                const PS::F64 r_A   = pars->r_A;
                 //const PS::F64 k     = CalcW(dr/r_out, r_in/r_out);
-                const PS::F64 kdot  = cutoff_poly_3rd(dr, r_oi_inv, r_in);
+                const PS::F64 k  = cutoff_poly_3rd(dr, r_oi_inv, r_A, r_in);
 
                 //Pij = - mi*mp / dr * (1-k);
 
                 // Aij[0] = mp * dx / dr3 * (1-k) + Pij * (1-kdx);
                 // Aij[1] = mp * dy / dr3 * (1-k) + Pij * (1-kdy);
                 // Aij[2] = mp * dz / dr3 * (1-k) + Pij * (1-kdz);
-                acc[i][0] += mor3 * dx[0] * (1-kdot);
-                acc[i][1] += mor3 * dx[1] * (1-kdot);
-                acc[i][2] += mor3 * dx[2] * (1-kdot);
+                acc[i][0] += mor3 * dx[0] * k;
+                acc[i][1] += mor3 * dx[1] * k;
+                acc[i][2] += mor3 * dx[2] * k;
             }
         }
     }

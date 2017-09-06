@@ -51,6 +51,11 @@ template<class Tptcl, class Teng>
 void CalcEnergyHard(const Tptcl ptcl[], const PS::S32 n_tot, Teng & eng, 
                     const PS::F64 r_in, const PS::F64 r_out, const PS::F64 eps_sq = 0.0){
     eng.clear();
+#ifndef INTEGRATED_CUTOFF_FUNCTION
+    PS::F64 r_oi_inv = 1.0/(r_out-r_in);
+    PS::F64 r_A = (r_out-r_in)/(r_out+r_in);
+    PS::F64 pot_off = cutoff_pot(1.0)/r_out;
+#endif
     for(PS::S32 i=0; i<n_tot; i++){
         eng.kin += 0.5 * ptcl[i].mass * ptcl[i].vel * ptcl[i].vel;
         eng.L   += ptcl[i].pos ^ (ptcl[i].mass*ptcl[i].vel);
@@ -59,7 +64,11 @@ void CalcEnergyHard(const Tptcl ptcl[], const PS::S32 n_tot, Teng & eng,
             //PS::F64 r_out = std::max(ptcl[i].r_out,ptcl[j].r_out);
             PS::F64vec rij = ptcl[i].pos - ptcl[j].pos;
             PS::F64 dr = sqrt(rij*rij + eps_sq);
+#ifdef INTEGRATED_CUTOFF_FUNCTION
             eng.pot -= ptcl[j].mass*ptcl[i].mass/dr*(1.0 - CalcW(dr/r_out, r_in/r_out));
+#else
+            if(dr<r_out) eng.pot -= ptcl[j].mass*ptcl[i].mass*(1.0/dr*cutoff_pot(dr, r_oi_inv, r_A, r_in) - pot_off);
+#endif
         }
     }
     eng.tot = eng.kin + eng.pot;

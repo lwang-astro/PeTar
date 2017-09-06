@@ -174,7 +174,7 @@ private:
         else {
             
             HermiteIntegrator<PtclHard> Hint;
-            Hint.setParams(dt_limit_hard_, eta_s_, Int_pars_.rin, Int_pars_.rout, Int_pars_.r_oi_inv, Int_pars_.eps2);
+            Hint.setParams(dt_limit_hard_, eta_s_, Int_pars_.rin, Int_pars_.rout, Int_pars_.eps2);
             Hint.setPtcl(ptcl_org,n_ptcl,group_.getPtclList(),group_.getPtclN());
             Hint.searchPerturber();
 
@@ -399,6 +399,8 @@ public:
 		Int_pars_.rin  = _rin;
         Int_pars_.rout = _rout;
         Int_pars_.r_oi_inv = 1.0/(_rout-_rin);
+        Int_pars_.r_A      = (_rout-_rin)/(_rout+_rin);
+        Int_pars_.pot_off  = (1.0+Int_pars_.r_A)/_rout;
         Int_pars_.eps2  = _eps*_eps;
         /// Set chain pars (L.Wang)        
         dt_limit_hard_ = _dt_limit_hard;
@@ -426,7 +428,6 @@ public:
     template<class Teng>
     void CalcEnergyHard(Teng & eng,  const PS::S32* ptcl_list, const PS::S32 ptcl_n, const PS::S32* group_list, const PS::S32 group_n, const PS::S32 nbin){
         eng.kin = eng.pot = eng.tot = 0.0;
-        
         for(PS::S32 i=nbin; i<ptcl_n; i++){
             PtclHard* pi = &ptcl_hard_[ptcl_list[i]];
             eng.kin += 0.5 * pi->mass * pi->vel * pi->vel;
@@ -435,14 +436,22 @@ public:
                 PtclHard* pj = &ptcl_hard_[ptcl_list[j]];
                 PS::F64vec rij = pi->pos - pj->pos;
                 PS::F64 dr = sqrt(rij*rij + Int_pars_.eps2);
-                eng.pot -= pj->mass*pi->mass/dr*(1.0 - CalcW(dr/Int_pars_.rout, Int_pars_.rin/Int_pars_.rout));
+#ifdef INTEGRATED_CUTOFF_FUNCTION
+                eng.pot -= pj->mass*pi->mass/dr*(1.0 - CalcW(dr/Int_pars_.rout, Int_pars_.rin/Int_pars_.rout));  
+#else
+                if(dr<Int_pars_.rout) eng.pot -= pj->mass*pi->mass*(1.0/dr*cutoff_pot(dr, Int_pars_.r_oi_inv, Int_pars_.r_A, Int_pars_.rin) - Int_pars_.pot_off);
+#endif
             }
 
             for(PS::S32 j=0; j<group_n; j++){
                 PtclHard* pj = &ptcl_hard_[group_list[j]];
                 PS::F64vec rij = pi->pos - pj->pos;
                 PS::F64 dr = sqrt(rij*rij + Int_pars_.eps2);
-                eng.pot -= pj->mass*pi->mass/dr*(1.0 - CalcW(dr/Int_pars_.rout, Int_pars_.rin/Int_pars_.rout));
+#ifdef INTEGRATED_CUTOFF_FUNCTION
+                eng.pot -= pj->mass*pi->mass/dr*(1.0 - CalcW(dr/Int_pars_.rout, Int_pars_.rin/Int_pars_.rout));  
+#else
+                if(dr<Int_pars_.rout) eng.pot -= pj->mass*pi->mass*(1.0/dr*cutoff_pot(dr, Int_pars_.r_oi_inv, Int_pars_.r_A, Int_pars_.rin) - Int_pars_.pot_off);
+#endif
             }
         }
 
@@ -454,7 +463,11 @@ public:
                 PtclHard* pj = &ptcl_hard_[group_list[j]];
                 PS::F64vec rij = pi->pos - pj->pos;
                 PS::F64 dr = sqrt(rij*rij + Int_pars_.eps2);
-                eng.pot -= pj->mass*pi->mass/dr*(1.0 - CalcW(dr/Int_pars_.rout, Int_pars_.rin/Int_pars_.rout));
+#ifdef INTEGRATED_CUTOFF_FUNCTION
+                eng.pot -= pj->mass*pi->mass/dr*(1.0 - CalcW(dr/Int_pars_.rout, Int_pars_.rin/Int_pars_.rout));  
+#else
+                if(dr<Int_pars_.rout) eng.pot -= pj->mass*pi->mass*(1.0/dr*cutoff_pot(dr, Int_pars_.r_oi_inv, Int_pars_.r_A, Int_pars_.rin) - Int_pars_.pot_off);
+#endif
             }
         }
         eng.tot = eng.kin + eng.pot;

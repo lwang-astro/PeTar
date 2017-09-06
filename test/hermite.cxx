@@ -108,7 +108,7 @@ int main(int argc, char** argv)
     group.findGroups(p.getPointer(), N, 8);
     
     HermiteIntegrator<PtclHard> Hint;
-    Hint.setParams(par.dt_limit_hard, par.eta, par.rin, par.rout, par.r_oi_inv, par.eps*par.eps);
+    Hint.setParams(par.dt_limit_hard, par.eta, par.rin, par.rout, par.eps*par.eps);
     Hint.setPtcl(p.getPointer(),p.size(),group.getPtclList(),group.getPtclN());
     Hint.searchPerturber();
             
