@@ -318,7 +318,7 @@ int main(int argc, char *argv[]){
     PS::F64 r_in, m_average, v_disp, r_search_min;
     GetR(system_soft, r_in, r_out.value, r_bin.value, r_search_min, m_average, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value, n_bin.value);
 //    EPISoft::r_out = r_out;
-//    EPISoft::r_in  = r_in;
+    EPISoft::r_in  = r_in;
     EPISoft::eps   = eps.value;
     EPISoft::r_out = EPJSoft::r_out = FPSoft::r_out = r_out.value;
     Ptcl::search_factor = search_factor.value;
@@ -384,11 +384,20 @@ int main(int argc, char *argv[]){
 
     Tree tree_soft;
     tree_soft.initialize(n_glb.value, theta.value, n_leaf_limit.value, n_group_limit.value);
+#ifndef USE_SIMD
     tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSIMD(),
 #ifdef USE_QUAD
                                        CalcForceEpSpQuadNoSimd(),
 #else
                                        CalcForceEpSpNoSIMD(),
+#endif
+#else
+    tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(),
+#ifdef USE_QUAD
+                                       CalcForceEpSpQuadSimd(),
+#else
+                                       CalcForceEpSpMonoSimd(),
+#endif
 #endif
                                        system_soft,
                                        dinfo);
@@ -449,12 +458,22 @@ int main(int argc, char *argv[]){
             system_soft[i].rank_org = my_rank;
             system_soft[i].adr = i;
         }
+#ifndef USE_SIMD
         tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSIMD(),
 #ifdef USE_QUAD
                                            CalcForceEpSpQuadNoSimd(),
 #else
                                            CalcForceEpSpNoSIMD(),
 #endif
+#else
+       tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(),
+#ifdef USE_QUAD
+                                       CalcForceEpSpQuadSimd(),
+#else
+                                       CalcForceEpSpMonoSimd(),
+#endif
+#endif
+
                                            system_soft,
                                            dinfo);
 
@@ -618,12 +637,22 @@ int main(int argc, char *argv[]){
             system_soft[i].rank_org = my_rank;
             system_soft[i].adr = i;
         }
+#ifndef USE_SIMD
         tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSIMD(),
 #ifdef USE_QUAD
                                            CalcForceEpSpQuadNoSimd(),
 #else
                                            CalcForceEpSpNoSIMD(),
 #endif
+#else
+        tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(),
+#ifdef USE_QUAD
+                                       CalcForceEpSpQuadSimd(),
+#else
+                                       CalcForceEpSpMonoSimd(),
+#endif
+#endif
+
                                            system_soft,
                                            dinfo);
 #ifdef PROFILE

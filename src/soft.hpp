@@ -127,6 +127,7 @@ public:
     PS::S32 rank_org;
     static PS::F64 eps;
     static PS::F64 r_out;
+    static PS::F64 r_in;
 //    static PS::F64 r_search;
 //    static PS::F64 r_in;
 //    static PS::F64 m_average;
@@ -201,8 +202,9 @@ public:
     }
 };
 
-PS::F64 EPISoft::eps = 1.0/1024.0;
+PS::F64 EPISoft::eps = 0.0;
 PS::F64 EPISoft::r_out = 0.0;
+PS::F64 EPISoft::r_in  = 0.0;
 PS::F64 EPJSoft::r_out = 0.0;
 PS::F64  FPSoft::r_out = 0.0;
 
@@ -449,3 +451,142 @@ struct CalcForceEpSpQuadNoSimd{
         }
     }
 };
+
+#ifdef USE_SIMD
+struct CalcForceEpEpWithLinearCutoffSimd{
+    void operator () (const EPISoft * ep_i,
+                      const PS::S32 n_ip,
+                      const EPJSoft * ep_j,
+                      const PS::S32 n_jp,
+                      ForceSoft * force){
+        const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
+//        const PS::F64 r_crit2 = EPJSoft::r_search * EPJSoft::r_search;
+    #ifdef __HPC_ACE__
+        PhantomGrapeQuad pg;
+    #else
+        #if defined(CALC_EP_64bit) || defined(CALC_EP_MIX)
+        static __thread PhantomGrapeQuad64Bit pg;
+        #else
+        static __thread PhantomGrapeQuad pg;
+        #endif
+    #endif
+        pg.set_eps2(eps2);
+        //pg.set_r_crit2( (r_crit2+eps2)*SAFTY_FACTOR_FOR_SEARCH_SQ );
+        pg.set_cutoff(EPISoft::r_out, EPISoft::r_in);
+        for(PS::S32 i=0; i<n_ip; i++){
+            const PS::F64vec pos_i = ep_i[i].getPos();
+            pg.set_xi_one(i, pos_i.x, pos_i.y, pos_i.z, ep_i[i].r_search);
+        }
+        PS::S32 loop_max = (n_jp-1) / PhantomGrapeQuad::NJMAX + 1;
+        for(PS::S32 loop=0; loop<loop_max; loop++){
+            const PS::S32 ih = PhantomGrapeQuad::NJMAX*loop;
+            const PS::S32 n_jp_tmp = ( (n_jp - ih) < PhantomGrapeQuad::NJMAX) ? (n_jp - ih) : PhantomGrapeQuad::NJMAX;
+            const PS::S32 it =ih + n_jp_tmp;
+            PS::S32 i_tmp = 0;
+            for(PS::S32 i=ih; i<it; i++, i_tmp++){
+                const PS::F64 m_j = ep_j[i].getCharge();
+                const PS::F64vec pos_j = ep_j[i].getPos();
+                pg.set_epj_one(i_tmp, pos_j.x, pos_j.y, pos_j.z, m_j, ep_j[i].r_search);
+
+            }
+            pg.run_epj_for_p3t_with_linear_cutoff(n_ip, n_jp_tmp);
+            for(PS::S32 i=0; i<n_ip; i++){
+                PS::F64 * p = &(force[i].pot);
+                PS::F64 * a = (PS::F64 * )(&force[i].acc[0]);
+                PS::F64 n_ngb = 0;
+                pg.accum_accp_one(i, a[0], a[1], a[2], *p, n_ngb);
+                force[i].n_ngb += (PS::S32)(n_ngb*1.00001);
+            }
+        }
+    }
+};
+
+struct CalcForceEpSpMonoSimd{
+    template<class Tsp>
+    void operator () (const EPISoft * ep_i,
+                      const PS::S32 n_ip,
+                      //const PS::SPJMonopoleScatter * sp_j,
+                      const Tsp * sp_j,
+                      const PS::S32 n_jp,
+                      ForceSoft * force){
+        const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
+#ifdef __HPC_ACE__
+        PhantomGrapeQuad pg;
+#else
+    #if defined(CALC_EP_64bit)
+        static __thread PhantomGrapeQuad64Bit pg;
+    #else
+        static __thread PhantomGrapeQuad pg;
+    #endif
+#endif
+        pg.set_eps2(eps2);
+        for(PS::S32 i=0; i<n_ip; i++){
+            const PS::F64vec pos_i = ep_i[i].getPos();
+            pg.set_xi_one(i, pos_i.x, pos_i.y, pos_i.z, 0.0);
+        }
+        PS::S32 loop_max = (n_jp-1) / PhantomGrapeQuad::NJMAX + 1;
+        for(PS::S32 loop=0; loop<loop_max; loop++){
+            const PS::S32 ih = PhantomGrapeQuad::NJMAX*loop;
+            const PS::S32 n_jp_tmp = ( (n_jp - ih) < PhantomGrapeQuad::NJMAX) ? (n_jp - ih) : PhantomGrapeQuad::NJMAX;
+            const PS::S32 it = ih + n_jp_tmp;
+            PS::S32 i_tmp = 0;
+            for(PS::S32 i=ih; i<it; i++, i_tmp++){
+                const PS::F64 m_j = sp_j[i].getCharge();
+                const PS::F64vec pos_j = sp_j[i].getPos();
+                pg.set_epj_one(i_tmp, pos_j.x, pos_j.y, pos_j.z, m_j, 0.0);
+            }
+            pg.run_epj(n_ip, n_jp_tmp);
+            for(PS::S32 i=0; i<n_ip; i++){
+                PS::F64 * p = &(force[i].pot);
+                PS::F64 * a = (PS::F64 * )(&force[i].acc[0]);
+                pg.accum_accp_one(i, a[0], a[1], a[2], *p);
+            }
+        }
+    }
+};
+
+struct CalcForceEpSpQuadSimd{
+    template<class Tsp>
+    void operator () (const EPISoft * ep_i,
+                      const PS::S32 n_ip,
+                      const Tsp * sp_j,
+                      const PS::S32 n_jp,
+                      ForceSoft * force){
+        const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
+    #ifdef __HPC_ACE__
+        PhantomGrapeQuad pg;
+    #else
+        #if defined(CALC_EP_64bit)
+        static __thread PhantomGrapeQuad64Bit pg;
+        #else
+        static __thread PhantomGrapeQuad pg;
+        #endif
+    #endif
+        pg.set_eps2(eps2);
+        for(PS::S32 i=0; i<n_ip; i++){
+            const PS::F64vec pos_i = ep_i[i].getPos();
+            pg.set_xi_one(i, pos_i.x, pos_i.y, pos_i.z, 0.0);
+        }
+        PS::S32 loop_max = (n_jp-1) / PhantomGrapeQuad::NJMAX + 1;
+        for(PS::S32 loop=0; loop<loop_max; loop++){
+            const PS::S32 ih = PhantomGrapeQuad::NJMAX*loop;
+            const PS::S32 n_jp_tmp = ( (n_jp - ih) < PhantomGrapeQuad::NJMAX) ? (n_jp - ih) : PhantomGrapeQuad::NJMAX;
+            const PS::S32 it = ih + n_jp_tmp;
+            PS::S32 i_tmp = 0;
+            for(PS::S32 i=ih; i<it; i++, i_tmp++){
+                const PS::F64 m_j = sp_j[i].getCharge();
+                const PS::F64vec pos_j = sp_j[i].getPos();
+                const PS::F64mat q = sp_j[i].quad;
+                pg.set_spj_one(i, pos_j.x, pos_j.y, pos_j.z, m_j,
+                               q.xx, q.yy, q.zz, q.xy, q.yz, q.xz);
+            }
+            pg.run_spj(n_ip, n_jp_tmp);
+            for(PS::S32 i=0; i<n_ip; i++){
+                PS::F64 * p = &(force[i].pot);
+                PS::F64 * a = (PS::F64 * )(&force[i].acc[0]);
+                pg.accum_accp_one(i, a[0], a[1], a[2], *p);
+            }
+        }
+    }
+};
+#endif
