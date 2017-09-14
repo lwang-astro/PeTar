@@ -63,7 +63,7 @@ public:
     }
 
     void writeAscii(FILE* fp) const{
-        fprintf(fp, "%lld %lld %lld %lf %lf %lld\n", nfile, n_body, id_offset, time, dt_soft, n_split);
+        fprintf(fp, "%lld %lld %lld %26.17e %26.17e %lld\n", nfile, n_body, id_offset, time, dt_soft, n_split);
     }
 
     void writeBinary(FILE* fp) const{
