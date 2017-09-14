@@ -13,19 +13,26 @@ void GetR(const Tpsys & system_soft,
           PS::F64 &vel_disp,
           const PS::F64 search_factor,
           const PS::F64 ratio_r_cut,
-          const PS::S64 n_bin){
+          const PS::S64 n_bin,
+          const bool restart_flag){
     //const PS::S32 my_rank=PS::Comm::getRank();
     const PS::S64 n_loc = system_soft.getNumberOfParticleLocal();
     PS::F64vec vel_cm_loc = 0.0;
     PS::F64 mass_cm_loc = 0.0;
     //    PS::F64 mmax_loc = system_soft[0].mass;
     //    PS::F64 mmin_loc = mmax_loc;
+
     for(PS::S64 i=0; i<n_loc; i++){
+        if(restart_flag) {
+            if (system_soft[i].id>0&&system_soft[i].status!=0) continue;
+            if (system_soft[i].id<0&&system_soft[i].status<=0) continue;
+        }
         mass_cm_loc += system_soft[i].mass;
         vel_cm_loc += system_soft[i].mass * system_soft[i].vel;
         //      if (system_soft[i].mass>mmax_loc) mmax_loc = system_soft[i].mass;
         //      if (system_soft[i].mass<mmin_loc) mmin_loc = system_soft[i].mass;
     }
+
     PS::F64    mass_cm_glb = PS::Comm::getSum(mass_cm_loc);
     PS::F64vec vel_cm_glb  = PS::Comm::getSum(vel_cm_loc);
     //    PS::F64    mmax = PS::Comm::getMaxValue(mmax_loc);
@@ -34,25 +41,37 @@ void GetR(const Tpsys & system_soft,
     vel_cm_glb /= mass_cm_glb;
     PS::F64 vel_sq_loc = 0.0;
     PS::S64 n_vel_loc_count = 0;
-    PS::S64 is_start = 0;
-    const PS::S64 bin_last_id = 2*n_bin;
-    if (system_soft[0].id<bin_last_id) {
-        is_start = std::min(bin_last_id - system_soft[0].id + 1,n_loc);
-        if(is_start%2!=0) is_start--;
+
+    if(restart_flag) {
+        for(PS::S64 i=0; i<n_loc; i++) {
+            if (system_soft[i].id>0&&system_soft[i].status!=0) continue;
+            if (system_soft[i].id<0&&system_soft[i].status<=0) continue;
+            PS::F64vec dv = system_soft[i].vel - vel_cm_glb;
+            vel_sq_loc += dv * dv;
+            n_vel_loc_count++;
+        }
     }
-    const PS::S64 ib_start = (system_soft[0].id%2==0)?1:0;
-    for (PS::S64 i=ib_start; i<is_start; i+=2) {
-        PS::F64 m1 = system_soft[i].mass;
-        PS::F64 m2 = system_soft[i+1].mass;
-        PS::F64vec dv = (m1*system_soft[i].vel + m2*system_soft[i+1].vel)/(m1+m2) - vel_cm_glb;
-        vel_sq_loc += dv * dv;
-        n_vel_loc_count++;
-    }
+    else {
+        PS::S64 is_start = 0;
+        const PS::S64 bin_last_id = 2*n_bin;
+        if (system_soft[0].id<bin_last_id) {
+            is_start = std::min(bin_last_id - system_soft[0].id + 1,n_loc);
+            if(is_start%2!=0) is_start--;
+        }
+        const PS::S64 ib_start = (system_soft[0].id%2==0)?1:0;
+        for (PS::S64 i=ib_start; i<is_start; i+=2) {
+            PS::F64 m1 = system_soft[i].mass;
+            PS::F64 m2 = system_soft[i+1].mass;
+            PS::F64vec dv = (m1*system_soft[i].vel + m2*system_soft[i+1].vel)/(m1+m2) - vel_cm_glb;
+            vel_sq_loc += dv * dv;
+            n_vel_loc_count++;
+        }
         
-    for (PS::S64 i=is_start; i<n_loc; i++){
-        PS::F64vec dv = system_soft[i].vel - vel_cm_glb;
-        vel_sq_loc += dv * dv;
-        n_vel_loc_count++;
+        for (PS::S64 i=is_start; i<n_loc; i++){
+            PS::F64vec dv = system_soft[i].vel - vel_cm_glb;
+            vel_sq_loc += dv * dv;
+            n_vel_loc_count++;
+        }
     }
 
     const PS::S64    n_vel_glb_count= PS::Comm::getSum(n_vel_loc_count);

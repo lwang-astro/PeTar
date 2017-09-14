@@ -303,7 +303,7 @@ int main(int argc, char *argv[]){
 
     // tree time step and n_split
     if (restart_flag) {
-        if(dt_soft.value!=file_header.dt_soft) 
+        if(dt_soft.value!=file_header.dt_soft&&dt_soft.value>0) 
             std::cerr<<"Warning: tree time step cannot be changed for restarting, the value from the data file ("<<file_header.dt_soft<<") will be used\n";
         if(n_split.value!=file_header.n_split)
             std::cerr<<"Warning: n_split cannot be changed for restarting, the value from the data file ("<<file_header.n_split<<") will be used\n";
@@ -316,7 +316,8 @@ int main(int argc, char *argv[]){
     }
     
     PS::F64 r_in, m_average, v_disp, r_search_min;
-    GetR(system_soft, r_in, r_out.value, r_bin.value, r_search_min, m_average, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value, n_bin.value);
+    GetR(system_soft, r_in, r_out.value, r_bin.value, r_search_min, m_average, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value, n_bin.value, restart_flag);
+
 //    EPISoft::r_out = r_out;
     EPISoft::r_in  = r_in;
     EPISoft::eps   = eps.value;
