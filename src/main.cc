@@ -93,7 +93,7 @@ int main(int argc, char *argv[]){
     IOParams<PS::F64> ratio_r_cut  (0.1,  "r_in / r_out");
     IOParams<PS::F64> theta        (0.3,  "openning angle theta");
     IOParams<PS::S32> n_leaf_limit (8,    "tree leaf number limit");
-    IOParams<PS::S32> n_group_limit(64,   "tree group number limit");
+    IOParams<PS::S32> n_group_limit(2048, "tree group number limit");
     IOParams<PS::S32> n_smp_ave    (100,  "average target number of sample particles per process");
     IOParams<PS::S32> n_split      (8,    "number of binary sample points for tree perturbation force");
     IOParams<PS::S64> n_bin        (0,    "number of primordial binaries (assume binaries ID=1,2*n_bin)");
