@@ -6,7 +6,7 @@
 #PS_PATH = -I../FDPS/src
 PS_PATH  = -I/home/lwang/code/fdps/src
 ARC_PATH = -I/home/lwang/code/ARC/include
-GPREF_PATH = -L/opt/gperftools-2.6.1/lib
+#GPERF_PATH = -L/opt/gperftools-2.6.1/lib
 #ARC_PATH = -I/home/lwang/GitHub/ARC/include
 
 #ROOT_PATH= ${shell pwd -P}
@@ -85,7 +85,7 @@ CXXFLAGS += -D PROFILE
 #CXXFLAGS += -D DEBUG_TEMP
 #CXXFLAGS += -D MAIN_DEBUG
 
-CXXLIBS += $(GPREF_PATH) -lprofiler -ltcmalloc 
+CXXLIBS += -L$(GPERF_PATH) -lprofiler -ltcmalloc 
 
 VPATH=./src ./test ../src
 

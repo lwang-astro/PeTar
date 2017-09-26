@@ -39,6 +39,8 @@ void SetRankComm(const PS::F64ort pos_domain[], Ttree &tree,
         }
 //        rank_neighbor.push_back(i);
     }
+    delete [] pos_domain_in;
+    delete [] pos_domain_out;
 }
 #endif
 
@@ -336,11 +338,11 @@ public:
                                            const PS::F64 r_in,
                                            const PS::F64ort pos_domain[],
                                            const PS::F64 eps_sq=0.0){
-        static PS::ReallocatableArray<PtclOuter> * ptcl_outer;
-        static PS::ReallocatableArray< std::pair<PS::S32, PS::S32> > * id_ngb_multi_cluster;
+        static PS::ReallocatableArray<PtclOuter> * ptcl_outer = NULL;
+        static PS::ReallocatableArray< std::pair<PS::S32, PS::S32> > * id_ngb_multi_cluster = NULL;
         const PS::S32 n_thread = PS::Comm::getNumberOfThread();
-        ptcl_outer = new PS::ReallocatableArray<PtclOuter>[n_thread];
-        id_ngb_multi_cluster = new PS::ReallocatableArray< std::pair<PS::S32, PS::S32> >[n_thread];
+        if(ptcl_outer==NULL) ptcl_outer = new PS::ReallocatableArray<PtclOuter>[n_thread];
+        if(id_ngb_multi_cluster==NULL) id_ngb_multi_cluster = new PS::ReallocatableArray< std::pair<PS::S32, PS::S32> >[n_thread];
         const PS::S32 my_rank = PS::Comm::getRank();
         //        const PS::S32 n_proc_tot = PS::Comm::getNumberOfProc();
         const PS::S32 n_loc = sys.getNumberOfParticleLocal();
