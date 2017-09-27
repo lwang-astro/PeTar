@@ -5,10 +5,11 @@
 class PhantomGrapeQuad{
 public:
     enum{
-	NIMAX = 32768,
-	NJMAX = 131072,
-	//NIMAX = 1024,
-	//NJMAX = 8192,
+        NIMAX = 32768,
+        //NIMAX = 16384,
+        NJMAX = 131072,
+        //NIMAX = 1024,
+        //NJMAX = 8192,
     };
 private:
 #if 1

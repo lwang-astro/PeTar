@@ -551,8 +551,7 @@ public:
     void writeBackPtclForOneCluster(Tsys & sys, 
                                     const PS::ReallocatableArray<PS::S32> & adr_array){
         const PS::S32 n = ptcl_hard_.size();
-//        PS::ReallocatableArray<PS::S32> removelist;
-//        removelist.reserve(n);
+        PS::ReallocatableArray<PS::S32> removelist(n);
         for(PS::S32 i=0; i<n; i++){
             PS::S32 adr = adr_array[i];
             // assert(sys[adr].id == ptcl_hard_[i].id);
@@ -563,9 +562,9 @@ public:
                 abort();
             }
 #endif
-//            if(sys[adr].id<0&&sys[adr].status<0) removelist.push_back(adr);
+            if(sys[adr].id<0&&sys[adr].status<0) removelist.push_back(adr);
         }
-//        sys.removeParticle(removelist.getPointer(), removelist.size());
+        sys.removeParticle(removelist.getPointer(), removelist.size());
     }
 
     template<class Tsys>

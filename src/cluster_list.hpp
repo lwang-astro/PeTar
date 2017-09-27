@@ -406,7 +406,7 @@ public:
         n_pcluster_self_node_ = ptcl_cluster_[0].size();
         std::sort(ptcl_outer[0].getPointer(), ptcl_outer[0].getPointer(ptcl_outer[0].size()), OPLessID());
 
-        if(PS::Comm::getRank() == 0 && ptcl_outer[0].size() > 0){
+/*        if(PS::Comm::getRank() == 0 && ptcl_outer[0].size() > 0){
             PS::S32 n_tmp = 1;
             PS::S32 n_tmp_tmp = 0;
             //std::cerr<<"ptcl_outer[0].size()="<<ptcl_outer[0].size()<<std::endl;
@@ -419,7 +419,7 @@ public:
                 }
                 n_tmp_tmp++;
             }
-        }
+            }*/
         mergePtclCluster(ptcl_outer, id_ngb_multi_cluster); // ptcl_cluster_ is complited
         id_to_adr_pcluster_.clear(); // temporally add 
         for(PS::S32 i=0; i<ptcl_cluster_[0].size(); i++){

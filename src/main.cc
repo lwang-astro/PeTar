@@ -92,8 +92,8 @@ int main(int argc, char *argv[]){
     // initial parameters
     IOParams<PS::F64> ratio_r_cut  (0.1,  "r_in / r_out");
     IOParams<PS::F64> theta        (0.3,  "openning angle theta");
-    IOParams<PS::S32> n_leaf_limit (8,    "tree leaf number limit");
-    IOParams<PS::S32> n_group_limit(2048, "tree group number limit");
+    IOParams<PS::S32> n_leaf_limit (20,   "tree leaf number limit; optimized value should be slightly >=11+N_bin_sample");
+    IOParams<PS::S32> n_group_limit(512,  "tree group number limit defaulted for x86-AVX2");
     IOParams<PS::S32> n_smp_ave    (100,  "average target number of sample particles per process");
     IOParams<PS::S32> n_split      (8,    "number of binary sample points for tree perturbation force");
     IOParams<PS::S64> n_bin        (0,    "number of primordial binaries (assume binaries ID=1,2*n_bin)");
@@ -432,6 +432,7 @@ int main(int argc, char *argv[]){
         system_hard_isolated.initialMultiClusterOMP<SystemSoft,FPSoft>(system_soft, dt_soft.value);
         system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_);
 #ifdef MAIN_DEBUG
+        n_loc = system_soft.getNumberOfParticleLocal();
         for(PS::S32 i=0; i<n_loc; i++){
             if(system_soft[i].id<0&&system_soft[i].status<0) {
                 std::cerr<<"Error! Ghost detected in system_soft after system_hard_isolated, i="<<i<<std::endl;
@@ -445,6 +446,7 @@ int main(int argc, char *argv[]){
         system_hard_connected.initialMultiClusterOMP<SystemSoft,FPSoft>(system_soft, dt_soft.value);
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl());
 #ifdef MAIN_DEBUG
+        n_loc = system_soft.getNumberOfParticleLocal();
         for(PS::S32 i=0; i<n_loc; i++){
             if(system_soft[i].id<0&&system_soft[i].status<0) {
                 std::cerr<<"Error! Ghost detected in system_soft after system_hard_connected, i="<<i<<std::endl;
@@ -454,6 +456,7 @@ int main(int argc, char *argv[]){
 #endif
 #endif
 
+        n_loc = system_soft.getNumberOfParticleLocal();
 #pragma omp parallel for
         for(PS::S32 i=0; i<n_loc; i++){
             system_soft[i].rank_org = my_rank;
@@ -559,7 +562,7 @@ int main(int argc, char *argv[]){
         system_hard_one_cluster.initializeForOneCluster(search_cluster.getAdrSysOneCluster().size());
         system_hard_one_cluster.setPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
         system_hard_one_cluster.driveForOneCluster(dt_soft.value);
-        system_hard_one_cluster.writeBackPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
+        system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft, search_cluster.getAdrSysOneCluster());
         ////// integrater one cluster
 #ifdef PROFILE
         profile.hard_single.end();
@@ -585,6 +588,7 @@ int main(int argc, char *argv[]){
 #endif
         
 #ifdef MAIN_DEBUG
+        n_loc = system_soft.getNumberOfParticleLocal();
         for(PS::S32 i=0; i<n_loc; i++){
             if(system_soft[i].id<0&&system_soft[i].status<0) {
                 std::cerr<<"Error! Ghost detected in system_soft after system_hard_isolated, i="<<i<<std::endl;
@@ -608,6 +612,7 @@ int main(int argc, char *argv[]){
 #endif        
         
 #ifdef MAIN_DEBUG
+        n_loc = system_soft.getNumberOfParticleLocal();
         for(PS::S32 i=0; i<n_loc; i++){
             if(system_soft[i].id<0&&system_soft[i].status<0) {
                 std::cerr<<"Error! Ghost detected in system_soft after system_hard_connected, i="<<i<<std::endl;
@@ -715,6 +720,9 @@ int main(int argc, char *argv[]){
 //#endif
         
         if( fmod(time_sys, dt_snp.value) == 0.0){
+            //update n_glb
+            n_glb = system_soft.getNumberOfParticleGlobal();
+            
 #ifdef MAIN_DEBUG
             write_p(fout, time_sys, dt_soft.value*0.5, system_soft, eng_now, eng_diff);
 //        //output
@@ -783,7 +791,7 @@ int main(int argc, char *argv[]){
             }
 #endif
             
-            file_header.n_body = system_soft.getNumberOfParticleGlobal();
+            file_header.n_body = n_glb;
             file_header.time = time_sys;
             file_header.nfile++;
             std::string fname = fname_snp.value+"."+std::to_string(file_header.nfile);
