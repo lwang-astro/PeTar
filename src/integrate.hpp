@@ -1033,7 +1033,7 @@ void Isolated_Multiple_integrator(Tptcl * ptcl_org,
         for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<ptcl_org[list[i]].r_out<<" ";
         std::cerr<<std::endl;
 #endif
-#ifdef SAFETY_CHECK
+#ifdef HARD_DEBUG
         for (PS::S32 i=0; i<n_ptcl; i++) 
             if (ptcl_org[list[i]].r_out<Int_pars.rin) {
                 std::cerr<<"Error, updated p["<<list[i]<<"].rout ("<<ptcl_org[list[i]].r_out<<") < r_in ("<<Int_pars.rin<<")"<<std::endl;

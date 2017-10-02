@@ -47,7 +47,7 @@ public:
 
 };
 
-#ifdef HARD_DEBUG
+#ifdef HARD_DEBUG_ENERGY
 class HardEnergy {
 public:
     PS::F64 kin, pot, tot;
@@ -57,7 +57,7 @@ public:
 class SystemHard{
 public:
     PS::ReallocatableArray<PtclHard> ptcl_hard_;
-#ifdef HARD_DEBUG
+#ifdef HARD_DEBUG_ENERGY
     std::map<PS::S32, PS::S32> N_count;  // counting number of particles in one cluster
     HardEnergy E0, E1;
     HardEnergy AE0, AE1;
@@ -111,7 +111,7 @@ private:
                                   const PS::F64 time_end,
                                   PS::ReallocatableArray<PtclHard> & ptcl_new,
                                   const bool first_int_flag=false) {
-#ifdef HARD_DEBUG
+#ifdef HARD_DEBUG_PROFILE
         N_count[n_ptcl]++;
 #endif
 //#ifdef HERMITE
@@ -136,6 +136,9 @@ private:
 #endif
 
         if(group.getPtclN()==1) {
+#ifdef HARD_DEBUG
+            assert(group.getNumOfGroups()==1);
+#endif
             PtclHard* pcm = &ptcl_org[group.getPtclIndex(0)];
             PS::S32 iact = 0;
             
@@ -151,7 +154,7 @@ private:
 
             Aint.adjustSlowDown(time_end);
 
-#ifdef HARD_DEBUG
+#ifdef HARD_DEBUG_ENERGY
             Aint.EnergyRecord(AE0);
 #endif 
             
@@ -161,7 +164,7 @@ private:
 
             Aint.updateCM(pcm, &iact, 1);
             Aint.resolve();
-#ifdef HARD_DEBUG
+#ifdef HARD_DEBUG_ENERGY
             Aint.EnergyRecord(AE1);
 #ifdef HARD_DEBUG_PRINT
             fprintf(stderr,"Slowdown factor = %e\n", Aint.getSlowDown(0));
@@ -213,8 +216,10 @@ private:
             Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups, &Aint);
 
 
-#ifdef HARD_DEBUG
+#ifdef HARD_DEBUG_ENERGY
             CalcEnergyHardFull(E0, AE0, HE0, ESD0, Hint, Aint, group);
+#endif
+#ifdef HARD_DEBUG
             PS::ReallocatableArray<PS::F64> slowdownrecord;
             slowdownrecord.resizeNoInitialize(n_groups);
 #endif
@@ -250,7 +255,7 @@ private:
             Aint.resolve();
             Hint.writeBackPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getPtclN());
 
-#ifdef HARD_DEBUG
+#ifdef HARD_DEBUG_ENERGY
             CalcEnergyHardFull(E1, AE1, HE1, ESD1, Hint, Aint, group);
         
 #ifdef HARD_DEBUG_PRINT
@@ -295,7 +300,7 @@ private:
 public:
 
     SystemHard(){
-#ifdef HARD_DEBUG
+#ifdef HARD_DEBUG_PROFILE
         for(PS::S32 i=0;i<20;i++) N_count[i]=0;
 #endif
         //        PS::S32 n_threads = PS::Comm::getNumberOfThread();
@@ -424,7 +429,7 @@ public:
         }
     }
 
-#ifdef HARD_DEBUG
+#ifdef HARD_DEBUG_ENERGY
     template<class Teng>
     void CalcEnergyHard(Teng & eng,  const PS::S32* ptcl_list, const PS::S32 ptcl_n, const PS::S32* group_list, const PS::S32 group_n, const PS::S32 nbin){
         eng.kin = eng.pot = eng.tot = 0.0;
