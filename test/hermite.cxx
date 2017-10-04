@@ -80,6 +80,9 @@ int main(int argc, char** argv)
     fs>>time_end>>N>>par.rin>>par.rout>>par.rsearch>>par.rbin>>par.dt_limit_hard>>par.eta>>par.eps;
     par.r_oi_inv = 1.0/(par.rout-par.rin);
 
+    PS::F64 dt_min_hard = 1.0;
+    for(int i=0;i<40;i++) dt_min_hard *= 0.5;
+    
     fprintf(stderr,"t_end = %e\nN = %d\nr_in = %e\nr_out = %e\nr_search = %e\neta = %e\ndt_limit = %e\neps = %e\n",time_end,N,par.rin,par.rout,par.rsearch,par.eta,par.dt_limit_hard,par.eps);
 
     PS::ReallocatableArray<PtclHard> p;
@@ -108,7 +111,7 @@ int main(int argc, char** argv)
     group.findGroups(p.getPointer(), N, 8);
     
     HermiteIntegrator<PtclHard> Hint;
-    Hint.setParams(par.dt_limit_hard, par.eta, par.rin, par.rout, par.eps*par.eps);
+    Hint.setParams(par.eta, par.rin, par.rout, par.eps*par.eps);
     Hint.setPtcl(p.getPointer(),p.size(),group.getPtclList(),group.getPtclN());
     Hint.searchPerturber();
             
@@ -127,7 +130,7 @@ int main(int argc, char** argv)
 #ifdef FIX_STEP_DEBUG
     PS::F64 dt_limit = par.dt_limit_hard;
 #else
-    PS::F64 dt_limit = calcDtLimit(time_sys, par.dt_limit_hard);
+    PS::F64 dt_limit = calcDtLimit(time_sys, par.dt_limit_hard, dt_min_hard);
 #endif
     ARCIntegrator<PtclHard, PtclH4, PtclForce>* arcint = NULL;
     Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups, arcint);
@@ -151,7 +154,7 @@ int main(int argc, char** argv)
 #ifdef FIX_STEP_DEBUG
         dt_limit = par.dt_limit_hard;
 #else
-        dt_limit = calcDtLimit(time_sys, par.dt_limit_hard);
+        dt_limit = calcDtLimit(time_sys, par.dt_limit_hard, dt_min_hard);
 #endif
         Hint.integrateOneStep(time_sys,dt_limit,true,arcint);
         Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);

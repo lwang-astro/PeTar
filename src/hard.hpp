@@ -64,11 +64,15 @@ public:
     HardEnergy HE0, HE1;
     HardEnergy ESD0, ESD1;
 #endif
+#ifdef ARC_PROFILE
+    PS::S64 ARC_substep_sum;
+#endif
 
 private:
     ARC::chainpars ARC_control_; ///chain controller (L.Wang)
     ARC_int_pars Int_pars_; /// ARC integration parameters, rout_, rin_ (L.Wang)
     PS::F64 dt_limit_hard_;
+    PS::F64 dt_min_hard_;
     PS::F64 eta_s_;
     //PS::ReallocatableArray<PtclHard> ptcl_hard_;
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_;
@@ -172,12 +176,17 @@ private:
                     AE0.kin+AE0.pot, AE1.kin+AE1.pot, AE1.kin+AE1.pot-AE0.kin-AE0.pot, (AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot)/AE0.tot);
 #endif
 #endif
-
+#ifdef ARC_PROFILE
+            ARC_substep_sum += Aint.getNsubstep();
+#endif
+#ifdef ARC_DEBUG_PRINT
+            Aint.info_print(std::cerr);
+#endif
         }
         else {
             
             HermiteIntegrator<PtclHard> Hint;
-            Hint.setParams(dt_limit_hard_, eta_s_, Int_pars_.rin, Int_pars_.rout, Int_pars_.eps2);
+            Hint.setParams(eta_s_, Int_pars_.rin, Int_pars_.rout, Int_pars_.eps2);
             Hint.setPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getPtclN());
             Hint.searchPerturber();
 
@@ -185,7 +194,7 @@ private:
 #ifdef FIX_STEP_DEBUG
             PS::F64 dt_limit = dt_limit_hard_;
 #else
-            PS::F64 dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
+            PS::F64 dt_limit = calcDtLimit(time_sys, dt_limit_hard_, dt_min_hard_);
 #endif
             
             PS::S32 group_act_n = 0;
@@ -230,7 +239,7 @@ private:
 #ifdef FIX_STEP_DEBUG
                 dt_limit = dt_limit_hard_;
 #else
-                dt_limit = calcDtLimit(time_sys, dt_limit_hard_);
+                dt_limit = calcDtLimit(time_sys, dt_limit_hard_, dt_min_hard_);
 #endif
 
 #ifdef HARD_DEBUG
@@ -271,6 +280,12 @@ private:
             Hint.printStepHist();
 #endif
 #endif
+#ifdef ARC_PROFILE
+            ARC_substep_sum += Aint.getNsubstep();
+#endif
+#ifdef ARC_DEBUG_PRINT
+            Aint.info_print(std::cerr);
+#endif
         }
             
         //group.resolveGroups(ptcl_org, n_ptcl, group_ptcl_glb.getPointer(), group_list.size(), group_list.getPointer(), adr_cm.getPointer());
@@ -302,6 +317,9 @@ public:
     SystemHard(){
 #ifdef HARD_DEBUG_PROFILE
         for(PS::S32 i=0;i<20;i++) N_count[i]=0;
+#endif
+#ifdef ARC_PROFILE
+        ARC_substep_sum = 0;
 #endif
         //        PS::S32 n_threads = PS::Comm::getNumberOfThread();
     }
@@ -393,6 +411,7 @@ public:
                   const PS::F64 _rin,
                   const PS::F64 _eps,
                   const PS::F64 _dt_limit_hard,
+                  const PS::F64 _dt_min_hard,
                   const PS::F64 _eta,
                   const PS::F64 _time_origin,
                   const PS::F64 _sd_factor,
@@ -409,6 +428,7 @@ public:
         Int_pars_.eps2  = _eps*_eps;
         /// Set chain pars (L.Wang)        
         dt_limit_hard_ = _dt_limit_hard;
+        dt_min_hard_   = _dt_min_hard;
         eta_s_ = _eta*_eta;
         sdfactor_ = _sd_factor;
         time_origin_ = _time_origin;

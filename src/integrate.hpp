@@ -61,13 +61,30 @@ void Drift(Tpsys & system,
 //Hermite----------------------------------------------
 PS::F64 calcDtLimit(const PS::F64 time_sys,
                     const PS::F64 dt_limit_org,
-                    const PS::F64 time_offset = 0.0){
-    PS::F64 dt_limit_ret = dt_limit_org;
-    PS::F64 s = (time_sys-time_offset) / dt_limit_ret;
-    PS::F64 time_head = ((PS::S64)(s)) * dt_limit_org;
-    PS::F64 time_shifted = time_sys - time_head;
-    while( fmod(time_shifted, dt_limit_ret) != 0.0) dt_limit_ret *= 0.5;
-    return dt_limit_ret;
+                    const PS::F64 dtmin){
+    if(time_sys==0.0) return dt_limit_org;
+    else {
+        PS::U64 bitmap = time_sys/dtmin;
+#ifdef HARD_DEBUG
+//        assert(bitmap*dtmin==time_sys);
+        if(bitmap==0) {
+            std::cerr<<"Error: dt_min_hard not small enough, time = "<<time_sys<<"; dt_min_hard = "<<dtmin<<std::endl;
+            abort();
+        }
+#endif
+#ifdef __GNUC__ 
+        PS::S64 dts = __builtin_ctz(bitmap) ;
+        PS::U64 c = (1<<dts);
+//        std::cerr<<"time = "<<time_sys<<"  dtmin = "<<dtmin<<"  bitmap = "<<bitmap<<"  dts = "<<dts<<std::endl;
+#else
+        PS::U64 c=1;
+        while((bitmap&1)==0) {
+            bitmap = (bitmap>>1);
+            c = (c<<1);
+        }
+#endif
+        return std::min(c*dtmin,dt_limit_org);
+    }
 }
 
 template <class Tptcl>
@@ -188,7 +205,7 @@ private:
     PS::S32 n_act_;        /// active particle number
 
     //  import parameter
-    PS::F64 dt_limit_hard_; // time step limit     
+    // PS::F64 dt_limit_hard_; // time step limit     
     PS::F64 eta_s_;         // time step parameter 
     PS::F64 r_in_;          // force parameter     
     PS::F64 r_out_;         // force parameter     
@@ -694,12 +711,12 @@ public:
         return ptcl_.size();
     }
 
-    void setParams(const PS::F64 dt_limit_hard,  // time step limit
+    void setParams(//const PS::F64 dt_limit_hard,  // time step limit
                    const PS::F64 eta_s,          // time step parameter
                    const PS::F64 r_in,           // force parameter
                    const PS::F64 r_out,          // force parameter
                    const PS::F64 eps_sq){        // softening parameter
-        dt_limit_hard_= dt_limit_hard; 
+        // dt_limit_hard_= dt_limit_hard; 
         eta_s_        = eta_s;         
         r_in_         = r_in;          
         r_out_        = r_out;
@@ -1607,6 +1624,30 @@ public:
         return clist_[i].slowdown.getkappa();
     }
 
+#ifdef ARC_PROFILE
+    const PS::S64 getNsubstep() const{
+        PS::S64 Nsum = 0;
+        for (int i=0; i<clist_.size(); i++) 
+            Nsum += clist_[i].profile.itercount;
+        return Nsum;
+    }
+#endif
+
+#ifdef ARC_DEBUG_PRINT
+    void info_print(std::ostream& os) const{
+        for (int i=0; i<clist_.size(); i++) {
+            os<<i<<" "
+              <<clist_[i].getN()<<" "
+              <<pert_n_[i]<<" "
+              <<bininfo[i].ax<<" "
+              <<bininfo[i].ecc<<" "
+              <<bininfo[i].peri<<" "
+              <<clist_[i].slowdown.getkappa()<<" "
+              <<clist_[i].profile.itercount<<std::endl;
+        }
+    }
+#endif
+    
 #ifdef ARC_ERROR
     template <class Teng>
     void EnergyRecord(Teng &energy, const PS::S32 sdflag=false) {

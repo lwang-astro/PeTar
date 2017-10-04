@@ -104,6 +104,7 @@ int main(int argc, char *argv[]){
     IOParams<PS::F64> dt_snp       (0.0625,"Output time interval of particle dataset");
     IOParams<PS::F64> search_factor(1.0,  "neighbor searching coefficient");
     IOParams<PS::F64> dt_limit_hard_factor(4.0, "limit of tree time step/hard time step");
+    IOParams<PS::F64> dt_min_index (40,   "power index n for the smallest time step (0.5^n) allowed in Hermite integrator");
     IOParams<PS::F64> eps          (0.0,  "softerning eps");
     IOParams<PS::F64> r_out        (0.0,  "transit function outer boundary radius", "3.0*<m>/sigma^2");
     IOParams<PS::F64> r_bin        (0.0,  "maximum binary radius criterion", "0.1*r_in");
@@ -117,7 +118,7 @@ int main(int argc, char *argv[]){
     int c;
     bool reading_flag=false;
 
-    while((c=getopt(argc,argv,"i:b:B:T:t:e:E:n:N:s:S:d:D:o:l:r:R:X:p:f:h")) != -1){
+    while((c=getopt(argc,argv,"i:b:B:T:t:e:E:m:n:N:s:S:d:D:o:l:r:R:X:p:f:h")) != -1){
         switch(c){
         case 'i':
             reading_flag=true;
@@ -154,6 +155,11 @@ int main(int argc, char *argv[]){
             eta.value = atof(optarg);
             if(my_rank == 0) eta.print(std::cerr);
             assert(eta.value>0.0);
+            break;
+        case 'm':
+            dt_min_index.value = atoi(optarg);
+            if(my_rank == 0) dt_min_index.print(std::cerr);
+            assert(pow(0.5,dt_min_index.value)<dt_soft.value/dt_limit_hard_factor.value);
             break;
         case 'n':
             n_group_limit.value = atoi(optarg);
@@ -249,6 +255,7 @@ int main(int argc, char *argv[]){
             std::cerr<<"  -t: [F] "<<time_end<<std::endl;
             std::cerr<<"  -e: [F] "<<eps<<std::endl;
             std::cerr<<"  -E: [F] "<<eta<<std::endl;
+            std::cerr<<"  -m: [I] "<<dt_min_index<<std::endl;
             std::cerr<<"  -n: [I] "<<n_group_limit<<std::endl;
             std::cerr<<"  -N: [I] "<<n_glb<<std::endl;
             std::cerr<<"  -s: [I] "<<n_smp_ave<<std::endl;
@@ -402,16 +409,18 @@ int main(int argc, char *argv[]){
 #endif
                                        system_soft,
                                        dinfo);
-
+                                       
     SystemHard system_hard_one_cluster;
     PS::F64 dt_limit_hard = dt_soft.value/dt_limit_hard_factor.value;
-    system_hard_one_cluster.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
+    PS::F64 dt_min_hard = 1.0;
+    for (PS::S32 i=0;i<dt_min_index.value;i++) dt_min_hard *= 0.5;
+    system_hard_one_cluster.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hard, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
     // system_hard_one_cluster.setARCParam();
     SystemHard system_hard_isolated;
-    system_hard_isolated.setParam(r_bin.value, r_out.value, r_in, eps.value,  dt_limit_hard, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
+    system_hard_isolated.setParam(r_bin.value, r_out.value, r_in, eps.value,  dt_limit_hard, dt_min_hard, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
     system_hard_isolated.setARCParam();
     SystemHard system_hard_connected;
-    system_hard_connected.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
+    system_hard_connected.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hard, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
     system_hard_connected.setARCParam();
 
     SearchCluster search_cluster;
@@ -697,10 +706,17 @@ int main(int argc, char *argv[]){
         PS::S32 n_hard_single     = system_hard_one_cluster.getPtcl().size();
         PS::S32 n_hard_isolated   = system_hard_isolated.getPtcl().size();
         PS::S32 n_hard_connected  = system_hard_connected.getPtcl().size();
+
         n_count.hard_single      += PS::Comm::getSum(n_hard_single);
         n_count.hard_isolated    += PS::Comm::getSum(n_hard_isolated);
         n_count.hard_connected   += PS::Comm::getSum(n_hard_connected);
 
+#ifdef ARC_PROFILE                                           
+        PS::S64 ARC_substep_sum   = system_hard_isolated.ARC_substep_sum;
+        n_count.ARC_substep_sum  += PS::Comm::getSum(ARC_substep_sum);
+        system_hard_isolated.ARC_substep_sum = 0;
+#endif
+                                           
         n_count.cluster_count(1, n_hard_single);
         const PS::S32  n_isolated_cluster = system_hard_isolated.getNCluster();
         n_count.cluster_isolated += n_isolated_cluster;
@@ -740,7 +756,7 @@ int main(int argc, char *argv[]){
 
             //eng_diff.dump(std::cerr);
             if(my_rank==0) {
-                std::cerr<<"n_loop= "<<n_loop<<std::endl;
+                std::cerr<<"n_loop= "<<dn_loop<<std::endl;
                 std::cerr<<"n_glb= "<<n_glb<<std::endl;
                 std::cerr<<"Time= "<<time_sys<<" Enow-Einit="<<eng_diff.tot<<" (Enow-Einit)/Einit= "<<eng_diff.tot/eng_init.tot
 //#ifdef ARC_ERROR
@@ -776,7 +792,7 @@ int main(int argc, char *argv[]){
             if(my_rank==0) {
                 fprofile<<std::setprecision(PRINT_PRECISION);
                 fprofile<<std::setw(PRINT_WIDTH)<<time_sys
-                        <<std::setw(PRINT_WIDTH)<<n_loop
+                        <<std::setw(PRINT_WIDTH)<<dn_loop
                         <<std::setw(PRINT_WIDTH)<<n_glb;
                 profile.dump(fprofile, PRINT_WIDTH, dn_loop);
                 n_count.dump(fprofile, PRINT_WIDTH, dn_loop);
