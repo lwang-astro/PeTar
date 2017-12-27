@@ -1,0 +1,272 @@
+librdmacm: Fatal: no RDMA devices found
+--------------------------------------------------------------------------
+[[40103,1],0]: A high-performance Open MPI point-to-point messaging module
+was unable to find any relevant network interfaces:
+
+Module: OpenFabrics (openib)
+  Host: jenever0.aics27.riken.jp
+
+Another transport will be used instead, although this may result in
+lower performance.
+--------------------------------------------------------------------------
+librdmacm: Fatal: no RDMA devices found
+librdmacm: Fatal: no RDMA devices found
+librdmacm: Fatal: no RDMA devices found
+librdmacm: Fatal: no RDMA devices found
+librdmacm: Fatal: no RDMA devices found
+librdmacm: Fatal: no RDMA devices found
+librdmacm: Fatal: no RDMA devices found
+     //==================================\\
+     ||                                  ||
+     || ::::::: ::::::. ::::::. .::::::. ||
+     || ::      ::    : ::    : ::       ||
+     || ::::::  ::    : ::::::'  `:::::. ||
+     || ::      ::::::' ::      `......' ||
+     ||     Framework for Developing     ||
+     ||        Particle Simulator        ||
+     ||     Version 2.0 (2016/06)        ||
+     \\==================================//
+
+       Home   : https://github.com/fdps/fdps 
+       E-mail : fdps-support@mail.jmlab.jp
+       Licence: MIT (see, https://github.com/FDPS/FDPS/blob/master/LICENSE)
+       Note   : Please cite Iwasawa et al. (in press.)
+
+       Copyright (C) 2015 
+         Masaki Iwasawa, Ataru Tanikawa, Natsuki Hosono,
+         Keigo Nitadori, Takayuki Muranushi, Daisuke Namekata
+         Junichiro Makino and many others
+******** FDPS has successfully begun. ********
+Data read(r)/write(w) format BINARY(B)/ASCII(A): 2
+number of primordial binaries (assume binaries ID=1,2*n_bin): 10000
+finishing time: 0.001953125
+transit function outer boundary radius: 0.005
+maximum binary radius criterion: 0.0001
+Tree timestep: 0.001953125
+Output time interval of particle dataset: 0.001953125
+Number of particles =100000;  Time=0
+Reading file input/p100kb10.input
+N_tot = 100000
+N_loc = 12500
+Parameter list:
+ m_average    = 9.99999999999987e-06
+ r_in         = 0.0005
+ r_out        = 0.005
+ r_search_min = 0.00579857271950778
+ vel_disp     = 0.408869232387983
+ dt_soft      = 0.001953125
+np_ave=12500
+used mem size for tree(3)=0.020284832[GB]
+Energy: total = -10.4899963371182 kin = 9.4527479381271 pot = -19.9427442752453
+Angular Momentum: L = -0.00451872254478126   -0.00965475994817797    0.00580369491870047 |L| = 0.0121373851303732
+Rank= 0
+n_loop= 1
+n_glb= 152088
+Time= 0.001953125 Enow-Einit=5.17889343853994e-06 (Enow-Einit)/Einit= -4.93698307616633e-07
+Energy: total = -10.4899911582248 kin = 9.13529857319017 pot = -19.625289731415
+Angular Momentum: L = -0.00451872430337696   -0.0096547648107161    0.00580368300812152 |L| = 0.0121373839577946
+Wtime per loop:
+Time: 0.001953125
+Total         : 1.48080801963806
+Hard total    : 0.840463876724243
+Hard single   : 0.000756978988647461
+Hard isolated : 0.826131105422974
+Hard connected: 0.0121219158172607
+Soft total    : 0.541434049606323
+Search cluster: 0.0336670875549316
+Number per loop:
+Hard single   : 82055
+Hard isolated : 69567
+Hard connected: 466
+Cluster isolated : 8468
+Cluster connected: 25
+ARC sub-steps sum: 0
+Number of members in clusters:
+                   1                   2                   3                   4                  19                  20                  21                  22                  23                  24                  28                  31                  66                  68
+               10320                 616                  17                   2                 392                  11                   3                   1                   1                   2                   1                   1                   1                   1
+Rank= 1
+n_loop= 1
+n_glb= 152088
+Time= 0.001953125 Enow-Einit=5.17889343853994e-06 (Enow-Einit)/Einit= -4.93698307616633e-07
+Energy: total = -10.4899911582248 kin = 9.13529857319017 pot = -19.625289731415
+Angular Momentum: L = -0.00451872430337696   -0.0096547648107161    0.00580368300812152 |L| = 0.0121373839577946
+Wtime per loop:
+Time: 0.001953125
+Total         : 1.4812798500061
+Hard total    : 0.840773820877075
+Hard single   : 0.000627994537353516
+Hard isolated : 0.377601861953735
+Hard connected: 0.01212477684021
+Soft total    : 0.513735055923462
+Search cluster: 0.0291049480438232
+Number per loop:
+Hard single   : 82055
+Hard isolated : 69567
+Hard connected: 466
+Cluster isolated : 8468
+Cluster connected: 25
+ARC sub-steps sum: 0
+Number of members in clusters:
+                   1                   2                   3                   4                  19                  20                  21                  22                  23                  26                  29                  34                  38                  43
+                9759                 615                  14                   2                 317                   8                   3                   1                   1                   1                   1                   1                   1                   1
+Rank= 2
+n_loop= 1
+n_glb= 152088
+Time= 0.001953125 Enow-Einit=5.17889343853994e-06 (Enow-Einit)/Einit= -4.93698307616633e-07
+Energy: total = -10.4899911582248 kin = 9.13529857319017 pot = -19.625289731415
+Angular Momentum: L = -0.00451872430337696   -0.0096547648107161    0.00580368300812152 |L| = 0.0121373839577946
+Wtime per loop:
+Time: 0.001953125
+Total         : 1.48092794418335
+Hard total    : 0.934226989746094
+Hard single   : 0.000978946685791016
+Hard isolated : 0.447477102279663
+Hard connected: 0.105957984924316
+Soft total    : 0.435595035552979
+Search cluster: 0.031033992767334
+Number per loop:
+Hard single   : 82055
+Hard isolated : 69567
+Hard connected: 466
+Cluster isolated : 8468
+Cluster connected: 25
+ARC sub-steps sum: 0
+Number of members in clusters:
+                   1                   2                   3                   4                  19                  20                  21                  24                  25                  27                  38                  44
+               10552                 701                  12                   2                 332                  18                   5                   1                   1                   2                   1                   1
+Rank= 3
+n_loop= 1
+n_glb= 152088
+Time= 0.001953125 Enow-Einit=5.17889343853994e-06 (Enow-Einit)/Einit= -4.93698307616633e-07
+Energy: total = -10.4899911582248 kin = 9.13529857319017 pot = -19.625289731415
+Angular Momentum: L = -0.00451872430337696   -0.0096547648107161    0.00580368300812152 |L| = 0.0121373839577946
+Wtime per loop:
+Time: 0.001953125
+Total         : 1.48101401329041
+Hard total    : 0.828507900238037
+Hard single   : 0.000982046127319336
+Hard isolated : 0.75042200088501
+Hard connected: 0.000176906585693359
+Soft total    : 0.556502103805542
+Search cluster: 0.0320100784301758
+Number per loop:
+Hard single   : 82055
+Hard isolated : 69567
+Hard connected: 466
+Cluster isolated : 8468
+Cluster connected: 25
+ARC sub-steps sum: 0
+Number of members in clusters:
+                   1                   2                   3                   4                  19                  20                  21                  22                  24                  26                  27                  32                  34                  50                  60                  80
+               10279                 651                  10                   1                 357                  12                   4                   1                   1                   1                   1                   1                   1                   1                   1                   1
+Rank= 4
+n_loop= 1
+n_glb= 152088
+Time= 0.001953125 Enow-Einit=5.17889343853994e-06 (Enow-Einit)/Einit= -4.93698307616633e-07
+Energy: total = -10.4899911582248 kin = 9.13529857319017 pot = -19.625289731415
+Angular Momentum: L = -0.00451872430337696   -0.0096547648107161    0.00580368300812152 |L| = 0.0121373839577946
+Wtime per loop:
+Time: 0.001953125
+Total         : 1.48122000694275
+Hard total    : 0.882097005844116
+Hard single   : 0.000841856002807617
+Hard isolated : 0.327128171920776
+Hard connected: 0.0534939765930176
+Soft total    : 0.45601487159729
+Search cluster: 0.029541015625
+Number per loop:
+Hard single   : 82055
+Hard isolated : 69567
+Hard connected: 466
+Cluster isolated : 8468
+Cluster connected: 25
+ARC sub-steps sum: 0
+Number of members in clusters:
+                   1                   2                   3                   4                  19                  20                  21                  22                  52                  56                  66
+                9116                 588                   6                   2                 325                   9                   4                   2                   1                   1                   1
+Rank= 5
+n_loop= 1
+n_glb= 152088
+Time= 0.001953125 Enow-Einit=5.17889343853994e-06 (Enow-Einit)/Einit= -4.93698307616633e-07
+Energy: total = -10.4899911582248 kin = 9.13529857319017 pot = -19.625289731415
+Angular Momentum: L = -0.00451872430337696   -0.0096547648107161    0.00580368300812152 |L| = 0.0121373839577946
+Wtime per loop:
+Time: 0.001953125
+Total         : 1.48086285591125
+Hard total    : 0.934099912643433
+Hard single   : 0.00122499465942383
+Hard isolated : 0.740262031555176
+Hard connected: 0.10596489906311
+Soft total    : 0.545909881591797
+Search cluster: 0.0357859134674072
+Number per loop:
+Hard single   : 82055
+Hard isolated : 69567
+Hard connected: 466
+Cluster isolated : 8468
+Cluster connected: 25
+ARC sub-steps sum: 0
+Number of members in clusters:
+                   1                   2                   3                   4                  19                  20                  21                  22                  23                  24                  27                  28                  47                  73                  79
+               13305                 924                  30                   2                 447                  16                   6                   3                   3                   1                   1                   1                   1                   1                   1
+Rank= 6
+n_loop= 1
+n_glb= 152088
+Time= 0.001953125 Enow-Einit=5.17889343853994e-06 (Enow-Einit)/Einit= -4.93698307616633e-07
+Energy: total = -10.4899911582248 kin = 9.13529857319017 pot = -19.625289731415
+Angular Momentum: L = -0.00451872430337696   -0.0096547648107161    0.00580368300812152 |L| = 0.0121373839577946
+Wtime per loop:
+Time: 0.001953125
+Total         : 1.481281042099
+Hard total    : 0.934575796127319
+Hard single   : 0.000952959060668945
+Hard isolated : 0.626883029937744
+Hard connected: 0.105962991714478
+Soft total    : 0.4569411277771
+Search cluster: 0.0328919887542725
+Number per loop:
+Hard single   : 82055
+Hard isolated : 69567
+Hard connected: 466
+Cluster isolated : 8468
+Cluster connected: 25
+ARC sub-steps sum: 0
+Number of members in clusters:
+                   1                   2                   3                  19                  20                  21                  22                  24                  25                  27                  28                  33                  35                  37                  38                  42                  68                 133
+               10230                 654                  18                 352                  11                   2                   1                   1                   2                   2                   1                   1                   1                   1                   1                   1                   1                   1
+Rank= 7
+n_loop= 1
+n_glb= 152088
+Time= 0.001953125 Enow-Einit=5.17889343853994e-06 (Enow-Einit)/Einit= -4.93698307616633e-07
+Energy: total = -10.4899911582248 kin = 9.13529857319017 pot = -19.625289731415
+Angular Momentum: L = -0.00451872430337696   -0.0096547648107161    0.00580368300812152 |L| = 0.0121373839577946
+Wtime per loop:
+Time: 0.001953125
+Total         : 1.48115992546082
+Hard total    : 0.93452000617981
+Hard single   : 0.000949859619140625
+Hard isolated : 0.311873197555542
+Hard connected: 0.105962038040161
+Soft total    : 0.392719984054565
+Search cluster: 0.0279209613800049
+Number per loop:
+Hard single   : 82055
+Hard isolated : 69567
+Hard connected: 466
+Cluster isolated : 8468
+Cluster connected: 25
+ARC sub-steps sum: 0
+Number of members in clusters:
+                   1                   2                   3                  19                  20                  21                  22                  23                  28                  40                  46
+                8494                 583                   7                 322                  10                   3                   2                   1                   1                   1                   1
+******** FDPS has successfully finished. ********
+PROFILE: interrupts/evictions/bytes = 1467/335/81000
+PROFILE: interrupts/evictions/bytes = 1467/292/70328
+PROFILE: interrupts/evictions/bytes = 1469/260/63352
+PROFILE: interrupts/evictions/bytes = 1440/374/88144
+PROFILE: interrupts/evictions/bytes = 1468/337/78688
+PROFILE: interrupts/evictions/bytes = 1463/294/72136
+PROFILE: interrupts/evictions/bytes = 1465/328/81080
+PROFILE: interrupts/evictions/bytes = 1467/248/65576
+[jenever0.aics27.riken.jp:18746] 7 more processes have sent help message help-mpi-btl-base.txt / btl:no-nics
+[jenever0.aics27.riken.jp:18746] Set MCA parameter "orte_base_help_aggregate" to 0 to see all help / error messages

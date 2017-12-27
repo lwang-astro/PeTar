@@ -299,8 +299,9 @@ int main(int argc, char *argv[]){
       n_glb.value = system_soft.getNumberOfParticleGlobal();
       n_loc = system_soft.getNumberOfParticleLocal();
       //      for(PS::S32 i=0; i<n_loc; i++) system_soft[i].id = i;
-      std::cerr<<"Reading file "<<sinput<<std::endl
-               <<"N_tot = "<<n_glb.value<<"\nN_loc = "<<n_loc<<std::endl;
+      if(my_rank==0)
+          std::cerr<<"Reading file "<<sinput<<std::endl
+                   <<"N_tot = "<<n_glb.value<<"\nN_loc = "<<n_loc<<std::endl;
     }
     else SetParticlePlummer(system_soft, n_glb.value, n_loc, time_sys);
 
@@ -523,7 +524,7 @@ int main(int argc, char *argv[]){
 #endif
 #ifdef PROFILE
     std::ofstream fprofile;
-    if(my_rank==0) fprofile.open("profile.out");
+    fprofile.open("profile.out",std::ofstream::out | std::ofstream::app);
     PS::S64 dn_loop = 0;
 #endif
 
@@ -609,6 +610,7 @@ int main(int argc, char *argv[]){
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         /////////////
 #ifdef PROFILE
+        PS::Comm::barrier();
         profile.hard_connected.start();
 #endif
         // integrate multi cluster B
@@ -719,12 +721,12 @@ int main(int argc, char *argv[]){
                                            
         n_count.cluster_count(1, n_hard_single);
         const PS::S32  n_isolated_cluster = system_hard_isolated.getNCluster();
-        n_count.cluster_isolated += n_isolated_cluster;
+        n_count.cluster_isolated += PS::Comm::getSum(n_isolated_cluster);
         const PS::S32* isolated_cluster_n_list = system_hard_isolated.getClusterNList();
         for (PS::S32 i=0; i<n_isolated_cluster; i++) n_count.cluster_count(isolated_cluster_n_list[i]);
 
         const PS::S32  n_connected_cluster = system_hard_connected.getNCluster();
-        n_count.cluster_connected += n_connected_cluster;
+        n_count.cluster_connected += PS::Comm::getSum(n_connected_cluster);
         const PS::S32* connected_cluster_n_list = system_hard_connected.getClusterNList();
         for (PS::S32 i=0; i<n_connected_cluster; i++) n_count.cluster_count(connected_cluster_n_list[i]);
 
@@ -755,25 +757,30 @@ int main(int argc, char *argv[]){
 #endif
 
             //eng_diff.dump(std::cerr);
-            if(my_rank==0) {
-                std::cerr<<"n_loop= "<<dn_loop<<std::endl;
-                std::cerr<<"n_glb= "<<n_glb<<std::endl;
-                std::cerr<<"Time= "<<time_sys<<" Enow-Einit="<<eng_diff.tot<<" (Enow-Einit)/Einit= "<<eng_diff.tot/eng_init.tot
+            const int NProc=PS::Comm::getNumberOfProc();
+            for (int i=0; i<NProc; i++) {
+                if(my_rank==i) {
+                    std::cerr<<"Rank= "<<my_rank<<std::endl;
+                    std::cerr<<"n_loop= "<<dn_loop<<std::endl;
+                    std::cerr<<"n_glb= "<<n_glb<<std::endl;
+                    std::cerr<<"Time= "<<time_sys<<" Enow-Einit="<<eng_diff.tot<<" (Enow-Einit)/Einit= "<<eng_diff.tot/eng_init.tot
 //#ifdef ARC_ERROR
 //                         <<" ARC_error_relative="<<system_hard_isolated.ARC_error_relative+system_hard_connected.ARC_error_relative<<" ARC_error="<<system_hard_isolated.ARC_error+system_hard_connected.ARC_error
 //#endif
-                         <<std::endl;
-                eng_now.dump(std::cerr);
+                             <<std::endl;
+                    eng_now.dump(std::cerr);
 #ifdef PROFILE
-                std::cerr<<"Wtime per loop:\n";
-                profile.print(std::cerr,time_sys,dn_loop);
-                std::cerr<<"Number per loop:\n";
+                    std::cerr<<"Wtime per loop:\n";
+                    profile.print(std::cerr,time_sys,dn_loop);
+                    std::cerr<<"Number per loop:\n";
 //                std::cerr<<"\nHard single    "<<(PS::F64)n_ptcl_hard_one_cluster/dn_loop
 //                         <<"\nHard isolated :"<<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop
 //                         <<"\nHard connected:"<<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop
 //                         <<std::endl;
-                n_count.print(std::cerr,20,dn_loop);
+                    n_count.print(std::cerr,20,dn_loop);
 #endif
+                }
+                PS::Comm::barrier();
             }
 
 //#ifdef ARC_ERROR
@@ -789,13 +796,15 @@ int main(int argc, char *argv[]){
 //#endif
             
 #ifdef PROFILE
-            if(my_rank==0) {
-                fprofile<<std::setprecision(PRINT_PRECISION);
-                fprofile<<std::setw(PRINT_WIDTH)<<time_sys
-                        <<std::setw(PRINT_WIDTH)<<dn_loop
-                        <<std::setw(PRINT_WIDTH)<<n_glb;
-                profile.dump(fprofile, PRINT_WIDTH, dn_loop);
-                n_count.dump(fprofile, PRINT_WIDTH, dn_loop);
+            for (int i=0; i<NProc; i++) {
+                if(my_rank==i) {
+                    fprofile<<std::setprecision(PRINT_PRECISION);
+                    fprofile<<std::setw(PRINT_WIDTH)<<my_rank;
+                    fprofile<<std::setw(PRINT_WIDTH)<<time_sys
+                            <<std::setw(PRINT_WIDTH)<<dn_loop
+                            <<std::setw(PRINT_WIDTH)<<n_glb;
+                    profile.dump(fprofile, PRINT_WIDTH, dn_loop);
+                    n_count.dump(fprofile, PRINT_WIDTH, dn_loop);
 //                fprofile<<std::setw(PRINT_WIDTH)<<(PS::F64)n_ptcl_hard_one_cluster/dn_loop
 //                        <<std::setw(PRINT_WIDTH)<<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop
 //                        <<std::setw(PRINT_WIDTH)<<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop
@@ -803,7 +812,9 @@ int main(int argc, char *argv[]){
 //#ifdef ARC_ERROR
 //                        <<std::setw(PRINT_WIDTH)<<system_hard_isolated.ARC_error+system_hard_connected.ARC_error
 //#endif              
-                fprofile<<std::endl;
+                    fprofile<<std::endl;
+                }
+                PS::Comm::barrier();
             }
 #endif
             

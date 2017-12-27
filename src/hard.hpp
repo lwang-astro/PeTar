@@ -709,35 +709,54 @@ public:
         //    n_sort_list[i].second= i;
         //}
         //std::sort(n_sort_list.getPointer(),n_sort_list.getPointer()+n_cluster,[](const std::pair<PS::S32,PS::S32> &a, const std::pair<PS::S32,PS::S32> &b){return a.first<b.first;});
-        
-        
+#ifdef OMP_PROFILE        
+        PS::ReallocatableArray<PS::F64> time_thread(num_thread);
+        PS::ReallocatableArray<PS::S64> num_cluster(num_thread);
+        for (PS::S32 i=0; i<num_thread; i++) {
+          time_thread[i] = 0;
+          num_cluster[i] = 0;
+        }
+#endif
 #pragma omp parallel for schedule(dynamic)
         for(PS::S32 i=0; i<n_cluster; i++){
             const PS::S32 ith = PS::Comm::getThreadNum();
+#ifdef OMP_PROFILE
+            time_thread[ith] -= PS::GetWtime();
+#endif
             //const PS::S32 i   = n_sort_list[k].second;
             const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
+#ifdef OMP_PROFILE
+            num_cluster[ith] += n_ptcl;
+#endif
 #ifdef HARD_DEBUG_PROFILE
             PS::F64 tstart = PS::GetWtime();
 #endif
             driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, dt, extra_ptcl[ith], first_step_flag);
+#ifdef OMP_PROFILE
+            time_thread[ith] += PS::GetWtime();
+#endif
 #ifdef HARD_DEBUG_PROFILE
             PS::F64 tend = PS::GetWtime();
             std::cerr<<"HT: "<<i<<" "<<ith<<" "<<n_cluster<<" "<<n_ptcl<<" "<<tend-tstart<<std::endl;
 #endif
         }
-        
-        for(PS::S32 i=0; i<num_thread; i++) {
-            for (PS::S32 j=0; j<extra_ptcl[i].size(); j++) {
-                PS::S32 adr = sys.getNumberOfParticleLocal();
-                PS::S32 rank = PS::Comm::getRank();
-                sys.addOneParticle(Tsptcl(extra_ptcl[i][j],rank,adr));
-#ifdef HARD_DEBUG
-                if(extra_ptcl[i][j].id<0&&extra_ptcl[i][j].status<0) {
-                    std::cerr<<"Error: extra particle list contain ghost particle! i_thread="<<i<<" index="<<j<<" rank="<<rank<<" adr="<<adr<<std::endl;
-                    abort();
-                }
+        if (n_cluster>0) {
+            for(PS::S32 i=0; i<num_thread; i++) {
+#ifdef OMP_PROFILE        
+                std::cerr<<"thread: "<<i<<"  Hard Time="<<time_thread[i]<<"  n_ptcl="<<num_cluster[i]<<std::endl;
 #endif
+                for (PS::S32 j=0; j<extra_ptcl[i].size(); j++) {
+                    PS::S32 adr = sys.getNumberOfParticleLocal();
+                    PS::S32 rank = PS::Comm::getRank();
+                    sys.addOneParticle(Tsptcl(extra_ptcl[i][j],rank,adr));
+#ifdef HARD_DEBUG
+                    if(extra_ptcl[i][j].id<0&&extra_ptcl[i][j].status<0) {
+                        std::cerr<<"Error: extra particle list contain ghost particle! i_thread="<<i<<" index="<<j<<" rank="<<rank<<" adr="<<adr<<std::endl;
+                        abort();
+                    }
+#endif
+                }
             }
         }
     }

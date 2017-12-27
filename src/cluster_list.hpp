@@ -20,8 +20,8 @@ void SetRankComm(const PS::F64ort pos_domain[], Ttree &tree,
     const PS::S32 my_rank = PS::Comm::getRank();
     const PS::S32 n_proc = PS::Comm::getNumberOfProc();
 //    const PS::F64ort pos_my_domain = pos_domain[my_rank];
-    const PS::F64ort pos_my_domain = tree.getOuterBoundaryOfLocalTree();
-    const PS::F64ort pos_my_domain_in = tree.getInnerBoundaryOfLocalTree();
+    PS::F64ort pos_my_domain = tree.getOuterBoundaryOfLocalTree();
+    PS::F64ort pos_my_domain_in = tree.getInnerBoundaryOfLocalTree();
     PS::F64ort * pos_domain_out = new PS::F64ort[n_proc];
     MPI_Allgather(&pos_my_domain, 1, PS::GetDataType<PS::F64ort>(),
                   pos_domain_out, 1, PS::GetDataType<PS::F64ort>(), MPI_COMM_WORLD);
