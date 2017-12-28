@@ -174,7 +174,7 @@ struct Tprofile{
     PS::F64 time;
     const char* name;
     
-    Tprofile(const char* name_): time(0.0), name(name_) {}
+    Tprofile(const char* _name): time(0.0), name(_name) {}
     
     void start(){
         time -= PS::GetWtime();
@@ -192,6 +192,10 @@ struct Tprofile{
         fout<<std::setw(width)<<time/divider;
     }
 
+    void dumpName(std::ostream & fout, const PS::S32 width=20) {
+        fout<<std::setw(width)<<name;
+    }
+
     void reset() {
         time = 0.0;
     }
@@ -199,34 +203,37 @@ struct Tprofile{
 };
 
 struct NumCounter{
-    PS::S64 n_;
-    const char* name_;
+    PS::S64 n;
+    const char* name;
     
-    NumCounter(const char* name): n_(0), name_(name) {}
+    NumCounter(const char* _name): n(0), name(_name) {}
 
     NumCounter &operator++() {
-        (this->n_)++;
+        (this->n)++;
         return *this;
     }
 
-    NumCounter &operator+=(const PS::S64 n) {
-        this->n_ += n;
+    NumCounter &operator+=(const PS::S64 _n) {
+        this->n += _n;
         return *this;
     }
 
-    NumCounter &operator=(const PS::S64 n) {
-        this->n_ = n;
+    NumCounter &operator=(const PS::S64 _n) {
+        this->n = _n;
         return *this;
     }
 
     void print(std::ostream & fout, const PS::S32 divider=1){
-        fout<<name_<<": "<<((divider==1)?n_:(PS::F64)n_/divider)<<std::endl;
+        fout<<name<<": "<<((divider==1)?n:(PS::F64)n/divider)<<std::endl;
     }
 
     void dump(std::ostream & fout, const PS::S32 width=20, const PS::S32 divider=1){
-        fout<<std::setw(width)<<((divider==1)?n_:(PS::F64)n_/divider);
+        fout<<std::setw(width)<<((divider==1)?n:(PS::F64)n/divider);
     }
 
+    void dumpName(std::ostream & fout, const PS::S32 width=20) {
+        fout<<std::setw(width)<<name;
+    }
 };
 
 class SysProfile{
@@ -241,12 +248,12 @@ public:
     const PS::S32 n_profile;
     
     SysProfile(): tot           (Tprofile("Total         ")),
-                  hard_tot      (Tprofile("Hard total    ")),
-                  hard_single   (Tprofile("Hard single   ")),
-                  hard_isolated (Tprofile("Hard isolated ")),
-                  hard_connected(Tprofile("Hard connected")),
-                  soft_tot      (Tprofile("Soft total    ")),
-                  search_cluster(Tprofile("Search cluster")),
+                  hard_tot      (Tprofile("Hard_total    ")),
+                  hard_single   (Tprofile("Hard_single   ")),
+                  hard_isolated (Tprofile("Hard_isolated ")),
+                  hard_connected(Tprofile("Hard_connected")),
+                  soft_tot      (Tprofile("Soft_total    ")),
+                  search_cluster(Tprofile("Search_cluster")),
                   n_profile(7) {}
 
 	void print(std::ostream & fout, const PS::F64 time_sys, const PS::S64 n_loop=1){
@@ -265,6 +272,27 @@ public:
         }
     }
 
+    void dumpName(std::ofstream & fout, const PS::S32 width=20) {
+        for(PS::S32 i=0; i<n_profile; i++) {
+            Tprofile* iptr = (Tprofile*)this+i;
+            iptr->dumpName(fout, width);
+        }
+    }
+    
+    void dump(std::ostream & fout, const PS::S32 width=20, const PS::S64 n_loop=1){
+        for(PS::S32 i=0; i<n_profile; i++) {
+            Tprofile* iptr = (Tprofile*)this+i;
+            iptr->dump(fout, width, n_loop);
+        }
+    }
+
+    void dumpName(std::ostream & fout, const PS::S32 width=20) {
+        for(PS::S32 i=0; i<n_profile; i++) {
+            Tprofile* iptr = (Tprofile*)this+i;
+            iptr->dumpName(fout, width);
+        }
+    }
+    
     void clear(){
         for(PS::S32 i=0; i<n_profile; i++) {
             Tprofile* iptr = (Tprofile*)this+i;

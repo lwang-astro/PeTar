@@ -78,8 +78,8 @@ void write_p(FILE* fout, const PS::F64 time, const PS::F64 dt_soft, const Tsys& 
 #endif
 
 int main(int argc, char *argv[]){
-    std::cout<<std::setprecision(15);
-    std::cerr<<std::setprecision(15);
+    std::cout<<std::setprecision(5);
+    std::cerr<<std::setprecision(5);
     PS::Initialize(argc, argv);
 
     PS::S32 my_rank = PS::Comm::getRank();
@@ -757,32 +757,44 @@ int main(int argc, char *argv[]){
 #endif
 
             //eng_diff.dump(std::cerr);
-            const int NProc=PS::Comm::getNumberOfProc();
-            for (int i=0; i<NProc; i++) {
-                if(my_rank==i) {
-                    std::cerr<<"Rank= "<<my_rank<<std::endl;
-                    std::cerr<<"n_loop= "<<dn_loop<<std::endl;
-                    std::cerr<<"n_glb= "<<n_glb<<std::endl;
-                    std::cerr<<"Time= "<<time_sys<<" Enow-Einit="<<eng_diff.tot<<" (Enow-Einit)/Einit= "<<eng_diff.tot/eng_init.tot
+
+            if(my_rank==0) {
+                std::cerr<<"n_loop= "<<dn_loop<<std::endl;
+                std::cerr<<"n_glb= "<<n_glb<<std::endl;
+                std::cerr<<"Time= "<<time_sys<<" Enow-Einit="<<eng_diff.tot<<" (Enow-Einit)/Einit= "<<eng_diff.tot/eng_init.tot
 //#ifdef ARC_ERROR
 //                         <<" ARC_error_relative="<<system_hard_isolated.ARC_error_relative+system_hard_connected.ARC_error_relative<<" ARC_error="<<system_hard_isolated.ARC_error+system_hard_connected.ARC_error
 //#endif
-                             <<std::endl;
-                    eng_now.dump(std::cerr);
+                         <<std::endl;
+                eng_now.dump(std::cerr);
+                std::cerr<<"Wtime per loop:\n";
+                std::cerr<<std::setw(PRINT_WIDTH)<<"Rank";
+                profile.dumpName(std::cerr,PRINT_WIDTH);
+                std::cerr<<std::endl;
+            }
+            
+            const int NProc=PS::Comm::getNumberOfProc();
+            for (int i=0; i<NProc; i++) {
+                if(my_rank==i) {
 #ifdef PROFILE
-                    std::cerr<<"Wtime per loop:\n";
-                    profile.print(std::cerr,time_sys,dn_loop);
-                    std::cerr<<"Number per loop:\n";
-//                std::cerr<<"\nHard single    "<<(PS::F64)n_ptcl_hard_one_cluster/dn_loop
-//                         <<"\nHard isolated :"<<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop
-//                         <<"\nHard connected:"<<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop
-//                         <<std::endl;
-                    n_count.print(std::cerr,20,dn_loop);
+//                    std::cerr<<"Rank= "<<my_rank<<std::endl;
+//                    profile.print(std::cerr,time_sys,dn_loop);
+                    std::cerr<<std::setw(PRINT_WIDTH)<<my_rank;
+                    profile.dump(std::cerr,PRINT_WIDTH,dn_loop);
+                    std::cerr<<std::endl;
 #endif
                 }
                 PS::Comm::barrier();
             }
-
+            if(my_rank==0) {
+                std::cerr<<"Number per loop:\n";
+//                std::cerr<<"\nHard single    "<<(PS::F64)n_ptcl_hard_one_cluster/dn_loop
+//                         <<"\nHard isolated :"<<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop
+//                         <<"\nHard connected:"<<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop
+//                         <<std::endl;
+                n_count.print(std::cerr,PRINT_WIDTH,dn_loop);
+            }
+                    
 //#ifdef ARC_ERROR
 //            for (int i=1;i<20;i++)  system_hard_isolated.N_count[i] = PS::Comm::getSum(system_hard_isolated.N_count[i]);
 //            if(my_rank==0) {
