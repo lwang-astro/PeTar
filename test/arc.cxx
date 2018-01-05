@@ -1,3 +1,5 @@
+//arctest [input] [(arc.dat.)outname]
+
 #include <iostream>
 #include <cstdio>
 #include <string>
@@ -54,7 +56,7 @@ void CalcEnergyHard(const Tptcl ptcl[], const PS::S32 n_tot, Teng & eng,
 #ifndef INTEGRATED_CUTOFF_FUNCTION
     PS::F64 r_oi_inv = 1.0/(r_out-r_in);
     PS::F64 r_A = (r_out-r_in)/(r_out+r_in);
-    PS::F64 pot_off = cutoff_pot(1.0)/r_out;
+    PS::F64 pot_off = (1.0 + r_A)/r_out;
 #endif
     for(PS::S32 i=0; i<n_tot; i++){
         eng.kin += 0.5 * ptcl[i].mass * ptcl[i].vel * ptcl[i].vel;
@@ -147,8 +149,8 @@ int main(int argc, char** argv)
   PS::F64 rin, rout, rsearch, rbin, eps, eta, dt_limit, time, m_average=0;
   PS::S32 rcount = fscanf(fin, "%lf %d %lf %lf %lf %lf %lf %lf %lf\n", 
                           &time, &N, &rin, &rout, &rsearch, &rbin, &dt_limit, &eta, &eps);
-  if (rcount<8) {
-      std::cerr<<"Error: parameter reading fail!\n";
+  if (rcount<9) {
+      std::cerr<<"Error: parameter reading fail! rcount = "<<rcount<<", required 9 \n";
       abort();
   }
   Ptcl::r_search_min = rout;
@@ -230,9 +232,14 @@ int main(int argc, char** argv)
   ARC_control.setIterConst(0);
   ARC_control.setAutoStep(3);
 
+  ARC_control.print(std::cerr);
+
   ARC_int_pars Int_pars;
   Int_pars.rin = rin;
   Int_pars.rout = rout;
+  Int_pars.r_oi_inv = 1.0/(rout-rin);
+  Int_pars.r_A = (rout-rin)/(rout+rin);
+  Int_pars.pot_off = (1.0 + Int_pars.r_A)/rout;
   Int_pars.eps2 = eps*eps;
 
   ARCIntegrator<PtclH4, PtclH4, PtclForce> Aint(ARC_control, Int_pars);

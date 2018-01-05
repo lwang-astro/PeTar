@@ -1273,9 +1273,17 @@ public:
 };
 #endif
 
+//! ARC integrator extra data
+/*!
+ */
 class ARC_int_pars{
 public:
-    PS::F64 rout, rin, r_oi_inv, r_A, pot_off, eps2;
+    PS::F64 rout;      ///> r out
+    PS::F64 rin;       ///> r in
+    PS::F64 r_oi_inv;  ///> 1.0/(rout-rin)
+    PS::F64 r_A;       ///> (rout-rin)/(rout+rin)
+    PS::F64 pot_off;   ///> (1 + r_A)/rout
+    PS::F64 eps2;      ///> eps*eps
     
     ARC_int_pars() {}
     ARC_int_pars(const ARC_int_pars& in_) {
