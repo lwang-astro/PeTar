@@ -1236,14 +1236,14 @@ private:
         //Tptcl* plist[n_split][2];
         /*
           acc, ecc
-          peri, tperi,
+          peri, tstep,
           inc, OMG,
           omg, ecca
          */
         bindata[0][0] = bin.ax;
         bindata[0][1] = bin.ecc;
         bindata[1][0] = bin.peri;
-        bindata[1][1] = bin.tperi;
+        bindata[1][1] = bin.tstep;
         bindata[2][0] = bin.inc; 
         bindata[2][1] = bin.OMG; 
         bindata[3][0] = bin.omg; 
@@ -1416,8 +1416,8 @@ private:
             stab_bins.reserve(n_groups);
             bins.resizeNoInitialize(group_list_n[i]-1);
             keplerTreeGenerator(bins.getPointer(), &group_list[group_list_disp[i]], group_list_n[i], ptcl_org, dt_tree);
-            bool istab = stabilityCheck<Tptcl>(stab_bins,bins.back(),rmax);
-            if (istab) {
+            PS::F64 fstab = stabilityCheck<Tptcl>(stab_bins,bins.back(),rmax);
+            if (fstab>0) {
                 keplerOrbitGenerator(ptcl_org, ptcl_extra, empty_list, bins.back(), id_offset, n_split);
             }
             else {
@@ -1864,7 +1864,7 @@ public:
             bin.ax   = ptcl_org[soft_pert_list_[ioff  ]].mass_bk;
             bin.ecc  = ptcl_org[soft_pert_list_[ioff+1]].mass_bk;
             bin.peri = ptcl_org[soft_pert_list_[ioff+2]].mass_bk;
-            bin.tperi= ptcl_org[soft_pert_list_[ioff+3]].mass_bk;
+            bin.tstep= ptcl_org[soft_pert_list_[ioff+3]].mass_bk;
             bin.inc  = ptcl_org[soft_pert_list_[ioff+4]].mass_bk;
             bin.OMG  = ptcl_org[soft_pert_list_[ioff+5]].mass_bk;
             bin.omg  = ptcl_org[soft_pert_list_[ioff+6]].mass_bk;
@@ -1876,7 +1876,7 @@ public:
             bin.ax   = ptcl_org[soft_pert_list_[ioff+1]].mass_bk;
             bin.ecc  = ptcl_org[soft_pert_list_[ioff  ]].mass_bk;
             bin.peri = ptcl_org[soft_pert_list_[ioff+3]].mass_bk;
-            bin.tperi= ptcl_org[soft_pert_list_[ioff+2]].mass_bk;
+            bin.tstep= ptcl_org[soft_pert_list_[ioff+2]].mass_bk;
             bin.inc  = ptcl_org[soft_pert_list_[ioff+5]].mass_bk;
             bin.OMG  = ptcl_org[soft_pert_list_[ioff+4]].mass_bk;
             bin.omg  = ptcl_org[soft_pert_list_[ioff+7]].mass_bk;

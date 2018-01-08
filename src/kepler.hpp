@@ -12,7 +12,18 @@ const PS::F64 PI = 4.0*atan(1.0);
 
 class Binary{
 public:
-    PS::F64 ax, ecc, inc, OMG, omg, tperi, peri, ecca, m1, m2;
+    // ax: semi-major axis
+    // ecc: eccentricity
+    // inc: inclination
+    // OMG: rotational angle 1
+    // omg: rotational angle 2
+    // tperi: time to peri-center
+    // peri: period
+    // ecca: eccentricty anomaly
+    // m1: mass 1
+    // m2: mass 2
+    // tstep: integration step estimation
+    PS::F64 ax, ecc, inc, OMG, omg, tperi, peri, ecca, m1, m2, tstep;
 };
 
 template <class Tptcl>
@@ -460,7 +471,10 @@ void keplerTreeGenerator(PtclTree<Tptcl> bins[],   // make sure bins.size = n_me
         calc_center_of_mass(*(Tptcl*)&bins[i], p, 2);
         bins[i].member[0] = p[0];
         bins[i].member[1] = p[1];
+        bins[i].m1 = p[0]->mass;
+        bins[i].m2 = p[1]->mass;
         bins[i].id = p[0]->id;
+        bins[i].tstep = 0.0; 
         bins[i].status = bins[i].id;
         //bins[i].r_search = std::max(p[0]->r_search,p[1]->r_search);
         bins[i].calcRSearch(dt_tree);
@@ -471,60 +485,85 @@ void keplerTreeGenerator(PtclTree<Tptcl> bins[],   // make sure bins.size = n_me
 #endif
 }
 
+// return integration step estimation
 template<class Tptcl>
-bool stab2check(const PtclTree<Tptcl> &bin, const PS::F64 rmax) {
-    if(bin.ax<0) return false;
-    if(bin.ax*(1.0+bin.ecc)>rmax) return false;
-    return true;
+PS::F64 stab2check(const PtclTree<Tptcl> &bin, const PS::F64 rmax) {
+    if(bin.ax<0) return -1.0;
+    if(bin.ax*(1.0+bin.ecc)>rmax) return -1.0;
+    PS::F64 mrate = (bin.m1>bin.m2)?bin.m2/bin.m1:bin.m1/bin.m2;
+    return 1.0*bin.peri*std::sqrt(mrate)*pow(1-bin.ecc,0.41666666);
 }
 
 template<class Tptcl>
-bool stab3check(const PtclTree<Tptcl> &bout, const PtclTree<Tptcl> &bin, const PS::F64 rmax) {
-    if(!stab2check(bout,rmax)) return false;
-    if(!stab2check(bin ,rmax)) return false;
-    return true;
+PS::F64 stab3check(const PtclTree<Tptcl> &bout, const PtclTree<Tptcl> &bin, const PS::F64 rmax) {
+    PS::F64 s1=stab2check(bout,rmax);
+    if (s1<0.0) return -1.0;
+    PS::F64 s2=stab2check(bin ,rmax);
+    if (s2<0.0) return -1.0;
+    return std::min(s1,s2);
 }
 
 template<class Tptcl>
-bool stab4check(const PtclTree<Tptcl> &bout, const PtclTree<Tptcl> &bin1, const PtclTree<Tptcl> &bin2, const PS::F64 rmax) {
-    if(!stab2check(bout,rmax)) return false;
-    if(!stab2check(bin1,rmax)) return false;
-    if(!stab2check(bin2,rmax)) return false;
-    return true;
+PS::F64 stab4check(const PtclTree<Tptcl> &bout, const PtclTree<Tptcl> &bin1, const PtclTree<Tptcl> &bin2, const PS::F64 rmax) {
+    PS::F64 s1=stab2check(bout,rmax);
+    if (s1<0.0) return -1.0;
+    PS::F64 s2=stab2check(bin1,rmax);
+    if (s2<0.0) return -1.0;
+    PS::F64 s3=stab2check(bin2,rmax);
+    if (s3<0.0) return -1.0;
+    return std::min(s2,s3);
 }
 
 
 template<class Tptcl>
-bool stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &nbin, 
+PS::F64 stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &nbin, 
                     PtclTree<Tptcl> &bins, const PS::F64 rmax) {
     nbin.clearSize();
-    bool fstab=true;
+    PS::F64 fstab=0.0;
     if(bins.member[0]->status!=0) {
         if(bins.member[1]->status!=0) {
-            fstab = stab4check(bins, *(PtclTree<Tptcl>*)bins.member[0], *(PtclTree<Tptcl>*)bins.member[1], rmax);
-            bool fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[0], rmax);
-            bool fs2 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[1], rmax);
-            fstab &= fs1 & fs2;
-            if(!fstab) {
-                if(fs1) nbin.push_back((PtclTree<Tptcl>*)bins.member[0]);
-                if(fs2) nbin.push_back((PtclTree<Tptcl>*)bins.member[1]);
+            PS::F64 fs0 = stab4check(bins, *(PtclTree<Tptcl>*)bins.member[0], *(PtclTree<Tptcl>*)bins.member[1], rmax);
+            PS::F64 fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[0], rmax);
+            PS::F64 fs2 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[1], rmax);
+            if(fs0<0) {
+                if(fs1>0) {
+                    nbin.push_back((PtclTree<Tptcl>*)bins.member[0]);
+                    nbin.back()->tstep = fs1;
+                }
+                if(fs2>0) {
+                    nbin.push_back((PtclTree<Tptcl>*)bins.member[1]);
+                    nbin.back()->tstep = fs2;
+                }
+                fstab = -1.0;
             }
+            else fstab = std::min(fs1,fs2);
         }
         else {
-            fstab = stab3check(bins, *(PtclTree<Tptcl>*)bins.member[0], rmax);
-            bool fs = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[0], rmax);
-            fstab &= fs;
-            if(!fstab&fs) nbin.push_back((PtclTree<Tptcl>*)bins.member[0]);
+            PS::F64 fs0 = stab3check(bins, *(PtclTree<Tptcl>*)bins.member[0], rmax);
+            PS::F64 fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[0], rmax);
+            if(fs0<0) {
+                nbin.push_back((PtclTree<Tptcl>*)bins.member[0]);
+                nbin.back()->tstep = fs1;
+                fstab = -1.0;
+            }
+            else fstab = fs1;
         }
     }
     else {
         if(bins.member[1]->status!=0) {
-            fstab = stab3check(bins, *(PtclTree<Tptcl>*)bins.member[1], rmax);
-            bool fs = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[1], rmax);
-            fstab &= fs;
-            if(!fstab&fs) nbin.push_back((PtclTree<Tptcl>*)bins.member[1]);
+            PS::F64 fs0 = stab3check(bins, *(PtclTree<Tptcl>*)bins.member[1], rmax);
+            PS::F64 fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[1], rmax);
+            if(fs0<0) {
+                nbin.push_back((PtclTree<Tptcl>*)bins.member[1]);
+                nbin.back()->tstep = fs1;
+                fstab = -1.0;
+            }
+            else fstab = fs1;
         }
-        else fstab = stab2check(bins, rmax);
+        else {
+            fstab = stab2check(bins, rmax);
+            if(fstab>0) bins.tstep = fstab;
+        }
     }
     
     return fstab;
