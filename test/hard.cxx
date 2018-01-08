@@ -227,7 +227,9 @@ int main(int argc, char** argv)
   SystemHard sys;
   PS::ParticleSystem<FPSoft> fp;
   PS::F64 time_sys = 0.0;
-  sys.setParam(rbin, rout, rin, eps, dt_limit, eta, time_sys, 1e-8, N, n_split);
+  PS::F64 dt_min_hard = 1.0;
+  for (PS::S32 i=0;i<40;i++) dt_min_hard *= 0.5;
+  sys.setParam(rbin, rout, rin, eps, dt_limit, dt_min_hard, eta, time_sys, 1e-8, N, n_split);
   sys.setARCParam();
   
   sys.setPtclForIsolatedMultiCluster(p,adr,np);
@@ -265,7 +267,7 @@ int main(int argc, char** argv)
           }
       }
       print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
-      write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(), &sys.ESD1, &sys.ESD0);
+      //write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(), &sys.ESD1, &sys.ESD0);
       //write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),pcm1,et,rin,rout,eps2,et0.tot);
       write_p(fout2,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),ppcm1,etcm,rin,rout,eps2,etcm0.tot,1);
       std::cerr<<"CM: pos="<<pcm1.pos<<" vel="<<pcm1.vel<<" shift pos="<<pcm1.pos-pcm0.pos<<" shift vel="<<pcm1.vel-pcm0.vel<<std::endl;

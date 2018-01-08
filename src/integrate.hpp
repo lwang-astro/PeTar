@@ -1493,16 +1493,33 @@ public:
         c->print(std::cerr);
     }
 
-    void integrateOneStep(const PS::S32 ic,
-                          const PS::F64 time_end,
-                          const PS::F64 dt_limit) {
+    PS::S64 integrateOneStepSym(const PS::S32 ic,
+                                const PS::F64 time_end,
+                                const PS::F64 dt_limit) {
+        ARChain* c = &clist_[ic];
+        ARC_pert_pars* par = &par_list_[ic];
+        PS::F64 ds_up_limit = 0.25*dt_limit/c->calc_dt_X(1.0,*ARC_control_);
+        PS::F64 ds_use = bininfo[ic].tstep;
+        if (ds_use>ds_up_limit) ds_use = ds_up_limit;
+
+        const PS::S32 ipert = pert_disp_[ic];
+        PS::S64 stepcount = c->Symplectic_integration_tsyn(ds_use, *ARC_control_, time_end, par, &pert_[ipert], &pforce_[ipert], pert_n_[ic]);
+        return stepcount;
+    }
+
+    PS::S64 integrateOneStepExt(const PS::S32 ic,
+                             const PS::F64 time_end,
+                             const PS::F64 dt_limit) {
         ARChain* c = &clist_[ic];
         ARC_pert_pars* par = &par_list_[ic];
         PS::F64 dscoff=1.0;
         PS::F64 ds_up_limit = 0.25*dt_limit/c->calc_dt_X(1.0,*ARC_control_);
-        PS::F64 ds_use = c->calc_next_step_custom(*ARC_control_,par);
+        //PS::F64 ds_use = c->calc_next_step_custom(*ARC_control_,par);
+        PS::F64 ds_use = bininfo[ic].tstep;
         
         if (ds_use>ds_up_limit) ds_use = ds_up_limit;
+
+        PS::S64 nstep=0;
 
         // convergency check
         PS::S32 converge_count=0;
@@ -1556,22 +1573,30 @@ public:
                 if(error_count>0) error_count--;
             }
         }
+#ifdef ARC_PROFILE
+        nstep = c->profile.itercount;
+#endif
     }
 
-    void integrateOneStepList(PS::S32 act_list[],
+    PS::S64 integrateOneStepList(PS::S32 act_list[],
                               PS::S32 n_act,
                               const PS::F64 time_end,
                               const PS::F64 dt_limit) {
+        PS::S64 nstep = 0;
         for(int i=0; i<n_act; i++) {
-            integrateOneStep(act_list[i], time_end, dt_limit);
+            nstep += integrateOneStepSym(act_list[i], time_end, dt_limit);
         }
+
+        return nstep;
     }
 
-    void integrateOneStepList(const PS::F64 time_end,
+    PS::S64 integrateOneStepList(const PS::F64 time_end,
                               const PS::F64 dt_limit) {
+        PS::S64 nstep = 0;
         for(int i=0; i<clist_.size(); i++) {
-            integrateOneStep(i, time_end, dt_limit);
+            nstep += integrateOneStepSym(i, time_end, dt_limit);
         }
+        return nstep;
     }
 
     template <class Tp>
@@ -1632,14 +1657,14 @@ public:
         return clist_[i].slowdown.getkappa();
     }
 
-#ifdef ARC_PROFILE
-    const PS::S64 getNsubstep() const{
-        PS::S64 Nsum = 0;
-        for (int i=0; i<clist_.size(); i++) 
-            Nsum += clist_[i].profile.itercount;
-        return Nsum;
-    }
-#endif
+//#ifdef ARC_PROFILE
+//    const PS::S64 getNsubstep() const{
+//        PS::S64 Nsum = 0;
+//        for (int i=0; i<clist_.size(); i++) 
+//            Nsum += clist_[i].profile.itercount;
+//        return Nsum;
+//    }
+//#endif
 
 #ifdef ARC_DEBUG_PRINT
     void info_print(std::ostream& os) const{

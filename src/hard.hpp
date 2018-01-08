@@ -118,6 +118,9 @@ private:
 #ifdef HARD_DEBUG_PROFILE
         N_count[n_ptcl]++;
 #endif
+
+        PS::S32 nstepcount = 0;
+
 //#ifdef HERMITE
 //        if(n_ptcl>5) {
         SearchGroup<PtclHard> group;
@@ -162,7 +165,7 @@ private:
             Aint.EnergyRecord(AE0);
 #endif 
             
-            Aint.integrateOneStep(0, time_end, dt_limit_hard_);
+            nstepcount +=Aint.integrateOneStepSym(0, time_end, dt_limit_hard_);
             
             pcm->pos += pcm->vel * time_end;
 
@@ -177,7 +180,8 @@ private:
 #endif
 #endif
 #ifdef ARC_PROFILE
-            ARC_substep_sum += Aint.getNsubstep();
+            //ARC_substep_sum += Aint.getNsubstep();
+            ARC_substep_sum += nstepcount;
 #endif
 #ifdef ARC_DEBUG_PRINT
             Aint.info_print(std::cerr);
@@ -254,7 +258,7 @@ private:
                 }
 #endif
                 //Aint.integrateOneStepList(group_act_list.getPointer(), group_act_n, time_sys, dt_limit);
-                Aint.integrateOneStepList(time_sys, std::min(dt_limit,dt_h));
+                nstepcount +=Aint.integrateOneStepList(time_sys, std::min(dt_limit,dt_h));
                 Hint.integrateOneStep(time_sys,dt_limit,true,&Aint);
                 //Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
                 Hint.SortAndSelectIp();
@@ -281,7 +285,8 @@ private:
 #endif
 #endif
 #ifdef ARC_PROFILE
-            ARC_substep_sum += Aint.getNsubstep();
+        //ARC_substep_sum += Aint.getNsubstep();
+        ARC_substep_sum += nstepcount;
 #endif
 #ifdef ARC_DEBUG_PRINT
             Aint.info_print(std::cerr);
@@ -334,7 +339,8 @@ public:
 #endif
         ARC_control_.setabg(0,1,0);
         ARC_control_.setErr(energy_error,dtmin,dterr);
-        ARC_control_.setIterSeq(exp_itermax,3,den_intpmax);
+        //ARC_control_.setIterSeq(exp_itermax,3,den_intpmax);
+        ARC_control_.setSymOrder(-6);
         ARC_control_.setIntp(exp_method);
         ARC_control_.setIterConst((bool)exp_fix_iter);
         ARC_control_.setAutoStep(3);
