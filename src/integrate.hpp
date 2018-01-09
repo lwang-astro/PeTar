@@ -1586,7 +1586,11 @@ public:
                               const PS::F64 dt_limit) {
         PS::S64 nstep = 0;
         for(int i=0; i<n_act; i++) {
+#ifdef ARC_SYM
             nstep += integrateOneStepSym(act_list[i], time_end, dt_limit);
+#else
+            nstep += integrateOneStepExt(act_list[i], time_end, dt_limit);
+#endif
         }
 
         return nstep;
@@ -1596,7 +1600,12 @@ public:
                               const PS::F64 dt_limit) {
         PS::S64 nstep = 0;
         for(int i=0; i<clist_.size(); i++) {
+#ifdef ARC_SYM
             nstep += integrateOneStepSym(i, time_end, dt_limit);
+#else
+            nstep += integrateOneStepExt(i, time_end, dt_limit);
+#endif
+
         }
         return nstep;
     }

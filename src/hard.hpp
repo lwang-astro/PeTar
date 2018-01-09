@@ -164,8 +164,12 @@ private:
 #ifdef HARD_DEBUG_ENERGY
             Aint.EnergyRecord(AE0);
 #endif 
-            
+
+#ifdef ARC_SYM            
             nstepcount +=Aint.integrateOneStepSym(0, time_end, dt_limit_hard_);
+#else 
+            nstepcount +=Aint.integrateOneStepExt(0, time_end, dt_limit_hard_);
+#endif
             
             pcm->pos += pcm->vel * time_end;
 
@@ -339,8 +343,11 @@ public:
 #endif
         ARC_control_.setabg(0,1,0);
         ARC_control_.setErr(energy_error,dtmin,dterr);
-        //ARC_control_.setIterSeq(exp_itermax,3,den_intpmax);
+#ifdef ARC_SYM
         ARC_control_.setSymOrder(-6);
+#else
+        ARC_control_.setIterSeq(exp_itermax,3,den_intpmax);
+#endif
         ARC_control_.setIntp(exp_method);
         ARC_control_.setIterConst((bool)exp_fix_iter);
         ARC_control_.setAutoStep(3);

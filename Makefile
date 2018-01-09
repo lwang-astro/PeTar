@@ -5,9 +5,9 @@
 #PS_PATH = -I../../../../project/fdps/src
 #PS_PATH = -I../FDPS/src
 PS_PATH  = -I/home/lwang/code/fdps/src
-ARC_PATH = -I/home/lwang/code/ARC/include
+#ARC_PATH = -I/home/lwang/code/ARC/include
 #GPERF_PATH = -L/opt/gperftools-2.6.1/lib
-#ARC_PATH = -I/home/lwang/GitHub/ARC/include
+ARC_PATH = -I/home/lwang/GitHub/ARC/include
 
 #ROOT_PATH= ${shell pwd -P}
 INCLUDE  = -I./src -I../src
@@ -70,6 +70,7 @@ CXXFLAGS += -D TIDAL_TENSOR # Must use HARD_CM_KICK together
 CXXFLAGS += -D SOFT_PERT
 CXXFLAGS += -D SPLIT_MASS
 CXXFLAGS += -D PROFILE
+CXXFLAGS += -D ARC_SYM
 #CXXFLAGS += -D ARC_PROFILE
 
 #CXXFLAGS += -D INTEGRATED_CUTOFF_FUNCTION
@@ -87,7 +88,7 @@ CXXFLAGS += -D PROFILE
 #CXXFLAGS += -D DEBUG_TEMP
 #CXXFLAGS += -D MAIN_DEBUG
 
-CXXLIBS += -L$(GPERF_PATH) -lprofiler -ltcmalloc 
+#CXXLIBS += -L$(GPERF_PATH) -lprofiler -ltcmalloc 
 
 VPATH=./src ./test ../src
 
