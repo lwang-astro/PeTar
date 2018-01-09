@@ -227,7 +227,11 @@ int main(int argc, char** argv)
   ARC_control.setA(Newtonian_cut_AW<PtclH4,ARC_pert_pars>,Newtonian_extA<PtclH4,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
   ARC_control.setabg(0,1,0);
   ARC_control.setErr(1e-10,1e-24,1e-6);
+#ifdef ARC_SYM
+  ARC_control.setSymOrder(-6);
+#else
   ARC_control.setIterSeq(20,3,20);
+#endif
   ARC_control.setIntp(1);
   ARC_control.setIterConst(0);
   ARC_control.setAutoStep(3);
@@ -246,6 +250,7 @@ int main(int argc, char** argv)
   pcm = p[group.getPtclList()[0]];
   Aint.reserveARMem(1);
   Aint.reservePertMem(10);
+  group.getBinPars(Aint.bininfo[0],p.getPointer(),0,n_split);
   Aint.addOneGroup(p.getPointer(),group.getGroup(0), group.getGroupN(0),group.getGroupPertList(0,n_split), n_split, &pcm, NULL, NULL, 0);
 
   std::cerr<<"Add group, N = "<<group.getGroupN(0)<<std::endl;
@@ -270,9 +275,14 @@ int main(int argc, char** argv)
   CalcEnergyHard(p.getPointer(),N,e0,rin,rout,eps*eps);
   //Aint.EnergyRecord(e0);
   write_p(fout,0.0,e0,ediff,p.getPointer(),N);
+  PS::S64 stepcount = 0;
   for (int i=0; i<nstep; i++) {
       time_i += dt_limit/STEP_DIVIDER;
-      Aint.integrateOneStep(0, time_i, dt_limit/STEP_DIVIDER);
+#ifdef ARC_SYM
+      stepcount +=Aint.integrateOneStepSym(0, time_i, dt_limit/STEP_DIVIDER);
+#else
+      stepcount +=Aint.integrateOneStepExt(0, time_i, dt_limit/STEP_DIVIDER);
+#endif
       if((i+1)%(int)STEP_DIVIDER==0) {
           printf("step_d=%d, i=%d\n",(int)STEP_DIVIDER,i);
           Aint.resolve();
@@ -287,7 +297,7 @@ int main(int argc, char** argv)
       }
   }
 
-  printf("Energy error: %e, kin: %e, pot: %e, init: %e, end: %e\n",ediff.tot/e1.tot, e1.kin, e1.pot, e0.tot, e1.tot);
+  printf("Energy error: %e, kin: %e, pot: %e, init: %e, end: %e, nstep: %lld\n",ediff.tot/e1.tot, e1.kin, e1.pot, e0.tot, e1.tot, stepcount);
 
   fclose(fout);
   

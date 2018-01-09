@@ -1576,6 +1576,8 @@ public:
 #ifdef ARC_PROFILE
         nstep = c->profile.itercount;
 #endif
+
+        return nstep;
     }
 
     PS::S64 integrateOneStepList(PS::S32 act_list[],

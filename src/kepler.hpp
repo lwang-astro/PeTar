@@ -518,7 +518,6 @@ PS::F64 stab4check(const PtclTree<Tptcl> &bout, const PtclTree<Tptcl> &bin1, con
 template<class Tptcl>
 PS::F64 stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &nbin, 
                     PtclTree<Tptcl> &bins, const PS::F64 rmax) {
-    nbin.clearSize();
     PS::F64 fstab=0.0;
     if(bins.member[0]->status!=0) {
         if(bins.member[1]->status!=0) {
@@ -536,7 +535,10 @@ PS::F64 stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &nbin,
                 }
                 fstab = -1.0;
             }
-            else fstab = std::min(fs1,fs2);
+            else {
+                fstab = std::min(fs1,fs2);
+                if(fstab>0) bins.tstep = fstab;
+            }
         }
         else {
             PS::F64 fs0 = stab3check(bins, *(PtclTree<Tptcl>*)bins.member[0], rmax);
@@ -546,7 +548,11 @@ PS::F64 stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &nbin,
                 nbin.back()->tstep = fs1;
                 fstab = -1.0;
             }
-            else fstab = fs1;
+            else {
+                fstab = fs1;
+                if(fstab>0) bins.tstep = fstab;
+            }
+
         }
     }
     else {
@@ -558,7 +564,10 @@ PS::F64 stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &nbin,
                 nbin.back()->tstep = fs1;
                 fstab = -1.0;
             }
-            else fstab = fs1;
+            else {
+                fstab = fs1;
+                if (fstab>0) bins.tstep = fstab;
+            }
         }
         else {
             fstab = stab2check(bins, rmax);
