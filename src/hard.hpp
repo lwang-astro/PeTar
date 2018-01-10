@@ -64,10 +64,9 @@ public:
     HardEnergy HE0, HE1;
     HardEnergy ESD0, ESD1;
 #endif
-#ifdef ARC_PROFILE
+#ifdef PROFILE
     PS::S64 ARC_substep_sum;
     PS::F64 ARC_n_groups;
-    PS::S64 ARC_substep_per_group;
 #endif
 
 private:
@@ -185,7 +184,7 @@ private:
                     AE0.kin+AE0.pot, AE1.kin+AE1.pot, AE1.kin+AE1.pot-AE0.kin-AE0.pot, (AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot)/AE0.tot);
 #endif
 #endif
-#ifdef ARC_PROFILE
+#ifdef PROFILE
             //ARC_substep_sum += Aint.getNsubstep();
             ARC_substep_sum += nstepcount;
             ARC_n_groups += 1;
@@ -291,7 +290,7 @@ private:
             Hint.printStepHist();
 #endif
 #endif
-#ifdef ARC_PROFILE
+#ifdef PROFILE
             //ARC_substep_sum += Aint.getNsubstep();
             ARC_substep_sum += nstepcount;
             ARC_n_groups += n_groups;
@@ -331,7 +330,7 @@ public:
 #ifdef HARD_DEBUG_PROFILE
         for(PS::S32 i=0;i<20;i++) N_count[i]=0;
 #endif
-#ifdef ARC_PROFILE
+#ifdef PROFILE
         ARC_substep_sum = 0;
 #endif
         //        PS::S32 n_threads = PS::Comm::getNumberOfThread();

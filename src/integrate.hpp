@@ -1499,7 +1499,8 @@ public:
         ARChain* c = &clist_[ic];
         ARC_pert_pars* par = &par_list_[ic];
         PS::F64 ds_up_limit = 0.25*dt_limit/c->calc_dt_X(1.0,*ARC_control_);
-        PS::F64 ds_use = bininfo[ic].tstep;
+        PS::F64 ds_use = 2.0*bininfo[ic].tstep*std::abs(c->getPt());
+        //PS::F64 ds_use = c->calc_next_step_custom(*ARC_control_,par);
         if (ds_use>ds_up_limit) ds_use = ds_up_limit;
 
         const PS::S32 ipert = pert_disp_[ic];
@@ -1515,7 +1516,7 @@ public:
         PS::F64 dscoff=1.0;
         PS::F64 ds_up_limit = 0.25*dt_limit/c->calc_dt_X(1.0,*ARC_control_);
         PS::F64 ds_use = c->calc_next_step_custom(*ARC_control_,par);
-        //PS::F64 ds_use = bininfo[ic].tstep;
+        //PS::F64 ds_use = 0.5*bininfo[ic].tstep*std::abs(c->GetPt());
         
         if (ds_use>ds_up_limit) ds_use = ds_up_limit;
 

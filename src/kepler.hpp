@@ -491,7 +491,8 @@ PS::F64 stab2check(const PtclTree<Tptcl> &bin, const PS::F64 rmax) {
     if(bin.ax<0) return -1.0;
     if(bin.ax*(1.0+bin.ecc)>rmax) return -1.0;
     PS::F64 mrate = (bin.m1>bin.m2)?bin.m2/bin.m1:bin.m1/bin.m2;
-    return 1.0*bin.peri*std::sqrt(mrate)*pow(1-bin.ecc,0.41666666);
+    return bin.peri*std::sqrt(mrate)*pow(1.0-bin.ecc,0.41666666);
+//    return std::max(std::sqrt(std::abs(1.0-bin.ecc)),0.01)*peri;
 }
 
 template<class Tptcl>

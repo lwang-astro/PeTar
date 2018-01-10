@@ -715,14 +715,12 @@ int main(int argc, char *argv[]){
         n_count.hard_isolated    += PS::Comm::getSum(n_hard_isolated);
         n_count.hard_connected   += PS::Comm::getSum(n_hard_connected);
                                            
-#ifdef ARC_PROFILE                                           
         PS::S64 ARC_substep_sum   = system_hard_isolated.ARC_substep_sum;
         PS::S64 ARC_n_groups      = system_hard_isolated.ARC_n_groups;
         n_count.ARC_substep_sum  += PS::Comm::getSum(ARC_substep_sum);
         n_count.ARC_n_groups     += PS::Comm::getSum(ARC_n_groups);
         system_hard_isolated.ARC_substep_sum = 0;
         system_hard_isolated.ARC_n_groups = 0;
-#endif
                                            
         n_count.cluster_count(1, n_hard_single);
         const PS::S32  n_isolated_cluster = system_hard_isolated.getNCluster();
