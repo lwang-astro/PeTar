@@ -66,6 +66,8 @@ public:
 #endif
 #ifdef ARC_PROFILE
     PS::S64 ARC_substep_sum;
+    PS::F64 ARC_n_groups;
+    PS::S64 ARC_substep_per_group;
 #endif
 
 private:
@@ -186,6 +188,7 @@ private:
 #ifdef ARC_PROFILE
             //ARC_substep_sum += Aint.getNsubstep();
             ARC_substep_sum += nstepcount;
+            ARC_n_groups += 1;
 #endif
 #ifdef ARC_DEBUG_PRINT
             Aint.info_print(std::cerr);
@@ -289,8 +292,9 @@ private:
 #endif
 #endif
 #ifdef ARC_PROFILE
-        //ARC_substep_sum += Aint.getNsubstep();
-        ARC_substep_sum += nstepcount;
+            //ARC_substep_sum += Aint.getNsubstep();
+            ARC_substep_sum += nstepcount;
+            ARC_n_groups += n_groups;
 #endif
 #ifdef ARC_DEBUG_PRINT
             Aint.info_print(std::cerr);

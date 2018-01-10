@@ -237,6 +237,8 @@ int main(int argc, char *argv[]){
                      <<"             2. N_particle \n"
                      <<"             3. N_offset: for naming special particle ID, should be > N_particle\n"
                      <<"             4. Time\n"
+                     <<"             5. Tree time step (set 0 for input file)\n"
+                     <<"             6. n_split (set 0 for input file)\n"
                      <<"            Following lines:\n"
                      <<"             1. mass\n"
                      <<"             2. position[3]\n"
@@ -712,11 +714,14 @@ int main(int argc, char *argv[]){
         n_count.hard_single      += PS::Comm::getSum(n_hard_single);
         n_count.hard_isolated    += PS::Comm::getSum(n_hard_isolated);
         n_count.hard_connected   += PS::Comm::getSum(n_hard_connected);
-
+                                           
 #ifdef ARC_PROFILE                                           
         PS::S64 ARC_substep_sum   = system_hard_isolated.ARC_substep_sum;
+        PS::S64 ARC_n_groups      = system_hard_isolated.ARC_n_groups;
         n_count.ARC_substep_sum  += PS::Comm::getSum(ARC_substep_sum);
+        n_count.ARC_n_groups     += PS::Comm::getSum(ARC_n_groups);
         system_hard_isolated.ARC_substep_sum = 0;
+        system_hard_isolated.ARC_n_groups = 0;
 #endif
                                            
         n_count.cluster_count(1, n_hard_single);
