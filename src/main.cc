@@ -341,12 +341,15 @@ int main(int argc, char *argv[]){
     // ID safety check
     if (!restart_flag) {
         for (PS::S32 i=0; i<n_loc; i++) {
-            if(system_soft[i].id<=0) {
+            PS::S64 id = system_soft[i].id;
+            if(id<=0) {
                 std::cerr<<"Error: for initial data, the id should always larger than zero. current index i = "<<i<<", id = "<<system_soft[i].id<<"!"<<std::endl;
                 abort();
             }
-            
-            system_soft[i].calcRSearch(dt_soft.value);
+
+            // for binary, research depend on v_disp
+            if(id<=2*n_bin.value) system_soft[i].r_search = std::max(r_search_min,v_disp*dt_soft.value*search_factor.value);
+            else system_soft[i].calcRSearch(dt_soft.value);
         }
     }
     
@@ -355,6 +358,7 @@ int main(int argc, char *argv[]){
         std::cerr<<" m_average    = "<<m_average      <<std::endl
                  <<" r_in         = "<<r_in           <<std::endl
                  <<" r_out        = "<<r_out.value    <<std::endl
+                 <<" r_bin        = "<<r_bin.value    <<std::endl
                  <<" r_search_min = "<<r_search_min   <<std::endl
                  <<" vel_disp     = "<<v_disp         <<std::endl
                  <<" dt_soft      = "<<dt_soft.value  <<std::endl;

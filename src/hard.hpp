@@ -184,13 +184,13 @@ private:
                     AE0.kin+AE0.pot, AE1.kin+AE1.pot, AE1.kin+AE1.pot-AE0.kin-AE0.pot, (AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot)/AE0.tot);
 #endif
 #endif
+#ifdef ARC_DEBUG_PRINT
+            Aint.info_print(std::cerr, ARC_n_groups, dt_limit_hard_);
+#endif
 #ifdef PROFILE
             //ARC_substep_sum += Aint.getNsubstep();
             ARC_substep_sum += nstepcount;
             ARC_n_groups += 1;
-#endif
-#ifdef ARC_DEBUG_PRINT
-            Aint.info_print(std::cerr);
 #endif
         }
         else {
@@ -243,6 +243,9 @@ private:
             slowdownrecord.resizeNoInitialize(n_groups);
 #endif
 
+//#ifdef ARC_DEBUG_PRINT
+//            Aint.info_print(std::cerr, n_groups, dt_limit_hard_);
+//#endif
             while(time_sys<time_end) {
                 time_now = time_sys;
                 time_sys = Hint.getNextTime();
@@ -290,13 +293,13 @@ private:
             Hint.printStepHist();
 #endif
 #endif
+#ifdef ARC_DEBUG_PRINT
+            Aint.info_print(std::cerr, ARC_n_groups, dt_limit_hard_);
+#endif
 #ifdef PROFILE
             //ARC_substep_sum += Aint.getNsubstep();
             ARC_substep_sum += nstepcount;
             ARC_n_groups += n_groups;
-#endif
-#ifdef ARC_DEBUG_PRINT
-            Aint.info_print(std::cerr);
 #endif
         }
             
@@ -306,7 +309,7 @@ private:
 
         group.searchAndMerge(ptcl_org, r_bin_);
         // Kickcorrect(ptcl_org, group.getRoutChangeList());
-        group.generateList(ptcl_org, ptcl_new, r_bin_, time_end, id_offset_, n_split_);
+        group.generateList(ptcl_org, ptcl_new, r_bin_,Int_pars_.rin, time_end, id_offset_, n_split_);
 
             // group.reverseCopy(ptcl_org, n_ptcl);
 //        }
@@ -789,7 +792,7 @@ public:
             group.findGroups(ptcl_hard_.getPointer(adr_head), n_ptcl, n_split_);
             group.searchAndMerge(ptcl_hard_.getPointer(adr_head), r_bin_);
             PS::ReallocatableArray<PtclHard> ptcl_new;
-            group.generateList(ptcl_hard_.getPointer(adr_head), ptcl_new, r_bin_, dt_tree, id_offset_, n_split_);
+            group.generateList(ptcl_hard_.getPointer(adr_head), ptcl_new, r_bin_, Int_pars_.rin, dt_tree, id_offset_, n_split_);
 #pragma omp critical
             {
                 for (PS::S32 j=0; j<ptcl_new.size(); j++) {

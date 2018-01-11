@@ -1679,16 +1679,50 @@ public:
 //#endif
 
 #ifdef ARC_DEBUG_PRINT
-    void info_print(std::ostream& os) const{
+    void data_dump(std::ostream& os, const PS::S32 i, const PS::F64 dt_limit) const{
+        const ARC_pert_pars* par = &par_list_[i];
+        os<<std::setprecision(15)<<dt_limit<<" "
+          <<clist_[i].getN()+pert_n_[i]<<" "
+          <<par->rin<<" "
+          <<par->rout<<" "
+          <<par->rout<<" "
+          <<par->rin*0.1<<" "
+          <<dt_limit<<" "
+          <<0.05<<" "
+          <<std::sqrt(par->eps2)<<std::endl;
+        for (int j=0; j<clist_[i].getN(); j++) {
+            os<<clist_[i].getP(j).mass<<" "
+              <<clist_[i].getP(j).pos<<" "
+              <<clist_[i].getP(j).vel<<std::endl;
+        }
+        for (int j=0; j<pert_n_[i]; j++) {
+            os<<pert_[pert_disp_[i]+j+1]->mass<<" "
+              <<pert_[pert_disp_[i]+j+1]->pos<<" "
+              <<pert_[pert_disp_[i]+j+1]->vel<<std::endl;
+        }
+    }
+    
+    void info_print(std::ostream& os, const PS::S64 ngroups, const PS::F64 dt_limit) const{
         for (int i=0; i<clist_.size(); i++) {
-            os<<i<<" "
+            os<<"ARC_info: "
+              <<ngroups+i<<" "
               <<clist_[i].getN()<<" "
               <<pert_n_[i]<<" "
               <<bininfo[i].ax<<" "
               <<bininfo[i].ecc<<" "
               <<bininfo[i].peri<<" "
-              <<clist_[i].slowdown.getkappa()<<" "
-              <<clist_[i].profile.itercount<<std::endl;
+              <<clist_[i].slowdown.getkappa()<<" ";
+#ifdef ARC_SYM
+            PS::S64 nstep = clist_[i].profile.stepcount[0];
+#else
+            PS::S64 nstep = clist_[i].profile.itercount;
+#endif
+            os<<nstep<<std::endl;
+
+            if(nstep>1e4) {
+                os<<"Data dump for hardtest in the case of large nstep "<<nstep<<std::endl;
+                data_dump(os, i, dt_limit);
+            }
         }
     }
 #endif

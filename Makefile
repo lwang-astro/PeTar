@@ -124,6 +124,9 @@ splinetest: spline.cxx
 keplersolvertest: keplersolver.cxx
 	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
+keplertest: keplertest.cxx
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
+
 hardtest: hard.cxx
 	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
