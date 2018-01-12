@@ -1695,17 +1695,20 @@ public:
               <<clist_[i].getP(j).pos<<" "
               <<clist_[i].getP(j).vel<<std::endl;
         }
-        for (int j=0; j<pert_n_[i]; j++) {
-            os<<pert_[pert_disp_[i]+j+1]->mass<<" "
-              <<pert_[pert_disp_[i]+j+1]->pos<<" "
-              <<pert_[pert_disp_[i]+j+1]->vel<<std::endl;
+        for (int j=1; j<pert_n_[i]; j++) {
+            os<<pert_[pert_disp_[i]+j]->mass<<" "
+              <<pert_[pert_disp_[i]+j]->pos<<" "
+              <<pert_[pert_disp_[i]+j]->vel<<std::endl;
         }
     }
     
-    void info_print(std::ostream& os, const PS::S64 ngroups, const PS::F64 dt_limit) const{
+    void info_print(std::ostream& os, const PS::S64 ngroups, const PS::S64 ngroupi, const PS::S64 nptcl, const PS::S64 ntot, const PS::F64 dt_limit) const{
         for (int i=0; i<clist_.size(); i++) {
-            os<<"ARC_info: "
+            os<<"ARC_info(i,n_tot,n_ptcl,n_group,n,n_pert,ax,ecc,peri,kappa,n_step): "
               <<ngroups+i<<" "
+              <<ntot<<" "
+              <<nptcl<<" "
+              <<ngroupi<<" "
               <<clist_[i].getN()<<" "
               <<pert_n_[i]<<" "
               <<bininfo[i].ax<<" "

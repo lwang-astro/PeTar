@@ -1205,6 +1205,7 @@ private:
                 if(is_top) bin.member[i]->status = -std::abs(id_offset+bin.member[i]->id*n_split);
                 else bin.member[i]->status = -std::abs(id_offset+bid*n_split);
                 bin.member[i]->mass_bk = bin.member[i]->mass;
+                bin.member[i]->r_search = bin.r_search;
 #ifdef SPLIT_MASS
                 bin.member[i]->mass    = 0.0;
 #endif
@@ -1271,7 +1272,8 @@ private:
                 }
                 p[j]->mass = bin.member[j]->mass;
                 p[j]->id = id_offset + (bin.member[j]->id)*n_split + i;
-                p[j]->r_search = bin.member[j]->r_search;
+                //p[j]->r_search = bin.member[j]->r_search;
+                p[j]->r_search = bin.r_search;
                 p[j]->status = (bin.id<<ID_PHASE_SHIFT)|i;
 #ifdef SPLIT_MASS
 #ifdef TIDAL_TENSOR
@@ -1384,6 +1386,9 @@ private:
         pcm->vel = bin.vel;
         pcm->id  = - std::abs(bin.id);
         pcm->r_search = bin.r_search;
+#ifdef TIDAL_TENSOR
+        pcm->r_search += bin.ax*(1+bin.ecc)*0.6063;
+#endif
         pcm->status = nbin;
     }
 

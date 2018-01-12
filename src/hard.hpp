@@ -185,7 +185,7 @@ private:
 #endif
 #endif
 #ifdef ARC_DEBUG_PRINT
-            Aint.info_print(std::cerr, ARC_n_groups, dt_limit_hard_);
+            Aint.info_print(std::cerr, ARC_n_groups, 1, 1, group.getGroupN(0),dt_limit_hard_);
 #endif
 #ifdef PROFILE
             //ARC_substep_sum += Aint.getNsubstep();
@@ -243,9 +243,6 @@ private:
             slowdownrecord.resizeNoInitialize(n_groups);
 #endif
 
-//#ifdef ARC_DEBUG_PRINT
-//            Aint.info_print(std::cerr, n_groups, dt_limit_hard_);
-//#endif
             while(time_sys<time_end) {
                 time_now = time_sys;
                 time_sys = Hint.getNextTime();
@@ -294,7 +291,7 @@ private:
 #endif
 #endif
 #ifdef ARC_DEBUG_PRINT
-            Aint.info_print(std::cerr, ARC_n_groups, dt_limit_hard_);
+            Aint.info_print(std::cerr, ARC_n_groups, n_groups, group.getPtclN(), n_ptcl, dt_limit_hard_);
 #endif
 #ifdef PROFILE
             //ARC_substep_sum += Aint.getNsubstep();
