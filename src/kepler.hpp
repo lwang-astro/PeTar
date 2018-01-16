@@ -55,6 +55,10 @@ double solve_keplereq(const double l,
         //if( fabs(u1-u0) < 1e-13 ){ return u1; }
         if( fabs(u1-u0) < 1e-15 ){ return u1; }
         else{ u0 = u1; }
+        if (loop>1e5) {
+            std::cerr<<"Error: kepler solver cannot converge to find correct eccentricity anomaly!\n";
+            abort();
+        }
     }
 }
 //double solve_keplereq(const double l,
