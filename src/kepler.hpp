@@ -557,8 +557,10 @@ PS::F64 stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &nbin,
             PS::F64 fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[0], rbin, rin);
             PS::F64 fs0 = stab2check(bins, rin);
             if(fs0<=0) {
-                nbin.push_back((PtclTree<Tptcl>*)bins.member[0]);
-                nbin.back()->tstep = fs1;
+                if(fs1>0) {
+                    nbin.push_back((PtclTree<Tptcl>*)bins.member[0]);
+                    nbin.back()->tstep = fs1;
+                }
                 fstab = -1.0;
             }
             else {
@@ -574,8 +576,10 @@ PS::F64 stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &nbin,
             PS::F64 fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[1], rbin, rin);
             PS::F64 fs0 = stab2check(bins, rin);
             if(fs0<=0) {
-                nbin.push_back((PtclTree<Tptcl>*)bins.member[1]);
-                nbin.back()->tstep = fs1;
+                if(fs1>0) {
+                    nbin.push_back((PtclTree<Tptcl>*)bins.member[1]);
+                    nbin.back()->tstep = fs1;
+                }
                 fstab = -1.0;
             }
             else {
