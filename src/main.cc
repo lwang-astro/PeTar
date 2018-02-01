@@ -305,7 +305,13 @@ int main(int argc, char *argv[]){
           std::cerr<<"Reading file "<<sinput<<std::endl
                    <<"N_tot = "<<n_glb.value<<"\nN_loc = "<<n_loc<<std::endl;
     }
-    else SetParticlePlummer(system_soft, n_glb.value, n_loc, time_sys);
+    else {
+        SetParticlePlummer(system_soft, n_glb.value, n_loc, time_sys);
+        file_header.nfile = 0;
+        time_sys = file_header.time = 0.0;
+        file_header.n_body = n_glb.value;
+        file_header.id_offset = n_glb.value;
+    }
 
     bool restart_flag = file_header.nfile; // nfile = 0 is assumed as initial data file
 
