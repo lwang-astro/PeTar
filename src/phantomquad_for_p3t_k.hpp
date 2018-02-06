@@ -13,7 +13,7 @@ private:
     double accpbuf[NIMAX/2]  [5][2]; // ax, ay, az, pot, nngb
     double epjbuf [NJMAX]    [4];    // x, y, z, m
     double spjbuf [NJMAX]    [10];   // x, y, z, m, xx, yy, xy, yz, zx, tr
-    double rsearchj[NJMAX]           // r_search_j
+    double rsearchj[NJMAX];          // r_search_j
 
     double eps2;
     //double r_crit2;
@@ -73,12 +73,12 @@ public:
         v_denominator =  _fjsp_set_v2r8(denominator, denominator);
 	}
 
-	void set_epj_one(const int addr, const double x, const double y, const double z, const double m) {
+        void set_epj_one(const int addr, const double x, const double y, const double z, const double m, const double r_search) {
 		epjbuf[addr][0] = x;
 		epjbuf[addr][1] = y;
 		epjbuf[addr][2] = z;
 		epjbuf[addr][3] = m;
-        rsearchj[addr]  = r_search;
+		rsearchj[addr]  = r_search;
 	}
 	// please specialize the following
 	template <typename EPJ_t>
@@ -112,7 +112,7 @@ public:
 		xibuf[ah][0][al] = x;
 		xibuf[ah][1][al] = y;
 		xibuf[ah][2][al] = z;
-        xibuf[ah][3][al] = r_search;
+		xibuf[ah][3][al] = r_search;
 	}
 	// please specialize the following
 	template <typename EPI_t>
@@ -172,7 +172,7 @@ public:
 		kernel_epj_unroll4(ni, nj);
 	}
 
-	void run_epj_for_p3t(const int ni, const int nj){
+  /*	void run_epj_for_p3t(const int ni, const int nj){
         if(ni > NIMAX || nj > NJMAX){
             std::cout<<"ni= "<<ni<<" NIMAX= "<<NIMAX<<" nj= "<<nj<<" NJMAX= "<<NJMAX<<std::endl;
         }
@@ -183,7 +183,7 @@ public:
 		//kernel_epj_unroll4_for_p3t(ni, nj);
         kernel_epj_unroll4_with_cutoff(ni, nj);
 	}
-
+  */
 	void run_epj_for_p3t_with_linear_cutoff(const int ni, const int nj){
         if(ni > NIMAX || nj > NJMAX){
             std::cout<<"ni= "<<ni<<" NIMAX= "<<NIMAX<<" nj= "<<nj<<" NJMAX= "<<NJMAX<<std::endl;
@@ -278,13 +278,13 @@ private:
 
     __attribute__ ((always_inline))
     void inline_kernel_epj_for_p3t_with_linear_cutoff(const v2r8 eps2,
-                                                      const v2r8 rsj,
+                                                      v2r8 &rsj,
                                                       const v2r8 jp_xy,
                                                       const v2r8 jp_zm,
                                                       const v2r8 xi,
                                                       const v2r8 yi,
                                                       const v2r8 zi,
-                                                      const v2r8 rsi,
+                                                      v2r8 &rsi,
                                                       v2r8 &ax,
                                                       v2r8 &ay,
                                                       v2r8 &az,
@@ -312,7 +312,7 @@ private:
         ay += mri3 * dy;
         az += mri3 * dz;
         
-        const v2r8 r_crit = _fjsp_max_v2r8(rsi, rsj);
+        v2r8 r_crit = _fjsp_max_v2r8(rsi, rsj);
         const v2r8 r_crit2= r_crit*r_crit;
         const v2r8_mask mask = r_crit2 < r2;
         nngb += _fjsp_andnot1_v2r8( mask.val, v2r8(1.0) );
@@ -513,11 +513,11 @@ private:
 		}
 	}
 
-	__attribute__ ((noinline))
+  /*	__attribute__ ((noinline))
 	void kernel_epj_unroll4_for_p3t(const int ni, const int nj){
 		for(int i=0; i<ni; i+=8){
 			const v2r8 veps2 = v2r8(eps2);
-			const v2r8 vrcrit2 = v2r8(r_crit2);
+			//const v2r8 vrcrit2 = v2r8(r_crit2);
 
 			const v2r8 xi0 = v2r8::load(xibuf[0 + i/2][0]);
 			const v2r8 yi0 = v2r8::load(xibuf[0 + i/2][1]);
@@ -536,22 +536,22 @@ private:
 			v2r8 ay0(0.0);
 			v2r8 az0(0.0);
 			v2r8 po0(0.0);
-            v2r8 nngb0(0.0);
+			v2r8 nngb0(0.0);
 			v2r8 ax1(0.0);
 			v2r8 ay1(0.0);
 			v2r8 az1(0.0);
 			v2r8 po1(0.0);
-            v2r8 nngb1(0.0);
+			v2r8 nngb1(0.0);
 			v2r8 ax2(0.0);
 			v2r8 ay2(0.0);
 			v2r8 az2(0.0);
 			v2r8 po2(0.0);
-            v2r8 nngb2(0.0);
+			v2r8 nngb2(0.0);
 			v2r8 ax3(0.0);
 			v2r8 ay3(0.0);
 			v2r8 az3(0.0);
 			v2r8 po3(0.0);
-            v2r8 nngb3(0.0);
+			v2r8 nngb3(0.0);
 
 			for(int j=0; j<nj; j++){
 				const v2r8 jp_xy = v2r8::load(epjbuf[j] + 0);
@@ -584,7 +584,7 @@ private:
 			nngb3.store(accpbuf[3 + i/2][4]);
 		}
 	}
-
+  */
 	__attribute__ ((noinline))
 	void kernel_epj_unroll4_for_p3t_with_linear_cutoff(const int ni, const int nj){
 		for(int i=0; i<ni; i+=8){
@@ -593,45 +593,45 @@ private:
 			const v2r8 xi0 = v2r8::load(xibuf[0 + i/2][0]);
 			const v2r8 yi0 = v2r8::load(xibuf[0 + i/2][1]);
 			const v2r8 zi0 = v2r8::load(xibuf[0 + i/2][2]);
-            const v2r8 rs0 = v2r8::load(xibuf[0 + i/2][3]);
+			v2r8 rs0 = v2r8::load(xibuf[0 + i/2][3]);
 			const v2r8 xi1 = v2r8::load(xibuf[1 + i/2][0]);
 			const v2r8 yi1 = v2r8::load(xibuf[1 + i/2][1]);
 			const v2r8 zi1 = v2r8::load(xibuf[1 + i/2][2]);
-            const v2r8 rs1 = v2r8::load(xibuf[1 + i/2][3]);
+			v2r8 rs1 = v2r8::load(xibuf[1 + i/2][3]);
 			const v2r8 xi2 = v2r8::load(xibuf[2 + i/2][0]);
 			const v2r8 yi2 = v2r8::load(xibuf[2 + i/2][1]);
 			const v2r8 zi2 = v2r8::load(xibuf[2 + i/2][2]);
-            const v2r8 rs2 = v2r8::load(xibuf[2 + i/2][3]);
+			v2r8 rs2 = v2r8::load(xibuf[2 + i/2][3]);
 			const v2r8 xi3 = v2r8::load(xibuf[3 + i/2][0]);
 			const v2r8 yi3 = v2r8::load(xibuf[3 + i/2][1]);
 			const v2r8 zi3 = v2r8::load(xibuf[3 + i/2][2]);
-            const v2r8 rs3 = v2r8::load(xibuf[3 + i/2][3]);
+			v2r8 rs3 = v2r8::load(xibuf[3 + i/2][3]);
 
 			v2r8 ax0(0.0);
 			v2r8 ay0(0.0);
 			v2r8 az0(0.0);
 			v2r8 po0(0.0);
-            v2r8 nngb0(0.0);
+			v2r8 nngb0(0.0);
 			v2r8 ax1(0.0);
 			v2r8 ay1(0.0);
 			v2r8 az1(0.0);
 			v2r8 po1(0.0);
-            v2r8 nngb1(0.0);
+			v2r8 nngb1(0.0);
 			v2r8 ax2(0.0);
 			v2r8 ay2(0.0);
 			v2r8 az2(0.0);
 			v2r8 po2(0.0);
-            v2r8 nngb2(0.0);
+			v2r8 nngb2(0.0);
 			v2r8 ax3(0.0);
 			v2r8 ay3(0.0);
 			v2r8 az3(0.0);
 			v2r8 po3(0.0);
-            v2r8 nngb3(0.0);
+			v2r8 nngb3(0.0);
 
 			for(int j=0; j<nj; j++){
 				const v2r8 jp_xy = v2r8::load(epjbuf[j] + 0);
 				const v2r8 jp_zm = v2r8::load(epjbuf[j] + 2);
-                const v2r8 rsjp  =  __builtin_fj_set_v2r8(rsearchj[j], rsearchj[j]);
+				v2r8 rsjp  =  __builtin_fj_set_v2r8(rsearchj[j], rsearchj[j]);
 				inline_kernel_epj_for_p3t_with_linear_cutoff(veps2, rsjp, jp_xy, jp_zm, xi0, yi0, zi0, rs0, ax0, ay0, az0, po0, nngb0);
 				inline_kernel_epj_for_p3t_with_linear_cutoff(veps2, rsjp, jp_xy, jp_zm, xi1, yi1, zi1, rs1, ax1, ay1, az1, po1, nngb1);
 				inline_kernel_epj_for_p3t_with_linear_cutoff(veps2, rsjp, jp_xy, jp_zm, xi2, yi2, zi2, rs2, ax2, ay2, az2, po2, nngb2);
@@ -662,7 +662,7 @@ private:
 	}
 
 
-	__attribute__ ((noinline))
+  /*	__attribute__ ((noinline))
 	void kernel_epj_unroll4_with_cutoff(const int ni, const int nj){
 		for(int i=0; i<ni; i+=8){
 			const v2r8 veps2 = v2r8(eps2);
@@ -733,6 +733,7 @@ private:
 			nngb3.store(accpbuf[3 + i/2][4]);
 		}
 	}
+  */
 
 	__attribute__ ((always_inline))
 	void inline_kernel_spj(

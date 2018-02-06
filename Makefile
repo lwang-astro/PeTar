@@ -3,22 +3,25 @@
 #PS_PATH = -I../../../fdps/src/
 #PS_PATH = -I../../fdps/src/
 #PS_PATH = -I../../../../project/fdps/src
-#PS_PATH = -I../FDPS/src
-PS_PATH  = -I/home/lwang/code/fdps/src
-ARC_PATH = -I/home/lwang/code/ARC/include
-GPERF_PATH = -L/opt/gperftools-2.6.1/lib
+PS_PATH = -I../FDPS/src
+ARC_PATH= -I../TSARC/include
+#PS_PATH  = -I/home/lwang/code/fdps/src
+#ARC_PATH = -I/home/lwang/code/ARC/include
+#GPERF_PATH = -L/opt/gperftools-2.6.1/lib
 #ARC_PATH = -I/home/lwang/GitHub/ARC/include
 
 #ROOT_PATH= ${shell pwd -P}
 INCLUDE  = -I./src -I../src
 
-#use_k_computer = yes
+use_k_computer = yes
 #use_xc30_naoj = yes
-use_x86 = yes
+#use_x86 = yes
 
 ifeq ($(use_k_computer),yes)
 CXX = time mpiFCCpx
-#CXXFLAGS = -Kfast
+CXXFLAGS = -Kfast
+CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -Kopenmp
+CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
 CXXFLAGS += -x32
 CXXFLAGS += -Xg
 CXXFLAGS += -DFAST_ALL_TO_ALL_FOR_K
@@ -45,7 +48,9 @@ ifeq ($(use_x86),yes)
 CXX = time mpicxx
 #CXX = kinst-ompp mpicxx
 #CXX = tau_cxx.sh  -tau_makefile=/opt/tau-2.26.3/x86_64/lib/Makefile.tau-mpi-openmp -tau_options=-optCompInst 
-#CXXFLAGS = -g -O0
+#CXXFLAGS = -g
+CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -fopenmp
+CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
 CXXFLAGS += -O2
 CXXFLAGS += -Wall
 CXXFLAGS += -march=core-avx2
@@ -58,24 +63,20 @@ CXXFLAGS += -DINTRINSIC_X86
 #CXXLIBS += ${shell gsl-config --libs}
 endif
 
-CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -fopenmp
-CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
 CXXFLAGS += -DDIV_FIX
 #CXXFLAGS += -DP3T_64BIT
 CXXFLAGS += -DUSE_QUAD
-#CXXFLAGS += -DUSE_SIMD
+CXXFLAGS += -DUSE_SIMD
 
 CXXFLAGS += -D HARD_CM_KICK
 CXXFLAGS += -D TIDAL_TENSOR # Must use HARD_CM_KICK together
 CXXFLAGS += -D SOFT_PERT
 CXXFLAGS += -D SPLIT_MASS
 CXXFLAGS += -D PROFILE
-CXXFLAGS += -D ARC_SYM
 #CXXFLAGS += -D ARC_PROFILE
 
 #CXXFLAGS += -D INTEGRATED_CUTOFF_FUNCTION
 #CXXFLAGS += -D ARC_DEBUG
-#CXXFLAGS += -D ARC_DEEP_DEBUG
 #CXXFLAGS += -D ARC_DEBUG_PRINT
 #CXXFLAGS += -D ARC_ERROR
 #CXXFLAGS += -D ARC_WARN
@@ -83,13 +84,13 @@ CXXFLAGS += -D ARC_SYM
 #CXXFLAGS += -D HARD_DEBUG_ENERGY
 #CXXFLAGS += -D HARD_DEBUG_PRINT
 #CXXFLAGS += -D HARD_DEBUG_PROFILE
-CXXFLAGS += -D DATA_DEBUG
+#CXXFLAGS += -D DATA_DEBUG
 #CXXFLAGS += -D FIX_STEP_DEBUG
 #CXXFLAGS += -D DEBUG
 #CXXFLAGS += -D DEBUG_TEMP
 #CXXFLAGS += -D MAIN_DEBUG
 
-CXXLIBS += $(GPERF_PATH) -lprofiler -ltcmalloc 
+#CXXLIBS += -L$(GPERF_PATH) -lprofiler -ltcmalloc 
 
 VPATH=./src ./test ../src
 
@@ -123,9 +124,6 @@ splinetest: spline.cxx
 
 keplersolvertest: keplersolver.cxx
 	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
-
-keplertest: keplertest.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
 
 hardtest: hard.cxx
 	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
