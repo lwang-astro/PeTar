@@ -536,7 +536,12 @@ int main(int argc, char *argv[]){
 #endif
 #ifdef PROFILE
     std::ofstream fprofile;
-    fprofile.open("profile.out",std::ofstream::out | std::ofstream::app);
+    std::string fproname;
+    std::stringstream atmp;
+    atmp<<my_rank;
+    atmp>>fproname;
+    fproname="profile.rank."+fproname;
+    fprofile.open(fproname.c_str(),std::ofstream::out);
     PS::S64 dn_loop = 0;
 #endif
 
@@ -786,26 +791,22 @@ int main(int argc, char *argv[]){
                 std::cerr<<std::endl;
             }
             
-            const int NProc=PS::Comm::getNumberOfProc();
-            for (int i=0; i<NProc; i++) {
-                if(my_rank==i) {
 #ifdef PROFILE
-//                    std::cerr<<"Rank= "<<my_rank<<std::endl;
-//                    profile.print(std::cerr,time_sys,dn_loop);
-                    std::cerr<<std::setw(PRINT_WIDTH)<<my_rank;
-                    profile.dump(std::cerr,PRINT_WIDTH,dn_loop);
-                    std::cerr<<std::endl;
-#endif
-                }
-                PS::Comm::barrier();
-            }
+            //const int NProc=PS::Comm::getNumberOfProc();
+
             if(my_rank==0) {
+                std::cerr<<std::setw(PRINT_WIDTH)<<my_rank;
+                profile.dump(std::cerr,PRINT_WIDTH,dn_loop);
+                std::cerr<<std::endl;
+
                 std::cerr<<"Number per loop:\n";
-//                std::cerr<<"\nHard single    "<<(PS::F64)n_ptcl_hard_one_cluster/dn_loop
-//                         <<"\nHard isolated :"<<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop
-//                         <<"\nHard connected:"<<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop
-//                         <<std::endl;
-                n_count.print(std::cerr,PRINT_WIDTH,dn_loop);
+                std::cerr<<std::setw(PRINT_WIDTH)<<"Rank";
+                n_count.dumpName(std::cerr,PRINT_WIDTH);
+                std::cerr<<std::endl;
+                n_count.dump(std::cerr,PRINT_WIDTH,dn_loop);
+                std::cerr<<std::endl;
+                
+                n_count.printHist(std::cerr,PRINT_WIDTH,dn_loop);
             }
                     
 //#ifdef ARC_ERROR
@@ -820,27 +821,18 @@ int main(int argc, char *argv[]){
 //            }
 //#endif
             
-#ifdef PROFILE
-            for (int i=0; i<NProc; i++) {
-                if(my_rank==i) {
-                    fprofile<<std::setprecision(PRINT_PRECISION);
-                    fprofile<<std::setw(PRINT_WIDTH)<<my_rank;
-                    fprofile<<std::setw(PRINT_WIDTH)<<time_sys
-                            <<std::setw(PRINT_WIDTH)<<dn_loop
-                            <<std::setw(PRINT_WIDTH)<<n_glb;
-                    profile.dump(fprofile, PRINT_WIDTH, dn_loop);
-                    n_count.dump(fprofile, PRINT_WIDTH, dn_loop);
-//                fprofile<<std::setw(PRINT_WIDTH)<<(PS::F64)n_ptcl_hard_one_cluster/dn_loop
-//                        <<std::setw(PRINT_WIDTH)<<(PS::F64)n_ptcl_hard_isolated_cluster/dn_loop
-//                        <<std::setw(PRINT_WIDTH)<<(PS::F64)n_ptcl_hard_nonisolated_cluster/dn_loop
-//                        <<std::setw(PRINT_WIDTH)<<eng_diff.tot/eng_init.tot
-//#ifdef ARC_ERROR
-//                        <<std::setw(PRINT_WIDTH)<<system_hard_isolated.ARC_error+system_hard_connected.ARC_error
-//#endif              
-                    fprofile<<std::endl;
-                }
-                PS::Comm::barrier();
-            }
+            PS::Comm::barrier();
+
+            fprofile<<std::setprecision(PRINT_PRECISION);
+            fprofile<<std::setw(PRINT_WIDTH)<<my_rank;
+            fprofile<<std::setw(PRINT_WIDTH)<<time_sys
+                    <<std::setw(PRINT_WIDTH)<<dn_loop
+                    <<std::setw(PRINT_WIDTH)<<n_glb;
+            profile.dump(fprofile, PRINT_WIDTH, dn_loop);
+            n_count.dump(fprofile, PRINT_WIDTH, dn_loop);
+            fprofile<<std::endl;
+
+            PS::Comm::barrier();
 #endif
             
             file_header.n_body = n_glb;

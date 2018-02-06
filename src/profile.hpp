@@ -335,6 +335,9 @@ public:
             NumCounter* iptr = (NumCounter*)this+i;
             iptr->print(fout, n_loop);
         }
+    }
+
+    void printHist(std::ostream & fout, const PS::S32 width=20, const PS::S64 n_loop=1) {
         fout<<"Number of members in clusters:\n";
         for(auto i=n_cluster.begin(); i!=n_cluster.end(); ++i) fout<<std::setw(width)<<i->first;
         fout<<std::endl;
@@ -347,10 +350,39 @@ public:
             NumCounter* iptr = (NumCounter*)this+i;
             iptr->dump(fout, width, n_loop);
         }
+    }
+
+    void dumpHist(std::ofstream & fout, const PS::S32 width=20, const PS::S64 n_loop=1){
         for(auto i=n_cluster.begin(); i!=n_cluster.end(); ++i)
             fout<<std::setw(width)<<i->first<<std::setw(width)<<i->second/((n_loop==1)?1:(PS::F64)n_loop);
     }
 
+    void dumpName(std::ofstream & fout, const PS::S32 width=20) {
+        for(PS::S32 i=0; i<n_counter; i++) {
+            Tprofile* iptr = (Tprofile*)this+i;
+            iptr->dumpName(fout, width);
+        }
+    }
+    
+    void dump(std::ostream & fout, const PS::S32 width=20, const PS::S64 n_loop=1){
+        for(PS::S32 i=0; i<n_counter; i++) {
+            Tprofile* iptr = (Tprofile*)this+i;
+            iptr->dump(fout, width, n_loop);
+        }
+    }
+
+    void dumpHist(std::ostream & fout, const PS::S32 width=20, const PS::S64 n_loop=1){
+        for(auto i=n_cluster.begin(); i!=n_cluster.end(); ++i)
+            fout<<std::setw(width)<<i->first<<std::setw(width)<<i->second/((n_loop==1)?1:(PS::F64)n_loop);
+    }
+
+    void dumpName(std::ostream & fout, const PS::S32 width=20) {
+        for(PS::S32 i=0; i<n_counter; i++) {
+            Tprofile* iptr = (Tprofile*)this+i;
+            iptr->dumpName(fout, width);
+        }
+    }
+    
     void clear() {
         for(PS::S32 i=0; i<n_counter; i++) {
             NumCounter* iptr = (NumCounter*)this+i;
