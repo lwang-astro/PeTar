@@ -362,6 +362,10 @@ public:
                 Tepj * nbl = NULL;
                 sys[i].n_ngb = tree.getNeighborListOneParticle(sys[i], nbl) - 1;
                 assert(sys[i].n_ngb >= 0);
+                // self-potential correction 
+                if (sys[i].status==0) sys[i].pot_tot += sys[i].mass/r_out;
+                else if (sys[i].status<0) sys[i].pot_tot += sys[i].mass_bk/r_out;
+
                 if(sys[i].n_ngb == 0){
                     // no neighbor
                     adr_sys_one_cluster_[ith].push_back(i);

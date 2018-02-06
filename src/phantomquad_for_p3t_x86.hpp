@@ -5,8 +5,8 @@
 class PhantomGrapeQuad{
 public:
     enum{
-        NIMAX = 32768,
-        //NIMAX = 16384,
+        //NIMAX = 32768,
+        NIMAX = 16384,
         NJMAX = 131072,
         //NIMAX = 1024,
         //NJMAX = 8192,
@@ -327,11 +327,13 @@ private:
                 yj =  __builtin_ia32_shufps256(jbuf, jbuf, 0x55);
                 zj =  __builtin_ia32_shufps256(jbuf, jbuf, 0xaa);
                 mj =  __builtin_ia32_shufps256(jbuf, jbuf, 0xff);
-                pot -= _mm256_and_ps(mri1, _mm256_cmp_ps(r2_real, veps2, 0x04));
+                //pot -= _mm256_and_ps(mri1, _mm256_cmp_ps(r2_real, veps2, 0x04));
+                pot -= mri1;
                 ax += mri3 * dx;
                 ay += mri3 * dy;
                 az += mri3 * dz;
-                v8sf vrcrit2 = _mm256_max_ps(rsi, rsj);
+                v8sf vrcrit = _mm256_max_ps(rsi, rsj);
+                v8sf vrcrit2 = vrcrit*vrcrit;
                 v8sf mask = _mm256_cmp_ps(vrcrit2, r2_real, 0x01); // for neighbour search
                 rsj= rsjbuf;
                 nngb += _mm256_and_ps( vone, _mm256_xor_ps(mask, allbits) ); // can remove

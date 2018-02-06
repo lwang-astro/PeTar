@@ -353,19 +353,19 @@ struct CalcForceEpEpWithLinearCutoffNoSIMD{
         //std::cerr<<"r_out= "<<r_out<<" r_in= "<<r_in<<" eps2= "<<eps2<<" r_crit2= "<<r_crit2<<std::endl;
         for(PS::S32 i=0; i<n_ip; i++){
             const PS::F64vec xi = ep_i[i].pos;
-            PS::S64 id_i = ep_i[i].id;
+            //PS::S64 id_i = ep_i[i].id;
             PS::F64vec ai = 0.0;
             PS::F64 poti = 0.0;
             PS::S32 n_ngb_i = 0;
             for(PS::S32 j=0; j<n_jp; j++){
-                const PS::F64 r_search = std::max(ep_i[i].r_search,ep_j[j].r_search);
-                if(id_i == ep_j[j].id){
-                    n_ngb_i++;
-                    continue;
-                }
+                //if(id_i == ep_j[j].id){
+                //    n_ngb_i++;
+                //    continue;
+                //}
                 const PS::F64vec rij = xi - ep_j[j].pos;
                 const PS::F64 r2 = rij * rij;
                 const PS::F64 r2_eps = rij * rij + eps2;
+                const PS::F64 r_search = std::max(ep_i[i].r_search,ep_j[j].r_search);
                 if(r2 < r_search*r_search*SAFTY_FACTOR_FOR_SEARCH_SQ){
                     n_ngb_i++;
                 }
