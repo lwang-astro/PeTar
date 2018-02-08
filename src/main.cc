@@ -803,6 +803,7 @@ int main(int argc, char *argv[]){
                 std::cerr<<std::setw(PRINT_WIDTH)<<"Rank";
                 n_count.dumpName(std::cerr,PRINT_WIDTH);
                 std::cerr<<std::endl;
+                std::cerr<<std::setw(PRINT_WIDTH)<<my_rank;
                 n_count.dump(std::cerr,PRINT_WIDTH,dn_loop);
                 std::cerr<<std::endl;
                 

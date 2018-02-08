@@ -359,14 +359,14 @@ public:
 
     void dumpName(std::ofstream & fout, const PS::S32 width=20) {
         for(PS::S32 i=0; i<n_counter; i++) {
-            Tprofile* iptr = (Tprofile*)this+i;
+            NumCounter* iptr = (NumCounter*)this+i;
             iptr->dumpName(fout, width);
         }
     }
     
     void dump(std::ostream & fout, const PS::S32 width=20, const PS::S64 n_loop=1){
         for(PS::S32 i=0; i<n_counter; i++) {
-            Tprofile* iptr = (Tprofile*)this+i;
+            NumCounter* iptr = (NumCounter*)this+i;
             iptr->dump(fout, width, n_loop);
         }
     }
@@ -378,7 +378,7 @@ public:
 
     void dumpName(std::ostream & fout, const PS::S32 width=20) {
         for(PS::S32 i=0; i<n_counter; i++) {
-            Tprofile* iptr = (Tprofile*)this+i;
+            NumCounter* iptr = (NumCounter*)this+i;
             iptr->dumpName(fout, width);
         }
     }
