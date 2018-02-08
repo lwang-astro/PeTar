@@ -100,14 +100,14 @@ int main(int argc, char *argv[]){
     IOParams<PS::F64> time_end     (10.0, "finishing time");
     IOParams<PS::F64> eta          (0.1,  "Hermite time step coefficient eta");
     IOParams<PS::S64> n_glb        (16384,"Total number of particles");
-    IOParams<PS::F64> dt_soft      (0.0,  "Tree timestep","0.1*r_in/sigma");
+    IOParams<PS::F64> dt_soft      (0.0,  "Tree timestep","0.1*r_out/sigma_1D");
     IOParams<PS::F64> dt_snp       (0.0625,"Output time interval of particle dataset");
     IOParams<PS::F64> search_factor(1.0,  "neighbor searching coefficient");
     IOParams<PS::F64> dt_limit_hard_factor(4.0, "limit of tree time step/hard time step");
     IOParams<PS::F64> dt_min_index (40,   "power index n for the smallest time step (0.5^n) allowed in Hermite integrator");
     IOParams<PS::F64> eps          (0.0,  "softerning eps");
-    IOParams<PS::F64> r_out        (0.0,  "transit function outer boundary radius", "3.0*<m>/sigma^2");
-    IOParams<PS::F64> r_bin        (0.0,  "maximum binary radius criterion", "0.1*r_in");
+    IOParams<PS::F64> r_out        (0.0,  "transit function outer boundary radius", "<m>/sigma_1D^2*/ratio_r_cut");
+    IOParams<PS::F64> r_bin        (0.0,  "maximum binary radius criterion", "0.8*r_in");
     IOParams<PS::F64> sd_factor    (1e-8, "Slowdown perturbation criterion");
     IOParams<PS::S32> data_format  (1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A)","r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0)");
     IOParams<std::string> fname_snp("data","Prefix filename of dataset: [prefix].[File ID]");

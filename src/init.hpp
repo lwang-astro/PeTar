@@ -97,17 +97,17 @@ void GetR(const Tpsys & system_soft,
         r_in = r_out * ratio_r_cut;
     }
     else {
-        r_out = 3.0*average_mass_glb / (vel_disp*vel_disp);
+        r_in = average_mass_glb / (vel_disp*vel_disp);
         // remove 2.33 factor
         // r_out = r_in * pow(mmax/average_mass_glb/gmin,1.0/7.0);
-        r_in = r_out * ratio_r_cut;
+        r_out = r_in / ratio_r_cut;
     }
     
-    if (r_bin==0.0) r_bin = 0.1*r_in;
+    if (r_bin==0.0) r_bin = 0.8*r_in;
 
     if (dt==0.0) {
         //PS::F64 dt_origin = 0.125*sqrt(r_out*r_out+r_in*r_in) / vel_disp;
-        PS::F64 dt_origin = 0.1*r_in / vel_disp;
+        PS::F64 dt_origin = 0.1*r_out / vel_disp;
         dt = 1.0;
         if (dt_origin<1) while (dt>dt_origin) dt *= 0.5;
         else {

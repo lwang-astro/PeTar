@@ -3,19 +3,19 @@
 #PS_PATH = -I../../../fdps/src/
 #PS_PATH = -I../../fdps/src/
 #PS_PATH = -I../../../../project/fdps/src
-PS_PATH = -I../FDPS/src
-ARC_PATH= -I../TSARC/include
-#PS_PATH  = -I/home/lwang/code/fdps/src
-#ARC_PATH = -I/home/lwang/code/ARC/include
+#PS_PATH = -I../FDPS/src
+#ARC_PATH= -I../TSARC/include
+PS_PATH  = -I/home/lwang/code/fdps/src
+ARC_PATH = -I/home/lwang/code/ARC/include
 #GPERF_PATH = -L/opt/gperftools-2.6.1/lib
 #ARC_PATH = -I/home/lwang/GitHub/ARC/include
 
 #ROOT_PATH= ${shell pwd -P}
 INCLUDE  = -I./src -I../src
 
-use_k_computer = yes
+$use_k_computer = yes
 #use_xc30_naoj = yes
-#use_x86 = yes
+use_x86 = yes
 
 ifeq ($(use_k_computer),yes)
 CXX = time mpiFCCpx
@@ -73,6 +73,7 @@ CXXFLAGS += -D TIDAL_TENSOR # Must use HARD_CM_KICK together
 CXXFLAGS += -D SOFT_PERT
 CXXFLAGS += -D SPLIT_MASS
 CXXFLAGS += -D PROFILE
+CXXFLAGS += -D ARC_SYM
 #CXXFLAGS += -D ARC_PROFILE
 
 #CXXFLAGS += -D INTEGRATED_CUTOFF_FUNCTION
@@ -124,6 +125,9 @@ splinetest: spline.cxx
 
 keplersolvertest: keplersolver.cxx
 	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
+
+keplertest: keplertest.cxx
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
 
 hardtest: hard.cxx
 	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
