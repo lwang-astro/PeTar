@@ -6,14 +6,14 @@
 #PS_PATH = -I../FDPS/src
 #ARC_PATH= -I../TSARC/include
 PS_PATH  = -I/home/lwang/code/fdps/src
-ARC_PATH = -I/home/lwang/code/ARC/include
+#ARC_PATH = -I/home/lwang/code/ARC/include
 #GPERF_PATH = -L/opt/gperftools-2.6.1/lib
-#ARC_PATH = -I/home/lwang/GitHub/ARC/include
+ARC_PATH = -I/home/lwang/GitHub/ARC/include
 
 #ROOT_PATH= ${shell pwd -P}
 INCLUDE  = -I./src -I../src
 
-$use_k_computer = yes
+#use_k_computer = yes
 #use_xc30_naoj = yes
 use_x86 = yes
 
@@ -85,6 +85,7 @@ CXXFLAGS += -D ARC_SYM
 #CXXFLAGS += -D HARD_DEBUG_ENERGY
 #CXXFLAGS += -D HARD_DEBUG_PRINT
 #CXXFLAGS += -D HARD_DEBUG_PROFILE
+#CXXFLAGS += -D NAN_CHECK_DEBUG
 #CXXFLAGS += -D DATA_DEBUG
 #CXXFLAGS += -D FIX_STEP_DEBUG
 #CXXFLAGS += -D DEBUG

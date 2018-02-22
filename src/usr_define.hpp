@@ -1,7 +1,9 @@
 #pragma once
 
+#ifdef NAN_CHECK_DEBUG
 #ifndef NAN_CHECK
 #define NAN_CHECK(val) assert((val) == (val));
+#endif
 #endif
 
 /// Basic particle class
@@ -102,13 +104,14 @@ public:
       @param [in] z: particle position in z axis
     */
     void setPos(const PS::F64 x, const PS::F64 y, const PS::F64 z) {
+#ifdef NAN_CHECK_DEBUG
         NAN_CHECK(x);
         NAN_CHECK(y);
         NAN_CHECK(z);
-    
-        pos[0] = x;
-        pos[1] = y;
-        pos[2] = z;
+#endif    
+        pos.x = x;
+        pos.y = y;
+        pos.z = z;
     }
 
     //!Set position (used in soft part)
@@ -121,13 +124,15 @@ public:
       @param [in] vz: particle velocity in z axis 
     */
     void setVel(const PS::F64 vx, const PS::F64 vy, const PS::F64 vz) {
+#ifdef NAN_CHECK_DEBUG
         NAN_CHECK(vx);
         NAN_CHECK(vy);
         NAN_CHECK(vz);
+#endif    
     
-        vel[0] = vx;
-        vel[1] = vy;
-        vel[2] = vz;
+        vel.x = vx;
+        vel.y = vy;
+        vel.z = vz;
     }
 
     //!Set velocity
@@ -138,7 +143,9 @@ public:
       @param [in] m: particle mass
     */
     void setMass(const PS::F64 m) {
+#ifdef NAN_CHECK_DEBUG
         NAN_CHECK(m);
+#endif
 
         mass = m;
     }

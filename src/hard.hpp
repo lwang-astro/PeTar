@@ -3,10 +3,6 @@
 #include<immintrin.h>
 #endif
 
-#ifndef NAN_CHECK
-#define NAN_CHECK(val) assert((val) == (val));
-#endif
-
 #include"integrate.hpp"
 #include"cstdlib"
 #include"ptcl.hpp"
