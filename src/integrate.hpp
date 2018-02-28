@@ -65,24 +65,24 @@ PS::F64 calcDtLimit(const PS::F64 time_sys,
     if(time_sys==0.0) return dt_limit_org;
     else {
         PS::U64 bitmap = time_sys/dtmin;
-#ifdef HARD_DEBUG
-//        assert(bitmap*dtmin==time_sys);
-        if(bitmap==0) {
-            std::cerr<<"Error: dt_min_hard not small enough, time = "<<time_sys<<"; dt_min_hard = "<<dtmin<<std::endl;
-            abort();
-        }
-#endif
-#ifdef __GNUC__ 
-        PS::S64 dts = __builtin_ctz(bitmap) ;
-        PS::U64 c = (1<<dts);
-//        std::cerr<<"time = "<<time_sys<<"  dtmin = "<<dtmin<<"  bitmap = "<<bitmap<<"  dts = "<<dts<<std::endl;
-#else
+//#ifdef HARD_DEBUG
+////        assert(bitmap*dtmin==time_sys);
+//        if(bitmap==0) {
+//            std::cerr<<"Error: dt_min_hard not small enough, time = "<<time_sys<<"; dt_min_hard = "<<dtmin<<std::endl;
+//            abort();
+//        }
+//#endif
+//#ifdef __GNUC__ 
+//        PS::S64 dts = __builtin_ctz(bitmap) ;
+//        PS::U64 c = (1<<dts);
+////        std::cerr<<"time = "<<time_sys<<"  dtmin = "<<dtmin<<"  bitmap = "<<bitmap<<"  dts = "<<dts<<std::endl;
+//#else
         PS::U64 c=1;
         while((bitmap&1)==0) {
             bitmap = (bitmap>>1);
             c = (c<<1);
         }
-#endif
+//#endif
         return std::min(c*dtmin,dt_limit_org);
     }
 }
@@ -165,10 +165,10 @@ public:
     PS::F64vec acc3; // for debug
 #endif
 
-    PtclH4() {}
+    PtclH4(): dt(0.0), time(0.0) {}
     
     template<class Tp>
-    PtclH4(const Tp &p): Ptcl(p) {}
+    PtclH4(const Tp &p): Ptcl(p), dt(0.0), time(0.0) {}
 };
 
 class PtclPred{
