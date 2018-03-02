@@ -606,12 +606,6 @@ public:
             PS::S32 adr = adr_array[i];
             // assert(sys[adr].id == ptcl_hard_[i].id);
             sys[adr].DataCopy(ptcl_hard_[i]);
-#ifdef HARD_DEBUG
-            if(sys[adr].id<0&&sys[adr].status<0) {
-                std::cerr<<"Error! ghost particle appear in writeback for single! adr="<<adr<<std::endl;
-                abort();
-            }
-#endif
             if(sys[adr].id<0&&sys[adr].status<0) removelist.push_back(adr);
         }
         sys.removeParticle(removelist.getPointer(), removelist.size());

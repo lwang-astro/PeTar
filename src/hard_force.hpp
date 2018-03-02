@@ -142,7 +142,7 @@ template<class Tptcl, class Tpert, class Tforce, class extpar>
 void Newtonian_extA_pert (double3* acc, const PS::F64 time, Tptcl* p, const PS::S32 np, Tpert* pert, Tforce* pf, const PS::S32 npert, extpar* pars){
 #ifdef HARD_DEBUG
     if(npert<=1) {
-        std::cerr<<"Error: perturboer number not enough !"<<std::::endl;
+        std::cerr<<"Error: perturboer number not enough !"<<std::endl;
         abort();
     }
 #endif
@@ -205,22 +205,27 @@ void Newtonian_extA_pert (double3* acc, const PS::F64 time, Tptcl* p, const PS::
             acc[i][1] += mor3 * dx[1] * k;
             acc[i][2] += mor3 * dx[2] * k;
         }
-    }
 
 #ifdef SOFT_PERT
-    // soft perturbation
-    for(int i=0; i<np; i++) 
+        // soft perturbation
 #ifdef TIDAL_TENSOR
         pars->eval(acc[i], p[i].pos);
 #else
         if(p[i].status==0) pars->eval(acc[i], time);
 #endif
 #endif
+    }
 }
 /// end Newtonian cut force (L.Wang)
 
 template<class Tptcl, class Tpert, class Tforce, class extpar>
 void Newtonian_extA_soft (double3* acc, const PS::F64 time, Tptcl* p, const PS::S32 np, Tpert* pert, Tforce* pf, const PS::S32 npert, extpar* pars){
+#ifdef HARD_DEBUG
+    if(npert>1) {
+        std::cerr<<"Error: perturboer number should be zero !"<<std::endl;
+        abort();
+    }
+#endif
     for(int i=0; i<np; i++) {
         acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
 #ifdef SOFT_PERT
