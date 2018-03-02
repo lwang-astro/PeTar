@@ -66,7 +66,8 @@ public:
 #endif
 
 private:
-    ARC::chainpars ARC_control_; ///chain controller (L.Wang)
+    ARC::chainpars ARC_control_pert_; ///chain controller for perturbed(L.Wang)
+    ARC::chainpars ARC_control_soft_; ///chain controller for no perturber(L.Wang)
     ARC_int_pars Int_pars_; /// ARC integration parameters, rout_, rin_ (L.Wang)
     PS::F64 dt_limit_hard_;
     PS::F64 dt_min_hard_;
@@ -146,7 +147,7 @@ private:
             PtclHard* pcm = &ptcl_org[group.getPtclIndex(0)];
             PS::S32 iact = 0;
             
-            ARCIntegrator<PtclHard, PtclH4, PtclForce> Aint(ARC_control_, Int_pars_);
+            ARCIntegrator<PtclHard, PtclH4, PtclForce> Aint(ARC_control_soft_, Int_pars_);
             Aint.reserveARMem(1);
             // Aint.reservePertMem(1);
             group.getBinPars(Aint.bininfo[0],ptcl_org,0,n_split_);
@@ -213,7 +214,7 @@ private:
 
             group_act_list.resizeNoInitialize(group.getPtclN());
             
-            ARCIntegrator<PtclHard, PtclH4, PtclForce> Aint(ARC_control_, Int_pars_);
+            ARCIntegrator<PtclHard, PtclH4, PtclForce> Aint(ARC_control_pert_, Int_pars_);
 
             // first particles in Hint.Ptcl are c.m.
             PS::S32 n_groups = group.getNumOfGroups();
@@ -336,20 +337,32 @@ public:
     ///
     void setARCParam(const PS::F64 energy_error=1e-10, const PS::F64 dterr=1e-6, const PS::F64 dtmin=1e-24, const PS::S32 exp_method=1, const PS::S32 exp_itermax=20, const PS::S32 den_intpmax=20, const PS::S32 exp_fix_iter=0) {
 #ifdef HARD_DEBUG_DEEP_CHECK
-        ARC_control_.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_test<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+        ARC_control_pert_.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_test<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+        ARC_control_soft_.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_test<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
 #else
-        ARC_control_.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+        ARC_control_pert_.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_pert<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+        ARC_control_soft_.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_soft<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
 #endif
-        ARC_control_.setabg(0,1,0);
-        ARC_control_.setErr(energy_error,dtmin,dterr);
+        ARC_control_pert_.setabg(0,1,0);
+        ARC_control_soft_.setabg(0,1,0);
+        
+        ARC_control_pert_.setErr(energy_error,dtmin,dterr);
+        ARC_control_soft_.setErr(energy_error,dtmin,dterr);
 #ifdef ARC_SYM
-        ARC_control_.setSymOrder(-6);
+        ARC_control_pert_.setSymOrder(-6);
+        ARC_control_soft_.setSymOrder(-6);
 #else
-        ARC_control_.setIterSeq(exp_itermax,3,den_intpmax);
+        ARC_control_pert_.setIterSeq(exp_itermax,3,den_intpmax);
+        ARC_control_soft_.setIterSeq(exp_itermax,3,den_intpmax);
 #endif
-        ARC_control_.setIntp(exp_method);
-        ARC_control_.setIterConst((bool)exp_fix_iter);
-        ARC_control_.setAutoStep(3);
+        ARC_control_pert_.setIntp(exp_method);
+        ARC_control_soft_.setIntp(exp_method);
+
+        ARC_control_pert_.setIterConst((bool)exp_fix_iter);
+        ARC_control_soft_.setIterConst((bool)exp_fix_iter);
+
+        ARC_control_pert_.setAutoStep(3);
+        ARC_control_soft_.setAutoStep(3);
     }
     /// end set Chainpars (L.Wang)
 

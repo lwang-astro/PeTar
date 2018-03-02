@@ -1456,7 +1456,8 @@ public:
                 PS::F64 acc[2][3];
                 const PS::S32 ipert = pert_disp_[i];
                 //Newtonian_extA(acc, bininfo[i].tperi+bininfo[i].peri, p, 2, &pert_[ipert], &pforce_[ipert], pert_n_[i], &par_list_[i]);
-                Newtonian_extA(acc, 0.0, p, 2, &pert_[ipert], &pforce_[ipert], pert_n_[i], &par_list_[i]);
+                if(pert_n_[i]>1) Newtonian_extA_pert(acc, 0.0, p, 2, &pert_[ipert], &pforce_[ipert], pert_n_[i], &par_list_[i]);
+                else Newtonian_extA_soft(acc, 0.0, p, 2, &pert_[ipert], &pforce_[ipert], pert_n_[i], &par_list_[i]);
                 PS::F64 fpertsq = 0.0;
                 for(int k=0; k<3; k++) {
                     PS::F64 dacc = acc[0][k]-acc[1][k];
