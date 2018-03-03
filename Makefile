@@ -1,14 +1,19 @@
+##FDPS PATH
 #PS_PATH = -I../../fdps/src/
 #PS_PATH = -I../fdps/src/
 #PS_PATH = -I../../../fdps/src/
 #PS_PATH = -I../../fdps/src/
 #PS_PATH = -I../../../../project/fdps/src
 #PS_PATH = -I../FDPS/src
-#ARC_PATH= -I../TSARC/include
 PS_PATH  = -I/home/lwang/code/fdps/src
+
+##ARC PATH
+#ARC_PATH= -I../TSARC/include
 #ARC_PATH = -I/home/lwang/code/ARC/include
-#GPERF_PATH = -L/opt/gperftools-2.6.1/lib
 ARC_PATH = -I/home/lwang/GitHub/ARC/include
+
+##Gperftools PATH
+#GPERF_PATH = -L/opt/gperftools-2.6.1/lib
 
 #ROOT_PATH= ${shell pwd -P}
 INCLUDE  = -I./src -I../src
@@ -48,7 +53,7 @@ ifeq ($(use_x86),yes)
 CXX = time mpicxx
 #CXX = kinst-ompp mpicxx
 #CXX = tau_cxx.sh  -tau_makefile=/opt/tau-2.26.3/x86_64/lib/Makefile.tau-mpi-openmp -tau_options=-optCompInst 
-#CXXFLAGS = -g
+#CXXFLAGS = -g -O0 -fbounds-check
 CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -fopenmp
 CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
 CXXFLAGS += -O2
@@ -75,6 +80,7 @@ CXXFLAGS += -D SPLIT_MASS
 CXXFLAGS += -D PROFILE
 CXXFLAGS += -D ARC_SYM
 CXXFLAGS += -D ARC_OPT_SYM2
+#CXXFLAGS += -D ARC_SYM_SD_PERIOD
 #CXXFLAGS += -D ARC_PROFILE
 
 #CXXFLAGS += -D INTEGRATED_CUTOFF_FUNCTION
@@ -93,7 +99,9 @@ CXXFLAGS += -D ARC_OPT_SYM2
 #CXXFLAGS += -D DEBUG_TEMP
 #CXXFLAGS += -D MAIN_DEBUG
 
-#CXXLIBS += -L$(GPERF_PATH) -lprofiler -ltcmalloc 
+ifneq (x$(GPERF_PATH),x)
+CXXLIBS += $(GPERF_PATH) -lprofiler -ltcmalloc 
+endif
 
 VPATH=./src ./test ../src
 

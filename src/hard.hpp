@@ -151,20 +151,32 @@ private:
             Aint.reserveARMem(1);
             // Aint.reservePertMem(1);
             group.getBinPars(Aint.bininfo[0],ptcl_org,0,n_split_);
-            Aint.addOneGroup(ptcl_org, group.getGroup(0), group.getGroupN(0),group.getGroupPertList(0,n_split_), n_split_);
+            const PS::S32 *group_list = group.getGroup(0);
+            const PS::S32 group_n = group.getGroupN(0);
+            Aint.addOneGroup(ptcl_org, group_list, group_n, group.getGroupPertList(0,n_split_), n_split_);
             Aint.updateCM(pcm, &iact, 1, true);
 
             Aint.initialSlowDown(time_end, sdfactor_);
             Aint.initial();
 
+#ifdef ARC_SYM_SD_PERIOD
+            PS::S32 kp=0;
+            Aint.adjustSlowDownPeriod(time_end, &kp);
+#else
             Aint.adjustSlowDown(time_end);
+#endif
 
 #ifdef HARD_DEBUG_ENERGY
             Aint.EnergyRecord(AE0);
 #endif 
 
-#ifdef ARC_SYM            
+#ifdef ARC_SYM
+#ifdef ARC_SYM_SD_PERIOD
+            if(group_n==2&&kp>0) nstepcount +=Aint.integrateOneStepSymTwo(0, time_end, kp);
+            else nstepcount +=Aint.integrateOneStepSym(0, time_end, dt_limit_hard_);
+#else
             nstepcount +=Aint.integrateOneStepSym(0, time_end, dt_limit_hard_);
+#endif
 #else 
             nstepcount +=Aint.integrateOneStepExt(0, time_end, dt_limit_hard_);
 #endif
@@ -182,7 +194,11 @@ private:
 #endif
 #endif
 #ifdef ARC_DEBUG_PRINT
-            Aint.info_print(std::cerr, ARC_n_groups, 1, 1, group.getGroupN(0),dt_limit_hard_);
+#ifdef ARC_SYM_SD_PERIOD
+            Aint.info_print(std::cerr, ARC_n_groups, 1, 1, group.getGroupN(0),dt_limit_hard_,kp);
+#else
+            Aint.info_print(std::cerr, ARC_n_groups, 1, 1, group.getGroupN(0),dt_limit_hard_,0);
+#endif
 #endif
 #ifdef PROFILE
             //ARC_substep_sum += Aint.getNsubstep();
@@ -288,7 +304,7 @@ private:
 #endif
 #endif
 #ifdef ARC_DEBUG_PRINT
-            Aint.info_print(std::cerr, ARC_n_groups, n_groups, group.getPtclN(), n_ptcl, dt_limit_hard_);
+            Aint.info_print(std::cerr, ARC_n_groups, n_groups, group.getPtclN(), n_ptcl, dt_limit_hard_,0);
 #endif
 #ifdef PROFILE
             //ARC_substep_sum += Aint.getNsubstep();

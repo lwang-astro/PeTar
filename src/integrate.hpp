@@ -1480,6 +1480,12 @@ public:
             clist_[i].slowdown.adjustkappa(dt);
         }
     }
+
+    void adjustSlowDownPeriod(const PS::F64 dt, PS::S32* np) {
+        for (int i=0; i<clist_.size(); i++) {
+            np[i] = clist_[i].slowdown.adjustkappaPeriod(dt);
+        }
+    }
     
     void initial() {
         for (int i=0; i<clist_.size(); i++) {
@@ -1494,13 +1500,51 @@ public:
         c->print(std::cerr);
     }
 
+    PS::S64 integrateOneStepSymTwo(const PS::S32 ic, const PS::F64 time_end, const PS::S32 kp) {
+        ARChain* c = &clist_[ic];
+        ARC_pert_pars* par = &par_list_[ic];
+        PS::F64 ds_use=bininfo[ic].tstep;
+        const PS::S32 ipert = pert_disp_[ic];
+        PS::F64 timetable[8]; // Notice, assuming sym order is -6
+#ifdef ARC_OPT_SYM2
+        const PS::F64 m1=c->getP(0).getMass();
+        const PS::F64 m2=c->getP(1).getMass();
+        const PS::F64 m2_mt = m2/(m1+m2);
+        const PS::F64 m1_m2_1 = -m1/m2-1.0;
+#endif
+        const PS::S32 np=8*kp;
+        for (int i=0; i<np; i++) {
+#ifdef ARC_OPT_SYM2
+            c->Symplectic_integration_two(ds_use, *ARC_control_, timetable, m2_mt, m1_m2_1, par, &pert_[ipert], &pforce_[ipert], pert_n_[ic]);
+#else 
+            c->Symplectic_integration(ds_use, *ARC_control_, timetable, par, &pert_[ipert], &pforce_[ipert], pert_n_[ic]);
+#endif
+        }
+//        std::cout<<std::setprecision(16)<<ds_use<<" "<<kp<<" "
+//                 <<c->getTime()<<" "<<time_end<<" "<<getSlowDown(0)
+//                 <<std::endl; 
+//        for (int j=0; j<c->getN(); j++) {
+//            std::cout<<c->getP(j).mass<<" "
+//                     <<c->getP(j).pos<<" "
+//                     <<c->getP(j).vel<<std::endl;
+//        }
+#ifdef ARC_WARN       
+        if((c->getTime()-time_end)/time_end>1e-6) {
+            std::cerr<<"Warning! time not synchronized! t(chain)="<<c->getTime()<<" t="<<time_end<<" diff="<<(c->getTime()-time_end)/time_end<<std::endl;
+        }
+#endif
+        return np;
+    }
+
+
     PS::S64 integrateOneStepSym(const PS::S32 ic,
                                 const PS::F64 time_end,
                                 const PS::F64 dt_limit) {
         ARChain* c = &clist_[ic];
         ARC_pert_pars* par = &par_list_[ic];
         PS::F64 ds_up_limit = 0.25*dt_limit/c->calc_dt_X(1.0,*ARC_control_);
-        PS::F64 ds_use = 2.0*bininfo[ic].tstep*std::abs(c->getPt());
+        //PS::F64 ds_use = 2.0*bininfo[ic].tstep*std::abs(c->getPt());
+        PS::F64 ds_use=bininfo[ic].tstep;
         //PS::F64 ds_use = c->calc_next_step_custom(*ARC_control_,par);
         if (ds_use>ds_up_limit) ds_use = ds_up_limit;
 
@@ -1703,7 +1747,7 @@ public:
         }
     }
     
-    void info_print(std::ostream& os, const PS::S64 ngroups, const PS::S64 ngroupi, const PS::S64 nptcl, const PS::S64 ntot, const PS::F64 dt_limit) const{
+    void info_print(std::ostream& os, const PS::S64 ngroups, const PS::S64 ngroupi, const PS::S64 nptcl, const PS::S64 ntot, const PS::F64 dt_limit, const PS::S32 kp) const{
         for (int i=0; i<clist_.size(); i++) {
             os<<"ARC_info(i,n_tot,n_ptcl,n_group,n,n_pert,ax,ecc,peri,kappa,n_step): "
               <<ngroups+i<<" "
@@ -1716,8 +1760,10 @@ public:
               <<bininfo[i].ecc<<" "
               <<bininfo[i].peri<<" "
               <<clist_[i].slowdown.getkappa()<<" ";
+            PS::S64 nstep = 0;
 #ifdef ARC_SYM
-            PS::S64 nstep = clist_[i].profile.stepcount[0];
+            if(kp>0) nstep = kp*8;
+            else nstep = clist_[i].profile.stepcount[0];
 #else
             PS::S64 nstep = clist_[i].profile.itercount;
 #endif
