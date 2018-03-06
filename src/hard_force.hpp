@@ -147,11 +147,13 @@ void Newtonian_extA_pert (double3* acc, const PS::F64 time, Tptcl* p, const PS::
     }
 #endif
     static const PS::F64 inv3 = 1.0 / 3.0;
-    PS::F64vec xp[npert];
+    PS::F64 xp[npert][3];
 
     for(int i=0; i<npert; i++) {
         PS::F64 dt = time - pert[i]->time;
-        xp[i] = pert[i]->pos + dt*(pert[i]->vel + 0.5*dt*(pert[i]->acc0 + inv3*dt*pert[i]->acc1));
+        xp[i][0] = pert[i]->pos.x + dt*(pert[i]->vel.x + 0.5*dt*(pert[i]->acc0.x + inv3*dt*pert[i]->acc1.x));
+        xp[i][1] = pert[i]->pos.y + dt*(pert[i]->vel.y + 0.5*dt*(pert[i]->acc0.y + inv3*dt*pert[i]->acc1.y));
+        xp[i][2] = pert[i]->pos.z + dt*(pert[i]->vel.z + 0.5*dt*(pert[i]->acc0.z + inv3*dt*pert[i]->acc1.z));
         //xp[i] = pert[i]->pos + dt*
         //    (pert[i]->vel* + 0.5*dt*(
         //        pert[i]->acc0 + inv3*dt*(
@@ -167,18 +169,26 @@ void Newtonian_extA_pert (double3* acc, const PS::F64 time, Tptcl* p, const PS::
 #endif
 
     for(int i=0; i<np; i++) {
-        PS::F64vec xi = p[i].pos + xp[0];
-        acc[i][0] = -pf[0]->acc0[0]; 
-        acc[i][1] = -pf[0]->acc0[1];        
-        acc[i][2] = -pf[0]->acc0[2]; 
+        PS::F64 xi[3];
+        xi[0] = p[i].pos.x + xp[0][0];
+        xi[1] = p[i].pos.y + xp[0][1];
+        xi[2] = p[i].pos.z + xp[0][2];
+
+        acc[i][0] = -pf[0]->acc0.x; 
+        acc[i][1] = -pf[0]->acc0.y;        
+        acc[i][2] = -pf[0]->acc0.z; 
 //            acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
         for(int j=1; j<npert; j++) {
             
-            PS::F64vec dx = xp[j] - xi;
+            PS::F64 dx[3];
+            dx[0] = xp[j][0] - xi[0];
+            dx[1] = xp[j][1] - xi[1];
+            dx[2] = xp[j][2] - xi[2];
+            
             //std::cerr<<"i = "<<i<<" j = "<<j<<" dx = "<<dx<<std::endl;
             //PS::F64 mi = p[i].mass;
             PS::F64 mp = pert[j]->mass;
-            PS::F64 dr2 = dx*dx + pars->eps2;
+            PS::F64 dr2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2] + pars->eps2;
             PS::F64 dr  = std::sqrt(dr2);
             PS::F64 dr3 = dr*dr2;
             PS::F64 mor3 = mp/dr3;

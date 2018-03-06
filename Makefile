@@ -4,13 +4,13 @@
 #PS_PATH = -I../../../fdps/src/
 #PS_PATH = -I../../fdps/src/
 #PS_PATH = -I../../../../project/fdps/src
-#PS_PATH = -I../FDPS/src
-PS_PATH  = -I/home/lwang/code/fdps/src
+PS_PATH = -I../FDPS/src
+#PS_PATH  = -I/home/lwang/code/fdps/src
 
 ##ARC PATH
-#ARC_PATH= -I../TSARC/include
+ARC_PATH= -I../TSARC/include
 #ARC_PATH = -I/home/lwang/code/ARC/include
-ARC_PATH = -I/home/lwang/GitHub/ARC/include
+#ARC_PATH = -I/home/lwang/GitHub/ARC/include
 
 ##Gperftools PATH
 #GPERF_PATH = -L/opt/gperftools-2.6.1/lib
@@ -18,9 +18,9 @@ ARC_PATH = -I/home/lwang/GitHub/ARC/include
 #ROOT_PATH= ${shell pwd -P}
 INCLUDE  = -I./src -I../src
 
-#use_k_computer = yes
+use_k_computer = yes
 #use_xc30_naoj = yes
-use_x86 = yes
+#use_x86 = yes
 
 ifeq ($(use_k_computer),yes)
 CXX = time mpiFCCpx
@@ -36,6 +36,8 @@ CXXFLAGS += -std=c++11
 CXXFLAGS += -Nfjcex
 CXXFLAGS += -Krestp=all
 CXXFLAGS += -DINTRINSIC_K
+# profiling
+CXXFLAGS += -Ntl_trt
 endif
 
 ifeq ($(use_xc30_naoj),yes)

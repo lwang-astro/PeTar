@@ -605,12 +605,15 @@ public:
         adr_pcluster_send_.clearSize();
         adr_pcluster_recv_.clearSize();
         for(PS::S32 i=0; i<n_recv_disp.back(); i++){
+#ifdef CLUSTER_DEBUG
             auto itr = id_to_adr_pcluster_.find(id_recv[i]);
             assert(itr != id_to_adr_pcluster_.end());
             assert(id_to_adr_pcluster_[id_recv[i]] < n_pcluster_self_node_);
+#endif
             adr_pcluster_send_.push_back(id_to_adr_pcluster_[id_recv[i]]);
         }
         for(PS::S32 i=0; i<n_send_disp.back(); i++){
+#ifdef CLUSTER_DEBUG
             auto itr = id_to_adr_pcluster_.find(id_send[i]);
             assert(itr != id_to_adr_pcluster_.end());
             /*
@@ -623,6 +626,7 @@ public:
               }
             */
             assert(id_to_adr_pcluster_[id_send[i]] >= n_pcluster_self_node_);
+#endif
             adr_pcluster_recv_.push_back(id_to_adr_pcluster_[id_send[i]]);
         }
         n_cluster_disp_send_.resizeNoInitialize(n_proc_send+1);
