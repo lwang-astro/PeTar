@@ -99,7 +99,7 @@ int main(int argc, char *argv[]){
     IOParams<PS::S64> n_bin        (0,    "number of primordial binaries (assume binaries ID=1,2*n_bin)");
     IOParams<PS::F64> time_end     (10.0, "finishing time");
     IOParams<PS::F64> eta          (0.1,  "Hermite time step coefficient eta");
-    IOParams<PS::S64> n_glb        (16384,"Total number of particles");
+    IOParams<PS::S64> n_glb        (16384,"Total number of particles, this will suppress reading snapshot data and use Plummer model generator without binary");
     IOParams<PS::F64> dt_soft      (0.0,  "Tree timestep","0.1*r_out/sigma_1D");
     IOParams<PS::F64> dt_snp       (0.0625,"Output time interval of particle dataset");
     IOParams<PS::F64> search_factor(1.0,  "neighbor searching coefficient");
@@ -108,20 +108,19 @@ int main(int argc, char *argv[]){
     IOParams<PS::F64> eps          (0.0,  "softerning eps");
     IOParams<PS::F64> r_out        (0.0,  "transit function outer boundary radius", "<m>/sigma_1D^2*/ratio_r_cut");
     IOParams<PS::F64> r_bin        (0.0,  "maximum binary radius criterion", "0.8*r_in");
-    IOParams<PS::F64> sd_factor    (1e-8, "Slowdown perturbation criterion");
-    IOParams<PS::S32> data_format  (1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A)","r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0)");
+    IOParams<PS::F64> sd_factor    (1e-6, "Slowdown perturbation criterion");
+    IOParams<PS::S32> data_format  (1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A)","Writing off: r-B(5), r-A(4); Writing on: r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0)");
     IOParams<std::string> fname_snp("data","Prefix filename of dataset: [prefix].[File ID]");
 
     // PS::F64 g_min = 1e-6;
 
     // reading parameters
     int c;
-    bool reading_flag=false;
+    bool reading_flag=true;
 
     while((c=getopt(argc,argv,"i:b:B:T:t:e:E:m:n:N:s:S:d:D:o:l:r:R:X:p:f:h")) != -1){
         switch(c){
         case 'i':
-            reading_flag=true;
             data_format.value = atoi(optarg);
             if(my_rank == 0) data_format.print(std::cerr);
             assert(data_format.value>=0||data_format.value<=3);
@@ -167,6 +166,7 @@ int main(int argc, char *argv[]){
             assert(n_group_limit.value>0);
             break;
         case 'N':
+            reading_flag=false;
             n_glb.value = atol(optarg);
             if(my_rank == 0) n_glb.print(std::cerr);
             assert(n_glb.value>0);
@@ -227,55 +227,56 @@ int main(int argc, char *argv[]){
             if(my_rank == 0) fname_snp.print(std::cerr);
             break;
         case 'h':
-            std::cerr<<"Usage: nbody.out [option] [filename]"<<std::endl;
-            std::cerr<<"       Option defaulted values are shown after ':'\n"<<std::endl;
-            std::cerr<<"  -i: [I] enable reading data file: disabled with Plummer model"<<std::endl;
-            std::cerr<<"          "<<data_format<<std::endl;
-            std::cerr<<"          File content:\n"
-                     <<"            First line: \n"
-                     <<"             1. File_ID: 0 for initialization, else for restarting\n"
-                     <<"             2. N_particle \n"
-                     <<"             3. N_offset: for naming special particle ID, should be > N_particle\n"
-                     <<"             4. Time\n"
-                     <<"             5. Tree time step (set 0 for input file)\n"
-                     <<"             6. n_split (set 0 for input file)\n"
-                     <<"            Following lines:\n"
-                     <<"             1. mass\n"
-                     <<"             2. position[3]\n"
-                     <<"             5. velocity[3]\n"
-                     <<"             8. r_search (0.0)\n"
-                     <<"             9. mass_backup (0.0)\n"
-                     <<"             10. ID (>0,unique)\n"
-                     <<"             11. status (0)\n"
-                     <<"             12. Acceleration[3] (0.0)\n"
-                     <<"             15. Potential (0.0)\n"
-                     <<"             16. N_neighbor (0)\n"
-                     <<"             (*) show initialization values which should be used together with FILE_ID = 0"<<std::endl;
-            std::cerr<<"  -b: [F] "<<r_bin<<std::endl;
-            std::cerr<<"  -B: [I] "<<n_bin<<std::endl;
-            std::cerr<<"  -T: [F] "<<theta<<std::endl;
-            std::cerr<<"  -t: [F] "<<time_end<<std::endl;
-            std::cerr<<"  -e: [F] "<<eps<<std::endl;
-            std::cerr<<"  -E: [F] "<<eta<<std::endl;
-            std::cerr<<"  -m: [I] "<<dt_min_index<<std::endl;
-            std::cerr<<"  -n: [I] "<<n_group_limit<<std::endl;
-            std::cerr<<"  -N: [I] "<<n_glb<<std::endl;
-            std::cerr<<"  -s: [I] "<<n_smp_ave<<std::endl;
-            std::cerr<<"  -S: [F] "<<search_factor<<std::endl;
-            std::cerr<<"  -d: [F] "<<sd_factor<<std::endl;
-            std::cerr<<"  -D: [F] "<<dt_soft<<std::endl;
-            std::cerr<<"  -o: [F] "<<dt_snp<<std::endl;
-            std::cerr<<"  -l: [I] "<<n_leaf_limit<<std::endl;
-            std::cerr<<"  -r: [F] "<<ratio_r_cut<<std::endl;
-            std::cerr<<"  -R: [F] "<<r_out<<std::endl;
-            std::cerr<<"  -X: [F] "<<dt_limit_hard_factor<<std::endl;
-            std::cerr<<"  -p: [I] "<<n_split<<std::endl;
-            std::cerr<<"  -f: [S] "<<fname_snp<<std::endl;
-            std::cerr<<"*** PS: r_in : transit function inner boundary radius\n"
-                     <<"        r_out: transit function outer boundary radius\n"
-                     <<"        sigma: half-mass radius velocity dispersion\n"
-                     <<"        n_bin: number of primordial binaries\n"
-                     <<"        <m>  : averaged mass"<<std::endl;
+            if(my_rank == 0){
+                std::cerr<<"Usage: nbody.out [option] [filename]"<<std::endl;
+                std::cerr<<"       Option defaulted values are shown after ':'\n"<<std::endl;
+                std::cerr<<"  -i: [I] "<<data_format<<std::endl;
+                std::cerr<<"          File content:\n"
+                         <<"            First line: \n"
+                         <<"             1. File_ID: 0 for initialization, else for restarting\n"
+                         <<"             2. N_particle \n"
+                         <<"             3. N_offset: for naming special particle ID, should be > N_particle\n"
+                         <<"             4. Time\n"
+                         <<"             5. Tree time step (set 0 for input file)\n"
+                         <<"             6. n_split (set 0 for input file)\n"
+                         <<"            Following lines:\n"
+                         <<"             1. mass\n"
+                         <<"             2. position[3]\n"
+                         <<"             5. velocity[3]\n"
+                         <<"             8. r_search (0.0)\n"
+                         <<"             9. mass_backup (0.0)\n"
+                         <<"             10. ID (>0,unique)\n"
+                         <<"             11. status (0)\n"
+                         <<"             12. Acceleration[3] (0.0)\n"
+                         <<"             15. Potential (0.0)\n"
+                         <<"             16. N_neighbor (0)\n"
+                         <<"             (*) show initialization values which should be used together with FILE_ID = 0"<<std::endl;
+                std::cerr<<"  -b: [F] "<<r_bin<<std::endl;
+                std::cerr<<"  -B: [I] "<<n_bin<<std::endl;
+                std::cerr<<"  -T: [F] "<<theta<<std::endl;
+                std::cerr<<"  -t: [F] "<<time_end<<std::endl;
+                std::cerr<<"  -e: [F] "<<eps<<std::endl;
+                std::cerr<<"  -E: [F] "<<eta<<std::endl;
+                std::cerr<<"  -m: [I] "<<dt_min_index<<std::endl;
+                std::cerr<<"  -n: [I] "<<n_group_limit<<std::endl;
+                std::cerr<<"  -N: [I] "<<n_glb<<std::endl;
+                std::cerr<<"  -s: [I] "<<n_smp_ave<<std::endl;
+                std::cerr<<"  -S: [F] "<<search_factor<<std::endl;
+                std::cerr<<"  -d: [F] "<<sd_factor<<std::endl;
+                std::cerr<<"  -D: [F] "<<dt_soft<<std::endl;
+                std::cerr<<"  -o: [F] "<<dt_snp<<std::endl;
+                std::cerr<<"  -l: [I] "<<n_leaf_limit<<std::endl;
+                std::cerr<<"  -r: [F] "<<ratio_r_cut<<std::endl;
+                std::cerr<<"  -R: [F] "<<r_out<<std::endl;
+                std::cerr<<"  -X: [F] "<<dt_limit_hard_factor<<std::endl;
+                std::cerr<<"  -p: [I] "<<n_split<<std::endl;
+                std::cerr<<"  -f: [S] "<<fname_snp<<std::endl;
+                std::cerr<<"*** PS: r_in : transit function inner boundary radius\n"
+                         <<"        r_out: transit function outer boundary radius\n"
+                         <<"        sigma: half-mass radius velocity dispersion\n"
+                         <<"        n_bin: number of primordial binaries\n"
+                         <<"        <m>  : averaged mass"<<std::endl;
+            }
             PS::Finalize();
             return 0;
         }
@@ -291,7 +292,7 @@ int main(int argc, char *argv[]){
     FileHeader file_header;
     if (reading_flag) {
       char* sinput=argv[argc-1];
-      if(data_format.value==1||data_format.value==2)
+      if(data_format.value==1||data_format.value==2||data_format.value==4)
           system_soft.readParticleAscii(sinput, file_header);
       else
           system_soft.readParticleBinary(sinput, file_header);
@@ -511,7 +512,7 @@ int main(int argc, char *argv[]){
         std::string fname = fname_snp.value+"."+std::to_string(file_header.nfile);
         if (data_format.value==1||data_format.value==3)
             system_soft.writeParticleAscii(fname.c_str(), file_header);
-        else
+        else if(data_format.value==0||data_format.value==2)
             system_soft.writeParticleBinary(fname.c_str(), file_header);
         file_header.dt_soft= dt_soft.value;
     }    
@@ -842,7 +843,7 @@ int main(int argc, char *argv[]){
             std::string fname = fname_snp.value+"."+std::to_string(file_header.nfile);
             if (data_format.value==1||data_format.value==3)
                 system_soft.writeParticleAscii(fname.c_str(), file_header);
-            else
+            else if(data_format.value==0||data_format.value==2)
                 system_soft.writeParticleBinary(fname.c_str(), file_header);
 
 //            if (n_bin>0) {
