@@ -87,6 +87,7 @@ int main(int argc, char *argv[]){
 #ifdef PROFILE
     SysProfile profile;
     SysCounts  n_count;
+    SysCounts  n_count_sum;
 #endif
     
     // initial parameters
@@ -117,13 +118,17 @@ int main(int argc, char *argv[]){
     // reading parameters
     int c;
     bool reading_flag=true;
+    bool app_flag=false; // appending data flag
 
-    while((c=getopt(argc,argv,"i:b:B:T:t:e:E:m:n:N:s:S:d:D:o:l:r:R:X:p:f:h")) != -1){
+    while((c=getopt(argc,argv,"i:ab:B:T:t:e:E:m:n:N:s:S:d:D:o:l:r:R:X:p:f:h")) != -1){
         switch(c){
         case 'i':
             data_format.value = atoi(optarg);
             if(my_rank == 0) data_format.print(std::cerr);
             assert(data_format.value>=0||data_format.value<=3);
+            break;
+        case 'a':
+            app_flag=true;
             break;
         case 'b':
             r_bin.value = atof(optarg);
@@ -251,6 +256,7 @@ int main(int argc, char *argv[]){
                          <<"             15. Potential (0.0)\n"
                          <<"             16. N_neighbor (0)\n"
                          <<"             (*) show initialization values which should be used together with FILE_ID = 0"<<std::endl;
+                std::cerr<<"  -a:     data output style (except snapshot) becomes appending, defaulted: replace"<<std::endl;
                 std::cerr<<"  -b: [F] "<<r_bin<<std::endl;
                 std::cerr<<"  -B: [I] "<<n_bin<<std::endl;
                 std::cerr<<"  -T: [F] "<<theta<<std::endl;
@@ -318,6 +324,16 @@ int main(int argc, char *argv[]){
 
     PS::Comm::barrier();
 
+    // status information output
+    std::ofstream fstatus;
+    if(my_rank==0) {
+        if(app_flag) fstatus.open((fname_snp.value+".status").c_str(),std::ofstream::out|std::ofstream::app);
+        else         fstatus.open((fname_snp.value+".status").c_str(),std::ofstream::out);
+        fstatus<<std::setprecision(PRINT_PRECISION);
+    }
+
+    Status stat;
+
     // tree time step and n_split
     if (restart_flag) {
         if(dt_soft.value!=file_header.dt_soft&&dt_soft.value>0) 
@@ -330,6 +346,10 @@ int main(int argc, char *argv[]){
     else {
         file_header.dt_soft = dt_soft.value;
         file_header.n_split = n_split.value;        
+        if(my_rank==0&&app_flag==false) {
+            stat.dumpName(fstatus,PRINT_WIDTH);
+            fstatus<<std::endl;
+        }
     }
     
     PS::F64 r_in, m_average, v_disp, r_search_min;
@@ -517,14 +537,19 @@ int main(int argc, char *argv[]){
         file_header.dt_soft= dt_soft.value;
     }    
 
-    EnergyAndMomemtum eng_init, eng_now, eng_diff;
+    stat.time = time_sys;
+    stat.N = n_glb.value;
 
-    eng_init.clear();
-    eng_init.calc(&system_soft[0], system_soft.getNumberOfParticleLocal(), 0.0);
-    eng_init.getSumMultiNodes();
+    stat.eng_init.clear();
+    stat.eng_init.calc(&system_soft[0], system_soft.getNumberOfParticleLocal(), 0.0);
+    stat.eng_init.getSumMultiNodes();
+    stat.eng_now = stat.eng_init;
 
-    if(my_rank==0) eng_init.dump(std::cerr);
-    eng_now = eng_init;
+    if(my_rank==0) {
+        stat.eng_init.dump(std::cerr);
+        stat.dump(fstatus,PRINT_WIDTH);
+        fstatus<<std::endl;
+    }
 
 
 #ifdef MAIN_DEBUG
@@ -533,18 +558,20 @@ int main(int argc, char *argv[]){
         fprintf(stderr,"Error: Cannot open file nbody.dat\n");
         abort();
     }
-    write_p(fout, time_sys, 0.0, system_soft, eng_now, eng_diff);
+    write_p(fout, time_sys, 0.0, system_soft, stat.eng_now, stat.eng_diff);
 #endif
 #ifdef PROFILE
     std::ofstream fprofile;
-    std::string fproname;
+    std::string rank_str;
     std::stringstream atmp;
     atmp<<my_rank;
-    atmp>>fproname;
-    fproname="profile.rank."+fproname;
-    fprofile.open(fproname.c_str(),std::ofstream::out);
+    atmp>>rank_str;
+    std::string fproname=fname_snp.value+".prof.rank."+rank_str;
+    if(app_flag) fprofile.open(fproname.c_str(),std::ofstream::out|std::ofstream::app);
+    else         fprofile.open(fproname.c_str(),std::ofstream::out);
     PS::S64 dn_loop = 0;
 #endif
+
 
     PS::S64 n_loop = 0;
     bool first_step_flag = true;
@@ -711,41 +738,53 @@ int main(int argc, char *argv[]){
         ////// 2nd kick
         ////////////////
 
-        eng_now.clear();
-        eng_now.calc(&system_soft[0], system_soft.getNumberOfParticleLocal(), dt_soft.value*0.5);
-        eng_now.getSumMultiNodes();
+        stat.eng_now.clear();
+        stat.eng_now.calc(&system_soft[0], system_soft.getNumberOfParticleLocal(), dt_soft.value*0.5);
+        stat.eng_now.getSumMultiNodes();
         
 #ifdef PROFILE
         profile.tot.end();
 #endif
         /////////////
 
-        eng_diff = eng_now - eng_init;
+        stat.eng_diff = stat.eng_now - stat.eng_init;
         PS::S64 n_glb = system_soft.getNumberOfParticleGlobal();
 #ifdef PROFILE
         PS::S32 n_hard_single     = system_hard_one_cluster.getPtcl().size();
         PS::S32 n_hard_isolated   = system_hard_isolated.getPtcl().size();
         PS::S32 n_hard_connected  = system_hard_connected.getPtcl().size();
 
-        n_count.hard_single      += PS::Comm::getSum(n_hard_single);
-        n_count.hard_isolated    += PS::Comm::getSum(n_hard_isolated);
-        n_count.hard_connected   += PS::Comm::getSum(n_hard_connected);
+        n_count.hard_single      += n_hard_single;
+        n_count.hard_isolated    += n_hard_isolated;
+        n_count.hard_connected   += n_hard_connected;
+
+        n_count_sum.hard_single      += PS::Comm::getSum(n_hard_single);
+        n_count_sum.hard_isolated    += PS::Comm::getSum(n_hard_isolated);
+        n_count_sum.hard_connected   += PS::Comm::getSum(n_hard_connected);
                                            
         PS::S64 ARC_substep_sum   = system_hard_isolated.ARC_substep_sum;
         PS::S64 ARC_n_groups      = system_hard_isolated.ARC_n_groups;
-        n_count.ARC_substep_sum  += PS::Comm::getSum(ARC_substep_sum);
-        n_count.ARC_n_groups     += PS::Comm::getSum(ARC_n_groups);
+        n_count.ARC_substep_sum  += ARC_substep_sum;
+        n_count.ARC_n_groups     += ARC_n_groups;
+
+        n_count_sum.ARC_substep_sum  += PS::Comm::getSum(ARC_substep_sum);
+        n_count_sum.ARC_n_groups     += PS::Comm::getSum(ARC_n_groups);
+
         system_hard_isolated.ARC_substep_sum = 0;
         system_hard_isolated.ARC_n_groups = 0;
                                            
         n_count.cluster_count(1, n_hard_single);
+
         const PS::S32  n_isolated_cluster = system_hard_isolated.getNCluster();
-        n_count.cluster_isolated += PS::Comm::getSum(n_isolated_cluster);
+        n_count.cluster_isolated += n_isolated_cluster;
+        n_count_sum.cluster_isolated += PS::Comm::getSum(n_isolated_cluster);
+
         const PS::S32* isolated_cluster_n_list = system_hard_isolated.getClusterNList();
         for (PS::S32 i=0; i<n_isolated_cluster; i++) n_count.cluster_count(isolated_cluster_n_list[i]);
 
         const PS::S32  n_connected_cluster = system_hard_connected.getNCluster();
-        n_count.cluster_connected += PS::Comm::getSum(n_connected_cluster);
+        n_count.cluster_connected += n_connected_cluster;
+        n_count_sum.cluster_connected += PS::Comm::getSum(n_connected_cluster);
         const PS::S32* connected_cluster_n_list = system_hard_connected.getClusterNList();
         for (PS::S32 i=0; i<n_connected_cluster; i++) n_count.cluster_count(connected_cluster_n_list[i]);
 
@@ -761,7 +800,7 @@ int main(int argc, char *argv[]){
             n_glb = system_soft.getNumberOfParticleGlobal();
             
 #ifdef MAIN_DEBUG
-            write_p(fout, time_sys, dt_soft.value*0.5, system_soft, eng_now, eng_diff);
+            write_p(fout, time_sys, dt_soft.value*0.5, system_soft, stat.eng_now, stat.eng_diff);
 //        //output
 //        PS::S32 ntot = system_soft.getNumberOfParticleLocal();
 //        fout<<std::setprecision(17)<<time_sys<<" ";
@@ -775,37 +814,38 @@ int main(int argc, char *argv[]){
 //        fout<<std::endl;
 #endif
 
-            //eng_diff.dump(std::cerr);
+            //stat.eng_diff.dump(std::cerr);
+            stat.time = time_sys;
+            stat.N = n_glb;
 
             if(my_rank==0) {
-                std::cerr<<"n_loop= "<<dn_loop<<std::endl;
-                std::cerr<<"n_glb= "<<n_glb<<std::endl;
-                std::cerr<<"Time= "<<time_sys<<" Enow-Einit="<<eng_diff.tot<<" (Enow-Einit)/Einit= "<<eng_diff.tot/eng_init.tot
-//#ifdef ARC_ERROR
-//                         <<" ARC_error_relative="<<system_hard_isolated.ARC_error_relative+system_hard_connected.ARC_error_relative<<" ARC_error="<<system_hard_isolated.ARC_error+system_hard_connected.ARC_error
-//#endif
-                         <<std::endl;
-                eng_now.dump(std::cerr);
-                std::cerr<<"Wtime per loop:\n";
-                std::cerr<<std::setw(PRINT_WIDTH)<<"Rank";
-                profile.dumpName(std::cerr,PRINT_WIDTH);
-                std::cerr<<std::endl;
+                stat.dump(std::cout);
+                stat.dump(fstatus, PRINT_WIDTH);
+                fstatus<<std::endl;
             }
+
             
 #ifdef PROFILE
             //const int NProc=PS::Comm::getNumberOfProc();
 
             if(my_rank==0) {
+                std::cerr<<"Tree step number: "<<dn_loop<<std::endl;
+
+                std::cerr<<"Wtime per step:\n";
+                std::cerr<<std::setw(PRINT_WIDTH)<<"Rank";
+                profile.dumpName(std::cerr,PRINT_WIDTH);
+                std::cerr<<std::endl;
+
                 std::cerr<<std::setw(PRINT_WIDTH)<<my_rank;
                 profile.dump(std::cerr,PRINT_WIDTH,dn_loop);
                 std::cerr<<std::endl;
 
-                std::cerr<<"Number per loop:\n";
+                std::cerr<<"Number per step:\n";
                 std::cerr<<std::setw(PRINT_WIDTH)<<"Rank";
-                n_count.dumpName(std::cerr,PRINT_WIDTH);
+                n_count_sum.dumpName(std::cerr,PRINT_WIDTH);
                 std::cerr<<std::endl;
                 std::cerr<<std::setw(PRINT_WIDTH)<<my_rank;
-                n_count.dump(std::cerr,PRINT_WIDTH,dn_loop);
+                n_count_sum.dump(std::cerr,PRINT_WIDTH,dn_loop);
                 std::cerr<<std::endl;
                 
                 n_count.printHist(std::cerr,PRINT_WIDTH,dn_loop);
@@ -823,7 +863,6 @@ int main(int argc, char *argv[]){
 //            }
 //#endif
             
-            PS::Comm::barrier();
 
             fprofile<<std::setprecision(PRINT_PRECISION);
             fprofile<<std::setw(PRINT_WIDTH)<<my_rank;
@@ -834,7 +873,6 @@ int main(int argc, char *argv[]){
             n_count.dump(fprofile, PRINT_WIDTH, dn_loop);
             fprofile<<std::endl;
 
-            PS::Comm::barrier();
 #endif
             
             file_header.n_body = n_glb;

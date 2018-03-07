@@ -235,6 +235,24 @@ public:
             <<"\nAngular Momentum: L = "<<L<<" |L| = "<<Lt
             <<std::endl;
     }
+    void dumpName(std::ofstream & fout, const PS::S32 width=20) {
+        fout<<std::setw(width)<<"Etot"
+            <<std::setw(width)<<"Ekin"
+            <<std::setw(width)<<"Epot"
+            <<std::setw(width)<<"Lx"
+            <<std::setw(width)<<"Ly"
+            <<std::setw(width)<<"Lz"
+            <<std::setw(width)<<"|L|";
+    }
+    void dump(std::ofstream & fout, const PS::S32 width=20){
+        fout<<std::setw(width)<<tot
+            <<std::setw(width)<<kin
+            <<std::setw(width)<<pot
+            <<std::setw(width)<<L.x
+            <<std::setw(width)<<L.y
+            <<std::setw(width)<<L.z
+            <<std::setw(width)<<Lt;
+    }
     void  writeAscii(FILE* fout) {
         fprintf(fout, "%26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e ",
                 this->kin, this->pot, this->tot, this->L[0], this->L[1], this->L[2], this->Lt);
