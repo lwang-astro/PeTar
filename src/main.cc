@@ -907,6 +907,7 @@ int main(int argc, char *argv[]){
 #ifdef PROFILE            
             profile.clear();
             n_count.clear();
+            n_count_sum.clear();
             dn_loop=0;
 #endif
         }
