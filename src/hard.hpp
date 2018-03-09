@@ -237,6 +237,9 @@ private:
             Aint.reserveARMem(n_groups);
             Aint.reservePertMem(Hint.getPertListSize());
             for (int i=0; i<n_groups; i++) {
+#ifdef HARD_DEBUG
+                assert(Hint.getPertN(i)>0);
+#endif
                 group.getBinPars(Aint.bininfo[i],ptcl_org,i,n_split_);
                 Aint.addOneGroup(ptcl_org, group.getGroup(i), group.getGroupN(i), group.getGroupPertList(i,n_split_), n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i)); 
                 
@@ -399,11 +402,24 @@ public:
             if(med[i].rank_send_ != PS::Comm::getRank()) continue;
             const auto & p = sys[med[i].adr_sys_];
             ptcl_hard_.push_back(PtclHard(p, med[i].id_cluster_, med[i].adr_sys_));
+#ifdef HARD_DEBUG
+            assert(med[i].adr_sys_<sys.getNumberOfParticleLocal());
+            if(p.id<0&&p.status<0) {
+                std::cerr<<"Error: ghost particle is selected! i="<<i<<"; med[i].adr_sys="<<med[i].adr_sys_<<std::endl;
+                abort();
+            }
+#endif
         }
 
         for(PS::S32 i=0; i<ptcl_recv.size(); i++){
             const Tptcl & p = ptcl_recv[i];
             ptcl_hard_.push_back(PtclHard(p, p.id_cluster, -(i+1)));
+#ifdef HARD_DEBUG
+            if(p.id<0&&p.status<0) {
+                std::cerr<<"Error: receive ghost particle! i="<<i<<std::endl;
+                abort();
+            }
+#endif
         }
 
         if(ptcl_hard_.size() == 0) return;
@@ -615,16 +631,17 @@ public:
 
     template<class Tsys>
     void writeBackPtclForOneCluster(Tsys & sys, 
-                                    const PS::ReallocatableArray<PS::S32> & adr_array){
+                                    const PS::ReallocatableArray<PS::S32> & adr_array,
+                                    PS::ReallocatableArray<PS::S32> & removelist){
         const PS::S32 n = ptcl_hard_.size();
-        PS::ReallocatableArray<PS::S32> removelist(n);
+        //PS::ReallocatableArray<PS::S32> removelist(n);
         for(PS::S32 i=0; i<n; i++){
             PS::S32 adr = adr_array[i];
             // assert(sys[adr].id == ptcl_hard_[i].id);
             sys[adr].DataCopy(ptcl_hard_[i]);
             if(sys[adr].id<0&&sys[adr].status<0) removelist.push_back(adr);
         }
-        sys.removeParticle(removelist.getPointer(), removelist.size());
+        //sys.removeParticle(removelist.getPointer(), removelist.size());
     }
 
     template<class Tsys>
@@ -693,13 +710,15 @@ public:
 
     template<class Tsys>
     void writeBackPtclForMultiCluster(Tsys & sys, 
-                                      const PS::ReallocatableArray<PS::S32> & adr_array){
-        writeBackPtclForOneCluster(sys, adr_array);
+                                      const PS::ReallocatableArray<PS::S32> & adr_array,
+                                      PS::ReallocatableArray<PS::S32> & removelist){
+        writeBackPtclForOneCluster(sys, adr_array, removelist);
     }
     template<class Tsys>
     void writeBackPtclForMultiClusterOMP(Tsys & sys, 
-                                         const PS::ReallocatableArray<PS::S32> & adr_array){
-        writeBackPtclForOneClusterOMP(sys, adr_array);
+                                         const PS::ReallocatableArray<PS::S32> & adr_array,
+                                         PS::ReallocatableArray<PS::S32> & removelist){
+        writeBackPtclForOneClusterOMP(sys, adr_array, removelist);
     }
 // for isolated multi cluster only
 //////////////////

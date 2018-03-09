@@ -75,7 +75,7 @@ struct PtclCluster{
     PtclCluster * next_;
     PS::S32 rank_org_;
     PS::S32 id_cluster_;
-    PtclCluster(): id_(-1), adr_sys_(-1), adr_ngb_head_(-1), n_ngb_(0), 
+    PtclCluster(): id_(-10), adr_sys_(-1), adr_ngb_head_(-1), n_ngb_(0), 
                    flag_searched_(false), next_(NULL), rank_org_(-1), id_cluster_(id_){}
     PtclCluster(const PS::S32 _id,    const PS::S32 _adr_sys,    const PS::S32 _adr_ngb_head, 
                 const PS::S32 _n_ngb, const bool _flag_searched, PtclCluster * const _next, 
@@ -84,7 +84,7 @@ struct PtclCluster{
         n_ngb_(_n_ngb), flag_searched_(_flag_searched), next_(_next), rank_org_(_rank_org), 
         id_cluster_(_id){}
     void clear(){
-        id_ = -1; adr_sys_ = -1; adr_ngb_head_ = -1; n_ngb_ = 0; 
+        id_ = -10; adr_sys_ = -1; adr_ngb_head_ = -1; n_ngb_ = 0; 
         flag_searched_ = false; next_ = NULL; rank_org_ = -1; id_cluster_ = id_;
     }
     void dump(){
@@ -106,11 +106,11 @@ public:
     PS::S32 id_;
     PS::S32 id_ngb_;
     PS::S32 rank_org_;
-    PtclOuter(): id_(-1), id_ngb_(-1), rank_org_(-1){}
+    PtclOuter(): id_(-10), id_ngb_(-1), rank_org_(-1){}
     PtclOuter(const PS::S32 _id, const PS::S32 _id_ngb, const PS::S32 _rank_org): 
         id_(_id), id_ngb_(_id_ngb), rank_org_(_rank_org){}
     void clear(){
-        id_ = -1; id_ngb_ = -1; rank_org_ = -1;
+        id_ = -10; id_ngb_ = -1; rank_org_ = -1;
     }
     void dump(){
         std::cout<<" id="<<id_<<" id_ngb_="<<id_ngb_<<" rank_org_="<<rank_org_<<std::endl;
@@ -124,14 +124,14 @@ public:
     PS::S32 adr_pcluster_;
     PS::S32 id_cluster_;
     PS::S32 rank_send_;
-    Mediator():id_(-1), adr_sys_(-1), adr_pcluster_(-1), id_cluster_(-1), rank_send_(-1){} 
+    Mediator():id_(-10), adr_sys_(-1), adr_pcluster_(-1), id_cluster_(-1), rank_send_(-1){} 
     Mediator(const PS::S32 _id, const PS::S32 _adr_sys, 
              const PS::S32 _adr_pcluster, const PS::S32 _id_cluster,
              const PS::S32 _rank_send):
         id_(_id), adr_sys_(_adr_sys), adr_pcluster_(_adr_pcluster), id_cluster_(_id_cluster),
         rank_send_(_rank_send){}
     void clear(){
-        id_ = -1; adr_sys_ = -1; adr_pcluster_ = -1; id_cluster_ = -1; rank_send_ = -1;
+        id_ = -10; adr_sys_ = -1; adr_pcluster_ = -1; id_cluster_ = -1; rank_send_ = -1;
     }
     void dump(){
         std::cout<<" id="<<id_<<" adr_sys="<<adr_sys_
@@ -373,6 +373,13 @@ public:
                 else{
                     // has neighbor
                     ptcl_cluster_[ith].push_back( PtclCluster(sys[i].id, i, id_ngb_multi_cluster[ith].size(), sys[i].n_ngb, false, NULL, my_rank) );
+#ifdef HARD_DEBUG
+                    if(sys[i].id<0&&sys[i].status<0) {
+                        std::cerr<<"Error: ghost particle exist! i="<<i<<std::endl;
+                        abort();
+                    }
+                    assert(i<n_loc);
+#endif
                     //PS::S32 n_tmp2 = 0;
                     //PS::S32 n_tmp3 = 0;
                     //PS::S32 n_tmp4 = 0;
@@ -817,6 +824,12 @@ public:
                     adr_sys_ptcl_send_.push_back(adr_sys);
                     ptcl_send_.push_back(PtclComm(p));
                     ptcl_send_.back().id_cluster = cluster_loc[i].id_;
+#ifdef HARD_DEBUG
+                    if(ptcl_send_.back().id<0&&ptcl_send_.back().status<0) {
+                        std::cerr<<"Error! sending particle is ghost! adr="<<adr_sys<<std::endl;
+                        abort();
+                    }
+#endif
                     n_ptcl_send_.back()++;
                     n_cnt++;
                 }
@@ -910,12 +923,11 @@ public:
 
     template<class Tsys, class Tphard>
     void writeAndSendBackPtcl(Tsys & sys,
-                              const PS::ReallocatableArray<Tphard> & ptcl_hard){
+                              const PS::ReallocatableArray<Tphard> & ptcl_hard,
+                              PS::ReallocatableArray<PS::S32> &removelist){
         //  const PS::S32 my_rank = PS::Comm::getRank();
         //  const PS::S32 n_proc  = PS::Comm::getNumberOfProc();
-        PS::ReallocatableArray<PS::S32> removelist;
         const PS::S32 n = ptcl_hard.size();
-        removelist.reserve(n);
         for(PS::S32 i=0; i<n; i++){
             const PS::S32 adr = ptcl_hard[i].adr_org;
             if( adr >= 0){
@@ -958,8 +970,8 @@ public:
             sys[adr].DataCopy(ptcl_send_[i]);
             if(sys[adr].id<0&&sys[adr].status<0) removelist.push_back(adr);
         }
-        // remove empty particles
-        sys.removeParticle(removelist.getPointer(), removelist.size());
+        // remove empty particles cannot do here
+        // sys.removeParticle(removelist.getPointer(), removelist.size());
     }
 #endif
 
@@ -1303,6 +1315,10 @@ private:
 #ifdef TIDAL_TENSOR
             }
             else {
+                /* Assume apo-center distance is the maximum length inside box
+                   Then the lscale=apo/(2*sqrt(2))
+                 */
+                
                 PS::F64 lscale = bin.ax*(1+bin.ecc)*0.35;
                 // 8 points box 
                 switch(i) {
@@ -1395,7 +1411,7 @@ private:
         pcm->id  = - std::abs(bin.id);
         pcm->r_search = bin.r_search;
 #ifdef TIDAL_TENSOR
-        pcm->r_search += bin.ax*(1+bin.ecc)*0.6063;
+        pcm->r_search += bin.ax*(1+bin.ecc);  // depend on the mass ratio, the upper limit distance to c.m. from all members and artifical particles is apo-center distance
 #endif
         pcm->status = nbin;
     }

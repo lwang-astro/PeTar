@@ -110,7 +110,7 @@ int main(int argc, char *argv[]){
     IOParams<PS::F64> r_out        (0.0,  "transit function outer boundary radius", "<m>/sigma_1D^2*/ratio_r_cut");
     IOParams<PS::F64> r_bin        (0.0,  "maximum binary radius criterion", "0.8*r_in");
     IOParams<PS::F64> sd_factor    (1e-6, "Slowdown perturbation criterion");
-    IOParams<PS::S32> data_format  (1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A)","Writing off: r-B(5), r-A(4); Writing on: r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0)");
+    IOParams<PS::S32> data_format  (1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): Writing off: r-B(5), r-A(4); Writing on: r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0)");
     IOParams<std::string> fname_snp("data","Prefix filename of dataset: [prefix].[File ID]");
 
     // PS::F64 g_min = 1e-6;
@@ -457,6 +457,8 @@ int main(int argc, char *argv[]){
     system_hard_connected.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hard, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
     system_hard_connected.setARCParam();
 
+    PS::ReallocatableArray<PS::S32> remove_list;
+                                       
     SearchCluster search_cluster;
     search_cluster.initialize();
     search_cluster.searchNeighborAndCalcHardForceOMP<SystemSoft, Tree, EPJSoft>
@@ -473,30 +475,30 @@ int main(int argc, char *argv[]){
 
         system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
         system_hard_isolated.initialMultiClusterOMP<SystemSoft,FPSoft>(system_soft, dt_soft.value);
-        system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_);
-#ifdef MAIN_DEBUG
-        n_loc = system_soft.getNumberOfParticleLocal();
-        for(PS::S32 i=0; i<n_loc; i++){
-            if(system_soft[i].id<0&&system_soft[i].status<0) {
-                std::cerr<<"Error! Ghost detected in system_soft after system_hard_isolated, i="<<i<<std::endl;
-                abort();
-            }
-        }
-#endif
+        system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, remove_list);
+//#ifdef MAIN_DEBUG
+//        n_loc = system_soft.getNumberOfParticleLocal();
+//        for(PS::S32 i=0; i<n_loc; i++){
+//            if(system_soft[i].id<0&&system_soft[i].status<0) {
+//                std::cerr<<"Error! Ghost detected in system_soft after system_hard_isolated, i="<<i<<std::endl;
+//                abort();
+//            }
+//        }
+//#endif
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
         system_hard_connected.initialMultiClusterOMP<SystemSoft,FPSoft>(system_soft, dt_soft.value);
-        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl());
-#ifdef MAIN_DEBUG
-        n_loc = system_soft.getNumberOfParticleLocal();
-        for(PS::S32 i=0; i<n_loc; i++){
-            if(system_soft[i].id<0&&system_soft[i].status<0) {
-                std::cerr<<"Error! Ghost detected in system_soft after system_hard_connected, i="<<i<<std::endl;
-                abort();
-            }
-        }
-#endif
+        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+//#ifdef MAIN_DEBUG
+//        n_loc = system_soft.getNumberOfParticleLocal();
+//        for(PS::S32 i=0; i<n_loc; i++){
+//            if(system_soft[i].id<0&&system_soft[i].status<0) {
+//                std::cerr<<"Error! Ghost detected in system_soft after system_hard_connected, i="<<i<<std::endl;
+//                abort();
+//            }
+//        }
+//#endif
 #endif
 
         n_loc = system_soft.getNumberOfParticleLocal();
@@ -535,6 +537,8 @@ int main(int argc, char *argv[]){
         else if(data_format.value==0||data_format.value==2)
             system_soft.writeParticleBinary(fname.c_str(), file_header);
         file_header.dt_soft= dt_soft.value;
+
+        assert(remove_list.size()==0);
     }    
 
     stat.time = time_sys;
@@ -606,6 +610,15 @@ int main(int argc, char *argv[]){
         search_cluster.setIdClusterGlobalIteration();
         search_cluster.sendAndRecvCluster(system_soft);
 #endif
+#ifdef MAIN_DEBUG
+        n_loc = system_soft.getNumberOfParticleLocal();
+        for(PS::S32 i=0; i<n_loc; i++){
+            if(system_soft[i].id<0&&system_soft[i].status<0) {
+                std::cerr<<"Error! Ghost detected in system_soft after send and receive, i="<<i<<std::endl;
+                abort();
+            }
+        }
+#endif
         ////// search cluster
         ////////////////
 
@@ -631,7 +644,7 @@ int main(int argc, char *argv[]){
         // integrate multi cluster A
         system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
         system_hard_isolated.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft.value,system_soft,first_step_flag);
-        system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_);
+        system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_,remove_list);
         // integrate multi cluster A
 #ifdef PROFILE
         profile.hard_isolated.end();
@@ -642,15 +655,15 @@ int main(int argc, char *argv[]){
         std::cerr<<"HT: Time break t="<<time_sys<<std::endl;
 #endif
         
-#ifdef MAIN_DEBUG
-        n_loc = system_soft.getNumberOfParticleLocal();
-        for(PS::S32 i=0; i<n_loc; i++){
-            if(system_soft[i].id<0&&system_soft[i].status<0) {
-                std::cerr<<"Error! Ghost detected in system_soft after system_hard_isolated, i="<<i<<std::endl;
-                abort();
-            }
-        }
-#endif
+//#ifdef MAIN_DEBUG
+//        n_loc = system_soft.getNumberOfParticleLocal();
+//        for(PS::S32 i=0; i<n_loc; i++){
+//            if(system_soft[i].id<0&&system_soft[i].status<0) {
+//                std::cerr<<"Error! Ghost detected in system_soft after system_hard_isolated, i="<<i<<std::endl;
+//                abort();
+//            }
+//        }
+//#endif
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         /////////////
@@ -661,17 +674,21 @@ int main(int argc, char *argv[]){
         // integrate multi cluster B
         system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
         system_hard_connected.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft.value,system_soft,first_step_flag);
-        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl());
+        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
         // integrate multi cluster B
 #ifdef PROFILE
         profile.hard_connected.end();
 #endif        
+
+        // Remove ghost particles
+        system_soft.removeParticle(remove_list.getPointer(), remove_list.size());
+        remove_list.resizeNoInitialize(0);
         
 #ifdef MAIN_DEBUG
         n_loc = system_soft.getNumberOfParticleLocal();
         for(PS::S32 i=0; i<n_loc; i++){
             if(system_soft[i].id<0&&system_soft[i].status<0) {
-                std::cerr<<"Error! Ghost detected in system_soft after system_hard_connected, i="<<i<<std::endl;
+                std::cerr<<"Error! Ghost detected in system_soft after remove, i="<<i<<std::endl;
                 abort();
             }
         }
