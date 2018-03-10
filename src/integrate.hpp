@@ -655,7 +655,7 @@ public:
         }
     }
 
-    void searchPerturber() {
+    void searchPerturber(PS::F64 dr_search[], const PS::S32 nbin) {
         // find perturber
         PS::S32 n = ptcl_.size();
         PS::S32 nj_tot = 0;
@@ -666,11 +666,22 @@ public:
 #endif
             Jlist_disp_.pushBackNoCheck(nj_tot);
             Jlist_n_.pushBackNoCheck(0);
-            for(int j=0; j<n; j++) {
+            for(int j=0; j<nbin; j++) {
                 PS::F64vec dr = ptcl_[i].pos-ptcl_[j].pos;
                 PS::F64 r2 = dr*dr;
-                PS::F64 r_search = std::max(ptcl_[i].r_search,ptcl_[j].r_search);
-                PS::F64 r_search2 = r_search*r_search*SAFTY_FACTOR_FOR_SEARCH_SQ;
+                PS::F64 r_search = std::max(ptcl_[i].r_search,ptcl_[j].r_search)*SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH + dr_search[j];
+                PS::F64 r_search2 = r_search*r_search;
+                if (r2<r_search2&&i!=j) {
+                    Jlist_.push_back(j);
+                    Jlist_n_[i]++;
+                    nj_tot++;
+                }
+            }
+            for(int j=nbin; j<n; j++) {
+                PS::F64vec dr = ptcl_[i].pos-ptcl_[j].pos;
+                PS::F64 r2 = dr*dr;
+                PS::F64 r_search = std::max(ptcl_[i].r_search,ptcl_[j].r_search)*SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+                PS::F64 r_search2 = r_search*r_search;
                 if (r2<r_search2&&i!=j) {
                     Jlist_.push_back(j);
                     Jlist_n_[i]++;
@@ -1457,8 +1468,12 @@ public:
                 OrbParam2PosVel(p[0].pos, p[1].pos, p[0].vel, p[1].vel, bininfo[i].m1, bininfo[i].m2, bininfo[i].ax, bininfo[i].ecc, bininfo[i].inc, bininfo[i].OMG, bininfo[i].omg, PI);
                 p[0].mass = bininfo[i].m1;
                 p[1].mass = bininfo[i].m2;
+#ifdef SOFT_PERT
+#ifndef TIDAL_TENSOR
                 p[0].status = 0;
                 p[1].status = 1;
+#endif
+#endif
                 //center_of_mass_correction(*(Tptcl*)&clist_[i], p, 2);
                 PS::F64 acc[2][3];
                 const PS::S32 ipert = pert_disp_[i];

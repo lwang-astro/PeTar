@@ -211,7 +211,6 @@ private:
             HermiteIntegrator<PtclHard> Hint;
             Hint.setParams(eta_s_, Int_pars_.rin, Int_pars_.rout, Int_pars_.eps2);
             Hint.setPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getPtclN());
-            Hint.searchPerturber();
 
             PS::F64 time_sys=0.0, time_now;
 #ifdef FIX_STEP_DEBUG
@@ -230,17 +229,28 @@ private:
 
             group_act_list.resizeNoInitialize(group.getPtclN());
             
+            // Initial Aint
+            PS::S32 n_groups = group.getNumOfGroups();
             ARCIntegrator<PtclHard, PtclH4, PtclForce> Aint(ARC_control_pert_, Int_pars_);
+            Aint.reserveARMem(n_groups);
+            PS::F64 dr_search[n_groups];
+            for (int i=0; i<n_groups; i++) {
+                group.getBinPars(Aint.bininfo[i],ptcl_org,i,n_split_);
+                auto &bini= Aint.bininfo[i];
+                /* Notice when artificial particles exist, the c.m. particle may find neighbor among them from another binary.
+                   This can result in merging of two binarties to one group.
+                   To avoid no perturbers, the rsearch should add the maximum distance of artifical particles to the c.m., which is apo-center distance
+                 */
+                dr_search[i] = bini.ax*(bini.ecc+1.0); 
+            }            
+            Hint.searchPerturber(dr_search,n_groups);
 
             // first particles in Hint.Ptcl are c.m.
-            PS::S32 n_groups = group.getNumOfGroups();
-            Aint.reserveARMem(n_groups);
             Aint.reservePertMem(Hint.getPertListSize());
             for (int i=0; i<n_groups; i++) {
 #ifdef HARD_DEBUG
                 assert(Hint.getPertN(i)>0);
 #endif
-                group.getBinPars(Aint.bininfo[i],ptcl_org,i,n_split_);
                 Aint.addOneGroup(ptcl_org, group.getGroup(i), group.getGroupN(i), group.getGroupPertList(i,n_split_), n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i)); 
                 
             }
