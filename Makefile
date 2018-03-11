@@ -18,9 +18,9 @@ ARC_PATH= -I../TSARC/include
 #ROOT_PATH= ${shell pwd -P}
 INCLUDE  = -I./src -I../src
 
-use_k_computer = yes
+#use_k_computer = yes
 #use_xc30_naoj = yes
-#use_x86 = yes
+use_x86 = yes
 
 ifeq ($(use_k_computer),yes)
 CXX = time mpiFCCpx
@@ -61,6 +61,7 @@ CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
 CXXFLAGS += -O2
 CXXFLAGS += -Wall
 CXXFLAGS += -march=core-avx2
+#CXXFLAGS += -mavx
 CXXFLAGS += -ffast-math -funroll-loops
 CXXFLAGS += -std=c++11
 #CXXFLAGS += ${shell gsl-config --cflags}
@@ -88,7 +89,9 @@ CXXFLAGS += -D ARC_OPT_SYM2
 #CXXFLAGS += -D INTEGRATED_CUTOFF_FUNCTION
 #CXXFLAGS += -D ARC_DEBUG
 #CXXFLAGS += -D ARC_DEBUG_PRINT
+#CXXFLAGS += -D ARC_DEEP_DEBUG
 #CXXFLAGS += -D ARC_ERROR
+#CXXFLAGS += -D ARC_DEBUG_DUMP
 #CXXFLAGS += -D ARC_WARN
 #CXXFLAGS += -D HARD_DEBUG
 #CXXFLAGS += -D HARD_DEBUG_ENERGY

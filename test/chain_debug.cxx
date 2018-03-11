@@ -48,14 +48,15 @@ void chain_print(const ARC::chain<PtclHard> &c, const double ds, const double w,
 
 
 int main(int argc, char **argv){
-  PS::F64 ds=0.5, toff=-1.0, rout=-1.0, rin=-1.0;
-  PS::S32 n=0, iter=-1,intp=-1;
-  std::string parname="ARC_dump.extpar";
-  std::string controlname="ARC_dump.control";
+  PS::F64 ds=-1.0, toff=-1.0, rout=-1.0, rin=-1.0;
+  PS::S32 n=0;
+#ifndef ARC_SYM
+  PS::S32 iter=-1,intp=-1;
+#endif
   
   int copt;
   int cint=0;
-  while ((copt = getopt(argc, argv, "s:n:t:r:R:i:I:l:p:h")) != -1)
+  while ((copt = getopt(argc, argv, "s:n:t:r:R:i:I:h")) != -1)
     switch (copt) {
     case 's':
       ds = atof(optarg);
@@ -77,6 +78,7 @@ int main(int argc, char **argv){
       rout = atof(optarg);
       cint++;
       break;
+#ifndef ARC_SYM
     case 'i':
       iter = atoi(optarg);
       cint++;
@@ -85,14 +87,7 @@ int main(int argc, char **argv){
       intp = atoi(optarg);
       cint++;
       break;
-    case 'l':
-      controlname = optarg;
-      cint++;
-      break;
-    case 'p':
-      parname = optarg;
-      cint++;
-      break;
+#endif
     case 'h':
       std::cout<<"options:\n"
                <<"    -s [double]:  step size ("<<ds<<")\n"
@@ -100,10 +95,10 @@ int main(int argc, char **argv){
                <<"    -t [double]:  ending time ("<<toff<<")\n"
                <<"    -r [double]:  r_in ("<<rin<<")\n"
                <<"    -R [double]:  r_out ("<<rout<<")\n"
+#ifndef ARC_SYM
                <<"    -i [int]:     itermax("<<iter<<")\n"
                <<"    -I [int]:     dense intpmax("<<intp<<")\n"
-               <<"    -l [char*]:   ARC_control parameter dump filename\n"
-               <<"    -p [char*]:   ARC_pert_par dump filename\n"
+#endif
                <<"    -h :          help\n"
                <<std::endl;
       return 0;
@@ -152,29 +147,73 @@ int main(int argc, char **argv){
 //  const PS::S32 exp_itermax=20;
 //  const PS::S32 exp_fix_iter=0;
   
-  ARC::chainpars chain_control; ///chain controller (L.Wang)
-  ARC_pert_pars int_par;
-  int_par.read(parname.c_str());
-  chain_control.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
-  chain_control.read(controlname.c_str());
+  std::FILE* fp = std::fopen(filename.c_str(),"r");
+  PS::F64 dtmp;
+  size_t rc;
+  if(toff>0) rc=fread(&dtmp, sizeof(PS::F64), 1, fp);
+  else rc=fread(&toff, sizeof(PS::F64), 1, fp);
+  if (rc<1) {
+      std::cerr<<"Error: read time_end fails!\n";
+      abort();
+  }
+  if(ds>0)  rc=fread(&dtmp, sizeof(PS::F64), 1, fp);
+  else rc=fread(&ds, sizeof(PS::F64), 1, fp);
+  if (rc<1) {
+      std::cerr<<"Error: read ds fails!\n";
+      abort();
+  }
+
+  ARC_pert_pars int_par; /// ARC integration parameters, rout_, rin_ (L.Wang)
+  int_par.read(fp);
+
+  PS::S32 np;
+  rc=fread(&np, sizeof(PS::S32), 1, fp);
+  if (rc<1) {
+      std::cerr<<"Error: read np fails!\n";
+      abort();
+  }
+  
+  
+  PtclH4* ptr[np+1];
+  PtclForce* ftr[np+1];
+  PtclH4 pert[np+1];
+  PtclForce force[np+1];
+  for (int i=0; i<np; i++) {
+      pert[i].read(fp);
+      force[i].read(fp);
+      ptr[i]=&pert[i];
+      ftr[i]=&force[i];
+  }
+ 
+//  chain_control.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+//  chain_control.read(controlname.c_str());
 //  else {
 //    chain_control.setabg(0,1,0);
 //    chain_control.setEXP(energy_error,dtmin,dterr,exp_itermax,exp_method,3,(bool)exp_fix_iter);
 //  }
 
-  chain_control.print(std::cerr);
+//  chain_control.print(std::cerr);
   
   ARC::chain<PtclHard> c;
   
   //  c.addP(n,p);
   //  c.Int_pars=ARC_int_pars;
   //  c.init(0);
-  c.read(filename.c_str());
-  c.print(std::cerr);
+  c.read(fp);
 
-  bool err_ignore=false;
+  ARC::chainpars chain_control;
+
+  chain_control.read(fp);
+
+  if(np>0) chain_control.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_pert<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+  else chain_control.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_soft<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+
+  std::fclose(fp);
+
   if (rout>0) int_par.rout = rout;
   if (rin>0)  int_par.rin = rin;
+#ifndef ARC_SYM
+  bool err_ignore=false;
   if (iter>0) {
     int seq=chain_control.getSeq();
     chain_control.setIterSeq(iter,seq);
@@ -182,18 +221,50 @@ int main(int argc, char **argv){
     err_ignore=true;
   }
   if (intp>0) chain_control.setDenIntpmax(intp);
-  
-  std::cerr<<"rout = "<<int_par.rout<<"; rin = "<<int_par.rin<<std::endl;
+#endif
 
-  double nds = c.calc_next_step_custom(chain_control,&int_par);
-  std::cerr<<"New ds approx ="<<nds<<std::endl
-           <<"Used ds = "<<ds<<std::endl;
+  chain_control.print(std::cerr);
+  std::cerr<<"-------------Int parameters:--------------\n";
+  std::cerr<<"rout = "<<int_par.rout<<"; rin = "<<int_par.rin<<std::endl;
+  std::cerr<<"time_end= "<<toff<<"; ds_use = "<<ds<<std::endl;
+
+//  double nds = c.calc_next_step_custom(chain_control,&int_par);
+//  std::cerr<<"New ds approx ="<<nds<<std::endl
+//           <<"Used ds = "<<ds<<std::endl;
 
   c.init(0.0, chain_control, &int_par);
 
+  c.print(std::cerr);
+
   int count=0;
+#ifdef ARC_SYM
+  if(n>0) {
+      PS::F64 timetable[8];
+#ifdef ARC_OPT_SYM2
+      const PS::F64 m1=c.getP(0).getMass();
+      const PS::F64 m2=c.getP(1).getMass();
+      const PS::F64 m2_mt = m2/(m1+m2);
+      const PS::F64 m1_m2_1 = -m1/m2-1.0;
+#endif
+      for(int i=0; i<n; i++) {
+#ifdef ARC_OPT_SYM2
+          c.Symplectic_integration_two(ds, chain_control, timetable, m2_mt, m1_m2_1, &int_par, ptr, ftr, np);
+#else 
+          c.Symplectic_integration(ds, chain_control, timetable, &int_par, ptr, ftr, np);
+#endif
+          chain_print(c,ds,24,16);
+      }
+  }
+  else {
+      bool fix_step_flag=false;
+      if(c.slowdown.getkappa()>1.0&&c.getN()==2) fix_step_flag=true;
+      count = c.Symplectic_integration_tsyn(ds, chain_control, toff, &int_par, ptr, ftr, np, fix_step_flag);
+      chain_print(c,ds,24,16);
+      std::cerr<<"Step count="<<count<<std::endl;
+  }
+#else
   while(toff-c.getTime()>chain_control.dterr||n>0) {
-    PS::F64 dsf=c.extrapolation_integration<PtclH4*, PtclForce*, ARC_pert_pars>(ds,chain_control,toff,&int_par,NULL,NULL,0,err_ignore);
+    PS::F64 dsf=c.extrapolation_integration<PtclH4*, PtclForce*, ARC_pert_pars>(ds,chain_control,toff,&int_par,ptr,ftr,np,err_ignore);
     //    std::cerr<<" Time="<<c.getTime()<<" Tdiff="<<toff-c.getTime()<<" ds="<<ds<<" dsf="<<dsf<<std::endl;
     chain_print(c,ds,24,16);
 
@@ -206,6 +277,7 @@ int main(int argc, char **argv){
 
     if (n>0&&count>=n) break;
   }
+#endif
 
   return 0;
 }

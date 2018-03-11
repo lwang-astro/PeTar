@@ -169,6 +169,19 @@ public:
     
     template<class Tp>
     PtclH4(const Tp &p): Ptcl(p), dt(0.0), time(0.0) {}
+
+    void dump(FILE *fp) {
+        fwrite(this, sizeof(PtclH4),1,fp);
+    }
+
+    void read(FILE *fp) {
+        size_t rcount = fread(this, sizeof(PtclH4),1,fp);
+        if (rcount<1) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            abort();
+        }
+    }
+
 };
 
 class PtclPred{
@@ -185,6 +198,18 @@ public:
     PS::F64vec acc1; //
     void clear(){
         acc0 = acc1 = 0.0;
+    }
+
+    void dump(FILE *fp) {
+        fwrite(this, sizeof(PtclForce),1,fp);
+    }
+
+    void read(FILE *fp) {
+        size_t rcount = fread(this, sizeof(PtclForce),1,fp);
+        if (rcount<1) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            abort();
+        }
     }
 };
 
@@ -1095,6 +1120,19 @@ private:
     PS::F64 T2[6];  // 1st (6)
     PS::F64 T3[10]; // 2nd Tensor (10)
 public:
+
+    void dump(FILE *fp){
+        fwrite(this, sizeof(TidalTensor),1,fp);
+    }
+
+    void read(FILE *fp){
+        size_t rcount = fread(this, sizeof(TidalTensor),1,fp);
+        if (rcount<1) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            abort();
+        }
+    }
+
     template<class Tptcl>
     void fit(Tptcl* data, const PS::S32* list, const Binary& bin, const PS::S32 n_split) {
         PS::F64vec fi[8];
@@ -1313,21 +1351,15 @@ public:
         eps2     = in_.eps2;
     }
 
-    void dump(const char* filename) {
-        std::FILE* pout = std::fopen(filename,"w");
-        if (pout==NULL) std::cerr<<"Error: filename "<<filename<<" cannot be open!\n";
-        else {
-            fwrite(this, sizeof(ARC_int_pars),1,pout);
-            fclose(pout);
-        }
+    void dump(FILE *fp) {
+        fwrite(this, sizeof(ARC_int_pars),1,fp);
     }
 
-    void read(const char* filename) {
-        std::FILE* pin = std::fopen(filename,"r");
-        if (pin==NULL) std::cerr<<"Error: filename "<<filename<<" cannot be open!\n";
-        else {
-            fread(this, sizeof(ARC_int_pars),1,pin);
-            fclose(pin);
+    void read(FILE *fp) {
+        size_t rcount = fread(this, sizeof(ARC_int_pars),1,fp);
+        if (rcount<1) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            abort();
         }
     }
 };
@@ -1337,12 +1369,37 @@ class ARC_pert_pars: public ARC_int_pars, public TidalTensor{
 public:
     ARC_pert_pars() {}
     ARC_pert_pars(const ARC_int_pars& in_): ARC_int_pars(in_) {}
+
+    void dump(FILE *fp) {
+        fwrite(this, sizeof(ARC_pert_pars),1,fp);
+    }
+
+    void read(FILE *fp) {
+        size_t rcount = fread(this, sizeof(ARC_pert_pars),1,fp);
+        if (rcount<1) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            abort();
+        }
+    }
 };
 #else
 class ARC_pert_pars: public ARC_int_pars, public keplerSplineFit{
 public:
     ARC_pert_pars() {}
     ARC_pert_pars(const ARC_int_pars& in_): ARC_int_pars(in_) {}
+
+    void dump(FILE *fp) {
+        fwrite(this, sizeof(ARC_pert_pars),1,fp);
+    }
+
+    void read(FILE *fp) {
+        size_t rcount = fread(this, sizeof(ARC_pert_pars),1,fp);
+        if (rcount<1) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            abort();
+        }
+    }
+
 };
 #endif
 
@@ -1515,11 +1572,29 @@ public:
         }
     }
 
-    void dump(ARChain* c, ARC_pert_pars* par) {
-        c->dump("ARC_dump.dat");
-        ARC_control_->dump("ARC_dump.control");
-        par->dump("ARC_dump.extpar");
-        c->print(std::cerr);
+    void dump(const PS::S32 ic, const PS::F64 time_end, const PS::F64 ds_use) {
+        std::FILE* fp = std::fopen("ARC_dump.dat","w");
+        if (fp==NULL) {
+            std::cerr<<"Error: filename ARC_dump.dat cannot be open!\n";
+            abort();
+        }
+        fwrite(&time_end,sizeof(PS::F64),1,fp);
+        fwrite(&ds_use,sizeof(PS::F64),1,fp);
+
+        par_list_[ic].dump(fp);
+        PS::S32 np = pert_n_[ic];
+        fwrite(&np,sizeof(PS::S32),1,fp);
+        const PS::S32 ipert = pert_disp_[ic];
+        for (PS::S32 i=0;i<np;i++) {
+            pert_[ipert+i]->dump(fp);
+            pforce_[ipert+i]->dump(fp);
+        }
+
+        clist_[ic].dump(fp);
+        ARC_control_->dump(fp);
+
+        std::fclose(fp);
+        //clist_[ic].print(std::cerr);
     }
 
     PS::S64 integrateOneStepSymTwo(const PS::S32 ic, const PS::F64 time_end, const PS::S32 kp) {
@@ -1570,8 +1645,14 @@ public:
         //PS::F64 ds_use = c->calc_next_step_custom(*ARC_control_,par);
         if (ds_use>ds_up_limit) ds_use = ds_up_limit;
 
+#ifdef ARC_DEBUG_DUMP
+        dump(ic,time_end,ds_use);
+#endif
+
         const PS::S32 ipert = pert_disp_[ic];
-        PS::S64 stepcount = c->Symplectic_integration_tsyn(ds_use, *ARC_control_, time_end, par, &pert_[ipert], &pforce_[ipert], pert_n_[ic]);
+        bool fix_step_flag = false;
+        if(c->slowdown.getkappa()>1.0&&c->getN()==2&&bininfo[ic].ecc>0.999) fix_step_flag = true;
+        PS::S64 stepcount = c->Symplectic_integration_tsyn(ds_use, *ARC_control_, time_end, par, &pert_[ipert], &pforce_[ipert], pert_n_[ic],fix_step_flag);
         return stepcount;
     }
 
@@ -1603,7 +1684,7 @@ public:
                 converge_count++;
                 if (converge_count>10&&time_end-c->getTime()>ARC_control_->dterr*100) {
                     std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c->getTime()<<"\nR_in: "<<Int_pars_->rin<<"\nR_out: "<<Int_pars_->rout<<"\n";
-                    dump(c,par);
+                    dump(ic,time_end,ds_use);
                     abort();
                 }
                 else ds_use *= -dsf;
@@ -1613,7 +1694,7 @@ public:
                 error_count++;
                 if(error_count>4) {
                     std::cerr<<"Error: Too much error appear!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c->getTime()<<"\nR_in: "<<Int_pars_->rin<<"\nR_out: "<<Int_pars_->rout<<"\n";
-                    dump(c,par);
+                    dump(ic,time_end,ds_use);
                     abort();
                 }
                 if (c->info->status==5) {
@@ -1628,7 +1709,7 @@ public:
                 if (final_flag) {
                     if (converge_count>10&&time_end-c->getTime()>ARC_control_->dterr*100) {
                         std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c->getTime()<<"\nR_in: "<<Int_pars_->rin<<"\nR_out: "<<Int_pars_->rout<<"\n";
-                        dump(c,par);
+                        dump(ic,time_end,ds_use);
                         abort();
                     }
                     converge_count++;
