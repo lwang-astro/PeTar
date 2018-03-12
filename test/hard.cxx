@@ -199,7 +199,7 @@ int main(int argc, char** argv)
   
   PS::ReallocatableArray<PtclHard> ptcl_new;
 
-  group.generateList(p.getPointer(), ptcl_new, rbin, rin, dt_limit, N, n_split);
+  group.generateList(p.getPointer(), ptcl_new, rbin, rin, rout, dt_limit, N, n_split);
   std::cerr<<"GenerateList\n";
   print_p(p.getPointer(),p.size());
 

@@ -517,15 +517,18 @@ void keplerTreeGenerator(PtclTree<Tptcl> bins[],   // make sure bins.size = n_me
 
 // return integration step estimation if good
 template<class Tptcl>
-PS::F64 stab2check(const PtclTree<Tptcl> &bin, const PS::F64 rmax) {
+PS::F64 stab2check(const PtclTree<Tptcl> &bin, const PS::F64 rbin, const PS::F64 rmax) {
 #ifdef STABLE_CHECK_DEBUG
     std::cerr<<"STAB2 ax="<<bin.ax<<" ecc="<<bin.ecc<<" m1="<<bin.m1<<" m2="<<bin.m2<<" peri="<<bin.peri<<" res="
-             <<(bin.ax<0 ? 0.0 : (rmax<bin.ax*(1.0+bin.ecc) ? -(bin.ax*(1.0+bin.ecc)) : bin.peri*std::sqrt((bin.m1>bin.m2)?bin.m2/bin.m1:bin.m1/bin.m2)*pow(1.0-bin.ecc,0.41666666)))
+             <<(bin.ax<0 ? 0.0 : (rbin<bin.ax*(1.0+bin.ecc) ? -(bin.ax*(1.0+bin.ecc)) : bin.peri*std::sqrt((bin.m1>bin.m2)?bin.m2/bin.m1:bin.m1/bin.m2)*pow(1.0-bin.ecc,0.41666666)))
              <<std::endl;
 #endif
     if(bin.ax<0) return 0.0;
     PS::F64 apo = bin.ax*(1.0+bin.ecc);
-    if(apo>rmax) return -apo;
+    if(apo>rbin) {
+        PS::F64 pec=bin.ax*(1.0-bin.ecc);
+        if(pec>0.01*rbin||apo>rmax) return -apo;
+    }
     //PS::F64 mrate = (bin.m1>bin.m2)?bin.m2/bin.m1:bin.m1/bin.m2;
     //return bin.peri*std::sqrt(mrate)*pow(1.0-bin.ecc,0.41666666);
     //  return std::max(std::sqrt(std::abs(1.0-bin.ecc)),0.01)*peri;
@@ -533,21 +536,21 @@ PS::F64 stab2check(const PtclTree<Tptcl> &bin, const PS::F64 rmax) {
 }
 
 template<class Tptcl>
-PS::F64 stab3check(const PtclTree<Tptcl> &bout, const PtclTree<Tptcl> &bin, const PS::F64 rbin, const PS::F64 rin) {
-    PS::F64 s2=stab2check(bin, rbin);
+PS::F64 stab3check(const PtclTree<Tptcl> &bout, const PtclTree<Tptcl> &bin, const PS::F64 rbin, const PS::F64 rin, const PS::F64 rout) {
+    PS::F64 s2=stab2check(bin, rbin, rin);
     if (s2<=0.0) return s2;
-    PS::F64 s1=stab2check(bout, rin);
+    PS::F64 s1=stab2check(bout, rin, rout);
     if (s1<=0.0) return s1;
     return std::min(s1,s2);
 }
 
 template<class Tptcl>
-PS::F64 stab4check(const PtclTree<Tptcl> &bout, const PtclTree<Tptcl> &bin1, const PtclTree<Tptcl> &bin2, const PS::F64 rbin, const PS::F64 rin) {
-    PS::F64 s2=stab2check(bin1,rbin);
+PS::F64 stab4check(const PtclTree<Tptcl> &bout, const PtclTree<Tptcl> &bin1, const PtclTree<Tptcl> &bin2, const PS::F64 rbin, const PS::F64 rin, const PS::F64 rout) {
+    PS::F64 s2=stab2check(bin1,rbin, rin);
     if (s2<=0.0) return s2;
-    PS::F64 s3=stab2check(bin2,rbin);
+    PS::F64 s3=stab2check(bin2,rbin, rin);
     if (s3<=0.0) return s3;
-    PS::F64 s1=stab2check(bout,rin);
+    PS::F64 s1=stab2check(bout,rin, rout);
     if (s1<=0.0) return s1;
     return std::min(s2,s3);
 }
@@ -555,14 +558,14 @@ PS::F64 stab4check(const PtclTree<Tptcl> &bout, const PtclTree<Tptcl> &bin1, con
 
 template<class Tptcl>
 PS::F64 stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &nbin, 
-                       PtclTree<Tptcl> &bins, const PS::F64 rbin, const PS::F64 rin) {
+                       PtclTree<Tptcl> &bins, const PS::F64 rbin, const PS::F64 rin, const PS::F64 rout) {
     PS::F64 fstab=0.0;
     if(bins.member[0]->status!=0) {
         if(bins.member[1]->status!=0) {
             //PS::F64 fs0 = stab4check(bins, *(PtclTree<Tptcl>*)bins.member[0], *(PtclTree<Tptcl>*)bins.member[1], rbin, rin);
-            PS::F64 fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[0], rbin, rin);
-            PS::F64 fs2 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[1], rbin, rin);
-            PS::F64 fs0 = stab2check(bins, rin);
+            PS::F64 fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[0], rbin, rin, rout);
+            PS::F64 fs2 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[1], rbin, rin, rout);
+            PS::F64 fs0 = stab2check(bins, rin, rout);
             if(fs0<=0) {
                 if(fs1>0) {
                     nbin.push_back((PtclTree<Tptcl>*)bins.member[0]);
@@ -581,8 +584,8 @@ PS::F64 stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &nbin,
         }
         else {
             //PS::F64 fs0 = stab3check(bins, *(PtclTree<Tptcl>*)bins.member[0], rbin, rin);
-            PS::F64 fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[0], rbin, rin);
-            PS::F64 fs0 = stab2check(bins, rin);
+            PS::F64 fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[0], rbin, rin, rout);
+            PS::F64 fs0 = stab2check(bins, rin, rout);
             if(fs0<=0) {
                 if(fs1>0) {
                     nbin.push_back((PtclTree<Tptcl>*)bins.member[0]);
@@ -600,8 +603,8 @@ PS::F64 stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &nbin,
     else {
         if(bins.member[1]->status!=0) {
             //PS::F64 fs0 = stab3check(bins, *(PtclTree<Tptcl>*)bins.member[1], rbin, rin);
-            PS::F64 fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[1], rbin, rin);
-            PS::F64 fs0 = stab2check(bins, rin);
+            PS::F64 fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[1], rbin, rin, rout);
+            PS::F64 fs0 = stab2check(bins, rin, rout);
             if(fs0<=0) {
                 if(fs1>0) {
                     nbin.push_back((PtclTree<Tptcl>*)bins.member[1]);
@@ -615,7 +618,7 @@ PS::F64 stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &nbin,
             }
         }
         else {
-            fstab = stab2check(bins, rbin);
+            fstab = stab2check(bins, rbin, rout);
             if(fstab>0) bins.tstep = fstab;
         }
     }

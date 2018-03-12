@@ -1427,6 +1427,7 @@ private:
                          PS::ReallocatableArray<PS::S32> & empty_list,
                          const PS::F64 rbin,
                          const PS::F64 rin,
+                         const PS::F64 rout,
                          const PS::F64 dt_tree,
                          const PS::S64 id_offset,
                          const PS::S32 n_split){
@@ -1446,7 +1447,7 @@ private:
             stab_bins.reserve(n_groups);
             bins.resizeNoInitialize(group_list_n[i]-1);
             keplerTreeGenerator(bins.getPointer(), &group_list[group_list_disp[i]], group_list_n[i], ptcl_org, dt_tree);
-            PS::F64 fstab = stabilityCheck<Tptcl>(stab_bins,bins.back(),rbin,rin);
+            PS::F64 fstab = stabilityCheck<Tptcl>(stab_bins,bins.back(),rbin,rin,rout);
             if (fstab>0) {
                 keplerOrbitGenerator(ptcl_org, ptcl_extra, empty_list, bins.back(), id_offset, n_split);
             }
@@ -1807,6 +1808,7 @@ public:
                       PS::ReallocatableArray<Tptcl> & ptcl_extra,
                       const PS::F64 rbin,
                       const PS::F64 rin,
+                      const PS::F64 rout,
                       const PS::F64 dt_tree,
                       const PS::S64 id_offset,
                       const PS::S32 n_split) {
@@ -1814,7 +1816,7 @@ public:
             std::cerr<<"Error! ID_PHASE_SHIFT is too small for phase split! shift bit: "<<ID_PHASE_SHIFT<<" n_split: "<<n_split<<std::endl;
             abort();
         }
-        generateNewPtcl<PtclTree<Tptcl>>(ptcl_org, p_list_, ptcl_extra, group_list_, group_list_disp_, group_list_n_, soft_pert_list_, rbin, rin, dt_tree, id_offset,n_split);
+        generateNewPtcl<PtclTree<Tptcl>>(ptcl_org, p_list_, ptcl_extra, group_list_, group_list_disp_, group_list_n_, soft_pert_list_, rbin, rin, rout, dt_tree, id_offset,n_split);
         //searchPerturber(pert_list_, ptcl_org, n_ptcl);
     }
 

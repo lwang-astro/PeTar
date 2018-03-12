@@ -680,6 +680,8 @@ int main(int argc, char *argv[]){
         profile.hard_connected.end();
 #endif        
 
+#endif
+
         // Remove ghost particles
         system_soft.removeParticle(remove_list.getPointer(), remove_list.size());
         remove_list.resizeNoInitialize(0);
@@ -693,8 +695,7 @@ int main(int argc, char *argv[]){
             }
         }
 #endif
-#endif
-        
+
         first_step_flag = false;
 #ifdef PROFILE
         profile.hard_tot.end();

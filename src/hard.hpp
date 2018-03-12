@@ -258,7 +258,7 @@ private:
             Aint.initial();
 
 
-            Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups, &Aint);
+            Hint.initialize(dt_limit, dt_min_hard_, group_act_list.getPointer(), group_act_n, n_groups, &Aint);
 
 
 #ifdef HARD_DEBUG_ENERGY
@@ -291,7 +291,7 @@ private:
 #endif
                 //Aint.integrateOneStepList(group_act_list.getPointer(), group_act_n, time_sys, dt_limit);
                 nstepcount +=Aint.integrateOneStepList(time_sys, std::min(dt_limit,dt_h));
-                Hint.integrateOneStep(time_sys,dt_limit,true,&Aint);
+                Hint.integrateOneStep(time_sys,dt_limit,dt_min_hard_,true,&Aint);
                 //Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
                 Hint.SortAndSelectIp();
             }
@@ -330,9 +330,10 @@ private:
         group.resolveGroups();
         updateRSearch(ptcl_org, group.getPtclList(), group.getPtclN(), time_end);
 
-        group.searchAndMerge(ptcl_org, r_bin_);
+        if (group.getPtclN()==2) group.searchAndMerge(ptcl_org, Int_pars_.rout);
+        else group.searchAndMerge(ptcl_org, Int_pars_.rin);
         // Kickcorrect(ptcl_org, group.getRoutChangeList());
-        group.generateList(ptcl_org, ptcl_new, r_bin_,Int_pars_.rin, time_end, id_offset_, n_split_);
+        group.generateList(ptcl_org, ptcl_new, r_bin_,Int_pars_.rin, Int_pars_.rout, time_end, id_offset_, n_split_);
 
             // group.reverseCopy(ptcl_org, n_ptcl);
 //        }
@@ -366,11 +367,11 @@ public:
     ///
     void setARCParam(const PS::F64 energy_error=1e-10, const PS::F64 dterr=1e-6, const PS::F64 dtmin=1e-24, const PS::S32 exp_method=1, const PS::S32 exp_itermax=20, const PS::S32 den_intpmax=20, const PS::S32 exp_fix_iter=0) {
 #ifdef HARD_DEBUG_DEEP_CHECK
-        ARC_control_pert_.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_test<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
-        ARC_control_soft_.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_test<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+        ARC_control_pert_.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_test<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+        ARC_control_soft_.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_test<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
 #else
-        ARC_control_pert_.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_pert<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
-        ARC_control_soft_.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_soft<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+        ARC_control_pert_.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_pert<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+        ARC_control_soft_.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_soft<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
 #endif
         ARC_control_pert_.setabg(0,1,0);
         ARC_control_soft_.setabg(0,1,0);
@@ -835,9 +836,9 @@ public:
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
             SearchGroup<PtclHard> group;
             group.findGroups(ptcl_hard_.getPointer(adr_head), n_ptcl, n_split_);
-            group.searchAndMerge(ptcl_hard_.getPointer(adr_head), r_bin_);
+            group.searchAndMerge(ptcl_hard_.getPointer(adr_head), Int_pars_.rin);
             PS::ReallocatableArray<PtclHard> ptcl_new;
-            group.generateList(ptcl_hard_.getPointer(adr_head), ptcl_new, r_bin_, Int_pars_.rin, dt_tree, id_offset_, n_split_);
+            group.generateList(ptcl_hard_.getPointer(adr_head), ptcl_new, r_bin_, Int_pars_.rin, Int_pars_.rout, dt_tree, id_offset_, n_split_);
 #pragma omp critical
             {
                 for (PS::S32 j=0; j<ptcl_new.size(); j++) {

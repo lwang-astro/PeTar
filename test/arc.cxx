@@ -203,7 +203,7 @@ int main(int argc, char** argv)
   
   PS::ReallocatableArray<PtclH4> ptcl_new;
 
-  group.generateList(p.getPointer(), ptcl_new, rsearch, rsearch, dt_limit, N, n_split);
+  group.generateList(p.getPointer(), ptcl_new, rsearch, rsearch, rsearch, dt_limit, N, n_split);
   //std::cout<<"GenerateList\n";
   //print_p(p.getPointer(),p.size());
 

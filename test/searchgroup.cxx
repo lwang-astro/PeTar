@@ -212,7 +212,7 @@ int main(int argc, char** argv)
   PS::ReallocatableArray<PtclHard> ptcl_new;
 
   //group.generateList(p, N, adr_group_glb, group_ptcl_glb, group_ptcl_glb_empty_list);
-  group.generateList(p.getPointer(), ptcl_new, par.rin, par.rin, par.dt_tree, N, par.n_split);
+  group.generateList(p.getPointer(), ptcl_new, par.rin, par.rin, par.rin,par.dt_tree, N, par.n_split);
   std::cout<<"GenerateList\n";
   print_p(p.getPointer(),p.size());
   
@@ -290,7 +290,7 @@ int main(int argc, char** argv)
   ptcl_new.clearSize();
 
   //group.generateList(p, N, adr_group_glb, group_ptcl_glb, group_ptcl_glb_empty_list);
-  group.generateList(p.getPointer(), ptcl_new, par.rin, par.rin, par.dt_tree,N,par.n_split);
+  group.generateList(p.getPointer(), ptcl_new, par.rin, par.rin, par.rin, par.dt_tree,N,par.n_split);
   std::cout<<"GenerateList 2nd\n";
   print_p(p.getPointer(),p.size());
   

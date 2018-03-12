@@ -277,7 +277,8 @@ private:
                            const PS::S32 adr_array[],
                            const PS::S32 n_act, 
                            const PS::F64 eta,
-                           const PS::F64 dt_limit,
+                           const PS::F64 dt_max,
+                           const PS::F64 dt_min,
                            const PS::F64 a0_offset_sq){
         for(PS::S32 i=0; i<n_act; i++){
             const PS::S32 adr = adr_array[i];
@@ -285,13 +286,18 @@ private:
             const PS::F64vec a1 = force[adr].acc1;
 
 #ifdef FIX_STEP_DEBUG
-            ptcl[adr].dt = dt_limit/STEP_DIVIDER;
+            ptcl[adr].dt = dt_max/STEP_DIVIDER;
 #else        
             const PS::F64 dt_ref = CalcDt2nd(a0, a1, eta, a0_offset_sq);
-            PS::F64 dt = dt_limit;
+            PS::F64 dt = dt_max;
             while(dt > dt_ref) dt *= 0.5;
             ptcl[adr].dt = dt;
 #endif
+            if(dt<dt_min) {
+                std::cerr<<"Error: Hermite integrator initial step size ("<<dt<<") < dt_min ("<<dt_min<<")!"<<std::endl;
+                std::cerr<<"i="<<i<<" adr="<<adr<<" acc="<<a0<<" acc1="<<a1<<" eta="<<eta<<" a0_offset_sq="<<a0_offset_sq<<std::endl;
+                abort();
+            }
         }
     }
 
@@ -550,7 +556,8 @@ private:
                                 const PtclForce force[],
                                 const PS::S32 adr_sorted[], 
                                 const PS::S32 n_act,
-                                const PS::F64 dt_limit,
+                                const PS::F64 dt_max,
+                                const PS::F64 dt_min,
                                 const PS::F64 a0_offset_sq,
                                 const PS::F64 eta){
         static thread_local const PS::F64 inv3 = 1.0 / 3.0;
@@ -586,7 +593,7 @@ private:
             pti->acc2 = acc2;
             pti->acc3 = acc3;
 #endif
-            pti->dt = dt_limit;
+            pti->dt = dt_max;
 
 #ifdef FIX_STEP_DEBUG
             pti->dt /= STEP_DIVIDER;
@@ -599,6 +606,17 @@ private:
             assert(pti->dt != 0.0);
 //            assert(pti->dt >1.0e-12);
 #endif
+
+            if(pti->dt <dt_min) {
+                std::cerr<<"Error: Hermite integrator step size ("<<pti->dt<<") < dt_min ("<<dt_min<<")!"<<std::endl;
+                std::cerr<<" pti->time="<<pti->time<<" i="<<i<<" adr="<<adr<<" pos="<<pti->pos<<" vel="<<pti->vel<<" acc="<<pti->acc0<<" acc1="<<pti->acc1
+#ifdef HARD_DEBUG
+                         <<" acc2="<<pti->acc2
+                         <<" acc3="<<pti->acc3
+#endif
+                         <<std::endl;
+                abort();
+            }
         }
     }
 
@@ -762,7 +780,8 @@ public:
     }
 
     template <class ARCint>
-    void initialize(PS::F64 dt_limit,
+    void initialize(PS::F64 dt_max,
+                    PS::F64 dt_min,
                     PS::S32 group_act_list[],
                     PS::S32 &group_act_n,
                     const PS::S32 n_groups,
@@ -807,7 +826,7 @@ public:
 
         if(Aint!=NULL) Aint->shift();
 
-        CalcBlockDt2ndAct(ptcl_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, 0.01*eta_s_, dt_limit, a0_offset_sq_);
+        CalcBlockDt2ndAct(ptcl_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, 0.01*eta_s_, dt_max, dt_min, a0_offset_sq_);
 
         for(PS::S32 i=0; i<n_ptcl; i++){
             time_next_[i] = ptcl_[i].time + ptcl_[i].dt;
@@ -827,7 +846,8 @@ public:
 
     template <class ARCint>
     void integrateOneStep(const PS::F64 time_sys,
-                          const PS::F64 dt_limit,
+                          const PS::F64 dt_max,
+                          const PS::F64 dt_min,
                           const bool calc_full_flag = true,
                           ARCint* Aint = NULL) {
         // pred::mass,pos,vel updated
@@ -840,7 +860,7 @@ public:
         if(calc_full_flag) CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), ptcl_.size(), adr_sorted_.getPointer(), n_act_, r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, Aint);
         else CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), adr_sorted_.getPointer(), n_act_, Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, Aint);
         // ptcl_org::pos,vel; pred::time,dt,acc0,acc1,acc2,acc3 updated
-        CorrectAndCalcDt4thAct(ptcl_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, dt_limit, a0_offset_sq_, eta_s_);
+        CorrectAndCalcDt4thAct(ptcl_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, dt_max, dt_min, a0_offset_sq_, eta_s_);
 
         for(PS::S32 i=0; i<n_act_; i++){
             PS::S32 adr = adr_sorted_[i];
@@ -1652,7 +1672,11 @@ public:
 
         const PS::S32 ipert = pert_disp_[ic];
         bool fix_step_flag = false;
-        if(c->slowdown.getkappa()>1.0&&c->getN()==2&&bininfo[ic].ecc>0.999) fix_step_flag = true;
+        if(c->getN()==2&&bininfo[ic].ecc>0.999) {
+            fix_step_flag = true;
+            PS::F64 korg=c->slowdown.getkappaorg();
+            if(korg<1.0) ds_use *= std::max(0.1,korg);
+        }
         PS::S64 stepcount = c->Symplectic_integration_tsyn(ds_use, *ARC_control_, time_end, par, &pert_[ipert], &pforce_[ipert], pert_n_[ic],fix_step_flag);
         return stepcount;
     }

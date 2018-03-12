@@ -52,20 +52,26 @@ CXXFLAGS += -DINTRINSIC_X86
 endif
 
 ifeq ($(use_x86),yes)
-CXX = time mpicxx
+#CXX = time g++
+
 #CXX = kinst-ompp mpicxx
-#CXX = tau_cxx.sh  -tau_makefile=/opt/tau-2.26.3/x86_64/lib/Makefile.tau-mpi-openmp -tau_options=-optCompInst 
-#CXXFLAGS = -g -O0 -fbounds-check
-CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -fopenmp
+
+#CXX = tau_cxx.sh  -tau_makefile=/opt/tau-2.26.3/x86_64/lib/Makefile.tau-mpi-openmp -tau_options=-optCompInst
+
+CXX = time mpicxx
 CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
+CXXFLAGS += -DMPICH_IGNORE_CXX_SEEKC
+
+#CXXFLAGS = -g -O0 -fbounds-check
 CXXFLAGS += -O2
+
+CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -fopenmp
 CXXFLAGS += -Wall
 CXXFLAGS += -march=core-avx2
 #CXXFLAGS += -mavx
 CXXFLAGS += -ffast-math -funroll-loops
 CXXFLAGS += -std=c++11
 #CXXFLAGS += ${shell gsl-config --cflags}
-CXXFLAGS += -DMPICH_IGNORE_CXX_SEEK
 CXXFLAGS += -DINTRINSIC_X86
 #CXXFLAGS += -DUSE_GNU_PARALLEL_SORT
 #CXXLIBS += ${shell gsl-config --libs}

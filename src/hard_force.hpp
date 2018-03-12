@@ -40,6 +40,32 @@ inline void CalcAccPotShortWithLinearCutoff(const PS::F64vec & posi,
     acci_pla -= (Rm3*(1-k) - Rm3_max)*rij;
 }
 
+// Pure Newtonian pair force function
+template <class Tptcl, class extpar>
+int Newtonian_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, const double xij[3], const Tptcl &pi, const Tptcl &pj, extpar* pars) {
+    const double invrij = 1.0/std::sqrt(xij[0]*xij[0]+xij[1]*xij[1]+xij[2]*xij[2]+pars->eps2);
+    const double mi = pi.mass;
+    const double mj = pj.mass;
+    
+    const double mimj = mi*mj; // m_i*m_i
+    const double mmij = mimj;
+
+    Pij = - mimj*invrij;
+    Wij =   mmij*invrij;   // Transformation coefficient
+    
+    const double invrij3=invrij*invrij*invrij;
+    double mor3 = mj * invrij3;
+    Aij[0] = mor3 * xij[0];   
+    Aij[1] = mor3 * xij[1]; 
+    Aij[2] = mor3 * xij[2]; 
+
+    mor3 = mmij * invrij3;
+    pWij[0] = mor3 * xij[0];
+    pWij[1] = mor3 * xij[1];
+    pWij[2] = mor3 * xij[2];
+
+  return 0;
+}
 
 /// start Newtonian cut force (L.Wang)
 //! Newtonian acceleration with cutoff function and \f$\partial W_{ij}/\partial \mathbf{x}_i\f$ from particle j to particle i (function type of \link #ARC::pair_AW \endlink) 

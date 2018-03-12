@@ -74,7 +74,7 @@ int main(int argc, char** argv)
            <<std::endl;
   print_tree(bins.back());
 
-  PS::F64 fstab = stabilityCheck<PtclHard>(stab_bins,bins.back(),rbin,rin);
+  PS::F64 fstab = stabilityCheck<PtclHard>(stab_bins,bins.back(),rbin,rin,rout);
   
   return 0;
 }

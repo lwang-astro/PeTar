@@ -205,8 +205,8 @@ int main(int argc, char **argv){
 
   chain_control.read(fp);
 
-  if(np>0) chain_control.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_pert<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
-  else chain_control.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_soft<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+  if(np>0) chain_control.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_pert<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+  else chain_control.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_soft<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
 
   Binary bin;
   bin.read(fp);
@@ -262,7 +262,12 @@ int main(int argc, char **argv){
   }
   else {
       bool fix_step_flag=false;
-      if(c.slowdown.getkappa()>1.0&&c.getN()==2) fix_step_flag=true;
+      if(c.getN()==2&&bin.ecc>0.999) {
+          fix_step_flag=true;
+          PS::F64 korg=c.slowdown.getkappaorg();
+          if(korg<1.0) ds *= std::max(0.1,korg);
+          std::cout<<"Fix step\n";
+      }
       count = c.Symplectic_integration_tsyn(ds, chain_control, toff, &int_par, ptr, ftr, np, fix_step_flag);
       chain_print(c,ds,24,16);
       std::cout<<"Step count="<<count<<std::endl;
