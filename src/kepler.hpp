@@ -24,6 +24,32 @@ public:
     // m2: mass 2
     // tstep: integration step estimation
     PS::F64 ax, ecc, inc, OMG, omg, tperi, peri, ecca, m1, m2, tstep;
+
+    void dump(FILE *fp) {
+        fwrite(this, sizeof(*this),1,fp);
+    }
+
+    void read(FILE *fp) {
+        size_t rcount = fread(this, sizeof(*this),1,fp);
+        if (rcount<1) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            abort();
+        }
+    }
+
+    void print(std::ostream& os, const PS::F64 width) {
+        os<<"ax: semi-major axis       : "<<ax<<std::endl
+          <<"ecc: eccentricity         : "<<ecc<<std::endl
+          <<"inc: inclination          : "<<inc<<std::endl
+          <<"OMG: rotational angle 1   : "<<OMG<<std::endl
+          <<"omg: rotational angle 2   : "<<omg<<std::endl
+          <<"tperi: time to peri-center: "<<tperi<<std::endl
+          <<"peri: period              : "<<peri<<std::endl
+          <<"ecca: eccentricty anomaly : "<<ecca<<std::endl
+          <<"m1: mass 1                : "<<m1<<std::endl
+          <<"m2: mass 2                : "<<m2<<std::endl
+          <<"tstep: step estimation    : "<<tstep<<std::endl;
+    }
 };
 
 template <class Tptcl>

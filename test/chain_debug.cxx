@@ -208,8 +208,13 @@ int main(int argc, char **argv){
   if(np>0) chain_control.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_pert<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
   else chain_control.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_soft<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
 
+  Binary bin;
+  bin.read(fp);
+  
   std::fclose(fp);
 
+  bin.print(std::cout,20);
+  
   if (rout>0) int_par.rout = rout;
   if (rin>0)  int_par.rin = rin;
 #ifndef ARC_SYM
@@ -223,10 +228,10 @@ int main(int argc, char **argv){
   if (intp>0) chain_control.setDenIntpmax(intp);
 #endif
 
-  chain_control.print(std::cerr);
-  std::cerr<<"-------------Int parameters:--------------\n";
-  std::cerr<<"rout = "<<int_par.rout<<"; rin = "<<int_par.rin<<std::endl;
-  std::cerr<<"time_end= "<<toff<<"; ds_use = "<<ds<<std::endl;
+  chain_control.print(std::cout);
+  std::cout<<"-------------Int parameters:--------------\n";
+  std::cout<<"rout = "<<int_par.rout<<"; rin = "<<int_par.rin<<std::endl;
+  std::cout<<"time_end= "<<toff<<"; ds_use = "<<ds<<std::endl;
 
 //  double nds = c.calc_next_step_custom(chain_control,&int_par);
 //  std::cerr<<"New ds approx ="<<nds<<std::endl
@@ -234,7 +239,7 @@ int main(int argc, char **argv){
 
   c.init(0.0, chain_control, &int_par);
 
-  c.print(std::cerr);
+  c.print(std::cout);
 
   int count=0;
 #ifdef ARC_SYM
@@ -260,7 +265,7 @@ int main(int argc, char **argv){
       if(c.slowdown.getkappa()>1.0&&c.getN()==2) fix_step_flag=true;
       count = c.Symplectic_integration_tsyn(ds, chain_control, toff, &int_par, ptr, ftr, np, fix_step_flag);
       chain_print(c,ds,24,16);
-      std::cerr<<"Step count="<<count<<std::endl;
+      std::cout<<"Step count="<<count<<std::endl;
   }
 #else
   while(toff-c.getTime()>chain_control.dterr||n>0) {
@@ -271,7 +276,7 @@ int main(int argc, char **argv){
     count++;
     if (dsf<0) ds *= -dsf;
     else if(dsf==0) {
-      c.info->ErrMessage(std::cerr);
+      c.info->ErrMessage(std::cout);
       abort();
     }
 

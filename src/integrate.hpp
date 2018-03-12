@@ -1592,6 +1592,7 @@ public:
 
         clist_[ic].dump(fp);
         ARC_control_->dump(fp);
+        bininfo[ic].dump(fp);
 
         std::fclose(fp);
         //clist_[ic].print(std::cerr);
