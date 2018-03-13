@@ -230,7 +230,7 @@ int main(int argc, char** argv)
   PS::F64 dt_min_hard = 1.0;
   for (PS::S32 i=0;i<40;i++) dt_min_hard *= 0.5;
   sys.setParam(rbin, rout, rin, eps, dt_limit, dt_min_hard, eta, time_sys, 1e-8, N, n_split);
-  sys.setARCParam();
+  sys.setARCParam(1e-10, 1e-6, 1e-3, 1e-24);
   
   sys.setPtclForIsolatedMultiCluster(p,adr,np);
   //sys.initialMultiCluserOMP(fp);

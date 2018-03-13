@@ -113,7 +113,10 @@ int main(int argc, char** argv)
     HermiteIntegrator<PtclHard> Hint;
     Hint.setParams(par.eta, par.rin, par.rout, par.eps*par.eps);
     Hint.setPtcl(p.getPointer(),p.size(),group.getPtclList(),group.getPtclN());
-    Hint.searchPerturber();
+    PS::S32 n_groups = group.getNumOfGroups();
+    assert(n_groups==0);
+    PS::F64 dr_search[n_groups];
+    Hint.searchPerturber(dr_search,n_groups);
             
     Hint.CalcEnergy(E0);
     
@@ -125,7 +128,6 @@ int main(int argc, char** argv)
 
     group_act_list.resizeNoInitialize(group.getPtclN());
             
-    PS::S32 n_groups = 0;
     PS::F64 time_sys=0.0;
 #ifdef FIX_STEP_DEBUG
     PS::F64 dt_limit = par.dt_limit_hard;
@@ -133,7 +135,7 @@ int main(int argc, char** argv)
     PS::F64 dt_limit = calcDtLimit(time_sys, par.dt_limit_hard, dt_min_hard);
 #endif
     ARCIntegrator<PtclHard, PtclH4, PtclForce>* arcint = NULL;
-    Hint.initialize(dt_limit, group_act_list.getPointer(), group_act_n, n_groups, arcint);
+    Hint.initialize(dt_limit, dt_min_hard,  group_act_list.getPointer(), group_act_n, n_groups, arcint);
 
     FILE* fout;
     std::string fname="hermite.dat.";
@@ -156,7 +158,7 @@ int main(int argc, char** argv)
 #else
         dt_limit = calcDtLimit(time_sys, par.dt_limit_hard, dt_min_hard);
 #endif
-        Hint.integrateOneStep(time_sys,dt_limit,true,arcint);
+        Hint.integrateOneStep(time_sys,dt_limit,dt_min_hard,true,arcint);
         Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
         if(fmod(time_sys,par.dt_limit_hard)==0) {
             //std::cout<<"Time = "<<time_sys<<std::endl;

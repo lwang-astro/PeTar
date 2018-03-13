@@ -332,6 +332,7 @@ private:
 
         if (group.getPtclN()==2) group.searchAndMerge(ptcl_org, Int_pars_.rout);
         else group.searchAndMerge(ptcl_org, Int_pars_.rin);
+        //group.searchAndMerge(ptcl_org, r_bin_);
         // Kickcorrect(ptcl_org, group.getRoutChangeList());
         group.generateList(ptcl_org, ptcl_new, r_bin_,Int_pars_.rin, Int_pars_.rout, time_end, id_offset_, n_split_);
 
@@ -841,7 +842,9 @@ public:
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
             SearchGroup<PtclHard> group;
             group.findGroups(ptcl_hard_.getPointer(adr_head), n_ptcl, n_split_);
-            group.searchAndMerge(ptcl_hard_.getPointer(adr_head), Int_pars_.rin);
+            if (group.getPtclN()==2) group.searchAndMerge(ptcl_hard_.getPointer(adr_head), Int_pars_.rout);
+            else group.searchAndMerge(ptcl_hard_.getPointer(adr_head), Int_pars_.rin);
+            //group.searchAndMerge(ptcl_hard_.getPointer(adr_head), Int_pars_.rin);
             PS::ReallocatableArray<PtclHard> ptcl_new;
             group.generateList(ptcl_hard_.getPointer(adr_head), ptcl_new, r_bin_, Int_pars_.rin, Int_pars_.rout, dt_tree, id_offset_, n_split_);
 #pragma omp critical

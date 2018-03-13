@@ -224,7 +224,7 @@ int main(int argc, char** argv)
   group.findGroups(p.getPointer(),p.size(),n_split);
 
   ARC::chainpars ARC_control;
-  ARC_control.setA(Newtonian_cut_AW<PtclH4,ARC_pert_pars>,Newtonian_extA<PtclH4,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+  ARC_control.setA(Newtonian_AW<PtclH4,ARC_pert_pars>,Newtonian_extA_soft<PtclH4,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
   ARC_control.setabg(0,1,0);
   ARC_control.setErr(1e-10,1e-24,1e-6);
 #ifdef ARC_SYM
