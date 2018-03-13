@@ -48,7 +48,7 @@ void chain_print(const ARC::chain<PtclHard> &c, const double ds, const double w,
 
 
 int main(int argc, char **argv){
-  PS::F64 ds=-1.0, toff=-1.0, rout=-1.0, rin=-1.0;
+  PS::F64 ds=-1.0, toff=-1.0, rout=-1.0, rin=-1.0, dterr=-1.0;
   PS::S32 n=0;
 #ifndef ARC_SYM
   PS::S32 iter=-1,intp=-1;
@@ -56,7 +56,7 @@ int main(int argc, char **argv){
   
   int copt;
   int cint=0;
-  while ((copt = getopt(argc, argv, "s:n:t:r:R:i:I:h")) != -1)
+  while ((copt = getopt(argc, argv, "s:n:t:r:R:e:i:I:h")) != -1)
     switch (copt) {
     case 's':
       ds = atof(optarg);
@@ -78,6 +78,10 @@ int main(int argc, char **argv){
       rout = atof(optarg);
       cint++;
       break;
+    case 'e':
+      dterr = atof(optarg);
+      cint++;
+      break;
 #ifndef ARC_SYM
     case 'i':
       iter = atoi(optarg);
@@ -95,6 +99,7 @@ int main(int argc, char **argv){
                <<"    -t [double]:  ending time ("<<toff<<")\n"
                <<"    -r [double]:  r_in ("<<rin<<")\n"
                <<"    -R [double]:  r_out ("<<rout<<")\n"
+               <<"    -e [double]:  time error ("<<dterr<<")\n"
 #ifndef ARC_SYM
                <<"    -i [int]:     itermax("<<iter<<")\n"
                <<"    -I [int]:     dense intpmax("<<intp<<")\n"
@@ -208,6 +213,8 @@ int main(int argc, char **argv){
   if(np>0) chain_control.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_pert<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
   else chain_control.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_soft<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
 
+  if(dterr>0.0) chain_control.setErr(1e-10, 1e-24, dterr);
+  
   Binary bin;
   bin.read(fp);
   

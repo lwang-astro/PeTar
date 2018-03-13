@@ -23,7 +23,8 @@
 #include<fstream>
 #include<string>
 #include<sstream>
-#include<unistd.h>
+//#include<unistd.h>
+#include<getopt.h>
 #ifdef USE_C03
 #include<map>
 #else //USE_C03
@@ -105,7 +106,11 @@ int main(int argc, char *argv[]){
     IOParams<PS::F64> dt_snp       (0.0625,"Output time interval of particle dataset");
     IOParams<PS::F64> search_factor(1.0,  "neighbor searching coefficient");
     IOParams<PS::F64> dt_limit_hard_factor(4.0, "limit of tree time step/hard time step");
-    IOParams<PS::F64> dt_min_index (40,   "power index n for the smallest time step (0.5^n) allowed in Hermite integrator");
+    IOParams<PS::S32> dt_min_hermite_index(40,   "power index n for the smallest time step (0.5^n) allowed in Hermite integrator");
+    IOParams<PS::S32> dt_min_arc_index    (64,   "power index n for the smallest time step (0.5^n) allowed in ARC integrator");
+    IOParams<PS::F64> dt_err_pert  (1e-6, "Time synchronization maximum (relative) error for perturbed ARC integrator");
+    IOParams<PS::F64> dt_err_soft  (1e-3, "Time synchronization maximum (relative) error for no-perturber (only soft perturbation) ARC integrator");
+    IOParams<PS::F64> e_err_arc    (1e-10,"Maximum energy error allown for ARC integrator");
     IOParams<PS::F64> eps          (0.0,  "softerning eps");
     IOParams<PS::F64> r_out        (0.0,  "transit function outer boundary radius", "<m>/sigma_1D^2*/ratio_r_cut");
     IOParams<PS::F64> r_bin        (0.0,  "maximum binary radius criterion", "0.8*r_in");
@@ -116,12 +121,85 @@ int main(int argc, char *argv[]){
     // PS::F64 g_min = 1e-6;
 
     // reading parameters
-    int c;
     bool reading_flag=true;
     bool app_flag=false; // appending data flag
 
-    while((c=getopt(argc,argv,"i:ab:B:T:t:e:E:m:n:N:s:S:d:D:o:l:r:R:X:p:f:h")) != -1){
-        switch(c){
+    static struct option long_options[] = {
+        {"n-split", required_argument, 0, 0},           //0 
+        {"search-factor", required_argument, 0, 0},     //1 
+        {"dt-max-factor", required_argument, 0, 0},     //2
+        {"dt-min-hermite", required_argument, 0, 0},    //3
+        {"dt-min-arc", required_argument, 0, 0},        //4
+        {"dt-err-pert", required_argument, 0, 0},       //5
+        {"dt-err-soft", required_argument, 0, 0},       //6
+        {"energy-err-arc", required_argument, 0, 0},    //7
+        {"soft-eps", required_argument, 0, 0},          //8
+        {"slowdown-factor", required_argument, 0, 0},   //9
+        {"help",no_argument, 0, 'h'},                   //10
+        {0,0,0,0}
+    };
+
+    int copt;
+    int option_index;
+    while ((copt = getopt_long(argc, argv, "i:at:D:o:r:R:b:B:N:n:l:s:T:E:f:h", long_options, &option_index)) != -1) 
+        switch (copt) {
+        case 0:
+            switch(option_index){
+            case 0:
+                n_split.value = atoi(optarg);
+                if(my_rank == 0) n_split.print(std::cerr);
+                assert(n_split.value>=8);
+                break;
+            case 1:
+                search_factor.value = atof(optarg);
+                if(my_rank == 0) search_factor.print(std::cerr);
+                assert(search_factor.value>0.0);
+                break;
+            case 2:
+                dt_limit_hard_factor.value = atof(optarg);
+                if(my_rank == 0) dt_limit_hard_factor.print(std::cerr);
+                assert(dt_limit_hard_factor.value > 0.0);
+                break;
+            case 3:
+                dt_min_hermite_index.value = atoi(optarg);
+                if(my_rank == 0) dt_min_hermite_index.print(std::cerr);
+                assert(dt_min_hermite_index.value > 0);
+                break;
+            case 4:
+                dt_min_arc_index.value = atoi(optarg);
+                if(my_rank == 0) dt_min_arc_index.print(std::cerr);
+                assert(dt_min_arc_index.value > 0);
+                break;
+            case 5:
+                dt_err_pert.value = atof(optarg);
+                if(my_rank == 0) dt_err_pert.print(std::cerr);
+                assert(dt_err_pert.value > 0.0);
+                break;
+            case 6:
+                dt_err_soft.value = atof(optarg);
+                if(my_rank == 0) dt_err_soft.print(std::cerr);
+                assert(dt_err_soft.value > 0.0);
+                break;
+            case 7:
+                e_err_arc.value = atof(optarg);
+                if(my_rank == 0) e_err_arc.print(std::cerr);
+                assert(e_err_arc.value > 0.0);
+                break;
+            case 8:
+                eps.value = atof(optarg);
+                if(my_rank == 0) eps.print(std::cerr);
+                assert(eps.value>=0.0);
+                break;
+            case 9:
+                sd_factor.value = atof(optarg);
+                if(my_rank == 0) sd_factor.print(std::cerr);
+                assert(sd_factor.value>0.0);
+                break;
+            default:
+                if(my_rank == 0) std::cerr<<"Unknown option. check '-h' for help.\n";
+                abort();
+            }
+            break;
         case 'i':
             data_format.value = atoi(optarg);
             if(my_rank == 0) data_format.print(std::cerr);
@@ -150,20 +228,10 @@ int main(int argc, char *argv[]){
             if(my_rank == 0) time_end.print(std::cerr);
             assert(time_end.value>=0.0);
             break;
-        case 'e':
-            eps.value = atof(optarg);
-            if(my_rank == 0) eps.print(std::cerr);
-            assert(eps.value>=0.0);
-            break;
         case 'E':
             eta.value = atof(optarg);
             if(my_rank == 0) eta.print(std::cerr);
             assert(eta.value>0.0);
-            break;
-        case 'm':
-            dt_min_index.value = atoi(optarg);
-            if(my_rank == 0) dt_min_index.print(std::cerr);
-            assert(pow(0.5,dt_min_index.value)<dt_soft.value/dt_limit_hard_factor.value);
             break;
         case 'n':
             n_group_limit.value = atoi(optarg);
@@ -180,16 +248,6 @@ int main(int argc, char *argv[]){
             n_smp_ave.value = atoi(optarg);
             if(my_rank == 0) n_smp_ave.print(std::cerr);
             assert(n_smp_ave.value>0.0);
-            break;
-        case 'S':
-            search_factor.value = atof(optarg);
-            if(my_rank == 0) search_factor.print(std::cerr);
-            assert(search_factor.value>0.0);
-            break;
-        case 'd':
-            sd_factor.value = atof(optarg);
-            if(my_rank == 0) sd_factor.print(std::cerr);
-            assert(sd_factor.value>0.0);
             break;
         case 'D':
             dt_soft.value = atof(optarg);
@@ -216,16 +274,6 @@ int main(int argc, char *argv[]){
             r_out.value = atof(optarg);
             if(my_rank == 0) r_out.print(std::cerr);
             assert(r_out.value>0.0);
-            break;
-        case 'X':
-            dt_limit_hard_factor.value = atof(optarg);
-            if(my_rank == 0) dt_limit_hard_factor.print(std::cerr);
-            assert(dt_limit_hard_factor.value > 0.0);
-            break;
-        case 'p':
-            n_split.value = atoi(optarg);
-            if(my_rank == 0) n_split.print(std::cerr);
-            assert(n_split.value>=8);
             break;
         case 'f':
             fname_snp.value = optarg;
@@ -257,26 +305,31 @@ int main(int argc, char *argv[]){
                          <<"             16. N_neighbor (0)\n"
                          <<"             (*) show initialization values which should be used together with FILE_ID = 0"<<std::endl;
                 std::cerr<<"  -a:     data output style (except snapshot) becomes appending, defaulted: replace"<<std::endl;
-                std::cerr<<"  -b: [F] "<<r_bin<<std::endl;
-                std::cerr<<"  -B: [I] "<<n_bin<<std::endl;
-                std::cerr<<"  -T: [F] "<<theta<<std::endl;
                 std::cerr<<"  -t: [F] "<<time_end<<std::endl;
-                std::cerr<<"  -e: [F] "<<eps<<std::endl;
-                std::cerr<<"  -E: [F] "<<eta<<std::endl;
-                std::cerr<<"  -m: [I] "<<dt_min_index<<std::endl;
-                std::cerr<<"  -n: [I] "<<n_group_limit<<std::endl;
-                std::cerr<<"  -N: [I] "<<n_glb<<std::endl;
-                std::cerr<<"  -s: [I] "<<n_smp_ave<<std::endl;
-                std::cerr<<"  -S: [F] "<<search_factor<<std::endl;
-                std::cerr<<"  -d: [F] "<<sd_factor<<std::endl;
                 std::cerr<<"  -D: [F] "<<dt_soft<<std::endl;
                 std::cerr<<"  -o: [F] "<<dt_snp<<std::endl;
-                std::cerr<<"  -l: [I] "<<n_leaf_limit<<std::endl;
+                std::cerr<<"        --dt-max-factor:   [F] "<<dt_limit_hard_factor<<std::endl;
+                std::cerr<<"        --dt-min-hermite:  [I] "<<dt_min_hermite_index<<std::endl;
+                std::cerr<<"        --dt-min-arc:      [I] "<<dt_min_arc_index<<std::endl;
+                std::cerr<<"        --dt-err-pert:     [F] "<<dt_err_pert<<std::endl;
+                std::cerr<<"        --dt-err-soft:     [F] "<<dt_err_soft<<std::endl;
                 std::cerr<<"  -r: [F] "<<ratio_r_cut<<std::endl;
                 std::cerr<<"  -R: [F] "<<r_out<<std::endl;
-                std::cerr<<"  -X: [F] "<<dt_limit_hard_factor<<std::endl;
-                std::cerr<<"  -p: [I] "<<n_split<<std::endl;
+                std::cerr<<"  -b: [F] "<<r_bin<<std::endl;
+                std::cerr<<"  -B: [I] "<<n_bin<<std::endl;
+                std::cerr<<"  -N: [I] "<<n_glb<<std::endl;
+                std::cerr<<"  -n: [I] "<<n_group_limit<<std::endl;
+                std::cerr<<"  -l: [I] "<<n_leaf_limit<<std::endl;
+                std::cerr<<"  -s: [I] "<<n_smp_ave<<std::endl;
+                std::cerr<<"        --n-split:         [I] "<<n_split<<std::endl;
+                std::cerr<<"  -T: [F] "<<theta<<std::endl;
+                std::cerr<<"  -E: [F] "<<eta<<std::endl;
+                std::cerr<<"        --search-factor:   [F] "<<search_factor<<std::endl;
+                std::cerr<<"        --energy-err-arc:  [F] "<<e_err_arc<<std::endl;
+                std::cerr<<"        --slowdown-factor: [F] "<<sd_factor<<std::endl;
+                std::cerr<<"        --soft-eps:        [F] "<<eps<<std::endl;
                 std::cerr<<"  -f: [S] "<<fname_snp<<std::endl;
+                std::cerr<<"  -h(--help):               print help"<<std::endl;
                 std::cerr<<"*** PS: r_in : transit function inner boundary radius\n"
                          <<"        r_out: transit function outer boundary radius\n"
                          <<"        sigma: half-mass radius velocity dispersion\n"
@@ -286,8 +339,7 @@ int main(int argc, char *argv[]){
             PS::Finalize();
             return 0;
         }
-    }
-
+    
     PS::F64 time_sys = 0.0;
     PS::S32 n_loc;
 
@@ -446,16 +498,18 @@ int main(int argc, char *argv[]){
                                        
     SystemHard system_hard_one_cluster;
     PS::F64 dt_limit_hard = dt_soft.value/dt_limit_hard_factor.value;
-    PS::F64 dt_min_hard = 1.0;
-    for (PS::S32 i=0;i<dt_min_index.value;i++) dt_min_hard *= 0.5;
-    system_hard_one_cluster.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hard, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
+    PS::F64 dt_min_hermite = 1.0;
+    PS::F64 dt_min_arc = 1.0;
+    for (PS::S32 i=0;i<dt_min_hermite_index.value;i++) dt_min_hermite *= 0.5;
+    for (PS::S32 i=0;i<dt_min_arc_index.value;i++) dt_min_arc *= 0.5;
+    system_hard_one_cluster.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
     // system_hard_one_cluster.setARCParam();
     SystemHard system_hard_isolated;
-    system_hard_isolated.setParam(r_bin.value, r_out.value, r_in, eps.value,  dt_limit_hard, dt_min_hard, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
-    system_hard_isolated.setARCParam();
+    system_hard_isolated.setParam(r_bin.value, r_out.value, r_in, eps.value,  dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
+    system_hard_isolated.setARCParam(e_err_arc.value, dt_err_pert.value, dt_err_soft.value, dt_min_arc);
     SystemHard system_hard_connected;
-    system_hard_connected.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hard, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
-    system_hard_connected.setARCParam();
+    system_hard_connected.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
+    system_hard_connected.setARCParam(e_err_arc.value, dt_err_pert.value, dt_err_soft.value, dt_min_arc);
 
     PS::ReallocatableArray<PS::S32> remove_list;
                                        

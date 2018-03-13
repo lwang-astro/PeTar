@@ -365,7 +365,11 @@ public:
 
     /// start set Chainpars (L.Wang)
     ///
-    void setARCParam(const PS::F64 energy_error=1e-10, const PS::F64 dterr=1e-6, const PS::F64 dtmin=1e-24, const PS::S32 exp_method=1, const PS::S32 exp_itermax=20, const PS::S32 den_intpmax=20, const PS::S32 exp_fix_iter=0) {
+    void setARCParam(const PS::F64 energy_error=1e-10, const PS::F64 dterr_pert=1e-6, const PS::F64 dterr_soft=1e-3, const PS::F64 dtmin=1e-24
+#ifndef ARC_SYM
+                     ,const PS::S32 exp_method=1, const PS::S32 exp_itermax=20, const PS::S32 den_intpmax=20, const PS::S32 exp_fix_iter=0
+#endif
+        ) {
 #ifdef HARD_DEBUG_DEEP_CHECK
         ARC_control_pert_.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_test<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
         ARC_control_soft_.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_test<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
@@ -376,15 +380,15 @@ public:
         ARC_control_pert_.setabg(0,1,0);
         ARC_control_soft_.setabg(0,1,0);
         
-        ARC_control_pert_.setErr(energy_error,dtmin,dterr);
-        ARC_control_soft_.setErr(energy_error,dtmin,dterr);
+        ARC_control_pert_.setErr(energy_error,dtmin,dterr_pert);
+        ARC_control_soft_.setErr(energy_error,dtmin,dterr_soft);
 #ifdef ARC_SYM
         ARC_control_pert_.setSymOrder(-6);
         ARC_control_soft_.setSymOrder(-6);
 #else
         ARC_control_pert_.setIterSeq(exp_itermax,3,den_intpmax);
         ARC_control_soft_.setIterSeq(exp_itermax,3,den_intpmax);
-#endif
+
         ARC_control_pert_.setIntp(exp_method);
         ARC_control_soft_.setIntp(exp_method);
 
@@ -393,6 +397,7 @@ public:
 
         ARC_control_pert_.setAutoStep(3);
         ARC_control_soft_.setAutoStep(3);
+#endif
     }
     /// end set Chainpars (L.Wang)
 
