@@ -1592,8 +1592,8 @@ public:
         }
     }
 
-    void dump(const PS::S32 ic, const PS::F64 time_end, const PS::F64 ds_use) {
-        std::FILE* fp = std::fopen("ARC_dump.dat","w");
+    void dump(const char* fname, const PS::S32 ic, const PS::F64 time_end, const PS::F64 ds_use) {
+        std::FILE* fp = std::fopen(fname,"w");
         if (fp==NULL) {
             std::cerr<<"Error: filename ARC_dump.dat cannot be open!\n";
             abort();
@@ -1666,10 +1666,6 @@ public:
         //PS::F64 ds_use = c->calc_next_step_custom(*ARC_control_,par);
         if (ds_use>ds_up_limit) ds_use = ds_up_limit;
 
-#ifdef ARC_DEBUG_DUMP
-        dump(ic,time_end,ds_use);
-#endif
-
         const PS::S32 ipert = pert_disp_[ic];
         bool fix_step_flag = false;
         if(c->getN()==2&&bininfo[ic].ecc>0.999) {
@@ -1677,7 +1673,17 @@ public:
             PS::F64 korg=c->slowdown.getkappaorg();
             if(korg<1.0) ds_use *= std::max(0.1,korg);
         }
+
         PS::S64 stepcount = c->Symplectic_integration_tsyn(ds_use, *ARC_control_, time_end, par, &pert_[ipert], &pforce_[ipert], pert_n_[ic],fix_step_flag);
+
+#ifdef ARC_DEBUG_DUMP
+        if(stepcount<0) {
+            dump("ARC_dump.dat",ic,time_end,ds_use);
+            std::cerr<<"ic = "<<ic<<" N = "<<c->getN()<<" Np = "<<pert_n_[ic]<<std::endl;
+            abort();
+        }
+#endif
+        
         return stepcount;
     }
 

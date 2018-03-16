@@ -40,6 +40,17 @@ public:
         adr_org = p.adr_org;
         return *this;
     }
+    void dump(FILE *fp) {
+        fwrite(this, sizeof(*this),1,fp);
+    }
+
+    void read(FILE *fp) {
+        size_t rcount = fread(this, sizeof(*this),1,fp);
+        if (rcount<1) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            abort();
+        }
+    }
 
 };
 
