@@ -165,7 +165,7 @@ private:
             const PS::S32 *group_list = group.getGroup(0);
             const PS::S32 group_n = group.getGroupN(0);
             Aint.addOneGroup(ptcl_org, group_list, group_n, group.getGroupPertList(0,n_split_), n_split_);
-            Aint.updateCM(pcm, &iact, 1, true);
+            Aint.updateCM(pcm, &iact, 1);
 
             Aint.initialSlowDown(time_end, sdfactor_);
             Aint.initial();
@@ -307,6 +307,8 @@ private:
                 Hint.SortAndSelectIp();
             }
         
+            Hint.moveCM(time_end);
+            Hint.shiftBackCM();
             Aint.updateCM(Hint.getPtcl());
             Aint.resolve();
             Hint.writeBackPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getPtclN());

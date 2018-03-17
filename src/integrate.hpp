@@ -226,6 +226,8 @@ private:
     PS::ReallocatableArray<PS::S32> Jlist_disp_;
     PS::ReallocatableArray<PS::S32> Jlist_n_;
 
+    ParticleBase pcm_; // c.m. of the cluster
+
     PS::F64 a0_offset_sq_; /// time step parameter
     PS::S32 n_act_;        /// active particle number
 
@@ -267,6 +269,56 @@ private:
         }
         else{
             return eta * sqrt( (sqrt(s0*s2) + s1) / (sqrt(s1*s3) + s2) );
+        }
+    }
+
+
+    //! Center-of-mass frame shift for particles
+    /*! Shift positions and velocities of particles in #p from their original frame to their center-of-mass frame\n
+      Notice the center-of-mass position and velocity use values from #cm
+    */
+    void calcCMAndShift(ParticleBase &pcm, PtclH4* ptcl, const PS::S32 n) {
+        pcm.mass = 0.0;
+        pcm.pos = pcm.vel = 0.0;
+        for (int i=0; i<n; i++) {
+            PS::F64 mi=ptcl[i].mass;
+            pcm.mass += mi;
+            pcm.pos += mi*ptcl[i].pos;
+            pcm.vel += mi*ptcl[i].vel;
+        }
+        PS::F64 invm = 1.0/pcm.mass;
+        pcm.pos *= invm;
+        pcm.vel *= invm;
+        
+        for (int i=0;i<n;i++) {
+//            std::cerr<<std::setprecision(14)<<"cm sbore i "<<i<<" pos "<<ptcl[i].pos<<" vel "<<ptcl[i].vel<<std::endl;
+            ptcl[i].pos -= pcm.pos;
+            ptcl[i].vel -= pcm.vel;
+//#ifdef HARD_DEBUG
+//            std::cerr<<"cm shift i "<<i<<" pos "<<ptcl[i].pos<<" vel "<<ptcl[i].vel<<std::endl;
+//#endif
+        }
+    }
+
+    void shiftBackCM(const ParticleBase &pcm, PtclH4* ptcl, const PS::S32 n) {
+#ifdef HARD_DEBUG
+        PS::F64 m=0;
+        for (int i=0;i<n;i++) m+= ptcl[i].mass;
+        assert(m==pcm.mass);
+        //PS::F64vec pos=0,vel=0;
+        //for (int i=0;i<n;i++) {
+        //    pos += ptcl[i].mass*ptcl[i].pos;
+        //    vel += ptcl[i].mass*ptcl[i].vel;
+        //}
+        //pos /=m;
+        //vel /=m;
+        //std::cerr<<std::setprecision(14)<<"cm pos "<<pos<<" vel "<<vel<<std::endl;
+#endif
+        for (int i=0;i<n;i++) {
+            //std::cerr<<"cm bbck i "<<i<<" pos "<<ptcl[i].pos<<" vel "<<ptcl[i].vel<<std::endl;
+            ptcl[i].pos += pcm.pos;
+            ptcl[i].vel += pcm.vel;
+            //std::cerr<<"cm back i "<<i<<" pos "<<ptcl[i].pos<<" vel "<<ptcl[i].vel<<std::endl;
         }
     }
 
@@ -660,6 +712,15 @@ public:
 //#endif
 //        resizeArray(n);
 //    }
+    
+    void moveCM(const PS::F64 dt) {
+        pcm_.pos += pcm_.vel * dt;
+        //std::cerr<<"pcm.pos "<<pcm_.pos<<" pcm.vel "<<pcm_.vel<<" dt "<<dt<<std::endl;
+    }
+    
+    void shiftBackCM() {
+        shiftBackCM(pcm_,ptcl_.getPointer(),ptcl_.size());
+    }
 
     void resizeArray(const PS::S32 n) {
         ptcl_.reserve(n);
@@ -813,7 +874,13 @@ public:
         a0_offset_sq_ = 0.1 * mass_min / (r_out_ * r_out_);
         n_act_ = n_ptcl;
 
-        if(Aint!=NULL) Aint->resolve();
+        //shift c.m.
+        calcCMAndShift(pcm_, ptcl_.getPointer(), n_ptcl);
+
+        if(Aint!=NULL) {
+            Aint->updateCM(ptcl_.getPointer());
+            Aint->resolve();
+        }
 
         if(calc_full_flag) CalcAcc0Acc1Act(force_.getPointer(), ptcl_.getPointer(), ptcl_.size(), adr_sorted_.getPointer(), n_act_, r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, Aint);
         else CalcAcc0Acc1Act(force_.getPointer(), ptcl_.getPointer(), adr_sorted_.getPointer(), n_act_, Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, Aint);
@@ -1793,16 +1860,12 @@ public:
     template <class Tp>
     void updateCM(Tp ptcl[],
                   PS::S32 act_list[],
-                  PS::S32 n_act,
-                  const bool updatemass_flag=false) {
+                  PS::S32 n_act) {
         for(int i=0; i<n_act; i++) {
             PS::S32 iact = act_list[i];
             clist_[iact].pos = ptcl[iact].pos;
             clist_[iact].vel = ptcl[iact].vel;
-            if(updatemass_flag) clist_[iact].mass = ptcl[iact].mass;
-#ifdef HARD_DEBUG
-            else assert(clist_[iact].mass==ptcl[iact].mass);
-#endif
+            clist_[iact].mass = ptcl[iact].mass;
         }
     }
 
