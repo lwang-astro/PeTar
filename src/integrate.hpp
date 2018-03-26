@@ -1735,7 +1735,7 @@ public:
 
         const PS::S32 ipert = pert_disp_[ic];
         bool fix_step_flag = false;
-        if(c->getN()==2&&bininfo[ic].ecc>0.999) {
+        if(c->getN()==2&&bininfo[ic].ecc>0.99) {
             fix_step_flag = true;
             PS::F64 korg=c->slowdown.getkappaorg();
             if(korg<1.0) ds_use *= std::max(0.1,korg);

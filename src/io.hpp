@@ -512,8 +512,9 @@ public:
         eng_now.dump(fout,width);
     }
 
-    void dump(std::ostream & fout) {
-        fout<<"Time= "<<time
+    void dump(std::ostream & fout, const PS::S32 precision=7) {
+        fout<<"Time= "<<std::setprecision(15)<<time
+            <<std::setprecision(precision)
             <<" N= "<<N
             <<" Enow-Einit= "<<eng_diff.tot
             <<" (Enow-Einit)/Einit= "<<eng_diff.tot/eng_init.tot

@@ -327,13 +327,8 @@ inline void CalcAcc0Acc1R2Cutoff(const PS::F64vec posi,
         const PS::F64 R2 = R*R;
         const PS::F64 R3 = R2*R;
         const PS::F64 A = (rijvij)*R2;
-#ifdef FORDEBUG
-        PS::F64 K = 1.0; // for debug
-        PS::F64 Kdot = 1.0; // for debug
-#else
         const PS::F64 K = cutoff_poly_3rd(r_eps, rcut_oi_inv, rcut_A, rcut_in);
         const PS::F64 Kdot = cutoff_poly_3rd_dot(r_eps, rijvij, rcut_oi_inv, rcut_A, rcut_in);
-#endif
         const PS::F64 MR3 = massj*R3;
         const PS::F64vec F0 = -MR3*rij*K;
         const PS::F64vec F1 = -MR3*vij*K - 3.0*A*F0 - MR3*rij*Kdot;

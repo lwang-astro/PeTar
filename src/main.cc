@@ -79,8 +79,8 @@ void write_p(FILE* fout, const PS::F64 time, const PS::F64 dt_soft, const Tsys& 
 #endif
 
 int main(int argc, char *argv[]){
-    std::cout<<std::setprecision(5);
-    std::cerr<<std::setprecision(5);
+    std::cout<<std::setprecision(15);
+    std::cerr<<std::setprecision(15);
     PS::Initialize(argc, argv);
 
     PS::S32 my_rank = PS::Comm::getRank();
@@ -147,52 +147,52 @@ int main(int argc, char *argv[]){
             switch(option_index){
             case 0:
                 n_split.value = atoi(optarg);
-                if(my_rank == 0) n_split.print(std::cerr);
+                if(my_rank == 0) n_split.print(std::cout);
                 assert(n_split.value>=8);
                 break;
             case 1:
                 search_factor.value = atof(optarg);
-                if(my_rank == 0) search_factor.print(std::cerr);
+                if(my_rank == 0) search_factor.print(std::cout);
                 assert(search_factor.value>0.0);
                 break;
             case 2:
                 dt_limit_hard_factor.value = atof(optarg);
-                if(my_rank == 0) dt_limit_hard_factor.print(std::cerr);
+                if(my_rank == 0) dt_limit_hard_factor.print(std::cout);
                 assert(dt_limit_hard_factor.value > 0.0);
                 break;
             case 3:
                 dt_min_hermite_index.value = atoi(optarg);
-                if(my_rank == 0) dt_min_hermite_index.print(std::cerr);
+                if(my_rank == 0) dt_min_hermite_index.print(std::cout);
                 assert(dt_min_hermite_index.value > 0);
                 break;
             case 4:
                 dt_min_arc_index.value = atoi(optarg);
-                if(my_rank == 0) dt_min_arc_index.print(std::cerr);
+                if(my_rank == 0) dt_min_arc_index.print(std::cout);
                 assert(dt_min_arc_index.value > 0);
                 break;
             case 5:
                 dt_err_pert.value = atof(optarg);
-                if(my_rank == 0) dt_err_pert.print(std::cerr);
+                if(my_rank == 0) dt_err_pert.print(std::cout);
                 assert(dt_err_pert.value > 0.0);
                 break;
             case 6:
                 dt_err_soft.value = atof(optarg);
-                if(my_rank == 0) dt_err_soft.print(std::cerr);
+                if(my_rank == 0) dt_err_soft.print(std::cout);
                 assert(dt_err_soft.value > 0.0);
                 break;
             case 7:
                 e_err_arc.value = atof(optarg);
-                if(my_rank == 0) e_err_arc.print(std::cerr);
+                if(my_rank == 0) e_err_arc.print(std::cout);
                 assert(e_err_arc.value > 0.0);
                 break;
             case 8:
                 eps.value = atof(optarg);
-                if(my_rank == 0) eps.print(std::cerr);
+                if(my_rank == 0) eps.print(std::cout);
                 assert(eps.value>=0.0);
                 break;
             case 9:
                 sd_factor.value = atof(optarg);
-                if(my_rank == 0) sd_factor.print(std::cerr);
+                if(my_rank == 0) sd_factor.print(std::cout);
                 assert(sd_factor.value>0.0);
                 break;
             default:
@@ -202,7 +202,7 @@ int main(int argc, char *argv[]){
             break;
         case 'i':
             data_format.value = atoi(optarg);
-            if(my_rank == 0) data_format.print(std::cerr);
+            if(my_rank == 0) data_format.print(std::cout);
             assert(data_format.value>=0||data_format.value<=3);
             break;
         case 'a':
@@ -210,81 +210,81 @@ int main(int argc, char *argv[]){
             break;
         case 'b':
             r_bin.value = atof(optarg);
-            if(my_rank == 0) r_bin.print(std::cerr);
+            if(my_rank == 0) r_bin.print(std::cout);
             assert(r_bin.value>0.0);
             break;
         case 'B':
             n_bin.value = atoi(optarg);
-            if(my_rank == 0) n_bin.print(std::cerr);
+            if(my_rank == 0) n_bin.print(std::cout);
             assert(n_bin.value>=0);
             break;
         case 'T':
             theta.value = atof(optarg);
-            if(my_rank == 0) theta.print(std::cerr);
+            if(my_rank == 0) theta.print(std::cout);
             assert(theta.value>=0.0);
             break;
         case 't':
             time_end.value = atof(optarg);
-            if(my_rank == 0) time_end.print(std::cerr);
+            if(my_rank == 0) time_end.print(std::cout);
             assert(time_end.value>=0.0);
             break;
         case 'E':
             eta.value = atof(optarg);
-            if(my_rank == 0) eta.print(std::cerr);
+            if(my_rank == 0) eta.print(std::cout);
             assert(eta.value>0.0);
             break;
         case 'n':
             n_group_limit.value = atoi(optarg);
-            if(my_rank == 0) n_group_limit.print(std::cerr);
+            if(my_rank == 0) n_group_limit.print(std::cout);
             assert(n_group_limit.value>0);
             break;
         case 'N':
             reading_flag=false;
             n_glb.value = atol(optarg);
-            if(my_rank == 0) n_glb.print(std::cerr);
+            if(my_rank == 0) n_glb.print(std::cout);
             assert(n_glb.value>0);
             break;
         case 's':
             n_smp_ave.value = atoi(optarg);
-            if(my_rank == 0) n_smp_ave.print(std::cerr);
+            if(my_rank == 0) n_smp_ave.print(std::cout);
             assert(n_smp_ave.value>0.0);
             break;
         case 'D':
             dt_soft.value = atof(optarg);
-            if(my_rank == 0) dt_soft.print(std::cerr);
+            if(my_rank == 0) dt_soft.print(std::cout);
             assert(dt_soft.value>0.0);
             break;
         case 'o':
             dt_snp.value = atof(optarg);
-            if(my_rank == 0) dt_snp.print(std::cerr);
+            if(my_rank == 0) dt_snp.print(std::cout);
             assert(dt_snp.value>0.0);
             break;
         case 'l':
             n_leaf_limit.value = atoi(optarg);
-            if(my_rank == 0) n_leaf_limit.print(std::cerr);
+            if(my_rank == 0) n_leaf_limit.print(std::cout);
             assert(n_leaf_limit.value>0);
             break;
         case 'r':
             ratio_r_cut.value = atof(optarg);
-            if(my_rank == 0) ratio_r_cut.print(std::cerr);
+            if(my_rank == 0) ratio_r_cut.print(std::cout);
             assert(ratio_r_cut.value>0.0);
             assert(ratio_r_cut.value<1.0);
             break;
         case 'R':
             r_out.value = atof(optarg);
-            if(my_rank == 0) r_out.print(std::cerr);
+            if(my_rank == 0) r_out.print(std::cout);
             assert(r_out.value>0.0);
             break;
         case 'f':
             fname_snp.value = optarg;
-            if(my_rank == 0) fname_snp.print(std::cerr);
+            if(my_rank == 0) fname_snp.print(std::cout);
             break;
         case 'h':
             if(my_rank == 0){
-                std::cerr<<"Usage: nbody.out [option] [filename]"<<std::endl;
-                std::cerr<<"       Option defaulted values are shown after ':'\n"<<std::endl;
-                std::cerr<<"  -i: [I] "<<data_format<<std::endl;
-                std::cerr<<"          File content:\n"
+                std::cout<<"Usage: nbody.out [option] [filename]"<<std::endl;
+                std::cout<<"       Option defaulted values are shown after ':'\n"<<std::endl;
+                std::cout<<"  -i: [I] "<<data_format<<std::endl;
+                std::cout<<"          File content:\n"
                          <<"            First line: \n"
                          <<"             1. File_ID: 0 for initialization, else for restarting\n"
                          <<"             2. N_particle \n"
@@ -304,33 +304,33 @@ int main(int argc, char *argv[]){
                          <<"             15. Potential (0.0)\n"
                          <<"             16. N_neighbor (0)\n"
                          <<"             (*) show initialization values which should be used together with FILE_ID = 0"<<std::endl;
-                std::cerr<<"  -a:     data output style (except snapshot) becomes appending, defaulted: replace"<<std::endl;
-                std::cerr<<"  -t: [F] "<<time_end<<std::endl;
-                std::cerr<<"  -D: [F] "<<dt_soft<<std::endl;
-                std::cerr<<"  -o: [F] "<<dt_snp<<std::endl;
-                std::cerr<<"        --dt-max-factor:   [F] "<<dt_limit_hard_factor<<std::endl;
-                std::cerr<<"        --dt-min-hermite:  [I] "<<dt_min_hermite_index<<std::endl;
-                std::cerr<<"        --dt-min-arc:      [I] "<<dt_min_arc_index<<std::endl;
-                std::cerr<<"        --dt-err-pert:     [F] "<<dt_err_pert<<std::endl;
-                std::cerr<<"        --dt-err-soft:     [F] "<<dt_err_soft<<std::endl;
-                std::cerr<<"  -r: [F] "<<ratio_r_cut<<std::endl;
-                std::cerr<<"  -R: [F] "<<r_out<<std::endl;
-                std::cerr<<"  -b: [F] "<<r_bin<<std::endl;
-                std::cerr<<"  -B: [I] "<<n_bin<<std::endl;
-                std::cerr<<"  -N: [I] "<<n_glb<<std::endl;
-                std::cerr<<"  -n: [I] "<<n_group_limit<<std::endl;
-                std::cerr<<"  -l: [I] "<<n_leaf_limit<<std::endl;
-                std::cerr<<"  -s: [I] "<<n_smp_ave<<std::endl;
-                std::cerr<<"        --n-split:         [I] "<<n_split<<std::endl;
-                std::cerr<<"  -T: [F] "<<theta<<std::endl;
-                std::cerr<<"  -E: [F] "<<eta<<std::endl;
-                std::cerr<<"        --search-factor:   [F] "<<search_factor<<std::endl;
-                std::cerr<<"        --energy-err-arc:  [F] "<<e_err_arc<<std::endl;
-                std::cerr<<"        --slowdown-factor: [F] "<<sd_factor<<std::endl;
-                std::cerr<<"        --soft-eps:        [F] "<<eps<<std::endl;
-                std::cerr<<"  -f: [S] "<<fname_snp<<std::endl;
-                std::cerr<<"  -h(--help):               print help"<<std::endl;
-                std::cerr<<"*** PS: r_in : transit function inner boundary radius\n"
+                std::cout<<"  -a:     data output style (except snapshot) becomes appending, defaulted: replace"<<std::endl;
+                std::cout<<"  -t: [F] "<<time_end<<std::endl;
+                std::cout<<"  -D: [F] "<<dt_soft<<std::endl;
+                std::cout<<"  -o: [F] "<<dt_snp<<std::endl;
+                std::cout<<"        --dt-max-factor:   [F] "<<dt_limit_hard_factor<<std::endl;
+                std::cout<<"        --dt-min-hermite:  [I] "<<dt_min_hermite_index<<std::endl;
+                std::cout<<"        --dt-min-arc:      [I] "<<dt_min_arc_index<<std::endl;
+                std::cout<<"        --dt-err-pert:     [F] "<<dt_err_pert<<std::endl;
+                std::cout<<"        --dt-err-soft:     [F] "<<dt_err_soft<<std::endl;
+                std::cout<<"  -r: [F] "<<ratio_r_cut<<std::endl;
+                std::cout<<"  -R: [F] "<<r_out<<std::endl;
+                std::cout<<"  -b: [F] "<<r_bin<<std::endl;
+                std::cout<<"  -B: [I] "<<n_bin<<std::endl;
+                std::cout<<"  -N: [I] "<<n_glb<<std::endl;
+                std::cout<<"  -n: [I] "<<n_group_limit<<std::endl;
+                std::cout<<"  -l: [I] "<<n_leaf_limit<<std::endl;
+                std::cout<<"  -s: [I] "<<n_smp_ave<<std::endl;
+                std::cout<<"        --n-split:         [I] "<<n_split<<std::endl;
+                std::cout<<"  -T: [F] "<<theta<<std::endl;
+                std::cout<<"  -E: [F] "<<eta<<std::endl;
+                std::cout<<"        --search-factor:   [F] "<<search_factor<<std::endl;
+                std::cout<<"        --energy-err-arc:  [F] "<<e_err_arc<<std::endl;
+                std::cout<<"        --slowdown-factor: [F] "<<sd_factor<<std::endl;
+                std::cout<<"        --soft-eps:        [F] "<<eps<<std::endl;
+                std::cout<<"  -f: [S] "<<fname_snp<<std::endl;
+                std::cout<<"  -h(--help):               print help"<<std::endl;
+                std::cout<<"*** PS: r_in : transit function inner boundary radius\n"
                          <<"        r_out: transit function outer boundary radius\n"
                          <<"        sigma: half-mass radius velocity dispersion\n"
                          <<"        n_bin: number of primordial binaries\n"
@@ -361,7 +361,7 @@ int main(int argc, char *argv[]){
       n_loc = system_soft.getNumberOfParticleLocal();
       //      for(PS::S32 i=0; i<n_loc; i++) system_soft[i].id = i;
       if(my_rank==0)
-          std::cerr<<"Reading file "<<sinput<<std::endl
+          std::cout<<"Reading file "<<sinput<<std::endl
                    <<"N_tot = "<<n_glb.value<<"\nN_loc = "<<n_loc<<std::endl;
     }
     else {
@@ -433,8 +433,8 @@ int main(int argc, char *argv[]){
     }
     
     if(my_rank == 0) {
-        std::cerr<<"Parameter list:\n";
-        std::cerr<<" m_average    = "<<m_average      <<std::endl
+        std::cout<<"Parameter list:\n";
+        std::cout<<" m_average    = "<<m_average      <<std::endl
                  <<" r_in         = "<<r_in           <<std::endl
                  <<" r_out        = "<<r_out.value    <<std::endl
                  <<" r_bin        = "<<r_bin.value    <<std::endl
@@ -604,7 +604,7 @@ int main(int argc, char *argv[]){
     stat.eng_now = stat.eng_init;
 
     if(my_rank==0) {
-        stat.eng_init.dump(std::cerr);
+        stat.eng_init.dump(std::cout);
         stat.dump(fstatus,PRINT_WIDTH);
         fstatus<<std::endl;
     }
@@ -901,26 +901,27 @@ int main(int argc, char *argv[]){
             //const int NProc=PS::Comm::getNumberOfProc();
 
             if(my_rank==0) {
-                std::cerr<<"Tree step number: "<<dn_loop<<std::endl;
+                std::cout<<std::setprecision(5);
+                std::cout<<"Tree step number: "<<dn_loop<<std::endl;
 
-                std::cerr<<"Wtime per step:\n";
-                std::cerr<<std::setw(PRINT_WIDTH)<<"Rank";
-                profile.dumpName(std::cerr,PRINT_WIDTH);
-                std::cerr<<std::endl;
+                std::cout<<"Wtime per step:\n";
+                std::cout<<std::setw(PRINT_WIDTH)<<"Rank";
+                profile.dumpName(std::cout,PRINT_WIDTH);
+                std::cout<<std::endl;
 
-                std::cerr<<std::setw(PRINT_WIDTH)<<my_rank;
-                profile.dump(std::cerr,PRINT_WIDTH,dn_loop);
-                std::cerr<<std::endl;
+                std::cout<<std::setw(PRINT_WIDTH)<<my_rank;
+                profile.dump(std::cout,PRINT_WIDTH,dn_loop);
+                std::cout<<std::endl;
 
-                std::cerr<<"Number per step:\n";
-                std::cerr<<std::setw(PRINT_WIDTH)<<"Rank";
-                n_count_sum.dumpName(std::cerr,PRINT_WIDTH);
-                std::cerr<<std::endl;
-                std::cerr<<std::setw(PRINT_WIDTH)<<my_rank;
-                n_count_sum.dump(std::cerr,PRINT_WIDTH,dn_loop);
-                std::cerr<<std::endl;
+                std::cout<<"Number per step:\n";
+                std::cout<<std::setw(PRINT_WIDTH)<<"Rank";
+                n_count_sum.dumpName(std::cout,PRINT_WIDTH);
+                std::cout<<std::endl;
+                std::cout<<std::setw(PRINT_WIDTH)<<my_rank;
+                n_count_sum.dump(std::cout,PRINT_WIDTH,dn_loop);
+                std::cout<<std::endl;
                 
-                n_count.printHist(std::cerr,PRINT_WIDTH,dn_loop);
+                n_count.printHist(std::cout,PRINT_WIDTH,dn_loop);
             }
                     
 //#ifdef ARC_ERROR

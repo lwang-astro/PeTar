@@ -183,11 +183,13 @@ int main(int argc, char **argv){
   PtclForce* ftr[np+1];
   PtclH4 pert[np+1];
   PtclForce force[np+1];
+  std::cout<<"--------Perturber number: "<<np<<std::endl;
   for (int i=0; i<np; i++) {
       pert[i].read(fp);
       force[i].read(fp);
       ptr[i]=&pert[i];
       ftr[i]=&force[i];
+      std::cout<<"Pert["<<i<<"]: pos:"<<pert[i].pos<<" vel:"<<pert[i].vel<<" acc0:"<<force[i].acc0<<" acc2:"<<force[i].acc1<<std::endl;
   }
  
 //  chain_control.setA(Newtonian_cut_AW<PtclHard,ARC_pert_pars>,Newtonian_extA<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
@@ -269,7 +271,7 @@ int main(int argc, char **argv){
   }
   else {
       bool fix_step_flag=false;
-      if(c.getN()==2&&bin.ecc>0.999) {
+      if(c.getN()==2&&bin.ecc>0.99) {
           fix_step_flag=true;
 //          PS::F64 korg=c.slowdown.getkappaorg();
 //          if(korg<1.0) ds *= std::max(0.1,korg);
