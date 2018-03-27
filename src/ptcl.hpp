@@ -55,6 +55,14 @@ public:
             <<" status="<<status;
     }
 
+    void print(std::ostream & fout){
+        ParticleBase::print(fout);
+        fout<<" r_search="<<r_search
+            <<" mass_bk="<<mass_bk
+            <<" id="<<id
+            <<" status="<<status;
+    }
+
     void writeAscii(FILE* fp) const{
         ParticleBase::writeAscii(fp);
         fprintf(fp, "%26.17e %26.17e %lld %lld ", 

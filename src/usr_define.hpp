@@ -65,6 +65,13 @@ public:
             <<" vel="<<vel;
     }
 
+    //! for print debugging
+    void print(std::ostream & fout){
+        fout<<" mass="<<mass
+            <<" pos="<<pos
+            <<" vel="<<vel;
+    }
+
     //! Copy from another ParticleBase 
     /*! This is used for data transfer between nodes and between soft and hard parts
       @param[in] din: data need to be copied

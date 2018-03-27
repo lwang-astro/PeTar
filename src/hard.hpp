@@ -51,10 +51,37 @@ public:
             abort();
         }
     }
-
+    void print(std::ostream & fout){
+        Ptcl::print(fout);
+        std::cerr<<" id_cluster="<<id_cluster
+                 <<" adr_org="<<adr_org;
+    }
 };
 
-#ifdef HARD_DEBUG_ENERGY
+
+void PtclHardDump(FILE *fp, PtclHard * ptcl, const PS::S32 n) {
+    fwrite(&n, sizeof(PS::S32), 1, fp);
+    for(int i=0; i<n; i++) {
+        ptcl[i].dump(fp);
+    }
+}
+
+void PtclHardRead(FILE *fp, PS::ReallocatableArray<PtclHard> & ptcl) {
+    PS::S32 n;
+    size_t rcount = fread(&n, sizeof(PS::S32),1,fp);
+    if (rcount<1) {
+        std::cerr<<"Error: Data reading fails! requiring data number i 15, only obtain "<<rcount<<".\n";
+        abort();
+    }
+    PtclHard ptmp;
+    for(int i=0; i<n; i++) {
+        ptmp.read(fp);
+        ptcl.push_back(ptmp);
+    }
+}
+
+
+#ifdef HARD_CHECK_ENERGY
 class HardEnergy {
 public:
     PS::F64 kin, pot, tot;
@@ -64,7 +91,7 @@ public:
 class SystemHard{
 public:
     PS::ReallocatableArray<PtclHard> ptcl_hard_;
-#ifdef HARD_DEBUG_ENERGY
+#ifdef HARD_CHECK_ENERGY
     std::map<PS::S32, PS::S32> N_count;  // counting number of particles in one cluster
     HardEnergy E0, E1;
     HardEnergy AE0, AE1;
@@ -77,23 +104,21 @@ public:
 #endif
 
 private:
-    ARC::chainpars ARC_control_pert_; ///chain controller for perturbed(L.Wang)
-    ARC::chainpars ARC_control_soft_; ///chain controller for no perturber(L.Wang)
-    ARC_int_pars Int_pars_; /// ARC integration parameters, rout_, rin_ (L.Wang)
+    // Notice: if new variables added, change pardump also
     PS::F64 dt_limit_hard_;
     PS::F64 dt_min_hard_;
     PS::F64 eta_s_;
-    //PS::ReallocatableArray<PtclHard> ptcl_hard_;
-    PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_;
-    PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_disp_;
     PS::F64 time_origin_;
-    // PS::F64 gamma_;
-    // PS::F64 r_search_single_;
     PS::F64 r_bin_;
-    // PS::F64 m_average_;
+    PS::F64 sdfactor_;
     PS::S64 id_offset_;
     PS::S32 n_split_;
-    PS::F64 sdfactor_;
+    
+    PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_;
+    PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_disp_;
+    ARC::chainpars ARC_control_pert_; ///chain controller for perturbed(L.Wang)
+    ARC::chainpars ARC_control_soft_; ///chain controller for no perturber(L.Wang)
+    ARC_int_pars Int_pars_; /// ARC integration parameters, rout_, rin_ (L.Wang)
 
     ///////////
     /// functor
@@ -119,6 +144,7 @@ private:
         }
     };
 
+    
     void driveForMultiClusterImpl(PtclHard * ptcl_org,
                                   const PS::S32 n_ptcl,
                                   const PS::F64 time_end,
@@ -127,7 +153,11 @@ private:
 #ifdef HARD_DEBUG_PROFILE
         N_count[n_ptcl]++;
 #endif
-
+#ifdef HARD_DEBUG_DUMP
+        PS::ReallocatableArray<PtclHard> ptcl_bk;
+        ptcl_bk.reserve(n_ptcl);
+        for(int i=0; i<n_ptcl; i++) ptcl_bk.pushBackNoCheck(ptcl_org[i]);
+#endif
         PS::S32 nstepcount = 0;
 
 //#ifdef HERMITE
@@ -177,7 +207,7 @@ private:
             Aint.adjustSlowDown(time_end);
 #endif
 
-#ifdef HARD_DEBUG_ENERGY
+#ifdef HARD_CHECK_ENERGY
             Aint.EnergyRecord(AE0);
 #endif 
 
@@ -196,7 +226,7 @@ private:
 
             Aint.updateCM(pcm, &iact, 1);
             Aint.resolve();
-#ifdef HARD_DEBUG_ENERGY
+#ifdef HARD_CHECK_ENERGY
             Aint.EnergyRecord(AE1);
 #ifdef HARD_DEBUG_PRINT
             fprintf(stderr,"Slowdown factor = %e\n", Aint.getSlowDown(0));
@@ -268,14 +298,14 @@ private:
             Aint.initialSlowDown(dt_limit, sdfactor_);
             Aint.initial();
 
+#ifdef HARD_CHECK_ENERGY
+            CalcEnergyHardFull(ptcl_org, E0, AE0, HE0, ESD0, Hint, Aint, group);
+#endif
 
             Hint.initialize(dt_limit, dt_min_hard_, group_act_list.getPointer(), group_act_n, n_groups, &Aint);
 
 
-#ifdef HARD_DEBUG_ENERGY
-            CalcEnergyHardFull(E0, AE0, HE0, ESD0, Hint, Aint, group);
-#endif
-#ifdef HARD_DEBUG
+#ifdef HARD_CHECK_ENERGY
             PS::ReallocatableArray<PS::F64> slowdownrecord;
             slowdownrecord.resizeNoInitialize(n_groups);
 #endif
@@ -294,7 +324,7 @@ private:
 #endif
                 PS::F64 dt_h = time_sys-time_now;
                 //Aint.updateSlowDown(time_sys);
-#ifdef HARD_DEBUG
+#ifdef HARD_CHECK_ENERGY
                 for(int k=0; k<n_groups; k++) {
                     slowdownrecord[k] = std::max(slowdownrecord[k], Aint.getSlowDown(k));
                     assert(Aint.getSlowDown(k)>=1.0);
@@ -313,24 +343,38 @@ private:
             Aint.resolve();
             Hint.writeBackPtcl(ptcl_org,n_ptcl,group.getPtclList(),group.getPtclN());
 
-#ifdef HARD_DEBUG_ENERGY
-            CalcEnergyHardFull(E1, AE1, HE1, ESD1, Hint, Aint, group);
-        
+#ifdef ARC_DEBUG_PRINT
+            Aint.info_print(std::cerr, ARC_n_groups, n_groups, group.getPtclN(), n_ptcl, dt_limit_hard_,0);
+#endif
+#ifdef HARD_CHECK_ENERGY
+            CalcEnergyHardFull(ptcl_org, E1, AE1, HE1, ESD1, Hint, Aint, group);
 #ifdef HARD_DEBUG_PRINT
             fprintf(stderr,"Slowdown factor = ");
             for(int k=0; k<n_groups; k++) 
                 fprintf(stderr,"%e; ",slowdownrecord[k]);
             fprintf(stderr,"\n");
-            fprintf(stderr,"H4  Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e\nARC Energy: init =%e, end =%e, diff =%e, error = %e\nTot Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e, Tot-H4-ARC =%e\nTSD Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e\n", 
-                    HE0.tot, HE1.tot, HE1.tot-HE0.tot, HE1.kin, HE1.pot, 
+            fprintf(stderr,"H4  Energy: init =%e, end =%e, diff =%e, kini =%e kinf =%e poti =%e potf =%e\nARC Energy: init =%e, end =%e, diff =%e, error = %e\nTot Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e, Tot-H4-ARC =%e\nTSD Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e\n", 
+                    HE0.tot, HE1.tot, HE1.tot-HE0.tot, HE0.kin, HE1.kin, HE0.pot, HE1.pot, 
                     AE0.kin+AE0.pot, AE1.kin+AE1.pot, AE1.kin+AE1.pot-AE0.kin-AE0.pot, (AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot)/AE0.tot,
                     E0.tot, E1.tot, E1.tot-E0.tot, E1.kin, E1.pot, E1.tot-HE1.tot-AE1.kin-AE1.pot,
                     ESD0.tot, ESD1.tot, ESD1.tot-ESD0.tot, ESD1.kin, ESD1.pot);
             Hint.printStepHist();
 #endif
+#ifdef HARD_DEBUG_DUMP
+            PS::F64 dEtot = E1.tot-E0.tot;
+            if(fabs(dEtot)>1e-4) {
+                std::cerr<<"Hard energy significant: "<<dEtot<<std::endl;
+                std::cerr<<"Dump data:"<<std::endl;
+                std::FILE* fp = std::fopen("hard_dump","w");
+                fwrite(&time_end, sizeof(PS::F64),1,fp);
+                PS::S32 firststep=first_int_flag;
+                fwrite(&firststep, sizeof(PS::S32),1,fp);
+                PtclHardDump(fp, ptcl_bk.getPointer(), n_ptcl);
+                pardump(fp);
+                fclose(fp);
+                abort();
+            }
 #endif
-#ifdef ARC_DEBUG_PRINT
-            Aint.info_print(std::cerr, ARC_n_groups, n_groups, group.getPtclN(), n_ptcl, dt_limit_hard_,0);
 #endif
 #ifdef PROFILE
             //ARC_substep_sum += Aint.getNsubstep();
@@ -536,16 +580,16 @@ public:
         }
     }
 
-#ifdef HARD_DEBUG_ENERGY
+#ifdef HARD_CHECK_ENERGY
     template<class Teng>
-    void CalcEnergyHard(Teng & eng,  const PS::S32* ptcl_list, const PS::S32 ptcl_n, const PS::S32* group_list, const PS::S32 group_n, const PS::S32 nbin){
+    void CalcEnergyHard(PtclHard* ptcl, Teng & eng,  const PS::S32* ptcl_list, const PS::S32 ptcl_n, const PS::S32* group_list, const PS::S32 group_n, const PS::S32 nbin){
         eng.kin = eng.pot = eng.tot = 0.0;
         for(PS::S32 i=nbin; i<ptcl_n; i++){
-            PtclHard* pi = &ptcl_hard_[ptcl_list[i]];
+            PtclHard* pi = &ptcl[ptcl_list[i]];
             eng.kin += 0.5 * pi->mass * pi->vel * pi->vel;
 
             for(PS::S32 j=i+1; j<ptcl_n; j++){
-                PtclHard* pj = &ptcl_hard_[ptcl_list[j]];
+                PtclHard* pj = &ptcl[ptcl_list[j]];
                 PS::F64vec rij = pi->pos - pj->pos;
                 PS::F64 dr = sqrt(rij*rij + Int_pars_.eps2);
 #ifdef INTEGRATED_CUTOFF_FUNCTION
@@ -556,7 +600,7 @@ public:
             }
 
             for(PS::S32 j=0; j<group_n; j++){
-                PtclHard* pj = &ptcl_hard_[group_list[j]];
+                PtclHard* pj = &ptcl[group_list[j]];
                 PS::F64vec rij = pi->pos - pj->pos;
                 PS::F64 dr = sqrt(rij*rij + Int_pars_.eps2);
 #ifdef INTEGRATED_CUTOFF_FUNCTION
@@ -568,11 +612,11 @@ public:
         }
 
         for(PS::S32 i=0; i<group_n; i++){
-            PtclHard* pi = &ptcl_hard_[group_list[i]];
+            PtclHard* pi = &ptcl[group_list[i]];
             eng.kin += 0.5 * pi->mass * pi->vel * pi->vel;
 
             for(PS::S32 j=i+1; j<group_n; j++){
-                PtclHard* pj = &ptcl_hard_[group_list[j]];
+                PtclHard* pj = &ptcl[group_list[j]];
                 PS::F64vec rij = pi->pos - pj->pos;
                 PS::F64 dr = sqrt(rij*rij + Int_pars_.eps2);
 #ifdef INTEGRATED_CUTOFF_FUNCTION
@@ -586,12 +630,12 @@ public:
     }
 
     template<class Teng, class TH4, class TARC, class Tgroup>
-    void CalcEnergyHardFull(Teng& E, Teng& AE, Teng& HE, Teng& ESD, TH4 &Hint, TARC& Aint, const Tgroup& group){
+    void CalcEnergyHardFull(PtclHard* ptcl, Teng& E, Teng& AE, Teng& HE, Teng& ESD, TH4 &Hint, TARC& Aint, const Tgroup& group){
         Hint.CalcEnergy(HE);
         Teng TMP;
         Aint.EnergyRecord(TMP,true);
         Aint.EnergyRecord(AE);
-        CalcEnergyHard(E, group.getPtclList(), group.getPtclN(), group.getGroup(0), group.getGroupListSize(), group.getNumOfGroups());
+        CalcEnergyHard(ptcl, E, group.getPtclList(), group.getPtclN(), group.getGroup(0), group.getGroupListSize(), group.getNumOfGroups());
         ESD.tot = (E.tot - AE.kin-AE.pot) + (TMP.kin+TMP.pot);
         ESD.kin = (E.kin - AE.kin) + TMP.kin;
         ESD.pot = (E.pot - AE.pot) + TMP.pot;
@@ -826,15 +870,23 @@ public:
 #endif
         }
         if (n_cluster>0) {
+            PS::S32 rank = PS::Comm::getRank();
             for(PS::S32 i=0; i<num_thread; i++) {
 #ifdef OMP_PROFILE        
                 std::cerr<<"thread: "<<i<<"  Hard Time="<<time_thread[i]<<"  n_ptcl="<<num_cluster[i]<<std::endl;
 #endif
                 for (PS::S32 j=0; j<extra_ptcl[i].size(); j++) {
                     PS::S32 adr = sys.getNumberOfParticleLocal();
-                    PS::S32 rank = PS::Comm::getRank();
                     sys.addOneParticle(Tsptcl(extra_ptcl[i][j],rank,adr));
 #ifdef HARD_DEBUG
+//                    if(sys[adr].id==10477) {
+//                        std::cerr<<"Add particle adr="<<adr;
+//                        sys[adr].print(std::cerr);
+//                        std::cerr<<std::endl;
+//                        std::cerr<<" original: ";
+//                        extra_ptcl[i][j].print(std::cerr);
+//                        std::cerr<<std::endl;
+//                    }
                     if(extra_ptcl[i][j].id<0&&extra_ptcl[i][j].status<0) {
                         std::cerr<<"Error: extra particle list contain ghost particle! i_thread="<<i<<" index="<<j<<" rank="<<rank<<" adr="<<adr<<std::endl;
                         abort();
@@ -872,5 +924,69 @@ public:
         }        
     }
 
+#ifdef HARD_DEBUG_DUMP
+    //! parameter dump function
+    /* list: (S32)
+       dt_limit_hard_: 1-2
+       dt_min_hard_:   3-4
+       eta_s_:         5-6
+       time_origin_:   7-8
+       r_bin_:         9-10
+       sdfactor_:      11-12
+       id_offset_:     13-14
+       n_split_:       15
+       
+     */
+    void pardump(FILE *_p_file){
+        fwrite(&dt_limit_hard_, sizeof(PS::F32), 15, _p_file);
+        Int_pars_.dump(_p_file);
+        ARC_control_pert_.dump(_p_file);
+        ARC_control_soft_.dump(_p_file);
+    }
+#endif
+#ifdef HARD_DEBUG
+    void parread(FILE *fp){
+        size_t rcount = fread(&dt_limit_hard_, sizeof(PS::F32),15,fp);
+        if (rcount<15) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 15, only obtain "<<rcount<<".\n";
+            abort();
+        }
+        Int_pars_.read(fp);
+        ARC_control_pert_.read(fp);
+        ARC_control_soft_.read(fp);
+#ifdef HARD_DEBUG_DEEP_CHECK
+        ARC_control_pert_.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_test<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+        ARC_control_soft_.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_test<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+#else
+        ARC_control_pert_.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_pert<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+        ARC_control_soft_.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_soft<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+#endif
+#ifdef HARD_DEBUG_PRINT
+        std::cerr<<"Parameters:"
+                 <<"\nrout: "<<Int_pars_.rout
+                 <<"\nrin: "<<Int_pars_.rin
+                 <<"\neps2: "<<Int_pars_.eps2
+                 <<"\npot_off: "<<Int_pars_.pot_off
+                 <<"\ndt_limit_hard: "<<dt_limit_hard_
+                 <<"\ndt_min_hard: "<<dt_min_hard_
+                 <<"\neta_s: "<<eta_s_
+                 <<"\nr_bin: "<<r_bin_
+                 <<"\nsdfactor: "<<sdfactor_
+                 <<"\nid_offset: "<<id_offset_
+                 <<"\nn_split: "<<n_split_
+                 <<std::endl;
+#endif
+    }
+
+    void driveForMultiClusterOneDebug(PtclHard* _ptcl, const PS::S32 _n_ptcl,const PS::F64 _time_end, const PS::S32 _first_step_flag) {
+        PS::ReallocatableArray<PtclHard> ptcl_new;
+        driveForMultiClusterImpl(_ptcl, _n_ptcl, _time_end, ptcl_new, _first_step_flag);
+    }
+
+    void set_slowdown_factor(const PS::F64 _slowdown_factor) {
+        sdfactor_ = _slowdown_factor;
+    }
+    
+#endif
 
 };

@@ -112,11 +112,18 @@ public:
 
     void dump(std::ofstream & fout){
         Ptcl::dump(fout);
-        fout<<"adr= "<<adr<<std::endl;
-        fout<<"acc= "<<acc<<std::endl;
-        fout<<"pot_tot= "<<pot_tot<<std::endl;
+        fout<<" adr= "<<adr;
+        fout<<" acc= "<<acc;
+        fout<<" pot_tot= "<<pot_tot;
     }
 
+    void print(std::ostream & fout){
+        Ptcl::print(fout);
+        fout<<" adr= "<<adr;
+        fout<<" acc= "<<acc;
+        fout<<" pot_tot= "<<pot_tot;
+    }
+    
 };
 
 class EPISoft{

@@ -378,6 +378,10 @@ public:
                         std::cerr<<"Error: ghost particle exist! i="<<i<<std::endl;
                         abort();
                     }
+//                    if(sys[i].id==10477) {
+//                        sys[i].print(std::cerr);
+//                        std::cerr<<std::endl;
+//                    }
                     assert(i<n_loc);
 #endif
                     //PS::S32 n_tmp2 = 0;
@@ -1235,7 +1239,14 @@ private:
         return nloc;
     }
 
-    // generate kepler sampling artificial particles, also store the binary parameters in mass_bk of first 4 pairs
+    //! generate kepler sampling artificial particles
+    /* also store the binary parameters in mass_bk of first 4 pairs
+       acc, ecc
+       peri, tstep (integrator step estimation ),
+       inc, OMG,
+       omg, ecca
+       
+     */
     template<class Tptree>
     void keplerOrbitGenerator(Tptcl* ptcl_org,
                               PS::ReallocatableArray<Tptcl> & ptcl_extra,
@@ -1276,6 +1287,8 @@ private:
         PS::F64 mnormal=0.0;
 #endif
 
+        // Make sure the ptcl_extra will not make new array due to none enough capacity during the following loop, otherwise the p[j] pointer will point to wrong position
+        ptcl_extra.reserveEmptyAreaAtLeast(2*n_split-empty_list.size());
         // First 4 is used for tidal tensor points
         // remaining is used for sample points
         for (int i=0; i<n_split; i++) {
@@ -1308,10 +1321,11 @@ private:
 #else 
                 PS::S32 iph = i;
 #endif
-            // center_of_mass_shift(*(Tptcl*)&bin,p,2);
+                // center_of_mass_shift(*(Tptcl*)&bin,p,2);
+                // generate particles at different orbitial phase
                 OrbParam2PosVel(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass,
                                 bin.ax, bin.ecc, bin.inc, bin.OMG, bin.omg, dE*iph);
-            //DriveKeplerOrbParam(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass, (i+1)*dt, bin.ax, bin.ecc, bin.inc, bin.OMG, bin.omg, bin.peri, bin.ecca);
+                //DriveKeplerOrbParam(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass, (i+1)*dt, bin.ax, bin.ecc, bin.inc, bin.OMG, bin.omg, bin.peri, bin.ecca);
 #ifdef TIDAL_TENSOR
             }
             else {
@@ -1374,7 +1388,20 @@ private:
                 for(int j=0; j<2; j++) p[j]->mass = 0;
 #endif
                 center_of_mass_correction(*(Tptcl*)&bin,p,2);
-             
+#ifdef HARD_DEBUG
+                //check rsearch consistence:
+                PS::F64 rsearch_bin = bin.r_search+bin.ax*(1+bin.ecc);
+                for(int j=0; j<2; j++) {
+                    PS::F64vec dp = p[j]->pos-bin.pos;
+                    PS::F64 dr = dp*dp;
+                    assert(dr<=rsearch_bin*rsearch_bin);
+//                    if(p[j]->id==10477) {
+//                        std::cerr<<"i="<<i<<" dr="<<sqrt(dr)<<std::endl;
+//                        p[j]->print(std::cerr);
+//                        std::cerr<<std::endl;
+//                    }
+                }
+#endif
 #ifdef TIDAL_TENSOR
             }
 #endif
@@ -1414,6 +1441,7 @@ private:
         pcm->r_search += bin.ax*(1+bin.ecc);  // depend on the mass ratio, the upper limit distance to c.m. from all members and artifical particles is apo-center distance
 #endif
         pcm->status = nbin;
+
     }
 
     template<class Tptree>
