@@ -413,6 +413,7 @@ int main(int argc, char *argv[]){
     EPISoft::r_out = EPJSoft::r_out = FPSoft::r_out = r_out.value;
     Ptcl::search_factor = search_factor.value;
     Ptcl::r_search_min = r_search_min;
+    Ptcl::mean_mass_inv = 1.0/m_average;
 //    const PS::F64 r_oi_inv = 1.0/(r_out - r_in);
 //    EPJSoft::r_search_min = r_out*search_factor;
 //    EPJSoft::m_average = m_average;
@@ -427,6 +428,7 @@ int main(int argc, char *argv[]){
             }
 
             // for binary, research depend on v_disp
+            //if(id<=2*n_bin.value) system_soft[i].r_search = std::max(r_search_min*std::sqrt(system_soft[i].mass*Ptcl::mean_mass_inv),v_disp*dt_soft.value*search_factor.value);
             if(id<=2*n_bin.value) system_soft[i].r_search = std::max(r_search_min,v_disp*dt_soft.value*search_factor.value);
             else system_soft[i].calcRSearch(dt_soft.value);
         }

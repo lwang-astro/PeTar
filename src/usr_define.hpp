@@ -58,13 +58,6 @@ public:
         }
     }
 
-    //! for dump debugging
-    void dump(std::ofstream & fout){
-        fout<<" mass="<<mass
-            <<" pos="<<pos
-            <<" vel="<<vel;
-    }
-
     //! for print debugging
     void print(std::ostream & fout){
         fout<<" mass="<<mass

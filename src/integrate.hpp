@@ -324,7 +324,7 @@ private:
 
 
     template <class Tp>
-    void CalcBlockDt2ndAct(Tp ptcl[],
+    bool CalcBlockDt2ndAct(Tp ptcl[],
                            const PtclForce force[],
                            const PS::S32 adr_array[],
                            const PS::S32 n_act, 
@@ -332,6 +332,7 @@ private:
                            const PS::F64 dt_max,
                            const PS::F64 dt_min,
                            const PS::F64 a0_offset_sq){
+        bool fail_flag=false;
         for(PS::S32 i=0; i<n_act; i++){
             const PS::S32 adr = adr_array[i];
             const PS::F64vec a0 = force[adr].acc0;
@@ -348,9 +349,10 @@ private:
             if(dt<dt_min) {
                 std::cerr<<"Error: Hermite integrator initial step size ("<<dt<<") < dt_min ("<<dt_min<<")!"<<std::endl;
                 std::cerr<<"i="<<i<<" adr="<<adr<<" acc="<<a0<<" acc1="<<a1<<" eta="<<eta<<" a0_offset_sq="<<a0_offset_sq<<std::endl;
-                abort();
+                fail_flag=true;
             }
         }
+        return fail_flag;
     }
 
     template <class Tp, class ARCint>
@@ -841,7 +843,7 @@ public:
     }
 
     template <class ARCint>
-    void initialize(PS::F64 dt_max,
+    bool initialize(PS::F64 dt_max,
                     PS::F64 dt_min,
                     PS::S32 group_act_list[],
                     PS::S32 &group_act_n,
@@ -893,13 +895,15 @@ public:
 
         if(Aint!=NULL) Aint->shift();
 
-        CalcBlockDt2ndAct(ptcl_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, 0.01*eta_s_, dt_max, dt_min, a0_offset_sq_);
+        bool fail_flag=CalcBlockDt2ndAct(ptcl_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, 0.01*eta_s_, dt_max, dt_min, a0_offset_sq_);
 
         for(PS::S32 i=0; i<n_ptcl; i++){
             time_next_[i] = ptcl_[i].time + ptcl_[i].dt;
         }
         //SortAndSelectIp(adr_sorted_.getPointer(), time_next_.getPointer(), n_act_, time_next_.size(), group_act_list, group_act_n, n_groups);
         SortAndSelectIp(adr_sorted_.getPointer(), time_next_.getPointer(), n_act_, time_next_.size());
+
+        return fail_flag;
     }
     
     template<class Energy>
@@ -1603,7 +1607,7 @@ public:
 
     void initialSlowDown(const PS::F64 tend, const PS::F64 sdfactor = 1.0e-8) {
         for (int i=0; i<clist_.size(); i++) {
-            if (bininfo[i].ax>0) {
+            if (bininfo[i].ax>0&&bininfo[i].stable_factor>0) {
                 PS::F64 finner = bininfo[i].ax*(1.0+bininfo[i].ecc);
                 finner = clist_[i].mass/(finner*finner);
                 finner = finner*finner;
@@ -1743,6 +1747,14 @@ public:
 
         PS::S64 stepcount = c->Symplectic_integration_tsyn(ds_use, *ARC_control_, time_end, par, &pert_[ipert], &pforce_[ipert], pert_n_[ic],fix_step_flag);
 
+#ifdef ARC_WARN
+        if(c->info!=NULL) {
+            c->info->ErrMessage(std::cerr);
+            dump("ARC_dump.dat",ic,time_end,ds_use);
+            abort();
+        }
+#endif
+        
 #ifdef ARC_DEBUG_DUMP
         if(stepcount<0) {
             dump("ARC_dump.dat",ic,time_end,ds_use);

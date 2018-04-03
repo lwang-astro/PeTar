@@ -49,9 +49,31 @@ int main(int argc, char **argv){
   
   PS::ReallocatableArray<PtclHard> ptcl;
   PtclHardRead(fp,ptcl);
-  Ptcl::r_search_min = ptcl[0].r_search;
 
-  std::cout<<"n: "<<ptcl.size();
+  std::cout<<"n: "<<ptcl.size()<<std::endl;
+  std::cerr<<std::setprecision(20);
+  PS::F64 r_search_max=0.0;
+  PS::S32 i_r_search_max=-1;
+  std::cerr<<"C.M.:\n";
+  for(int i=0; i<ptcl.size(); i++) {
+      if(ptcl[i].id<0) {
+          //ptcl[i].print(std::cerr);
+          std::cerr<<ptcl[i].mass_bk<<" "<<ptcl[i].pos<<" "<<ptcl[i].vel<<std::endl;
+      }
+  }
+  std::cerr<<"single:\n";
+  for(int i=0; i<ptcl.size(); i++) {
+      if(ptcl[i].status==0) {
+          std::cerr<<ptcl[i].mass<<" "<<ptcl[i].pos<<" "<<ptcl[i].vel<<std::endl;
+      }
+      if(r_search_max<ptcl[i].r_search) {
+          r_search_max =ptcl[i].r_search;
+          i_r_search_max = i;
+      }
+  }
+  std::cout<<"R_search_max = "<<r_search_max;
+  ptcl[i_r_search_max].print(std::cout);
+  std::cout<<std::endl;
 
   SystemHard sys;
   sys.parread(fp);

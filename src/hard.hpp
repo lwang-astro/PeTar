@@ -64,13 +64,18 @@ void PtclHardDump(FILE *fp, PtclHard * ptcl, const PS::S32 n) {
     for(int i=0; i<n; i++) {
         ptcl[i].dump(fp);
     }
+    PS::F64 ptcl_st_dat[3];
+    ptcl_st_dat[0] = Ptcl::search_factor;
+    ptcl_st_dat[1] = Ptcl::r_search_min;
+    ptcl_st_dat[2] = Ptcl::mean_mass_inv;
+    fwrite(ptcl_st_dat, sizeof(PS::F64),3,fp);
 }
 
 void PtclHardRead(FILE *fp, PS::ReallocatableArray<PtclHard> & ptcl) {
     PS::S32 n;
     size_t rcount = fread(&n, sizeof(PS::S32),1,fp);
     if (rcount<1) {
-        std::cerr<<"Error: Data reading fails! requiring data number i 15, only obtain "<<rcount<<".\n";
+        std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
         abort();
     }
     PtclHard ptmp;
@@ -78,6 +83,15 @@ void PtclHardRead(FILE *fp, PS::ReallocatableArray<PtclHard> & ptcl) {
         ptmp.read(fp);
         ptcl.push_back(ptmp);
     }
+    PS::F64 ptcl_st_dat[3];
+    rcount = fread(ptcl_st_dat, sizeof(PS::F64),3,fp);
+    if (rcount<3) {
+        std::cerr<<"Error: Data reading fails! requiring data number is 3, only obtain "<<rcount<<".\n";
+        abort();
+    }
+    Ptcl::search_factor = ptcl_st_dat[0];
+    Ptcl::r_search_min  = ptcl_st_dat[1];
+    Ptcl::mean_mass_inv = ptcl_st_dat[2];
 }
 
 
@@ -91,13 +105,6 @@ public:
 class SystemHard{
 public:
     PS::ReallocatableArray<PtclHard> ptcl_hard_;
-#ifdef HARD_CHECK_ENERGY
-    std::map<PS::S32, PS::S32> N_count;  // counting number of particles in one cluster
-    HardEnergy E0, E1;
-    HardEnergy AE0, AE1;
-    HardEnergy HE0, HE1;
-    HardEnergy ESD0, ESD1;
-#endif
 #ifdef PROFILE
     PS::S64 ARC_substep_sum;
     PS::F64 ARC_n_groups;
@@ -150,6 +157,13 @@ private:
                                   const PS::F64 time_end,
                                   PS::ReallocatableArray<PtclHard> & ptcl_new,
                                   const bool first_int_flag=false) {
+#ifdef HARD_CHECK_ENERGY
+        std::map<PS::S32, PS::S32> N_count;  // counting number of particles in one cluster
+        HardEnergy E0, E1;
+        HardEnergy AE0, AE1;
+        HardEnergy HE0, HE1;
+        HardEnergy ESD0, ESD1;
+#endif
 #ifdef HARD_DEBUG_PROFILE
         N_count[n_ptcl]++;
 #endif
@@ -192,6 +206,9 @@ private:
             Aint.reserveARMem(1);
             // Aint.reservePertMem(1);
             group.getBinPars(Aint.bininfo[0],ptcl_org,0,n_split_);
+#ifdef HARD_DEBUG_PRINT            
+            if(Aint.bininfo[0].ax>Int_pars_.rout)  Aint.bininfo[0].print(std::cerr,13);
+#endif
             const PS::S32 *group_list = group.getGroup(0);
             const PS::S32 group_n = group.getGroupN(0);
             Aint.addOneGroup(ptcl_org, group_list, group_n, group.getGroupPertList(0,n_split_), n_split_);
@@ -302,8 +319,14 @@ private:
             CalcEnergyHardFull(ptcl_org, E0, AE0, HE0, ESD0, Hint, Aint, group);
 #endif
 
-            Hint.initialize(dt_limit, dt_min_hard_, group_act_list.getPointer(), group_act_n, n_groups, &Aint);
+            bool fail_flag=Hint.initialize(dt_limit, dt_min_hard_, group_act_list.getPointer(), group_act_n, n_groups, &Aint);
 
+            if(fail_flag) {
+#ifdef HARD_DEBUG_DUMP
+                dump("hard_dump",time_end, (PS::S32)first_int_flag, ptcl_bk.getPointer(), n_ptcl);
+#endif
+                abort();
+            }
 
 #ifdef HARD_CHECK_ENERGY
             PS::ReallocatableArray<PS::F64> slowdownrecord;
@@ -365,13 +388,7 @@ private:
             if(fabs(dEtot)>1e-4) {
                 std::cerr<<"Hard energy significant: "<<dEtot<<std::endl;
                 std::cerr<<"Dump data:"<<std::endl;
-                std::FILE* fp = std::fopen("hard_dump","w");
-                fwrite(&time_end, sizeof(PS::F64),1,fp);
-                PS::S32 firststep=first_int_flag;
-                fwrite(&firststep, sizeof(PS::S32),1,fp);
-                PtclHardDump(fp, ptcl_bk.getPointer(), n_ptcl);
-                pardump(fp);
-                fclose(fp);
+                dump("hard_dump",time_end, (PS::S32)first_int_flag, ptcl_bk.getPointer(), n_ptcl);
                 abort();
             }
 #endif
@@ -389,7 +406,7 @@ private:
 
         if (group.getPtclN()==2) group.searchAndMerge(ptcl_org, Int_pars_.rout);
         else group.searchAndMerge(ptcl_org, Int_pars_.rin);
-        //group.searchAndMerge(ptcl_org, r_bin_);
+        //group.searchAndMerge(ptcl_org, Int_pars_.rout);
         // Kickcorrect(ptcl_org, group.getRoutChangeList());
         group.generateList(ptcl_org, ptcl_new, r_bin_,Int_pars_.rin, Int_pars_.rout, time_end, id_offset_, n_split_);
 
@@ -943,6 +960,19 @@ public:
         ARC_control_pert_.dump(_p_file);
         ARC_control_soft_.dump(_p_file);
     }
+    
+    void dump(const char* fname, const PS::F64 time_end, const PS::S32 first_int_flag, PtclHard* ptcl_bk, const PS::S32 n_ptcl) {
+        std::FILE* fp = std::fopen(fname,"w");
+        if (fp==NULL) {
+            std::cerr<<"Error: filename ARC_dump.dat cannot be open!\n";
+            abort();
+        }
+        fwrite(&time_end, sizeof(PS::F64),1,fp);
+        fwrite(&first_int_flag, sizeof(PS::S32),1,fp);
+        PtclHardDump(fp, ptcl_bk, n_ptcl);
+        pardump(fp);
+        fclose(fp);
+    }
 #endif
 #ifdef HARD_DEBUG
     void parread(FILE *fp){
@@ -986,7 +1016,7 @@ public:
     void set_slowdown_factor(const PS::F64 _slowdown_factor) {
         sdfactor_ = _slowdown_factor;
     }
-    
+
 #endif
 
 };

@@ -23,7 +23,9 @@ public:
     // m1: mass 1
     // m2: mass 2
     // tstep: integration step estimation
-    PS::F64 ax, ecc, inc, OMG, omg, tperi, peri, ecca, m1, m2, tstep;
+    // stable_factor: indicate whether the system is stable
+    // fpert: perturbation from neighbors
+    PS::F64 ax, ecc, inc, OMG, omg, tperi, peri, ecca, m1, m2, tstep, stable_factor, fpert;
 
     void dump(FILE *fp) {
         fwrite(this, sizeof(*this),1,fp);
@@ -38,17 +40,18 @@ public:
     }
 
     void print(std::ostream& os, const PS::F64 width) {
-        os<<"ax: semi-major axis       : "<<ax<<std::endl
-          <<"ecc: eccentricity         : "<<ecc<<std::endl
-          <<"inc: inclination          : "<<inc<<std::endl
-          <<"OMG: rotational angle 1   : "<<OMG<<std::endl
-          <<"omg: rotational angle 2   : "<<omg<<std::endl
-          <<"tperi: time to peri-center: "<<tperi<<std::endl
-          <<"peri: period              : "<<peri<<std::endl
-          <<"ecca: eccentricty anomaly : "<<ecca<<std::endl
-          <<"m1: mass 1                : "<<m1<<std::endl
-          <<"m2: mass 2                : "<<m2<<std::endl
-          <<"tstep: step estimation    : "<<tstep<<std::endl;
+        os<<"ax: semi-major axis               : "<<ax<<std::endl
+          <<"ecc: eccentricity                 : "<<ecc<<std::endl
+          <<"inc: inclination                  : "<<inc<<std::endl
+          <<"OMG: rotational angle 1           : "<<OMG<<std::endl
+          <<"omg: rotational angle 2           : "<<omg<<std::endl
+          <<"tperi: time to peri-center        : "<<tperi<<std::endl
+          <<"peri: period                      : "<<peri<<std::endl
+          <<"ecca: eccentricty anomaly         : "<<ecca<<std::endl
+          <<"m1: mass 1                        : "<<m1<<std::endl
+          <<"m2: mass 2                        : "<<m2<<std::endl
+          <<"tstep: step estimation            : "<<tstep<<std::endl
+          <<"stable_factor: step estimation    : "<<stable_factor<<std::endl;
     }
 };
 
@@ -503,8 +506,13 @@ void keplerTreeGenerator(PtclTree<Tptcl> bins[],   // make sure bins.size = n_me
         bins[i].member[1] = p[1];
         bins[i].m1 = p[0]->mass;
         bins[i].m2 = p[1]->mass;
+        PS::F64 dr = 1.0-bins[i].ecc*cos(bins[i].ecca);
+        PS::F64 apo= 1.0+bins[i].ecc;
+        bins[i].fpert = fabs(p[0]->mass_bk - p[1]->mass_bk)/dr*apo;
+        bins[i].mass_bk = p[0]->mass_bk + p[1]->mass_bk;
         bins[i].id = p[0]->id;
-        bins[i].tstep = 0.0; 
+        bins[i].tstep = -1.0;
+        bins[i].stable_factor = 0.0;
         bins[i].status = bins[i].id;
         //bins[i].r_search = std::max(p[0]->r_search,p[1]->r_search);
         bins[i].calcRSearch(dt_tree);
@@ -515,114 +523,204 @@ void keplerTreeGenerator(PtclTree<Tptcl> bins[],   // make sure bins.size = n_me
 #endif
 }
 
-// return integration step estimation if good
+//! return integration step estimation if good
+/* bin.tstep is //pi/4*sqrt(ax/(m1+m2))*m1*m2;
+   bin.stable_factor = 1
+   if ax<0, bin.tstep = -1.0, bin.stable_factor = 0
+   return 0: unstable; 1: closed orbit; 2: closed orbit but strong perturbation
+ */
 template<class Tptcl>
-PS::F64 stab2check(const PtclTree<Tptcl> &bin, const PS::F64 rbin, const PS::F64 rmax) {
+PS::S32 stab2check(PtclTree<Tptcl> &bin, const PS::F64 rbin, const PS::F64 rmax) {
 #ifdef STABLE_CHECK_DEBUG
-    std::cerr<<"STAB2 ax="<<bin.ax<<" ecc="<<bin.ecc<<" m1="<<bin.m1<<" m2="<<bin.m2<<" peri="<<bin.peri<<" res="
-             <<(bin.ax<0 ? 0.0 : (rbin<bin.ax*(1.0+bin.ecc) ? -(bin.ax*(1.0+bin.ecc)) : bin.peri*std::sqrt((bin.m1>bin.m2)?bin.m2/bin.m1:bin.m1/bin.m2)*pow(1.0-bin.ecc,0.41666666)))
+    std::cerr<<"STAB2 ax="<<bin.ax<<" ecc="<<bin.ecc<<" m1="<<bin.m1<<" m2="<<bin.m2<<" period="<<bin.peri
+             <<" apo="<<bin.ax*(1.0+bin.ecc)<<" peri="<<bin.ax*(1.0-bin.ecc)
              <<std::endl;
 #endif
-    if(bin.ax<0) return 0.0;
+    if(bin.ax<0) {
+        bin.tstep = -1.0;
+        bin.stable_factor = 0;
+#ifdef STABLE_CHECK_DEBUG
+        std::cerr<<"res=0 bin.ax<0"<<std::endl;
+#endif        
+        return 0;
+    }
     PS::F64 apo = bin.ax*(1.0+bin.ecc);
     if(apo>rbin) {
         PS::F64 pec=bin.ax*(1.0-bin.ecc);
-        if(pec>0.01*rbin||apo>rmax) return -apo;
+        if(pec>0.01*rbin||apo>rmax) {
+            bin.tstep = 0.78539816339*std::sqrt(bin.ax/(bin.m1+bin.m2))*bin.m1*bin.m2;
+            bin.stable_factor = 1;
+            return 0;
+#ifdef STABLE_CHECK_DEBUG
+            std::cerr<<"res=0 apo>rbin<0"<<std::endl;
+#endif        
+        }
     }
+    
     //PS::F64 mrate = (bin.m1>bin.m2)?bin.m2/bin.m1:bin.m1/bin.m2;
     //return bin.peri*std::sqrt(mrate)*pow(1.0-bin.ecc,0.41666666);
     //  return std::max(std::sqrt(std::abs(1.0-bin.ecc)),0.01)*peri;
-    return 0.78539816339*std::sqrt(bin.ax/(bin.m1+bin.m2))*bin.m1*bin.m2;  //pi/4*sqrt(ax/(m1+m2))*m1*m2
+    bin.tstep=0.78539816339*std::sqrt(bin.ax/(bin.m1+bin.m2))*bin.m1*bin.m2;  //pi/4*sqrt(ax/(m1+m2))*m1*m2
+    bin.stable_factor=1.0;
+
+    //avoid too strong perturbation
+    if(bin.fpert>0.01*std::max(bin.m1,bin.m2)/(apo*apo)) return 2;
+    
+#ifdef STABLE_CHECK_DEBUG
+    std::cerr<<"res=1"<<std::endl;
+#endif
+        
+    return 1;
 }
 
 template<class Tptcl>
-PS::F64 stab3check(const PtclTree<Tptcl> &bout, const PtclTree<Tptcl> &bin, const PS::F64 rbin, const PS::F64 rin, const PS::F64 rout) {
-    PS::F64 s2=stab2check(bin, rbin, rin);
-    if (s2<=0.0) return s2;
-    PS::F64 s1=stab2check(bout, rin, rout);
-    if (s1<=0.0) return s1;
-    return std::min(s1,s2);
+bool stab3check(PtclTree<Tptcl> &bout, PtclTree<Tptcl> &bin, const PS::F64 rbin, const PS::F64 rin, const PS::F64 rout) {
+#ifdef STABLE_CHECK_DEBUG
+    std::cerr<<"STAB3 bout ax="<<bout.ax<<" ecc="<<bout.ecc<<" m1="<<bout.m1<<" m2="<<bout.m2<<" period="<<bout.peri
+             <<" apo="<<bout.ax*(1.0+bout.ecc)<<" peri="<<bout.ax*(1.0-bout.ecc)
+             <<std::endl;
+#endif
+    if(bout.ax<0) {
+        bout.tstep=-1.0;
+        bout.stable_factor=0;
+#ifdef STABLE_CHECK_DEBUG
+        std::cerr<<"False: bout.ax<0: "<<bout.ax<<std::endl;
+#endif
+        return false;
+    }
+    PS::F64 apo_bout=bout.ax*(1.0+bout.ecc);
+    PS::F64 peri_bout=bout.ax*(1.0-bout.ecc);
+    PS::F64 apo_bin=bin.ax*(1.0+bin.ecc);
+    bout.tstep = bin.tstep;
+    if(peri_bout>apo_bin) {
+        PS::F64 dr_p_a = peri_bout*peri_bout-apo_bin*apo_bin;
+        PS::F64 r_pert = 4.0*peri_bout*apo_bin/(dr_p_a*dr_p_a);
+        PS::F64 pert_ratio = bout.mass/bin.mass*r_pert*apo_bin*apo_bin;
+        if(pert_ratio>0.01) {
+            bout.stable_factor=0;
+#ifdef STABLE_CHECK_DEBUG
+            std::cerr<<"True: pert_ratio>0.01: "<<pert_ratio<<std::endl;
+#endif
+            return true;
+        }
+        else bout.stable_factor=1;
+    }
+    else {
+        bout.stable_factor=0;
+#ifdef STABLE_CHECK_DEBUG
+            std::cerr<<"True: peri_bout<apo_bin: "<<peri_bout;
+#endif
+        return true;
+    }
+    if(apo_bout>rin&&(peri_bout>0.01*rbin||apo_bout>rout)) {
+        bout.stable_factor = 1;
+#ifdef STABLE_CHECK_DEBUG
+        std::cerr<<"False: apo_bout>rin&&(peri_bout>0.01*rbin||apo_bout>rout): apo_bout="<<apo_bout<<" peri_bout=<<"<<std::endl;
+#endif
+        return false;
+    }
+#ifdef STABLE_CHECK_DEBUG
+    std::cerr<<"True"<<std::endl;
+#endif
+    return true;
 }
 
 template<class Tptcl>
-PS::F64 stab4check(const PtclTree<Tptcl> &bout, const PtclTree<Tptcl> &bin1, const PtclTree<Tptcl> &bin2, const PS::F64 rbin, const PS::F64 rin, const PS::F64 rout) {
-    PS::F64 s2=stab2check(bin1,rbin, rin);
-    if (s2<=0.0) return s2;
-    PS::F64 s3=stab2check(bin2,rbin, rin);
-    if (s3<=0.0) return s3;
-    PS::F64 s1=stab2check(bout,rin, rout);
-    if (s1<=0.0) return s1;
-    return std::min(s2,s3);
+bool stab4check(PtclTree<Tptcl> &bout, PtclTree<Tptcl> &bin1, PtclTree<Tptcl> &bin2, const PS::F64 rbin, const PS::F64 rin, const PS::F64 rout) {
+#ifdef STABLE_CHECK_DEBUG
+    std::cerr<<"STAB4 bout ax="<<bout.ax<<" ecc="<<bout.ecc<<" m1="<<bout.m1<<" m2="<<bout.m2<<" period="<<bout.peri
+             <<" apo="<<bout.ax*(1.0+bout.ecc)<<" peri="<<bout.ax*(1.0-bout.ecc)
+             <<std::endl;
+#endif
+    if(bout.ax<0) {
+        bout.tstep=-1.0;
+        bout.stable_factor=0;
+        return false;
+    }
+    //PS::F64 apo_bout=bout.ax*(1.0+bout.ecc);
+    //if(apo_bout>rout) return -apo_bout;
+    PS::F64 apo_bout=bout.ax*(1.0+bout.ecc);
+    PS::F64 peri_bout=bout.ax*(1.0-bout.ecc);
+    PS::F64 apo_bin1=bin1.ax*(1.0+bin1.ecc);
+    PS::F64 apo_bin2=bin2.ax*(1.0+bin2.ecc);
+    // the seperation is large for perturbation estimation
+    bout.tstep=std::min(bin1.tstep,bin2.tstep);
+    if(peri_bout>apo_bin1+apo_bin2) {
+        /* Assume all particles are along one line
+           peri_bout -> p3
+           apo_bin1/2 -> a1/2
+           Then strongest perurbation distance is p3-(a1+a2)
+           Weakest p3+(a1+a2)
+           The perturbation is estimated as
+           M[1/2] * 4 p3*(a1+a2)/(p3^2-(a1+a2)^2)
+           The inner force
+           M1/a1^2 | M2/a2^2
+         */
+        PS::F64 apo12 = apo_bin1 + apo_bin2;
+        PS::F64 dr_p_a = peri_bout*peri_bout-apo12*apo12;
+        PS::F64 r_pert = 4.0*peri_bout*apo12/(dr_p_a*dr_p_a);
+        PS::F64 pert_ratio = std::max(bin1.mass/bin2.mass*r_pert*apo_bin2*apo_bin2,
+                                      bin2.mass/bin1.mass*r_pert*apo_bin1*apo_bin1);
+        if(pert_ratio>0.01) {
+            bout.stable_factor=0;
+            return true;
+        }
+        else bout.stable_factor=1;
+    }
+    else{
+        // Unstable
+        bout.stable_factor=0;
+        return true;
+    }
+    if(apo_bout>rin&&(peri_bout>0.01*rbin||apo_bout>rout)) {
+        bout.stable_factor = 1;
+        return false;
+    }
+    return true;
 }
 
 
 template<class Tptcl>
-PS::F64 stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &nbin, 
+PS::S32 stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &nbin, 
                        PtclTree<Tptcl> &bins, const PS::F64 rbin, const PS::F64 rin, const PS::F64 rout) {
-    PS::F64 fstab=0.0;
     if(bins.member[0]->status!=0) {
         if(bins.member[1]->status!=0) {
             //PS::F64 fs0 = stab4check(bins, *(PtclTree<Tptcl>*)bins.member[0], *(PtclTree<Tptcl>*)bins.member[1], rbin, rin);
-            PS::F64 fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[0], rbin, rin, rout);
-            PS::F64 fs2 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[1], rbin, rin, rout);
-            PS::F64 fs0 = stab2check(bins, rin, rout);
-            if(fs0<=0) {
-                if(fs1>0) {
-                    nbin.push_back((PtclTree<Tptcl>*)bins.member[0]);
-                    nbin.back()->tstep = fs1;
-                }
-                if(fs2>0) {
-                    nbin.push_back((PtclTree<Tptcl>*)bins.member[1]);
-                    nbin.back()->tstep = fs2;
-                }
-                fstab = -1.0;
+            PS::S32 fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[0], rbin, rin, rout);
+            PS::S32 fs2 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[1], rbin, rin, rout);
+            if(fs1&&fs2) {
+                bool fs0 = stab4check(bins, *(PtclTree<Tptcl>*)bins.member[0], *(PtclTree<Tptcl>*)bins.member[1], rbin, rin, rout);
+                if(fs0) return 1;
             }
-            else {
-                fstab = std::min(fs1,fs2);
-                if(fstab>0) bins.tstep = fstab;
-            }
+            if(fs1==1) nbin.push_back((PtclTree<Tptcl>*)bins.member[0]);
+            if(fs2==1) nbin.push_back((PtclTree<Tptcl>*)bins.member[1]);
+            return 0;
         }
         else {
             //PS::F64 fs0 = stab3check(bins, *(PtclTree<Tptcl>*)bins.member[0], rbin, rin);
-            PS::F64 fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[0], rbin, rin, rout);
-            PS::F64 fs0 = stab2check(bins, rin, rout);
-            if(fs0<=0) {
-                if(fs1>0) {
-                    nbin.push_back((PtclTree<Tptcl>*)bins.member[0]);
-                    nbin.back()->tstep = fs1;
-                }
-                fstab = -1.0;
+            PS::S32 fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[0], rbin, rin, rout);
+            if(fs1) {
+                bool fs0 = stab3check(bins, *(PtclTree<Tptcl>*)bins.member[0], rbin, rin, rout);
+                if(fs0) return 1;
             }
-            else {
-                fstab = fs1;
-                if(fstab>0) bins.tstep = fstab;
-            }
-
+            if(fs1==1) nbin.push_back((PtclTree<Tptcl>*)bins.member[0]);
+            return 0;
         }
     }
     else {
         if(bins.member[1]->status!=0) {
             //PS::F64 fs0 = stab3check(bins, *(PtclTree<Tptcl>*)bins.member[1], rbin, rin);
-            PS::F64 fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[1], rbin, rin, rout);
-            PS::F64 fs0 = stab2check(bins, rin, rout);
-            if(fs0<=0) {
-                if(fs1>0) {
-                    nbin.push_back((PtclTree<Tptcl>*)bins.member[1]);
-                    nbin.back()->tstep = fs1;
-                }
-                fstab = -1.0;
+            PS::S32 fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[1], rbin, rin, rout);
+            if(fs1) {
+                bool fs0 = stab3check(bins, *(PtclTree<Tptcl>*)bins.member[1], rbin, rin, rout);
+                if(fs0) return 1;
             }
-            else {
-                fstab = fs1;
-                if (fstab>0) bins.tstep = fstab;
-            }
+            if(fs1==1) nbin.push_back((PtclTree<Tptcl>*)bins.member[1]);
+            return 0;
         }
         else {
-            fstab = stab2check(bins, rbin, rout);
-            if(fstab>0) bins.tstep = fstab;
+            return stab2check(bins, rbin, rout);
         }
     }
-    
-    return fstab;
 }
 

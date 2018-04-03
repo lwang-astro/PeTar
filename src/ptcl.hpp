@@ -25,6 +25,7 @@ public:
     PS::S64 status;
     static PS::F64 search_factor;
     static PS::F64 r_search_min;
+    static PS::F64 mean_mass_inv;
 
     Ptcl(): id(-10), status(-10) {}
 
@@ -45,14 +46,6 @@ public:
         mass_bk  = p.mass_bk;
         id       = p.id;
         status   = p.status;
-    }
-
-    void dump(std::ofstream & fout){
-        ParticleBase::dump(fout);
-        fout<<" r_search="<<r_search
-            <<" mass_bk="<<mass_bk
-            <<" id="<<id
-            <<" status="<<status;
     }
 
     void print(std::ostream & fout){
@@ -95,6 +88,7 @@ public:
 
     void calcRSearch(const PS::F64 dt_tree) {
         r_search = std::max(std::sqrt(vel*vel)*dt_tree*search_factor, r_search_min);
+        //r_search = std::max(std::sqrt(vel*vel)*dt_tree*search_factor, std::sqrt(mass*mean_mass_inv)*r_search_min);
 #ifdef HARD_DEBUG
         assert(r_search>0);
 #endif
@@ -104,3 +98,4 @@ public:
 
 PS::F64 Ptcl::r_search_min = 0.0;
 PS::F64 Ptcl::search_factor= 0.0;
+PS::F64 Ptcl::mean_mass_inv= 0.0; // mean mass inverse

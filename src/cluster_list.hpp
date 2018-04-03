@@ -148,8 +148,8 @@ public:
     PtclComm(const Tp &p): Ptcl(p) {}
     PtclComm() {}
 
-    void dump(std::ofstream & fout){
-        Ptcl::dump(fout);
+    void print(std::ostream & fout){
+        Ptcl::print(fout);
         fout<<" id_cluster="<<id_cluster<<std::endl;
     }
 };
@@ -1091,6 +1091,7 @@ private:
         PS::S32 offset = 0;
         for(int i=0; i<n; i++) {
             PS::S32 ip = p_list[i];
+            ptcl[ip].mass_bk = 0.0;
             part_list_n[i] = 0;
             part_list_disp[i] = offset;
             for(int j=0; j<n; j++) {
@@ -1098,10 +1099,16 @@ private:
                 if(ip==jp) continue;
                 PS::F64vec dr = ptcl[ip].pos-ptcl[jp].pos;
                 PS::F64 r2 = dr*dr;
-                if (r2<r_crit2) {
+                PS::F64 mass_factor=std::max(ptcl[ip].mass,ptcl[jp].mass)/std::min(ptcl[ip].mass,ptcl[jp].mass);
+                //PS::F64 mass_factor=std::max(ptcl[ip].mass,ptcl[jp].mass)*Ptcl::mean_mass_inv;
+                if (r2<r_crit2*mass_factor) {
                     part_list.push_back(j);
                     part_list_n[i]++;
                     offset++;
+                }
+                else {
+                    //store perturbation force
+                    ptcl[ip].mass_bk += ptcl[jp].mass/r2; 
                 }
             }
         }
@@ -1264,13 +1271,14 @@ private:
             std::cerr<<"N_SPLIT to small to save binary parameters, should be >= 8!";
             abort();
         }
-        PS::F64 bindata[4][2];
+        PS::F64 bindata[5][2];
         //Tptcl* plist[n_split][2];
         /*
           acc, ecc
           peri, tstep,
           inc, OMG,
           omg, ecca
+          tperi, stable_factor
          */
         bindata[0][0] = bin.ax;
         bindata[0][1] = bin.ecc;
@@ -1280,6 +1288,8 @@ private:
         bindata[2][1] = bin.OMG; 
         bindata[3][0] = bin.omg; 
         bindata[3][1] = bin.ecca;
+        bindata[4][0] = bin.tperi;
+        bindata[4][1] = bin.stable_factor;
 
 #ifdef SPLIT_MASS        
         PS::F64* pm[n_split][2];
@@ -1362,15 +1372,15 @@ private:
             }
 #endif
             // binary parameters
-            if(i<4) {
+            if(i<5) {
                 p[0]->mass_bk = bindata[i][0];
                 p[1]->mass_bk = bindata[i][1];
             }
-            else if(i==4) {
+            else if(i==5) {
                 p[0]->mass_bk = p[0]->mass;
                 p[1]->mass_bk = p[1]->mass;
             }
-            else if(i==5) {
+            else if(i==6) {
                 p[0]->mass_bk = 0.0; // indicate the order
                 p[1]->mass_bk = 1.0;
             }
@@ -1475,8 +1485,8 @@ private:
             stab_bins.reserve(n_groups);
             bins.resizeNoInitialize(group_list_n[i]-1);
             keplerTreeGenerator(bins.getPointer(), &group_list[group_list_disp[i]], group_list_n[i], ptcl_org, dt_tree);
-            PS::F64 fstab = stabilityCheck<Tptcl>(stab_bins,bins.back(),rbin,rin,rout);
-            if (fstab>0) {
+            PS::S32 fstab = stabilityCheck<Tptcl>(stab_bins,bins.back(),rbin,rin,rout);
+            if (fstab) {
                 keplerOrbitGenerator(ptcl_org, ptcl_extra, empty_list, bins.back(), id_offset, n_split);
             }
             else {
@@ -1815,12 +1825,12 @@ public:
     //    searchPerturber(pert_list_, ptcl_org, n_ptcl);
     //}
 
-    void searchAndMerge(Tptcl *ptcl_org, const PS::F64 rin){
+    void searchAndMerge(Tptcl *ptcl_org, const PS::F64 rcrit){
         PS::ReallocatableArray<PS::S32> part_list;      ///partner list
         PS::ReallocatableArray<PS::S32> part_list_disp;      ///partner list
         PS::ReallocatableArray<PS::S32> part_list_n;      ///partner list
         
-        searchPartner(part_list, part_list_disp, part_list_n, p_list_, ptcl_org, rin*rin);
+        searchPartner(part_list, part_list_disp, part_list_n, p_list_, ptcl_org, rcrit*rcrit);
         mergeCluster(group_list_, group_list_disp_, group_list_n_, p_list_, part_list.getPointer(), part_list_disp.getPointer(), part_list_n.getPointer());
         // #ifdef HARD_DEBUG
         // assert(Rout_change_list_.size()==0);
@@ -1921,7 +1931,7 @@ public:
     // assume the binary information stored in artificial star mass_bk
     void getBinPars(Binary &bin, const Tptcl ptcl_org[], const std::size_t igroup, const PS::S32 n_split) {
         const PS::S32 ioff = igroup*2*n_split;
-        if (ptcl_org[soft_pert_list_[ioff+10]].mass_bk==0.0) {
+        if (ptcl_org[soft_pert_list_[ioff+12]].mass_bk==0.0) {
             bin.ax   = ptcl_org[soft_pert_list_[ioff  ]].mass_bk;
             bin.ecc  = ptcl_org[soft_pert_list_[ioff+1]].mass_bk;
             bin.peri = ptcl_org[soft_pert_list_[ioff+2]].mass_bk;
@@ -1930,8 +1940,10 @@ public:
             bin.OMG  = ptcl_org[soft_pert_list_[ioff+5]].mass_bk;
             bin.omg  = ptcl_org[soft_pert_list_[ioff+6]].mass_bk;
             bin.ecca = ptcl_org[soft_pert_list_[ioff+7]].mass_bk;
-            bin.m1   = ptcl_org[soft_pert_list_[ioff+8]].mass_bk;
-            bin.m2   = ptcl_org[soft_pert_list_[ioff+9]].mass_bk;
+            bin.tperi= ptcl_org[soft_pert_list_[ioff+8]].mass_bk;
+            bin.stable_factor= ptcl_org[soft_pert_list_[ioff+9]].mass_bk;
+            bin.m1   = ptcl_org[soft_pert_list_[ioff+10]].mass_bk;
+            bin.m2   = ptcl_org[soft_pert_list_[ioff+11]].mass_bk;
         }
         else {
             bin.ax   = ptcl_org[soft_pert_list_[ioff+1]].mass_bk;
@@ -1942,8 +1954,10 @@ public:
             bin.OMG  = ptcl_org[soft_pert_list_[ioff+4]].mass_bk;
             bin.omg  = ptcl_org[soft_pert_list_[ioff+7]].mass_bk;
             bin.ecca = ptcl_org[soft_pert_list_[ioff+6]].mass_bk;
-            bin.m1   = ptcl_org[soft_pert_list_[ioff+9]].mass_bk;
-            bin.m2   = ptcl_org[soft_pert_list_[ioff+8]].mass_bk;
+            bin.tperi= ptcl_org[soft_pert_list_[ioff+9]].mass_bk;
+            bin.stable_factor= ptcl_org[soft_pert_list_[ioff+8]].mass_bk;
+            bin.m1   = ptcl_org[soft_pert_list_[ioff+11]].mass_bk;
+            bin.m2   = ptcl_org[soft_pert_list_[ioff+10]].mass_bk;
         }
     }
     
