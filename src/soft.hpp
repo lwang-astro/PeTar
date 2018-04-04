@@ -478,6 +478,11 @@ struct CalcForceEpEpWithLinearCutoffSimd{
                       const PS::S32 n_jp,
                       ForceSoft * force){
         const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
+        PS::S32 ep_j_list[n_jp], n_jp_local=0;
+        for (PS::S32 i=0; i<n_jp; i++){
+            if(ep_j[i].mass>0) ep_j_list[n_jp_local++] = i;
+        }
+        //std::cerr<<"n_jp="<<n_jp<<" reduced n_jp="<<n_jp_local<<std::endl;
 //        const PS::F64 r_crit2 = EPJSoft::r_search * EPJSoft::r_search;
     #ifdef __HPC_ACE__
         PhantomGrapeQuad pg;
@@ -495,16 +500,17 @@ struct CalcForceEpEpWithLinearCutoffSimd{
             const PS::F64vec pos_i = ep_i[i].getPos();
             pg.set_xi_one(i, pos_i.x, pos_i.y, pos_i.z, ep_i[i].r_search);
         }
-        PS::S32 loop_max = (n_jp-1) / PhantomGrapeQuad::NJMAX + 1;
+        PS::S32 loop_max = (n_jp_local-1) / PhantomGrapeQuad::NJMAX + 1;
         for(PS::S32 loop=0; loop<loop_max; loop++){
             const PS::S32 ih = PhantomGrapeQuad::NJMAX*loop;
-            const PS::S32 n_jp_tmp = ( (n_jp - ih) < PhantomGrapeQuad::NJMAX) ? (n_jp - ih) : PhantomGrapeQuad::NJMAX;
+            const PS::S32 n_jp_tmp = ( (n_jp_local - ih) < PhantomGrapeQuad::NJMAX) ? (n_jp_local - ih) : PhantomGrapeQuad::NJMAX;
             const PS::S32 it =ih + n_jp_tmp;
             PS::S32 i_tmp = 0;
             for(PS::S32 i=ih; i<it; i++, i_tmp++){
-                const PS::F64 m_j = ep_j[i].getCharge();
-                const PS::F64vec pos_j = ep_j[i].getPos();
-                pg.set_epj_one(i_tmp, pos_j.x, pos_j.y, pos_j.z, m_j, ep_j[i].r_search);
+                const PS::S32 ij = ep_j_list[i];
+                const PS::F64 m_j = ep_j[ij].getCharge();
+                const PS::F64vec pos_j = ep_j[ij].getPos();
+                pg.set_epj_one(i_tmp, pos_j.x, pos_j.y, pos_j.z, m_j, ep_j[ij].r_search);
 
             }
             pg.run_epj_for_p3t_with_linear_cutoff(n_ip, n_jp_tmp);
