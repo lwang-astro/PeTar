@@ -311,19 +311,23 @@ public:
     NumCounter cluster_connected;
     NumCounter ARC_substep_sum;
     NumCounter ARC_n_groups;
+    NumCounter ep_ep_interact;
+    NumCounter ep_sp_interact;
     //NumCounter ARC_step_group;
     const PS::S32 n_counter;
     std::map<PS::S32,PS::S32> n_cluster; ///<Histogram of number of particles in clusters
 
-    SysCounts(): hard_single     (NumCounter("Hard single   ")),
-                 hard_isolated   (NumCounter("Hard isolated ")),
-                 hard_connected  (NumCounter("Hard connected")),
+    SysCounts(): hard_single      (NumCounter("Hard single   ")),
+                 hard_isolated    (NumCounter("Hard isolated ")),
+                 hard_connected   (NumCounter("Hard connected")),
                  cluster_isolated (NumCounter("Cluster isolated ")),
                  cluster_connected(NumCounter("Cluster connected")),
                  ARC_substep_sum  (NumCounter("ARC sub-steps sum")),
                  ARC_n_groups     (NumCounter("ARC group number")),
+                 ep_ep_interact   (NumCounter("Ep-Ep interaction")),
+                 ep_sp_interact   (NumCounter("Ep-Sp interaction")),
                  //ARC_step_group   (NumCounter("ARC step per group")),
-                 n_counter(7) {}
+                 n_counter(9) {}
 
     void cluster_count(const PS::S32 n, const PS::S32 ntimes=1) {
         if (n_cluster.count(n)) n_cluster[n] += ntimes;

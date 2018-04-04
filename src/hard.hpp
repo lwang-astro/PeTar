@@ -323,6 +323,7 @@ private:
 
             if(fail_flag) {
 #ifdef HARD_DEBUG_DUMP
+                std::cerr<<"Dump hard data. tend="<<time_end<<" n_ptcl="<<n_ptcl<<"\n";
                 dump("hard_dump",time_end, (PS::S32)first_int_flag, ptcl_bk.getPointer(), n_ptcl);
 #endif
                 abort();

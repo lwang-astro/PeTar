@@ -773,6 +773,10 @@ int main(int argc, char *argv[]){
             system_soft[i].rank_org = my_rank;
             system_soft[i].adr = i;
         }
+#ifdef PROFILE
+        tree_soft.clearNumberOfInteraction();
+#endif
+        
 #ifndef USE_SIMD
         tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSIMD(),
 #ifdef USE_QUAD
@@ -792,6 +796,11 @@ int main(int argc, char *argv[]){
                                            system_soft,
                                            dinfo);
 #ifdef PROFILE
+        n_count.ep_ep_interact     += tree_soft.getNumberOfInteractionEPEPLocal();
+        n_count_sum.ep_ep_interact += tree_soft.getNumberOfInteractionEPEPGlobal();
+        n_count.ep_sp_interact     += tree_soft.getNumberOfInteractionEPSPLocal();
+        n_count_sum.ep_sp_interact += tree_soft.getNumberOfInteractionEPSPGlobal(); 
+    
         profile.search_cluster.start();
 #endif
         search_cluster.searchNeighborAndCalcHardForceOMP<SystemSoft, Tree, EPJSoft>
