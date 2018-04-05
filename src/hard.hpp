@@ -325,8 +325,8 @@ private:
 #ifdef HARD_DEBUG_DUMP
                 std::cerr<<"Dump hard data. tend="<<time_end<<" n_ptcl="<<n_ptcl<<"\n";
                 dump("hard_dump",time_end, (PS::S32)first_int_flag, ptcl_bk.getPointer(), n_ptcl);
-#endif
                 abort();
+#endif
             }
 
 #ifdef HARD_CHECK_ENERGY
@@ -356,7 +356,15 @@ private:
 #endif
                 //Aint.integrateOneStepList(group_act_list.getPointer(), group_act_n, time_sys, dt_limit);
                 nstepcount +=Aint.integrateOneStepList(time_sys, std::min(dt_limit,dt_h));
-                Hint.integrateOneStep(time_sys,dt_limit,dt_min_hard_,true,&Aint);
+                fail_flag = Hint.integrateOneStep(time_sys,dt_limit,dt_min_hard_,true,&Aint);
+                
+                if(fail_flag) {
+#ifdef HARD_DEBUG_DUMP
+                    std::cerr<<"Dump hard data. tend="<<time_end<<" n_ptcl="<<n_ptcl<<"\n";
+                    dump("hard_dump",time_end, (PS::S32)first_int_flag, ptcl_bk.getPointer(), n_ptcl);
+                    abort();
+#endif
+                }
                 //Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
                 Hint.SortAndSelectIp();
             }

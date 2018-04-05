@@ -367,7 +367,7 @@ int main(int argc, char *argv[]){
                    <<"N_tot = "<<n_glb.value<<"\nN_loc = "<<n_loc<<std::endl;
     }
     else {
-        SetParticlePlummer(system_soft, n_glb.value, n_loc, time_sys);
+        SetParticlePlummer(system_soft, n_glb.value, n_loc);
         file_header.nfile = 0;
         time_sys = file_header.time = 0.0;
         file_header.n_body = n_glb.value;
@@ -811,6 +811,8 @@ int main(int argc, char *argv[]){
         n_count_sum.ep_sp_interact += tree_soft.getNumberOfInteractionEPSPGlobal(); 
 
         ps_profile += tree_soft.getTimeProfile();
+        profile.soft_tot.end();
+                                           
         profile.search_cluster.start();
 #endif
         search_cluster.searchNeighborAndCalcHardForceOMP<SystemSoft, Tree, EPJSoft>
@@ -818,7 +820,6 @@ int main(int argc, char *argv[]){
 
 #ifdef PROFILE
         profile.search_cluster.end();
-        profile.soft_tot.end();
 #endif
 
         // Domain decomposition, parrticle exchange and force calculation

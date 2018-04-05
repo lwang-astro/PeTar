@@ -322,7 +322,9 @@ private:
         }
     }
 
-
+    //
+    /* \return fail_flag: if the time step < dt_min, return true (failure)
+     */
     template <class Tp>
     bool CalcBlockDt2ndAct(Tp ptcl[],
                            const PtclForce force[],
@@ -606,7 +608,9 @@ private:
     */
     }
 
-    void CorrectAndCalcDt4thAct(PtclH4 ptcl[],
+    /* \return fail_flag: if the time step < dt_min, return true (failure)
+     */
+    bool CorrectAndCalcDt4thAct(PtclH4 ptcl[],
                                 const PtclForce force[],
                                 const PS::S32 adr_sorted[], 
                                 const PS::S32 n_act,
@@ -614,6 +618,7 @@ private:
                                 const PS::F64 dt_min,
                                 const PS::F64 a0_offset_sq,
                                 const PS::F64 eta){
+        bool fail_flag=false;
         static thread_local const PS::F64 inv3 = 1.0 / 3.0;
         for(PS::S32 i=0; i<n_act; i++){
             const PS::S32 adr = adr_sorted[i];
@@ -669,9 +674,10 @@ private:
                          <<" acc3="<<pti->acc3
 #endif
                          <<std::endl;
-                abort();
+                fail_flag=true;
             }
         }
+        return fail_flag;
     }
 
 
@@ -915,8 +921,11 @@ public:
         return time_next_[adr_sorted_[0]];
     }
 
+    /*
+      \return If step size < dt_min, return true
+     */
     template <class ARCint>
-    void integrateOneStep(const PS::F64 time_sys,
+    bool integrateOneStep(const PS::F64 time_sys,
                           const PS::F64 dt_max,
                           const PS::F64 dt_min,
                           const bool calc_full_flag = true,
@@ -931,7 +940,7 @@ public:
         if(calc_full_flag) CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), ptcl_.size(), adr_sorted_.getPointer(), n_act_, r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, Aint);
         else CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), adr_sorted_.getPointer(), n_act_, Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, Aint);
         // ptcl_org::pos,vel; pred::time,dt,acc0,acc1,acc2,acc3 updated
-        CorrectAndCalcDt4thAct(ptcl_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, dt_max, dt_min, a0_offset_sq_, eta_s_);
+        bool fail_flag=CorrectAndCalcDt4thAct(ptcl_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, dt_max, dt_min, a0_offset_sq_, eta_s_);
 
         for(PS::S32 i=0; i<n_act_; i++){
             PS::S32 adr = adr_sorted_[i];
@@ -943,6 +952,8 @@ public:
             //Aint->updateCM(ptcl_.getPointer());
             //Aint.updateCM(Hint.getPtcl(), group_act_list.getPointer(), group_act_n);
         }
+        
+        return fail_flag;
     }
 
     void SortAndSelectIp(PS::S32 group_act_list[],

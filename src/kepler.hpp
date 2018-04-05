@@ -547,13 +547,13 @@ PS::S32 stab2check(PtclTree<Tptcl> &bin, const PS::F64 rbin, const PS::F64 rmax)
     PS::F64 apo = bin.ax*(1.0+bin.ecc);
     if(apo>rbin) {
         PS::F64 pec=bin.ax*(1.0-bin.ecc);
-        if(pec>0.01*rbin||apo>rmax) {
+        if(pec>0.01*rbin||(apo>rmax&&bin.ecc<0.99)) {
             bin.tstep = 0.78539816339*std::sqrt(bin.ax/(bin.m1+bin.m2))*bin.m1*bin.m2;
             bin.stable_factor = 1;
-            return 0;
 #ifdef STABLE_CHECK_DEBUG
-            std::cerr<<"res=0 apo>rbin<0"<<std::endl;
+            std::cerr<<"res=0 apo>rbin("<<rbin<<"), pec>0.01*rbin||apo>rmax("<<rmax<<")"<<std::endl;
 #endif        
+            return 0;
         }
     }
     

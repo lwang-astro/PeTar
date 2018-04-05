@@ -371,8 +371,7 @@ void MakePlummerModel(const double mass_glb,
 template<class Tpsys>
 void SetParticlePlummer(Tpsys & psys,
                         const PS::S64 n_glb,
-                        PS::S32 & n_loc,
-                        PS::F64 & t_sys){
+                        PS::S32 & n_loc){
 
     PS::S32 my_rank = PS::Comm::getRank();
     PS::S32 n_proc = PS::Comm::getNumberOfProc();
@@ -393,7 +392,6 @@ void SetParticlePlummer(Tpsys & psys,
     PS::F64 * mass;
     PS::F64vec * pos;
     PS::F64vec * vel;
-    t_sys = 0.0;
 
     const PS::F64 m_tot = 1.0;
     const PS::F64 eng = -0.25;
