@@ -112,9 +112,9 @@ public:
 
     void print(std::ostream & fout){
         Ptcl::print(fout);
-        fout<<" adr= "<<adr;
-        fout<<" acc= "<<acc;
-        fout<<" pot_tot= "<<pot_tot;
+        fout<<" adr= "<<adr
+            <<" acc= "<<acc
+            <<" pot_tot= "<<pot_tot;
     }
     
 };
@@ -139,11 +139,11 @@ public:
         r_search = fp.r_search;
         rank_org = fp.rank_org;
     }
-    void dump(std::ostream & fout=std::cout) const {
-        fout<<"id="<<id<<std::endl;
-        fout<<"rank_org="<<rank_org<<std::endl;
-        fout<<"pos="<<pos<<std::endl;
-        fout<<"eps="<<eps<<std::endl;
+    void print(std::ostream & fout=std::cout) const {
+        fout<<" id="<<id
+            <<" rank_org="<<rank_org
+            <<" pos="<<pos
+            <<" eps="<<eps;
     }
     PS::F64 getRSearch() const {
 //        return std::max(r_search * std::pow(2.0*mass/m_average,0.3333),r_search_min) * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
@@ -186,13 +186,13 @@ public:
         return r_search * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
     }
     // FORDEBUG
-    void dump(std::ostream & fout=std::cout) const {
-        fout<<"id="<<id<<std::endl;
-        fout<<"rank_org="<<rank_org<<std::endl;
-        fout<<"mass="<<mass<<std::endl;
-        fout<<"pos="<<pos<<std::endl;
-        fout<<"vel="<<vel<<std::endl;
-        fout<<"r_search="<<r_search<<std::endl;
+    void print(std::ostream & fout=std::cout) const {
+        fout<<" id="<<id
+            <<" rank_org="<<rank_org
+            <<" mass="<<mass
+            <<" pos="<<pos
+            <<" vel="<<vel
+            <<" r_search="<<r_search;
     }
     void clear(){
         mass = 0.0;
@@ -230,7 +230,7 @@ public:
         kin = pot = tot = Lt = 0.0;
         L = PS::F64vec(0.0);
     }
-    void dump(std::ostream & fout=std::cout){
+    void print(std::ostream & fout=std::cout){
         fout<<"Energy: total = "<<tot<<" kin = "<<kin<<" pot = "<<pot
             <<"\nAngular Momentum: L = "<<L<<" |L| = "<<Lt
             <<std::endl;
@@ -253,7 +253,7 @@ public:
             <<std::setw(width)<<L.z
             <<std::setw(width)<<Lt;
     }
-    void  writeAscii(FILE* fout) {
+    void writeAscii(FILE* fout) {
         fprintf(fout, "%26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e ",
                 this->kin, this->pot, this->tot, this->L[0], this->L[1], this->L[2], this->Lt);
     }

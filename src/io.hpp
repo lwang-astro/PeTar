@@ -1,7 +1,7 @@
 #pragma once
 #include "kepler.hpp"
 
-#define PRINT_WIDTH 22
+#define PRINT_WIDTH 18
 #define PRINT_PRECISION 14
 
 // IO Params
@@ -14,7 +14,7 @@ struct IOParams{
     IOParams(const Type& _value, const char* _name, const char* _defaulted=NULL): value(_value), name(_name), defaulted(_defaulted)  {}
 
     void print(std::ostream& os) const{
-        os<<name<<": "<<value<<std::endl;
+        os<<name<<":   "<<value<<std::endl;
     }
 };
 
@@ -512,13 +512,13 @@ public:
         eng_now.dump(fout,width);
     }
 
-    void dump(std::ostream & fout, const PS::S32 precision=7) {
+    void print(std::ostream & fout, const PS::S32 precision=7) {
         fout<<"Time= "<<std::setprecision(15)<<time
             <<std::setprecision(precision)
             <<" N= "<<N
             <<" Enow-Einit= "<<eng_diff.tot
             <<" (Enow-Einit)/Einit= "<<eng_diff.tot/eng_init.tot
             <<std::endl;
-        eng_now.dump(fout);
+        eng_now.print(fout);
     }
 };

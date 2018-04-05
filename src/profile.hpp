@@ -236,6 +236,86 @@ struct NumCounter{
     }
 };
 
+class PsProfile: public PS::TimeProfile {
+public:
+    PsProfile &operator+=(const PS::TimeProfile _tp) {
+        *(TimeProfile*)this = *(TimeProfile*)this + _tp;
+        return *this;
+    }
+
+    void dumpName(std::ofstream & fout, const PS::S32 width=20) {
+        fout<<std::setw(width)<<"collect_sam_ptcl"
+            <<std::setw(width)<<"decompose_domain"
+            <<std::setw(width)<<"exchange_ptcl"
+            <<std::setw(width)<<"make_local_tree"
+            <<std::setw(width)<<"make_global_tree"
+            <<std::setw(width)<<"calc_force"
+            <<std::setw(width)<<"calc_mom_loc_tree"
+            <<std::setw(width)<<"calc_mom_gb_tree"
+            <<std::setw(width)<<"make_LET_1st"
+            <<std::setw(width)<<"make_LET_2nd"
+            <<std::setw(width)<<"exchange_LET_1st"
+            <<std::setw(width)<<"exchange_LET_2nd";
+    }
+
+    void dumpName(std::ostream & fout, const PS::S32 width=10) {
+        fout<<std::setw(width)<<"collect_sam_ptcl"
+            <<std::setw(width)<<"decompose_domain"
+            <<std::setw(width)<<"exchange_ptcl"
+            <<std::setw(width)<<"make_local_tree"
+            <<std::setw(width)<<"make_global_tree"
+            <<std::setw(width)<<"calc_force"
+            <<std::setw(width)<<"calc_mom_loc_tree"
+            <<std::setw(width)<<"calc_mom_gb_tree"
+            <<std::setw(width)<<"make_LET_1st"
+            <<std::setw(width)<<"make_LET_2nd"
+            <<std::setw(width)<<"exchange_LET_1st"
+            <<std::setw(width)<<"exchange_LET_2nd";
+//        fout<<std::setw(width)<<"col_s_p"
+//            <<std::setw(width)<<"deco-dom"
+//            <<std::setw(width)<<"ex_p"
+//            <<std::setw(width)<<"mk_loc_tr"
+//            <<std::setw(width)<<"mk_gb_tr"
+//            <<std::setw(width)<<"Force"
+//            <<std::setw(width)<<"M_loc_tr"
+//            <<std::setw(width)<<"M_gb_tr"
+//            <<std::setw(width)<<"mk_LET_1"
+//            <<std::setw(width)<<"mk_LET_2"
+//            <<std::setw(width)<<"ex_LET_1"
+//            <<std::setw(width)<<"ex_LET_2";
+    }
+    
+    void dump(std::ofstream & fout, const PS::S32 width=20, const PS::S64 n_loop=1){
+        fout<<std::setw(width)<<collect_sample_particle
+            <<std::setw(width)<<decompose_domain
+            <<std::setw(width)<<exchange_particle
+            <<std::setw(width)<<make_local_tree
+            <<std::setw(width)<<make_global_tree
+            <<std::setw(width)<<calc_force
+            <<std::setw(width)<<calc_moment_local_tree
+            <<std::setw(width)<<calc_moment_global_tree
+            <<std::setw(width)<<make_LET_1st
+            <<std::setw(width)<<make_LET_2nd
+            <<std::setw(width)<<exchange_LET_1st
+            <<std::setw(width)<<exchange_LET_2nd;
+    }
+
+    void dump(std::ostream & fout, const PS::S32 width=10, const PS::S64 n_loop=1){
+        fout<<std::setw(width)<<collect_sample_particle
+            <<std::setw(width)<<decompose_domain
+            <<std::setw(width)<<exchange_particle
+            <<std::setw(width)<<make_local_tree
+            <<std::setw(width)<<make_global_tree
+            <<std::setw(width)<<calc_force
+            <<std::setw(width)<<calc_moment_local_tree
+            <<std::setw(width)<<calc_moment_global_tree
+            <<std::setw(width)<<make_LET_1st
+            <<std::setw(width)<<make_LET_2nd
+            <<std::setw(width)<<exchange_LET_1st
+            <<std::setw(width)<<exchange_LET_2nd;
+    }
+};
+
 class SysProfile{
 public:
 	Tprofile tot;		   
@@ -317,15 +397,15 @@ public:
     const PS::S32 n_counter;
     std::map<PS::S32,PS::S32> n_cluster; ///<Histogram of number of particles in clusters
 
-    SysCounts(): hard_single      (NumCounter("Hard single   ")),
-                 hard_isolated    (NumCounter("Hard isolated ")),
-                 hard_connected   (NumCounter("Hard connected")),
-                 cluster_isolated (NumCounter("Cluster isolated ")),
-                 cluster_connected(NumCounter("Cluster connected")),
-                 ARC_substep_sum  (NumCounter("ARC sub-steps sum")),
-                 ARC_n_groups     (NumCounter("ARC group number")),
-                 ep_ep_interact   (NumCounter("Ep-Ep interaction")),
-                 ep_sp_interact   (NumCounter("Ep-Sp interaction")),
+    SysCounts(): hard_single      (NumCounter("Hard_single   ")),
+                 hard_isolated    (NumCounter("Hard_isolated ")),
+                 hard_connected   (NumCounter("Hard_connected")),
+                 cluster_isolated (NumCounter("Cluster_isolated ")),
+                 cluster_connected(NumCounter("Cluster_connected")),
+                 ARC_substep_sum  (NumCounter("ARC_sub-steps_sum")),
+                 ARC_n_groups     (NumCounter("ARC_group_number")),
+                 ep_ep_interact   (NumCounter("Ep-Ep_interaction")),
+                 ep_sp_interact   (NumCounter("Ep-Sp_interaction")),
                  //ARC_step_group   (NumCounter("ARC step per group")),
                  n_counter(9) {}
 
@@ -334,15 +414,7 @@ public:
         else n_cluster[n]=ntimes;
     }
 
-    void print(std::ostream & fout, const PS::S32 width=20, const PS::S64 n_loop=1) {
-        for(PS::S32 i=0; i<n_counter; i++) {
-            NumCounter* iptr = (NumCounter*)this+i;
-            iptr->print(fout, n_loop);
-        }
-    }
-
     void printHist(std::ostream & fout, const PS::S32 width=20, const PS::S64 n_loop=1) {
-        fout<<"Number of members in clusters:\n";
         for(auto i=n_cluster.begin(); i!=n_cluster.end(); ++i) fout<<std::setw(width)<<i->first;
         fout<<std::endl;
         for(auto i=n_cluster.begin(); i!=n_cluster.end(); ++i) fout<<std::setw(width)<<i->second/((n_loop==1)?1:(PS::F64)n_loop);

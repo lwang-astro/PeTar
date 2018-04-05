@@ -89,31 +89,32 @@ int main(int argc, char *argv[]){
     SysProfile profile;
     SysCounts  n_count;
     SysCounts  n_count_sum;
+    PsProfile  ps_profile;
 #endif
     
     // initial parameters
     IOParams<PS::F64> ratio_r_cut  (0.1,  "r_in / r_out");
-    IOParams<PS::F64> theta        (0.3,  "openning angle theta");
-    IOParams<PS::S32> n_leaf_limit (20,   "tree leaf number limit; optimized value should be slightly >=11+N_bin_sample");
-    IOParams<PS::S32> n_group_limit(512,  "tree group number limit defaulted for x86-AVX2");
-    IOParams<PS::S32> n_smp_ave    (100,  "average target number of sample particles per process");
-    IOParams<PS::S32> n_split      (8,    "number of binary sample points for tree perturbation force");
-    IOParams<PS::S64> n_bin        (0,    "number of primordial binaries (assume binaries ID=1,2*n_bin)");
-    IOParams<PS::F64> time_end     (10.0, "finishing time");
+    IOParams<PS::F64> theta        (0.3,  "Openning angle theta");
+    IOParams<PS::S32> n_leaf_limit (20,   "Tree leaf number limit", "optimized value shoudl be slightly >=11+N_bin_sample (20)");
+    IOParams<PS::S32> n_group_limit(512,  "Tree group number limit", "optimized for x86-AVX2 (512)");
+    IOParams<PS::S32> n_smp_ave    (100,  "Average target number of sample particles per process");
+    IOParams<PS::S32> n_split      (8,    "Number of binary sample points for tree perturbation force");
+    IOParams<PS::S64> n_bin        (0,    "Number of primordial binaries (assume binaries ID=1,2*n_bin)");
+    IOParams<PS::F64> time_end     (10.0, "Finishing time");
     IOParams<PS::F64> eta          (0.1,  "Hermite time step coefficient eta");
-    IOParams<PS::S64> n_glb        (16384,"Total number of particles, this will suppress reading snapshot data and use Plummer model generator without binary");
+    IOParams<PS::S64> n_glb        (16384,"Total number of particles (this will suppress reading snapshot data and use Plummer model generator without binary)");
     IOParams<PS::F64> dt_soft      (0.0,  "Tree timestep","0.1*r_out/sigma_1D");
     IOParams<PS::F64> dt_snp       (0.0625,"Output time interval of particle dataset");
-    IOParams<PS::F64> search_factor(1.0,  "neighbor searching coefficient");
-    IOParams<PS::F64> dt_limit_hard_factor(4.0, "limit of tree time step/hard time step");
-    IOParams<PS::S32> dt_min_hermite_index(40,   "power index n for the smallest time step (0.5^n) allowed in Hermite integrator");
-    IOParams<PS::S32> dt_min_arc_index    (64,   "power index n for the smallest time step (0.5^n) allowed in ARC integrator");
+    IOParams<PS::F64> search_factor(1.0,  "Neighbor searching coefficient");
+    IOParams<PS::F64> dt_limit_hard_factor(4.0,  "Limit of tree time step/hard time step");
+    IOParams<PS::S32> dt_min_hermite_index(40,   "Power index n for the smallest time step (0.5^n) allowed in Hermite integrator");
+    IOParams<PS::S32> dt_min_arc_index    (64,   "Power index n for the smallest time step (0.5^n) allowed in ARC integrator");
     IOParams<PS::F64> dt_err_pert  (1e-6, "Time synchronization maximum (relative) error for perturbed ARC integrator");
     IOParams<PS::F64> dt_err_soft  (1e-3, "Time synchronization maximum (relative) error for no-perturber (only soft perturbation) ARC integrator");
     IOParams<PS::F64> e_err_arc    (1e-10,"Maximum energy error allown for ARC integrator");
-    IOParams<PS::F64> eps          (0.0,  "softerning eps");
-    IOParams<PS::F64> r_out        (0.0,  "transit function outer boundary radius", "<m>/sigma_1D^2*/ratio_r_cut");
-    IOParams<PS::F64> r_bin        (0.0,  "maximum binary radius criterion", "0.8*r_in");
+    IOParams<PS::F64> eps          (0.0,  "Softerning eps");
+    IOParams<PS::F64> r_out        (0.0,  "Transit function outer boundary radius", "<m>/sigma_1D^2*/ratio_r_cut");
+    IOParams<PS::F64> r_bin        (0.0,  "Maximum binary radius criterion", "0.8*r_in");
     IOParams<PS::F64> sd_factor    (1e-6, "Slowdown perturbation criterion");
     IOParams<PS::S32> data_format  (1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): Writing off: r-B(5), r-A(4); Writing on: r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0)");
     IOParams<std::string> fname_snp("data","Prefix filename of dataset: [prefix].[File ID]");
@@ -141,6 +142,7 @@ int main(int argc, char *argv[]){
 
     int copt;
     int option_index;
+    if(my_rank == 0) std::cout<<"----- input option -----\n";
     while ((copt = getopt_long(argc, argv, "i:at:D:o:r:R:b:B:N:n:l:s:T:E:f:h", long_options, &option_index)) != -1) 
         switch (copt) {
         case 0:
@@ -435,7 +437,7 @@ int main(int argc, char *argv[]){
     }
     
     if(my_rank == 0) {
-        std::cout<<"Parameter list:\n";
+        std::cout<<"----- Parameter list: -----\n";
         std::cout<<" m_average    = "<<m_average      <<std::endl
                  <<" r_in         = "<<r_in           <<std::endl
                  <<" r_out        = "<<r_out.value    <<std::endl
@@ -465,6 +467,11 @@ int main(int argc, char *argv[]){
     dinfo.initialize(coef_ema);
     dinfo.decomposeDomainAll(system_soft);
     const PS::S32 n_proc = PS::Comm::getNumberOfProc();
+
+    std::cout<<"----- Parallelization information -----\n";
+    std::cout<<"MPI processors: "<<n_proc<<std::endl;
+    std::cout<<"OMP threads:    "<<PS::Comm::getNumberOfThread()<<std::endl;
+    
     PS::F64ort * pos_domain = new PS::F64ort[n_proc];
     for(PS::S32 i=0; i<n_proc; i++) pos_domain[i] = dinfo.getPosDomain(i);
 
@@ -606,7 +613,8 @@ int main(int argc, char *argv[]){
     stat.eng_now = stat.eng_init;
 
     if(my_rank==0) {
-        stat.eng_init.dump(std::cout);
+        std::cout<<"----- Initial status -----\n";
+        stat.eng_init.print(std::cout);
         stat.dump(fstatus,PRINT_WIDTH);
         fstatus<<std::endl;
     }
@@ -775,6 +783,7 @@ int main(int argc, char *argv[]){
         }
 #ifdef PROFILE
         tree_soft.clearNumberOfInteraction();
+        tree_soft.clearTimeProfile();
 #endif
         
 #ifndef USE_SIMD
@@ -800,7 +809,8 @@ int main(int argc, char *argv[]){
         n_count_sum.ep_ep_interact += tree_soft.getNumberOfInteractionEPEPGlobal();
         n_count.ep_sp_interact     += tree_soft.getNumberOfInteractionEPSPLocal();
         n_count_sum.ep_sp_interact += tree_soft.getNumberOfInteractionEPSPGlobal(); 
-    
+
+        ps_profile += tree_soft.getTimeProfile();
         profile.search_cluster.start();
 #endif
         search_cluster.searchNeighborAndCalcHardForceOMP<SystemSoft, Tree, EPJSoft>
@@ -902,7 +912,8 @@ int main(int argc, char *argv[]){
             stat.N = n_glb;
 
             if(my_rank==0) {
-                stat.dump(std::cout);
+                std::cout<<std::endl;
+                stat.print(std::cout);
                 stat.dump(fstatus, PRINT_WIDTH);
                 fstatus<<std::endl;
             }
@@ -915,23 +926,28 @@ int main(int argc, char *argv[]){
                 std::cout<<std::setprecision(5);
                 std::cout<<"Tree step number: "<<dn_loop<<std::endl;
 
-                std::cout<<"Wtime per step:\n";
-                std::cout<<std::setw(PRINT_WIDTH)<<"Rank";
+                std::cout<<"**** Wallclock time per step (local):\n";
+                //std::cout<<std::setw(PRINT_WIDTH)<<"Rank";
                 profile.dumpName(std::cout,PRINT_WIDTH);
                 std::cout<<std::endl;
 
-                std::cout<<std::setw(PRINT_WIDTH)<<my_rank;
+                //std::cout<<std::setw(PRINT_WIDTH)<<my_rank;
                 profile.dump(std::cout,PRINT_WIDTH,dn_loop);
                 std::cout<<std::endl;
 
-                std::cout<<"Number per step:\n";
-                std::cout<<std::setw(PRINT_WIDTH)<<"Rank";
+                std::cout<<"**** FDPS time profile (local):\n";
+                ps_profile.dumpName(std::cout,PRINT_WIDTH);
+                std::cout<<std::endl;
+                ps_profile.dump(std::cout,PRINT_WIDTH,dn_loop);
+                std::cout<<std::endl;
+
+                std::cout<<"**** Number per step (global):\n";
                 n_count_sum.dumpName(std::cout,PRINT_WIDTH);
                 std::cout<<std::endl;
-                std::cout<<std::setw(PRINT_WIDTH)<<my_rank;
                 n_count_sum.dump(std::cout,PRINT_WIDTH,dn_loop);
                 std::cout<<std::endl;
                 
+                std::cout<<"**** Number of members in clusters (local):\n";
                 n_count.printHist(std::cout,PRINT_WIDTH,dn_loop);
             }
                     
@@ -954,6 +970,7 @@ int main(int argc, char *argv[]){
                     <<std::setw(PRINT_WIDTH)<<dn_loop
                     <<std::setw(PRINT_WIDTH)<<n_glb;
             profile.dump(fprofile, PRINT_WIDTH, dn_loop);
+            ps_profile.dump(fprofile, PRINT_WIDTH, dn_loop);
             n_count.dump(fprofile, PRINT_WIDTH, dn_loop);
             fprofile<<std::endl;
 
@@ -990,6 +1007,7 @@ int main(int argc, char *argv[]){
 
 #ifdef PROFILE            
             profile.clear();
+            ps_profile.clear();
             n_count.clear();
             n_count_sum.clear();
             dn_loop=0;
