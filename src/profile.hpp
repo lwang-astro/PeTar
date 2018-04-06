@@ -286,33 +286,33 @@ public:
     }
     
     void dump(std::ofstream & fout, const PS::S32 width=20, const PS::S64 n_loop=1){
-        fout<<std::setw(width)<<collect_sample_particle
-            <<std::setw(width)<<decompose_domain
-            <<std::setw(width)<<exchange_particle
-            <<std::setw(width)<<make_local_tree
-            <<std::setw(width)<<make_global_tree
-            <<std::setw(width)<<calc_force
-            <<std::setw(width)<<calc_moment_local_tree
-            <<std::setw(width)<<calc_moment_global_tree
-            <<std::setw(width)<<make_LET_1st
-            <<std::setw(width)<<make_LET_2nd
-            <<std::setw(width)<<exchange_LET_1st
-            <<std::setw(width)<<exchange_LET_2nd;
+        fout<<std::setw(width)<<collect_sample_particle/n_loop 
+            <<std::setw(width)<<decompose_domain       /n_loop 
+            <<std::setw(width)<<exchange_particle      /n_loop 
+            <<std::setw(width)<<make_local_tree        /n_loop 
+            <<std::setw(width)<<make_global_tree       /n_loop 
+            <<std::setw(width)<<calc_force             /n_loop 
+            <<std::setw(width)<<calc_moment_local_tree /n_loop 
+            <<std::setw(width)<<calc_moment_global_tree/n_loop 
+            <<std::setw(width)<<make_LET_1st           /n_loop 
+            <<std::setw(width)<<make_LET_2nd           /n_loop 
+            <<std::setw(width)<<exchange_LET_1st       /n_loop 
+            <<std::setw(width)<<exchange_LET_2nd       /n_loop;
     }
 
     void dump(std::ostream & fout, const PS::S32 width=10, const PS::S64 n_loop=1){
-        fout<<std::setw(width)<<collect_sample_particle
-            <<std::setw(width)<<decompose_domain
-            <<std::setw(width)<<exchange_particle
-            <<std::setw(width)<<make_local_tree
-            <<std::setw(width)<<make_global_tree
-            <<std::setw(width)<<calc_force
-            <<std::setw(width)<<calc_moment_local_tree
-            <<std::setw(width)<<calc_moment_global_tree
-            <<std::setw(width)<<make_LET_1st
-            <<std::setw(width)<<make_LET_2nd
-            <<std::setw(width)<<exchange_LET_1st
-            <<std::setw(width)<<exchange_LET_2nd;
+        fout<<std::setw(width)<<collect_sample_particle/n_loop 
+            <<std::setw(width)<<decompose_domain       /n_loop 
+            <<std::setw(width)<<exchange_particle      /n_loop 
+            <<std::setw(width)<<make_local_tree        /n_loop 
+            <<std::setw(width)<<make_global_tree       /n_loop 
+            <<std::setw(width)<<calc_force             /n_loop 
+            <<std::setw(width)<<calc_moment_local_tree /n_loop 
+            <<std::setw(width)<<calc_moment_global_tree/n_loop 
+            <<std::setw(width)<<make_LET_1st           /n_loop 
+            <<std::setw(width)<<make_LET_2nd           /n_loop 
+            <<std::setw(width)<<exchange_LET_1st       /n_loop 
+            <<std::setw(width)<<exchange_LET_2nd       /n_loop; 
     }
 };
 

@@ -551,11 +551,11 @@ public:
         return ptcl_hard_;
     }
 
-    const PS::S32 getNCluster() const{
+    PS::S32 getNCluster() const{
         return n_ptcl_in_cluster_.size();
     }
 
-    const PS::S32* getClusterNList() const{
+    PS::S32* getClusterNList() const{
         return n_ptcl_in_cluster_.getPointer();
     }
 

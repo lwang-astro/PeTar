@@ -1888,15 +1888,15 @@ public:
     //    return pert_list_.getPointer();
     //}
 
-    const PS::S32 getPtclN() const {
+    PS::S32 getPtclN() const {
         return p_list_.size();
     }
 
-    PS::S32* getPtclList() const {
+    const PS::S32* getPtclList() const {
         return p_list_.getPointer();
     }
 
-    const PS::S32 getPtclIndex(const std::size_t i) const {
+    PS::S32 getPtclIndex(const std::size_t i) const {
         return p_list_.getPointer()[i];
     }
 
@@ -1904,7 +1904,7 @@ public:
 //        return group_ptcl_.getPointer();
 //    }
 
-    const PS::S32 getNumOfGroups() const {
+    PS::S32 getNumOfGroups() const {
         return group_list_n_.size();
     }
 

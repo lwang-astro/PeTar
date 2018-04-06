@@ -79,7 +79,7 @@ public:
     //! Get mass (required for \ref ARC::chain)
     /*! \return mass
      */
-    const PS::F64 getMass() const{
+    PS::F64 getMass() const{
         return mass;
     }
   

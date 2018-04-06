@@ -814,11 +814,11 @@ public:
         return &Jlist_[Jlist_disp_[i]];
     }
 
-    const PS::S32 getPertN(const PS::S32 i) const {
+    PS::S32 getPertN(const PS::S32 i) const {
         return Jlist_n_[i];
     }
 
-    const PS::S32 getPertListSize() const {
+    PS::S32 getPertListSize() const {
         return Jlist_.size();
     }
 
@@ -830,7 +830,7 @@ public:
         return force_.getPointer();
     }
 
-    const PS::S32 getPtclN() const {
+    PS::S32 getPtclN() const {
         return ptcl_.size();
     }
 
@@ -967,7 +967,7 @@ public:
         SortAndSelectIp(adr_sorted_.getPointer(), time_next_.getPointer(), n_act_, time_next_.size());
     }
     
-    const PS::S32 getNact() const{
+    PS::S32 getNact() const{
         return n_act_;
     }
 
