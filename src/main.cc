@@ -488,11 +488,11 @@ int main(int argc, char *argv[]){
     Tree tree_soft;
     tree_soft.initialize(n_glb.value, theta.value, n_leaf_limit.value, n_group_limit.value);
 #ifndef USE_SIMD
-    tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSIMD(),
+    tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSimd(),
 #ifdef USE_QUAD
                                        CalcForceEpSpQuadNoSimd(),
 #else
-                                       CalcForceEpSpNoSIMD(),
+                                       CalcForceEpSpMonoNoSimd(),
 #endif
 #else
     tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(),

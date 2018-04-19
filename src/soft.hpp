@@ -357,7 +357,7 @@ public:
 
 ////////////////////
 /// FORCE FUNCTOR
-struct CalcForceEpEpWithLinearCutoffNoSIMD{
+struct CalcForceEpEpWithLinearCutoffNoSimd{
     void operator () (const EPISoft * ep_i,
                       const PS::S32 n_ip,
                       const EPJSoft * ep_j,
@@ -402,7 +402,7 @@ struct CalcForceEpEpWithLinearCutoffNoSIMD{
     }
 };
 
-struct CalcForceEpSpNoSIMD{
+struct CalcForceEpSpMonoNoSimd {
     template<class Tsp>
     void operator () (const EPISoft * ep_i,
                       const PS::S32 n_ip,
@@ -493,9 +493,11 @@ struct CalcForceEpEpWithLinearCutoffSimd{
         static __thread PhantomGrapeQuad pg;
         #endif
     #endif
+        assert(n_ip<=pg.NIMAX);
+        assert(n_jp<=pg.NJMAX);
         pg.set_eps2(eps2);
-        //pg.set_r_crit2( (r_crit2+eps2)*SAFTY_FACTOR_FOR_SEARCH_SQ );
-        pg.set_cutoff(EPISoft::r_out, EPISoft::r_in);
+        pg.set_r_crit2(EPISoft::r_out*EPISoft::r_out);
+        //pg.set_cutoff(EPISoft::r_out, EPISoft::r_in);
         for(PS::S32 i=0; i<n_ip; i++){
             const PS::F64vec pos_i = ep_i[i].getPos();
             pg.set_xi_one(i, pos_i.x, pos_i.y, pos_i.z, ep_i[i].r_search);
@@ -543,6 +545,8 @@ struct CalcForceEpSpMonoSimd{
         static __thread PhantomGrapeQuad pg;
     #endif
 #endif
+        assert(n_ip<=pg.NIMAX);
+        assert(n_jp<=pg.NJMAX);
         pg.set_eps2(eps2);
         for(PS::S32 i=0; i<n_ip; i++){
             const PS::F64vec pos_i = ep_i[i].getPos();
@@ -586,6 +590,8 @@ struct CalcForceEpSpQuadSimd{
         static __thread PhantomGrapeQuad pg;
         #endif
     #endif
+        assert(n_ip<=pg.NIMAX);
+        assert(n_jp<=pg.NJMAX);
         pg.set_eps2(eps2);
         for(PS::S32 i=0; i<n_ip; i++){
             const PS::F64vec pos_i = ep_i[i].getPos();
