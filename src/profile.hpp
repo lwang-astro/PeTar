@@ -325,6 +325,7 @@ public:
 	Tprofile hard_connected;
 	Tprofile soft_tot;	   
 	Tprofile search_cluster;
+    Tprofile domain_ex_ptcl;
     const PS::S32 n_profile;
     
     SysProfile(): tot           (Tprofile("Total         ")),
@@ -334,7 +335,8 @@ public:
                   hard_connected(Tprofile("Hard_connected")),
                   soft_tot      (Tprofile("Soft_total    ")),
                   search_cluster(Tprofile("Search_cluster")),
-                  n_profile(7) {}
+                  domain_ex_ptcl(Tprofile("Domain_ex_ptcl")),
+                  n_profile(8) {}
 
 	void print(std::ostream & fout, const PS::F64 time_sys, const PS::S64 n_loop=1){
         fout<<"Time: "<<time_sys<<std::endl;

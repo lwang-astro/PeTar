@@ -1,8 +1,8 @@
 #pragma once
 #include "kepler.hpp"
 
-#define PRINT_WIDTH 18
-#define PRINT_PRECISION 14
+#define PRINT_WIDTH 19
+#define PRINT_PRECISION 13
 
 // IO Params
 template <class Type>

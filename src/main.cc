@@ -763,12 +763,11 @@ int main(int argc, char *argv[]){
         first_step_flag = false;
 #ifdef PROFILE
         profile.hard_tot.end();
-#endif
+
         /////////////
 
         /////////////
-#ifdef PROFILE
-        profile.soft_tot.start();
+        profile.domain_ex_ptcl.start();
 #endif
         // Domain decomposition, parrticle exchange and force calculation
 
@@ -781,6 +780,12 @@ int main(int argc, char *argv[]){
             system_soft[i].rank_org = my_rank;
             system_soft[i].adr = i;
         }
+        
+#ifdef PROFILE
+        profile.domain_ex_ptcl.end();
+        
+        profile.soft_tot.start();
+#endif
 #ifdef PROFILE
         tree_soft.clearNumberOfInteraction();
         tree_soft.clearTimeProfile();

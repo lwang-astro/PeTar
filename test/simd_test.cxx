@@ -36,7 +36,7 @@ int main(int argc, char **argv){
     EPISoft::r_out = FPSoft::r_out = EPJSoft::r_out = 0.01;
     EPISoft::r_in = 0.001;
     EPISoft::eps = 0.0;
-    const PS::F64 DF_MAX=1e-4;
+    const PS::F64 DF_MAX=7e-3;
     
     SystemSoft ptcl;
     PS::S32 n=0;
@@ -47,7 +47,9 @@ int main(int argc, char **argv){
     ForceSoft force[Nepi], force_simd[Nepi];
     ForceSoft force_sp[Nepi], force_sp_simd[Nepi];
     ForceSoft force_sp_quad[Nepi], force_sp_quad_simd[Nepi];
+#pragma omp parallel for
     for (int i=0; i<N; i++) ptcl[i].calcRSearch(1.0/2048.0);
+#pragma omp parallel for    
     for (int i=0; i<Nepi; i++) {
         epi[i].copyFromFP(ptcl[i]);
         epj[i].copyFromFP(ptcl[i+Nepi]);
@@ -59,6 +61,7 @@ int main(int argc, char **argv){
         force_sp_quad[i].clear();
     }
     //for (int i=0; i<Nepj; i++) epj[i].copyFromFP(ptcl[i]);
+    
     for (int i=0; i<Nspj; i++) spj[i].setQuad((PS::F64)N);
 
     CalcForceEpEpWithLinearCutoffSimd f_ep_ep_simd;
@@ -67,7 +70,7 @@ int main(int argc, char **argv){
     CalcForceEpSpMonoNoSimd f_ep_sp;
     CalcForceEpSpQuadSimd f_ep_sp_quad_simd;
     CalcForceEpSpQuadNoSimd  f_ep_sp_quad;
-        
+
     PS::F64 t_ep_simd=0, t_ep_no=0, t_sp_simd=0, t_sp_no=0, t_sp_quad_simd=0, t_sp_quad_no=0;
     t_ep_simd -= PS::GetWtime();
     f_ep_ep_simd(epi, Nepi, epj, Nepj, force_simd);
@@ -93,7 +96,7 @@ int main(int argc, char **argv){
     f_ep_sp_quad(epi, Nepi, spj, Nspj, force_sp_quad);
     t_sp_quad_no += PS::GetWtime();
 
-    PS::F64 dfmax=0,dsmax=0,dqmax=0,dpmax=0;
+    PS::F64 dfmax=0,dsmax=0,dqmax=0,dfpmax=0,dspmax=0,dqpmax=0;
     for(int i=0; i<Nepi; i++) {
         for (int j=0; j<3; j++) {
             PS::F64 df=(force[i].acc[j]-force_simd[i].acc[j])/force[i].acc[j];
@@ -107,16 +110,46 @@ int main(int argc, char **argv){
             if(df>DF_MAX) std::cerr<<"Force sp_quad diff: i="<<i<<" nosimd["<<j<<"] "<<force_sp_quad[i].acc[j]<<" simd["<<j<<"] "<<force_sp_quad_simd[i].acc[j]<<std::endl;
             
         }
-        dpmax = std::max(dpmax, (force[i].pot-force_simd[i].pot)/force[i].pot);
+        dfpmax = std::max(dfpmax, (force[i].pot-force_simd[i].pot)/force[i].pot);
+        dspmax = std::max(dspmax, (force_sp[i].pot-force_sp_simd[i].pot)/force_sp[i].pot);
+        dqpmax = std::max(dqpmax, (force_sp_quad[i].pot-force_sp_quad_simd[i].pot)/force_sp_quad[i].pot);
         if(force[i].n_ngb!=force_simd[i].n_ngb) {
             std::cerr<<"Neighbor diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" simd "<<force_simd[i].n_ngb<<std::endl;
         }
     }
-    std::cout<<"Force diff max: "<<dfmax<<"\nPot diff max: "<<dpmax<<"\nSp diff max: "<<dsmax<<"\nQuad diff max: "<<dqmax<<std::endl;
+#ifdef USE__AVX512
+    std::cout<<"Use AVX512\n";
+#elif defined(__AVX2__)
+    std::cout<<"Use AVX2\n";
+#endif
+    
+    std::cout<<"Force diff max: "<<dfmax<<" Pot diff max: "<<dfpmax
+             <<"\nSp diff max: "<<dsmax<<" Pot diff max: "<<dspmax
+             <<"\nQuad diff max: "<<dqmax<<" Pot diff max: "<<dqpmax
+             <<std::endl;
     
     std::cout<<"Time: epj  simd="<<t_ep_simd<<" no="<<t_ep_no<<" ratio="<<t_ep_no/t_ep_simd<<std::endl;
     std::cout<<"Time: spj  simd="<<t_sp_simd<<" no="<<t_sp_no<<" ratio="<<t_sp_no/t_sp_simd<<std::endl;
     std::cout<<"Time: quad simd="<<t_sp_quad_simd<<" no="<<t_sp_quad_no<<" ratio="<<t_sp_quad_no/t_sp_quad_simd<<std::endl;
-    
+
+//    for (int i=0; i<Nepi; i++) {
+//        force_sp_quad_simd[i].clear();
+//        force_sp_quad[i].clear();
+//    }
+//    for (int i=0; i<Nspj; i++) {
+//        int id=4783;
+//        f_ep_sp_quad_simd(&epi[id], 16, &spj[i], 1, &force_sp_quad_simd[id]);
+//        f_ep_sp_quad(&epi[id], 16, &spj[i], 1, &force_sp_quad[id]);
+// 
+//        for(int j=0; j<3; j++) {
+//            double df = (force_sp_quad[id].acc[j]-force_sp_quad_simd[id].acc[j])/force_sp_quad[id].acc[j];
+//            if(df>DF_MAX) {
+//                std::cerr<<"Force sp_quad diff: i="<<i<<" nosimd["<<j<<"] "<<force_sp_quad[id].acc[j]<<" simd["<<j<<"] "<<force_sp_quad_simd[id].acc[j]<<std::endl;
+//            }
+//            
+//        }
+//        force_sp_quad_simd[id].clear();
+//        force_sp_quad[id].clear();
+//    }
     return 0;
 }
