@@ -432,19 +432,17 @@ private:
         }
     }    
 #else
-    typedef float v4sf __attribute__((vector_size(16)));
-    typedef float v8sf __attribute__((vector_size(32)));
-    typedef double v4df __attribute__((vector_size(32)));
+    typedef __m128 v4sf;
+    typedef __m256 v8sf;
+    typedef __m256d v4df;
+
     __attribute__ ((noinline))
     void kernel_epj_nounroll_for_p3t_with_linear_cutoff(const int ni, const int nj){
-        const v8sf vone = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
-        const v8sf veps2 = {(float)eps2, (float)eps2, (float)eps2, (float)eps2, 
-			    (float)eps2, (float)eps2, (float)eps2, (float)eps2};
-        //const v8sf vr_out  = {(float)r_out,  (float)r_out,  (float)r_out,  (float)r_out,  
-		//          (float)r_out,  (float)r_out,  (float)r_out,  (float)r_out};
-        //const v8sf vr_out2  = vr_out * vr_out;
-        const v8sf vr_out2 = {(float)r_crit2, (float)r_crit2, (float)r_crit2, (float)r_crit2, 
-                              (float)r_crit2, (float)r_crit2, (float)r_crit2, (float)r_crit2};
+        const v8sf vone  = _mm256_set1_ps(1.0f);
+        const v8sf veps2 = _mm256_set1_ps((float)eps2);
+        //const v8sf vr_out  = _mm256_set1_ps((float)r_out);
+        //const v8sf vr_out2 = _mm256_mul_ps(vr_out, vr_out);
+        const v8sf vr_out2 = _mm256_set1_ps((float)r_crit2);
         const v8sf allbits = _mm256_cmp_ps(vone, vone, 0x00);
         for(int i=0; i<ni; i+=8){
 	    //const v8sf xi = *(v8sf *)(&xibuf[i/8][0][0]);
@@ -468,56 +466,77 @@ private:
             const v8sf rsi = *(v8sf *)(xibuf[i/8][3]);
             
             v8sf ax, ay, az, pot, nngb;
-            ax = ay = az = pot = nngb = (v8sf){0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-            v8sf jbuf = __builtin_ia32_vbroadcastf128_ps256((v4sf *)epjbuf);
+            ax = ay = az = pot = nngb = _mm256_set1_ps(0.0f);
+            v8sf jbuf = _mm256_broadcast_ps((v4sf *)epjbuf);
+            //v8sf jbuf = __builtin_ia32_vbroadcastf128_ps256((v4sf *)epjbuf);
             v8sf rsjbuf=  _mm256_broadcast_ss(rsearchj);
 	    //v8sf jbuf = __builtin_ia32_vbroadcastf128_ps256((v4sf *)&epjbuf[0][0]);
-            v8sf xj =  __builtin_ia32_shufps256(jbuf, jbuf, 0x00);
-            v8sf yj =  __builtin_ia32_shufps256(jbuf, jbuf, 0x55);
-            v8sf zj =  __builtin_ia32_shufps256(jbuf, jbuf, 0xaa);
-            v8sf mj =  __builtin_ia32_shufps256(jbuf, jbuf, 0xff);
+            v8sf xj =  _mm256_shuffle_ps(jbuf, jbuf, 0x00);
+            v8sf yj =  _mm256_shuffle_ps(jbuf, jbuf, 0x55);
+            v8sf zj =  _mm256_shuffle_ps(jbuf, jbuf, 0xaa);
+            v8sf mj =  _mm256_shuffle_ps(jbuf, jbuf, 0xff);
             v8sf rsj= rsjbuf;
             for(int j=0; j<nj; j++){
-                jbuf = __builtin_ia32_vbroadcastf128_ps256((v4sf *)(epjbuf + j+1));
-                rsjbuf  =  _mm256_broadcast_ss(rsearchj+j+1);
+                jbuf = _mm256_broadcast_ps((v4sf *)(epjbuf + j+1));
+                rsjbuf = _mm256_broadcast_ss(rsearchj+j+1);
 		//jbuf = __builtin_ia32_vbroadcastf128_ps256((v4sf *)(&epjbuf[j+1][0]));
-                v8sf dx = xj - xi;
-                v8sf dy = yj - yi;
-                v8sf dz = zj - zi;
-                v8sf r2_real   = ((veps2 + dx*dx) + dy*dy) + dz*dz;
+                v8sf dx = _mm256_sub_ps(xi, xj);
+                v8sf dy = _mm256_sub_ps(yi, yj);
+                v8sf dz = _mm256_sub_ps(zi, zj);
+
+                v8sf r2_real = _mm256_fmadd_ps(dx, dx, veps2);
+                r2_real = _mm256_fmadd_ps(dy, dy, r2_real);
+                r2_real = _mm256_fmadd_ps(dz, dz, r2_real);
                 v8sf r2 = _mm256_max_ps(r2_real, vr_out2);
-                v8sf ri1  = __builtin_ia32_rsqrtps256(r2);
+                v8sf ri1 = _mm256_rsqrt_ps(r2);
+
+                v8sf ri2 = _mm256_mul_ps(ri1, ri1);
 #ifdef RSQRT_NR_EPJ_X4
                 // x4
-                v8sf v8p0 = {8.0f, 8.0f, 8.0f, 8.0f, 8.0f, 8.0f, 8.0f, 8.0f};
-                v8sf v6p0 = {6.0f, 6.0f, 6.0f, 6.0f, 6.0f, 6.0f, 6.0f, 6.0f};
-                v8sf v5p0 = {5.0f, 5.0f, 5.0f, 5.0f, 5.0f, 5.0f, 5.0f, 5.0f};
-                v8sf v0p0625 = {(float)1.0/16.0, (float)1.0/16.0, (float)1.0/16.0, (float)1.0/16.0,
-                                (float)1.0/16.0, (float)1.0/16.0, (float)1.0/16.0, (float)1.0/16.0};
-                v8sf h = vone - r2*(ri1*ri1);
-                ri1 *= vone + h*(v8p0+h*(v6p0+v5p0*h))*v0p0625;
+                v8sf v1 = _mm256_set1_ps(1.0f);
+                v8sf h = _mm256_fnmadd_ps(r2, ri2, v1);
+
+                v8sf v6p0 = _mm256_set1_ps(6.0f);
+                v8sf v5p0 = _mm256_set1_ps(5.0f);
+                v8sf v8p0 = _mm256_set1_ps(8.0f);
+                v8sf v0p0625 = _mm256_set1_ps((float)1.0/16.0);
+                
+                ri2 = _mm256_fmadd_ps(h, v5p0, v6p0);
+                ri2 = _mm256_fmadd_ps(h, ri2, v8p0);
+                ri2 = _mm256_mul_ps(h, ri2);
+                ri2 = _mm256_fmadd_ps(ri2, v0p0625, v1);
+                ri1 = _mm256_mul_ps(ri2, ri1);
+                
+                ri2 = _mm256_mul_ps(ri1, ri1);
 #elif defined(RSQRT_NR_EPJ_X2)
-                v8sf v3p0 = {3.0f, 3.0f, 3.0f, 3.0f, 3.0f, 3.0f, 3.0f, 3.0f}; 
-                v8sf v0p5 = {0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f};
-                ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
+                ri2 = _mm256_fnmadd_ps(r2, ri2, _mm256_set1_ps(3.0f));
+                ri2 = _mm256_mul_ps(ri2, _mm256_set1_ps(0.5f));
+                ri1 = _mm256_mul_ps(ri2, ri1);
+                //ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
+                ri2 = _mm256_mul_ps(ri1, ri1);
+                //v8sf v3p0 = {3.0f, 3.0f, 3.0f, 3.0f, 3.0f, 3.0f, 3.0f, 3.0f}; 
+                //v8sf v0p5 = {0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f};
+                //ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
 #endif
-                v8sf ri2 = ri1*ri1;
-                v8sf mri1 = mj*ri1;
-                v8sf mri3 = mri1 * ri2;
-                xj =  __builtin_ia32_shufps256(jbuf, jbuf, 0x00);
-                yj =  __builtin_ia32_shufps256(jbuf, jbuf, 0x55);
-                zj =  __builtin_ia32_shufps256(jbuf, jbuf, 0xaa);
-                mj =  __builtin_ia32_shufps256(jbuf, jbuf, 0xff);
+                v8sf mri1 = _mm256_mul_ps(mj, ri1);
+                v8sf mri3 = _mm256_mul_ps(mri1, ri2);
+
+                xj =  _mm256_shuffle_ps(jbuf, jbuf, 0x00);
+                yj =  _mm256_shuffle_ps(jbuf, jbuf, 0x55);
+                zj =  _mm256_shuffle_ps(jbuf, jbuf, 0xaa);
+                mj =  _mm256_shuffle_ps(jbuf, jbuf, 0xff);
                 //pot -= _mm256_and_ps(mri1, _mm256_cmp_ps(r2_real, veps2, 0x04));
-                pot -= mri1;
-                ax += mri3 * dx;
-                ay += mri3 * dy;
-                az += mri3 * dz;
+
+                pot = _mm256_sub_ps(pot, mri1);
+                ax = _mm256_fnmadd_ps(mri3, dx, ax);
+                ay = _mm256_fnmadd_ps(mri3, dy, ay);
+                az = _mm256_fnmadd_ps(mri3, dz, az);
+                
                 v8sf vrcrit = _mm256_max_ps(rsi, rsj);
-                v8sf vrcrit2 = vrcrit*vrcrit;
+                v8sf vrcrit2 = _mm256_mul_ps(vrcrit, vrcrit);
                 v8sf mask = _mm256_cmp_ps(vrcrit2, r2_real, 0x01); // for neighbour search
                 rsj= rsjbuf;
-                nngb += _mm256_and_ps( vone, _mm256_xor_ps(mask, allbits) ); // can remove
+                nngb = _mm256_add_ps(_mm256_and_ps( vone, _mm256_xor_ps(mask, allbits) ), nngb); // can remove
             }
             *(v8sf *)(accpbuf[i/8][0]) = ax;
             *(v8sf *)(accpbuf[i/8][1]) = ay;
@@ -610,55 +629,54 @@ private:
 #else
     __attribute__ ((noinline))
     void kernel_epj_nounroll(const int ni, const int nj){
-        const v8sf veps2 = {(float)eps2, (float)eps2, (float)eps2, (float)eps2, 
-                            (float)eps2, (float)eps2, (float)eps2, (float)eps2};
+        const v8sf veps2 = _mm256_set1_ps((float)eps2);
         for(int i=0; i<ni; i+=8){
             const v8sf xi = *(v8sf *)(xibuf[i/8][0]);
             const v8sf yi = *(v8sf *)(xibuf[i/8][1]);
             const v8sf zi = *(v8sf *)(xibuf[i/8][2]);
 
             v8sf ax, ay, az, pot;
-            ax = ay = az = pot = (v8sf){0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-            v8sf jbuf = __builtin_ia32_vbroadcastf128_ps256((v4sf *)epjbuf);
-            v8sf xj =  __builtin_ia32_shufps256(jbuf, jbuf, 0x00);
-            v8sf yj =  __builtin_ia32_shufps256(jbuf, jbuf, 0x55);
-            v8sf zj =  __builtin_ia32_shufps256(jbuf, jbuf, 0xaa);
-            v8sf mj =  __builtin_ia32_shufps256(jbuf, jbuf, 0xff);
+            ax = ay = az = pot = _mm256_set1_ps(0.0f);
+
+            v8sf jbuf = _mm256_broadcast_ps((v4sf *)epjbuf);
+            v8sf xj =  _mm256_shuffle_ps(jbuf, jbuf, 0x00);
+            v8sf yj =  _mm256_shuffle_ps(jbuf, jbuf, 0x55);
+            v8sf zj =  _mm256_shuffle_ps(jbuf, jbuf, 0xaa);
+            v8sf mj =  _mm256_shuffle_ps(jbuf, jbuf, 0xff);
+            
             for(int j=0; j<nj; j++){
-                jbuf = __builtin_ia32_vbroadcastf128_ps256((v4sf *)(epjbuf + j+1));
+                jbuf = _mm256_broadcast_ps((v4sf *)(epjbuf + j+1));
 		
-                v8sf dx = xj - xi;
-                v8sf dy = yj - yi;
-                v8sf dz = zj - zi;
+                v8sf dx = _mm256_sub_ps(xi, xj);
+                v8sf dy = _mm256_sub_ps(yi, yj);
+                v8sf dz = _mm256_sub_ps(zi, zj);
 		
-                v8sf r2   = ((veps2 + dx*dx) + dy*dy) + dz*dz;
-                v8sf ri1  = __builtin_ia32_rsqrtps256(r2);
+                v8sf r2 = _mm256_fmadd_ps(dx, dx, veps2);
+                r2 = _mm256_fmadd_ps(dy, dy, r2);
+                r2 = _mm256_fmadd_ps(dz, dz, r2);
+                v8sf ri1 = _mm256_rsqrt_ps(r2);
+
+                v8sf ri2 = _mm256_mul_ps(ri1, ri1);
 #ifdef RSQRT_NR_EPJ_X2
-                v8sf v3p0 = {3.0f, 3.0f, 3.0f, 3.0f, 3.0f, 3.0f, 3.0f, 3.0f}; 
-                ri1 *= (v3p0 - r2*(ri1*ri1));
+                ri2 = _mm256_fnmadd_ps(r2, ri2, _mm256_set1_ps(3.0f));
+                ri2 = _mm256_mul_ps(ri2, _mm256_set1_ps(0.5f));
+                ri1 = _mm256_mul_ps(ri2, ri1);
+                //ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
+                ri2 = _mm256_mul_ps(ri1, ri1);
 #endif
-                v8sf mri1 = mj * ri1;
-                v8sf ri2  = ri1 * ri1;
-                v8sf mri3 = mri1 * ri2;
+                v8sf mri1 = _mm256_mul_ps(mj, ri1);
+                v8sf mri3 = _mm256_mul_ps(mri1, ri2);
 
-                xj =  __builtin_ia32_shufps256(jbuf, jbuf, 0x00);
-                yj =  __builtin_ia32_shufps256(jbuf, jbuf, 0x55);
-                zj =  __builtin_ia32_shufps256(jbuf, jbuf, 0xaa);
-                mj =  __builtin_ia32_shufps256(jbuf, jbuf, 0xff);
+                xj =  _mm256_shuffle_ps(jbuf, jbuf, 0x00);
+                yj =  _mm256_shuffle_ps(jbuf, jbuf, 0x55);
+                zj =  _mm256_shuffle_ps(jbuf, jbuf, 0xaa);
+                mj =  _mm256_shuffle_ps(jbuf, jbuf, 0xff);
 
-                pot -= mri1;
-                ax += mri3 * dx;
-                ay += mri3 * dy;
-                az += mri3 * dz;
+                pot = _mm256_sub_ps(pot, mri1);
+                ax = _mm256_fnmadd_ps(mri3, dx, ax);
+                ay = _mm256_fnmadd_ps(mri3, dy, ay);
+                az = _mm256_fnmadd_ps(mri3, dz, az);
             }
-#ifdef RSQRT_NR_EPJ_X2
-            v8sf v0p5 = {0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f}; 
-            v8sf v0p125 = {0.125f, 0.125f, 0.125f, 0.125f, 0.125f, 0.125f, 0.125f, 0.125f}; 
-            pot *= v0p5;
-            ax  *= v0p125;
-            ay  *= v0p125;
-            az  *= v0p125;
-#endif
             *(v8sf *)(accpbuf[i/8][0]) = ax;
             *(v8sf *)(accpbuf[i/8][1]) = ay;
             *(v8sf *)(accpbuf[i/8][2]) = az;
@@ -834,89 +852,107 @@ private:
 #else
 	__attribute__ ((noinline))
 	void kernel_spj_nounroll(const int ni, const int nj){
-	    const v8sf veps2 = {(float)eps2, (float)eps2, (float)eps2, (float)eps2, (float)eps2, (float)eps2, (float)eps2, (float)eps2};
+        const v8sf veps2 = _mm256_set1_ps((float)eps2);
 		for(int i=0; i<ni; i+=8){
 			const v8sf xi = *(v8sf *)(xibuf[i/8][0]);
 			const v8sf yi = *(v8sf *)(xibuf[i/8][1]);
 			const v8sf zi = *(v8sf *)(xibuf[i/8][2]);
 
 			v8sf ax, ay, az, pot;
-			ax = ay = az = pot = (v8sf){0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+            ax = ay = az = pot = _mm256_set1_ps(0.0f);
 
 #ifdef AVX_PRELOAD
-			v8sf jbuf0 = __builtin_ia32_vbroadcastf128_ps256((v4sf *)&spjbuf[0][0]);
-			v8sf jbuf1 = __builtin_ia32_vbroadcastf128_ps256((v4sf *)&spjbuf[0][1]);
-			v8sf jbuf2 = __builtin_ia32_vbroadcastf128_ps256((v4sf *)&spjbuf[0][2]);
+			v8sf jbuf0 = _mm256_broadcast_ps((v4sf *)&spjbuf[0][0]);
+			v8sf jbuf1 = _mm256_broadcast_ps((v4sf *)&spjbuf[0][1]);
+			v8sf jbuf2 = _mm256_broadcast_ps((v4sf *)&spjbuf[0][2]);
 #else
 			v8sf jbuf0, jbuf1, jbuf2;
 #endif
 			for(int j=0; j<nj; j++){
 #ifndef AVX_PRELOAD
-				jbuf0 = __builtin_ia32_vbroadcastf128_ps256((v4sf *)&spjbuf[j+0][0]);
+				jbuf0 = _mm256_broadcast_ps((v4sf *)&spjbuf[j+0][0]);
 #endif
-				v8sf xj  = __builtin_ia32_shufps256(jbuf0, jbuf0, 0x00);
-				v8sf yj  = __builtin_ia32_shufps256(jbuf0, jbuf0, 0x55);
-				v8sf zj  = __builtin_ia32_shufps256(jbuf0, jbuf0, 0xaa);
+				v8sf xj  = _mm256_shuffle_ps(jbuf0, jbuf0, 0x00);
+				v8sf yj  = _mm256_shuffle_ps(jbuf0, jbuf0, 0x55);
+				v8sf zj  = _mm256_shuffle_ps(jbuf0, jbuf0, 0xaa);
 #ifdef AVX_PRELOAD
-				jbuf0 = __builtin_ia32_vbroadcastf128_ps256((v4sf *)&spjbuf[j+1][0]);
+				jbuf0 = _mm256_broadcast_ps((v4sf *)&spjbuf[j+1][0]);
 #endif
 
 #ifndef AVX_PRELOAD
-				jbuf1 = __builtin_ia32_vbroadcastf128_ps256((v4sf *)&spjbuf[j+0][1]);
+				jbuf1 = _mm256_broadcast_ps((v4sf *)&spjbuf[j+0][1]);
 #endif
-				v8sf qxx = __builtin_ia32_shufps256(jbuf1, jbuf1, 0x00);
-				v8sf qyy = __builtin_ia32_shufps256(jbuf1, jbuf1, 0x55);
-				v8sf qzz = __builtin_ia32_shufps256(jbuf1, jbuf1, 0xaa);
-				v8sf mj  = __builtin_ia32_shufps256(jbuf1, jbuf1, 0xff);
+				v8sf qxx = _mm256_shuffle_ps(jbuf1, jbuf1, 0x00);
+				v8sf qyy = _mm256_shuffle_ps(jbuf1, jbuf1, 0x55);
+				v8sf qzz = _mm256_shuffle_ps(jbuf1, jbuf1, 0xaa);
+				v8sf mj  = _mm256_shuffle_ps(jbuf1, jbuf1, 0xff);
 #ifdef AVX_PRELOAD
-				jbuf1 = __builtin_ia32_vbroadcastf128_ps256((v4sf *)&spjbuf[j+1][1]);
+				jbuf1 = _mm256_broadcast_ps((v4sf *)&spjbuf[j+1][1]);
 #endif
 
 #ifndef AVX_PRELOAD
-				jbuf2 = __builtin_ia32_vbroadcastf128_ps256((v4sf *)&spjbuf[j+0][2]);
+				jbuf2 = _mm256_broadcast_ps((v4sf *)&spjbuf[j+0][2]);
 #endif
-				v8sf qxy = __builtin_ia32_shufps256(jbuf2, jbuf2, 0x00);
-				v8sf qyz = __builtin_ia32_shufps256(jbuf2, jbuf2, 0x55);
-				v8sf qzx = __builtin_ia32_shufps256(jbuf2, jbuf2, 0xaa);
-				v8sf mtr = __builtin_ia32_shufps256(jbuf2, jbuf2, 0xff);
+				v8sf qxy = _mm256_shuffle_ps(jbuf2, jbuf2, 0x00);
+				v8sf qyz = _mm256_shuffle_ps(jbuf2, jbuf2, 0x55);
+				v8sf qzx = _mm256_shuffle_ps(jbuf2, jbuf2, 0xaa);
+				v8sf mtr = _mm256_shuffle_ps(jbuf2, jbuf2, 0xff);
 #ifdef AVX_PRELOAD
-				jbuf2 = __builtin_ia32_vbroadcastf128_ps256((v4sf *)&spjbuf[j+1][2]);
+				jbuf2 = _mm256_broadcast_ps((v4sf *)&spjbuf[j+1][2]);
 #endif
 
-				v8sf dx = xj - xi;
-				v8sf dy = yj - yi;
-				v8sf dz = zj - zi;
+                v8sf dx = _mm256_sub_ps(xi, xj);
+                v8sf dy = _mm256_sub_ps(yi, yj);
+                v8sf dz = _mm256_sub_ps(zi, zj);
 
-				v8sf r2  = ((veps2 + dx*dx) + dy*dy) + dz*dz;
-				v8sf ri1 = __builtin_ia32_rsqrtps256(r2);
-				v8sf v0p5 = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
+                v8sf r2 = _mm256_fmadd_ps(dx, dx, veps2);
+                r2 = _mm256_fmadd_ps(dy, dy, r2);
+                r2 = _mm256_fmadd_ps(dz, dz, r2);
+                v8sf ri1 = _mm256_rsqrt_ps(r2);
+
+                v8sf ri2 = _mm256_mul_ps(ri1, ri1);
 #ifdef RSQRT_NR_SPJ_X2
-                v8sf v3p0 = {3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0};
-                ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
+                ri2 = _mm256_fnmadd_ps(r2, ri2, _mm256_set1_ps(3.0f));
+                ri2 = _mm256_mul_ps(ri2, _mm256_set1_ps(0.5f));
+                ri1 = _mm256_mul_ps(ri2, ri1);
+                //ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
+                ri2 = _mm256_mul_ps(ri1, ri1);
 #endif
-				v8sf ri2 = ri1 * ri1;
-				v8sf ri3 = ri1 * ri2;
-				v8sf ri4 = ri2 * ri2;
-				v8sf ri5 = ri2 * ri3;
+				v8sf ri3 = _mm256_mul_ps(ri1, ri2);
+				v8sf ri4 = _mm256_mul_ps(ri2, ri2);
+				v8sf ri5 = _mm256_mul_ps(ri2, ri3);
 
-				v8sf qr_x = (qxx*dx + qxy*dy) + qzx*dz;
-				v8sf qr_y = (qyy*dy + qxy*dx) + qyz*dz;
-				v8sf qr_z = (qzz*dz + qzx*dx) + qyz*dy;
+                //(qxx*dx + qxy*dy) + qzx*dz;
+				v8sf qr_x = _mm256_mul_ps(dx, qxx);
+                qr_x = _mm256_fmadd_ps(dy, qxy, qr_x);
+                qr_x = _mm256_fmadd_ps(dz, qzx, qr_x);
+                //(qyy*dy + qxy*dx) + qyz*dz;
+				v8sf qr_y = _mm256_mul_ps(dy, qyy);
+                qr_y = _mm256_fmadd_ps(dx, qxy, qr_y);
+                qr_y = _mm256_fmadd_ps(dz, qyz, qr_y);
+                //(qzz*dz + qzx*dx) + qyz*dy;
+				v8sf qr_z = _mm256_mul_ps(dz, qzz);
+                qr_z = _mm256_fmadd_ps(dx, qzx, qr_z);
+                qr_z = _mm256_fmadd_ps(dy, qyz, qr_z);
 
-				v8sf rqr = ((mtr + qr_x*dx) + qr_y*dy) + qr_z*dz;
-				v8sf rqr_ri4 = rqr * ri4;
+                v8sf rqr = _mm256_fmadd_ps(qr_x, dx, mtr);
+                rqr = _mm256_fmadd_ps(qr_y, dy, rqr);
+                rqr = _mm256_fmadd_ps(qr_z, dz, rqr);
 
-				//v8sf v0p5 = {0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f};
-				v8sf v2p5 = {2.5f, 2.5f, 2.5f, 2.5f, 2.5f, 2.5f, 2.5f, 2.5f}; 
+				v8sf rqr_ri4 = _mm256_mul_ps(rqr, ri4);
+                
+				v8sf meff  = _mm256_fmadd_ps(rqr_ri4, _mm256_set1_ps(0.5f), mj);
+                v8sf meff3 = _mm256_fmadd_ps(rqr_ri4, _mm256_set1_ps(2.5f), mj);
+                meff3 = _mm256_mul_ps(meff3, ri3);
 
-				v8sf meff  =  mj + v0p5 * rqr_ri4;
-				v8sf meff3 = (mj + v2p5 * rqr_ri4) * ri3;
-
-				pot -= meff * ri1;
-
-				ax = (ax - ri5*qr_x) + meff3*dx;
-				ay = (ay - ri5*qr_y) + meff3*dy;
-				az = (az - ri5*qr_z) + meff3*dz;
+				pot = _mm256_fnmadd_ps(meff, ri1, pot);
+                
+                ax = _mm256_fmadd_ps(ri5, qr_x, ax);
+                ax = _mm256_fnmadd_ps(meff3, dx, ax);
+                ay = _mm256_fmadd_ps(ri5, qr_y, ay);
+                ay = _mm256_fnmadd_ps(meff3, dy, ay);
+                az = _mm256_fmadd_ps(ri5, qr_z, az);
+                az = _mm256_fnmadd_ps(meff3, dz, az);
 			}
 			*(v8sf *)(accpbuf[i/8][0]) = ax;
 			*(v8sf *)(accpbuf[i/8][1]) = ay;
@@ -1303,71 +1339,104 @@ private:
     }
 
 #else
-    typedef float v4sf __attribute__((vector_size(16)));
-    typedef float v8sf __attribute__((vector_size(32)));
-    typedef double v4df __attribute__((vector_size(32)));
+    //typedef float v4sf __attribute__((vector_size(16)));
+    //typedef float v8sf __attribute__((vector_size(32)));
+    //typedef double v4df __attribute__((vector_size(32)));
+    typedef __m128 v4sf;
+    typedef __m256 v8sf;
+    typedef __m256d v4df;
 
     __attribute__ ((noinline))
     void kernel_epj_nounroll(const int ni, const int nj){
-	const v4df veps2 = {eps2, eps2, eps2, eps2};
-	for(int i=0; i<ni; i+=4){
-	    const int il = i%8;
-	    const v4df xi = *(v4df *)(&xibuf[i/8][0][il]);
-	    const v4df yi = *(v4df *)(&xibuf[i/8][1][il]);
-	    const v4df zi = *(v4df *)(&xibuf[i/8][2][il]);
+        const v4df veps2 = _mm256_set1_pd(eps2);
+        for(int i=0; i<ni; i+=4){
+            const int il = i%8;
+            const v4df xi = *(v4df *)(&xibuf[i/8][0][il]);
+            const v4df yi = *(v4df *)(&xibuf[i/8][1][il]);
+            const v4df zi = *(v4df *)(&xibuf[i/8][2][il]);
 
-	    v4df ax, ay, az, pot;
-	    ax = ay = az = pot = (v4df){0.0, 0.0, 0.0, 0.0};
+            v4df ax, ay, az, pot;
+            ax = ay = az = pot = _mm256_set1_pd(0.0);
 
-	    v4df jbuf = *((v4df*)epjbuf);
-	    v4df xj =  _mm256_permute4x64_pd(jbuf, 0x00);
-	    v4df yj =  _mm256_permute4x64_pd(jbuf, 0x55);
-	    v4df zj =  _mm256_permute4x64_pd(jbuf, 0xaa);
-	    v4df mj =  _mm256_permute4x64_pd(jbuf, 0xff);
+            v4df jbuf = *((v4df*)epjbuf);
+            v4df xj =  _mm256_permute4x64_pd(jbuf, 0x00);
+            v4df yj =  _mm256_permute4x64_pd(jbuf, 0x55);
+            v4df zj =  _mm256_permute4x64_pd(jbuf, 0xaa);
+            v4df mj =  _mm256_permute4x64_pd(jbuf, 0xff);
 
-	    for(int j=0; j<nj; j++){
-            jbuf = *((v4df*)(epjbuf+j+1));
-            v4df dx = xj - xi;
-            v4df dy = yj - yi;
-            v4df dz = zj - zi;
-            v4df r2   = ((veps2 + dx*dx) + dy*dy) + dz*dz;
-            //v4df mask = _mm256_cmp_pd(vrcrit2, r2, 0x01); // vrcrit2 < r2
-            v4df mask = _mm256_cmp_pd(veps2, r2, 0x4); // veps2 != r2
-            v4df ri1  = _mm256_and_pd( __builtin_ia32_cvtps2pd256( __builtin_ia32_rsqrtps( __builtin_ia32_cvtpd2ps256(r2))), mask );
+            for(int j=0; j<nj; j++){
+                jbuf = *((v4df*)(epjbuf+j+1));
+                v4df dx = _mm256_sub_pd(xi, xj); 
+                v4df dy = _mm256_sub_pd(yi, yj); 
+                v4df dz = _mm256_sub_pd(zi, zj);
+                
+                v4df r2 = _mm256_fmadd_pd(dx, dx, veps2);
+                r2 = _mm256_fmadd_pd(dy, dy, r2);
+                r2 = _mm256_fmadd_pd(dz, dz, r2);
+                //v4df mask = _mm256_cmp_pd(vrcrit2, r2, 0x01); // vrcrit2 < r2
+                v4df mask = _mm256_cmp_pd(veps2, r2, 0x4); // veps2 != r2
+                v4df ri1  = _mm256_and_pd(_mm256_cvtps_pd(_mm256_castps256_ps128(_mm256_rsqrt_ps(_mm256_castps128_ps256(_mm256_cvtpd_ps(r2))))), mask);
+                //v4df ri1  = __builtin_ia32_cvtps2pd256(__builtin_ia32_rsqrtps( __builtin_ia32_cvtpd2ps256(r2)));
+
+                v4df ri2 = _mm256_mul_pd(ri1, ri1);
 #ifdef RSQRT_NR_EPJ_X4
-            // x4
-            v4df vone = {1.0, 1.0, 1.0, 1.0};
-            v4df v8p0 = {8.0, 8.0, 8.0, 8.0};
-            v4df v6p0 = {6.0, 6.0, 6.0, 6.0};
-            v4df v5p0 = {5.0, 5.0, 5.0, 5.0};
-            v4df v0p0625 = {1.0/16.0, 1.0/16.0, 1.0/16.0, 1.0/16.0};
-            v4df h = vone - r2*(ri1*ri1);
-            ri1 *= vone + h*(v8p0+h*(v6p0+v5p0*h))*v0p0625;
-#elif defined(RSQRT_NR_EPJ_X2)
-            //x2
-            v4df v0p5 = {0.5, 0.5, 0.5, 0.5};
-            v4df v3p0 = {3.0, 3.0, 3.0, 3.0};
-            ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
-#endif
-            v4df mri1 = mj * ri1;
-            v4df ri2  = ri1 * ri1;
-            v4df mri3 = mri1 * ri2;
-		
-            xj =  _mm256_permute4x64_pd(jbuf, 0x00);
-            yj =  _mm256_permute4x64_pd(jbuf, 0x55);
-            zj =  _mm256_permute4x64_pd(jbuf, 0xaa);
-            mj =  _mm256_permute4x64_pd(jbuf, 0xff);
+                // x4
+                v4df v1 = _mm256_set1_pd(1.0f);
+                v4df h = _mm256_fnmadd_pd(r2, ri2, v1);
 
-            pot -= mri1;
-            ax += mri3 * dx;
-            ay += mri3 * dy;
-            az += mri3 * dz;
-	    }
-	    *(v4df *)(&accpbuf[i/8][0][il]) = ax;
-	    *(v4df *)(&accpbuf[i/8][1][il]) = ay;
-	    *(v4df *)(&accpbuf[i/8][2][il]) = az;
-	    *(v4df *)(&accpbuf[i/8][3][il]) = pot;
-	}
+                v4df v6p0 = _mm256_set1_pd(6.0f);
+                v4df v5p0 = _mm256_set1_pd(5.0f);
+                v4df v8p0 = _mm256_set1_pd(8.0f);
+                v4df v0p0625 = _mm256_set1_pd((float)1.0/16.0);
+                
+                ri2 = _mm256_fmadd_pd(h, v5p0, v6p0);
+                ri2 = _mm256_fmadd_pd(h, ri2, v8p0);
+                ri2 = _mm256_mul_pd(h, ri2);
+                ri2 = _mm256_fmadd_pd(ri2, v0p0625, v1);
+                ri1 = _mm256_mul_pd(ri2, ri1);
+                
+                //v4df h = vone - r2*(ri1*ri1);
+                //ri1 *= vone + h*(v8p0+h*(v6p0+v5p0*h))*v0p0625;
+                ri2 = _mm256_mul_pd(ri1, ri1);
+                //v4df vone = {1.0, 1.0, 1.0, 1.0};
+                //v4df v8p0 = {8.0, 8.0, 8.0, 8.0};
+                //v4df v6p0 = {6.0, 6.0, 6.0, 6.0};
+                //v4df v5p0 = {5.0, 5.0, 5.0, 5.0};
+                //v4df v0p0625 = {1.0/16.0, 1.0/16.0, 1.0/16.0, 1.0/16.0};
+                //v4df h = vone - r2*(ri1*ri1);
+                //ri1 *= vone + h*(v8p0+h*(v6p0+v5p0*h))*v0p0625;
+#elif defined(RSQRT_NR_EPJ_X2)
+                //x2
+                ri2 = _mm256_fnmadd_pd(r2, ri2, _mm256_set1_pd(3.0f));
+                ri2 = _mm256_mul_pd(ri2, _mm256_set1_pd(0.5f));
+                ri1 = _mm256_mul_pd(ri2, ri1);
+                //v4df v0p5 = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
+                //v4df v3p0 = {3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0};
+                //ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
+                ri2 = _mm256_mul_pd(ri1, ri1);
+
+                //v4df v0p5 = {0.5, 0.5, 0.5, 0.5};
+                //v4df v3p0 = {3.0, 3.0, 3.0, 3.0};
+                //ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
+#endif
+                v4df mri1 = _mm256_mul_pd(ri1, mj);
+                v4df mri3 = _mm256_mul_pd(mri1, ri2);
+		
+                xj =  _mm256_permute4x64_pd(jbuf, 0x00);
+                yj =  _mm256_permute4x64_pd(jbuf, 0x55);
+                zj =  _mm256_permute4x64_pd(jbuf, 0xaa);
+                mj =  _mm256_permute4x64_pd(jbuf, 0xff);
+
+                pot = _mm256_sub_pd(pot, mri1);
+                ax = _mm256_fnmadd_pd(mri3, dx, ax);
+                ay = _mm256_fnmadd_pd(mri3, dy, ay);
+                az = _mm256_fnmadd_pd(mri3, dz, az);
+            }
+            *(v4df *)(&accpbuf[i/8][0][il]) = ax;
+            *(v4df *)(&accpbuf[i/8][1][il]) = ay;
+            *(v4df *)(&accpbuf[i/8][2][il]) = az;
+            *(v4df *)(&accpbuf[i/8][3][il]) = pot;
+        }
     }
 #endif
     
@@ -1500,11 +1569,11 @@ private:
 #else
     __attribute__ ((noinline))
     void kernel_epj_nounroll_for_p3t_with_linear_cutoff(const int ni, const int nj){
-        const v4df vone = {1.0, 1.0, 1.0, 1.0};
-        const v4df veps2 = {eps2, eps2, eps2, eps2};
-        //const v4df vr_out  = {r_out,  r_out,  r_out,  r_out};
-        //const v4df vr_out2  = vr_out * vr_out;
-        const v4df vr_out2 = {r_crit2, r_crit2, r_crit2, r_crit2};
+        const v4df vone = _mm256_set1_pd(1.0);
+        const v4df veps2 = _mm256_set1_pd(eps2);
+        //const v4df vr_out  = _mm256_set1_pd(r_out);
+        //const v4df vr_out2 = _mm256_mul_pd(vr_out, vr_out);
+        const v4df vr_out2 = _mm256_set1_pd(r_crit2);
         const v4df allbits = _mm256_cmp_pd(vone, vone, 0x00);
         for(int i=0; i<ni; i+=4){
             const int il = i%8;
@@ -1513,7 +1582,7 @@ private:
             const v4df zi = *(v4df *)(&xibuf[i/8][2][il]);
             const v4df rsi= *(v4df *)(&xibuf[i/8][3][il]);
             v4df ax, ay, az, pot, nngb;
-            ax = ay = az = pot = nngb = (v4df){0.0, 0.0, 0.0, 0.0};
+            ax = ay = az = pot = nngb = _mm256_set1_pd(0.0);
             v4df jbuf = *((v4df*)epjbuf);
             v4df rsjbuf=  _mm256_broadcast_sd(rsearchj);
             v4df xj =  _mm256_permute4x64_pd(jbuf, 0x00);
@@ -1524,42 +1593,77 @@ private:
             for(int j=0; j<nj; j++){
                 jbuf = *((v4df*)(epjbuf+j+1));
                 rsjbuf  =  _mm256_broadcast_sd(rsearchj+j+1);
-                v4df dx = xj - xi;
-                v4df dy = yj - yi;
-                v4df dz = zj - zi;
-                v4df r2_real   = ((veps2 + dx*dx) + dy*dy) + dz*dz;
+                v4df dx = _mm256_sub_pd(xi, xj); 
+                v4df dy = _mm256_sub_pd(yi, yj); 
+                v4df dz = _mm256_sub_pd(zi, zj);
+
+                v4df r2_real = _mm256_fmadd_pd(dx, dx, veps2);
+                r2_real = _mm256_fmadd_pd(dy, dy, r2_real);
+                r2_real = _mm256_fmadd_pd(dz, dz, r2_real);
+
                 v4df r2 = _mm256_max_pd( r2_real, vr_out2);
-                v4df ri1  = __builtin_ia32_cvtps2pd256(__builtin_ia32_rsqrtps( __builtin_ia32_cvtpd2ps256(r2)));
+                v4df ri1  = _mm256_cvtps_pd(_mm256_castps256_ps128(_mm256_rsqrt_ps(_mm256_castps128_ps256(_mm256_cvtpd_ps(r2)))));
+                //v4df ri1  = __builtin_ia32_cvtps2pd256(__builtin_ia32_rsqrtps( __builtin_ia32_cvtpd2ps256(r2)));
+                v4df ri2 = _mm256_mul_pd(ri1, ri1);
+
 #ifdef RSQRT_NR_EPJ_X4
                 // x4
-                v4df v8p0 = {8.0, 8.0, 8.0, 8.0};
-                v4df v6p0 = {6.0, 6.0, 6.0, 6.0};
-                v4df v5p0 = {5.0, 5.0, 5.0, 5.0};
-                v4df v0p0625 = {1.0/16.0, 1.0/16.0, 1.0/16.0, 1.0/16.0};
-                v4df h = vone - r2*(ri1*ri1);
-                ri1 *= vone + h*(v8p0+h*(v6p0+v5p0*h))*v0p0625;
+                v4df v1 = _mm256_set1_pd(1.0f);
+                v4df h = _mm256_fnmadd_pd(r2, ri2, v1);
+
+                v4df v6p0 = _mm256_set1_pd(6.0f);
+                v4df v5p0 = _mm256_set1_pd(5.0f);
+                v4df v8p0 = _mm256_set1_pd(8.0f);
+                v4df v0p0625 = _mm256_set1_pd((float)1.0/16.0);
+                
+                ri2 = _mm256_fmadd_pd(h, v5p0, v6p0);
+                ri2 = _mm256_fmadd_pd(h, ri2, v8p0);
+                ri2 = _mm256_mul_pd(h, ri2);
+                ri2 = _mm256_fmadd_pd(ri2, v0p0625, v1);
+                ri1 = _mm256_mul_pd(ri2, ri1);
+                
+                //v4df h = vone - r2*(ri1*ri1);
+                //ri1 *= vone + h*(v8p0+h*(v6p0+v5p0*h))*v0p0625;
+                ri2 = _mm256_mul_pd(ri1, ri1);
+                //v4df vone = {1.0, 1.0, 1.0, 1.0};
+                //v4df v8p0 = {8.0, 8.0, 8.0, 8.0};
+                //v4df v6p0 = {6.0, 6.0, 6.0, 6.0};
+                //v4df v5p0 = {5.0, 5.0, 5.0, 5.0};
+                //v4df v0p0625 = {1.0/16.0, 1.0/16.0, 1.0/16.0, 1.0/16.0};
+                //v4df h = vone - r2*(ri1*ri1);
+                //ri1 *= vone + h*(v8p0+h*(v6p0+v5p0*h))*v0p0625;
 #elif defined(RSQRT_NR_EPJ_X2)
                 //x2
-                v4df v0p5 = {0.5, 0.5, 0.5, 0.5};
-                v4df v3p0 = {3.0, 3.0, 3.0, 3.0};
-                ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
+                ri2 = _mm256_fnmadd_pd(r2, ri2, _mm256_set1_pd(3.0f));
+                ri2 = _mm256_mul_pd(ri2, _mm256_set1_pd(0.5f));
+                ri1 = _mm256_mul_pd(ri2, ri1);
+                //v4df v0p5 = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
+                //v4df v3p0 = {3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0};
+                //ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
+                ri2 = _mm256_mul_pd(ri1, ri1);
+
+                //v4df v0p5 = {0.5, 0.5, 0.5, 0.5};
+                //v4df v3p0 = {3.0, 3.0, 3.0, 3.0};
+                //ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
 #endif
-                v4df ri2 = ri1*ri1;
-                v4df mri1 = mj*ri1;
-                v4df mri3 = mri1 * ri2;
+                v4df mri1 = _mm256_mul_pd(ri1, mj);
+                v4df mri3 = _mm256_mul_pd(mri1, ri2);
+
                 xj =  _mm256_permute4x64_pd(jbuf, 0x00);
                 yj =  _mm256_permute4x64_pd(jbuf, 0x55);
                 zj =  _mm256_permute4x64_pd(jbuf, 0xaa);
                 mj =  _mm256_permute4x64_pd(jbuf, 0xff);
-                pot -= mri1;
-                ax += mri3 * dx;
-                ay += mri3 * dy;
-                az += mri3 * dz;
+
+                pot = _mm256_sub_pd(pot, mri1);
+                ax = _mm256_fnmadd_pd(mri3, dx, ax);
+                ay = _mm256_fnmadd_pd(mri3, dy, ay);
+                az = _mm256_fnmadd_pd(mri3, dz, az);
+                
                 v4df vrcrit = _mm256_max_pd(rsi, rsj);
-                v4df vrcrit2 = vrcrit*vrcrit;
+                v4df vrcrit2 = _mm256_mul_pd(vrcrit, vrcrit);
                 v4df mask = _mm256_cmp_pd(vrcrit2, r2_real, 0x01); // for neighbour search
                 rsj= rsjbuf;
-                nngb += _mm256_and_pd( vone, _mm256_xor_pd(mask, allbits) ); // can remove
+                nngb = _mm256_add_pd(_mm256_and_pd( vone, _mm256_xor_pd(mask, allbits) ), nngb); // can remove
             }
             *(v4df *)(&accpbuf[i/8][0][il]) = ax;
             *(v4df *)(&accpbuf[i/8][1][il]) = ay;
@@ -1712,7 +1816,7 @@ private:
                 v8df mj = _mm512_set1_pd(spjbuf[j][1][3]);
 #endif
 				v8df meff  = _mm512_fmadd_pd(rqr_ri4, _mm512_set1_pd(0.5f), mj);
-				//v16sf meff3 = (mj + v2p5 * rqr_ri4) * ri3;
+				//v8df meff3 = (mj + v2p5 * rqr_ri4) * ri3;
                 v8df meff3 = _mm512_fmadd_pd(rqr_ri4, _mm512_set1_pd(2.5f), mj);
                 meff3 = _mm512_mul_pd(meff3, ri3);
                 //v8df meff3 = (mj + v2p5 * rqr_ri4) * ri3;
@@ -1749,84 +1853,129 @@ private:
 #else
     __attribute__ ((noinline))
     void kernel_spj_nounroll(const int ni, const int nj){
-	const v4df veps2 = {eps2, eps2, eps2, eps2};
-	for(int i=0; i<ni; i+=4){
-	    const int il = i%8;
-	    const v4df xi = *(v4df *)(&xibuf[i/8][0][il]);
-	    const v4df yi = *(v4df *)(&xibuf[i/8][1][il]);
-	    const v4df zi = *(v4df *)(&xibuf[i/8][2][il]);
+        const v4df veps2 = _mm256_set1_pd(eps2);
+        for(int i=0; i<ni; i+=4){
+            const int il = i%8;
+            const v4df xi = *(v4df *)(&xibuf[i/8][0][il]);
+            const v4df yi = *(v4df *)(&xibuf[i/8][1][il]);
+            const v4df zi = *(v4df *)(&xibuf[i/8][2][il]);
 
-	    v4df ax, ay, az, pot;
-	    ax = ay = az = pot = (v4df){0.0, 0.0, 0.0, 0.0};
+            v4df ax, ay, az, pot;
+            ax = ay = az = pot = _mm256_set1_pd(0.0);
+            
+            v4df jbuf0 = *((v4df*)spjbuf[0][0]);
+            v4df jbuf1 = *((v4df*)spjbuf[0][1]);
+            v4df jbuf2 = *((v4df*)spjbuf[0][2]);
 
-	    v4df jbuf0 = *((v4df*)spjbuf[0][0]);
-	    v4df jbuf1 = *((v4df*)spjbuf[0][1]);
-	    v4df jbuf2 = *((v4df*)spjbuf[0][2]);
+            for(int j=0; j<nj; j++){
+                v4df xj  = _mm256_permute4x64_pd(jbuf0, 0x00);
+                v4df yj  = _mm256_permute4x64_pd(jbuf0, 0x55);
+                v4df zj  = _mm256_permute4x64_pd(jbuf0, 0xaa);
+                jbuf0 = *((v4df*)spjbuf[j+1][0]);
 
-	    for(int j=0; j<nj; j++){
-		v4df xj  = _mm256_permute4x64_pd(jbuf0, 0x00);
-		v4df yj  = _mm256_permute4x64_pd(jbuf0, 0x55);
-		v4df zj  = _mm256_permute4x64_pd(jbuf0, 0xaa);
-		jbuf0 = *((v4df*)spjbuf[j+1][0]);
+                v4df qxx = _mm256_permute4x64_pd(jbuf1, 0x00);
+                v4df qyy = _mm256_permute4x64_pd(jbuf1, 0x55);
+                v4df qzz = _mm256_permute4x64_pd(jbuf1, 0xaa);
+                v4df mj  = _mm256_permute4x64_pd(jbuf1, 0xff);
+                jbuf1 = *((v4df*)spjbuf[j+1][1]);
+		
+                v4df qxy = _mm256_permute4x64_pd(jbuf2, 0x00);
+                v4df qyz = _mm256_permute4x64_pd(jbuf2, 0x55);
+                v4df qzx = _mm256_permute4x64_pd(jbuf2, 0xaa);
+                v4df mtr = _mm256_permute4x64_pd(jbuf2, 0xff);
+                jbuf2 = *((v4df*)spjbuf[j+1][2]);
+		
+                v4df dx = _mm256_sub_pd(xi, xj); 
+                v4df dy = _mm256_sub_pd(yi, yj); 
+                v4df dz = _mm256_sub_pd(zi, zj);
+		
+                v4df r2 = _mm256_fmadd_pd(dx, dx, veps2);
+                r2 = _mm256_fmadd_pd(dy, dy, r2);
+                r2 = _mm256_fmadd_pd(dz, dz, r2);
 
-		v4df qxx = _mm256_permute4x64_pd(jbuf1, 0x00);
-		v4df qyy = _mm256_permute4x64_pd(jbuf1, 0x55);
-		v4df qzz = _mm256_permute4x64_pd(jbuf1, 0xaa);
-		v4df mj  = _mm256_permute4x64_pd(jbuf1, 0xff);
-		jbuf1 = *((v4df*)spjbuf[j+1][1]);
+                v4df ri1  = _mm256_cvtps_pd(_mm256_castps256_ps128(_mm256_rsqrt_ps(_mm256_castps128_ps256(_mm256_cvtpd_ps(r2)))));
+                //v4df ri1 = __builtin_ia32_cvtps2pd256( __builtin_ia32_rsqrtps( __builtin_ia32_cvtpd2ps256(r2)));
 		
-		v4df qxy = _mm256_permute4x64_pd(jbuf2, 0x00);
-		v4df qyz = _mm256_permute4x64_pd(jbuf2, 0x55);
-		v4df qzx = _mm256_permute4x64_pd(jbuf2, 0xaa);
-		v4df mtr = _mm256_permute4x64_pd(jbuf2, 0xff);
-		jbuf2 = *((v4df*)spjbuf[j+1][2]);
-		
-		v4df dx = xj - xi;
-		v4df dy = yj - yi;
-		v4df dz = zj - zi;
-		
-		v4df r2  = ((veps2 + dx*dx) + dy*dy) + dz*dz;
-		//v4df ri1 = __builtin_ia32_rsqrtps256(r2);
-		v4df ri1 = __builtin_ia32_cvtps2pd256( __builtin_ia32_rsqrtps( __builtin_ia32_cvtpd2ps256(r2)));
-		
-	    v4df v0p5 = {0.5, 0.5, 0.5, 0.5};
-#ifdef RSQRT_NR_SPJ_X4
-		// x4
-		v4df v8p0 = {8.0, 8.0, 8.0, 8.0};
-		v4df v6p0 = {6.0, 6.0, 6.0, 6.0};
-		v4df v5p0 = {5.0, 5.0, 5.0, 5.0};
-		v4df v0p0625 = {1.0/16.0, 1.0/16.0, 1.0/16.0, 1.0/16.0};
-		v4df v1p0 = {1.0, 1.0, 1.0, 1.0};
-		v4df h = v1p0 - r2*(ri1*ri1);
-		ri1 *= v1p0 + h*(v8p0+h*(v6p0+v5p0*h))*v0p0625;
-#elif defined(RSQRT_NR_SPJ_X2)
-		//x2
-		v4df v3p0 = {3.0, 3.0, 3.0, 3.0};
-		ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
+                v4df ri2 = _mm256_mul_pd(ri1, ri1);
+
+#ifdef RSQRT_NR_EPJ_X4
+                // x4
+                v4df v1 = _mm256_set1_pd(1.0f);
+                v4df h = _mm256_fnmadd_pd(r2, ri2, v1);
+
+                v4df v6p0 = _mm256_set1_pd(6.0f);
+                v4df v5p0 = _mm256_set1_pd(5.0f);
+                v4df v8p0 = _mm256_set1_pd(8.0f);
+                v4df v0p0625 = _mm256_set1_pd((float)1.0/16.0);
+                
+                ri2 = _mm256_fmadd_pd(h, v5p0, v6p0);
+                ri2 = _mm256_fmadd_pd(h, ri2, v8p0);
+                ri2 = _mm256_mul_pd(h, ri2);
+                ri2 = _mm256_fmadd_pd(ri2, v0p0625, v1);
+                ri1 = _mm256_mul_pd(ri2, ri1);
+                
+                //v4df h = vone - r2*(ri1*ri1);
+                //ri1 *= vone + h*(v8p0+h*(v6p0+v5p0*h))*v0p0625;
+                ri2 = _mm256_mul_pd(ri1, ri1);
+                //v4df vone = {1.0, 1.0, 1.0, 1.0};
+                //v4df v8p0 = {8.0, 8.0, 8.0, 8.0};
+                //v4df v6p0 = {6.0, 6.0, 6.0, 6.0};
+                //v4df v5p0 = {5.0, 5.0, 5.0, 5.0};
+                //v4df v0p0625 = {1.0/16.0, 1.0/16.0, 1.0/16.0, 1.0/16.0};
+                //v4df h = vone - r2*(ri1*ri1);
+                //ri1 *= vone + h*(v8p0+h*(v6p0+v5p0*h))*v0p0625;
+#elif defined(RSQRT_NR_EPJ_X2)
+                //x2
+                ri2 = _mm256_fnmadd_pd(r2, ri2, _mm256_set1_pd(3.0f));
+                ri2 = _mm256_mul_pd(ri2, _mm256_set1_pd(0.5f));
+                ri1 = _mm256_mul_pd(ri2, ri1);
+                //v4df v0p5 = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
+                //v4df v3p0 = {3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0};
+                //ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
+                ri2 = _mm256_mul_pd(ri1, ri1);
+
+                //v4df v0p5 = {0.5, 0.5, 0.5, 0.5};
+                //v4df v3p0 = {3.0, 3.0, 3.0, 3.0};
+                //ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
 #endif
-		v4df ri2 = ri1 * ri1;
-		v4df ri3 = ri1 * ri2;
-		v4df ri4 = ri2 * ri2;
-		v4df ri5 = ri2 * ri3;
-		
-		v4df qr_x = (qxx*dx + qxy*dy) + qzx*dz;
-		v4df qr_y = (qyy*dy + qxy*dx) + qyz*dz;
-		v4df qr_z = (qzz*dz + qzx*dx) + qyz*dy;
-		
-		v4df rqr = ((mtr + qr_x*dx) + qr_y*dy) + qr_z*dz;
-		v4df rqr_ri4 = rqr * ri4;
-		
-		v4df v2p5 = {2.5, 2.5, 2.5, 2.5};
-		
-		v4df meff  =  mj + v0p5 * rqr_ri4;
-		v4df meff3 = (mj + v2p5 * rqr_ri4) * ri3;
 
-		pot -= meff * ri1;
+                v4df ri3 = _mm256_mul_pd(ri1, ri2);
+				v4df ri4 = _mm256_mul_pd(ri2, ri2);
+				v4df ri5 = _mm256_mul_pd(ri2, ri3);
+		
+                //(qxx*dx + qxy*dy) + qzx*dz;
+				v4df qr_x = _mm256_mul_pd(dx, qxx);
+                qr_x = _mm256_fmadd_pd(dy, qxy, qr_x);
+                qr_x = _mm256_fmadd_pd(dz, qzx, qr_x);
+                //(qyy*dy + qxy*dx) + qyz*dz;
+				v4df qr_y = _mm256_mul_pd(dy, qyy);
+                qr_y = _mm256_fmadd_pd(dx, qxy, qr_y);
+                qr_y = _mm256_fmadd_pd(dz, qyz, qr_y);
+                //(qzz*dz + qzx*dx) + qyz*dy;
+				v4df qr_z = _mm256_mul_pd(dz, qzz);
+                qr_z = _mm256_fmadd_pd(dx, qzx, qr_z);
+                qr_z = _mm256_fmadd_pd(dy, qyz, qr_z);
 
-		ax = (ax - ri5*qr_x) + meff3*dx;
-		ay = (ay - ri5*qr_y) + meff3*dy;
-		az = (az - ri5*qr_z) + meff3*dz;
-	    }
+				//v4df rqr = ((mtr + qr_x*dx) + qr_y*dy) + qr_z*dz;
+                v4df rqr = _mm256_fmadd_pd(qr_x, dx, mtr);
+                rqr = _mm256_fmadd_pd(qr_y, dy, rqr);
+                rqr = _mm256_fmadd_pd(qr_z, dz, rqr);
+
+				v4df rqr_ri4 = _mm256_mul_pd(rqr, ri4);
+		
+				v4df meff  = _mm256_fmadd_pd(rqr_ri4, _mm256_set1_pd(0.5f), mj);
+                v4df meff3 = _mm256_fmadd_pd(rqr_ri4, _mm256_set1_pd(2.5f), mj);
+                meff3 = _mm256_mul_pd(meff3, ri3);
+
+				pot = _mm256_fnmadd_pd(meff, ri1, pot);
+
+                ax = _mm256_fmadd_pd(ri5, qr_x, ax);
+                ax = _mm256_fnmadd_pd(meff3, dx, ax);
+                ay = _mm256_fmadd_pd(ri5, qr_y, ay);
+                ay = _mm256_fnmadd_pd(meff3, dy, ay);
+                az = _mm256_fmadd_pd(ri5, qr_z, az);
+                az = _mm256_fnmadd_pd(meff3, dz, az);
+            }
 
 //#ifdef RSQRT_NR_SPJ_X2
 //        //x2
@@ -1837,11 +1986,11 @@ private:
 //        az  *= v0p125;
 //#endif
 	    
-	    *(v4df *)(&accpbuf[i/8][0][il]) = ax;
-	    *(v4df *)(&accpbuf[i/8][1][il]) = ay;
-	    *(v4df *)(&accpbuf[i/8][2][il]) = az;
-	    *(v4df *)(&accpbuf[i/8][3][il]) = pot;
-	}
+            *(v4df *)(&accpbuf[i/8][0][il]) = ax;
+            *(v4df *)(&accpbuf[i/8][1][il]) = ay;
+            *(v4df *)(&accpbuf[i/8][2][il]) = az;
+            *(v4df *)(&accpbuf[i/8][3][il]) = pot;
+        }
     }
 
 #endif
