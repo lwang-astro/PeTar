@@ -696,24 +696,19 @@ private:
 				v16sf zj  = _mm512_shuffle_ps(jbuf0, jbuf0, 0xaa);
 
 				jbuf0 = _mm512_broadcast_f32x4(*(v4sf *)&spjbuf[j+1][0]);
-#endif
-
 //#ifndef AVX_PRELOAD
 //    			jbuf1 = _mm512_broadcast_f32x4(*(v4sf *)&spjbuf[j+0][1]);
 //#endif
-#ifdef AVX_PRELOAD
 				v16sf qxx = _mm512_shuffle_ps(jbuf1, jbuf1, 0x00);
 				v16sf qyy = _mm512_shuffle_ps(jbuf1, jbuf1, 0x55);
 				v16sf qzz = _mm512_shuffle_ps(jbuf1, jbuf1, 0xaa);
 				v16sf mj  = _mm512_shuffle_ps(jbuf1, jbuf1, 0xff);
 
 				jbuf1 = _mm512_broadcast_f32x4(*(v4sf *)&spjbuf[j+1][1]);
-#endif
 
 //#ifndef AVX_PRELOAD
 //    			jbuf2 = _mm512_broadcast_f32x4(*(v4sf *)&spjbuf[j+0][2]);
 //#endif
-#ifdef AVX_PRELOAD
 				v16sf qxy = _mm512_shuffle_ps(jbuf2, jbuf2, 0x00);
 				v16sf qyz = _mm512_shuffle_ps(jbuf2, jbuf2, 0x55);
 				v16sf qzx = _mm512_shuffle_ps(jbuf2, jbuf2, 0xaa);
@@ -1193,70 +1188,112 @@ public:
 
 private:
 #ifdef USE__AVX512
-    typedef float v8sf __attribute__((vector_size(32)));
-    typedef double v4df __attribute__((vector_size(32)));
-    typedef float v16sf __attribute__((vector_size(64)));
-    typedef double v8df __attribute__((vector_size(64)));
+//    typedef float v8sf __attribute__((vector_size(32)));
+//    typedef double v4df __attribute__((vector_size(32)));
+//    typedef float v16sf __attribute__((vector_size(64)));
+//    typedef double v8df __attribute__((vector_size(64)));
+    typedef __m256 v8sf;
+    typedef __m256d v4df;
+    typedef __m512 v16sf;
+    typedef __m512d v8df;
 
     __attribute__ ((noinline))
     void kernel_epj_nounroll(const int ni, const int nj){
-        const v8df veps2 = {eps2, eps2, eps2, eps2, eps2, eps2, eps2, eps2};
+        const v8df veps2 = _mm512_set1_pd(eps2);
         for(int i=0; i<ni; i+=8){
             const v8df xi = *(v8df *)(&xibuf[i/8][0]);
             const v8df yi = *(v8df *)(&xibuf[i/8][1]);
             const v8df zi = *(v8df *)(&xibuf[i/8][2]);
 
             v8df ax, ay, az, pot;
-            ax = ay = az = pot = (v8df){0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+            ax = ay = az = pot = _mm512_set1_pd(0.0);
 
+#ifdef AVX_PRELOAD
             v4df jbuf = *((v4df*)epjbuf);
             v8df jbuf8= _mm512_broadcast_f64x4(jbuf);
             v8df xj =  _mm512_permutex_pd(jbuf8, 0x00);
             v8df yj =  _mm512_permutex_pd(jbuf8, 0x55);
             v8df zj =  _mm512_permutex_pd(jbuf8, 0xaa);
             v8df mj =  _mm512_permutex_pd(jbuf8, 0xff);
-
+#endif
             for(int j=0; j<nj; j++){
+#ifdef AVX_PRELOAD
                 jbuf = *((v4df*)(epjbuf+j+1));
-                v8df dx = xj - xi;
-                v8df dy = yj - yi;
-                v8df dz = zj - zi;
-                v8df r2   = ((veps2 + dx*dx) + dy*dy) + dz*dz;
+                v8df dx = _mm512_sub_pd(xi, xj); 
+                v8df dy = _mm512_sub_pd(yi, yj); 
+                v8df dz = _mm512_sub_pd(zi, zj); 
+#else
+                v8df dx = _mm512_sub_pd(xi, _mm512_set1_pd(epjbuf[j][0]));
+                v8df dy = _mm512_sub_pd(yi, _mm512_set1_pd(epjbuf[j][1]));
+                v8df dz = _mm512_sub_pd(zi, _mm512_set1_pd(epjbuf[j][2]));
+#endif
+                v8df r2 = _mm512_fmadd_pd(dx, dx, veps2);
+                r2 = _mm512_fmadd_pd(dy, dy, r2);
+                r2 = _mm512_fmadd_pd(dz, dz, r2);
                 //v8df mask = _mm512_cmp_pd(vrcrit2, r2, 0x01); // vrcrit2 < r2
                 //v8df mask = _mm512_cmp_pd(veps2, r2, 0x4); // veps2 != r2
                 //v8df ri1  = _mm512_and_pd( __builtin_ia32_cvtps2pd512( __builtin_ia32_rsqrtps( __builtin_ia32_cvtpd2ps512(r2))), mask );
                 v8df ri1 = _mm512_rsqrt14_pd(r2);
 
+                v8df ri2 = _mm512_mul_pd(ri1, ri1);
+                
 #ifdef RSQRT_NR_EPJ_X4
                 // x4
-                v8df vone = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
-                v8df v8p0 = {8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0};
-                v8df v6p0 = {6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0};
-                v8df v5p0 = {5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0};
-                v8df v0p0625 = {1.0/16.0, 1.0/16.0, 1.0/16.0, 1.0/16.0,
-                                1.0/16.0, 1.0/16.0, 1.0/16.0, 1.0/16.0};
-                v8df h = vone - r2*(ri1*ri1);
-                ri1 *= vone + h*(v8p0+h*(v6p0+v5p0*h))*v0p0625;
+                v8df v1 = _mm512_set1_pd(1.0f);
+                v8df h = _mm512_fnmadd_pd(r2, ri2, v1);
+
+                v8df v6p0 = _mm512_set1_pd(6.0f);
+                v8df v5p0 = _mm512_set1_pd(5.0f);
+                v8df v8p0 = _mm512_set1_pd(8.0f);
+                v8df v0p0625 = _mm512_set1_pd((float)1.0/16.0);
+                
+                ri2 = _mm512_fmadd_pd(h, v5p0, v6p0);
+                ri2 = _mm512_fmadd_pd(h, ri2, v8p0);
+                ri2 = _mm512_mul_pd(h, ri2);
+                ri2 = _mm512_fmadd_pd(ri2, v0p0625, v1);
+                ri1 = _mm512_mul_pd(ri2, ri1);
+                
+                //v16sf h = vone - r2*(ri1*ri1);
+                //ri1 *= vone + h*(v8p0+h*(v6p0+v5p0*h))*v0p0625;
+                ri2 = _mm512_mul_pd(ri1, ri1);
+                // x4
+                //v8df vone = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+                //v8df v8p0 = {8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0};
+                //v8df v6p0 = {6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0};
+                //v8df v5p0 = {5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0};
+                //v8df v0p0625 = {1.0/16.0, 1.0/16.0, 1.0/16.0, 1.0/16.0,
+                //                1.0/16.0, 1.0/16.0, 1.0/16.0, 1.0/16.0};
+                //v8df h = vone - r2*(ri1*ri1);
+                //ri1 *= vone + h*(v8p0+h*(v6p0+v5p0*h))*v0p0625;
 #elif defined(RSQRT_NR_EPJ_X2)
                 //x2
-                v8df v0p5 = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
-                v8df v3p0 = {3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0};
-                ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
+                ri2 = _mm512_fnmadd_pd(r2, ri2, _mm512_set1_pd(3.0f));
+                ri2 = _mm512_mul_pd(ri2, _mm512_set1_pd(0.5f));
+                ri1 = _mm512_mul_pd(ri2, ri1);
+                //v8df v0p5 = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
+                //v8df v3p0 = {3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0};
+                //ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
+                ri2 = _mm512_mul_pd(ri1, ri1);
 #endif
-                v8df mri1 = mj * ri1;
-                v8df ri2  = ri1 * ri1;
-                v8df mri3 = mri1 * ri2;
+                
+#ifdef AVX_PRELOAD
+                v8df mri1 = _mm512_mul_pd(ri1, mj);
+#else
+                v8df mri1 = _mm512_mul_pd(ri1, _mm512_set1_pd(epjbuf[j][3]));
+#endif
+                v8df mri3 = _mm512_mul_pd(mri1, ri2);
 		
+#ifdef AVX_PRELOAD
                 jbuf8=_mm512_broadcast_f64x4(jbuf);
                 xj =  _mm512_permutex_pd(jbuf8, 0x00);
                 yj =  _mm512_permutex_pd(jbuf8, 0x55);
                 zj =  _mm512_permutex_pd(jbuf8, 0xaa);
                 mj =  _mm512_permutex_pd(jbuf8, 0xff);
-
-                pot -= mri1;
-                ax += mri3 * dx;
-                ay += mri3 * dy;
-                az += mri3 * dz;
+#endif
+                pot = _mm512_sub_pd(pot, mri1);
+                ax = _mm512_fnmadd_pd(mri3, dx, ax);
+                ay = _mm512_fnmadd_pd(mri3, dy, ay);
+                az = _mm512_fnmadd_pd(mri3, dz, az);
             }
             *(v8df *)(&accpbuf[i/8][0]) = ax;
             *(v8df *)(&accpbuf[i/8][1]) = ay;
@@ -1337,12 +1374,10 @@ private:
 #ifdef USE__AVX512
     __attribute__ ((noinline))
     void kernel_epj_nounroll_for_p3t_with_linear_cutoff(const int ni, const int nj) {
-        const v8df vone = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
-        const v8df vzero= {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-        const v8df veps2 = {eps2, eps2, eps2, eps2, eps2, eps2, eps2, eps2};
-        //const v8df vr_out  = {r_out,  r_out,  r_out,  r_out, r_out,  r_out,  r_out,  r_out};
-        //const v8df vr_out2  = vr_out * vr_out;
-        const v8df vr_out2 = {r_crit2, r_crit2, r_crit2, r_crit2, r_crit2, r_crit2, r_crit2, r_crit2};
+        const v8df veps2 = _mm512_set1_pd(eps2);
+        //const v8df vr_out  = _mm512_set1_pd(r_out);
+        //const v8df vr_out2  = _mm512_mul_pd(vr_out, vr_out);
+        const v8df vr_out2 = _mm512_set1_pd(r_crit2);
         //const v8df allbits = _mm256_cmp_pd(vone, vone, 0x00);
         for(int i=0; i<ni; i+=8){
             const v8df xi = *(v8df *)(&xibuf[i/8][0]);
@@ -1350,7 +1385,9 @@ private:
             const v8df zi = *(v8df *)(&xibuf[i/8][2]);
             const v8df rsi= *(v8df *)(&xibuf[i/8][3]);
             v8df ax, ay, az, pot, nngb;
-            ax = ay = az = pot = nngb = (v8df){0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+            ax = ay = az = pot = nngb = _mm512_set1_pd(0.0);
+
+#ifdef AVX_PRELOAD            
             v4df jbuf = *((v4df*)epjbuf);
             v8df jbuf8= _mm512_broadcast_f64x4(jbuf);
             v8df rsjbuf= _mm512_set1_pd(*rsearchj);
@@ -1359,49 +1396,99 @@ private:
             v8df zj =  _mm512_permutex_pd(jbuf8, 0xaa);
             v8df mj =  _mm512_permutex_pd(jbuf8, 0xff);
             v8df rsj= rsjbuf;
+#endif
             for(int j=0; j<nj; j++){
+#ifdef AVX_PRELOAD
                 jbuf = *((v4df*)(epjbuf+j+1));
                 rsjbuf = _mm512_set1_pd(*(rsearchj+j+1));
-                v8df dx = xj - xi;
-                v8df dy = yj - yi;
-                v8df dz = zj - zi;
-                v8df r2_real   = ((veps2 + dx*dx) + dy*dy) + dz*dz;
+                v8df dx = _mm512_sub_pd(xi, xj); 
+                v8df dy = _mm512_sub_pd(yi, yj); 
+                v8df dz = _mm512_sub_pd(zi, zj);
+#else
+                v8df dx = _mm512_sub_pd(xi, _mm512_set1_pd(epjbuf[j][0]));
+                v8df dy = _mm512_sub_pd(yi, _mm512_set1_pd(epjbuf[j][1]));
+                v8df dz = _mm512_sub_pd(zi, _mm512_set1_pd(epjbuf[j][2]));
+#endif
+                v8df r2_real = _mm512_fmadd_pd(dx, dx, veps2);
+                r2_real = _mm512_fmadd_pd(dy, dy, r2_real);
+                r2_real = _mm512_fmadd_pd(dz, dz, r2_real);
+                
                 v8df r2 = _mm512_max_pd( r2_real, vr_out2);
                 v8df ri1 = _mm512_rsqrt14_pd(r2);
                 //v8df ri1  = __builtin_ia32_cvtps2pd256(__builtin_ia32_rsqrtps( __builtin_ia32_cvtpd2ps256(r2)));
+                v8df ri2 = _mm512_mul_pd(ri1, ri1);
+                
 #ifdef RSQRT_NR_EPJ_X4
                 // x4
-                v8df v8p0 = {8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0};
-                v8df v6p0 = {6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0};
-                v8df v5p0 = {5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0};
-                v8df v0p0625 = {1.0/16.0, 1.0/16.0, 1.0/16.0, 1.0/16.0,
-                                1.0/16.0, 1.0/16.0, 1.0/16.0, 1.0/16.0};
-                v8df h = vone - r2*(ri1*ri1);
-                ri1 *= vone + h*(v8p0+h*(v6p0+v5p0*h))*v0p0625;
+                v8df v1 = _mm512_set1_pd(1.0f);
+                v8df h = _mm512_fnmadd_pd(r2, ri2, v1);
+
+                v8df v6p0 = _mm512_set1_pd(6.0f);
+                v8df v5p0 = _mm512_set1_pd(5.0f);
+                v8df v8p0 = _mm512_set1_pd(8.0f);
+                v8df v0p0625 = _mm512_set1_pd((float)1.0/16.0);
+                
+                ri2 = _mm512_fmadd_pd(h, v5p0, v6p0);
+                ri2 = _mm512_fmadd_pd(h, ri2, v8p0);
+                ri2 = _mm512_mul_pd(h, ri2);
+                ri2 = _mm512_fmadd_pd(ri2, v0p0625, v1);
+                ri1 = _mm512_mul_pd(ri2, ri1);
+                //v8df v8p0 = {8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0};
+                //v8df v6p0 = {6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0};
+                //v8df v5p0 = {5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0};
+                //v8df v0p0625 = {1.0/16.0, 1.0/16.0, 1.0/16.0, 1.0/16.0,
+                //                1.0/16.0, 1.0/16.0, 1.0/16.0, 1.0/16.0};
+                //v8df h = vone - r2*(ri1*ri1);
+                //ri1 *= vone + h*(v8p0+h*(v6p0+v5p0*h))*v0p0625;
+                ri2 = _mm512_mul_pd(ri1, ri1);
+                
 #elif defined(RSQRT_NR_EPJ_X2)
                 //x2
-                v8df v0p5 = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
-                v8df v3p0 = {3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0};
-                ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
+                ri2 = _mm512_fnmadd_pd(r2, ri2, _mm512_set1_pd(3.0f));
+                ri2 = _mm512_mul_pd(ri2, _mm512_set1_pd(0.5f));
+                ri1 = _mm512_mul_pd(ri2, ri1);
+                //v8df v0p5 = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
+                //v8df v3p0 = {3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0};
+                //ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
+                ri2 = _mm512_mul_pd(ri1, ri1);
 #endif
-                v8df ri2 = ri1*ri1;
-                v8df mri1 = mj*ri1;
-                v8df mri3 = mri1 * ri2;
+
+#ifdef AVX_PRELOAD
+                v8df mri1 = _mm512_mul_pd(ri1, mj);
+#else
+                v8df mri1 = _mm512_mul_pd(ri1, _mm512_set1_pd(epjbuf[j][3]));
+#endif
+                v8df mri3 = _mm512_mul_pd(mri1, ri2);
+
+#ifdef AVX_PRELOAD
                 jbuf8= _mm512_broadcast_f64x4(jbuf);
                 xj =  _mm512_permutex_pd(jbuf8, 0x00);
                 yj =  _mm512_permutex_pd(jbuf8, 0x55);
                 zj =  _mm512_permutex_pd(jbuf8, 0xaa);
                 mj =  _mm512_permutex_pd(jbuf8, 0xff);
-                pot -= mri1;
-                ax += mri3 * dx;
-                ay += mri3 * dy;
-                az += mri3 * dz;
+#endif
+
+                pot = _mm512_sub_pd(pot, mri1);
+                ax = _mm512_fnmadd_pd(mri3, dx, ax);
+                ay = _mm512_fnmadd_pd(mri3, dy, ay);
+                az = _mm512_fnmadd_pd(mri3, dz, az);
+
+#ifdef AVX_PRELOAD
                 v8df vrcrit = _mm512_max_pd(rsi, rsj);
-                v8df vrcrit2 = vrcrit*vrcrit;
+#else
+                v8df vrcrit = _mm512_max_pd(rsi, _mm512_set1_pd(rsearchj[j]));
+#endif
+                v8df vrcrit2 = _mm512_max_pd(vrcrit, vrcrit);
                 //v8df mask = _mm256_cmp_pd(vrcrit2, r2_real, 0x01); // for neighbour search
                 //nngb += _mm256_and_pd( vone, _mm256_xor_pd(mask, allbits) ); // can remove
-                nngb += _mm512_mask_blend_pd(_mm512_cmp_pd_mask(vrcrit2, r2_real, 0x01), vone, vzero); // can
+                nngb = _mm512_add_pd(
+                    _mm512_mask_blend_pd(_mm512_cmp_pd_mask(vrcrit2, r2_real, 0x01),
+                                         _mm512_set1_pd(1.0),
+                                         _mm512_set1_pd(0.0)),
+                    nngb); // can
+#ifdef AVX_PRELOAD
                 rsj= rsjbuf;
+#endif
             }
             *(v8df *)(&accpbuf[i/8][0]) = ax;
             *(v8df *)(&accpbuf[i/8][1]) = ay;
@@ -1486,20 +1573,22 @@ private:
 #ifdef USE__AVX512
     __attribute__ ((noinline))
     void kernel_spj_nounroll(const int ni, const int nj){
-        const v8df veps2 = {eps2, eps2, eps2, eps2, eps2, eps2, eps2, eps2};
+        const v8df veps2 = _mm512_set1_pd(eps2);
         for(int i=0; i<ni; i+=8){
             const v8df xi = *(v8df *)(&xibuf[i/8][0]);
             const v8df yi = *(v8df *)(&xibuf[i/8][1]);
             const v8df zi = *(v8df *)(&xibuf[i/8][2]);
 
             v8df ax, ay, az, pot;
-            ax = ay = az = pot = (v8df){0.0, 0.0, 0.0, 0.0};
+            ax = ay = az = pot = _mm512_set1_pd(0.0);
 
+#ifdef AVX_PRELOAD            
             v4df jbuf0 = *((v4df*)spjbuf[0][0]);
             v4df jbuf1 = *((v4df*)spjbuf[0][1]);
             v4df jbuf2 = *((v4df*)spjbuf[0][2]);
-
+#endif
             for(int j=0; j<nj; j++){
+#ifdef AVX_PRELOAD                
                 v8df jp  = _mm512_broadcast_f64x4(jbuf0);
                 v8df xj  = _mm512_permutex_pd(jp, 0x00);
                 v8df yj  = _mm512_permutex_pd(jp, 0x55);
@@ -1521,52 +1610,124 @@ private:
                 v8df mtr = _mm512_permutex_pd(jq2, 0xff);
                 jbuf2 = *((v4df*)spjbuf[j+1][2]);
 		
-                v8df dx = xj - xi;
-                v8df dy = yj - yi;
-                v8df dz = zj - zi;
-		
-                v8df r2  = ((veps2 + dx*dx) + dy*dy) + dz*dz;
+                v8df dx = _mm512_sub_pd(xi, xj); 
+                v8df dy = _mm512_sub_pd(yi, yj); 
+                v8df dz = _mm512_sub_pd(zi, zj); 
+#else
+                v8df dx = _mm512_sub_pd(xi, _mm512_set1_pd(spjbuf[j][0][0]));
+                v8df dy = _mm512_sub_pd(yi, _mm512_set1_pd(spjbuf[j][0][1]));
+                v8df dz = _mm512_sub_pd(zi, _mm512_set1_pd(spjbuf[j][0][2]));
+#endif
+                v8df r2 = _mm512_fmadd_pd(dx, dx, veps2);
+                r2 = _mm512_fmadd_pd(dy, dy, r2);
+                r2 = _mm512_fmadd_pd(dz, dz, r2);
                 //v8df ri1 = __builtin_ia32_rsqrtps256(r2);
 				v8df ri1 = _mm512_rsqrt14_pd(r2);
                 //v8df ri1 = __builtin_ia32_cvtps2pd512( __builtin_ia32_rsqrtps( __builtin_ia32_cvtpd2ps512(r2)));
-                v8df v0p5 = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
-#ifdef RSQRT_NR_SPJ_X2
-                //x2
-                v8df v3p0 = {3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0};
-                ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
-#elif defined(RSQRT_NR_SPJ_X4)
+                v8df ri2 = _mm512_mul_pd(ri1, ri1);
+
+#ifdef RSQRT_NR_EPJ_X4
                 // x4
-                v8df v8p0 = {8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0};
-                v8df v6p0 = {6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0};
-                v8df v5p0 = {5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0};
-                v8df v0p0625 = {1.0/16.0, 1.0/16.0, 1.0/16.0, 1.0/16.0,
-                                1.0/16.0, 1.0/16.0, 1.0/16.0, 1.0/16.0};
-                v8df v1p0 = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
-                v8df h = v1p0 - r2*(ri1*ri1);
-                ri1 *= v1p0 + h*(v8p0+h*(v6p0+v5p0*h))*v0p0625;
+                v8df v1 = _mm512_set1_pd(1.0f);
+                v8df h = _mm512_fnmadd_pd(r2, ri2, v1);
+
+                v8df v6p0 = _mm512_set1_pd(6.0f);
+                v8df v5p0 = _mm512_set1_pd(5.0f);
+                v8df v8p0 = _mm512_set1_pd(8.0f);
+                v8df v0p0625 = _mm512_set1_pd((float)1.0/16.0);
+                
+                ri2 = _mm512_fmadd_pd(h, v5p0, v6p0);
+                ri2 = _mm512_fmadd_pd(h, ri2, v8p0);
+                ri2 = _mm512_mul_pd(h, ri2);
+                ri2 = _mm512_fmadd_pd(ri2, v0p0625, v1);
+                ri1 = _mm512_mul_pd(ri2, ri1);
+                
+                //v16sf h = vone - r2*(ri1*ri1);
+                //ri1 *= vone + h*(v8p0+h*(v6p0+v5p0*h))*v0p0625;
+                ri2 = _mm512_mul_pd(ri1, ri1);
+                // x4
+                //v8df vone = {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+                //v8df v8p0 = {8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0, 8.0};
+                //v8df v6p0 = {6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0, 6.0};
+                //v8df v5p0 = {5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0};
+                //v8df v0p0625 = {1.0/16.0, 1.0/16.0, 1.0/16.0, 1.0/16.0,
+                //                1.0/16.0, 1.0/16.0, 1.0/16.0, 1.0/16.0};
+                //v8df h = vone - r2*(ri1*ri1);
+                //ri1 *= vone + h*(v8p0+h*(v6p0+v5p0*h))*v0p0625;
+#elif defined(RSQRT_NR_EPJ_X2)
+                //x2
+                ri2 = _mm512_fnmadd_pd(r2, ri2, _mm512_set1_pd(3.0f));
+                ri2 = _mm512_mul_pd(ri2, _mm512_set1_pd(0.5f));
+                ri1 = _mm512_mul_pd(ri2, ri1);
+                //v8df v0p5 = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5};
+                //v8df v3p0 = {3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0};
+                //ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
+                ri2 = _mm512_mul_pd(ri1, ri1);
 #endif
-                v8df ri2 = ri1 * ri1;
-                v8df ri3 = ri1 * ri2;
-                v8df ri4 = ri2 * ri2;
-                v8df ri5 = ri2 * ri3;
-		
-                v8df qr_x = (qxx*dx + qxy*dy) + qzx*dz;
-                v8df qr_y = (qyy*dy + qxy*dx) + qyz*dz;
-                v8df qr_z = (qzz*dz + qzx*dx) + qyz*dy;
-		
-                v8df rqr = ((mtr + qr_x*dx) + qr_y*dy) + qr_z*dz;
-                v8df rqr_ri4 = rqr * ri4;
-		
-                v8df v2p5 = {2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5, 2.5};
-		
-                v8df meff  =  mj + v0p5 * rqr_ri4;
-                v8df meff3 = (mj + v2p5 * rqr_ri4) * ri3;
 
-                pot -= meff * ri1;
+                v8df ri3 = _mm512_mul_pd(ri1, ri2);
+				v8df ri4 = _mm512_mul_pd(ri2, ri2);
+				v8df ri5 = _mm512_mul_pd(ri2, ri3);
 
-                ax = (ax - ri5*qr_x) + meff3*dx;
-                ay = (ay - ri5*qr_y) + meff3*dy;
-                az = (az - ri5*qr_z) + meff3*dz;
+#ifdef AVX_PRELOAD
+                //(qxx*dx + qxy*dy) + qzx*dz;
+				v8df qr_x = _mm512_mul_pd(dx, qxx);
+                qr_x = _mm512_fmadd_pd(dy, qxy, qr_x);
+                qr_x = _mm512_fmadd_pd(dz, qzx, qr_x);
+                //(qyy*dy + qxy*dx) + qyz*dz;
+				v8df qr_y = _mm512_mul_pd(dy, qyy);
+                qr_y = _mm512_fmadd_pd(dx, qxy, qr_y);
+                qr_y = _mm512_fmadd_pd(dz, qyz, qr_y);
+                //(qzz*dz + qzx*dx) + qyz*dy;
+				v8df qr_z = _mm512_mul_pd(dz, qzz);
+                qr_z = _mm512_fmadd_pd(dx, qzx, qr_z);
+                qr_z = _mm512_fmadd_pd(dy, qyz, qr_z);
+
+				//v8df rqr = ((mtr + qr_x*dx) + qr_y*dy) + qr_z*dz;
+                v8df rqr = _mm512_fmadd_pd(qr_x, dx, mtr);
+#else
+                //(qxx*dx + qxy*dy) + qzx*dz;
+				v8df qr_x = _mm512_mul_pd(dx, _mm512_set1_pd(spjbuf[j][1][0]));
+                qr_x = _mm512_fmadd_pd(dy, _mm512_set1_pd(spjbuf[j][2][0]), qr_x);
+                qr_x = _mm512_fmadd_pd(dz, _mm512_set1_pd(spjbuf[j][2][2]), qr_x);
+                //(qyy*dy + qxy*dx) + qyz*dz;
+				v8df qr_y = _mm512_mul_pd(dy, _mm512_set1_pd(spjbuf[j][1][1]));
+                qr_y = _mm512_fmadd_pd(dx, _mm512_set1_pd(spjbuf[j][2][0]), qr_y);
+                qr_y = _mm512_fmadd_pd(dz, _mm512_set1_pd(spjbuf[j][2][1]), qr_y);
+                //(qzz*dz + qzx*dx) + qyz*dy;
+				v8df qr_z = _mm512_mul_pd(dz, _mm512_set1_pd(spjbuf[j][1][2]));
+                qr_z = _mm512_fmadd_pd(dx, _mm512_set1_pd(spjbuf[j][2][2]), qr_z);
+                qr_z = _mm512_fmadd_pd(dy, _mm512_set1_pd(spjbuf[j][2][1]), qr_z);
+
+				//v8df rqr = ((mtr + qr_x*dx) + qr_y*dy) + qr_z*dz;
+                v8df rqr = _mm512_fmadd_pd(qr_x, dx, _mm512_set1_pd(spjbuf[j][2][3]));
+#endif
+
+                rqr = _mm512_fmadd_pd(qr_y, dy, rqr);
+                rqr = _mm512_fmadd_pd(qr_z, dz, rqr);
+
+				v8df rqr_ri4 = _mm512_mul_pd(rqr, ri4);
+		
+#ifndef AVX_PRELOAD
+                v8df mj = _mm512_set1_pd(spjbuf[j][1][3]);
+#endif
+				v8df meff  = _mm512_fmadd_pd(rqr_ri4, _mm512_set1_pd(0.5f), mj);
+				//v16sf meff3 = (mj + v2p5 * rqr_ri4) * ri3;
+                v8df meff3 = _mm512_fmadd_pd(rqr_ri4, _mm512_set1_pd(2.5f), mj);
+                meff3 = _mm512_mul_pd(meff3, ri3);
+                //v8df meff3 = (mj + v2p5 * rqr_ri4) * ri3;
+
+				pot = _mm512_fnmadd_pd(meff, ri1, pot);
+
+                ax = _mm512_fmadd_pd(ri5, qr_x, ax);
+                ax = _mm512_fnmadd_pd(meff3, dx, ax);
+                ay = _mm512_fmadd_pd(ri5, qr_y, ay);
+                ay = _mm512_fnmadd_pd(meff3, dy, ay);
+                az = _mm512_fmadd_pd(ri5, qr_z, az);
+                az = _mm512_fnmadd_pd(meff3, dz, az);
+                //ax = (ax - ri5*qr_x) + meff3*dx;
+                //ay = (ay - ri5*qr_y) + meff3*dy;
+                //az = (az - ri5*qr_z) + meff3*dz;
             }
 
 //#ifdef RSQRT_NR_SPJ_X2
@@ -1629,11 +1790,7 @@ private:
 		v4df ri1 = __builtin_ia32_cvtps2pd256( __builtin_ia32_rsqrtps( __builtin_ia32_cvtpd2ps256(r2)));
 		
 	    v4df v0p5 = {0.5, 0.5, 0.5, 0.5};
-#ifdef RSQRT_NR_SPJ_X2
-		//x2
-		v4df v3p0 = {3.0, 3.0, 3.0, 3.0};
-		ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
-#elif defined(RSQRT_NR_SPJ_X4)
+#ifdef RSQRT_NR_SPJ_X4
 		// x4
 		v4df v8p0 = {8.0, 8.0, 8.0, 8.0};
 		v4df v6p0 = {6.0, 6.0, 6.0, 6.0};
@@ -1642,6 +1799,10 @@ private:
 		v4df v1p0 = {1.0, 1.0, 1.0, 1.0};
 		v4df h = v1p0 - r2*(ri1*ri1);
 		ri1 *= v1p0 + h*(v8p0+h*(v6p0+v5p0*h))*v0p0625;
+#elif defined(RSQRT_NR_SPJ_X2)
+		//x2
+		v4df v3p0 = {3.0, 3.0, 3.0, 3.0};
+		ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
 #endif
 		v4df ri2 = ri1 * ri1;
 		v4df ri3 = ri1 * ri2;

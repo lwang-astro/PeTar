@@ -4,7 +4,8 @@
 #PS_PATH = -I../../../fdps/src/
 #PS_PATH = -I../../fdps/src/
 #PS_PATH = -I../../../../project/fdps/src
-PS_PATH = -I../FDPS/src
+#PS_PATH = -I../FDPS/src
+PS_PATH = -I../fdps.svn/
 #PS_PATH  = -I/home/lwang/code/fdps/src
 
 ##ARC PATH
@@ -13,7 +14,7 @@ ARC_PATH= -I../TSARC/include
 #ARC_PATH = -I/home/lwang/GitHub/ARC/include
 
 ##Gperftools PATH
-#GPERF_PATH = -L/opt/gperftools-2.6.1/lib
+#GPERF_PATH = -L../../soft/gperftools-2.6.90/lib
 
 #ROOT_PATH= ${shell pwd -P}
 INCLUDE  = -I./src -I../src
@@ -52,15 +53,16 @@ CXXFLAGS += -DINTRINSIC_X86
 endif
 
 ifeq ($(use_x86),yes)
-#CXX = time g++
+CXX = time g++
+#CXX = time icc
 
 #CXX = kinst-ompp mpicxx
 
 #CXX = tau_cxx.sh  -tau_makefile=/opt/tau-2.26.3/x86_64/lib/Makefile.tau-mpi-openmp -tau_options=-optCompInst
 
-CXX = time mpicxx
-CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
-CXXFLAGS += -DMPICH_IGNORE_CXX_SEEKC
+#CXX = time mpicxx
+#CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
+#CXXFLAGS += -DMPICH_IGNORE_CXX_SEEKC
 
 #CXXFLAGS = -g -O0 -fbounds-check
 CXXFLAGS += -O2
@@ -95,10 +97,11 @@ CXXFLAGS += -D ARC_OPT_SYM2
 
 SIMD_DEBFLAGS += -DCALC_EP_64bit
 SIMD_DEBFLAGS += -DRSQRT_NR_EPJ_X2
-#SIMD_DEBFLAGS += -DRSQRT_NR_EPJ_X4
+SIMD_DEBFLAGS += -DRSQRT_NR_EPJ_X4
 SIMD_DEBFLAGS += -DCALC_SP_64bit
-#SIMD_DEBFLAGS += -DRSQRT_NR_SPJ_X2
+SIMD_DEBFLAGS += -DRSQRT_NR_SPJ_X2
 SIMD_DEBFLAGS += -DRSQRT_NR_SPJ_X4
+SIMD_DEBFLAGS += -DAVX_PRELOAD
 
 #DEBFLAGS += -D ARC_PROFILE
 #DEBFLAGS += -D INTEGRATED_CUTOFF_FUNCTION
@@ -175,8 +178,11 @@ hardtest: hard.cxx
 arctest: arc.cxx
 	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(ARC_DEBFLAGS) -o $@ $< $(CXXLIBS)
 
+simd_test.s: simd_test.cxx
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(SIMD_DEBFLAGS) -S $< -o $@  $(CXXLIBS)
+
 simd_test: simd_test.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(SIMD_DEBFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(SIMD_DEBFLAGS)  $< -o $@  $(CXXLIBS)
 
 clean:
 	rm *.out *.o

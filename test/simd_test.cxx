@@ -15,10 +15,10 @@ public:
     PS::F64mat quad;
 
     void setQuad(const PS::F64 N) {
-        mass =  10.0/N*rand()/(float)RAND_MAX;
-        pos.x = 10.0*rand()/(float)RAND_MAX;
-        pos.y = 10.0*rand()/(float)RAND_MAX;
-        pos.z = 10.0*rand()/(float)RAND_MAX;
+        mass =  1.0/N+0.001/N*rand()/(float)RAND_MAX;
+        pos.x = 1.0+10.0*rand()/(float)RAND_MAX;
+        pos.y = 1.0+10.0*rand()/(float)RAND_MAX;
+        pos.z = 1.0+10.0*rand()/(float)RAND_MAX;
         quad.xx = 10.0*rand()/(float)RAND_MAX;
         quad.yy = 10.0*rand()/(float)RAND_MAX;
         quad.zz = 10.0*rand()/(float)RAND_MAX;
@@ -118,10 +118,34 @@ int main(int argc, char **argv){
         }
     }
 #ifdef USE__AVX512
-    std::cout<<"Use AVX512\n";
+    std::cout<<"Use AVX512";
 #elif defined(__AVX2__)
-    std::cout<<"Use AVX2\n";
+    std::cout<<"Use AVX2";
 #endif
+#ifdef CALC_EP_64bit
+    std::cout<<" EP_64bit";
+#else
+    std::cout<<" EP_32bit";
+#endif
+#ifdef CALC_SP_64bit
+    std::cout<<" SP_64bit";
+#else
+    std::cout<<" SP_32bit";
+#endif
+#ifdef RSQRT_NR_EPJ_X4
+    std::cout<<" EP_RSQRT_X4";
+#elif defined (RSQRT_NR_EPJ_X2)
+    std::cout<<" EP_RSQRT_X2";
+#endif
+#ifdef RSQRT_NR_SPJ_X4
+    std::cout<<" SP_RSQRT_X4";
+#elif defined (RSQRT_NR_SPJ_X2)
+    std::cout<<" SP_RSQRT_X2";
+#endif
+#ifdef AVX_PRELOAD
+    std::cout<<" PRELOAD";
+#endif
+    std::cout<<std::endl;
     
     std::cout<<"Force diff max: "<<dfmax<<" Pot diff max: "<<dfpmax
              <<"\nSp diff max: "<<dsmax<<" Pot diff max: "<<dspmax
