@@ -16,7 +16,7 @@ private:
     double rsearchj[NJMAX];          // r_search_j
 
     double eps2;
-    //double r_crit2;
+    double r_crit2;
     double r_out;
     double r_in;
     double denominator;
@@ -57,10 +57,10 @@ public:
 		this->eps2 = _eps2;
 	}
 
-	//void set_r_crit2(const double _r_crit2){
-	//    this->r_crit2 = _r_crit2;
-    //    v_r_crit2 = _fjsp_set_v2r8(r_crit2, r_crit2);
-	//}
+	void set_r_crit2(const double _r_crit2){
+	    this->r_crit2 = _r_crit2;
+        v_r_crit2 = _fjsp_set_v2r8(r_crit2, r_crit2);
+	}
 
 	void set_cutoff(const double _r_out, const double _r_in){
 		this->r_out = _r_out;
@@ -300,7 +300,7 @@ private:
         const v2r8 dz = zj - zi;
 
         v2r8 r2_real   = ((eps2 + dx*dx) +  dy*dy) + dz*dz;
-        const v2r8 r2 = _fjsp_max_v2r8(r2_real, v_r_out_sq);
+        const v2r8 r2 = _fjsp_max_v2r8(r2_real, v_r_crit2);
         const v2r8 ri1  = r2.rsqrta_x3();
         //const v2r8 ri1  = r2.rsqrta_x7();
         const v2r8 ri2  = ri1  * ri1;
