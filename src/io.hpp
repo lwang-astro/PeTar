@@ -377,7 +377,7 @@ void SetParticlePlummer(Tpsys & psys,
 
     PS::S32 my_rank = PS::Comm::getRank();
     PS::S32 n_proc = PS::Comm::getNumberOfProc();
-#if 1 // for debug
+#if 0 // for debug
     if(my_rank == 0){
         n_loc = n_glb;
     }
