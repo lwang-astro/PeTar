@@ -79,24 +79,43 @@ void write_p(FILE* fout, const PS::F64 time, const PS::F64 dt_soft, const Tsys& 
 #endif
 
 int main(int argc, char *argv[]){
-    std::cout<<std::setprecision(15);
-    std::cerr<<std::setprecision(15);
+    std::cout<<std::setprecision(PRINT_PRECISION);
+    std::cerr<<std::setprecision(PRINT_PRECISION);
     PS::Initialize(argc, argv);
 
     PS::S32 my_rank = PS::Comm::getRank();
+    const PS::S32 n_proc = PS::Comm::getNumberOfProc();
 
 #ifdef PROFILE
+    if(my_rank==0) {
+        std::cout<<"----- Parallelization information -----\n";
+        std::cout<<"MPI processors: "<<n_proc<<std::endl;
+        std::cout<<"OMP threads:    "<<PS::Comm::getNumberOfThread()<<std::endl;
+    }
+    
     SysProfile profile;
     SysCounts  n_count;
     SysCounts  n_count_sum;
     PsProfile  ps_profile;
+
+    std::ofstream fprofile;
+    std::string rank_str;
+    std::stringstream atmp;
+    atmp<<my_rank;
+    atmp>>rank_str;
+    PS::S64 dn_loop = 0;
+
 #endif
     
     // initial parameters
     IOParams<PS::F64> ratio_r_cut  (0.1,  "r_in / r_out");
     IOParams<PS::F64> theta        (0.3,  "Openning angle theta");
     IOParams<PS::S32> n_leaf_limit (20,   "Tree leaf number limit", "optimized value shoudl be slightly >=11+N_bin_sample (20)");
+#ifdef USE__AVX512
+    IOParams<PS::S32> n_group_limit(1024, "Tree group number limit", "optimized for x86-AVX512 (2048)");    
+#else
     IOParams<PS::S32> n_group_limit(512,  "Tree group number limit", "optimized for x86-AVX2 (512)");
+#endif
     IOParams<PS::S32> n_smp_ave    (100,  "Average target number of sample particles per process");
     IOParams<PS::S32> n_split      (8,    "Number of binary sample points for tree perturbation force");
     IOParams<PS::S64> n_bin        (0,    "Number of primordial binaries (assume binaries ID=1,2*n_bin)");
@@ -345,6 +364,12 @@ int main(int argc, char *argv[]){
     PS::F64 time_sys = 0.0;
     PS::S32 n_loc;
 
+#ifdef PROFILE
+    std::string fproname=fname_snp.value+".prof.rank."+rank_str;
+    if(app_flag) fprofile.open(fproname.c_str(),std::ofstream::out|std::ofstream::app);
+    else         fprofile.open(fproname.c_str(),std::ofstream::out);
+#endif
+    
     SystemSoft system_soft;
     system_soft.initialize();
     system_soft.setAverageTargetNumberOfSampleParticlePerProcess(n_smp_ave.value);
@@ -383,7 +408,7 @@ int main(int argc, char *argv[]){
     if(my_rank==0) {
         if(app_flag) fstatus.open((fname_snp.value+".status").c_str(),std::ofstream::out|std::ofstream::app);
         else         fstatus.open((fname_snp.value+".status").c_str(),std::ofstream::out);
-        fstatus<<std::setprecision(PRINT_PRECISION);
+        fstatus<<std::setprecision(WRITE_PRECISION);
     }
 
     Status stat;
@@ -401,7 +426,7 @@ int main(int argc, char *argv[]){
         file_header.dt_soft = dt_soft.value;
         file_header.n_split = n_split.value;        
         if(my_rank==0&&app_flag==false) {
-            stat.dumpName(fstatus,PRINT_WIDTH);
+            stat.dumpName(fstatus,WRITE_WIDTH);
             fstatus<<std::endl;
         }
     }
@@ -464,14 +489,10 @@ int main(int argc, char *argv[]){
 
     const PS::F32 coef_ema = 0.2;
     PS::DomainInfo dinfo;
+    PS::F32 domain_decompose_weight=1.0;
     dinfo.initialize(coef_ema);
     dinfo.decomposeDomainAll(system_soft);
-    const PS::S32 n_proc = PS::Comm::getNumberOfProc();
 
-    std::cout<<"----- Parallelization information -----\n";
-    std::cout<<"MPI processors: "<<n_proc<<std::endl;
-    std::cout<<"OMP threads:    "<<PS::Comm::getNumberOfThread()<<std::endl;
-    
     PS::F64ort * pos_domain = new PS::F64ort[n_proc];
     for(PS::S32 i=0; i<n_proc; i++) pos_domain[i] = dinfo.getPosDomain(i);
 
@@ -487,6 +508,10 @@ int main(int argc, char *argv[]){
 
     Tree tree_soft;
     tree_soft.initialize(n_glb.value, theta.value, n_leaf_limit.value, n_group_limit.value);
+
+#ifdef PROFILE
+    tree_soft.clearTimeProfile();
+#endif
 #ifndef USE_SIMD
     tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSimd(),
 #ifdef USE_QUAD
@@ -494,6 +519,8 @@ int main(int argc, char *argv[]){
 #else
                                        CalcForceEpSpMonoNoSimd(),
 #endif
+                                       system_soft,
+                                       dinfo);
 #else
     tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(),
 #ifdef USE_QUAD
@@ -501,9 +528,15 @@ int main(int argc, char *argv[]){
 #else
                                        CalcForceEpSpMonoSimd(),
 #endif
-#endif
                                        system_soft,
                                        dinfo);
+#endif
+                                       
+#ifdef PROFILE
+    ps_profile += tree_soft.getTimeProfile();
+    domain_decompose_weight = ps_profile.calc_force;
+    ps_profile.clear();
+#endif
                                        
     SystemHard system_hard_one_cluster;
     PS::F64 dt_limit_hard = dt_soft.value/dt_limit_hard_factor.value;
@@ -570,6 +603,12 @@ int main(int argc, char *argv[]){
             system_soft[i].rank_org = my_rank;
             system_soft[i].adr = i;
         }
+        
+#ifdef PROFILE
+        tree_soft.clearTimeProfile();
+#endif
+        
+        
 #ifndef USE_SIMD
         tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSIMD(),
 #ifdef USE_QUAD
@@ -589,6 +628,12 @@ int main(int argc, char *argv[]){
                                            system_soft,
                                            dinfo);
 
+#ifdef PROFILE
+        ps_profile += tree_soft.getTimeProfile();
+        domain_decompose_weight = ps_profile.calc_force;
+        ps_profile.clear();
+#endif
+                                           
         search_cluster.searchNeighborAndCalcHardForceOMP<SystemSoft, Tree, EPJSoft>
             (system_soft, tree_soft, r_out.value, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
 
@@ -615,10 +660,9 @@ int main(int argc, char *argv[]){
     if(my_rank==0) {
         std::cout<<"----- Initial status -----\n";
         stat.eng_init.print(std::cout);
-        stat.dump(fstatus,PRINT_WIDTH);
+        stat.dump(fstatus,WRITE_WIDTH);
         fstatus<<std::endl;
     }
-
 
 #ifdef MAIN_DEBUG
     FILE* fout;
@@ -628,18 +672,6 @@ int main(int argc, char *argv[]){
     }
     write_p(fout, time_sys, 0.0, system_soft, stat.eng_now, stat.eng_diff);
 #endif
-#ifdef PROFILE
-    std::ofstream fprofile;
-    std::string rank_str;
-    std::stringstream atmp;
-    atmp<<my_rank;
-    atmp>>rank_str;
-    std::string fproname=fname_snp.value+".prof.rank."+rank_str;
-    if(app_flag) fprofile.open(fproname.c_str(),std::ofstream::out|std::ofstream::app);
-    else         fprofile.open(fproname.c_str(),std::ofstream::out);
-    PS::S64 dn_loop = 0;
-#endif
-
 
     PS::S64 n_loop = 0;
     bool first_step_flag = true;
@@ -771,7 +803,10 @@ int main(int argc, char *argv[]){
 #endif
         // Domain decomposition, parrticle exchange and force calculation
 
-        if(n_loop % 16 == 0) dinfo.decomposeDomainAll(system_soft);
+        if(n_loop % 16 == 0) {
+            dinfo.decomposeDomainAll(system_soft,domain_decompose_weight);
+            //std::cout<<"rank: "<<my_rank<<" weight: "<<domain_decompose_weight<<std::endl;
+        }
         system_soft.exchangeParticle(dinfo);
         n_loc = system_soft.getNumberOfParticleLocal();
 
@@ -785,8 +820,7 @@ int main(int argc, char *argv[]){
         profile.domain_ex_ptcl.end();
         
         profile.soft_tot.start();
-#endif
-#ifdef PROFILE
+
         tree_soft.clearNumberOfInteraction();
         tree_soft.clearTimeProfile();
 #endif
@@ -798,17 +832,19 @@ int main(int argc, char *argv[]){
 #else
                                            CalcForceEpSpNoSIMD(),
 #endif
+                                           system_soft,
+                                           dinfo);
 #else
         tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(),
 #ifdef USE_QUAD
-                                       CalcForceEpSpQuadSimd(),
+                                           CalcForceEpSpQuadSimd(),
 #else
-                                       CalcForceEpSpMonoSimd(),
+                                           CalcForceEpSpMonoSimd(),
 #endif
-#endif
-
                                            system_soft,
                                            dinfo);
+#endif
+
 #ifdef PROFILE
         n_count.ep_ep_interact     += tree_soft.getNumberOfInteractionEPEPLocal();
         n_count_sum.ep_ep_interact += tree_soft.getNumberOfInteractionEPEPGlobal();
@@ -816,6 +852,7 @@ int main(int argc, char *argv[]){
         n_count_sum.ep_sp_interact += tree_soft.getNumberOfInteractionEPSPGlobal(); 
 
         ps_profile += tree_soft.getTimeProfile();
+        domain_decompose_weight = ps_profile.calc_force;
         profile.soft_tot.end();
                                            
         profile.search_cluster.start();
@@ -920,7 +957,7 @@ int main(int argc, char *argv[]){
             if(my_rank==0) {
                 std::cout<<std::endl;
                 stat.print(std::cout);
-                stat.dump(fstatus, PRINT_WIDTH);
+                stat.dump(fstatus, WRITE_WIDTH);
                 fstatus<<std::endl;
             }
 
@@ -970,14 +1007,14 @@ int main(int argc, char *argv[]){
 //#endif
             
 
-            fprofile<<std::setprecision(PRINT_PRECISION);
-            fprofile<<std::setw(PRINT_WIDTH)<<my_rank;
-            fprofile<<std::setw(PRINT_WIDTH)<<time_sys
-                    <<std::setw(PRINT_WIDTH)<<dn_loop
-                    <<std::setw(PRINT_WIDTH)<<n_glb;
-            profile.dump(fprofile, PRINT_WIDTH, dn_loop);
-            ps_profile.dump(fprofile, PRINT_WIDTH, dn_loop);
-            n_count.dump(fprofile, PRINT_WIDTH, dn_loop);
+            fprofile<<std::setprecision(WRITE_PRECISION);
+            fprofile<<std::setw(WRITE_WIDTH)<<my_rank;
+            fprofile<<std::setw(WRITE_WIDTH)<<time_sys
+                    <<std::setw(WRITE_WIDTH)<<dn_loop
+                    <<std::setw(WRITE_WIDTH)<<n_glb;
+            profile.dump(fprofile, WRITE_WIDTH, dn_loop);
+            ps_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
+            n_count.dump(fprofile, WRITE_WIDTH, dn_loop);
             fprofile<<std::endl;
 
 #endif
