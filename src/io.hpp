@@ -3,7 +3,7 @@
 
 #define PRINT_WIDTH 18
 #define PRINT_PRECISION 14
-#define WRITE_WIDTH 22
+#define WRITE_WIDTH 24
 #define WRITE_PRECISION 15
 
 // IO Params
