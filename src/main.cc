@@ -697,6 +697,9 @@ int main(int argc, char *argv[]){
         ////// set time
         ////////////////
         
+#ifdef PROFILE
+        profile.search_cluster.start();
+#endif
         ////////////////
         ////// search cluster
         search_cluster.searchClusterLocal();
@@ -720,6 +723,7 @@ int main(int argc, char *argv[]){
 
         ////////////////
 #ifdef PROFILE
+        profile.search_cluster.end();
         profile.hard_single.start();
 #endif
         ////// integrater one cluster
@@ -1011,7 +1015,7 @@ int main(int argc, char *argv[]){
             fprofile<<std::setw(WRITE_WIDTH)<<my_rank;
             fprofile<<std::setw(WRITE_WIDTH)<<time_sys
                     <<std::setw(WRITE_WIDTH)<<dn_loop
-                    <<std::setw(WRITE_WIDTH)<<n_glb;
+                    <<std::setw(WRITE_WIDTH)<<n_loc;
             profile.dump(fprofile, WRITE_WIDTH, dn_loop);
             ps_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
             n_count.dump(fprofile, WRITE_WIDTH, dn_loop);

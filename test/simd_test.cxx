@@ -121,6 +121,8 @@ int main(int argc, char **argv){
     std::cout<<"Use AVX512";
 #elif defined(__AVX2__)
     std::cout<<"Use AVX2";
+#elif defined(__AVX__)
+    std::cout<<"Use AVX";
 #endif
 #ifdef CALC_EP_64bit
     std::cout<<" EP_64bit";

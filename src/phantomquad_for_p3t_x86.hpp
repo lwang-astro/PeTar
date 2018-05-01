@@ -6,6 +6,11 @@
 #define USE__AVX512
 #endif
 
+#define _mm256_fmadd_ps(x,y,z)  _mm256_add_ps(z, _mm256_mul_ps(x,y))
+#define _mm256_fnmadd_ps(x,y,z) _mm256_sub_ps(z, _mm256_mul_ps(x,y))
+#define _mm512_fmadd_ps(x,y,z)  _mm512_add_ps(z, _mm512_mul_ps(x,y))
+#define _mm512_fnmadd_ps(x,y,z) _mm512_sub_ps(z, _mm512_mul_ps(x,y))
+
 class PhantomGrapeQuad{
 public:
     enum{
@@ -685,6 +690,13 @@ private:
     }
 #endif
 
+#ifdef __FMA__    
+#undef _mm256_fmadd_ps
+#undef _mm256_fnmadd_ps
+#undef _mm512_fmadd_ps
+#undef _mm512_fnmadd_ps
+#endif
+    
 #ifdef USE__AVX512
 	__attribute__ ((noinline))
 	void kernel_spj_nounroll(const int ni, const int nj){
@@ -1067,6 +1079,11 @@ private:
 
 #if defined(CALC_EP_64bit) || defined(CALC_EP_MIX)
 
+#define _mm256_fmadd_pd(x,y,z)  _mm256_add_pd(z, _mm256_mul_pd(x,y))
+#define _mm256_fnmadd_pd(x,y,z) _mm256_sub_pd(z, _mm256_mul_pd(x,y))
+#define _mm512_fmadd_pd(x,y,z)  _mm512_add_pd(z, _mm512_mul_pd(x,y))
+#define _mm512_fnmadd_pd(x,y,z) _mm512_sub_pd(z, _mm512_mul_pd(x,y))
+
 class PhantomGrapeQuad64Bit{
 public:
     enum{
@@ -1369,13 +1386,21 @@ private:
                 v4df dx = _mm256_sub_pd(xi, xj); 
                 v4df dy = _mm256_sub_pd(yi, yj); 
                 v4df dz = _mm256_sub_pd(zi, zj);
-                
+
+//#ifdef _FMA__                
                 v4df r2 = _mm256_fmadd_pd(dx, dx, veps2);
                 r2 = _mm256_fmadd_pd(dy, dy, r2);
                 r2 = _mm256_fmadd_pd(dz, dz, r2);
+//#else
+//                v4df dx2 = _mm256_mul_pd(dx, dx);
+//                v4df dy2 = _mm256_mul_pd(dy, dy);
+//                v4df dz2 = _mm256_mul_pd(dz, dz);
+//                
+//                v4df r2 = _mm256_add_pd(_mm256_add_pd(_mm256_add_pd(veps2, dx2), dy2), dz2);
+//#endif
                 //v4df mask = _mm256_cmp_pd(vrcrit2, r2, 0x01); // vrcrit2 < r2
                 v4df mask = _mm256_cmp_pd(veps2, r2, 0x4); // veps2 != r2
-                v4df ri1  = _mm256_and_pd(_mm256_cvtps_pd(_mm256_castps256_ps128(_mm256_rsqrt_ps(_mm256_castps128_ps256(_mm256_cvtpd_ps(r2))))), mask);
+                v4df ri1  = _mm256_and_pd(_mm256_cvtps_pd(_mm_rsqrt_ps(_mm256_cvtpd_ps(r2))), mask);
                 //v4df ri1  = __builtin_ia32_cvtps2pd256(__builtin_ia32_rsqrtps( __builtin_ia32_cvtpd2ps256(r2)));
 
                 v4df ri2 = _mm256_mul_pd(ri1, ri1);
@@ -1602,7 +1627,7 @@ private:
                 r2_real = _mm256_fmadd_pd(dz, dz, r2_real);
 
                 v4df r2 = _mm256_max_pd( r2_real, vr_out2);
-                v4df ri1  = _mm256_cvtps_pd(_mm256_castps256_ps128(_mm256_rsqrt_ps(_mm256_castps128_ps256(_mm256_cvtpd_ps(r2)))));
+                v4df ri1 = _mm256_cvtps_pd(_mm_rsqrt_ps(_mm256_cvtpd_ps(r2)));
                 //v4df ri1  = __builtin_ia32_cvtps2pd256(__builtin_ia32_rsqrtps( __builtin_ia32_cvtpd2ps256(r2)));
                 v4df ri2 = _mm256_mul_pd(ri1, ri1);
 
@@ -1672,6 +1697,13 @@ private:
             *(v4df *)(&accpbuf[i/8][4][il]) = nngb;
         }
     }
+#endif
+
+#ifdef __FMA__    
+#undef _mm512_fmadd_pd
+#undef _mm512_fnmadd_pd
+#undef _mm256_fmadd_pd
+#undef _mm256_fnmadd_pd
 #endif
 
 #ifdef USE__AVX512
@@ -1893,7 +1925,7 @@ private:
                 r2 = _mm256_fmadd_pd(dy, dy, r2);
                 r2 = _mm256_fmadd_pd(dz, dz, r2);
 
-                v4df ri1  = _mm256_cvtps_pd(_mm256_castps256_ps128(_mm256_rsqrt_ps(_mm256_castps128_ps256(_mm256_cvtpd_ps(r2)))));
+                v4df ri1  = _mm256_cvtps_pd(_mm_rsqrt_ps(_mm256_cvtpd_ps(r2)));
                 //v4df ri1 = __builtin_ia32_cvtps2pd256( __builtin_ia32_rsqrtps( __builtin_ia32_cvtpd2ps256(r2)));
 		
                 v4df ri2 = _mm256_mul_pd(ri1, ri1);
