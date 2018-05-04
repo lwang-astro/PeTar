@@ -7,14 +7,16 @@ ARC: https://github.com/lwang-astro/ARC
 
 # Current developement status:
 ## Schedule: 
-1. soft tree_for_force with artificial particles
-2. Search clusters with all artificial particles and force correction for cutoff function
-3. Hard find ARC systems: because all artificial particles are inside the same cluster with the corresponding binaries, we only need to find which are binaries, which are corresponding artificial particles
-4. Hard integration
-5. Resolve all binaries to singles and remove all artificial particles
-6. Find new binaries based on new positions of all particles in the same cluster and create new artificial particles
-7. Domain + exchange particle (include artificial particles)
-8. Go to 1
+1. tree_for_force_short_symmetry for real particles neighbor number ( no spj) 
+2. Search clusters with real particles (no force correction)
+3. For each cluster, we find new binaries and create artificial particles by adding to the end of particle system locally
+4. Do soft tree_for_force
+5. Go to hard: find all artificial particles to corresponding binaries (all artificial particles address are registered in the binary particle information), 
+6. force correction for cutoff function
+7. Hard integration 
+8. Remove artificial particles by setNumberOfParticalLocal
+9. Performance weighted Domain + exchange particle (only real particles)
+10. Go to 1
 
 ## Issue:
 1. Energy conservation for massive body encounters
