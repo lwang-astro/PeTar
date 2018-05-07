@@ -22,10 +22,14 @@
 //const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ;
 
 //leap frog----------------------------------------------
-template<class Tpsys, class Ttree>
-void Kick(Tpsys & system,
-          const Ttree & tree,
-          const PS::F64 dt){
+template<class Tpsys, class Tmediator, class Tptcl>
+void Kick(Tpsys & _system,
+          const PS::ReallocatableArray<PS::S32> & _adr_one,
+          const PS::ReallocatableArray<PS::S32> & _adr_multi,
+          const PS::ReallocatableArray<PS::S32> & _n_multi,
+          const PS::ReallocatableArray<Tmediator> & _med,
+          const PS::ReallocatableArray<Tptcl> & _ptcl_recv,
+          const PS::F64 _dt){
     const PS::S32 n = system.getNumberOfParticleLocal();
 #pragma omp parallel for
     for(int i=0; i<n; i++){

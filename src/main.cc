@@ -505,41 +505,12 @@ int main(int argc, char *argv[]){
         file_header.dt_soft= dt_soft.value;
     }
 
-    // for potential calculation
-#ifndef USE_SIMD
-    tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSIMD(),
-#ifdef USE_QUAD
-                                       CalcForceEpSpQuadNoSimd(),
-#else
-                                       CalcForceEpSpNoSIMD(),
-#endif
-                                       system_soft,
-                                       dinfo);
-#else
-    tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(),
-#ifdef USE_QUAD
-                                       CalcForceEpSpQuadSimd(),
-#else
-                                       CalcForceEpSpMonoSimd(),
-#endif
-                                       system_soft,
-                                       dinfo);
-
-
-    stat.time = time_sys;
-    stat.N = n_glb.value;
-
-    stat.eng_init.clear();
-    stat.eng_init.calc(&system_soft[0], system_soft.getNumberOfParticleLocal(), 0.0);
-    stat.eng_init.getSumMultiNodes();
-    stat.eng_now = stat.eng_init;
-
-    if(my_rank==0) {
-        std::cout<<"----- Initial status -----\n";
-        stat.eng_init.print(std::cout);
-        stat.dump(fstatus,WRITE_WIDTH);
-        fstatus<<std::endl;
-    }
+    //if(my_rank==0) {
+    //    std::cout<<"----- Initial status -----\n";
+    //    stat.eng_init.print(std::cout);
+    //    stat.dump(fstatus,WRITE_WIDTH);
+    //    fstatus<<std::endl;
+    //}
 
 
     PS::S64 n_loop = 0;
@@ -569,6 +540,13 @@ int main(int argc, char *argv[]){
 
         search_cluster.searchClusterLocal();
         search_cluster.setIdClusterLocal();
+
+        // Send receive cluster particles
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+        search_cluster.connectNodes(pos_domain,tree_soft);
+        search_cluster.setIdClusterGlobalIteration();
+        search_cluster.sendAndRecvCluster(system_soft);
+#endif
 
         n_loc = system_soft.getNumberOfParticleLocal();
 
@@ -625,155 +603,37 @@ int main(int argc, char *argv[]){
         ps_profile += tree_soft.getTimeProfile();
         domain_decompose_weight = ps_profile.calc_force;
         profile.tree_soft.end();
-        profile.kick.start();
-#endif
-        
-        ////////////////
-        ////// 1st kick
-        Kick(system_soft, tree_soft, dt_soft.value*0.5);
-        ////// 1st kick
-        ////////////////
-
-#ifdef PROFILE
-        profile.kick.end();
         profile.soft_tot.end();
-        profile.search_cluster.start();
 #endif
 
-        // Send receive cluster particles
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-        search_cluster.connectNodes(pos_domain,tree_soft);
-        search_cluster.setIdClusterGlobalIteration();
-        search_cluster.sendAndRecvCluster(system_soft);
-#endif
+        // for first step
+        if(first_step_flag) {
+            first_step_flag = false;
+
+            // status analysis
+            stat.time = time_sys;
+            stat.N = n_glb.value;
+
+            stat.eng_init.clear();
+            stat.eng_init.calc(&system_soft[0], system_soft.getNumberOfParticleLocal(), 0.0);
+            stat.eng_init.getSumMultiNodes();
+            stat.eng_now = stat.eng_init;
+
 
 #ifdef PROFILE
-        profile.search_cluster.end();
-        profile.hard_tot.start();
+            profile.soft_tot.start();
+            profile.kick.start();
 #endif
-        ////////////////
-        ////// set time
-        system_hard_one_cluster.setTimeOrigin(time_sys);
-        system_hard_isolated.setTimeOrigin(time_sys);
-        system_hard_connected.setTimeOrigin(time_sys);
-        ////// set time
-        ////////////////
-        
-
-        ////////////////
+            ////////////////
+            ////// kick half step
+            Kick(system_soft, tree_soft, dt_soft.value*0.5);
+            ////////////////
 #ifdef PROFILE
-        profile.hard_single.start();
+            profile.kick.end();
+            profile.soft_tot.end();
 #endif
-        ////// integrater one cluster
-        system_hard_one_cluster.initializeForOneCluster(search_cluster.getAdrSysOneCluster().size());
-        system_hard_one_cluster.setPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
-        system_hard_one_cluster.driveForOneCluster(dt_soft.value);
-        system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft, search_cluster.getAdrSysOneCluster());
-        ////// integrater one cluster
-#ifdef PROFILE
-        profile.hard_single.end();
-#endif
-        ////////////////
-
-        /////////////
-#ifdef PROFILE
-        profile.hard_isolated.start();
-#endif
-        // integrate multi cluster A
-        system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
-        system_hard_isolated.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft.value,system_soft,first_step_flag);
-        system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_,remove_list);
-        // integrate multi cluster A
-#ifdef PROFILE
-        profile.hard_isolated.end();
-#endif
-        /////////////
-
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-        /////////////
-#ifdef PROFILE
-        PS::Comm::barrier();
-        profile.hard_connected.start();
-#endif
-        // integrate multi cluster B
-        system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
-        system_hard_connected.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft.value,system_soft,first_step_flag);
-        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
-        // integrate multi cluster B
-#ifdef PROFILE
-        profile.hard_connected.end();
-#endif        
-
-#endif
-        
-//#ifdef MAIN_DEBUG
-//        n_loc = system_soft.getNumberOfParticleLocal();
-//        for(PS::S32 i=0; i<n_loc; i++){
-//            if(system_soft[i].id<0&&system_soft[i].status<0) {
-//                std::cerr<<"Error! Ghost detected in system_soft after remove, i="<<i<<std::endl;
-//                abort();
-//            }
-//        }
-//#endif
-
-        first_step_flag = false;
-
-        /////////////
-        // Remove ghost particles
-        system_soft.removeParticle(remove_list.getPointer(), remove_list.size());
-        // reset particle number
-        system_soft.setNumberOfParticleLocal(n_loc-remove_list.size());
-        remove_list.resizeNoInitialize(0);
-
-#ifdef PROFILE
-        profile.hard_tot.end();
-        /////////////
-
-#ifdef MAIN_DEBUG
-        FILE* fout;
-        if ( (fout = fopen("nbody.dat","w")) == NULL) {
-            fprintf(stderr,"Error: Cannot open file nbody.dat\n");
-            abort();
         }
-        write_p(fout, time_sys, 0.0, system_soft, stat.eng_now, stat.eng_diff);
-#endif
-
-#ifdef PROFILE
-        profile.domain_ex_ptcl.start();
-#endif
-        // Domain decomposition, parrticle exchange and force calculation
-        if(n_loop % 16 == 0) {
-            dinfo.decomposeDomainAll(system_soft,domain_decompose_weight);
-            //std::cout<<"rank: "<<my_rank<<" weight: "<<domain_decompose_weight<<std::endl;
-        }
-        system_soft.exchangeParticle(dinfo);
-
-        n_loc = system_soft.getNumberOfParticleLocal();
-#pragma omp parallel for
-        for(PS::S32 i=0; i<n_loc; i++){
-            system_soft[i].rank_org = my_rank;
-            system_soft[i].adr = i;
-        }
-        
-#ifdef PROFILE
-        profile.domain_ex_ptcl.end();
-        profile.kick.start();
-#endif                                           
-
-        ////////////////
-        ////// 2nd kick
-        Kick(system_soft, tree_soft, dt_soft.value*0.5);
-        time_sys += dt_soft.value;
-        ////// 2nd kick
-        ////////////////
-#ifdef PROFILE
-        profile.kick.end();
-#endif 
-
-#ifdef PROFILE
-        profile.tot.end();
-#endif
-        /////////////
+        else {
 
         PS::S64 n_glb = system_soft.getNumberOfParticleGlobal();
 #ifdef PROFILE
@@ -823,6 +683,11 @@ int main(int argc, char *argv[]){
 //#endif
         
         if( fmod(time_sys, dt_snp.value) == 0.0){
+            /////////////
+            ////// kick half step
+            Kick(system_soft, tree_soft, dt_soft.value*0.5);
+            ////////////////
+
             //update n_glb
             n_glb = system_soft.getNumberOfParticleGlobal();
             
@@ -944,6 +809,8 @@ int main(int argc, char *argv[]){
 //              fclose(bfout);
 //            }
 
+            Kick(system_soft, tree_soft, dt_soft.value*0.5);
+
 #ifdef PROFILE            
             profile.clear();
             ps_profile.clear();
@@ -952,7 +819,146 @@ int main(int argc, char *argv[]){
             dn_loop=0;
 #endif
         }
+        else {
+#ifdef PROFILE
+            profile.soft_tot.start();
+            profile.kick.start();
+#endif
+            ////////////////
+            ////// kick
+            Kick(system_soft, tree_soft, dt_soft.value);
+            ////// kick
+            ////////////////
+#ifdef PROFILE
+            profile.kick.end();
+            profile.soft_tot.end();
+#endif
+        }
 
+#endif
+        profile.search_cluster.start();
+#endif
+
+        // Send receive cluster particles
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+        search_cluster.connectNodes(pos_domain,tree_soft);
+        search_cluster.setIdClusterGlobalIteration();
+        search_cluster.sendAndRecvCluster(system_soft);
+#endif
+
+#ifdef PROFILE
+        profile.search_cluster.end();
+        profile.hard_tot.start();
+#endif
+        ////////////////
+        ////// set time
+        system_hard_one_cluster.setTimeOrigin(time_sys);
+        system_hard_isolated.setTimeOrigin(time_sys);
+        system_hard_connected.setTimeOrigin(time_sys);
+        ////// set time
+        ////////////////
+        
+
+        ////////////////
+#ifdef PROFILE
+        profile.hard_single.start();
+#endif
+        ////// integrater one cluster
+        system_hard_one_cluster.initializeForOneCluster(search_cluster.getAdrSysOneCluster().size());
+        system_hard_one_cluster.setPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
+        system_hard_one_cluster.driveForOneCluster(dt_soft.value);
+        system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft, search_cluster.getAdrSysOneCluster());
+        ////// integrater one cluster
+#ifdef PROFILE
+        profile.hard_single.end();
+#endif
+        ////////////////
+
+        /////////////
+#ifdef PROFILE
+        profile.hard_isolated.start();
+#endif
+        // integrate multi cluster A
+        system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
+        system_hard_isolated.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft.value,system_soft,first_step_flag);
+        system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_,remove_list);
+        // integrate multi cluster A
+#ifdef PROFILE
+        profile.hard_isolated.end();
+#endif
+        /////////////
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+        /////////////
+#ifdef PROFILE
+        PS::Comm::barrier();
+        profile.hard_connected.start();
+#endif
+        // integrate multi cluster B
+        system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
+        system_hard_connected.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft.value,system_soft,first_step_flag);
+        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+        // integrate multi cluster B
+#ifdef PROFILE
+        profile.hard_connected.end();
+#endif        
+
+#endif
+        
+//#ifdef MAIN_DEBUG
+//        n_loc = system_soft.getNumberOfParticleLocal();
+//        for(PS::S32 i=0; i<n_loc; i++){
+//            if(system_soft[i].id<0&&system_soft[i].status<0) {
+//                std::cerr<<"Error! Ghost detected in system_soft after remove, i="<<i<<std::endl;
+//                abort();
+//            }
+//        }
+//#endif
+
+
+        /////////////
+        // Remove ghost particles
+        system_soft.removeParticle(remove_list.getPointer(), remove_list.size());
+        // reset particle number
+        system_soft.setNumberOfParticleLocal(n_loc-remove_list.size());
+        remove_list.resizeNoInitialize(0);
+
+#ifdef PROFILE
+        profile.hard_tot.end();
+        /////////////
+
+#ifdef MAIN_DEBUG
+        FILE* fout;
+        if ( (fout = fopen("nbody.dat","w")) == NULL) {
+            fprintf(stderr,"Error: Cannot open file nbody.dat\n");
+            abort();
+        }
+        write_p(fout, time_sys, 0.0, system_soft, stat.eng_now, stat.eng_diff);
+#endif
+
+#ifdef PROFILE
+        profile.domain_ex_ptcl.start();
+#endif
+        // Domain decomposition, parrticle exchange and force calculation
+        if(n_loop % 16 == 0) {
+            dinfo.decomposeDomainAll(system_soft,domain_decompose_weight);
+            //std::cout<<"rank: "<<my_rank<<" weight: "<<domain_decompose_weight<<std::endl;
+        }
+        system_soft.exchangeParticle(dinfo);
+
+        n_loc = system_soft.getNumberOfParticleLocal();
+#pragma omp parallel for
+        for(PS::S32 i=0; i<n_loc; i++){
+            system_soft[i].rank_org = my_rank;
+            system_soft[i].adr = i;
+        }
+        
+#ifdef PROFILE
+        profile.domain_ex_ptcl.end();
+        profile.tot.end();
+#endif
+
+        time_sys += dt_soft.value;
 
         n_loop++;
     }

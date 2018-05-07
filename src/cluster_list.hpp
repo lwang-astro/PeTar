@@ -327,6 +327,101 @@ public:
     }
 
 
+    template<class Tsys, class Ttree, class Tepj>
+    void searchNeighborOMP(Tsys & sys,
+                           Ttree & tree,
+                           const PS::F64 r_out,  // 1/(r_out-r_in)
+                           const PS::F64 r_in,
+                           const PS::F64ort pos_domain[],
+                           const PS::F64 eps_sq=0.0){
+        static PS::ReallocatableArray<PtclOuter> * ptcl_outer = NULL;
+        static PS::ReallocatableArray< std::pair<PS::S32, PS::S32> > * id_ngb_multi_cluster = NULL;
+        const PS::S32 n_thread = PS::Comm::getNumberOfThread();
+        if(ptcl_outer==NULL) ptcl_outer = new PS::ReallocatableArray<PtclOuter>[n_thread];
+        if(id_ngb_multi_cluster==NULL) id_ngb_multi_cluster = new PS::ReallocatableArray< std::pair<PS::S32, PS::S32> >[n_thread];
+        const PS::S32 my_rank = PS::Comm::getRank();
+        //        const PS::S32 n_proc_tot = PS::Comm::getNumberOfProc();
+        const PS::S32 n_loc = sys.getNumberOfParticleLocal();
+        const PS::F64 r_oi_inv = 1.0/(r_out-r_in);
+        const PS::F64 r_A = (r_out-r_in)/(r_out+r_in);
+#pragma omp parallel
+        {
+            const PS::S32 ith = PS::Comm::getThreadNum();
+            adr_sys_one_cluster_[ith].clearSize();
+            id_ngb_multi_cluster[ith].clearSize();
+            for(PS::S32 i=0; i<ptcl_cluster_[ith].size(); i++) ptcl_cluster_[ith][i].clear();
+            ptcl_cluster_[ith].clearSize();
+            for(PS::S32 i=0; i<ptcl_outer[ith].size(); i++) ptcl_outer[ith][i].clear();
+            ptcl_outer[ith].clearSize();
+#pragma omp for
+            for(PS::S32 i=0; i<n_loc; i++){
+                Tepj * nbl = NULL;
+                sys[i].n_ngb = tree.getNeighborListOneParticle(sys[i], nbl) - 1;
+                assert(sys[i].n_ngb >= 0);
+                // self-potential correction 
+
+                if(sys[i].n_ngb == 0){
+                    // no neighbor
+                    adr_sys_one_cluster_[ith].push_back(i);
+                }
+                else{
+                    // has neighbor
+                    ptcl_cluster_[ith].push_back( PtclCluster(sys[i].id, i, id_ngb_multi_cluster[ith].size(), sys[i].n_ngb, false, NULL, my_rank) );
+                    //PS::S32 n_tmp2 = 0;
+                    //PS::S32 n_tmp3 = 0;
+                    //PS::S32 n_tmp4 = 0;
+                    for(PS::S32 ii=0; ii<sys[i].n_ngb+1; ii++){
+                        if( (nbl+ii)->id == sys[i].id ){
+                            //n_tmp2++;
+                            continue;
+                        }
+                        id_ngb_multi_cluster[ith].push_back( std::pair<PS::S32, PS::S32>(sys[i].id, (nbl+ii)->id) );
+                        PS::S32 pot_control_flag;
+                        Tepj* nj = nbl+ii;
+                        if( (nbl+ii)->rank_org != my_rank ){
+                            ptcl_outer[ith].push_back(PtclOuter((nbl+ii)->id, sys[i].id, (nbl+ii)->rank_org));
+                            //n_tmp3++;
+                        }
+                    }
+                }
+            }
+        } // end of OMP parallel 
+        packDataToThread0(adr_sys_one_cluster_);
+        packDataToThread0(ptcl_cluster_);
+        packDataToThread0(id_ngb_multi_cluster);
+        packDataToThread0(ptcl_outer);
+        setNgbAdrHead(id_ngb_multi_cluster);
+        n_pcluster_self_node_ = ptcl_cluster_[0].size();
+        std::sort(ptcl_outer[0].getPointer(), ptcl_outer[0].getPointer(ptcl_outer[0].size()), OPLessID());
+
+/*        if(PS::Comm::getRank() == 0 && ptcl_outer[0].size() > 0){
+            PS::S32 n_tmp = 1;
+            PS::S32 n_tmp_tmp = 0;
+            //std::cerr<<"ptcl_outer[0].size()="<<ptcl_outer[0].size()<<std::endl;
+            PS::S32 ref_tmp = ptcl_outer[0][0].id_;
+            for(PS::S32 i=0; i<ptcl_outer[0].size(); i++){
+                if( ref_tmp != ptcl_outer[0][i].id_){
+                    ref_tmp = ptcl_outer[0][i].id_;
+                    n_tmp++;
+                    n_tmp_tmp = 0;
+                }
+                n_tmp_tmp++;
+            }
+            }*/
+        mergePtclCluster(ptcl_outer, id_ngb_multi_cluster); // ptcl_cluster_ is complited
+        id_to_adr_pcluster_.clear(); // temporally add 
+        for(PS::S32 i=0; i<ptcl_cluster_[0].size(); i++){
+            id_to_adr_pcluster_.insert(std::pair<PS::S32, PS::S32>(ptcl_cluster_[0][i].id_, i));
+        }
+        adr_ngb_multi_cluster_.clearSize();
+        adr_ngb_multi_cluster_.resizeNoInitialize(id_ngb_multi_cluster[0].size());
+        for(PS::S32 i=0; i<id_ngb_multi_cluster[0].size(); i++){
+            const PS::S32 adr_self = id_to_adr_pcluster_[id_ngb_multi_cluster[0][i].first];
+            const PS::S32 adr_ngb  = id_to_adr_pcluster_[id_ngb_multi_cluster[0][i].second];
+            adr_ngb_multi_cluster_[i] = std::pair<PS::S32, PS::S32>(adr_self, adr_ngb);
+        }
+    }
+    
     // * adr_sys_one_cluster_
     // * ptcl_cluster_ 
     // * adr_ngb_multi_cluster_ 
@@ -448,6 +543,12 @@ public:
             adr_ngb_multi_cluster_[i] = std::pair<PS::S32, PS::S32>(adr_self, adr_ngb);
         }
     }
+
+    template<class Tsys>
+    void findGroupsAndCreateArtificalParticles(Tsys & sys) {
+        
+    }
+
 
     template<class Tsys>
     void checkPtclCluster(const Tsys & sys){
