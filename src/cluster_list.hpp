@@ -544,9 +544,64 @@ public:
         }
     }
 
-    template<class Tsys>
-    void findGroupsAndCreateArtificalParticles(Tsys & sys) {
+    template<class Tsys, class Tphard, class Tpsoft>
+    void findGroupsAndCreateArtificalParticlesOMP(Tsys & sys) {
+        const PS::S32 n_cluster = n_ptcl_in_multi_cluster_isolated_.size();
+        PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_disp;
+        n_ptcl_in_cluster_disp.resizeNoInitialize(n_cluster+1);
         
+        for (PS::S32 i=0; i<n_cluster; i++) 
+            n_ptcl_in_cluster_disp[i+1] = n_ptcl_in_cluster_disp[i] + n_ptcl_in_multi_cluster_isolated_[i];
+
+        const PS::S32 num_thread = PS::Comm::getNumberOfThread();
+        PS::ReallocatableArray<Tphard> ptcl_artifical[num_thread];
+        PS::ReallocatableArray<Tphard> ptcl_org_adr[num_thread];
+        const PS::S64 n_sys = sys.getNumberOfParticleLocal();
+
+#pragma omp for schedule(dynamic)
+        for (PS::S32 i=0; i<n_cluster; i++){
+            const PS::S32 ith = PS::Comm::getThreadNum();
+
+            PS::ReallocatableArray<Tphard> ptcl_local;
+            PS::S32 n_ptcl = n_ptcl_in_multi_cluster_isolated_[i];
+            ptcl_local.reserve(n_ptcl);
+            ptcl_local.resizeNoInitialize(n_ptcl);
+            // copy local ptcl data
+            PS::S64 n_start = n_ptcl_in_cluster_disp[i];
+            PS::S64 n_end = n_ptcl_in_cluster_disp[i+1]
+            for (PS::S32 j=n_start; j<n_end; j++) {
+                PS::S32 adr = adr_sys_multi_cluster_isolated_[j];
+                ptcl_local[j].DataCopy(sys[adr]);
+            }
+            // search groups
+            SearchGroup<Ptcl> group;
+            // find group members
+            group.findGroups(ptcl_local.getPointer(), n_ptcl, n_split_);
+            // merge groups
+            if (group.getPtclN()==2) group.searchAndMerge(ptcl_local.getPointer(), rout_);
+            else group.searchAndMerge(ptcl_local.getPointer(), rin_);
+
+            // generate artifical particles,
+            // the third: adr list. The function reorder the adr list to let group particles at first, the ptcl_artifical also use the same order to store the artifical particles.
+            group.generateList(ptcl_local.getPointer(), ptcl_artifical[ith], adr_sys_multi_cluster_isolated_.getPointer(n_start), n_group_multi_cluster_isolated.getPointer(), rbin_, rin_, rout_, dt_tree_, id_offset_, n_split_);
+        }
+
+        // add artificial particle to particle system
+        PS::S32 rank = PS::Comm::getRank();
+        const PS::S32 n_artifical_per_group = 2*n_split_+1;
+        for(PS::S32 i=0; i<num_thread; i++) {
+            assert(ptcl_artifical[i].size()%n_artifical_per_group==0);
+            for (PS::S32 j=0; j<ptcl_artifical[i].size(); j++) {
+                PS::S32 adr = sys.getNumberOfParticleLocal();
+                sys.addOneParticle(Tpsoft(ptcl_artifical[i][j],rank,adr));
+            }
+            // set member status to c.m. address
+            for (PS::S32 j=0; j<ptcl_artifical[i].size(); j+=n_artifical_per_group) {
+                Tphard* = &ptcl_artifical[i][j];
+                PS::S32 n_members = Tphard->status;
+                for (PS::S32 k=0; k<n_members; k++) sys[(Tphard+3+k)->status]=Tphard->adr;
+            }
+        }
     }
 
 

@@ -511,10 +511,19 @@ int main(int argc, char *argv[]){
     //    stat.dump(fstatus,WRITE_WIDTH);
     //    fstatus<<std::endl;
     //}
+#ifdef MAIN_DEBUG
+    FILE* fout;
+    if ( (fout = fopen("nbody.dat","w")) == NULL) {
+        fprintf(stderr,"Error: Cannot open file nbody.dat\n");
+        abort();
+    }
+#endif
 
 
-    PS::S64 n_loop = 0;
     bool first_step_flag = true;
+    bool output_flag = false;
+    PS::S64 n_loop = 0;
+    PS::F64 dt_kick = dt_soft.value;
 /// Main loop
     while(time_sys < time_end.value){
 
@@ -523,7 +532,7 @@ int main(int argc, char *argv[]){
 
         profile.tree_nb.start();
 #endif
-        // Tree for neighbor searching
+        // >1. Tree for neighbor searching ----------------------------------------
 #ifndef USE_SIMD
         tree_nb.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSIMD(), system_soft, dinfo);
 #else
@@ -534,28 +543,32 @@ int main(int argc, char *argv[]){
         profile.tree_nb.end();
         profile.search_cluster.start();
 #endif
-        // search clusters
+        // >2.1 search clusters ----------------------------------------
         search_cluster.searchNeighborOMP<SystemSoft, Tree, EPJSoft>
             (system_soft, tree_nb, r_out.value, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
 
         search_cluster.searchClusterLocal();
         search_cluster.setIdClusterLocal();
 
-        // Send receive cluster particles
+        // >2.2 Send/receive connect cluster
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         search_cluster.connectNodes(pos_domain,tree_soft);
         search_cluster.setIdClusterGlobalIteration();
         search_cluster.sendAndRecvCluster(system_soft);
 #endif
 
+        // record real particle n_loc/glb
         n_loc = system_soft.getNumberOfParticleLocal();
+        n_glb = system_soft.getNumberOfParticleGlobal();
 
-        // Find ARC groups and create artificial particles
+        // >2.3 Find ARC groups and create artificial particles
         search_cluster.findGroupsAndCreateArtificalParticles(system_soft);
 
-        PS::S64 n_loc_new = system_soft.getNumberOfParticleLocal();
-
-        // set for artificial particles
+        // update n_glb, n_loc for all
+        PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
+        PS::S64 n_glb_all = system_soft.getNumberOfParticleGlobal();
+            
+        // >2.4 set adr/rank for artificial particles in GPS
 #pragma omp parallel for
         for(PS::S32 i=n_loc; i<n_loc_new; i++){
             system_soft[i].rank_org = my_rank;
@@ -563,6 +576,7 @@ int main(int argc, char *argv[]){
             assert(system_soft[i].id<0&&system_soft[i].status<0);
         }
 
+        // >3 Tree for force ----------------------------------------
 #ifdef PROFILE
         profile.search_cluster.end();
 
@@ -573,7 +587,6 @@ int main(int argc, char *argv[]){
         tree_soft.clearTimeProfile();
 #endif
         
-        // Tree for force
 #ifndef USE_SIMD
         tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSIMD(),
 #ifdef USE_QUAD
@@ -610,87 +623,57 @@ int main(int argc, char *argv[]){
         if(first_step_flag) {
             first_step_flag = false;
 
-            // status analysis
+            // update status
             stat.time = time_sys;
-            stat.N = n_glb.value;
+            stat.N = n_glb;
+            stat.N_all = n_glb_all;
 
+            // calculate initial energy
             stat.eng_init.clear();
             stat.eng_init.calc(&system_soft[0], system_soft.getNumberOfParticleLocal(), 0.0);
             stat.eng_init.getSumMultiNodes();
             stat.eng_now = stat.eng_init;
+             
+            // print status
+            if(my_rank==0) {
+                std::cout<<std::endl;
+                stat.print(std::cout);
+                stat.dump(fstatus, WRITE_WIDTH);
+                fstatus<<std::endl;
+            }
+            
+            output_flag = false;
 
-
-#ifdef PROFILE
-            profile.soft_tot.start();
-            profile.kick.start();
-#endif
-            ////////////////
-            ////// kick half step
-            Kick(system_soft, tree_soft, dt_soft.value*0.5);
-            ////////////////
-#ifdef PROFILE
-            profile.kick.end();
-            profile.soft_tot.end();
-#endif
+            // set kick step
+            dt_kick = dt_soft.value*0.5;
         }
         else {
+            // output step, reduce step by half 
+            if( fmod(time_sys, dt_snp.value) == 0.0) {
+                output_flag = true;
+                dt_kick = dt_soft.value*0.5;
+            } 
+            else {
+                output_flag = false;
+                // double kick step
+                dt_kick = dt_soft.value;
+            }
+        }
 
-        PS::S64 n_glb = system_soft.getNumberOfParticleGlobal();
 #ifdef PROFILE
-        PS::S32 n_hard_single     = system_hard_one_cluster.getPtcl().size();
-        PS::S32 n_hard_isolated   = system_hard_isolated.getPtcl().size();
-        PS::S32 n_hard_connected  = system_hard_connected.getPtcl().size();
-
-        n_count.hard_single      += n_hard_single;
-        n_count.hard_isolated    += n_hard_isolated;
-        n_count.hard_connected   += n_hard_connected;
-
-        n_count_sum.hard_single      += PS::Comm::getSum(n_hard_single);
-        n_count_sum.hard_isolated    += PS::Comm::getSum(n_hard_isolated);
-        n_count_sum.hard_connected   += PS::Comm::getSum(n_hard_connected);
-                                           
-        PS::S64 ARC_substep_sum   = system_hard_isolated.ARC_substep_sum;
-        PS::S64 ARC_n_groups      = system_hard_isolated.ARC_n_groups;
-        n_count.ARC_substep_sum  += ARC_substep_sum;
-        n_count.ARC_n_groups     += ARC_n_groups;
-
-        n_count_sum.ARC_substep_sum  += PS::Comm::getSum(ARC_substep_sum);
-        n_count_sum.ARC_n_groups     += PS::Comm::getSum(ARC_n_groups);
-
-        system_hard_isolated.ARC_substep_sum = 0;
-        system_hard_isolated.ARC_n_groups = 0;
-                                           
-        n_count.cluster_count(1, n_hard_single);
-
-        const PS::S32  n_isolated_cluster = system_hard_isolated.getNCluster();
-        n_count.cluster_isolated += n_isolated_cluster;
-        n_count_sum.cluster_isolated += PS::Comm::getSum(n_isolated_cluster);
-
-        const PS::S32* isolated_cluster_n_list = system_hard_isolated.getClusterNList();
-        for (PS::S32 i=0; i<n_isolated_cluster; i++) n_count.cluster_count(isolated_cluster_n_list[i]);
-
-        const PS::S32  n_connected_cluster = system_hard_connected.getNCluster();
-        n_count.cluster_connected += n_connected_cluster;
-        n_count_sum.cluster_connected += PS::Comm::getSum(n_connected_cluster);
-        const PS::S32* connected_cluster_n_list = system_hard_connected.getClusterNList();
-        for (PS::S32 i=0; i<n_connected_cluster; i++) n_count.cluster_count(connected_cluster_n_list[i]);
-
-        dn_loop++;
+        profile.soft_tot.start();
+        profile.kick.start();
+#endif
+        // >4. kick  ----------------------------------------
+        Kick(system_soft, tree_soft, dt_kick);
+#ifdef PROFILE
+        profile.kick.end();
+        profile.soft_tot.end();
 #endif
 
-//#ifdef ARC_ERROR
-//        system_hard_isolated.N_count[0] += PS::Comm::getSum(n_one_cluster);
-//#endif
-        
+        // output information
         if( fmod(time_sys, dt_snp.value) == 0.0){
-            /////////////
-            ////// kick half step
-            Kick(system_soft, tree_soft, dt_soft.value*0.5);
-            ////////////////
 
-            //update n_glb
-            n_glb = system_soft.getNumberOfParticleGlobal();
-            
 #ifdef MAIN_DEBUG
             write_p(fout, time_sys, dt_soft.value*0.5, system_soft, stat.eng_now, stat.eng_diff);
 //        //output
@@ -706,22 +689,23 @@ int main(int argc, char *argv[]){
 //        fout<<std::endl;
 #endif
 
-            //stat.eng_diff.dump(std::cerr);
+            // update status
             stat.time = time_sys;
             stat.N = n_glb;
+            
             stat.eng_now.clear();
             stat.eng_now.calc(&system_soft[0], system_soft.getNumberOfParticleLocal(), dt_soft.value*0.5);
             stat.eng_now.getSumMultiNodes();
         
             stat.eng_diff = stat.eng_now - stat.eng_init;
 
+            // print status
             if(my_rank==0) {
                 std::cout<<std::endl;
                 stat.print(std::cout);
                 stat.dump(fstatus, WRITE_WIDTH);
                 fstatus<<std::endl;
             }
-
             
 #ifdef PROFILE
             //const int NProc=PS::Comm::getNumberOfProc();
@@ -779,7 +763,8 @@ int main(int argc, char *argv[]){
             fprofile<<std::endl;
 
 #endif
-            
+
+            // data output
             file_header.n_body = n_glb;
             file_header.time = time_sys;
             file_header.nfile++;
@@ -789,27 +774,6 @@ int main(int argc, char *argv[]){
             else if(data_format.value==0||data_format.value==2)
                 system_soft.writeParticleBinary(fname.c_str(), file_header);
 
-//            if (n_bin>0) {
-//              char bout[99] = "bin.";
-//              sprintf(&bout[4],"%lld",file_header.nfile);
-//              FILE* bfout=fopen(bout,"w");
-//              for (PS::S64 k=0; k<n_bin; k++) {
-//                PS::F64 ax,ecc,inc,OMG,omg,tperi,anomaly;
-//                anomaly=PosVel2OrbParam(ax,ecc,inc,OMG,omg,tperi,
-//                                        system_soft[2*k].pos, system_soft[2*k+1].pos,
-//                                        system_soft[2*k].vel, system_soft[2*k+1].vel,
-//                                        system_soft[2*k].mass,system_soft[2*k+1].mass);
-//                FPSoft pcm;
-//                calc_center_of_mass(pcm, &(system_soft[2*k]), 2);
-//                
-//                fprintf(bfout,"%lld %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e\n",
-//                        k, ax, ecc, inc, OMG, omg, tperi, anomaly, system_soft[2*k].mass, system_soft[2*k+1].mass,
-//                        pcm.pos[0],pcm.pos[1],pcm.pos[2],pcm.vel[0],pcm.vel[1],pcm.vel[2]);
-//              }
-//              fclose(bfout);
-//            }
-
-            Kick(system_soft, tree_soft, dt_soft.value*0.5);
 
 #ifdef PROFILE            
             profile.clear();
@@ -817,18 +781,13 @@ int main(int argc, char *argv[]){
             n_count.clear();
             n_count_sum.clear();
             dn_loop=0;
-#endif
-        }
-        else {
-#ifdef PROFILE
+
+            // second half kick
             profile.soft_tot.start();
             profile.kick.start();
 #endif
-            ////////////////
-            ////// kick
             Kick(system_soft, tree_soft, dt_soft.value);
-            ////// kick
-            ////////////////
+
 #ifdef PROFILE
             profile.kick.end();
             profile.soft_tot.end();
@@ -839,7 +798,7 @@ int main(int argc, char *argv[]){
         profile.search_cluster.start();
 #endif
 
-        // Send receive cluster particles
+        // Send receive cluster particles after kick
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         search_cluster.connectNodes(pos_domain,tree_soft);
         search_cluster.setIdClusterGlobalIteration();
@@ -848,18 +807,18 @@ int main(int argc, char *argv[]){
 
 #ifdef PROFILE
         profile.search_cluster.end();
+
+        // >5. Hard integration --------------------------------------
         profile.hard_tot.start();
 #endif
-        ////////////////
+
         ////// set time
         system_hard_one_cluster.setTimeOrigin(time_sys);
         system_hard_isolated.setTimeOrigin(time_sys);
         system_hard_connected.setTimeOrigin(time_sys);
         ////// set time
-        ////////////////
         
 
-        ////////////////
 #ifdef PROFILE
         profile.hard_single.start();
 #endif
@@ -927,15 +886,8 @@ int main(int argc, char *argv[]){
         profile.hard_tot.end();
         /////////////
 
-#ifdef MAIN_DEBUG
-        FILE* fout;
-        if ( (fout = fopen("nbody.dat","w")) == NULL) {
-            fprintf(stderr,"Error: Cannot open file nbody.dat\n");
-            abort();
-        }
-        write_p(fout, time_sys, 0.0, system_soft, stat.eng_now, stat.eng_diff);
-#endif
 
+        // > 6. Domain decomposition
 #ifdef PROFILE
         profile.domain_ex_ptcl.start();
 #endif
@@ -960,6 +912,48 @@ int main(int argc, char *argv[]){
 
         time_sys += dt_soft.value;
 
+#ifdef PROFILE
+        // profile analysis
+        PS::S32 n_hard_single     = system_hard_one_cluster.getPtcl().size();
+        PS::S32 n_hard_isolated   = system_hard_isolated.getPtcl().size();
+        PS::S32 n_hard_connected  = system_hard_connected.getPtcl().size();
+
+        n_count.hard_single      += n_hard_single;
+        n_count.hard_isolated    += n_hard_isolated;
+        n_count.hard_connected   += n_hard_connected;
+
+        n_count_sum.hard_single      += PS::Comm::getSum(n_hard_single);
+        n_count_sum.hard_isolated    += PS::Comm::getSum(n_hard_isolated);
+        n_count_sum.hard_connected   += PS::Comm::getSum(n_hard_connected);
+                                           
+        PS::S64 ARC_substep_sum   = system_hard_isolated.ARC_substep_sum;
+        PS::S64 ARC_n_groups      = system_hard_isolated.ARC_n_groups;
+        n_count.ARC_substep_sum  += ARC_substep_sum;
+        n_count.ARC_n_groups     += ARC_n_groups;
+
+        n_count_sum.ARC_substep_sum  += PS::Comm::getSum(ARC_substep_sum);
+        n_count_sum.ARC_n_groups     += PS::Comm::getSum(ARC_n_groups);
+
+        system_hard_isolated.ARC_substep_sum = 0;
+        system_hard_isolated.ARC_n_groups = 0;
+                                           
+        n_count.cluster_count(1, n_hard_single);
+
+        const PS::S32  n_isolated_cluster = system_hard_isolated.getNCluster();
+        n_count.cluster_isolated += n_isolated_cluster;
+        n_count_sum.cluster_isolated += PS::Comm::getSum(n_isolated_cluster);
+
+        const PS::S32* isolated_cluster_n_list = system_hard_isolated.getClusterNList();
+        for (PS::S32 i=0; i<n_isolated_cluster; i++) n_count.cluster_count(isolated_cluster_n_list[i]);
+
+        const PS::S32  n_connected_cluster = system_hard_connected.getNCluster();
+        n_count.cluster_connected += n_connected_cluster;
+        n_count_sum.cluster_connected += PS::Comm::getSum(n_connected_cluster);
+        const PS::S32* connected_cluster_n_list = system_hard_connected.getClusterNList();
+        for (PS::S32 i=0; i<n_connected_cluster; i++) n_count.cluster_count(connected_cluster_n_list[i]);
+
+        dn_loop++;
+#endif
         n_loop++;
     }
 

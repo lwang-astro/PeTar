@@ -12,12 +12,12 @@ public:
     /*
                 single           c.m.                       members            
       id         id          id of first member (-)            id
-      states      0           number of members             fake pert id with iphase=0 (-)
+      status      0          member number                  c.m. adr
       mass_bk   unknown         mass                         mass
-                 fake members                  unused
-                id_offset+id*n_split+iphase      -1
-                 c.m. id+phase order(+)          -1
-                    unknown                    unknown
+                 fake members                                                           unused
+                id_offset+id*n_split+iphase                                              -1
+                1. first component member number 2. second >=3: member adr               -1
+                    unknown                                                              unknown
      */
     PS::F64 r_search;
     PS::F64 mass_bk;
