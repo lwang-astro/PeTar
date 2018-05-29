@@ -429,17 +429,23 @@ void center_of_mass_correction(particle &cm, particle* p[], const int num) {
 // 
 //}
 
+//! Find the minimum distant particle and same the sqrt distance at first and index at second of r2_list
+/* @param[in,out] _member_list: group particle member index, will be reordered by the minimum distance chain.
+   @param[in,out] _r2_list: a pair. first is the square distance of closes neighbor (next particle i+1 in _member_list); second is equal to particle current index i
+   @param[in] _n: number of members
+   @param[in] _ptcl_org: original particle data
+ */
 template <class Tptcl>
-void calcMinDisList(PS::S32 member_list[], 
-                    std::pair<PS::F32, PS::S32> r2_list[],
-                    const PS::S32 n,
-                    Tptcl* ptcl_org) {
+void calcMinDisList(PS::S32 _member_list[], 
+                    std::pair<PS::F32, PS::S32> _r2_list[],
+                    const PS::S32 _n,
+                    Tptcl* _ptcl_org) {
     for (int i=0; i<n-1; i++) {
-        PS::S32 k = member_list[i];
+        PS::S32 k = _member_list[i];
         PS::S32 jc=-1;
         PS::F64 r2min = PS::LARGE_FLOAT;
         for(int j=i+1; j<n; j++) {
-            PS::F64vec dr = ptcl_org[k].pos - ptcl_org[member_list[j]].pos;
+            PS::F64vec dr = _ptcl_org[k].pos - _ptcl_org[_member_list[j]].pos;
             PS::F64 r2 = dr*dr;
             if(r2<r2min) {
                 r2min = r2;
@@ -450,12 +456,12 @@ void calcMinDisList(PS::S32 member_list[],
         assert(jc>=0);
 #endif
         if (jc!=i+1) {
-            PS::S32 jtmp = member_list[i+1];
-            member_list[i+1] = member_list[jc];
-            member_list[jc]  = jtmp;
+            PS::S32 jtmp = _member_list[i+1];
+            _member_list[i+1] = _member_list[jc];
+            _member_list[jc]  = jtmp;
         }
-        r2_list[i].first = r2min;
-        r2_list[i].second = i;
+        _r2_list[i].first = r2min;
+        _r2_list[i].second = i;
     }
 }
 
@@ -463,63 +469,83 @@ bool pairLess(const std::pair<PS::F32,PS::S32> & a, const std::pair<PS::F32,PS::
     return a.first < b.first;
 }
 
+//! Find systems and generate artificial particles
+/*  @param[in,out] _bins: binary tree, size of n_members
+    @param[in,out] _member_list: group particle member index, will be reordered by the minimum distance chain.
+    @param[in,out] _ptcl_org: particle data, the status of members are modified to 1
+    @param[in] _dt_tree: tree time step, used for calculating r_search for bin
+ */
 template<class Tptcl>
-void keplerTreeGenerator(PtclTree<Tptcl> bins[],   // make sure bins.size = n_members!
-                         PS::S32 member_list[], // make sure list.size = n_members!
-                         const PS::S32 n_members,
-                         Tptcl* ptcl_org,
-                         const PS::F64 dt_tree){
+void keplerTreeGenerator(PtclTree<Tptcl> _bins[],   // make sure bins.size = n_members!
+                         PS::S32 _member_list[], // make sure list.size = n_members!
+                         const PS::S32 _n_members,
+                         Tptcl* _ptcl_org,
+                         const PS::F64 _dt_tree){
 
-    std::pair<PS::F32,PS::S32> r2_list[n_members];
-    calcMinDisList(member_list,r2_list, n_members, ptcl_org);
-    if(n_members>2) std::sort(r2_list, r2_list+n_members-1, pairLess);
+    std::pair<PS::F32,PS::S32> r2_list[_n_members];
+    // reorder _member_list by minimum distance of each particles, and save square minimum distance r2min and index i in _member_list (not particle index in _ptcl_org) in r2_list 
+    calcMinDisList(_member_list, r2_list, _n_members, _ptcl_org);
+    // sort r2_list by r2min 
+    if(_n_members>2) std::sort(r2_list, r2_list+_n_members-1, pairLess);
 
-    PtclTree<Tptcl>* bin_host[n_members];
+    // tree root for each binary pair
+    PtclTree<Tptcl>* bin_host[_n_members]; 
     for(auto &p : bin_host) p=NULL;
     
-    for(int i=0; i<n_members-1; i++) {
+    // check binary from the closest pair to longest pair
+    for(int i=0; i<_n_members-1; i++) {
+        // get the pair index k in _member_list with sorted r2_list, i represent the sorted r2min order.
         PS::S32 k = r2_list[i].second;
         Tptcl* p[2];
+        // if no tree root assign, set member 1 to particle and their host to current bins i
         if(bin_host[k]==NULL) {
-            p[0] = &ptcl_org[member_list[k]];
-            bin_host[k] = &bins[i];
+            p[0] = &_ptcl_org[_member_list[k]];
+            bin_host[k] = &_bins[i];
+            p[0]->status=1; // set status to 1 for counting members
         }
+        // if tree root already exist, member 1 assigned to tree root bin_host[k], tree members' bin_host -> current bins i
         else {
             p[0] = bin_host[k];
             PS::S32 ki = k;
-            while(bin_host[ki]==p[0]&&ki>=0) bin_host[ki--] = &bins[i];
+            while(bin_host[ki]==p[0]&&ki>=0) bin_host[ki--] = &_bins[i];
         }
 
+        // if no tree root assign, set member 2 to particle and their host to current bins i
         if(bin_host[k+1]==NULL) {
-            p[1] = &ptcl_org[member_list[k+1]];
-            bin_host[k+1] = &bins[i];
+            p[1] = &_ptcl_org[_member_list[k+1]];
+            bin_host[k+1] = &_bins[i];
+            p[1]->status=1; // set status to 1 for counting members
         }
+        // if tree root already exist, member 2 assigned to tree root bin_host[k], tree members' bin_host -> current bins i
         else {
             p[1] = bin_host[k+1];
             PS::S32 ki = k+1;
-            while(bin_host[ki]==p[1]&&ki>=0) bin_host[ki++] = &bins[i];
+            while(bin_host[ki]==p[1]&&ki>=0) bin_host[ki++] = &_bins[i];
         }
-        
-        bins[i].ecca=PosVel2OrbParam(bins[i].ax, bins[i].ecc, bins[i].inc, bins[i].OMG, bins[i].omg, bins[i].tperi, bins[i].peri, p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass);
-        calc_center_of_mass(*(Tptcl*)&bins[i], p, 2);
-        bins[i].member[0] = p[0];
-        bins[i].member[1] = p[1];
-        bins[i].m1 = p[0]->mass;
-        bins[i].m2 = p[1]->mass;
-        PS::F64 dr = 1.0-bins[i].ecc*cos(bins[i].ecca);
-        PS::F64 apo= 1.0+bins[i].ecc;
-        bins[i].fpert = fabs(p[0]->mass_bk - p[1]->mass_bk)/dr*apo;
-        bins[i].mass_bk = p[0]->mass_bk + p[1]->mass_bk;
-        bins[i].id = p[0]->id;
-        bins[i].tstep = -1.0;
-        bins[i].stable_factor = 0.0;
-        bins[i].status = bins[i].id;
+
+        // calculate binary parameter
+        _bins[i].ecca=PosVel2OrbParam(_bins[i].ax, _bins[i].ecc, _bins[i].inc, _bins[i].OMG, _bins[i].omg, _bins[i].tperi, _bins[i].peri, p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass);
+        // calculate center-of-mass particle
+        calc_center_of_mass(*(Tptcl*)&_bins[i], p, 2);
+        _bins[i].member[0] = p[0];
+        _bins[i].member[1] = p[1];
+        _bins[i].m1 = p[0]->mass;
+        _bins[i].m2 = p[1]->mass;
+        PS::F64 dr = 1.0-_bins[i].ecc*cos(_bins[i].ecca);
+        PS::F64 apo= 1.0+_bins[i].ecc;
+        _bins[i].fpert = fabs(p[0]->mass_bk - p[1]->mass_bk)/dr*apo;
+        _bins[i].mass_bk = p[0]->mass_bk + p[1]->mass_bk;
+        _bins[i].id = p[0]->id;
+        _bins[i].tstep = -1.0;
+        _bins[i].stable_factor = 0.0;
+        //_bins[i].status = _bins[i].id;
+        _bins[i].status = _bins[i].member[0].status + _bins[i].member[1].status;  // counting total number of members in the leafs
         //bins[i].r_search = std::max(p[0]->r_search,p[1]->r_search);
-        bins[i].calcRSearch(dt_tree);
+        _bins[i].calcRSearch(dt_tree);
     }
 
 #ifdef HARD_DEBUG
-    for(int i=0; i<n_members; i++) assert(bin_host[i]==&bins[n_members-2]);
+    for(int i=0; i<_n_members; i++) assert(bin_host[i]==&_bins[n_members-2]); // check whether all bin_host point to the last of bins
 #endif
 }
 

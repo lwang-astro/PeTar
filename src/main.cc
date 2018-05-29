@@ -562,7 +562,7 @@ int main(int argc, char *argv[]){
         n_glb = system_soft.getNumberOfParticleGlobal();
 
         // >2.3 Find ARC groups and create artificial particles
-        search_cluster.findGroupsAndCreateArtificalParticles(system_soft);
+        search_cluster.findGroupsAndCreateArtificalParticlesOMP(system_soft);
 
         // update n_glb, n_loc for all
         PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
