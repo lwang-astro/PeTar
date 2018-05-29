@@ -440,11 +440,11 @@ void calcMinDisList(PS::S32 _member_list[],
                     std::pair<PS::F32, PS::S32> _r2_list[],
                     const PS::S32 _n,
                     Tptcl* _ptcl_org) {
-    for (int i=0; i<n-1; i++) {
+    for (int i=0; i<_n-1; i++) {
         PS::S32 k = _member_list[i];
         PS::S32 jc=-1;
         PS::F64 r2min = PS::LARGE_FLOAT;
-        for(int j=i+1; j<n; j++) {
+        for(int j=i+1; j<_n; j++) {
             PS::F64vec dr = _ptcl_org[k].pos - _ptcl_org[_member_list[j]].pos;
             PS::F64 r2 = dr*dr;
             if(r2<r2min) {
@@ -539,13 +539,13 @@ void keplerTreeGenerator(PtclTree<Tptcl> _bins[],   // make sure bins.size = n_m
         _bins[i].tstep = -1.0;
         _bins[i].stable_factor = 0.0;
         //_bins[i].status = _bins[i].id;
-        _bins[i].status = _bins[i].member[0].status + _bins[i].member[1].status;  // counting total number of members in the leafs
+        _bins[i].status = _bins[i].member[0]->status + _bins[i].member[1]->status;  // counting total number of members in the leafs
         //bins[i].r_search = std::max(p[0]->r_search,p[1]->r_search);
-        _bins[i].calcRSearch(dt_tree);
+        _bins[i].calcRSearch(_dt_tree);
     }
 
 #ifdef HARD_DEBUG
-    for(int i=0; i<_n_members; i++) assert(bin_host[i]==&_bins[n_members-2]); // check whether all bin_host point to the last of bins
+    for(int i=0; i<_n_members; i++) assert(bin_host[i]==&_bins[_n_members-2]); // check whether all bin_host point to the last of bins
 #endif
 }
 

@@ -5,13 +5,13 @@
 #PS_PATH = -I../../fdps/src/
 #PS_PATH = -I../../../../project/fdps/src
 #PS_PATH = -I../FDPS/src
-PS_PATH = -I../fdps.svn/
-#PS_PATH  = -I/home/lwang/code/fdps/src
+#PS_PATH = -I../fdps.svn/
+PS_PATH  = -I/home/lwang/code/fdps/src
 
 ##ARC PATH
-ARC_PATH= -I../TSARC/include
+#ARC_PATH= -I../TSARC/include
 #ARC_PATH = -I/home/lwang/code/ARC/include
-#ARC_PATH = -I/home/lwang/GitHub/ARC/include
+ARC_PATH = -I/home/lwang/GitHub/ARC/include
 
 ##Gperftools PATH
 #GPERF_PATH = -L../../soft/gperftools-2.6.90/lib
@@ -70,8 +70,8 @@ CXXFLAGS += -O2
 CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -fopenmp
 #CXXFLAGS += -DPARTICLE_SIMULATOR_DEBUG_PRINT
 CXXFLAGS += -Wall
-CXXFLAGS += -march=skylake-avx512
-#CXXFLAGS += -march=core-avx2
+#CXXFLAGS += -march=skylake-avx512
+CXXFLAGS += -march=core-avx2
 #CXXFLAGS += -mavx
 CXXFLAGS += -ffast-math -funroll-loops
 CXXFLAGS += -std=c++11
@@ -158,7 +158,7 @@ test.out: test.cxx
 	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
 searchgrouptest: searchgroup.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
 
 hermitetest: hermite.cxx
 	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)

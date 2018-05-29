@@ -30,21 +30,21 @@ void Kick(Tpsys & _system,
           const PS::ReallocatableArray<Tmediator> & _med,
           const PS::ReallocatableArray<Tptcl> & _ptcl_recv,
           const PS::F64 _dt){
-    const PS::S32 n = system.getNumberOfParticleLocal();
+    const PS::S32 n = _system.getNumberOfParticleLocal();
 #pragma omp parallel for
     for(int i=0; i<n; i++){
 #ifdef HARD_CM_KICK
-        if(system[i].status==0)  //only single stars have kick, c.m. are kicked in hard part
+        if(_system[i].status==0)  //only single stars have kick, c.m. are kicked in hard part
 #else
-        if(system[i].status==0||(system[i].id<0&&system[i].status>0)) // single and c.m.
+        if(_system[i].status==0||(_system[i].id<0&&system[i].status>0)) // single and c.m.
 #endif
-            system[i].vel  += system[i].acc * dt;
+            _system[i].vel  += _system[i].acc * _dt;
 #ifdef TIDAL_TENSOR
-        if(system[i].status>0)   // backup acceleration to velocity for fake members and c.m.
+        if(_system[i].status>0)   // backup acceleration to velocity for fake members and c.m.
 #else
-        if(system[i].status>0&&system[i].id>0)  // backup acceleration to velocity for fake members
+        if(_system[i].status>0&&_system[i].id>0)  // backup acceleration to velocity for fake members
 #endif
-            system[i].vel = system[i].acc;
+            _system[i].vel = _system[i].acc;
     }
 }
 

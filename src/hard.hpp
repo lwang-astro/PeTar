@@ -410,14 +410,14 @@ private:
         }
             
         //group.resolveGroups(ptcl_org, n_ptcl, group_ptcl_glb.getPointer(), group_list.size(), group_list.getPointer(), adr_cm.getPointer());
-        group.resolveGroups();
-        updateRSearch(ptcl_org, group.getPtclList(), group.getPtclN(), time_end);
+        //group.resolveGroups();
+        //updateRSearch(ptcl_org, group.getPtclList(), group.getPtclN(), time_end);
 
-        if (group.getPtclN()==2) group.searchAndMerge(ptcl_org, Int_pars_.rout);
-        else group.searchAndMerge(ptcl_org, Int_pars_.rin);
+        //if (group.getPtclN()==2) group.searchAndMerge(ptcl_org, Int_pars_.rout);
+        //else group.searchAndMerge(ptcl_org, Int_pars_.rin);
         //group.searchAndMerge(ptcl_org, Int_pars_.rout);
         // Kickcorrect(ptcl_org, group.getRoutChangeList());
-        group.generateList(ptcl_org, ptcl_new, r_bin_,Int_pars_.rin, Int_pars_.rout, time_end, id_offset_, n_split_);
+        //group.generateList(ptcl_org, ptcl_new, r_bin_,Int_pars_.rin, Int_pars_.rout, time_end, id_offset_, n_split_);
 
             // group.reverseCopy(ptcl_org, n_ptcl);
 //        }
@@ -923,32 +923,32 @@ public:
         }
     }
 
-    template<class Tsys, class Tsptcl>
-    void initialMultiClusterOMP(Tsys & sys, const PS::F64 dt_tree){
-        const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
-        //	const PS::S32 ith = PS::Comm::getThreadNum();
-#pragma omp for schedule(dynamic)
-        for(PS::S32 i=0; i<n_cluster; i++){
-            const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
-            const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
-            SearchGroup<PtclHard> group;
-            group.findGroups(ptcl_hard_.getPointer(adr_head), n_ptcl, n_split_);
-            if (group.getPtclN()==2) group.searchAndMerge(ptcl_hard_.getPointer(adr_head), Int_pars_.rout);
-            else group.searchAndMerge(ptcl_hard_.getPointer(adr_head), Int_pars_.rin);
-            //group.searchAndMerge(ptcl_hard_.getPointer(adr_head), Int_pars_.rin);
-            PS::ReallocatableArray<PtclHard> ptcl_new;
-            group.generateList(ptcl_hard_.getPointer(adr_head), ptcl_new, r_bin_, Int_pars_.rin, Int_pars_.rout, dt_tree, id_offset_, n_split_);
-#pragma omp critical
-            {
-                for (PS::S32 j=0; j<ptcl_new.size(); j++) {
-                    PS::S32 adr = sys.getNumberOfParticleLocal();
-                    PS::S32 rank = PS::Comm::getRank();
-                    sys.addOneParticle(Tsptcl(ptcl_new[j],rank,adr));
-                }
-            }
-            
-        }        
-    }
+    //template<class Tsys, class Tsptcl>
+    //void initialMultiClusterOMP(Tsys & sys, const PS::F64 dt_tree){
+    //    const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
+    //    //	const PS::S32 ith = PS::Comm::getThreadNum();
+//#pragma omp for schedule(dynamic)
+    //    for(PS::S32 i=0; i<n_cluster; i++){
+    //        const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
+    //        const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
+    //        SearchGroup<PtclHard> group;
+    //        group.findGroups(ptcl_hard_.getPointer(adr_head), n_ptcl, n_split_);
+    //        if (group.getPtclN()==2) group.searchAndMerge(ptcl_hard_.getPointer(adr_head), Int_pars_.rout);
+    //        else group.searchAndMerge(ptcl_hard_.getPointer(adr_head), Int_pars_.rin);
+    //        //group.searchAndMerge(ptcl_hard_.getPointer(adr_head), Int_pars_.rin);
+    //        PS::ReallocatableArray<PtclHard> ptcl_new;
+    //        group.generateList(ptcl_hard_.getPointer(adr_head), ptcl_new, r_bin_, Int_pars_.rin, Int_pars_.rout, dt_tree, id_offset_, n_split_);
+//#pragma omp critical
+    //        {
+    //            for (PS::S32 j=0; j<ptcl_new.size(); j++) {
+    //                PS::S32 adr = sys.getNumberOfParticleLocal();
+    //                PS::S32 rank = PS::Comm::getRank();
+    //                sys.addOneParticle(Tsptcl(ptcl_new[j],rank,adr));
+    //            }
+    //        }
+    //        
+    //    }        
+    //}
 
 #ifdef HARD_DEBUG_DUMP
     //! parameter dump function
