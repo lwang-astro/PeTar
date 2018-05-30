@@ -189,6 +189,7 @@ int main(int argc, char** argv)
       std::cout<<std::setw(20)<<"Group"<<std::setw(20)<<i<<std::endl;
       plist.pair_process(0,0,kepler_print,rsearch);
 
+      for (int j=0; j<n_ptcl_cluster[i]; j++) p[j+n_offset[i]].adr_org = j+n_offset[i];
       print_p(p.getPointer(),N);
   }
 
@@ -265,11 +266,12 @@ int main(int argc, char** argv)
       assert(ptcl_artifical[i].size()%n_artifical_per_group==0);
       // Add particle to ptcl sys
       for (PS::S32 j=0; j<ptcl_artifical[i].size(); j++) {
-          //PS::S32 adr = p.size();
+          PS::S32 adr = p.size();
           p.push_back(ptcl_artifical[i][j]);
+          p.back().adr_org = adr;
       }
       // Update the status of group members to c.m. address in ptcl sys
-      for (PS::S32 j=0; j<ptcl_artifical[i].size(); j+=n_artifical_per_group) {
+      for (PS::S32 j=n_artifical_per_group-1; j<ptcl_artifical[i].size(); j+=n_artifical_per_group) {
           // obtain group member nember
           PS::S32 n_members = ptcl_artifical[i][j].status;
           // update member status
@@ -299,7 +301,7 @@ int main(int argc, char** argv)
       for (int j=0; j<n_ptcl_cluster[i]; j++) {
           std::cout<<std::setw(10)<<ptcl_list[n_offset[i]+j];
       }
-      std::cout<<"Ptcl:\n";
+      std::cout<<"\nPtcl:\n";
       print_p(p.getPointer(n_offset[i]),n_ptcl_cluster[i]);
       std::cout<<std::endl;
   }

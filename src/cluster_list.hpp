@@ -730,11 +730,12 @@ private:
             const PS::S32 group_start = _group_list_disp[i];
             const PS::S32 group_n = _group_list_n[i];
             keplerTreeGenerator(bins.getPointer(), &_group_list[group_start], group_n, _ptcl_org, _dt_tree);
-            // stability check and break groups
-            PS::S32 fstab = stabilityCheck<Tptcl>(stab_bins, bins.back(), _rbin, _rin, _rout);
 
             // reset status to 0
             for (int j=0; j<_group_list_n[i]; j++) _ptcl_org[_group_list[group_start+j]].status=0;
+         
+            // stability check and break groups
+            PS::S32 fstab = stabilityCheck<Tptcl>(stab_bins, bins.back(), _rbin, _rin, _rout);
             
             if (fstab) {
                 keplerOrbitGenerator(_ptcl_org, _ptcl_artifical, _empty_list, &group_list_reorder[group_list_reorder_offset], bins.back(), _id_offset, _n_split);
@@ -750,12 +751,17 @@ private:
 
         assert(group_list_reorder_offset<=_n_ptcl);
 
+        // Obtain list index from global system
+        PS::S32 ptcl_list_new[group_list_reorder_offset];
+        for (int i=0; i<group_list_reorder_offset; i++) ptcl_list_new[i] = _ptcl_list[group_list_reorder[i]];
+
         // shift single after group members
         PS::S32 i_group=0, i_single_front=group_list_reorder_offset;
         while (i_group<group_list_reorder_offset) {
             // if single find inside group_list_reorder_offset, exchange single with group member out of the offset
-            if(_ptcl_org[_ptcl_list[i_group]].status==0) {
-                while(_ptcl_org[_ptcl_list[i_single_front]].status==0) {
+            // Notice the _ptcl_org is local copy of a cluster, thus group_list_reorder is index of this local copy and _ptcl_list is index of global system
+            if(_ptcl_org[i_group].status==0) {
+                while(_ptcl_org[i_single_front].status==0) {
                     i_single_front++;
                     assert(i_single_front<_n_ptcl);
                 }
@@ -764,19 +770,20 @@ private:
                 _ptcl_list[i_group] = _ptcl_list[i_single_front];
                 _ptcl_list[i_single_front] = plist_tmp;
             }
+            i_group++;
         }
 
 #ifdef HARD_DEBUG
         // check whether the list is correct
-        PS::S32 plist_now[group_list_reorder_offset];
-        for (int i=0; i<group_list_reorder_offset; i++) plist_now[i] = group_list_reorder[i];
-        std::sort(plist_now, plist_now+group_list_reorder_offset, [](PS::S32 &a, PS::S32 &b) {return a < b;});
+        PS::S32 plist_new[group_list_reorder_offset];
+        for (int i=0; i<group_list_reorder_offset; i++) plist_new[i] = ptcl_list_new[i];
+        std::sort(plist_new, plist_new+group_list_reorder_offset, [](PS::S32 &a, PS::S32 &b) {return a < b;});
         std::sort(_ptcl_list, _ptcl_list+group_list_reorder_offset, [](PS::S32 &a, PS::S32 &b) {return a < b;});
-        for (int i=0; i<group_list_reorder_offset; i++) assert(_ptcl_list[i]==plist_now[i]);
+        for (int i=0; i<group_list_reorder_offset; i++) assert(_ptcl_list[i]==plist_new[i]);
 #endif        
 
         // overwrite the current ptcl list for group members by reorderd list
-        for (int i=0; i<group_list_reorder_offset; i++) _ptcl_list[i] = group_list_reorder[i];
+        for (int i=0; i<group_list_reorder_offset; i++) _ptcl_list[i] = ptcl_list_new[i];
 
         for (int i=0; i<_empty_list.size(); i++) {
             PS::S32 ik = _empty_list[i];
@@ -1730,8 +1737,8 @@ public:
                 PS::S32 adr = sys.getNumberOfParticleLocal();
                 sys.addOneParticle(Tpsoft(ptcl_artifical[i][j],rank,adr));
             }
-            // Update the status of group members to c.m. address in ptcl sys
-            for (PS::S32 j=0; j<ptcl_artifical[i].size(); j+=n_artifical_per_group) {
+            // Update the status of group members to c.m. address in ptcl sys. Notice c.m. is at the end of an artificial particle group
+            for (PS::S32 j=n_artifical_per_group-1; j<ptcl_artifical[i].size(); j+=n_artifical_per_group) {
                 // obtain group member nember
                 PS::S32 n_members = ptcl_artifical[i][j].status;
                 // update member status
