@@ -709,8 +709,8 @@ bool stab4check(PtclTree<Tptcl> &bout, PtclTree<Tptcl> &bin1, PtclTree<Tptcl> &b
 template<class Tptcl>
 PS::S32 stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &nbin, 
                        PtclTree<Tptcl> &bins, const PS::F64 rbin, const PS::F64 rin, const PS::F64 rout) {
-    if(bins.member[0]->status!=0) {
-        if(bins.member[1]->status!=0) {
+    if(bins.member[0]->status>1) {
+        if(bins.member[1]->status>1) {
             //PS::F64 fs0 = stab4check(bins, *(PtclTree<Tptcl>*)bins.member[0], *(PtclTree<Tptcl>*)bins.member[1], rbin, rin);
             PS::S32 fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[0], rbin, rin, rout);
             PS::S32 fs2 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[1], rbin, rin, rout);
@@ -734,7 +734,7 @@ PS::S32 stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &nbin,
         }
     }
     else {
-        if(bins.member[1]->status!=0) {
+        if(bins.member[1]->status>1) {
             //PS::F64 fs0 = stab3check(bins, *(PtclTree<Tptcl>*)bins.member[1], rbin, rin);
             PS::S32 fs1 = stabilityCheck<Tptcl>(nbin, *(PtclTree<Tptcl>*)bins.member[1], rbin, rin, rout);
             if(fs1) {

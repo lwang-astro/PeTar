@@ -8,6 +8,7 @@
 #include "kepler.hpp"
 #include "cluster_list.hpp"
 #include "hard.hpp"
+#include "soft.hpp"
 
 
 #ifndef NAN_CHECK
@@ -68,7 +69,6 @@ PtclHard kepler_print(const std::size_t id, const std::size_t ib, PtclHard* c[2]
     return PtclHard(Ptcl(ParticleBase(mt, xcm, vcm), rsearch, 0, ib, 0));
 }
 
-
 void print_p(PtclHard* p, const int n) {
     std::cout<<std::setw(20)<<"mass"
              <<std::setw(20)<<"x1"
@@ -102,6 +102,37 @@ void print_p(PtclHard* p, const int n) {
     }
 }
 
+void print_p(FPSoft* p, const int n, const int adr_ref) {
+    std::cout<<std::setw(20)<<"mass"
+             <<std::setw(20)<<"x1"
+             <<std::setw(20)<<"x2"
+             <<std::setw(20)<<"x3"
+             <<std::setw(20)<<"v1"
+             <<std::setw(20)<<"v2"
+             <<std::setw(20)<<"v3"
+             <<std::setw(20)<<"rsearch"
+             <<std::setw(20)<<"mass_bk"
+             <<std::setw(20)<<"status"
+             <<std::setw(20)<<"id"
+             <<std::setw(20)<<"adr"
+             <<std::endl;
+    for (int i=0; i<n; i++) {
+        std::cout<<std::setw(20)<<p[i].mass
+                 <<std::setw(20)<<p[i].pos[0]
+                 <<std::setw(20)<<p[i].pos[1]
+                 <<std::setw(20)<<p[i].pos[2]
+                 <<std::setw(20)<<p[i].vel[0]
+                 <<std::setw(20)<<p[i].vel[1]
+                 <<std::setw(20)<<p[i].vel[2]
+                 <<std::setw(20)<<p[i].r_search
+                 <<std::setw(20)<<p[i].mass_bk
+                 <<std::setw(20)<<p[i].status
+                 <<std::setw(20)<<p[i].id
+                 <<std::setw(20)<<i+adr_ref
+                 <<std::endl;
+    }
+}
+
 int main(int argc, char** argv)
 {
   // data file name
@@ -116,14 +147,15 @@ int main(int argc, char** argv)
 
   PS::ReallocatableArray<PtclHard> p;
 
-  PS::S32 n_cluster;
-  PS::F64 rbin, rin, rout, rsearch, dt_tree, n_split;
+  PS::S32 n_cluster, n_split;
+  PS::F64 rbin, rin, rout, rsearch, dt_tree;
   fs>>n_cluster>>rbin>>rin>>rout>>rsearch>>dt_tree>>n_split;;
   Ptcl::r_search_min = rsearch;
 
-  PS::S32 n_offset[n_cluster];
-  PS::S32 n_ptcl_cluster[n_cluster];
-  PS::S32 n_group[n_cluster];
+  PS::S32 n_offset[n_cluster+1];
+  PS::ReallocatableArray<PS::S32> n_ptcl_cluster;
+  n_ptcl_cluster.resizeNoInitialize(n_cluster);
+  PS::ReallocatableArray<PS::S32> n_group;
   
   for (int i=0; i<n_cluster;i++) {
 
@@ -193,8 +225,10 @@ int main(int argc, char** argv)
       print_p(p.getPointer(),N);
   }
 
-  const PS::S32 num_thread = PS::Comm::getNumberOfThread();
-  PS::ReallocatableArray<PtclHard> ptcl_artifical[num_thread];
+  PS::ParticleSystem<FPSoft> sys;
+  for (int i=0; i<p.size(); i++) sys.addOneParticle(FPSoft(p[i],0,i));
+  const PS::S32 n_sys = sys.getNumberOfParticleLocal();
+
   PS::S32 ptcl_list[p.size()];
   for (int i=0; i<n_cluster; i++) {
       std::cout<<"index list group "<<i<<std::endl;
@@ -204,97 +238,11 @@ int main(int argc, char** argv)
       }
       std::cout<<std::endl;
   }
-  PS::S32 id_offset=p.size();
-
-#pragma omp for schedule(dynamic)
-  for (int i=0; i<n_cluster; i++) {
-      const PS::S32 ith = PS::Comm::getThreadNum();
-      
-      SearchGroup<PtclHard> group;
-
-      //group.findGroups(p.getPointer(), N, par.n_split);
-      //group.resolveGroups();
-
-      group.searchAndMerge(p.getPointer(n_offset[i]), n_ptcl_cluster[i], rin);
-      
-      group.generateList(p.getPointer(n_offset[i]), n_ptcl_cluster[i], ptcl_artifical[ith], &ptcl_list[n_offset[i]], n_group[i], rbin, rin, rout, dt_tree, id_offset, n_split);
-      //print_p(p.getPointer(),N);
-
-      //for(int i=0; i<group.getNumOfGroups(); i++) {
-      //    std::cout<<"group["<<i<<"]: ";
-      //    for(int j=0; j<group.getGroupN(i); j++) {
-      //    std::cout<<std::setw(10)<<group.getGroup(i)[j];
-      //}
-      //std::cout<<std::endl;
-  }
-
-  //std::cout<<"Ptcl List:";
-  //for(int i=0; i<group.getPtclN(); i++) {
-  //    std::cout<<std::setw(10)<<group.getPtclList()[i];
-  //}
-  //std::cout<<std::endl;
-
-  //PS::ReallocatableArray<PS::S32> adr_group_glb;
-  //PS::ReallocatableArray<std::vector<Ptcl>> group_ptcl_glb; 
-  //PS::ReallocatableArray<PS::S32> group_ptcl_glb_empty_list;
-  //PS::ReallocatableArray<PtclHard> ptcl_new;
-  // 
-  ////group.generateList(p, N, adr_group_glb, group_ptcl_glb, group_ptcl_glb_empty_list);
-  //group.generateList(p.getPointer(), ptcl_new, par.rin, par.rin, par.rin,par.dt_tree, N, par.n_split);
-  //std::cout<<"GenerateList\n";
-  //print_p(p.getPointer(),p.size());
+  PS::S64 id_offset=p.size();
   
-  //std::cout<<"adr_group_glb: ";
-  //for(int i=0; i<adr_group_glb.size(); i++) std::cout<<std::setw(6)<<adr_group_glb[i];
-  //std::cout<<std::endl;
-  
-  //std::cout<<"new ptcl: "<<ptcl_new.size()<<"\n ";
-  //print_p(ptcl_new.getPointer(),ptcl_new.size());
-  //for(int i=0; i<ptcl_new.size(); i++) {
-  //    print_p(group_ptcl_glb[i].data(),group_ptcl_glb[i].size());
-  //}
-  //p.reserveEmptyAreaAtLeast(ptcl_new.size());
-  //for(int i=0;i<ptcl_new.size();i++) p.pushBackNoCheck(ptcl_new[i]);
+  SearchCluster search_cluster;
 
-  // add artifical particle to particle system
-  //PS::S32 rank = PS::Comm::getRank();
-  const PS::S32 n_artifical_per_group = 2*n_split+1;
-  const PS::S32 n_sys = p.size();
-  PS::S32 i_cluster=0, j_group=0, group_offset=0, n_sys_offset_threads=0;
-  for(PS::S32 i=0; i<num_thread; i++) {
-      // ptcl_artifical should be integer times of 2*n_split+1
-      assert(ptcl_artifical[i].size()%n_artifical_per_group==0);
-      // Add particle to ptcl sys
-      for (PS::S32 j=0; j<ptcl_artifical[i].size(); j++) {
-          PS::S32 adr = p.size();
-          p.push_back(ptcl_artifical[i][j]);
-          p.back().adr_org = adr;
-      }
-      // Update the status of group members to c.m. address in ptcl sys
-      for (PS::S32 j=n_artifical_per_group-1; j<ptcl_artifical[i].size(); j+=n_artifical_per_group) {
-          // obtain group member nember
-          PS::S32 n_members = ptcl_artifical[i][j].status;
-          // update member status
-          for (PS::S32 k=0; k<n_members; k++) {
-              PS::S64 ptcl_k=ptcl_list[n_offset[i_cluster]+group_offset+k];
-#ifdef HARD_DEBUG
-              assert(p[ptcl_k].status==j);
-#endif
-              p[ptcl_k].status = n_sys+n_sys_offset_threads+j;
-          }
-          // group in cluster counter
-          j_group++;
-          // shift cluster
-          if(j_group==n_group[i_cluster]) {
-              j_group=0;
-              i_cluster++;
-              group_offset=0;
-          }
-          else group_offset += n_members; // group offset in the ptcl list index of one cluster
-      }
-      // sys address offset due to the multi-threads
-      n_sys_offset_threads += ptcl_artifical[i].size();
-  }
+  search_cluster.findGroupsAndCreateArtificalParticlesImpl<PS::ParticleSystem<FPSoft>, PtclHard, FPSoft>(sys, n_ptcl_cluster, n_group, ptcl_list, rbin, rin, rout, dt_tree, id_offset, n_split);
 
   for(int i=0; i<n_cluster; i++) {
       std::cout<<"new index list group "<<i<<std::endl;
@@ -302,11 +250,11 @@ int main(int argc, char** argv)
           std::cout<<std::setw(10)<<ptcl_list[n_offset[i]+j];
       }
       std::cout<<"\nPtcl:\n";
-      print_p(p.getPointer(n_offset[i]),n_ptcl_cluster[i]);
+      print_p(&sys[n_offset[i]], n_ptcl_cluster[i], n_offset[i]);
       std::cout<<std::endl;
   }
-  std::cout<<"New artifical particles: N="<<p.size()-n_sys<<"\n";
-  print_p(p.getPointer(n_sys), p.size()-n_sys);
+  std::cout<<"New artifical particles: N="<<sys.getNumberOfParticleLocal()-n_sys<<"\n";
+  print_p(&sys[n_sys], sys.getNumberOfParticleLocal()-n_sys, n_sys);
 
   //group.findGroups(p.getPointer(),p.size(), par.n_split);
   // 

@@ -16,7 +16,7 @@ public:
       mass_bk   unknown         mass                         mass
                  fake members                                                           unused
                 id_offset+id*n_split+iphase                                              -1
-                1. first component member number 2. second                               -1
+                1. first component member number 2. second. 3. first member adr          -1
                     unknown                                                              unknown
      */
     PS::F64 r_search;

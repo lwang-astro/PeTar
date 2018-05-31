@@ -407,35 +407,33 @@ private:
     }
 
 
-    //! Fill the mass_bk, r_search and status of group members, set mass=0, return orderd particle member index list
+    //! Fill the mass_bk, r_search and status of group members, set mass=0, status=1, return orderd particle member index list
     /* @param[in]  _bin: binary tree root
-       @param[in]  _pcm_adr: c.m. address, written to status
        @param[in]  _adr_ref: ptcl_org first particle address as reference to calculate the particle index.
-       @param[out] _ptcl_list: particle index in order
+       @param[out] _ptcl_adr_sys: particle index list in global particle system (not _ptcl_in_cluster)
        @param[in]  _n_split: split number for artifical particles
        @param[in]  _id_offset: for artifical particles, the offset of starting id.
      */
     template<class Tptree>
     PS::S32 setGroupMemberPars(Tptree &_bin, 
-                               const PS::S64 _pcm_adr, 
                                const Tptcl* _adr_ref, 
-                               PS::S32* _ptcl_list, 
+                               PS::S32* _ptcl_adr_sys, 
                                const PS::S32 _n_split, 
                                const PS::S64 _id_offset) {
         PS::S32 nloc = 0;
         for(int i=0; i<2; i++) {
             if(_bin.member[i]->status!=0) 
-                nloc += setGroupMemberPars(*(Tptree*)_bin.member[i], _pcm_adr, _adr_ref, &_ptcl_list[nloc], _n_split, _id_offset);
+                nloc += setGroupMemberPars(*(Tptree*)_bin.member[i], _adr_ref, &_ptcl_adr_sys[nloc], _n_split, _id_offset);
             else {
                 //if(is_top) bin.member[i]->status = -std::abs(id_offset+bin.member[i]->id*n_split);
                 //else bin.member[i]->status = -std::abs(id_offset+bid*n_split);
-                _bin.member[i]->status = _pcm_adr;
-                _bin.member[i]->mass_bk = _bin.member[i]->mass;
-                _bin.member[i]->r_search = _bin.r_search;
-                _ptcl_list[nloc] = _bin.member[i]-_adr_ref;
-#ifdef SPLIT_MASS
-                _bin.member[i]->mass    = 0.0;
-#endif
+                _bin.member[i]->status = 1;
+                //_bin.member[i]->mass_bk = _bin.member[i]->mass;
+                //_bin.member[i]->r_search = _bin.r_search;
+                _ptcl_adr_sys[nloc] = _bin.member[i]-_adr_ref;
+//#ifdef SPLIT_MASS
+//                _bin.member[i]->mass    = 0.0;
+//#endif
                 nloc += 1;
             }
         }
@@ -443,10 +441,12 @@ private:
     }
 
     //! generate kepler sampling artifical particles
-    /*  @param[in,out] _ptcl_org: particle data
+    /*  @param[in]     _i_cluster: cluster index
+        @param[in]     _i_group: group index in the cluster
+        @param[in,out] _ptcl_in_cluster: particle data in local cluster
         @param[out]    _ptcl_new: artifical particles that will be added
-        @param[in,out] _empty_list: the list of _ptcl_org that can be used to store new artifical particles, reduced when used
-        @param[out]    _ptcl_list: particle index list of members, members' order is consistent with _ptcl_new
+        @param[in,out] _empty_list: the list of _ptcl_in_cluster that can be used to store new artifical particles, reduced when used
+        @param[out]    _ptcl_adr_sys: particle index list in global particle system (not _ptcl_in_cluster), members' order is consistent with _ptcl_new
         @param[in]     _bin: binary tree root
         @param[in]     _id_offset: for artifical particles, the offset of starting id.
         @param[in]     _n_split: split number for artifical particles
@@ -462,10 +462,12 @@ private:
         first two artifical particles status is n_members of two components.
      */
     template<class Tptree>
-    void keplerOrbitGenerator(Tptcl* _ptcl_org,
+    void keplerOrbitGenerator(const PS::S32 _i_cluster,
+                              const PS::S32 _i_group,
+                              Tptcl* _ptcl_in_cluster,
                               PS::ReallocatableArray<Tptcl> & _ptcl_new,
                               PS::ReallocatableArray<PS::S32> & _empty_list,
-                              PS::S32 *_ptcl_list,
+                              PS::S32 *_ptcl_adr_sys,
                               Tptree &_bin,
                               const PS::S64 _id_offset,
                               const PS::S32 _n_split) {
@@ -479,6 +481,7 @@ private:
             std::cerr<<"N_SPLIT to small to save binary parameters, should be >= 8!";
             abort();
         }
+        PS::S32 i_cg[2]={_i_cluster, _i_group};
         PS::F64 bindata[5][2];
         //Tptcl* plist[_n_split][2];
         /*
@@ -506,6 +509,9 @@ private:
 #endif
 
         const PS::S32 n_members = _bin.status;
+        Tptcl* adr_ref= _ptcl_in_cluster;
+        PS::S32 nbin = setGroupMemberPars(_bin, adr_ref, _ptcl_adr_sys, _n_split, _id_offset);
+        assert(nbin==n_members);
 
         // Make sure the _ptcl_new will not make new array due to none enough capacity during the following loop, otherwise the p[j] pointer will point to wrong position
         _ptcl_new.reserveEmptyAreaAtLeast(2*_n_split+1-_empty_list.size());
@@ -517,7 +523,7 @@ private:
                 if(_empty_list.size()>0) {
                     PS::S32 k = _empty_list.back();
                     _empty_list.decreaseSize(1);
-                    p[j] = &_ptcl_org[k];
+                    p[j] = &_ptcl_in_cluster[k];
                 }
                 else {
                     _ptcl_new.push_back(Tptcl());
@@ -528,6 +534,7 @@ private:
                 //p[j]->r_search = _bin.member[j]->r_search;
                 p[j]->r_search = _bin.r_search;
                 if(i==0) p[j]->status = _bin.member[j]->status; // store the component member number 
+                if(i==1) p[j]->status = i_cg[j]; // store the i_cluster and i_group for identify artifical particles
                 //p[j]->status = (_bin.id<<ID_PHASE_SHIFT)|i;
                 
 #ifdef SPLIT_MASS
@@ -646,21 +653,17 @@ private:
         // collect the member address .
 
         Tptcl* pcm;
-        PS::S64 pcm_adr;
+        //PS::S64 pcm_adr;
         if(_empty_list.size()>0) {
-            pcm = &_ptcl_org[_empty_list.back()];
-            pcm_adr = - _empty_list.back(); // if is in empty list, put negative address
+            pcm = &_ptcl_in_cluster[_empty_list.back()];
+            //pcm_adr = - _empty_list.back(); // if is in empty list, put negative address
             _empty_list.decreaseSize(1);
         }
         else {
             _ptcl_new.push_back(Tptcl());
             pcm = &_ptcl_new.back();
-            pcm_adr = _ptcl_new.size()-1; // if is in new, put ptcl_new address
+            //pcm_adr = _ptcl_new.size()-1; // if is in new, put ptcl_new address
         }
-        Tptcl* adr_ref= _ptcl_org;
-        
-        PS::S32 nbin = setGroupMemberPars(_bin, pcm_adr, adr_ref, _ptcl_list, _n_split, _id_offset);
-        assert(nbin==n_members);
         pcm->mass_bk = _bin.mass;
         pcm->mass = 0.0;
         pcm->pos = _bin.pos;
@@ -674,15 +677,16 @@ private:
     }
 
     //! generate artifical particles,
-    /*  @param[in,out] _ptcl_org: particle data
-        @param[in]     _n_ptcl: total number of particle in _ptcl_org.
+    /*  @param[in]     _i_cluster: cluster index
+        @param[in,out] _ptcl_in_cluster: particle data
+        @param[in]     _n_ptcl: total number of particle in _ptcl_in_cluster.
         @param[out]    _ptcl_artifical: artifical particles that will be added
-        @param[in,out] _ptcl_list: particle index list of _ptcl_org, will be reorderd that groups members come first with corresponding positions in _ptcl_artifical
+        @param[in,out] _ptcl_adr_sys: particle index list in global particle system (not _ptcl_in_cluster), will be reorderd that groups members come first with corresponding positions in _ptcl_artifical
         @param[out]    _n_groups: number of groups in current cluster
         @param[in,out] _group_list: 1-D group member index array, will be reordered by the minimum distance chain for each group
         @param[in]     _group_list_disp: offset of group boundary index in _group_list
         @param[in]     _group_list_n: number of members in each group
-        @param[in,out] _empty_list: the list of _ptcl_org that can be used to store new artifical particles, reduced when used
+        @param[in,out] _empty_list: the list of _ptcl_in_cluster that can be used to store new artifical particles, reduced when used
         @param[in]     _rbin: binary detection criterion radius
         @param[in]     _rin: inner radius of soft-hard changeover function
         @param[in]     _rout: outer radius of soft-hard changeover function
@@ -691,11 +695,12 @@ private:
         @param[in]     _n_split: split number for artifical particles
      */
     template<class Tptree>
-    void generateNewPtcl(Tptcl* _ptcl_org,
+    void generateNewPtcl(const PS::S32 _i_cluster,
+                         Tptcl* _ptcl_in_cluster,
                          const PS::S32 _n_ptcl,
                          //PS::ReallocatableArray<PS::S32> & p_list,
                          PS::ReallocatableArray<Tptcl> & _ptcl_artifical,
-                         PS::S32 *_ptcl_list,
+                         PS::S32 *_ptcl_adr_sys,
                          PS::S32 &_n_groups,
                          PS::ReallocatableArray<PS::S32> & _group_list,
                          PS::ReallocatableArray<PS::S32> & _group_list_disp,
@@ -710,16 +715,17 @@ private:
 #ifdef HARD_DEBUG
 //        assert(ptcl.size()==0);
 //        assert(group_ptcl.size()==0);
-//        assert(_n_ptcl<=_n_ptcl_org);
+//        assert(_n_ptcl<=_n_ptcl_in_cluster);
 //        assert(ptcl_map.size()==0);
 #endif
         // reset all single status to 0
-        //for (int i=0; i<p_list.size(); i++) _ptcl_org[p_list[i]].status = 0;
+        //for (int i=0; i<p_list.size(); i++) _ptcl_in_cluster[p_list[i]].status = 0;
 
-        _n_groups = _group_list_n.size();
+        //_n_groups = _group_list_n.size();
         PS::S32 group_list_reorder[_n_ptcl];
         PS::S32 group_list_reorder_offset=0;
-        for (int i=0; i<_n_groups; i++) {
+        _n_groups = 0;
+        for (int i=0; i<_group_list_n.size(); i++) {
             PS::ReallocatableArray<Tptree> bins;   // hierarch binary tree
             PS::ReallocatableArray<Tptree*> stab_bins; // stable checked binary tree
             bins.reserve(_n_groups);
@@ -729,22 +735,25 @@ private:
 
             const PS::S32 group_start = _group_list_disp[i];
             const PS::S32 group_n = _group_list_n[i];
-            keplerTreeGenerator(bins.getPointer(), &_group_list[group_start], group_n, _ptcl_org, _dt_tree);
 
-            // reset status to 0
-            for (int j=0; j<_group_list_n[i]; j++) _ptcl_org[_group_list[group_start+j]].status=0;
+            keplerTreeGenerator(bins.getPointer(), &_group_list[group_start], group_n, _ptcl_in_cluster, _dt_tree);
          
+            // reset status to 0
+            for (int j=0; j<group_n; j++) _ptcl_in_cluster[_group_list[group_start+j]].status=0;
+
             // stability check and break groups
             PS::S32 fstab = stabilityCheck<Tptcl>(stab_bins, bins.back(), _rbin, _rin, _rout);
             
             if (fstab) {
-                keplerOrbitGenerator(_ptcl_org, _ptcl_artifical, _empty_list, &group_list_reorder[group_list_reorder_offset], bins.back(), _id_offset, _n_split);
+                keplerOrbitGenerator(_i_cluster, _n_groups, _ptcl_in_cluster, _ptcl_artifical, _empty_list, &group_list_reorder[group_list_reorder_offset], bins.back(), _id_offset, _n_split);
                 group_list_reorder_offset += bins.back().status;
+                _n_groups++;
             }
             else {
                 for (int i=0; i<stab_bins.size(); i++) {
-                    keplerOrbitGenerator(_ptcl_org, _ptcl_artifical, _empty_list, &group_list_reorder[group_list_reorder_offset], *stab_bins[i], _id_offset, _n_split);
+                    keplerOrbitGenerator(_i_cluster, _n_groups, _ptcl_in_cluster, _ptcl_artifical, _empty_list, &group_list_reorder[group_list_reorder_offset], *stab_bins[i], _id_offset, _n_split);
                     group_list_reorder_offset += stab_bins[i]->status;
+                    _n_groups++;
                 }
             }
         }
@@ -753,22 +762,24 @@ private:
 
         // Obtain list index from global system
         PS::S32 ptcl_list_new[group_list_reorder_offset];
-        for (int i=0; i<group_list_reorder_offset; i++) ptcl_list_new[i] = _ptcl_list[group_list_reorder[i]];
+        for (int i=0; i<group_list_reorder_offset; i++) ptcl_list_new[i] = _ptcl_adr_sys[group_list_reorder[i]];
 
         // shift single after group members
-        PS::S32 i_group=0, i_single_front=group_list_reorder_offset;
+        PS::S32 i_single_front=group_list_reorder_offset;
+        PS::S32 i_group = 0;
         while (i_group<group_list_reorder_offset) {
             // if single find inside group_list_reorder_offset, exchange single with group member out of the offset
-            // Notice the _ptcl_org is local copy of a cluster, thus group_list_reorder is index of this local copy and _ptcl_list is index of global system
-            if(_ptcl_org[i_group].status==0) {
-                while(_ptcl_org[i_single_front].status==0) {
+            // Notice the _ptcl_in_cluster is local copy of a cluster, thus group_list_reorder is index of this local copy and _ptcl_adr_sys is index of global system
+            if(_ptcl_in_cluster[i_group].status==0) {
+                while(_ptcl_in_cluster[i_single_front].status==0) {
                     i_single_front++;
                     assert(i_single_front<_n_ptcl);
                 }
                 // Swap index
-                PS::S32 plist_tmp = _ptcl_list[i_group];
-                _ptcl_list[i_group] = _ptcl_list[i_single_front];
-                _ptcl_list[i_single_front] = plist_tmp;
+                PS::S32 plist_tmp = _ptcl_adr_sys[i_group];
+                _ptcl_adr_sys[i_group] = _ptcl_adr_sys[i_single_front];
+                _ptcl_adr_sys[i_single_front] = plist_tmp;
+                i_single_front++; // avoild same particle be replaced
             }
             i_group++;
         }
@@ -778,18 +789,18 @@ private:
         PS::S32 plist_new[group_list_reorder_offset];
         for (int i=0; i<group_list_reorder_offset; i++) plist_new[i] = ptcl_list_new[i];
         std::sort(plist_new, plist_new+group_list_reorder_offset, [](PS::S32 &a, PS::S32 &b) {return a < b;});
-        std::sort(_ptcl_list, _ptcl_list+group_list_reorder_offset, [](PS::S32 &a, PS::S32 &b) {return a < b;});
-        for (int i=0; i<group_list_reorder_offset; i++) assert(_ptcl_list[i]==plist_new[i]);
+        std::sort(_ptcl_adr_sys, _ptcl_adr_sys+group_list_reorder_offset, [](PS::S32 &a, PS::S32 &b) {return a < b;});
+        for (int i=0; i<group_list_reorder_offset; i++) assert(_ptcl_adr_sys[i]==plist_new[i]);
 #endif        
 
         // overwrite the current ptcl list for group members by reorderd list
-        for (int i=0; i<group_list_reorder_offset; i++) _ptcl_list[i] = ptcl_list_new[i];
+        for (int i=0; i<group_list_reorder_offset; i++) _ptcl_adr_sys[i] = ptcl_list_new[i];
 
         for (int i=0; i<_empty_list.size(); i++) {
             PS::S32 ik = _empty_list[i];
-            _ptcl_org[ik].mass = 0.0;
-            _ptcl_org[ik].id = -1;
-            _ptcl_org[ik].status = -1;
+            _ptcl_in_cluster[ik].mass = 0.0;
+            _ptcl_in_cluster[ik].id = -1;
+            _ptcl_in_cluster[ik].status = -1;
         }
 
 //#ifdef HARD_DEBUG
@@ -809,8 +820,8 @@ private:
         //            nnext++;
         //            assert(nnext>=_n_ptcl);
         //        }
-        //        _ptcl_org[nnext] = _ptcl_org[i];
-        //        _ptcl_org[nnext].id_group = -1;
+        //        _ptcl_in_cluster[nnext] = _ptcl_in_cluster[i];
+        //        _ptcl_in_cluster[nnext].id_group = -1;
         //        nnext++;
         //    }
         //}
@@ -819,16 +830,16 @@ private:
         //    if(masks[nnext]>0) {
         //        while(masks[nend]>0) nend--;
         //        if(nnext<nend) {
-        //            _ptcl_org[nnext] = _ptcl_org[nend];
-        //            _ptcl_org[nnext].id_group = -1;
+        //            _ptcl_in_cluster[nnext] = _ptcl_in_cluster[nend];
+        //            _ptcl_in_cluster[nnext].id_group = -1;
         //        }
         //    }
-        //    else _ptcl_org[i].id_group = -1;
+        //    else _ptcl_in_cluster[i].id_group = -1;
         //}
 //#ifdef HARD_DEBUG
 //        for (int i=_group_list.size(); i<n_ptcl_new; i++) {
 //            assert(masks[i]==0);
-//            assert(_ptcl_org[i].id_group==-1);
+//            assert(_ptcl_in_cluster[i].id_group==-1);
 //        }
 //#endif
         //nnext = n_ptcl_new;
@@ -837,16 +848,16 @@ private:
         //    
         //        if (i<n_groups_glb) {
         //            gnow = &group_ptcl_glb[id_group_glb[i]];
-        //        _ptcl_org[i].id_group = id_group_glb[i];
+        //        _ptcl_in_cluster[i].id_group = id_group_glb[i];
         //    }
         //    else {
         //        gnow = &group_ptcl_loc[i-n_groups_glb];
         //    }
-        //    getCenterOfMass(_ptcl_org[i],gnow->getPointer(),gnow->size());
+        //    getCenterOfMass(_ptcl_in_cluster[i],gnow->getPointer(),gnow->size());
         //    // ptcl_map[i] = -i;
         //    for (int j=0; j<group_ptcl[i].size(); j++) {
-        //        _ptcl_org[nnext] = _ptcl_org[i];
-        //        _ptcl_org[nnext].mass = 0.0;
+        //        _ptcl_in_cluster[nnext] = _ptcl_in_cluster[i];
+        //        _ptcl_in_cluster[nnext].mass = 0.0;
         //        nnext++;
         //    }
         //}
@@ -855,7 +866,7 @@ private:
         // PS::S32 ik = _group_list.size();
         // for (int i=0; i<_n_ptcl; i++) {
         //     if(masks[i]>0) continue;
-        //     ptcl[ik]     = _ptcl_org[i];
+        //     ptcl[ik]     = _ptcl_in_cluster[i];
         //     ptcl_map[ik] = i;
         //     ik++;
         // }
@@ -918,7 +929,7 @@ public:
                group member status is updated to fake_order
        4. correct mass of c.m. and members
      */
-    void findGroups(Tptcl* _ptcl_org,
+    void findGroups(Tptcl* _ptcl_in_cluster,
                     const PS::S32 _n_ptcl,
                     const PS::S32 n_split) {
         p_list_.reserve(_n_ptcl);
@@ -944,13 +955,13 @@ public:
         PS::S32 n_members = 0;
         PS::S32 n_unused = 0;
         for (int i=0; i<_n_ptcl; i++) {
-            if(_ptcl_org[i].id<0) {
-                if(_ptcl_org[i].status>0) {
-                    cm_adr[_ptcl_org[i].id] = p_list_.size();
+            if(_ptcl_in_cluster[i].id<0) {
+                if(_ptcl_in_cluster[i].status>0) {
+                    cm_adr[_ptcl_in_cluster[i].id] = p_list_.size();
                     p_list_.pushBackNoCheck(i);
                     group_list_disp_.pushBackNoCheck(n_members);
                     group_list_n_.pushBackNoCheck(0);
-                    n_members += _ptcl_org[i].status;
+                    n_members += _ptcl_in_cluster[i].status;
 #ifdef HARD_DEBUG
                     icount[i]++;
 #endif
@@ -997,11 +1008,11 @@ public:
 #endif
 
         for (int i=0; i<_n_ptcl; i++) {
-            if(_ptcl_org[i].id>0&&_ptcl_org[i].status>0) { // fake members
-                PS::S32 idcm = (_ptcl_org[i].status>>ID_PHASE_SHIFT);
-                PS::S32 phase = _ptcl_org[i].status&ID_PHASE_MASKER;
+            if(_ptcl_in_cluster[i].id>0&&_ptcl_in_cluster[i].status>0) { // fake members
+                PS::S32 idcm = (_ptcl_in_cluster[i].status>>ID_PHASE_SHIFT);
+                PS::S32 phase = _ptcl_in_cluster[i].status&ID_PHASE_MASKER;
                 PS::S32 icm = cm_adr.at(-idcm);
-                PS::S32 id0 = _ptcl_org[i].id-phase;
+                PS::S32 id0 = _ptcl_in_cluster[i].id-phase;
                 auto itr = fake_cm.find(id0);
                 if(itr==fake_cm.end()) {
                     fake_cm[id0] = idcm;
@@ -1021,41 +1032,41 @@ public:
                     scount[fake_adr[id0]+phase*2]++;
 #endif
                 }
-                //std::pair<PS::S32,PS::S32>* iadr = &mem_order[_ptcl_org[i].id];
+                //std::pair<PS::S32,PS::S32>* iadr = &mem_order[_ptcl_in_cluster[i].id];
                 // PS::S32 icm = iadr->first;
                 // PS::S32 iorder = iadr->second;
-                // PS::S32 iphase = _ptcl_org[i].status;
+                // PS::S32 iphase = _ptcl_in_cluster[i].status;
             }
         }
 
         for (int i=0; i<_n_ptcl; i++) {
-            if(_ptcl_org[i].id>=0) {
-                if(_ptcl_org[i].status==0) {
+            if(_ptcl_in_cluster[i].id>=0) {
+                if(_ptcl_in_cluster[i].status==0) {
                     p_list_.pushBackNoCheck(i); //single
 #ifdef HARD_DEBUG
                     icount[i]++;
 #endif
                 }
-                else if(_ptcl_org[i].status<0) {  // members
-                    PS::S32 id_fake = -_ptcl_org[i].status;
+                else if(_ptcl_in_cluster[i].status<0) {  // members
+                    PS::S32 id_fake = -_ptcl_in_cluster[i].status;
                     PS::S32 iadr_cm   = cm_adr.at(-fake_cm.at(id_fake));
                     PS::S32 ilst    = group_list_disp_[iadr_cm]+group_list_n_[iadr_cm]++;
                     group_list_[ilst] = i;
                     //group_list_pert_adr_[ilst] = fake_adr.at(id_fake);
 
                     // give status the order of fake member order saved in soft_pert_list
-                    _ptcl_org[i].status = fake_order.at(id_fake); 
+                    _ptcl_in_cluster[i].status = fake_order.at(id_fake); 
                     
-                    //mem_order[_ptcl_org[i].id] = std::pair<PS::S32, PS::S32>(iadr_cm, group_list_n_[iadr_cm]);  // record cm index and member id order
+                    //mem_order[_ptcl_in_cluster[i].id] = std::pair<PS::S32, PS::S32>(iadr_cm, group_list_n_[iadr_cm]);  // record cm index and member id order
 #ifdef HARD_DEBUG
                     assert(ilst<group_list_.size());
-                    assert(group_list_n_[iadr_cm]<=_ptcl_org[p_list_[iadr_cm]].status);
+                    assert(group_list_n_[iadr_cm]<=_ptcl_in_cluster[p_list_[iadr_cm]].status);
                     icount[i]++;
                     gcount[group_list_disp_[iadr_cm]+group_list_n_[iadr_cm]-1]++;
 #endif
                 }
             }
-            else if(_ptcl_org[i].status<0){
+            else if(_ptcl_in_cluster[i].status<0){
                 soft_pert_list_[i_unused++] = i; // unused 
 #ifdef HARD_DEBUG
                 icount[i]++;
@@ -1081,11 +1092,11 @@ public:
             for (int j=0; j<group_list_n_[i]; j++) {
                 PS::S32 i_mem  = group_list_[group_list_disp_[i]+j];
                 //PS::S32 i_fake = soft_pert_list_[soft_pert_list_disp_[i]+j];
-                _ptcl_org[i_mem].mass = _ptcl_org[i_mem].mass_bk;
-                //masscm += _ptcl_org[i_mem].mass;
+                _ptcl_in_cluster[i_mem].mass = _ptcl_in_cluster[i_mem].mass_bk;
+                //masscm += _ptcl_in_cluster[i_mem].mass;
             }
             const PS::S32 pid = p_list_[i];
-            _ptcl_org[pid].mass = _ptcl_org[pid].mass_bk;
+            _ptcl_in_cluster[pid].mass = _ptcl_in_cluster[pid].mass_bk;
         }
         
         // get 
@@ -1097,7 +1108,7 @@ public:
 //        id_group.resizeNoInitialize(_n_ptcl);
 //        id_group_map.resizeNoInitialize(_n_ptcl);
 //        for (int i=0; i<_n_ptcl; i++) {
-//            id_group[i] = _ptcl_org[i].id_group;
+//            id_group[i] = _ptcl_in_cluster[i].id_group;
 //            if(id_group[i]>=0) {
 //                id_group_map[i] = n_groups;
 //                group_list.push_back(id_group[i]);
@@ -1110,29 +1121,30 @@ public:
 //        }
     }
 
-    //void searchPerturber(Tptcl *_ptcl_org, const PS::S32 _n_ptcl) {
-    //    searchPerturber(pert_list_, _ptcl_org, _n_ptcl);
+    //void searchPerturber(Tptcl *_ptcl_in_cluster, const PS::S32 _n_ptcl) {
+    //    searchPerturber(pert_list_, _ptcl_in_cluster, _n_ptcl);
     //}
 
-    void searchAndMerge(Tptcl *_ptcl_org, const PS::S32 _n_ptcl, const PS::F64 _rcrit){
+    void searchAndMerge(Tptcl *_ptcl_in_cluster, const PS::S32 _n_ptcl, const PS::F64 _rcrit){
         PS::ReallocatableArray<PS::S32> part_list;      ///partner list
         PS::ReallocatableArray<PS::S32> part_list_disp;      ///partner list
         PS::ReallocatableArray<PS::S32> part_list_n;      ///partner list
         
-        searchPartner(part_list, part_list_disp, part_list_n, _ptcl_org, _n_ptcl, _rcrit*_rcrit);
+        searchPartner(part_list, part_list_disp, part_list_n, _ptcl_in_cluster, _n_ptcl, _rcrit*_rcrit);
         mergeCluster(group_list_, group_list_disp_, group_list_n_, _n_ptcl, part_list.getPointer(), part_list_disp.getPointer(), part_list_n.getPointer());
         // #ifdef HARD_DEBUG
         // assert(Rout_change_list_.size()==0);
         // #endif
-        // checkRoutChange(Rout_change_list_, group_list, _ptcl_org);
+        // checkRoutChange(Rout_change_list_, group_list, _ptcl_in_cluster);
 
     }
 
     //! generate artifical particles,
-    /*  @param[in,out] _ptcl_org: particle data
-        @param[in]     _n_ptcl: total number of particle in _ptcl_org.
+    /*  @param[in]     _i_cluster: cluster index
+        @param[in,out] _ptcl_in_cluster: particle data
+        @param[in]     _n_ptcl: total number of particle in _ptcl_in_cluster.
         @param[out]    _ptcl_artifical: artifical particles that will be added
-        @param[in,out] _ptcl_list: particle index list of _ptcl_org, will be reorderd that groups members come first with corresponding positions in _ptcl_artifical
+        @param[in,out] _ptcl_adr_sys: particle index list in global particle system (not _ptcl_in_cluster), will be reorderd that groups members come first with corresponding positions in _ptcl_artifical
         @param[out]    _n_groups: number of groups in current cluster
         @param[in]     _rbin: binary detection criterion radius
         @param[in]     _rin: inner radius of soft-hard changeover function
@@ -1141,10 +1153,11 @@ public:
         @param[in]     _id_offset: for artifical particles, the offset of starting id.
         @param[in]     _n_split: split number for artifical particles
     */
-    void generateList(Tptcl *_ptcl_org, 
+    void generateList(const PS::S32 _i_cluster,
+                      Tptcl *_ptcl_in_cluster, 
                       const PS::S32 _n_ptcl,
                       PS::ReallocatableArray<Tptcl> & _ptcl_artifical,
-                      PS::S32 *_ptcl_list,
+                      PS::S32 *_ptcl_adr_sys,
                       PS::S32 &_n_groups,
                       const PS::F64 _rbin,
                       const PS::F64 _rin,
@@ -1156,8 +1169,8 @@ public:
             std::cerr<<"Error! ID_PHASE_SHIFT is too small for phase split! shift bit: "<<ID_PHASE_SHIFT<<" n_split: "<<_n_split<<std::endl;
             abort();
         }
-        generateNewPtcl<PtclTree<Tptcl>>(_ptcl_org, _n_ptcl, _ptcl_artifical, _ptcl_list, _n_groups, group_list_, group_list_disp_, group_list_n_, soft_pert_list_, _rbin, _rin, _rout, _dt_tree, _id_offset, _n_split);
-        //searchPerturber(pert_list_, _ptcl_org, _n_ptcl);
+        generateNewPtcl<PtclTree<Tptcl>>(_i_cluster, _ptcl_in_cluster, _n_ptcl, _ptcl_artifical, _ptcl_adr_sys, _n_groups, group_list_, group_list_disp_, group_list_n_, soft_pert_list_, _rbin, _rin, _rout, _dt_tree, _id_offset, _n_split);
+        //searchPerturber(pert_list_, _ptcl_in_cluster, _n_ptcl);
     }
 
     void resolveGroups() {
@@ -1231,35 +1244,35 @@ public:
     }
 
     // assume the binary information stored in artifical star mass_bk
-    void getBinPars(Binary &bin, const Tptcl _ptcl_org[], const std::size_t igroup, const PS::S32 n_split) {
+    void getBinPars(Binary &bin, const Tptcl _ptcl_in_cluster[], const std::size_t igroup, const PS::S32 n_split) {
         const PS::S32 ioff = igroup*2*n_split;
-        if (_ptcl_org[soft_pert_list_[ioff+12]].mass_bk==0.0) {
-            bin.ax   = _ptcl_org[soft_pert_list_[ioff  ]].mass_bk;
-            bin.ecc  = _ptcl_org[soft_pert_list_[ioff+1]].mass_bk;
-            bin.peri = _ptcl_org[soft_pert_list_[ioff+2]].mass_bk;
-            bin.tstep= _ptcl_org[soft_pert_list_[ioff+3]].mass_bk;
-            bin.inc  = _ptcl_org[soft_pert_list_[ioff+4]].mass_bk;
-            bin.OMG  = _ptcl_org[soft_pert_list_[ioff+5]].mass_bk;
-            bin.omg  = _ptcl_org[soft_pert_list_[ioff+6]].mass_bk;
-            bin.ecca = _ptcl_org[soft_pert_list_[ioff+7]].mass_bk;
-            bin.tperi= _ptcl_org[soft_pert_list_[ioff+8]].mass_bk;
-            bin.stable_factor= _ptcl_org[soft_pert_list_[ioff+9]].mass_bk;
-            bin.m1   = _ptcl_org[soft_pert_list_[ioff+10]].mass_bk;
-            bin.m2   = _ptcl_org[soft_pert_list_[ioff+11]].mass_bk;
+        if (_ptcl_in_cluster[soft_pert_list_[ioff+12]].mass_bk==0.0) {
+            bin.ax   = _ptcl_in_cluster[soft_pert_list_[ioff  ]].mass_bk;
+            bin.ecc  = _ptcl_in_cluster[soft_pert_list_[ioff+1]].mass_bk;
+            bin.peri = _ptcl_in_cluster[soft_pert_list_[ioff+2]].mass_bk;
+            bin.tstep= _ptcl_in_cluster[soft_pert_list_[ioff+3]].mass_bk;
+            bin.inc  = _ptcl_in_cluster[soft_pert_list_[ioff+4]].mass_bk;
+            bin.OMG  = _ptcl_in_cluster[soft_pert_list_[ioff+5]].mass_bk;
+            bin.omg  = _ptcl_in_cluster[soft_pert_list_[ioff+6]].mass_bk;
+            bin.ecca = _ptcl_in_cluster[soft_pert_list_[ioff+7]].mass_bk;
+            bin.tperi= _ptcl_in_cluster[soft_pert_list_[ioff+8]].mass_bk;
+            bin.stable_factor= _ptcl_in_cluster[soft_pert_list_[ioff+9]].mass_bk;
+            bin.m1   = _ptcl_in_cluster[soft_pert_list_[ioff+10]].mass_bk;
+            bin.m2   = _ptcl_in_cluster[soft_pert_list_[ioff+11]].mass_bk;
         }
         else {
-            bin.ax   = _ptcl_org[soft_pert_list_[ioff+1]].mass_bk;
-            bin.ecc  = _ptcl_org[soft_pert_list_[ioff  ]].mass_bk;
-            bin.peri = _ptcl_org[soft_pert_list_[ioff+3]].mass_bk;
-            bin.tstep= _ptcl_org[soft_pert_list_[ioff+2]].mass_bk;
-            bin.inc  = _ptcl_org[soft_pert_list_[ioff+5]].mass_bk;
-            bin.OMG  = _ptcl_org[soft_pert_list_[ioff+4]].mass_bk;
-            bin.omg  = _ptcl_org[soft_pert_list_[ioff+7]].mass_bk;
-            bin.ecca = _ptcl_org[soft_pert_list_[ioff+6]].mass_bk;
-            bin.tperi= _ptcl_org[soft_pert_list_[ioff+9]].mass_bk;
-            bin.stable_factor= _ptcl_org[soft_pert_list_[ioff+8]].mass_bk;
-            bin.m1   = _ptcl_org[soft_pert_list_[ioff+11]].mass_bk;
-            bin.m2   = _ptcl_org[soft_pert_list_[ioff+10]].mass_bk;
+            bin.ax   = _ptcl_in_cluster[soft_pert_list_[ioff+1]].mass_bk;
+            bin.ecc  = _ptcl_in_cluster[soft_pert_list_[ioff  ]].mass_bk;
+            bin.peri = _ptcl_in_cluster[soft_pert_list_[ioff+3]].mass_bk;
+            bin.tstep= _ptcl_in_cluster[soft_pert_list_[ioff+2]].mass_bk;
+            bin.inc  = _ptcl_in_cluster[soft_pert_list_[ioff+5]].mass_bk;
+            bin.OMG  = _ptcl_in_cluster[soft_pert_list_[ioff+4]].mass_bk;
+            bin.omg  = _ptcl_in_cluster[soft_pert_list_[ioff+7]].mass_bk;
+            bin.ecca = _ptcl_in_cluster[soft_pert_list_[ioff+6]].mass_bk;
+            bin.tperi= _ptcl_in_cluster[soft_pert_list_[ioff+9]].mass_bk;
+            bin.stable_factor= _ptcl_in_cluster[soft_pert_list_[ioff+8]].mass_bk;
+            bin.m1   = _ptcl_in_cluster[soft_pert_list_[ioff+11]].mass_bk;
+            bin.m2   = _ptcl_in_cluster[soft_pert_list_[ioff+10]].mass_bk;
         }
     }
     
@@ -1267,12 +1280,12 @@ public:
 //        return Rout_change_list_.getPointer();
 //    }
 
-//    void reverseCopy(Tptcl *_ptcl_org, const PS::S32 _n_ptcl) {
+//    void reverseCopy(Tptcl *_ptcl_in_cluster, const PS::S32 _n_ptcl) {
 //#ifdef HARD_DEBUG
 //        int checker[_n_ptcl]={0};
 //#endif
 //        for (int i=group_list_.size(); i<ptcl_.size(); i++) {
-//            _ptcl_org[ptcl_map_[i]] = ptcl_[i];
+//            _ptcl_in_cluster[ptcl_map_[i]] = ptcl_[i];
 //#ifdef HARD_DEBUG
 //            assert(ptcl_map_[i]<_n_ptcl);
 //            checker[ptcl_map_[i]]++;
@@ -1284,7 +1297,7 @@ public:
 //                assert(group_list_[i][j]<_n_ptcl);
 //                checker[group_list_[i][j]]++;
 //#endif
-//                _ptcl_org[group_list_[i][j]] = group_ptcl_[i][j];
+//                _ptcl_in_cluster[group_list_[i][j]] = group_ptcl_[i][j];
 //            }
 // 
 //#ifdef HARD_DEBUG
@@ -1445,7 +1458,118 @@ private:
             return left.second < right.second;
         }
     };
+
 public:
+    //! Find groups and create aritfical particles to sys
+    /* @param[in,out] _sys: global particle system
+       @param[in]     _n_ptcl_in_cluster: number of particles in one cluster
+       @param[out]    _n_group_in_cluster: number of groups in one cluster
+       @param[in,out] _ptcl_adr_sys: particle index list in global particle system (not _ptcl_in_cluster), will be reorderd that groups members come first with corresponding positions in _ptcl_artifical
+       @param[in]     _rbin: binary detection criterion radius
+       @param[in]     _rin: inner radius of soft-hard changeover function
+       @param[in]     _rout: outer radius of soft-hard changeover function
+       @param[in]     _dt_tree: tree time step for calculating r_search
+       @param[in]     _id_offset: for artifical particles, the offset of starting id.
+       @param[in]     _n_split: split number for artifical particles
+     */
+    template<class Tsys, class Tphard, class Tpsoft>
+    void findGroupsAndCreateArtificalParticlesImpl(Tsys & _sys,
+                                                   PS::ReallocatableArray<PS::S32> &_n_ptcl_in_cluster,
+                                                   PS::ReallocatableArray<PS::S32> &_n_group_in_cluster,
+                                                   PS::S32* _ptcl_adr_sys,
+                                                   const PS::F64 _rbin,
+                                                   const PS::F64 _rin,
+                                                   const PS::F64 _rout,
+                                                   const PS::F64 _dt_tree,
+                                                   const PS::S64 _id_offset,
+                                                   const PS::S32 _n_split) {                                                  
+        const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
+        _n_group_in_cluster.resizeNoInitialize(n_cluster);
+        PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_disp;
+        n_ptcl_in_cluster_disp.resizeNoInitialize(n_cluster+1);
+        
+        for (PS::S32 i=0; i<n_cluster; i++) 
+            n_ptcl_in_cluster_disp[i+1] = n_ptcl_in_cluster_disp[i] + _n_ptcl_in_cluster[i];
+
+        const PS::S32 num_thread = PS::Comm::getNumberOfThread();
+        PS::ReallocatableArray<Tphard> ptcl_artifical[num_thread];
+
+#pragma omp for schedule(dynamic)
+        for (PS::S32 i=0; i<n_cluster; i++){
+            const PS::S32 ith = PS::Comm::getThreadNum();
+
+            PS::ReallocatableArray<Tphard> ptcl_local;
+            PS::S32 n_ptcl = _n_ptcl_in_cluster[i];
+            ptcl_local.reserve(n_ptcl);
+            ptcl_local.resizeNoInitialize(n_ptcl);
+            // copy local ptcl data
+            PS::S64 n_start = n_ptcl_in_cluster_disp[i];
+            PS::S64 n_end = n_ptcl_in_cluster_disp[i+1];
+            for (PS::S32 j=n_start; j<n_end; j++) {
+                PS::S32 adr = _ptcl_adr_sys[j];
+                ptcl_local[j-n_start].DataCopy(_sys[adr]);
+            }
+            // search groups
+            SearchGroup<Tphard> group;
+            // merge groups
+            if (n_ptcl==2) group.searchAndMerge(ptcl_local.getPointer(), n_ptcl, _rout);
+            else group.searchAndMerge(ptcl_local.getPointer(), n_ptcl, _rin);
+
+            // generate artifical particles,
+            group.generateList(i, ptcl_local.getPointer(), n_ptcl, ptcl_artifical[ith], &_ptcl_adr_sys[n_start], _n_group_in_cluster[i], _rbin, _rin, _rout, _dt_tree, _id_offset, _n_split);
+        }
+
+        // add artifical particle to particle system
+        PS::S32 rank = PS::Comm::getRank();
+        const PS::S32 n_artifical_per_group = 2*_n_split+1;
+        for(PS::S32 i=0; i<num_thread; i++) {
+            // ptcl_artifical should be integer times of 2*n_split+1
+            assert(ptcl_artifical[i].size()%n_artifical_per_group==0);
+            // Add particle to ptcl sys
+            for (PS::S32 j=0; j<ptcl_artifical[i].size(); j++) {
+                PS::S32 adr = _sys.getNumberOfParticleLocal();
+                ptcl_artifical[i][j].adr_org=adr;
+                _sys.addOneParticle(Tpsoft(ptcl_artifical[i][j],rank,adr));
+            }
+            PS::S32 group_offset=0, j_group_recored=-1;
+            // Update the status of group members to c.m. address in ptcl sys. Notice c.m. is at the end of an artificial particle group
+            for (PS::S32 j=0; j<ptcl_artifical[i].size(); j+=n_artifical_per_group) {
+                // obtain group member nember
+                PS::S32 j_cm = j+2*_n_split;
+                PS::S32 n_members = ptcl_artifical[i][j_cm].status;
+                PS::S32 i_cluster = ptcl_artifical[i][j+2].status;
+                PS::S32 j_group = ptcl_artifical[i][j+3].status;
+                PS::F64 rsearch_member=ptcl_artifical[i][j+2].r_search;
+                // make sure group index increase one by one
+                assert(j_group==j_group_recored+1);
+                j_group_recored=j_group;
+                // update member status
+                for (PS::S32 k=0; k<n_members; k++) {
+                    PS::S64 ptcl_k=_ptcl_adr_sys[n_ptcl_in_cluster_disp[i_cluster]+group_offset+k];
+#ifdef HARD_DEBUG
+                    // check whether ID is consistent.
+                    if(k==0) assert(_sys[ptcl_k].id==-ptcl_artifical[i][j_cm].id);
+#endif
+                    // save c.m. address and shift mass to mass_bk, set rsearch
+                    _sys[ptcl_k].status = ptcl_artifical[i][j_cm].adr_org;
+                    _sys[ptcl_k].mass_bk = _sys[ptcl_k].mass;
+                    _sys[ptcl_k].r_search = rsearch_member;
+#ifdef SPLIT_MASS
+                    _sys[ptcl_k].mass = 0;
+#endif
+                }
+                // shift cluster
+                if(j_group==_n_group_in_cluster[i_cluster]-1) {
+                    group_offset=0;
+                    j_group_recored=-1;
+                }
+                else group_offset += n_members; // group offset in the ptcl list index of one cluster
+                // j_group should be consistent with n_group[i_cluster];
+                assert(j_group<=_n_group_in_cluster[i_cluster]);
+            }
+        }
+    }
+
     void initialize(){
         const PS::S32 n_thread = PS::Comm::getNumberOfThread();
         adr_sys_one_cluster_  = new PS::ReallocatableArray<PS::S32>[n_thread];
@@ -1671,7 +1795,7 @@ public:
     }
 
     //! Find groups and create aritfical particles to sys
-    /* @param[in,out] sys: global particle system
+    /* @param[in,out] _sys: global particle system
        @param[in]     _rbin: binary detection criterion radius
        @param[in]     _rin: inner radius of soft-hard changeover function
        @param[in]     _rout: outer radius of soft-hard changeover function
@@ -1680,88 +1804,24 @@ public:
        @param[in]     _n_split: split number for artifical particles
      */
     template<class Tsys, class Tphard, class Tpsoft>
-    void findGroupsAndCreateArtificalParticlesOMP(Tsys & sys,
+    void findGroupsAndCreateArtificalParticlesOMP(Tsys & _sys,
                                                   const PS::F64 _rbin,
                                                   const PS::F64 _rin,
                                                   const PS::F64 _rout,
                                                   const PS::F64 _dt_tree,
                                                   const PS::S64 _id_offset,
                                                   const PS::S32 _n_split) {                                                  
-        const PS::S32 n_cluster = n_ptcl_in_multi_cluster_isolated_.size();
-        n_group_multi_cluster_isolated_.resizeNoInitialize(n_cluster);
-        PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_disp;
-        n_ptcl_in_cluster_disp.resizeNoInitialize(n_cluster+1);
-        
-        for (PS::S32 i=0; i<n_cluster; i++) 
-            n_ptcl_in_cluster_disp[i+1] = n_ptcl_in_cluster_disp[i] + n_ptcl_in_multi_cluster_isolated_[i];
+        findGroupsAndCreateArtificalParticlesImpl(_sys, 
+                                                  n_ptcl_in_multi_cluster_isolated_,
+                                                  n_group_multi_cluster_isolated_,
+                                                  adr_sys_multi_cluster_isolated_.getPointer(),
+                                                  _rbin,    
+                                                  _rin,     
+                                                  _rout,    
+                                                  _dt_tree, 
+                                                  _id_offset,
+                                                  _n_split);
 
-        const PS::S32 num_thread = PS::Comm::getNumberOfThread();
-        PS::ReallocatableArray<Tphard> ptcl_artifical[num_thread];
-        const PS::S64 n_sys = sys.getNumberOfParticleLocal();
-
-#pragma omp for schedule(dynamic)
-        for (PS::S32 i=0; i<n_cluster; i++){
-            const PS::S32 ith = PS::Comm::getThreadNum();
-
-            PS::ReallocatableArray<Tphard> ptcl_local;
-            PS::S32 n_ptcl = n_ptcl_in_multi_cluster_isolated_[i];
-            ptcl_local.reserve(n_ptcl);
-            ptcl_local.resizeNoInitialize(n_ptcl);
-            // copy local ptcl data
-            PS::S64 n_start = n_ptcl_in_cluster_disp[i];
-            PS::S64 n_end = n_ptcl_in_cluster_disp[i+1];
-            for (PS::S32 j=n_start; j<n_end; j++) {
-                PS::S32 adr = adr_sys_multi_cluster_isolated_[j];
-                ptcl_local[j].DataCopy(sys[adr]);
-            }
-            // search groups
-            SearchGroup<Ptcl> group;
-            // merge groups
-            if (n_ptcl==2) group.searchAndMerge(ptcl_local.getPointer(), n_ptcl, _rout);
-            else group.searchAndMerge(ptcl_local.getPointer(), n_ptcl, _rin);
-
-            // generate artifical particles,
-            // the third: adr list. The function reorder the adr list to let group particles at first, the ptcl_artifical also use the same order to store the artifical particles.
-            group.generateList(ptcl_local.getPointer(), n_ptcl, ptcl_artifical[ith], adr_sys_multi_cluster_isolated_.getPointer(n_start), n_group_multi_cluster_isolated_[i], _rbin, _rin, _rout, _dt_tree, _id_offset, _n_split);
-        }
-
-        // add artifical particle to particle system
-        PS::S32 rank = PS::Comm::getRank();
-        const PS::S32 n_artifical_per_group = 2*_n_split+1;
-        PS::S32 i_cluster=0, j_group=0, group_offset=0, n_sys_offset_threads=0;
-        for(PS::S32 i=0; i<num_thread; i++) {
-            // ptcl_artifical should be integer times of 2*n_split+1
-            assert(ptcl_artifical[i].size()%n_artifical_per_group==0);
-            // Add particle to ptcl sys
-            for (PS::S32 j=0; j<ptcl_artifical[i].size(); j++) {
-                PS::S32 adr = sys.getNumberOfParticleLocal();
-                sys.addOneParticle(Tpsoft(ptcl_artifical[i][j],rank,adr));
-            }
-            // Update the status of group members to c.m. address in ptcl sys. Notice c.m. is at the end of an artificial particle group
-            for (PS::S32 j=n_artifical_per_group-1; j<ptcl_artifical[i].size(); j+=n_artifical_per_group) {
-                // obtain group member nember
-                PS::S32 n_members = ptcl_artifical[i][j].status;
-                // update member status
-                for (PS::S32 k=0; k<n_members; k++) {
-                    PS::S64 ptcl_k=adr_sys_multi_cluster_isolated_[n_ptcl_in_cluster_disp[i_cluster]+group_offset+k];
-#ifdef HARD_DEBUG
-                    assert(sys[ptcl_k].status==j);
-#endif
-                    sys[ptcl_k].status = n_sys+n_sys_offset_threads+j;
-                }
-                // group in cluster counter
-                j_group++;
-                // shift cluster
-                if(j_group==n_group_multi_cluster_isolated_[i_cluster]) {
-                    j_group=0;
-                    i_cluster++;
-                    group_offset=0;
-                }
-                else group_offset += n_members; // group offset in the ptcl list index of one cluster
-            }
-            // sys address offset due to the multi-threads
-            n_sys_offset_threads += ptcl_artifical[i].size();
-        }
     }
 
 
