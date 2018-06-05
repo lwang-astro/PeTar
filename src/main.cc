@@ -562,7 +562,13 @@ int main(int argc, char *argv[]){
         n_glb = system_soft.getNumberOfParticleGlobal();
 
         // >2.3 Find ARC groups and create artificial particles
-        search_cluster.findGroupsAndCreateArtificalParticlesOMP(system_soft);
+        // Set local ptcl_hard for isolated and connected clusters
+        system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
+        system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
+        // Find groups and add artifical particles to global particle system
+        system_hard_isolated.findGroupsAndCreateArtificalParticlesOMP(system_soft);
+        system_hard_connected.findGroupsAndCreateArtificalParticlesOMP(system_soft);
+        
 
         // update n_glb, n_loc for all
         PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
@@ -800,9 +806,10 @@ int main(int argc, char *argv[]){
 
         // Send receive cluster particles after kick
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-        search_cluster.connectNodes(pos_domain,tree_soft);
-        search_cluster.setIdClusterGlobalIteration();
-        search_cluster.sendAndRecvCluster(system_soft);
+//        search_cluster.sendAndRecvCluster(system_soft);
+//        search_cluster.connectNodes(pos_domain,tree_soft);
+//        search_cluster.setIdClusterGlobalIteration();
+//        search_cluster.sendAndRecvCluster(system_soft);
 #endif
 
 #ifdef PROFILE
@@ -838,7 +845,6 @@ int main(int argc, char *argv[]){
         profile.hard_isolated.start();
 #endif
         // integrate multi cluster A
-        system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
         system_hard_isolated.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft.value,system_soft,first_step_flag);
         system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_,remove_list);
         // integrate multi cluster A
@@ -854,7 +860,6 @@ int main(int argc, char *argv[]){
         profile.hard_connected.start();
 #endif
         // integrate multi cluster B
-        system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
         system_hard_connected.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft.value,system_soft,first_step_flag);
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
         // integrate multi cluster B

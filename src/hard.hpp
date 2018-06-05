@@ -123,6 +123,7 @@ private:
     
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_;
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_disp_;
+    PS::ReallocatableArray<PS::S32> n_group_in_cluster_;
     ARC::chainpars ARC_control_pert_; ///chain controller for perturbed(L.Wang)
     ARC::chainpars ARC_control_soft_; ///chain controller for no perturber(L.Wang)
     ARC_int_pars Int_pars_; /// ARC integration parameters, rout_, rin_ (L.Wang)
@@ -150,6 +151,103 @@ private:
             return left.id_cluster < right.id_cluster;
         }
     };
+
+    //! Find groups and create aritfical particles to sys
+    /* @param[in,out] _sys: global particle system
+       @param[in,out] _ptcl_local: local saved particle data (will be reordered due to the groups)
+       @param[in]     _n_ptcl_in_cluster: number of particles in one cluster
+       @param[in]     _n_ptcl_in_cluster_disp: boundar of particle cluster
+       @param[out]    _n_group_in_cluster: number of groups in one cluster
+       @param[in]     _rbin: binary detection criterion radius
+       @param[in]     _rin: inner radius of soft-hard changeover function
+       @param[in]     _rout: outer radius of soft-hard changeover function
+       @param[in]     _dt_tree: tree time step for calculating r_search
+       @param[in]     _id_offset: for artifical particles, the offset of starting id.
+       @param[in]     _n_split: split number for artifical particles
+     */
+    template<class Tsys, class Tphard, class Tpsoft>
+    void findGroupsAndCreateArtificalParticlesImpl(Tsys & _sys,
+                                                   Tphard* _ptcl_local,
+                                                   PS::ReallocatableArray<PS::S32> &_n_ptcl_in_cluster,
+                                                   PS::ReallocatableArray<PS::S32> &_n_ptcl_in_cluster_disp,
+                                                   PS::ReallocatableArray<PS::S32> &_n_group_in_cluster,
+                                                   const PS::F64 _rbin,
+                                                   const PS::F64 _rin,
+                                                   const PS::F64 _rout,
+                                                   const PS::F64 _dt_tree,
+                                                   const PS::S64 _id_offset,
+                                                   const PS::S32 _n_split) {                                                  
+        const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
+        _n_group_in_cluster.resizeNoInitialize(n_cluster);
+
+        const PS::S32 num_thread = PS::Comm::getNumberOfThread();
+        PS::ReallocatableArray<Tphard> ptcl_artifical[num_thread];
+
+#pragma omp for schedule(dynamic)
+        for (PS::S32 i=0; i<n_cluster; i++){
+            const PS::S32 ith = PS::Comm::getThreadNum();
+            Tphard* ptcl_in_cluster = _ptcl_local + _n_ptcl_in_cluster_disp[i];
+            const PS::S32 n_ptcl = _n_ptcl_in_cluster[i];
+            // search groups
+            SearchGroup<Tphard> group;
+            // merge groups
+            if (n_ptcl==2) group.searchAndMerge(ptcl_in_cluster, n_ptcl, _rout);
+            else group.searchAndMerge(ptcl_in_cluster, n_ptcl, _rin);
+
+            // generate artifical particles,
+            group.generateList(i, ptcl_in_cluster, n_ptcl, ptcl_artifical[ith], _n_group_in_cluster[i], _rbin, _rin, _rout, _dt_tree, _id_offset, _n_split);
+        }
+
+        // add artifical particle to particle system
+        PS::S32 rank = PS::Comm::getRank();
+        const PS::S32 n_artifical_per_group = 2*_n_split+1;
+        for(PS::S32 i=0; i<num_thread; i++) {
+            // ptcl_artifical should be integer times of 2*n_split+1
+            assert(ptcl_artifical[i].size()%n_artifical_per_group==0);
+            // Add particle to ptcl sys
+            for (PS::S32 j=0; j<ptcl_artifical[i].size(); j++) {
+                PS::S32 adr = _sys.getNumberOfParticleLocal();
+                ptcl_artifical[i][j].adr_org=adr;
+                _sys.addOneParticle(Tpsoft(ptcl_artifical[i][j],rank,adr));
+            }
+            PS::S32 group_offset=0, j_group_recored=-1;
+            // Update the status of group members to c.m. address in ptcl sys. Notice c.m. is at the end of an artificial particle group
+            for (PS::S32 j=0; j<ptcl_artifical[i].size(); j+=n_artifical_per_group) {
+                // obtain group member nember
+                PS::S32 j_cm = j+2*_n_split;
+                PS::S32 n_members = ptcl_artifical[i][j_cm].status;
+                PS::S32 i_cluster = ptcl_artifical[i][j+2].status;
+                PS::S32 j_group = ptcl_artifical[i][j+3].status;
+                PS::F64 rsearch_member=ptcl_artifical[i][j+2].r_search;
+                // make sure group index increase one by one
+                assert(j_group==j_group_recored+1);
+                j_group_recored=j_group;
+                // update member status
+                for (PS::S32 k=0; k<n_members; k++) {
+                    PS::S64 ptcl_k=_ptcl_local[_n_ptcl_in_cluster_disp[i_cluster]+group_offset+k].adr_org;
+#ifdef HARD_DEBUG
+                    // check whether ID is consistent.
+                    if(k==0) assert(_sys[ptcl_k].id==-ptcl_artifical[i][j_cm].id);
+#endif
+                    // save c.m. address and shift mass to mass_bk, set rsearch
+                    _sys[ptcl_k].status = ptcl_artifical[i][j_cm].adr_org;
+                    _sys[ptcl_k].mass_bk = _sys[ptcl_k].mass;
+                    _sys[ptcl_k].r_search = rsearch_member;
+#ifdef SPLIT_MASS
+                    _sys[ptcl_k].mass = 0;
+#endif
+                }
+                // shift cluster
+                if(j_group==_n_group_in_cluster[i_cluster]-1) {
+                    group_offset=0;
+                    j_group_recored=-1;
+                }
+                else group_offset += n_members; // group offset in the ptcl list index of one cluster
+                // j_group should be consistent with n_group[i_cluster];
+                assert(j_group<=_n_group_in_cluster[i_cluster]);
+            }
+        }
+    }
 
     
     void driveForMultiClusterImpl(PtclHard * ptcl_org,
@@ -921,6 +1019,28 @@ public:
                 }
             }
         }
+    }
+
+    //! Find groups and create aritfical particles to sys
+    /* @param[in,out] _sys: global particle system
+       @param[in]     _dt_tree: tree time step for calculating r_search
+     */
+    template<class Tsys, class Tphard, class Tpsoft>
+    void findGroupsAndCreateArtificalParticlesOMP(Tsys & _sys, 
+                                                  const PS::F64 _dt_tree) {
+        // isolated clusters
+        findGroupsAndCreateArtificalParticlesImpl(_sys, 
+                                                  n_ptcl_in_cluster_,
+                                                  n_ptcl_in_cluster_disp_,
+                                                  n_group_in_cluster_,
+                                                  r_bin_,
+                                                  Int_pars_.rin,     
+                                                  Int_pars_.rout,    
+                                                  _dt_tree, 
+                                                  id_offset_,
+                                                  n_split_);
+
+        // connected clusters
     }
 
     //template<class Tsys, class Tsptcl>
