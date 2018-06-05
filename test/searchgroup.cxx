@@ -6,7 +6,6 @@
 #include "Newtonian_acceleration.h"
 #include "ptree.h"
 #include "kepler.hpp"
-#include "cluster_list.hpp"
 #include "hard.hpp"
 #include "soft.hpp"
 
@@ -229,7 +228,8 @@ int main(int argc, char** argv)
   for (int i=0; i<p.size(); i++) sys.addOneParticle(FPSoft(p[i],0,i));
   const PS::S32 n_sys = sys.getNumberOfParticleLocal();
 
-  PS::S32 ptcl_list[p.size()];
+  PS::ReallocatableArray<PS::S32> ptcl_list;
+  ptcl_list.resizeNoInitialize(p.size());
   for (int i=0; i<n_cluster; i++) {
       std::cout<<"index list group "<<i<<std::endl;
       for (int j=0; j<n_ptcl_cluster[i]; j++) {
@@ -240,9 +240,11 @@ int main(int argc, char** argv)
   }
   PS::S64 id_offset=p.size();
   
-  SearchCluster search_cluster;
+  SystemHard sys_hard;
+  sys_hard.setParam(rbin, rout, rin, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, id_offset, n_split);
 
-  search_cluster.findGroupsAndCreateArtificalParticlesImpl<PS::ParticleSystem<FPSoft>, PtclHard, FPSoft>(sys, n_ptcl_cluster, n_group, ptcl_list, rbin, rin, rout, dt_tree, id_offset, n_split);
+  sys_hard.setPtclForIsolatedMultiCluster(sys, ptcl_list, n_ptcl_cluster);
+  sys_hard.findGroupsAndCreateArtificalParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys, dt_tree,true);
 
   for(int i=0; i<n_cluster; i++) {
       std::cout<<"new index list group "<<i<<std::endl;

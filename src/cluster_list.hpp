@@ -786,7 +786,7 @@ private:
         PS::S32 plist_new[group_ptcl_adr_offset];
         for (int i=0; i<group_ptcl_adr_offset; i++) plist_new[i] = group_ptcl_adr_list[i];
         std::sort(plist_new, plist_new+group_ptcl_adr_offset, [](PS::S32 &a, PS::S32 &b) {return a < b;});
-        std::sort(ptcl_list_reorder, _ptcl_list_reorder+group_ptcl_adr_offset, [](PS::S32 &a, PS::S32 &b) {return a < b;});
+        std::sort(ptcl_list_reorder, ptcl_list_reorder+group_ptcl_adr_offset, [](PS::S32 &a, PS::S32 &b) {return a < b;});
         for (int i=0; i<group_ptcl_adr_offset; i++) assert(ptcl_list_reorder[i]==plist_new[i]);
 #endif        
 
@@ -795,10 +795,10 @@ private:
 
         // templately copy ptcl data
         Tptcl ptcl_tmp[_n_ptcl];
-        for (int i=0; i<_n_ptcl; i++) ptcl_tmp[i].DataCopy(_ptcl_in_cluster[i]);
+        for (int i=0; i<_n_ptcl; i++) ptcl_tmp[i]=_ptcl_in_cluster[i];
 
         // reorder ptcl
-        for (int i=0; i<_n_ptcl; i++) _ptcl_in_cluster[i].ptcl_tmp[ptcl_list_reorder[i]];
+        for (int i=0; i<_n_ptcl; i++) _ptcl_in_cluster[i]=ptcl_tmp[ptcl_list_reorder[i]];
 
         for (int i=0; i<_empty_list.size(); i++) {
             PS::S32 ik = _empty_list[i];
