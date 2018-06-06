@@ -124,6 +124,7 @@ private:
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_;
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_disp_;
     PS::ReallocatableArray<PS::S32> n_group_in_cluster_;
+    PS::S32 n_group_member_remote_; // number of members in groups but in remote nodes
     ARC::chainpars ARC_control_pert_; ///chain controller for perturbed(L.Wang)
     ARC::chainpars ARC_control_soft_; ///chain controller for no perturber(L.Wang)
     ARC_int_pars Int_pars_; /// ARC integration parameters, rout_, rin_ (L.Wang)
@@ -164,7 +165,6 @@ private:
        @param[in]     _dt_tree: tree time step for calculating r_search
        @param[in]     _id_offset: for artifical particles, the offset of starting id.
        @param[in]     _n_split: split number for artifical particles
-       @param[in]     _isolated_flag: indicate whether this is isolated cluster. (related to _sys)
      */
     template<class Tsys, class Tptcl>
     void findGroupsAndCreateArtificalParticlesImpl(Tsys & _sys,
@@ -177,10 +177,10 @@ private:
                                                    const PS::F64 _rout,
                                                    const PS::F64 _dt_tree,
                                                    const PS::S64 _id_offset,
-                                                   const PS::S32 _n_split,
-                                                   const bool _isolated_flag=true) { 
+                                                   const PS::S32 _n_split) { 
         const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
         _n_group_in_cluster.resizeNoInitialize(n_cluster);
+        n_group_member_remote_=0;
 
         const PS::S32 num_thread = PS::Comm::getNumberOfThread();
         PS::ReallocatableArray<PtclHard> ptcl_artifical[num_thread];
@@ -228,7 +228,7 @@ private:
                 for (PS::S32 k=0; k<n_members; k++) {
                     PS::S32 kl = _n_ptcl_in_cluster_disp[i_cluster]+group_offset+k;
                     PS::S64 ptcl_k=_ptcl_local[kl].adr_org;
-                    if(_isolated_flag) {
+                    if(ptcl_k>=0) {
 #ifdef HARD_DEBUG
                         // check whether ID is consistent.
                         if(k==0) assert(_sys[ptcl_k].id==-ptcl_artifical[i][j_cm].id);
@@ -242,11 +242,18 @@ private:
 #endif
                     }
                     else {
+                        // this is remoted member;
+                        n_group_member_remote_++;
 #ifdef HARD_DEBUG
                         // check whether ID is consistent.
                         if(k==0) assert(_ptcl_local[kl].id==-ptcl_artifical[i][j_cm].id);
 #endif
                         _ptcl_local[kl].status = ptcl_artifical[i][j_cm].adr_org;
+                        _ptcl_local[kl].mass_bk = _ptcl_local[kl].mass;
+                        _ptcl_local[kl].r_search = rsearch_member;
+#ifdef SPLIT_MASS
+                        _ptcl_local[kl].mass = 0;
+#endif
                     }
                 }
                 // shift cluster
@@ -656,6 +663,9 @@ public:
     // for NON-ISOLATED CLUSTER
     ////////////////////////
 
+    PS::S32 getGroupPtclRemoteN() const{
+        return n_group_member_remote_;
+    }
 
     const PS::ReallocatableArray<PtclHard> & getPtcl() const {
         return ptcl_hard_;
@@ -860,8 +870,7 @@ public:
     }
 
     template<class Tsys>
-    void writeBackPtclForOneClusterOMP(Tsys & sys, 
-                                       const PS::ReallocatableArray<PS::S32> & adr_array){
+    void writeBackPtclForOneClusterOMP(Tsys & sys){
         const PS::S32 n = ptcl_hard_.size();
 #pragma omp for schedule(dynamic)
         for(PS::S32 i=0; i<n; i++){
@@ -871,6 +880,20 @@ public:
             assert(sys[adr].id == ptcl_hard_[i].id);
 #endif
             sys[adr].DataCopy(ptcl_hard_[i]);
+        }
+    }
+
+    template<class Tsys>
+    void writeBackPtclLocalOnlyOMP(Tsys & sys) {
+        const PS::S32 n = ptcl_hard_.size();
+#pragma omp for schedule(dynamic)
+        for(PS::S32 i=0; i<n; i++){
+            PS::S32 adr = ptcl_hard_[i].adr_org;
+            //PS::S32 adr = adr_array[i];
+#ifdef HARD_DEBUG
+            assert(sys[adr].id == ptcl_hard_[i].id);
+#endif
+            if(adr>=0) sys[adr].DataCopy(ptcl_hard_[i]);
         }
     }
 // for one cluster
@@ -934,11 +957,10 @@ public:
                                       PS::ReallocatableArray<PS::S32> & removelist){
         writeBackPtclForOneCluster(sys, removelist);
     }
+
     template<class Tsys>
-    void writeBackPtclForMultiClusterOMP(Tsys & sys, 
-//                                         const PS::ReallocatableArray<PS::S32> & adr_array,
-                                         PS::ReallocatableArray<PS::S32> & removelist){
-        writeBackPtclForOneClusterOMP(sys, removelist);
+    void writeBackPtclForMultiClusterOMP(Tsys & sys) { 
+        writeBackPtclForOneClusterOMP(sys);
     }
 // for isolated multi cluster only
 //////////////////
@@ -1049,8 +1071,7 @@ public:
      */
     template<class Tsys, class Tptcl>
     void findGroupsAndCreateArtificalParticlesOMP(Tsys & _sys, 
-                                                  const PS::F64 _dt_tree,
-                                                  const bool _isolated_flag) {
+                                                  const PS::F64 _dt_tree) {
         // isolated clusters
         findGroupsAndCreateArtificalParticlesImpl<Tsys, Tptcl>(_sys, 
                                                   ptcl_hard_.getPointer(),
@@ -1062,8 +1083,7 @@ public:
                                                   Int_pars_.rout,    
                                                   _dt_tree, 
                                                   id_offset_,
-                                                  n_split_,
-                                                  _isolated_flag);
+                                                  n_split_);
 
         // connected clusters
     }

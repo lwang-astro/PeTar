@@ -2163,6 +2163,76 @@ public:
         ////////////
     }
 
+    //! Send and receive the remote particles due to the change of kick
+    /* For remote particles in group members, the kick is done locally from c.m. Force, need to send back to original nodes
+       For remote particles outside group, the kick is done remotely, need to receive
+       @param[in,out] _sys: particle system. Notice the local particles of non-group members are updated.
+       @param[in,out] _ptcl_hard: local partical in system_hard_connected
+     */
+    template<class Tsys, class Tphard>
+    void SendAndRecieveUpdatedPtclAfterKick(Tsys & _sys,
+                                            const PS::ReallocatableArray<Tphard> & _ptcl_hard){
+        //  const PS::S32 my_rank = PS::Comm::getRank();
+        //  const PS::S32 n_proc  = PS::Comm::getNumberOfProc();
+        const PS::S32 n = _ptcl_hard.size();
+        for(PS::S32 i=0; i<n; i++){
+            const PS::S32 adr = _ptcl_hard[i].adr_org;
+            // only care the remote data of group member
+            if(adr <0 && _ptcl_hard[i].status>0){
+#ifdef HARD_DEBUG
+                assert( ptcl_recv_[-(adr+1)].id == _ptcl_hard[i].id );
+#endif
+                ptcl_recv_[-(adr+1)].DataCopy(_ptcl_hard[i]);
+            }
+        }
+        static PS::ReallocatableArray<MPI_Request> req_recv;
+        static PS::ReallocatableArray<MPI_Status> stat_recv;
+        static PS::ReallocatableArray<MPI_Request> req_send;
+        static PS::ReallocatableArray<MPI_Status> stat_send;
+        req_recv.resizeNoInitialize(rank_recv_ptcl_.size());
+        stat_recv.resizeNoInitialize(rank_recv_ptcl_.size());
+        req_send.resizeNoInitialize(rank_send_ptcl_.size());
+        stat_send.resizeNoInitialize(rank_send_ptcl_.size());
+
+        for(PS::S32 i=0; i<rank_recv_ptcl_.size(); i++){
+            PS::S32 rank = rank_recv_ptcl_[i];
+            MPI_Isend(ptcl_recv_.getPointer(n_ptcl_disp_recv_[i]), n_ptcl_recv_[i],
+                      PS::GetDataType<PtclComm>(),
+                      rank, 0, MPI_COMM_WORLD, req_recv.getPointer(i));
+        }
+        for(PS::S32 i=0; i<rank_send_ptcl_.size(); i++){
+            PS::S32 rank = rank_send_ptcl_[i];
+            MPI_Irecv(ptcl_send_.getPointer(n_ptcl_disp_send_[i]),  n_ptcl_send_[i],
+                      PS::GetDataType<PtclComm>(),
+                      rank, 0, MPI_COMM_WORLD, req_send.getPointer(i));
+        }
+        MPI_Waitall(rank_send_ptcl_.size(), req_send.getPointer(), stat_send.getPointer());
+        MPI_Waitall(rank_recv_ptcl_.size(), req_recv.getPointer(), stat_recv.getPointer());
+
+        for(PS::S32 i=0; i<ptcl_send_.size(); i++){
+            PS::S32 adr = adr__sys_ptcl_send_[i];
+#ifdef HARD_DEBUG
+            assert(_sys[adr].id == ptcl_send_[i].id);
+#endif
+            // only care remote data non-group member 
+            if(ptcl_send_[i].status=0) {
+                _sys[adr].DataCopy(ptcl_send_[i]);
+            }
+        }
+
+        for(PS::S32 i=0; i<n; i++) {
+            const PS::S32 adr = _ptcl_hard[i].adr_org;
+            // only care the remote data of non-group member
+            if(adr >=0 && _ptcl_hard[i].status=0){
+#ifdef HARD_DEBUG
+                assert( _sys[adr].id == _ptcl_hard[i].id );
+#endif
+                ptcl_hard_[i].DataCopy(_sys[adr]);
+            }
+        }
+    }
+    
+
     template<class Tsys, class Tphard>
     void writeAndSendBackPtcl(Tsys & sys,
                               const PS::ReallocatableArray<Tphard> & ptcl_hard,

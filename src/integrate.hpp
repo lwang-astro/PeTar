@@ -21,30 +21,49 @@
 
 //const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ;
 
-//leap frog----------------------------------------------
-template<class Tpsys, class Tmediator, class Tptcl>
-void Kick(Tpsys & _system,
-          const PS::ReallocatableArray<PS::S32> & _adr_one,
-          const PS::ReallocatableArray<PS::S32> & _adr_multi,
-          const PS::ReallocatableArray<PS::S32> & _n_multi,
-          const PS::ReallocatableArray<Tmediator> & _med,
-          const PS::ReallocatableArray<Tptcl> & _ptcl_recv,
-          const PS::F64 _dt){
-    const PS::S32 n = _system.getNumberOfParticleLocal();
+//!leap frog kick for single----------------------------------------------
+/* modify the velocity of particle in global system
+   @param[in,out] _sys: particle system
+   @param[in]: _dt: tree step
+   @param[in]; _adr: address for single particles
+ */
+template<class Tsys>
+void kickOne(Tsys & _sys, 
+             const PS::F64 _dt, 
+             const PS::ReallocatableArray<PS::S32>& _adr) {
+    const PS::S64 n= _adr.size();
 #pragma omp parallel for
     for(int i=0; i<n; i++){
-#ifdef HARD_CM_KICK
-        if(_system[i].status==0)  //only single stars have kick, c.m. are kicked in hard part
-#else
-        if(_system[i].status==0||(_system[i].id<0&&system[i].status>0)) // single and c.m.
-#endif
-            _system[i].vel  += _system[i].acc * _dt;
-#ifdef TIDAL_TENSOR
-        if(_system[i].status>0)   // backup acceleration to velocity for fake members and c.m.
-#else
-        if(_system[i].status>0&&_system[i].id>0)  // backup acceleration to velocity for fake members
-#endif
-            _system[i].vel = _system[i].acc;
+        const PS::S32 k=_adr[i];
+        _sys[k].vel  += _sys[k].acc * _dt;
+    }
+}
+
+//!leap frog kick for connected clusters------------------------------------------
+/* modify the velocity of particle in local, if remote particle, do nothing, need MPI receive to update data
+   @param[in] _force: force array
+   @param[in,out] _ptcl: local particle array in system hard
+   @param[in]: _dt: tree step
+   @param[in]: _n: number of particls
+ */
+template<class Tforce, class Tptcl>
+void kickCluster(Tforce *_force,
+                 const PS::ReallocatableArray<Tptcl>& _ptcl,
+                 const PS::F64 _dt) {
+    const PS::S64 n= _ptcl.size();
+#pragma omp parallel for
+    for(int i=0; i<n; i++) {
+        const PS::S64 cm_adr=_ptcl[i].status;
+        const PS::S66 i_adr =_ptcl[i].adr_org;
+        // if is group member, recover mass and kick due to c.m. force
+        if(cm_adr>0) {
+            _ptcl[i].mass = _ptcl[i].mass_bk;
+            _ptcl[i].vel += _force[cm_adr].acc * _dt;
+        }
+        else if(i_adr>=0) {
+            // not remote particles
+            _ptcl[i].vel += _force[i_adr].acc * _dt;
+        }
     }
 }
 
@@ -1346,14 +1365,17 @@ public:
     }
 };
 
+//! substract c.m. force from component used for tidal tensor. 
+/* @param[in,out] _ptcl: aritficial particle group, the acc is updated
+   @param[in]: _n_split: artifical particle split number
+*/
 template<class Tptcl>
-void subtractFcmAndRecoverCMVec(Tptcl * ptcl_org,
-                                const PS::S32  icm,
-                                const PS::S32* group_list,
-                                const PS::S32  ngroup,
-                                const PS::S32* soft_pert_list) {
-    Tptcl* pi = &ptcl_org[icm];
+void subtractFcm(Tptcl * _ptcl, const PS::S32 _n_split) {
+    // c.m.
+    const icm=2*_n_split;
+    Tptcl* picm = &_ptcl[icm];
     PS::F64vec Fcm = pi->vel;
+
     PS::F64vec vtmp(0.0);
     PS::F64 mtmp = 0.0;
     for (PS::S32 i=0; i<ngroup; i++) {

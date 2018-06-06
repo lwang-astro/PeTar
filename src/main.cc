@@ -562,13 +562,18 @@ int main(int argc, char *argv[]){
         n_glb = system_soft.getNumberOfParticleGlobal();
 
         // >2.3 Find ARC groups and create artificial particles
-        // Set local ptcl_hard for isolated and connected clusters
+        // Set local ptcl_hard for isolated  clusters
         system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
-        system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
         // Find groups and add artifical particles to global particle system
-        system_hard_isolated.findGroupsAndCreateArtificalParticlesOMP(system_soft);
-        system_hard_connected.findGroupsAndCreateArtificalParticlesOMP(system_soft);
-        
+        system_hard_isolated.findGroupsAndCreateArtificalParticlesOMP(system_soft, dt_soft.value);
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        // For connected clusters
+        system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
+        system_hard_connected.findGroupsAndCreateArtificalParticlesOMP(system_soft, dt_soft.value);
+        // send updated particle back to original (set zero mass particle to origin)
+        if(system_hard_connected.getGroupPtclRemoteN()>0) search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+#endif
 
         // update n_glb, n_loc for all
         PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
@@ -579,7 +584,9 @@ int main(int argc, char *argv[]){
         for(PS::S32 i=n_loc; i<n_loc_new; i++){
             system_soft[i].rank_org = my_rank;
             system_soft[i].adr = i;
-            assert(system_soft[i].id<0&&system_soft[i].status<0);
+#ifdef HARD_DEBUG
+            assert(system_soft[i].id<0);
+#endif
         }
 
         // >3 Tree for force ----------------------------------------
@@ -671,7 +678,17 @@ int main(int argc, char *argv[]){
         profile.kick.start();
 #endif
         // >4. kick  ----------------------------------------
-        Kick(system_soft, tree_soft, dt_kick);
+        // single
+        kickOne(system_soft, dt_kick, search_cluster.getAdrSysOneCluster());
+        // isolated
+        kickCluster(system_soft, system_hard_isolated.getPtcl(), dt_kick);
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        // connected
+        kickCluster(system_soft, system_hard_connected.getPtcl(), dt_kick);
+        search_cluster.SendAndRecieveUpdatedPtclAfterKick(system_soft, system_hard_connected.getPtcl());
+#endif
+
 #ifdef PROFILE
         profile.kick.end();
         profile.soft_tot.end();
@@ -679,6 +696,10 @@ int main(int argc, char *argv[]){
 
         // output information
         if( fmod(time_sys, dt_snp.value) == 0.0){
+            
+            // update global particle system due to kick
+            system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
+            system_hard_connected.writeBackPtclLocalOnlyOMP(system_soft);
 
 #ifdef MAIN_DEBUG
             write_p(fout, time_sys, dt_soft.value*0.5, system_soft, stat.eng_now, stat.eng_diff);
