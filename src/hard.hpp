@@ -15,6 +15,96 @@
 //std::ofstream kout;
 //std::ofstream arout;
 
+//! Soft force correction due to different cut-off function
+/* @param[in] _sys: global particle system
+   @param[in] _ptcl_local: particle in systme_hard
+   @param[in] _n_real: local real particle number
+   @param[in] _n_arti: artifical particle total number
+   @param[in] _n_split: artifical particle splitting number
+   @param[in] _n_ptcl_in_cluster: number of particles in clusters
+   @param[in] _n_ptcl_in_cluster_offset: boundary of clusters in _adr_sys_in_cluster
+   @param[in] _rin: cutoff inner radius;
+   @param[in] _rout: cutoff outer radius;
+   @param[in] _eps_sq: softing eps square
+ */
+template <class Tsys>
+void CorrectForceWithCutoffClusterOMP(Tsys _sys, 
+                                      PtclHard* _ptcl_local,
+                                      const PS::S32 _n_real,
+                                      const PS::S32 _n_arti,
+                                      const PS::S32 _n_split,
+                                      const PS::ReallocatableArray<PS::S32>& _n_ptcl_in_cluster,
+                                      const PS::ReallocatableArray<PS::S32>& _n_ptcl_in_cluster_offset,
+                                      const PS::F64 _rin;
+                                      const PS::F64 _rout;
+                                      const PS::F64 _eps_sq=0.0) {
+    // cutoff function parameter
+    const PS::F64 r_oi_inv = 1.0/(_rout-_rin);
+    const PS::F64 r_A = (_rout-_rin)/(_rout+_rin);
+    // first obtain the correction for aritifical particles
+    const PS::S32 ptcl_art_offset = 2*_n_split+1;
+#pragma omp for schedule(dynamic)
+    for (int i=_n_real, i<_n_arti, i+=ptcl_art_offset){
+        PS::S32 i_cluster=_sys[i+2].status;
+        // loop all artifical particles (tidal tensor particle)
+        for (int j=i; j<i+_n_split; j++) {
+            PS::F64vec& pos_j= _sys[j].pos;
+            PS::F64vec& acc_j= _sys[j].acc;
+            PS::F64& pot_j = _sys[j].pot_tot;
+            // loop artifical particle (orbital and c.m.)
+            for (int k=i+_n_split; k<i+ptcl_art_offset; k++) {
+                auto& ptcl_k = _sys[k];
+                CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
+                                                ptcl_k.pos, ptcl_k.mass, ptcl_k.mass_bk, 
+                                                2, _eps_sq,
+                                                r_oi_inv, r_A, _rout, _rin);
+            }
+            // loop real particle
+            for (int k=_n_ptcl_in_cluster_offset[i_cluster]; k<_n_ptcl_in_cluster_offset[i_cluster+1]; k++) {
+                PtclHard* ptcl_k_ptr = &_ptcl_local[k];
+                PS::S32 pot_control_flag = ptcl_k_ptr->status>0? 1: 0;
+                CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
+                                                ptcl_k_ptr->pos, ptcl_k_ptr->mass, ptcl_k_ptr->mass_bk, 
+                                                pot_control_flag, _eps_sq,
+                                                r_oi_inv, r_A, _rout, _rin);
+            }
+        }
+    }
+
+    // then obtain correction for real particles in clusters
+    const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
+#pragma omp for schedule(dynamic)
+    for (int i=0; i<n_cluster; i++) {
+        PS::S32 adr_start= _n_ptcl_in_cluster_offset[i];
+        PS::S32 adr_end= _n_ptcl_in_cluster_offset[i+1];
+        for (int j=adr_start; j<adr_end; j++) {
+            PS::S64 adr = _ptcl_local[j].adr_org;
+#ifdef HARD_DEBUG
+            assert(_sys[adr].id==_ptcl_local[j].id);
+#endif
+            PS::F64vec& pos_j= _sys[adr].pos;
+            PS::F64vec& acc_j= _sys[adr].acc;
+            PS::F64& pot_j = _sys[adr].pot_tot;
+            // cluster member
+            for (int k=adr_start; k=adr_end; k++) {
+                PtclHard* ptcl_k_ptr = &_ptcl_local[k];
+                PS::S32 pot_control_flag = ptcl_k_ptr->status>0? 1: 0;
+                CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
+                                                ptcl_k_ptr->pos, ptcl_k_ptr->mass, ptcl_k_ptr->mass_bk, 
+                                                pot_control_flag, _eps_sq,
+                                                r_oi_inv, r_A, _rout, _rin);
+            }
+            PS::S64 stat_j = _sys[adr].status;
+#ifdef HARD_DEBUG
+            assert(-_sys[stat_j].id==_ptcl_local[j].id);
+#endif
+            // group member, use c.m. acc
+            if(stat_j>0) acc_j = _sys[stat_j].acc;
+        }
+    }
+}
+
+
 class PtclHard: public Ptcl{
 public:
     PS::S32 id_cluster;
@@ -244,17 +334,17 @@ private:
                     else {
                         // this is remoted member;
                         n_group_member_remote_++;
-#ifdef HARD_DEBUG
-                        // check whether ID is consistent.
-                        if(k==0) assert(_ptcl_local[kl].id==-ptcl_artifical[i][j_cm].id);
-#endif
-                        _ptcl_local[kl].status = ptcl_artifical[i][j_cm].adr_org;
-                        _ptcl_local[kl].mass_bk = _ptcl_local[kl].mass;
-                        _ptcl_local[kl].r_search = rsearch_member;
-#ifdef SPLIT_MASS
-                        _ptcl_local[kl].mass = 0;
-#endif
                     }
+#ifdef HARD_DEBUG
+                    // check whether ID is consistent.
+                    if(k==0) assert(_ptcl_local[kl].id==-ptcl_artifical[i][j_cm].id);
+#endif
+                    _ptcl_local[kl].status = ptcl_artifical[i][j_cm].adr_org;
+                    _ptcl_local[kl].mass_bk = _ptcl_local[kl].mass;
+                    _ptcl_local[kl].r_search = rsearch_member;
+#ifdef SPLIT_MASS
+                    _ptcl_local[kl].mass = 0;
+#endif
                 }
                 // shift cluster
                 if(j_group==_n_group_in_cluster[i_cluster]-1) {
@@ -677,6 +767,10 @@ public:
 
     PS::S32* getClusterNList() const{
         return n_ptcl_in_cluster_.getPointer();
+    }
+
+    PS::S32* getClusterNOffset() const{
+        return n_ptcl_in_cluster_disp_.getPointer();
     }
 
     void setTimeOrigin(const PS::F64 _time_origin){

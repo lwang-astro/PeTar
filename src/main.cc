@@ -632,6 +632,13 @@ int main(int argc, char *argv[]){
         profile.soft_tot.end();
 #endif
 
+        // >3.1 soft force correction due to different cut-off function
+        // Isolated clusters
+        CorrectForceWithCutoffClusterOMP(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_offset_);
+        
+        // Connected clusters
+        CorrectForceWithCutoffTreeNeighborOMP(system_soft, search_cluster.getAdrSysConnectClusterSend());
+
         // for first step
         if(first_step_flag) {
             first_step_flag = false;

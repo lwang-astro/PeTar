@@ -407,7 +407,7 @@ private:
     }
 
 
-    //! Fill the mass_bk, r_search and status of group members, set mass=0, status=1, return orderd particle member index list
+    //! Fill the mass_bk, r_search and status of group members, set status=1, return orderd particle member index list
     /* @param[in]  _bin: binary tree root
        @param[in]  _adr_ref: ptcl_org first particle address as reference to calculate the particle index.
        @param[out] _ptcl_adr_sys: particle index list in global particle system (not _ptcl_in_cluster)
@@ -1312,6 +1312,7 @@ public:
 class SearchCluster{
 public:
     PS::ReallocatableArray<PS::S32> n_ptcl_in_multi_cluster_isolated_;
+    PS::ReallocatableArray<PS::S32> n_ptcl_in_multi_cluster_isolated_offset_;
     PS::ReallocatableArray<PS::S32> n_group_multi_cluster_isolated_;
     PS::ReallocatableArray<Mediator> mediator_sorted_id_cluster_;
     PS::ReallocatableArray<PtclComm> ptcl_recv_;
@@ -1714,6 +1715,8 @@ public:
         for(PS::S32 i=0; i<cluster_isolated.size(); i++) cluster_isolated[i].clear();
         cluster_isolated.clearSize();
         n_ptcl_in_multi_cluster_isolated_.clearSize();
+        n_ptcl_in_multi_cluster_isolated_offset_.clearSize();
+        n_ptcl_in_multi_cluster_isolated_offset_.push_back(0);
 
         for(PS::S32 i=0; i<n_loc; i++){
             bool flag_isolated = true;
@@ -1734,6 +1737,7 @@ public:
                     }
                     cluster_isolated.push_back( Cluster(id_cluster, n_ptcl_in_cluster, n_ptcl_in_cluster, adr_sys_multi_cluster_isolated_head, my_rank) );
                     n_ptcl_in_multi_cluster_isolated_.push_back(n_ptcl_in_cluster);
+                    n_ptcl_in_multi_cluster_isolated_offset_.push_back(n_ptcl_in_cluster+n_ptcl_in_multi_cluster_isolated_offset_.back());
                 }
                 else{
                     PtclCluster * p_tmp = ptcl_cluster_[0].getPointer(i);
@@ -2291,7 +2295,11 @@ public:
     const PS::ReallocatableArray<PS::S32> & getAdrSysOneCluster(){
         return adr_sys_one_cluster_[0];
     }
-
+    
+    //! get the address list of ptcl need to send in connected clusters
+    const PS::ReallocatableArray<PS::S32> & getAdrSysConnectClusterSend(){
+        return adr_sys_ptcl_send_;
+    }
 
 };
 
