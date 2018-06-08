@@ -567,6 +567,10 @@ int main(int argc, char *argv[]){
         // Find groups and add artifical particles to global particle system
         system_hard_isolated.findGroupsAndCreateArtificalParticlesOMP(system_soft, dt_soft.value);
 
+        // update n_loc_iso, n_glb_iso for isolated clusters
+        PS::S64 n_loc_iso = system_soft.getNumberOfParticleLocal();
+        PS::S64 n_glb_iso = system_soft.getNumberOfParticleGlobal();
+
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         // For connected clusters
         system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
@@ -575,13 +579,13 @@ int main(int argc, char *argv[]){
         if(system_hard_connected.getGroupPtclRemoteN()>0) search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
 #endif
 
-        // update n_glb, n_loc for all
+        // update n_glb, n_glb for all
         PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
         PS::S64 n_glb_all = system_soft.getNumberOfParticleGlobal();
             
         // >2.4 set adr/rank for artificial particles in GPS
 #pragma omp parallel for
-        for(PS::S32 i=n_loc; i<n_loc_new; i++){
+        for(PS::S32 i=n_loc; i<n_loc_all; i++){
             system_soft[i].rank_org = my_rank;
             system_soft[i].adr = i;
 #ifdef HARD_DEBUG
@@ -634,7 +638,7 @@ int main(int argc, char *argv[]){
 
         // >3.1 soft force correction due to different cut-off function
         // Isolated clusters
-        CorrectForceWithCutoffClusterOMP(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_offset_);
+        CorrectForceWithCutoffClusterOMP(system_soft, system_hard_isolated.getPtcl().getPointer(), n_loc, n_loc_iso, n_split.value,  search_cluster.n_ptcl_in_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_offset_, r_in, r_out.value);
         
         // Connected clusters
         CorrectForceWithCutoffTreeNeighborOMP(system_soft, search_cluster.getAdrSysConnectClusterSend());
