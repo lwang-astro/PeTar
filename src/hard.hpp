@@ -31,36 +31,85 @@
 template <class Tsys>
 void CorrectForceWithCutoffClusterOMP(Tsys _sys, 
                                       PtclHard* _ptcl_local,
-                                      const PS::S32 _n_arti_start,
-                                      const PS::S32 _n_arti_end,
                                       const PS::S32 _n_split,
                                       const PS::ReallocatableArray<PS::S32>& _n_ptcl_in_cluster,
                                       const PS::ReallocatableArray<PS::S32>& _n_ptcl_in_cluster_offset,
+                                      const PS::ReallocatableArray<PS::S32>& _n_group_in_cluster,
+                                      const PS::ReallocatableArray<PS::S32>& _n_group_in_cluster_offset,
+                                      const PS::ReallocatableArray<PS::S32>& _adr_first_ptcl_arti_in_cluster,
                                       const PS::F64 _rin;
                                       const PS::F64 _rout;
                                       const PS::F64 _eps_sq=0.0) {
     // cutoff function parameter
     const PS::F64 r_oi_inv = 1.0/(_rout-_rin);
     const PS::F64 r_A = (_rout-_rin)/(_rout+_rin);
-    // first obtain the correction for aritifical particles
     const PS::S32 ptcl_art_offset = 2*_n_split+1;
+
+    const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
 #pragma omp for schedule(dynamic)
-    for (int i=_n_arti_start, i<_n_arti_end, i+=ptcl_art_offset){
-        PS::S32 i_cluster=_sys[i+2].status;
-        PS::S32 j_cm= i+2*_n_split;
-        // loop all artifical particles (tidal tensor particle)
-        for (int j=i; j<i+_n_split; j++) {
-            PS::F64vec& pos_j= _sys[j].pos;
-            PS::F64vec& acc_j= _sys[j].acc;
-            PS::F64& pot_j = _sys[j].pot_tot;
-            // loop orbital artifical particle
-            for (int k=i+_n_split; k<j_cm; k++) {
-                auto& ptcl_k = _sys[k];
-                CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
-                                                ptcl_k.pos, ptcl_k.mass, ptcl_k.mass_bk, 
-                                                2, _eps_sq,
-                                                r_oi_inv, r_A, _rout, _rin);
+    for (int i=0; i<n_cluster; i++) {  // i: i_cluster
+        PS::S32 adr_start= _n_ptcl_in_cluster_offset[i];
+        PS::S32 adr_end= _n_ptcl_in_cluster_offset[i+1];
+        // artifical particle group number
+        PS::S32 n_group = _n_group_in_cluster[i];
+        PS::S32 n_group_offset = _n_group_in_cluster_offset[i];
+        
+        // correction for artifical particles
+        for (int j=0; j<n_group; j++) {  // j: j_group
+            PS::S32 j_start = _adr_first_ptcl_arti_in_cluster[n_group_offset+j];
+            PS::S32 j_cm = j_start + 2*_n_split;
+
+            // loop all artifical particles (tidal tensor particle)
+            for (int k=j_start; k<j_start+_n_split; k++) {  // k: k_ptcl_arti
+                PS::F64vec& pos_k= _sys[k].pos;
+                PS::F64vec& acc_k= _sys[k].acc;
+                PS::F64& pot_k = _sys[k].pot_tot;
+
+                // loop orbital artifical particle
+                // group
+                for (int kj=0; kj<n_group; kj++) { // group
+                    PS::S32 kj_start = _adr_first_ptcl_arti_in_cluster[n_group_offset+kj];
+                    PS::S32 kj_cm = kj_start + 2*_n_split;
+
+                    // particle arti orbital
+                    for (int kk=kj_start+_n_split; kk<kj_cm; kk++) {
+                        auto& ptcl_kk = _sys[kk];
+                        CalcAccPotShortWithLinearCutoff(pos_k, acc_k, pot_k, 
+                                                        ptcl_kk.pos, ptcl_kk.mass, ptcl_kk.mass_bk, 
+                                                        2, _eps_sq,
+                                                        r_oi_inv, r_A, _rout, _rin);
+                    }
+                }
+
+                // loop real particle
+                for (int kj=_n_ptcl_in_cluster_offset[i]; kj<_n_ptcl_in_cluster_offset[i+1]; k++) {
+                    PtclHard* ptcl_kj_ptr = &_ptcl_local[kj];
+                    PS::S32 pot_control_flag = ptcl_k_ptr->status>0? 1: 0;
+                    CalcAccPotShortWithLinearCutoff(pos_k, acc_k, pot_k, 
+                                                    ptcl_kj_ptr->pos, ptcl_kj_ptr->mass, ptcl_kj_ptr->mass_bk, 
+                                                    pot_control_flag, _eps_sq,
+                                                    r_oi_inv, r_A, _rout, _rin);
+                }
             }
+            
+            // for c.m. particle
+            PS::F64vec& pos_j= _sys[j_cm].pos;
+            PS::F64vec& acc_j= _sys[j_cm].acc;
+            PS::F64& pot_j = _sys[j_cm].pot_tot;
+            
+            // loop artifical particle orbital
+            for (int k=0; k<n_group; k++) { // group
+                PS::S32 k_start = _adr_first_ptcl_arti_in_cluster[_n_group_in_cluster_offset[i]+k];
+                PS::S32 k_cm = k_start + 2*_n_split;
+                for (int ki=k_start+_n_split; ki<k_cm; ki++) {
+                    auto& ptcl_k = _sys[ki];
+                    CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
+                                                    ptcl_k.pos, ptcl_k.mass, ptcl_k.mass_bk, 
+                                                    2, _eps_sq,
+                                                    r_oi_inv, r_A, _rout, _rin);
+                }
+            }
+            
             // loop real particle
             for (int k=_n_ptcl_in_cluster_offset[i_cluster]; k<_n_ptcl_in_cluster_offset[i_cluster+1]; k++) {
                 PtclHard* ptcl_k_ptr = &_ptcl_local[k];
@@ -71,35 +120,8 @@ void CorrectForceWithCutoffClusterOMP(Tsys _sys,
                                                 r_oi_inv, r_A, _rout, _rin);
             }
         }
-        // for c.m. particle
-        PS::F64vec& pos_j= _sys[j_cm].pos;
-        PS::F64vec& acc_j= _sys[j_cm].acc;
-        PS::F64& pot_j = _sys[j_cm].pot_tot;
-        // loop artifical particle orbital
-        for (int k=i+_n_split; k<j_cm; k++) {
-            auto& ptcl_k = _sys[k];
-            CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
-                                            ptcl_k.pos, ptcl_k.mass, ptcl_k.mass_bk, 
-                                            2, _eps_sq,
-                                            r_oi_inv, r_A, _rout, _rin);
-        }
-        // loop real particle
-        for (int k=_n_ptcl_in_cluster_offset[i_cluster]; k<_n_ptcl_in_cluster_offset[i_cluster+1]; k++) {
-            PtclHard* ptcl_k_ptr = &_ptcl_local[k];
-            PS::S32 pot_control_flag = ptcl_k_ptr->status>0? 1: 0;
-            CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
-                                            ptcl_k_ptr->pos, ptcl_k_ptr->mass, ptcl_k_ptr->mass_bk, 
-                                            pot_control_flag, _eps_sq,
-                                            r_oi_inv, r_A, _rout, _rin);
-        }
-    }
 
-    // then obtain correction for real particles in clusters
-    const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
-#pragma omp for schedule(dynamic)
-    for (int i=0; i<n_cluster; i++) {
-        PS::S32 adr_start= _n_ptcl_in_cluster_offset[i];
-        PS::S32 adr_end= _n_ptcl_in_cluster_offset[i+1];
+        // obtain correction for real particles in clusters
         for (int j=adr_start; j<adr_end; j++) {
             PS::S64 adr = _ptcl_local[j].adr_org;
 #ifdef HARD_DEBUG
@@ -125,6 +147,18 @@ void CorrectForceWithCutoffClusterOMP(Tsys _sys,
             }
 
             // orbital artifical particle
+            for (int k=0; k<n_group; k++) {
+                // loop artifical particle orbital
+                PS::S32 k_start = _adr_first_ptcl_arti_in_cluster[_n_group_in_cluster_offset[i]+k];
+                PS::S32 k_cm = k_start + 2*_n_split;
+                for (int ki=k_start+_n_split; ki<k_cm; ki++) {
+                    auto& ptcl_k = _sys[ki];
+                    CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
+                                                    ptcl_k.pos, ptcl_k.mass, ptcl_k.mass_bk, 
+                                                    2, _eps_sq,
+                                                    r_oi_inv, r_A, _rout, _rin);
+                }
+            }
             
 #ifdef HARD_DEBUG
             assert(-_sys[stat_j].id==_ptcl_local[j].id);
@@ -166,24 +200,74 @@ void CorrectForceWithCutoffTreeNeighborOMP(Tsys _sys,
     // cutoff function parameter
     const PS::F64 r_oi_inv = 1.0/(_rout-_rin);
     const PS::F64 r_A = (_rout-_rin)/(_rout+_rin);
-    // first obtain the correction for aritifical particles
     const PS::S32 ptcl_art_offset = 2*_n_split+1;
+
+    const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
+
 #pragma omp for schedule(dynamic)
-    for (int i=_n_arti_start, i<_n_arti_end, i+=ptcl_art_offset){
-        PS::S32 i_cluster=_sys[i+2].status;
-        // loop all artifical particles (tidal tensor particle)
-        for (int j=i; j<i+_n_split; j++) {
-            PS::F64vec& pos_j= _sys[j].pos;
-            PS::F64vec& acc_j= _sys[j].acc;
-            PS::F64& pot_j = _sys[j].pot_tot;
-            // loop artifical particle (orbital and c.m.)
-            for (int k=i+_n_split; k<i+ptcl_art_offset; k++) {
-                auto& ptcl_k = _sys[k];
-                CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
-                                                ptcl_k.pos, ptcl_k.mass, ptcl_k.mass_bk, 
-                                                2, _eps_sq,
-                                                r_oi_inv, r_A, _rout, _rin);
+    for (int i=0; i<n_cluster; i++) {  // i: i_cluster
+        PS::S32 adr_start= _n_ptcl_in_cluster_offset[i];
+        PS::S32 adr_end= _n_ptcl_in_cluster_offset[i+1];
+        // artifical particle group number
+        PS::S32 n_group = _n_group_in_cluster[i];
+        PS::S32 n_group_offset = _n_group_in_cluster_offset[i];
+        
+        // correction for artifical particles
+        for (int j=0; j<n_group; j++) {  // j: j_group
+            PS::S32 j_start = _adr_first_ptcl_arti_in_cluster[n_group_offset+j];
+            PS::S32 j_cm = j_start + 2*_n_split;
+
+            // loop all artifical particles (tidal tensor particle)
+            for (int k=j_start; k<j_start+_n_split; k++) {  // k: k_ptcl_arti
+                PS::F64vec& pos_k= _sys[k].pos;
+                PS::F64vec& acc_k= _sys[k].acc;
+                PS::F64& pot_k = _sys[k].pot_tot;
+
+                // loop orbital artifical particle
+                // group
+                for (int kj=0; kj<n_group; kj++) { // group
+                    PS::S32 kj_start = _adr_first_ptcl_arti_in_cluster[n_group_offset+kj];
+                    PS::S32 kj_cm = kj_start + 2*_n_split;
+
+                    // particle arti orbital
+                    for (int kk=kj_start+_n_split; kk<kj_cm; kk++) {
+                        auto& ptcl_kk = _sys[kk];
+                        CalcAccPotShortWithLinearCutoff(pos_k, acc_k, pot_k, 
+                                                        ptcl_kk.pos, ptcl_kk.mass, ptcl_kk.mass_bk, 
+                                                        2, _eps_sq,
+                                                        r_oi_inv, r_A, _rout, _rin);
+                    }
+                }
+
+                // loop real particle
+                for (int kj=_n_ptcl_in_cluster_offset[i]; kj<_n_ptcl_in_cluster_offset[i+1]; k++) {
+                    PtclHard* ptcl_kj_ptr = &_ptcl_local[kj];
+                    PS::S32 pot_control_flag = ptcl_k_ptr->status>0? 1: 0;
+                    CalcAccPotShortWithLinearCutoff(pos_k, acc_k, pot_k, 
+                                                    ptcl_kj_ptr->pos, ptcl_kj_ptr->mass, ptcl_kj_ptr->mass_bk, 
+                                                    pot_control_flag, _eps_sq,
+                                                    r_oi_inv, r_A, _rout, _rin);
+                }
             }
+            
+            // for c.m. particle
+            PS::F64vec& pos_j= _sys[j_cm].pos;
+            PS::F64vec& acc_j= _sys[j_cm].acc;
+            PS::F64& pot_j = _sys[j_cm].pot_tot;
+            
+            // loop artifical particle orbital
+            for (int k=0; k<n_group; k++) { // group
+                PS::S32 k_start = _adr_first_ptcl_arti_in_cluster[_n_group_in_cluster_offset[i]+k];
+                PS::S32 k_cm = k_start + 2*_n_split;
+                for (int ki=k_start+_n_split; ki<k_cm; ki++) {
+                    auto& ptcl_k = _sys[ki];
+                    CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
+                                                    ptcl_k.pos, ptcl_k.mass, ptcl_k.mass_bk, 
+                                                    2, _eps_sq,
+                                                    r_oi_inv, r_A, _rout, _rin);
+                }
+            }
+            
             // loop real particle
             for (int k=_n_ptcl_in_cluster_offset[i_cluster]; k<_n_ptcl_in_cluster_offset[i_cluster+1]; k++) {
                 PtclHard* ptcl_k_ptr = &_ptcl_local[k];
@@ -194,53 +278,44 @@ void CorrectForceWithCutoffTreeNeighborOMP(Tsys _sys,
                                                 r_oi_inv, r_A, _rout, _rin);
             }
         }
-        // for c.m. particle
-        PS::S32 j_cm= i+2*_n_split;
-        PS::F64vec& pos_j= _sys[j_cm].pos;
-        PS::F64vec& acc_j= _sys[j_cm].acc;
-        PS::F64& pot_j = _sys[j_cm].pot_tot;
-        // loop artifical particle (orbital and c.m.)
-        for (int k=i+_n_split; k<i+ptcl_art_offset; k++) {
-            auto& ptcl_k = _sys[k];
-            CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
-                                            ptcl_k.pos, ptcl_k.mass, ptcl_k.mass_bk, 
-                                            2, _eps_sq,
-                                            r_oi_inv, r_A, _rout, _rin);
-        }
-        // loop real particle
-        for (int k=_n_ptcl_in_cluster_offset[i_cluster]; k<_n_ptcl_in_cluster_offset[i_cluster+1]; k++) {
-            PtclHard* ptcl_k_ptr = &_ptcl_local[k];
-            PS::S32 pot_control_flag = ptcl_k_ptr->status>0? 1: 0;
-            CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
-                                            ptcl_k_ptr->pos, ptcl_k_ptr->mass, ptcl_k_ptr->mass_bk, 
-                                            pot_control_flag, _eps_sq,
-                                            r_oi_inv, r_A, _rout, _rin);
-        }
-    }
 
-    // then obtain correction for real particles in clusters
-    const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
-#pragma omp for schedule(dynamic)
-    for (int i=0; i<n_cluster; i++) {
-        PS::S32 adr_start= _n_ptcl_in_cluster_offset[i];
-        PS::S32 adr_end= _n_ptcl_in_cluster_offset[i+1];
+        // obtain correction for real particles in clusters use tree neighbor search
         for (int j=adr_start; j<adr_end; j++) {
             PS::S64 adr = _ptcl_local[j].adr_org;
             // only do for local particles
-            if(adr>=0) {
-                Tepj * nbl = NULL;
-                PS::S32 n_ngb = _tree.getNeighborListOneParticle(sys[i], nbl) - 1;
 #ifdef HARD_DEBUG
-                assert(_sys[i].n_ngb >= 0);
+            assert(_sys[adr].id==_ptcl_local[j].id);
 #endif
+            if(adr>=0) {
+                Tepj * ptcl_nb = NULL;
+                PS::S32 n_ngb = _tree.getNeighborListOneParticle(_sys[adr], ptcl_nb) - 1;
+#ifdef HARD_DEBUG
+                assert(n_ngb >= 0);
+#endif
+                PS::F64vec& pos_j= _sys[adr].pos;
+                PS::F64vec& acc_j= _sys[adr].acc;
+                PS::F64& pot_j = _sys[adr].pot_tot;
                 PS::S64 stat_j = _sys[adr].status;
+
                 // self-potential correction 
-                if (stat_j==0) sys[i].pot_tot += sys[i].mass/r_out;
-                else if (stat_j<0) sys[i].pot_tot += sys[i].mass_bk/r_out;
+                if (stat_j==0) pot_j += _sys[adr].mass/r_out;
+                else if (stat_j<0) pot_ += _sys[adr].mass_bk/r_out;
 
                 // loop neighbors
                 for(PS::S32 k=0; k<n_ngb+1; k++){
-                    
+                    if (ptcl_nb[k].id == _sys[adr].id) continue;
+                    PS::S32 pot_control_flag;
+#ifdef HARD_DEBUG 
+                    assert(ptcl_nb[k].id>0);
+#endif
+                    if (stat_j==0) pot_control_flag = 0; //single 
+                    else if (stat_j<0) pot_control_flag = 1; //member
+                    else pot_control_flag = 2; //artifical
+
+                    CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
+                                                    ptcl_nb[k].pos, ptcl_nb[k].mass, ptcl_nb[k].mass_bk, 
+                                                    pot_control_flag, _eps_sq,
+                                                    r_oi_inv, r_A, _rout, _rin);
                 }
             }
         }
