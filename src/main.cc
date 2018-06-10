@@ -544,7 +544,7 @@ int main(int argc, char *argv[]){
         profile.search_cluster.start();
 #endif
         // >2.1 search clusters ----------------------------------------
-        search_cluster.searchNeighborOMP<SystemSoft, Tree, EPJSoft>
+        search_cluster.searchNeighborOMP<SystemSoft, TreeNB, EPJSoft>
             (system_soft, tree_nb, r_out.value, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
 
         search_cluster.searchClusterLocal();
@@ -559,22 +559,22 @@ int main(int argc, char *argv[]){
 
         // record real particle n_loc/glb
         n_loc = system_soft.getNumberOfParticleLocal();
-        n_glb = system_soft.getNumberOfParticleGlobal();
+        n_glb.value = system_soft.getNumberOfParticleGlobal();
 
         // >2.3 Find ARC groups and create artificial particles
         // Set local ptcl_hard for isolated  clusters
         system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
         // Find groups and add artifical particles to global particle system
-        system_hard_isolated.findGroupsAndCreateArtificalParticlesOMP(system_soft, dt_soft.value);
+        system_hard_isolated.findGroupsAndCreateArtificalParticlesOMP<SystemSoft, FPSoft>(system_soft, dt_soft.value);
 
         // update n_loc_iso, n_glb_iso for isolated clusters
-        PS::S64 n_loc_iso = system_soft.getNumberOfParticleLocal();
-        PS::S64 n_glb_iso = system_soft.getNumberOfParticleGlobal();
+        //PS::S64 n_loc_iso = system_soft.getNumberOfParticleLocal();
+        //PS::S64 n_glb_iso = system_soft.getNumberOfParticleGlobal();
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         // For connected clusters
         system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
-        system_hard_connected.findGroupsAndCreateArtificalParticlesOMP(system_soft, dt_soft.value);
+        system_hard_connected.findGroupsAndCreateArtificalParticlesOMP<SystemSoft, FPSoft>(system_soft, dt_soft.value);
         // send updated particle back to original (set zero mass particle to origin)
         if(system_hard_connected.getGroupPtclRemoteN()>0) search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
 #endif
@@ -638,10 +638,10 @@ int main(int argc, char *argv[]){
 
         // >3.1 soft force correction due to different cut-off function
         // Isolated clusters
-        CorrectForceWithCutoffClusterOMP(system_soft, system_hard_isolated.getPtcl().getPointer(), n_loc, n_loc_iso, n_split.value,  search_cluster.n_ptcl_in_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_offset_, r_in, r_out.value);
+        system_hard_isolated.correctForceWithCutoffClusterOMP(system_soft);
         
         // Connected clusters
-        CorrectForceWithCutoffTreeNeighborOMP(system_soft, search_cluster.getAdrSysConnectClusterSend());
+        system_hard_connected.correctForceWithCutoffTreeNeighborOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft);
 
         // for first step
         if(first_step_flag) {
@@ -649,7 +649,7 @@ int main(int argc, char *argv[]){
 
             // update status
             stat.time = time_sys;
-            stat.N = n_glb;
+            stat.N = n_glb.value;
             stat.N_all = n_glb_all;
 
             // calculate initial energy
@@ -692,11 +692,11 @@ int main(int argc, char *argv[]){
         // single
         kickOne(system_soft, dt_kick, search_cluster.getAdrSysOneCluster());
         // isolated
-        kickCluster(system_soft, system_hard_isolated.getPtcl(), dt_kick);
+        kickCluster(&system_soft[0], system_hard_isolated.getPtcl(), dt_kick);
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         // connected
-        kickCluster(system_soft, system_hard_connected.getPtcl(), dt_kick);
+        kickCluster(&system_soft[0], system_hard_connected.getPtcl(), dt_kick);
         search_cluster.SendAndRecieveUpdatedPtclAfterKick(system_soft, system_hard_connected.getPtcl());
 #endif
 
@@ -706,7 +706,7 @@ int main(int argc, char *argv[]){
 #endif
 
         // output information
-        if( fmod(time_sys, dt_snp.value) == 0.0){
+        if(output_flag) {
             
             // update global particle system due to kick
             system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
@@ -729,7 +729,7 @@ int main(int argc, char *argv[]){
 
             // update status
             stat.time = time_sys;
-            stat.N = n_glb;
+            stat.N = n_glb.value;
             
             stat.eng_now.clear();
             stat.eng_now.calc(&system_soft[0], system_soft.getNumberOfParticleLocal(), dt_soft.value*0.5);
@@ -803,7 +803,7 @@ int main(int argc, char *argv[]){
 #endif
 
             // data output
-            file_header.n_body = n_glb;
+            file_header.n_body = n_glb.value;
             file_header.time = time_sys;
             file_header.nfile++;
             std::string fname = fname_snp.value+"."+std::to_string(file_header.nfile);
@@ -824,7 +824,16 @@ int main(int argc, char *argv[]){
             profile.soft_tot.start();
             profile.kick.start();
 #endif
-            Kick(system_soft, tree_soft, dt_soft.value);
+            // single
+            kickOne(system_soft, dt_kick, search_cluster.getAdrSysOneCluster());
+            // isolated
+            kickCluster(&system_soft[0], system_hard_isolated.getPtcl(), dt_kick);
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+            // connected
+            kickCluster(&system_soft[0], system_hard_connected.getPtcl(), dt_kick);
+            search_cluster.SendAndRecieveUpdatedPtclAfterKick(system_soft, system_hard_connected.getPtcl());
+#endif
 
 #ifdef PROFILE
             profile.kick.end();
@@ -832,7 +841,7 @@ int main(int argc, char *argv[]){
 #endif
         }
 
-#endif
+#ifdef PROFILE
         profile.search_cluster.start();
 #endif
 
@@ -865,7 +874,8 @@ int main(int argc, char *argv[]){
         system_hard_one_cluster.initializeForOneCluster(search_cluster.getAdrSysOneCluster().size());
         system_hard_one_cluster.setPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
         system_hard_one_cluster.driveForOneCluster(dt_soft.value);
-        system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft, search_cluster.getAdrSysOneCluster());
+        //system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft, search_cluster.getAdrSysOneCluster());
+        system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft);
         ////// integrater one cluster
 #ifdef PROFILE
         profile.hard_single.end();
@@ -877,8 +887,9 @@ int main(int argc, char *argv[]){
         profile.hard_isolated.start();
 #endif
         // integrate multi cluster A
-        system_hard_isolated.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft.value,system_soft,first_step_flag);
-        system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_,remove_list);
+        system_hard_isolated.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft.value,system_soft);
+        //system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_,remove_list);
+        system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
         // integrate multi cluster A
 #ifdef PROFILE
         profile.hard_isolated.end();
@@ -892,7 +903,7 @@ int main(int argc, char *argv[]){
         profile.hard_connected.start();
 #endif
         // integrate multi cluster B
-        system_hard_connected.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft.value,system_soft,first_step_flag);
+        system_hard_connected.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft.value,system_soft);
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
         // integrate multi cluster B
 #ifdef PROFILE
@@ -923,9 +934,7 @@ int main(int argc, char *argv[]){
         profile.hard_tot.end();
         /////////////
 
-
         // > 6. Domain decomposition
-#ifdef PROFILE
         profile.domain_ex_ptcl.start();
 #endif
         // Domain decomposition, parrticle exchange and force calculation

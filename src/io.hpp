@@ -492,13 +492,15 @@ class Status {
 public:
     PS::F64 time;
     PS::S64 N;
+    PS::S64 N_all;
     EnergyAndMomemtum eng_init, eng_now, eng_diff;
 
-    Status(): time(0.0), N(0) {}
+    Status(): time(0.0), N(0), N_all(0) {}
 
     void dumpName(std::ofstream & fout, const PS::S32 width=20) {
         fout<<std::setw(width)<<"Time"
             <<std::setw(width)<<"N"
+            <<std::setw(width)<<"Nall"
             <<std::setw(width)<<"dE"
             <<std::setw(width)<<"dE/E0";
         eng_now.dumpName(fout,width);
@@ -507,6 +509,7 @@ public:
     void dump(std::ofstream & fout, const PS::S32 width=20) {
         fout<<std::setw(width)<<time
             <<std::setw(width)<<N
+            <<std::setw(width)<<N_all
             <<std::setw(width)<<eng_diff.tot
             <<std::setw(width)<<eng_diff.tot/eng_init.tot;
         eng_now.dump(fout,width);
@@ -516,6 +519,7 @@ public:
         fout<<"Time= "<<std::setprecision(15)<<time
             <<std::setprecision(precision)
             <<" N= "<<N
+            <<" Nall= "<<N_all
             <<" Enow-Einit= "<<eng_diff.tot
             <<" (Enow-Einit)/Einit= "<<eng_diff.tot/eng_init.tot
             <<std::endl;

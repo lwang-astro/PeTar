@@ -244,12 +244,12 @@ int main(int argc, char** argv)
   sys_hard.setParam(rbin, rout, rin, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, id_offset, n_split);
 
   sys_hard.setPtclForIsolatedMultiCluster(sys, ptcl_list, n_ptcl_cluster);
-  sys_hard.findGroupsAndCreateArtificalParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys, dt_tree,true);
+  sys_hard.findGroupsAndCreateArtificalParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys, dt_tree);
 
   for(int i=0; i<n_cluster; i++) {
       std::cout<<"new index list group "<<i<<std::endl;
       for (int j=0; j<n_ptcl_cluster[i]; j++) {
-          std::cout<<std::setw(10)<<ptcl_list[n_offset[i]+j];
+          std::cout<<std::setw(10)<<sys_hard.getPtcl()[n_offset[i]+j].adr_org;
       }
       std::cout<<"\nPtcl:\n";
       print_p(&sys[n_offset[i]], n_ptcl_cluster[i], n_offset[i]);
@@ -258,6 +258,16 @@ int main(int argc, char** argv)
   std::cout<<"New artifical particles: N="<<sys.getNumberOfParticleLocal()-n_sys<<"\n";
   print_p(&sys[n_sys], sys.getNumberOfParticleLocal()-n_sys, n_sys);
 
+  std::cout<<"N group, offset and first adr of artifical:\n";
+  for(int i=0; i<n_cluster; i++) {
+      std::cout<<std::setw(10)<<*sys_hard.getGroupNList(i);
+      std::cout<<" offset: "<<std::setw(10)<<*sys_hard.getGroupNOffset(i+1)<<" adr: ";
+      for(int j=*sys_hard.getGroupNOffset(i); j<*sys_hard.getGroupNOffset(i+1); j++) 
+          std::cout<<std::setw(10)<<(*sys_hard.getAdrPtclArtFirstList(j));
+      std::cout<<std::endl;
+  }
+  
+  
   //group.findGroups(p.getPointer(),p.size(), par.n_split);
   // 
   //PS::ReallocatableArray<PtclHard> pn;

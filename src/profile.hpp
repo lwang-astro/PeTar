@@ -323,7 +323,10 @@ public:
 	Tprofile hard_single;	   
 	Tprofile hard_isolated;
 	Tprofile hard_connected;
-	Tprofile soft_tot;	   
+	Tprofile soft_tot;
+	Tprofile tree_nb;
+    Tprofile tree_soft;
+    Tprofile kick;
 	Tprofile search_cluster;
     Tprofile domain_ex_ptcl;
     const PS::S32 n_profile;
@@ -334,9 +337,12 @@ public:
                   hard_isolated (Tprofile("Hard_isolated ")),
                   hard_connected(Tprofile("Hard_connected")),
                   soft_tot      (Tprofile("Soft_total    ")),
+                  tree_nb       (Tprofile("Tree_neighbor ")),
+                  tree_soft     (Tprofile("Tree_force    ")),
+                  kick          (Tprofile("Kick          ")),
                   search_cluster(Tprofile("Search_cluster")),
                   domain_ex_ptcl(Tprofile("Domain_ex_ptcl")),
-                  n_profile(8) {}
+                  n_profile(11) {}
 
 	void print(std::ostream & fout, const PS::F64 time_sys, const PS::S64 n_loop=1){
         fout<<"Time: "<<time_sys<<std::endl;

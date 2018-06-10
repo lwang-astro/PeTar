@@ -39,28 +39,27 @@ void kickOne(Tsys & _sys,
     }
 }
 
-//!leap frog kick for connected clusters------------------------------------------
-/* modify the velocity of particle in local, if remote particle, do nothing, need MPI receive to update data
+//!leap frog kick for clusters------------------------------------------
+/* modify the velocity of particle in local, if remote non-group particle, do nothing, need MPI receive to update data
    @param[in] _force: force array
    @param[in,out] _ptcl: local particle array in system hard
    @param[in]: _dt: tree step
-   @param[in]: _n: number of particls
  */
 template<class Tforce, class Tptcl>
 void kickCluster(Tforce *_force,
-                 const PS::ReallocatableArray<Tptcl>& _ptcl,
+                 PS::ReallocatableArray<Tptcl>& _ptcl,
                  const PS::F64 _dt) {
     const PS::S64 n= _ptcl.size();
 #pragma omp parallel for
     for(int i=0; i<n; i++) {
         const PS::S64 cm_adr=_ptcl[i].status;
-        const PS::S66 i_adr =_ptcl[i].adr_org;
+        const PS::S64 i_adr =_ptcl[i].adr_org;
         // if is group member, recover mass and kick due to c.m. force
         if(cm_adr>0) {
             _ptcl[i].mass = _ptcl[i].mass_bk;
             _ptcl[i].vel += _force[cm_adr].acc * _dt;
         }
-        else if(i_adr>=0) {
+        else if(i_adr>=0) { // non-member particle
             // not remote particles
             _ptcl[i].vel += _force[i_adr].acc * _dt;
         }
@@ -110,37 +109,37 @@ PS::F64 calcDtLimit(const PS::F64 time_sys,
     }
 }
 
-template <class Tptcl>
-void softKickForCM(Tptcl * ptcl_org,
-                   const PS::S32* cm_list,
-                   const PS::S32  n_cm,
-                   const PS::S32* soft_pert_list,
-                   const PS::F64  dt_soft,
-                   const PS::S32  n_split) {
-    PS::S32 offset = 2*n_split;
-    for (PS::S32 i=0; i<n_cm; i++) {
-        Tptcl* pi = &ptcl_org[cm_list[i]];
-        PS::F64vec fi= PS::F64vec(0.0);
-        const PS::S32* isoft = &soft_pert_list[i*offset];
-        PS::F64 micum = 0.0;
-#ifdef TIDAL_TENSOR
-        for (PS::S32 j=8; j<2*n_split; j++) {
-#else
-        for (PS::S32 j=0; j<2*n_split; j++) {
-#endif
-            Tptcl* pj = &ptcl_org[isoft[j]];
-            fi += pj->mass*pj->vel; // here pj->vel store the soft force of fake members
-            micum += pj->mass;
-#ifdef HARD_DEBUG
-            assert(((pj->status)>>ID_PHASE_SHIFT)==-pi->id);
-#endif
-        }
-#ifdef HARD_DEBUG
-        assert(abs(micum-pi->mass)<1e-10);
-#endif
-        pi->vel += fi/micum * dt_soft;
-    }
-}
+//template <class Tptcl>
+//void softKickForCM(Tptcl * ptcl_org,
+//                   const PS::S32* cm_list,
+//                   const PS::S32  n_cm,
+//                   const PS::S32* soft_pert_list,
+//                   const PS::F64  dt_soft,
+//                   const PS::S32  n_split) {
+//    PS::S32 offset = 2*n_split;
+//    for (PS::S32 i=0; i<n_cm; i++) {
+//        Tptcl* pi = &ptcl_org[cm_list[i]];
+//        PS::F64vec fi= PS::F64vec(0.0);
+//        const PS::S32* isoft = &soft_pert_list[i*offset];
+//        PS::F64 micum = 0.0;
+//#ifdef TIDAL_TENSOR
+//        for (PS::S32 j=8; j<2*n_split; j++) {
+//#else
+//        for (PS::S32 j=0; j<2*n_split; j++) {
+//#endif
+//            Tptcl* pj = &ptcl_org[isoft[j]];
+//            fi += pj->mass*pj->vel; // here pj->vel store the soft force of fake members
+//            micum += pj->mass;
+//#ifdef HARD_DEBUG
+//            assert(((pj->status)>>ID_PHASE_SHIFT)==-pi->id);
+//#endif
+//        }
+//#ifdef HARD_DEBUG
+//        assert(abs(micum-pi->mass)<1e-10);
+//#endif
+//        pi->vel += fi/micum * dt_soft;
+//    }
+//}
 
 template <class Tptcl>
 void softKickForOneGroup(Tptcl * ptcl_org,
@@ -1365,36 +1364,17 @@ public:
     }
 };
 
-//! substract c.m. force from component used for tidal tensor. 
-/* @param[in,out] _ptcl: aritficial particle group, the acc is updated
-   @param[in]: _n_split: artifical particle split number
-*/
-template<class Tptcl>
-void subtractFcm(Tptcl * _ptcl, const PS::S32 _n_split) {
-    // c.m.
-    const icm=2*_n_split;
-    Tptcl* picm = &_ptcl[icm];
-    PS::F64vec Fcm = pi->vel;
-
-    PS::F64vec vtmp(0.0);
-    PS::F64 mtmp = 0.0;
-    for (PS::S32 i=0; i<ngroup; i++) {
-        Tptcl* pj = &ptcl_org[group_list[i]];
-#ifdef HARD_DEBUG
-        assert(pj->mass>0.0);
-#endif
-        vtmp += pj->mass*pj->vel;
-        mtmp += pj->mass;
-    }
-    pi->vel = vtmp/mtmp;
-#ifdef HARD_DEBUG
-    assert(fabs(pi->mass-mtmp)<1e-10);
-#endif
-
-    // remove center force
-    for (PS::S32 i=0; i<8; i++) 
-        ptcl_org[soft_pert_list[i]].vel -= Fcm;
-}
+////! substract c.m. force from component used for tidal tensor. 
+///* @param[in]     _ptcl_cm: c.m. particle
+//   @param[in,out] _ptcl_tt: tidal tensor artifical particle (8)
+//*/
+//template<class Tptcl>
+//void subtractFcm(Tptcl& _ptcl_cm, Tptcl* _ptcl_tt) {
+//    PS::F64vec& acc_cm = _ptcl_cm.acc;
+// 
+//    // remove center force
+//    for (PS::S32 i=0; i<8; i++)  _ptcl_tt[i].acc -= acc_cm;
+//}
 
 #else
 class keplerSplineFit{

@@ -1313,7 +1313,6 @@ class SearchCluster{
 public:
     PS::ReallocatableArray<PS::S32> n_ptcl_in_multi_cluster_isolated_;
     PS::ReallocatableArray<PS::S32> n_ptcl_in_multi_cluster_isolated_offset_;
-    PS::ReallocatableArray<PS::S32> n_group_multi_cluster_isolated_;
     PS::ReallocatableArray<Mediator> mediator_sorted_id_cluster_;
     PS::ReallocatableArray<PtclComm> ptcl_recv_;
     PS::ReallocatableArray<PS::S32> adr_sys_multi_cluster_isolated_;
@@ -1485,8 +1484,6 @@ public:
         const PS::S32 my_rank = PS::Comm::getRank();
         //        const PS::S32 n_proc_tot = PS::Comm::getNumberOfProc();
         const PS::S32 n_loc = sys.getNumberOfParticleLocal();
-        const PS::F64 r_oi_inv = 1.0/(r_out-r_in);
-        const PS::F64 r_A = (r_out-r_in)/(r_out+r_in);
 #pragma omp parallel
         {
             const PS::S32 ith = PS::Comm::getThreadNum();
@@ -1519,8 +1516,6 @@ public:
                             continue;
                         }
                         id_ngb_multi_cluster[ith].push_back( std::pair<PS::S32, PS::S32>(sys[i].id, (nbl+ii)->id) );
-                        PS::S32 pot_control_flag;
-                        Tepj* nj = nbl+ii;
                         if( (nbl+ii)->rank_org != my_rank ){
                             ptcl_outer[ith].push_back(PtclOuter((nbl+ii)->id, sys[i].id, (nbl+ii)->rank_org));
                             //n_tmp3++;
