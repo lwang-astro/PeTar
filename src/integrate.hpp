@@ -41,12 +41,12 @@ void kickOne(Tsys & _sys,
 
 //!leap frog kick for clusters------------------------------------------
 /* modify the velocity of particle in local, if remote non-group particle, do nothing, need MPI receive to update data
-   @param[in] _force: force array
+   @param[in,out] _sys: particle system
    @param[in,out] _ptcl: local particle array in system hard
    @param[in]: _dt: tree step
  */
-template<class Tforce, class Tptcl>
-void kickCluster(Tforce *_force,
+template<class Tsys, class Tptcl>
+void kickCluster(Tsys& _sys,
                  PS::ReallocatableArray<Tptcl>& _ptcl,
                  const PS::F64 _dt) {
     const PS::S64 n= _ptcl.size();
@@ -57,11 +57,11 @@ void kickCluster(Tforce *_force,
         // if is group member, recover mass and kick due to c.m. force
         if(cm_adr>0) {
             _ptcl[i].mass = _ptcl[i].mass_bk;
-            _ptcl[i].vel += _force[cm_adr].acc * _dt;
+            _ptcl[i].vel += _sys[cm_adr].acc * _dt;
         }
         else if(i_adr>=0) { // non-member particle
             // not remote particles
-            _ptcl[i].vel += _force[i_adr].acc * _dt;
+            _ptcl[i].vel += _sys[i_adr].acc * _dt;
         }
     }
 }

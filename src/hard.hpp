@@ -215,8 +215,9 @@ private:
         _adr_first_ptcl_arti_in_cluster.resizeNoInitialize(_n_group_in_cluster_offset[n_cluster]);
 
         // add artifical particle to particle system
+        GroupPars gpar(_n_split);
         PS::S32 rank = PS::Comm::getRank();
-        const PS::S32 n_artifical_per_group = 2*_n_split+1;
+        const PS::S32 n_artifical_per_group = gpar.n_ptcl_artifical;
         for(PS::S32 i=0; i<num_thread; i++) {
             // ptcl_artifical should be integer times of 2*n_split+1
             assert(ptcl_artifical[i].size()%n_artifical_per_group==0);
@@ -230,11 +231,12 @@ private:
             // Update the status of group members to c.m. address in ptcl sys. Notice c.m. is at the end of an artificial particle group
             for (PS::S32 j=0; j<ptcl_artifical[i].size(); j+=n_artifical_per_group) {
                 // obtain group member nember
-                PS::S32 j_cm = j+2*_n_split;
-                PS::S32 n_members = ptcl_artifical[i][j_cm].status;
-                PS::S32 i_cluster = ptcl_artifical[i][j+2].status;
-                PS::S32 j_group = ptcl_artifical[i][j+3].status;
-                PS::F64 rsearch_member=ptcl_artifical[i][j+2].r_search;
+                gpar.getGroupIndex(&ptcl_artifical[i][j]);
+                PS::S32 j_cm = gpar.offset_cm + j;
+                PS::S32 n_members = gpar.n_members;
+                PS::S32 i_cluster = gpar.i_cluster;
+                PS::S32 j_group = gpar.i_group;
+                PS::F64 rsearch_member=ptcl_artifical[i][j].r_search;
                 // make sure group index increase one by one
                 assert(j_group==j_group_recored+1);
                 j_group_recored=j_group;
@@ -316,10 +318,11 @@ private:
                                                       const PS::F64 _r_A,
                                                       const PS::S32 _n_split,
                                                       const PS::F64 _eps_sq) {
-        
+
+        GroupPars gpars(_n_split);
         for (int j=0; j<_n_group; j++) {  // j: j_group
             PS::S32 j_start = _adr_first_ptcl_arti_in_cluster[j];
-            PS::S32 j_cm = j_start + 2*_n_split;
+            PS::S32 j_cm = j_start + gpars.offset_cm;
 
             // loop all artifical particles: tidal tensor, orbital and c.m. particle
             for (int k=j_start; k<=j_cm; k++) {  
@@ -332,10 +335,10 @@ private:
                 // group
                 for (int kj=0; kj<_n_group; kj++) { // group
                     PS::S32 kj_start = _adr_first_ptcl_arti_in_cluster[kj];
-                    PS::S32 kj_cm = kj_start + 2*_n_split;
+                    PS::S32 kj_cm = kj_start + gpars.offset_cm;
 
                     // particle arti orbital
-                    for (int kk=kj_start+_n_split; kk<kj_cm; kk++) {
+                    for (int kk=kj_start+gpars.offset_orb; kk<kj_cm; kk++) {
                         if(kk==k) continue; //avoid same particle
                         auto& ptcl_kk = _sys[kk];
                         CalcAccPotShortWithLinearCutoff(pos_k, acc_k, pot_k, 
@@ -361,22 +364,19 @@ private:
 
 #ifdef TIDAL_TENSOR
             // substract c.m. force (acc) from tidal tensor force (acc)
-            for (PS::S32 k=0; k<8; k++)  _sys[j_start+k].acc -= acc_cm;
+            for (PS::S32 k=gpars.offset_tt; k<gpars.offset_orb; k++)  _sys[j_start+k].acc -= acc_cm;
 #endif
                 
             // After c.m. force used, it can be replaced by the averaged force on orbital particles
             acc_cm=PS::F64vec(0.0);
             PS::F64 m_ob_tot = 0.0;
 
-            PS::S32 job_start = j_start;
-#ifdef TIDAL_TENSOR
-            job_start +=8;
-#endif
+            PS::S32 job_start = j_start+gpars.offset_orb;
             for (PS::S32 k=job_start; k<j_cm; k++) {
                 acc_cm += _sys[k].mass*_sys[k].acc; 
                 m_ob_tot += _sys[k].mass;
 #ifdef HARD_DEBUG
-                assert(((_sys[k].status)>>ID_PHASE_SHIFT)==-sys[j_cm].id);
+                assert(((_sys[k].status)>>ID_PHASE_SHIFT)==-_sys[j_cm].id);
 #endif
             }
             acc_cm /= m_ob_tot;
@@ -463,6 +463,7 @@ private:
             correctForceWithCutoffArtificalOneClusterImp(_sys, _ptcl_local, adr_real_start, adr_real_end, n_group, adr_first_ptcl_arti, r_oi_inv, r_A, _rin, _rout, _n_split, _eps_sq);
 
             // obtain correction for real particles in clusters
+            GroupPars gpars(_n_split);
             for (int j=adr_real_start; j<adr_real_end; j++) {
                 PS::S64 adr = _ptcl_local[j].adr_org;
 #ifdef HARD_DEBUG
@@ -491,8 +492,8 @@ private:
                 for (int k=0; k<n_group; k++) {
                     // loop artifical particle orbital
                     PS::S32 k_start = adr_first_ptcl_arti[k];
-                    PS::S32 k_cm = k_start + 2*_n_split;
-                    for (int ki=k_start+_n_split; ki<k_cm; ki++) {
+                    PS::S32 k_cm = k_start + gpars.offset_cm;
+                    for (int ki=k_start+gpars.offset_orb; ki<k_cm; ki++) {
                         auto& ptcl_k = _sys[ki];
                         CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
                                                         ptcl_k.pos, ptcl_k.mass, ptcl_k.mass_bk, 
@@ -602,10 +603,17 @@ private:
     }
     
     //! Hard integration for clusters
-    /* @param[in,out] ptcl_org: 
+    /* @param[in,out] _ptcl_local: local particle in system_hard for integration
+       @param[in] _n_ptcl: particle number in cluster
+       @param[in] _ptcl_artifical: artifical particle array
+       @param[in] _n_group: group number in cluster
+       @param[in] _time_end: integration ending time (initial time is fixed to 0)
      */
+    template <class Tsoft>
     void driveForMultiClusterImpl(PtclHard * _ptcl_local,
                                   const PS::S32 _n_ptcl,
+                                  Tsoft* _ptcl_artifical,
+                                  const PS::S32 _n_group,
                                   const PS::F64 _time_end) {
 #ifdef HARD_CHECK_ENERGY
         std::map<PS::S32, PS::S32> N_count;  // counting number of particles in one cluster
@@ -624,29 +632,48 @@ private:
 #endif
         PS::S32 nstepcount = 0;
 
-//#ifdef HERMITE
-//        if(_n_ptcl>5) {
-        SearchGroup<PtclHard> group;
-        group.findGroups(_ptcl_local, _n_ptcl, n_split_);
+        GroupPars gpars[_n_group](_n_ptcl);
+        for(int i=0; i<n_group; i++) {
+            gpars[i].getGroupIndex(&_ptcl_artifical[i*gpars[i].n_ptcl_artifical]);
+        }
+        
+        // Only one group with all particles in group
+        if(_n_group==1&&gpars[0].n_members==_n_ptcl) {
+            PS::S32 icm = gpars[0].offset_cm;
+            // First kick c.m. 
+            _ptcl_artifical[icm].vel += _ptcl_artifical[icm].acc * _time_end;
 
 #ifdef HARD_DEBUG
-        // If only ghost particle exist, this assertion happen
-        assert(group.getPtclN()>0);
+            assert(-_ptcl_artifical[icm].id==_ptcl_local[0].id);
+
+            // check whether c.m. pos. and vel. are consistent
+            PS::F64 mass_cm_check=0.0;
+            PS::F64vec vel_cm_check=PS::F64vec(0.0);
+            PS::F64vec pos_cm_check=PS::F64vec(0.0);
+
+            for(int k=0; k<gpars[0].n_members; k++) {
+                mass_cm_check += _ptcl_local[k].mass_bk;
+                vel_cm_check +=  _ptcl_local[k].vel*_ptcl_local[k].mass_bk;
+                pos_cm_check +=  _ptcl_local[k].pos*_ptcl_local[k].mass_bk;
+            }
+            vel_cm_check /= mass_cm_check;
+            pos_cm_check /= mass_cm_check;
+
+            assert(abs(mass_cm_check-_ptcl_artifical[icm].mass_bk)<1e-10);
+            PS::F64vec dvec = vel_cm_check-_ptcl_artifical[icm].vel;
+            PS::F64vec dpos = pos_cm_check-_ptcl_artifical[icm].pos;
+            assert(abs(dvec*dvec)<1e-20);
+            assert(abs(dpos*dpos)<1e-20);
 #endif
 
-
-
-        if(group.getPtclN()==1) {
-#ifdef HARD_DEBUG
-            assert(group.getNumOfGroups()==1);
-#endif
-            PtclHard* pcm = &_ptcl_local[group.getPtclIndex(0)];
+            // create c.m. particles
+            PtclHard pcm(_ptcl_artifical[icm], 0, -1);
             PS::S32 iact = 0;
             
             ARCIntegrator<PtclHard, PtclH4, PtclForce> Aint(ARC_control_soft_, Int_pars_);
             Aint.reserveARMem(1);
             // Aint.reservePertMem(1);
-            group.getBinPars(Aint.bininfo[0],_ptcl_local,0,n_split_);
+            gpars[0].getBinPars(Aint.bininfo[0], _ptcl_artifical);
 #ifdef HARD_DEBUG_PRINT            
             if(Aint.bininfo[0].ax>Int_pars_.rout)  Aint.bininfo[0].print(std::cerr,13);
 #endif

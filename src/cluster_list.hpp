@@ -176,14 +176,14 @@ private:
     typedef std::pair<PS::S32, PS::S32> PLinker;
 //    typedef std::pair<PS::S32, PS::F64> RCList;
 
-    PS::ReallocatableArray<PS::S32> p_list_;
+    //PS::ReallocatableArray<PS::S32> p_list_;
     // group member list
     PS::ReallocatableArray<PS::S32> group_list_;
     PS::ReallocatableArray<PS::S32> group_list_disp_;
     PS::ReallocatableArray<PS::S32> group_list_n_;
     //PS::ReallocatableArray<PS::S32> group_list_pert_adr_; // soft pert adr in soft_pert_list_
     // fake particle list
-    PS::ReallocatableArray<PS::S32> soft_pert_list_;
+    // PS::ReallocatableArray<PS::S32> soft_pert_list_;
     // PS::ReallocatableArray<PS::S32> soft_pert_list_disp_;
 
 //    PS::ReallocatableArray<Tptcl> ptcl_;               ///new ptcl with c.m.
@@ -932,7 +932,6 @@ public:
                group member order depend on which is found first
                group member status is updated to fake_order
        4. correct mass of c.m. and members
-     */
     void findGroups(Tptcl* _ptcl_in_cluster,
                     const PS::S32 _n_ptcl,
                     const PS::S32 n_split) {
@@ -1124,6 +1123,7 @@ public:
 //            }
 //        }
     }
+     */
 
     //void searchPerturber(Tptcl *_ptcl_in_cluster, const PS::S32 _n_ptcl) {
     //    searchPerturber(pert_list_, _ptcl_in_cluster, _n_ptcl);
@@ -1171,10 +1171,12 @@ public:
             std::cerr<<"Error! ID_PHASE_SHIFT is too small for phase split! shift bit: "<<ID_PHASE_SHIFT<<" n_split: "<<_n_split<<std::endl;
             abort();
         }
-        generateNewPtcl<PtclTree<Tptcl>>(_i_cluster, _ptcl_in_cluster, _n_ptcl, _ptcl_artifical, _n_groups, group_list_, group_list_disp_, group_list_n_, soft_pert_list_, _rbin, _rin, _rout, _dt_tree, _id_offset, _n_split);
+        PS::ReallocatableArray<PS::S32> emtpy_list;
+        generateNewPtcl<PtclTree<Tptcl>>(_i_cluster, _ptcl_in_cluster, _n_ptcl, _ptcl_artifical, _n_groups, group_list_, group_list_disp_, group_list_n_, emtpy_list, _rbin, _rin, _rout, _dt_tree, _id_offset, _n_split);
         //searchPerturber(pert_list_, _ptcl_in_cluster, _n_ptcl);
     }
 
+    /*
     void resolveGroups() {
         const PS::S32 ng = group_list_n_.size();
         for (int i=0; i<ng; i++) {
@@ -1196,30 +1198,31 @@ public:
         group_list_n_.clearSize();
         group_list_disp_.clearSize();
     }
+    */
 
-//    Tptcl* getPtcl() {
-//        return ptcl_.getPointer();
-//    };
+    //    Tptcl* getPtcl() {
+    //        return ptcl_.getPointer();
+    //    };
 
     //PS::ReallocatableArray<PS::S32> *getPerts() {
     //    return pert_list_.getPointer();
     //}
 
-    PS::S32 getPtclN() const {
-        return p_list_.size();
-    }
+    //PS::S32 getPtclN() const {
+    //    return p_list_.size();
+    //}
+    // 
+    //const PS::S32* getPtclList() const {
+    //    return p_list_.getPointer();
+    //}
+    // 
+    //PS::S32 getPtclIndex(const std::size_t i) const {
+    //    return p_list_.getPointer()[i];
+    //}
 
-    const PS::S32* getPtclList() const {
-        return p_list_.getPointer();
-    }
-
-    PS::S32 getPtclIndex(const std::size_t i) const {
-        return p_list_.getPointer()[i];
-    }
-
-//    PS::ReallocatableArray<Tptcl> *getPGroups() {
-//        return group_ptcl_.getPointer();
-//    }
+    //    PS::ReallocatableArray<Tptcl> *getPGroups() {
+    //        return group_ptcl_.getPointer();
+    //    }
 
     PS::S32 getNumOfGroups() const {
         return group_list_n_.size();
@@ -1237,46 +1240,15 @@ public:
         return group_list_n_[igroup];
     }
 
-    PS::S32 getGroupPertAdr(const std::size_t igroup, const std::size_t imember, const std::size_t iphase, const PS::S32 n_split) const {
-        return soft_pert_list_[igroup*2*n_split+imember+2*iphase];
-    }
-    // 
-    PS::S32* getGroupPertList(const std::size_t igroup, const PS::S32 n_split) {
-        return &soft_pert_list_[igroup*2*n_split];
-    }
+    
+    //PS::S32 getGroupPertAdr(const std::size_t igroup, const std::size_t imember, const std::size_t iphase, const PS::S32 n_split) const {
+    //    return soft_pert_list_[igroup*2*n_split+imember+2*iphase];
+    //}
+    //// 
+    //PS::S32* getGroupPertList(const std::size_t igroup, const PS::S32 n_split) {
+    //    return &soft_pert_list_[igroup*2*n_split];
+    //}
 
-    // assume the binary information stored in artifical star mass_bk
-    void getBinPars(Binary &bin, const Tptcl _ptcl_in_cluster[], const std::size_t igroup, const PS::S32 n_split) {
-        const PS::S32 ioff = igroup*2*n_split;
-        if (_ptcl_in_cluster[soft_pert_list_[ioff+12]].mass_bk==0.0) {
-            bin.ax   = _ptcl_in_cluster[soft_pert_list_[ioff  ]].mass_bk;
-            bin.ecc  = _ptcl_in_cluster[soft_pert_list_[ioff+1]].mass_bk;
-            bin.peri = _ptcl_in_cluster[soft_pert_list_[ioff+2]].mass_bk;
-            bin.tstep= _ptcl_in_cluster[soft_pert_list_[ioff+3]].mass_bk;
-            bin.inc  = _ptcl_in_cluster[soft_pert_list_[ioff+4]].mass_bk;
-            bin.OMG  = _ptcl_in_cluster[soft_pert_list_[ioff+5]].mass_bk;
-            bin.omg  = _ptcl_in_cluster[soft_pert_list_[ioff+6]].mass_bk;
-            bin.ecca = _ptcl_in_cluster[soft_pert_list_[ioff+7]].mass_bk;
-            bin.tperi= _ptcl_in_cluster[soft_pert_list_[ioff+8]].mass_bk;
-            bin.stable_factor= _ptcl_in_cluster[soft_pert_list_[ioff+9]].mass_bk;
-            bin.m1   = _ptcl_in_cluster[soft_pert_list_[ioff+10]].mass_bk;
-            bin.m2   = _ptcl_in_cluster[soft_pert_list_[ioff+11]].mass_bk;
-        }
-        else {
-            bin.ax   = _ptcl_in_cluster[soft_pert_list_[ioff+1]].mass_bk;
-            bin.ecc  = _ptcl_in_cluster[soft_pert_list_[ioff  ]].mass_bk;
-            bin.peri = _ptcl_in_cluster[soft_pert_list_[ioff+3]].mass_bk;
-            bin.tstep= _ptcl_in_cluster[soft_pert_list_[ioff+2]].mass_bk;
-            bin.inc  = _ptcl_in_cluster[soft_pert_list_[ioff+5]].mass_bk;
-            bin.OMG  = _ptcl_in_cluster[soft_pert_list_[ioff+4]].mass_bk;
-            bin.omg  = _ptcl_in_cluster[soft_pert_list_[ioff+7]].mass_bk;
-            bin.ecca = _ptcl_in_cluster[soft_pert_list_[ioff+6]].mass_bk;
-            bin.tperi= _ptcl_in_cluster[soft_pert_list_[ioff+9]].mass_bk;
-            bin.stable_factor= _ptcl_in_cluster[soft_pert_list_[ioff+8]].mass_bk;
-            bin.m1   = _ptcl_in_cluster[soft_pert_list_[ioff+11]].mass_bk;
-            bin.m2   = _ptcl_in_cluster[soft_pert_list_[ioff+10]].mass_bk;
-        }
-    }
     
 //    RCList* getRoutChangeList() {
 //        return Rout_change_list_.getPointer();
@@ -1307,6 +1279,61 @@ public:
 //#endif
 //    }
 
+};
+
+
+//! Group paramter class
+/* get artifical particle group parameters
+ */
+class GroupPars{
+public:
+    PS::S32 i_cluster;  ///> cluster index
+    PS::S32 i_group;    ///> group index in cluster
+    PS::S32 n_members;  ///> number of members
+    PS::S32 n_members_1st; ///> number of members in first component
+    PS::S32 n_members_2nd; ///> number of members in second component
+    const PS::S32 offset_cm;   ///> c.m. index offset in group
+    const PS::S32 offset_orb;  ///> orbital partical offset in group
+    const PS::S32 offset_tt;   ///> tital tensor partical offset in group
+    oconst PS::S32 n_ptcl_artifical; ///> artifical particle number
+
+    GroupPars(const PS::S32 _n_split): i_cluster(-1), i_group(-1), n_members(0), n_members_1st(0), n_members_2nd(0), offset_cm(2*_n_split), 
+#ifdef TIDAL_TENSOR
+                                       offset_orb(8), 
+#else
+                                       offset_orb(0), 
+#endif
+                                       offset_tt(0), n_ptcl_arti(2*_n_split+1) {}
+
+    // assume the binary information stored in artifical star mass_bk
+    template <class Tptcl>
+    void getBinPars(Binary &bin, const Tptcl* _ptcl_artifical) {
+        bin.ax   = _ptcl_artifical[0].mass_bk;
+        bin.ecc  = _ptcl_artifical[1].mass_bk;
+        bin.peri = _ptcl_artifical[2].mass_bk;
+        bin.tstep= _ptcl_artifical[3].mass_bk;
+        bin.inc  = _ptcl_artifical[4].mass_bk;
+        bin.OMG  = _ptcl_artifical[5].mass_bk;
+        bin.omg  = _ptcl_artifical[6].mass_bk;
+        bin.ecca = _ptcl_artifical[7].mass_bk;
+        bin.tperi= _ptcl_artifical[8].mass_bk;
+        bin.stable_factor= _ptcl_artifical[9].mass_bk;
+        bin.m1   = _ptcl_artifical[10].mass_bk;
+        bin.m2   = _ptcl_artifical[11].mass_bk;
+    }
+
+    //! return group parameters
+    /* @param[in] _ptcl_artifical: ptcl artifical particle group
+    */
+    template <class Tptcl>
+    void getGroupIndex(Tptcl* _ptcl_artifical) {
+        n_members_1st = _ptcl_artifical[0].status;
+        n_members_2nd = _ptcl_artifical[1].status;
+        i_cluster = _ptcl_artifical[2].status;
+        i_group   = _ptcl_artifical[3].status;
+        n_members = _ptcl_artifical[offset_cm].status;
+    }
+    
 };
 
 class SearchCluster{
