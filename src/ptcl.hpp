@@ -29,23 +29,25 @@ public:
 
     Ptcl(): id(-10), status(-10) {}
 
-    Ptcl(const Ptcl& p_) { Ptcl::DataCopy(p_);  }
-    Ptcl(const ParticleBase& p_) { ParticleBase::DataCopy(p_); }
+    template<class Tptcl>
+    Ptcl(const Tptcl& _p) { Ptcl::DataCopy(_p);  }
 
-    // Unsafe, suppressed!
-    //template<class Tp>
-    //Ptcl(const Tp& p_): ParticleBase(p_), id(-5), status(-5) {abort();}
+    template<class Tptcl>
+    Ptcl(const Tptcl& _p, const PS::F64 _r_search, const PS::F64 _mass_bk, const PS::S64 _id, const PS::S64 _status): ParticleBase(_p), r_search(_r_search), mass_bk(_mass_bk), id(_id), status(_status)  {}
 
-    template<class Tp>
-    Ptcl(const Tp& p_, const PS::F64 r_search_, const PS::F64 mass_bk_, const PS::S64 id_, const PS::S64 status_): ParticleBase(p_), r_search(r_search_), mass_bk(mass_bk_), id(id_), status(status_)  {}
+    template<class Tptcl>
+    void DataCopy(const Tptcl& _p) {
+        ParticleBase::DataCopy(_p);
+        r_search = _p.r_search;
+        mass_bk  = _p.mass_bk;
+        id       = _p.id;
+        status   = _p.status;
+    }
 
-    template<class Tp>
-    void DataCopy(const Tp& p) {
-        ParticleBase::DataCopy(p);
-        r_search = p.r_search;
-        mass_bk  = p.mass_bk;
-        id       = p.id;
-        status   = p.status;
+    template<class Tptcl>
+    Ptcl& operator = (const Tptcl& _p) {
+        Ptcl::DataCopy(_p);
+        return *this;
     }
 
     void print(std::ostream & fout){
@@ -94,6 +96,17 @@ public:
 #endif
     }
 
+    void dump(FILE *fp) {
+        fwrite(this, sizeof(*this),1,fp);
+    }
+
+    void read(FILE *fp) {
+        size_t rcount = fread(this, sizeof(*this),1,fp);
+        if (rcount<1) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            abort();
+        }
+    }
 };
 
 PS::F64 Ptcl::r_search_min = 0.0;

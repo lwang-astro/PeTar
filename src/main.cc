@@ -692,11 +692,11 @@ int main(int argc, char *argv[]){
         // single
         kickOne(system_soft, dt_kick, search_cluster.getAdrSysOneCluster());
         // isolated
-        kickCluster(&system_soft[0], system_hard_isolated.getPtcl(), dt_kick);
+        kickCluster(system_soft, system_hard_isolated.getPtcl(), dt_kick);
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         // connected
-        kickCluster(&system_soft[0], system_hard_connected.getPtcl(), dt_kick);
+        kickCluster(system_soft, system_hard_connected.getPtcl(), dt_kick);
         search_cluster.SendAndRecieveUpdatedPtclAfterKick(system_soft, system_hard_connected.getPtcl());
 #endif
 
@@ -827,11 +827,11 @@ int main(int argc, char *argv[]){
             // single
             kickOne(system_soft, dt_kick, search_cluster.getAdrSysOneCluster());
             // isolated
-            kickCluster(&system_soft[0], system_hard_isolated.getPtcl(), dt_kick);
+            kickCluster(system_soft, system_hard_isolated.getPtcl(), dt_kick);
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
             // connected
-            kickCluster(&system_soft[0], system_hard_connected.getPtcl(), dt_kick);
+            kickCluster(system_soft, system_hard_connected.getPtcl(), dt_kick);
             search_cluster.SendAndRecieveUpdatedPtclAfterKick(system_soft, system_hard_connected.getPtcl());
 #endif
 

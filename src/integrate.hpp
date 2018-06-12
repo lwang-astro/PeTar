@@ -189,8 +189,8 @@ public:
 
     PtclH4(): dt(0.0), time(0.0) {}
     
-    template<class Tp>
-    PtclH4(const Tp &p): Ptcl(p), dt(0.0), time(0.0) {}
+    template<class Tptcl>
+    PtclH4(const Tptcl &_p): Ptcl(_p), dt(0.0), time(0.0) {}
 
     void dump(FILE *fp) {
         fwrite(this, sizeof(PtclH4),1,fp);
@@ -235,7 +235,6 @@ public:
     }
 };
 
-template<class Tptcl>
 class HermiteIntegrator{
 private:
     PS::ReallocatableArray<PtclPred> pred_;
@@ -347,8 +346,8 @@ private:
     //
     /* \return fail_flag: if the time step < dt_min, return true (failure)
      */
-    template <class Tp>
-    bool CalcBlockDt2ndAct(Tp ptcl[],
+    template <class Tptcl>
+    bool CalcBlockDt2ndAct(Tptcl ptcl[],
                            const PtclForce force[],
                            const PS::S32 adr_array[],
                            const PS::S32 n_act, 
@@ -379,9 +378,9 @@ private:
         return fail_flag;
     }
 
-    template <class Tp, class ARCint>
+    template <class Tptcl, class ARCint>
     inline void CalcAcc0Acc1Act(PtclForce force[],
-                         const Tp ptcl[],
+                         const Tptcl ptcl[],
                          const PS::S32 Ilist[],
                          const PS::S32 n_act,
                          const PS::S32 Jlist[],
@@ -410,7 +409,7 @@ private:
                 PS::F64 mcmcheck =0.0;
 #endif
                 if (jadr<nbin) {
-                    const Tptcl* pj = Aint->getGroupPtcl(jadr);
+                    const auto* pj = Aint->getGroupPtcl(jadr);
                     PS::F64 sd = Aint->getSlowDown(jadr);
                     for(PS::S32 k=0; k<Aint->getGroupN(jadr); k++) {
                         PS::F64 r2 = 0.0;
@@ -443,13 +442,13 @@ private:
         }
     }
 
-    template <class Tpi, class Tp, class ARCint>
+    template <class Tpi, class Tptcl, class ARCint>
     inline void CalcAcc0Acc1AllJ(PtclForce &force, 
                           const Tpi &pi,
                           const PS::S32 iadr,
                           const PS::F64vec &vcmsdi,
                           const PS::F64 sdi,
-                          const Tp ptcl[],
+                          const Tptcl ptcl[],
                           const PS::S32 n_tot,
                           const PS::S32 nbin,
                           const PS::F64 rin,
@@ -464,7 +463,7 @@ private:
 #ifdef HARD_DEBUG
             PS::F64 mcmcheck =0.0;
 #endif
-            const Tptcl* pj = Aint->getGroupPtcl(j);
+            const auto* pj = Aint->getGroupPtcl(j);
             PS::F64 sdj = 1.0/Aint->getSlowDown(j);
             PS::F64vec vcmsdj = (1.0-sdj)*ptcl[j].vel;
             for(PS::S32 k=0; k<Aint->getGroupN(j); k++) {
@@ -498,9 +497,9 @@ private:
     }
 
 
-    template <class Tp, class ARCint>
+    template <class Tptcl, class ARCint>
     void CalcAcc0Acc1Act(PtclForce force[],
-                         const Tp ptcl[],
+                         const Tptcl ptcl[],
                          const PS::S32 n_tot,
                          const PS::S32 Ilist[],
                          const PS::S32 n_act,
@@ -524,7 +523,7 @@ private:
                 PS::F64 mcmcheck =0.0;
 #endif
                 const PS::S32 ni = Aint->getGroupN(iadr);
-                const Tptcl* pi = Aint->getGroupPtcl(iadr);
+                const auto* pi = Aint->getGroupPtcl(iadr);
                 const PS::F64 sdi = 1.0/Aint->getSlowDown(iadr);
                 const PS::F64vec vcmsdi = (1.0-sdi)*ptcl[iadr].vel;
                 PtclForce fp[ni];
@@ -762,30 +761,68 @@ public:
         time_next_.reserve(n);
     }
 
-    void setPtcl(Tptcl * ptcl_org, 
-                 const PS::S32 n_org, 
-                 const PS::S32 ptcl_list[],
-                 const PS::S32 ptcl_n) {
-#ifdef HARD_DEBUG
-        assert(ptcl_n<=n_org);
-#endif
-        resizeArray(ptcl_n);
-        for (int i=0; i<ptcl_n; i++) {
+    //! Copy particle data to local array
+    /* @param[in] _ptcl: particle data array
+       @param[in] _n_ptcl: number of particle need to be added
+       @param[in] _ptcl_list: particle address in _ptcl
+     */
+    template <class Tptcl>
+    void setPtcl(Tptcl * _ptcl, 
+                 const PS::S32 _n_ptcl, 
+                 const PS::S32* _ptcl_list) {
+        for (int i=0; i<_n_ptcl; i++) {
             ptcl_.increaseSize(1);
-            ptcl_.back().DataCopy(ptcl_org[ptcl_list[i]]);
+            ptcl_.back().DataCopy(_ptcl[_ptcl_list[i]]);
             //ptcl_.pushBackNoCheck(ptcl_org[ptcl_list[i]]);
         }
     }
 
-    void writeBackPtcl(Tptcl * ptcl_org, 
-                 const PS::S32 n_org, 
-                 const PS::S32 ptcl_list[],
-                 const PS::S32 ptcl_n) {
+    //! Copy particle data to local array
+    /* @param[in] _ptcl: particle data array
+       @param[in] _n_ptcl: number of particles need to be added
+     */
+    template <class Tptcl>
+    void setPtcl(Tptcl * _ptcl, 
+                 const PS::S32 _n_ptcl) {
+        for (int i=0; i<_n_ptcl; i++) {
+            ptcl_.increaseSize(1);
+            ptcl_.back().DataCopy(_ptcl[i]);
+        }
+    }
+
+    //! Write back particle data to original array
+    /* @param[out] _ptcl: original particle data array
+       @param[in] _n_ptcl: number of particles need for copy
+       @param[in] _ptcl_list: particle address in _ptcl
+       @param[in] _i_start: start index in local particle array for copy
+     */
+    template <class Tptcl>
+    void writeBackPtcl(Tptcl * _ptcl, 
+                       const PS::S32 _n_ptcl, 
+                       const PS::S32* _ptcl_list,
+                       const PS::S32 _i_start) {
 #ifdef HARD_DEBUG
-        assert(ptcl_n<=n_org);
+        assert(_i_start+_n_ptcl<=ptcl_.size());
 #endif
-        for (int i=0; i<ptcl_n; i++) {
-            ptcl_org[ptcl_list[i]].DataCopy(ptcl_[i]);
+        for (int i=0; i<_n_ptcl; i++) {
+            _ptcl[_ptcl_list[i]].DataCopy(ptcl_[i+_i_start]);
+        }
+    }
+
+    //! Write back particle data to original array
+    /* @param[out] _ptcl: original particle data array
+       @param[in] _n_ptcl: number of particles need for copy
+       @param[in] _i_start: particle address in _ptcl
+     */
+    template <class Tptcl>
+    void writeBackPtcl(Tptcl * _ptcl, 
+                 const PS::S32 _n_ptcl, 
+                 const PS::S32 _i_start) {
+#ifdef HARD_DEBUG
+        assert(_i_start+_n_ptcl<=ptcl_.size());
+#endif
+        for (int i=0; i<_n_ptcl; i++) {
+            _ptcl[i].DataCopy(ptcl_[i+_i_start]);
         }
     }
 
@@ -1257,19 +1294,21 @@ public:
         }
     }
 
+    //! tidal tensor fitting function,
+    /* @param[in] _ptcl_tt: tidal tensor measure particles
+       @param[in] _bin: binary information, get the scaling factor of distance
+       @param[in] _n_split: artifical particle splitting number
+     */
     template<class Tptcl>
-    void fit(Tptcl* data, const PS::S32* list, const Binary& bin, const PS::S32 n_split) {
+    void fit(Tptcl* _ptcl_tt, const Binary& _bin, const PS::S32 _n_split) {
         PS::F64vec fi[8];
-        if(data[list[10]].mass_bk>0) {
-            for (PS::S32 i=0; i<8; i+=2) {
-                fi[i]   = data[list[i+1]].vel;
-                fi[i+1] = data[list[i  ]].vel;
-            }
-        }
-        else {
-            for (PS::S32 i=0; i<8; i++) 
-                fi[i] = data[list[i]].vel;
-        }
+#ifdef HARD_DEBUG
+        assert(_ptcl_tt[10].mass_bk==0);
+        assert(_n_split>4);
+#endif
+        // get acceleration
+        for (PS::S32 i=0; i<8; i++) fi[i] = _ptcl_tt[i].acc;
+        // get cofficients
         for (PS::S32 i=0; i<8; i++) {
             T2[0] =  0.250000000000000*fi[0][0] + -0.250000000000000*fi[2][0] +  0.250000000000000*fi[4][0] + -0.250000000000000*fi[6][0];
             T2[1] =  0.125000000000000*fi[0][1] +  0.125000000000000*fi[1][0] + -0.125000000000000*fi[2][1] + -0.125000000000000*fi[3][0] 
@@ -1310,7 +1349,7 @@ public:
                 +    0.062500000000000*fi[6][0] +  0.125000000000000*fi[6][2] +  0.062500000000000*fi[7][1] +  0.125000000000000*fi[7][2];
         }
         // Rescale
-        PS::F64 T2S = 1.0/(bin.ax*(1+bin.ecc)*0.35);
+        PS::F64 T2S = 1.0/(_bin.ax*(1+_bin.ecc)*0.35);
         PS::F64 T3S = T2S*T2S;
         for (PS::S32 i=0; i<6;  i++) T2[i] *= T2S;
         for (PS::S32 i=0; i<10; i++) T3[i] *= T3S;
@@ -1391,26 +1430,31 @@ public:
         spline_[0]=spline_[1]=spline_[2]=NULL;
     }
     
+    //! orbital force fitting function,
+    /* @param[in] _ptcl_orb: orbital particles
+       @param[in] _bin: binary information, get the scaling factor of distance
+       @param[in] _n_split: artifical particle splitting number
+     */
     template<class Tptcl> 
-    void fit(Tptcl* data, const PS::S32* list, const Binary& bin, const PS::S32 n_split) {
+    void fit(Tptcl* _ptcl_orb, const Binary& _bin, const PS::S32 _n_split) {
 #ifdef HARD_DEBUG
-        assert(n_split>=4);
+        assert(_n_split>=4);
 #endif
         const PS::F64 twopi = PI*2.0;
-        peri_  = bin.peri;
-        tperi_ = bin.tperi - twopi;  // make sure tperi_ is negative
-        const PS::U32 np = n_split+1;
+        peri_  = _bin.peri;
+        tperi_ = _bin.tperi - twopi;  // make sure tperi_ is negative
+        const PS::U32 np = _n_split+1;
         PS::F64 x[np],y[3][np];
-        for(PS::U32 i=0;i<np;i++) {
-            x[i] = PS::F64(i)/n_split*twopi;
-            x[i] = bin.peri/twopi * (x[i] - bin.ecc*std::sin(x[i]));
+        for(PS::U32 i=0; i<np; i++) {
+            x[i] = PS::F64(i)/_n_split*twopi;
+            x[i] = _bin.peri/twopi * (x[i] - _bin.ecc*std::sin(x[i]));
         }
-        for(PS::S32 i=0; i<n_split; i++) {            
+        for(PS::S32 i=0; i<_n_split; i++) {            
             for(PS::S32 j=0; j<3; j++)
-                y[j][i] = data[list[2*i+1]].vel[j] - data[list[2*i]].vel[j];  // acc1 - acc0
+                y[j][i] = _ptcl_orb[2*i+1].acc[j] - _ptcl_orb[2*i].acc[j];  // acc1 - acc0
         }
         for(PS::S32 i=0; i<3; i++) {
-            y[i][n_split] = y[i][0];
+            y[i][_n_split] = y[i][0];
 
             if(acc_[i]!=NULL) gsl_interp_accel_free(acc_[i]);
             acc_[i] = gsl_interp_accel_alloc();
@@ -1511,10 +1555,10 @@ public:
 };
 #endif
 
-template<class Tptcl, class Tpert, class Tpforce>
+template<class TpARC, class Tpert, class Tpforce>
 class ARCIntegrator{
 private:
-    typedef ARC::chain<Tptcl> ARChain;
+    typedef ARC::chain<TpARC> ARChain;
     typedef ARC::chainpars ARControl;
     PS::ReallocatableArray<ARChain> clist_;
     PS::ReallocatableArray<ARC_pert_pars> par_list_;
@@ -1552,9 +1596,9 @@ public:
         pforce_.reserve(n);
     }
     //void initialize(PS::S32 group_list[];
-    //                ReallocatableArray<Tptcl> groups[],
+    //                ReallocatableArray<TpARC> groups[],
     //                const PS::S32 n_groups,
-    //                Tptcl* ptcl,
+    //                TpARC* ptcl,
     //                PS::S32 adr_cm[],
     //                ReallocatableArray<PS::S32> pertlist[],
     //                ARControl &control,
@@ -1573,53 +1617,65 @@ public:
     //    Int_pars_ = &Int_pars;
     //}
 
-    void addOneGroup(Tptcl* ptcl_org,
-                     const PS::S32* group_list,
-                     const PS::S32 n_group,
-                     const PS::S32* soft_pert_list,
-                     const PS::S32 n_split,
-                     Tpert* ptcl_pert = NULL,
-                     Tpforce* pert_force = NULL,
-                     const PS::S32* pert_list = NULL,
-                     const PS::S32 n_pert = 0) {
+    //! Add group of particles to ARC class
+    /* @param[in] _ptcl: particle data array
+       @param[in] _n_ptcl: number of particles
+       @param[in] _ptcl_soft_pert: soft perturbation artifical particles
+       @param[in] _n_split: split number for artifical particles
+       @param[in] _ptcl_pert: perturber particle array, notice the first _n_group are c.m. which has consistent order of ARC groups
+       @param[in] _force_pert: perturber force array
+       @param[in] _ptcl_pert_list: perturber particle index in _ptcl_pert
+       @param[in] _n_pert: number of perturbers
+     */
+    template <class Tptcl, class Tpsoft>
+    void addOneGroup(Tptcl* _ptcl,
+                     const PS::S32 _n_ptcl,
+                     const Tpsoft* _ptcl_soft_pert,
+                     const PS::S32 _n_split,
+                     Tpert* _ptcl_pert = NULL,
+                     Tpforce* _pert_force = NULL,
+                     const PS::S32* _ptcl_pert_list = NULL,
+                     const PS::S32 _n_pert = 0) {
+        // set group offset
         const PS::S32 igroup = clist_.size();
         const PS::S32 ioff = pert_.size();
         pert_disp_.push_back(ioff);
         pert_n_.push_back(0);
+        
         clist_.increaseSize(1);
-        clist_.back().allocate(n_group);
-        for(int i=0; i<n_group; i++) {
-            clist_.back().addP(ptcl_org[group_list[i]]);
+        clist_.back().allocate(_n_ptcl);
+        for(int i=0; i<_n_ptcl; i++) {
+            clist_.back().addP(_ptcl[i]);
         }
-
-        // c.m.
-        if(ptcl_pert!=NULL) {
-            pert_.push_back(&ptcl_pert[igroup]);   // c.m. position is in igroup
-            pforce_.push_back(&pert_force[igroup]);
+        
+        // c.m. position is in igroup, put the c.m. particle to perturber list thus it can be used for predicting the c.m. position and velocity
+        if(_ptcl_pert!=NULL) {
+            pert_.push_back(&_ptcl_pert[igroup]);   
+            pforce_.push_back(&_pert_force[igroup]);
             pert_n_[igroup]++;
         }
 
         // perturber
-        for(int i=0; i<n_pert; i++) {
-            const PS::S32  k = pert_list[i];
+        for(int i=0; i<_n_pert; i++) {
+            const PS::S32  k = _ptcl_pert_list[i];
             //const PS::S32 ik = ioff+pert_n_[igroup]++;
-            pert_.push_back(&ptcl_pert[k]);
-            pforce_.push_back(&pert_force[k]);
+            pert_.push_back(&_ptcl_pert[k]);
+            pforce_.push_back(&_pert_force[k]);
             pert_n_[igroup]++;
         }
         par_list_.push_back(ARC_pert_pars(*Int_pars_));
-        par_list_.back().fit(ptcl_org,soft_pert_list,bininfo[igroup],n_split);
+        par_list_.back().fit(_ptcl_soft_pert,bininfo[igroup],_n_split);
 
-        if(ptcl_pert!=NULL) {
-            clist_.back().pos = ptcl_pert[igroup].pos;
-            clist_.back().vel = ptcl_pert[igroup].vel;
-            clist_.back().mass = ptcl_pert[igroup].mass;
+        // recored c.m. inforamtion
+        if(_ptcl_pert!=NULL) {
+            clist_.back().pos = _ptcl_pert[igroup].pos;
+            clist_.back().vel = _ptcl_pert[igroup].vel;
+            clist_.back().mass = _ptcl_pert[igroup].mass;
         }
 
         // dt.push_back(0.0);
 
         //clist_.back().init(0.0, *ARC_control_, &(par_list_.back()));
-        return;
     }
 
     void initialSlowDown(const PS::F64 tend, const PS::F64 sdfactor = 1.0e-8) {
@@ -1629,7 +1685,7 @@ public:
                 finner = clist_[i].mass/(finner*finner);
                 finner = finner*finner;
                 clist_[i].slowdown.setSlowDownPars(finner, bininfo[i].peri, sdfactor);
-                Tptcl p[2];
+                TpARC p[2];
                 OrbParam2PosVel(p[0].pos, p[1].pos, p[0].vel, p[1].vel, bininfo[i].m1, bininfo[i].m2, bininfo[i].ax, bininfo[i].ecc, bininfo[i].inc, bininfo[i].OMG, bininfo[i].omg, PI);
                 p[0].mass = bininfo[i].m1;
                 p[1].mass = bininfo[i].m2;
@@ -1639,7 +1695,7 @@ public:
                 p[1].status = 1;
 #endif
 #endif
-                //center_of_mass_correction(*(Tptcl*)&clist_[i], p, 2);
+                //center_of_mass_correction(*(TpARC*)&clist_[i], p, 2);
                 PS::F64 acc[2][3];
                 const PS::S32 ipert = pert_disp_[i];
                 //Newtonian_extA(acc, bininfo[i].tperi+bininfo[i].peri, p, 2, &pert_[ipert], &pforce_[ipert], pert_n_[i], &par_list_[i]);
@@ -1886,20 +1942,25 @@ public:
         return nstep;
     }
 
-    template <class Tp>
-    void updateCM(Tp ptcl[],
-                  PS::S32 act_list[],
-                  PS::S32 n_act) {
-        for(int i=0; i<n_act; i++) {
-            PS::S32 iact = act_list[i];
-            clist_[iact].pos = ptcl[iact].pos;
-            clist_[iact].vel = ptcl[iact].vel;
-            clist_[iact].mass = ptcl[iact].mass;
+    //! Update the c.m. data from the original particle data
+    /* @param[out] _ptcl: original particle array
+       @param[in] _ptcl_list: particle index list need to be updated, assume _ptcl and ARC group have consistent index
+       @param[in] _n_ptcl: number of particles
+     */
+    template <class Tptcl>
+    void updateCM(Tptcl* _ptcl,
+                  PS::S32* _ptcl_list,
+                  PS::S32 _n_ptcl) {
+        for(int i=0; i<_n_ptcl; i++) {
+            PS::S32 k = _ptcl_list[i];
+            clist_[k].pos =  _ptcl[k].pos;
+            clist_[k].vel =  _ptcl[k].vel;
+            clist_[k].mass = _ptcl[k].mass;
         }
     }
 
-    template <class Tp>
-    void updateCM(Tp ptcl[]) {
+    template <class Tptcl>
+    void updateCM(Tptcl ptcl[]) {
         for(int i=0; i<clist_.size(); i++) {
             clist_[i].pos = ptcl[i].pos;
             clist_[i].vel = ptcl[i].vel;
@@ -1929,7 +1990,7 @@ public:
         return clist_.size();
     }
 
-    const Tptcl* getGroupPtcl(const PS::S32 i) const {
+    const TpARC* getGroupPtcl(const PS::S32 i) const {
 #ifdef ARC_ERROR
         assert(i<clist_.size());
 #endif        
