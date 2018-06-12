@@ -46,7 +46,8 @@ void CalcEnergyHard(const PtclHard ptcl[], const PS::S32 n_tot, Teng & eng,
 #define NAN_CHECK(val) assert((val) == (val));
 #endif
 
-void print_p(PtclHard* p, const int n, const int width = 20, const int precision = 14) {
+template<class Tptcl>
+void print_p(Tptcl* p, const int n, const int width= 20, const int precision = 14) {
     std::cout<<std::setprecision(precision);
     std::cout<<std::setw(width)<<"mass"
              <<std::setw(width)<<"x1"
@@ -142,7 +143,7 @@ int main(int argc, char** argv)
   }
 
   int N;
-  PS::F64 rin, rout, rbin, rsearch, eps, eta, dt_limit, time, m_average=0;
+  PS::F64 rin, rout, rbin, rsearch, eps, eta, dt_limit, time;
   PS::S32 rcount = fscanf(fin, "%lf %d %lf %lf %lf %lf %lf %lf %lf\n", 
                           &time, &N, &rin, &rout, &rsearch, &rbin, &dt_limit, &eta, &eps);
   if (rcount<8) {
@@ -154,86 +155,34 @@ int main(int argc, char** argv)
 
   fprintf(stderr,"t_end = %e\nN = %d\nr_in = %e\nr_out = %e\neta = %e\ndt_limit = %e\neps = %e\n",time,N,rin,rout,eta,dt_limit,eps);
 
-  PS::ReallocatableArray<ParticleBase> pin;
-  PS::ReallocatableArray<PtclHard> p;
-  PS::ReallocatableArray<PS::S32> adr;
+  ParticleBase pin;
+  PS::ReallocatableArray<PS::S32> p_list;
+  PS::ReallocatableArray<PS::S32> n_cluster;
   PS::ReallocatableArray<PS::S32> np;
-  pin.resizeNoInitialize(N);
+  p_list.resizeNoInitialize(N);
+  n_cluster.resizeNoInitialize(1);
+  n_cluster[0] = N;
+
+  PS::ParticleSystem<FPSoft> sys;
+
   for (int i=0; i<N; i++) {
-      pin[i].readAscii(fin);
-      p.push_back(PtclHard(pin[i]));
-      p.back().r_search = rsearch;
-      //p.back().mass_bk = 0.0;
-      p.back().id = i+1;
-      p.back().status = 0;
-      m_average += p.back().mass;
-      adr.push_back(i);
-  }
-  m_average /= N;
-
-  PtclHard pcm;
-  calc_center_of_mass(pcm, p.getPointer(), p.size());
-  center_of_mass_shift(pcm, p.getPointer(), p.size());
-
-  print_p(p.getPointer(),N);
-
-  SearchGroup<PtclHard> group;
-  group.findGroups(p.getPointer(), N, n_split);
-  group.searchAndMerge(p.getPointer(), rbin);
-  std::cerr<<"SearchAndMerge\n";
-  //print_p(p.getPointer(),N);
-  
-  for(int i=0; i<group.getNumOfGroups(); i++) {
-      std::cerr<<"group["<<i<<"]: ";
-      for(int j=0; j<group.getGroupN(i); j++) {
-          std::cerr<<std::setw(10)<<group.getGroup(i)[j];
-      }
-      std::cerr<<std::endl;
+      pin.readAscii(fin);
+      sys.addOneParticle(FPSoft(Ptcl(pin, rsearch, 0.0, i+1, 0), 0, i));
+      p_list[i]=i;
   }
 
-  std::cerr<<"Ptcl List:";
-  for(int i=0; i<group.getPtclN(); i++) {
-      std::cerr<<std::setw(10)<<group.getPtclList()[i];
-  }
-  std::cerr<<std::endl;
-  
-  PS::ReallocatableArray<PtclHard> ptcl_new;
-
-  group.generateList(p.getPointer(), ptcl_new, rbin, rin, rout, dt_limit, N, n_split);
-  std::cerr<<"GenerateList\n";
-  print_p(p.getPointer(),p.size());
-
-  std::cerr<<"new ptcl: "<<ptcl_new.size()<<"\n ";
-  print_p(ptcl_new.getPointer(),ptcl_new.size());
-
-  p.reserveEmptyAreaAtLeast(ptcl_new.size());
-  for(int i=0;i<ptcl_new.size();i++) {
-      p.pushBackNoCheck(ptcl_new[i]);
-      adr.push_back(i+N);
-  }
-
-  np.push_back(p.size());
-
-  std::cerr<<"new p: "<<p.size()<<"\n ";
-  print_p(p.getPointer(),np[0]);
-    
-  for(PS::S32 i=0; i<p.size(); i++) {
-      if (p[i].id>0&&p[i].status>0) {
-          p[i].vel = PS::F64vec(0.0);
-      }
-  }
-
-
-  SystemHard sys;
-  PS::ParticleSystem<FPSoft> fp;
   PS::F64 time_sys = 0.0;
   PS::F64 dt_min_hard = 1.0;
   for (PS::S32 i=0;i<40;i++) dt_min_hard *= 0.5;
-  sys.setParam(rbin, rout, rin, eps, dt_limit, dt_min_hard, eta, time_sys, 1e-8, N, n_split);
-  sys.setARCParam(1e-10, 1e-6, 1e-3, 1e-24);
-  
-  sys.setPtclForIsolatedMultiCluster(p,adr,np);
-  //sys.initialMultiCluserOMP(fp);
+
+  SystemHard sys_hard;
+  sys_hard.setParam(rbin, rout, rin, eps, dt_limit, dt_min_hard, eta, time_sys, 1e-8, N, n_split);
+  sys_hard.setARCParam(1e-10, 1e-6, 1e-3, 1e-24);
+   
+  sys_hard.setPtclForIsolatedMultiCluster(sys, p_list, n_cluster);
+  print_p(sys_hard.getPtcl().getPointer(),N);
+
+  sys_hard.findGroupsAndCreateArtificalParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys, dt_limit);
 
   FILE* fout;
   std::string fname="hard.dat.";
@@ -253,27 +202,27 @@ int main(int argc, char** argv)
   PS::F64 eps2 = eps*eps;
   PtclHard pcm0,pcm1,ppcm0,ppcm1;
   fprintf(stderr,"Time = %e\n", time_sys);
-  print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
-  write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),pcm0,et0,rin,rout,eps2,0.0);
-  //write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(), &sys.ESD0);
-  write_p(fout2,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),ppcm0,etcm0,rin,rout,eps2,0.0,1);
+  print_p(sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size());
+  write_p(fout,time_sys,sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size(),pcm0,et0,rin,rout,eps2,0.0);
+  //write_p(fout,time_sys,sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size(), &sys_hard.ESD0);
+  write_p(fout2,time_sys,sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size(),ppcm0,etcm0,rin,rout,eps2,0.0,1);
   while(time_sys < time){
       fprintf(stderr,"Time = %e\n", time_sys+dt_limit);
-      sys.driveForMultiCluster<PS::ParticleSystem<FPSoft>,FPSoft>(dt_limit, fp);
+      sys_hard.driveForMultiCluster<PS::ParticleSystem<FPSoft>,FPSoft>(dt_limit, sys);
       time_sys += dt_limit;
-      for(PS::S32 i=0; i<sys.ptcl_hard_.size(); i++) {
-          if (sys.ptcl_hard_[i].id>0&&sys.ptcl_hard_[i].status>0) {
-              sys.ptcl_hard_[i].vel = PS::F64vec(0.0);
+      for(PS::S32 i=0; i<sys_hard.getPtcl().size(); i++) {
+          if (sys_hard.getPtcl()[i].id>0&&sys_hard.getPtcl()[i].status>0) {
+              sys_hard.getPtcl()[i].vel = PS::F64vec(0.0);
           }
       }
-      print_p(sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size());
-      //write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(), &sys.ESD1, &sys.ESD0);
-      write_p(fout,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),pcm1,et,rin,rout,eps2,et0.tot);
-      write_p(fout2,time_sys,sys.ptcl_hard_.getPointer(),sys.ptcl_hard_.size(),ppcm1,etcm,rin,rout,eps2,etcm0.tot,1);
+      print_p(sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size());
+      //write_p(fout,time_sys,sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size(), &sys_hard.ESD1, &sys_hard.ESD0);
+      write_p(fout,time_sys,sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size(),pcm1,et,rin,rout,eps2,et0.tot);
+      write_p(fout2,time_sys,sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size(),ppcm1,etcm,rin,rout,eps2,etcm0.tot,1);
       std::cerr<<"CM: pos="<<pcm1.pos<<" vel="<<pcm1.vel<<" shift pos="<<pcm1.pos-pcm0.pos<<" shift vel="<<pcm1.vel-pcm0.vel<<std::endl;
       std::cerr<<"CMHint: pos="<<ppcm1.pos<<" vel="<<ppcm1.vel<<" shift pos="<<ppcm1.pos-ppcm0.pos<<" shift vel="<<ppcm1.vel-ppcm0.vel<<std::endl;
-      std::cerr<<"Profile: ARC steps: "<<sys.ARC_substep_sum<<std::endl;
-      sys.ARC_substep_sum = 0;
+      std::cerr<<"Profile: ARC steps: "<<sys_hard.ARC_substep_sum<<std::endl;
+      sys_hard.ARC_substep_sum = 0;
   }
   
 

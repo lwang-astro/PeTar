@@ -105,28 +105,23 @@ int main(int argc, char** argv)
     PtclHard pcm;
     calc_center_of_mass(pcm, p.getPointer(), p.size());
     center_of_mass_shift(pcm, p.getPointer(), p.size());
-
-    SearchGroup<PtclHard> group;
-            
-    group.findGroups(p.getPointer(), N, 8);
     
-    HermiteIntegrator<PtclHard> Hint;
+    HermiteIntegrator Hint;
     Hint.setParams(par.eta, par.rin, par.rout, par.eps*par.eps);
-    Hint.setPtcl(p.getPointer(),p.size(),group.getPtclList(),group.getPtclN());
-    PS::S32 n_groups = group.getNumOfGroups();
-    assert(n_groups==0);
-    PS::F64 dr_search[n_groups];
-    Hint.searchPerturber(dr_search,n_groups);
+    Hint.resizeArray(p.size());
+    Hint.setPtcl(p.getPointer(),p.size());
+    PS::F64* dr_search=NULL;
+    Hint.searchPerturber(dr_search,0);
             
     Hint.CalcEnergy(E0);
     
     std::cerr<<"Energy: init: ";
-    E0.dump(std::cerr);
+    E0.print(std::cerr);
 
     PS::S32 group_act_n = 0;
     PS::ReallocatableArray<PS::S32> group_act_list; //active group_list act adr
 
-    group_act_list.resizeNoInitialize(group.getPtclN());
+    group_act_list.resizeNoInitialize(p.size());
             
     PS::F64 time_sys=0.0;
 #ifdef FIX_STEP_DEBUG
@@ -135,7 +130,7 @@ int main(int argc, char** argv)
     PS::F64 dt_limit = calcDtLimit(time_sys, par.dt_limit_hard, dt_min_hard);
 #endif
     ARCIntegrator<PtclHard, PtclH4, PtclForce>* arcint = NULL;
-    Hint.initialize(dt_limit, dt_min_hard,  group_act_list.getPointer(), group_act_n, n_groups, arcint);
+    Hint.initialize(dt_limit, dt_min_hard,  group_act_list.getPointer(), group_act_n, 0, arcint);
 
     FILE* fout;
     std::string fname="hermite.dat.";
@@ -159,7 +154,7 @@ int main(int argc, char** argv)
         dt_limit = calcDtLimit(time_sys, par.dt_limit_hard, dt_min_hard);
 #endif
         Hint.integrateOneStep(time_sys,dt_limit,dt_min_hard,true,arcint);
-        Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
+        Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, 0);
         if(fmod(time_sys,par.dt_limit_hard)==0) {
             //std::cout<<"Time = "<<time_sys<<std::endl;
             Hint.CalcEnergy(E1);
@@ -170,14 +165,14 @@ int main(int argc, char** argv)
             
         }
     }
-    Hint.writeBackPtcl(p.getPointer(),p.size(),group.getPtclList(),group.getPtclN());
+    Hint.writeBackPtcl(p.getPointer(),p.size(),0);
     
     Hint.CalcEnergy(E1);
 
     EnergyAndMomemtum Ediff = E1-E0;
     
     std::cerr<<"final: ";
-    E1.dump(std::cerr);
+    E1.print(std::cerr);
     std::cerr<<"error: "<<Ediff.tot/E0.tot<<std::endl;
 
 #ifdef HARD_DEBUG

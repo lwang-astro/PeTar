@@ -10,6 +10,7 @@
 #include "hard.hpp"
 #include "ptree.h"
 #include "kepler.hpp"
+#include "soft.hpp"
 //#include "rsearch.hpp"
 #include "cluster_list.hpp"
 
@@ -21,33 +22,33 @@
 //const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ = SAFTY_FACTOR_FOR_SEARCH * SAFTY_FACTOR_FOR_SEARCH;
 //const PS::F64 SAFTY_OFFSET_FOR_SEARCH = 1e-7;
 
-class EnergyAndMomemtum{
-public:
-    PS::F64 kin;
-    PS::F64 pot;
-    PS::F64 tot;
-    PS::F64vec L; // angular momentum
-    PS::F64 Lt; // total angular momemtum
-
-    EnergyAndMomemtum() {
-        clear();
-    }
-
-    void clear(){
-        kin = pot = tot = Lt = 0.0;
-        L = PS::F64vec(0.0);
-    }
-
-    EnergyAndMomemtum operator -(const EnergyAndMomemtum& eng){
-        EnergyAndMomemtum diff;
-        diff.kin = this->kin - eng.kin;
-        diff.pot = this->pot - eng.pot;
-        diff.tot = this->tot - eng.tot;
-        diff.L   = this->L   - eng.L;
-        diff.Lt  = std::sqrt(diff.L*diff.L);
-        return diff;
-    }
-};
+//class EnergyAndMomemtum{
+//public:
+//    PS::F64 kin;
+//    PS::F64 pot;
+//    PS::F64 tot;
+//    PS::F64vec L; // angular momentum
+//    PS::F64 Lt; // total angular momemtum
+// 
+//    EnergyAndMomemtum() {
+//        clear();
+//    }
+// 
+//    void clear(){
+//        kin = pot = tot = Lt = 0.0;
+//        L = PS::F64vec(0.0);
+//    }
+// 
+//    EnergyAndMomemtum operator -(const EnergyAndMomemtum& eng){
+//        EnergyAndMomemtum diff;
+//        diff.kin = this->kin - eng.kin;
+//        diff.pot = this->pot - eng.pot;
+//        diff.tot = this->tot - eng.tot;
+//        diff.L   = this->L   - eng.L;
+//        diff.Lt  = std::sqrt(diff.L*diff.L);
+//        return diff;
+//    }
+//};
 
 template<class Tptcl, class Teng>
 void CalcEnergyHard(const Tptcl ptcl[], const PS::S32 n_tot, Teng & eng, 
@@ -103,7 +104,7 @@ void write_p(FILE* fout, const PS::F64 time, const Teng &E, const Teng &Ediff, c
 #define NAN_CHECK(val) assert((val) == (val));
 #endif
 
-void print_p(PtclH4* p, const int n) {
+void print_p(Ptcl* p, const int n) {
     std::cout<<std::setw(12)<<"mass"
              <<std::setw(12)<<"x1"
              <<std::setw(12)<<"x2"
@@ -146,7 +147,7 @@ int main(int argc, char** argv)
   }
 
   int N;
-  PS::F64 rin, rout, rsearch, rbin, eps, eta, dt_limit, time, m_average=0;
+  PS::F64 rin, rout, rsearch, rbin, eps, eta, dt_limit, time;
   PS::S32 rcount = fscanf(fin, "%lf %d %lf %lf %lf %lf %lf %lf %lf\n", 
                           &time, &N, &rin, &rout, &rsearch, &rbin, &dt_limit, &eta, &eps);
   if (rcount<9) {
@@ -157,35 +158,40 @@ int main(int argc, char** argv)
 
   fprintf(stderr,"t_end = %e\nN = %d\nr_in = %e\nr_out = %e\neta = %e\ndt_limit = %e\neps = %e\n",time,N,rin,rout,eta,dt_limit,eps);
 
-  PS::ReallocatableArray<ParticleBase> pin;
-  PS::ReallocatableArray<PtclH4> p;
-  PS::ReallocatableArray<PS::S32> adr;
+  ParticleBase pin;
+  PS::ReallocatableArray<Ptcl> p;
+  PS::ReallocatableArray<PS::S32> p_list;
+  PS::ReallocatableArray<PS::S32> n_cluster;
   PS::ReallocatableArray<PS::S32> np;
-  pin.resizeNoInitialize(N);
+  p.resizeNoInitialize(N);
+  p_list.resizeNoInitialize(N);
+  n_cluster.resizeNoInitialize(1);
+  n_cluster[0] = N;
   for (int i=0; i<N; i++) {
-      pin[i].readAscii(fin);
-      p.push_back(PtclH4(pin[i]));
-      p.back().r_search = rsearch;
-      //p.back().mass_bk = 0.0;
-      p.back().id = i+1;
-      p.back().status = 0;
-      m_average += p.back().mass;
-      adr.push_back(i);
+      pin.readAscii(fin);
+      p[i]=Ptcl(pin, rsearch, 0.0, i+1, 0);
+      p_list[i]=i;
   }
-  m_average /= N;
 
-  PtclH4 pcm;
-  calc_center_of_mass(pcm, p.getPointer(), N);
-  center_of_mass_shift(pcm, p.getPointer(), N);
+  //PS::ParticleSystem<FPSoft> sys;
+  //for (int i=0; i<p.size(); i++) sys.addOneParticle(FPSoft(p[i],0,i));
+  
+  const PS::S32 n_split = 8;
+
+  //SystemHard sys_hard;
+  //sys_hard.setParam(rbin, rout, rin, eps, dt_limit, dt_limit, eta, 0.0, 0.0, id_offset, n_split);
+  // 
+  //sys_hard.setPtclForIsolatedMultiCluster(sys, p_list, n_cluster);
+  //sys_hard.findGroupsAndCreateArtificalParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys, dt_limit);
 
   print_p(p.getPointer(),N);
 
-  const PS::S32 n_split = 8;
 
-  SearchGroup<PtclH4> group;
-  group.findGroups(p.getPointer(), N, n_split);
-  group.searchAndMerge(p.getPointer(), rsearch);
-  //std::cout<<"SearchAndMerge\n";
+  SearchGroup<Ptcl> group;
+  
+  //group.findGroups(p.getPointer(), N, n_split);
+  group.searchAndMerge(p.getPointer(), N, rsearch);
+  std::cout<<"SearchAndMerge\n";
   // 
   //for(int i=0; i<group.getNGroups(); i++) {
   //    std::cout<<"group["<<i<<"]: ";
@@ -201,30 +207,32 @@ int main(int argc, char** argv)
   //}
   //std::cout<<std::endl;
   
-  PS::ReallocatableArray<PtclH4> ptcl_new;
-
-  group.generateList(p.getPointer(), ptcl_new, rsearch, rsearch, rsearch, dt_limit, N, n_split);
+  PS::ReallocatableArray<Ptcl> ptcl_new;
+  PS::S32 n_group;
+  group.generateList(0, p.getPointer(), N, ptcl_new, n_group, rbin, rin, rout, dt_limit, N, n_split);
   //std::cout<<"GenerateList\n";
   //print_p(p.getPointer(),p.size());
 
   //std::cout<<"new ptcl: "<<ptcl_new.size()<<"\n ";
   //print_p(ptcl_new.getPointer(),ptcl_new.size());
 
-  p.reserveEmptyAreaAtLeast(ptcl_new.size());
+
+  PS::ReallocatableArray<FPSoft> psys;
+  psys.reserveEmptyAreaAtLeast(ptcl_new.size());
   for(int i=0;i<ptcl_new.size();i++) {
-      p.pushBackNoCheck(ptcl_new[i]);
-      adr.push_back(i+N);
+      psys.pushBackNoCheck(FPSoft(ptcl_new[i],0,i));
+      //    adr.push_back(i+N);
   }
 
-  np.push_back(p.size());
+  //np.push_back(p.size());
 
-  std::cout<<"new p: "<<p.size()<<"\n ";
-  print_p(p.getPointer(),np[0]);
+  std::cout<<"create artifical particles: N= "<<ptcl_new.size()<<"\n ";
+  print_p(ptcl_new.getPointer(),ptcl_new.size());
 
-  group.findGroups(p.getPointer(),p.size(),n_split);
+  //group.findGroups(p.getPointer(),p.size(),n_split);
 
   ARC::chainpars ARC_control;
-  ARC_control.setA(Newtonian_AW<PtclH4,ARC_pert_pars>,Newtonian_extA_soft<PtclH4,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+  ARC_control.setA(Newtonian_AW<Ptcl,ARC_pert_pars>,Newtonian_extA_soft<Ptcl,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
   ARC_control.setabg(0,1,0);
   ARC_control.setErr(1e-10,1e-24,1e-6);
 #ifdef ARC_SYM
@@ -246,15 +254,18 @@ int main(int argc, char** argv)
   Int_pars.pot_off = (1.0 + Int_pars.r_A)/rout;
   Int_pars.eps2 = eps*eps;
 
-  ARCIntegrator<PtclH4, PtclH4, PtclForce> Aint(ARC_control, Int_pars);
-  pcm = p[group.getPtclList()[0]];
+  ARCIntegrator<Ptcl, PtclH4, PtclForce> Aint(ARC_control, Int_pars);
+  GroupPars gpars(n_split);
+  gpars.getGroupIndex(ptcl_new.getPointer());
+  Ptcl* pcm = &ptcl_new[gpars.offset_cm];
   Aint.reserveARMem(1);
   Aint.reservePertMem(10);
-  group.getBinPars(Aint.bininfo[0],p.getPointer(),0,n_split);
-  Aint.addOneGroup(p.getPointer(),group.getGroup(0), group.getGroupN(0),group.getGroupPertList(0,n_split), n_split, &pcm, NULL, NULL, 0);
+  gpars.getBinPars(Aint.bininfo[0],ptcl_new.getPointer());
+  Aint.addOneGroup(p.getPointer(), gpars.n_members, psys.getPointer(gpars.offset_tt), n_split);
+  PS::S32 iact=0;
+  Aint.updateCM(pcm, &iact, 1);
 
-  std::cerr<<"Add group, N = "<<group.getGroupN(0)<<std::endl;
-  
+  //Aint.initialSlowDown(_time_end, sdfactor_);
   Aint.initial();
   
   EnergyAndMomemtum e0,e1,ediff;

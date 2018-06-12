@@ -116,7 +116,6 @@ public:
 
 class SystemHard{
 public:
-    PS::ReallocatableArray<PtclHard> ptcl_hard_;
 #ifdef PROFILE
     PS::S64 ARC_substep_sum;
     PS::F64 ARC_n_groups;
@@ -133,6 +132,7 @@ private:
     PS::S64 id_offset_;
     PS::S32 n_split_;
     
+    PS::ReallocatableArray<PtclHard> ptcl_hard_;
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_;
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_disp_;
     PS::ReallocatableArray<PS::S32> n_group_in_cluster_;
@@ -763,9 +763,9 @@ private:
 #endif
 #ifdef ARC_DEBUG_PRINT
 #ifdef ARC_SYM_SD_PERIOD
-            Aint.info_print(std::cerr, ARC_n_groups, 1, 1, group.getGroupN(0),dt_limit_hard_,kp);
+            Aint.info_print(std::cerr, ARC_n_groups, 1, _n_ptcl, gpars.n_members,dt_limit_hard_,kp);
 #else
-            Aint.info_print(std::cerr, ARC_n_groups, 1, 1, group.getGroupN(0),dt_limit_hard_,0);
+            Aint.info_print(std::cerr, ARC_n_groups, 1, _n_ptcl, gpars.n_members,dt_limit_hard_,0);
 #endif
 #endif
 #ifdef PROFILE
@@ -896,7 +896,7 @@ private:
             Hint.writeBackPtcl(&_ptcl_local[i_single_start], n_single, _n_group);
 
 #ifdef ARC_DEBUG_PRINT
-            Aint.info_print(std::cerr, ARC_n_groups, n_groups, group.getPtclN(), _n_ptcl, dt_limit_hard_,0);
+            Aint.info_print(std::cerr, ARC_n_groups, _n_group, _n_ptcl, n_single, dt_limit_hard_,0);
 #endif
 #ifdef HARD_CHECK_ENERGY
             CalcEnergyHardFull(_ptcl_local, _n_ptcl, E1, AE1, HE1, ESD1, Hint, Aint);
@@ -975,11 +975,11 @@ public:
 #endif
         ) {
 #ifdef HARD_DEBUG_DEEP_CHECK
-        ARC_control_pert_.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_test<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
-        ARC_control_soft_.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_test<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+        ARC_control_pert_.setA(Newtonian_AW<Ptcl,ARC_pert_pars>,Newtonian_extA_test<Ptcl,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+        ARC_control_soft_.setA(Newtonian_AW<Ptcl,ARC_pert_pars>,Newtonian_extA_test<Ptcl,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
 #else
-        ARC_control_pert_.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_pert<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
-        ARC_control_soft_.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_soft<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+        ARC_control_pert_.setA(Newtonian_AW<Ptcl,ARC_pert_pars>,Newtonian_extA_pert<Ptcl,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+        ARC_control_soft_.setA(Newtonian_AW<Ptcl,ARC_pert_pars>,Newtonian_extA_soft<Ptcl,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
 #endif
         ARC_control_pert_.setabg(0,1,0);
         ARC_control_soft_.setabg(0,1,0);

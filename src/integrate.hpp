@@ -835,7 +835,7 @@ public:
             assert(Jlist_disp_.size()==i);
             assert(Jlist_n_.size()==i);
 #endif
-            Jlist_disp_.pushBackNoCheck(nj_tot);
+ Jlist_disp_.pushBackNoCheck(nj_tot);
             Jlist_n_.pushBackNoCheck(0);
             for(int j=0; j<nbin; j++) {
                 PS::F64vec dr = ptcl_[i].pos-ptcl_[j].pos;
@@ -2033,14 +2033,22 @@ public:
               <<pert_[pert_disp_[i]+j]->vel<<std::endl;
         }
     }
-    
-    void info_print(std::ostream& os, const PS::S64 ngroups, const PS::S64 ngroupi, const PS::S64 nptcl, const PS::S64 ntot, const PS::F64 dt_limit, const PS::S32 kp) const{
+
+    //! ARC info print
+    /* _n_group: current total number of groups already integrated
+       _n_group_in_cluster: number of groups in current cluster
+       _n_ptcl: number of real particles
+       _n_single: number of single particles
+       _dt_limit: hard time step limit
+       _kp: kepler period number per step
+     */
+    void info_print(std::ostream& os, const PS::S64 _n_group, const PS::S64 _n_group_in_cluster, const PS::S64 _n_ptcl, const PS::S64 _n_single, const PS::F64 _dt_limit, const PS::S32 _kp) const{
         for (int i=0; i<clist_.size(); i++) {
-            os<<"ARC_info(i,n_tot,n_ptcl,n_group,n,n_pert,ax,ecc,peri,kappa,n_step): "
-              <<ngroups+i<<" "
-              <<ntot<<" "
-              <<nptcl<<" "
-              <<ngroupi<<" "
+            os<<"ARC_info(i_group,n_ptcl,n_single,n_group,n,n_pert,ax,ecc,peri,kappa,n_step): "
+              <<_n_group+i<<" "
+              <<_n_ptcl<<" "
+              <<_n_single<<" "
+              <<_n_group_in_cluster<<" "
               <<clist_[i].getN()<<" "
               <<pert_n_[i]<<" "
               <<bininfo[i].ax<<" "
@@ -2049,7 +2057,7 @@ public:
               <<clist_[i].slowdown.getkappa()<<" ";
             PS::S64 nstep = 0;
 #ifdef ARC_SYM
-            if(kp>0) nstep = kp*8;
+            if(_kp>0) nstep = _kp*8;
             else nstep = clist_[i].profile.stepcount[0];
 #else
             PS::S64 nstep = clist_[i].profile.itercount;
@@ -2058,7 +2066,7 @@ public:
 
             if(nstep>1e4) {
                 os<<"Data dump for hardtest in the case of large nstep "<<nstep<<std::endl;
-                data_dump(os, i, dt_limit);
+                data_dump(os, i, _dt_limit);
             }
         }
     }
