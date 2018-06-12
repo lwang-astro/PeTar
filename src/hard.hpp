@@ -655,8 +655,8 @@ private:
             n_group_offset[i+1] = n_group_offset[i] + gpars[i].n_members;
 #ifdef HARD_DEBUG
             assert(gpars[i].id == _ptcl_local[n_group_offset[i]].id);
-            assert(_ptcl_local[n_group_offset[n_group]].status==0);
-            assert(_ptcl_local[n_group_offset[n_group]-1].status>0);
+            assert(_ptcl_local[n_group_offset[_n_group]].status==0);
+            assert(_ptcl_local[n_group_offset[_n_group]-1].status>0);
 #endif
         }
         // single particle start index in _ptcl_local
@@ -836,7 +836,7 @@ private:
             Aint.initial();
 
 #ifdef HARD_CHECK_ENERGY
-            CalcEnergyHardFull(_ptcl_local, E0, AE0, HE0, ESD0, Hint, Aint, group);
+            CalcEnergyHardFull(_ptcl_local, _n_ptcl, E0, AE0, HE0, ESD0, Hint, Aint);
 #endif
 
             bool fail_flag=Hint.initialize(dt_limit, dt_min_hard_, group_act_list.getPointer(), group_act_n, _n_group, &Aint);
@@ -851,7 +851,7 @@ private:
 
 #ifdef HARD_CHECK_ENERGY
             PS::ReallocatableArray<PS::F64> slowdownrecord;
-            slowdownrecord.resizeNoInitialize(n_groups);
+            slowdownrecord.resizeNoInitialize(_n_group);
 #endif
 
             while(time_sys<_time_end) {
@@ -869,7 +869,7 @@ private:
                 PS::F64 dt_h = time_sys-time_now;
                 //Aint.updateSlowDown(time_sys);
 #ifdef HARD_CHECK_ENERGY
-                for(int k=0; k<n_groups; k++) {
+                for(int k=0; k<_n_group; k++) {
                     slowdownrecord[k] = std::max(slowdownrecord[k], Aint.getSlowDown(k));
                     assert(Aint.getSlowDown(k)>=1.0);
                 }
@@ -899,10 +899,10 @@ private:
             Aint.info_print(std::cerr, ARC_n_groups, n_groups, group.getPtclN(), _n_ptcl, dt_limit_hard_,0);
 #endif
 #ifdef HARD_CHECK_ENERGY
-            CalcEnergyHardFull(_ptcl_local, E1, AE1, HE1, ESD1, Hint, Aint, group);
+            CalcEnergyHardFull(_ptcl_local, _n_ptcl, E1, AE1, HE1, ESD1, Hint, Aint);
 #ifdef HARD_DEBUG_PRINT
             fprintf(stderr,"Slowdown factor = ");
-            for(int k=0; k<n_groups; k++) 
+            for(int k=0; k<_n_group; k++) 
                 fprintf(stderr,"%e; ",slowdownrecord[k]);
             fprintf(stderr,"\n");
             fprintf(stderr,"H4  Energy: init =%e, end =%e, diff =%e, kini =%e kinf =%e poti =%e potf =%e\nARC Energy: init =%e, end =%e, diff =%e, error = %e\nTot Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e, Tot-H4-ARC =%e\nTSD Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e\n", 
@@ -1146,64 +1146,99 @@ public:
     }
 
 #ifdef HARD_CHECK_ENERGY
+    //! check energy
+    /* @param[in] _ptcl: particle data array
+       @param[out] _energy: energy class
+       @param[in] _n_ptcl: particle number
+    */
     template<class Teng>
-    void CalcEnergyHard(PtclHard* ptcl, Teng & eng,  const PS::S32* ptcl_list, const PS::S32 ptcl_n, const PS::S32* group_list, const PS::S32 group_n, const PS::S32 nbin){
-        eng.kin = eng.pot = eng.tot = 0.0;
-        for(PS::S32 i=nbin; i<ptcl_n; i++){
-            PtclHard* pi = &ptcl[ptcl_list[i]];
-            eng.kin += 0.5 * pi->mass * pi->vel * pi->vel;
+    void CalcEnergyHard(PtclHard* _ptcl, Teng & _energy,  const PS::S32 _n_ptcl) {
+        _energy.kin = _energy.pot = _energy.tot = 0.0;
+        for(PS::S32 i=0; i<_n_ptcl; i++){
+            PtclHard* pi = &_ptcl[i];
+            _energy.kin += 0.5 * pi->mass * pi->vel * pi->vel;
 
-            for(PS::S32 j=i+1; j<ptcl_n; j++){
-                PtclHard* pj = &ptcl[ptcl_list[j]];
+            for(PS::S32 j=i+1; j<_n_ptcl; j++){
+                PtclHard* pj = &_ptcl[i];
                 PS::F64vec rij = pi->pos - pj->pos;
                 PS::F64 dr = sqrt(rij*rij + Int_pars_.eps2);
 #ifdef INTEGRATED_CUTOFF_FUNCTION
-                eng.pot -= pj->mass*pi->mass/dr*(1.0 - CalcW(dr/Int_pars_.rout, Int_pars_.rin/Int_pars_.rout));  
+                _energy.pot -= pj->mass*pi->mass/dr*(1.0 - CalcW(dr/Int_pars_.rout, Int_pars_.rin/Int_pars_.rout));  
 #else
-                if(dr<Int_pars_.rout) eng.pot -= pj->mass*pi->mass*(1.0/dr*cutoff_pot(dr, Int_pars_.r_oi_inv, Int_pars_.r_A, Int_pars_.rin) - Int_pars_.pot_off);
-#endif
-            }
-
-            for(PS::S32 j=0; j<group_n; j++){
-                PtclHard* pj = &ptcl[group_list[j]];
-                PS::F64vec rij = pi->pos - pj->pos;
-                PS::F64 dr = sqrt(rij*rij + Int_pars_.eps2);
-#ifdef INTEGRATED_CUTOFF_FUNCTION
-                eng.pot -= pj->mass*pi->mass/dr*(1.0 - CalcW(dr/Int_pars_.rout, Int_pars_.rin/Int_pars_.rout));  
-#else
-                if(dr<Int_pars_.rout) eng.pot -= pj->mass*pi->mass*(1.0/dr*cutoff_pot(dr, Int_pars_.r_oi_inv, Int_pars_.r_A, Int_pars_.rin) - Int_pars_.pot_off);
+                if(dr<Int_pars_.rout) _energy.pot -= pj->mass*pi->mass*(1.0/dr*cutoff_pot(dr, Int_pars_.r_oi_inv, Int_pars_.r_A, Int_pars_.rin) - Int_pars_.pot_off);
 #endif
             }
         }
-
-        for(PS::S32 i=0; i<group_n; i++){
-            PtclHard* pi = &ptcl[group_list[i]];
-            eng.kin += 0.5 * pi->mass * pi->vel * pi->vel;
-
-            for(PS::S32 j=i+1; j<group_n; j++){
-                PtclHard* pj = &ptcl[group_list[j]];
-                PS::F64vec rij = pi->pos - pj->pos;
-                PS::F64 dr = sqrt(rij*rij + Int_pars_.eps2);
-#ifdef INTEGRATED_CUTOFF_FUNCTION
-                eng.pot -= pj->mass*pi->mass/dr*(1.0 - CalcW(dr/Int_pars_.rout, Int_pars_.rin/Int_pars_.rout));  
-#else
-                if(dr<Int_pars_.rout) eng.pot -= pj->mass*pi->mass*(1.0/dr*cutoff_pot(dr, Int_pars_.r_oi_inv, Int_pars_.r_A, Int_pars_.rin) - Int_pars_.pot_off);
-#endif
-            }
-        }
-        eng.tot = eng.kin + eng.pot;
+        _energy.tot = _energy.kin + _energy.pot;
     }
 
-    template<class Teng, class TH4, class TARC, class Tgroup>
-    void CalcEnergyHardFull(PtclHard* ptcl, Teng& E, Teng& AE, Teng& HE, Teng& ESD, TH4 &Hint, TARC& Aint, const Tgroup& group){
-        Hint.CalcEnergy(HE);
+
+    //! check energy based on list
+    /* @param[in] _ptcl: particle data array
+       @param[out] _energy: energy class
+       @param[in] _ptcl_single_list: single particle list
+       @param[in] _n_ptcl_single: single particle number
+       @param[in] _ptcl_group_list: group particle list
+       @param[in] _n_ptcl_group: group particle number
+    */
+    template<class Teng>
+    void CalcEnergyHard(PtclHard* _ptcl, Teng & _energy,  const PS::S32* _ptcl_single_list, const PS::S32 _n_ptcl_single, const PS::S32* _ptcl_group_list, const PS::S32 _n_ptcl_group, const PS::S32 _i_single_start){
+        _energy.kin = _energy.pot = _energy.tot = 0.0;
+        for(PS::S32 i=_i_single_start; i<_n_ptcl_single+_i_single_start; i++){
+            PtclHard* pi = &_ptcl[_ptcl_single_list[i]];
+            _energy.kin += 0.5 * pi->mass * pi->vel * pi->vel;
+
+            for(PS::S32 j=i+1; j<_n_ptcl_single; j++){
+                PtclHard* pj = &_ptcl[_ptcl_single_list[j]];
+                PS::F64vec rij = pi->pos - pj->pos;
+                PS::F64 dr = sqrt(rij*rij + Int_pars_.eps2);
+#ifdef INTEGRATED_CUTOFF_FUNCTION
+                _energy.pot -= pj->mass*pi->mass/dr*(1.0 - CalcW(dr/Int_pars_.rout, Int_pars_.rin/Int_pars_.rout));  
+#else
+                if(dr<Int_pars_.rout) _energy.pot -= pj->mass*pi->mass*(1.0/dr*cutoff_pot(dr, Int_pars_.r_oi_inv, Int_pars_.r_A, Int_pars_.rin) - Int_pars_.pot_off);
+#endif
+            }
+
+            for(PS::S32 j=0; j<_n_ptcl_group; j++){
+                PtclHard* pj = &_ptcl[_ptcl_group_list[j]];
+                PS::F64vec rij = pi->pos - pj->pos;
+                PS::F64 dr = sqrt(rij*rij + Int_pars_.eps2);
+#ifdef INTEGRATED_CUTOFF_FUNCTION
+                _energy.pot -= pj->mass*pi->mass/dr*(1.0 - CalcW(dr/Int_pars_.rout, Int_pars_.rin/Int_pars_.rout));  
+#else
+                if(dr<Int_pars_.rout) _energy.pot -= pj->mass*pi->mass*(1.0/dr*cutoff_pot(dr, Int_pars_.r_oi_inv, Int_pars_.r_A, Int_pars_.rin) - Int_pars_.pot_off);
+#endif
+            }
+        }
+
+        for(PS::S32 i=0; i<_n_ptcl_group; i++){
+            PtclHard* pi = &_ptcl[_ptcl_group_list[i]];
+            _energy.kin += 0.5 * pi->mass * pi->vel * pi->vel;
+
+            for(PS::S32 j=i+1; j<_n_ptcl_group; j++){
+                PtclHard* pj = &_ptcl[_ptcl_group_list[j]];
+                PS::F64vec rij = pi->pos - pj->pos;
+                PS::F64 dr = sqrt(rij*rij + Int_pars_.eps2);
+#ifdef INTEGRATED_CUTOFF_FUNCTION
+                _energy.pot -= pj->mass*pi->mass/dr*(1.0 - CalcW(dr/Int_pars_.rout, Int_pars_.rin/Int_pars_.rout));  
+#else
+                if(dr<Int_pars_.rout) _energy.pot -= pj->mass*pi->mass*(1.0/dr*cutoff_pot(dr, Int_pars_.r_oi_inv, Int_pars_.r_A, Int_pars_.rin) - Int_pars_.pot_off);
+#endif
+            }
+        }
+        _energy.tot = _energy.kin + _energy.pot;
+    }
+
+    template<class Teng, class THint, class TARC>
+    void CalcEnergyHardFull(PtclHard* _ptcl, const PS::S32 _n_ptcl, Teng& _E, Teng& _AE, Teng& _HE, Teng& _ESD, THint &_Hint, TARC& _Aint){
+        _Hint.CalcEnergy(_HE);
         Teng TMP;
-        Aint.EnergyRecord(TMP,true);
-        Aint.EnergyRecord(AE);
-        CalcEnergyHard(ptcl, E, group.getPtclList(), group.getPtclN(), group.getGroup(0), group.getGroupListSize(), group.getNumOfGroups());
-        ESD.tot = (E.tot - AE.kin-AE.pot) + (TMP.kin+TMP.pot);
-        ESD.kin = (E.kin - AE.kin) + TMP.kin;
-        ESD.pot = (E.pot - AE.pot) + TMP.pot;
+        _Aint.EnergyRecord(TMP,true);
+        _Aint.EnergyRecord(_AE);
+        CalcEnergyHard(_ptcl, _E, _n_ptcl);
+        _ESD.tot = (_E.tot - _AE.kin - _AE.pot) + (TMP.kin+TMP.pot);
+        _ESD.kin = (_E.kin - _AE.kin) + TMP.kin;
+        _ESD.pot = (_E.pot - _AE.pot) + TMP.pot;
     }
 #endif
 
@@ -1626,10 +1661,10 @@ public:
                  <<std::endl;
 #endif
     }
-
-    void driveForMultiClusterOneDebug(PtclHard* _ptcl, const PS::S32 _n_ptcl,const PS::F64 _time_end, const PS::S32 _first_step_flag) {
-        PS::ReallocatableArray<PtclHard> ptcl_new;
-        driveForMultiClusterImpl(_ptcl, _n_ptcl, _time_end, ptcl_new, _first_step_flag);
+    
+    template <class Tpsoft>
+    void driveForMultiClusterOneDebug(PtclHard* _ptcl, const PS::S32 _n_ptcl, Tpsoft* _ptcl_artifical, const PS::S32 _n_group,  const PS::F64 _time_end) {
+        driveForMultiClusterImpl(_ptcl, _n_ptcl, _ptcl_artifical, _n_group, _time_end);
     }
 
     void set_slowdown_factor(const PS::F64 _slowdown_factor) {

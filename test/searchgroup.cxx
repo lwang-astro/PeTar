@@ -65,7 +65,7 @@ PtclHard kepler_print(const std::size_t id, const std::size_t ib, PtclHard* c[2]
                    (v[0][1]*m[0]+v[1][1]*m[1])/mt, 
                    (v[0][2]*m[0]+v[1][2]*m[1])/mt);
 
-    return PtclHard(Ptcl(ParticleBase(mt, xcm, vcm), rsearch, 0, ib, 0));
+    return PtclHard(Ptcl(ParticleBase(mt, xcm, vcm), rsearch, 0, ib, 0), -10, -10);
 }
 
 void print_p(PtclHard* p, const int n) {
@@ -183,8 +183,8 @@ int main(int argc, char** argv)
           PS::F64vec vv1(v1[0],v1[1],v1[2]);
           PS::F64vec vv2(v2[0],v2[1],v2[2]);    
 
-          PtclHard a(Ptcl(ParticleBase(m1,xx1,vv1),rsearch,0,idc++,0));
-          PtclHard b(Ptcl(ParticleBase(m2,xx2,vv2),rsearch,0,idc++,0));
+          PtclHard a(Ptcl(ParticleBase(m1,xx1,vv1),rsearch,0,idc++,0),-10,-10);
+          PtclHard b(Ptcl(ParticleBase(m2,xx2,vv2),rsearch,0,idc++,0),-10,-10);
 
           bool flag=plist.link(id,ib,a,b,pshift);
           if (!flag) {
