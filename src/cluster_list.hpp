@@ -288,10 +288,10 @@ private:
                     part_list_n[i]++;
                     offset++;
                 }
-                else {
-                    //store perturbation force
-                    ptcl[i].mass_bk += ptcl[j].mass/r2; 
-                }
+//                else {
+//                    //store perturbation force
+//                    ptcl[i].mass_bk += ptcl[j].mass/r2; 
+//                }
             }
         }
     }

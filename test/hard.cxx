@@ -81,30 +81,31 @@ void print_p(Tptcl* p, const int n, const int width= 20, const int precision = 1
     }
 }
 
-// flag: 1: c.m; 2: individual; 
+
 template<class Teng>
-void write_p(FILE* fout, const PS::F64 time, const PtclHard* p, const int n, PtclHard & pcm, Teng &et, const PS::F64 rin, const PS::F64 rout, const PS::F64 eps2, const PS::F64 et0=0, const int flag=2) {
+void write_p(FILE* fout, const PS::F64 time, PtclHard* p, const int n, PtclHard& pcm, Teng &et, const PS::F64 rin, const PS::F64 rout, const PS::F64 eps2, const PS::F64 et0=0) {
     fprintf(fout,"%20.14e ",time);
-    PS::ReallocatableArray<PtclHard> pp;
-    for (int i=0; i<n; i++) {
-        if(flag==2&&(p[i].status>0||p[i].id<0)) continue;
-        if(flag==1&&((p[i].id>0&&p[i].status!=0)||(p[i].id<=0&&p[i].status<0))) continue;
-        pp.push_back(p[i]);
-        if((flag==2||flag==1)&&p[i].status!=0) {
-            pp.back().mass = pp.back().mass_bk;
-        }
-        
-    }
-    calc_center_of_mass(pcm, pp.getPointer(), pp.size());
+    //PS::ReallocatableArray<PtclHard> pp;
+    //for (int i=0; i<n; i++) {
+    //    if(flag==2&&(p[i].status>0||p[i].id<0)) continue;
+    //    if(flag==1&&((p[i].id>0&&p[i].status!=0)||(p[i].id<=0&&p[i].status<0))) continue;
+    //    pp.push_back(p[i]);
+    //    if((flag==2||flag==1)&&p[i].status!=0) {
+    //        pp.back().mass = pp.back().mass_bk;
+    //    }
+    //    
+    //}
+    //for (int i=0; i<n; i++) p[i].mass = p[i].mass_bk;
+    calc_center_of_mass(pcm, p, n);
     //printf("n = %d\n",pp.size());
     Teng etb;
-    CalcEnergyHard(pp.getPointer(),pp.size(),et,rin,rout,eps2);
+    CalcEnergyHard(p, n, et,rin,rout,eps2);
     PS::F64 err = et0==0?0:(et.tot-et0)/et0;
     fprintf(fout,"%20.14e %20.14e %20.14e %20.14e ",err,et.kin,et.pot,et.tot);
-    for (int i=0; i<pp.size(); i++) {
+    for (int i=0; i<n; i++) {
         fprintf(fout,"%20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e ", 
-                pp[i].mass, pp[i].pos[0], pp[i].pos[1], pp[i].pos[2], 
-                pp[i].vel[0], pp[i].vel[1], pp[i].vel[2]);
+                p[i].mass, p[i].pos[0], p[i].pos[1], p[i].pos[2], 
+                p[i].vel[0], p[i].vel[1], p[i].vel[2]);
     }
     fprintf(fout,"\n");
 }
@@ -113,18 +114,19 @@ void write_p(FILE* fout, const PS::F64 time, const PtclHard* p, const int n, Ptc
 template<class Teng>
 void write_p(FILE* fout, const PS::F64 time, const PtclHard* p, const int n, const Teng *E, const Teng *E0=NULL) {
     fprintf(fout,"%20.14e ",time);
-    PS::ReallocatableArray<PtclHard> pp;
-    for (int i=0; i<n; i++) {
-        if(p[i].status>0||p[i].id<0) continue;
-        pp.push_back(p[i]);
-        if(p[i].status!=0) pp.back().mass = pp.back().mass_bk;
-    }
+    //PS::ReallocatableArray<PtclHard> pp;
+    //for (int i=0; i<n; i++) {
+    //    if(p[i].status>0||p[i].id<0) continue;
+    //    pp.push_back(p[i]);
+    //    if(p[i].status!=0) pp.back().mass = pp.back().mass_bk;
+    //}
     PS::F64 err = E0==NULL?0:(E->tot-E0->tot)/E0->tot;
-    fprintf(fout,"%20.14e %20.14e %20.14e %20.14e ",err,E->kin,E->pot,E->tot);
-    for (int i=0; i<pp.size(); i++) {
+    fprintf(fout,"%20.14e %20.14e %20.14e %20.14e ",
+            err,E->kin,E->pot,E->tot);
+    for (int i=0; i<n; i++) {
         fprintf(fout,"%20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e ", 
-                pp[i].mass, pp[i].pos[0], pp[i].pos[1], pp[i].pos[2], 
-                pp[i].vel[0], pp[i].vel[1], pp[i].vel[2]);
+                p[i].mass, p[i].pos[0], p[i].pos[1], p[i].pos[2], 
+                p[i].vel[0], p[i].vel[1], p[i].vel[2]);
     }
     fprintf(fout,"\n");
 }
@@ -180,55 +182,55 @@ int main(int argc, char** argv)
   sys_hard.setARCParam(1e-10, 1e-6, 1e-3, 1e-24);
    
   sys_hard.setPtclForIsolatedMultiCluster(sys, p_list, n_cluster);
-  print_p(sys_hard.getPtcl().getPointer(),N);
 
-  sys_hard.findGroupsAndCreateArtificalParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys, dt_limit);
-
+  EnergyAndMomemtum et0,et,etcm0,etcm;
+  PS::F64 eps2 = eps*eps;
+  PtclHard pcm0,pcm1;//,ppcm0,ppcm1;
   FILE* fout;
   std::string fname="hard.dat.";
   if ( (fout = fopen((fname+foutname).c_str(),"w")) == NULL) {
     fprintf(stderr,"Error: Cannot open file hard.dat.\n");
     abort();
   }
-
-  FILE* fout2;
-  fname = "hardc.dat.";
-  if ( (fout2 = fopen((fname+foutname).c_str(),"w")) == NULL) {
-    fprintf(stderr,"Error: Cannot open file hardcm.dat.\n");
-    abort();
-  }
-
-  EnergyAndMomemtum et0,et,etcm0,etcm;
-  PS::F64 eps2 = eps*eps;
-  PtclHard pcm0,pcm1,ppcm0,ppcm1;
   fprintf(stderr,"Time = %e\n", time_sys);
-  print_p(sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size());
+  print_p(sys_hard.getPtcl().getPointer(),N);
   write_p(fout,time_sys,sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size(),pcm0,et0,rin,rout,eps2,0.0);
+
+  PS::S32 n_sys = sys.getNumberOfParticleLocal();
+  sys_hard.findGroupsAndCreateArtificalParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys, dt_limit);
+
+  fprintf(stderr,"After findgroup\n");
+  print_p(sys_hard.getPtcl().getPointer(),N);
+ // FILE* fout2;
+ // fname = "hardc.dat.";
+ // if ( (fout2 = fopen((fname+foutname).c_str(),"w")) == NULL) {
+ //   fprintf(stderr,"Error: Cannot open file hardcm.dat.\n");
+ //   abort();
+ // }
+
+  //print_p(sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size());
   //write_p(fout,time_sys,sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size(), &sys_hard.ESD0);
-  write_p(fout2,time_sys,sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size(),ppcm0,etcm0,rin,rout,eps2,0.0,1);
+  //write_p(fout2,time_sys,sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size(),ppcm0,etcm0,rin,rout,eps2,0.0,1);
   while(time_sys < time){
       fprintf(stderr,"Time = %e\n", time_sys+dt_limit);
       sys_hard.driveForMultiCluster<PS::ParticleSystem<FPSoft>,FPSoft>(dt_limit, sys);
       time_sys += dt_limit;
-      for(PS::S32 i=0; i<sys_hard.getPtcl().size(); i++) {
-          if (sys_hard.getPtcl()[i].id>0&&sys_hard.getPtcl()[i].status>0) {
-              sys_hard.getPtcl()[i].vel = PS::F64vec(0.0);
-          }
-      }
+      sys.setNumberOfParticleLocal(n_sys);
       print_p(sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size());
       //write_p(fout,time_sys,sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size(), &sys_hard.ESD1, &sys_hard.ESD0);
       write_p(fout,time_sys,sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size(),pcm1,et,rin,rout,eps2,et0.tot);
-      write_p(fout2,time_sys,sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size(),ppcm1,etcm,rin,rout,eps2,etcm0.tot,1);
+      //write_p(fout2,time_sys,sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size(),ppcm1,etcm,rin,rout,eps2,etcm0.tot,1);
       std::cerr<<"CM: pos="<<pcm1.pos<<" vel="<<pcm1.vel<<" shift pos="<<pcm1.pos-pcm0.pos<<" shift vel="<<pcm1.vel-pcm0.vel<<std::endl;
-      std::cerr<<"CMHint: pos="<<ppcm1.pos<<" vel="<<ppcm1.vel<<" shift pos="<<ppcm1.pos-ppcm0.pos<<" shift vel="<<ppcm1.vel-ppcm0.vel<<std::endl;
+      //std::cerr<<"CMHint: pos="<<ppcm1.pos<<" vel="<<ppcm1.vel<<" shift pos="<<ppcm1.pos-ppcm0.pos<<" shift vel="<<ppcm1.vel-ppcm0.vel<<std::endl;
       std::cerr<<"Profile: ARC steps: "<<sys_hard.ARC_substep_sum<<std::endl;
       sys_hard.ARC_substep_sum = 0;
+      sys_hard.findGroupsAndCreateArtificalParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys, dt_limit);
   }
   
 
   fclose(fin);
   fclose(fout);
-  fclose(fout2);
+//  fclose(fout2);
   
   return 0;
 }

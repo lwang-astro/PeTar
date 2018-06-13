@@ -675,6 +675,7 @@ private:
             assert(_ptcl_local[i].status>0);
             assert(_ptcl_local[i].mass>0);
 #endif
+            _ptcl_local[i].mass_bk = -10.0;
         }
 
         // pre-process for c.m. particle,
@@ -1176,7 +1177,7 @@ public:
             _energy.kin += 0.5 * pi->mass * pi->vel * pi->vel;
 
             for(PS::S32 j=i+1; j<_n_ptcl; j++){
-                PtclHard* pj = &_ptcl[i];
+                PtclHard* pj = &_ptcl[j];
                 PS::F64vec rij = pi->pos - pj->pos;
                 PS::F64 dr = sqrt(rij*rij + Int_pars_.eps2);
 #ifdef INTEGRATED_CUTOFF_FUNCTION
