@@ -686,6 +686,19 @@ private:
             // recover mass
             _ptcl_artifical[icm].mass = _ptcl_artifical[icm].mass_bk;
 #ifdef HARD_DEBUG
+            // check id 
+            PS::S32 id_mem[2];
+            id_mem[0] = _ptcl_local[n_group_offset[i]].id;
+            id_mem[1] = _ptcl_local[n_group_offset[i]+gpars[i].n_members_1st].id;
+            // id_offset unknown, try to substract id information via calculation between neighbor particles
+            for (int j=0; j<gpars[i].n_ptcl_artifical-1; j+=2) {
+                // first member
+                PS::S32 id_offset_j1 = _ptcl_artifical[adr_first_ptcl[i]+j].id - j/2- id_mem[0]*n_split_;
+                // second member
+                PS::S32 id_offset_j2 = _ptcl_artifical[adr_first_ptcl[i]+j+1].id - j/2 - id_mem[1]*n_split_;
+                assert(id_offset_j1==id_offset_j2);
+            }
+
             // check mass of component
             PS::F64 mtot = 0.0;
             
