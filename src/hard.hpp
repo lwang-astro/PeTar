@@ -647,7 +647,7 @@ private:
         PS::S32 adr_cm_ptcl[_n_group];
         PS::S32 n_group_offset[_n_group+1]; // ptcl member offset in _ptcl_local
         n_group_offset[0] = 0;
-        GroupPars gpars[_n_group](_n_ptcl);
+        GroupPars gpars[_n_group](n_split_);
         for(int i=0; i<_n_group; i++) {
             adr_first_ptcl[i] = i*gpars[i].n_ptcl_artifical;
             adr_cm_ptcl[i] = adr_first_ptcl[i]+gpars[i].offset_cm;
@@ -655,7 +655,8 @@ private:
             n_group_offset[i+1] = n_group_offset[i] + gpars[i].n_members;
 #ifdef HARD_DEBUG
             assert(gpars[i].id == _ptcl_local[n_group_offset[i]].id);
-            assert(_ptcl_local[n_group_offset[_n_group]].status==0);
+            if(n_group_offset[_n_group]<_n_ptcl)
+                assert(_ptcl_local[n_group_offset[_n_group]].status==0);
             assert(_ptcl_local[n_group_offset[_n_group]-1].status>0);
 #endif
         }
@@ -676,11 +677,27 @@ private:
 #endif
         }
 
+        // pre-process for c.m. particle,
+        for(int i=0; i<_n_group; i++){
+            PS::S32 icm = adr_cm_ptcl[i];
+            // kick c.m. (not done in previous kick function to avoid multi-kick)
+            _ptcl_artifical[icm].vel += _ptcl_artifical[icm].acc * _time_end;
+            // recover mass
+            _ptcl_artifical[icm].mass = _ptcl_artifical[icm].mass_bk;
+#ifdef HARD_DEBUG
+            // check mass of component
+            PS::F64 mtot = 0.0;
+            
+            for(int j=0; j<gpars[i].n_members; j++) {
+                mtot += _ptcl_local[n_group_offset[i]+j].mass;
+            }
+            assert(abs(mtot - _ptcl_artifical[icm].mass)<1e-10);
+#endif
+        }
+
         // Only one group with all particles in group
         if(_n_group==1&&n_single==0) {
-            PS::S32 icm = gpars[0].offset_cm;
-            // First kick c.m. 
-            _ptcl_artifical[icm].vel += _ptcl_artifical[icm].acc * _time_end;
+            PS::S32 icm = adr_cm_ptcl[0];
 
 #ifdef HARD_DEBUG
             assert(-_ptcl_artifical[icm].id==_ptcl_local[0].id);
@@ -691,14 +708,14 @@ private:
             PS::F64vec pos_cm_check=PS::F64vec(0.0);
 
             for(int k=0; k<gpars[0].n_members; k++) {
-                mass_cm_check += _ptcl_local[k].mass_bk;
-                vel_cm_check +=  _ptcl_local[k].vel*_ptcl_local[k].mass_bk;
-                pos_cm_check +=  _ptcl_local[k].pos*_ptcl_local[k].mass_bk;
+                mass_cm_check += _ptcl_local[k].mass;
+                vel_cm_check +=  _ptcl_local[k].vel*_ptcl_local[k].mass;
+                pos_cm_check +=  _ptcl_local[k].pos*_ptcl_local[k].mass;
             }
             vel_cm_check /= mass_cm_check;
             pos_cm_check /= mass_cm_check;
 
-            assert(abs(mass_cm_check-_ptcl_artifical[icm].mass_bk)<1e-10);
+            assert(abs(mass_cm_check-_ptcl_artifical[icm].mass)<1e-10);
             PS::F64vec dvec = vel_cm_check-_ptcl_artifical[icm].vel;
             PS::F64vec dpos = pos_cm_check-_ptcl_artifical[icm].pos;
             assert(abs(dvec*dvec)<1e-20);

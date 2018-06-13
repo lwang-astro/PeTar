@@ -1303,7 +1303,7 @@ public:
     void fit(Tptcl* _ptcl_tt, const Binary& _bin, const PS::S32 _n_split) {
         PS::F64vec fi[8];
 #ifdef HARD_DEBUG
-        assert(_ptcl_tt[10].mass_bk==0);
+        assert(_ptcl_tt[12].mass_bk==0);
         assert(_n_split>4);
 #endif
         // get acceleration
@@ -1671,6 +1671,9 @@ public:
             clist_.back().pos = _ptcl_pert[igroup].pos;
             clist_.back().vel = _ptcl_pert[igroup].vel;
             clist_.back().mass = _ptcl_pert[igroup].mass;
+#ifdef HARD_DEBUG
+            assert(clist_.back().mass>0.0);
+#endif
         }
 
         // dt.push_back(0.0);
