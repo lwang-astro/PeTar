@@ -198,7 +198,9 @@ int main(int argc, char** argv)
 
   PS::S32 n_sys = sys.getNumberOfParticleLocal();
   sys_hard.findGroupsAndCreateArtificalParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys, dt_limit);
-
+  
+  kickCluster(sys, sys_hard.getPtcl(), 0.0);
+  
   fprintf(stderr,"After findgroup\n");
   print_p(sys_hard.getPtcl().getPointer(),N);
  // FILE* fout2;
@@ -225,6 +227,7 @@ int main(int argc, char** argv)
       std::cerr<<"Profile: ARC steps: "<<sys_hard.ARC_substep_sum<<std::endl;
       sys_hard.ARC_substep_sum = 0;
       sys_hard.findGroupsAndCreateArtificalParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys, dt_limit);
+      kickCluster(sys, sys_hard.getPtcl(), 0.0);
   }
   
 

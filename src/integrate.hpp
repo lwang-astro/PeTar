@@ -41,6 +41,8 @@ void kickOne(Tsys & _sys,
 
 //!leap frog kick for clusters------------------------------------------
 /* modify the velocity of particle in local, if remote non-group particle, do nothing, need MPI receive to update data
+   Recover the mass of members for energy calculation
+   Kick c.m. velocity also
    @param[in,out] _sys: particle system
    @param[in,out] _ptcl: local particle array in system hard
    @param[in]: _dt: tree step
@@ -52,12 +54,13 @@ void kickCluster(Tsys& _sys,
     const PS::S64 n= _ptcl.size();
 #pragma omp parallel for
     for(int i=0; i<n; i++) {
-        const PS::S64 cm_adr=_ptcl[i].status;
+        const PS::S64 cm_adr=-_ptcl[i].status; // notice status is negative 
         const PS::S64 i_adr =_ptcl[i].adr_org;
         // if is group member, recover mass and kick due to c.m. force
         if(cm_adr>0) {
             _ptcl[i].mass = _ptcl[i].mass_bk;
             _ptcl[i].vel += _sys[cm_adr].acc * _dt;
+            _sys[cm_adr].vel += _sys[cm_adr].acc * _dt/_sys[cm_adr].status; // status has total number of members, to avoid duplicate kick
         }
         else if(i_adr>=0) { // non-member particle
             // not remote particles
@@ -141,40 +144,40 @@ PS::F64 calcDtLimit(const PS::F64 time_sys,
 //    }
 //}
 
-template <class Tptcl>
-void softKickForOneGroup(Tptcl * ptcl_org,
-                         const PS::S32  i_cm,
-                         const PS::S32* group_list,
-                         const PS::S32  group_n,
-                         const PS::S32* soft_pert_list,
-                         const PS::F64  dt_soft,
-                         const PS::S32  n_split) {
-    Tptcl* pi = &ptcl_org[i_cm];
-    PS::F64vec fi= PS::F64vec(0.0);
-    PS::F64 micum = 0.0;
-#ifdef TIDAL_TENSOR
-    for (PS::S32 j=8; j<2*n_split; j++) {
-#else
-    for (PS::S32 j=0; j<2*n_split; j++) {
-#endif
-        Tptcl* pj = &ptcl_org[soft_pert_list[j]];
-        fi += pj->mass*pj->vel; // here pj->vel store the soft force of fake members
-        micum += pj->mass;
-#ifdef HARD_DEBUG
-        assert(((pj->status)>>ID_PHASE_SHIFT)==-pi->id);
-#endif
-    }
-    PS::F64vec vkick = fi/micum * dt_soft;
-
-#ifdef HARD_DEBUG
-    assert(abs(micum-pi->mass)<1e-10);
-#endif
-    for (PS::S32 i=0; i<group_n; i++) {
-        Tptcl* pk = &ptcl_org[group_list[i]];
-        pk->vel += vkick;
-    }
-    pi->vel += vkick;
-}
+//template <class Tptcl>
+//void softKickForOneGroup(Tptcl * ptcl_org,
+//                         const PS::S32  i_cm,
+//                         const PS::S32* group_list,
+//                         const PS::S32  group_n,
+//                         const PS::S32* soft_pert_list,
+//                         const PS::F64  dt_soft,
+//                         const PS::S32  n_split) {
+//    Tptcl* pi = &ptcl_org[i_cm];
+//    PS::F64vec fi= PS::F64vec(0.0);
+//    PS::F64 micum = 0.0;
+//#ifdef TIDAL_TENSOR
+//    for (PS::S32 j=8; j<2*n_split; j++) {
+//#else
+//    for (PS::S32 j=0; j<2*n_split; j++) {
+//#endif
+//        Tptcl* pj = &ptcl_org[soft_pert_list[j]];
+//        fi += pj->mass*pj->vel; // here pj->vel store the soft force of fake members
+//        micum += pj->mass;
+//#ifdef HARD_DEBUG
+//        assert(((pj->status)>>ID_PHASE_SHIFT)==-pi->id);
+//#endif
+//    }
+//    PS::F64vec vkick = fi/micum * dt_soft;
+// 
+//#ifdef HARD_DEBUG
+//    assert(abs(micum-pi->mass)<1e-10);
+//#endif
+//    for (PS::S32 i=0; i<group_n; i++) {
+//        Tptcl* pk = &ptcl_org[group_list[i]];
+//        pk->vel += vkick;
+//    }
+//    pi->vel += vkick;
+//}
 
 class PtclH4: public Ptcl{
 public:

@@ -36,7 +36,7 @@ inline void CalcAccPotShortWithLinearCutoff(const PS::F64vec & posi,
     const PS::F64 Rm3_max = Rm_max * R2_max;
     if(pot_control_flag==0) poti_tot -= (Rm - Rm_max);   // single, remove cutoff, obtain total potential
     else if(pot_control_flag==1) poti_tot -= (mass_bkj * R - Rm_max); // member mass is zero, use backup value
-    else poti_tot += Rm_max; // fake, should be exclude, since it is inside neighbor, Rm_max cancel it out, the contribution become zero
+    else poti_tot += Rm_max; // artifical, should be exclude for orbital artifical particles, since it is inside neighbor, Rm_max cancel it out, the contribution become zero
     acci_pla -= (Rm3*(1-k) - Rm3_max)*rij;
 }
 

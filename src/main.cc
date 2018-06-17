@@ -472,10 +472,14 @@ int main(int argc, char *argv[]){
         system_soft[i].adr = i;
     }
 
+    // tree for neighbor search
     TreeNB tree_nb;
     tree_nb.initialize(n_glb.value, theta.value, n_leaf_limit.value, n_group_limit.value);
+
+    // tree for force
+    PS::S64 n_tree_init = n_glb.value+n_bin.value;
     TreeForce tree_soft;
-    tree_soft.initialize(n_glb.value, theta.value, n_leaf_limit.value, n_group_limit.value);
+    //tree_soft.initialize(n_tree_init, theta.value, n_leaf_limit.value, n_group_limit.value);
 
     SystemHard system_hard_one_cluster;
     PS::F64 dt_limit_hard = dt_soft.value/dt_limit_hard_factor.value;
@@ -524,8 +528,9 @@ int main(int argc, char *argv[]){
     bool output_flag = false;
     PS::S64 n_loop = 0;
     PS::F64 dt_kick = dt_soft.value;
+
 /// Main loop
-    while(time_sys < time_end.value){
+    while(time_sys <= time_end.value){
 
 #ifdef PROFILE
         profile.tot.start();
@@ -538,7 +543,7 @@ int main(int argc, char *argv[]){
 #else
         tree_nb.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(), system_soft, dinfo);
 #endif
-
+        
 #ifdef PROFILE
         profile.tree_nb.end();
         profile.search_cluster.start();
@@ -552,7 +557,7 @@ int main(int argc, char *argv[]){
 
         // >2.2 Send/receive connect cluster
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-        search_cluster.connectNodes(pos_domain,tree_soft);
+        search_cluster.connectNodes(pos_domain,tree_nb);
         search_cluster.setIdClusterGlobalIteration();
         search_cluster.sendAndRecvCluster(system_soft);
 #endif
@@ -589,9 +594,10 @@ int main(int argc, char *argv[]){
             system_soft[i].rank_org = my_rank;
             system_soft[i].adr = i;
 #ifdef HARD_DEBUG
-            assert(system_soft[i].id<0);
+            assert(system_soft[i].status>0);
 #endif
         }
+
 
         // >3 Tree for force ----------------------------------------
 #ifdef PROFILE
@@ -603,7 +609,14 @@ int main(int argc, char *argv[]){
         tree_soft.clearNumberOfInteraction();
         tree_soft.clearTimeProfile();
 #endif
+
+        if(n_glb_all>n_tree_init) {
+            n_tree_init = n_glb_all*1.05;
+            if(!first_step_flag) std::cerr<<"Warning! tree glb size increase\n";
+        }
+        if(first_step_flag) tree_soft.initialize(n_tree_init, theta.value, n_leaf_limit.value, n_group_limit.value);
         
+
 #ifndef USE_SIMD
         tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSIMD(),
 #ifdef USE_QUAD
@@ -633,15 +646,66 @@ int main(int argc, char *argv[]){
         ps_profile += tree_soft.getTimeProfile();
         domain_decompose_weight = ps_profile.calc_force;
         profile.tree_soft.end();
-        profile.soft_tot.end();
+        profile.force_correct.start();
 #endif
 
         // >3.1 soft force correction due to different cut-off function
+#ifdef CORRECT_FORCE_DEBUG
+        // backup particle data
+        FPSoft psys_bk[n_loc_all];
+#pragma omp parallel for
+        for (int i=0; i<n_loc_all; i++) 
+            psys_bk[i] = system_soft[i];
+#endif
+
+        // single 
+        system_hard_one_cluster.correctPotWithCutoffOMP(system_soft, search_cluster.getAdrSysOneCluster());
+
         // Isolated clusters
         system_hard_isolated.correctForceWithCutoffClusterOMP(system_soft);
-        
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         // Connected clusters
-        system_hard_connected.correctForceWithCutoffTreeNeighborOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft);
+        system_hard_connected.correctForceWithCutoffTreeNeighborAndClusterOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft);
+#endif
+
+
+#ifdef CORRECT_FORCE_DEBUG
+        // switch backup and sys particle data
+#pragma omp parallel for
+        for (int i=0; i<n_loc_all; i++) {
+            FPSoft ptmp = psys_bk[i];
+            psys_bk[i] = system_soft[i];
+            system_soft[i] = ptmp;
+        }
+
+        // single 
+        system_hard_one_cluster.correctPotWithCutoffOMP(system_soft, search_cluster.getAdrSysOneCluster());
+        // Isolated clusters
+        system_hard_isolated.correctForceWithCutoffTreeNeighborOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, n_loc);
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+        // Connected clusters
+        system_hard_connected.correctForceWithCutoffTreeNeighborOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, n_loc_all);
+#endif
+        for (int i=0; i<n_loc_all; i++) {
+            PS::F64vec dacci=psys_bk[i].acc- system_soft[i].acc;
+            PS::F64 dpoti = psys_bk[i].pot_tot- system_soft[i].pot_tot;
+            if(dacci*dacci/(system_soft[i].acc*system_soft[i].acc)>1e-8) {
+                std::cerr<<"Corrected Acc diff >1e-8: i "<<i<<" acc(tree): "<<system_soft[i].acc<<" acc(cluster): "<<psys_bk[i].acc<<std::endl;
+                abort();
+            }
+            if(abs(dpoti/system_soft[i].pot_tot)>1e-8) {
+                std::cerr<<"Corrected pot diff >1e-8: i "<<i<<" pot(tree): "<<system_soft[i].pot_tot<<" pot(cluster): "<<psys_bk[i].pot_tot<<std::endl;
+                abort();
+            }
+        }
+        
+#endif
+
+#ifdef PROFILE
+        profile.force_correct.end();
+        profile.soft_tot.end();
+#endif
 
         // for first step
         if(first_step_flag) {
@@ -654,7 +718,7 @@ int main(int argc, char *argv[]){
 
             // calculate initial energy
             stat.eng_init.clear();
-            stat.eng_init.calc(&system_soft[0], system_soft.getNumberOfParticleLocal(), 0.0);
+            stat.eng_init.calc(&system_soft[0], n_loc, 0.0);
             stat.eng_init.getSumMultiNodes();
             stat.eng_now = stat.eng_init;
              
@@ -710,7 +774,9 @@ int main(int argc, char *argv[]){
             
             // update global particle system due to kick
             system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
             system_hard_connected.writeBackPtclLocalOnlyOMP(system_soft);
+#endif
 
 #ifdef MAIN_DEBUG
             write_p(fout, time_sys, dt_soft.value*0.5, system_soft, stat.eng_now, stat.eng_diff);
@@ -732,7 +798,7 @@ int main(int argc, char *argv[]){
             stat.N = n_glb.value;
             
             stat.eng_now.clear();
-            stat.eng_now.calc(&system_soft[0], system_soft.getNumberOfParticleLocal(), dt_soft.value*0.5);
+            stat.eng_now.calc(&system_soft[0], n_loc, dt_soft.value*0.5);
             stat.eng_now.getSumMultiNodes();
         
             stat.eng_diff = stat.eng_now - stat.eng_init;

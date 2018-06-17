@@ -534,8 +534,8 @@ private:
                 //p[j]->r_search = _bin.member[j]->r_search;
                 p[j]->r_search = _bin.r_search;
                 if(i==0) p[j]->status = _bin.member[j]->status; // store the component member number 
-                if(i==1) p[j]->status = i_cg[j]; // store the i_cluster and i_group for identify artifical particles
-                //p[j]->status = (_bin.id<<ID_PHASE_SHIFT)|i;
+                else if(i==1) p[j]->status = i_cg[j]+1; // store the i_cluster and i_group for identify artifical particles, +1 to avoid 0 value (status>0)
+                else p[j]->status = (_bin.id<<ID_PHASE_SHIFT)|i; // not used, but make status>0
                 
 #ifdef SPLIT_MASS
 #ifdef TIDAL_TENSOR
@@ -1332,8 +1332,8 @@ public:
     void getGroupIndex(Tptcl* _ptcl_artifical) {
         n_members_1st = _ptcl_artifical[0].status;
         n_members_2nd = _ptcl_artifical[1].status;
-        i_cluster = _ptcl_artifical[2].status;
-        i_group   = _ptcl_artifical[3].status;
+        i_cluster = _ptcl_artifical[2].status-1;
+        i_group   = _ptcl_artifical[3].status-1;
         n_members = _ptcl_artifical[offset_cm].status;
         id        =-_ptcl_artifical[offset_cm].id;
     }
@@ -1526,17 +1526,17 @@ public:
             ptcl_outer[ith].clearSize();
 #pragma omp for
             for(PS::S32 i=0; i<n_loc; i++){
-                Tepj * nbl = NULL;
-                sys[i].n_ngb = tree.getNeighborListOneParticle(sys[i], nbl) - 1;
-                assert(sys[i].n_ngb >= 0);
-                // self-potential correction 
-
-                if(sys[i].n_ngb == 0){
+                if(sys[i].n_ngb == 1){
                     // no neighbor
                     adr_sys_one_cluster_[ith].push_back(i);
                 }
                 else{
                     // has neighbor
+                    Tepj * nbl = NULL;
+                    sys[i].n_ngb = tree.getNeighborListOneParticle(sys[i], nbl) - 1;
+                    assert(sys[i].n_ngb >= 0);
+                    // self-potential correction 
+
                     ptcl_cluster_[ith].push_back( PtclCluster(sys[i].id, i, id_ngb_multi_cluster[ith].size(), sys[i].n_ngb, false, NULL, my_rank) );
                     //PS::S32 n_tmp2 = 0;
                     //PS::S32 n_tmp3 = 0;
@@ -1623,19 +1623,19 @@ public:
             ptcl_outer[ith].clearSize();
 #pragma omp for
             for(PS::S32 i=0; i<n_loc; i++){
-                Tepj * nbl = NULL;
-                sys[i].n_ngb = tree.getNeighborListOneParticle(sys[i], nbl) - 1;
-                assert(sys[i].n_ngb >= 0);
-                // self-potential correction 
-                if (sys[i].status==0) sys[i].pot_tot += sys[i].mass/r_out;
-                else if (sys[i].status<0) sys[i].pot_tot += sys[i].mass_bk/r_out;
-
-                if(sys[i].n_ngb == 0){
+                if(sys[i].n_ngb == 1){
                     // no neighbor
                     adr_sys_one_cluster_[ith].push_back(i);
                 }
                 else{
                     // has neighbor
+                    Tepj * nbl = NULL;
+                    sys[i].n_ngb = tree.getNeighborListOneParticle(sys[i], nbl) - 1;
+                    assert(sys[i].n_ngb >= 0);
+                    // self-potential correction 
+                    if (sys[i].status==0) sys[i].pot_tot += sys[i].mass/r_out;
+                    //else if (sys[i].status<0) sys[i].pot_tot += sys[i].mass_bk/r_out;
+
                     ptcl_cluster_[ith].push_back( PtclCluster(sys[i].id, i, id_ngb_multi_cluster[ith].size(), sys[i].n_ngb, false, NULL, my_rank) );
 #ifdef HARD_DEBUG
                     if(sys[i].id<0&&sys[i].status<0) {

@@ -10,14 +10,14 @@ const PS::F64 SAFTY_OFFSET_FOR_SEARCH = 1e-7;
 class Ptcl: public ParticleBase{
 public:
     /*
-                single           c.m.                       members            
-      id         id          id of first member (-)            id
-      status      0          member number                  c.m. adr
-      mass_bk   unknown         mass                         mass
-                 fake members                                                           unused
-                id_offset+id*n_split+iphase                                              -1
-                1. first component member number 2. second. 3. first member adr          -1
-                    unknown                                                              unknown
+                single           c.m.                       members               unused
+      id         id          id of first member (-)            id                   -1
+      status      0          member number                  c.m. adr (-)            -1
+      mass_bk     0             mass                         mass                 unknown
+                 fake members                                                                            
+                id_offset+id*n_split+iphase                                             
+                1. first component member number 2. second. 3. i_cluster+1, 4. i_group+1, others: (c.m.id<<ID_PHASE_SHIFT)|i
+                  binary parameters                                                 
      */
     PS::F64 r_search;
     PS::F64 mass_bk;
