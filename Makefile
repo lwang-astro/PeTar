@@ -53,18 +53,18 @@ CXXFLAGS += -DINTRINSIC_X86
 endif
 
 ifeq ($(use_x86),yes)
-CXX = time g++
+#CXX = time g++
 #CXX = time icc
 
 #CXX = kinst-ompp mpicxx
 
 #CXX = tau_cxx.sh  -tau_makefile=/opt/tau-2.26.3/x86_64/lib/Makefile.tau-mpi-openmp -tau_options=-optCompInst
 
-#CXX = time mpicxx
-#CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
-#CXXFLAGS += -DMPICH_IGNORE_CXX_SEEKC
+CXX = time mpicxx
+CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
+CXXFLAGS += -DMPICH_IGNORE_CXX_SEEKC
 
-CXXFLAGS = -g -O0 -fbounds-check
+CXXFLAGS += -g -O0 -fbounds-check
 #CXXFLAGS += -O2
 
 CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -fopenmp

@@ -2201,14 +2201,14 @@ public:
      */
     template<class Tsys, class Tphard>
     void SendAndRecieveUpdatedPtclAfterKick(Tsys & _sys,
-                                            const PS::ReallocatableArray<Tphard> & _ptcl_hard){
+                                            PS::ReallocatableArray<Tphard> & _ptcl_hard){
         //  const PS::S32 my_rank = PS::Comm::getRank();
         //  const PS::S32 n_proc  = PS::Comm::getNumberOfProc();
         const PS::S32 n = _ptcl_hard.size();
         for(PS::S32 i=0; i<n; i++){
             const PS::S32 adr = _ptcl_hard[i].adr_org;
             // only care the remote data of group member
-            if(adr <0 && _ptcl_hard[i].status>0){
+            if(adr <0 && _ptcl_hard[i].status<0){
 #ifdef HARD_DEBUG
                 assert( ptcl_recv_[-(adr+1)].id == _ptcl_hard[i].id );
 #endif
@@ -2240,12 +2240,12 @@ public:
         MPI_Waitall(rank_recv_ptcl_.size(), req_recv.getPointer(), stat_recv.getPointer());
 
         for(PS::S32 i=0; i<ptcl_send_.size(); i++){
-            PS::S32 adr = adr__sys_ptcl_send_[i];
+            PS::S32 adr = adr_sys_ptcl_send_[i];
 #ifdef HARD_DEBUG
             assert(_sys[adr].id == ptcl_send_[i].id);
 #endif
             // only care remote data non-group member 
-            if(ptcl_send_[i].status=0) {
+            if(ptcl_send_[i].status==0) {
                 _sys[adr].DataCopy(ptcl_send_[i]);
             }
         }
@@ -2253,11 +2253,11 @@ public:
         for(PS::S32 i=0; i<n; i++) {
             const PS::S32 adr = _ptcl_hard[i].adr_org;
             // only care the remote data of non-group member
-            if(adr >=0 && _ptcl_hard[i].status=0){
+            if(adr >=0 && _ptcl_hard[i].status==0){
 #ifdef HARD_DEBUG
                 assert( _sys[adr].id == _ptcl_hard[i].id );
 #endif
-                ptcl_hard_[i].DataCopy(_sys[adr]);
+                _ptcl_hard[i].DataCopy(_sys[adr]);
             }
         }
     }
