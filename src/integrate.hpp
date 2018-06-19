@@ -70,6 +70,29 @@ void kickCluster(Tsys& _sys,
     }
 }
 
+//!leap frog kick for sending list------------------------------------------
+/* Kick single particles in sending list 
+   @param[in,out] _sys: particle system
+   @param[in,out] _ptcl: local particle array in system hard
+   @param[in]: _dt: tree step
+ */
+template<class Tsys>
+void kickSend(Tsys& _sys,
+              const PS::ReallocatableArray<PS::S32>& _adr_ptcl_send,
+              const PS::F64 _dt) {
+    const PS::S64 n= _adr_ptcl_send.size();
+#pragma omp parallel for
+    for(int i=0; i<n; i++) {
+        const PS::S64 adr = _adr_ptcl_send[i];
+        const PS::S64 cm_adr=-_sys[adr].status; // notice status is negative 
+        // if it is group member, should not do kick since c.m. particles are on remote nodes;
+        if(cm_adr==0)  _sys[adr].vel += _sys[adr].acc * _dt;
+#ifdef HARD_DEBUG
+        if(cm_adr==0) assert(_sys[adr].mass>0&&_sys[adr].mass_bk==0);
+#endif
+    }
+}
+
 template<class Tpsys, class Ttree>
 void Drift(Tpsys & system,
            const Ttree & tree,

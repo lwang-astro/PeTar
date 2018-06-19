@@ -666,7 +666,7 @@ int main(int argc, char *argv[]){
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         // Connected clusters
-        system_hard_connected.correctForceWithCutoffTreeNeighborAndClusterOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft);
+        system_hard_connected.correctForceWithCutoffTreeNeighborAndClusterOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, search_cluster.getAdrSysConnectClusterSend());
 #endif
 
 
@@ -679,14 +679,18 @@ int main(int argc, char *argv[]){
             system_soft[i] = ptmp;
         }
 
-        // single 
-        system_hard_one_cluster.correctPotWithCutoffOMP(system_soft, search_cluster.getAdrSysOneCluster());
-        // Isolated clusters
+        // all particles
         system_hard_isolated.correctForceWithCutoffTreeNeighborOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, n_loc);
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-        // Connected clusters
-        system_hard_connected.correctForceWithCutoffTreeNeighborOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, n_loc_all);
-#endif
+
+        // single 
+        //system_hard_one_cluster.correctPotWithCutoffOMP(system_soft, search_cluster.getAdrSysOneCluster());
+        // Isolated clusters
+        //system_hard_isolated.correctForceWithCutoffTreeNeighborOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, n_loc);
+//#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+//        // Connected clusters
+//        system_hard_connected.correctForceWithCutoffTreeNeighborOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, n_loc_all);
+//#endif
+
         for (int i=0; i<n_loc_all; i++) {
             PS::F64vec dacci=psys_bk[i].acc- system_soft[i].acc;
             PS::F64 dpoti = psys_bk[i].pot_tot- system_soft[i].pot_tot;
@@ -694,6 +698,7 @@ int main(int argc, char *argv[]){
                 std::cerr<<"Corrected Acc diff >1e-8: i "<<i<<" acc(tree): "<<system_soft[i].acc<<" acc(cluster): "<<psys_bk[i].acc<<std::endl;
                 abort();
             }
+            // Notice, the cluster members can include particles are not in the tree neighbor searching. If the extra neighbors in clusters are group members. The correct from clusters will be more accurate than tree neighbor correction. Since the potential is calculated from the real members instead of artifical particles. This can result in different potential
             if(abs(dpoti/system_soft[i].pot_tot)>1e-8) {
                 std::cerr<<"Corrected pot diff >1e-8: i "<<i<<" pot(tree): "<<system_soft[i].pot_tot<<" pot(cluster): "<<psys_bk[i].pot_tot<<std::endl;
                 abort();
@@ -761,8 +766,10 @@ int main(int argc, char *argv[]){
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         // connected
         kickCluster(system_soft, system_hard_connected.getPtcl(), dt_kick);
-        // receive kicked non-group particles from remote and write back kicked data to system_soft
-        search_cluster.writeLocalAndSendSinglePtcl(system_soft, system_hard_connected.getPtcl());
+        // sending list for connected clusters
+        kickSend(system_soft, search_cluster.getAdrSysConnectClusterSend(), dt_kick);
+        // send kicked particle from sending list, and receive remote single particle
+        search_cluster.SendSinglePtcl(system_soft, system_hard_connected.getPtcl());
 #endif
 
 #ifdef PROFILE
@@ -776,8 +783,8 @@ int main(int argc, char *argv[]){
             // update global particle system due to kick
             system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-            // update local group particles that are kicked on remote.
-            search_cluster.writeAndSendBackGroupPtcl(system_soft, system_hard_connected.getPtcl());
+            // update gloabl particle system and send receive remote particles
+            search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
 #endif
 
 #ifdef MAIN_DEBUG
@@ -900,7 +907,10 @@ int main(int argc, char *argv[]){
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
             // connected
             kickCluster(system_soft, system_hard_connected.getPtcl(), dt_kick);
-            search_cluster.writeLocalAndSendSinglePtcl(system_soft, system_hard_connected.getPtcl());
+            // sending list for connected clusters, kick data are written on system_soft
+            kickSend(system_soft, search_cluster.getAdrSysConnectClusterSend(), dt_kick);
+            // send kicked particle from sending list , and receive remote single particle
+            search_cluster.SendSinglePtcl(system_soft, system_hard_connected.getPtcl());
 #endif
 
 #ifdef PROFILE

@@ -2194,25 +2194,24 @@ public:
     }
 
     //! Send and receive the remote particles due to the change of kick
-    /* First write back kicked data to _sys.
-       Send local single particles to remote nodes and receive remote single particles
+    /* Send local single particles to remote nodes and receive remote single particles.
+       Notice _ptcl_hard are not overlap with ptcl_send
        @param[in,out] _sys: particle system. Notice the local particles of non-group members are updated.
        @param[in,out] _ptcl_hard: local partical in system_hard_connected
      */
     template<class Tsys, class Tphard>
-    void writeLocalAndSendSinglePtcl(Tsys & _sys,
-                                     PS::ReallocatableArray<Tphard> & _ptcl_hard){
-        // First, write back local kicked single particles to sys.
-        const PS::S32 n = _ptcl_hard.size();
-        for(PS::S32 i=0; i<n; i++) {
-            const PS::S32 adr = _ptcl_hard[i].adr_org;
-            if(adr >=0){
-#ifdef HARD_DEBUG
-                assert( _sys[adr].id == _ptcl_hard[i].id );
-#endif
-                _sys[adr].DataCopy(_ptcl_hard[i]);
-            }
-        }
+    void SendSinglePtcl(Tsys & _sys,
+                        PS::ReallocatableArray<Tphard> & _ptcl_hard){
+        //// First, write back local kicked single particles to sys.
+        //for(PS::S32 i=0; i<n; i++) {
+        //    const PS::S32 adr = _ptcl_hard[i].adr_org;
+        //    if(adr >=0){
+#ifdef H//ARD_DEBUG
+        //        assert( _sys[adr].id == _ptcl_hard[i].id );
+#endif  // 
+        //        _sys[adr].DataCopy(_ptcl_hard[i]);
+        //    }
+        //}
         // write kicked single particle to sending buffer
         for(PS::S32 i=0; i<ptcl_send_.size(); i++){
             PS::S32 adr = adr_sys_ptcl_send_[i];
@@ -2249,6 +2248,7 @@ public:
         MPI_Waitall(rank_recv_ptcl_.size(), req_recv.getPointer(), stat_recv.getPointer());
 
         // Receive remote single particle data
+        const PS::S32 n = _ptcl_hard.size();
         for(PS::S32 i=0; i<n; i++){
             const PS::S32 adr = _ptcl_hard[i].adr_org;
             if(adr <0 && _ptcl_hard[i].status==0){
@@ -2324,10 +2324,11 @@ public:
     }
 
 
-    //! send back remote group particles and write to _sys
+    //! send back remote group particles and write particles back to global particle sys
     /* @param[in,out] _sys: particle system
        @param[in] _ptcl_hard: local partical in system_hard_connected
      */
+    /*
     template<class Tsys, class Tphard>
     void writeAndSendBackGroupPtcl(Tsys & _sys,
                                    const PS::ReallocatableArray<Tphard> & _ptcl_hard){
@@ -2376,6 +2377,7 @@ public:
                 _sys[adr].DataCopy(ptcl_send_[i]);
         }
     }
+    */
 #endif
 
 

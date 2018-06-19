@@ -337,7 +337,9 @@ private:
             if (ptcl_nb[k].id == _psoft.id) continue;
             PS::S32 pot_control_flag;
 #ifdef HARD_DEBUG 
+#ifndef CORRECT_FORCE_DEBUG
             assert(ptcl_nb[k].id>0);
+#endif
 #endif
             PS::S64 stat_k = ptcl_nb[k].status;
             if (stat_k==0) pot_control_flag = 0; //single 
@@ -507,7 +509,7 @@ private:
                                           const PS::F64 _rin,
                                           const PS::F64 _rout,
                                           const PS::S32 _n_split,
-                                          const PS::F64 _eps_sq=0.0) {
+                                          const PS::F64 _eps_sq) {
         // cutoff function parameter
         const PS::F64 r_oi_inv = 1.0/(_rout-_rin);
         const PS::F64 r_A = (_rout-_rin)/(_rout+_rin);
@@ -590,6 +592,7 @@ private:
    @parma[in] _n_group_in_cluster: number of groups in clusters
    @param[in] _n_group_in_cluster_offset: boundary of groups in _adr_first_ptcl_arti_in_cluster
    @param[in] _adr_first_ptcl_arti_in_cluster: address of the first artifical particle in each groups
+   @param[in] _adr_send: particle in sending list of connected clusters
    @param[in] _rin: cutoff inner radius;
    @param[in] _rout: cutoff outer radius;
    @param[in] _n_split: artifical particle splitting number
@@ -604,10 +607,11 @@ private:
                                                          const PS::ReallocatableArray<PS::S32>& _n_group_in_cluster,
                                                          const PS::ReallocatableArray<PS::S32>& _n_group_in_cluster_offset,
                                                          const PS::ReallocatableArray<PS::S32>& _adr_first_ptcl_arti_in_cluster,
+                                                         const PS::ReallocatableArray<PS::S32>& _adr_send,
                                                          const PS::F64 _rin,
                                                          const PS::F64 _rout,
                                                          const PS::S32 _n_split,
-                                                         const PS::F64 _eps_sq=0.0) {
+                                                         const PS::F64 _eps_sq) {
 
         // cutoff function parameter
         const PS::F64 r_oi_inv = 1.0/(_rout-_rin);
@@ -638,6 +642,14 @@ private:
                 if(adr>=0) correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[adr], _tree, _rin, _rout, r_oi_inv, r_A, _eps_sq);
             }
         }
+
+        const PS::S32 n_send = _adr_send.size();
+#pragma omp parallel for 
+        // sending list to other nodes need also be corrected.
+        for (int i=0; i<n_send; i++) {
+            PS::S64 adr = _adr_send[i];
+            correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[adr], _tree, _rin, _rout, r_oi_inv, r_A, _eps_sq); 
+        }
     }
     
 //! soft force correction completely use tree neighbor search
@@ -660,7 +672,7 @@ private:
                                                const PS::F64 _rin,
                                                const PS::F64 _rout,
                                                const PS::S32 _n_split,
-                                               const PS::F64 _eps_sq=0.0) { 
+                                               const PS::F64 _eps_sq) { 
         // cutoff function parameter
         const PS::F64 r_oi_inv = 1.0/(_rout-_rin);
         const PS::F64 r_A = (_rout-_rin)/(_rout+_rin);
@@ -679,6 +691,66 @@ private:
             correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[i], _tree, _rin, _rout, r_oi_inv, r_A, _eps_sq);
 
         
+        GroupPars gpars(_n_split);
+#ifdef HARD_DEBUG
+        assert((n_tot-_adr_ptcl_artifical_start)%gpars.n_ptcl_artifical==0);
+#endif
+#pragma omp for schedule(dynamic)
+        for (int i=_adr_ptcl_artifical_start; i<n_tot; i+=gpars.n_ptcl_artifical){
+            PS::S32 i_cm = i + gpars.offset_cm;
+            PS::F64vec& acc_cm = _sys[i_cm].acc;
+#ifdef TIDAL_TENSOR
+            // substract c.m. force (acc) from tidal tensor force (acc)
+            for (PS::S32 k=gpars.offset_tt; k<gpars.offset_orb; k++)  _sys[i+k].acc -= acc_cm;
+#endif
+
+            // After c.m. force used, it can be replaced by the averaged force on orbital particles
+            acc_cm=PS::F64vec(0.0);
+            PS::F64 m_ob_tot = 0.0;
+
+            PS::S32 ob_start = i+gpars.offset_orb;
+            for (PS::S32 k=ob_start; k<i_cm; k++) {
+                acc_cm += _sys[k].mass*_sys[k].acc; 
+                m_ob_tot += _sys[k].mass;
+//#ifdef HARD_DEBUG
+//                assert(((_sys[k].status)>>ID_PHASE_SHIFT)==-_sys[j_cm].id);
+//#endif
+            }
+            acc_cm /= m_ob_tot;
+
+#ifdef HARD_DEBUG
+            assert(abs(m_ob_tot-_sys[i_cm].mass_bk)<1e-10);
+#endif
+        }
+    }
+
+//! soft force correction completely use tree neighbor search for all particles
+/* @param[in,out] _sys: global particle system, acc is updated
+   @param[in] _tree: tree for force
+   @param[in] _adr_ptcl_artifical_start: start address of artifical particle in _sys
+   @param[in] _rin: cutoff inner radius;
+   @param[in] _rout: cutoff outer radius;
+   @param[in] _n_split: artifical particle splitting number
+   @param[in] _eps_sq: softing eps square
+*/
+    template <class Tsys, class Tpsoft, class Ttree, class Tepj>
+    void correctForceWithCutoffTreeNeighborImp(Tsys& _sys, 
+                                               Ttree& _tree, 
+                                               const PS::S32 _adr_ptcl_artifical_start,
+                                               const PS::F64 _rin,
+                                               const PS::F64 _rout,
+                                               const PS::S32 _n_split,
+                                               const PS::F64 _eps_sq) { 
+        // cutoff function parameter
+        const PS::F64 r_oi_inv = 1.0/(_rout-_rin);
+        const PS::F64 r_A = (_rout-_rin)/(_rout+_rin);
+        // for artifical particle
+        const PS::S32 n_tot = _sys.getNumberOfParticleLocal();
+
+#pragma omp for schedule(dynamic)
+        for (int i=0; i<n_tot; i++) {
+            correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[i], _tree, _rin, _rout, r_oi_inv, r_A, _eps_sq);
+        }
         GroupPars gpars(_n_split);
 #ifdef HARD_DEBUG
         assert((n_tot-_adr_ptcl_artifical_start)%gpars.n_ptcl_artifical==0);
@@ -760,11 +832,14 @@ private:
                 n_group_offset[i+1] = n_group_offset[i] + gpars[i].n_members;
 #ifdef HARD_DEBUG
                 assert(gpars[i].id == _ptcl_local[n_group_offset[i]].id);
-                if(n_group_offset[_n_group]<_n_ptcl)
-                    assert(_ptcl_local[n_group_offset[_n_group]].status==0);
-                assert(_ptcl_local[n_group_offset[_n_group]-1].status<0);
 #endif
             }
+#ifdef HARD_DEBUG
+            if(n_group_offset[_n_group]<_n_ptcl)
+                assert(_ptcl_local[n_group_offset[_n_group]].status==0);
+            assert(_ptcl_local[n_group_offset[_n_group]-1].status<0);
+#endif
+
             // single particle start index in _ptcl_local
             PS::S32 i_single_start = n_group_offset[_n_group];
             // number of single particles
@@ -975,7 +1050,7 @@ private:
                     PS::S32 i_soft_pert_offset = adr_first_ptcl[i]+gpars[i].offset_orb;
 #endif
                 
-                    Aint.addOneGroup(_ptcl_local, gpars[i].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i)); 
+                    Aint.addOneGroup(&_ptcl_local[n_group_offset[i]], gpars[i].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i)); 
                 }
                 Aint.initialSlowDown(dt_limit, sdfactor_);
                 Aint.initial();
@@ -1819,17 +1894,19 @@ public:
     }
 
     //! Soft force correction due to different cut-off function
-    /* Use tree neighbor search for local real particles.
+    /* Use tree neighbor search for local real particles including sending particles.
        Use cluster information correct artifical particles. 
        c.m. force is replaced by the averaged force on orbital particles
        Tidal tensor particle subtract the c.m. acc
        @param[in] _sys: global particle system, acc is updated
        @param[in] _tree: tree for force
+       @param[in] _adr_send: particle in sending list of connected clusters
     */
     template <class Tsys, class Tpsoft, class Ttree, class Tepj>
     void correctForceWithCutoffTreeNeighborAndClusterOMP(Tsys& _sys,
-                                               Ttree& _tree) {
-        correctForceWithCutoffTreeNeighborAndClusterImp<Tsys, Tpsoft, Ttree, Tepj>(_sys, _tree, ptcl_hard_.getPointer(), n_ptcl_in_cluster_, n_ptcl_in_cluster_disp_, n_group_in_cluster_, n_group_in_cluster_offset_, adr_first_ptcl_arti_in_cluster_, Int_pars_.rin, Int_pars_.rout, n_split_);
+                                                         Ttree& _tree,
+                                                         const PS::ReallocatableArray<PS::S32>& _adr_send) {
+        correctForceWithCutoffTreeNeighborAndClusterImp<Tsys, Tpsoft, Ttree, Tepj>(_sys, _tree, ptcl_hard_.getPointer(), n_ptcl_in_cluster_, n_ptcl_in_cluster_disp_, n_group_in_cluster_, n_group_in_cluster_offset_, adr_first_ptcl_arti_in_cluster_, _adr_send, Int_pars_.rin, Int_pars_.rout, n_split_, Int_pars_.eps2);
     }
 
     //! Soft force correction due to different cut-off function
@@ -1840,7 +1917,7 @@ public:
     */
     template <class Tsys>
     void correctForceWithCutoffClusterOMP(Tsys& _sys) { 
-        correctForceWithCutoffClusterImp(_sys, ptcl_hard_.getPointer(), n_ptcl_in_cluster_, n_ptcl_in_cluster_disp_, n_group_in_cluster_, n_group_in_cluster_offset_, adr_first_ptcl_arti_in_cluster_, Int_pars_.rin, Int_pars_.rout, n_split_);
+        correctForceWithCutoffClusterImp(_sys, ptcl_hard_.getPointer(), n_ptcl_in_cluster_, n_ptcl_in_cluster_disp_, n_group_in_cluster_, n_group_in_cluster_offset_, adr_first_ptcl_arti_in_cluster_, Int_pars_.rin, Int_pars_.rout, n_split_, Int_pars_.eps2);
     }
 
     //! Soft force correction due to different cut-off function
@@ -1856,8 +1933,27 @@ public:
                                                Ttree& _tree,
                                                const PS::S32 _adr_ptcl_artifical_start) {
         
-        correctForceWithCutoffTreeNeighborImp<Tsys, Tpsoft, Ttree, Tepj>(_sys, _tree, ptcl_hard_.getPointer(), ptcl_hard_.size(), _adr_ptcl_artifical_start, Int_pars_.rin, Int_pars_.rout, n_split_);
+        correctForceWithCutoffTreeNeighborImp<Tsys, Tpsoft, Ttree, Tepj>(_sys, _tree, _adr_ptcl_artifical_start, Int_pars_.rin, Int_pars_.rout, n_split_, Int_pars_.eps2);
     }
+
+    ////! soft force correction for sending particles
+    ///* Use tree neighbor search for sending particles
+    //   
+    // */
+    //template <class Tsys, class Tpsoft, class Ttree, class Tepj>
+    //void correctForceWithCutoffTreeNeighborSendOMP(Tsys& _sys,
+    //                                               Ttree& _tree,
+    //                                               const PS::ReallocatableArray<PS::S32> & _adr_send) {
+    //    
+    //    const PS::S32 n_send = _adr_send.size();
+    //    // cutoff function parameter
+    //    const PS::F64 r_oi_inv = 1.0/(_rout-_rin);
+    //    const PS::F64 r_A = (_rout-_rin)/(_rout+_rin);
+//#pragma omp for schedule(dynamic)
+    //    for (int i=0; i<n_send; i++) 
+    //        const PS::S64 adr  = _adr_send(i);
+    //        correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[adr], _tree, Int_pars_.rin, Int_pars_.rout, r_oi_inv, r_A, Int_pars_.eps2);
+    //}
 
     //template<class Tsys, class Tsptcl>
     //void initialMultiClusterOMP(Tsys & sys, const PS::F64 dt_tree){
