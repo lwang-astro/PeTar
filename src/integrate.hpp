@@ -40,7 +40,7 @@ void kickOne(Tsys & _sys,
 }
 
 //!leap frog kick for clusters------------------------------------------
-/* modify the velocity of particle in local, if remote non-group particle, do nothing, need MPI receive to update data
+/* modify the velocity of particle in local, if particle is from remote note and is not group member, do nothing, need MPI receive to update data
    Recover the mass of members for energy calculation
    Kick c.m. velocity also
    @param[in,out] _sys: particle system
@@ -62,7 +62,8 @@ void kickCluster(Tsys& _sys,
             _ptcl[i].vel += _sys[cm_adr].acc * _dt;
             _sys[cm_adr].vel += _sys[cm_adr].acc * _dt/_sys[cm_adr].status; // status has total number of members, to avoid duplicate kick
         }
-        else if(i_adr>=0) { // non-member particle
+        // non-member particle
+        else if(i_adr>=0) {
             // not remote particles
             _ptcl[i].vel += _sys[i_adr].acc * _dt;
         }

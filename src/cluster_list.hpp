@@ -2194,24 +2194,96 @@ public:
     }
 
     //! Send and receive the remote particles due to the change of kick
-    /* For remote particles in group members, the kick is done locally from c.m. Force, need to send back to original nodes
-       For remote particles outside group, the kick is done remotely, need to receive
+    /* First write back kicked data to _sys.
+       Send local single particles to remote nodes and receive remote single particles
        @param[in,out] _sys: particle system. Notice the local particles of non-group members are updated.
        @param[in,out] _ptcl_hard: local partical in system_hard_connected
      */
     template<class Tsys, class Tphard>
-    void SendAndRecieveUpdatedPtclAfterKick(Tsys & _sys,
-                                            PS::ReallocatableArray<Tphard> & _ptcl_hard){
+    void writeLocalAndSendSinglePtcl(Tsys & _sys,
+                                     PS::ReallocatableArray<Tphard> & _ptcl_hard){
+        // First, write back local kicked single particles to sys.
+        const PS::S32 n = _ptcl_hard.size();
+        for(PS::S32 i=0; i<n; i++) {
+            const PS::S32 adr = _ptcl_hard[i].adr_org;
+            if(adr >=0){
+#ifdef HARD_DEBUG
+                assert( _sys[adr].id == _ptcl_hard[i].id );
+#endif
+                _sys[adr].DataCopy(_ptcl_hard[i]);
+            }
+        }
+        // write kicked single particle to sending buffer
+        for(PS::S32 i=0; i<ptcl_send_.size(); i++){
+            PS::S32 adr = adr_sys_ptcl_send_[i];
+#ifdef HARD_DEBUG
+            assert(_sys[adr].id == ptcl_send_[i].id);
+#endif
+            // write local single particle
+            if(ptcl_send_[i].status==0) {
+                ptcl_send_[i].DataCopy(_sys[adr]);
+            }
+        }
+        static PS::ReallocatableArray<MPI_Request> req_send;
+        static PS::ReallocatableArray<MPI_Status> stat_send;
+        static PS::ReallocatableArray<MPI_Request> req_recv;
+        static PS::ReallocatableArray<MPI_Status> stat_recv;
+        req_send.resizeNoInitialize(rank_send_ptcl_.size());
+        stat_send.resizeNoInitialize(rank_send_ptcl_.size());
+        req_recv.resizeNoInitialize(rank_recv_ptcl_.size());
+        stat_recv.resizeNoInitialize(rank_recv_ptcl_.size());
+
+        for(PS::S32 i=0; i<rank_send_ptcl_.size(); i++){
+            PS::S32 rank = rank_send_ptcl_[i];
+            MPI_Isend(ptcl_send_.getPointer(n_ptcl_disp_send_[i]),  n_ptcl_send_[i],
+                      PS::GetDataType<PtclComm>(),
+                      rank, 0, MPI_COMM_WORLD, req_send.getPointer(i));
+        }
+        for(PS::S32 i=0; i<rank_recv_ptcl_.size(); i++){
+            PS::S32 rank = rank_recv_ptcl_[i];
+            MPI_Irecv(ptcl_recv_.getPointer(n_ptcl_disp_recv_[i]), n_ptcl_recv_[i],
+                      PS::GetDataType<PtclComm>(),
+                      rank, 0, MPI_COMM_WORLD, req_recv.getPointer(i));
+        }
+        MPI_Waitall(rank_send_ptcl_.size(), req_send.getPointer(), stat_send.getPointer());
+        MPI_Waitall(rank_recv_ptcl_.size(), req_recv.getPointer(), stat_recv.getPointer());
+
+        // Receive remote single particle data
+        for(PS::S32 i=0; i<n; i++){
+            const PS::S32 adr = _ptcl_hard[i].adr_org;
+            if(adr <0 && _ptcl_hard[i].status==0){
+#ifdef HARD_DEBUG
+                assert( ptcl_recv_[-(adr+1)].id == _ptcl_hard[i].id );
+#endif
+                _ptcl_hard[i].DataCopy(ptcl_recv_[-(adr+1)]);
+            }
+        }
+
+    }
+    
+    //! send and receive particles on remote
+    /* @param[in,out] _sys: particle system
+       @param[in] _ptcl_hard: local partical in system_hard_connected
+       @param[out] _removelist: address on _sys of particles that are need to be removed (id<0&status<0) are stored.
+     */
+    template<class Tsys, class Tphard>
+    void writeAndSendBackPtcl(Tsys & _sys,
+                              const PS::ReallocatableArray<Tphard> & _ptcl_hard,
+                              PS::ReallocatableArray<PS::S32> &_removelist){
         //  const PS::S32 my_rank = PS::Comm::getRank();
         //  const PS::S32 n_proc  = PS::Comm::getNumberOfProc();
         const PS::S32 n = _ptcl_hard.size();
         for(PS::S32 i=0; i<n; i++){
             const PS::S32 adr = _ptcl_hard[i].adr_org;
-            // only care the remote data of group member
-            if(adr <0 && _ptcl_hard[i].status<0){
+            if( adr >= 0){
 #ifdef HARD_DEBUG
-                assert( ptcl_recv_[-(adr+1)].id == _ptcl_hard[i].id );
+                assert( _sys[adr].id == _ptcl_hard[i].id);
 #endif
+                _sys[adr].DataCopy(_ptcl_hard[i]);
+                if(_sys[adr].id<0&&_sys[adr].status<0) _removelist.push_back(adr);
+            }
+            else{
+                //assert( ptcl_recv_[-(adr+1)].id == _ptcl_hard[i].id );
                 ptcl_recv_[-(adr+1)].DataCopy(_ptcl_hard[i]);
             }
         }
@@ -2244,42 +2316,30 @@ public:
 #ifdef HARD_DEBUG
             assert(_sys[adr].id == ptcl_send_[i].id);
 #endif
-            // only care remote data non-group member 
-            if(ptcl_send_[i].status==0) {
-                _sys[adr].DataCopy(ptcl_send_[i]);
-            }
+            _sys[adr].DataCopy(ptcl_send_[i]);
+            if(_sys[adr].id<0&&_sys[adr].status<0) _removelist.push_back(adr);
         }
-
-        for(PS::S32 i=0; i<n; i++) {
-            const PS::S32 adr = _ptcl_hard[i].adr_org;
-            // only care the remote data of non-group member
-            if(adr >=0 && _ptcl_hard[i].status==0){
-#ifdef HARD_DEBUG
-                assert( _sys[adr].id == _ptcl_hard[i].id );
-#endif
-                _ptcl_hard[i].DataCopy(_sys[adr]);
-            }
-        }
+        // remove empty particles cannot do here
+        // _sys.removeParticle(_removelist.getPointer(), _removelist.size());
     }
-    
 
+
+    //! send back remote group particles and write to _sys
+    /* @param[in,out] _sys: particle system
+       @param[in] _ptcl_hard: local partical in system_hard_connected
+     */
     template<class Tsys, class Tphard>
-    void writeAndSendBackPtcl(Tsys & sys,
-                              const PS::ReallocatableArray<Tphard> & ptcl_hard,
-                              PS::ReallocatableArray<PS::S32> &removelist){
-        //  const PS::S32 my_rank = PS::Comm::getRank();
-        //  const PS::S32 n_proc  = PS::Comm::getNumberOfProc();
-        const PS::S32 n = ptcl_hard.size();
+    void writeAndSendBackGroupPtcl(Tsys & _sys,
+                                   const PS::ReallocatableArray<Tphard> & _ptcl_hard){
+        const PS::S32 n = _ptcl_hard.size();
+        // write back the remoted group particles
         for(PS::S32 i=0; i<n; i++){
-            const PS::S32 adr = ptcl_hard[i].adr_org;
-            if( adr >= 0){
-                //assert( sys[adr].id == ptcl_hard[i].id);
-                sys[adr].DataCopy(ptcl_hard[i]);
-                if(sys[adr].id<0&&sys[adr].status<0) removelist.push_back(adr);
-            }
-            else{
-                //assert( ptcl_recv_[-(adr+1)].id == ptcl_hard[i].id );
-                ptcl_recv_[-(adr+1)].DataCopy(ptcl_hard[i]);
+            const PS::S32 adr = _ptcl_hard[i].adr_org;
+            if(adr<0 && _ptcl_hard[i].status<0) {
+#ifdef HARD_DEBUG
+                assert( ptcl_recv_[-(adr+1)].id == _ptcl_hard[i].id );
+#endif
+                ptcl_recv_[-(adr+1)].DataCopy(_ptcl_hard[i]);
             }
         }
         static PS::ReallocatableArray<MPI_Request> req_recv;
@@ -2306,14 +2366,15 @@ public:
         MPI_Waitall(rank_send_ptcl_.size(), req_send.getPointer(), stat_send.getPointer());
         MPI_Waitall(rank_recv_ptcl_.size(), req_recv.getPointer(), stat_recv.getPointer());
 
+        // get group particles on remote
         for(PS::S32 i=0; i<ptcl_send_.size(); i++){
             PS::S32 adr = adr_sys_ptcl_send_[i];
-            //assert(sys[adr].id == ptcl_send_[i].id);
-            sys[adr].DataCopy(ptcl_send_[i]);
-            if(sys[adr].id<0&&sys[adr].status<0) removelist.push_back(adr);
+#ifdef HARD_DEBUG
+            assert(_sys[adr].id == ptcl_send_[i].id);
+#endif
+            if(_sys[adr].status<0) 
+                _sys[adr].DataCopy(ptcl_send_[i]);
         }
-        // remove empty particles cannot do here
-        // sys.removeParticle(removelist.getPointer(), removelist.size());
     }
 #endif
 

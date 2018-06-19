@@ -761,7 +761,8 @@ int main(int argc, char *argv[]){
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         // connected
         kickCluster(system_soft, system_hard_connected.getPtcl(), dt_kick);
-        search_cluster.SendAndRecieveUpdatedPtclAfterKick(system_soft, system_hard_connected.getPtcl());
+        // receive kicked non-group particles from remote and write back kicked data to system_soft
+        search_cluster.writeLocalAndSendSinglePtcl(system_soft, system_hard_connected.getPtcl());
 #endif
 
 #ifdef PROFILE
@@ -775,7 +776,8 @@ int main(int argc, char *argv[]){
             // update global particle system due to kick
             system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-            system_hard_connected.writeBackPtclLocalOnlyOMP(system_soft);
+            // update local group particles that are kicked on remote.
+            search_cluster.writeAndSendBackGroupPtcl(system_soft, system_hard_connected.getPtcl());
 #endif
 
 #ifdef MAIN_DEBUG
@@ -898,7 +900,7 @@ int main(int argc, char *argv[]){
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
             // connected
             kickCluster(system_soft, system_hard_connected.getPtcl(), dt_kick);
-            search_cluster.SendAndRecieveUpdatedPtclAfterKick(system_soft, system_hard_connected.getPtcl());
+            search_cluster.writeLocalAndSendSinglePtcl(system_soft, system_hard_connected.getPtcl());
 #endif
 
 #ifdef PROFILE

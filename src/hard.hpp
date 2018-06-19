@@ -633,7 +633,7 @@ private:
                 PS::S64 adr = _ptcl_local[j].adr_org;
                 // only do for local particles
 #ifdef HARD_DEBUG
-                assert(_sys[adr].id==_ptcl_local[j].id);
+                if(adr>=0) assert(_sys[adr].id==_ptcl_local[j].id);
 #endif
                 if(adr>=0) correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[adr], _tree, _rin, _rout, r_oi_inv, r_A, _eps_sq);
             }
@@ -1594,7 +1594,7 @@ public:
             PS::S32 adr = ptcl_hard_[i].adr_org;
             //PS::S32 adr = adr_array[i];
 #ifdef HARD_DEBUG
-            assert(sys[adr].id == ptcl_hard_[i].id);
+            if(adr>=0) assert(sys[adr].id == ptcl_hard_[i].id);
 #endif
             if(adr>=0) sys[adr].DataCopy(ptcl_hard_[i]);
         }
