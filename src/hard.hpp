@@ -888,29 +888,13 @@ private:
                     assert(id_offset_j1==id_offset_j2);
                 }
 
-                // check mass of component
-                PS::F64 mtot = 0.0;
-            
-                for(int j=0; j<gpars[i].n_members; j++) {
-                    mtot += _ptcl_local[n_group_offset[i]+j].mass;
-                }
-                assert(abs(mtot - _ptcl_artifical[icm].mass)<1e-10);
-#endif
-            }
-
-            // Only one group with all particles in group
-            if(_n_group==1&&n_single==0) {
-                PS::S32 icm = adr_cm_ptcl[0];
-
-#ifdef HARD_DEBUG
-                assert(-_ptcl_artifical[icm].id==_ptcl_local[0].id);
-
                 // check whether c.m. pos. and vel. are consistent
                 PS::F64 mass_cm_check=0.0;
                 PS::F64vec vel_cm_check=PS::F64vec(0.0);
                 PS::F64vec pos_cm_check=PS::F64vec(0.0);
-
-                for(int k=0; k<gpars[0].n_members; k++) {
+            
+                for(int j=0; j<gpars[i].n_members; j++) {
+                    PS::S32 k = n_group_offset[i]+j;
                     mass_cm_check += _ptcl_local[k].mass;
                     vel_cm_check +=  _ptcl_local[k].vel*_ptcl_local[k].mass;
                     pos_cm_check +=  _ptcl_local[k].pos*_ptcl_local[k].mass;
@@ -924,6 +908,13 @@ private:
                 assert(abs(dvec*dvec)<1e-20);
                 assert(abs(dpos*dpos)<1e-20);
 #endif
+
+            }
+
+            // Only one group with all particles in group
+            if(_n_group==1&&n_single==0) {
+                PS::S32 icm = adr_cm_ptcl[0];
+
 
                 // create c.m. particles
                 Ptcl pcm(_ptcl_artifical[icm]);
@@ -1064,7 +1055,7 @@ private:
                 if(fail_flag) {
 #ifdef HARD_DEBUG_DUMP
                     std::cerr<<"Dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
-                    dump("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl);
+                    dump("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
                     abort();
 #endif
                 }
@@ -1101,7 +1092,7 @@ private:
                     if(fail_flag) {
 #ifdef HARD_DEBUG_DUMP
                         std::cerr<<"Dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
-                        dump("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl);
+                        dump("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
                         abort();
 #endif
                     }
@@ -1137,7 +1128,7 @@ private:
                 if(fabs(dEtot)>1e-4) {
                     std::cerr<<"Hard energy significant: "<<dEtot<<std::endl;
                     std::cerr<<"Dump data:"<<std::endl;
-                    dump("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl);
+                    dump("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
                     abort();
                 }
 #endif
@@ -1197,7 +1188,7 @@ private:
             if(fail_flag) {
 #ifdef HARD_DEBUG_DUMP
                 std::cerr<<"Dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
-                dump("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl);
+                dump("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, 0, 0);
                 abort();
 #endif
             }
@@ -1220,7 +1211,7 @@ private:
                 if(fail_flag) {
 #ifdef HARD_DEBUG_DUMP
                     std::cerr<<"Dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
-                    dump("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl);
+                    dump("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, 0, 0);
                     abort();
 #endif
                 }
@@ -1241,13 +1232,13 @@ private:
             Hint.printStepHist();
 #endif
 #ifdef HARD_DEBUG_DUMP
-                PS::F64 dEtot = E1.tot-E0.tot;
-                if(fabs(dEtot)>1e-4) {
-                    std::cerr<<"Hard energy significant: "<<dEtot<<std::endl;
-                    std::cerr<<"Dump data:"<<std::endl;
-                    dump("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl);
-                    abort();
-                }
+            PS::F64 dEtot = HE1.tot-HE0.tot;
+            if(fabs(dEtot)>1e-4) {
+                std::cerr<<"Hard energy significant: "<<dEtot<<std::endl;
+                std::cerr<<"Dump data:"<<std::endl;
+                dump("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, 0, 0);
+                abort();
+            }
 #endif
 #endif
 
@@ -2002,14 +1993,35 @@ public:
         ARC_control_soft_.dump(_p_file);
     }
     
-    void dump(const char* fname, const PS::F64 time_end, PtclHard* ptcl_bk, const PS::S32 n_ptcl) {
+    //! Dumping data for debuging
+    /* 
+       @param[in] fname: file name to write
+       @param[in] time_end: time ending
+       @param[in] ptcl_bk: hard particle backup
+       @param[in] n_ptcl: cluster member number
+       @param[in] ptcl_arti_bk: artifical particle backup
+       @param[in] n_arti: artifical particle number
+       @param[in] n_group: number of groups
+     */
+    template<class Tpsoft>
+    void dump(const char* fname, 
+              const PS::F64 time_end, 
+              PtclHard* ptcl_bk, 
+              const PS::S32 n_ptcl, 
+              const Tpsoft* ptcl_arti_bk,
+              const PS::S32 n_arti,
+              const PS::S32 n_group) {
+        
         std::FILE* fp = std::fopen(fname,"w");
         if (fp==NULL) {
-            std::cerr<<"Error: filename ARC_dump.dat cannot be open!\n";
+            std::cerr<<"Error: filename "<<fname<<" cannot be open!\n";
             abort();
         }
         fwrite(&time_end, sizeof(PS::F64),1,fp);
         PtclHardDump(fp, ptcl_bk, n_ptcl);
+        fwrite(&n_arti, sizeof(PS::S32),1,fp);
+        fwrite(&n_group, sizeof(PS::S32), 1, fp);
+        for (int i=0; i<n_arti; i++) ptcl_arti_bk->writeBinary(fp);
         pardump(fp);
         fclose(fp);
     }

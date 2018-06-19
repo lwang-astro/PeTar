@@ -1769,7 +1769,7 @@ public:
     void dump(const char* fname, const PS::S32 ic, const PS::F64 time_end, const PS::F64 ds_use) {
         std::FILE* fp = std::fopen(fname,"w");
         if (fp==NULL) {
-            std::cerr<<"Error: filename ARC_dump.dat cannot be open!\n";
+            std::cerr<<"Error: filename "<<fname<<" cannot be open!\n";
             abort();
         }
         fwrite(&time_end,sizeof(PS::F64),1,fp);

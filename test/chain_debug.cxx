@@ -21,7 +21,7 @@
 #define NAN_CHECK(val) assert((val) == (val));
 #endif
 
-void chain_print(const ARC::chain<PtclHard> &c, const double ds, const double w, const double pre) {
+void chain_print(const ARC::chain<Ptcl> &c, const double ds, const double w, const double pre) {
   // printing digital precision
   std::cout<<std::setprecision(pre);
  
@@ -201,7 +201,7 @@ int main(int argc, char **argv){
 
 //  chain_control.print(std::cerr);
   
-  ARC::chain<PtclHard> c;
+  ARC::chain<Ptcl> c;
   
   //  c.addP(n,p);
   //  c.Int_pars=ARC_int_pars;
@@ -212,8 +212,8 @@ int main(int argc, char **argv){
 
   chain_control.read(fp);
 
-  if(np>0) chain_control.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_pert<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
-  else chain_control.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_soft<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+  if(np>0) chain_control.setA(Newtonian_AW<Ptcl,ARC_pert_pars>,Newtonian_extA_pert<Ptcl,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+  else chain_control.setA(Newtonian_AW<Ptcl,ARC_pert_pars>,Newtonian_extA_soft<Ptcl,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
 
   if(dterr>0.0) chain_control.setErr(1e-10, 1e-24, dterr);
   
