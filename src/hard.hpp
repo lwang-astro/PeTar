@@ -821,8 +821,10 @@ private:
             PS::S32 adr_cm_ptcl[_n_group];
             PS::S32 n_group_offset[_n_group+1]; // ptcl member offset in _ptcl_local
             n_group_offset[0] = 0;
-            GroupPars gpars[_n_group](n_split_);
+            //GroupPars gpars[_n_group](n_split_);
+            GroupPars gpars[_n_group];
             for(int i=0; i<_n_group; i++) {
+                gpars[i].init(n_split_);
                 adr_first_ptcl[i] = i*gpars[i].n_ptcl_artifical;
                 adr_cm_ptcl[i] = adr_first_ptcl[i]+gpars[i].offset_cm;
                 gpars[i].getGroupIndex(&_ptcl_artifical[adr_first_ptcl[i]]);
@@ -1763,8 +1765,8 @@ public:
     template<class Tsys, class Tsptcl>
     void driveForMultiClusterOMP(const PS::F64 dt, Tsys & sys){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
-        const PS::S32 num_thread = PS::Comm::getNumberOfThread();
-        PS::ReallocatableArray<PtclHard> extra_ptcl[num_thread];
+        //const PS::S32 num_thread = PS::Comm::getNumberOfThread();
+        //PS::ReallocatableArray<PtclHard> extra_ptcl[num_thread];
         //// For test
         //PS::ReallocatableArray<std::pair<PS::S32,PS::S32>> n_sort_list;
         //n_sort_list.resizeNoInitialize(n_cluster);

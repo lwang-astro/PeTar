@@ -1295,10 +1295,10 @@ public:
     PS::S32 n_members;  ///> number of members
     PS::S32 n_members_1st; ///> number of members in first component
     PS::S32 n_members_2nd; ///> number of members in second component
-    const PS::S32 offset_cm;   ///> c.m. index offset in group
-    const PS::S32 offset_orb;  ///> orbital partical offset in group
-    const PS::S32 offset_tt;   ///> tital tensor partical offset in group
-    const PS::S32 n_ptcl_artifical; ///> artifical particle number
+    PS::S32 offset_cm;   ///> c.m. index offset in group
+    PS::S32 offset_orb;  ///> orbital partical offset in group
+    PS::S32 offset_tt;   ///> tital tensor partical offset in group
+    PS::S32 n_ptcl_artifical; ///> artifical particle number
 
     GroupPars(const PS::S32 _n_split): id(-10), i_cluster(-1), i_group(-1), n_members(0), n_members_1st(0), n_members_2nd(0), offset_cm(2*_n_split), 
 #ifdef TIDAL_TENSOR
@@ -1307,6 +1307,24 @@ public:
                                        offset_orb(0), 
 #endif
                                        offset_tt(0), n_ptcl_artifical(2*_n_split+1) {}
+    GroupPars() {init(0);}
+
+    void init(const PS::S32 _n_split) {
+        id=-10;
+        i_cluster=-1;
+        i_group=-1;
+        n_members=0;
+        n_members_1st=0;
+        n_members_2nd=0;
+        offset_cm=2*_n_split;
+#ifdef TIDAL_TENSOR
+        offset_orb=8;
+#else
+        offset_orb=0;
+#endif
+        offset_tt=0;
+        n_ptcl_artifical=2*_n_split+1;
+    }
 
     // assume the binary information stored in artifical star mass_bk
     template <class Tptcl>
