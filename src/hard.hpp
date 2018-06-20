@@ -336,11 +336,6 @@ private:
         for(PS::S32 k=0; k<n_ngb; k++){
             if (ptcl_nb[k].id == _psoft.id) continue;
             PS::S32 pot_control_flag;
-#ifdef HARD_DEBUG 
-#ifndef CORRECT_FORCE_DEBUG
-            assert(ptcl_nb[k].id>0);
-#endif
-#endif
             PS::S64 stat_k = ptcl_nb[k].status;
             if (stat_k==0) pot_control_flag = 0; //single 
             else if (stat_k<0) pot_control_flag = 1; //member

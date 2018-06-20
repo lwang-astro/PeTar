@@ -39,7 +39,7 @@ public:
         }
     }
 
-    void print(std::ostream& os, const PS::F64 width) {
+    void print(std::ostream& os) {
         os<<"ax: semi-major axis               : "<<ax<<std::endl
           <<"ecc: eccentricity                 : "<<ecc<<std::endl
           <<"inc: inclination                  : "<<inc<<std::endl
@@ -51,7 +51,36 @@ public:
           <<"m1: mass 1                        : "<<m1<<std::endl
           <<"m2: mass 2                        : "<<m2<<std::endl
           <<"tstep: step estimation            : "<<tstep<<std::endl
-          <<"stable_factor: step estimation    : "<<stable_factor<<std::endl;
+          <<"stable_factor: stable factor      : "<<stable_factor<<std::endl;
+    }
+    void print(std::ostream& os, const PS::F64 width=14, const bool title_flag=false) {
+        if(title_flag)
+            os<<std::setw(width)<<"semi"
+              <<std::setw(width)<<"ecc"
+              <<std::setw(width)<<"inc"
+              <<std::setw(width)<<"plane_rot"
+              <<std::setw(width)<<"self_rot"
+              <<std::setw(width)<<"tperi"
+              <<std::setw(width)<<"period"
+              <<std::setw(width)<<"ecca"
+              <<std::setw(width)<<"m1"
+              <<std::setw(width)<<"m2"
+              <<std::setw(width)<<"tstep"
+              <<std::setw(width)<<"stable"
+              <<std::endl;
+        os<<std::setw(width)<<ax
+          <<std::setw(width)<<ecc
+          <<std::setw(width)<<inc
+          <<std::setw(width)<<OMG
+          <<std::setw(width)<<omg
+          <<std::setw(width)<<tperi
+          <<std::setw(width)<<peri
+          <<std::setw(width)<<ecca
+          <<std::setw(width)<<m1
+          <<std::setw(width)<<m2
+          <<std::setw(width)<<tstep
+          <<std::setw(width)<<stable_factor
+          <<std::endl;
     }
 };
 
@@ -124,7 +153,7 @@ void OrbParam2PosVel(PS::F64vec & pos0,       PS::F64vec & pos1,
                      const double inc,   const double OMG,
                      const double omg,   const double u){
     double m_tot = mass0 + mass1;
-    double n = sqrt( m_tot / (ax*ax*ax) );
+    double n = sqrt( m_tot / (ax*ax*ax) ); // mean mortion
     double cosu = cos(u);
     double sinu = sin(u);
     double c0 = sqrt(1.0 - ecc*ecc);
@@ -138,6 +167,31 @@ void OrbParam2PosVel(PS::F64vec & pos0,       PS::F64vec & pos1,
     pos1 =  mass0 / m_tot * pos_red;
     vel0 = - mass1 / m_tot * vel_red;
     vel1 =  mass0 / m_tot * vel_red;
+
+}
+
+//! Orbit to position and velocity
+/* @param[out]: _p1: particle 1
+   @param[out]: _p2: particle 2
+   @param[in]: _bin: binary parameter
+ */
+template <class Tptcl>
+void OrbParam2PosVel(Tptcl& _p1, Tptcl& _p2, const Binary& _bin) {
+    double m_tot = _p1.mass + _p2.mass;
+    double n = sqrt( m_tot / (_bin.ax*_bin.ax*_bin.ax) );
+    double cosu = cos(_bin.ecca);
+    double sinu = sin(_bin.ecca);
+    double c0 = sqrt(1.0 - _bin.ecc*_bin.ecc);
+    PS::F64vec pos_star(_bin.ax*(cosu - _bin.ecc), _bin.ax*c0*sinu, 0.0);
+    PS::F64vec vel_star(-_bin.ax*n*sinu/(1.0-_bin.ecc*cosu), _bin.ax*n*c0*cosu/(1.0-_bin.ecc*cosu), 0.0);
+    Matrix3<PS::F64> rot;
+    rot.rotation(_bin.inc, _bin.OMG, _bin.omg);
+    PS::F64vec pos_red = rot*pos_star;
+    PS::F64vec vel_red = rot*vel_star;
+    _p1.pos = -_p2.mass / m_tot * pos_red;
+    _p2.pos =  _p1.mass / m_tot * pos_red;
+    _p1.vel = -_p2.mass / m_tot * vel_red;
+    _p2.vel =  _p1.mass / m_tot * vel_red;
 
 }
 
@@ -189,6 +243,53 @@ double PosVel2OrbParam(double & ax,    double & ecc,
     double l = u - ecc*sin(u);  // mean anomaly
     tperi = l / n; 
     return u;
+}
+
+//! position velocity to orbit
+/* @param[out]: _bin: binary parameter
+   @param[in]:  _p1: particle 1
+   @param[in]:  _p2: particle 2
+ */
+template <class Tptcl>
+void PosVel2OrbParam(Binary& _bin, const Tptcl& _p1, const Tptcl& _p2){
+    double m_tot = _p1.mass + _p2.mass;
+    PS::F64vec pos_red = _p2.pos - _p1.pos;
+    PS::F64vec vel_red = _p2.vel - _p1.vel;
+    double r_sq = pos_red * pos_red;
+    double r = sqrt(r_sq);
+    double inv_dr = 1.0 / r;
+    double v_sq = vel_red * vel_red;
+    _bin.ax = 1.0 / (2.0*inv_dr - v_sq / m_tot);
+    //    assert(ax > 0.0);
+    PS::F64vec AM = pos_red ^ vel_red;
+    _bin.inc = atan2( sqrt(AM.x*AM.x+AM.y*AM.y), AM.z);
+    _bin.OMG = atan2(AM.x, -AM.y);
+
+    PS::F64vec pos_bar, vel_bar;
+    double cosOMG = cos(_bin.OMG);
+    double sinOMG = sin(_bin.OMG);
+    double cosinc = cos(_bin.inc);
+    double sininc = sin(_bin.inc);
+    pos_bar.x =   pos_red.x*cosOMG + pos_red.y*sinOMG;
+    pos_bar.y = (-pos_red.x*sinOMG + pos_red.y*cosOMG)*cosinc + pos_red.z*sininc;
+    pos_bar.z = 0.0;
+    vel_bar.x =   vel_red.x*cosOMG + vel_red.y*sinOMG;
+    vel_bar.y = (-vel_red.x*sinOMG + vel_red.y*cosOMG)*cosinc + vel_red.z*sininc;
+    vel_bar.z = 0.0;
+    double h = sqrt(AM*AM);
+    double ecccosomg =  h/m_tot*vel_bar.y - pos_bar.x*inv_dr;
+    double eccsinomg = -h/m_tot*vel_bar.x - pos_bar.y*inv_dr;
+    _bin.ecc = sqrt( ecccosomg*ecccosomg + eccsinomg*eccsinomg );
+    _bin.omg = atan2(eccsinomg, ecccosomg);
+    double phi = atan2(pos_bar.y, pos_bar.x); // f + omg (f: true anomaly)
+    double f = phi - _bin.omg;
+    double sinu = r*sin(f) / (_bin.ax*sqrt(1.0 - _bin.ecc*_bin.ecc));
+    double cosu = (r*cos(f) / _bin.ax) + _bin.ecc;
+    _bin.ecca = atan2(sinu, cosu); // eccentric anomaly
+    double n = sqrt(m_tot/(_bin.ax*_bin.ax*_bin.ax)); // mean mortion
+    _bin.peri = 8.0*std::atan(1.0)/n;
+    double l = _bin.ecca - _bin.ecc*sin(_bin.ecca);  // mean anomaly
+    _bin.tperi = l / n; 
 }
 
 

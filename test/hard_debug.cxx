@@ -62,7 +62,7 @@ int main(int argc, char **argv){
   std::cerr<<std::setprecision(20);
   PS::F64 r_search_max=0.0;
   PS::S32 i_r_search_max=-1;
-  std::cerr<<"member :\n";
+  if(n_group>0) std::cerr<<"member :\n";
   for(int i=0; i<ptcl.size(); i++) {
       if(ptcl[i].status<0) {
           ptcl[i].print(std::cerr);
@@ -71,11 +71,15 @@ int main(int argc, char **argv){
       }
   }
   std::cerr<<"single:\n";
+  PS::S32 n_single=0;
+  PS::ReallocatableArray<PS::S32> single_adr;
   for(int i=0; i<ptcl.size(); i++) {
       if(ptcl[i].status==0) {
           ptcl[i].print(std::cerr);
           std::cerr<<std::endl;
           //std::cerr<<ptcl[i].mass<<" "<<ptcl[i].pos<<" "<<ptcl[i].vel<<std::endl;
+          n_single++;
+          single_adr.push_back(i);
       }
       if(r_search_max<ptcl[i].r_search) {
           r_search_max =ptcl[i].r_search;
@@ -84,6 +88,13 @@ int main(int argc, char **argv){
   }
 
   std::cout<<"n_group: "<<n_group<<std::endl;
+
+  if(n_single==2) {
+      std::cout<<"Kepler parameters for two single:\n";
+      Binary bin;
+      PosVel2OrbParam(bin, ptcl[single_adr[0]], ptcl[single_adr[1]]);
+      bin.print(std::cout,14,true);
+  }
   
   std::cout<<"R_search_max = "<<r_search_max;
   ptcl[i_r_search_max].print(std::cout);
