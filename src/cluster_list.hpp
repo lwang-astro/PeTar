@@ -1834,9 +1834,9 @@ public:
         for(PS::S32 i=0; i<rank_neighbor.size(); i++){
             PS::S32 rank = rank_neighbor[i];
             MPI_Isend(n_send.getPointer(rank),  1, PS::GetDataType<PS::S32>(),
-                      rank, 0, MPI_COMM_WORLD, req_send.getPointer(i));
+                      rank, 1837, MPI_COMM_WORLD, req_send.getPointer(i));
             MPI_Irecv(n_recv.getPointer(rank),  1, PS::GetDataType<PS::S32>(),
-                      rank, 0, MPI_COMM_WORLD, req_recv.getPointer(i));
+                      rank, 1837, MPI_COMM_WORLD, req_recv.getPointer(i));
         }
         MPI_Waitall(rank_neighbor.size(), req_send.getPointer(), stat_send.getPointer());
         MPI_Waitall(rank_neighbor.size(), req_recv.getPointer(), stat_recv.getPointer());
@@ -1868,14 +1868,14 @@ public:
                 rank_recv_cluster_.push_back(rank); // NOTE: recv not send
                 n_cluster_recv_.push_back(n_send[rank]); // NOTE: recv not send
                 MPI_Isend(id_send.getPointer(n_send_disp[rank]), n_send[rank], PS::GetDataType<PS::S32>(),
-                          rank, 0, MPI_COMM_WORLD, req_send.getPointer(n_proc_send));
+                          rank, 1871, MPI_COMM_WORLD, req_send.getPointer(n_proc_send));
                 n_proc_send++;
             }
             if(n_recv[rank] > 0){
                 rank_send_cluster_.push_back(rank); // NOTE: send
                 n_cluster_send_.push_back(n_recv[rank]); // NOTE: send
                 MPI_Irecv(id_recv.getPointer(n_recv_disp[rank]), n_recv[rank], PS::GetDataType<PS::S32>(),
-                          rank, 0, MPI_COMM_WORLD, req_recv.getPointer(n_proc_recv));
+                          rank, 1871, MPI_COMM_WORLD, req_recv.getPointer(n_proc_recv));
                 n_proc_recv++;
             }
         }
@@ -1944,13 +1944,13 @@ public:
             for(PS::S32 i=0; i<rank_send_cluster_.size(); i++){
                 PS::S32 rank = rank_send_cluster_[i];
                 MPI_Isend(id_cluster_send_.getPointer(n_cluster_disp_send_[i]), n_cluster_send_[i], PS::GetDataType<PS::S32>(),
-                          rank, 0, MPI_COMM_WORLD, req_send.getPointer(n_proc_send));
+                          rank, 1947, MPI_COMM_WORLD, req_send.getPointer(n_proc_send));
                 n_proc_send++;
             }
             for(PS::S32 i=0; i<rank_recv_cluster_.size(); i++){
                 PS::S32 rank = rank_recv_cluster_[i];
                 MPI_Irecv(id_cluster_recv_.getPointer(n_cluster_disp_recv_[i]), n_cluster_recv_[i], PS::GetDataType<PS::S32>(),
-                          rank, 0, MPI_COMM_WORLD, req_recv.getPointer(n_proc_recv));
+                          rank, 1947, MPI_COMM_WORLD, req_recv.getPointer(n_proc_recv));
                 n_proc_recv++;
             }
             MPI_Waitall(n_proc_send, req_send.getPointer(), stat_send.getPointer());
@@ -2133,7 +2133,7 @@ public:
             PS::S32 rank = rank_send_ptcl_[i];
             MPI_Isend(ptcl_send_.getPointer(n_ptcl_disp_send_[i]),  n_ptcl_send_[i], 
                       PS::GetDataType<PtclComm>(),
-                      rank, 0, MPI_COMM_WORLD, req_send.getPointer(i));
+                      rank, 2136, MPI_COMM_WORLD, req_send.getPointer(i));
         }
 
         //std::cerr<<"sendAndRecvCluster 4: "<<my_rank<<std::endl;
@@ -2181,7 +2181,7 @@ public:
             PS::S32 rank = rank_recv_ptcl_[i];
             MPI_Irecv(ptcl_recv_.getPointer(n_ptcl_disp_recv_[i]), n_ptcl_recv_[i], 
                       PS::GetDataType<PtclComm>(),
-                      rank, 0, MPI_COMM_WORLD, req_recv.getPointer(i));
+                      rank, 2136, MPI_COMM_WORLD, req_recv.getPointer(i));
         }
         //std::cerr<<"sendAndRecvCluster 4.7: "<<my_rank<<std::endl;
         MPI_Waitall(rank_send_ptcl_.size(), req_send.getPointer(), stat_send.getPointer());
@@ -2236,13 +2236,13 @@ public:
             PS::S32 rank = rank_send_ptcl_[i];
             MPI_Isend(ptcl_send_.getPointer(n_ptcl_disp_send_[i]),  n_ptcl_send_[i],
                       PS::GetDataType<PtclComm>(),
-                      rank, 0, MPI_COMM_WORLD, req_send.getPointer(i));
+                      rank, 2239, MPI_COMM_WORLD, req_send.getPointer(i));
         }
         for(PS::S32 i=0; i<rank_recv_ptcl_.size(); i++){
             PS::S32 rank = rank_recv_ptcl_[i];
             MPI_Irecv(ptcl_recv_.getPointer(n_ptcl_disp_recv_[i]), n_ptcl_recv_[i],
                       PS::GetDataType<PtclComm>(),
-                      rank, 0, MPI_COMM_WORLD, req_recv.getPointer(i));
+                      rank, 2239, MPI_COMM_WORLD, req_recv.getPointer(i));
         }
         MPI_Waitall(rank_send_ptcl_.size(), req_send.getPointer(), stat_send.getPointer());
         MPI_Waitall(rank_recv_ptcl_.size(), req_recv.getPointer(), stat_recv.getPointer());
@@ -2300,13 +2300,13 @@ public:
             PS::S32 rank = rank_recv_ptcl_[i];
             MPI_Isend(ptcl_recv_.getPointer(n_ptcl_disp_recv_[i]), n_ptcl_recv_[i],
                       PS::GetDataType<PtclComm>(),
-                      rank, 0, MPI_COMM_WORLD, req_recv.getPointer(i));
+                      rank, 2303, MPI_COMM_WORLD, req_recv.getPointer(i));
         }
         for(PS::S32 i=0; i<rank_send_ptcl_.size(); i++){
             PS::S32 rank = rank_send_ptcl_[i];
             MPI_Irecv(ptcl_send_.getPointer(n_ptcl_disp_send_[i]),  n_ptcl_send_[i],
                       PS::GetDataType<PtclComm>(),
-                      rank, 0, MPI_COMM_WORLD, req_send.getPointer(i));
+                      rank, 2303, MPI_COMM_WORLD, req_send.getPointer(i));
         }
         MPI_Waitall(rank_send_ptcl_.size(), req_send.getPointer(), stat_send.getPointer());
         MPI_Waitall(rank_recv_ptcl_.size(), req_recv.getPointer(), stat_recv.getPointer());

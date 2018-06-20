@@ -30,6 +30,42 @@
 #else //USE_C03
 #include<unordered_map>
 #endif //USE_C03
+
+#ifdef MPI_DEBUG
+#include <mpi.h>
+// Send recev debug
+int MPI_Isend(void* buffer, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request* req)
+{
+   int ret;
+
+   int size;
+   MPI_Type_size(datatype, &size);
+   std::cerr<<"MPI_ISend count "<<count<<" dest "<<dest<<" datatype "<<size<<" tag "<<tag<<std::endl;
+
+   ret = PMPI_Isend(buffer, count, datatype, dest, tag, comm, req);
+
+   /* ここで何か固有処理(2) */
+
+   return ret;
+}
+
+// Debug
+int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request* req)
+{
+   int ret;
+
+   int size;
+   MPI_Type_size(datatype, &size);
+   std::cerr<<"MPI_IRecv count "<<count<<" dest "<<dest<<" datatype "<<size<<" tag "<<tag<<std::endl;
+
+   ret = PMPI_Irecv(buffer, count, datatype, dest, tag, comm, req);
+
+   /* ここで何か固有処理(2) */
+
+   return ret;
+}
+#endif
+
 #include<particle_simulator.hpp>
 #include"soft.hpp"
 #include"hard.hpp"
@@ -581,7 +617,7 @@ int main(int argc, char *argv[]){
         system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
         system_hard_connected.findGroupsAndCreateArtificalParticlesOMP<SystemSoft, FPSoft>(system_soft, dt_soft.value);
         // send updated particle back to original (set zero mass particle to origin)
-        if(system_hard_connected.getGroupPtclRemoteN()>0) search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
 #endif
 
         // update n_glb, n_glb for all
