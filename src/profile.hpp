@@ -320,31 +320,33 @@ class SysProfile{
 public:
 	Tprofile tot;		   
 	Tprofile hard_tot;	   
+	Tprofile soft_tot;
 	Tprofile hard_single;	   
 	Tprofile hard_isolated;
 	Tprofile hard_connected;
-	Tprofile soft_tot;
 	Tprofile tree_nb;
     Tprofile tree_soft;
     Tprofile force_correct;
     Tprofile kick;
 	Tprofile search_cluster;
+    Tprofile create_group;
     Tprofile domain_ex_ptcl;
     const PS::S32 n_profile;
     
     SysProfile(): tot           (Tprofile("Total         ")),
                   hard_tot      (Tprofile("Hard_total    ")),
+                  soft_tot      (Tprofile("Soft_total    ")),
                   hard_single   (Tprofile("Hard_single   ")),
                   hard_isolated (Tprofile("Hard_isolated ")),
                   hard_connected(Tprofile("Hard_connected")),
-                  soft_tot      (Tprofile("Soft_total    ")),
                   tree_nb       (Tprofile("Tree_neighbor ")),
                   tree_soft     (Tprofile("Tree_force    ")),
                   force_correct (Tprofile("Force_correct ")),
                   kick          (Tprofile("Kick          ")),
                   search_cluster(Tprofile("Search_cluster")),
+                  create_group  (Tprofile("Create_group  ")),
                   domain_ex_ptcl(Tprofile("Domain_ex_ptcl")),
-                  n_profile(12) {}
+                  n_profile(13) {}
 
 	void print(std::ostream & fout, const PS::F64 time_sys, const PS::S64 n_loop=1){
         fout<<"Time: "<<time_sys<<std::endl;

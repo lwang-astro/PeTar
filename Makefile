@@ -5,16 +5,16 @@
 #PS_PATH = -I../../fdps/src/
 #PS_PATH = -I../../../../project/fdps/src
 #PS_PATH = -I../FDPS/src
-#PS_PATH = -I../fdps.svn/
-PS_PATH  = -I/home/lwang/code/fdps/src
+PS_PATH = -I../fdps.svn/
+#PS_PATH  = -I/home/lwang/code/fdps/src
 
 ##ARC PATH
-#ARC_PATH= -I../TSARC/include
+ARC_PATH= -I../TSARC/include
 #ARC_PATH = -I/home/lwang/code/ARC/include
-ARC_PATH = -I/home/lwang/GitHub/ARC/include
+#ARC_PATH = -I/home/lwang/GitHub/ARC/include
 
 ##Gperftools PATH
-#GPERF_PATH = -L../../soft/gperftools-2.6.90/lib
+GPERF_PATH = -L../../soft/gperftools-2.6.90/lib
 
 #ROOT_PATH= ${shell pwd -P}
 INCLUDE  = -I./src -I../src
@@ -64,14 +64,14 @@ CXX = time mpicxx
 CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
 CXXFLAGS += -DMPICH_IGNORE_CXX_SEEKC
 
-CXXFLAGS += -g -O0 -fbounds-check
-#CXXFLAGS += -O2
+#CXXFLAGS += -g -O0 -fbounds-check
+CXXFLAGS += -O2
 
 CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -fopenmp
 #CXXFLAGS += -DPARTICLE_SIMULATOR_DEBUG_PRINT
 CXXFLAGS += -Wall
-#CXXFLAGS += -march=skylake-avx512
-CXXFLAGS += -march=core-avx2
+CXXFLAGS += -march=skylake-avx512
+#CXXFLAGS += -march=core-avx2
 #CXXFLAGS += -mavx
 CXXFLAGS += -ffast-math -funroll-loops
 CXXFLAGS += -std=c++11
@@ -103,20 +103,20 @@ SIMD_DEBFLAGS += -DRSQRT_NR_SPJ_X2
 SIMD_DEBFLAGS += -DRSQRT_NR_SPJ_X4
 SIMD_DEBFLAGS += -DAVX_PRELOAD
 
-DEBFLAGS += -D ARC_PROFILE
+#DEBFLAGS += -D ARC_PROFILE
 #DEBFLAGS += -D INTEGRATED_CUTOFF_FUNCTION
-DEBFLAGS += -D ARC_DEBUG
+#DEBFLAGS += -D ARC_DEBUG
 #DEBFLAGS += -D ARC_DEBUG_PRINT
 #DEBFLAGS += -D ARC_DEEP_DEBUG
-DEBFLAGS += -D ARC_ERROR
+#DEBFLAGS += -D ARC_ERROR
 DEBFLAGS += -D ARC_DEBUG_DUMP
 #DEBFLAGS += -D ARC_WARN
-DEBFLAGS += -D HARD_DEBUG
-DEBFLAGS += -D HARD_CHECK_ENERGY
+#DEBFLAGS += -D HARD_DEBUG
+#DEBFLAGS += -D HARD_CHECK_ENERGY
 DEBFLAGS += -D HARD_DEBUG_DUMP
 #DEBFLAGS += -D HARD_DEBUG_PRINT
 #DEBFLAGS += -D HARD_DEBUG_PROFILE
-DEBFLAGS += -D NAN_CHECK_DEBUG
+#DEBFLAGS += -D NAN_CHECK_DEBUG
 #DEBFLAGS += -D DATA_DEBUG
 #DEBFLAGS += -D FIX_STEP_DEBUG
 #DEBFLAGS += -D DEBUG

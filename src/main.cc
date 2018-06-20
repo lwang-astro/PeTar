@@ -613,6 +613,10 @@ int main(int argc, char *argv[]){
         n_loc = system_soft.getNumberOfParticleLocal();
         n_glb.value = system_soft.getNumberOfParticleGlobal();
 
+#ifdef PROFILE
+        profile.search_cluster.end();
+        profile.create_group.start();
+#endif
         // >2.3 Find ARC groups and create artificial particles
         // Set local ptcl_hard for isolated  clusters
         system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
@@ -648,7 +652,7 @@ int main(int argc, char *argv[]){
 
         // >3 Tree for force ----------------------------------------
 #ifdef PROFILE
-        profile.search_cluster.end();
+        profile.create_group.end();
 
         profile.soft_tot.start();
         profile.tree_soft.start();
@@ -849,6 +853,7 @@ int main(int argc, char *argv[]){
 #ifdef PROFILE
         profile.kick.end();
         profile.soft_tot.end();
+        profile.tot.end();
 #endif
 
         // output information
@@ -971,9 +976,9 @@ int main(int argc, char *argv[]){
             n_count_sum.clear();
             dn_loop=0;
 
-            // second half kick
-            profile.soft_tot.start();
-            profile.kick.start();
+            //// second half kick
+            //profile.soft_tot.start();
+            //profile.kick.start();
 #endif
             // single
             kickOne(system_soft, dt_kick, search_cluster.getAdrSysOneCluster());
@@ -992,13 +997,14 @@ int main(int argc, char *argv[]){
 #endif
 
 #ifdef PROFILE
-            profile.kick.end();
-            profile.soft_tot.end();
+            //profile.kick.end();
+            //profile.soft_tot.end();
 #endif
         }
 
 #ifdef PROFILE
         // >5. Hard integration --------------------------------------
+        profile.tot.start();
         profile.hard_tot.start();
 #endif
 

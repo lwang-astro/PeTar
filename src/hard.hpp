@@ -203,7 +203,7 @@ private:
         const PS::S32 num_thread = PS::Comm::getNumberOfThread();
         PS::ReallocatableArray<PtclHard> ptcl_artifical[num_thread];
 
-#pragma omp for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
         for (PS::S32 i=0; i<n_cluster; i++){
             const PS::S32 ith = PS::Comm::getThreadNum();
             PtclHard* ptcl_in_cluster = _ptcl_local + _n_ptcl_in_cluster_disp[i];
@@ -513,7 +513,7 @@ private:
         //const PS::S32 ptcl_art_offset = 2*_n_split+1;
 
         const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
-#pragma omp for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
         for (int i=0; i<n_cluster; i++) {  // i: i_cluster
             PS::S32 adr_real_start= _n_ptcl_in_cluster_offset[i];
             PS::S32 adr_real_end= _n_ptcl_in_cluster_offset[i+1];
@@ -617,7 +617,7 @@ private:
 
         const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
 
-#pragma omp for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
         for (int i=0; i<n_cluster; i++) {  // i: i_cluster
             PS::S32 adr_real_start= _n_ptcl_in_cluster_offset[i];
             PS::S32 adr_real_end= _n_ptcl_in_cluster_offset[i+1];
@@ -675,7 +675,7 @@ private:
         const PS::F64 r_A = (_rout-_rin)/(_rout+_rin);
 
         // for real particle
-#pragma omp for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
         for (int i=0; i<_n_ptcl; i++) {
             PS::S64 adr = _ptcl_local[i].adr_org;
             if(adr>=0) correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[adr], _tree, _rin, _rout, r_oi_inv, r_A, _eps_sq);
@@ -683,7 +683,7 @@ private:
 
         // for artifical particle
         const PS::S32 n_tot = _sys.getNumberOfParticleLocal();
-#pragma omp for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
         for (int i=_adr_ptcl_artifical_start; i<n_tot; i++) 
             correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[i], _tree, _rin, _rout, r_oi_inv, r_A, _eps_sq);
 
@@ -692,7 +692,7 @@ private:
 #ifdef HARD_DEBUG
         assert((n_tot-_adr_ptcl_artifical_start)%gpars.n_ptcl_artifical==0);
 #endif
-#pragma omp for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
         for (int i=_adr_ptcl_artifical_start; i<n_tot; i+=gpars.n_ptcl_artifical){
             PS::S32 i_cm = i + gpars.offset_cm;
             PS::F64vec& acc_cm = _sys[i_cm].acc;
@@ -744,7 +744,7 @@ private:
         // for artifical particle
         const PS::S32 n_tot = _sys.getNumberOfParticleLocal();
 
-#pragma omp for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
         for (int i=0; i<n_tot; i++) {
             correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[i], _tree, _rin, _rout, r_oi_inv, r_A, _eps_sq);
         }
@@ -752,7 +752,7 @@ private:
 #ifdef HARD_DEBUG
         assert((n_tot-_adr_ptcl_artifical_start)%gpars.n_ptcl_artifical==0);
 #endif
-#pragma omp for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
         for (int i=_adr_ptcl_artifical_start; i<n_tot; i+=gpars.n_ptcl_artifical){
             PS::S32 i_cm = i + gpars.offset_cm;
             PS::F64vec& acc_cm = _sys[i_cm].acc;
@@ -1578,7 +1578,7 @@ public:
         const PS::S32 n = adr_array.size();
         //ptcl_hard_.resizeNoInitialize(n);
         //n_ptcl_in_cluster_.resizeNoInitialize(n);
-#pragma omp for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
         for(PS::S32 i=0; i<n; i++){
             PS::S32 adr = adr_array[i];
             ptcl_hard_[i].DataCopy(sys[adr]);
@@ -1604,7 +1604,7 @@ public:
     }
     void driveForOneClusterOMP(const PS::F64 dt){
         const PS::S32 n = ptcl_hard_.size();
-#pragma omp for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
         for(PS::S32 i=0; i<n; i++){
             PS::F64vec dr = ptcl_hard_[i].vel * dt;
             ptcl_hard_[i].pos += dr;
@@ -1638,7 +1638,7 @@ public:
     template<class Tsys>
     void writeBackPtclForOneClusterOMP(Tsys & sys){
         const PS::S32 n = ptcl_hard_.size();
-#pragma omp for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
         for(PS::S32 i=0; i<n; i++){
             PS::S32 adr = ptcl_hard_[i].adr_org;
             //PS::S32 adr = adr_array[i];
@@ -1652,7 +1652,7 @@ public:
     template<class Tsys>
     void writeBackPtclLocalOnlyOMP(Tsys & sys) {
         const PS::S32 n = ptcl_hard_.size();
-#pragma omp for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
         for(PS::S32 i=0; i<n; i++){
             PS::S32 adr = ptcl_hard_[i].adr_org;
             //PS::S32 adr = adr_array[i];
@@ -1708,7 +1708,7 @@ public:
                                            const PS::ReallocatableArray<PS::S32> & _adr_array,
                                            const PS::ReallocatableArray<PS::S32> & _n_ptcl_in_cluster){
         const PS::S32 n_ptcl = _adr_array.size();
-#pragma omp for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic)
         for(PS::S32 i=0; i<n_ptcl; i++){
             PS::S32 adr = _adr_array[i];
             ptcl_hard_[i].DataCopy(sys[adr]);
@@ -1938,7 +1938,7 @@ public:
     //    // cutoff function parameter
     //    const PS::F64 r_oi_inv = 1.0/(_rout-_rin);
     //    const PS::F64 r_A = (_rout-_rin)/(_rout+_rin);
-//#pragma omp for schedule(dynamic)
+//#pragma omp parallel for schedule(dynamic)
     //    for (int i=0; i<n_send; i++) 
     //        const PS::S64 adr  = _adr_send(i);
     //        correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[adr], _tree, Int_pars_.rin, Int_pars_.rout, r_oi_inv, r_A, Int_pars_.eps2);
@@ -1948,7 +1948,7 @@ public:
     //void initialMultiClusterOMP(Tsys & sys, const PS::F64 dt_tree){
     //    const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
     //    //	const PS::S32 ith = PS::Comm::getThreadNum();
-//#pragma omp for schedule(dynamic)
+//#pragma omp parallel for schedule(dynamic)
     //    for(PS::S32 i=0; i<n_cluster; i++){
     //        const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
     //        const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
