@@ -31,10 +31,10 @@ class FileHeader{
 public:
     PS::S64 nfile;  // file id
     PS::S64 n_body;
-    PS::S64 id_offset; // file id offset for add new artificial particles, should be larger than the maximum file id
+    //PS::S64 id_offset; // file id offset for add new artificial particles, should be larger than the maximum file id
     PS::F64 time;
-    PS::F64 dt_soft;   // tree time step should be recorded for restarting (soft kick of cm)
-    PS::S64 n_split;   // n_split is also needed for restarting (soft kick of cm)
+    //PS::F64 dt_soft;   // tree time step should be recorded for restarting (soft kick of cm)
+    //PS::S64 n_split;   // n_split is also needed for restarting (soft kick of cm)
     FileHeader(){
         n_body = 0;
         time = 0.0;
@@ -45,8 +45,8 @@ public:
         time = t;
     }
     PS::S32 readAscii(FILE * fp){
-        PS::S32 rcount=fscanf(fp, "%lld %lld %lld %lf %lf %lld\n", &nfile, &n_body, &id_offset, &time, &dt_soft, &n_split);
-        if (rcount<6) {
+        PS::S32 rcount=fscanf(fp, "%lld %lld %lf\n", &nfile, &n_body, &time);
+        if (rcount<3) {
           std::cerr<<"Error: cannot read header, please check your data file header!\n";
           abort();
         }
@@ -65,7 +65,7 @@ public:
     }
 
     void writeAscii(FILE* fp) const{
-        fprintf(fp, "%lld %lld %lld %26.17e %26.17e %lld\n", nfile, n_body, id_offset, time, dt_soft, n_split);
+        fprintf(fp, "%lld %lld %26.17e\n", nfile, n_body, time);
     }
 
     void writeBinary(FILE* fp) const{

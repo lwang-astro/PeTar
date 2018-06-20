@@ -25,14 +25,14 @@ void GetR(const Tpsys & system_soft,
     for(PS::S64 i=0; i<n_loc; i++){
         PS::F64 mi = system_soft[i].mass;
         PS::F64vec vi = system_soft[i].vel;
-        if(restart_flag) {
-            if (system_soft[i].id>0&&system_soft[i].status!=0) continue;
-            if (system_soft[i].id<0&&system_soft[i].status<=0) continue;
-            if (system_soft[i].id<0) {
-                mi = system_soft[i].mass_bk;
-                vi = system_soft[i].vel + system_soft[i].acc * dt;
-            }
-        }
+        //if(restart_flag) {
+        //    if (system_soft[i].id>0&&system_soft[i].status!=0) continue;
+        //    if (system_soft[i].id<0&&system_soft[i].status<=0) continue;
+        //    if (system_soft[i].id<0) {
+        //        mi = system_soft[i].mass_bk;
+        //        vi = system_soft[i].vel + system_soft[i].acc * dt;
+        //    }
+        //}
 #ifdef MAIN_DEBUG
         assert(mi>0);
 #endif
@@ -51,38 +51,36 @@ void GetR(const Tpsys & system_soft,
     PS::F64 vel_sq_loc = 0.0;
     PS::S64 n_vel_loc_count = 0;
 
-    if(restart_flag) {
-        for(PS::S64 i=0; i<n_loc; i++) {
-            if (system_soft[i].id>0&&system_soft[i].status!=0) continue;
-            if (system_soft[i].id<0&&system_soft[i].status<=0) continue;
-            PS::F64vec dv;
-            if (system_soft[i].id<0) dv = system_soft[i].vel - vel_cm_glb;
-            else dv = system_soft[i].vel + system_soft[i].acc*dt - vel_cm_glb;
-            vel_sq_loc += dv * dv;
-            n_vel_loc_count++;
-        }
+    //if(restart_flag) {
+    //    for(PS::S64 i=0; i<n_loc; i++) {
+    //        if (system_soft[i].id>0&&system_soft[i].status!=0) continue;
+    //        if (system_soft[i].id<0&&system_soft[i].status<=0) continue;
+    //        PS::F64vec dv;
+    //        if (system_soft[i].id<0) dv = system_soft[i].vel - vel_cm_glb;
+    //        else dv = system_soft[i].vel + system_soft[i].acc*dt - vel_cm_glb;
+    //        vel_sq_loc += dv * dv;
+    //        n_vel_loc_count++;
+    //    }
+    //}
+    PS::S64 is_start = 0;
+    const PS::S64 bin_last_id = 2*n_bin;
+    if (system_soft[0].id<bin_last_id) {
+        is_start = std::min(bin_last_id - system_soft[0].id + 1,n_loc);
+        if(is_start%2!=0) is_start--;
     }
-    else {
-        PS::S64 is_start = 0;
-        const PS::S64 bin_last_id = 2*n_bin;
-        if (system_soft[0].id<bin_last_id) {
-            is_start = std::min(bin_last_id - system_soft[0].id + 1,n_loc);
-            if(is_start%2!=0) is_start--;
-        }
-        const PS::S64 ib_start = (system_soft[0].id%2==0)?1:0;
-        for (PS::S64 i=ib_start; i<is_start; i+=2) {
-            PS::F64 m1 = system_soft[i].mass;
-            PS::F64 m2 = system_soft[i+1].mass;
-            PS::F64vec dv = (m1*system_soft[i].vel + m2*system_soft[i+1].vel)/(m1+m2) - vel_cm_glb;
-            vel_sq_loc += dv * dv;
-            n_vel_loc_count++;
-        }
+    const PS::S64 ib_start = (system_soft[0].id%2==0)?1:0;
+    for (PS::S64 i=ib_start; i<is_start; i+=2) {
+        PS::F64 m1 = system_soft[i].mass;
+        PS::F64 m2 = system_soft[i+1].mass;
+        PS::F64vec dv = (m1*system_soft[i].vel + m2*system_soft[i+1].vel)/(m1+m2) - vel_cm_glb;
+        vel_sq_loc += dv * dv;
+        n_vel_loc_count++;
+    }
         
-        for (PS::S64 i=is_start; i<n_loc; i++){
-            PS::F64vec dv = system_soft[i].vel - vel_cm_glb;
-            vel_sq_loc += dv * dv;
-            n_vel_loc_count++;
-        }
+    for (PS::S64 i=is_start; i<n_loc; i++){
+        PS::F64vec dv = system_soft[i].vel - vel_cm_glb;
+        vel_sq_loc += dv * dv;
+        n_vel_loc_count++;
     }
 
     const PS::S64    n_vel_glb_count= PS::Comm::getSum(n_vel_loc_count);

@@ -410,8 +410,15 @@ int main(int argc, char *argv[]){
         file_header.nfile = 0;
         time_sys = file_header.time = 0.0;
         file_header.n_body = n_glb.value;
-        file_header.id_offset = n_glb.value;
+        //file_header.id_offset = n_glb.value;
     }
+
+    const PS::S64 id_offset = n_glb.value+1;
+#ifdef HARD_DEBUG
+    for (int i=0; i<n_loc; i++) {
+        assert(id_offset>system_soft[i].id);
+    }
+#endif
 
     bool restart_flag = file_header.nfile; // nfile = 0 is assumed as initial data file
 
@@ -426,24 +433,28 @@ int main(int argc, char *argv[]){
     }
 
     Status stat;
+    if(!restart_flag&&my_rank==0&&app_flag==false)  {
+        stat.dumpName(fstatus,WRITE_WIDTH);
+        fstatus<<std::endl;
+    }
 
-    // tree time step and n_split
-    if (restart_flag) {
-        if(dt_soft.value!=file_header.dt_soft&&dt_soft.value>0) 
-            std::cerr<<"Warning: tree time step cannot be changed for restarting, the value from the data file ("<<file_header.dt_soft<<") will be used\n";
-        if(n_split.value!=file_header.n_split)
-            std::cerr<<"Warning: n_split cannot be changed for restarting, the value from the data file ("<<file_header.n_split<<") will be used\n";
-        dt_soft.value = file_header.dt_soft;
-        n_split.value = file_header.n_split;
-    }
-    else {
-        file_header.dt_soft = dt_soft.value;
-        file_header.n_split = n_split.value;        
-        if(my_rank==0&&app_flag==false) {
-            stat.dumpName(fstatus,WRITE_WIDTH);
-            fstatus<<std::endl;
-        }
-    }
+    //// tree time step and n_split
+    //if (restart_flag) {
+    //    if(dt_soft.value!=file_header.dt_soft&&dt_soft.value>0) 
+    //        std::cerr<<"Warning: tree time step cannot be changed for restarting, the value from the data file ("<<file_header.dt_soft<<") will be used\n";
+    //    if(n_split.value!=file_header.n_split)
+    //        std::cerr<<"Warning: n_split cannot be changed for restarting, the value from the data file ("<<file_header.n_split<<") will be used\n";
+    //    dt_soft.value = file_header.dt_soft;
+    //    n_split.value = file_header.n_split;
+    //}
+    //else {
+    //    file_header.dt_soft = dt_soft.value;
+    //    file_header.n_split = n_split.value;        
+    //    if(my_rank==0&&app_flag==false) {
+    //        stat.dumpName(fstatus,WRITE_WIDTH);
+    //        fstatus<<std::endl;
+    //    }
+    //}
     
     PS::F64 r_in, m_average, v_disp, r_search_min;
     GetR(system_soft, r_in, r_out.value, r_bin.value, r_search_min, m_average, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value, n_bin.value, restart_flag);
@@ -523,13 +534,13 @@ int main(int argc, char *argv[]){
     PS::F64 dt_min_arc = 1.0;
     for (PS::S32 i=0;i<dt_min_hermite_index.value;i++) dt_min_hermite *= 0.5;
     for (PS::S32 i=0;i<dt_min_arc_index.value;i++) dt_min_arc *= 0.5;
-    system_hard_one_cluster.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
+    system_hard_one_cluster.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, id_offset, n_split.value);
     // system_hard_one_cluster.setARCParam();
     SystemHard system_hard_isolated;
-    system_hard_isolated.setParam(r_bin.value, r_out.value, r_in, eps.value,  dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
+    system_hard_isolated.setParam(r_bin.value, r_out.value, r_in, eps.value,  dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, id_offset, n_split.value);
     system_hard_isolated.setARCParam(e_err_arc.value, dt_err_pert.value, dt_err_soft.value, dt_min_arc);
     SystemHard system_hard_connected;
-    system_hard_connected.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, file_header.id_offset, n_split.value);
+    system_hard_connected.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, id_offset, n_split.value);
     system_hard_connected.setARCParam(e_err_arc.value, dt_err_pert.value, dt_err_soft.value, dt_min_arc);
 
     PS::ReallocatableArray<PS::S32> remove_list;
@@ -540,9 +551,9 @@ int main(int argc, char *argv[]){
 
     if(!restart_flag) {
         file_header.n_body = system_soft.getNumberOfParticleGlobal();
-        file_header.dt_soft= 0.0;
+        //file_header.dt_soft= 0.0;
         std::string fname = fname_snp.value+"."+std::to_string(file_header.nfile);
-        file_header.dt_soft= dt_soft.value;
+        //file_header.dt_soft= dt_soft.value;
     }
 
     //if(my_rank==0) {
@@ -945,10 +956,12 @@ int main(int argc, char *argv[]){
             file_header.time = time_sys;
             file_header.nfile++;
             std::string fname = fname_snp.value+"."+std::to_string(file_header.nfile);
+            system_soft.setNumberOfParticleLocal(n_loc);
             if (data_format.value==1||data_format.value==3)
                 system_soft.writeParticleAscii(fname.c_str(), file_header);
             else if(data_format.value==0||data_format.value==2)
                 system_soft.writeParticleBinary(fname.c_str(), file_header);
+            system_soft.setNumberOfParticleLocal(n_loc_all);
 
 
 #ifdef PROFILE            
