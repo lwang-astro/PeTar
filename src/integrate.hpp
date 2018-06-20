@@ -23,6 +23,7 @@
 
 //!leap frog kick for single----------------------------------------------
 /* modify the velocity of particle in global system
+   reset status to zero
    @param[in,out] _sys: particle system
    @param[in]: _dt: tree step
    @param[in]; _adr: address for single particles
@@ -36,6 +37,7 @@ void kickOne(Tsys & _sys,
     for(int i=0; i<n; i++){
         const PS::S32 k=_adr[i];
         _sys[k].vel  += _sys[k].acc * _dt;
+        _sys[k].status = 0;
     }
 }
 
@@ -476,7 +478,7 @@ private:
 #endif
                     }
 #ifdef HARD_DEBUG
-                    assert(mcmcheck==ptcl[jadr].mass);
+                    assert(abs(mcmcheck-ptcl[jadr].mass)<1e-10);
                     assert(mcmcheck>0.0);
 #endif                    
                 }
@@ -530,7 +532,7 @@ private:
 #endif
             }
 #ifdef HARD_DEBUG
-            assert(mcmcheck==ptcl[j].mass);
+            assert(abs(mcmcheck-ptcl[j].mass)<1e-10);
             assert(mcmcheck>0.0);
 #endif                    
         }
@@ -590,7 +592,7 @@ private:
 #endif
                 }
 #ifdef HARD_DEBUG
-                assert(mcmcheck==ptcl[iadr].mass);
+                assert(abs(mcmcheck-ptcl[iadr].mass)<1e-10);
                 assert(mcmcheck>0.0);
 #endif                    
                 force[iadr].acc0 /= ptcl[iadr].mass;
@@ -1726,6 +1728,7 @@ public:
             clist_.back().mass = _ptcl_pert[igroup].mass;
 #ifdef HARD_DEBUG
             assert(clist_.back().mass>0.0);
+            assert(clist_.back().mass==_ptcl_pert[igroup].mass);
 #endif
         }
 
@@ -2021,7 +2024,7 @@ public:
             clist_[i].pos = ptcl[i].pos;
             clist_[i].vel = ptcl[i].vel;
 #ifdef HARD_DEBUG
-            assert(clist_[i].mass==ptcl[i].mass);
+            assert(abs(clist_[i].mass-ptcl[i].mass)<1e-10);
 #endif
         }
     }

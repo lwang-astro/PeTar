@@ -191,7 +191,7 @@ void Newtonian_extA_pert (double3* acc, const PS::F64 time, Tptcl* p, const PS::
 #ifdef HARD_DEBUG
     PS::F64 mt = 0.0;
     for(int i=0; i<np; i++) mt += p[i].mass;
-    assert(mt==pert[0]->mass);
+    assert(abs(mt-pert[0]->mass)<1e-10);
 #endif
 
     for(int i=0; i<np; i++) {

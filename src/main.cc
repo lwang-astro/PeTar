@@ -806,7 +806,7 @@ int main(int argc, char *argv[]){
 #endif
         // >4. kick  ----------------------------------------
         /// Member mass are recovered
-        // single
+        // single and reset status to zero (due to binary disruption)
         kickOne(system_soft, dt_kick, search_cluster.getAdrSysOneCluster());
         // isolated
         kickCluster(system_soft, system_hard_isolated.getPtcl(), dt_kick);

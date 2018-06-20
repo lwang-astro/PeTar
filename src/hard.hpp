@@ -208,6 +208,8 @@ private:
             const PS::S32 ith = PS::Comm::getThreadNum();
             PtclHard* ptcl_in_cluster = _ptcl_local + _n_ptcl_in_cluster_disp[i];
             const PS::S32 n_ptcl = _n_ptcl_in_cluster[i];
+            // reset status
+            for(PS::S32 j=0; j<n_ptcl; j++) ptcl_in_cluster[j].status = 0;
             // search groups
             SearchGroup<PtclHard> group;
             // merge groups
@@ -1874,7 +1876,8 @@ public:
             const PS::S32 k =_ptcl_list[i];
             _sys[k].pot_tot += _sys[k].mass / Int_pars_.rout;
 #ifdef HARD_DEBUG
-            assert(_sys[k].status==0);
+            // status may not be zero after binary disrupted
+            // assert(_sys[k].status==0);
 #endif
         }
     }
