@@ -2254,6 +2254,7 @@ public:
             if(adr <0 && _ptcl_hard[i].status==0){
 #ifdef HARD_DEBUG
                 assert( ptcl_recv_[-(adr+1)].id == _ptcl_hard[i].id );
+                assert( ptcl_recv_[-(adr+1)].status==0);
 #endif
                 _ptcl_hard[i].DataCopy(ptcl_recv_[-(adr+1)]);
             }

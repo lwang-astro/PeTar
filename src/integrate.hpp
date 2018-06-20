@@ -58,6 +58,9 @@ void kickCluster(Tsys& _sys,
         const PS::S64 i_adr =_ptcl[i].adr_org;
         // if is group member, recover mass and kick due to c.m. force
         if(cm_adr>0) {
+#ifdef HARD_DEBUG
+            assert(_ptcl[i].mass_bk>0); 
+#endif
             _ptcl[i].mass = _ptcl[i].mass_bk;
             _ptcl[i].vel += _sys[cm_adr].acc * _dt;
             _sys[cm_adr].vel += _sys[cm_adr].acc * _dt/_sys[cm_adr].status; // status has total number of members, to avoid duplicate kick
@@ -89,6 +92,7 @@ void kickSend(Tsys& _sys,
         if(cm_adr==0)  _sys[adr].vel += _sys[adr].acc * _dt;
 #ifdef HARD_DEBUG
         if(cm_adr==0) assert(_sys[adr].mass>0&&_sys[adr].mass_bk==0);
+        else assert(_sys[adr].mass==0&&_sys[adr].mass_bk>0);
 #endif
     }
 }

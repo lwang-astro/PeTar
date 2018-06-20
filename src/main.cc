@@ -794,6 +794,7 @@ int main(int argc, char *argv[]){
         profile.kick.start();
 #endif
         // >4. kick  ----------------------------------------
+        /// Member mass are recovered
         // single
         kickOne(system_soft, dt_kick, search_cluster.getAdrSysOneCluster());
         // isolated
@@ -956,20 +957,6 @@ int main(int argc, char *argv[]){
         }
 
 #ifdef PROFILE
-        profile.search_cluster.start();
-#endif
-
-        // Send receive cluster particles after kick
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-//        search_cluster.sendAndRecvCluster(system_soft);
-//        search_cluster.connectNodes(pos_domain,tree_soft);
-//        search_cluster.setIdClusterGlobalIteration();
-//        search_cluster.sendAndRecvCluster(system_soft);
-#endif
-
-#ifdef PROFILE
-        profile.search_cluster.end();
-
         // >5. Hard integration --------------------------------------
         profile.hard_tot.start();
 #endif
