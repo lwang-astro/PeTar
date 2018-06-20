@@ -42,7 +42,6 @@ void kickOne(Tsys & _sys,
 //!leap frog kick for clusters------------------------------------------
 /* modify the velocity of particle in local, if particle is from remote note and is not group member, do nothing, need MPI receive to update data
    Recover the mass of members for energy calculation
-   Kick c.m. velocity also
    @param[in,out] _sys: particle system
    @param[in,out] _ptcl: local particle array in system hard
    @param[in]: _dt: tree step
@@ -63,7 +62,8 @@ void kickCluster(Tsys& _sys,
 #endif
             _ptcl[i].mass = _ptcl[i].mass_bk;
             _ptcl[i].vel += _sys[cm_adr].acc * _dt;
-            _sys[cm_adr].vel += _sys[cm_adr].acc * _dt/_sys[cm_adr].status; // status has total number of members, to avoid duplicate kick
+            // Suppressed because thread unsafe
+            //_sys[cm_adr].vel += _sys[cm_adr].acc * _dt/_sys[cm_adr].status; // status has total number of members, to avoid duplicate kick. 
         }
         // non-member particle
         else if(i_adr>=0) {
@@ -93,6 +93,28 @@ void kickSend(Tsys& _sys,
 #ifdef HARD_DEBUG
         if(cm_adr==0) assert(_sys[adr].mass>0&&_sys[adr].mass_bk==0);
         else assert(_sys[adr].mass_bk>0);
+#endif
+    }
+}
+
+//! kick for artifical c.m. particles
+/* Kick c.m. velocity
+   @param[in,out] _sys: particle system
+   @param[in] _adr_cm_start: c.m. particle starting address
+   @param[in] _adr_cm_offset: c.m. address offset
+   @param[in]: _dt: tree step
+ */
+template<class Tsys>
+void kickCM(Tsys& _sys,
+            const PS::S32 _adr_cm_start,
+            const PS::S32 _adr_cm_offset,
+            const PS::F64 _dt) {
+    const PS::S64 n_tot= _sys.getNumberOfParticleLocal();
+#pragma omp parallel for
+    for(int i=_adr_cm_start; i<n_tot; i+= _adr_cm_offset) {
+        _sys[i].vel += _sys[i].acc * _dt;
+#ifdef HARD_DEBUG
+        assert(_sys[i].id<0&&_sys[i].status>0);
 #endif
     }
 }

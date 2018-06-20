@@ -33,7 +33,7 @@
 
 #ifdef MPI_DEBUG
 #include <mpi.h>
-// Send recev debug
+// Send recv debug
 int MPI_Isend(void* buffer, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request* req)
 {
    int ret;
@@ -799,7 +799,10 @@ int main(int argc, char *argv[]){
         kickOne(system_soft, dt_kick, search_cluster.getAdrSysOneCluster());
         // isolated
         kickCluster(system_soft, system_hard_isolated.getPtcl(), dt_kick);
-
+        // c.m. artifical
+        GroupPars gpar(n_split.value);
+        kickCM(system_soft, n_loc+gpar.offset_cm, gpar.n_ptcl_artifical, dt_kick);
+        
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         // connected
         kickCluster(system_soft, system_hard_connected.getPtcl(), dt_kick);
@@ -963,6 +966,8 @@ int main(int argc, char *argv[]){
             kickOne(system_soft, dt_kick, search_cluster.getAdrSysOneCluster());
             // isolated
             kickCluster(system_soft, system_hard_isolated.getPtcl(), dt_kick);
+            // c.m.
+            kickCM(system_soft, n_loc+gpar.offset_cm, gpar.n_ptcl_artifical, dt_kick);
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
             // connected
