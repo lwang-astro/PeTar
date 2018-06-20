@@ -809,6 +809,29 @@ int main(int argc, char *argv[]){
         search_cluster.SendSinglePtcl(system_soft, system_hard_connected.getPtcl());
 #endif
 
+#ifdef HARD_DEBUG
+        PS::S32 kick_regist[n_loc]={0};
+        for(int i=0; i<search_cluster.getAdrSysOneCluster().size(); i++) {
+            kick_regist[search_cluster.getAdrSysOneCluster()[i]]++;
+        }
+        for(int i=0; i<system_hard_isolated.getPtcl().size(); i++) {
+            PS::S64 adr= system_hard_isolated.getPtcl()[i].adr_org;
+            assert(adr>=0);
+            kick_regist[adr]++;
+        }
+        for(int i=0; i<system_hard_connected.getPtcl().size(); i++) {
+            PS::S64 adr= system_hard_connected.getPtcl()[i].adr_org;
+            if(adr>=0) kick_regist[adr]++;
+        }
+        for(int i=0; i<search_cluster.getAdrSysConnectClusterSend().size(); i++) {
+            PS::S64 adr= search_cluster.getAdrSysConnectClusterSend()[i];
+            kick_regist[adr]++;
+        }
+        for(int i=0; i<n_loc; i++) {
+            assert(kick_regist[i]==1);
+        }
+#endif
+
 #ifdef PROFILE
         profile.kick.end();
         profile.soft_tot.end();
