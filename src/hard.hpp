@@ -228,17 +228,25 @@ private:
         _adr_first_ptcl_arti_in_cluster.resizeNoInitialize(_n_group_in_cluster_offset[n_cluster]);
 
         // add artifical particle to particle system
-        GroupPars gpar(_n_split);
         PS::S32 rank = PS::Comm::getRank();
-        const PS::S32 n_artifical_per_group = gpar.n_ptcl_artifical;
+        // Get the address offset for new artifical ptcl array in each thread in _sys
+        PS::S64 sys_ptcl_artifical_thread_offset[num_thread+1];
+        sys_ptcl_artifical_thread_offset[0] = _sys.getNumberOfParticleLocal();
+        for(PS::S32 i=0; i<num_thread; i++) 
+            sys_ptcl_artifical_thread_offset[i+1] = sys_ptcl_artifical_thread_offset[i] + ptcl_artifical[i].size();
+        _sys.setNumberOfParticleLocal(sys_ptcl_artifical_thread_offset[num_thread]);
+        
+#pragma omp parallel for        
         for(PS::S32 i=0; i<num_thread; i++) {
+            GroupPars gpar(_n_split);
+            const PS::S32 n_artifical_per_group = gpar.n_ptcl_artifical;
             // ptcl_artifical should be integer times of 2*n_split+1
             assert(ptcl_artifical[i].size()%n_artifical_per_group==0);
             // Add particle to ptcl sys
             for (PS::S32 j=0; j<ptcl_artifical[i].size(); j++) {
-                PS::S32 adr = _sys.getNumberOfParticleLocal();
+                PS::S32 adr = j+sys_ptcl_artifical_thread_offset[i];
                 ptcl_artifical[i][j].adr_org=adr;
-                _sys.addOneParticle(Tptcl(ptcl_artifical[i][j],rank,adr));
+                _sys[adr]=Tptcl(ptcl_artifical[i][j],rank,adr);
             }
             PS::S32 group_offset=0, j_group_recored=-1;
             // Update the status of group members to c.m. address in ptcl sys. Notice c.m. is at the end of an artificial particle group
