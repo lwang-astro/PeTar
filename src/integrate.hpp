@@ -1349,6 +1349,11 @@ public:
         }
     }
 
+    void reset(){
+        for(int i=0; i<6; i++) T2[i] = 0;
+        for(int i=0; i<10; i++) T3[i] = 0;
+    }
+
     //! tidal tensor fitting function,
     /* @param[in] _ptcl_tt: tidal tensor measure particles
        @param[in] _bin: binary information, get the scaling factor of distance
@@ -1523,15 +1528,23 @@ public:
     void eval(double* acc, const PS::F64 time) const {
         PS::F64 dt = time - tperi_;
         dt = dt - (int)(dt/peri_)*peri_;
-        for(int i=0; i<3; i++)
-            acc[i] -= gsl_spline_eval(spline_[i],dt,acc_[i]);
+        if(spline_[0]!=NULL) {
+            for(int i=0; i<3; i++)
+                acc[i] -= gsl_spline_eval(spline_[i],dt,acc_[i]);
+        }
     }
 
-    ~keplerSplineFit() {
+    void reset(){
         for(int i=0;i<3;i++) {
             if(acc_[i]!=NULL) gsl_interp_accel_free(acc_[i]);
             if(spline_[i]!=NULL) gsl_spline_free(spline_[i]);
+            acc_[i]=NULL;
+            spline_[i]=NULL;
         }
+    }
+
+    ~keplerSplineFit() {
+        reset();
     }
 };
 #endif
@@ -2119,7 +2132,7 @@ public:
             if(_kp>0) nstep = _kp*8;
             else nstep = clist_[i].profile.stepcount[0];
 #else
-            PS::S64 nstep = clist_[i].profile.itercount;
+            nstep = clist_[i].profile.itercount;
 #endif
             os<<nstep<<std::endl;
 

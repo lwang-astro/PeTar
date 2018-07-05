@@ -22,63 +22,83 @@ INCLUDE  = -I./src -I../src
 #use_k_computer = yes
 #use_xc30_naoj = yes
 use_x86 = yes
+use_mpi = yes
+#use_intel=yes
 
 ifeq ($(use_k_computer),yes)
 CXX = time mpiFCCpx
-CXXFLAGS = -Kfast
-CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -Kopenmp
-CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
+OPTFLAGS = -Kfast
+OPTFLAGS += -Nfjcex
+OPTFLAGS += -Krestp=all
+OPTFLAGS += -Ntl_trt
+#OPTFLAGS += -NRtrap
+
+CXXFLAGS = -Kopenmp
 CXXFLAGS += -x32
 CXXFLAGS += -Xg
-CXXFLAGS += -DFAST_ALL_TO_ALL_FOR_K
-CXXFLAGS += -DFAST_WALK_K
 CXXFLAGS += -std=c++11
-#CXXFLAGS += -NRtrap
-CXXFLAGS += -Nfjcex
-CXXFLAGS += -Krestp=all
-CXXFLAGS += -DINTRINSIC_K
+
+FDPSFLAGS = -DPARTICLE_SIMULATOR_THREAD_PARALLEL
+FDPSFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
+FDPSFLAGS += -DFAST_ALL_TO_ALL_FOR_K
+FDPSFLAGS += -DFAST_WALK_K
+FDPSFLAGS += -DINTRINSIC_K
 # profiling
-CXXFLAGS += -Ntl_trt
 endif
 
 ifeq ($(use_xc30_naoj),yes)
 CXX = time CC
-CXXFLAGS = -O3 
-CXXFLAGS += -Wall
+CXXNOMPI = time CC
+OPTFLAGS = -O3 -Wall
+
+CXXFLAGS = -ffast-math -funroll-loops
 CXXFLAGS += -march=core-avx2
-CXXFLAGS += -ffast-math -funroll-loops
 CXXFLAGS += -std=c++11
-CXXFLAGS += -DINTRINSIC_X86
-#CXXFLAGS += -DUSE_GNU_PARALLEL_SORT
+
+FDPSFLAGS = -DINTRINSIC_X86
+#FDPSFLAGS += -DUSE_GNU_PARALLEL_SORT
 endif
 
 ifeq ($(use_x86),yes)
-#CXX = time g++
-#CXX = time icc
-
-#CXX = kinst-ompp mpicxx
-
-#CXX = tau_cxx.sh  -tau_makefile=/opt/tau-2.26.3/x86_64/lib/Makefile.tau-mpi-openmp -tau_options=-optCompInst
-
+ifeq ($(use_mpi),yes)
 CXX = time mpicxx
-CXXFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
-CXXFLAGS += -DMPICH_IGNORE_CXX_SEEKC
+ifeq ($(use_intel),yes)
+CXXNOMPI = time icc
+else
+CXXNOMPI = time g++
+endif
+#CXX = kinst-ompp mpicxx
+#CXX = tau_cxx.sh  -tau_makefile=/opt/tau-2.26.3/x86_64/lib/Makefile.tau-mpi-openmp -tau_options=-optCompInst
+FDPSFLAGS = -DPARTICLE_SIMULATOR_MPI_PARALLEL
+FDPSFLAGS += -DMPICH_IGNORE_CXX_SEEKC
+else
+ifeq ($(use_intel),yes)
+CXX = time icc
+CXXNOMPI = time icc
+else
+CXX = time g++
+CXXNOMPI = time g++
+endif
+endif
 
-#CXXFLAGS += -g -O0 -fbounds-check
-CXXFLAGS += -O2
+ifeq ($(debug_mode),yes)
+OPTFLAGS = -g -O0 -fbounds-check -Wall
+else
+OPTFLAGS = -O2 -Wall
+endif
 
-CXXFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL -fopenmp
-#CXXFLAGS += -DPARTICLE_SIMULATOR_DEBUG_PRINT
+CXXFLAGS = -ffast-math -funroll-loops
+CXXFLAGS += -std=c++11
 CXXFLAGS += -Wall
+CXXFLAGS += -fopenmp
 CXXFLAGS += -march=skylake-avx512
 #CXXFLAGS += -march=core-avx2
 #CXXFLAGS += -mavx
-CXXFLAGS += -ffast-math -funroll-loops
-CXXFLAGS += -std=c++11
-#CXXFLAGS += ${shell gsl-config --cflags}
-CXXFLAGS += -DINTRINSIC_X86
-#CXXFLAGS += -DUSE_GNU_PARALLEL_SORT
-#CXXLIBS += ${shell gsl-config --libs}
+
+FDPSFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL
+FDPSFLAGS += -DINTRINSIC_X86
+#FDPSFLAGS += -DPARTICLE_SIMULATOR_DEBUG_PRINT
+#FDPSFLAGS += -DUSE_GNU_PARALLEL_SORT
 endif
 
 CXXFLAGS += -DDIV_FIX
@@ -86,6 +106,8 @@ CXXFLAGS += -DDIV_FIX
 CXXFLAGS += -DUSE_QUAD
 CXXFLAGS += -DUSE_SIMD
 CXXFLAGS += -D PROFILE
+#CXXFLAGS += ${shell gsl-config --cflags}
+#CXXLIBS += ${shell gsl-config --libs}
 
 #MT_FLAGS += -D HARD_CM_KICK
 MT_FLAGS += -D TIDAL_TENSOR # Must use HARD_CM_KICK together
@@ -110,7 +132,7 @@ SIMD_DEBFLAGS += -DAVX_PRELOAD
 #DEBFLAGS += -D ARC_DEEP_DEBUG
 #DEBFLAGS += -D ARC_ERROR
 DEBFLAGS += -D ARC_DEBUG_DUMP
-#DEBFLAGS += -D ARC_WARN
+DEBFLAGS += -D ARC_WARN
 #DEBFLAGS += -D HARD_DEBUG
 #DEBFLAGS += -D HARD_CHECK_ENERGY
 DEBFLAGS += -D HARD_DEBUG_DUMP
@@ -124,6 +146,7 @@ DEBFLAGS += -D HARD_DEBUG_DUMP
 #DEBFLAGS += -D MAIN_DEBUG
 #DEBFLAGS += -D CORRECT_FORCE_DEBUG
 
+DEBUG_OPT_FLAGS = -g -O0 -fbounds-check -Wall
 ARC_DEBFLAGS += -D ARC_PROFILE -D ARC_DEBUG -D ARC_DEBUG_PRINT -D ARC_EEROR -D ARC_WARN 
 ARC_MT_FLAGS += -D ARC_SYM -D ARC_OPT_SYM2 -D TIDAL_TENSOR -D SPLIT_MASS
 HARD_DEBFLAGS+= -D ARC_PROFILE -D ARC_DEBUG -D ARC_ERROR -D ARC_WARN -D HARD_DEBUG -D HARD_CHECK_ENERGY -D HARD_DEBUG_PRINT
@@ -140,52 +163,52 @@ SRC = main.cc hard.hpp soft.hpp hard_force.hpp io.hpp kepler.hpp phantomquad_for
 all: nbody.out
 
 nbody.out: $(SRC)
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)
 
 getdata: data.cc
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)
 
 ARC_debug.out: chain_debug.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(MT_FLAGS) $(ARC_DEBFLAGS) -D ARC_DEEP_DEBUG -D DEBUG -o $@ $< $(CXXLIBS)
+	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(ARC_DEBFLAGS) -D ARC_DEEP_DEBUG -D DEBUG -o $@ $< $(CXXLIBS)
 
 hard_debug.out: hard_debug.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
 
 group_debug.out: group_debug.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
+	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
 
 rsearchtest: rsearchtest.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
 test.out: test.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
 searchgrouptest: searchgroup.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
 
 hermitetest: hermite.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
 
 splinetest: spline.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)
 
 keplersolvertest: keplersolver.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)
 
 keplertest: keplertest.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
+	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
 
 hardtest: hard.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
 
 arctest: arc.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(ARC_MT_FLAGS) $(ARC_DEBFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(ARC_MT_FLAGS) $(ARC_DEBFLAGS) -o $@ $< $(CXXLIBS)
 
 simd_test.s: simd_test.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(SIMD_DEBFLAGS) -S $< -o $@  $(CXXLIBS)
+	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(SIMD_DEBFLAGS) -S $< -o $@  $(CXXLIBS)
 
 simd_test: simd_test.cxx
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(CXXFLAGS) $(SIMD_DEBFLAGS)  $< -o $@  $(CXXLIBS)
+	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(SIMD_DEBFLAGS)  $< -o $@  $(CXXLIBS)
 
 clean:
 	rm *.out *.o

@@ -21,12 +21,25 @@
 #define NAN_CHECK(val) assert((val) == (val));
 #endif
 
-void chain_print(const ARC::chain<Ptcl> &c, const double ds, const double w, const double pre) {
+void chain_print(const ARC::chain<Ptcl> &c, const double E0, const double ds, const double w, const double pre, const bool title_flag=false) {
   // printing digital precision
+    
   std::cout<<std::setprecision(pre);
- 
-  std::cout<<c.getTime()
-           <<std::setw(w)<<(c.getEkin()+c.getPot()+c.getPt())/c.getPt()
+  if(title_flag) {
+      std::cout<<std::setw(w)<<"Time"
+               <<std::setw(w)<<"E+PT"
+               <<std::setw(w)<<"dE/E"
+               <<std::setw(w)<<"Ekin"
+               <<std::setw(w)<<"Epot"
+               <<std::setw(w)<<"Pt"
+               <<std::setw(w)<<"w"
+               <<std::setw(w)<<"W"
+               <<std::setw(w)<<"Particle"
+               <<std::endl;
+  }
+  std::cout<<std::setw(w)<<c.getTime()
+           <<std::setw(w)<<c.getEkin()+c.getPot()+c.getPt()
+           <<std::setw(w)<<(c.getEkin()+c.getPot()+c.getPt()-E0)/c.getPt()
            <<std::setw(w)<<c.getEkin()
            <<std::setw(w)<<c.getPot()
            <<std::setw(w)<<c.getPt()
@@ -50,46 +63,51 @@ void chain_print(const ARC::chain<Ptcl> &c, const double ds, const double w, con
 int main(int argc, char **argv){
   PS::F64 ds=-1.0, toff=-1.0, rout=-1.0, rin=-1.0, dterr=-1.0;
   PS::S32 n=0;
+  bool pert_off=false;
 #ifndef ARC_SYM
   PS::S32 iter=-1,intp=-1;
 #endif
   
   int copt;
   int cint=0;
-  while ((copt = getopt(argc, argv, "s:n:t:r:R:e:i:I:h")) != -1)
+  while ((copt = getopt(argc, argv, "s:n:t:r:R:e:i:I:ph")) != -1)
     switch (copt) {
     case 's':
       ds = atof(optarg);
-      cint++;
+      cint+=2;
       break;
     case 'n':
       n = atoi(optarg);
-      cint++;
+      cint+=2;
       break;
     case 't':
       toff = atof(optarg);
-      cint++;
+      cint+=2;
       break;
     case 'r':
       rin = atof(optarg);
-      cint++;
+      cint+=2;
       break;
     case 'R':
       rout = atof(optarg);
-      cint++;
+      cint+=2;
       break;
     case 'e':
       dterr = atof(optarg);
+      cint+=2;
+      break;
+    case 'p':
+      pert_off = true;
       cint++;
       break;
 #ifndef ARC_SYM
     case 'i':
       iter = atoi(optarg);
-      cint++;
+      cint+=2;
       break;
     case 'I':
       intp = atoi(optarg);
-      cint++;
+      cint+=2;
       break;
 #endif
     case 'h':
@@ -100,6 +118,7 @@ int main(int argc, char **argv){
                <<"    -r [double]:  r_in ("<<rin<<")\n"
                <<"    -R [double]:  r_out ("<<rout<<")\n"
                <<"    -e [double]:  time error ("<<dterr<<")\n"
+               <<"    -p :          suppress soft perturbation\n"
 #ifndef ARC_SYM
                <<"    -i [int]:     itermax("<<iter<<")\n"
                <<"    -I [int]:     dense intpmax("<<intp<<")\n"
@@ -119,7 +138,7 @@ int main(int argc, char **argv){
       
   // data file name
   std::string filename="ARC_dump.dat";
-  if (argc-cint*2>1) filename=argv[argc-1];
+  if (argc-cint>1) filename=argv[argc-1];
 //  FILE* pf = fopen(filename,"r");
 //  if (pf==NULL) {
 //    std::cerr<<"Error: Filename "<<filename<<" not found\n";
@@ -170,6 +189,10 @@ int main(int argc, char **argv){
 
   ARC_pert_pars int_par; /// ARC integration parameters, rout_, rin_ (L.Wang)
   int_par.read(fp);
+  if(pert_off) {
+      int_par.reset();
+      std::cout<<"Suppress soft perturbation\n";
+  }
 
   PS::S32 np;
   rc=fread(&np, sizeof(PS::S32), 1, fp);
@@ -222,14 +245,21 @@ int main(int argc, char **argv){
   
   std::fclose(fp);
 
-  bin.print(std::cout,20);
+  bin.print(std::cout,20,true);
   
   if (rout>0) int_par.rout = rout;
   if (rin>0)  int_par.rin = rin;
 #ifndef ARC_SYM
   bool err_ignore=false;
+  int seq=chain_control.getSeq();
+  if (seq==0) {
+      seq=3;
+      chain_control.setIterSeq(20,3,20);
+      chain_control.setIntp(1);
+      chain_control.setIterConst(0);
+      chain_control.setAutoStep(3);
+  }
   if (iter>0) {
-    int seq=chain_control.getSeq();
     chain_control.setIterSeq(iter,seq);
     chain_control.setIterConst(true);
     err_ignore=true;
@@ -250,6 +280,9 @@ int main(int argc, char **argv){
 
   c.print(std::cout);
 
+  double E0 = c.getEkin()+c.getPot()+c.getPt();
+  chain_print(c,E0,ds,24,16,true);
+
   int count=0;
 #ifdef ARC_SYM
   if(n>0) {
@@ -259,14 +292,16 @@ int main(int argc, char **argv){
       const PS::F64 m2=c.getP(1).getMass();
       const PS::F64 m2_mt = m2/(m1+m2);
       const PS::F64 m1_m2_1 = -m1/m2-1.0;
+      if(c.getN()==2) std::cout<<"Use OPT_SYM2\n";
 #endif
       for(int i=0; i<n; i++) {
 #ifdef ARC_OPT_SYM2
-          c.Symplectic_integration_two(ds, chain_control, timetable, m2_mt, m1_m2_1, &int_par, ptr, ftr, np);
+          if(c.getN()==2) c.Symplectic_integration_two(ds, chain_control, timetable, m2_mt, m1_m2_1, &int_par, ptr, ftr, np);
+          else c.Symplectic_integration(ds, chain_control, timetable, &int_par, ptr, ftr, np);
 #else 
           c.Symplectic_integration(ds, chain_control, timetable, &int_par, ptr, ftr, np);
 #endif
-          chain_print(c,ds,24,16);
+          chain_print(c,E0,ds,24,16,true);
       }
   }
   else {
@@ -278,14 +313,14 @@ int main(int argc, char **argv){
           std::cout<<"Fix step\n";
       }
       count = c.Symplectic_integration_tsyn(ds, chain_control, toff, &int_par, ptr, ftr, np, fix_step_flag);
-      chain_print(c,ds,24,16);
+      chain_print(c,E0,ds,24,16,true);
       std::cout<<"Step count="<<count<<std::endl;
   }
 #else
   while(toff-c.getTime()>chain_control.dterr||n>0) {
-    PS::F64 dsf=c.extrapolation_integration<PtclH4*, PtclForce*, ARC_pert_pars>(ds,chain_control,toff,&int_par,ptr,ftr,np,err_ignore);
+    PS::F64 dsf=c.extrapolation_integration(ds,chain_control,toff,&int_par,ptr,ftr,np,err_ignore);
     //    std::cerr<<" Time="<<c.getTime()<<" Tdiff="<<toff-c.getTime()<<" ds="<<ds<<" dsf="<<dsf<<std::endl;
-    chain_print(c,ds,24,16);
+    chain_print(c,E0,ds,24,16,true);
 
     count++;
     if (dsf<0) ds *= -dsf;

@@ -11,9 +11,9 @@
 
 class ForceSoft{
 public:
-    PS::F64vec acc; // soft
-    PS::F64 pot; // soft
-    PS::S32 n_ngb;
+    PS::F64vec acc; ///> soft acceleration (c.m.: averaged force from orbital particles; tensor: c.m. is substracted)
+    PS::F64 pot; ///> full potential
+    PS::S32 n_ngb; // neighbor number+1
     void clear(){
         acc = 0.0;
         pot = 0.0;
