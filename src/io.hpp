@@ -494,6 +494,7 @@ public:
     PS::S64 N;
     PS::S64 N_all;
     EnergyAndMomemtum eng_init, eng_now, eng_diff;
+    PS::F64 eng_hard_diff;
 
     Status(): time(0.0), N(0), N_all(0) {}
 
@@ -502,6 +503,9 @@ public:
             <<std::setw(width)<<"N"
             <<std::setw(width)<<"Nall"
             <<std::setw(width)<<"dE"
+#ifdef HARD_CHECK_ENERGY
+            <<std::setw(width)<<"dE_hard"
+#endif
             <<std::setw(width)<<"dE/E0";
         eng_now.dumpName(fout,width);
     }
@@ -511,6 +515,9 @@ public:
             <<std::setw(width)<<N
             <<std::setw(width)<<N_all
             <<std::setw(width)<<eng_diff.tot
+#ifdef HARD_CHECK_ENERGY
+            <<std::setw(width)<<eng_hard_diff
+#endif
             <<std::setw(width)<<eng_diff.tot/eng_init.tot;
         eng_now.dump(fout,width);
     }
@@ -521,6 +528,9 @@ public:
             <<" N= "<<N
             <<" Nall= "<<N_all
             <<" Enow-Einit= "<<eng_diff.tot
+#ifdef HARD_CHECK_ENERGY
+            <<" E_hard_diff = "<<eng_hard_diff
+#endif
             <<" (Enow-Einit)/Einit= "<<eng_diff.tot/eng_init.tot
             <<std::endl;
         eng_now.print(fout);

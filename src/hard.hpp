@@ -15,7 +15,6 @@
 //std::ofstream kout;
 //std::ofstream arout;
 
-
 class PtclHard: public Ptcl{
 public:
     PS::S32 id_cluster;
@@ -120,6 +119,9 @@ public:
     PS::S64 ARC_substep_sum;
     PS::F64 ARC_n_groups;
 #endif
+#ifdef HARD_CHECK_ENERGY
+    PS::F64 hard_dE, hard_dESD;
+#endif
 
 private:
     // Notice: if new variables added, change pardump also
@@ -197,6 +199,9 @@ private:
                                                    const PS::S64 _id_offset,
                                                    const PS::S32 _n_split) { 
         const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
+#ifdef HARD_DEBUG
+        assert(n_cluster<ARRAY_ALLOW_LIMIT);
+#endif        
         _n_group_in_cluster.resizeNoInitialize(n_cluster);
         n_group_member_remote_=0;
 
@@ -225,7 +230,11 @@ private:
         _n_group_in_cluster_offset[0] = 0;
         for (PS::S32 i=0; i<n_cluster; i++) 
             _n_group_in_cluster_offset[i+1] = _n_group_in_cluster_offset[i] + _n_group_in_cluster[i];
+#ifdef HARD_DEBUG
+        assert(_n_group_in_cluster_offset[n_cluster]<ARRAY_ALLOW_LIMIT);
+#endif        
         _adr_first_ptcl_arti_in_cluster.resizeNoInitialize(_n_group_in_cluster_offset[n_cluster]);
+
 
         // add artifical particle to particle system
         PS::S32 rank = PS::Comm::getRank();
@@ -973,6 +982,7 @@ private:
                 Aint.resolve();
 #ifdef HARD_CHECK_ENERGY
                 Aint.EnergyRecord(AE1);
+                hard_dE += AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot;
 #ifdef HARD_DEBUG_PRINT
                 fprintf(stderr,"Slowdown factor = %e\n", Aint.getSlowDown(0));
                 fprintf(stderr,"ARC Energy: init =%e, end =%e, diff =%e, error = %e\n", 
@@ -1019,7 +1029,11 @@ private:
                 // ReallocatableArray<PS::S32> adr_cm;         //group_list index -> ptcl.cm
                 // group.findGroups(group_list, status, status_map,  adr_cm, group_act_n, _ptcl_local, _n_ptcl);
 
+#ifdef HARD_DEBUG
+                assert(n_hint<ARRAY_ALLOW_LIMIT);
+#endif        
                 group_act_list.resizeNoInitialize(n_hint);
+
             
                 // Initial Aint
                 ARCIntegrator<Ptcl, PtclH4, PtclForce> Aint(ARC_control_pert_, Int_pars_);
@@ -1069,6 +1083,9 @@ private:
 
 #ifdef HARD_CHECK_ENERGY
                 PS::ReallocatableArray<PS::F64> slowdownrecord;
+#ifdef HARD_DEBUG
+                assert(_n_group<ARRAY_ALLOW_LIMIT);
+#endif        
                 slowdownrecord.resizeNoInitialize(_n_group);
 #endif
 
@@ -1118,6 +1135,8 @@ private:
 #endif
 #ifdef HARD_CHECK_ENERGY
                 CalcEnergyHardFull(_ptcl_local, _n_ptcl, E1, AE1, HE1, ESD1, Hint, Aint);
+                hard_dE += E1.tot - E0.tot;
+                hard_dESD += ESD1.tot - ESD0.tot;
 #ifdef HARD_DEBUG_PRINT
                 fprintf(stderr,"Slowdown factor = ");
                 for(int k=0; k<_n_group; k++) 
@@ -1183,6 +1202,9 @@ private:
             PS::S32 group_act_n = 0;
             PS::ReallocatableArray<PS::S32> group_act_list; //active group_list act adr
 
+#ifdef HARD_DEBUG
+            assert(_n_ptcl<ARRAY_ALLOW_LIMIT);
+#endif        
             group_act_list.resizeNoInitialize(_n_ptcl);
 
 #ifdef HARD_CHECK_ENERGY
@@ -1233,6 +1255,7 @@ private:
 
 #ifdef HARD_CHECK_ENERGY
             Hint.CalcEnergy(HE1);
+            hard_dE += HE1.tot - HE0.tot;
 #ifdef HARD_DEBUG_PRINT
             fprintf(stderr,"H4  Energy: init =%e, end =%e, diff =%e, kini =%e kinf =%e poti =%e potf =%e\n", 
                     HE0.tot, HE1.tot, HE1.tot-HE0.tot, HE0.kin, HE1.kin, HE0.pot, HE1.pot);
@@ -1248,7 +1271,6 @@ private:
             }
 #endif
 #endif
-
         }
 
         //group.resolveGroups(_ptcl_local, _n_ptcl, group_ptcl_glb.getPointer(), group_list.size(), group_list.getPointer(), adr_cm.getPointer());
@@ -1268,7 +1290,7 @@ private:
 //            PS::F64 dt_limit = calcDtLimit(0.0, dt_limit_hard_);
 //            Multiple_integrator(_ptcl_local, _n_ptcl, _time_end, dt_limit,
 //                                r_search_single_, gamma_, m_average_,
-//#ifdef ARC_ERROR
+//#ifdef HARD_CHECK_ENERGY
 //                                ARC_error_relative,
 //                                ARC_error,
 //                                N_count,
@@ -1285,6 +1307,9 @@ public:
 #endif
 #ifdef PROFILE
         ARC_substep_sum = 0;
+#endif
+#ifdef HARD_CHECK_ENERGY
+        hard_dE = hard_dESD = 0;
 #endif
         //        PS::S32 n_threads = PS::Comm::getNumberOfThread();
     }
@@ -1328,6 +1353,9 @@ public:
     /// end set Chainpars (L.Wang)
 
     void initializeForOneCluster(const PS::S32 n){
+#ifdef HARD_DEBUG
+        assert(n<ARRAY_ALLOW_LIMIT);
+#endif        
         ptcl_hard_.resizeNoInitialize(n);
     }
 
@@ -1377,6 +1405,9 @@ public:
             n_ptcl_in_cluster_.back()++;
         }
         PS::S32 n_cluster = n_ptcl_in_cluster_.size();
+#ifdef HARD_DEBUG
+        assert(n_cluster<ARRAY_ALLOW_LIMIT);
+#endif        
         n_ptcl_in_cluster_disp_.resizeNoInitialize(n_cluster+1);
         n_ptcl_in_cluster_disp_[0] = 0;
         for(PS::S32 i=0; i<n_cluster; i++){
@@ -1683,6 +1714,9 @@ public:
                                         const PS::ReallocatableArray<PS::S32> & _adr_array,
                                         const PS::ReallocatableArray<PS::S32> & _n_ptcl_in_cluster){
         const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
+#ifdef HARD_DEBUG
+        assert(n_cluster<ARRAY_ALLOW_LIMIT);
+#endif        
         n_ptcl_in_cluster_.resizeNoInitialize(n_cluster);
         n_ptcl_in_cluster_disp_.resizeNoInitialize(n_cluster+1);
         n_ptcl_in_cluster_disp_[0] = 0;
@@ -1691,6 +1725,9 @@ public:
             n_ptcl_in_cluster_disp_[i+1] = n_ptcl_in_cluster_disp_[i] + n_ptcl_in_cluster_[i];
         }
         const PS::S32 n_ptcl = _adr_array.size();
+#ifdef HARD_DEBUG
+        assert(n_ptcl<ARRAY_ALLOW_LIMIT);
+#endif        
         ptcl_hard_.resizeNoInitialize(n_ptcl);
         for(PS::S32 i=0; i<n_ptcl; i++){
             PS::S32 adr = _adr_array[i];
@@ -1702,8 +1739,14 @@ public:
 
     void initailizeForIsolatedMultiCluster(const PS::S32 _n_ptcl,
                                            const PS::ReallocatableArray<PS::S32> & _n_ptcl_in_cluster){
+#ifdef HARD_DEBUG
+        assert(_n_ptcl<ARRAY_ALLOW_LIMIT);
+#endif        
         ptcl_hard_.resizeNoInitialize(_n_ptcl);
         const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
+#ifdef HARD_DEBUG
+        assert(n_cluster<ARRAY_ALLOW_LIMIT);
+#endif        
         n_ptcl_in_cluster_.resizeNoInitialize(n_cluster);
         n_ptcl_in_cluster_disp_.resizeNoInitialize(n_cluster+1);
         n_ptcl_in_cluster_disp_[0] = 0;

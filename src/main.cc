@@ -411,6 +411,11 @@ int main(int argc, char *argv[]){
         time_sys = file_header.time = 0.0;
         file_header.n_body = n_glb.value;
         //file_header.id_offset = n_glb.value;
+        std::string fname = fname_snp.value+"."+std::to_string(file_header.nfile);
+        if (data_format.value==1||data_format.value==3)
+            system_soft.writeParticleAscii(fname.c_str(), file_header);
+        else if(data_format.value==0||data_format.value==2)
+            system_soft.writeParticleBinary(fname.c_str(), file_header);
     }
 
     const PS::S64 id_offset = n_glb.value+1;
@@ -777,6 +782,9 @@ int main(int argc, char *argv[]){
             stat.eng_init.calc(&system_soft[0], n_loc, 0.0);
             stat.eng_init.getSumMultiNodes();
             stat.eng_now = stat.eng_init;
+#ifdef HARD_CHECK_ENERGY
+            stat.eng_hard_diff = 0;
+#endif
              
             // print status
             if(my_rank==0) {
@@ -890,6 +898,16 @@ int main(int argc, char *argv[]){
             stat.eng_now.getSumMultiNodes();
         
             stat.eng_diff = stat.eng_now - stat.eng_init;
+#ifdef HARD_CHECK_ENERGY
+            PS::F64 hard_dE_local = system_hard_isolated.hard_dE;
+            hard_dE_local += system_hard_connected.hard_dE;
+            stat.eng_hard_diff += PS::Comm::getSum(hard_dE_local);
+
+            system_hard_isolated.hard_dE = 0;
+            system_hard_isolated.hard_dESD = 0;
+            system_hard_connected.hard_dE = 0;
+            system_hard_connected.hard_dESD = 0;
+#endif
 
             // print status
             if(my_rank==0) {
@@ -931,7 +949,7 @@ int main(int argc, char *argv[]){
                 n_count.printHist(std::cout,PRINT_WIDTH,dn_loop);
             }
                     
-//#ifdef ARC_ERROR
+//#ifdef HARD_CHECK_ENERGY
 //            for (int i=1;i<20;i++)  system_hard_isolated.N_count[i] = PS::Comm::getSum(system_hard_isolated.N_count[i]);
 //            if(my_rank==0) {
 //                std::cerr<<"NHist: ";
@@ -1121,7 +1139,9 @@ int main(int argc, char *argv[]){
         n_count_sum.hard_connected   += PS::Comm::getSum(n_hard_connected);
                                            
         PS::S64 ARC_substep_sum   = system_hard_isolated.ARC_substep_sum;
+        ARC_substep_sum += system_hard_connected.ARC_substep_sum;
         PS::S64 ARC_n_groups      = system_hard_isolated.ARC_n_groups;
+        ARC_n_groups += system_hard_connected.ARC_n_groups;
         n_count.ARC_substep_sum  += ARC_substep_sum;
         n_count.ARC_n_groups     += ARC_n_groups;
 
@@ -1130,6 +1150,8 @@ int main(int argc, char *argv[]){
 
         system_hard_isolated.ARC_substep_sum = 0;
         system_hard_isolated.ARC_n_groups = 0;
+        system_hard_connected.ARC_substep_sum = 0;
+        system_hard_connected.ARC_n_groups = 0;
                                            
         n_count.cluster_count(1, n_hard_single);
 
@@ -1151,7 +1173,7 @@ int main(int argc, char *argv[]){
         n_loop++;
     }
 
-//#ifdef ARC_ERROR
+//#ifdef HARD_CHECK_ENERGY
 //    std::cout<<"Hist[1]"<<system_hard_isolated.N_count[1]/(PS::F64)n_loop<<std::endl;
 //    for (int i=1;i<20;i++)  system_hard_isolated.N_count[i] = PS::Comm::getSum(system_hard_isolated.N_count[i]);
 //    if(my_rank==0) {

@@ -10,6 +10,9 @@
 #define ID_PHASE_SHIFT 4
 #define ID_PHASE_MASKER 0xF
 
+#ifndef ARRAY_ALLOW_LIMIT
+#define ARRAY_ALLOW_LIMIT 1000000000
+#endif
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
 template <class Ttree>
@@ -265,6 +268,9 @@ private:
         //PS::S32 n = p_list.size();
         part_list.clearSize();
         part_list_disp.reserve(n);
+#ifdef HARD_DEBUG
+        assert(n<ARRAY_ALLOW_LIMIT);
+#endif        
         part_list_disp.resizeNoInitialize(n);
         part_list_n.reserve(n);
         part_list_n.resizeNoInitialize(n);
@@ -312,6 +318,9 @@ private:
 
         // map index from ptcl_org to partner_index
         PS::ReallocatableArray<PS::S32> reverse_list; 
+#ifdef HARD_DEBUG
+        assert(_n_ptcl<ARRAY_ALLOW_LIMIT);
+#endif        
         reverse_list.reserve(_n_ptcl);
         reverse_list.resizeNoInitialize(_n_ptcl);
 
@@ -730,6 +739,9 @@ private:
             PS::ReallocatableArray<Tptree*> stab_bins; // stable checked binary tree
             bins.reserve(_n_groups);
             stab_bins.reserve(_n_groups);
+#ifdef HARD_DEBUG
+            assert(_group_list_n[i]<ARRAY_ALLOW_LIMIT);
+#endif        
             bins.resizeNoInitialize(_group_list_n[i]-1);
             // build hierarch binary tree from the minimum distant neighbors
 
@@ -1399,6 +1411,10 @@ private:
         for(PS::S32 i=1; i<n_thread; i++){
             size_data += data[i].size();
         }
+#ifdef HARD_DEBUG
+        assert(size_data<ARRAY_ALLOW_LIMIT);
+#endif        
+        
         data[0].resizeNoInitialize(size_data);
 #pragma omp parallel
         {
@@ -1601,6 +1617,9 @@ public:
             id_to_adr_pcluster_.insert(std::pair<PS::S32, PS::S32>(ptcl_cluster_[0][i].id_, i));
         }
         adr_ngb_multi_cluster_.clearSize();
+#ifdef HARD_DEBUG
+        assert(id_ngb_multi_cluster[0].size()<ARRAY_ALLOW_LIMIT);
+#endif        
         adr_ngb_multi_cluster_.resizeNoInitialize(id_ngb_multi_cluster[0].size());
         for(PS::S32 i=0; i<id_ngb_multi_cluster[0].size(); i++){
             const PS::S32 adr_self = id_to_adr_pcluster_[id_ngb_multi_cluster[0][i].first];
@@ -1723,6 +1742,9 @@ public:
             id_to_adr_pcluster_.insert(std::pair<PS::S32, PS::S32>(ptcl_cluster_[0][i].id_, i));
         }
         adr_ngb_multi_cluster_.clearSize();
+#ifdef HARD_DEBUG
+        assert(id_ngb_multi_cluster[0].size()<ARRAY_ALLOW_LIMIT);
+#endif        
         adr_ngb_multi_cluster_.resizeNoInitialize(id_ngb_multi_cluster[0].size());
         for(PS::S32 i=0; i<id_ngb_multi_cluster[0].size(); i++){
             const PS::S32 adr_self = id_to_adr_pcluster_[id_ngb_multi_cluster[0][i].first];
@@ -1936,6 +1958,15 @@ public:
     void setIdClusterGlobalIteration(){
         //        const PS::S32 my_rank = PS::Comm::getRank();
         const PS::S32 n_proc_tot = PS::Comm::getNumberOfProc();
+#ifdef HARD_DEBUG
+        //assert(n_cluster_disp_send_.back()<ARRAY_ALLOW_LIMIT);
+        if(n_cluster_disp_send_.back()>ARRAY_ALLOW_LIMIT) {
+            std::cerr<<"Error: size overflow: rank: "<<PS::Comm::getRank()<<" n_cluster_disp_send_.back()="<<n_cluster_disp_send_.back()<<" size="<<n_cluster_disp_send_.size()<<std::endl;
+        }
+        if(n_cluster_disp_recv_.back()>ARRAY_ALLOW_LIMIT) {
+            std::cerr<<"Error: size overflow: rank: "<<PS::Comm::getRank()<<" n_cluster_disp_recv_.back()="<<n_cluster_disp_recv_.back()<<" size="<<n_cluster_disp_recv_.size()<<std::endl;
+        }
+#endif        
         id_cluster_send_.resizeNoInitialize(n_cluster_disp_send_.back());
         id_cluster_recv_.resizeNoInitialize(n_cluster_disp_recv_.back());
         static PS::ReallocatableArray<MPI_Request> req_send;

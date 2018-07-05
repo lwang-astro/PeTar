@@ -19,6 +19,9 @@
 #define STEP_DIVIDER 32.0
 #endif
 
+#ifndef ARRAY_ALLOW_LIMIT
+#define ARRAY_ALLOW_LIMIT 1000000000
+#endif
 //const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ;
 
 //!leap frog kick for single----------------------------------------------
@@ -971,6 +974,9 @@ public:
                     ARCint* Aint = NULL,
                     const bool calc_full_flag = true) {
         PS::S32 n_ptcl = ptcl_.size();
+#ifdef HARD_DEBUG
+        assert(n_ptcl<ARRAY_ALLOW_LIMIT);
+#endif        
         pred_.resizeNoInitialize(n_ptcl);
         force_.resizeNoInitialize(n_ptcl);
         adr_sorted_.resizeNoInitialize(n_ptcl);
@@ -1121,7 +1127,7 @@ void Isolated_Multiple_integrator(Tptcl * ptcl_org,
                                   const PS::F64 rout_single,
                                   const PS::F64 gamma,
                                   const PS::F64 m_average,
-#ifdef ARC_ERROR
+#ifdef HARD_CHECK_ENERGY
                                   PS::F64 &ARC_error_relative,
                                   PS::F64 &ARC_error,
                                   PS::S32 N_count[20],
@@ -1182,7 +1188,7 @@ void Isolated_Multiple_integrator(Tptcl * ptcl_org,
     //c.link_int_par(Int_pars);
     c.init(time_sys,ARC_control,Int_pars);
 
-#ifdef ARC_ERROR
+#ifdef HARD_CHECK_ENERGY
     PS::F64 ARC_error_once = c.getPot()+c.getEkin();
     if(n_ptcl<=20) N_count[n_ptcl-1]++;
     else std::cerr<<"Large cluster formed, n="<<n_ptcl<<std::endl;
@@ -1314,7 +1320,7 @@ void Isolated_Multiple_integrator(Tptcl * ptcl_org,
     }
 
     // error record
-#ifdef ARC_ERROR
+#ifdef HARD_CHECK_ENERGY
     PS::F64 ARC_error_temp = (c.getPot()+c.getEkin()-ARC_error_once);
     ARC_error += ARC_error_temp;
     ARC_error_relative += ARC_error_temp/ARC_error_once;
@@ -1646,6 +1652,9 @@ public:
     ARCIntegrator(ARControl &contr, ARC_int_pars &par): ARC_control_(&contr), Int_pars_(&par) {}
 
     void reserveARMem(const PS::S32 n) {
+#ifdef HARD_DEBUG
+        assert(n<ARRAY_ALLOW_LIMIT);
+#endif        
         clist_.reserve(n);
         //clist_.resizeNoInitialize(n);
         par_list_.reserve(n);
@@ -2063,7 +2072,7 @@ public:
     }
 
     const TpARC* getGroupPtcl(const PS::S32 i) const {
-#ifdef ARC_ERROR
+#ifdef HARD_CHECK_ENERGY
         assert(i<clist_.size());
 #endif        
         return &clist_[i].getP(0);
@@ -2144,7 +2153,7 @@ public:
     }
 #endif
     
-#ifdef ARC_ERROR
+#ifdef HARD_CHECK_ENERGY
     template <class Teng>
     void EnergyRecord(Teng &energy, const PS::S32 sdflag=false) {
         energy.kin = energy.pot = energy.tot = 0.0;
