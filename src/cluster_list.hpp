@@ -1563,7 +1563,7 @@ public:
                 if(sys[i].n_ngb == 1){
                     // no neighbor
                     adr_sys_one_cluster_[ith].push_back(i);
-#ifdef HARD_DEBUG
+#ifdef CLUSTER_DEBUG
                     Tepj * nbl = NULL;
                     PS::S32 n_ngb_tree_i = tree.getNeighborListOneParticle(sys[i], nbl) ;
                     if(n_ngb_tree_i!=sys[i].n_ngb) {

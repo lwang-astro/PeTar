@@ -23,7 +23,7 @@ INCLUDE  = -I./src -I../src
 #use_xc30_naoj = yes
 use_x86 = yes
 use_mpi = yes
-debug_mode=yes
+#debug_mode=yes
 #use_intel=yes
 
 ifeq ($(use_k_computer),yes)
@@ -135,9 +135,9 @@ SIMD_DEBFLAGS += -DAVX_PRELOAD
 #DEBFLAGS += -D ARC_ERROR
 DEBFLAGS += -D ARC_DEBUG_DUMP
 #DEBFLAGS += -D ARC_WARN
-DEBFLAGS += -D HARD_DEBUG
+#DEBFLAGS += -D HARD_DEBUG
 DEBFLAGS += -D HARD_DEBUG_DUMP
-DEBFLAGS += -D CLUSTER_DEBUG
+#DEBFLAGS += -D CLUSTER_DEBUG
 #DEBFLAGS += -D HARD_DEBUG_PRINT
 #DEBFLAGS += -D HARD_DEBUG_PROFILE
 #DEBFLAGS += -D NAN_CHECK_DEBUG

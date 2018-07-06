@@ -73,7 +73,8 @@ public:
 
     PS::F64 getRSearch() const {
 //        return std::max(r_search * std::pow(2.0*mass/m_average,0.3333),r_search_min) * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
-        return this->r_search * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+//        return this->r_search * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+        return this->r_search*SAFTY_FACTOR_FOR_SEARCH;
     }
 
     void writeAscii(FILE* fp) const{
@@ -147,7 +148,8 @@ public:
     }
     PS::F64 getRSearch() const {
 //        return std::max(r_search * std::pow(2.0*mass/m_average,0.3333),r_search_min) * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
-        return r_search * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+//        return r_search; * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+        return r_search*SAFTY_FACTOR_FOR_SEARCH;
     }
 
 };
@@ -183,7 +185,8 @@ public:
     PS::F64 getCharge() const { return mass; }
     PS::F64 getRSearch() const {
 //        return std::max(r_search * std::pow(2.0*mass/m_average,0.3333),r_search_min) * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
-        return r_search * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+//        return r_search * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+        return r_search*SAFTY_FACTOR_FOR_SEARCH;
     }
     // FORDEBUG
     void print(std::ostream & fout=std::cout) const {
@@ -370,7 +373,7 @@ struct CalcForceEpEpWithLinearCutoffNoSimd{
                 const PS::F64 r2 = rij * rij;
                 const PS::F64 r2_eps = rij * rij + eps2;
                 const PS::F64 r_search = std::max(ep_i[i].r_search,ep_j[j].r_search);
-                if(r2 < r_search*r_search*SAFTY_FACTOR_FOR_SEARCH_SQ){
+                if(r2 < r_search*r_search){
                     n_ngb_i++;
                 }
                 const PS::F64 r2_tmp = (r2_eps > r_out2) ? r2_eps : r_out2;

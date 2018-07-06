@@ -898,7 +898,7 @@ public:
             for(int j=0; j<nbin; j++) {
                 PS::F64vec dr = ptcl_[i].pos-ptcl_[j].pos;
                 PS::F64 r2 = dr*dr;
-                PS::F64 r_search = std::max(ptcl_[i].r_search,ptcl_[j].r_search)*SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH + dr_search[j];
+                PS::F64 r_search = std::max(ptcl_[i].r_search,ptcl_[j].r_search) + dr_search[j];
                 PS::F64 r_search2 = r_search*r_search;
                 if (r2<r_search2&&i!=j) {
                     Jlist_.push_back(j);
@@ -909,7 +909,7 @@ public:
             for(int j=nbin; j<n; j++) {
                 PS::F64vec dr = ptcl_[i].pos-ptcl_[j].pos;
                 PS::F64 r2 = dr*dr;
-                PS::F64 r_search = std::max(ptcl_[i].r_search,ptcl_[j].r_search)*SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
+                PS::F64 r_search = std::max(ptcl_[i].r_search,ptcl_[j].r_search);
                 PS::F64 r_search2 = r_search*r_search;
                 if (r2<r_search2&&i!=j) {
                     Jlist_.push_back(j);
