@@ -5,13 +5,13 @@
 #PS_PATH = -I../../fdps/src/
 #PS_PATH = -I../../../../project/fdps/src
 #PS_PATH = -I../FDPS/src
-PS_PATH = -I../fdps.svn/
-#PS_PATH  = -I/home/lwang/code/fdps/src
+#PS_PATH = -I../fdps.svn/
+PS_PATH  = -I/home/lwang/code/fdps/src
 
 ##ARC PATH
-ARC_PATH= -I../TSARC/include
+#ARC_PATH= -I../TSARC/include
 #ARC_PATH = -I/home/lwang/code/ARC/include
-#ARC_PATH = -I/home/lwang/GitHub/ARC/include
+ARC_PATH = -I/home/lwang/GitHub/ARC/include
 
 ##Gperftools PATH
 #GPERF_PATH = -L../../soft/gperftools-2.6.90/lib
@@ -23,6 +23,7 @@ INCLUDE  = -I./src -I../src
 #use_xc30_naoj = yes
 use_x86 = yes
 use_mpi = yes
+debug_mode=yes
 #use_intel=yes
 
 ifeq ($(use_k_computer),yes)
@@ -91,8 +92,8 @@ CXXFLAGS = -ffast-math -funroll-loops
 CXXFLAGS += -std=c++11
 CXXFLAGS += -Wall
 CXXFLAGS += -fopenmp
-CXXFLAGS += -march=skylake-avx512
-#CXXFLAGS += -march=core-avx2
+#CXXFLAGS += -march=skylake-avx512
+CXXFLAGS += -march=core-avx2
 #CXXFLAGS += -mavx
 
 FDPSFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL

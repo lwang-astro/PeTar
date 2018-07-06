@@ -1563,6 +1563,18 @@ public:
                 if(sys[i].n_ngb == 1){
                     // no neighbor
                     adr_sys_one_cluster_[ith].push_back(i);
+#ifdef HARD_DEBUG
+                    Tepj * nbl = NULL;
+                    PS::S32 n_ngb_tree_i = tree.getNeighborListOneParticle(sys[i], nbl) ;
+                    if(n_ngb_tree_i!=sys[i].n_ngb) {
+                        std::cerr<<"Error: Tree neighbor search number ("<<n_ngb_tree_i<<") is inconsistent with force kernel neighbor number ("<<sys[i].n_ngb<<")!\n Neighbor ID from tree: ";
+                        for(int j=0; j<n_ngb_tree_i; j++) {
+                            std::cerr<<(nbl+j)->id<<" ";
+                        }
+                        std::cerr<<std::endl;
+                        abort();
+                    }
+#endif
                 }
                 else{
                     // has neighbor
@@ -1908,19 +1920,19 @@ public:
                 rank_recv_cluster_.push_back(rank); // NOTE: recv not send
                 n_cluster_recv_.push_back(n_send[rank]); // NOTE: recv not send
                 MPI_Isend(id_send.getPointer(n_send_disp[rank]), n_send[rank], PS::GetDataType<PS::S32>(),
-                          rank, 1871, MPI_COMM_WORLD, req_send.getPointer(n_proc_send));
-                n_proc_send++;
+                          rank, 1871, MPI_COMM_WORLD, req_send.getPointer(n_proc_recv));
+                n_proc_recv++;
             }
             if(n_recv[rank] > 0){
                 rank_send_cluster_.push_back(rank); // NOTE: send
                 n_cluster_send_.push_back(n_recv[rank]); // NOTE: send
                 MPI_Irecv(id_recv.getPointer(n_recv_disp[rank]), n_recv[rank], PS::GetDataType<PS::S32>(),
-                          rank, 1871, MPI_COMM_WORLD, req_recv.getPointer(n_proc_recv));
-                n_proc_recv++;
+                          rank, 1871, MPI_COMM_WORLD, req_recv.getPointer(n_proc_send));
+                n_proc_send++;
             }
         }
-        MPI_Waitall(n_proc_send, req_send.getPointer(), stat_send.getPointer());
-        MPI_Waitall(n_proc_recv, req_recv.getPointer(), stat_recv.getPointer());
+        MPI_Waitall(n_proc_recv, req_send.getPointer(), stat_send.getPointer());
+        MPI_Waitall(n_proc_send, req_recv.getPointer(), stat_recv.getPointer());
         adr_pcluster_send_.clearSize();
         adr_pcluster_recv_.clearSize();
         for(PS::S32 i=0; i<n_recv_disp.back(); i++){
@@ -2255,9 +2267,9 @@ public:
         //for(PS::S32 i=0; i<n; i++) {
         //    const PS::S32 adr = _ptcl_hard[i].adr_org;
         //    if(adr >=0){
-#ifdef H//ARD_DEBUG
+//#ifdef HARD_DEBUG
         //        assert( _sys[adr].id == _ptcl_hard[i].id );
-#endif  // 
+//#endif  // 
         //        _sys[adr].DataCopy(_ptcl_hard[i]);
         //    }
         //}
