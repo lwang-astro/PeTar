@@ -1552,6 +1552,7 @@ public:
 #pragma omp parallel
         {
             const PS::S32 ith = PS::Comm::getThreadNum();
+//            const PS::S32 ith = 0;
             adr_sys_one_cluster_[ith].clearSize();
             id_ngb_multi_cluster[ith].clearSize();
             for(PS::S32 i=0; i<ptcl_cluster_[ith].size(); i++) ptcl_cluster_[ith][i].clear();
@@ -1567,7 +1568,7 @@ public:
                     Tepj * nbl = NULL;
                     PS::S32 n_ngb_tree_i = tree.getNeighborListOneParticle(sys[i], nbl) ;
                     if(n_ngb_tree_i!=sys[i].n_ngb) {
-                        std::cerr<<"Error: Tree neighbor search number ("<<n_ngb_tree_i<<") is inconsistent with force kernel neighbor number ("<<sys[i].n_ngb<<")!\n Neighbor ID from tree: ";
+                        std::cerr<<"Error: particle "<<i<<" Tree neighbor search number ("<<n_ngb_tree_i<<") is inconsistent with force kernel neighbor number ("<<sys[i].n_ngb<<")!\n Neighbor ID from tree: ";
                         for(int j=0; j<n_ngb_tree_i; j++) {
                             std::cerr<<(nbl+j)->id<<" ";
                         }
@@ -1579,10 +1580,27 @@ public:
                 else{
                     // has neighbor
                     Tepj * nbl = NULL;
+#ifdef CLUSTER_DEBUG
+                    PS::S32 n_ngb_force_i = sys[i].n_ngb;
+#endif
                     sys[i].n_ngb = tree.getNeighborListOneParticle(sys[i], nbl) - 1;
-                    assert(sys[i].n_ngb >= 0);
-                    // self-potential correction 
+#ifdef CLUSTER_DEBUG
+                    if(n_ngb_force_i<sys[i].n_ngb+1) {
+                        std::cerr<<"Error: particle "<<i<<" Tree neighbor search number ("<<sys[i].n_ngb+1<<") is inconsistent with force kernel neighbor number ("<<n_ngb_force_i<<")!\n Neighbor ID from tree: ";
+                        for(int j=0; j<sys[i].n_ngb+1; j++) {
+                            std::cerr<<(nbl+j)->id<<" ";
+                        }
+                        std::cerr<<std::endl;
+                        abort();
+                    }
+#endif
 
+                    if(sys[i].n_ngb == 0){
+                        // no neighbor
+                        adr_sys_one_cluster_[ith].push_back(i);
+                        continue;
+                    }
+                    
                     ptcl_cluster_[ith].push_back( PtclCluster(sys[i].id, i, id_ngb_multi_cluster[ith].size(), sys[i].n_ngb, false, NULL, my_rank) );
                     //PS::S32 n_tmp2 = 0;
                     //PS::S32 n_tmp3 = 0;

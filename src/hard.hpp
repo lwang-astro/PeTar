@@ -940,7 +940,8 @@ private:
                 Aint.reserveARMem(1);
                 // Aint.reservePertMem(1);
                 gpars[0].getBinPars(Aint.bininfo[0], _ptcl_artifical);
-#ifdef HARD_DEBUG_PRINT            
+#ifdef HARD_DEBUG_PRINT
+                std::cerr<<"Hard: one group, n="<<_n_ptcl<<std::endl;
                 if(Aint.bininfo[0].ax>Int_pars_.rout)  Aint.bininfo[0].print(std::cerr,13);
 #endif
 #ifdef TIDAL_TENSOR
@@ -1030,6 +1031,9 @@ private:
                 // group.findGroups(group_list, status, status_map,  adr_cm, group_act_n, _ptcl_local, _n_ptcl);
 
 #ifdef HARD_DEBUG
+#ifdef HARD_DEBUG_PRINT
+                std::cerr<<"Hard: mix, n="<<_n_ptcl<<" n_group= "<<_n_group<<std::endl;
+#endif
                 assert(n_hint<ARRAY_ALLOW_LIMIT);
 #endif        
                 group_act_list.resizeNoInitialize(n_hint);
@@ -1178,6 +1182,10 @@ private:
             Hint.setPtcl(_ptcl_local, _n_ptcl);
 
 #ifdef HARD_DEBUG
+            assert(_n_ptcl>1);
+#ifdef HARD_DEBUG_PRINT
+            std::cerr<<"Hard: hermite, n="<<_n_ptcl<<std::endl;
+#endif
             for(int i=0; i<_n_ptcl; i++) {
                 assert(_ptcl_local[i].status==0);
                 assert(_ptcl_local[i].mass>0);
@@ -1411,6 +1419,9 @@ public:
         n_ptcl_in_cluster_disp_.resizeNoInitialize(n_cluster+1);
         n_ptcl_in_cluster_disp_[0] = 0;
         for(PS::S32 i=0; i<n_cluster; i++){
+#ifdef HARD_DEBUG
+            assert(n_ptcl_in_cluster_[i]>1);
+#endif
             n_ptcl_in_cluster_disp_[i+1] = n_ptcl_in_cluster_disp_[i] + n_ptcl_in_cluster_[i];
         }
     }
@@ -1722,6 +1733,9 @@ public:
         n_ptcl_in_cluster_disp_[0] = 0;
         for(PS::S32 i=0; i<n_cluster; i++){
             n_ptcl_in_cluster_[i] = _n_ptcl_in_cluster[i];
+#ifdef HARD_DEBUG
+            assert(n_ptcl_in_cluster_[i]>1);
+#endif
             n_ptcl_in_cluster_disp_[i+1] = n_ptcl_in_cluster_disp_[i] + n_ptcl_in_cluster_[i];
         }
         const PS::S32 n_ptcl = _adr_array.size();
@@ -1752,6 +1766,9 @@ public:
         n_ptcl_in_cluster_disp_[0] = 0;
         for(PS::S32 i=0; i<n_cluster; i++){
             n_ptcl_in_cluster_[i] = _n_ptcl_in_cluster[i];
+#ifdef HARD_DEBUG
+            assert(n_ptcl_in_cluster_[i]>1);
+#endif
             n_ptcl_in_cluster_disp_[i+1] = n_ptcl_in_cluster_disp_[i] + n_ptcl_in_cluster_[i];
         }
     }
