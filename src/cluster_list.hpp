@@ -288,6 +288,12 @@ private:
                 PS::F64vec dr = ptcl[i].pos-ptcl[j].pos;
                 PS::F64 r2 = dr*dr;
                 PS::F64 mass_factor=std::max(ptcl[i].mass,ptcl[j].mass)/std::min(ptcl[i].mass,ptcl[j].mass);
+#ifdef HARD_DEBUG
+                if(r2==0) {
+                    std::cerr<<"Error: zero distance! i="<<i<<" j="<<j<<" mass_factor="<<mass_factor<<std::endl;
+                    abort();
+                }
+#endif
                 //PS::F64 mass_factor=std::max(ptcl[ip].mass,ptcl[jp].mass)*Ptcl::mean_mass_inv;
                 if (r2<r_crit2*mass_factor) {
                     part_list.push_back(j);

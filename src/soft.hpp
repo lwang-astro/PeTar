@@ -482,6 +482,9 @@ struct CalcForceEpEpWithLinearCutoffSimd{
         static __thread PhantomGrapeQuad pg;
         #endif
     #endif
+        if(n_ip > pg.NIMAX || n_jp > pg.NJMAX){
+            std::cout<<"ni= "<<n_ip<<" NIMAX= "<<pg.NIMAX<<" nj= "<<n_jp<<" NJMAX= "<<pg.NJMAX<<std::endl;
+        }
         assert(n_ip<=pg.NIMAX);
         assert(n_jp<=pg.NJMAX);
         pg.set_eps2(eps2);

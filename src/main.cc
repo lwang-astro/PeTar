@@ -8,6 +8,7 @@
 #define RSQRT_NR_EPJ_X4
 #else
 #define RSQRT_NR_EPJ_X2
+//#define RSQRT_NR_SPJ_X2
 #endif //P3T_64BIT
 
 #ifdef FORCE_CHECK
@@ -138,7 +139,7 @@ int main(int argc, char *argv[]){
     IOParams<PS::S64> n_glb        (16384,"Total number of particles (this will suppress reading snapshot data and use Plummer model generator without binary)");
     IOParams<PS::F64> dt_soft      (0.0,  "Tree timestep","0.1*r_out/sigma_1D");
     IOParams<PS::F64> dt_snp       (0.0625,"Output time interval of particle dataset");
-    IOParams<PS::F64> search_factor(1.0,  "Neighbor searching coefficient");
+    IOParams<PS::F64> search_factor(3.0,  "Neighbor searching coefficient");
     IOParams<PS::F64> dt_limit_hard_factor(4.0,  "Limit of tree time step/hard time step");
     IOParams<PS::S32> dt_min_hermite_index(40,   "Power index n for the smallest time step (0.5^n) allowed in Hermite integrator");
     IOParams<PS::S32> dt_min_arc_index    (64,   "Power index n for the smallest time step (0.5^n) allowed in ARC integrator");
@@ -585,6 +586,7 @@ int main(int argc, char *argv[]){
     while(time_sys <= time_end.value){
 
 #ifdef PROFILE
+        PS::Comm::barrier();
         profile.tot.start();
 
         profile.tree_nb.start();
@@ -597,6 +599,8 @@ int main(int argc, char *argv[]){
 #endif
         
 #ifdef PROFILE
+        profile.tree_nb.barrier();
+        PS::Comm::barrier();
         profile.tree_nb.end();
         profile.search_cluster.start();
 #endif
@@ -619,6 +623,8 @@ int main(int argc, char *argv[]){
         n_glb.value = system_soft.getNumberOfParticleGlobal();
 
 #ifdef PROFILE
+        profile.search_cluster.barrier();
+        PS::Comm::barrier();
         profile.search_cluster.end();
         profile.create_group.start();
 #endif
@@ -653,13 +659,12 @@ int main(int argc, char *argv[]){
             assert(system_soft[i].status>0);
 #endif
         }
-
-
         // >3 Tree for force ----------------------------------------
 #ifdef PROFILE
+        profile.create_group.barrier();
+        PS::Comm::barrier();
         profile.create_group.end();
-
-        profile.soft_tot.start();
+//        profile.soft_tot.start();
         profile.tree_soft.start();
 
         tree_soft.clearNumberOfInteraction();
@@ -670,8 +675,11 @@ int main(int argc, char *argv[]){
             n_tree_init = n_glb_all*1.05;
             if(!first_step_flag) std::cerr<<"Warning! tree glb size increase\n";
         }
-        if(first_step_flag) tree_soft.initialize(n_tree_init, theta.value, n_leaf_limit.value, n_group_limit.value);
-        
+        if(first_step_flag) {
+            tree_soft.initialize(n_tree_init, theta.value, n_leaf_limit.value, n_group_limit.value);
+            if(my_rank==0) std::cout<<"Global total particle number: "<<n_glb_all<<" real: "<<n_glb.value<<std::endl;
+            if(my_rank==0) std::cout<<"Local total particle number: "<<n_loc_all<<" real: "<<n_loc<<std::endl;
+        }
 
 #ifndef USE_SIMD
         tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSIMD(),
@@ -701,6 +709,9 @@ int main(int argc, char *argv[]){
 
         ps_profile += tree_soft.getTimeProfile();
         domain_decompose_weight = ps_profile.calc_force;
+
+        profile.tree_soft.barrier();
+        PS::Comm::barrier();
         profile.tree_soft.end();
         profile.force_correct.start();
 #endif
@@ -764,14 +775,17 @@ int main(int argc, char *argv[]){
 #endif
 
 #ifdef PROFILE
+        profile.force_correct.barrier();
+        PS::Comm::barrier();
         profile.force_correct.end();
-        profile.soft_tot.end();
+        profile.output.start();
+//        profile.soft_tot.end();
 #endif
 
         // for first step
         if(first_step_flag) {
             first_step_flag = false;
-
+        
             // update status
             stat.time = time_sys;
             stat.N = n_glb.value;
@@ -813,7 +827,10 @@ int main(int argc, char *argv[]){
         }
 
 #ifdef PROFILE
-        profile.soft_tot.start();
+        profile.output.barrier();
+        PS::Comm::barrier();
+        profile.output.end();
+//        profile.soft_tot.start();
         profile.kick.start();
 #endif
         // >4. kick  ----------------------------------------
@@ -859,14 +876,18 @@ int main(int argc, char *argv[]){
 #endif
 
 #ifdef PROFILE
+        profile.kick.barrier();
+        PS::Comm::barrier();
         profile.kick.end();
-        profile.soft_tot.end();
-        profile.tot.end();
+//        profile.soft_tot.end();
 #endif
 
         // output information
         if(output_flag) {
-            
+
+#ifdef PROFILE
+            profile.output.start();
+#endif
             // update global particle system due to kick
             system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
@@ -898,6 +919,7 @@ int main(int argc, char *argv[]){
             stat.eng_now.getSumMultiNodes();
         
             stat.eng_diff = stat.eng_now - stat.eng_init;
+
 #ifdef HARD_CHECK_ENERGY
             PS::F64 hard_dE_local = system_hard_isolated.hard_dE;
             hard_dE_local += system_hard_connected.hard_dE;
@@ -917,38 +939,6 @@ int main(int argc, char *argv[]){
                 fstatus<<std::endl;
             }
             
-#ifdef PROFILE
-            //const int NProc=PS::Comm::getNumberOfProc();
-
-            if(my_rank==0) {
-                std::cout<<std::setprecision(5);
-                std::cout<<"Tree step number: "<<dn_loop<<std::endl;
-
-                std::cout<<"**** Wallclock time per step (local):\n";
-                //std::cout<<std::setw(PRINT_WIDTH)<<"Rank";
-                profile.dumpName(std::cout,PRINT_WIDTH);
-                std::cout<<std::endl;
-
-                //std::cout<<std::setw(PRINT_WIDTH)<<my_rank;
-                profile.dump(std::cout,PRINT_WIDTH,dn_loop);
-                std::cout<<std::endl;
-
-                std::cout<<"**** FDPS time profile (local):\n";
-                ps_profile.dumpName(std::cout,PRINT_WIDTH);
-                std::cout<<std::endl;
-                ps_profile.dump(std::cout,PRINT_WIDTH,dn_loop);
-                std::cout<<std::endl;
-
-                std::cout<<"**** Number per step (global):\n";
-                n_count_sum.dumpName(std::cout,PRINT_WIDTH);
-                std::cout<<std::endl;
-                n_count_sum.dump(std::cout,PRINT_WIDTH,dn_loop);
-                std::cout<<std::endl;
-                
-                std::cout<<"**** Number of members in clusters (local):\n";
-                n_count.printHist(std::cout,PRINT_WIDTH,dn_loop);
-            }
-                    
 //#ifdef HARD_CHECK_ENERGY
 //            for (int i=1;i<20;i++)  system_hard_isolated.N_count[i] = PS::Comm::getSum(system_hard_isolated.N_count[i]);
 //            if(my_rank==0) {
@@ -960,19 +950,6 @@ int main(int argc, char *argv[]){
 //                std::cerr<<std::endl;
 //            }
 //#endif
-            
-
-            fprofile<<std::setprecision(WRITE_PRECISION);
-            fprofile<<std::setw(WRITE_WIDTH)<<my_rank;
-            fprofile<<std::setw(WRITE_WIDTH)<<time_sys
-                    <<std::setw(WRITE_WIDTH)<<dn_loop
-                    <<std::setw(WRITE_WIDTH)<<n_loc;
-            profile.dump(fprofile, WRITE_WIDTH, dn_loop);
-            ps_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
-            n_count.dump(fprofile, WRITE_WIDTH, dn_loop);
-            fprofile<<std::endl;
-
-#endif
 
             // data output
             file_header.n_body = n_glb.value;
@@ -987,17 +964,6 @@ int main(int argc, char *argv[]){
             system_soft.setNumberOfParticleLocal(n_loc_all);
 
 
-#ifdef PROFILE            
-            profile.clear();
-            ps_profile.clear();
-            n_count.clear();
-            n_count_sum.clear();
-            dn_loop=0;
-
-            //// second half kick
-            //profile.soft_tot.start();
-            //profile.kick.start();
-#endif
             // single
             kickOne(system_soft, dt_kick, search_cluster.getAdrSysOneCluster());
             // isolated
@@ -1015,15 +981,18 @@ int main(int argc, char *argv[]){
 #endif
 
 #ifdef PROFILE
-            //profile.kick.end();
-            //profile.soft_tot.end();
+            profile.output.barrier();
+            PS::Comm::barrier();
+            profile.output.end();
+            //// second half kick
+            //profile.soft_tot.start();
+            //profile.kick.start();
 #endif
         }
 
 #ifdef PROFILE
         // >5. Hard integration --------------------------------------
-        profile.tot.start();
-        profile.hard_tot.start();
+        //  profile.hard_tot.start();
 #endif
 
         ////// set time
@@ -1044,6 +1013,7 @@ int main(int argc, char *argv[]){
         system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft);
         ////// integrater one cluster
 #ifdef PROFILE
+        profile.hard_single.barrier();
         profile.hard_single.end();
 #endif
         ////////////////
@@ -1058,6 +1028,7 @@ int main(int argc, char *argv[]){
         system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
         // integrate multi cluster A
 #ifdef PROFILE
+        profile.hard_isolated.barrier();
         profile.hard_isolated.end();
 #endif
         /////////////
@@ -1065,7 +1036,6 @@ int main(int argc, char *argv[]){
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         /////////////
 #ifdef PROFILE
-        PS::Comm::barrier();
         profile.hard_connected.start();
 #endif
         // integrate multi cluster B
@@ -1073,8 +1043,10 @@ int main(int argc, char *argv[]){
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
         // integrate multi cluster B
 #ifdef PROFILE
+        profile.hard_connected.barrier();
+        PS::Comm::barrier();
         profile.hard_connected.end();
-#endif        
+#endif
 
 #endif
         
@@ -1097,35 +1069,46 @@ int main(int argc, char *argv[]){
         remove_list.resizeNoInitialize(0);
 
 #ifdef PROFILE
-        profile.hard_tot.end();
+//        profile.hard_tot.end();
         /////////////
 
         // > 6. Domain decomposition
-        profile.domain_ex_ptcl.start();
+        profile.domain.start();
 #endif
         // Domain decomposition, parrticle exchange and force calculation
         if(n_loop % 16 == 0) {
             dinfo.decomposeDomainAll(system_soft,domain_decompose_weight);
             //std::cout<<"rank: "<<my_rank<<" weight: "<<domain_decompose_weight<<std::endl;
         }
+#ifdef PROFILE
+        profile.domain.barrier();
+        PS::Comm::barrier();
+        profile.domain.end();
+        profile.exchange.start();
+#endif
         system_soft.exchangeParticle(dinfo);
 
-        n_loc = system_soft.getNumberOfParticleLocal();
+        const PS::S32 n_loc_tmp = system_soft.getNumberOfParticleLocal();
 #pragma omp parallel for
-        for(PS::S32 i=0; i<n_loc; i++){
+        for(PS::S32 i=0; i<n_loc_tmp; i++){
             system_soft[i].rank_org = my_rank;
             system_soft[i].adr = i;
         }
         
 #ifdef PROFILE
-        profile.domain_ex_ptcl.end();
-        profile.tot.end();
+        profile.exchange.barrier();
+        PS::Comm::barrier();
+        profile.exchange.end();
 #endif
 
         time_sys += dt_soft.value;
 
 #ifdef PROFILE
+        profile.tot.barrier();
+        profile.tot.end();
+        
         // profile analysis
+
         PS::S32 n_hard_single     = system_hard_one_cluster.getPtcl().size();
         PS::S32 n_hard_isolated   = system_hard_isolated.getPtcl().size();
         PS::S32 n_hard_connected  = system_hard_connected.getPtcl().size();
@@ -1169,6 +1152,66 @@ int main(int argc, char *argv[]){
         for (PS::S32 i=0; i<n_connected_cluster; i++) n_count.cluster_count(connected_cluster_n_list[i]);
 
         dn_loop++;
+
+        // output profile data
+        if(fmod(time_sys, dt_snp.value) == 0.0) {
+
+            //const int NProc=PS::Comm::getNumberOfProc();
+
+            const SysProfile& profile_min = profile.getMin();
+            const SysProfile& profile_max = profile.getMax();
+        
+            if(my_rank==0) {
+                std::cout<<std::setprecision(5);
+                std::cout<<"Tree step number: "<<dn_loop
+                         <<"  Local N: "<<n_loc
+                         <<"  Local Nall: "<<n_loc_all<<std::endl;
+                
+
+                std::cout<<"**** Wallclock time per step (local): [Min/Max]\n";
+                //std::cout<<std::setw(PRINT_WIDTH)<<"Rank";
+                profile.dumpName(std::cout,PRINT_WIDTH);
+                std::cout<<std::endl;
+
+                //std::cout<<std::setw(PRINT_WIDTH)<<my_rank;
+                profile_min.dump(std::cout,PRINT_WIDTH,dn_loop);
+                std::cout<<std::endl;
+                profile_max.dump(std::cout,PRINT_WIDTH,dn_loop);
+                std::cout<<std::endl;
+
+                std::cout<<"**** FDPS time profile (local):\n";
+                ps_profile.dumpName(std::cout,PRINT_WIDTH);
+                std::cout<<std::endl;
+                ps_profile.dump(std::cout,PRINT_WIDTH,dn_loop);
+                std::cout<<std::endl;
+
+                std::cout<<"**** Number per step (global):\n";
+                n_count_sum.dumpName(std::cout,PRINT_WIDTH);
+                std::cout<<std::endl;
+                n_count_sum.dump(std::cout,PRINT_WIDTH,dn_loop);
+                std::cout<<std::endl;
+                
+                std::cout<<"**** Number of members in clusters (local):\n";
+                n_count.printHist(std::cout,PRINT_WIDTH,dn_loop);
+            }
+
+            fprofile<<std::setprecision(WRITE_PRECISION);
+            fprofile<<std::setw(WRITE_WIDTH)<<my_rank;
+            fprofile<<std::setw(WRITE_WIDTH)<<time_sys
+                    <<std::setw(WRITE_WIDTH)<<dn_loop
+                    <<std::setw(WRITE_WIDTH)<<n_loc;
+            profile.dump(fprofile, WRITE_WIDTH, dn_loop);
+            profile.dumpBarrier(fprofile, WRITE_WIDTH, dn_loop);
+            ps_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
+            n_count.dump(fprofile, WRITE_WIDTH, dn_loop);
+            fprofile<<std::endl;
+
+            profile.clear();
+            ps_profile.clear();
+            n_count.clear();
+            n_count_sum.clear();
+            dn_loop=0;
+        }
 #endif
         n_loop++;
     }
