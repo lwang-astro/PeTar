@@ -502,19 +502,20 @@ private:
 
     template <class Tpi, class Tptcl, class ARCint>
     inline void CalcAcc0Acc1AllJ(PtclForce &force, 
-                          const Tpi &pi,
-                          const PS::S32 iadr,
-                          const PS::F64vec &vcmsdi,
-                          const PS::F64 sdi,
-                          const Tptcl ptcl[],
-                          const PS::S32 n_tot,
-                          const PS::S32 nbin,
-                          const PS::F64 rin,
-                          const PS::F64 rout,
-                          const PS::F64 r_oi_inv,
-                          const PS::F64 r_A,
-                          const PS::F64 eps2,
-                          const ARCint* Aint = NULL) {
+//                                 PS::F64 r2min[],
+                                 const Tpi &pi,
+                                 const PS::S32 iadr,
+                                 const PS::F64vec &vcmsdi,
+                                 const PS::F64 sdi,
+                                 const Tptcl ptcl[],
+                                 const PS::S32 n_tot,
+                                 const PS::S32 nbin,
+                                 const PS::F64 rin,
+                                 const PS::F64 rout,
+                                 const PS::F64 r_oi_inv,
+                                 const PS::F64 r_A,
+                                 const PS::F64 eps2,
+                                 const ARCint* Aint = NULL) {
 
         for(PS::S32 j=0; j<nbin; j++) {
             if(iadr==j) continue;
@@ -533,6 +534,7 @@ private:
 #ifdef HARD_DEBUG
                 mcmcheck += pj[k].mass;
 #endif
+//                r2min[j] = std::min(r2,r2min[j]);
             }
 #ifdef HARD_DEBUG
             assert(abs(mcmcheck-ptcl[j].mass)<1e-10);
@@ -541,8 +543,8 @@ private:
         }
         for(PS::S32 j=nbin; j<n_tot; j++){
             if(iadr==j) continue;
-            PS::F64 r2 = 0.0;
             //PS::F64 rout = std::max(ptcl[iadr].r_out, ptcl[j].r_out);
+            PS::F64 r2 = 0.0;
             CalcAcc0Acc1R2Cutoff(pi.pos, pi.vel*sdi+vcmsdi,
                                  force.acc0, force.acc1, r2,
                                  ptcl[j].pos, ptcl[j].vel, ptcl[j].mass,
@@ -550,58 +552,95 @@ private:
                 // if(r2 < ((ptcl[adr].r_merge + ptcl[j].r_merge)*(ptcl[adr].r_merge + ptcl[j].r_merge)) && ptcl[j].mass > 0.0){
                 //     merge_pair.push_back( std::make_pair(adr, j) );
                 // }
+//            r2min[j] = std::min(r2,r2min[j]);
         }
         
     }
 
-
+    //! Calculate acc and jerk for active particles from all particles
+    /* @param[out] _force: acc and jerk array for output
+       @param[in] _ptcl: particle list
+       @param[in] _n_tot: total number of particles
+       @param[in] _Ilist: active i particle index in ptcl_
+       @param[in] _n_act: active particle number
+       @param[in] _rin: inner radius of soft-hard changeover function
+       @param[in] _rout: outer radius of soft-hard changeover function
+       @param[in] _r_oi_inv: 1.0/(_rout-_rin);
+       @param[in] _r_A: (_rout-_rin)/(_rout+_rin);
+       @param[in] _eps2: softing eps square
+       @param[in] _Aint: ARC integrator class
+     */
     template <class Tptcl, class ARCint>
-    void CalcAcc0Acc1Act(PtclForce force[],
-                         const Tptcl ptcl[],
-                         const PS::S32 n_tot,
-                         const PS::S32 Ilist[],
-                         const PS::S32 n_act,
-                         const PS::F64 rin,
-                         const PS::F64 rout,
-                         const PS::F64 r_oi_inv,
-                         const PS::F64 r_A,
-                         const PS::F64 eps2,
-                         const ARCint* Aint=NULL) {
-        PS::S32 nbin = 0;
-        if (Aint!=NULL) nbin = Aint->getN();
-        static thread_local const PS::F64vec vzero = PS::F64vec(0.0);
+    void CalcAcc0Acc1Act(PtclForce _force[],
+                         const Tptcl _ptcl[],
+                         const PS::S32 _n_tot,
+                         const PS::S32 _Ilist[],
+                         const PS::S32 _n_act,
+                         const PS::F64 _rin,
+                         const PS::F64 _rout,
+                         const PS::F64 _r_oi_inv,
+                         const PS::F64 _r_A,
+                         const PS::F64 _eps2,
+                         const ARCint* _Aint=NULL) {
+        // group number
+//        PS::S32 ngroup = 0;
+//        if (_Aint!=NULL) {
+//            ngroup = _Aint->getN();
+//            _Aint.resetPert();
+//        }
+        PS::S32 ngroup=0;
+        if (_Aint!=NULL) ngroup = _Aint->getN();
+        const PS::F64vec vzero = PS::F64vec(0.0);
         // PS::ReallocatableArray< std::pair<PS::S32, PS::S32> > & merge_pair ){
-        // active particles
-        for(PS::S32 i=0; i<n_act; i++){
-            const PS::S32 iadr = Ilist[i];
-            force[iadr].acc0 = force[iadr].acc1 = 0.0;
+
+        // active iparticles loop
+        for(PS::S32 i=0; i<_n_act; i++){
+            const PS::S32 iadr = _Ilist[i];
+            _force[iadr].acc0 = _force[iadr].acc1 = 0.0;
             
-            if (iadr<nbin) {
+            // for group particle
+            if (iadr<ngroup) {
 #ifdef HARD_DEBUG
                 PS::F64 mcmcheck =0.0;
 #endif
-                const PS::S32 ni = Aint->getGroupN(iadr);
-                const auto* pi = Aint->getGroupPtcl(iadr);
-                const PS::F64 sdi = 1.0/Aint->getSlowDown(iadr);
-                const PS::F64vec vcmsdi = (1.0-sdi)*ptcl[iadr].vel;
+                const PS::S32 ni = _Aint->getGroupN(iadr);             // number of members
+                const auto* pi = _Aint->getGroupPtcl(iadr);
+                const PS::F64 sdi = 1.0/_Aint->getSlowDown(iadr);      // slowdown factor
+                const PS::F64vec vcmsdi = (1.0-sdi)*_ptcl[iadr].vel;   // slowdown velocity
                 PtclForce fp[ni];
+//                PS::F64 r2min[_n_tot]={PS::LARGE_FLOAT};
                 for (PS::S32 j=0; j<ni; j++) {
                     fp[j].acc0 = fp[j].acc1 = 0.0;
-                    CalcAcc0Acc1AllJ(fp[j], pi[j], iadr, vcmsdi, sdi, ptcl, n_tot, nbin, rin, rout, r_oi_inv, r_A, eps2, Aint);
-                    force[iadr].acc0 += pi[j].mass*fp[j].acc0;
-                    force[iadr].acc1 += pi[j].mass*fp[j].acc1;
+                    CalcAcc0Acc1AllJ(fp[j], pi[j], iadr, vcmsdi, sdi, _ptcl, _n_tot, ngroup, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
+                    // c.m. force
+                    _force[iadr].acc0 += pi[j].mass*fp[j].acc0;
+                    _force[iadr].acc1 += pi[j].mass*fp[j].acc1;
+                    
 #ifdef HARD_DEBUG
                     mcmcheck += pi[j].mass;
 #endif
                 }
 #ifdef HARD_DEBUG
-                assert(abs(mcmcheck-ptcl[iadr].mass)<1e-10);
+                assert(abs(mcmcheck-_ptcl[iadr].mass)<1e-10);
                 assert(mcmcheck>0.0);
 #endif                    
-                force[iadr].acc0 /= ptcl[iadr].mass;
-                force[iadr].acc1 /= ptcl[iadr].mass;
+                // c.m. force
+                _force[iadr].acc0 /= _ptcl[iadr].mass;
+                _force[iadr].acc1 /= _ptcl[iadr].mass;
+
+//                //update perturber list
+//                PS::F64 rsearchi = _ptcl[iadr].r_search;
+//                for (PS::S32 j=0; j<_n_tot; j++) {
+//                    PS::F64 rsearch= std::max(_ptcl[j].r_search, rsearchi);
+//                    if (r2min[j] < rsearch*rsearch) {
+//                        _Aint.addPert(iadr,_ptcl[j],_force[j]);
+//                    }
+//                }
             }
-            else CalcAcc0Acc1AllJ(force[iadr], ptcl[iadr], iadr, vzero, 1.0, ptcl, n_tot, nbin, rin, rout, r_oi_inv, r_A, eps2, Aint);
+            else {
+//                PS::F64 r2[_n_tot];
+                CalcAcc0Acc1AllJ(_force[iadr], _ptcl[iadr], iadr, vzero, 1.0, _ptcl, _n_tot, ngroup, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
+            }
         }
     }
     
@@ -893,7 +932,7 @@ public:
             assert(Jlist_disp_.size()==i);
             assert(Jlist_n_.size()==i);
 #endif
- Jlist_disp_.pushBackNoCheck(nj_tot);
+            Jlist_disp_.pushBackNoCheck(nj_tot);
             Jlist_n_.pushBackNoCheck(0);
             for(int j=0; j<nbin; j++) {
                 PS::F64vec dr = ptcl_[i].pos-ptcl_[j].pos;

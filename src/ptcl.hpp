@@ -18,6 +18,8 @@ public:
                 id_offset+id*n_split+iphase                                             
                 1. first component member number 2. second. 3. i_cluster+1, 4. i_group+1, others: (c.m.id<<ID_PHASE_SHIFT)|i
                   binary parameters                                                 
+
+      PS: mass_bk is used to store perturber force in searchpart
      */
     PS::F64 r_search;
     PS::F64 mass_bk;

@@ -23,8 +23,8 @@ public:
     // m1: mass 1
     // m2: mass 2
     // tstep: integration step estimation
-    // stable_factor: indicate whether the system is stable
-    // fpert: perturbation from neighbors
+    // stable_factor: indicate whether the system is stable, >0: switch on slowdown, <=0: no slowdown
+    // fpert: perturbation from neighbors (acceleration)
     PS::F64 ax, ecc, inc, OMG, omg, tperi, peri, ecca, m1, m2, tstep, stable_factor, fpert;
 
     void dump(FILE *fp) {
@@ -634,8 +634,8 @@ void keplerTreeGenerator(PtclTree<Tptcl> _bins[],   // make sure bins.size = n_m
         _bins[i].m2 = p[1]->mass;
         PS::F64 dr = 1.0-_bins[i].ecc*cos(_bins[i].ecca);
         PS::F64 apo= 1.0+_bins[i].ecc;
-        _bins[i].fpert = fabs(p[0]->mass_bk - p[1]->mass_bk)/dr*apo;
-        _bins[i].mass_bk = p[0]->mass_bk + p[1]->mass_bk;
+        _bins[i].fpert = fabs(p[0]->mass_bk - p[1]->mass_bk)/dr*apo; // for perturbation, use acceleration difference to estimate
+        _bins[i].mass_bk = (p[0]->mass*p[0]->mass_bk + p[1]->mass*p[1]->mass_bk)/_bins[i].mass; // for c.m. perturbation, use m1 a1 + m2 a2 = mcm acm
         _bins[i].id = p[0]->id;
         _bins[i].tstep = -1.0;
         _bins[i].stable_factor = 0.0;
@@ -650,11 +650,18 @@ void keplerTreeGenerator(PtclTree<Tptcl> _bins[],   // make sure bins.size = n_m
 #endif
 }
 
-//! return integration step estimation if good
-/* bin.tstep is //pi/4*sqrt(ax/(m1+m2))*m1*m2;
+//! check two-body stability
+/* modify bin.tstep and bin.stable_factor
+   If hyperbolic: unstable, tstep = -1; stable_factor = 0
+   If apo>rbin: 
+   return integration step estimation if good
+   bin.tstep is //pi/4*sqrt(ax/(m1+m2))*m1*m2;
    bin.stable_factor = 1
    if ax<0, bin.tstep = -1.0, bin.stable_factor = 0
-   return 0: unstable; 1: closed orbit; 2: closed orbit but strong perturbation
+   @param[in,out]: _bin: binary information
+   @param[in]: _rbin: binary distance criterion
+   @param[rmax]: _rmax: maximum distance criterion
+   \return 0: unstable; 1: closed orbit; 2: closed orbit but strong perturbation
  */
 template<class Tptcl>
 PS::S32 stab2check(PtclTree<Tptcl> &bin, const PS::F64 rbin, const PS::F64 rmax) {
@@ -691,7 +698,7 @@ PS::S32 stab2check(PtclTree<Tptcl> &bin, const PS::F64 rbin, const PS::F64 rmax)
     bin.stable_factor=1.0;
 
     //avoid too strong perturbation
-    if(bin.fpert>0.01*std::max(bin.m1,bin.m2)/(apo*apo)) return 2;
+    if(bin.fpert>0.01*(bin.m1+bin.m2)/(apo*apo)) return 2;
     
 #ifdef STABLE_CHECK_DEBUG
     std::cerr<<"res=1"<<std::endl;
@@ -700,6 +707,13 @@ PS::S32 stab2check(PtclTree<Tptcl> &bin, const PS::F64 rbin, const PS::F64 rmax)
     return 1;
 }
 
+//! Three-body stability check
+/* @param[in] _bout: outer orbit parameter
+   @param[in] _bin: inner orbit parameter
+   @param[in] _rbin: binary radius criterion from input
+   @param[in] _rin: inner radius of soft-hard changeover function
+   @param[in] _rout: outer radius of soft-hard changeover function
+ */
 template<class Tptcl>
 bool stab3check(PtclTree<Tptcl> &bout, PtclTree<Tptcl> &bin, const PS::F64 rbin, const PS::F64 rin, const PS::F64 rout) {
 #ifdef STABLE_CHECK_DEBUG
