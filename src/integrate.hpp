@@ -96,7 +96,7 @@ void kickSend(Tsys& _sys,
         // if it is group member, should not do kick since c.m. particles are on remote nodes;
         if(cm_adr==0)  _sys[adr].vel += _sys[adr].acc * _dt;
 #ifdef HARD_DEBUG
-        if(cm_adr==0) assert(_sys[adr].mass>0&&_sys[adr].mass_bk==0);
+        if(cm_adr==0) assert(_sys[adr].mass>0);
         else assert(_sys[adr].mass_bk>0);
 #endif
     }

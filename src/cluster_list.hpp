@@ -279,7 +279,7 @@ private:
         _part_list.clearSize();
         _part_list_disp.reserve(_n);
 #ifdef HARD_DEBUG
-        assert(n<ARRAY_ALLOW_LIMIT);
+        assert(_n<ARRAY_ALLOW_LIMIT);
 #endif        
         _part_list_disp.resizeNoInitialize(_n);
         _part_list_n.reserve(_n);
