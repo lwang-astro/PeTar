@@ -1800,7 +1800,7 @@ public:
 
     void initialSlowDown(const PS::F64 tend, const PS::F64 sdfactor = 1.0e-8) {
         for (int i=0; i<clist_.size(); i++) {
-            if (bininfo[i].ax>0&&bininfo[i].stable_factor>0) {
+            if (bininfo[i].ax>0&&bininfo[i].stable_factor>=0) {
                 PS::F64 finner = bininfo[i].ax*(1.0+bininfo[i].ecc);
                 finner = clist_[i].mass/(finner*finner);
                 finner = finner*finner;

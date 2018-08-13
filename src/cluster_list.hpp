@@ -790,19 +790,13 @@ private:
             for (int j=0; j<group_n; j++) _ptcl_in_cluster[_group_list[group_start+j]].status=0;
 
             // stability check and break groups
-            PS::S32 fstab = stabilityCheck<Tptcl>(stab_bins, bins.back(), _rbin, _rin, _rout);
+            bool stab_flag=stabilityCheck<Tptcl>(stab_bins, bins.back(), _rbin, _rin, _rout, _dt_tree);
+            if(stab_flag) stab_bins.push_back(&bins.back());
             
-            if (fstab) {
-                keplerOrbitGenerator(_i_cluster, _n_groups, _ptcl_in_cluster, _ptcl_artifical, _empty_list, &group_ptcl_adr_list[group_ptcl_adr_offset], bins.back(), _id_offset, _n_split);
-                group_ptcl_adr_offset += bins.back().status;
+            for (int i=0; i<stab_bins.size(); i++) {
+                keplerOrbitGenerator(_i_cluster, _n_groups, _ptcl_in_cluster, _ptcl_artifical, _empty_list, &group_ptcl_adr_list[group_ptcl_adr_offset], *stab_bins[i], _id_offset, _n_split);
+                group_ptcl_adr_offset += stab_bins[i]->status;
                 _n_groups++;
-            }
-            else {
-                for (int i=0; i<stab_bins.size(); i++) {
-                    keplerOrbitGenerator(_i_cluster, _n_groups, _ptcl_in_cluster, _ptcl_artifical, _empty_list, &group_ptcl_adr_list[group_ptcl_adr_offset], *stab_bins[i], _id_offset, _n_split);
-                    group_ptcl_adr_offset += stab_bins[i]->status;
-                    _n_groups++;
-                }
             }
         }
 

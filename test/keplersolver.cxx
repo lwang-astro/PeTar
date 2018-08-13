@@ -135,6 +135,7 @@ int main(int argc, char** argv) {
 
   ParticleBase p[2];
   double ax, ecc, inc, OMG, omg, tperi, ecca, peri;
+  PS::F64vec am;
 
   if (opt==1) {
       for(int i=0;i<2;i++) {
@@ -152,7 +153,7 @@ int main(int argc, char** argv) {
       kepler_print(0,0,p);
       ParticleBase pcm;
       calc_center_of_mass(pcm,p,2);
-      ecca=PosVel2OrbParam(ax,ecc,inc,OMG,omg,tperi,peri,p[0].pos,p[1].pos,p[0].vel,p[1].vel,p[0].mass,p[1].mass);
+      ecca=PosVel2OrbParam(ax,ecc,inc,OMG,omg,tperi,peri,am,p[0].pos,p[1].pos,p[0].vel,p[1].vel,p[0].mass,p[1].mass);
       center_of_mass_shift(pcm,p,2);
   }
   else {
