@@ -942,7 +942,7 @@ private:
                 gpars[0].getBinPars(Aint.bininfo[0], _ptcl_artifical);
 #ifdef HARD_DEBUG_PRINT
                 std::cerr<<"Hard: one group, n="<<_n_ptcl<<std::endl;
-                if(Aint.bininfo[0].ax>Int_pars_.rout)  Aint.bininfo[0].print(std::cerr,13);
+                if(Aint.bininfo[0].semi>Int_pars_.rout)  Aint.bininfo[0].print(std::cerr,13);
 #endif
 #ifdef TIDAL_TENSOR
                 PS::S32 i_soft_pert_offset = gpars[0].offset_tt;
@@ -1050,7 +1050,7 @@ private:
                        The two members in different binaries can find each other as neighbors, but the c.m. particle may not find another c.m. 
                        To avoid no perturbers issues, the rsearch should add the maximum distance of components in other binaries (apo-center distance).
                     */
-                    dr_search[i] = bini.ax*(bini.ecc+1.0); 
+                    dr_search[i] = bini.semi*(bini.ecc+1.0); 
                 }            
                 Hint.searchPerturber(dr_search,_n_group);
 

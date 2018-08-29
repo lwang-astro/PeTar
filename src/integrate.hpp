@@ -1454,7 +1454,7 @@ public:
                 +    0.062500000000000*fi[6][0] +  0.125000000000000*fi[6][2] +  0.062500000000000*fi[7][1] +  0.125000000000000*fi[7][2];
         }
         // Rescale
-        PS::F64 T2S = 1.0/(_bin.ax*(1+_bin.ecc)*0.35);
+        PS::F64 T2S = 1.0/(_bin.semi*(1+_bin.ecc)*0.35);
         PS::F64 T3S = T2S*T2S;
         for (PS::S32 i=0; i<6;  i++) T2[i] *= T2S;
         for (PS::S32 i=0; i<10; i++) T3[i] *= T3S;
@@ -1800,13 +1800,13 @@ public:
 
     void initialSlowDown(const PS::F64 tend, const PS::F64 sdfactor = 1.0e-8) {
         for (int i=0; i<clist_.size(); i++) {
-            if (bininfo[i].ax>0&&bininfo[i].stable_factor>=0) {
-                PS::F64 finner = bininfo[i].ax*(1.0+bininfo[i].ecc);
+            if (bininfo[i].semi>0&&bininfo[i].stable_factor>=0) {
+                PS::F64 finner = bininfo[i].semi*(1.0+bininfo[i].ecc);
                 finner = clist_[i].mass/(finner*finner);
                 finner = finner*finner;
                 clist_[i].slowdown.setSlowDownPars(finner, bininfo[i].peri, sdfactor);
                 TpARC p[2];
-                OrbParam2PosVel(p[0].pos, p[1].pos, p[0].vel, p[1].vel, bininfo[i].m1, bininfo[i].m2, bininfo[i].ax, bininfo[i].ecc, bininfo[i].inc, bininfo[i].OMG, bininfo[i].omg, PI);
+                OrbParam2PosVel(p[0].pos, p[1].pos, p[0].vel, p[1].vel, bininfo[i].m1, bininfo[i].m2, bininfo[i].semi, bininfo[i].ecc, bininfo[i].inc, bininfo[i].OMG, bininfo[i].omg, PI);
                 p[0].mass = bininfo[i].m1;
                 p[1].mass = bininfo[i].m2;
 #ifdef SOFT_PERT
@@ -2164,14 +2164,14 @@ public:
      */
     void info_print(std::ostream& os, const PS::S64 _n_group, const PS::S64 _n_group_in_cluster, const PS::S64 _n_ptcl, const PS::S64 _n_single, const PS::F64 _dt_limit, const PS::S32 _kp) const{
         for (int i=0; i<clist_.size(); i++) {
-            os<<"ARC_info(i_group,n_ptcl,n_single,n_group,n,n_pert,ax,ecc,peri,kappa,n_step): "
+            os<<"ARC_info(i_group,n_ptcl,n_single,n_group,n,n_pert,semi,ecc,peri,kappa,n_step): "
               <<_n_group+i<<" "
               <<_n_ptcl<<" "
               <<_n_single<<" "
               <<_n_group_in_cluster<<" "
               <<clist_[i].getN()<<" "
               <<pert_n_[i]<<" "
-              <<bininfo[i].ax<<" "
+              <<bininfo[i].semi<<" "
               <<bininfo[i].ecc<<" "
               <<bininfo[i].peri<<" "
               <<clist_[i].slowdown.getkappa()<<" ";

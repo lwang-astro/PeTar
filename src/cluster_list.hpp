@@ -536,7 +536,7 @@ private:
           omg, ecca
           tperi, stable_factor
          */
-        bindata[0][0] = _bin.ax;
+        bindata[0][0] = _bin.semi;
         bindata[0][1] = _bin.ecc;
         bindata[1][0] = _bin.peri;
         bindata[1][1] = _bin.tstep;
@@ -598,8 +598,8 @@ private:
                 // center_of_mass_shift(*(Tptcl*)&_bin,p,2);
                 // generate particles at different orbitial phase
                 OrbParam2PosVel(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass,
-                                _bin.ax, _bin.ecc, _bin.inc, _bin.OMG, _bin.omg, dE*iph);
-                //DriveKeplerOrbParam(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass, (i+1)*dt, _bin.ax, _bin.ecc, _bin.inc, _bin.OMG, _bin.omg, _bin.peri, _bin.ecca);
+                                _bin.semi, _bin.ecc, _bin.inc, _bin.OMG, _bin.omg, dE*iph);
+                //DriveKeplerOrbParam(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass, (i+1)*dt, _bin.semi, _bin.ecc, _bin.inc, _bin.OMG, _bin.omg, _bin.peri, _bin.ecca);
 #ifdef TIDAL_TENSOR
             }
             else {
@@ -607,7 +607,7 @@ private:
                    Then the lscale=apo/(2*sqrt(2))
                  */
                 
-                PS::F64 lscale = _bin.ax*(1+_bin.ecc)*0.35;
+                PS::F64 lscale = _bin.semi*(1+_bin.ecc)*0.35;
                 // 8 points box 
                 switch(i) {
                 case 0:
@@ -666,7 +666,7 @@ private:
                 center_of_mass_correction(*(Tptcl*)&_bin,p,2);
 #ifdef HARD_DEBUG
                 //check rsearch consistence:
-                PS::F64 rsearch_bin = _bin.r_search+_bin.ax*(1+_bin.ecc);
+                PS::F64 rsearch_bin = _bin.r_search+_bin.semi*(1+_bin.ecc);
                 for(int j=0; j<2; j++) {
                     PS::F64vec dp = p[j]->pos-_bin.pos;
                     PS::F64 dr = dp*dp;
@@ -718,7 +718,7 @@ private:
         pcm->id  = - std::abs(_bin.id);
         pcm->r_search = _bin.r_search;
 #ifdef TIDAL_TENSOR
-        pcm->r_search += _bin.ax*(1+_bin.ecc);  // depend on the mass ratio, the upper limit distance to c.m. from all members and artifical particles is apo-center distance
+        pcm->r_search += _bin.semi*(1+_bin.ecc);  // depend on the mass ratio, the upper limit distance to c.m. from all members and artifical particles is apo-center distance
 #endif
         pcm->status = nbin;
     }
@@ -1371,7 +1371,7 @@ public:
     // assume the binary information stored in artifical star mass_bk
     template <class Tptcl>
     void getBinPars(Binary &bin, const Tptcl* _ptcl_artifical) {
-        bin.ax   = _ptcl_artifical[0].mass_bk;
+        bin.semi   = _ptcl_artifical[0].mass_bk;
         bin.ecc  = _ptcl_artifical[1].mass_bk;
         bin.peri = _ptcl_artifical[2].mass_bk;
         bin.tstep= _ptcl_artifical[3].mass_bk;
