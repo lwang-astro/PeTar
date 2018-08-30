@@ -6,6 +6,90 @@
 #define WRITE_WIDTH 24
 #define WRITE_PRECISION 15
 
+//! IO Params container
+class IOParamsContainer{
+    PS::ReallocatableArray<PS::F64*> d_f64;
+    PS::ReallocatableArray<PS::S64*> d_s64;
+    PS::ReallocatableArray<PS::S32*> d_s32;
+    PS::ReallocatableArray<std::string*> d_str;
+    
+public:
+    
+    void store(PS::F64* _item) {
+        d_f64.push_back(_item);
+    }
+
+    void store(PS::S64* _item) {
+        d_s64.push_back(_item);
+    }
+
+    void store(PS::S32* _item) {
+        d_s32.push_back(_item);
+    }
+
+    void store(std::string* _item) {
+        d_str.push_back(_item);
+    }
+
+    void writeAscii(FILE *_fout) {
+        for(PS::S32 i=0; i<d_f64.size(); i++) fprintf(_fout, "%26.15e ", *d_f64[i]);
+        for(PS::S32 i=0; i<d_s64.size(); i++) fprintf(_fout, "%lld ",    *d_s64[i]);
+        for(PS::S32 i=0; i<d_s32.size(); i++) fprintf(_fout, "%d ",      *d_s32[i]);
+        for(PS::S32 i=0; i<d_str.size(); i++) fprintf(_fout, "%s ",d_str[i]->c_str());
+        fprintf(_fout,"\n");
+    }
+    
+    void readAscii(FILE *_fin) {
+        size_t rcount=0;
+        for(PS::S32 i=0; i<d_f64.size(); i++) {
+            rcount=fscanf(_fin, "%lf ", d_f64[i]);
+            if (rcount<1) {
+                std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+                abort();
+            }
+        }
+        for(PS::S32 i=0; i<d_s64.size(); i++) {
+            rcount=fscanf(_fin, "%lld ", d_s64[i]);
+            if (rcount<1) {
+                std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+                abort();
+            }
+        }
+        for(PS::S32 i=0; i<d_s32.size(); i++) {
+            rcount=fscanf(_fin, "%d ", d_s32[i]);
+            if (rcount<1) {
+                std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+                abort();
+            }
+        }
+        for(PS::S32 i=0; i<d_str.size(); i++) {
+            char dtmp[1024];
+            rcount=fscanf(_fin, "%s ", dtmp);
+            if (rcount<1) {
+                std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+                abort();
+            }
+            *d_str[i] = dtmp;
+        }
+    }
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+    void mpi_broadcast() {
+        for(PS::S32 i=0; i<d_f64.size(); i++) PS::Comm::broadcast(d_f64[i], 1, 0);
+        for(PS::S32 i=0; i<d_s64.size(); i++) PS::Comm::broadcast(d_s64[i], 1, 0);
+        for(PS::S32 i=0; i<d_s32.size(); i++) PS::Comm::broadcast(d_s32[i], 1, 0);
+        for(PS::S32 i=0; i<d_str.size(); i++) {
+            size_t str_size=d_str[i]->size();
+            PS::Comm::broadcast(&str_size, 1, 0);
+            char stmp[str_size+1];
+            std::strcpy(stmp, d_str[i]->c_str());
+            PS::Comm::broadcast(stmp, str_size, 0);
+            *d_str[i]=std::string(stmp);
+        }
+    }
+#endif
+};
+
 // IO Params
 template <class Type>
 struct IOParams{
@@ -13,7 +97,9 @@ struct IOParams{
     const char* name;
     const char* defaulted;
 
-    IOParams(const Type& _value, const char* _name, const char* _defaulted=NULL): value(_value), name(_name), defaulted(_defaulted)  {}
+    IOParams(IOParamsContainer& _ioc, const Type& _value, const char* _name, const char* _defaulted=NULL): value(_value), name(_name), defaulted(_defaulted)  {
+        _ioc.store(&value);
+    }
 
     void print(std::ostream& os) const{
         os<<name<<":   "<<value<<std::endl;
@@ -26,6 +112,7 @@ std::ostream& operator <<(std::ostream& os, const IOParams<Type>& par) {
     else os<<par.name<<": "<<par.value;
     return os;
 }
+
 
 class FileHeader{
 public:

@@ -51,51 +51,51 @@ public:
         return *this;
     }
 
-    void dump(FILE *fp) {
-        fwrite(this, sizeof(*this),1,fp);
+    void dump(FILE *_fout) {
+        fwrite(this, sizeof(*this),1,_fout);
     }
 
-    void read(FILE *fp) {
-        size_t rcount = fread(this, sizeof(*this),1,fp);
+    void read(FILE *_fin) {
+        size_t rcount = fread(this, sizeof(*this),1,_fin);
         if (rcount<1) {
             std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
             abort();
         }
     }
-    void print(std::ostream & fout){
-        Ptcl::print(fout);
+    void print(std::ostream & _fout){
+        Ptcl::print(_fout);
         std::cerr<<" id_cluster="<<id_cluster
                  <<" adr_org="<<adr_org;
     }
 };
 
 
-void PtclHardDump(FILE *fp, PtclHard * ptcl, const PS::S32 n) {
-    fwrite(&n, sizeof(PS::S32), 1, fp);
-    for(int i=0; i<n; i++) {
-        ptcl[i].dump(fp);
+void PtclHardDump(FILE *_fout, PtclHard * _ptcl, const PS::S32 _n) {
+    fwrite(&_n, sizeof(PS::S32), 1, _fout);
+    for(int i=0; i<_n; i++) {
+        _ptcl[i].dump(_fout);
     }
     PS::F64 ptcl_st_dat[3];
     ptcl_st_dat[0] = Ptcl::search_factor;
     ptcl_st_dat[1] = Ptcl::r_search_min;
     ptcl_st_dat[2] = Ptcl::mean_mass_inv;
-    fwrite(ptcl_st_dat, sizeof(PS::F64),3,fp);
+    fwrite(ptcl_st_dat, sizeof(PS::F64),3,_fout);
 }
 
-void PtclHardRead(FILE *fp, PS::ReallocatableArray<PtclHard> & ptcl) {
+void PtclHardRead(FILE *_fin, PS::ReallocatableArray<PtclHard> & _ptcl) {
     PS::S32 n;
-    size_t rcount = fread(&n, sizeof(PS::S32),1,fp);
+    size_t rcount = fread(&n, sizeof(PS::S32),1,_fin);
     if (rcount<1) {
         std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
         abort();
     }
     PtclHard ptmp;
     for(int i=0; i<n; i++) {
-        ptmp.read(fp);
-        ptcl.push_back(ptmp);
+        ptmp.read(_fin);
+        _ptcl.push_back(ptmp);
     }
     PS::F64 ptcl_st_dat[3];
-    rcount = fread(ptcl_st_dat, sizeof(PS::F64),3,fp);
+    rcount = fread(ptcl_st_dat, sizeof(PS::F64),3,_fin);
     if (rcount<3) {
         std::cerr<<"Error: Data reading fails! requiring data number is 3, only obtain "<<rcount<<".\n";
         abort();

@@ -52,28 +52,28 @@ public:
         return *this;
     }
 
-    void print(std::ostream & fout){
-        ParticleBase::print(fout);
-        fout<<" r_search="<<r_search
-            <<" mass_bk="<<mass_bk
-            <<" id="<<id
-            <<" status="<<status;
+    void print(std::ostream & _fout){
+        ParticleBase::print(_fout);
+        _fout<<" r_search="<<r_search
+             <<" mass_bk="<<mass_bk
+             <<" id="<<id
+             <<" status="<<status;
     }
 
-    void writeAscii(FILE* fp) const{
-        ParticleBase::writeAscii(fp);
-        fprintf(fp, "%26.17e %26.17e %lld %lld ", 
+    void writeAscii(FILE* _fout) const{
+        ParticleBase::writeAscii(_fout);
+        fprintf(_fout, "%26.17e %26.17e %lld %lld ", 
                 this->r_search, this->mass_bk, this->id, this->status);
     }
 
-    void writeBinary(FILE* fp) const{
-        ParticleBase::writeBinary(fp);
-        fwrite(&(this->r_search), sizeof(PS::F64), 4, fp);
+    void writeBinary(FILE* _fin) const{
+        ParticleBase::writeBinary(_fin);
+        fwrite(&(this->r_search), sizeof(PS::F64), 4, _fin);
     }
 
-    void readAscii(FILE* fp) {
-        ParticleBase::readAscii(fp);
-        PS::S64 rcount=fscanf(fp, "%lf %lf %lld %lld ",
+    void readAscii(FILE* _fin) {
+        ParticleBase::readAscii(_fin);
+        PS::S64 rcount=fscanf(_fin, "%lf %lf %lld %lld ",
                               &this->r_search, &this->mass_bk, &this->id, &this->status);
         if (rcount<4) {
             std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
@@ -81,29 +81,29 @@ public:
         }
     }
 
-    void readBinary(FILE* fp) {
-        ParticleBase::readBinary(fp);
-        size_t rcount = fread(&(this->r_search), sizeof(PS::F64), 4, fp);
+    void readBinary(FILE* _fin) {
+        ParticleBase::readBinary(_fin);
+        size_t rcount = fread(&(this->r_search), sizeof(PS::F64), 4, _fin);
         if (rcount<4) {
             std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
             abort();
         }
     }
 
-    void calcRSearch(const PS::F64 dt_tree) {
-        r_search = std::max(std::sqrt(vel*vel)*dt_tree*search_factor, r_search_min);
+    void calcRSearch(const PS::F64 _dt_tree) {
+        r_search = std::max(std::sqrt(vel*vel)*_dt_tree*search_factor, r_search_min);
         //r_search = std::max(std::sqrt(vel*vel)*dt_tree*search_factor, std::sqrt(mass*mean_mass_inv)*r_search_min);
 #ifdef HARD_DEBUG
         assert(r_search>0);
 #endif
     }
 
-    void dump(FILE *fp) {
-        fwrite(this, sizeof(*this),1,fp);
+    void dump(FILE *_fout) {
+        fwrite(this, sizeof(*this),1,_fout);
     }
 
-    void read(FILE *fp) {
-        size_t rcount = fread(this, sizeof(*this),1,fp);
+    void read(FILE *_fin) {
+        size_t rcount = fread(this, sizeof(*this),1,_fin);
         if (rcount<1) {
             std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
             abort();

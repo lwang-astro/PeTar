@@ -45,8 +45,6 @@ int MPI_Isend(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 
    ret = PMPI_Isend(buffer, count, datatype, dest, tag, comm, req);
 
-   /* ここで何か固有処理(2) */
-
    return ret;
 }
 
@@ -61,8 +59,6 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 
    ret = PMPI_Irecv(buffer, count, datatype, dest, tag, comm, req);
 
-   /* ここで何か固有処理(2) */
-
    return ret;
 }
 #endif
@@ -75,8 +71,7 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #include"init.hpp"
 #include"integrate.hpp"
 #include"domain.hpp"
-#include"AR.h" /// include AR.h (L.Wang)
-//#include"cluster.hpp"
+#include"AR.h" 
 #include"cluster_list.hpp"
 #ifdef PROFILE
 #include"profile.hpp"
@@ -86,7 +81,6 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::QuadrupoleWithSymmetrySearch TreeForce; 
 #else
 typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::MonopoleWithSymmetrySearch TreeForce;
-//typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::MonopoleWithScatterSearch Tree;
 #endif
 typedef PS::ParticleSystem<FPSoft> SystemSoft;
 
@@ -113,7 +107,6 @@ int main(int argc, char *argv[]){
     SysCounts  n_count_sum;
     PsProfile  ps_profile;
 
-    std::ofstream fprofile;
     std::string rank_str;
     std::stringstream atmp;
     atmp<<my_rank;
@@ -123,37 +116,39 @@ int main(int argc, char *argv[]){
 #endif
     
     // initial parameters
-    IOParams<PS::F64> ratio_r_cut  (0.1,  "r_in / r_out");
-    IOParams<PS::F64> theta        (0.3,  "Openning angle theta");
-    IOParams<PS::S32> n_leaf_limit (20,   "Tree leaf number limit", "optimized value shoudl be slightly >=11+N_bin_sample (20)");
-#ifdef USE__AVX512
-    IOParams<PS::S32> n_group_limit(1024, "Tree group number limit", "optimized for x86-AVX512 (2048)");    
-#else
-    IOParams<PS::S32> n_group_limit(512,  "Tree group number limit", "optimized for x86-AVX2 (512)");
-#endif
-    IOParams<PS::S32> n_smp_ave    (100,  "Average target number of sample particles per process");
-    IOParams<PS::S32> n_split      (8,    "Number of binary sample points for tree perturbation force");
-    IOParams<PS::S64> n_bin        (0,    "Number of primordial binaries (assume binaries ID=1,2*n_bin)");
-    IOParams<PS::F64> time_end     (10.0, "Finishing time");
-    IOParams<PS::F64> eta          (0.1,  "Hermite time step coefficient eta");
-    IOParams<PS::S64> n_glb        (16384,"Total number of particles (this will suppress reading snapshot data and use Plummer model generator without binary)");
-    IOParams<PS::F64> dt_soft      (0.0,  "Tree timestep","0.1*r_out/sigma_1D");
-    IOParams<PS::F64> dt_snp       (0.0625,"Output time interval of particle dataset");
-    IOParams<PS::F64> search_factor(3.0,  "Neighbor searching coefficient");
-    IOParams<PS::F64> dt_limit_hard_factor(4.0,  "Limit of tree time step/hard time step");
-    IOParams<PS::S32> dt_min_hermite_index(40,   "Power index n for the smallest time step (0.5^n) allowed in Hermite integrator");
-    IOParams<PS::S32> dt_min_arc_index    (64,   "Power index n for the smallest time step (0.5^n) allowed in ARC integrator");
-    IOParams<PS::F64> dt_err_pert  (1e-6, "Time synchronization maximum (relative) error for perturbed ARC integrator");
-    IOParams<PS::F64> dt_err_soft  (1e-3, "Time synchronization maximum (relative) error for no-perturber (only soft perturbation) ARC integrator");
-    IOParams<PS::F64> e_err_arc    (1e-10,"Maximum energy error allown for ARC integrator");
-    IOParams<PS::F64> eps          (0.0,  "Softerning eps");
-    IOParams<PS::F64> r_out        (0.0,  "Transit function outer boundary radius", "<m>/sigma_1D^2*/ratio_r_cut");
-    IOParams<PS::F64> r_bin        (0.0,  "Maximum binary radius criterion", "0.8*r_in");
-    IOParams<PS::F64> sd_factor    (1e-6, "Slowdown perturbation criterion");
-    IOParams<PS::S32> data_format  (1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): Writing off: r-B(5), r-A(4); Writing on: r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0)");
-    IOParams<std::string> fname_snp("data","Prefix filename of dataset: [prefix].[File ID]");
+    IOParamsContainer input_par_store;
 
-    // PS::F64 g_min = 1e-6;
+    IOParams<PS::F64> ratio_r_cut  (input_par_store, 0.1,  "r_in / r_out");
+    IOParams<PS::F64> theta        (input_par_store, 0.3,  "Openning angle theta");
+    IOParams<PS::S32> n_leaf_limit (input_par_store, 20,   "Tree leaf number limit", "optimized value shoudl be slightly >=11+N_bin_sample (20)");
+#ifdef USE__AVX512
+    IOParams<PS::S32> n_group_limit(input_par_store, 1024, "Tree group number limit", "optimized for x86-AVX512 (1024)");    
+#else
+    IOParams<PS::S32> n_group_limit(input_par_store, 512,  "Tree group number limit", "optimized for x86-AVX2 (512)");
+#endif
+    IOParams<PS::S32> n_smp_ave    (input_par_store, 100,  "Average target number of sample particles per process");
+    IOParams<PS::S32> n_split      (input_par_store, 8,    "Number of binary sample points for tree perturbation force");
+    IOParams<PS::S64> n_bin        (input_par_store, 0,    "Number of primordial binaries (assume binaries ID=1,2*n_bin)");
+    IOParams<PS::F64> time_end     (input_par_store, 10.0, "Finishing time");
+    IOParams<PS::F64> eta          (input_par_store, 0.1,  "Hermite time step coefficient eta");
+    IOParams<PS::S64> n_glb        (input_par_store, 16384,"Total number of particles (this will suppress reading snapshot data and use Plummer model generator without binary)");
+    IOParams<PS::F64> dt_soft      (input_par_store, 0.0,  "Tree timestep","0.1*r_out/sigma_1D");
+    IOParams<PS::F64> dt_snp       (input_par_store, 0.0625,"Output time interval of particle dataset");
+    IOParams<PS::F64> search_factor(input_par_store, 3.0,  "Neighbor searching coefficient");
+    IOParams<PS::F64> dt_limit_hard_factor(input_par_store, 4.0,  "Limit of tree time step/hard time step");
+    IOParams<PS::S32> dt_min_hermite_index(input_par_store, 40,   "Power index n for the smallest time step (0.5^n) allowed in Hermite integrator");
+    IOParams<PS::S32> dt_min_arc_index    (input_par_store, 64,   "Power index n for the smallest time step (0.5^n) allowed in ARC integrator");
+    IOParams<PS::F64> dt_err_pert  (input_par_store, 1e-6, "Time synchronization maximum (relative) error for perturbed ARC integrator");
+    IOParams<PS::F64> dt_err_soft  (input_par_store, 1e-3, "Time synchronization maximum (relative) error for no-perturber (only soft perturbation) ARC integrator");
+    IOParams<PS::F64> e_err_arc    (input_par_store, 1e-10,"Maximum energy error allown for ARC integrator");
+    IOParams<PS::F64> eps          (input_par_store, 0.0,  "Softerning eps");
+    IOParams<PS::F64> r_out        (input_par_store, 0.0,  "Transit function outer boundary radius", "<m>/sigma_1D^2*/ratio_r_cut");
+    IOParams<PS::F64> r_bin        (input_par_store, 0.0,  "Maximum binary radius criterion", "0.8*r_in");
+    IOParams<PS::F64> sd_factor    (input_par_store, 1e-6, "Slowdown perturbation criterion");
+    IOParams<PS::S32> data_format  (input_par_store, 1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): Writing off: r-B(5), r-A(4); Writing on: r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0)");
+    IOParams<std::string> fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]");
+    IOParams<std::string> fname_par(input_par_store, "input.par", "Input parameter file (this option should be used first before any other options)");
+
 
     // reading parameters
     bool reading_flag=true;
@@ -170,14 +165,16 @@ int main(int argc, char *argv[]){
         {"energy-err-arc", required_argument, 0, 0},    //7
         {"soft-eps", required_argument, 0, 0},          //8
         {"slowdown-factor", required_argument, 0, 0},   //9
-        {"help",no_argument, 0, 'h'},                   //10
+        {"r-ratio", required_argument, 0, 0},           //10
+        {"r-bin",   required_argument, 0, 0},           //11
+        {"help",no_argument, 0, 'h'},                   //12
         {0,0,0,0}
     };
 
     int copt;
     int option_index;
     if(my_rank == 0) std::cout<<"----- input option -----\n";
-    while ((copt = getopt_long(argc, argv, "i:at:D:o:r:R:b:B:N:n:l:s:T:E:f:h", long_options, &option_index)) != -1) 
+    while ((copt = getopt_long(argc, argv, "i:at:s:o:r:b:n:G:L:S:T:E:f:p:h", long_options, &option_index)) != -1) 
         switch (copt) {
         case 0:
             switch(option_index){
@@ -231,6 +228,17 @@ int main(int argc, char *argv[]){
                 if(my_rank == 0) sd_factor.print(std::cout);
                 assert(sd_factor.value>0.0);
                 break;
+            case 10:
+                ratio_r_cut.value = atof(optarg);
+                if(my_rank == 0) ratio_r_cut.print(std::cout);
+                assert(ratio_r_cut.value>0.0);
+                assert(ratio_r_cut.value<1.0);
+                break;
+            case 11:
+                r_bin.value = atof(optarg);
+                if(my_rank == 0) r_bin.print(std::cout);
+                assert(r_bin.value>0.0);
+                break;
             default:
                 if(my_rank == 0) std::cerr<<"Unknown option. check '-h' for help.\n";
                 abort();
@@ -244,48 +252,12 @@ int main(int argc, char *argv[]){
         case 'a':
             app_flag=true;
             break;
-        case 'b':
-            r_bin.value = atof(optarg);
-            if(my_rank == 0) r_bin.print(std::cout);
-            assert(r_bin.value>0.0);
-            break;
-        case 'B':
-            n_bin.value = atoi(optarg);
-            if(my_rank == 0) n_bin.print(std::cout);
-            assert(n_bin.value>=0);
-            break;
-        case 'T':
-            theta.value = atof(optarg);
-            if(my_rank == 0) theta.print(std::cout);
-            assert(theta.value>=0.0);
-            break;
         case 't':
             time_end.value = atof(optarg);
             if(my_rank == 0) time_end.print(std::cout);
             assert(time_end.value>=0.0);
             break;
-        case 'E':
-            eta.value = atof(optarg);
-            if(my_rank == 0) eta.print(std::cout);
-            assert(eta.value>0.0);
-            break;
-        case 'n':
-            n_group_limit.value = atoi(optarg);
-            if(my_rank == 0) n_group_limit.print(std::cout);
-            assert(n_group_limit.value>0);
-            break;
-        case 'N':
-            reading_flag=false;
-            n_glb.value = atol(optarg);
-            if(my_rank == 0) n_glb.print(std::cout);
-            assert(n_glb.value>0);
-            break;
         case 's':
-            n_smp_ave.value = atoi(optarg);
-            if(my_rank == 0) n_smp_ave.print(std::cout);
-            assert(n_smp_ave.value>0.0);
-            break;
-        case 'D':
             dt_soft.value = atof(optarg);
             if(my_rank == 0) dt_soft.print(std::cout);
             assert(dt_soft.value>0.0);
@@ -295,25 +267,67 @@ int main(int argc, char *argv[]){
             if(my_rank == 0) dt_snp.print(std::cout);
             assert(dt_snp.value>0.0);
             break;
-        case 'l':
-            n_leaf_limit.value = atoi(optarg);
-            if(my_rank == 0) n_leaf_limit.print(std::cout);
-            assert(n_leaf_limit.value>0);
-            break;
         case 'r':
-            ratio_r_cut.value = atof(optarg);
-            if(my_rank == 0) ratio_r_cut.print(std::cout);
-            assert(ratio_r_cut.value>0.0);
-            assert(ratio_r_cut.value<1.0);
-            break;
-        case 'R':
             r_out.value = atof(optarg);
             if(my_rank == 0) r_out.print(std::cout);
             assert(r_out.value>0.0);
             break;
+        case 'b':
+            n_bin.value = atoi(optarg);
+            if(my_rank == 0) n_bin.print(std::cout);
+            assert(n_bin.value>=0);
+            break;
+        case 'n':
+            reading_flag=false;
+            n_glb.value = atol(optarg);
+            if(my_rank == 0) n_glb.print(std::cout);
+            assert(n_glb.value>0);
+            break;
+        case 'G':
+            n_group_limit.value = atoi(optarg);
+            if(my_rank == 0) n_group_limit.print(std::cout);
+            assert(n_group_limit.value>0);
+            break;
+        case 'L':
+            n_leaf_limit.value = atoi(optarg);
+            if(my_rank == 0) n_leaf_limit.print(std::cout);
+            assert(n_leaf_limit.value>0);
+            break;
+        case 'S':
+            n_smp_ave.value = atoi(optarg);
+            if(my_rank == 0) n_smp_ave.print(std::cout);
+            assert(n_smp_ave.value>0.0);
+            break;
+        case 'T':
+            theta.value = atof(optarg);
+            if(my_rank == 0) theta.print(std::cout);
+            assert(theta.value>=0.0);
+            break;
+        case 'E':
+            eta.value = atof(optarg);
+            if(my_rank == 0) eta.print(std::cout);
+            assert(eta.value>0.0);
+            break;
         case 'f':
             fname_snp.value = optarg;
             if(my_rank == 0) fname_snp.print(std::cout);
+            break;
+        case 'p':
+            fname_par.value = optarg;
+            if(my_rank == 0) {
+                fname_par.print(std::cout);
+                FILE* fpar_in;
+                if( (fpar_in = fopen(fname_par.value.c_str(),"r")) == NULL) {
+                    fprintf(stderr,"Error: Cannot open file %s.\n", fname_par.value.c_str());
+                    abort();
+                }
+                input_par_store.readAscii(fpar_in);
+                fclose(fpar_in);
+            }
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+            input_par_store.mpi_broadcast();
+            PS::Comm::barrier();
+#endif
             break;
         case 'h':
             if(my_rank == 0){
@@ -342,21 +356,21 @@ int main(int argc, char *argv[]){
                          <<"             (*) show initialization values which should be used together with FILE_ID = 0"<<std::endl;
                 std::cout<<"  -a:     data output style (except snapshot) becomes appending, defaulted: replace"<<std::endl;
                 std::cout<<"  -t: [F] "<<time_end<<std::endl;
-                std::cout<<"  -D: [F] "<<dt_soft<<std::endl;
+                std::cout<<"  -s: [F] "<<dt_soft<<std::endl;
                 std::cout<<"  -o: [F] "<<dt_snp<<std::endl;
                 std::cout<<"        --dt-max-factor:   [F] "<<dt_limit_hard_factor<<std::endl;
                 std::cout<<"        --dt-min-hermite:  [I] "<<dt_min_hermite_index<<std::endl;
                 std::cout<<"        --dt-min-arc:      [I] "<<dt_min_arc_index<<std::endl;
                 std::cout<<"        --dt-err-pert:     [F] "<<dt_err_pert<<std::endl;
                 std::cout<<"        --dt-err-soft:     [F] "<<dt_err_soft<<std::endl;
-                std::cout<<"  -r: [F] "<<ratio_r_cut<<std::endl;
-                std::cout<<"  -R: [F] "<<r_out<<std::endl;
-                std::cout<<"  -b: [F] "<<r_bin<<std::endl;
-                std::cout<<"  -B: [I] "<<n_bin<<std::endl;
-                std::cout<<"  -N: [I] "<<n_glb<<std::endl;
-                std::cout<<"  -n: [I] "<<n_group_limit<<std::endl;
-                std::cout<<"  -l: [I] "<<n_leaf_limit<<std::endl;
-                std::cout<<"  -s: [I] "<<n_smp_ave<<std::endl;
+                std::cout<<"  -r: [F] "<<r_out<<std::endl;
+                std::cout<<"        --r-ratio:         [F] "<<ratio_r_cut<<std::endl;
+                std::cout<<"        --r-bin:           [F] "<<r_bin<<std::endl;
+                std::cout<<"  -b: [I] "<<n_bin<<std::endl;
+                std::cout<<"  -n: [I] "<<n_glb<<std::endl;
+                std::cout<<"  -G: [I] "<<n_group_limit<<std::endl;
+                std::cout<<"  -L: [I] "<<n_leaf_limit<<std::endl;
+                std::cout<<"  -S: [I] "<<n_smp_ave<<std::endl;
                 std::cout<<"        --n-split:         [I] "<<n_split<<std::endl;
                 std::cout<<"  -T: [F] "<<theta<<std::endl;
                 std::cout<<"  -E: [F] "<<eta<<std::endl;
@@ -365,6 +379,7 @@ int main(int argc, char *argv[]){
                 std::cout<<"        --slowdown-factor: [F] "<<sd_factor<<std::endl;
                 std::cout<<"        --soft-eps:        [F] "<<eps<<std::endl;
                 std::cout<<"  -f: [S] "<<fname_snp<<std::endl;
+                std::cout<<"  -p: [S] "<<fname_snp<<std::endl;
                 std::cout<<"  -h(--help):               print help"<<std::endl;
                 std::cout<<"*** PS: r_in : transit function inner boundary radius\n"
                          <<"        r_out: transit function outer boundary radius\n"
@@ -376,10 +391,24 @@ int main(int argc, char *argv[]){
             return 0;
         }
     
+    // save initial parameters
+    if(my_rank==0) {
+        std::cout<<"Save input parameters to file "<<fname_par.value<<std::endl;
+        FILE* fpar_out;
+        if( (fpar_out = fopen(fname_par.value.c_str(),"w")) == NULL) {
+            fprintf(stderr,"Error: Cannot open file %s.\n", fname_par.value.c_str());
+            abort();
+        }
+        input_par_store.writeAscii(fpar_out);
+        fclose(fpar_out);
+    }
+    PS::Comm::barrier();
+
     PS::F64 time_sys = 0.0;
     PS::S32 n_loc;
 
 #ifdef PROFILE
+    std::ofstream fprofile;
     std::string fproname=fname_snp.value+".prof.rank."+rank_str;
     if(app_flag) fprofile.open(fproname.c_str(),std::ofstream::out|std::ofstream::app);
     else         fprofile.open(fproname.c_str(),std::ofstream::out);
