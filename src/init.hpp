@@ -120,7 +120,7 @@ void GetR(const Tpsys & system_soft,
 
     if (r_bin==0.0) r_bin = 0.8*r_in;
 
-    r_search_min = search_factor*vel_disp*dt + r_out;
+    if (r_search_min==0.0) r_search_min = search_factor*vel_disp*dt + r_out;
 }
 
 #ifdef MUTIL_ROUT

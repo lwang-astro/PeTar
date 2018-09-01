@@ -121,6 +121,10 @@ public:
 #endif
 #ifdef HARD_CHECK_ENERGY
     PS::F64 hard_dE, hard_dESD;
+    PS::F64 hard_dE_limit;
+#endif
+#ifdef ARC_DEBUG_DUMP
+    PS::S32 arc_step_count_limit;
 #endif
 
 private:
@@ -832,6 +836,18 @@ private:
 #endif
         PS::S32 nstepcount = 0;
 
+#ifdef HARD_DEBUG
+        if (_n_ptcl>400) {
+            std::cerr<<"Large cluster, n_ptcl="<<_n_ptcl<<" n_group="<<_n_group<<std::endl;
+            for (PS::S32 i=0; i<_n_ptcl; i++) {
+                if(_ptcl_local[i].r_search>10*_ptcl_local[i].r_search_min) {
+                    std::cerr<<"i = "<<i<<" ";
+                    _ptcl_local[i].print(std::cerr);
+                }
+            }
+        }
+#endif
+
         // when group exist
         if (_n_group>0) {
             PS::S32 adr_first_ptcl[_n_group];
@@ -937,6 +953,9 @@ private:
                 PS::S32 iact = 0;
 
                 ARCIntegrator<Ptcl, PtclH4, PtclForce> Aint(ARC_control_soft_, Int_pars_);
+#ifdef ARC_DEBUG_DUMP
+                Aint.step_count_limit = arc_step_count_limit;
+#endif
                 Aint.reserveARMem(1);
                 // Aint.reservePertMem(1);
                 gpars[0].getBinPars(Aint.bininfo[0], _ptcl_artifical);
@@ -983,11 +1002,20 @@ private:
                 Aint.resolve();
 #ifdef HARD_CHECK_ENERGY
                 Aint.EnergyRecord(AE1);
-                hard_dE += AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot;
+                PS::F64 dEtot = AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot;
+                hard_dE += dEtot;
 #ifdef HARD_DEBUG_PRINT
                 fprintf(stderr,"Slowdown factor = %e\n", Aint.getSlowDown(0));
                 fprintf(stderr,"ARC Energy: init =%e, end =%e, diff =%e, error = %e\n", 
                         AE0.kin+AE0.pot, AE1.kin+AE1.pot, AE1.kin+AE1.pot-AE0.kin-AE0.pot, (AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot)/AE0.tot);
+#endif
+#ifdef HARD_DEBUG_DUMP
+                if(fabs(dEtot)>hard_dE_limit) {
+                    std::cerr<<"Hard energy significant: "<<dEtot<<std::endl;
+                    std::cerr<<"Dump data:"<<std::endl;
+                    dump("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, 0, 0);
+                    abort();
+                }
 #endif
 #endif
 #ifdef ARC_DEBUG_PRINT
@@ -1041,6 +1069,9 @@ private:
             
                 // Initial Aint
                 ARCIntegrator<Ptcl, PtclH4, PtclForce> Aint(ARC_control_pert_, Int_pars_);
+#ifdef ARC_DEBUG_DUMP
+                Aint.step_count_limit = arc_step_count_limit;
+#endif
                 Aint.reserveARMem(_n_group);
                 PS::F64 dr_search[_n_group];
                 for (int i=0; i<_n_group; i++) {
@@ -1139,7 +1170,8 @@ private:
 #endif
 #ifdef HARD_CHECK_ENERGY
                 CalcEnergyHardFull(_ptcl_local, _n_ptcl, E1, AE1, HE1, ESD1, Hint, Aint);
-                hard_dE += E1.tot - E0.tot;
+                PS::F64 dEtot = E1.tot - E0.tot;
+                hard_dE += dEtot;
                 hard_dESD += ESD1.tot - ESD0.tot;
 #ifdef HARD_DEBUG_PRINT
                 fprintf(stderr,"Slowdown factor = ");
@@ -1154,8 +1186,7 @@ private:
                 Hint.printStepHist();
 #endif
 #ifdef HARD_DEBUG_DUMP
-                PS::F64 dEtot = E1.tot-E0.tot;
-                if(fabs(dEtot)>1e-4) {
+                if(fabs(dEtot)>hard_dE_limit) {
                     std::cerr<<"Hard energy significant: "<<dEtot<<std::endl;
                     std::cerr<<"Dump data:"<<std::endl;
                     dump("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
@@ -1263,15 +1294,15 @@ private:
 
 #ifdef HARD_CHECK_ENERGY
             Hint.CalcEnergy(HE1);
-            hard_dE += HE1.tot - HE0.tot;
+            PS::F64 dEtot = HE1.tot-HE0.tot;
+            hard_dE += dEtot;
 #ifdef HARD_DEBUG_PRINT
             fprintf(stderr,"H4  Energy: init =%e, end =%e, diff =%e, kini =%e kinf =%e poti =%e potf =%e\n", 
                     HE0.tot, HE1.tot, HE1.tot-HE0.tot, HE0.kin, HE1.kin, HE0.pot, HE1.pot);
             Hint.printStepHist();
 #endif
 #ifdef HARD_DEBUG_DUMP
-            PS::F64 dEtot = HE1.tot-HE0.tot;
-            if(fabs(dEtot)>1e-4) {
+            if(fabs(dEtot)>hard_dE_limit) {
                 std::cerr<<"Hard energy significant: "<<dEtot<<std::endl;
                 std::cerr<<"Dump data:"<<std::endl;
                 dump("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, 0, 0);
@@ -1281,30 +1312,6 @@ private:
 #endif
         }
 
-        //group.resolveGroups(_ptcl_local, _n_ptcl, group_ptcl_glb.getPointer(), group_list.size(), group_list.getPointer(), adr_cm.getPointer());
-        //group.resolveGroups();
-        //updateRSearch(_ptcl_local, group.getPtclList(), group.getPtclN(), _time_end);
-
-        //if (group.getPtclN()==2) group.searchAndMerge(_ptcl_local, Int_pars_.rout);
-        //else group.searchAndMerge(_ptcl_local, Int_pars_.rin);
-        //group.searchAndMerge(_ptcl_local, Int_pars_.rout);
-        // Kickcorrect(_ptcl_local, group.getRoutChangeList());
-        //group.generateList(_ptcl_local, ptcl_new, r_bin_,Int_pars_.rin, Int_pars_.rout, _time_end, id_offset_, n_split_);
-
-            // group.reverseCopy(_ptcl_local, _n_ptcl);
-//        }
-//        else {
-//#endif
-//            PS::F64 dt_limit = calcDtLimit(0.0, dt_limit_hard_);
-//            Multiple_integrator(_ptcl_local, _n_ptcl, _time_end, dt_limit,
-//                                r_search_single_, gamma_, m_average_,
-//#ifdef HARD_CHECK_ENERGY
-//                                ARC_error_relative,
-//                                ARC_error,
-//                                N_count,
-//#endif
-//                                ARC_control_, Int_pars_);
-//        }
     }
 
 public:

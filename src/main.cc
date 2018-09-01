@@ -112,6 +112,7 @@ int main(int argc, char *argv[]){
     atmp<<my_rank;
     atmp>>rank_str;
     PS::S64 dn_loop = 0;
+    PS::F64 r_search_min = 0.0;
 
 #endif
     
@@ -141,6 +142,12 @@ int main(int argc, char *argv[]){
     IOParams<PS::F64> dt_err_pert  (input_par_store, 1e-6, "Time synchronization maximum (relative) error for perturbed ARC integrator");
     IOParams<PS::F64> dt_err_soft  (input_par_store, 1e-3, "Time synchronization maximum (relative) error for no-perturber (only soft perturbation) ARC integrator");
     IOParams<PS::F64> e_err_arc    (input_par_store, 1e-10,"Maximum energy error allown for ARC integrator");
+#ifdef HARD_CHECK_ENERGY
+    IOParams<PS::F64> e_err_hard   (input_par_store, 1e-4, "Maximum energy error allown for hard integrator");
+#endif
+#if defined(ARC_DEBUG_DUMP) && defined(ARC_SYM)
+    IOParams<PS::S32> step_limit_arc(input_par_store, 1000000, "Maximum step allown for ARC sym integrator");
+#endif
     IOParams<PS::F64> eps          (input_par_store, 0.0,  "Softerning eps");
     IOParams<PS::F64> r_out        (input_par_store, 0.0,  "Transit function outer boundary radius", "<m>/sigma_1D^2*/ratio_r_cut");
     IOParams<PS::F64> r_bin        (input_par_store, 0.0,  "Maximum binary radius criterion", "0.8*r_in");
@@ -149,6 +156,7 @@ int main(int argc, char *argv[]){
     IOParams<std::string> fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]");
     IOParams<std::string> fname_par(input_par_store, "input.par", "Input parameter file (this option should be used first before any other options)");
 
+    input_par_store.store(&r_search_min);
 
     // reading parameters
     bool reading_flag=true;
@@ -168,6 +176,12 @@ int main(int argc, char *argv[]){
         {"r-ratio", required_argument, 0, 0},           //10
         {"r-bin",   required_argument, 0, 0},           //11
         {"help",no_argument, 0, 'h'},                   //12
+#ifdef HARD_CHECK_ENERGY
+        {"energy-err-hard", required_argument, 0, 0},   //13
+#endif
+#if defined(ARC_DEBUG_DUMP) && defined(ARC_SYM)
+        {"step-limit-arc", required_argument, 0, 0},    //14
+#endif
         {0,0,0,0}
     };
 
@@ -239,6 +253,18 @@ int main(int argc, char *argv[]){
                 if(my_rank == 0) r_bin.print(std::cout);
                 assert(r_bin.value>0.0);
                 break;
+#ifdef HARD_CHECK_ENERGY
+            case 13:
+                e_err_hard.value = atof(optarg);
+                if(my_rank == 0) e_err_hard.print(std::cout);
+                break;
+#endif
+#if defined(ARC_DEBUG_DUMP) && defined(ARC_SYM)
+            case 14:
+                step_limit_arc.value = atoi(optarg);
+                if(my_rank == 0) step_limit_arc.print(std::cout);
+                break;
+#endif
             default:
                 if(my_rank == 0) std::cerr<<"Unknown option. check '-h' for help.\n";
                 abort();
@@ -376,6 +402,12 @@ int main(int argc, char *argv[]){
                 std::cout<<"  -E: [F] "<<eta<<std::endl;
                 std::cout<<"        --search-factor:   [F] "<<search_factor<<std::endl;
                 std::cout<<"        --energy-err-arc:  [F] "<<e_err_arc<<std::endl;
+#ifdef HARD_CHECK_ENERGY
+                std::cout<<"        --energy-err-hard: [F] "<<e_err_hard<<std::endl;
+#endif
+#if defined(ARC_DEBUG_DUMP) && defined(ARC_SYM)
+                std::cout<<"        --step-limit-arc:  [F] "<<step_limit_arc<<std::endl;
+#endif
                 std::cout<<"        --slowdown-factor: [F] "<<sd_factor<<std::endl;
                 std::cout<<"        --soft-eps:        [F] "<<eps<<std::endl;
                 std::cout<<"  -f: [S] "<<fname_snp<<std::endl;
@@ -391,18 +423,6 @@ int main(int argc, char *argv[]){
             return 0;
         }
     
-    // save initial parameters
-    if(my_rank==0) {
-        std::cout<<"Save input parameters to file "<<fname_par.value<<std::endl;
-        FILE* fpar_out;
-        if( (fpar_out = fopen(fname_par.value.c_str(),"w")) == NULL) {
-            fprintf(stderr,"Error: Cannot open file %s.\n", fname_par.value.c_str());
-            abort();
-        }
-        input_par_store.writeAscii(fpar_out);
-        fclose(fpar_out);
-    }
-    PS::Comm::barrier();
 
     PS::F64 time_sys = 0.0;
     PS::S32 n_loc;
@@ -491,7 +511,7 @@ int main(int argc, char *argv[]){
     //    }
     //}
     
-    PS::F64 r_in, m_average, v_disp, r_search_min;
+    PS::F64 r_in, m_average, v_disp;
     GetR(system_soft, r_in, r_out.value, r_bin.value, r_search_min, m_average, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value, n_bin.value, restart_flag);
 
 //    EPISoft::r_out = r_out;
@@ -532,6 +552,19 @@ int main(int argc, char *argv[]){
                  <<" dt_soft      = "<<dt_soft.value  <<std::endl;
     }
 
+    // save initial parameters
+    if(my_rank==0) {
+        std::cout<<"Save input parameters to file "<<fname_par.value<<std::endl;
+        FILE* fpar_out;
+        if( (fpar_out = fopen(fname_par.value.c_str(),"w")) == NULL) {
+            fprintf(stderr,"Error: Cannot open file %s.\n", fname_par.value.c_str());
+            abort();
+        }
+        input_par_store.writeAscii(fpar_out);
+        fclose(fpar_out);
+    }
+    PS::Comm::barrier();
+
 // Finish dataset initialization
 
 
@@ -563,6 +596,7 @@ int main(int argc, char *argv[]){
     TreeForce tree_soft;
     //tree_soft.initialize(n_tree_init, theta.value, n_leaf_limit.value, n_group_limit.value);
 
+    // initial hard class and parameters
     SystemHard system_hard_one_cluster;
     PS::F64 dt_limit_hard = dt_soft.value/dt_limit_hard_factor.value;
     PS::F64 dt_min_hermite = 1.0;
@@ -578,6 +612,16 @@ int main(int argc, char *argv[]){
     system_hard_connected.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, id_offset, n_split.value);
     system_hard_connected.setARCParam(e_err_arc.value, dt_err_pert.value, dt_err_soft.value, dt_min_arc);
 
+#ifdef HARD_CHECK_ENERGY
+    // Set hard energy limit
+    system_hard_isolated.hard_dE_limit = e_err_hard.value;
+    system_hard_connected.hard_dE_limit = e_err_hard.value;
+#endif
+#if defined(ARC_DEBUG_DUMP) && defined(ARC_SYM)
+    // Set step limit for ARC sym
+    system_hard_isolated.arc_step_count_limit = step_limit_arc.value;
+    system_hard_connected.arc_step_count_limit = step_limit_arc.value;
+#endif
     PS::ReallocatableArray<PS::S32> remove_list;
                                        
     SearchCluster search_cluster;

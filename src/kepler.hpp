@@ -726,7 +726,7 @@ bool stab2check(PtclTree<Tptcl> &_bin, const PS::F64 _rbin, const PS::F64 _rcrit
         _bin.tstep = -1.0;
         _bin.stable_factor = -1;
 #ifdef STABLE_CHECK_DEBUG
-        std::cerr<<"Hyperbolic unstable _bin.semi<0"<<std::endl;
+        std::cerr<<"STAB2 reject: Hyperbolic unstable _bin.semi<0"<<std::endl;
 #endif        
         return false;
     }
@@ -765,7 +765,7 @@ bool stab2check(PtclTree<Tptcl> &_bin, const PS::F64 _rbin, const PS::F64 _rcrit
         }
     
 #ifdef STABLE_CHECK_DEBUG
-        std::cerr<<"Stable pert factor: "<<_bin.stable_factor<<std::endl;
+        std::cerr<<"STAB2 accept: Stable pert factor: "<<_bin.stable_factor<<std::endl;
 #endif
         
         return true;
@@ -774,7 +774,7 @@ bool stab2check(PtclTree<Tptcl> &_bin, const PS::F64 _rbin, const PS::F64 _rcrit
         _bin.tstep = -1.0;
         _bin.stable_factor = -1;
 #ifdef STABLE_CHECK_DEBUG
-        std::cerr<<"Stable but too large orbit, apo: "<<apo<<std::endl;
+        std::cerr<<"STAB2 reject: Stable but too large orbit, apo: "<<apo<<" ecc: "<<_bin.ecc<<" pec: "<<pec<<std::endl;
 #endif 
         return false;
     }
@@ -805,6 +805,13 @@ bool stab3check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin, const PS::F64 _rb
              <<" period="<<_bout.peri
              <<" apo="<<_bout.semi*(1.0+_bout.ecc)
              <<" pec="<<_bout.semi*(1.0-_bout.ecc)
+             <<" bin semi="<<_bin.semi
+             <<" ecc="<<_bin.ecc
+             <<" m1="<<_bin.m1
+             <<" m2="<<_bin.m2
+             <<" period="<<_bin.peri
+             <<" apo="<<_bin.semi*(1.0+_bin.ecc)
+             <<" pec="<<_bin.semi*(1.0-_bin.ecc)
              <<std::endl;
 #endif
     // hyperbolic okuter orbit
@@ -812,7 +819,7 @@ bool stab3check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin, const PS::F64 _rb
         _bout.tstep=-1.0;
         _bout.stable_factor=-1;
 #ifdef STABLE_CHECK_DEBUG
-        std::cerr<<"Unstable, Outer body hyperbolic, semi_out: "<<_bout.semi<<std::endl;
+        std::cerr<<"STAB3 reject: Unstable, Outer body hyperbolic, semi_out: "<<_bout.semi<<std::endl;
 #endif
         return false;
     }
@@ -826,7 +833,7 @@ bool stab3check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin, const PS::F64 _rb
         _bout.tstep=-1.0;
         _bout.stable_factor=-1;
 #ifdef STABLE_CHECK_DEBUG
-        std::cerr<<"Too large outer orbit, pec_out: "<<pec_out<<std::endl;
+        std::cerr<<"STAB3 reject: Unstable, Too large outer orbit, pec_out: "<<pec_out<<std::endl;
 #endif
         return false;
     } 
@@ -837,7 +844,7 @@ bool stab3check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin, const PS::F64 _rb
         _bout.tstep=-1.0;
         _bout.stable_factor=-1;
 #ifdef STABLE_CHECK_DEBUG
-        std::cerr<<"Too large period ratio, pec_out: "<<pec_out<<std::endl;
+        std::cerr<<"STAB3 reject: Too large period ratio, acc_out/acc_in: "<<acc_out/acc_in<<" period_out: "<<_bout.peri<<std::endl;
 #endif
         return false;
     }
@@ -849,6 +856,9 @@ bool stab3check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin, const PS::F64 _rb
     if(stab3>1) {
         // Unstable case
         _bout.stable_factor = -stab3;
+#ifdef STABLE_CHECK_DEBUG
+        std::cerr<<"STAB3 accept: Unstable, stab3:"<<stab3<<std::endl;
+#endif
     }
     else {
         // stable case
@@ -856,8 +866,17 @@ bool stab3check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin, const PS::F64 _rb
         _bout.stable_factor = fpert_ratio;
         // for unperturbed and large period case, stable_factor=-1 to switch off slowdown
         if(fpert_ratio<1e-6) {
-            if(_bout.peri>0.125*_dt_tree) _bout.stable_factor = -1.0;
+            if(_bout.peri>0.125*_dt_tree) {
+                _bout.stable_factor = -1.0;
+#ifdef STABLE_CHECK_DEBUG
+                std::cerr<<"STAB3 accept: Unstable, large period, period_out:"<<_bout.peri<<std::endl;
+#endif
+            }
         }
+#ifdef STABLE_CHECK_DEBUG
+        if(_bout.stable_factor>0) 
+            std::cerr<<"STAB3 accept: Stable, fpert_ratio:"<<fpert_ratio<<" stab3:"<<stab3<<std::endl;
+#endif
     }
     _bout.tstep = _bin.tstep;
     return true;
@@ -921,6 +940,20 @@ bool stab4check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin1, PtclTree<Tptcl> 
              <<" period="<<_bout.peri
              <<" apo="<<_bout.semi*(1.0+_bout.ecc)
              <<" pec="<<_bout.semi*(1.0-_bout.ecc)
+             <<" bin1 semi="<<_bin1.semi
+             <<" ecc="<<_bin1.ecc
+             <<" m1="<<_bin1.m1
+             <<" m2="<<_bin1.m2
+             <<" period="<<_bin1.peri
+             <<" apo="<<_bin1.semi*(1.0+_bin1.ecc)
+             <<" pec="<<_bin1.semi*(1.0-_bin1.ecc)
+             <<" bin2 semi="<<_bin2.semi
+             <<" ecc="<<_bin2.ecc
+             <<" m1="<<_bin2.m1
+             <<" m2="<<_bin2.m2
+             <<" period="<<_bin2.peri
+             <<" apo="<<_bin2.semi*(1.0+_bin2.ecc)
+             <<" pec="<<_bin2.semi*(1.0-_bin2.ecc)
              <<std::endl;
 #endif
     // hyperbolic outer orbit
@@ -928,7 +961,7 @@ bool stab4check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin1, PtclTree<Tptcl> 
         _bout.tstep=-1.0;
         _bout.stable_factor=-1;
 #ifdef STABLE_CHECK_DEBUG
-        std::cerr<<"Unstable, Outer body hyperbolic, semi_out: "<<_bout.semi<<std::endl;
+        std::cerr<<"STAB4 reject: Unstable, Outer body hyperbolic, semi_out: "<<_bout.semi<<std::endl;
 #endif
         return false;
     }
@@ -945,7 +978,7 @@ bool stab4check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin1, PtclTree<Tptcl> 
         _bout.tstep=-1.0;
         _bout.stable_factor=-1;
 #ifdef STABLE_CHECK_DEBUG
-        std::cerr<<"Too large outer orbit, pec_out: "<<pec_out<<std::endl;
+        std::cerr<<"STAB4 reject: Unstable, Too large outer orbit, pec_out: "<<pec_out<<std::endl;
 #endif
         return false;
     } 
@@ -959,7 +992,7 @@ bool stab4check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin1, PtclTree<Tptcl> 
         _bout.tstep=-1.0;
         _bout.stable_factor=-1;
 #ifdef STABLE_CHECK_DEBUG
-        std::cerr<<"Too large period ratio, pec_out: "<<pec_out<<std::endl;
+        std::cerr<<"STAB4 reject: Too large period ratio, acc_out/acc_in: "<<acc_out/acc_in_max<<" period_out: "<<_bout.peri<<std::endl;
 #endif
         return false;
     }
@@ -973,6 +1006,9 @@ bool stab4check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin1, PtclTree<Tptcl> 
     if(stab3_1>0.8||stab3_2>0.8) {
         // Unstable case
         _bout.stable_factor = -std::max(stab3_1,stab3_2);
+#ifdef STABLE_CHECK_DEBUG
+        std::cerr<<"STAB4 accept: Unstable, stab3_1:"<<stab3_1<<" stab3_2:"<<stab3_2<<std::endl;
+#endif
     }
     else {
         // stable case
@@ -980,8 +1016,17 @@ bool stab4check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin1, PtclTree<Tptcl> 
         _bout.stable_factor = fpert_ratio;
         // for unperturbed and large period case, stable_factor=-1 to switch off slowdown
         if(fpert_ratio<1e-6) {
-            if(_bout.peri>0.125*_dt_tree) _bout.stable_factor = -1.0;
+            if(_bout.peri>0.125*_dt_tree) {
+                _bout.stable_factor = -1.0;
+#ifdef STABLE_CHECK_DEBUG
+                std::cerr<<"STAB4 accept: Unstable, large period, period_out:"<<_bout.peri<<std::endl;
+#endif
+            }
         }
+#ifdef STABLE_CHECK_DEBUG
+        if(_bout.stable_factor>0) 
+            std::cerr<<"STAB4 accept: Stable, fpert_ratio:"<<fpert_ratio<<" stab3_1"<<stab3_1<<" stab3_2"<<stab3_2<<std::endl;
+#endif
     }
     _bout.tstep = std::min(_bin1.tstep,_bin2.tstep);
     return true;

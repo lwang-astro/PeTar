@@ -1686,6 +1686,9 @@ private:
 public:
     PS::ReallocatableArray<Binary> bininfo;
     //PS::ReallocatableArray<PS::F64> dt;
+#ifdef ARC_DEBUG_DUMP
+    PS::S32 step_count_limit;
+#endif
 
     ARCIntegrator() {};
     ARCIntegrator(ARControl &contr, ARC_int_pars &par): ARC_control_(&contr), Int_pars_(&par) {}
@@ -1949,9 +1952,9 @@ public:
 #endif
         
 #ifdef ARC_DEBUG_DUMP
-        if(stepcount<0) {
+        if(stepcount<0||stepcount>step_count_limit) {
             dump("ARC_dump.dat",ic,time_end,ds_use);
-            std::cerr<<"ic = "<<ic<<" N = "<<c->getN()<<" Np = "<<pert_n_[ic]<<std::endl;
+            std::cerr<<"ic = "<<ic<<" N = "<<c->getN()<<" Np = "<<pert_n_[ic]<<" stepcount = "<<stepcount<<std::endl;
             abort();
         }
 #endif
