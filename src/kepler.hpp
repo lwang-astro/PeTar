@@ -784,10 +784,10 @@ bool stab2check(PtclTree<Tptcl> &_bin, const PS::F64 _rbin, const PS::F64 _rcrit
 /*             return     tstep   stable_factor            case
    Unstable:    false     -1         -1                  hyperbolic outer orbit
                 false     -1         -1                  peri-center outer > r_out
-                false     -1         -1                  acceleration ratio >1e4 and outer period >1e-4 dt_tree
-                true      inner      -stab3               stab3 >1
+                true      inner      -stab3              stab3 >1
     stable:     true      inner      -1                  stab3 <1 & unpert & outer period > 1/8 dt_tree
-                true      inner      fpert/(outer max)   other stab3>0 cases
+                false     -1         -1                   --      & acceleration ratio(out/in) <1e-6 and outer period >1e-4 dt_tree
+                true      inner      fpert/(outer max)    --      & other cases
    @param[in] _bout: outer orbit parameter
    @param[in] _bin: inner orbit parameter
    @param[in] _rbin: binary radius criterion from input
@@ -837,17 +837,6 @@ bool stab3check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin, const PS::F64 _rb
 #endif
         return false;
     } 
-    // for large period ratio (acceleration ratio > 1.0e4), avoid triple system in ARC
-    PS::F64 acc_out = _bout.mass/(pec_out*pec_out);
-    PS::F64 acc_in  = _bin.mass/(apo_in*apo_in);
-    if (acc_out>1.0e4* acc_in && _bout.peri >1.0e-4*_dt_tree) {
-        _bout.tstep=-1.0;
-        _bout.stable_factor=-1;
-#ifdef STABLE_CHECK_DEBUG
-        std::cerr<<"STAB3 reject: Too large period ratio, acc_out/acc_in: "<<acc_out/acc_in<<" period_out: "<<_bout.peri<<std::endl;
-#endif
-        return false;
-    }
         
     // stability check
     // inclination between inner and outer orbit
@@ -857,10 +846,22 @@ bool stab3check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin, const PS::F64 _rb
         // Unstable case
         _bout.stable_factor = -stab3;
 #ifdef STABLE_CHECK_DEBUG
-        std::cerr<<"STAB3 accept: Unstable, stab3:"<<stab3<<std::endl;
+        std::cerr<<"STAB3 accept: Unstable, stab3: "<<stab3<<std::endl;
 #endif
     }
     else {
+        // for large period ratio (acceleration ratio < 1.0e-6), avoid triple system in ARC
+        PS::F64 acc_out = _bout.mass/(pec_out*pec_out);
+        PS::F64 acc_in  = _bin.mass/(apo_in*apo_in);
+        if (acc_out<1.0e-6* acc_in && _bout.peri >1.0e-4*_dt_tree) {
+            _bout.tstep=-1.0;
+            _bout.stable_factor=-1;
+#ifdef STABLE_CHECK_DEBUG
+            std::cerr<<"STAB3 reject: Too large period ratio, acc_out/acc_in: "<<acc_out/acc_in<<" period_out: "<<_bout.peri<<std::endl;
+#endif
+            return false;
+        }
+
         // stable case
         PS::F64 fpert_ratio = _bout.fpert*(apo_out*apo_out)/_bout.mass;
         _bout.stable_factor = fpert_ratio;
@@ -869,13 +870,13 @@ bool stab3check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin, const PS::F64 _rb
             if(_bout.peri>0.125*_dt_tree) {
                 _bout.stable_factor = -1.0;
 #ifdef STABLE_CHECK_DEBUG
-                std::cerr<<"STAB3 accept: Unstable, large period, period_out:"<<_bout.peri<<std::endl;
+                std::cerr<<"STAB3 accept: Unstable, large period, period_out: "<<_bout.peri<<std::endl;
 #endif
             }
         }
 #ifdef STABLE_CHECK_DEBUG
         if(_bout.stable_factor>0) 
-            std::cerr<<"STAB3 accept: Stable, fpert_ratio:"<<fpert_ratio<<" stab3:"<<stab3<<std::endl;
+            std::cerr<<"STAB3 accept: Stable, fpert_ratio: "<<fpert_ratio<<" stab3: "<<stab3<<" acc_out/acc_in: "<<acc_out/acc_in<<std::endl;
 #endif
     }
     _bout.tstep = _bin.tstep;
@@ -918,10 +919,10 @@ bool stab3check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin, const PS::F64 _rb
 /*             return     tstep   stable_factor      case
    Unstable:    false     -1         -1          hyperbolic outer orbit
                 false     -1         -1          peri-center outer > r_out
-                false     -1         -1          acceleration ratio >1e4 and outer period >1e-4 dt_tree
                 true      inner      -stab3_max  stab3_1 >0.8 || stab3_2 > 0.8
     stable:     true      inner      -1          stab3_1 <=0.8 & stab3_2 <=0.8 & unpert & outer period > 1/8 dt_tree
-                true      inner      fpert/(m_out/apo_out^2)   other stab3_1<=0.8 & stab3_2<=0.8  cases
+                false     -1         -1                                    --  & acceleration ratio(out/in) <1e-6 and outer period >1e-4 dt_tree
+                true      inner      fpert/(m_out/apo_out^2)               --  & other cases
    @param[in] _bout: outer orbit parameter
    @param[in] _bin1: first inner orbit parameter
    @param[in] _bin2: second inner orbit parameter
@@ -983,20 +984,6 @@ bool stab4check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin1, PtclTree<Tptcl> 
         return false;
     } 
     
-    // for large period ratio (acceleration ratio > 1.0e4), avoid quad system in ARC
-    PS::F64 acc_out = _bout.mass/(pec_out*pec_out);
-    PS::F64 acc_in1  = _bin1.mass/(apo_in1*apo_in1);
-    PS::F64 acc_in2  = _bin2.mass/(apo_in2*apo_in2);
-    PS::F64 acc_in_max = std::max(acc_in1, acc_in2);
-    if (acc_out>1.0e4* acc_in_max && _bout.peri >1.0e-4*_dt_tree) {
-        _bout.tstep=-1.0;
-        _bout.stable_factor=-1;
-#ifdef STABLE_CHECK_DEBUG
-        std::cerr<<"STAB4 reject: Too large period ratio, acc_out/acc_in: "<<acc_out/acc_in_max<<" period_out: "<<_bout.peri<<std::endl;
-#endif
-        return false;
-    }
-
     // stability check
     // inclination between inner and outer orbit
     PS::F64 incl1=std::acos(std::min(1.0, _bout.am*_bin1.am/std::sqrt((_bout.am*_bout.am)*(_bin1.am*_bin1.am))));
@@ -1007,10 +994,24 @@ bool stab4check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin1, PtclTree<Tptcl> 
         // Unstable case
         _bout.stable_factor = -std::max(stab3_1,stab3_2);
 #ifdef STABLE_CHECK_DEBUG
-        std::cerr<<"STAB4 accept: Unstable, stab3_1:"<<stab3_1<<" stab3_2:"<<stab3_2<<std::endl;
+        std::cerr<<"STAB4 accept: Unstable, stab3_1: "<<stab3_1<<" stab3_2: "<<stab3_2<<std::endl;
 #endif
     }
     else {
+        // for large period ratio (acceleration ratio < 1.0e-6), avoid quad system in ARC
+        PS::F64 acc_out = _bout.mass/(pec_out*pec_out);
+        PS::F64 acc_in1  = _bin1.mass/(apo_in1*apo_in1);
+        PS::F64 acc_in2  = _bin2.mass/(apo_in2*apo_in2);
+        PS::F64 acc_in_max = std::max(acc_in1, acc_in2);
+        if (acc_out<1.0e-6* acc_in_max && _bout.peri >1.0e-4*_dt_tree) {
+            _bout.tstep=-1.0;
+            _bout.stable_factor=-1;
+#ifdef STABLE_CHECK_DEBUG
+            std::cerr<<"STAB4 reject: Too large period ratio, acc_out/acc_in: "<<acc_out/acc_in_max<<" period_out: "<<_bout.peri<<std::endl;
+#endif
+            return false;
+        }
+
         // stable case
         PS::F64 fpert_ratio = _bout.fpert*(apo_out*apo_out)/_bout.mass;
         _bout.stable_factor = fpert_ratio;
@@ -1019,13 +1020,13 @@ bool stab4check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin1, PtclTree<Tptcl> 
             if(_bout.peri>0.125*_dt_tree) {
                 _bout.stable_factor = -1.0;
 #ifdef STABLE_CHECK_DEBUG
-                std::cerr<<"STAB4 accept: Unstable, large period, period_out:"<<_bout.peri<<std::endl;
+                std::cerr<<"STAB4 accept: Unstable, large period, period_out: "<<_bout.peri<<std::endl;
 #endif
             }
         }
 #ifdef STABLE_CHECK_DEBUG
         if(_bout.stable_factor>0) 
-            std::cerr<<"STAB4 accept: Stable, fpert_ratio:"<<fpert_ratio<<" stab3_1"<<stab3_1<<" stab3_2"<<stab3_2<<std::endl;
+            std::cerr<<"STAB4 accept: Stable, fpert_ratio: "<<fpert_ratio<<" stab3_1: "<<stab3_1<<" stab3_2: "<<stab3_2<<" acc_out/acc_in: "<<acc_out/acc_in_max<<std::endl;
 #endif
     }
     _bout.tstep = std::min(_bin1.tstep,_bin2.tstep);

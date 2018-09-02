@@ -240,7 +240,7 @@ public:
     PS::F64vec acc1;
     PS::F64 dt;
     PS::F64 time;
-#ifdef HARD_DEBUG
+#ifdef HARD_DEBUG_PRINT
     PS::F64vec acc2; // for debug
     PS::F64vec acc3; // for debug
 #endif
@@ -767,8 +767,10 @@ private:
 #ifdef HARD_DEBUG
             // for debug
             assert(dt_old != 0.0);
+#ifdef HARD_DEBUG_PRINT
             pti->acc2 = acc2;
             pti->acc3 = acc3;
+#endif
 #endif
             pti->dt = dt_max;
 
@@ -787,7 +789,7 @@ private:
             if(pti->dt <dt_min) {
                 std::cerr<<"Error: Hermite integrator step size ("<<pti->dt<<") < dt_min ("<<dt_min<<")!"<<std::endl;
                 std::cerr<<" pti->time="<<pti->time<<" i="<<i<<" adr="<<adr<<" pos="<<pti->pos<<" vel="<<pti->vel<<" acc="<<pti->acc0<<" acc1="<<pti->acc1
-#ifdef HARD_DEBUG
+#ifdef HARD_DEBUG_PRINT
                          <<" acc2="<<pti->acc2
                          <<" acc3="<<pti->acc3
 #endif
@@ -1686,7 +1688,7 @@ private:
 public:
     PS::ReallocatableArray<Binary> bininfo;
     //PS::ReallocatableArray<PS::F64> dt;
-#ifdef ARC_DEBUG_DUMP
+#ifdef ARC_SYM
     PS::S32 step_count_limit;
 #endif
 
@@ -1941,7 +1943,7 @@ public:
             if(korg<1.0) ds_use *= std::max(0.1,korg);
         }
 
-        PS::S64 stepcount = c->Symplectic_integration_tsyn(ds_use, *ARC_control_, time_end, par, &pert_[ipert], &pforce_[ipert], pert_n_[ic],fix_step_flag);
+        PS::S64 stepcount = c->Symplectic_integration_tsyn(ds_use, *ARC_control_, time_end, par, &pert_[ipert], &pforce_[ipert], pert_n_[ic],fix_step_flag,step_count_limit);
 
 #ifdef ARC_WARN
         if(c->info!=NULL) {
@@ -1952,7 +1954,7 @@ public:
 #endif
         
 #ifdef ARC_DEBUG_DUMP
-        if(stepcount<0||stepcount>step_count_limit) {
+        if(stepcount<0) {
             dump("ARC_dump.dat",ic,time_end,ds_use);
             std::cerr<<"ic = "<<ic<<" N = "<<c->getN()<<" Np = "<<pert_n_[ic]<<" stepcount = "<<stepcount<<std::endl;
             abort();

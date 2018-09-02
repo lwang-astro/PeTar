@@ -145,7 +145,7 @@ int main(int argc, char *argv[]){
 #ifdef HARD_CHECK_ENERGY
     IOParams<PS::F64> e_err_hard   (input_par_store, 1e-4, "Maximum energy error allown for hard integrator");
 #endif
-#if defined(ARC_DEBUG_DUMP) && defined(ARC_SYM)
+#ifdef ARC_SYM
     IOParams<PS::S32> step_limit_arc(input_par_store, 1000000, "Maximum step allown for ARC sym integrator");
 #endif
     IOParams<PS::F64> eps          (input_par_store, 0.0,  "Softerning eps");
@@ -179,7 +179,7 @@ int main(int argc, char *argv[]){
 #ifdef HARD_CHECK_ENERGY
         {"energy-err-hard", required_argument, 0, 0},   //13
 #endif
-#if defined(ARC_DEBUG_DUMP) && defined(ARC_SYM)
+#ifdef ARC_SYM
         {"step-limit-arc", required_argument, 0, 0},    //14
 #endif
         {0,0,0,0}
@@ -259,7 +259,7 @@ int main(int argc, char *argv[]){
                 if(my_rank == 0) e_err_hard.print(std::cout);
                 break;
 #endif
-#if defined(ARC_DEBUG_DUMP) && defined(ARC_SYM)
+#ifdef ARC_SYM
             case 14:
                 step_limit_arc.value = atoi(optarg);
                 if(my_rank == 0) step_limit_arc.print(std::cout);
@@ -405,7 +405,7 @@ int main(int argc, char *argv[]){
 #ifdef HARD_CHECK_ENERGY
                 std::cout<<"        --energy-err-hard: [F] "<<e_err_hard<<std::endl;
 #endif
-#if defined(ARC_DEBUG_DUMP) && defined(ARC_SYM)
+#ifdef ARC_SYM
                 std::cout<<"        --step-limit-arc:  [F] "<<step_limit_arc<<std::endl;
 #endif
                 std::cout<<"        --slowdown-factor: [F] "<<sd_factor<<std::endl;
@@ -617,7 +617,7 @@ int main(int argc, char *argv[]){
     system_hard_isolated.hard_dE_limit = e_err_hard.value;
     system_hard_connected.hard_dE_limit = e_err_hard.value;
 #endif
-#if defined(ARC_DEBUG_DUMP) && defined(ARC_SYM)
+#ifdef ARC_SYM
     // Set step limit for ARC sym
     system_hard_isolated.arc_step_count_limit = step_limit_arc.value;
     system_hard_connected.arc_step_count_limit = step_limit_arc.value;

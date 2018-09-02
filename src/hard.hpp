@@ -123,7 +123,7 @@ public:
     PS::F64 hard_dE, hard_dESD;
     PS::F64 hard_dE_limit;
 #endif
-#ifdef ARC_DEBUG_DUMP
+#ifdef ARC_SYM
     PS::S32 arc_step_count_limit;
 #endif
 
@@ -953,7 +953,7 @@ private:
                 PS::S32 iact = 0;
 
                 ARCIntegrator<Ptcl, PtclH4, PtclForce> Aint(ARC_control_soft_, Int_pars_);
-#ifdef ARC_DEBUG_DUMP
+#ifdef ARC_SYM
                 Aint.step_count_limit = arc_step_count_limit;
 #endif
                 Aint.reserveARMem(1);
@@ -1069,7 +1069,7 @@ private:
             
                 // Initial Aint
                 ARCIntegrator<Ptcl, PtclH4, PtclForce> Aint(ARC_control_pert_, Int_pars_);
-#ifdef ARC_DEBUG_DUMP
+#ifdef ARC_SYM
                 Aint.step_count_limit = arc_step_count_limit;
 #endif
                 Aint.reserveARMem(_n_group);
@@ -2096,7 +2096,7 @@ public:
         PtclHardDump(fp, ptcl_bk, n_ptcl);
         fwrite(&n_arti, sizeof(PS::S32),1,fp);
         fwrite(&n_group, sizeof(PS::S32), 1, fp);
-        for (int i=0; i<n_arti; i++) ptcl_arti_bk->writeBinary(fp);
+        for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].writeBinary(fp);
         pardump(fp);
         fclose(fp);
     }
@@ -2112,11 +2112,11 @@ public:
         ARC_control_pert_.read(fp);
         ARC_control_soft_.read(fp);
 #ifdef HARD_DEBUG_DEEP_CHECK
-        ARC_control_pert_.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_test<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
-        ARC_control_soft_.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_test<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+        ARC_control_pert_.setA(Newtonian_AW<Ptcl,ARC_pert_pars>,Newtonian_extA_test<Ptcl,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+        ARC_control_soft_.setA(Newtonian_AW<Ptcl,ARC_pert_pars>,Newtonian_extA_test<Ptcl,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
 #else
-        ARC_control_pert_.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_pert<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
-        ARC_control_soft_.setA(Newtonian_AW<PtclHard,ARC_pert_pars>,Newtonian_extA_soft<PtclHard,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+        ARC_control_pert_.setA(Newtonian_AW<Ptcl,ARC_pert_pars>,Newtonian_extA_pert<Ptcl,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+        ARC_control_soft_.setA(Newtonian_AW<Ptcl,ARC_pert_pars>,Newtonian_extA_soft<Ptcl,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
 #endif
 #ifdef HARD_DEBUG_PRINT
         std::cerr<<"Parameters:"
