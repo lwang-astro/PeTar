@@ -1061,6 +1061,7 @@ private:
 #ifdef HARD_DEBUG
 #ifdef HARD_DEBUG_PRINT
                 std::cerr<<"Hard: mix, n="<<_n_ptcl<<" n_group= "<<_n_group<<std::endl;
+                for(int i=0; i<_n_group; i++) std::cerr<<"i_group= "<<i<<" n_members= "<<gpars[i].n_members<<std::endl;
 #endif
                 assert(n_hint<ARRAY_ALLOW_LIMIT);
 #endif        
@@ -1157,6 +1158,10 @@ private:
                     }
                     //Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
                     Hint.SortAndSelectIp();
+
+#ifdef HARD_DEBUG_PRINT
+                    fprintf(stderr,"Time = %g, dt = %g, nstep_ARC = %d \n",time_sys, dt_h, nstepcount);
+#endif
                 }
         
                 Hint.moveCM(_time_end);

@@ -240,7 +240,7 @@ public:
     PS::F64vec acc1;
     PS::F64 dt;
     PS::F64 time;
-#ifdef HARD_DEBUG_PRINT
+#ifdef HARD_DEBUG_ACC
     PS::F64vec acc2; // for debug
     PS::F64vec acc3; // for debug
 #endif
@@ -767,7 +767,7 @@ private:
 #ifdef HARD_DEBUG
             // for debug
             assert(dt_old != 0.0);
-#ifdef HARD_DEBUG_PRINT
+#ifdef HARD_DEBUG_ACC
             pti->acc2 = acc2;
             pti->acc3 = acc3;
 #endif
@@ -789,7 +789,7 @@ private:
             if(pti->dt <dt_min) {
                 std::cerr<<"Error: Hermite integrator step size ("<<pti->dt<<") < dt_min ("<<dt_min<<")!"<<std::endl;
                 std::cerr<<" pti->time="<<pti->time<<" i="<<i<<" adr="<<adr<<" pos="<<pti->pos<<" vel="<<pti->vel<<" acc="<<pti->acc0<<" acc1="<<pti->acc1
-#ifdef HARD_DEBUG_PRINT
+#ifdef HARD_DEBUG_ACC
                          <<" acc2="<<pti->acc2
                          <<" acc3="<<pti->acc3
 #endif
