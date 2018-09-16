@@ -261,7 +261,6 @@ public:
             abort();
         }
     }
-
 };
 
 class PtclPred{
@@ -991,6 +990,14 @@ public:
     PS::S32 getPtclN() const {
         return ptcl_.size();
     }
+
+#ifdef HARD_DEBUG_PRINT
+    void writePtcl(FILE* _fout, const PS::S32 _i_start) const{
+        for (PS::S32 i=_i_start; i<ptcl_.size(); i++) {
+            ptcl_[i].ParticleBase::writeAscii(_fout);
+        }
+    }
+#endif
 
     void setParams(//const PS::F64 dt_limit_hard,  // time step limit
                    const PS::F64 eta_s,          // time step parameter
@@ -1832,14 +1839,14 @@ public:
                     fpertsq += dacc*dacc;
                 }
                 clist_[i].slowdown.updatefpertsq(fpertsq);
-                clist_[i].slowdown.updatekappa(0.0, tend);
+                clist_[i].slowdown.updatekappa(tend);
             }
         }
     }
 
     void updateSlowDown(const PS::F64 tend) {
         for (int i=0; i<clist_.size(); i++) {
-            clist_[i].slowdown.updatekappa(clist_[i].getTime(),tend);
+            clist_[i].slowdown.updatekappa(tend);
         }
     }
 
@@ -2126,6 +2133,17 @@ public:
         return clist_[i].slowdown.getkappa();
     }
 
+    //! Print slow down parameters
+    /*! Print slow down parameters
+      @param[in] _os: ofstream for printing
+      @param[in] _i: Chain index
+      @param[in] _precision: printed precision for one variable
+      @param[in] _width: printing width for one variable
+     */
+    void printSlowDown(std::ostream& _os, const PS::S32 _i, const int _precision=15, const int _width=23) {
+        clist_[_i].slowdown.print(_os,_precision,_width);
+    }
+
 //#ifdef ARC_PROFILE
 //    const PS::S64 getNsubstep() const{
 //        PS::S64 Nsum = 0;
@@ -2211,5 +2229,21 @@ public:
         }
     }
 #endif                         
+
+#ifdef HARD_DEBUG_PRINT
+    template <class Tptcl>
+    void writePtcl(FILE* _fout) const{
+        for (int i=0; i<clist_.size(); i++) {
+            PS::F64vec pcm_pos = clist_[i].pos;
+            PS::F64vec pcm_vel = clist_[i].vel;
+            for (int j=0; j<clist_[i].getN(); j++) {
+                Tptcl pj = clist_[i].getP(j);
+                pj.pos += pcm_pos;
+                pj.vel += pcm_vel;
+                pj.ParticleBase::writeAscii(_fout);
+            }
+        }
+    }
+#endif
 
 };

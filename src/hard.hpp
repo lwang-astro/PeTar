@@ -1062,6 +1062,11 @@ private:
 #ifdef HARD_DEBUG_PRINT
                 std::cerr<<"Hard: mix, n="<<_n_ptcl<<" n_group= "<<_n_group<<std::endl;
                 for(int i=0; i<_n_group; i++) std::cerr<<"i_group= "<<i<<" n_members= "<<gpars[i].n_members<<std::endl;
+                std::FILE* fp = std::fopen("hard_debug_ptcl","w");
+                if (fp==NULL) {
+                    std::cerr<<"Error: file hard_debug_ptcl cannot be open!\n";
+                    abort();
+                }
 #endif
                 assert(n_hint<ARRAY_ALLOW_LIMIT);
 #endif        
@@ -1108,6 +1113,7 @@ private:
 #endif
 
                 bool fail_flag=Hint.initialize(dt_limit, dt_min_hard_, group_act_list.getPointer(), group_act_n, _n_group, &Aint);
+                Aint.updateSlowDown(Hint.getNextTime());
 
                 if(fail_flag) {
 #ifdef HARD_DEBUG_DUMP
@@ -1138,14 +1144,13 @@ private:
                     assert(time_sys>time_now);
 #endif
                     PS::F64 dt_h = time_sys-time_now;
-                    //Aint.updateSlowDown(time_sys);
+//                    Aint.updateSlowDown(time_sys);
 #ifdef HARD_CHECK_ENERGY
                     for(int k=0; k<_n_group; k++) {
                         slowdownrecord[k] = std::max(slowdownrecord[k], Aint.getSlowDown(k));
                         assert(Aint.getSlowDown(k)>=1.0);
                     }
 #endif
-                    //Aint.integrateOneStepList(group_act_list.getPointer(), group_act_n, time_sys, dt_limit);
                     nstepcount +=Aint.integrateOneStepList(time_sys, std::min(dt_limit,dt_h));
                     fail_flag = Hint.integrateOneStep(time_sys,dt_limit,dt_min_hard_,true,&Aint);
                 
@@ -1156,11 +1161,23 @@ private:
                         abort();
 #endif
                     }
-                    //Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, n_groups);
                     Hint.SortAndSelectIp();
 
 #ifdef HARD_DEBUG_PRINT
                     fprintf(stderr,"Time = %g, dt = %g, nstep_ARC = %d \n",time_sys, dt_h, nstepcount);
+                    fprintf(stderr,"Slowdown parameters:");
+                    for(int k=0; k<_n_group; k++) {
+                        std::cerr<<"Aint k="<<k<<std::endl;
+                        Aint.printSlowDown(std::cerr,k);
+                    }
+                    // fprintf(stderr,"Slowdownfactor: ");
+                    // for(int k=0; k<_n_group; k++) fprintf(stderr,"%d: %f; ",k,Aint.getSlowDown(k));
+                    // fprintf(stderr,"\n");
+                    Hint.printStepHist();
+                    fprintf(fp,"%25.14e ",time_sys);
+                    Aint.writePtcl<Ptcl>(fp);
+                    Hint.writePtcl(fp,_n_group);
+                    fprintf(fp,"\n");
 #endif
                 }
         
@@ -1179,9 +1196,12 @@ private:
                 hard_dE += dEtot;
                 hard_dESD += ESD1.tot - ESD0.tot;
 #ifdef HARD_DEBUG_PRINT
-                fprintf(stderr,"Slowdown factor = ");
-                for(int k=0; k<_n_group; k++) 
-                    fprintf(stderr,"%e; ",slowdownrecord[k]);
+                fclose(fp);
+                fprintf(stderr,"Slowdown parameters:");
+                for(int k=0; k<_n_group; k++) {
+                    std::cerr<<"Aint k="<<k<<std::endl;
+                    Aint.printSlowDown(std::cerr,k);
+                }
                 fprintf(stderr,"\n");
                 fprintf(stderr,"H4  Energy: init =%e, end =%e, diff =%e, kini =%e kinf =%e poti =%e potf =%e\nARC Energy: init =%e, end =%e, diff =%e, error = %e\nTot Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e, Tot-H4-ARC =%e\nTSD Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e\n", 
                         HE0.tot, HE1.tot, HE1.tot-HE0.tot, HE0.kin, HE1.kin, HE0.pot, HE1.pot, 
