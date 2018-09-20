@@ -1810,13 +1810,19 @@ public:
         //clist_.back().init(0.0, *ARC_control_, &(par_list_.back()));
     }
 
-    void initialSlowDown(const PS::F64 tend, const PS::F64 sdfactor = 1.0e-8) {
+    //! Set initial slowdown parameter
+    /*! 
+        @param[in] _tend: ending physical time for integration
+        @param[in] _sdfactor: slowdown criterion factor
+        @param[in] _tp_factor: if minimum factor of integration time interval / (kappa * period).
+    */
+    void initialSlowDown(const PS::F64 _tend, const PS::F64 _sdfactor = 1.0e-8, const PS::F64 _tp_factor = 0.01) {
         for (int i=0; i<clist_.size(); i++) {
             if (bininfo[i].semi>0&&bininfo[i].stable_factor>=0) {
                 PS::F64 finner = bininfo[i].semi*(1.0+bininfo[i].ecc);
                 finner = clist_[i].mass/(finner*finner);
                 finner = finner*finner;
-                clist_[i].slowdown.setSlowDownPars(finner, bininfo[i].peri, sdfactor);
+                clist_[i].slowdown.setSlowDownPars(finner, bininfo[i].peri, _sdfactor);
                 TpARC p[2];
                 OrbParam2PosVel(p[0].pos, p[1].pos, p[0].vel, p[1].vel, bininfo[i].m1, bininfo[i].m2, bininfo[i].semi, bininfo[i].ecc, bininfo[i].inc, bininfo[i].OMG, bininfo[i].omg, PI);
                 p[0].mass = bininfo[i].m1;
@@ -1839,7 +1845,7 @@ public:
                     fpertsq += dacc*dacc;
                 }
                 clist_[i].slowdown.updatefpertsq(fpertsq);
-                clist_[i].slowdown.updatekappa(tend);
+                clist_[i].slowdown.updatekappa(_tend, _tp_factor);
             }
         }
     }

@@ -971,7 +971,7 @@ private:
                 Aint.addOneGroup(_ptcl_local, gpars[0].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_);
                 Aint.updateCM(&pcm, &iact, 1);
 
-                Aint.initialSlowDown(_time_end, sdfactor_);
+                Aint.initialSlowDown(_time_end, sdfactor_, 1.0);
                 Aint.initial();
 
 #ifdef ARC_SYM_SD_PERIOD
