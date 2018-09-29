@@ -300,9 +300,9 @@ private:
     PS::ReallocatableArray<PS::F64> time_next_;
 
     PS::ReallocatableArray<PtclH4> ptcl_;   // first c.m.; second single
-    PS::ReallocatableArray<PS::S32> Jlist_;
-    PS::ReallocatableArray<PS::S32> Jlist_disp_;
-    PS::ReallocatableArray<PS::S32> Jlist_n_;
+    PS::ReallocatableArray<PS::S32> Jlist_; // neighbor list 
+    PS::ReallocatableArray<PS::S32> Jlist_disp_; // neighbor list offset 
+    PS::ReallocatableArray<PS::S32> Jlist_n_;    // number of neighbors
 
     ParticleBase pcm_; // c.m. of the cluster
 
@@ -436,19 +436,19 @@ private:
     }
 
     template <class Tptcl, class ARCint>
-    inline void CalcAcc0Acc1Act(PtclForce force[],
-                         const Tptcl ptcl[],
-                         const PS::S32 Ilist[],
-                         const PS::S32 n_act,
-                         const PS::S32 Jlist[],
-                         const PS::S32 Jlist_disp[],
-                         const PS::S32 Jlist_n[],
-                         const PS::F64 rin,
-                         const PS::F64 rout,
-                         const PS::F64 r_oi_inv,
-                         const PS::F64 r_A,
-                         const PS::F64 eps2,
-                         const ARCint *Aint) {
+    inline void CalcAcc0Acc1ActNb(PtclForce force[],
+                                  const Tptcl ptcl[],
+                                  const PS::S32 Ilist[],
+                                  const PS::S32 n_act,
+                                  const PS::S32 Jlist[],
+                                  const PS::S32 Jlist_disp[],
+                                  const PS::S32 Jlist_n[],
+                                  const PS::F64 rin,
+                                  const PS::F64 rout,
+                                  const PS::F64 r_oi_inv,
+                                  const PS::F64 r_A,
+                                  const PS::F64 eps2,
+                                  const ARCint *Aint=NULL) {
         PS::S32 nbin = 0;
         if (Aint!=NULL) nbin = Aint->getN();
         // PS::ReallocatableArray< std::pair<PS::S32, PS::S32> > & merge_pair ){
@@ -501,7 +501,7 @@ private:
 
     template <class Tpi, class Tptcl, class ARCint>
     inline void CalcAcc0Acc1AllJ(PtclForce &force, 
-//                                 PS::F64 r2min[],
+                                 bool nb_flag[],
                                  const Tpi &pi,
                                  const PS::S32 iadr,
                                  const PS::F64vec &vcmsdi,
@@ -533,7 +533,8 @@ private:
 #ifdef HARD_DEBUG
                 mcmcheck += pj[k].mass;
 #endif
-//                r2min[j] = std::min(r2,r2min[j]);
+                PS::F64 rs=std::max(pi.r_search,pj[k].r_search);
+                if(r2<=rs*rs) nb_flag[j] = true;
             }
 #ifdef HARD_DEBUG
             assert(abs(mcmcheck-ptcl[j].mass)<1e-10);
@@ -551,13 +552,17 @@ private:
                 // if(r2 < ((ptcl[adr].r_merge + ptcl[j].r_merge)*(ptcl[adr].r_merge + ptcl[j].r_merge)) && ptcl[j].mass > 0.0){
                 //     merge_pair.push_back( std::make_pair(adr, j) );
                 // }
-//            r2min[j] = std::min(r2,r2min[j]);
+            PS::F64 rs=std::max(pi.r_search,ptcl[j].r_search);
+            if(r2<=rs*rs) nb_flag[j] = true;
         }
         
     }
 
     //! Calculate acc and jerk for active particles from all particles
     /* @param[out] _force: acc and jerk array for output
+       @param[out] _Jlist: New neighbor list for each i particle
+       @param[out] _Jlist_n: New number of neighbors for each i particle
+       @param[in] _Jlist_disp: Neighbor list offset for each i particle
        @param[in] _ptcl: particle list
        @param[in] _n_tot: total number of particles
        @param[in] _Ilist: active i particle index in ptcl_
@@ -570,23 +575,20 @@ private:
        @param[in] _Aint: ARC integrator class
      */
     template <class Tptcl, class ARCint>
-    void CalcAcc0Acc1Act(PtclForce _force[],
-                         const Tptcl _ptcl[],
-                         const PS::S32 _n_tot,
-                         const PS::S32 _Ilist[],
-                         const PS::S32 _n_act,
-                         const PS::F64 _rin,
-                         const PS::F64 _rout,
-                         const PS::F64 _r_oi_inv,
-                         const PS::F64 _r_A,
-                         const PS::F64 _eps2,
-                         const ARCint* _Aint=NULL) {
-        // group number
-//        PS::S32 ngroup = 0;
-//        if (_Aint!=NULL) {
-//            ngroup = _Aint->getN();
-//            _Aint.resetPert();
-//        }
+    void CalcAcc0Acc1ActFull(PtclForce _force[],
+                             PS::S32 _Jlist[],
+                             PS::S32 _Jlist_n[],
+                             const PS::S32 _Jlist_disp[],
+                             const Tptcl _ptcl[],
+                             const PS::S32 _n_tot,
+                             const PS::S32 _Ilist[],
+                             const PS::S32 _n_act,
+                             const PS::F64 _rin,
+                             const PS::F64 _rout,
+                             const PS::F64 _r_oi_inv,
+                             const PS::F64 _r_A,
+                             const PS::F64 _eps2,
+                             const ARCint* _Aint=NULL) {
         PS::S32 ngroup=0;
         if (_Aint!=NULL) ngroup = _Aint->getN();
         const PS::F64vec vzero = PS::F64vec(0.0);
@@ -596,6 +598,7 @@ private:
         for(PS::S32 i=0; i<_n_act; i++){
             const PS::S32 iadr = _Ilist[i];
             _force[iadr].acc0 = _force[iadr].acc1 = 0.0;
+            bool nb_flag[_n_tot]={false}; // Neighbor flag for i particle
             
             // for group particle
             if (iadr<ngroup) {
@@ -608,9 +611,10 @@ private:
                 const PS::F64vec vcmsdi = (1.0-sdi)*_ptcl[iadr].vel;   // slowdown velocity
                 PtclForce fp[ni];
 //                PS::F64 r2min[_n_tot]={PS::LARGE_FLOAT};
+
                 for (PS::S32 j=0; j<ni; j++) {
                     fp[j].acc0 = fp[j].acc1 = 0.0;
-                    CalcAcc0Acc1AllJ(fp[j], pi[j], iadr, vcmsdi, sdi, _ptcl, _n_tot, ngroup, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
+                    CalcAcc0Acc1AllJ(fp[j], nb_flag, pi[j], iadr, vcmsdi, sdi, _ptcl, _n_tot, ngroup, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
                     // c.m. force
                     _force[iadr].acc0 += pi[j].mass*fp[j].acc0;
                     _force[iadr].acc1 += pi[j].mass*fp[j].acc1;
@@ -619,6 +623,7 @@ private:
                     mcmcheck += pi[j].mass;
 #endif
                 }
+
 #ifdef HARD_DEBUG
                 assert(abs(mcmcheck-_ptcl[iadr].mass)<1e-10);
                 assert(mcmcheck>0.0);
@@ -638,8 +643,20 @@ private:
             }
             else {
 //                PS::F64 r2[_n_tot];
-                CalcAcc0Acc1AllJ(_force[iadr], _ptcl[iadr], iadr, vzero, 1.0, _ptcl, _n_tot, ngroup, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
+                CalcAcc0Acc1AllJ(_force[iadr], nb_flag, _ptcl[iadr], iadr, vzero, 1.0, _ptcl, _n_tot, ngroup, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
             }
+
+            // Update neighbors
+            PS::S32 nb_disp = _Jlist_disp[iadr];
+            PS::S32 nb=0;
+            for (PS::S32 j=0; j<_n_tot; j++) {
+                if(nb_flag[j]) _Jlist[nb_disp+nb++] = j;
+            }
+            _Jlist_n[iadr] = nb;
+#ifdef HARD_DEBUG
+            assert(nb_flag[iadr]==false);
+            assert(nb<=_n_tot);
+#endif
         }
     }
     
@@ -851,6 +868,7 @@ public:
 
     void resizeArray(const PS::S32 n) {
         ptcl_.reserve(n);
+        Jlist_.reserve(n*n);
         Jlist_disp_.reserve(n);
         Jlist_n_.reserve(n);
         pred_.reserve(n);
@@ -908,10 +926,11 @@ public:
     }
 
     //! Write back particle data to original array
-    /* @param[out] _ptcl: original particle data array
-       @param[in] _n_ptcl: number of particles need for copy
-       @param[in] _i_start: particle address in _ptcl
-     */
+    /*!
+      @param[out] _ptcl: original particle data array
+      @param[in] _n_ptcl: number of particles need for copy
+      @param[in] _i_start: particle address in _ptcl
+    */
     template <class Tptcl>
     void writeBackPtcl(Tptcl * _ptcl, 
                  const PS::S32 _n_ptcl, 
@@ -924,47 +943,47 @@ public:
         }
     }
 
-    void searchPerturber(PS::F64 dr_search[], const PS::S32 nbin) {
-        // find perturber
+    //! Search perturber and neighbor
+    /*!
+      @param[in] _apo_bin: apo-center distance of binary 
+      @param[in] _n_bin: number of binaries (locate at begining of ptcl_)
+     */
+    void searchPerturber(PS::F64 _apo_bin[], const PS::S32 _n_bin) {
         PS::S32 n = ptcl_.size();
-        PS::S32 nj_tot = 0;
+        Jlist_disp_.resizeNoInitialize(n);
+        Jlist_n_.resizeNoInitialize(n);
+        Jlist_.resizeNoInitialize(n*n);
+        
+        // find perturber
         for(int i=0; i<n; i++) {
-#ifdef HARD_DEBUG
-            assert(Jlist_disp_.size()==i);
-            assert(Jlist_n_.size()==i);
-#endif
-            Jlist_disp_.pushBackNoCheck(nj_tot);
-            Jlist_n_.pushBackNoCheck(0);
-            for(int j=0; j<nbin; j++) {
+            PS::S32 disp=n*i;
+            PS::S32 n_pert=0;
+            for(int j=0; j<_n_bin; j++) {
                 PS::F64vec dr = ptcl_[i].pos-ptcl_[j].pos;
                 PS::F64 r2 = dr*dr;
-                PS::F64 r_search = std::max(ptcl_[i].r_search,ptcl_[j].r_search) + dr_search[j];
+                PS::F64 r_search = std::max(ptcl_[i].r_search,ptcl_[j].r_search) + _apo_bin[j];
                 PS::F64 r_search2 = r_search*r_search;
                 if (r2<r_search2&&i!=j) {
-                    Jlist_.push_back(j);
-                    Jlist_n_[i]++;
-                    nj_tot++;
+                    Jlist_[disp+n_pert]=j;
+                    n_pert++;
                 }
             }
-            for(int j=nbin; j<n; j++) {
+            for(int j=_n_bin; j<n; j++) {
                 PS::F64vec dr = ptcl_[i].pos-ptcl_[j].pos;
                 PS::F64 r2 = dr*dr;
                 PS::F64 r_search = std::max(ptcl_[i].r_search,ptcl_[j].r_search);
                 PS::F64 r_search2 = r_search*r_search;
                 if (r2<r_search2&&i!=j) {
-                    Jlist_.push_back(j);
-                    Jlist_n_[i]++;
-                    nj_tot++;
+                    Jlist_[disp+n_pert]=j;
+                    n_pert++;
                 }
             }
-        }
+            Jlist_disp_[i] = disp;
+            Jlist_n_[i] = n_pert;
 #ifdef HARD_DEBUG
-        for(int i=0; i<n-1; i++) {
-            assert(Jlist_n_[i]==Jlist_disp_[i+1]-Jlist_disp_[i]);
-            assert(Jlist_n_[i]<=n);
-        }
-        assert(Jlist_disp_[n-1]+Jlist_n_[n-1]==Jlist_.size());
+            assert(n_pert<=n);
 #endif
+        }
     }
 
     PS::S32* getPertList(const PS::S32 i) {
@@ -1058,8 +1077,21 @@ public:
             Aint->resolve();
         }
 
-        if(calc_full_flag) CalcAcc0Acc1Act(force_.getPointer(), ptcl_.getPointer(), ptcl_.size(), adr_sorted_.getPointer(), n_act_, r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, Aint);
-        else CalcAcc0Acc1Act(force_.getPointer(), ptcl_.getPointer(), adr_sorted_.getPointer(), n_act_, Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, Aint);
+        // force::acc0,acc1, neighbor list updated
+        if(calc_full_flag) 
+            CalcAcc0Acc1ActFull(force_.getPointer(), 
+                                Jlist_.getPointer(), Jlist_n_.getPointer(), 
+                                Jlist_disp_.getPointer(), 
+                                ptcl_.getPointer(), ptcl_.size(), 
+                                adr_sorted_.getPointer(), n_act_, 
+                                r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, 
+                                Aint);
+        // only neighbor force calculation
+        else CalcAcc0Acc1ActNb(force_.getPointer(), 
+                               ptcl_.getPointer(), 
+                               adr_sorted_.getPointer(), n_act_, 
+                               Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), 
+                               r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, Aint);
     
         // store predicted force
         for(PS::S32 i=0; i<n_ptcl; i++){
@@ -1089,6 +1121,18 @@ public:
         return time_next_[adr_sorted_[0]];
     }
 
+    //PS::F64* getNextTimeList() const {
+    //    return time_next_.getPointer();
+    //}
+    
+    PS::F64 getOneTime(const std::size_t i) const {
+        return ptcl_[i].time;
+    }
+
+    PS::F64 getOneDt(const std::size_t i) const {
+        return ptcl_[i].dt;
+    }
+
     /*
       \return If step size < dt_min, return true
      */
@@ -1100,22 +1144,40 @@ public:
                           ARCint* Aint = NULL) {
         // pred::mass,pos,vel updated
         PredictAll(pred_.getPointer(), ptcl_.getPointer(), ptcl_.size(), time_sys);
+        PS::S32 ngroup = 0;
         if(Aint!=NULL) {
             Aint->updateCM(pred_.getPointer());
             Aint->resolve();
+            ngroup = Aint->getN();
         }
-        // force::acc0,acc1 updated
-        if(calc_full_flag) CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), ptcl_.size(), adr_sorted_.getPointer(), n_act_, r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, Aint);
-        else CalcAcc0Acc1Act(force_.getPointer(), pred_.getPointer(), adr_sorted_.getPointer(), n_act_, Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, Aint);
+        // force::acc0,acc1, neighbor list updated
+        if(calc_full_flag) 
+            CalcAcc0Acc1ActFull(force_.getPointer(), 
+                                Jlist_.getPointer(), Jlist_n_.getPointer(), 
+                                Jlist_disp_.getPointer(), 
+                                pred_.getPointer(), ptcl_.size(), 
+                                adr_sorted_.getPointer(), n_act_, 
+                                r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, 
+                                Aint);
+        // only neighbor force calculation
+        else CalcAcc0Acc1ActNb(force_.getPointer(), 
+                               pred_.getPointer(), 
+                               adr_sorted_.getPointer(), n_act_, 
+                               Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), 
+                               r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, Aint);
+
         // ptcl_org::pos,vel; pred::time,dt,acc0,acc1,acc2,acc3 updated
         bool fail_flag=CorrectAndCalcDt4thAct(ptcl_.getPointer(), force_.getPointer(), adr_sorted_.getPointer(), n_act_, dt_max, dt_min, a0_offset_sq_, eta_s_);
 
         for(PS::S32 i=0; i<n_act_; i++){
             PS::S32 adr = adr_sorted_[i];
             time_next_[adr] = ptcl_[adr].time + ptcl_[adr].dt;
+            // update new perturber list
+            if(adr<ngroup) Aint->updatePertOneGroup(adr, ptcl_.getPointer(), force_.getPointer(), getPertList(adr), getPertN(adr));
         }
 
         if(Aint!=NULL) {
+            // shift member to c.m. frame
             Aint->shift();
             //Aint->updateCM(ptcl_.getPointer());
             //Aint.updateCM(Hint.getPtcl(), group_act_list.getPointer(), group_act_n);
@@ -1165,224 +1227,224 @@ public:
 
 };
 
-#ifdef ISOLATED
-//few-body----------------------------------------------
-template<class Tptcl, class ARC_par>
-void Isolated_Multiple_integrator(Tptcl * ptcl_org,
-                                  const PS::S32 n_ptcl,
-                                  const PS::F64 time_end,
-                                  const PS::F64 dt_limit,
-                                  const PS::F64 rout_single,
-                                  const PS::F64 gamma,
-                                  const PS::F64 m_average,
-#ifdef HARD_CHECK_ENERGY
-                                  PS::F64 &ARC_error_relative,
-                                  PS::F64 &ARC_error,
-                                  PS::S32 N_count[20],
-#endif                         
-                                  const ARC::chainpars &ARC_control,
-                                  ARC_par &Int_pars) {
-    // kepler motion test
-    if (n_ptcl==2) {
-        PS::F64 ax=0,ecc;
-        PS::F64 inc,OMG,omg,tperi;
-        PS::F64 ecc_anomaly_old = PosVel2OrbParam(ax, ecc, inc, OMG, omg, tperi,
-                                                  ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel, ptcl_org[0].mass, ptcl_org[1].mass);
-#ifdef HARD_DEBUG
-        std::cerr<<"n_ptcl="<<n_ptcl<<"; ax="<<ax<<"; ecc="<<ecc<<"; peri="<<tperi<<"; pid="<<ptcl_org[0].id<<std::endl;
-#endif
-        if (ax>0.0&&2.0*ax<Int_pars.rin) {
-            // center-of-mass
-            Tptcl pcm;
-            calc_center_of_mass(pcm, ptcl_org, n_ptcl, true);
-
-            DriveKeplerOrbParam(ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel,
-                                ptcl_org[0].mass, ptcl_org[1].mass, time_end, ax, ecc, inc, OMG, omg, ecc_anomaly_old);
-          
-          
-            // integration of center-of-mass
-            pcm.pos += pcm.vel * time_end;
-
-            center_of_mass_correction(pcm, ptcl_org, n_ptcl);
-          
-            //  PosVel2OrbParam(ax,ecc,inc,OMG,omg,tperi,ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel, ptcl_org[0].mass, ptcl_org[1].mass);
-            //  std::cerr<<"A:n_ptcl="<<n_ptcl<<"; ax="<<ax<<"; ecc="<<ecc<<"; peri="<<tperi<<"; pid"<<ptcl_org[0].id<<std::endl;
-            //  if (!kout.is_open()) kout.open("kout");
-            //  for (int i=0;i<n_ptcl;i++) kout<<std::setprecision(17)<<time_origin_<<" "<<ptcl_org[i].mass<<" "<<ptcl_org[i].pos<<" "<<ptcl_org[i].vel<<std::endl;
-
-            PS::F64 peri = ax*(1+ecc)*gamma*std::pow(pcm.mass/m_average,0.3333);
-            if (peri>1.2*ptcl_org[0].r_out || (peri>0 && peri<0.8*ptcl_org[0].r_out) || ptcl_org[0].r_out!= ptcl_org[1].r_out)
-                ptcl_org[0].r_out = ptcl_org[1].r_out = std::max(peri,rout_single);
-            return;
-        }
-    }
-    else if(n_ptcl==3) {
-        // Not yet implementd
-    }
-      
-    ARC::chain<Tptcl> c((std::size_t)n_ptcl);
-    static thread_local PS::F64 time_sys = 0.0;
-
-    c.addP(n_ptcl,ptcl_org);
-
-#ifdef HARD_DEBUG
-    for (PS::S32 i=0; i<n_ptcl; i++) 
-        if (ptcl_org[i].r_out<Int_pars.rin) {
-            std::cerr<<"Error, updated p["<<i<<"].rout ("<<ptcl_org[i].r_out<<") < r_in ("<<Int_pars.rin<<")"<<std::endl;
-            abort();
-        }
-#endif
-
-    //c.link_int_par(Int_pars);
-    c.init(time_sys,ARC_control,Int_pars);
-
-#ifdef HARD_CHECK_ENERGY
-    PS::F64 ARC_error_once = c.getPot()+c.getEkin();
-    if(n_ptcl<=20) N_count[n_ptcl-1]++;
-    else std::cerr<<"Large cluster formed, n="<<n_ptcl<<std::endl;
-#endif
-      
-    PS::F64 dscoff=1.0;
-    PS::F64 ds_up_limit = 0.25*dt_limit/c.calc_dt_X(1.0);
-    PS::F64 ds_use = c.calc_next_step_custom();
-      
-    if (ds_use>ds_up_limit) ds_use = ds_up_limit;
-
-    // convergency check
-    PS::S32 converge_count=0;
-    PS::S32 error_count=0;
-    bool modify_step_flag=false;
-    bool final_flag=false;
-      
-    while(time_end-c.getTime()>ARC_control.dterr) {
-
-        // if (ptcl_org[0].id==8&&time_origin_==0.0078125) {
-        //	 std::cout<<"ds= "<<ds_use<<" toff= "<<time_end<<std::endl;
-			
-        //	 FILE* fout=fopen("data","w");
-        //	 fwrite(ptcl_org,sizeof(Tptcl),n_ptcl,fout);
-        //	 fclose(fout);
-        // for (PS::S32 i=0; i<n_ptcl; i++) 
-        //	 std::cout<<ptcl_org[i].getMass()<<" "<<ptcl_org[i].getPos()[0]<<" "<<ptcl_org[i].getPos()[1]<<" "<<ptcl_org[i].getPos()[2]<<" "<<ptcl_org[i].getVel()[0]<<" "<<ptcl_org[i].getVel()[1]<<" "<<ptcl_org[i].getVel()[2]<<std::endl;
-        // }
-
-        PS::F64 dsf=c.extrapolation_integration(ds_use,ARC_control,time_end,Int_pars);
-
-        // std::cerr<<"Particle=";
-        // for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<ptcl_org[i].id<<" ";
-        // std::cerr<<"n="<<n_ptcl<<" Time_end="<<time_end<<" ctime="<<c.getTime()<<" diff="<<time_end-c.getTime()<<" ds="<<ds_use<<" dsf="<<dsf<<std::endl;
-
-        if (dsf<0) {
-            final_flag=true;
-            converge_count++;
-            if (converge_count>5&&time_end-c.getTime()>ARC_control.dterr*100) {
-                std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c.getTime()<<"\nR_in: "<<Int_pars.rin<<"\nR_out: "<<Int_pars.rout<<"\n";
-                //  ds_use = 0.1*c.calc_next_step_custom();
-                //  std::cerr<<"New step size: "<<ds_use<<std::endl;
-                //  modify_step_flag=true;
-                //	converge_count=0;
-                c.dump("ARC_dump.dat");
-                ARC_control.dump("ARC_dump.par");
-                c.print(std::cerr);
-                abort();
-            }
-            else ds_use *= -dsf;
-            // debuging
-            // if (ptcl_org[0].id==267) {
-            //		c.dump("ARC_dump.dat");
-            //		ARC_control.dump("ARC_dump.par");
-            //		c.print(std::cerr);
-            //		abort();
-            // }
-        }
-        else if (dsf==0) {
-            //          char collerr[50]="two particle overlap!";
-            c.info->ErrMessage(std::cerr);
-            error_count++;
-            if(error_count>4) {
-                std::cerr<<"Error: Too much error appear!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c.getTime()<<"\nR_in: "<<Int_pars.rin<<"\nR_out: "<<Int_pars.rout<<"\n";
-                c.dump("ARC_dump.dat");
-                ARC_control.dump("ARC_dump.par");
-                c.print(std::cerr);
-                abort();
-            }
-            if (c.info->status==5) {
-                dscoff = 0.25;
-                ds_use *= dscoff;
-            }
-            //          else if (c.info->status==6) ds_use *= 0.001;
-            else if (c.info->status==4) ds_use = std::min(dscoff*c.calc_next_step_custom(),ds_up_limit);
-            else ds_use *= 0.1;
-            modify_step_flag=true;
-        }
-        else  {
-            if (final_flag) {
-                if (converge_count>6&&time_end-c.getTime()>ARC_control.dterr*100) {
-                    std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c.getTime()<<"\nR_in: "<<Int_pars.rin<<"\nR_out: "<<Int_pars.rout<<"\n";
-                    c.dump("ARC_dump.dat");
-                    ARC_control.dump("ARC_dump.par");
-                    c.print(std::cerr);
-                    abort();
-                }
-                converge_count++;
-            }
-            else if (n_ptcl>2||(modify_step_flag&&error_count==0)) {
-                ds_use = std::min(dscoff*c.calc_next_step_custom(),ds_up_limit);
-                modify_step_flag=false;
-            }
-            // reducing error counter if integration success, this is to avoid the significant change of step may cause some issue
-            if(error_count>0) error_count--;
-        }
-    }
-
-    // update Rout
-    if(n_ptcl>2) {
-        std::size_t* list=new std::size_t[n_ptcl];
-        Tptcl** plist=new Tptcl*[n_ptcl];
-        c.getList(list);
-#ifdef DEBUG_TEMP
-        std::cerr<<"Curren r_out: n="<<n_ptcl;
-        for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<list[i]<<" ";
-        std::cerr<<std::endl;
-        for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<ptcl_org[list[i]].r_out<<" ";
-        std::cerr<<std::endl;
-#endif
-        for (PS::S32 i=0; i<n_ptcl; i++) plist[i] = &(ptcl_org[list[i]]);
-        updateRout(plist,n_ptcl,Int_pars.rin,rout_single,gamma,m_average);
-#ifdef DEBUG_TEMP
-        std::cerr<<"new r_out: n="<<n_ptcl;
-        for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<list[i]<<" ";
-        std::cerr<<std::endl;
-        for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<ptcl_org[list[i]].r_out<<" ";
-        std::cerr<<std::endl;
-#endif
-#ifdef HARD_DEBUG
-        for (PS::S32 i=0; i<n_ptcl; i++) 
-            if (ptcl_org[list[i]].r_out<Int_pars.rin) {
-                std::cerr<<"Error, updated p["<<list[i]<<"].rout ("<<ptcl_org[list[i]].r_out<<") < r_in ("<<Int_pars.rin<<")"<<std::endl;
-                abort();
-            }
-#endif
-        delete[] list;
-        delete[] plist;
-    }
-
-    // error record
-#ifdef HARD_CHECK_ENERGY
-    PS::F64 ARC_error_temp = (c.getPot()+c.getEkin()-ARC_error_once);
-    ARC_error += ARC_error_temp;
-    ARC_error_relative += ARC_error_temp/ARC_error_once;
-#endif
-      
-    // integration of center-of-mass
-    c.cm.pos += c.cm.vel * time_end;
-
-    c.center_shift_inverse();
-
-    // if (!arout.is_open()) arout.open("arout");
-    // for (int i=0;i<n_ptcl;i++) arout<<std::setprecision(17)<<time_origin_<<" "<<ptcl_org[i].mass<<" "<<ptcl_org[i].pos<<" "<<ptcl_org[i].vel<<std::endl;
-}
-#endif
+//#ifdef ISOLATED
+////few-body----------------------------------------------
+//template<class Tptcl, class ARC_par>
+//void Isolated_Multiple_integrator(Tptcl * ptcl_org,
+//                                  const PS::S32 n_ptcl,
+//                                  const PS::F64 time_end,
+//                                  const PS::F64 dt_limit,
+//                                  const PS::F64 rout_single,
+//                                  const PS::F64 gamma,
+//                                  const PS::F64 m_average,
+//#ifdef HARD_CHECK_ENERGY
+//                                  PS::F64 &ARC_error_relative,
+//                                  PS::F64 &ARC_error,
+//                                  PS::S32 N_count[20],
+//#endif                         
+//                                  const ARC::chainpars &ARC_control,
+//                                  ARC_par &Int_pars) {
+//    // kepler motion test
+//    if (n_ptcl==2) {
+//        PS::F64 ax=0,ecc;
+//        PS::F64 inc,OMG,omg,tperi;
+//        PS::F64 ecc_anomaly_old = PosVel2OrbParam(ax, ecc, inc, OMG, omg, tperi,
+//                                                  ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel, ptcl_org[0].mass, ptcl_org[1].mass);
+//#ifdef HARD_DEBUG
+//        std::cerr<<"n_ptcl="<<n_ptcl<<"; ax="<<ax<<"; ecc="<<ecc<<"; peri="<<tperi<<"; pid="<<ptcl_org[0].id<<std::endl;
+//#endif
+//        if (ax>0.0&&2.0*ax<Int_pars.rin) {
+//            // center-of-mass
+//            Tptcl pcm;
+//            calc_center_of_mass(pcm, ptcl_org, n_ptcl, true);
+// 
+//            DriveKeplerOrbParam(ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel,
+//                                ptcl_org[0].mass, ptcl_org[1].mass, time_end, ax, ecc, inc, OMG, omg, ecc_anomaly_old);
+//          
+//          
+//            // integration of center-of-mass
+//            pcm.pos += pcm.vel * time_end;
+// 
+//            center_of_mass_correction(pcm, ptcl_org, n_ptcl);
+//          
+//            //  PosVel2OrbParam(ax,ecc,inc,OMG,omg,tperi,ptcl_org[0].pos, ptcl_org[1].pos, ptcl_org[0].vel, ptcl_org[1].vel, ptcl_org[0].mass, ptcl_org[1].mass);
+//            //  std::cerr<<"A:n_ptcl="<<n_ptcl<<"; ax="<<ax<<"; ecc="<<ecc<<"; peri="<<tperi<<"; pid"<<ptcl_org[0].id<<std::endl;
+//            //  if (!kout.is_open()) kout.open("kout");
+//            //  for (int i=0;i<n_ptcl;i++) kout<<std::setprecision(17)<<time_origin_<<" "<<ptcl_org[i].mass<<" "<<ptcl_org[i].pos<<" "<<ptcl_org[i].vel<<std::endl;
+// 
+//            PS::F64 peri = ax*(1+ecc)*gamma*std::pow(pcm.mass/m_average,0.3333);
+//            if (peri>1.2*ptcl_org[0].r_out || (peri>0 && peri<0.8*ptcl_org[0].r_out) || ptcl_org[0].r_out!= ptcl_org[1].r_out)
+//                ptcl_org[0].r_out = ptcl_org[1].r_out = std::max(peri,rout_single);
+//            return;
+//        }
+//    }
+//    else if(n_ptcl==3) {
+//        // Not yet implementd
+//    }
+//      
+//    ARC::chain<Tptcl> c((std::size_t)n_ptcl);
+//    static thread_local PS::F64 time_sys = 0.0;
+// 
+//    c.addP(n_ptcl,ptcl_org);
+// 
+//#ifdef HARD_DEBUG
+//    for (PS::S32 i=0; i<n_ptcl; i++) 
+//        if (ptcl_org[i].r_out<Int_pars.rin) {
+//            std::cerr<<"Error, updated p["<<i<<"].rout ("<<ptcl_org[i].r_out<<") < r_in ("<<Int_pars.rin<<")"<<std::endl;
+//            abort();
+//        }
+//#endif
+// 
+//    //c.link_int_par(Int_pars);
+//    c.init(time_sys,ARC_control,Int_pars);
+// 
+//#ifdef HARD_CHECK_ENERGY
+//    PS::F64 ARC_error_once = c.getPot()+c.getEkin();
+//    if(n_ptcl<=20) N_count[n_ptcl-1]++;
+//    else std::cerr<<"Large cluster formed, n="<<n_ptcl<<std::endl;
+//#endif
+//      
+//    PS::F64 dscoff=1.0;
+//    PS::F64 ds_up_limit = 0.25*dt_limit/c.calc_dt_X(1.0);
+//    PS::F64 ds_use = c.calc_next_step_custom();
+//      
+//    if (ds_use>ds_up_limit) ds_use = ds_up_limit;
+// 
+//    // convergency check
+//    PS::S32 converge_count=0;
+//    PS::S32 error_count=0;
+//    bool modify_step_flag=false;
+//    bool final_flag=false;
+//      
+//    while(time_end-c.getTime()>ARC_control.dterr) {
+// 
+//        // if (ptcl_org[0].id==8&&time_origin_==0.0078125) {
+//        //	 std::cout<<"ds= "<<ds_use<<" toff= "<<time_end<<std::endl;
+//    		
+//        //	 FILE* fout=fopen("data","w");
+//        //	 fwrite(ptcl_org,sizeof(Tptcl),n_ptcl,fout);
+//        //	 fclose(fout);
+//        // for (PS::S32 i=0; i<n_ptcl; i++) 
+//        //	 std::cout<<ptcl_org[i].getMass()<<" "<<ptcl_org[i].getPos()[0]<<" "<<ptcl_org[i].getPos()[1]<<" "<<ptcl_org[i].getPos()[2]<<" "<<ptcl_org[i].getVel()[0]<<" "<<ptcl_org[i].getVel()[1]<<" "<<ptcl_org[i].getVel()[2]<<std::endl;
+//        // }
+// 
+//        PS::F64 dsf=c.extrapolation_integration(ds_use,ARC_control,time_end,Int_pars);
+// 
+//        // std::cerr<<"Particle=";
+//        // for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<ptcl_org[i].id<<" ";
+//        // std::cerr<<"n="<<n_ptcl<<" Time_end="<<time_end<<" ctime="<<c.getTime()<<" diff="<<time_end-c.getTime()<<" ds="<<ds_use<<" dsf="<<dsf<<std::endl;
+// 
+//        if (dsf<0) {
+//            final_flag=true;
+//            converge_count++;
+//            if (converge_count>5&&time_end-c.getTime()>ARC_control.dterr*100) {
+//                std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c.getTime()<<"\nR_in: "<<Int_pars.rin<<"\nR_out: "<<Int_pars.rout<<"\n";
+//                //  ds_use = 0.1*c.calc_next_step_custom();
+//                //  std::cerr<<"New step size: "<<ds_use<<std::endl;
+//                //  modify_step_flag=true;
+//                //	converge_count=0;
+//                c.dump("ARC_dump.dat");
+//                ARC_control.dump("ARC_dump.par");
+//                c.print(std::cerr);
+//                abort();
+//            }
+//            else ds_use *= -dsf;
+//            // debuging
+//            // if (ptcl_org[0].id==267) {
+//            //		c.dump("ARC_dump.dat");
+//            //		ARC_control.dump("ARC_dump.par");
+//            //		c.print(std::cerr);
+//            //		abort();
+//            // }
+//        }
+//        else if (dsf==0) {
+//            //          char collerr[50]="two particle overlap!";
+//            c.info->ErrMessage(std::cerr);
+//            error_count++;
+//            if(error_count>4) {
+//                std::cerr<<"Error: Too much error appear!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c.getTime()<<"\nR_in: "<<Int_pars.rin<<"\nR_out: "<<Int_pars.rout<<"\n";
+//                c.dump("ARC_dump.dat");
+//                ARC_control.dump("ARC_dump.par");
+//                c.print(std::cerr);
+//                abort();
+//            }
+//            if (c.info->status==5) {
+//                dscoff = 0.25;
+//                ds_use *= dscoff;
+//            }
+//            //          else if (c.info->status==6) ds_use *= 0.001;
+//            else if (c.info->status==4) ds_use = std::min(dscoff*c.calc_next_step_custom(),ds_up_limit);
+//            else ds_use *= 0.1;
+//            modify_step_flag=true;
+//        }
+//        else  {
+//            if (final_flag) {
+//                if (converge_count>6&&time_end-c.getTime()>ARC_control.dterr*100) {
+//                    std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c.getTime()<<"\nR_in: "<<Int_pars.rin<<"\nR_out: "<<Int_pars.rout<<"\n";
+//                    c.dump("ARC_dump.dat");
+//                    ARC_control.dump("ARC_dump.par");
+//                    c.print(std::cerr);
+//                    abort();
+//                }
+//                converge_count++;
+//            }
+//            else if (n_ptcl>2||(modify_step_flag&&error_count==0)) {
+//                ds_use = std::min(dscoff*c.calc_next_step_custom(),ds_up_limit);
+//                modify_step_flag=false;
+//            }
+//            // reducing error counter if integration success, this is to avoid the significant change of step may cause some issue
+//            if(error_count>0) error_count--;
+//        }
+//    }
+// 
+//    // update Rout
+//    if(n_ptcl>2) {
+//        std::size_t* list=new std::size_t[n_ptcl];
+//        Tptcl** plist=new Tptcl*[n_ptcl];
+//        c.getList(list);
+//#ifdef DEBUG_TEMP
+//        std::cerr<<"Curren r_out: n="<<n_ptcl;
+//        for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<list[i]<<" ";
+//        std::cerr<<std::endl;
+//        for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<ptcl_org[list[i]].r_out<<" ";
+//        std::cerr<<std::endl;
+//#endif
+//        for (PS::S32 i=0; i<n_ptcl; i++) plist[i] = &(ptcl_org[list[i]]);
+//        updateRout(plist,n_ptcl,Int_pars.rin,rout_single,gamma,m_average);
+//#ifdef DEBUG_TEMP
+//        std::cerr<<"new r_out: n="<<n_ptcl;
+//        for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<list[i]<<" ";
+//        std::cerr<<std::endl;
+//        for (PS::S32 i=0; i<n_ptcl; i++) std::cerr<<std::setw(14)<<ptcl_org[list[i]].r_out<<" ";
+//        std::cerr<<std::endl;
+//#endif
+//#ifdef HARD_DEBUG
+//        for (PS::S32 i=0; i<n_ptcl; i++) 
+//            if (ptcl_org[list[i]].r_out<Int_pars.rin) {
+//                std::cerr<<"Error, updated p["<<list[i]<<"].rout ("<<ptcl_org[list[i]].r_out<<") < r_in ("<<Int_pars.rin<<")"<<std::endl;
+//                abort();
+//            }
+//#endif
+//        delete[] list;
+//        delete[] plist;
+//    }
+// 
+//    // error record
+//#ifdef HARD_CHECK_ENERGY
+//    PS::F64 ARC_error_temp = (c.getPot()+c.getEkin()-ARC_error_once);
+//    ARC_error += ARC_error_temp;
+//    ARC_error_relative += ARC_error_temp/ARC_error_once;
+//#endif
+//      
+//    // integration of center-of-mass
+//    c.cm.pos += c.cm.vel * time_end;
+// 
+//    c.center_shift_inverse();
+// 
+//    // if (!arout.is_open()) arout.open("arout");
+//    // for (int i=0;i<n_ptcl;i++) arout<<std::setprecision(17)<<time_origin_<<" "<<ptcl_org[i].mass<<" "<<ptcl_org[i].pos<<" "<<ptcl_org[i].vel<<std::endl;
+//}
+//#endif
 
 #ifdef TIDAL_TENSOR
 class TidalTensor{
@@ -1702,26 +1764,26 @@ public:
     ARCIntegrator() {};
     ARCIntegrator(ARControl &contr, ARC_int_pars &par): ARC_control_(&contr), Int_pars_(&par) {}
 
-    void reserveARMem(const PS::S32 n) {
+    void reserveARMem(const PS::S32 _n) {
 #ifdef HARD_DEBUG
-        assert(n<ARRAY_ALLOW_LIMIT);
+        assert(_n<ARRAY_ALLOW_LIMIT);
 #endif        
-        clist_.reserve(n);
+        clist_.reserve(_n);
         //clist_.resizeNoInitialize(n);
-        par_list_.reserve(n);
+        par_list_.reserve(_n);
         //par_list_.resizeNoInitialize(n);
-        pert_n_.reserve(n);
+        pert_n_.reserve(_n);
         //pert_n_.resizeNoInitialize(n);
-        pert_disp_.reserve(n);
+        pert_disp_.reserve(_n);
         //pert_disp_.resizeNoInitialize(n);
-        bininfo.reserve(n);
-        bininfo.resizeNoInitialize(n);
+        bininfo.reserve(_n);
+        bininfo.resizeNoInitialize(_n);
         //dt.reserve(n);
     }
 
-    void reservePertMem(const PS::S32 n) {
-        pert_.reserve(n);
-        pforce_.reserve(n);
+    void reservePertMem(const PS::S32 _n_bin, const PS::S32 _n_tot) {
+        pert_.reserve(_n_bin*_n_tot);
+        pforce_.reserve(_n_bin*_n_tot);
     }
     //void initialize(PS::S32 group_list[];
     //                ReallocatableArray<TpARC> groups[],
@@ -1754,6 +1816,7 @@ public:
        @param[in] _force_pert: perturber force array
        @param[in] _ptcl_pert_list: perturber particle index in _ptcl_pert
        @param[in] _n_pert: number of perturbers
+       @param[in] _n_pert_off: perturber offset in _ptcl_pert or _force_pert
      */
     template <class Tptcl, class Tpsoft>
     void addOneGroup(Tptcl* _ptcl,
@@ -1763,52 +1826,96 @@ public:
                      Tpert* _ptcl_pert = NULL,
                      Tpforce* _pert_force = NULL,
                      const PS::S32* _ptcl_pert_list = NULL,
-                     const PS::S32 _n_pert = 0) {
-        // set group offset
+                     const PS::S32 _n_pert = 0,
+                     const PS::S32 _n_pert_off = 1) {
+        // set current group offset
         const PS::S32 igroup = clist_.size();
-        const PS::S32 ioff = pert_.size();
-        pert_disp_.push_back(ioff);
+
         pert_n_.push_back(0);
+        pert_disp_.push_back(pert_.size());
+
+        // set current pert_disp
+        const PS::S32 i_pert_off = pert_.size();
+
+        pert_.increaseSize(_n_pert_off);
+        pforce_.increaseSize(_n_pert_off);
         
         clist_.increaseSize(1);
         clist_.back().allocate(_n_ptcl);
+
+#ifdef HARD_DEBUG
+        assert(pert_disp_.size()==clist_.size());
+        assert(pert_n_.size()==clist_.size());
+#endif
+
+        // Add members to ARC 
         for(int i=0; i<_n_ptcl; i++) {
             clist_.back().addP(_ptcl[i]);
         }
         
         // c.m. position is in igroup, put the c.m. particle to perturber list thus it can be used for predicting the c.m. position and velocity
         if(_ptcl_pert!=NULL) {
-            pert_.push_back(&_ptcl_pert[igroup]);   
-            pforce_.push_back(&_pert_force[igroup]);
+            pert_  [i_pert_off] = &_ptcl_pert [igroup];   
+            pforce_[i_pert_off] = &_pert_force[igroup];
             pert_n_[igroup]++;
         }
 
-        // perturber
+        // Add perturber
         for(int i=0; i<_n_pert; i++) {
             const PS::S32  k = _ptcl_pert_list[i];
-            //const PS::S32 ik = ioff+pert_n_[igroup]++;
-            pert_.push_back(&_ptcl_pert[k]);
-            pforce_.push_back(&_pert_force[k]);
+            pert_  [i+i_pert_off+1] = &_ptcl_pert[k];
+            pforce_[i+i_pert_off+1] = &_pert_force[k];
             pert_n_[igroup]++;
         }
         par_list_.push_back(ARC_pert_pars(*Int_pars_));
         par_list_.back().fit(_ptcl_soft_pert,bininfo[igroup],_n_split);
+#ifdef HARD_DEBUG
+        assert(_n_pert+1<=_n_pert_off);
+        assert(par_list_.size()==clist_.size());
+#endif
 
         // recored c.m. inforamtion
         if(_ptcl_pert!=NULL) {
-            clist_.back().pos = _ptcl_pert[igroup].pos;
-            clist_.back().vel = _ptcl_pert[igroup].vel;
+            clist_.back().pos  = _ptcl_pert[igroup].pos;
+            clist_.back().vel  = _ptcl_pert[igroup].vel;
             clist_.back().mass = _ptcl_pert[igroup].mass;
 #ifdef HARD_DEBUG
             assert(clist_.back().mass>0.0);
             assert(clist_.back().mass==_ptcl_pert[igroup].mass);
 #endif
         }
-
-        // dt.push_back(0.0);
-
-        //clist_.back().init(0.0, *ARC_control_, &(par_list_.back()));
     }
+
+    //! Update perturber list
+    /*! Update perturber list for group i
+      @param[in] _i_group: group index for update perturber
+      @param[in] _ptcl_pert: perturber particle array
+      @param[in] _force_pert: perturber force array
+      @param[in] _ptcl_pert_list: new perturber particle index
+      @param[in] _n_pert: number of perturbers
+     */
+    void updatePertOneGroup(const PS::S32 _i_group,
+                            Tpert* _ptcl_pert,
+                            Tpforce* _pert_force,
+                            const PS::S32* _ptcl_pert_list,
+                            const PS::S32 _n_pert) {
+        // Add one for c.m.
+        pert_n_[_i_group] = _n_pert + 1;
+        const PS::S32 i_pert_off = pert_disp_[_i_group];
+        
+        for (int i=0; i<_n_pert; i++) {
+            PS::S32 adr = _ptcl_pert_list[i];
+            pert_  [i+i_pert_off+1] = &_ptcl_pert[adr];
+            pforce_[i+i_pert_off+1] = &_pert_force[adr];
+        }
+    }
+
+    //! Merge groups to one
+    /*! Merge a few groups to one ARC group
+     */
+    PS::S32 mergeGroups(const PS::S32 _n_group_merge, const PS::S32 _n_group_merge_list[]) {
+        
+    } 
 
     //! Set initial slowdown parameter
     /*! 
@@ -1850,10 +1957,17 @@ public:
         }
     }
 
-    void updateSlowDown(const PS::F64 tend) {
-        for (int i=0; i<clist_.size(); i++) {
-            clist_[i].slowdown.updatekappa(tend);
-        }
+    //! Update slow down factor for one ARC
+    /*! Update slowdown for one ARC
+      @param[in] _index: index of ARC
+      @param[in] _tnow: current time of c.m.
+      @param[in] _dt: c.m. step size
+      @param[in] _dt_limit: step limit
+     */
+    void updateOneSlowDown(const size_t _index, const PS::F64 _tnow, const PS::F64 _dt, const PS::F64 _dt_limit) {
+        PS::F64 tp_factor = std::max(0.0001,_dt/_dt_limit);
+        //std::cerr<<"i "<<_index<<" dt "<<_dt<<" fac "<<tp_factor<<std::endl;
+        clist_[_index].slowdown.updatekappa(_tnow+_dt,tp_factor);
     }
 
     void adjustSlowDown(const PS::F64 dt) {
@@ -1978,7 +2092,7 @@ public:
     }
 
     PS::S64 integrateOneStepExt(const PS::S32 ic,
-                             const PS::F64 time_end,
+                            const PS::F64 time_end,
                              const PS::F64 dt_limit) {
         ARChain* c = &clist_[ic];
         ARC_pert_pars* par = &par_list_[ic];
@@ -2050,30 +2164,40 @@ public:
         return nstep;
     }
 
-    PS::S64 integrateOneStepList(PS::S32 act_list[],
-                              PS::S32 n_act,
-                              const PS::F64 time_end,
-                              const PS::F64 dt_limit) {
+    //! Integrate active ARC groups
+    /* @param[in] _act_list: active ARC group index list
+       @param[in] _n_act: number of active groups
+       @param[in] _time_end: end of physical integration time
+       @param[in] _dt_limit: physical time step upper limit
+     */
+    PS::S64 integrateOneStepList(PS::S32 _act_list[],
+                                 PS::S32 _n_act,
+                                 const PS::F64 _time_end,
+                                 const PS::F64 _dt_limit) {
         PS::S64 nstep = 0;
-        for(int i=0; i<n_act; i++) {
+        for(int i=0; i<_n_act; i++) {
 #ifdef ARC_SYM
-            nstep += integrateOneStepSym(act_list[i], time_end, dt_limit);
+            nstep += integrateOneStepSym(_act_list[i], _time_end, _dt_limit);
 #else
-            nstep += integrateOneStepExt(act_list[i], time_end, dt_limit);
+            nstep += integrateOneStepExt(_act_list[i], _time_end, _dt_limit);
 #endif
         }
 
         return nstep;
     }
 
-    PS::S64 integrateOneStepList(const PS::F64 time_end,
-                              const PS::F64 dt_limit) {
+    //! Integrate active ARC groups
+    /* @param[in] _time_end: end of physical integration time
+       @param[in] _dt_limit: physical time step upper limit
+     */
+    PS::S64 integrateOneStepList(const PS::F64 _time_end,
+                                 const PS::F64 _dt_limit) {
         PS::S64 nstep = 0;
         for(int i=0; i<clist_.size(); i++) {
 #ifdef ARC_SYM
-            nstep += integrateOneStepSym(i, time_end, dt_limit);
+            nstep += integrateOneStepSym(i, _time_end, _dt_limit);
 #else
-            nstep += integrateOneStepExt(i, time_end, dt_limit);
+            nstep += integrateOneStepExt(i, _time_end, _dt_limit);
 #endif
 
         }

@@ -957,7 +957,7 @@ private:
                 Aint.step_count_limit = arc_step_count_limit;
 #endif
                 Aint.reserveARMem(1);
-                // Aint.reservePertMem(1);
+                Aint.reservePertMem(1,1);
                 gpars[0].getBinPars(Aint.bininfo[0], _ptcl_artifical);
 #ifdef HARD_DEBUG_PRINT
                 std::cerr<<"Hard: one group, n="<<_n_ptcl<<std::endl;
@@ -1078,8 +1078,13 @@ private:
 #ifdef ARC_SYM
                 Aint.step_count_limit = arc_step_count_limit;
 #endif
+                // Reserve memory space
                 Aint.reserveARMem(_n_group);
-                PS::F64 dr_search[_n_group];
+                // first particles in Hint.Ptcl are c.m. thus add 1
+                Aint.reservePertMem(_n_group,_n_ptcl+1);
+
+                // Obtain binary parameters
+                PS::F64 apo_bin[_n_group];
                 for (int i=0; i<_n_group; i++) {
                     gpars[i].getBinPars(Aint.bininfo[i], &_ptcl_artifical[adr_first_ptcl[i]]);
                     auto &bini= Aint.bininfo[i];
@@ -1087,12 +1092,10 @@ private:
                        The two members in different binaries can find each other as neighbors, but the c.m. particle may not find another c.m. 
                        To avoid no perturbers issues, the rsearch should add the maximum distance of components in other binaries (apo-center distance).
                     */
-                    dr_search[i] = bini.semi*(bini.ecc+1.0); 
+                    apo_bin[i] = bini.semi*(bini.ecc+1.0); 
                 }            
-                Hint.searchPerturber(dr_search,_n_group);
+                Hint.searchPerturber(apo_bin,_n_group);
 
-                // first particles in Hint.Ptcl are c.m.
-                Aint.reservePertMem(Hint.getPertListSize());
                 for (int i=0; i<_n_group; i++) {
 #ifdef HARD_DEBUG
                     assert(Hint.getPertN(i)>0);
@@ -1103,7 +1106,7 @@ private:
                     PS::S32 i_soft_pert_offset = adr_first_ptcl[i]+gpars[i].offset_orb;
 #endif
                 
-                    Aint.addOneGroup(&_ptcl_local[n_group_offset[i]], gpars[i].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i)); 
+                    Aint.addOneGroup(&_ptcl_local[n_group_offset[i]], gpars[i].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i), _n_ptcl+1); 
                 }
                 Aint.initialSlowDown(dt_limit, sdfactor_);
                 Aint.initial();
@@ -1113,7 +1116,9 @@ private:
 #endif
 
                 bool fail_flag=Hint.initialize(dt_limit, dt_min_hard_, group_act_list.getPointer(), group_act_n, _n_group, &Aint);
-                Aint.updateSlowDown(Hint.getNextTime());
+                for (int i=0; i<_n_group; i++) {
+                    Aint.updateOneSlowDown(i, Hint.getOneTime(i), Hint.getOneDt(i), dt_limit);
+                }
 
                 if(fail_flag) {
 #ifdef HARD_DEBUG_DUMP
@@ -1144,7 +1149,8 @@ private:
                     assert(time_sys>time_now);
 #endif
                     PS::F64 dt_h = time_sys-time_now;
-//                    Aint.updateSlowDown(time_sys);
+//                    for (int k=0; k<_n_group; k++) 
+//                        Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit);
 #ifdef HARD_CHECK_ENERGY
                     for(int k=0; k<_n_group; k++) {
                         slowdownrecord[k] = std::max(slowdownrecord[k], Aint.getSlowDown(k));

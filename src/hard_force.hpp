@@ -167,7 +167,7 @@ int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, c
 template<class Tptcl, class Tpert, class Tforce, class extpar>
 void Newtonian_extA_pert (double3* acc, const PS::F64 time, Tptcl* p, const PS::S32 np, Tpert* pert, Tforce* pf, const PS::S32 npert, extpar* pars){
 #ifdef HARD_DEBUG
-    if(npert<=1) {
+    if(npert<1) {
         std::cerr<<"Error: perturboer number not enough !"<<std::endl;
         abort();
     }
