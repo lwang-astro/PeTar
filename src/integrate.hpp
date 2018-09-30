@@ -925,15 +925,17 @@ public:
     }
 
     //! Insert one particle
-    /*! insert one particle to local array at position i
+    /*! insert one particle to local array at position i, notice adr_sorted_ insert -1 at last
       @param[in] _i: insert position
       @param[in] _ptcl: particle to be inserted
       @param[in] _n_pert_off: neighbor list offset to separate different ptcl
+      @param[in] _n_list_correct: number of ptcl (count from first) need to correct the neighbor list
      */
     template <class Tptcl>
     void insertOnePtcl(const PS::S32 _i,
                        Tptcl &_ptcl,
-                       const PS::S32 _n_pert_off) {
+                       const PS::S32 _n_pert_off,
+                       const PS::S32 _n_list_correct) {
 #ifdef HARD_DEBUG
         assert(_i<=ptcl_.size());
         assert(ptcl_.size()+1<=_n_pert_off);
@@ -949,31 +951,115 @@ public:
         Jlist_n_.increaseSize(1);
 
         // last just add
-        if (_i==ptcl_.size()) {
+        if (_i==ptcl_.size()-1) {
             ptcl_.back().DataCopy(_ptcl);
         }
         // shift _i to last and add
         else {
-            ptcl_.back().DataCopy(ptcl_[_i]);
+            PS::S32 inew = ptcl_.size()-1;
+#ifdef HARD_DEBUG
+            assert(&(ptcl_.back())==&(ptcl_[inew]));
+#endif
+            ptcl_.back() = ptcl_[_i];
             ptcl_[_i].DataCopy(_ptcl);
             
             pred_.back()       = pred_[_i];
             force_.back()      = force_[_i];
-            adr_sorted_.back() = adr_sorted_[_i];
             time_next_.back()  = time_next_[_i];
+
+            // find sorted index and change
+            for (int i=0; i<inew; i++) { 
+                if(adr_sorted_[i]==_i) {
+                    adr_sorted_[i] = inew;
+                    break;
+                }
+            }
+            adr_sorted_.back() = -1;
+
+            // shift Jlist
             Jlist_n_.back()    = Jlist_n_[_i];
+            Jlist_n_[_i] = 0;
             PS::S32 disp_last = Jlist_disp_.back();
             PS::S32 disp_i = Jlist_disp_[_i];
-            for (int i=0; i<Jlist_n_[_i]; i++) {
+            for (int i=0; i<Jlist_n_.back(); i++) {
                 Jlist_[disp_last+i] = Jlist_[disp_i+i];
+            }
+
+            // correct neighbor list
+            for (int i=0; i<_n_list_correct; i++) {
+                disp_i = Jlist_disp_[i];
+                for (int j=0; j<Jlist_n_[i]; j++) {
+                    PS::S32 k = disp_i+j;
+                    if(Jlist_[k]==_i) Jlist_[k]=inew;
+                }
             }
         }
     }
                     
     //! Remove one particle
     /*!
+      @param[in] _i: remove index
+      @param[in] _n_list_correct: number of ptcl (count from first) need to correct the neighbor list
      */
+    void removeOnePtcl(const PS::S32 _i,
+                       const PS::S32 _n_list_correct) {
+#ifdef HARD_DEBUG
+        assert(_i<ptcl_.size());
+#endif 
+        PS::S32 ilast = ptcl_.size()-1;
+        if(_i<ilast) {
+            ptcl_[_i] = ptcl_.back();
+            pred_[_i] = pred_.back();
+            force_[_i] = force_.back();
+            time_next_[_i] = time_next_.back();
 
+            // find sorted index and change
+            PS::S32 adr_size=adr_sorted_.size();
+            for (int i=0; i<adr_size; i++) { 
+                // shift right to left
+                if(adr_sorted_[i]==_i) {
+                    for(int j=i; j<adr_size-1; j++) {
+                        adr_sorted_[j] = adr_sorted_[j+1];
+                    }
+                    adr_size--;
+                }
+                if(adr_sorted_[i]==ilast) {
+                    adr_sorted_[i] = _i;
+                    break;
+                }
+            }
+#ifdef HARD_DEBUG
+            assert(adr_size==adr_sorted_.size()-1);
+            assert(adr_size==ptcl_.size()-1);
+#endif
+
+            // shift Jlist
+            Jlist_n_[_i] = Jlist_n_.back();
+            Jlist_n_.back() = 0;
+            PS::S32 disp_last = Jlist_disp_.back();
+            PS::S32 disp_i = Jlist_disp_[_i];
+            for (int i=0; i<Jlist_n_[_i]; i++) {
+                Jlist_[disp_i+i] = Jlist_[disp_last+i];
+            }
+
+            // correct neighbor list
+            for (int i=0; i<_n_list_correct; i++) {
+                disp_i = Jlist_disp_[i];
+                for (int j=0; j<Jlist_n_[i]; j++) {
+                    PS::S32 k = disp_i+j;
+                    if(Jlist_[k]==_i) {
+                        Jlist_[k]=Jlist_[disp_i+Jlist_n_[i]-1];
+                        Jlist_n_[i]--;
+                    }
+                    if(Jlist_[k]==ilast) Jlist_[k]=_i;
+                }
+#ifdef HARD_DEBUG
+                assert(Jlist_n_[i]>=0);
+#endif
+            }
+            
+        }
+    }                       
 
     //! Write back particle data to original array
     /* @param[out] _ptcl: original particle data array
