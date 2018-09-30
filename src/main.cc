@@ -411,7 +411,7 @@ int main(int argc, char *argv[]){
                 std::cout<<"        --slowdown-factor: [F] "<<sd_factor<<std::endl;
                 std::cout<<"        --soft-eps:        [F] "<<eps<<std::endl;
                 std::cout<<"  -f: [S] "<<fname_snp<<std::endl;
-                std::cout<<"  -p: [S] "<<fname_snp<<std::endl;
+                std::cout<<"  -p: [S] "<<fname_par<<std::endl;
                 std::cout<<"  -h(--help):               print help"<<std::endl;
                 std::cout<<"*** PS: r_in : transit function inner boundary radius\n"
                          <<"        r_out: transit function outer boundary radius\n"
