@@ -759,22 +759,32 @@ private:
     */
     }
 
-    /* \return fail_flag: if the time step < dt_min, return true (failure)
+    //! correct ptcl and calculate step 
+    /*! Correct ptcl and calculate next time step
+      @param[in,out] _ptcl: particle array store the dt, time, previous acc0, acc1, the acc0, acc1 are updated with new ones
+      @param[in] _force: predicted forces
+      @param[in] _adr_sorted: active particle index array
+      @param[in] _n_act: number of active particles
+      @param[in] _dt_max: maximum time step
+      @param[in] _dt_min: minimum time step for check
+      @param[in] _a0_offset_sq: acc0 offset to determine time step
+      @param[in] _eta: time step criterion coefficiency
+      \return fail_flag: if the time step < dt_min, return true (failure)
      */
-    bool CorrectAndCalcDt4thAct(PtclH4 ptcl[],
-                                const PtclForce force[],
-                                const PS::S32 adr_sorted[], 
-                                const PS::S32 n_act,
-                                const PS::F64 dt_max,
-                                const PS::F64 dt_min,
-                                const PS::F64 a0_offset_sq,
-                                const PS::F64 eta){
+    bool CorrectAndCalcDt4thAct(PtclH4 _ptcl[],
+                                const PtclForce _force[],
+                                const PS::S32 _adr_sorted[], 
+                                const PS::S32 _n_act,
+                                const PS::F64 _dt_max,
+                                const PS::F64 _dt_min,
+                                const PS::F64 _a0_offset_sq,
+                                const PS::F64 _eta){
         bool fail_flag=false;
         static thread_local const PS::F64 inv3 = 1.0 / 3.0;
-        for(PS::S32 i=0; i<n_act; i++){
-            const PS::S32 adr = adr_sorted[i];
-            PtclH4*     pti = &ptcl[adr];
-            const PtclForce* fpi = &force[adr];
+        for(PS::S32 i=0; i<_n_act; i++){
+            const PS::S32 adr = _adr_sorted[i];
+            PtclH4*     pti = &_ptcl[adr];
+            const PtclForce* fpi = &_force[adr];
 
             const PS::F64 dt = pti->dt;
             const PS::F64 h = 0.5 * dt;
@@ -794,7 +804,7 @@ private:
 
             const PS::F64vec acc3 = (1.5*hinv*hinv*hinv) * (A1p - A0m);
             const PS::F64vec acc2 = (0.5*hinv*hinv) * A1m + h*acc3;
-            const PS::F64 dt_ref = CalcDt4th(pti->acc0, pti->acc1, acc2, acc3, eta, a0_offset_sq);
+            const PS::F64 dt_ref = CalcDt4th(pti->acc0, pti->acc1, acc2, acc3, _eta, _a0_offset_sq);
 
             const PS::F64 dt_old = pti->dt;
 #ifdef HARD_DEBUG
@@ -805,13 +815,14 @@ private:
             pti->acc3 = acc3;
 #endif
 #endif
-            pti->dt = dt_max;
+            pti->dt = _dt_max;
 
 #ifdef FIX_STEP_DEBUG
             pti->dt /= STEP_DIVIDER;
 #else
             while(pti->dt > dt_ref) pti->dt *= 0.5;
             pti->dt = dt_old*2 < pti->dt ?  dt_old*2 : pti->dt;
+            if(int(pti->time/pti->dt)*pti->dt<pti->time) pti->dt *= 0.5;
 #endif
 
 #ifdef HARD_DEBUG
@@ -819,8 +830,8 @@ private:
 //            assert(pti->dt >1.0e-12);
 #endif
 
-            if(pti->dt <dt_min) {
-                std::cerr<<"Error: Hermite integrator step size ("<<pti->dt<<") < dt_min ("<<dt_min<<")!"<<std::endl;
+            if(pti->dt <_dt_min) {
+                std::cerr<<"Error: Hermite integrator step size ("<<pti->dt<<") < dt_min ("<<_dt_min<<")!"<<std::endl;
                 std::cerr<<" pti->time="<<pti->time<<" i="<<i<<" adr="<<adr<<" pos="<<pti->pos<<" vel="<<pti->vel<<" acc="<<pti->acc0<<" acc1="<<pti->acc1
 #ifdef HARD_DEBUG_ACC
                          <<" acc2="<<pti->acc2
@@ -879,9 +890,15 @@ public:
         pcm_.pos += pcm_.vel * dt;
         //std::cerr<<"pcm.pos "<<pcm_.pos<<" pcm.vel "<<pcm_.vel<<" dt "<<dt<<std::endl;
     }
-    
+
+    //!shift ptcl back to original frame
     void shiftBackCM() {
         shiftBackCM(pcm_,ptcl_.getPointer(),ptcl_.size());
+    }
+
+    //!shift ptcl to c.m. frame and save c.m.
+    void shiftToCM() {
+        calcCMAndShift(pcm_, ptcl_.getPointer(), ptcl_.size());
     }
 
     void resizeArray(const PS::S32 n) {
@@ -925,7 +942,7 @@ public:
     }
 
     //! Insert one particle
-    /*! insert one particle to local array at position i, notice adr_sorted_ insert -1 at last
+    /*! insert one particle to local array at position i, notice i is added in the front of adr_sorted_.
       @param[in] _i: insert position
       @param[in] _ptcl: particle to be inserted
       @param[in] _n_pert_off: neighbor list offset to separate different ptcl
@@ -950,6 +967,15 @@ public:
         Jlist_.increaseSize(_n_pert_off);
         Jlist_n_.increaseSize(1);
 
+#ifdef HARD_DEBUG
+        assert(ptcl_.size()==pred_.size());
+        assert(ptcl_.size()==force_.size());
+        assert(ptcl_.size()==adr_sorted_.size());
+        assert(ptcl_.size()==time_next_.size());
+        assert(ptcl_.size()==Jlist_.size());
+        assert(ptcl_.size()==Jlist_n_.size());
+#endif
+
         // last just add
         if (_i==ptcl_.size()-1) {
             ptcl_.back().DataCopy(_ptcl);
@@ -968,13 +994,13 @@ public:
             time_next_.back()  = time_next_[_i];
 
             // find sorted index and change
-            for (int i=0; i<inew; i++) { 
+            for (int i=inew; i>0; i--) {
+                adr_sorted_[i] = adr_sorted_[i-1];
                 if(adr_sorted_[i]==_i) {
                     adr_sorted_[i] = inew;
-                    break;
                 }
             }
-            adr_sorted_.back() = -1;
+            adr_sorted_[0] = _i;
 
             // shift Jlist
             Jlist_n_.back()    = Jlist_n_[_i];
@@ -1235,9 +1261,6 @@ public:
         a0_offset_sq_ = 0.1 * mass_min / (r_out_ * r_out_);
         n_act_ = n_ptcl;
 
-        //shift c.m.
-        calcCMAndShift(pcm_, ptcl_.getPointer(), n_ptcl);
-
         if(_n_group>0) {
             _Aint->updateCM(ptcl_.getPointer());
             _Aint->resolve();
@@ -1277,6 +1300,83 @@ public:
 
         return fail_flag;
     }
+
+    //! Initial one ptcl
+    /*! Initial one ptcl
+      @param[in] _i: ptcl oindex to initial
+      @param[in] _time_sys: current set time
+      @param[in] _dt_max: maximum time step
+      @param[in] _dt_min: minimum time step for check
+      @param[in] _n_group: number of ARC group
+      @param[in,out] _Aint: ARC integrator class (resolve and shift is used)
+      @param[in] _calc_full_flag: flag to control whether loop all ptcl for j particles or only neighbor list (Jlist)
+     */
+    template <class ARCint>
+    bool initializeOne(const PS::S32 _i,
+                       const PS::F64 _time_sys,
+                       const PS::F64 _dt_max,
+                       const PS::F64 _dt_min,
+                       const PS::S32 _n_group,
+                       ARCint* _Aint,
+                       const bool _calc_full_flag = true) {
+
+        ptcl_[_i].time = _time_sys;
+        ptcl_[_i].acc0 = ptcl_[_i].acc1 = 0.0;
+
+        PredictAll(pred_.getPointer(), ptcl_.getPointer(), ptcl_.size(), _time_sys);
+
+        if(_n_group>0) {
+            _Aint->updateCM(ptcl_.getPointer());
+            _Aint->resolve();
+        }
+        
+        if(_calc_full_flag) 
+            CalcAcc0Acc1ActFull(force_.getPointer(), 
+                                Jlist_.getPointer(), Jlist_n_.getPointer(), 
+                                Jlist_disp_.getPointer(), 
+                                pred_.getPointer(), ptcl_.size(), 
+                                &_i, 1, 
+                                r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, 
+                                _Aint, _n_group);
+        // only neighbor force calculation
+        else CalcAcc0Acc1ActNb(force_.getPointer(), 
+                               pred_.getPointer(), 
+                               &_i, 1,
+                               Jlist_.getPointer(), Jlist_disp_.getPointer(), Jlist_n_.getPointer(), 
+                               r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, _Aint, _n_group);
+
+        // store predicted force
+        ptcl_[_i].acc0 = force_[_i].acc0;
+        ptcl_[_i].acc1 = force_[_i].acc1;
+
+        if(_n_group>0) _Aint->shift();
+        
+        // find maximum dt allown
+//        PS::F64 dt_max = _dt_max;
+//        PS::S32 dt_sort_index = 0;
+//#ifdef HARD_DEBUG
+//        assert(ptcl_[adr_sorted[0]].time==_time_sys);
+//#endif
+//        for(PS::S32 i=0; i<adr_sorted.size(); i++) {
+//            PS::S32 iadr=adr_sorted[i];
+//            if(ptcl_[iadr].time==_time_sys) dt_max = ptcl_[iadr].dt;
+//            else {
+//                dt_sort_index = i;
+//                break;
+//            }
+//        }
+
+        bool fail_flag=CalcBlockDt2ndAct(ptcl_.getPointer(), force_.getPointer(), &_i, 1, 0.01*eta_s_, _dt_max, _dt_min, a0_offset_sq_);
+        // make sure dt is consistent with the dt in previous n_act region
+        ptcl_[_i].dt = std::min(ptcl_[_i].dt, ptcl_[adr_sorted_[0]].dt);
+        // increase n_act for including the sort
+        n_act_++;
+        
+        time_next_[_i] = ptcl_[_i].time + ptcl_[_i].dt;
+        if(_i<_n_group) _Aint->updatePertOneGroup(_i, ptcl_.getPointer(), force_.getPointer(), getPertList(_i), getPertN(_i));
+        
+        return fail_flag;
+    }    
     
     template<class Energy>
     void CalcEnergy(Energy & eng) {

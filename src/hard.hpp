@@ -1167,6 +1167,7 @@ private:
             CalcEnergyHardFull(_ptcl_local, _n_ptcl, E0, AE0, HE0, ESD0, Hint, Aint);
 #endif
 
+            Hint.shiftToCM(); // shift ptcl to c.m. frame
             bool fail_flag=Hint.initialize(dt_limit, dt_min_hard_, _n_group, &Aint);
             for (int i=0; i<_n_group; i++) {
                 Aint.updateOneSlowDown(i, Hint.getOneTime(i), Hint.getOneDt(i), dt_limit);
