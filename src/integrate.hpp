@@ -103,11 +103,11 @@ void kickSend(Tsys& _sys,
 }
 
 //! kick for artifical c.m. particles
-/* Kick c.m. velocity
+/*! Kick c.m. velocity
    @param[in,out] _sys: particle system
    @param[in] _adr_cm_start: c.m. particle starting address
    @param[in] _adr_cm_offset: c.m. address offset
-   @param[in]: _dt: tree step
+   @param[in] _dt: tree step
  */
 template<class Tsys>
 void kickCM(Tsys& _sys,
@@ -125,7 +125,7 @@ void kickCM(Tsys& _sys,
 }
 
 template<class Tpsys, class Ttree>
-void Drift(Tpsys & system,
+void drift(Tpsys & system,
            const Ttree & tree,
            const PS::F64 dt){
     const PS::S32 n = system.getNumberOfParticleLocal();
@@ -482,6 +482,7 @@ private:
                 PS::F64 mcmcheck =0.0;
 #endif
                 if (jadr<_n_group) {
+                    if(_Aint->getMask(jadr)) continue; 
                     const auto* pj = _Aint->getGroupPtcl(jadr);
                     PS::F64 sd = _Aint->getSlowDown(jadr);
                     for(PS::S32 k=0; k<_Aint->getGroupN(jadr); k++) {
@@ -534,6 +535,7 @@ private:
 
         for(PS::S32 j=0; j<nbin; j++) {
             if(iadr==j) continue;
+            if(Aint->getMask(j)) continue;
 #ifdef HARD_DEBUG
             PS::F64 mcmcheck =0.0;
 #endif
@@ -822,7 +824,7 @@ private:
 #else
             while(pti->dt > dt_ref) pti->dt *= 0.5;
             pti->dt = dt_old*2 < pti->dt ?  dt_old*2 : pti->dt;
-            if(int(pti->time/pti->dt)*pti->dt<pti->time) pti->dt *= 0.5;
+//            if(int(pti->time/pti->dt)*pti->dt<pti->time) pti->dt *= 0.5;
 #endif
 
 #ifdef HARD_DEBUG
@@ -1367,9 +1369,7 @@ public:
 //        }
 
         bool fail_flag=CalcBlockDt2ndAct(ptcl_.getPointer(), force_.getPointer(), &_i, 1, 0.01*eta_s_, _dt_max, _dt_min, a0_offset_sq_);
-        // make sure dt is consistent with the dt in previous n_act region
-        ptcl_[_i].dt = std::min(ptcl_[_i].dt, ptcl_[adr_sorted_[0]].dt);
-        // increase n_act for including the sort
+        // increase n_act to sort the new ptcl step
         n_act_++;
         
         time_next_[_i] = ptcl_[_i].time + ptcl_[_i].dt;
@@ -1422,7 +1422,7 @@ public:
             _Aint->updateCM(pred_.getPointer());
             _Aint->resolve();
 #ifdef HARD_DEBUG
-            assert(_n_group==_Aint->getN());
+            assert(_n_group==_Aint->getNGroups());
 #endif
         }
         // force::acc0,acc1, neighbor list updated
@@ -1726,6 +1726,7 @@ class TidalTensor{
 private:
     PS::F64 T2[6];  // 1st (6)
     PS::F64 T3[10]; // 2nd Tensor (10)
+    bool use_flag;
 public:
 
     void dump(FILE *fp){
@@ -1741,6 +1742,7 @@ public:
     }
 
     void reset(){
+        use_flag=false;
         for(int i=0; i<6; i++) T2[i] = 0;
         for(int i=0; i<10; i++) T3[i] = 0;
     }
@@ -1752,6 +1754,7 @@ public:
      */
     template<class Tptcl>
     void fit(Tptcl* _ptcl_tt, const Binary& _bin, const PS::S32 _n_split) {
+        use_flag=true;
         PS::F64vec fi[8];
 #ifdef HARD_DEBUG
         assert(_ptcl_tt[12].mass_bk==0);
@@ -1807,6 +1810,7 @@ public:
     }
 
     void eval(double* acc, const PS::F64vec &pos) const {
+        if(use_flag) {
         /*
           T2:
           [[0 1 2]
@@ -1848,9 +1852,13 @@ public:
         acc2 +=  T2[2]*x + T2[4]*y + T2[5]*z
             +      T3[2]*x2 + 2*T3[4]*xy + 2*T3[5]*xz + T3[7]*y2 + 2*T3[8]*yz + T3[9]*z2;
 
-        acc[0] = acc0;
-        acc[1] = acc1;
-        acc[2] = acc2;
+        acc[0] += acc0;
+        acc[1] += acc1;
+        acc[2] += acc2;
+        }
+        else{
+            acc[0] = acc[1] = acc[2] = 0.0;
+        }
     }
 };
 
@@ -2025,6 +2033,7 @@ private:
     PS::ReallocatableArray<Tpforce*> pforce_;
     PS::ReallocatableArray<PS::S32> pert_n_;
     PS::ReallocatableArray<PS::S32> pert_disp_;
+    PS::ReallocatableArray<bool> group_mask_int_; 
 
     ARControl *ARC_control_;
     ARC_int_pars *Int_pars_;
@@ -2054,6 +2063,7 @@ public:
         bininfo.reserve(_n);
         bininfo.resizeNoInitialize(_n);
         //dt.reserve(n);
+        group_mask_int_.reserve(_n);
     }
 
     void reservePertMem(const PS::S32 _n_bin, const PS::S32 _n_tot) {
@@ -2083,67 +2093,97 @@ public:
     //}
 
     //! Add group of particles to ARC class
-    /* @param[in] _ptcl: particle data array
-       @param[in] _n_ptcl: number of particles
-       @param[in] _ptcl_soft_pert: soft perturbation artifical particles
-       @param[in] _n_split: split number for artifical particles
-       @param[in] _ptcl_pert: perturber particle array, notice the first _n_group are c.m. which has consistent order of ARC groups
-       @param[in] _force_pert: perturber force array
-       @param[in] _ptcl_pert_list: perturber particle index in _ptcl_pert
-       @param[in] _n_pert: number of perturbers
-       @param[in] _n_pert_off: perturber offset in _ptcl_pert or _force_pert
-     */
+    /*! Add or renew one group in ARC
+      @param[in] _igroup: group index, if = clist_.size(), add new, otherwise update
+      @param[in] _ptcl: particle data array
+      @param[in] _n_ptcl: number of particles
+      @param[in] _ptcl_soft_pert: soft perturbation artifical particles
+      @param[in] _n_split: split number for artifical particles
+      @param[in] _ptcl_pert: perturber particle array, notice the first _n_group are c.m. which has consistent order of ARC groups
+      @param[in] _force_pert: perturber force array
+      @param[in] _ptcl_pert_list: perturber particle index in _ptcl_pert
+      @param[in] _n_pert: number of perturbers
+      @param[in] _n_pert_off: perturber offset in _ptcl_pert or _force_pert
+    */
     template <class Tptcl, class Tpsoft>
-    void addOneGroup(Tptcl* _ptcl,
+    void addOneGroup(const PS::S32 _igroup,
+                     Tptcl* _ptcl,
                      const PS::S32 _n_ptcl,
                      const Tpsoft* _ptcl_soft_pert,
                      const PS::S32 _n_split,
                      Tpert* _ptcl_pert = NULL,
-                     Tpforce* _pert_force = NULL,
+                     Tpforce* _force_pert = NULL,
                      const PS::S32* _ptcl_pert_list = NULL,
                      const PS::S32 _n_pert = 0,
                      const PS::S32 _n_pert_off = 1) {
         // set current group offset
-        const PS::S32 igroup = clist_.size();
+        const PS::S32 ngroup = clist_.size();
 
-        pert_n_.push_back(0);
-        pert_disp_.push_back(pert_.size());
+        // add new
+        if(_igroup==ngroup) {
 
-        // set current pert_disp
-        const PS::S32 i_pert_off = pert_.size();
+            pert_n_.push_back(0);
+            pert_disp_.push_back(pert_.size());
+            group_mask_int_.push_back(false);
 
-        pert_.increaseSize(_n_pert_off);
-        pforce_.increaseSize(_n_pert_off);
+            pert_.increaseSize(_n_pert_off);
+            pforce_.increaseSize(_n_pert_off);
         
-        clist_.increaseSize(1);
-        clist_.back().allocate(_n_ptcl);
+            clist_.increaseSize(1);
 
 #ifdef HARD_DEBUG
-        assert(pert_disp_.size()==clist_.size());
-        assert(pert_n_.size()==clist_.size());
+            assert(pert_disp_.size()==clist_.size());
+            assert(pert_n_.size()==clist_.size());
 #endif
+            par_list_.push_back(ARC_pert_pars(*Int_pars_));
+        }
+        else if(_igroup<ngroup) {
+            if(!group_mask_int_[_igroup]) {
+                std::cerr<<"Error! group "<<_igroup<<" not yet clear!"<<std::endl;
+                abort();
+            }
+#ifdef HARD_DEBUG
+            assert(pert_n_[_igroup]==0);
+            assert(clist_[_igroup].getN()==0);
+#endif
+        }
+        else if(_igroup>ngroup) {
+            std::cerr<<"Error! new group indes "<<_igroup<<" > current group number "<<ngroup<<std::endl;
+            abort();
+        }
+
+        // Soft perturbation
+        if(_ptcl_soft_pert)
+            par_list_[_igroup].fit(_ptcl_soft_pert, bininfo[_igroup], _n_split);
+        else
+            par_list_[_igroup].reset();
+
+        // allocate memory
+        clist_[_igroup].allocate(_n_ptcl);
+        
+        // set current pert_disp
+        const PS::S32 i_pert_off = pert_disp_[_igroup];
+
 
         // Add members to ARC 
         for(int i=0; i<_n_ptcl; i++) {
-            clist_.back().addP(_ptcl[i]);
+            clist_[_igroup].addP(_ptcl[i]);
         }
         
         // c.m. position is in igroup, put the c.m. particle to perturber list thus it can be used for predicting the c.m. position and velocity
         if(_ptcl_pert!=NULL) {
-            pert_  [i_pert_off] = &_ptcl_pert [igroup];   
-            pforce_[i_pert_off] = &_pert_force[igroup];
-            pert_n_[igroup]++;
+            pert_  [i_pert_off] = &_ptcl_pert [_igroup];   
+            pforce_[i_pert_off] = &_force_pert[_igroup];
+            pert_n_[_igroup]++;
         }
 
         // Add perturber
         for(int i=0; i<_n_pert; i++) {
             const PS::S32  k = _ptcl_pert_list[i];
             pert_  [i+i_pert_off+1] = &_ptcl_pert[k];
-            pforce_[i+i_pert_off+1] = &_pert_force[k];
-            pert_n_[igroup]++;
+            pforce_[i+i_pert_off+1] = &_force_pert[k];
+            pert_n_[_igroup]++;
         }
-        par_list_.push_back(ARC_pert_pars(*Int_pars_));
-        par_list_.back().fit(_ptcl_soft_pert,bininfo[igroup],_n_split);
 #ifdef HARD_DEBUG
         assert(_n_pert+1<=_n_pert_off);
         assert(par_list_.size()==clist_.size());
@@ -2151,14 +2191,39 @@ public:
 
         // recored c.m. inforamtion
         if(_ptcl_pert!=NULL) {
-            clist_.back().pos  = _ptcl_pert[igroup].pos;
-            clist_.back().vel  = _ptcl_pert[igroup].vel;
-            clist_.back().mass = _ptcl_pert[igroup].mass;
+            clist_.back().pos  = _ptcl_pert[_igroup].pos;
+            clist_.back().vel  = _ptcl_pert[_igroup].vel;
+            clist_.back().mass = _ptcl_pert[_igroup].mass;
 #ifdef HARD_DEBUG
             assert(clist_.back().mass>0.0);
-            assert(clist_.back().mass==_ptcl_pert[igroup].mass);
+            assert(clist_.back().mass==_ptcl_pert[_igroup].mass);
 #endif
         }
+    }
+
+    //! Clear one group
+    /*! Clear one group, remove members, relink to c.m., member number to 0
+     */
+    void clearOneGroup(const PS::S32 _igroup) {
+#ifdef HARD_DEBUG
+        assert(_igroup<clist_.size());
+#endif
+        clist_[_igroup].clear();
+        pert_n_[_igroup]=0;
+        group_mask_int_[_igroup]=true;
+    }
+
+    //! Copy ARC_par
+    /*! Copy ARC_pars (soft perturbation) from _i_source to _i_target
+      @param[in] _i_target: target to copy
+      @param[in] _i_source: source for copy
+     */
+    void copyParP2P(const PS::S32 _i_target, const PS::S32 _i_source) {
+#ifdef HARD_DEBUG
+        assert(_i_target>=0||_i_target<par_list_.size());
+        assert(_i_source>=0||_i_source<par_list_.size());
+#endif
+        par_list_[_i_target] = par_list_[_i_source];
     }
 
     //! Update perturber list
@@ -2171,7 +2236,7 @@ public:
      */
     void updatePertOneGroup(const PS::S32 _i_group,
                             Tpert* _ptcl_pert,
-                            Tpforce* _pert_force,
+                            Tpforce* _force_pert,
                             const PS::S32* _ptcl_pert_list,
                             const PS::S32 _n_pert) {
         // Add one for c.m.
@@ -2181,7 +2246,7 @@ public:
         for (int i=0; i<_n_pert; i++) {
             PS::S32 adr = _ptcl_pert_list[i];
             pert_  [i+i_pert_off+1] = &_ptcl_pert[adr];
-            pforce_[i+i_pert_off+1] = &_pert_force[adr];
+            pforce_[i+i_pert_off+1] = &_force_pert[adr];
         }
     }
 
@@ -2473,9 +2538,10 @@ public:
     }
 
     //! Update the c.m. data from the original particle data
-    /* @param[out] _ptcl: original particle array
-       @param[in] _ptcl_list: particle index list need to be updated, assume _ptcl and ARC group have consistent index
-       @param[in] _n_ptcl: number of particles
+    /*!
+      @param[in] _ptcl: original particle array
+      @param[in] _ptcl_list: particle index list need to be updated, assume _ptcl and ARC group have consistent index
+      @param[in] _n_ptcl: number of particles
      */
     template <class Tptcl>
     void updateCM(Tptcl* _ptcl,
@@ -2489,14 +2555,16 @@ public:
         }
     }
 
+    //! Update the c.m. data from the original particle data
+    /*!
+      @param[in] _ptcl: original particle array
+    */
     template <class Tptcl>
-    void updateCM(Tptcl ptcl[]) {
+    void updateCM(Tptcl _ptcl[]) {
         for(int i=0; i<clist_.size(); i++) {
-            clist_[i].pos = ptcl[i].pos;
-            clist_[i].vel = ptcl[i].vel;
-#ifdef HARD_DEBUG
-            assert(abs(clist_[i].mass-ptcl[i].mass)<1e-10);
-#endif
+            clist_[i].pos  = _ptcl[i].pos;
+            clist_[i].vel  = _ptcl[i].vel;
+            clist_[i].mass = _ptcl[i].mass;
         }
     }
 
@@ -2512,12 +2580,29 @@ public:
         }
     }
 
-    PS::S32 getGroupN(const PS::S32 i) const {
-        return clist_[i].getN();
+    //! Get number of members in group i
+    /*!
+      @param[in] _igroup: group index
+      \return number of members in group i
+     */
+    PS::S32 getGroupN(const PS::S32 _igroup) const {
+        return clist_[_igroup].getN();
     }
 
-    PS::S32 getN() const {
+    //! Get number of groups
+    /*!
+      \return number of groups
+     */
+    PS::S32 getNGroups() const {
         return clist_.size();
+    }
+
+    //! return integration mask
+    /*!
+      \return true: suppressed for integration
+     */
+    bool getMask(const PS::S32 i) const {
+        return group_mask_int_[i];
     }
 
     const TpARC* getGroupPtcl(const PS::S32 i) const {

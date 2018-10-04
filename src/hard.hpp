@@ -804,6 +804,7 @@ private:
 
     //! check group and adjust 
     /*! 
+      1. check group change:
       First, check Aint situation
       if rmax(i)>rbin, split
       else rmax(i)<=rbin, check rmin(i)
@@ -813,6 +814,14 @@ private:
       if rmin(i)<rbin,
          if i or j is Aint, check slowdownorg
             if kappaorg(i,j) <1, merge
+
+      2. Integrated selected ptcl to _time_sys
+
+      3. Add/remove Hint
+
+      4. Initialize new ARC group, suppress unused one
+
+      5. Initialize Hint new ptcl
 
       @param[out] _Hint: Hermite integrator class
       @param[out] _Aint: ARC integrator class
@@ -885,7 +894,6 @@ private:
         PS::ReallocatableArray<PS::S32> group_member_index[_n_ptcl];  // Group member index in _ptcl_local array
         PS::S32 n_group = _n_group; // number of groups, including blend groups
         PS::S32 single_index[_n_ptcl]; // Single index in _ptcl_local array
-        bool group_mask_int[_n_ptcl] = {false}; // mask to blend unused groups for integration
 
         // prepare initial groups with artifical particles
         PS::S32 adr_first_ptcl[_n_group+1];
@@ -1018,7 +1026,7 @@ private:
 #else
             PS::S32 i_soft_pert_offset = gpars[0].offset_orb;
 #endif
-            Aint.addOneGroup(_ptcl_local, gpars[0].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_);
+            Aint.addOneGroup(0, _ptcl_local, gpars[0].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_);
             Aint.updateCM(&pcm, &iact, 1);
  
             Aint.initialSlowDown(_time_end, sdfactor_, 1.0);
@@ -1158,7 +1166,7 @@ private:
                 PS::S32 i_soft_pert_offset = adr_first_ptcl[i]+gpars[i].offset_orb;
 #endif
                 
-                Aint.addOneGroup(&_ptcl_local[n_group_offset[i]], gpars[i].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i), _n_ptcl+1); 
+                Aint.addOneGroup(i, &_ptcl_local[n_group_offset[i]], gpars[i].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i), _n_ptcl+1); 
             }
             Aint.initialSlowDown(dt_limit, sdfactor_);
             Aint.initial();
@@ -1202,8 +1210,8 @@ private:
                 assert(time_sys>time_now);
 #endif
                 PS::F64 dt_h = time_sys-time_now;
-//                    for (int k=0; k<_n_group; k++) 
-//                        Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit);
+//                for (int k=0; k<_n_group; k++) 
+//                    Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit);
 //#ifdef HARD_CHECK_ENERGY
 //                    for(int k=0; k<n_group; k++) {
 //                        slowdownrecord[k] = std::max(slowdownrecord[k], Aint.getSlowDown(k));
