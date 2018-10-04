@@ -1810,7 +1810,7 @@ public:
     }
 
     void eval(double* acc, const PS::F64vec &pos) const {
-        if(use_flag) {
+        if(!use_flag) return;
         /*
           T2:
           [[0 1 2]
@@ -1852,13 +1852,9 @@ public:
         acc2 +=  T2[2]*x + T2[4]*y + T2[5]*z
             +      T3[2]*x2 + 2*T3[4]*xy + 2*T3[5]*xz + T3[7]*y2 + 2*T3[8]*yz + T3[9]*z2;
 
-        acc[0] += acc0;
-        acc[1] += acc1;
-        acc[2] += acc2;
-        }
-        else{
-            acc[0] = acc[1] = acc[2] = 0.0;
-        }
+        acc[0] = acc0;
+        acc[1] = acc1;
+        acc[2] = acc2;
     }
 };
 
