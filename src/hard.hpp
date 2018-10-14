@@ -823,20 +823,285 @@ private:
 
       5. Initialize Hint new ptcl
 
-      @param[out] _Hint: Hermite integrator class
-      @param[out] _Aint: ARC integrator class
-      @param[out] _group_member_index: group member index array
-      @param[out] _n_group: number of groups
-      @param[out] _single_index: single index array
-      @param[out] _n_single: number of singles
+      @param[in,out] _Hint: Hermite integrator class
+      @param[in,out] _Aint: ARC integrator class
+      @param[in,out] _ptcl_origin: originial ptcl array in current hard cluster
+      @param[in,out] _group_member_index_origin: array of group member index in _ptcl_origin 
+      @param[in,out] _n_group: number of groups
+      @param[in,out] _single_index_origin: array of single index in _ptcl_origin
+      @param[in,out] _n_single: number of singles
+      @param[in] _time_sys: system time
+      @param[in] _dt_max: time step maximum
+      @param[in] _dt_min: time step minimum
+      @param[in] _dt_tree: tree time step
      */
+    template <class Tsoft>
     void adjustGroup(HermiteIntegrator& _Hint,
                      ARCIntegrator<Ptcl, PtclH4, PtclForce>& _Aint,
-                     PS::ReallocatableArray<PS::S32>* _group_member_index,
+                     PtclHard* _ptcl_origin,
+                     PS::ReallocatableArray<PS::S32>* _group_member_index_origin,
                      PS::S32 &_n_group,
-                     PS::S32 _single_index[],
-                     PS::S32 &_n_single) {
+                     PS::S32 _single_index_origin[],
+                     PS::S32 &_n_single,
+                     const PS::F64 _time_sys,
+                     const PS::F64 _dt_max,
+                     const PS::F64 _dt_tree) {
+#ifdef HARD_DEBUG
+        assert(_n_group==_Aint.getNGroups());
+#endif
+        // check Aint group to break
+        PS::S32 break_group_list[_n_group];
+        PS::S32 break_isplit_list[_n_group];
+        PS::S32 n_group_break=_Aint.checkBreak(break_group_list, break_isplit_list, r_bin_);
+
+        // check Hint to find new group
+        PS::S32 hint_size=_Hint.getPtclN();
+        PS::S32 new_group_member_index_hint[hint_size];
+        PS::S32 n_group_new = _Hint.checkNewGroup(new_group_member_index_hint, r_bin_);
+
+        if(n_group_break==0&&n_group_new==0) return;
+
+        // Integrate breaking ptcl to current time
+        if(n_group_break>0) {
+            _Hint.integrateOneListNoPred(break_group_list, n_group_break, _time_sys, _dt_max, dt_min_hard_, _n_group, &_Aint);
+            _Aint.resolve(break_group_list, n_group_break);
+        }
+
+        // Integrate breaking ptcl to current time
+        if(n_group_new>0) {
+            _Hint.integrateOneListNoPred(new_group_member_index_hint, 2*n_group_new, _time_sys, _dt_max, dt_min_hard_, _n_group, &_Aint);
+            _Aint.resolve(new_group_member_index_hint, 2*n_group_new);
+        }
+            
+        PS::S32 hint_new_ptcl_index_origin[2*_n_group]; // new ptcl index from _ptcl_origin
+        PS::S32 hint_mod_ptcl_index[_n_group+_n_single]; // modified ptcl index from Hint.ptcl_ (notice this is not _ptcl!)
+        PS::S32 hint_del_ptcl_index[_n_single]; // del ptcl index from Hint.ptcl_. If it is c.m. only suppress the integration (remove index from time step list) 
+        PS::S32 n_hint_new=0, n_hint_del=0, n_hint_mod=0;
+        bool group_update_mask[_n_group]={false};
+        const PS::S32 n_group_old = _n_group;
+
+        if(n_group_break>0) {
+            //break groups
+            for (PS::S32 i=0; i<n_group_break; i++) {
+                PS::S32 i_break = break_group_list[i];
+                PS::S32 i_split = break_isplit_list[i];
+                group_update_mask[i_break]=true;
+
+                // get index in chain list
+                PS::S32 n_member = _Aint.getGroupN(i_break);
+#ifdef HARD_DEBUG
+                assert(n_member==_group_member_index_origin[i_break].size());
+#endif
+                // splitted group member index in Aint.chain
+                PS::S32 first_index_aint[n_member], second_index_aint[n_member];
+                PS::S32 n_first, n_second;
+                _Aint.splitOneGroup(first_index_aint, n_first, second_index_aint, n_second, i_break, i_split);
+
+                // current first_list and second_list are index in chain.lst, replace them to index in _ptcl
+                PS::S32 first_index_origin[n_member], second_index_origin[n_member];
+                if (n_first==1&&n_second>1) {
+                    // if first is single, switch to second 
+                    PS::S32 i_single = first_index_origin[first_index_aint[0]];
+                    for (PS::S32 j=0; j<n_second; j++) first_index_origin[j] = _group_member_index_origin[i_break][second_index_aint[j]];
+                    n_first = n_second;
+                    second_index_origin[0] = i_single;
+                    n_second = 1;
+                }
+                else {
+                    for (PS::S32 j=0; j<n_first;  j++)  first_index_origin[j] = _group_member_index_origin[i_break][first_index_aint[j]];
+                    for (PS::S32 j=0; j<n_second; j++) second_index_origin[j] = _group_member_index_origin[i_break][second_index_aint[j]];
+                }
+                
+                // 2 single case
+                if(n_first==1&&n_second==1) {
+                    // clear current group
+                    _Aint.clearOneGroup(i_break);
+
+                    hint_del_ptcl_index[n_hint_del++] = i_break; // used suppress dt
+
+                    hint_new_ptcl_index_origin[n_hint_new++] = first_index_origin[0];
+                    hint_new_ptcl_index_origin[n_hint_new++] = second_index_origin[0];
+
+                    // clear group index list
+                    _group_member_index_origin[i_break].resizeNoInitialize(0);
+                }
+                // group - single
+                else if(n_second==1) {
+                    // recreate group
+                    _Aint.clearOneGroup(i_break);
+                    _Aint.addOneGroup(i_break, _ptcl_origin, first_index_origin, n_first, (Tsoft*)NULL, n_split_);
+                    
+                    //_Aint.initial(i_break, _time_sys);
+                    //_Aint.generateCMfromMembers(i_break);
+                    
+                    hint_mod_ptcl_index[n_hint_mod++] = i_break; // used to renew c.m.
+                    hint_new_ptcl_index_origin[n_hint_new++] = second_index_origin[0];
+                    
+                    // update group member index 
+                    _group_member_index_origin[i_break].resizeNoInitialize(n_first);
+                    for (int j=0; j<n_first; j++) _group_member_index_origin[i_break][j] = first_index_origin[j];
+                }
+                // group - group
+                else {
+                    // recreate first group
+                    _Aint.clearOneGroup(i_break);
+                    _Aint.addOneGroup(i_break, _ptcl_origin, first_index_origin, n_first, (Tsoft*)NULL, n_split_);
+                    //_Aint.initial(i_break, _time_sys);
+                    //_Aint.generateCMfromMembers(i_break);
+
+                    // check whether suppressed group exist
+                    PS::S32 i_group_new;
+                    if (_Aint.getNEmpty()>0) {
+                        // use empty group
+                        i_group_new = _Aint.getAndRemoveOneEmpty();
+                    }
+                    else {
+                        i_group_new = _n_group;
+                        _n_group++;
+                    }
+
+                    // add new group
+                    _Aint.addOneGroup(i_group_new, _ptcl_origin, second_index_origin, n_second, (Tsoft*)NULL, n_split_);                        
+                    // copy soft perturbation parameters to new group
+                    _Aint.copyParP2P(i_group_new, i_break);
+                    //_Aint.initial(i_group_new, _time_sys);
+                    //_Aint.generateCMfromMembers(i_group_new);
+
+                    hint_mod_ptcl_index[n_hint_mod++] = i_break; // renew
+                    hint_mod_ptcl_index[n_hint_mod++] = i_group_new; // new c.m., put in mod list
+
+                    // update group member index 
+                    _group_member_index_origin[i_break].resizeNoInitialize(n_first);
+                    for (int j=0; j<n_first; j++) _group_member_index_origin[i_break][j] = first_index_origin[j];
+                    _group_member_index_origin[i_group_new].resizeNoInitialize(n_second);
+                    for (int j=0; j<n_second; j++) _group_member_index_origin[i_group_new][j] = second_index_origin[j];
+                }                
+            }
+        }
         
+        if(n_group_new>0) {
+            // new groups
+            for (PS::S32 i=0; i<n_group_new; i++) {
+                PS::S32 i1_hint = new_group_member_index_hint[i*2];
+                PS::S32 i2_hint = new_group_member_index_hint[i*2+1];
+
+                bool i1_group_flag=i1_hint<n_group_old;
+                bool i2_group_flag=i2_hint<n_group_old;
+
+                // if i1/2 are groups and need break, do nothing
+                if(i1_group_flag&&group_update_mask[i1_hint]) continue;
+                if(i2_group_flag&&group_update_mask[i2_hint]) continue;
+
+                // switch i1/i2 if i1 is single and i2 is group
+                if(!i1_group_flag&&i2_group_flag) {
+                    i1_group_flag = true;
+                    i2_group_flag = false;
+                    PS::S32 i_tmp = i1_hint;
+                    i1_hint = i2_hint;
+                    i2_hint = i_tmp;
+                }
+
+                // single - single
+                if(!i1_group_flag&&!i2_group_flag) {
+                    // create new group
+                    // get ptcl index from _ptcl
+                    PS::S32 new_index_origin[2]={_single_index_origin[i1_hint],_single_index_origin[i2_hint]};
+                    PS::S32 i_group_new;
+                    if (_Aint.getNEmpty()>0) {
+                        // use empty group
+                        i_group_new = _Aint.getAndRemoveOneEmpty();
+                    }
+                    else {
+                        i_group_new = _n_group;
+                        _n_group++;
+                    }
+                    _Aint.addOneGroup(i_group_new, _ptcl_origin, new_index_origin, 2, (Tsoft*)NULL, n_split_);
+                    //_Aint.initial(_n_group, _time_sys);
+                    //_Aint.generateCMfromMembers(_n_group);
+
+                    hint_del_ptcl_index[n_hint_del++] = i1_hint;
+                    hint_del_ptcl_index[n_hint_del++] = i2_hint;
+                    hint_mod_ptcl_index[n_hint_mod++] = i_group_new; // new c.m.
+                    
+                    _group_member_index_origin[i_group_new].resizeNoInitialize(2);
+                    for (int j=0; j<2; j++) _group_member_index_origin[i_group_new][j] = new_index_origin[j];
+                    
+                }
+                // group -single
+                else if(!i2_group_flag) {
+                    PS::S32 n_members_i1 = _Aint.getGroupN(i1_hint);
+#ifdef HARD_DEBUG
+                    assert(n_members_i1==_group_member_index_origin[i1_hint].size());
+#endif
+                    // increase group member index by 1
+                    _group_member_index_origin[i1_hint].increaseSize(1);
+                    _group_member_index_origin[i1_hint][n_members_i1] = i2_hint;
+                    
+                    // renew group i1
+                    _Aint.clearOneGroup(i1_hint);
+                    _Aint.addOneGroup(i1_hint, _ptcl_origin, _group_member_index_origin[i1_hint].getPointer(), n_members_i1+1, (Tsoft*)NULL, n_split_);
+
+                    //_Aint.initial(i1_hint, _time_sys);
+                    //_Aint.generateCMfromMembers(i1_hint);
+                    
+                    hint_del_ptcl_index[n_hint_del++] = i2_hint;
+                    hint_mod_ptcl_index[n_hint_mod++] = i1_hint;
+                }
+                // group - group
+                else {
+                    PS::S32 n_members_i1 = _Aint.getGroupN(i1_hint);
+                    PS::S32 n_members_i2 = _Aint.getGroupN(i2_hint);
+#ifdef HARD_DEBUG
+                    assert(n_members_i1==_group_member_index_origin[i1_hint].size());
+                    assert(n_members_i2==_group_member_index_origin[i2_hint].size());
+#endif
+
+                    // merge second group member index list to first
+                    _group_member_index_origin[i1_hint].increaseSize(n_members_i2);
+                    for (PS::S32 j=0; j<n_members_i2; j++) 
+                        _group_member_index_origin[i1_hint][n_members_i1+j] = _group_member_index_origin[i2_hint][j];
+                    _group_member_index_origin[i2_hint].resizeNoInitialize(0);
+                    
+                    // renew group i1
+                    _Aint.clearOneGroup(i1_hint);
+                    _Aint.addOneGroup(i1_hint, _ptcl_origin, _group_member_index_origin[i1_hint].getPointer(), n_members_i1+1, (Tsoft*)NULL, n_split_);
+
+                    //_Aint.initial(i1_hint, _time_sys);
+                    //_Aint.generateCMfromMembers(i1_hint);
+
+                    // clear group i2
+                    _Aint.clearOneGroup(i2_hint);
+
+                    hint_del_ptcl_index[n_hint_del++] = i2_hint; // suppress i2
+                    hint_mod_ptcl_index[n_hint_mod++] = i1_hint; // renew i1
+                }
+            }
+        }
+
+        // delete ptcl
+        _Hint.removePtclList(hint_del_ptcl_index, n_hint_del, n_group_old, n_group_old, _single_index_origin, _n_single);
+        // renew c.m. ptcl
+        for (PS::S32 i=0; i<n_hint_mod; i++) {
+            PS::S32 i_mod_hint=hint_mod_ptcl_index[i];
+            // initial new group
+            _Aint.initial(i_mod_hint, _time_sys);
+            Ptcl* ptcl_cm = _Aint.getCM(i_mod_hint);
+            // update research
+            ptcl_cm->calcRSearch(_dt_tree);
+            // update c.m.
+            if(i_mod_hint<n_group_old) _Hint.modOnePtcl(i_mod_hint, *ptcl_cm);
+            // insert new c.m.
+            else _Hint.insertOnePtcl(i_mod_hint, *ptcl_cm, n_group_old);
+        }
+        // add new ptcl
+        _Hint.addPtclList(_ptcl_origin, hint_new_ptcl_index_origin, n_hint_new, n_group_old, true, _single_index_origin, _n_single);
+        // initial the new ptcl 
+        _Hint.initial(NULL, n_hint_mod+n_hint_new, _time_sys, _dt_max, dt_min_hard_, _n_group, &_Aint);
+
+        // Update Aint perturber list
+        for (PS::S32 i=0; i<_n_group; i++) {
+            _Aint.updatePertOneGroup(i, _Hint.getPtcl(), _Hint.getForce(), _Hint.getPertList(i), _Hint.getPertN(i));
+        }
     }
     
     //! Hard integration for clusters
@@ -893,7 +1158,6 @@ private:
          */
         PS::ReallocatableArray<PS::S32> group_member_index[_n_ptcl];  // Group member index in _ptcl_local array
         PS::S32 n_group = _n_group; // number of groups, including blend groups
-        PS::S32 single_index[_n_ptcl]; // Single index in _ptcl_local array
 
         // prepare initial groups with artifical particles
         PS::S32 adr_first_ptcl[_n_group+1];
@@ -930,12 +1194,9 @@ private:
         // single particle start index in _ptcl_local
         PS::S32 i_single_start = n_group_offset[_n_group];
         // number of single particles
-        PS::S32 n_single = _n_ptcl - i_single_start;
-        for (int i=0; i<n_single; i++) {
-            single_index[i] = i_single_start + i;
-        }
+        PS::S32 n_single_init = _n_ptcl - i_single_start;
 #ifdef HARD_DEBUG
-        assert(n_single>=0);
+        assert(n_single_init>=0);
 #endif
 
         // recover group member masses
@@ -1002,7 +1263,7 @@ private:
         }
 
         // Only one group with all particles in group
-        if(_n_group==1&&n_single==0) {
+        if(_n_group==1&&n_single_init==0) {
             PS::S32 icm = adr_cm_ptcl[0];
  
  
@@ -1026,7 +1287,7 @@ private:
 #else
             PS::S32 i_soft_pert_offset = gpars[0].offset_orb;
 #endif
-            Aint.addOneGroup(0, _ptcl_local, gpars[0].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_);
+            Aint.addOneGroup(0, _ptcl_local, NULL, gpars[0].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_);
             Aint.updateCM(&pcm, &iact, 1);
  
             Aint.initialSlowDown(_time_end, sdfactor_, 1.0);
@@ -1090,18 +1351,25 @@ private:
 #endif
         }
         else {
+            // Single index in _ptcl_local array
+            PS::S32 single_index[_n_ptcl]; 
+            PS::S32 n_single = 0;
 
             // integration -----------------------------
             HermiteIntegrator Hint;
-            Hint.setParams(eta_s_, Int_pars_.rin, Int_pars_.rout, Int_pars_.eps2);
-            // PS::S32 n_hint = n_single + _n_group;
-            Hint.resizeArray(_n_ptcl);
-            
+            Hint.setParams(eta_s_, Int_pars_.rin, Int_pars_.rout, Int_pars_.eps2, _n_ptcl);
+
+            Hint.reserveMem(_n_ptcl);
+
             // add c.m.
-            Hint.setPtcl(_ptcl_artifical, _n_group, adr_cm_ptcl);
+            Hint.addPtclList(_ptcl_artifical, adr_cm_ptcl, _n_group, 0, false, single_index, n_single);
+
+            // reset n_single
+            n_single = 0;
 
             // add single
-            Hint.setPtcl(&_ptcl_local[i_single_start], n_single);
+            Hint.addPtclList(&_ptcl_local[i_single_start], NULL, n_single_init, 0, false, single_index, n_single);
+            for (int i=0; i<n_single; i++) single_index[i] += i_single_start;
 
             PS::F64 time_sys=0.0, time_now;
 #ifdef FIX_STEP_DEBUG
@@ -1154,7 +1422,7 @@ private:
                 */
                 apo_bin[i] = bini.semi*(bini.ecc+1.0); 
             }            
-            Hint.searchPerturber(apo_bin, _n_group, _n_ptcl);
+            Hint.searchPerturber(apo_bin, _n_group);
 
             for (int i=0; i<_n_group; i++) {
 //#ifdef HARD_DEBUG
@@ -1166,7 +1434,7 @@ private:
                 PS::S32 i_soft_pert_offset = adr_first_ptcl[i]+gpars[i].offset_orb;
 #endif
                 
-                Aint.addOneGroup(i, &_ptcl_local[n_group_offset[i]], gpars[i].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i), _n_ptcl+1); 
+                Aint.addOneGroup(i, &_ptcl_local[n_group_offset[i]], NULL, gpars[i].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i));
             }
             Aint.initialSlowDown(dt_limit, sdfactor_);
             Aint.initial();
@@ -1176,7 +1444,10 @@ private:
 #endif
 
             Hint.shiftToCM(); // shift ptcl to c.m. frame
-            bool fail_flag=Hint.initialize(dt_limit, dt_min_hard_, _n_group, &Aint);
+            Hint.calcA0offset();
+            bool fail_flag=Hint.initial(NULL, n_single_init + _n_group, 0.0, dt_limit, dt_min_hard_, _n_group, &Aint, true, false);
+            Hint.SortAndSelectIp();
+
             for (int i=0; i<_n_group; i++) {
                 Aint.updateOneSlowDown(i, Hint.getOneTime(i), Hint.getOneDt(i), dt_limit);
             }
@@ -1219,8 +1490,32 @@ private:
 //                    }
 //#endif
                 nstepcount +=Aint.integrateOneStepList(time_sys, std::min(dt_limit,dt_h));
-                fail_flag = Hint.integrateOneStep(time_sys,dt_limit,dt_min_hard_, n_group, &Aint, true);
-                adjustGroup(Hint, Aint, group_member_index, n_group, single_index, n_single);
+                fail_flag = Hint.integrateOneStepAct(time_sys,dt_limit,dt_min_hard_, n_group, &Aint, true);
+                //adjustGroup<Tsoft>(Hint, Aint, _ptcl_local, group_member_index, n_group, single_index, n_single, time_sys, dt_limit, _time_end);
+
+#ifdef HARD_DEBUG
+                // index consistent check
+                PS::S32 n_count_check[_n_ptcl] = {0};
+                PtclH4* hint_ptcl = Hint.getPtcl();
+                for (PS::S32 k=0; k<n_group; k++) {
+                    const Ptcl* arc_cm = Aint.getCM(k);
+                    assert(arc_cm->mass==hint_ptcl[k].mass);
+                    assert(arc_cm->pos.x==hint_ptcl[k].pos.x);
+                    const Ptcl* arc_ptcl = Aint.getGroupPtcl(k);
+                    for (PS::S32 ig=0; ig<group_member_index[k].size(); ig++) {
+                        PS::S32 adr=group_member_index[k][ig];
+                        assert(arc_ptcl[ig].id==_ptcl_local[adr].id);
+                        n_count_check[adr]++;
+                    }
+                }
+                for (PS::S32 k=0; k<n_single; k++) {
+                    PS::S32 adr=single_index[k];
+                    assert(hint_ptcl[k+n_group].id==_ptcl_local[adr].id);
+                    n_count_check[adr]++;
+                }
+                for (PS::S32 k=0; k<_n_ptcl; k++) 
+                    assert(n_count_check[k]==1);
+#endif
                 
                 if(fail_flag) {
 #ifdef HARD_DEBUG_DUMP

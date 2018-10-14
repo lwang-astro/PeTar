@@ -259,9 +259,9 @@ int main(int argc, char** argv)
   gpars.getGroupIndex(ptcl_new.getPointer());
   Ptcl* pcm = &ptcl_new[gpars.offset_cm];
   Aint.reserveARMem(1);
-  Aint.reservePertMem(10);
+  Aint.reservePertMem(10,10);
   gpars.getBinPars(Aint.bininfo[0],ptcl_new.getPointer());
-  Aint.addOneGroup(p.getPointer(), gpars.n_members, psys.getPointer(gpars.offset_tt), n_split);
+  Aint.addOneGroup(0, p.getPointer(), NULL, gpars.n_members, psys.getPointer(gpars.offset_tt), n_split);
   PS::S32 iact=0;
   Aint.updateCM(pcm, &iact, 1);
 
@@ -304,7 +304,7 @@ int main(int argc, char** argv)
           write_p(fout,time_i,e1,ediff,p.getPointer(),N);
           std::cerr<<"Time = "<<time_i<<std::endl;
           print_p(p.getPointer(),p.size());
-          Aint.shift();
+          Aint.shift2CM();
       }
   }
 
