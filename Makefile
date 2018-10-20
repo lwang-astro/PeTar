@@ -135,7 +135,7 @@ SIMD_DEBFLAGS += -DAVX_PRELOAD
 #DEBFLAGS += -D ARC_ERROR
 DEBFLAGS += -D ARC_DEBUG_DUMP
 #DEBFLAGS += -D ARC_WARN
-#DEBFLAGS += -D HARD_DEBUG
+DEBFLAGS += -D HARD_DEBUG
 DEBFLAGS += -D HARD_DEBUG_DUMP
 #DEBFLAGS += -D STABLE_CHECK_DEBUG
 #DEBFLAGS += -D CLUSTER_DEBUG
@@ -168,8 +168,8 @@ all: nbody.out
 nbody.out: $(SRC)
 	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)
 
-getdata: data.cc
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)
+#getdata: data.cc
+#	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)
 
 ARC_debug.out: chain_debug.cxx
 	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(ARC_DEBFLAGS) -D ARC_DEEP_DEBUG -D DEBUG -o $@ $< $(CXXLIBS)
@@ -177,40 +177,40 @@ ARC_debug.out: chain_debug.cxx
 hard_debug.out: hard_debug.cxx
 	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
 
-group_debug.out: group_debug.cxx
+stable_debug.out: stable_debug.cxx
 	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
 
-rsearchtest: rsearchtest.cxx
-	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
+#rsearchtest: rsearch_test.cxx
+#	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
 test.out: test.cxx
 	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 
-searchgrouptest: searchgroup.cxx
+searchgrouptest: searchgroup_test.cxx
 	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
 
-hermitetest: hermite.cxx
+hermitetest: hermite_test.cxx
 	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
 
-splinetest: spline.cxx
+splinetest: spline_test.cxx
 	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)
 
 keplersolvertest: keplersolver.cxx
 	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)
 
-keplertest: keplertest.cxx
+stabletest: stable_test.cxx
 	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
 
-hardtest: hard.cxx
+hardtest: hard_test.cxx
 	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
 
-arctest: arc.cxx
+arctest: arc_test.cxx
 	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(ARC_MT_FLAGS) $(ARC_DEBFLAGS) -o $@ $< $(CXXLIBS)
 
-simd_test.s: simd_test.cxx
+simdtest.s: simd_test.cxx
 	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(SIMD_DEBFLAGS) -S $< -o $@  $(CXXLIBS)
 
-simd_test: simd_test.cxx
+simdtest: simd_test.cxx
 	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(SIMD_DEBFLAGS)  $< -o $@  $(CXXLIBS)
 
 clean:

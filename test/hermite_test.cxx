@@ -106,10 +106,13 @@ int main(int argc, char** argv)
     calc_center_of_mass(pcm, p.getPointer(), p.size());
     center_of_mass_shift(pcm, p.getPointer(), p.size());
     
+    PS::S32 single_index[p.size()]; 
+    PS::S32 n_single = 0;
+
     HermiteIntegrator Hint;
-    Hint.setParams(par.eta, par.rin, par.rout, par.eps*par.eps);
-    Hint.resizeArray(p.size());
-    Hint.setPtcl(p.getPointer(),p.size());
+    Hint.setParams(par.eta, par.rin, par.rout, par.eps*par.eps, p.size());
+    Hint.reserveMem(p.size());
+    Hint.addPtclList(p.getPointer(), NULL, p.size(), 0, false, single_index, n_single);
     PS::F64* dr_search=NULL;
     Hint.searchPerturber(dr_search,0);
             
@@ -118,10 +121,10 @@ int main(int argc, char** argv)
     std::cerr<<"Energy: init: ";
     E0.print(std::cerr);
 
-    PS::S32 group_act_n = 0;
-    PS::ReallocatableArray<PS::S32> group_act_list; //active group_list act adr
+    //PS::S32 group_act_n = 0;
+    //PS::ReallocatableArray<PS::S32> group_act_list; //active group_list act adr
 
-    group_act_list.resizeNoInitialize(p.size());
+    //group_act_list.resizeNoInitialize(p.size());
             
     PS::F64 time_sys=0.0;
 #ifdef FIX_STEP_DEBUG
@@ -130,7 +133,9 @@ int main(int argc, char** argv)
     PS::F64 dt_limit = calcDtLimit(time_sys, par.dt_limit_hard, dt_min_hard);
 #endif
     ARCIntegrator<PtclHard, PtclH4, PtclForce>* arcint = NULL;
-    Hint.initialize(dt_limit, dt_min_hard,  group_act_list.getPointer(), group_act_n, 0, arcint);
+    Hint.calcA0offset();
+    Hint.initial(NULL, p.size(), 0.0, dt_limit, dt_min_hard, 0, arcint, false);
+    Hint.SortAndSelectIp();
 
     FILE* fout;
     std::string fname="hermite.dat.";
@@ -153,8 +158,8 @@ int main(int argc, char** argv)
 #else
         dt_limit = calcDtLimit(time_sys, par.dt_limit_hard, dt_min_hard);
 #endif
-        Hint.integrateOneStep(time_sys,dt_limit,dt_min_hard,true,arcint);
-        Hint.SortAndSelectIp(group_act_list.getPointer(), group_act_n, 0);
+        Hint.integrateOneStepAct(time_sys,dt_limit,dt_min_hard,0,arcint);
+        Hint.SortAndSelectIp();
         if(fmod(time_sys,par.dt_limit_hard)==0) {
             //std::cout<<"Time = "<<time_sys<<std::endl;
             Hint.CalcEnergy(E1);

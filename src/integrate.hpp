@@ -2736,7 +2736,7 @@ public:
         return np;
     }
 
-
+#ifdef ARC_SYM
     PS::S64 integrateOneStepSym(const PS::S32 ic,
                                 const PS::F64 time_end,
                                 const PS::F64 dt_limit) {
@@ -2759,7 +2759,7 @@ public:
             if(korg<1.0) ds_use *= std::max(0.1,korg);
         }
 
-        PS::S64 stepcount = c->Symplectic_integration_tsyn(ds_use, *ARC_control_, time_end, par, &pert_[ipert], &pforce_[ipert], pert_n_[ic],fix_step_flag,step_count_limit);
+        PS::S64 stepcount = c->Symplectic_integration_tsyn(ds_use, *ARC_control_, time_end, par, &pert_[ipert], &pforce_[ipert], pert_n_[ic],fix_step_flag, step_count_limit);
 
 #ifdef ARC_WARN
         if(c->info!=NULL) {
@@ -2779,6 +2779,7 @@ public:
         
         return stepcount;
     }
+#else
 
     PS::S64 integrateOneStepExt(const PS::S32 ic,
                             const PS::F64 time_end,
@@ -2811,7 +2812,7 @@ public:
                 converge_count++;
                 if (converge_count>10&&time_end-c->getTime()>ARC_control_->dterr*100) {
                     std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c->getTime()<<"\nR_in: "<<Int_pars_->rin<<"\nR_out: "<<Int_pars_->rout<<"\n";
-                    dump(ic,time_end,ds_use);
+                    dump("ARC_dump.dat",ic,time_end,ds_use);
                     abort();
                 }
                 else ds_use *= -dsf;
@@ -2821,7 +2822,7 @@ public:
                 error_count++;
                 if(error_count>4) {
                     std::cerr<<"Error: Too much error appear!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c->getTime()<<"\nR_in: "<<Int_pars_->rin<<"\nR_out: "<<Int_pars_->rout<<"\n";
-                    dump(ic,time_end,ds_use);
+                    dump("ARC_dump.dat",ic,time_end,ds_use);
                     abort();
                 }
                 if (c->info->status==5) {
@@ -2836,7 +2837,7 @@ public:
                 if (final_flag) {
                     if (converge_count>10&&time_end-c->getTime()>ARC_control_->dterr*100) {
                         std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c->getTime()<<"\nR_in: "<<Int_pars_->rin<<"\nR_out: "<<Int_pars_->rout<<"\n";
-                        dump(ic,time_end,ds_use);
+                        dump("ARC_dump.dat",ic,time_end,ds_use);
                         abort();
                     }
                     converge_count++;
@@ -2855,6 +2856,7 @@ public:
 
         return nstep;
     }
+#endif
 
     //! Integrate active ARC groups
     /* @param[in] _act_list: active ARC group index list

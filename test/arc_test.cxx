@@ -79,7 +79,7 @@ void CalcEnergyHard(const Tptcl ptcl[], const PS::S32 n_tot, Teng & eng,
 }
 
 template <class Tptcl, class Teng>
-void write_p(FILE* fout, const PS::F64 time, const Teng &E, const Teng &Ediff, const Tptcl* p, const int n) {
+void write_ptcl(FILE* fout, const PS::F64 time, const Teng &E, const Teng &Ediff, const Tptcl* p, const int n) {
     fprintf(fout,"%20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e ",
             time, Ediff.tot/E.tot, E.kin, E.pot, E.tot,
             Ediff.Lt/E.Lt, Ediff.L[0]/E.Lt, Ediff.L[1]/E.Lt, Ediff.L[2]/E.Lt,
@@ -104,7 +104,7 @@ void write_p(FILE* fout, const PS::F64 time, const Teng &E, const Teng &Ediff, c
 #define NAN_CHECK(val) assert((val) == (val));
 #endif
 
-void print_p(Ptcl* p, const int n) {
+void print_ptcl(Ptcl* p, const int n) {
     std::cout<<std::setw(12)<<"mass"
              <<std::setw(12)<<"x1"
              <<std::setw(12)<<"x2"
@@ -158,19 +158,19 @@ int main(int argc, char** argv)
 
   fprintf(stderr,"t_end = %e\nN = %d\nr_in = %e\nr_out = %e\neta = %e\ndt_limit = %e\neps = %e\n",time,N,rin,rout,eta,dt_limit,eps);
 
-  ParticleBase pin;
-  PS::ReallocatableArray<Ptcl> p;
-  PS::ReallocatableArray<PS::S32> p_list;
-  PS::ReallocatableArray<PS::S32> n_cluster;
-  PS::ReallocatableArray<PS::S32> np;
-  p.resizeNoInitialize(N);
-  p_list.resizeNoInitialize(N);
-  n_cluster.resizeNoInitialize(1);
-  n_cluster[0] = N;
+  ParticleBase ptcl_in;
+  PS::ReallocatableArray<Ptcl> ptcl;
+  PS::ReallocatableArray<PS::S32> ptcl_list;
+  //PS::ReallocatableArray<PS::S32> n_cluster;
+  //PS::ReallocatableArray<PS::S32> np;
+  ptcl.resizeNoInitialize(N);
+  ptcl_list.resizeNoInitialize(N);
+  //n_cluster.resizeNoInitialize(1);
+  //n_cluster[0] = N;
   for (int i=0; i<N; i++) {
-      pin.readAscii(fin);
-      p[i]=Ptcl(pin, rsearch, 0.0, i+1, 0);
-      p_list[i]=i;
+      ptcl_in.readAscii(fin);
+      ptcl[i]=Ptcl(ptcl_in, rsearch, 0.0, i+1, 0);
+      ptcl_list[i]=i;
   }
 
   //PS::ParticleSystem<FPSoft> sys;
@@ -184,14 +184,24 @@ int main(int argc, char** argv)
   //sys_hard.setPtclForIsolatedMultiCluster(sys, p_list, n_cluster);
   //sys_hard.findGroupsAndCreateArtificalParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys, dt_limit);
 
-  print_p(p.getPointer(),N);
+  print_ptcl(ptcl.getPointer(),N);
 
-
-  SearchGroup<Ptcl> group;
+  PtclTree<Ptcl> ptcl_tree[N-1];
+  keplerTreeGenerator<Ptcl>(ptcl_tree, ptcl_list.getPointer(), N, ptcl.getPointer(), dt_limit);
+  PS::F64 arc_step=PS::LARGE_FLOAT;
+  for (PS::S32 i=0; i<N-1; i++) {
+      const PS::F64 semi = ptcl_tree[i].semi;
+      const PS::F64 m1 = ptcl_tree[i].m1;
+      const PS::F64 m2 = ptcl_tree[i].m2;
+      const PS::F64 mcm = m1+m2;
+      ptcl_tree[i].tstep=0.78539816339*std::sqrt(semi/mcm)*m1*m2;  
+      arc_step = std::min(arc_step, ptcl_tree[i].tstep);
+  }
+  //SearchGroup<Ptcl> group;
   
   //group.findGroups(p.getPointer(), N, n_split);
-  group.searchAndMerge(p.getPointer(), N, rsearch);
-  std::cout<<"SearchAndMerge\n";
+  //group.searchAndMerge(p.getPointer(), N, rsearch);
+  //std::cout<<"SearchAndMerge\n";
   // 
   //for(int i=0; i<group.getNGroups(); i++) {
   //    std::cout<<"group["<<i<<"]: ";
@@ -207,9 +217,9 @@ int main(int argc, char** argv)
   //}
   //std::cout<<std::endl;
   
-  PS::ReallocatableArray<Ptcl> ptcl_new;
-  PS::S32 n_group;
-  group.generateList(0, p.getPointer(), N, ptcl_new, n_group, rbin, rin, rout, dt_limit, N, n_split);
+  //PS::ReallocatableArray<Ptcl> ptcl_new;
+  //PS::S32 n_group;
+  //group.generateList(0, p.getPointer(), N, ptcl_new, n_group, rbin, rin, rout, dt_limit, N, n_split);
   //std::cout<<"GenerateList\n";
   //print_p(p.getPointer(),p.size());
 
@@ -217,22 +227,22 @@ int main(int argc, char** argv)
   //print_p(ptcl_new.getPointer(),ptcl_new.size());
 
 
-  PS::ReallocatableArray<FPSoft> psys;
-  psys.reserveEmptyAreaAtLeast(ptcl_new.size());
-  for(int i=0;i<ptcl_new.size();i++) {
-      psys.pushBackNoCheck(FPSoft(ptcl_new[i],0,i));
-      //    adr.push_back(i+N);
-  }
+  //PS::ReallocatableArray<FPSoft> psys;
+  //psys.reserveEmptyAreaAtLeast(ptcl_new.size());
+  //for(int i=0;i<ptcl_new.size();i++) {
+  //psys.pushBackNoCheck(FPSoft(ptcl_new[i],0,i));
+  ////    adr.push_back(i+N);
+//}
 
   //np.push_back(p.size());
 
-  std::cout<<"create artifical particles: N= "<<ptcl_new.size()<<"\n ";
-  print_p(ptcl_new.getPointer(),ptcl_new.size());
+  //std::cout<<"create artifical particles: N= "<<ptcl_new.size()<<"\n ";
+  //print_p(ptcl_new.getPointer(),ptcl_new.size());
 
   //group.findGroups(p.getPointer(),p.size(),n_split);
 
   ARC::chainpars ARC_control;
-  ARC_control.setA(Newtonian_AW<Ptcl,ARC_pert_pars>,Newtonian_extA_soft<Ptcl,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
+  ARC_control.setA(Newtonian_cut_AW<Ptcl,ARC_pert_pars>,Newtonian_extA_soft<Ptcl,PtclH4*,PtclForce*,ARC_pert_pars>,Newtonian_timescale<ARC_pert_pars>);
   ARC_control.setabg(0,1,0);
   ARC_control.setErr(1e-10,1e-24,1e-6);
 #ifdef ARC_SYM
@@ -255,26 +265,33 @@ int main(int argc, char** argv)
   Int_pars.eps2 = eps*eps;
 
   ARCIntegrator<Ptcl, PtclH4, PtclForce> Aint(ARC_control, Int_pars);
-  GroupPars gpars(n_split);
-  gpars.getGroupIndex(ptcl_new.getPointer());
-  Ptcl* pcm = &ptcl_new[gpars.offset_cm];
+  //GroupPars gpars(n_split);
+  //gpars.getGroupIndex(ptcl_new.getPointer());
+  //Ptcl* pcm = &ptcl_new[gpars.offset_cm];
+#ifdef ARC_SYM
+  Aint.step_count_limit = 10000;
+#endif
   Aint.reserveARMem(1);
-  Aint.reservePertMem(10,10);
-  gpars.getBinPars(Aint.bininfo[0],ptcl_new.getPointer());
-  Aint.addOneGroup(0, p.getPointer(), NULL, gpars.n_members, psys.getPointer(gpars.offset_tt), n_split);
-  PS::S32 iact=0;
-  Aint.updateCM(pcm, &iact, 1);
+  Aint.reservePertMem(1,1);
+  //gpars.getBinPars(Aint.bininfo[0],ptcl_new.getPointer());
+  Aint.bininfo[0].tstep = arc_step;
+  Aint.addOneGroup(ptcl.getPointer(), NULL, N, (FPSoft*)NULL, n_split);
+  //PS::S32 iact=0;
+  //Aint.updateCM(pcm, &iact, 1);
 
   //Aint.initialSlowDown(_time_end, sdfactor_);
   Aint.initial();
+  Ptcl ptcl_cm = *Aint.getCM(0);
+  ptcl_cm.print(std::cout);
+  std::cout<<std::endl;
   
   EnergyAndMomemtum e0,e1,ediff;
 
   FILE* fout;
   std::string fname="arc.dat.";
   if ( (fout = fopen((fname+foutname).c_str(),"w")) == NULL) {
-    fprintf(stderr,"Error: Cannot open file arc.dat.\n");
-    abort();
+      fprintf(stderr,"Error: Cannot open file arc.dat.\n");
+      abort();
   }
 
   PS::S32 nstep = time/dt_limit*STEP_DIVIDER;
@@ -282,10 +299,10 @@ int main(int argc, char** argv)
   // PS::F64 err;
 
   std::cerr<<"Time = "<<time_i<<std::endl;
-  print_p(p.getPointer(),p.size());
-  CalcEnergyHard(p.getPointer(),N,e0,rin,rout,eps*eps);
+  print_ptcl(ptcl.getPointer(),N);
+  CalcEnergyHard(ptcl.getPointer(),N,e0,rin,rout,eps*eps);
   //Aint.EnergyRecord(e0);
-  write_p(fout,0.0,e0,ediff,p.getPointer(),N);
+  write_ptcl(fout,0.0,e0,ediff,ptcl.getPointer(),N);
   PS::S64 stepcount = 0;
   for (int i=0; i<nstep; i++) {
       time_i += dt_limit/STEP_DIVIDER;
@@ -298,12 +315,12 @@ int main(int argc, char** argv)
           printf("step_d=%d, i=%d\n",(int)STEP_DIVIDER,i);
           Aint.resolve();
       //Aint.EnergyRecord(e1);
-          CalcEnergyHard(p.getPointer(),N,e1,rin,rout,eps*eps);
+          CalcEnergyHard(ptcl.getPointer(),N,e1,rin,rout,eps*eps);
           //err = (e1.kin + e1.pot - (e0.kin + e0.pot))/(e0.kin + e0.pot);
           ediff = e1 - e0;
-          write_p(fout,time_i,e1,ediff,p.getPointer(),N);
-          std::cerr<<"Time = "<<time_i<<std::endl;
-          print_p(p.getPointer(),p.size());
+          write_ptcl(fout,time_i,e1,ediff,ptcl.getPointer(),N);
+          std::cerr<<"Time = "<<time_i<<" Energy Error = "<<ediff.tot/e1.tot<<std::endl;
+          print_ptcl(ptcl.getPointer(),N);
           Aint.shift2CM();
       }
   }

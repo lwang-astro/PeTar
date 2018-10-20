@@ -580,7 +580,7 @@ bool pairLess(const std::pair<PS::F32,PS::S32> & a, const std::pair<PS::F32,PS::
     @param[in] _dt_tree: tree time step, used for calculating r_search for bin
  */
 template<class Tptcl>
-void keplerTreeGenerator(PtclTree<Tptcl> _bins[],   // make sure bins.size = n_members!
+void keplerTreeGenerator(PtclTree<Tptcl> _bins[],   // make sure bins.size = n_members-1!
                          PS::S32 _member_list[], // make sure list.size = n_members!
                          const PS::S32 _n_members,
                          Tptcl* _ptcl_org,
