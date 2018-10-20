@@ -849,15 +849,16 @@ private:
 #ifdef HARD_DEBUG
         assert(_n_group==_Aint.getNGroups());
 #endif
+        const PS::F64 r_bin2 = r_bin_*r_bin_;
         // check Aint group to break
         PS::S32 break_group_list[_n_group];
-        PS::S32 break_isplit_list[_n_group];
-        PS::S32 n_group_break=_Aint.checkBreak(break_group_list, break_isplit_list, r_bin_);
+        PS::S32 break_split_index_list[_n_group];
+        PS::S32 n_group_break=_Aint.checkBreak(break_group_list, break_split_index_list, r_bin2);
 
         // check Hint to find new group
         PS::S32 hint_size=_Hint.getPtclN();
         PS::S32 new_group_member_index_hint[hint_size];
-        PS::S32 n_group_new = _Hint.checkNewGroup(new_group_member_index_hint, r_bin_);
+        PS::S32 n_group_new = _Hint.checkNewGroup(new_group_member_index_hint, r_bin2);
 
         if(n_group_break==0&&n_group_new==0) return;
 
@@ -884,7 +885,7 @@ private:
             //break groups
             for (PS::S32 i=0; i<n_group_break; i++) {
                 PS::S32 i_break = break_group_list[i];
-                PS::S32 i_split = break_isplit_list[i];
+                PS::S32 i_split = break_split_index_list[i];
                 group_update_mask[i_break]=true;
 
                 // get index in chain list
@@ -929,52 +930,54 @@ private:
                 else if(n_second==1) {
                     // recreate group
                     _Aint.clearOneGroup(i_break);
-                    _Aint.addOneGroup(i_break, _ptcl_origin, first_index_origin, n_first, (Tsoft*)NULL, n_split_);
+                    PS::S32 i_new=_Aint.addOneGroup(_ptcl_origin, first_index_origin, n_first, (Tsoft*)NULL, n_split_);
+#ifdef HARD_DEBUG
+                    assert(i_new==i_break);
+#endif
                     
                     //_Aint.initial(i_break, _time_sys);
                     //_Aint.generateCMfromMembers(i_break);
-                    
-                    hint_mod_ptcl_index[n_hint_mod++] = i_break; // used to renew c.m.
+
+                    if(i_new!=i_break) hint_del_ptcl_index[n_hint_del++] = i_break;
+                    hint_mod_ptcl_index[n_hint_mod++] = i_new; // used to renew c.m.
                     hint_new_ptcl_index_origin[n_hint_new++] = second_index_origin[0];
                     
                     // update group member index 
-                    _group_member_index_origin[i_break].resizeNoInitialize(n_first);
-                    for (int j=0; j<n_first; j++) _group_member_index_origin[i_break][j] = first_index_origin[j];
+                    _group_member_index_origin[i_new].resizeNoInitialize(n_first);
+                    for (int j=0; j<n_first; j++) _group_member_index_origin[i_new][j] = first_index_origin[j];
+
+                    _n_group = _Aint.getNGroups();
                 }
                 // group - group
                 else {
                     // recreate first group
                     _Aint.clearOneGroup(i_break);
-                    _Aint.addOneGroup(i_break, _ptcl_origin, first_index_origin, n_first, (Tsoft*)NULL, n_split_);
+                    PS::S32 i_new=_Aint.addOneGroup(_ptcl_origin, first_index_origin, n_first, (Tsoft*)NULL, n_split_);
+#ifdef HARD_DEBUG
+                    assert(i_new==i_break);
+#endif
+
                     //_Aint.initial(i_break, _time_sys);
                     //_Aint.generateCMfromMembers(i_break);
 
-                    // check whether suppressed group exist
-                    PS::S32 i_group_new;
-                    if (_Aint.getNEmpty()>0) {
-                        // use empty group
-                        i_group_new = _Aint.getAndRemoveOneEmpty();
-                    }
-                    else {
-                        i_group_new = _n_group;
-                        _n_group++;
-                    }
-
                     // add new group
-                    _Aint.addOneGroup(i_group_new, _ptcl_origin, second_index_origin, n_second, (Tsoft*)NULL, n_split_);                        
+                    PS::S32 i_new2=_Aint.addOneGroup(_ptcl_origin, second_index_origin, n_second, (Tsoft*)NULL, n_split_);                        
                     // copy soft perturbation parameters to new group
-                    _Aint.copyParP2P(i_group_new, i_break);
+                    _Aint.copyParP2P(i_new2, i_break);
                     //_Aint.initial(i_group_new, _time_sys);
                     //_Aint.generateCMfromMembers(i_group_new);
 
-                    hint_mod_ptcl_index[n_hint_mod++] = i_break; // renew
-                    hint_mod_ptcl_index[n_hint_mod++] = i_group_new; // new c.m., put in mod list
+                    if(i_new!=i_break) hint_del_ptcl_index[n_hint_del++] = i_break;
+                    hint_mod_ptcl_index[n_hint_mod++] = i_new; // renew
+                    hint_mod_ptcl_index[n_hint_mod++] = i_new2; // new c.m., put in mod list
 
                     // update group member index 
-                    _group_member_index_origin[i_break].resizeNoInitialize(n_first);
-                    for (int j=0; j<n_first; j++) _group_member_index_origin[i_break][j] = first_index_origin[j];
-                    _group_member_index_origin[i_group_new].resizeNoInitialize(n_second);
-                    for (int j=0; j<n_second; j++) _group_member_index_origin[i_group_new][j] = second_index_origin[j];
+                    _group_member_index_origin[i_new].resizeNoInitialize(n_first);
+                    for (int j=0; j<n_first; j++) _group_member_index_origin[i_new][j] = first_index_origin[j];
+                    _group_member_index_origin[i_new2].resizeNoInitialize(n_second);
+                    for (int j=0; j<n_second; j++) _group_member_index_origin[i_new2][j] = second_index_origin[j];
+
+                    _n_group = _Aint.getNGroups();
                 }                
             }
         }
@@ -1006,26 +1009,19 @@ private:
                     // create new group
                     // get ptcl index from _ptcl
                     PS::S32 new_index_origin[2]={_single_index_origin[i1_hint],_single_index_origin[i2_hint]};
-                    PS::S32 i_group_new;
-                    if (_Aint.getNEmpty()>0) {
-                        // use empty group
-                        i_group_new = _Aint.getAndRemoveOneEmpty();
-                    }
-                    else {
-                        i_group_new = _n_group;
-                        _n_group++;
-                    }
-                    _Aint.addOneGroup(i_group_new, _ptcl_origin, new_index_origin, 2, (Tsoft*)NULL, n_split_);
+                    PS::S32 i_new = _Aint.addOneGroup( _ptcl_origin, new_index_origin, 2, (Tsoft*)NULL, n_split_);
+
                     //_Aint.initial(_n_group, _time_sys);
                     //_Aint.generateCMfromMembers(_n_group);
 
                     hint_del_ptcl_index[n_hint_del++] = i1_hint;
                     hint_del_ptcl_index[n_hint_del++] = i2_hint;
-                    hint_mod_ptcl_index[n_hint_mod++] = i_group_new; // new c.m.
+                    hint_mod_ptcl_index[n_hint_mod++] = i_new; // new c.m.
                     
-                    _group_member_index_origin[i_group_new].resizeNoInitialize(2);
-                    for (int j=0; j<2; j++) _group_member_index_origin[i_group_new][j] = new_index_origin[j];
-                    
+                    _group_member_index_origin[i_new].resizeNoInitialize(2);
+                    for (int j=0; j<2; j++) _group_member_index_origin[i_new][j] = new_index_origin[j];
+
+                    _n_group = _Aint.getNGroups();
                 }
                 // group -single
                 else if(!i2_group_flag) {
@@ -1039,13 +1035,20 @@ private:
                     
                     // renew group i1
                     _Aint.clearOneGroup(i1_hint);
-                    _Aint.addOneGroup(i1_hint, _ptcl_origin, _group_member_index_origin[i1_hint].getPointer(), n_members_i1+1, (Tsoft*)NULL, n_split_);
+                    PS::S32 i_new=_Aint.addOneGroup(_ptcl_origin, _group_member_index_origin[i1_hint].getPointer(), n_members_i1+1, (Tsoft*)NULL, n_split_);
+#ifdef HARD_DEBUG
+                    assert(i_new==i1_hint);
+#endif
 
                     //_Aint.initial(i1_hint, _time_sys);
                     //_Aint.generateCMfromMembers(i1_hint);
                     
                     hint_del_ptcl_index[n_hint_del++] = i2_hint;
-                    hint_mod_ptcl_index[n_hint_mod++] = i1_hint;
+                    hint_mod_ptcl_index[n_hint_mod++] = i_new; // renew i1
+                    if(i_new!=i1_hint) {
+                        hint_del_ptcl_index[n_hint_del++] = i1_hint; // suppress i1
+                        _n_group = _Aint.getNGroups();
+                    }
                 }
                 // group - group
                 else {
@@ -1064,7 +1067,10 @@ private:
                     
                     // renew group i1
                     _Aint.clearOneGroup(i1_hint);
-                    _Aint.addOneGroup(i1_hint, _ptcl_origin, _group_member_index_origin[i1_hint].getPointer(), n_members_i1+1, (Tsoft*)NULL, n_split_);
+                    PS::S32 i_new=_Aint.addOneGroup(_ptcl_origin, _group_member_index_origin[i1_hint].getPointer(), n_members_i1+1, (Tsoft*)NULL, n_split_);
+#ifdef HARD_DEBUG
+                    assert(i_new==i1_hint);
+#endif
 
                     //_Aint.initial(i1_hint, _time_sys);
                     //_Aint.generateCMfromMembers(i1_hint);
@@ -1073,7 +1079,11 @@ private:
                     _Aint.clearOneGroup(i2_hint);
 
                     hint_del_ptcl_index[n_hint_del++] = i2_hint; // suppress i2
-                    hint_mod_ptcl_index[n_hint_mod++] = i1_hint; // renew i1
+                    hint_mod_ptcl_index[n_hint_mod++] = i_new; // renew i1
+                    if(i_new!=i1_hint) {
+                        hint_del_ptcl_index[n_hint_del++] = i1_hint; // suppress i1
+                        _n_group = _Aint.getNGroups();
+                    }
                 }
             }
         }
@@ -1287,7 +1297,7 @@ private:
 #else
             PS::S32 i_soft_pert_offset = gpars[0].offset_orb;
 #endif
-            Aint.addOneGroup(0, _ptcl_local, NULL, gpars[0].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_);
+            Aint.addOneGroup(_ptcl_local, NULL, gpars[0].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_);
             Aint.updateCM(&pcm, &iact, 1);
  
             Aint.initialSlowDown(_time_end, sdfactor_, 1.0);
@@ -1434,7 +1444,7 @@ private:
                 PS::S32 i_soft_pert_offset = adr_first_ptcl[i]+gpars[i].offset_orb;
 #endif
                 
-                Aint.addOneGroup(i, &_ptcl_local[n_group_offset[i]], NULL, gpars[i].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i));
+                Aint.addOneGroup(&_ptcl_local[n_group_offset[i]], NULL, gpars[i].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i));
             }
             Aint.initialSlowDown(dt_limit, sdfactor_);
             Aint.initial();
@@ -1445,7 +1455,7 @@ private:
 
             Hint.shiftToCM(); // shift ptcl to c.m. frame
             Hint.calcA0offset();
-            bool fail_flag=Hint.initial(NULL, n_single_init + _n_group, 0.0, dt_limit, dt_min_hard_, _n_group, &Aint, true, false);
+            bool fail_flag=Hint.initial(NULL, n_single_init + _n_group, 0.0, dt_limit, dt_min_hard_, _n_group, &Aint, false);
             Hint.SortAndSelectIp();
 
             for (int i=0; i<_n_group; i++) {
@@ -1490,7 +1500,7 @@ private:
 //                    }
 //#endif
                 nstepcount +=Aint.integrateOneStepList(time_sys, std::min(dt_limit,dt_h));
-                fail_flag = Hint.integrateOneStepAct(time_sys,dt_limit,dt_min_hard_, n_group, &Aint, true);
+                fail_flag = Hint.integrateOneStepAct(time_sys,dt_limit,dt_min_hard_, n_group, &Aint);
                 //adjustGroup<Tsoft>(Hint, Aint, _ptcl_local, group_member_index, n_group, single_index, n_single, time_sys, dt_limit, _time_end);
 
 #ifdef HARD_DEBUG
