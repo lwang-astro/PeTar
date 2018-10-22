@@ -292,6 +292,7 @@ public:
     }
 };
 
+template <class Tphard>
 class HermiteIntegrator{
 private:
     PS::ReallocatableArray<PtclPred> pred_;
@@ -300,6 +301,7 @@ private:
     PS::ReallocatableArray<PS::F64> time_next_;
 
     PS::ReallocatableArray<PtclH4> ptcl_;   // first c.m.; second single
+    PS::ReallocatableArray<Tphard*> ptcl_ptr_; // original ptcl address
     PS::ReallocatableArray<PS::S32> Jlist_; // neighbor list 
     PS::ReallocatableArray<PS::S32> Jlist_disp_; // neighbor list offset 
     PS::ReallocatableArray<PS::S32> Jlist_n_;    // number of neighbors
@@ -635,7 +637,6 @@ private:
        @param[in] _r_A: (_rout-_rin)/(_rout+_rin);
        @param[in] _eps2: softing eps square
        @param[in] _Aint: ARC integrator class
-       @param[in] _n_group: number of groups
      */
     template <class Tptcl, class ARCint>
     inline void CalcActAcc0Acc1(PtclForce _force[],
@@ -653,8 +654,9 @@ private:
                                 const PS::F64 _r_oi_inv,
                                 const PS::F64 _r_A,
                                 const PS::F64 _eps2,
-                                const ARCint* _Aint,
-                                const PS::S32 _n_group) {
+                                const ARCint* _Aint) {
+        PS::S32 n_group = 0;
+        if(_Aint!=NULL) n_group = _Aint->getNGroups();
         const PS::F64vec vzero = PS::F64vec(0.0);
         // PS::ReallocatableArray< std::pair<PS::S32, PS::S32> > & merge_pair ){
 
@@ -667,11 +669,14 @@ private:
             _r_min_index[iadr] = -1;
             
             // for group particle
-            if (iadr<_n_group) {
+            if (iadr<n_group) {
 #ifdef HARD_DEBUG
                 PS::F64 mcmcheck =0.0;
 #endif
                 const PS::S32 ni = _Aint->getGroupN(iadr);             // number of members
+#ifdef HARD_DEBUG
+                assert(ni>0);
+#endif
                 const auto* pi = _Aint->getGroupPtcl(iadr);
                 const PS::F64 sdi = 1.0/_Aint->getSlowDown(iadr);      // slowdown factor
                 const PS::F64vec vcmsdi = (1.0-sdi)*_ptcl[iadr].vel;   // slowdown velocity
@@ -680,7 +685,7 @@ private:
 
                 for (PS::S32 j=0; j<ni; j++) {
                     fp[j].acc0 = fp[j].acc1 = 0.0;
-                    CalcOneAcc0Acc1(fp[j], nb_flag, _r_min2[iadr], _r_min_index[iadr], pi[j], iadr, vcmsdi, sdi, _ptcl, _n_tot, _n_group, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
+                    CalcOneAcc0Acc1(fp[j], nb_flag, _r_min2[iadr], _r_min_index[iadr], pi[j], iadr, vcmsdi, sdi, _ptcl, _n_tot, n_group, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
                     // c.m. force
                     _force[iadr].acc0 += pi[j].mass*fp[j].acc0;
                     _force[iadr].acc1 += pi[j].mass*fp[j].acc1;
@@ -709,7 +714,7 @@ private:
             }
             else {
 //                PS::F64 r2[_n_tot];
-                CalcOneAcc0Acc1(_force[iadr], nb_flag, _r_min2[iadr], _r_min_index[iadr], _ptcl[iadr], iadr, vzero, 1.0, _ptcl, _n_tot, _n_group, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
+                CalcOneAcc0Acc1(_force[iadr], nb_flag, _r_min2[iadr], _r_min_index[iadr], _ptcl[iadr], iadr, vzero, 1.0, _ptcl, _n_tot, n_group, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
             }
 
             // Update neighbors
@@ -953,11 +958,12 @@ private:
                 if(itrace>0) _list[i] = itrace;
                 // move to next
                 i++;
+                if(i>=list_size) break;
             }
-            _list[i] = _list[i+imove];
 #ifdef HARD_DEBUG
             assert(i+imove<_n_list);
 #endif
+            _list[i] = _list[i+imove];
         }
 
         return list_size;
@@ -995,11 +1001,12 @@ public:
     //! check the pair with distance below r_crit
     /*! First check nearest neighbor distance r_min
         If r_min<r_crit, check the direction, if income, accept as group
-      @param[in] _new_group_member_index: new group member index, echo two neighbor is one group
+      @param[out] _new_group_member_index: new group member index in ptcl_
+      @param[out] _new_group_member_adr: new group member address, echo two neighbor is one group
       @param[in] _r_crit2: group distance criterion square
       \return number of new groups
      */
-    PS::S32 checkNewGroup(PS::S32* _new_group_member_index, const PS::S64 _r_crit2) {
+    PS::S32 checkNewGroup(PS::S32 _new_group_member_index[], Tphard* _new_group_member_adr[], const PS::F64 _r_crit2) {
 #ifdef HARD_DEBUG
         assert(r_min2_.size()==r_min_index_.size());
 #endif
@@ -1016,6 +1023,8 @@ public:
                         const PS::S32 group_offset = 2*n_new_group;
                         _new_group_member_index[group_offset] = i;
                         _new_group_member_index[group_offset+1] = j;
+                        _new_group_member_adr[group_offset] = ptcl_ptr_[i];
+                        _new_group_member_adr[group_offset+1] = ptcl_ptr_[j];
                         n_new_group++;
                     }
                 }
@@ -1045,6 +1054,7 @@ public:
      */
     void reserveMem(const PS::S32 _n) {
         ptcl_.reserve(_n);
+        ptcl_ptr_.reserve(_n);
         Jlist_.reserve(_n*n_nb_off_);
         Jlist_disp_.reserve(_n);
         Jlist_n_.reserve(_n);
@@ -1089,7 +1099,6 @@ public:
     /*! insert one particle to local array at position i, notice i is added in the front of adr_dt_sorted_.
       @param[in] _i: insert position
       @param[in] _ptcl: particle to be inserted
-      @param[in] _n_pert_off: neighbor list offset to separate different ptcl
       @param[in] _n_list_correct: number of ptcl (count from first) need to correct the neighbor list
      */
     template <class Tptcl>
@@ -1102,6 +1111,7 @@ public:
 #endif 
         // increase all data size by 1
         ptcl_.increaseSize(1);
+        ptcl_ptr_.increaseSize(1);
         pred_.increaseSize(1);
         force_.increaseSize(1);
         adr_dt_sorted_.increaseSize(1);
@@ -1116,7 +1126,7 @@ public:
         assert(ptcl_.size()==pred_.size());
         assert(ptcl_.size()==force_.size());
         assert(ptcl_.size()==time_next_.size());
-        assert(ptcl_.size()==Jlist_.size());
+        assert(ptcl_.size()==Jlist_disp_.size());
         assert(ptcl_.size()==Jlist_n_.size());
         assert(ptcl_.size()==r_min2_.size());
         assert(ptcl_.size()==r_min_index_.size());
@@ -1125,6 +1135,7 @@ public:
         // last just add
         if (_i==ptcl_.size()-1) {
             ptcl_.back().DataCopy(_ptcl);
+            ptcl_ptr_.back()=(Tphard*)&_ptcl;
 
             // shift adr_dt_sorted
             for (int i=ptcl_.size()-1; i>0; i--) {
@@ -1139,7 +1150,9 @@ public:
             assert(&(ptcl_.back())==&(ptcl_[inew]));
 #endif
             ptcl_.back() = ptcl_[_i];
+            ptcl_ptr_.back() = ptcl_ptr_[_i];
             ptcl_[_i].DataCopy(_ptcl);
+            ptcl_ptr_[_i]=(Tphard*)&_ptcl;
             
             pred_.back()       = pred_[_i];
             force_.back()      = force_[_i];
@@ -1189,6 +1202,7 @@ public:
         assert(_i<=ptcl_.size());
 #endif 
         ptcl_[_i].DataCopy(_ptcl);
+        ptcl_ptr_[_i] = (Tphard*)&_ptcl;
 
         // find index and shift to front
         const PS::S32 adr_size=adr_dt_sorted_.size();
@@ -1212,23 +1226,20 @@ public:
       @param[in] _n_list: number of adding particles
       @param[in] _n_nb_correct: number of ptcl (count from first): need to correct the neighbor list
       @param[in] _adr_dt_front_flag: add new ptcl index in front of adr_dt_sorted_ (true) or end (false)
-      @param[out] _single_index_origin: the corresponding ptcl index in original array for Hint.ptcl_; updated consistenly here
-      @param[out[ _n_single: number of singles, updated
      */
     template <class Tptcl>
-    void addPtclList(const Tptcl* _ptcl_origin,
+    void addPtclList(Tptcl* _ptcl_origin,
                      const PS::S32* _list_origin,
                      const PS::S32 _n_list,
                      const PS::S32 _n_nb_correct,
-                     const bool _adr_dt_front_flag,
-                     PS::S32* _single_index_origin,
-                     PS::S32& _n_single) {
+                     const bool _adr_dt_front_flag) {
 
         // original size
         const PS::S32 n_org = ptcl_.size();
 
         // increase all data size by _n_list
         ptcl_.increaseSize(_n_list);
+        ptcl_ptr_.increaseSize(_n_list);
         pred_.increaseSize(_n_list);
         force_.increaseSize(_n_list);
         adr_dt_sorted_.increaseSize(_n_list);
@@ -1241,6 +1252,7 @@ public:
 
 #ifdef HARD_DEBUG
         assert(ptcl_.size()<ARRAY_ALLOW_LIMIT);
+        assert(ptcl_.size()==ptcl_ptr_.size());
         assert(ptcl_.size()==pred_.size());
         assert(ptcl_.size()==force_.size());
         assert(ptcl_.size()==adr_dt_sorted_.size());
@@ -1254,7 +1266,8 @@ public:
         if (_list_origin==NULL) {
             for (PS::S32 i=0; i<_n_list; i++) {
                 ptcl_[n_org+i].DataCopy(_ptcl_origin[i]);
-                _single_index_origin[_n_single+i] = i;
+                ptcl_ptr_[n_org+i] = (Tphard*)&_ptcl_origin[i];
+                //_single_index_origin[_n_single+i] = i;
             }
         }
         // add ptcl from list
@@ -1262,10 +1275,11 @@ public:
             for (PS::S32 i=0; i<_n_list; i++) {
                 const PS::S32 iadr= _list_origin[i];
                 ptcl_[n_org+i].DataCopy(_ptcl_origin[iadr]);
-                _single_index_origin[_n_single+i] = iadr;
+                ptcl_ptr_[n_org+i] = (Tphard*)&_ptcl_origin[iadr];
+                //_single_index_origin[_n_single+i] = iadr;
             }
         }
-        _n_single += _n_list;
+        //_n_single += _n_list;
         
         // add new ptcl in front of adr_dt_sorted
         if(_adr_dt_front_flag) {
@@ -1301,15 +1315,11 @@ public:
       @param[in] _n_list: number of removing particles
       @param[in] _n_group: number of c.m. ptcl (count from first): ptcl will not be delected but only remove from adr_dt_sorted_, also the offset of the index between Hint.ptcl_ _single_index_origin
       @param[in] _n_nb_correct: number of ptcl (count from first) to correct neighbor list
-      @param[out] _single_index_origin: the corresponding ptcl index in original array for Hint.ptcl_; updated consistenly here
-      @param[out[ _n_single: number of singles, updated
      */
     void removePtclList(const PS::S32* _list,
                         const PS::S32 _n_list,
                         const PS::S32 _n_group,
-                        const PS::S32 _n_nb_correct,
-                        PS::S32* _single_index_origin,
-                        PS::S32& _n_single) {
+                        const PS::S32 _n_nb_correct) {
         const PS::S32 n_org=ptcl_.size();
         // moving trace (initial -1)
         PS::S32 trace[n_org]={-1};
@@ -1354,12 +1364,13 @@ public:
             else if(trace[i]<n_org) {
                 const PS::S32 inew=trace[i];
                 ptcl_[inew] = ptcl_[i];
+                ptcl_ptr_[inew] = ptcl_ptr_[i];
                 pred_[inew] = pred_[i];
                 force_[inew] = force_[i];
                 time_next_[inew] = time_next_[i];
                 r_min2_[inew] = r_min2_[i];
                 r_min_index_[inew] = r_min_index_[i];
-                _single_index_origin[inew-_n_group] = _single_index_origin[i-_n_group];
+                //_single_index_origin[inew-_n_group] = _single_index_origin[i-_n_group];
 
                 // shift Jlist
                 Jlist_n_[inew] = Jlist_n_[i];
@@ -1371,6 +1382,7 @@ public:
             }
         }
         ptcl_.decreaseSize(n_decrease);
+        ptcl_ptr_.decreaseSize(n_decrease);
         pred_.decreaseSize(n_decrease);
         force_.decreaseSize(n_decrease);
         time_next_.decreaseSize(n_decrease);
@@ -1379,7 +1391,7 @@ public:
         Jlist_n_.decreaseSize(n_decrease);
         Jlist_disp_.decreaseSize(n_decrease);
         Jlist_.decreaseSize(n_decrease*n_nb_off_);
-        _n_single -= n_decrease;
+        //_n_single -= n_decrease;
 
         // update adr_dt_sorted
         PS::S32 adr_dt_sorted_new_size=modifyList(adr_dt_sorted_.getPointer(), adr_dt_sorted_.size(), trace, n_org);
@@ -1426,19 +1438,11 @@ public:
 
     //! Write back particle data to original array
     /*!
-      @param[out] _ptcl: original particle data array
-      @param[in] _n_ptcl: number of particles need for copy
-      @param[in] _i_start: particle address in _ptcl
+      @param[in] _i_start: starting index in ptcl_ to copy
     */
-    template <class Tptcl>
-    void writeBackPtcl(Tptcl * _ptcl, 
-                       const PS::S32 _n_ptcl, 
-                       const PS::S32 _i_start) {
-#ifdef HARD_DEBUG
-        assert(_i_start+_n_ptcl<=ptcl_.size());
-#endif
-        for (int i=0; i<_n_ptcl; i++) {
-            _ptcl[i].DataCopy(ptcl_[i+_i_start]);
+    void writeBackPtcl(const PS::S32 _i_start) {
+        for (int i=_i_start; i<ptcl_.size(); i++) {
+            ptcl_ptr_[i]->DataCopy(ptcl_[i]);
         }
     }
 
@@ -1449,9 +1453,9 @@ public:
      */
     void searchPerturber(PS::F64 _apo_bin[], const PS::S32 _n_bin) {
         PS::S32 n = ptcl_.size();
-        Jlist_disp_.resizeNoInitialize(n_nb_off_);
-        Jlist_n_.resizeNoInitialize(n_nb_off_);
-        Jlist_.resizeNoInitialize(n_nb_off_*n_nb_off_);
+        //Jlist_disp_.resizeNoInitialize(n_nb_off_);
+        //Jlist_n_.resizeNoInitialize(n_nb_off_);
+        //Jlist_.resizeNoInitialize(n_nb_off_*n_nb_off_);
         
         // find perturber
         for(int i=0; i<n; i++) {
@@ -1509,6 +1513,10 @@ public:
         return ptcl_.size();
     }
 
+    Tphard** getPtclAdr() const {
+        return ptcl_ptr_.getPointer();
+    }
+
 #ifdef HARD_DEBUG_PRINT
     void writePtcl(FILE* _fout, const PS::S32 _i_start) const{
         for (PS::S32 i=_i_start; i<ptcl_.size(); i++) {
@@ -1558,7 +1566,6 @@ public:
       @param[in] _time_sys: current set time
       @param[in] _dt_max: maximum time step
       @param[in] _dt_min: minimum time step for check
-      @param[in] _n_group: number of ARC group
       @param[in,out] _Aint: ARC integrator class (resolve and shift is used)
      */
     template <class ARCint>
@@ -1567,7 +1574,6 @@ public:
                  const PS::F64 _time_sys,
                  const PS::F64 _dt_max,
                  const PS::F64 _dt_min,
-                 const PS::S32 _n_group,
                  ARCint* _Aint,
                  const bool _pred_flag = true) {
 
@@ -1583,7 +1589,7 @@ public:
 
         if(_pred_flag) PredictAll(pred_.getPointer(), ptcl_.getPointer(), ptcl_.size(), _time_sys);
 
-        if(_n_group>0) {
+        if(_Aint!=NULL) {
             _Aint->updateCM(ptcl_.getPointer());
             _Aint->resolve();
         }
@@ -1597,7 +1603,7 @@ public:
                         ptcl_.getPointer(), ptcl_.size(), 
                         ptcl_list, _n_list,
                         r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, 
-                        _Aint, _n_group);
+                        _Aint);
 //        // only neighbor force calculation
 //        else CalcAcc0Acc1ActNb(force_.getPointer(), 
 //                               ptcl_.getPointer(), 
@@ -1612,7 +1618,7 @@ public:
             ptcl_[iadr].acc1 = force_[iadr].acc1;
         }
 
-        if(_n_group>0) _Aint->shift2CM();
+        if(_Aint!=NULL) _Aint->shift2CM();
 
         bool fail_flag=CalcBlockDt2ndAct(ptcl_.getPointer(), force_.getPointer(), adr_dt_sorted_.getPointer(), n_act_, 0.01*eta_s_, _dt_max, _dt_min, a0_offset_sq_);
 
@@ -1650,7 +1656,6 @@ public:
       @param[in] _time_sys: integration target time
       @param[in] _dt_max: maximum time step
       @param[in] _dt_min: minimum time step for check
-      @param[in] _n_group: number of ARC group
       @param[in,out] _Aint: ARC integrator class (resolve and shift is used)
       \return fail_flag: If step size < dt_min, return true
      */
@@ -1658,16 +1663,14 @@ public:
     bool integrateOneStepAct(const PS::F64 _time_sys,
                              const PS::F64 _dt_max,
                              const PS::F64 _dt_min,
-                             const PS::S32 _n_group,
                              ARCint* _Aint) {
+        PS::S32 n_group = 0;
         // pred::mass,pos,vel updated
         PredictAll(pred_.getPointer(), ptcl_.getPointer(), ptcl_.size(), _time_sys);
-        if(_n_group>0) {
+        if(_Aint!=NULL) {
+            n_group = _Aint->getNGroups();
             _Aint->updateCM(pred_.getPointer());
             _Aint->resolve();
-#ifdef HARD_DEBUG
-            assert(_n_group==_Aint->getNGroups());
-#endif
         }
         // force::acc0,acc1, neighbor list updated
 //        if(_calc_full_flag) 
@@ -1678,7 +1681,7 @@ public:
                         pred_.getPointer(), ptcl_.size(), 
                         adr_dt_sorted_.getPointer(), n_act_, 
                         r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, 
-                        _Aint, _n_group);
+                        _Aint);
 //        // only neighbor force calculation
 //        else CalcAcc0Acc1ActNb(force_.getPointer(), 
 //                               pred_.getPointer(), 
@@ -1693,10 +1696,10 @@ public:
             PS::S32 adr = adr_dt_sorted_[i];
             time_next_[adr] = ptcl_[adr].time + ptcl_[adr].dt;
             // update new perturber list
-            if(adr<_n_group) _Aint->updatePertOneGroup(adr, ptcl_.getPointer(), force_.getPointer(), getPertList(adr), getPertN(adr));
+            if(adr<n_group) _Aint->updatePertOneGroup(adr, ptcl_.getPointer(), force_.getPointer(), getPertList(adr), getPertN(adr));
         }
 
-        if(_n_group>0) {
+        if(_Aint!=NULL) {
             // shift member to c.m. frame
             _Aint->shift2CM();
             // go back to original time
@@ -1714,7 +1717,6 @@ public:
       @param[in] _time_sys: integration target time
       @param[in] _dt_max: maximum time step
       @param[in] _dt_min: minimum time step for check
-      @param[in] _n_group: number of ARC group
       @param[in,out] _Aint: ARC integrator class (resolve and shift is used)
       \return fail_flag: If step size < dt_min, return true
      */
@@ -1724,9 +1726,9 @@ public:
                                 const PS::F64 _time_sys,
                                 const PS::F64 _dt_max,
                                 const PS::F64 _dt_min,
-                                const PS::S32 _n_group,
                                 ARCint* _Aint) {
 
+        PS::S32 n_group = 0;
         // adjust dt
         PS::S32 int_list[_n_list];
         PS::S32 n_int=0;
@@ -1738,11 +1740,9 @@ public:
 
         if (n_int==0) return false;
 
-        if(_n_group>0) {
+        if(_Aint!=NULL) {
+            n_group = _Aint->getNGroups();
             _Aint->resolve();
-#ifdef HARD_DEBUG
-            assert(_n_group==_Aint->getNGroups());
-#endif
         }
         // force::acc0,acc1, neighbor list updated
 //        if(_calc_full_flag) 
@@ -1753,7 +1753,7 @@ public:
                         pred_.getPointer(), ptcl_.size(), 
                         int_list, n_int,
                         r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, 
-                        _Aint, _n_group);
+                        _Aint);
 //        // only neighbor force calculation
 //        else CalcAcc0Acc1ActNb(force_.getPointer(), 
 //                               pred_.getPointer(), 
@@ -1768,14 +1768,15 @@ public:
                                               _dt_max, _dt_min, a0_offset_sq_, eta_s_);
 
         // shift member to c.m. frame
-        if(_n_group>0) _Aint->shift2CM();
-
-        // update c.m. of _i
-        _Aint->updateCM(ptcl_.getPointer(), int_list, n_int);
+        if(_Aint!=NULL) {
+            _Aint->shift2CM();
+            // update c.m. of _i
+            _Aint->updateCM(ptcl_.getPointer(), int_list, n_int);
+        }
 
         for(PS::S32 i=0; i<n_int; i++){
             // update new perturber list
-            if(i<_n_group) _Aint->updatePertOneGroup(i, ptcl_.getPointer(), force_.getPointer(), getPertList(i), getPertN(i));
+            if(i<n_group) _Aint->updatePertOneGroup(i, ptcl_.getPointer(), force_.getPointer(), getPertList(i), getPertN(i));
         }
 
         return fail_flag;
@@ -3001,9 +3002,9 @@ public:
       @param[in] _igroup: group index to split
       @param[in] _isplit: index used to split group
      */
-    void splitOneGroup(PS::S32* _first_list,
+    void splitOneGroup(TpARC* _first_list[],
                        PS::S32& _n_first,
-                       PS::S32* _second_list,
+                       TpARC* _second_list[],
                        PS::S32& _n_second,
                        const PS::S32 _igroup,
                        const PS::S32 _isplit) {
@@ -3051,6 +3052,18 @@ public:
         assert(i<clist_.size());
 #endif        
         return &clist_[i].getP(0);
+    }
+
+    //! return the address array of member particle 
+    /*!
+      @param[in] _igroup: index of group
+      \return TpARC** particle address array of members
+     */
+    TpARC** getGroupPtclAdr(const PS::S32 i) const {
+#ifdef HARD_CHECK_ENERGY
+        assert(i<clist_.size());
+#endif        
+        return clist_[i].getPAdr();
     }
     
     //! Get slow down factor
@@ -3117,16 +3130,16 @@ public:
     /* _n_group: current total number of groups already integrated
        _n_group_in_cluster: number of groups in current cluster
        _n_ptcl: number of real particles
-       _n_single: number of single particles
+       _n_hint: number of Hint particles
        _dt_limit: hard time step limit
        _kp: kepler period number per step
      */
-    void info_print(std::ostream& os, const PS::S64 _n_group, const PS::S64 _n_group_in_cluster, const PS::S64 _n_ptcl, const PS::S64 _n_single, const PS::F64 _dt_limit, const PS::S32 _kp) const{
+    void info_print(std::ostream& os, const PS::S64 _n_group, const PS::S64 _n_group_in_cluster, const PS::S64 _n_ptcl, const PS::S64 _n_hint, const PS::F64 _dt_limit, const PS::S32 _kp) const{
         for (int i=0; i<clist_.size(); i++) {
-            os<<"ARC_info(i_group,n_ptcl,n_single,n_group,n,n_pert,semi,ecc,peri,kappa,n_step): "
+            os<<"ARC_info(i_group,n_ptcl,n_hint,n_group,n,n_pert,semi,ecc,peri,kappa,n_step): "
               <<_n_group+i<<" "
               <<_n_ptcl<<" "
-              <<_n_single<<" "
+              <<_n_hint<<" "
               <<_n_group_in_cluster<<" "
               <<clist_[i].getN()<<" "
               <<pert_n_[i]<<" "

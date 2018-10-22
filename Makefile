@@ -180,6 +180,9 @@ hard_debug.out: hard_debug.cxx
 stable_debug.out: stable_debug.cxx
 	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
 
+adjustgrouptest: adjustgroup_test.cxx
+	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D ADJUST_GROUP_DEBUG -o $@ $< $(CXXLIBS)
+
 #rsearchtest: rsearch_test.cxx
 #	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 

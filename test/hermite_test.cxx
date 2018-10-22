@@ -106,13 +106,10 @@ int main(int argc, char** argv)
     calc_center_of_mass(pcm, p.getPointer(), p.size());
     center_of_mass_shift(pcm, p.getPointer(), p.size());
     
-    PS::S32 single_index[p.size()]; 
-    PS::S32 n_single = 0;
-
-    HermiteIntegrator Hint;
+    HermiteIntegrator<PtclHard> Hint;
     Hint.setParams(par.eta, par.rin, par.rout, par.eps*par.eps, p.size());
     Hint.reserveMem(p.size());
-    Hint.addPtclList(p.getPointer(), NULL, p.size(), 0, false, single_index, n_single);
+    Hint.addPtclList(p.getPointer(), NULL, p.size(), 0, false);
     PS::F64* dr_search=NULL;
     Hint.searchPerturber(dr_search,0);
             
@@ -134,7 +131,7 @@ int main(int argc, char** argv)
 #endif
     ARCIntegrator<PtclHard, PtclH4, PtclForce>* arcint = NULL;
     Hint.calcA0offset();
-    Hint.initial(NULL, p.size(), 0.0, dt_limit, dt_min_hard, 0, arcint, false);
+    Hint.initial(NULL, p.size(), 0.0, dt_limit, dt_min_hard, arcint, false);
     Hint.SortAndSelectIp();
 
     FILE* fout;
@@ -158,7 +155,7 @@ int main(int argc, char** argv)
 #else
         dt_limit = calcDtLimit(time_sys, par.dt_limit_hard, dt_min_hard);
 #endif
-        Hint.integrateOneStepAct(time_sys,dt_limit,dt_min_hard,0,arcint);
+        Hint.integrateOneStepAct(time_sys,dt_limit,dt_min_hard,arcint);
         Hint.SortAndSelectIp();
         if(fmod(time_sys,par.dt_limit_hard)==0) {
             //std::cout<<"Time = "<<time_sys<<std::endl;
@@ -170,7 +167,7 @@ int main(int argc, char** argv)
             
         }
     }
-    Hint.writeBackPtcl(p.getPointer(),p.size(),0);
+    Hint.writeBackPtcl(0);
     
     Hint.CalcEnergy(E1);
 
