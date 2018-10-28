@@ -783,7 +783,7 @@ bool stab2check(PtclTree<Tptcl> &_bin, const PS::F64 _rbin, const PS::F64 _rcrit
 //! Three-body (B-S) stability check
 /*             return     tstep   stable_factor            case
    Unstable:    false     -1         -1                  hyperbolic outer orbit
-                false     -1         -1                  peri-center outer > r_out
+                false     -1         -1                  apo-center outer > r_in
                 true      inner      -stab3              stab3 >1
     stable:     true      inner      -1                  stab3 <1 & unpert & outer period > 1/8 dt_tree
                 false     -1         -1                   --      & acceleration ratio(out/in) <1e-6 and outer period >1e-4 dt_tree
@@ -829,11 +829,11 @@ bool stab3check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin, const PS::F64 _rb
     //_bout.tstep = _bin.tstep;
 
     // too large orbit
-    if(pec_out>_rout) {
+    if(apo_out>_rin) {
         _bout.tstep=-1.0;
         _bout.stable_factor=-1;
 #ifdef STABLE_CHECK_DEBUG
-        std::cerr<<"STAB3 reject: Too large outer orbit, pec_out: "<<pec_out<<std::endl;
+        std::cerr<<"STAB3 reject: Too large outer orbit, apo_out: "<<apo_out<<std::endl;
 #endif
         return false;
     } 
@@ -928,7 +928,7 @@ bool stab3check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin, const PS::F64 _rb
 //! Four-body (B-B) stability check
 /*             return     tstep   stable_factor      case
    Unstable:    false     -1         -1          hyperbolic outer orbit
-                false     -1         -1          peri-center outer > r_out
+                false     -1         -1          apo-center outer > r_in
                 false     -1         -1          period outer > 0.25 * dt_tree
                 true      inner      -stab3_max  stab3_1 >0.8 || stab3_2 > 0.8 & apo_out <= r_out
                 false     -1         -1                                        & apo_out >  r_out
@@ -987,11 +987,11 @@ bool stab4check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin1, PtclTree<Tptcl> 
     //_bout.tstep=std::min(_bin1.tstep,_bin2.tstep);
     
     // too large orbit
-    if(pec_out>_rout) {
+    if(apo_out>_rin) {
         _bout.tstep=-1.0;
         _bout.stable_factor=-1;
 #ifdef STABLE_CHECK_DEBUG
-        std::cerr<<"STAB4 reject: Unstable, Too large outer orbit, pec_out: "<<pec_out<<std::endl;
+        std::cerr<<"STAB4 reject: Unstable, Too large outer orbit, apo_out: "<<apo_out<<std::endl;
 #endif
         return false;
     } 

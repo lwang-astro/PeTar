@@ -134,9 +134,8 @@ int main(int argc, char** argv)
     PS::F64 dt_min_hard = std::pow(0.5,32);
 
     if(check_flag==2) {
-        Hint.addPtclList(p.getPointer(), NULL, p.size(), 0, false);
-        PS::F64* dr_search=NULL;
-        Hint.searchPerturber(dr_search,0);
+        Hint.addPtclList(p.getPointer(), NULL, p.size(), 0, 0.0, false);
+        Hint.searchPerturber(p.size());
     
     
         Hint.calcA0offset();
@@ -144,13 +143,14 @@ int main(int argc, char** argv)
         Hint.SortAndSelectIp();
     }
     else {
-        Aint.addOneGroup(p.getPointer(), NULL, p.size(), (Psoft*)NULL, 0);
-        Aint.initial();
+        Aint.addOneGroup(p.getPointer(), NULL, p.size(), (Psoft*)NULL, 0, Hint.getPtcl(), Hint.getForce());
+        Aint.initialOneChain(0);
+        Aint.initialOneSys(0,0.0);
         //group_member_index[0].resizeNoInitialize(p.size());
         //for(int i=0; i<p.size(); i++) group_member_index[0][i]=i;
 //        n_group = Aint.getNGroups();
 
-        Hint.addPtclList((PtclHard*)Aint.getCM(0), NULL, 1, 0, false);
+        Hint.addPtclList((PtclHard*)Aint.getCM(0), NULL, 1, 0, 0.0, false);
         //n_single = 0;
     }
 

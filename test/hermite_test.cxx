@@ -109,9 +109,8 @@ int main(int argc, char** argv)
     HermiteIntegrator<PtclHard> Hint;
     Hint.setParams(par.eta, par.rin, par.rout, par.eps*par.eps, p.size());
     Hint.reserveMem(p.size());
-    Hint.addPtclList(p.getPointer(), NULL, p.size(), 0, false);
-    PS::F64* dr_search=NULL;
-    Hint.searchPerturber(dr_search,0);
+    Hint.addPtclList(p.getPointer(), NULL, p.size(), 0, 0.0, false);
+    Hint.searchPerturber(p.size());
             
     Hint.CalcEnergy(E0);
     

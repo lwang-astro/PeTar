@@ -168,7 +168,7 @@ template<class Tptcl, class Tpert, class Tforce, class extpar>
 void Newtonian_extA_pert (double3* acc, const PS::F64 time, Tptcl* p, const PS::S32 np, Tpert* pert, Tforce* pf, const PS::S32 npert, extpar* pars){
 #ifdef HARD_DEBUG
     if(npert<1) {
-        std::cerr<<"Error: perturboer number not enough !"<<std::endl;
+        std::cerr<<"Error: perturber number not enough, at least c.m. is needed!"<<std::endl;
         abort();
     }
 #endif
