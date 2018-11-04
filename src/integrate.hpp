@@ -37,7 +37,7 @@ void kickOne(Tsys & _sys,
              const PS::ReallocatableArray<PS::S32>& _adr) {
     const PS::S64 n= _adr.size();
 #pragma omp parallel for
-    for(int i=0; i<n; i++){
+    for(PS::S32 i=0; i<n; i++){
         const PS::S32 k=_adr[i];
         _sys[k].vel  += _sys[k].acc * _dt;
         _sys[k].status = 0;
@@ -57,7 +57,7 @@ void kickCluster(Tsys& _sys,
                  const PS::F64 _dt) {
     const PS::S64 n= _ptcl.size();
 #pragma omp parallel for
-    for(int i=0; i<n; i++) {
+    for(PS::S32 i=0; i<n; i++) {
         const PS::S64 cm_adr=-_ptcl[i].status; // notice status is negative 
         const PS::S64 i_adr =_ptcl[i].adr_org;
         // if is group member, recover mass and kick due to c.m. force
@@ -90,7 +90,7 @@ void kickSend(Tsys& _sys,
               const PS::F64 _dt) {
     const PS::S64 n= _adr_ptcl_send.size();
 #pragma omp parallel for
-    for(int i=0; i<n; i++) {
+    for(PS::S32 i=0; i<n; i++) {
         const PS::S64 adr = _adr_ptcl_send[i];
         const PS::S64 cm_adr=-_sys[adr].status; // notice status is negative 
         // if it is group member, should not do kick since c.m. particles are on remote nodes;
@@ -116,7 +116,7 @@ void kickCM(Tsys& _sys,
             const PS::F64 _dt) {
     const PS::S64 n_tot= _sys.getNumberOfParticleLocal();
 #pragma omp parallel for
-    for(int i=_adr_cm_start; i<n_tot; i+= _adr_cm_offset) {
+    for(PS::S32 i=_adr_cm_start; i<n_tot; i+= _adr_cm_offset) {
         _sys[i].vel += _sys[i].acc * _dt;
 #ifdef HARD_DEBUG
         assert(_sys[i].id<0&&_sys[i].status>0);
@@ -130,7 +130,7 @@ void drift(Tpsys & system,
            const PS::F64 dt){
     const PS::S32 n = system.getNumberOfParticleLocal();
 #pragma omp parallel for
-    for(int i=0; i<n; i++){
+    for(PS::S32 i=0; i<n; i++){
         //if(tree.getForce(i).n_ngb <= 0){
 	if(system[i].n_ngb <= 0){
             system[i].pos  += system[i].vel * dt;
@@ -372,7 +372,7 @@ private:
     void calcCMAndShift(ParticleBase &pcm, PtclH4* ptcl, const PS::S32 n) {
         pcm.mass = 0.0;
         pcm.pos = pcm.vel = 0.0;
-        for (int i=0; i<n; i++) {
+        for (PS::S32 i=0; i<n; i++) {
             PS::F64 mi=ptcl[i].mass;
             pcm.mass += mi;
             pcm.pos += mi*ptcl[i].pos;
@@ -382,7 +382,7 @@ private:
         pcm.pos *= invm;
         pcm.vel *= invm;
         
-        for (int i=0;i<n;i++) {
+        for (PS::S32 i=0;i<n;i++) {
 //            std::cerr<<std::setprecision(14)<<"cm sbore i "<<i<<" pos "<<ptcl[i].pos<<" vel "<<ptcl[i].vel<<std::endl;
             ptcl[i].pos -= pcm.pos;
             ptcl[i].vel -= pcm.vel;
@@ -395,10 +395,10 @@ private:
     void shiftBackCM(const ParticleBase &pcm, PtclH4* ptcl, const PS::S32 n) {
 #ifdef HARD_DEBUG
         PS::F64 m=0;
-        for (int i=0;i<n;i++) m+= ptcl[i].mass;
-        assert(m==pcm.mass);
+        for (PS::S32 i=0;i<n;i++) m+= ptcl[i].mass;
+        assert(abs(m-pcm.mass)<1e-10);
         //PS::F64vec pos=0,vel=0;
-        //for (int i=0;i<n;i++) {
+        //for (PS::S32 i=0;i<n;i++) {
         //    pos += ptcl[i].mass*ptcl[i].pos;
         //    vel += ptcl[i].mass*ptcl[i].vel;
         //}
@@ -406,7 +406,7 @@ private:
         //vel /=m;
         //std::cerr<<std::setprecision(14)<<"cm pos "<<pos<<" vel "<<vel<<std::endl;
 #endif
-        for (int i=0;i<n;i++) {
+        for (PS::S32 i=0;i<n;i++) {
             //std::cerr<<"cm bbck i "<<i<<" pos "<<ptcl[i].pos<<" vel "<<ptcl[i].vel<<std::endl;
             ptcl[i].pos += pcm.pos;
             ptcl[i].vel += pcm.vel;
@@ -787,7 +787,7 @@ private:
           time_next[adr] += ptcl[adr].dt; // n_act only
           }
         */
-        std::sort(adr_dt_sorted, adr_dt_sorted+n_act, SortAdr(time_next));
+        std::sort(adr_dt_sorted, adr_dt_sorted+std::min(n_act,n_tot), SortAdr(time_next));
 
         const PS::F64 time_ref = time_next[adr_dt_sorted[0]];
         for(n_act=1; n_act<n_tot; n_act++){
@@ -948,6 +948,10 @@ private:
                     const PS::S32 _n_list,
                     const PS::S32* _trace,
                     const PS::S32 _del_key) {
+        if(_n_list==0) return 0;
+#ifdef HARD_DEBUG
+        assert(_n_list>0);
+#endif
         PS::S32 list_size=_n_list;
         // moving offset
         PS::S32 imove=0;
@@ -963,7 +967,7 @@ private:
             }
             else {
                 // replace case
-                if(itrace>0) _list[i] = itrace;
+                if(itrace>=0) _list[i] = itrace;
                 // move to next
                 i++;
             }
@@ -1093,7 +1097,7 @@ public:
     //void addInitPtcl(Tptcl * _ptcl, 
     //             const PS::S32 _n_ptcl, 
     //             const PS::S32* _ptcl_list) {
-    //    for (int i=0; i<_n_ptcl; i++) {
+    //    for (PS::S32 i=0; i<_n_ptcl; i++) {
     //        ptcl_.increaseSize(1);
     //        ptcl_.back().DataCopy(_ptcl[_ptcl_list[i]]);
     //        //ptcl_.pushBackNoCheck(ptcl_org[ptcl_list[i]]);
@@ -1107,7 +1111,7 @@ public:
     //template <class Tptcl>
     //void addInitPtcl(Tptcl * _ptcl, 
     //             const PS::S32 _n_ptcl) {
-    //    for (int i=0; i<_n_ptcl; i++) {
+    //    for (PS::S32 i=0; i<_n_ptcl; i++) {
     //        ptcl_.increaseSize(1);
     //        ptcl_.back().DataCopy(_ptcl[i]);
     //    }
@@ -1159,7 +1163,7 @@ public:
             ptcl_ptr_.back()=(Tphard*)&_ptcl;
 
             // shift adr_dt_sorted
-            for (int i=ptcl_.size()-1; i>0; i--) {
+            for (PS::S32 i=ptcl_.size()-1; i>0; i--) {
                 adr_dt_sorted_[i] = adr_dt_sorted_[i-1];
             }
             adr_dt_sorted_[0] = _i;
@@ -1184,7 +1188,7 @@ public:
             nb_info_.back()    = nb_info_[_i];
 
             // find sorted index and change
-            for (int i=inew; i>0; i--) {
+            for (PS::S32 i=inew; i>0; i--) {
                 adr_dt_sorted_[i] = adr_dt_sorted_[i-1];
                 if(adr_dt_sorted_[i]==_i) {
                     adr_dt_sorted_[i] = inew;
@@ -1198,14 +1202,14 @@ public:
             Jlist_n_[_i] = 0;
             PS::S32 disp_last = Jlist_disp_.back();
             PS::S32 disp_i = Jlist_disp_[_i];
-            for (int i=0; i<Jlist_n_.back(); i++) {
+            for (PS::S32 i=0; i<Jlist_n_.back(); i++) {
                 Jlist_[disp_last+i] = Jlist_[disp_i+i];
             }
 
             // correct neighbor list
-            for (int i=0; i<_n_list_correct; i++) {
+            for (PS::S32 i=0; i<_n_list_correct; i++) {
                 disp_i = Jlist_disp_[i];
-                for (int j=0; j<Jlist_n_[i]; j++) {
+                for (PS::S32 j=0; j<Jlist_n_[i]; j++) {
                     PS::S32 k = disp_i+j;
                     if(Jlist_[k]==_i) Jlist_[k]=inew;
                 }
@@ -1264,6 +1268,12 @@ public:
                      const PS::F64 _time_sys,
                      const bool _adr_dt_front_flag) {
 
+        // quite if no new
+        if(_n_list==0) return;
+#ifdef HARD_DEBUG
+        assert(_n_list>0);
+#endif
+
         // original size
         const PS::S32 n_org = ptcl_.size();
         const PS::S32 n_adr_dt_org = adr_dt_sorted_.size();
@@ -1285,7 +1295,6 @@ public:
         assert(ptcl_.size()==ptcl_ptr_.size());
         assert(ptcl_.size()==pred_.size());
         assert(ptcl_.size()==force_.size());
-        assert(ptcl_.size()==adr_dt_sorted_.size());
         assert(ptcl_.size()==time_next_.size());
         assert(ptcl_.size()==Jlist_disp_.size());
         assert(ptcl_.size()==Jlist_n_.size());
@@ -1353,7 +1362,7 @@ public:
     }
                     
     //! Remove a list of particle
-    /*! Remove particles from _list, keep first _n_correct in ptcl_ undeleted and update their neighbor lists
+    /*! Remove particles from _list, keep first _n_correct in ptcl_ undeleted (but mass to zero) and update their neighbor lists
       @param[in] _list: removing particle index for ptcl_
       @param[in] _n_list: number of removing particles
       @param[in] _n_group: number of c.m. ptcl (count from first): ptcl will not be delected but only remove from adr_dt_sorted_, also the offset of the index between Hint.ptcl_ _single_index_origin
@@ -1363,6 +1372,12 @@ public:
                         const PS::S32 _n_list,
                         const PS::S32 _n_group,
                         const PS::S32 _n_nb_correct) {
+        // quit if no deleted ones
+        if(_n_list==0) return;
+#ifdef HARD_DEBUG
+        assert(_n_list>0);
+#endif
+
         const PS::S32 n_org=ptcl_.size();
         // moving trace (initial -1)
         PS::S32 trace[n_org];
@@ -1377,12 +1392,14 @@ public:
             // check no delete case
             if(k<_n_group) {
                 trace[k]=n_org;
+                // set suppressed group mass to zero
+                ptcl_[k].mass = 0.0;
                 continue;
             }
 
             PS::S32 idel = k;
             // check whether position is already moved
-            if(trace[k]>0) {
+            if(trace[k]>=0) {
                 idel=trace[k];
                 trace[k]=n_org;
             }
@@ -1390,7 +1407,7 @@ public:
             assert(k<n_org);
             assert(idel<n_org);
 #endif 
-            while(trace[ilast]>0&&ilast>idel) ilast--;
+            while(trace[ilast]>=0&&ilast>idel) ilast--;
 
             // move ilast to idel
             if(idel<ilast) trace[ilast]=idel;
@@ -1420,7 +1437,7 @@ public:
                 Jlist_n_[i] = 0;
                 PS::S32 disp_i = Jlist_disp_[i];
                 PS::S32 disp_inew = Jlist_disp_[inew];
-                for (int i=0; i<Jlist_n_[inew]; i++) 
+                for (PS::S32 i=0; i<Jlist_n_[inew]; i++) 
                     Jlist_[disp_inew+i] = Jlist_[disp_i+i];
             }
         }
@@ -1443,7 +1460,7 @@ public:
 
         
         // correct neighbor list
-        for (int i=0; i<_n_nb_correct; i++) {
+        for (PS::S32 i=0; i<_n_nb_correct; i++) {
             // escape suppressed one
             if (trace[i]==n_org) continue;
             
@@ -1456,21 +1473,21 @@ public:
             
     }                       
 
-    //! Write back particle data to original array
-    /* @param[out] _ptcl: original particle data array
-       @param[in] _n_ptcl: number of particles need for copy
+    //! Write back particle data to ptcl
+    /* @param[out] _ptcl: ptcl array to write
        @param[in] _ptcl_list: particle address in _ptcl
+       @param[in] _n_ptcl: number of particles need for copy
        @param[in] _i_start: start index in local particle array for copy
      */
     template <class Tptcl>
     void writeBackPtcl(Tptcl * _ptcl, 
-                       const PS::S32 _n_ptcl, 
                        const PS::S32* _ptcl_list,
+                       const PS::S32 _n_ptcl, 
                        const PS::S32 _i_start) {
 #ifdef HARD_DEBUG
         assert(_i_start+_n_ptcl<=ptcl_.size());
 #endif
-        for (int i=0; i<_n_ptcl; i++) {
+        for (PS::S32 i=0; i<_n_ptcl; i++) {
 #ifdef HARD_DEBUG
             assert(_ptcl[_ptcl_list[i]].id==ptcl_[i+_i_start].id);
 #endif
@@ -1483,9 +1500,36 @@ public:
       @param[in] _i_start: starting index in ptcl_ to copy
     */
     void writeBackPtcl(const PS::S32 _i_start) {
-        for (int i=_i_start; i<ptcl_.size(); i++) {
+        for (PS::S32 i=_i_start; i<ptcl_.size(); i++) {
             ptcl_ptr_[i]->DataCopy(ptcl_[i]);
         }
+    }
+
+    //! Write back a list of particle data to original array 
+    /*!
+      @param[in] _ptcl_list: particle index in ptcl_
+      @param[in] _n_ptcl: number of particles need for copy
+    */
+    void writeBackPtcl(const PS::S32* _ptcl_list,
+                       const PS::S32 _n_ptcl) {
+        for (PS::S32 i=0; i<_n_ptcl; i++) {
+            const PS::S32 k = _ptcl_list[i];
+#ifdef HARD_DEBUG
+            assert(k<ptcl_.size()&&k>=0);
+#endif            
+            ptcl_ptr_[k]->DataCopy(ptcl_[k]);
+        }
+    }
+
+    //! Write back one particle data to original array 
+    /*!
+      @param[in] _i: particle index in ptcl_
+    */
+    void writeBackOnePtcl(const PS::S32 _i) {
+#ifdef HARD_DEBUG
+        assert(_i<ptcl_.size()&&_i>=0);
+#endif            
+        ptcl_ptr_[_i]->DataCopy(ptcl_[_i]);
     }
 
     //! Search perturber and neighbor
@@ -1498,12 +1542,12 @@ public:
         PS::S32 n = ptcl_.size();
         
         // find perturber
-        for(int i=0; i<_n_search; i++) {
+        for(PS::S32 i=0; i<_n_search; i++) {
             PS::S32 disp=Jlist_disp_[i];
             PS::S32 n_pert=0;
             nb_info_[i].r_min2 = PS::LARGE_FLOAT;
             nb_info_[i].min_mass = PS::LARGE_FLOAT;
-            for(int j=0; j<_n_bin; j++) {
+            for(PS::S32 j=0; j<_n_bin; j++) {
                 PS::F64vec dr = ptcl_[i].pos-ptcl_[j].pos;
                 PS::F64 r2 = dr*dr;
                 PS::F64 r_search = std::max(ptcl_[i].r_search,ptcl_[j].r_search) + _apo_bin[j];
@@ -1518,7 +1562,7 @@ public:
                     nb_info_[i].min_mass = std::min(nb_info_[i].min_mass, ptcl_[j].mass);
                 }
             }
-            for(int j=_n_bin; j<n; j++) {
+            for(PS::S32 j=_n_bin; j<n; j++) {
                 PS::F64vec dr = ptcl_[i].pos-ptcl_[j].pos;
                 PS::F64 r2 = dr*dr;
                 PS::F64 r_search = std::max(ptcl_[i].r_search,ptcl_[j].r_search);
@@ -1546,7 +1590,7 @@ public:
       @param[in] _n_search: number of particles to search perturber
      */
     void searchPerturber(const PS::S32 _n_search) {
-        for(int i=0; i<_n_search; i++) searchPerturberOne(i);
+        for(PS::S32 i=0; i<_n_search; i++) searchPerturberOne(i);
     }
 
     //! Search perturber and neighbor for one 
@@ -1561,7 +1605,7 @@ public:
         PS::S32 n_pert=0;
         nb_info_[_i].r_min2 = PS::LARGE_FLOAT;
         nb_info_[_i].min_mass = PS::LARGE_FLOAT;
-        for(int j=0; j<n; j++) {
+        for(PS::S32 j=0; j<n; j++) {
             PS::F64vec dr = ptcl_[_i].pos-ptcl_[j].pos;
             PS::F64 r2 = dr*dr;
             PS::F64 r_search = std::max(ptcl_[_i].r_search,ptcl_[j].r_search);
@@ -1674,6 +1718,12 @@ public:
                  const PS::F64 _dt_min,
                  ARCint* _Aint,
                  const bool _pred_flag = true) {
+
+        // if no particle need initial, quit
+        if(_n_list==0) return false;
+#ifdef HARD_DEBUG
+        assert(_n_list>0);
+#endif
 
         const PS::S32* ptcl_list=_list;
         if(ptcl_list==NULL) ptcl_list = adr_dt_sorted_.getPointer();
@@ -1826,23 +1876,31 @@ public:
                                 const PS::F64 _dt_min,
                                 ARCint* _Aint) {
 
+        if(_n_list==0) return false;
+#ifdef HARD_DEBUG
+        assert(_n_list>0);
+#endif
+
         PS::S32 n_group = 0;
+        if(_Aint!=NULL) n_group = _Aint->getNGroups();
+
         // adjust dt
         PS::S32 int_list[_n_list];
+        PS::S32 group_int_list[n_group+1];
+        PS::S32 n_group_int=0;
         PS::S32 n_int=0;
         for (PS::S32 i=0; i<_n_list; i++) {
             PS::S32 iadr = _ptcl_list[i];
             if(ptcl_[iadr].time==_time_sys) continue;
             ptcl_[iadr].dt = _time_sys - ptcl_[iadr].time;
             int_list[n_int++] = iadr;
+            if(iadr<n_group) group_int_list[n_group_int++] = iadr;
         }
 
         if (n_int==0) return false;
 
-        if(_Aint!=NULL) {
-            n_group = _Aint->getNGroups();
-            _Aint->resolve();
-        }
+        if(_Aint!=NULL) _Aint->resolve();
+
         // force::acc0,acc1, neighbor list updated
 //        if(_calc_full_flag) 
         CalcActAcc0Acc1(force_.getPointer(), 
@@ -1871,15 +1929,19 @@ public:
         if(_Aint!=NULL) {
             _Aint->shift2CM();
             // update c.m. of _i
-            _Aint->updateCM(ptcl_.getPointer(), int_list, n_int);
+            _Aint->updateCM(ptcl_.getPointer(), group_int_list, n_group_int);
         }
 
         for(PS::S32 i=0; i<n_int; i++){
             PS::S32 iadr=int_list[i];
             // update time table
             time_next_[iadr] = ptcl_[iadr].time + ptcl_[iadr].dt;
-            // update new perturber list
-            if(iadr<n_group) _Aint->updatePertOneGroup(iadr, ptcl_.getPointer(), force_.getPointer(), getPertList(iadr), getPertN(iadr));
+        }
+
+        // update new perturber list
+        for(PS::S32 i=0; i<n_group_int; i++) {
+            PS::S32 iadr=group_int_list[i];
+            _Aint->updatePertOneGroup(iadr, ptcl_.getPointer(), force_.getPointer(), getPertList(iadr), getPertN(iadr));
         }
 
         return fail_flag;
@@ -1893,7 +1955,7 @@ public:
     }
 
     void SortAndSelectIp() {
-        SortAndSelectIp(adr_dt_sorted_.getPointer(), time_next_.getPointer(), n_act_, time_next_.size());
+        SortAndSelectIp(adr_dt_sorted_.getPointer(), time_next_.getPointer(), n_act_, adr_dt_sorted_.size());
     }
     
     PS::S32 getNact() const{
@@ -2192,8 +2254,8 @@ public:
 
     void reset(){
         use_flag=false;
-        for(int i=0; i<6; i++) T2[i] = 0;
-        for(int i=0; i<10; i++) T3[i] = 0;
+        for(PS::S32 i=0; i<6; i++) T2[i] = 0;
+        for(PS::S32 i=0; i<10; i++) T3[i] = 0;
     }
 
     //! tidal tensor fitting function,
@@ -2258,7 +2320,7 @@ public:
         for (PS::S32 i=0; i<10; i++) T3[i] *= T3S;
     }
 
-    void eval(double* acc, const PS::F64vec &pos) const {
+    void eval(PS::F64* acc, const PS::F64vec &pos) const {
         if(!use_flag) return;
         /*
           T2:
@@ -2369,17 +2431,17 @@ public:
         }
     }
 
-    void eval(double* acc, const PS::F64 time) const {
+    void eval(PS::F64* acc, const PS::F64 time) const {
         PS::F64 dt = time - tperi_;
-        dt = dt - (int)(dt/peri_)*peri_;
+        dt = dt - (PS::S32)(dt/peri_)*peri_;
         if(spline_[0]!=NULL) {
-            for(int i=0; i<3; i++)
+            for(PS::S32 i=0; i<3; i++)
                 acc[i] -= gsl_spline_eval(spline_[i],dt,acc_[i]);
         }
     }
 
     void reset(){
-        for(int i=0;i<3;i++) {
+        for(PS::S32 i=0;i<3;i++) {
             if(acc_[i]!=NULL) gsl_interp_accel_free(acc_[i]);
             if(spline_[i]!=NULL) gsl_spline_free(spline_[i]);
             acc_[i]=NULL;
@@ -2511,6 +2573,7 @@ public:
         bininfo.resizeNoInitialize(_n);
         //dt.reserve(n);
         group_mask_map_.reserve(_n);
+        group_mask_list_.reserve(_n);
     }
 
     //! Reserve memory for perturber list
@@ -2592,6 +2655,7 @@ public:
             pforce_.increaseSize(n_pert_off_);
         
             clist_.increaseSize(1);
+            bininfo.increaseSize(1);
 
 #ifdef HARD_DEBUG
             assert(pert_disp_.size()==clist_.size());
@@ -2613,12 +2677,12 @@ public:
 
         // Add members to ARC 
         if(_ptcl_list) { // use index from list 
-            for(int i=0; i<_n_ptcl; i++) {
+            for(PS::S32 i=0; i<_n_ptcl; i++) {
                 clist_[igroup].addP(_ptcl[_ptcl_list[i]]);
             }
         }
         else { // read one by one
-            for(int i=0; i<_n_ptcl; i++) {
+            for(PS::S32 i=0; i<_n_ptcl; i++) {
                 clist_[igroup].addP(_ptcl[i]);
             }
         }
@@ -2631,7 +2695,7 @@ public:
         }
 
         // Add perturber
-        for(int i=0; i<_n_pert; i++) {
+        for(PS::S32 i=0; i<_n_pert; i++) {
             const PS::S32  k = _ptcl_pert_list[i];
             pert_  [i+i_pert_off+1] = &_ptcl_pert[k];
             pforce_[i+i_pert_off+1] = &_force_pert[k];
@@ -2644,12 +2708,13 @@ public:
 
         // recored c.m. inforamtion
         if(_ptcl_pert!=NULL) {
-            clist_.back().pos  = _ptcl_pert[igroup].pos;
-            clist_.back().vel  = _ptcl_pert[igroup].vel;
-            clist_.back().mass = _ptcl_pert[igroup].mass;
+            clist_[igroup].DataCopy(_ptcl_pert[igroup]);
+            //clist_.back().pos  = _ptcl_pert[igroup].pos;
+            //clist_.back().vel  = _ptcl_pert[igroup].vel;
+            //clist_.back().mass = _ptcl_pert[igroup].mass;
 #ifdef HARD_DEBUG
-            assert(clist_.back().mass>0.0);
-            assert(clist_.back().mass==_ptcl_pert[igroup].mass);
+            assert(clist_[igroup].mass>0.0);
+            //assert(clist_.back().mass==_ptcl_pert[igroup].mass);
 #endif
         }
 
@@ -2666,6 +2731,7 @@ public:
         if(!group_mask_map_[_igroup]) {
             clist_[_igroup].clear();
             clist_[_igroup].slowdown.reset();
+            bininfo[_igroup].tstep = -1.0;
             pert_n_[_igroup]=0;
             group_mask_list_.push_back(_igroup);
             group_mask_map_[_igroup]=true;
@@ -2705,12 +2771,32 @@ public:
         pert_n_[_igroup] = _n_pert + 1;
         const PS::S32 i_pert_off = pert_disp_[_igroup];
         
-        for (int i=0; i<_n_pert; i++) {
+        for (PS::S32 i=0; i<_n_pert; i++) {
             PS::S32 adr = _ptcl_pert_list[i];
             pert_  [i+i_pert_off+1] = &_ptcl_pert[adr];
             pforce_[i+i_pert_off+1] = &_force_pert[adr];
         }
     }
+
+#ifdef HARD_DEBUG
+    //! check perturber list
+    void checkPert() {
+        for (PS::S32 i=0; i<clist_.size(); i++) {
+            if(!group_mask_map_[i]){
+                const PS::S32 n_member = clist_[i].getN();
+                const PS::S32 i_pert_off = pert_disp_[i];
+                for (PS::S32 j=1; j<pert_n_[i]; j++) {
+                    for (PS::S32 k=0; k<n_member; k++) {
+                        assert(clist_[i].getP(k).id!=pert_[j+i_pert_off]->id);
+                    }
+                    assert(clist_[i].id!=pert_[j+i_pert_off]->id);
+                }
+                assert(clist_[i].id==pert_[i_pert_off]->id);
+            }
+        }
+    }
+#endif
+
 
     //! Set initial slowdown parameter for one unpert group 
     /*! 
@@ -2742,7 +2828,7 @@ public:
             //if(pert_n_[i]>1) Newtonian_extA_pert(acc, 0.0, p, 2, &pert_[ipert], &pforce_[ipert], pert_n_[i], &par_list_[i]);
             Newtonian_extA_soft(acc, 0.0, p, 2, &pert_[ipert], &pforce_[ipert], pert_n_[_i_group], &par_list_[_i_group]);
             PS::F64 fpertsq = 0.0;
-            for(int k=0; k<3; k++) {
+            for(PS::S32 k=0; k<3; k++) {
                 PS::F64 dacc = acc[0][k]-acc[1][k];
                 fpertsq += dacc*dacc;
             }
@@ -2780,19 +2866,19 @@ public:
     }
 
     void adjustSlowDown(const PS::F64 dt) {
-        for (int i=0; i<clist_.size(); i++) {
+        for (PS::S32 i=0; i<clist_.size(); i++) {
             clist_[i].slowdown.adjustkappa(dt);
         }
     }
 
     void adjustSlowDownPeriod(const PS::F64 dt, PS::S32* np) {
-        for (int i=0; i<clist_.size(); i++) {
+        for (PS::S32 i=0; i<clist_.size(); i++) {
             np[i] = clist_[i].slowdown.adjustkappaPeriod(dt);
         }
     }
     
     void initialSys() {
-        for (int i=0; i<clist_.size(); i++) {
+        for (PS::S32 i=0; i<clist_.size(); i++) {
             const PS::S32 ipert = pert_disp_[i];
             clist_[i].initSys(0.0, *ARC_control_, &(par_list_.back()), &pert_[ipert], &pforce_[ipert], pert_n_[i]);
         }
@@ -2862,7 +2948,7 @@ public:
         const PS::F64 m1_m2_1 = -m1/m2-1.0;
 #endif
         const PS::S32 np=8*kp;
-        for (int i=0; i<np; i++) {
+        for (PS::S32 i=0; i<np; i++) {
 #ifdef ARC_OPT_SYM2
             c->Symplectic_integration_two(ds_use, *ARC_control_, timetable, m2_mt, m1_m2_1, par, &pert_[ipert], &pforce_[ipert], pert_n_[ic]);
 #else 
@@ -3018,7 +3104,7 @@ public:
                                  const PS::F64 _time_end,
                                  const PS::F64 _dt_limit) {
         PS::S64 nstep = 0;
-        for(int i=0; i<_n_act; i++) {
+        for(PS::S32 i=0; i<_n_act; i++) {
             if(getMask(i)) continue;
 #ifdef ARC_SYM
             nstep += integrateOneStepSym(_act_list[i], _time_end, _dt_limit);
@@ -3037,7 +3123,7 @@ public:
     PS::S64 integrateOneStepList(const PS::F64 _time_end,
                                  const PS::F64 _dt_limit) {
         PS::S64 nstep = 0;
-        for(int i=0; i<clist_.size(); i++) {
+        for(PS::S32 i=0; i<clist_.size(); i++) {
             if(getMask(i)) continue;
 #ifdef ARC_SYM
             nstep += integrateOneStepSym(i, _time_end, _dt_limit);
@@ -3059,8 +3145,11 @@ public:
     void updateCM(Tptcl* _ptcl,
                   PS::S32* _ptcl_list,
                   PS::S32 _n_ptcl) {
-        for(int i=0; i<_n_ptcl; i++) {
+        for(PS::S32 i=0; i<_n_ptcl; i++) {
             PS::S32 k = _ptcl_list[i];
+#ifdef HARD_DEBUG
+            assert(k<clist_.size());
+#endif
             clist_[k].pos =  _ptcl[k].pos;
             clist_[k].vel =  _ptcl[k].vel;
             clist_[k].mass = _ptcl[k].mass;
@@ -3073,7 +3162,7 @@ public:
     */
     template <class Tptcl>
     void updateCM(Tptcl _ptcl[]) {
-        for(int i=0; i<clist_.size(); i++) {
+        for(PS::S32 i=0; i<clist_.size(); i++) {
             clist_[i].pos  = _ptcl[i].pos;
             clist_[i].vel  = _ptcl[i].vel;
             clist_[i].mass = _ptcl[i].mass;
@@ -3084,7 +3173,7 @@ public:
     /*! Shift all group members to their c.m. frame for ARC integration
      */
     void shift2CM() {
-        for(int i=0; i<clist_.size(); i++) {
+        for(PS::S32 i=0; i<clist_.size(); i++) {
             clist_[i].center_shift();
         }
     }
@@ -3093,7 +3182,7 @@ public:
     /*! shift compotent coordinates to original frame and save data to original particle address
      */
     void resolve() {
-        for(int i=0; i<clist_.size(); i++) {
+        for(PS::S32 i=0; i<clist_.size(); i++) {
             clist_[i].resolve();
         }
     }
@@ -3104,7 +3193,7 @@ public:
       @param[in] _n_group: number of group to resolve
      */
     void resolve(const PS::S32 _group_list[], const PS::S32 _n_group) {
-        for(int i=0; i<_n_group; i++) {
+        for(PS::S32 i=0; i<_n_group; i++) {
             clist_[_group_list[i]].resolve();
         }
     }
@@ -3237,9 +3326,10 @@ public:
       @param[in] _precision: printed precision for one variable
       @param[in] _width: printing width for one variable
      */
-    void printSlowDown(std::ostream& _os, const PS::S32 _i, const int _precision=15, const int _width=23) {
+    void printSlowDown(std::ostream& _os, const PS::S32 _i, const PS::S32 _precision=15, const PS::S32 _width=23) {
         clist_[_i].slowdown.print(_os,_precision,_width);
     }
+
 
 //#ifdef ARC_PROFILE
 //    const PS::S64 getNsubstep() const{
@@ -3262,12 +3352,12 @@ public:
           <<dt_limit<<" "
           <<0.05<<" "
           <<std::sqrt(par->eps2)<<std::endl;
-        for (int j=0; j<clist_[i].getN(); j++) {
+        for (PS::S32 j=0; j<clist_[i].getN(); j++) {
             os<<clist_[i].getP(j).mass<<" "
               <<clist_[i].getP(j).pos<<" "
               <<clist_[i].getP(j).vel<<std::endl;
         }
-        for (int j=1; j<pert_n_[i]; j++) {
+        for (PS::S32 j=1; j<pert_n_[i]; j++) {
             os<<pert_[pert_disp_[i]+j]->mass<<" "
               <<pert_[pert_disp_[i]+j]->pos<<" "
               <<pert_[pert_disp_[i]+j]->vel<<std::endl;
@@ -3283,7 +3373,7 @@ public:
        _kp: kepler period number per step
      */
     void info_print(std::ostream& os, const PS::S64 _n_group, const PS::S64 _n_group_in_cluster, const PS::S64 _n_ptcl, const PS::S64 _n_hint, const PS::F64 _dt_limit, const PS::S32 _kp) const{
-        for (int i=0; i<clist_.size(); i++) {
+        for (PS::S32 i=0; i<clist_.size(); i++) {
             os<<"ARC_info(i_group,n_ptcl,n_hint,n_group,n,n_pert,semi,ecc,peri,kappa,n_step): "
               <<_n_group+i<<" "
               <<_n_ptcl<<" "
@@ -3317,7 +3407,7 @@ public:
     void EnergyRecord(Teng &energy, const PS::S32 sdflag=false) {
         energy.kin = energy.pot = energy.tot = 0.0;
         PS::F64 sd;
-        for(int i=0; i<clist_.size(); i++) {
+        for(PS::S32 i=0; i<clist_.size(); i++) {
             if (sdflag) sd = 1.0/clist_[i].slowdown.getkappa();
             else sd = 1.0;
             energy.kin += sd*clist_[i].getEkin();
@@ -3330,10 +3420,10 @@ public:
 #ifdef HARD_DEBUG_PRINT
     template <class Tptcl>
     void writePtcl(FILE* _fout) const{
-        for (int i=0; i<clist_.size(); i++) {
+        for (PS::S32 i=0; i<clist_.size(); i++) {
             PS::F64vec pcm_pos = clist_[i].pos;
             PS::F64vec pcm_vel = clist_[i].vel;
-            for (int j=0; j<clist_[i].getN(); j++) {
+            for (PS::S32 j=0; j<clist_[i].getN(); j++) {
                 Tptcl pj = clist_[i].getP(j);
                 pj.pos += pcm_pos;
                 pj.vel += pcm_vel;

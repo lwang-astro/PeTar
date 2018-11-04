@@ -806,6 +806,30 @@ private:
 public:
 #endif
 
+    //! Calculate binary info
+    /*!
+      @param[out] _bininfo: binary information (outer most, tstep choose minimum)
+      @param[in] _ptcl_list: ptcl index in _ptcl_origin
+      @param[in] _n_ptcl: number of members
+      @param[in] _ptcl_origin: original ptcl array
+      @param[in] _dt_tree: tree time step for rsearch
+    */
+    void calcBinPars(Binary& _bininfo,
+                     PS::S32* _ptcl_list,
+                     const PS::S32 _n_ptcl,
+                     PtclHard* _ptcl_origin,
+                     const PS::F64 _dt_tree) {
+
+        PtclTree<PtclHard> bins[_n_ptcl-1];
+        keplerTreeGenerator(bins, _ptcl_list, _n_ptcl, _ptcl_origin, _dt_tree);
+
+        _bininfo = *(Binary*)&(bins[_n_ptcl-2]);
+
+        for (PS::S32 j=0; j<_n_ptcl-1; j++) 
+            _bininfo.tstep = std::min(bins[j].tstep, _bininfo.tstep);
+    }
+
+
     //! check group and adjust 
     /*! 
       1. check group change:
@@ -892,18 +916,20 @@ public:
             for(PS::S32 i=0; i<n_group_break; i++) std::cout<<" "<<break_group_list[i]<<" "<<_Aint.getGroupN(i)<<" "<<break_split_index_list[i]<<std::endl;
 #endif
             _Hint.integrateOneListNoPred(break_group_list, n_group_break, _time_sys, _dt_max, dt_min_hard_, &_Aint);
+            //_Hint.writeBackPtcl(break_group_list, n_group_break);
             //_Aint.resolve(break_group_list, n_group_break);
         }
 
         // Integrate breaking ptcl to current time
         if(n_group_new>0) {
 #ifdef ADJUST_GROUP_DEBUG
-            std::cout<<"New group list, n_new_group: "<<n_group_new<<"\n";
-            for(PS::S32 i=0; i<n_group_new; i++) std::cout<<" "<<new_group_member_index_hint[2*i]<<" "<<new_group_member_index_hint[2*i+1]<<std::endl;
-            std::cout<<"Address:\n";
-            for(PS::S32 i=0; i<n_group_new; i++) std::cout<<" "<<PS::S32(new_group_member_adr_origin[2*i]-_ptcl_origin)<<" "<<PS::S32(new_group_member_adr_origin[2*i+1]-_ptcl_origin)<<std::endl;
+            std::cout<<"New group index in Hint:\n";
+            for(PS::S32 i=0; i<n_group_new; i++) std::cout<<"group "<<i<<": "<<new_group_member_index_hint[2*i]<<" "<<new_group_member_index_hint[2*i+1]<<std::endl;
+            std::cout<<"New group address in origin ptcl:\n";
+            for(PS::S32 i=0; i<n_group_new; i++) std::cout<<"group "<<i<<": "<<PS::S32(new_group_member_adr_origin[2*i]-_ptcl_origin)<<" "<<PS::S32(new_group_member_adr_origin[2*i+1]-_ptcl_origin)<<std::endl;
 #endif
             _Hint.integrateOneListNoPred(new_group_member_index_hint, 2*n_group_new, _time_sys, _dt_max, dt_min_hard_, &_Aint);
+            _Hint.writeBackPtcl(new_group_member_index_hint, 2*n_group_new);
         }
         _Aint.resolve();
          
@@ -983,6 +1009,7 @@ public:
 #ifdef HARD_DEBUG
                     assert(i_new==i_break);
 #endif
+                    calcBinPars(_Aint.bininfo[i_new], first_index_origin, n_first, _ptcl_origin, _dt_tree);
                     
                     //_Aint.initial(i_break, _time_sys);
                     //_Aint.generateCMfromMembers(i_break);
@@ -1005,12 +1032,16 @@ public:
 #ifdef HARD_DEBUG
                     assert(i_new==i_break);
 #endif
+                    calcBinPars(_Aint.bininfo[i_new], first_index_origin, n_first, _ptcl_origin, _dt_tree);
 
                     //_Aint.initial(i_break, _time_sys);
                     //_Aint.generateCMfromMembers(i_break);
 
                     // add new group
                     PS::S32 i_new2=_Aint.addOneGroup(_ptcl_origin, second_index_origin, n_second, (Tsoft*)NULL, n_split_, _Hint.getPtcl(), _Hint.getForce()); 
+
+                    calcBinPars(_Aint.bininfo[i_new2], second_index_origin, n_second, _ptcl_origin, _dt_tree);
+
                     // copy soft perturbation parameters to new group
                     _Aint.copyParP2P(i_new2, i_break);
                     //_Aint.initial(i_group_new, _time_sys);
@@ -1063,8 +1094,10 @@ public:
                     // create new group
                     // get ptcl index from _ptcl
                     PS::S32 new_index_origin[2]={PS::S32(i1_adr_origin-_ptcl_origin), PS::S32(i2_adr_origin-_ptcl_origin)};
+                    
                     PS::S32 i_new = _Aint.addOneGroup(_ptcl_origin, new_index_origin, 2, (Tsoft*)NULL, n_split_, _Hint.getPtcl(), _Hint.getForce());
 
+                    calcBinPars(_Aint.bininfo[i_new], new_index_origin, 2, _ptcl_origin, _dt_tree);
                     //_Aint.initial(_n_group, _time_sys);
                     //_Aint.generateCMfromMembers(_n_group);
 
@@ -1099,7 +1132,7 @@ public:
 #ifdef HARD_DEBUG
                     assert(i_new==i1_hint);
 #endif
-
+                    calcBinPars(_Aint.bininfo[i_new], new_group_member_index_origin, n_members_i1+1, _ptcl_origin, _dt_tree);
                     //_Aint.initial(i1_hint, _time_sys);
                     //_Aint.generateCMfromMembers(i1_hint);
                     
@@ -1141,6 +1174,7 @@ public:
                     assert(i_new==i1_hint);
 #endif
 
+                    calcBinPars(_Aint.bininfo[i_new], new_group_member_index_origin, n_members_i1+n_members_i2, _ptcl_origin, _dt_tree);
                     //_Aint.initial(i1_hint, _time_sys);
                     //_Aint.generateCMfromMembers(i1_hint);
 
@@ -1167,6 +1201,7 @@ public:
             Ptcl* ptcl_cm = _Aint.getCM(i_mod_hint);
             // update research
             ptcl_cm->calcRSearch(_dt_tree);
+            ptcl_cm->id = -_Aint.getGroupPtcl(i_mod_hint)->id;
             // update c.m.
             if(i_mod_hint<n_group_old) _Hint.modOnePtcl(i_mod_hint, *ptcl_cm, _time_sys);
             // insert new c.m.
@@ -1177,7 +1212,7 @@ public:
 
         // initial ARC system
         for (PS::S32 i=0; i<n_hint_mod; i++) {
-            PS::S32 i_mod_hint=hint_mod_ptcl_index[i];
+             PS::S32 i_mod_hint=hint_mod_ptcl_index[i];
             _Hint.searchPerturberOne(i_mod_hint);
             _Aint.initialOneSys(i_mod_hint, _time_sys);
             _Aint.initialOneSlowDown(i_mod_hint, _time_sys+dt_limit_hard_, _Hint.getNbInfo(i_mod_hint).min_mass, sdfactor_, 1.0);
@@ -1193,7 +1228,8 @@ public:
 
         // Update Aint perturber list
         for (PS::S32 i=0; i<n_group; i++) {
-            _Aint.updatePertOneGroup(i, _Hint.getPtcl(), _Hint.getForce(), _Hint.getPertList(i), _Hint.getPertN(i));
+            if(!_Aint.getMask(i))
+                _Aint.updatePertOneGroup(i, _Hint.getPtcl(), _Hint.getForce(), _Hint.getPertList(i), _Hint.getPertN(i));
         }
 
 #ifdef ADJUST_GROUP_DEBUG
@@ -1242,6 +1278,9 @@ public:
         }
         for (PS::S32 k=0; k<n_tot; k++) 
             assert(n_count_check[k]==1);
+
+        // check perturber
+        _Aint.checkPert();
 #endif
 
     }
@@ -1279,6 +1318,9 @@ private:
         PS::ReallocatableArray<PtclHard> ptcl_bk;
         ptcl_bk.reserve(_n_ptcl);
         for(int i=0; i<_n_ptcl; i++) ptcl_bk.pushBackNoCheck(_ptcl_local[i]);
+#ifdef HARD_DEBUG_PRE_DUMP
+        dump("hard_pre_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, 0, 0);
+#endif
 #endif
         PS::S32 nstepcount = 0;
 

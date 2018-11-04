@@ -641,7 +641,8 @@ void keplerTreeGenerator(PtclTree<Tptcl> _bins[],   // make sure bins.size = n_m
         _bins[i].fpert = fabs(p[0]->mass_bk - p[1]->mass_bk)/dr*apo; // for perturbation, use acceleration difference to estimate
         _bins[i].mass_bk = (p[0]->mass*p[0]->mass_bk + p[1]->mass*p[1]->mass_bk)/_bins[i].mass; // for c.m. perturbation, use m1 a1 + m2 a2 = mcm acm
         _bins[i].id = p[0]->id;
-        _bins[i].tstep = -1.0;
+        _bins[i].tstep = 0.78539816339*std::sqrt(fabs(_bins[i].semi)/(p[0]->mass+p[1]->mass))*(p[0]->mass*p[1]->mass);  
+        //_bins[i].tstep = -1.0;
         _bins[i].stable_factor = 0.0;
         //_bins[i].status = _bins[i].id;
         _bins[i].status = _bins[i].member[0]->status + _bins[i].member[1]->status;  // counting total number of members in the leafs
@@ -753,7 +754,7 @@ bool stab2check(PtclTree<Tptcl> &_bin, const PS::F64 _rbin, const PS::F64 _rcrit
 //    }
     
         //ARC step estimation: pi/4*sqrt(semi/(m1+m2))*m1*m2
-        _bin.tstep = 0.78539816339*std::sqrt(semi/mcm)*m1*m2;  
+        //_bin.tstep = 0.78539816339*std::sqrt(semi/mcm)*m1*m2;  
 
         // perturbation/inner acceleration 
         PS::F64 fpert_ratio = _bin.fpert*(apo*apo)/mcm;
