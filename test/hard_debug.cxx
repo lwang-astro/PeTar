@@ -60,6 +60,7 @@ int main(int argc, char **argv){
     std::cerr<<"Error: Filename "<<filename<<" not found\n";
     abort();
   }
+  std::cout<<"Reading dump file:"<<filename<<std::endl;
 
   PS::F64 time_end;
   fread(&time_end,sizeof(PS::F64),1,fp);
@@ -79,7 +80,7 @@ int main(int argc, char **argv){
   for(int i=0; i<n_artifical; i++) ptcl_artifical[i].readBinary(fp);
 
   std::cout<<"n: "<<ptcl.size()<<std::endl;
-  std::cerr<<std::setprecision(20);
+  std::cerr<<std::setprecision(12);
   PS::F64 r_search_max=0.0;
   PS::S32 i_r_search_max=-1;
   if(n_group>0) std::cerr<<"member :\n";
