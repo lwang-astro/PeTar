@@ -1354,7 +1354,7 @@ public:
             const PS::S32 ioff=Jlist_disp_[i]+Jlist_n_[i];
             for (PS::S32 j=ioff; j<ioff+_n_list; j++) 
                 Jlist_[j] = n_org+i;
-            Jlist_n_[i] += n_org;
+            Jlist_n_[i] += _n_list;
 #ifdef HARD_DEBUG
             assert(Jlist_n_[i]<=n_nb_off_);
 #endif
@@ -2809,7 +2809,7 @@ public:
         // isolated case
         if (bininfo[_i_group].semi>0&&bininfo[_i_group].stable_factor>=0) {   
             PS::F64 finner = bininfo[_i_group].semi*(1.0+bininfo[_i_group].ecc);
-            finner = clist_[_i_group].mass/(finner*finner);
+            finner = (bininfo[_i_group].m1-bininfo[_i_group].m2)/(finner*finner);
             PS::F64 finnersq = finner*finner;
             TpARC p[2];
             OrbParam2PosVel(p[0].pos, p[1].pos, p[0].vel, p[1].vel, bininfo[_i_group].m1, bininfo[_i_group].m2, bininfo[_i_group].semi, bininfo[_i_group].ecc, bininfo[_i_group].inc, bininfo[_i_group].OMG, bininfo[_i_group].omg, PI);
@@ -2980,11 +2980,11 @@ public:
 #endif
         ARChain* c = &clist_[ic];
         ARC_pert_pars* par = &par_list_[ic];
-        PS::F64 ds_up_limit = 0.25*dt_limit/c->calc_dt_X(1.0,*ARC_control_);
+        //PS::F64 ds_up_limit = 0.25*dt_limit/c->calc_dt_X(1.0,*ARC_control_);
         //PS::F64 ds_use = 2.0*bininfo[ic].tstep*std::abs(c->getPt());
         PS::F64 ds_use=bininfo[ic].tstep;
         //PS::F64 ds_use = c->calc_next_step_custom(*ARC_control_,par);
-        if (ds_use>ds_up_limit) ds_use = ds_up_limit;
+        //if (ds_use>ds_up_limit) ds_use = ds_up_limit;
 
         const PS::S32 ipert = pert_disp_[ic];
         bool fix_step_flag = false;
@@ -3365,26 +3365,29 @@ public:
     }
 
     //! ARC info print
-    /* _n_group: current total number of groups already integrated
-       _n_group_in_cluster: number of groups in current cluster
-       _n_ptcl: number of real particles
-       _n_hint: number of Hint particles
-       _dt_limit: hard time step limit
-       _kp: kepler period number per step
+    /* @param[in] _n_group: current total number of groups already integrated
+       @param[in] _n_group_in_cluster: number of groups in current cluster
+       @param[in] _n_ptcl: number of real particles
+       @param[in] _n_hint: number of Hint particles
+       @param[in] _dt_limit: hard time step limit
+       @param[in] _kp: kepler period number per step
      */
-    void info_print(std::ostream& os, const PS::S64 _n_group, const PS::S64 _n_group_in_cluster, const PS::S64 _n_ptcl, const PS::S64 _n_hint, const PS::F64 _dt_limit, const PS::S32 _kp) const{
+    bool info_print(std::ostream& os, const PS::S64 _n_group, const PS::S64 _n_group_in_cluster, const PS::S64 _n_ptcl, const PS::S64 _n_hint, const PS::F64 _dt_limit, const PS::S32 _kp, const PS::S32 _n_step_limit=10000) const{
+        bool dump_flag=false;
         for (PS::S32 i=0; i<clist_.size(); i++) {
-            os<<"ARC_info(i_group,n_ptcl,n_hint,n_group,n,n_pert,semi,ecc,peri,kappa,n_step): "
-              <<_n_group+i<<" "
-              <<_n_ptcl<<" "
-              <<_n_hint<<" "
-              <<_n_group_in_cluster<<" "
-              <<clist_[i].getN()<<" "
-              <<pert_n_[i]<<" "
-              <<bininfo[i].semi<<" "
-              <<bininfo[i].ecc<<" "
-              <<bininfo[i].peri<<" "
-              <<clist_[i].slowdown.getkappa()<<" ";
+            os<<"ARC_info: "
+              <<" i_group_tot="<<_n_group+i
+              <<" i_group="<<i
+              <<" n_ptcl="<<_n_ptcl
+              <<" n_groups="<<_n_group_in_cluster
+              <<" n_hint="<<_n_hint
+              <<" n_member="<<clist_[i].getN()
+              <<" n_pert="<<pert_n_[i]
+              <<" semi="<<bininfo[i].semi
+              <<" ecc="<<bininfo[i].ecc
+              <<" period="<<bininfo[i].peri
+              <<" tstep="<<bininfo[i].tstep
+              <<" sd="<<clist_[i].slowdown.getkappa();
             PS::S64 nstep = 0;
 #ifdef ARC_SYM
             if(_kp>0) nstep = _kp*8;
@@ -3392,13 +3395,15 @@ public:
 #else
             nstep = clist_[i].profile.itercount;
 #endif
-            os<<nstep<<std::endl;
+            os<<" nstep="<<nstep<<std::endl;
 
-            if(nstep>1e4) {
+            if(nstep>_n_step_limit) {
                 os<<"Data dump for hardtest in the case of large nstep "<<nstep<<std::endl;
                 data_dump(os, i, _dt_limit);
+                dump_flag = true;
             }
         }
+        return dump_flag;
     }
 #endif
     

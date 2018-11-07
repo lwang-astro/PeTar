@@ -754,7 +754,10 @@ bool stab2check(PtclTree<Tptcl> &_bin, const PS::F64 _rbin, const PS::F64 _rcrit
 //    }
     
         //ARC step estimation: pi/4*sqrt(semi/(m1+m2))*m1*m2
+#ifdef STABLE_CHECK_DEBUG
+        std::cerr<<"STAB2 tstep:"<<0.78539816339*std::sqrt(semi/mcm)*m1*m2<<std::endl;
         //_bin.tstep = 0.78539816339*std::sqrt(semi/mcm)*m1*m2;  
+#endif
 
         // perturbation/inner acceleration 
         PS::F64 fpert_ratio = _bin.fpert*(apo*apo)/mcm;

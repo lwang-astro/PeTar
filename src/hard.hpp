@@ -912,8 +912,7 @@ public:
         // Integrate breaking ptcl to current time
         if(n_group_break>0) {
 #ifdef ADJUST_GROUP_DEBUG
-            std::cout<<"Break group list, group N, split index:\n";
-            for(PS::S32 i=0; i<n_group_break; i++) std::cout<<" "<<break_group_list[i]<<" "<<_Aint.getGroupN(i)<<" "<<break_split_index_list[i]<<std::endl;
+            for(PS::S32 i=0; i<n_group_break; i++) std::cout<<"Break group: "<<break_group_list[i]<<" group N: "<<_Aint.getGroupN(break_group_list[i])<<" split index: "<<break_split_index_list[i]<<std::endl;
 #endif
             _Hint.integrateOneListNoPred(break_group_list, n_group_break, _time_sys, _dt_max, dt_min_hard_, &_Aint);
             //_Hint.writeBackPtcl(break_group_list, n_group_break);
@@ -957,14 +956,7 @@ public:
                 Ptcl* second_adr_origin[n_member];
                 PS::S32 n_first, n_second;
                 _Aint.splitOneGroup(first_adr_origin, n_first, second_adr_origin, n_second, i_break, i_split);
-#ifdef ADJUST_GROUP_DEBUG
-                std::cout<<"Index break i:"<<i<<std::endl;
-                std::cout<<"n_first: "<<n_first<<std::endl;
-                for (PS::S32 k =0; k<n_first; k++) std::cout<<" "<<PS::S32((PtclHard*)first_adr_origin[k]-_ptcl_origin);
-                std::cout<<"\nn_second: "<<n_second<<std::endl;
-                for (PS::S32 k =0; k<n_first; k++) std::cout<<" "<<PS::S32((PtclHard*)second_adr_origin[k]-_ptcl_origin);
-                std::cout<<std::endl;
-#endif
+
                 // current first_list and second_list are index in chain.lst, replace them to index in _ptcl
                 PS::S32 first_index_origin[n_member], second_index_origin[n_member];
                 if (n_first==1&&n_second>1) {
@@ -1257,16 +1249,18 @@ public:
         PS::S32 n_count_check[n_tot] = {0};
         PtclH4* hint_ptcl = _Hint.getPtcl();
         for (PS::S32 k=0; k<n_group; k++) {
-            const Ptcl* arc_cm = _Aint.getCM(k);
-            assert(arc_cm->mass==hint_ptcl[k].mass);
-            assert(arc_cm->pos.x==hint_ptcl[k].pos.x);
-            const Ptcl* arc_ptcl = _Aint.getGroupPtcl(k);
-            Ptcl** group_ptr= _Aint.getGroupPtclAdr(k);
-            for (PS::S32 ig=0; ig<_Aint.getGroupN(k); ig++) {
-                PS::S32 adr= PS::S32((PtclHard*)group_ptr[ig] - _ptcl_origin);
-                assert(arc_ptcl[ig].id==_ptcl_origin[adr].id);
-                assert(adr<n_tot);
-                n_count_check[adr]++;
+            if(!_Aint.getMask(k)) {
+                const Ptcl* arc_cm = _Aint.getCM(k);
+                assert(arc_cm->mass==hint_ptcl[k].mass);
+                assert(arc_cm->pos.x==hint_ptcl[k].pos.x);
+                const Ptcl* arc_ptcl = _Aint.getGroupPtcl(k);
+                Ptcl** group_ptr= _Aint.getGroupPtclAdr(k);
+                for (PS::S32 ig=0; ig<_Aint.getGroupN(k); ig++) {
+                    PS::S32 adr= PS::S32((PtclHard*)group_ptr[ig] - _ptcl_origin);
+                    assert(arc_ptcl[ig].id==_ptcl_origin[adr].id);
+                    assert(adr<n_tot);
+                    n_count_check[adr]++;
+                }
             }
         }
         PtclHard** hint_ptcl_ptr = _Hint.getPtclAdr(); 
@@ -1319,7 +1313,7 @@ private:
         ptcl_bk.reserve(_n_ptcl);
         for(int i=0; i<_n_ptcl; i++) ptcl_bk.pushBackNoCheck(_ptcl_local[i]);
 #ifdef HARD_DEBUG_PRE_DUMP
-        dump("hard_pre_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, 0, 0);
+        dump("hard_pre_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
 #endif
 #endif
         PS::S32 nstepcount = 0;
@@ -1468,7 +1462,7 @@ private:
             gpars[0].getBinPars(Aint.bininfo[0], _ptcl_artifical);
 #ifdef HARD_DEBUG_PRINT
             std::cerr<<"Hard: one group, n="<<_n_ptcl<<std::endl;
-            if(Aint.bininfo[0].semi>Int_pars_.rout)  Aint.bininfo[0].print(std::cerr,13);
+            Aint.bininfo[0].print(std::cerr,20,true);
 #endif
 #ifdef TIDAL_TENSOR
             PS::S32 i_soft_pert_offset = gpars[0].offset_tt;
@@ -1521,16 +1515,20 @@ private:
             if(fabs(dEtot)>hard_dE_limit) {
                 std::cerr<<"Hard energy significant: "<<dEtot<<std::endl;
                 std::cerr<<"Dump data:"<<std::endl;
-                dump("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, 0, 0);
+                dump("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
                 abort();
             }
 #endif
 #endif
 #ifdef ARC_DEBUG_PRINT
 #ifdef ARC_SYM_SD_PERIOD
-            Aint.info_print(std::cerr, ARC_n_groups, 1, _n_ptcl, gpars.n_members,dt_limit_hard_,kp);
+            Aint.info_print(std::cerr, ARC_n_groups, 1, _n_ptcl, 0, dt_limit_hard_,kp);
 #else
-            Aint.info_print(std::cerr, ARC_n_groups, 1, _n_ptcl, gpars.n_members,dt_limit_hard_,0);
+            Aint.info_print(std::cerr, ARC_n_groups, 1, _n_ptcl, 0, dt_limit_hard_, 0, 100000);
+//            if (dump_flag) {
+//                dump("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
+//                abort();
+//            }
 #endif
 #endif
 #ifdef PROFILE
@@ -1604,6 +1602,10 @@ private:
             //PS::F64 apo_bin[_n_group+1];
             for (int i=0; i<_n_group; i++) {
                 gpars[i].getBinPars(Aint.bininfo[i], &_ptcl_artifical[adr_first_ptcl[i]]);
+#ifdef HARD_DEBUG_PRINT
+                std::cerr<<"Group i:"<<i<<" ";
+                Aint.bininfo[i].print(std::cerr,20,true);
+#endif
                 //auto &bini= Aint.bininfo[i];
                 // In the new tree search way, this is not necessary
                 /* Notice in the neighbor search, the resolved members are used.
@@ -1686,8 +1688,10 @@ private:
                 assert(time_sys>time_now);
 #endif
                 PS::F64 dt_h = time_sys-time_now;
-                for (int k=0; k<_n_group; k++) 
-                    Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, Hint.getNbInfo(k).min_mass);
+                for (int k=0; k<_n_group; k++) {
+                    if(!Aint.getMask(k))
+                        Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, Hint.getNbInfo(k).min_mass);
+                }
 //#ifdef HARD_CHECK_ENERGY
 //                    for(int k=0; k<n_group; k++) {
 //                        slowdownrecord[k] = std::max(slowdownrecord[k], Aint.getSlowDown(k));
