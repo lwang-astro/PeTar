@@ -1031,20 +1031,21 @@ public:
         If r_min<r_crit, check the direction, if income, accept as group
       @param[out] _new_group_member_index: new group member index in ptcl_
       @param[out] _new_group_member_adr: new group member address, echo two neighbor is one group
+      @param[out] _new_group_offset: new group offset, last one show total number of members.
       @param[in] _r_crit2: group distance criterion square
       @param[in] _Aint: ARC integrator class
       \return number of new groups
      */
     template <class ARCint>
-    PS::S32 checkNewGroup(PS::S32 _new_group_member_index[], Tphard* _new_group_member_adr[], const PS::F64 _r_crit2, const ARCint* _Aint) {
+    PS::S32 checkNewGroup(PS::S32 _new_group_member_index[], Tphard* _new_group_member_adr[], PS::S32 _new_group_offset[], const PS::F64 _r_crit2, const ARCint* _Aint) {
 #ifdef HARD_DEBUG
         assert(nb_info_.size()==ptcl_.size());
 #endif
         PS::S32 n_group = 0;
         if (_Aint!=NULL) n_group = _Aint->getNGroups();
-        PS::S32 n_new_group=0;
-        bool used_mask[nb_info_.size()];
-        for (PS::S32 i=0; i<nb_info_.size(); i++) used_mask[i] = false;
+        PS::S32 n_new_group=0, offset=0;
+        PS::S32 used_mask[nb_info_.size()];
+        for (PS::S32 i=0; i<nb_info_.size(); i++) used_mask[i] = -1;
         for (PS::S32 i=0; i<nb_info_.size(); i++) {
             if(nb_info_[i].r_min2<_r_crit2) {
                 const PS::S32 j = nb_info_[i].r_min_index;
@@ -1053,7 +1054,7 @@ public:
 #endif                
                 if(j<0) continue;
 
-                if((!used_mask[i]) && (!used_mask[j])) { // avoid double count
+                if(!(used_mask[i]>=0 && used_mask[j]>=0)) { // avoid double count
                     bool out_flag=getDirection(i, j);
                     if(!out_flag) {
                         PS::F64 sdi=0.0, sdj=0.0;
@@ -1062,19 +1063,64 @@ public:
                         if(sdi>1.0&&sdj>1.0) continue;
                         if(sdi>1.0&&sdj==0.0) continue;
                         if(sdi==0.0&&sdj>1.0) continue;
-                        
-                        used_mask[i] = true;
-                        used_mask[j] = true;
-                        const PS::S32 group_offset = 2*n_new_group;
-                        _new_group_member_index[group_offset] = i;
-                        _new_group_member_index[group_offset+1] = j;
-                        _new_group_member_adr[group_offset] = ptcl_ptr_[i];
-                        _new_group_member_adr[group_offset+1] = ptcl_ptr_[j];
-                        n_new_group++;
+
+                        PS::S32 insert_group=-1, insert_index=-1;
+                        if(used_mask[i]>=0) {
+                            insert_group = used_mask[i];
+                            insert_index = j;
+                        }
+                        else if(used_mask[j]>=0) {
+                            insert_group = used_mask[j];
+                            insert_index = i;
+                        }
+                        // the case of merging group
+                        if(insert_group>=0) {
+                            // shift the first index in last group to last 
+                            PS::S32 last_group_offset = _new_group_offset[n_new_group-1];
+                            _new_group_member_index[offset] = _new_group_member_index[last_group_offset];
+                            _new_group_member_adr  [offset] = _new_group_member_adr  [last_group_offset];
+                            offset++;
+
+                            // in the case insert_group is not the last group
+                            if(insert_group<n_new_group-1) {
+                                // shift first index in each group to the end to allow to insert j in i_group
+                                for (PS::S32 k=n_new_group-1; k>insert_group; k--) {
+                                    PS::S32 k_group_offset = _new_group_offset[k];
+                                    PS::S32 k0_group_offset = _new_group_offset[k-1];
+                                    _new_group_member_index[k_group_offset] = _new_group_member_index[k0_group_offset];
+                                    _new_group_member_adr  [k_group_offset] = _new_group_member_adr  [k0_group_offset];
+                                    _new_group_offset[k]++;
+                                }
+                            }
+                            // replace the first position of insert_group with insert ptcl
+                            PS::S32 insert_group_offset=_new_group_offset[insert_group];
+                            _new_group_member_index[insert_group_offset] = insert_index;
+                            _new_group_member_adr[insert_group_offset] = ptcl_ptr_[insert_index];
+                            used_mask[insert_index] = insert_group;
+                        }
+                        else {   // new group case
+                            _new_group_offset[n_new_group] = offset;
+                            _new_group_member_index[offset] = i;
+                            _new_group_member_adr[offset] = ptcl_ptr_[i];
+                            used_mask[i] = n_new_group;
+                            offset++;
+
+                            _new_group_member_index[offset] = j;
+                            _new_group_member_adr[offset] = ptcl_ptr_[j];
+                            used_mask[j] = n_new_group;
+                            offset++;
+
+                            n_new_group++;
+                        }
                     }
                 }
             }
         }
+        // for total number of members
+        _new_group_offset[n_new_group] = offset;
+#ifdef HARD_DEBUG
+        assert(offset<=ptcl_.size());
+#endif
         return n_new_group;
     }
     
@@ -3317,22 +3363,14 @@ public:
         return n_group_break;
     }
 
-    //! Get splitted group ptcl index
-    /*! Get two ptcl index (in chain list) groups based on the given _isplit (will be last index in the first group)
-      @param[out] _first_list: index array to store the first group
-      @param[out] _n_first: number of particles in the first list
-      @param[out] _second_list: index array to store the second group
-      @param[out] _n_second: number of particles in the second list
+    //! Get group original address in chain order
+    /*! 
+      @param[out] _list particle address array to store the results
       @param[in] _igroup: group index to split
-      @param[in] _isplit: index used to split group
      */
-    void splitOneGroup(TpARC* _first_list[],
-                       PS::S32& _n_first,
-                       TpARC* _second_list[],
-                       PS::S32& _n_second,
-                       const PS::S32 _igroup,
-                       const PS::S32 _isplit) {
-        clist_[_igroup].splitTwoGroups(_first_list, _n_first, _second_list, _n_second, _isplit);
+    PS::S32 getPtclAdrChain(TpARC* _list[],
+                            const PS::S32 _igroup){
+        return clist_[_igroup].getPAdrChain(_list);
     }
     
 
