@@ -334,6 +334,20 @@ inline void CalcAcc0Acc1R2Cutoff(const PS::F64vec posi,
         const PS::F64vec F1 = -MR3*vij*K - 3.0*A*F0 - MR3*rij*Kdot;
         acci += F0;
         jrki += F1;
+#ifdef HARD_DEBUG
+        assert(!std::isnan(F0[0]));
+        assert(!std::isnan(F0[1]));
+        assert(!std::isnan(F0[2]));
+        assert(!std::isnan(F1[0]));
+        assert(!std::isnan(F1[1]));
+        assert(!std::isnan(F1[2]));
+        //assert(F0[0]==F0[0]);
+        //assert(F0[1]==F0[1]);
+        //assert(F0[2]==F0[2]);
+        //assert(F1[0]==F1[0]);
+        //assert(F1[1]==F1[1]);
+        //assert(F1[2]==F1[2]);
+#endif
     }
 }
 

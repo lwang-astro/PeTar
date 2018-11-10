@@ -276,7 +276,8 @@ int main(int argc, char **argv){
 //  std::cerr<<"New ds approx ="<<nds<<std::endl
 //           <<"Used ds = "<<ds<<std::endl;
 
-  c.init(0.0, chain_control, &int_par);
+//  c.initChain();
+  c.initSys(0.0, chain_control, &int_par, (PtclH4**)NULL, (PtclForce**)NULL);
 
   c.print(std::cout);
 

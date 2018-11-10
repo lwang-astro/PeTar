@@ -23,7 +23,7 @@ INCLUDE  = -I./src -I../src
 #use_xc30_naoj = yes
 use_x86 = yes
 use_mpi = yes
-debug_mode=yes
+#debug_mode=yes
 #use_intel=yes
 
 ifeq ($(use_k_computer),yes)
@@ -85,11 +85,10 @@ endif
 ifeq ($(debug_mode),yes)
 OPTFLAGS = -g -O0 -fbounds-check -Wall -D SANITY_CHECK_REALLOCATABLE_ARRAY -D HARD_DEBUG_PRE_DUMP
 else
-OPTFLAGS = -O2 -Wall
+OPTFLAGS = -O2 -Wall -ffast-math -funroll-loops
 endif
 
-CXXFLAGS = -ffast-math -funroll-loops
-CXXFLAGS += -std=c++11
+CXXFLAGS = -std=c++11
 CXXFLAGS += -Wall
 CXXFLAGS += -fopenmp
 #CXXFLAGS += -march=skylake-avx512
@@ -129,13 +128,14 @@ SIMD_DEBFLAGS += -DAVX_PRELOAD
 
 #DEBFLAGS += -D ARC_PROFILE
 #DEBFLAGS += -D INTEGRATED_CUTOFF_FUNCTION
-#DEBFLAGS += -D ARC_DEBUG
+DEBFLAGS += -D ARC_DEBUG
 #DEBFLAGS += -D ARC_DEBUG_PRINT
 #DEBFLAGS += -D ARC_DEEP_DEBUG
-#DEBFLAGS += -D ARC_ERROR
+DEBFLAGS += -D ARC_ERROR
 DEBFLAGS += -D ARC_DEBUG_DUMP
 #DEBFLAGS += -D ARC_WARN
 DEBFLAGS += -D HARD_DEBUG
+DEBFLAGS += -D HARD_DEBUG_PRE_DUMP
 DEBFLAGS += -D HARD_DEBUG_DUMP
 #DEBFLAGS += -D STABLE_CHECK_DEBUG
 #DEBFLAGS += -D CLUSTER_DEBUG
@@ -171,7 +171,7 @@ nbody.out: $(SRC)
 #getdata: data.cc
 #	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)
 
-ARC_debug.out: chain_debug.cxx
+arc_debug.out: arc_debug.cxx
 	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(ARC_DEBFLAGS) -D ARC_DEEP_DEBUG -D DEBUG -o $@ $< $(CXXLIBS)
 
 hard_debug.out: hard_debug.cxx

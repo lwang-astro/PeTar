@@ -392,6 +392,9 @@ private:
         }
     }
 
+    //! shift ptcl from c.m. frame to original frame
+    /*!
+     */
     void shiftBackCM(const ParticleBase &pcm, PtclH4* ptcl, const PS::S32 n) {
 #ifdef HARD_DEBUG
         PS::F64 m=0;
@@ -706,6 +709,7 @@ private:
 #ifdef HARD_DEBUG
                 assert(abs(mcmcheck-_ptcl[iadr].mass)<1e-10);
                 assert(mcmcheck>0.0);
+                assert(_ptcl[iadr].mass>0);
 #endif                    
                 // c.m. force
                 _force[iadr].acc0 /= _ptcl[iadr].mass;
@@ -871,6 +875,18 @@ private:
             const PS::F64 dt_old = pti->dt;
 #ifdef HARD_DEBUG
             // for debug
+            assert(!std::isnan(pti->pos[0]));
+            assert(!std::isnan(pti->pos[1]));
+            assert(!std::isnan(pti->pos[2]));
+            assert(!std::isnan(pti->vel[0]));
+            assert(!std::isnan(pti->vel[1]));
+            assert(!std::isnan(pti->vel[2]));
+            //assert(pti->pos[0]==pti->pos[0]);
+            //assert(pti->pos[1]==pti->pos[1]);
+            //assert(pti->pos[2]==pti->pos[2]);
+            //assert(pti->vel[0]==pti->vel[0]);
+            //assert(pti->vel[1]==pti->vel[1]);
+            //assert(pti->vel[2]==pti->vel[2]);
             assert(dt_old != 0.0);
 #ifdef HARD_DEBUG_ACC
             pti->acc2 = acc2;
@@ -1027,13 +1043,17 @@ public:
         PS::S32 n_group = 0;
         if (_Aint!=NULL) n_group = _Aint->getNGroups();
         PS::S32 n_new_group=0;
+        bool used_mask[nb_info_.size()];
+        for (PS::S32 i=0; i<nb_info_.size(); i++) used_mask[i] = false;
         for (PS::S32 i=0; i<nb_info_.size(); i++) {
             if(nb_info_[i].r_min2<_r_crit2) {
                 const PS::S32 j = nb_info_[i].r_min_index;
 #ifdef HARD_DEBUG
-                assert(j>=0&&j<ptcl_.size());
+                assert(j<ptcl_.size());
 #endif                
-                if(i<j) { // avoid double count
+                if(j<0) continue;
+
+                if((!used_mask[i]) && (!used_mask[j])) { // avoid double count
                     bool out_flag=getDirection(i, j);
                     if(!out_flag) {
                         PS::F64 sdi=0.0, sdj=0.0;
@@ -1043,6 +1063,8 @@ public:
                         if(sdi>1.0&&sdj==0.0) continue;
                         if(sdi==0.0&&sdj>1.0) continue;
                         
+                        used_mask[i] = true;
+                        used_mask[j] = true;
                         const PS::S32 group_offset = 2*n_new_group;
                         _new_group_member_index[group_offset] = i;
                         _new_group_member_index[group_offset+1] = j;
@@ -1206,6 +1228,12 @@ public:
                 Jlist_[disp_last+i] = Jlist_[disp_i+i];
             }
 
+            // check nb_info
+            for (PS::S32 i=0; i<=inew; i++) {
+                if(nb_info_[i].r_min_index==_i) 
+                    nb_info_[i].r_min_index=inew;
+            }
+
             // correct neighbor list
             for (PS::S32 i=0; i<_n_list_correct; i++) {
                 disp_i = Jlist_disp_[i];
@@ -1351,6 +1379,8 @@ public:
 
         // add new ptcl to neighbor list of c.m.
         for (PS::S32 i=0; i<_n_nb_correct; i++) { 
+            // escape the suppressed case
+            if(ptcl_[i].mass==0&&Jlist_n_[i]==0) continue;
             const PS::S32 ioff=Jlist_disp_[i]+Jlist_n_[i];
             for (PS::S32 j=ioff; j<ioff+_n_list; j++) 
                 Jlist_[j] = n_org+i;
@@ -1394,6 +1424,7 @@ public:
                 trace[k]=n_org;
                 // set suppressed group mass to zero
                 ptcl_[k].mass = 0.0;
+                Jlist_n_[k]=0;
                 continue;
             }
 
@@ -1452,6 +1483,18 @@ public:
         Jlist_.decreaseSize(n_decrease*n_nb_off_);
         //_n_single -= n_decrease;
 
+        // check nb_info
+        for (PS::S32 i=0; i<ptcl_.size(); i++) {
+            const PS::S32 i_min=nb_info_[i].r_min_index;
+            if(i_min>=0) {
+                const PS::S32 jtr=trace[i_min];
+                if(jtr>=0) {
+                    if(jtr<n_org) nb_info_[i].r_min_index=jtr;
+                    else nb_info_[i].r_min_index=-1;
+                }
+            }
+        }
+
         // update adr_dt_sorted
         PS::S32 adr_dt_sorted_new_size=modifyList(adr_dt_sorted_.getPointer(), adr_dt_sorted_.size(), trace, n_org);
         adr_dt_sorted_.decreaseSize(_n_list);
@@ -1490,6 +1533,12 @@ public:
         for (PS::S32 i=0; i<_n_ptcl; i++) {
 #ifdef HARD_DEBUG
             assert(_ptcl[_ptcl_list[i]].id==ptcl_[i+_i_start].id);
+            assert(!std::isnan(ptcl_[i+_i_start].pos[0]));
+            assert(!std::isnan(ptcl_[i+_i_start].pos[1]));
+            assert(!std::isnan(ptcl_[i+_i_start].pos[2]));
+            assert(!std::isnan(ptcl_[i+_i_start].vel[0]));
+            assert(!std::isnan(ptcl_[i+_i_start].vel[1]));
+            assert(!std::isnan(ptcl_[i+_i_start].vel[2]));
 #endif
             _ptcl[_ptcl_list[i]].DataCopy(ptcl_[i+_i_start]);
         }
@@ -1501,6 +1550,20 @@ public:
     */
     void writeBackPtcl(const PS::S32 _i_start) {
         for (PS::S32 i=_i_start; i<ptcl_.size(); i++) {
+#ifdef HARD_DEBUG
+            assert(!std::isnan(ptcl_[i].pos[0]));
+            assert(!std::isnan(ptcl_[i].pos[1]));
+            assert(!std::isnan(ptcl_[i].pos[2]));
+            assert(!std::isnan(ptcl_[i].vel[0]));
+            assert(!std::isnan(ptcl_[i].vel[1]));
+            assert(!std::isnan(ptcl_[i].vel[2]));
+//            assert(ptcl_[i].pos[0]==ptcl_[i].pos[0]);
+//            assert(ptcl_[i].pos[1]==ptcl_[i].pos[1]);
+//            assert(ptcl_[i].pos[2]==ptcl_[i].pos[2]);
+//            assert(ptcl_[i].vel[0]==ptcl_[i].vel[0]);
+//            assert(ptcl_[i].vel[1]==ptcl_[i].vel[1]);
+//            assert(ptcl_[i].vel[2]==ptcl_[i].vel[2]);
+#endif
             ptcl_ptr_[i]->DataCopy(ptcl_[i]);
         }
     }
@@ -1516,6 +1579,18 @@ public:
             const PS::S32 k = _ptcl_list[i];
 #ifdef HARD_DEBUG
             assert(k<ptcl_.size()&&k>=0);
+            assert(!std::isnan(ptcl_[k].pos[0]));
+            assert(!std::isnan(ptcl_[k].pos[1]));
+            assert(!std::isnan(ptcl_[k].pos[2]));
+            assert(!std::isnan(ptcl_[k].vel[0]));
+            assert(!std::isnan(ptcl_[k].vel[1]));
+            assert(!std::isnan(ptcl_[k].vel[2]));
+//            assert(ptcl_[k].pos[0]==ptcl_[k].pos[0]);
+//            assert(ptcl_[k].pos[1]==ptcl_[k].pos[1]);
+//            assert(ptcl_[k].pos[2]==ptcl_[k].pos[2]);
+//            assert(ptcl_[k].vel[0]==ptcl_[k].vel[0]);
+//            assert(ptcl_[k].vel[1]==ptcl_[k].vel[1]);
+//            assert(ptcl_[k].vel[2]==ptcl_[k].vel[2]);
 #endif            
             ptcl_ptr_[k]->DataCopy(ptcl_[k]);
         }
@@ -1528,6 +1603,18 @@ public:
     void writeBackOnePtcl(const PS::S32 _i) {
 #ifdef HARD_DEBUG
         assert(_i<ptcl_.size()&&_i>=0);
+        assert(!std::isnan(ptcl_[_i].pos[0]));
+        assert(!std::isnan(ptcl_[_i].pos[1]));
+        assert(!std::isnan(ptcl_[_i].pos[2]));
+        assert(!std::isnan(ptcl_[_i].vel[0]));
+        assert(!std::isnan(ptcl_[_i].vel[1]));
+        assert(!std::isnan(ptcl_[_i].vel[2]));
+//        assert(ptcl_[_i].pos[0]==ptcl_[_i].pos[0]);
+//        assert(ptcl_[_i].pos[1]==ptcl_[_i].pos[1]);
+//        assert(ptcl_[_i].pos[2]==ptcl_[_i].pos[2]);
+//        assert(ptcl_[_i].vel[0]==ptcl_[_i].vel[0]);
+//        assert(ptcl_[_i].vel[1]==ptcl_[_i].vel[1]);
+//        assert(ptcl_[_i].vel[2]==ptcl_[_i].vel[2]);
 #endif            
         ptcl_ptr_[_i]->DataCopy(ptcl_[_i]);
     }
@@ -2570,7 +2657,6 @@ public:
         pert_disp_.reserve(_n);
         //pert_disp_.resizeNoInitialize(n);
         bininfo.reserve(_n);
-        bininfo.resizeNoInitialize(_n);
         //dt.reserve(n);
         group_mask_map_.reserve(_n);
         group_mask_list_.reserve(_n);
@@ -2713,7 +2799,7 @@ public:
             //clist_.back().vel  = _ptcl_pert[igroup].vel;
             //clist_.back().mass = _ptcl_pert[igroup].mass;
 #ifdef HARD_DEBUG
-            assert(clist_[igroup].mass>0.0);
+            if(igroup==ngroup) assert(clist_[igroup].mass>0.0);
             //assert(clist_.back().mass==_ptcl_pert[igroup].mass);
 #endif
         }
@@ -2821,7 +2907,7 @@ public:
             p[1].status = 1;
 #endif
 #endif
-            center_of_mass_correction(*(TpARC*)&clist_[_i_group], p, 2);
+            //center_of_mass_correction(*(TpARC*)&clist_[_i_group], p, 2);
             PS::F64 acc[2][3];
             const PS::S32 ipert = pert_disp_[_i_group];
             //Newtonian_extA(acc, bininfo[i].tperi+bininfo[i].peri, p, 2, &pert_[ipert], &pforce_[ipert], pert_n_[i], &par_list_[i]);
@@ -2988,7 +3074,8 @@ public:
 
         const PS::S32 ipert = pert_disp_[ic];
         bool fix_step_flag = false;
-        if(c->getN()==2&&bininfo[ic].ecc>0.99) {
+        // for high-eccentric binary, it is better to fix step to avoid big step drop, for hyperbolic, fix step is risky
+        if(c->getN()==2&&bininfo[ic].ecc>0.99&&bininfo[ic].ecc<1.0) {
             fix_step_flag = true;
             PS::F64 korg=c->slowdown.getkappaorg();
             if(korg<1.0) ds_use *= std::max(0.1,korg);
@@ -3017,8 +3104,8 @@ public:
 #else
 
     PS::S64 integrateOneStepExt(const PS::S32 ic,
-                            const PS::F64 time_end,
-                             const PS::F64 dt_limit) {
+                                const PS::F64 time_end,
+                                const PS::F64 dt_limit) {
 #ifdef HARD_DEBUG
         assert(!group_mask_map_[ic]);
 #endif

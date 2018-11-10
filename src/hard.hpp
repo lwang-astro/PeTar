@@ -3,10 +3,16 @@
 #include<immintrin.h>
 #endif
 
+#ifdef HARD_DEBUG_PRE_DUMP
+#include <string>
+#endif
+
 #include"integrate.hpp"
 #include"cstdlib"
 #include"ptcl.hpp"
 #include"cluster_list.hpp"
+
+
 //#include"stdio.h" /// for debug (L.Wang)
 
 //template<class T>
@@ -1202,14 +1208,26 @@ public:
         // add new ptcl
         _Hint.addPtclList(_ptcl_origin, hint_new_ptcl_index_origin, n_hint_new, n_group_old, _time_sys, true);
 
-        // initial ARC system
+        // update neighbor for modified ptcl
         for (PS::S32 i=0; i<n_hint_mod; i++) {
              PS::S32 i_mod_hint=hint_mod_ptcl_index[i];
             _Hint.searchPerturberOne(i_mod_hint);
+        }
+
+        // Update Aint perturber list
+        for (PS::S32 i=0; i<n_group; i++) {
+            if(!_Aint.getMask(i))
+                _Aint.updatePertOneGroup(i, _Hint.getPtcl(), _Hint.getForce(), _Hint.getPertList(i), _Hint.getPertN(i));
+        }
+
+        // initial ARC system
+        for (PS::S32 i=0; i<n_hint_mod; i++) {
+             PS::S32 i_mod_hint=hint_mod_ptcl_index[i];
             _Aint.initialOneSys(i_mod_hint, _time_sys);
             _Aint.initialOneSlowDown(i_mod_hint, _time_sys+dt_limit_hard_, _Hint.getNbInfo(i_mod_hint).min_mass, sdfactor_, 1.0);
 #ifdef HARD_DEBUG_PRINT
-            fprintf(stderr,"New Group initial Slowdown parameters:");
+            _Aint.bininfo[i_mod_hint].print(std::cerr,20,true);
+            fprintf(stderr,"New Group initial Slowdown parameters:\n");
             std::cerr<<"Aint k="<<i_mod_hint<<std::endl;
             _Aint.printSlowDown(std::cerr,i_mod_hint);
 #endif            
@@ -1218,11 +1236,6 @@ public:
         // initial the new ptcl 
         _Hint.initial(NULL, n_hint_mod+n_hint_new, _time_sys, _dt_max, dt_min_hard_, &_Aint);
 
-        // Update Aint perturber list
-        for (PS::S32 i=0; i<n_group; i++) {
-            if(!_Aint.getMask(i))
-                _Aint.updatePertOneGroup(i, _Hint.getPtcl(), _Hint.getForce(), _Hint.getPertList(i), _Hint.getPertN(i));
-        }
 
 #ifdef ADJUST_GROUP_DEBUG
         std::cout<<"New group: n group="<<n_group<<"\n";
@@ -1291,13 +1304,15 @@ private:
        @param[in,out] _ptcl_artifical: artifical particle array, c.m. are kicked 
        @param[in] _n_group: group number in cluster
        @param[in] _time_end: integration ending time (initial time is fixed to 0)
+       @param[in] _ithread: omp thread id, default 0
      */
     template <class Tsoft>
     void driveForMultiClusterImpl(PtclHard * _ptcl_local,
                                   const PS::S32 _n_ptcl,
                                   Tsoft* _ptcl_artifical,
                                   const PS::S32 _n_group,
-                                  const PS::F64 _time_end) {
+                                  const PS::F64 _time_end,
+                                  const PS::S32 _ithread=0) {
 #ifdef HARD_CHECK_ENERGY
         std::map<PS::S32, PS::S32> N_count;  // counting number of particles in one cluster
         HardEnergy E0, E1;
@@ -1313,7 +1328,8 @@ private:
         ptcl_bk.reserve(_n_ptcl);
         for(int i=0; i<_n_ptcl; i++) ptcl_bk.pushBackNoCheck(_ptcl_local[i]);
 #ifdef HARD_DEBUG_PRE_DUMP
-        dump("hard_pre_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
+        std::string hpd_name="hard_pre_dump_"+std::to_string(_ithread);
+        dump(hpd_name.c_str(), ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
 #endif
 #endif
         PS::S32 nstepcount = 0;
@@ -1594,9 +1610,9 @@ private:
             Aint.step_count_limit = arc_step_count_limit;
 #endif
             // Reserve memory space
-            Aint.reserveARMem(_n_group+1);
+            Aint.reserveARMem(_n_group+2);
             // first particles in Hint.Ptcl are c.m. thus add 1
-            Aint.reservePertMem(_n_group+1,_n_ptcl+1);
+            Aint.reservePertMem(_n_group+2,_n_ptcl+1);
 
             // Obtain binary parameters
             //PS::F64 apo_bin[_n_group+1];
@@ -2114,6 +2130,11 @@ public:
         for(PS::S32 i=0; i<_n_ptcl; i++){
             PtclHard* pi = &_ptcl[i];
             _energy.kin += 0.5 * pi->mass * pi->vel * pi->vel;
+#ifdef HARD_DEBUG
+            assert(!std::isnan(pi->vel[0]));
+            assert(!std::isnan(pi->vel[1]));
+            assert(!std::isnan(pi->vel[2]));
+#endif
 
             for(PS::S32 j=i+1; j<_n_ptcl; j++){
                 PtclHard* pj = &_ptcl[j];
