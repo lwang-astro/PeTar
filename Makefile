@@ -85,7 +85,8 @@ endif
 ifeq ($(debug_mode),yes)
 OPTFLAGS = -g -O0 -fbounds-check -Wall -D SANITY_CHECK_REALLOCATABLE_ARRAY -D HARD_DEBUG_PRE_DUMP
 else
-OPTFLAGS = -O2 -Wall -ffast-math -funroll-loops
+OPTFLAGS = -O2 -Wall 
+#OPTFLAGS += -ffast-math -funroll-loops
 endif
 
 CXXFLAGS = -std=c++11

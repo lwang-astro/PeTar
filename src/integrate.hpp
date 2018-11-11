@@ -672,7 +672,8 @@ private:
         // active iparticles loop
         for(PS::S32 i=0; i<_n_act; i++){
             const PS::S32 iadr = _Ilist[i];
-            bool nb_flag[_n_tot]={false};   // Neighbor flag for i particle
+            bool nb_flag[_n_tot];
+            for (PS::S32 j=0; j<_n_tot; j++) nb_flag[j]=false;   // Neighbor flag for i particle
             _force[iadr].acc0 = _force[iadr].acc1 = 0.0;
             
             _nb_info[iadr].r_min_index = -1;
@@ -1026,7 +1027,7 @@ public:
     }
 
 
-    //! check the pair with distance below r_crit
+    //! check the pair with distance below r_crit for ptcl in adr_dt_sorted_
     /*! First check nearest neighbor distance r_min
         If r_min<r_crit, check the direction, if income, accept as group
       @param[out] _new_group_member_index: new group member index in ptcl_
@@ -1044,13 +1045,20 @@ public:
         PS::S32 n_group = 0;
         if (_Aint!=NULL) n_group = _Aint->getNGroups();
         PS::S32 n_new_group=0, offset=0;
-        PS::S32 used_mask[nb_info_.size()];
-        for (PS::S32 i=0; i<nb_info_.size(); i++) used_mask[i] = -1;
-        for (PS::S32 i=0; i<nb_info_.size(); i++) {
+
+        // here ptcl_.size() is used since any ptcl index can be checked!
+        PS::S32 used_mask[ptcl_.size()];
+        for (PS::S32 k=0; k<ptcl_.size(); k++) used_mask[k] = -1;
+
+        // check adr_dt_sorted_ list (avoid suppressed ptcl)
+        PS::S32 n_check = adr_dt_sorted_.size();
+        for (PS::S32 k=0; k<n_check; k++) {
+            const PS::S32 i = adr_dt_sorted_[k];
             if(nb_info_[i].r_min2<_r_crit2) {
                 const PS::S32 j = nb_info_[i].r_min_index;
 #ifdef HARD_DEBUG
                 assert(j<ptcl_.size());
+                assert(ptcl_[i].mass>0.0);
 #endif                
                 if(j<0) continue;
 
@@ -1429,7 +1437,7 @@ public:
             if(ptcl_[i].mass==0&&Jlist_n_[i]==0) continue;
             const PS::S32 ioff=Jlist_disp_[i]+Jlist_n_[i];
             for (PS::S32 j=ioff; j<ioff+_n_list; j++) 
-                Jlist_[j] = n_org+i;
+                Jlist_[j] = n_org+j-ioff;
             Jlist_n_[i] += _n_list;
 #ifdef HARD_DEBUG
             assert(Jlist_n_[i]<=n_nb_off_);
@@ -1470,12 +1478,17 @@ public:
                 trace[k]=n_org;
                 // set suppressed group mass to zero
                 ptcl_[k].mass = 0.0;
-                Jlist_n_[k]=0;
+                // set status to -20 to identify the suppressed ptcl
+                ptcl_[k].status = -20;
+                // set neighbor to zero to avoid issue
+                Jlist_n_[k] = 0;
+                // set r_min_index to -1
+                nb_info_[k].r_min_index = -1;
                 continue;
             }
 
             PS::S32 idel = k;
-            // check whether position is already moved
+            // check whether position is already moved, if so, check the moved new position and set current to delete
             if(trace[k]>=0) {
                 idel=trace[k];
                 trace[k]=n_org;
@@ -1484,12 +1497,22 @@ public:
             assert(k<n_org);
             assert(idel<n_org);
 #endif 
-            while(trace[ilast]>=0&&ilast>idel) ilast--;
+            // check the last avaiable particle that can be moved to idel
+            // If the ilast is already moved, check whether the new moved position trace[ilast] is before the current idel.
+            // If trace[ilast] is after the current idel, update the trace[ilast] to idel and set trace[ilast] as new idel to check, until trace[ilast]=-1 or idel >= ilast
+            while (idel>=0) {
+                PS::S32 itrlast = -1;
+                while(trace[ilast]>=0 && (trace[ilast]<idel || trace[ilast]==n_org) && ilast>idel) ilast--;
 
-            // move ilast to idel
-            if(idel<ilast) trace[ilast]=idel;
-            // idel is already at last, remove it
-            trace[idel]=n_org; 
+                // if ilast > idel, move ilast to idel
+                if(idel<ilast) {
+                    itrlast=trace[ilast];
+                    trace[ilast]=idel;
+                }
+                // idel is already at last, remove it
+                trace[idel]=n_org; 
+                idel = itrlast;
+            }
 
             n_decrease++;
         }
@@ -1609,6 +1632,7 @@ public:
 //            assert(ptcl_[i].vel[0]==ptcl_[i].vel[0]);
 //            assert(ptcl_[i].vel[1]==ptcl_[i].vel[1]);
 //            assert(ptcl_[i].vel[2]==ptcl_[i].vel[2]);
+            assert(ptcl_ptr_[i]->id==ptcl_[i].id);
 #endif
             ptcl_ptr_[i]->DataCopy(ptcl_[i]);
         }
@@ -1637,6 +1661,7 @@ public:
 //            assert(ptcl_[k].vel[0]==ptcl_[k].vel[0]);
 //            assert(ptcl_[k].vel[1]==ptcl_[k].vel[1]);
 //            assert(ptcl_[k].vel[2]==ptcl_[k].vel[2]);
+            assert(ptcl_ptr_[k]->id==ptcl_[k].id);
 #endif            
             ptcl_ptr_[k]->DataCopy(ptcl_[k]);
         }
@@ -1661,12 +1686,13 @@ public:
 //        assert(ptcl_[_i].vel[0]==ptcl_[_i].vel[0]);
 //        assert(ptcl_[_i].vel[1]==ptcl_[_i].vel[1]);
 //        assert(ptcl_[_i].vel[2]==ptcl_[_i].vel[2]);
+        assert(ptcl_ptr_[_i]->id==ptcl_[_i].id);
 #endif            
         ptcl_ptr_[_i]->DataCopy(ptcl_[_i]);
     }
 
     //! Search perturber and neighbor
-    /*!
+    /*! Assume the suppressed ptcl has zero mass
       @param[in] _apo_bin: apo-center distance of binary 
       @param[in] _n_bin: number of binaries (locate at begining of ptcl_)
       @param[in] _n_search: number of particles to search perturber
@@ -1685,7 +1711,7 @@ public:
                 PS::F64 r2 = dr*dr;
                 PS::F64 r_search = std::max(ptcl_[i].r_search,ptcl_[j].r_search) + _apo_bin[j];
                 PS::F64 r_search2 = r_search*r_search;
-                if (r2<r_search2&&i!=j) {
+                if (r2<r_search2&&i!=j&&ptcl_[j].mass>0.0) {
                     Jlist_[disp+n_pert]=j;
                     n_pert++;
                     if(r2<nb_info_[i].r_min2) {
@@ -1700,7 +1726,7 @@ public:
                 PS::F64 r2 = dr*dr;
                 PS::F64 r_search = std::max(ptcl_[i].r_search,ptcl_[j].r_search);
                 PS::F64 r_search2 = r_search*r_search;
-                if (r2<r_search2&&i!=j) {
+                if (r2<r_search2&&i!=j&&ptcl_[j].mass>0.0) {
                     Jlist_[disp+n_pert]=j;
                     n_pert++;
                     if(r2<nb_info_[i].r_min2) {
@@ -1727,23 +1753,27 @@ public:
     }
 
     //! Search perturber and neighbor for one 
-    /*! Search perturber and neighbor for one 
+    /*! Search perturber and neighbor for one from adr_dt_sorted list.
+        In this case, the suppressed particle can be avoid
       @param[in] _i: index of particle to search perturber
      */
     inline void searchPerturberOne(const PS::S32 _i) {
-        PS::S32 n = ptcl_.size();
-
+        PS::S32 n = adr_dt_sorted_.size();
         // find perturber
         PS::S32 disp=Jlist_disp_[_i];
         PS::S32 n_pert=0;
         nb_info_[_i].r_min2 = PS::LARGE_FLOAT;
         nb_info_[_i].min_mass = PS::LARGE_FLOAT;
-        for(PS::S32 j=0; j<n; j++) {
+        for(PS::S32 k=0; k<n; k++) {
+            PS::S32 j = adr_dt_sorted_[k];
             PS::F64vec dr = ptcl_[_i].pos-ptcl_[j].pos;
             PS::F64 r2 = dr*dr;
             PS::F64 r_search = std::max(ptcl_[_i].r_search,ptcl_[j].r_search);
             PS::F64 r_search2 = r_search*r_search;
             if (r2<r_search2&&_i!=j) {
+#ifdef HARD_DEBUG
+                assert(ptcl_[j].mass>0);
+#endif
                 Jlist_[disp+n_pert]=j;
                 n_pert++;
                 if(r2<nb_info_[_i].r_min2) {
@@ -2124,10 +2154,11 @@ public:
 
     void printStepHist(){
         std::map<PS::F64, PS::S32> stephist;
-        for(int i=0; i<ptcl_.size(); i++) {
-            std::map<PS::F64, PS::S32>::iterator p = stephist.find(ptcl_[i].dt);
-            if (p==stephist.end()) stephist[ptcl_[i].dt]=1;
-            else stephist[ptcl_[i].dt]++;
+        for(int i=0; i<adr_dt_sorted_.size(); i++) {
+            PS::S32 k = adr_dt_sorted_[i];
+            std::map<PS::F64, PS::S32>::iterator p = stephist.find(ptcl_[k].dt);
+            if (p==stephist.end()) stephist[ptcl_[k].dt]=1;
+            else stephist[ptcl_[k].dt]++;
         }
         std::cerr<<"Step hist:\n";
         for(auto i=stephist.begin(); i!=stephist.end(); i++) {

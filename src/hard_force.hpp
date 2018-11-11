@@ -205,7 +205,10 @@ void Newtonian_extA_pert (double3* acc, const PS::F64 time, Tptcl* p, const PS::
         acc[i][2] = -pf[0]->acc0.z; 
 //            acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
         for(int j=1; j<npert; j++) {
-            
+
+#ifdef HARD_DEBUG
+            assert(p[i].id!=pert[j]->id);
+#endif            
             PS::F64 dx[3];
             dx[0] = xp[j][0] - xi[0];
             dx[1] = xp[j][1] - xi[1];
@@ -219,6 +222,12 @@ void Newtonian_extA_pert (double3* acc, const PS::F64 time, Tptcl* p, const PS::
             PS::F64 dr3 = dr*dr2;
             PS::F64 mor3 = mp/dr3;
 
+#ifdef HARD_DEBUG
+            if (std::isnan(mor3)) {
+                std::cerr<<"Error: Nan detected in ARC pert force, xi["<<i<<"]="<<xi<<" xj["<<j<<"]="<<xp[j]<<" pi.id="<<p[i].id<<" pj.id="<<pert[j]->id<<" cm.id="<<pert[0]->id<<" eps2="<<pars->eps2<<std::endl;
+                abort();
+            }
+#endif
             // smpars[2:3]: rcut_out, rcut_in
             //  const double k   = cutoff_poly_3rd(dr, smpars[0], smpars[1]);
             //  const double kdx = cutoff_poly_3rd_dr(dr, dx, smpars[0], smpars[1]);

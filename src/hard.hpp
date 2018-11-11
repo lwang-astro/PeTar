@@ -940,7 +940,7 @@ public:
             for (PS::S32 i=0; i<n_group_new; i++) {
                 std::cout<<"group "<<i<<": ";
                 for (PS::S32 j=new_group_member_offset[i]; j<new_group_member_offset[i+1]; j++) {
-                    std::cout<<new_group_member_adr_origin[j]<<" ";
+                    std::cout<<PS::S32((PtclHard*)new_group_member_adr_origin[j]-_ptcl_origin)<<" ";
                 }
                 std::cout<<std::endl;
             }
@@ -997,7 +997,7 @@ public:
                 }
 
 #ifdef ADJUST_GROUP_DEBUG
-                std::cout<<"sub group origin index:\n: ";
+                std::cout<<"sub group origin index:\n ";
                 for (PS::S32 j=0; j<2; j++) {
                     std::cout<<"group "<<j<<": ";
                     for (PS::S32 k=n_sub_member_offset[j]; k<n_sub_member_offset[j]+n_sub_member[j]; k++)
@@ -2386,8 +2386,8 @@ public:
 #endif
 #pragma omp parallel for schedule(dynamic)
         for(PS::S32 i=0; i<n_cluster; i++){
-#ifdef OMP_PROFILE
             const PS::S32 ith = PS::Comm::getThreadNum();
+#ifdef OMP_PROFILE
             time_thread[ith] -= PS::GetWtime();
 #endif
             //const PS::S32 i   = n_sort_list[k].second;
@@ -2403,7 +2403,7 @@ public:
 #ifdef HARD_DEBUG_PROFILE
             PS::F64 tstart = PS::GetWtime();
 #endif
-            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, &sys[adr_ptcl_artifical], n_group, dt);
+            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, &sys[adr_ptcl_artifical], n_group, dt, ith);
 #ifdef OMP_PROFILE
             time_thread[ith] += PS::GetWtime();
 #endif

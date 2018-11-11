@@ -10,16 +10,17 @@ const PS::F64 SAFTY_FACTOR_FOR_SEARCH = 0.99;
 class Ptcl: public ParticleBase{
 public:
     /*
-                single           c.m.                       members               unused
-      id         id          id of first member (-)            id                   -1
-      status      0          member number                  c.m. adr (-)            -1
-      mass_bk     0             mass                         mass                 unknown
+                single           c.m.                       members               unused        suppressed c.m.
+      id         id          id of first member (-)            id                   -1          id of previous c.m. (-)
+      status      0          member number                  c.m. adr (-)            -1            -20 
+      mass_bk     0             mass                         mass                 unknown       unknown
                  fake members                                                                            
                 id_offset+id*n_split+iphase                                             
                 1. first component member number 2. second. 3. i_cluster+1, 4. i_group+1, others: (c.m.id<<ID_PHASE_SHIFT)|i
                   binary parameters                                                 
 
       PS: mass_bk is used to store perturber force in searchpart
+          suppressed c.m. is set in HermiteIntegrator.removePtclList
      */
     PS::F64 r_search;
     PS::F64 mass_bk;
