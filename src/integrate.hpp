@@ -2136,7 +2136,10 @@ public:
         const PS::S32 n_adr = adr_dt_sorted_.size();
         PS::S32 ncheck[n_ptcl]={0};
         for (PS::S32 i=0; i<n_adr; i++) {
-            assert(time_next_[adr_dt_sorted_[i]] == ptcl_[adr_dt_sorted_[i]].time + ptcl_[adr_dt_sorted_[i]].dt);
+            PS::S32 k =adr_dt_sorted_[i];
+            assert(time_next_[k] == ptcl_[k].time + ptcl_[k].dt);
+            PS::F64 tr=PS::S32(ptcl_[k].time/ptcl_[k].dt);
+            assert(tr*ptcl_[k].dt==ptcl_[k].time);
             ncheck[adr_dt_sorted_[i]]++;
         }
         const PS::S32 n_group = _Aint.getNGroups();
@@ -2149,6 +2152,7 @@ public:
         }
         for (PS::S32 i=0; i<n_adr-1; i++) {
             assert(ptcl_[adr_dt_sorted_[i]].dt<=ptcl_[adr_dt_sorted_[i+1]].dt);
+            assert(time_next_[adr_dt_sorted_[i]]<=time_next_[adr_dt_sorted_[i+1]]);
         }
     }
 
@@ -2162,11 +2166,11 @@ public:
         }
         std::cerr<<"Step hist:\n";
         for(auto i=stephist.begin(); i!=stephist.end(); i++) {
-            std::cerr<<std::setw(18)<<i->first;
+            std::cerr<<std::setw(24)<<i->first;
         }
         std::cerr<<std::endl;
         for(auto i=stephist.begin(); i!=stephist.end(); i++) {
-            std::cerr<<std::setw(18)<<i->second;
+            std::cerr<<std::setw(24)<<i->second;
         }
         std::cerr<<std::endl;
     }

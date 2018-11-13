@@ -307,7 +307,7 @@ int main(int argc, char **argv){
   }
   else {
       bool fix_step_flag=false;
-      if(c.getN()==2&&bin.ecc>0.99) {
+      if(c.getN()==2&&bin.ecc>0.99&&bin.ecc<1.0) {
           fix_step_flag=true;
 //          PS::F64 korg=c.slowdown.getkappaorg();
 //          if(korg<1.0) ds *= std::max(0.1,korg);

@@ -865,15 +865,18 @@ public:
       @param[in] _dt_max: time step maximum
       @param[in] _dt_min: time step minimum
       @param[in] _dt_tree: tree time step
+      \return fail flag from _Hint.initial
      */
     template <class Tsoft>
-    void adjustGroup(HermiteIntegrator<PtclHard>& _Hint,
+    bool adjustGroup(HermiteIntegrator<PtclHard>& _Hint,
                      ARCIntegrator<Ptcl, PtclH4, PtclForce>& _Aint,
                      PtclHard* _ptcl_origin,
                      const PS::S32 _n_ptcl,
                      const PS::F64 _time_sys,
                      const PS::F64 _dt_max,
                      const PS::F64 _dt_tree) {
+        bool fail_flag=false;
+
         PS::S32 n_group=_Aint.getNGroups();
         PS::S32 n_hint = _Hint.getPtclN();
 #ifdef HARD_DEBUG
@@ -894,7 +897,7 @@ public:
         PS::S32 new_group_member_offset[hint_size+1];
         PS::S32 n_group_new = _Hint.checkNewGroup(new_group_member_index_hint, new_group_member_adr_origin, new_group_member_offset, r_bin2, &_Aint);
 
-        if(n_group_break==0&&n_group_new==0) return;
+        if(n_group_break==0&&n_group_new==0) return fail_flag;
 
 #ifdef ADJUST_GROUP_DEBUG
         for (PS::S32 i=0; i<n_group; i++) {
@@ -1153,7 +1156,7 @@ public:
         }
 
         // initial the new ptcl 
-        _Hint.initial(NULL, n_hint_mod+n_hint_new, _time_sys, _dt_max, dt_min_hard_, &_Aint);
+        fail_flag=_Hint.initial(NULL, n_hint_mod+n_hint_new, _time_sys, _dt_max, dt_min_hard_, &_Aint);
 
 
 #ifdef ADJUST_GROUP_DEBUG
@@ -1209,6 +1212,7 @@ public:
         _Aint.checkPert();
 #endif
 
+        return fail_flag;
     }
 
 #ifdef ADJUST_GROUP_DEBUG
@@ -1635,16 +1639,16 @@ private:
 //#endif
                 nstepcount +=Aint.integrateOneStepList(time_sys, std::min(dt_limit,dt_h));
                 fail_flag = Hint.integrateOneStepAct(time_sys,dt_limit,dt_min_hard_, &Aint);
-                adjustGroup<Tsoft>(Hint, Aint, _ptcl_local, _n_ptcl, time_sys, dt_limit, _time_end);
+                bool fail_flag_adj = adjustGroup<Tsoft>(Hint, Aint, _ptcl_local, _n_ptcl, time_sys, dt_limit, _time_end);
 
-                
-                if(fail_flag) {
+                if(fail_flag || fail_flag_adj) {
 #ifdef HARD_DEBUG_DUMP
-                    std::cerr<<"Dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
+                    std::cerr<<"Hermite integration error, dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
                     dump("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
                     abort();
 #endif
                 }
+
                 Hint.SortAndSelectIp();
 #ifdef HARD_DEBUG
                 // check time step list
@@ -1653,7 +1657,7 @@ private:
 
 
 #ifdef HARD_DEBUG_PRINT
-                fprintf(stderr,"Time = %g, dt = %g, nstep_ARC = %d \n",time_sys, dt_h, nstepcount);
+                fprintf(stderr,"Time = %.14g, dt = %.14g, nstep_ARC = %d \n",time_sys, dt_h, nstepcount);
                 fprintf(stderr,"Slowdown parameters:");
                 for(int k=0; k<Aint.getNGroups(); k++) {
                     std::cerr<<"Aint k="<<k<<std::endl;

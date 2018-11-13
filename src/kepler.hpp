@@ -641,7 +641,8 @@ void keplerTreeGenerator(PtclTree<Tptcl> _bins[],   // make sure bins.size = n_m
         _bins[i].fpert = fabs(p[0]->mass_bk - p[1]->mass_bk)/dr*apo; // for perturbation, use acceleration difference to estimate
         _bins[i].mass_bk = (p[0]->mass*p[0]->mass_bk + p[1]->mass*p[1]->mass_bk)/_bins[i].mass; // for c.m. perturbation, use m1 a1 + m2 a2 = mcm acm
         _bins[i].id = p[0]->id;
-        _bins[i].tstep = 0.78539816339*std::sqrt(fabs(_bins[i].semi)/(p[0]->mass+p[1]->mass))*(p[0]->mass*p[1]->mass);  
+        if (_bins[i].semi>0)  _bins[i].tstep = 0.78539816339*std::sqrt(_bins[i].semi/(p[0]->mass+p[1]->mass))*(p[0]->mass*p[1]->mass);   //kepler orbit, step ds=dt*m1*m2/r estimation (1/8 orbit): pi/4*sqrt(semi/(m1+m2))*m1*m2 
+        else _bins[i].tstep = 0.0245436926*std::sqrt(-_bins[i].semi/(p[0]->mass+p[1]->mass))*(p[0]->mass*p[1]->mass);   //hyperbolic orbit, step ds=dt*m1*m2/r estimation (1/256 orbit): pi/128*sqrt(semi/(m1+m2))*m1*m2 
         //_bins[i].tstep = -1.0;
         _bins[i].stable_factor = 0.0;
         //_bins[i].status = _bins[i].id;
@@ -753,7 +754,6 @@ bool stab2check(PtclTree<Tptcl> &_bin, const PS::F64 _rbin, const PS::F64 _rcrit
 //        }
 //    }
     
-        //ARC step estimation: pi/4*sqrt(semi/(m1+m2))*m1*m2
 #ifdef STABLE_CHECK_DEBUG
         std::cerr<<"STAB2 tstep:"<<0.78539816339*std::sqrt(semi/mcm)*m1*m2<<std::endl;
         //_bin.tstep = 0.78539816339*std::sqrt(semi/mcm)*m1*m2;  
