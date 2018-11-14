@@ -1071,6 +1071,9 @@ public:
                         if(sdi>1.0&&sdj>1.0) continue;
                         if(sdi>1.0&&sdj==0.0) continue;
                         if(sdi==0.0&&sdj>1.0) continue;
+                        // to avoid extremely long time integration, for very large slowdown factor, no merge group
+                        // current 100.0 is experimental value
+                        if(sdi>100.0||sdj>100.0) continue;
 
                         PS::S32 insert_group=-1, insert_index=-1;
                         if(used_mask[i]>=0) {
@@ -1488,6 +1491,9 @@ public:
             }
 
             PS::S32 idel = k;
+            // set ilast >= idel for safety.
+            ilast = std::max(ilast, idel);
+            
             // check whether position is already moved, if so, check the moved new position and set current to delete
             if(trace[k]>=0) {
                 idel=trace[k];
@@ -1496,7 +1502,8 @@ public:
 #ifdef HARD_DEBUG
             assert(k<n_org);
             assert(idel<n_org);
-#endif 
+#endif
+
             // check the last avaiable particle that can be moved to idel
             // If the ilast is already moved, check whether the new moved position trace[ilast] is before the current idel.
             // If trace[ilast] is after the current idel, update the trace[ilast] to idel and set trace[ilast] as new idel to check, until trace[ilast]=-1 or idel >= ilast
@@ -1642,11 +1649,14 @@ public:
     /*!
       @param[in] _ptcl_list: particle index in ptcl_
       @param[in] _n_ptcl: number of particles need for copy
+      @param[in] _n_avoid: if particle index is below _n_avoid, no write (to avoid write group c.m.)
     */
     void writeBackPtcl(const PS::S32* _ptcl_list,
-                       const PS::S32 _n_ptcl) {
+                       const PS::S32 _n_ptcl,
+                       const PS::S32 _n_avoid) {
         for (PS::S32 i=0; i<_n_ptcl; i++) {
             const PS::S32 k = _ptcl_list[i];
+            if(k<_n_avoid) continue;
 #ifdef HARD_DEBUG
             assert(k<ptcl_.size()&&k>=0);
             assert(!std::isnan(ptcl_[k].pos[0]));
@@ -2134,7 +2144,8 @@ public:
     void checkAdrList(const ARCint& _Aint) {
         const PS::S32 n_ptcl = ptcl_.size();
         const PS::S32 n_adr = adr_dt_sorted_.size();
-        PS::S32 ncheck[n_ptcl]={0};
+        PS::S32 ncheck[n_ptcl];
+        for (PS::S32 i=0; i<n_ptcl; i++) ncheck[i]=0;
         for (PS::S32 i=0; i<n_adr; i++) {
             PS::S32 k =adr_dt_sorted_[i];
             assert(time_next_[k] == ptcl_[k].time + ptcl_[k].dt);

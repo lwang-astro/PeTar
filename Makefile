@@ -10,11 +10,11 @@ PS_PATH  = -I/home/lwang/code/fdps/src
 
 ##ARC PATH
 #ARC_PATH= -I../TSARC/include
-#ARC_PATH = -I/home/lwang/code/ARC/include
-ARC_PATH = -I/home/lwang/GitHub/ARC/include
+ARC_PATH = -I/home/lwang/code/ARC/include
+#ARC_PATH = -I/home/lwang/GitHub/ARC/include
 
 ##Gperftools PATH
-#GPERF_PATH = -L../../soft/gperftools-2.6.90/lib
+#GPERF_PATH = ../../soft/gperftools-2.6.90
 
 #ROOT_PATH= ${shell pwd -P}
 INCLUDE  = -I./src -I../src
@@ -157,7 +157,7 @@ HARD_DEBFLAGS+= -D ARC_PROFILE -D ARC_DEBUG -D ARC_ERROR -D ARC_WARN -D HARD_DEB
 HARD_MT_FLAGS += -D ARC_SYM -D ARC_OPT_SYM2 -D TIDAL_TENSOR -D SPLIT_MASS
 
 ifneq (x$(GPERF_PATH),x)
-CXXLIBS += $(GPERF_PATH) -lprofiler -ltcmalloc 
+CXXLIBS += -L$(GPERF_PATH)/lib -lprofiler -ltcmalloc 
 endif
 
 VPATH=./src ./test ../src

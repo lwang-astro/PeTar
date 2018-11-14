@@ -950,7 +950,7 @@ public:
 #endif
             const PS::S32 n_member_new = new_group_member_offset[n_group_new];
             _Hint.integrateOneListNoPred(new_group_member_index_hint, n_member_new, _time_sys, _dt_max, dt_min_hard_, &_Aint);
-            _Hint.writeBackPtcl(new_group_member_index_hint, n_member_new);
+            _Hint.writeBackPtcl(new_group_member_index_hint, n_member_new, n_group);
         }
         _Aint.resolve();
          
@@ -1054,11 +1054,18 @@ public:
 
                 // count number of ptcls in new group
                 PS::S32 n_member_new = 0;
+                // indicate whether any member is already a break group
+                bool break_flag = false; 
                 for (PS::S32 j=0; j<n_member_hint; j++) {
                     const PS::S32 j_hint=index_hint[j];
-                    if(j_hint<n_group_old) n_member_new +=_Aint.getGroupN(j_hint);
+                    if(j_hint<n_group_old) {
+                        n_member_new +=_Aint.getGroupN(j_hint);
+                        if (group_update_mask[j_hint]) break_flag = true;
+                    }
                     else n_member_new++;
                 }
+
+                if(break_flag) continue;
 
                 // index of all ptcl in original array for new group
                 PS::S32 new_group_member_index_origin[n_member_new];
@@ -1182,7 +1189,8 @@ public:
         
 #ifdef HARD_DEBUG
         // index consistent check
-        PS::S32 n_count_check[n_tot] = {0};
+        PS::S32 n_count_check[n_tot];
+        for (PS::S32 k=0; k<n_tot; k++) n_count_check[k]=0;
         PtclH4* hint_ptcl = _Hint.getPtcl();
         for (PS::S32 k=0; k<n_group; k++) {
             if(!_Aint.getMask(k)) {

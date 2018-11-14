@@ -926,7 +926,8 @@ int main(int argc, char *argv[]){
 #endif
 
 #ifdef HARD_DEBUG
-        PS::S32 kick_regist[n_loc]={0};
+        PS::S32 kick_regist[n_loc];
+        for(int i=0; i<n_loc; i++) kick_regist[i] = 0;
         for(int i=0; i<search_cluster.getAdrSysOneCluster().size(); i++) {
             kick_regist[search_cluster.getAdrSysOneCluster()[i]]++;
         }

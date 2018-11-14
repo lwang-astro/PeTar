@@ -829,8 +829,8 @@ private:
         // check whether the list is correct
         PS::S32 plist_new[group_ptcl_adr_offset];
         for (int i=0; i<group_ptcl_adr_offset; i++) plist_new[i] = group_ptcl_adr_list[i];
-        std::sort(plist_new, plist_new+group_ptcl_adr_offset, [](PS::S32 &a, PS::S32 &b) {return a < b;});
-        std::sort(ptcl_list_reorder, ptcl_list_reorder+group_ptcl_adr_offset, [](PS::S32 &a, PS::S32 &b) {return a < b;});
+        std::sort(plist_new, plist_new+group_ptcl_adr_offset, [](const PS::S32 &a, const PS::S32 &b) {return a < b;});
+        std::sort(ptcl_list_reorder, ptcl_list_reorder+group_ptcl_adr_offset, [](const PS::S32 &a, const PS::S32 &b) {return a < b;});
         for (int i=0; i<group_ptcl_adr_offset; i++) assert(ptcl_list_reorder[i]==plist_new[i]);
 #endif        
 
