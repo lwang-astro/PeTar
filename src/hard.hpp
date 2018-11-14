@@ -958,7 +958,8 @@ public:
         PS::S32 hint_mod_ptcl_index[n_group+n_hint]; // modified ptcl index from Hint.ptcl_ (notice this is not _ptcl!)
         PS::S32 hint_del_ptcl_index[n_hint+1]; // del ptcl index from Hint.ptcl_. If it is c.m. only suppress the integration (remove index from time step list) 
         PS::S32 n_hint_new=0, n_hint_del=0, n_hint_mod=0;
-        bool group_update_mask[n_group+1]={false};
+        bool group_update_mask[n_group+1];
+        for (PS::S32 k=0; k<n_group+1; k++) group_update_mask[k]=false;
         const PS::S32 n_group_old = n_group;
 
         if(n_group_break>0) {
