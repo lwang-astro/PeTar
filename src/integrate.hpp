@@ -1800,6 +1800,17 @@ public:
 #endif
     }
 
+    //! update rsearch of ptcl
+    /*!
+      @param[in] _i_start: start index to calculate
+      @param[in] _dt_tree: tree time step
+     */
+    void updateRSearch(const PS::S32 _i_start, const PS::F64 _dt_tree) {
+        for(PS::S32 i=_i_start; i<ptcl_.size(); i++) {
+            ptcl_[i].calcRSearch(_dt_tree);
+        }
+    }
+
     PS::S32* getPertList(const PS::S32 i) {
         return &Jlist_[Jlist_disp_[i]];
     }
@@ -3345,6 +3356,20 @@ public:
             clist_[i].pos  = _ptcl[i].pos;
             clist_[i].vel  = _ptcl[i].vel;
             clist_[i].mass = _ptcl[i].mass;
+        }
+    }
+
+    //! update rsearch of components based on c.m.
+    /*!
+      @param[in] _dt_tree: tree time step
+     */
+    void updateRSearch(const PS::F64 _dt_tree) {
+        for(PS::S32 i=0; i<clist_.size(); i++) {
+            if(getMask(i)) continue;
+            clist_[i].calcRSearch(_dt_tree);
+            TpARC** ipadr=clist_[i].getPAdr();
+            for (PS::S32 k=0; k<clist_[i].getN(); k++)
+                ipadr[k]->r_search = clist_[i].r_search;
         }
     }
 

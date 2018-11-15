@@ -1450,6 +1450,8 @@ private:
  
             Aint.updateCM(&pcm, &iact, 1);
             Aint.resolve();
+            Aint.updateRSearch(_time_end); // update rsearch after resolve to avoid overwrite
+
 #ifdef HARD_CHECK_ENERGY
             Aint.EnergyRecord(AE1);
             PS::F64 dEtot = AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot;
@@ -1687,6 +1689,9 @@ private:
             Hint.shiftBackCM();
             Aint.updateCM(Hint.getPtcl());
             Aint.resolve();
+            Aint.updateRSearch(_time_end); // update rsearch after resolve to avoid overwrite
+
+            Hint.updateRSearch(Aint.getNGroups(),_time_end);
             Hint.writeBackPtcl(Aint.getNGroups());
 
 #ifdef ARC_DEBUG_PRINT
@@ -2041,14 +2046,14 @@ public:
         id_offset_ = _id_offset;
     }
 
-    void updateRSearch(PtclHard* ptcl_org,
-                       const PS::S32* ptcl_list,
-                       const PS::S32 n_ptcl,
-                       const PS::F64 dt_tree) {
-        for (PS::S32 i=0; i<n_ptcl; i++) {
-            ptcl_org[ptcl_list[i]].calcRSearch(dt_tree);
-        }
-    }
+//    void updateRSearch(PtclHard* ptcl_org,
+//                       const PS::S32* ptcl_list,
+//                       const PS::S32 n_ptcl,
+//                       const PS::F64 dt_tree) {
+//        for (PS::S32 i=0; i<n_ptcl; i++) {
+//            ptcl_org[ptcl_list[i]].calcRSearch(dt_tree);
+//        }
+//    }
 
 #ifdef HARD_CHECK_ENERGY
     //! check energy
