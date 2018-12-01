@@ -578,13 +578,15 @@ bool pairLess(const std::pair<PS::F32,PS::S32> & a, const std::pair<PS::F32,PS::
     @param[in,out] _member_list: group particle member index, will be reordered by the minimum distance chain.
     @param[in,out] _ptcl_org: particle data, the status of members are modified to 1
     @param[in] _dt_tree: tree time step, used for calculating r_search for bin
+    @param[in] _v_max: maximum velocity used to calcualte r_search
  */
 template<class Tptcl>
 void keplerTreeGenerator(PtclTree<Tptcl> _bins[],   // make sure bins.size = n_members-1!
                          PS::S32 _member_list[], // make sure list.size = n_members!
                          const PS::S32 _n_members,
                          Tptcl* _ptcl_org,
-                         const PS::F64 _dt_tree){
+                         const PS::F64 _dt_tree,
+                         const PS::F64 _v_max){
 
     std::pair<PS::F32,PS::S32> r2_list[_n_members];
     // reorder _member_list by minimum distance of each particles, and save square minimum distance r2min and index i in _member_list (not particle index in _ptcl_org) in r2_list 
@@ -648,7 +650,7 @@ void keplerTreeGenerator(PtclTree<Tptcl> _bins[],   // make sure bins.size = n_m
         //_bins[i].status = _bins[i].id;
         _bins[i].status = _bins[i].member[0]->status + _bins[i].member[1]->status;  // counting total number of members in the leafs
         //bins[i].r_search = std::max(p[0]->r_search,p[1]->r_search);
-        _bins[i].calcRSearch(_dt_tree);
+        _bins[i].calcRSearch(_dt_tree, _v_max);
     }
 
 #ifdef HARD_DEBUG

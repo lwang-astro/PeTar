@@ -92,7 +92,7 @@ int main(int argc, char** argv)
   print_ptcl(ptcl.getPointer(),N);
 
   PtclTree<Ptcl> ptcl_tree[N-1];
-  keplerTreeGenerator<Ptcl>(ptcl_tree, ptcl_list.getPointer(), N, ptcl.getPointer(), dt_limit);
+  keplerTreeGenerator<Ptcl>(ptcl_tree, ptcl_list.getPointer(), N, ptcl.getPointer(), dt_limit, 100.0);
 
   for (PS::S32 i=0; i<N; i++) ptcl[i].status=0;
 

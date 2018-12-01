@@ -48,7 +48,7 @@ int main(int argc, char **argv){
     ForceSoft force_sp[Nepi], force_sp_simd[Nepi];
     ForceSoft force_sp_quad[Nepi], force_sp_quad_simd[Nepi];
 #pragma omp parallel for
-    for (int i=0; i<N; i++) ptcl[i].calcRSearch(1.0/2048.0);
+    for (int i=0; i<N; i++) ptcl[i].calcRSearch(1.0/2048.0, 100.0);
 #pragma omp parallel for    
     for (int i=0; i<Nepi; i++) {
         epi[i].copyFromFP(ptcl[i]);

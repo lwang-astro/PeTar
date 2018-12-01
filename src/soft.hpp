@@ -266,8 +266,7 @@ public:
 
     template<class Tptcl>
     void calc(const Tptcl* sys,
-              const PS::S32 n,
-              const PS::F64 dt_soft){
+              const PS::S32 n) {
         // PS::S32 n = sys.getNumberOfParticleLocal();
         PS::F64 pot_loc = 0.0;
         PS::F64 kin_loc = 0.0;

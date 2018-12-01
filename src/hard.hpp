@@ -132,6 +132,7 @@ public:
 #ifdef ARC_SYM
     PS::S32 arc_step_count_limit;
 #endif
+    PS::F64 dt_reduce_factor;
 
 private:
     // Notice: if new variables added, change pardump also
@@ -141,6 +142,7 @@ private:
     PS::F64 time_origin_;
     PS::F64 r_bin_;
     PS::F64 sdfactor_;
+    PS::F64 v_max_;
     PS::S64 id_offset_;
     PS::S32 n_split_;
     
@@ -191,6 +193,7 @@ private:
        @param[in]     _rin: inner radius of soft-hard changeover function
        @param[in]     _rout: outer radius of soft-hard changeover function
        @param[in]     _dt_tree: tree time step for calculating r_search
+       @param[in]     _v_max: maximum velocity used to calculate r_search
        @param[in]     _id_offset: for artifical particles, the offset of starting id.
        @param[in]     _n_split: split number for artifical particles
      */
@@ -206,6 +209,7 @@ private:
                                                    const PS::F64 _rin,
                                                    const PS::F64 _rout,
                                                    const PS::F64 _dt_tree,
+                                                   const PS::F64 _v_max,
                                                    const PS::S64 _id_offset,
                                                    const PS::S32 _n_split) { 
         const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
@@ -232,7 +236,7 @@ private:
             else group.searchAndMerge(ptcl_in_cluster, n_ptcl, _rin);
 
             // generate artifical particles,
-            group.generateList(i, ptcl_in_cluster, n_ptcl, ptcl_artifical[ith], _n_group_in_cluster[i], _rbin, _rin, _rout, _dt_tree, _id_offset, _n_split);
+            group.generateList(i, ptcl_in_cluster, n_ptcl, ptcl_artifical[ith], _n_group_in_cluster[i], _rbin, _rin, _rout, _dt_tree, _v_max, _id_offset, _n_split);
         }
 
         // n_group_in_cluster_offset
@@ -819,15 +823,17 @@ public:
       @param[in] _n_ptcl: number of members
       @param[in] _ptcl_origin: original ptcl array
       @param[in] _dt_tree: tree time step for rsearch
+      @param[in] _v_max: maximum velocity used to calculate r_search
     */
     void calcBinPars(Binary& _bininfo,
                      PS::S32* _ptcl_list,
                      const PS::S32 _n_ptcl,
                      PtclHard* _ptcl_origin,
-                     const PS::F64 _dt_tree) {
+                     const PS::F64 _dt_tree,
+                     const PS::F64 _v_max) {
 
         PtclTree<PtclHard> bins[_n_ptcl-1];
-        keplerTreeGenerator(bins, _ptcl_list, _n_ptcl, _ptcl_origin, _dt_tree);
+        keplerTreeGenerator(bins, _ptcl_list, _n_ptcl, _ptcl_origin, _dt_tree, _v_max);
 
         _bininfo = *(Binary*)&(bins[_n_ptcl-2]);
 
@@ -865,6 +871,7 @@ public:
       @param[in] _dt_max: time step maximum
       @param[in] _dt_min: time step minimum
       @param[in] _dt_tree: tree time step
+      @param[in] _v_max: maximum velocity used to calculate r_search
       \return fail flag from _Hint.initial
      */
     template <class Tsoft>
@@ -874,7 +881,8 @@ public:
                      const PS::S32 _n_ptcl,
                      const PS::F64 _time_sys,
                      const PS::F64 _dt_max,
-                     const PS::F64 _dt_tree) {
+                     const PS::F64 _dt_tree,
+                     const PS::F64 _v_max) {
         bool fail_flag=false;
 
         PS::S32 n_group=_Aint.getNGroups();
@@ -1025,7 +1033,7 @@ public:
                     else { // group case
                         PS::S32 i_new=_Aint.addOneGroup(_ptcl_origin, j_group_index_origin, n_sub_member[j], (Tsoft*)NULL, n_split_, _Hint.getPtcl(), _Hint.getForce());
 
-                        calcBinPars(_Aint.bininfo[i_new], j_group_index_origin, n_sub_member[j], _ptcl_origin, _dt_tree);
+                        calcBinPars(_Aint.bininfo[i_new], j_group_index_origin, n_sub_member[j], _ptcl_origin, _dt_tree, _v_max);
                     
                         hint_mod_ptcl_index[n_hint_mod++] = i_new; // used to renew c.m.
 
@@ -1104,7 +1112,7 @@ public:
                 // add new ARC group
                 PS::S32 i_new=_Aint.addOneGroup(_ptcl_origin, new_group_member_index_origin, n_member_new, (Tsoft*)NULL, n_split_, _Hint.getPtcl(), _Hint.getForce());
 
-                calcBinPars(_Aint.bininfo[i_new], new_group_member_index_origin, n_member_new, _ptcl_origin, _dt_tree);
+                calcBinPars(_Aint.bininfo[i_new], new_group_member_index_origin, n_member_new, _ptcl_origin, _dt_tree, _v_max);
 
                 // register the del (suppressed) list for Hint
                 for (PS::S32 j=0; j<n_arc_clear; j++) {
@@ -1128,7 +1136,7 @@ public:
             _Aint.initialOneChain(i_mod_hint);
             Ptcl* ptcl_cm = _Aint.getCM(i_mod_hint);
             // update research
-            ptcl_cm->calcRSearch(_dt_tree);
+            ptcl_cm->calcRSearch(_dt_tree, _v_max);
             ptcl_cm->id = -_Aint.getGroupPtcl(i_mod_hint)->id;
             // update c.m.
             if(i_mod_hint<n_group_old) _Hint.modOnePtcl(i_mod_hint, *ptcl_cm, _time_sys);
@@ -1236,6 +1244,7 @@ private:
        @param[in,out] _ptcl_artifical: artifical particle array, c.m. are kicked 
        @param[in] _n_group: group number in cluster
        @param[in] _time_end: integration ending time (initial time is fixed to 0)
+       @param[in] _v_max: maximum velocity used to calculate r_search and dt_reduce_factor
        @param[in] _ithread: omp thread id, default 0
      */
     template <class Tsoft>
@@ -1244,6 +1253,7 @@ private:
                                   Tsoft* _ptcl_artifical,
                                   const PS::S32 _n_group,
                                   const PS::F64 _time_end,
+                                  const PS::F64 _v_max,
                                   const PS::S32 _ithread=0) {
 #ifdef HARD_CHECK_ENERGY
         std::map<PS::S32, PS::S32> N_count;  // counting number of particles in one cluster
@@ -1450,7 +1460,9 @@ private:
  
             Aint.updateCM(&pcm, &iact, 1);
             Aint.resolve();
-            Aint.updateRSearch(_time_end); // update rsearch after resolve to avoid overwrite
+            PS::F64 dt_reduce_aint = Aint.updateRSearch(_time_end, _v_max); // update rsearch after resolve to avoid overwrite
+            dt_reduce_factor = std::max(dt_reduce_aint, dt_reduce_factor);
+
 
 #ifdef HARD_CHECK_ENERGY
             Aint.EnergyRecord(AE1);
@@ -1650,7 +1662,7 @@ private:
 //#endif
                 nstepcount +=Aint.integrateOneStepList(time_sys, std::min(dt_limit,dt_h));
                 fail_flag = Hint.integrateOneStepAct(time_sys,dt_limit,dt_min_hard_, &Aint);
-                bool fail_flag_adj = adjustGroup<Tsoft>(Hint, Aint, _ptcl_local, _n_ptcl, time_sys, dt_limit, _time_end);
+                bool fail_flag_adj = adjustGroup<Tsoft>(Hint, Aint, _ptcl_local, _n_ptcl, time_sys, dt_limit, _time_end, _v_max);
 
                 if(fail_flag || fail_flag_adj) {
 #ifdef HARD_DEBUG_DUMP
@@ -1689,9 +1701,11 @@ private:
             Hint.shiftBackCM();
             Aint.updateCM(Hint.getPtcl());
             Aint.resolve();
-            Aint.updateRSearch(_time_end); // update rsearch after resolve to avoid overwrite
+            PS::F64 dt_reduce_aint = Aint.updateRSearch(_time_end, _v_max); // update rsearch after resolve to avoid overwrite
+            PS::F64 dt_reduce_hint = Hint.updateRSearch(Aint.getNGroups(),_time_end, _v_max);
 
-            Hint.updateRSearch(Aint.getNGroups(),_time_end);
+            PS::F64 dt_reduce_tmp = std::max(dt_reduce_aint, dt_reduce_hint);
+            dt_reduce_factor = std::max(dt_reduce_tmp, dt_reduce_factor);
             Hint.writeBackPtcl(Aint.getNGroups());
 
 #ifdef ARC_DEBUG_PRINT
@@ -1732,6 +1746,7 @@ private:
             ARC_n_groups += _n_group;
 #endif
         }
+
 //        }            
 //        else { // no group
 //            // initial single_index
@@ -2021,6 +2036,7 @@ public:
                   const PS::F64 _eta,
                   const PS::F64 _time_origin,
                   const PS::F64 _sd_factor,
+                  const PS::F64 _v_max,
                   // const PS::F64 _gmin,
                   // const PS::F64 _m_avarage,
                   const PS::S64 _id_offset,
@@ -2037,6 +2053,7 @@ public:
         dt_min_hard_   = _dt_min_hard;
         eta_s_ = _eta*_eta;
         sdfactor_ = _sd_factor;
+        v_max_ = _v_max;
         time_origin_ = _time_origin;
 //        gamma_ = std::pow(1.0/_gmin,0.33333);
         // r_search_single_ = _rsearch; 
@@ -2190,12 +2207,19 @@ public:
         }
     }
 
-    void driveForOneCluster(const PS::F64 dt){
+
+    //! integrate one isolated particle
+    /*! integrate one isolated particle and calculate new r_search
+      @param[in] _dt: tree time step
+      @param[in] _v_max: maximum velocity used to calculate r_search
+     */
+    void driveForOneCluster(const PS::F64 _dt, const PS::F64 _v_max){
         const PS::S32 n = ptcl_hard_.size();
         for(PS::S32 i=0; i<n; i++){
-            PS::F64vec dr = ptcl_hard_[i].vel * dt;
+            PS::F64vec dr = ptcl_hard_[i].vel * _dt;
             ptcl_hard_[i].pos += dr;
-            ptcl_hard_[i].calcRSearch(dt);
+            PS::F64 dt_reduce_fi = ptcl_hard_[i].calcRSearch(_dt, _v_max);
+            dt_reduce_factor = std::max(dt_reduce_fi, dt_reduce_factor);
             // ptcl_hard_[i].r_search= r_search_single_;
             /*
               DriveKeplerRestricted(mass_sun_, 
@@ -2205,13 +2229,20 @@ public:
         }
 
     }
-    void driveForOneClusterOMP(const PS::F64 dt){
+
+    //! integrate one isolated particle
+    /*! integrate one isolated particle and calculate new r_search
+      @param[in] _dt: tree time step
+      @param[in] _v_max: maximum velocity used to calculate r_search
+     */
+    void driveForOneClusterOMP(const PS::F64 _dt, const PS::F64 _v_max){
         const PS::S32 n = ptcl_hard_.size();
 #pragma omp parallel for schedule(dynamic)
         for(PS::S32 i=0; i<n; i++){
-            PS::F64vec dr = ptcl_hard_[i].vel * dt;
+            PS::F64vec dr = ptcl_hard_[i].vel * _dt;
             ptcl_hard_[i].pos += dr;
-            ptcl_hard_[i].calcRSearch(dt);
+            PS::F64 dt_reduce_fi = ptcl_hard_[i].calcRSearch(_dt, _v_max);
+            dt_reduce_factor = std::max(dt_reduce_fi, dt_reduce_factor);
             /*
               DriveKeplerRestricted(mass_sun_, 
               pos_sun_, ptcl_hard_[i].pos, 
@@ -2369,7 +2400,7 @@ public:
             const PS::S32 n_group = n_group_in_cluster_[i];
             const PS::S32 adr_ptcl_artifical = adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]];
 
-            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, &sys[adr_ptcl_artifical], n_group, dt);
+            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, &sys[adr_ptcl_artifical], n_group, dt, v_max_);
 //#ifdef HARD_DEBUG
 //            if(extra_ptcl.size()>0) fprintf(stderr,"New particle number = %d\n",extra_ptcl.size());
 //#endif
@@ -2421,7 +2452,7 @@ public:
 #ifdef HARD_DEBUG_PROFILE
             PS::F64 tstart = PS::GetWtime();
 #endif
-            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, &sys[adr_ptcl_artifical], n_group, dt, ith);
+            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, &sys[adr_ptcl_artifical], n_group, dt, v_max_, ith);
 #ifdef OMP_PROFILE
             time_thread[ith] += PS::GetWtime();
 #endif
@@ -2477,6 +2508,7 @@ public:
                                                                Int_pars_.rin,     
                                                                Int_pars_.rout,    
                                                                _dt_tree, 
+                                                               v_max_,
                                                                id_offset_,
                                                                n_split_);
 
@@ -2601,12 +2633,13 @@ public:
        time_origin_:   7-8
        r_bin_:         9-10
        sdfactor_:      11-12
-       id_offset_:     13-14
-       n_split_:       15
+       v_max_:         13-14
+       id_offset_:     15-16
+       n_split_:       17
        
      */
     void pardump(FILE *_p_file){
-        fwrite(&dt_limit_hard_, sizeof(PS::F32), 15, _p_file);
+        fwrite(&dt_limit_hard_, sizeof(PS::F32), 17, _p_file);
         Int_pars_.dump(_p_file);
         ARC_control_pert_.dump(_p_file);
         ARC_control_soft_.dump(_p_file);

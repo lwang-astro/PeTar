@@ -113,6 +113,8 @@ int main(int argc, char *argv[]){
     atmp>>rank_str;
     PS::S64 dn_loop = 0;
     PS::F64 r_search_min = 0.0;
+    PS::F64 dt_reduce_factor_pre = 1.0;
+    PS::F64 dt_reduce_factor = 1.0;
 
 #endif
     
@@ -149,8 +151,9 @@ int main(int argc, char *argv[]){
     IOParams<PS::S32> step_limit_arc(input_par_store, 1000000, "Maximum step allown for ARC sym integrator");
 #endif
     IOParams<PS::F64> eps          (input_par_store, 0.0,  "Softerning eps");
-    IOParams<PS::F64> r_out        (input_par_store, 0.0,  "Transit function outer boundary radius", "<m>/sigma_1D^2*/ratio_r_cut");
+    IOParams<PS::F64> r_out        (input_par_store, 0.0,  "Transit function outer boundary radius", "<m>/sigma_1D^2/ratio_r_cut");
     IOParams<PS::F64> r_bin        (input_par_store, 0.0,  "Maximum binary radius criterion", "0.8*r_in");
+    IOParams<PS::F64> r_search_max (input_par_store, 0.0,  "Maximum binary radius criterion", "5*r_out");
     IOParams<PS::F64> sd_factor    (input_par_store, 1e-6, "Slowdown perturbation criterion");
     IOParams<PS::S32> data_format  (input_par_store, 1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): Writing off: r-B(5), r-A(4); Writing on: r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0)");
     IOParams<std::string> fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]");
@@ -511,8 +514,8 @@ int main(int argc, char *argv[]){
     //    }
     //}
     
-    PS::F64 r_in, m_average, v_disp;
-    GetR(system_soft, r_in, r_out.value, r_bin.value, r_search_min, m_average, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value, n_bin.value, restart_flag);
+    PS::F64 r_in, m_average, v_disp, v_max;
+    GetInitPar(system_soft, r_in, r_out.value, r_bin.value, r_search_min, r_search_max.value, v_max, m_average, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value, n_bin.value);
 
 //    EPISoft::r_out = r_out;
     EPISoft::r_in  = r_in;
@@ -527,6 +530,7 @@ int main(int argc, char *argv[]){
   
     // ID safety check
     if (!restart_flag) {
+        PS::F64 dt_reduce_factor_org = 1.0;
         for (PS::S32 i=0; i<n_loc; i++) {
             PS::S64 id = system_soft[i].id;
             if(id<=0) {
@@ -537,8 +541,13 @@ int main(int argc, char *argv[]){
             // for binary, research depend on v_disp
             //if(id<=2*n_bin.value) system_soft[i].r_search = std::max(r_search_min*std::sqrt(system_soft[i].mass*Ptcl::mean_mass_inv),v_disp*dt_soft.value*search_factor.value);
             if(id<=2*n_bin.value) system_soft[i].r_search = std::max(r_search_min,v_disp*dt_soft.value*search_factor.value);
-            else system_soft[i].calcRSearch(dt_soft.value);
+            else {
+                PS::F64 dt_reduce_factor_i = system_soft[i].calcRSearch(dt_soft.value, v_max);
+                dt_reduce_factor_org = std::max(dt_reduce_factor_i, dt_reduce_factor_org);
+            }
         }
+        while(dt_reduce_factor<dt_reduce_factor_org) dt_reduce_factor *=2.0;
+        dt_reduce_factor_pre = dt_reduce_factor;
     }
     
     if(my_rank == 0) {
@@ -549,7 +558,8 @@ int main(int argc, char *argv[]){
                  <<" r_bin        = "<<r_bin.value    <<std::endl
                  <<" r_search_min = "<<r_search_min   <<std::endl
                  <<" vel_disp     = "<<v_disp         <<std::endl
-                 <<" dt_soft      = "<<dt_soft.value  <<std::endl;
+                 <<" dt_soft      = "<<dt_soft.value  <<std::endl
+                 <<" dt_reduce_fac= "<<dt_reduce_factor<<std::endl;
     }
 
     // save initial parameters
@@ -603,13 +613,13 @@ int main(int argc, char *argv[]){
     PS::F64 dt_min_arc = 1.0;
     for (PS::S32 i=0;i<dt_min_hermite_index.value;i++) dt_min_hermite *= 0.5;
     for (PS::S32 i=0;i<dt_min_arc_index.value;i++) dt_min_arc *= 0.5;
-    system_hard_one_cluster.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, id_offset, n_split.value);
+    system_hard_one_cluster.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, v_max, id_offset, n_split.value);
     // system_hard_one_cluster.setARCParam();
     SystemHard system_hard_isolated;
-    system_hard_isolated.setParam(r_bin.value, r_out.value, r_in, eps.value,  dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, id_offset, n_split.value);
+    system_hard_isolated.setParam(r_bin.value, r_out.value, r_in, eps.value,  dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, v_max, id_offset, n_split.value);
     system_hard_isolated.setARCParam(e_err_arc.value, dt_err_pert.value, dt_err_soft.value, dt_min_arc);
     SystemHard system_hard_connected;
-    system_hard_connected.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, id_offset, n_split.value);
+    system_hard_connected.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, v_max, id_offset, n_split.value);
     system_hard_connected.setARCParam(e_err_arc.value, dt_err_pert.value, dt_err_soft.value, dt_min_arc);
 
 #ifdef HARD_CHECK_ENERGY
@@ -650,10 +660,11 @@ int main(int argc, char *argv[]){
 #endif
 
 
-    bool first_step_flag = true;
-    bool output_flag = false;
+    bool first_step_flag = true; // for check first step 
+    bool output_flag = false;    // for output snapshot and information
+    bool dt_mod_flag = false;    // for check whether tree time step need update
     PS::S64 n_loop = 0;
-    PS::F64 dt_kick = dt_soft.value;
+    PS::F64 dt_kick = dt_soft.value/dt_reduce_factor_pre;
 
 /// Main loop
     while(time_sys <= time_end.value){
@@ -866,7 +877,7 @@ int main(int argc, char *argv[]){
 
             // calculate initial energy
             stat.eng_init.clear();
-            stat.eng_init.calc(&system_soft[0], n_loc, 0.0);
+            stat.eng_init.calc(&system_soft[0], n_loc);
             stat.eng_init.getSumMultiNodes();
             stat.eng_now = stat.eng_init;
 #ifdef HARD_CHECK_ENERGY
@@ -884,18 +895,38 @@ int main(int argc, char *argv[]){
             output_flag = false;
 
             // set kick step
-            dt_kick = dt_soft.value*0.5;
+            dt_kick = 0.5*dt_soft.value/dt_reduce_factor_pre;
         }
         else {
+            // check whether tree time step need update
+            if(dt_reduce_factor_pre!= dt_reduce_factor) {
+                // in increasing case, need to make sure the time is consistent with block step time/dt_tree
+                if(dt_reduce_factor<dt_reduce_factor_pre) {
+                    PS::F64 dt_tree_now = dt_soft.value/dt_reduce_factor_pre;
+                    PS::F64 dt_tree_max = calcDtLimit(time_sys, dt_soft.value, dt_tree_now);
+                    if (dt_tree_max == dt_tree_now) {
+                        dt_mod_flag = false;
+                        dt_reduce_factor = dt_reduce_factor_pre;
+                    }
+                    else {
+                        // limit dt_reduce_factor to the maximum block step allown
+                        dt_reduce_factor = dt_soft.value/dt_tree_max;
+                        dt_mod_flag = true;
+                    }
+                }
+                else dt_mod_flag = true;
+            }
+            else dt_mod_flag = false;
+
             // output step, reduce step by half 
             if( fmod(time_sys, dt_snp.value) == 0.0) {
                 output_flag = true;
-                dt_kick = dt_soft.value*0.5;
-            } 
+                dt_kick = 0.5*dt_soft.value/dt_reduce_factor_pre;
+            }
             else {
                 output_flag = false;
-                // double kick step
-                dt_kick = dt_soft.value;
+                if(dt_mod_flag) dt_kick = 0.5*dt_soft.value/dt_reduce_factor_pre;
+                else dt_kick = dt_soft.value/dt_reduce_factor_pre;
             }
         }
 
@@ -989,7 +1020,7 @@ int main(int argc, char *argv[]){
             stat.N = n_glb.value;
             
             stat.eng_now.clear();
-            stat.eng_now.calc(&system_soft[0], n_loc, dt_soft.value*0.5);
+            stat.eng_now.calc(&system_soft[0], n_loc);
             stat.eng_now.getSumMultiNodes();
         
             stat.eng_diff = stat.eng_now - stat.eng_init;
@@ -1037,6 +1068,27 @@ int main(int argc, char *argv[]){
                 system_soft.writeParticleBinary(fname.c_str(), file_header);
             system_soft.setNumberOfParticleLocal(n_loc_all);
 
+#ifdef PROFILE
+            profile.output.barrier();
+            PS::Comm::barrier();
+            profile.output.end();
+            //// second half kick
+            //profile.soft_tot.start();
+            //profile.kick.start();
+#endif
+        }
+
+        // second kick if dt_tree is changed or output is done
+        if(dt_mod_flag||output_flag) {
+#ifdef PROFILE
+            profile.kick.start();
+#endif
+
+            //update new tree step if reduce factor is changed
+            dt_kick = 0.5*dt_soft.value/dt_reduce_factor;
+
+            if(dt_mod_flag)
+                std::cout<<"Tree time step change, time = "<<time_sys<<"  dt_tree = "<<dt_kick<<"  reduce factor = "<<dt_reduce_factor<<"  dt_tree_org = "<<dt_soft.value<<std::endl;
 
             // single
             kickOne(system_soft, dt_kick, search_cluster.getAdrSysOneCluster());
@@ -1053,16 +1105,13 @@ int main(int argc, char *argv[]){
             // send kicked particle from sending list , and receive remote single particle
             search_cluster.SendSinglePtcl(system_soft, system_hard_connected.getPtcl());
 #endif
-
 #ifdef PROFILE
-            profile.output.barrier();
+            profile.kick.barrier();
             PS::Comm::barrier();
-            profile.output.end();
-            //// second half kick
-            //profile.soft_tot.start();
-            //profile.kick.start();
+            profile.kick.end();
 #endif
         }
+
 
 #ifdef PROFILE
         // >5. Hard integration --------------------------------------
@@ -1082,7 +1131,7 @@ int main(int argc, char *argv[]){
         ////// integrater one cluster
         system_hard_one_cluster.initializeForOneCluster(search_cluster.getAdrSysOneCluster().size());
         system_hard_one_cluster.setPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
-        system_hard_one_cluster.driveForOneCluster(dt_soft.value);
+        system_hard_one_cluster.driveForOneClusterOMP(dt_soft.value, v_max);
         //system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft, search_cluster.getAdrSysOneCluster());
         system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft);
         ////// integrater one cluster
@@ -1133,6 +1182,19 @@ int main(int argc, char *argv[]){
 //            }
 //        }
 //#endif
+        // determine the next tree time step
+        PS::F64 dt_reduce_factor_org = 1.0;
+        dt_reduce_factor_org = std::max(system_hard_connected.dt_reduce_factor,   dt_reduce_factor_org);
+        dt_reduce_factor_org = std::max(system_hard_isolated.dt_reduce_factor,    dt_reduce_factor_org);
+        dt_reduce_factor_org = std::max(system_hard_one_cluster.dt_reduce_factor, dt_reduce_factor_org);
+        dt_reduce_factor_org = PS::Comm::getMaxValue(dt_reduce_factor_org);
+        dt_reduce_factor_pre = dt_reduce_factor;
+        dt_reduce_factor = 1.0;
+        while(dt_reduce_factor<dt_reduce_factor_org) dt_reduce_factor *=2.0;
+
+        system_hard_connected.dt_reduce_factor = 1.0;
+        system_hard_isolated.dt_reduce_factor  = 1.0;
+        system_hard_one_cluster.dt_reduce_factor=1.0;
 
 
         /////////////
@@ -1175,7 +1237,9 @@ int main(int argc, char *argv[]){
         profile.exchange.end();
 #endif
 
-        time_sys += dt_soft.value;
+        // advance time_sys
+        time_sys += dt_soft.value/dt_reduce_factor_pre;
+        //std::cout<<"T="<<time_sys<<" rd="<<dt_reduce_factor_pre<<std::endl;
 
 #ifdef PROFILE
         profile.tot.barrier();

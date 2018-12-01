@@ -91,12 +91,23 @@ public:
         }
     }
 
-    void calcRSearch(const PS::F64 _dt_tree) {
-        r_search = std::max(std::sqrt(vel*vel)*_dt_tree*search_factor, r_search_min);
+    //! calculate new rsearch
+    /*! calculate r_search based on velocity and tree step, if velocity exceed the max limit, return reduce_factor = v/_v_max
+      \return dt_tree reducing factor.
+     */
+    PS::F64 calcRSearch(const PS::F64 _dt_tree, const PS::F64 _v_max) {
+        PS::F64 v = std::sqrt(vel*vel);
+        PS::F64 dt_reduce_factor = 1.0;
+        if (v>_v_max) {
+            dt_reduce_factor = v/_v_max;
+            v = _v_max;
+        }
+        r_search = std::max(v*_dt_tree*search_factor, r_search_min);
         //r_search = std::max(std::sqrt(vel*vel)*dt_tree*search_factor, std::sqrt(mass*mean_mass_inv)*r_search_min);
 #ifdef HARD_DEBUG
         assert(r_search>0);
 #endif
+        return dt_reduce_factor;
     }
 
     void dump(FILE *_fout) {

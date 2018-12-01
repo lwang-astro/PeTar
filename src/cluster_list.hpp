@@ -737,6 +737,7 @@ private:
         @param[in]     _rin: inner radius of soft-hard changeover function
         @param[in]     _rout: outer radius of soft-hard changeover function
         @param[in]     _dt_tree: tree time step for calculating r_search
+        @param[in]     _v_max: maximum velocity used to calculate r_search
         @param[in]     _id_offset: for artifical particles, the offset of starting id.
         @param[in]     _n_split: split number for artifical particles
      */
@@ -755,6 +756,7 @@ private:
                          const PS::F64 _rin,
                          const PS::F64 _rout,
                          const PS::F64 _dt_tree,
+                         const PS::F64 _v_max,
                          const PS::S64 _id_offset,
                          const PS::S32 _n_split){
 #ifdef HARD_DEBUG
@@ -784,7 +786,7 @@ private:
             const PS::S32 group_start = _group_list_disp[i];
             const PS::S32 group_n = _group_list_n[i];
 
-            keplerTreeGenerator(bins.getPointer(), &_group_list[group_start], group_n, _ptcl_in_cluster, _dt_tree);
+            keplerTreeGenerator(bins.getPointer(), &_group_list[group_start], group_n, _ptcl_in_cluster, _dt_tree, _v_max);
          
             // reset status to 0
             for (int j=0; j<group_n; j++) _ptcl_in_cluster[_group_list[group_start+j]].status=0;
@@ -1197,6 +1199,7 @@ public:
         @param[in]     _rin: inner radius of soft-hard changeover function
         @param[in]     _rout: outer radius of soft-hard changeover function
         @param[in]     _dt_tree: tree time step for calculating r_search
+        @param[in]     _v_max: maximum velocity used to calculate r_search
         @param[in]     _id_offset: for artifical particles, the offset of starting id.
         @param[in]     _n_split: split number for artifical particles
     */
@@ -1209,6 +1212,7 @@ public:
                       const PS::F64 _rin,
                       const PS::F64 _rout,
                       const PS::F64 _dt_tree,
+                      const PS::F64 _v_max,
                       const PS::S64 _id_offset,
                       const PS::S32 _n_split) {
         if (_n_split>(1<<ID_PHASE_SHIFT)) {
@@ -1216,7 +1220,7 @@ public:
             abort();
         }
         PS::ReallocatableArray<PS::S32> emtpy_list;
-        generateNewPtcl<PtclTree<Tptcl>>(_i_cluster, _ptcl_in_cluster, _n_ptcl, _ptcl_artifical, _n_groups, group_list_, group_list_disp_, group_list_n_, emtpy_list, _rbin, _rin, _rout, _dt_tree, _id_offset, _n_split);
+        generateNewPtcl<PtclTree<Tptcl>>(_i_cluster, _ptcl_in_cluster, _n_ptcl, _ptcl_artifical, _n_groups, group_list_, group_list_disp_, group_list_n_, emtpy_list, _rbin, _rin, _rout, _dt_tree, _v_max, _id_offset, _n_split);
         //searchPerturber(pert_list_, _ptcl_in_cluster, _n_ptcl);
     }
 

@@ -139,31 +139,37 @@ void drift(Tpsys & system,
 }
 
 //Hermite----------------------------------------------
-PS::F64 calcDtLimit(const PS::F64 time_sys,
-                    const PS::F64 dt_limit_org,
-                    const PS::F64 dtmin){
-    if(time_sys==0.0) return dt_limit_org;
+//! Calculate the maximum time step limit for next block step
+/*! Get the maximum time step allown for next block step
+  Basic algorithm: the integer of time/dt_min is the binary tree for block step, counting from the minimum digital, the last zero indicate the maximum block step level allown for next step
+  @param[in] _time: current time
+  @param[in] _dt_max: maximum time step allown
+  @param[in] _dt_min: minimum time step allown
+ */
+PS::F64 calcDtLimit(const PS::F64 _time,
+                    const PS::F64 _dt_max,
+                    const PS::F64 _dt_min){
+    // for first step, the maximum time step is OK
+    if(_time==0.0) return _dt_max;
     else {
-        PS::U64 bitmap = time_sys/dtmin;
-//#ifdef HARD_DEBUG
-////        assert(bitmap*dtmin==time_sys);
-//        if(bitmap==0) {
-//            std::cerr<<"Error: dt_min_hard not small enough, time = "<<time_sys<<"; dt_min_hard = "<<dtmin<<std::endl;
-//            abort();
-//        }
-//#endif
+        // the binary tree for current time position in block step 
+        PS::U64 bitmap = _time/_dt_min;
 //#ifdef __GNUC__ 
 //        PS::S64 dts = __builtin_ctz(bitmap) ;
 //        PS::U64 c = (1<<dts);
-////        std::cerr<<"time = "<<time_sys<<"  dtmin = "<<dtmin<<"  bitmap = "<<bitmap<<"  dts = "<<dts<<std::endl;
+////        std::cerr<<"time = "<<_time<<"  dt_min = "<<_dt_min<<"  bitmap = "<<bitmap<<"  dts = "<<dts<<std::endl;
 //#else
+
+        // block step multiply factor 
         PS::U64 c=1;
+        // find the last zero in the binary tree to obtain the current block step level
         while((bitmap&1)==0) {
             bitmap = (bitmap>>1);
             c = (c<<1);
         }
 //#endif
-        return std::min(c*dtmin,dt_limit_org);
+        // return the maximum step allown
+        return std::min(c*_dt_min,_dt_max);
     }
 }
 
@@ -1801,14 +1807,19 @@ public:
     }
 
     //! update rsearch of ptcl
-    /*!
+    /*! 
       @param[in] _i_start: start index to calculate
       @param[in] _dt_tree: tree time step
+      @param[in] _v_max: maximum velocity used to calcualte r_search
+      \return the maximum research
      */
-    void updateRSearch(const PS::S32 _i_start, const PS::F64 _dt_tree) {
+    PS::F64 updateRSearch(const PS::S32 _i_start, const PS::F64 _dt_tree, const PS::F64 _v_max) {
+        PS::F64 dt_reduce_factor=1.0;
         for(PS::S32 i=_i_start; i<ptcl_.size(); i++) {
-            ptcl_[i].calcRSearch(_dt_tree);
+            PS::F64 dt_reduce_fi = ptcl_[i].calcRSearch(_dt_tree, _v_max);
+            dt_reduce_factor = std::max(dt_reduce_fi, dt_reduce_factor);
         }
+        return dt_reduce_factor;
     }
 
     PS::S32* getPertList(const PS::S32 i) {
@@ -3362,15 +3373,20 @@ public:
     //! update rsearch of components based on c.m.
     /*!
       @param[in] _dt_tree: tree time step
+      @param[in] _v_max: maximum velocity used to calcualte r_search
+      \return rsearch maximum
      */
-    void updateRSearch(const PS::F64 _dt_tree) {
+    PS::F64 updateRSearch(const PS::F64 _dt_tree, const PS::F64 _v_max) {
+        PS::F64 dt_reduce_factor=1.0;
         for(PS::S32 i=0; i<clist_.size(); i++) {
             if(getMask(i)) continue;
-            clist_[i].calcRSearch(_dt_tree);
+            PS::F64 dt_reduce_fi = clist_[i].calcRSearch(_dt_tree, _v_max);
+            dt_reduce_factor = std::max(dt_reduce_fi, dt_reduce_factor);
             TpARC** ipadr=clist_[i].getPAdr();
             for (PS::S32 k=0; k<clist_[i].getN(); k++)
                 ipadr[k]->r_search = clist_[i].r_search;
         }
+        return dt_reduce_factor;
     }
 
     //! Shift member ptcls to their c.m. frame
