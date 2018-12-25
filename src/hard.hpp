@@ -1235,7 +1235,7 @@ private:
         for(int i=0; i<_n_ptcl; i++) ptcl_bk.pushBackNoCheck(_ptcl_local[i]);
 #ifdef HARD_DEBUG_PRE_DUMP
         std::string hpd_name="hard_pre_dump_"+std::to_string(_ithread);
-        dump(hpd_name.c_str(), _time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
+        dumpOneCluster(hpd_name.c_str(), _time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
 #endif
 #endif
         PS::S32 nstepcount = 0;
@@ -1409,17 +1409,29 @@ private:
             Aint.EnergyRecord(AE0);
 #endif 
  
+            PS::S64 nstepcount_local;
 #ifdef ARC_SYM
 #ifdef ARC_SYM_SD_PERIOD
-            if(group_n==2&&kp>0) nstepcount +=Aint.integrateOneStepSymTwo(0, _time_end, kp);
-            else nstepcount +=Aint.integrateOneStepSym(0, _time_end, dt_limit_hard_);
+            if(group_n==2&&kp>0) nstepcount_local =Aint.integrateOneStepSymTwo(0, _time_end, kp);
+            else nstepcount_local =Aint.integrateOneStepSym(0, _time_end, dt_limit_hard_);
 #else
-            nstepcount +=Aint.integrateOneStepSym(0, _time_end, dt_limit_hard_);
+            nstepcount_local =Aint.integrateOneStepSym(0, _time_end, dt_limit_hard_);
 #endif
 #else 
-            nstepcount +=Aint.integrateOneStepExt(0, _time_end, dt_limit_hard_);
+            nstepcount_local =Aint.integrateOneStepExt(0, _time_end, dt_limit_hard_);
 #endif
-            
+
+            // error case
+            if(nstepcount_local<0) {
+#ifdef HARD_DEBUG_DUMP
+                std::cerr<<"Dump data:"<<std::endl;
+                dumpOneCluster("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
+#endif       
+                abort();
+            }
+            else nstepcount += nstepcount_local;
+
+
             pcm.pos += pcm.vel * _time_end;
  
             Aint.updateCM(&pcm, &iact, 1);
@@ -1441,7 +1453,7 @@ private:
             if(fabs(dEtot)>hard_dE_limit) {
                 std::cerr<<"Hard energy significant: "<<dEtot<<std::endl;
                 std::cerr<<"Dump data:"<<std::endl;
-                dump("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
+                dumpOneCluster("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
                 abort();
             }
 #endif
@@ -1452,7 +1464,7 @@ private:
 #else
             Aint.info_print(std::cerr, ARC_n_groups, 1, _n_ptcl, 0, dt_limit_hard_, 0, 100000);
 //            if (dump_flag) {
-//                dump("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
+//                dumpOneCluster("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
 //                abort();
 //            }
 #endif
@@ -1529,7 +1541,7 @@ private:
             for (int i=0; i<_n_group; i++) {
                 gpars[i].getBinPars(Aint.bininfo[i], &_ptcl_artifical[adr_first_ptcl[i]]);
 #ifdef HARD_DEBUG_PRINT
-                std::cerr<<"Group i:"<<i<<" ";
+                std::cerr<<"Group i:"<<i<<"\n";
                 Aint.bininfo[i].print(std::cerr,20,true);
 #endif
                 //auto &bini= Aint.bininfo[i];
@@ -1571,7 +1583,7 @@ private:
 
             Hint.shiftToCM(); // shift ptcl to c.m. frame
             Hint.calcA0offset();
-            bool fail_flag=Hint.initial(NULL, n_single_init + _n_group, 0.0, dt_limit, dt_min_hard_, &Aint, false);
+            bool fail_flag_hint=Hint.initial(NULL, n_single_init + _n_group, 0.0, dt_limit, dt_min_hard_, &Aint, false);
             Hint.SortAndSelectIp();
 
 //            for (int i=0; i<_n_group; i++) {
@@ -1585,10 +1597,10 @@ private:
 //                Aint.printSlowDown(std::cerr,k);
 //            }
 //#endif
-            if(fail_flag) {
+            if(fail_flag_hint) {
 #ifdef HARD_DEBUG_DUMP
                 std::cerr<<"Dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
-                dump("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
+                dumpOneCluster("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
                 abort();
 #endif
             }
@@ -1624,14 +1636,17 @@ private:
 //                        assert(Aint.getSlowDown(k)>=1.0);
 //                    }
 //#endif
-                nstepcount +=Aint.integrateOneStepList(time_sys, std::min(dt_limit,dt_h));
-                fail_flag = Hint.integrateOneStepAct(time_sys,dt_limit,dt_min_hard_, &Aint);
+                PS::S64 nstepcount_aint;
+                nstepcount_aint =Aint.integrateOneStepList(time_sys, std::min(dt_limit,dt_h));
+                bool fail_flag_aint = (nstepcount_aint<0); // fail case
+                nstepcount += nstepcount_aint;
+                bool fail_flag_hint = Hint.integrateOneStepAct(time_sys,dt_limit,dt_min_hard_, &Aint);
                 bool fail_flag_adj = adjustGroup<Tsoft>(Hint, Aint, _ptcl_local, _n_ptcl, time_sys, dt_limit, _time_end, _v_max);
 
-                if(fail_flag || fail_flag_adj) {
+                if(fail_flag_hint || fail_flag_aint || fail_flag_adj) {
 #ifdef HARD_DEBUG_DUMP
                     std::cerr<<"Hermite integration error, dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
-                    dump("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
+                    dumpOneCluster("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
                     abort();
 #endif
                 }
@@ -1699,7 +1714,7 @@ private:
             if(fabs(dEtot)>hard_dE_limit) {
                 std::cerr<<"Hard energy significant: "<<dEtot<<std::endl;
                 std::cerr<<"Dump data:"<<std::endl;
-                dump("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
+                dumpOneCluster("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
                 abort();
             }
 #endif
@@ -1774,7 +1789,7 @@ private:
 //            if(fail_flag) {
 //#ifdef HARD_DEBUG_DUMP
 //                std::cerr<<"Dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
-//                dump("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, 0, 0);
+//                dumpOneCluster("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, 0, 0);
 //                abort();
 //#endif
 //            }
@@ -1797,7 +1812,7 @@ private:
 //                if(fail_flag) {
 //#ifdef HARD_DEBUG_DUMP
 //                    std::cerr<<"Dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
-//                    dump("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, 0, 0);
+//                    dumpOneCluster("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, 0, 0);
 //                    abort();
 //#endif
 //                }
@@ -1823,7 +1838,7 @@ private:
 //            if(fabs(dEtot)>hard_dE_limit) {
 //                std::cerr<<"Hard energy significant: "<<dEtot<<std::endl;
 //                std::cerr<<"Dump data:"<<std::endl;
-//                dump("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, 0, 0);
+//                dumpOneCluster("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, 0, 0);
 //                abort();
 //            }
 //#endif
@@ -2349,7 +2364,7 @@ public:
 
 //////////////////
 // for multi cluster
-    template<class Tsys, class Tsptcl>
+    template<class Tsys>
     void driveForMultiCluster(const PS::F64 dt, Tsys & sys){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         /*
@@ -2378,7 +2393,7 @@ public:
         }
     }
 
-    template<class Tsys, class Tsptcl>
+    template<class Tsys>
     void driveForMultiClusterOMP(const PS::F64 dt, Tsys & sys){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         //const PS::S32 num_thread = PS::Comm::getNumberOfThread();
@@ -2590,7 +2605,7 @@ public:
     //    }        
     //}
 
-#ifdef HARD_DEBUG_DUMP
+#ifdef HARD_DEBUG
     //! particle data dump
     /*! dump hard particle data
       @param[in]: _fout: file for dump
@@ -2615,7 +2630,7 @@ public:
       @param[in]: _ptcl: particle array for read
       @param[in]: _n: number of particles
      */
-    void ptclHardRead(FILE *_fin, PS::ReallocatableArray<PtclHard> & _ptcl) {
+    void ptclHardRead(FILE *_fin, PS::ReallocatableArray<PtclHard> & _ptcl, PS::S32 & _n) {
         PS::S32 n;
         size_t rcount = fread(&n, sizeof(PS::S32),1,_fin);
         if (rcount<1) {
@@ -2636,6 +2651,7 @@ public:
         Ptcl::search_factor = ptcl_st_dat[0];
         Ptcl::r_search_min  = ptcl_st_dat[1];
         Ptcl::mean_mass_inv = ptcl_st_dat[2];
+        _n = n;
     }
     
     //! parameter dump function
@@ -2658,8 +2674,21 @@ public:
         ARC_control_soft_.dump(_p_file);
     }
     
+    //! parameter read function
+    /* list: (S32)
+       dt_limit_hard_: 1-2
+       dt_min_hard_:   3-4
+       eta_s_:         5-6
+       time_origin_:   7-8
+       r_bin_:         9-10
+       sdfactor_:      11-12
+       v_max_:         13-14
+       id_offset_:     15-16
+       n_split_:       17
+       
+     */
     void parRead(FILE *fp){
-        size_t rcount = fread(&dt_limit_hard_, sizeof(PS::F32),15,fp);
+        size_t rcount = fread(&dt_limit_hard_, sizeof(PS::F32),17,fp);
         if (rcount<15) {
             std::cerr<<"Error: Data reading fails! requiring data number is 15, only obtain "<<rcount<<".\n";
             abort();
@@ -2716,7 +2745,7 @@ public:
             abort();
         }
         fwrite(&_time_end, sizeof(PS::F64),1,fp);
-        ptclHardDump(fp, _ptcl_bk, _n_ptcl);
+        ptclHardDump(fp, _ptcl_bk, _n_ptcl); // will dump n_ptcl and ptcl
         fwrite(&_n_arti, sizeof(PS::S32),1,fp);
         fwrite(&_n_group, sizeof(PS::S32), 1, fp);
         for (int i=0; i<_n_arti; i++) _ptcl_arti_bk[i].writeBinary(fp);
@@ -2734,28 +2763,52 @@ public:
     template<class Tpsoft>
     void readOneCluster(const char* _fname,
                         PS::F64 & _time_end,
-                        Tpsoft  & _ptcl_arti,
-                        PS::S32 & _n_arti) {
-        
-        std::FILE* fp = std::fopen(fname,"w");
+                        PS::ReallocatableArray<Tpsoft>  & _ptcl_soft) {
+        std::FILE* fp = std::fopen(_fname,"r");
         if (fp==NULL) {
-            std::cerr<<"Error: filename "<<fname<<" cannot be open!\n";
+            std::cerr<<"Error: filename "<<_fname<<" cannot be open!\n";
             abort();
         }
+
+        // read time
         fread(&_time_end, sizeof(PS::F64),1,fp);
-        ptclHardRead(fp, ptcl_bk, n_ptcl);
-        fwrite(&n_arti, sizeof(PS::S32),1,fp);
-        fwrite(&n_group, sizeof(PS::S32), 1, fp);
-        for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].writeBinary(fp);
-        pardump(fp);
+        // read hard particles
+        PS::S32 n_ptcl;
+        ptclHardRead(fp, ptcl_hard_, n_ptcl);
+        // increase cluster number
+        n_ptcl_in_cluster_.push_back(n_ptcl);
+        // if empty, put 0 in n_ptcl offset first
+        if (n_ptcl_in_cluster_disp_.size()==0) n_ptcl_in_cluster_disp_.push_back(0);
+        n_ptcl_in_cluster_disp_.push_back(n_ptcl_in_cluster_disp_.back()+n_ptcl);
+        // artifical particle number
+        PS::S32 n_arti;
+        fread(&n_arti, sizeof(PS::S32),1,fp);
+        // put address of first artifical particle 
+        adr_first_ptcl_arti_in_cluster_.push_back(_ptcl_soft.size());
+        // read and add n_group number
+        PS::S32 n_group;
+        fread(&n_group, sizeof(PS::S32), 1, fp);
+        n_group_in_cluster_.push_back(n_group);
+        // if empty, put 0 in n_group offset first
+        if (n_group_in_cluster_offset_.size()==0) n_group_in_cluster_offset_.push_back(0);
+        n_group_in_cluster_offset_.push_back(n_group_in_cluster_offset_.back()+n_group);
+        // read artifical particles
+        for (int i=0; i<n_arti; i++) {
+            Tpsoft ptmp;
+            ptmp.readBinary(fp);
+            _ptcl_soft.push_back(ptmp);
+        }
+        // read hard parameters
+        parRead(fp);
+
         fclose(fp);
     }
 
 
-    template <class Tpsoft>
-    void driveForMultiClusterOneDebug(PtclHard* _ptcl, const PS::S32 _n_ptcl, Tpsoft* _ptcl_artifical, const PS::S32 _n_group,  const PS::F64 _v_max, const PS::F64 _time_end) {
-        driveForMultiClusterImpl(_ptcl, _n_ptcl, _ptcl_artifical, _n_group, _v_max, _time_end);
-    }
+    //template <class Tpsoft>
+    //void driveForMultiClusterOneDebug(PtclHard* _ptcl, const PS::S32 _n_ptcl, Tpsoft* _ptcl_artifical, const PS::S32 _n_group,  const PS::F64 _v_max, const PS::F64 _time_end) {
+    //    driveForMultiClusterImpl(_ptcl, _n_ptcl, _ptcl_artifical, _n_group, _v_max, _time_end);
+    //}
 
     void set_slowdown_factor(const PS::F64 _slowdown_factor) {
         sdfactor_ = _slowdown_factor;

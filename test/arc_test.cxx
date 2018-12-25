@@ -306,11 +306,17 @@ int main(int argc, char** argv)
   PS::S64 stepcount = 0;
   for (int i=0; i<nstep; i++) {
       time_i += dt_limit/STEP_DIVIDER;
+      PS::S64 stepcount_i;
 #ifdef ARC_SYM
-      stepcount +=Aint.integrateOneStepSym(0, time_i, dt_limit/STEP_DIVIDER);
+      stepcount_i =Aint.integrateOneStepSym(0, time_i, dt_limit/STEP_DIVIDER);
 #else
-      stepcount +=Aint.integrateOneStepExt(0, time_i, dt_limit/STEP_DIVIDER);
+      stepcount_i =Aint.integrateOneStepExt(0, time_i, dt_limit/STEP_DIVIDER);
 #endif
+      if(stepcount_i<0) {
+          std::cout<<"Error happen!"<<std::endl;
+          abort();
+      }
+      else stepcount += stepcount_i;
       if((i+1)%(int)STEP_DIVIDER==0) {
           printf("step_d=%d, i=%d\n",(int)STEP_DIVIDER,i);
           Aint.resolve();

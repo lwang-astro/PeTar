@@ -1146,7 +1146,7 @@ int main(int argc, char *argv[]){
         profile.hard_isolated.start();
 #endif
         // integrate multi cluster A
-        system_hard_isolated.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft.value,system_soft);
+        system_hard_isolated.driveForMultiClusterOMP<SystemSoft>(dt_soft.value,system_soft);
         //system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_,remove_list);
         system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
         // integrate multi cluster A
@@ -1162,7 +1162,7 @@ int main(int argc, char *argv[]){
         profile.hard_connected.start();
 #endif
         // integrate multi cluster B
-        system_hard_connected.driveForMultiClusterOMP<SystemSoft, FPSoft>(dt_soft.value,system_soft);
+        system_hard_connected.driveForMultiClusterOMP<SystemSoft>(dt_soft.value,system_soft);
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
         // integrate multi cluster B
 #ifdef PROFILE

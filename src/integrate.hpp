@@ -3178,44 +3178,49 @@ public:
     }
 
 #ifdef ARC_SYM
-    PS::S64 integrateOneStepSym(const PS::S32 ic,
-                                const PS::F64 time_end,
-                                const PS::F64 dt_limit) {
+    //! integration arc with symplectic method
+    /*! 
+      @param[in] _igroup: the ARC group id
+      @param[in] _time_end: finishing time
+      @param[in] _dt_limit: physical time step limit
+      \return stepcount; negative means fail case
+     */
+    PS::S64 integrateOneStepSym(const PS::S32 _igroup,
+                                const PS::F64 _time_end,
+                                const PS::F64 _dt_limit) {
 #ifdef HARD_DEBUG
-        assert(!group_mask_map_[ic]);
+        assert(!group_mask_map_[_igroup]);
 #endif
-        ARChain* c = &clist_[ic];
-        ARC_pert_pars* par = &par_list_[ic];
-        //PS::F64 ds_up_limit = 0.25*dt_limit/c->calc_dt_X(1.0,*ARC_control_);
-        //PS::F64 ds_use = 2.0*bininfo[ic].tstep*std::abs(c->getPt());
-        PS::F64 ds_use=bininfo[ic].tstep;
+        ARChain* c = &clist_[_igroup];
+        ARC_pert_pars* par = &par_list_[_igroup];
+        //PS::F64 ds_up_limit = 0.25*_dt_limit/c->calc_dt_X(1.0,*ARC_control_);
+        //PS::F64 ds_use = 2.0*bininfo[_igroup].tstep*std::abs(c->getPt());
+        PS::F64 ds_use=bininfo[_igroup].tstep;
         //PS::F64 ds_use = c->calc_next_step_custom(*ARC_control_,par);
         //if (ds_use>ds_up_limit) ds_use = ds_up_limit;
 
-        const PS::S32 ipert = pert_disp_[ic];
+        const PS::S32 ipert = pert_disp_[_igroup];
         bool fix_step_flag = false;
         // for high-eccentric binary, it is better to fix step to avoid big step drop, for hyperbolic, fix step is risky
-        if(c->getN()==2&&bininfo[ic].ecc>0.99&&bininfo[ic].ecc<1.0) {
+        if(c->getN()==2&&bininfo[_igroup].ecc>0.99&&bininfo[_igroup].ecc<1.0) {
             fix_step_flag = true;
             PS::F64 korg=c->slowdown.getkappaorg();
             if(korg<1.0) ds_use *= std::max(0.1,korg);
         }
 
-        PS::S64 stepcount = c->Symplectic_integration_tsyn(ds_use, *ARC_control_, time_end, par, &pert_[ipert], &pforce_[ipert], pert_n_[ic],fix_step_flag, step_count_limit);
+        PS::S64 stepcount = c->Symplectic_integration_tsyn(ds_use, *ARC_control_, _time_end, par, &pert_[ipert], &pforce_[ipert], pert_n_[_igroup],fix_step_flag, step_count_limit);
 
 #ifdef ARC_WARN
         if(c->info!=NULL) {
             c->info->ErrMessage(std::cerr);
-            dump("ARC_dump.dat",ic,time_end,ds_use);
-            abort();
+            dump("ARC_dump.dat",_igroup,_time_end,ds_use);
         }
 #endif
         
 #ifdef ARC_DEBUG_DUMP
         if(stepcount<0) {
-            dump("ARC_dump.dat",ic,time_end,ds_use);
-            std::cerr<<"ic = "<<ic<<" N = "<<c->getN()<<" Np = "<<pert_n_[ic]<<" stepcount = "<<stepcount<<std::endl;
-            abort();
+            dump("ARC_dump.dat",_igroup,_time_end,ds_use);
+            std::cerr<<"Igroup = "<<_igroup<<" N = "<<c->getN()<<" Np = "<<pert_n_[_igroup]<<" stepcount = "<<stepcount<<std::endl;
         }
 #endif
         
@@ -3223,18 +3228,25 @@ public:
     }
 #else
 
-    PS::S64 integrateOneStepExt(const PS::S32 ic,
-                                const PS::F64 time_end,
-                                const PS::F64 dt_limit) {
+    //! integration arc with extrapolation method
+    /*! 
+      @param[in] _igroup: the ARC group id
+      @param[in] _time_end: finishing time
+      @param[in] _dt_limit: physical time step limit
+      \return stepcount; negative means fail case
+     */
+    PS::S64 integrateOneStepExt(const PS::S32 _igroup,
+                                const PS::F64 _time_end,
+                                const PS::F64 _dt_limit) {
 #ifdef HARD_DEBUG
-        assert(!group_mask_map_[ic]);
+        assert(!group_mask_map_[_igroup]);
 #endif
-        ARChain* c = &clist_[ic];
-        ARC_pert_pars* par = &par_list_[ic];
+        ARChain* c = &clist_[_igroup];
+        ARC_pert_pars* par = &par_list_[_igroup];
         PS::F64 dscoff=1.0;
-        PS::F64 ds_up_limit = 0.25*dt_limit/c->calc_dt_X(1.0,*ARC_control_);
+        PS::F64 ds_up_limit = 0.25*_dt_limit/c->calc_dt_X(1.0,*ARC_control_);
         PS::F64 ds_use = c->calc_next_step_custom(*ARC_control_,par);
-        //PS::F64 ds_use = 0.5*bininfo[ic].tstep*std::abs(c->GetPt());
+        //PS::F64 ds_use = 0.5*bininfo[_igroup].tstep*std::abs(c->GetPt());
         
         if (ds_use>ds_up_limit) ds_use = ds_up_limit;
 
@@ -3246,16 +3258,16 @@ public:
         bool modify_step_flag=false;
         bool final_flag=false;
 
-        while(time_end-c->getTime()>ARC_control_->dterr*c->getTime()) {
-            const PS::S32 ipert = pert_disp_[ic];
-            PS::F64 dsf=c->extrapolation_integration(ds_use, *ARC_control_, time_end, par, &pert_[ipert], &pforce_[ipert], pert_n_[ic]);
+        while(_time_end-c->getTime()>ARC_control_->dterr*c->getTime()) {
+            const PS::S32 ipert = pert_disp_[_igroup];
+            PS::F64 dsf=c->extrapolation_integration(ds_use, *ARC_control_, _time_end, par, &pert_[ipert], &pforce_[ipert], pert_n_[_igroup]);
             if (dsf<0) {
                 final_flag=true;
                 converge_count++;
-                if (converge_count>10&&time_end-c->getTime()>ARC_control_->dterr*100) {
-                    std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c->getTime()<<"\nR_in: "<<Int_pars_->rin<<"\nR_out: "<<Int_pars_->rout<<"\n";
-                    dump("ARC_dump.dat",ic,time_end,ds_use);
-                    abort();
+                if (converge_count>10&&_time_end-c->getTime()>ARC_control_->dterr*100) {
+                    std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<_time_end<<"\nTime difference: "<<_time_end-c->getTime()<<"\nR_in: "<<Int_pars_->rin<<"\nR_out: "<<Int_pars_->rout<<"\n";
+                    dump("ARC_dump.dat",_igroup,_time_end,ds_use);
+                    return -1;
                 }
                 else ds_use *= -dsf;
             }
@@ -3263,9 +3275,9 @@ public:
                 c->info->ErrMessage(std::cerr);
                 error_count++;
                 if(error_count>4) {
-                    std::cerr<<"Error: Too much error appear!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c->getTime()<<"\nR_in: "<<Int_pars_->rin<<"\nR_out: "<<Int_pars_->rout<<"\n";
-                    dump("ARC_dump.dat",ic,time_end,ds_use);
-                    abort();
+                    std::cerr<<"Error: Too much error appear!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<_time_end<<"\nTime difference: "<<_time_end-c->getTime()<<"\nR_in: "<<Int_pars_->rin<<"\nR_out: "<<Int_pars_->rout<<"\n";
+                    dump("ARC_dump.dat",_igroup,_time_end,ds_use);
+                    return -1;
                 }
                 if (c->info->status==5) {
                     dscoff = 0.25;
@@ -3277,10 +3289,10 @@ public:
             }
             else  {
                 if (final_flag) {
-                    if (converge_count>10&&time_end-c->getTime()>ARC_control_->dterr*100) {
-                        std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<time_end<<"\nTime difference: "<<time_end-c->getTime()<<"\nR_in: "<<Int_pars_->rin<<"\nR_out: "<<Int_pars_->rout<<"\n";
-                        dump("ARC_dump.dat",ic,time_end,ds_use);
-                        abort();
+                    if (converge_count>10&&_time_end-c->getTime()>ARC_control_->dterr*100) {
+                        std::cerr<<"Error: Time synchronization fails!\nStep size ds: "<<ds_use<<"\nEnding physical time: "<<_time_end<<"\nTime difference: "<<_time_end-c->getTime()<<"\nR_in: "<<Int_pars_->rin<<"\nR_out: "<<Int_pars_->rout<<"\n";
+                        dump("ARC_dump.dat",_igroup,_time_end,ds_use);
+                        return -1;
                     }
                     converge_count++;
                 }
@@ -3305,6 +3317,7 @@ public:
        @param[in] _n_act: number of active groups
        @param[in] _time_end: end of physical integration time
        @param[in] _dt_limit: physical time step upper limit
+       \return stepcount; if negative, error happen
      */
     PS::S64 integrateOneStepList(PS::S32 _act_list[],
                                  PS::S32 _n_act,
@@ -3313,11 +3326,14 @@ public:
         PS::S64 nstep = 0;
         for(PS::S32 i=0; i<_n_act; i++) {
             if(getMask(i)) continue;
+            PS::S64 nstep_i;
 #ifdef ARC_SYM
-            nstep += integrateOneStepSym(_act_list[i], _time_end, _dt_limit);
+            nstep_i = integrateOneStepSym(_act_list[i], _time_end, _dt_limit);
 #else
-            nstep += integrateOneStepExt(_act_list[i], _time_end, _dt_limit);
+            nstep_i = integrateOneStepExt(_act_list[i], _time_end, _dt_limit);
 #endif
+            if (nstep_i<0) return nstep_i; // error case
+            else nstep += nstep_i;
         }
 
         return nstep;
@@ -3326,18 +3342,21 @@ public:
     //! Integrate active ARC groups
     /* @param[in] _time_end: end of physical integration time
        @param[in] _dt_limit: physical time step upper limit
+       \return stepcount; if negative, error happen
      */
     PS::S64 integrateOneStepList(const PS::F64 _time_end,
                                  const PS::F64 _dt_limit) {
         PS::S64 nstep = 0;
         for(PS::S32 i=0; i<clist_.size(); i++) {
             if(getMask(i)) continue;
+            PS::S64 nstep_i;
 #ifdef ARC_SYM
-            nstep += integrateOneStepSym(i, _time_end, _dt_limit);
+            nstep_i = integrateOneStepSym(i, _time_end, _dt_limit);
 #else
-            nstep += integrateOneStepExt(i, _time_end, _dt_limit);
+            nstep_i = integrateOneStepExt(i, _time_end, _dt_limit);
 #endif
-
+            if (nstep_i<0) return nstep_i; // error case
+            else nstep += nstep_i;
         }
         return nstep;
     }

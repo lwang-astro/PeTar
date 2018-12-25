@@ -54,78 +54,16 @@ int main(int argc, char **argv){
     }
 
   if (argc-n_opt*2>1) filename=argv[argc-1];
-  
-  std::FILE* fp = std::fopen(filename.c_str(),"r");
-  if (fp==NULL) {
-    std::cerr<<"Error: Filename "<<filename<<" not found\n";
-    abort();
-  }
+
   std::cout<<"Reading dump file:"<<filename<<std::endl;
 
-  PS::F64 time_end;
-  fread(&time_end,sizeof(PS::F64),1,fp);
-  std::cout<<"Time_end: "<<time_end<<std::endl;
-  
-  PS::ReallocatableArray<PtclHard> ptcl;
-  PtclHardRead(fp,ptcl);
-
-  PS::S32 n_artifical, n_group;
-  fread(&n_artifical, sizeof(PS::S32),1,fp);
-  fread(&n_group, sizeof(PS::S32),1,fp);
-  if(n_artifical>0) assert(n_artifical%n_group==0);
-
-  PS::ReallocatableArray<FPSoft> ptcl_artifical;
-  ptcl_artifical.resizeNoInitialize(n_artifical);
-  
-  for(int i=0; i<n_artifical; i++) ptcl_artifical[i].readBinary(fp);
-
-  std::cout<<"n: "<<ptcl.size()<<std::endl;
-  std::cout<<std::setprecision(14);
-  std::cerr<<std::setprecision(12);
-  PS::F64 r_search_max=0.0;
-  PS::S32 i_r_search_max=-1;
-  if(n_group>0) std::cerr<<"member :\n";
-  for(int i=0; i<ptcl.size(); i++) {
-      if(ptcl[i].status<0) {
-          ptcl[i].print(std::cerr);
-          std::cerr<<std::endl;
-          //std::cerr<<ptcl[i].mass_bk<<" "<<ptcl[i].pos<<" "<<ptcl[i].vel<<std::endl;
-      }
-  }
-  std::cerr<<"single:\n";
-  PS::S32 n_single=0;
-  PS::ReallocatableArray<PS::S32> single_adr;
-  for(int i=0; i<ptcl.size(); i++) {
-      if(ptcl[i].status==0) {
-          ptcl[i].print(std::cerr);
-          std::cerr<<std::endl;
-          //std::cerr<<ptcl[i].mass<<" "<<ptcl[i].pos<<" "<<ptcl[i].vel<<std::endl;
-          n_single++;
-          single_adr.push_back(i);
-      }
-      if(r_search_max<ptcl[i].r_search) {
-          r_search_max =ptcl[i].r_search;
-          i_r_search_max = i;
-      }
-  }
-
-  std::cout<<"n_group: "<<n_group<<std::endl;
-
-  if(n_single==2) {
-      std::cout<<"Kepler parameters for two single:\n";
-      Binary bin;
-      PosVel2OrbParam(bin, ptcl[single_adr[0]], ptcl[single_adr[1]]);
-      bin.print(std::cout,14,true);
-  }
-  
-  std::cout<<"R_search_max = "<<r_search_max;
-  ptcl[i_r_search_max].print(std::cout);
-  std::cout<<std::endl;
-
   SystemHard sys;
-  sys.parread(fp);
+  PS::ReallocatableArray<FPSoft> ptcl_artifical;
 
-  fclose(fp);
+  PS::F64 time_end;
+  sys.readOneCluster(filename.c_str(), time_end, ptcl_artifical);
+
+  std::cout<<"Time_end: "<<time_end<<std::endl;
 
 #ifdef HARD_CHECK_ENERGY
     // Set hard energy limit
@@ -139,7 +77,7 @@ int main(int argc, char **argv){
   // set slowdown factor
   if(slowdown_factor>0) sys.set_slowdown_factor(slowdown_factor);
   
-  sys.driveForMultiClusterOneDebug(ptcl.getPointer(), ptcl.size(), ptcl_artifical.getPointer(), n_group, 1000.0, time_end);
+  sys.driveForMultiCluster(time_end, ptcl_artifical);
 
   return 0;
 }
