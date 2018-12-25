@@ -76,42 +76,6 @@ public:
 };
 
 
-void PtclHardDump(FILE *_fout, PtclHard * _ptcl, const PS::S32 _n) {
-    fwrite(&_n, sizeof(PS::S32), 1, _fout);
-    for(int i=0; i<_n; i++) {
-        _ptcl[i].dump(_fout);
-    }
-    PS::F64 ptcl_st_dat[3];
-    ptcl_st_dat[0] = Ptcl::search_factor;
-    ptcl_st_dat[1] = Ptcl::r_search_min;
-    ptcl_st_dat[2] = Ptcl::mean_mass_inv;
-    fwrite(ptcl_st_dat, sizeof(PS::F64),3,_fout);
-}
-
-void PtclHardRead(FILE *_fin, PS::ReallocatableArray<PtclHard> & _ptcl) {
-    PS::S32 n;
-    size_t rcount = fread(&n, sizeof(PS::S32),1,_fin);
-    if (rcount<1) {
-        std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
-        abort();
-    }
-    PtclHard ptmp;
-    for(int i=0; i<n; i++) {
-        ptmp.read(_fin);
-        _ptcl.push_back(ptmp);
-    }
-    PS::F64 ptcl_st_dat[3];
-    rcount = fread(ptcl_st_dat, sizeof(PS::F64),3,_fin);
-    if (rcount<3) {
-        std::cerr<<"Error: Data reading fails! requiring data number is 3, only obtain "<<rcount<<".\n";
-        abort();
-    }
-    Ptcl::search_factor = ptcl_st_dat[0];
-    Ptcl::r_search_min  = ptcl_st_dat[1];
-    Ptcl::mean_mass_inv = ptcl_st_dat[2];
-}
-
-
 #ifdef HARD_CHECK_ENERGY
 class HardEnergy {
 public:
@@ -1680,16 +1644,16 @@ private:
 
 
 #ifdef HARD_DEBUG_PRINT
-                fprintf(stderr,"Time = %.14g, dt = %.14g, nstep_ARC = %d \n",time_sys, dt_h, nstepcount);
-                fprintf(stderr,"Slowdown parameters:");
-                for(int k=0; k<Aint.getNGroups(); k++) {
-                    std::cerr<<"Aint k="<<k<<std::endl;
-                    Aint.printSlowDown(std::cerr,k);
-                }
+//                fprintf(stderr,"Time = %.14g, dt = %.14g, nstep_ARC = %d \n",time_sys, dt_h, nstepcount);
+//                fprintf(stderr,"Slowdown parameters:");
+//                for(int k=0; k<Aint.getNGroups(); k++) {
+//                    std::cerr<<"Aint k="<<k<<std::endl;
+//                    Aint.printSlowDown(std::cerr,k);
+//                }
                 // fprintf(stderr,"Slowdownfactor: ");
                 // for(int k=0; k<_n_group; k++) fprintf(stderr,"%d: %f; ",k,Aint.getSlowDown(k));
                 // fprintf(stderr,"\n");
-                Hint.printStepHist();
+//                Hint.printStepHist();
                 fprintf(fp,"%25.14e ",time_sys);
                 Aint.writePtcl<Ptcl>(fp);
                 Hint.writePtcl(fp,Aint.getNGroups());
@@ -2398,8 +2362,10 @@ public:
             const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
             const PS::S32 n_group = n_group_in_cluster_[i];
-            const PS::S32 adr_ptcl_artifical = adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]];
-
+            PS::S32 adr_ptcl_artifical;
+            if(n_group>0) adr_ptcl_artifical=adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]];
+            else adr_ptcl_artifical=0;
+            
             driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, &sys[adr_ptcl_artifical], n_group, dt, v_max_);
 //#ifdef HARD_DEBUG
 //            if(extra_ptcl.size()>0) fprintf(stderr,"New particle number = %d\n",extra_ptcl.size());
@@ -2625,6 +2591,53 @@ public:
     //}
 
 #ifdef HARD_DEBUG_DUMP
+    //! particle data dump
+    /*! dump hard particle data
+      @param[in]: _fout: file for dump
+      @param[in]: _ptcl: particle array for dump
+      @param[in]: _n: number of particles
+     */
+    void ptclHardDump(FILE *_fout, PtclHard * _ptcl, const PS::S32 _n) {
+        fwrite(&_n, sizeof(PS::S32), 1, _fout);
+        for(int i=0; i<_n; i++) {
+            _ptcl[i].dump(_fout);
+        }
+        PS::F64 ptcl_st_dat[3];
+        ptcl_st_dat[0] = Ptcl::search_factor;
+        ptcl_st_dat[1] = Ptcl::r_search_min;
+        ptcl_st_dat[2] = Ptcl::mean_mass_inv;
+        fwrite(ptcl_st_dat, sizeof(PS::F64),3,_fout);
+    }
+
+    //! particle data read
+    /*! read hard particle data
+      @param[in]: _fout: file for read
+      @param[in]: _ptcl: particle array for read
+      @param[in]: _n: number of particles
+     */
+    void ptclHardRead(FILE *_fin, PS::ReallocatableArray<PtclHard> & _ptcl) {
+        PS::S32 n;
+        size_t rcount = fread(&n, sizeof(PS::S32),1,_fin);
+        if (rcount<1) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            abort();
+        }
+        PtclHard ptmp;
+        for(int i=0; i<n; i++) {
+            ptmp.read(_fin);
+            _ptcl.push_back(ptmp);
+        }
+        PS::F64 ptcl_st_dat[3];
+        rcount = fread(ptcl_st_dat, sizeof(PS::F64),3,_fin);
+        if (rcount<3) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 3, only obtain "<<rcount<<".\n";
+            abort();
+        }
+        Ptcl::search_factor = ptcl_st_dat[0];
+        Ptcl::r_search_min  = ptcl_st_dat[1];
+        Ptcl::mean_mass_inv = ptcl_st_dat[2];
+    }
+    
     //! parameter dump function
     /* list: (S32)
        dt_limit_hard_: 1-2
@@ -2638,48 +2651,14 @@ public:
        n_split_:       17
        
      */
-    void pardump(FILE *_p_file){
+    void parDump(FILE *_p_file){
         fwrite(&dt_limit_hard_, sizeof(PS::F32), 17, _p_file);
         Int_pars_.dump(_p_file);
         ARC_control_pert_.dump(_p_file);
         ARC_control_soft_.dump(_p_file);
     }
     
-    //! Dumping data for debuging
-    /* 
-       @param[in] fname: file name to write
-       @param[in] time_end: time ending
-       @param[in] ptcl_bk: hard particle backup
-       @param[in] n_ptcl: cluster member number
-       @param[in] ptcl_arti_bk: artifical particle backup
-       @param[in] n_arti: artifical particle number
-       @param[in] n_group: number of groups
-     */
-    template<class Tpsoft>
-    void dump(const char* fname, 
-              const PS::F64 time_end, 
-              PtclHard* ptcl_bk, 
-              const PS::S32 n_ptcl, 
-              const Tpsoft* ptcl_arti_bk,
-              const PS::S32 n_arti,
-              const PS::S32 n_group) {
-        
-        std::FILE* fp = std::fopen(fname,"w");
-        if (fp==NULL) {
-            std::cerr<<"Error: filename "<<fname<<" cannot be open!\n";
-            abort();
-        }
-        fwrite(&time_end, sizeof(PS::F64),1,fp);
-        PtclHardDump(fp, ptcl_bk, n_ptcl);
-        fwrite(&n_arti, sizeof(PS::S32),1,fp);
-        fwrite(&n_group, sizeof(PS::S32), 1, fp);
-        for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].writeBinary(fp);
-        pardump(fp);
-        fclose(fp);
-    }
-#endif
-#ifdef HARD_DEBUG
-    void parread(FILE *fp){
+    void parRead(FILE *fp){
         size_t rcount = fread(&dt_limit_hard_, sizeof(PS::F32),15,fp);
         if (rcount<15) {
             std::cerr<<"Error: Data reading fails! requiring data number is 15, only obtain "<<rcount<<".\n";
@@ -2712,9 +2691,70 @@ public:
 #endif
     }
     
+    //! Dumping one cluster data for debuging
+    /* 
+       @param[in] _fname: file name to write
+       @param[in] _time_end: time ending
+       @param[in] _ptcl_bk: hard particle backup
+       @param[in] _n_ptcl: cluster member number
+       @param[in] _ptcl_arti_bk: artifical particle backup
+       @param[in] _n_arti: artifical particle number
+       @param[in] _n_group: number of groups
+     */
+    template<class Tpsoft>
+    void dumpOneCluster(const char* _fname, 
+                        const PS::F64 _time_end, 
+                        PtclHard* _ptcl_bk, 
+                        const PS::S32 _n_ptcl, 
+                        const Tpsoft* _ptcl_arti_bk,
+                        const PS::S32 _n_arti,
+                        const PS::S32 _n_group) {
+        
+        std::FILE* fp = std::fopen(_fname,"w");
+        if (fp==NULL) {
+            std::cerr<<"Error: filename "<<_fname<<" cannot be open!\n";
+            abort();
+        }
+        fwrite(&_time_end, sizeof(PS::F64),1,fp);
+        ptclHardDump(fp, _ptcl_bk, _n_ptcl);
+        fwrite(&_n_arti, sizeof(PS::S32),1,fp);
+        fwrite(&_n_group, sizeof(PS::S32), 1, fp);
+        for (int i=0; i<_n_arti; i++) _ptcl_arti_bk[i].writeBinary(fp);
+        parDump(fp);
+        fclose(fp);
+    }
+
+    //! reading one cluster data for debuging
+    /* 
+       @param[in]  _fname: file name to read
+       @param[out] _time_end: time ending to read
+       @param[out] _ptcl_arti: artifical particle data array
+       @param[out] _n_arti: artifical particle number 
+     */
+    template<class Tpsoft>
+    void readOneCluster(const char* _fname,
+                        PS::F64 & _time_end,
+                        Tpsoft  & _ptcl_arti,
+                        PS::S32 & _n_arti) {
+        
+        std::FILE* fp = std::fopen(fname,"w");
+        if (fp==NULL) {
+            std::cerr<<"Error: filename "<<fname<<" cannot be open!\n";
+            abort();
+        }
+        fread(&_time_end, sizeof(PS::F64),1,fp);
+        ptclHardRead(fp, ptcl_bk, n_ptcl);
+        fwrite(&n_arti, sizeof(PS::S32),1,fp);
+        fwrite(&n_group, sizeof(PS::S32), 1, fp);
+        for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].writeBinary(fp);
+        pardump(fp);
+        fclose(fp);
+    }
+
+
     template <class Tpsoft>
-    void driveForMultiClusterOneDebug(PtclHard* _ptcl, const PS::S32 _n_ptcl, Tpsoft* _ptcl_artifical, const PS::S32 _n_group,  const PS::F64 _time_end) {
-        driveForMultiClusterImpl(_ptcl, _n_ptcl, _ptcl_artifical, _n_group, _time_end);
+    void driveForMultiClusterOneDebug(PtclHard* _ptcl, const PS::S32 _n_ptcl, Tpsoft* _ptcl_artifical, const PS::S32 _n_group,  const PS::F64 _v_max, const PS::F64 _time_end) {
+        driveForMultiClusterImpl(_ptcl, _n_ptcl, _ptcl_artifical, _n_group, _v_max, _time_end);
     }
 
     void set_slowdown_factor(const PS::F64 _slowdown_factor) {

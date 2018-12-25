@@ -1071,15 +1071,21 @@ public:
                 if(!(used_mask[i]>=0 && used_mask[j]>=0)) { // avoid double count
                     bool out_flag=getDirection(i, j);
                     if(!out_flag) {
-                        PS::F64 sdi=0.0, sdj=0.0;
-                        if(i<n_group) sdi = _Aint->getSlowDown(i);
-                        if(j<n_group) sdj = _Aint->getSlowDown(j);
+                        PS::F64 sdi=0.0, sdj=0.0, fpi=0.0, fpj=0.0;
+                        if(i<n_group) {
+                            sdi = _Aint->getSlowDown(i);
+                            fpi = _Aint->getFratioSq(i);
+                        }
+                        if(j<n_group) {
+                            sdj = _Aint->getSlowDown(j);
+                            fpj = _Aint->getFratioSq(j);
+                        }
                         if(sdi>1.0&&sdj>1.0) continue;
                         if(sdi>1.0&&sdj==0.0) continue;
                         if(sdi==0.0&&sdj>1.0) continue;
                         // to avoid extremely long time integration, for very large slowdown factor, no merge group
-                        // current 100.0 is experimental value
-                        if(sdi>100.0||sdj>100.0) continue;
+                        // current slowdown factor 100.0 and fratioSq 1e-8 is experimental value
+                        if ((sdi>100.0&&fpj<1e-8)||(sdj>100.0&&fpi<1e-8)) continue;
 
                         PS::S32 insert_group=-1, insert_index=-1;
                         if(used_mask[i]>=0) {
@@ -3522,6 +3528,15 @@ public:
      */
     PS::F64 getSlowDown(const PS::S32 i) const{
         return clist_[i].slowdown.getkappa();
+    }
+
+    //! Get perturbation factor square
+    /*! get current maximum perturbation/inner force square
+      @param[in] i: index of groups
+      \return fpert square
+    */
+    PS::F64 getFratioSq(const PS::S32 i) const{
+        return clist_[i].slowdown.getFratioSq();
     }
 
     //! Get slow down original factor

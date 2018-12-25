@@ -139,7 +139,7 @@ int main(int argc, char **argv){
   // set slowdown factor
   if(slowdown_factor>0) sys.set_slowdown_factor(slowdown_factor);
   
-  sys.driveForMultiClusterOneDebug(ptcl.getPointer(), ptcl.size(), ptcl_artifical.getPointer(), n_group, time_end);
+  sys.driveForMultiClusterOneDebug(ptcl.getPointer(), ptcl.size(), ptcl_artifical.getPointer(), n_group, 1000.0, time_end);
 
   return 0;
 }
