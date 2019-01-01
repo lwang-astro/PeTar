@@ -2169,30 +2169,58 @@ public:
 
 #ifdef HARD_DEBUG
     template <class ARCint>
-    void checkAdrList(const ARCint& _Aint) {
+    bool checkAdrList(const ARCint& _Aint) {
+        bool fail_flag = false;
         const PS::S32 n_ptcl = ptcl_.size();
         const PS::S32 n_adr = adr_dt_sorted_.size();
         PS::S32 ncheck[n_ptcl];
         for (PS::S32 i=0; i<n_ptcl; i++) ncheck[i]=0;
         for (PS::S32 i=0; i<n_adr; i++) {
             PS::S32 k =adr_dt_sorted_[i];
-            assert(time_next_[k] == ptcl_[k].time + ptcl_[k].dt);
+#ifdef HARD_DEBUG_DUMP
+            if (time_next_[k] != ptcl_[k].time + ptcl_[k].dt) fail_flag = true;
+#else
+            assert(time_next_[k]==ptcl_[k].time + ptcl_[k].dt);
+#endif
             PS::F64 tr=PS::S32(ptcl_[k].time/ptcl_[k].dt);
+#ifdef HARD_DEBUG_DUMP
+            if (tr*ptcl_[k].dt != ptcl_[k].time) fail_flag = true;
+#else
             assert(tr*ptcl_[k].dt==ptcl_[k].time);
+#endif
             ncheck[adr_dt_sorted_[i]]++;
         }
         const PS::S32 n_group = _Aint.getNGroups();
         for (PS::S32 i=0; i<n_group; i++) {
+#ifdef HARD_DEBUG_DUMP
+            if(_Aint.getMask(i)) { 
+                if (ncheck[i]!=0) fail_flag = true;
+            }
+            else if (ncheck[i]!=1) 
+                fail_flag = true;
+#else
             if(_Aint.getMask(i)) assert(ncheck[i]==0);
             else assert(ncheck[i]==1);
+#endif
         }
         for (PS::S32 i=n_group; i<n_ptcl; i++) {
+#ifdef HARD_DEBUG_DUMP
+            if (ncheck[i]!=1) fail_flag = true;
+#else
             assert(ncheck[i]==1);
+#endif
         }
         for (PS::S32 i=0; i<n_adr-1; i++) {
+#ifdef HARD_DEBUG_DUMP
+            if (ptcl_[adr_dt_sorted_[i]].dt>ptcl_[adr_dt_sorted_[i+1]].dt) fail_flag = true;
+            if (time_next_[adr_dt_sorted_[i]]>time_next_[adr_dt_sorted_[i+1]]) fail_flag = true;
+#else
             assert(ptcl_[adr_dt_sorted_[i]].dt<=ptcl_[adr_dt_sorted_[i+1]].dt);
             assert(time_next_[adr_dt_sorted_[i]]<=time_next_[adr_dt_sorted_[i+1]]);
+#endif
+
         }
+        return fail_flag;
     }
 
     void printStepHist(){
@@ -3200,10 +3228,10 @@ public:
         //if (ds_use>ds_up_limit) ds_use = ds_up_limit;
 
         const PS::S32 ipert = pert_disp_[_igroup];
-        bool fix_step_flag = false;
+        PS::S32 fix_step_flag = 1;
         // for high-eccentric binary, it is better to fix step to avoid big step drop, for hyperbolic, fix step is risky
         if(c->getN()==2&&bininfo[_igroup].ecc>0.99&&bininfo[_igroup].ecc<1.0) {
-            fix_step_flag = true;
+            fix_step_flag = 2;
             PS::F64 korg=c->slowdown.getkappaorg();
             if(korg<1.0) ds_use *= std::max(0.1,korg);
         }
@@ -3445,8 +3473,12 @@ public:
 
     //! Check break condition
     /*! Check whether it is necessary to break the chain
-      1. get maximum distance (rmax) pair
-      2. if rmax>r_crit, check whether the pair is go away or go close
+      Inner distance criterion:
+       1. get maximum distance (rmax) pair
+       2. if rmax>r_crit, check whether the pair is go away or go close
+
+      Perturbation criterion:
+       2. if perturbation / inner force square > 2, break
       @param[out] _break_group_list: group index list to break
       @param[out] _break_isplit_list: index in chain list to split for corresponding groups
       @param[in] _r_crit2: distance (square) criterion to check whether need to break
@@ -3462,14 +3494,20 @@ public:
             if(getMask(i)) continue;
             // obtain maximum distance pair
             clist_[i].getRmaxIndex(r_max2, r_max_index);
+            bool break_flag = false;
             if(r_max2>_r_crit2) {
                 // check whether outcome or income
                 bool out_flag=clist_[i].getDirection(r_max_index);
-                if(out_flag) {
-                    _break_group_list[n_group_break] = i;
-                    _break_isplit_list[n_group_break]= r_max_index;
-                    n_group_break++;
-                }
+                if(out_flag) break_flag = true;
+            }
+            // check strong perturbed case
+            PS::F64 fp_sq = clist_[i].slowdown.getFratioSq();
+            if (fp_sq>2) break_flag = true;
+
+            if (break_flag) {
+                _break_group_list[n_group_break] = i;
+                _break_isplit_list[n_group_break] = r_max_index;
+                n_group_break++;
             }
         }
         return n_group_break;

@@ -1654,7 +1654,14 @@ private:
                 Hint.SortAndSelectIp();
 #ifdef HARD_DEBUG
                 // check time step list
-                Hint.checkAdrList(Aint);
+                if (Hint.checkAdrList(Aint)) {
+#ifdef HARD_DEBUG_DUMP
+                    std::cerr<<"Hermite integration error, dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
+                    dumpOneCluster("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
+#endif
+                    abort();
+                    
+                }
 #endif
 
 
@@ -2810,10 +2817,16 @@ public:
     //    driveForMultiClusterImpl(_ptcl, _n_ptcl, _ptcl_artifical, _n_group, _v_max, _time_end);
     //}
 
-    void set_slowdown_factor(const PS::F64 _slowdown_factor) {
+    //! Set slowdown reference factor
+    void setSlowdownFactor(const PS::F64 _slowdown_factor) {
         sdfactor_ = _slowdown_factor;
     }
 
+    //! Set eta for Hermite
+    void setEta(const PS::F64 _eta) {
+        eta_s_ = _eta*_eta;
+    }
+    
 #endif
 
 };

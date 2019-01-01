@@ -306,9 +306,9 @@ int main(int argc, char **argv){
       }
   }
   else {
-      bool fix_step_flag=false;
+      PS::S32 fix_step_flag=1;
       if(c.getN()==2&&bin.ecc>0.99&&bin.ecc<1.0) {
-          fix_step_flag=true;
+          fix_step_flag=2;
 //          PS::F64 korg=c.slowdown.getkappaorg();
 //          if(korg<1.0) ds *= std::max(0.1,korg);
           std::cout<<"Fix step\n";
