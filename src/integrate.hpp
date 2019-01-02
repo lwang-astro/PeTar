@@ -1040,11 +1040,13 @@ public:
       @param[out] _new_group_member_adr: new group member address, echo two neighbor is one group
       @param[out] _new_group_offset: new group offset, last one show total number of members.
       @param[in] _r_crit2: group distance criterion square
+      @param[in] _mask_list: a list contain the index that would not be in the new group
+      @param[in] _n_mask: number of masked indices
       @param[in] _Aint: ARC integrator class
       \return number of new groups
      */
     template <class ARCint>
-    PS::S32 checkNewGroup(PS::S32 _new_group_member_index[], Tphard* _new_group_member_adr[], PS::S32 _new_group_offset[], const PS::F64 _r_crit2, const ARCint* _Aint) {
+    PS::S32 checkNewGroup(PS::S32 _new_group_member_index[], Tphard* _new_group_member_adr[], PS::S32 _new_group_offset[], const PS::F64 _r_crit2, const PS::S32* _mask_list, const PS::S32 _n_mask, const ARCint* _Aint) {
 #ifdef HARD_DEBUG
         assert(nb_info_.size()==ptcl_.size());
 #endif
@@ -1055,6 +1057,9 @@ public:
         // here ptcl_.size() is used since any ptcl index can be checked!
         PS::S32 used_mask[ptcl_.size()];
         for (PS::S32 k=0; k<ptcl_.size(); k++) used_mask[k] = -1;
+        // for the index not allowed to be grouped
+        for (PS::S32 k=0; k<_n_mask; k++) used_mask[_mask_list[k]] = -2; 
+        
 
         // check adr_dt_sorted_ list (avoid suppressed ptcl)
         PS::S32 n_check = adr_dt_sorted_.size();
@@ -1066,7 +1071,10 @@ public:
                 assert(j<ptcl_.size());
                 assert(ptcl_[i].mass>0.0);
 #endif                
-                if(j<0) continue;
+                if(j<0) continue; 
+
+                // avoid masked member
+                if(used_mask[i]==-2||used_mask[j]==-2) continue;
 
                 if(!(used_mask[i]>=0 && used_mask[j]>=0)) { // avoid double count
                     bool out_flag=getDirection(i, j);
@@ -1087,6 +1095,11 @@ public:
                         // current slowdown factor 100.0 and fratioSq 1e-8 is experimental value
                         if ((sdi>100.0&&fpj<1e-8)||(sdj>100.0&&fpi<1e-8)) continue;
 
+#ifdef ADJUST_GROUP_DEBUG
+                        std::cout<<"Find new group, index: i:"<<i<<" j:"<<j
+                                 <<" slowdown: i: "<<sdi<<" j:"<<sdj
+                                 <<std::endl;
+#endif
                         PS::S32 insert_group=-1, insert_index=-1;
                         if(used_mask[i]>=0) {
                             insert_group = used_mask[i];
@@ -2092,7 +2105,7 @@ public:
         PS::S32 n_int=0;
         for (PS::S32 i=0; i<_n_list; i++) {
             PS::S32 iadr = _ptcl_list[i];
-            if(ptcl_[iadr].time==_time_sys) continue;
+            if(ptcl_[iadr].time>=_time_sys) continue;
             ptcl_[iadr].dt = _time_sys - ptcl_[iadr].time;
             int_list[n_int++] = iadr;
             if(iadr<n_group) group_int_list[n_group_int++] = iadr;
@@ -3477,7 +3490,7 @@ public:
        1. get maximum distance (rmax) pair
        2. if rmax>r_crit, check whether the pair is go away or go close
 
-      Perturbation criterion:
+      Perturbation criterion for closed orbit:
        2. if perturbation / inner force square > 2, break
       @param[out] _break_group_list: group index list to break
       @param[out] _break_isplit_list: index in chain list to split for corresponding groups
@@ -3495,16 +3508,27 @@ public:
             // obtain maximum distance pair
             clist_[i].getRmaxIndex(r_max2, r_max_index);
             bool break_flag = false;
+            bool out_flag;
             if(r_max2>_r_crit2) {
                 // check whether outcome or income
-                bool out_flag=clist_[i].getDirection(r_max_index);
+                out_flag=clist_[i].getDirection(r_max_index);
                 if(out_flag) break_flag = true;
             }
             // check strong perturbed case
             PS::F64 fp_sq = clist_[i].slowdown.getFratioSq();
-            if (fp_sq>2) break_flag = true;
+            if (fp_sq>2 && bininfo[i].semi>0) break_flag = true;
 
             if (break_flag) {
+#ifdef ADJUST_GROUP_DEBUG
+                std::cout<<"Break group, group index: "<<i
+                         <<" N_member: "<<clist_[i].getN()
+                         <<" break index: "<<r_max_index
+                         <<" Out case: "<<out_flag
+                         <<" separation square: "<<r_max2
+                         <<" r_crit square: "<<_r_crit2
+                         <<" pert_ratio_square: "<<fp_sq
+                         <<std::endl;
+#endif
                 _break_group_list[n_group_break] = i;
                 _break_isplit_list[n_group_break] = r_max_index;
                 n_group_break++;
