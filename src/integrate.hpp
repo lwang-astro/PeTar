@@ -1093,11 +1093,21 @@ public:
                         if(sdi==0.0&&sdj>1.0) continue;
                         // to avoid extremely long time integration, for very large slowdown factor, no merge group
                         // current slowdown factor 100.0 and fratioSq 1e-8 is experimental value
-                        if ((sdi>100.0&&fpj<1e-8)||(sdj>100.0&&fpi<1e-8)) continue;
+                        if ((sdi>100.0&&fpj<1e-2)||(sdj>100.0&&fpi<1e-2)) continue;
+                        //if ((sdi>100.0&&sdi*sdi*fpj<1.0)||(sdj>100.0&&sdj*sdj*fpi<1.0)) continue;
 
 #ifdef ADJUST_GROUP_DEBUG
-                        std::cout<<"Find new group, index: i:"<<i<<" j:"<<j
-                                 <<" slowdown: i: "<<sdi<<" j:"<<sdj
+                        std::cout<<"Find new group      index      slowdown      fratio_sq       sd*sd*fr\n"
+                                 <<"i1              "
+                                 <<std::setw(8)<<i
+                                 <<std::setw(16)<<sdi
+                                 <<std::setw(16)<<fpi
+                                 <<std::setw(16)<<sdi*sdi*fpj
+                                 <<"\ni2              "
+                                 <<std::setw(8)<<j
+                                 <<std::setw(16)<<sdj
+                                 <<std::setw(16)<<fpj
+                                 <<std::setw(16)<<sdj*sdj*fpi
                                  <<std::endl;
 #endif
                         PS::S32 insert_group=-1, insert_index=-1;

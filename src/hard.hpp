@@ -1236,6 +1236,11 @@ private:
         dumpOneCluster(hpd_name.c_str(), _time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
 #endif
 #endif
+//#ifdef HARD_DEBUG_PRINT
+//        PS::ReallocatableArray<PtclHard> ptcl_bk_pt;
+//        ptcl_bk_pt.reserve(_n_ptcl);
+//        ptcl_bk_pt.resizeNoInitialize(_n_ptcl);
+//#endif
         PS::S32 nstepcount = 0;
 
 #ifdef HARD_DEBUG
@@ -1674,10 +1679,19 @@ private:
                 // for(int k=0; k<_n_group; k++) fprintf(stderr,"%d: %f; ",k,Aint.getSlowDown(k));
                 // fprintf(stderr,"\n");
 //                Hint.printStepHist();
+//                for(int i=0; i<_n_ptcl; i++) ptcl_bk_pt[i] = _ptcl_local[i];
+
                 fprintf(fp,"%25.14e ",time_sys);
-                Aint.writePtcl<Ptcl>(fp);
-                Hint.writePtcl(fp,Aint.getNGroups());
+//                Aint.writePtcl<Ptcl>(fp);
+//                Hint.writePtcl(fp,Aint.getNGroups());
+//                Aint.updateCM(Hint.getPtcl());
+//                Aint.resolve();
+//                Aint.shift2CM();
+                Hint.writeBackPtcl(Aint.getNGroups());
+                for(int i=0; i<_n_ptcl; i++) _ptcl_local[i].ParticleBase::writeAscii(fp);
                 fprintf(fp,"\n");
+
+//                for(int i=0; i<_n_ptcl; i++) _ptcl_local[i] = ptcl_bk_pt[i];
 #endif
             }
         
