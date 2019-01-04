@@ -1079,22 +1079,40 @@ public:
                 if(!(used_mask[i]>=0 && used_mask[j]>=0)) { // avoid double count
                     bool out_flag=getDirection(i, j);
                     if(!out_flag) {
-                        PS::F64 sdi=0.0, sdj=0.0, fpi=0.0, fpj=0.0;
+                        PS::F64 sdi=0.0, sdj=0.0, frsi=0.0, frsj=0.0;
                         if(i<n_group) {
                             sdi = _Aint->getSlowDown(i);
-                            fpi = _Aint->getFratioSq(i);
+                            frsi = _Aint->getFratioSq(i);
                         }
                         if(j<n_group) {
                             sdj = _Aint->getSlowDown(j);
-                            fpj = _Aint->getFratioSq(j);
+                            frsj = _Aint->getFratioSq(j);
                         }
                         if(sdi>1.0&&sdj>1.0) continue;
                         if(sdi>1.0&&sdj==0.0) continue;
                         if(sdi==0.0&&sdj>1.0) continue;
                         // to avoid extremely long time integration, for very large slowdown factor, no merge group
                         // current slowdown factor 100.0 and fratioSq 1e-8 is experimental value
-                        if ((sdi>100.0&&fpj<1e-2)||(sdj>100.0&&fpi<1e-2)) continue;
+                        //if ((sdi>100.0&&fpj<1e-2)||(sdj>100.0&&fpi<1e-2)) continue;
                         //if ((sdi>100.0&&sdi*sdi*fpj<1.0)||(sdj>100.0&&sdj*sdj*fpi<1.0)) continue;
+
+                        // check the tidal effect of strong bound binary
+                        PS::S32 i_bin_strong = -1;  // strong bound binary index (-1 means no slowdown exist)
+                        PS::F64 fratio_weak_sq;     // weak binary force ratio square
+                        if (sdi>1.0) {
+                            i_bin_strong = i;
+                            fratio_weak_sq = frsj;
+                        }
+                        if (sdj>1.0) {
+                            i_bin_strong = j;
+                            fratio_weak_sq = frsi;
+                        }
+                        if(i_bin_strong>0) {
+                            PS::F64 apo = _Aint->bininfo[i_bin_strong].semi*(1.0 + _Aint->bininfo[i_bin_strong].ecc);
+                            // tidal effect estimated by apo (strong) / rij
+                            PS::F64 ftid_strong_sq = apo*apo/nb_info_[i].r_min2;
+                            if (ftid_strong_sq*fratio_weak_sq<1e-10) continue;
+                        }
 
 #ifdef ADJUST_GROUP_DEBUG
                         std::cout<<"Find new group      index      slowdown      fratio_sq       sd*sd*fr\n"
