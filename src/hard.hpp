@@ -847,7 +847,6 @@ public:
                      const PS::F64 _dt_max,
                      const PS::F64 _dt_tree,
                      const PS::F64 _v_max) {
-        bool fail_flag=false;
 
         PS::S32 n_group=_Aint.getNGroups();
         PS::S32 n_hint = _Hint.getPtclN();
@@ -869,7 +868,7 @@ public:
         PS::S32 new_group_member_offset[hint_size+1];
         PS::S32 n_group_new = _Hint.checkNewGroup(new_group_member_index_hint, new_group_member_adr_origin, new_group_member_offset, r_bin2, break_group_list, n_group_break, &_Aint);
 
-        if(n_group_break==0&&n_group_new==0) return fail_flag;
+        if(n_group_break==0&&n_group_new==0) return false;
 
 #ifdef ADJUST_GROUP_DEBUG
         std::cout<<"-------Before adjust-------\n";
@@ -1122,7 +1121,8 @@ public:
         // initial ARC system
         for (PS::S32 i=0; i<n_hint_mod; i++) {
              PS::S32 i_mod_hint=hint_mod_ptcl_index[i];
-            _Aint.initialOneSys(i_mod_hint, _time_sys);
+             bool fail_flag = _Aint.initialOneSys(i_mod_hint, _time_sys);
+             if(fail_flag) return true;
             _Aint.initialOneSlowDown(i_mod_hint, _time_sys+dt_limit_hard_, _Hint.getNbInfo(i_mod_hint).min_mass, sdfactor_, 1.0);
 #ifdef HARD_DEBUG_PRINT
             _Aint.bininfo[i_mod_hint].print(std::cerr,20,true);
@@ -1133,8 +1133,8 @@ public:
         }
 
         // initial the new ptcl 
-        fail_flag=_Hint.initial(NULL, n_hint_mod+n_hint_new, _time_sys, _dt_max, dt_min_hard_, &_Aint);
-
+        bool fail_flag=_Hint.initial(NULL, n_hint_mod+n_hint_new, _time_sys, _dt_max, dt_min_hard_, &_Aint);
+        if(fail_flag) return true;
 
 #ifdef ADJUST_GROUP_DEBUG
         std::cout<<"--------After adjust----------\n";
@@ -1191,7 +1191,7 @@ public:
         _Aint.checkPert();
 #endif
 
-        return fail_flag;
+        return false;
     }
 
 #ifdef ADJUST_GROUP_DEBUG
@@ -1398,7 +1398,14 @@ private:
             Aint.updateCM(&pcm, &iact, 1);
  
             Aint.initialOneChain(0);
-            Aint.initialOneSys(0, 0.0);
+            bool fail_flag = Aint.initialOneSys(0, 0.0);
+            if(fail_flag) {
+#ifdef HARD_DEBUG_DUMP
+                std::cerr<<"ARC initial error, Dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
+                dumpOneCluster("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
+                abort();
+#endif
+            }
             Aint.initialOneSlowDownUnPert(0, _time_end, sdfactor_, 1.0);
  
 #ifdef ARC_SYM_SD_PERIOD
@@ -1569,7 +1576,14 @@ private:
                 
                 Aint.addOneGroup(&_ptcl_local[n_group_offset[i]], NULL, gpars[i].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i));
                 Aint.initialOneChain(i);
-                Aint.initialOneSys(i,time_sys);
+                bool fail_flag_aint_init = Aint.initialOneSys(i,time_sys);
+                if(fail_flag_aint_init) {
+#ifdef HARD_DEBUG_DUMP
+                    std::cerr<<"ARC initial error, Dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
+                    dumpOneCluster("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
+                    abort();
+#endif
+                }
                 Aint.initialOneSlowDown(i, dt_limit, Hint.getNbInfo(i).min_mass, sdfactor_, 1.0);
             }
 
@@ -1577,7 +1591,7 @@ private:
             CalcEnergyHardFull(_ptcl_local, _n_ptcl, E0, AE0, HE0, ESD0, Hint, Aint);
 #endif
 #ifdef HARD_DEBUG_PRINT
-            fprintf(stderr,"Initial Slowdown parameters:");
+            if(Aint.getNGroups()>0) fprintf(stderr,"Initial Slowdown parameters:\n");
             for(int k=0; k<Aint.getNGroups(); k++) {
                 std::cerr<<"Aint k="<<k<<std::endl;
                 Aint.printSlowDown(std::cerr,k);
@@ -1587,6 +1601,13 @@ private:
             Hint.shiftToCM(); // shift ptcl to c.m. frame
             Hint.calcA0offset();
             bool fail_flag_hint=Hint.initial(NULL, n_single_init + _n_group, 0.0, dt_limit, dt_min_hard_, &Aint, false);
+            if(fail_flag_hint) {
+#ifdef HARD_DEBUG_DUMP
+                std::cerr<<"Hermite initial error, Dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
+                dumpOneCluster("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
+                abort();
+#endif
+            }
             Hint.SortAndSelectIp();
 
 //            for (int i=0; i<_n_group; i++) {
@@ -1600,13 +1621,6 @@ private:
 //                Aint.printSlowDown(std::cerr,k);
 //            }
 //#endif
-            if(fail_flag_hint) {
-#ifdef HARD_DEBUG_DUMP
-                std::cerr<<"Dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
-                dumpOneCluster("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
-                abort();
-#endif
-            }
 
 //#ifdef HARD_CHECK_ENERGY
 //                PS::ReallocatableArray<PS::F64> slowdownrecord;
@@ -1648,7 +1662,7 @@ private:
 
                 if(fail_flag_hint || fail_flag_aint || fail_flag_adj) {
 #ifdef HARD_DEBUG_DUMP
-                    std::cerr<<"Hermite integration error, dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
+                    std::cerr<<"Hard integration error, dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
                     dumpOneCluster("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
                     abort();
 #endif
@@ -2383,8 +2397,8 @@ public:
 
 //////////////////
 // for multi cluster
-    template<class Tsys>
-    void driveForMultiCluster(const PS::F64 dt, Tsys & sys){
+    template<class Tpsoft>
+    void driveForMultiCluster(const PS::F64 dt, Tpsoft* _ptcl_soft){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         /*
           for(PS::S32 ith=0; ith<PS::Comm::getNumberOfThread(); ith++){
@@ -2396,11 +2410,9 @@ public:
             const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
             const PS::S32 n_group = n_group_in_cluster_[i];
-            PS::S32 adr_ptcl_artifical;
-            if(n_group>0) adr_ptcl_artifical=adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]];
-            else adr_ptcl_artifical=0;
-            
-            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, &sys[adr_ptcl_artifical], n_group, dt, v_max_);
+            Tpsoft* ptcl_artifical_ptr=NULL;
+            if(n_group>0) ptcl_artifical_ptr = &(_ptcl_soft[adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]]]);
+            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artifical_ptr, n_group, dt, v_max_);
 //#ifdef HARD_DEBUG
 //            if(extra_ptcl.size()>0) fprintf(stderr,"New particle number = %d\n",extra_ptcl.size());
 //#endif
@@ -2412,8 +2424,8 @@ public:
         }
     }
 
-    template<class Tsys>
-    void driveForMultiClusterOMP(const PS::F64 dt, Tsys & sys){
+    template<class Tpsoft>
+    void driveForMultiClusterOMP(const PS::F64 dt, Tpsoft* _ptcl_soft){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         //const PS::S32 num_thread = PS::Comm::getNumberOfThread();
         //PS::ReallocatableArray<PtclHard> extra_ptcl[num_thread];
@@ -2443,16 +2455,15 @@ public:
             const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
             const PS::S32 n_group = n_group_in_cluster_[i];
-            PS::S32 adr_ptcl_artifical;
-            if(n_group>0) adr_ptcl_artifical=adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]];
-            else adr_ptcl_artifical=0;
+            Tpsoft* ptcl_artifical_ptr=NULL;
+            if(n_group>0) ptcl_artifical_ptr = &(_ptcl_soft[adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]]]);
 #ifdef OMP_PROFILE
             num_cluster[ith] += n_ptcl;
 #endif
 #ifdef HARD_DEBUG_PROFILE
             PS::F64 tstart = PS::GetWtime();
 #endif
-            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, &sys[adr_ptcl_artifical], n_group, dt, v_max_, ith);
+            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artifical_ptr, n_group, dt, v_max_, ith);
 #ifdef OMP_PROFILE
             time_thread[ith] += PS::GetWtime();
 #endif

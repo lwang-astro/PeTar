@@ -1107,7 +1107,7 @@ public:
                             i_bin_strong = j;
                             fratio_weak_sq = frsi;
                         }
-                        if(i_bin_strong>0) {
+                        if(i_bin_strong>=0) {
                             PS::F64 apo = _Aint->bininfo[i_bin_strong].semi*(1.0 + _Aint->bininfo[i_bin_strong].ecc);
                             // tidal effect estimated by apo (strong) / rij
                             PS::F64 ftid_strong_sq = apo*apo/nb_info_[i].r_min2;
@@ -1115,18 +1115,27 @@ public:
                         }
 
 #ifdef ADJUST_GROUP_DEBUG
-                        std::cout<<"Find new group      index      slowdown      fratio_sq       sd*sd*fr\n"
+                        std::cout<<"Find new group      index      slowdown      fratio_sq       apo      ftid_sq \n"
                                  <<"i1              "
                                  <<std::setw(8)<<i
                                  <<std::setw(16)<<sdi
-                                 <<std::setw(16)<<fpi
-                                 <<std::setw(16)<<sdi*sdi*fpj
-                                 <<"\ni2              "
+                                 <<std::setw(16)<<frsi;
+                        if(i<n_group)  {
+                            PS::F64 apo= _Aint->bininfo[i].semi*(1.0+_Aint->bininfo[i].ecc);
+                            std::cout<<std::setw(16)<<apo
+                                     <<std::setw(16)<<apo*apo/nb_info_[i].r_min2;
+                        }
+                        std::cout<<"\ni2              "
                                  <<std::setw(8)<<j
                                  <<std::setw(16)<<sdj
-                                 <<std::setw(16)<<fpj
-                                 <<std::setw(16)<<sdj*sdj*fpi
-                                 <<std::endl;
+                                 <<std::setw(16)<<frsj;
+                        if(j<n_group)  {
+                            PS::F64 apo= _Aint->bininfo[j].semi*(1.0+_Aint->bininfo[j].ecc);
+                            std::cout<<std::setw(16)<<apo
+                                     <<std::setw(16)<<apo*apo/nb_info_[i].r_min2;
+                        }
+                        std::cout<<std::endl;
+                        std::cout<<"I_binary_strong: "<<i_bin_strong<<std::endl;
 #endif
                         PS::S32 insert_group=-1, insert_index=-1;
                         if(used_mask[i]>=0) {
@@ -1519,6 +1528,7 @@ public:
 #endif
 
         const PS::S32 n_org=ptcl_.size();
+        const PS::S32 n_new = n_org - _n_list; // new ptcl number
         // moving trace (initial -1)
         PS::S32 trace[n_org];
         for (PS::S32 i=0; i<n_org; i++) trace[i] = -1;
@@ -1562,10 +1572,11 @@ public:
             // If trace[ilast] is after the current idel, update the trace[ilast] to idel and set trace[ilast] as new idel to check, until trace[ilast]=-1 or idel >= ilast
             while (idel>=0) {
                 PS::S32 itrlast = -1;
-                while(trace[ilast]>=0 && (trace[ilast]<idel || trace[ilast]==n_org) && ilast>idel) ilast--;
+                //cond: last is moved && ( moved pos before new n_ptcl || last is del ) &&  ilast > idel 
+                while(trace[ilast]>=0 && (trace[ilast]<n_new || trace[ilast]==n_org) && ilast>idel) ilast--;
 
-                // if ilast > idel, move ilast to idel
-                if(idel<ilast) {
+                // if ilast is not yet moved or (new pos of ilast > idel and ilast is not del, move ilast to idel)
+                if(trace[ilast]<0||(idel<trace[ilast]&&trace[ilast]<n_org)) {
                     itrlast=trace[ilast];
                     trace[ilast]=idel;
                 }
@@ -3152,24 +3163,44 @@ public:
         }
     }
     
-    void initialSys() {
+    // return fail_flag
+    bool initialSys() {
         for (PS::S32 i=0; i<clist_.size(); i++) {
             const PS::S32 ipert = pert_disp_[i];
             clist_[i].initSys(0.0, *ARC_control_, &(par_list_.back()), &pert_[ipert], &pforce_[ipert], pert_n_[i]);
+#ifdef ARC_WARN
+            if(clist_[i].info!=NULL) {
+                clist_[i].info->ErrMessage(std::cerr);
+                return true;
+            }
+#endif
         }
+        return false;
     }
 
     //! Initial one group chain integration parameters
     /*! Initial one group chain integration parameters
       @param[in] _i_group: group to initialize
       @param[in] _time_sys: time to initialize
+      \return fail_flag
      */
-    void initialOneSys(const PS::S32 _i_group, const PS::F64 _time_sys) {
+    bool initialOneSys(const PS::S32 _i_group, const PS::F64 _time_sys) {
 #ifdef HARD_DEBUG
+#ifdef HARD_DEBUG_DUMP
+        if (group_mask_map_[_i_group]) return true;
+#else
         assert(!group_mask_map_[_i_group]);
+#endif
 #endif
         const PS::S32 ipert = pert_disp_[_i_group];
         clist_[_i_group].initSys(_time_sys, *ARC_control_, &(par_list_[_i_group]),&pert_[ipert], &pforce_[ipert], pert_n_[_i_group]);
+#ifdef ARC_WARN
+        if(clist_[_i_group].info!=NULL) {
+            clist_[_i_group].info->ErrMessage(std::cerr);
+            return true;
+        }
+#endif
+        return false;
     }
 
     //! Initial one group chain member and c.m.
@@ -3282,7 +3313,6 @@ public:
 #ifdef ARC_WARN
         if(c->info!=NULL) {
             c->info->ErrMessage(std::cerr);
-            dump("ARC_dump.dat",_igroup,_time_end,ds_use);
         }
 #endif
         

@@ -165,7 +165,7 @@ int Newtonian_cut_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, c
   @param[in]  pars: ARC pars including rin, rout and perturbation kepler spline interpolation class
  */
 template<class Tptcl, class Tpert, class Tforce, class extpar>
-void Newtonian_extA_pert (double3* acc, const PS::F64 time, Tptcl* p, const PS::S32 np, Tpert* pert, Tforce* pf, const PS::S32 npert, extpar* pars){
+PS::S32 Newtonian_extA_pert (double3* acc, const PS::F64 time, Tptcl* p, const PS::S32 np, Tpert* pert, Tforce* pf, const PS::S32 npert, extpar* pars){
 #ifdef HARD_DEBUG
     if(npert<1) {
         std::cerr<<"Error: perturber number not enough, at least c.m. is needed!"<<std::endl;
@@ -191,7 +191,11 @@ void Newtonian_extA_pert (double3* acc, const PS::F64 time, Tptcl* p, const PS::
 #ifdef HARD_DEBUG
     PS::F64 mt = 0.0;
     for(int i=0; i<np; i++) mt += p[i].mass;
+#ifdef HARD_DEBUG_DUMP
+    if (abs(mt-pert[0]->mass)>=1e-10) return 6;
+#else
     assert(abs(mt-pert[0]->mass)<1e-10);
+#endif
 #endif
 
     for(int i=0; i<np; i++) {
@@ -207,7 +211,11 @@ void Newtonian_extA_pert (double3* acc, const PS::F64 time, Tptcl* p, const PS::
         for(int j=1; j<npert; j++) {
 
 #ifdef HARD_DEBUG
+#ifdef HARD_DEBUG_DUMP
+            if (p[i].id==pert[j]->id) return 7;
+#else
             assert(p[i].id!=pert[j]->id);
+#endif
 #endif            
             PS::F64 dx[3];
             dx[0] = xp[j][0] - xi[0];
@@ -260,11 +268,13 @@ void Newtonian_extA_pert (double3* acc, const PS::F64 time, Tptcl* p, const PS::
 #endif
 #endif
     }
+
+    return 0;
 }
 /// end Newtonian cut force (L.Wang)
 
 template<class Tptcl, class Tpert, class Tforce, class extpar>
-void Newtonian_extA_soft (double3* acc, const PS::F64 time, Tptcl* p, const PS::S32 np, Tpert* pert, Tforce* pf, const PS::S32 npert, extpar* pars){
+PS::S32 Newtonian_extA_soft (double3* acc, const PS::F64 time, Tptcl* p, const PS::S32 np, Tpert* pert, Tforce* pf, const PS::S32 npert, extpar* pars){
 #ifdef HARD_DEBUG
     if(npert>1) {
         std::cerr<<"Error: perturboer number should be zero !"<<std::endl;
@@ -281,6 +291,8 @@ void Newtonian_extA_soft (double3* acc, const PS::F64 time, Tptcl* p, const PS::
 #endif
 #endif
     }
+
+    return 0;
 }
 
 // period of two-body motion
