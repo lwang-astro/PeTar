@@ -514,6 +514,7 @@ private:
                               PS::ReallocatableArray<PS::S32> & _empty_list,
                               PS::S32 *_group_ptcl_adr_list,
                               Tptree &_bin,
+                              const PS::F64 _r_bin,
                               const PS::S64 _id_offset,
                               const PS::S32 _n_split) {
 #ifdef TIDAL_TENSOR
@@ -603,11 +604,14 @@ private:
 #ifdef TIDAL_TENSOR
             }
             else {
-                /* Assume apo-center distance is the maximum length inside box
-                   Then the lscale=apo/(2*sqrt(2))
-                 */
-                
-                PS::F64 lscale = _bin.semi*(1+_bin.ecc)*0.35;
+                ///* Assume apo-center distance is the maximum length inside box
+                //   Then the lscale=apo/(2*sqrt(2))
+                // */
+                // PS::F64 lscale = _bin.semi*(1+_bin.ecc)*0.35;
+
+                // Use fixed 0.5*r_bin to determine lscale
+                PS::F64 lscale = 0.16*_r_bin;
+
                 // 8 points box 
                 switch(i) {
                 case 0:
@@ -796,7 +800,7 @@ private:
             if(stab_flag) stab_bins.push_back(&bins.back());
             
             for (int i=0; i<stab_bins.size(); i++) {
-                keplerOrbitGenerator(_i_cluster, _n_groups, _ptcl_in_cluster, _ptcl_artifical, _empty_list, &group_ptcl_adr_list[group_ptcl_adr_offset], *stab_bins[i], _id_offset, _n_split);
+                keplerOrbitGenerator(_i_cluster, _n_groups, _ptcl_in_cluster, _ptcl_artifical, _empty_list, &group_ptcl_adr_list[group_ptcl_adr_offset], *stab_bins[i], _rbin, _id_offset, _n_split);
                 group_ptcl_adr_offset += stab_bins[i]->status;
                 _n_groups++;
             }

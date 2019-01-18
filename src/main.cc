@@ -152,7 +152,7 @@ int main(int argc, char *argv[]){
 #endif
     IOParams<PS::F64> eps          (input_par_store, 0.0,  "Softerning eps");
     IOParams<PS::F64> r_out        (input_par_store, 0.0,  "Transit function outer boundary radius", "<m>/sigma_1D^2/ratio_r_cut");
-    IOParams<PS::F64> r_bin        (input_par_store, 0.0,  "Maximum binary radius criterion", "0.8*r_in");
+    IOParams<PS::F64> r_bin        (input_par_store, 0.0,  "Maximum binary radius criterion", "theta*r_in");
     IOParams<PS::F64> r_search_max (input_par_store, 0.0,  "Maximum binary radius criterion", "5*r_out");
     IOParams<PS::F64> sd_factor    (input_par_store, 1e-6, "Slowdown perturbation criterion");
     IOParams<PS::S32> data_format  (input_par_store, 1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): Writing off: r-B(5), r-A(4); Writing on: r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0)");
@@ -515,7 +515,7 @@ int main(int argc, char *argv[]){
     //}
     
     PS::F64 r_in, m_average, v_disp, v_max;
-    GetInitPar(system_soft, r_in, r_out.value, r_bin.value, r_search_min, r_search_max.value, v_max, m_average, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value, n_bin.value);
+    GetInitPar(system_soft, r_in, r_out.value, r_bin.value, r_search_min, r_search_max.value, v_max, m_average, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value, n_bin.value, theta.value);
 
 //    EPISoft::r_out = r_out;
     EPISoft::r_in  = r_in;

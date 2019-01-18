@@ -114,7 +114,7 @@ int main(int argc, char **argv){
   if(dt_arc_min>0||dE_arc_limit>0||dt_err_pert>0||dt_err_soft>0) 
       sys.setARCParam(dE_arc_limit, dt_err_pert, dt_err_soft, dt_arc_min);
   
-  sys.driveForMultiCluster(time_end, ptcl_artifical);
+  sys.driveForMultiCluster(time_end, ptcl_artifical.getPointer());
 
   return 0;
 }

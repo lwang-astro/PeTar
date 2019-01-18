@@ -269,7 +269,7 @@ public:
 #ifdef MAIN_DEBUG
 // flag: 1: c.m; 2: individual; 
 template<class Teng, class Tsys>
-void write_p(FILE* fout, const PS::F64 time, const PS::F64 dt_soft, const Tsys& p, const Teng &et, const Teng &ediff) {
+void write_p(FILE* fout, const PS::F64 time, const Tsys& p, const Teng &et, const Teng &ediff) {
     fprintf(fout,"%20.14e ",time);
     fprintf(fout,"%20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e ",
             ediff.tot/et.tot, et.kin, et.pot, et.tot,
@@ -279,10 +279,6 @@ void write_p(FILE* fout, const PS::F64 time, const PS::F64 dt_soft, const Tsys& 
         if(p[i].status>0||p[i].id<0) continue;
         PS::F64 mi = p[i].mass;
         PS::F64vec vi = p[i].vel;
-        if(p[i].status!=0) {
-            mi = p[i].mass_bk;
-            vi += p[i].acc * dt_soft;
-        }
         fprintf(fout,"%20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e ", 
                 mi, p[i].pos[0], p[i].pos[1], p[i].pos[2], 
                 vi[0], vi[1], vi[2]);

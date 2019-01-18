@@ -158,7 +158,7 @@ int main(int argc, char** argv)
     sys.setParam(par.rbin, par.rout, par.rin, par.eps, par.dt_limit_hard, dt_min_hard, par.eta, 0.0, 1e-8, N+10, 8);
     sys.setARCParam(1e-8, 1e-6, 1e-6, dt_min_hard);
 
-    sys.adjustGroup<Psoft>(Hint, Aint, p.getPointer(), 0.0, par.dt_limit_hard, time_end);
+    sys.adjustGroup<Psoft>(Hint, Aint, p.getPointer(), 0.0, par.dt_limit_hard, time_end, par.rbin);
     
     return 0;
 }

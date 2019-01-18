@@ -587,22 +587,42 @@ private:
         for(PS::S32 j=0; j<_n_group; j++) {
             if(_iadr==j) continue;
             if(_Aint->getMask(j)) continue;
-#ifdef HARD_DEBUG
-            PS::F64 mcmcheck =0.0;
-#endif
             const auto* pj = _Aint->getGroupPtcl(j);
             PS::F64 sdj = 1.0/_Aint->getSlowDown(j);
-            PS::F64vec vcmsdj = (1.0-sdj)*_ptcl[j].vel;
-            for(PS::S32 k=0; k<_Aint->getGroupN(j); k++) {
+            if(sdj==1.0) {
+#ifdef HARD_DEBUG
+                PS::F64 mcmcheck =0.0;
+#endif
+                PS::F64vec vcmsdj = (1.0-sdj)*_ptcl[j].vel;
+                for(PS::S32 k=0; k<_Aint->getGroupN(j); k++) {
+                    PS::F64 r2 = 0.0;
+                    CalcAcc0Acc1R2Cutoff(_pi.pos, _pi.vel*_sdi+_vcmsdi,
+                                         _force.acc0, _force.acc1, r2,
+                                         pj[k].pos, pj[k].vel*sdj+vcmsdj, pj[k].mass,
+                                         _eps2, _rout, _rin, _r_oi_inv, _r_A);
+#ifdef HARD_DEBUG
+                    mcmcheck += pj[k].mass;
+#endif
+                    PS::F64 rs=std::max(_pi.r_search,pj[k].r_search);
+                    if(r2<=rs*rs) _nb_flag[j] = true;
+                    if(r2<_nb_info.r_min2) {
+                        _nb_info.r_min2 = r2;
+                        _nb_info.r_min_index = j;
+                    }
+                    _nb_info.min_mass = std::min(_nb_info.min_mass,_ptcl[j].mass);
+                }
+#ifdef HARD_DEBUG
+                assert(abs(mcmcheck-_ptcl[j].mass)<1e-10);
+                assert(mcmcheck>0.0);
+#endif                    
+            }
+            else {
                 PS::F64 r2 = 0.0;
                 CalcAcc0Acc1R2Cutoff(_pi.pos, _pi.vel*_sdi+_vcmsdi,
                                      _force.acc0, _force.acc1, r2,
-                                     pj[k].pos, pj[k].vel*sdj+vcmsdj, pj[k].mass,
+                                     _ptcl[j].pos, _ptcl[j].vel, _ptcl[j].mass,
                                      _eps2, _rout, _rin, _r_oi_inv, _r_A);
-#ifdef HARD_DEBUG
-                mcmcheck += pj[k].mass;
-#endif
-                PS::F64 rs=std::max(_pi.r_search,pj[k].r_search);
+                PS::F64 rs=std::max(_pi.r_search, _ptcl[j].r_search);
                 if(r2<=rs*rs) _nb_flag[j] = true;
                 if(r2<_nb_info.r_min2) {
                     _nb_info.r_min2 = r2;
@@ -610,10 +630,6 @@ private:
                 }
                 _nb_info.min_mass = std::min(_nb_info.min_mass,_ptcl[j].mass);
             }
-#ifdef HARD_DEBUG
-            assert(abs(mcmcheck-_ptcl[j].mass)<1e-10);
-            assert(mcmcheck>0.0);
-#endif                    
         }
         for(PS::S32 j=_n_group; j<_n_tot; j++){
             if(_iadr==j) continue;
@@ -698,29 +714,36 @@ private:
                 const auto* pi = _Aint->getGroupPtcl(iadr);
                 const PS::F64 sdi = 1.0/_Aint->getSlowDown(iadr);      // slowdown factor
                 const PS::F64vec vcmsdi = (1.0-sdi)*_ptcl[iadr].vel;   // slowdown velocity
-                PtclForce fp[ni];
+
+                if(sdi==1.0) {
+
+                    PtclForce fp[ni];
 //                PS::F64 r2min[_n_tot]={PS::LARGE_FLOAT};
 
-                for (PS::S32 j=0; j<ni; j++) {
-                    fp[j].acc0 = fp[j].acc1 = 0.0;
-                    CalcOneAcc0Acc1(fp[j], nb_flag, _nb_info[iadr], pi[j], iadr, vcmsdi, sdi, _ptcl, _n_tot, n_group, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
-                    // c.m. force
-                    _force[iadr].acc0 += pi[j].mass*fp[j].acc0;
-                    _force[iadr].acc1 += pi[j].mass*fp[j].acc1;
+                    for (PS::S32 j=0; j<ni; j++) {
+                        fp[j].acc0 = fp[j].acc1 = 0.0;
+                        CalcOneAcc0Acc1(fp[j], nb_flag, _nb_info[iadr], pi[j], iadr, vcmsdi, sdi, _ptcl, _n_tot, n_group, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
+                        // c.m. force
+                        _force[iadr].acc0 += pi[j].mass*fp[j].acc0;
+                        _force[iadr].acc1 += pi[j].mass*fp[j].acc1;
                     
 #ifdef HARD_DEBUG
-                    mcmcheck += pi[j].mass;
+                        mcmcheck += pi[j].mass;
 #endif
-                }
+                    }
 
 #ifdef HARD_DEBUG
-                assert(abs(mcmcheck-_ptcl[iadr].mass)<1e-10);
-                assert(mcmcheck>0.0);
-                assert(_ptcl[iadr].mass>0);
+                    assert(abs(mcmcheck-_ptcl[iadr].mass)<1e-10);
+                    assert(mcmcheck>0.0);
+                    assert(_ptcl[iadr].mass>0);
 #endif                    
-                // c.m. force
-                _force[iadr].acc0 /= _ptcl[iadr].mass;
-                _force[iadr].acc1 /= _ptcl[iadr].mass;
+                    // c.m. force
+                    _force[iadr].acc0 /= _ptcl[iadr].mass;
+                    _force[iadr].acc1 /= _ptcl[iadr].mass;
+                }
+                else {
+                    CalcOneAcc0Acc1(_force[iadr], nb_flag, _nb_info[iadr], _ptcl[iadr], iadr, vzero, 1.0, _ptcl, _n_tot, n_group, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
+                }
 
 //                //update perturber list
 //                PS::F64 rsearchi = _ptcl[iadr].r_search;
@@ -1111,7 +1134,7 @@ public:
                             PS::F64 apo = _Aint->bininfo[i_bin_strong].semi*(1.0 + _Aint->bininfo[i_bin_strong].ecc);
                             // tidal effect estimated by apo (strong) / rij
                             PS::F64 ftid_strong_sq = apo*apo/nb_info_[i].r_min2;
-                            if (ftid_strong_sq*fratio_weak_sq<1e-10) continue;
+                            if (ftid_strong_sq*fratio_weak_sq<1e-6) continue;
                         }
 
 #ifdef ADJUST_GROUP_DEBUG
@@ -1426,6 +1449,9 @@ public:
         const PS::S32 n_adr_dt_org = adr_dt_sorted_.size();
 
         // increase all data size by _n_list
+#ifdef HARD_DEBUG
+        assert(ptcl_.capacity()>=ptcl_.size()+_n_list);
+#endif        
         ptcl_.increaseSize(_n_list);
         ptcl_ptr_.increaseSize(_n_list);
         pred_.increaseSize(_n_list);
@@ -2551,7 +2577,7 @@ public:
        @param[in] _n_split: artifical particle splitting number
      */
     template<class Tptcl>
-    void fit(Tptcl* _ptcl_tt, const Binary& _bin, const PS::S32 _n_split) {
+    void fit(Tptcl* _ptcl_tt, const Binary& _bin, const PS::F64 _r_bin, const PS::S32 _n_split) {
         use_flag=true;
         PS::F64vec fi[8];
 #ifdef HARD_DEBUG
@@ -2601,7 +2627,8 @@ public:
                 +    0.062500000000000*fi[6][0] +  0.125000000000000*fi[6][2] +  0.062500000000000*fi[7][1] +  0.125000000000000*fi[7][2];
         }
         // Rescale
-        PS::F64 T2S = 1.0/(_bin.semi*(1+_bin.ecc)*0.35);
+        //PS::F64 T2S = 1.0/(_bin.semi*(1+_bin.ecc)*0.35);
+        PS::F64 T2S = 1.0/(_r_bin*0.16);
         PS::F64 T3S = T2S*T2S;
         for (PS::S32 i=0; i<6;  i++) T2[i] *= T2S;
         for (PS::S32 i=0; i<10; i++) T3[i] *= T3S;
@@ -2753,6 +2780,7 @@ public:
     PS::F64 r_A;       ///> (rout-rin)/(rout+rin)
     PS::F64 pot_off;   ///> (1 + r_A)/rout
     PS::F64 eps2;      ///> eps*eps
+    PS::F64 r_bin;     ///> for tidal tensor lscale
     
     ARC_int_pars() {}
     ARC_int_pars(const ARC_int_pars& in_) {
@@ -2952,7 +2980,7 @@ public:
 
         // Soft perturbation
         if(_ptcl_soft_pert)
-            par_list_[igroup].fit(_ptcl_soft_pert, bininfo[igroup], _n_split);
+            par_list_[igroup].fit(_ptcl_soft_pert, bininfo[igroup], Int_pars_->r_bin, _n_split);
 
         // allocate memory
         clist_[igroup].allocate(_n_ptcl);
@@ -3066,20 +3094,42 @@ public:
 
 #ifdef HARD_DEBUG
     //! check perturber list
-    void checkPert() {
+    bool checkPert() {
         for (PS::S32 i=0; i<clist_.size(); i++) {
             if(!group_mask_map_[i]){
                 const PS::S32 n_member = clist_[i].getN();
                 const PS::S32 i_pert_off = pert_disp_[i];
                 for (PS::S32 j=1; j<pert_n_[i]; j++) {
                     for (PS::S32 k=0; k<n_member; k++) {
+#ifdef HARD_DEBUG_DUMP
+                        if (clist_[i].getP(k).id==pert_[j+i_pert_off]->id) {
+                            std::cerr<<"Error: clist_[i].getP(k).id==pert_[j+i_pert_off]->id\n";
+                            return true;
+                        }
+#else
                         assert(clist_[i].getP(k).id!=pert_[j+i_pert_off]->id);
+#endif
                     }
+#ifdef HARD_DEBUG_DUMP
+                    if (clist_[i].id==pert_[j+i_pert_off]->id) {
+                        std::cerr<<"Error: clist_[i].id!=pert_[j+i_pert_off]->id\n";
+                        return true;
+                    }
+#else
                     assert(clist_[i].id!=pert_[j+i_pert_off]->id);
+#endif
                 }
+#ifdef HARD_DEBUG_DUMP
+                if (clist_[i].id!=pert_[i_pert_off]->id) {
+                    std::cerr<<"Error: clist_[i].id!=pert_[j+i_pert_off]->id\n";
+                    return true;
+                }
+#else
                 assert(clist_[i].id==pert_[i_pert_off]->id);
+#endif
             }
         }
+        return false;
     }
 #endif
 
@@ -3741,6 +3791,7 @@ public:
     bool info_print(std::ostream& os, const PS::S64 _n_group, const PS::S64 _n_group_in_cluster, const PS::S64 _n_ptcl, const PS::S64 _n_hint, const PS::F64 _dt_limit, const PS::S32 _kp, const PS::S32 _n_step_limit=10000) const{
         bool dump_flag=false;
         for (PS::S32 i=0; i<clist_.size(); i++) {
+            if(getMask(i)) continue;
             os<<"ARC_info: "
               <<" i_group_tot="<<_n_group+i
               <<" i_group="<<i

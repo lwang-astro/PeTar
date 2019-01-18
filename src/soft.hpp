@@ -12,6 +12,9 @@
 class ForceSoft{
 public:
     PS::F64vec acc; ///> soft acceleration (c.m.: averaged force from orbital particles; tensor: c.m. is substracted)
+#ifdef KDKDK_4TH
+    PS::F64vec acorr; ///> soft gradient correction for 4th order KDKDK method
+#endif
     PS::F64 pot; ///> full potential
     PS::S32 n_ngb; // neighbor number+1
     void clear(){
@@ -24,6 +27,9 @@ public:
 class FPSoft: public Ptcl{
 public:
     PS::F64vec acc; // soft
+#ifdef KDKDK_4TH
+    PS::F64vec acorr;
+#endif
     PS::F64 pot_tot; // soft + hard
     PS::S32 n_ngb;
     PS::S32 rank_org;
@@ -67,6 +73,9 @@ public:
 
     void copyFromForce(const ForceSoft & force){
         acc = force.acc;
+#ifdef KDKDK_4TH
+        acorr = force.acorr;
+#endif
         pot_tot = force.pot;
         n_ngb = force.n_ngb;
     }
@@ -126,6 +135,9 @@ public:
     PS::F64vec pos;
     PS::F64 r_search;
     PS::S32 rank_org;
+#ifdef KDKDK_4TH
+    PS::F64vec acc;
+#endif
     static PS::F64 eps;
     static PS::F64 r_out;
     static PS::F64 r_in;
@@ -137,6 +149,9 @@ public:
     void copyFromFP(const FPSoft & fp){ 
         id = fp.id;
         pos = fp.pos;
+#ifdef KDKDK_4TH
+        acc = fp.acc;
+#endif
         r_search = fp.r_search;
         rank_org = fp.rank_org;
     }
@@ -161,6 +176,9 @@ public:
     PS::F64 mass;
     PS::F64vec pos;
     PS::F64vec vel;
+#ifdef KDKDK_4TH
+    PS::F64vec acc;
+#endif
     PS::F64 r_search;
     PS::F64 mass_bk;
     PS::S64 status;
@@ -174,6 +192,9 @@ public:
         mass = fp.mass;
         pos = fp.pos;
         vel = fp.vel;
+#ifdef KDKDK_4TH
+        acc = fp.acc;
+#endif
         r_search = fp.r_search;
         mass_bk  = fp.mass_bk;
         status   = fp.status;
@@ -370,7 +391,7 @@ struct CalcForceEpEpWithLinearCutoffNoSimd{
                 //}
                 const PS::F64vec rij = xi - ep_j[j].pos;
                 const PS::F64 r2 = rij * rij;
-                const PS::F64 r2_eps = rij * rij + eps2;
+                const PS::F64 r2_eps = r2 + eps2;
                 const PS::F64 r_search = std::max(ep_i[i].r_search,ep_j[j].r_search);
                 if(r2 < r_search*r_search){
                     n_ngb_i++;
@@ -389,6 +410,41 @@ struct CalcForceEpEpWithLinearCutoffNoSimd{
         }
     }
 };
+
+#ifdef KDKDK_4TH
+struct CalcCorrectEpEpWithLinearCutoffNoSimd{
+    void operator () (const EPISoft * ep_i,
+                      const PS::S32 n_ip,
+                      const EPJSoft * ep_j,
+                      const PS::S32 n_jp,
+                      ForceSoft * force){
+        const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
+        const PS::F64 r_out2 = EPISoft::r_out*EPISoft::r_out;
+
+        for(PS::S32 i=0; i<n_ip; i++){
+            PS::F64vec acorr = 0.0;
+            const PS::F64vec posi = ep_i[i].pos;
+            const PS::F64vec acci = ep_i[i].acc;
+            for(PS::S32 j=0; j<n_jp; j++){
+                const PS::F64vec dr = posi - ep_j[j].pos;
+                const PS::F64vec da = acci - ep_j[j].acc; 
+                const PS::F64 r2    = dr * dr + eps2;
+                const PS::F64 drda  = dr * dacc
+                const PS::F64 r2_tmp = (r2_eps > r_out2) ? r2_eps : r_out2;
+                const PS::F64 r_inv = 1.0/sqrt(r2_tmp);
+                const PS::F64 r2_inv = r_inv*r_inv;
+                const PS::F64 m_r = ep_j[j].mass * r_inv;
+                const PS::F64 m_r3 = m_r * r_inv * r_inv;
+
+                const PS::F64 alpha = 3.0 * drda * r2_inv;
+                acorr += m_r3 * (da - alpha * dr); 
+            }
+            //std::cerr<<"poti= "<<poti<<std::endl;
+            force[i].acorr += 2.0 * acorr;
+        }
+    }
+};
+#endif
 
 struct CalcForceEpSpMonoNoSimd {
     template<class Tsp>

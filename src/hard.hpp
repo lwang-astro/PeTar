@@ -104,7 +104,6 @@ private:
     PS::F64 dt_min_hard_;
     PS::F64 eta_s_;
     PS::F64 time_origin_;
-    PS::F64 r_bin_;
     PS::F64 sdfactor_;
     PS::F64 v_max_;
     PS::S64 id_offset_;
@@ -846,7 +845,8 @@ public:
                      const PS::F64 _time_sys,
                      const PS::F64 _dt_max,
                      const PS::F64 _dt_tree,
-                     const PS::F64 _v_max) {
+                     const PS::F64 _v_max,
+                     const PS::F64 _r_bin) {
 
         PS::S32 n_group=_Aint.getNGroups();
         PS::S32 n_hint = _Hint.getPtclN();
@@ -855,7 +855,7 @@ public:
         for (PS::S32 i=0; i<n_group; i++) n_tot += _Aint.getGroupN(i);
         n_tot -= n_group;
 #endif
-        const PS::F64 r_bin2 = r_bin_*r_bin_;
+        const PS::F64 r_bin2 = _r_bin*_r_bin;
         // check Aint group to break
         PS::S32 break_group_list[n_group+1];
         PS::S32 break_split_index_list[n_group+1];
@@ -1188,7 +1188,10 @@ public:
             assert(n_count_check[k]==1);
 
         // check perturber
-        _Aint.checkPert();
+        fail_flag = _Aint.checkPert();
+#ifdef HARD_DEBUG_DUMP
+        if(fail_flag) return true;
+#endif
 #endif
 
         return false;
@@ -1472,11 +1475,11 @@ private:
 #ifdef ARC_SYM_SD_PERIOD
             Aint.info_print(std::cerr, ARC_n_groups, 1, _n_ptcl, 0, dt_limit_hard_,kp);
 #else
-            Aint.info_print(std::cerr, ARC_n_groups, 1, _n_ptcl, 0, dt_limit_hard_, 0, 100000);
-//            if (dump_flag) {
-//                dumpOneCluster("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
-//                abort();
-//            }
+            bool dump_flag = Aint.info_print(std::cerr, ARC_n_groups, 1, _n_ptcl, 0, dt_limit_hard_, 0, 100000);
+            if (dump_flag) {
+                dumpOneCluster("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
+                abort();
+            }
 #endif
 #endif
 #ifdef PROFILE
@@ -1494,7 +1497,7 @@ private:
             HermiteIntegrator<PtclHard> Hint;
             Hint.setParams(eta_s_, Int_pars_.rin, Int_pars_.rout, Int_pars_.eps2, _n_ptcl);
 
-            Hint.reserveMem(_n_ptcl);
+            Hint.reserveMem(_n_ptcl+4);
 
             // add c.m.
             Hint.addPtclList(_ptcl_artifical, adr_cm_ptcl, _n_group, 0, 0.0, false);
@@ -1658,7 +1661,7 @@ private:
                 bool fail_flag_aint = (nstepcount_aint<0); // fail case
                 nstepcount += nstepcount_aint;
                 bool fail_flag_hint = Hint.integrateOneStepAct(time_sys,dt_limit,dt_min_hard_, &Aint);
-                bool fail_flag_adj = adjustGroup<Tsoft>(Hint, Aint, _ptcl_local, _n_ptcl, time_sys, dt_limit, _time_end, _v_max);
+                bool fail_flag_adj = adjustGroup<Tsoft>(Hint, Aint, _ptcl_local, _n_ptcl, time_sys, dt_limit, _time_end, _v_max, Int_pars_.r_bin);
 
                 if(fail_flag_hint || fail_flag_aint || fail_flag_adj) {
 #ifdef HARD_DEBUG_DUMP
@@ -1683,16 +1686,16 @@ private:
 
 
 #ifdef HARD_DEBUG_PRINT
-//                fprintf(stderr,"Time = %.14g, dt = %.14g, nstep_ARC = %d \n",time_sys, dt_h, nstepcount);
+                fprintf(stderr,"Time = %.14g, dt = %.14g, nstep_ARC = %d \n",time_sys, dt_h, nstepcount);
 //                fprintf(stderr,"Slowdown parameters:");
 //                for(int k=0; k<Aint.getNGroups(); k++) {
 //                    std::cerr<<"Aint k="<<k<<std::endl;
 //                    Aint.printSlowDown(std::cerr,k);
 //                }
-                // fprintf(stderr,"Slowdownfactor: ");
-                // for(int k=0; k<_n_group; k++) fprintf(stderr,"%d: %f; ",k,Aint.getSlowDown(k));
-                // fprintf(stderr,"\n");
-//                Hint.printStepHist();
+                fprintf(stderr,"Slowdownfactor: ");
+                for(int k=0; k<_n_group; k++) fprintf(stderr,"%d: %f; ",k,Aint.getSlowDown(k));
+                fprintf(stderr,"\n");
+                Hint.printStepHist();
 //                for(int i=0; i<_n_ptcl; i++) ptcl_bk_pt[i] = _ptcl_local[i];
 
                 fprintf(fp,"%25.14e ",time_sys);
@@ -1721,7 +1724,11 @@ private:
             Hint.writeBackPtcl(Aint.getNGroups());
 
 #ifdef ARC_DEBUG_PRINT
-            Aint.info_print(std::cerr, ARC_n_groups, _n_group, _n_ptcl, Hint.getPtclN(), dt_limit_hard_,0);
+            bool dump_flag = Aint.info_print(std::cerr, ARC_n_groups, _n_group, _n_ptcl, Hint.getPtclN(), dt_limit_hard_, 0, 1000000);
+            if (dump_flag) {
+                dumpOneCluster("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
+                abort();
+            }
 #endif
 #ifdef HARD_CHECK_ENERGY
             CalcEnergyHardFull(_ptcl_local, _n_ptcl, E1, AE1, HE1, ESD1, Hint, Aint);
@@ -2060,6 +2067,7 @@ public:
         Int_pars_.r_A      = (_rout-_rin)/(_rout+_rin);
         Int_pars_.pot_off  = (1.0+Int_pars_.r_A)/_rout;
         Int_pars_.eps2  = _eps*_eps;
+        Int_pars_.r_bin = _rbin;
         /// Set chain pars (L.Wang)        
         dt_limit_hard_ = _dt_limit_hard;
         dt_min_hard_   = _dt_min_hard;
@@ -2069,7 +2077,7 @@ public:
         time_origin_ = _time_origin;
 //        gamma_ = std::pow(1.0/_gmin,0.33333);
         // r_search_single_ = _rsearch; 
-        r_bin_           = _rbin;
+        //r_bin_           = _rbin;
         // m_average_ = _m_avarage;
         n_split_ = _n_split;
         id_offset_ = _id_offset;
@@ -2515,7 +2523,7 @@ public:
                                                                n_group_in_cluster_,
                                                                n_group_in_cluster_offset_,
                                                                adr_first_ptcl_arti_in_cluster_,
-                                                               r_bin_,
+                                                               Int_pars_.r_bin,
                                                                Int_pars_.rin,     
                                                                Int_pars_.rout,    
                                                                _dt_tree, 
@@ -2622,7 +2630,7 @@ public:
     //        else group.searchAndMerge(ptcl_hard_.getPointer(adr_head), Int_pars_.rin);
     //        //group.searchAndMerge(ptcl_hard_.getPointer(adr_head), Int_pars_.rin);
     //        PS::ReallocatableArray<PtclHard> ptcl_new;
-    //        group.generateList(ptcl_hard_.getPointer(adr_head), ptcl_new, r_bin_, Int_pars_.rin, Int_pars_.rout, dt_tree, id_offset_, n_split_);
+    //        group.generateList(ptcl_hard_.getPointer(adr_head), ptcl_new, Int_pars_.r_bin, Int_pars_.rin, Int_pars_.rout, dt_tree, id_offset_, n_split_);
 //#pragma omp critical
     //        {
     //            for (PS::S32 j=0; j<ptcl_new.size(); j++) {
@@ -2690,15 +2698,14 @@ public:
        dt_min_hard_:   3-4
        eta_s_:         5-6
        time_origin_:   7-8
-       r_bin_:         9-10
-       sdfactor_:      11-12
-       v_max_:         13-14
-       id_offset_:     15-16
-       n_split_:       17
-       
+       sdfactor_:      9-10 
+       v_max_:         11-12
+       id_offset_:     13-14
+       n_split_:       15
+
      */
     void parDump(FILE *_p_file){
-        fwrite(&dt_limit_hard_, sizeof(PS::F32), 17, _p_file);
+        fwrite(&dt_limit_hard_, sizeof(PS::F32), 15, _p_file);
         Int_pars_.dump(_p_file);
         ARC_control_pert_.dump(_p_file);
         ARC_control_soft_.dump(_p_file);
@@ -2710,15 +2717,13 @@ public:
        dt_min_hard_:   3-4
        eta_s_:         5-6
        time_origin_:   7-8
-       r_bin_:         9-10
-       sdfactor_:      11-12
-       v_max_:         13-14
-       id_offset_:     15-16
-       n_split_:       17
-       
+       sdfactor_:      9-10 
+       v_max_:         11-12
+       id_offset_:     13-14
+       n_split_:       15
      */
     void parRead(FILE *fp){
-        size_t rcount = fread(&dt_limit_hard_, sizeof(PS::F32),17,fp);
+        size_t rcount = fread(&dt_limit_hard_, sizeof(PS::F32),15,fp);
         if (rcount<15) {
             std::cerr<<"Error: Data reading fails! requiring data number is 15, only obtain "<<rcount<<".\n";
             abort();
@@ -2735,6 +2740,7 @@ public:
 #endif
 #ifdef HARD_DEBUG_PRINT
         std::cerr<<"Parameters:"
+                 <<"\nr_bin: "<<Int_pars_.r_bin
                  <<"\nrout: "<<Int_pars_.rout
                  <<"\nrin: "<<Int_pars_.rin
                  <<"\neps2: "<<Int_pars_.eps2
@@ -2742,7 +2748,6 @@ public:
                  <<"\ndt_limit_hard: "<<dt_limit_hard_
                  <<"\ndt_min_hard: "<<dt_min_hard_
                  <<"\neta_s: "<<eta_s_
-                 <<"\nr_bin: "<<r_bin_
                  <<"\nsdfactor: "<<sdfactor_
                  <<"\nid_offset: "<<id_offset_
                  <<"\nn_split: "<<n_split_

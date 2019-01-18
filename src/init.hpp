@@ -30,7 +30,8 @@ void GetInitPar(const Tpsys & _tsys,
                 PS::F64 &_vel_disp,
                 const PS::F64 _search_factor,
                 const PS::F64 _ratio_r_cut,
-                const PS::S64 _n_bin) {
+                const PS::S64 _n_bin,
+                const PS::F64 _theta) {
 
     // local particle number
     const PS::S64 n_loc = _tsys.getNumberOfParticleLocal();
@@ -120,8 +121,8 @@ void GetInitPar(const Tpsys & _tsys,
         //}
     }
 
-    // if r_bin is not defined, set to 0.8 * r_in
-    if (_r_bin==0.0) _r_bin = 0.8*_r_in;
+    // if r_bin is not defined, set to theta * r_in
+    if (_r_bin==0.0) _r_bin = _theta*_r_in;
 
     // if r_search_min is not defined, calculate by search_factor*velocity_dispersion*tree_time_step + r_out
     if (_r_search_min==0.0) _r_search_min = _search_factor*_vel_disp*_dt_tree + _r_out;
