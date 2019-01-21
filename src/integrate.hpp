@@ -40,6 +40,9 @@ void kickOne(Tsys & _sys,
     for(PS::S32 i=0; i<n; i++){
         const PS::S32 k=_adr[i];
         _sys[k].vel  += _sys[k].acc * _dt;
+#ifdef KDKDK_4TH
+        _sys[k].vel  += _dt*_dt* _sys[k].acorr /48; 
+#endif
         _sys[k].status = 0;
     }
 }
@@ -67,6 +70,9 @@ void kickCluster(Tsys& _sys,
 #endif
             _ptcl[i].mass = _ptcl[i].mass_bk;
             _ptcl[i].vel += _sys[cm_adr].acc * _dt;
+#ifdef KDKDK_4TH
+            _ptcl[i].vel  += _dt*_dt* _sys[cm_adr].acorr /48; 
+#endif
             // Suppressed because thread unsafe
             //_sys[cm_adr].vel += _sys[cm_adr].acc * _dt/_sys[cm_adr].status; // status has total number of members, to avoid duplicate kick. 
         }
@@ -74,6 +80,9 @@ void kickCluster(Tsys& _sys,
         else if(i_adr>=0) {
             // not remote particles
             _ptcl[i].vel += _sys[i_adr].acc * _dt;
+#ifdef KDKDK_4TH
+            _ptcl[i].vel += _dt*_dt* _sys[i_adr].acorr /48; 
+#endif
         }
     }
 }
@@ -94,7 +103,13 @@ void kickSend(Tsys& _sys,
         const PS::S64 adr = _adr_ptcl_send[i];
         const PS::S64 cm_adr=-_sys[adr].status; // notice status is negative 
         // if it is group member, should not do kick since c.m. particles are on remote nodes;
-        if(cm_adr==0)  _sys[adr].vel += _sys[adr].acc * _dt;
+        if(cm_adr==0)  {
+            _sys[adr].vel += _sys[adr].acc * _dt;
+#ifdef KDKDK_4TH
+            _sys[adr].vel += _dt*_dt* _sys[adr].acorr /48; 
+#endif
+        }
+
 #ifdef HARD_DEBUG
         if(cm_adr==0) assert(_sys[adr].mass>0);
         else assert(_sys[adr].mass_bk>0);
@@ -118,6 +133,9 @@ void kickCM(Tsys& _sys,
 #pragma omp parallel for
     for(PS::S32 i=_adr_cm_start; i<n_tot; i+= _adr_cm_offset) {
         _sys[i].vel += _sys[i].acc * _dt;
+#ifdef KDKDK_4TH
+        _sys[i].vel += _dt*_dt* _sys[i].acorr /48; 
+#endif
 #ifdef HARD_DEBUG
         assert(_sys[i].id<0&&_sys[i].status>0);
 #endif

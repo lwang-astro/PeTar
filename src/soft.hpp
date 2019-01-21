@@ -26,9 +26,10 @@ public:
 
 class FPSoft: public Ptcl{
 public:
-    PS::F64vec acc; // soft
 #ifdef KDKDK_4TH
     PS::F64vec acorr;
+#else
+    PS::F64vec acc; // soft
 #endif
     PS::F64 pot_tot; // soft + hard
     PS::S32 n_ngb;
@@ -405,6 +406,9 @@ struct CalcForceEpEpWithLinearCutoffNoSimd{
             }
             //std::cerr<<"poti= "<<poti<<std::endl;
             force[i].acc += ai;
+#ifdef KDKDK_4TH
+            force[i].acorr = 0.0;
+#endif
             force[i].pot += poti;
             force[i].n_ngb = n_ngb_i;
         }
@@ -429,15 +433,15 @@ struct CalcCorrectEpEpWithLinearCutoffNoSimd{
                 const PS::F64vec dr = posi - ep_j[j].pos;
                 const PS::F64vec da = acci - ep_j[j].acc; 
                 const PS::F64 r2    = dr * dr + eps2;
-                const PS::F64 drda  = dr * dacc
-                const PS::F64 r2_tmp = (r2_eps > r_out2) ? r2_eps : r_out2;
+                const PS::F64 drda  = dr * da;
+                const PS::F64 r2_tmp = (r2 > r_out2) ? r2 : r_out2;
                 const PS::F64 r_inv = 1.0/sqrt(r2_tmp);
                 const PS::F64 r2_inv = r_inv*r_inv;
                 const PS::F64 m_r = ep_j[j].mass * r_inv;
-                const PS::F64 m_r3 = m_r * r_inv * r_inv;
+                const PS::F64 m_r3 = m_r * r2_inv;
 
                 const PS::F64 alpha = 3.0 * drda * r2_inv;
-                acorr += m_r3 * (da - alpha * dr); 
+                acorr -= m_r3 * (da - alpha * dr); 
             }
             //std::cerr<<"poti= "<<poti<<std::endl;
             force[i].acorr += 2.0 * acorr;
@@ -454,6 +458,7 @@ struct CalcForceEpSpMonoNoSimd {
                       const PS::S32 n_jp,
                       ForceSoft * force){
         const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
+        assert(n_jp==0);
         for(PS::S32 i=0; i<n_ip; i++){
             PS::F64vec xi = ep_i[i].pos;
             PS::F64vec ai = 0.0;

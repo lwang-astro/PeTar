@@ -73,6 +73,7 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #include"domain.hpp"
 #include"AR.h" 
 #include"cluster_list.hpp"
+#include"kickdriftstep.hpp"
 #ifdef PROFILE
 #include"profile.hpp"
 #endif
@@ -86,6 +87,7 @@ typedef PS::ParticleSystem<FPSoft> SystemSoft;
 
 // For neighbor searching
 typedef PS::TreeForForceShort<ForceSoft, EPISoft, EPJSoft>::Symmetry TreeNB;
+
 
 int main(int argc, char *argv[]){
     std::cout<<std::setprecision(PRINT_PRECISION);
@@ -113,7 +115,6 @@ int main(int argc, char *argv[]){
     atmp>>rank_str;
     PS::S64 dn_loop = 0;
     PS::F64 r_search_min = 0.0;
-    PS::F64 dt_reduce_factor_pre = 1.0;
     PS::F64 dt_reduce_factor = 1.0;
 
 #endif
@@ -547,7 +548,6 @@ int main(int argc, char *argv[]){
             }
         }
         while(dt_reduce_factor<dt_reduce_factor_org) dt_reduce_factor *=2.0;
-        dt_reduce_factor_pre = dt_reduce_factor;
     }
     
     if(my_rank == 0) {
@@ -664,7 +664,9 @@ int main(int argc, char *argv[]){
     bool output_flag = false;    // for output snapshot and information
     bool dt_mod_flag = false;    // for check whether tree time step need update
     PS::S64 n_loop = 0;
-    PS::F64 dt_kick = dt_soft.value/dt_reduce_factor_pre;
+    KickDriftStep dt_manager(dt_soft.value/dt_reduce_factor);
+    PS::F64 dt_kick  = dt_manager.getDtStartContinue();
+    PS::F64 dt_drift = dt_manager.getDtDriftContinue();
 
 /// Main loop
     while(time_sys <= time_end.value){
@@ -766,11 +768,11 @@ int main(int argc, char *argv[]){
         }
 
 #ifndef USE_SIMD
-        tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSIMD(),
+        tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSimd(),
 #ifdef USE_QUAD
                                            CalcForceEpSpQuadNoSimd(),
 #else
-                                           CalcForceEpSpNoSIMD(),
+                                           CalcForceEpSpMonoNoSimd(),
 #endif
                                            system_soft,
                                            dinfo);
@@ -820,7 +822,6 @@ int main(int argc, char *argv[]){
         system_hard_connected.correctForceWithCutoffTreeNeighborAndClusterOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, search_cluster.getAdrSysConnectClusterSend());
 #endif
 
-
 #ifdef CORRECT_FORCE_DEBUG
         // switch backup and sys particle data
 #pragma omp parallel for
@@ -858,6 +859,59 @@ int main(int argc, char *argv[]){
         
 #endif
 
+
+#ifdef KDKDK_4TH
+#ifdef PROFILE
+        profile.force_correct.barrier();
+        PS::Comm::barrier();
+        profile.force_correct.end();
+        profile.tree_soft.start();
+
+        // only do correction at middle step
+        if (dt_manager.getCountContinue() == 1) {
+
+            tree_soft.clearNumberOfInteraction();
+            tree_soft.clearTimeProfile();
+#endif
+            // correction calculation
+            //tree_soft.setParticaleLocalTree(system_soft, false);
+        
+            tree_soft.calcForceAllAndWriteBack(CalcCorrectEpEpWithLinearCutoffNoSimd(),
+#ifdef USE_QUAD
+                                               CalcForceEpSpQuadNoSimd(),
+#else
+                                               CalcForceEpSpMonoNoSimd(),
+#endif
+                                               system_soft,
+                                               dinfo);
+
+#ifdef PROFILE
+            n_count.ep_ep_interact     += tree_soft.getNumberOfInteractionEPEPLocal();
+            n_count_sum.ep_ep_interact += tree_soft.getNumberOfInteractionEPEPGlobal();
+            n_count.ep_sp_interact     += tree_soft.getNumberOfInteractionEPSPLocal();
+            n_count_sum.ep_sp_interact += tree_soft.getNumberOfInteractionEPSPGlobal(); 
+
+            ps_profile += tree_soft.getTimeProfile();
+            domain_decompose_weight += ps_profile.calc_force;
+
+            profile.tree_soft.barrier();
+            PS::Comm::barrier();
+            profile.tree_soft.end();
+            profile.force_correct.start();
+#endif 
+
+            // Isolated clusters
+            system_hard_isolated.correctForceWithCutoffClusterOMP(system_soft, true);
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+            // Connected clusters
+            system_hard_connected.correctForceWithCutoffTreeNeighborAndClusterOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, search_cluster.getAdrSysConnectClusterSend(), true);
+#endif
+        }
+
+#endif
+
+
 #ifdef PROFILE
         profile.force_correct.barrier();
         PS::Comm::barrier();
@@ -891,42 +945,42 @@ int main(int argc, char *argv[]){
                 stat.dump(fstatus, WRITE_WIDTH);
                 fstatus<<std::endl;
             }
-            
             output_flag = false;
-
-            // set kick step
-            dt_kick = 0.5*dt_soft.value/dt_reduce_factor_pre;
+            dt_kick = dt_manager.getDtStartContinue();
         }
         else {
-            // check whether tree time step need update
-            if(dt_reduce_factor_pre!= dt_reduce_factor) {
-                // in increasing case, need to make sure the time is consistent with block step time/dt_tree
-                if(dt_reduce_factor<dt_reduce_factor_pre) {
-                    PS::F64 dt_tree_now = dt_soft.value/dt_reduce_factor_pre;
-                    PS::F64 dt_tree_max = calcDtLimit(time_sys, dt_soft.value, dt_tree_now);
-                    if (dt_tree_max == dt_tree_now) {
-                        dt_mod_flag = false;
-                        dt_reduce_factor = dt_reduce_factor_pre;
-                    }
-                    else {
-                        // limit dt_reduce_factor to the maximum block step allown
-                        dt_reduce_factor = dt_soft.value/dt_tree_max;
-                        dt_mod_flag = true;
-                    }
-                }
-                else dt_mod_flag = true;
-            }
-            else dt_mod_flag = false;
+            output_flag = false;
+            dt_mod_flag = false;
+            dt_kick = dt_manager.getDtKickContinue();
 
-            // output step, reduce step by half 
-            if( fmod(time_sys, dt_snp.value) == 0.0) {
-                output_flag = true;
-                dt_kick = 0.5*dt_soft.value/dt_reduce_factor_pre;
-            }
-            else {
-                output_flag = false;
-                if(dt_mod_flag) dt_kick = 0.5*dt_soft.value/dt_reduce_factor_pre;
-                else dt_kick = dt_soft.value/dt_reduce_factor_pre;
+            // check whether tree time step need update only when one full step finish
+            if (dt_manager.getCountContinue() == 0) {
+                PS::F64 dt_tree_new = dt_soft.value / dt_reduce_factor;
+                PS::F64 dt_tree_now = dt_manager.getStep();
+                if(dt_tree_now!= dt_tree_new) {
+                    // in increasing case, need to make sure the time is consistent with block step time/dt_tree
+                    if(dt_tree_now<dt_tree_new) {
+                        PS::F64 dt_tree_max = calcDtLimit(time_sys, dt_soft.value, dt_tree_now);
+                        if (dt_tree_max == dt_tree_now) {
+                            // no modificatoin, recover original reduce factor
+                            dt_reduce_factor= dt_soft.value/dt_tree_now;
+                        }
+                        else {
+                            dt_mod_flag = true;
+                            // limit dt_reduce_factor to the maximum block step allown
+                            dt_reduce_factor = std::min(dt_soft.value/dt_tree_max, dt_reduce_factor);
+
+                        }
+                    }
+                    else dt_mod_flag = true;
+                }
+                if(dt_mod_flag) dt_kick = dt_manager.getDtEndContinue();
+
+                // output step, get last kick step
+                if( fmod(time_sys, dt_snp.value) == 0.0) {
+                    output_flag = true;
+                    dt_kick = dt_manager.getDtEndContinue();
+                }
             }
         }
 
@@ -1000,21 +1054,6 @@ int main(int argc, char *argv[]){
             search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
 #endif
 
-#ifdef MAIN_DEBUG
-            write_p(fout, time_sys, dt_soft.value*0.5, system_soft, stat.eng_now, stat.eng_diff);
-//        //output
-//        PS::S32 ntot = system_soft.getNumberOfParticleLocal();
-//        fout<<std::setprecision(17)<<time_sys<<" ";
-//        for (PS::S32 i=0;i<ntot;i++){
-//          fout<<system_soft[i].mass<<" ";
-//          for (PS::S32 k=0;k<3;k++) fout<<system_soft[i].pos[k]<<" ";
-//          for (PS::S32 k=0;k<3;k++) fout<<system_soft[i].vel[k]<<" ";
-//          fout<<system_soft[i].pot_tot<<" ";
-//          fout<<0.5*system_soft[i].mass*system_soft[i].vel*system_soft[i].vel<<" ";
-//        }
-//        fout<<std::endl;
-#endif
-
             // update status
             stat.time = time_sys;
             stat.N = n_glb.value;
@@ -1068,6 +1107,21 @@ int main(int argc, char *argv[]){
                 system_soft.writeParticleBinary(fname.c_str(), file_header);
             system_soft.setNumberOfParticleLocal(n_loc_all);
 
+#ifdef MAIN_DEBUG
+            write_p(fout, time_sys, system_soft, stat.eng_now, stat.eng_diff);
+//        //output
+//        PS::S32 ntot = system_soft.getNumberOfParticleLocal();
+//        fout<<std::setprecision(17)<<time_sys<<" ";
+//        for (PS::S32 i=0;i<ntot;i++){
+//          fout<<system_soft[i].mass<<" ";
+//          for (PS::S32 k=0;k<3;k++) fout<<system_soft[i].pos[k]<<" ";
+//          for (PS::S32 k=0;k<3;k++) fout<<system_soft[i].vel[k]<<" ";
+//          fout<<system_soft[i].pot_tot<<" ";
+//          fout<<0.5*system_soft[i].mass*system_soft[i].vel*system_soft[i].vel<<" ";
+//        }
+//        fout<<std::endl;
+#endif
+
 #ifdef PROFILE
             profile.output.barrier();
             PS::Comm::barrier();
@@ -1078,6 +1132,15 @@ int main(int argc, char *argv[]){
 #endif
         }
 
+        // modify the tree step
+        if(dt_mod_flag) {
+            dt_manager.setStep(dt_soft.value/dt_reduce_factor);
+            std::cout<<"Tree time step change, time = "<<time_sys
+                     <<"  dt_soft = "<<dt_soft.value
+                     <<"  reduce factor = "<<dt_reduce_factor
+                     <<std::endl;
+        }
+
         // second kick if dt_tree is changed or output is done
         if(dt_mod_flag||output_flag) {
 #ifdef PROFILE
@@ -1085,10 +1148,7 @@ int main(int argc, char *argv[]){
 #endif
 
             //update new tree step if reduce factor is changed
-            dt_kick = 0.5*dt_soft.value/dt_reduce_factor;
-
-            if(dt_mod_flag)
-                std::cout<<"Tree time step change, time = "<<time_sys<<"  dt_tree = "<<dt_kick<<"  reduce factor = "<<dt_reduce_factor<<"  dt_tree_org = "<<dt_soft.value<<std::endl;
+            dt_kick = dt_manager.getDtStartContinue();
 
             // single
             kickOne(system_soft, dt_kick, search_cluster.getAdrSysOneCluster());
@@ -1124,6 +1184,8 @@ int main(int argc, char *argv[]){
         system_hard_connected.setTimeOrigin(time_sys);
         ////// set time
         
+        // get drift step
+        dt_drift = dt_manager.getDtDriftContinue();
 
 #ifdef PROFILE
         profile.hard_single.start();
@@ -1131,7 +1193,7 @@ int main(int argc, char *argv[]){
         ////// integrater one cluster
         system_hard_one_cluster.initializeForOneCluster(search_cluster.getAdrSysOneCluster().size());
         system_hard_one_cluster.setPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
-        system_hard_one_cluster.driveForOneClusterOMP(dt_soft.value, v_max);
+        system_hard_one_cluster.driveForOneClusterOMP(dt_drift, v_max);
         //system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft, search_cluster.getAdrSysOneCluster());
         system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft);
         ////// integrater one cluster
@@ -1146,7 +1208,7 @@ int main(int argc, char *argv[]){
         profile.hard_isolated.start();
 #endif
         // integrate multi cluster A
-        system_hard_isolated.driveForMultiClusterOMP(dt_soft.value, &(system_soft[0]));
+        system_hard_isolated.driveForMultiClusterOMP(dt_drift, &(system_soft[0]));
         //system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_,remove_list);
         system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
         // integrate multi cluster A
@@ -1162,7 +1224,7 @@ int main(int argc, char *argv[]){
         profile.hard_connected.start();
 #endif
         // integrate multi cluster B
-        system_hard_connected.driveForMultiClusterOMP(dt_soft.value, &(system_soft[0]));
+        system_hard_connected.driveForMultiClusterOMP(dt_drift, &(system_soft[0]));
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
         // integrate multi cluster B
 #ifdef PROFILE
@@ -1188,7 +1250,6 @@ int main(int argc, char *argv[]){
         dt_reduce_factor_org = std::max(system_hard_isolated.dt_reduce_factor,    dt_reduce_factor_org);
         dt_reduce_factor_org = std::max(system_hard_one_cluster.dt_reduce_factor, dt_reduce_factor_org);
         dt_reduce_factor_org = PS::Comm::getMaxValue(dt_reduce_factor_org);
-        dt_reduce_factor_pre = dt_reduce_factor;
         dt_reduce_factor = 1.0;
         while(dt_reduce_factor<dt_reduce_factor_org) dt_reduce_factor *=2.0;
 
@@ -1237,8 +1298,10 @@ int main(int argc, char *argv[]){
         profile.exchange.end();
 #endif
 
-        // advance time_sys
-        time_sys += dt_soft.value/dt_reduce_factor_pre;
+        // advance time_sys and step count
+        time_sys += dt_drift;
+        dt_manager.nextContinue();
+
         //std::cout<<"T="<<time_sys<<" rd="<<dt_reduce_factor_pre<<std::endl;
 
 #ifdef PROFILE

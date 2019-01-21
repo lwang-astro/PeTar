@@ -40,6 +40,50 @@ inline void CalcAccPotShortWithLinearCutoff(const PS::F64vec & posi,
     acci_pla -= (Rm3*(1-k) - Rm3_max)*rij;
 }
 
+#ifdef KDKDK_4TH
+inline void CalcAcorrShortWithLinearCutoff(const PS::F64vec & posi,
+                                           PS::F64vec & acci,
+                                           PS::F64vec & acorri,
+                                           const PS::F64vec & posj,
+                                           const PS::F64vec & accj,
+                                           const PS::F64 massj,
+                                           const PS::F64 eps2,
+                                           const PS::F64 rcut_oi_inv,
+                                           const PS::F64 rcut_A,
+                                           const PS::F64 rcut_out,
+                                           const PS::F64 rcut_in) {
+    const PS::F64 rcut2_out = rcut_out * rcut_out;
+
+    const PS::F64vec rij = posi - posj;
+    const PS::F64vec aij = acci - accj;
+    const PS::F64 r2 = rij * rij;
+    const PS::F64 r2_eps = r2 + eps2;
+    const PS::F64 rijaij = rij*aij;
+    const PS::F64 R = 1.0/sqrt(r2_eps);
+    const PS::F64 Rm = massj * R;
+    const PS::F64 R2 = R * R;
+    const PS::F64 Rm3 = Rm * R2;
+    const PS::F64 r_eps = R * r2_eps;
+
+    const PS::F64 k = 1.0 - cutoff_poly_3rd(r_eps, rcut_oi_inv, rcut_A, rcut_in);
+    const PS::F64 kdot = - cutoff_poly_3rd_dot(r_eps, rijaij, rcut_oi_inv, rcut_A, rcut_in);
+
+    const PS::F64 r2_max = (r2_eps > rcut2_out) ? r2_eps : rcut2_out;
+    const PS::F64 R_max = 1.0/sqrt(r2_max);
+    const PS::F64 Rm_max = massj * R_max;
+    const PS::F64 R2_max = R_max * R_max;
+    const PS::F64 Rm3_max = Rm_max * R2_max;
+
+    const PS::F64 alpha = rijaij * R2;
+    const PS::F64 alpha_max = rijaij * R2_max;
+    const PS::F64vec acorr_k = Rm3 * (k*aij - (3.0*k*alpha - kdot) * rij);
+    const PS::F64vec acorr_max = Rm3_max * (aij - 3.0*alpha_max * rij);
+
+    acorri -= 2.0 * (acorr_k - acorr_max);
+    //acci + dt_kick * dt_kick * acorri /48; 
+}
+#endif
+
 // Pure Newtonian pair force function
 template <class Tptcl, class extpar>
 int Newtonian_AW (double Aij[3], double &Pij, double pWij[3], double &Wij, const double xij[3], const Tptcl &pi, const Tptcl &pj, extpar* pars) {
