@@ -1133,7 +1133,9 @@ public:
         n_group = _Aint.getNGroups();
                         
         // delete ptcl
-        _Hint.removePtclList(hint_del_ptcl_index, n_hint_del, n_group_old, n_group_old);
+        bool fail_flag = _Hint.removePtclList(hint_del_ptcl_index, n_hint_del, n_group_old, n_group_old);
+        if(fail_flag) return true;
+
         // renew c.m. ptcl
         for (PS::S32 i=0; i<n_hint_mod; i++) {
             PS::S32 i_mod_hint=hint_mod_ptcl_index[i];
@@ -1178,7 +1180,7 @@ public:
         }
 
         // initial the new ptcl 
-        bool fail_flag=_Hint.initial(NULL, n_hint_mod+n_hint_new, _time_sys, _dt_max, dt_min_hard_, &_Aint);
+        fail_flag=_Hint.initial(NULL, n_hint_mod+n_hint_new, _time_sys, _dt_max, dt_min_hard_, &_Aint);
         if(fail_flag) return true;
 
 #ifdef ADJUST_GROUP_DEBUG

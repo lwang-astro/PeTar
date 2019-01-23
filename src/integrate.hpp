@@ -321,9 +321,11 @@ class NeighborInfo{
 public:
     PS::S32 r_min_index; // nearest neighbor index for each ptcl
     PS::F64 r_min2;      // nearest neighbor distance square
-    PS::F64 min_mass;  // mimimum mass in neighbors
+    PS::F64 min_mass;    // mimimum mass in neighbors
+    bool resolve_flag;   // flag to indicate whether the group member is resolved
+    bool init_flag;      // indicate whether the initial of step size is needed due to the resolve switch in neigbbor force
 
-    NeighborInfo(): r_min_index(-1), r_min2(PS::LARGE_FLOAT), min_mass(PS::LARGE_FLOAT) {}
+    NeighborInfo(): r_min_index(-1), r_min2(PS::LARGE_FLOAT), min_mass(PS::LARGE_FLOAT), resolve_flag(false), init_flag(false) {}
 };
 
 template <class Tphard>
@@ -588,7 +590,7 @@ private:
     template <class Tpi, class Tptcl, class ARCint>
     inline void CalcOneAcc0Acc1(PtclForce &_force, 
                                 bool _nb_flag[],
-                                NeighborInfo& _nb_info,
+                                NeighborInfo _nb_info[],
                                 const Tpi &_pi,
                                 const PS::S32 _iadr,
                                 const PS::F64vec &_vcmsdi,
@@ -607,7 +609,14 @@ private:
             if(_Aint->getMask(j)) continue;
             const auto* pj = _Aint->getGroupPtcl(j);
             PS::F64 sdj = 1.0/_Aint->getSlowDown(j);
-            if(sdj==1.0) {
+            // resolve case check, use some region to avoid frequent switch
+            if(sdj==1.0||(_nb_info[j].resolve_flag&&sdj<3.0)) {
+                // if switch, make init flag true
+                if(!_nb_info[j].resolve_flag) {
+                    _nb_info[_iadr].init_flag = true;
+                    _nb_info[j].init_flag = true;
+                    _nb_info[j].resolve_flag = true;
+                }
 #ifdef HARD_DEBUG
                 PS::F64 mcmcheck =0.0;
 #endif
@@ -623,11 +632,11 @@ private:
 #endif
                     PS::F64 rs=std::max(_pi.r_search,pj[k].r_search);
                     if(r2<=rs*rs) _nb_flag[j] = true;
-                    if(r2<_nb_info.r_min2) {
-                        _nb_info.r_min2 = r2;
-                        _nb_info.r_min_index = j;
+                    if(r2<_nb_info[_iadr].r_min2) {
+                        _nb_info[_iadr].r_min2 = r2;
+                        _nb_info[_iadr].r_min_index = j;
                     }
-                    _nb_info.min_mass = std::min(_nb_info.min_mass,_ptcl[j].mass);
+                    _nb_info[_iadr].min_mass = std::min(_nb_info[_iadr].min_mass,_ptcl[j].mass);
                 }
 #ifdef HARD_DEBUG
                 assert(abs(mcmcheck-_ptcl[j].mass)<1e-10);
@@ -635,6 +644,12 @@ private:
 #endif                    
             }
             else {
+                // if switch, make init flag true
+                if(_nb_info[j].resolve_flag) {
+                    _nb_info[_iadr].init_flag = true;
+                    _nb_info[j].init_flag = true;
+                    _nb_info[j].resolve_flag = false;
+                }
                 PS::F64 r2 = 0.0;
                 CalcAcc0Acc1R2Cutoff(_pi.pos, _pi.vel*_sdi+_vcmsdi,
                                      _force.acc0, _force.acc1, r2,
@@ -642,11 +657,11 @@ private:
                                      _eps2, _rout, _rin, _r_oi_inv, _r_A);
                 PS::F64 rs=std::max(_pi.r_search, _ptcl[j].r_search);
                 if(r2<=rs*rs) _nb_flag[j] = true;
-                if(r2<_nb_info.r_min2) {
-                    _nb_info.r_min2 = r2;
-                    _nb_info.r_min_index = j;
+                if(r2<_nb_info[_iadr].r_min2) {
+                    _nb_info[_iadr].r_min2 = r2;
+                    _nb_info[_iadr].r_min_index = j;
                 }
-                _nb_info.min_mass = std::min(_nb_info.min_mass,_ptcl[j].mass);
+                _nb_info[_iadr].min_mass = std::min(_nb_info[_iadr].min_mass,_ptcl[j].mass);
             }
         }
         for(PS::S32 j=_n_group; j<_n_tot; j++){
@@ -662,11 +677,11 @@ private:
             // }
             PS::F64 rs=std::max(_pi.r_search, _ptcl[j].r_search);
             if(r2<=rs*rs) _nb_flag[j] = true;
-            if(r2<_nb_info.r_min2) {
-                _nb_info.r_min2 = r2;
-                _nb_info.r_min_index = j;
+            if(r2<_nb_info[_iadr].r_min2) {
+                _nb_info[_iadr].r_min2 = r2;
+                _nb_info[_iadr].r_min_index = j;
             }
-            _nb_info.min_mass = std::min(_nb_info.min_mass,_ptcl[j].mass);
+            _nb_info[_iadr].min_mass = std::min(_nb_info[_iadr].min_mass,_ptcl[j].mass);
         }
     }
 
@@ -733,14 +748,19 @@ private:
                 const PS::F64 sdi = 1.0/_Aint->getSlowDown(iadr);      // slowdown factor
                 const PS::F64vec vcmsdi = (1.0-sdi)*_ptcl[iadr].vel;   // slowdown velocity
 
-                if(sdi==1.0) {
+                if(sdi==1.0||(_nb_info[iadr].resolve_flag&&sdi<3.0)) {
+                    // if switch, make init flag true
+                    if(!_nb_info[iadr].resolve_flag) {
+                        _nb_info[iadr].init_flag = true;
+                        _nb_info[iadr].resolve_flag = true;
+                    }
 
                     PtclForce fp[ni];
 //                PS::F64 r2min[_n_tot]={PS::LARGE_FLOAT};
 
                     for (PS::S32 j=0; j<ni; j++) {
                         fp[j].acc0 = fp[j].acc1 = 0.0;
-                        CalcOneAcc0Acc1(fp[j], nb_flag, _nb_info[iadr], pi[j], iadr, vcmsdi, sdi, _ptcl, _n_tot, n_group, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
+                        CalcOneAcc0Acc1(fp[j], nb_flag, _nb_info, pi[j], iadr, vcmsdi, sdi, _ptcl, _n_tot, n_group, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
                         // c.m. force
                         _force[iadr].acc0 += pi[j].mass*fp[j].acc0;
                         _force[iadr].acc1 += pi[j].mass*fp[j].acc1;
@@ -760,7 +780,13 @@ private:
                     _force[iadr].acc1 /= _ptcl[iadr].mass;
                 }
                 else {
-                    CalcOneAcc0Acc1(_force[iadr], nb_flag, _nb_info[iadr], _ptcl[iadr], iadr, vzero, 1.0, _ptcl, _n_tot, n_group, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
+                    // if switch, make init flag true
+                    if(_nb_info[iadr].resolve_flag) {
+                        _nb_info[iadr].init_flag = true;
+                        _nb_info[iadr].resolve_flag = false;
+                    }
+
+                    CalcOneAcc0Acc1(_force[iadr], nb_flag, _nb_info, _ptcl[iadr], iadr, vzero, 1.0, _ptcl, _n_tot, n_group, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
                 }
 
 //                //update perturber list
@@ -774,7 +800,7 @@ private:
             }
             else {
 //                PS::F64 r2[_n_tot];
-                CalcOneAcc0Acc1(_force[iadr], nb_flag, _nb_info[iadr], _ptcl[iadr], iadr, vzero, 1.0, _ptcl, _n_tot, n_group, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
+                CalcOneAcc0Acc1(_force[iadr], nb_flag, _nb_info, _ptcl[iadr], iadr, vzero, 1.0, _ptcl, _n_tot, n_group, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
             }
 
             // Update neighbors
@@ -876,6 +902,7 @@ private:
     //! correct ptcl and calculate step 
     /*! Correct ptcl and calculate next time step
       @param[in,out] _ptcl: particle array store the dt, time, previous acc0, acc1, the acc0, acc1 are updated with new ones
+      @param[in] _nb_info: neighbor information that contain the initial flag for dt
       @param[in] _force: predicted forces
       @param[in] _adr_dt_sorted: active particle index array
       @param[in] _n_act: number of active particles
@@ -886,6 +913,7 @@ private:
       \return fail_flag: if the time step < dt_min, return true (failure)
      */
     bool CorrectAndCalcDt4thAct(PtclH4 _ptcl[],
+                                NeighborInfo _nb_info[],
                                 const PtclForce _force[],
                                 const PS::S32 _adr_dt_sorted[], 
                                 const PS::S32 _n_act,
@@ -918,7 +946,13 @@ private:
 
             const PS::F64vec acc3 = (1.5*hinv*hinv*hinv) * (A1p - A0m);
             const PS::F64vec acc2 = (0.5*hinv*hinv) * A1m + h*acc3;
-            const PS::F64 dt_ref = CalcDt4th(pti->acc0, pti->acc1, acc2, acc3, _eta, _a0_offset_sq);
+            PS::F64 dt_ref;
+            if (_nb_info[i].init_flag) {
+                dt_ref = CalcDt2nd(pti->acc0, pti->acc1, _eta, _a0_offset_sq);
+                _nb_info[i].init_flag = false;
+            }
+            else
+                dt_ref = CalcDt4th(pti->acc0, pti->acc1, acc2, acc3, _eta, _a0_offset_sq);
 
             const PS::F64 dt_old = pti->dt;
 #ifdef HARD_DEBUG
@@ -1560,15 +1594,23 @@ public:
       @param[in] _n_list: number of removing particles
       @param[in] _n_group: number of c.m. ptcl (count from first): ptcl will not be delected but only remove from adr_dt_sorted_, also the offset of the index between Hint.ptcl_ _single_index_origin
       @param[in] _n_nb_correct: number of ptcl (count from first) to correct neighbor list
+      \return fail_flag
      */
-    void removePtclList(const PS::S32* _list,
+    bool removePtclList(const PS::S32* _list,
                         const PS::S32 _n_list,
                         const PS::S32 _n_group,
                         const PS::S32 _n_nb_correct) {
         // quit if no deleted ones
-        if(_n_list==0) return;
+        if(_n_list==0) return false;
 #ifdef HARD_DEBUG
+#ifdef HARD_DEBUG_DUMP
+        if(_n_list<=0) {
+            std::cerr<<"Error: _n_list<=0\n";
+            return true;
+        }
+#else
         assert(_n_list>0);
+#endif
 #endif
 
         const PS::S32 n_org=ptcl_.size();
@@ -1607,8 +1649,15 @@ public:
                 trace[k]=n_org;
             }
 #ifdef HARD_DEBUG
+#ifdef HARD_DEBUG_DUMP
+            if(k>=n_org||idel>=n_org) {
+                std::cerr<<"Error: k>=n_org||idel>=n_org\n";
+                return true;
+            }
+#else
             assert(k<n_org);
             assert(idel<n_org);
+#endif
 #endif
 
             // check the last avaiable particle that can be moved to idel
@@ -1697,7 +1746,7 @@ public:
             assert(Jlist_n_[i]>=0);
 #endif
         }
-            
+        return false;
     }                       
 
     //! Write back particle data to ptcl
@@ -2070,6 +2119,8 @@ public:
         for(PS::S32 i=0; i<_n_list; i++){
             PS::S32 iadr = ptcl_list[i];
             time_next_[iadr] = ptcl_[iadr].time + ptcl_[iadr].dt;
+            // reset initial flag 
+            nb_info_[iadr].init_flag = false;
         }
 
         return fail_flag;
@@ -2135,7 +2186,7 @@ public:
 //                               r_in_, r_out_, r_oi_inv_, r_A_, eps_sq_, _Aint, _n_group);
 
         // ptcl_org::pos,vel; pred::time,dt,acc0,acc1,acc2,acc3 updated
-        bool fail_flag=CorrectAndCalcDt4thAct(ptcl_.getPointer(), force_.getPointer(), adr_dt_sorted_.getPointer(), n_act_, _dt_max, _dt_min, a0_offset_sq_, eta_s_);
+        bool fail_flag=CorrectAndCalcDt4thAct(ptcl_.getPointer(), nb_info_.getPointer(), force_.getPointer(), adr_dt_sorted_.getPointer(), n_act_, _dt_max, _dt_min, a0_offset_sq_, eta_s_);
 
         for(PS::S32 i=0; i<n_act_; i++){
             PS::S32 adr = adr_dt_sorted_[i];
@@ -2217,6 +2268,7 @@ public:
 
 
         bool fail_flag=CorrectAndCalcDt4thAct(ptcl_.getPointer(), 
+                                              nb_info_.getPointer(),
                                               force_.getPointer(), 
                                               int_list, n_int,
                                               _dt_max, _dt_min, a0_offset_sq_, eta_s_);
