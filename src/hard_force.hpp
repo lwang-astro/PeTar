@@ -224,6 +224,10 @@ PS::S32 Newtonian_extA_pert (double3* acc, const PS::F64 time, Tptcl* p, const P
         xp[i][0] = pert[i]->pos.x + dt*(pert[i]->vel.x + 0.5*dt*(pert[i]->acc0.x + inv3*dt*pert[i]->acc1.x));
         xp[i][1] = pert[i]->pos.y + dt*(pert[i]->vel.y + 0.5*dt*(pert[i]->acc0.y + inv3*dt*pert[i]->acc1.y));
         xp[i][2] = pert[i]->pos.z + dt*(pert[i]->vel.z + 0.5*dt*(pert[i]->acc0.z + inv3*dt*pert[i]->acc1.z));
+
+        //xp[i][0] = pert[i]->pos.x + dt*(pert[i]->vel.x + 0.5*dt*(pert[i]->acc0.x + inv3*dt*(pert[i]->acc1.x + 0.25*dt*(pert[i]->acc2.x + 0.2*dt*pert[i]->acc3.x))));
+        //xp[i][1] = pert[i]->pos.y + dt*(pert[i]->vel.y + 0.5*dt*(pert[i]->acc0.y + inv3*dt*(pert[i]->acc1.y + 0.25*dt*(pert[i]->acc2.x + 0.2*dt*pert[i]->acc3.x))));
+        //xp[i][2] = pert[i]->pos.z + dt*(pert[i]->vel.z + 0.5*dt*(pert[i]->acc0.z + inv3*dt*(pert[i]->acc1.z + 0.25*dt*(pert[i]->acc2.x + 0.2*dt*pert[i]->acc3.x))));
         //xp[i] = pert[i]->pos + dt*
         //    (pert[i]->vel* + 0.5*dt*(
         //        pert[i]->acc0 + inv3*dt*(

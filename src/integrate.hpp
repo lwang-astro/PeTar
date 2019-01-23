@@ -321,11 +321,12 @@ class NeighborInfo{
 public:
     PS::S32 r_min_index; // nearest neighbor index for each ptcl
     PS::F64 r_min2;      // nearest neighbor distance square
+    PS::F64 r_min_mass;  // nearest neighbor mass
     PS::F64 min_mass;    // mimimum mass in neighbors
     bool resolve_flag;   // flag to indicate whether the group member is resolved
     bool init_flag;      // indicate whether the initial of step size is needed due to the resolve switch in neigbbor force
 
-    NeighborInfo(): r_min_index(-1), r_min2(PS::LARGE_FLOAT), min_mass(PS::LARGE_FLOAT), resolve_flag(false), init_flag(false) {}
+    NeighborInfo(): r_min_index(-1), r_min2(PS::LARGE_FLOAT), r_min_mass(0.0), min_mass(PS::LARGE_FLOAT), resolve_flag(true), init_flag(false) {}
 };
 
 template <class Tphard>
@@ -610,6 +611,7 @@ private:
             const auto* pj = _Aint->getGroupPtcl(j);
             PS::F64 sdj = 1.0/_Aint->getSlowDown(j);
             // resolve case check, use some region to avoid frequent switch
+#ifndef HERMITE_RESOLVE_GROUP
             if(sdj==1.0||(_nb_info[j].resolve_flag&&sdj<3.0)) {
                 // if switch, make init flag true
                 if(!_nb_info[j].resolve_flag) {
@@ -617,6 +619,7 @@ private:
                     _nb_info[j].init_flag = true;
                     _nb_info[j].resolve_flag = true;
                 }
+#endif
 #ifdef HARD_DEBUG
                 PS::F64 mcmcheck =0.0;
 #endif
@@ -635,13 +638,15 @@ private:
                     if(r2<_nb_info[_iadr].r_min2) {
                         _nb_info[_iadr].r_min2 = r2;
                         _nb_info[_iadr].r_min_index = j;
-                    }
+                        _nb_info[_iadr].r_min_mass = _ptcl[j].mass;
+    }
                     _nb_info[_iadr].min_mass = std::min(_nb_info[_iadr].min_mass,_ptcl[j].mass);
                 }
 #ifdef HARD_DEBUG
                 assert(abs(mcmcheck-_ptcl[j].mass)<1e-10);
                 assert(mcmcheck>0.0);
 #endif                    
+#ifndef HERMITE_RESOLVE_GROUP
             }
             else {
                 // if switch, make init flag true
@@ -660,9 +665,11 @@ private:
                 if(r2<_nb_info[_iadr].r_min2) {
                     _nb_info[_iadr].r_min2 = r2;
                     _nb_info[_iadr].r_min_index = j;
+                    _nb_info[_iadr].r_min_mass = _ptcl[j].mass;
                 }
                 _nb_info[_iadr].min_mass = std::min(_nb_info[_iadr].min_mass,_ptcl[j].mass);
             }
+#endif
         }
         for(PS::S32 j=_n_group; j<_n_tot; j++){
             if(_iadr==j) continue;
@@ -680,6 +687,7 @@ private:
             if(r2<_nb_info[_iadr].r_min2) {
                 _nb_info[_iadr].r_min2 = r2;
                 _nb_info[_iadr].r_min_index = j;
+                _nb_info[_iadr].r_min_mass = _ptcl[j].mass;
             }
             _nb_info[_iadr].min_mass = std::min(_nb_info[_iadr].min_mass,_ptcl[j].mass);
         }
@@ -748,13 +756,14 @@ private:
                 const PS::F64 sdi = 1.0/_Aint->getSlowDown(iadr);      // slowdown factor
                 const PS::F64vec vcmsdi = (1.0-sdi)*_ptcl[iadr].vel;   // slowdown velocity
 
+#ifndef HERMITE_RESOLVE_GROUP
                 if(sdi==1.0||(_nb_info[iadr].resolve_flag&&sdi<3.0)) {
                     // if switch, make init flag true
                     if(!_nb_info[iadr].resolve_flag) {
                         _nb_info[iadr].init_flag = true;
                         _nb_info[iadr].resolve_flag = true;
                     }
-
+#endif
                     PtclForce fp[ni];
 //                PS::F64 r2min[_n_tot]={PS::LARGE_FLOAT};
 
@@ -778,8 +787,10 @@ private:
                     // c.m. force
                     _force[iadr].acc0 /= _ptcl[iadr].mass;
                     _force[iadr].acc1 /= _ptcl[iadr].mass;
+#ifndef HERMITE_RESOLVE_GROUP
                 }
                 else {
+
                     // if switch, make init flag true
                     if(_nb_info[iadr].resolve_flag) {
                         _nb_info[iadr].init_flag = true;
@@ -788,7 +799,7 @@ private:
 
                     CalcOneAcc0Acc1(_force[iadr], nb_flag, _nb_info, _ptcl[iadr], iadr, vzero, 1.0, _ptcl, _n_tot, n_group, _rin, _rout, _r_oi_inv, _r_A, _eps2, _Aint);
                 }
-
+#endif
 //                //update perturber list
 //                PS::F64 rsearchi = _ptcl[iadr].r_search;
 //                for (PS::S32 j=0; j<_n_tot; j++) {
@@ -1140,7 +1151,15 @@ public:
         PS::S32 n_check = adr_dt_sorted_.size();
         for (PS::S32 k=0; k<n_check; k++) {
             const PS::S32 i = adr_dt_sorted_[k];
-            if(nb_info_[i].r_min2<_r_crit2) {
+            PS::F64 mass_ratio = nb_info_[i].r_min_mass>ptcl_[i].mass ? (nb_info_[i].r_min_mass/ptcl_[i].mass) : (ptcl_[i].mass/nb_info_[i].r_min_mass);
+#ifdef ADJUST_GROUP_DEBUG
+            if(i<n_group) {
+                if(_Aint->getSlowDown(i)==1.0) {
+                    std::cerr<<"SD= 1.0, i="<<i<<" nearest neighbor: j="<<nb_info_[i].r_min_index<<" r_min2="<<nb_info_[i].r_min2<<" mass_ratio="<<mass_ratio<<" resolve="<<nb_info_[i].resolve_flag<<" init"<<nb_info_[i].init_flag<<" r_crit2="<<_r_crit2<<std::endl;
+                }
+            }
+#endif
+            if(nb_info_[i].r_min2 < mass_ratio*_r_crit2) {
                 const PS::S32 j = nb_info_[i].r_min_index;
 #ifdef HARD_DEBUG
                 assert(j<ptcl_.size());
@@ -3260,7 +3279,7 @@ public:
       @param[in] _mpert: nearest perturber mass
       @param[in] _md_factor: slowdown modification limit factor (negative suppress the limit)
      */
-    void updateOneSlowDown(const size_t _igroup, const PS::F64 _tnow, const PS::F64 _dt, const PS::F64 _dt_limit, const PS::F64 _mpert, const PS::F64 _md_factor=1.2) {
+    void updateOneSlowDown(const size_t _igroup, const PS::F64 _tnow, const PS::F64 _dt, const PS::F64 _dt_limit, const PS::F64 _mpert, const PS::F64 _md_factor) {
 #ifdef HARD_DEBUG
         assert(!group_mask_map_[_igroup]);
 #endif
@@ -3425,7 +3444,7 @@ public:
         if(c->getN()==2&&bininfo[_igroup].ecc>0.99&&bininfo[_igroup].ecc<1.0) {
             fix_step_flag = 2;
             PS::F64 korg=c->slowdown.getkappaorg();
-            if(korg<1.0) ds_use *= std::max(0.1,korg);
+            if(korg<1.0) ds_use *= 1.0/8.0*std::pow(korg,1.0/6.0);
         }
 
         PS::S64 stepcount = c->Symplectic_integration_tsyn(ds_use, *ARC_control_, _time_end, par, &pert_[ipert], &pforce_[ipert], pert_n_[_igroup],fix_step_flag, step_count_limit);

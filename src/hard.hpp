@@ -880,6 +880,7 @@ public:
       @param[in] _dt_min: time step minimum
       @param[in] _dt_tree: tree time step
       @param[in] _v_max: maximum velocity used to calculate r_search
+      @param[in] _r_crit: distance criterion for group check
       \return fail flag from _Hint.initial
      */
     template <class Tsoft>
@@ -891,7 +892,7 @@ public:
                      const PS::F64 _dt_max,
                      const PS::F64 _dt_tree,
                      const PS::F64 _v_max,
-                     const PS::F64 _r_bin) {
+                     const PS::F64 _r_crit) {
 
         PS::S32 n_group=_Aint.getNGroups();
         PS::S32 n_hint = _Hint.getPtclN();
@@ -900,18 +901,19 @@ public:
         for (PS::S32 i=0; i<n_group; i++) n_tot += _Aint.getGroupN(i);
         n_tot -= n_group;
 #endif
-        const PS::F64 r_bin2 = _r_bin*_r_bin;
+        const PS::F64 r_crit2 = _r_crit*_r_crit;
+
         // check Aint group to break
         PS::S32 break_group_list[n_group+1];
         PS::S32 break_split_index_list[n_group+1];
-        PS::S32 n_group_break=_Aint.checkBreak(break_group_list, break_split_index_list, r_bin2);
+        PS::S32 n_group_break=_Aint.checkBreak(break_group_list, break_split_index_list, r_crit2);
 
         // check Hint to find new group
         PS::S32 hint_size=_Hint.getPtclN();
         PtclHard* new_group_member_adr_origin[hint_size];
         PS::S32 new_group_member_index_hint[hint_size];
         PS::S32 new_group_member_offset[hint_size+1];
-        PS::S32 n_group_new = _Hint.checkNewGroup(new_group_member_index_hint, new_group_member_adr_origin, new_group_member_offset, r_bin2, break_group_list, n_group_break, &_Aint);
+        PS::S32 n_group_new = _Hint.checkNewGroup(new_group_member_index_hint, new_group_member_adr_origin, new_group_member_offset, r_crit2, break_group_list, n_group_break, &_Aint);
 
         if(n_group_break==0&&n_group_new==0) return false;
 
@@ -1660,6 +1662,13 @@ private:
             }
             Hint.SortAndSelectIp();
 
+            // re calculate slodown factor
+            for (int k=0; k<_n_group; k++) {
+                if(!Aint.getMask(k))
+                    Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, Hint.getNbInfo(k).min_mass, -1);
+                //Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, 1.0, -1.0);
+            }
+
 //            for (int i=0; i<_n_group; i++) {
 //                Aint.updateOneSlowDown(i, Hint.getOneTime(i), Hint.getOneDt(i), dt_limit, Hint.getNbInfo(i).min_mass, -1);
 //            }
@@ -1679,6 +1688,11 @@ private:
 #endif        
 //                slowdownrecord.resizeNoInitialize(n_group);
 //#endif
+#ifdef HARD_DEBUG_PRINT
+            HardEnergy E0CM, E1CM;
+            Hint.writeBackPtcl(Aint.getNGroups());
+            CalcEnergyHard(_ptcl_local, E0CM, _n_ptcl);
+#endif
 
             while(time_sys<_time_end) {
                 time_now = time_sys;
@@ -1693,10 +1707,6 @@ private:
                 assert(time_sys>time_now);
 #endif
                 PS::F64 dt_h = time_sys-time_now;
-                for (int k=0; k<_n_group; k++) {
-                    if(!Aint.getMask(k))
-                        Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, Hint.getNbInfo(k).min_mass);
-                }
 //#ifdef HARD_CHECK_ENERGY
 //                    for(int k=0; k<n_group; k++) {
 //                        slowdownrecord[k] = std::max(slowdownrecord[k], Aint.getSlowDown(k));
@@ -1719,6 +1729,13 @@ private:
                 }
 
                 Hint.SortAndSelectIp();
+
+                // update slowdown factor
+                for (int k=0; k<_n_group; k++) {
+                    if(!Aint.getMask(k))
+                        Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, Hint.getNbInfo(k).min_mass, 0.01);
+                }
+
 #ifdef HARD_DEBUG
                 // check time step list
                 if (Hint.checkAdrList(Aint)) {
@@ -1752,6 +1769,10 @@ private:
 //                Aint.resolve();
 //                Aint.shift2CM();
                 Hint.writeBackPtcl(Aint.getNGroups());
+                CalcEnergyHard(_ptcl_local, E1CM, _n_ptcl);
+                PS::F64 dEtot = E1CM.tot - E0CM.tot;
+                fprintf(fp,"%25.14e ", dEtot);
+                fprintf(stderr," Energy error: init: %g, now: %g, diff: %g\n", E0CM.tot, E1CM.tot, dEtot);
                 for(int i=0; i<_n_ptcl; i++) _ptcl_local[i].ParticleBase::writeAscii(fp);
                 fprintf(fp,"\n");
 

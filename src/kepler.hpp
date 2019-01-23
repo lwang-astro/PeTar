@@ -1155,7 +1155,7 @@ bool stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &_stab_bins,
             return false;
         }
         else { // Binary
-            bool fs = stab2check(_bins, _rbin, _rout, _dt_tree);
+            bool fs = stab2check(_bins, _rbin, _rin, _dt_tree);
             return fs;
         }
     }
