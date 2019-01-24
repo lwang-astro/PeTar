@@ -892,7 +892,8 @@ public:
                      const PS::F64 _dt_max,
                      const PS::F64 _dt_tree,
                      const PS::F64 _v_max,
-                     const PS::F64 _r_crit) {
+                     const PS::F64 _r_crit,
+                     const PS::F64 _sd_factor) {
 
         PS::S32 n_group=_Aint.getNGroups();
         PS::S32 n_hint = _Hint.getPtclN();
@@ -906,7 +907,7 @@ public:
         // check Aint group to break
         PS::S32 break_group_list[n_group+1];
         PS::S32 break_split_index_list[n_group+1];
-        PS::S32 n_group_break=_Aint.checkBreak(break_group_list, break_split_index_list, r_crit2);
+        PS::S32 n_group_break=_Aint.checkBreak(break_group_list, break_split_index_list, r_crit2, _sd_factor);
 
         // check Hint to find new group
         PS::S32 hint_size=_Hint.getPtclN();
@@ -1172,7 +1173,7 @@ public:
              PS::S32 i_mod_hint=hint_mod_ptcl_index[i];
              bool fail_flag = _Aint.initialOneSys(i_mod_hint, _time_sys);
              if(fail_flag) return true;
-            _Aint.initialOneSlowDown(i_mod_hint, _time_sys+dt_limit_hard_, _Hint.getNbInfo(i_mod_hint).min_mass, sdfactor_, 1.0);
+             _Aint.initialOneSlowDown(i_mod_hint, _time_sys+dt_limit_hard_, dt_limit_hard_, sdfactor_, 0.01);
 #ifdef HARD_DEBUG_PRINT
             _Aint.bininfo[i_mod_hint].print(std::cerr,20,true);
             fprintf(stderr,"New Group initial Slowdown parameters:\n");
@@ -1458,7 +1459,7 @@ private:
                 abort();
 #endif
             }
-            Aint.initialOneSlowDownUnPert(0, _time_end, sdfactor_, 1.0);
+            Aint.initialOneSlowDownUnPert(0, _time_end, sdfactor_);
  
 #ifdef ARC_SYM_SD_PERIOD
             PS::S32 kp=0;
@@ -1636,7 +1637,7 @@ private:
                     abort();
 #endif
                 }
-                Aint.initialOneSlowDown(i, dt_limit, Hint.getNbInfo(i).min_mass, sdfactor_, 1.0);
+                Aint.initialOneSlowDown(i, dt_limit, dt_limit_hard_, sdfactor_, -1.0);
             }
 
 #ifdef HARD_CHECK_ENERGY
@@ -1665,7 +1666,7 @@ private:
             // re calculate slodown factor
             for (int k=0; k<_n_group; k++) {
                 if(!Aint.getMask(k))
-                    Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, Hint.getNbInfo(k).min_mass, -1);
+                    Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, -1);
                 //Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, 1.0, -1.0);
             }
 
@@ -1718,7 +1719,7 @@ private:
                 bool fail_flag_aint = (nstepcount_aint<0); // fail case
                 nstepcount += nstepcount_aint;
                 bool fail_flag_hint = Hint.integrateOneStepAct(time_sys,dt_limit,dt_min_hard_, &Aint);
-                bool fail_flag_adj = adjustGroup<Tsoft>(Hint, Aint, _ptcl_local, _n_ptcl, time_sys, dt_limit, _time_end, _v_max, Int_pars_.r_bin);
+                bool fail_flag_adj = adjustGroup<Tsoft>(Hint, Aint, _ptcl_local, _n_ptcl, time_sys, dt_limit, _time_end, _v_max, Int_pars_.r_bin, sdfactor_);
 
                 if(fail_flag_hint || fail_flag_aint || fail_flag_adj) {
 #ifdef HARD_DEBUG_DUMP
@@ -1733,7 +1734,7 @@ private:
                 // update slowdown factor
                 for (int k=0; k<_n_group; k++) {
                     if(!Aint.getMask(k))
-                        Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, Hint.getNbInfo(k).min_mass, 0.01);
+                        Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, 0.01);
                 }
 
 #ifdef HARD_DEBUG
@@ -1757,7 +1758,7 @@ private:
 //                    Aint.printSlowDown(std::cerr,k);
 //                }
                 fprintf(stderr,"Slowdownfactor: ");
-                for(int k=0; k<_n_group; k++) fprintf(stderr,"%d: %f; ",k,Aint.getSlowDown(k));
+                for(int k=0; k<_n_group; k++) fprintf(stderr,"%d: %f, %f; ",k,Aint.getSlowDown(k),Aint.getSlowDownOrg(k));
                 fprintf(stderr,"\n");
                 Hint.printStepHist();
 //                for(int i=0; i<_n_ptcl; i++) ptcl_bk_pt[i] = _ptcl_local[i];
@@ -1771,6 +1772,9 @@ private:
                 Hint.writeBackPtcl(Aint.getNGroups());
                 CalcEnergyHard(_ptcl_local, E1CM, _n_ptcl);
                 PS::F64 dEtot = E1CM.tot - E0CM.tot;
+                if(std::fabs(dEtot)>1e-5) {
+                    std::cerr<<"Warning, large energy error appear! dE="<<dEtot<<std::endl;
+                }
                 fprintf(fp,"%25.14e ", dEtot);
                 fprintf(stderr," Energy error: init: %g, now: %g, diff: %g\n", E0CM.tot, E1CM.tot, dEtot);
                 for(int i=0; i<_n_ptcl; i++) _ptcl_local[i].ParticleBase::writeAscii(fp);

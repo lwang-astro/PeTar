@@ -1208,6 +1208,21 @@ public:
                             if (ftid_strong_sq*fratio_weak_sq<1e-6) continue;
                         }
 
+                        // avoid strong perturbed case, estimate perturbation
+                        PS::F64vec dr = ptcl_[j].pos - ptcl_[i].pos;
+                        PS::F64 dr2 = dr*dr;
+                        PS::F64 invr = 1/std::sqrt(dr2);
+                        PS::F64 invr3 = invr*invr*invr;
+                        PS::F64vec daccin = (ptcl_[j].mass + ptcl_[i].mass)*invr3*dr;
+                        //PS::F64vec fpi = ptcl_[i].acc0 - ptcl_[j].mass*invr3*dr;
+                        //PS::F64vec fpj = ptcl_[j].acc0 + ptcl_[i].mass*invr3*dr;
+                        PS::F64vec daccp = ptcl_[i].acc0 - ptcl_[j].acc0 - daccin;
+                        PS::F64 daccin2 = daccin*daccin;
+                        PS::F64 daccp2 = daccp*daccp;
+                        PS::F64 fratiosq = daccp2/daccin2;
+                        // if mass ratio >1.5, avoid to form new group, should be consistent as checkbreak
+                        if(fratiosq>1.5) continue;
+
 #ifdef ADJUST_GROUP_DEBUG
                         std::cout<<"Find new group      index      slowdown      fratio_sq       apo      ftid_sq \n"
                                  <<"i1              "
@@ -1402,6 +1417,7 @@ public:
                 adr_dt_sorted_[i] = adr_dt_sorted_[i-1];
             }
             adr_dt_sorted_[0] = _i;
+            n_act_++;
         }
         // shift _i to last and add
         else {
@@ -3228,14 +3244,15 @@ public:
       @param[in] _i_group: group index
       @param[in] _tend: ending physical time for integration
       @param[in] _sdfactor: slowdown criterion factor
-      @param[in] _tp_factor: if minimum factor of integration time interval / (kappa * period).
     */
-    void initialOneSlowDownUnPert(const PS::S32 _i_group, const PS::F64 _tend, const PS::F64 _sdfactor = 1.0e-8, const PS::F64 _tp_factor = 0.01) {
+    void initialOneSlowDownUnPert(const PS::S32 _i_group, const PS::F64 _tend, const PS::F64 _sdfactor) {
         // isolated case
         if (bininfo[_i_group].semi>0&&bininfo[_i_group].stable_factor>=0) {   
+            // estimate inner acceleration diference at apo-center
             PS::F64 finner = bininfo[_i_group].semi*(1.0+bininfo[_i_group].ecc);
-            finner = (bininfo[_i_group].m1-bininfo[_i_group].m2)/(finner*finner);
+            finner = (bininfo[_i_group].m1+bininfo[_i_group].m2)/(finner*finner);
             PS::F64 finnersq = finner*finner;
+            // get apo-center position and velocity
             TpARC p[2];
             OrbParam2PosVel(p[0].pos, p[1].pos, p[0].vel, p[1].vel, bininfo[_i_group].m1, bininfo[_i_group].m2, bininfo[_i_group].semi, bininfo[_i_group].ecc, bininfo[_i_group].inc, bininfo[_i_group].OMG, bininfo[_i_group].omg, PI);
             p[0].mass = bininfo[_i_group].m1;
@@ -3257,16 +3274,19 @@ public:
                 PS::F64 dacc = acc[0][k]-acc[1][k];
                 fpertsq += dacc*dacc;
             }
-            clist_[_i_group].slowdown.setSlowDownPars(bininfo[_i_group].peri, _sdfactor);
+            clist_[_i_group].slowdown.setSlowDownPars(bininfo[_i_group].peri, _sdfactor, std::max(1.0, 0.1*_tend/bininfo[_i_group].peri));
             clist_[_i_group].slowdown.updatefratiosq(fpertsq/finnersq);
-            clist_[_i_group].slowdown.updatekappa(_tend, 1.0, _tp_factor,-1);
+            //clist_[_i_group].slowdown.updatekappa(_tend, 1.0, _tp_factor,-1);
+            clist_[_i_group].slowdown.updatekappa(_tend, -1);
         }
     }
 
-    void initialOneSlowDown(const PS::S32 _i_group, const PS::F64 _tend, const PS::F64 _mpert, const PS::F64 _sdfactor = 1.0e-8, const PS::F64 _tp_factor = 1e-4) {
+    //void initialOneSlowDown(const PS::S32 _i_group, const PS::F64 _tend, const PS::F64 _mpert, const PS::F64 _sdfactor, const PS::F64 _tp_factor) {
+    void initialOneSlowDown(const PS::S32 _i_group, const PS::F64 _dt, const PS::F64 _dt_limit_hard, const PS::F64 _sdfactor, const PS::F64 _md_factor) {
         if (bininfo[_i_group].semi>0&&bininfo[_i_group].stable_factor>=0) {
-            clist_[_i_group].slowdown.setSlowDownPars(bininfo[_i_group].peri, _sdfactor);
-            clist_[_i_group].slowdown.updatekappa(_tend, clist_[_i_group].mass/_mpert, _tp_factor,-1);
+            clist_[_i_group].slowdown.setSlowDownPars(bininfo[_i_group].peri, _sdfactor, std::max(1.0, 0.1*_dt_limit_hard/bininfo[_i_group].peri));
+            //clist_[_i_group].slowdown.updatekappa(_tend, clist_[_i_group].mass/_mpert, _tp_factor,-1);
+            clist_[_i_group].slowdown.updatekappa(_dt, _md_factor);
         }
     }
 
@@ -3276,18 +3296,17 @@ public:
       @param[in] _tnow: current time of c.m.
       @param[in] _dt: c.m. step size
       @param[in] _dt_limit: step limit
-      @param[in] _mpert: nearest perturber mass
       @param[in] _md_factor: slowdown modification limit factor (negative suppress the limit)
      */
-    void updateOneSlowDown(const size_t _igroup, const PS::F64 _tnow, const PS::F64 _dt, const PS::F64 _dt_limit, const PS::F64 _mpert, const PS::F64 _md_factor) {
+    void updateOneSlowDown(const size_t _igroup, const PS::F64 _tnow, const PS::F64 _dt, const PS::F64 _dt_limit, const PS::F64 _md_factor) {
 #ifdef HARD_DEBUG
         assert(!group_mask_map_[_igroup]);
 #endif
         //PS::F64 tp_factor = std::max(1e-4,_dt/_dt_limit);
         //PS::F64 tp_factor = std::max(1e-4,_dt/_dt_limit);
-        PS::F64 tp_factor = _dt/_dt_limit;
+        //PS::F64 tp_factor = _dt/_dt_limit;
         //std::cerr<<"i "<<_index<<" dt "<<_dt<<" fac "<<tp_factor<<std::endl;
-        clist_[_igroup].slowdown.updatekappa(_tnow+_dt, clist_[_igroup].mass/_mpert, tp_factor, _md_factor);
+        clist_[_igroup].slowdown.updatekappa(_tnow+_dt, _md_factor);
     }
 
     void adjustSlowDown(const PS::F64 dt) {
@@ -3435,17 +3454,21 @@ public:
         //PS::F64 ds_up_limit = 0.25*_dt_limit/c->calc_dt_X(1.0,*ARC_control_);
         //PS::F64 ds_use = 2.0*bininfo[_igroup].tstep*std::abs(c->getPt());
         PS::F64 ds_use=bininfo[_igroup].tstep;
+        if(c->slowdown.isUsed()) {
+            PS::F64 korg=c->slowdown.getkappaorg();
+            if(korg<1.0) ds_use *= 1.0/8.0*std::pow(korg,1.0/6.0);
+        }
         //PS::F64 ds_use = c->calc_next_step_custom(*ARC_control_,par);
         //if (ds_use>ds_up_limit) ds_use = ds_up_limit;
 
         const PS::S32 ipert = pert_disp_[_igroup];
         PS::S32 fix_step_flag = 1;
         // for high-eccentric binary, it is better to fix step to avoid big step drop, for hyperbolic, fix step is risky
-        if(c->getN()==2&&bininfo[_igroup].ecc>0.99&&bininfo[_igroup].ecc<1.0) {
-            fix_step_flag = 2;
-            PS::F64 korg=c->slowdown.getkappaorg();
-            if(korg<1.0) ds_use *= 1.0/8.0*std::pow(korg,1.0/6.0);
-        }
+        //if(c->getN()==2&&bininfo[_igroup].ecc>0.99&&bininfo[_igroup].ecc<1.0) {
+        //    fix_step_flag = 2;
+        //    PS::F64 korg=c->slowdown.getkappaorg();
+        //    if(korg<1.0) ds_use *= 1.0/8.0*std::pow(korg,1.0/6.0);
+        //}
 
         PS::S64 stepcount = c->Symplectic_integration_tsyn(ds_use, *ARC_control_, _time_end, par, &pert_[ipert], &pforce_[ipert], pert_n_[_igroup],fix_step_flag, step_count_limit);
 
@@ -3692,11 +3715,13 @@ public:
       @param[out] _break_group_list: group index list to break
       @param[out] _break_isplit_list: index in chain list to split for corresponding groups
       @param[in] _r_crit2: distance (square) criterion to check whether need to break
+      @param[in] _sd_factor: slowdown reference factor
       \return n_group_break: number of groups need to break
      */
     PS::S32 checkBreak(PS::S32* _break_group_list,
                        PS::S32* _break_isplit_list,
-                       const PS::F64 _r_crit2) {
+                       const PS::F64 _r_crit2,
+                       const PS::F64 _sd_factor) {
         PS::F64 r_max2;
         PS::S32 r_max_index;
         PS::S32 n_group_break=0;
@@ -3715,6 +3740,20 @@ public:
             PS::F64 fp_sq = clist_[i].slowdown.getFratioSq();
             if (fp_sq>2 && bininfo[i].semi>0) break_flag = true;
 
+            // check few-body inner perturbation
+            PS::F64 frinsqi=1.0, frinsqj=1.0;
+            if(clist_[i].getN()>2) {
+                out_flag=clist_[i].getDirection(r_max_index);
+                if(out_flag) {
+                    clist_[i].getFratioInnerSq(frinsqi, frinsqj, r_max_index, *ARC_control_, Int_pars_);
+                    // if slowdown factor is large, break the group
+                    if (std::min(frinsqi,frinsqj)<_sd_factor*_sd_factor) break_flag = true;
+#ifdef ADJUST_GROUP_DEBUG
+                    std::cout<<"Check inner fratio, i_group:"<<i<<" left:"<<frinsqi<<" right:"<<frinsqj<<std::endl;
+#endif
+                }
+            }
+
             if (break_flag) {
 #ifdef ADJUST_GROUP_DEBUG
                 std::cout<<"Break group, group index: "<<i
@@ -3724,6 +3763,8 @@ public:
                          <<" separation square: "<<r_max2
                          <<" r_crit square: "<<_r_crit2
                          <<" pert_ratio_square: "<<fp_sq
+                         <<" inner pert ratio square, left: "<<frinsqi
+                         <<" right: "<<frinsqj
                          <<std::endl;
 #endif
                 _break_group_list[n_group_break] = i;
