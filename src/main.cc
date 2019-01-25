@@ -679,7 +679,7 @@ int main(int argc, char *argv[]){
 #endif
         // >1. Tree for neighbor searching ----------------------------------------
 #ifndef USE_SIMD
-        tree_nb.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSIMD(), system_soft, dinfo);
+        tree_nb.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSimd(), system_soft, dinfo);
 #else
         tree_nb.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(), system_soft, dinfo);
 #endif
@@ -869,6 +869,7 @@ int main(int argc, char *argv[]){
 
         // only do correction at middle step
         if (dt_manager.getCountContinue() == 1) {
+//        if (true) {
 
             tree_soft.clearNumberOfInteraction();
             tree_soft.clearTimeProfile();
@@ -907,6 +908,19 @@ int main(int argc, char *argv[]){
             // Connected clusters
             system_hard_connected.correctForceWithCutoffTreeNeighborAndClusterOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, search_cluster.getAdrSysConnectClusterSend(), true);
 #endif
+
+// for debug
+//            FILE* fdump;
+//            if ( (fdump = fopen("acorr.dump","w")) == NULL) {
+//                fprintf(stderr,"Error: Cannot open file acorr.dump\n");
+//                abort();
+//            }
+//            for (int i=0; i<n_loc; i++) {
+//                fprintf(fdump, "%d %.12g %.12g %.12g %.12g %.12g %.12g\n", i, system_soft[i].acc[0], system_soft[i].acc[1], system_soft[i].acc[2], system_soft[i].acorr[0], system_soft[i].acorr[1], system_soft[i].acorr[2]);
+//            }
+//            fclose(fdump);
+//            abort();
+// debug
         }
 
 #endif
@@ -946,6 +960,7 @@ int main(int argc, char *argv[]){
                 fstatus<<std::endl;
             }
             output_flag = false;
+            dt_mod_flag = false;
             dt_kick = dt_manager.getDtStartContinue();
         }
         else {

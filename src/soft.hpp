@@ -26,10 +26,9 @@ public:
 
 class FPSoft: public Ptcl{
 public:
+    PS::F64vec acc; // soft
 #ifdef KDKDK_4TH
     PS::F64vec acorr;
-#else
-    PS::F64vec acc; // soft
 #endif
     PS::F64 pot_tot; // soft + hard
     PS::S32 n_ngb;
@@ -445,6 +444,7 @@ struct CalcCorrectEpEpWithLinearCutoffNoSimd{
             }
             //std::cerr<<"poti= "<<poti<<std::endl;
             force[i].acorr += 2.0 * acorr;
+            force[i].acc = acci;
         }
     }
 };
@@ -458,7 +458,6 @@ struct CalcForceEpSpMonoNoSimd {
                       const PS::S32 n_jp,
                       ForceSoft * force){
         const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
-        assert(n_jp==0);
         for(PS::S32 i=0; i<n_ip; i++){
             PS::F64vec xi = ep_i[i].pos;
             PS::F64vec ai = 0.0;
@@ -487,6 +486,7 @@ struct CalcForceEpSpQuadNoSimd{
                       const PS::S32 n_jp,
                       ForceSoft * force){
         const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
+//        assert(n_jp==0);
         for(PS::S32 ip=0; ip<n_ip; ip++){
             PS::F64vec xi = ep_i[ip].pos;
             PS::F64vec ai = 0.0;

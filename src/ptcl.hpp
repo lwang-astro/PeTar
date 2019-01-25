@@ -22,9 +22,6 @@ public:
       PS: mass_bk is used to store perturber force in searchpart
           suppressed c.m. is set in HermiteIntegrator.removePtclList
      */
-#ifdef KDKDK_4TH
-    PS::F64vec acc;
-#endif
     PS::F64 r_search;
     PS::F64 mass_bk;
     PS::S64 id;
@@ -44,9 +41,6 @@ public:
     template<class Tptcl>
     void DataCopy(const Tptcl& _p) {
         ParticleBase::DataCopy(_p);
-#ifdef KDKDK_4TH
-        acc = _p.acc;
-#endif
         r_search = _p.r_search;
         mass_bk  = _p.mass_bk;
         id       = _p.id;

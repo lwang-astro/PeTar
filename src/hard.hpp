@@ -428,10 +428,17 @@ private:
                     const PtclHard* ptcl_kj_ptr = &_ptcl_local[kj];
                     PS::S32 pot_control_flag = ptcl_kj_ptr->status<0? 1: 0;
 #ifdef KDKDK_4TH
-                    if(_acorr_flag) 
+                    if(_acorr_flag) {
+                        PS::S64 adr_kj = _ptcl_local[kj].adr_org;
+                        PS::F64vec& pos_kj = _sys[adr_kj].pos;
+                        PS::F64vec& acc_kj = _sys[adr_kj].acc;
+                        // be careful for member particle with zero mass
+                        PS::F64& mass_kj = pot_control_flag==1? _sys[adr_kj].mass_bk: _sys[adr_kj].mass;
+
                         CalcAcorrShortWithLinearCutoff(pos_k, acc_k, _sys[k].acorr,
-                                                     ptcl_kj_ptr->pos, ptcl_kj_ptr->acc, ptcl_kj_ptr->mass,
-                                                     _eps_sq, _r_oi_inv, _r_A, _rout, _rin);
+                                                       pos_kj, acc_kj, mass_kj,
+                                                       _eps_sq, _r_oi_inv, _r_A, _rout, _rin);
+                    }
                     else
 #endif
                         CalcAccPotShortWithLinearCutoff(pos_k, acc_k, pot_k, 
@@ -541,7 +548,7 @@ private:
             // artifical particle group number
             PS::S32 n_group = _n_group_in_cluster[i];
             //PS::S32 n_group_offset = _n_group_in_cluster_offset[i];
-            const PS::S32* adr_first_ptcl_arti = &_adr_first_ptcl_arti_in_cluster[_n_group_in_cluster_offset[i]];
+            const PS::S32* adr_first_ptcl_arti = n_group>0? &_adr_first_ptcl_arti_in_cluster[_n_group_in_cluster_offset[i]] : NULL;
 
             // correction for artifical particles
             correctForceWithCutoffArtificalOneClusterImp(_sys, _ptcl_local, adr_real_start, adr_real_end, n_group, adr_first_ptcl_arti, _rin, _rout, r_oi_inv, r_A, _n_split, _eps_sq, _acorr_flag);
@@ -568,10 +575,16 @@ private:
                     const PtclHard* ptcl_k_ptr = &_ptcl_local[k];
                     PS::S32 pot_control_flag = ptcl_k_ptr->status<0? 1: 0;
 #ifdef KDKDK_4TH
-                    if(_acorr_flag) 
+                    if(_acorr_flag) {
+                        PS::S64 adr_k = _ptcl_local[k].adr_org;
+                        PS::F64vec& pos_k = _sys[adr_k].pos;
+                        PS::F64vec& acc_k = _sys[adr_k].acc;
+                        // be careful for member particle with zero mass
+                        PS::F64& mass_k = pot_control_flag==1? _sys[adr_k].mass_bk: _sys[adr_k].mass;
                         CalcAcorrShortWithLinearCutoff(pos_j, acc_j, _sys[adr].acorr,
-                                                     ptcl_k_ptr->pos, ptcl_k_ptr->acc, ptcl_k_ptr->mass, 
-                                                     _eps_sq, r_oi_inv, r_A, _rout, _rin);
+                                                       pos_k, acc_k, mass_k,
+                                                       _eps_sq, r_oi_inv, r_A, _rout, _rin);
+                    }
                     else
 #endif
                         CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
@@ -2489,10 +2502,23 @@ public:
         for(PS::S32 i=0; i<n_cluster; i++){
             const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
+#ifndef ONLY_SOFT
             const PS::S32 n_group = n_group_in_cluster_[i];
             Tpsoft* ptcl_artifical_ptr=NULL;
             if(n_group>0) ptcl_artifical_ptr = &(_ptcl_soft[adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]]]);
             driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artifical_ptr, n_group, dt, v_max_);
+#else
+            auto* pi = ptcl_hard_.getPointer(adr_head);
+            for (PS::S32 j=0; j<n_ptcl; j++) {
+                PS::F64vec dr = pi[j].vel * dt;
+                pi[j].pos += dr;
+                pi[j].status = 0;
+                pi[j].mass_bk = 0;
+                PS::F64 dt_reduce_fi = pi[j].calcRSearch(dt, v_max_);
+                dt_reduce_factor = std::max(dt_reduce_fi, dt_reduce_factor);
+                
+            }
+#endif
 //#ifdef HARD_DEBUG
 //            if(extra_ptcl.size()>0) fprintf(stderr,"New particle number = %d\n",extra_ptcl.size());
 //#endif
@@ -2534,6 +2560,7 @@ public:
             //const PS::S32 i   = n_sort_list[k].second;
             const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
+#ifndef ONLY_SOFT
             const PS::S32 n_group = n_group_in_cluster_[i];
             Tpsoft* ptcl_artifical_ptr=NULL;
             if(n_group>0) ptcl_artifical_ptr = &(_ptcl_soft[adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]]]);
@@ -2551,6 +2578,18 @@ public:
             PS::F64 tend = PS::GetWtime();
             std::cerr<<"HT: "<<i<<" "<<ith<<" "<<n_cluster<<" "<<n_ptcl<<" "<<tend-tstart<<std::endl;
 #endif
+#else
+            auto* pi = ptcl_hard_.getPointer(adr_head);
+            for (PS::S32 j=0; j<n_ptcl; j++) {
+                PS::F64vec dr = pi[j].vel * dt;
+                pi[j].pos += dr;
+                pi[j].status = 0;
+                pi[j].mass_bk = 0;
+                PS::F64 dt_reduce_fi = pi[j].calcRSearch(dt, v_max_);
+                dt_reduce_factor = std::max(dt_reduce_fi, dt_reduce_factor);
+            }
+#endif
+
         }
 //        if (n_cluster>0) {
 //            PS::S32 rank = PS::Comm::getRank();

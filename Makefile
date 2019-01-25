@@ -10,8 +10,8 @@ PS_PATH  = -I/home/lwang/code/fdps/src
 
 ##ARC PATH
 #ARC_PATH= -I../TSARC/include
-ARC_PATH = -I/home/lwang/code/ARC/include
-#ARC_PATH = -I/home/lwang/GitHub/ARC/include
+#ARC_PATH = -I/home/lwang/code/ARC/include
+ARC_PATH = -I/home/lwang/GitHub/ARC/include
 
 ##Gperftools PATH
 #GPERF_PATH = ../../soft/gperftools-2.6.90
@@ -83,7 +83,7 @@ endif
 endif
 
 ifeq ($(debug_mode),yes)
-OPTFLAGS = -g -O0 -fbounds-check -Wall -D SANITY_CHECK_REALLOCATABLE_ARRAY -D HARD_DEBUG_PRE_DUMP
+OPTFLAGS = -g -O0 -fbounds-check -Wall -D SANITY_CHECK_REALLOCATABLE_ARRAY 
 else
 OPTFLAGS = -O2 -Wall 
 #OPTFLAGS += -ffast-math -funroll-loops
@@ -105,7 +105,7 @@ endif
 CXXFLAGS += -DDIV_FIX
 #CXXFLAGS += -DP3T_64BIT
 CXXFLAGS += -DUSE_QUAD
-CXXFLAGS += -DUSE_SIMD
+#CXXFLAGS += -DUSE_SIMD
 CXXFLAGS += -D PROFILE
 CXXFLAGS += -D HARD_CHECK_ENERGY
 #CXXFLAGS += ${shell gsl-config --cflags}
@@ -118,6 +118,10 @@ MT_FLAGS += -D SPLIT_MASS
 MT_FLAGS += -D ARC_SYM
 MT_FLAGS += -D ARC_OPT_SYM2
 #MT_FLAGS += -D ARC_SYM_SD_PERIOD
+#MT_FLAGS += -D HERMITE_RESOLVE_GROUP
+#MT_FLAGS += -D KDKDK_2ND
+MT_FLAGS += -D KDKDK_4TH
+#MT_FLAGS += -D ONLY_SOFT
 
 SIMD_DEBFLAGS += -DCALC_EP_64bit
 SIMD_DEBFLAGS += -DRSQRT_NR_EPJ_X2
@@ -136,7 +140,7 @@ DEBFLAGS += -D ARC_ERROR
 DEBFLAGS += -D ARC_DEBUG_DUMP
 #DEBFLAGS += -D ARC_WARN
 DEBFLAGS += -D HARD_DEBUG
-DEBFLAGS += -D HARD_DEBUG_PRE_DUMP
+#DEBFLAGS += -D HARD_DEBUG_PRE_DUMP
 DEBFLAGS += -D HARD_DEBUG_DUMP
 #DEBFLAGS += -D STABLE_CHECK_DEBUG
 #DEBFLAGS += -D CLUSTER_DEBUG
