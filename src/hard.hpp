@@ -2757,7 +2757,6 @@ public:
     //    }        
     //}
 
-#ifdef HARD_DEBUG
     //! particle data dump
     /*! dump hard particle data
       @param[in]: _fout: file for dump
@@ -2969,6 +2968,5 @@ public:
         eta_s_ = _eta*_eta;
     }
     
-#endif
 
 };
