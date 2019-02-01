@@ -1790,6 +1790,8 @@ private:
                 }
                 fprintf(fp,"%25.14e ", dEtot);
                 fprintf(stderr," Energy error: init: %g, now: %g, diff: %g\n", E0CM.tot, E1CM.tot, dEtot);
+                fprintf(fp,"%d ", _n_group);
+                for(int k=0; k<_n_group; k++) fprintf(fp,"%f %f ",Aint.getSlowDown(k),Aint.getSlowDownOrg(k));                
                 for(int i=0; i<_n_ptcl; i++) _ptcl_local[i].ParticleBase::writeAscii(fp);
                 fprintf(fp,"\n");
 
