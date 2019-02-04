@@ -3280,16 +3280,18 @@ public:
             clist_[_i_group].slowdown.setSlowDownPars(bininfo[_i_group].peri, _sdfactor, std::max(1.0, 0.1*_tend/bininfo[_i_group].peri));
             clist_[_i_group].slowdown.updatefratiosq(fpertsq/finnersq);
             //clist_[_i_group].slowdown.updatekappa(_tend, 1.0, _tp_factor,-1);
-            clist_[_i_group].slowdown.updatekappa(_tend, -1);
+            clist_[_i_group].slowdown.updateKappaDt(_tend, -1);
+            //clist_[_i_group].slowdown.updateKappa();
         }
     }
 
     //void initialOneSlowDown(const PS::S32 _i_group, const PS::F64 _tend, const PS::F64 _mpert, const PS::F64 _sdfactor, const PS::F64 _tp_factor) {
     void initialOneSlowDown(const PS::S32 _i_group, const PS::F64 _dt, const PS::F64 _dt_limit_hard, const PS::F64 _sdfactor, const PS::F64 _md_factor) {
         if (bininfo[_i_group].semi>0&&bininfo[_i_group].stable_factor>=0) {
-            clist_[_i_group].slowdown.setSlowDownPars(bininfo[_i_group].peri, _sdfactor, std::max(1.0, 0.1*_dt_limit_hard/bininfo[_i_group].peri));
+            clist_[_i_group].slowdown.setSlowDownPars(bininfo[_i_group].peri, _sdfactor, std::max(1.0, _dt_limit_hard/bininfo[_i_group].peri));
             //clist_[_i_group].slowdown.updatekappa(_tend, clist_[_i_group].mass/_mpert, _tp_factor,-1);
-            clist_[_i_group].slowdown.updatekappa(_dt, _md_factor);
+            clist_[_i_group].slowdown.updateKappaDt(_dt, _md_factor);
+            //clist_[_i_group].slowdown.updateKappa();
         }
     }
 
@@ -3309,7 +3311,8 @@ public:
         //PS::F64 tp_factor = std::max(1e-4,_dt/_dt_limit);
         //PS::F64 tp_factor = _dt/_dt_limit;
         //std::cerr<<"i "<<_index<<" dt "<<_dt<<" fac "<<tp_factor<<std::endl;
-        clist_[_igroup].slowdown.updatekappa(_tnow+_dt, _md_factor);
+        clist_[_igroup].slowdown.updateKappaDt(_tnow+_dt, _md_factor);
+        //clist_[_igroup].slowdown.updateKappa();
     }
 
     void adjustSlowDown(const PS::F64 dt) {
@@ -3451,14 +3454,20 @@ public:
                                 const PS::F64 _dt_limit) {
 #ifdef HARD_DEBUG
         assert(!group_mask_map_[_igroup]);
+        assert(_time_end>clist_[_igroup].getTime());
 #endif
         ARChain* c = &clist_[_igroup];
         ARC_pert_pars* par = &par_list_[_igroup];
         //PS::F64 ds_up_limit = 0.25*_dt_limit/c->calc_dt_X(1.0,*ARC_control_);
         //PS::F64 ds_use = 2.0*bininfo[_igroup].tstep*std::abs(c->getPt());
         PS::F64 ds_use=bininfo[_igroup].tstep;
+        // in case dt is much less then period, reduce step
+        //if (_dt_limit<bininfo[_igroup].peri*c->slowdown.getkappa()) {
+        //    ds_use *= _dt_limit/(bininfo[_igroup].peri*c->slowdown.getkappa());
+        //}
         if(c->slowdown.isUsed()) {
             PS::F64 korg=c->slowdown.getkappaorg();
+            // in strong perturbed case, avoid too large step size
             if(korg<1.0) ds_use *= 1.0/8.0*std::pow(korg,1.0/6.0);
         }
         //PS::F64 ds_use = c->calc_next_step_custom(*ARC_control_,par);
@@ -3474,6 +3483,10 @@ public:
         //}
 
         PS::S64 stepcount = c->Symplectic_integration_tsyn(ds_use, *ARC_control_, _time_end, par, &pert_[ipert], &pforce_[ipert], pert_n_[_igroup],fix_step_flag, step_count_limit);
+
+#ifdef HARD_DEBUG
+        assert(_time_end+0.5*_dt_limit>c->getTime());
+#endif
 
 #ifdef ARC_WARN
         if(c->info!=NULL) {

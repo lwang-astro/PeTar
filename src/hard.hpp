@@ -1186,6 +1186,7 @@ public:
              PS::S32 i_mod_hint=hint_mod_ptcl_index[i];
              bool fail_flag = _Aint.initialOneSys(i_mod_hint, _time_sys);
              if(fail_flag) return true;
+             // use mod_factor = 0.01 to set kappa to 1.0 initially
              _Aint.initialOneSlowDown(i_mod_hint, _time_sys+dt_limit_hard_, dt_limit_hard_, sdfactor_, 0.01);
 #ifdef HARD_DEBUG_PRINT
             _Aint.bininfo[i_mod_hint].print(std::cerr,20,true);
@@ -1744,11 +1745,11 @@ private:
 
                 Hint.SortAndSelectIp();
 
-                // update slowdown factor
-                for (int k=0; k<_n_group; k++) {
-                    if(!Aint.getMask(k))
-                        Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, 0.01);
-                }
+                // update slowdown factor (suppressed outside and update during integration
+                //for (int k=0; k<_n_group; k++) {
+                //    if(!Aint.getMask(k))
+                //        Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, 0.01);
+                //}
 
 #ifdef HARD_DEBUG
                 // check time step list
