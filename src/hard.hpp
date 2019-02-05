@@ -1186,8 +1186,9 @@ public:
              PS::S32 i_mod_hint=hint_mod_ptcl_index[i];
              bool fail_flag = _Aint.initialOneSys(i_mod_hint, _time_sys);
              if(fail_flag) return true;
-             // use mod_factor = 0.01 to set kappa to 1.0 initially
-             _Aint.initialOneSlowDown(i_mod_hint, _time_sys+dt_limit_hard_, dt_limit_hard_, sdfactor_, 0.01);
+             //// use mod_factor = 0.01 to set kappa to 1.0 initially
+             //_Aint.initialOneSlowDown(i_mod_hint, _time_sys+dt_limit_hard_, dt_limit_hard_, sdfactor_, 0.01);
+             _Aint.initialOneSlowDown(i_mod_hint, dt_limit_hard_, sdfactor_);
 #ifdef HARD_DEBUG_PRINT
             _Aint.bininfo[i_mod_hint].print(std::cerr,20,true);
             fprintf(stderr,"New Group initial Slowdown parameters:\n");
@@ -1651,7 +1652,8 @@ private:
                     abort();
 #endif
                 }
-                Aint.initialOneSlowDown(i, dt_limit, dt_limit_hard_, sdfactor_, -1.0);
+                //Aint.initialOneSlowDown(i, dt_limit, dt_limit_hard_, sdfactor_, -1.0);
+                Aint.initialOneSlowDown(i, dt_limit_hard_, sdfactor_);
             }
 
 #ifdef HARD_CHECK_ENERGY
@@ -1680,7 +1682,8 @@ private:
             // re calculate slodown factor
             for (int k=0; k<_n_group; k++) {
                 if(!Aint.getMask(k))
-                    Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, -1);
+                    Aint.updateOneSlowDown(k, -1);
+                    //Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, -1);
                 //Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, 1.0, -1.0);
             }
 
@@ -1733,7 +1736,7 @@ private:
                 bool fail_flag_aint = (nstepcount_aint<0); // fail case
                 nstepcount += nstepcount_aint;
                 bool fail_flag_hint = Hint.integrateOneStepAct(time_sys,dt_limit,dt_min_hard_, &Aint);
-                bool fail_flag_adj = adjustGroup<Tsoft>(Hint, Aint, _ptcl_local, _n_ptcl, time_sys, dt_limit, _time_end, _v_max, Int_pars_.r_bin, sdfactor_);
+                bool fail_flag_adj = adjustGroup<Tsoft>(Hint, Aint, _ptcl_local, _n_ptcl, time_sys, dt_limit, _time_end, _v_max, Int_pars_.rin, sdfactor_);
 
                 if(fail_flag_hint || fail_flag_aint || fail_flag_adj) {
 #ifdef HARD_DEBUG_DUMP
@@ -1745,11 +1748,12 @@ private:
 
                 Hint.SortAndSelectIp();
 
-                // update slowdown factor (suppressed outside and update during integration
-                //for (int k=0; k<_n_group; k++) {
-                //    if(!Aint.getMask(k))
-                //        Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, 0.01);
-                //}
+                // update slowdown factor 
+                for (int k=0; k<_n_group; k++) {
+                    if(!Aint.getMask(k))
+                        Aint.updateOneSlowDown(k, 0.5);
+                        //Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, 0.01);
+                }
 
 #ifdef HARD_DEBUG
                 // check time step list

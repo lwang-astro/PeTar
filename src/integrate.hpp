@@ -638,7 +638,8 @@ private:
 #endif
                     PS::F64 rs=std::max(_pi.r_search,pj[k].r_search);
                     if(r2<=rs*rs) _nb_flag[j] = true;
-                    if(r2<_nb_info[_iadr].r_min2) {
+                    // mass weighted neigbor
+                    if(r2*_nb_info[_iadr].r_min_mass<_nb_info[_iadr].r_min2*_ptcl[j].mass) {
                         _nb_info[_iadr].r_min2 = r2;
                         _nb_info[_iadr].r_min_index = j;
                         _nb_info[_iadr].r_min_mass = _ptcl[j].mass;
@@ -665,7 +666,8 @@ private:
                                      _eps2, _rout, _rin, _r_oi_inv, _r_A);
                 PS::F64 rs=std::max(_pi.r_search, _ptcl[j].r_search);
                 if(r2<=rs*rs) _nb_flag[j] = true;
-                if(r2<_nb_info[_iadr].r_min2) {
+                // mass weighted neigbor
+                if(r2*_nb_info[_iadr].r_min_mass<_nb_info[_iadr].r_min2*_ptcl[j].mass) {
                     _nb_info[_iadr].r_min2 = r2;
                     _nb_info[_iadr].r_min_index = j;
                     _nb_info[_iadr].r_min_mass = _ptcl[j].mass;
@@ -687,7 +689,8 @@ private:
             // }
             PS::F64 rs=std::max(_pi.r_search, _ptcl[j].r_search);
             if(r2<=rs*rs) _nb_flag[j] = true;
-            if(r2<_nb_info[_iadr].r_min2) {
+            // mass weighted neigbor
+            if(r2*_nb_info[_iadr].r_min_mass<_nb_info[_iadr].r_min2*_ptcl[j].mass) {
                 _nb_info[_iadr].r_min2 = r2;
                 _nb_info[_iadr].r_min_index = j;
                 _nb_info[_iadr].r_min_mass = _ptcl[j].mass;
@@ -1154,15 +1157,13 @@ public:
         PS::S32 n_check = adr_dt_sorted_.size();
         for (PS::S32 k=0; k<n_check; k++) {
             const PS::S32 i = adr_dt_sorted_[k];
-            PS::F64 mass_ratio = nb_info_[i].r_min_mass>ptcl_[i].mass ? (nb_info_[i].r_min_mass/ptcl_[i].mass) : (ptcl_[i].mass/nb_info_[i].r_min_mass);
 #ifdef ADJUST_GROUP_DEBUG
             if(i<n_group) {
-                if(_Aint->getSlowDown(i)==1.0) {
-                    std::cerr<<"SD= 1.0, i="<<i<<" nearest neighbor: j="<<nb_info_[i].r_min_index<<" r_min2="<<nb_info_[i].r_min2<<" mass_ratio="<<mass_ratio<<" resolve="<<nb_info_[i].resolve_flag<<" init"<<nb_info_[i].init_flag<<" r_crit2="<<_r_crit2<<std::endl;
-                }
+                PS::F64 mass_ratio = nb_info_[i].r_min_mass>ptcl_[i].mass ? (nb_info_[i].r_min_mass/ptcl_[i].mass) : (ptcl_[i].mass/nb_info_[i].r_min_mass);
+                std::cerr<<"SD= "<<_Aint->getSlowDown(i)<<", i="<<i<<" nearest neighbor: j="<<nb_info_[i].r_min_index<<" r_min2="<<nb_info_[i].r_min2<<" mass_ratio="<<mass_ratio<<" resolve="<<nb_info_[i].resolve_flag<<" init"<<nb_info_[i].init_flag<<" r_crit2="<<_r_crit2<<std::endl;
             }
 #endif
-            if(nb_info_[i].r_min2 < mass_ratio*_r_crit2) {
+            if(nb_info_[i].r_min2 < _r_crit2) {
                 const PS::S32 j = nb_info_[i].r_min_index;
 #ifdef HARD_DEBUG
                 assert(j<ptcl_.size());
@@ -3277,20 +3278,20 @@ public:
                 PS::F64 dacc = acc[0][k]-acc[1][k];
                 fpertsq += dacc*dacc;
             }
-            clist_[_i_group].slowdown.setSlowDownPars(bininfo[_i_group].peri, _sdfactor, std::max(1.0, 0.1*_tend/bininfo[_i_group].peri));
-            clist_[_i_group].slowdown.updatefratiosq(fpertsq/finnersq);
+            clist_[_i_group].slowdown.setSlowDownPars(bininfo[_i_group].peri, _sdfactor, std::max(1.0, _tend/bininfo[_i_group].peri));
+            clist_[_i_group].slowdown.initialFRatioSqRange(fpertsq/finnersq);
             //clist_[_i_group].slowdown.updatekappa(_tend, 1.0, _tp_factor,-1);
-            clist_[_i_group].slowdown.updateKappaDt(_tend, -1);
+            clist_[_i_group].slowdown.updateKappaMin();
             //clist_[_i_group].slowdown.updateKappa();
         }
     }
 
     //void initialOneSlowDown(const PS::S32 _i_group, const PS::F64 _tend, const PS::F64 _mpert, const PS::F64 _sdfactor, const PS::F64 _tp_factor) {
-    void initialOneSlowDown(const PS::S32 _i_group, const PS::F64 _dt, const PS::F64 _dt_limit_hard, const PS::F64 _sdfactor, const PS::F64 _md_factor) {
+    void initialOneSlowDown(const PS::S32 _i_group, const PS::F64 _dt_limit_hard, const PS::F64 _sdfactor) {
         if (bininfo[_i_group].semi>0&&bininfo[_i_group].stable_factor>=0) {
             clist_[_i_group].slowdown.setSlowDownPars(bininfo[_i_group].peri, _sdfactor, std::max(1.0, _dt_limit_hard/bininfo[_i_group].peri));
             //clist_[_i_group].slowdown.updatekappa(_tend, clist_[_i_group].mass/_mpert, _tp_factor,-1);
-            clist_[_i_group].slowdown.updateKappaDt(_dt, _md_factor);
+            clist_[_i_group].slowdown.updateKappaMin();
             //clist_[_i_group].slowdown.updateKappa();
         }
     }
@@ -3298,12 +3299,9 @@ public:
     //! Update slow down factor for one ARC
     /*! Update slowdown for one ARC
       @param[in] _igroup: index of ARC
-      @param[in] _tnow: current time of c.m.
-      @param[in] _dt: c.m. step size
-      @param[in] _dt_limit: step limit
       @param[in] _md_factor: slowdown modification limit factor (negative suppress the limit)
      */
-    void updateOneSlowDown(const size_t _igroup, const PS::F64 _tnow, const PS::F64 _dt, const PS::F64 _dt_limit, const PS::F64 _md_factor) {
+    void updateOneSlowDown(const size_t _igroup, const PS::F64 _md_factor) {
 #ifdef HARD_DEBUG
         assert(!group_mask_map_[_igroup]);
 #endif
@@ -3311,7 +3309,7 @@ public:
         //PS::F64 tp_factor = std::max(1e-4,_dt/_dt_limit);
         //PS::F64 tp_factor = _dt/_dt_limit;
         //std::cerr<<"i "<<_index<<" dt "<<_dt<<" fac "<<tp_factor<<std::endl;
-        clist_[_igroup].slowdown.updateKappaDt(_tnow+_dt, _md_factor);
+        clist_[_igroup].slowdown.updateKappaMinPeriod(_md_factor);
         //clist_[_igroup].slowdown.updateKappa();
     }
 
