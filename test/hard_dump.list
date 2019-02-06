@@ -1,0 +1,4 @@
+BBencounter:  B-B encounter, both have high eccentricity, ARC fail when step is fixed (fix_step_flag=1) :
+sdissue: a massive binary encounter a low-mass binary. The slowdown factor of massive binary should be smooth and not too large to get energy conservation : -k 1e-8 
+5body: B-B encounter with one body pass by, one binary have strong change of slowdown factor, it should be one and allow the B-B go to ARC for good energy conservation :
+BSweakencounter: weak encounter, should not go to ARC for three body :

@@ -1163,6 +1163,16 @@ public:
                 std::cerr<<"SD= "<<_Aint->getSlowDown(i)<<", i="<<i<<" nearest neighbor: j="<<nb_info_[i].r_min_index<<" r_min2="<<nb_info_[i].r_min2<<" mass_ratio="<<mass_ratio<<" resolve="<<nb_info_[i].resolve_flag<<" init"<<nb_info_[i].init_flag<<" r_crit2="<<_r_crit2<<std::endl;
             }
 #endif
+
+            // get original slowdown factor
+            PS::F64 sdi=0.0, frsi=0.0;
+            if(i<n_group) {
+                sdi = _Aint->getSlowDownOrg(i);
+                frsi = _Aint->getFratioSq(i);
+            }
+
+            // if radius criterion satisify or slowdown factor <1.0
+            //if(nb_info_[i].r_min2 < _r_crit2 || (sdi>0.0&&sdi<1.0)) {
             if(nb_info_[i].r_min2 < _r_crit2) {
                 const PS::S32 j = nb_info_[i].r_min_index;
 #ifdef HARD_DEBUG
@@ -1177,13 +1187,9 @@ public:
                 if(!(used_mask[i]>=0 && used_mask[j]>=0)) { // avoid double count
                     bool out_flag=getDirection(i, j);
                     if(!out_flag) {
-                        PS::F64 sdi=0.0, sdj=0.0, frsi=0.0, frsj=0.0;
-                        if(i<n_group) {
-                            sdi = _Aint->getSlowDown(i);
-                            frsi = _Aint->getFratioSq(i);
-                        }
+                        PS::F64 sdj=0.0, frsj=0.0;
                         if(j<n_group) {
-                            sdj = _Aint->getSlowDown(j);
+                            sdj = _Aint->getSlowDownOrg(j);
                             frsj = _Aint->getFratioSq(j);
                         }
                         if(sdi>1.0&&sdj>1.0) continue;
@@ -3472,7 +3478,10 @@ public:
         //if (ds_use>ds_up_limit) ds_use = ds_up_limit;
 
         const PS::S32 ipert = pert_disp_[_igroup];
-        PS::S32 fix_step_flag = 1;
+        // for standard case, not fix step
+        PS::S32 fix_step_flag = 0;
+        // for two-body or few-body with closed orbit
+        if (c->getN()==2||(c->getN()>2&&bininfo[_igroup].semi>0)) fix_step_flag = 1;
         // for high-eccentric binary, it is better to fix step to avoid big step drop, for hyperbolic, fix step is risky
         //if(c->getN()==2&&bininfo[_igroup].ecc>0.99&&bininfo[_igroup].ecc<1.0) {
         //    fix_step_flag = 2;
