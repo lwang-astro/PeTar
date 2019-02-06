@@ -1135,10 +1135,11 @@ public:
       @param[in] _mask_list: a list contain the index that would not be in the new group
       @param[in] _n_mask: number of masked indices
       @param[in] _Aint: ARC integrator class
+      @param[in] _first_step_flag: if it is first step, even the out going case will be included for the chaotic situation
       \return number of new groups
      */
     template <class ARCint>
-    PS::S32 checkNewGroup(PS::S32 _new_group_member_index[], Tphard* _new_group_member_adr[], PS::S32 _new_group_offset[], const PS::F64 _r_crit2, const PS::S32* _mask_list, const PS::S32 _n_mask, const ARCint* _Aint) {
+    PS::S32 checkNewGroup(PS::S32 _new_group_member_index[], Tphard* _new_group_member_adr[], PS::S32 _new_group_offset[], const PS::F64 _r_crit2, const PS::S32* _mask_list, const PS::S32 _n_mask, const ARCint* _Aint, const bool _first_step_flag) {
 #ifdef HARD_DEBUG
         assert(nb_info_.size()==ptcl_.size());
 #endif
@@ -1186,7 +1187,7 @@ public:
 
                 if(!(used_mask[i]>=0 && used_mask[j]>=0)) { // avoid double count
                     bool out_flag=getDirection(i, j);
-                    if(!out_flag) {
+                    if(!out_flag||_first_step_flag) {
                         PS::F64 sdj=0.0, frsj=0.0;
                         if(j<n_group) {
                             sdj = _Aint->getSlowDown(j);

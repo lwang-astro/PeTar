@@ -894,6 +894,8 @@ public:
       @param[in] _dt_tree: tree time step
       @param[in] _v_max: maximum velocity used to calculate r_search
       @param[in] _r_crit: distance criterion for group check
+      @parma[in] _sd_factor: slowdown factor for initialization
+      @param[in] _first_step_flag: if it is first step, even the out going case will be included in group for the chaotic situation
       \return fail flag from _Hint.initial
      */
     template <class Tsoft>
@@ -906,7 +908,8 @@ public:
                      const PS::F64 _dt_tree,
                      const PS::F64 _v_max,
                      const PS::F64 _r_crit,
-                     const PS::F64 _sd_factor) {
+                     const PS::F64 _sd_factor,
+                     const bool _first_step_flag) {
 
         PS::S32 n_group=_Aint.getNGroups();
         PS::S32 n_hint = _Hint.getPtclN();
@@ -927,7 +930,7 @@ public:
         PtclHard* new_group_member_adr_origin[hint_size];
         PS::S32 new_group_member_index_hint[hint_size];
         PS::S32 new_group_member_offset[hint_size+1];
-        PS::S32 n_group_new = _Hint.checkNewGroup(new_group_member_index_hint, new_group_member_adr_origin, new_group_member_offset, r_crit2, break_group_list, n_group_break, &_Aint);
+        PS::S32 n_group_new = _Hint.checkNewGroup(new_group_member_index_hint, new_group_member_adr_origin, new_group_member_offset, r_crit2, break_group_list, n_group_break, &_Aint, _first_step_flag);
 
         if(n_group_break==0&&n_group_new==0) return false;
 
@@ -1712,6 +1715,7 @@ private:
             CalcEnergyHard(_ptcl_local, E0CM, _n_ptcl);
 #endif
 
+            bool first_step_flag=true;
             while(time_sys<_time_end) {
                 time_now = time_sys;
                 time_sys = Hint.getNextTime();
@@ -1736,7 +1740,7 @@ private:
                 bool fail_flag_aint = (nstepcount_aint<0); // fail case
                 nstepcount += nstepcount_aint;
                 bool fail_flag_hint = Hint.integrateOneStepAct(time_sys,dt_limit,dt_min_hard_, &Aint);
-                bool fail_flag_adj = adjustGroup<Tsoft>(Hint, Aint, _ptcl_local, _n_ptcl, time_sys, dt_limit, _time_end, _v_max, Int_pars_.rin, sdfactor_);
+                bool fail_flag_adj = adjustGroup<Tsoft>(Hint, Aint, _ptcl_local, _n_ptcl, time_sys, dt_limit, _time_end, _v_max, Int_pars_.rin, sdfactor_, first_step_flag);
 
                 if(fail_flag_hint || fail_flag_aint || fail_flag_adj) {
 #ifdef HARD_DEBUG_DUMP
@@ -1776,7 +1780,7 @@ private:
 //                    Aint.printSlowDown(std::cerr,k);
 //                }
                 fprintf(stderr,"Slowdownfactor: ");
-                for(int k=0; k<_n_group; k++) fprintf(stderr,"%d: %f, %f; ",k,Aint.getSlowDown(k),Aint.getSlowDownOrg(k));
+                for(int k=0; k<Aint.getNGroups(); k++) fprintf(stderr,"%d: %f, %f; ",k,Aint.getSlowDown(k),Aint.getSlowDownOrg(k));
                 fprintf(stderr,"\n");
                 Hint.printStepHist();
 //                for(int i=0; i<_n_ptcl; i++) ptcl_bk_pt[i] = _ptcl_local[i];
@@ -1802,6 +1806,8 @@ private:
 
 //                for(int i=0; i<_n_ptcl; i++) _ptcl_local[i] = ptcl_bk_pt[i];
 #endif
+
+                first_step_flag = false;
             }
         
             Hint.moveCM(_time_end);
