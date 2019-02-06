@@ -1167,7 +1167,7 @@ public:
             // get original slowdown factor
             PS::F64 sdi=0.0, frsi=0.0;
             if(i<n_group) {
-                sdi = _Aint->getSlowDownOrg(i);
+                sdi = _Aint->getSlowDown(i);
                 frsi = _Aint->getFratioSq(i);
             }
 
@@ -1189,7 +1189,7 @@ public:
                     if(!out_flag) {
                         PS::F64 sdj=0.0, frsj=0.0;
                         if(j<n_group) {
-                            sdj = _Aint->getSlowDownOrg(j);
+                            sdj = _Aint->getSlowDown(j);
                             frsj = _Aint->getFratioSq(j);
                         }
                         if(sdi>1.0&&sdj>1.0) continue;
@@ -3284,7 +3284,7 @@ public:
                 PS::F64 dacc = acc[0][k]-acc[1][k];
                 fpertsq += dacc*dacc;
             }
-            clist_[_i_group].slowdown.setSlowDownPars(bininfo[_i_group].peri, _sdfactor, std::max(1.0, _tend/bininfo[_i_group].peri));
+            clist_[_i_group].slowdown.setSlowDownPars(bininfo[_i_group].peri, _sdfactor/((p[0].mass+p[1].mass)*Ptcl::mean_mass_inv), std::max(1.0, _tend/bininfo[_i_group].peri));
             clist_[_i_group].slowdown.initialFRatioSqRange(fpertsq/finnersq);
             //clist_[_i_group].slowdown.updatekappa(_tend, 1.0, _tp_factor,-1);
             clist_[_i_group].slowdown.updateKappaMin();
@@ -3293,11 +3293,12 @@ public:
     }
 
     //void initialOneSlowDown(const PS::S32 _i_group, const PS::F64 _tend, const PS::F64 _mpert, const PS::F64 _sdfactor, const PS::F64 _tp_factor) {
-    void initialOneSlowDown(const PS::S32 _i_group, const PS::F64 _dt_limit_hard, const PS::F64 _sdfactor) {
+    void initialOneSlowDown(const PS::S32 _i_group, const PS::F64 _dt_limit_hard, const PS::F64 _sdfactor, bool _set_one_flag=false) {
         if (bininfo[_i_group].semi>0&&bininfo[_i_group].stable_factor>=0) {
-            clist_[_i_group].slowdown.setSlowDownPars(bininfo[_i_group].peri, _sdfactor, std::max(1.0, _dt_limit_hard/bininfo[_i_group].peri));
+            clist_[_i_group].slowdown.setSlowDownPars(bininfo[_i_group].peri, _sdfactor/((bininfo[_i_group].m1+bininfo[_i_group].m2)*Ptcl::mean_mass_inv), std::max(1.0, _dt_limit_hard/bininfo[_i_group].peri));
             //clist_[_i_group].slowdown.updatekappa(_tend, clist_[_i_group].mass/_mpert, _tp_factor,-1);
-            clist_[_i_group].slowdown.updateKappaMin();
+            if (_set_one_flag) clist_[_i_group].slowdown.setKappa(1.0);
+            else clist_[_i_group].slowdown.updateKappaMin();
             //clist_[_i_group].slowdown.updateKappa();
         }
     }
@@ -3743,8 +3744,7 @@ public:
      */
     PS::S32 checkBreak(PS::S32* _break_group_list,
                        PS::S32* _break_isplit_list,
-                       const PS::F64 _r_crit2,
-                       const PS::F64 _sd_factor) {
+                       const PS::F64 _r_crit2) {
         PS::F64 r_max2;
         PS::S32 r_max_index;
         PS::S32 n_group_break=0;
@@ -3769,8 +3769,9 @@ public:
                 out_flag=clist_[i].getDirection(r_max_index);
                 if(out_flag) {
                     clist_[i].getFratioInnerSq(frinsqi, frinsqj, r_max_index, *ARC_control_, Int_pars_);
+                    PS::F64 sd_factor = clist_[i].slowdown.getSDRef();
                     // if slowdown factor is large, break the group
-                    if (std::min(frinsqi,frinsqj)<_sd_factor*_sd_factor) break_flag = true;
+                    if (std::min(frinsqi,frinsqj)<sd_factor*sd_factor) break_flag = true;
 #ifdef ADJUST_GROUP_DEBUG
                     std::cout<<"Check inner fratio, i_group:"<<i<<" left:"<<frinsqi<<" right:"<<frinsqj<<std::endl;
 #endif

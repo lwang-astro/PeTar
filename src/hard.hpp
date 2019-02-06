@@ -920,7 +920,7 @@ public:
         // check Aint group to break
         PS::S32 break_group_list[n_group+1];
         PS::S32 break_split_index_list[n_group+1];
-        PS::S32 n_group_break=_Aint.checkBreak(break_group_list, break_split_index_list, r_crit2, _sd_factor);
+        PS::S32 n_group_break=_Aint.checkBreak(break_group_list, break_split_index_list, r_crit2);
 
         // check Hint to find new group
         PS::S32 hint_size=_Hint.getPtclN();
@@ -1188,7 +1188,7 @@ public:
              if(fail_flag) return true;
              //// use mod_factor = 0.01 to set kappa to 1.0 initially
              //_Aint.initialOneSlowDown(i_mod_hint, _time_sys+dt_limit_hard_, dt_limit_hard_, sdfactor_, 0.01);
-             _Aint.initialOneSlowDown(i_mod_hint, dt_limit_hard_, sdfactor_);
+             _Aint.initialOneSlowDown(i_mod_hint, dt_limit_hard_, sdfactor_, true);
 #ifdef HARD_DEBUG_PRINT
             _Aint.bininfo[i_mod_hint].print(std::cerr,20,true);
             fprintf(stderr,"New Group initial Slowdown parameters:\n");
