@@ -10,6 +10,8 @@
 class ARInteraction{
 public:
     Float eps_sq; ///> softening parameter
+    Float r_crit;  ///> radius criterion for group
+    int n_split;   ///> artificial pariticle splitting parameter
     ChangeOver changeover; ///> changover control
 
     //! (Necessary) calculate acceleration from perturber and the perturbation factor for slowdown calculation

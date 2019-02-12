@@ -33,7 +33,7 @@ public:
         }
     }
 
-    void reset(){
+    void clear(){
         use_flag=false;
         for(PS::S32 i=0; i<6; i++) T2[i] = 0;
         for(PS::S32 i=0; i<10; i++) T3[i] = 0;
@@ -222,7 +222,7 @@ public:
         }
     }
 
-    void reset(){
+    void clear(){
         for(PS::S32 i=0;i<3;i++) {
             if(acc_[i]!=NULL) gsl_interp_accel_free(acc_[i]);
             if(spline_[i]!=NULL) gsl_spline_free(spline_[i]);
@@ -232,7 +232,7 @@ public:
     }
 
     ~keplerSplineFit() {
-        reset();
+        clear();
     }
 };
 #endif
@@ -240,18 +240,16 @@ public:
 //! Perturber class for AR integration
 class ARPerturber{
 public:
-    List<PtclH4*> neighbor; //> neighbor perturbers
-    
-    
-    ARPerturber(): neighbor() {}
+    List<PtclH4*> neighbor; ///> neighbor perturbers
+#ifdef TIDAL_TENSOR
+    TidalTensor soft_pert;  ///> soft perturbation 
+#else
+    keplerSplineFit soft_pert; ///> soft perturbation 
+#endif
 
+    //! clear function
     void clear() {
-        pert_single = NULL;
-        pert_group  = NULL;
-        nb_single   = NULL;
-        nb_group    = NULL;
-        pert_soft   = NULL;
-        cm_self     = NULL;
+        neighbor.clear();
+        soft_pert.reset();
     }
-
 };
