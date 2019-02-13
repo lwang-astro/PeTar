@@ -11,6 +11,8 @@ class ARInteraction{
 public:
     Float eps_sq; ///> softening parameter
     Float r_crit;  ///> radius criterion for group
+    Float dt_tree; ///> tree step size, for rsearch calculation
+    Float vmax;    ///> maximum velocity, for rsearch calculation
     int n_split;   ///> artificial pariticle splitting parameter
     ChangeOver changeover; ///> changover control
 
@@ -21,7 +23,7 @@ public:
       @param[in] _n_particle: number of member particles
       @param[in] _particle_cm: center-of-mass particle
       @param[in] _perturber: pertuber container
-      \return perturbation force to calculate slowdown factor
+      \return perturbation energy to calculate slowdown factor
     */
     Float calcAccAndSlowDownPert(Force* _force, const Ptcl* _particles, const int _n_particle, const PtclH4& _particle_cm, const Perturber& _perturber) {
         for (int i=0; i<_n_particle; i++) {
@@ -305,11 +307,7 @@ PS::S32 Newtonian_extA_pert (double3* acc, const PS::F64 time, Tptcl* p, const P
 
 #ifdef SOFT_PERT
         // soft perturbation
-#ifdef TIDAL_TENSOR
         pars->eval(acc[i], p[i].pos);
-#else
-        if(p[i].status==0) pars->eval(acc[i], time);
-#endif
 #endif
     }
 
@@ -328,11 +326,7 @@ PS::S32 Newtonian_extA_soft (double3* acc, const PS::F64 time, Tptcl* p, const P
     for(int i=0; i<np; i++) {
         acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
 #ifdef SOFT_PERT
-#ifdef TIDAL_TENSOR
         pars->eval(acc[i], p[i].pos);
-#else
-        if(p[i].status==0) pars->eval(acc[i], time);
-#endif
 #endif
     }
 
