@@ -1440,549 +1440,167 @@ private:
 
         }
 
+        // manager
+        H4::HermiteManager<HermiteInteraction> manager;
+        manager.r_break_crit = r_break;
+        manager.r_neighbor_crit = r_search;
+        manager.step.eta_4th = eta_4th;
+        manager.step.eta_2nd = eta_2nd;
+        manager.step.setDtRange(dt_max, dt_min_power_index);
+        manager.interaction.eps_sq = eps_sq;
+        manager.interaction.G = G;
+        AR::SymplecticManager<ARInteraction> ar_manager;
+        ar_manager.interaction.eps_sq = eps_sq;
+        ar_manager.interaction.G = G;
+        ar_manager.time_step_real_min = manager.step.getDtMin();
+        if (time_error == 0.0) time_error = 0.25*ar_manager.time_step_real_min;
+        ASSERT(time_error>1e-14);
+        ar_manager.time_error_max_real = time_error;
+        // time error cannot be smaller than round-off error
+        ar_manager.energy_error_relative_max = energy_error; 
+        ar_manager.step_count_max = nstep_max;
+        // set symplectic order
+        ar_manager.step.initialSymplecticCofficients(sym_order);
+
         // Only one group with all particles in group
         if(_n_group==1&&n_single_init==0) {
+
+            AR::SymplecticIntegrator<PtclHard, PtclHard, ARPerturber<PtclHard>, ARInteraction, H4::ARInformation> sym_int;
+            sym_int.manager = ar_manager;
+
+            sym_int.particles.setMode(COMM::ListMode::copy);
+            for (PS::S32 i=0; i<gpars[0].n_members; i++) {
+                sym_int.particles.addMemberAndAddress(_ptcl_local[i]);
+                sym_int.info.particle_index.addMember(i);
+            }
+            sym_int.reserveIntegratorMem();
+            sym_int.info.generateBinaryTree(sym_int.particles);
             PS::S32 icm = adr_cm_ptcl[0];
- 
- 
-            // create c.m. particles
-            Ptcl pcm(_ptcl_artifical[icm]);
-            PS::S32 iact = 0;
- 
-            ARCIntegrator<Ptcl, PtclH4, PtclForce> Aint(ARC_control_soft_, Int_pars_);
-#ifdef ARC_SYM
-            Aint.step_count_limit = arc_step_count_limit;
-#endif
-            Aint.reserveARMem(1);
-            Aint.reservePertMem(1,1);
-            gpars[0].getBinPars(Aint.bininfo[0], _ptcl_artifical);
-#ifdef HARD_DEBUG_PRINT
-            std::cerr<<"Hard: one group, n="<<_n_ptcl<<std::endl;
-            Aint.bininfo[0].print(std::cerr,20,true);
-#endif
-#ifdef TIDAL_TENSOR
             PS::S32 i_soft_pert_offset = gpars[0].offset_tt;
-#else
-            PS::S32 i_soft_pert_offset = gpars[0].offset_orb;
-#endif
-            Aint.addOneGroup(_ptcl_local, NULL, gpars[0].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_);
-            Aint.updateCM(&pcm, &iact, 1);
- 
-            Aint.initialOneChain(0);
-            bool fail_flag = Aint.initialOneSys(0, 0.0);
-            if(fail_flag) {
-#ifdef HARD_DEBUG_DUMP
-                std::cerr<<"ARC initial error, Dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
-                dumpOneCluster("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
-                abort();
-#endif
+            sym_int.perturber.fit(&_ptcl_artifical[i_soft_pert_offset], _ptcl_artifical[icm], n_split_);
+            
+            // initialization 
+            sym_int.initialIntegration(0.0);
+            sym_int.calcDsAndStepOption(sym_int.slowdown.getSlowDownFactorOrigin(), ar_manager->step.getOrder()); 
+
+            // integration
+            sym_int.integrateToTime(sym_int.info.ds, _time_end, sym_int.info.fix_step_option);
+
+            sym_int.particles.cm.pos += sym_int.particles.cm.vel * _time_end;
+
+            // update rsearch
+            sym_int.particles.cm.updateRSearch(_time_end);
+            // copyback
+            sym_int.particles.shiftToOriginFrame();
+            sym_int.particles.template writeBackMemberAll<PtclHard>();
+
+            for (PS::S32 i=0 i<gpars[0].n_members; i++) {
+                _ptcl_local[i].r_search = sym_int.particles.cm.r_search;
             }
-            Aint.initialOneSlowDownUnPert(0, _time_end, sdfactor_);
- 
-#ifdef ARC_SYM_SD_PERIOD
-            PS::S32 kp=0;
-            Aint.adjustSlowDownPeriod(_time_end, &kp);
-#else
-            Aint.adjustSlowDown(_time_end);
-#endif
- 
-#ifdef HARD_CHECK_ENERGY
-            Aint.EnergyRecord(AE0);
-#endif 
- 
-            PS::S64 nstepcount_local;
-#ifdef ARC_SYM
-#ifdef ARC_SYM_SD_PERIOD
-            if(group_n==2&&kp>0) nstepcount_local =Aint.integrateOneStepSymTwo(0, _time_end, kp);
-            else nstepcount_local =Aint.integrateOneStepSym(0, _time_end, dt_limit_hard_);
-#else
-            nstepcount_local =Aint.integrateOneStepSym(0, _time_end, dt_limit_hard_);
-#endif
-#else 
-            nstepcount_local =Aint.integrateOneStepExt(0, _time_end, dt_limit_hard_);
-#endif
 
-            // error case
-            if(nstepcount_local<0) {
-#ifdef HARD_DEBUG_DUMP
-                std::cerr<<"Dump data:"<<std::endl;
-                dumpOneCluster("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
-#endif       
-                abort();
-            }
-            else nstepcount += nstepcount_local;
-
-
-            pcm.pos += pcm.vel * _time_end;
- 
-            Aint.updateCM(&pcm, &iact, 1);
-            Aint.resolve();
-            PS::F64 dt_reduce_aint = Aint.updateRSearch(_time_end, _v_max); // update rsearch after resolve to avoid overwrite
-            dt_reduce_factor = std::max(dt_reduce_aint, dt_reduce_factor);
-
-
-#ifdef HARD_CHECK_ENERGY
-            Aint.EnergyRecord(AE1);
-            PS::F64 dEtot = AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot;
-            hard_dE += dEtot;
-#ifdef HARD_DEBUG_PRINT
-            fprintf(stderr,"Slowdown factor = %e\n", Aint.getSlowDown(0));
-            fprintf(stderr,"ARC Energy: init =%e, end =%e, diff =%e, error = %e\n", 
-                    AE0.kin+AE0.pot, AE1.kin+AE1.pot, AE1.kin+AE1.pot-AE0.kin-AE0.pot, (AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot)/AE0.tot);
-#endif
-#ifdef HARD_DEBUG_DUMP
-            if(fabs(dEtot)>hard_dE_limit) {
-                std::cerr<<"Hard energy significant: "<<dEtot<<std::endl;
-                std::cerr<<"Dump data:"<<std::endl;
-                dumpOneCluster("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
-                abort();
-            }
-#endif
-#endif
-#ifdef ARC_DEBUG_PRINT
-#ifdef ARC_SYM_SD_PERIOD
-            Aint.info_print(std::cerr, ARC_n_groups, 1, _n_ptcl, 0, dt_limit_hard_,kp);
-#else
-            bool dump_flag = Aint.info_print(std::cerr, ARC_n_groups, 1, _n_ptcl, 0, dt_limit_hard_, 0, 100000);
-            if (dump_flag) {
-                dumpOneCluster("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
-                abort();
-            }
-#endif
-#endif
-#ifdef PROFILE
-            //ARC_substep_sum += Aint.getNsubstep();
-            ARC_substep_sum += nstepcount;
+            ARC_substep_sum += sym_int.profile.step_count;
             ARC_n_groups += 1;
-#endif
         }
         else {
-            // Single index in _ptcl_local array
-            //PS::S32 single_index[_n_ptcl]; 
-            //PS::S32 n_single = 0;
-
             // integration -----------------------------
-            HermiteIntegrator<PtclHard> Hint;
-            Hint.setParams(eta_s_, Int_pars_.rin, Int_pars_.rout, Int_pars_.eps2, _n_ptcl);
+            HermiteIntegrator<PtclHard, PtclHard, HermitePerturber, ARPerturber<PtclHard>, HermiteIntegration, ARInteraction, HermiteIntegrator> h4_int;
+            h4_int.manager = h4_manager;
+            h4_int.ar_manager = ar_manager;
 
-            Hint.reserveMem(_n_ptcl+4);
-
-            // add c.m.
-            Hint.addPtclList(_ptcl_artifical, adr_cm_ptcl, _n_group, 0, 0.0, false);
-
-            // reset n_single
-            //n_single = 0;
-
-            // add single
-            Hint.addPtclList(&_ptcl_local[i_single_start], NULL, n_single_init, 0, 0.0, false);
-            //for (int i=0; i<n_single; i++) single_index[i] += i_single_start;
-
-            PS::F64 time_sys=0.0, time_now;
-#ifdef FIX_STEP_DEBUG
-            PS::F64 dt_limit = dt_limit_hard_;
-#else
-            PS::F64 dt_limit = calcDtLimit(time_sys, dt_limit_hard_, dt_min_hard_);
-#endif
+            h4_int.particles.setMode(COMM::ListMode::link);
+            h4_int.particles.linkMemberArray(_ptcl_local, _n_ptcl);
+            h4_int.particles.calcCenterOfMass();
+            h4_int.particles.shiftToCenterOfMassFrame();
             
-            //PS::S32 group_act_n = 0;
-            //PS::ReallocatableArray<PS::S32> group_act_list; //active group_list act adr
-            // ReallocatableArray<PS::S32> group_list;     //group.adr list
-            // ReallocatableArray<PS::S32> status;      //ptcl -> group.adr [non cm is -1] (value of Ptcl.status)
-            // ReallocatableArray<PS::S32> status_map;  //ptcl -> group_list index [non cm is -1]
-            // ReallocatableArray<PS::S32> adr_cm;         //group_list index -> ptcl.cm
-            // group.findGroups(group_list, status, status_map,  adr_cm, group_act_n, _ptcl_local, _n_ptcl);
+            h4_int.groups.setMode(COMM::ListMode::local);
+            h4_int.groups.reserveMem(_n_group+3);
+            h4_int.reserveIntegratorMem();
 
-#ifdef HARD_DEBUG
-#ifdef HARD_DEBUG_PRINT
-            std::cerr<<"Hard: mix, n="<<_n_ptcl<<" n_group= "<<_n_group<<std::endl;
-            for(int i=0; i<_n_group; i++) std::cerr<<"i_group= "<<i<<" n_members= "<<gpars[i].n_members<<std::endl;
-            std::FILE* fp = std::fopen("hard_debug_ptcl","w");
-            if (fp==NULL) {
-                std::cerr<<"Error: file hard_debug_ptcl cannot be open!\n";
-                abort();
+            // initial system 
+            h4_int.initialSystemSingle(time_zero);
+
+            // Tidal tensor 
+            TidalTensor tidal_tensor[_n_group+1];
+            
+            // add groups
+            if (_n_group>0) {
+                ASSERT(n_group_offset[_n_group]>0);
+                PS::S32 ptcl_index_group[n_group_offset[_n_group]];
+                for (PS::S32 i=0; i<n_group_offset[_n_group]; i++) ptcl_index_group[i] = i;
+                h4_int.addGroups(ptcl_index_group, n_group_offset, _n_group);
+
+                for (PS::S32 i=0; i<_n_groups; i++) {
+                    PS::S32 i_soft_pert_offset = adr_first_ptcl[i]+gpars[i].offset_tt;
+                    PS::S32 icm = adr_cm_ptcl[i];
+                    // correct pos for t.t. cm
+                    _ptcl_artifical[icm].pos -= h4_int.particles.cm.pos;
+                    tidal_tensor[i].fit(&_ptcl_artifical[i_soft_pert_offset], _ptcl_artifical[icm], n_split_);
+                    h4_int.groups.perturber.soft_pert = &tidal_tensor[i];
+                }
             }
-#endif
-//            assert(n_hint<ARRAY_ALLOW_LIMIT);
-#endif        
-            //group_act_list.resizeNoInitialize(n_hint);
 
-            
-            // Initial Aint
-            ARCIntegrator<Ptcl, PtclH4, PtclForce> Aint(ARC_control_pert_, Int_pars_);
-#ifdef ARC_SYM
-            Aint.step_count_limit = arc_step_count_limit;
-#endif
-            // Reserve memory space
-            Aint.reserveARMem(_n_group+2);
-            // first particles in Hint.Ptcl are c.m. thus add 1
-            Aint.reservePertMem(_n_group+2,_n_ptcl+1);
+            // initialization 
+            h4_int.initialIntegration(); // get neighbors and min particles
+            h4_int.adjustGroups(true);
+            h4_int.sortDtAndSelectActParticle();
+            h4_int.info.time = h4_int.getTime();
 
-            // Obtain binary parameters
-            //PS::F64 apo_bin[_n_group+1];
-            for (int i=0; i<_n_group; i++) {
-                gpars[i].getBinPars(Aint.bininfo[i], &_ptcl_artifical[adr_first_ptcl[i]]);
-#ifdef HARD_DEBUG_PRINT
-                std::cerr<<"Group i:"<<i<<"\n";
-                Aint.bininfo[i].print(std::cerr,20,true);
-#endif
-                //auto &bini= Aint.bininfo[i];
-                // In the new tree search way, this is not necessary
-                /* Notice in the neighbor search, the resolved members are used.
-                   The two members in different binaries can find each other as neighbors, but the c.m. particle may not find another c.m. 
-                   To avoid no perturbers issues, the rsearch should add the maximum distance of components in other binaries (apo-center distance).
-                */
-                //apo_bin[i] = bini.semi*(bini.ecc+1.0); 
-            }            
-            Hint.searchPerturber(_n_group);
-
-            for (int i=0; i<_n_group; i++) {
-//#ifdef HARD_DEBUG
-//                    assert(Hint.getPertN(i)>0);
-//#endif
-#ifdef TIDAL_TENSOR
-                PS::S32 i_soft_pert_offset = adr_first_ptcl[i]+gpars[i].offset_tt;
-#else
-                PS::S32 i_soft_pert_offset = adr_first_ptcl[i]+gpars[i].offset_orb;
-#endif
+            // integration loop
+            while (h4_int.info.time<time_end) {
+                h4_int.integrateOneStepAct();
+                h4_int.adjustGroups(false);
                 
-                Aint.addOneGroup(&_ptcl_local[n_group_offset[i]], NULL, gpars[i].n_members, &_ptcl_artifical[i_soft_pert_offset], n_split_, Hint.getPtcl(), Hint.getForce(), Hint.getPertList(i), Hint.getPertN(i));
-                Aint.initialOneChain(i);
-                bool fail_flag_aint_init = Aint.initialOneSys(i,time_sys);
-                if(fail_flag_aint_init) {
-#ifdef HARD_DEBUG_DUMP
-                    std::cerr<<"ARC initial error, Dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
-                    dumpOneCluster("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
-                    abort();
-#endif
-                }
-                //Aint.initialOneSlowDown(i, dt_limit, dt_limit_hard_, sdfactor_, -1.0);
-                Aint.initialOneSlowDown(i, dt_limit_hard_, sdfactor_);
-            }
-
-#ifdef HARD_CHECK_ENERGY
-            CalcEnergyHardFull(_ptcl_local, _n_ptcl, E0, AE0, HE0, ESD0, Hint, Aint);
-#endif
-#ifdef HARD_DEBUG_PRINT
-            if(Aint.getNGroups()>0) fprintf(stderr,"Initial Slowdown parameters:\n");
-            for(int k=0; k<Aint.getNGroups(); k++) {
-                std::cerr<<"Aint k="<<k<<std::endl;
-                Aint.printSlowDown(std::cerr,k);
-            }
-#endif
-
-            Hint.shiftToCM(); // shift ptcl to c.m. frame
-            Hint.calcA0offset();
-            bool fail_flag_hint=Hint.initial(NULL, n_single_init + _n_group, 0.0, dt_limit, dt_min_hard_, &Aint, false);
-            if(fail_flag_hint) {
-#ifdef HARD_DEBUG_DUMP
-                std::cerr<<"Hermite initial error, Dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
-                dumpOneCluster("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
-                abort();
-#endif
-            }
-            Hint.SortAndSelectIp();
-
-            // re calculate slodown factor
-            for (int k=0; k<_n_group; k++) {
-                if(!Aint.getMask(k))
-                    Aint.updateOneSlowDown(k, -1);
-                    //Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, -1);
-                //Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, 1.0, -1.0);
-            }
-
-//            for (int i=0; i<_n_group; i++) {
-//                Aint.updateOneSlowDown(i, Hint.getOneTime(i), Hint.getOneDt(i), dt_limit, Hint.getNbInfo(i).min_mass, -1);
-//            }
-// 
-//#ifdef HARD_DEBUG_PRINT
-//            fprintf(stderr,"First Slowdown parameters:");
-//            for(int k=0; k<Aint.getNGroups(); k++) {
-//                std::cerr<<"Aint k="<<k<<std::endl;
-//                Aint.printSlowDown(std::cerr,k);
-//            }
-//#endif
-
-//#ifdef HARD_CHECK_ENERGY
-//                PS::ReallocatableArray<PS::F64> slowdownrecord;
-#ifdef HARD_DEBUG
-            assert(_n_group<ARRAY_ALLOW_LIMIT);
-#endif        
-//                slowdownrecord.resizeNoInitialize(n_group);
-//#endif
-#ifdef HARD_DEBUG_PRINT
-            HardEnergy E0CM, E1CM;
-            Hint.writeBackPtcl(Aint.getNGroups());
-            CalcEnergyHard(_ptcl_local, E0CM, _n_ptcl);
-#endif
-
-            bool first_step_flag=true;
-            while(time_sys<_time_end) {
-                time_now = time_sys;
-                time_sys = Hint.getNextTime();
-#ifdef FIX_STEP_DEBUG
-                dt_limit = dt_limit_hard_;
-#else
-                dt_limit = calcDtLimit(time_sys, dt_limit_hard_, dt_min_hard_);
-#endif
-
-#ifdef HARD_DEBUG
-                assert(time_sys>time_now);
-#endif
-                PS::F64 dt_h = time_sys-time_now;
-//#ifdef HARD_CHECK_ENERGY
-//                    for(int k=0; k<n_group; k++) {
-//                        slowdownrecord[k] = std::max(slowdownrecord[k], Aint.getSlowDown(k));
-//                        assert(Aint.getSlowDown(k)>=1.0);
-//                    }
-//#endif
-                PS::S64 nstepcount_aint;
-                nstepcount_aint =Aint.integrateOneStepList(time_sys, std::min(dt_limit,dt_h));
-                bool fail_flag_aint = (nstepcount_aint<0); // fail case
-                nstepcount += nstepcount_aint;
-                bool fail_flag_hint = Hint.integrateOneStepAct(time_sys,dt_limit,dt_min_hard_, &Aint);
-                bool fail_flag_adj = adjustGroup<Tsoft>(Hint, Aint, _ptcl_local, _n_ptcl, time_sys, dt_limit, _time_end, _v_max, Int_pars_.rin, sdfactor_, first_step_flag);
-
-                if(fail_flag_hint || fail_flag_aint || fail_flag_adj) {
-#ifdef HARD_DEBUG_DUMP
-                    std::cerr<<"Hard integration error, dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
-                    dumpOneCluster("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
-                    abort();
-#endif
+                // check tt
+                const PS::S32* group_index = h4_int.getGroupActIndex();
+                const PS::S32 n_init = h4_int.getNGroupInit();
+                for(int i=0; i<n_init; i++) {
+                    h4_int.groups[group_index[i]].perturber.findCloseSoftPert(tt, _n_group);
                 }
 
-                Hint.SortAndSelectIp();
-
-                // update slowdown factor 
-                for (int k=0; k<_n_group; k++) {
-                    if(!Aint.getMask(k))
-                        Aint.updateOneSlowDown(k, 0.5);
-                        //Aint.updateOneSlowDown(k, Hint.getOneTime(k), Hint.getOneDt(k), dt_limit_hard_, 0.01);
-                }
-
-#ifdef HARD_DEBUG
-                // check time step list
-                if (Hint.checkAdrList(Aint)) {
-#ifdef HARD_DEBUG_DUMP
-                    std::cerr<<"Hermite integration error, dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
-                    dumpOneCluster("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
-#endif
-                    abort();
-                    
-                }
-#endif
-
+                h4_int.sortDtAndSelectActParticle();
+                h4_int.info.time = h4_int.getTime();
 
 #ifdef HARD_DEBUG_PRINT
-                fprintf(stderr,"Time = %.14g, dt = %.14g, nstep_ARC = %d \n",time_sys, dt_h, nstepcount);
-//                fprintf(stderr,"Slowdown parameters:");
-//                for(int k=0; k<Aint.getNGroups(); k++) {
-//                    std::cerr<<"Aint k="<<k<<std::endl;
-//                    Aint.printSlowDown(std::cerr,k);
-//                }
-                fprintf(stderr,"Slowdownfactor: ");
-                for(int k=0; k<Aint.getNGroups(); k++) fprintf(stderr,"%d: %f, %f; ",k,Aint.getSlowDown(k),Aint.getSlowDownOrg(k));
-                fprintf(stderr,"\n");
-                Hint.printStepHist();
-//                for(int i=0; i<_n_ptcl; i++) ptcl_bk_pt[i] = _ptcl_local[i];
-
-                fprintf(fp,"%25.14e ",time_sys);
-//                Aint.writePtcl<Ptcl>(fp);
-//                Hint.writePtcl(fp,Aint.getNGroups());
-//                Aint.updateCM(Hint.getPtcl());
-//                Aint.resolve();
-//                Aint.shift2CM();
-                Hint.writeBackPtcl(Aint.getNGroups());
-                CalcEnergyHard(_ptcl_local, E1CM, _n_ptcl);
-                PS::F64 dEtot = E1CM.tot - E0CM.tot;
-                if(std::fabs(dEtot)>1e-5) {
-                    std::cerr<<"Warning, large energy error appear! dE="<<dEtot<<std::endl;
+                if (fmod(h4_int.info.time, h4_manager->step.getDtMax())==0.0) {
+                    h4_int.writeBackGroupMembers();
+                    h4_int.info.calcEnergy(h4_int.particles, h4_manager->interaction, false);
+            
+                    h4_int.info.printColumn(std::cout, print_width);
+                    h4_int.particles.printColumn(std::cout, print_width);
+                    std::cout<<std::endl;
+                    h4_int.printStepHist();
                 }
-                fprintf(fp,"%25.14e ", dEtot);
-                fprintf(stderr," Energy error: init: %g, now: %g, diff: %g\n", E0CM.tot, E1CM.tot, dEtot);
-                fprintf(fp,"%d ", _n_group);
-                for(int k=0; k<_n_group; k++) fprintf(fp,"%f %f ",Aint.getSlowDown(k),Aint.getSlowDownOrg(k));                
-                for(int i=0; i<_n_ptcl; i++) _ptcl_local[i].ParticleBase::writeAscii(fp);
-                fprintf(fp,"\n");
-
-//                for(int i=0; i<_n_ptcl; i++) _ptcl_local[i] = ptcl_bk_pt[i];
 #endif
-
-                first_step_flag = false;
             }
         
-            Hint.moveCM(_time_end);
-            Hint.shiftBackCM();
-            Aint.updateCM(Hint.getPtcl());
-            Aint.resolve();
-            PS::F64 dt_reduce_aint = Aint.updateRSearch(_time_end, _v_max); // update rsearch after resolve to avoid overwrite
-            PS::F64 dt_reduce_hint = Hint.updateRSearch(Aint.getNGroups(),_time_end, _v_max);
+            h4_int.particles.cm.pos += h4_int.particles.cm.vel * _time_end;
+            h4_int.writeBackGroupMembers();
+            // update research
+            const PS::S32* group_index = h4_int.getGroupActIndex();
+            for(PS::S32 i=0; i<h4_int.getNGroupAct(); i++) {
+                const PS::S32 k =group_index[i];
+                h4_int.groups[k].particles.cm.calcRSearch(_time_end);
+                const PS::S32 n_member = h4_int.groups[k].particles.getSize();
+                for (PS::S32 j=0; j<n_member; j++) {
+                    h4_int.groups[k].particles.getMemberOriginAddress(j)->r_search = h4_int.groups[k].particles.cm.r_search;
+                }
+            }
+            const PS::S32* single_index = h4_int.getSingleActIndex();
+            for (PS::S32 i=0; i<h4_int.getNSingleAct(); i++) {
+                h4_int.particles[single_index[i]].calcRSearch(_time_end);
+            }
 
-            PS::F64 dt_reduce_tmp = std::max(dt_reduce_aint, dt_reduce_hint);
-            dt_reduce_factor = std::max(dt_reduce_tmp, dt_reduce_factor);
-            Hint.writeBackPtcl(Aint.getNGroups());
+#ifdef PROFILE
+            h4_int.info.calcEnergy(h4_int.particles, h4_manager->interaction, false);
+#endif
+            h4_int.particles.shiftToOriginFrame();
 
-#ifdef ARC_DEBUG_PRINT
-            bool dump_flag = Aint.info_print(std::cerr, ARC_n_groups, _n_group, _n_ptcl, Hint.getPtclN(), dt_limit_hard_, 0, 1000000);
-            if (dump_flag) {
-                dumpOneCluster("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*(2*n_split_+1), _n_group);
-                abort();
-            }
-#endif
-#ifdef HARD_CHECK_ENERGY
-            CalcEnergyHardFull(_ptcl_local, _n_ptcl, E1, AE1, HE1, ESD1, Hint, Aint);
-            PS::F64 dEtot = E1.tot - E0.tot;
-            hard_dE += dEtot;
-            hard_dESD += ESD1.tot - ESD0.tot;
-#ifdef HARD_DEBUG_PRINT
-            fclose(fp);
-            fprintf(stderr,"Slowdown parameters:");
-            for(int k=0; k<_n_group; k++) {
-                std::cerr<<"Aint k="<<k<<std::endl;
-                Aint.printSlowDown(std::cerr,k);
-            }
-            fprintf(stderr,"\n");
-            fprintf(stderr,"H4  Energy: init =%e, end =%e, diff =%e, kini =%e kinf =%e poti =%e potf =%e\nARC Energy: init =%e, end =%e, diff =%e, error = %e\nTot Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e, Tot-H4-ARC =%e\nTSD Energy: init =%e, end =%e, diff =%e, kin =%e pot =%e\n", 
-                    HE0.tot, HE1.tot, HE1.tot-HE0.tot, HE0.kin, HE1.kin, HE0.pot, HE1.pot, 
-                    AE0.kin+AE0.pot, AE1.kin+AE1.pot, AE1.kin+AE1.pot-AE0.kin-AE0.pot, (AE1.kin+AE1.pot+AE1.tot-AE0.kin-AE0.pot-AE0.tot)/AE0.tot,
-                    E0.tot, E1.tot, E1.tot-E0.tot, E1.kin, E1.pot, E1.tot-HE1.tot-AE1.kin-AE1.pot,
-                    ESD0.tot, ESD1.tot, ESD1.tot-ESD0.tot, ESD1.kin, ESD1.pot);
-            Hint.printStepHist();
-#endif
-#ifdef HARD_DEBUG_DUMP
-            if(fabs(dEtot)>hard_dE_limit) {
-                std::cerr<<"Hard energy significant: "<<dEtot<<std::endl;
-                std::cerr<<"Dump data:"<<std::endl;
-                dumpOneCluster("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, _n_group*gpars[0].n_ptcl_artifical, _n_group);
-                abort();
-            }
-#endif
-#endif
 #ifdef PROFILE
             //ARC_substep_sum += Aint.getNsubstep();
             ARC_substep_sum += nstepcount;
             ARC_n_groups += _n_group;
 #endif
         }
-
-//        }            
-//        else { // no group
-//            // initial single_index
-//            n_single = _n_ptcl;
-//            for (int i=0; i<_n_ptcl; i++) {
-//                single_index[i] = i;
-//            }
-//            n_group = 0;
-// 
-//            HermiteIntegrator Hint;
-//            Hint.setParams(eta_s_, Int_pars_.rin, Int_pars_.rout, Int_pars_.eps2);
-//            Hint.resizeArray(_n_ptcl);
-// 
-//            // Null pointer for arguments of Hint
-//            ARCIntegrator<Ptcl, PtclH4, PtclForce> *Aint_null=NULL;
-// 
-//            // add single
-//            Hint.setPtcl(_ptcl_local, _n_ptcl);
-// 
-//#ifdef HARD_DEBUG
-//            assert(_n_ptcl>1);
-//#ifdef HARD_DEBUG_PRINT
-//            std::cerr<<"Hard: hermite, n="<<_n_ptcl<<std::endl;
-//#endif
-//            for(int i=0; i<_n_ptcl; i++) {
-//                assert(_ptcl_local[i].status==0);
-//                assert(_ptcl_local[i].mass>0);
-//                assert(_ptcl_local[i].id>0);
-//            }
-//#endif
-// 
-//            PS::F64* dr_search=NULL;
-//            Hint.searchPerturber(dr_search,0,_n_ptcl);
-//            
-//            PS::F64 time_sys=0.0;
-//#ifdef HARD_DEBUG
-//            PS::F64 time_now;
-//#endif
-// 
-//#ifdef FIX_STEP_DEBUG
-//            PS::F64 dt_limit = dt_limit_hard_;
-//#else
-//            PS::F64 dt_limit = calcDtLimit(time_sys, dt_limit_hard_, dt_min_hard_);
-//#endif
-// 
-//            //PS::S32 group_act_n = 0;
-//            //PS::ReallocatableArray<PS::S32> group_act_list; //active group_list act adr
-// 
-//#ifdef HARD_DEBUG
-//            assert(_n_ptcl<ARRAY_ALLOW_LIMIT);
-//#endif        
-//            //group_act_list.resizeNoInitialize(_n_ptcl);
-// 
-//#ifdef HARD_CHECK_ENERGY
-//            // calculate initial energy
-//            Hint.CalcEnergy(HE0);
-//#endif
-// 
-//            bool fail_flag=Hint.initialize(dt_limit, dt_min_hard_, 0, Aint_null);
-// 
-//            if(fail_flag) {
-//#ifdef HARD_DEBUG_DUMP
-//                std::cerr<<"Dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
-//                dumpOneCluster("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, 0, 0);
-//                abort();
-//#endif
-//            }
-// 
-//            while(time_sys<_time_end) {
-//#ifdef HARD_DEBUG
-//                time_now = time_sys;
-//#endif
-//                time_sys = Hint.getNextTime();
-//#ifdef FIX_STEP_DEBUG
-//                dt_limit = dt_limit_hard_;
-//#else
-//                dt_limit = calcDtLimit(time_sys, dt_limit_hard_, dt_min_hard_);
-//#endif
-// 
-//#ifdef HARD_DEBUG
-//                assert(time_sys>time_now);
-//#endif
-//                fail_flag = Hint.integrateOneStep(time_sys,dt_limit,dt_min_hard_,true, Aint_null);
-//                if(fail_flag) {
-//#ifdef HARD_DEBUG_DUMP
-//                    std::cerr<<"Dump hard data. tend="<<_time_end<<" _n_ptcl="<<_n_ptcl<<"\n";
-//                    dumpOneCluster("hard_dump",_time_end, ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, 0, 0);
-//                    abort();
-//#endif
-//                }
-//                
-//                Hint.SortAndSelectIp();
-//            }
-//            
-//            Hint.moveCM(_time_end);
-//            Hint.shiftBackCM();
-// 
-//            Hint.writeBackPtcl(_ptcl_local, _n_ptcl, single_index, 0);
-// 
-//#ifdef HARD_CHECK_ENERGY
-//            Hint.CalcEnergy(HE1);
-//            PS::F64 dEtot = HE1.tot-HE0.tot;
-//            hard_dE += dEtot;
-//#ifdef HARD_DEBUG_PRINT
-//            fprintf(stderr,"H4  Energy: init =%e, end =%e, diff =%e, kini =%e kinf =%e poti =%e potf =%e\n", 
-//                    HE0.tot, HE1.tot, HE1.tot-HE0.tot, HE0.kin, HE1.kin, HE0.pot, HE1.pot);
-//            Hint.printStepHist();
-//#endif
-//#ifdef HARD_DEBUG_DUMP
-//            if(fabs(dEtot)>hard_dE_limit) {
-//                std::cerr<<"Hard energy significant: "<<dEtot<<std::endl;
-//                std::cerr<<"Dump data:"<<std::endl;
-//                dumpOneCluster("hard_dump",_time_end,  ptcl_bk.getPointer(), _n_ptcl, _ptcl_artifical, 0, 0);
-//                abort();
-//            }
-//#endif
-//#endif
-//        }
-
     }
 
 public:

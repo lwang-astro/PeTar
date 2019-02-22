@@ -9,11 +9,10 @@ class TidalTensor{
 private:
     PS::F64 T2[6];  // 1st (6)
     PS::F64 T3[10]; // 2nd Tensor (10)
-    bool use_flag;
+    PS::F64vec pos;  // position of c.m.
 public:
 
-    // only initialize flag
-    TidalTensor(): use_flag(false) {}
+    TidalTensor(): T2{0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, T3{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0} pos(0.0) {}
 
     void dump(FILE *fp){
         fwrite(this, sizeof(TidalTensor),1,fp);
@@ -37,10 +36,12 @@ public:
     /* @param[in] _ptcl_tt: tidal tensor measure particles
        @param[in] _bin: binary information, get the scaling factor of distance
        @param[in] _n_split: artifical particle splitting number
-     */
+    */
     template<class Tptcl>
-    void fit(Tptcl* _ptcl_tt, const Binary& _bin, const PS::F64 _r_bin, const PS::S32 _n_split) {
-        use_flag=true;
+    void fit(Tptcl* _ptcl_tt, Tptcl& _ptcl_cm, const Binary& _bin, const PS::F64 _r_bin, const PS::S32 _n_split) {
+        // get c.m. position
+        pos = _ptcl_cm.pos;
+
         PS::F64vec fi[8];
 #ifdef HARD_DEBUG
         assert(_ptcl_tt[12].mass_bk==0);
@@ -97,7 +98,6 @@ public:
     }
 
     void eval(PS::F64* acc, const PS::F64vec &pos) const {
-        if(!use_flag) return;
         /*
           T2:
           [[0 1 2]
@@ -117,7 +117,7 @@ public:
           [10 13 14]
           [11 14 15]]]
 
-         */
+        */
         PS::F64 x = pos.x;
         PS::F64 y = pos.y;
         PS::F64 z = pos.z;
@@ -146,14 +146,20 @@ public:
 };
 
 //! Perturber class for AR integration
-class ARPerturber{
+template <class Tparticle>
+class ARPerturber: public H4::Neighbor<Tparticle>{
 public:
-    List<PtclH4*> neighbor; ///> neighbor perturbers
-    TidalTensor soft_pert;  ///> soft perturbation 
+    TidalTensor* soft_pert;  ///> soft perturbation 
+
+    ARPerturber(): H4:Neighbor(), soft_pert(NULL) {}
 
     //! clear function
     void clear() {
-        neighbor.clear();
-        soft_pert.reset();
+        H4::Neighbor::clear();
+        soft_pert = NULL:
+    }
+
+    void findCloseSoftPert(TidalTensor* _tt, const int _n_tt) {
+        
     }
 };
