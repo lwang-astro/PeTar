@@ -11,19 +11,19 @@ PS_PATH  = -I/home/lwang/code/fdps/src
 ##ARC PATH
 #ARC_PATH= -I../TSARC/include
 #ARC_PATH = -I/home/lwang/code/ARC/include
-ARC_PATH = -I/home/lwang/GitHub/ARC/include
+ARC_PATH = -I/home/lwang/GitHub/ARModule/src
 
 ##Gperftools PATH
 #GPERF_PATH = ../../soft/gperftools-2.6.90
 
-#ROOT_PATH= ${shell pwd -P}
-INCLUDE  = -I./src -I../src
+ROOT_PATH= /home/lwang/GitHub/P3TARC
+INCLUDE  = -I${ROOT_PATH}/src
 
 #use_k_computer = yes
 #use_xc30_naoj = yes
 use_x86 = yes
 use_mpi = yes
-#debug_mode=yes
+debug_mode=yes
 #use_intel=yes
 
 ifeq ($(use_k_computer),yes)
@@ -112,13 +112,8 @@ CXXFLAGS += -D HARD_CHECK_ENERGY
 #CXXLIBS += ${shell gsl-config --libs}
 
 #MT_FLAGS += -D HARD_CM_KICK
-MT_FLAGS += -D TIDAL_TENSOR # Must use HARD_CM_KICK together
 MT_FLAGS += -D SOFT_PERT
-MT_FLAGS += -D SPLIT_MASS
 MT_FLAGS += -D ARC_SYM
-MT_FLAGS += -D ARC_OPT_SYM2
-#MT_FLAGS += -D ARC_SYM_SD_PERIOD
-#MT_FLAGS += -D HERMITE_RESOLVE_GROUP
 #MT_FLAGS += -D KDKDK_2ND
 MT_FLAGS += -D KDKDK_4TH
 #MT_FLAGS += -D ONLY_SOFT
@@ -131,16 +126,11 @@ SIMD_DEBFLAGS += -DRSQRT_NR_SPJ_X2
 SIMD_DEBFLAGS += -DRSQRT_NR_SPJ_X4
 SIMD_DEBFLAGS += -DAVX_PRELOAD
 
-#DEBFLAGS += -D ARC_PROFILE
 #DEBFLAGS += -D INTEGRATED_CUTOFF_FUNCTION
-DEBFLAGS += -D ARC_DEBUG
-#DEBFLAGS += -D ARC_DEBUG_PRINT
-#DEBFLAGS += -D ARC_DEEP_DEBUG
-DEBFLAGS += -D ARC_ERROR
-DEBFLAGS += -D ARC_DEBUG_DUMP
-#DEBFLAGS += -D ARC_WARN
+DEBFLAGS += -D AR_DEBUG
+#DEBFLAGS += -D AC_DEEP_DEBUG
+DEBFLAGS += -D AR_WARN
 DEBFLAGS += -D HARD_DEBUG
-#DEBFLAGS += -D HARD_DEBUG_PRE_DUMP
 DEBFLAGS += -D HARD_DEBUG_DUMP
 #DEBFLAGS += -D STABLE_CHECK_DEBUG
 #DEBFLAGS += -D CLUSTER_DEBUG
@@ -150,7 +140,6 @@ DEBFLAGS += -D HARD_DEBUG_DUMP
 #DEBFLAGS += -D DATA_DEBUG
 #DEBFLAGS += -D FIX_STEP_DEBUG
 #DEBFLAGS += -D DEBUG
-#DEBFLAGS += -D DEBUG_TEMP
 #DEBFLAGS += -D MAIN_DEBUG
 #DEBFLAGS += -D CORRECT_FORCE_DEBUG
 
@@ -164,9 +153,9 @@ ifneq (x$(GPERF_PATH),x)
 CXXLIBS += -L$(GPERF_PATH)/lib -lprofiler -ltcmalloc 
 endif
 
-VPATH=./src ./test ../src
+VPATH=${ROOT_PATH}/src ${ROOT_PATH}/test
 
-SRC = main.cc hard.hpp soft.hpp hard_force.hpp io.hpp kepler.hpp phantomquad_for_p3t_x86.hpp domain.hpp profile.hpp cluster_list.hpp integrate.hpp init.hpp
+SRC = main.cc ${shell ls ${ROOT_PATH}/src/*.hpp} 
 
 all: nbody.out
 

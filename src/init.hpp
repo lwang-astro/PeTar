@@ -9,10 +9,11 @@
   @param[in,out] _r_bin:  arc group radius criterion
   @param[in,out] _r_search_min: minimum searching radius
   @param[in,out] _r_search_max: maximum searching radius
-  @param[in,out] _v_max:  maximum velocity to calculate r_search
-  @param[in,out] _m_average: averaged mass of particles
+  @param[out] _v_max:  maximum velocity to calculate r_search
+  @param[out] _m_average: averaged mass of particles
+  @param[out] _m_max: maximum mass of particles
   @param[in,out] _dt_tree: tree time step
-  @param[in,out] _vel_disp: system velocity dispersion 
+  @param[out] _vel_disp: system velocity dispersion 
   @param[in]     _search_factor: coefficient to calculate r_search
   @param[in]     _ratio_r_cut: _r_out/_r_in
   @param[in]     _n_bin: number of binaries
@@ -26,6 +27,7 @@ void GetInitPar(const Tpsys & _tsys,
                 PS::F64 &_r_search_max,
                 PS::F64 &_v_max,
                 PS::F64 &_m_average,
+                PS::F64 &_m_max,
                 PS::F64 &_dt_tree,
                 PS::F64 &_vel_disp,
                 const PS::F64 _search_factor,
@@ -40,6 +42,8 @@ void GetInitPar(const Tpsys & _tsys,
     PS::F64vec vel_cm_loc = 0.0;
     // local c.m. mass
     PS::F64 mass_cm_loc = 0.0;
+    // local maximum mass
+    PS::F64 mass_max_loc = 0.0;
 
     for(PS::S64 i=0; i<n_loc; i++){
         PS::F64 mi = _tsys[i].mass;
@@ -50,10 +54,12 @@ void GetInitPar(const Tpsys & _tsys,
 #endif
         mass_cm_loc += mi;
         vel_cm_loc += mi * vi;
+        mass_max_loc = std::max(mi, mass_max_loc);
     }
 
     // global c.m. parameters
     PS::F64    mass_cm_glb = PS::Comm::getSum(mass_cm_loc);
+    _m_max = PS::Comm::getMaxValue(mass_max_loc);
     PS::F64vec vel_cm_glb  = PS::Comm::getSum(vel_cm_loc);
     vel_cm_glb /= mass_cm_glb;
 

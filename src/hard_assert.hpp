@@ -155,21 +155,21 @@ public:
 
     void dump(const char *filename) {
         for (int i=0; i<size; i++) {
-            std::string fname = filename + std::to_string(i);
+            std::string fname = filename + std::string(".") + std::to_string(i);
             hard_dump[i].dumpOneCluster(fname.c_str());
+            std::cerr<<"Dump file: "<<fname.c_str()<<std::endl;
         }
     }
 };
 
 static HardDumpList HARD_DUMP;
 
-#define DATADUMP(expr)                                                  \
-    std::cerr<<"Assertion! File: "<<__FILE__<<" Line: "<<__LINE__<<std::endl; \
-    HARD_DUMP.dump("hard_dump");                                        
+#define DATADUMP(expr) HARD_DUMP.dump("hard_dump");                                        
 
 #ifdef HARD_DEBUG_DUMP
 #define ASSERT(expr)                                                    \
     if(!(expr)) {                                                       \
+        std::cerr<<"Assertion! "<<__FILE__<<":"<<__LINE__<<": ("<<#expr<<") fail!"<<std::endl; \
         DATADUMP();                                                     \
         abort();                                                        \
     }

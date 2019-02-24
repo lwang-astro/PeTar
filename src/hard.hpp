@@ -926,17 +926,18 @@ private:
             _ptcl_local[i].mass_bk = 0.0;
         }
 
-        // In orbital fitting soft perturbation, the status is used to identify which component the member belong to
-        for(int i=0; i<_n_group; i++) {
-            // only first component is enough.
-            for(int j=0; j<gpars[i].n_members_1st; j++)
-                _ptcl_local[n_group_offset[i]+j].status = 0; 
-        }
+        //// In orbital fitting soft perturbation, the status is used to identify which component the member belong to
+        //for(int i=0; i<_n_group; i++) {
+        //    // only first component is enough.
+        //    for(int j=0; j<gpars[i].n_members_1st; j++)
+        //        _ptcl_local[n_group_offset[i]+j].status = 0; 
+        //}
 
         // pre-process for c.m. particle,
         for(int i=0; i<_n_group; i++){
             PS::S32 icm = adr_cm_ptcl[i];
             // kick c.m. (not done in previous kick function to avoid multi-kick)
+            // Cannot do any kick in drift, because the K/D time step is not necessary same
             //_ptcl_artifical[icm].vel += _ptcl_artifical[icm].acc * _time_end; (not do here to avoid half time step issue)
             // recover mass
             _ptcl_artifical[icm].mass = _ptcl_artifical[icm].mass_bk;
@@ -956,22 +957,23 @@ private:
 
             // check whether c.m. pos. and vel. are consistent
             PS::F64 mass_cm_check=0.0;
-            PS::F64vec vel_cm_check=PS::F64vec(0.0);
+            // Cannot do velocity check because cm is not kicked
+            //PS::F64vec vel_cm_check=PS::F64vec(0.0);
             PS::F64vec pos_cm_check=PS::F64vec(0.0);
             
             for(int j=0; j<gpars[i].n_members; j++) {
                 PS::S32 k = n_group_offset[i]+j;
                 mass_cm_check += _ptcl_local[k].mass;
-                vel_cm_check +=  _ptcl_local[k].vel*_ptcl_local[k].mass;
+                //vel_cm_check +=  _ptcl_local[k].vel*_ptcl_local[k].mass;
                 pos_cm_check +=  _ptcl_local[k].pos*_ptcl_local[k].mass;
             }
-            vel_cm_check /= mass_cm_check;
+            //vel_cm_check /= mass_cm_check;
             pos_cm_check /= mass_cm_check;
 
             assert(abs(mass_cm_check-_ptcl_artifical[icm].mass)<1e-10);
-            PS::F64vec dvec = vel_cm_check-_ptcl_artifical[icm].vel;
+            //PS::F64vec dvec = vel_cm_check-_ptcl_artifical[icm].vel;
             PS::F64vec dpos = pos_cm_check-_ptcl_artifical[icm].pos;
-            assert(abs(dvec*dvec)<1e-20);
+            //assert(abs(dvec*dvec)<1e-20);
             assert(abs(dpos*dpos)<1e-20);
 #endif
 
@@ -988,6 +990,9 @@ private:
             sym_int.manager = ar_manager;
 
             sym_int.particles.setMode(COMM::ListMode::copy);
+            sym_int.particles.reserveMem(gpars[0].n_members);
+            sym_int.info.reserveMem(gpars[0].n_members);
+            sym_int.perturber.r_crit_sq = h4_manager->r_neighbor_crit*h4_manager->r_neighbor_crit;
             for (PS::S32 i=0; i<gpars[0].n_members; i++) {
                 sym_int.particles.addMemberAndAddress(_ptcl_local[i]);
                 sym_int.info.particle_index.addMember(i);
@@ -1070,7 +1075,8 @@ private:
 
             // initialization 
             h4_int.initialIntegration(); // get neighbors and min particles
-            h4_int.adjustGroups(true);
+            //h4_int.adjustGroups(true);
+            //h4_int.initialIntegration();
             h4_int.sortDtAndSelectActParticle();
             h4_int.info.time = h4_int.getTime();
 
@@ -1090,7 +1096,8 @@ private:
                     auto& groupi = h4_int.groups[group_index[i]];
                     groupi.perturber.findCloseSoftPert(tidal_tensor, _n_group, groupi.particles.cm);
                 }
-
+                // initial after groups are modified
+                h4_int.initialIntegration();
                 h4_int.sortDtAndSelectActParticle();
                 h4_int.info.time = h4_int.getTime();
 
@@ -1138,7 +1145,7 @@ private:
         }
 #ifdef HARD_CHECK_ENERGY
         hard_dE = etotf - etoti;
-        if (hard_dE > manager->energy_error_relative_max * etoti) {
+        if (abs(hard_dE) > manager->energy_error_relative_max * abs(etoti)) {
             std::cerr<<"Hard energy significant ("<<hard_dE<<") !\n";
             DATADUMP();
             abort();

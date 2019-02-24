@@ -159,6 +159,13 @@ public:
         soft_pert = NULL;
     }
 
+    //! check parameters status
+    bool checkParams() {
+        ASSERT(NB::checkParams());
+        ASSERT(soft_pert!=NULL);
+        return true;
+    }
+
     void findCloseSoftPert(TidalTensor* _tt, const int _n_tt, const H4::ParticleH4<PtclHard>& _cm) {
         const PS::F64vec& pos = _cm.pos;
         PS::F64 r_min2=NUMERIC_FLOAT_MAX;

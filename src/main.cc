@@ -517,8 +517,8 @@ int main(int argc, char *argv[]){
     //    }
     //}
     
-    PS::F64 r_in, m_average, v_disp, v_max;
-    GetInitPar(system_soft, r_in, r_out.value, r_bin.value, r_search_min, r_search_max.value, v_max, m_average, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value, n_bin.value, theta.value);
+    PS::F64 r_in, m_average, m_max, v_disp, v_max;
+    GetInitPar(system_soft, r_in, r_out.value, r_bin.value, r_search_min, r_search_max.value, v_max, m_average, m_max, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value, n_bin.value, theta.value);
 
 //    EPISoft::r_out = r_out;
     EPISoft::r_in  = r_in;
@@ -612,6 +612,9 @@ int main(int argc, char *argv[]){
     hard_manager.setG(1.0);
     hard_manager.energy_error_relative_max = e_err_hard.value;
     hard_manager.r_tidal_tensor = r_bin.value;
+    hard_manager.id_offset = id_offset;
+    hard_manager.n_split = n_split.value;
+    hard_manager.changeover.setR(r_in, r_out.value);
     hard_manager.h4_manager.r_break_crit = r_bin.value;
     hard_manager.h4_manager.r_neighbor_crit = r_search_min;
     hard_manager.h4_manager.step.eta_4th = eta.value;
@@ -625,6 +628,9 @@ int main(int argc, char *argv[]){
     hard_manager.ar_manager.slowdown_pert_ratio_ref = sd_factor.value;
     hard_manager.ar_manager.slowdown_factor_max = 1.0e8;
     hard_manager.ar_manager.slowdown_mass_ref = m_average;
+    hard_manager.ar_manager.interaction.calcSoftPertMin(m_max);
+
+    hard_manager.checkParams();
 
     // initial hard class and parameters
     SystemHard system_hard_one_cluster;

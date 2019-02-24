@@ -521,7 +521,7 @@ private:
 //      const PS::F64 dE = 8.0*atan(1.0)/_n_split;
         //const PS::F64 dt = _bin.peri/_n_split;
         if (_n_split<8) {
-            std::cerr<<"N_SPLIT to small to save binary parameters, should be >= 8!";
+            std::cerr<<"N_SPLIT "<<_n_split<<" to small to save binary parameters, should be >= 8!";
             abort();
         }
         PS::S32 i_cg[2]={_i_cluster, _i_group};
