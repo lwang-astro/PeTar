@@ -53,12 +53,38 @@ public:
         return *this;
     }
 
-    void print(std::ostream & _fout){
+    void print(std::ostream & _fout) const{
         ParticleBase::print(_fout);
         _fout<<" r_search="<<r_search
              <<" mass_bk="<<mass_bk
              <<" id="<<id
              <<" status="<<status;
+    }
+
+    //! print titles of class members using column style
+    /*! print titles of class members in one line for column style
+      @param[out] _fout: std::ostream output object
+      @param[in] _width: print width (defaulted 20)
+     */
+    void printColumnTitle(std::ostream & _fout, const int _width=20) {
+        ParticleBase::printColumnTitle(_fout, _width);
+        _fout<<std::setw(_width)<<"r_search"
+             <<std::setw(_width)<<"mass_bk"
+             <<std::setw(_width)<<"id"
+             <<std::setw(_width)<<"status";
+    }
+
+    //! print data of class members using column style
+    /*! print data of class members in one line for column style. Notice no newline is printed at the end
+      @param[out] _fout: std::ostream output object
+      @param[in] _width: print width (defaulted 20)
+     */
+    void printColumn(std::ostream & _fout, const int _width=20){
+        ParticleBase::printColumn(_fout, _width);
+        _fout<<std::setw(_width)<<r_search
+             <<std::setw(_width)<<mass_bk
+             <<std::setw(_width)<<id
+             <<std::setw(_width)<<status;
     }
 
     void writeAscii(FILE* _fout) const{
@@ -92,35 +118,31 @@ public:
     }
 
     //! calculate new rsearch
-    /*! calculate r_search based on velocity and tree step, if velocity exceed the max limit, return reduce_factor = v/_v_max
-      \return dt_tree reducing factor.
+    /*! calculate r_search based on velocity and tree step 
      */
-    PS::F64 calcRSearch(const PS::F64 _dt_tree, const PS::F64 _v_max) {
+    void calcRSearch(const PS::F64 _dt_tree) {
         PS::F64 v = std::sqrt(vel*vel);
-        PS::F64 dt_reduce_factor = 1.0;
-        if (v>_v_max) {
-            dt_reduce_factor = v/_v_max;
-            v = _v_max;
-        }
         r_search = std::max(v*_dt_tree*search_factor, r_search_min);
         //r_search = std::max(std::sqrt(vel*vel)*dt_tree*search_factor, std::sqrt(mass*mean_mass_inv)*r_search_min);
 #ifdef HARD_DEBUG
         assert(r_search>0);
 #endif
-        return dt_reduce_factor;
     }
+//    PS::F64 calcRSearch(const PS::F64 _dt_tree, const PS::F64 _v_max) {
+//        PS::F64 v = std::sqrt(vel*vel);
+//        PS::F64 dt_reduce_factor = 1.0;
+//        if (v>_v_max) {
+//            dt_reduce_factor = v/_v_max;
+//            v = _v_max;
+//        }
+//        r_search = std::max(v*_dt_tree*search_factor, r_search_min);
+//        //r_search = std::max(std::sqrt(vel*vel)*dt_tree*search_factor, std::sqrt(mass*mean_mass_inv)*r_search_min);
+//#ifdef HARD_DEBUG
+//        assert(r_search>0);
+//#endif
+//        return dt_reduce_factor;
+//    }
 
-    void dump(FILE *_fout) {
-        fwrite(this, sizeof(*this),1,_fout);
-    }
-
-    void read(FILE *_fin) {
-        size_t rcount = fread(this, sizeof(*this),1,_fin);
-        if (rcount<1) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
-            abort();
-        }
-    }
 };
 
 PS::F64 Ptcl::r_search_min = 0.0;

@@ -1,18 +1,18 @@
 #pragma once
 
-#include "AR/Float.h"
-#include "AR/list.h"
-#include "ptclh4.hpp"
+#include "Common/list.h"
+#include "Hermite/hermite_particle.h"
+#include "hard_ptcl.hpp"
 
 //! Tidal tensor perterbation for AR
 class TidalTensor{
 private:
     PS::F64 T2[6];  // 1st (6)
     PS::F64 T3[10]; // 2nd Tensor (10)
-    PS::F64vec pos;  // position of c.m.
 public:
+    PS::F64vec pos;  // position of c.m.
 
-    TidalTensor(): T2{0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, T3{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0} pos(0.0) {}
+    TidalTensor(): T2{0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, T3{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, pos(0.0) {}
 
     void dump(FILE *fp){
         fwrite(this, sizeof(TidalTensor),1,fp);
@@ -27,18 +27,18 @@ public:
     }
 
     void clear(){
-        use_flag=false;
         for(PS::S32 i=0; i<6; i++) T2[i] = 0;
         for(PS::S32 i=0; i<10; i++) T3[i] = 0;
     }
 
     //! tidal tensor fitting function,
-    /* @param[in] _ptcl_tt: tidal tensor measure particles
-       @param[in] _bin: binary information, get the scaling factor of distance
-       @param[in] _n_split: artifical particle splitting number
+    /*! @param[in] _ptcl_tt: tidal tensor measure particles
+        @param[in] _ptcl_cm: tidal tensor measure particle c.m.
+        @param[in] _r_bin: particle box size
+        @param[in] _n_split: artifical particle splitting number
     */
     template<class Tptcl>
-    void fit(Tptcl* _ptcl_tt, Tptcl& _ptcl_cm, const Binary& _bin, const PS::F64 _r_bin, const PS::S32 _n_split) {
+    void fit(Tptcl* _ptcl_tt, Tptcl& _ptcl_cm,  const PS::F64 _r_bin, const PS::S32 _n_split) {
         // get c.m. position
         pos = _ptcl_cm.pos;
 
@@ -146,20 +146,31 @@ public:
 };
 
 //! Perturber class for AR integration
-template <class Tparticle>
-class ARPerturber: public H4::Neighbor<Tparticle>{
+class ARPerturber: public H4::Neighbor<PtclHard>{
 public:
+    typedef H4::Neighbor<PtclHard> NB;
     TidalTensor* soft_pert;  ///> soft perturbation 
 
-    ARPerturber(): H4:Neighbor(), soft_pert(NULL) {}
+    ARPerturber(): NB(), soft_pert(NULL) {}
 
     //! clear function
     void clear() {
-        H4::Neighbor::clear();
-        soft_pert = NULL:
+        NB::clear();
+        soft_pert = NULL;
     }
 
-    void findCloseSoftPert(TidalTensor* _tt, const int _n_tt) {
-        
+    void findCloseSoftPert(TidalTensor* _tt, const int _n_tt, const H4::ParticleH4<PtclHard>& _cm) {
+        const PS::F64vec& pos = _cm.pos;
+        PS::F64 r_min2=NUMERIC_FLOAT_MAX;
+        PS::S32 r_min_index=-1;
+        for (int i=0; i<_n_tt; i++) {
+            PS::F64vec dr = pos - _tt[i].pos;
+            PS::F64 r2 = dr*dr;
+            if (r_min2>r2) {
+                r_min_index = i;
+                r_min2 = r2;
+            }
+        }
+        soft_pert = &_tt[r_min_index];
     }
 };

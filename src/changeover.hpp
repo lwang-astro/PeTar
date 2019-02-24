@@ -18,6 +18,15 @@ public:
 
     ChangeOver(): r_in_(-1.0), r_out_(-1.0), norm_(0.0), coff_(0.0), pot_off_(0.0) {}
 
+    //! check whether parameters values are correct
+    /*! \return true: all correct
+     */
+    bool checkParams() {
+        ASSERT(r_in_>0.0);
+        ASSERT(r_out_>0.0);
+        return true;
+    }
+
     //! constructor based on inherited class
     template <class Tpars>
     ChangeOver(const Tpars& _par) {

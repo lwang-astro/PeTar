@@ -139,10 +139,9 @@ int main(int argc, char *argv[]){
         
         // Correct CM data
         std::cout<<"Correct c.m. velocity, N_groups= "<<groups.getNumOfGroups()<<std::endl;
-#ifdef TIDAL_TENSOR
         for (PS::S32 i=0; i<groups.getNumOfGroups(); i++) 
             subtractFcmAndRecoverCMVec(particle_data.getPointer(), groups.getPtclIndex(i), groups.getGroup(i), groups.getGroupN(i), groups.getGroupPertList(i,file_header.n_split));
-#endif
+
 //#ifdef HARD_CM_KICK
 //        softKickForCM(particle_data.getPointer(), groups.getPtclList(), groups.getNumOfGroups(), groups.getGroupPertList(0,file_header.n_split), 0.5*file_header.dt_soft, file_header.n_split);
 //#endif        

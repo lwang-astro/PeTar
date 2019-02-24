@@ -1,20 +1,44 @@
 #pragma once
 
 #include <cmath>
-#include "AR/Float.h"
-#include "ptclh4.hpp"
+#include "Common/Float.h"
+#include "changeover.hpp"
 #include "AR/force.h"
+#include "hard_ptcl.hpp"
+#include "Hermite/hermite_particle.h"
 #include "ar_perturber.hpp"
 
 //! AR interaction clas
 class ARInteraction{
 public:
+    typedef H4::ParticleAR<PtclHard> ARPtcl;
+    typedef H4::ParticleH4<PtclHard> H4Ptcl;
     Float eps_sq; ///> softening parameter
-    Float r_crit;  ///> radius criterion for group
-    Float dt_tree; ///> tree step size, for rsearch calculation
-    Float vmax;    ///> maximum velocity, for rsearch calculation
-    int n_split;   ///> artificial pariticle splitting parameter
-    ChangeOver changeover; ///> changover control
+    Float G;
+    Float soft_pert_min; ///> minimum soft perturbation
+    ChangeOver* changeover; ///> changover control
+
+    ARInteraction(): eps_sq(Float(-1.0)), G(Float(-1.0)), soft_pert_min(Float(-1.0)), changeover(NULL) {}
+
+    //! check whether parameters values are correct
+    /*! \return true: all correct
+     */
+    bool checkParams() {
+        ASSERT(eps_sq>=0.0);
+        ASSERT(G>0.0);
+        ASSERT(soft_pert_min>=0.0);
+        ASSERT(changeover!=NULL);
+        return true;
+    }        
+
+    //! calculate soft perturbation minimum
+    /*! @param[in] _mass_max: maximum mass of the system to determine the minimum soft perturbation (_mass_max/r_out^3)
+     */
+    void calcSoftPertMin(const Float _mass_max) {
+        ASSERT(changeover!=NULL);
+        Float r_out = changeover->getRout();
+        soft_pert_min = _mass_max/(r_out*r_out*r_out);
+    }
 
     //! (Necessary) calculate acceleration from perturber and the perturbation factor for slowdown calculation
     /*! The Force class acc_pert should be updated
@@ -23,14 +47,163 @@ public:
       @param[in] _n_particle: number of member particles
       @param[in] _particle_cm: center-of-mass particle
       @param[in] _perturber: pertuber container
+      @param[in] _time: current time
       \return perturbation energy to calculate slowdown factor
     */
-    Float calcAccAndSlowDownPert(Force* _force, const Ptcl* _particles, const int _n_particle, const PtclH4& _particle_cm, const Perturber& _perturber) {
-        for (int i=0; i<_n_particle; i++) {
-            Float* acc_pert = _force[i].acc_pert;
-            acc_pert[0] = acc_pert[1] = acc_pert[2] = Float(0.0);
-        }            
-        return 0.0;
+    Float calcAccAndSlowDownPert(AR::Force* _force, const ARPtcl* _particles, const int _n_particle, const H4Ptcl& _particle_cm, const ARPerturber& _perturber, const Float _time) {
+        static const Float inv3 = 1.0 / 3.0;
+
+        const int n_pert = _perturber.neighbor_address.getSize();
+
+        if (n_pert>0) {
+
+            auto* pert_adr = _perturber.neighbor_address.getDataAddress();
+
+            Float xp[n_pert][3], xcm[3], m[n_pert];
+
+            for (int j=0; j<n_pert; j++) {
+                auto& pertj = *pert_adr[j].adr;
+                Float dt = _time - pertj.time;
+                ASSERT(dt>=0.0);
+                xp[j][0] = pertj.pos[0] + dt*(pertj.vel[0] + 0.5*dt*(pertj.acc0[0] + inv3*dt*pertj.acc1[0]));
+                xp[j][1] = pertj.pos[1] + dt*(pertj.vel[1] + 0.5*dt*(pertj.acc0[1] + inv3*dt*pertj.acc1[1]));
+                xp[j][2] = pertj.pos[2] + dt*(pertj.vel[2] + 0.5*dt*(pertj.acc0[2] + inv3*dt*pertj.acc1[2]));
+                m[j] = pertj.mass;
+            }
+
+            Float dt = _time - _particle_cm.time;
+            ASSERT(dt>=0.0);
+            xcm[0] = _particle_cm.pos[0] + dt*(_particle_cm.vel[0] + 0.5*dt*(_particle_cm.acc0[0] + inv3*dt*_particle_cm.acc1[0]));
+            xcm[1] = _particle_cm.pos[1] + dt*(_particle_cm.vel[1] + 0.5*dt*(_particle_cm.acc0[1] + inv3*dt*_particle_cm.acc1[1]));
+            xcm[2] = _particle_cm.pos[2] + dt*(_particle_cm.vel[2] + 0.5*dt*(_particle_cm.acc0[2] + inv3*dt*_particle_cm.acc1[2]));
+
+
+            Float pert_cm = 0.0, acc_pert_cm[3]={0.0, 0.0, 0.0};
+            Float mcm = _particle_cm.mass;
+            if (_perturber.need_resolve_flag) {
+                // calculate component perturbation
+                for (int i=0; i<_n_particle; i++) {
+                    Float* acc_pert = _force[i].acc_pert;
+                    const auto& pi = _particles[i];
+                    acc_pert[0] = acc_pert[1] = acc_pert[2] = Float(0.0);
+
+                    Float xi[3];
+                    xi[0] = pi.pos[0] + xcm[0];
+                    xi[1] = pi.pos[1] + xcm[1];
+                    xi[2] = pi.pos[2] + xcm[2];
+
+                    for (int j=0; j<n_pert; j++) {
+                        Float dr[3] = {xp[j][0] - xi[0],
+                                       xp[j][1] - xi[1],
+                                       xp[j][2] - xi[2]};
+                        Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
+                        Float r  = sqrt(r2);
+                        Float k  = changeover->calcAcc0W(r);
+                        Float r3 = r*r2;
+                        Float mor3 = G*m[j]/r3 * k;
+
+                        acc_pert[0] += mor3 * dr[0];
+                        acc_pert[1] += mor3 * dr[1];
+                        acc_pert[2] += mor3 * dr[2];
+                    }
+#ifdef SOFT_PERT
+                    _perturber.soft_pert->eval(acc_pert, pi.pos);
+#endif
+
+                    acc_pert_cm[0] += pi.mass *acc_pert[0];
+                    acc_pert_cm[1] += pi.mass *acc_pert[1];
+                    acc_pert_cm[2] += pi.mass *acc_pert[2];
+
+#ifdef ARC_DEBUG
+                    mcm += pi.mass;
+#endif
+                }
+#ifdef ARC_DEBUG
+                ASSERT(abs(mcm-_particle_cm.mass)<1e-10);
+#endif
+                
+                // get cm perturbation
+                acc_pert_cm[0] /= mcm;
+                acc_pert_cm[1] /= mcm;
+                acc_pert_cm[2] /= mcm;
+
+                // remove cm. perturbation
+                for (int i=0; i<_n_particle; i++) {
+                    Float* acc_pert = _force[i].acc_pert;
+                    acc_pert[0] -= acc_pert_cm[0]; 
+                    acc_pert[1] -= acc_pert_cm[1];        
+                    acc_pert[2] -= acc_pert_cm[2]; 
+                }
+                
+            }
+            else {
+                // first calculate c.m. acceleration and tidal perturbation
+                for (int j=0; j<n_pert; j++) {
+                    Float dr[3] = {xp[j][0] - xcm[0],
+                                   xp[j][1] - xcm[1],
+                                   xp[j][2] - xcm[2]};
+                    Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
+                    Float r  = sqrt(r2);
+                    Float k  = changeover->calcAcc0W(r);
+                    Float r3 = r*r2;
+                    Float mor3 = G*m[j]/r3 * k;
+                    pert_cm += mor3;
+
+                    acc_pert_cm[0] += mor3 * dr[0];
+                    acc_pert_cm[1] += mor3 * dr[1];
+                    acc_pert_cm[2] += mor3 * dr[2];
+                }
+
+                // calculate component perturbation
+                for (int i=0; i<_n_particle; i++) {
+                    Float* acc_pert = _force[i].acc_pert;
+                    const auto& pi = _particles[i];
+                    acc_pert[0] = acc_pert[1] = acc_pert[2] = Float(0.0);
+
+                    Float xi[3];
+                    xi[0] = pi.pos[0] + xcm[0];
+                    xi[1] = pi.pos[1] + xcm[1];
+                    xi[2] = pi.pos[2] + xcm[2];
+
+                    // remove c.m. perturbation acc
+                    acc_pert[0] = -acc_pert_cm[0]; 
+                    acc_pert[1] = -acc_pert_cm[1];        
+                    acc_pert[2] = -acc_pert_cm[2]; 
+
+                    for (int j=0; j<n_pert; j++) {
+                        Float dr[3] = {xp[j][0] - xi[0],
+                                       xp[j][1] - xi[1],
+                                       xp[j][2] - xi[2]};
+                        Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
+                        Float r  = sqrt(r2);
+                        Float k  = changeover->calcAcc0W(r);
+                        Float r3 = r*r2;
+                        Float mor3 = G*m[j]/r3 * k;
+
+                        acc_pert[0] += mor3 * dr[0];
+                        acc_pert[1] += mor3 * dr[1];
+                        acc_pert[2] += mor3 * dr[2];
+                    }
+#ifdef SOFT_PERT
+                    _perturber.soft_pert->eval(acc_pert, pi.pos);
+#endif
+                }   
+            }
+            ASSERT(soft_pert_min>0.0);
+            return _particle_cm.mass*pert_cm + soft_pert_min;
+        }
+        else {
+#ifdef SOFT_PERT
+            for(int i=0; i<_n_particle; i++) {
+                Float* acc_pert = _force[i].acc_pert;
+                const auto& pi = _particles[i];
+                acc_pert[0] = acc_pert[1] = acc_pert[2] = Float(0.0);
+                _perturber.soft_pert->eval(acc_pert, pi.pos);
+            }
+#endif
+            ASSERT(soft_pert_min>0.0);
+            return soft_pert_min;
+        }
     }
 
     //! (Necessary) calculate inner member acceleration, potential and time transformation function gradient and factor for kick (two-body case)
@@ -41,15 +214,15 @@ public:
       @param[in] _n_particle: number of member particles
       \return the time transformation factor (gt_kick) for kick step
     */
-    Float calcAccPotAndGTKickTwo(Force* _force, Float& _epot, const Particle* _particles, const int _n_particle) {
+    Float calcAccPotAndGTKickTwo(AR::Force* _force, Float& _epot, const ARPtcl* _particles, const int _n_particle) {
         assert(_n_particle==2);
 
         // acceleration
         const Float mass1 = _particles[0].mass;
-        const Float* pos1 = _particles[0].pos;
+        const Float* pos1 = &_particles[0].pos.x;
 
         const Float mass2 = _particles[1].mass;
-        const Float* pos2 = _particles[1].pos;
+        const Float* pos2 = &_particles[1].pos.x;
 
         Float m1m2 = mass1*mass2;
         
@@ -121,7 +294,7 @@ public:
       @param[in] _n_particle: number of member particles
       \return the time transformation factor (gt_kick) for kick step
     */
-    Float calcAccPotAndGTKick(Force* _force, Float& _epot, const Particle* _particles, const int _n_particle) {
+    Float calcAccPotAndGTKick(AR::Force* _force, Float& _epot, const ARPtcl* _particles, const int _n_particle) {
         _epot = Float(0.0);
         Float gt_kick = Float(0.0);
 
@@ -132,7 +305,7 @@ public:
 
         for (int i=0; i<_n_particle; i++) {
             const Float massi = _particles[i].mass;
-            const Float* posi = _particles[i].pos;
+            const Float* posi = &_particles[i].pos.x;
             Float* acci = _force[i].acc_in;
             acci[0] = acci[1] = acci[2] = Float(0.0);
 
@@ -147,7 +320,7 @@ public:
             for (int j=0; j<_n_particle; j++) {
                 if (i==j) continue;
                 const Float massj = _particles[j].mass;
-                const Float* posj = _particles[j].pos; 
+                const Float* posj = &_particles[j].pos.x; 
                 Float dr[3] = {posj[0] -posi[0],
                                posj[1] -posi[1],
                                posj[2] -posi[2]};
@@ -194,142 +367,23 @@ public:
         return 1.0/_ekin_minus_etot;
     }
 #endif   
-};
 
-//! Newtonian acceleration from particle p to particle i (function type of ::ARC::pair_Ap)
-/*! 
-  @param[out] Ai: acceleration vector. \f$Aij[1:3] = m_i m_p (xp[1:3]-xi[1:3]) / |xp-xi|^3 \f$.
-  @param[in]  time: next time
-  @param[in]  p:  chain particle list
-  @param[in]  np: chain particle number
-  @param[in]  pert: perturber address list (first should be center-of-mass of AR)
-  @param[in]  pf:  perturber force array
-  @param[in]  pars: ARC pars including rin, rout and perturbation kepler spline interpolation class
-*/
-template<class Tptcl, class Tpert, class Tforce, class extpar>
-PS::S32 Newtonian_extA_pert (double3* acc, const PS::F64 time, Tptcl* p, const PS::S32 np, Tpert* pert, Tforce* pf, const PS::S32 npert, extpar* pars){
-#ifdef HARD_DEBUG
-    if(npert<1) {
-        std::cerr<<"Error: perturber number not enough, at least c.m. is needed!"<<std::endl;
-        abort();
-    }
-#endif
-    static const PS::F64 inv3 = 1.0 / 3.0;
-    PS::F64 xp[npert][3];
-
-    for(int i=0; i<npert; i++) {
-        PS::F64 dt = time - pert[i]->time;
-        xp[i][0] = pert[i]->pos.x + dt*(pert[i]->vel.x + 0.5*dt*(pert[i]->acc0.x + inv3*dt*pert[i]->acc1.x));
-        xp[i][1] = pert[i]->pos.y + dt*(pert[i]->vel.y + 0.5*dt*(pert[i]->acc0.y + inv3*dt*pert[i]->acc1.y));
-        xp[i][2] = pert[i]->pos.z + dt*(pert[i]->vel.z + 0.5*dt*(pert[i]->acc0.z + inv3*dt*pert[i]->acc1.z));
-
-        //xp[i][0] = pert[i]->pos.x + dt*(pert[i]->vel.x + 0.5*dt*(pert[i]->acc0.x + inv3*dt*(pert[i]->acc1.x + 0.25*dt*(pert[i]->acc2.x + 0.2*dt*pert[i]->acc3.x))));
-        //xp[i][1] = pert[i]->pos.y + dt*(pert[i]->vel.y + 0.5*dt*(pert[i]->acc0.y + inv3*dt*(pert[i]->acc1.y + 0.25*dt*(pert[i]->acc2.x + 0.2*dt*pert[i]->acc3.x))));
-        //xp[i][2] = pert[i]->pos.z + dt*(pert[i]->vel.z + 0.5*dt*(pert[i]->acc0.z + inv3*dt*(pert[i]->acc1.z + 0.25*dt*(pert[i]->acc2.x + 0.2*dt*pert[i]->acc3.x))));
-        //xp[i] = pert[i]->pos + dt*
-        //    (pert[i]->vel* + 0.5*dt*(
-        //        pert[i]->acc0 + inv3*dt*(
-        //            pert[i]->acc1 + 0.25*dt*(
-        //                pert[i]->acc2 + 0.2*dt*pert[i]->acc3))));
-        //xp[i] = pert[i]->pos;
+    //! write class data to file with binary format
+    /*! @param[in] _fp: FILE type file for output
+     */
+    void writeBinary(FILE *_fp) const {
+        fwrite(this, sizeof(*this),1,_fp);
     }
 
-#ifdef HARD_DEBUG
-    PS::F64 mt = 0.0;
-    for(int i=0; i<np; i++) mt += p[i].mass;
-#ifdef HARD_DEBUG_DUMP
-    if (abs(mt-pert[0]->mass)>=1e-10) return 6;
-#else
-    assert(abs(mt-pert[0]->mass)<1e-10);
-#endif
-#endif
-
-    for(int i=0; i<np; i++) {
-        PS::F64 xi[3];
-        xi[0] = p[i].pos.x + xp[0][0];
-        xi[1] = p[i].pos.y + xp[0][1];
-        xi[2] = p[i].pos.z + xp[0][2];
-
-        acc[i][0] = -pf[0]->acc0.x; 
-        acc[i][1] = -pf[0]->acc0.y;        
-        acc[i][2] = -pf[0]->acc0.z; 
-//            acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
-        for(int j=1; j<npert; j++) {
-
-#ifdef HARD_DEBUG
-#ifdef HARD_DEBUG_DUMP
-            if (p[i].id==pert[j]->id) return 7;
-#else
-            assert(p[i].id!=pert[j]->id);
-#endif
-#endif            
-            PS::F64 dx[3];
-            dx[0] = xp[j][0] - xi[0];
-            dx[1] = xp[j][1] - xi[1];
-            dx[2] = xp[j][2] - xi[2];
-            
-            //std::cerr<<"i = "<<i<<" j = "<<j<<" dx = "<<dx<<std::endl;
-            //PS::F64 mi = p[i].mass;
-            PS::F64 mp = pert[j]->mass;
-            PS::F64 dr2 = dx[0]*dx[0] + dx[1]*dx[1] + dx[2]*dx[2] + pars->eps2;
-            PS::F64 dr  = std::sqrt(dr2);
-            PS::F64 dr3 = dr*dr2;
-            PS::F64 mor3 = mp/dr3;
-
-#ifdef HARD_DEBUG
-            if (std::isnan(mor3)) {
-                std::cerr<<"Error: Nan detected in ARC pert force, xi["<<i<<"]="<<xi<<" xj["<<j<<"]="<<xp[j]<<" pi.id="<<p[i].id<<" pj.id="<<pert[j]->id<<" cm.id="<<pert[0]->id<<" eps2="<<pars->eps2<<std::endl;
-                abort();
-            }
-#endif
-            // smpars[2:3]: rcut_out, rcut_in
-            //  const double k   = cutoff_poly_3rd(dr, smpars[0], smpars[1]);
-            //  const double kdx = cutoff_poly_3rd_dr(dr, dx, smpars[0], smpars[1]);
-            //  const double kdy = cutoff_poly_3rd_dr(dr, dy, smpars[0], smpars[1]);
-            //  const double kdz = cutoff_poly_3rd_dr(dr, dz, smpars[0], smpars[1]);  
-            // const PS::F64 r_out = pars->rout;
-            //  const PS::F64 r_out = std::max(pi.r_out, pp.r_out);
-            const PS::F64 r_in  = pars->rin;
-            const PS::F64 r_oi_inv = pars->r_oi_inv;
-            const PS::F64 r_A   = pars->r_A;
-            //const PS::F64 k     = CalcW(dr/r_out, r_in/r_out);
-            const PS::F64 k  = cutoff_poly_3rd(dr, r_oi_inv, r_A, r_in);
-
-            //Pij = - mi*mp / dr * (1-k);
-
-            // Aij[0] = mp * dx / dr3 * (1-k) + Pij * (1-kdx);
-            // Aij[1] = mp * dy / dr3 * (1-k) + Pij * (1-kdy);
-            // Aij[2] = mp * dz / dr3 * (1-k) + Pij * (1-kdz);
-            acc[i][0] += mor3 * dx[0] * k;
-            acc[i][1] += mor3 * dx[1] * k;
-            acc[i][2] += mor3 * dx[2] * k;
+    //! read class data to file with binary format
+    /*! @param[in] _fp: FILE type file for reading
+     */
+    void readBinary(FILE *_fin) {
+        size_t rcount = fread(this, sizeof(*this), 1, _fin);
+        if (rcount<1) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            abort();
         }
-
-#ifdef SOFT_PERT
-        // soft perturbation
-        pars->eval(acc[i], p[i].pos);
-#endif
-    }
-
-    return 0;
-}
-/// end Newtonian cut force (L.Wang)
-
-template<class Tptcl, class Tpert, class Tforce, class extpar>
-PS::S32 Newtonian_extA_soft (double3* acc, const PS::F64 time, Tptcl* p, const PS::S32 np, Tpert* pert, Tforce* pf, const PS::S32 npert, extpar* pars){
-#ifdef HARD_DEBUG
-    if(npert>1) {
-        std::cerr<<"Error: perturboer number should be zero !"<<std::endl;
-        abort();
-    }
-#endif
-    for(int i=0; i<np; i++) {
-        acc[i][0] = acc[i][1] = acc[i][2] = 0.0;
-#ifdef SOFT_PERT
-        pars->eval(acc[i], p[i].pos);
-#endif
-    }
-
-    return 0;
-}
+    }    
+};
 

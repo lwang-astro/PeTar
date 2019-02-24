@@ -517,11 +517,8 @@ private:
                               const PS::F64 _r_bin,
                               const PS::S64 _id_offset,
                               const PS::S32 _n_split) {
-#ifdef TIDAL_TENSOR
         const PS::F64 dE = 8.0*atan(1.0)/(_n_split-4);
-#else
-        const PS::F64 dE = 8.0*atan(1.0)/_n_split;
-#endif
+//      const PS::F64 dE = 8.0*atan(1.0)/_n_split;
         //const PS::F64 dt = _bin.peri/_n_split;
         if (_n_split<8) {
             std::cerr<<"N_SPLIT to small to save binary parameters, should be >= 8!";
@@ -548,11 +545,9 @@ private:
         bindata[4][0] = _bin.tperi;
         bindata[4][1] = _bin.stable_factor;
 
-#ifdef SPLIT_MASS        
         PS::F64* pm[_n_split][2];
         PS::F64 mfactor;
         PS::F64 mnormal=0.0;
-#endif
 
         const PS::S32 n_members = _bin.status;
         Tptcl* adr_ref= _ptcl_in_cluster;
@@ -583,25 +578,17 @@ private:
                 else if(i==1) p[j]->status = i_cg[j]+1; // store the i_cluster and i_group for identify artifical particles, +1 to avoid 0 value (status>0)
                 else p[j]->status = (_bin.id<<ID_PHASE_SHIFT)|i; // not used, but make status>0
                 
-#ifdef SPLIT_MASS
-#ifdef TIDAL_TENSOR
                 if(i>=4) 
-#endif
                     pm[i][j] = &(p[j]->mass);
-#endif
             }
-#ifdef TIDAL_TENSOR
             if (i>=4) {
                 PS::S32 iph = i-4;
-#else 
-                PS::S32 iph = i;
-#endif
+
                 // center_of_mass_shift(*(Tptcl*)&_bin,p,2);
                 // generate particles at different orbitial phase
                 OrbParam2PosVel(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass,
                                 _bin.semi, _bin.ecc, _bin.inc, _bin.OMG, _bin.omg, dE*iph);
                 //DriveKeplerOrbParam(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass, (i+1)*dt, _bin.semi, _bin.ecc, _bin.inc, _bin.OMG, _bin.omg, _bin.peri, _bin.ecca);
-#ifdef TIDAL_TENSOR
             }
             else {
                 ///* Assume apo-center distance is the maximum length inside box
@@ -638,7 +625,6 @@ private:
                 p[1]->vel = _bin.vel;
                 p[0]->mass = p[1]->mass = 0.0;
             }
-#endif
             // binary parameters
             if(i<5) {
                 p[0]->mass_bk = bindata[i][0];
@@ -654,19 +640,13 @@ private:
                 p[1]->mass_bk = 1.0;
             }
 #endif
-#ifdef TIDAL_TENSOR
             if(i>=4) {
-#endif
-#ifdef SPLIT_MASS
                 PS::F64vec dvvec= p[0]->vel - p[1]->vel;
                 PS::F64 odv = 1.0/std::sqrt(dvvec*dvvec);
                 for(int j=0; j<2; j++) p[j]->mass *= odv;
                 //if(i==0) p[j]->mass /= 2.0*_n_split;
                 //else p[j]->mass /= _n_split;
                 mnormal += odv;
-#else
-                for(int j=0; j<2; j++) p[j]->mass = 0;
-#endif
                 center_of_mass_correction(*(Tptcl*)&_bin,p,2);
 #ifdef HARD_DEBUG
                 //check rsearch consistence:
@@ -682,21 +662,15 @@ private:
 //                    }
                 }
 #endif
-#ifdef TIDAL_TENSOR
             }
-#endif
         }
 
-#ifdef SPLIT_MASS
         mfactor = 1.0/mnormal;
-#ifdef TIDAL_TENSOR
+
         for (int i=4; i<_n_split; i++) 
-#else
-        for (int i=0; i<_n_split; i++) 
-#endif
             for (int j=0; j<2; j++) 
                 *pm[i][j] *= mfactor;
-#endif
+        
         //mfactor *= 0.5;
         //*pm[0][0] *= mfactor;
         //*pm[0][1] *= mfactor;
@@ -721,9 +695,9 @@ private:
         pcm->vel = _bin.vel;
         pcm->id  = - std::abs(_bin.id);
         pcm->r_search = _bin.r_search;
-#ifdef TIDAL_TENSOR
+
         pcm->r_search += _bin.semi*(1+_bin.ecc);  // depend on the mass ratio, the upper limit distance to c.m. from all members and artifical particles is apo-center distance
-#endif
+
         pcm->status = nbin;
     }
 
@@ -741,7 +715,6 @@ private:
         @param[in]     _rin: inner radius of soft-hard changeover function
         @param[in]     _rout: outer radius of soft-hard changeover function
         @param[in]     _dt_tree: tree time step for calculating r_search
-        @param[in]     _v_max: maximum velocity used to calculate r_search
         @param[in]     _id_offset: for artifical particles, the offset of starting id.
         @param[in]     _n_split: split number for artifical particles
      */
@@ -760,7 +733,6 @@ private:
                          const PS::F64 _rin,
                          const PS::F64 _rout,
                          const PS::F64 _dt_tree,
-                         const PS::F64 _v_max,
                          const PS::S64 _id_offset,
                          const PS::S32 _n_split){
 #ifdef HARD_DEBUG
@@ -790,7 +762,7 @@ private:
             const PS::S32 group_start = _group_list_disp[i];
             const PS::S32 group_n = _group_list_n[i];
 
-            keplerTreeGenerator(bins.getPointer(), &_group_list[group_start], group_n, _ptcl_in_cluster, _dt_tree, _v_max);
+            keplerTreeGenerator(bins.getPointer(), &_group_list[group_start], group_n, _ptcl_in_cluster, _dt_tree);
          
             // reset status to 0
             for (int j=0; j<group_n; j++) _ptcl_in_cluster[_group_list[group_start+j]].status=0;
@@ -1203,7 +1175,6 @@ public:
         @param[in]     _rin: inner radius of soft-hard changeover function
         @param[in]     _rout: outer radius of soft-hard changeover function
         @param[in]     _dt_tree: tree time step for calculating r_search
-        @param[in]     _v_max: maximum velocity used to calculate r_search
         @param[in]     _id_offset: for artifical particles, the offset of starting id.
         @param[in]     _n_split: split number for artifical particles
     */
@@ -1216,7 +1187,6 @@ public:
                       const PS::F64 _rin,
                       const PS::F64 _rout,
                       const PS::F64 _dt_tree,
-                      const PS::F64 _v_max,
                       const PS::S64 _id_offset,
                       const PS::S32 _n_split) {
         if (_n_split>(1<<ID_PHASE_SHIFT)) {
@@ -1224,7 +1194,7 @@ public:
             abort();
         }
         PS::ReallocatableArray<PS::S32> emtpy_list;
-        generateNewPtcl<PtclTree<Tptcl>>(_i_cluster, _ptcl_in_cluster, _n_ptcl, _ptcl_artifical, _n_groups, group_list_, group_list_disp_, group_list_n_, emtpy_list, _rbin, _rin, _rout, _dt_tree, _v_max, _id_offset, _n_split);
+        generateNewPtcl<PtclTree<Tptcl>>(_i_cluster, _ptcl_in_cluster, _n_ptcl, _ptcl_artifical, _n_groups, group_list_, group_list_disp_, group_list_n_, emtpy_list, _rbin, _rin, _rout, _dt_tree, _id_offset, _n_split);
         //searchPerturber(pert_list_, _ptcl_in_cluster, _n_ptcl);
     }
 
@@ -1351,11 +1321,7 @@ public:
     PS::S32 n_ptcl_artifical; ///> artifical particle number
 
     GroupPars(const PS::S32 _n_split): id(-10), i_cluster(-1), i_group(-1), n_members(0), n_members_1st(0), n_members_2nd(0), offset_cm(2*_n_split), 
-#ifdef TIDAL_TENSOR
                                        offset_orb(8), 
-#else
-                                       offset_orb(0), 
-#endif
                                        offset_tt(0), n_ptcl_artifical(2*_n_split+1) {}
     GroupPars() {init(0);}
 
@@ -1367,11 +1333,7 @@ public:
         n_members_1st=0;
         n_members_2nd=0;
         offset_cm=2*_n_split;
-#ifdef TIDAL_TENSOR
         offset_orb=8;
-#else
-        offset_orb=0;
-#endif
         offset_tt=0;
         n_ptcl_artifical=2*_n_split+1;
     }
