@@ -21,7 +21,7 @@
 //! Hard integrator parameter manager
 class HardManager{
 public:
-    PS::F64 energy_error_relative_max;
+    PS::F64 energy_error_max;
     PS::F64 r_tidal_tensor;
     PS::F64 eps_sq;
     PS::S64 id_offset;
@@ -31,7 +31,7 @@ public:
     AR::SymplecticManager<ARInteraction> ar_manager;
 
     //! constructor
-    HardManager(): energy_error_relative_max(-1.0), r_tidal_tensor(-1.0), eps_sq(-1.0), id_offset(-1), n_split(-1), changeover(), h4_manager(), ar_manager() {
+    HardManager(): energy_error_max(-1.0), r_tidal_tensor(-1.0), eps_sq(-1.0), id_offset(-1), n_split(-1), changeover(), h4_manager(), ar_manager() {
         h4_manager.interaction.changeover = &changeover;
         ar_manager.interaction.changeover = &changeover;
     }
@@ -58,7 +58,7 @@ public:
 
     //! check paramters
     bool checkParams() {
-        ASSERT(energy_error_relative_max>0.0);
+        ASSERT(energy_error_max>0.0);
         ASSERT(r_tidal_tensor>=0.0);
         ASSERT(eps_sq>=0.0);
         ASSERT(id_offset>0);
@@ -96,6 +96,18 @@ public:
         h4_manager.interaction.changeover = &changeover;
         ar_manager.interaction.changeover = &changeover;
     }
+
+    //! print parameters
+    void print(std::ostream & _fout) const{
+        _fout<<"energy_error_max : "<<energy_error_max<<std::endl
+             <<"r_tidal_tensor   : "<<r_tidal_tensor<<std::endl
+             <<"eps_sq           : "<<eps_sq<<std::endl
+             <<"id_offset        : "<<id_offset<<std::endl
+             <<"n_split          : "<<n_split<<std::endl;
+        changeover.print(_fout);
+        h4_manager.print(_fout);
+        ar_manager.print(_fout);
+    }
 };
 
 
@@ -125,7 +137,9 @@ public:
 
 #ifdef PROFILE
     PS::S64 ARC_substep_sum;
+    PS::S64 ARC_tsyn_step_sum;
     PS::F64 ARC_n_groups;
+    PS::S64 H4_step_sum;
 #endif
 #ifdef HARD_CHECK_ENERGY
     PS::F64 hard_dE;
@@ -820,6 +834,9 @@ private:
         }
     }
 
+#ifdef HARD_DEBUG
+public:
+#endif
     //! Hard integration for clusters
     /* The local particle array are integrated. 
        No update of artifical particle pos and vel, eccept the artifical c.m. particle are kicked with acc. 
@@ -851,7 +868,6 @@ private:
 //        ptcl_bk_pt.reserve(_n_ptcl);
 //        ptcl_bk_pt.resizeNoInitialize(_n_ptcl);
 //#endif
-        PS::S32 nstepcount = 0;
 
 #ifdef HARD_DEBUG
         if (_n_ptcl>400) {
@@ -979,6 +995,10 @@ private:
 
         }
 
+#ifdef HARD_DEBUG_PRINT
+        std::cerr<<"Hard: n_ptcl: "<<_n_ptcl<<" n_group: "<<_n_group<<std::endl;
+#endif
+
         // manager
         H4::HermiteManager<HermiteInteraction>* h4_manager = &(manager->h4_manager);
         AR::SymplecticManager<ARInteraction>* ar_manager = &(manager->ar_manager);
@@ -1004,6 +1024,9 @@ private:
             TidalTensor tt;
             tt.fit(&_ptcl_artifical[i_soft_pert_offset], _ptcl_artifical[icm], manager->r_tidal_tensor, manager->n_split);
             sym_int.perturber.soft_pert=&tt;
+
+            // calculate soft_pert_min
+            sym_int.perturber.calcSoftPertMin(sym_int.info.getBinaryTreeRoot());
             
             // initialization 
             sym_int.initialIntegration(0.0);
@@ -1055,6 +1078,7 @@ private:
 
             // Tidal tensor 
             TidalTensor tidal_tensor[_n_group+1];
+            PS::S32 n_tt = 0;
             
             // add groups
             if (_n_group>0) {
@@ -1069,7 +1093,11 @@ private:
                     // correct pos for t.t. cm
                     _ptcl_artifical[icm].pos -= h4_int.particles.cm.pos;
                     tidal_tensor[i].fit(&_ptcl_artifical[i_soft_pert_offset], _ptcl_artifical[icm], manager->r_tidal_tensor, manager->n_split);
+                    n_tt ++;
                     h4_int.groups[i].perturber.soft_pert = &tidal_tensor[i];
+
+                    // calculate soft_pert_min
+                    h4_int.groups[i].perturber.calcSoftPertMin(h4_int.groups[i].info.getBinaryTreeRoot());
                 }
             }
 
@@ -1084,17 +1112,29 @@ private:
             h4_int.info.calcEnergy(h4_int.particles, h4_manager->interaction, true);
             etoti  = h4_int.info.etot0;
 #endif
+#ifdef HARD_DEBUG_PRINT
+            h4_int.info.printColumnTitle(std::cout, WRITE_WIDTH);
+            h4_int.particles.printColumnTitle(std::cout, WRITE_WIDTH);
+            std::cout<<std::endl;
+#endif
+
             // integration loop
             while (h4_int.info.time<_time_end) {
+
+                
                 h4_int.integrateOneStepAct();
                 h4_int.adjustGroups(false);
                 
                 // check tt
-                const PS::S32* group_index = h4_int.getSortDtIndexGroup();
-                const PS::S32 n_init = h4_int.getNInitGroup();
-                for(int i=0; i<n_init; i++) {
-                    auto& groupi = h4_int.groups[group_index[i]];
-                    groupi.perturber.findCloseSoftPert(tidal_tensor, _n_group, groupi.particles.cm);
+                if (n_tt>0) {
+                    const PS::S32* group_index = h4_int.getSortDtIndexGroup();
+                    const PS::S32 n_init = h4_int.getNInitGroup();
+                    for(int i=0; i<n_init; i++) {
+                        auto& groupi = h4_int.groups[group_index[i]];
+                        groupi.perturber.findCloseSoftPert(tidal_tensor, _n_group, groupi.particles.cm);
+                        // calculate soft_pert_min
+                        groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot());
+                    }
                 }
                 // initial after groups are modified
                 h4_int.initialIntegration();
@@ -1102,13 +1142,21 @@ private:
                 h4_int.info.time = h4_int.getTime();
 
 #ifdef HARD_DEBUG_PRINT
-                if (fmod(h4_int.info.time, h4_manager->step.getDtMax())==0.0) {
+                //PS::F64 dt_max = 0.0;
+                //PS::S32 n_group = h4_int.getNGroup();
+                //PS::S32 n_single = h4_int.getNSingle();
+                //if (n_group>0) dt_max = h4_int.groups[h4_int.getSortDtIndexGroup()[n_group-1]].particles.cm.dt;
+                //if (n_single>0) dt_max = std::max(dt_max, h4_int.particles[h4_int.getSortDtIndexSingle()[n_single-1]].dt);
+                //ASSERT(dt_max>0.0);
+                if (fmod(h4_int.info.time, h4_manager->step.getDtMax()/1024)==0.0) {
                     h4_int.writeBackGroupMembers();
                     h4_int.info.calcEnergy(h4_int.particles, h4_manager->interaction, false);
             
-                    h4_int.info.printColumn(std::cout, print_width);
-                    h4_int.particles.printColumn(std::cout, print_width);
+                    h4_int.info.printColumn(std::cout, WRITE_WIDTH);
+                    h4_int.particles.printColumn(std::cout, WRITE_WIDTH);
                     std::cout<<std::endl;
+                }
+                if (fmod(h4_int.info.time, h4_manager->step.getDtMax())==0.0) {
                     h4_int.printStepHist();
                 }
 #endif
@@ -1139,13 +1187,18 @@ private:
 
 #ifdef PROFILE
             //ARC_substep_sum += Aint.getNsubstep();
-            ARC_substep_sum += nstepcount;
+            H4_step_sum += h4_int.profile.hermite_single_step_count + h4_int.profile.hermite_group_step_count;
+            ARC_substep_sum += h4_int.profile.ar_step_count;
+            ARC_tsyn_step_sum += h4_int.profile.ar_step_count_tsyn;
             ARC_n_groups += _n_group;
 #endif
         }
 #ifdef HARD_CHECK_ENERGY
         hard_dE = etotf - etoti;
-        if (abs(hard_dE) > manager->energy_error_relative_max * abs(etoti)) {
+#ifdef HARD_DEBUG_PRINT
+        std::cerr<<"Hard Energy: init: "<<etoti<<" end: "<<etotf<<" dE: "<<hard_dE<<std::endl;
+#endif        
+        if (abs(hard_dE) > manager->energy_error_max) {
             std::cerr<<"Hard energy significant ("<<hard_dE<<") !\n";
             DATADUMP();
             abort();
@@ -1162,7 +1215,9 @@ public:
 #endif
 #ifdef PROFILE
         ARC_substep_sum = 0;
+        ARC_tsyn_step_sum =0;
         ARC_n_groups = 0;
+        H4_step_sum = 0;
 #endif
 #ifdef HARD_CHECK_ENERGY
         hard_dE = 0;
@@ -1546,6 +1601,10 @@ public:
             const PS::S32 n_group = n_group_in_cluster_[i];
             Tpsoft* ptcl_artifical_ptr=NULL;
             if(n_group>0) ptcl_artifical_ptr = &(_ptcl_soft[adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]]]);
+#ifdef HARD_DUMP
+            assert(hard_dump.size>0);
+            hard_dump[0].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artifical_ptr, n_group, dt, manager->n_split);
+#endif
             driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artifical_ptr, n_group, dt);
 #else
             auto* pi = ptcl_hard_.getPointer(adr_head);
@@ -1554,9 +1613,7 @@ public:
                 pi[j].pos += dr;
                 pi[j].status = 0;
                 pi[j].mass_bk = 0;
-                PS::F64 dt_reduce_fi = pi[j].calcRSearch(dt, v_max_);
-                dt_reduce_factor = std::max(dt_reduce_fi, dt_reduce_factor);
-                
+                pi[j].calcRSearch(dt);
             }
 #endif
 //#ifdef HARD_DEBUG
@@ -1607,9 +1664,9 @@ public:
 #ifdef OMP_PROFILE
             num_cluster[ith] += n_ptcl;
 #endif
-#ifdef HARD_DEBUG_DUMP
-            assert(ith<HARD_DUMP.size);
-            HARD_DUMP.hard_dump[ith].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artifical_ptr, n_group, dt, manager->n_split);
+#ifdef HARD_DUMP
+            assert(ith<hard_dump.size);
+            hard_dump[ith].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artifical_ptr, n_group, dt, manager->n_split);
 #endif
 
 #ifdef HARD_DEBUG_PROFILE
@@ -1630,8 +1687,7 @@ public:
                 pi[j].pos += dr;
                 pi[j].status = 0;
                 pi[j].mass_bk = 0;
-                PS::F64 dt_reduce_fi = pi[j].calcRSearch(dt, v_max_);
-                dt_reduce_factor = std::max(dt_reduce_fi, dt_reduce_factor);
+                pi[j].calcRSearch(dt);
             }
 #endif
 

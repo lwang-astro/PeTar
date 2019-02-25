@@ -23,6 +23,12 @@ public:
         return true;
     }        
     
+    //! print parameters
+    void print(std::ostream & _fout) const{
+        _fout<<"eps_sq: "<<eps_sq<<std::endl
+             <<"G     : "<<G<<std::endl;
+    }    
+
     //! calculate acceleration and jerk of one pair
     /*! \return the distance square of the pair
      */
@@ -50,7 +56,7 @@ public:
 
         const Float mor3 = G*_pj.mass*rinv3; 
         const Float mor3k = mor3*k;
-        const Float mor3kd = mor3*kdot;
+        const Float mor3kd = mor3*drdv*kdot;
         const Float acc0[3] = {mor3k*dr[0], mor3k*dr[1], mor3k*dr[2]};
         const Float acc1[3] = {mor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + mor3kd*dr[0],
                                mor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + mor3kd*dr[1],

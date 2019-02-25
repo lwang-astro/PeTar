@@ -15,10 +15,9 @@ public:
     typedef H4::ParticleH4<PtclHard> H4Ptcl;
     Float eps_sq; ///> softening parameter
     Float G;
-    Float soft_pert_min; ///> minimum soft perturbation
     ChangeOver* changeover; ///> changover control
 
-    ARInteraction(): eps_sq(Float(-1.0)), G(Float(-1.0)), soft_pert_min(Float(-1.0)), changeover(NULL) {}
+    ARInteraction(): eps_sq(Float(-1.0)), G(Float(-1.0)), changeover(NULL) {}
 
     //! check whether parameters values are correct
     /*! \return true: all correct
@@ -26,19 +25,15 @@ public:
     bool checkParams() {
         ASSERT(eps_sq>=0.0);
         ASSERT(G>0.0);
-        ASSERT(soft_pert_min>=0.0);
         ASSERT(changeover!=NULL);
         return true;
     }        
 
-    //! calculate soft perturbation minimum
-    /*! @param[in] _mass_max: maximum mass of the system to determine the minimum soft perturbation (_mass_max/r_out^3)
-     */
-    void calcSoftPertMin(const Float _mass_max) {
-        ASSERT(changeover!=NULL);
-        Float r_out = changeover->getRout();
-        soft_pert_min = _mass_max/(r_out*r_out*r_out);
-    }
+    //! print parameters
+    void print(std::ostream & _fout) const{
+        _fout<<"eps_sq : "<<eps_sq<<std::endl
+             <<"G      : "<<G<<std::endl;
+    }    
 
     //! (Necessary) calculate acceleration from perturber and the perturbation factor for slowdown calculation
     /*! The Force class acc_pert should be updated
@@ -107,7 +102,7 @@ public:
                         acc_pert[2] += mor3 * dr[2];
                     }
 #ifdef SOFT_PERT
-                    _perturber.soft_pert->eval(acc_pert, pi.pos);
+                    if(_perturber.soft_pert!=NULL) _perturber.soft_pert->eval(acc_pert, pi.pos);
 #endif
 
                     acc_pert_cm[0] += pi.mass *acc_pert[0];
@@ -185,24 +180,26 @@ public:
                         acc_pert[2] += mor3 * dr[2];
                     }
 #ifdef SOFT_PERT
-                    _perturber.soft_pert->eval(acc_pert, pi.pos);
+                    if(_perturber.soft_pert!=NULL) _perturber.soft_pert->eval(acc_pert, pi.pos);
 #endif
                 }   
             }
-            ASSERT(soft_pert_min>0.0);
-            return _particle_cm.mass*pert_cm + soft_pert_min;
+            //ASSERT(_perturber.soft_pert_min>0.0);
+            return _particle_cm.mass*pert_cm + _perturber.soft_pert_min;
         }
         else {
 #ifdef SOFT_PERT
-            for(int i=0; i<_n_particle; i++) {
-                Float* acc_pert = _force[i].acc_pert;
-                const auto& pi = _particles[i];
-                acc_pert[0] = acc_pert[1] = acc_pert[2] = Float(0.0);
-                _perturber.soft_pert->eval(acc_pert, pi.pos);
+            if(_perturber.soft_pert!=NULL) {
+                for(int i=0; i<_n_particle; i++) {
+                    Float* acc_pert = _force[i].acc_pert;
+                    const auto& pi = _particles[i];
+                    acc_pert[0] = acc_pert[1] = acc_pert[2] = Float(0.0);
+                    _perturber.soft_pert->eval(acc_pert, pi.pos);
+                }
             }
 #endif
-            ASSERT(soft_pert_min>0.0);
-            return soft_pert_min;
+            //ASSERT(_perturber.soft_pert_min>0.0);
+            return _perturber.soft_pert_min;
         }
     }
 
@@ -237,8 +234,8 @@ public:
         Float* acc2 = _force[1].acc_in;
 
 #ifdef AR_CHANGEOVER
-        const Float kpot  = pars->changeover.calcPotW(rij);
-        const Float k     = pars->changeover.calcAcc0W(rij);
+        const Float kpot  = changeover->calcPotW(rij);
+        const Float k     = changeover->calcAcc0W(rij);
         Float mor3_1 = mass2*inv_r3*k;
         Float mor3_2 = mass1*inv_r3*k;
 
@@ -299,8 +296,8 @@ public:
         Float gt_kick = Float(0.0);
 
 #ifdef AR_CHANGEOVER
-        const Float kpot  = pars->changeover.calcPotW(rij);
-        const Float k     = pars->changeover.calcAcc0W(rij);
+        const Float kpot  = changeover->calcPotW(rij);
+        const Float k     = changeover->calcAcc0W(rij);
 #endif
 
         for (int i=0; i<_n_particle; i++) {

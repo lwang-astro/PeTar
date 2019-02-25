@@ -1,3 +1,5 @@
+#pragma once
+
 class EnergyAndMomemtum{
 public:
     PS::F64 kin;

@@ -4,12 +4,13 @@
 #include <string>
 #include <unordered_map>
 #include <particle_simulator.hpp>
-#include "Newtonian_acceleration.h"
-#include "ptree.h"
+#include "io.hpp"
+#include "integrate.hpp"
+#include "hard_assert.hpp"
 #include "kepler.hpp"
 #include "cluster_list.hpp"
 #include "hard.hpp"
-#include "soft.hpp"
+#include "soft_ptcl.hpp"
 
 
 template<class Teng>
@@ -167,20 +168,53 @@ int main(int argc, char** argv)
 
   PS::ParticleSystem<FPSoft> sys;
 
+  PS::F64 m_average =0;
   for (int i=0; i<N; i++) {
       pin.readAscii(fin);
       sys.addOneParticle(FPSoft(Ptcl(pin, rsearch, 0.0, i+1, 0), 0, i));
       p_list[i]=i;
+      m_average = pin.mass;
   }
+  m_average = pin.mass/N;
 
   PS::F64 time_sys = 0.0;
   PS::F64 dt_min_hard = 1.0;
   for (PS::S32 i=0;i<40;i++) dt_min_hard *= 0.5;
 
-  SystemHard sys_hard;
-  sys_hard.setParam(rbin, rout, rin, eps, dt_limit, dt_min_hard, eta, time_sys, 1e-8, N, n_split);
-  sys_hard.setARCParam(1e-10, 1e-6, 1e-3, 1e-24);
+  // system hard paramters
+  HardManager hard_manager;
+  hard_manager.setDtRange(dt_limit, 40);
+  hard_manager.setEpsSq(eps);
+  hard_manager.setG(1.0);
+#ifdef HARD_CHECK_ENERGY
+  hard_manager.energy_error_max = 1e-4;
+#else
+  hard_manager.energy_error_max = NUMERIC_FLOAT_MAX;
+#endif
+  hard_manager.r_tidal_tensor = rbin;
+  hard_manager.id_offset = N;
+  hard_manager.n_split = n_split;
+  hard_manager.changeover.setR(rin, rout);
+  hard_manager.h4_manager.r_break_crit = rbin;
+  hard_manager.h4_manager.r_neighbor_crit = rsearch;
+  hard_manager.h4_manager.step.eta_4th = eta*eta;
+  hard_manager.h4_manager.step.eta_2nd = 0.01*eta*eta;
+  hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, rout);
+  hard_manager.ar_manager.energy_error_relative_max = 1e-8;
+#ifdef AR_SYM
+  hard_manager.ar_manager.step_count_max = 1e6;
+#endif
+  // set symplectic order
+  hard_manager.ar_manager.step.initialSymplecticCofficients(-6);
+  hard_manager.ar_manager.slowdown_pert_ratio_ref = 1e-6;
+  hard_manager.ar_manager.slowdown_factor_max = 1.0e8;
+  hard_manager.ar_manager.slowdown_mass_ref = m_average;
+
+  // check consistence of paramters
+  hard_manager.checkParams();
    
+  SystemHard sys_hard;
+  sys_hard.manager = &hard_manager;
   sys_hard.setPtclForIsolatedMultiCluster(sys, p_list, n_cluster);
 
   EnergyAndMomemtum et0,et,etcm0,etcm;
@@ -215,7 +249,7 @@ int main(int argc, char** argv)
   //write_p(fout2,time_sys,sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size(),ppcm0,etcm0,rin,rout,eps2,0.0,1);
   while(time_sys < time){
       fprintf(stderr,"Time = %e\n", time_sys+dt_limit);
-      sys_hard.driveForMultiCluster<PS::ParticleSystem<FPSoft>,FPSoft>(dt_limit, sys);
+      sys_hard.driveForMultiCluster(dt_limit, &sys[0]);
       time_sys += dt_limit;
       sys.setNumberOfParticleLocal(n_sys);
       print_p(sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size());

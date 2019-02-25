@@ -65,8 +65,8 @@ public:
     }
 
     void print(std::ostream & _fout) const{
-        _fout<<" r_in="<<r_in_;
-        _fout<<" r_out="<<r_out_;
+        _fout<<"r_in : "<<r_in_<<std::endl
+             <<"r_out: "<<r_out_<<std::endl;
     }
 
     //! print titles of class members using column style

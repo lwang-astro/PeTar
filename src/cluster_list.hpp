@@ -634,12 +634,10 @@ private:
                 p[0]->mass_bk = p[0]->mass;
                 p[1]->mass_bk = p[1]->mass;
             }
-#ifdef HARD_DEBUG
             else if(i==6) {
                 p[0]->mass_bk = 0.0; // indicate the order
                 p[1]->mass_bk = 1.0;
             }
-#endif
             if(i>=4) {
                 PS::F64vec dvvec= p[0]->vel - p[1]->vel;
                 PS::F64 odv = 1.0/std::sqrt(dvvec*dvvec);

@@ -150,7 +150,7 @@ int main(int argc, char *argv[]){
 #ifdef HARD_CHECK_ENERGY
     IOParams<PS::F64> e_err_hard   (input_par_store, 1e-4, "Maximum energy error allown for hard integrator");
 #endif
-#ifdef ARC_SYM
+#ifdef AR_SYM
     IOParams<PS::S32> step_limit_arc(input_par_store, 1000000, "Maximum step allown for ARC sym integrator");
 #endif
     IOParams<PS::F64> eps          (input_par_store, 0.0,  "Softerning eps");
@@ -185,7 +185,7 @@ int main(int argc, char *argv[]){
 #ifdef HARD_CHECK_ENERGY
         {"energy-err-hard", required_argument, 0, 0},   //13
 #endif
-#ifdef ARC_SYM
+#ifdef AR_SYM
         {"step-limit-arc", required_argument, 0, 0},    //14
 #endif
         {0,0,0,0}
@@ -265,7 +265,7 @@ int main(int argc, char *argv[]){
                 if(my_rank == 0) e_err_hard.print(std::cout);
                 break;
 #endif
-#ifdef ARC_SYM
+#ifdef AR_SYM
             case 14:
                 step_limit_arc.value = atoi(optarg);
                 if(my_rank == 0) step_limit_arc.print(std::cout);
@@ -411,7 +411,7 @@ int main(int argc, char *argv[]){
 #ifdef HARD_CHECK_ENERGY
                 std::cout<<"        --energy-err-hard: [F] "<<e_err_hard<<std::endl;
 #endif
-#ifdef ARC_SYM
+#ifdef AR_SYM
                 std::cout<<"        --step-limit-arc:  [F] "<<step_limit_arc<<std::endl;
 #endif
                 std::cout<<"        --slowdown-factor: [F] "<<sd_factor<<std::endl;
@@ -610,17 +610,22 @@ int main(int argc, char *argv[]){
     hard_manager.setDtRange(dt_soft.value/dt_limit_hard_factor.value, dt_min_hermite_index.value);
     hard_manager.setEpsSq(eps.value);
     hard_manager.setG(1.0);
-    hard_manager.energy_error_relative_max = e_err_hard.value;
+#ifdef HARD_CHECK_ENERGY
+    hard_manager.energy_error_max = e_err_hard.value;
+#else
+    hard_manager.energy_error_max = NUMERIC_FLOAT_MAX;
+#endif
     hard_manager.r_tidal_tensor = r_bin.value;
     hard_manager.id_offset = id_offset;
     hard_manager.n_split = n_split.value;
     hard_manager.changeover.setR(r_in, r_out.value);
     hard_manager.h4_manager.r_break_crit = r_bin.value;
     hard_manager.h4_manager.r_neighbor_crit = r_search_min;
-    hard_manager.h4_manager.step.eta_4th = eta.value;
-    hard_manager.h4_manager.step.eta_2nd = 0.01*eta.value;
+    hard_manager.h4_manager.step.eta_4th = eta.value*eta.value;
+    hard_manager.h4_manager.step.eta_2nd = 0.01*eta.value*eta.value;
+    hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, r_out.value);
     hard_manager.ar_manager.energy_error_relative_max = e_err_arc.value;
-#ifdef ARC_SYM
+#ifdef AR_SYM
     hard_manager.ar_manager.step_count_max = step_limit_arc.value;
 #endif
     // set symplectic order
@@ -628,33 +633,31 @@ int main(int argc, char *argv[]){
     hard_manager.ar_manager.slowdown_pert_ratio_ref = sd_factor.value;
     hard_manager.ar_manager.slowdown_factor_max = 1.0e8;
     hard_manager.ar_manager.slowdown_mass_ref = m_average;
-    hard_manager.ar_manager.interaction.calcSoftPertMin(m_max);
 
+    // check consistence of paramters
     hard_manager.checkParams();
+
+    // dump paramters for restart
+    if(my_rank==0) {
+        std::string fhard_par = fname_par.value + ".hard";
+        std::cout<<"Save hard_manager parameters to file "<<fhard_par<<std::endl;
+        FILE* fpar_out;
+        if( (fpar_out = fopen(fhard_par.c_str(),"w")) == NULL) {
+            fprintf(stderr,"Error: Cannot open file %s.\n", fhard_par.c_str());
+            abort();
+        }
+        hard_manager.writeBinary(fpar_out);
+        fclose(fpar_out);
+    }
 
     // initial hard class and parameters
     SystemHard system_hard_one_cluster;
     system_hard_one_cluster.manager = &hard_manager;
-    //system_hard_one_cluster.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, v_max, id_offset, n_split.value);
     SystemHard system_hard_isolated;
     system_hard_isolated.manager = &hard_manager;
-    //system_hard_isolated.setParam(r_bin.value, r_out.value, r_in, eps.value,  dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, v_max, id_offset, n_split.value);
-    //system_hard_isolated.setARCParam(e_err_arc.value, dt_err_pert.value, dt_err_soft.value, dt_min_arc);
     SystemHard system_hard_connected;
     system_hard_connected.manager = &hard_manager;
-    //system_hard_connected.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, v_max, id_offset, n_split.value);
-    //system_hard_connected.setARCParam(e_err_arc.value, dt_err_pert.value, dt_err_soft.value, dt_min_arc);
 
-//#ifdef HARD_CHECK_ENERGY
-//    // Set hard energy limit
-//    system_hard_isolated.hard_dE_limit = e_err_hard.value;
-//    system_hard_connected.hard_dE_limit = e_err_hard.value;
-//#endif
-//#ifdef ARC_SYM
-//    // Set step limit for ARC sym
-//    system_hard_isolated.arc_step_count_limit = step_limit_arc.value;
-//    system_hard_connected.arc_step_count_limit = step_limit_arc.value;
-//#endif
     PS::ReallocatableArray<PS::S32> remove_list;
                                        
     SearchCluster search_cluster;
@@ -691,10 +694,10 @@ int main(int argc, char *argv[]){
     PS::F64 dt_kick  = dt_manager.getDtStartContinue();
     PS::F64 dt_drift = dt_manager.getDtDriftContinue();
 
-#ifdef HARD_DEBUG_DUMP
+#ifdef HARD_DUMP
     // initial hard_dump 
     const PS::S32 num_thread = PS::Comm::getNumberOfThread();
-    HARD_DUMP.initial(num_thread);
+    hard_dump.initial(num_thread);
 #endif
 
 /// Main loop
@@ -888,18 +891,18 @@ int main(int argc, char *argv[]){
         
 #endif
 
-
 #ifdef KDKDK_4TH
 #ifdef PROFILE
         profile.force_correct.barrier();
         PS::Comm::barrier();
         profile.force_correct.end();
-        profile.tree_soft.start();
-
+#endif
         // only do correction at middle step
         if (dt_manager.getCountContinue() == 1) {
 //        if (true) {
 
+#ifdef PROFILE
+            profile.tree_soft.start();
             tree_soft.clearNumberOfInteraction();
             tree_soft.clearTimeProfile();
 #endif
@@ -927,7 +930,6 @@ int main(int argc, char *argv[]){
             profile.tree_soft.barrier();
             PS::Comm::barrier();
             profile.tree_soft.end();
-            profile.force_correct.start();
 #endif 
 
             // Isolated clusters
@@ -951,6 +953,9 @@ int main(int argc, char *argv[]){
 //            abort();
 // debug
         }
+#ifdef PROFILE
+        profile.force_correct.start();
+#endif
 
 #endif
 
@@ -1358,18 +1363,30 @@ int main(int argc, char *argv[]){
                                            
         PS::S64 ARC_substep_sum   = system_hard_isolated.ARC_substep_sum;
         ARC_substep_sum += system_hard_connected.ARC_substep_sum;
+        PS::S64 ARC_tsyn_step_sum   = system_hard_isolated.ARC_tsyn_step_sum;
+        ARC_tsyn_step_sum += system_hard_connected.ARC_tsyn_step_sum;
         PS::S64 ARC_n_groups      = system_hard_isolated.ARC_n_groups;
         ARC_n_groups += system_hard_connected.ARC_n_groups;
+        PS::S64 H4_step_sum       = system_hard_isolated.H4_step_sum;
+        H4_step_sum +=  system_hard_connected.H4_step_sum;
         n_count.ARC_substep_sum  += ARC_substep_sum;
+        n_count.ARC_tsyn_step_sum+= ARC_tsyn_step_sum;
         n_count.ARC_n_groups     += ARC_n_groups;
+        n_count.H4_step_sum      += H4_step_sum;
 
         n_count_sum.ARC_substep_sum  += PS::Comm::getSum(ARC_substep_sum);
+        n_count_sum.ARC_tsyn_step_sum+= PS::Comm::getSum(ARC_tsyn_step_sum);
         n_count_sum.ARC_n_groups     += PS::Comm::getSum(ARC_n_groups);
+        n_count_sum.H4_step_sum      += PS::Comm::getSum(H4_step_sum);
 
         system_hard_isolated.ARC_substep_sum = 0;
+        system_hard_isolated.ARC_tsyn_step_sum=0;
         system_hard_isolated.ARC_n_groups = 0;
+        system_hard_isolated.H4_step_sum = 0;
         system_hard_connected.ARC_substep_sum = 0;
+        system_hard_connected.ARC_tsyn_step_sum=0;
         system_hard_connected.ARC_n_groups = 0;
+        system_hard_connected.H4_step_sum = 0;
                                            
         n_count.cluster_count(1, n_hard_single);
 

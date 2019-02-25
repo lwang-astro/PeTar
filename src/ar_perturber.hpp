@@ -3,6 +3,7 @@
 #include "Common/list.h"
 #include "Hermite/hermite_particle.h"
 #include "hard_ptcl.hpp"
+#include "Common/binary_tree.h"
 
 //! Tidal tensor perterbation for AR
 class TidalTensor{
@@ -43,10 +44,11 @@ public:
         pos = _ptcl_cm.pos;
 
         PS::F64vec fi[8];
-#ifdef HARD_DEBUG
-        assert(_ptcl_tt[12].mass_bk==0);
-        assert(_n_split>4);
-#endif
+
+        // Marked the mass_bk == 0 in generate orbits for consistent check
+        ASSERT(_ptcl_tt[12].mass_bk==0);
+        ASSERT(_n_split>4);
+
         // get acceleration
         for (PS::S32 i=0; i<8; i++) fi[i] = _ptcl_tt[i].acc;
         // get cofficients
@@ -150,8 +152,9 @@ class ARPerturber: public H4::Neighbor<PtclHard>{
 public:
     typedef H4::Neighbor<PtclHard> NB;
     TidalTensor* soft_pert;  ///> soft perturbation 
+    Float soft_pert_min; ///> minimum soft perturbation
 
-    ARPerturber(): NB(), soft_pert(NULL) {}
+    ARPerturber(): NB(), soft_pert(NULL), soft_pert_min(Float(0.0)) {}
 
     //! clear function
     void clear() {
@@ -162,7 +165,8 @@ public:
     //! check parameters status
     bool checkParams() {
         ASSERT(NB::checkParams());
-        ASSERT(soft_pert!=NULL);
+        ASSERT(soft_pert_min>=0.0);
+        //ASSERT(soft_pert!=NULL);
         return true;
     }
 
@@ -179,5 +183,37 @@ public:
             }
         }
         soft_pert = &_tt[r_min_index];
+    }
+
+    //! calculate soft perturbation 
+    /*! calculate soft perturbation for two members of one binary
+      @param[in] _p1: member 1 
+      @param[in] _p2: member 2
+      \return soft perturbation for slowdown
+     */
+    template <class Tptcl>
+    Float calcSoftPertSlowDownBinary(const Tptcl& _p1, const Tptcl& _p2) {
+        Float pert = 0.0;
+#ifdef SOFT_PERT
+        if(soft_pert!=NULL) {
+            Float acc_p1[3] = {0.0, 0.0, 0.0};
+            Float acc_p2[3] = {0.0, 0.0, 0.0};
+            soft_pert->eval(acc_p1, _p1.pos);
+            soft_pert->eval(acc_p2, _p2.pos);
+            Float dacc[3] = {acc_p1[0]-acc_p2[0], 
+                             acc_p1[1]-acc_p2[1],
+                             acc_p1[2]-acc_p2[2]};
+            pert = std::sqrt(dacc[0]*dacc[0] + dacc[1]*dacc[1] + dacc[2]*dacc[2]);
+        }
+#endif
+        return pert;
+    }
+
+    //! calculate soft_pert_min
+    void calcSoftPertMin(const COMM::Binary& _bin) {
+        ParticleBase p[2];
+        _bin.calcParticlesEcca(p[0], p[1], COMM::PI);
+        Float dacc_soft = calcSoftPertSlowDownBinary(p[0], p[1]);
+        soft_pert_min = dacc_soft/(2.0*abs(_bin.semi));
     }
 };

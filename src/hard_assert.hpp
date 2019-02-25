@@ -160,13 +160,22 @@ public:
             std::cerr<<"Dump file: "<<fname.c_str()<<std::endl;
         }
     }
+
+    HardDump& operator [] (const int i) {
+        assert(i<size);
+        return hard_dump[i];
+    }
 };
 
-static HardDumpList HARD_DUMP;
+static HardDumpList hard_dump;
 
-#define DATADUMP(expr) HARD_DUMP.dump("hard_dump");                                        
+#ifdef HARD_DUMP
+#define DATADUMP(expr) hard_dump.dump("hard_dump");                                        
+#else
+#define DATADUMP(expr) 
+#endif
 
-#ifdef HARD_DEBUG_DUMP
+#ifdef HARD_DEBUG
 #define ASSERT(expr)                                                    \
     if(!(expr)) {                                                       \
         std::cerr<<"Assertion! "<<__FILE__<<":"<<__LINE__<<": ("<<#expr<<") fail!"<<std::endl; \
@@ -174,5 +183,5 @@ static HardDumpList HARD_DUMP;
         abort();                                                        \
     }
 #else
-#define ASSERT(expr) assert(expr)
+#define ASSERT(expr)
 #endif

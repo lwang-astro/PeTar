@@ -5,77 +5,72 @@
 #include <unistd.h>
 #include <unordered_map>
 #include <particle_simulator.hpp>
-#include "Newtonian_acceleration.h"
-#include "ptree.h"
+#include "io.hpp"
+#include "hard_assert.hpp"
 #include "kepler.hpp"
 #include "cluster_list.hpp"
 #include "hard.hpp"
-#include "soft.hpp"
+#include "soft_ptcl.hpp"
 
 int main(int argc, char **argv){
-  std::string filename="hard_dump";
   int n_opt=0;
   int arg_label;
   PS::F64 slowdown_factor=0;
   PS::F64 eta=0;
-  PS::F64 dE_arc_limit = -1;
-  PS::F64 dt_err_pert = -1;
-  PS::F64 dt_err_soft = -1;
-  PS::F64 dt_arc_min = -1;
-  PS::F64 dE_hard_limit = 1e-4;
+  PS::F64 e_err_ar = -1;
+  PS::F64 e_err_hard = 1e-4;
+  PS::S32 dt_min_power = -1;
+  PS::F64 dt_max = -1;
   PS::S32 step_arc_limit = 100000;
-  while ((arg_label = getopt(argc, argv, "k:E:a:p:f:d:e:s:h")) != -1)
+
+  while ((arg_label = getopt(argc, argv, "k:E:a:D:d:e:s:h")) != -1)
     switch (arg_label) {
     case 'k':
         slowdown_factor = atof(optarg);
-        n_opt++;
+        n_opt+=2;
         break;
     case 'E':
         eta = atof(optarg);
-        n_opt++;
+        n_opt+=2;
         break;
     case 'a':
-        dE_arc_limit = atof(optarg);
-        n_opt++;
+        e_err_ar = atof(optarg);
+        n_opt+=2;
         break;
-    case 'p':
-        dt_err_pert = atof(optarg);
-        n_opt++;
-        break;
-    case 'f':
-        dt_err_soft = atof(optarg);
-        n_opt++;
+    case 'D':
+        dt_max = atof(optarg);
+        n_opt+=2;
         break;
     case 'd':
-        dt_arc_min = atof(optarg);
-        n_opt++;
+        dt_min_power = atoi(optarg);
+        n_opt+=2;
         break;
 #ifdef HARD_CHECK_ENERGY
     case 'e':
-        dE_hard_limit = atof(optarg);
-        n_opt++;
+        e_err_hard = atof(optarg);
+        n_opt+=2;
         break;
 #endif
-#ifdef ARC_SYM
+#ifdef AR_SYM
     case 's':
         step_arc_limit = atoi(optarg);
-        n_opt++;
+        n_opt+=2;
         break;
 #endif
     case 'h':
-        std::cout<<"options:\n"
+        std::cout<<"hard_debug.out [options] [hard_manager.par] [cluster_data]\n"
+                 <<"options:\n"
                  <<"    -k [double]:  change slowdown factor\n"
 #ifdef HARD_CHECK_ENERGY
-                 <<"    -e [double]:  hard energy limit ("<<dE_hard_limit<<")\n"
+                 <<"    -e [double]:  hard energy limit ("<<e_err_hard<<")\n"
 #endif
-#ifdef ARC_SYM
-                 <<"    -s [int]:     ARC SYM step count limit ("<<step_arc_limit<<")\n"
+#ifdef AR_SYM
+                 <<"    -s [int]:     AR`1`= SYM step count limit ("<<step_arc_limit<<")\n"
 #endif
                  <<"    -E [double]:  Eta for hermite \n"
-                 <<"    -a [double]:  ARC energy limit \n"
-                 <<"    -p [double]:  ARC time error perturbation case \n"
-                 <<"    -f [double]:  ARC time error no perturber case \n"
-                 <<"    -d [double]:  ARC time step limit \n"
+                 <<"    -a [double]:  AR energy limit \n"
+                 <<"    -D [double]:  hard time step max \n"
+                 <<"    -d [int]:     hard time step min power \n"
                  <<"    -h         :  help\n";
         return 0;
     default:
@@ -83,38 +78,62 @@ int main(int argc, char **argv){
         abort();
     }
 
-  if (argc-n_opt*2>1) filename=argv[argc-1];
+  assert(argc-n_opt>2);
+  std::string filename=argv[argc-1];
+  std::string fhardpar=argv[argc-2];
 
-  std::cout<<"Reading dump file:"<<filename<<std::endl;
+  std::cerr<<"Reading dump file:"<<filename<<std::endl;
+  std::cerr<<"Hard manager parameter file:"<<fhardpar<<std::endl;
 
-  SystemHard sys;
-  PS::ReallocatableArray<FPSoft> ptcl_artifical;
+  std::cout<<std::setprecision(WRITE_PRECISION);
 
-  PS::F64 time_end;
-  sys.readOneCluster(filename.c_str(), time_end, ptcl_artifical);
-
-  std::cout<<"Time_end: "<<time_end<<std::endl;
+  HardManager hard_manager;
+  FILE* fpar_in;
+  if( (fpar_in = fopen(fhardpar.c_str(),"r")) == NULL) {
+      fprintf(stderr,"Error: Cannot open file %s.\n", fhardpar.c_str());
+      abort();
+  }
+  hard_manager.readBinary(fpar_in);
+  fclose(fpar_in);
 
 #ifdef HARD_CHECK_ENERGY
-    // Set hard energy limit
-  sys.hard_dE_limit = dE_hard_limit;
+  // Set hard energy limit
+  if (e_err_hard>0 )
+      hard_manager.energy_error_max = e_err_hard;
 #endif
-#ifdef ARC_SYM
+#ifdef AR_SYM
   // Set step limit for ARC sym
-  sys.arc_step_count_limit = step_arc_limit;
+  if (step_arc_limit>0) 
+      hard_manager.ar_manager.step_count_max = step_arc_limit;
 #endif
-
   // set slowdown factor
-  if(slowdown_factor>0) sys.setSlowdownFactor(slowdown_factor);
+  if(slowdown_factor>0)    
+      hard_manager.ar_manager.slowdown_pert_ratio_ref = slowdown_factor;
 
   // set eta
-  if(eta>0) sys.setEta(eta);
+  if(eta>0) {
+      hard_manager.h4_manager.step.eta_4th = eta;
+      hard_manager.h4_manager.step.eta_2nd = 0.1*eta;
+  }
+  // time step
+  if(dt_min_power>0&&dt_max>0) 
+      hard_manager.setDtRange(dt_max, dt_min_power);
+
+  if(e_err_ar>0) 
+      hard_manager.ar_manager.energy_error_relative_max = e_err_ar;
+
+  hard_manager.checkParams();
+  hard_manager.print(std::cerr);
+
+  HardDump hard_dump;
+  hard_dump.readOneCluster(filename.c_str());
+  std::cerr<<"Time_end: "<<hard_dump.time_end<<std::endl;
+
+  SystemHard sys;
+  sys.manager = &hard_manager;
 
   // change ARC parameters
-  if(dt_arc_min>0||dE_arc_limit>0||dt_err_pert>0||dt_err_soft>0) 
-      sys.setARCParam(dE_arc_limit, dt_err_pert, dt_err_soft, dt_arc_min);
-  
-  sys.driveForMultiCluster(time_end, ptcl_artifical.getPointer());
+  sys.driveForMultiClusterImpl(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, hard_dump.time_end, 0);
 
   return 0;
 }
