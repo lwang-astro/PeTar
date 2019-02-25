@@ -87,7 +87,9 @@ class SystemHard{
 public:
 #ifdef PROFILE
     PS::S64 ARC_substep_sum;
+    PS::S64 ARC_tsyn_step_sum;
     PS::F64 ARC_n_groups;
+    PS::S64 H4_step_sum;
 #endif
 #ifdef HARD_CHECK_ENERGY
     PS::F64 hard_dE, hard_dESD;
@@ -1313,6 +1315,7 @@ private:
 //        ptcl_bk_pt.resizeNoInitialize(_n_ptcl);
 //#endif
         PS::S32 nstepcount = 0;
+        PS::S32 nstepcount_h4 = 0;
 
 #ifdef HARD_DEBUG
         if (_n_ptcl>400) {
@@ -1740,6 +1743,7 @@ private:
                 bool fail_flag_aint = (nstepcount_aint<0); // fail case
                 nstepcount += nstepcount_aint;
                 bool fail_flag_hint = Hint.integrateOneStepAct(time_sys,dt_limit,dt_min_hard_, &Aint);
+                nstepcount_h4 += Hint.getNact();
                 bool fail_flag_adj = adjustGroup<Tsoft>(Hint, Aint, _ptcl_local, _n_ptcl, time_sys, dt_limit, _time_end, _v_max, Int_pars_.rin, sdfactor_, first_step_flag);
 
                 if(fail_flag_hint || fail_flag_aint || fail_flag_adj) {
@@ -1861,6 +1865,7 @@ private:
             //ARC_substep_sum += Aint.getNsubstep();
             ARC_substep_sum += nstepcount;
             ARC_n_groups += _n_group;
+            H4_step_sum += nstepcount_h4;
 #endif
         }
 
@@ -1993,6 +1998,9 @@ public:
 #endif
 #ifdef PROFILE
         ARC_substep_sum = 0;
+        ARC_tsyn_step_sum =0;
+        ARC_n_groups = 0;
+        H4_step_sum = 0;
 #endif
 #ifdef HARD_CHECK_ENERGY
         hard_dE = hard_dESD = 0;

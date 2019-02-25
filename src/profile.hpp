@@ -454,7 +454,9 @@ public:
     NumCounter cluster_isolated;
     NumCounter cluster_connected;
     NumCounter ARC_substep_sum;
+    NumCounter ARC_tsyn_step_sum;
     NumCounter ARC_n_groups;
+    NumCounter H4_step_sum;
     NumCounter ep_ep_interact;
     NumCounter ep_sp_interact;
     //NumCounter ARC_step_group;
@@ -466,12 +468,14 @@ public:
                  hard_connected   (NumCounter("Hard_connected")),
                  cluster_isolated (NumCounter("Cluster_isolated ")),
                  cluster_connected(NumCounter("Cluster_connected")),
-                 ARC_substep_sum  (NumCounter("ARC_sub-steps_sum")),
-                 ARC_n_groups     (NumCounter("ARC_group_number")),
+                 ARC_substep_sum  (NumCounter("AR_step_sum")),
+                 ARC_tsyn_step_sum(NumCounter("AR_tsyn_step_sum")),
+                 ARC_n_groups     (NumCounter("AR_group_number")),
+                 H4_step_sum      (NumCounter("Hermite_step_sum")),
                  ep_ep_interact   (NumCounter("Ep-Ep_interaction")),
                  ep_sp_interact   (NumCounter("Ep-Sp_interaction")),
                  //ARC_step_group   (NumCounter("ARC step per group")),
-                 n_counter(9) {}
+                 n_counter(11) {}
 
     void cluster_count(const PS::S32 n, const PS::S32 ntimes=1) {
         if (n_cluster.count(n)) n_cluster[n] += ntimes;

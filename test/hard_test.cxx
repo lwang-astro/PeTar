@@ -178,10 +178,11 @@ int main(int argc, char** argv)
   for (PS::S32 i=0;i<40;i++) dt_min_hard *= 0.5;
 
   SystemHard sys_hard;
-  sys_hard.setParam(rbin, rout, rin, eps, dt_limit, dt_min_hard, eta, time_sys, 1e-8, N, n_split);
+  sys_hard.setParam(rbin, rout, rin, eps, dt_limit, dt_min_hard, eta, time_sys, 1000.0, 1e-8, N, n_split);
   sys_hard.setARCParam(1e-10, 1e-6, 1e-3, 1e-24);
    
   sys_hard.setPtclForIsolatedMultiCluster(sys, p_list, n_cluster);
+  sys_hard.arc_step_count_limit = 100000;
 
   EnergyAndMomemtum et0,et,etcm0,etcm;
   PS::F64 eps2 = eps*eps;
@@ -215,7 +216,7 @@ int main(int argc, char** argv)
   //write_p(fout2,time_sys,sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size(),ppcm0,etcm0,rin,rout,eps2,0.0,1);
   while(time_sys < time){
       fprintf(stderr,"Time = %e\n", time_sys+dt_limit);
-      sys_hard.driveForMultiCluster<PS::ParticleSystem<FPSoft>,FPSoft>(dt_limit, sys);
+      sys_hard.driveForMultiCluster(dt_limit, &sys[0]);
       time_sys += dt_limit;
       sys.setNumberOfParticleLocal(n_sys);
       print_p(sys_hard.getPtcl().getPointer(),sys_hard.getPtcl().size());
