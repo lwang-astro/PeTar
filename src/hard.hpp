@@ -1166,7 +1166,7 @@ public:
             h4_int.writeBackGroupMembers();
             // update research
             const PS::S32* group_index = h4_int.getSortDtIndexGroup();
-            for(PS::S32 i=0; i<h4_int.getNActGroup(); i++) {
+            for(PS::S32 i=0; i<h4_int.getNGroup(); i++) {
                 const PS::S32 k =group_index[i];
                 h4_int.groups[k].particles.cm.calcRSearch(_time_end);
                 const PS::S32 n_member = h4_int.groups[k].particles.getSize();
@@ -1175,7 +1175,7 @@ public:
                 }
             }
             const PS::S32* single_index = h4_int.getSortDtIndexSingle();
-            for (PS::S32 i=0; i<h4_int.getNActSingle(); i++) {
+            for (PS::S32 i=0; i<h4_int.getNSingle(); i++) {
                 h4_int.particles[single_index[i]].calcRSearch(_time_end);
             }
 
@@ -1191,6 +1191,24 @@ public:
             ARC_substep_sum += h4_int.profile.ar_step_count;
             ARC_tsyn_step_sum += h4_int.profile.ar_step_count_tsyn;
             ARC_n_groups += _n_group;
+#endif
+#ifdef AR_DEBUG_PRINT
+            for (PS::S32 i=0; i<h4_int.getNGroup(); i++) {
+                const PS::S32 k= group_index[i];
+                auto& groupk = h4_int.groups[k];
+                std::cerr<<"Group N:"<<ARC_n_groups
+                         <<" k:"<<k
+                         <<" N_member: "<<groupk.particles.getSize()
+                         <<" Slowdown: "<<groupk.slowdown.getSlowDownFactor()
+                         <<" Slowdown(org): "<<groupk.slowdown.getSlowDownFactorOrigin()
+                         <<" steps: "<<groupk.profile.step_count
+                         <<" steps(tsyn): "<<groupk.profile.step_count_tsyn;
+                auto& bin = groupk.info.getBinaryTreeRoot();
+                std::cerr<<" semi: "<<bin.semi
+                         <<" ecc: "<<bin.ecc
+                         <<" NB: "<<groupk.perturber.neighbor_address.getSize()
+                         <<std::endl;
+            }
 #endif
         }
 #ifdef HARD_CHECK_ENERGY
