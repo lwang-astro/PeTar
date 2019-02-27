@@ -1212,11 +1212,12 @@ public:
 #endif
         }
 #ifdef HARD_CHECK_ENERGY
-        hard_dE = etotf - etoti;
+        Float hard_dE_local = etotf - etoti;
+        hard_dE += hard_dE_local;
 #ifdef HARD_DEBUG_PRINT
-        std::cerr<<"Hard Energy: init: "<<etoti<<" end: "<<etotf<<" dE: "<<hard_dE<<std::endl;
+        std::cerr<<"Hard Energy: init: "<<etoti<<" end: "<<etotf<<" dE: "<<hard_dE_local<<std::endl;
 #endif        
-        if (abs(hard_dE) > manager->energy_error_max) {
+        if (abs(hard_dE_local) > manager->energy_error_max) {
             std::cerr<<"Hard energy significant ("<<hard_dE<<") !\n";
             DATADUMP();
             abort();
