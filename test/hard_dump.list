@@ -1,7 +1,1 @@
-BBencounter:  B-B encounter, both have high eccentricity, ARC fail when step is fixed (fix_step_flag=1) : -k 1e-6
-sdissue: a massive binary encounter a low-mass binary. The slowdown factor of massive binary should be smooth and not too large to get energy conservation : -k 1e-6
-sdissue2: a massive binary encounter a low-mass star. the switch of 3-body ARC back to 2+1 should be consistent with the slowdown factor (mass weighted), the initial slowdown factor should be enforced to 1.0 : -k 1e-6
-5body: B-B encounter with one body pass by, one binary have strong change of slowdown factor, it should be one and allow the B-B go to ARC for good energy conservation : -k 1e-6
-BSweakencounter: weak encounter, should not go to ARC for three body : -k 1e-6
-sdinit: initialization issue of slowdown factor : -k 1e-6
-chaos: chaotic 4-body encounter, require all particles in ARC at begining : -k 1e-6
+4body: 4-body encounters, do not allow fratiosq>0.005 to form groups :
