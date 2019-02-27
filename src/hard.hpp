@@ -1116,6 +1116,8 @@ public:
 
 #ifdef HARD_DEBUG_PRINT
             h4_int.info.printColumnTitle(std::cout, WRITE_WIDTH);
+            std::cout<<std::setw(WRITE_WIDTH)<<"Ngroup";
+            for (int i=0; i<_n_group; i++) h4_int.groups[i].slowdown.printColumnTitle(std::cout, WRITE_WIDTH);
             h4_int.particles.printColumnTitle(std::cout, WRITE_WIDTH);
             std::cout<<std::endl;
 #endif
@@ -1155,6 +1157,8 @@ public:
                     h4_int.info.calcEnergy(h4_int.particles, h4_manager->interaction, false);
             
                     h4_int.info.printColumn(std::cout, WRITE_WIDTH);
+                    std::cout<<std::setw(WRITE_WIDTH)<<_n_group;
+                    for (int i=0; i<_n_group; i++) h4_int.groups[i].slowdown.printColumn(std::cout, WRITE_WIDTH);
                     h4_int.particles.printColumn(std::cout, WRITE_WIDTH);
                     std::cout<<std::endl;
                 }

@@ -1,1 +1,3 @@
 4body: 4-body encounters, do not allow fratiosq>0.005 to form groups :
+-dt: negative dt_real for one group with large SD factor :
+
