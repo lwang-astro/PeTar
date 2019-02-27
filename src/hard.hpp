@@ -1196,17 +1196,22 @@ public:
             for (PS::S32 i=0; i<h4_int.getNGroup(); i++) {
                 const PS::S32 k= group_index[i];
                 auto& groupk = h4_int.groups[k];
-                std::cerr<<"Group N:"<<ARC_n_groups
-                         <<" k:"<<k
-                         <<" N_member: "<<groupk.particles.getSize()
-                         <<" Slowdown: "<<groupk.slowdown.getSlowDownFactor()
-                         <<" Slowdown(org): "<<groupk.slowdown.getSlowDownFactorOrigin()
-                         <<" steps: "<<groupk.profile.step_count
-                         <<" steps(tsyn): "<<groupk.profile.step_count_tsyn;
+                std::cerr<<"Group N:"<<std::setw(6)<<ARC_n_groups
+                         <<" k:"<<std::setw(2)<<k
+                         <<" N_member: "<<std::setw(4)<<groupk.particles.getSize()
+                         <<" step: "<<std::setw(12)<<groupk.profile.step_count_sum
+                         <<" step(tsyn): "<<std::setw(10)<<groupk.profile.step_count_tsyn_sum
+//                         <<" step(sum): "<<std::setw(12)<<h4_int.profile.ar_step_count
+//                         <<" step_tsyn(sum): "<<std::setw(12)<<h4_int.profile.ar_step_count_tsyn
+                         <<" Soft_Pert: "<<std::setw(20)<<groupk.perturber.soft_pert_min
+                         <<" Pert_In: "<<std::setw(20)<<groupk.slowdown.getPertIn()
+                         <<" Pert_Out: "<<std::setw(20)<<groupk.slowdown.getPertOut()
+                         <<" SD: "<<std::setw(20)<<groupk.slowdown.getSlowDownFactor()
+                         <<" SD(org): "<<std::setw(20)<<groupk.slowdown.getSlowDownFactorOrigin();
                 auto& bin = groupk.info.getBinaryTreeRoot();
-                std::cerr<<" semi: "<<bin.semi
-                         <<" ecc: "<<bin.ecc
-                         <<" NB: "<<groupk.perturber.neighbor_address.getSize()
+                std::cerr<<" semi: "<<std::setw(20)<<bin.semi
+                         <<" ecc: "<<std::setw(20)<<bin.ecc
+                         <<" NB: "<<std::setw(4)<<groupk.perturber.neighbor_address.getSize()
                          <<std::endl;
             }
 #endif
