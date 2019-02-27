@@ -267,9 +267,9 @@ private:
                         _sys[ptcl_k].status = -ptcl_artifical[i][j_cm].adr_org; //save negative address
                         _sys[ptcl_k].mass_bk = _sys[ptcl_k].mass;
                         _sys[ptcl_k].r_search = rsearch_member;
-#ifdef SPLIT_MASS
+//#ifdef SPLIT_MASS
                         _sys[ptcl_k].mass = 0;
-#endif
+//#endif
                     }
                     else {
                         // this is remoted member;
@@ -282,9 +282,9 @@ private:
                     _ptcl_local[kl].status = -ptcl_artifical[i][j_cm].adr_org;
                     _ptcl_local[kl].mass_bk = _ptcl_local[kl].mass;
                     _ptcl_local[kl].r_search = rsearch_member;
-#ifdef SPLIT_MASS
+//#ifdef SPLIT_MASS
                     _ptcl_local[kl].mass = 0;
-#endif
+//#endif
                 }
                 // shift cluster
                 if(j_group==_n_group_in_cluster[i_cluster]-1) {
@@ -1066,11 +1066,17 @@ public:
 
             h4_int.particles.setMode(COMM::ListMode::link);
             h4_int.particles.linkMemberArray(_ptcl_local, _n_ptcl);
+
+#ifdef HARD_CHECK_ENERGY
+            h4_int.info.calcEnergy(h4_int.particles, h4_manager->interaction, true);
+            etoti  = h4_int.info.etot0;
+#endif
+
             h4_int.particles.calcCenterOfMass();
             h4_int.particles.shiftToCenterOfMassFrame();
             
             h4_int.groups.setMode(COMM::ListMode::local);
-            h4_int.groups.reserveMem(_n_group+3);
+            h4_int.groups.reserveMem(_n_group+_n_group/2+3);
             h4_int.reserveIntegratorMem();
 
             // initial system 
@@ -1108,10 +1114,6 @@ public:
             h4_int.sortDtAndSelectActParticle();
             h4_int.info.time = h4_int.getTime();
 
-#ifdef HARD_CHECK_ENERGY
-            h4_int.info.calcEnergy(h4_int.particles, h4_manager->interaction, true);
-            etoti  = h4_int.info.etot0;
-#endif
 #ifdef HARD_DEBUG_PRINT
             h4_int.info.printColumnTitle(std::cout, WRITE_WIDTH);
             h4_int.particles.printColumnTitle(std::cout, WRITE_WIDTH);
@@ -1162,8 +1164,10 @@ public:
 #endif
             }
         
-            h4_int.particles.cm.pos += h4_int.particles.cm.vel * _time_end;
             h4_int.writeBackGroupMembers();
+            h4_int.particles.cm.pos += h4_int.particles.cm.vel * _time_end;
+            h4_int.particles.shiftToOriginFrame();
+
             // update research
             const PS::S32* group_index = h4_int.getSortDtIndexGroup();
             for(PS::S32 i=0; i<h4_int.getNGroup(); i++) {
@@ -1183,7 +1187,6 @@ public:
             h4_int.info.calcEnergy(h4_int.particles, h4_manager->interaction, false);
             etotf  = h4_int.info.etot;
 #endif
-            h4_int.particles.shiftToOriginFrame();
 
 #ifdef PROFILE
             //ARC_substep_sum += Aint.getNsubstep();

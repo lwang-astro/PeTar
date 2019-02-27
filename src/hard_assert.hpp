@@ -153,12 +153,18 @@ public:
         clear();
     }
 
-    void dump(const char *filename) {
+    void dumpAll(const char *filename) {
         for (int i=0; i<size; i++) {
             std::string fname = filename + std::string(".") + std::to_string(i);
             hard_dump[i].dumpOneCluster(fname.c_str());
             std::cerr<<"Dump file: "<<fname.c_str()<<std::endl;
         }
+    }
+
+    void dumpThread(const char *filename){
+        const PS::S32 ith = PS::Comm::getThreadNum();
+        hard_dump[ith].dumpOneCluster(filename);
+        std::cerr<<"Thread: "<<ith<<" Dump file: "<<filename<<std::endl;
     }
 
     HardDump& operator [] (const int i) {
@@ -170,7 +176,7 @@ public:
 static HardDumpList hard_dump;
 
 #ifdef HARD_DUMP
-#define DATADUMP(expr) hard_dump.dump("hard_dump");                                        
+#define DATADUMP(expr) hard_dump.dumpThread("hard_dump");
 #else
 #define DATADUMP(expr) 
 #endif

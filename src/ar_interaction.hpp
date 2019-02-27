@@ -59,7 +59,7 @@ public:
             for (int j=0; j<n_pert; j++) {
                 auto& pertj = *pert_adr[j].adr;
                 Float dt = _time - pertj.time;
-                ASSERT(dt>=0.0);
+                //ASSERT(dt>=0.0);
                 xp[j][0] = pertj.pos[0] + dt*(pertj.vel[0] + 0.5*dt*(pertj.acc0[0] + inv3*dt*pertj.acc1[0]));
                 xp[j][1] = pertj.pos[1] + dt*(pertj.vel[1] + 0.5*dt*(pertj.acc0[1] + inv3*dt*pertj.acc1[1]));
                 xp[j][2] = pertj.pos[2] + dt*(pertj.vel[2] + 0.5*dt*(pertj.acc0[2] + inv3*dt*pertj.acc1[2]));
@@ -67,7 +67,7 @@ public:
             }
 
             Float dt = _time - _particle_cm.time;
-            ASSERT(dt>=0.0);
+            //ASSERT(dt>=0.0);
             xcm[0] = _particle_cm.pos[0] + dt*(_particle_cm.vel[0] + 0.5*dt*(_particle_cm.acc0[0] + inv3*dt*_particle_cm.acc1[0]));
             xcm[1] = _particle_cm.pos[1] + dt*(_particle_cm.vel[1] + 0.5*dt*(_particle_cm.acc0[1] + inv3*dt*_particle_cm.acc1[1]));
             xcm[2] = _particle_cm.pos[2] + dt*(_particle_cm.vel[2] + 0.5*dt*(_particle_cm.acc0[2] + inv3*dt*_particle_cm.acc1[2]));

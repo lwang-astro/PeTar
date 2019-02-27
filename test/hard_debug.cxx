@@ -58,7 +58,7 @@ int main(int argc, char **argv){
         break;
 #endif
     case 'h':
-        std::cout<<"hard_debug.out [options] [hard_manager.par] [cluster_data]\n"
+        std::cout<<"hard_debug.out [options] [hard_manager (defaulted: input.par.hard)] [cluster_data] (defaulted: hard_dump)\n"
                  <<"options:\n"
                  <<"    -k [double]:  change slowdown factor\n"
 #ifdef HARD_CHECK_ENERGY
@@ -78,9 +78,13 @@ int main(int argc, char **argv){
         abort();
     }
 
-  assert(argc-n_opt>2);
-  std::string filename=argv[argc-1];
-  std::string fhardpar=argv[argc-2];
+  std::string filename="hard_dump";
+  std::string fhardpar="input.par.hard";
+  if (argc-n_opt>1) {
+      std::string filename=argv[argc-1];
+      if (argc-n_opt>2) 
+          std::string fhardpar=argv[argc-2];
+  }
 
   std::cerr<<"Reading dump file:"<<filename<<std::endl;
   std::cerr<<"Hard manager parameter file:"<<fhardpar<<std::endl;

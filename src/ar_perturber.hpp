@@ -165,7 +165,7 @@ public:
     //! check parameters status
     bool checkParams() {
         ASSERT(NB::checkParams());
-        ASSERT(soft_pert_min>=0.0);
+        //ASSERT(soft_pert_min>=0.0);
         //ASSERT(soft_pert!=NULL);
         return true;
     }
@@ -210,10 +210,15 @@ public:
     }
 
     //! calculate soft_pert_min
-    void calcSoftPertMin(const COMM::Binary& _bin) {
-        ParticleBase p[2];
-        _bin.calcParticlesEcca(p[0], p[1], COMM::PI);
-        Float dacc_soft = calcSoftPertSlowDownBinary(p[0], p[1]);
-        soft_pert_min = dacc_soft/(2.0*abs(_bin.semi));
+    template <class Tptcl>
+    void calcSoftPertMin(const COMM::BinaryTree<Tptcl>& _bin) {
+        // hyperbolic case
+        if(_bin.semi<0.0) soft_pert_min = 0.0;
+        else { // close orbit
+            ParticleBase p[2];
+            _bin.calcParticlesEcca(p[0], p[1], COMM::PI);
+            Float dacc_soft = calcSoftPertSlowDownBinary(p[0], p[1]);
+            soft_pert_min = _bin.mass*dacc_soft/(2.0*abs(_bin.semi));
+        }
     }
 };
