@@ -1222,6 +1222,10 @@ public:
                          <<" ecc: "<<std::setw(20)<<bin.ecc
                          <<" NB: "<<std::setw(4)<<groupk.perturber.neighbor_address.getSize()
                          <<std::endl;
+                if (groupk.profile.step_count_tsyn_sum>10000) {
+                    std::string dumpname="hard_dump."+std::to_string(int(ARC_n_groups));
+                    DATADUMP(dumpname.c_str());
+                }
             }
 #endif
         }
@@ -1233,7 +1237,7 @@ public:
 #endif        
         if (abs(hard_dE_local) > manager->energy_error_max) {
             std::cerr<<"Hard energy significant ("<<hard_dE<<") !\n";
-            DATADUMP();
+            DATADUMP("hard_dump");
             abort();
         }
 #endif

@@ -176,7 +176,7 @@ public:
 static HardDumpList hard_dump;
 
 #ifdef HARD_DUMP
-#define DATADUMP(expr) hard_dump.dumpThread("hard_dump");
+#define DATADUMP(expr) hard_dump.dumpThread(expr)
 #else
 #define DATADUMP(expr) 
 #endif
@@ -185,7 +185,7 @@ static HardDumpList hard_dump;
 #define ASSERT(expr)                                                    \
     if(!(expr)) {                                                       \
         std::cerr<<"Assertion! "<<__FILE__<<":"<<__LINE__<<": ("<<#expr<<") fail!"<<std::endl; \
-        DATADUMP();                                                     \
+        DATADUMP("hard_dump");                                          \
         abort();                                                        \
     }
 #else

@@ -81,9 +81,9 @@ int main(int argc, char **argv){
   std::string filename="hard_dump";
   std::string fhardpar="input.par.hard";
   if (argc-n_opt>1) {
-      std::string filename=argv[argc-1];
+      filename=argv[argc-1];
       if (argc-n_opt>2) 
-          std::string fhardpar=argv[argc-2];
+          fhardpar=argv[argc-2];
   }
 
   std::cerr<<"Reading dump file:"<<filename<<std::endl;
