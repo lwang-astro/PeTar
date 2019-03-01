@@ -37,6 +37,7 @@ public:
 
     //! (Necessary) calculate acceleration from perturber and the perturbation factor for slowdown calculation
     /*! The Force class acc_pert should be updated
+      @param[in,out] _slowdown: slowdown paramters, (pert_out and timescale should be updated)
       @param[out] _force: force array to store the calculation results (in acc_pert[3], notice acc_pert may need to reset zero to avoid accummulating old values)
       @param[in] _particles: member particle array
       @param[in] _n_particle: number of member particles
@@ -45,32 +46,44 @@ public:
       @param[in] _time: current time
       \return perturbation energy to calculate slowdown factor
     */
-    Float calcAccAndSlowDownPert(AR::Force* _force, const ARPtcl* _particles, const int _n_particle, const H4Ptcl& _particle_cm, const ARPerturber& _perturber, const Float _time) {
+    void calcAccAndSlowDownPert(AR::SlowDown& _slowdown, AR::Force* _force, const ARPtcl* _particles, const int _n_particle, const H4Ptcl& _particle_cm, const ARPerturber& _perturber) {
         static const Float inv3 = 1.0 / 3.0;
 
         const int n_pert = _perturber.neighbor_address.getSize();
 
         if (n_pert>0) {
 
+            Float time = _slowdown.getRealTime();
+
             auto* pert_adr = _perturber.neighbor_address.getDataAddress();
 
             Float xp[n_pert][3], xcm[3], m[n_pert];
+            Float vp[n_pert][3], vcm[3];
 
             for (int j=0; j<n_pert; j++) {
                 auto& pertj = *pert_adr[j].adr;
-                Float dt = _time - pertj.time;
+                Float dt = time - pertj.time;
                 //ASSERT(dt>=0.0);
                 xp[j][0] = pertj.pos[0] + dt*(pertj.vel[0] + 0.5*dt*(pertj.acc0[0] + inv3*dt*pertj.acc1[0]));
                 xp[j][1] = pertj.pos[1] + dt*(pertj.vel[1] + 0.5*dt*(pertj.acc0[1] + inv3*dt*pertj.acc1[1]));
                 xp[j][2] = pertj.pos[2] + dt*(pertj.vel[2] + 0.5*dt*(pertj.acc0[2] + inv3*dt*pertj.acc1[2]));
+
+                vp[j][0] = pertj.vel[0] + dt*(pertj.acc0[0] + 0.5*dt*pertj.acc1[0]);
+                vp[j][1] = pertj.vel[1] + dt*(pertj.acc0[1] + 0.5*dt*pertj.acc1[1]);
+                vp[j][2] = pertj.vel[2] + dt*(pertj.acc0[2] + 0.5*dt*pertj.acc1[2]);
+
                 m[j] = pertj.mass;
             }
 
-            Float dt = _time - _particle_cm.time;
+            Float dt = time - _particle_cm.time;
             //ASSERT(dt>=0.0);
             xcm[0] = _particle_cm.pos[0] + dt*(_particle_cm.vel[0] + 0.5*dt*(_particle_cm.acc0[0] + inv3*dt*_particle_cm.acc1[0]));
             xcm[1] = _particle_cm.pos[1] + dt*(_particle_cm.vel[1] + 0.5*dt*(_particle_cm.acc0[1] + inv3*dt*_particle_cm.acc1[1]));
             xcm[2] = _particle_cm.pos[2] + dt*(_particle_cm.vel[2] + 0.5*dt*(_particle_cm.acc0[2] + inv3*dt*_particle_cm.acc1[2]));
+
+            vcm[0] = _particle_cm.vel[0] + dt*(_particle_cm.acc0[0] + 0.5*dt*_particle_cm.acc1[0]);
+            vcm[1] = _particle_cm.vel[1] + dt*(_particle_cm.acc0[1] + 0.5*dt*_particle_cm.acc1[1]);
+            vcm[2] = _particle_cm.vel[2] + dt*(_particle_cm.acc0[2] + 0.5*dt*_particle_cm.acc1[2]);
 
 
             Float pert_cm = 0.0, acc_pert_cm[3]={0.0, 0.0, 0.0};
@@ -87,6 +100,7 @@ public:
                     xi[1] = pi.pos[1] + xcm[1];
                     xi[2] = pi.pos[2] + xcm[2];
 
+                    Float pert_pot = 0.0;
                     for (int j=0; j<n_pert; j++) {
                         Float dr[3] = {xp[j][0] - xi[0],
                                        xp[j][1] - xi[1],
@@ -96,6 +110,7 @@ public:
                         Float k  = changeover->calcAcc0W(r);
                         Float r3 = r*r2;
                         Float mor3 = G*m[j]/r3 * k;
+                        pert_pot += mor3;
 
                         acc_pert[0] += mor3 * dr[0];
                         acc_pert[1] += mor3 * dr[1];
@@ -105,6 +120,7 @@ public:
                     if(_perturber.soft_pert!=NULL) _perturber.soft_pert->eval(acc_pert, pi.pos);
 #endif
 
+                    pert_cm += pi.mass * pert_pot;
                     acc_pert_cm[0] += pi.mass *acc_pert[0];
                     acc_pert_cm[1] += pi.mass *acc_pert[1];
                     acc_pert_cm[2] += pi.mass *acc_pert[2];
@@ -129,7 +145,21 @@ public:
                     acc_pert[1] -= acc_pert_cm[1];        
                     acc_pert[2] -= acc_pert_cm[2]; 
                 }
-                
+
+                // get SD time scale
+                for (int i=0; i<n_pert; i++) {
+                    Float dr[3] = {xp[i][0] - xcm[0],
+                                   xp[i][1] - xcm[1],
+                                   xp[i][2] - xcm[2]};
+                    Float dv[3] = {vp[i][0] - vcm[0],
+                                   vp[i][1] - vcm[1],
+                                   vp[i][2] - vcm[2]};
+                    Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
+                    Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
+                    Float ti = abs(r2/drdv);
+
+                    _slowdown.timescale = std::min(_slowdown.timescale, ti);
+                }
             }
             else {
                 // first calculate c.m. acceleration and tidal perturbation
@@ -137,7 +167,12 @@ public:
                     Float dr[3] = {xp[j][0] - xcm[0],
                                    xp[j][1] - xcm[1],
                                    xp[j][2] - xcm[2]};
+                    Float dv[3] = {vp[j][0] - vcm[0],
+                                   vp[j][1] - vcm[1],
+                                   vp[j][2] - vcm[2]};
                     Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
+                    Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
+                    Float ti = abs(r2/drdv);
                     Float r  = sqrt(r2);
                     Float k  = changeover->calcAcc0W(r);
                     Float r3 = r*r2;
@@ -147,7 +182,10 @@ public:
                     acc_pert_cm[0] += mor3 * dr[0];
                     acc_pert_cm[1] += mor3 * dr[1];
                     acc_pert_cm[2] += mor3 * dr[2];
+
+                    _slowdown.timescale = std::min(_slowdown.timescale, ti);
                 }
+                pert_cm *= _particle_cm.mass;
 
                 // calculate component perturbation
                 for (int i=0; i<_n_particle; i++) {
@@ -183,9 +221,10 @@ public:
                     if(_perturber.soft_pert!=NULL) _perturber.soft_pert->eval(acc_pert, pi.pos);
 #endif
                 }   
+                //ASSERT(_perturber.soft_pert_min>0.0);
             }
-            //ASSERT(_perturber.soft_pert_min>0.0);
-            return _particle_cm.mass*pert_cm + _perturber.soft_pert_min;
+            _slowdown.pert_out = pert_cm + _perturber.soft_pert_min;
+            _slowdown.timescale = std::min(_slowdown.getTimescaleMax(), _slowdown.timescale);
         }
         else {
 #ifdef SOFT_PERT
@@ -198,8 +237,9 @@ public:
                 }
             }
 #endif
+            _slowdown.pert_out = _perturber.soft_pert_min;
+            _slowdown.timescale = _slowdown.getTimescaleMax();
             //ASSERT(_perturber.soft_pert_min>0.0);
-            return _perturber.soft_pert_min;
         }
     }
 

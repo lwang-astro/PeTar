@@ -1067,14 +1067,14 @@ public:
             h4_int.particles.setMode(COMM::ListMode::link);
             h4_int.particles.linkMemberArray(_ptcl_local, _n_ptcl);
 
+            h4_int.particles.calcCenterOfMass();
+            h4_int.particles.shiftToCenterOfMassFrame();
+            
 #ifdef HARD_CHECK_ENERGY
             h4_int.info.calcEnergy(h4_int.particles, h4_manager->interaction, true);
             etoti  = h4_int.info.etot0;
 #endif
 
-            h4_int.particles.calcCenterOfMass();
-            h4_int.particles.shiftToCenterOfMassFrame();
-            
             h4_int.groups.setMode(COMM::ListMode::local);
             h4_int.groups.reserveMem(_n_group+_n_group/2+3);
             h4_int.reserveIntegratorMem();
@@ -1129,17 +1129,18 @@ public:
                 h4_int.integrateOneStepAct();
                 h4_int.adjustGroups(false);
                 
-                // check tt
                 if (n_tt>0) {
                     const PS::S32* group_index = h4_int.getSortDtIndexGroup();
                     const PS::S32 n_init = h4_int.getNInitGroup();
                     for(int i=0; i<n_init; i++) {
                         auto& groupi = h4_int.groups[group_index[i]];
+                        // check tt
                         groupi.perturber.findCloseSoftPert(tidal_tensor, _n_group, groupi.particles.cm);
                         // calculate soft_pert_min
                         groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot());
                     }
                 }
+
                 // initial after groups are modified
                 h4_int.initialIntegration();
                 h4_int.sortDtAndSelectActParticle();
@@ -1170,6 +1171,11 @@ public:
         
             h4_int.writeBackGroupMembers();
             h4_int.particles.cm.pos += h4_int.particles.cm.vel * _time_end;
+#ifdef HARD_CHECK_ENERGY
+            h4_int.info.calcEnergy(h4_int.particles, h4_manager->interaction, false);
+            etotf  = h4_int.info.etot;
+#endif
+
             h4_int.particles.shiftToOriginFrame();
 
             // update research
@@ -1187,10 +1193,6 @@ public:
                 h4_int.particles[single_index[i]].calcRSearch(_time_end);
             }
 
-#ifdef HARD_CHECK_ENERGY
-            h4_int.info.calcEnergy(h4_int.particles, h4_manager->interaction, false);
-            etotf  = h4_int.info.etot;
-#endif
 
 #ifdef PROFILE
             //ARC_substep_sum += Aint.getNsubstep();

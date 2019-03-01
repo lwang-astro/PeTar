@@ -631,7 +631,7 @@ int main(int argc, char *argv[]){
     // set symplectic order
     hard_manager.ar_manager.step.initialSymplecticCofficients(-6);
     hard_manager.ar_manager.slowdown_pert_ratio_ref = sd_factor.value;
-    hard_manager.ar_manager.slowdown_factor_max = 1.0e8;
+    hard_manager.ar_manager.slowdown_timescale_max = dt_soft.value;
     hard_manager.ar_manager.slowdown_mass_ref = m_average;
 
     // check consistence of paramters
