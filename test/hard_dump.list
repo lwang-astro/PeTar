@@ -1,3 +1,4 @@
 6body: 4-body strong encounter :
 ce: two-body close encounter with one surrounding, break group too late for hyperbolic (bug) :
 sdjump: slowdown for second binary jump to very large value (bug) :
+slow: small steps :
