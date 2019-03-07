@@ -1109,8 +1109,8 @@ public:
 
             // initialization 
             h4_int.initialIntegration(); // get neighbors and min particles
-            //h4_int.adjustGroups(true);
-            //h4_int.initialIntegration();
+            h4_int.adjustGroups(true);
+            h4_int.initialIntegration();
             h4_int.sortDtAndSelectActParticle();
             h4_int.info.time = h4_int.getTime();
 
@@ -1220,6 +1220,7 @@ public:
                 auto& bin = groupk.info.getBinaryTreeRoot();
                 std::cerr<<" semi: "<<std::setw(20)<<bin.semi
                          <<" ecc: "<<std::setw(20)<<bin.ecc
+                         <<" period: "<<std::setw(20)<<bin.period
                          <<" NB: "<<std::setw(4)<<groupk.perturber.neighbor_address.getSize()
                          <<std::endl;
                 if (groupk.profile.step_count_tsyn_sum>10000) {
