@@ -5,12 +5,11 @@
 #include <unistd.h>
 #include <unordered_map>
 #include <particle_simulator.hpp>
-#include "Newtonian_acceleration.h"
-#include "ptree.h"
-#include "kepler.hpp"
+#include "io.hpp"
+#include "hard_assert.hpp"
+#include "hard_ptcl.hpp"
 #include "cluster_list.hpp"
 #include "hard.hpp"
-#include "soft.hpp"
 
 struct HardPars{
     PS::F64 dt_limit_hard;
@@ -32,7 +31,6 @@ struct HardPars{
 };
 
 int main(int argc, char **argv){
-  std::string filename="hard_dump";
   int n_opt=0;
   int arg_label;
 
@@ -47,23 +45,41 @@ int main(int argc, char **argv){
         abort();
     }
 
-  if (argc-n_opt*2>1) filename=argv[argc-1];
+  std::string filename="hard_dump";
+  std::string fhardpar="input.par.hard";
+  if (argc-n_opt>1) {
+      filename=argv[argc-1];
+      if (argc-n_opt>2) 
+          fhardpar=argv[argc-2];
+  }
+
+  std::cerr<<"Reading dump file:"<<filename<<std::endl;
+  std::cerr<<"Hard manager parameter file:"<<fhardpar<<std::endl;
+
+  std::cout<<std::setprecision(WRITE_PRECISION);
   
 
-  if (argc-n_opt*2>1) filename=argv[argc-1];
-  
-  std::cout<<"Reading dump file:"<<filename<<std::endl;
+  HardManager hard_manager;
+  FILE* fpar_in;
+  if( (fpar_in = fopen(fhardpar.c_str(),"r")) == NULL) {
+      fprintf(stderr,"Error: Cannot open file %s.\n", fhardpar.c_str());
+      abort();
+  }
+  hard_manager.readBinary(fpar_in);
+  fclose(fpar_in);
 
-  SystemHard sys;
-  PS::ReallocatableArray<FPSoft> ptcl_artifical;
-  PS::ParticleSystem<FPSoft> sys_soft;
-  sys_soft.initialize();
-  sys_soft.createParticle(1000);
+  HardDump hard_dump;
+  hard_dump.readOneCluster(filename.c_str());
+  std::cerr<<"Time_end: "<<hard_dump.time_end<<std::endl;
 
-  PS::F64 time_end;
-  sys.readOneCluster(filename.c_str(), time_end, ptcl_artifical);
+  //SystemHard sys;
+  //sys.manage = &hard_manager; 
 
-  sys.findGroupsAndCreateArtificalParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys_soft, time_end);
+  //PS::ParticleSystem<FPSoft> sys_soft;
+  //sys_soft.initialize();
+  //sys_soft.createParticle(1000);
+
+  //sys.findGroupsAndCreateArtificalParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys_soft, time_end);
 
   //std::FILE* fp = std::fopen(filename.c_str(),"r");
   //if (fp==NULL) {
@@ -109,10 +125,18 @@ int main(int argc, char **argv){
   //    std::cerr<<std::endl;
   //}
 
-  //SearchGroup<PtclHard> group;
-  ////  group.findGroups(ptcl.getPointer(), ptcl.size(), hard_pars.n_split);
-  //if (n_ptcl==2) group.searchAndMerge(ptcl.getPointer(), n_ptcl, int_pars.rout);
-  //else group.searchAndMerge(ptcl.getPointer(), n_ptcl, int_pars.rin);
+  typedef H4::ParticleH4<PtclHard> PtclH4;
+
+  SearchGroup<PtclH4> group;
+  auto* ptcl = hard_dump.ptcl_bk.getPointer();
+  PS::S32 n_ptcl = hard_dump.n_ptcl;
+  PS::F64 rout = hard_manager.changeover.getRout();
+  PS::F64 rin = hard_manager.changeover.getRin(); 
+
+  if (n_ptcl==2) group.searchAndMerge(ptcl, n_ptcl, rout);
+  else group.searchAndMerge(ptcl, n_ptcl, rin);
+
+  // generate artifical particles,
   //std::cout<<"SearchAndMerge\n";
   //  
   //for(int i=0; i<group.getNumOfGroups(); i++) {
@@ -128,12 +152,11 @@ int main(int argc, char **argv){
 ////      std::cout<<std::setw(10)<<group.getPtclList()[i];
 ////  }
 ////  std::cout<<std::endl;
-  // 
-  //PS::ReallocatableArray<PtclHard> ptcl_new;
-  //PS::S32 n_group_in_cluster;
-  // 
-  //group.generateList(0, ptcl.getPointer(), n_ptcl, ptcl_new, n_group_in_cluster, hard_pars.r_bin, int_pars.rin, int_pars.rout, time_end, hard_pars.id_offset, hard_pars.n_split);
-  // 
+
+  PS::ReallocatableArray<PtclH4> ptcl_new;
+  PS::S32 n_group_in_cluster;
+  group.generateList(0, ptcl, n_ptcl, ptcl_new, n_group_in_cluster, hard_manager.h4_manager.r_break_crit, rin, rout, hard_dump.time_end, hard_manager.id_offset, hard_manager.n_split);
+
   //std::cout<<"GenerateList\n";
   //for (int i=0; i<ptcl.size(); i++) {
   //    ptcl[i].print(std::cout);
