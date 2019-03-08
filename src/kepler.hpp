@@ -864,20 +864,24 @@ bool stab3check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin, const PS::F64 _rb
 #endif
     }
     else {
-        // for large period ratio (acceleration ratio < 1.0e-6), avoid triple system in ARC
-        PS::F64 acc_out = _bout.mass/(pec_out*pec_out);
-        PS::F64 acc_in  = _bin.mass/(apo_in*apo_in);
-        if (acc_out<1.0e-6* acc_in && _bout.peri >1.0e-4*_dt_tree) {
-            _bout.tstep=-1.0;
-            _bout.stable_factor=-1;
-#ifdef STABLE_CHECK_DEBUG
-            std::cerr<<"STAB3 reject: Too large period ratio, acc_out/acc_in: "<<acc_out/acc_in<<" period_out: "<<_bout.peri<<std::endl;
-#endif
-            return false;
-        }
-
         // stable case
-        PS::F64 fpert_ratio = _bout.fpert*(apo_out*apo_out)/_bout.mass;
+
+        // for large period ratio (acceleration ratio < 1.0e-6), avoid triple system in ARC
+        //PS::F64 acc_out = _bout.mass/(pec_out*pec_out);
+        //PS::F64 acc_in  = _bin.mass/(apo_in*apo_in);
+        //if (acc_out<1.0e-6* acc_in && _bout.peri >1.0e-4*_dt_tree) {
+        //    _bout.tstep=-1.0;
+        //    _bout.stable_factor=-1;
+        //    //#ifdef STABLE_CHECK_DEBUG
+        //    //            std::cerr<<"STAB3 reject: Too large period ratio, acc_out/acc_in: "<<acc_out/acc_in<<" period_out: "<<_bout.peri<<std::endl;
+        //    //#endif
+        //    return false;
+        //}
+
+        // estimate inner perturbation
+        PS::F64 pert_out = _bout.mass/(pec_out*pec_out*pec_out);
+        PS::F64 acc_in   = _bin.mass/(apo_in*apo_in*apo_in);
+        PS::F64 fpert_ratio = pert_out/acc_in;
         _bout.stable_factor = fpert_ratio;
         // for unperturbed and large period case, stable_factor=-1 to switch off slowdown
         if(fpert_ratio<1e-6) {
@@ -888,9 +892,17 @@ bool stab3check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin, const PS::F64 _rb
 #endif
             }
         }
+        else {
+            _bout.tstep=-1.0;
+            _bout.stable_factor=-1;
+#ifdef STABLE_CHECK_DEBUG
+            std::cerr<<"STAB3 reject: Too weak inner perturbation, fpert_ratio: "<<fpert_ratio<<" period_out: "<<_bout.peri<<std::endl;
+#endif
+            return false;
+        }
 #ifdef STABLE_CHECK_DEBUG
         if(_bout.stable_factor>0) 
-            std::cerr<<"STAB3 accept: Stable, fpert_ratio: "<<fpert_ratio<<" stab3: "<<stab3<<" acc_out/acc_in: "<<acc_out/acc_in<<std::endl;
+            std::cerr<<"STAB3 accept: Stable, fpert_ratio: "<<fpert_ratio<<" stab3: "<<stab3<<" period_out: "<<_bout.peri<<std::endl;
 #endif
     }
     _bout.tstep = _bin.tstep;
