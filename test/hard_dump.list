@@ -2,3 +2,4 @@
 ce: two-body close encounter with one surrounding, break group too late for hyperbolic (bug) :
 sdjump: slowdown for second binary jump to very large value (bug) :
 5ce: massive B + low-mass B + massive single 5-body encounter (bug of binarytree) :
+eccflip: b-b encounter with one binary eccentricity >1.0 :
