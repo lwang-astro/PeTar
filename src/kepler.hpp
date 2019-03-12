@@ -884,12 +884,13 @@ bool stab3check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin, const PS::F64 _rb
         PS::F64 fpert_ratio = pert_out/acc_in;
         _bout.stable_factor = fpert_ratio;
         // for unperturbed and large period case, stable_factor=-1 to switch off slowdown
-        if(fpert_ratio<1e-6) {
+        if(fpert_ratio>1e-6) {
             if(_bout.peri>0.125*_dt_tree) {
                 _bout.stable_factor = -1.0;
 #ifdef STABLE_CHECK_DEBUG
-                std::cerr<<"STAB3 accept: Unstable, large period, period_out: "<<_bout.peri<<std::endl;
+                std::cerr<<"STAB3 reject: Unstable, large period, fpert_ratio: "<<fpert_ratio<<" period_out: "<<_bout.peri<<std::endl;
 #endif
+                return false;
             }
         }
         else {
