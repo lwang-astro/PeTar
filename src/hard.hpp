@@ -1200,6 +1200,10 @@ public:
             ARC_substep_sum += h4_int.profile.ar_step_count;
             ARC_tsyn_step_sum += h4_int.profile.ar_step_count_tsyn;
             ARC_n_groups += _n_group;
+            if (h4_int.profile.ar_step_count>manager->ar_manager.step_count_max) {
+                std::cerr<<"Large AR step cluster found: step: "<<h4_int.profile.ar_step_count<<std::endl;
+                DATADUMP("dump_large_step");
+            } 
 #endif
 #ifdef AR_DEBUG_PRINT
             for (PS::S32 i=0; i<h4_int.getNGroup(); i++) {
@@ -1236,6 +1240,18 @@ public:
 #ifdef HARD_DEBUG_PRINT
         std::cerr<<"Hard Energy: init: "<<etoti<<" end: "<<etotf<<" dE: "<<hard_dE_local<<std::endl;
 #endif        
+#ifdef HARD_CLUSTER_PRINT
+        std::cerr<<"Hard cluster: dE: "<<hard_dE_local
+                 <<" Einit: "<<etoti
+                 <<" Eend: "<<etotf
+                 <<" H4_step(single): "<<h4_int.profile.hermite_single_step_count
+                 <<" H4_step(group): "<<h4_int.profile.hermite_group_step_count
+                 <<" AR_step: "<<h4_int.profile.ar_step_count
+                 <<" AR_step: "<<h4_int.profile.ar_step_count_tsyn
+                 <<" n_ptcl: "<<_n_ptcl
+                 <<" n_group: "<<_n_group
+                 <<std::endl;
+#endif
         if (abs(hard_dE_local) > manager->energy_error_max) {
             std::cerr<<"Hard energy significant ("<<hard_dE<<") !\n";
             DATADUMP("hard_dump");
