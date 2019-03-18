@@ -1070,10 +1070,6 @@ public:
             h4_int.particles.calcCenterOfMass();
             h4_int.particles.shiftToCenterOfMassFrame();
             
-#ifdef HARD_CHECK_ENERGY
-            h4_int.info.calcEnergy(h4_int.particles, h4_manager->interaction, true);
-            etoti  = h4_int.info.etot0;
-#endif
 
             h4_int.groups.setMode(COMM::ListMode::local);
             h4_int.groups.reserveMem(_n_group+_n_group/2+3);
@@ -1106,6 +1102,11 @@ public:
                     h4_int.groups[i].perturber.calcSoftPertMin(h4_int.groups[i].info.getBinaryTreeRoot());
                 }
             }
+
+#ifdef HARD_CHECK_ENERGY
+            h4_int.info.calcEnergy(h4_int.particles, h4_int.groups, h4_manager->interaction, true);
+            etoti  = h4_int.info.etot0;
+#endif
 
             // initialization 
             h4_int.initialIntegration(); // get neighbors and min particles
@@ -1155,7 +1156,7 @@ public:
                 //ASSERT(dt_max>0.0);
                 if (fmod(h4_int.info.time, h4_manager->step.getDtMax()/1024)==0.0) {
                     h4_int.writeBackGroupMembers();
-                    h4_int.info.calcEnergy(h4_int.particles, h4_manager->interaction, false);
+                    h4_int.info.calcEnergy(h4_int.particles, h4_int.groups, h4_manager->interaction, false);
             
                     h4_int.info.printColumn(std::cout, WRITE_WIDTH);
                     std::cout<<std::setw(WRITE_WIDTH)<<_n_group;
@@ -1172,7 +1173,7 @@ public:
             h4_int.writeBackGroupMembers();
             h4_int.particles.cm.pos += h4_int.particles.cm.vel * _time_end;
 #ifdef HARD_CHECK_ENERGY
-            h4_int.info.calcEnergy(h4_int.particles, h4_manager->interaction, false);
+            h4_int.info.calcEnergy(h4_int.particles, h4_int.groups, h4_manager->interaction, false);
             etotf  = h4_int.info.etot;
 #endif
 
@@ -1244,10 +1245,9 @@ public:
         std::cerr<<"Hard cluster: dE: "<<hard_dE_local
                  <<" Einit: "<<etoti
                  <<" Eend: "<<etotf
-                 <<" H4_step(single): "<<h4_int.profile.hermite_single_step_count
-                 <<" H4_step(group): "<<h4_int.profile.hermite_group_step_count
-                 <<" AR_step: "<<h4_int.profile.ar_step_count
-                 <<" AR_step: "<<h4_int.profile.ar_step_count_tsyn
+                 <<" H4_step(single): "<<H4_step_sum
+                 <<" AR_step: "<<ARC_substep_sum
+                 <<" AR_step(tsyn): "<<ARC_tsyn_step_sum
                  <<" n_ptcl: "<<_n_ptcl
                  <<" n_group: "<<_n_group
                  <<std::endl;

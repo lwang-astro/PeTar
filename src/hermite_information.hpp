@@ -11,6 +11,7 @@ public:
     Float etot; // total energy
     Float ekin; // kinetic energy
     Float epot; // potential energy
+    Float ett;  // tidal tensor energy
 
     //! check whether parameters values are correct
     /*! \return true: all correct
@@ -20,10 +21,11 @@ public:
     }        
 
     //! calculate energy of particle group
-    template <class TList>
-    void calcEnergy(TList& _particles, HermiteInteraction& _interaction, const bool _initial_flag) {
-        ekin = epot = etot = 0.0;
+    template <class Tptcl, class Tgroup>
+    void calcEnergy(Tptcl& _particles, Tgroup& _groups, HermiteInteraction& _interaction, const bool _initial_flag) {
+        ekin = epot = etot = ett = 0.0;
         const int n = _particles.getSize();
+        // inner
         for (int i=0; i<n; i++) {
             auto& pi = _particles[i];
             ekin += pi.mass* (pi.vel[0]*pi.vel[0] + pi.vel[1]*pi.vel[1] + pi.vel[2]*pi.vel[2]);
@@ -33,8 +35,21 @@ public:
             }
             epot += poti*pi.mass;
         }
+#ifdef SOFT_PERT
+        // tidal
+        const int n_group =_groups.getSize();
+        for (int i=0; i<n_group; i++) {
+            const int n_member = _groups[i].particles.getSize();
+            if (_groups[i].perturber.soft_pert!=NULL) {
+                auto* pert = _groups[i].perturber.soft_pert;
+                for (int j=0; j<n_member; j++) {
+                    ett += _groups[i].particles[j].mass*pert->evalPot(_groups[i].particles[j].pos);
+                }
+            }
+        }
+#endif
         ekin *= 0.5;
-        etot = ekin + epot;
+        etot = ekin + epot + ett;
 
         if (_initial_flag) {
             etot0 = etot;
@@ -53,7 +68,8 @@ public:
              <<std::setw(_width)<<"dE"
              <<std::setw(_width)<<"Etot"
              <<std::setw(_width)<<"Ekin"
-             <<std::setw(_width)<<"Epot";
+             <<std::setw(_width)<<"Epot"
+             <<std::setw(_width)<<"Ett";
     }
 
     //! print data of class members using column style
@@ -66,6 +82,7 @@ public:
              <<std::setw(_width)<<de
              <<std::setw(_width)<<etot
              <<std::setw(_width)<<ekin
-             <<std::setw(_width)<<epot;
+             <<std::setw(_width)<<epot
+             <<std::setw(_width)<<ett;
     }
 };

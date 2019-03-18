@@ -145,6 +145,27 @@ public:
         acc[1] = acc1;
         acc[2] = acc2;
     }
+
+    PS::F64 evalPot(const PS::F64vec &pos) const {
+        PS::F64 x = pos.x;
+        PS::F64 y = pos.y;
+        PS::F64 z = pos.z;
+        PS::F64 x2 = x*x;
+        PS::F64 xy = x*y;
+        PS::F64 xz = x*z;
+        PS::F64 y2 = y*y;
+        PS::F64 yz = y*z;
+        PS::F64 z2 = z*z;
+
+        PS::F64 acc0 =  T2[0]*x + T2[1]*y + T2[2]*z 
+            +      T3[0]*x2 + 2*T3[1]*xy + 2*T3[2]*xz + T3[3]*y2 + 2*T3[4]*yz + T3[5]*z2;
+        PS::F64 acc1 =  T2[1]*x + T2[3]*y + T2[4]*z
+            +      T3[1]*x2 + 2*T3[3]*xy + 2*T3[4]*xz + T3[6]*y2 + 2*T3[7]*yz + T3[8]*z2;
+        PS::F64 acc2 =  T2[2]*x + T2[4]*y + T2[5]*z
+            +      T3[2]*x2 + 2*T3[4]*xy + 2*T3[5]*xz + T3[7]*y2 + 2*T3[8]*yz + T3[9]*z2;
+        
+        return - x*acc0 - y*acc1 - z*acc2;
+    }
 };
 
 //! Perturber class for AR integration
