@@ -9,7 +9,6 @@
 #include"Hermite/hermite_integrator.h"
 #include"Hermite/hermite_particle.h"
 #include"hard_ptcl.hpp"
-#include"hard_force.hpp"
 #include"hermite_interaction.hpp"
 #include"hermite_information.hpp"
 #include"hermite_perturber.hpp"
@@ -301,62 +300,121 @@ private:
         }
     }
 
+    //! correct force and potential for soft force with changeover function
+    /*!
+      @param[in,out] _pi: particle for correction
+      @param[in] _pj: j particle to calculate correction
+     */
+    template <class Tpi, class Tpj>
+    inline void calcAccPotShortWithLinearCutoff(Tpi& _pi,
+                                                const Tpj& _pj) {
+        const PS::F64vec dr = _pi.pos - _pj.pos;
+        const PS::F64 dr2 = dr * dr;
+        const PS::F64 dr2_eps = dr2 + manager->eps_sq;
+        const PS::F64 r_out = manager->changeover.getRout();
+        const PS::F64 r_out2 = r_out * r_out;
+        const PS::F64 drinv = 1.0/sqrt(dr2_eps);
+        const PS::F64 movr = _pj.mass * drinv;
+        const PS::F64 drinv2 = drinv * drinv;
+        const PS::F64 movr3 = movr * drinv2;
+        const PS::F64 dr_eps = drinv * dr2_eps;
+        const PS::F64 k = 1.0 - manager->changeover.calcAcc0W(dr_eps);
+
+        // linear cutoff 
+        const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
+        const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
+        const PS::F64 movr_max = _pj.mass * drinv_max;
+        const PS::F64 drinv2_max = drinv_max*drinv_max;
+        const PS::F64 movr3_max = movr_max * drinv2_max;
+
+#ifdef ONLY_SOFT
+        const PS::F64 kpot  = 1.0 - manager->changeover.calcPotW(dr_eps);
+        // single, remove linear cutoff, obtain changeover soft potential
+        if (_pj.status==0) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (movr*kpot  - movr_max);   
+        // member, mass is zero, use backup mass
+        else if (_pj.status<0) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (_pj.mass_bk*drinv*kpot  - movr_max);   
+        // (orbitial) artifical, should be excluded in potential calculation, since it is inside neighbor, movr_max cancel it to 0.0
+        else _pi.pot_tot += movr_max; 
+#else
+        // single/member, remove linear cutoff, obtain total potential
+        if (_pj.status==0) _pi.pot_tot -= (movr - movr_max);   
+        // member, mass is zero, use backup mass
+        else if (_pj.status<0) _pi.pot_tot -= (_pj.mass_bk*drinv  - movr_max);   
+        // (orbitial) artifical, should be excluded in potential calculation, since it is inside neighbor, movr_max cancel it to 0.0
+        else _pi.pot_tot += movr_max; 
+#endif
+        // correct to changeover soft acceleration
+        _pi.acc -= (movr3*k - movr3_max)*dr;
+    }
+
+
+#ifdef KDKDK_4TH
+    template <class Tpi, class Tpj>
+    inline void calcAcorrShortWithLinearCutoff(Tpi& _pi,
+                                               const Tpj& _pj) {
+        const PS::F64 r_out = manager->changeover.getRout();
+        const PS::F64 r_out2 = r_out * r_out;
+
+        const PS::F64vec dr = _pi.pos - _pj.pos;
+        const PS::F64vec da = _pi.acc - _pi.acc;
+        const PS::F64 dr2 = dr * dr;
+        const PS::F64 dr2_eps = dr2 + manager->eps_sq;
+        const PS::F64 drda = dr*da;
+        const PS::F64 drinv = 1.0/sqrt(dr2_eps);
+         const PS::F64 movr = _pj.mass * drinv;
+        const PS::F64 drinv2 = drinv * drinv;
+        const PS::F64 movr3 = movr * drinv2;
+        const PS::F64 dr_eps = drinv * dr2_eps;
+
+        const PS::F64 k = 1.0 - manager->changeover.calcAcc0W(dr_eps);
+        const PS::F64 kdot = - manager->changeover.calcAcc1W(dr_eps);
+
+        const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
+        const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
+        const PS::F64 movr_max = _pj.mass * drinv_max;
+        const PS::F64 drinv2_max = drinv_max*drinv_max;
+        const PS::F64 movr3_max = movr_max * drinv2_max;
+
+        const PS::F64 alpha = drda*drinv2;
+        const PS::F64 alpha_max = drda * drinv2_max;
+        const PS::F64vec acorr_k = movr3 * (k*da - (3.0*k*alpha - kdot) * dr);
+        const PS::F64vec acorr_max = movr3_max * (da - 3.0*alpha_max * dr);
+
+        _pi.acorr -= 2.0 * (acorr_k - acorr_max);
+        //acci + dt_kick * dt_kick * acorri /48; 
+    }
+#endif
+
     //! soft force correction use tree neighbor search for one particle
     /*
       @param[in,out] _psoft: particle in global system need to be corrected for acc and pot
       @param[in] _tree: tree for force
-      @param[in] _rin: cutoff inner radius;
-      @param[in] _rout: cutoff outer radius;
-      @param[in] _r_oi_inv: 1.0/(_rout-_rin);
-      @param[in] _r_A: (_rout-_rin)/(_rout+_rin);
-      @param[in] _eps_sq: softing eps square
       @param[in] _acorr_flag: flag to do acorr for KDKDK_4TH case
      */
     template <class Tpsoft, class Ttree, class Tepj>
     void correctForceWithCutoffTreeNeighborOneParticleImp(Tpsoft& _psoft, 
                                                           Ttree& _tree,
-                                                          const PS::F64 _rin,
-                                                          const PS::F64 _rout,
-                                                          const PS::F64 _r_oi_inv,
-                                                          const PS::F64 _r_A,
-                                                          const PS::F64 _eps_sq,
                                                           const bool _acorr_flag=false) {
         Tepj * ptcl_nb = NULL;
         PS::S32 n_ngb = _tree.getNeighborListOneParticle(_psoft, ptcl_nb);
 #ifdef HARD_DEBUG
         assert(n_ngb >= 1);
 #endif
-        PS::F64vec& pos_j= _psoft.pos;
-        PS::F64vec& acc_j= _psoft.acc;
-        PS::F64& pot_j = _psoft.pot_tot;
-        PS::S64 stat_j = _psoft.status;
-
         // self-potential correction 
         // no correction for orbital artifical particles because the potential are not used for any purpose
         // no correction for member particles because their mass is zero during the soft force calculation, the self-potential contribution is also zero.
-        if (stat_j==0) pot_j += _psoft.mass/_rout; // single
-        //else if (stat_j<0) pot_j += _psoft.mass_bk/_rout; // member
+        if (_psoft.status==0) _psoft.pot_tot += _psoft.mass/manager->changeover.getRout(); // single
 
         // loop neighbors
         for(PS::S32 k=0; k<n_ngb; k++){
             if (ptcl_nb[k].id == _psoft.id) continue;
-            PS::S32 pot_control_flag;
-            PS::S64 stat_k = ptcl_nb[k].status;
-            if (stat_k==0) pot_control_flag = 0; //single 
-            else if (stat_k<0) pot_control_flag = 1; //member
-            else pot_control_flag = 2; //artifical
 
 #ifdef KDKDK_4TH
             if(_acorr_flag) 
-                CalcAcorrShortWithLinearCutoff(pos_j, acc_j, _psoft.acorr,
-                                             ptcl_nb[k].pos, ptcl_nb[k].acc, ptcl_nb[k].mass,
-                                             _eps_sq, _r_oi_inv, _r_A, _rout, _rin);
+                calcAcorrShortWithLinearCutoff(_psoft, ptcl_nb[k]);
             else
 #endif
-                CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
-                                                ptcl_nb[k].pos, ptcl_nb[k].mass, ptcl_nb[k].mass_bk, 
-                                                pot_control_flag, _eps_sq,
-                                                _r_oi_inv, _r_A, _rout, _rin);
+                calcAccPotShortWithLinearCutoff(_psoft, ptcl_nb[k]);
         }
     }
 
@@ -370,12 +428,6 @@ private:
        @param[in] _adr_real_end:   real particle end (+1) address in _ptcl_local
        @param[in] _n_group:  number of groups in cluster
        @param[in] _adr_first_ptcl_arti_in_cluster: address of the first artifical particle in each groups
-       @param[in] _rin: cutoff inner radius;
-       @param[in] _rout: cutoff outer radius;
-       @param[in] _r_oi_inv: 1.0/(_rout-_rin);
-       @param[in] _r_A: (_rout-_rin)/(_rout+_rin);
-       @param[in] _n_split: artifical particle splitting number
-       @param[in] _eps_sq: softing eps square
        @param[in] _acorr_flag: flag to do acorr for KDKDK_4TH case
      */
     template <class Tsys>
@@ -385,15 +437,9 @@ private:
                                                       const PS::S32 _adr_real_end,
                                                       const PS::S32 _n_group,
                                                       const PS::S32* _adr_first_ptcl_arti_in_cluster,
-                                                      const PS::F64 _rin,
-                                                      const PS::F64 _rout,
-                                                      const PS::F64 _r_oi_inv,
-                                                      const PS::F64 _r_A,
-                                                      const PS::S32 _n_split,
-                                                      const PS::F64 _eps_sq,
                                                       const bool _acorr_flag) {
 
-        GroupPars gpars(_n_split);
+        GroupPars gpars(manager->n_split);
         for (int j=0; j<_n_group; j++) {  // j: j_group
             PS::S32 j_start = _adr_first_ptcl_arti_in_cluster[j];
             PS::S32 j_cm = j_start + gpars.offset_cm;
@@ -401,10 +447,6 @@ private:
             // loop all artifical particles: tidal tensor, orbital and c.m. particle
             for (int k=j_start; k<=j_cm; k++) {  
                 // k: k_ptcl_arti
-                PS::F64vec& pos_k= _sys[k].pos;
-                PS::F64vec& acc_k= _sys[k].acc;
-                PS::F64& pot_k = _sys[k].pot_tot;
-
 
                 // loop orbital artifical particle
                 // group
@@ -415,43 +457,25 @@ private:
                     // particle arti orbital
                     for (int kk=kj_start+gpars.offset_orb; kk<kj_cm; kk++) {
                         if(kk==k) continue; //avoid same particle
-                        auto& ptcl_kk = _sys[kk];
 #ifdef KDKDK_4TH
                     if(_acorr_flag) 
-                        CalcAcorrShortWithLinearCutoff(pos_k, acc_k, _sys[k].acorr,
-                                                     ptcl_kk.pos, ptcl_kk.acc, ptcl_kk.mass,
-                                                     _eps_sq, _r_oi_inv, _r_A, _rout, _rin);
+                        calcAcorrShortWithLinearCutoff(_sys[k], _sys[kk]);
                     else
 #endif
-                        CalcAccPotShortWithLinearCutoff(pos_k, acc_k, pot_k, 
-                                                        ptcl_kk.pos, ptcl_kk.mass, ptcl_kk.mass_bk, 
-                                                        2, _eps_sq,
-                                                        _r_oi_inv, _r_A, _rout, _rin);
+                        calcAccPotShortWithLinearCutoff(_sys[k], _sys[kk]);
                     }
                 }
 
                 // loop real particle
                 for (int kj=_adr_real_start; kj<_adr_real_end; kj++) {
-                    const PtclH4* ptcl_kj_ptr = &_ptcl_local[kj];
-                    PS::S32 pot_control_flag = ptcl_kj_ptr->status<0? 1: 0;
 #ifdef KDKDK_4TH
                     if(_acorr_flag) {
                         PS::S64 adr_kj = _ptcl_local[kj].adr_org;
-                        PS::F64vec& pos_kj = _sys[adr_kj].pos;
-                        PS::F64vec& acc_kj = _sys[adr_kj].acc;
-                        // be careful for member particle with zero mass
-                        PS::F64& mass_kj = pot_control_flag==1? _sys[adr_kj].mass_bk: _sys[adr_kj].mass;
-
-                        CalcAcorrShortWithLinearCutoff(pos_k, acc_k, _sys[k].acorr,
-                                                       pos_kj, acc_kj, mass_kj,
-                                                       _eps_sq, _r_oi_inv, _r_A, _rout, _rin);
+                        calcAcorrShortWithLinearCutoff(_sys[k], _sys[adr_kj]);
                     }
                     else
 #endif
-                        CalcAccPotShortWithLinearCutoff(pos_k, acc_k, pot_k, 
-                                                        ptcl_kj_ptr->pos, ptcl_kj_ptr->mass, ptcl_kj_ptr->mass_bk, 
-                                                        pot_control_flag, _eps_sq,
-                                                        _r_oi_inv, _r_A, _rout, _rin);
+                        calcAccPotShortWithLinearCutoff(_sys[k], _ptcl_local[kj]);
                 }
             }
             
@@ -521,10 +545,6 @@ private:
        @parma[in] _n_group_in_cluster: number of groups in clusters
        @param[in] _n_group_in_cluster_offset: boundary of groups in _adr_first_ptcl_arti_in_cluster
        @param[in] _adr_first_ptcl_arti_in_cluster: address of the first artifical particle in each groups
-       @param[in] _rin: cutoff inner radius;
-       @param[in] _rout: cutoff outer radius;
-       @param[in] _n_split: artifical particle splitting number
-       @param[in] _eps_sq: softing eps square
        @param[in] _acorr_flag: flag to do acorr for KDKDK_4TH case
     */
     template <class Tsys>
@@ -535,16 +555,7 @@ private:
                                           const PS::ReallocatableArray<PS::S32>& _n_group_in_cluster,
                                           const PS::ReallocatableArray<PS::S32>& _n_group_in_cluster_offset,
                                           const PS::ReallocatableArray<PS::S32>& _adr_first_ptcl_arti_in_cluster,
-                                          const PS::F64 _rin,
-                                          const PS::F64 _rout,
-                                          const PS::S32 _n_split,
-                                          const PS::F64 _eps_sq,
                                           const bool _acorr_flag) {
-        // cutoff function parameter
-        const PS::F64 r_oi_inv = 1.0/(_rout-_rin);
-        const PS::F64 r_A = (_rout-_rin)/(_rout+_rin);
-        //const PS::S32 ptcl_art_offset = 2*_n_split+1;
-
         const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
 #pragma omp parallel for schedule(dynamic)
         for (int i=0; i<n_cluster; i++) {  // i: i_cluster
@@ -556,46 +567,29 @@ private:
             const PS::S32* adr_first_ptcl_arti = n_group>0? &_adr_first_ptcl_arti_in_cluster[_n_group_in_cluster_offset[i]] : NULL;
 
             // correction for artifical particles
-            correctForceWithCutoffArtificalOneClusterImp(_sys, _ptcl_local, adr_real_start, adr_real_end, n_group, adr_first_ptcl_arti, _rin, _rout, r_oi_inv, r_A, _n_split, _eps_sq, _acorr_flag);
+            correctForceWithCutoffArtificalOneClusterImp(_sys, _ptcl_local, adr_real_start, adr_real_end, n_group, adr_first_ptcl_arti, _acorr_flag);
 
             // obtain correction for real particles in clusters
-            GroupPars gpars(_n_split);
+            GroupPars gpars(manager->n_split);
             for (int j=adr_real_start; j<adr_real_end; j++) {
                 PS::S64 adr = _ptcl_local[j].adr_org;
 #ifdef HARD_DEBUG
                 assert(_sys[adr].id==_ptcl_local[j].id);
 #endif
-                PS::F64vec& pos_j= _sys[adr].pos;
-                PS::F64vec& acc_j= _sys[adr].acc;
-                PS::F64& pot_j = _sys[adr].pot_tot;
-            
-                PS::S64 stat_j = _sys[adr].status;
                 //self-potential correction for non-group member, group member has mass zero, so no need correction
-                if(stat_j==0) pot_j += _sys[adr].mass/_rout;
-                //else if(stat_j<0) pot_j += _sys[adr].mass_bk/_rout; 
+                if(_sys[adr].status==0) _sys[adr].pot_tot += _sys[adr].mass/manager->changeover.getRout();
 
                 // cluster member
                 for (int k=adr_real_start; k<adr_real_end; k++) {
                     if(k==j) continue;
-                    const PtclH4* ptcl_k_ptr = &_ptcl_local[k];
-                    PS::S32 pot_control_flag = ptcl_k_ptr->status<0? 1: 0;
 #ifdef KDKDK_4TH
                     if(_acorr_flag) {
                         PS::S64 adr_k = _ptcl_local[k].adr_org;
-                        PS::F64vec& pos_k = _sys[adr_k].pos;
-                        PS::F64vec& acc_k = _sys[adr_k].acc;
-                        // be careful for member particle with zero mass
-                        PS::F64& mass_k = pot_control_flag==1? _sys[adr_k].mass_bk: _sys[adr_k].mass;
-                        CalcAcorrShortWithLinearCutoff(pos_j, acc_j, _sys[adr].acorr,
-                                                       pos_k, acc_k, mass_k,
-                                                       _eps_sq, r_oi_inv, r_A, _rout, _rin);
+                        calcAcorrShortWithLinearCutoff(_sys[adr], _sys[adr_k]);
                     }
                     else
 #endif
-                        CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
-                                                        ptcl_k_ptr->pos, ptcl_k_ptr->mass, ptcl_k_ptr->mass_bk, 
-                                                        pot_control_flag, _eps_sq,
-                                                        r_oi_inv, r_A, _rout, _rin);
+                        calcAccPotShortWithLinearCutoff(_sys[adr], _ptcl_local[k]);
                 }
 
                 // orbital artifical particle
@@ -604,18 +598,12 @@ private:
                     PS::S32 k_start = adr_first_ptcl_arti[k];
                     PS::S32 k_cm = k_start + gpars.offset_cm;
                     for (int ki=k_start+gpars.offset_orb; ki<k_cm; ki++) {
-                        auto& ptcl_k = _sys[ki];
 #ifdef KDKDK_4TH
-                    if(_acorr_flag) 
-                        CalcAcorrShortWithLinearCutoff(pos_j, acc_j, _sys[adr].acorr,
-                                                     ptcl_k.pos, ptcl_k.acc, ptcl_k.mass, 
-                                                     _eps_sq, r_oi_inv, r_A, _rout, _rin);
-                    else
+                        if(_acorr_flag) 
+                            calcAcorrShortWithLinearCutoff(_sys[adr], _sys[ki]);
+                        else
 #endif
-                        CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
-                                                        ptcl_k.pos, ptcl_k.mass, ptcl_k.mass_bk, 
-                                                        2, _eps_sq,
-                                                        r_oi_inv, r_A, _rout, _rin);
+                            calcAccPotShortWithLinearCutoff(_sys[adr], _sys[ki]);
                     }
                 }
             
@@ -643,10 +631,6 @@ private:
    @param[in] _n_group_in_cluster_offset: boundary of groups in _adr_first_ptcl_arti_in_cluster
    @param[in] _adr_first_ptcl_arti_in_cluster: address of the first artifical particle in each groups
    @param[in] _adr_send: particle in sending list of connected clusters
-   @param[in] _rin: cutoff inner radius;
-   @param[in] _rout: cutoff outer radius;
-   @param[in] _n_split: artifical particle splitting number
-   @param[in] _eps_sq: softing eps square
    @param[in] _acorr_flag: flag to do acorr for KDKDK_4TH case
 */
     template <class Tsys, class Tpsoft, class Ttree, class Tepj>
@@ -659,16 +643,7 @@ private:
                                                          const PS::ReallocatableArray<PS::S32>& _n_group_in_cluster_offset,
                                                          const PS::ReallocatableArray<PS::S32>& _adr_first_ptcl_arti_in_cluster,
                                                          const PS::ReallocatableArray<PS::S32>& _adr_send,
-                                                         const PS::F64 _rin,
-                                                         const PS::F64 _rout,
-                                                         const PS::S32 _n_split,
-                                                         const PS::F64 _eps_sq,
                                                          const bool _acorr_flag=false) {
-
-        // cutoff function parameter
-        const PS::F64 r_oi_inv = 1.0/(_rout-_rin);
-        const PS::F64 r_A = (_rout-_rin)/(_rout+_rin);
-        //const PS::S32 ptcl_art_offset = 2*_n_split+1;
 
         const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
 
@@ -682,7 +657,7 @@ private:
             const PS::S32* adr_first_ptcl_arti = &_adr_first_ptcl_arti_in_cluster[_n_group_in_cluster_offset[i]];
 
             // correction for artifical particles
-            correctForceWithCutoffArtificalOneClusterImp(_sys, _ptcl_local, adr_real_start, adr_real_end, n_group, adr_first_ptcl_arti, _rin, _rout, r_oi_inv, r_A, _n_split, _eps_sq, _acorr_flag);
+            correctForceWithCutoffArtificalOneClusterImp(_sys, _ptcl_local, adr_real_start, adr_real_end, n_group, adr_first_ptcl_arti, _acorr_flag);
 
             // obtain correction for real particles in clusters use tree neighbor search
             for (int j=adr_real_start; j<adr_real_end; j++) {
@@ -691,7 +666,7 @@ private:
 #ifdef HARD_DEBUG
                 if(adr>=0) assert(_sys[adr].id==_ptcl_local[j].id);
 #endif
-                if(adr>=0) correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[adr], _tree, _rin, _rout, r_oi_inv, r_A, _eps_sq, _acorr_flag);
+                if(adr>=0) correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[adr], _tree, _acorr_flag);
             }
         }
 
@@ -700,7 +675,7 @@ private:
         // sending list to other nodes need also be corrected.
         for (int i=0; i<n_send; i++) {
             PS::S64 adr = _adr_send[i];
-            correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[adr], _tree, _rin, _rout, r_oi_inv, r_A, _eps_sq, _acorr_flag); 
+            correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[adr], _tree, _acorr_flag); 
         }
     }
     
@@ -710,10 +685,6 @@ private:
    @param[in] _ptcl_local: particle in systme_hard, only used to get adr_org
    @param[in] _n_ptcl: total number of particles in all clusters
    @param[in] _adr_ptcl_artifical_start: start address of artifical particle in _sys
-   @param[in] _rin: cutoff inner radius;
-   @param[in] _rout: cutoff outer radius;
-   @param[in] _n_split: artifical particle splitting number
-   @param[in] _eps_sq: softing eps square
    @param[in] _acorr_flag: flag to do acorr for KDKDK_4TH case
 */
     template <class Tsys, class Tpsoft, class Ttree, class Tepj>
@@ -722,30 +693,21 @@ private:
                                                const PtclH4* _ptcl_local,
                                                const PS::S32 _n_ptcl,
                                                const PS::S32 _adr_ptcl_artifical_start,
-                                               const PS::F64 _rin,
-                                               const PS::F64 _rout,
-                                               const PS::S32 _n_split,
-                                               const PS::F64 _eps_sq,
                                                const bool _acorr_flag=false) { 
-        // cutoff function parameter
-        const PS::F64 r_oi_inv = 1.0/(_rout-_rin);
-        const PS::F64 r_A = (_rout-_rin)/(_rout+_rin);
-
         // for real particle
 #pragma omp parallel for schedule(dynamic)
         for (int i=0; i<_n_ptcl; i++) {
             PS::S64 adr = _ptcl_local[i].adr_org;
-            if(adr>=0) correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[adr], _tree, _rin, _rout, r_oi_inv, r_A, _eps_sq, _acorr_flag);
+            if(adr>=0) correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[adr], _tree, _acorr_flag);
         }
 
         // for artifical particle
         const PS::S32 n_tot = _sys.getNumberOfParticleLocal();
 #pragma omp parallel for schedule(dynamic)
         for (int i=_adr_ptcl_artifical_start; i<n_tot; i++) 
-            correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[i], _tree, _rin, _rout, r_oi_inv, r_A, _eps_sq, _acorr_flag);
+            correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[i], _tree, _acorr_flag);
 
-        
-        GroupPars gpars(_n_split);
+        GroupPars gpars(manager->n_split);
 #ifdef HARD_DEBUG
         assert((n_tot-_adr_ptcl_artifical_start)%gpars.n_ptcl_artifical==0);
 #endif
@@ -780,30 +742,20 @@ private:
 /* @param[in,out] _sys: global particle system, acc is updated
    @param[in] _tree: tree for force
    @param[in] _adr_ptcl_artifical_start: start address of artifical particle in _sys
-   @param[in] _rin: cutoff inner radius;
-   @param[in] _rout: cutoff outer radius;
-   @param[in] _n_split: artifical particle splitting number
-   @param[in] _eps_sq: softing eps square
 */
     template <class Tsys, class Tpsoft, class Ttree, class Tepj>
     void correctForceWithCutoffTreeNeighborImp(Tsys& _sys, 
                                                Ttree& _tree, 
                                                const PS::S32 _adr_ptcl_artifical_start,
-                                               const PS::F64 _rin,
-                                               const PS::F64 _rout,
-                                               const PS::S32 _n_split,
-                                               const PS::F64 _eps_sq) { 
-        // cutoff function parameter
-        const PS::F64 r_oi_inv = 1.0/(_rout-_rin);
-        const PS::F64 r_A = (_rout-_rin)/(_rout+_rin);
+                                               const bool _acorr_flag=false) {
         // for artifical particle
         const PS::S32 n_tot = _sys.getNumberOfParticleLocal();
 
 #pragma omp parallel for schedule(dynamic)
         for (int i=0; i<n_tot; i++) {
-            correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[i], _tree, _rin, _rout, r_oi_inv, r_A, _eps_sq);
+            correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[i], _tree, _acorr_flag);
         }
-        GroupPars gpars(_n_split);
+        GroupPars gpars(manager->n_split);
 #ifdef HARD_DEBUG
         assert((n_tot-_adr_ptcl_artifical_start)%gpars.n_ptcl_artifical==0);
 #endif
@@ -1834,7 +1786,7 @@ public:
                                                          Ttree& _tree,
                                                          const PS::ReallocatableArray<PS::S32>& _adr_send,
                                                          const bool _acorr_flag=false) {
-        correctForceWithCutoffTreeNeighborAndClusterImp<Tsys, Tpsoft, Ttree, Tepj>(_sys, _tree, ptcl_hard_.getPointer(), n_ptcl_in_cluster_, n_ptcl_in_cluster_disp_, n_group_in_cluster_, n_group_in_cluster_offset_, adr_first_ptcl_arti_in_cluster_, _adr_send, manager->changeover.getRin(), manager->changeover.getRout(), manager->n_split, manager->eps_sq, _acorr_flag);
+        correctForceWithCutoffTreeNeighborAndClusterImp<Tsys, Tpsoft, Ttree, Tepj>(_sys, _tree, ptcl_hard_.getPointer(), n_ptcl_in_cluster_, n_ptcl_in_cluster_disp_, n_group_in_cluster_, n_group_in_cluster_offset_, adr_first_ptcl_arti_in_cluster_, _adr_send, _acorr_flag);
     }
 
     //! Soft force correction due to different cut-off function
@@ -1846,7 +1798,7 @@ public:
 */
     template <class Tsys>
     void correctForceWithCutoffClusterOMP(Tsys& _sys, const bool _acorr_flag=false) { 
-        correctForceWithCutoffClusterImp(_sys, ptcl_hard_.getPointer(), n_ptcl_in_cluster_, n_ptcl_in_cluster_disp_, n_group_in_cluster_, n_group_in_cluster_offset_, adr_first_ptcl_arti_in_cluster_, manager->changeover.getRin(), manager->changeover.getRout(), manager->n_split, manager->eps_sq, _acorr_flag);
+        correctForceWithCutoffClusterImp(_sys, ptcl_hard_.getPointer(), n_ptcl_in_cluster_, n_ptcl_in_cluster_disp_, n_group_in_cluster_, n_group_in_cluster_offset_, adr_first_ptcl_arti_in_cluster_, _acorr_flag);
     }
 
     //! Soft force correction due to different cut-off function
@@ -1860,9 +1812,10 @@ public:
     template <class Tsys, class Tpsoft, class Ttree, class Tepj>
     void correctForceWithCutoffTreeNeighborOMP(Tsys& _sys,
                                                Ttree& _tree,
-                                               const PS::S32 _adr_ptcl_artifical_start) {
+                                               const PS::S32 _adr_ptcl_artifical_start,
+                                               const bool _acorr_flag=false) {
         
-        correctForceWithCutoffTreeNeighborImp<Tsys, Tpsoft, Ttree, Tepj>(_sys, _tree, _adr_ptcl_artifical_start, manager->changeover.getRin(), manager->changeover.getRout(), manager->n_split, manager->eps_sq);
+        correctForceWithCutoffTreeNeighborImp<Tsys, Tpsoft, Ttree, Tepj>(_sys, _tree, _adr_ptcl_artifical_start, _acorr_flag);
     }
 
     ////! soft force correction for sending particles
