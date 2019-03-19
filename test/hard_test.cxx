@@ -149,7 +149,7 @@ int main(int argc, char** argv)
   PS::F64 rin, rout, rbin, rsearch, eps, eta, dt_limit, time;
   PS::S32 rcount = fscanf(fin, "%lf %d %lf %lf %lf %lf %lf %lf %lf\n", 
                           &time, &N, &rin, &rout, &rsearch, &rbin, &dt_limit, &eta, &eps);
-  if (rcount<8) {
+  if (rcount<9) {
       std::cerr<<"Error: parameter reading fail!\n";
       abort();
   }
@@ -206,8 +206,8 @@ int main(int argc, char** argv)
 #endif
   // set symplectic order
   hard_manager.ar_manager.step.initialSymplecticCofficients(-6);
-  hard_manager.ar_manager.slowdown_pert_ratio_ref = 1e-6;
-  hard_manager.ar_manager.slowdown_factor_max = 1.0e8;
+  hard_manager.ar_manager.slowdown_pert_ratio_ref = 1e-4;
+  hard_manager.ar_manager.slowdown_timescale_max = dt_limit;
   hard_manager.ar_manager.slowdown_mass_ref = m_average;
 
   // check consistence of paramters

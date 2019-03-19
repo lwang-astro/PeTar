@@ -149,7 +149,7 @@ public:
     PS::S32 id_cluster;
 
     template <class Tp>
-    PtclComm(const Tp &p): Ptcl(p) {}
+    PtclComm(const Tp &p): Ptcl(p), id_cluster(-1) {}
     PtclComm() {}
 
     void print(std::ostream & fout){
