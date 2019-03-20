@@ -48,6 +48,8 @@ public:
         static const Float inv3 = 1.0 / 3.0;
 
         const int n_pert = _perturber.neighbor_address.getSize();
+        const int n_pert_single = _perturber.n_neighbor_single;
+        const int n_pert_group = _perturber.n_neighbor_group;
 
         if (n_pert>0) {
 
@@ -57,23 +59,41 @@ public:
 
             Float xp[n_pert][3], xcm[3], m[n_pert];
             Float vp[n_pert][3], vcm[3];
-            ChangeOver* changeover[n_pert];
+            ChangeOver* changeover[n_pert_single];
+            H4::NBAdr<Particle>::Group* groups[n_pert_group];
 
+            int n_single_count=0;
+            int n_group_count=0;
             for (int j=0; j<n_pert; j++) {
-                auto& pertj = *pert_adr[j].adr;
-                changeover[j] = &pertj.changeover;
-                Float dt = time - pertj.time;
-                //ASSERT(dt>=0.0);
-                xp[j][0] = pertj.pos[0] + dt*(pertj.vel[0] + 0.5*dt*(pertj.acc0[0] + inv3*dt*pertj.acc1[0]));
-                xp[j][1] = pertj.pos[1] + dt*(pertj.vel[1] + 0.5*dt*(pertj.acc0[1] + inv3*dt*pertj.acc1[1]));
-                xp[j][2] = pertj.pos[2] + dt*(pertj.vel[2] + 0.5*dt*(pertj.acc0[2] + inv3*dt*pertj.acc1[2]));
+                H4::NBAdr<Particle>::Single* pertj;
+                int k; // index of predicted data
+                if (pert_adr[j].type==H4::NBType::group) {
+                    pertj = &(((H4::NBAdr<Particle>::Group*)pert_adr[j].adr)->cm);
+                    k = n_single_count;
+                    changeover[k] = &pertj->changeover;
+                    n_single_count++;
+                }
+                else {
+                    pertj = (H4::NBAdr<Particle>::Single*)pert_adr[j].adr;
+                    k = n_group_count + n_pert_single;
+                    groups[k] = (H4::NBAdr<Particle>::Group*)pert_adr[j].adr;
+                    n_group_count++;
+                }
 
-                vp[j][0] = pertj.vel[0] + dt*(pertj.acc0[0] + 0.5*dt*pertj.acc1[0]);
-                vp[j][1] = pertj.vel[1] + dt*(pertj.acc0[1] + 0.5*dt*pertj.acc1[1]);
-                vp[j][2] = pertj.vel[2] + dt*(pertj.acc0[2] + 0.5*dt*pertj.acc1[2]);
+                Float dt = time - pertj->time;
+                ASSERT(dt>=0.0);
+                xp[k][0] = pertj->pos[0] + dt*(pertj->vel[0] + 0.5*dt*(pertj->acc0[0] + inv3*dt*pertj->acc1[0]));
+                xp[k][1] = pertj->pos[1] + dt*(pertj->vel[1] + 0.5*dt*(pertj->acc0[1] + inv3*dt*pertj->acc1[1]));
+                xp[k][2] = pertj->pos[2] + dt*(pertj->vel[2] + 0.5*dt*(pertj->acc0[2] + inv3*dt*pertj->acc1[2]));
 
-                m[j] = pertj.mass;
+                vp[k][0] = pertj->vel[0] + dt*(pertj->acc0[0] + 0.5*dt*pertj->acc1[0]);
+                vp[k][1] = pertj->vel[1] + dt*(pertj->acc0[1] + 0.5*dt*pertj->acc1[1]);
+                vp[k][2] = pertj->vel[2] + dt*(pertj->acc0[2] + 0.5*dt*pertj->acc1[2]);
+
+                m[k] = pertj->mass;
             }
+            ASSERT(n_single_count == n_pert_single);
+            ASSERT(n_group_count == n_pert_group);
 
             Float dt = time - _particle_cm.time;
             //ASSERT(dt>=0.0);
@@ -88,79 +108,104 @@ public:
 
             Float pert_cm = 0.0, acc_pert_cm[3]={0.0, 0.0, 0.0};
             Float mcm = _particle_cm.mass;
-            if (_perturber.need_resolve_flag) {
-                // calculate component perturbation
-                for (int i=0; i<_n_particle; i++) {
-                    Float* acc_pert = _force[i].acc_pert;
-                    const auto& pi = _particles[i];
-                    acc_pert[0] = acc_pert[1] = acc_pert[2] = Float(0.0);
+            // if (_perturber.need_resolve_flag) {
+            // calculate component perturbation
+            for (int i=0; i<_n_particle; i++) {
+                Float* acc_pert = _force[i].acc_pert;
+                const auto& pi = _particles[i];
+                auto& chi = pi.changeover;
+                Float r_out_i = chi.getRout();
+                acc_pert[0] = acc_pert[1] = acc_pert[2] = Float(0.0);
 
-                    Float xi[3];
-                    xi[0] = pi.pos[0] + xcm[0];
-                    xi[1] = pi.pos[1] + xcm[1];
-                    xi[2] = pi.pos[2] + xcm[2];
+                Float xi[3];
+                xi[0] = pi.pos[0] + xcm[0];
+                xi[1] = pi.pos[1] + xcm[1];
+                xi[2] = pi.pos[2] + xcm[2];
 
-                    Float pert_pot = 0.0;
-                    for (int j=0; j<n_pert; j++) {
-                        Float dr[3] = {xp[j][0] - xi[0],
-                                       xp[j][1] - xi[1],
-                                       xp[j][2] - xi[2]};
-                        Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
-                        Float r  = sqrt(r2);
-                        Float k  = changeover[j]->calcAcc0W(r);
-                        Float r3 = r*r2;
-                        Float mor3 = G*m[j]/r3 * k;
-                        pert_pot += mor3;
+                Float pert_pot = 0.0;
+                // single perturber
+                for (int j=0; j<n_pert_single; j++) {
+                    Float dr[3] = {xp[j][0] - xi[0],
+                                   xp[j][1] - xi[1],
+                                   xp[j][2] - xi[2]};
+                    Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
+                    Float r  = sqrt(r2);
+                    Float k  = ChangeOver::calcAcc0WTwo(chi, *changeover[j], r);
+                    Float r3 = r*r2;
+                    Float mor3 = G*m[j]/r3 * k;
+                    pert_pot += mor3;
 
-                        acc_pert[0] += mor3 * dr[0];
-                        acc_pert[1] += mor3 * dr[1];
-                        acc_pert[2] += mor3 * dr[2];
-                    }
-#ifdef SOFT_PERT
-                    if(_perturber.soft_pert!=NULL) _perturber.soft_pert->eval(acc_pert, pi.pos);
-#endif
-
-                    pert_cm += pi.mass * pert_pot;
-                    acc_pert_cm[0] += pi.mass *acc_pert[0];
-                    acc_pert_cm[1] += pi.mass *acc_pert[1];
-                    acc_pert_cm[2] += pi.mass *acc_pert[2];
-
-#ifdef ARC_DEBUG
-                    mcm += pi.mass;
-#endif
+                    acc_pert[0] += mor3 * dr[0];
+                    acc_pert[1] += mor3 * dr[1];
+                    acc_pert[2] += mor3 * dr[2];
                 }
-#ifdef ARC_DEBUG
-                ASSERT(abs(mcm-_particle_cm.mass)<1e-10);
+                // group perturber
+                for (int j=n_pert_single; j<n_pert; j++) {
+                    Float dr[3] = {xp[j][0] - xi[0],
+                                   xp[j][1] - xi[1],
+                                   xp[j][2] - xi[2]};
+                    Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
+                    Float r  = sqrt(r2);
+                    const int jk = j-n_pert_single;
+                    auto* ptcl_mem = groups[jk]->getDataAddress();
+                    Float mk = 0.0;
+                    for (int k=0; k<groups[jk]->getSize(); k++) {
+                        mk += ptcl_mem[k].mass * ChangeOver::calcAcc0WTwo(chi, ptcl_mem[k].changeover[j], r);
+                    }
+                    Float r3 = r*r2;
+                    Float mor3 = G*mk/r3;
+                    pert_pot += mor3;
+
+                    acc_pert[0] += mor3 * dr[0];
+                    acc_pert[1] += mor3 * dr[1];
+                    acc_pert[2] += mor3 * dr[2];
+                }
+
+#ifdef SOFT_PERT
+                if(_perturber.soft_pert!=NULL) _perturber.soft_pert->eval(acc_pert, pi.pos);
+#endif
+
+                pert_cm += pi.mass * pert_pot;
+                acc_pert_cm[0] += pi.mass *acc_pert[0];
+                acc_pert_cm[1] += pi.mass *acc_pert[1];
+                acc_pert_cm[2] += pi.mass *acc_pert[2];
+
+#ifdef AR_DEBUG
+                mcm += pi.mass;
+#endif
+            }
+#ifdef AR_DEBUG
+            ASSERT(abs(mcm-_particle_cm.mass)<1e-10);
 #endif
                 
-                // get cm perturbation
-                acc_pert_cm[0] /= mcm;
-                acc_pert_cm[1] /= mcm;
-                acc_pert_cm[2] /= mcm;
+            // get cm perturbation
+            acc_pert_cm[0] /= mcm;
+            acc_pert_cm[1] /= mcm;
+            acc_pert_cm[2] /= mcm;
 
-                // remove cm. perturbation
-                for (int i=0; i<_n_particle; i++) {
-                    Float* acc_pert = _force[i].acc_pert;
-                    acc_pert[0] -= acc_pert_cm[0]; 
-                    acc_pert[1] -= acc_pert_cm[1];        
-                    acc_pert[2] -= acc_pert_cm[2]; 
-                }
-
-                // get SD time scale
-                for (int i=0; i<n_pert; i++) {
-                    Float dr[3] = {xp[i][0] - xcm[0],
-                                   xp[i][1] - xcm[1],
-                                   xp[i][2] - xcm[2]};
-                    Float dv[3] = {vp[i][0] - vcm[0],
-                                   vp[i][1] - vcm[1],
-                                   vp[i][2] - vcm[2]};
-                    Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
-                    Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
-                    Float ti = abs(r2/drdv);
-
-                    _slowdown.timescale = std::min(_slowdown.timescale, ti);
-                }
+            // remove cm. perturbation
+            for (int i=0; i<_n_particle; i++) {
+                Float* acc_pert = _force[i].acc_pert;
+                acc_pert[0] -= acc_pert_cm[0]; 
+                acc_pert[1] -= acc_pert_cm[1];        
+                acc_pert[2] -= acc_pert_cm[2]; 
             }
+
+            // get SD time scale
+            for (int i=0; i<n_pert; i++) {
+                Float dr[3] = {xp[i][0] - xcm[0],
+                               xp[i][1] - xcm[1],
+                               xp[i][2] - xcm[2]};
+                Float dv[3] = {vp[i][0] - vcm[0],
+                               vp[i][1] - vcm[1],
+                               vp[i][2] - vcm[2]};
+                Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
+                Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
+                Float ti = abs(r2/drdv);
+
+                _slowdown.timescale = std::min(_slowdown.timescale, ti);
+            }
+            /* it is much more cost due to the changeover function
             else {
                 // first calculate c.m. acceleration and tidal perturbation
                 for (int j=0; j<n_pert; j++) {
@@ -223,6 +268,7 @@ public:
                 }   
                 //ASSERT(_perturber.soft_pert_min>0.0);
             }
+            */
             _slowdown.pert_out = pert_cm + _perturber.soft_pert_min;
             _slowdown.timescale = std::min(_slowdown.getTimescaleMax(), _slowdown.timescale);
         }
@@ -274,8 +320,13 @@ public:
         Float* acc2 = _force[1].acc_in;
 
 #ifdef AR_CHANGEOVER
-        const Float kpot  = changeover->calcPotW(rij);
-        const Float k     = changeover->calcAcc0W(rij);
+        auto& ch1 = _particles[0].changeover;
+        auto& ch2 = _particles[1].changeover;
+
+        Float r = r2*invr;
+        Float k = ChangeOver::calcAcc0WTwo(ch1,ch2,r);
+        Float kpot = ChangeOver::calcPotWTwo(ch1,ch2,r);
+
         Float mor3_1 = mass2*inv_r3*k;
         Float mor3_2 = mass1*inv_r3*k;
 
@@ -335,11 +386,6 @@ public:
         _epot = Float(0.0);
         Float gt_kick = Float(0.0);
 
-#ifdef AR_CHANGEOVER
-        const Float kpot  = changeover->calcPotW(rij);
-        const Float k     = changeover->calcAcc0W(rij);
-#endif
-
         for (int i=0; i<_n_particle; i++) {
             const Float massi = _particles[i].mass;
             const Float* posi = &_particles[i].pos.x;
@@ -365,6 +411,10 @@ public:
                 Float inv_r = 1.0/sqrt(r2);
                 Float inv_r3 = inv_r*inv_r*inv_r;
 #ifdef AR_CHANGEOVER
+                Float r = r2*inv_r;
+                const Float kpot  = ChangeOver::calcPotWTwo(_particles[i].changeover, _particles[j].changeover, r);
+                const Float k     = ChangeOver::calcAcc0WTwo(_particles[i].changeover, _particles[j].changeover, r);
+
                 Float mor3 = massj*inv_r3*k;
                 Float mor = massj*inv_r*kpot;
 #else

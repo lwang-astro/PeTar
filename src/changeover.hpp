@@ -269,5 +269,24 @@ public:
     }
 
 #endif
+
+    //! calculate changeover function Pot by selecting maximum rout
+    static Float calcPotWTwo(const ChangeOver& _ch1, const ChangeOver& _ch2, const Float _dr) {
+        if (_ch1.getRout()> _ch2.getRout) return _ch1.calcPotW(_dr);
+        else return _ch2.calcPotW(_dr);
+    }
+
+    //! calculate changeover function Acc0 by selecting maximum rout
+    static Float calcAcc0WTwo(const ChangeOver& _ch1, const ChangeOver& _ch2, const Float _dr) {
+        if (_ch1.getRout()> _ch2.getRout) return _ch1.calcAcc0W(_dr);
+        else return _ch2.calcAcc0W(_dr);
+    }
+
+    //! calculate changeover function Acc1 by selecting maximum rout
+    static Float calcAcc1WTwo(const ChangeOver& _ch1, const ChangeOver& _ch2, const Float _dr) {
+        if (_ch1.getRout()> _ch2.getRout) return _ch1.calcAcc1W(_dr);
+        else return _ch2.calcAcc1W(_dr);
+    }
+    
 };
 
