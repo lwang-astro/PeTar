@@ -1,12 +1,14 @@
 #pragma once
 #include<particle_simulator.hpp>
 #include"usr_define.hpp"
+#include"changeover.hpp"
 
 const PS::F64 SAFTY_FACTOR_FOR_SEARCH = 0.99;
 //const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ = SAFTY_FACTOR_FOR_SEARCH * SAFTY_FACTOR_FOR_SEARCH;
 //const PS::F64 SAFTY_OFFSET_FOR_SEARCH = 1e-7;
 //const PS::F64 SAFTY_OFFSET_FOR_SEARCH = 0.0;
 
+//! Particle class 
 class Ptcl: public ParticleBase{
 public:
     /*
@@ -26,6 +28,7 @@ public:
     PS::F64 mass_bk;
     PS::S64 id;
     PS::S64 status;
+    ChangeOver changeover;
     static PS::F64 search_factor;
     static PS::F64 r_search_min;
     static PS::F64 mean_mass_inv;
@@ -36,7 +39,7 @@ public:
     Ptcl(const Tptcl& _p) { Ptcl::DataCopy(_p);  }
 
     template<class Tptcl>
-    Ptcl(const Tptcl& _p, const PS::F64 _r_search, const PS::F64 _mass_bk, const PS::S64 _id, const PS::S64 _status): ParticleBase(_p), r_search(_r_search), mass_bk(_mass_bk), id(_id), status(_status)  {}
+    Ptcl(const Tptcl& _p, const PS::F64 _r_search, const PS::F64 _mass_bk, const PS::S64 _id, const PS::S64 _status, const ChangeOver& _co): ParticleBase(_p), r_search(_r_search), mass_bk(_mass_bk), id(_id), status(_status), changeover(_co) {}
 
     template<class Tptcl>
     void DataCopy(const Tptcl& _p) {
@@ -45,6 +48,7 @@ public:
         mass_bk  = _p.mass_bk;
         id       = _p.id;
         status   = _p.status;
+        changeover = _p.changeover;
     }
 
     template<class Tptcl>
@@ -59,6 +63,7 @@ public:
              <<" mass_bk="<<mass_bk
              <<" id="<<id
              <<" status="<<status;
+        changeover.print(_fout);
     }
 
     //! print titles of class members using column style
@@ -72,6 +77,7 @@ public:
              <<std::setw(_width)<<"mass_bk"
              <<std::setw(_width)<<"id"
              <<std::setw(_width)<<"status";
+        changeover::printColumnTitle(_fout, _width);
     }
 
     //! print data of class members using column style
@@ -85,17 +91,20 @@ public:
              <<std::setw(_width)<<mass_bk
              <<std::setw(_width)<<id
              <<std::setw(_width)<<status;
+        changeover::printColumn(_fout, _width);
     }
 
     void writeAscii(FILE* _fout) const{
         ParticleBase::writeAscii(_fout);
         fprintf(_fout, "%26.17e %26.17e %lld %lld ", 
                 this->r_search, this->mass_bk, this->id, this->status);
+        changeover.writeAscii(_fout):
     }
 
     void writeBinary(FILE* _fin) const{
         ParticleBase::writeBinary(_fin);
         fwrite(&(this->r_search), sizeof(PS::F64), 4, _fin);
+        changeover.writeBinary(_fin);
     }
 
     void readAscii(FILE* _fin) {
@@ -106,6 +115,7 @@ public:
             std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
             abort();
         }
+        changeover.readAscii(_fin);
     }
 
     void readBinary(FILE* _fin) {
@@ -115,6 +125,7 @@ public:
             std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
             abort();
         }
+        changeover.readBinary(_fin);
     }
 
     //! calculate new rsearch
@@ -122,7 +133,7 @@ public:
      */
     void calcRSearch(const PS::F64 _dt_tree) {
         PS::F64 v = std::sqrt(vel*vel);
-        r_search = std::max(v*_dt_tree*search_factor, r_search_min);
+        r_search = std::max(v*_dt_tree*search_factor+changeover.getRout(), r_search_min);
         //r_search = std::max(std::sqrt(vel*vel)*dt_tree*search_factor, std::sqrt(mass*mean_mass_inv)*r_search_min);
 #ifdef HARD_DEBUG
         assert(r_search>0);

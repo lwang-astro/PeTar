@@ -1,14 +1,12 @@
 #pragma once
 
 #include "Common/Float.h"
-#include "changeover.hpp"
 
 //! hermite interaction class 
 class HermiteInteraction{
 public:
     Float eps_sq; // softening parameter
     Float G;      // gravitational constant
-    ChangeOver* changeover; ///> changover control
 
     // constructor
     HermiteInteraction(): eps_sq(Float(-1.0)), G(Float(-1.0)) {}
@@ -19,7 +17,6 @@ public:
     bool checkParams() {
         ASSERT(eps_sq>=0.0);
         ASSERT(G>0.0);
-        ASSERT(changeover!=NULL);
         return true;
     }        
     
@@ -48,8 +45,8 @@ public:
         const Float r = sqrt(dr2_eps);
         ASSERT(r>0.0);
         const Float rinv = 1.0/r;
-        const PS::F64 k = changeover->calcAcc0W(r);
-        const PS::F64 kdot = changeover->calcAcc1W(r);
+        const PS::F64 k = _pj.changeover.calcAcc0W(r);
+        const PS::F64 kdot = _pj.changeover.calcAcc1W(r);
           
         const Float rinv2 = rinv*rinv;
         const Float rinv3 = rinv2*rinv;
@@ -86,7 +83,7 @@ public:
         const Float r = sqrt(dr2_eps);
         ASSERT(r>0.0);
         const Float rinv = 1.0/r;
-        const PS::F64 k = changeover->calcPotW(r);
+        const PS::F64 k = _pj.changeover.calcPotW(r);
         
         return -G*_pj.mass*rinv*k;
     }

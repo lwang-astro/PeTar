@@ -15,9 +15,8 @@ public:
     typedef H4::ParticleH4<PtclHard> H4Ptcl;
     Float eps_sq; ///> softening parameter
     Float G;
-    ChangeOver* changeover; ///> changover control
 
-    ARInteraction(): eps_sq(Float(-1.0)), G(Float(-1.0)), changeover(NULL) {}
+    ARInteraction(): eps_sq(Float(-1.0)), G(Float(-1.0)) {}
 
     //! check whether parameters values are correct
     /*! \return true: all correct
@@ -25,7 +24,6 @@ public:
     bool checkParams() {
         ASSERT(eps_sq>=0.0);
         ASSERT(G>0.0);
-        ASSERT(changeover!=NULL);
         return true;
     }        
 
@@ -59,9 +57,11 @@ public:
 
             Float xp[n_pert][3], xcm[3], m[n_pert];
             Float vp[n_pert][3], vcm[3];
+            ChangeOver* changeover[n_pert];
 
             for (int j=0; j<n_pert; j++) {
                 auto& pertj = *pert_adr[j].adr;
+                changeover[j] = &pertj.changeover;
                 Float dt = time - pertj.time;
                 //ASSERT(dt>=0.0);
                 xp[j][0] = pertj.pos[0] + dt*(pertj.vel[0] + 0.5*dt*(pertj.acc0[0] + inv3*dt*pertj.acc1[0]));
@@ -107,7 +107,7 @@ public:
                                        xp[j][2] - xi[2]};
                         Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
                         Float r  = sqrt(r2);
-                        Float k  = changeover->calcAcc0W(r);
+                        Float k  = changeover[j]->calcAcc0W(r);
                         Float r3 = r*r2;
                         Float mor3 = G*m[j]/r3 * k;
                         pert_pot += mor3;
@@ -174,7 +174,7 @@ public:
                     Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
                     Float ti = abs(r2/drdv);
                     Float r  = sqrt(r2);
-                    Float k  = changeover->calcAcc0W(r);
+                    Float k  = changeover[j]->calcAcc0W(r);
                     Float r3 = r*r2;
                     Float mor3 = G*m[j]/r3 * k;
                     pert_cm += mor3;
@@ -209,7 +209,7 @@ public:
                                        xp[j][2] - xi[2]};
                         Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
                         Float r  = sqrt(r2);
-                        Float k  = changeover->calcAcc0W(r);
+                        Float k  = changeover[j]->calcAcc0W(r);
                         Float r3 = r*r2;
                         Float mor3 = G*m[j]/r3 * k;
 

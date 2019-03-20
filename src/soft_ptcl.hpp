@@ -1,7 +1,6 @@
 #pragma once
 #include"ptcl.hpp"
 
-
 class ForceSoft{
 public:
     PS::F64vec acc; ///> soft acceleration (c.m.: averaged force from orbital particles; tensor: c.m. is substracted)

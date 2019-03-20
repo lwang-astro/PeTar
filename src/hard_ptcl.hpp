@@ -10,8 +10,8 @@ public:
     PtclHard() {}
 
     template<class Tptcl>
-    PtclHard(const Tptcl& _p, const PS::F64 _r_search, const PS::F64 _mass_bk, const PS::S64 _id, const PS::S64 _status, const PS::S32 _id_cluster, const PS::S32 _adr_org): 
-        Ptcl(_p, _r_search, _mass_bk, _id, _status), id_cluster(_id_cluster), adr_org(_adr_org) {}
+    PtclHard(const Tptcl& _p, const PS::F64 _r_search, const PS::F64 _mass_bk, const PS::S64 _id, const PS::S64 _status, const ChangeOver& _co, const PS::S32 _id_cluster, const PS::S32 _adr_org): 
+        Ptcl(_p, _r_search, _mass_bk, _id, _status, _co), id_cluster(_id_cluster), adr_org(_adr_org) {}
 
     template<class Tptcl>
     PtclHard(const Tptcl &_p, const PS::S32 _id_cluster, const PS::S32 _adr_org): 
