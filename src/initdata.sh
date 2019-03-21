@@ -11,4 +11,4 @@ read -p "Ignore line number (0): " igline
 
 n=`wc -l $fname|cut -d' ' -f1`
 n=`expr $n - $igline`
-awk -v n=$n -v ig=$igline 'BEGIN{print 0,n,0} {if(NR>ig) print $LINE,0,0,NR-ig,0,0,0,0,0,0}' $fname >$fout
+awk -v n=$n -v ig=$igline 'BEGIN{print 0,n,0} {if(NR>ig) print $LINE,0,0,NR-ig,0,0,0,0,0,0,0,0}' $fname >$fout

@@ -77,7 +77,7 @@ public:
              <<std::setw(_width)<<"mass_bk"
              <<std::setw(_width)<<"id"
              <<std::setw(_width)<<"status";
-        changeover::printColumnTitle(_fout, _width);
+        ChangeOver::printColumnTitle(_fout, _width);
     }
 
     //! print data of class members using column style
@@ -91,14 +91,14 @@ public:
              <<std::setw(_width)<<mass_bk
              <<std::setw(_width)<<id
              <<std::setw(_width)<<status;
-        changeover::printColumn(_fout, _width);
+        changeover.printColumn(_fout, _width);
     }
 
     void writeAscii(FILE* _fout) const{
         ParticleBase::writeAscii(_fout);
         fprintf(_fout, "%26.17e %26.17e %lld %lld ", 
                 this->r_search, this->mass_bk, this->id, this->status);
-        changeover.writeAscii(_fout):
+        changeover.writeAscii(_fout);
     }
 
     void writeBinary(FILE* _fin) const{

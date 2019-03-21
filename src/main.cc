@@ -521,9 +521,9 @@ int main(int argc, char *argv[]){
     GetInitPar(system_soft, r_in, r_out.value, r_bin.value, r_search_min, r_search_max.value, v_max, m_average, m_max, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value, n_bin.value, theta.value);
 
 //    EPISoft::r_out = r_out;
-    EPISoft::r_in  = r_in;
     EPISoft::eps   = eps.value;
-    EPISoft::r_out = EPJSoft::r_out = FPSoft::r_out = r_out.value;
+    EPISoft::r_in  = r_in;
+    EPISoft::r_out = r_out.value;
     Ptcl::search_factor = search_factor.value;
     Ptcl::r_search_min = r_search_min;
     Ptcl::mean_mass_inv = 1.0/m_average;
@@ -544,7 +544,7 @@ int main(int argc, char *argv[]){
             // for binary, research depend on v_disp
             //if(id<=2*n_bin.value) system_soft[i].r_search = std::max(r_search_min*std::sqrt(system_soft[i].mass*Ptcl::mean_mass_inv),v_disp*dt_soft.value*search_factor.value);
             PS::F64 m_fac = system_soft[i].mass*Ptcl::mean_mass_inv;
-            system_soft[i].changeover.setR(m_fac*r_in, m_fac*r_out.value);
+            system_soft[i].changeover.setR(m_fac, r_in, r_out.value);
             if(id<=2*n_bin.value) system_soft[i].r_search = std::max(r_search_min,v_disp*dt_soft.value*search_factor.value + m_fac*r_out.value);
             else system_soft[i].calcRSearch(dt_soft.value);
         }
@@ -618,9 +618,10 @@ int main(int argc, char *argv[]){
     hard_manager.energy_error_max = NUMERIC_FLOAT_MAX;
 #endif
     hard_manager.r_tidal_tensor = r_bin.value;
+    hard_manager.r_in_base = r_in;
+    hard_manager.r_out_base = r_out.value;
     hard_manager.id_offset = id_offset;
     hard_manager.n_split = n_split.value;
-    hard_manager.changeover.setR(r_in, r_out.value);
     hard_manager.h4_manager.r_break_crit = r_bin.value;
     hard_manager.h4_manager.r_neighbor_crit = r_search_min;
     hard_manager.h4_manager.step.eta_4th = eta.value*eta.value;

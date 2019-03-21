@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <iomanip>
+#include "Common/Float.h"
 
 //! Changeover function class
 class ChangeOver{
@@ -22,8 +23,8 @@ public:
     /*! \return true: all correct
      */
     bool checkParams() {
-        ASSERT(r_in_>0.0);
-        ASSERT(r_out_>0.0);
+        assert(r_in_>0.0);
+        assert(r_out_>0.0);
         return true;
     }
 
@@ -35,6 +36,26 @@ public:
 
     //! set r_in and r_out for changeover function
     /*!
+      @param[in] _m_fac: mass factor 
+      @param[in] _r_in:   changeover function inner boundary
+      @param[in] _r_out:  changeover function outer boundary
+    */
+    void setR(const Float _m_fac, const Float _r_in, const Float _r_out) {
+        Float m_fac3 = std::pow(_m_fac,(1.0/3.0));
+        r_in_     = m_fac3*_r_in;          
+        r_out_    = m_fac3*_r_out;
+        norm_    = 1.0/(_r_out-_r_in);
+        coff_     = (_r_out-_r_in)/(_r_out+_r_in);
+        pot_off_  = (1.0+coff_)/_r_out;
+#ifdef CHANGEOVER_DEBUG
+        assert(_r_in>0.0);
+        assert(_r_out>_r_in);
+#endif
+    }
+
+    //! set r_in and r_out for changeover function
+    /*!
+      @param[in] _m_fac: mass factor 
       @param[in] _r_in:   changeover function inner boundary
       @param[in] _r_out:  changeover function outer boundary
     */
@@ -65,8 +86,8 @@ public:
     }
 
     void print(std::ostream & _fout) const{
-        _fout<<"r_in : "<<r_in_<<std::endl
-             <<"r_out: "<<r_out_<<std::endl;
+        _fout<<" r_in="<<r_in_
+             <<" r_out="<<r_out_;
     }
 
     //! print titles of class members using column style
@@ -74,7 +95,7 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    void printColumnTitle(std::ostream & _fout, const int _width=20) {
+    static void printColumnTitle(std::ostream & _fout, const int _width=20) {
         _fout<<std::setw(_width)<<"R_in"
              <<std::setw(_width)<<"R_out";
     }
@@ -105,6 +126,27 @@ public:
             std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
             abort();
         }
+    }
+
+    //! write class data to file with binary format
+    /*! @param[in] _fp: FILE type file for output
+     */
+    void writeAscii(FILE *_fp) const {
+        fprintf(_fp, "%26.17e %26.17e ", 
+                this->r_in_, this->r_out_);
+    }
+
+    //! read class data to file with binary format
+    /*! @param[in] _fp: FILE type file for reading
+     */
+    void readAscii(FILE *_fin) {
+        PS::S64 rcount=fscanf(_fin, "%lf %lf ",
+                              &this->r_in_, &this->r_out_);
+        if (rcount<2) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
+            abort();
+        }
+        setR(1.0, r_in_, r_out_);
     }
 
     //! copy data from inherited class object
@@ -272,19 +314,19 @@ public:
 
     //! calculate changeover function Pot by selecting maximum rout
     static Float calcPotWTwo(const ChangeOver& _ch1, const ChangeOver& _ch2, const Float _dr) {
-        if (_ch1.getRout()> _ch2.getRout) return _ch1.calcPotW(_dr);
+        if (_ch1.getRout()> _ch2.getRout()) return _ch1.calcPotW(_dr);
         else return _ch2.calcPotW(_dr);
     }
 
     //! calculate changeover function Acc0 by selecting maximum rout
     static Float calcAcc0WTwo(const ChangeOver& _ch1, const ChangeOver& _ch2, const Float _dr) {
-        if (_ch1.getRout()> _ch2.getRout) return _ch1.calcAcc0W(_dr);
+        if (_ch1.getRout()> _ch2.getRout()) return _ch1.calcAcc0W(_dr);
         else return _ch2.calcAcc0W(_dr);
     }
 
     //! calculate changeover function Acc1 by selecting maximum rout
     static Float calcAcc1WTwo(const ChangeOver& _ch1, const ChangeOver& _ch2, const Float _dr) {
-        if (_ch1.getRout()> _ch2.getRout) return _ch1.calcAcc1W(_dr);
+        if (_ch1.getRout()> _ch2.getRout()) return _ch1.calcAcc1W(_dr);
         else return _ch2.calcAcc1W(_dr);
     }
     

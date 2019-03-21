@@ -266,15 +266,13 @@ private:
    @param[out] _part_list_n: number of partners for each particle
    @param[in,out] _ptcl: particle data, mass_bk is updated
    @param[in] _n: number of particles
-   @param[in] _r_crit2: square of distance criterion
  */
     void searchPartner(PS::ReallocatableArray<PS::S32> & _part_list,
                        PS::ReallocatableArray<PS::S32> & _part_list_disp,
                        PS::ReallocatableArray<PS::S32> & _part_list_n,
                        //PS::ReallocatableArray<PS::S32> & p_list,
                        Tptcl *_ptcl,
-                       const PS::S32 _n,
-                       const PS::F64 _r_crit2) {
+                       const PS::S32 _n) {
         //PS::S32 n = p_list.size();
         _part_list.clearSize();
         _part_list_disp.reserve(_n);
@@ -296,44 +294,57 @@ private:
                 //PS::S32 jp = p_list[j];
                 if(i==j) continue;
                 PS::F64vec dr = _ptcl[i].pos-_ptcl[j].pos;
-                PS::F64vec dv = _ptcl[i].vel-_ptcl[j].vel;
-                PS::F64 rv = dr*dv;
                 PS::F64 r2 = dr*dr;
-                PS::F64 mi = _ptcl[i].mass;
-                PS::F64 mj = _ptcl[j].mass;
-                PS::F64 mass_factor= mi>mj ? mi/mj : mj/mi; ///> get mass ratio
+                // use simple criterion
+                PS::F64 rin_min = std::min(_ptcl[i].changeover.getRin(), _ptcl[j].changeover.getRin());
+                if (r2<rin_min*rin_min) {
+                    _part_list.push_back(j);
+                    _part_list_n[i]++;
+                    offset++;
+                }
+                else {
+                    //store perturbation force
+                    _ptcl[i].mass_bk += _ptcl[j].mass/r2; 
+                }
+
+                //PS::F64vec dv = _ptcl[i].vel-_ptcl[j].vel;
+                //PS::F64 rv = dr*dv;
+                //PS::F64 r2 = dr*dr;
+                //PS::F64 mi = _ptcl[i].mass;
+                //PS::F64 mj = _ptcl[j].mass;
+                //PS::F64 mass_factor= mi>mj ? mi/mj : mj/mi; ///> get mass ratio
                 //PS::F64 mass_factor=std::max(ptcl[ip].mass,ptcl[jp].mass)*Ptcl::mean_mass_inv;
 #ifdef HARD_DEBUG
                 if(r2==0) {
-                    std::cerr<<"Error: zero distance! i="<<i<<" j="<<j<<" mass_factor="<<mass_factor<<std::endl;
+                    std::cerr<<"Error: zero distance! i="<<i<<" j="<<j<<std::endl;
                     abort();
                 }
 #endif
                 // incoming case
-                if (rv>0) {
-                    PS::F64 v2 = dv*dv;
-                    //  use bin factor to check
-                    if (r2*v2-rv*rv<_r_crit2*v2*mass_factor) {
-                        _part_list.push_back(j);
-                        _part_list_n[i]++;
-                        offset++;
-                    }
-                    else {
-                        //store perturbation force
-                        _ptcl[i].mass_bk += _ptcl[j].mass/r2; 
-                    }
-                }
-                else { // outgoing case
-                    if (r2<_r_crit2*mass_factor) {
-                        _part_list.push_back(j);
-                        _part_list_n[i]++;
-                        offset++;
-                    }
-                    else {
-                        //store perturbation force
-                        _ptcl[i].mass_bk += _ptcl[j].mass/r2; 
-                    }
-                }
+                //if (rv>0) {
+                //    PS::F64 v2 = dv*dv;
+                //    //  use bin factor to check
+                //    if (r2*v2-rv*rv<_r_crit2*v2*mass_factor) {
+                //        _part_list.push_back(j);
+                //        _part_list_n[i]++;
+                //        offset++;
+                //    }
+                //    else {
+                //        //store perturbation force
+                //        _ptcl[i].mass_bk += _ptcl[j].mass/r2; 
+                //    }
+                //}
+                //else { // outgoing case
+                //    if (r2<_r_crit2*mass_factor) {
+                //        _part_list.push_back(j);
+                //        _part_list_n[i]++;
+                //        offset++;
+                //    }
+                //    else {
+                //        //store perturbation force
+                //        _ptcl[i].mass_bk += _ptcl[j].mass/r2; 
+                //    }
+                //}
             }
         }
     }
@@ -465,7 +476,7 @@ private:
         for(int i=0; i<2; i++) {
             if(_bin.member[i]->status!=0) {
                 _bin.member[i]->changeover = _bin.changeover;
-                nloc += setGroupMemberPars(*(Tptree*)_bin.member[i], _adr_ref, &_ptcl_adr_sys[nloc], _n_split, _id_offset);
+                nloc += setGroupMemberPars(*(Tptree*)_bin.member[i], _adr_ref, &_ptcl_adr_sys[nloc]);
             }
             else {
                 //if(is_top) bin.member[i]->status = -std::abs(id_offset+bin.member[i]->id*n_split);
@@ -1151,12 +1162,12 @@ public:
     //    searchPerturber(pert_list_, _ptcl_in_cluster, _n_ptcl);
     //}
 
-    void searchAndMerge(Tptcl *_ptcl_in_cluster, const PS::S32 _n_ptcl, const PS::F64 _rcrit){
+    void searchAndMerge(Tptcl *_ptcl_in_cluster, const PS::S32 _n_ptcl) {
         PS::ReallocatableArray<PS::S32> part_list;      ///partner list
         PS::ReallocatableArray<PS::S32> part_list_disp;      ///partner list
         PS::ReallocatableArray<PS::S32> part_list_n;      ///partner list
         
-        searchPartner(part_list, part_list_disp, part_list_n, _ptcl_in_cluster, _n_ptcl, _rcrit*_rcrit);
+        searchPartner(part_list, part_list_disp, part_list_n, _ptcl_in_cluster, _n_ptcl);
         mergeCluster(group_list_, group_list_disp_, group_list_n_, _n_ptcl, part_list.getPointer(), part_list_disp.getPointer(), part_list_n.getPointer());
         // #ifdef HARD_DEBUG
         // assert(Rout_change_list_.size()==0);

@@ -60,23 +60,23 @@ public:
             Float xp[n_pert][3], xcm[3], m[n_pert];
             Float vp[n_pert][3], vcm[3];
             ChangeOver* changeover[n_pert_single];
-            H4::NBAdr<Particle>::Group* groups[n_pert_group];
+            H4::NBAdr<PtclHard>::Group* ptclgroup[n_pert_group];
 
             int n_single_count=0;
             int n_group_count=0;
             for (int j=0; j<n_pert; j++) {
-                H4::NBAdr<Particle>::Single* pertj;
+                H4::NBAdr<PtclHard>::Single* pertj;
                 int k; // index of predicted data
                 if (pert_adr[j].type==H4::NBType::group) {
-                    pertj = &(((H4::NBAdr<Particle>::Group*)pert_adr[j].adr)->cm);
+                    pertj = &(((H4::NBAdr<PtclHard>::Group*)pert_adr[j].adr)->cm);
                     k = n_single_count;
                     changeover[k] = &pertj->changeover;
                     n_single_count++;
                 }
                 else {
-                    pertj = (H4::NBAdr<Particle>::Single*)pert_adr[j].adr;
+                    pertj = (H4::NBAdr<PtclHard>::Single*)pert_adr[j].adr;
                     k = n_group_count + n_pert_single;
-                    groups[k] = (H4::NBAdr<Particle>::Group*)pert_adr[j].adr;
+                    ptclgroup[k] = (H4::NBAdr<PtclHard>::Group*)pert_adr[j].adr;
                     n_group_count++;
                 }
 
@@ -114,7 +114,6 @@ public:
                 Float* acc_pert = _force[i].acc_pert;
                 const auto& pi = _particles[i];
                 auto& chi = pi.changeover;
-                Float r_out_i = chi.getRout();
                 acc_pert[0] = acc_pert[1] = acc_pert[2] = Float(0.0);
 
                 Float xi[3];
@@ -147,10 +146,10 @@ public:
                     Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
                     Float r  = sqrt(r2);
                     const int jk = j-n_pert_single;
-                    auto* ptcl_mem = groups[jk]->getDataAddress();
+                    auto* ptcl_mem = ptclgroup[jk]->getDataAddress();
                     Float mk = 0.0;
-                    for (int k=0; k<groups[jk]->getSize(); k++) {
-                        mk += ptcl_mem[k].mass * ChangeOver::calcAcc0WTwo(chi, ptcl_mem[k].changeover[j], r);
+                    for (int k=0; k<ptclgroup[jk]->getSize(); k++) {
+                        mk += ptcl_mem[k].mass * ChangeOver::calcAcc0WTwo(chi, ptcl_mem[k].changeover, r);
                     }
                     Float r3 = r*r2;
                     Float mor3 = G*mk/r3;

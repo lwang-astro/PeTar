@@ -9,6 +9,7 @@
 #include"Hermite/hermite_integrator.h"
 #include"Hermite/hermite_particle.h"
 #include"hard_ptcl.hpp"
+#include"soft_ptcl.hpp"
 #include"hermite_interaction.hpp"
 #include"hermite_information.hpp"
 #include"hermite_perturber.hpp"
@@ -22,18 +23,16 @@ class HardManager{
 public:
     PS::F64 energy_error_max;
     PS::F64 r_tidal_tensor;
+    PS::F64 r_in_base;
+    PS::F64 r_out_base;
     PS::F64 eps_sq;
     PS::S64 id_offset;
     PS::S32 n_split;
-    ChangeOver changeover;
     H4::HermiteManager<HermiteInteraction> h4_manager;
     AR::SymplecticManager<ARInteraction> ar_manager;
 
     //! constructor
-    HardManager(): energy_error_max(-1.0), r_tidal_tensor(-1.0), eps_sq(-1.0), id_offset(-1), n_split(-1), changeover(), h4_manager(), ar_manager() {
-        h4_manager.interaction.changeover = &changeover;
-        ar_manager.interaction.changeover = &changeover;
-    }
+    HardManager(): energy_error_max(-1.0), r_tidal_tensor(-1.0), r_in_base(-1.0), r_out_base(-1.0), eps_sq(-1.0), id_offset(-1), n_split(-1), h4_manager(), ar_manager() {}
     
     //! set softening
     void setEpsSq(const PS::F64 _eps_sq) {
@@ -59,10 +58,11 @@ public:
     bool checkParams() {
         ASSERT(energy_error_max>0.0);
         ASSERT(r_tidal_tensor>=0.0);
+        ASSERT(r_in_base>0.0);
+        ASSERT(r_out_base>0.0);
         ASSERT(eps_sq>=0.0);
         ASSERT(id_offset>0);
         ASSERT(n_split>0);
-        ASSERT(changeover.checkParams());
         ASSERT(h4_manager.checkParams());
         ASSERT(ar_manager.checkParams());
         return true;
@@ -72,9 +72,8 @@ public:
     /*! @param[in] _fp: FILE type file for output
      */
     void writeBinary(FILE *_fp) {
-        size_t size = sizeof(*this) - sizeof(changeover) - sizeof(h4_manager) - sizeof(ar_manager);
+        size_t size = sizeof(*this) - sizeof(h4_manager) - sizeof(ar_manager);
         fwrite(this, size, 1, _fp);
-        changeover.writeBinary(_fp);
         h4_manager.writeBinary(_fp);
         ar_manager.writeBinary(_fp);
     }
@@ -83,17 +82,14 @@ public:
     /*! @param[in] _fp: FILE type file for reading
      */
     void readBinary(FILE *_fin) {
-        size_t size = sizeof(*this) - sizeof(changeover) - sizeof(h4_manager) - sizeof(ar_manager);
+        size_t size = sizeof(*this) - sizeof(h4_manager) - sizeof(ar_manager);
         size_t rcount = fread(this, size, 1, _fin);
         if (rcount<1) {
             std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
             abort();
         }
-        changeover.readBinary(_fin);
         h4_manager.readBinary(_fin);
         ar_manager.readBinary(_fin);
-        h4_manager.interaction.changeover = &changeover;
-        ar_manager.interaction.changeover = &changeover;
     }
 
     //! print parameters
@@ -103,7 +99,6 @@ public:
              <<"eps_sq           : "<<eps_sq<<std::endl
              <<"id_offset        : "<<id_offset<<std::endl
              <<"n_split          : "<<n_split<<std::endl;
-        changeover.print(_fout);
         h4_manager.print(_fout);
         ar_manager.print(_fout);
     }
@@ -201,8 +196,8 @@ private:
             // search groups
             SearchGroup<PtclH4> group;
             // merge groups
-            if (n_ptcl==2) group.searchAndMerge(ptcl_in_cluster, n_ptcl, _rout);
-            else group.searchAndMerge(ptcl_in_cluster, n_ptcl, _rin);
+            if (n_ptcl==2) group.searchAndMerge(ptcl_in_cluster, n_ptcl);
+            else group.searchAndMerge(ptcl_in_cluster, n_ptcl);
 
             // generate artifical particles,
             group.generateList(i, ptcl_in_cluster, n_ptcl, ptcl_artifical[ith], _n_group_in_cluster[i], _rbin, _rin, _rout, _dt_tree, _id_offset, _n_split);
@@ -305,13 +300,13 @@ private:
       @param[in,out] _pi: particle for correction
       @param[in] _pj: j particle to calculate correction
      */
-    template <class Tpi, class Tpj>
+    template <class Tpi>
     inline void calcAccPotShortWithLinearCutoff(Tpi& _pi,
-                                                const Tpj& _pj) {
+                                                const Ptcl& _pj) {
         const PS::F64vec dr = _pi.pos - _pj.pos;
         const PS::F64 dr2 = dr * dr;
         const PS::F64 dr2_eps = dr2 + manager->eps_sq;
-        const PS::F64 r_out = manager->changeover.getRout();
+        const PS::F64 r_out = manager->r_out_base;
         const PS::F64 r_out2 = r_out * r_out;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
         const PS::F64 movr = _pj.mass * drinv;
@@ -347,11 +342,60 @@ private:
         _pi.acc -= (movr3*k - movr3_max)*dr;
     }
 
+    //! correct force and potential for soft force with changeover function
+    /*!
+      @param[in,out] _pi: particle for correction
+      @param[in] _pj: j particle to calculate correction
+     */
+    template <class Tpi>
+    inline void calcAccPotShortWithLinearCutoff(Tpi& _pi,
+                                                const EPJSoft& _pj) {
+        const PS::F64vec dr = _pi.pos - _pj.pos;
+        const PS::F64 dr2 = dr * dr;
+        const PS::F64 dr2_eps = dr2 + manager->eps_sq;
+        const PS::F64 r_out = manager->r_out_base;
+        const PS::F64 r_out2 = r_out * r_out;
+        const PS::F64 drinv = 1.0/sqrt(dr2_eps);
+        const PS::F64 movr = _pj.mass * drinv;
+        const PS::F64 drinv2 = drinv * drinv;
+        const PS::F64 movr3 = movr * drinv2;
+        const PS::F64 dr_eps = drinv * dr2_eps;
+        ChangeOver chj;
+        chj.setR(_pj.r_in, _pj.r_out);
+        const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, chj, dr_eps);
+
+        // linear cutoff 
+        const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
+        const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
+        const PS::F64 movr_max = _pj.mass * drinv_max;
+        const PS::F64 drinv2_max = drinv_max*drinv_max;
+        const PS::F64 movr3_max = movr_max * drinv2_max;
+
+#ifdef ONLY_SOFT
+        const PS::F64 kpot  = 1.0 - ChangeOver::calcPotWTwo(_pi.changeover, chj, dr_eps);
+        // single, remove linear cutoff, obtain changeover soft potential
+        if (_pj.status==0) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (movr*kpot  - movr_max);   
+        // member, mass is zero, use backup mass
+        else if (_pj.status<0) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (_pj.mass_bk*drinv*kpot  - movr_max);   
+        // (orbitial) artifical, should be excluded in potential calculation, since it is inside neighbor, movr_max cancel it to 0.0
+        else _pi.pot_tot += movr_max; 
+#else
+        // single/member, remove linear cutoff, obtain total potential
+        if (_pj.status==0) _pi.pot_tot -= (movr - movr_max);   
+        // member, mass is zero, use backup mass
+        else if (_pj.status<0) _pi.pot_tot -= (_pj.mass_bk*drinv  - movr_max);   
+        // (orbitial) artifical, should be excluded in potential calculation, since it is inside neighbor, movr_max cancel it to 0.0
+        else _pi.pot_tot += movr_max; 
+#endif
+        // correct to changeover soft acceleration
+        _pi.acc -= (movr3*k - movr3_max)*dr;
+    }
+
 
 #ifdef KDKDK_4TH
-    template <class Tpi, class Tpj>
+    template <class Tpi>
     inline void calcAcorrShortWithLinearCutoff(Tpi& _pi,
-                                               const Tpj& _pj) {
+                                               const Ptcl& _pj) {
         const PS::F64 r_out = manager->changeover.getRout();
         const PS::F64 r_out2 = r_out * r_out;
 
@@ -366,8 +410,44 @@ private:
         const PS::F64 movr3 = movr * drinv2;
         const PS::F64 dr_eps = drinv * dr2_eps;
 
-        const PS::F64 k = 1.0 - manager->changeover.calcAcc0W(dr_eps);
-        const PS::F64 kdot = - manager->changeover.calcAcc1W(dr_eps);
+        const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, dr_eps);
+        const PS::F64 kdot = - ChangeOver::calcAcc1WTwo(_pi.changeover, _pj.changeover, dr_eps);
+
+        const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
+        const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
+        const PS::F64 movr_max = _pj.mass * drinv_max;
+        const PS::F64 drinv2_max = drinv_max*drinv_max;
+        const PS::F64 movr3_max = movr_max * drinv2_max;
+
+        const PS::F64 alpha = drda*drinv2;
+        const PS::F64 alpha_max = drda * drinv2_max;
+        const PS::F64vec acorr_k = movr3 * (k*da - (3.0*k*alpha - kdot) * dr);
+        const PS::F64vec acorr_max = movr3_max * (da - 3.0*alpha_max * dr);
+
+        _pi.acorr -= 2.0 * (acorr_k - acorr_max);
+        //acci + dt_kick * dt_kick * acorri /48; 
+    }
+
+    template <class Tpi>
+    inline void calcAcorrShortWithLinearCutoff(Tpi& _pi,
+                                               const EPJSoft& _pj) {
+        const PS::F64 r_out = manager->changeover.getRout();
+        const PS::F64 r_out2 = r_out * r_out;
+
+        const PS::F64vec dr = _pi.pos - _pj.pos;
+        const PS::F64vec da = _pi.acc - _pi.acc;
+        const PS::F64 dr2 = dr * dr;
+        const PS::F64 dr2_eps = dr2 + manager->eps_sq;
+        const PS::F64 drda = dr*da;
+        const PS::F64 drinv = 1.0/sqrt(dr2_eps);
+        const PS::F64 movr = _pj.mass * drinv;
+        const PS::F64 drinv2 = drinv * drinv;
+        const PS::F64 movr3 = movr * drinv2;
+        const PS::F64 dr_eps = drinv * dr2_eps;
+        ChangeOver chj;
+        chj.setR(_pj.r_in, _pj.r_out);
+        const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, chj, dr_eps);
+        const PS::F64 kdot = - ChangeOver::calcAcc1WTwo(_pi.changeover, chj, dr_eps);
 
         const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
         const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
@@ -403,7 +483,7 @@ private:
         // self-potential correction 
         // no correction for orbital artifical particles because the potential are not used for any purpose
         // no correction for member particles because their mass is zero during the soft force calculation, the self-potential contribution is also zero.
-        if (_psoft.status==0) _psoft.pot_tot += _psoft.mass/manager->changeover.getRout(); // single
+        if (_psoft.status==0) _psoft.pot_tot += _psoft.mass/manager->r_out_base; // single
 
         // loop neighbors
         for(PS::S32 k=0; k<n_ngb; k++){
@@ -577,7 +657,7 @@ private:
                 assert(_sys[adr].id==_ptcl_local[j].id);
 #endif
                 //self-potential correction for non-group member, group member has mass zero, so no need correction
-                if(_sys[adr].status==0) _sys[adr].pot_tot += _sys[adr].mass/manager->changeover.getRout();
+                if(_sys[adr].status==0) _sys[adr].pot_tot += _sys[adr].mass/manager->r_out_base;
 
                 // cluster member
                 for (int k=adr_real_start; k<adr_real_end; k++) {
@@ -828,6 +908,7 @@ public:
                 if(_ptcl_local[i].r_search>10*_ptcl_local[i].r_search_min) {
                     std::cerr<<"i = "<<i<<" ";
                     _ptcl_local[i].print(std::cerr);
+                    std::cerr<<std::endl;
                 }
             }
         }
@@ -1742,8 +1823,8 @@ public:
                                                                n_group_in_cluster_offset_,
                                                                adr_first_ptcl_arti_in_cluster_,
                                                                manager->h4_manager.r_break_crit,
-                                                               manager->changeover.getRin(),
-                                                               manager->changeover.getRout(),
+                                                               manager->r_in_base,
+                                                               manager->r_out_base,
                                                                _dt_tree, 
                                                                manager->id_offset,
                                                                manager->n_split);
@@ -1763,7 +1844,7 @@ public:
 #pragma omp parallel for 
         for (int i=0; i<n_ptcl; i++) {
             const PS::S32 k =_ptcl_list[i];
-            _sys[k].pot_tot += _sys[k].mass / manager->changeover.getRout();
+            _sys[k].pot_tot += _sys[k].mass / manager->r_out_base;
 #ifdef HARD_DEBUG
             // status may not be zero after binary disrupted
             // assert(_sys[k].status==0);
