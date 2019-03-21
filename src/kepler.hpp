@@ -584,6 +584,8 @@ void keplerTreeGenerator(PtclTree<Tptcl> _bins[],   // make sure bins.size = n_m
                          PS::S32 _member_list[], // make sure list.size = n_members!
                          const PS::S32 _n_members,
                          Tptcl* _ptcl_org,
+                         PS::F64 _r_in,
+                         PS::F64 _r_out,
                          const PS::F64 _dt_tree) {
 
     std::pair<PS::F32,PS::S32> r2_list[_n_members];
@@ -648,6 +650,8 @@ void keplerTreeGenerator(PtclTree<Tptcl> _bins[],   // make sure bins.size = n_m
         //_bins[i].status = _bins[i].id;
         _bins[i].status = _bins[i].member[0]->status + _bins[i].member[1]->status;  // counting total number of members in the leafs
         //bins[i].r_search = std::max(p[0]->r_search,p[1]->r_search);
+        PS::F64 fac = _bins[i].mass*Ptcl::mean_mass_inv;
+        _bins[i].changeover.setR(fac*_r_in, fac*_r_out);
         _bins[i].calcRSearch(_dt_tree);
     }
 

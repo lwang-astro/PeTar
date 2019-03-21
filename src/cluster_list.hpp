@@ -456,23 +456,22 @@ private:
     /* @param[in]  _bin: binary tree root
        @param[in]  _adr_ref: ptcl_org first particle address as reference to calculate the particle index.
        @param[out] _ptcl_adr_sys: particle index list in global particle system (not _ptcl_in_cluster)
-       @param[in]  _n_split: split number for artifical particles
-       @param[in]  _id_offset: for artifical particles, the offset of starting id.
      */
     template<class Tptree>
     PS::S32 setGroupMemberPars(Tptree &_bin, 
                                const Tptcl* _adr_ref, 
-                               PS::S32* _ptcl_adr_sys, 
-                               const PS::S32 _n_split, 
-                               const PS::S64 _id_offset) {
+                               PS::S32* _ptcl_adr_sys) {
         PS::S32 nloc = 0;
         for(int i=0; i<2; i++) {
-            if(_bin.member[i]->status!=0) 
+            if(_bin.member[i]->status!=0) {
+                _bin.member[i]->changeover = _bin.changeover;
                 nloc += setGroupMemberPars(*(Tptree*)_bin.member[i], _adr_ref, &_ptcl_adr_sys[nloc], _n_split, _id_offset);
+            }
             else {
                 //if(is_top) bin.member[i]->status = -std::abs(id_offset+bin.member[i]->id*n_split);
                 //else bin.member[i]->status = -std::abs(id_offset+bid*n_split);
                 _bin.member[i]->status = 1;
+                _bin.member[i]->changeover = _bin.changeover;
                 //_bin.member[i]->mass_bk = _bin.member[i]->mass;
                 //_bin.member[i]->r_search = _bin.r_search;
                 _ptcl_adr_sys[nloc] = _bin.member[i]-_adr_ref;
@@ -551,7 +550,7 @@ private:
 
         const PS::S32 n_members = _bin.status;
         Tptcl* adr_ref= _ptcl_in_cluster;
-        PS::S32 nbin = setGroupMemberPars(_bin, adr_ref, _group_ptcl_adr_list, _n_split, _id_offset);
+        PS::S32 nbin = setGroupMemberPars(_bin, adr_ref, _group_ptcl_adr_list);
         assert(nbin==n_members);
 
         // Make sure the _ptcl_new will not make new array due to none enough capacity during the following loop, otherwise the p[j] pointer will point to wrong position
@@ -574,6 +573,8 @@ private:
                 p[j]->id = _id_offset + (_bin.member[j]->id)*_n_split + i;
                 //p[j]->r_search = _bin.member[j]->r_search;
                 p[j]->r_search = _bin.r_search;
+                // use cm changeover functions
+                p[j]->changeover = _bin.changeover;
                 if(i==0) p[j]->status = _bin.member[j]->status; // store the component member number 
                 else if(i==1) p[j]->status = i_cg[j]+1; // store the i_cluster and i_group for identify artifical particles, +1 to avoid 0 value (status>0)
                 else p[j]->status = (_bin.id<<ID_PHASE_SHIFT)|i; // not used, but make status>0
@@ -693,6 +694,7 @@ private:
         pcm->vel = _bin.vel;
         pcm->id  = - std::abs(_bin.id);
         pcm->r_search = _bin.r_search;
+        pcm->changeover = _bin.changeover;
 
         pcm->r_search += _bin.semi*(1+_bin.ecc);  // depend on the mass ratio, the upper limit distance to c.m. from all members and artifical particles is apo-center distance
 
@@ -760,7 +762,7 @@ private:
             const PS::S32 group_start = _group_list_disp[i];
             const PS::S32 group_n = _group_list_n[i];
 
-            keplerTreeGenerator(bins.getPointer(), &_group_list[group_start], group_n, _ptcl_in_cluster, _dt_tree);
+            keplerTreeGenerator(bins.getPointer(), &_group_list[group_start], group_n, _ptcl_in_cluster, _rin, _rout, _dt_tree);
          
             // reset status to 0
             for (int j=0; j<group_n; j++) _ptcl_in_cluster[_group_list[group_start+j]].status=0;

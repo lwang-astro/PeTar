@@ -45,8 +45,8 @@ public:
         const Float r = sqrt(dr2_eps);
         ASSERT(r>0.0);
         const Float rinv = 1.0/r;
-        const PS::F64 k = _pj.changeover.calcAcc0W(r);
-        const PS::F64 kdot = _pj.changeover.calcAcc1W(r);
+        const PS::F64 k = ChangeOver::calcAcc0WTwo(_pi, _pj, r);
+        const PS::F64 kdot = ChangeOver::calcAcc1WTwo(_pi, _pj, r);
           
         const Float rinv2 = rinv*rinv;
         const Float rinv3 = rinv2*rinv;
@@ -83,7 +83,7 @@ public:
         const Float r = sqrt(dr2_eps);
         ASSERT(r>0.0);
         const Float rinv = 1.0/r;
-        const PS::F64 k = _pj.changeover.calcPotW(r);
+        const PS::F64 k = ChangeOver::calcPotWTwo(_pi, _pj, r);
         
         return -G*_pj.mass*rinv*k;
     }

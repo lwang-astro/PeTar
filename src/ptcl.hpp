@@ -33,7 +33,7 @@ public:
     static PS::F64 r_search_min;
     static PS::F64 mean_mass_inv;
 
-    Ptcl(): id(-10), status(-10) {}
+    Ptcl(): id(-10), status(-10), changeover() {}
 
     template<class Tptcl>
     Ptcl(const Tptcl& _p) { Ptcl::DataCopy(_p);  }

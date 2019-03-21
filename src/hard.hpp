@@ -318,7 +318,7 @@ private:
         const PS::F64 drinv2 = drinv * drinv;
         const PS::F64 movr3 = movr * drinv2;
         const PS::F64 dr_eps = drinv * dr2_eps;
-        const PS::F64 k = 1.0 - manager->changeover.calcAcc0W(dr_eps);
+        const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, dr_eps);
 
         // linear cutoff 
         const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
@@ -328,7 +328,7 @@ private:
         const PS::F64 movr3_max = movr_max * drinv2_max;
 
 #ifdef ONLY_SOFT
-        const PS::F64 kpot  = 1.0 - manager->changeover.calcPotW(dr_eps);
+        const PS::F64 kpot  = 1.0 - ChangeOver::calcPotWTwo(_pi.changeover, _pj.changeover, dr_eps);
         // single, remove linear cutoff, obtain changeover soft potential
         if (_pj.status==0) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (movr*kpot  - movr_max);   
         // member, mass is zero, use backup mass
