@@ -545,7 +545,7 @@ int main(int argc, char *argv[]){
             //if(id<=2*n_bin.value) system_soft[i].r_search = std::max(r_search_min*std::sqrt(system_soft[i].mass*Ptcl::mean_mass_inv),v_disp*dt_soft.value*search_factor.value);
             PS::F64 m_fac = system_soft[i].mass*Ptcl::mean_mass_inv;
             system_soft[i].changeover.setR(m_fac, r_in, r_out.value);
-            if(id<=2*n_bin.value) system_soft[i].r_search = std::max(r_search_min,v_disp*dt_soft.value*search_factor.value + m_fac*r_out.value);
+            if(id<=2*n_bin.value) system_soft[i].r_search = std::max(r_search_min,v_disp*dt_soft.value*search_factor.value + system_soft[i].changeover.getRout());
             else system_soft[i].calcRSearch(dt_soft.value);
         }
         while(dt_reduce_factor<dt_reduce_factor_org) dt_reduce_factor *=2.0;
