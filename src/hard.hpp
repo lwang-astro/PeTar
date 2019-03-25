@@ -196,8 +196,7 @@ private:
             // search groups
             SearchGroup<PtclH4> group;
             // merge groups
-            if (n_ptcl==2) group.searchAndMerge(ptcl_in_cluster, n_ptcl);
-            else group.searchAndMerge(ptcl_in_cluster, n_ptcl);
+            group.searchAndMerge(ptcl_in_cluster, n_ptcl);
 
             // generate artifical particles,
             group.generateList(i, ptcl_in_cluster, n_ptcl, ptcl_artifical[ith], _n_group_in_cluster[i], _rbin, _rin, _rout, _dt_tree, _id_offset, _n_split);
@@ -877,7 +876,7 @@ public:
        @param[in] _n_ptcl: particle number in cluster
        @param[in,out] _ptcl_artifical: artifical particle array, c.m. are kicked 
        @param[in] _n_group: group number in cluster
-       @param[in] _time_end: integration ending time (initial time is fixed to 0)
+       @param[in] _dt: integration ending time (initial time is fixed to 0)
        @param[in] _ithread: omp thread id, default 0
      */
     template <class Tsoft>
@@ -885,7 +884,7 @@ public:
                                   const PS::S32 _n_ptcl,
                                   Tsoft* _ptcl_artifical,
                                   const PS::S32 _n_group,
-                                  const PS::F64 _time_end,
+                                  const PS::F64 _dt,
                                   const PS::S32 _ithread=0) {
         ASSERT(checkParams());
 #ifdef HARD_CHECK_ENERGY
@@ -913,6 +912,8 @@ public:
             }
         }
 #endif
+
+        const PS::F64 time_end = time_origin_ + _dt;
 
         //** suppressed, use address offset instead
         ///* The index:
@@ -987,7 +988,7 @@ public:
             PS::S32 icm = adr_cm_ptcl[i];
             // kick c.m. (not done in previous kick function to avoid multi-kick)
             // Cannot do any kick in drift, because the K/D time step is not necessary same
-            //_ptcl_artifical[icm].vel += _ptcl_artifical[icm].acc * _time_end; (not do here to avoid half time step issue)
+            //_ptcl_artifical[icm].vel += _ptcl_artifical[icm].acc * _dt; (not do here to avoid half time step issue)
             // recover mass
             _ptcl_artifical[icm].mass = _ptcl_artifical[icm].mass_bk;
 #ifdef HARD_DEBUG
@@ -1062,19 +1063,19 @@ public:
             sym_int.perturber.calcSoftPertMin(sym_int.info.getBinaryTreeRoot());
             
             // initialization 
-            sym_int.initialIntegration(0.0);
+            sym_int.initialIntegration(time_origin_);
             sym_int.info.calcDsAndStepOption(sym_int.slowdown.getSlowDownFactorOrigin(), ar_manager->step.getOrder()); 
 
 #ifdef HARD_CHECK_ENERGY
             etoti = sym_int.getEtot();
 #endif
             // integration
-            sym_int.integrateToTime(sym_int.info.ds, _time_end, sym_int.info.fix_step_option);
+            sym_int.integrateToTime(sym_int.info.ds, time_end, sym_int.info.fix_step_option);
 
-            sym_int.particles.cm.pos += sym_int.particles.cm.vel * _time_end;
+            sym_int.particles.cm.pos += sym_int.particles.cm.vel * _dt;
 
             // update rsearch
-            sym_int.particles.cm.calcRSearch(_time_end);
+            sym_int.particles.cm.calcRSearch(_dt);
             // copyback
             sym_int.particles.shiftToOriginFrame();
             sym_int.particles.template writeBackMemberAll<PtclH4>();
@@ -1147,8 +1148,9 @@ public:
             h4_int.initialIntegration();
             h4_int.sortDtAndSelectActParticle();
             h4_int.info.time = h4_int.getTime();
+            h4_int.info.time_origin = h4_int.info.time + time_origin_;
 
-#ifdef HARD_DEBUG_PRINT
+#ifdef HARD_DEBUG_PRINT_TITLE
             h4_int.info.printColumnTitle(std::cout, WRITE_WIDTH);
             std::cout<<std::setw(WRITE_WIDTH)<<"Ngroup";
             for (int i=0; i<_n_group; i++) h4_int.groups[i].slowdown.printColumnTitle(std::cout, WRITE_WIDTH);
@@ -1157,7 +1159,7 @@ public:
 #endif
 
             // integration loop
-            while (h4_int.info.time<_time_end) {
+            while (h4_int.info.time<_dt) {
 
                 
                 h4_int.integrateOneStepAct();
@@ -1179,6 +1181,7 @@ public:
                 h4_int.initialIntegration();
                 h4_int.sortDtAndSelectActParticle();
                 h4_int.info.time = h4_int.getTime();
+                h4_int.info.time_origin = h4_int.info.time + time_origin_;
 
 #ifdef HARD_DEBUG_PRINT
                 //PS::F64 dt_max = 0.0;
@@ -1187,7 +1190,7 @@ public:
                 //if (n_group>0) dt_max = h4_int.groups[h4_int.getSortDtIndexGroup()[n_group-1]].particles.cm.dt;
                 //if (n_single>0) dt_max = std::max(dt_max, h4_int.particles[h4_int.getSortDtIndexSingle()[n_single-1]].dt);
                 //ASSERT(dt_max>0.0);
-                if (fmod(h4_int.info.time, h4_manager->step.getDtMax()/1024)==0.0) {
+                if (fmod(h4_int.info.time, h4_manager->step.getDtMax()/HARD_DEBUG_PRINT_FEQ)==0.0) {
                     h4_int.writeBackGroupMembers();
                     h4_int.info.calcEnergy(h4_int.particles, h4_int.groups, h4_manager->interaction, false);
             
@@ -1204,7 +1207,7 @@ public:
             }
         
             h4_int.writeBackGroupMembers();
-            h4_int.particles.cm.pos += h4_int.particles.cm.vel * _time_end;
+            h4_int.particles.cm.pos += h4_int.particles.cm.vel * _dt;
 #ifdef HARD_CHECK_ENERGY
             h4_int.info.calcEnergy(h4_int.particles, h4_int.groups, h4_manager->interaction, false);
             etotf  = h4_int.info.etot;
@@ -1216,7 +1219,7 @@ public:
             const PS::S32* group_index = h4_int.getSortDtIndexGroup();
             for(PS::S32 i=0; i<h4_int.getNGroup(); i++) {
                 const PS::S32 k =group_index[i];
-                h4_int.groups[k].particles.cm.calcRSearch(_time_end);
+                h4_int.groups[k].particles.cm.calcRSearch(_dt);
                 const PS::S32 n_member = h4_int.groups[k].particles.getSize();
                 for (PS::S32 j=0; j<n_member; j++) {
                     h4_int.groups[k].particles.getMemberOriginAddress(j)->r_search = h4_int.groups[k].particles.cm.r_search;
@@ -1224,7 +1227,7 @@ public:
             }
             const PS::S32* single_index = h4_int.getSortDtIndexSingle();
             for (PS::S32 i=0; i<h4_int.getNSingle(); i++) {
-                h4_int.particles[single_index[i]].calcRSearch(_time_end);
+                h4_int.particles[single_index[i]].calcRSearch(_dt);
             }
 
 
@@ -1947,8 +1950,8 @@ public:
 
 
     //template <class Tpsoft>
-    //void driveForMultiClusterOneDebug(PtclH4* _ptcl, const PS::S32 _n_ptcl, Tpsoft* _ptcl_artifical, const PS::S32 _n_group,  const PS::F64 _v_max, const PS::F64 _time_end) {
-    //    driveForMultiClusterImpl(_ptcl, _n_ptcl, _ptcl_artifical, _n_group, _v_max, _time_end);
+    //void driveForMultiClusterOneDebug(PtclH4* _ptcl, const PS::S32 _n_ptcl, Tpsoft* _ptcl_artifical, const PS::S32 _n_group,  const PS::F64 _v_max, const PS::F64 _dt) {
+    //    driveForMultiClusterImpl(_ptcl, _n_ptcl, _ptcl_artifical, _n_group, _v_max, _dt);
     //}
 
 };

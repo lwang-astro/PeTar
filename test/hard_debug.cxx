@@ -5,12 +5,15 @@
 #include <unistd.h>
 #include <unordered_map>
 #include <particle_simulator.hpp>
+#define HARD_DEBUG_PRINT_FEQ 1024
+
 #include "io.hpp"
 #include "hard_assert.hpp"
 #include "kepler.hpp"
 #include "cluster_list.hpp"
 #include "hard.hpp"
 #include "soft_ptcl.hpp"
+
 
 int main(int argc, char **argv){
   int n_opt=0;

@@ -5,7 +5,8 @@
 
 class HermiteInformation{
 public:
-    Float time; // current time
+    Float time_origin; // time of origin
+    Float time; // current time in integrator
     Float etot0; // initial total energy;
     Float de;    // energy difference
     Float etot; // total energy
@@ -49,6 +50,7 @@ public:
         }
 #endif
         ekin *= 0.5;
+        ett *= 0.5;
         etot = ekin + epot + ett;
 
         if (_initial_flag) {
@@ -64,7 +66,8 @@ public:
       @param[in] _width: print width (defaulted 20)
     */
     void printColumnTitle(std::ostream & _fout, const int _width=20) {
-        _fout<<std::setw(_width)<<"Time_int"
+        _fout<<std::setw(_width)<<"Time_org"
+             <<std::setw(_width)<<"Time_int"
              <<std::setw(_width)<<"dE"
              <<std::setw(_width)<<"Etot"
              <<std::setw(_width)<<"Ekin"
@@ -78,7 +81,8 @@ public:
       @param[in] _width: print width (defaulted 20)
     */
     void printColumn(std::ostream & _fout, const int _width=20){
-        _fout<<std::setw(_width)<<time
+        _fout<<std::setw(_width)<<time_origin
+             <<std::setw(_width)<<time
              <<std::setw(_width)<<de
              <<std::setw(_width)<<etot
              <<std::setw(_width)<<ekin

@@ -69,15 +69,15 @@ public:
                 int k; // index of predicted data
                 if (pert_adr[j].type==H4::NBType::group) {
                     pertj = &(((H4::NBAdr<PtclHard>::Group*)pert_adr[j].adr)->cm);
-                    k = n_single_count;
-                    changeover[k] = &pertj->changeover;
-                    n_single_count++;
+                    k = n_group_count + n_pert_single;
+                    ptclgroup[n_group_count] = (H4::NBAdr<PtclHard>::Group*)pert_adr[j].adr;
+                    n_group_count++;
                 }
                 else {
                     pertj = (H4::NBAdr<PtclHard>::Single*)pert_adr[j].adr;
-                    k = n_group_count + n_pert_single;
-                    ptclgroup[k] = (H4::NBAdr<PtclHard>::Group*)pert_adr[j].adr;
-                    n_group_count++;
+                    k = n_single_count;
+                    changeover[n_single_count] = &pertj->changeover;
+                    n_single_count++;
                 }
 
                 Float dt = time - pertj->time;
@@ -107,7 +107,7 @@ public:
 
 
             Float pert_cm = 0.0, acc_pert_cm[3]={0.0, 0.0, 0.0};
-            Float mcm = _particle_cm.mass;
+            Float mcm = 0.0;
             // if (_perturber.need_resolve_flag) {
             // calculate component perturbation
             for (int i=0; i<_n_particle; i++) {
