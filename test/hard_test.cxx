@@ -178,12 +178,12 @@ int main(int argc, char** argv)
       m_average = pin.mass;
   }
   m_average = pin.mass/N;
-  Ptcl::mean_mass_inv = m_average;
+  Ptcl::mean_mass_inv = 1.0/m_average;
   Ptcl::search_factor = 3;
 
   for (int i=0; i<N; i++) {
-//      sys[i].changeover.setR(sys[i].mass/m_average, rin, rout);
-      sys[i].changeover.setR(1.0, rin, rout);
+      sys[i].changeover.setR(sys[i].mass*Ptcl::mean_mass_inv, rin, rout);
+//      sys[i].changeover.setR(1.5, rin, rout);
   }
 
   PS::F64 time_sys = 0.0;
@@ -201,15 +201,15 @@ int main(int argc, char** argv)
   hard_manager.energy_error_max = NUMERIC_FLOAT_MAX;
 #endif
   hard_manager.r_tidal_tensor = rbin;
-  hard_manager.r_in_base = rin;
-  hard_manager.r_out_base = rout;
+  hard_manager.r_in_base = sys[0].changeover.getRin();
+  hard_manager.r_out_base = sys[0].changeover.getRout();
   hard_manager.id_offset = N;
   hard_manager.n_split = n_split;
   hard_manager.h4_manager.r_break_crit = rbin;
   hard_manager.h4_manager.r_neighbor_crit = rsearch;
   hard_manager.h4_manager.step.eta_4th = eta*eta;
   hard_manager.h4_manager.step.eta_2nd = 0.01*eta*eta;
-  hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, rout);
+  hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, sys[0].changeover.getRout());
   hard_manager.ar_manager.energy_error_relative_max = 1e-8;
 #ifdef AR_SYM
   hard_manager.ar_manager.step_count_max = 1e6;

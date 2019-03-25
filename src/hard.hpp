@@ -1164,7 +1164,8 @@ public:
                 
                 h4_int.integrateOneStepAct();
                 h4_int.adjustGroups(false);
-                
+
+#ifdef SOFT_PERT                
                 if (n_tt>0) {
                     const PS::S32* group_index = h4_int.getSortDtIndexGroup();
                     const PS::S32 n_init = h4_int.getNInitGroup();
@@ -1176,6 +1177,7 @@ public:
                         groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot());
                     }
                 }
+#endif
 
                 // initial after groups are modified
                 h4_int.initialIntegration();

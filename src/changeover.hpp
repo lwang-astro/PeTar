@@ -44,12 +44,12 @@ public:
         Float m_fac3 = std::pow(_m_fac,(1.0/3.0));
         r_in_     = m_fac3*_r_in;          
         r_out_    = m_fac3*_r_out;
-        norm_    = 1.0/(_r_out-_r_in);
-        coff_     = (_r_out-_r_in)/(_r_out+_r_in);
-        pot_off_  = (1.0+coff_)/_r_out;
+        norm_    = 1.0/(r_out_-r_in_);
+        coff_     = (r_out_-r_in_)/(r_out_+r_in_);
+        pot_off_  = (1.0+coff_)/r_out_;
 #ifdef CHANGEOVER_DEBUG
-        assert(_r_in>0.0);
-        assert(_r_out>_r_in);
+        assert(r_in_>0.0);
+        assert(r_out_>r_in_);
 #endif
     }
 
