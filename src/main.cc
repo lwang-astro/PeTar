@@ -64,14 +64,16 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #endif
 
 #include<particle_simulator.hpp>
-#include"soft.hpp"
+#include"hard_assert.hpp"
+#include"soft_ptcl.hpp"
+#include"soft_force.hpp"
+#include"energy.hpp"
 #include"hard.hpp"
 #include"kepler.hpp"
 #include"io.hpp"
 #include"init.hpp"
 #include"integrate.hpp"
 #include"domain.hpp"
-#include"AR.h" 
 #include"cluster_list.hpp"
 #include"kickdriftstep.hpp"
 #ifdef PROFILE
@@ -141,14 +143,14 @@ int main(int argc, char *argv[]){
     IOParams<PS::F64> search_factor(input_par_store, 3.0,  "Neighbor searching coefficient");
     IOParams<PS::F64> dt_limit_hard_factor(input_par_store, 4.0,  "Limit of tree time step/hard time step");
     IOParams<PS::S32> dt_min_hermite_index(input_par_store, 40,   "Power index n for the smallest time step (0.5^n) allowed in Hermite integrator");
-    IOParams<PS::S32> dt_min_arc_index    (input_par_store, 64,   "Power index n for the smallest time step (0.5^n) allowed in ARC integrator");
-    IOParams<PS::F64> dt_err_pert  (input_par_store, 1e-6, "Time synchronization maximum (relative) error for perturbed ARC integrator");
-    IOParams<PS::F64> dt_err_soft  (input_par_store, 1e-3, "Time synchronization maximum (relative) error for no-perturber (only soft perturbation) ARC integrator");
+    IOParams<PS::S32> dt_min_arc_index    (input_par_store, 64,   "Power index n for the smallest time step (0.5^n) allowed in ARC integrator, suppressed");
+    IOParams<PS::F64> dt_err_pert  (input_par_store, 1e-6, "Time synchronization maximum (relative) error for perturbed ARC integrator, suppressed");
+    IOParams<PS::F64> dt_err_soft  (input_par_store, 1e-3, "Time synchronization maximum (relative) error for no-perturber (only soft perturbation) ARC integrator, suppressed");
     IOParams<PS::F64> e_err_arc    (input_par_store, 1e-10,"Maximum energy error allown for ARC integrator");
 #ifdef HARD_CHECK_ENERGY
     IOParams<PS::F64> e_err_hard   (input_par_store, 1e-4, "Maximum energy error allown for hard integrator");
 #endif
-#ifdef ARC_SYM
+#ifdef AR_SYM
     IOParams<PS::S32> step_limit_arc(input_par_store, 1000000, "Maximum step allown for ARC sym integrator");
 #endif
     IOParams<PS::F64> eps          (input_par_store, 0.0,  "Softerning eps");
@@ -183,7 +185,7 @@ int main(int argc, char *argv[]){
 #ifdef HARD_CHECK_ENERGY
         {"energy-err-hard", required_argument, 0, 0},   //13
 #endif
-#ifdef ARC_SYM
+#ifdef AR_SYM
         {"step-limit-arc", required_argument, 0, 0},    //14
 #endif
         {0,0,0,0}
@@ -263,7 +265,7 @@ int main(int argc, char *argv[]){
                 if(my_rank == 0) e_err_hard.print(std::cout);
                 break;
 #endif
-#ifdef ARC_SYM
+#ifdef AR_SYM
             case 14:
                 step_limit_arc.value = atoi(optarg);
                 if(my_rank == 0) step_limit_arc.print(std::cout);
@@ -409,7 +411,7 @@ int main(int argc, char *argv[]){
 #ifdef HARD_CHECK_ENERGY
                 std::cout<<"        --energy-err-hard: [F] "<<e_err_hard<<std::endl;
 #endif
-#ifdef ARC_SYM
+#ifdef AR_SYM
                 std::cout<<"        --step-limit-arc:  [F] "<<step_limit_arc<<std::endl;
 #endif
                 std::cout<<"        --slowdown-factor: [F] "<<sd_factor<<std::endl;
@@ -515,13 +517,13 @@ int main(int argc, char *argv[]){
     //    }
     //}
     
-    PS::F64 r_in, m_average, v_disp, v_max;
-    GetInitPar(system_soft, r_in, r_out.value, r_bin.value, r_search_min, r_search_max.value, v_max, m_average, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value, n_bin.value, theta.value);
+    PS::F64 r_in, m_average, m_max, v_disp, v_max;
+    GetInitPar(system_soft, r_in, r_out.value, r_bin.value, r_search_min, r_search_max.value, v_max, m_average, m_max, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value, n_bin.value, theta.value);
 
 //    EPISoft::r_out = r_out;
-    EPISoft::r_in  = r_in;
     EPISoft::eps   = eps.value;
-    EPISoft::r_out = EPJSoft::r_out = FPSoft::r_out = r_out.value;
+    EPISoft::r_in  = r_in;
+    EPISoft::r_out = r_out.value;
     Ptcl::search_factor = search_factor.value;
     Ptcl::r_search_min = r_search_min;
     Ptcl::mean_mass_inv = 1.0/m_average;
@@ -541,11 +543,10 @@ int main(int argc, char *argv[]){
 
             // for binary, research depend on v_disp
             //if(id<=2*n_bin.value) system_soft[i].r_search = std::max(r_search_min*std::sqrt(system_soft[i].mass*Ptcl::mean_mass_inv),v_disp*dt_soft.value*search_factor.value);
-            if(id<=2*n_bin.value) system_soft[i].r_search = std::max(r_search_min,v_disp*dt_soft.value*search_factor.value);
-            else {
-                PS::F64 dt_reduce_factor_i = system_soft[i].calcRSearch(dt_soft.value, v_max);
-                dt_reduce_factor_org = std::max(dt_reduce_factor_i, dt_reduce_factor_org);
-            }
+            PS::F64 m_fac = system_soft[i].mass*Ptcl::mean_mass_inv;
+            system_soft[i].changeover.setR(m_fac, r_in, r_out.value);
+            if(id<=2*n_bin.value) system_soft[i].r_search = std::max(r_search_min,v_disp*dt_soft.value*search_factor.value + system_soft[i].changeover.getRout());
+            else system_soft[i].calcRSearch(dt_soft.value);
         }
         while(dt_reduce_factor<dt_reduce_factor_org) dt_reduce_factor *=2.0;
     }
@@ -606,32 +607,60 @@ int main(int argc, char *argv[]){
     TreeForce tree_soft;
     //tree_soft.initialize(n_tree_init, theta.value, n_leaf_limit.value, n_group_limit.value);
 
+    // system hard paramters
+    HardManager hard_manager;
+    hard_manager.setDtRange(dt_soft.value/dt_limit_hard_factor.value, dt_min_hermite_index.value);
+    hard_manager.setEpsSq(eps.value);
+    hard_manager.setG(1.0);
+#ifdef HARD_CHECK_ENERGY
+    hard_manager.energy_error_max = e_err_hard.value;
+#else
+    hard_manager.energy_error_max = NUMERIC_FLOAT_MAX;
+#endif
+    hard_manager.r_tidal_tensor = r_bin.value;
+    hard_manager.r_in_base = r_in;
+    hard_manager.r_out_base = r_out.value;
+    hard_manager.id_offset = id_offset;
+    hard_manager.n_split = n_split.value;
+    hard_manager.h4_manager.r_break_crit = r_bin.value;
+    hard_manager.h4_manager.r_neighbor_crit = r_search_min;
+    hard_manager.h4_manager.step.eta_4th = eta.value*eta.value;
+    hard_manager.h4_manager.step.eta_2nd = 0.01*eta.value*eta.value;
+    hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, r_out.value);
+    hard_manager.ar_manager.energy_error_relative_max = e_err_arc.value;
+#ifdef AR_SYM
+    hard_manager.ar_manager.step_count_max = step_limit_arc.value;
+#endif
+    // set symplectic order
+    hard_manager.ar_manager.step.initialSymplecticCofficients(-6);
+    hard_manager.ar_manager.slowdown_pert_ratio_ref = sd_factor.value;
+    hard_manager.ar_manager.slowdown_timescale_max = dt_soft.value;
+    hard_manager.ar_manager.slowdown_mass_ref = m_average;
+
+    // check consistence of paramters
+    hard_manager.checkParams();
+
+    // dump paramters for restart
+    if(my_rank==0) {
+        std::string fhard_par = fname_par.value + ".hard";
+        std::cout<<"Save hard_manager parameters to file "<<fhard_par<<std::endl;
+        FILE* fpar_out;
+        if( (fpar_out = fopen(fhard_par.c_str(),"w")) == NULL) {
+            fprintf(stderr,"Error: Cannot open file %s.\n", fhard_par.c_str());
+            abort();
+        }
+        hard_manager.writeBinary(fpar_out);
+        fclose(fpar_out);
+    }
+
     // initial hard class and parameters
     SystemHard system_hard_one_cluster;
-    PS::F64 dt_limit_hard = dt_soft.value/dt_limit_hard_factor.value;
-    PS::F64 dt_min_hermite = 1.0;
-    PS::F64 dt_min_arc = 1.0;
-    for (PS::S32 i=0;i<dt_min_hermite_index.value;i++) dt_min_hermite *= 0.5;
-    for (PS::S32 i=0;i<dt_min_arc_index.value;i++) dt_min_arc *= 0.5;
-    system_hard_one_cluster.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, v_max, id_offset, n_split.value);
-    // system_hard_one_cluster.setARCParam();
+    system_hard_one_cluster.manager = &hard_manager;
     SystemHard system_hard_isolated;
-    system_hard_isolated.setParam(r_bin.value, r_out.value, r_in, eps.value,  dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, v_max, id_offset, n_split.value);
-    system_hard_isolated.setARCParam(e_err_arc.value, dt_err_pert.value, dt_err_soft.value, dt_min_arc);
+    system_hard_isolated.manager = &hard_manager;
     SystemHard system_hard_connected;
-    system_hard_connected.setParam(r_bin.value, r_out.value, r_in, eps.value, dt_limit_hard, dt_min_hermite, eta.value, time_sys, sd_factor.value, v_max, id_offset, n_split.value);
-    system_hard_connected.setARCParam(e_err_arc.value, dt_err_pert.value, dt_err_soft.value, dt_min_arc);
+    system_hard_connected.manager = &hard_manager;
 
-#ifdef HARD_CHECK_ENERGY
-    // Set hard energy limit
-    system_hard_isolated.hard_dE_limit = e_err_hard.value;
-    system_hard_connected.hard_dE_limit = e_err_hard.value;
-#endif
-#ifdef ARC_SYM
-    // Set step limit for ARC sym
-    system_hard_isolated.arc_step_count_limit = step_limit_arc.value;
-    system_hard_connected.arc_step_count_limit = step_limit_arc.value;
-#endif
     PS::ReallocatableArray<PS::S32> remove_list;
                                        
     SearchCluster search_cluster;
@@ -667,6 +696,12 @@ int main(int argc, char *argv[]){
     KickDriftStep dt_manager(dt_soft.value/dt_reduce_factor);
     PS::F64 dt_kick  = dt_manager.getDtStartContinue();
     PS::F64 dt_drift = dt_manager.getDtDriftContinue();
+
+#ifdef HARD_DUMP
+    // initial hard_dump 
+    const PS::S32 num_thread = PS::Comm::getNumberOfThread();
+    hard_dump.initial(num_thread);
+#endif
 
 /// Main loop
     while(time_sys <= time_end.value){
@@ -859,18 +894,18 @@ int main(int argc, char *argv[]){
         
 #endif
 
-
 #ifdef KDKDK_4TH
 #ifdef PROFILE
         profile.force_correct.barrier();
         PS::Comm::barrier();
         profile.force_correct.end();
-        profile.tree_soft.start();
-
+#endif
         // only do correction at middle step
         if (dt_manager.getCountContinue() == 1) {
 //        if (true) {
 
+#ifdef PROFILE
+            profile.tree_soft.start();
             tree_soft.clearNumberOfInteraction();
             tree_soft.clearTimeProfile();
 #endif
@@ -898,7 +933,6 @@ int main(int argc, char *argv[]){
             profile.tree_soft.barrier();
             PS::Comm::barrier();
             profile.tree_soft.end();
-            profile.force_correct.start();
 #endif 
 
             // Isolated clusters
@@ -922,6 +956,9 @@ int main(int argc, char *argv[]){
 //            abort();
 // debug
         }
+#ifdef PROFILE
+        profile.force_correct.start();
+#endif
 
 #endif
 
@@ -1085,9 +1122,7 @@ int main(int argc, char *argv[]){
             stat.eng_hard_diff += PS::Comm::getSum(hard_dE_local);
 
             system_hard_isolated.hard_dE = 0;
-            system_hard_isolated.hard_dESD = 0;
             system_hard_connected.hard_dE = 0;
-            system_hard_connected.hard_dESD = 0;
 #endif
 
             // print status
@@ -1208,7 +1243,7 @@ int main(int argc, char *argv[]){
         ////// integrater one cluster
         system_hard_one_cluster.initializeForOneCluster(search_cluster.getAdrSysOneCluster().size());
         system_hard_one_cluster.setPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
-        system_hard_one_cluster.driveForOneClusterOMP(dt_drift, v_max);
+        system_hard_one_cluster.driveForOneClusterOMP(dt_drift);
         //system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft, search_cluster.getAdrSysOneCluster());
         system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft);
         ////// integrater one cluster
@@ -1261,17 +1296,9 @@ int main(int argc, char *argv[]){
 //#endif
         // determine the next tree time step
         PS::F64 dt_reduce_factor_org = 1.0;
-        dt_reduce_factor_org = std::max(system_hard_connected.dt_reduce_factor,   dt_reduce_factor_org);
-        dt_reduce_factor_org = std::max(system_hard_isolated.dt_reduce_factor,    dt_reduce_factor_org);
-        dt_reduce_factor_org = std::max(system_hard_one_cluster.dt_reduce_factor, dt_reduce_factor_org);
         dt_reduce_factor_org = PS::Comm::getMaxValue(dt_reduce_factor_org);
         dt_reduce_factor = 1.0;
         while(dt_reduce_factor<dt_reduce_factor_org) dt_reduce_factor *=2.0;
-
-        system_hard_connected.dt_reduce_factor = 1.0;
-        system_hard_isolated.dt_reduce_factor  = 1.0;
-        system_hard_one_cluster.dt_reduce_factor=1.0;
-
 
         /////////////
         // Remove ghost particles

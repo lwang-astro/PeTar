@@ -59,11 +59,42 @@ public:
     }
 
     //! for print debugging
-    void print(std::ostream & fout){
+    void print(std::ostream & fout) const{
         fout<<" mass="<<mass
             <<" pos="<<pos
             <<" vel="<<vel;
     }
+
+    //! print titles of class members using column style
+    /*! print titles of class members in one line for column style
+      @param[out] _fout: std::ostream output object
+      @param[in] _width: print width (defaulted 20)
+     */
+    void printColumnTitle(std::ostream & _fout, const int _width=20) {
+        _fout<<std::setw(_width)<<"mass"
+             <<std::setw(_width)<<"pos.x"
+             <<std::setw(_width)<<"pos.y"
+             <<std::setw(_width)<<"pos.z"
+             <<std::setw(_width)<<"vel.x"
+             <<std::setw(_width)<<"vel.y"
+             <<std::setw(_width)<<"vel.z";
+    }
+
+    //! print data of class members using column style
+    /*! print data of class members in one line for column style. Notice no newline is printed at the end
+      @param[out] _fout: std::ostream output object
+      @param[in] _width: print width (defaulted 20)
+     */
+    void printColumn(std::ostream & _fout, const int _width=20){
+        _fout<<std::setw(_width)<<mass
+             <<std::setw(_width)<<pos.x
+             <<std::setw(_width)<<pos.y
+             <<std::setw(_width)<<pos.z
+             <<std::setw(_width)<<vel.x
+             <<std::setw(_width)<<vel.y
+             <<std::setw(_width)<<vel.z;
+    }
+    
 
     //! Copy from another ParticleBase 
     /*! This is used for data transfer between nodes and between soft and hard parts
@@ -79,22 +110,22 @@ public:
     //! Get mass (required for \ref ARC::chain)
     /*! \return mass
      */
-    PS::F64 getMass() const{
+    PS::F64 getMass() {
         return mass;
     }
   
     //! Get position (required for \ref ARC::chain)
     /*! \return position vector (PS::F64[3])
      */
-    const PS::F64* getPos() const{
-        return &pos[0];
+    PS::F64* getPos() {
+        return &pos.x;
     }
 
     //! Get velocity (required for \ref ARC::chain)
     /*! \return velocity vector (PS::F64[3])
      */
-    const PS::F64* getVel() const{
-        return &vel[0];
+    PS::F64* getVel() {
+        return &vel.x;
     }
 
     //!Set position (required for \ref ARC::chain)

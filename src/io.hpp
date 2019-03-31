@@ -5,6 +5,8 @@
 #define WRITE_WIDTH 24
 #define WRITE_PRECISION 15
 
+#include "energy.hpp"
+
 //! IO Params container
 class IOParamsContainer{
     PS::ReallocatableArray<PS::F64*> d_f64;

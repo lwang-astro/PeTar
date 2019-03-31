@@ -578,15 +578,15 @@ bool pairLess(const std::pair<PS::F32,PS::S32> & a, const std::pair<PS::F32,PS::
     @param[in,out] _member_list: group particle member index, will be reordered by the minimum distance chain.
     @param[in,out] _ptcl_org: particle data, the status of members are modified to 1
     @param[in] _dt_tree: tree time step, used for calculating r_search for bin
-    @param[in] _v_max: maximum velocity used to calcualte r_search
  */
 template<class Tptcl>
 void keplerTreeGenerator(PtclTree<Tptcl> _bins[],   // make sure bins.size = n_members-1!
                          PS::S32 _member_list[], // make sure list.size = n_members!
                          const PS::S32 _n_members,
                          Tptcl* _ptcl_org,
-                         const PS::F64 _dt_tree,
-                         const PS::F64 _v_max){
+                         PS::F64 _r_in,
+                         PS::F64 _r_out,
+                         const PS::F64 _dt_tree) {
 
     std::pair<PS::F32,PS::S32> r2_list[_n_members];
     // reorder _member_list by minimum distance of each particles, and save square minimum distance r2min and index i in _member_list (not particle index in _ptcl_org) in r2_list 
@@ -650,7 +650,9 @@ void keplerTreeGenerator(PtclTree<Tptcl> _bins[],   // make sure bins.size = n_m
         //_bins[i].status = _bins[i].id;
         _bins[i].status = _bins[i].member[0]->status + _bins[i].member[1]->status;  // counting total number of members in the leafs
         //bins[i].r_search = std::max(p[0]->r_search,p[1]->r_search);
-        _bins[i].calcRSearch(_dt_tree, _v_max);
+        PS::F64 m_fac = _bins[i].mass*Ptcl::mean_mass_inv;
+        _bins[i].changeover.setR(m_fac, _r_in, _r_out);
+        _bins[i].calcRSearch(_dt_tree);
     }
 
 #ifdef HARD_DEBUG
@@ -866,33 +868,46 @@ bool stab3check(PtclTree<Tptcl> &_bout, PtclTree<Tptcl> &_bin, const PS::F64 _rb
 #endif
     }
     else {
-        // for large period ratio (acceleration ratio < 1.0e-6), avoid triple system in ARC
-        PS::F64 acc_out = _bout.mass/(pec_out*pec_out);
-        PS::F64 acc_in  = _bin.mass/(apo_in*apo_in);
-        if (acc_out<1.0e-6* acc_in && _bout.peri >1.0e-4*_dt_tree) {
-            _bout.tstep=-1.0;
-            _bout.stable_factor=-1;
-#ifdef STABLE_CHECK_DEBUG
-            std::cerr<<"STAB3 reject: Too large period ratio, acc_out/acc_in: "<<acc_out/acc_in<<" period_out: "<<_bout.peri<<std::endl;
-#endif
-            return false;
-        }
-
         // stable case
-        PS::F64 fpert_ratio = _bout.fpert*(apo_out*apo_out)/_bout.mass;
+
+        // for large period ratio (acceleration ratio < 1.0e-6), avoid triple system in ARC
+        //PS::F64 acc_out = _bout.mass/(pec_out*pec_out);
+        //PS::F64 acc_in  = _bin.mass/(apo_in*apo_in);
+        //if (acc_out<1.0e-6* acc_in && _bout.peri >1.0e-4*_dt_tree) {
+        //    _bout.tstep=-1.0;
+        //    _bout.stable_factor=-1;
+        //    //#ifdef STABLE_CHECK_DEBUG
+        //    //            std::cerr<<"STAB3 reject: Too large period ratio, acc_out/acc_in: "<<acc_out/acc_in<<" period_out: "<<_bout.peri<<std::endl;
+        //    //#endif
+        //    return false;
+        //}
+
+        // estimate inner perturbation
+        PS::F64 pert_out = _bout.mass/(pec_out*pec_out*pec_out);
+        PS::F64 acc_in   = _bin.mass/(apo_in*apo_in*apo_in);
+        PS::F64 fpert_ratio = pert_out/acc_in;
         _bout.stable_factor = fpert_ratio;
         // for unperturbed and large period case, stable_factor=-1 to switch off slowdown
-        if(fpert_ratio<1e-6) {
+        if(fpert_ratio>1e-6) {
             if(_bout.peri>0.125*_dt_tree) {
                 _bout.stable_factor = -1.0;
 #ifdef STABLE_CHECK_DEBUG
-                std::cerr<<"STAB3 accept: Unstable, large period, period_out: "<<_bout.peri<<std::endl;
+                std::cerr<<"STAB3 reject: Unstable, large period, fpert_ratio: "<<fpert_ratio<<" period_out: "<<_bout.peri<<std::endl;
 #endif
+                return false;
             }
+        }
+        else {
+            _bout.tstep=-1.0;
+            _bout.stable_factor=-1;
+#ifdef STABLE_CHECK_DEBUG
+            std::cerr<<"STAB3 reject: Too weak inner perturbation, fpert_ratio: "<<fpert_ratio<<" period_out: "<<_bout.peri<<std::endl;
+#endif
+            return false;
         }
 #ifdef STABLE_CHECK_DEBUG
         if(_bout.stable_factor>0) 
-            std::cerr<<"STAB3 accept: Stable, fpert_ratio: "<<fpert_ratio<<" stab3: "<<stab3<<" acc_out/acc_in: "<<acc_out/acc_in<<std::endl;
+            std::cerr<<"STAB3 accept: Stable, fpert_ratio: "<<fpert_ratio<<" stab3: "<<stab3<<" period_out: "<<_bout.peri<<std::endl;
 #endif
     }
     _bout.tstep = _bin.tstep;
