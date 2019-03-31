@@ -1,9 +1,9 @@
-# P3TA
+# PeTar
 Particle-particle \& Particle-tree with Algorithmic regularization code for collisional system
 
 # Dependence: 
 FDPS: https://github.com/FDPS/FDPS
-ARC: https://github.com/lwang-astro/ARC
+AR: https://github.com/lwang-astro/ARModule
 
 # Current developement status:
 ## Schedule: 
@@ -19,5 +19,5 @@ ARC: https://github.com/lwang-astro/ARC
 10. Go to 1
 
 ## Issue:
-1. Energy conservation for massive body encounters
-2. Unstable time step for specific ARC systems
+1. Energy conservation for tidal tensor potential
+2. Some perturbation jump happen after implementation of varying changeover functions
