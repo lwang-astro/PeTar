@@ -1046,10 +1046,13 @@ public:
             sym_int.particles.setMode(COMM::ListMode::copy);
             sym_int.particles.reserveMem(gpars[0].n_members);
             sym_int.info.reserveMem(gpars[0].n_members);
-            sym_int.perturber.r_crit_sq = h4_manager->r_neighbor_crit*h4_manager->r_neighbor_crit;
+            //sym_int.perturber.r_crit_sq = h4_manager->r_neighbor_crit*h4_manager->r_neighbor_crit;
             for (PS::S32 i=0; i<gpars[0].n_members; i++) {
                 sym_int.particles.addMemberAndAddress(_ptcl_local[i]);
                 sym_int.info.particle_index.addMember(i);
+                sym_int.info.r_break_crit = std::max(sym_int.info.r_break_crit,_ptcl_local[i].getRBreak());
+                Float r_neighbor_crit = _ptcl_local[i].getRNeighbor();
+                sym_int.perturber.r_neighbor_crit_sq = std::max(sym_int.perturber.r_neighbor_crit_sq, r_neighbor_crit*r_neighbor_crit);                
             }
             sym_int.reserveIntegratorMem();
             sym_int.info.generateBinaryTree(sym_int.particles);
@@ -1827,7 +1830,7 @@ public:
                                                                n_group_in_cluster_,
                                                                n_group_in_cluster_offset_,
                                                                adr_first_ptcl_arti_in_cluster_,
-                                                               manager->h4_manager.r_break_crit,
+                                                               manager->r_tidal_tensor,
                                                                manager->r_in_base,
                                                                manager->r_out_base,
                                                                _dt_tree, 

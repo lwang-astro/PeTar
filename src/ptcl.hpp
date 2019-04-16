@@ -31,6 +31,7 @@ public:
     ChangeOver changeover;
     static PS::F64 search_factor;
     static PS::F64 r_search_min;
+    static PS::F64 r_group_crit_ratio;
     static PS::F64 mean_mass_inv;
 
     Ptcl(): id(-10), status(-10), changeover() {}
@@ -139,6 +140,17 @@ public:
         assert(r_search>0);
 #endif
     }
+
+    //! Get neighbor distance criterion 
+    PS::F64 getRNeighbor() const {
+        return r_search;
+    }
+
+    //! Get neighbor distance criterion 
+    PS::F64 getRBreak() const {
+        return changeover.getRin()*r_group_crit_ratio;
+    }
+
 //    PS::F64 calcRSearch(const PS::F64 _dt_tree, const PS::F64 _v_max) {
 //        PS::F64 v = std::sqrt(vel*vel);
 //        PS::F64 dt_reduce_factor = 1.0;
@@ -159,3 +171,4 @@ public:
 PS::F64 Ptcl::r_search_min = 0.0;
 PS::F64 Ptcl::search_factor= 0.0;
 PS::F64 Ptcl::mean_mass_inv= 0.0; // mean mass inverse
+PS::F64 Ptcl::r_group_crit_ratio =0.0;

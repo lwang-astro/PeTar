@@ -57,11 +57,12 @@ public:
         fwrite(&n_ptcl, sizeof(PS::S32), 1, fp);
         for(int i=0; i<n_ptcl; i++) ptcl_bk[i].writeBinary(fp);
         // static member
-        PS::F64 ptcl_st_dat[3];
+        PS::F64 ptcl_st_dat[4];
         ptcl_st_dat[0] = Ptcl::search_factor;
         ptcl_st_dat[1] = Ptcl::r_search_min;
         ptcl_st_dat[2] = Ptcl::mean_mass_inv;
-        fwrite(ptcl_st_dat, sizeof(PS::F64),3, fp);
+        ptcl_st_dat[3] = Ptcl::r_group_crit_ratio;
+        fwrite(ptcl_st_dat, sizeof(PS::F64),4, fp);
         // artificial 
         fwrite(&n_arti, sizeof(PS::S32),1,fp);
         fwrite(&n_group, sizeof(PS::S32), 1, fp);
@@ -98,15 +99,16 @@ public:
         ptcl_bk.resizeNoInitialize(n_ptcl);
         for(int i=0; i<n_ptcl; i++) ptcl_bk[i].readBinary(fp);
         // static members
-        PS::F64 ptcl_st_dat[3];
-        rcount = fread(ptcl_st_dat, sizeof(PS::F64),3, fp);
-        if (rcount<3) {
+        PS::F64 ptcl_st_dat[4];
+        rcount = fread(ptcl_st_dat, sizeof(PS::F64),4, fp);
+        if (rcount<4) {
             std::cerr<<"Error: Data reading fails! requiring data number is 3, only obtain "<<rcount<<".\n";
             abort();
         }
         Ptcl::search_factor = ptcl_st_dat[0];
         Ptcl::r_search_min  = ptcl_st_dat[1];
         Ptcl::mean_mass_inv = ptcl_st_dat[2];
+        Ptcl::r_group_crit_ratio = ptcl_st_dat[3];
         // artifical particles
         rcount = fread(&n_arti, sizeof(PS::S32),1,fp);
         // number of groups

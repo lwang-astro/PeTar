@@ -155,8 +155,8 @@ int main(int argc, char *argv[]){
 #endif
     IOParams<PS::F64> eps          (input_par_store, 0.0,  "Softerning eps");
     IOParams<PS::F64> r_out        (input_par_store, 0.0,  "Transit function outer boundary radius", "<m>/sigma_1D^2/ratio_r_cut");
-    IOParams<PS::F64> r_bin        (input_par_store, 0.0,  "Maximum binary radius criterion", "theta*r_in");
-    IOParams<PS::F64> r_search_max (input_par_store, 0.0,  "Maximum binary radius criterion", "5*r_out");
+    IOParams<PS::F64> r_bin        (input_par_store, 0.0,  "Tidal tensor box size and binary radius criterion", "theta*r_in");
+    IOParams<PS::F64> r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out");
     IOParams<PS::F64> sd_factor    (input_par_store, 1e-6, "Slowdown perturbation criterion");
     IOParams<PS::S32> data_format  (input_par_store, 1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): Writing off: r-B(5), r-A(4); Writing on: r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0)");
     IOParams<std::string> fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]");
@@ -527,6 +527,7 @@ int main(int argc, char *argv[]){
     Ptcl::search_factor = search_factor.value;
     Ptcl::r_search_min = r_search_min;
     Ptcl::mean_mass_inv = 1.0/m_average;
+    Ptcl::r_group_crit_ratio = r_bin.value/r_in;
 //    const PS::F64 r_oi_inv = 1.0/(r_out - r_in);
 //    EPJSoft::r_search_min = r_out*search_factor;
 //    EPJSoft::m_average = m_average;
@@ -622,8 +623,8 @@ int main(int argc, char *argv[]){
     hard_manager.r_out_base = r_out.value;
     hard_manager.id_offset = id_offset;
     hard_manager.n_split = n_split.value;
-    hard_manager.h4_manager.r_break_crit = r_bin.value;
-    hard_manager.h4_manager.r_neighbor_crit = r_search_min;
+    //hard_manager.h4_manager.r_break_crit = r_bin.value;
+    //hard_manager.h4_manager.r_neighbor_crit = r_search_min;
     hard_manager.h4_manager.step.eta_4th = eta.value*eta.value;
     hard_manager.h4_manager.step.eta_2nd = 0.01*eta.value*eta.value;
     hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, r_out.value);
