@@ -157,7 +157,7 @@ int main(int argc, char *argv[]){
     IOParams<PS::F64> r_out        (input_par_store, 0.0,  "Transit function outer boundary radius", "<m>/sigma_1D^2/ratio_r_cut");
     IOParams<PS::F64> r_bin        (input_par_store, 0.0,  "Tidal tensor box size and binary radius criterion", "theta*r_in");
     IOParams<PS::F64> r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out");
-    IOParams<PS::F64> sd_factor    (input_par_store, 1e-6, "Slowdown perturbation criterion");
+    IOParams<PS::F64> sd_factor    (input_par_store, 1e-4, "Slowdown perturbation criterion");
     IOParams<PS::S32> data_format  (input_par_store, 1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): Writing off: r-B(5), r-A(4); Writing on: r-B/w-A (3); r-A/w-B (2); rw-A (1); rw-B (0)");
     IOParams<std::string> fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]");
     IOParams<std::string> fname_par(input_par_store, "input.par", "Input parameter file (this option should be used first before any other options)");

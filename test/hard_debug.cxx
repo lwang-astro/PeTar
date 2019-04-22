@@ -134,7 +134,7 @@ int main(int argc, char **argv){
 
   HardDump hard_dump;
   hard_dump.readOneCluster(filename.c_str());
-  std::cerr<<"Time_end: "<<hard_dump.time_end<<std::endl;
+  std::cerr<<"Dt: "<<hard_dump.time_end<<std::endl;
 
   SystemHard sys;
   sys.manager = &hard_manager;

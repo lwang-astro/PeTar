@@ -912,8 +912,8 @@ public:
             }
         }
 #endif
-
-        const PS::F64 time_end = time_origin_ + _dt;
+        const PS::F64 time_origin_int = 0.0; // to avoid precision issue
+        const PS::F64 time_end = time_origin_int + _dt;
 
         //** suppressed, use address offset instead
         ///* The index:
@@ -1066,8 +1066,11 @@ public:
             sym_int.perturber.calcSoftPertMin(sym_int.info.getBinaryTreeRoot());
             
             // initialization 
-            sym_int.initialIntegration(time_origin_);
+            sym_int.initialIntegration(time_origin_int);
             sym_int.info.calcDsAndStepOption(sym_int.slowdown.getSlowDownFactorOrigin(), ar_manager->step.getOrder()); 
+            //check paramters
+            ASSERT(sym_int.info.checkParams());
+            ASSERT(sym_int.perturber.checkParams());
 
 #ifdef HARD_CHECK_ENERGY
             etoti = sym_int.getEtot();
@@ -1151,7 +1154,7 @@ public:
             h4_int.initialIntegration();
             h4_int.sortDtAndSelectActParticle();
             h4_int.info.time = h4_int.getTime();
-            h4_int.info.time_origin = h4_int.info.time + time_origin_;
+            h4_int.info.time_origin = h4_int.info.time + time_origin_int;
 
 #ifdef HARD_DEBUG_PRINT_TITLE
             h4_int.info.printColumnTitle(std::cout, WRITE_WIDTH);
@@ -1186,7 +1189,7 @@ public:
                 h4_int.initialIntegration();
                 h4_int.sortDtAndSelectActParticle();
                 h4_int.info.time = h4_int.getTime();
-                h4_int.info.time_origin = h4_int.info.time + time_origin_;
+                h4_int.info.time_origin = h4_int.info.time + time_origin_int;
 
 #ifdef HARD_DEBUG_PRINT
                 //PS::F64 dt_max = 0.0;

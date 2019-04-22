@@ -34,7 +34,7 @@ public:
     static PS::F64 r_group_crit_ratio;
     static PS::F64 mean_mass_inv;
 
-    Ptcl(): id(-10), status(-10), changeover() {}
+    Ptcl(): r_search(-1.0), id(-10), status(-10), changeover() {}
 
     template<class Tptcl>
     Ptcl(const Tptcl& _p) { Ptcl::DataCopy(_p);  }
@@ -144,7 +144,10 @@ public:
     //! Get neighbor distance criterion 
     PS::F64 getRNeighbor() const {
         return r_search;
-    }
+#ifdef HARD_DEBUG
+        assert(r_search>0);
+#endif 
+   }
 
     //! Get neighbor distance criterion 
     PS::F64 getRBreak() const {
