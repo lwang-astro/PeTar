@@ -887,8 +887,8 @@ int main(int argc, char *argv[]){
                 abort();
             }
             // Notice, the cluster members can include particles are not in the tree neighbor searching. If the extra neighbors in clusters are group members. The correct from clusters will be more accurate than tree neighbor correction. Since the potential is calculated from the real members instead of artifical particles. This can result in different potential
-            if(abs(dpoti/system_soft[i].pot_tot)>1e-8) {
-                std::cerr<<"Corrected pot diff >1e-8: i "<<i<<" pot(tree): "<<system_soft[i].pot_tot<<" pot(cluster): "<<psys_bk[i].pot_tot<<std::endl;
+            if(abs(dpoti/system_soft[i].pot_tot)>1e-6) {
+                std::cerr<<"Corrected pot diff >1e-6: i "<<i<<" pot(tree): "<<system_soft[i].pot_tot<<" pot(cluster): "<<psys_bk[i].pot_tot<<std::endl;
                 abort();
             }
         }

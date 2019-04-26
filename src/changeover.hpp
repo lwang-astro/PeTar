@@ -41,7 +41,11 @@ public:
       @param[in] _r_out:  changeover function outer boundary
     */
     void setR(const Float _m_fac, const Float _r_in, const Float _r_out) {
+#ifdef FIX_CHANGEOVER
+        Float m_fac3 = 1.0;
+#else
         Float m_fac3 = std::pow(_m_fac,(1.0/3.0));
+#endif
         r_in_     = m_fac3*_r_in;          
         r_out_    = m_fac3*_r_out;
         norm_    = 1.0/(r_out_-r_in_);

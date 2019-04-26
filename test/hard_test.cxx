@@ -205,8 +205,6 @@ int main(int argc, char** argv)
   hard_manager.r_out_base = sys[0].changeover.getRout();
   hard_manager.id_offset = N;
   hard_manager.n_split = n_split;
-  hard_manager.h4_manager.r_break_crit = rbin;
-  hard_manager.h4_manager.r_neighbor_crit = rsearch;
   hard_manager.h4_manager.step.eta_4th = eta*eta;
   hard_manager.h4_manager.step.eta_2nd = 0.01*eta*eta;
   hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, sys[0].changeover.getRout());
@@ -226,7 +224,6 @@ int main(int argc, char** argv)
   SystemHard sys_hard;
   sys_hard.manager = &hard_manager;
   sys_hard.setPtclForIsolatedMultiCluster(sys, p_list, n_cluster);
-  sys_hard.arc_step_count_limit = 100000;
 
 //  EnergyAndMomemtum et0,et,etcm0,etcm;
 //  PS::F64 eps2 = eps*eps;

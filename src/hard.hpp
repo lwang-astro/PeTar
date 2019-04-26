@@ -244,6 +244,7 @@ private:
                 PS::S32 i_cluster = gpar.i_cluster;
                 PS::S32 j_group = gpar.i_group;
                 PS::F64 rsearch_member=ptcl_artifical[i][j].r_search;
+                auto& changeover_member= ptcl_artifical[i][j].changeover;
                 // make sure group index increase one by one
                 assert(j_group==j_group_recored+1);
                 j_group_recored=j_group;
@@ -260,6 +261,8 @@ private:
                         _sys[ptcl_k].status = -ptcl_artifical[i][j_cm].adr_org; //save negative address
                         _sys[ptcl_k].mass_bk = _sys[ptcl_k].mass;
                         _sys[ptcl_k].r_search = rsearch_member;
+                        // update changeover 
+                        _sys[ptcl_k].changeover = changeover_member;
 //#ifdef SPLIT_MASS
                         _sys[ptcl_k].mass = 0;
 //#endif
@@ -275,6 +278,7 @@ private:
                     _ptcl_local[kl].status = -ptcl_artifical[i][j_cm].adr_org;
                     _ptcl_local[kl].mass_bk = _ptcl_local[kl].mass;
                     _ptcl_local[kl].r_search = rsearch_member;
+                    _ptcl_local[kl].changeover = changeover_member;
 //#ifdef SPLIT_MASS
                     _ptcl_local[kl].mass = 0;
 //#endif
@@ -305,8 +309,6 @@ private:
         const PS::F64vec dr = _pi.pos - _pj.pos;
         const PS::F64 dr2 = dr * dr;
         const PS::F64 dr2_eps = dr2 + manager->eps_sq;
-        const PS::F64 r_out = manager->r_out_base;
-        const PS::F64 r_out2 = r_out * r_out;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
         const PS::F64 movr = _pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
@@ -315,6 +317,8 @@ private:
         const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, dr_eps);
 
         // linear cutoff 
+        const PS::F64 r_out = manager->r_out_base;
+        const PS::F64 r_out2 = r_out * r_out;
         const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
         const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
         const PS::F64 movr_max = _pj.mass * drinv_max;
