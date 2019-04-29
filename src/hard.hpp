@@ -1080,6 +1080,12 @@ public:
             // initialization 
             sym_int.initialIntegration(time_origin_int);
             sym_int.info.calcDsAndStepOption(sym_int.slowdown.getSlowDownFactorOrigin(), ar_manager->step.getOrder()); 
+
+            // calculate c.m. changeover
+            auto& pcm = sym_int.particles.cm;
+            PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
+            pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+
             //check paramters
             ASSERT(sym_int.info.checkParams());
             ASSERT(sym_int.perturber.checkParams());
@@ -1090,16 +1096,19 @@ public:
             // integration
             sym_int.integrateToTime(sym_int.info.ds, time_end, sym_int.info.fix_step_option);
 
-            sym_int.particles.cm.pos += sym_int.particles.cm.vel * _dt;
+            pcm.pos += pcm.vel * _dt;
 
             // update rsearch
-            sym_int.particles.cm.calcRSearch(_dt);
+            pcm.calcRSearch(_dt);
             // copyback
             sym_int.particles.shiftToOriginFrame();
             sym_int.particles.template writeBackMemberAll<PtclH4>();
 
             for (PS::S32 i=0; i<gpars[0].n_members; i++) {
-                _ptcl_local[i].r_search = sym_int.particles.cm.r_search;
+                _ptcl_local[i].r_search = pcm.r_search;
+#ifdef HARD_DEBUG
+                ASSERT(_ptcl_local[i].r_search>_ptcl_local[i].changeover.getRout());
+#endif
             }
 
 #ifdef PROFILE
@@ -1156,6 +1165,9 @@ public:
                     // calculate c.m. changeover
                     auto& pcm = h4_int.groups[i].particles.cm;
                     PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
+#ifdef HARD_DEBUG
+                    ASSERT(m_fac>0.0);
+#endif
                     pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
                 }
             }
@@ -1176,6 +1188,9 @@ public:
                 // calculate c.m. changeover
                 auto& pcm = groupi.particles.cm;
                 PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
+#ifdef HARD_DEBUG
+                ASSERT(m_fac>0.0);
+#endif
                 pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
 #ifdef SOFT_PERT                
                 if (n_tt>0) {
@@ -1214,6 +1229,9 @@ public:
                     // calculate c.m. changeover
                     auto& pcm = groupi.particles.cm;
                     PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
+#ifdef HARD_DEBUG
+                    ASSERT(m_fac>0.0);
+#endif
                     pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
 #ifdef SOFT_PERT                
                     if (n_tt>0) {
