@@ -636,6 +636,10 @@ void keplerTreeGenerator(PtclTree<Tptcl> _bins[],   // make sure bins.size = n_m
         calc_center_of_mass(*(Tptcl*)&_bins[i], p, 2);
         _bins[i].member[0] = p[0];
         _bins[i].member[1] = p[1];
+#ifdef HARD_DEBUG
+        assert(p[0]->mass>0.0);
+        assert(p[1]->mass>0.0);
+#endif        
         _bins[i].m1 = p[0]->mass;
         _bins[i].m2 = p[1]->mass;
         PS::F64 dr = 1.0-_bins[i].ecc*cos(_bins[i].ecca);

@@ -463,7 +463,7 @@ private:
     }
 
 
-    //! Fill the mass_bk, r_search and status of group members, set status=1, return orderd particle member index list
+    //! Set member particle status=1, return orderd particle member index list
     /* @param[in]  _bin: binary tree root
        @param[in]  _adr_ref: ptcl_org first particle address as reference to calculate the particle index.
        @param[out] _ptcl_adr_sys: particle index list in global particle system (not _ptcl_in_cluster)
@@ -476,19 +476,27 @@ private:
         for(int i=0; i<2; i++) {
             if(_bin.member[i]->status!=0) {
                 _bin.member[i]->changeover = _bin.changeover;
+#ifdef HARD_DEBUG
+                assert(_bin.member[i]->mass>0.0);
+#endif                
+                //_bin.member[i]->mass_bk = _bin.member[i]->mass;
                 nloc += setGroupMemberPars(*(Tptree*)_bin.member[i], _adr_ref, &_ptcl_adr_sys[nloc]);
             }
             else {
                 //if(is_top) bin.member[i]->status = -std::abs(id_offset+bin.member[i]->id*n_split);
                 //else bin.member[i]->status = -std::abs(id_offset+bid*n_split);
-                _bin.member[i]->status = 1;
-                _bin.member[i]->changeover = _bin.changeover;
+                _bin.member[i]->status = 1; // used for number count later
+                // To be consistent, all these paramters are set later in findGroupsAndCreateArtificalParticles
+                //_bin.member[i]->changeover = _bin.changeover;
+//#ifdef HARD_DEBUG
+                //assert(_bin.member[i]->mass>0.0);
+//#endif                
                 //_bin.member[i]->mass_bk = _bin.member[i]->mass;
                 //_bin.member[i]->r_search = _bin.r_search;
-                _ptcl_adr_sys[nloc] = _bin.member[i]-_adr_ref;
 //#ifdef SPLIT_MASS
-//                _bin.member[i]->mass    = 0.0;
+                //_bin.member[i]->mass    = 0.0;
 //#endif
+                _ptcl_adr_sys[nloc] = _bin.member[i]-_adr_ref;
                 nloc += 1;
             }
         }
@@ -581,11 +589,18 @@ private:
                     p[j] = &_ptcl_new.back();
                 }
                 p[j]->mass = _bin.member[j]->mass;
+#ifdef HARD_DEBUG
+                assert(_bin.member[j]->mass>0);
+#endif
                 p[j]->id = _id_offset + (_bin.member[j]->id)*_n_split + i;
+                // use c.m. r_search 
                 //p[j]->r_search = _bin.member[j]->r_search;
                 p[j]->r_search = _bin.r_search;
                 // use cm changeover functions
                 p[j]->changeover = _bin.changeover;
+#ifdef HARD_DEBUG
+                assert(p[j]->r_search>_bin.changeover.getRout());
+#endif 
                 if(i==0) p[j]->status = _bin.member[j]->status; // store the component member number 
                 else if(i==1) p[j]->status = i_cg[j]+1; // store the i_cluster and i_group for identify artifical particles, +1 to avoid 0 value (status>0)
                 else p[j]->status = (_bin.id<<ID_PHASE_SHIFT)|i; // not used, but make status>0

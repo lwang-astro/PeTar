@@ -245,6 +245,9 @@ private:
                 PS::S32 j_group = gpar.i_group;
                 PS::F64 rsearch_member=ptcl_artifical[i][j].r_search;
                 auto& changeover_member= ptcl_artifical[i][j].changeover;
+#ifdef HARD_DEBUG
+                assert(rsearch_member>changeover_member.getRout());
+#endif                
                 // make sure group index increase one by one
                 assert(j_group==j_group_recored+1);
                 j_group_recored=j_group;
@@ -259,13 +262,15 @@ private:
 #endif
                         // save c.m. address and shift mass to mass_bk, set rsearch
                         _sys[ptcl_k].status = -ptcl_artifical[i][j_cm].adr_org; //save negative address
-                        _sys[ptcl_k].mass_bk = _sys[ptcl_k].mass;
                         _sys[ptcl_k].r_search = rsearch_member;
-                        // update changeover 
                         _sys[ptcl_k].changeover = changeover_member;
+                        _sys[ptcl_k].mass_bk = _sys[ptcl_k].mass;
 //#ifdef SPLIT_MASS
                         _sys[ptcl_k].mass = 0;
 //#endif
+#ifdef HARD_DEBUG
+                        assert(_sys[ptcl_k].mass_bk>0.0);
+#endif
                     }
                     else {
                         // this is remoted member;
@@ -276,12 +281,15 @@ private:
                     if(k==0) assert(_ptcl_local[kl].id==-ptcl_artifical[i][j_cm].id);
 #endif
                     _ptcl_local[kl].status = -ptcl_artifical[i][j_cm].adr_org;
-                    _ptcl_local[kl].mass_bk = _ptcl_local[kl].mass;
                     _ptcl_local[kl].r_search = rsearch_member;
                     _ptcl_local[kl].changeover = changeover_member;
+                    _ptcl_local[kl].mass_bk = _ptcl_local[kl].mass;
 //#ifdef SPLIT_MASS
                     _ptcl_local[kl].mass = 0;
 //#endif
+#ifdef HARD_DEBUG
+                    assert(_ptcl_local[kl].mass_bk>0.0);
+#endif
                 }
                 // shift cluster
                 if(j_group==_n_group_in_cluster[i_cluster]-1) {
@@ -1144,6 +1152,11 @@ public:
 
                     // calculate soft_pert_min
                     h4_int.groups[i].perturber.calcSoftPertMin(h4_int.groups[i].info.getBinaryTreeRoot());
+
+                    // calculate c.m. changeover
+                    auto& pcm = h4_int.groups[i].particles.cm;
+                    PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
+                    pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
                 }
             }
 
@@ -1155,6 +1168,25 @@ public:
             // initialization 
             h4_int.initialIntegration(); // get neighbors and min particles
             h4_int.adjustGroups(true);
+
+            const PS::S32 n_init = h4_int.getNInitGroup();
+            const PS::S32* group_index = h4_int.getSortDtIndexGroup();
+            for(int i=0; i<n_init; i++) {
+                auto& groupi = h4_int.groups[group_index[i]];
+                // calculate c.m. changeover
+                auto& pcm = groupi.particles.cm;
+                PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
+                pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+#ifdef SOFT_PERT                
+                if (n_tt>0) {
+                    // check tt
+                    groupi.perturber.findCloseSoftPert(tidal_tensor, _n_group, groupi.particles.cm);
+                    // calculate soft_pert_min
+                    groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot());
+                }
+#endif
+            }
+
             h4_int.initialIntegration();
             h4_int.sortDtAndSelectActParticle();
             h4_int.info.time = h4_int.getTime();
@@ -1175,19 +1207,23 @@ public:
                 h4_int.integrateOneStepAct();
                 h4_int.adjustGroups(false);
 
+                const PS::S32 n_init = h4_int.getNInitGroup();
+                const PS::S32* group_index = h4_int.getSortDtIndexGroup();
+                for(int i=0; i<n_init; i++) {
+                    auto& groupi = h4_int.groups[group_index[i]];
+                    // calculate c.m. changeover
+                    auto& pcm = groupi.particles.cm;
+                    PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
+                    pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
 #ifdef SOFT_PERT                
-                if (n_tt>0) {
-                    const PS::S32* group_index = h4_int.getSortDtIndexGroup();
-                    const PS::S32 n_init = h4_int.getNInitGroup();
-                    for(int i=0; i<n_init; i++) {
-                        auto& groupi = h4_int.groups[group_index[i]];
+                    if (n_tt>0) {
                         // check tt
                         groupi.perturber.findCloseSoftPert(tidal_tensor, _n_group, groupi.particles.cm);
                         // calculate soft_pert_min
                         groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot());
                     }
-                }
 #endif
+                }
 
                 // initial after groups are modified
                 h4_int.initialIntegration();
@@ -1228,13 +1264,18 @@ public:
             h4_int.particles.shiftToOriginFrame();
 
             // update research
-            const PS::S32* group_index = h4_int.getSortDtIndexGroup();
             for(PS::S32 i=0; i<h4_int.getNGroup(); i++) {
                 const PS::S32 k =group_index[i];
+#ifdef HARD_DEBUG
+                ASSERT(h4_int.groups[k].particles.cm.changeover.getRout()>0);
+#endif
                 h4_int.groups[k].particles.cm.calcRSearch(_dt);
                 const PS::S32 n_member = h4_int.groups[k].particles.getSize();
                 for (PS::S32 j=0; j<n_member; j++) {
                     h4_int.groups[k].particles.getMemberOriginAddress(j)->r_search = h4_int.groups[k].particles.cm.r_search;
+#ifdef HARD_DEBUG
+                    ASSERT(h4_int.groups[k].particles.getMemberOriginAddress(j)->r_search>h4_int.groups[k].particles.getMemberOriginAddress(j)->changeover.getRout());
+#endif
                 }
             }
             const PS::S32* single_index = h4_int.getSortDtIndexSingle();

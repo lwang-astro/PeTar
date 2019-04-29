@@ -68,7 +68,7 @@ int main(int argc, char **argv){
                  <<"    -e [double]:  hard energy limit ("<<e_err_hard<<")\n"
 #endif
 #ifdef AR_SYM
-                 <<"    -s [int]:     AR`1`= SYM step count limit ("<<step_arc_limit<<")\n"
+                 <<"    -s [int]:     AR step count limit ("<<step_arc_limit<<")\n"
 #endif
                  <<"    -E [double]:  Eta for hermite \n"
                  <<"    -a [double]:  AR energy limit \n"

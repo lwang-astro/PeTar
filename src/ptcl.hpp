@@ -143,10 +143,10 @@ public:
 
     //! Get neighbor distance criterion 
     PS::F64 getRNeighbor() const {
-        return r_search;
 #ifdef HARD_DEBUG
-        assert(r_search>0);
+        assert(r_search>changeover.getRout());
 #endif 
+        return r_search;
    }
 
     //! Get neighbor distance criterion 
