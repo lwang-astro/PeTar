@@ -191,6 +191,7 @@ public:
             }
 
             // get SD time scale
+            _slowdown.timescale = NUMERIC_FLOAT_MAX;
             for (int i=0; i<n_pert; i++) {
                 Float dr[3] = {xp[i][0] - xcm[0],
                                xp[i][1] - xcm[1],
