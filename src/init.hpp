@@ -107,7 +107,7 @@ void GetInitPar(const Tpsys & _tsys,
     if (r_out_flag) _r_in = _r_out * _ratio_r_cut;
     // calculate r_in based on velocity dispersion and averaged mass, calculate r_out by _ratio_r_cut
     else {
-        _r_in = average_mass_glb / (_vel_disp*_vel_disp);
+        _r_in = 0.5*average_mass_glb / (_vel_disp*_vel_disp);
         _r_out = _r_in / _ratio_r_cut;
     }
 

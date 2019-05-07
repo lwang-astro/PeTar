@@ -656,7 +656,7 @@ void keplerTreeGenerator(PtclTree<Tptcl> _bins[],   // make sure bins.size = n_m
         //bins[i].r_search = std::max(p[0]->r_search,p[1]->r_search);
         PS::F64 m_fac = _bins[i].mass*Ptcl::mean_mass_inv;
         _bins[i].changeover.setR(m_fac, _r_in, _r_out);
-        _bins[i].calcRSearch(_dt_tree);
+        _bins[i].Ptcl::calcRSearch(_dt_tree);
     }
 
 #ifdef HARD_DEBUG

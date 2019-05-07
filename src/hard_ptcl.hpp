@@ -38,6 +38,31 @@ public:
         return *this;
     }
 
+    // calculate reseach based on potential and velocity
+    /*!
+      Potential criterion: 
+      pot = -Gm/r0
+      -Gm/r0 + 1/2 v^2 = -Gm/(r0+dr)
+      dr = r0/[2Gm/(r0 v^2) - 1]
+      If energy is positive, dr < 0
+
+      velocity criterion:
+      v*dt_tree
+
+      Use min of two
+     */
+    void calcRSearch(const PS::F64 _Gm, const PS::F64 _pot, const PS::F64vec& _vel_cm, const PS::F64 _dt_tree) {
+        PS::F64vec vrel = Ptcl::vel-_vel_cm;
+        PS::F64 v2rel = vrel*vrel;
+        PS::F64 r0 = _pot>0? _Gm/_pot : NUMERIC_FLOAT_MAX;
+        PS::F64 q = 2.0*_pot/v2rel;
+        if (q>1.0) r0 /= (q-1.0);
+
+        PS::F64 v2 = Ptcl::vel*Ptcl::vel;
+        PS::F64 v = std::sqrt(v2);
+        r_search = std::max(std::min(v*_dt_tree, r0)*search_factor+Ptcl::changeover.getRout(), r_search_min);
+    }
+
     void dump(FILE *_fout) {
         fwrite(this, sizeof(*this),1,_fout);
     }
@@ -54,4 +79,5 @@ public:
         std::cerr<<" id_cluster="<<id_cluster
                  <<" adr_org="<<adr_org;
     }
+
 };

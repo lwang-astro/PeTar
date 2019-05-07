@@ -1099,7 +1099,7 @@ public:
             pcm.pos += pcm.vel * _dt;
 
             // update rsearch
-            pcm.calcRSearch(_dt);
+            pcm.Ptcl::calcRSearch(_dt);
             // copyback
             sym_int.particles.shiftToOriginFrame();
             sym_int.particles.template writeBackMemberAll<PtclH4>();
@@ -1292,15 +1292,23 @@ public:
             h4_int.particles.shiftToOriginFrame();
 
             // update research
+            auto& h4_pcm = h4_int.particles.cm;
             for(PS::S32 i=0; i<h4_int.getNGroup(); i++) {
                 const PS::S32 k =group_index[i];
 #ifdef HARD_DEBUG
                 ASSERT(h4_int.groups[k].particles.cm.changeover.getRout()>0);
 #endif
-                h4_int.groups[k].particles.cm.calcRSearch(_dt);
+                //h4_int.groups[k].particles.cm.calcRSearch(_dt);
+                auto& pcm = h4_int.groups[k].particles.cm;
+                pcm.vel += h4_pcm.vel;
+//#ifdef HARD_DEBUG
+//                ASSERT(h4_pcm.mass-pcm.mass>=0);
+//#endif
+                //pcm.calcRSearch(h4_manager->interaction.G*(h4_pcm.mass-pcm.mass), abs(pcm.pot), h4_pcm.vel, _dt);
+                pcm.Ptcl::calcRSearch(_dt);
                 const PS::S32 n_member = h4_int.groups[k].particles.getSize();
                 for (PS::S32 j=0; j<n_member; j++) {
-                    h4_int.groups[k].particles.getMemberOriginAddress(j)->r_search = h4_int.groups[k].particles.cm.r_search;
+                    h4_int.groups[k].particles.getMemberOriginAddress(j)->r_search = pcm.r_search;
 #ifdef HARD_DEBUG
                     ASSERT(h4_int.groups[k].particles.getMemberOriginAddress(j)->r_search>h4_int.groups[k].particles.getMemberOriginAddress(j)->changeover.getRout());
 #endif
@@ -1308,7 +1316,12 @@ public:
             }
             const PS::S32* single_index = h4_int.getSortDtIndexSingle();
             for (PS::S32 i=0; i<h4_int.getNSingle(); i++) {
-                h4_int.particles[single_index[i]].calcRSearch(_dt);
+                auto& pi = h4_int.particles[single_index[i]];
+//#ifdef HARD_DEBUG
+//                ASSERT(h4_pcm.mass-pi.mass>0);
+//#endif
+                pi.Ptcl::calcRSearch(_dt);
+//                pi.calcRSearch(h4_manager->interaction.G*(h4_pcm.mass-pi.mass), abs(pi.pot), h4_pcm.vel, _dt);
             }
 
 
@@ -1591,7 +1604,7 @@ public:
         for(PS::S32 i=0; i<n; i++){
             PS::F64vec dr = ptcl_hard_[i].vel * _dt;
             ptcl_hard_[i].pos += dr;
-            ptcl_hard_[i].calcRSearch(_dt);
+            ptcl_hard_[i].Ptcl::calcRSearch(_dt);
             // ptcl_hard_[i].r_search= r_search_single_;
             /*
               DriveKeplerRestricted(mass_sun_, 
@@ -1613,7 +1626,7 @@ public:
         for(PS::S32 i=0; i<n; i++){
             PS::F64vec dr = ptcl_hard_[i].vel * _dt;
             ptcl_hard_[i].pos += dr;
-            ptcl_hard_[i].calcRSearch(_dt);
+            ptcl_hard_[i].Ptcl::calcRSearch(_dt);
             /*
               DriveKeplerRestricted(mass_sun_, 
               pos_sun_, ptcl_hard_[i].pos, 

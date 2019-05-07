@@ -1621,13 +1621,15 @@ public:
                     }
 #endif
 
+                    // no neighbor
                     if(sys[i].n_ngb == 0){
-                        // no neighbor
                         adr_sys_one_cluster_[ith].push_back(i);
                         continue;
                     }
                     
-                    ptcl_cluster_[ith].push_back( PtclCluster(sys[i].id, i, id_ngb_multi_cluster[ith].size(), sys[i].n_ngb, false, NULL, my_rank) );
+                    PS::S32 adr_ngb_head_i = id_ngb_multi_cluster[ith].size();
+                    PS::S32 n_ngb_i = sys[i].n_ngb;
+
                     //PS::S32 n_tmp2 = 0;
                     //PS::S32 n_tmp3 = 0;
                     //PS::S32 n_tmp4 = 0;
@@ -1636,12 +1638,28 @@ public:
                             //n_tmp2++;
                             continue;
                         }
+
+//                        // check neighbor bin factor
+//  Double_t dotx=sqrt(dot3(x));
+//  Double_t bE=dot3(v)/msys-2.0/dotx;
+//  semi=-1.0/bE;
+//  eng=m1*m2*bE/2.0;
+// 
+//  //calculate eccentricity============================//
+//  Double_t p1=1-dotx/semi;
+//  Double_t crs=x[0]*v[0]+x[1]*v[1]+x[2]*v[2];
+//  ecc=sqrt(p1*p1+crs*crs/semi/msys);
+//  peri=semi*(1-ecc);
+                        
+
                         id_ngb_multi_cluster[ith].push_back( std::pair<PS::S32, PS::S32>(sys[i].id, (nbl+ii)->id) );
                         if( (nbl+ii)->rank_org != my_rank ){
                             ptcl_outer[ith].push_back(PtclOuter((nbl+ii)->id, sys[i].id, (nbl+ii)->rank_org));
                             //n_tmp3++;
                         }
                     }
+
+                    ptcl_cluster_[ith].push_back( PtclCluster(sys[i].id, i, adr_ngb_head_i, n_ngb_i, false, NULL, my_rank) );
                 }
             }
         } // end of OMP parallel 
