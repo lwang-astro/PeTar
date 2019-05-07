@@ -58,7 +58,9 @@ public:
             auto* pert_adr = _perturber.neighbor_address.getDataAddress();
 
             Float xp[n_pert][3], xcm[3], m[n_pert];
+#ifdef SLOWDOWN_TIMESCALE
             Float vp[n_pert][3], vcm[3];
+#endif
             ChangeOver* changeover[n_pert_single];
             H4::NBAdr<PtclHard>::Group* ptclgroup[n_pert_group];
 
@@ -81,14 +83,16 @@ public:
                 }
 
                 Float dt = time - pertj->time;
-                ASSERT(dt>=-1e-7);
+                //ASSERT(dt>=-1e-7);
                 xp[k][0] = pertj->pos[0] + dt*(pertj->vel[0] + 0.5*dt*(pertj->acc0[0] + inv3*dt*pertj->acc1[0]));
                 xp[k][1] = pertj->pos[1] + dt*(pertj->vel[1] + 0.5*dt*(pertj->acc0[1] + inv3*dt*pertj->acc1[1]));
                 xp[k][2] = pertj->pos[2] + dt*(pertj->vel[2] + 0.5*dt*(pertj->acc0[2] + inv3*dt*pertj->acc1[2]));
 
+#ifdef SLOWDOWN_TIMESCALE
                 vp[k][0] = pertj->vel[0] + dt*(pertj->acc0[0] + 0.5*dt*pertj->acc1[0]);
                 vp[k][1] = pertj->vel[1] + dt*(pertj->acc0[1] + 0.5*dt*pertj->acc1[1]);
                 vp[k][2] = pertj->vel[2] + dt*(pertj->acc0[2] + 0.5*dt*pertj->acc1[2]);
+#endif
 
                 m[k] = pertj->mass;
             }
@@ -101,10 +105,11 @@ public:
             xcm[1] = _particle_cm.pos[1] + dt*(_particle_cm.vel[1] + 0.5*dt*(_particle_cm.acc0[1] + inv3*dt*_particle_cm.acc1[1]));
             xcm[2] = _particle_cm.pos[2] + dt*(_particle_cm.vel[2] + 0.5*dt*(_particle_cm.acc0[2] + inv3*dt*_particle_cm.acc1[2]));
 
+#ifdef SLOWDOWN_TIMESCALE
             vcm[0] = _particle_cm.vel[0] + dt*(_particle_cm.acc0[0] + 0.5*dt*_particle_cm.acc1[0]);
             vcm[1] = _particle_cm.vel[1] + dt*(_particle_cm.acc0[1] + 0.5*dt*_particle_cm.acc1[1]);
             vcm[2] = _particle_cm.vel[2] + dt*(_particle_cm.acc0[2] + 0.5*dt*_particle_cm.acc1[2]);
-
+#endif
 
             Float pert_cm = 0.0, acc_pert_cm[3]={0.0, 0.0, 0.0};
             Float mcm = 0.0;
@@ -190,8 +195,12 @@ public:
                 acc_pert[2] -= acc_pert_cm[2]; 
             }
 
+#ifdef SLOWDOWN_TIMESCALE
+            // suppressed. The new and break group change the neighbors (c.m. <-> components). 
+            // This cause the sudden change of perturber velocity calculation, the timescale will jump and cause slowdown discontinue 
             // get SD time scale
             _slowdown.timescale = NUMERIC_FLOAT_MAX;
+            //Float mrsum = 0.0, mvsum= 0.0;
             for (int i=0; i<n_pert; i++) {
                 Float dr[3] = {xp[i][0] - xcm[0],
                                xp[i][1] - xcm[1],
@@ -201,10 +210,48 @@ public:
                                vp[i][2] - vcm[2]};
                 Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
                 Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
+                //Float r = sqrt(r2);
+                //mrsum += m[i]*r;
+                //mvsum += m[i]*drdv/r;
+                //mt_sum += m[i]*r2/drdv;
+                //mtot += m[i];
                 Float ti = abs(r2/drdv);
-
                 _slowdown.timescale = std::min(_slowdown.timescale, ti);
             }
+            //_slowdown.timescale = abs(mrsum/mvsum);
+
+            //_slowdown.timescale = NUMERIC_FLOAT_MAX;
+            //// single perturber
+            //for (int j=0; j<n_pert_single; j++) {
+            //    Float dr[3] = {xp[j][0] - xcm[0],
+            //                   xp[j][1] - xcm[1],
+            //                   xp[j][2] - xcm[2]};
+            //    Float dv[3] = {vp[j][0] - vcm[0],
+            //                   vp[j][1] - vcm[1],
+            //                   vp[j][2] - vcm[2]};
+            //    Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
+            //    Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
+            //    Float ti = abs(r2/drdv);
+            //    _slowdown.timescale = std::min(_slowdown.timescale, ti);
+            //}
+            //// group perturber
+            //for (int j=n_pert_single; j<n_pert; j++) {
+            //    const int jk = j-n_pert_single;
+            //    auto* ptcl_mem = ptclgroup[jk]->getDataAddress();
+            //    for (int k=0; k<ptclgroup[jk]->getSize(); k++) {
+            //        Float dr[3] = {(xp[j][0]+ptcl_mem[k].pos[0]) - xcm[0],
+            //                       (xp[j][1]+ptcl_mem[k].pos[1]) - xcm[1],
+            //                       (xp[j][2]+ptcl_mem[k].pos[2]) - xcm[2]};
+            //        Float dv[3] = {(vp[j][0]+ptcl_mem[k].vel[0]) - vcm[0],
+            //                       (vp[j][1]+ptcl_mem[k].vel[1]) - vcm[1],
+            //                       (vp[j][2]+ptcl_mem[k].vel[2]) - vcm[2]};
+            //        Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
+            //        Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
+            //        Float ti = abs(r2/drdv);
+            //        _slowdown.timescale = std::min(_slowdown.timescale, ti);
+            //    }
+            //}
+#endif
             /* it is much more cost due to the changeover function
             else {
                 // first calculate c.m. acceleration and tidal perturbation
@@ -270,7 +317,11 @@ public:
             }
             */
             _slowdown.pert_out = pert_cm + _perturber.soft_pert_min;
-            _slowdown.timescale = std::min(_slowdown.getTimescaleMax(), _slowdown.timescale);
+#ifdef SLOWDOWN_TIMESCALE
+            _slowdown.timescale = std::min(_slowdown.getTimescaleMax(), 0.25*_slowdown.timescale);
+#else
+            _slowdown.timescale = _slowdown.getTimescaleMax();
+#endif
         }
         else {
 #ifdef SOFT_PERT

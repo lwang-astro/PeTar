@@ -1131,16 +1131,16 @@ public:
             h4_int.particles.calcCenterOfMass();
             h4_int.particles.shiftToCenterOfMassFrame();
             
-
+            PS::S32 n_group_size_max = _n_group+_n_group/2+3;
             h4_int.groups.setMode(COMM::ListMode::local);
-            h4_int.groups.reserveMem(_n_group+_n_group/2+3);
+            h4_int.groups.reserveMem(n_group_size_max);
             h4_int.reserveIntegratorMem();
 
             // initial system 
             h4_int.initialSystemSingle(0.0);
 
             // Tidal tensor 
-            TidalTensor tidal_tensor[_n_group+1];
+            TidalTensor tidal_tensor[n_group_size_max];
             PS::S32 n_tt = 0;
             
             // add groups
@@ -1195,7 +1195,7 @@ public:
 #ifdef SOFT_PERT                
                 if (n_tt>0) {
                     // check tt
-                    groupi.perturber.findCloseSoftPert(tidal_tensor, _n_group, groupi.particles.cm);
+                    groupi.perturber.findCloseSoftPert(tidal_tensor, n_tt, n_group_size_max, groupi.particles.cm, group_index[i]);
                     // calculate soft_pert_min
                     groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot());
                 }
@@ -1222,9 +1222,10 @@ public:
                 h4_int.integrateOneStepAct();
                 h4_int.adjustGroups(false);
 
-                const PS::S32 n_init = h4_int.getNInitGroup();
+                const PS::S32 n_init_group = h4_int.getNInitGroup();
+                const PS::S32 n_act_group = h4_int.getNActGroup();
                 const PS::S32* group_index = h4_int.getSortDtIndexGroup();
-                for(int i=0; i<n_init; i++) {
+                for(int i=0; i<n_init_group; i++) {
                     auto& groupi = h4_int.groups[group_index[i]];
                     // calculate c.m. changeover
                     auto& pcm = groupi.particles.cm;
@@ -1236,13 +1237,22 @@ public:
 #ifdef SOFT_PERT                
                     if (n_tt>0) {
                         // check tt
-                        groupi.perturber.findCloseSoftPert(tidal_tensor, _n_group, groupi.particles.cm);
+                        groupi.perturber.findCloseSoftPert(tidal_tensor, n_tt, n_group_size_max, groupi.particles.cm, group_index[i]);
                         // calculate soft_pert_min
                         groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot());
                     }
 #endif
                 }
-
+                ASSERT(n_init_group<=n_act_group);
+#ifdef SOFT_PERT
+                // update c.m. for Tidal tensor
+                if (n_tt>0) {
+                    for(int i=n_init_group; i<n_act_group; i++) {
+                        auto& groupi = h4_int.groups[group_index[i]];
+                        groupi.perturber.soft_pert->shiftCM(groupi.particles.cm.pos);
+                    }
+                }
+#endif
                 // initial after groups are modified
                 h4_int.initialIntegration();
                 h4_int.sortDtAndSelectActParticle();
