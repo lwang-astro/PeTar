@@ -1223,6 +1223,9 @@ public:
                 h4_int.adjustGroups(false);
 
                 const PS::S32 n_init_group = h4_int.getNInitGroup();
+#ifdef HARD_DEBUG_PRINT
+                const PS::S32 n_init_single = h4_int.getNInitSingle();
+#endif
                 const PS::S32 n_act_group = h4_int.getNActGroup();
                 const PS::S32* group_index = h4_int.getSortDtIndexGroup();
                 for(int i=0; i<n_init_group; i++) {
@@ -1278,6 +1281,12 @@ public:
                 }
                 if (fmod(h4_int.info.time, h4_manager->step.getDtMax())==0.0) {
                     h4_int.printStepHist();
+                }
+                if (n_init_group>0||n_init_single>0) {
+                    h4_int.info.printColumnTitle(std::cerr, WRITE_WIDTH);
+                    std::cerr<<std::endl;
+                    h4_int.info.printColumn(std::cerr, WRITE_WIDTH);
+                    std::cerr<<std::endl;
                 }
 #endif
             }
