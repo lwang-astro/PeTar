@@ -4,6 +4,7 @@
 #endif
 
 #include"cstdlib"
+#include <algorithm>
 
 #include"AR/symplectic_integrator.h"
 #include"Hermite/hermite_integrator.h"
@@ -118,6 +119,7 @@ private:
     PS::ReallocatableArray<PS::S32> n_group_in_cluster_;
     PS::ReallocatableArray<PS::S32> n_group_in_cluster_offset_;
     PS::ReallocatableArray<PS::S32> adr_first_ptcl_arti_in_cluster_;
+    PS::ReallocatableArray<PS::S32> i_cluster_changeover_update_;
     PS::S32 n_group_member_remote_; // number of members in groups but in remote nodes
 
     struct OPLessIDCluster{
@@ -217,9 +219,12 @@ private:
         PS::S32 rank = PS::Comm::getRank();
         // Get the address offset for new artifical ptcl array in each thread in _sys
         PS::S64 sys_ptcl_artifical_thread_offset[num_thread+1];
+        PS::ReallocatableArray<PS::S32> i_cluster_changeover_update_threads[num_thread];
         sys_ptcl_artifical_thread_offset[0] = _sys.getNumberOfParticleLocal();
-        for(PS::S32 i=0; i<num_thread; i++) 
+        for(PS::S32 i=0; i<num_thread; i++) {
             sys_ptcl_artifical_thread_offset[i+1] = sys_ptcl_artifical_thread_offset[i] + ptcl_artifical[i].size();
+            i_cluster_changeover_update_threads[i].resizeNoInitialize(0);
+        }
         _sys.setNumberOfParticleLocal(sys_ptcl_artifical_thread_offset[num_thread]);
         
 #pragma omp parallel for        
@@ -243,14 +248,17 @@ private:
                 PS::S32 n_members = gpar.n_members;
                 PS::S32 i_cluster = gpar.i_cluster;
                 PS::S32 j_group = gpar.i_group;
-                PS::F64 rsearch_member=ptcl_artifical[i][j].r_search;
-                auto& changeover_member= ptcl_artifical[i][j].changeover;
+                PS::F64 rsearch_cm=ptcl_artifical[i][j_cm].r_search;
+                auto& changeover_cm= ptcl_artifical[i][j_cm].changeover;
 #ifdef HARD_DEBUG
-                assert(rsearch_member>changeover_member.getRout());
+                assert(rsearch_cm>changeover_cm.getRout());
 #endif                
                 // make sure group index increase one by one
                 assert(j_group==j_group_recored+1);
                 j_group_recored=j_group;
+
+                // changeover update flag
+                bool changeover_update_flag=false;
                 // update member status
                 for (PS::S32 k=0; k<n_members; k++) {
                     PS::S32 kl = _n_ptcl_in_cluster_disp[i_cluster]+group_offset+k;
@@ -262,8 +270,11 @@ private:
 #endif
                         // save c.m. address and shift mass to mass_bk, set rsearch
                         _sys[ptcl_k].status = -ptcl_artifical[i][j_cm].adr_org; //save negative address
-                        _sys[ptcl_k].r_search = rsearch_member;
-                        _sys[ptcl_k].changeover = changeover_member;
+                        //_sys[ptcl_k].r_search = rsearch_member;
+                        if (_sys[ptcl_k].changeover.getRin() != changeover_cm.getRin() ) {
+                            _sys[ptcl_k].changeover.r_scale_next = changeover_cm.getRin() / _sys[ptcl_k].changeover.getRin();
+                            _sys[ptcl_k].r_search = std::max(_sys[ptcl_k].r_search, rsearch_cm);
+                        }
                         _sys[ptcl_k].mass_bk = _sys[ptcl_k].mass;
 //#ifdef SPLIT_MASS
                         _sys[ptcl_k].mass = 0;
@@ -281,8 +292,13 @@ private:
                     if(k==0) assert(_ptcl_local[kl].id==-ptcl_artifical[i][j_cm].id);
 #endif
                     _ptcl_local[kl].status = -ptcl_artifical[i][j_cm].adr_org;
-                    _ptcl_local[kl].r_search = rsearch_member;
-                    _ptcl_local[kl].changeover = changeover_member;
+                    //_ptcl_local[kl].r_search = rsearch_member;
+                    //_ptcl_local[kl].changeover = changeover_member;
+                    if (_ptcl_local[kl].changeover.getRin()!=changeover_cm.getRin()) {
+                        _ptcl_local[kl].changeover.r_scale_next = changeover_cm.getRin()/_ptcl_local[kl].changeover.getRin();
+                        _ptcl_local[kl].r_search = std::max(_ptcl_local[kl].r_search, rsearch_cm);
+                        changeover_update_flag = true;
+                    }
                     _ptcl_local[kl].mass_bk = _ptcl_local[kl].mass;
 //#ifdef SPLIT_MASS
                     _ptcl_local[kl].mass = 0;
@@ -291,6 +307,9 @@ private:
                     assert(_ptcl_local[kl].mass_bk>0.0);
 #endif
                 }
+                // record i_cluster if changeover change
+                if (changeover_update_flag) i_cluster_changeover_update_threads[i].push_back(i_cluster);
+
                 // shift cluster
                 if(j_group==_n_group_in_cluster[i_cluster]-1) {
                     group_offset=0;
@@ -303,6 +322,30 @@ private:
                 // save first address of artifical particle
                 _adr_first_ptcl_arti_in_cluster[_n_group_in_cluster_offset[i_cluster]+j_group] = ptcl_artifical[i][j].adr_org;
             }
+        }
+        
+        // merge i_cluster_changeover
+        i_cluster_changeover_update_.resizeNoInitialize(0);
+        for(PS::S32 i=0; i<num_thread; i++) {
+            for (PS::S32 j=0; j<i_cluster_changeover_update_threads[i].size();j++)
+                i_cluster_changeover_update_.push_back(i_cluster_changeover_update_threads[i][j]);
+        }
+        // sort data
+        PS::S32 i_cluster_size = i_cluster_changeover_update_.size();
+        if (i_cluster_size>0) {
+            PS::S32* i_cluster_data = i_cluster_changeover_update_.getPointer();
+            std::sort(i_cluster_data, i_cluster_data+i_cluster_size, [] (const PS::S32 &a, const PS::S32 &b) { return a<b; });
+            // remove dup
+            PS::S32* i_end = std::unique(i_cluster_data, i_cluster_data+i_cluster_size);
+#ifdef HARD_DEBUG
+            assert(i_end-i_cluster_data>=0&&i_end-i_cluster_data<=i_cluster_size);
+            std::cerr<<"Changeover change cluster found: ";
+            for (auto k=i_cluster_data; k<i_end; k++) {
+                std::cerr<<*k<<" ";
+            }
+            std::cerr<<std::endl;
+#endif
+            i_cluster_changeover_update_.resizeNoInitialize(i_end-i_cluster_data);
         }
     }
 
@@ -402,6 +445,67 @@ private:
         _pi.acc -= (movr3*k - movr3_max)*dr;
     }
 
+    //! correct force and potential for changeover function change
+    /*!
+      @param[in,out] _pi: particle for correction
+      @param[in] _pj: j particle to calculate correction
+     */
+    template <class Tpi>
+    inline void calcAccChangeOverCorrection(Tpi& _pi,
+                                            const Ptcl& _pj) {
+        const PS::F64vec dr = _pi.pos - _pj.pos;
+        const PS::F64 dr2 = dr * dr;
+        const PS::F64 dr2_eps = dr2 + manager->eps_sq;
+        const PS::F64 drinv = 1.0/sqrt(dr2_eps);
+        const PS::F64 movr = _pj.mass * drinv;
+        const PS::F64 drinv2 = drinv * drinv;
+        const PS::F64 movr3 = movr * drinv2;
+        const PS::F64 dr_eps = drinv * dr2_eps;
+
+        // old
+        const PS::F64 kold = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, dr_eps);
+
+        // new
+        ChangeOver chinew, chjnew;
+        chinew.setR(_pi.changeover.getRin()*_pi.changeover.r_scale_next, _pi.changeover.getRout()*_pi.changeover.r_scale_next);
+        chjnew.setR(_pj.changeover.getRin()*_pj.changeover.r_scale_next, _pj.changeover.getRout()*_pj.changeover.r_scale_next);
+        const PS::F64 knew = 1.0 - ChangeOver::calcAcc0WTwo(chinew, chjnew, dr_eps);
+
+        // correct to changeover soft acceleration
+        _pi.acc -= movr3*(knew-kold)*dr;
+    }
+
+    //! correct force and potential for changeover function change
+    /*!
+      @param[in,out] _pi: particle for correction
+      @param[in] _pj: j particle to calculate correction
+     */
+    template <class Tpi>
+    inline void calcAccChangeOverCorrection(Tpi& _pi,
+                                            const EPJSoft& _pj) {
+        const PS::F64vec dr = _pi.pos - _pj.pos;
+        const PS::F64 dr2 = dr * dr;
+        const PS::F64 dr2_eps = dr2 + manager->eps_sq;
+        const PS::F64 drinv = 1.0/sqrt(dr2_eps);
+        const PS::F64 movr = _pj.mass * drinv;
+        const PS::F64 drinv2 = drinv * drinv;
+        const PS::F64 movr3 = movr * drinv2;
+        const PS::F64 dr_eps = drinv * dr2_eps;
+
+        ChangeOver chjold;
+        chjold.setR(_pj.r_in, _pj.r_out);
+        // old
+        const PS::F64 kold = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, chjold, dr_eps);
+
+        // new
+        ChangeOver chinew, chjnew;
+        chinew.setR(_pi.changeover.getRin()*_pi.changeover.r_scale_next, _pi.changeover.getRout()*_pi.changeover.r_scale_next);
+        chjnew.setR(_pj.r_in*_pj.r_scale_next, _pj.r_out*_pj.r_scale_next);
+        const PS::F64 knew = 1.0 - ChangeOver::calcAcc0WTwo(chinew, chjnew, dr_eps);
+
+        // correct to changeover soft acceleration
+        _pi.acc -= movr3*(knew-kold)*dr;
+    }
 
 #ifdef KDKDK_4TH
     template <class Tpi>
@@ -416,7 +520,7 @@ private:
         const PS::F64 dr2_eps = dr2 + manager->eps_sq;
         const PS::F64 drda = dr*da;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
-         const PS::F64 movr = _pj.mass * drinv;
+        const PS::F64 movr = _pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
         const PS::F64 movr3 = movr * drinv2;
         const PS::F64 dr_eps = drinv * dr2_eps;
@@ -1520,6 +1624,10 @@ public:
         return adr_first_ptcl_arti_in_cluster_.getPointer(i);
     }
 
+    PS::S32 getNClusterChangeOverUpdate() const {
+        return i_cluster_changeover_update_.size();
+    }
+
     void setTimeOrigin(const PS::F64 _time_origin){
         time_origin_ = _time_origin;
     }
@@ -1982,11 +2090,99 @@ public:
        Tidal tensor particle subtract the c.m. acc
        @param[in] _sys: global particle system, acc is updated
        @param[in] _acorr_flag: flag to do acorr for KDKDK_4TH case
-*/
+    */
     template <class Tsys>
     void correctForceWithCutoffClusterOMP(Tsys& _sys, const bool _acorr_flag=false) { 
         correctForceWithCutoffClusterImp(_sys, ptcl_hard_.getPointer(), n_ptcl_in_cluster_, n_ptcl_in_cluster_disp_, n_group_in_cluster_, n_group_in_cluster_offset_, adr_first_ptcl_arti_in_cluster_, _acorr_flag);
     }
+
+
+    template <class Tsys, class Ttree, class Tepj>
+    void correctForceForChangeOverUpdateOMP(Tsys& _sys, Ttree& _tree, 
+                                            const PS::ReallocatableArray<PS::S32>& _adr_send) {
+        const PS::S32 n_cluster = i_cluster_changeover_update_.size();
+#pragma omp parallel for schedule(dynamic)
+        for (int i=0; i<n_cluster; i++) {  // i: i_cluster
+            PS::S32 i_cluster = i_cluster_changeover_update_[i];
+            PS::S32 adr_real_start= n_ptcl_in_cluster_disp_[i_cluster];
+            PS::S32 adr_real_end= n_ptcl_in_cluster_disp_[i_cluster+1];
+            // artifical particle group number
+            PS::S32 n_group = n_group_in_cluster_[i_cluster];
+            const PS::S32* adr_first_ptcl_arti = n_group>0? &adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i_cluster]] : NULL;
+            
+            // correction for artifical particles
+            GroupPars gpars(manager->n_split);
+            for (int j=0; j<n_group; j++) {  // j: j_group
+                PS::S32 j_start = adr_first_ptcl_arti[j];
+                PS::S32 j_cm = j_start + gpars.offset_cm;
+                
+                // loop orbital particles;
+                for (int k=j_start + gpars.offset_orb; k<=j_cm; k++) {  
+                    // k: k_ptcl_arti
+
+                    // loop orbital artifical particle
+                    // group
+                    for (int kj=0; kj<n_group; kj++) { // group
+                        PS::S32 kj_start_orb = adr_first_ptcl_arti[kj] + gpars.offset_orb;
+                        PS::S32 kj_cm = adr_first_ptcl_arti[kj] + gpars.offset_cm;
+
+                        // particle arti orbital
+                        if (_sys[kj_start_orb].changeover.r_scale_next!=1.0) {
+                            
+                            for (int kk=kj_start_orb; kk<kj_cm; kk++) {
+                                if(kk==k) continue; //avoid same particle
+                         
+                                calcAccChangeOverCorrection(_sys[k], _sys[kk]);
+                            }
+                        }
+                    }
+
+                    //loop real particle
+                    for (int kj=adr_real_start; kj<adr_real_end; kj++) {
+                        if (ptcl_hard_[kj].changeover.r_scale_next!=1) {
+                            calcAccChangeOverCorrection(_sys[k], ptcl_hard_[kj]);
+                        }
+                    }
+                }
+            }
+
+            // correction for real particles
+            for (int j=adr_real_start; j<adr_real_end; j++) {
+                PS::S64 adr = ptcl_hard_[j].adr_org;
+                if(adr>=0) {
+                    Tepj * ptcl_nb = NULL;
+                    PS::S32 n_ngb = _tree.getNeighborListOneParticle(_sys[adr], ptcl_nb);
+                    for(PS::S32 k=0; k<n_ngb; k++){
+                        if (ptcl_nb[k].id == _sys[adr].id) continue;
+
+                        if (ptcl_nb[k].r_scale_next!=1.0) 
+                            calcAccChangeOverCorrection(_sys[adr], ptcl_nb[k]);
+                    }
+                }
+                // update changeover
+                ptcl_hard_[j].changeover.updateWithRScale();
+                if(adr>=0) _sys[adr].changeover.updateWithRScale();
+            }
+            
+        }
+        const PS::S32 n_send = _adr_send.size();
+#pragma omp parallel for 
+        // sending list to other nodes need also be corrected.
+        for (int i=0; i<n_send; i++) {
+            PS::S64 adr = _adr_send[i];
+            Tepj * ptcl_nb = NULL;
+            PS::S32 n_ngb = _tree.getNeighborListOneParticle(_sys[adr], ptcl_nb);
+            for(PS::S32 k=0; k<n_ngb; k++){
+                if (ptcl_nb[k].id == _sys[adr].id) continue;
+                
+                if (ptcl_nb[k].r_scale_next!=1.0) 
+                    calcAccChangeOverCorrection(_sys[adr], ptcl_nb[k]);
+            }
+            _sys[adr].changeover.updateWithRScale();
+        }
+        
+    }
+
 
     //! Soft force correction due to different cut-off function
     /* Use tree neighbor search for all particles.

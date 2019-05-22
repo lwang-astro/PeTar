@@ -16,8 +16,9 @@ private:
 #endif
   
 public:
+    Float r_scale_next;   ///> scaling for changeover factor (for next step)
 
-    ChangeOver(): r_in_(-1.0), r_out_(-1.0), norm_(0.0), coff_(0.0), pot_off_(0.0) {}
+    ChangeOver(): r_in_(-1.0), r_out_(-1.0), norm_(0.0), coff_(0.0), pot_off_(0.0), r_scale_next(1.0) {}
 
     //! check whether parameters values are correct
     /*! \return true: all correct
@@ -74,7 +75,12 @@ public:
         assert(_r_out>_r_in);
 #endif
     }
-
+    //! update radius based on r_scale_next, reset r_scale_next to 1
+    void updateWithRScale() {
+        setR(r_in_*r_scale_next, r_out_*r_scale_next);
+        r_scale_next = 1.0;
+    }
+     
     //! get r_in
     /*! \return r_in
      */
@@ -164,6 +170,7 @@ public:
         norm_   = _par.norm_   ;
         coff_   = _par.coff_   ;
         pot_off_= _par.pot_off_;
+        r_scale_next= _par.r_scale_next;
 #ifdef INTEGRATED_CUTOFF_FUNCTION
         q_      = _par.q_;
 #endif        

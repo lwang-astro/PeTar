@@ -174,6 +174,7 @@ public:
     PS::F64 r_in;
     PS::F64 r_out;
     PS::F64 r_search;
+    PS::F64 r_scale_next;
     PS::F64 mass_bk;
     PS::S64 status;
     PS::S32 rank_org;
@@ -191,6 +192,7 @@ public:
 #endif
         r_in = fp.changeover.getRin();
         r_out = fp.changeover.getRout();
+        r_scale_next = fp.changeover.r_scale_next;
         r_search = fp.r_search;
         mass_bk  = fp.mass_bk;
         status   = fp.status;
@@ -219,6 +221,7 @@ public:
         pos = vel = 0.0;
         r_in = r_out = 0.0;
         r_search = 0.0;
+        r_scale_next = 1.0;
         id = rank_org = adr_org = -1;
     }
 };

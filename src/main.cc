@@ -693,6 +693,7 @@ int main(int argc, char *argv[]){
     bool first_step_flag = true; // for check first step 
     bool output_flag = false;    // for output snapshot and information
     bool dt_mod_flag = false;    // for check whether tree time step need update
+    bool changeover_flag = false; // for check whether changeover need update
     PS::S64 n_loop = 0;
     KickDriftStep dt_manager(dt_soft.value/dt_reduce_factor);
     PS::F64 dt_kick  = dt_manager.getDtStartContinue();
@@ -975,6 +976,15 @@ int main(int argc, char *argv[]){
         // for first step
         if(first_step_flag) {
             first_step_flag = false;
+
+            // correct changeover for first step
+            // Isolated clusters
+            system_hard_isolated.correctForceForChangeOverUpdateOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft, search_cluster.getAdrSysConnectClusterSend());
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+            // Connected clusters
+            system_hard_connected.correctForceForChangeOverUpdateOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft, search_cluster.getAdrSysConnectClusterSend());
+#endif
         
             // update status
             stat.time = time_sys;
@@ -999,11 +1009,13 @@ int main(int argc, char *argv[]){
             }
             output_flag = false;
             dt_mod_flag = false;
+            changeover_flag = false;
             dt_kick = dt_manager.getDtStartContinue();
         }
         else {
             output_flag = false;
             dt_mod_flag = false;
+            changeover_flag = false;
             dt_kick = dt_manager.getDtKickContinue();
 
             // check whether tree time step need update only when one full step finish
@@ -1034,6 +1046,22 @@ int main(int argc, char *argv[]){
                     output_flag = true;
                     dt_kick = dt_manager.getDtEndContinue();
                 }
+
+                // check changeover change
+                if (system_hard_isolated.getNClusterChangeOverUpdate()>0) {
+                    changeover_flag = true;
+                    dt_kick = dt_manager.getDtEndContinue();
+                }
+
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+                // check changeover change
+                if (system_hard_connected.getNClusterChangeOverUpdate()>0) {
+                    changeover_flag = true;
+                    dt_kick = dt_manager.getDtEndContinue();
+                }
+#endif
+
             }
         }
 
@@ -1193,13 +1221,21 @@ int main(int argc, char *argv[]){
         }
 
         // second kick if dt_tree is changed or output is done
-        if(dt_mod_flag||output_flag) {
+        if(dt_mod_flag||output_flag||changeover_flag) {
 #ifdef PROFILE
             profile.kick.start();
 #endif
 
             //update new tree step if reduce factor is changed
             dt_kick = dt_manager.getDtStartContinue();
+
+            // Isolated clusters
+            system_hard_isolated.correctForceForChangeOverUpdateOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft, search_cluster.getAdrSysConnectClusterSend());
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+            // Connected clusters
+            system_hard_connected.correctForceForChangeOverUpdateOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft, search_cluster.getAdrSysConnectClusterSend());
+#endif
 
             // single
             kickOne(system_soft, dt_kick, search_cluster.getAdrSysOneCluster());

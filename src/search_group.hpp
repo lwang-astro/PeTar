@@ -353,14 +353,6 @@ private:
                 assert(_bin.member[j]->mass>0);
 #endif
                 p[j]->id = _id_offset + (_bin.member[j]->id)*_n_split + i;
-                // use c.m. r_search 
-                //p[j]->r_search = _bin.member[j]->r_search;
-                p[j]->r_search = _bin.r_search;
-                // use cm changeover functions
-                p[j]->changeover = _bin.changeover;
-#ifdef HARD_DEBUG
-                assert(p[j]->r_search>_bin.changeover.getRout());
-#endif 
                 if(i==0) p[j]->status = _bin.member[j]->status; // store the component member number 
                 else if(i==1) p[j]->status = i_cg[j]+1; // store the i_cluster and i_group for identify artifical particles, +1 to avoid 0 value (status>0)
                 else p[j]->status = (_bin.id<<ID_PHASE_SHIFT)|i; // not used, but make status>0
@@ -371,6 +363,19 @@ private:
             if (i>=4) {
                 PS::S32 iph = i-4;
 
+                for (int j=0; j<2; j++) {
+                    // use member changeover, if new changeover is different, record the scale ratio 
+                    p[j]->changeover = _bin.member[j]->changeover;
+                    if (p[j]->changeover.getRin()!=_bin.changeover.getRin()) {
+                        p[j]->changeover.r_scale_next = _bin.changeover.getRin()/p[j]->changeover.getRin();
+                        p[j]->r_search = std::max(p[j]->r_search, _bin.r_search);
+#ifdef HARD_DEBUG
+                        assert(p[j]->r_search > p[j]->changeover.getRout());
+#endif 
+                    }
+                    else p[j]->r_search = _bin.r_search;
+                }
+
                 // center_of_mass_shift(*(Tptcl*)&_bin,p,2);
                 // generate particles at different orbitial phase
                 OrbParam2PosVel(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass,
@@ -378,6 +383,12 @@ private:
                 //DriveKeplerOrbParam(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass, (i+1)*dt, _bin.semi, _bin.ecc, _bin.inc, _bin.OMG, _bin.omg, _bin.peri, _bin.ecca);
             }
             else {
+                // use c.m. r_search 
+                for (int j=0; j<2; j++) {
+                    p[j]->r_search = _bin.member[j]->r_search;
+                    p[j]->changeover = _bin.changeover;
+                }
+
                 ///* Assume apo-center distance is the maximum length inside box
                 //   Then the lscale=apo/(2*sqrt(2))
                 // */
