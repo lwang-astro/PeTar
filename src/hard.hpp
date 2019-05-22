@@ -1209,7 +1209,7 @@ public:
             sym_int.particles.template writeBackMemberAll<PtclH4>();
 
             for (PS::S32 i=0; i<gpars[0].n_members; i++) {
-                _ptcl_local[i].r_search = pcm.r_search;
+                _ptcl_local[i].r_search = std::max(pcm.r_search, _ptcl_local[i].r_search);
 #ifdef HARD_DEBUG
                 ASSERT(_ptcl_local[i].r_search>_ptcl_local[i].changeover.getRout());
 #endif
@@ -1421,7 +1421,7 @@ public:
                 pcm.Ptcl::calcRSearch(_dt);
                 const PS::S32 n_member = h4_int.groups[k].particles.getSize();
                 for (PS::S32 j=0; j<n_member; j++) {
-                    h4_int.groups[k].particles.getMemberOriginAddress(j)->r_search = pcm.r_search;
+                    h4_int.groups[k].particles.getMemberOriginAddress(j)->r_search = std::max(h4_int.groups[k].particles.getMemberOriginAddress(j)->r_search, pcm.r_search);
 #ifdef HARD_DEBUG
                     ASSERT(h4_int.groups[k].particles.getMemberOriginAddress(j)->r_search>h4_int.groups[k].particles.getMemberOriginAddress(j)->changeover.getRout());
 #endif
@@ -2119,6 +2119,7 @@ public:
                 // loop orbital particles;
                 for (int k=j_start + gpars.offset_orb; k<=j_cm; k++) {  
                     // k: k_ptcl_arti
+                    bool changek = _sys[k].changeover.r_scale_next!=1.0;
 
                     // loop orbital artifical particle
                     // group
@@ -2127,7 +2128,7 @@ public:
                         PS::S32 kj_cm = adr_first_ptcl_arti[kj] + gpars.offset_cm;
 
                         // particle arti orbital
-                        if (_sys[kj_start_orb].changeover.r_scale_next!=1.0) {
+                        if (_sys[kj_start_orb].changeover.r_scale_next!=1.0 || changek) {
                             
                             for (int kk=kj_start_orb; kk<kj_cm; kk++) {
                                 if(kk==k) continue; //avoid same particle
@@ -2139,7 +2140,7 @@ public:
 
                     //loop real particle
                     for (int kj=adr_real_start; kj<adr_real_end; kj++) {
-                        if (ptcl_hard_[kj].changeover.r_scale_next!=1) {
+                        if (ptcl_hard_[kj].changeover.r_scale_next!=1.0 || changek) {
                             calcAccChangeOverCorrection(_sys[k], ptcl_hard_[kj]);
                         }
                     }
@@ -2150,12 +2151,13 @@ public:
             for (int j=adr_real_start; j<adr_real_end; j++) {
                 PS::S64 adr = ptcl_hard_[j].adr_org;
                 if(adr>=0) {
+                    bool change_i = _sys[adr].changeover.r_scale_next!=1.0;
                     Tepj * ptcl_nb = NULL;
                     PS::S32 n_ngb = _tree.getNeighborListOneParticle(_sys[adr], ptcl_nb);
                     for(PS::S32 k=0; k<n_ngb; k++){
                         if (ptcl_nb[k].id == _sys[adr].id) continue;
 
-                        if (ptcl_nb[k].r_scale_next!=1.0) 
+                        if (ptcl_nb[k].r_scale_next!=1.0 || change_i) 
                             calcAccChangeOverCorrection(_sys[adr], ptcl_nb[k]);
                     }
                 }
@@ -2170,12 +2172,13 @@ public:
         // sending list to other nodes need also be corrected.
         for (int i=0; i<n_send; i++) {
             PS::S64 adr = _adr_send[i];
+            bool change_i = _sys[adr].changeover.r_scale_next!=1.0;
             Tepj * ptcl_nb = NULL;
             PS::S32 n_ngb = _tree.getNeighborListOneParticle(_sys[adr], ptcl_nb);
             for(PS::S32 k=0; k<n_ngb; k++){
                 if (ptcl_nb[k].id == _sys[adr].id) continue;
                 
-                if (ptcl_nb[k].r_scale_next!=1.0) 
+                if (ptcl_nb[k].r_scale_next!=1.0 || change_i) 
                     calcAccChangeOverCorrection(_sys[adr], ptcl_nb[k]);
             }
             _sys[adr].changeover.updateWithRScale();
