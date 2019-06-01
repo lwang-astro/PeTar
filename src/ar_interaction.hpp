@@ -318,7 +318,7 @@ public:
             */
             _slowdown.pert_out = pert_cm + _perturber.soft_pert_min;
 #ifdef SLOWDOWN_TIMESCALE
-            _slowdown.timescale = 0.02*std::min(_slowdown.getTimescaleMax(), _slowdown.timescale);
+            _slowdown.timescale = 0.1*std::min(_slowdown.getTimescaleMax(), _slowdown.timescale);
 #else
             _slowdown.timescale = 0.02*_slowdown.getTimescaleMax();
 #endif

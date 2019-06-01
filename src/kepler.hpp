@@ -696,7 +696,7 @@ PS::F64 stab3body(const PS::F64 _m1,
 
     PS::F64 g = std::sqrt(std::max(_m1,_m2) /(_m1 + _m2))*(1.0 + _mout/(_m1 + _m2));
     
-    PS::F64 q = 1.52*std::pow(std::sqrt(std::min(_dt,10000.0)/_period_out)/(1.0 - _ecc_out),1.0/6.0)*std::pow(fac*g,1.0/3.0);
+    PS::F64 q = 1.52*std::pow(std::sqrt(std::min(_dt/_period_out,10000.0))/(1.0 - _ecc_out),1.0/6.0)*std::pow(fac*g,1.0/3.0);
 
     PS::F64 rp = _pec_out/_semi_in;
     
