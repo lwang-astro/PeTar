@@ -334,13 +334,227 @@ public:
     }
 
 
+    //! identify whether the neighbor satisfy velocity criterion
+    /*! 
+      @param[out] _index: neighbor index pass check
+      @param[in] _pi: particle i
+      @param[in] _pb: neighbor particles (including self)
+      @param[in] _nb: number of neighbors
+      @param[in] _G:  gravitational constant
+      @param[in] _radius_factor: radius_factor to check neighbors (peri*radius_factor)
+      \return new neighbor number
+     */
+    template<class Tpsoft, class Tepj>
+    PS::S32 checkNeighborWithVelocity(PS::S32* _index, Tpsoft& _pi, Tepj *_pb, const PS::S32 _nb, const PS::F64 _G, const PS::F64 _radius_factor) {
+        std::pair<PS::S32, PS::S32> sort_status_index[_nb];
+        for (PS::S32 i=0; i<_nb; i++) {
+            sort_status_index[i].first  = i;
+            sort_status_index[i].second = _pb[i].status;
+        }
+        
+        std::sort(sort_status_index, sort_status_index+_nb, [] (const std::pair<PS::S32, PS::S32> &a, const std::pair<PS::S32, PS::S32> &b) { return a.second < b.second;});
+        
+        PS::S32 n_nb_new = 0;
+        PS::F64 r_crit_i = _pi.changeover.getRout();
+
+        // only single case
+        if (sort_status_index[0].second==0) {
+            for (PS::S32 j=0; j<_nb; j++) {
+#ifdef CLUSTER_DEBUG
+                assert(_pb[j].status==0);
+#endif                
+                if( _pi.id == _pb[j].id ) continue;
+                
+                // check neighbor peri-center
+                PS::F64 semi,ecc;
+                COMM::Binary::particleToSemiEcc(semi, ecc, _pi, _pb[j], _G);
+                PS::F64 peri = semi*(1-ecc);
+                PS::F64 r_crit_j = _pb[j].r_out;
+                if (peri < _radius_factor*std::max(r_crit_i, r_crit_j)) {
+                    _index[n_nb_new++] = j;
+                }
+#ifdef CLUSTER_DEBUG_PRINT
+                else {
+                    std::cerr<<"Reject idi "<<_pi.id<<" idj "<<_pb[j].id<<" peri "<<peri<<" rci "<<r_crit_i<<" rcj "<<r_crit_j<<std::endl;
+                }
+#endif
+            }
+        }
+        // neighbors contain groups
+        else {
+            // get c.m. particles
+            ParticleBase pcm[_nb];
+            PS::F64 r_crit_j[_nb];
+            PS::S32 group_index_offset[_nb], group_status[_nb], i_index=-1;
+            group_status[0] = sort_status_index[0].second;
+            group_index_offset[0] = 0;
+            pcm[0].pos  = pcm[0].vel = 0.0;
+            pcm[0].mass = 0.0;
+
+            PS::S32 status_i = _pi.status;
+
+            PS::S32 n_group=0, single_index_start=0;
+            for (PS::S32 j=0; j<_nb; j++) {
+                PS::S32 index = sort_status_index[j].first;
+                PS::S32 status= sort_status_index[j].second;
+                // single case
+                if (status<0) {
+                    // if in the same group, add as neighbor and set i_index
+                    if (status_i==status) {
+                        if (_pb[index].id != _pi.id)
+                            _index[n_nb_new++] = index;
+#ifdef CLUSTER_DEBUG
+                        else 
+                            assert(_pb[index].status == _pi.status);
+#endif
+                        i_index = n_group;
+                    }
+
+                    // next group, obtain c.m. and initialize next c.m. particle
+                    if (status!=group_status[n_group]) {
+                        pcm[n_group].pos /= pcm[n_group].mass;
+                        pcm[n_group].vel /= pcm[n_group].mass;
+                        n_group++;
+                        group_index_offset[n_group] = single_index_start;
+                        group_status[n_group] = status;
+                        pcm[n_group].pos = pcm[n_group].vel = 0.0;
+                        pcm[n_group].mass= 0.0;
+                        r_crit_j[n_group] = -1.0;
+                    }
+                    // cumulative members
+                    pcm[n_group].pos += _pb[index].pos * _pb[index].mass;
+                    pcm[n_group].vel += _pb[index].vel * _pb[index].mass;
+                    pcm[n_group].mass+= _pb[index].mass;
+                    r_crit_j[n_group] = std::max(r_crit_j[n_group], _pb[index].r_out);
+                }
+                else {
+#ifdef CLUSTER_DEBUG
+                    assert(status==0);
+#endif
+                    pcm[n_group].pos /= pcm[n_group].mass;
+                    pcm[n_group].vel /= pcm[n_group].mass;
+                    n_group++;
+                    group_index_offset[n_group] = single_index_start;
+                    break;
+                }
+                single_index_start++;
+            }
+            // check only singles case (to finish the last group)
+            if(single_index_start==_nb) {
+#ifdef CLUSTER_DEBUG
+                assert(sort_status_index[_nb-1].second<0);
+#endif
+                pcm[n_group].pos /= pcm[n_group].mass;
+                pcm[n_group].vel /= pcm[n_group].mass;
+                n_group++;
+                group_index_offset[n_group] = _nb;
+            }
+            
+            // i is group member
+            if (status_i<0) {
+#ifdef CLUSTER_DEBUG
+                assert(i_index>=0&&i_index<n_group);
+#endif
+                for (PS::S32 j=0; j<n_group; j++) {
+                    if (i_index==j) continue;
+                    PS::F64 semi,ecc;
+                    COMM::Binary::particleToSemiEcc(semi, ecc, pcm[i_index], pcm[j], _G);
+                    PS::F64 peri = semi*(1-ecc);
+#ifdef CLUSTER_DEBUG
+                    assert(r_crit_j[i_index]>0.0);
+                    assert(r_crit_j[j]>0.0);
+#endif
+                    if (peri < _radius_factor*std::max(r_crit_j[i_index], r_crit_j[j])) {
+                        for (PS::S32 k=group_index_offset[j]; k<group_index_offset[j+1]; k++) 
+                            _index[n_nb_new++] = sort_status_index[k].first;
+                    }
+#ifdef CLUSTER_DEBUG_PRINT
+                    else {
+                        for (PS::S32 k=group_index_offset[j]; k<group_index_offset[j+1]; k++) 
+                            std::cerr<<"Reject idi(g) "<<_pi.id<<" status "<<status_i
+                                     <<" idj(g) "<<_pb[sort_status_index[k].first].id<<" status "<<_pb[sort_status_index[k].first].status
+                                     <<" peri "<<peri<<" rci "<<r_crit_j[i_index]<<" rcj "<<r_crit_j[j]<<std::endl;
+                    }
+#endif
+                }
+
+                for (PS::S32 j=single_index_start; j<_nb; j++) {
+                    PS::S32 j_index = sort_status_index[j].first;
+#ifdef CLUSTER_DEBUG
+                    assert(_pb[j_index].status==0);
+#endif
+                    PS::F64 semi,ecc;
+                    COMM::Binary::particleToSemiEcc(semi, ecc, pcm[i_index], _pb[j_index], _G);
+                    PS::F64 peri = semi*(1-ecc);
+                    if (peri < _radius_factor*std::max(r_crit_j[i_index], _pb[j_index].r_out)) {
+                        _index[n_nb_new++] = j_index;
+                    }
+#ifdef CLUSTER_DEBUG_PRINT
+                    else {
+                        std::cerr<<"Reject idi(g) "<<_pi.id<<" status "<<status_i
+                                 <<" idj "<<_pb[j_index].id<<" peri "<<peri<<" rci "<<r_crit_j[i_index]<<" rcj "<<_pb[j_index].r_out<<std::endl;
+                    }
+#endif
+                }
+            }
+            // i is single
+            else {
+#ifdef CLUSTER_DEBUG
+                assert(status_i==0);
+#endif
+                for (PS::S32 j=0; j<n_group; j++) {
+                    PS::F64 semi,ecc;
+                    COMM::Binary::particleToSemiEcc(semi, ecc, _pi, pcm[j], _G);
+                    PS::F64 peri = semi*(1-ecc);
+#ifdef CLUSTER_DEBUG
+                    assert(r_crit_i>0.0);
+                    assert(r_crit_j[j]>0.0);
+#endif
+                    if (peri < _radius_factor*std::max(r_crit_i, r_crit_j[j])) {
+                        for (PS::S32 k=group_index_offset[j]; k<group_index_offset[j+1]; k++) 
+                            _index[n_nb_new++] = sort_status_index[k].first;
+                    }
+#ifdef CLUSTER_DEBUG_PRINT
+                    else {
+                        for (PS::S32 k=group_index_offset[j]; k<group_index_offset[j+1]; k++) 
+                            std::cerr<<"Reject idi "<<_pi.id
+                                     <<" idj(g) "<<_pb[sort_status_index[k].first].id<<" status "<<_pb[sort_status_index[k].first].status
+                                     <<" peri "<<peri<<" rci "<<r_crit_i<<" rcj "<<r_crit_j[j]<<std::endl;
+                    }
+#endif
+                }
+
+                for (PS::S32 j=single_index_start; j<_nb; j++) {
+                    PS::S32 j_index = sort_status_index[j].first;
+                    if (_pb[j_index].id==_pi.id) continue;
+                    PS::F64 semi,ecc;
+                    COMM::Binary::particleToSemiEcc(semi, ecc, _pi, _pb[j_index], _G);
+                    PS::F64 peri = semi*(1-ecc);
+                    if (peri < _radius_factor*std::max(r_crit_i, _pb[j_index].r_out)) {
+                        _index[n_nb_new++] = j_index;
+                    }
+#ifdef CLUSTER_DEBUG_PRINT
+                    else {
+                        std::cerr<<"Reject idi "<<_pi.id<<" idj "<<_pb[j].id<<" peri "<<peri<<" rci "<<r_crit_i<<" rcj "<<_pb[j_index].r_out<<std::endl;
+                    }
+#endif
+                }
+            }
+
+        }
+        return n_nb_new;
+    }
+
+    //! search neighbors and separate isolated and multiple clusters
     template<class Tsys, class Ttree, class Tepj>
     void searchNeighborOMP(Tsys & sys,
                            Ttree & tree,
+                           const PS::F64ort pos_domain[],
                            const PS::F64 r_out,  // 1/(r_out-r_in)
                            const PS::F64 r_in,
-                           const PS::F64ort pos_domain[],
-                           const PS::F64 eps_sq=0.0){
+                           const PS::F64 eps_sq,
+                           const PS::F64 _G,
+                           const PS::F64 _radius_factor){
         static PS::ReallocatableArray<PtclOuter> * ptcl_outer = NULL;
         static PS::ReallocatableArray< std::pair<PS::S32, PS::S32> > * id_ngb_multi_cluster = NULL;
         const PS::S32 n_thread = PS::Comm::getNumberOfThread();
@@ -365,6 +579,8 @@ public:
                     // no neighbor
                     adr_sys_one_cluster_[ith].push_back(i);
 #ifdef CLUSTER_DEBUG
+                    assert(sys[i].status==0);
+
                     Tepj * nbl = NULL;
                     PS::S32 n_ngb_tree_i = tree.getNeighborListOneParticle(sys[i], nbl) ;
                     if(n_ngb_tree_i!=sys[i].n_ngb) {
@@ -397,43 +613,55 @@ public:
 
                     // no neighbor
                     if(sys[i].n_ngb == 0){
+#ifdef CLUSTER_DEBUG
+                        assert(sys[i].status==0);
+#endif
                         adr_sys_one_cluster_[ith].push_back(i);
                         continue;
                     }
                     
                     PS::S32 adr_ngb_head_i = id_ngb_multi_cluster[ith].size();
                     PS::S32 n_ngb_i = sys[i].n_ngb;
+                    
+#ifdef CLUSTER_VELOCITY
+                    // Use velocity criterion to select neighbors
+                    PS::S32 neighbor_index[n_ngb_i];
+                    PS::S32 n_ngb_check = checkNeighborWithVelocity(neighbor_index, sys[i], nbl, n_ngb_i+1, _G, _radius_factor);
+#ifdef CLUSTER_DEBUG
+                    assert(n_ngb_check>=0);
+#endif
+                    sys[i].n_ngb = n_ngb_check;
 
-                    //PS::S32 n_tmp2 = 0;
-                    //PS::S32 n_tmp3 = 0;
-                    //PS::S32 n_tmp4 = 0;
-                    for(PS::S32 ii=0; ii<sys[i].n_ngb+1; ii++){
-                        if( (nbl+ii)->id == sys[i].id ){
-                            //n_tmp2++;
-                            continue;
+                    // no neighbor
+                    if (n_ngb_check==0) {
+                        adr_sys_one_cluster_[ith].push_back(i);
+                        continue;
+                    }
+                    else {
+                        for(PS::S32 j=0; j<n_ngb_check; j++) {
+                            PS::S32 index = neighbor_index[j];
+                            auto* nbj = nbl + index;
+
+                            id_ngb_multi_cluster[ith].push_back( std::pair<PS::S32, PS::S32>(sys[i].id, nbj->id) );
+                            if( nbj->rank_org != my_rank ){
+                                ptcl_outer[ith].push_back(PtclOuter(nbj->id, sys[i].id, nbj->rank_org));
+                            }
                         }
-
-//                        // check neighbor bin factor
-//  Double_t dotx=sqrt(dot3(x));
-//  Double_t bE=dot3(v)/msys-2.0/dotx;
-//  semi=-1.0/bE;
-//  eng=m1*m2*bE/2.0;
-// 
-//  //calculate eccentricity============================//
-//  Double_t p1=1-dotx/semi;
-//  Double_t crs=x[0]*v[0]+x[1]*v[1]+x[2]*v[2];
-//  ecc=sqrt(p1*p1+crs*crs/semi/msys);
-//  peri=semi*(1-ecc);
+                        ptcl_cluster_[ith].push_back( PtclCluster(sys[i].id, i, adr_ngb_head_i, n_ngb_check, false, NULL, my_rank) );
+                    }
+#else
+                    // use neighbor lists from tree neighbor search
+                    for (int j=0; j<n_ngb_i+1; j++) {
+                        auto* nbj = nbl + j;
+                        if (sys[i].id==nbj->id) continue;
                         
-
-                        id_ngb_multi_cluster[ith].push_back( std::pair<PS::S32, PS::S32>(sys[i].id, (nbl+ii)->id) );
-                        if( (nbl+ii)->rank_org != my_rank ){
-                            ptcl_outer[ith].push_back(PtclOuter((nbl+ii)->id, sys[i].id, (nbl+ii)->rank_org));
-                            //n_tmp3++;
+                        id_ngb_multi_cluster[ith].push_back( std::pair<PS::S32, PS::S32>(sys[i].id, nbj->id) );
+                        if( nbj->rank_org != my_rank ){
+                            ptcl_outer[ith].push_back(PtclOuter(nbj->id, sys[i].id, nbj->rank_org));
                         }
                     }
-
                     ptcl_cluster_[ith].push_back( PtclCluster(sys[i].id, i, adr_ngb_head_i, n_ngb_i, false, NULL, my_rank) );
+#endif
                 }
             }
         } // end of OMP parallel 
@@ -475,7 +703,8 @@ public:
             adr_ngb_multi_cluster_[i] = std::pair<PS::S32, PS::S32>(adr_self, adr_ngb);
         }
     }
-    
+
+    /*
     // * adr_sys_one_cluster_
     // * ptcl_cluster_ 
     // * adr_ngb_multi_cluster_ 
@@ -570,20 +799,6 @@ public:
         n_pcluster_self_node_ = ptcl_cluster_[0].size();
         std::sort(ptcl_outer[0].getPointer(), ptcl_outer[0].getPointer(ptcl_outer[0].size()), OPLessID());
 
-/*        if(PS::Comm::getRank() == 0 && ptcl_outer[0].size() > 0){
-            PS::S32 n_tmp = 1;
-            PS::S32 n_tmp_tmp = 0;
-            //std::cerr<<"ptcl_outer[0].size()="<<ptcl_outer[0].size()<<std::endl;
-            PS::S32 ref_tmp = ptcl_outer[0][0].id_;
-            for(PS::S32 i=0; i<ptcl_outer[0].size(); i++){
-                if( ref_tmp != ptcl_outer[0][i].id_){
-                    ref_tmp = ptcl_outer[0][i].id_;
-                    n_tmp++;
-                    n_tmp_tmp = 0;
-                }
-                n_tmp_tmp++;
-            }
-            }*/
         mergePtclCluster(ptcl_outer, id_ngb_multi_cluster); // ptcl_cluster_ is complited
         id_to_adr_pcluster_.clear(); // temporally add 
         for(PS::S32 i=0; i<ptcl_cluster_[0].size(); i++){
@@ -601,6 +816,7 @@ public:
         }
     }
 
+    */
 
     template<class Tsys>
     void checkPtclCluster(const Tsys & sys){

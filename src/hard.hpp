@@ -194,7 +194,12 @@ private:
             PtclH4* ptcl_in_cluster = _ptcl_local + _n_ptcl_in_cluster_disp[i];
             const PS::S32 n_ptcl = _n_ptcl_in_cluster[i];
             // reset status
-            for(PS::S32 j=0; j<n_ptcl; j++) ptcl_in_cluster[j].status = 0;
+            for(PS::S32 j=0; j<n_ptcl; j++) {
+                // ensure both hard local and global system have reset status, otherwise singles in global system may have wrong status
+                ptcl_in_cluster[j].status = 0;
+                PS::S64 adr=ptcl_in_cluster[j].adr_org;
+                if(adr>=0) _sys[adr].status = 0;
+            }
             // search groups
             SearchGroup<PtclH4> group;
             // merge groups
@@ -1235,7 +1240,7 @@ public:
             h4_int.particles.calcCenterOfMass();
             h4_int.particles.shiftToCenterOfMassFrame();
             
-            PS::S32 n_group_size_max = _n_group+_n_group/2+3;
+            PS::S32 n_group_size_max = _n_group+_n_group/2+5;
             h4_int.groups.setMode(COMM::ListMode::local);
             h4_int.groups.reserveMem(n_group_size_max);
             h4_int.reserveIntegratorMem();
@@ -1404,7 +1409,7 @@ public:
 
             h4_int.particles.shiftToOriginFrame();
 
-            // update research
+            // update research and status
             auto& h4_pcm = h4_int.particles.cm;
             for(PS::S32 i=0; i<h4_int.getNGroup(); i++) {
                 const PS::S32 k =group_index[i];
@@ -1420,16 +1425,22 @@ public:
                 //pcm.calcRSearch(h4_manager->interaction.G*(h4_pcm.mass-pcm.mass), abs(pcm.pot), h4_pcm.vel, _dt);
                 pcm.Ptcl::calcRSearch(_dt);
                 const PS::S32 n_member = h4_int.groups[k].particles.getSize();
+                const PS::S32 id_first = h4_int.groups[k].particles.getMemberOriginAddress(0)->id;
                 for (PS::S32 j=0; j<n_member; j++) {
-                    h4_int.groups[k].particles.getMemberOriginAddress(j)->r_search = std::max(h4_int.groups[k].particles.getMemberOriginAddress(j)->r_search, pcm.r_search);
+                    auto* pj = h4_int.groups[k].particles.getMemberOriginAddress(j);
+                    pj->r_search = std::max(pj->r_search, pcm.r_search);
+                    // set new c.m. id as status for searchneighbors
+                    pj->status = -id_first;
 #ifdef HARD_DEBUG
-                    ASSERT(h4_int.groups[k].particles.getMemberOriginAddress(j)->r_search>h4_int.groups[k].particles.getMemberOriginAddress(j)->changeover.getRout());
+                    ASSERT(pj->r_search>pj->changeover.getRout());
 #endif
                 }
             }
             const PS::S32* single_index = h4_int.getSortDtIndexSingle();
             for (PS::S32 i=0; i<h4_int.getNSingle(); i++) {
                 auto& pi = h4_int.particles[single_index[i]];
+                // set status for searchneighbors
+                pi.status = 0;
 //#ifdef HARD_DEBUG
 //                ASSERT(h4_pcm.mass-pi.mass>0);
 //#endif
@@ -2059,10 +2070,10 @@ public:
         for (int i=0; i<n_ptcl; i++) {
             const PS::S32 k =_ptcl_list[i];
             _sys[k].pot_tot += _sys[k].mass / manager->r_out_base;
-#ifdef HARD_DEBUG
+//#ifdef HARD_DEBUG
             // status may not be zero after binary disrupted
             // assert(_sys[k].status==0);
-#endif
+//#endif
         }
     }
 

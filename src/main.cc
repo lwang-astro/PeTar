@@ -140,7 +140,8 @@ int main(int argc, char *argv[]){
     IOParams<PS::S64> n_glb        (input_par_store, 16384,"Total number of particles (this will suppress reading snapshot data and use Plummer model generator without binary)");
     IOParams<PS::F64> dt_soft      (input_par_store, 0.0,  "Tree timestep","0.1*r_out/sigma_1D");
     IOParams<PS::F64> dt_snp       (input_par_store, 0.0625,"Output time interval of particle dataset");
-    IOParams<PS::F64> search_factor(input_par_store, 3.0,  "Neighbor searching coefficient");
+    IOParams<PS::F64> search_factor(input_par_store, 3.0,  "Neighbor searching coefficient for v*dt");
+    IOParams<PS::F64> radius_factor(input_par_store, 1.5,  "Neighbor searching radius factor for peri-center check");
     IOParams<PS::F64> dt_limit_hard_factor(input_par_store, 4.0,  "Limit of tree time step/hard time step");
     IOParams<PS::S32> dt_min_hermite_index(input_par_store, 40,   "Power index n for the smallest time step (0.5^n) allowed in Hermite integrator");
     IOParams<PS::S32> dt_min_arc_index    (input_par_store, 64,   "Power index n for the smallest time step (0.5^n) allowed in ARC integrator, suppressed");
@@ -181,12 +182,13 @@ int main(int argc, char *argv[]){
         {"slowdown-factor", required_argument, 0, 0},   //9
         {"r-ratio", required_argument, 0, 0},           //10
         {"r-bin",   required_argument, 0, 0},           //11
-        {"help",no_argument, 0, 'h'},                   //12
+        {"radius_factor", required_argument, 0, 0},     //12
+        {"help",no_argument, 0, 'h'},                   //13
 #ifdef HARD_CHECK_ENERGY
-        {"energy-err-hard", required_argument, 0, 0},   //13
+        {"energy-err-hard", required_argument, 0, 0},   //14
 #endif
 #ifdef AR_SYM
-        {"step-limit-arc", required_argument, 0, 0},    //14
+        {"step-limit-arc", required_argument, 0, 0},    //15
 #endif
         {0,0,0,0}
     };
@@ -259,14 +261,19 @@ int main(int argc, char *argv[]){
                 if(my_rank == 0) r_bin.print(std::cout);
                 assert(r_bin.value>0.0);
                 break;
+            case 12:
+                radius_factor.value = atof(optarg);
+                if(my_rank == 0) radius_factor.print(std::cout);
+                assert(radius_factor.value>=1.0);
+                break;
 #ifdef HARD_CHECK_ENERGY
-            case 13:
+            case 14:
                 e_err_hard.value = atof(optarg);
                 if(my_rank == 0) e_err_hard.print(std::cout);
                 break;
 #endif
 #ifdef AR_SYM
-            case 14:
+            case 15:
                 step_limit_arc.value = atoi(optarg);
                 if(my_rank == 0) step_limit_arc.print(std::cout);
                 break;
@@ -407,6 +414,7 @@ int main(int argc, char *argv[]){
                 std::cout<<"  -T: [F] "<<theta<<std::endl;
                 std::cout<<"  -E: [F] "<<eta<<std::endl;
                 std::cout<<"        --search-factor:   [F] "<<search_factor<<std::endl;
+                std::cout<<"        --radius_factor:   [F] "<<radius_factor<<std::endl;
                 std::cout<<"        --energy-err-arc:  [F] "<<e_err_arc<<std::endl;
 #ifdef HARD_CHECK_ENERGY
                 std::cout<<"        --energy-err-hard: [F] "<<e_err_hard<<std::endl;
@@ -729,7 +737,7 @@ int main(int argc, char *argv[]){
 #endif
         // >2.1 search clusters ----------------------------------------
         search_cluster.searchNeighborOMP<SystemSoft, TreeNB, EPJSoft>
-            (system_soft, tree_nb, r_out.value, r_in, pos_domain, EPISoft::eps*EPISoft::eps);
+            (system_soft, tree_nb, pos_domain, r_out.value, r_in, eps.value*eps.value, 1.0, radius_factor.value);
 
         search_cluster.searchClusterLocal();
         search_cluster.setIdClusterLocal();
@@ -754,9 +762,22 @@ int main(int argc, char *argv[]){
         // >2.3 Find ARC groups and create artificial particles
         // Set local ptcl_hard for isolated  clusters
         system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
+
+//#ifdef CLUSTER_DEBUG
+//        for (PS::S32 i=0; i<n_loc; i++) system_soft[i].status = -1000000;
+//#endif
+
         // Find groups and add artifical particles to global particle system
         system_hard_isolated.findGroupsAndCreateArtificalParticlesOMP<SystemSoft, FPSoft>(system_soft, dt_soft.value);
 
+//#ifdef CLUSTER_DEBUG
+//        not correct check, isolated clusters are not reset above
+//        for (PS::S32 i=0; i<n_loc; i++) {
+//            if (system_soft[i].status ==-1000000) {
+//                std::cerr<<"Find un initialized status i="<<i<<" status="<<system_soft[i].status<<std::endl;
+//            }
+//        }
+//#endif
         // update n_loc_iso, n_glb_iso for isolated clusters
         //PS::S64 n_loc_iso = system_soft.getNumberOfParticleLocal();
         //PS::S64 n_glb_iso = system_soft.getNumberOfParticleGlobal();
