@@ -174,9 +174,8 @@ public:
                 acc_pert_cm[1] += pi.mass *acc_pert[1];
                 acc_pert_cm[2] += pi.mass *acc_pert[2];
 
-#ifdef AR_DEBUG
+
                 mcm += pi.mass;
-#endif
             }
 #ifdef AR_DEBUG
             ASSERT(abs(mcm-_particle_cm.mass)<1e-10);
