@@ -76,7 +76,7 @@ public:
         PS::F64vec fi[8];
 
         // Marked the mass_bk == 0 in generate orbits for consistent check
-        ASSERT(_ptcl_tt[12].mass_bk==0);
+        ASSERT(_ptcl_tt[12].mass_bk.d==0);
         ASSERT(_n_split>4);
 
         // get acceleration

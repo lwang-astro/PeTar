@@ -472,12 +472,12 @@ void SetParticlePlummer(Tpsys & psys,
         psys[i].pos = pos[i];
         psys[i].vel = vel[i];
         psys[i].id = i_h + i+1;
-        psys[i].status = 0;
+        psys[i].status.d = 0;
         psys[i+1].mass = mass[i];
         psys[i+1].pos = pos[i] + PS::F64vec(0.02, 0.02, 0.02);
         psys[i+1].vel = vel[i];
         psys[i+1].id = i_h + i+2;
-        psys[i+1].status = 0;
+        psys[i+1].status.d = 0;
         
     }
 #else
@@ -486,7 +486,7 @@ void SetParticlePlummer(Tpsys & psys,
         psys[i].pos = pos[i];
         psys[i].vel = vel[i];
         psys[i].id = i_h + i + 1;
-        psys[i].status = 0;
+        psys[i].status.d = 0;
     }
 #endif
     delete [] mass;

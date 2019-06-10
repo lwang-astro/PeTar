@@ -800,7 +800,7 @@ int main(int argc, char *argv[]){
             system_soft[i].rank_org = my_rank;
             system_soft[i].adr = i;
 #ifdef HARD_DEBUG
-            assert(system_soft[i].status>0);
+            assert(system_soft[i].status.d>0);
 #endif
         }
         // >3 Tree for force ----------------------------------------

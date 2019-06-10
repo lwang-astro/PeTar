@@ -196,9 +196,9 @@ private:
             // reset status
             for(PS::S32 j=0; j<n_ptcl; j++) {
                 // ensure both hard local and global system have reset status, otherwise singles in global system may have wrong status
-                ptcl_in_cluster[j].status = 0;
+                ptcl_in_cluster[j].status.d = 0;
                 PS::S64 adr=ptcl_in_cluster[j].adr_org;
-                if(adr>=0) _sys[adr].status = 0;
+                if(adr>=0) _sys[adr].status.d = 0;
             }
             // search groups
             SearchGroup<PtclH4> group;
@@ -274,18 +274,18 @@ private:
                         if(k==0) assert(_sys[ptcl_k].id==-ptcl_artifical[i][j_cm].id);
 #endif
                         // save c.m. address and shift mass to mass_bk, set rsearch
-                        _sys[ptcl_k].status = -ptcl_artifical[i][j_cm].adr_org; //save negative address
+                        _sys[ptcl_k].status.d = -ptcl_artifical[i][j_cm].adr_org; //save negative address
                         //_sys[ptcl_k].r_search = rsearch_member;
                         if (_sys[ptcl_k].changeover.getRin() != changeover_cm.getRin() ) {
                             _sys[ptcl_k].changeover.r_scale_next = changeover_cm.getRin() / _sys[ptcl_k].changeover.getRin();
                             _sys[ptcl_k].r_search = std::max(_sys[ptcl_k].r_search, rsearch_cm);
                         }
-                        _sys[ptcl_k].mass_bk = _sys[ptcl_k].mass;
+                        _sys[ptcl_k].mass_bk.d = _sys[ptcl_k].mass;
 //#ifdef SPLIT_MASS
                         _sys[ptcl_k].mass = 0;
 //#endif
 #ifdef HARD_DEBUG
-                        assert(_sys[ptcl_k].mass_bk>0.0);
+                        assert(_sys[ptcl_k].mass_bk.d>0.0);
 #endif
                     }
                     else {
@@ -296,7 +296,7 @@ private:
                     // check whether ID is consistent.
                     if(k==0) assert(_ptcl_local[kl].id==-ptcl_artifical[i][j_cm].id);
 #endif
-                    _ptcl_local[kl].status = -ptcl_artifical[i][j_cm].adr_org;
+                    _ptcl_local[kl].status.d = -ptcl_artifical[i][j_cm].adr_org;
                     //_ptcl_local[kl].r_search = rsearch_member;
                     //_ptcl_local[kl].changeover = changeover_member;
                     if (_ptcl_local[kl].changeover.getRin()!=changeover_cm.getRin()) {
@@ -304,12 +304,12 @@ private:
                         _ptcl_local[kl].r_search = std::max(_ptcl_local[kl].r_search, rsearch_cm);
                         changeover_update_flag = true;
                     }
-                    _ptcl_local[kl].mass_bk = _ptcl_local[kl].mass;
+                    _ptcl_local[kl].mass_bk.d = _ptcl_local[kl].mass;
 //#ifdef SPLIT_MASS
                     _ptcl_local[kl].mass = 0;
 //#endif
 #ifdef HARD_DEBUG
-                    assert(_ptcl_local[kl].mass_bk>0.0);
+                    assert(_ptcl_local[kl].mass_bk.d>0.0);
 #endif
                 }
                 // record i_cluster if changeover change
@@ -384,16 +384,16 @@ private:
 #ifdef ONLY_SOFT
         const PS::F64 kpot  = 1.0 - ChangeOver::calcPotWTwo(_pi.changeover, _pj.changeover, dr_eps);
         // single, remove linear cutoff, obtain changeover soft potential
-        if (_pj.status==0) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (movr*kpot  - movr_max);   
+        if (_pj.status.d==0) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (movr*kpot  - movr_max);   
         // member, mass is zero, use backup mass
-        else if (_pj.status<0) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (_pj.mass_bk*drinv*kpot  - movr_max);   
+        else if (_pj.status.d<0) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (_pj.mass_bk.d*drinv*kpot  - movr_max);   
         // (orbitial) artifical, should be excluded in potential calculation, since it is inside neighbor, movr_max cancel it to 0.0
         else _pi.pot_tot += movr_max; 
 #else
         // single/member, remove linear cutoff, obtain total potential
-        if (_pj.status==0) _pi.pot_tot -= (movr - movr_max);   
+        if (_pj.status.d==0) _pi.pot_tot -= (movr - movr_max);   
         // member, mass is zero, use backup mass
-        else if (_pj.status<0) _pi.pot_tot -= (_pj.mass_bk*drinv  - movr_max);   
+        else if (_pj.status.d<0) _pi.pot_tot -= (_pj.mass_bk.d*drinv  - movr_max);   
         // (orbitial) artifical, should be excluded in potential calculation, since it is inside neighbor, movr_max cancel it to 0.0
         else _pi.pot_tot += movr_max; 
 #endif
@@ -433,16 +433,16 @@ private:
 #ifdef ONLY_SOFT
         const PS::F64 kpot  = 1.0 - ChangeOver::calcPotWTwo(_pi.changeover, chj, dr_eps);
         // single, remove linear cutoff, obtain changeover soft potential
-        if (_pj.status==0) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (movr*kpot  - movr_max);   
+        if (_pj.status.d==0) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (movr*kpot  - movr_max);   
         // member, mass is zero, use backup mass
-        else if (_pj.status<0) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (_pj.mass_bk*drinv*kpot  - movr_max);   
+        else if (_pj.status.d<0) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (_pj.mass_bk.d*drinv*kpot  - movr_max);   
         // (orbitial) artifical, should be excluded in potential calculation, since it is inside neighbor, movr_max cancel it to 0.0
         else _pi.pot_tot += movr_max; 
 #else
         // single/member, remove linear cutoff, obtain total potential
-        if (_pj.status==0) _pi.pot_tot -= (movr - movr_max);   
+        if (_pj.status.d==0) _pi.pot_tot -= (movr - movr_max);   
         // member, mass is zero, use backup mass
-        else if (_pj.status<0) _pi.pot_tot -= (_pj.mass_bk*drinv  - movr_max);   
+        else if (_pj.status.d<0) _pi.pot_tot -= (_pj.mass_bk.d*drinv  - movr_max);   
         // (orbitial) artifical, should be excluded in potential calculation, since it is inside neighbor, movr_max cancel it to 0.0
         else _pi.pot_tot += movr_max; 
 #endif
@@ -603,7 +603,7 @@ private:
         // self-potential correction 
         // no correction for orbital artifical particles because the potential are not used for any purpose
         // no correction for member particles because their mass is zero during the soft force calculation, the self-potential contribution is also zero.
-        if (_psoft.status==0) _psoft.pot_tot += _psoft.mass/manager->r_out_base; // single
+        if (_psoft.status.d==0) _psoft.pot_tot += _psoft.mass/manager->r_out_base; // single
 
         // loop neighbors
         for(PS::S32 k=0; k<n_ngb; k++){
@@ -694,13 +694,13 @@ private:
                 acc_cm += _sys[k].mass*_sys[k].acc; 
                 m_ob_tot += _sys[k].mass;
 //#ifdef HARD_DEBUG
-//                assert(((_sys[k].status)>>ID_PHASE_SHIFT)==-_sys[j_cm].id);
+//                assert(((_sys[k].status.d)>>ID_PHASE_SHIFT)==-_sys[j_cm].id);
 //#endif
             }
             acc_cm /= m_ob_tot;
 
 #ifdef HARD_DEBUG
-            assert(abs(m_ob_tot-_sys[j_cm].mass_bk)<1e-10);
+            assert(abs(m_ob_tot-_sys[j_cm].mass_bk.d)<1e-10);
 #endif
 
             //PS::F64vec& pos_j= _sys[j_cm].pos;
@@ -714,7 +714,7 @@ private:
             //    for (int ki=k_start+_n_split; ki<k_cm; ki++) {
             //        auto& ptcl_k = _sys[ki];
             //        CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
-            //                                        ptcl_k.pos, ptcl_k.mass, ptcl_k.mass_bk, 
+            //                                        ptcl_k.pos, ptcl_k.mass, ptcl_k.mass_bk.d, 
             //                                        2, _eps_sq,
             //                                        r_oi_inv, r_A, _rout, _rin);
             //    }
@@ -723,9 +723,9 @@ private:
             //// loop real particle
             //for (int k=_n_ptcl_in_cluster_offset[i]; k<_n_ptcl_in_cluster_offset[i+1]; k++) {
             //    PtclH4* ptcl_k_ptr = &_ptcl_local[k];
-            //    PS::S32 pot_control_flag = ptcl_k_ptr->status>0? 1: 0;
+            //    PS::S32 pot_control_flag = ptcl_k_ptr->status.d>0? 1: 0;
             //    CalcAccPotShortWithLinearCutoff(pos_j, acc_j, pot_j, 
-            //                                    ptcl_k_ptr->pos, ptcl_k_ptr->mass, ptcl_k_ptr->mass_bk, 
+            //                                    ptcl_k_ptr->pos, ptcl_k_ptr->mass, ptcl_k_ptr->mass_bk.d, 
             //                                    pot_control_flag, _eps_sq,
             //                                    r_oi_inv, r_A, _rout, _rin);
             //}
@@ -777,7 +777,7 @@ private:
                 assert(_sys[adr].id==_ptcl_local[j].id);
 #endif
                 //self-potential correction for non-group member, group member has mass zero, so no need correction
-                if(_sys[adr].status==0) _sys[adr].pot_tot += _sys[adr].mass/manager->r_out_base;
+                if(_sys[adr].status.d==0) _sys[adr].pot_tot += _sys[adr].mass/manager->r_out_base;
 
                 // cluster member
                 for (int k=adr_real_start; k<adr_real_end; k++) {
@@ -927,13 +927,13 @@ private:
                 acc_cm += _sys[k].mass*_sys[k].acc; 
                 m_ob_tot += _sys[k].mass;
 //#ifdef HARD_DEBUG
-//                assert(((_sys[k].status)>>ID_PHASE_SHIFT)==-_sys[j_cm].id);
+//                assert(((_sys[k].status.d)>>ID_PHASE_SHIFT)==-_sys[j_cm].id);
 //#endif
             }
             acc_cm /= m_ob_tot;
 
 #ifdef HARD_DEBUG
-            assert(abs(m_ob_tot-_sys[i_cm].mass_bk)<1e-10);
+            assert(abs(m_ob_tot-_sys[i_cm].mass_bk.d)<1e-10);
 #endif
         }
     }
@@ -975,13 +975,13 @@ private:
                 acc_cm += _sys[k].mass*_sys[k].acc; 
                 m_ob_tot += _sys[k].mass;
 //#ifdef HARD_DEBUG
-//                assert(((_sys[k].status)>>ID_PHASE_SHIFT)==-_sys[j_cm].id);
+//                assert(((_sys[k].status.d)>>ID_PHASE_SHIFT)==-_sys[j_cm].id);
 //#endif
             }
             acc_cm /= m_ob_tot;
 
 #ifdef HARD_DEBUG
-            assert(abs(m_ob_tot-_sys[i_cm].mass_bk)<1e-10);
+            assert(abs(m_ob_tot-_sys[i_cm].mass_bk.d)<1e-10);
 #endif
         }
     }
@@ -1074,8 +1074,8 @@ public:
 #ifdef HARD_DEBUG
         if(_n_group>0) {
             if(n_group_offset[_n_group]<_n_ptcl)
-                assert(_ptcl_local[n_group_offset[_n_group]].status==0);
-            assert(_ptcl_local[n_group_offset[_n_group]-1].status<0);
+                assert(_ptcl_local[n_group_offset[_n_group]].status.d==0);
+            assert(_ptcl_local[n_group_offset[_n_group]-1].status.d<0);
         }
 #endif
 
@@ -1089,12 +1089,12 @@ public:
 
         // recover group member masses
         for(int i=0; i<i_single_start; i++) {
-            //_ptcl_local[i].mass = _ptcl_local[i].mass_bk;
+            //_ptcl_local[i].mass = _ptcl_local[i].mass_bk.d;
 #ifdef HARD_DEBUG
-            assert(_ptcl_local[i].status<0);
+            assert(_ptcl_local[i].status.d<0);
             assert(_ptcl_local[i].mass>0);
 #endif
-            _ptcl_local[i].mass_bk = 0.0;
+            _ptcl_local[i].mass_bk.d = 0.0;
         }
 
         //// In orbital fitting soft perturbation, the status is used to identify which component the member belong to
@@ -1111,7 +1111,7 @@ public:
             // Cannot do any kick in drift, because the K/D time step is not necessary same
             //_ptcl_artifical[icm].vel += _ptcl_artifical[icm].acc * _dt; (not do here to avoid half time step issue)
             // recover mass
-            _ptcl_artifical[icm].mass = _ptcl_artifical[icm].mass_bk;
+            _ptcl_artifical[icm].mass = _ptcl_artifical[icm].mass_bk.d;
 #ifdef HARD_DEBUG
             // check id 
             PS::S32 id_mem[2];
@@ -1214,7 +1214,12 @@ public:
             sym_int.particles.template writeBackMemberAll<PtclH4>();
 
             for (PS::S32 i=0; i<gpars[0].n_members; i++) {
-                _ptcl_local[i].r_search = std::max(pcm.r_search, _ptcl_local[i].r_search);
+                auto& pi = _ptcl_local[i];
+                pi.r_search = std::max(pcm.r_search, pi.r_search);
+                pi.status.f[0]  = pcm.vel[0];
+                pi.status.f[1]  = pcm.vel[1];
+                pi.mass_bk.f[0] = pcm.vel[2];
+                pi.mass_bk.f[1] = pcm.mass;
 #ifdef HARD_DEBUG
                 ASSERT(_ptcl_local[i].r_search>_ptcl_local[i].changeover.getRout());
 #endif
@@ -1425,12 +1430,17 @@ public:
                 //pcm.calcRSearch(h4_manager->interaction.G*(h4_pcm.mass-pcm.mass), abs(pcm.pot), h4_pcm.vel, _dt);
                 pcm.Ptcl::calcRSearch(_dt);
                 const PS::S32 n_member = h4_int.groups[k].particles.getSize();
-                const PS::S32 id_first = h4_int.groups[k].particles.getMemberOriginAddress(0)->id;
+                //const PS::S32 id_first = h4_int.groups[k].particles.getMemberOriginAddress(0)->id;
                 for (PS::S32 j=0; j<n_member; j++) {
                     auto* pj = h4_int.groups[k].particles.getMemberOriginAddress(j);
                     pj->r_search = std::max(pj->r_search, pcm.r_search);
                     // set new c.m. id as status for searchneighbors
-                    pj->status = -id_first;
+                    //pj->status = -id_first;
+                    // save c.m. velocity and mass for neighbor search
+                    pj->status.f[0] = pcm.vel[0];
+                    pj->status.f[1] = pcm.vel[1];
+                    pj->mass_bk.f[0]= pcm.vel[2];
+                    pj->mass_bk.f[1]= pcm.mass;
 #ifdef HARD_DEBUG
                     ASSERT(pj->r_search>pj->changeover.getRout());
 #endif
@@ -1440,7 +1450,11 @@ public:
             for (PS::S32 i=0; i<h4_int.getNSingle(); i++) {
                 auto& pi = h4_int.particles[single_index[i]];
                 // set status for searchneighbors
-                pi.status = 0;
+                pi.status.f[0]  = 0.0;
+                pi.status.f[1]  = 0.0;
+                pi.mass_bk.f[0] = 0.0;
+                pi.mass_bk.f[1] = 0.0;
+
 //#ifdef HARD_DEBUG
 //                ASSERT(h4_pcm.mass-pi.mass>0);
 //#endif
@@ -1555,7 +1569,7 @@ public:
             ptcl_hard_.push_back(PtclHard(p, med[i].id_cluster_, med[i].adr_sys_));
 #ifdef HARD_DEBUG
             assert(med[i].adr_sys_<sys.getNumberOfParticleLocal());
-            if(p.id<0&&p.status<0) {
+            if(p.id<0&&p.status.d<0) {
                 std::cerr<<"Error: ghost particle is selected! i="<<i<<"; med[i].adr_sys="<<med[i].adr_sys_<<std::endl;
                 abort();
             }
@@ -1566,7 +1580,7 @@ public:
             const Tptcl & p = ptcl_recv[i];
             ptcl_hard_.push_back(PtclHard(p, p.id_cluster, -(i+1)));
 #ifdef HARD_DEBUG
-            if(p.id<0&&p.status<0) {
+            if(p.id<0&&p.status.d<0) {
                 std::cerr<<"Error: receive ghost particle! i="<<i<<std::endl;
                 abort();
             }
@@ -1776,7 +1790,7 @@ public:
             assert(sys[adr].id == ptcl_hard_[i].id);
 #endif
             sys[adr].DataCopy(ptcl_hard_[i]);
-            if(sys[adr].id<0&&sys[adr].status<0) removelist.push_back(adr);
+            if(sys[adr].id<0&&sys[adr].status.d<0) removelist.push_back(adr);
         }
         //sys.removeParticle(removelist.getPointer(), removelist.size());
     }
@@ -1923,8 +1937,8 @@ public:
             for (PS::S32 j=0; j<n_ptcl; j++) {
                 PS::F64vec dr = pi[j].vel * dt;
                 pi[j].pos += dr;
-                pi[j].status = 0;
-                pi[j].mass_bk = 0;
+                pi[j].status.f[0] = pi[j].status.f[1] = 0;
+                pi[j].mass_bk.f[0] = pi[j].mass_bk = 0;
                 pi[j].calcRSearch(dt);
             }
 #endif
@@ -1997,8 +2011,8 @@ public:
             for (PS::S32 j=0; j<n_ptcl; j++) {
                 PS::F64vec dr = pi[j].vel * dt;
                 pi[j].pos += dr;
-                pi[j].status = 0;
-                pi[j].mass_bk = 0;
+                pi[j].status.f[0] = pi[j].status.f[1] = 0;
+                pi[j].mass_bk.f[0] = pi[j].mass_bk = 0;
                 pi[j].calcRSearch(dt);
             }
 #endif

@@ -175,8 +175,8 @@ public:
     PS::F64 r_out;
     PS::F64 r_search;
     PS::F64 r_scale_next;
-    PS::F64 mass_bk;
-    PS::S64 status;
+    Gdat mass_bk;
+    Gdat status;
     PS::S32 rank_org;
     PS::S32 adr_org;
 //    static PS::F64 r_out;

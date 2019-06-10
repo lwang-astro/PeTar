@@ -8,6 +8,11 @@ const PS::F64 SAFTY_FACTOR_FOR_SEARCH = 0.99;
 //const PS::F64 SAFTY_OFFSET_FOR_SEARCH = 1e-7;
 //const PS::F64 SAFTY_OFFSET_FOR_SEARCH = 0.0;
 
+union Gdat{
+    PS::F64 d;
+    PS::F32 f[2];
+};
+
 //! Particle class 
 class Ptcl: public ParticleBase{
 public:
@@ -25,16 +30,16 @@ public:
           suppressed c.m. is set in HermiteIntegrator.removePtclList
      */
     PS::F64 r_search;
-    PS::F64 mass_bk;
+    Gdat mass_bk;
     PS::S64 id;
-    PS::S64 status;
+    Gdat status;
     ChangeOver changeover;
     static PS::F64 search_factor;
     static PS::F64 r_search_min;
     static PS::F64 r_group_crit_ratio;
     static PS::F64 mean_mass_inv;
 
-    Ptcl(): r_search(-1.0), id(-10), status(-10), changeover() {}
+    Ptcl(): r_search(-1.0), mass_bk({0.0}), id(-10), status({-10.0}), changeover() {}
 
     template<class Tptcl>
     Ptcl(const Tptcl& _p) { Ptcl::DataCopy(_p);  }
@@ -61,9 +66,9 @@ public:
     void print(std::ostream & _fout) const{
         ParticleBase::print(_fout);
         _fout<<" r_search="<<r_search
-             <<" mass_bk="<<mass_bk
+             <<" mass_bk="<<mass_bk.d
              <<" id="<<id
-             <<" status="<<status;
+             <<" status="<<status.d;
         changeover.print(_fout);
     }
 
@@ -89,16 +94,16 @@ public:
     void printColumn(std::ostream & _fout, const int _width=20){
         ParticleBase::printColumn(_fout, _width);
         _fout<<std::setw(_width)<<r_search
-             <<std::setw(_width)<<mass_bk
+             <<std::setw(_width)<<mass_bk.d
              <<std::setw(_width)<<id
-             <<std::setw(_width)<<status;
+             <<std::setw(_width)<<status.d;
         changeover.printColumn(_fout, _width);
     }
 
     void writeAscii(FILE* _fout) const{
         ParticleBase::writeAscii(_fout);
-        fprintf(_fout, "%26.17e %26.17e %lld %lld ", 
-                this->r_search, this->mass_bk, this->id, this->status);
+        fprintf(_fout, "%26.17e %26.17e %lld %26.17e ", 
+                this->r_search, this->mass_bk.d, this->id, this->status.d);
         changeover.writeAscii(_fout);
     }
 
@@ -110,8 +115,8 @@ public:
 
     void readAscii(FILE* _fin) {
         ParticleBase::readAscii(_fin);
-        PS::S64 rcount=fscanf(_fin, "%lf %lf %lld %lld ",
-                              &this->r_search, &this->mass_bk, &this->id, &this->status);
+        PS::S64 rcount=fscanf(_fin, "%lf %lf %lld %lf ",
+                              &this->r_search, &this->mass_bk.d, &this->id, &this->status.d);
         if (rcount<4) {
             std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
             abort();

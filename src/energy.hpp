@@ -59,9 +59,9 @@ public:
         //plist.reserve(n);
         for(PS::S32 i=0; i<n; i++){
             PS::F64 mi = sys[i].mass;
-            if(sys[i].status<0) mi = sys[i].mass_bk;
+            if(sys[i].status.d<0) mi = sys[i].mass_bk.d;
 #ifdef HARD_DEBUG
-            assert(sys[i].id>0&&sys[i].status<=0);
+            assert(sys[i].id>0&&sys[i].status.d<=0);
             assert(mi>0);
 #endif
             PS::F64vec vi = sys[i].vel;

@@ -346,6 +346,55 @@ public:
      */
     template<class Tpsoft, class Tepj>
     PS::S32 checkNeighborWithVelocity(PS::S32* _index, Tpsoft& _pi, Tepj *_pb, const PS::S32 _nb, const PS::F64 _G, const PS::F64 _radius_factor) {
+        
+        PS::S32 n_nb_new = 0;
+        PS::F64 r_crit_i = _pi.changeover.getRout();
+
+        ParticleBase pi;
+        pi.DataCopy(_pi);
+        
+#ifdef CLUSTER_DEBUG
+        assert(_pi.mass_bk.f[1]>=0.0);
+#endif
+        if (_pi.mass_bk.f[1]>0.0) {
+            pi.vel[0] = _pi.status.f[0];
+            pi.vel[1] = _pi.status.f[1];
+            pi.vel[2] = _pi.mass_bk.f[0];
+            pi.mass   = _pi.mass_bk.f[1];
+        }
+
+        for (PS::S32 j=0; j<_nb; j++) {
+            if (_pi.id==_pb[j].id) continue;
+            ParticleBase pj;
+            pj.DataCopy(_pb[j]);
+#ifdef CLUSTER_DEBUG
+            assert(_pb[j].mass_bk.f[1]>=0.0);
+#endif
+            if (_pb[j].mass_bk.f[1]>0.0) {
+                pj.vel[0] = _pb[j].status.f[0];
+                pj.vel[1] = _pb[j].status.f[1];
+                pj.vel[2] = _pb[j].mass_bk.f[0];
+                pj.mass   = _pb[j].mass_bk.f[1];
+            }
+            PS::F64 semi,ecc;
+            COMM::Binary::particleToSemiEcc(semi, ecc, pi, pj, _G);
+            PS::F64 peri = semi*(1-ecc);
+            PS::F64 r_crit_j = _pb[j].r_out;
+            if (peri < _radius_factor*std::max(r_crit_i, r_crit_j)) {
+                _index[n_nb_new++] = j;
+            }
+#ifdef CLUSTER_DEBUG_PRINT
+            else 
+                std::cerr<<"Reject idi "<<_pi.id<<" idj "<<_pb[j].id<<" peri "
+                         <<peri<<" rci "<<r_crit_i<<" rcj "<<r_crit_j
+                         <<" c.m.vel.i "<<_pi.status.f[0]<<" "<<_pi.status.f[1]<<" "<<_pi.mass_bk.f[0]<<" "<<_pi.mass_bk.f[1]<<" "
+                         <<"c.m.vel.j "<<_pb[j].status.f[0]<<" "<<_pb[j].status.f[1]<<" "<<_pb[j].mass_bk.f[0]<<" "<<_pb[j].mass_bk.f[1]<<" "
+                         <<"status "<<_pi.status.d<<" mass_bk"<<_pi.mass_bk.d
+                         <<std::endl;
+#endif            
+        }
+        
+/*
         std::pair<PS::S32, PS::S32> sort_status_index[_nb];
         for (PS::S32 i=0; i<_nb; i++) {
             sort_status_index[i].first  = i;
@@ -357,6 +406,7 @@ public:
         PS::S32 n_nb_new = 0;
         PS::F64 r_crit_i = _pi.changeover.getRout();
 
+        
         // only single case
         if (sort_status_index[0].second==0) {
             for (PS::S32 j=0; j<_nb; j++) {
@@ -542,6 +592,7 @@ public:
             }
 
         }
+*/
         return n_nb_new;
     }
 
@@ -579,7 +630,7 @@ public:
                     // no neighbor
                     adr_sys_one_cluster_[ith].push_back(i);
 #ifdef CLUSTER_DEBUG
-                    assert(sys[i].status==0);
+                    assert(sys[i].status.d==0);
 
                     Tepj * nbl = NULL;
                     PS::S32 n_ngb_tree_i = tree.getNeighborListOneParticle(sys[i], nbl) ;
@@ -614,7 +665,7 @@ public:
                     // no neighbor
                     if(sys[i].n_ngb == 0){
 #ifdef CLUSTER_DEBUG
-                        assert(sys[i].status==0);
+                        assert(sys[i].status.d==0);
 #endif
                         adr_sys_one_cluster_[ith].push_back(i);
                         continue;
@@ -1210,7 +1261,7 @@ public:
                     ptcl_send_.push_back(PtclComm(p));
                     ptcl_send_.back().id_cluster = cluster_loc[i].id_;
 #ifdef HARD_DEBUG
-                    if(ptcl_send_.back().id<0&&ptcl_send_.back().status<0) {
+                    if(ptcl_send_.back().id<0&&ptcl_send_.back().status.d<0) {
                         std::cerr<<"Error! sending particle is ghost! adr="<<adr_sys<<std::endl;
                         abort();
                     }
@@ -1332,7 +1383,7 @@ public:
             assert(_sys[adr].id == ptcl_send_[i].id);
 #endif
             // write local single particle
-            if(ptcl_send_[i].status==0) {
+            if(ptcl_send_[i].status.d==0) {
                 ptcl_send_[i].DataCopy(_sys[adr]);
             }
         }
@@ -1364,10 +1415,10 @@ public:
         const PS::S32 n = _ptcl_hard.size();
         for(PS::S32 i=0; i<n; i++){
             const PS::S32 adr = _ptcl_hard[i].adr_org;
-            if(adr <0 && _ptcl_hard[i].status==0){
+            if(adr <0 && _ptcl_hard[i].status.d==0){
 #ifdef HARD_DEBUG
                 assert( ptcl_recv_[-(adr+1)].id == _ptcl_hard[i].id );
-                assert( ptcl_recv_[-(adr+1)].status==0);
+                assert( ptcl_recv_[-(adr+1)].status.d==0);
 #endif
                 _ptcl_hard[i].DataCopy(ptcl_recv_[-(adr+1)]);
             }
@@ -1394,7 +1445,7 @@ public:
                 assert( _sys[adr].id == _ptcl_hard[i].id);
 #endif
                 _sys[adr].DataCopy(_ptcl_hard[i]);
-                if(_sys[adr].id<0&&_sys[adr].status<0) _removelist.push_back(adr);
+                if(_sys[adr].id<0&&_sys[adr].status.d<0) _removelist.push_back(adr);
             }
             else{
                 //assert( ptcl_recv_[-(adr+1)].id == _ptcl_hard[i].id );
@@ -1431,7 +1482,7 @@ public:
             assert(_sys[adr].id == ptcl_send_[i].id);
 #endif
             _sys[adr].DataCopy(ptcl_send_[i]);
-            if(_sys[adr].id<0&&_sys[adr].status<0) _removelist.push_back(adr);
+            if(_sys[adr].id<0&&_sys[adr].status.d<0) _removelist.push_back(adr);
         }
         // remove empty particles cannot do here
         // _sys.removeParticle(_removelist.getPointer(), _removelist.size());

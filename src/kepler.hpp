@@ -607,7 +607,7 @@ void keplerTreeGenerator(PtclTree<Tptcl> _bins[],   // make sure bins.size = n_m
         if(bin_host[k]==NULL) {
             p[0] = &_ptcl_org[_member_list[k]];
             bin_host[k] = &_bins[i];
-            p[0]->status=1; // set status to 1 for counting members
+            p[0]->status.d=1; // set status to 1 for counting members
         }
         // if tree root already exist, member 1 assigned to tree root bin_host[k], tree members' bin_host -> current bins i
         else {
@@ -620,7 +620,7 @@ void keplerTreeGenerator(PtclTree<Tptcl> _bins[],   // make sure bins.size = n_m
         if(bin_host[k+1]==NULL) {
             p[1] = &_ptcl_org[_member_list[k+1]];
             bin_host[k+1] = &_bins[i];
-            p[1]->status=1; // set status to 1 for counting members
+            p[1]->status.d=1; // set status to 1 for counting members
         }
         // if tree root already exist, member 2 assigned to tree root bin_host[k], tree members' bin_host -> current bins i
         else {
@@ -644,15 +644,15 @@ void keplerTreeGenerator(PtclTree<Tptcl> _bins[],   // make sure bins.size = n_m
         _bins[i].m2 = p[1]->mass;
         PS::F64 dr = 1.0-_bins[i].ecc*cos(_bins[i].ecca);
         PS::F64 apo= 1.0+_bins[i].ecc;
-        _bins[i].fpert = fabs(p[0]->mass_bk - p[1]->mass_bk)/dr*apo; // for perturbation, use acceleration difference to estimate
-        _bins[i].mass_bk = (p[0]->mass*p[0]->mass_bk + p[1]->mass*p[1]->mass_bk)/_bins[i].mass; // for c.m. perturbation, use m1 a1 + m2 a2 = mcm acm
+        _bins[i].fpert = fabs(p[0]->mass_bk.d - p[1]->mass_bk.d)/dr*apo; // for perturbation, use acceleration difference to estimate
+        _bins[i].mass_bk.d = (p[0]->mass*p[0]->mass_bk.d + p[1]->mass*p[1]->mass_bk.d)/_bins[i].mass; // for c.m. perturbation, use m1 a1 + m2 a2 = mcm acm
         _bins[i].id = p[0]->id;
         if (_bins[i].semi>0)  _bins[i].tstep = 0.78539816339*std::sqrt(_bins[i].semi/(p[0]->mass+p[1]->mass))*(p[0]->mass*p[1]->mass);   //kepler orbit, step ds=dt*m1*m2/r estimation (1/8 orbit): pi/4*sqrt(semi/(m1+m2))*m1*m2 
         else _bins[i].tstep = 0.0245436926*std::sqrt(-_bins[i].semi/(p[0]->mass+p[1]->mass))*(p[0]->mass*p[1]->mass);   //hyperbolic orbit, step ds=dt*m1*m2/r estimation (1/256 orbit): pi/128*sqrt(semi/(m1+m2))*m1*m2 
         //_bins[i].tstep = -1.0;
         _bins[i].stable_factor = 0.0;
         //_bins[i].status = _bins[i].id;
-        _bins[i].status = _bins[i].member[0]->status + _bins[i].member[1]->status;  // counting total number of members in the leafs
+        _bins[i].status.d = _bins[i].member[0]->status.d + _bins[i].member[1]->status.d;  // counting total number of members in the leafs
         //bins[i].r_search = std::max(p[0]->r_search,p[1]->r_search);
         PS::F64 m_fac = _bins[i].mass*Ptcl::mean_mass_inv;
         _bins[i].changeover.setR(m_fac, _r_in, _r_out);
@@ -1137,9 +1137,9 @@ bool stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &_stab_bins,
                     const PS::F64 _rin, 
                     const PS::F64 _rout, 
                     const PS::F64 _dt_tree) {
-    if(_bins.member[0]->status>1) {
+    if(_bins.member[0]->status.d>1) {
         // B-B system
-        if(_bins.member[1]->status>1) {
+        if(_bins.member[1]->status.d>1) {
             //PS::F64 fs0 = stab4check(_bins, *(PtclTree<Tptcl>*)_bins.member[0], *(PtclTree<Tptcl>*)_bins.member[1], rbin, rin);
             bool fs1 = stabilityCheck<Tptcl>(_stab_bins, *(PtclTree<Tptcl>*)_bins.member[0], _rbin, _rin, _rout, _dt_tree);
             bool fs2 = stabilityCheck<Tptcl>(_stab_bins, *(PtclTree<Tptcl>*)_bins.member[1], _rbin, _rin, _rout, _dt_tree);
@@ -1163,7 +1163,7 @@ bool stabilityCheck(PS::ReallocatableArray<PtclTree<Tptcl>*> &_stab_bins,
         }
     }
     else {
-        if(_bins.member[1]->status>1) { // S-B system
+        if(_bins.member[1]->status.d>1) { // S-B system
             //PS::F64 fs0 = stab3check(_bins, *(PtclTree<Tptcl>*)_bins.member[1], _rbin, _rin);
             bool fs1 = stabilityCheck<Tptcl>(_stab_bins, *(PtclTree<Tptcl>*)_bins.member[1], _rbin, _rin, _rout, _dt_tree);
             if(fs1) {

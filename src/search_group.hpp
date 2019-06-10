@@ -47,7 +47,7 @@ private:
         PS::S32 offset = 0;
         for(int i=0; i<_n; i++) {
             //PS::S32 ip = p_list[i];
-            _ptcl[i].mass_bk = 0.0;
+            _ptcl[i].mass_bk.d = 0.0;
             _part_list_n[i] = 0;
             _part_list_disp[i] = offset;
             for(int j=0; j<_n; j++) {
@@ -64,7 +64,7 @@ private:
                 }
                 else {
                     //store perturbation force
-                    _ptcl[i].mass_bk += _ptcl[j].mass/r2; 
+                    _ptcl[i].mass_bk.d += _ptcl[j].mass/r2; 
                 }
 
                 //PS::F64vec dv = _ptcl[i].vel-_ptcl[j].vel;
@@ -234,24 +234,24 @@ private:
                                PS::S32* _ptcl_adr_sys) {
         PS::S32 nloc = 0;
         for(int i=0; i<2; i++) {
-            if(_bin.member[i]->status!=0) {
+            if(_bin.member[i]->status.d!=0) {
                 _bin.member[i]->changeover = _bin.changeover;
 #ifdef HARD_DEBUG
                 assert(_bin.member[i]->mass>0.0);
 #endif                
-                //_bin.member[i]->mass_bk = _bin.member[i]->mass;
+                //_bin.member[i]->mass_bk.d = _bin.member[i]->mass;
                 nloc += setGroupMemberPars(*(Tptree*)_bin.member[i], _adr_ref, &_ptcl_adr_sys[nloc]);
             }
             else {
                 //if(is_top) bin.member[i]->status = -std::abs(id_offset+bin.member[i]->id*n_split);
                 //else bin.member[i]->status = -std::abs(id_offset+bid*n_split);
-                _bin.member[i]->status = 1; // used for number count later
+                _bin.member[i]->status.d = 1; // used for number count later
                 // To be consistent, all these paramters are set later in findGroupsAndCreateArtificalParticles
                 //_bin.member[i]->changeover = _bin.changeover;
 //#ifdef HARD_DEBUG
                 //assert(_bin.member[i]->mass>0.0);
 //#endif                
-                //_bin.member[i]->mass_bk = _bin.member[i]->mass;
+                //_bin.member[i]->mass_bk.d = _bin.member[i]->mass;
                 //_bin.member[i]->r_search = _bin.r_search;
 //#ifdef SPLIT_MASS
                 //_bin.member[i]->mass    = 0.0;
@@ -327,7 +327,7 @@ private:
         PS::F64 mfactor;
         PS::F64 mnormal=0.0;
 
-        const PS::S32 n_members = _bin.status;
+        const PS::S32 n_members = _bin.status.d;
         Tptcl* adr_ref= _ptcl_in_cluster;
         PS::S32 nbin = setGroupMemberPars(_bin, adr_ref, _group_ptcl_adr_list);
         assert(nbin==n_members);
@@ -353,9 +353,9 @@ private:
                 assert(_bin.member[j]->mass>0);
 #endif
                 p[j]->id = _id_offset + (_bin.member[j]->id)*_n_split + i;
-                if(i==0) p[j]->status = _bin.member[j]->status; // store the component member number 
-                else if(i==1) p[j]->status = i_cg[j]+1; // store the i_cluster and i_group for identify artifical particles, +1 to avoid 0 value (status>0)
-                else p[j]->status = (_bin.id<<ID_PHASE_SHIFT)|i; // not used, but make status>0
+                if(i==0) p[j]->status.d = _bin.member[j]->status.d; // store the component member number 
+                else if(i==1) p[j]->status.d = i_cg[j]+1; // store the i_cluster and i_group for identify artifical particles, +1 to avoid 0 value (status.d>0)
+                else p[j]->status.d = (_bin.id<<ID_PHASE_SHIFT)|i; // not used, but make status.d>0
                 
                 if(i>=4) 
                     pm[i][j] = &(p[j]->mass);
@@ -425,16 +425,16 @@ private:
             }
             // binary parameters
             if(i<5) {
-                p[0]->mass_bk = bindata[i][0];
-                p[1]->mass_bk = bindata[i][1];
+                p[0]->mass_bk.d = bindata[i][0];
+                p[1]->mass_bk.d = bindata[i][1];
             }
             else if(i==5) {
-                p[0]->mass_bk = p[0]->mass;
-                p[1]->mass_bk = p[1]->mass;
+                p[0]->mass_bk.d = p[0]->mass;
+                p[1]->mass_bk.d = p[1]->mass;
             }
             else if(i==6) {
-                p[0]->mass_bk = 0.0; // indicate the order
-                p[1]->mass_bk = 1.0;
+                p[0]->mass_bk.d = 0.0; // indicate the order
+                p[1]->mass_bk.d = 1.0;
             }
             if(i>=4) {
                 PS::F64vec dvvec= p[0]->vel - p[1]->vel;
@@ -485,7 +485,7 @@ private:
             pcm = &_ptcl_new.back();
             //pcm_adr = _ptcl_new.size()-1; // if is in new, put ptcl_new address
         }
-        pcm->mass_bk = _bin.mass;
+        pcm->mass_bk.d = _bin.mass;
         pcm->mass = 0.0;
         pcm->pos = _bin.pos;
         pcm->vel = _bin.vel;
@@ -495,7 +495,7 @@ private:
 
         pcm->r_search += _bin.semi*(1+_bin.ecc);  // depend on the mass ratio, the upper limit distance to c.m. from all members and artifical particles is apo-center distance
 
-        pcm->status = nbin;
+        pcm->status.d = nbin;
     }
 
     //! generate artifical particles,
@@ -539,7 +539,7 @@ private:
 //        assert(ptcl_map.size()==0);
 #endif
         // reset all single status to 0
-        //for (int i=0; i<p_list.size(); i++) _ptcl_in_cluster[p_list[i]].status = 0;
+        //for (int i=0; i<p_list.size(); i++) _ptcl_in_cluster[p_list[i]].status.d = 0;
 
         //_n_groups = _group_list_n.size();
         PS::S32 group_ptcl_adr_list[_n_ptcl];
@@ -562,7 +562,7 @@ private:
             keplerTreeGenerator(bins.getPointer(), &_group_list[group_start], group_n, _ptcl_in_cluster, _rin, _rout, _dt_tree);
          
             // reset status to 0
-            for (int j=0; j<group_n; j++) _ptcl_in_cluster[_group_list[group_start+j]].status=0;
+            for (int j=0; j<group_n; j++) _ptcl_in_cluster[_group_list[group_start+j]].status.d=0;
 
             // stability check and break groups
             bool stab_flag=stabilityCheck<Tptcl>(stab_bins, bins.back(), _rbin, _rin, _rout, _dt_tree);
@@ -570,7 +570,7 @@ private:
             
             for (int i=0; i<stab_bins.size(); i++) {
                 keplerOrbitGenerator(_i_cluster, _n_groups, _ptcl_in_cluster, _ptcl_artifical, _empty_list, &group_ptcl_adr_list[group_ptcl_adr_offset], *stab_bins[i], _rbin, _id_offset, _n_split);
-                group_ptcl_adr_offset += stab_bins[i]->status;
+                group_ptcl_adr_offset += stab_bins[i]->status.d;
                 _n_groups++;
             }
         }
@@ -586,8 +586,8 @@ private:
         PS::S32 i_group = 0;
         while (i_group<group_ptcl_adr_offset) {
             // if single find inside group_ptcl_adr_offset, exchange single with group member out of the offset
-            if(_ptcl_in_cluster[i_group].status==0) {
-                while(_ptcl_in_cluster[i_single_front].status==0) {
+            if(_ptcl_in_cluster[i_group].status.d==0) {
+                while(_ptcl_in_cluster[i_single_front].status.d==0) {
                     i_single_front++;
                     assert(i_single_front<_n_ptcl);
                 }
@@ -623,7 +623,7 @@ private:
             PS::S32 ik = _empty_list[i];
             _ptcl_in_cluster[ik].mass = 0.0;
             _ptcl_in_cluster[ik].id = -1;
-            _ptcl_in_cluster[ik].status = -1;
+            _ptcl_in_cluster[ik].status.d = -1;
         }
 
     }
@@ -751,18 +751,18 @@ public:
     // assume the binary information stored in artifical star mass_bk
     template <class Tptcl>
     void getBinPars(Binary &bin, const Tptcl* _ptcl_artifical) {
-        bin.semi   = _ptcl_artifical[0].mass_bk;
-        bin.ecc  = _ptcl_artifical[1].mass_bk;
-        bin.peri = _ptcl_artifical[2].mass_bk;
-        bin.tstep= _ptcl_artifical[3].mass_bk;
-        bin.inc  = _ptcl_artifical[4].mass_bk;
-        bin.OMG  = _ptcl_artifical[5].mass_bk;
-        bin.omg  = _ptcl_artifical[6].mass_bk;
-        bin.ecca = _ptcl_artifical[7].mass_bk;
-        bin.tperi= _ptcl_artifical[8].mass_bk;
-        bin.stable_factor= _ptcl_artifical[9].mass_bk;
-        bin.m1   = _ptcl_artifical[10].mass_bk;
-        bin.m2   = _ptcl_artifical[11].mass_bk;
+        bin.semi   = _ptcl_artifical[0].mass_bk.d;
+        bin.ecc  = _ptcl_artifical[1].mass_bk.d;
+        bin.peri = _ptcl_artifical[2].mass_bk.d;
+        bin.tstep= _ptcl_artifical[3].mass_bk.d;
+        bin.inc  = _ptcl_artifical[4].mass_bk.d;
+        bin.OMG  = _ptcl_artifical[5].mass_bk.d;
+        bin.omg  = _ptcl_artifical[6].mass_bk.d;
+        bin.ecca = _ptcl_artifical[7].mass_bk.d;
+        bin.tperi= _ptcl_artifical[8].mass_bk.d;
+        bin.stable_factor= _ptcl_artifical[9].mass_bk.d;
+        bin.m1   = _ptcl_artifical[10].mass_bk.d;
+        bin.m2   = _ptcl_artifical[11].mass_bk.d;
     }
 
     //! return group parameters
@@ -770,11 +770,11 @@ public:
     */
     template <class Tptcl>
     void getGroupIndex(Tptcl* _ptcl_artifical) {
-        n_members_1st = _ptcl_artifical[0].status;
-        n_members_2nd = _ptcl_artifical[1].status;
-        i_cluster = _ptcl_artifical[2].status-1;
-        i_group   = _ptcl_artifical[3].status-1;
-        n_members = _ptcl_artifical[offset_cm].status;
+        n_members_1st = _ptcl_artifical[0].status.d;
+        n_members_2nd = _ptcl_artifical[1].status.d;
+        i_cluster = _ptcl_artifical[2].status.d-1;
+        i_group   = _ptcl_artifical[3].status.d-1;
+        n_members = _ptcl_artifical[offset_cm].status.d;
         id        =-_ptcl_artifical[offset_cm].id;
     }
     

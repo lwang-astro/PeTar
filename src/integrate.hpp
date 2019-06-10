@@ -36,7 +36,7 @@ void kickOne(Tsys & _sys,
 #else
         _sys[k].vel  += _sys[k].acc * _dt;
 #endif
-        _sys[k].status = 0;
+        _sys[k].status.d = 0;
     }
 }
 
@@ -54,14 +54,14 @@ void kickCluster(Tsys& _sys,
     const PS::S64 n= _ptcl.size();
 #pragma omp parallel for
     for(PS::S32 i=0; i<n; i++) {
-        const PS::S64 cm_adr=-_ptcl[i].status; // notice status is negative 
+        const PS::S64 cm_adr=-_ptcl[i].status.d; // notice status is negative 
         const PS::S64 i_adr =_ptcl[i].adr_org;
         // if is group member, recover mass and kick due to c.m. force
         if(cm_adr>0) {
 #ifdef HARD_DEBUG
-            assert(_ptcl[i].mass_bk>0); 
+            assert(_ptcl[i].mass_bk.d>0); 
 #endif
-            _ptcl[i].mass = _ptcl[i].mass_bk;
+            _ptcl[i].mass = _ptcl[i].mass_bk.d;
 #ifdef KDKDK_4TH
             _ptcl[i].vel  += _dt*(_sys[cm_adr].acc + 9.0/192.0*_dt*_dt*_sys[cm_adr].acorr); 
 #else
@@ -96,7 +96,7 @@ void kickSend(Tsys& _sys,
 #pragma omp parallel for
     for(PS::S32 i=0; i<n; i++) {
         const PS::S64 adr = _adr_ptcl_send[i];
-        const PS::S64 cm_adr=-_sys[adr].status; // notice status is negative 
+        const PS::S64 cm_adr=-_sys[adr].status.d; // notice status is negative 
         // if it is group member, should not do kick since c.m. particles are on remote nodes;
         if(cm_adr==0)  {
             _sys[adr].vel += _sys[adr].acc * _dt;
@@ -107,7 +107,7 @@ void kickSend(Tsys& _sys,
 
 #ifdef HARD_DEBUG
         if(cm_adr==0) assert(_sys[adr].mass>0);
-        else assert(_sys[adr].mass_bk>0);
+        else assert(_sys[adr].mass_bk.d>0);
 #endif
     }
 }
@@ -132,7 +132,7 @@ void kickCM(Tsys& _sys,
         _sys[i].vel += _dt*_dt* _sys[i].acorr /48; 
 #endif
 #ifdef HARD_DEBUG
-        assert(_sys[i].id<0&&_sys[i].status>0);
+        assert(_sys[i].id<0&&_sys[i].status.d>0);
 #endif
     }
 }

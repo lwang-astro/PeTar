@@ -23,8 +23,8 @@ INCLUDE  = -I${ROOT_PATH}/src
 #use_xc30_naoj = yes
 use_x86 = yes
 use_mpi = yes
-debug_mode=yes
-#use_intel=yes
+#debug_mode=yes
+use_intel=yes
 
 ifeq ($(use_k_computer),yes)
 CXX = time mpiFCCpx
