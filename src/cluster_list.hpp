@@ -377,17 +377,19 @@ public:
                 pj.vel[2] = _pb[j].mass_bk.f[0];
                 pj.mass   = _pb[j].mass_bk.f[1];
             }
-            PS::F64 semi,ecc;
-            COMM::Binary::particleToSemiEcc(semi, ecc, pi, pj, _G);
+            PS::F64 semi,ecc, r,rv;
+            COMM::Binary::particleToSemiEcc(semi, ecc, r, rv, pi, pj, _G);
             PS::F64 peri = semi*(1-ecc);
             PS::F64 r_crit_j = _pb[j].r_out;
-            if (peri < _radius_factor*std::max(r_crit_i, r_crit_j)) {
+            PS::F64 r_crit_max = _radius_factor*std::max(r_crit_i, r_crit_j);
+            
+            if (peri < r_crit_max && !(rv<0 && r>r_crit_max) ) {
                 _index[n_nb_new++] = j;
             }
 #ifdef CLUSTER_DEBUG_PRINT
             else 
                 std::cerr<<"Reject idi "<<_pi.id<<" idj "<<_pb[j].id<<" peri "
-                         <<peri<<" rci "<<r_crit_i<<" rcj "<<r_crit_j
+                         <<peri<<" rci "<<r_crit_i<<" rcj "<<r_crit_j<<" dr "<<r<<" drdv "<<rv
                          <<" c.m.vel.i "<<_pi.status.f[0]<<" "<<_pi.status.f[1]<<" "<<_pi.mass_bk.f[0]<<" "<<_pi.mass_bk.f[1]<<" "
                          <<"c.m.vel.j "<<_pb[j].status.f[0]<<" "<<_pb[j].status.f[1]<<" "<<_pb[j].mass_bk.f[0]<<" "<<_pb[j].mass_bk.f[1]<<" "
                          <<"status "<<_pi.status.d<<" mass_bk"<<_pi.mass_bk.d
