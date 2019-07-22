@@ -1195,6 +1195,9 @@ public:
             PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
             pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
 
+            // set tt gid
+            sym_int.perturber.soft_pert->group_id = pcm.changeover.getRout();
+
             //check paramters
             ASSERT(sym_int.info.checkParams());
             ASSERT(sym_int.perturber.checkParams());
@@ -1271,18 +1274,26 @@ public:
                     _ptcl_artifical[icm].pos -= h4_int.particles.cm.pos;
                     tidal_tensor[i].fit(&_ptcl_artifical[i_soft_pert_offset], _ptcl_artifical[icm], manager->r_tidal_tensor, manager->n_split);
                     n_tt ++;
-                    h4_int.groups[i].perturber.soft_pert = &tidal_tensor[i];
+                    auto& groupi = h4_int.groups[i];
+                    groupi.perturber.soft_pert = &tidal_tensor[i];
 
                     // calculate soft_pert_min
-                    h4_int.groups[i].perturber.calcSoftPertMin(h4_int.groups[i].info.getBinaryTreeRoot());
+                    groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot());
 
                     // calculate c.m. changeover
-                    auto& pcm = h4_int.groups[i].particles.cm;
+                    auto& pcm = groupi.particles.cm;
                     PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
-#ifdef HARD_DEBUG
+
                     ASSERT(m_fac>0.0);
-#endif
                     pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+
+#ifdef HARD_DEBUG
+                    PS::F64 r_out_cm = pcm.changeover.getRout();
+                    for (PS::S32 k=0; k<groupi.particles.getSize(); k++) 
+                        ASSERT(abs(groupi.particles[k].changeover.getRout()-r_out_cm)<1e-10);
+#endif
+                    // set group id of tidal tensor by r out.
+                    groupi.perturber.soft_pert->group_id = pcm.changeover.getRout();
                 }
             }
 
@@ -1302,16 +1313,34 @@ public:
                 // calculate c.m. changeover
                 auto& pcm = groupi.particles.cm;
                 PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
-#ifdef HARD_DEBUG
                 ASSERT(m_fac>0.0);
-#endif
                 pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+
+                // check whether all r_out are same (primoridal or not)
+                bool primordial_flag = true;
+                PS::F64 r_out_cm = groupi.particles.cm.changeover.getRout();
+                for (PS::S32 k=0; k<groupi.particles.getSize(); k++) 
+                    if (abs(groupi.particles[k].changeover.getRout()-r_out_cm)>1e-10) {
+                        primordial_flag =false;
+                        break;
+                    }
 #ifdef SOFT_PERT                
-                if (n_tt>0) {
-                    // check tt
-                    groupi.perturber.findCloseSoftPert(tidal_tensor, n_tt, n_group_size_max, groupi.particles.cm, group_index[i]);
+                if (n_tt>0 && primordial_flag) {
+                    // check closed tt and only find consistent changeover 
+                    PS::F32 tt_index=groupi.perturber.findCloseSoftPert(tidal_tensor, n_tt, n_group_size_max, groupi.particles.cm, r_out_cm);
+                    ASSERT(tt_index<n_tt);
                     // calculate soft_pert_min
-                    groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot());
+                    if (tt_index>=0) 
+                        groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot());
+#ifdef HARD_DEBUG_PRINT
+                    std::cerr<<"Find tidal tensor, group i: "<<group_index[i]<<" pcm.r_out: "<<r_out_cm;
+                    std::cerr<<" member.r_out: ";
+                    for (PS::S32 k=0; k<groupi.particles.getSize(); k++) 
+                        std::cerr<<groupi.particles[k].changeover.getRout()<<" ";
+                    std::cerr<<" tidal tensor index: "<<tt_index;
+                    std::cerr<<std::endl;
+#endif
+                    tt_index=0;
                 }
 #endif
             }
@@ -1347,16 +1376,34 @@ public:
                     // calculate c.m. changeover
                     auto& pcm = groupi.particles.cm;
                     PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
-#ifdef HARD_DEBUG
                     ASSERT(m_fac>0.0);
-#endif
                     pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+                    // check whether all r_out are same (primoridal or not)
+                    bool primordial_flag = true;
+                    PS::F64 r_out_cm = groupi.particles.cm.changeover.getRout();
+                    for (PS::S32 k=0; k<groupi.particles.getSize(); k++) 
+                        if (abs(groupi.particles[k].changeover.getRout()-r_out_cm)>1e-10) {
+                            primordial_flag =false;
+                            break;
+                        }
+
 #ifdef SOFT_PERT                
-                    if (n_tt>0) {
-                        // check tt
-                        groupi.perturber.findCloseSoftPert(tidal_tensor, n_tt, n_group_size_max, groupi.particles.cm, group_index[i]);
+                    if (n_tt>0 && primordial_flag) {
+                        // check closed tt and only find consistent changeover 
+                        PS::F32 tt_index=groupi.perturber.findCloseSoftPert(tidal_tensor, n_tt, n_group_size_max, groupi.particles.cm, r_out_cm);
+                        ASSERT(tt_index<n_tt);
                         // calculate soft_pert_min
-                        groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot());
+                        if (tt_index>=0) 
+                            groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot());
+#ifdef HARD_DEBUG_PRINT
+                        std::cerr<<"Find tidal tensor, group i: "<<group_index[i]<<" pcm.r_out: "<<groupi.particles.cm.changeover.getRout();
+                        std::cerr<<" member.r_out: ";
+                        for (PS::S32 k=0; k<groupi.particles.getSize(); k++) 
+                            std::cerr<<groupi.particles[k].changeover.getRout()<<" ";
+                        std::cerr<<" tidal tensor index: "<<tt_index;
+                        std::cerr<<std::endl;
+#endif
+
                     }
 #endif
                 }
@@ -1366,7 +1413,8 @@ public:
                 if (n_tt>0) {
                     for(int i=n_init_group; i<n_act_group; i++) {
                         auto& groupi = h4_int.groups[group_index[i]];
-                        groupi.perturber.soft_pert->shiftCM(groupi.particles.cm.pos);
+                        if (groupi.perturber.soft_pert!=NULL) 
+                            groupi.perturber.soft_pert->shiftCM(groupi.particles.cm.pos);
                     }
                 }
 #endif

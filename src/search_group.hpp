@@ -366,7 +366,7 @@ private:
                 for (int j=0; j<2; j++) {
                     // use member changeover, if new changeover is different, record the scale ratio 
                     p[j]->changeover = _bin.member[j]->changeover;
-                    if (p[j]->changeover.getRin()!=_bin.changeover.getRin()) {
+                    if (abs(p[j]->changeover.getRin()-_bin.changeover.getRin())>1e-10) {
                         p[j]->changeover.r_scale_next = _bin.changeover.getRin()/p[j]->changeover.getRin();
                         p[j]->r_search = std::max(p[j]->r_search, _bin.r_search);
 #ifdef HARD_DEBUG

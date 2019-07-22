@@ -14,9 +14,9 @@ private:
     PS::F64 T3[10]; // 2nd Tensor (10)
 public:
     PS::F64vec pos;  // position of c.m.
-    PS::S32 group_id; // indicate which group use the tensor
+    PS::F64 group_id; // indicate which group use the tensor
 
-    TidalTensor(): T1{0.0,0.0,0.0}, T2{0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, T3{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, pos(0.0), group_id(-1) {}
+    TidalTensor(): T1{0.0,0.0,0.0}, T2{0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, T3{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, pos(0.0), group_id(0.0) {}
 
     void dump(FILE *fp){
         fwrite(this, sizeof(TidalTensor),1,fp);
@@ -35,7 +35,7 @@ public:
         for(PS::S32 i=0; i<9; i++) T2[i] = 0;
         for(PS::S32 i=0; i<10; i++) T3[i] = 0;
         pos = 0.0;
-        group_id = -1;
+        group_id = 0.0;
     }
 
     //! tidal tensor fitting function,
@@ -287,7 +287,8 @@ public:
     void clear() {
         NB::clear();
         if (soft_pert!=NULL) {
-            soft_pert->group_id = -1;
+            ASSERT(soft_pert->group_id>0.0);
+            soft_pert->group_id = -soft_pert->group_id;
             soft_pert = NULL;
         }
     }
@@ -300,15 +301,17 @@ public:
         return true;
     }
 
-    //! find close tidal tensor and initial tidal tensor c.m.
+    //! find close tidal tensor and if (-) tensor group id is the same as input, initial tidal tensor c.m.
     /*! if the tidal tensor is already in used (group_id>=0), copy a new one after _n_tt
       @param[in,out] _tt: tensor array
       @param[in,out] _n_tt: number of current tensor
       @param[in] _n_max: maximum size of tensor array
       @param[in] _cm: c.m. particle
-      @param[in] _gid: group id
+      @param[in] _gid: group id (not necessary integer)
+      \return the tidal tensor index, if no match, return -1
      */
-    void findCloseSoftPert(TidalTensor* _tt, int& _n_tt, const int _n_max, const H4::ParticleH4<PtclHard>& _cm, const PS::S32 _gid) {
+    PS::S32 findCloseSoftPert(TidalTensor* _tt, int& _n_tt, const int _n_max, const H4::ParticleH4<PtclHard>& _cm, const PS::F64 _gid) {
+        ASSERT(_gid>0.0);
         const PS::F64vec& pos = _cm.pos;
         PS::F64 r_min2=NUMERIC_FLOAT_MAX;
         PS::S32 r_min_index=-1;
@@ -321,16 +324,22 @@ public:
             }
         }
         // if the close tt is already used, copy a new one
-        if (_tt[r_min_index].group_id>=0) {
-            ASSERT(_n_tt<_n_max);
-            _tt[_n_tt] = _tt[r_min_index];
-            soft_pert = &_tt[_n_tt];
-            _n_tt++;
+        //if (_tt[r_min_index].group_id>=0) {
+        //ASSERT(_n_tt<_n_max);
+            
+            //_tt[_n_tt] = _tt[r_min_index];
+            //soft_pert = &_tt[_n_tt];
+            //_n_tt++;
+        //}
+        if (-_tt[r_min_index].group_id==_gid) {
+            soft_pert = &_tt[r_min_index];
+            soft_pert->group_id = _gid;
+            // update c.m.
+            soft_pert->shiftCM(pos);
+            return r_min_index;
         }
-        else soft_pert = &_tt[r_min_index];
-        soft_pert->group_id = _gid;
-        // update c.m.
-        soft_pert->shiftCM(pos);
+        else 
+            return -1;
     }
 
     //! calculate soft perturbation 
