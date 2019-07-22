@@ -633,8 +633,8 @@ int main(int argc, char *argv[]){
     hard_manager.n_split = n_split.value;
     //hard_manager.h4_manager.r_break_crit = r_bin.value;
     //hard_manager.h4_manager.r_neighbor_crit = r_search_min;
-    hard_manager.h4_manager.step.eta_4th = eta.value*eta.value;
-    hard_manager.h4_manager.step.eta_2nd = 0.01*eta.value*eta.value;
+    hard_manager.h4_manager.step.eta_4th = eta.value;
+    hard_manager.h4_manager.step.eta_2nd = 0.01*eta.value;
     hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, r_out.value);
     hard_manager.ar_manager.energy_error_relative_max = e_err_arc.value;
 #ifdef AR_SYM
