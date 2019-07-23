@@ -24,7 +24,7 @@ INCLUDE  = -I${ROOT_PATH}/src
 use_x86 = yes
 use_mpi = yes
 #debug_mode=yes
-use_intel=yes
+#use_intel=yes
 
 ifeq ($(use_k_computer),yes)
 CXX = time mpiFCCpx
@@ -112,10 +112,11 @@ CXXFLAGS += -D HARD_CHECK_ENERGY
 #CXXLIBS += ${shell gsl-config --libs}
 
 #MT_FLAGS += -D HARD_CM_KICK
-#MT_FLAGS += -D SOFT_PERT
+MT_FLAGS += -D SOFT_PERT
 MT_FLAGS += -D AR_SYM
 #MT_FLAGS += -D FIX_CHANGEOVER
 MT_FLAGS += -D SLOWDOWN_TIMESCALE
+MT_FLAGS += -D SLOWDOWN_MASSRATIO
 MT_FLAGS += -D CLUSTER_VELOCITY
 #MT_FLAGS += -D KDKDK_2ND
 #MT_FLAGS += -D KDKDK_4TH
