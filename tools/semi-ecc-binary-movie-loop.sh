@@ -41,9 +41,25 @@ read -p "semi min (1e-7):" amin
 [[ -z $amin ]] && amin=1e-7
 echo amin $amin >> semi_ecc_binary.$logname.log.$ntime
 
-read -p "semi max (1e-1):" amax
-[[ -z $amax ]] && amax=1e-1
+read -p "semi max (5):" amax
+[[ -z $amax ]] && amax=5
 echo amax $amax >> semi_ecc_binary.$logname.log.$ntime
+
+read -p "r min (1e-2):" rmin
+[[ -z $rmin ]] && rmin=1e-2
+echo rmin $rmin >> semi_ecc_binary.$logname.log.$ntime
+
+read -p "r max (100):" rmax
+[[ -z $rmax ]] && rmax=100
+echo rmax $rmax >> semi_ecc_binary.$logname.log.$ntime
+
+read -p "ekin min (1e-7):" ekmin
+[[ -z $ekmin ]] && ekmin=1e-7
+echo ekmin $ekmin >> semi_ecc_binary.$logname.log.$ntime
+
+read -p "ekin max (1000):" ekmax
+[[ -z $ekmax ]] && ekmax=1000
+echo ekmax $ekmax >> semi_ecc_binary.$logname.log.$ntime
 
 read -p "Number of parallel threads (4):" nloop
 [[ -z $nloop ]] && nloop=4
@@ -58,5 +74,5 @@ lst=`ls $dlist"_split."*`
 for kk in $lst
 do
     rm -f semi-ecc-binary.${kk}
-    python semi-ecc-binary-movie.py $kk $dout $tscale $rscale $vscale $mscale $amin $amax &> semi-ecc-binary.${kk##*.}.$logname &
+    python semi-ecc-binary-movie.py $kk $dout $tscale $rscale $vscale $mscale $amin $amax $rmin $rmax $ekmin $ekmax &> semi-ecc-binary.${kk##*.}.$logname &
 done
