@@ -4,3 +4,4 @@
 #5ce: massive B + low-mass B + massive single 5-body encounter (bug of binarytree) :
 #eccflip: b-b encounter with one binary eccentricity >1.0 :
 arerr: 3-body AR quit at a large error phase :
+sdissue.flyby: one flyby pass a binary, the timescale criterion depending on radial velocity has inverse peak near peri-center, which cause big energy jump, by using full velocity instead of radial. the problem is solved.

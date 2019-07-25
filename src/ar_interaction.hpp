@@ -208,15 +208,18 @@ public:
                                vp[i][1] - vcm[1],
                                vp[i][2] - vcm[2]};
                 Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
-                Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
+                //Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
+                Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
                 //Float r = sqrt(r2);
                 //mrsum += m[i]*r;
                 //mvsum += m[i]*drdv/r;
                 //mt_sum += m[i]*r2/drdv;
                 //mtot += m[i];
-                Float ti = abs(r2/drdv);
+                //Float ti = abs(r2/drdv);
+                Float ti = abs(r2/v2);
                 _slowdown.timescale = std::min(_slowdown.timescale, ti);
             }
+            _slowdown.timescale = std::sqrt(_slowdown.timescale);
             //_slowdown.timescale = abs(mrsum/mvsum);
 
             //_slowdown.timescale = NUMERIC_FLOAT_MAX;
