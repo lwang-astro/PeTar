@@ -1077,7 +1077,9 @@ int main(int argc, char *argv[]){
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
                 // check changeover change
-                if (system_hard_connected.getNClusterChangeOverUpdate()>0) {
+                PS::S32 n_changeover_modify_local  = system_hard_connected.getNClusterChangeOverUpdate() + system_hard_isolated.getNClusterChangeOverUpdate();
+                PS::S32 n_changeover_modify_global = PS::Comm::getSum(n_changeover_modify_local);
+                if (n_changeover_modify_global>0) {
                     changeover_flag = true;
                     dt_kick = dt_manager.getDtEndContinue();
                 }
