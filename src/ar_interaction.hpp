@@ -216,7 +216,8 @@ public:
                 //mt_sum += m[i]*r2/drdv;
                 //mtot += m[i];
                 //Float ti = abs(r2/drdv);
-                Float ti = abs(r2/v2);
+                Float mu =mcm*m[i]/(mcm+m[i]);
+                Float ti = r2*r2/(v2*mu*mu); // approximate t = r/(v+ 0.5*mu/r^2*t)
                 _slowdown.timescale = std::min(_slowdown.timescale, ti);
             }
             _slowdown.timescale = std::sqrt(_slowdown.timescale);
