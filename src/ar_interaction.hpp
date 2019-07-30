@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include "Common/Float.h"
+#include "Common/binary_tree.h"
 #include "changeover.hpp"
 #include "AR/force.h"
 #include "hard_ptcl.hpp"
@@ -18,6 +19,165 @@ public:
 
     ARInteraction(): eps_sq(Float(-1.0)), G(Float(-1.0)) {}
 
+private:
+    //!  calculate inner member acceleration, potential and time transformation function gradient and factor for kick (two-body case)
+    /*!
+      @param[out] _force: force array to store the calculation results (in acc_in[3] for acceleration and gtgrad[3] for gradient, notice acc/gtgard may need to reset zero to avoid accummulating old values)
+      @param[out] _epot: total inner potential energy
+      @param[in] _particles: member particle array
+      @param[in] _n_particle: number of member particles
+      \return the time transformation factor (gt_kick) for kick step
+    */
+    inline Float calcAccPotAndGTKickTwo(AR::Force* _force, Float& _epot, const ARPtcl* _particles, const int _n_particle) {
+        assert(_n_particle==2);
+
+        // acceleration
+        const Float mass1 = _particles[0].mass;
+        const Float* pos1 = &_particles[0].pos.x;
+
+        const Float mass2 = _particles[1].mass;
+        const Float* pos2 = &_particles[1].pos.x;
+
+        Float m1m2 = mass1*mass2;
+        
+        Float dr[3] = {pos2[0] -pos1[0],
+                       pos2[1] -pos1[1],
+                       pos2[2] -pos1[2]};
+        Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+        Float inv_r = 1.0/sqrt(r2);
+        Float inv_r3 = inv_r*inv_r*inv_r;
+
+        Float* acc1 = _force[0].acc_in;
+        Float* acc2 = _force[1].acc_in;
+
+#ifdef AR_CHANGEOVER
+        auto& ch1 = _particles[0].changeover;
+        auto& ch2 = _particles[1].changeover;
+
+        Float r = r2*invr;
+        Float k = ChangeOver::calcAcc0WTwo(ch1,ch2,r);
+        Float kpot = ChangeOver::calcPotWTwo(ch1,ch2,r);
+
+        Float mor3_1 = mass2*inv_r3*k;
+        Float mor3_2 = mass1*inv_r3*k;
+
+        Float m1m2or = m1m2*inv_r*kpot;
+#else
+        Float mor3_1 = mass2*inv_r3;
+        Float mor3_2 = mass1*inv_r3;
+
+        Float m1m2or = m1m2*inv_r;
+#endif
+
+        acc1[0] = mor3_1 * dr[0];
+        acc1[1] = mor3_1 * dr[1];
+        acc1[2] = mor3_1 * dr[2];
+
+        acc2[0] = - mor3_2 * dr[0];
+        acc2[1] = - mor3_2 * dr[1];
+        acc2[2] = - mor3_2 * dr[2];
+
+#ifdef AR_TTL 
+        // trans formation function gradient
+#ifdef AR_CHANGEOVER
+        Float m1m2or3 = m1m2*inv_r3*k;
+#else
+        Float m1m2or3 = m1m2*inv_r3;
+#endif
+        Float* gtgrad1 = _force[0].gtgrad;
+        Float* gtgrad2 = _force[1].gtgrad;
+
+        gtgrad1[0] = m1m2or3 * dr[0];
+        gtgrad1[1] = m1m2or3 * dr[1];
+        gtgrad1[2] = m1m2or3 * dr[2];
+
+        gtgrad2[0] = - gtgrad1[0];
+        gtgrad2[1] = - gtgrad1[1];
+        gtgrad2[2] = - gtgrad1[2];
+#endif
+
+        // potential energy
+        _epot = - m1m2or;
+
+        // transformation factor for kick
+        Float gt_kick = 1.0/m1m2or;
+
+        return gt_kick;
+    }
+
+    //! calculate inner member acceleration, potential and time transformation function gradient and factor for kick
+    /*!
+      @param[out] _force: force array to store the calculation results (in acc_in[3] for acceleration and gtgrad[3] for gradient, notice acc/gtgard may need to reset zero to avoid accummulating old values)
+      @param[out] _epot: total inner potential energy
+      @param[in] _particles: member particle array
+      @param[in] _n_particle: number of member particles
+      \return the time transformation factor (gt_kick) for kick step
+    */
+    inline Float calcAccPotAndGTKick(AR::Force* _force, Float& _epot, const ARPtcl* _particles, const int _n_particle) {
+        _epot = Float(0.0);
+        Float gt_kick = Float(0.0);
+
+        for (int i=0; i<_n_particle; i++) {
+            const Float massi = _particles[i].mass;
+            const Float* posi = &_particles[i].pos.x;
+            Float* acci = _force[i].acc_in;
+            acci[0] = acci[1] = acci[2] = Float(0.0);
+
+#ifdef AR_TTL 
+            Float* gtgradi = _force[i].gtgrad;
+            gtgradi[0] = gtgradi[1] = gtgradi[2] = Float(0.0);
+#endif
+
+            Float poti = Float(0.0);
+            Float gtki = Float(0.0);
+
+            for (int j=0; j<_n_particle; j++) {
+                if (i==j) continue;
+                const Float massj = _particles[j].mass;
+                const Float* posj = &_particles[j].pos.x; 
+                Float dr[3] = {posj[0] -posi[0],
+                               posj[1] -posi[1],
+                               posj[2] -posi[2]};
+                Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+                Float inv_r = 1.0/sqrt(r2);
+                Float inv_r3 = inv_r*inv_r*inv_r;
+#ifdef AR_CHANGEOVER
+                Float r = r2*inv_r;
+                const Float kpot  = ChangeOver::calcPotWTwo(_particles[i].changeover, _particles[j].changeover, r);
+                const Float k     = ChangeOver::calcAcc0WTwo(_particles[i].changeover, _particles[j].changeover, r);
+
+                Float mor3 = massj*inv_r3*k;
+                Float mor = massj*inv_r*kpot;
+#else
+                Float mor3 = massj*inv_r3;
+                Float mor = massj*inv_r;
+#endif
+                acci[0] += mor3 * dr[0];
+                acci[1] += mor3 * dr[1];
+                acci[2] += mor3 * dr[2];
+
+#ifdef AR_TTL                     
+                Float mimjor3 = massi*mor3;
+                gtgradi[0] += mimjor3 * dr[0];
+                gtgradi[1] += mimjor3 * dr[1];
+                gtgradi[2] += mimjor3 * dr[2];
+#endif
+
+                poti -= mor;
+                gtki += mor;
+                    
+            }
+            _epot += poti * massi;
+            gt_kick += gtki * massi;
+        }
+        _epot   *= 0.5;
+        gt_kick = 2.0/gt_kick;
+
+        return gt_kick;
+    }
+    
+public:
+
     //! check whether parameters values are correct
     /*! \return true: all correct
      */
@@ -33,20 +193,53 @@ public:
              <<"G      : "<<G<<std::endl;
     }    
 
+    //! calculate perturbation from c.m. acceleration
+    Float calcPertFromAcc(const Float* _acc, const Float _mp, const Float _mpert) {
+        Float acc2 = _acc[0]*_acc[0]+_acc[1]*_acc[1]+_acc[2]*_acc[2];
+        return acc2/(_mp*_mpert);
+    }
+
+    //! calculate perturbation from binary tree
+    Float calcPertFromBinary(const COMM::BinaryTree<ARPtcl>& _bin) {
+        Float apo = _bin.semi*(1.0+_bin.ecc);
+        Float r2 = apo*apo;
+        return (_bin.m1*_bin.m2)/(r2*r2);
+    }
+
+    //! calculate perturbation from distance to perturber and masses of particle and perturber 
+    Float calcPertFromMR(const Float _r, const Float _mp, const Float _mpert) {
+        Float r2 = _r*_r;
+        return _mp*_mpert/(r2*r2);
+    }
+
     //! (Necessary) calculate acceleration from perturber and the perturbation factor for slowdown calculation
     /*! The Force class acc_pert should be updated
       @param[in,out] _slowdown: slowdown paramters, (pert_out and timescale should be updated)
       @param[out] _force: force array to store the calculation results (in acc_pert[3], notice acc_pert may need to reset zero to avoid accummulating old values)
+      @param[out] _epot: potential 
       @param[in] _particles: member particle array
       @param[in] _n_particle: number of member particles
       @param[in] _particle_cm: center-of-mass particle
+      @param[in] _bin_root: binary tree root
       @param[in] _perturber: pertuber container
       @param[in] _time: current time
       \return perturbation energy to calculate slowdown factor
     */
-    void calcAccAndSlowDownPert(AR::SlowDown& _slowdown, AR::Force* _force, const ARPtcl* _particles, const int _n_particle, const H4Ptcl& _particle_cm, const ARPerturber& _perturber) {
+    Float calcAccEnergyAndSlowDownPert(AR::SlowDown& _slowdown, AR::Force* _force, Float& _epot, const ARPtcl* _particles, const int _n_particle, const H4Ptcl& _particle_cm, const COMM::BinaryTree<ARPtcl>& _bin_root, const ARPerturber& _perturber) {
         static const Float inv3 = 1.0 / 3.0;
+        
+        // inner force
+        Float gt_kick;
+        if (_n_particle==2) gt_kick = calcAccPotAndGTKickTwo(_force, _epot, _particles, _n_particle);
+        else gt_kick = calcAccPotAndGTKick(_force, _epot, _particles, _n_particle);
 
+        // slowdown inner perturbation: m1*m2/apo_in^4
+        Float apo_in = _bin_root.semi*(1.0+_bin_root.ecc);
+        Float apo_in2 = apo_in*apo_in;
+        _slowdown.pert_in = _bin_root.m1*_bin_root.m2/(apo_in2*apo_in2);
+        _slowdown.period  = _bin_root.period;
+
+        // perturber force
         const int n_pert = _perturber.neighbor_address.getSize();
         const int n_pert_single = _perturber.n_neighbor_single;
         const int n_pert_group = _perturber.n_neighbor_group;
@@ -137,11 +330,12 @@ public:
                     Float k  = ChangeOver::calcAcc0WTwo(chi, *changeover[j], r);
                     Float r3 = r*r2;
                     Float mor3 = G*m[j]/r3 * k;
-                    pert_pot += mor3;
+                    pert_pot += mor3/r;
 
                     acc_pert[0] += mor3 * dr[0];
                     acc_pert[1] += mor3 * dr[1];
                     acc_pert[2] += mor3 * dr[2];
+
                 }
                 // group perturber
                 for (int j=n_pert_single; j<n_pert; j++) {
@@ -158,11 +352,12 @@ public:
                     }
                     Float r3 = r*r2;
                     Float mor3 = G*mk/r3;
-                    pert_pot += mor3;
+                    pert_pot += mor3/r;
 
                     acc_pert[0] += mor3 * dr[0];
                     acc_pert[1] += mor3 * dr[1];
                     acc_pert[2] += mor3 * dr[2];
+
                 }
 
 #ifdef SOFT_PERT
@@ -194,10 +389,13 @@ public:
                 acc_pert[2] -= acc_pert_cm[2]; 
             }
 
+            // get slowdown perturbation out
+            _slowdown.pert_out = pert_cm + _perturber.soft_pert_min;
+
 #ifdef SLOWDOWN_TIMESCALE
-            // suppressed. The new and break group change the neighbors (c.m. <-> components). 
-            // This cause the sudden change of perturber velocity calculation, the timescale will jump and cause slowdown discontinue 
             // get SD time scale
+            // risk: he new and break group change the neighbors (c.m. <-> components). 
+            // This cause the sudden change of perturber velocity calculation, the timescale will jump and cause slowdown discontinue 
             _slowdown.timescale = NUMERIC_FLOAT_MAX;
             //Float mrsum = 0.0, mvsum= 0.0;
             for (int i=0; i<n_pert; i++) {
@@ -208,119 +406,27 @@ public:
                                vp[i][1] - vcm[1],
                                vp[i][2] - vcm[2]};
                 Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
-                //Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
+                Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
                 Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
                 //Float r = sqrt(r2);
                 //mrsum += m[i]*r;
                 //mvsum += m[i]*drdv/r;
                 //mt_sum += m[i]*r2/drdv;
                 //mtot += m[i];
+                //Float mu =mcm*m[i]/(mcm+m[i]);
                 //Float ti = abs(r2/drdv);
-                Float mu =mcm*m[i]/(mcm+m[i]);
-                Float ti = r2*r2/(v2*mu*mu); // approximate t = r/(v+ 0.5*mu/r^2*t)
+
+                // approximate t = r/(v+ 0.5*mu/r^2*t)
+                
+                // in case radial velocity is larger, use radial velocity, otherwise use whole velocity
+                Float ti = (drdv*drdv>0.25*v2*r2)? r2*r2/(drdv*drdv) : r2/v2;
+                //Float ti = r2/(v2+mu*mu/(r2*v2));
+                //Float ti = std::min(r2*r2/(drdv*drdv),r2/v2);
                 _slowdown.timescale = std::min(_slowdown.timescale, ti);
             }
+            //_slowdown.timescale /= std::max(1.0, log(_slowdown.getSlowDownFactorOrigin());
             _slowdown.timescale = std::sqrt(_slowdown.timescale);
             //_slowdown.timescale = abs(mrsum/mvsum);
-
-            //_slowdown.timescale = NUMERIC_FLOAT_MAX;
-            //// single perturber
-            //for (int j=0; j<n_pert_single; j++) {
-            //    Float dr[3] = {xp[j][0] - xcm[0],
-            //                   xp[j][1] - xcm[1],
-            //                   xp[j][2] - xcm[2]};
-            //    Float dv[3] = {vp[j][0] - vcm[0],
-            //                   vp[j][1] - vcm[1],
-            //                   vp[j][2] - vcm[2]};
-            //    Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
-            //    Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
-            //    Float ti = abs(r2/drdv);
-            //    _slowdown.timescale = std::min(_slowdown.timescale, ti);
-            //}
-            //// group perturber
-            //for (int j=n_pert_single; j<n_pert; j++) {
-            //    const int jk = j-n_pert_single;
-            //    auto* ptcl_mem = ptclgroup[jk]->getDataAddress();
-            //    for (int k=0; k<ptclgroup[jk]->getSize(); k++) {
-            //        Float dr[3] = {(xp[j][0]+ptcl_mem[k].pos[0]) - xcm[0],
-            //                       (xp[j][1]+ptcl_mem[k].pos[1]) - xcm[1],
-            //                       (xp[j][2]+ptcl_mem[k].pos[2]) - xcm[2]};
-            //        Float dv[3] = {(vp[j][0]+ptcl_mem[k].vel[0]) - vcm[0],
-            //                       (vp[j][1]+ptcl_mem[k].vel[1]) - vcm[1],
-            //                       (vp[j][2]+ptcl_mem[k].vel[2]) - vcm[2]};
-            //        Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
-            //        Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
-            //        Float ti = abs(r2/drdv);
-            //        _slowdown.timescale = std::min(_slowdown.timescale, ti);
-            //    }
-            //}
-#endif
-            /* it is much more cost due to the changeover function
-            else {
-                // first calculate c.m. acceleration and tidal perturbation
-                for (int j=0; j<n_pert; j++) {
-                    Float dr[3] = {xp[j][0] - xcm[0],
-                                   xp[j][1] - xcm[1],
-                                   xp[j][2] - xcm[2]};
-                    Float dv[3] = {vp[j][0] - vcm[0],
-                                   vp[j][1] - vcm[1],
-                                   vp[j][2] - vcm[2]};
-                    Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
-                    Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
-                    Float ti = abs(r2/drdv);
-                    Float r  = sqrt(r2);
-                    Float k  = changeover[j]->calcAcc0W(r);
-                    Float r3 = r*r2;
-                    Float mor3 = G*m[j]/r3 * k;
-                    pert_cm += mor3;
-
-                    acc_pert_cm[0] += mor3 * dr[0];
-                    acc_pert_cm[1] += mor3 * dr[1];
-                    acc_pert_cm[2] += mor3 * dr[2];
-
-                    _slowdown.timescale = std::min(_slowdown.timescale, ti);
-                }
-                pert_cm *= _particle_cm.mass;
-
-                // calculate component perturbation
-                for (int i=0; i<_n_particle; i++) {
-                    Float* acc_pert = _force[i].acc_pert;
-                    const auto& pi = _particles[i];
-                    acc_pert[0] = acc_pert[1] = acc_pert[2] = Float(0.0);
-
-                    Float xi[3];
-                    xi[0] = pi.pos[0] + xcm[0];
-                    xi[1] = pi.pos[1] + xcm[1];
-                    xi[2] = pi.pos[2] + xcm[2];
-
-                    // remove c.m. perturbation acc
-                    acc_pert[0] = -acc_pert_cm[0]; 
-                    acc_pert[1] = -acc_pert_cm[1];        
-                    acc_pert[2] = -acc_pert_cm[2]; 
-
-                    for (int j=0; j<n_pert; j++) {
-                        Float dr[3] = {xp[j][0] - xi[0],
-                                       xp[j][1] - xi[1],
-                                       xp[j][2] - xi[2]};
-                        Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
-                        Float r  = sqrt(r2);
-                        Float k  = changeover[j]->calcAcc0W(r);
-                        Float r3 = r*r2;
-                        Float mor3 = G*m[j]/r3 * k;
-
-                        acc_pert[0] += mor3 * dr[0];
-                        acc_pert[1] += mor3 * dr[1];
-                        acc_pert[2] += mor3 * dr[2];
-                    }
-#ifdef SOFT_PERT
-                    if(_perturber.soft_pert!=NULL) _perturber.soft_pert->eval(acc_pert, pi.pos);
-#endif
-                }   
-                //ASSERT(_perturber.soft_pert_min>0.0);
-            }
-            */
-            _slowdown.pert_out = pert_cm + _perturber.soft_pert_min;
-#ifdef SLOWDOWN_TIMESCALE
             _slowdown.timescale = 0.1*std::min(_slowdown.getTimescaleMax(), _slowdown.timescale);
 #else
             _slowdown.timescale = _slowdown.getTimescaleMax();
@@ -341,163 +447,10 @@ public:
             _slowdown.timescale = _slowdown.getTimescaleMax();
             //ASSERT(_perturber.soft_pert_min>0.0);
         }
-    }
-
-    //! (Necessary) calculate inner member acceleration, potential and time transformation function gradient and factor for kick (two-body case)
-    /*!
-      @param[out] _force: force array to store the calculation results (in acc_in[3] for acceleration and gtgrad[3] for gradient, notice acc/gtgard may need to reset zero to avoid accummulating old values)
-      @param[out] _epot: total inner potential energy
-      @param[in] _particles: member particle array
-      @param[in] _n_particle: number of member particles
-      \return the time transformation factor (gt_kick) for kick step
-    */
-    Float calcAccPotAndGTKickTwo(AR::Force* _force, Float& _epot, const ARPtcl* _particles, const int _n_particle) {
-        assert(_n_particle==2);
-
-        // acceleration
-        const Float mass1 = _particles[0].mass;
-        const Float* pos1 = &_particles[0].pos.x;
-
-        const Float mass2 = _particles[1].mass;
-        const Float* pos2 = &_particles[1].pos.x;
-
-        Float m1m2 = mass1*mass2;
-        
-        Float dr[3] = {pos2[0] -pos1[0],
-                       pos2[1] -pos1[1],
-                       pos2[2] -pos1[2]};
-        Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
-        Float inv_r = 1.0/sqrt(r2);
-        Float inv_r3 = inv_r*inv_r*inv_r;
-
-        Float* acc1 = _force[0].acc_in;
-        Float* acc2 = _force[1].acc_in;
-
-#ifdef AR_CHANGEOVER
-        auto& ch1 = _particles[0].changeover;
-        auto& ch2 = _particles[1].changeover;
-
-        Float r = r2*invr;
-        Float k = ChangeOver::calcAcc0WTwo(ch1,ch2,r);
-        Float kpot = ChangeOver::calcPotWTwo(ch1,ch2,r);
-
-        Float mor3_1 = mass2*inv_r3*k;
-        Float mor3_2 = mass1*inv_r3*k;
-
-        Float m1m2or = m1m2*inv_r*kpot;
-#else
-        Float mor3_1 = mass2*inv_r3;
-        Float mor3_2 = mass1*inv_r3;
-
-        Float m1m2or = m1m2*inv_r;
-#endif
-
-        acc1[0] = mor3_1 * dr[0];
-        acc1[1] = mor3_1 * dr[1];
-        acc1[2] = mor3_1 * dr[2];
-
-        acc2[0] = - mor3_2 * dr[0];
-        acc2[1] = - mor3_2 * dr[1];
-        acc2[2] = - mor3_2 * dr[2];
-
-#ifdef AR_TTL 
-        // trans formation function gradient
-#ifdef AR_CHANGEOVER
-        Float m1m2or3 = m1m2*inv_r3*k;
-#else
-        Float m1m2or3 = m1m2*inv_r3;
-#endif
-        Float* gtgrad1 = _force[0].gtgrad;
-        Float* gtgrad2 = _force[1].gtgrad;
-
-        gtgrad1[0] = m1m2or3 * dr[0];
-        gtgrad1[1] = m1m2or3 * dr[1];
-        gtgrad1[2] = m1m2or3 * dr[2];
-
-        gtgrad2[0] = - gtgrad1[0];
-        gtgrad2[1] = - gtgrad1[1];
-        gtgrad2[2] = - gtgrad1[2];
-#endif
-
-        // potential energy
-        _epot = - m1m2or;
-
-        // transformation factor for kick
-        Float gt_kick = 1.0/m1m2or;
 
         return gt_kick;
     }
 
-    //! (Necessary) calculate inner member acceleration, potential and time transformation function gradient and factor for kick
-    /*!
-      @param[out] _force: force array to store the calculation results (in acc_in[3] for acceleration and gtgrad[3] for gradient, notice acc/gtgard may need to reset zero to avoid accummulating old values)
-      @param[out] _epot: total inner potential energy
-      @param[in] _particles: member particle array
-      @param[in] _n_particle: number of member particles
-      \return the time transformation factor (gt_kick) for kick step
-    */
-    Float calcAccPotAndGTKick(AR::Force* _force, Float& _epot, const ARPtcl* _particles, const int _n_particle) {
-        _epot = Float(0.0);
-        Float gt_kick = Float(0.0);
-
-        for (int i=0; i<_n_particle; i++) {
-            const Float massi = _particles[i].mass;
-            const Float* posi = &_particles[i].pos.x;
-            Float* acci = _force[i].acc_in;
-            acci[0] = acci[1] = acci[2] = Float(0.0);
-
-#ifdef AR_TTL 
-            Float* gtgradi = _force[i].gtgrad;
-            gtgradi[0] = gtgradi[1] = gtgradi[2] = Float(0.0);
-#endif
-
-            Float poti = Float(0.0);
-            Float gtki = Float(0.0);
-
-            for (int j=0; j<_n_particle; j++) {
-                if (i==j) continue;
-                const Float massj = _particles[j].mass;
-                const Float* posj = &_particles[j].pos.x; 
-                Float dr[3] = {posj[0] -posi[0],
-                               posj[1] -posi[1],
-                               posj[2] -posi[2]};
-                Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
-                Float inv_r = 1.0/sqrt(r2);
-                Float inv_r3 = inv_r*inv_r*inv_r;
-#ifdef AR_CHANGEOVER
-                Float r = r2*inv_r;
-                const Float kpot  = ChangeOver::calcPotWTwo(_particles[i].changeover, _particles[j].changeover, r);
-                const Float k     = ChangeOver::calcAcc0WTwo(_particles[i].changeover, _particles[j].changeover, r);
-
-                Float mor3 = massj*inv_r3*k;
-                Float mor = massj*inv_r*kpot;
-#else
-                Float mor3 = massj*inv_r3;
-                Float mor = massj*inv_r;
-#endif
-                acci[0] += mor3 * dr[0];
-                acci[1] += mor3 * dr[1];
-                acci[2] += mor3 * dr[2];
-
-#ifdef AR_TTL                     
-                Float mimjor3 = massi*mor3;
-                gtgradi[0] += mimjor3 * dr[0];
-                gtgradi[1] += mimjor3 * dr[1];
-                gtgradi[2] += mimjor3 * dr[2];
-#endif
-
-                poti -= mor;
-                gtki += mor;
-                    
-            }
-            _epot += poti * massi;
-            gt_kick += gtki * massi;
-        }
-        _epot   *= 0.5;
-        gt_kick = 2.0/gt_kick;
-
-        return gt_kick;
-    }
 
 #ifndef AR_TTL
     //! (Necessary) calcualte the time transformation factor for drift

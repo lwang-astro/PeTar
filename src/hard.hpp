@@ -1206,7 +1206,7 @@ public:
             etoti = sym_int.getEtot();
 #endif
             // integration
-            sym_int.integrateToTime(sym_int.info.ds, time_end, sym_int.info.fix_step_option);
+            sym_int.integrateToTime(time_end);
 
             pcm.pos += pcm.vel * _dt;
 

@@ -14,6 +14,6 @@ do
 	flog=hard.debug.$fname.log
 	fdata=hard.debug.$fname.data
 	./hard_debug.out $opt hard_dump.$fname 1>$fdata 2>$flog
-	tail -10 $flog |egrep 'Hard Energy:'
+	tail -2 $flog
     fi
 done
