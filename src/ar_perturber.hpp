@@ -360,7 +360,7 @@ public:
             Float dacc[3] = {acc_p1[0]-acc_p2[0], 
                              acc_p1[1]-acc_p2[1],
                              acc_p1[2]-acc_p2[2]};
-            pert = std::sqrt(dacc[0]*dacc[0] + dacc[1]*dacc[1] + dacc[2]*dacc[2]);
+            pert = dacc[0]*dacc[0] + dacc[1]*dacc[1] + dacc[2]*dacc[2];
         }
 #endif
         return pert;
@@ -375,7 +375,10 @@ public:
             ParticleBase p[2];
             _bin.calcParticlesEcca(p[0], p[1], COMM::PI);
             Float dacc_soft = calcSoftPertSlowDownBinary(p[0], p[1]);
-            soft_pert_min = _bin.mass*dacc_soft/(2.0*abs(_bin.semi));
+            //soft_pert_min = _bin.mass*dacc_soft/(2.0*abs(_bin.semi));
+            Float apo = _bin.semi*(1.0+_bin.ecc);
+            soft_pert_min = _bin.mass*dacc_soft/(apo*apo);
+            //soft_pert_min = _bin.mass*_bin.mass*dacc_soft;
         }
     }
 };
