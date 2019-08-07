@@ -683,7 +683,9 @@ public:
             // This cause the sudden change of perturber velocity calculation, the timescale will jump and cause slowdown discontinue 
             Float pert_pot = 0.0;
 #ifdef SLOWDOWN_TIMESCALE
-            Float t2_min = NUMERIC_FLOAT_MAX;
+            //Float t2_min = NUMERIC_FLOAT_MAX;
+            Float mvor[3] = {0.0,0.0,0.0};
+            Float mtot=0.0;
 #endif
             for (int j=0; j<n_pert; j++) {
                 H4::NBAdr<PtclHard>::Single* pertj;
@@ -719,10 +721,16 @@ public:
                 pert_pot += mj/r4 * k;
 
 #ifdef SLOWDOWN_TIMESCALE
-                Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
-                Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
+                //Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
+                //Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
+                //mvor += mj*drdv/r2;
+                Float mor = mj/r;
+                mvor[0] += mor*dv[0];
+                mvor[1] += mor*dv[1];
+                mvor[2] += mor*dv[2];
+                mtot += mj;
                 //Float v = sqrt(v2);
-                Float tj2 = r2*r2/(drdv*drdv+0.01*v2*r2);
+                //Float tj2 = r2*r2/(drdv*drdv+0.01*v2*r2);
                 //Float tj2 = r2/(abs(drdv)+0.01*v*r);
 
                 // approximate t = r/(v+ 0.5*mu/r^2*t)
@@ -731,18 +739,20 @@ public:
                 //Float ti = (drdv*drdv>0.25*v2*r2)? r2*r2/(drdv*drdv) : r2/v2;
                 //Float ti = r2/(v2+mu*mu/(r2*v2));
                 //Float ti = std::min(r2*r2/(drdv*drdv),r2/v2);
-                t2_min =  std::min(t2_min, tj2);
+                //t2_min =  std::min(t2_min, tj2);
 #endif
             }
 
             // get slowdown perturbation out
             _slowdown.pert_out = pert_pot*mcm + _perturber.soft_pert_min;
 
+#ifdef SLOWDOWN_TIMESCALE
+            Float tave = mtot/sqrt(mvor[0]*mvor[0] + mvor[1]*mvor[1] + mvor[2]*mvor[2]);
             //_slowdown.timescale /= std::max(1.0, log(_slowdown.getSlowDownFactorOrigin());
             //_slowdown.timescale = std::sqrt(_slowdown.timescale);
             //_slowdown.timescale = abs(mrsum/mvsum);
-#ifdef SLOWDOWN_TIMESCALE
-            _slowdown.timescale = 0.1*std::min(_slowdown.getTimescaleMax(), sqrt(t2_min));
+            //_slowdown.timescale = 0.1*std::min(_slowdown.getTimescaleMax(), sqrt(t2_min));
+            _slowdown.timescale = 0.1*std::min(_slowdown.getTimescaleMax(), tave);
 #else
             _slowdown.timescale = _slowdown.getTimescaleMax();
 #endif
