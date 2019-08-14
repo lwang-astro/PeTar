@@ -143,10 +143,10 @@ int main(int argc, char *argv[]){
     IOParams<PS::F64> search_factor(input_par_store, 3.0,  "Neighbor searching coefficient for v*dt");
     IOParams<PS::F64> radius_factor(input_par_store, 1.5,  "Neighbor searching radius factor for peri-center check");
     IOParams<PS::F64> dt_limit_hard_factor(input_par_store, 4.0,  "Limit of tree time step/hard time step");
-    IOParams<PS::S32> dt_min_hermite_index(input_par_store, 40,   "Power index n for the smallest time step (0.5^n) allowed in Hermite integrator");
-    IOParams<PS::S32> dt_min_arc_index    (input_par_store, 64,   "Power index n for the smallest time step (0.5^n) allowed in ARC integrator, suppressed");
-    IOParams<PS::F64> dt_err_pert  (input_par_store, 1e-6, "Time synchronization maximum (relative) error for perturbed ARC integrator, suppressed");
-    IOParams<PS::F64> dt_err_soft  (input_par_store, 1e-3, "Time synchronization maximum (relative) error for no-perturber (only soft perturbation) ARC integrator, suppressed");
+    IOParams<PS::S32> dt_min_hermite_index(input_par_store, 20,   "Power index n for the smallest time step (0.5^n) allowed in Hermite integrator");
+    //IOParams<PS::S32> dt_min_arc_index    (input_par_store, 64,   "Power index n for the smallest time step (0.5^n) allowed in ARC integrator, suppressed");
+    //IOParams<PS::F64> dt_err_pert  (input_par_store, 1e-6, "Time synchronization maximum (relative) error for perturbed ARC integrator, suppressed");
+    //IOParams<PS::F64> dt_err_soft  (input_par_store, 1e-3, "Time synchronization maximum (relative) error for no-perturber (only soft perturbation) ARC integrator, suppressed");
     IOParams<PS::F64> e_err_arc    (input_par_store, 1e-10,"Maximum energy error allown for ARC integrator");
 #ifdef HARD_CHECK_ENERGY
     IOParams<PS::F64> e_err_hard   (input_par_store, 1e-4, "Maximum energy error allown for hard integrator");
@@ -170,25 +170,25 @@ int main(int argc, char *argv[]){
     bool app_flag=false; // appending data flag
 
     static struct option long_options[] = {
-        {"n-split", required_argument, 0, 0},           //0 
-        {"search-factor", required_argument, 0, 0},     //1 
-        {"dt-max-factor", required_argument, 0, 0},     //2
-        {"dt-min-hermite", required_argument, 0, 0},    //3
-        {"dt-min-arc", required_argument, 0, 0},        //4
-        {"dt-err-pert", required_argument, 0, 0},       //5
-        {"dt-err-soft", required_argument, 0, 0},       //6
-        {"energy-err-arc", required_argument, 0, 0},    //7
-        {"soft-eps", required_argument, 0, 0},          //8
-        {"slowdown-factor", required_argument, 0, 0},   //9
-        {"r-ratio", required_argument, 0, 0},           //10
-        {"r-bin",   required_argument, 0, 0},           //11
-        {"radius_factor", required_argument, 0, 0},     //12
-        {"help",no_argument, 0, 'h'},                   //13
+        {"n-split", required_argument, 0, 0},        
+        {"search-factor", required_argument, 0, 1},  
+        {"dt-max-factor", required_argument, 0, 2},  
+        {"dt-min-hermite", required_argument, 0, 3}, 
+//        {"dt-min-arc", required_argument, 0, 4},   
+//        {"dt-err-pert", required_argument, 0, 5},  
+//        {"dt-err-soft", required_argument, 0, 6},  
+        {"energy-err-arc", required_argument, 0, 7}, 
+        {"soft-eps", required_argument, 0, 8},       
+        {"slowdown-factor", required_argument, 0, 9},
+        {"r-ratio", required_argument, 0, 10},       
+        {"r-bin",   required_argument, 0, 11},       
+        {"radius_factor", required_argument, 0, 12}, 
+        {"help",no_argument, 0, 'h'},                
 #ifdef HARD_CHECK_ENERGY
-        {"energy-err-hard", required_argument, 0, 0},   //14
+        {"energy-err-hard", required_argument, 0, 14},  
 #endif
 #ifdef AR_SYM
-        {"step-limit-arc", required_argument, 0, 0},    //15
+        {"step-limit-arc", required_argument, 0, 15},   
 #endif
         {0,0,0,0}
     };
@@ -199,90 +199,83 @@ int main(int argc, char *argv[]){
     while ((copt = getopt_long(argc, argv, "i:at:s:o:r:b:n:G:L:S:T:E:f:p:h", long_options, &option_index)) != -1) 
         switch (copt) {
         case 0:
-            switch(option_index){
-            case 0:
-                n_split.value = atoi(optarg);
-                if(my_rank == 0) n_split.print(std::cout);
-                assert(n_split.value>=8);
-                break;
-            case 1:
-                search_factor.value = atof(optarg);
-                if(my_rank == 0) search_factor.print(std::cout);
-                assert(search_factor.value>0.0);
-                break;
-            case 2:
-                dt_limit_hard_factor.value = atof(optarg);
-                if(my_rank == 0) dt_limit_hard_factor.print(std::cout);
-                assert(dt_limit_hard_factor.value > 0.0);
-                break;
-            case 3:
-                dt_min_hermite_index.value = atoi(optarg);
-                if(my_rank == 0) dt_min_hermite_index.print(std::cout);
-                assert(dt_min_hermite_index.value > 0);
-                break;
-            case 4:
-                dt_min_arc_index.value = atoi(optarg);
-                if(my_rank == 0) dt_min_arc_index.print(std::cout);
-                assert(dt_min_arc_index.value > 0);
-                break;
-            case 5:
-                dt_err_pert.value = atof(optarg);
-                if(my_rank == 0) dt_err_pert.print(std::cout);
-                assert(dt_err_pert.value > 0.0);
-                break;
-            case 6:
-                dt_err_soft.value = atof(optarg);
-                if(my_rank == 0) dt_err_soft.print(std::cout);
-                assert(dt_err_soft.value > 0.0);
-                break;
-            case 7:
-                e_err_arc.value = atof(optarg);
-                if(my_rank == 0) e_err_arc.print(std::cout);
-                assert(e_err_arc.value > 0.0);
-                break;
-            case 8:
-                eps.value = atof(optarg);
-                if(my_rank == 0) eps.print(std::cout);
-                assert(eps.value>=0.0);
-                break;
-            case 9:
-                sd_factor.value = atof(optarg);
-                if(my_rank == 0) sd_factor.print(std::cout);
-                assert(sd_factor.value>0.0);
-                break;
-            case 10:
-                ratio_r_cut.value = atof(optarg);
-                if(my_rank == 0) ratio_r_cut.print(std::cout);
-                assert(ratio_r_cut.value>0.0);
-                assert(ratio_r_cut.value<1.0);
-                break;
-            case 11:
-                r_bin.value = atof(optarg);
-                if(my_rank == 0) r_bin.print(std::cout);
-                assert(r_bin.value>0.0);
-                break;
-            case 12:
-                radius_factor.value = atof(optarg);
-                if(my_rank == 0) radius_factor.print(std::cout);
-                assert(radius_factor.value>=1.0);
-                break;
+            n_split.value = atoi(optarg);
+            if(my_rank == 0) n_split.print(std::cout);
+            assert(n_split.value>=8);
+            break;
+        case 1:
+            search_factor.value = atof(optarg);
+            if(my_rank == 0) search_factor.print(std::cout);
+            assert(search_factor.value>0.0);
+            break;
+        case 2:
+            dt_limit_hard_factor.value = atof(optarg);
+            if(my_rank == 0) dt_limit_hard_factor.print(std::cout);
+            assert(dt_limit_hard_factor.value > 0.0);
+            break;
+        case 3:
+            dt_min_hermite_index.value = atoi(optarg);
+            if(my_rank == 0) dt_min_hermite_index.print(std::cout);
+            assert(dt_min_hermite_index.value > 0);
+            break;
+        //case 4:
+        //    dt_min_arc_index.value = atoi(optarg);
+        //    if(my_rank == 0) dt_min_arc_index.print(std::cout);
+        //    assert(dt_min_arc_index.value > 0);
+        //    break;
+        //case 5:
+        //    dt_err_pert.value = atof(optarg);
+        //    if(my_rank == 0) dt_err_pert.print(std::cout);
+        //    assert(dt_err_pert.value > 0.0);
+        //    break;
+        //case 6:
+        //    dt_err_soft.value = atof(optarg);
+        //    if(my_rank == 0) dt_err_soft.print(std::cout);
+        //    assert(dt_err_soft.value > 0.0);
+        //    break;
+        case 7:
+            e_err_arc.value = atof(optarg);
+            if(my_rank == 0) e_err_arc.print(std::cout);
+            assert(e_err_arc.value > 0.0);
+            break;
+        case 8:
+            eps.value = atof(optarg);
+            if(my_rank == 0) eps.print(std::cout);
+            assert(eps.value>=0.0);
+            break;
+        case 9:
+            sd_factor.value = atof(optarg);
+            if(my_rank == 0) sd_factor.print(std::cout);
+            assert(sd_factor.value>0.0);
+            break;
+        case 10:
+            ratio_r_cut.value = atof(optarg);
+            if(my_rank == 0) ratio_r_cut.print(std::cout);
+            assert(ratio_r_cut.value>0.0);
+            assert(ratio_r_cut.value<1.0);
+            break;
+        case 11:
+            r_bin.value = atof(optarg);
+            if(my_rank == 0) r_bin.print(std::cout);
+            assert(r_bin.value>0.0);
+            break;
+        case 12:
+            radius_factor.value = atof(optarg);
+            if(my_rank == 0) radius_factor.print(std::cout);
+            assert(radius_factor.value>=1.0);
+            break;
 #ifdef HARD_CHECK_ENERGY
-            case 14:
-                e_err_hard.value = atof(optarg);
-                if(my_rank == 0) e_err_hard.print(std::cout);
-                break;
+        case 14:
+            e_err_hard.value = atof(optarg);
+            if(my_rank == 0) e_err_hard.print(std::cout);
+            break;
 #endif
 #ifdef AR_SYM
-            case 15:
-                step_limit_arc.value = atoi(optarg);
-                if(my_rank == 0) step_limit_arc.print(std::cout);
-                break;
-#endif
-            default:
-                if(my_rank == 0) std::cerr<<"Unknown option. check '-h' for help.\n";
-                abort();
-            }
+        case 15:
+            step_limit_arc.value = atoi(optarg);
+            if(my_rank == 0) step_limit_arc.print(std::cout);
             break;
+#endif
         case 'i':
             data_format.value = atoi(optarg);
             if(my_rank == 0) data_format.print(std::cout);
@@ -399,9 +392,9 @@ int main(int argc, char *argv[]){
                 std::cout<<"  -o: [F] "<<dt_snp<<std::endl;
                 std::cout<<"        --dt-max-factor:   [F] "<<dt_limit_hard_factor<<std::endl;
                 std::cout<<"        --dt-min-hermite:  [I] "<<dt_min_hermite_index<<std::endl;
-                std::cout<<"        --dt-min-arc:      [I] "<<dt_min_arc_index<<std::endl;
-                std::cout<<"        --dt-err-pert:     [F] "<<dt_err_pert<<std::endl;
-                std::cout<<"        --dt-err-soft:     [F] "<<dt_err_soft<<std::endl;
+//                std::cout<<"        --dt-min-arc:      [I] "<<dt_min_arc_index<<std::endl;
+//                std::cout<<"        --dt-err-pert:     [F] "<<dt_err_pert<<std::endl;
+//                std::cout<<"        --dt-err-soft:     [F] "<<dt_err_soft<<std::endl;
                 std::cout<<"  -r: [F] "<<r_out<<std::endl;
                 std::cout<<"        --r-ratio:         [F] "<<ratio_r_cut<<std::endl;
                 std::cout<<"        --r-bin:           [F] "<<r_bin<<std::endl;
