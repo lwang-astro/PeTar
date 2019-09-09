@@ -143,7 +143,7 @@ int main(int argc, char *argv[]){
     IOParams<PS::F64> search_factor(input_par_store, 3.0,  "Neighbor searching coefficient for v*dt");
     IOParams<PS::F64> radius_factor(input_par_store, 1.5,  "Neighbor searching radius factor for peri-center check");
     IOParams<PS::F64> dt_limit_hard_factor(input_par_store, 4.0,  "Limit of tree time step/hard time step");
-    IOParams<PS::S32> dt_min_hermite_index(input_par_store, 20,   "Power index n for the smallest time step (0.5^n) allowed in Hermite integrator");
+    IOParams<PS::S32> dt_min_hermite_index(input_par_store, 40,   "Power index n for the smallest time step (0.5^n) allowed in Hermite integrator");
     //IOParams<PS::S32> dt_min_arc_index    (input_par_store, 64,   "Power index n for the smallest time step (0.5^n) allowed in ARC integrator, suppressed");
     //IOParams<PS::F64> dt_err_pert  (input_par_store, 1e-6, "Time synchronization maximum (relative) error for perturbed ARC integrator, suppressed");
     //IOParams<PS::F64> dt_err_soft  (input_par_store, 1e-3, "Time synchronization maximum (relative) error for no-perturber (only soft perturbation) ARC integrator, suppressed");
