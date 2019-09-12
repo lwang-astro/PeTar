@@ -196,8 +196,8 @@ public:
     //! calculate perturbation from c.m. acceleration
     Float calcPertFromForce(const Float* _force, const Float _mp, const Float _mpert) {
         Float force2 = _force[0]*_force[0]+_force[1]*_force[1]+_force[2]*_force[2];
-        //return force2*force2;
-        return force2/(_mp*_mpert);
+        Float force = sqrt(force2);
+        return sqrt(force/(_mp*_mpert))*force;
     }
 
     //! calculate perturbation from binary tree
@@ -206,7 +206,7 @@ public:
         //Float mmor2 = (_bin.m1*_bin.m2)/(apo*apo);
         //return mmor2*mmor2;
         Float apo2 = apo*apo;
-        return (_bin.m1*_bin.m2)/(apo2*apo2);
+        return (_bin.m1*_bin.m2)/(apo2*apo);
     }
 
     //! calculate perturbation from distance to perturber and masses of particle and perturber 
@@ -214,7 +214,7 @@ public:
         //Float mmor2 = _mp*_mpert/(_r*_r);
         //return mmor2*mmor2;
         Float r2 = _r*_r;
-        return (_mp*_mpert)/(r2*r2);
+        return (_mp*_mpert)/(r2*_r);
     }
 
 #ifdef SLOWDOWN_INTEGRATE
@@ -648,7 +648,7 @@ public:
         //Float mmor2 = _bin_root.m1*_bin_root.m2/(apo_in*apo_in);
         //_slowdown.pert_in = mmor2*mmor2;
         Float apo_in2 = apo_in*apo_in;
-        _slowdown.pert_in = _bin_root.m1*_bin_root.m2/(apo_in2*apo_in2);
+        _slowdown.pert_in = _bin_root.m1*_bin_root.m2/(apo_in2*apo_in);
         _slowdown.period  = _bin_root.period;
 
         const int n_pert = _perturber.neighbor_address.getSize();
@@ -660,6 +660,7 @@ public:
 
             Float xp[3], xcm[3];
 #ifdef SLOWDOWN_TIMESCALE
+            // velocity dependent method 
             Float vp[3], vcm[3];
 #endif
 
@@ -670,6 +671,7 @@ public:
             xcm[2] = _particle_cm.pos[2] + dt*(_particle_cm.vel[2] + 0.5*dt*(_particle_cm.acc0[2] + inv3*dt*_particle_cm.acc1[2]));
 
 #ifdef SLOWDOWN_TIMESCALE
+            // velocity dependent method 
             vcm[0] = _particle_cm.vel[0] + dt*(_particle_cm.acc0[0] + 0.5*dt*_particle_cm.acc1[0]);
             vcm[1] = _particle_cm.vel[1] + dt*(_particle_cm.acc0[1] + 0.5*dt*_particle_cm.acc1[1]);
             vcm[2] = _particle_cm.vel[2] + dt*(_particle_cm.acc0[2] + 0.5*dt*_particle_cm.acc1[2]);
@@ -683,7 +685,7 @@ public:
             // This cause the sudden change of perturber velocity calculation, the timescale will jump and cause slowdown discontinue 
             Float pert_pot = 0.0;
 #ifdef SLOWDOWN_TIMESCALE
-            //Float t2_min = NUMERIC_FLOAT_MAX;
+            Float trf2_min = NUMERIC_FLOAT_MAX;
             Float mvor[3] = {0.0,0.0,0.0};
             Float mtot=0.0;
 #endif
@@ -699,6 +701,7 @@ public:
                 xp[2] = pertj->pos[2] + dt*(pertj->vel[2] + 0.5*dt*(pertj->acc0[2] + inv3*dt*pertj->acc1[2]));
 
 #ifdef SLOWDOWN_TIMESCALE
+                // velocity dependent method 
                 vp[0] = pertj->vel[0] + dt*(pertj->acc0[0] + 0.5*dt*pertj->acc1[0]);
                 vp[1] = pertj->vel[1] + dt*(pertj->acc0[1] + 0.5*dt*pertj->acc1[1]);
                 vp[2] = pertj->vel[2] + dt*(pertj->acc0[2] + 0.5*dt*pertj->acc1[2]);
@@ -711,24 +714,37 @@ public:
                 Float dr[3] = {xp[0] - xcm[0],
                                xp[1] - xcm[1],
                                xp[2] - xcm[2]};
+
+#ifdef SLOWDOWN_TIMESCALE
+                // velocity dependent method 
                 Float dv[3] = {vp[0] - vcm[0],
                                vp[1] - vcm[1],
                                vp[2] - vcm[2]};
+#endif
                 Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
                 Float r  = sqrt(r2);
                 Float k  = ChangeOver::calcAcc0WTwo(chi, chj, r);
-                Float r4 = r2*r2;
-                pert_pot += mj/r4 * k;
+                Float r3 = r2*r;
+                pert_pot += mj/r3 * k;
 
 #ifdef SLOWDOWN_TIMESCALE
-                //Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
-                //Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
-                //mvor += mj*drdv/r2;
+                // velocity dependent method 
+                // m_tot / |\sum m_j /|r_j| * v_j|
                 Float mor = mj/r;
                 mvor[0] += mor*dv[0];
                 mvor[1] += mor*dv[1];
                 mvor[2] += mor*dv[2];
                 mtot += mj;
+
+                // force dependent method
+                // min sqrt(r^3/(G m))
+                Float mor3 = (mj+mcm)*r*r2/(G*mj*mcm);
+                trf2_min =  std::min(trf2_min, mor3);
+
+                //Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
+                //Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
+                //mvor += mj*drdv/r2;
+
                 //Float v = sqrt(v2);
                 //Float tj2 = r2*r2/(drdv*drdv+0.01*v2*r2);
                 //Float tj2 = r2/(abs(drdv)+0.01*v*r);
@@ -740,6 +756,7 @@ public:
                 //Float ti = r2/(v2+mu*mu/(r2*v2));
                 //Float ti = std::min(r2*r2/(drdv*drdv),r2/v2);
                 //t2_min =  std::min(t2_min, tj2);
+
 #endif
             }
 
@@ -747,12 +764,18 @@ public:
             _slowdown.pert_out = pert_pot*mcm + _perturber.soft_pert_min;
 
 #ifdef SLOWDOWN_TIMESCALE
-            Float tave = mtot/sqrt(mvor[0]*mvor[0] + mvor[1]*mvor[1] + mvor[2]*mvor[2]);
+
             //_slowdown.timescale /= std::max(1.0, log(_slowdown.getSlowDownFactorOrigin());
             //_slowdown.timescale = std::sqrt(_slowdown.timescale);
             //_slowdown.timescale = abs(mrsum/mvsum);
             //_slowdown.timescale = 0.1*std::min(_slowdown.getTimescaleMax(), sqrt(t2_min));
-            _slowdown.timescale = 0.1*std::min(_slowdown.getTimescaleMax(), tave);
+
+            // velocity dependent method
+            Float trv_ave = mtot/sqrt(mvor[0]*mvor[0] + mvor[1]*mvor[1] + mvor[2]*mvor[2]);
+            // get min of velocity and force dependent values
+            Float t_min = std::min(trv_ave, sqrt(trf2_min));
+
+            _slowdown.timescale = 0.1*std::min(_slowdown.getTimescaleMax(), t_min);
 #else
             _slowdown.timescale = _slowdown.getTimescaleMax();
 #endif
