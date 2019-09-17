@@ -1010,7 +1010,7 @@ public:
         ASSERT(checkParams());
 #ifdef HARD_CHECK_ENERGY
         std::map<PS::S32, PS::S32> N_count;  // counting number of particles in one cluster
-        PS::F64 etoti, etotf;
+        PS::F64 etot, etot_sd, de, de_sd;
 #endif
 #ifdef HARD_DEBUG_PROFILE
         N_count[_n_ptcl]++;
@@ -1202,9 +1202,6 @@ public:
             ASSERT(sym_int.info.checkParams());
             ASSERT(sym_int.perturber.checkParams());
 
-#ifdef HARD_CHECK_ENERGY
-            etoti = sym_int.getEtot();
-#endif
             // integration
             sym_int.integrateToTime(time_end);
 
@@ -1233,7 +1230,10 @@ public:
             ARC_n_groups += 1;
 #endif
 #ifdef HARD_CHECK_ENERGY
-            etotf  = sym_int.getEtot();
+            etot    = sym_int.getEtot();
+            etot_sd = sym_int.getEtotSlowDownInner();
+            de      = sym_int.getEnergyError();
+            de_sd   = sym_int.getEnergyErrorSlowDownInner();
 #endif
         }
         else {
@@ -1297,13 +1297,14 @@ public:
                 }
             }
 
-#ifdef HARD_CHECK_ENERGY
-            h4_int.info.calcEnergy(h4_int.particles, h4_int.groups, h4_manager->interaction, true);
-            etoti  = h4_int.info.etot0;
-#endif
-
             // initialization 
             h4_int.initialIntegration(); // get neighbors and min particles
+            // AR inner slowdown number
+            int n_group_sub_init[_n_group], n_group_sub_tot_init=0;
+            for (int i=0; i<_n_group; i++) {
+                n_group_sub_init[i] = h4_int.groups[i].slowdown_inner.getSize();
+                n_group_sub_tot_init += n_group_sub_init[i];
+            }
             h4_int.adjustGroups(true);
 
             const PS::S32 n_init = h4_int.getNInitGroup();
@@ -1316,6 +1317,7 @@ public:
                 ASSERT(m_fac>0.0);
                 pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
 
+#ifdef SOFT_PERT                
                 // check whether all r_out are same (primoridal or not)
                 bool primordial_flag = true;
                 PS::F64 r_out_cm = groupi.particles.cm.changeover.getRout();
@@ -1324,7 +1326,6 @@ public:
                         primordial_flag =false;
                         break;
                     }
-#ifdef SOFT_PERT                
                 if (n_tt>0 && primordial_flag) {
                     // check closed tt and only find consistent changeover 
                     PS::F32 tt_index=groupi.perturber.findCloseSoftPert(tidal_tensor, n_tt, n_group_size_max, groupi.particles.cm, r_out_cm);
@@ -1350,19 +1351,32 @@ public:
             h4_int.info.time = h4_int.getTime();
             h4_int.info.time_origin = h4_int.info.time + time_origin_int;
 
+#ifdef HARD_CHECK_ENERGY
+            h4_int.writeBackGroupMembers();
+            h4_int.info.calcEnergySlowDown(h4_int.particles, h4_int.groups, h4_manager->interaction, true);
+#endif
+
 #ifdef HARD_DEBUG_PRINT_TITLE
             h4_int.info.printColumnTitle(std::cout, WRITE_WIDTH);
-            std::cout<<std::setw(WRITE_WIDTH)<<"Ngroup";
-            for (int i=0; i<_n_group; i++) h4_int.groups[i].slowdown.printColumnTitle(std::cout, WRITE_WIDTH);
+            std::cout<<std::setw(WRITE_WIDTH)<<"N_SD";
+            for (int i=0; i<_n_group; i++) {
+                auto & gi = h4_int.groups[i];
+                for (int j=0; j<n_group_sub_init[i]; j++) 
+                    gi.slowdown.printColumnTitle(std::cout, WRITE_WIDTH);
+                gi.slowdown.printColumnTitle(std::cout, WRITE_WIDTH);
+            }
             h4_int.particles.printColumnTitle(std::cout, WRITE_WIDTH);
             std::cout<<std::endl;
+            AR::SlowDown sd_empty;
 #endif
 
             // integration loop
             while (h4_int.info.time<_dt) {
 
-                
                 h4_int.integrateOneStepAct();
+#ifdef HARD_CHECK_ENERGY
+                h4_int.info.correctEtotSlowDownRef(h4_int.groups);
+#endif
                 h4_int.adjustGroups(false);
 
                 const PS::S32 n_init_group = h4_int.getNInitGroup();
@@ -1378,6 +1392,8 @@ public:
                     PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
                     ASSERT(m_fac>0.0);
                     pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+
+#ifdef SOFT_PERT                
                     // check whether all r_out are same (primoridal or not)
                     bool primordial_flag = true;
                     PS::F64 r_out_cm = groupi.particles.cm.changeover.getRout();
@@ -1387,7 +1403,6 @@ public:
                             break;
                         }
 
-#ifdef SOFT_PERT                
                     if (n_tt>0 && primordial_flag) {
                         // check closed tt and only find consistent changeover 
                         PS::F32 tt_index=groupi.perturber.findCloseSoftPert(tidal_tensor, n_tt, n_group_size_max, groupi.particles.cm, r_out_cm);
@@ -1433,11 +1448,20 @@ public:
                 //ASSERT(dt_max>0.0);
                 if (fmod(h4_int.info.time, h4_manager->step.getDtMax()/HARD_DEBUG_PRINT_FEQ)==0.0) {
                     h4_int.writeBackGroupMembers();
-                    h4_int.info.calcEnergy(h4_int.particles, h4_int.groups, h4_manager->interaction, false);
+                    h4_int.info.correctEtotSlowDownRef(h4_int.groups);
+                    h4_int.info.calcEnergySlowDown(h4_int.particles, h4_int.groups, h4_manager->interaction, false);
             
                     h4_int.info.printColumn(std::cout, WRITE_WIDTH);
                     std::cout<<std::setw(WRITE_WIDTH)<<_n_group;
-                    for (int i=0; i<_n_group; i++) h4_int.groups[i].slowdown.printColumn(std::cout, WRITE_WIDTH);
+                    for (int i=0; i<_n_group; i++) {
+                        auto & gi = h4_int.groups[i];
+                        int n_sd_in = gi.slowdown_inner.getSize();
+                        for (int j=0; j<n_group_sub_init[i]; j++) {
+                            if (j<n_sd_in) gi.slowdown_inner[j].slowdown.printColumn(std::cout, WRITE_WIDTH);
+                            else sd_empty.printColumn(std::cout, WRITE_WIDTH);
+                        }
+                        h4_int.groups[i].slowdown.printColumn(std::cout, WRITE_WIDTH);
+                    }
                     h4_int.particles.printColumn(std::cout, WRITE_WIDTH);
                     std::cout<<std::endl;
                 }
@@ -1456,8 +1480,12 @@ public:
             h4_int.writeBackGroupMembers();
             h4_int.particles.cm.pos += h4_int.particles.cm.vel * _dt;
 #ifdef HARD_CHECK_ENERGY
-            h4_int.info.calcEnergy(h4_int.particles, h4_int.groups, h4_manager->interaction, false);
-            etotf  = h4_int.info.etot;
+            h4_int.info.correctEtotSlowDownRef(h4_int.groups);
+            h4_int.info.calcEnergySlowDown(h4_int.particles, h4_int.groups, h4_manager->interaction, false);
+            etot    = h4_int.info.etot;
+            etot_sd = h4_int.info.etot_sd;
+            de      = h4_int.info.de;
+            de_sd   = h4_int.info.de_sd;
 #endif
 
             h4_int.particles.shiftToOriginFrame();
@@ -1551,16 +1579,21 @@ public:
             }
 #endif
         }
+
 #ifdef HARD_CHECK_ENERGY
-        Float hard_dE_local = etotf - etoti;
-        hard_dE += hard_dE_local;
+        hard_dE += de_sd;
 #ifdef HARD_DEBUG_PRINT
-        std::cerr<<"Hard Energy: init: "<<etoti<<" end: "<<etotf<<" dE: "<<hard_dE_local<<std::endl;
+        std::cerr<<"Hard Energy: Etot: "<<etot
+                 <<" Etot_SD: "<<etot_sd
+                 <<" dE: "<<de
+                 <<" dE_SD: "<<de_sd
+                 <<std::endl;
 #endif        
 #ifdef HARD_CLUSTER_PRINT
-        std::cerr<<"Hard cluster: dE: "<<hard_dE_local
-                 <<" Einit: "<<etoti
-                 <<" Eend: "<<etotf
+        std::cerr<<"Hard cluster: dE_SD: "<<de_sd
+                 <<" dE: "<<de
+                 <<" Etot: "<<etot
+                 <<" Etot_SD: "<<etot_sd
                  <<" H4_step(single): "<<H4_step_sum
                  <<" AR_step: "<<ARC_substep_sum
                  <<" AR_step(tsyn): "<<ARC_tsyn_step_sum
@@ -1568,8 +1601,8 @@ public:
                  <<" n_group: "<<_n_group
                  <<std::endl;
 #endif
-        if (abs(hard_dE_local) > manager->energy_error_max) {
-            std::cerr<<"Hard energy significant ("<<hard_dE<<") !\n";
+        if (abs(de_sd) > manager->energy_error_max) {
+            std::cerr<<"Hard energy significant ("<<de_sd<<") !\n";
             DATADUMP("hard_dump");
             abort();
         }
