@@ -1348,41 +1348,24 @@ public:
 
             h4_int.initialIntegration();
             h4_int.sortDtAndSelectActParticle();
-            h4_int.info.time = h4_int.getTime();
-            h4_int.info.time_origin = h4_int.info.time + time_origin_int;
+            h4_int.info.time_origin = h4_int.getTime() + time_origin_int;
 
 #ifdef HARD_CHECK_ENERGY
-            h4_int.writeBackGroupMembers();
-            h4_int.info.calcEnergySlowDown(h4_int.particles, h4_int.groups, h4_manager->interaction, true);
+            h4_int.calcEnergySlowDown(true);
 #endif
 
 #ifdef HARD_DEBUG_PRINT_TITLE
-            h4_int.info.printColumnTitle(std::cout, WRITE_WIDTH);
-            std::cout<<std::setw(WRITE_WIDTH)<<"N_SD";
-            for (int i=0; i<_n_group; i++) {
-                auto & gi = h4_int.groups[i];
-                for (int j=0; j<n_group_sub_init[i]; j++) 
-                    gi.slowdown.printColumnTitle(std::cout, WRITE_WIDTH);
-                gi.slowdown.printColumnTitle(std::cout, WRITE_WIDTH);
-            }
-            h4_int.particles.printColumnTitle(std::cout, WRITE_WIDTH);
+            h4_int.printColumnTitle(std::cout, WRITE_WIDTH, n_group_sub_init, _n_group, n_group_sub_tot_init);
             std::cout<<std::endl;
-            AR::SlowDown sd_empty;
 #endif
 
             // integration loop
-            while (h4_int.info.time<_dt) {
+            while (h4_int.getTime()<_dt) {
 
                 h4_int.integrateOneStepAct();
-#ifdef HARD_CHECK_ENERGY
-                h4_int.info.correctEtotSlowDownRef(h4_int.groups);
-#endif
                 h4_int.adjustGroups(false);
 
                 const PS::S32 n_init_group = h4_int.getNInitGroup();
-#ifdef HARD_DEBUG_PRINT
-                const PS::S32 n_init_single = h4_int.getNInitSingle();
-#endif
                 const PS::S32 n_act_group = h4_int.getNActGroup();
                 const PS::S32* group_index = h4_int.getSortDtIndexGroup();
                 for(int i=0; i<n_init_group; i++) {
@@ -1436,8 +1419,7 @@ public:
                 // initial after groups are modified
                 h4_int.initialIntegration();
                 h4_int.sortDtAndSelectActParticle();
-                h4_int.info.time = h4_int.getTime();
-                h4_int.info.time_origin = h4_int.info.time + time_origin_int;
+                h4_int.info.time_origin = h4_int.getTime() + time_origin_int;
 
 #ifdef HARD_DEBUG_PRINT
                 //PS::F64 dt_max = 0.0;
@@ -1446,47 +1428,28 @@ public:
                 //if (n_group>0) dt_max = h4_int.groups[h4_int.getSortDtIndexGroup()[n_group-1]].particles.cm.dt;
                 //if (n_single>0) dt_max = std::max(dt_max, h4_int.particles[h4_int.getSortDtIndexSingle()[n_single-1]].dt);
                 //ASSERT(dt_max>0.0);
-                if (fmod(h4_int.info.time, h4_manager->step.getDtMax()/HARD_DEBUG_PRINT_FEQ)==0.0) {
-                    h4_int.writeBackGroupMembers();
-                    h4_int.info.correctEtotSlowDownRef(h4_int.groups);
-                    h4_int.info.calcEnergySlowDown(h4_int.particles, h4_int.groups, h4_manager->interaction, false);
-            
-                    h4_int.info.printColumn(std::cout, WRITE_WIDTH);
-                    std::cout<<std::setw(WRITE_WIDTH)<<_n_group;
-                    for (int i=0; i<_n_group; i++) {
-                        auto & gi = h4_int.groups[i];
-                        int n_sd_in = gi.slowdown_inner.getSize();
-                        for (int j=0; j<n_group_sub_init[i]; j++) {
-                            if (j<n_sd_in) gi.slowdown_inner[j].slowdown.printColumn(std::cout, WRITE_WIDTH);
-                            else sd_empty.printColumn(std::cout, WRITE_WIDTH);
-                        }
-                        h4_int.groups[i].slowdown.printColumn(std::cout, WRITE_WIDTH);
-                    }
-                    h4_int.particles.printColumn(std::cout, WRITE_WIDTH);
+                if (fmod(h4_int.getTime(), h4_manager->step.getDtMax()/HARD_DEBUG_PRINT_FEQ)==0.0) {
+                    h4_int.calcEnergySlowDown(false);
+
+                    h4_int.printColumn(std::cout, WRITE_WIDTH, n_group_sub_init, _n_group, n_group_sub_tot_init);
                     std::cout<<std::endl;
                 }
-                if (fmod(h4_int.info.time, h4_manager->step.getDtMax())==0.0) {
+                if (fmod(h4_int.getTime(), h4_manager->step.getDtMax())==0.0) {
                     h4_int.printStepHist();
-                }
-                if (n_init_group>0||n_init_single>0) {
-                    h4_int.info.printColumnTitle(std::cerr, WRITE_WIDTH);
-                    std::cerr<<std::endl;
-                    h4_int.info.printColumn(std::cerr, WRITE_WIDTH);
-                    std::cerr<<std::endl;
                 }
 #endif
             }
-        
-            h4_int.writeBackGroupMembers();
-            h4_int.particles.cm.pos += h4_int.particles.cm.vel * _dt;
+
 #ifdef HARD_CHECK_ENERGY
-            h4_int.info.correctEtotSlowDownRef(h4_int.groups);
-            h4_int.info.calcEnergySlowDown(h4_int.particles, h4_int.groups, h4_manager->interaction, false);
-            etot    = h4_int.info.etot;
-            etot_sd = h4_int.info.etot_sd;
-            de      = h4_int.info.de;
-            de_sd   = h4_int.info.de_sd;
+            h4_int.calcEnergySlowDown(false);
+            etot    = h4_int.getEtot();
+            etot_sd = h4_int.getEtotSlowDown();
+            de      = h4_int.getEnergyError();
+            de_sd   = h4_int.getEnergyErrorSlowDown();
+#else
+            h4_int.writeBackGroupMembers();
 #endif
+            h4_int.particles.cm.pos += h4_int.particles.cm.vel * _dt;
 
             h4_int.particles.shiftToOriginFrame();
 
