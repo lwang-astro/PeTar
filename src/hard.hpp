@@ -105,6 +105,33 @@ public:
     }
 };
 
+struct HardEnergy{
+    PS::F64 de;                 // energy error
+    PS::F64 de_sd;              // slowdown energy error
+    PS::F64 de_sd_change_cum;   // cumulative Etot_SD change due to the change of slowdown factor
+    PS::F64 ekin_sd_correction; // correction from Ekin to Etot_sd
+    PS::F64 epot_sd_correction; // correction from Epot to Etot_sd
+
+    HardEnergy() {clear();}
+
+    void clear() {
+        de = de_sd = de_sd_change_cum = ekin_sd_correction = epot_sd_correction = 0.0;
+    }
+
+    void resetEnergyCorrection() {
+        ekin_sd_correction = epot_sd_correction = 0.0;
+    }
+
+    HardEnergy& operator +=(const HardEnergy& _energy) {
+        de    += _energy.de;
+        de_sd += _energy.de_sd;
+        de_sd_change_cum   += _energy.de_sd_change_cum;
+        ekin_sd_correction += _energy.ekin_sd_correction;
+        epot_sd_correction += _energy.epot_sd_correction;
+        return *this;
+    }
+
+};
 
 //! Hard system
 class SystemHard{
@@ -138,7 +165,7 @@ public:
     PS::S64 H4_step_sum;
 #endif
 #ifdef HARD_CHECK_ENERGY
-    PS::F64 hard_dE;
+    HardEnergy energy;
 #endif
 
     //! check paramters
@@ -1010,7 +1037,7 @@ public:
         ASSERT(checkParams());
 #ifdef HARD_CHECK_ENERGY
         std::map<PS::S32, PS::S32> N_count;  // counting number of particles in one cluster
-        PS::F64 etot, etot_sd, de, de_sd;
+        PS::F64 ekin, epot, ekin_sd, epot_sd, de, de_sd, de_sd_change_cum;
 #endif
 #ifdef HARD_DEBUG_PROFILE
         N_count[_n_ptcl]++;
@@ -1230,10 +1257,14 @@ public:
             ARC_n_groups += 1;
 #endif
 #ifdef HARD_CHECK_ENERGY
-            etot    = sym_int.getEtot();
-            etot_sd = sym_int.getEtotSlowDownInner();
+            PS::F64 kappa_inv = 1.0/sym_int.slowdown.getSlowDownFactor();
+            ekin    = sym_int.getEkin();
+            ekin_sd = kappa_inv*sym_int.getEkinSlowDownInner();
+            epot    = sym_int.getEpot();
+            epot_sd = kappa_inv*sym_int.getEpotSlowDownInner();
             de      = sym_int.getEnergyError();
-            de_sd   = sym_int.getEnergyErrorSlowDownInner();
+            de_sd   = kappa_inv*sym_int.getEnergyErrorSlowDownInner();
+            de_sd_change_cum = sym_int.getDESlowDownChangeCum();
 #endif
         }
         else {
@@ -1442,10 +1473,13 @@ public:
 
 #ifdef HARD_CHECK_ENERGY
             h4_int.calcEnergySlowDown(false);
-            etot    = h4_int.getEtot();
-            etot_sd = h4_int.getEtotSlowDown();
+            ekin    = h4_int.getEkin();
+            ekin_sd = h4_int.getEkinSlowDown();
+            epot    = h4_int.getEpot();
+            epot_sd = h4_int.getEpotSlowDown();
             de      = h4_int.getEnergyError();
             de_sd   = h4_int.getEnergyErrorSlowDown();
+            de_sd_change_cum = h4_int.getDESlowDownChangeCum();
 #else
             h4_int.writeBackGroupMembers();
 #endif
@@ -1544,10 +1578,16 @@ public:
         }
 
 #ifdef HARD_CHECK_ENERGY
-        hard_dE += de_sd;
+        energy.de_sd += de_sd;
+        energy.de    += de;
+        PS::F64 ekin_sd_correction = ekin_sd - ekin;
+        PS::F64 epot_sd_correction = epot_sd - epot;
+        energy.ekin_sd_correction += ekin_sd_correction;
+        energy.epot_sd_correction += epot_sd_correction;
+        energy.de_sd_change_cum   += de_sd_change_cum - (ekin_sd_correction + epot_sd_correction);
 #ifdef HARD_DEBUG_PRINT
-        std::cerr<<"Hard Energy: Etot: "<<etot
-                 <<" Etot_SD: "<<etot_sd
+        std::cerr<<"Hard Energy: Etot: "<<ekin+epot
+                 <<" Etot_SD: "<<ekin_sd+epot_sd
                  <<" dE: "<<de
                  <<" dE_SD: "<<de_sd
                  <<std::endl;
@@ -1555,8 +1595,10 @@ public:
 #ifdef HARD_CLUSTER_PRINT
         std::cerr<<"Hard cluster: dE_SD: "<<de_sd
                  <<" dE: "<<de
-                 <<" Etot: "<<etot
-                 <<" Etot_SD: "<<etot_sd
+                 <<" Ekin: "<<ekin
+                 <<" Epot: "<<epot
+                 <<" Ekin_SD: "<<ekin_sd
+                 <<" Epot_SD: "<<epot_sd
                  <<" H4_step(single): "<<H4_step_sum
                  <<" AR_step: "<<ARC_substep_sum
                  <<" AR_step(tsyn): "<<ARC_tsyn_step_sum
@@ -1586,7 +1628,7 @@ public:
         H4_step_sum = 0;
 #endif
 #ifdef HARD_CHECK_ENERGY
-        hard_dE = 0;
+        energy.clear();
 #endif
         //        PS::S32 n_threads = PS::Comm::getNumberOfThread();
     }

@@ -71,6 +71,7 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #include"hard.hpp"
 #include"kepler.hpp"
 #include"io.hpp"
+#include"status.hpp"
 #include"init.hpp"
 #include"integrate.hpp"
 #include"domain.hpp"
@@ -496,28 +497,10 @@ int main(int argc, char *argv[]){
 
     Status stat;
     if(!restart_flag&&my_rank==0&&app_flag==false)  {
-        stat.dumpName(fstatus,WRITE_WIDTH);
+        stat.printColumnTitle(fstatus,WRITE_WIDTH);
         fstatus<<std::endl;
     }
 
-    //// tree time step and n_split
-    //if (restart_flag) {
-    //    if(dt_soft.value!=file_header.dt_soft&&dt_soft.value>0) 
-    //        std::cerr<<"Warning: tree time step cannot be changed for restarting, the value from the data file ("<<file_header.dt_soft<<") will be used\n";
-    //    if(n_split.value!=file_header.n_split)
-    //        std::cerr<<"Warning: n_split cannot be changed for restarting, the value from the data file ("<<file_header.n_split<<") will be used\n";
-    //    dt_soft.value = file_header.dt_soft;
-    //    n_split.value = file_header.n_split;
-    //}
-    //else {
-    //    file_header.dt_soft = dt_soft.value;
-    //    file_header.n_split = n_split.value;        
-    //    if(my_rank==0&&app_flag==false) {
-    //        stat.dumpName(fstatus,WRITE_WIDTH);
-    //        fstatus<<std::endl;
-    //    }
-    //}
-    
     PS::F64 r_in, m_average, m_max, v_disp, v_max;
     GetInitPar(system_soft, r_in, r_out.value, r_bin.value, r_search_min, r_search_max.value, v_max, m_average, m_max, dt_soft.value, v_disp, search_factor.value, ratio_r_cut.value, n_bin.value, theta.value);
 
@@ -676,12 +659,6 @@ int main(int argc, char *argv[]){
         //file_header.dt_soft= dt_soft.value;
     }
 
-    //if(my_rank==0) {
-    //    std::cout<<"----- Initial status -----\n";
-    //    stat.eng_init.print(std::cout);
-    //    stat.dump(fstatus,WRITE_WIDTH);
-    //    fstatus<<std::endl;
-    //}
 #ifdef MAIN_DEBUG
     FILE* fout;
     if ( (fout = fopen("nbody.dat","w")) == NULL) {
@@ -1006,19 +983,23 @@ int main(int argc, char *argv[]){
             stat.N_all = n_glb_all;
 
             // calculate initial energy
-            stat.eng_init.clear();
-            stat.eng_init.calc(&system_soft[0], n_loc);
-            stat.eng_init.getSumMultiNodes();
-            stat.eng_now = stat.eng_init;
+            stat.energy.clear();
+            stat.energy.calc(&system_soft[0], n_loc, true);
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+            stat.energy.getSumMultiNodes(true);
+#endif
 #ifdef HARD_CHECK_ENERGY
-            stat.eng_hard_diff = 0;
+            stat.energy.ekin_sd = stat.energy.ekin;
+            stat.energy.epot_sd = stat.energy.epot;
+            stat.energy_hard_diff = 0;
+            stat.energy_hard_sd_diff = 0;
 #endif
              
             // print status
             if(my_rank==0) {
                 std::cout<<std::endl;
                 stat.print(std::cout);
-                stat.dump(fstatus, WRITE_WIDTH);
+                stat.printColumn(fstatus, WRITE_WIDTH);
                 fstatus<<std::endl;
             }
             output_flag = false;
@@ -1154,30 +1135,40 @@ int main(int argc, char *argv[]){
             // update status
             stat.time = time_sys;
             stat.N = n_glb.value;
-            
-            stat.eng_now.clear();
-            stat.eng_now.calc(&system_soft[0], n_loc);
-            stat.eng_now.getSumMultiNodes();
-        
-            stat.eng_diff = stat.eng_now - stat.eng_init;
+
+
+            stat.energy.calc(&system_soft[0], n_loc);
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+            stat.energy.getSumMultiNodes();
+#endif
 
 #ifdef HARD_CHECK_ENERGY
-            PS::F64 hard_dE_local = system_hard_isolated.hard_dE;
-            hard_dE_local += system_hard_connected.hard_dE;
-            stat.eng_hard_diff += PS::Comm::getSum(hard_dE_local);
+            HardEnergy energy_local = system_hard_isolated.energy;
+            energy_local += system_hard_connected.energy;
+            // hard energy error
+            stat.energy_hard_diff += PS::Comm::getSum(energy_local.de);
+            stat.energy_hard_sd_diff += PS::Comm::getSum(energy_local.de_sd);
+            // energy correction due to slowdown 
+            PS::F64 ekin_sd_correction = PS::Comm::getSum(energy_local.ekin_sd_correction);
+            stat.energy.ekin_sd = stat.energy.ekin + ekin_sd_correction;
+            PS::F64 epot_sd_correction = PS::Comm::getSum(energy_local.epot_sd_correction);
+            stat.energy.epot_sd = stat.energy.epot + epot_sd_correction;
+            PS::F64 etot_sd_correction = ekin_sd_correction + epot_sd_correction;
+            // for total energy reference, first add the cumulative change due to slowdown change in the integration (referring to no slowdown case), then add slowdown energy correction from current time
+            stat.energy.etot_sd_ref += PS::Comm::getSum(energy_local.de_sd_change_cum) + etot_sd_correction;
 
-            system_hard_isolated.hard_dE = 0;
-            system_hard_connected.hard_dE = 0;
+            system_hard_isolated.energy.clear();
+            system_hard_connected.energy.clear();
 #endif
 
             // print status
             if(my_rank==0) {
                 std::cout<<std::endl;
                 stat.print(std::cout);
-                stat.dump(fstatus, WRITE_WIDTH);
+                stat.printColumn(fstatus, WRITE_WIDTH);
                 fstatus<<std::endl;
             }
-            
+
 //#ifdef HARD_CHECK_ENERGY
 //            for (int i=1;i<20;i++)  system_hard_isolated.N_count[i] = PS::Comm::getSum(system_hard_isolated.N_count[i]);
 //            if(my_rank==0) {
@@ -1203,7 +1194,7 @@ int main(int argc, char *argv[]){
             system_soft.setNumberOfParticleLocal(n_loc_all);
 
 #ifdef MAIN_DEBUG
-            write_p(fout, time_sys, system_soft, stat.eng_now, stat.eng_diff);
+            write_p(fout, time_sys, system_soft, stat.energy);
 //        //output
 //        PS::S32 ntot = system_soft.getNumberOfParticleLocal();
 //        fout<<std::setprecision(17)<<time_sys<<" ";
@@ -1216,6 +1207,10 @@ int main(int argc, char *argv[]){
 //        }
 //        fout<<std::endl;
 #endif
+
+            // reset sd energy reference to no slowdown case
+            stat.energy.etot_sd_ref -= ekin_sd_correction + epot_sd_correction;
+            
 
 #ifdef PROFILE
             profile.output.barrier();
@@ -1286,6 +1281,10 @@ int main(int argc, char *argv[]){
         system_hard_isolated.setTimeOrigin(time_sys);
         system_hard_connected.setTimeOrigin(time_sys);
         ////// set time
+
+        // reset slowdown energy correction
+        system_hard_isolated.energy.resetEnergyCorrection();
+        system_hard_connected.energy.resetEnergyCorrection();
         
         // get drift step
         dt_drift = dt_manager.getDtDriftContinue();
@@ -1458,6 +1457,7 @@ int main(int argc, char *argv[]){
         n_count_sum.cluster_connected += PS::Comm::getSum(n_connected_cluster);
         const PS::S32* connected_cluster_n_list = system_hard_connected.getClusterNList();
         for (PS::S32 i=0; i<n_connected_cluster; i++) n_count.cluster_count(connected_cluster_n_list[i]);
+
 
         dn_loop++;
 

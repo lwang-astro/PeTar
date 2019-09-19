@@ -217,59 +217,11 @@ class DiskModel{
 };
 */
 
-class Status {
-public:
-    PS::F64 time;
-    PS::S64 N;
-    PS::S64 N_all;
-    EnergyAndMomemtum eng_init, eng_now, eng_diff;
-    PS::F64 eng_hard_diff;
-
-    Status(): time(0.0), N(0), N_all(0) {}
-
-    void dumpName(std::ofstream & fout, const PS::S32 width=20) {
-        fout<<std::setw(width)<<"Time"
-            <<std::setw(width)<<"N"
-            <<std::setw(width)<<"Nall"
-            <<std::setw(width)<<"dE"
-#ifdef HARD_CHECK_ENERGY
-            <<std::setw(width)<<"dE_hard"
-#endif
-            <<std::setw(width)<<"dE/E0";
-        eng_now.dumpName(fout,width);
-    }
-
-    void dump(std::ofstream & fout, const PS::S32 width=20) {
-        fout<<std::setw(width)<<time
-            <<std::setw(width)<<N
-            <<std::setw(width)<<N_all
-            <<std::setw(width)<<eng_diff.tot
-#ifdef HARD_CHECK_ENERGY
-            <<std::setw(width)<<eng_hard_diff
-#endif
-            <<std::setw(width)<<eng_diff.tot/eng_init.tot;
-        eng_now.dump(fout,width);
-    }
-
-    void print(std::ostream & fout, const PS::S32 precision=7) {
-        fout<<"Time= "<<std::setprecision(15)<<time
-            <<std::setprecision(precision)
-            <<" N= "<<N
-            <<" Nall= "<<N_all
-            <<" Enow-Einit= "<<eng_diff.tot
-#ifdef HARD_CHECK_ENERGY
-            <<" E_hard_diff = "<<eng_hard_diff
-#endif
-            <<" (Enow-Einit)/Einit= "<<eng_diff.tot/eng_init.tot
-            <<std::endl;
-        eng_now.print(fout);
-    }
-};
 
 #ifdef MAIN_DEBUG
 // flag: 1: c.m; 2: individual; 
 template<class Teng, class Tsys>
-void write_p(FILE* fout, const PS::F64 time, const Tsys& p, const Teng &et, const Teng &ediff) {
+void write_p(FILE* fout, const PS::F64 time, const Tsys& p, const Teng &et) {
     fprintf(fout,"%20.14e ",time);
     fprintf(fout,"%20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e ",
             ediff.tot/et.tot, et.kin, et.pot, et.tot,
