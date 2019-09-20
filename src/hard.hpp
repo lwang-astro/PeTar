@@ -1464,6 +1464,29 @@ public:
 
                     h4_int.printColumn(std::cout, WRITE_WIDTH, n_group_sub_init, _n_group, n_group_sub_tot_init);
                     std::cout<<std::endl;
+
+                    de_sd   = h4_int.getEnergyErrorSlowDown();
+                    if (abs(de_sd) > manager->energy_error_max) {
+                        ekin    = h4_int.getEkin();
+                        ekin_sd = h4_int.getEkinSlowDown();
+                        epot    = h4_int.getEpot();
+                        epot_sd = h4_int.getEpotSlowDown();
+                        PS::F64 etot_sd = h4_int.getEtotSlowDownRef();
+                        de      = h4_int.getEnergyError();
+                        de_sd_change_cum = h4_int.getDESlowDownChangeCum();
+                        std::cerr<<"Hard energy significant ("<<de_sd<<") !"
+                                 <<"  Ekin: "<<ekin
+                                 <<"  Ekin_SD: "<<ekin_sd
+                                 <<"  Epot: "<<epot_sd
+                                 <<"  Epot_SD: "<<epot_sd
+                                 <<"  Etot_SD_ref: "<<etot_sd
+                                 <<"  dE: "<<de
+                                 <<"  dE_SD: "<<de_sd
+                                 <<"  dE_SD_CHANGE: "<<de_sd_change_cum
+                                 <<std::endl;
+                        DATADUMP("hard_dump");
+                        abort();
+                    }
                 }
                 if (fmod(h4_int.getTime(), h4_manager->step.getDtMax())==0.0) {
                     h4_int.printStepHist();
@@ -1586,10 +1609,14 @@ public:
         energy.epot_sd_correction += epot_sd_correction;
         energy.de_sd_change_cum   += de_sd_change_cum - (ekin_sd_correction + epot_sd_correction);
 #ifdef HARD_DEBUG_PRINT
-        std::cerr<<"Hard Energy: Etot: "<<ekin+epot
-                 <<" Etot_SD: "<<ekin_sd+epot_sd
-                 <<" dE: "<<de
-                 <<" dE_SD: "<<de_sd
+        std::cerr<<"Hard Energy: "
+                 <<"  Ekin: "<<ekin
+                 <<"  Ekin_SD: "<<ekin_sd
+                 <<"  Epot: "<<epot_sd
+                 <<"  Epot_SD: "<<epot_sd
+                 <<"  dE: "<<de
+                 <<"  dE_SD: "<<de_sd
+                 <<"  dE_SD_CHANGE: "<<de_sd_change_cum
                  <<std::endl;
 #endif        
 #ifdef HARD_CLUSTER_PRINT

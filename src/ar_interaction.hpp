@@ -450,7 +450,7 @@ public:
         // velocity dependent method
         Float trv_ave = mtot/sqrt(mvor[0]*mvor[0] + mvor[1]*mvor[1] + mvor[2]*mvor[2]);
         // get min of velocity and force dependent values
-        Float t_min = 0.1*std::min(trv_ave, sqrt(trf2_min));
+        Float t_min = std::min(trv_ave, sqrt(trf2_min));
         _slowdown.timescale = 0.1*std::min(_slowdown.getTimescaleMax(), t_min);
 #else
         _slowdown.timescale = _slowdown.getTimescaleMax();
@@ -591,7 +591,7 @@ public:
             // velocity dependent method
             Float trv_ave = mtot/sqrt(mvor[0]*mvor[0] + mvor[1]*mvor[1] + mvor[2]*mvor[2]);
             // get min of velocity and force dependent values
-            Float t_min = 0.1*std::min(trv_ave, sqrt(trf2_min));
+            Float t_min = std::min(trv_ave, sqrt(trf2_min));
 
             _slowdown.timescale = 0.1*std::min(_slowdown.getTimescaleMax(), t_min);
 #else
