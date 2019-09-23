@@ -17,7 +17,7 @@
 #include"ar_interaction.hpp"
 #include"ar_perturber.hpp"
 #include"search_group.hpp"
-
+#include"fake_particles.hpp"
 
 //! Hard integrator parameter manager
 class HardManager{
@@ -233,7 +233,7 @@ private:
             group.searchAndMerge(ptcl_in_cluster, n_ptcl);
 
             // generate artifical particles,
-            group.generateList(i, ptcl_in_cluster, n_ptcl, ptcl_artifical[ith], _n_group_in_cluster[i], _rbin, _rin, _rout, _dt_tree, _id_offset, _n_split);
+            FakeParticles<PtclH4>::createFakeParticles<PtclTree<PtclH4>>(i, ptcl_in_cluster, n_ptcl, ptcl_artifical[ith], _n_group_in_cluster[i], group, _rbin, _rin, _rout, _dt_tree, _id_offset, _n_split);
         }
 
         // n_group_in_cluster_offset
