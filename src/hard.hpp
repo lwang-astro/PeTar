@@ -1389,7 +1389,10 @@ public:
             h4_int.printColumnTitle(std::cout, WRITE_WIDTH, n_group_sub_init, _n_group, n_group_sub_tot_init);
             std::cout<<std::endl;
 #endif
-
+#ifdef HARD_DEBUG_PRINT
+            h4_int.printColumn(std::cout, WRITE_WIDTH, n_group_sub_init, _n_group, n_group_sub_tot_init);
+            std::cout<<std::endl;
+#endif
             // integration loop
             while (h4_int.getTime()<_dt) {
 
@@ -1476,8 +1479,8 @@ public:
                         de_sd_change_cum = h4_int.getDESlowDownChangeCum();
                         std::cerr<<"Hard energy significant ("<<de_sd<<") !"
                                  <<"  Ekin: "<<ekin
+                                 <<"  Epot: "<<epot
                                  <<"  Ekin_SD: "<<ekin_sd
-                                 <<"  Epot: "<<epot_sd
                                  <<"  Epot_SD: "<<epot_sd
                                  <<"  Etot_SD_ref: "<<etot_sd
                                  <<"  dE: "<<de
@@ -1635,8 +1638,8 @@ public:
 #endif
         if (abs(de_sd) > manager->energy_error_max) {
             std::cerr<<"Hard energy significant ("<<de_sd<<") !\n";
-            DATADUMP("hard_dump");
-            abort();
+            DATADUMP("hard_large_energy");
+            //abort();
         }
 #endif
     }
