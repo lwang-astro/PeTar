@@ -970,11 +970,12 @@ int main(int argc, char *argv[]){
 
             // correct changeover for first step
             // Isolated clusters
-            system_hard_isolated.correctForceForChangeOverUpdateOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft, search_cluster.getAdrSysConnectClusterSend());
+            system_hard_isolated.correctForceForChangeOverUpdateOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft);
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
             // Connected clusters
-            system_hard_connected.correctForceForChangeOverUpdateOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft, search_cluster.getAdrSysConnectClusterSend());
+            auto& adr_send = search_cluster.getAdrSysConnectClusterSend();
+            system_hard_connected.correctForceForChangeOverUpdateOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft, adr_send.getPointer(), adr_send.size());
 #endif
         
             // update status
@@ -1241,11 +1242,12 @@ int main(int argc, char *argv[]){
             dt_kick = dt_manager.getDtStartContinue();
 
             // Isolated clusters
-            system_hard_isolated.correctForceForChangeOverUpdateOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft, search_cluster.getAdrSysConnectClusterSend());
+            system_hard_isolated.correctForceForChangeOverUpdateOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft);
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
             // Connected clusters
-            system_hard_connected.correctForceForChangeOverUpdateOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft, search_cluster.getAdrSysConnectClusterSend());
+            auto& adr_send = search_cluster.getAdrSysConnectClusterSend();
+            system_hard_connected.correctForceForChangeOverUpdateOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft, adr_send.getPointer(), adr_send.size());
 #endif
 
             // single

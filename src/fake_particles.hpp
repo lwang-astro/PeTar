@@ -69,7 +69,7 @@ public:
 };
 
 template <class Tptcl>
-class FakeParticles{
+class FakeParticleManager{
 
 
     //! Set member particle status=1, return orderd particle member index list

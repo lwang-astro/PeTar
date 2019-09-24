@@ -59,12 +59,11 @@ int main(int argc, char **argv){
         n_opt+=2;
         break;
 #endif
-#ifdef AR_SYM
     case 's':
         step_arc_limit = atoi(optarg);
         n_opt+=2;
         break;
-#endif
+
     case 'h':
         std::cout<<"hard_debug.out [options] [hard_manager (defaulted: input.par.hard)] [cluster_data] (defaulted: hard_dump)\n"
                  <<"options:\n"
@@ -72,9 +71,7 @@ int main(int argc, char **argv){
 #ifdef HARD_CHECK_ENERGY
                  <<"    -e [double]:  hard energy limit ("<<e_err_hard<<")\n"
 #endif
-#ifdef AR_SYM
                  <<"    -s [int]:     AR step count limit ("<<step_arc_limit<<")\n"
-#endif
                  <<"    -E [double]:  Eta 4th for hermite \n"
                  <<"    -A [double]:  Eta 2nd for hermite \n"
                  <<"    -a [double]:  AR energy limit \n"
@@ -114,11 +111,11 @@ int main(int argc, char **argv){
   if (e_err_hard>0 )
       hard_manager.energy_error_max = e_err_hard;
 #endif
-#ifdef AR_SYM
+
   // Set step limit for ARC sym
   if (step_arc_limit>0) 
       hard_manager.ar_manager.step_count_max = step_arc_limit;
-#endif
+
   // set slowdown factor
   if(slowdown_factor>0)    
       hard_manager.ar_manager.slowdown_pert_ratio_ref = slowdown_factor;

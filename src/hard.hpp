@@ -233,7 +233,7 @@ private:
             group.searchAndMerge(ptcl_in_cluster, n_ptcl);
 
             // generate artifical particles,
-            FakeParticles<PtclH4>::createFakeParticles<PtclTree<PtclH4>>(i, ptcl_in_cluster, n_ptcl, ptcl_artifical[ith], _n_group_in_cluster[i], group, _rbin, _rin, _rout, _dt_tree, _id_offset, _n_split);
+            FakeParticleManager<PtclH4>::createFakeParticles<PtclTree<PtclH4>>(i, ptcl_in_cluster, n_ptcl, ptcl_artifical[ith], _n_group_in_cluster[i], group, _rbin, _rin, _rout, _dt_tree, _id_offset, _n_split);
         }
 
         // n_group_in_cluster_offset
@@ -1259,11 +1259,17 @@ public:
 #ifdef HARD_CHECK_ENERGY
             PS::F64 kappa_inv = 1.0/sym_int.slowdown.getSlowDownFactor();
             ekin    = sym_int.getEkin();
-            ekin_sd = kappa_inv*sym_int.getEkinSlowDownInner();
             epot    = sym_int.getEpot();
-            epot_sd = kappa_inv*sym_int.getEpotSlowDownInner();
             de      = sym_int.getEnergyError();
+#ifdef AR_TTL_SLOWDOWN_INNER
+            ekin_sd = kappa_inv*sym_int.getEkinSlowDownInner();
+            epot_sd = kappa_inv*sym_int.getEpotSlowDownInner();
             de_sd   = kappa_inv*sym_int.getEnergyErrorSlowDownInner();
+#else
+            ekin_sd = ekin;
+            epot_sd = epot;
+            de_sd   = de;
+#endif
             de_sd_change_cum = sym_int.getDESlowDownChangeCum();
 #endif
         }
@@ -1332,10 +1338,14 @@ public:
             h4_int.initialIntegration(); // get neighbors and min particles
             // AR inner slowdown number
             int n_group_sub_init[_n_group], n_group_sub_tot_init=0;
+#ifdef AR_TTL_SLOWDOWN_INNER
             for (int i=0; i<_n_group; i++) {
                 n_group_sub_init[i] = h4_int.groups[i].slowdown_inner.getSize();
                 n_group_sub_tot_init += n_group_sub_init[i];
             }
+#else
+            for (int i=0; i<_n_group; i++) n_group_sub_init[i] = 0;
+#endif
             h4_int.adjustGroups(true);
 
             const PS::S32 n_init = h4_int.getNInitGroup();
@@ -2237,10 +2247,16 @@ public:
         correctForceWithCutoffClusterImp(_sys, ptcl_hard_.getPointer(), n_ptcl_in_cluster_, n_ptcl_in_cluster_disp_, n_group_in_cluster_, n_group_in_cluster_offset_, adr_first_ptcl_arti_in_cluster_, _acorr_flag);
     }
 
-
+    //! Correct force due to change over factor change 
+    /*!
+       @param[in,out] _sys: global particle system, acc is updated
+       @param[in] _tree: tree for force, to get neighbor list
+       @param[in] _adr_send: for connected case, correct sending list
+       @param[in] _n_send: sending particle number
+     */
     template <class Tsys, class Ttree, class Tepj>
     void correctForceForChangeOverUpdateOMP(Tsys& _sys, Ttree& _tree, 
-                                            const PS::ReallocatableArray<PS::S32>& _adr_send) {
+                                            const PS::S32*  _adr_send=NULL, const PS::S32 _n_send=0) {
         const PS::S32 n_cluster = i_cluster_changeover_update_.size();
 #pragma omp parallel for schedule(dynamic)
         for (int i=0; i<n_cluster; i++) {  // i: i_cluster
@@ -2308,10 +2324,9 @@ public:
             }
             
         }
-        const PS::S32 n_send = _adr_send.size();
 #pragma omp parallel for 
         // sending list to other nodes need also be corrected.
-        for (int i=0; i<n_send; i++) {
+        for (int i=0; i<_n_send; i++) {
             PS::S64 adr = _adr_send[i];
             bool change_i = _sys[adr].changeover.r_scale_next!=1.0;
             Tepj * ptcl_nb = NULL;
