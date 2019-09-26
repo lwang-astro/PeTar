@@ -232,8 +232,10 @@ private:
             // merge groups
             group.searchAndMerge(ptcl_in_cluster, n_ptcl);
 
+            FakeParticleManager<PtclH4> fp;
+            fp.G = manager->h4_manager.interaction.G;
             // generate artifical particles,
-            FakeParticleManager<PtclH4>::createFakeParticles<PtclTree<PtclH4>>(i, ptcl_in_cluster, n_ptcl, ptcl_artifical[ith], _n_group_in_cluster[i], group, _rbin, _rin, _rout, _dt_tree, _id_offset, _n_split);
+            fp.createFakeParticles(i, ptcl_in_cluster, n_ptcl, ptcl_artifical[ith], _n_group_in_cluster[i], group, _rbin, _rin, _rout, _dt_tree, _id_offset, _n_split);
         }
 
         // n_group_in_cluster_offset

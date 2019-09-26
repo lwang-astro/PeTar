@@ -221,20 +221,13 @@ class DiskModel{
 #ifdef MAIN_DEBUG
 // flag: 1: c.m; 2: individual; 
 template<class Teng, class Tsys>
-void write_p(FILE* fout, const PS::F64 time, const Tsys& p, const Teng &et) {
-    fprintf(fout,"%20.14e ",time);
-    fprintf(fout,"%20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e ",
-            ediff.tot/et.tot, et.kin, et.pot, et.tot,
-            ediff.Lt/et.Lt, ediff.L[0]/et.Lt, ediff.L[1]/et.Lt, ediff.L[2]/et.Lt,
-               et.Lt,    et.L[0],    et.L[1],    et.L[2]);
+void write_p(std::ofstream & fout, const PS::F64 time, const Tsys& p, const Teng &et) {
+    fout<<std::setprecision(13)<<std::setw(20)<<time;
+    et.printColumn(fout);
     for (int i=0; i<p.getNumberOfParticleLocal(); i++) {
-        if(p[i].status>0||p[i].id<0) continue;
-        PS::F64 mi = p[i].mass;
-        PS::F64vec vi = p[i].vel;
-        fprintf(fout,"%20.14e %20.14e %20.14e %20.14e %20.14e %20.14e %20.14e ", 
-                mi, p[i].pos[0], p[i].pos[1], p[i].pos[2], 
-                vi[0], vi[1], vi[2]);
+        if(p[i].status.d>0||p[i].id<0) continue;
+        p[i].ParticleBase::printColumn(fout);
     }
-    fprintf(fout,"\n");
+    fout<<std::endl;
 }
 #endif

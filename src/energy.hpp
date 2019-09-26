@@ -51,7 +51,7 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
     */
-    void printColumnTitle(std::ofstream & _fout, const PS::S32 _width=20) {
+    void printColumnTitle(std::ofstream & _fout, const PS::S32 _width=20) const {
         _fout<<std::setw(_width)<<"dE"
              <<std::setw(_width)<<"Ekin"
              <<std::setw(_width)<<"Epot"
@@ -72,7 +72,7 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
     */
-    void printColumn(std::ofstream & _fout, const PS::S32 _width=20){
+    void printColumn(std::ofstream & _fout, const PS::S32 _width=20) const {
         _fout<<std::setw(_width)<<getEnergyError()
              <<std::setw(_width)<<ekin
              <<std::setw(_width)<<epot

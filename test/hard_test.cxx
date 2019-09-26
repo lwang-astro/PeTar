@@ -9,7 +9,6 @@
 #include "io.hpp"
 #include "integrate.hpp"
 #include "hard_assert.hpp"
-#include "kepler.hpp"
 #include "cluster_list.hpp"
 #include "hard.hpp"
 #include "soft_ptcl.hpp"

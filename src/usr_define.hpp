@@ -70,7 +70,7 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    void printColumnTitle(std::ostream & _fout, const int _width=20) {
+    void printColumnTitle(std::ostream & _fout, const int _width=20) const {
         _fout<<std::setw(_width)<<"mass"
              <<std::setw(_width)<<"pos.x"
              <<std::setw(_width)<<"pos.y"
@@ -85,7 +85,7 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    void printColumn(std::ostream & _fout, const int _width=20){
+    void printColumn(std::ostream & _fout, const int _width=20) const{
         _fout<<std::setw(_width)<<mass
              <<std::setw(_width)<<pos.x
              <<std::setw(_width)<<pos.y

@@ -1,6 +1,5 @@
 #pragma once
 #include<particle_simulator.hpp>
-#include"kepler.hpp"
 
 #define ID_PHASE_SHIFT 4
 #define ID_PHASE_MASKER 0xF

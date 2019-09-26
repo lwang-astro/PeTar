@@ -1,5 +1,5 @@
 #pragma once
-#include "kepler.hpp"
+#include "Common/binary_tree.h"
 
 //!initializaton of system parameters
 /*! Obtain Radius parameters, consistent with the input help information
@@ -279,18 +279,21 @@ void MakeKeplerDisk(PS::F64 & mass_planet_glb,
     //const PS::F64 i_sigma = i_rms;
     for(long long int i=0; i<n_loc; i++){
         mass[i] = m_planet;
-	double ax = HayashiDistributionWithIceLine(a_in, a_out, a_ice, f_ice, power);
-        double ecc = RayleighDistribution(e_sigma) * h;
-        double inc = RayleighDistribution(i_sigma) * h;
-        PS::F64vec pos_dummy, vel_dummy;
-        double omg = 2.0 * PI * mt.genrand_res53();
-        double OMG = 2.0 * PI * mt.genrand_res53();
+        COMM::Binary bin;
+        bin.semi = HayashiDistributionWithIceLine(a_in, a_out, a_ice, f_ice, power);
+        bin.ecc  = RayleighDistribution(e_sigma) * h;
+        bin.incline = RayleighDistribution(i_sigma) * h;
+        bin.rot_horizon = 2.0 * PI * mt.genrand_res53();
+        bin.rot_self    = 2.0 * PI * mt.genrand_res53();
         double l = 2.0 * PI * mt.genrand_res53(); // mean anomayl
-        double u = solve_keplereq(l, ecc); // eccentric anomayl
-        OrbParam2PosVel(pos_dummy, pos[i],   vel_dummy, vel[i],
-                        mass_sun,  m_planet, ax,        ecc,
-                        inc,       OMG,      omg,       u);
-        e_ave += ecc*ecc;
+        bin.ecca = bin.calcEccAnomaly(l, bin.ecc); // eccentric anomayl
+        bin.m1 = mass_sun;
+        bin.m2 = m_planet;
+        ParticleBase sun,planet;
+        bin.calcParticles(sun, planet);
+        pos[i]=planet.pos;
+        vel[i]=planet.vel;
+        e_ave += bin.ecc*bin.ecc;
     }
     PS::F64 e_ave_glb = sqrt(PS::Comm::getSum(e_ave)/n_glb);
     if(PS::Comm::getRank() == 0){
@@ -494,84 +497,4 @@ void SetParticlePlummer(Tpsys & psys,
     delete [] vel;
 
 }
-
-#ifdef MUTIL_ROUT
-
-template<class Tpsys>
-void SetBinaryRout(Tpsys & psys, const PS::S32 _n_bin, const PS::F64 g_min, const PS::F64 _r_in, const PS::F64 _r_out, const PS::F64 _m_average) {
-    double gamma = std::pow(1.0/g_min,0.33333);
-    for (PS::S32 i=0; i<2*_n_bin; i+=2) {
-        if (psys[i].r_out<=0||psys[i+i].r_out<=0) {
-            double a,ecc;
-            PosVel2AxEcc(a,ecc,psys[i].pos, psys[i+1].pos, psys[i].vel, psys[i+1].vel, psys[i].mass, psys[i+1].mass);
-            double apo = a*(1+ecc);
-            if(apo>0&&apo<_r_in) psys[i+1].r_out = psys[i].r_out = std::max(apo*gamma*std::pow((psys[i].mass+psys[i+1].mass)/_m_average,0.3333),r_out);
-            else psys[i+1].r_out = psys[i].r_out = _r_out;
-        }
-    }
-}
-
-
-template<class Tpsys>
-void SetSingleRout(Tpsys & psys, const PS::S32 n, const PS::S32 n_off, const PS::F64 _r_out) {
-    for (PS::S32 i=n_off; i<n; i++) if(psys[i].r_out<=0) psys[i].r_out = _r_out;
-}
-
-//! update r_out function
-template<class Tptcl>
-void updateRout(Tptcl** p, const PS::S32 n, const PS::F64 _r_in, const PS::F64 _r_out, const PS::F64 gamma, const PS::F64 _m_average) {
-    PS::S32 istart=0,icount=0,ioff[n];
-    PS::F64 apomax=0;
-    Tptcl* plist[n];
-    for(PS::S32 i=0; i<n; i++) {
-        PS::F64 ax=0.0,ecc,apo=0.0;
-        if(i<n-1) {
-            PosVel2AxEcc(ax,ecc,
-                         p[i]->pos, p[i+1]->pos,
-                         p[i]->vel, p[i+1]->vel,
-                         p[i]->mass,p[i+1]->mass);
-            //apo=ax*(1.0+ecc);
-            apo=ax*(1.0+ecc)*std::pow((p[i]->mass+p[i+1]->mass)/_m_average,0.3333);
-        }
-        if (ax<0.0||apo>_r_in||i==n-1) {
-            if (i==istart) {
-                p[i]->r_out=_r_out;
-                plist[icount]=p[i];
-            }
-            else {
-                Tptcl** ptemp=new Tptcl*[i-istart+1];
-                apomax *=gamma;
-                for(PS::S32 j=istart; j<=i; j++) {
-                    if(apomax>0.0&&(apomax>1.2*p[j]->r_out||apomax<0.8*p[j]->r_out)) p[j]->r_out = std::max(apomax,_r_out);
-                    ptemp[j-istart]=p[j];
-                }
-                apomax = 0.0;
-                plist[icount]=new Tptcl;
-                calc_center_of_mass(*(plist[icount]),ptemp,i-istart+1);
-                delete[] ptemp;
-            }
-            istart = i+1;
-            ioff[icount] = istart;
-            icount++;
-        }
-        else if (apo>apomax) apomax=apo;
-    }
-    if (n>icount) {
-        updateRout(plist, icount, _r_in, _r_out, gamma, _m_average);
-        if(plist[0]->r_out>1.2*p[0]->r_out)
-            for (PS::S32 j=0; j<ioff[0]; j++) p[j]->r_out = plist[0]->r_out;
-        for (PS::S32 i=1; i<icount; i++) {
-            if (plist[i]->r_out>1.2*p[ioff[i-1]]->r_out)
-                for (PS::S32 j=ioff[i-1];j<ioff[i];j++) {
-                    p[j]->r_out = plist[i]->r_out;
-#ifdef HARD_DEBUG
-                    assert(p[j]->r_out<_r_out);
-#endif
-                }
-            if (ioff[i]-ioff[i-1]>1) delete plist[i];
-        }
-    }
-}
-
-#endif
 

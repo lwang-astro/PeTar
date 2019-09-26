@@ -69,7 +69,6 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #include"soft_force.hpp"
 #include"energy.hpp"
 #include"hard.hpp"
-#include"kepler.hpp"
 #include"io.hpp"
 #include"status.hpp"
 #include"init.hpp"
@@ -660,11 +659,8 @@ int main(int argc, char *argv[]){
     }
 
 #ifdef MAIN_DEBUG
-    FILE* fout;
-    if ( (fout = fopen("nbody.dat","w")) == NULL) {
-        fprintf(stderr,"Error: Cannot open file nbody.dat\n");
-        abort();
-    }
+    std::ofstream fout;
+    fout.open("nbody.dat");
 #endif
 
 
@@ -1536,7 +1532,7 @@ int main(int argc, char *argv[]){
 //    }
 //#endif
 #ifdef MAIN_DEBUG
-    fclose(fout);
+    fout.close();
 #endif
 
     PS::Finalize();
