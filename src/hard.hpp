@@ -1209,7 +1209,7 @@ public:
             PS::S32 icm = adr_cm_ptcl[0];
             PS::S32 i_soft_pert_offset = gpars[0].offset_tt;
             TidalTensor tt;
-            tt.fit(&_ptcl_artifical[i_soft_pert_offset], _ptcl_artifical[icm], manager->r_tidal_tensor, manager->n_split);
+            tt.fit(&_ptcl_artifical[i_soft_pert_offset], _ptcl_artifical[icm], manager->r_tidal_tensor);
             sym_int.perturber.soft_pert=&tt;
 
             // calculate soft_pert_min
@@ -1311,7 +1311,7 @@ public:
                     PS::S32 icm = adr_cm_ptcl[i];
                     // correct pos for t.t. cm
                     _ptcl_artifical[icm].pos -= h4_int.particles.cm.pos;
-                    tidal_tensor[i].fit(&_ptcl_artifical[i_soft_pert_offset], _ptcl_artifical[icm], manager->r_tidal_tensor, manager->n_split);
+                    tidal_tensor[i].fit(&_ptcl_artifical[i_soft_pert_offset], _ptcl_artifical[icm], manager->r_tidal_tensor);
                     n_tt ++;
                     auto& groupi = h4_int.groups[i];
                     groupi.perturber.soft_pert = &tidal_tensor[i];

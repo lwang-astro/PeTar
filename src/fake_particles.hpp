@@ -100,7 +100,6 @@ class FakeParticleManager{
         @param[in]     _i_group: group index in the cluster
         @param[in,out] _ptcl_in_cluster: particle data in local cluster
         @param[out]    _ptcl_new: artifical particles that will be added
-        @param[in,out] _empty_list: the list of _ptcl_in_cluster that can be used to store new artifical particles, reduced when used
         @param[out]    _group_ptcl_adr_list: group member particle index list in _ptcl_in_cluster 
         @param[in]     _bin: binary tree root
         @param[in]     _id_offset: for artifical particles, the offset of starting id.
@@ -120,7 +119,6 @@ class FakeParticleManager{
                               const PS::S32 _i_group,
                               Tptcl* _ptcl_in_cluster,
                               PS::ReallocatableArray<Tptcl> & _ptcl_new,
-                              PS::ReallocatableArray<PS::S32> & _empty_list,
                               PS::S32 *_group_ptcl_adr_list,
                               COMM::BinaryTree<Tptcl> &_bin,
                               const PS::F64 _r_bin,
@@ -133,11 +131,6 @@ class FakeParticleManager{
             std::cerr<<"N_SPLIT "<<_n_split<<" to small to save binary parameters, should be >= 8!";
             abort();
         }
-        PS::S32 i_cg[2]={_i_cluster, _i_group};
-        PS::F64* pm[_n_split][2];
-        PS::F64 mfactor;
-        PS::F64 mnormal=0.0;
-
         const PS::S32 n_members = _bin.getMemberN();
         //! Set member particle status=1, return orderd particle member index list
         /*  _adr_ref: ptcl_org first particle address as reference to calculate the particle index.
@@ -149,158 +142,103 @@ class FakeParticleManager{
 #endif                
 
         // Make sure the _ptcl_new will not make new array due to none enough capacity during the following loop, otherwise the p[j] pointer will point to wrong position
-        _ptcl_new.reserveEmptyAreaAtLeast(2*_n_split+1-_empty_list.size());
-        // First 4 is used for tidal tensor points
-        // remaining is used for sample points
+        const int np = _ptcl_new.size();
+        _ptcl_new.increaseSize(2*_n_split+1);
+        Tptcl* p = &_ptcl_new[np];
+        
+        // set id and status.d 
         for (int i=0; i<_n_split; i++) {
-            Tptcl* p[2];
             for(int j=0; j<2; j++) {
-                if(_empty_list.size()>0) {
-                    PS::S32 k = _empty_list.back();
-                    _empty_list.decreaseSize(1);
-                    p[j] = &_ptcl_in_cluster[k];
-                }
-                else {
-                    _ptcl_new.push_back(Tptcl());
-                    p[j] = &_ptcl_new.back();
-                }
+                Tptcl* pj = &p[2*i+j];
                 Tptcl* member = _bin.getMember(j);
-                p[j]->mass = member->mass;
+                pj->id = _id_offset + abs(member->id)*_n_split +i;
+                pj->status.d = (_bin.id<<ID_PHASE_SHIFT)|i; // not used, but make status.d>0
+            }
+        }
+
+        // First 8 is used for tidal tensor points
+        TidalTensor::createTidalTensorMeasureParticles(p, *((Tptcl*)&_bin), _r_bin);
+
+        // use c.m. r_search and changeover
+        for (int i=0; i<4; i++) {
+            for (int j=0; j<2; j++) {
+                Tptcl* pj = &p[2*i+j];
+                pj->r_search =_bin.getMember(j)->r_search;
+                pj->changeover = _bin.changeover;
+            }
+        }
+
+        // remaining is used for sample points
+        PS::F64 mnormal=0.0;
+        for (int i=4; i<_n_split; i++) {
+            PS::S32 iph = i-4;
+
+            // center_of_mass_shift(*(Tptcl*)&_bin,p,2);
+            // generate particles at different orbitial phase
+            _bin.orbitToParticle(p[2*i], p[2*i+1], _bin, dE*iph, G);
+
+            // use velocity to weight mass
+            PS::F64vec dvvec= p[2*i].vel - p[2*i+1].vel;
+            PS::F64 odv = 1.0/std::sqrt(dvvec*dvvec);
+
+            for (int j=0; j<2; j++) {
+                Tptcl* pj = &p[2*i+j];
+                Tptcl* member = _bin.getMember(j);
+
+                // set mass
+                pj->mass = member->mass * odv;
+
+                // center_of_mass_correction 
+                pj->pos += _bin.pos;
+                pj->vel += _bin.vel;
+
 #ifdef FAKE_PARTICLE_DEBUG
                 assert(member->mass>0);
 #endif
-                p[j]->id = _id_offset + abs(member->id)*_n_split + i;
-                if(i==0) p[j]->status.d = _bin.isMemberTree(j) ? ((COMM::BinaryTree<Tptcl>*)member)->getMemberN() : 1; // store the component member number 
-                else if(i==1) p[j]->status.d = i_cg[j]+1; // store the i_cluster and i_group for identify artifical particles, +1 to avoid 0 value (status.d>0)
-                else p[j]->status.d = (_bin.id<<ID_PHASE_SHIFT)|i; // not used, but make status.d>0
-                
-                if(i>=4) 
-                    pm[i][j] = &(p[j]->mass);
-            }
-            if (i>=4) {
-                PS::S32 iph = i-4;
 
-                for (int j=0; j<2; j++) {
-                    // use member changeover, if new changeover is different, record the scale ratio 
-                    p[j]->changeover =  _bin.getMember(j)->changeover;
-                    if (abs(p[j]->changeover.getRin()-_bin.changeover.getRin())>1e-10) {
-                        p[j]->changeover.r_scale_next = _bin.changeover.getRin()/p[j]->changeover.getRin();
-                        p[j]->r_search = std::max(p[j]->r_search, _bin.r_search);
+                // use member changeover, if new changeover is different, record the scale ratio 
+                pj->changeover =  member->changeover;
+                if (abs(pj->changeover.getRin()-_bin.changeover.getRin())>1e-10) {
+                    pj->changeover.r_scale_next = _bin.changeover.getRin()/pj->changeover.getRin();
+                    pj->r_search = std::max(pj->r_search, _bin.r_search);
 #ifdef FAKE_PARTICLE_DEBUG
-                        assert(p[j]->r_search > p[j]->changeover.getRout());
+                    assert(pj->r_search > pj->changeover.getRout());
 #endif 
-                    }
-                    else p[j]->r_search = _bin.r_search;
                 }
+                else pj->r_search = _bin.r_search;
 
-                // center_of_mass_shift(*(Tptcl*)&_bin,p,2);
-                // generate particles at different orbitial phase
-                _bin.orbitToParticle(*p[0], *p[1], _bin, dE*iph, G);
-                //DriveKeplerOrbParam(p[0]->pos, p[1]->pos, p[0]->vel, p[1]->vel, p[0]->mass, p[1]->mass, (i+1)*dt, _bin.semi, _bin.ecc, _bin.inc, _bin.OMG, _bin.omg, _bin.peri, _bin.ecca);
-            }
-            else {
-                // use c.m. r_search 
-                for (int j=0; j<2; j++) {
-                    p[j]->r_search =_bin.getMember(j)->r_search;
-                    p[j]->changeover = _bin.changeover;
-                }
-
-                ///* Assume apo-center distance is the maximum length inside box
-                //   Then the lscale=apo/(2*sqrt(2))
-                // */
-                // PS::F64 lscale = _bin.semi*(1+_bin.ecc)*0.35;
-
-                // Use fixed 0.5*r_bin to determine lscale
-                PS::F64 lscale = 0.16*_r_bin;
-
-                // 8 points box 
-                switch(i) {
-                case 0:
-                    p[0]->pos = PS::F64vec(lscale, 0,      -lscale) + _bin.pos;
-                    p[1]->pos = PS::F64vec(0,      lscale, -lscale) + _bin.pos;
-                    break;
-                case 1:
-                    p[0]->pos = PS::F64vec(-lscale, 0,      -lscale) + _bin.pos;
-                    p[1]->pos = PS::F64vec(0,      -lscale, -lscale) + _bin.pos;
-                    break;
-                case 2:
-                    p[0]->pos = PS::F64vec(lscale, 0,      lscale) + _bin.pos;
-                    p[1]->pos = PS::F64vec(0,      lscale, lscale) + _bin.pos;
-                    break;
-                case 3:
-                    p[0]->pos = PS::F64vec(-lscale, 0,      lscale) + _bin.pos;
-                    p[1]->pos = PS::F64vec(0,      -lscale, lscale) + _bin.pos;
-                    break;
-                default:
-                    std::cerr<<"Error: index >= 4!\n";
-                    abort();
-                }
-                p[0]->vel = _bin.vel;
-                p[1]->vel = _bin.vel;
-                p[0]->mass = p[1]->mass = 0.0;
-            }
-            // binary parameters
-            if(i==5) {
-                p[0]->mass_bk.d = p[0]->mass;
-                p[1]->mass_bk.d = p[1]->mass;
-            }
-            else if(i==6) {
-                p[0]->mass_bk.d = 0.0; // indicate the order
-                p[1]->mass_bk.d = 1.0;
-            }
-            if(i>=4) {
-                PS::F64vec dvvec= p[0]->vel - p[1]->vel;
-                PS::F64 odv = 1.0/std::sqrt(dvvec*dvvec);
-                for(int j=0; j<2; j++) p[j]->mass *= odv;
-                //if(i==0) p[j]->mass /= 2.0*_n_split;
-                //else p[j]->mass /= _n_split;
-                mnormal += odv;
-                // center_of_mass_correction 
-                for (int j=0; j<2; j++) {
-                    p[j]->pos += _bin.pos;
-                    p[j]->vel += _bin.vel;
-                }
 #ifdef FAKE_PARTICLE_DEBUG
                 //check rsearch consistence:
                 PS::F64 rsearch_bin = _bin.r_search+_bin.semi*(1+_bin.ecc);
-                for(int j=0; j<2; j++) {
-                    PS::F64vec dp = p[j]->pos-_bin.pos;
-                    PS::F64 dr = dp*dp;
-                    assert(dr<=rsearch_bin*rsearch_bin);
-//                    if(p[j]->id==10477) {
-//                        std::cerr<<"i="<<i<<" dr="<<sqrt(dr)<<std::endl;
-//                        p[j]->print(std::cerr);
-//                        std::cerr<<std::endl;
-//                    }
-                }
+                PS::F64vec dp = pj->pos-_bin.pos;
+                PS::F64 dr = dp*dp;
+                assert(dr<=rsearch_bin*rsearch_bin);
 #endif
             }
+
+            mnormal += odv;
         }
 
-        mfactor = 1.0/mnormal;
-
+        // normalized the mass of each particles to keep the total mass the same as c.m. mass
+        PS::F64 mfactor = 1.0/mnormal;
         for (int i=4; i<_n_split; i++) 
             for (int j=0; j<2; j++) 
-                *pm[i][j] *= mfactor;
-        
-        //mfactor *= 0.5;
-        //*pm[0][0] *= mfactor;
-        //*pm[0][1] *= mfactor;
-        //mfactor /= _n_split;
-        // collect the member address .
+                p[2*i+j].mass *= mfactor;
 
+
+        for (int j=0; j<2; j++) {
+            // store the component member number 
+            p[j].status.d = _bin.isMemberTree(j) ? ((COMM::BinaryTree<Tptcl>*)(_bin.getMember(j)))->getMemberN() : 1; 
+            p[10+j].mass_bk.d = p[10+j].mass;
+            p[12+j].mass_bk.d = j; // indicate the order
+        }
+        // store the i_cluster and i_group for identify artifical particles, +1 to avoid 0 value (status.d>0)
+        p[2].status.d = _i_cluster+1;
+        p[3].status.d = _i_group+1;
+
+        // last member is the c.m. particle
         Tptcl* pcm;
-        //PS::S64 pcm_adr;
-        if(_empty_list.size()>0) {
-            pcm = &_ptcl_in_cluster[_empty_list.back()];
-            //pcm_adr = - _empty_list.back(); // if is in empty list, put negative address
-            _empty_list.decreaseSize(1);
-        }
-        else {
-            _ptcl_new.push_back(Tptcl());
-            pcm = &_ptcl_new.back();
-            //pcm_adr = _ptcl_new.size()-1; // if is in new, put ptcl_new address
-        }
+        pcm = &_ptcl_new.back();
         pcm->mass_bk.d = _bin.mass;
         pcm->mass = 0.0;
         pcm->pos = _bin.pos;
@@ -380,9 +318,8 @@ public:
             stab.stable_binary_tree.reserve(_n_groups);
             stab.findStableTree(bins.back());
 
-            PS::ReallocatableArray<PS::S32> empty_list;
             for (int i=0; i<stab.stable_binary_tree.size(); i++) {
-                keplerOrbitGenerator(_i_cluster, _n_groups, _ptcl_in_cluster, _ptcl_artifical, empty_list, &group_ptcl_adr_list[group_ptcl_adr_offset], *stab.stable_binary_tree[i], _rbin, _id_offset, _n_split);
+                keplerOrbitGenerator(_i_cluster, _n_groups, _ptcl_in_cluster, _ptcl_artifical, &group_ptcl_adr_list[group_ptcl_adr_offset], *stab.stable_binary_tree[i], _rbin, _id_offset, _n_split);
                 group_ptcl_adr_offset += stab.stable_binary_tree[i]->getMemberN();
                 _n_groups++;
             }
