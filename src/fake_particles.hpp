@@ -102,8 +102,6 @@ class FakeParticleManager{
         @param[out]    _ptcl_new: artifical particles that will be added
         @param[out]    _group_ptcl_adr_list: group member particle index list in _ptcl_in_cluster 
         @param[in]     _bin: binary tree root
-        @param[in]     _id_offset: for artifical particles, the offset of starting id.
-        @param[in]     _n_split: split number for artifical particles
 
         also store the binary parameters in mass_bk of first 4 pairs of artifical particles
         acc, ecc
@@ -120,15 +118,10 @@ class FakeParticleManager{
                               Tptcl* _ptcl_in_cluster,
                               PS::ReallocatableArray<Tptcl> & _ptcl_new,
                               PS::S32 *_group_ptcl_adr_list,
-                              COMM::BinaryTree<Tptcl> &_bin,
-                              const PS::F64 _r_bin,
-                              const PS::S64 _id_offset,
-                              const PS::S32 _n_split) {
-        const PS::F64 dE = 8.0*atan(1.0)/(_n_split-4);
-//      const PS::F64 dE = 8.0*atan(1.0)/_n_split;
-        //const PS::F64 dt = _bin.peri/_n_split;
-        if (_n_split<8) {
-            std::cerr<<"N_SPLIT "<<_n_split<<" to small to save binary parameters, should be >= 8!";
+                              COMM::BinaryTree<Tptcl> &_bin) {
+        const PS::F64 dE = 8.0*atan(1.0)/(n_split-4);
+        if (n_split<8) {
+            std::cerr<<"N_SPLIT "<<n_split<<" to small to save binary parameters, should be >= 8!";
             abort();
         }
         const PS::S32 n_members = _bin.getMemberN();
@@ -143,21 +136,21 @@ class FakeParticleManager{
 
         // Make sure the _ptcl_new will not make new array due to none enough capacity during the following loop, otherwise the p[j] pointer will point to wrong position
         const int np = _ptcl_new.size();
-        _ptcl_new.increaseSize(2*_n_split+1);
+        _ptcl_new.increaseSize(2*n_split+1);
         Tptcl* p = &_ptcl_new[np];
         
         // set id and status.d 
-        for (int i=0; i<_n_split; i++) {
+        for (int i=0; i<n_split; i++) {
             for(int j=0; j<2; j++) {
                 Tptcl* pj = &p[2*i+j];
                 Tptcl* member = _bin.getMember(j);
-                pj->id = _id_offset + abs(member->id)*_n_split +i;
+                pj->id = id_offset + abs(member->id)*n_split +i;
                 pj->status.d = (_bin.id<<ID_PHASE_SHIFT)|i; // not used, but make status.d>0
             }
         }
 
         // First 8 is used for tidal tensor points
-        TidalTensor::createTidalTensorMeasureParticles(p, *((Tptcl*)&_bin), _r_bin);
+        TidalTensor::createTidalTensorMeasureParticles(p, *((Tptcl*)&_bin), r_tidal_tensor);
 
         // use c.m. r_search and changeover
         for (int i=0; i<4; i++) {
@@ -170,7 +163,7 @@ class FakeParticleManager{
 
         // remaining is used for sample points
         PS::F64 mnormal=0.0;
-        for (int i=4; i<_n_split; i++) {
+        for (int i=4; i<n_split; i++) {
             PS::S32 iph = i-4;
 
             // center_of_mass_shift(*(Tptcl*)&_bin,p,2);
@@ -221,7 +214,7 @@ class FakeParticleManager{
 
         // normalized the mass of each particles to keep the total mass the same as c.m. mass
         PS::F64 mfactor = 1.0/mnormal;
-        for (int i=4; i<_n_split; i++) 
+        for (int i=4; i<n_split; i++) 
             for (int j=0; j<2; j++) 
                 p[2*i+j].mass *= mfactor;
 
@@ -254,7 +247,24 @@ class FakeParticleManager{
 
 
 public:
+    PS::F64 r_tidal_tensor;
+    PS::F64 r_in_base;
+    PS::F64 r_out_base;
+    PS::S64 id_offset;
+    PS::S32 n_split;
     PS::F64 G; // gravitational constant
+
+    FakeParticleManager(): r_tidal_tensor(-1.0), r_in_base(-1.0), r_out_base(-1.0), id_offset(-1), n_split(-1) {}
+
+    //! check paramters
+    bool checkParams() {
+        ASSERT(r_tidal_tensor>=0.0);
+        ASSERT(r_in_base>0.0);
+        ASSERT(r_out_base>0.0);
+        ASSERT(id_offset>0);
+        ASSERT(n_split>4);
+        return true;
+    }
       
     //! generate artifical particles,
     /*  @param[in]     _i_cluster: cluster index
@@ -264,12 +274,7 @@ public:
         @param[out]    _n_groups: number of groups in current cluster
         @param[in,out] _groups: searchgroup class, which contain 1-D group member index array, will be reordered by the minimum distance chain for each group
         @param[in,out] _empty_list: the list of _ptcl_in_cluster that can be used to store new artifical particles, reduced when used
-        @param[in]     _rbin: binary detection criterion radius
-        @param[in]     _rin: inner radius of soft-hard changeover function
-        @param[in]     _rout: outer radius of soft-hard changeover function
         @param[in]     _dt_tree: tree time step for calculating r_search
-        @param[in]     _id_offset: for artifical particles, the offset of starting id.
-        @param[in]     _n_split: split number for artifical particles
      */
     void createFakeParticles(const PS::S32 _i_cluster,
                              Tptcl* _ptcl_in_cluster,
@@ -277,14 +282,9 @@ public:
                              PS::ReallocatableArray<Tptcl> & _ptcl_artifical,
                              PS::S32 &_n_groups,
                              SearchGroup<Tptcl>& _groups,
-                             const PS::F64 _rbin,
-                             const PS::F64 _rin,
-                             const PS::F64 _rout,
-                             const PS::F64 _dt_tree,
-                             const PS::S64 _id_offset,
-                             const PS::S32 _n_split){
-        if (_n_split>(1<<ID_PHASE_SHIFT)) {
-            std::cerr<<"Error! ID_PHASE_SHIFT is too small for phase split! shift bit: "<<ID_PHASE_SHIFT<<" n_split: "<<_n_split<<std::endl;
+                             const PS::F64 _dt_tree) {
+        if (n_split>(1<<ID_PHASE_SHIFT)) {
+            std::cerr<<"Error! ID_PHASE_SHIFT is too small for phase split! shift bit: "<<ID_PHASE_SHIFT<<" n_split: "<<n_split<<std::endl;
             abort();
         }
 
@@ -308,8 +308,9 @@ public:
             // reset status to 0
             for (int j=0; j<n_members; j++) _ptcl_in_cluster[member_list[j]].status.d=0;
 
-            struct {PS::F64 mean_mass_inv, rin, rout, dt_tree; } ch = {Tptcl::mean_mass_inv, _rin, _rout, _dt_tree};
+            struct {PS::F64 mean_mass_inv, rin, rout, dt_tree; } ch = {Tptcl::mean_mass_inv, r_in_base, r_out_base, _dt_tree};
             auto* chp = &ch;
+            // get new changeover and rsearch for c.m.
             bins.back().processRootIter(chp, calcBinChangeOverAndRSearchIter);
             
             // stability check and break groups
@@ -319,7 +320,7 @@ public:
             stab.findStableTree(bins.back());
 
             for (int i=0; i<stab.stable_binary_tree.size(); i++) {
-                keplerOrbitGenerator(_i_cluster, _n_groups, _ptcl_in_cluster, _ptcl_artifical, &group_ptcl_adr_list[group_ptcl_adr_offset], *stab.stable_binary_tree[i], _rbin, _id_offset, _n_split);
+                keplerOrbitGenerator(_i_cluster, _n_groups, _ptcl_in_cluster, _ptcl_artifical, &group_ptcl_adr_list[group_ptcl_adr_offset], *stab.stable_binary_tree[i]);
                 group_ptcl_adr_offset += stab.stable_binary_tree[i]->getMemberN();
                 _n_groups++;
             }
@@ -377,6 +378,33 @@ public:
         //}
 
     }
+
+    //! write class data to file with binary format
+    /*! @param[in] _fp: FILE type file for output
+     */
+    void writeBinary(FILE *_fp) {
+        fwrite(this, sizeof(*this), 1, _fp);
+    }    
+
+    //! read class data to file with binary format
+    /*! @param[in] _fp: FILE type file for reading
+     */
+    void readBinary(FILE *_fin) {
+        size_t rcount = fread(this, sizeof(*this), 1, _fin);
+        if (rcount<1) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            abort();
+        }
+    }    
+
+    //! print parameters
+    void print(std::ostream & _fout) const{
+        _fout<<"r_tidal_tensor   : "<<r_tidal_tensor<<std::endl
+             <<"r_in_base        : "<<r_in_base<<std::endl
+             <<"r_out_base       : "<<r_out_base<<std::endl
+             <<"id_offset        : "<<id_offset<<std::endl
+             <<"n_split          : "<<n_split<<std::endl;
+    }    
 
 //    void checkRoutChange(PS::ReallocatableArray<RCList> & r_out_change_list,
 //                         PS::ReallocatableArray<PS::ReallocatableArray<PS::S32>> & group_list,

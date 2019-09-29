@@ -23,17 +23,13 @@
 class HardManager{
 public:
     PS::F64 energy_error_max;
-    PS::F64 r_tidal_tensor;
-    PS::F64 r_in_base;
-    PS::F64 r_out_base;
     PS::F64 eps_sq;
-    PS::S64 id_offset;
-    PS::S32 n_split;
+    FakeParticleManager<H4::ParticleH4<PtclHard>> fp_manager;
     H4::HermiteManager<HermiteInteraction> h4_manager;
     AR::SymplecticManager<ARInteraction> ar_manager;
 
     //! constructor
-    HardManager(): energy_error_max(-1.0), r_tidal_tensor(-1.0), r_in_base(-1.0), r_out_base(-1.0), eps_sq(-1.0), id_offset(-1), n_split(-1), h4_manager(), ar_manager() {}
+    HardManager(): energy_error_max(-1.0), eps_sq(-1.0), fp_manager(), h4_manager(), ar_manager() {}
     
     //! set softening
     void setEpsSq(const PS::F64 _eps_sq) {
@@ -44,6 +40,7 @@ public:
 
     //! set gravitational constant
     void setG(const PS::F64 _g) {
+        fp_manager.G = _g;
         h4_manager.interaction.G = _g;
         ar_manager.interaction.G = _g;
     }
@@ -58,12 +55,8 @@ public:
     //! check paramters
     bool checkParams() {
         ASSERT(energy_error_max>0.0);
-        ASSERT(r_tidal_tensor>=0.0);
-        ASSERT(r_in_base>0.0);
-        ASSERT(r_out_base>0.0);
         ASSERT(eps_sq>=0.0);
-        ASSERT(id_offset>0);
-        ASSERT(n_split>0);
+        ASSERT(fp_manager.checkParams());
         ASSERT(h4_manager.checkParams());
         ASSERT(ar_manager.checkParams());
         return true;
@@ -73,8 +66,9 @@ public:
     /*! @param[in] _fp: FILE type file for output
      */
     void writeBinary(FILE *_fp) {
-        size_t size = sizeof(*this) - sizeof(h4_manager) - sizeof(ar_manager);
+        size_t size = sizeof(*this) - sizeof(fp_manager) - sizeof(h4_manager) - sizeof(ar_manager);
         fwrite(this, size, 1, _fp);
+        fp_manager.writeBinary(_fp);
         h4_manager.writeBinary(_fp);
         ar_manager.writeBinary(_fp);
     }
@@ -83,12 +77,13 @@ public:
     /*! @param[in] _fp: FILE type file for reading
      */
     void readBinary(FILE *_fin) {
-        size_t size = sizeof(*this) - sizeof(h4_manager) - sizeof(ar_manager);
+        size_t size = sizeof(*this) - sizeof(fp_manager) - sizeof(h4_manager) - sizeof(ar_manager);
         size_t rcount = fread(this, size, 1, _fin);
         if (rcount<1) {
             std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
             abort();
         }
+        fp_manager.readBinary(_fin);
         h4_manager.readBinary(_fin);
         ar_manager.readBinary(_fin);
     }
@@ -96,10 +91,8 @@ public:
     //! print parameters
     void print(std::ostream & _fout) const{
         _fout<<"energy_error_max : "<<energy_error_max<<std::endl
-             <<"r_tidal_tensor   : "<<r_tidal_tensor<<std::endl
-             <<"eps_sq           : "<<eps_sq<<std::endl
-             <<"id_offset        : "<<id_offset<<std::endl
-             <<"n_split          : "<<n_split<<std::endl;
+             <<"eps_sq           : "<<eps_sq<<std::endl;
+        fp_manager.print(_fout);
         h4_manager.print(_fout);
         ar_manager.print(_fout);
     }
@@ -232,10 +225,8 @@ private:
             // merge groups
             group.searchAndMerge(ptcl_in_cluster, n_ptcl);
 
-            FakeParticleManager<PtclH4> fp;
-            fp.G = manager->h4_manager.interaction.G;
             // generate artifical particles,
-            fp.createFakeParticles(i, ptcl_in_cluster, n_ptcl, ptcl_artifical[ith], _n_group_in_cluster[i], group, _rbin, _rin, _rout, _dt_tree, _id_offset, _n_split);
+            manager->fp_manager.createFakeParticles(i, ptcl_in_cluster, n_ptcl, ptcl_artifical[ith], _n_group_in_cluster[i], group, _dt_tree);
         }
 
         // n_group_in_cluster_offset
@@ -402,7 +393,7 @@ private:
         const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, dr_eps);
 
         // linear cutoff 
-        const PS::F64 r_out = manager->r_out_base;
+        const PS::F64 r_out = manager->fp_manager.r_out_base;
         const PS::F64 r_out2 = r_out * r_out;
         const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
         const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
@@ -441,7 +432,7 @@ private:
         const PS::F64vec dr = _pi.pos - _pj.pos;
         const PS::F64 dr2 = dr * dr;
         const PS::F64 dr2_eps = dr2 + manager->eps_sq;
-        const PS::F64 r_out = manager->r_out_base;
+        const PS::F64 r_out = manager->fp_manager.r_out_base;
         const PS::F64 r_out2 = r_out * r_out;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
         const PS::F64 movr = _pj.mass * drinv;
@@ -632,7 +623,7 @@ private:
         // self-potential correction 
         // no correction for orbital artifical particles because the potential are not used for any purpose
         // no correction for member particles because their mass is zero during the soft force calculation, the self-potential contribution is also zero.
-        if (_psoft.status.d==0) _psoft.pot_tot += _psoft.mass/manager->r_out_base; // single
+        if (_psoft.status.d==0) _psoft.pot_tot += _psoft.mass/manager->fp_manager.r_out_base; // single
 
         // loop neighbors
         for(PS::S32 k=0; k<n_ngb; k++){
@@ -668,7 +659,7 @@ private:
                                                       const PS::S32* _adr_first_ptcl_arti_in_cluster,
                                                       const bool _acorr_flag) {
 
-        GroupPars gpars(manager->n_split);
+        GroupPars gpars(manager->fp_manager.n_split);
         for (int j=0; j<_n_group; j++) {  // j: j_group
             PS::S32 j_start = _adr_first_ptcl_arti_in_cluster[j];
             PS::S32 j_cm = j_start + gpars.offset_cm;
@@ -799,14 +790,14 @@ private:
             correctForceWithCutoffArtificalOneClusterImp(_sys, _ptcl_local, adr_real_start, adr_real_end, n_group, adr_first_ptcl_arti, _acorr_flag);
 
             // obtain correction for real particles in clusters
-            GroupPars gpars(manager->n_split);
+            GroupPars gpars(manager->fp_manager.n_split);
             for (int j=adr_real_start; j<adr_real_end; j++) {
                 PS::S64 adr = _ptcl_local[j].adr_org;
 #ifdef HARD_DEBUG
                 assert(_sys[adr].id==_ptcl_local[j].id);
 #endif
                 //self-potential correction for non-group member, group member has mass zero, so no need correction
-                if(_sys[adr].status.d==0) _sys[adr].pot_tot += _sys[adr].mass/manager->r_out_base;
+                if(_sys[adr].status.d==0) _sys[adr].pot_tot += _sys[adr].mass/manager->fp_manager.r_out_base;
 
                 // cluster member
                 for (int k=adr_real_start; k<adr_real_end; k++) {
@@ -936,7 +927,7 @@ private:
         for (int i=_adr_ptcl_artifical_start; i<n_tot; i++) 
             correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[i], _tree, _acorr_flag);
 
-        GroupPars gpars(manager->n_split);
+        GroupPars gpars(manager->fp_manager.n_split);
 #ifdef HARD_DEBUG
         assert((n_tot-_adr_ptcl_artifical_start)%gpars.n_ptcl_artifical==0);
 #endif
@@ -984,7 +975,7 @@ private:
         for (int i=0; i<n_tot; i++) {
             correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[i], _tree, _acorr_flag);
         }
-        GroupPars gpars(manager->n_split);
+        GroupPars gpars(manager->fp_manager.n_split);
 #ifdef HARD_DEBUG
         assert((n_tot-_adr_ptcl_artifical_start)%gpars.n_ptcl_artifical==0);
 #endif
@@ -1085,7 +1076,7 @@ public:
         //GroupPars gpars[_n_group](n_split_);
         GroupPars gpars[_n_group+1];
         for(int i=0; i<_n_group; i++) {
-            gpars[i].init(manager->n_split);
+            gpars[i].init(manager->fp_manager.n_split);
             adr_first_ptcl[i] = i*gpars[i].n_ptcl_artifical;
             adr_cm_ptcl[i] = adr_first_ptcl[i]+gpars[i].offset_cm;
             gpars[i].getGroupIndex(&_ptcl_artifical[adr_first_ptcl[i]]);
@@ -1149,9 +1140,9 @@ public:
             // id_offset unknown, try to substract id information via calculation between neighbor particles
             for (int j=0; j<gpars[i].n_ptcl_artifical-1; j+=2) {
                 // first member
-                PS::S32 id_offset_j1 = _ptcl_artifical[adr_first_ptcl[i]+j].id - j/2- id_mem[0]*manager->n_split;
+                PS::S32 id_offset_j1 = _ptcl_artifical[adr_first_ptcl[i]+j].id - j/2- id_mem[0]*manager->fp_manager.n_split;
                 // second member
-                PS::S32 id_offset_j2 = _ptcl_artifical[adr_first_ptcl[i]+j+1].id - j/2 - id_mem[1]*manager->n_split;
+                PS::S32 id_offset_j2 = _ptcl_artifical[adr_first_ptcl[i]+j+1].id - j/2 - id_mem[1]*manager->fp_manager.n_split;
                 assert(id_offset_j1==id_offset_j2);
             }
 
@@ -1209,7 +1200,7 @@ public:
             PS::S32 icm = adr_cm_ptcl[0];
             PS::S32 i_soft_pert_offset = gpars[0].offset_tt;
             TidalTensor tt;
-            tt.fit(&_ptcl_artifical[i_soft_pert_offset], _ptcl_artifical[icm], manager->r_tidal_tensor);
+            tt.fit(&_ptcl_artifical[i_soft_pert_offset], _ptcl_artifical[icm], manager->fp_manager.r_tidal_tensor);
             sym_int.perturber.soft_pert=&tt;
 
             // calculate soft_pert_min
@@ -1222,7 +1213,7 @@ public:
             // calculate c.m. changeover
             auto& pcm = sym_int.particles.cm;
             PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
-            pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+            pcm.changeover.setR(m_fac, manager->fp_manager.r_in_base, manager->fp_manager.r_out_base);
 
             // set tt gid
             sym_int.perturber.soft_pert->group_id = pcm.changeover.getRout();
@@ -1311,7 +1302,7 @@ public:
                     PS::S32 icm = adr_cm_ptcl[i];
                     // correct pos for t.t. cm
                     _ptcl_artifical[icm].pos -= h4_int.particles.cm.pos;
-                    tidal_tensor[i].fit(&_ptcl_artifical[i_soft_pert_offset], _ptcl_artifical[icm], manager->r_tidal_tensor);
+                    tidal_tensor[i].fit(&_ptcl_artifical[i_soft_pert_offset], _ptcl_artifical[icm], manager->fp_manager.r_tidal_tensor);
                     n_tt ++;
                     auto& groupi = h4_int.groups[i];
                     groupi.perturber.soft_pert = &tidal_tensor[i];
@@ -1324,7 +1315,7 @@ public:
                     PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
 
                     ASSERT(m_fac>0.0);
-                    pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+                    pcm.changeover.setR(m_fac, manager->fp_manager.r_in_base, manager->fp_manager.r_out_base);
 
 #ifdef HARD_DEBUG
                     PS::F64 r_out_cm = pcm.changeover.getRout();
@@ -1358,7 +1349,7 @@ public:
                 auto& pcm = groupi.particles.cm;
                 PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
                 ASSERT(m_fac>0.0);
-                pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+                pcm.changeover.setR(m_fac, manager->fp_manager.r_in_base, manager->fp_manager.r_out_base);
 
 #ifdef SOFT_PERT                
                 // check whether all r_out are same (primoridal or not)
@@ -1420,7 +1411,7 @@ public:
                     auto& pcm = groupi.particles.cm;
                     PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
                     ASSERT(m_fac>0.0);
-                    pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+                    pcm.changeover.setR(m_fac, manager->fp_manager.r_in_base, manager->fp_manager.r_out_base);
 
 #ifdef SOFT_PERT                
                     // check whether all r_out are same (primoridal or not)
@@ -2057,7 +2048,7 @@ public:
             if(n_group>0) ptcl_artifical_ptr = &(_ptcl_soft[adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]]]);
 #ifdef HARD_DUMP
             assert(hard_dump.size>0);
-            hard_dump[0].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artifical_ptr, n_group, dt, manager->n_split);
+            hard_dump[0].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artifical_ptr, n_group, dt, manager->fp_manager.n_split);
 #endif
             driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artifical_ptr, n_group, dt);
 #else
@@ -2120,7 +2111,7 @@ public:
 #endif
 #ifdef HARD_DUMP
             assert(ith<hard_dump.size);
-            hard_dump[ith].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artifical_ptr, n_group, dt, manager->n_split);
+            hard_dump[ith].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artifical_ptr, n_group, dt, manager->fp_manager.n_split);
 #endif
 
 #ifdef HARD_DEBUG_PROFILE
@@ -2189,12 +2180,12 @@ public:
                                                                n_group_in_cluster_,
                                                                n_group_in_cluster_offset_,
                                                                adr_first_ptcl_arti_in_cluster_,
-                                                               manager->r_tidal_tensor,
-                                                               manager->r_in_base,
-                                                               manager->r_out_base,
+                                                               manager->fp_manager.r_tidal_tensor,
+                                                               manager->fp_manager.r_in_base,
+                                                               manager->fp_manager.r_out_base,
                                                                _dt_tree, 
-                                                               manager->id_offset,
-                                                               manager->n_split);
+                                                               manager->fp_manager.id_offset,
+                                                               manager->fp_manager.n_split);
 
     }
 
@@ -2211,7 +2202,7 @@ public:
 #pragma omp parallel for 
         for (int i=0; i<n_ptcl; i++) {
             const PS::S32 k =_ptcl_list[i];
-            _sys[k].pot_tot += _sys[k].mass / manager->r_out_base;
+            _sys[k].pot_tot += _sys[k].mass / manager->fp_manager.r_out_base;
 //#ifdef HARD_DEBUG
             // status may not be zero after binary disrupted
             // assert(_sys[k].status==0);
@@ -2270,7 +2261,7 @@ public:
             const PS::S32* adr_first_ptcl_arti = n_group>0? &adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i_cluster]] : NULL;
             
             // correction for artifical particles
-            GroupPars gpars(manager->n_split);
+            GroupPars gpars(manager->fp_manager.n_split);
             for (int j=0; j<n_group; j++) {  // j: j_group
                 PS::S32 j_start = adr_first_ptcl_arti[j];
                 PS::S32 j_cm = j_start + gpars.offset_cm;

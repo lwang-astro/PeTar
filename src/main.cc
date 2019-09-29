@@ -601,11 +601,11 @@ int main(int argc, char *argv[]){
 #else
     hard_manager.energy_error_max = NUMERIC_FLOAT_MAX;
 #endif
-    hard_manager.r_tidal_tensor = r_bin.value;
-    hard_manager.r_in_base = r_in;
-    hard_manager.r_out_base = r_out.value;
-    hard_manager.id_offset = id_offset;
-    hard_manager.n_split = n_split.value;
+    hard_manager.fp_manager.r_tidal_tensor = r_bin.value;
+    hard_manager.fp_manager.r_in_base = r_in;
+    hard_manager.fp_manager.r_out_base = r_out.value;
+    hard_manager.fp_manager.id_offset = id_offset;
+    hard_manager.fp_manager.n_split = n_split.value;
     //hard_manager.h4_manager.r_break_crit = r_bin.value;
     //hard_manager.h4_manager.r_neighbor_crit = r_search_min;
     hard_manager.h4_manager.step.eta_4th = eta.value;
