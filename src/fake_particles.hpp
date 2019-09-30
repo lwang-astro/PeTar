@@ -2,6 +2,7 @@
 
 #include"search_group.hpp"
 #include "stability.hpp"
+#include "changeover.hpp"
 
 //! Group paramter class
 /* get artifical particle group parameters
