@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include "artificial_particles.hpp"
 
 #ifdef HARD_DEBUG
 #define DEBUG_ENERGY_LIMIT 1e-6
@@ -115,24 +116,26 @@ void kickSend(Tsys& _sys,
 //! kick for artifical c.m. particles
 /*! Kick c.m. velocity
    @param[in,out] _sys: particle system
-   @param[in] _adr_cm_start: c.m. particle starting address
-   @param[in] _adr_cm_offset: c.m. address offset
+   @param[in] _adr_artificial_start: c.m. particle starting address
+   @param[in] _ap_manager: artificial particle manager
    @param[in] _dt: tree step
  */
 template<class Tsys>
 void kickCM(Tsys& _sys,
-            const PS::S32 _adr_cm_start,
-            const PS::S32 _adr_cm_offset,
+            const PS::S32 _adr_artificial_start,
+            ArtificialParticleManager& _ap_manager,
             const PS::F64 _dt) {
     const PS::S64 n_tot= _sys.getNumberOfParticleLocal();
+    const PS::S32 n_artifical_per_group = _ap_manager.getArtificialParticleN();
 #pragma omp parallel for
-    for(PS::S32 i=_adr_cm_start; i<n_tot; i+= _adr_cm_offset) {
-        _sys[i].vel += _sys[i].acc * _dt;
+    for(PS::S32 i=_adr_artificial_start; i<n_tot; i+= n_artifical_per_group) {
+        auto* pcm = _ap_manager.getCMParticles(&(_sys[i]));
+        pcm->vel += pcm->acc * _dt;
 #ifdef KDKDK_4TH
-        _sys[i].vel += _dt*_dt* _sys[i].acorr /48; 
+        pcm->vel += _dt*_dt* pcm->acorr /48; 
 #endif
 #ifdef HARD_DEBUG
-        assert(_sys[i].id<0&&_sys[i].status.d>0);
+        assert(pcm->id<0&&pcm->status.d>0);
 #endif
     }
 }

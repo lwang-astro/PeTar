@@ -82,11 +82,11 @@ int main(int argc, char** argv)
 #else
   hard_manager.energy_error_max = NUMERIC_FLOAT_MAX;
 #endif
-  hard_manager.fp_manager.r_tidal_tensor = rbin;
-  hard_manager.fp_manager.r_in_base = sys[0].changeover.getRin();
-  hard_manager.fp_manager.r_out_base = sys[0].changeover.getRout();
-  hard_manager.fp_manager.id_offset = N;
-  hard_manager.fp_manager.n_split = n_split;
+  hard_manager.ap_manager.r_tidal_tensor = rbin;
+  hard_manager.ap_manager.r_in_base = sys[0].changeover.getRin();
+  hard_manager.ap_manager.r_out_base = sys[0].changeover.getRout();
+  hard_manager.ap_manager.id_offset = N;
+  hard_manager.ap_manager.setOrbitalParticleSplitN(n_split);
   hard_manager.h4_manager.step.eta_4th = eta*eta;
   hard_manager.h4_manager.step.eta_2nd = 0.01*eta*eta;
   hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, sys[0].changeover.getRout());

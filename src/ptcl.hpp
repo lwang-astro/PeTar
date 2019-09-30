@@ -21,7 +21,7 @@ public:
       id         id          id of first member (-)            id                   -1          id of previous c.m. (-)
       status      0          member number                  c.m. adr (-)            -1            -20 
       mass_bk     0             mass                         mass                 unknown       unknown
-                 fake members                                                                            
+                artificial members                                                                            
                 id_offset+id*n_split+iphase                                             
                 1. first component member number 2. second. 3. i_cluster+1, 4. i_group+1, others: (c.m.id<<ID_PHASE_SHIFT)|i
                   binary parameters                                                 

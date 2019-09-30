@@ -601,11 +601,11 @@ int main(int argc, char *argv[]){
 #else
     hard_manager.energy_error_max = NUMERIC_FLOAT_MAX;
 #endif
-    hard_manager.fp_manager.r_tidal_tensor = r_bin.value;
-    hard_manager.fp_manager.r_in_base = r_in;
-    hard_manager.fp_manager.r_out_base = r_out.value;
-    hard_manager.fp_manager.id_offset = id_offset;
-    hard_manager.fp_manager.n_split = n_split.value;
+    hard_manager.ap_manager.r_tidal_tensor = r_bin.value;
+    hard_manager.ap_manager.r_in_base = r_in;
+    hard_manager.ap_manager.r_out_base = r_out.value;
+    hard_manager.ap_manager.id_offset = id_offset;
+    hard_manager.ap_manager.setOrbitalParticleSplitN(n_split.value);
     //hard_manager.h4_manager.r_break_crit = r_bin.value;
     //hard_manager.h4_manager.r_neighbor_crit = r_search_min;
     hard_manager.h4_manager.step.eta_4th = eta.value;
@@ -1073,8 +1073,7 @@ int main(int argc, char *argv[]){
         // isolated
         kickCluster(system_soft, system_hard_isolated.getPtcl(), dt_kick);
         // c.m. artifical
-        GroupPars gpar(n_split.value);
-        kickCM(system_soft, n_loc+gpar.offset_cm, gpar.n_ptcl_artifical, dt_kick);
+        kickCM(system_soft, n_loc, hard_manager.ap_manager, dt_kick);
         
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         // connected
@@ -1251,7 +1250,7 @@ int main(int argc, char *argv[]){
             // isolated
             kickCluster(system_soft, system_hard_isolated.getPtcl(), dt_kick);
             // c.m.
-            kickCM(system_soft, n_loc+gpar.offset_cm, gpar.n_ptcl_artifical, dt_kick);
+            kickCM(system_soft, n_loc, hard_manager.ap_manager, dt_kick);
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
             // connected

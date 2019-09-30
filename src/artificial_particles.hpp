@@ -4,68 +4,25 @@
 #include "stability.hpp"
 #include "changeover.hpp"
 
-//! Group paramter class
-/* get artifical particle group parameters
- */
-class GroupPars{
-public:
-    PS::S32 id;         ///> group id corresponding to the first member
-    PS::S32 i_cluster;  ///> cluster index
-    PS::S32 i_group;    ///> group index in cluster
-    PS::S32 n_members;  ///> number of members
-    PS::S32 n_members_1st; ///> number of members in first component
-    PS::S32 n_members_2nd; ///> number of members in second component
-    PS::S32 offset_cm;   ///> c.m. index offset in group
-    PS::S32 offset_orb;  ///> orbital partical offset in group
-    PS::S32 offset_tt;   ///> tital tensor partical offset in group
-    PS::S32 n_ptcl_artifical; ///> artifical particle number
+class ArtificialParticleManager{
+    PS::S32 n_split_;    // oribital particle splitting number
+    PS::S32 n_artificial_;     // number of artificial particles
+    PS::S32 index_offset_tt_;  // tidal tensor particle starting index
+    PS::S32 index_offset_orb_; // Orbital particle starting index
+    PS::S32 index_cm_;        // center of mass index
 
-    GroupPars(const PS::S32 _n_split): id(-10), i_cluster(-1), i_group(-1), n_members(0), n_members_1st(0), n_members_2nd(0), offset_cm(2*_n_split), 
-                                       offset_orb(8), 
-                                       offset_tt(0), n_ptcl_artifical(2*_n_split+1) {}
-    GroupPars() {init(0);}
-
-    void init(const PS::S32 _n_split) {
-        id=-10;
-        i_cluster=-1;
-        i_group=-1;
-        n_members=0;
-        n_members_1st=0;
-        n_members_2nd=0;
-        offset_cm=2*_n_split;
-        offset_orb=8;
-        offset_tt=0;
-        n_ptcl_artifical=2*_n_split+1;
-    }
-
-    //! return group parameters
-    /* @param[in] _ptcl_artifical: ptcl artifical particle group
-    */
     template <class Tptcl>
-    void getGroupIndex(Tptcl* _ptcl_artifical) {
-        n_members_1st = _ptcl_artifical[0].status.d;
-        n_members_2nd = _ptcl_artifical[1].status.d;
-        i_cluster = _ptcl_artifical[2].status.d-1;
-        i_group   = _ptcl_artifical[3].status.d-1;
-        n_members = _ptcl_artifical[offset_cm].status.d;
-        id        =-_ptcl_artifical[offset_cm].id;
-    }
-    
-};
-
-template <class Tptcl>
-class FakeParticleManager{
-
     struct BinPar {
         Tptcl* adr_ref; PS::S32* group_list; PS::S32 n; ChangeOver* changeover;
     };
 
     // set binary tree parameters 
-    static PS::S64 setBinChangeOverIDAndGetMemberAdrIter(BinPar& _par, const PS::S64& _id1, const PS::S64& _id2, COMM::BinaryTree<Tptcl>& _bin) {
+    template <class Tptcl>
+    static PS::S64 setBinChangeOverIDAndGetMemberAdrIter(BinPar<Tptcl>& _par, const PS::S64& _id1, const PS::S64& _id2, COMM::BinaryTree<Tptcl>& _bin) {
         // set bin id as the left member id
         if (_id1<0) _bin.id = _bin.getLeftMember()->id;
         else _bin.id = _id1;
-#ifdef FAKE_PARTICLE_DEBUG
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
         assert(_bin.id>0);
 #endif
 
@@ -74,7 +31,7 @@ class FakeParticleManager{
             // collect address
             for (int k=0; k<2; k++) {
                 Tptcl* member = _bin.getMember(k);
-#ifdef FAKE_PARTICLE_DEBUG
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
                 assert(member->mass>0.0);
 #endif                
                 _par.group_list[_par.n++] = member - _par.adr_ref;
@@ -89,7 +46,7 @@ class FakeParticleManager{
     }
 
     // get new changeover and rsearch for c.m.
-    template <class Tchp>
+    template <class Tchp, class Tptcl>
     static Tchp* calcBinChangeOverAndRSearchIter (Tchp*& _ch, COMM::BinaryTree<Tptcl>& _bin) {
         _bin.changeover.setR(_bin.mass*_ch->mean_mass_inv, _ch->rin, _ch->rout);
         _bin.Ptcl::calcRSearch(_ch->dt_tree);
@@ -114,38 +71,39 @@ class FakeParticleManager{
 
         first two artifical particles status is n_members of two components.
      */
+    template <class Tptcl>
     void keplerOrbitGenerator(const PS::S32 _i_cluster,
                               const PS::S32 _i_group,
                               Tptcl* _ptcl_in_cluster,
                               PS::ReallocatableArray<Tptcl> & _ptcl_new,
                               PS::S32 *_group_ptcl_adr_list,
                               COMM::BinaryTree<Tptcl> &_bin) {
-        const PS::F64 dE = 8.0*atan(1.0)/(n_split-4);
-        if (n_split<8) {
-            std::cerr<<"N_SPLIT "<<n_split<<" to small to save binary parameters, should be >= 8!";
+        const PS::F64 dE = 8.0*atan(1.0)/(n_split_-4);
+        if (n_split_<8) {
+            std::cerr<<"N_SPLIT "<<n_split_<<" to small to save binary parameters, should be >= 8!";
             abort();
         }
-        const PS::S32 n_members = _bin.getMemberN();
         //! Set member particle status=1, return orderd particle member index list
         /*  _adr_ref: ptcl_org first particle address as reference to calculate the particle index.
         */
-        BinPar bin_par = {_ptcl_in_cluster, _group_ptcl_adr_list, 0, &_bin.changeover};
+        BinPar<Tptcl> bin_par = {_ptcl_in_cluster, _group_ptcl_adr_list, 0, &_bin.changeover};
         _bin.processTreeIter(bin_par, (PS::S64)-1, (PS::S64)-1, setBinChangeOverIDAndGetMemberAdrIter);
-#ifdef FAKE_PARTICLE_DEBUG
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        const PS::S32 n_members = _bin.getMemberN();
         assert(bin_par.n==n_members);
 #endif                
 
         // Make sure the _ptcl_new will not make new array due to none enough capacity during the following loop, otherwise the p[j] pointer will point to wrong position
         const int np = _ptcl_new.size();
-        _ptcl_new.increaseSize(2*n_split+1);
+        _ptcl_new.increaseSize(2*n_split_+1);
         Tptcl* p = &_ptcl_new[np];
         
         // set id and status.d 
-        for (int i=0; i<n_split; i++) {
+        for (int i=0; i<n_split_; i++) {
             for(int j=0; j<2; j++) {
                 Tptcl* pj = &p[2*i+j];
                 Tptcl* member = _bin.getMember(j);
-                pj->id = id_offset + abs(member->id)*n_split +i;
+                pj->id = id_offset + abs(member->id)*n_split_ +i;
                 pj->status.d = (_bin.id<<ID_PHASE_SHIFT)|i; // not used, but make status.d>0
             }
         }
@@ -164,7 +122,7 @@ class FakeParticleManager{
 
         // remaining is used for sample points
         PS::F64 mnormal=0.0;
-        for (int i=4; i<n_split; i++) {
+        for (int i=4; i<n_split_; i++) {
             PS::S32 iph = i-4;
 
             // center_of_mass_shift(*(Tptcl*)&_bin,p,2);
@@ -186,7 +144,7 @@ class FakeParticleManager{
                 pj->pos += _bin.pos;
                 pj->vel += _bin.vel;
 
-#ifdef FAKE_PARTICLE_DEBUG
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
                 assert(member->mass>0);
 #endif
 
@@ -195,13 +153,13 @@ class FakeParticleManager{
                 if (abs(pj->changeover.getRin()-_bin.changeover.getRin())>1e-10) {
                     pj->changeover.r_scale_next = _bin.changeover.getRin()/pj->changeover.getRin();
                     pj->r_search = std::max(pj->r_search, _bin.r_search);
-#ifdef FAKE_PARTICLE_DEBUG
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
                     assert(pj->r_search > pj->changeover.getRout());
 #endif 
                 }
                 else pj->r_search = _bin.r_search;
 
-#ifdef FAKE_PARTICLE_DEBUG
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
                 //check rsearch consistence:
                 PS::F64 rsearch_bin = _bin.r_search+_bin.semi*(1+_bin.ecc);
                 PS::F64vec dp = pj->pos-_bin.pos;
@@ -215,7 +173,7 @@ class FakeParticleManager{
 
         // normalized the mass of each particles to keep the total mass the same as c.m. mass
         PS::F64 mfactor = 1.0/mnormal;
-        for (int i=4; i<n_split; i++) 
+        for (int i=4; i<n_split_; i++) 
             for (int j=0; j<2; j++) 
                 p[2*i+j].mass *= mfactor;
 
@@ -248,23 +206,41 @@ class FakeParticleManager{
 
 
 public:
+    PS::S32 n_split;    // test
     PS::F64 r_tidal_tensor;
     PS::F64 r_in_base;
     PS::F64 r_out_base;
     PS::S64 id_offset;
-    PS::S32 n_split;
     PS::F64 G; // gravitational constant
 
-    FakeParticleManager(): r_tidal_tensor(-1.0), r_in_base(-1.0), r_out_base(-1.0), id_offset(-1), n_split(-1) {}
+    ArtificialParticleManager(): n_split_(-1), n_artificial_(-1), index_offset_tt_(0), index_offset_orb_(8), index_cm_(-1), r_tidal_tensor(-1.0), r_in_base(-1.0), r_out_base(-1.0), id_offset(-1), G(-1.0) {}
 
     //! check paramters
     bool checkParams() {
+        ASSERT(n_split_>=4);
+        ASSERT(n_artificial_>=9);
+        ASSERT(index_cm_>=8);
         ASSERT(r_tidal_tensor>=0.0);
         ASSERT(r_in_base>0.0);
         ASSERT(r_out_base>0.0);
         ASSERT(id_offset>0);
-        ASSERT(n_split>4);
+        ASSERT(G>0);
         return true;
+    }
+
+    //! set orbital particle split number
+    void setOrbitalParticleSplitN(const PS::S32& _n_split) {
+        if (_n_split>(1<<ID_PHASE_SHIFT)) {
+            std::cerr<<"Error! ID_PHASE_SHIFT is too small for phase split! shift bit: "<<ID_PHASE_SHIFT<<" n_split_: "<<_n_split<<std::endl;
+            abort();
+        }
+        ASSERT(_n_split>=4);
+        n_split_  = _n_split;
+        n_artificial_   = 2*_n_split+1;
+        index_offset_tt_  = 0;
+        index_offset_orb_ = 8;
+        index_cm_ = 2*_n_split;
+        n_split = _n_split;
     }
       
     //! generate artifical particles,
@@ -277,17 +253,14 @@ public:
         @param[in,out] _empty_list: the list of _ptcl_in_cluster that can be used to store new artifical particles, reduced when used
         @param[in]     _dt_tree: tree time step for calculating r_search
      */
-    void createFakeParticles(const PS::S32 _i_cluster,
+    template <class Tptcl>
+    void createArtificialParticles(const PS::S32 _i_cluster,
                              Tptcl* _ptcl_in_cluster,
                              const PS::S32 _n_ptcl,
                              PS::ReallocatableArray<Tptcl> & _ptcl_artifical,
                              PS::S32 &_n_groups,
                              SearchGroup<Tptcl>& _groups,
                              const PS::F64 _dt_tree) {
-        if (n_split>(1<<ID_PHASE_SHIFT)) {
-            std::cerr<<"Error! ID_PHASE_SHIFT is too small for phase split! shift bit: "<<ID_PHASE_SHIFT<<" n_split: "<<n_split<<std::endl;
-            abort();
-        }
 
         PS::S32 group_ptcl_adr_list[_n_ptcl];
         PS::S32 group_ptcl_adr_offset=0;
@@ -297,7 +270,7 @@ public:
             bins.reserve(_n_groups);
 
             const PS::S32 n_members = _groups.getNumberOfGroupMembers(i);
-#ifdef FAKE_PARTICLE_DEBUG
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
             assert(n_members<ARRAY_ALLOW_LIMIT);
 #endif        
             PS::S32* member_list = _groups.getMemberList(i);
@@ -352,7 +325,7 @@ public:
             i_group++;
         }
 
-#ifdef FAKE_PARTICLE_DEBUG
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
         // check whether the list is correct
         PS::S32 plist_new[group_ptcl_adr_offset];
         for (int i=0; i<group_ptcl_adr_offset; i++) plist_new[i] = group_ptcl_adr_list[i];
@@ -380,6 +353,113 @@ public:
 
     }
 
+    //! correct orbitial particles force
+    /*!
+      replace c.m. force by the averaged force on orbital particles
+      @param[in,out] _ptcl_artifical: one group of artifical particles 
+    */
+    template <class Tptcl>
+    void correctOrbitalParticleForce(Tptcl* _ptcl_artificial) {
+        auto* pcm = getCMParticles(_ptcl_artificial);
+        PS::F64vec& acc_cm = pcm->acc;
+        
+        acc_cm=PS::F64vec(0.0);
+        PS::F64 m_ob_tot = 0.0;
+
+        auto* porb = getOrbitalParticles(_ptcl_artificial);
+        const PS::S32 n_orb = getOrbitalParticleN();
+        for (int k=0; k<n_orb; k++) {
+            acc_cm += porb[k].mass*porb[k].acc; 
+            m_ob_tot += porb[k].mass;
+        }
+        acc_cm /= m_ob_tot;
+
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert(abs(m_ob_tot-pcm->mass_bk.d)<1e-10);
+#endif
+    }
+
+    //! correct artifical particles force for furture use
+    /*! 
+      substract c.m. force (acc) from tidal tensor force (acc)\n
+      replace c.m. force by the averaged force on orbital particles
+      @param[in,out] _ptcl_artifical: one group of artifical particles 
+    */
+    template <class Tptcl>
+    void correctArtficialParticleForce(Tptcl* _ptcl_artificial) {
+        auto* pcm = getCMParticles(_ptcl_artificial);
+        // substract c.m. force (acc) from tidal tensor force (acc)
+        auto* ptt = getTidalTensorParticles(_ptcl_artificial);
+        TidalTensor::subtractCMForce(ptt, *pcm);
+
+        // After c.m. force used, it can be replaced by the averaged force on orbital particles
+        correctOrbitalParticleForce(_ptcl_artificial);
+    }
+
+    //! get oribital particle list address from a artificial particle array
+    template <class Tptcl>
+    Tptcl* getOrbitalParticles(Tptcl* _ptcl_list)  {
+        return &_ptcl_list[index_offset_orb_];
+    }
+
+    //! get tidal tensor particle list address from a artificial particle array
+    template <class Tptcl>
+    Tptcl* getTidalTensorParticles(Tptcl* _ptcl_list) {
+        return &_ptcl_list[index_offset_tt_];
+    }
+
+    //! get c.m. particle list address from a artificial particle array
+    template <class Tptcl>
+    Tptcl* getCMParticles(Tptcl* _ptcl_list)  {
+        return &_ptcl_list[index_cm_];
+    }
+
+    //! get artificial particle total number
+    PS::S32 getArtificialParticleN() const {
+        return n_artificial_;
+    }
+
+    //! get orbitial particle number 
+    PS::S32 getOrbitalParticleN() const {
+        return n_artificial_ - 9;
+    }
+
+    //! get left member number
+    template <class Tptcl>
+    PS::S32 getLeftMemberN(const Tptcl* _ptcl_list) const {
+        return PS::S32(_ptcl_list[0].status.d);
+    }
+
+    //! get left member number
+    template <class Tptcl>
+    PS::S32 getMemberN(const Tptcl* _ptcl_list) const {
+        return PS::S32(_ptcl_list[index_cm_].status.d);
+    }
+
+    //! get left member number
+    template <class Tptcl>
+    PS::S32 getRightMemberN(const Tptcl* _ptcl_list) const {
+        return PS::S32(_ptcl_list[1].status.d);
+    }
+
+    //! get cluster id
+    template <class Tptcl>
+    PS::S32 getClusterID(const Tptcl* _ptcl_list) const {
+        return PS::S32(_ptcl_list[2].status.d)-1;
+    }
+
+    //! get group id
+    template <class Tptcl>
+    PS::S32 getGroupID(const Tptcl* _ptcl_list) const {
+        return PS::S32(_ptcl_list[3].status.d)-1;
+    }
+
+    //! get first member id
+    template <class Tptcl>
+    PS::S64 getFirstMemberID(const Tptcl* _ptcl_list) const {
+        return -PS::S64(_ptcl_list[index_cm_].id);
+    }
+
     //! write class data to file with binary format
     /*! @param[in] _fp: FILE type file for output
      */
@@ -404,7 +484,7 @@ public:
              <<"r_in_base        : "<<r_in_base<<std::endl
              <<"r_out_base       : "<<r_out_base<<std::endl
              <<"id_offset        : "<<id_offset<<std::endl
-             <<"n_split          : "<<n_split<<std::endl;
+             <<"n_split          : "<<n_split_<<std::endl;
     }    
 
 //    void checkRoutChange(PS::ReallocatableArray<RCList> & r_out_change_list,
@@ -420,7 +500,7 @@ public:
 //                PS::S32 k = group_list[i][j];
 //                if(ptcl[k].r_out != r_out_max) {
 //                    r_out_change_list.push_back(RCList(k,ptcl[k].r_out));
-//#ifdef FAKE_PARTICLE_DEBUG
+//#ifdef ARTIFICIAL_PARTICLE_DEBUG
 //                    std::cerr<<"Rout change detected, p["<<k<<"].r_out: "<<ptcl[k].r_out<<" -> "<<r_out_max<<std::endl;
 //#endif
 //                    ptcl[k].r_out = r_out_max;

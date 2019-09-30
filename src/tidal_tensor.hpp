@@ -64,6 +64,12 @@ public:
         }
     }
 
+    //! subtract c.m. force from measure points
+    template<class Tptcl>
+    static void subtractCMForce(Tptcl* _ptcl_tt, const Tptcl& _ptcl_cm) {
+        for (int k=0; k<8; k++) _ptcl_tt[k].acc -= _ptcl_cm.acc;
+    }
+
     //! tidal tensor fitting function,
     /*! 
        Symmetry T2:
