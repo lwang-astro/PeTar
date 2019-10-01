@@ -1,6 +1,9 @@
 #pragma once
 
-#include"search_group.hpp"
+#define ID_PHASE_SHIFT 4
+#define ID_PHASE_MASKER 0xF
+
+#include "search_group.hpp"
 #include "stability.hpp"
 #include "changeover.hpp"
 
@@ -53,23 +56,25 @@ class ArtificialParticleManager{
         return _ch;
     };
 
-    //! generate kepler sampling artifical particles
-    /*  @param[in]     _i_cluster: cluster index
+    //! generate kepler sampling artificial particles
+    /*  Particle status:
+        member particle: 1
+        Artificial particles:
+        0: left member N
+        1: right member N
+        2: id_cluster
+        3: id_group
+        4-2*n_split: index+1
+        pcm: n_members
+        Particle mass_bk:
+        pcm: mass(cm)
+
+        @param[in]     _i_cluster: cluster index
         @param[in]     _i_group: group index in the cluster
         @param[in,out] _ptcl_in_cluster: particle data in local cluster
-        @param[out]    _ptcl_new: artifical particles that will be added
+        @param[out]    _ptcl_new: artificial particles that will be added
         @param[out]    _group_ptcl_adr_list: group member particle index list in _ptcl_in_cluster 
         @param[in]     _bin: binary tree root
-
-        also store the binary parameters in mass_bk of first 4 pairs of artifical particles
-        acc, ecc
-        peri, tstep (integrator step estimation ),
-        inc, OMG,
-        omg, ecca
-        tperi, stable_factor 
-        mass1, mass2
-
-        first two artifical particles status is n_members of two components.
      */
     template <class Tptcl>
     void keplerOrbitGenerator(const PS::S32 _i_cluster,
@@ -79,10 +84,6 @@ class ArtificialParticleManager{
                               PS::S32 *_group_ptcl_adr_list,
                               COMM::BinaryTree<Tptcl> &_bin) {
         const PS::F64 dE = 8.0*atan(1.0)/(n_split_-4);
-        if (n_split_<8) {
-            std::cerr<<"N_SPLIT "<<n_split_<<" to small to save binary parameters, should be >= 8!";
-            abort();
-        }
         //! Set member particle status=1, return orderd particle member index list
         /*  _adr_ref: ptcl_org first particle address as reference to calculate the particle index.
         */
@@ -95,7 +96,7 @@ class ArtificialParticleManager{
 
         // Make sure the _ptcl_new will not make new array due to none enough capacity during the following loop, otherwise the p[j] pointer will point to wrong position
         const int np = _ptcl_new.size();
-        _ptcl_new.increaseSize(2*n_split_+1);
+        _ptcl_new.increaseSize(n_artificial_);
         Tptcl* p = &_ptcl_new[np];
         
         // set id and status.d 
@@ -104,7 +105,7 @@ class ArtificialParticleManager{
                 Tptcl* pj = &p[2*i+j];
                 Tptcl* member = _bin.getMember(j);
                 pj->id = id_offset + abs(member->id)*n_split_ +i;
-                pj->status.d = (_bin.id<<ID_PHASE_SHIFT)|i; // not used, but make status.d>0
+                pj->status.d = 2*i+j+1;
             }
         }
 
@@ -178,13 +179,11 @@ class ArtificialParticleManager{
                 p[2*i+j].mass *= mfactor;
 
 
+        // store the component member number 
         for (int j=0; j<2; j++) {
-            // store the component member number 
             p[j].status.d = _bin.isMemberTree(j) ? ((COMM::BinaryTree<Tptcl>*)(_bin.getMember(j)))->getMemberN() : 1; 
-            p[10+j].mass_bk.d = p[10+j].mass;
-            p[12+j].mass_bk.d = j; // indicate the order
         }
-        // store the i_cluster and i_group for identify artifical particles, +1 to avoid 0 value (status.d>0)
+        // store the i_cluster and i_group for identify artificial particles, +1 to avoid 0 value (status.d>0)
         p[2].status.d = _i_cluster+1;
         p[3].status.d = _i_group+1;
 
@@ -199,7 +198,7 @@ class ArtificialParticleManager{
         pcm->r_search = _bin.r_search;
         pcm->changeover = _bin.changeover;
 
-        pcm->r_search += _bin.semi*(1+_bin.ecc);  // depend on the mass ratio, the upper limit distance to c.m. from all members and artifical particles is apo-center distance
+        pcm->r_search += _bin.semi*(1+_bin.ecc);  // depend on the mass ratio, the upper limit distance to c.m. from all members and artificial particles is apo-center distance
 
         pcm->status.d = _bin.getMemberN();
     }
@@ -243,21 +242,22 @@ public:
         n_split = _n_split;
     }
       
-    //! generate artifical particles,
-    /*  @param[in]     _i_cluster: cluster index
+    //! generate artificial particles,
+    /*  
+        @param[in]     _i_cluster: cluster index
         @param[in,out] _ptcl_in_cluster: particle data
         @param[in]     _n_ptcl: total number of particle in _ptcl_in_cluster.
-        @param[out]    _ptcl_artifical: artifical particles that will be added
+        @param[out]    _ptcl_artificial: artificial particles that will be added
         @param[out]    _n_groups: number of groups in current cluster
         @param[in,out] _groups: searchgroup class, which contain 1-D group member index array, will be reordered by the minimum distance chain for each group
-        @param[in,out] _empty_list: the list of _ptcl_in_cluster that can be used to store new artifical particles, reduced when used
+        @param[in,out] _empty_list: the list of _ptcl_in_cluster that can be used to store new artificial particles, reduced when used
         @param[in]     _dt_tree: tree time step for calculating r_search
      */
     template <class Tptcl>
     void createArtificialParticles(const PS::S32 _i_cluster,
                              Tptcl* _ptcl_in_cluster,
                              const PS::S32 _n_ptcl,
-                             PS::ReallocatableArray<Tptcl> & _ptcl_artifical,
+                             PS::ReallocatableArray<Tptcl> & _ptcl_artificial,
                              PS::S32 &_n_groups,
                              SearchGroup<Tptcl>& _groups,
                              const PS::F64 _dt_tree) {
@@ -294,7 +294,7 @@ public:
             stab.findStableTree(bins.back());
 
             for (int i=0; i<stab.stable_binary_tree.size(); i++) {
-                keplerOrbitGenerator(_i_cluster, _n_groups, _ptcl_in_cluster, _ptcl_artifical, &group_ptcl_adr_list[group_ptcl_adr_offset], *stab.stable_binary_tree[i]);
+                keplerOrbitGenerator(_i_cluster, _n_groups, _ptcl_in_cluster, _ptcl_artificial, &group_ptcl_adr_list[group_ptcl_adr_offset], *stab.stable_binary_tree[i]);
                 group_ptcl_adr_offset += stab.stable_binary_tree[i]->getMemberN();
                 _n_groups++;
             }
@@ -356,7 +356,7 @@ public:
     //! correct orbitial particles force
     /*!
       replace c.m. force by the averaged force on orbital particles
-      @param[in,out] _ptcl_artifical: one group of artifical particles 
+      @param[in,out] _ptcl_artificial: one group of artificial particles 
     */
     template <class Tptcl>
     void correctOrbitalParticleForce(Tptcl* _ptcl_artificial) {
@@ -379,11 +379,11 @@ public:
 #endif
     }
 
-    //! correct artifical particles force for furture use
+    //! correct artificial particles force for furture use
     /*! 
       substract c.m. force (acc) from tidal tensor force (acc)\n
       replace c.m. force by the averaged force on orbital particles
-      @param[in,out] _ptcl_artifical: one group of artifical particles 
+      @param[in,out] _ptcl_artificial: one group of artificial particles 
     */
     template <class Tptcl>
     void correctArtficialParticleForce(Tptcl* _ptcl_artificial) {
@@ -399,6 +399,9 @@ public:
     //! get oribital particle list address from a artificial particle array
     template <class Tptcl>
     Tptcl* getOrbitalParticles(Tptcl* _ptcl_list)  {
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert((PS::S32)(_ptcl_list[index_offset_orb_].status.d)==index_offset_orb_+1);
+#endif
         return &_ptcl_list[index_offset_orb_];
     }
 
@@ -486,6 +489,42 @@ public:
              <<"id_offset        : "<<id_offset<<std::endl
              <<"n_split          : "<<n_split_<<std::endl;
     }    
+
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+    template <class Tptcl, class Tpart>
+    void checkConsistence(Tptcl* _ptcl_member, Tpart* _ptcl_artificial) {
+        // check id 
+        assert(getFirstMemberID(_ptcl_artificial) == _ptcl_member[0].id);
+        PS::S32 id_mem[2];
+        id_mem[0] = _ptcl_member[0].id;
+        id_mem[1] = _ptcl_member[getLeftMemberN(_ptcl_artificial)].id;
+        // id_offset unknown, try to substract id information via calculation between neighbor particles
+        for (int j=0; j<getArtificialParticleN()-1; j+=2) {
+            // first member
+            PS::S32 id_offset_j1 = _ptcl_artificial[j].id - j/2- id_mem[0]*(getArtificialParticleN()-1)/2;
+            // second member
+            PS::S32 id_offset_j2 = _ptcl_artificial[j+1].id - j/2 - id_mem[1]*(getArtificialParticleN()-1)/2;
+            assert(id_offset_j1==id_offset_j2);
+        }
+
+        // check whether c.m. pos. are consistent
+        // Cannot do velocity check because cm is not kicked
+        PS::F64 mass_cm_check=0.0;
+        PS::F64vec pos_cm_check=PS::F64vec(0.0);
+        
+        for(int j=0; j<getMemberN(_ptcl_artificial); j++) {
+            mass_cm_check += _ptcl_member[j].mass;
+            pos_cm_check +=  _ptcl_member[j].pos*_ptcl_member[j].mass;
+        }
+        
+        pos_cm_check /= mass_cm_check;
+
+        auto* pcm = getCMParticles(_ptcl_artificial);
+        assert(abs(mass_cm_check-pcm->mass)<1e-10);
+        PS::F64vec dpos = pos_cm_check-pcm->pos;
+        assert(abs(dpos*dpos)<1e-20);
+    }
+#endif
 
 //    void checkRoutChange(PS::ReallocatableArray<RCList> & r_out_change_list,
 //                         PS::ReallocatableArray<PS::ReallocatableArray<PS::S32>> & group_list,

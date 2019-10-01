@@ -733,8 +733,8 @@ int main(int argc, char *argv[]){
 //        for (PS::S32 i=0; i<n_loc; i++) system_soft[i].status = -1000000;
 //#endif
 
-        // Find groups and add artifical particles to global particle system
-        system_hard_isolated.findGroupsAndCreateArtificalParticlesOMP<SystemSoft, FPSoft>(system_soft, dt_soft.value);
+        // Find groups and add artificial particles to global particle system
+        system_hard_isolated.findGroupsAndCreateArtificialParticlesOMP<SystemSoft, FPSoft>(system_soft, dt_soft.value);
 
 //#ifdef CLUSTER_DEBUG
 //        not correct check, isolated clusters are not reset above
@@ -751,7 +751,7 @@ int main(int argc, char *argv[]){
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         // For connected clusters
         system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
-        system_hard_connected.findGroupsAndCreateArtificalParticlesOMP<SystemSoft, FPSoft>(system_soft, dt_soft.value);
+        system_hard_connected.findGroupsAndCreateArtificialParticlesOMP<SystemSoft, FPSoft>(system_soft, dt_soft.value);
         // send updated particle back to original (set zero mass particle to origin)
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
 #endif
@@ -874,7 +874,7 @@ int main(int argc, char *argv[]){
                 std::cerr<<"Corrected Acc diff >1e-8: i "<<i<<" acc(tree): "<<system_soft[i].acc<<" acc(cluster): "<<psys_bk[i].acc<<std::endl;
                 abort();
             }
-            // Notice, the cluster members can include particles are not in the tree neighbor searching. If the extra neighbors in clusters are group members. The correct from clusters will be more accurate than tree neighbor correction. Since the potential is calculated from the real members instead of artifical particles. This can result in different potential
+            // Notice, the cluster members can include particles are not in the tree neighbor searching. If the extra neighbors in clusters are group members. The correct from clusters will be more accurate than tree neighbor correction. Since the potential is calculated from the real members instead of artificial particles. This can result in different potential
             if(abs(dpoti/system_soft[i].pot_tot)>1e-6) {
                 std::cerr<<"Corrected pot diff >1e-6: i "<<i<<" pot(tree): "<<system_soft[i].pot_tot<<" pot(cluster): "<<psys_bk[i].pot_tot<<std::endl;
                 abort();
@@ -1071,13 +1071,13 @@ int main(int argc, char *argv[]){
         // single and reset status to zero (due to binary disruption)
         kickOne(system_soft, dt_kick, search_cluster.getAdrSysOneCluster());
         // isolated
-        kickCluster(system_soft, system_hard_isolated.getPtcl(), dt_kick);
-        // c.m. artifical
+        kickClusterAndRecoverGroupMemberMass(system_soft, system_hard_isolated.getPtcl(), dt_kick);
+        // c.m. artificial
         kickCM(system_soft, n_loc, hard_manager.ap_manager, dt_kick);
         
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         // connected
-        kickCluster(system_soft, system_hard_connected.getPtcl(), dt_kick);
+        kickClusterAndRecoverGroupMemberMass(system_soft, system_hard_connected.getPtcl(), dt_kick);
         // sending list for connected clusters
         kickSend(system_soft, search_cluster.getAdrSysConnectClusterSend(), dt_kick);
         // send kicked particle from sending list, and receive remote single particle
@@ -1248,13 +1248,13 @@ int main(int argc, char *argv[]){
             // single
             kickOne(system_soft, dt_kick, search_cluster.getAdrSysOneCluster());
             // isolated
-            kickCluster(system_soft, system_hard_isolated.getPtcl(), dt_kick);
+            kickClusterAndRecoverGroupMemberMass(system_soft, system_hard_isolated.getPtcl(), dt_kick);
             // c.m.
             kickCM(system_soft, n_loc, hard_manager.ap_manager, dt_kick);
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
             // connected
-            kickCluster(system_soft, system_hard_connected.getPtcl(), dt_kick);
+            kickClusterAndRecoverGroupMemberMass(system_soft, system_hard_connected.getPtcl(), dt_kick);
             // sending list for connected clusters, kick data are written on system_soft
             kickSend(system_soft, search_cluster.getAdrSysConnectClusterSend(), dt_kick);
             // send kicked particle from sending list , and receive remote single particle

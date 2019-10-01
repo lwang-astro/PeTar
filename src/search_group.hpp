@@ -1,9 +1,6 @@
 #pragma once
 #include<particle_simulator.hpp>
 
-#define ID_PHASE_SHIFT 4
-#define ID_PHASE_MASKER 0xF
-
 #ifndef ARRAY_ALLOW_LIMIT
 #define ARRAY_ALLOW_LIMIT 1000000000
 #endif

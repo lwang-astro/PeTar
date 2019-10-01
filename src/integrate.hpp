@@ -49,9 +49,9 @@ void kickOne(Tsys & _sys,
    @param[in]: _dt: tree step
  */
 template<class Tsys, class Tptcl>
-void kickCluster(Tsys& _sys,
-                 PS::ReallocatableArray<Tptcl>& _ptcl,
-                 const PS::F64 _dt) {
+void kickClusterAndRecoverGroupMemberMass(Tsys& _sys,
+                                          PS::ReallocatableArray<Tptcl>& _ptcl,
+                                          const PS::F64 _dt) {
     const PS::S64 n= _ptcl.size();
 #pragma omp parallel for
     for(PS::S32 i=0; i<n; i++) {
