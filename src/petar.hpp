@@ -117,7 +117,7 @@ public:
     PS::F64 dt_tree;
     PS::F64 dt_output;
     PS::F64 search_cluster_radius_factor;
-    std::string fname_output;
+    std::string filename_output;
     PS::S32 output_data_format;
 
     FileHeader file_header;
@@ -127,6 +127,7 @@ public:
     PS::F64ort * pos_domain;
     TreeNB tree_nb;
     TreeForce tree_soft;
+    bool init_flag;
 
     HardManager hard_manager;
     SystemHard system_hard_one_cluster;
@@ -149,8 +150,8 @@ public:
 #ifdef MAIN_DEBUG
         fout(),
 #endif        
-        n_loop(0), time_sys(0.0), time_end(0.0), dt_tree(0.0), search_cluster_radius_factor(0.0), fname_output(), output_data_format(0),
-        file_header(), system_soft(), dinfo(), pos_domain(NULL), tree_nb(), tree_soft(), 
+        n_loop(0), time_sys(0.0), time_end(0.0), dt_tree(0.0), search_cluster_radius_factor(0.0), filename_output(), output_data_format(0),
+        file_header(), system_soft(), dinfo(), pos_domain(NULL), tree_nb(), tree_soft(), init_flag(false),
         hard_manager(), system_hard_one_cluster(), system_hard_isolated(), system_hard_connected(), 
         remove_list(),
         search_cluster()  {}
@@ -158,6 +159,7 @@ public:
 
     // reading input parameters
     PS::S32 readParameters(int argc, char *argv[]) {
+        init_flag = true;
         // set print format
         std::cout<<std::setprecision(PRINT_PRECISION);
         std::cerr<<std::setprecision(PRINT_PRECISION);
@@ -207,9 +209,8 @@ public:
         IOParams<std::string> fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]");
         IOParams<std::string> fname_par(input_par_store, "input.par", "Input parameter file (this option should be used first before any other options)");
 
-        PS::F64 r_search_min;
+        PS::F64 r_search_min=0.0;
         input_par_store.store(&r_search_min);
-
 
         my_rank = PS::Comm::getRank();
         n_proc = PS::Comm::getNumberOfProc();
@@ -454,7 +455,6 @@ public:
                              <<"        n_bin: number of primordial binaries\n"
                              <<"        <m>  : averaged mass"<<std::endl;
                 }
-                PS::Finalize();
                 return -1;
             }
     
@@ -533,11 +533,12 @@ public:
         //    const PS::F64 r_oi_inv = 1.0/(r_out - r_in);
         //    EPJSoft::r_search_min = r_out*search_factor;
         //    EPJSoft::m_average = m_average;
-        dt_tree = dt_soft.value;
+        this->dt_tree = dt_soft.value;
+        this->dt_output = dt_snp.value;
         this->time_end = time_end.value;
-        search_cluster_radius_factor = radius_factor.value;
-        fname_output = fname_snp.value;
-        output_data_format = data_format.value;
+        this->search_cluster_radius_factor = radius_factor.value;
+        this->filename_output = fname_snp.value;
+        this->output_data_format = data_format.value;
 
         // check restart
         bool restart_flag = file_header.nfile; // nfile = 0 is assumed as initial data file
@@ -1213,7 +1214,7 @@ public:
                 file_header.n_body = n_glb;
                 file_header.time = time_sys;
                 file_header.nfile++;
-                std::string fname = fname_output+"."+std::to_string(file_header.nfile);
+                std::string fname = filename_output+"."+std::to_string(file_header.nfile);
                 system_soft.setNumberOfParticleLocal(n_loc);
                 if (output_data_format==1||output_data_format==3)
                     system_soft.writeParticleAscii(fname.c_str(), file_header);
@@ -1565,7 +1566,7 @@ public:
             pos_domain=NULL;
         }
         
-        PS::Finalize();
+        if (init_flag) PS::Finalize();
     }
 };
 
