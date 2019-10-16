@@ -604,9 +604,6 @@ public:
     void searchNeighborOMP(Tsys & sys,
                            Ttree & tree,
                            const PS::F64ort pos_domain[],
-                           const PS::F64 r_out,  // 1/(r_out-r_in)
-                           const PS::F64 r_in,
-                           const PS::F64 eps_sq,
                            const PS::F64 _G,
                            const PS::F64 _radius_factor){
         static PS::ReallocatableArray<PtclOuter> * ptcl_outer = NULL;
