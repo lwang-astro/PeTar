@@ -128,6 +128,7 @@ public:
     TreeNB tree_nb;
     TreeForce tree_soft;
     bool init_flag;
+    bool first_step_flag;
 
     HardManager hard_manager;
     SystemHard system_hard_one_cluster;
@@ -151,7 +152,7 @@ public:
         fout(),
 #endif        
         n_loop(0), time_sys(0.0), time_end(0.0), dt_tree(0.0), search_cluster_radius_factor(0.0), filename_output(), output_data_format(0),
-        file_header(), system_soft(), dinfo(), pos_domain(NULL), tree_nb(), tree_soft(), init_flag(false),
+        file_header(), system_soft(), dinfo(), pos_domain(NULL), tree_nb(), tree_soft(), init_flag(false), first_step_flag(true),
         hard_manager(), system_hard_one_cluster(), system_hard_isolated(), system_hard_connected(), 
         remove_list(),
         search_cluster()  {}
@@ -160,6 +161,7 @@ public:
     // reading input parameters
     PS::S32 readParameters(int argc, char *argv[]) {
         init_flag = true;
+        first_step_flag = true;
         // set print format
         std::cout<<std::setprecision(PRINT_PRECISION);
         std::cerr<<std::setprecision(PRINT_PRECISION);
@@ -701,7 +703,6 @@ public:
     // integrate the system
     PS::S32 evolveToTime(const PS::F64 _time_end) {
 
-        bool first_step_flag = true; // for check first step 
         bool output_flag = false;    // for output snapshot and information
         bool dt_mod_flag = false;    // for check whether tree time step need update
         bool changeover_flag = false; // for check whether changeover need update
@@ -1556,7 +1557,6 @@ public:
         return 0;
     }
 
-
     void clear() {
 #ifdef MAIN_DEBUG
         fout.close();
@@ -1567,6 +1567,10 @@ public:
         }
         
         if (init_flag) PS::Finalize();
+        init_flag = false;
+        first_step_flag = false;
     }
+
+    ~PeTar() { clear();}
 };
 
