@@ -112,10 +112,10 @@ public:
 #endif
 
     PS::S64 n_loop;
-    PS::F64 time_sys;
     PS::F64 time_end;
     PS::F64 dt_tree;
     PS::F64 dt_output;
+    PS::F64 domain_decompose_weight;
     PS::F64 search_cluster_radius_factor;
     std::string filename_output;
     PS::S32 output_data_format;
@@ -151,13 +151,752 @@ public:
 #ifdef MAIN_DEBUG
         fout(),
 #endif        
-        n_loop(0), time_sys(0.0), time_end(0.0), dt_tree(0.0), search_cluster_radius_factor(0.0), filename_output(), output_data_format(0),
+        n_loop(0), time_end(0.0), dt_tree(0.0), dt_output(0.0), domain_decompose_weight(1.0), search_cluster_radius_factor(0.0), filename_output(), output_data_format(0),
         file_header(), system_soft(), dinfo(), pos_domain(NULL), tree_nb(), tree_soft(), init_flag(false), first_step_flag(true),
         hard_manager(), system_hard_one_cluster(), system_hard_isolated(), system_hard_connected(), 
         remove_list(),
         search_cluster()  {}
 
 
+private:
+    //! tree for neighbor searching.
+    inline void treeNeighborSearch() {
+#ifdef PROFILE
+            profile.tree_nb.start();
+#endif
+#ifndef USE_SIMD
+            tree_nb.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSimd(), system_soft, dinfo);
+#else
+            tree_nb.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(), system_soft, dinfo);
+#endif
+        
+#ifdef PROFILE
+            profile.tree_nb.barrier();
+            PS::Comm::barrier();
+            profile.tree_nb.end();
+#endif
+    }
+
+    //! search clusters
+    inline void searchCluster() {
+#ifdef PROFILE
+            profile.search_cluster.start();
+#endif
+            // >2.1 search clusters ----------------------------------------
+            search_cluster.searchNeighborOMP<SystemSoft, TreeNB, EPJSoft>
+                (system_soft, tree_nb, pos_domain, 1.0, search_cluster_radius_factor);
+
+            search_cluster.searchClusterLocal();
+            search_cluster.setIdClusterLocal();
+
+            // >2.2 Send/receive connect cluster
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+            search_cluster.connectNodes(pos_domain,tree_nb);
+            search_cluster.setIdClusterGlobalIteration();
+            search_cluster.sendAndRecvCluster(system_soft);
+#endif
+
+#ifdef PROFILE
+            profile.search_cluster.barrier();
+            PS::Comm::barrier();
+            profile.search_cluster.end();
+#endif    
+    }
+
+    //! and ground and create artificial particles
+    inline void createGroup() {
+#ifdef PROFILE
+            profile.create_group.start();
+#endif
+
+            // record real particle n_loc/glb
+            stat.n_real_loc = system_soft.getNumberOfParticleLocal();
+            stat.n_real_glb = system_soft.getNumberOfParticleGlobal();
+
+
+            // >2.3 Find ARC groups and create artificial particles
+            // Set local ptcl_hard for isolated  clusters
+            system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
+
+//#ifdef CLUSTER_DEBUG
+//        for (PS::S32 i=0; i<n_loc; i++) system_soft[i].status = -1000000;
+//#endif
+
+            // Find groups and add artificial particles to global particle system
+            system_hard_isolated.findGroupsAndCreateArtificialParticlesOMP<SystemSoft, FPSoft>(system_soft, dt_tree);
+
+//#ifdef CLUSTER_DEBUG
+//        not correct check, isolated clusters are not reset above
+//        for (PS::S32 i=0; i<n_loc; i++) {
+//            if (system_soft[i].status ==-1000000) {
+//                std::cerr<<"Find un initialized status i="<<i<<" status="<<system_soft[i].status<<std::endl;
+//            }
+//        }
+//#endif
+            // update n_loc_iso, n_glb_iso for isolated clusters
+            //PS::S64 n_loc_iso = system_soft.getNumberOfParticleLocal();
+            //PS::S64 n_glb_iso = system_soft.getNumberOfParticleGlobal();
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+            // For connected clusters
+            system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
+            system_hard_connected.findGroupsAndCreateArtificialParticlesOMP<SystemSoft, FPSoft>(system_soft, dt_tree);
+            // send updated particle back to original (set zero mass particle to origin)
+            search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+#endif
+
+            // update n_glb, n_glb for all
+            stat.n_all_loc = system_soft.getNumberOfParticleLocal();
+            stat.n_all_glb = system_soft.getNumberOfParticleGlobal();
+            
+            // >2.4 set adr/rank for artificial particles in GPS
+#pragma omp parallel for
+            for(PS::S32 i=stat.n_real_loc; i<stat.n_all_loc; i++){
+                system_soft[i].rank_org = my_rank;
+                system_soft[i].adr = i;
+#ifdef HARD_DEBUG
+                assert(system_soft[i].status.d>0);
+#endif
+            }
+            // >3 Tree for force ----------------------------------------
+#ifdef PROFILE
+            profile.create_group.barrier();
+            PS::Comm::barrier();
+            profile.create_group.end();
+#endif
+    }
+
+    //! calculate tree solf force
+    inline void treeSoftForce() {
+#ifdef PROFILE
+            profile.tree_soft.start();
+
+            tree_soft.clearNumberOfInteraction();
+            tree_soft.clearTimeProfile();
+#endif
+
+#ifndef USE_SIMD
+            tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSimd(),
+#ifdef USE_QUAD
+                                               CalcForceEpSpQuadNoSimd(),
+#else
+                                               CalcForceEpSpMonoNoSimd(),
+#endif
+                                               system_soft,
+                                               dinfo);
+#else
+            tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(),
+#ifdef USE_QUAD
+                                               CalcForceEpSpQuadSimd(),
+#else
+                                               CalcForceEpSpMonoSimd(),
+#endif
+                                               system_soft,
+                                               dinfo);
+#endif
+
+#ifdef PROFILE
+            n_count.ep_ep_interact     += tree_soft.getNumberOfInteractionEPEPLocal();
+            n_count_sum.ep_ep_interact += tree_soft.getNumberOfInteractionEPEPGlobal();
+            n_count.ep_sp_interact     += tree_soft.getNumberOfInteractionEPSPLocal();
+            n_count_sum.ep_sp_interact += tree_soft.getNumberOfInteractionEPSPGlobal(); 
+
+            ps_profile += tree_soft.getTimeProfile();
+            domain_decompose_weight = ps_profile.calc_force;
+
+            profile.tree_soft.barrier();
+            PS::Comm::barrier();
+            profile.tree_soft.end();
+#endif
+    }
+
+    // correct force due to change over function
+    inline void treeForceCorrectChangeover() {
+#ifdef PROFILE
+        profile.force_correct.start();
+#endif
+
+#ifdef CORRECT_FORCE_DEBUG
+        // backup particle data
+        PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
+
+        FPSoft psys_bk[n_loc_all];
+#pragma omp parallel for
+        for (int i=0; i<n_loc_all; i++) 
+            psys_bk[i] = system_soft[i];
+#endif
+
+        // single 
+        system_hard_one_cluster.correctPotWithCutoffOMP(system_soft, search_cluster.getAdrSysOneCluster());
+
+        // Isolated clusters
+        system_hard_isolated.correctForceWithCutoffClusterOMP(system_soft);
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+        // Connected clusters
+        system_hard_connected.correctForceWithCutoffTreeNeighborAndClusterOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, search_cluster.getAdrSysConnectClusterSend());
+#endif
+
+#ifdef CORRECT_FORCE_DEBUG
+        // switch backup and sys particle data
+#pragma omp parallel for
+        for (int i=0; i<n_loc_all; i++) {
+            FPSoft ptmp = psys_bk[i];
+            psys_bk[i] = system_soft[i];
+            system_soft[i] = ptmp;
+        }
+
+        // all particles
+        system_hard_isolated.correctForceWithCutoffTreeNeighborOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, n_loc);
+
+        // single 
+        //system_hard_one_cluster.correctPotWithCutoffOMP(system_soft, search_cluster.getAdrSysOneCluster());
+        // Isolated clusters
+        //system_hard_isolated.correctForceWithCutoffTreeNeighborOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, n_loc);
+//#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+//        // Connected clusters
+//        system_hard_connected.correctForceWithCutoffTreeNeighborOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, n_loc_all);
+//#endif
+
+        for (int i=0; i<n_loc_all; i++) {
+            PS::F64vec dacci=psys_bk[i].acc- system_soft[i].acc;
+            PS::F64 dpoti = psys_bk[i].pot_tot- system_soft[i].pot_tot;
+            if(dacci*dacci/(system_soft[i].acc*system_soft[i].acc)>1e-8) {
+                std::cerr<<"Corrected Acc diff >1e-8: i "<<i<<" acc(tree): "<<system_soft[i].acc<<" acc(cluster): "<<psys_bk[i].acc<<std::endl;
+                abort();
+            }
+            // Notice, the cluster members can include particles are not in the tree neighbor searching. If the extra neighbors in clusters are group members. The correct from clusters will be more accurate than tree neighbor correction. Since the potential is calculated from the real members instead of artificial particles. This can result in different potential
+            if(abs(dpoti/system_soft[i].pot_tot)>1e-6) {
+                std::cerr<<"Corrected pot diff >1e-6: i "<<i<<" pot(tree): "<<system_soft[i].pot_tot<<" pot(cluster): "<<psys_bk[i].pot_tot<<std::endl;
+                abort();
+            }
+        }
+        
+#endif
+#ifdef PROFILE
+        profile.force_correct.barrier();
+        PS::Comm::barrier();
+        profile.force_correct.end();
+#endif
+    }
+
+#ifdef KDKDK_4TH
+    //! gradient kick for KDKDK_4TH method
+    inline void GradientKick() {
+#ifdef PROFILE
+        profile.tree_soft.start();
+        tree_soft.clearNumberOfInteraction();
+        tree_soft.clearTimeProfile();
+#endif
+        // correction calculation
+        //tree_soft.setParticaleLocalTree(system_soft, false);
+        
+        tree_soft.calcForceAllAndWriteBack(CalcCorrectEpEpWithLinearCutoffNoSimd(),
+#ifdef USE_QUAD
+                                           CalcForceEpSpQuadNoSimd(),
+#else
+                                           CalcForceEpSpMonoNoSimd(),
+#endif
+                                           system_soft,
+                                           dinfo);
+
+#ifdef PROFILE
+        n_count.ep_ep_interact     += tree_soft.getNumberOfInteractionEPEPLocal();
+        n_count_sum.ep_ep_interact += tree_soft.getNumberOfInteractionEPEPGlobal();
+        n_count.ep_sp_interact     += tree_soft.getNumberOfInteractionEPSPLocal();
+        n_count_sum.ep_sp_interact += tree_soft.getNumberOfInteractionEPSPGlobal(); 
+
+        ps_profile += tree_soft.getTimeProfile();
+        domain_decompose_weight += ps_profile.calc_force;
+
+        profile.tree_soft.barrier();
+        PS::Comm::barrier();
+        profile.tree_soft.end();
+        profile.force_correct.start();
+#endif 
+
+        // Isolated clusters
+        system_hard_isolated.correctForceWithCutoffClusterOMP(system_soft, true);
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+        // Connected clusters
+        system_hard_connected.correctForceWithCutoffTreeNeighborAndClusterOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, search_cluster.getAdrSysConnectClusterSend(), true);
+#endif
+
+#ifdef PROFILE
+        profile.force_correct.barrier();
+        PS::Comm::barrier();
+        profile.force_correct.end();
+#endif
+//        if (true) {
+
+
+// for debug
+//            FILE* fdump;
+//            if ( (fdump = fopen("acorr.dump","w")) == NULL) {
+//                fprintf(stderr,"Error: Cannot open file acorr.dump\n");
+//                abort();
+//            }
+//            for (int i=0; i<n_loc; i++) {
+//                fprintf(fdump, "%d %.12g %.12g %.12g %.12g %.12g %.12g\n", i, system_soft[i].acc[0], system_soft[i].acc[1], system_soft[i].acc[2], system_soft[i].acorr[0], system_soft[i].acorr[1], system_soft[i].acorr[2]);
+//            }
+//            fclose(fdump);
+//            abort();
+// debug
+//            }
+
+    }
+#endif
+
+    //! kick
+    inline void kick(const PS::F64 _dt_kick) {
+#ifdef PROFILE
+        profile.kick.start();
+#endif
+        /// Member mass are recovered
+        // single and reset status to zero (due to binary disruption)
+        kickOne(system_soft, _dt_kick, search_cluster.getAdrSysOneCluster());
+        // isolated
+        kickClusterAndRecoverGroupMemberMass(system_soft, system_hard_isolated.getPtcl(), _dt_kick);
+        // c.m. artificial
+        kickCM(system_soft, stat.n_real_loc, hard_manager.ap_manager, _dt_kick);
+        
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        // connected
+        kickClusterAndRecoverGroupMemberMass(system_soft, system_hard_connected.getPtcl(), _dt_kick);
+        // sending list for connected clusters
+        kickSend(system_soft, search_cluster.getAdrSysConnectClusterSend(), _dt_kick);
+        // send kicked particle from sending list, and receive remote single particle
+        search_cluster.SendSinglePtcl(system_soft, system_hard_connected.getPtcl());
+#endif
+
+#ifdef HARD_DEBUG
+        PS::S32 kick_regist[stat.n_real_loc];
+        for(int i=0; i<stat.n_real_loc; i++) kick_regist[i] = 0;
+        for(int i=0; i<search_cluster.getAdrSysOneCluster().size(); i++) {
+            kick_regist[search_cluster.getAdrSysOneCluster()[i]]++;
+        }
+        for(int i=0; i<system_hard_isolated.getPtcl().size(); i++) {
+            PS::S64 adr= system_hard_isolated.getPtcl()[i].adr_org;
+            assert(adr>=0);
+            kick_regist[adr]++;
+        }
+        for(int i=0; i<system_hard_connected.getPtcl().size(); i++) {
+            PS::S64 adr= system_hard_connected.getPtcl()[i].adr_org;
+            if(adr>=0) kick_regist[adr]++;
+        }
+        for(int i=0; i<search_cluster.getAdrSysConnectClusterSend().size(); i++) {
+            PS::S64 adr= search_cluster.getAdrSysConnectClusterSend()[i];
+            kick_regist[adr]++;
+        }
+        for(int i=0; i<stat.n_real_loc; i++) {
+            assert(kick_regist[i]==1);
+        }
+#endif
+
+#ifdef PROFILE
+        profile.kick.barrier();
+        PS::Comm::barrier();
+        profile.kick.end();
+#endif
+    }
+
+    //! hard drift
+    inline void drift(const PS::F64 _dt_drift) {
+        ////// set time
+        system_hard_one_cluster.setTimeOrigin(stat.time);
+        system_hard_isolated.setTimeOrigin(stat.time);
+        system_hard_connected.setTimeOrigin(stat.time);
+        ////// set time
+
+        // reset slowdown energy correction
+        system_hard_isolated.energy.resetEnergyCorrection();
+        system_hard_connected.energy.resetEnergyCorrection();
+        
+#ifdef PROFILE
+        profile.hard_single.start();
+#endif
+        ////// integrater one cluster
+        system_hard_one_cluster.initializeForOneCluster(search_cluster.getAdrSysOneCluster().size());
+        system_hard_one_cluster.setPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
+        system_hard_one_cluster.driveForOneClusterOMP(_dt_drift);
+        //system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft, search_cluster.getAdrSysOneCluster());
+        system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft);
+        ////// integrater one cluster
+#ifdef PROFILE
+        profile.hard_single.barrier();
+        profile.hard_single.end();
+#endif
+        ////////////////
+
+        /////////////
+#ifdef PROFILE
+        profile.hard_isolated.start();
+#endif
+        // integrate multi cluster A
+        system_hard_isolated.driveForMultiClusterOMP(_dt_drift, &(system_soft[0]));
+        //system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_,remove_list);
+        system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
+        // integrate multi cluster A
+#ifdef PROFILE
+        profile.hard_isolated.barrier();
+        profile.hard_isolated.end();
+#endif
+        /////////////
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+        /////////////
+#ifdef PROFILE
+        profile.hard_connected.start();
+#endif
+        // integrate multi cluster B
+        system_hard_connected.driveForMultiClusterOMP(_dt_drift, &(system_soft[0]));
+        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+        // integrate multi cluster B
+#ifdef PROFILE
+        profile.hard_connected.barrier();
+        PS::Comm::barrier();
+        profile.hard_connected.end();
+#endif
+
+#endif
+
+    }
+    
+    //! remove artificial and unused particles
+    inline void removeParticles() {
+        /////////////
+        // Remove ghost particles
+        system_soft.removeParticle(remove_list.getPointer(), remove_list.size());
+        // reset particle number
+        stat.n_real_loc = stat.n_real_loc-remove_list.size();
+        system_soft.setNumberOfParticleLocal(stat.n_real_loc);
+        stat.n_real_glb = system_soft.getNumberOfParticleGlobal();
+        remove_list.resizeNoInitialize(0);
+    }
+
+    //! correct force due to the change over update
+    inline void correctForceChangeOverUpdate() {
+#ifdef PROFILE
+        profile.force_correct.start();
+#endif
+        // correct changeover for first step
+        // Isolated clusters
+        system_hard_isolated.correctForceForChangeOverUpdateOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft);
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+        // Connected clusters
+        auto& adr_send = search_cluster.getAdrSysConnectClusterSend();
+        system_hard_connected.correctForceForChangeOverUpdateOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft, adr_send.getPointer(), adr_send.size());
+#endif
+
+#ifdef PROFILE
+        profile.force_correct.barrier();
+        PS::Comm::barrier();
+        profile.force_correct.end();
+#endif
+
+    }
+
+    //! domain decomposition
+    inline void domainDecompose() {
+#ifdef PROFILE
+        // > 6. Domain decomposition
+        profile.domain.start();
+#endif
+        // Domain decomposition, parrticle exchange and force calculation
+        if(n_loop % 16 == 0) {
+            dinfo.decomposeDomainAll(system_soft,domain_decompose_weight);
+            //std::cout<<"rank: "<<my_rank<<" weight: "<<domain_decompose_weight<<std::endl;
+        }
+#ifdef PROFILE
+        profile.domain.barrier();
+        PS::Comm::barrier();
+        profile.domain.end();
+#endif
+    }
+
+    //! exchange particles
+    inline void exchangeParticle() {
+#ifdef PROFILE
+        profile.exchange.start();
+#endif
+        system_soft.exchangeParticle(dinfo);
+
+        const PS::S32 n_loc_tmp = system_soft.getNumberOfParticleLocal();
+#pragma omp parallel for
+        for(PS::S32 i=0; i<n_loc_tmp; i++){
+            system_soft[i].rank_org = my_rank;
+            system_soft[i].adr = i;
+        }
+        
+#ifdef PROFILE
+        profile.exchange.barrier();
+        PS::Comm::barrier();
+        profile.exchange.end();
+#endif
+    }
+
+    //! adjust dt_reduce_factor for tree time step
+    /*!
+      \return true: if tree time need update
+     */
+    inline bool adjustDtTreeReduce(PS::F64& _dt_reduce_factor, const PS::F64 _dt_tree_base, const PS::F64 _dt_tree_now) {
+        bool dt_mod_flag = false;
+        PS::F64 dt_tree_new = _dt_tree_base / _dt_reduce_factor;
+        if(_dt_tree_now!= dt_tree_new) {
+            // in increasing case, need to make sure the time is consistent with block step time/dt_tree
+            if(_dt_tree_now<dt_tree_new) {
+                PS::F64 dt_tree_max = calcDtLimit(stat.time, _dt_tree_base, _dt_tree_now);
+                if (dt_tree_max == _dt_tree_now) {
+                    // no modificatoin, recover original reduce factor
+                    _dt_reduce_factor= _dt_tree_base/_dt_tree_now;
+                }
+                else {
+                    dt_mod_flag = true;
+                    // limit dt_reduce_factor to the maximum block step allown
+                    _dt_reduce_factor = std::min(_dt_tree_base/dt_tree_max, _dt_reduce_factor);
+
+                }
+            }
+            else dt_mod_flag = true;
+        }
+
+        return dt_mod_flag;
+    }
+
+    inline void outputInit() {
+#ifdef PROFILE
+        profile.output.start();
+#endif
+
+        // calculate initial energy
+        stat.energy.clear();
+        stat.energy.calc(&system_soft[0], stat.n_real_loc, true);
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        stat.energy.getSumMultiNodes(true);
+#endif
+#ifdef HARD_CHECK_ENERGY
+        stat.energy.ekin_sd = stat.energy.ekin;
+        stat.energy.epot_sd = stat.energy.epot;
+        stat.energy_hard_diff = 0;
+        stat.energy_hard_sd_diff = 0;
+#endif
+             
+        // print status
+        if(my_rank==0) {
+            //tree_soft.initialize(n_tree_init, theta.value, n_leaf_limit.value, n_group_limit.value);
+            std::cout<<"Global total particle number: "<<stat.n_all_glb<<" real: "<<stat.n_real_glb<<std::endl;
+            std::cout<<"Local total particle number: "<<stat.n_all_loc<<" real: "<<stat.n_real_loc<<std::endl;
+
+            std::cout<<std::endl;
+            stat.print(std::cout);
+            stat.printColumn(fstatus, WRITE_WIDTH);
+            fstatus<<std::endl;
+        }
+#ifdef PROFILE
+        profile.output.barrier();
+        PS::Comm::barrier();
+        profile.output.end();
+#endif
+    }
+
+    inline void output() {
+#ifdef PROFILE
+        profile.output.start();
+#endif
+
+#ifdef PETAR_DEBUG
+        assert(stat.n_all_loc==system_soft.getNumberOfParticleLocal());
+#endif
+
+
+        stat.energy.calc(&system_soft[0], stat.n_real_loc);
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        stat.energy.getSumMultiNodes();
+#endif
+
+#ifdef HARD_CHECK_ENERGY
+        HardEnergy energy_local = system_hard_isolated.energy;
+        energy_local += system_hard_connected.energy;
+        // hard energy error
+        stat.energy_hard_diff += PS::Comm::getSum(energy_local.de);
+        stat.energy_hard_sd_diff += PS::Comm::getSum(energy_local.de_sd);
+        // energy correction due to slowdown 
+        PS::F64 ekin_sd_correction = PS::Comm::getSum(energy_local.ekin_sd_correction);
+        stat.energy.ekin_sd = stat.energy.ekin + ekin_sd_correction;
+        PS::F64 epot_sd_correction = PS::Comm::getSum(energy_local.epot_sd_correction);
+        stat.energy.epot_sd = stat.energy.epot + epot_sd_correction;
+        PS::F64 etot_sd_correction = ekin_sd_correction + epot_sd_correction;
+        // for total energy reference, first add the cumulative change due to slowdown change in the integration (referring to no slowdown case), then add slowdown energy correction from current time
+        stat.energy.etot_sd_ref += PS::Comm::getSum(energy_local.de_sd_change_cum) + etot_sd_correction;
+
+        system_hard_isolated.energy.clear();
+        system_hard_connected.energy.clear();
+#endif
+
+        // print status
+        if(my_rank==0) {
+            std::cout<<std::endl;
+            stat.print(std::cout);
+            stat.printColumn(fstatus, WRITE_WIDTH);
+            fstatus<<std::endl;
+        }
+
+        // data output
+        file_header.n_body = stat.n_real_glb;
+        file_header.time = stat.time;
+        file_header.nfile++;
+        std::string fname = filename_output+"."+std::to_string(file_header.nfile);
+        system_soft.setNumberOfParticleLocal(stat.n_real_loc);
+        if (output_data_format==1||output_data_format==3)
+            system_soft.writeParticleAscii(fname.c_str(), file_header);
+        else if(output_data_format==0||output_data_format==2)
+            system_soft.writeParticleBinary(fname.c_str(), file_header);
+        system_soft.setNumberOfParticleLocal(stat.n_all_loc);
+
+
+#ifdef MAIN_DEBUG
+        write_p(fout, stat.time, system_soft, stat.energy);
+#endif
+
+        // reset sd energy reference to no slowdown case
+        stat.energy.etot_sd_ref -= ekin_sd_correction + epot_sd_correction;
+            
+
+#ifdef PROFILE
+        profile.output.barrier();
+        PS::Comm::barrier();
+        profile.output.end();
+#endif
+    }
+
+#ifdef PROFILE
+    inline void calcProfile() {
+        profile.tot.barrier();
+        profile.tot.end();
+        
+        // profile analysis
+
+        PS::S32 n_hard_single     = system_hard_one_cluster.getPtcl().size();
+        PS::S32 n_hard_isolated   = system_hard_isolated.getPtcl().size();
+        PS::S32 n_hard_connected  = system_hard_connected.getPtcl().size();
+
+        n_count.hard_single      += n_hard_single;
+        n_count.hard_isolated    += n_hard_isolated;
+        n_count.hard_connected   += n_hard_connected;
+
+        n_count_sum.hard_single      += PS::Comm::getSum(n_hard_single);
+        n_count_sum.hard_isolated    += PS::Comm::getSum(n_hard_isolated);
+        n_count_sum.hard_connected   += PS::Comm::getSum(n_hard_connected);
+                                           
+        PS::S64 ARC_substep_sum   = system_hard_isolated.ARC_substep_sum;
+        ARC_substep_sum += system_hard_connected.ARC_substep_sum;
+        PS::S64 ARC_tsyn_step_sum   = system_hard_isolated.ARC_tsyn_step_sum;
+        ARC_tsyn_step_sum += system_hard_connected.ARC_tsyn_step_sum;
+        PS::S64 ARC_n_groups      = system_hard_isolated.ARC_n_groups;
+        ARC_n_groups += system_hard_connected.ARC_n_groups;
+        PS::S64 H4_step_sum       = system_hard_isolated.H4_step_sum;
+        H4_step_sum +=  system_hard_connected.H4_step_sum;
+        n_count.ARC_substep_sum  += ARC_substep_sum;
+        n_count.ARC_tsyn_step_sum+= ARC_tsyn_step_sum;
+        n_count.ARC_n_groups     += ARC_n_groups;
+        n_count.H4_step_sum      += H4_step_sum;
+
+        n_count_sum.ARC_substep_sum  += PS::Comm::getSum(ARC_substep_sum);
+        n_count_sum.ARC_tsyn_step_sum+= PS::Comm::getSum(ARC_tsyn_step_sum);
+        n_count_sum.ARC_n_groups     += PS::Comm::getSum(ARC_n_groups);
+        n_count_sum.H4_step_sum      += PS::Comm::getSum(H4_step_sum);
+
+        system_hard_isolated.ARC_substep_sum = 0;
+        system_hard_isolated.ARC_tsyn_step_sum=0;
+        system_hard_isolated.ARC_n_groups = 0;
+        system_hard_isolated.H4_step_sum = 0;
+        system_hard_connected.ARC_substep_sum = 0;
+        system_hard_connected.ARC_tsyn_step_sum=0;
+        system_hard_connected.ARC_n_groups = 0;
+        system_hard_connected.H4_step_sum = 0;
+                                           
+        n_count.cluster_count(1, n_hard_single);
+
+        const PS::S32  n_isolated_cluster = system_hard_isolated.getNCluster();
+        n_count.cluster_isolated += n_isolated_cluster;
+        n_count_sum.cluster_isolated += PS::Comm::getSum(n_isolated_cluster);
+
+        const PS::S32* isolated_cluster_n_list = system_hard_isolated.getClusterNList();
+        for (PS::S32 i=0; i<n_isolated_cluster; i++) n_count.cluster_count(isolated_cluster_n_list[i]);
+
+        const PS::S32  n_connected_cluster = system_hard_connected.getNCluster();
+        n_count.cluster_connected += n_connected_cluster;
+        n_count_sum.cluster_connected += PS::Comm::getSum(n_connected_cluster);
+        const PS::S32* connected_cluster_n_list = system_hard_connected.getClusterNList();
+        for (PS::S32 i=0; i<n_connected_cluster; i++) n_count.cluster_count(connected_cluster_n_list[i]);
+
+        dn_loop++;
+
+        // output profile data
+        if(fmod(stat.time, dt_output) == 0.0) {
+
+            //const int NProc=PS::Comm::getNumberOfProc();
+
+            const SysProfile& profile_min = profile.getMin();
+            const SysProfile& profile_max = profile.getMax();
+        
+            if(my_rank==0) {
+                std::cout<<std::setprecision(5);
+                std::cout<<"Tree step number: "<<dn_loop
+                         <<"  Local N: "<<stat.n_real_loc
+                         <<"  Local Nall: "<<stat.n_all_loc<<std::endl;
+                
+
+                std::cout<<"**** Wallclock time per step (local): [Min/Max]\n";
+                //std::cout<<std::setw(PRINT_WIDTH)<<"Rank";
+                profile.dumpName(std::cout,PRINT_WIDTH);
+                std::cout<<std::endl;
+
+                //std::cout<<std::setw(PRINT_WIDTH)<<my_rank;
+                profile_min.dump(std::cout,PRINT_WIDTH,dn_loop);
+                std::cout<<std::endl;
+                profile_max.dump(std::cout,PRINT_WIDTH,dn_loop);
+                std::cout<<std::endl;
+
+                std::cout<<"**** FDPS time profile (local):\n";
+                ps_profile.dumpName(std::cout,PRINT_WIDTH);
+                std::cout<<std::endl;
+                ps_profile.dump(std::cout,PRINT_WIDTH,dn_loop);
+                std::cout<<std::endl;
+
+                std::cout<<"**** Number per step (global):\n";
+                n_count_sum.dumpName(std::cout,PRINT_WIDTH);
+                std::cout<<std::endl;
+                n_count_sum.dump(std::cout,PRINT_WIDTH,dn_loop);
+                std::cout<<std::endl;
+                
+                std::cout<<"**** Number of members in clusters (local):\n";
+                n_count.printHist(std::cout,PRINT_WIDTH,dn_loop);
+            }
+
+            fprofile<<std::setprecision(WRITE_PRECISION);
+            fprofile<<std::setw(WRITE_WIDTH)<<my_rank;
+            fprofile<<std::setw(WRITE_WIDTH)<<stat.time
+                    <<std::setw(WRITE_WIDTH)<<dn_loop
+                    <<std::setw(WRITE_WIDTH)<<stat.n_real_loc;
+            profile.dump(fprofile, WRITE_WIDTH, dn_loop);
+            profile.dumpBarrier(fprofile, WRITE_WIDTH, dn_loop);
+            ps_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
+            n_count.dump(fprofile, WRITE_WIDTH, dn_loop);
+            fprofile<<std::endl;
+
+            profile.clear();
+            ps_profile.clear();
+            n_count.clear();
+            n_count_sum.clear();
+            dn_loop=0;
+        }
+    }
+#endif
+
+public:
     // reading input parameters
     PS::S32 readParameters(int argc, char *argv[]) {
         init_flag = true;
@@ -489,8 +1228,8 @@ public:
                 system_soft.readParticleAscii(sinput, file_header);
             else
                 system_soft.readParticleBinary(sinput, file_header);
-            time_sys = file_header.time;
-            PS::Comm::broadcast(&time_sys, 1, 0);
+            stat.time = file_header.time;
+            PS::Comm::broadcast(&stat.time, 1, 0);
             PS::Comm::broadcast(&file_header, 1, 0);
             n_glb.value = system_soft.getNumberOfParticleGlobal();
             n_loc = system_soft.getNumberOfParticleLocal();
@@ -502,7 +1241,7 @@ public:
         else {
             SetParticlePlummer(system_soft, n_glb.value, n_loc);
             file_header.nfile = 0;
-            time_sys = file_header.time = 0.0;
+            stat.time = file_header.time = 0.0;
             file_header.n_body = n_glb.value;
             //file_header.id_offset = n_glb.value;
             std::string fname = fname_snp.value+"."+std::to_string(file_header.nfile);
@@ -667,8 +1406,9 @@ public:
 
         // domain decomposition
         const PS::F32 coef_ema = 0.2;
+        domain_decompose_weight=1.0;
         dinfo.initialize(coef_ema);
-        dinfo.decomposeDomainAll(system_soft);
+        dinfo.decomposeDomainAll(system_soft,domain_decompose_weight);
 
         if(pos_domain!=NULL) {
             pos_domain = new PS::F64ort[n_proc];
@@ -700,339 +1440,59 @@ public:
         return 0;
     }
 
-    // integrate the system
-    PS::S32 evolveToTime(const PS::F64 _time_end) {
+
+    //! integrate the system
+    /*! @param[in] _time_break: additional breaking time to interupt the integration, in default the system integrate to time_end
+     */
+    PS::S32 evolveToTime(const PS::F64 _time_break=-1.0) {
 
         bool output_flag = false;    // for output snapshot and information
+        bool interupt_flag = false;  // for interupt integration 
+        bool restart_flag = false;   // for restart from interuption
         bool dt_mod_flag = false;    // for check whether tree time step need update
         bool changeover_flag = false; // for check whether changeover need update
         KickDriftStep dt_manager(dt_tree);
         PS::F64 dt_reduce_factor=1.0;
         PS::F64 dt_kick  = dt_manager.getDtStartContinue();
         PS::F64 dt_drift = dt_manager.getDtDriftContinue();
-        PS::S64 n_loc, n_glb;
-        PS::F32 domain_decompose_weight=1.0;
 
         /// Main loop
-        while(time_sys <= _time_end){
+        while(stat.time <= time_end){
 
 #ifdef PROFILE
             PS::Comm::barrier();
             profile.tot.start();
-
-            profile.tree_nb.start();
-#endif
-            // >1. Tree for neighbor searching ----------------------------------------
-#ifndef USE_SIMD
-            tree_nb.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSimd(), system_soft, dinfo);
-#else
-            tree_nb.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(), system_soft, dinfo);
-#endif
-        
-#ifdef PROFILE
-            profile.tree_nb.barrier();
-            PS::Comm::barrier();
-            profile.tree_nb.end();
-            profile.search_cluster.start();
-#endif
-            // >2.1 search clusters ----------------------------------------
-            search_cluster.searchNeighborOMP<SystemSoft, TreeNB, EPJSoft>
-                (system_soft, tree_nb, pos_domain, 1.0, search_cluster_radius_factor);
-
-            search_cluster.searchClusterLocal();
-            search_cluster.setIdClusterLocal();
-
-            // >2.2 Send/receive connect cluster
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-            search_cluster.connectNodes(pos_domain,tree_nb);
-            search_cluster.setIdClusterGlobalIteration();
-            search_cluster.sendAndRecvCluster(system_soft);
 #endif
 
-            // record real particle n_loc/glb
-            n_loc = system_soft.getNumberOfParticleLocal();
-            n_glb = system_soft.getNumberOfParticleGlobal();
+            // >1. Tree for neighbor searching 
+            treeNeighborSearch();
 
-#ifdef PROFILE
-            profile.search_cluster.barrier();
-            PS::Comm::barrier();
-            profile.search_cluster.end();
-            profile.create_group.start();
-#endif
-            // >2.3 Find ARC groups and create artificial particles
-            // Set local ptcl_hard for isolated  clusters
-            system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
+            // >2. search clusters
+            searchCluster();
 
-//#ifdef CLUSTER_DEBUG
-//        for (PS::S32 i=0; i<n_loc; i++) system_soft[i].status = -1000000;
-//#endif
+            // >3. find group and create artificial particles
+            createGroup();
 
-            // Find groups and add artificial particles to global particle system
-            system_hard_isolated.findGroupsAndCreateArtificialParticlesOMP<SystemSoft, FPSoft>(system_soft, dt_tree);
+            // >4 tree soft force
+            treeSoftForce() ;
 
-//#ifdef CLUSTER_DEBUG
-//        not correct check, isolated clusters are not reset above
-//        for (PS::S32 i=0; i<n_loc; i++) {
-//            if (system_soft[i].status ==-1000000) {
-//                std::cerr<<"Find un initialized status i="<<i<<" status="<<system_soft[i].status<<std::endl;
-//            }
-//        }
-//#endif
-            // update n_loc_iso, n_glb_iso for isolated clusters
-            //PS::S64 n_loc_iso = system_soft.getNumberOfParticleLocal();
-            //PS::S64 n_glb_iso = system_soft.getNumberOfParticleGlobal();
-
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-            // For connected clusters
-            system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
-            system_hard_connected.findGroupsAndCreateArtificialParticlesOMP<SystemSoft, FPSoft>(system_soft, dt_tree);
-            // send updated particle back to original (set zero mass particle to origin)
-            search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
-#endif
-
-            // update n_glb, n_glb for all
-            PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
-            PS::S64 n_glb_all = system_soft.getNumberOfParticleGlobal();
-            
-            // >2.4 set adr/rank for artificial particles in GPS
-#pragma omp parallel for
-            for(PS::S32 i=n_loc; i<n_loc_all; i++){
-                system_soft[i].rank_org = my_rank;
-                system_soft[i].adr = i;
-#ifdef HARD_DEBUG
-                assert(system_soft[i].status.d>0);
-#endif
-            }
-            // >3 Tree for force ----------------------------------------
-#ifdef PROFILE
-            profile.create_group.barrier();
-            PS::Comm::barrier();
-            profile.create_group.end();
-//        profile.soft_tot.start();
-            profile.tree_soft.start();
-
-            tree_soft.clearNumberOfInteraction();
-            tree_soft.clearTimeProfile();
-#endif
-
-            //if(n_glb_all>n_tree_init) {
-            //    n_tree_init = n_glb_all*1.05;
-            //    if(!first_step_flag) std::cerr<<"Warning! tree glb size increase\n";
-            //}
-            if(first_step_flag) {
-                //tree_soft.initialize(n_tree_init, theta.value, n_leaf_limit.value, n_group_limit.value);
-                if(my_rank==0) std::cout<<"Global total particle number: "<<n_glb_all<<" real: "<<n_glb<<std::endl;
-                if(my_rank==0) std::cout<<"Local total particle number: "<<n_loc_all<<" real: "<<n_loc<<std::endl;
-            }
-
-#ifndef USE_SIMD
-            tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSimd(),
-#ifdef USE_QUAD
-                                               CalcForceEpSpQuadNoSimd(),
-#else
-                                               CalcForceEpSpMonoNoSimd(),
-#endif
-                                               system_soft,
-                                               dinfo);
-#else
-            tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(),
-#ifdef USE_QUAD
-                                               CalcForceEpSpQuadSimd(),
-#else
-                                               CalcForceEpSpMonoSimd(),
-#endif
-                                               system_soft,
-                                               dinfo);
-#endif
-
-#ifdef PROFILE
-            n_count.ep_ep_interact     += tree_soft.getNumberOfInteractionEPEPLocal();
-            n_count_sum.ep_ep_interact += tree_soft.getNumberOfInteractionEPEPGlobal();
-            n_count.ep_sp_interact     += tree_soft.getNumberOfInteractionEPSPLocal();
-            n_count_sum.ep_sp_interact += tree_soft.getNumberOfInteractionEPSPGlobal(); 
-
-            ps_profile += tree_soft.getTimeProfile();
-            domain_decompose_weight = ps_profile.calc_force;
-
-            profile.tree_soft.barrier();
-            PS::Comm::barrier();
-            profile.tree_soft.end();
-            profile.force_correct.start();
-#endif
-
-            // >3.1 soft force correction due to different cut-off function
-#ifdef CORRECT_FORCE_DEBUG
-            // backup particle data
-            FPSoft psys_bk[n_loc_all];
-#pragma omp parallel for
-            for (int i=0; i<n_loc_all; i++) 
-                psys_bk[i] = system_soft[i];
-#endif
-
-            // single 
-            system_hard_one_cluster.correctPotWithCutoffOMP(system_soft, search_cluster.getAdrSysOneCluster());
-
-            // Isolated clusters
-            system_hard_isolated.correctForceWithCutoffClusterOMP(system_soft);
-
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-            // Connected clusters
-            system_hard_connected.correctForceWithCutoffTreeNeighborAndClusterOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, search_cluster.getAdrSysConnectClusterSend());
-#endif
-
-#ifdef CORRECT_FORCE_DEBUG
-            // switch backup and sys particle data
-#pragma omp parallel for
-            for (int i=0; i<n_loc_all; i++) {
-                FPSoft ptmp = psys_bk[i];
-                psys_bk[i] = system_soft[i];
-                system_soft[i] = ptmp;
-            }
-
-            // all particles
-            system_hard_isolated.correctForceWithCutoffTreeNeighborOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, n_loc);
-
-            // single 
-            //system_hard_one_cluster.correctPotWithCutoffOMP(system_soft, search_cluster.getAdrSysOneCluster());
-            // Isolated clusters
-            //system_hard_isolated.correctForceWithCutoffTreeNeighborOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, n_loc);
-//#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-//        // Connected clusters
-//        system_hard_connected.correctForceWithCutoffTreeNeighborOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, n_loc_all);
-//#endif
-
-            for (int i=0; i<n_loc_all; i++) {
-                PS::F64vec dacci=psys_bk[i].acc- system_soft[i].acc;
-                PS::F64 dpoti = psys_bk[i].pot_tot- system_soft[i].pot_tot;
-                if(dacci*dacci/(system_soft[i].acc*system_soft[i].acc)>1e-8) {
-                    std::cerr<<"Corrected Acc diff >1e-8: i "<<i<<" acc(tree): "<<system_soft[i].acc<<" acc(cluster): "<<psys_bk[i].acc<<std::endl;
-                    abort();
-                }
-                // Notice, the cluster members can include particles are not in the tree neighbor searching. If the extra neighbors in clusters are group members. The correct from clusters will be more accurate than tree neighbor correction. Since the potential is calculated from the real members instead of artificial particles. This can result in different potential
-                if(abs(dpoti/system_soft[i].pot_tot)>1e-6) {
-                    std::cerr<<"Corrected pot diff >1e-6: i "<<i<<" pot(tree): "<<system_soft[i].pot_tot<<" pot(cluster): "<<psys_bk[i].pot_tot<<std::endl;
-                    abort();
-                }
-            }
-        
-#endif
+            // >5 correct change over
+            treeForceCorrectChangeover();
 
 #ifdef KDKDK_4TH
-#ifdef PROFILE
-            profile.force_correct.barrier();
-            PS::Comm::barrier();
-            profile.force_correct.end();
-#endif
             // only do correction at middle step
-            if (dt_manager.getCountContinue() == 1) {
-//        if (true) {
-
-#ifdef PROFILE
-                profile.tree_soft.start();
-                tree_soft.clearNumberOfInteraction();
-                tree_soft.clearTimeProfile();
-#endif
-                // correction calculation
-                //tree_soft.setParticaleLocalTree(system_soft, false);
-        
-                tree_soft.calcForceAllAndWriteBack(CalcCorrectEpEpWithLinearCutoffNoSimd(),
-#ifdef USE_QUAD
-                                                   CalcForceEpSpQuadNoSimd(),
-#else
-                                                   CalcForceEpSpMonoNoSimd(),
-#endif
-                                                   system_soft,
-                                                   dinfo);
-
-#ifdef PROFILE
-                n_count.ep_ep_interact     += tree_soft.getNumberOfInteractionEPEPLocal();
-                n_count_sum.ep_ep_interact += tree_soft.getNumberOfInteractionEPEPGlobal();
-                n_count.ep_sp_interact     += tree_soft.getNumberOfInteractionEPSPLocal();
-                n_count_sum.ep_sp_interact += tree_soft.getNumberOfInteractionEPSPGlobal(); 
-
-                ps_profile += tree_soft.getTimeProfile();
-                domain_decompose_weight += ps_profile.calc_force;
-
-                profile.tree_soft.barrier();
-                PS::Comm::barrier();
-                profile.tree_soft.end();
-#endif 
-
-                // Isolated clusters
-                system_hard_isolated.correctForceWithCutoffClusterOMP(system_soft, true);
-
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-                // Connected clusters
-                system_hard_connected.correctForceWithCutoffTreeNeighborAndClusterOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, search_cluster.getAdrSysConnectClusterSend(), true);
-#endif
-
-// for debug
-//            FILE* fdump;
-//            if ( (fdump = fopen("acorr.dump","w")) == NULL) {
-//                fprintf(stderr,"Error: Cannot open file acorr.dump\n");
-//                abort();
-//            }
-//            for (int i=0; i<n_loc; i++) {
-//                fprintf(fdump, "%d %.12g %.12g %.12g %.12g %.12g %.12g\n", i, system_soft[i].acc[0], system_soft[i].acc[1], system_soft[i].acc[2], system_soft[i].acorr[0], system_soft[i].acorr[1], system_soft[i].acorr[2]);
-//            }
-//            fclose(fdump);
-//            abort();
-// debug
-            }
-#ifdef PROFILE
-            profile.force_correct.start();
-#endif
-
-#endif
-
-
-#ifdef PROFILE
-            profile.force_correct.barrier();
-            PS::Comm::barrier();
-            profile.force_correct.end();
-            profile.output.start();
-//        profile.soft_tot.end();
+            if (dt_manager.getCountContinue() == 1) GradientKick();
 #endif
 
             // for first step
             if(first_step_flag) {
                 first_step_flag = false;
 
-                // correct changeover for first step
-                // Isolated clusters
-                system_hard_isolated.correctForceForChangeOverUpdateOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft);
+                // correct force due to the change over update
+                correctForceChangeOverUpdate();
 
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-                // Connected clusters
-                auto& adr_send = search_cluster.getAdrSysConnectClusterSend();
-                system_hard_connected.correctForceForChangeOverUpdateOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft, adr_send.getPointer(), adr_send.size());
-#endif
-        
-                // update status
-                stat.time = time_sys;
-                stat.N = n_glb;
-                stat.N_all = n_glb_all;
+                outputInit();
 
-                // calculate initial energy
-                stat.energy.clear();
-                stat.energy.calc(&system_soft[0], n_loc, true);
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-                stat.energy.getSumMultiNodes(true);
-#endif
-#ifdef HARD_CHECK_ENERGY
-                stat.energy.ekin_sd = stat.energy.ekin;
-                stat.energy.epot_sd = stat.energy.epot;
-                stat.energy_hard_diff = 0;
-                stat.energy_hard_sd_diff = 0;
-#endif
-             
-                // print status
-                if(my_rank==0) {
-                    std::cout<<std::endl;
-                    stat.print(std::cout);
-                    stat.printColumn(fstatus, WRITE_WIDTH);
-                    fstatus<<std::endl;
-                }
                 output_flag = false;
                 dt_mod_flag = false;
                 changeover_flag = false;
@@ -1040,35 +1500,19 @@ public:
             }
             else {
                 output_flag = false;
-                dt_mod_flag = false;
                 changeover_flag = false;
+                dt_mod_flag = false;
                 dt_kick = dt_manager.getDtKickContinue();
 
                 // check whether tree time step need update only when one full step finish
                 if (dt_manager.getCountContinue() == 0) {
-                    PS::F64 dt_tree_new = dt_tree / dt_reduce_factor;
-                    PS::F64 dt_tree_now = dt_manager.getStep();
-                    if(dt_tree_now!= dt_tree_new) {
-                        // in increasing case, need to make sure the time is consistent with block step time/dt_tree
-                        if(dt_tree_now<dt_tree_new) {
-                            PS::F64 dt_tree_max = calcDtLimit(time_sys, dt_tree, dt_tree_now);
-                            if (dt_tree_max == dt_tree_now) {
-                                // no modificatoin, recover original reduce factor
-                                dt_reduce_factor= dt_tree/dt_tree_now;
-                            }
-                            else {
-                                dt_mod_flag = true;
-                                // limit dt_reduce_factor to the maximum block step allown
-                                dt_reduce_factor = std::min(dt_tree/dt_tree_max, dt_reduce_factor);
 
-                            }
-                        }
-                        else dt_mod_flag = true;
-                    }
+                    // adjust tree step
+                    dt_mod_flag = adjustDtTreeReduce(dt_reduce_factor, dt_tree, dt_manager.getStep());
                     if(dt_mod_flag) dt_kick = dt_manager.getDtEndContinue();
 
                     // output step, get last kick step
-                    if( fmod(time_sys, dt_output) == 0.0) {
+                    if( fmod(stat.time, dt_output) == 0.0) {
                         output_flag = true;
                         dt_kick = dt_manager.getDtEndContinue();
                     }
@@ -1093,169 +1537,27 @@ public:
                 }
             }
 
-#ifdef PROFILE
-            profile.output.barrier();
-            PS::Comm::barrier();
-            profile.output.end();
-//        profile.soft_tot.start();
-            profile.kick.start();
-#endif
-            // >4. kick  ----------------------------------------
-            /// Member mass are recovered
-            // single and reset status to zero (due to binary disruption)
-            kickOne(system_soft, dt_kick, search_cluster.getAdrSysOneCluster());
-            // isolated
-            kickClusterAndRecoverGroupMemberMass(system_soft, system_hard_isolated.getPtcl(), dt_kick);
-            // c.m. artificial
-            kickCM(system_soft, n_loc, hard_manager.ap_manager, dt_kick);
-        
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-            // connected
-            kickClusterAndRecoverGroupMemberMass(system_soft, system_hard_connected.getPtcl(), dt_kick);
-            // sending list for connected clusters
-            kickSend(system_soft, search_cluster.getAdrSysConnectClusterSend(), dt_kick);
-            // send kicked particle from sending list, and receive remote single particle
-            search_cluster.SendSinglePtcl(system_soft, system_hard_connected.getPtcl());
-#endif
 
-#ifdef HARD_DEBUG
-            PS::S32 kick_regist[n_loc];
-            for(int i=0; i<n_loc; i++) kick_regist[i] = 0;
-            for(int i=0; i<search_cluster.getAdrSysOneCluster().size(); i++) {
-                kick_regist[search_cluster.getAdrSysOneCluster()[i]]++;
-            }
-            for(int i=0; i<system_hard_isolated.getPtcl().size(); i++) {
-                PS::S64 adr= system_hard_isolated.getPtcl()[i].adr_org;
-                assert(adr>=0);
-                kick_regist[adr]++;
-            }
-            for(int i=0; i<system_hard_connected.getPtcl().size(); i++) {
-                PS::S64 adr= system_hard_connected.getPtcl()[i].adr_org;
-                if(adr>=0) kick_regist[adr]++;
-            }
-            for(int i=0; i<search_cluster.getAdrSysConnectClusterSend().size(); i++) {
-                PS::S64 adr= search_cluster.getAdrSysConnectClusterSend()[i];
-                kick_regist[adr]++;
-            }
-            for(int i=0; i<n_loc; i++) {
-                assert(kick_regist[i]==1);
-            }
-#endif
+            // >6. kick 
+            kick(dt_kick);
 
-#ifdef PROFILE
-            profile.kick.barrier();
-            PS::Comm::barrier();
-            profile.kick.end();
-//        profile.soft_tot.end();
-#endif
 
             // output information
             if(output_flag) {
-
-#ifdef PROFILE
-                profile.output.start();
-#endif
                 // update global particle system due to kick
                 system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
                 // update gloabl particle system and send receive remote particles
                 search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
 #endif
-
-                // update status
-                stat.time = time_sys;
-                stat.N = n_glb;
-
-
-                stat.energy.calc(&system_soft[0], n_loc);
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-                stat.energy.getSumMultiNodes();
-#endif
-
-#ifdef HARD_CHECK_ENERGY
-                HardEnergy energy_local = system_hard_isolated.energy;
-                energy_local += system_hard_connected.energy;
-                // hard energy error
-                stat.energy_hard_diff += PS::Comm::getSum(energy_local.de);
-                stat.energy_hard_sd_diff += PS::Comm::getSum(energy_local.de_sd);
-                // energy correction due to slowdown 
-                PS::F64 ekin_sd_correction = PS::Comm::getSum(energy_local.ekin_sd_correction);
-                stat.energy.ekin_sd = stat.energy.ekin + ekin_sd_correction;
-                PS::F64 epot_sd_correction = PS::Comm::getSum(energy_local.epot_sd_correction);
-                stat.energy.epot_sd = stat.energy.epot + epot_sd_correction;
-                PS::F64 etot_sd_correction = ekin_sd_correction + epot_sd_correction;
-                // for total energy reference, first add the cumulative change due to slowdown change in the integration (referring to no slowdown case), then add slowdown energy correction from current time
-                stat.energy.etot_sd_ref += PS::Comm::getSum(energy_local.de_sd_change_cum) + etot_sd_correction;
-
-                system_hard_isolated.energy.clear();
-                system_hard_connected.energy.clear();
-#endif
-
-                // print status
-                if(my_rank==0) {
-                    std::cout<<std::endl;
-                    stat.print(std::cout);
-                    stat.printColumn(fstatus, WRITE_WIDTH);
-                    fstatus<<std::endl;
-                }
-
-//#ifdef HARD_CHECK_ENERGY
-//            for (int i=1;i<20;i++)  system_hard_isolated.N_count[i] = PS::Comm::getSum(system_hard_isolated.N_count[i]);
-//            if(my_rank==0) {
-//                std::cerr<<"NHist: ";
-//                for (PS::S32 i=0;i<20;i++) {
-//                    std::cerr<<system_hard_isolated.N_count[i]<<" ";
-//                    system_hard_isolated.N_count[i] = 0;
-//                }
-//                std::cerr<<std::endl;
-//            }
-//#endif
-
-                // data output
-                file_header.n_body = n_glb;
-                file_header.time = time_sys;
-                file_header.nfile++;
-                std::string fname = filename_output+"."+std::to_string(file_header.nfile);
-                system_soft.setNumberOfParticleLocal(n_loc);
-                if (output_data_format==1||output_data_format==3)
-                    system_soft.writeParticleAscii(fname.c_str(), file_header);
-                else if(output_data_format==0||output_data_format==2)
-                    system_soft.writeParticleBinary(fname.c_str(), file_header);
-                system_soft.setNumberOfParticleLocal(n_loc_all);
-
-#ifdef MAIN_DEBUG
-                write_p(fout, time_sys, system_soft, stat.energy);
-//        //output
-//        PS::S32 ntot = system_soft.getNumberOfParticleLocal();
-//        fout<<std::setprecision(17)<<time_sys<<" ";
-//        for (PS::S32 i=0;i<ntot;i++){
-//          fout<<system_soft[i].mass<<" ";
-//          for (PS::S32 k=0;k<3;k++) fout<<system_soft[i].pos[k]<<" ";
-//          for (PS::S32 k=0;k<3;k++) fout<<system_soft[i].vel[k]<<" ";
-//          fout<<system_soft[i].pot_tot<<" ";
-//          fout<<0.5*system_soft[i].mass*system_soft[i].vel*system_soft[i].vel<<" ";
-//        }
-//        fout<<std::endl;
-#endif
-
-                // reset sd energy reference to no slowdown case
-                stat.energy.etot_sd_ref -= ekin_sd_correction + epot_sd_correction;
-            
-
-#ifdef PROFILE
-                profile.output.barrier();
-                PS::Comm::barrier();
-                profile.output.end();
-                //// second half kick
-                //profile.soft_tot.start();
-                //profile.kick.start();
-#endif
+                output();
             }
+
 
             // modify the tree step
             if(dt_mod_flag) {
                 dt_manager.setStep(dt_tree/dt_reduce_factor);
-                std::cout<<"Tree time step change, time = "<<time_sys
+                std::cout<<"Tree time step change, time = "<<stat.time
                          <<"  dt_soft = "<<dt_tree
                          <<"  reduce factor = "<<dt_reduce_factor
                          <<std::endl;
@@ -1263,294 +1565,43 @@ public:
 
             // second kick if dt_tree is changed or output is done
             if(dt_mod_flag||output_flag||changeover_flag) {
-#ifdef PROFILE
-                profile.kick.start();
-#endif
-
                 //update new tree step if reduce factor is changed
                 dt_kick = dt_manager.getDtStartContinue();
 
-                // Isolated clusters
-                system_hard_isolated.correctForceForChangeOverUpdateOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft);
+                correctForceChangeOverUpdate();
 
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-                // Connected clusters
-                auto& adr_send = search_cluster.getAdrSysConnectClusterSend();
-                system_hard_connected.correctForceForChangeOverUpdateOMP<SystemSoft, TreeForce, EPJSoft>(system_soft, tree_soft, adr_send.getPointer(), adr_send.size());
-#endif
-
-                // single
-                kickOne(system_soft, dt_kick, search_cluster.getAdrSysOneCluster());
-                // isolated
-                kickClusterAndRecoverGroupMemberMass(system_soft, system_hard_isolated.getPtcl(), dt_kick);
-                // c.m.
-                kickCM(system_soft, n_loc, hard_manager.ap_manager, dt_kick);
-
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-                // connected
-                kickClusterAndRecoverGroupMemberMass(system_soft, system_hard_connected.getPtcl(), dt_kick);
-                // sending list for connected clusters, kick data are written on system_soft
-                kickSend(system_soft, search_cluster.getAdrSysConnectClusterSend(), dt_kick);
-                // send kicked particle from sending list , and receive remote single particle
-                search_cluster.SendSinglePtcl(system_soft, system_hard_connected.getPtcl());
-#endif
-#ifdef PROFILE
-                profile.kick.barrier();
-                PS::Comm::barrier();
-                profile.kick.end();
-#endif
+                kick(dt_kick);
             }
 
 
-#ifdef PROFILE
             // >5. Hard integration --------------------------------------
-            //  profile.hard_tot.start();
-#endif
-
-            ////// set time
-            system_hard_one_cluster.setTimeOrigin(time_sys);
-            system_hard_isolated.setTimeOrigin(time_sys);
-            system_hard_connected.setTimeOrigin(time_sys);
-            ////// set time
-
-            // reset slowdown energy correction
-            system_hard_isolated.energy.resetEnergyCorrection();
-            system_hard_connected.energy.resetEnergyCorrection();
-        
             // get drift step
             dt_drift = dt_manager.getDtDriftContinue();
 
-#ifdef PROFILE
-            profile.hard_single.start();
-#endif
-            ////// integrater one cluster
-            system_hard_one_cluster.initializeForOneCluster(search_cluster.getAdrSysOneCluster().size());
-            system_hard_one_cluster.setPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
-            system_hard_one_cluster.driveForOneClusterOMP(dt_drift);
-            //system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft, search_cluster.getAdrSysOneCluster());
-            system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft);
-            ////// integrater one cluster
-#ifdef PROFILE
-            profile.hard_single.barrier();
-            profile.hard_single.end();
-#endif
-            ////////////////
-
-            /////////////
-#ifdef PROFILE
-            profile.hard_isolated.start();
-#endif
-            // integrate multi cluster A
-            system_hard_isolated.driveForMultiClusterOMP(dt_drift, &(system_soft[0]));
-            //system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_,remove_list);
-            system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
-            // integrate multi cluster A
-#ifdef PROFILE
-            profile.hard_isolated.barrier();
-            profile.hard_isolated.end();
-#endif
-            /////////////
-
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-            /////////////
-#ifdef PROFILE
-            profile.hard_connected.start();
-#endif
-            // integrate multi cluster B
-            system_hard_connected.driveForMultiClusterOMP(dt_drift, &(system_soft[0]));
-            search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
-            // integrate multi cluster B
-#ifdef PROFILE
-            profile.hard_connected.barrier();
-            PS::Comm::barrier();
-            profile.hard_connected.end();
-#endif
-
-#endif
-        
-//#ifdef MAIN_DEBUG
-//        n_loc = system_soft.getNumberOfParticleLocal();
-//        for(PS::S32 i=0; i<n_loc; i++){
-//            if(system_soft[i].id<0&&system_soft[i].status<0) {
-//                std::cerr<<"Error! Ghost detected in system_soft after remove, i="<<i<<std::endl;
-//                abort();
-//            }
-//        }
-//#endif
+            drift(dt_drift);
+            
             // determine the next tree time step
             PS::F64 dt_reduce_factor_org = 1.0;
             dt_reduce_factor_org = PS::Comm::getMaxValue(dt_reduce_factor_org);
             dt_reduce_factor = 1.0;
             while(dt_reduce_factor<dt_reduce_factor_org) dt_reduce_factor *=2.0;
 
-            /////////////
-            // Remove ghost particles
-            system_soft.removeParticle(remove_list.getPointer(), remove_list.size());
-            // reset particle number
-            system_soft.setNumberOfParticleLocal(n_loc-remove_list.size());
-            remove_list.resizeNoInitialize(0);
-
-#ifdef PROFILE
-//        profile.hard_tot.end();
-            /////////////
+            //! remove artificial and unused particles
+            removeParticles();
 
             // > 6. Domain decomposition
-            profile.domain.start();
-#endif
-            // Domain decomposition, parrticle exchange and force calculation
-            if(n_loop % 16 == 0) {
-                dinfo.decomposeDomainAll(system_soft,domain_decompose_weight);
-                //std::cout<<"rank: "<<my_rank<<" weight: "<<domain_decompose_weight<<std::endl;
-            }
-#ifdef PROFILE
-            profile.domain.barrier();
-            PS::Comm::barrier();
-            profile.domain.end();
-            profile.exchange.start();
-#endif
-            system_soft.exchangeParticle(dinfo);
+            domainDecompose();
+            // > 7. exchange particles
+            exchangeParticle();
 
-            const PS::S32 n_loc_tmp = system_soft.getNumberOfParticleLocal();
-#pragma omp parallel for
-            for(PS::S32 i=0; i<n_loc_tmp; i++){
-                system_soft[i].rank_org = my_rank;
-                system_soft[i].adr = i;
-            }
-        
-#ifdef PROFILE
-            profile.exchange.barrier();
-            PS::Comm::barrier();
-            profile.exchange.end();
-#endif
+            // advance stat.time and step count
+            stat.time += dt_drift;
 
-            // advance time_sys and step count
-            time_sys += dt_drift;
             dt_manager.nextContinue();
 
-            //std::cout<<"T="<<time_sys<<" rd="<<dt_reduce_factor_pre<<std::endl;
+            //! profile
+            calcProfile();
 
-#ifdef PROFILE
-            profile.tot.barrier();
-            profile.tot.end();
-        
-            // profile analysis
-
-            PS::S32 n_hard_single     = system_hard_one_cluster.getPtcl().size();
-            PS::S32 n_hard_isolated   = system_hard_isolated.getPtcl().size();
-            PS::S32 n_hard_connected  = system_hard_connected.getPtcl().size();
-
-            n_count.hard_single      += n_hard_single;
-            n_count.hard_isolated    += n_hard_isolated;
-            n_count.hard_connected   += n_hard_connected;
-
-            n_count_sum.hard_single      += PS::Comm::getSum(n_hard_single);
-            n_count_sum.hard_isolated    += PS::Comm::getSum(n_hard_isolated);
-            n_count_sum.hard_connected   += PS::Comm::getSum(n_hard_connected);
-                                           
-            PS::S64 ARC_substep_sum   = system_hard_isolated.ARC_substep_sum;
-            ARC_substep_sum += system_hard_connected.ARC_substep_sum;
-            PS::S64 ARC_tsyn_step_sum   = system_hard_isolated.ARC_tsyn_step_sum;
-            ARC_tsyn_step_sum += system_hard_connected.ARC_tsyn_step_sum;
-            PS::S64 ARC_n_groups      = system_hard_isolated.ARC_n_groups;
-            ARC_n_groups += system_hard_connected.ARC_n_groups;
-            PS::S64 H4_step_sum       = system_hard_isolated.H4_step_sum;
-            H4_step_sum +=  system_hard_connected.H4_step_sum;
-            n_count.ARC_substep_sum  += ARC_substep_sum;
-            n_count.ARC_tsyn_step_sum+= ARC_tsyn_step_sum;
-            n_count.ARC_n_groups     += ARC_n_groups;
-            n_count.H4_step_sum      += H4_step_sum;
-
-            n_count_sum.ARC_substep_sum  += PS::Comm::getSum(ARC_substep_sum);
-            n_count_sum.ARC_tsyn_step_sum+= PS::Comm::getSum(ARC_tsyn_step_sum);
-            n_count_sum.ARC_n_groups     += PS::Comm::getSum(ARC_n_groups);
-            n_count_sum.H4_step_sum      += PS::Comm::getSum(H4_step_sum);
-
-            system_hard_isolated.ARC_substep_sum = 0;
-            system_hard_isolated.ARC_tsyn_step_sum=0;
-            system_hard_isolated.ARC_n_groups = 0;
-            system_hard_isolated.H4_step_sum = 0;
-            system_hard_connected.ARC_substep_sum = 0;
-            system_hard_connected.ARC_tsyn_step_sum=0;
-            system_hard_connected.ARC_n_groups = 0;
-            system_hard_connected.H4_step_sum = 0;
-                                           
-            n_count.cluster_count(1, n_hard_single);
-
-            const PS::S32  n_isolated_cluster = system_hard_isolated.getNCluster();
-            n_count.cluster_isolated += n_isolated_cluster;
-            n_count_sum.cluster_isolated += PS::Comm::getSum(n_isolated_cluster);
-
-            const PS::S32* isolated_cluster_n_list = system_hard_isolated.getClusterNList();
-            for (PS::S32 i=0; i<n_isolated_cluster; i++) n_count.cluster_count(isolated_cluster_n_list[i]);
-
-            const PS::S32  n_connected_cluster = system_hard_connected.getNCluster();
-            n_count.cluster_connected += n_connected_cluster;
-            n_count_sum.cluster_connected += PS::Comm::getSum(n_connected_cluster);
-            const PS::S32* connected_cluster_n_list = system_hard_connected.getClusterNList();
-            for (PS::S32 i=0; i<n_connected_cluster; i++) n_count.cluster_count(connected_cluster_n_list[i]);
-
-            dn_loop++;
-
-            // output profile data
-            if(fmod(time_sys, dt_output) == 0.0) {
-
-                //const int NProc=PS::Comm::getNumberOfProc();
-
-                const SysProfile& profile_min = profile.getMin();
-                const SysProfile& profile_max = profile.getMax();
-        
-                if(my_rank==0) {
-                    std::cout<<std::setprecision(5);
-                    std::cout<<"Tree step number: "<<dn_loop
-                             <<"  Local N: "<<n_loc
-                             <<"  Local Nall: "<<n_loc_all<<std::endl;
-                
-
-                    std::cout<<"**** Wallclock time per step (local): [Min/Max]\n";
-                    //std::cout<<std::setw(PRINT_WIDTH)<<"Rank";
-                    profile.dumpName(std::cout,PRINT_WIDTH);
-                    std::cout<<std::endl;
-
-                    //std::cout<<std::setw(PRINT_WIDTH)<<my_rank;
-                    profile_min.dump(std::cout,PRINT_WIDTH,dn_loop);
-                    std::cout<<std::endl;
-                    profile_max.dump(std::cout,PRINT_WIDTH,dn_loop);
-                    std::cout<<std::endl;
-
-                    std::cout<<"**** FDPS time profile (local):\n";
-                    ps_profile.dumpName(std::cout,PRINT_WIDTH);
-                    std::cout<<std::endl;
-                    ps_profile.dump(std::cout,PRINT_WIDTH,dn_loop);
-                    std::cout<<std::endl;
-
-                    std::cout<<"**** Number per step (global):\n";
-                    n_count_sum.dumpName(std::cout,PRINT_WIDTH);
-                    std::cout<<std::endl;
-                    n_count_sum.dump(std::cout,PRINT_WIDTH,dn_loop);
-                    std::cout<<std::endl;
-                
-                    std::cout<<"**** Number of members in clusters (local):\n";
-                    n_count.printHist(std::cout,PRINT_WIDTH,dn_loop);
-                }
-
-                fprofile<<std::setprecision(WRITE_PRECISION);
-                fprofile<<std::setw(WRITE_WIDTH)<<my_rank;
-                fprofile<<std::setw(WRITE_WIDTH)<<time_sys
-                        <<std::setw(WRITE_WIDTH)<<dn_loop
-                        <<std::setw(WRITE_WIDTH)<<n_loc;
-                profile.dump(fprofile, WRITE_WIDTH, dn_loop);
-                profile.dumpBarrier(fprofile, WRITE_WIDTH, dn_loop);
-                ps_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
-                n_count.dump(fprofile, WRITE_WIDTH, dn_loop);
-                fprofile<<std::endl;
-
-                profile.clear();
-                ps_profile.clear();
-                n_count.clear();
-                n_count_sum.clear();
-                dn_loop=0;
-            }
-#endif
             n_loop++;
         }
 
@@ -1568,7 +1619,7 @@ public:
         
         if (init_flag) PS::Finalize();
         init_flag = false;
-        first_step_flag = false;
+        first_step_flag = true;
     }
 
     ~PeTar() { clear();}
