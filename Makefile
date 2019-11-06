@@ -4,19 +4,19 @@
 #PS_PATH = -I../../../fdps/src/
 #PS_PATH = -I../../fdps/src/
 #PS_PATH = -I../../../../project/fdps/src
-#PS_PATH = -I../FDPS/src
+PS_PATH = -I../FDPS/src
 #PS_PATH = -I../fdps.svn/
-PS_PATH  = -I/home/lwang/code/fdps/src
+#PS_PATH  = -I/home/lwang/code/fdps/src
 
 ##ARC PATH
-#ARC_PATH= -I../TSARC/include
+ARC_PATH= -I../ARModule/src
 #ARC_PATH = -I/home/lwang/code/ARC/include
-ARC_PATH = -I/home/lwang/GitHub/ARModule/src
+#ARC_PATH = -I/home/lwang/GitHub/ARModule/src
 
 ##Gperftools PATH
 #GPERF_PATH = ../../soft/gperftools-2.6.90
 
-ROOT_PATH= /home/lwang/GitHub/P3TARC
+ROOT_PATH= .
 INCLUDE  = -I${ROOT_PATH}/src
 
 #use_k_computer = yes
@@ -171,6 +171,7 @@ all: nbody.out
 
 nbody.out: $(SRC)
 	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)
+
 
 hard_debug.out: hard_debug.cxx
 	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -o $@ $< $(CXXLIBS)
