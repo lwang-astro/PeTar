@@ -445,20 +445,11 @@ void SetParticlePlummer(Tpsys & psys,
 
     PS::S32 my_rank = PS::Comm::getRank();
     PS::S32 n_proc = PS::Comm::getNumberOfProc();
-#if 0 // for debug
-    if(my_rank == 0){
-        n_loc = n_glb;
-    }
-    else{
-        n_loc = 0;
-    }
-    psys.setNumberOfParticleLocal(n_loc);
-#else
-// original
+
     n_loc = n_glb / n_proc; 
     if( n_glb % n_proc > my_rank) n_loc++;
     psys.setNumberOfParticleLocal(n_loc);
-#endif
+
     PS::F64 * mass;
     PS::F64vec * pos;
     PS::F64vec * vel;
@@ -469,29 +460,14 @@ void SetParticlePlummer(Tpsys & psys,
     PS::S64 i_h = n_glb/n_proc*my_rank;
     if( n_glb % n_proc  > my_rank) i_h += my_rank;
     else i_h += n_glb % n_proc;
-#ifdef BINARY
-    for(PS::S32 i=0; i<n_loc; i+=2){
-        psys[i].mass = mass[i];
-        psys[i].pos = pos[i];
-        psys[i].vel = vel[i];
-        psys[i].id = i_h + i+1;
-        psys[i].status.d = 0;
-        psys[i+1].mass = mass[i];
-        psys[i+1].pos = pos[i] + PS::F64vec(0.02, 0.02, 0.02);
-        psys[i+1].vel = vel[i];
-        psys[i+1].id = i_h + i+2;
-        psys[i+1].status.d = 0;
-        
-    }
-#else
     for(PS::S32 i=0; i<n_loc; i++){
         psys[i].mass = mass[i];
         psys[i].pos = pos[i];
         psys[i].vel = vel[i];
         psys[i].id = i_h + i + 1;
         psys[i].status.d = 0;
+        psys[i].mass_bk.d = 0;
     }
-#endif
     delete [] mass;
     delete [] pos;
     delete [] vel;
