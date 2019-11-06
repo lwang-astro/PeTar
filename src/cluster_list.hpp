@@ -362,6 +362,10 @@ public:
             pi.vel[1] = _pi.status.f[1];
             pi.vel[2] = _pi.mass_bk.f[0];
             pi.mass   = _pi.mass_bk.f[1];
+#ifdef CLUSTER_DEBUG
+            if (_pi.status.d==0.0 && _pi.mass_bk.d!=0.0) 
+                std::cout<<"Warning: may not be pcm data! idi "<<_pi.id<<" status="<<_pi.status.d<<" mass_bk="<<_pi.mass_bk.d<<std::endl;
+#endif
         }
 
         for (PS::S32 j=0; j<_nb; j++) {
@@ -376,6 +380,10 @@ public:
                 pj.vel[1] = _pb[j].status.f[1];
                 pj.vel[2] = _pb[j].mass_bk.f[0];
                 pj.mass   = _pb[j].mass_bk.f[1];
+#ifdef CLUSTER_DEBUG
+                if (_pb[j].status.d==0.0 && _pb[j].mass_bk.d!=0.0) 
+                    std::cout<<"Warning: may not be pcm data! idj "<<_pb[j].id<<" status="<<_pb[j].status.d<<" mass_bk="<<_pb[j].mass_bk.d<<std::endl;
+#endif
             }
             PS::F64 semi,ecc, r,rv;
             COMM::Binary::particleToSemiEcc(semi, ecc, r, rv, pi, pj, _G);
@@ -391,8 +399,9 @@ public:
                 std::cerr<<"Reject idi "<<_pi.id<<" idj "<<_pb[j].id<<" peri "
                          <<peri<<" rci "<<r_crit_i<<" rcj "<<r_crit_j<<" dr "<<r<<" drdv "<<rv
                          <<" c.m.vel.i "<<_pi.status.f[0]<<" "<<_pi.status.f[1]<<" "<<_pi.mass_bk.f[0]<<" "<<_pi.mass_bk.f[1]<<" "
+                         <<"i.status "<<_pi.status.d<<" i.mass_bk "<<_pi.mass_bk.d
                          <<"c.m.vel.j "<<_pb[j].status.f[0]<<" "<<_pb[j].status.f[1]<<" "<<_pb[j].mass_bk.f[0]<<" "<<_pb[j].mass_bk.f[1]<<" "
-                         <<"status "<<_pi.status.d<<" mass_bk"<<_pi.mass_bk.d
+                         <<"j.status "<<_pb[j].status.d<<" j.mass_bk "<<_pb[j].mass_bk.d
                          <<std::endl;
 #endif            
         }

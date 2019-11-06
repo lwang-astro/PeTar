@@ -128,7 +128,7 @@ public:
     TreeNB tree_nb;
     TreeForce tree_soft;
     bool init_flag;
-    bool first_step_flag;
+    bool initial_step_flag;
 
     HardManager hard_manager;
     SystemHard system_hard_one_cluster;
@@ -152,7 +152,7 @@ public:
         fout(),
 #endif        
         n_loop(0), time_end(0.0), dt_tree(0.0), dt_output(0.0), domain_decompose_weight(1.0), search_cluster_radius_factor(0.0), filename_output(), output_data_format(0),
-        file_header(), system_soft(), dinfo(), pos_domain(NULL), tree_nb(), tree_soft(), init_flag(false), first_step_flag(true),
+        file_header(), system_soft(), dinfo(), pos_domain(NULL), tree_nb(), tree_soft(), init_flag(false), initial_step_flag(true),
         hard_manager(), system_hard_one_cluster(), system_hard_isolated(), system_hard_connected(), 
         remove_list(),
         search_cluster()  {}
@@ -162,68 +162,68 @@ private:
     //! tree for neighbor searching.
     inline void treeNeighborSearch() {
 #ifdef PROFILE
-            profile.tree_nb.start();
+        profile.tree_nb.start();
 #endif
 #ifndef USE_SIMD
-            tree_nb.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSimd(), system_soft, dinfo);
+        tree_nb.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSimd(), system_soft, dinfo);
 #else
-            tree_nb.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(), system_soft, dinfo);
+        tree_nb.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(), system_soft, dinfo);
 #endif
         
 #ifdef PROFILE
-            profile.tree_nb.barrier();
-            PS::Comm::barrier();
-            profile.tree_nb.end();
+        profile.tree_nb.barrier();
+        PS::Comm::barrier();
+        profile.tree_nb.end();
 #endif
     }
 
     //! search clusters
     inline void searchCluster() {
 #ifdef PROFILE
-            profile.search_cluster.start();
+        profile.search_cluster.start();
 #endif
-            // >2.1 search clusters ----------------------------------------
-            search_cluster.searchNeighborOMP<SystemSoft, TreeNB, EPJSoft>
-                (system_soft, tree_nb, pos_domain, 1.0, search_cluster_radius_factor);
+        // >2.1 search clusters ----------------------------------------
+        search_cluster.searchNeighborOMP<SystemSoft, TreeNB, EPJSoft>
+            (system_soft, tree_nb, pos_domain, 1.0, search_cluster_radius_factor);
 
-            search_cluster.searchClusterLocal();
-            search_cluster.setIdClusterLocal();
+        search_cluster.searchClusterLocal();
+        search_cluster.setIdClusterLocal();
 
-            // >2.2 Send/receive connect cluster
+        // >2.2 Send/receive connect cluster
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-            search_cluster.connectNodes(pos_domain,tree_nb);
-            search_cluster.setIdClusterGlobalIteration();
-            search_cluster.sendAndRecvCluster(system_soft);
+        search_cluster.connectNodes(pos_domain,tree_nb);
+        search_cluster.setIdClusterGlobalIteration();
+        search_cluster.sendAndRecvCluster(system_soft);
 #endif
 
 #ifdef PROFILE
-            profile.search_cluster.barrier();
-            PS::Comm::barrier();
-            profile.search_cluster.end();
+        profile.search_cluster.barrier();
+        PS::Comm::barrier();
+        profile.search_cluster.end();
 #endif    
     }
 
     //! and ground and create artificial particles
     inline void createGroup() {
 #ifdef PROFILE
-            profile.create_group.start();
+        profile.create_group.start();
 #endif
 
-            // record real particle n_loc/glb
-            stat.n_real_loc = system_soft.getNumberOfParticleLocal();
-            stat.n_real_glb = system_soft.getNumberOfParticleGlobal();
+        // record real particle n_loc/glb
+        stat.n_real_loc = system_soft.getNumberOfParticleLocal();
+        stat.n_real_glb = system_soft.getNumberOfParticleGlobal();
 
 
-            // >2.3 Find ARC groups and create artificial particles
-            // Set local ptcl_hard for isolated  clusters
-            system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
+        // >2.3 Find ARC groups and create artificial particles
+        // Set local ptcl_hard for isolated  clusters
+        system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
 
 //#ifdef CLUSTER_DEBUG
 //        for (PS::S32 i=0; i<n_loc; i++) system_soft[i].status = -1000000;
 //#endif
 
-            // Find groups and add artificial particles to global particle system
-            system_hard_isolated.findGroupsAndCreateArtificialParticlesOMP<SystemSoft, FPSoft>(system_soft, dt_tree);
+        // Find groups and add artificial particles to global particle system
+        system_hard_isolated.findGroupsAndCreateArtificialParticlesOMP<SystemSoft, FPSoft>(system_soft, dt_tree);
 
 //#ifdef CLUSTER_DEBUG
 //        not correct check, isolated clusters are not reset above
@@ -233,80 +233,80 @@ private:
 //            }
 //        }
 //#endif
-            // update n_loc_iso, n_glb_iso for isolated clusters
-            //PS::S64 n_loc_iso = system_soft.getNumberOfParticleLocal();
-            //PS::S64 n_glb_iso = system_soft.getNumberOfParticleGlobal();
+        // update n_loc_iso, n_glb_iso for isolated clusters
+        //PS::S64 n_loc_iso = system_soft.getNumberOfParticleLocal();
+        //PS::S64 n_glb_iso = system_soft.getNumberOfParticleGlobal();
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-            // For connected clusters
-            system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
-            system_hard_connected.findGroupsAndCreateArtificialParticlesOMP<SystemSoft, FPSoft>(system_soft, dt_tree);
-            // send updated particle back to original (set zero mass particle to origin)
-            search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+        // For connected clusters
+        system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
+        system_hard_connected.findGroupsAndCreateArtificialParticlesOMP<SystemSoft, FPSoft>(system_soft, dt_tree);
+        // send updated particle back to original (set zero mass particle to origin)
+        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
 #endif
 
-            // update n_glb, n_glb for all
-            stat.n_all_loc = system_soft.getNumberOfParticleLocal();
-            stat.n_all_glb = system_soft.getNumberOfParticleGlobal();
+        // update n_glb, n_glb for all
+        stat.n_all_loc = system_soft.getNumberOfParticleLocal();
+        stat.n_all_glb = system_soft.getNumberOfParticleGlobal();
             
-            // >2.4 set adr/rank for artificial particles in GPS
+        // >2.4 set adr/rank for artificial particles in GPS
 #pragma omp parallel for
-            for(PS::S32 i=stat.n_real_loc; i<stat.n_all_loc; i++){
-                system_soft[i].rank_org = my_rank;
-                system_soft[i].adr = i;
+        for(PS::S32 i=stat.n_real_loc; i<stat.n_all_loc; i++){
+            system_soft[i].rank_org = my_rank;
+            system_soft[i].adr = i;
 #ifdef HARD_DEBUG
-                assert(system_soft[i].status.d>0);
+            assert(system_soft[i].status.d>0);
 #endif
-            }
-            // >3 Tree for force ----------------------------------------
+        }
+        // >3 Tree for force ----------------------------------------
 #ifdef PROFILE
-            profile.create_group.barrier();
-            PS::Comm::barrier();
-            profile.create_group.end();
+        profile.create_group.barrier();
+        PS::Comm::barrier();
+        profile.create_group.end();
 #endif
     }
 
     //! calculate tree solf force
     inline void treeSoftForce() {
 #ifdef PROFILE
-            profile.tree_soft.start();
+        profile.tree_soft.start();
 
-            tree_soft.clearNumberOfInteraction();
-            tree_soft.clearTimeProfile();
+        tree_soft.clearNumberOfInteraction();
+        tree_soft.clearTimeProfile();
 #endif
 
 #ifndef USE_SIMD
-            tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSimd(),
+        tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSimd(),
 #ifdef USE_QUAD
-                                               CalcForceEpSpQuadNoSimd(),
+                                           CalcForceEpSpQuadNoSimd(),
 #else
-                                               CalcForceEpSpMonoNoSimd(),
+                                           CalcForceEpSpMonoNoSimd(),
 #endif
-                                               system_soft,
-                                               dinfo);
+                                           system_soft,
+                                           dinfo);
 #else
-            tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(),
+        tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(),
 #ifdef USE_QUAD
-                                               CalcForceEpSpQuadSimd(),
+                                           CalcForceEpSpQuadSimd(),
 #else
-                                               CalcForceEpSpMonoSimd(),
+                                           CalcForceEpSpMonoSimd(),
 #endif
-                                               system_soft,
-                                               dinfo);
+                                           system_soft,
+                                           dinfo);
 #endif
 
 #ifdef PROFILE
-            n_count.ep_ep_interact     += tree_soft.getNumberOfInteractionEPEPLocal();
-            n_count_sum.ep_ep_interact += tree_soft.getNumberOfInteractionEPEPGlobal();
-            n_count.ep_sp_interact     += tree_soft.getNumberOfInteractionEPSPLocal();
-            n_count_sum.ep_sp_interact += tree_soft.getNumberOfInteractionEPSPGlobal(); 
+        n_count.ep_ep_interact     += tree_soft.getNumberOfInteractionEPEPLocal();
+        n_count_sum.ep_ep_interact += tree_soft.getNumberOfInteractionEPEPGlobal();
+        n_count.ep_sp_interact     += tree_soft.getNumberOfInteractionEPSPLocal();
+        n_count_sum.ep_sp_interact += tree_soft.getNumberOfInteractionEPSPGlobal(); 
 
-            ps_profile += tree_soft.getTimeProfile();
-            domain_decompose_weight = ps_profile.calc_force;
+        ps_profile += tree_soft.getTimeProfile();
+        domain_decompose_weight = ps_profile.calc_force;
 
-            profile.tree_soft.barrier();
-            PS::Comm::barrier();
-            profile.tree_soft.end();
+        profile.tree_soft.barrier();
+        PS::Comm::barrier();
+        profile.tree_soft.end();
 #endif
     }
 
@@ -665,74 +665,63 @@ private:
         return dt_mod_flag;
     }
 
-    inline void outputInit() {
-#ifdef PROFILE
-        profile.output.start();
-#endif
-
-        // calculate initial energy
-        stat.energy.clear();
-        stat.energy.calc(&system_soft[0], stat.n_real_loc, true);
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-        stat.energy.getSumMultiNodes(true);
-#endif
-#ifdef HARD_CHECK_ENERGY
-        stat.energy.ekin_sd = stat.energy.ekin;
-        stat.energy.epot_sd = stat.energy.epot;
-        stat.energy_hard_diff = 0;
-        stat.energy_hard_sd_diff = 0;
-#endif
-             
-        // print status
-        if(my_rank==0) {
-            //tree_soft.initialize(n_tree_init, theta.value, n_leaf_limit.value, n_group_limit.value);
-            std::cout<<"Global total particle number: "<<stat.n_all_glb<<" real: "<<stat.n_real_glb<<std::endl;
-            std::cout<<"Local total particle number: "<<stat.n_all_loc<<" real: "<<stat.n_real_loc<<std::endl;
-
-            std::cout<<std::endl;
-            stat.print(std::cout);
-            stat.printColumn(fstatus, WRITE_WIDTH);
-            fstatus<<std::endl;
-        }
-#ifdef PROFILE
-        profile.output.barrier();
-        PS::Comm::barrier();
-        profile.output.end();
-#endif
-    }
-
-    inline void output() {
-#ifdef PROFILE
-        profile.output.start();
-#endif
+    inline void updateStatus(const bool _initial_flag) {
 
 #ifdef PETAR_DEBUG
         assert(stat.n_all_loc==system_soft.getNumberOfParticleLocal());
 #endif
 
-
-        stat.energy.calc(&system_soft[0], stat.n_real_loc);
+        if (_initial_flag) {
+            // calculate initial energy
+            stat.energy.clear();
+            stat.energy.calc(&system_soft[0], stat.n_real_loc, true);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-        stat.energy.getSumMultiNodes();
+            stat.energy.getSumMultiNodes(true);
+#endif
+#ifdef HARD_CHECK_ENERGY
+            stat.energy.ekin_sd = stat.energy.ekin;
+            stat.energy.epot_sd = stat.energy.epot;
+            stat.energy_hard_diff = 0;
+            stat.energy_hard_sd_diff = 0;
+#endif
+
+        }
+        else {
+
+#ifdef HARD_CHECK_ENERGY
+            // reset sd energy reference to no slowdown case
+            stat.energy.etot_sd_ref -= stat.energy.ekin_sd + stat.energy.epot_sd - stat.energy.ekin - stat.energy.epot;
+#endif
+
+            stat.energy.calc(&system_soft[0], stat.n_real_loc);
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+            stat.energy.getSumMultiNodes();
 #endif
 
 #ifdef HARD_CHECK_ENERGY
-        HardEnergy energy_local = system_hard_isolated.energy;
-        energy_local += system_hard_connected.energy;
-        // hard energy error
-        stat.energy_hard_diff += PS::Comm::getSum(energy_local.de);
-        stat.energy_hard_sd_diff += PS::Comm::getSum(energy_local.de_sd);
-        // energy correction due to slowdown 
-        PS::F64 ekin_sd_correction = PS::Comm::getSum(energy_local.ekin_sd_correction);
-        stat.energy.ekin_sd = stat.energy.ekin + ekin_sd_correction;
-        PS::F64 epot_sd_correction = PS::Comm::getSum(energy_local.epot_sd_correction);
-        stat.energy.epot_sd = stat.energy.epot + epot_sd_correction;
-        PS::F64 etot_sd_correction = ekin_sd_correction + epot_sd_correction;
-        // for total energy reference, first add the cumulative change due to slowdown change in the integration (referring to no slowdown case), then add slowdown energy correction from current time
-        stat.energy.etot_sd_ref += PS::Comm::getSum(energy_local.de_sd_change_cum) + etot_sd_correction;
+            HardEnergy energy_local = system_hard_isolated.energy;
+            energy_local += system_hard_connected.energy;
+            // hard energy error
+            stat.energy_hard_diff += PS::Comm::getSum(energy_local.de);
+            stat.energy_hard_sd_diff += PS::Comm::getSum(energy_local.de_sd);
+            // energy correction due to slowdown 
+            PS::F64 ekin_sd_correction = PS::Comm::getSum(energy_local.ekin_sd_correction);
+            stat.energy.ekin_sd = stat.energy.ekin + ekin_sd_correction;
+            PS::F64 epot_sd_correction = PS::Comm::getSum(energy_local.epot_sd_correction);
+            stat.energy.epot_sd = stat.energy.epot + epot_sd_correction;
+            PS::F64 etot_sd_correction = ekin_sd_correction + epot_sd_correction;
+            // for total energy reference, first add the cumulative change due to slowdown change in the integration (referring to no slowdown case), then add slowdown energy correction from current time
+            stat.energy.etot_sd_ref += PS::Comm::getSum(energy_local.de_sd_change_cum) + etot_sd_correction;
 
-        system_hard_isolated.energy.clear();
-        system_hard_connected.energy.clear();
+            system_hard_isolated.energy.clear();
+            system_hard_connected.energy.clear();
+#endif
+        }
+    }
+
+    inline void output(const bool _initial_flag) {
+#ifdef PROFILE
+        profile.output.start();
 #endif
 
         // print status
@@ -743,26 +732,24 @@ private:
             fstatus<<std::endl;
         }
 
-        // data output
-        file_header.n_body = stat.n_real_glb;
-        file_header.time = stat.time;
-        file_header.nfile++;
-        std::string fname = filename_output+"."+std::to_string(file_header.nfile);
-        system_soft.setNumberOfParticleLocal(stat.n_real_loc);
-        if (output_data_format==1||output_data_format==3)
-            system_soft.writeParticleAscii(fname.c_str(), file_header);
-        else if(output_data_format==0||output_data_format==2)
-            system_soft.writeParticleBinary(fname.c_str(), file_header);
-        system_soft.setNumberOfParticleLocal(stat.n_all_loc);
+        if (!_initial_flag) {
+            // data output
+            file_header.n_body = stat.n_real_glb;
+            file_header.time = stat.time;
+            file_header.nfile++;
+            std::string fname = filename_output+"."+std::to_string(file_header.nfile);
+            system_soft.setNumberOfParticleLocal(stat.n_real_loc);
+            if (output_data_format==1||output_data_format==3)
+                system_soft.writeParticleAscii(fname.c_str(), file_header);
+            else if(output_data_format==0||output_data_format==2)
+                system_soft.writeParticleBinary(fname.c_str(), file_header);
+            system_soft.setNumberOfParticleLocal(stat.n_all_loc);
 
 
 #ifdef MAIN_DEBUG
-        write_p(fout, stat.time, system_soft, stat.energy);
+            write_p(fout, stat.time, system_soft, stat.energy);
 #endif
-
-        // reset sd energy reference to no slowdown case
-        stat.energy.etot_sd_ref -= ekin_sd_correction + epot_sd_correction;
-            
+        }
 
 #ifdef PROFILE
         profile.output.barrier();
@@ -900,7 +887,7 @@ public:
     // reading input parameters
     PS::S32 readParameters(int argc, char *argv[]) {
         init_flag = true;
-        first_step_flag = true;
+        initial_step_flag = true;
         // set print format
         std::cout<<std::setprecision(PRINT_PRECISION);
         std::cerr<<std::setprecision(PRINT_PRECISION);
@@ -1444,17 +1431,18 @@ public:
     //! integrate the system
     /*! @param[in] _time_break: additional breaking time to interupt the integration, in default the system integrate to time_end
      */
-    PS::S32 evolveToTime(const PS::F64 _time_break=-1.0) {
+    PS::S32 evolveToTime(const PS::F64 _time_break=0.0) {
 
-        bool output_flag = false;    // for output snapshot and information
-        bool interupt_flag = false;  // for interupt integration 
-        bool restart_flag = false;   // for restart from interuption
-        bool dt_mod_flag = false;    // for check whether tree time step need update
-        bool changeover_flag = false; // for check whether changeover need update
+#ifdef PETAR_DEBUG
+        PS::F64 time_drift = stat.time, time_kick = stat.time;
+#endif
+        // check time break
+        PS::F64 time_break = _time_break==0.0? NUMERIC_FLOAT_MAX: _time_break;
+        if (stat.time>=time_break) return 0;
+
         KickDriftStep dt_manager(dt_tree);
         PS::F64 dt_reduce_factor=1.0;
-        PS::F64 dt_kick  = dt_manager.getDtStartContinue();
-        PS::F64 dt_drift = dt_manager.getDtDriftContinue();
+        bool first_step_flag = true;
 
         /// Main loop
         while(stat.time <= time_end){
@@ -1465,18 +1453,23 @@ public:
 #endif
 
             // >1. Tree for neighbor searching 
+            /// get neighbor list to tree_nb
             treeNeighborSearch();
 
             // >2. search clusters
+            /// gether clusters information to search_cluster, using tree_nb and velocity criterion (particles status/mass_bk)
             searchCluster();
 
             // >3. find group and create artificial particles
+            /// find group and create artificial particles, using search_cluster, save to system_hard and system_soft (particle status/mass_bk updated)
             createGroup();
 
             // >4 tree soft force
+            /// calculate tree force with linear cutoff, save to system_soft.acc
             treeSoftForce() ;
 
             // >5 correct change over
+            /// correct system_soft.acc with changeover, using system_hard and system_soft particles
             treeForceCorrectChangeover();
 
 #ifdef KDKDK_4TH
@@ -1484,24 +1477,30 @@ public:
             if (dt_manager.getCountContinue() == 1) GradientKick();
 #endif
 
-            // for first step
-            if(first_step_flag) {
+            bool interupt_flag = false;  // for interupt integration 
+            bool output_flag = false;    // for output snapshot and information
+            bool dt_mod_flag = false;    // for check whether tree time step need update
+            bool changeover_flag = false; // for check whether changeover need update
+            PS::F64 dt_kick, dt_drift;
+
+            // for initial the system
+            if(initial_step_flag) {
+                initial_step_flag = false;
                 first_step_flag = false;
 
                 // correct force due to the change over update
                 correctForceChangeOverUpdate();
 
-                outputInit();
+                updateStatus(true);
+                output(true);
 
-                output_flag = false;
-                dt_mod_flag = false;
-                changeover_flag = false;
+                dt_kick = dt_manager.getDtStartContinue();
+            }
+            else if (first_step_flag) {
+                first_step_flag = false;
                 dt_kick = dt_manager.getDtStartContinue();
             }
             else {
-                output_flag = false;
-                changeover_flag = false;
-                dt_mod_flag = false;
                 dt_kick = dt_manager.getDtKickContinue();
 
                 // check whether tree time step need update only when one full step finish
@@ -1523,9 +1522,7 @@ public:
                         dt_kick = dt_manager.getDtEndContinue();
                     }
 
-
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-                    // check changeover change
                     PS::S32 n_changeover_modify_local  = system_hard_connected.getNClusterChangeOverUpdate() + system_hard_isolated.getNClusterChangeOverUpdate();
                     PS::S32 n_changeover_modify_global = PS::Comm::getSum(n_changeover_modify_local);
                     if (n_changeover_modify_global>0) {
@@ -1534,25 +1531,60 @@ public:
                     }
 #endif
 
+                    // check interuption
+                    if (stat.time>=time_break) {
+                        interupt_flag = true;
+                        dt_kick = dt_manager.getDtEndContinue();
+                    }
+                    
                 }
             }
 
 
             // >6. kick 
             kick(dt_kick);
+#ifdef PETAR_DEBUG
+            time_kick += dt_kick;
+#endif
 
-
-            // output information
-            if(output_flag) {
+            // >7. write back data
+            if(output_flag||interupt_flag) {
                 // update global particle system due to kick
                 system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
                 // update gloabl particle system and send receive remote particles
                 search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
 #endif
-                output();
             }
 
+            // output information
+            if(output_flag) {
+                // update status
+                updateStatus(false);
+                output(false);
+            }
+
+            // interupt
+            if(interupt_flag) {
+#ifdef CLUSTER_VELOCITY
+                // update status and mass_bk to pcm data for search cluster after restart
+                system_hard_one_cluster.resetParticleStatus(system_soft);
+                system_hard_isolated.setParticleStatusToCMData(system_soft);
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+                system_hard_connected.setParticleStatusToCMData(system_soft);
+                search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+#endif                
+#endif
+                // correct force due to the change over update
+                //correctForceChangeOverUpdate();
+                // need remove artificial particles
+                system_soft.setNumberOfParticleLocal(stat.n_real_loc);
+#ifdef PETAR_DEBUG
+                assert(time_kick==time_drift);
+                assert(time_kick==stat.time);
+#endif
+                return 0;
+            }
 
             // modify the tree step
             if(dt_mod_flag) {
@@ -1565,16 +1597,23 @@ public:
 
             // second kick if dt_tree is changed or output is done
             if(dt_mod_flag||output_flag||changeover_flag) {
+#ifdef PETAR_DEBUG
+                assert(time_kick==time_drift);
+                assert(time_kick==stat.time);
+#endif
                 //update new tree step if reduce factor is changed
                 dt_kick = dt_manager.getDtStartContinue();
 
                 correctForceChangeOverUpdate();
 
                 kick(dt_kick);
+#ifdef PETAR_DEBUG
+                time_kick += dt_kick;
+#endif
             }
 
 
-            // >5. Hard integration --------------------------------------
+            // >8. Hard integration 
             // get drift step
             dt_drift = dt_manager.getDtDriftContinue();
 
@@ -1586,20 +1625,22 @@ public:
             dt_reduce_factor = 1.0;
             while(dt_reduce_factor<dt_reduce_factor_org) dt_reduce_factor *=2.0;
 
-            //! remove artificial and unused particles
+            // remove artificial and unused particles
             removeParticles();
 
-            // > 6. Domain decomposition
+            // >9. Domain decomposition
             domainDecompose();
-            // > 7. exchange particles
+            // >10. exchange particles
             exchangeParticle();
 
             // advance stat.time and step count
             stat.time += dt_drift;
-
+#ifdef PETAR_DEBUG
+            time_drift += dt_drift;
+#endif
             dt_manager.nextContinue();
 
-            //! profile
+            // profile
             calcProfile();
 
             n_loop++;
@@ -1619,7 +1660,7 @@ public:
         
         if (init_flag) PS::Finalize();
         init_flag = false;
-        first_step_flag = true;
+        initial_step_flag = true;
     }
 
     ~PeTar() { clear();}

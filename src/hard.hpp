@@ -286,10 +286,18 @@ private:
 
                     // set changeover r_scale_next for updating changeover next tree step
                     // set rsearch to maximum of c.m. rsearch and member rsearch
-                    if (p_loc.changeover.getRin()!=changeover_cm.getRin()) {
-                        p_loc.changeover.r_scale_next = changeover_cm.getRin()/p_loc.changeover.getRin();
-                        p_loc.r_search = std::max(p_loc.r_search, rsearch_cm);
-                        changeover_update_flag = true;
+                    PS::F64 rin_cm = changeover_cm.getRin();
+                    PS::F64 rin_p  = p_loc.changeover.getRin();
+                    if (rin_p!=rin_cm) {
+                        // avoid round-off error case
+                        if (abs(rin_p-rin_cm)<1e-10) {
+                            p_loc.changeover = changeover_cm;
+                        }
+                        else {
+                            p_loc.changeover.r_scale_next = changeover_cm.getRin()/p_loc.changeover.getRin();
+                            p_loc.r_search = std::max(p_loc.r_search, rsearch_cm);
+                            changeover_update_flag = true;
+                        }
                     }
                     // shift mass to mass_bk
                     p_loc.mass_bk.d = p_loc.mass;
@@ -826,14 +834,14 @@ private:
         }
     }
     
-//! soft force correction completely use tree neighbor search
-/* @param[in,out] _sys: global particle system, acc is updated
-   @param[in] _tree: tree for force
-   @param[in] _ptcl_local: particle in systme_hard, only used to get adr_org
-   @param[in] _n_ptcl: total number of particles in all clusters
-   @param[in] _adr_ptcl_artificial_start: start address of artificial particle in _sys
-   @param[in] _acorr_flag: flag to do acorr for KDKDK_4TH case
-*/
+    //! soft force correction completely use tree neighbor search
+    /* @param[in,out] _sys: global particle system, acc is updated
+       @param[in] _tree: tree for force
+       @param[in] _ptcl_local: particle in systme_hard, only used to get adr_org
+       @param[in] _n_ptcl: total number of particles in all clusters
+       @param[in] _adr_ptcl_artificial_start: start address of artificial particle in _sys
+       @param[in] _acorr_flag: flag to do acorr for KDKDK_4TH case
+    */
     template <class Tsys, class Tpsoft, class Ttree, class Tepj>
     void correctForceWithCutoffTreeNeighborImp(Tsys& _sys, 
                                                Ttree& _tree, 
@@ -865,11 +873,11 @@ private:
 
     }
 
-//! soft force correction completely use tree neighbor search for all particles
-/* @param[in,out] _sys: global particle system, acc is updated
-   @param[in] _tree: tree for force
-   @param[in] _adr_ptcl_artificial_start: start address of artificial particle in _sys
-*/
+    //! soft force correction completely use tree neighbor search for all particles
+    /* @param[in,out] _sys: global particle system, acc is updated
+       @param[in] _tree: tree for force
+       @param[in] _adr_ptcl_artificial_start: start address of artificial particle in _sys
+    */
     template <class Tsys, class Tpsoft, class Ttree, class Tepj>
     void correctForceWithCutoffTreeNeighborImp(Tsys& _sys, 
                                                Ttree& _tree, 
@@ -1057,10 +1065,12 @@ public:
             for (PS::S32 i=0; i<n_members; i++) {
                 auto& pi = _ptcl_local[i];
                 pi.r_search = std::max(pcm.r_search, pi.r_search);
+#ifdef CLUSTER_VELOCITY
                 pi.status.f[0]  = pcm.vel[0];
                 pi.status.f[1]  = pcm.vel[1];
                 pi.mass_bk.f[0] = pcm.vel[2];
                 pi.mass_bk.f[1] = pcm.mass;
+#endif
 #ifdef HARD_DEBUG
                 ASSERT(_ptcl_local[i].r_search>_ptcl_local[i].changeover.getRout());
 #endif
@@ -1361,10 +1371,12 @@ public:
                     // set new c.m. id as status for searchneighbors
                     //pj->status = -id_first;
                     // save c.m. velocity and mass for neighbor search
+#ifdef CLUSTER_VELOCITY
                     pj->status.f[0] = pcm.vel[0];
                     pj->status.f[1] = pcm.vel[1];
                     pj->mass_bk.f[0]= pcm.vel[2];
                     pj->mass_bk.f[1]= pcm.mass;
+#endif
 #ifdef HARD_DEBUG
                     ASSERT(pj->r_search>pj->changeover.getRout());
 #endif
@@ -1374,11 +1386,12 @@ public:
             for (PS::S32 i=0; i<h4_int.getNSingle(); i++) {
                 auto& pi = h4_int.particles[single_index[i]];
                 // set status for searchneighbors
+#ifdef CLUSTER_VELOCITY
                 pi.status.f[0]  = 0.0;
                 pi.status.f[1]  = 0.0;
                 pi.mass_bk.f[0] = 0.0;
                 pi.mass_bk.f[1] = 0.0;
-
+#endif
 //#ifdef HARD_DEBUG
 //                ASSERT(h4_pcm.mass-pi.mass>0);
 //#endif
@@ -1688,6 +1701,11 @@ public:
             PS::F64vec dr = ptcl_hard_[i].vel * _dt;
             ptcl_hard_[i].pos += dr;
             ptcl_hard_[i].Ptcl::calcRSearch(_dt);
+#ifdef HARD_DEBUG
+            // to avoid issue in cluster search with velocity
+            assert(ptcl_hard_[i].status.d==0.0);
+            assert(ptcl_hard_[i].mass_bk.d==0.0);
+#endif
             // ptcl_hard_[i].r_search= r_search_single_;
             /*
               DriveKeplerRestricted(mass_sun_, 
@@ -1709,6 +1727,11 @@ public:
         for(PS::S32 i=0; i<n; i++){
             PS::F64vec dr = ptcl_hard_[i].vel * _dt;
             ptcl_hard_[i].pos += dr;
+#ifdef HARD_DEBUG
+            // to avoid issue in cluster search with velocity
+            assert(ptcl_hard_[i].status.d==0.0);
+            assert(ptcl_hard_[i].mass_bk.d==0.0);
+#endif
             ptcl_hard_[i].Ptcl::calcRSearch(_dt);
             /*
               DriveKeplerRestricted(mass_sun_, 
@@ -1878,8 +1901,10 @@ public:
             for (PS::S32 j=0; j<n_ptcl; j++) {
                 PS::F64vec dr = pi[j].vel * dt;
                 pi[j].pos += dr;
+#ifdef CLUSTER_VELOCITY
                 pi[j].status.f[0] = pi[j].status.f[1] = 0;
-                pi[j].mass_bk.f[0] = pi[j].mass_bk = 0;
+                pi[j].mass_bk.f[0] = pi[j].mass_bk.f[1] = 0;
+#endif
                 pi[j].calcRSearch(dt);
             }
 #endif
@@ -1952,8 +1977,10 @@ public:
             for (PS::S32 j=0; j<n_ptcl; j++) {
                 PS::F64vec dr = pi[j].vel * dt;
                 pi[j].pos += dr;
+#ifdef CLUSTER_VELOCITY
                 pi[j].status.f[0] = pi[j].status.f[1] = 0;
-                pi[j].mass_bk.f[0] = pi[j].mass_bk = 0;
+                pi[j].mass_bk.f[0] = pi[j].mass_bk.f[1] = 0;
+#endif
                 pi[j].calcRSearch(dt);
             }
 #endif
@@ -2004,6 +2031,87 @@ public:
                                                                adr_first_ptcl_arti_in_cluster_,
                                                                _dt_tree);
     }
+
+#ifdef CLUSTER_VELOCITY
+    //! reset group member particle status/mass_bk to zero for search cluster
+    /*! update both local and global 
+       @param[in,out] _ptcl_soft: global particle
+    */
+    template <class Tsoft>
+    void resetParticleStatus(Tsoft& _ptcl_soft) {
+        const PS::S32 n = ptcl_hard_.size();
+#pragma omp parallel for schedule(dynamic)
+        for(PS::S32 i=0; i<n; i++){
+            // to avoid issue in cluster search with velocity
+            ptcl_hard_[i].status.f[0]=0.0;
+            ptcl_hard_[i].status.f[1]=0.0;
+            ptcl_hard_[i].mass_bk.f[0]=0.0;
+            ptcl_hard_[i].mass_bk.f[1]=0.0;
+            PS::S32 adr = ptcl_hard_[i].adr_org;
+#ifdef HARD_DEBUG
+            assert(adr>=0);
+#endif
+            _ptcl_soft[adr].status  = ptcl_hard_[i].status;
+            _ptcl_soft[adr].mass_bk = ptcl_hard_[i].mass_bk;
+        }
+    }
+
+    //! set group member particle status/mass_bk to c.m. data for search cluster
+    /*! update both local and global 
+       @param[in,out] _ptcl_soft: global particle
+    */
+    template <class Tsoft>
+    void setParticleStatusToCMData(Tsoft& _ptcl_soft) {
+        auto& ap_manager = manager->ap_manager;
+        const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
+#pragma omp parallel for schedule(dynamic)
+        for(PS::S32 i=0; i<n_cluster; i++){
+            const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
+            const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
+            const PS::S32 n_group = n_group_in_cluster_[i];
+            PtclH4* ptcl_local = ptcl_hard_.getPointer(adr_head);
+
+            PS::S32 n_group_offset = 0;
+            if(n_group>0) {
+                auto* ptcl_artificial = &(_ptcl_soft[adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]]]);
+                for(int k=0; k<n_group; k++) {
+                    PS::S32 adr_first_ptcl = k*ap_manager.getArtificialParticleN();
+                    auto* pi = &(ptcl_artificial[adr_first_ptcl]);
+                    const PS::S32 n_members = ap_manager.getMemberN(pi);
+                    auto* pcm = ap_manager.getCMParticles(pi);
+                    pcm->mass = pcm->mass_bk.d;
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+                    ap_manager.checkConsistence(&ptcl_local[n_group_offset], pi);
+#endif
+                    for (int j=n_group_offset; j<n_group_offset+n_members; j++) {
+                        ptcl_local[j].r_search = std::max(pcm->r_search, ptcl_local[j].r_search);
+                        ptcl_local[j].status.f[0] = pcm->vel[0];
+                        ptcl_local[j].status.f[1] = pcm->vel[1];
+                        ptcl_local[j].mass_bk.f[0]= pcm->vel[2];
+                        ptcl_local[j].mass_bk.f[1]= pcm->mass;
+                        PS::S32 adr = ptcl_local[j].adr_org;
+                        if(adr>=0) {
+                            _ptcl_soft[adr].status = ptcl_local[j].status;
+                            _ptcl_soft[adr].mass_bk= ptcl_local[j].mass_bk;
+                        }
+                    }
+                    n_group_offset += n_members;
+                }
+            }
+            for (int j=n_group_offset; j<n_ptcl; j++) {
+                ptcl_local[j].status.f[0] = 0;
+                ptcl_local[j].status.f[1] = 0;
+                ptcl_local[j].mass_bk.f[0] = 0;
+                ptcl_local[j].mass_bk.f[1] = 0;
+                PS::S32 adr = ptcl_local[j].adr_org;
+                if(adr>=0) {
+                    _ptcl_soft[adr].status = ptcl_local[j].status;
+                    _ptcl_soft[adr].mass_bk= ptcl_local[j].mass_bk;
+                }
+            }
+        }
+    }
+#endif
 
     //! potential correction for single cluster
     /* The force kernel have self-interaction on the potential contribution, need to be excluded. _sys acc is updated

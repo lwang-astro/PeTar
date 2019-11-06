@@ -148,7 +148,7 @@ void drift(Tpsys & system,
 #pragma omp parallel for
     for(PS::S32 i=0; i<n; i++){
         //if(tree.getForce(i).n_ngb <= 0){
-	if(system[i].n_ngb <= 0){
+        if(system[i].n_ngb <= 0){
             system[i].pos  += system[i].vel * dt;
         }
     }
