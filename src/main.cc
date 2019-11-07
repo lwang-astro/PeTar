@@ -4,18 +4,20 @@ int main(int argc, char *argv[]){
 
     PeTar petar;
 
-    PS::S32 iread = petar.readParametersAndInitFPDS(argc,argv);
+    petar.initialFDPS(argc,argv);
+    
+    PS::S32 iread = petar.readParameters(argc,argv);
     if (iread<0) return 0;
 
     auto& inp = petar.input_parameters;
 
     PS::S32 reading_style = inp.reading_style.value;
-    if (reading_style==1) petar.readDataFromFile(inp.fname_inp.value.c_str(), inp.data_format.value);
+    if (reading_style==1) petar.readDataFromFile();
     else if (reading_style==2) petar.generatePlummer();
 
     petar.initial();
 
-#if 0
+#if 1
     PS::F64 dt_break = petar.input_parameters.dt_snp.value;
     PS::F64 dt_end = petar.input_parameters.time_end.value;
     PS::S32 n_loop = dt_end/dt_break;

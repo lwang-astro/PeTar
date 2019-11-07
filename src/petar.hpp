@@ -131,6 +131,8 @@ public:
 
     // flag
     bool app_flag; // appending data flag
+    bool print_flag; 
+    bool write_flag;
 
     IOParamsPeTar(): input_par_store(), 
                      ratio_r_cut  (input_par_store, 0.1,  "r_in / r_out"),
@@ -174,7 +176,7 @@ public:
                      fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]"),
                      fname_par(input_par_store, "input.par", "Input parameter file (this option should be used first before any other options)"),
                      fname_inp(input_par_store, "input", "Input data file"),
-                     app_flag(false) {}
+                     app_flag(false), print_flag(true), write_flag(true) {}
 
     
     //! reading parameters from GNU option API
@@ -184,8 +186,7 @@ public:
       @param[in] print_flag: true: print input
       \return -1 if help is used
      */
-    int read(int argc, char *argv[], bool print_flag=true) {
-        
+    int read(int argc, char *argv[]) {
         static struct option long_options[] = {
             {"n-split", required_argument, 0, 0},        
             {"search-factor", required_argument, 0, 1},  
@@ -204,6 +205,8 @@ public:
 #ifdef AR_SYM
             {"step-limit-arc", required_argument, 0, 15},   
 #endif
+            {"disable-print-info", no_argument, 0, 16},
+            {"disable-write-info", no_argument, 0, 17},
             {0,0,0,0}
         };
 
@@ -275,6 +278,12 @@ public:
                 if(print_flag) step_limit_arc.print(std::cout);
                 break;
 #endif
+            case 16:
+                print_flag = false;
+                break;
+            case 17:
+                write_flag = false;
+                break;
             case 'i':
                 data_format.value = atoi(optarg);
                 if(print_flag) data_format.print(std::cout);
@@ -396,6 +405,8 @@ public:
                     std::cout<<"  -o: [F] "<<dt_snp<<std::endl;
                     std::cout<<"        --dt-max-factor:   [F] "<<dt_limit_hard_factor<<std::endl;
                     std::cout<<"        --dt-min-hermite:  [I] "<<dt_min_hermite_index<<std::endl;
+                    std::cout<<"        --disable-print-info:  "<<"Do not print information"<<std::endl;
+                    std::cout<<"        --disable-write-info:  "<<"Do not write information"<<std::endl;
                     std::cout<<"  -r: [F] "<<r_out<<std::endl;
                     std::cout<<"        --r-ratio:         [F] "<<ratio_r_cut<<std::endl;
                     std::cout<<"        --r-bin:           [F] "<<r_bin<<std::endl;
@@ -497,15 +508,17 @@ public:
     std::ofstream fout;
 #endif
 
-    PS::S64 n_loop;
-    PS::F64 domain_decompose_weight;
-
+    // file system
     FileHeader file_header;
     SystemSoft system_soft;
 
     // domain
+    PS::S64 n_loop; // count for domain decomposition
+    PS::F64 domain_decompose_weight;
     PS::DomainInfo dinfo;
     PS::F64ort * pos_domain;
+
+    // tree
     TreeNB tree_nb;
     TreeForce tree_soft;
 
@@ -526,10 +539,15 @@ public:
     PS::S32 n_proc;
 
     // safety check flag
+    bool initial_fdps_flag;
     bool read_parameters_flag;
     bool read_data_flag;
     bool initial_flag;
     bool initial_step_flag;
+    
+    // for information output
+    bool print_flag;
+    bool write_flag;
 
     // initialization
     PeTar(): 
@@ -541,12 +559,18 @@ public:
 #ifdef MAIN_DEBUG
         fout(),
 #endif        
-        n_loop(0), domain_decompose_weight(1.0),
-        file_header(), system_soft(), dinfo(), pos_domain(NULL), tree_nb(), tree_soft(), 
+        file_header(), system_soft(), 
+        n_loop(0), domain_decompose_weight(1.0), dinfo(), pos_domain(NULL), 
+        tree_nb(), tree_soft(), 
         hard_manager(), system_hard_one_cluster(), system_hard_isolated(), system_hard_connected(), 
         remove_list(),
         search_cluster(),
-        read_parameters_flag(false), read_data_flag(false), initial_flag(false), initial_step_flag(true)  {}
+        initial_fdps_flag(false), read_parameters_flag(false), read_data_flag(false), initial_flag(false), initial_step_flag(true), 
+        print_flag(true), write_flag(true) {
+        // set print format
+        std::cout<<std::setprecision(PRINT_PRECISION);
+        std::cerr<<std::setprecision(PRINT_PRECISION);
+     }
 
 
 private:
@@ -1075,6 +1099,7 @@ private:
             stat.energy_hard_diff = 0;
             stat.energy_hard_sd_diff = 0;
 #endif
+            stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);
 
         }
         else {
@@ -1107,6 +1132,8 @@ private:
             system_hard_isolated.energy.clear();
             system_hard_connected.energy.clear();
 #endif
+            stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);
+
         }
     }
 
@@ -1116,14 +1143,14 @@ private:
 #endif
 
         // print status
-        if(my_rank==0) {
+        if(print_flag) {
             std::cout<<std::endl;
             stat.print(std::cout);
             stat.printColumn(fstatus, WRITE_WIDTH);
             fstatus<<std::endl;
         }
 
-        if (!_initial_flag) {
+        if (!_initial_flag&&write_flag) {
             // data output
             file_header.n_body = stat.n_real_glb;
             file_header.time = stat.time;
@@ -1151,8 +1178,6 @@ private:
 
 #ifdef PROFILE
     inline void calcProfile(const PS::F64 _dt_output) {
-        profile.tot.barrier();
-        profile.tot.end();
         
         // profile analysis
 
@@ -1220,7 +1245,7 @@ private:
             const SysProfile& profile_min = profile.getMin();
             const SysProfile& profile_max = profile.getMax();
         
-            if(my_rank==0) {
+            if(print_flag) {
                 std::cout<<std::setprecision(5);
                 std::cout<<"Tree step number: "<<dn_loop
                          <<"  Local N: "<<stat.n_real_loc
@@ -1254,16 +1279,18 @@ private:
                 n_count.printHist(std::cout,PRINT_WIDTH,dn_loop);
             }
 
-            fprofile<<std::setprecision(WRITE_PRECISION);
-            fprofile<<std::setw(WRITE_WIDTH)<<my_rank;
-            fprofile<<std::setw(WRITE_WIDTH)<<stat.time
-                    <<std::setw(WRITE_WIDTH)<<dn_loop
-                    <<std::setw(WRITE_WIDTH)<<stat.n_real_loc;
-            profile.dump(fprofile, WRITE_WIDTH, dn_loop);
-            profile.dumpBarrier(fprofile, WRITE_WIDTH, dn_loop);
-            ps_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
-            n_count.dump(fprofile, WRITE_WIDTH, dn_loop);
-            fprofile<<std::endl;
+            if(write_flag) {
+                fprofile<<std::setprecision(WRITE_PRECISION);
+                fprofile<<std::setw(WRITE_WIDTH)<<my_rank;
+                fprofile<<std::setw(WRITE_WIDTH)<<stat.time
+                        <<std::setw(WRITE_WIDTH)<<dn_loop
+                        <<std::setw(WRITE_WIDTH)<<stat.n_real_loc;
+                profile.dump(fprofile, WRITE_WIDTH, dn_loop);
+                profile.dumpBarrier(fprofile, WRITE_WIDTH, dn_loop);
+                ps_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
+                n_count.dump(fprofile, WRITE_WIDTH, dn_loop);
+                fprofile<<std::endl;
+            }
 
             profile.clear();
             ps_profile.clear();
@@ -1275,50 +1302,57 @@ private:
 #endif
 
 public:
+
+    //! get index and rank of particle from an id
+    void get_particle_index_from_id(PS::S32& _index, PS::S32& _rank, const PS::S64 _id) {
+        _index = _id-1;
+        _rank = 0;
+    }
+
+    //! save index and rank of a particle with id
+    void add_particle_index_map(const PS::S32& _index, const PS::S32& _rank, const PS::S64 _id) {
+        
+    }
+
+    //! initial FDPS and MPI
+    void initialFDPS(int argc, char *argv[]) {
+        PS::Initialize(argc, argv);
+        my_rank = PS::Comm::getRank();
+        n_proc = PS::Comm::getNumberOfProc();
+        initial_fdps_flag = true;
+    }
+
     //! reading input parameters
     /*! 
       @param[in] argc: number of options
       @param[in] argv: string of options
-      @param[in] print_flag: true: print input
       \return -1 if help is used
      */
-    int readParametersAndInitFPDS(int argc, char *argv[], bool print_flag=true) {
-        // set print format
-        std::cout<<std::setprecision(PRINT_PRECISION);
-        std::cerr<<std::setprecision(PRINT_PRECISION);
-
-        // initial FPDS
-        read_parameters_flag = true;
-        PS::Initialize(argc, argv);
-
-        my_rank = PS::Comm::getRank();
-        n_proc = PS::Comm::getNumberOfProc();
-
+    int readParameters(int argc, char *argv[]) {
+        assert(initial_fdps_flag);
         // reading parameters
-        int read_flag = input_parameters.read(argc,argv,print_flag);
+        read_parameters_flag = true;
+        int read_flag = input_parameters.read(argc,argv);
         return read_flag;
     }
     
     //! reading data set from file
-    /*!
-      @param[in] _data_file: data file name
-      @param[in] _data_format: data file format
-      @param[in] print_flag: true: print information
-     */
-    void readDataFromFile(const char* _data_file, const PS::S32 _data_format, bool print_flag=true) {
+    void readDataFromFile() {
+        assert(read_parameters_flag);
         system_soft.initialize();
-        system_soft.setAverageTargetNumberOfSampleParticlePerProcess(input_parameters.n_smp_ave.value);
 
-        if(_data_format==1||_data_format==2||_data_format==4)
-            system_soft.readParticleAscii(_data_file, file_header);
+        PS::S32 data_format = input_parameters.data_format.value;
+        auto* data_filename = input_parameters.fname_inp.value.c_str();
+        if(data_format==1||data_format==2||data_format==4)
+            system_soft.readParticleAscii(data_filename, file_header);
         else
-            system_soft.readParticleBinary(_data_file, file_header);
+            system_soft.readParticleBinary(data_filename, file_header);
         PS::Comm::broadcast(&file_header, 1, 0);
         PS::S64 n_glb = system_soft.getNumberOfParticleGlobal();
         PS::S64 n_loc = system_soft.getNumberOfParticleLocal();
 
         if(print_flag)
-            std::cout<<"Reading file "<<_data_file<<std::endl
+            std::cout<<"Reading file "<<data_filename<<std::endl
                      <<"N_tot = "<<n_glb<<"\nN_loc = "<<n_loc<<std::endl;
 
         read_data_flag = true;
@@ -1337,44 +1371,48 @@ public:
       @param[in] _id: id of particles (if provided, must >0)
      */
     void readDataFromArray(PS::S64 _n_partcle, PS::F64* _mass, PS::F64* _x, PS::F64* _y, PS::F64* _z, PS::F64* _vx, PS::F64* _vy, PS::F64* _vz, PS::S64* _id=NULL) {
+        assert(read_parameters_flag);
         system_soft.initialize();
-        system_soft.setAverageTargetNumberOfSampleParticlePerProcess(input_parameters.n_smp_ave.value);
 
         PS::S64 n_glb = _n_partcle;
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         PS::S64 n_loc = n_glb / n_proc; 
         if( n_glb % n_proc > my_rank) n_loc++;
-        system_soft.setNumberOfParticleLocal(n_loc);
-
         PS::S64 i_h = n_glb/n_proc*my_rank;
         if( n_glb % n_proc  > my_rank) i_h += my_rank;
         else i_h += n_glb % n_proc;
-        
+#else
+        PS::S64 n_loc = n_glb;
+        PS::S64 i_h = 0;
+#endif
+
+        system_soft.setNumberOfParticleLocal(n_loc);
         if (_id!=NULL) {
             for(PS::S32 i=0; i<n_loc; i++){
-                system_soft[i].mass = _mass[i_h];
-                system_soft[i].pos.x = _x[i_h];
-                system_soft[i].pos.y = _y[i_h];
-                system_soft[i].pos.z = _z[i_h];
-                system_soft[i].vel.x = _vx[i_h];
-                system_soft[i].vel.y = _vy[i_h];
-                system_soft[i].vel.z = _vz[i_h];
+                system_soft[i].mass = _mass[i_h+i];
+                system_soft[i].pos.x = _x[i_h+i];
+                system_soft[i].pos.y = _y[i_h+i];
+                system_soft[i].pos.z = _z[i_h+i];
+                system_soft[i].vel.x = _vx[i_h+i];
+                system_soft[i].vel.y = _vy[i_h+i];
+                system_soft[i].vel.z = _vz[i_h+i];
                 system_soft[i].mass_bk.d = 0;
-                system_soft[i].id = _id[i_h];
-                assert(_id[i_h]>0);
+                system_soft[i].id = _id[i_h+i];
+                assert(_id[i_h+i]>0);
                 system_soft[i].status.d = 0;
             }
         }
         else {
             for(PS::S32 i=0; i<n_loc; i++){
-                system_soft[i].mass = _mass[i_h];
-                system_soft[i].pos.x = _x[i_h];
-                system_soft[i].pos.y = _y[i_h];
-                system_soft[i].pos.z = _z[i_h];
-                system_soft[i].vel.x = _vx[i_h];
-                system_soft[i].vel.y = _vy[i_h];
-                system_soft[i].vel.z = _vz[i_h];
+                system_soft[i].mass = _mass[i_h+i];
+                system_soft[i].pos.x = _x[i_h+i];
+                system_soft[i].pos.y = _y[i_h+i];
+                system_soft[i].pos.z = _z[i_h+i];
+                system_soft[i].vel.x = _vx[i_h+i];
+                system_soft[i].vel.y = _vy[i_h+i];
+                system_soft[i].vel.z = _vz[i_h+i];
                 system_soft[i].mass_bk.d = 0;
-                system_soft[i].id = i_h+1;
+                system_soft[i].id = i_h+i+1;
                 system_soft[i].status.d = 0;
             }
         }
@@ -1387,8 +1425,8 @@ public:
 
     //! generate data from plummer model
     void generatePlummer() {
+        assert(read_parameters_flag);
         system_soft.initialize();
-        system_soft.setAverageTargetNumberOfSampleParticlePerProcess(input_parameters.n_smp_ave.value);
 
         PS::S64 n_glb = input_parameters.n_glb.value;
         PS::S64 n_loc;
@@ -1404,7 +1442,7 @@ public:
     }
 
     //! initial the system
-    void initial(bool print_flag=true, bool write_flag=true) {
+    void initial() {
         // ensure data is read
         assert(read_data_flag);
 
@@ -1420,9 +1458,11 @@ public:
         atmp<<my_rank;
         atmp>>rank_str;
 
-        std::string fproname=input_parameters.fname_snp.value+".prof.rank."+rank_str;
-        if(input_parameters.app_flag) fprofile.open(fproname.c_str(),std::ofstream::out|std::ofstream::app);
-        else  fprofile.open(fproname.c_str(),std::ofstream::out);
+        if(write_flag) {
+            std::string fproname=input_parameters.fname_snp.value+".prof.rank."+rank_str;
+            if(input_parameters.app_flag) fprofile.open(fproname.c_str(),std::ofstream::out|std::ofstream::app);
+            else  fprofile.open(fproname.c_str(),std::ofstream::out);
+        }
 #endif    
 
         PS::S64 n_glb = system_soft.getNumberOfParticleGlobal();
@@ -1586,6 +1626,7 @@ public:
 #endif
 
         // domain decomposition
+        system_soft.setAverageTargetNumberOfSampleParticlePerProcess(input_parameters.n_smp_ave.value);
         const PS::F32 coef_ema = 0.2;
         domain_decompose_weight=1.0;
         dinfo.initialize(coef_ema);
@@ -1655,7 +1696,6 @@ public:
         while(stat.time <= input_parameters.time_end.value){
 
 #ifdef PROFILE
-            PS::Comm::barrier();
             profile.tot.start();
 #endif
 
@@ -1691,19 +1731,14 @@ public:
             PS::F64 dt_kick, dt_drift;
 
             // for initial the system
-            if(initial_step_flag) {
-                initial_step_flag = false;
-                first_step_flag = false;
-
+            if (first_step_flag) {
                 // correct force due to the change over update
                 correctForceChangeOverUpdate();
 
-                updateStatus(true);
-                output(true);
+                updateStatus(initial_step_flag);
+                output(initial_step_flag);
+                initial_step_flag = false;
 
-                dt_kick = dt_manager.getDtStartContinue();
-            }
-            else if (first_step_flag) {
                 first_step_flag = false;
                 dt_kick = dt_manager.getDtStartContinue();
             }
@@ -1764,13 +1799,6 @@ public:
 #endif
             }
 
-            // output information
-            if(output_flag) {
-                // update status
-                updateStatus(false);
-                output(false);
-            }
-
             // interupt
             if(interupt_flag) {
 #ifdef CLUSTER_VELOCITY
@@ -1792,6 +1820,14 @@ public:
 #endif
                 return 0;
             }
+
+            // output information
+            if(output_flag) {
+                // update status
+                updateStatus(false);
+                output(false);
+            }
+
 
             // modify the tree step
             if(dt_mod_flag) {
@@ -1847,6 +1883,11 @@ public:
 #endif
             dt_manager.nextContinue();
 
+#ifdef PROFILE
+            profile.tot.barrier();
+            PS::Comm::barrier();
+            profile.tot.end();
+#endif
             // profile
             calcProfile(dt_output);
 
@@ -1870,7 +1911,7 @@ public:
             pos_domain=NULL;
         }
 
-        if (read_parameters_flag) PS::Finalize();
+        if (initial_fdps_flag) PS::Finalize();
         read_data_flag = false;
         initial_flag = false;
         initial_step_flag = true;

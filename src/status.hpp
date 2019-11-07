@@ -1,5 +1,6 @@
 #pragma once
 
+#include "usr_define.hpp"
 #include "energy.hpp"
 
 //! class for measure the status of the system
@@ -10,11 +11,53 @@ public:
     PS::S64 n_real_glb;
     PS::S64 n_all_loc;
     PS::S64 n_all_glb;
+    PS::F64 half_mass_radius;
+    ParticleBase pcm;
     EnergyAndMomemtum energy;
     PS::F64 energy_hard_diff;
     PS::F64 energy_hard_sd_diff;
 
-    Status(): time(0.0), n_real_loc(0), n_real_glb(0), n_all_loc(0), n_all_glb(0) {}
+    Status(): time(0.0), n_real_loc(0), n_real_glb(0), n_all_loc(0), n_all_glb(0), half_mass_radius(0), pcm() {}
+
+    template <class Tsoft>
+    void calcCenterOfMass(Tsoft* _tsys, const PS::S64 _n) {
+        PS::F64 mass = 0.0;
+        PS::F64 x,y,z,vx,vy,vz;
+        x = y = z = vx = vy = vz = 0.0;
+
+#pragma omp parallel for reduction(+:mass,x,y,z,vx,vy,vz)
+        for (int i=0; i<_n; i++) {
+            auto& pi = _tsys[i];
+            PS::F64 mi = pi.mass;
+            mass  += mi;
+            x += mi*pi.pos.x;
+            y += mi*pi.pos.y;
+            z += mi*pi.pos.z;
+            vx += mi*pi.vel.x;
+            vy += mi*pi.vel.y;
+            vz += mi*pi.vel.z;
+        }        
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        pcm.mass = PS::Comm::getSum(mass);
+        pcm.pos.x  = PS::Comm::getSum(x);
+        pcm.pos.y  = PS::Comm::getSum(y);
+        pcm.pos.z  = PS::Comm::getSum(x);
+        pcm.vel.x  = PS::Comm::getSum(vx);
+        pcm.vel.y  = PS::Comm::getSum(vy);
+        pcm.vel.z  = PS::Comm::getSum(vz);
+#else
+        pcm.mass = mass;
+        pcm.pos.x = x;
+        pcm.pos.y = y;
+        pcm.pos.z = z;
+        pcm.vel.x = vx;
+        pcm.vel.y = vy;
+        pcm.vel.z = vz;
+#endif
+        pcm.pos /= pcm.mass;
+        pcm.vel /= pcm.mass;
+    }
 
     //! print titles of class members using column style
     /*! print titles of class members in one line for column style
