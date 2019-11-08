@@ -75,6 +75,13 @@ public:
         _fout<<std::setw(_width)<<"dE_hard"
              <<std::setw(_width)<<"dE_SD_hard";
 #endif
+        _fout<<std::setw(_width)<<"CM.mass"
+             <<std::setw(_width)<<"CM.pos.x"
+             <<std::setw(_width)<<"CM.pos.y"
+             <<std::setw(_width)<<"CM.pos.z"
+             <<std::setw(_width)<<"CM.vel.x"
+             <<std::setw(_width)<<"CM.vel.y"
+             <<std::setw(_width)<<"CM.vel.z";
     }
 
     //! print data of class members using column style
@@ -93,6 +100,13 @@ public:
         _fout<<std::setw(_width)<<energy_hard_diff
              <<std::setw(_width)<<energy_hard_sd_diff;
 #endif
+        _fout<<std::setw(_width)<<pcm.mass
+             <<std::setw(_width)<<pcm.pos.x
+             <<std::setw(_width)<<pcm.pos.y
+             <<std::setw(_width)<<pcm.pos.z
+             <<std::setw(_width)<<pcm.vel.x
+             <<std::setw(_width)<<pcm.vel.y
+             <<std::setw(_width)<<pcm.vel.z;
     }
 
     //! print title and values in one lines
@@ -112,6 +126,10 @@ public:
              <<"  dE_SD: "<<energy_hard_sd_diff
              <<std::endl;
 #endif
+        _fout<<"C.M.: mass: "<<pcm.mass
+             <<" pos: "<<pcm.pos
+             <<" vel: "<<pcm.vel
+             <<std::endl;
         energy.print(_fout);
     }
 };

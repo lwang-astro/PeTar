@@ -15,7 +15,9 @@ int main(int argc, char *argv[]){
     if (reading_style==1) petar.readDataFromFile();
     else if (reading_style==2) petar.generatePlummer();
 
-    petar.initial();
+    petar.initialParameters();
+
+    petar.initialStep();
 
 #if 1
     PS::F64 dt_break = petar.input_parameters.dt_snp.value;

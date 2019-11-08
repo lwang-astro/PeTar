@@ -518,6 +518,9 @@ public:
     PS::DomainInfo dinfo;
     PS::F64ort * pos_domain;
 
+    // dt_tree reduce factor
+    PS::F64 dt_reduce_factor;
+
     // tree
     TreeNB tree_nb;
     TreeForce tree_soft;
@@ -542,7 +545,7 @@ public:
     bool initial_fdps_flag;
     bool read_parameters_flag;
     bool read_data_flag;
-    bool initial_flag;
+    bool initial_parameters_flag;
     bool initial_step_flag;
     
     // for information output
@@ -561,11 +564,12 @@ public:
 #endif        
         file_header(), system_soft(), 
         n_loop(0), domain_decompose_weight(1.0), dinfo(), pos_domain(NULL), 
+        dt_reduce_factor(1.0),
         tree_nb(), tree_soft(), 
         hard_manager(), system_hard_one_cluster(), system_hard_isolated(), system_hard_connected(), 
         remove_list(),
         search_cluster(),
-        initial_fdps_flag(false), read_parameters_flag(false), read_data_flag(false), initial_flag(false), initial_step_flag(true), 
+        initial_fdps_flag(false), read_parameters_flag(false), read_data_flag(false), initial_parameters_flag(false), initial_step_flag(false), 
         print_flag(true), write_flag(true) {
         // set print format
         std::cout<<std::setprecision(PRINT_PRECISION);
@@ -990,6 +994,29 @@ private:
         remove_list.resizeNoInitialize(0);
     }
 
+    //! write back hard particles to global system
+    inline void writeBackHardParticles() {
+        system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        // update gloabl particle system and send receive remote particles
+        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+#endif        
+    }
+
+    // update status and mass_bk to pcm data for search cluster after restart
+    inline void setParticleStatusToCMData() {
+#ifdef CLUSTER_VELOCITY
+        // update status and mass_bk to pcm data for search cluster after restart
+        system_hard_one_cluster.resetParticleStatus(system_soft);
+        system_hard_isolated.setParticleStatusToCMData(system_soft);
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        system_hard_connected.setParticleStatusToCMData(system_soft);
+        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+#endif
+    }
+    
+#endif    
+
     //! correct force due to the change over update
     inline void correctForceChangeOverUpdate() {
 #ifdef PROFILE
@@ -1082,9 +1109,9 @@ private:
 
     inline void updateStatus(const bool _initial_flag) {
 
-#ifdef PETAR_DEBUG
-        assert(stat.n_all_loc==system_soft.getNumberOfParticleLocal());
-#endif
+//#ifdef PETAR_DEBUG
+//        assert(stat.n_real_loc==system_soft.getNumberOfParticleLocal());
+//#endif
 
         if (_initial_flag) {
             // calculate initial energy
@@ -1319,6 +1346,14 @@ public:
         PS::Initialize(argc, argv);
         my_rank = PS::Comm::getRank();
         n_proc = PS::Comm::getNumberOfProc();
+
+        // particle system
+        system_soft.initialize();
+
+        // domain information
+        const PS::F32 coef_ema = 0.2;
+        dinfo.initialize(coef_ema);
+
         initial_fdps_flag = true;
     }
 
@@ -1333,13 +1368,14 @@ public:
         // reading parameters
         read_parameters_flag = true;
         int read_flag = input_parameters.read(argc,argv);
+        print_flag = input_parameters.print_flag;
+        write_flag = input_parameters.write_flag;
         return read_flag;
     }
     
     //! reading data set from file
     void readDataFromFile() {
         assert(read_parameters_flag);
-        system_soft.initialize();
 
         PS::S32 data_format = input_parameters.data_format.value;
         auto* data_filename = input_parameters.fname_inp.value.c_str();
@@ -1372,7 +1408,6 @@ public:
      */
     void readDataFromArray(PS::S64 _n_partcle, PS::F64* _mass, PS::F64* _x, PS::F64* _y, PS::F64* _z, PS::F64* _vx, PS::F64* _vy, PS::F64* _vz, PS::S64* _id=NULL) {
         assert(read_parameters_flag);
-        system_soft.initialize();
 
         PS::S64 n_glb = _n_partcle;
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
@@ -1426,7 +1461,6 @@ public:
     //! generate data from plummer model
     void generatePlummer() {
         assert(read_parameters_flag);
-        system_soft.initialize();
 
         PS::S64 n_glb = input_parameters.n_glb.value;
         PS::S64 n_loc;
@@ -1441,8 +1475,8 @@ public:
         read_data_flag = true;
     }
 
-    //! initial the system
-    void initial() {
+    //! initial the system parameters
+    void initialParameters() {
         // ensure data is read
         assert(read_data_flag);
 
@@ -1627,9 +1661,7 @@ public:
 
         // domain decomposition
         system_soft.setAverageTargetNumberOfSampleParticlePerProcess(input_parameters.n_smp_ave.value);
-        const PS::F32 coef_ema = 0.2;
         domain_decompose_weight=1.0;
-        dinfo.initialize(coef_ema);
         dinfo.decomposeDomainAll(system_soft,domain_decompose_weight);
 
         if(pos_domain!=NULL) {
@@ -1654,7 +1686,6 @@ public:
         stat.n_real_glb = stat.n_all_glb = n_glb;
         stat.n_real_loc = stat.n_all_loc = n_loc;
 
-
         // tree for neighbor search
         tree_nb.initialize(n_glb, input_parameters.theta.value, input_parameters.n_leaf_limit.value, input_parameters.n_group_limit.value);
 
@@ -1668,16 +1699,77 @@ public:
         // checkparameters
         input_parameters.checkParams();
 
-        initial_flag = true;
+        initial_parameters_flag = true;
     }
 
+    //! the first initial step for integration, energy calculation
+    void initialStep() {
+        assert(initial_parameters_flag);
+        if (initial_step_flag) return;
 
+        PS::F64 dt_tree = input_parameters.dt_soft.value;
+
+        dt_reduce_factor=1.0;
+
+        // >1. Tree for neighbor searching 
+        /// get neighbor list to tree_nb
+        treeNeighborSearch();
+
+        // >2. search clusters
+        /// gether clusters information to search_cluster, using tree_nb and velocity criterion (particles status/mass_bk)
+        searchCluster();
+
+        // >3. find group and create artificial particles
+        /// find group and create artificial particles, using search_cluster, save to system_hard and system_soft (particle status/mass_bk updated)
+        createGroup(dt_tree);
+
+        // >4 tree soft force
+        /// calculate tree force with linear cutoff, save to system_soft.acc
+        treeSoftForce() ;
+
+        // >5 correct change over
+        /// correct system_soft.acc with changeover, using system_hard and system_soft particles
+        treeForceCorrectChangeover();
+
+        // correct force due to the change over update
+        correctForceChangeOverUpdate();
+
+        // recover mass
+        kickClusterAndRecoverGroupMemberMass(system_soft, system_hard_isolated.getPtcl(), 0);
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        // connected
+        kickClusterAndRecoverGroupMemberMass(system_soft, system_hard_connected.getPtcl(), 0);
+        // sending list for connected clusters
+        kickSend(system_soft, search_cluster.getAdrSysConnectClusterSend(), 0);
+        // send kicked particle from sending list, and receive remote single particle
+        search_cluster.SendSinglePtcl(system_soft, system_hard_connected.getPtcl());
+#endif
+
+        // update global particle system due to kick
+        writeBackHardParticles();
+
+        system_soft.setNumberOfParticleLocal(stat.n_real_loc);
+
+        // initial status and energy
+        updateStatus(true);
+
+        // output initial data
+        output(true);
+
+#ifdef CLUSTER_VELOCITY
+        setParticleStatusToCMData();
+#endif
+
+        initial_step_flag = true;
+    }
+    
     //! integrate the system
     /*! @param[in] _time_break: additional breaking time to interupt the integration, in default the system integrate to time_end
      */
     PS::S32 evolveToTime(const PS::F64 _time_break=0.0) {
         // ensure it is initialized
-        assert(initial_flag);
+        assert(initial_step_flag);
 
 #ifdef PETAR_DEBUG
         PS::F64 time_drift = stat.time, time_kick = stat.time;
@@ -1688,8 +1780,7 @@ public:
 
         PS::F64 dt_tree = input_parameters.dt_soft.value;
         PS::F64 dt_output = input_parameters.dt_snp.value;
-        KickDriftStep dt_manager(dt_tree);
-        PS::F64 dt_reduce_factor=1.0;
+        KickDriftStep dt_manager(dt_tree/dt_reduce_factor);
         bool first_step_flag = true;
 
         /// Main loop
@@ -1732,14 +1823,10 @@ public:
 
             // for initial the system
             if (first_step_flag) {
-                // correct force due to the change over update
+                first_step_flag = false;
+
                 correctForceChangeOverUpdate();
 
-                updateStatus(initial_step_flag);
-                output(initial_step_flag);
-                initial_step_flag = false;
-
-                first_step_flag = false;
                 dt_kick = dt_manager.getDtStartContinue();
             }
             else {
@@ -1792,33 +1879,7 @@ public:
             // >7. write back data
             if(output_flag||interupt_flag) {
                 // update global particle system due to kick
-                system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-                // update gloabl particle system and send receive remote particles
-                search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
-#endif
-            }
-
-            // interupt
-            if(interupt_flag) {
-#ifdef CLUSTER_VELOCITY
-                // update status and mass_bk to pcm data for search cluster after restart
-                system_hard_one_cluster.resetParticleStatus(system_soft);
-                system_hard_isolated.setParticleStatusToCMData(system_soft);
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-                system_hard_connected.setParticleStatusToCMData(system_soft);
-                search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
-#endif                
-#endif
-                // correct force due to the change over update
-                //correctForceChangeOverUpdate();
-                // need remove artificial particles
-                system_soft.setNumberOfParticleLocal(stat.n_real_loc);
-#ifdef PETAR_DEBUG
-                assert(time_kick==time_drift);
-                assert(time_kick==stat.time);
-#endif
-                return 0;
+                writeBackHardParticles();
             }
 
             // output information
@@ -1828,14 +1889,32 @@ public:
                 output(false);
             }
 
-
             // modify the tree step
             if(dt_mod_flag) {
                 dt_manager.setStep(dt_tree/dt_reduce_factor);
-                std::cout<<"Tree time step change, time = "<<stat.time
-                         <<"  dt_soft = "<<dt_tree
-                         <<"  reduce factor = "<<dt_reduce_factor
-                         <<std::endl;
+                if (print_flag) {
+                    std::cout<<"Tree time step change, time = "<<stat.time
+                             <<"  dt_soft = "<<dt_tree
+                             <<"  reduce factor = "<<dt_reduce_factor
+                             <<std::endl;
+                }
+            }
+
+            // interupt
+            if(interupt_flag) {
+#ifdef CLUSTER_VELOCITY
+                setParticleStatusToCMData();
+#endif
+                // correct force due to the change over update
+                correctForceChangeOverUpdate();
+
+                // need remove artificial particles
+                system_soft.setNumberOfParticleLocal(stat.n_real_loc);
+#ifdef PETAR_DEBUG
+                assert(time_kick==time_drift);
+                assert(time_kick==stat.time);
+#endif
+                return 0;
             }
 
             // second kick if dt_tree is changed or output is done
@@ -1912,9 +1991,11 @@ public:
         }
 
         if (initial_fdps_flag) PS::Finalize();
+        initial_fdps_flag = false;
+        read_parameters_flag = false;
         read_data_flag = false;
-        initial_flag = false;
-        initial_step_flag = true;
+        initial_parameters_flag = false;
+        initial_step_flag = false;
     }
 
     ~PeTar() { clear();}
