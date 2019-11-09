@@ -25,15 +25,16 @@ from amuse.ic.salpeter import new_salpeter_mass_distribution
 
 def generate_cluster(number_of_stars):
     # numpy.random.seed(1)
-    
+
     salpeter_masses = new_salpeter_mass_distribution(number_of_stars)
     total_mass = salpeter_masses.sum()
         
     convert_nbody = nbody_system.nbody_to_si(total_mass, 1.0 | units.parsec)
 
+    print "generate plummer model, N=",number_of_stars
     particles = new_plummer_model(number_of_stars, convert_nbody)
 
-    #print "setting masses of the stars"
+    print "setting masses of the stars"
     particles.radius = 0.0 | units.RSun
     particles.mass = salpeter_masses
 
@@ -45,8 +46,9 @@ def generate_cluster(number_of_stars):
 
 def evolve_cluster(particles, convert_nbody, end_time=40 | units.Myr, dt=0.25 | units.Myr):
     
-    #particles = _particles.copy()
-    gravity = petar(convert_nbody,redirection='none')
+
+    #gravity = petar(convert_nbody,redirection='none')
+    gravity = petar(convert_nbody)
     
     stellar_evolution = SSE()
 
@@ -54,7 +56,7 @@ def evolve_cluster(particles, convert_nbody, end_time=40 | units.Myr, dt=0.25 | 
     stellar_evolution.particles.add_particles(particles)
     from_stellar_evolution_to_model = stellar_evolution.particles.new_channel_to(particles)
     from_stellar_evolution_to_model.copy_attributes(["mass"])
-    print stellar_evolution.particles
+    #print stellar_evolution.particles
 
     print "centering the particles"
     particles.move_to_center()
@@ -114,6 +116,7 @@ def evolve_cluster(particles, convert_nbody, end_time=40 | units.Myr, dt=0.25 | 
 
     def animate(k):
         time = (dt*k)
+        print "Evolve to time: ",time.as_quantity_in(units.Myr)
         #print "gravity evolve step starting"
         gravity.evolve_model(time)
         #print "gravity evolve step done"
