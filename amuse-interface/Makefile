@@ -16,7 +16,7 @@ OBJS = interface.o
 
 CODELIB = 
 
-all: src_code petar_worker 
+all: petar_worker 
 
 clean:
 	$(RM) -rf __pycache__
@@ -30,8 +30,8 @@ distclean: clean
 $(CODELIB):
 	make -C src all
 
-src_code:
-	bash down.sh
+interface.cc:
+	bash down.sh 
 
 test_interface:   $(OBJS) test_interface.o
 	$(CXX) $(CXXFLAGS) $(OBJS) -o $@

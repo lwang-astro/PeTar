@@ -3,8 +3,6 @@
 #define PRINT_WIDTH 18
 #define PRINT_PRECISION 14
 
-#include "energy.hpp"
-
 //! IO Params container
 class IOParamsContainer{
     PS::ReallocatableArray<PS::F64*> d_f64;
@@ -158,76 +156,3 @@ public:
         fwrite(this, sizeof(FileHeader), 1, fp);
     }
 };
-
-template<class Tpsys, class Fheader, class Tpsoft>
-void WriteFile(const Tpsys & psys,
-               const char * file_name,
-               const Fheader & file_header){
-    PS::S32 my_rank = PS::Comm::getRank();
-    PS::S32 n_proc = PS::Comm::getNumberOfProc();
-    const PS::S64 n_glb = psys.getNumberOfParticleGlobal();
-    const PS::S32 n_loc = psys.getNumberOfParticleLocal();
-    FILE* fout;
-    if(my_rank == 0){
-      fout=fopen(file_name,"w");
-      file_header.writeAscii(fout);
-    }
-    const PS::S32 n_tmp = 10;
-    //FPSoft * ptcl_loc = new FPSoft[n_tmp];
-    //FPSoft * ptcl_glb = new FPSoft[n_tmp];
-    Tpsoft * ptcl_loc = new Tpsoft[n_tmp];
-    Tpsoft * ptcl_glb = new Tpsoft[n_tmp];
-    PS::S32 * n_ptcl_array = new PS::S32[n_proc];
-    PS::S32 * n_ptcl_disp = new PS::S32[n_proc+1];
-    for(PS::S32 i=0; i<(n_glb-1)/n_tmp+1; i++){
-      PS::S32 i_head = i * n_tmp;
-      PS::S32 i_tail = (i+1) * n_tmp;
-      PS::S32 n_cnt = 0;
-      for(PS::S32 j=0; j<n_loc; j++){
-	    if( i_head<=psys[j].id && psys[j].id<i_tail){
-            ptcl_loc[n_cnt] = psys[j];
-            n_cnt++;
-	    }
-      }
-      PS::Comm::allGather(&n_cnt, 1, n_ptcl_array);
-      n_ptcl_disp[0] = 0;
-      for(PS::S32 j=0; j<n_proc; j++){
-	    n_ptcl_disp[j+1] = n_ptcl_disp[j] + n_ptcl_array[j];
-      }
-      PS::Comm::gatherV(ptcl_loc, n_cnt, ptcl_glb, n_ptcl_array, n_ptcl_disp);
-      if(my_rank == 0){
-	    const PS::S32 n = n_ptcl_disp[n_proc];
-	    //std::sort(ptcl_glb, ptcl_glb+n, SortID());
-	    std::sort(ptcl_glb, ptcl_glb+n,
-		      //[](const FPSoft & left, const FPSoft & right)->bool{return left.id < right.id;}
-		      [](const Tpsoft & left, const Tpsoft & right)->bool{return left.id < right.id;}
-		      );
-	    for(PS::S32 j=0; j<n; j++) ptcl_glb[j].writeAscii(fout);
-      }
-    }
-    if(my_rank==0) fclose(fout);
-}
-
-/*
-class DiskModel{
-    PS::S32 n_planet_;
-    PS::S32 n_planetesimal_;
-    DiskModel(): n_planet_(0), n_planetesimal_(0){
-    }
-};
-*/
-
-
-#ifdef MAIN_DEBUG
-// flag: 1: c.m; 2: individual; 
-template<class Teng, class Tsys>
-void write_p(std::ofstream & fout, const PS::F64 time, const Tsys& p, const Teng &et) {
-    fout<<std::setprecision(13)<<std::setw(20)<<time;
-    et.printColumn(fout);
-    for (int i=0; i<p.getNumberOfParticleLocal(); i++) {
-        if(p[i].status.d>0||p[i].id<0) continue;
-        p[i].ParticleBase::printColumn(fout);
-    }
-    fout<<std::endl;
-}
-#endif

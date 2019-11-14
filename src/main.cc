@@ -11,17 +11,16 @@ int main(int argc, char *argv[]){
 
     auto& inp = petar.input_parameters;
 
-    PS::S32 reading_style = inp.reading_style.value;
-    if (reading_style==1) petar.readDataFromFile();
-    else if (reading_style==2) petar.generatePlummer();
+    if (inp.n_glb.value==0) petar.readDataFromFile();
+    else petar.generatePlummer();
 
     petar.initialParameters();
 
     petar.initialStep();
 
 #if 1
-    PS::F64 dt_break = petar.input_parameters.dt_snp.value;
-    PS::F64 dt_end = petar.input_parameters.time_end.value;
+    PS::F64 dt_break = inp.dt_snp.value;
+    PS::F64 dt_end = inp.time_end.value;
     PS::S32 n_loop = dt_end/dt_break;
     PS::F64 time_break = 0.0;
     

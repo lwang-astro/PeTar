@@ -73,8 +73,7 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #include"hard.hpp"
 #include"io.hpp"
 #include"status.hpp"
-#include"init.hpp"
-#include"integrate.hpp"
+#include"particle_distribution_generator.hpp"
 #include"domain.hpp"
 #include"cluster_list.hpp"
 #include"kickdriftstep.hpp"
@@ -101,6 +100,7 @@ public:
     IOParams<PS::F64> time_end;
     IOParams<PS::F64> eta;
     IOParams<PS::S64> n_glb;
+    IOParams<PS::S64> id_offset;
     IOParams<PS::F64> dt_soft;
     IOParams<PS::F64> dt_snp;
     IOParams<PS::F64> search_factor;
@@ -118,7 +118,6 @@ public:
     IOParams<PS::S32> step_limit_arc;
 #endif
     IOParams<PS::F64> eps;
-    IOParams<PS::S32> reading_style;
     IOParams<PS::F64> r_out;
     IOParams<PS::F64> r_bin;
     IOParams<PS::F64> r_search_max;
@@ -145,10 +144,11 @@ public:
 #endif
                      n_smp_ave    (input_par_store, 100,  "Average target number of sample particles per process"),
                      n_split      (input_par_store, 8,    "Number of binary sample points for tree perturbation force"),
-                     n_bin        (input_par_store, 0,    "Number of primordial binaries (assume binaries ID=1,2*n_bin)"),
+                     n_bin        (input_par_store, 0,    "Number of binaries used for initialization (assume binaries ID=1,2*n_bin)"),
                      time_end     (input_par_store, 10.0, "Finishing time"),
                      eta          (input_par_store, 0.1,  "Hermite time step coefficient eta"),
-                     n_glb        (input_par_store, 16384,"Total number of particles for plummer model (only used when data reading style is 2)"),
+                     n_glb        (input_par_store, 0,    "Total number of particles, only used to generate particles if needed"),
+                     id_offset    (input_par_store, -1,   "Starting id for artificial particles, total number of real particles must be always smaller than this","n_glb+1"),
                      dt_soft      (input_par_store, 0.0,  "Tree timestep","0.1*r_out/sigma_1D"),
                      dt_snp       (input_par_store, 0.0625,"Output time interval of particle dataset"),
                      search_factor(input_par_store, 3.0,  "Neighbor searching coefficient for v*dt"),
@@ -166,7 +166,6 @@ public:
                      step_limit_arc(input_par_store, 1000000, "Maximum step allown for ARC sym integrator"),
 #endif
                      eps          (input_par_store, 0.0,  "Softerning eps"),
-                     reading_style(input_par_store, 1,    "Data reading style: 1. reading from file; 2. generate Plummer; 0. using reading function"),
                      r_out        (input_par_store, 0.0,  "Transit function outer boundary radius", "<m>/sigma_1D^2/ratio_r_cut"),
                      r_bin        (input_par_store, 0.0,  "Tidal tensor box size and binary radius criterion", "theta*r_in"),
                      r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out"),
@@ -213,7 +212,7 @@ public:
         int copt;
         int option_index;
         if(print_flag) std::cout<<"----- input option -----\n";
-        while ((copt = getopt_long(argc, argv, "i:ad:t:s:o:r:b:n:G:L:S:T:E:f:p:h", long_options, &option_index)) != -1) 
+        while ((copt = getopt_long(argc, argv, "i:at:s:o:r:b:n:G:L:S:T:E:f:p:h", long_options, &option_index)) != -1) 
             switch (copt) {
             case 0:
                 n_split.value = atoi(optarg);
@@ -291,11 +290,6 @@ public:
                 break;
             case 'a':
                 app_flag=true;
-                break;
-            case 'd':
-                reading_style.value= atoi(optarg);
-                if(print_flag) reading_style.print(std::cout);
-                assert(reading_style.value>=0&&reading_style.value<=2);
                 break;
             case 't':
                 time_end.value = atof(optarg);
@@ -399,7 +393,6 @@ public:
                              <<"             16. N_neighbor (0)\n"
                              <<"             (*) show initialization values which should be used together with FILE_ID = 0"<<std::endl;
                     std::cout<<"  -a:     data output style (except snapshot) becomes appending, defaulted: replace"<<std::endl;
-                    std::cout<<"  -d: [I] "<<reading_style<<std::endl;
                     std::cout<<"  -t: [F] "<<time_end<<std::endl;
                     std::cout<<"  -s: [F] "<<dt_soft<<std::endl;
                     std::cout<<"  -o: [F] "<<dt_snp<<std::endl;
@@ -441,7 +434,7 @@ public:
                 return -1;
             }
         
-        if (reading_style.value==1) fname_inp.value =argv[argc-1];
+        if (argc>0) fname_inp.value =argv[argc-1];
 
         return 0;
     }
@@ -460,7 +453,6 @@ public:
         assert(r_bin.value>0.0);
         assert(radius_factor.value>=1.0);
         assert(data_format.value>=0||data_format.value<=3);
-        assert(reading_style.value>=0&&reading_style.value<=2);
         assert(time_end.value>=0.0);
         assert(dt_soft.value>0.0);
         assert(dt_snp.value>0.0);
@@ -578,6 +570,143 @@ public:
 
 
 private:
+
+    //!initializaton of system parameters
+    /*! Obtain Radius parameters, consistent with the input help information
+      @param[in]     _tsys:   particle system (soft)
+      @param[in,out] _r_in:   changeover function inner boundary
+      @param[in,out] _r_out:  changeover function outer boundary
+      @param[in,out] _r_bin:  arc group radius criterion
+      @param[in,out] _r_search_min: minimum searching radius
+      @param[in,out] _r_search_max: maximum searching radius
+      @param[out] _v_max:  maximum velocity to calculate r_search
+      @param[out] _m_average: averaged mass of particles
+      @param[out] _m_max: maximum mass of particles
+      @param[in,out] _dt_tree: tree time step
+      @param[out] _vel_disp: system velocity dispersion 
+      @param[in]     _search_factor: coefficient to calculate r_search
+      @param[in]     _ratio_r_cut: _r_out/_r_in
+      @param[in]     _n_bin: number of binaries
+    */
+    void getInitPar(const SystemSoft & _tsys,
+                    PS::F64 &_r_in,
+                    PS::F64 &_r_out,
+                    PS::F64 &_r_bin,
+                    PS::F64 &_r_search_min,
+                    PS::F64 &_r_search_max,
+                    PS::F64 &_v_max,
+                    PS::F64 &_m_average,
+                    PS::F64 &_m_max,
+                    PS::F64 &_dt_tree,
+                    PS::F64 &_vel_disp,
+                    const PS::F64 _search_factor,
+                    const PS::F64 _ratio_r_cut,
+                    const PS::S64 _n_bin,
+                    const PS::F64 _theta) {
+
+        // local particle number
+        const PS::S64 n_loc = _tsys.getNumberOfParticleLocal();
+
+        // local c.m velocity
+        PS::F64vec vel_cm_loc = 0.0;
+        // local c.m. mass
+        PS::F64 mass_cm_loc = 0.0;
+        // local maximum mass
+        PS::F64 mass_max_loc = 0.0;
+
+        for(PS::S64 i=0; i<n_loc; i++){
+            PS::F64 mi = _tsys[i].mass;
+            PS::F64vec vi = _tsys[i].vel;
+
+#ifdef MAIN_DEBUG
+            assert(mi>0);
+#endif
+            mass_cm_loc += mi;
+            vel_cm_loc += mi * vi;
+            mass_max_loc = std::max(mi, mass_max_loc);
+        }
+
+        // global c.m. parameters
+        PS::F64    mass_cm_glb = PS::Comm::getSum(mass_cm_loc);
+        _m_max = PS::Comm::getMaxValue(mass_max_loc);
+        PS::F64vec vel_cm_glb  = PS::Comm::getSum(vel_cm_loc);
+        vel_cm_glb /= mass_cm_glb;
+
+        // local velocity square
+        PS::F64 vel_sq_loc = 0.0;
+        PS::S64 n_vel_loc_count = 0;
+
+        // single particle starting index
+        PS::S64 single_start_index = 0;
+        const PS::S64 bin_last_id = 2*_n_bin;
+        if (_tsys[0].id<bin_last_id) {
+            single_start_index = std::min(bin_last_id - _tsys[0].id + 1,n_loc);
+            if(single_start_index%2!=0) single_start_index--;
+        }
+        // binary particle starting index
+        const PS::S64 binary_start_index = (_tsys[0].id%2==0)?1:0;
+
+        // calculate velocity dispersion
+        for (PS::S64 i=binary_start_index; i<single_start_index; i+=2) {
+            PS::F64 m1 = _tsys[i].mass;
+            PS::F64 m2 = _tsys[i+1].mass;
+            PS::F64vec dv = (m1*_tsys[i].vel + m2*_tsys[i+1].vel)/(m1+m2) - vel_cm_glb;
+            vel_sq_loc += dv * dv;
+            n_vel_loc_count++;
+        }
+    
+        for (PS::S64 i=single_start_index; i<n_loc; i++){
+            PS::F64vec dv = _tsys[i].vel - vel_cm_glb;
+            vel_sq_loc += dv * dv;
+            n_vel_loc_count++;
+        }
+
+        const PS::S64    n_vel_glb_count= PS::Comm::getSum(n_vel_loc_count);
+        const PS::S64    n_glb          = PS::Comm::getSum(n_loc);
+        const PS::F64    vel_sq_glb     = PS::Comm::getSum(vel_sq_loc);
+        _vel_disp   = sqrt(vel_sq_glb / 3.0 / (PS::F64)n_vel_glb_count);
+
+        PS::F64 average_mass_glb = mass_cm_glb/(PS::F64)n_glb;
+        _m_average = average_mass_glb;
+
+        // flag to check whether r_ous is already defined
+        bool r_out_flag = (_r_out>0);
+    
+        // if r_out is already defined, calculate r_in based on _ratio_r_cut
+        if (r_out_flag) _r_in = _r_out * _ratio_r_cut;
+        // calculate r_in based on velocity dispersion and averaged mass, calculate r_out by _ratio_r_cut
+        else {
+            _r_in = 0.5*average_mass_glb / (_vel_disp*_vel_disp);
+            _r_out = _r_in / _ratio_r_cut;
+        }
+
+        // if tree time step is not defined, calculate tree time step by r_out and velocity dispersion
+        if (_dt_tree==0.0) {
+            PS::F64 dt_origin = 0.1*_r_out / _vel_disp;
+            _dt_tree = 1.0;
+            if (dt_origin<1) while (_dt_tree>dt_origin) _dt_tree *= 0.5;
+            else {
+                while (_dt_tree<=dt_origin) _dt_tree *= 2.0;
+                _dt_tree *= 0.5;
+            }
+            //// if r_out is not defined, calculate r_out based on tree step and velocity dispersion
+            //if (!r_out_flag) {
+            //    _r_out = 10.0*_dt_tree*_vel_disp;
+            //    _r_in = _r_out*_ratio_r_cut;
+            //}
+        }
+
+        // if r_bin is not defined, set to theta * r_in
+        if (_r_bin==0.0) _r_bin = _theta*_r_in;
+
+        // if r_search_min is not defined, calculate by search_factor*velocity_dispersion*tree_time_step + r_out
+        if (_r_search_min==0.0) _r_search_min = _search_factor*_vel_disp*_dt_tree + _r_out;
+        // if r_search_max is not defined, calcualte by 5*r_out
+        if (_r_search_max==0.0) _r_search_max = 5*_r_out;
+        // calculate v_max based on r_search_max, tree time step and search_factor
+        _v_max = (_r_search_max - _r_out) / _dt_tree / _search_factor;
+    }
+
     //! tree for neighbor searching.
     inline void treeNeighborSearch() {
 #ifdef PROFILE
@@ -867,6 +996,138 @@ private:
     }
 #endif
 
+    //!leap frog kick for single----------------------------------------------
+    /* modify the velocity of particle in global system
+       reset status to zero
+       @param[in,out] _sys: particle system
+       @param[in]: _dt: tree step
+       @param[in]; _adr: address for single particles
+    */
+    inline void kickOne(SystemSoft & _sys, 
+                        const PS::F64 _dt, 
+                        const PS::ReallocatableArray<PS::S32>& _adr) {
+        const PS::S64 n= _adr.size();
+#pragma omp parallel for
+        for(PS::S32 i=0; i<n; i++){
+            const PS::S32 k=_adr[i];
+#ifdef KDKDK_4TH
+            _sys[k].vel  += _dt*(_sys[k].acc + 9.0/192.0*_dt*_dt*_sys[k].acorr); 
+#else
+            _sys[k].vel  += _sys[k].acc * _dt;
+#endif
+            _sys[k].status.d = 0;
+        }
+    }
+
+    //!leap frog kick for clusters
+    /*! modify the velocity of particle in local, if particle is from remote note and is not group member, do nothing, need MPI receive to update data
+       Recover the mass of members for energy calculation
+       @param[in,out] _sys: particle system
+       @param[in,out] _ptcl: local particle array in system hard
+       @param[in]: _dt: tree step
+    */
+    template<class Tptcl>
+    inline void kickClusterAndRecoverGroupMemberMass(SystemSoft& _sys,
+                                                     PS::ReallocatableArray<Tptcl>& _ptcl,
+                                                     const PS::F64 _dt) {
+        const PS::S64 n= _ptcl.size();
+#pragma omp parallel for
+        for(PS::S32 i=0; i<n; i++) {
+            const PS::S64 cm_adr=-_ptcl[i].status.d; // notice status is negative 
+            const PS::S64 i_adr =_ptcl[i].adr_org;
+            // if is group member, recover mass and kick due to c.m. force
+            if(cm_adr>0) {
+#ifdef HARD_DEBUG
+                assert(_ptcl[i].mass_bk.d>0); 
+#endif
+                _ptcl[i].mass = _ptcl[i].mass_bk.d;
+#ifdef KDKDK_4TH
+                _ptcl[i].vel  += _dt*(_sys[cm_adr].acc + 9.0/192.0*_dt*_dt*_sys[cm_adr].acorr); 
+#else
+                _ptcl[i].vel += _sys[cm_adr].acc * _dt;
+#endif
+                // Suppressed because thread unsafe
+                //_sys[cm_adr].vel += _sys[cm_adr].acc * _dt/_sys[cm_adr].status; // status has total number of members, to avoid duplicate kick. 
+            }
+            // non-member particle
+            else if(i_adr>=0) {
+                // not remote particles
+#ifdef KDKDK_4TH
+                _ptcl[i].vel  += _dt*(_sys[i_adr].acc + 9.0/192.0*_dt*_dt*_sys[i_adr].acorr); 
+#else
+                _ptcl[i].vel += _sys[i_adr].acc * _dt;
+#endif
+            }
+        }
+    }
+
+    //!leap frog kick for sending list
+    /*! Kick single particles in sending list 
+       @param[in,out] _sys: particle system
+       @param[in,out] _ptcl: local particle array in system hard
+       @param[in]: _dt: tree step
+    */
+    inline void kickSend(SystemSoft& _sys,
+                         const PS::ReallocatableArray<PS::S32>& _adr_ptcl_send,
+                         const PS::F64 _dt) {
+        const PS::S64 n= _adr_ptcl_send.size();
+#pragma omp parallel for
+        for(PS::S32 i=0; i<n; i++) {
+            const PS::S64 adr = _adr_ptcl_send[i];
+            const PS::S64 cm_adr=-_sys[adr].status.d; // notice status is negative 
+            // if it is group member, should not do kick since c.m. particles are on remote nodes;
+            if(cm_adr==0)  {
+                _sys[adr].vel += _sys[adr].acc * _dt;
+#ifdef KDKDK_4TH
+                _sys[adr].vel += _dt*_dt* _sys[adr].acorr /48; 
+#endif
+            }
+
+#ifdef HARD_DEBUG
+            if(cm_adr==0) assert(_sys[adr].mass>0);
+            else assert(_sys[adr].mass_bk.d>0);
+#endif
+        }
+    }
+
+    //! kick for artifical c.m. particles
+    /*! Kick c.m. velocity
+      @param[in,out] _sys: particle system
+      @param[in] _adr_artificial_start: c.m. particle starting address
+      @param[in] _ap_manager: artificial particle manager
+      @param[in] _dt: tree step
+    */
+    inline void kickCM(SystemSoft& _sys,
+                const PS::S32 _adr_artificial_start,
+                ArtificialParticleManager& _ap_manager,
+                const PS::F64 _dt) {
+        const PS::S64 n_tot= _sys.getNumberOfParticleLocal();
+        const PS::S32 n_artifical_per_group = _ap_manager.getArtificialParticleN();
+#pragma omp parallel for
+        for(PS::S32 i=_adr_artificial_start; i<n_tot; i+= n_artifical_per_group) {
+            auto* pcm = _ap_manager.getCMParticles(&(_sys[i]));
+            pcm->vel += pcm->acc * _dt;
+#ifdef KDKDK_4TH
+            pcm->vel += _dt*_dt* pcm->acorr /48; 
+#endif
+#ifdef HARD_DEBUG
+            assert(pcm->id<0&&pcm->status.d>0);
+#endif
+        }
+    }
+
+    //! drift for single particles
+    inline void driftSingle(SystemSoft & system,
+                            const PS::F64 dt){
+        const PS::S32 n = system.getNumberOfParticleLocal();
+#pragma omp parallel for
+        for(PS::S32 i=0; i<n; i++){
+            if(system[i].n_ngb <= 0){
+                system[i].pos  += system[i].vel * dt;
+            }
+        }
+    }
+
     //! kick
     inline void kick(const PS::F64 _dt_kick) {
 #ifdef PROFILE
@@ -981,6 +1242,41 @@ private:
 #endif
 
     }
+
+    //! Calculate the maximum time step limit for next block step
+    /*! Get the maximum time step allown for next block step
+      Basic algorithm: the integer of time/dt_min is the binary tree for block step, counting from the minimum digital, the last zero indicate the maximum block step level allown for next step
+      @param[in] _time: current time
+      @param[in] _dt_max: maximum time step allown
+      @param[in] _dt_min: minimum time step allown
+    */
+    PS::F64 calcDtLimit(const PS::F64 _time,
+                        const PS::F64 _dt_max,
+                        const PS::F64 _dt_min){
+        // for first step, the maximum time step is OK
+        if(_time==0.0) return _dt_max;
+        else {
+            // the binary tree for current time position in block step 
+            PS::U64 bitmap = _time/_dt_min;
+//#ifdef __GNUC__ 
+//        PS::S64 dts = __builtin_ctz(bitmap) ;
+//        PS::U64 c = (1<<dts);
+////        std::cerr<<"time = "<<_time<<"  dt_min = "<<_dt_min<<"  bitmap = "<<bitmap<<"  dts = "<<dts<<std::endl;
+//#else
+
+            // block step multiply factor 
+            PS::U64 c=1;
+            // find the last zero in the binary tree to obtain the current block step level
+            while((bitmap&1)==0) {
+                bitmap = (bitmap>>1);
+                c = (c<<1);
+            }
+//#endif
+            // return the maximum step allown
+            return std::min(c*_dt_min,_dt_max);
+        }
+    }
+
     
     //! remove artificial and unused particles
     inline void removeParticles() {
@@ -1192,7 +1488,14 @@ private:
 
 
 #ifdef MAIN_DEBUG
-            write_p(fout, stat.time, system_soft, stat.energy);
+            // write snapshot with one line
+            fout<<std::setprecision(13)<<std::setw(20)<<stat.time;
+            stat.energy.printColumn(fout);
+            for (int i=0; i<system_soft.getNumberOfParticleLocal(); i++) {
+                if(system_soft[i].status.d>0||p[i].id<0) continue;
+                system_soft[i].ParticleBase::printColumn(fout);
+            }
+            fout<<std::endl;
 #endif
         }
 
@@ -1341,23 +1644,15 @@ public:
         
     }
 
-    //! initial FDPS and MPI
+    //! initial FDPS (print LOGO) and MPI
     void initialFDPS(int argc, char *argv[]) {
         PS::Initialize(argc, argv);
         my_rank = PS::Comm::getRank();
         n_proc = PS::Comm::getNumberOfProc();
-
-        // particle system
-        system_soft.initialize();
-
-        // domain information
-        const PS::F32 coef_ema = 0.2;
-        dinfo.initialize(coef_ema);
-
         initial_fdps_flag = true;
     }
 
-    //! reading input parameters
+    //! reading input parameters using getopt method
     /*! 
       @param[in] argc: number of options
       @param[in] argv: string of options
@@ -1373,9 +1668,12 @@ public:
         return read_flag;
     }
     
-    //! reading data set from file
+    //! reading data set from file, filename is given by readParameters
     void readDataFromFile() {
         assert(read_parameters_flag);
+
+        // particle system
+        if (!read_data_flag) system_soft.initialize();
 
         PS::S32 data_format = input_parameters.data_format.value;
         auto* data_filename = input_parameters.fname_inp.value.c_str();
@@ -1408,6 +1706,9 @@ public:
      */
     void readDataFromArray(PS::S64 _n_partcle, PS::F64* _mass, PS::F64* _x, PS::F64* _y, PS::F64* _z, PS::F64* _vx, PS::F64* _vy, PS::F64* _vz, PS::S64* _id=NULL) {
         assert(read_parameters_flag);
+
+        // particle system
+        if (!read_data_flag) system_soft.initialize();
 
         PS::S64 n_glb = _n_partcle;
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
@@ -1460,11 +1761,40 @@ public:
 
     //! generate data from plummer model
     void generatePlummer() {
+        // ensure parameters are used
         assert(read_parameters_flag);
 
+        // particle system
+        if (!read_data_flag) system_soft.initialize();
+
         PS::S64 n_glb = input_parameters.n_glb.value;
-        PS::S64 n_loc;
-        SetParticlePlummer(system_soft, n_glb, n_loc);
+        assert(n_glb>0);
+
+        PS::S64 n_loc = n_glb / n_proc; 
+        if( n_glb % n_proc > my_rank) n_loc++;
+        system_soft.setNumberOfParticleLocal(n_loc);
+
+        PS::F64 * mass;
+        PS::F64vec * pos;
+        PS::F64vec * vel;
+
+        const PS::F64 m_tot = 1.0;
+        const PS::F64 eng = -0.25;
+
+        ParticleDistributionGenerator::makePlummerModel(m_tot, n_glb, n_loc, mass, pos, vel, eng);
+
+        PS::S64 i_h = n_glb/n_proc*my_rank;
+        if( n_glb % n_proc  > my_rank) i_h += my_rank;
+        else i_h += n_glb % n_proc;
+        for(PS::S32 i=0; i<n_loc; i++){
+            system_soft[i].mass = mass[i];
+            system_soft[i].pos = pos[i];
+            system_soft[i].vel = vel[i];
+            system_soft[i].id = i_h + i + 1;
+            system_soft[i].status.d = 0;
+            system_soft[i].mass_bk.d = 0;
+        }
+
         file_header.nfile = 0;
         stat.time = file_header.time = 0.0;
         file_header.n_body = n_glb;
@@ -1473,6 +1803,71 @@ public:
         stat.n_real_loc = stat.n_all_loc = n_loc;
 
         read_data_flag = true;
+
+        delete [] mass;
+        delete [] pos;
+        delete [] vel;
+    }
+
+    //! create kepler disk
+    /*! No center sun is set, suppressed 
+     */
+    void generateKeplerDisk(const PS::F64 ax_in, // [AU]
+                            const PS::F64 ax_out, // [AU]
+                            const PS::F64 ecc_rms, // normalized
+                            const PS::F64 inc_rms, // normalized
+                            const PS::F64 dens = 10.0, // [g/cm^2]
+                            const PS::F64 mass_sun = 1.0, //[m_sun]
+                            const double a_ice = 0.0,
+                            const double f_ice = 1.0,
+                            const double power = -1.5,
+                            const PS::S32 seed = 0) {
+        
+        // ensure parameters are used
+        assert(read_parameters_flag);
+
+        // particle system
+        if (!read_data_flag) system_soft.initialize();
+
+        PS::S64 n_glb = input_parameters.n_glb.value;
+        assert(n_glb>0);
+
+        PS::S64 n_loc = n_glb / n_proc; 
+        if( n_glb % n_proc > my_rank) n_loc++;
+        system_soft.setNumberOfParticleLocal(n_loc);
+
+        PS::F64 * mass;
+        PS::F64vec * pos;
+        PS::F64vec * vel;
+
+        PS::F64 mass_planet_glb;
+        ParticleDistributionGenerator::makeKeplerDisk(mass_planet_glb, mass, pos, vel, n_glb, n_loc,
+                                                      ax_in, ax_out, ecc_rms, inc_rms, dens, mass_sun, a_ice, f_ice, power, seed);
+
+        PS::S64 i_h = n_glb/n_proc*my_rank;
+        if( n_glb % n_proc  > my_rank) i_h += my_rank;
+        else i_h += n_glb % n_proc;
+        for(PS::S32 i=0; i<n_loc; i++){
+            system_soft[i].mass = mass[i];
+            system_soft[i].pos = pos[i];
+            system_soft[i].vel = vel[i];
+            system_soft[i].id = i_h + i + 1;
+            system_soft[i].status.d = 0;
+            system_soft[i].mass_bk.d = 0;
+        }
+
+        file_header.nfile = 0;
+        stat.time = file_header.time = 0.0;
+        file_header.n_body = n_glb;
+
+        stat.n_real_glb = stat.n_all_glb = n_glb;
+        stat.n_real_loc = stat.n_all_loc = n_loc;
+
+        read_data_flag = true;
+
+        delete [] mass;
+        delete [] pos;
+        delete [] vel;
     }
 
     //! initial the system parameters
@@ -1499,9 +1894,11 @@ public:
         }
 #endif    
 
-        PS::S64 n_glb = system_soft.getNumberOfParticleGlobal();
+        PS::S64& n_glb = input_parameters.n_glb.value;
+        PS::S64& id_offset = input_parameters.id_offset.value;
+        n_glb = system_soft.getNumberOfParticleGlobal();
         PS::S64 n_loc = system_soft.getNumberOfParticleLocal();
-        PS::S64 id_offset = n_glb+1;
+        id_offset = id_offset==-1 ? n_glb+1 : id_offset;
 
         assert(n_glb>0);
 
@@ -1523,7 +1920,7 @@ public:
         PS::S64& n_bin         =  input_parameters.n_bin.value;
         PS::F64& theta         =  input_parameters.theta.value;
 
-        GetInitPar(system_soft, r_in, r_out, r_bin, r_search_min, r_search_max, v_max, m_average, m_max, dt_soft, v_disp, search_factor, ratio_r_cut, n_bin, theta);
+        getInitPar(system_soft, r_in, r_out, r_bin, r_search_min, r_search_max, v_max, m_average, m_max, dt_soft, v_disp, search_factor, ratio_r_cut, n_bin, theta);
 
         EPISoft::eps   = input_parameters.eps.value;
         EPISoft::r_in  = r_in;
@@ -1612,16 +2009,14 @@ public:
 #else
         hard_manager.energy_error_max = NUMERIC_FLOAT_MAX;
 #endif
-        hard_manager.ap_manager.r_tidal_tensor = input_parameters.r_bin.value;
+        hard_manager.ap_manager.r_tidal_tensor = r_bin;
         hard_manager.ap_manager.r_in_base = r_in;
-        hard_manager.ap_manager.r_out_base = input_parameters.r_out.value;
+        hard_manager.ap_manager.r_out_base = r_out;
         hard_manager.ap_manager.id_offset = id_offset;
         hard_manager.ap_manager.setOrbitalParticleSplitN(input_parameters.n_split.value);
-        //hard_manager.h4_manager.r_break_crit = input_parameters.r_bin.value;
-        //hard_manager.h4_manager.r_neighbor_crit = input_parameters.r_search_min.value;
         hard_manager.h4_manager.step.eta_4th = input_parameters.eta.value;
         hard_manager.h4_manager.step.eta_2nd = 0.01*input_parameters.eta.value;
-        hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, input_parameters.r_out.value);
+        hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, r_out);
         hard_manager.ar_manager.energy_error_relative_max = input_parameters.e_err_arc.value;
 #ifdef AR_SYM
         hard_manager.ar_manager.step_count_max = input_parameters.step_limit_arc.value;
@@ -1629,7 +2024,7 @@ public:
         // set symplectic order
         hard_manager.ar_manager.step.initialSymplecticCofficients(-6);
         hard_manager.ar_manager.slowdown_pert_ratio_ref = input_parameters.sd_factor.value;
-        hard_manager.ar_manager.slowdown_timescale_max = input_parameters.dt_soft.value;
+        hard_manager.ar_manager.slowdown_timescale_max = dt_soft;
         hard_manager.ar_manager.slowdown_mass_ref = m_average;
 
         // check consistence of paramters
@@ -1662,6 +2057,9 @@ public:
         // domain decomposition
         system_soft.setAverageTargetNumberOfSampleParticlePerProcess(input_parameters.n_smp_ave.value);
         domain_decompose_weight=1.0;
+
+        const PS::F32 coef_ema = 0.2;
+        dinfo.initialize(coef_ema);
         dinfo.decomposeDomainAll(system_soft,domain_decompose_weight);
 
         if(pos_domain!=NULL) {
