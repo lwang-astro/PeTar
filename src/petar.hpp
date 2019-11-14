@@ -1882,12 +1882,12 @@ public:
             std::cout<<"OMP threads:    "<<PS::Comm::getNumberOfThread()<<std::endl;
         }
     
-        std::string rank_str;
-        std::stringstream atmp;
-        atmp<<my_rank;
-        atmp>>rank_str;
 
         if(write_flag) {
+            std::string rank_str;
+            std::stringstream atmp;
+            atmp<<my_rank;
+            atmp>>rank_str;
             std::string fproname=input_parameters.fname_snp.value+".prof.rank."+rank_str;
             if(input_parameters.app_flag) fprofile.open(fproname.c_str(),std::ofstream::out|std::ofstream::app);
             else  fprofile.open(fproname.c_str(),std::ofstream::out);
@@ -1943,7 +1943,7 @@ public:
         // open output files
         // status information output
         std::string& fname_snp = input_parameters.fname_snp.value;
-        if(write_flag) {
+        if(write_flag&&my_rank==0) {
             if(input_parameters.app_flag) fstatus.open((fname_snp+".status").c_str(),std::ofstream::out|std::ofstream::app);
             else  fstatus.open((fname_snp+".status").c_str(),std::ofstream::out);
             fstatus<<std::setprecision(WRITE_PRECISION);
@@ -1953,7 +1953,7 @@ public:
         }
 
 
-        if(!restart_flag&&write_flag&&input_parameters.app_flag==false)  {
+        if(!restart_flag&&write_flag&&my_rank==0&&input_parameters.app_flag==false)  {
             stat.printColumnTitle(fstatus,WRITE_WIDTH);
             fstatus<<std::endl;
         }
@@ -1988,7 +1988,7 @@ public:
         }
 
         // save initial parameters
-        if(write_flag) {
+        if(write_flag&&my_rank==0) {
             std::string& fname_par = input_parameters.fname_par.value;
             if(print_flag) std::cout<<"Save input parameters to file "<<fname_par<<std::endl;
             FILE* fpar_out;
@@ -2031,7 +2031,7 @@ public:
         hard_manager.checkParams();
 
         // dump paramters for restart
-        if(write_flag) {
+        if(write_flag&&my_rank==0) {
             std::string fhard_par = input_parameters.fname_par.value + ".hard";
             if (print_flag) std::cout<<"Save hard_manager parameters to file "<<fhard_par<<std::endl;
             FILE* fpar_out;
@@ -2311,6 +2311,12 @@ public:
 #ifdef PETAR_DEBUG
                 assert(time_kick==time_drift);
                 assert(time_kick==stat.time);
+#endif
+
+#ifdef PROFILE
+                profile.tot.barrier();
+                PS::Comm::barrier();
+                profile.tot.end();
 #endif
                 return 0;
             }
