@@ -1659,7 +1659,7 @@ public:
       \return -1 if help is used
      */
     int readParameters(int argc, char *argv[]) {
-        assert(initial_fdps_flag);
+        //assert(initial_fdps_flag);
         // reading parameters
         read_parameters_flag = true;
         int read_flag = input_parameters.read(argc,argv);

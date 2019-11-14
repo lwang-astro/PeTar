@@ -10,7 +10,10 @@ extern "C" {
 
     static PeTar* ptr=NULL;
     static double time_start = 0.0;
- 
+    static CalcForcePPSimd<ParticleBase,FPSoft> fcalc; // Force calculator
+
+    // common
+
     int initialize_code() {
         ptr = new PeTar;
 
@@ -19,7 +22,8 @@ extern "C" {
 
         //No second MPI init
         //ptr->initialFDPS(argc,argv);
-        ptr->initial_fdps_flag = true;
+        //ptr->initial_fdps_flag = true;
+        ptr->n_proc = PS::Comm::getNumberOfProc();
 
         // default input
         int flag= ptr->readParameters(argc,argv);
@@ -51,6 +55,8 @@ extern "C" {
         // not allown
         return -1;
     }
+
+    // GravitationalDynamicsInterface
 
     int new_particle(int* index_of_the_particle,  double mass, double x, double y, double z, double vx, double vy, double vz, double radius) {
         // if not yet initial the system
@@ -365,6 +371,71 @@ extern "C" {
         * index_of_the_next_particle = index_of_the_particle + 1;
         return 0;
     }
+
+    // GravityFieldInterface
+
+    int get_gravity_at_point(double * eps, double * x, double * y, double * z, 
+                             double * forcex, double * forcey, double * forcez, int n)  {
+        // transform data
+        ParticleBase ptmp[n];
+        ForceSoft force[n];
+        for (int i=0; i<n; i++) {
+            ptmp[i].pos.x = x[i];
+            ptmp[i].pos.y = y[i];
+            ptmp[i].pos.z = z[i];
+            force[i].acc.x = 0;
+            force[i].acc.y = 0;
+            force[i].acc.z = 0;
+        };
+
+        
+        fcalc(ptmp, n, &(ptr->system_soft[0]), ptr->system_soft.getNumberOfParticleLocal(), force);
+
+        for (int i=0; i<n; i++) {
+            forcex[i] = force[i].acc.x;
+            forcey[i] = force[i].acc.y;
+            forcez[i] = force[i].acc.z;
+        }
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        if (ptr->my_rank==0) {
+            MPI_Reduce(MPI_IN_PLACE, forcex, n, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+            MPI_Reduce(MPI_IN_PLACE, forcey, n, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+            MPI_Reduce(MPI_IN_PLACE, forcez, n, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        }
+        else {
+            MPI_Reduce(forcex, NULL, n, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+            MPI_Reduce(forcey, NULL, n, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+            MPI_Reduce(forcez, NULL, n, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        }
+#endif
+        return 0;
+    }
+
+
+    int get_potential_at_point(double * eps,
+                               double * x, double * y, double * z, 
+                               double * phi, int n)  {
+        // transform data
+        ParticleBase ptmp[n];
+        ForceSoft force[n];
+        for (int i=0; i<n; i++) {
+            ptmp[i].pos.x = x[i];
+            ptmp[i].pos.y = y[i];
+            ptmp[i].pos.z = z[i];
+            force[i].pot = 0;
+        };
+
+        fcalc(ptmp, n, &(ptr->system_soft[0]), ptr->system_soft.getNumberOfParticleLocal(), force);
+
+        for (int i=0; i<n; i++) phi[i] = force[i].pot;
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        if (ptr->my_rank==0) MPI_Reduce(MPI_IN_PLACE, phi,  n, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        else                 MPI_Reduce(phi,          NULL, n, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+#endif
+        return 0;
+    }    
 
 #ifdef __cplusplus
 }

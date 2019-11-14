@@ -162,6 +162,64 @@ struct CalcForceEpSpQuadNoSimd{
 };
 
 #ifdef USE_SIMD
+template <class Tpi, class Tpj>
+struct CalcForcePPSimd{
+    void operator () (const Tpi * ep_i,
+                      const PS::S32 n_ip,
+                      const Tpj * ep_j,
+                      const PS::S32 n_jp,
+                      ForceSoft * force){
+        PS::S32 ep_j_list[n_jp], n_jp_local=0;
+        for (PS::S32 i=0; i<n_jp; i++){
+            if(ep_j[i].mass>0) ep_j_list[n_jp_local++] = i;
+        }
+    #ifdef __HPC_ACE__
+        PhantomGrapeQuad pg;
+    #else
+        #if defined(CALC_EP_64bit) || defined(CALC_EP_MIX)
+        static __thread PhantomGrapeQuad64Bit pg;
+        #else
+        static __thread PhantomGrapeQuad pg;
+        #endif
+    #endif
+        if(n_ip > pg.NIMAX || n_jp > pg.NJMAX){
+            std::cout<<"ni= "<<n_ip<<" NIMAX= "<<pg.NIMAX<<" nj= "<<n_jp<<" NJMAX= "<<pg.NJMAX<<std::endl;
+        }
+        assert(n_ip<=pg.NIMAX);
+        assert(n_jp<=pg.NJMAX);
+        pg.set_eps2(0.0);
+        pg.set_r_crit2(0.0);
+        //pg.set_cutoff(EPISoft::r_out, EPISoft::r_in);
+        for(PS::S32 i=0; i<n_ip; i++){
+            const PS::F64vec pos_i = ep_i[i].pos;
+            pg.set_xi_one(i, pos_i.x, pos_i.y, pos_i.z, 0.0);
+        }
+        PS::S32 loop_max = (n_jp_local-1) / PhantomGrapeQuad::NJMAX + 1;
+        for(PS::S32 loop=0; loop<loop_max; loop++){
+            const PS::S32 ih = PhantomGrapeQuad::NJMAX*loop;
+            const PS::S32 n_jp_tmp = ( (n_jp_local - ih) < PhantomGrapeQuad::NJMAX) ? (n_jp_local - ih) : PhantomGrapeQuad::NJMAX;
+            const PS::S32 it =ih + n_jp_tmp;
+            PS::S32 i_tmp = 0;
+            for(PS::S32 i=ih; i<it; i++, i_tmp++){
+                const PS::S32 ij = ep_j_list[i];
+                const PS::F64 m_j = ep_j[ij].mass;
+                const PS::F64vec pos_j = ep_j[ij].pos;
+                pg.set_epj_one(i_tmp, pos_j.x, pos_j.y, pos_j.z, m_j, 0.0);
+
+            }
+            pg.run_epj_for_p3t_with_linear_cutoff(n_ip, n_jp_tmp);
+            for(PS::S32 i=0; i<n_ip; i++){
+                PS::F64 * p = &(force[i].pot);
+                PS::F64 * a = (PS::F64 * )(&force[i].acc[0]);
+                PS::F64 n_ngb = 0;
+                pg.accum_accp_one(i, a[0], a[1], a[2], *p, n_ngb);
+                force[i].n_ngb += (PS::S32)(n_ngb*1.00001);
+            }
+        }
+    }
+};
+
+
 struct CalcForceEpEpWithLinearCutoffSimd{
     void operator () (const EPISoft * ep_i,
                       const PS::S32 n_ip,

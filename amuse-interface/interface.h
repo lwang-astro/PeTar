@@ -4,6 +4,8 @@
 extern "C" {
 #endif
 
+//  GravitationalDynamicsCode
+
 int initialize_code();
 
 int cleanup_code();
@@ -79,6 +81,12 @@ int get_number_of_particles(int * number_of_particles);
 int get_index_of_first_particle(int * index_of_the_particle);
 
 int get_index_of_next_particle(int index_of_the_particle, int * index_of_the_next_particle);
+
+// GravityFieldCode
+
+int get_gravity_at_point(double * eps, double * x, double * y, double * z, double * ax, double * ay, double * az, int npoints);
+
+int get_potential_at_point(double * eps, double * x, double * y, double * z, double * phi, int npoints);
 
 //int get_eta(double * eta);
 
