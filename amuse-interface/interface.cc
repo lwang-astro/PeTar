@@ -13,10 +13,27 @@ extern "C" {
  
     int initialize_code() {
         ptr = new PeTar;
+
         int argc = 0;
         char **argv=NULL;
-        ptr->initialFDPS(argc,argv);
-        return 0;
+
+        //No second MPI init
+        //ptr->initialFDPS(argc,argv);
+        ptr->initial_fdps_flag = true;
+
+        // default input
+        int flag= ptr->readParameters(argc,argv);
+
+        // set writing flag to false
+        ptr->input_parameters.write_flag = false;
+        ptr->write_flag = false;
+
+        // set restart flat to false
+        ptr->file_header.nfile = 0; 
+        
+        ptr->system_soft.initialize();
+
+        return flag;
     }
 
     int cleanup_code() {
@@ -26,23 +43,8 @@ extern "C" {
     }
 
     int commit_parameters() {
-        //assign them all something
-        int argc = 4;
-        char **argv = (char**)malloc((argc+1)*sizeof(char*));
-        for(int i = 0; i < argc; i++){
-            argv[i] = (char*)malloc(50*sizeof(char));
-        }
-        argv[argc] = NULL;
-        sprintf(argv[1], "-d");
-        sprintf(argv[2], "0");
-        sprintf(argv[3], "--disable-write-info");
-        int flag= ptr->readParameters(argc,argv);
-        for(int i = 0; i < argc; i++) free(argv[i]);
-        free(argv);
-
-        ptr->file_header.nfile = 0; // no restart
-
-        return flag;
+        if (!ptr->read_parameters_flag) return -1;
+        return 0;
     }
 
     int recommit_parameters() {
