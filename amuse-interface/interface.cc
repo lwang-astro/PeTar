@@ -28,6 +28,9 @@ extern "C" {
         // default input
         int flag= ptr->readParameters(argc,argv);
 
+        // set id_offset
+        ptr->input_parameters.id_offset.value = 10000000;
+
         // set writing flag to false
         ptr->input_parameters.write_flag = false;
         ptr->write_flag = false;
@@ -37,22 +40,35 @@ extern "C" {
         
         ptr->system_soft.initialize();
 
+#ifdef INTERFACE_DEBUG_PRINT
+        std::cout<<"Initialize_code\n";
+#endif
         return flag;
     }
 
     int cleanup_code() {
         delete ptr;
         ptr=NULL;
+#ifdef INTERFACE_DEBUG_PRINT
+        std::cout<<"cleanup_code\n";
+#endif
         return 0;
     }
 
     int commit_parameters() {
         if (!ptr->read_parameters_flag) return -1;
+        
+#ifdef INTERFACE_DEBUG_PRINT
+        std::cout<<"commit_parameters\n";
+#endif
         return 0;
     }
 
     int recommit_parameters() {
         // not allown
+#ifdef INTERFACE_DEBUG_PRINT
+        std::cout<<"recommit_parameters(forbidden!)\n";
+#endif
         return -1;
     }
 
@@ -62,41 +78,58 @@ extern "C" {
         // if not yet initial the system
         ptr->read_data_flag = true;
         
-        FPSoft p;
-        long long int id_offset = ptr->hard_manager.ap_manager.id_offset;
-        long long int n_glb = ptr->stat.n_real_glb;
-        long long int n_loc = ptr->system_soft.getNumberOfParticleLocal();
-        if (n_loc!=ptr->stat.n_real_loc) {std::cerr<<"Error: number of particle not match !"; return -1;}
-        if (n_glb<id_offset) return -1;
-        p.mass = mass;
-        p.pos.x = x;
-        p.pos.y = y;
-        p.pos.z = z;
-        p.vel.x = vx;
-        p.vel.y = vy;
-        p.vel.z = vz;
-        p.status.d = 0.0;
-        p.mass_bk.d = 0.0;
-        if (ptr->initial_parameters_flag) p.calcRSearch(ptr->input_parameters.dt_soft.value);
-        p.id = n_glb+1;
-        p.adr = n_loc;
-        p.rank_org = ptr->my_rank;
-        ptr->system_soft.addOneParticle(p);
-        ptr->add_particle_index_map(p.adr, p.rank_org, p.id);
-        ptr->stat.n_real_loc++;
+        PS::S64 id_offset = ptr->input_parameters.id_offset.value;
+        PS::S64 n_glb = ptr->stat.n_real_glb;
+        PS::S64 n_loc = ptr->stat.n_real_loc;
+#ifdef INTERFACE_DEBUG
+        assert(n_loc == ptr->system_soft.getNumberOfParticleLocal());
+        assert(n_glb == ptr->system_soft.getNumberOfParticleGlobal());
+#endif
+
+        if(ptr->my_rank==0) {
+            FPSoft p;
+            p.mass = mass;
+            p.pos.x = x;
+            p.pos.y = y;
+            p.pos.z = z;
+            p.vel.x = vx;
+            p.vel.y = vy;
+            p.vel.z = vz;
+
+            p.mass_bk.d = 0.0;
+            p.id = n_glb+1;
+            p.status.d = 0.0;
+            if (ptr->initial_parameters_flag) p.calcRSearch(ptr->input_parameters.dt_soft.value);
+            if (p.id>=id_offset) return -1;
+
+            p.rank_org = ptr->my_rank;
+            p.adr = n_loc;
+
+            ptr->system_soft.addOneParticle(p);
+
+            ptr->stat.n_real_loc++;
+            *index_of_the_particle = p.id;
+        }
         ptr->stat.n_real_glb++;
-        *index_of_the_particle = p.id;
+
         return 0;
     }
 
     int delete_particle(int index_of_the_particle) {
-        if (index_of_the_particle>ptr->stat.n_real_glb||index_of_the_particle<0) return -1;
-        int index, rank;
-        ptr->get_particle_index_from_id(index, rank, index_of_the_particle);
-        if(ptr->my_rank==rank) {
+        int index = ptr->getParticleAdrFromID(index_of_the_particle);
+        if (index>=0) {
             ptr->system_soft.removeParticle(&index, 1);
             ptr->stat.n_real_loc--;
+#ifdef INTERFACE_DEBUG_PRINT
+            std::cout<<"Remove particle index "<<index<<" id "<<index_of_the_particle<<" rank "<<ptr->my_rank<<std::endl;
+#endif
         }
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        int check = PS::Comm::getMaxValue(index);
+        if (check==-1) return -1;
+#else
+        else return -1;
+#endif
         ptr->stat.n_real_glb--;
         return 0;
     }
@@ -105,12 +138,12 @@ extern "C" {
                   double * mass, 
                   double * x, double * y, double * z,
                   double * vx, double * vy, double * vz, double * radius){
-        if (index_of_the_particle>ptr->stat.n_real_glb||index_of_the_particle<0) return -1;
-        int index, rank;
-        ptr->get_particle_index_from_id(index, rank, index_of_the_particle);
-        if (rank<0) return -1;
-        if (ptr->my_rank == rank) {
-            if (index<0||index>ptr->stat.n_real_loc) return -1;
+        int index = ptr->getParticleAdrFromID(index_of_the_particle);
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        int rank_mask = index==-1 ? 0 : ptr->my_rank;
+        int particle_rank = PS::Comm::getSum(rank_mask);
+        if (particle_rank==0) {
+            if (index==-1) return -1;
             FPSoft* p = &(ptr->system_soft[index]);
             *mass = p->mass;
             *x = p->pos.x;
@@ -120,6 +153,37 @@ extern "C" {
             *vy = p->vel.y;
             *vz = p->vel.z;
         }
+        else {
+            if (ptr->my_rank==particle_rank) { // sender
+                FPSoft* p = &(ptr->system_soft[index]);
+                MPI_Send(p, 7, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+            }
+            else if (ptr->my_rank==0) { // receiver
+                ParticleBase p;
+                MPI_Recv(&p, 7, MPI_DOUBLE, particle_rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+                *mass = p.mass;
+                *x = p.pos.x;
+                *y = p.pos.y;
+                *z = p.pos.z;
+                *vx = p.vel.x;
+                *vy = p.vel.y;
+                *vz = p.vel.z;
+            }
+        }
+#else
+        if (index>=0) {
+            FPSoft* p = &(ptr->system_soft[index]);
+            *mass = p->mass;
+            *x = p->pos.x;
+            *y = p->pos.y;
+            *z = p->pos.z;
+            *vx = p->vel.x;
+            *vy = p->vel.y;
+            *vz = p->vel.z;
+        }
+        else return -1;
+#endif
         return 0;
     }
 
@@ -127,10 +191,8 @@ extern "C" {
                   double mass, 
                   double x, double y, double z,
                   double vx, double vy, double vz, double radius) {
-        if (index_of_the_particle>ptr->stat.n_real_glb||index_of_the_particle<0) return -1;
-        int index, rank;
-        ptr->get_particle_index_from_id(index, rank, index_of_the_particle);
-        if (ptr->my_rank == rank) {
+        int index = ptr->getParticleAdrFromID(index_of_the_particle);
+        if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
             p->mass = mass;
             p->pos.x = x;
@@ -140,28 +202,48 @@ extern "C" {
             p->vel.y = vy;
             p->vel.z = vz;
         }
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        int check = PS::Comm::getMaxValue(index);
+        if (check==-1) return -1;
+#else
+        else return -1;
+#endif
         return 0;
     }
 
     int get_mass(int index_of_the_particle, double * mass) {
-        if (index_of_the_particle>ptr->stat.n_real_glb||index_of_the_particle<0) return -1;
-        int index, rank;
-        ptr->get_particle_index_from_id(index, rank, index_of_the_particle);
-        if (ptr->my_rank == rank) {
+        int index = ptr->getParticleAdrFromID(index_of_the_particle);
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        double mass_local = 0.0;
+        if (index>=0) {
+            FPSoft* p = &(ptr->system_soft[index]);
+            mass_local = p->mass;
+        }    
+        *mass = PS::Comm::getSum(mass_local);
+        int check = PS::Comm::getMaxValue(index);
+        if (check==-1) return -1;
+#else
+        if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
             *mass = p->mass;
         }    
+        else return -1;
+#endif
         return 0;
     }
 
     int set_mass(int index_of_the_particle, double mass) {
-        if (index_of_the_particle>ptr->stat.n_real_glb||index_of_the_particle<0) return -1;
-        int index, rank;
-        ptr->get_particle_index_from_id(index, rank, index_of_the_particle);
-        if (ptr->my_rank == rank) {
+        int index = ptr->getParticleAdrFromID(index_of_the_particle);
+        if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
             p->mass = mass;
         }    
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        int check = PS::Comm::getMaxValue(index);
+        if (check==-1) return -1;
+#else
+        else return -1;
+#endif
         return 0;
     }
 
@@ -177,94 +259,197 @@ extern "C" {
 
     int set_position(int index_of_the_particle,
                      double x, double y, double z) {
-        if (index_of_the_particle>ptr->stat.n_real_glb||index_of_the_particle<0) return -1;
-        int index, rank;
-        ptr->get_particle_index_from_id(index, rank, index_of_the_particle);
-        if (ptr->my_rank == rank) {
+        int index = ptr->getParticleAdrFromID(index_of_the_particle);
+        if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
             p->pos.x = x;
             p->pos.y = y;
             p->pos.z = z;
         }    
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        int check = PS::Comm::getMaxValue(index);
+        if (check==-1) return -1;
+#else
+        else return -1;
+#endif
         return 0;
     }
 
     int get_position(int index_of_the_particle,
                      double * x, double * y, double * z) {
-        if (index_of_the_particle>ptr->stat.n_real_glb||index_of_the_particle<0) return -1;
-        int index, rank;
-        ptr->get_particle_index_from_id(index, rank, index_of_the_particle);
-        if (ptr->my_rank == rank) {
+        int index = ptr->getParticleAdrFromID(index_of_the_particle);
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        int rank_mask = index==-1 ? 0 : ptr->my_rank;
+        int particle_rank = PS::Comm::getSum(rank_mask);
+        if (particle_rank==0) {
+            if (index==-1) return -1;
+            FPSoft* p = &(ptr->system_soft[index]);
+
+            *x = p->pos.x;
+            *y = p->pos.y;
+            *z = p->pos.z;
+        }
+        else {
+            if (ptr->my_rank==particle_rank) { // sender
+                FPSoft* p = &(ptr->system_soft[index]);
+                double* pos = &(p->pos.x);
+                MPI_Send(pos, 3, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+            }
+            else if (ptr->my_rank==0) { // receiver
+                double pos[3];
+                MPI_Recv(pos, 3, MPI_DOUBLE, particle_rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+                *x = pos[0];
+                *y = pos[1];
+                *z = pos[2];
+            }
+        }
+#else
+        if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
             *x = p->pos.x;
             *y = p->pos.y;
             *z = p->pos.z;
         }    
+        else return -1;
+#endif
         return 0;
     }
 
     int set_velocity(int index_of_the_particle,
                      double vx, double vy, double vz) {
-        if (index_of_the_particle>ptr->stat.n_real_glb||index_of_the_particle<0) return -1;
-        int index, rank;
-        ptr->get_particle_index_from_id(index, rank, index_of_the_particle);
-        if (ptr->my_rank == rank) {
+        int index = ptr->getParticleAdrFromID(index_of_the_particle);
+        if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
             p->vel.x = vx;
             p->vel.y = vy;
             p->vel.z = vz;
         }    
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        int check = PS::Comm::getMaxValue(index);
+        if (check==-1) return -1;
+#else
+        else return -1;
+#endif
         return 0;
     }
 
     int get_velocity(int index_of_the_particle,
                      double * vx, double * vy, double * vz) {
-        if (index_of_the_particle>ptr->stat.n_real_glb||index_of_the_particle<0) return -1;
-        int index, rank;
-        ptr->get_particle_index_from_id(index, rank, index_of_the_particle);
-        if (ptr->my_rank == rank) {
+        int index = ptr->getParticleAdrFromID(index_of_the_particle);
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        int rank_mask = index==-1 ? 0 : ptr->my_rank;
+        int particle_rank = PS::Comm::getSum(rank_mask);
+        if (particle_rank==0) {
+            if (index==-1) return -1;
+            FPSoft* p = &(ptr->system_soft[index]);
+
+            *vx = p->vel.x;
+            *vy = p->vel.y;
+            *vz = p->vel.z;
+        }
+        else {
+            if (ptr->my_rank==particle_rank) { // sender
+                FPSoft* p = &(ptr->system_soft[index]);
+                double* vel = &(p->vel.x);
+                MPI_Send(vel, 3, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+            }
+            else if (ptr->my_rank==0) { // receiver
+                double vel[3];
+                MPI_Recv(vel, 3, MPI_DOUBLE, particle_rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+                *vx = vel[0];
+                *vy = vel[1];
+                *vz = vel[2];
+            }
+        }
+#else
+        if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
             *vx = p->vel.x;
             *vy = p->vel.y;
             *vz = p->vel.z;
         }    
+        else return -1;
+#endif
         return 0;
     }
 
     int get_acceleration(int index_of_the_particle, double * ax, double * ay, double * az) {
-        if (index_of_the_particle>ptr->stat.n_real_glb||index_of_the_particle<0) return -1;
-        int index, rank;
-        ptr->get_particle_index_from_id(index, rank, index_of_the_particle);
-        if (ptr->my_rank == rank) {
+        int index = ptr->getParticleAdrFromID(index_of_the_particle);
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        int rank_mask = index==-1 ? 0 : ptr->my_rank;
+        int particle_rank = PS::Comm::getSum(rank_mask);
+        if (particle_rank==0) {
+            if (index==-1) return -1;
+            FPSoft* p = &(ptr->system_soft[index]);
+
+            *ax = p->acc.x;
+            *ay = p->acc.y;
+            *az = p->acc.z;
+        }
+        else {
+            if (ptr->my_rank==particle_rank) { // sender
+                FPSoft* p = &(ptr->system_soft[index]);
+                double* acc = &(p->acc.x);
+                MPI_Send(acc, 7, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+            }
+            else if (ptr->my_rank==0) { // receiver
+                double acc[3];
+                MPI_Recv(acc, 7, MPI_DOUBLE, particle_rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+                *ax = acc[0];
+                *ay = acc[1];
+                *az = acc[2];
+            }
+        }
+#else
+        if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
             *ax = p->acc.x;
             *ay = p->acc.y;
             *az = p->acc.z;
         }    
+        else return -1;
+#endif
         return 0;
     }
 
     int set_acceleration(int index_of_the_particle, double ax, double ay, double az) {
-        if (index_of_the_particle>ptr->stat.n_real_glb||index_of_the_particle<0) return -1;
-        int index, rank;
-        ptr->get_particle_index_from_id(index, rank, index_of_the_particle);
-        if (ptr->my_rank == rank) {
+        int index = ptr->getParticleAdrFromID(index_of_the_particle);
+        if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
             p->acc.x = ax; 
             p->acc.y = ay; 
             p->acc.z = az; 
         }    
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        int check = PS::Comm::getMaxValue(index);
+        if (check==-1) return -1;
+#else
+        else return -1;
+#endif
         return 0;
     }
 
     int get_potential(int index_of_the_particle, double * potential) {
-        if (index_of_the_particle>ptr->stat.n_real_glb||index_of_the_particle<0) return -1;
-        int index, rank;
-        ptr->get_particle_index_from_id(index, rank, index_of_the_particle);
-        if (ptr->my_rank == rank) {
+        int index = ptr->getParticleAdrFromID(index_of_the_particle);
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        double pot_local = 0.0;
+        if (index>=0) {
+            FPSoft* p = &(ptr->system_soft[index]);
+            pot_local = p->pot_tot;
+        }    
+        *potential = PS::Comm::getSum(pot_local);
+        int check = PS::Comm::getMaxValue(index);
+        if (check==-1) return -1;
+#else
+        if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
             *potential = p->pot_tot;
         }    
+        else return -1;
+#endif
         return 0;
     }
 
@@ -278,17 +463,33 @@ extern "C" {
     int commit_particles() {
         if (!ptr->read_parameters_flag) return -1;
         if (!ptr->read_data_flag) return -1;
+        ptr->input_parameters.n_glb.value = ptr->stat.n_real_glb;
         ptr->initialParameters();
         ptr->initialStep();
+#ifdef INTERFACE_DEBUG_PRINT
+        std::cout<<"commit_particles\n";
+#endif
         return 0;
     }
 
     int synchronize_model() {
+#ifdef INTERFACE_DEBUG_PRINT
+        std::cout<<"synchronize_model\n";
+#endif
         return 0;
     }
 
     int recommit_particles() {
         ptr->initial_step_flag = false;
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        ptr->exchangeParticle();
+#else
+        reconstructIdAdrMap();
+#endif
+        ptr->initialStep();
+#ifdef INTERFACE_DEBUG_PRINT
+        std::cout<<"recommit_particles\n";
+#endif
         return 0;
     }
 

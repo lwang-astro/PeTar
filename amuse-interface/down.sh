@@ -22,7 +22,7 @@ if  [ ! -d FDPS ]; then
     rm -f master.zip
 fi
 cd $npath
-flist='interface.cc interface.py test_interface.cc interface.h run_one_cluster_movie.py'
+flist='interface.cc interface.py interface.h test_interface.cc test_interface.py run_one_cluster_movie.py'
 for file in $flist
 do
     ln -sf src/PeTar/amuse-interface/$file 

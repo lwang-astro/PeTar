@@ -504,6 +504,9 @@ public:
     FileHeader file_header;
     SystemSoft system_soft;
 
+    // particle index map
+    std::map<PS::S64, PS::S32> id_adr_map;
+
     // domain
     PS::S64 n_loop; // count for domain decomposition
     PS::F64 domain_decompose_weight;
@@ -554,7 +557,7 @@ public:
 #ifdef MAIN_DEBUG
         fout(),
 #endif        
-        file_header(), system_soft(), 
+        file_header(), system_soft(), id_adr_map(),
         n_loop(0), domain_decompose_weight(1.0), dinfo(), pos_domain(NULL), 
         dt_reduce_factor(1.0),
         tree_nb(), tree_soft(), 
@@ -606,6 +609,7 @@ private:
 
         // local particle number
         const PS::S64 n_loc = _tsys.getNumberOfParticleLocal();
+        assert(n_loc>0);
 
         // local c.m velocity
         PS::F64vec vel_cm_loc = 0.0;
@@ -618,7 +622,7 @@ private:
             PS::F64 mi = _tsys[i].mass;
             PS::F64vec vi = _tsys[i].vel;
 
-#ifdef MAIN_DEBUG
+#ifdef PETAR_DEBUG
             assert(mi>0);
 #endif
             mass_cm_loc += mi;
@@ -757,11 +761,6 @@ private:
         profile.create_group.start();
 #endif
 
-        // record real particle n_loc/glb
-        stat.n_real_loc = system_soft.getNumberOfParticleLocal();
-        stat.n_real_glb = system_soft.getNumberOfParticleGlobal();
-
-
         // >2.3 Find ARC groups and create artificial particles
         // Set local ptcl_hard for isolated  clusters
         system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
@@ -793,7 +792,7 @@ private:
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
 #endif
 
-        // update n_glb, n_glb for all
+        // update total particle number including artificial particles
         stat.n_all_loc = system_soft.getNumberOfParticleLocal();
         stat.n_all_glb = system_soft.getNumberOfParticleGlobal();
             
@@ -1354,27 +1353,6 @@ private:
 #endif
     }
 
-    //! exchange particles
-    inline void exchangeParticle() {
-#ifdef PROFILE
-        profile.exchange.start();
-#endif
-        system_soft.exchangeParticle(dinfo);
-
-        const PS::S32 n_loc_tmp = system_soft.getNumberOfParticleLocal();
-#pragma omp parallel for
-        for(PS::S32 i=0; i<n_loc_tmp; i++){
-            system_soft[i].rank_org = my_rank;
-            system_soft[i].adr = i;
-        }
-        
-#ifdef PROFILE
-        profile.exchange.barrier();
-        PS::Comm::barrier();
-        profile.exchange.end();
-#endif
-    }
-
     //! adjust dt_reduce_factor for tree time step
     /*!
       \return true: if tree time need update
@@ -1403,12 +1381,8 @@ private:
         return dt_mod_flag;
     }
 
+    //! update system status
     inline void updateStatus(const bool _initial_flag) {
-
-//#ifdef PETAR_DEBUG
-//        assert(stat.n_real_loc==system_soft.getNumberOfParticleLocal());
-//#endif
-
         if (_initial_flag) {
             // calculate initial energy
             stat.energy.clear();
@@ -1426,10 +1400,10 @@ private:
 
         }
         else {
-
 #ifdef HARD_CHECK_ENERGY
             // reset sd energy reference to no slowdown case
-            stat.energy.etot_sd_ref -= stat.energy.ekin_sd + stat.energy.epot_sd - stat.energy.ekin - stat.energy.epot;
+            PS::F64 energy_old = stat.energy.ekin + stat.energy.epot;
+            stat.energy.etot_sd_ref -= stat.energy.ekin_sd + stat.energy.epot_sd - energy_old;
 #endif
 
             stat.energy.calc(&system_soft[0], stat.n_real_loc);
@@ -1456,7 +1430,6 @@ private:
             system_hard_connected.energy.clear();
 #endif
             stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);
-
         }
     }
 
@@ -1633,15 +1606,63 @@ private:
 
 public:
 
-    //! get index and rank of particle from an id
-    void get_particle_index_from_id(PS::S32& _index, PS::S32& _rank, const PS::S64 _id) {
-        _index = _id-1;
-        _rank = 0;
+    //! get address of particle from an id, if not found, return -1
+    PS::S32 getParticleAdrFromID(const PS::S64 _id) {
+        auto item = id_adr_map.find(_id);
+        if (item==id_adr_map.end()) return -1;
+        else return item->second;
     }
 
-    //! save index and rank of a particle with id
-    void add_particle_index_map(const PS::S32& _index, const PS::S32& _rank, const PS::S64 _id) {
+    //! regist a particle 
+    void addParticleInIdAdrMap(FPSoft& _ptcl) {
+        id_adr_map[_ptcl.id] = _ptcl.adr;
+    }
+
+    //! reconstruct ID-address map
+    void reconstructIdAdrMap() {
+        id_adr_map.clear();
+        for (PS::S32 i=0; i<stat.n_real_loc; i++) id_adr_map[system_soft[i].id] = i;
+    }
+
+    //! remove particle with id from map, return particle index, if not found return -1
+    PS::S32 removeParticleFromIdAdrMap(const PS::S64 _id) {
+        auto item = id_adr_map.find(_id);
+        if (item==id_adr_map.end()) return -1;
+        else {
+            PS::S32 adr = item->second;
+            id_adr_map.erase(item);
+            return adr;
+        }
+    }
+
+    //! exchange particles
+    void exchangeParticle() {
+#ifdef PROFILE
+        profile.exchange.start();
+#endif
+        system_soft.exchangeParticle(dinfo);
+
+        const PS::S32 n_loc = system_soft.getNumberOfParticleLocal();
+
+        id_adr_map.clear();
+//#pragma omp parallel for
+        for(PS::S32 i=0; i<n_loc; i++){
+            system_soft[i].rank_org = my_rank;
+            system_soft[i].adr = i;
+            id_adr_map[system_soft[i].id] = i;
+        }
+
+        // record real particle n_loc/glb
+        stat.n_real_loc = n_loc;
+#ifdef PETAR_DEBUG
+        assert(stat.n_real_glb==system_soft.getNumberOfParticleGlobal());
+#endif
         
+#ifdef PROFILE
+        profile.exchange.barrier();
+        PS::Comm::barrier();
+        profile.exchange.end();
+#endif
     }
 
     //! initial FDPS (print LOGO) and MPI
@@ -1688,6 +1709,12 @@ public:
         if(print_flag)
             std::cout<<"Reading file "<<data_filename<<std::endl
                      <<"N_tot = "<<n_glb<<"\nN_loc = "<<n_loc<<std::endl;
+
+        stat.time = file_header.time;
+        stat.n_real_glb = stat.n_all_glb = n_glb;
+        stat.n_real_loc = stat.n_all_loc = n_loc;
+
+        input_parameters.n_glb.value = n_glb;
 
         read_data_flag = true;
     }
@@ -1756,6 +1783,12 @@ public:
         file_header.n_body = n_glb;
         file_header.time = 0.0;
 
+        stat.time = 0.0;
+        stat.n_real_glb = stat.n_all_glb = n_glb;
+        stat.n_real_loc = stat.n_all_loc = n_loc;
+
+        input_parameters.n_glb.value = n_glb;
+
         read_data_flag = true;
     }
 
@@ -1796,9 +1829,10 @@ public:
         }
 
         file_header.nfile = 0;
-        stat.time = file_header.time = 0.0;
         file_header.n_body = n_glb;
+        file_header.time = 0.0;
 
+        stat.time = 0.0;
         stat.n_real_glb = stat.n_all_glb = n_glb;
         stat.n_real_loc = stat.n_all_loc = n_loc;
 
@@ -1882,7 +1916,7 @@ public:
             std::cout<<"OMP threads:    "<<PS::Comm::getNumberOfThread()<<std::endl;
         }
     
-
+        // open profile file
         if(write_flag) {
             std::string rank_str;
             std::stringstream atmp;
@@ -1894,21 +1928,8 @@ public:
         }
 #endif    
 
-        PS::S64& n_glb = input_parameters.n_glb.value;
-        PS::S64& id_offset = input_parameters.id_offset.value;
-        n_glb = system_soft.getNumberOfParticleGlobal();
-        PS::S64 n_loc = system_soft.getNumberOfParticleLocal();
-        id_offset = id_offset==-1 ? n_glb+1 : id_offset;
 
-        assert(n_glb>0);
-
-#ifdef MAIN_DEBUG
-        for (int i=0; i<n_loc; i++) {
-            assert(id_offset>system_soft[i].id);
-        }
-#endif
-
-        // get parameters
+        // calculate system parameters
         PS::F64 r_in, m_average, m_max, v_disp, v_max;
         PS::F64& r_out = input_parameters.r_out.value;
         PS::F64& r_bin = input_parameters.r_bin.value;
@@ -1930,52 +1951,6 @@ public:
         Ptcl::mean_mass_inv = 1.0/m_average;
         Ptcl::r_group_crit_ratio = r_bin/r_in;
 
-        // check restart
-        bool restart_flag = file_header.nfile; // nfile = 0 is assumed as initial data file
-
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-        PS::Comm::barrier();
-#endif
-
-        // file header update
-        if(!restart_flag) file_header.n_body = system_soft.getNumberOfParticleGlobal();
-
-        // open output files
-        // status information output
-        std::string& fname_snp = input_parameters.fname_snp.value;
-        if(write_flag&&my_rank==0) {
-            if(input_parameters.app_flag) fstatus.open((fname_snp+".status").c_str(),std::ofstream::out|std::ofstream::app);
-            else  fstatus.open((fname_snp+".status").c_str(),std::ofstream::out);
-            fstatus<<std::setprecision(WRITE_PRECISION);
-#ifdef MAIN_DEBUG
-            fout.open("nbody.dat");
-#endif
-        }
-
-
-        if(!restart_flag&&write_flag&&my_rank==0&&input_parameters.app_flag==false)  {
-            stat.printColumnTitle(fstatus,WRITE_WIDTH);
-            fstatus<<std::endl;
-        }
-
-        // ID safety check
-        if (!restart_flag) {
-            for (PS::S32 i=0; i<n_loc; i++) {
-                PS::S64 id = system_soft[i].id;
-                if(id<=0) {
-                    std::cerr<<"Error: for initial data, the id should always larger than zero. current index i = "<<i<<", id = "<<system_soft[i].id<<"!"<<std::endl;
-                    abort();
-                }
-
-                // for binary, research depend on v_disp
-                //if(id<=2*n_bin.value) system_soft[i].r_search = std::max(r_search_min*std::sqrt(system_soft[i].mass*Ptcl::mean_mass_inv),v_disp*dt_soft.value*search_factor.value);
-                PS::F64 m_fac = system_soft[i].mass*Ptcl::mean_mass_inv;
-                system_soft[i].changeover.setR(m_fac, r_in, r_out);
-                if(id<=2*n_bin) system_soft[i].r_search = std::max(r_search_min,v_disp*dt_soft*search_factor + system_soft[i].changeover.getRout());
-                else system_soft[i].calcRSearch(dt_soft);
-            }
-        }
-    
         if(print_flag) {
             std::cout<<"----- Parameter list: -----\n";
             std::cout<<" m_average    = "<<m_average      <<std::endl
@@ -1987,20 +1962,57 @@ public:
                      <<" dt_soft      = "<<dt_soft        <<std::endl;
         }
 
-        // save initial parameters
+        // check restart
+        bool restart_flag = file_header.nfile; // nfile = 0 is assumed as initial data file
+
+        // open output files
+        // status information output
+        std::string& fname_snp = input_parameters.fname_snp.value;
         if(write_flag&&my_rank==0) {
-            std::string& fname_par = input_parameters.fname_par.value;
-            if(print_flag) std::cout<<"Save input parameters to file "<<fname_par<<std::endl;
-            FILE* fpar_out;
-            if( (fpar_out = fopen(fname_par.c_str(),"w")) == NULL) {
-                fprintf(stderr,"Error: Cannot open file %s.\n", fname_par.c_str());
-                abort();
+            if(input_parameters.app_flag) 
+                fstatus.open((fname_snp+".status").c_str(),std::ofstream::out|std::ofstream::app);
+            else 
+                fstatus.open((fname_snp+".status").c_str(),std::ofstream::out);
+            fstatus<<std::setprecision(WRITE_PRECISION);
+
+            // write titles of columns
+            if(!restart_flag&&input_parameters.app_flag==false)  {
+                stat.printColumnTitle(fstatus,WRITE_WIDTH);
+                fstatus<<std::endl;
             }
-            input_parameters.input_par_store.writeAscii(fpar_out);
-            fclose(fpar_out);
+
+#ifdef MAIN_DEBUG
+            fout.open("nbody.dat");
+#endif
         }
 
-        // system hard paramters
+        // set id_offset
+#ifdef PETAR_DEBUG
+        assert(stat.n_real_glb == input_parameters.n_glb.value);
+        assert(stat.n_real_glb == system_soft.getNumberOfParticleGlobal());
+#endif
+        PS::S64& id_offset = input_parameters.id_offset.value;
+        id_offset = id_offset==-1 ? stat.n_real_glb+1 : id_offset;
+
+        // initial particles paramters
+        if (!restart_flag) {
+            for (PS::S32 i=0; i<stat.n_real_loc; i++) {
+                // ID safety check 
+                PS::S64 id = system_soft[i].id;
+                assert(id_offset>id);
+                assert(id>0);
+
+                // set changeover 
+                PS::F64 m_fac = system_soft[i].mass*Ptcl::mean_mass_inv;
+                system_soft[i].changeover.setR(m_fac, r_in, r_out);
+
+                // calculate r_search for particles, for binary, r_search depend on v_disp
+                if(id<=2*n_bin) system_soft[i].r_search = std::max(r_search_min,v_disp*dt_soft*search_factor + system_soft[i].changeover.getRout());
+                else system_soft[i].calcRSearch(dt_soft);
+            }
+        }
+    
+        // set system hard paramters
         hard_manager.setDtRange(input_parameters.dt_soft.value/input_parameters.dt_limit_hard_factor.value, input_parameters.dt_min_hermite_index.value);
         hard_manager.setEpsSq(input_parameters.eps.value);
         hard_manager.setG(1.0);
@@ -2021,20 +2033,35 @@ public:
 #ifdef AR_SYM
         hard_manager.ar_manager.step_count_max = input_parameters.step_limit_arc.value;
 #endif
-        // set symplectic order
         hard_manager.ar_manager.step.initialSymplecticCofficients(-6);
         hard_manager.ar_manager.slowdown_pert_ratio_ref = input_parameters.sd_factor.value;
         hard_manager.ar_manager.slowdown_timescale_max = dt_soft;
         hard_manager.ar_manager.slowdown_mass_ref = m_average;
 
         // check consistence of paramters
+        input_parameters.checkParams();
         hard_manager.checkParams();
 
-        // dump paramters for restart
+        // initial hard class and parameters
+        system_hard_one_cluster.manager = &hard_manager;
+        system_hard_isolated.manager = &hard_manager;
+        system_hard_connected.manager = &hard_manager;
+
         if(write_flag&&my_rank==0) {
+            // save initial parameters
+            std::string& fname_par = input_parameters.fname_par.value;
+            if (print_flag) std::cout<<"Save input parameters to file "<<fname_par<<std::endl;
+            FILE* fpar_out;
+            if( (fpar_out = fopen(fname_par.c_str(),"w")) == NULL) {
+                fprintf(stderr,"Error: Cannot open file %s.\n", fname_par.c_str());
+                abort();
+            }
+            input_parameters.input_par_store.writeAscii(fpar_out);
+            fclose(fpar_out);
+
+            // save hard paramters 
             std::string fhard_par = input_parameters.fname_par.value + ".hard";
             if (print_flag) std::cout<<"Save hard_manager parameters to file "<<fhard_par<<std::endl;
-            FILE* fpar_out;
             if( (fpar_out = fopen(fhard_par.c_str(),"w")) == NULL) {
                 fprintf(stderr,"Error: Cannot open file %s.\n", fhard_par.c_str());
                 abort();
@@ -2042,11 +2069,6 @@ public:
             hard_manager.writeBinary(fpar_out);
             fclose(fpar_out);
         }
-
-        // initial hard class and parameters
-        system_hard_one_cluster.manager = &hard_manager;
-        system_hard_isolated.manager = &hard_manager;
-        system_hard_connected.manager = &hard_manager;
 
 #ifdef HARD_DUMP
         // initial hard_dump 
@@ -2056,9 +2078,8 @@ public:
 
         // domain decomposition
         system_soft.setAverageTargetNumberOfSampleParticlePerProcess(input_parameters.n_smp_ave.value);
-        domain_decompose_weight=1.0;
-
         const PS::F32 coef_ema = 0.2;
+        domain_decompose_weight=1.0;
         dinfo.initialize(coef_ema);
         dinfo.decomposeDomainAll(system_soft,domain_decompose_weight);
 
@@ -2068,39 +2089,22 @@ public:
         }
 
         // exchange particles
-        system_soft.exchangeParticle(dinfo); 
-
-        n_loc = system_soft.getNumberOfParticleLocal();
-
-        // set local address
-#pragma omp parallel for
-        for(PS::S32 i=0; i<n_loc; i++){
-            system_soft[i].rank_org = my_rank;
-            system_soft[i].adr = i;
-        }
-        n_glb = system_soft.getNumberOfParticleGlobal();
-
-        stat.time = file_header.time;
-        stat.n_real_glb = stat.n_all_glb = n_glb;
-        stat.n_real_loc = stat.n_all_loc = n_loc;
+        exchangeParticle();
 
         // tree for neighbor search
-        tree_nb.initialize(n_glb, input_parameters.theta.value, input_parameters.n_leaf_limit.value, input_parameters.n_group_limit.value);
+        tree_nb.initialize(stat.n_real_glb, input_parameters.theta.value, input_parameters.n_leaf_limit.value, input_parameters.n_group_limit.value);
 
         // tree for force
-        PS::S64 n_tree_init = n_glb + input_parameters.n_bin.value;
+        PS::S64 n_tree_init = stat.n_real_glb + input_parameters.n_bin.value;
         tree_soft.initialize(n_tree_init, input_parameters.theta.value, input_parameters.n_leaf_limit.value, input_parameters.n_group_limit.value);
 
         // initial search cluster
         search_cluster.initialize();
 
-        // checkparameters
-        input_parameters.checkParams();
-
         initial_parameters_flag = true;
     }
 
-    //! the first initial step for integration, energy calculation
+    //! the first initial step to find groups and energy calculation
     void initialStep() {
         assert(initial_parameters_flag);
         if (initial_step_flag) return;
@@ -2147,6 +2151,7 @@ public:
         // update global particle system due to kick
         writeBackHardParticles();
 
+        // remove artificial particles
         system_soft.setNumberOfParticleLocal(stat.n_real_loc);
 
         // initial status and energy
