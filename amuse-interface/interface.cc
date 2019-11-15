@@ -23,18 +23,18 @@ extern "C" {
         //No second MPI init
         //ptr->initialFDPS(argc,argv);
         //ptr->initial_fdps_flag = true;
+        ptr->my_rank= PS::Comm::getRank();
         ptr->n_proc = PS::Comm::getNumberOfProc();
+        // set print flag to rank 0
+        ptr->input_parameters.print_flag = (ptr->my_rank==0) ? true: false;
+        // set writing flag to false
+        ptr->input_parameters.write_flag = false;
 
         // default input
         int flag= ptr->readParameters(argc,argv);
 
         // set id_offset
         ptr->input_parameters.id_offset.value = 10000000;
-
-        // set writing flag to false
-        ptr->input_parameters.write_flag = false;
-        ptr->print_flag = (ptr->my_rank=0) ? true: false;
-        ptr->write_flag = false;
 
         // set restart flat to false
         ptr->file_header.nfile = 0; 
@@ -48,11 +48,11 @@ extern "C" {
     }
 
     int cleanup_code() {
-        delete ptr;
-        ptr=NULL;
 #ifdef INTERFACE_DEBUG_PRINT
         if(ptr->my_rank==0) std::cout<<"cleanup_code\n";
 #endif
+        delete ptr;
+        ptr=NULL;
         return 0;
     }
 
@@ -84,7 +84,6 @@ extern "C" {
         PS::S64 n_loc = ptr->stat.n_real_loc;
 #ifdef INTERFACE_DEBUG
         assert(n_loc == ptr->system_soft.getNumberOfParticleLocal());
-        std::cerr<<"rank: "<<ptr->my_rank<<" ng: "<<n_glb<<" ngs: "<<ptr->system_soft.getNumberOfParticleGlobal()<<std::endl;
         assert(n_glb == ptr->system_soft.getNumberOfParticleGlobal());
 #endif
 
@@ -123,7 +122,7 @@ extern "C" {
             ptr->system_soft.removeParticle(&index, 1);
             ptr->stat.n_real_loc--;
 #ifdef INTERFACE_DEBUG_PRINT
-            if(ptr->my_rank==0) std::cout<<"Remove particle index "<<index<<" id "<<index_of_the_particle<<" rank "<<ptr->my_rank<<std::endl;
+            std::cout<<"Remove particle index "<<index<<" id "<<index_of_the_particle<<" rank "<<ptr->my_rank<<std::endl;
 #endif
         }
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
@@ -394,11 +393,11 @@ extern "C" {
             if (ptr->my_rank==particle_rank) { // sender
                 FPSoft* p = &(ptr->system_soft[index]);
                 double* acc = &(p->acc.x);
-                MPI_Send(acc, 7, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+                MPI_Send(acc, 3, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
             }
             else if (ptr->my_rank==0) { // receiver
                 double acc[3];
-                MPI_Recv(acc, 7, MPI_DOUBLE, particle_rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                MPI_Recv(acc, 3, MPI_DOUBLE, particle_rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
                 *ax = acc[0];
                 *ay = acc[1];

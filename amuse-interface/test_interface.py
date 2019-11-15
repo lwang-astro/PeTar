@@ -29,9 +29,30 @@ for index in [1,2,3]:
     print  gravity.particles[index-1]
     print "Using API peter.get_mass(",index,"), should return the same mass :"
     print  gravity.get_mass(index)
+    print "Using API peter.get_position(",index,"), should return the same position :"
+    print  gravity.get_position(index)
+    print "Using API peter.get_velocity(",index,"), should return the same velocity :"
+    print  gravity.get_velocity(index)
+    print "Get acceleration:"
+    print  gravity.get_acceleration(index)
     print "Get potential:"
     print  gravity.get_potential(index)
     print ""
+
+print "set state of particle id=2 to particle id=3(index=2)"
+gravity.set_state(2,particles[2].mass,particles[2].position.x,particles[2].position.y,particles[2].position.z,particles[2].velocity.x,particles[2].velocity.y,particles[2].velocity.z,particles[2].radius)
+print "get state"
+print gravity.particles[1]
+
+print "set mass of particle id=2 to particle id=2(index=1)"
+gravity.set_mass(2,particles[1].mass)
+print "set position of particle id=2 to particle id=2(index=1)"
+gravity.set_position(2,*particles[1].position)
+print "set velocity of particle id=2 to particle id=2(index=1)"
+gravity.set_velocity(2,*particles[1].velocity)
+print "get state"
+print gravity.particles[1]
+
 
 print "Del particle 2 from code"
 gravity.delete_particle(2)

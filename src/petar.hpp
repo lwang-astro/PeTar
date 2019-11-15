@@ -609,7 +609,6 @@ private:
 
         // local particle number
         const PS::S64 n_loc = _tsys.getNumberOfParticleLocal();
-        assert(n_loc>0);
 
         // local c.m velocity
         PS::F64vec vel_cm_loc = 0.0;
@@ -1550,9 +1549,7 @@ private:
         
             if(print_flag) {
                 std::cout<<std::setprecision(5);
-                std::cout<<"Tree step number: "<<dn_loop
-                         <<"  Local N: "<<stat.n_real_loc
-                         <<"  Local Nall: "<<stat.n_all_loc<<std::endl;
+                std::cout<<"Tree step number: "<<dn_loop<<std::endl;
                 
 
                 std::cout<<"**** Wallclock time per step (local): [Min/Max]\n";
@@ -1908,6 +1905,7 @@ public:
     void initialParameters() {
         // ensure data is read
         assert(read_data_flag);
+        assert(stat.n_real_glb>0);
 
 #ifdef PROFILE
         if(print_flag) {
