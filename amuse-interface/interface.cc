@@ -33,6 +33,7 @@ extern "C" {
 
         // set writing flag to false
         ptr->input_parameters.write_flag = false;
+        ptr->print_flag = (ptr->my_rank=0) ? true: false;
         ptr->write_flag = false;
 
         // set restart flat to false
@@ -41,7 +42,7 @@ extern "C" {
         ptr->system_soft.initialize();
 
 #ifdef INTERFACE_DEBUG_PRINT
-        std::cout<<"Initialize_code\n";
+        if(ptr->my_rank==0) std::cout<<"Initialize_code\n";
 #endif
         return flag;
     }
@@ -50,7 +51,7 @@ extern "C" {
         delete ptr;
         ptr=NULL;
 #ifdef INTERFACE_DEBUG_PRINT
-        std::cout<<"cleanup_code\n";
+        if(ptr->my_rank==0) std::cout<<"cleanup_code\n";
 #endif
         return 0;
     }
@@ -59,7 +60,7 @@ extern "C" {
         if (!ptr->read_parameters_flag) return -1;
         
 #ifdef INTERFACE_DEBUG_PRINT
-        std::cout<<"commit_parameters\n";
+        if(ptr->my_rank==0) std::cout<<"commit_parameters\n";
 #endif
         return 0;
     }
@@ -67,7 +68,7 @@ extern "C" {
     int recommit_parameters() {
         // not allown
 #ifdef INTERFACE_DEBUG_PRINT
-        std::cout<<"recommit_parameters(forbidden!)\n";
+        if(ptr->my_rank==0) std::cout<<"recommit_parameters(forbidden!)\n";
 #endif
         return -1;
     }
@@ -83,6 +84,7 @@ extern "C" {
         PS::S64 n_loc = ptr->stat.n_real_loc;
 #ifdef INTERFACE_DEBUG
         assert(n_loc == ptr->system_soft.getNumberOfParticleLocal());
+        std::cerr<<"rank: "<<ptr->my_rank<<" ng: "<<n_glb<<" ngs: "<<ptr->system_soft.getNumberOfParticleGlobal()<<std::endl;
         assert(n_glb == ptr->system_soft.getNumberOfParticleGlobal());
 #endif
 
@@ -121,7 +123,7 @@ extern "C" {
             ptr->system_soft.removeParticle(&index, 1);
             ptr->stat.n_real_loc--;
 #ifdef INTERFACE_DEBUG_PRINT
-            std::cout<<"Remove particle index "<<index<<" id "<<index_of_the_particle<<" rank "<<ptr->my_rank<<std::endl;
+            if(ptr->my_rank==0) std::cout<<"Remove particle index "<<index<<" id "<<index_of_the_particle<<" rank "<<ptr->my_rank<<std::endl;
 #endif
         }
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
@@ -467,14 +469,14 @@ extern "C" {
         ptr->initialParameters();
         ptr->initialStep();
 #ifdef INTERFACE_DEBUG_PRINT
-        std::cout<<"commit_particles\n";
+        if(ptr->my_rank==0) std::cout<<"commit_particles\n";
 #endif
         return 0;
     }
 
     int synchronize_model() {
 #ifdef INTERFACE_DEBUG_PRINT
-        std::cout<<"synchronize_model\n";
+        if(ptr->my_rank==0) std::cout<<"synchronize_model\n";
 #endif
         return 0;
     }
@@ -488,7 +490,7 @@ extern "C" {
 #endif
         ptr->initialStep();
 #ifdef INTERFACE_DEBUG_PRINT
-        std::cout<<"recommit_particles\n";
+        if(ptr->my_rank==0) std::cout<<"recommit_particles\n";
 #endif
         return 0;
     }

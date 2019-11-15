@@ -11,7 +11,7 @@ from amuse.ic.plummer import new_plummer_model
 
 print "Initial"
 
-gravity = petar(redirection='none')
+gravity = petar(number_of_workers=2, redirection='none')
 
 print "Add 50 particle"
 number_of_stars=50
