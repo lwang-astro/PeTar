@@ -53,7 +53,7 @@ distclean: clean
 $(CODELIB):
 	make -C src all
 
-interface.cc:
+interface.py:
 	bash down.sh 
 
 test_interface:   $(OBJS) test_interface.o
