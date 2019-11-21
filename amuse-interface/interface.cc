@@ -119,8 +119,8 @@ extern "C" {
     int delete_particle(int index_of_the_particle) {
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
         if (index>=0) {
-            ptr->system_soft.removeParticle(&index, 1);
-            ptr->stat.n_real_loc--;
+            ptr->remove_list.push_back(index);
+            //ptr->stat.n_real_loc--;
 #ifdef INTERFACE_DEBUG_PRINT
             std::cout<<"Remove particle index "<<index<<" id "<<index_of_the_particle<<" rank "<<ptr->my_rank<<std::endl;
 #endif
@@ -482,6 +482,7 @@ extern "C" {
 
     int recommit_particles() {
         ptr->initial_step_flag = false;
+        ptr->removeParticles();
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         ptr->exchangeParticle();
 #else
