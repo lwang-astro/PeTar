@@ -2034,8 +2034,9 @@ public:
         hard_manager.ar_manager.step.initialSymplecticCofficients(-6);
         hard_manager.ar_manager.slowdown_pert_ratio_ref = input_parameters.sd_factor.value;
         hard_manager.ar_manager.slowdown_timescale_max = dt_soft;
+#ifdef SLOWDOWN_MASSRATIO
         hard_manager.ar_manager.slowdown_mass_ref = m_average;
-
+#endif
         // check consistence of paramters
         input_parameters.checkParams();
         hard_manager.checkParams();
