@@ -19,7 +19,7 @@ int main(int argc, char *argv[]){
 
     petar.initialStep();
 
-#if 1
+#if 0
     PS::F64 dt_break = inp.dt_snp.value;
     PS::F64 dt_end = inp.time_end.value;
     PS::S32 n_loop = dt_end/dt_break;

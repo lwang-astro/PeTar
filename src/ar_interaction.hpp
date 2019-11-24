@@ -360,7 +360,7 @@ public:
     //! calculate perturbation from c.m. acceleration
     Float calcPertFromForce(const Float* _force, const Float _mp, const Float _mpert) {
         Float force2 = _force[0]*_force[0]+_force[1]*_force[1]+_force[2]*_force[2];
-#ifdef SLOWDOWN_PERT_R4
+#ifdef AR_SLOWDOWN_PERT_R4
         return force2/(_mp*_mpert);
 #else
         Float force = sqrt(force2);
@@ -372,7 +372,7 @@ public:
     Float calcPertFromBinary(const COMM::BinaryTree<ARPtcl>& _bin) {
         Float apo = _bin.semi*(1.0+_bin.ecc);
         Float apo2 = apo*apo;
-#ifdef SLOWDOWN_PERT_R4
+#ifdef AR_SLOWDOWN_PERT_R4
         return (_bin.m1*_bin.m2)/(apo2*apo2);
 #else
         return (_bin.m1*_bin.m2)/(apo2*apo);
@@ -382,14 +382,14 @@ public:
     //! calculate perturbation from distance to perturber and masses of particle and perturber 
     Float calcPertFromMR(const Float _r, const Float _mp, const Float _mpert) {
         Float r2 = _r*_r;
-#ifdef SLOWDOWN_PERT_R4
+#ifdef AR_SLOWDOWN_PERT_R4
         return _mp*_mpert/(r2*r2);
 #else
         return (_mp*_mpert)/(r2*_r);
 #endif
     }
 
-#ifdef AR_TTL_SLOWDOWN_INNER
+#ifdef AR_SLOWDOWN_INNER
     //! (Necessary) calculate slowdown factor for inner binary based on other particles and slowdown of system c.m.
     /*!
       @param[in,out] _slowdown: slowdown paramters for inner binary.
@@ -405,7 +405,7 @@ public:
         const Float* xcm = &_bin_root.pos.x;
         const Float  mcm = _bin_root.mass;
         Float pert_pot = 0.0;
-#ifdef SLOWDOWN_TIMESCALE
+#ifdef AR_SLOWDOWN_TIMESCALE
         const Float* vcm = &_bin_root.vel.x;
         Float trf2_min = NUMERIC_FLOAT_MAX;
         Float mvor[3] = {0.0,0.0,0.0};
@@ -424,7 +424,7 @@ public:
             Float r = sqrt(r2);
             pert_pot += calcPertFromMR(r, mcm, mj);
 
-#ifdef SLOWDOWN_TIMESCALE
+#ifdef AR_SLOWDOWN_TIMESCALE
             const Float* vp = &_particles[i].vel.x;
             Float dv[3] = {vp[0] - vcm[0],
                            vp[1] - vcm[1],
@@ -446,7 +446,7 @@ public:
 #endif
         }            
         _slowdown.pert_out = pert_pot + _slowdown_cm.pert_out;
-#ifdef SLOWDOWN_TIMESCALE
+#ifdef AR_SLOWDOWN_TIMESCALE
         // velocity dependent method
         Float trv_ave = mtot/sqrt(mvor[0]*mvor[0] + mvor[1]*mvor[1] + mvor[2]*mvor[2]);
         // get min of velocity and force dependent values
@@ -502,7 +502,7 @@ public:
             // This cause the sudden change of perturber velocity calculation, the timescale will jump and cause slowdown discontinue 
             Float pert_pot = 0.0;
 
-#ifdef SLOWDOWN_TIMESCALE
+#ifdef AR_SLOWDOWN_TIMESCALE
             // velocity dependent method 
             Float vp[3], vcm[3];
 
@@ -537,7 +537,7 @@ public:
                 Float k  = ChangeOver::calcAcc0WTwo(chi, chj, r);
                 pert_pot += calcPertFromMR(r, mcm, k*mj);
 
-#ifdef SLOWDOWN_TIMESCALE
+#ifdef AR_SLOWDOWN_TIMESCALE
                 // velocity dependent method 
                 vp[0] = pertj->vel[0] + dt*(pertj->acc0[0] + 0.5*dt*pertj->acc1[0]);
                 vp[1] = pertj->vel[1] + dt*(pertj->acc0[1] + 0.5*dt*pertj->acc1[1]);
@@ -581,7 +581,7 @@ public:
             // get slowdown perturbation out
             _slowdown.pert_out = pert_pot + _perturber.soft_pert_min;
 
-#ifdef SLOWDOWN_TIMESCALE
+#ifdef AR_SLOWDOWN_TIMESCALE
 
             //_slowdown.timescale /= std::max(1.0, log(_slowdown.getSlowDownFactorOrigin());
             //_slowdown.timescale = std::sqrt(_slowdown.timescale);

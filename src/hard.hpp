@@ -1085,7 +1085,7 @@ public:
             ekin    = sym_int.getEkin();
             epot    = sym_int.getEpot();
             de      = sym_int.getEnergyError();
-#ifdef AR_TTL_SLOWDOWN_INNER
+#ifdef AR_SLOWDOWN_INNER
             ekin_sd = kappa_inv*sym_int.getEkinSlowDownInner();
             epot_sd = kappa_inv*sym_int.getEpotSlowDownInner();
             de_sd   = kappa_inv*sym_int.getEnergyErrorSlowDownInner();
@@ -1163,7 +1163,7 @@ public:
             h4_int.initialIntegration(); // get neighbors and min particles
             // AR inner slowdown number
             int n_group_sub_init[_n_group], n_group_sub_tot_init=0;
-#ifdef AR_TTL_SLOWDOWN_INNER
+#ifdef AR_SLOWDOWN_INNER
             for (int i=0; i<_n_group; i++) {
                 n_group_sub_init[i] = h4_int.groups[i].slowdown_inner.getSize();
                 n_group_sub_tot_init += n_group_sub_init[i];
