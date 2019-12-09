@@ -124,6 +124,7 @@ public:
     IOParams<PS::F64> r_search_min;
     IOParams<PS::F64> sd_factor;
     IOParams<PS::S32> data_format;
+    IOParams<PS::S32> write_style;
     IOParams<std::string> fname_snp;
     IOParams<std::string> fname_par;
     IOParams<std::string> fname_inp;
@@ -131,7 +132,6 @@ public:
     // flag
     bool app_flag; // appending data flag
     bool print_flag; 
-    bool write_flag;
 
     IOParamsPeTar(): input_par_store(), 
                      ratio_r_cut  (input_par_store, 0.1,  "r_in / r_out"),
@@ -171,11 +171,12 @@ public:
                      r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out"),
                      r_search_min (input_par_store, 0.0,  "Minimum search radius  value","auto"),
                      sd_factor    (input_par_store, 1e-4, "Slowdown perturbation criterion"),
-                     data_format  (input_par_store, 1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): Writing off: r-B(5), r-A(4), Writing on: r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),
+                     data_format  (input_par_store, 1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),
+                     write_style  (input_par_store, 1,    "File Writing style: 0, no output; 1. write snapshots and status separately; 2. write all data in one line per step (no MPI support)"),
                      fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]"),
                      fname_par(input_par_store, "input.par", "Input parameter file (this option should be used first before any other options)"),
                      fname_inp(input_par_store, "input", "Input data file"),
-                     app_flag(false), print_flag(true), write_flag(true) {}
+                     app_flag(false), print_flag(false) {}
 
     
     //! reading parameters from GNU option API
@@ -205,14 +206,12 @@ public:
             {"step-limit-arc", required_argument, 0, 15},   
 #endif
             {"disable-print-info", no_argument, 0, 16},
-            {"disable-write-info", no_argument, 0, 17},
             {0,0,0,0}
         };
 
         int copt;
         int option_index;
-        if(print_flag) std::cout<<"----- input option -----\n";
-        while ((copt = getopt_long(argc, argv, "i:at:s:o:r:b:n:G:L:S:T:E:f:p:h", long_options, &option_index)) != -1) 
+        while ((copt = getopt_long(argc, argv, "i:at:s:o:r:b:n:G:L:S:T:E:f:p:w:h", long_options, &option_index)) != -1) 
             switch (copt) {
             case 0:
                 n_split.value = atoi(optarg);
@@ -279,9 +278,6 @@ public:
 #endif
             case 16:
                 print_flag = false;
-                break;
-            case 17:
-                write_flag = false;
                 break;
             case 'i':
                 data_format.value = atoi(optarg);
@@ -367,6 +363,10 @@ public:
                 PS::Comm::barrier();
 #endif
                 break;
+            case 'w':
+                write_style.value = atoi(optarg);
+                if(print_flag) write_style.print(std::cout);
+                break;
             case 'h':
                 if(print_flag){
                     std::cout<<"Usage: nbody.out [option] [filename]"<<std::endl;
@@ -376,10 +376,7 @@ public:
                              <<"            First line: \n"
                              <<"             1. File_ID: 0 for initialization, else for restarting\n"
                              <<"             2. N_particle \n"
-                             <<"             3. N_offset: for naming special particle ID, should be > N_particle\n"
-                             <<"             4. Time\n"
-                             <<"             5. Tree time step (set 0 for input file)\n"
-                             <<"             6. n_split (set 0 for input file)\n"
+                             <<"             3. Time\n"
                              <<"            Following lines:\n"
                              <<"             1. mass\n"
                              <<"             2. position[3]\n"
@@ -388,10 +385,12 @@ public:
                              <<"             9. mass_backup (0.0)\n"
                              <<"             10. ID (>0,unique)\n"
                              <<"             11. status (0)\n"
-                             <<"             12. Acceleration[3] (0.0)\n"
-                             <<"             15. Potential (0.0)\n"
-                             <<"             16. N_neighbor (0)\n"
-                             <<"             (*) show initialization values which should be used together with FILE_ID = 0"<<std::endl;
+                             <<"             12. r_in (0.0)\n"
+                             <<"             13. r_out (0.0)\n"
+                             <<"             14. Acceleration[3] (0.0)\n"
+                             <<"             17. Potential (0.0)\n"
+                             <<"             18. N_neighbor (0)\n"
+                             <<"             in () show initialization values which should be used together with FILE_ID = 0"<<std::endl;
                     std::cout<<"  -a:     data output style (except snapshot) becomes appending, defaulted: replace"<<std::endl;
                     std::cout<<"  -t: [F] "<<time_end<<std::endl;
                     std::cout<<"  -s: [F] "<<dt_soft<<std::endl;
@@ -424,6 +423,7 @@ public:
                     std::cout<<"        --soft-eps:        [F] "<<eps<<std::endl;
                     std::cout<<"  -f: [S] "<<fname_snp<<std::endl;
                     std::cout<<"  -p: [S] "<<fname_par<<std::endl;
+                    std::cout<<"  -w: [I] "<<write_style<<std::endl;
                     std::cout<<"  -h(--help):               print help"<<std::endl;
                     std::cout<<"*** PS: r_in : transit function inner boundary radius\n"
                              <<"        r_out: transit function outer boundary radius\n"
@@ -435,6 +435,8 @@ public:
             }
         
         if (argc>0) fname_inp.value =argv[argc-1];
+
+        if(print_flag) std::cout<<"----- Finish reading input options -----\n";
 
         return 0;
     }
@@ -496,10 +498,6 @@ public:
     Status stat;
     std::ofstream fstatus;
 
-#ifdef MAIN_DEBUG
-    std::ofstream fout;
-#endif
-
     // file system
     FileHeader file_header;
     SystemSoft system_soft;
@@ -542,10 +540,6 @@ public:
     bool read_data_flag;
     bool initial_parameters_flag;
     bool initial_step_flag;
-    
-    // for information output
-    bool print_flag;
-    bool write_flag;
 
     // initialization
     PeTar(): 
@@ -554,9 +548,6 @@ public:
         dn_loop(0), profile(), n_count(), n_count_sum(), ps_profile(), fprofile(), 
 #endif
         stat(), fstatus(),
-#ifdef MAIN_DEBUG
-        fout(),
-#endif        
         file_header(), system_soft(), id_adr_map(),
         n_loop(0), domain_decompose_weight(1.0), dinfo(), pos_domain(NULL), 
         dt_reduce_factor(1.0),
@@ -564,8 +555,7 @@ public:
         hard_manager(), system_hard_one_cluster(), system_hard_isolated(), system_hard_connected(), 
         remove_list(),
         search_cluster(),
-        initial_fdps_flag(false), read_parameters_flag(false), read_data_flag(false), initial_parameters_flag(false), initial_step_flag(false), 
-        print_flag(true), write_flag(true) {
+        initial_fdps_flag(false), read_parameters_flag(false), read_data_flag(false), initial_parameters_flag(false), initial_step_flag(false) {
         // set print format
         std::cout<<std::setprecision(PRINT_PRECISION);
         std::cerr<<std::setprecision(PRINT_PRECISION);
@@ -1432,43 +1422,47 @@ private:
         }
     }
 
-    inline void output(const bool _initial_flag) {
+    inline void output() {
 #ifdef PROFILE
         profile.output.start();
 #endif
+        bool print_flag = input_parameters.print_flag;
+        int write_style = input_parameters.write_style.value;
 
         // print status
         if(print_flag) {
             std::cout<<std::endl;
             stat.print(std::cout);
-            stat.printColumn(fstatus, WRITE_WIDTH);
-            fstatus<<std::endl;
         }
+        // write status, output to separate snapshots
+        if(write_style==1) {
+            // status output
+            if(my_rank==0) {
+                stat.printColumn(fstatus, WRITE_WIDTH);
+                fstatus<<std::endl;
+            }
 
-        if (!_initial_flag&&write_flag) {
             // data output
             file_header.n_body = stat.n_real_glb;
             file_header.time = stat.time;
             file_header.nfile++;
             std::string fname = input_parameters.fname_snp.value+"."+std::to_string(file_header.nfile);
+#ifdef PETAR_DEBUG
+            assert(system_soft.getNumberOfParticleLocal()!= stat.n_all_loc);
+#endif
             system_soft.setNumberOfParticleLocal(stat.n_real_loc);
             if (input_parameters.data_format.value==1||input_parameters.data_format.value==3)
                 system_soft.writeParticleAscii(fname.c_str(), file_header);
             else if(input_parameters.data_format.value==0||input_parameters.data_format.value==2)
                 system_soft.writeParticleBinary(fname.c_str(), file_header);
             system_soft.setNumberOfParticleLocal(stat.n_all_loc);
-
-
-#ifdef MAIN_DEBUG
+        }
+        // write all information in to fstatus
+        else if(write_style==2&&my_rank==0) {
             // write snapshot with one line
-            fout<<std::setprecision(13)<<std::setw(20)<<stat.time;
-            stat.energy.printColumn(fout);
-            for (int i=0; i<system_soft.getNumberOfParticleLocal(); i++) {
-                if(system_soft[i].status.d>0||p[i].id<0) continue;
-                system_soft[i].ParticleBase::printColumn(fout);
-            }
-            fout<<std::endl;
-#endif
+            stat.printColumn(fstatus, WRITE_WIDTH);
+            for (int i=0; i<stat.n_real_loc; i++) system_soft[i].printColumn(fstatus, WRITE_WIDTH);
+            fstatus<<std::endl;
         }
 
 #ifdef PROFILE
@@ -1547,7 +1541,7 @@ private:
             const SysProfile& profile_min = profile.getMin();
             const SysProfile& profile_max = profile.getMax();
         
-            if(print_flag) {
+            if(input_parameters.print_flag) {
                 std::cout<<std::setprecision(5);
                 std::cout<<"Tree step number: "<<dn_loop<<std::endl;
                 
@@ -1579,7 +1573,7 @@ private:
                 n_count.printHist(std::cout,PRINT_WIDTH,dn_loop);
             }
 
-            if(write_flag) {
+            if(input_parameters.write_style.value>0) {
                 fprofile<<std::setprecision(WRITE_PRECISION);
                 fprofile<<std::setw(WRITE_WIDTH)<<my_rank;
                 fprofile<<std::setw(WRITE_WIDTH)<<stat.time
@@ -1680,9 +1674,9 @@ public:
         //assert(initial_fdps_flag);
         // reading parameters
         read_parameters_flag = true;
+        if (my_rank==0) input_parameters.print_flag=true;
+        else input_parameters.print_flag=false;
         int read_flag = input_parameters.read(argc,argv);
-        print_flag = input_parameters.print_flag;
-        write_flag = input_parameters.write_flag;
         return read_flag;
     }
     
@@ -1703,7 +1697,7 @@ public:
         PS::S64 n_glb = system_soft.getNumberOfParticleGlobal();
         PS::S64 n_loc = system_soft.getNumberOfParticleLocal();
 
-        if(print_flag)
+        if(input_parameters.print_flag)
             std::cout<<"Reading file "<<data_filename<<std::endl
                      <<"N_tot = "<<n_glb<<"\nN_loc = "<<n_loc<<std::endl;
 
@@ -1907,6 +1901,9 @@ public:
         assert(read_data_flag);
         assert(stat.n_real_glb>0);
 
+        bool print_flag = input_parameters.print_flag;
+        int write_style = input_parameters.write_style.value;
+
 #ifdef PROFILE
         if(print_flag) {
             std::cout<<"----- Parallelization information -----\n";
@@ -1915,7 +1912,7 @@ public:
         }
     
         // open profile file
-        if(write_flag) {
+        if(write_style>0) {
             std::string rank_str;
             std::stringstream atmp;
             atmp<<my_rank;
@@ -1966,7 +1963,7 @@ public:
         // open output files
         // status information output
         std::string& fname_snp = input_parameters.fname_snp.value;
-        if(write_flag&&my_rank==0) {
+        if(write_style>0&&my_rank==0) {
             if(input_parameters.app_flag) 
                 fstatus.open((fname_snp+".status").c_str(),std::ofstream::out|std::ofstream::app);
             else 
@@ -1976,12 +1973,11 @@ public:
             // write titles of columns
             if(!restart_flag&&input_parameters.app_flag==false)  {
                 stat.printColumnTitle(fstatus,WRITE_WIDTH);
+                if (write_style==2) {
+                    for (int i=0; i<stat.n_real_loc; i++) system_soft[0].printColumnTitle(fstatus, WRITE_WIDTH);
+                }
                 fstatus<<std::endl;
             }
-
-#ifdef MAIN_DEBUG
-            fout.open("nbody.dat");
-#endif
         }
 
         // set id_offset
@@ -2046,7 +2042,7 @@ public:
         system_hard_isolated.manager = &hard_manager;
         system_hard_connected.manager = &hard_manager;
 
-        if(write_flag&&my_rank==0) {
+        if(write_style>0&&my_rank==0) {
             // save initial parameters
             std::string& fname_par = input_parameters.fname_par.value;
             if (print_flag) std::cout<<"Save input parameters to file "<<fname_par<<std::endl;
@@ -2157,7 +2153,7 @@ public:
         updateStatus(true);
 
         // output initial data
-        output(true);
+        output();
 
 #ifdef CLUSTER_VELOCITY
         setParticleStatusToCMData();
@@ -2288,13 +2284,13 @@ public:
             if(output_flag) {
                 // update status
                 updateStatus(false);
-                output(false);
+                output();
             }
 
             // modify the tree step
             if(dt_mod_flag) {
                 dt_manager.setStep(dt_tree/dt_reduce_factor);
-                if (print_flag) {
+                if (input_parameters.print_flag) {
                     std::cout<<"Tree time step change, time = "<<stat.time
                              <<"  dt_soft = "<<dt_tree
                              <<"  reduce factor = "<<dt_reduce_factor
@@ -2389,9 +2385,6 @@ public:
         if (fstatus.is_open()) fstatus.close();
 #ifdef PROFILE
         if (fprofile.is_open()) fprofile.close();
-#endif
-#ifdef MAIN_DEBUG
-        if (fout.is_open()) fout.close();
 #endif
         if (pos_domain) {
             delete[] pos_domain;

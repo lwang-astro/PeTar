@@ -114,10 +114,39 @@ public:
 
     void print(std::ostream & fout){
         Ptcl::print(fout);
-        fout<<" adr= "<<adr
-            <<" acc= "<<acc
-            <<" pot_tot= "<<pot_tot;
+        fout<<" acc= "<<acc
+            <<" pot_tot= "<<pot_tot
+            <<" N_b= "<<n_ngb;
     }
+
+    //! print titles of class members using column style
+    /*! print titles of class members in one line for column style
+      @param[out] _fout: std::ostream output object
+      @param[in] _width: print width (defaulted 20)
+     */
+    void printColumnTitle(std::ostream & _fout, const int _width=20) {
+        Ptcl::printColumnTitle(_fout, _width);
+        _fout<<std::setw(_width)<<"acc.x"
+             <<std::setw(_width)<<"acc.y"
+             <<std::setw(_width)<<"acc.z"
+             <<std::setw(_width)<<"pot_tot"
+             <<std::setw(_width)<<"n_b";
+    }
+
+    //! print data of class members using column style
+    /*! print data of class members in one line for column style. Notice no newline is printed at the end
+      @param[out] _fout: std::ostream output object
+      @param[in] _width: print width (defaulted 20)
+     */
+    void printColumn(std::ostream & _fout, const int _width=20){
+        Ptcl::printColumn(_fout, _width);
+        _fout<<std::setw(_width)<<acc.x
+             <<std::setw(_width)<<acc.y
+             <<std::setw(_width)<<acc.z
+             <<std::setw(_width)<<pot_tot
+             <<std::setw(_width)<<n_ngb;
+    }
+
     
 };
 

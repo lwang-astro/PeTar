@@ -10,7 +10,6 @@ int main(int argc, char *argv[]){
     if (iread<0) return 0;
 
     auto& inp = petar.input_parameters;
-    if(petar.my_rank!=0) petar.print_flag=false;
 
     if (inp.n_glb.value==0) petar.readDataFromFile();
     else petar.generatePlummer();
