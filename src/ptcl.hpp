@@ -143,6 +143,8 @@ public:
         //r_search = std::max(std::sqrt(vel*vel)*dt_tree*search_factor, std::sqrt(mass*mean_mass_inv)*r_search_min);
 #ifdef HARD_DEBUG
         assert(r_search>0);
+        assert(r_search_min>0);
+        assert(search_factor>0);
 #endif
     }
 
@@ -156,6 +158,9 @@ public:
 
     //! Get neighbor distance criterion 
     PS::F64 getRBreak() const {
+#ifdef HARD_DEBUG
+        assert(r_group_crit_ratio>0);
+#endif
         return changeover.getRin()*r_group_crit_ratio;
     }
 

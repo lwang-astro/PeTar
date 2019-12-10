@@ -36,7 +36,6 @@ int main(int argc, char** argv)
       std::cerr<<"Error: parameter reading fail!\n";
       abort();
   }
-  Ptcl::r_search_min = rsearch;
   const PS::F64 n_split = 8;
 
   fprintf(stderr,"t_end = %e\nN = %d\nr_in = %e\nr_out = %e\neta = %e\ndt_limit = %e\neps = %e\n",time,N,rin,rout,eta,dt_limit,eps);
@@ -60,11 +59,14 @@ int main(int argc, char** argv)
       m_average = pin.mass;
   }
   m_average = pin.mass/N;
-  Ptcl::mean_mass_inv = 1.0/m_average;
+  Ptcl::r_search_min = rsearch;
   Ptcl::search_factor = 3;
+  Ptcl::r_group_crit_ratio = rbin/rin;
+  Ptcl::mean_mass_inv = 1.0/m_average;
 
   for (int i=0; i<N; i++) {
       sys[i].changeover.setR(sys[i].mass*Ptcl::mean_mass_inv, rin, rout);
+      sys[i].calcRSearch(dt_limit);
   }
 
   PS::F64 time_sys = 0.0;
@@ -82,13 +84,13 @@ int main(int argc, char** argv)
   hard_manager.energy_error_max = NUMERIC_FLOAT_MAX;
 #endif
   hard_manager.ap_manager.r_tidal_tensor = rbin;
-  hard_manager.ap_manager.r_in_base = sys[0].changeover.getRin();
-  hard_manager.ap_manager.r_out_base = sys[0].changeover.getRout();
+  hard_manager.ap_manager.r_in_base = rin;
+  hard_manager.ap_manager.r_out_base = rout;
   hard_manager.ap_manager.id_offset = N;
   hard_manager.ap_manager.setOrbitalParticleSplitN(n_split);
-  hard_manager.h4_manager.step.eta_4th = eta*eta;
-  hard_manager.h4_manager.step.eta_2nd = 0.01*eta*eta;
-  hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, sys[0].changeover.getRout());
+  hard_manager.h4_manager.step.eta_4th = eta;
+  hard_manager.h4_manager.step.eta_2nd = 0.01*eta;
+  hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, rout);
   hard_manager.ar_manager.energy_error_relative_max = 1e-8;
 #ifdef AR_SYM
   hard_manager.ar_manager.step_count_max = 1e6;

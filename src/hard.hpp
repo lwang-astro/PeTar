@@ -1214,7 +1214,7 @@ public:
 
             h4_int.initialIntegration();
             h4_int.sortDtAndSelectActParticle();
-            h4_int.info.time_origin = h4_int.getTime() + time_origin_int;
+            h4_int.info.time_origin = h4_int.getTime() + time_origin_;
 
 #ifdef HARD_CHECK_ENERGY
             h4_int.calcEnergySlowDown(true);
@@ -1288,7 +1288,7 @@ public:
                 // initial after groups are modified
                 h4_int.initialIntegration();
                 h4_int.sortDtAndSelectActParticle();
-                h4_int.info.time_origin = h4_int.getTime() + time_origin_int;
+                h4_int.info.time_origin = h4_int.getTime() + time_origin_;
 
 #ifdef HARD_DEBUG_PRINT
                 //PS::F64 dt_max = 0.0;

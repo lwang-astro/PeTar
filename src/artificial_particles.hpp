@@ -155,6 +155,7 @@ class ArtificialParticleManager{
                     pj->changeover.r_scale_next = _bin.changeover.getRin()/pj->changeover.getRin();
                     pj->r_search = std::max(pj->r_search, _bin.r_search);
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
+                    assert(_bin.changeover.getRin()>=pj->changeover.getRin());
                     assert(pj->r_search > pj->changeover.getRout());
 #endif 
                 }
