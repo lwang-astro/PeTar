@@ -7,7 +7,6 @@
 #define HARD_DEBUG_PRINT_FEQ 1
 
 #include "io.hpp"
-#include "integrate.hpp"
 #include "hard_assert.hpp"
 #include "cluster_list.hpp"
 #include "hard.hpp"
@@ -98,7 +97,9 @@ int main(int argc, char** argv)
   hard_manager.ar_manager.step.initialSymplecticCofficients(-6);
   hard_manager.ar_manager.slowdown_pert_ratio_ref = 1e-4;
   hard_manager.ar_manager.slowdown_timescale_max = dt_limit;
+#ifdef SLOWDOWN_MASSRATIO
   hard_manager.ar_manager.slowdown_mass_ref = m_average;
+#endif
 
   // check consistence of paramters
   hard_manager.checkParams();
@@ -108,7 +109,7 @@ int main(int argc, char** argv)
   sys_hard.setPtclForIsolatedMultiCluster(sys, p_list, n_cluster);
 
   PS::S32 n_sys = sys.getNumberOfParticleLocal();
-  sys_hard.findGroupsAndCreateArtificalParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys, dt_limit);
+  sys_hard.findGroupsAndCreateArtificialParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys, dt_limit);
   
   PS::ReallocatableArray<PS::S32> remove_list;
 
@@ -117,7 +118,17 @@ int main(int argc, char** argv)
   int n =hard_ptcl.size();
   for (int i=0; i<n; i++) hard_ptcl[i].changeover.updateWithRScale();
 
-  kickCluster(sys, sys_hard.getPtcl(), 0.0);
+  // recover mass
+  for(int i=0; i<n; i++) {
+      const PS::S64 cm_adr=-hard_ptcl[i].status.d; // notice status is negative 
+      // if is group member, recover mass 
+      if(cm_adr>0) {
+#ifdef HARD_DEBUG
+          assert(hard_ptcl[i].mass_bk.d>0); 
+#endif
+          hard_ptcl[i].mass = hard_ptcl[i].mass_bk.d;
+      }
+  }
 
   std::cout<<std::setprecision(WRITE_PRECISION);
 
@@ -130,9 +141,19 @@ int main(int argc, char** argv)
       sys.setNumberOfParticleLocal(n_sys);
       sys_hard.setTimeOrigin(time_sys);
       sys_hard.ARC_substep_sum = 0;
-      sys_hard.findGroupsAndCreateArtificalParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys, dt_limit);
+      sys_hard.findGroupsAndCreateArtificialParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys, dt_limit);
       for (int i=0; i<n; i++) hard_ptcl[i].changeover.updateWithRScale();
-      kickCluster(sys, sys_hard.getPtcl(), 0.0);
+      // recover mass
+      for(int i=0; i<n; i++) {
+          const PS::S64 cm_adr=-hard_ptcl[i].status.d; // notice status is negative 
+          // if is group member, recover mass 
+          if(cm_adr>0) {
+#ifdef HARD_DEBUG
+              assert(hard_ptcl[i].mass_bk.d>0); 
+#endif
+              hard_ptcl[i].mass = hard_ptcl[i].mass_bk.d;
+          }
+      }
   }
   
 

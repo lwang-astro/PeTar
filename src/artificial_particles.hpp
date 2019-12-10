@@ -289,7 +289,8 @@ public:
             
             // stability check and break groups
             Stability<Tptcl> stab;
-            stab.t_crit = _dt_tree*0.25;
+            // be careful, here t_crit should be >= hard slowdown_timescale_max to avoid using slowdown for wide binaries
+            stab.t_crit = _dt_tree;
             stab.stable_binary_tree.reserve(_n_groups);
             stab.findStableTree(bins.back());
 
