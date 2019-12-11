@@ -29,7 +29,7 @@ int main(int argc, char** argv)
   }
 
   int N;
-  PS::F64 rin, rout, rbin, rsearch, eps, eta, dt_limit, time;
+  PS::F64 time, rin, rout, rsearch, rbin, dt_limit, eta, eps;
   PS::S32 rcount = fscanf(fin, "%lf %d %lf %lf %lf %lf %lf %lf %lf\n", 
                           &time, &N, &rin, &rout, &rsearch, &rbin, &dt_limit, &eta, &eps);
   if (rcount<9) {
@@ -105,7 +105,9 @@ int main(int argc, char** argv)
 
   // check consistence of paramters
   hard_manager.checkParams();
-   
+
+  fclose(fin);
+
   SystemHard sys_hard;
   sys_hard.manager = &hard_manager;
   sys_hard.setPtclForIsolatedMultiCluster(sys, p_list, n_cluster);
@@ -156,11 +158,8 @@ int main(int argc, char** argv)
               hard_ptcl[i].mass = hard_ptcl[i].mass_bk.d;
           }
       }
-  }
-  
+  } 
 
-  fclose(fin);
-  
   return 0;
 }
 

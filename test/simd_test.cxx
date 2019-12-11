@@ -2,11 +2,15 @@
 #include <cstdio>
 #include <iomanip>
 #include <string>
+#include <cstdlib>
+#include <cassert>
+#define ASSERT assert
 #include <unistd.h>
 #include <particle_simulator.hpp>
-#include "soft.hpp"
+#include "soft_ptcl.hpp"
+#include "soft_force.hpp"
 #include "io.hpp"
-#include <cstdlib>
+#include "particle_distribution_generator.hpp"
 
 typedef PS::ParticleSystem<FPSoft> SystemSoft;
 
@@ -33,14 +37,26 @@ int main(int argc, char **argv){
     const int Nepj = 50000;
     const int Nspj = 50000;
     const int N = Nepi+Nepj;
-    EPISoft::r_out = FPSoft::r_out = EPJSoft::r_out = 0.01;
+    EPISoft::r_out = 0.01;
     EPISoft::r_in = 0.001;
     EPISoft::eps = 0.0;
     const PS::F64 DF_MAX=7e-3;
     
     SystemSoft ptcl;
     PS::S32 n=0;
-    SetParticlePlummer(ptcl, N, n);
+    PS::F64 * mass;
+    PS::F64vec * pos;
+    PS::F64vec * vel;
+    ParticleDistributionGenerator::makePlummerModel(N*1.0, N, N, mass, pos, vel, -0.25, n);
+    for(PS::S32 i=0; i<N; i++){
+        ptcl[i].mass = mass[i];
+        ptcl[i].pos = pos[i];
+        ptcl[i].vel = vel[i];
+        ptcl[i].id =  i + 1;
+        ptcl[i].status.d = 0;
+        ptcl[i].mass_bk.d = 0;
+        ptcl[i].changeover.setR(1.0, 0.001, 0.01);
+    }    
     EPISoft epi[Nepi];
     EPJSoft epj[Nepj];
     SPJSoft spj[Nspj];
@@ -48,7 +64,7 @@ int main(int argc, char **argv){
     ForceSoft force_sp[Nepi], force_sp_simd[Nepi];
     ForceSoft force_sp_quad[Nepi], force_sp_quad_simd[Nepi];
 #pragma omp parallel for
-    for (int i=0; i<N; i++) ptcl[i].calcRSearch(1.0/2048.0, 100.0);
+    for (int i=0; i<N; i++) ptcl[i].calcRSearch(1.0/2048.0);
 #pragma omp parallel for    
     for (int i=0; i<Nepi; i++) {
         epi[i].copyFromFP(ptcl[i]);

@@ -60,7 +60,7 @@ public:
     //! check two-body stability
     /* return       case
        Unstable:    false   hyperbolic orbit
-       stable:      true    apo-center < r_bin && period < _tcrit 
+       stable:      true    apo-center < _rcrit && period < _tcrit 
                     false   others
         
        @param[in,out] _bin: binary information
@@ -188,7 +188,7 @@ public:
     //! Four-body (B-B) stability check
     /*             return     tstep   stable_factor      case
                    Unstable:  false     -1         -1          hyperbolic outer orbit
-                   false     -1         -1          apo-center outer > r_in
+                   false     -1         -1          apo-center outer > _rcrit
                    false     -1         -1          period outer > 0.25 * dt_tree
                    true      inner      -stab3_max  stab3_1 >0.8 || stab3_2 > 0.8 & apo_out <= r_out
                    false     -1         -1                                        & apo_out >  r_out

@@ -17,6 +17,7 @@
 int main(int argc, char **argv){
   int n_opt=0;
   int arg_label;
+  int mode=0; // 0: integrate to time; 1: times stability
   PS::F64 slowdown_factor=0;
   PS::F64 eta_4th=0;
   PS::F64 eta_2nd=0;
@@ -26,7 +27,7 @@ int main(int argc, char **argv){
   PS::F64 dt_max = -1;
   PS::S32 step_arc_limit = 100000;
 
-  while ((arg_label = getopt(argc, argv, "k:E:A:a:D:d:e:s:h")) != -1)
+  while ((arg_label = getopt(argc, argv, "k:E:A:a:D:d:e:s:m:h")) != -1)
     switch (arg_label) {
     case 'k':
         slowdown_factor = atof(optarg);
@@ -62,7 +63,10 @@ int main(int argc, char **argv){
         step_arc_limit = atoi(optarg);
         n_opt+=2;
         break;
-
+    case 'm':
+        mode = atoi(optarg);
+        n_opt+=2;
+        break;
     case 'h':
         std::cout<<"hard_debug.out [options] [hard_manager (defaulted: input.par.hard)] [cluster_data] (defaulted: hard_dump)\n"
                  <<"options:\n"
@@ -76,6 +80,7 @@ int main(int argc, char **argv){
                  <<"    -a [double]:  AR energy limit \n"
                  <<"    -D [double]:  hard time step max \n"
                  <<"    -d [int]:     hard time step min power \n"
+                 <<"    -m [int]:     running mode: 0: evolve system to time_end (default); 1: stability check \n"
                  <<"    -h         :  help\n";
         return 0;
     default:
@@ -142,11 +147,30 @@ int main(int argc, char **argv){
   hard_dump.readOneCluster(filename.c_str());
   std::cerr<<"Dt: "<<hard_dump.time_end<<std::endl;
 
-  SystemHard sys;
-  sys.manager = &hard_manager;
+  // running mode
+  if (mode==0) {
+      SystemHard sys;
+      sys.manager = &hard_manager;
 
-  // change ARC parameters
-  sys.driveForMultiClusterImpl(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, hard_dump.time_end, 0);
+      // change ARC parameters
+      sys.driveForMultiClusterImpl(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, hard_dump.time_end, 0);
+  }
+  // test stability
+  else if (mode==1) {
+      typedef H4::ParticleH4<PtclHard> PtclH4;
+
+      SearchGroup<PtclH4> group;
+      auto* ptcl = hard_dump.ptcl_bk.getPointer();
+      PS::S32 n_ptcl = hard_dump.n_ptcl;
+
+      group.searchAndMerge(ptcl, n_ptcl);
+
+      PS::ReallocatableArray<PtclH4> ptcl_new;
+      PS::S32 n_group_in_cluster;
+      
+      // generate artificial particles, stability test is included
+      hard_manager.ap_manager.createArtificialParticles(0, ptcl, n_ptcl, ptcl_new, n_group_in_cluster, group, hard_dump.time_end);
+  }
 
   return 0;
 }

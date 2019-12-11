@@ -1448,7 +1448,7 @@ private:
             file_header.nfile++;
             std::string fname = input_parameters.fname_snp.value+"."+std::to_string(file_header.nfile);
 #ifdef PETAR_DEBUG
-            assert(system_soft.getNumberOfParticleLocal()!= stat.n_all_loc);
+            assert(system_soft.getNumberOfParticleLocal()== stat.n_all_loc);
 #endif
             system_soft.setNumberOfParticleLocal(stat.n_real_loc);
             if (input_parameters.data_format.value==1||input_parameters.data_format.value==3)
@@ -2146,14 +2146,14 @@ public:
         // update global particle system due to kick
         writeBackHardParticles();
 
-        // remove artificial particles
-        system_soft.setNumberOfParticleLocal(stat.n_real_loc);
-
         // initial status and energy
         updateStatus(true);
 
         // output initial data
         output();
+
+        // remove artificial particles
+        system_soft.setNumberOfParticleLocal(stat.n_real_loc);
 
 #ifdef CLUSTER_VELOCITY
         setParticleStatusToCMData();

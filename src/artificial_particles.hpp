@@ -110,6 +110,9 @@ class ArtificialParticleManager{
         }
 
         // First 8 is used for tidal tensor points
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert(r_tidal_tensor<=_bin.changeover.getRin());
+#endif
         TidalTensor::createTidalTensorMeasureParticles(p, *((Tptcl*)&_bin), r_tidal_tensor);
 
         // use c.m. r_search and changeover

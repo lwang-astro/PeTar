@@ -172,26 +172,17 @@ all: nbody.out
 nbody.out: $(SRC)
 	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)
 
-
 hard_debug.out: hard_debug.cxx
-	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -o $@ $< $(CXXLIBS)
+	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
 
-stable_debug.out: stable_debug.cxx
-	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
-
-keplersolvertest: keplersolver.cxx
-	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)
-
-hardtest: hard_test.cxx
+hard_test.out: hard_test.cxx
 	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
 
-simdtest: simd_test.cxx
+simd_test.out: simd_test.cxx
 	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(SIMD_DEBFLAGS)  $< -o $@  $(CXXLIBS)
 
-clean:
-	rm *.out *.o
-cleanall:
-	rm *.out *.hpp~ *.cc~ *.h~
+tidal_tensor_test.out: tidal_tensor_test.cxx
+	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS)  $< -o $@  $(CXXLIBS)
 
-run: nbody.out
-	mpiexec -n 2 ./nbody.out -i input.dat.14
+clean:
+	rm *.out *.o 

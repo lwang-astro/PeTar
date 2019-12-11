@@ -11,7 +11,10 @@ public:
     PS::F64vec pos;  // position of c.m.
     PS::F64 group_id; // indicate which group use the tensor
 
-    TidalTensor(): T1{0.0,0.0,0.0}, T2{0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, T3{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, pos(0.0), group_id(0.0) {}
+    TidalTensor(): T1{0.0, 0.0, 0.0}, 
+                   T2{0.0, 0.0, 0.0,  0.0, 0.0, 0.0,  0.0, 0.0, 0.0}, 
+                   T3{0.0, 0.0, 0.0,  0.0, 0.0, 0.0,  0.0, 0.0, 0.0,  0.0}, 
+                   pos(0.0), group_id(0.0) {}
 
     void dump(FILE *fp){
         fwrite(this, sizeof(TidalTensor),1,fp);
@@ -73,9 +76,9 @@ public:
     //! tidal tensor fitting function,
     /*! 
        Symmetry T2:
-       xx xy xz 0  1  2
-       yx yy yz 1  3  4
-       zx zy zz 2  4  5
+       xx xy xz 0     1     2
+       yx yy yz 3(1)  4     5
+       zx zy zz 6(2)  7(5)  8
 
        General T2:
        xx xy xz 0  1  2
@@ -106,9 +109,6 @@ public:
 
         PS::F64vec fi[8];
 
-        // Marked the mass_bk == 0 in generate orbits for consistent check
-        ASSERT(_ptcl_tt[12].mass_bk.d==0);
-
         // get acceleration
         for (PS::S32 i=0; i<8; i++) fi[i] = _ptcl_tt[i].acc;
 
@@ -134,7 +134,7 @@ public:
 
         // 6 7 8
         T2[6] =  T2[2];
-        T2[7] =  T2[4];
+        T2[7] =  T2[5];
         T2[8] = -0.125000000000000*fi[0][2] + -0.125000000000000*fi[1][2] + -0.125000000000000*fi[2][2] + -0.125000000000000*fi[3][2]
             +    0.125000000000000*fi[4][2] +  0.125000000000000*fi[5][2] +  0.125000000000000*fi[6][2] +  0.125000000000000*fi[7][2];
 
@@ -168,7 +168,7 @@ public:
         //PS::F64 T2S = 1.0/(_bin.semi*(1+_bin.ecc)*0.35);
         PS::F64 T2S = 1.0/(_r_bin*0.16);
         PS::F64 T3S = T2S*T2S;
-        for (PS::S32 i=0; i<6;  i++) T2[i] *= T2S;
+        for (PS::S32 i=0; i<9;  i++) T2[i] *= T2S;
         for (PS::S32 i=0; i<10; i++) T3[i] *= T3S;
     }
 
@@ -210,12 +210,14 @@ public:
         PS::F64 z2 = z*z;
 
         // T1 += T2^dr + dr^T3^dr
+        /*! c.m. force need to be removed, otherwise the perturbation force sum of all particles are not zero 
         T1[0] += T2[0]*x + T2[1]*y + T2[2]*z 
             +    T3[0]*x2 + 2*T3[1]*xy + 2*T3[2]*xz + T3[3]*y2 + 2*T3[4]*yz + T3[5]*z2;
         T1[1] += T2[3]*x + T2[4]*y + T2[5]*z
             +    T3[1]*x2 + 2*T3[3]*xy + 2*T3[4]*xz + T3[6]*y2 + 2*T3[7]*yz + T3[8]*z2;
         T1[2] += T2[6]*x + T2[7]*y + T2[8]*z
             +    T3[2]*x2 + 2*T3[4]*xy + 2*T3[5]*xz + T3[7]*y2 + 2*T3[8]*yz + T3[9]*z2;
+        */
         
         // T2 += 2*dr^T3
         T2[0] += 2.0*(T3[0]*x + T3[1]*y + T3[2]*z); // xx: xxx*x + xyx*y + xzx*z
@@ -294,12 +296,73 @@ public:
 
         PS::F64 acc0 =  T1[0] + T2[0]*x + T2[1]*y + T2[2]*z 
             +      T3[0]*x2 + 2*T3[1]*xy + 2*T3[2]*xz + T3[3]*y2 + 2*T3[4]*yz + T3[5]*z2;
-        PS::F64 acc1 =  T1[1] + T2[1]*x + T2[3]*y + T2[4]*z
+        PS::F64 acc1 =  T1[1] + T2[3]*x + T2[4]*y + T2[5]*z
             +      T3[1]*x2 + 2*T3[3]*xy + 2*T3[4]*xz + T3[6]*y2 + 2*T3[7]*yz + T3[8]*z2;
-        PS::F64 acc2 =  T1[2] + T2[2]*x + T2[4]*y + T2[5]*z
+        PS::F64 acc2 =  T1[2] + T2[6]*x + T2[7]*y + T2[8]*z
             +      T3[2]*x2 + 2*T3[4]*xy + 2*T3[5]*xz + T3[7]*y2 + 2*T3[8]*yz + T3[9]*z2;
         
         return - x*acc0 - y*acc1 - z*acc2;
+    }
+
+    void print(std::ostream & _fout, const int _width) const{
+        _fout<<"T1: \n"
+             <<std::setw(_width)<<T1[0]
+             <<std::setw(_width)<<T1[1]
+             <<std::setw(_width)<<T1[2]
+             <<std::endl
+             <<"T2: \n"
+             <<std::setw(_width)<<T2[0]
+             <<std::setw(_width)<<T2[1]
+             <<std::setw(_width)<<T2[2]
+             <<std::endl
+             <<std::setw(_width)<<T2[3]
+             <<std::setw(_width)<<T2[4]
+             <<std::setw(_width)<<T2[5]
+             <<std::endl
+             <<std::setw(_width)<<T2[6]
+             <<std::setw(_width)<<T2[7]
+             <<std::setw(_width)<<T2[8]
+             <<std::endl
+             <<"T3: \n"
+             <<"x: \n"
+             <<std::setw(_width)<<T3[0]
+             <<std::setw(_width)<<T3[1]
+             <<std::setw(_width)<<T3[2]
+             <<std::endl
+             <<std::setw(_width)<<T3[1]
+             <<std::setw(_width)<<T3[3]
+             <<std::setw(_width)<<T3[4]
+             <<std::endl
+             <<std::setw(_width)<<T3[2]
+             <<std::setw(_width)<<T3[4]
+             <<std::setw(_width)<<T3[5]
+             <<std::endl
+             <<"y: \n"
+             <<std::setw(_width)<<T3[1]
+             <<std::setw(_width)<<T3[3]
+             <<std::setw(_width)<<T3[4]
+             <<std::endl
+             <<std::setw(_width)<<T3[3]
+             <<std::setw(_width)<<T3[6]
+             <<std::setw(_width)<<T3[7]
+             <<std::endl
+             <<std::setw(_width)<<T3[4]
+             <<std::setw(_width)<<T3[7]
+             <<std::setw(_width)<<T3[8]
+             <<std::endl
+             <<"x: \n"
+             <<std::setw(_width)<<T3[2]
+             <<std::setw(_width)<<T3[4]
+             <<std::setw(_width)<<T3[5]
+             <<std::endl
+             <<std::setw(_width)<<T3[4]
+             <<std::setw(_width)<<T3[7]
+             <<std::setw(_width)<<T3[8]
+             <<std::endl
+             <<std::setw(_width)<<T3[5]
+             <<std::setw(_width)<<T3[8]
+             <<std::setw(_width)<<T3[9]
+             <<std::endl;
     }
 };
 
