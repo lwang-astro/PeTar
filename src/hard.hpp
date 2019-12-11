@@ -24,12 +24,14 @@ class HardManager{
 public:
     PS::F64 energy_error_max;
     PS::F64 eps_sq;
+    PS::F64 r_in_base;
+    PS::F64 r_out_base;
     ArtificialParticleManager ap_manager;
     H4::HermiteManager<HermiteInteraction> h4_manager;
     AR::SymplecticManager<ARInteraction> ar_manager;
 
     //! constructor
-    HardManager(): energy_error_max(-1.0), eps_sq(-1.0), ap_manager(), h4_manager(), ar_manager() {}
+    HardManager(): energy_error_max(-1.0), eps_sq(-1.0), r_in_base(-1.0), r_out_base(-1.0), ap_manager(), h4_manager(), ar_manager() {}
     
     //! set softening
     void setEpsSq(const PS::F64 _eps_sq) {
@@ -56,6 +58,8 @@ public:
     bool checkParams() {
         ASSERT(energy_error_max>0.0);
         ASSERT(eps_sq>=0.0);
+        ASSERT(r_in_base>0.0);
+        ASSERT(r_out_base>0.0);
         ASSERT(ap_manager.checkParams());
         ASSERT(h4_manager.checkParams());
         ASSERT(ar_manager.checkParams());
@@ -91,7 +95,9 @@ public:
     //! print parameters
     void print(std::ostream & _fout) const{
         _fout<<"energy_error_max : "<<energy_error_max<<std::endl
-             <<"eps_sq           : "<<eps_sq<<std::endl;
+             <<"eps_sq           : "<<eps_sq<<std::endl
+             <<"r_in_base        : "<<r_in_base<<std::endl
+             <<"r_out_base       : "<<r_out_base<<std::endl;
         ap_manager.print(_fout);
         h4_manager.print(_fout);
         ar_manager.print(_fout);
@@ -169,6 +175,128 @@ public:
     }
 
 private:
+
+    // get new changeover and rsearch for c.m.
+    template <class Tchp, class Tptcl>
+    static Tchp* calcBinChangeOverAndRSearchIter (Tchp*& _ch, COMM::BinaryTree<Tptcl>& _bin) {
+        _bin.changeover.setR(_bin.mass*_ch->mean_mass_inv, _ch->rin, _ch->rout);
+        _bin.Ptcl::calcRSearch(_ch->dt_tree);
+        return _ch;
+    };
+
+    //! generate artificial particles,
+    /*  
+        @param[in]     _i_cluster: cluster index
+        @param[in,out] _ptcl_in_cluster: particle data
+        @param[in]     _n_ptcl: total number of particle in _ptcl_in_cluster.
+        @param[out]    _ptcl_artificial: artificial particles that will be added
+        @param[out]    _n_groups: number of groups in current cluster
+        @param[in,out] _groups: searchgroup class, which contain 1-D group member index array, will be reordered by the minimum distance chain for each group
+        @param[in,out] _empty_list: the list of _ptcl_in_cluster that can be used to store new artificial particles, reduced when used
+        @param[in]     _dt_tree: tree time step for calculating r_search
+     */
+    template <class Tptcl>
+    void createArtificialParticles(const PS::S32 _i_cluster,
+                             Tptcl* _ptcl_in_cluster,
+                             const PS::S32 _n_ptcl,
+                             PS::ReallocatableArray<Tptcl> & _ptcl_artificial,
+                             PS::S32 &_n_groups,
+                             SearchGroup<Tptcl>& _groups,
+                             const PS::F64 _dt_tree) {
+
+        PS::S32 group_ptcl_adr_list[_n_ptcl];
+        PS::S32 group_ptcl_adr_offset=0;
+        _n_groups = 0;
+        for (int i=0; i<_groups.getNumberOfGroups(); i++) {
+            PS::ReallocatableArray<COMM::BinaryTree<Tptcl>> bins;   // hierarch binary tree
+
+            const PS::S32 n_members = _groups.getNumberOfGroupMembers(i);
+            bins.reserve(n_members);
+
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+            assert(n_members<ARRAY_ALLOW_LIMIT);
+#endif        
+            PS::S32* member_list = _groups.getMemberList(i);
+            bins.resizeNoInitialize(n_members-1);
+            // build hierarch binary tree from the minimum distant neighbors
+
+            COMM::BinaryTree<Tptcl>::generateBinaryTree(bins.getPointer(), member_list, n_members, _ptcl_in_cluster);
+
+            // reset status to 0
+            for (int j=0; j<n_members; j++) _ptcl_in_cluster[member_list[j]].status.d=0;
+
+            struct {PS::F64 mean_mass_inv, rin, rout, dt_tree; } ch = {Tptcl::mean_mass_inv, manager->r_in_base, manager->r_out_base, _dt_tree};
+            auto* chp = &ch;
+            // get new changeover and rsearch for c.m.
+            bins.back().processRootIter(chp, calcBinChangeOverAndRSearchIter);
+            
+            // stability check and break groups
+            Stability<Tptcl> stab;
+            // be careful, here t_crit should be >= hard slowdown_timescale_max to avoid using slowdown for wide binaries
+            stab.t_crit = _dt_tree;
+            stab.stable_binary_tree.reserve(n_members);
+            stab.findStableTree(bins.back());
+
+            for (int i=0; i<stab.stable_binary_tree.size(); i++) {
+                manager->ap_manager.keplerOrbitGenerator(_i_cluster, _n_groups, _ptcl_in_cluster, _ptcl_artificial, &group_ptcl_adr_list[group_ptcl_adr_offset], *stab.stable_binary_tree[i]);
+                group_ptcl_adr_offset += stab.stable_binary_tree[i]->getMemberN();
+                _n_groups++;
+            }
+        }
+
+        assert(group_ptcl_adr_offset<=_n_ptcl);
+
+        // Reorder the ptcl that group member come first
+        PS::S32 ptcl_list_reorder[_n_ptcl];
+        for (int i=0; i<_n_ptcl; i++) ptcl_list_reorder[i] = i;
+ 
+        // shift single after group members
+        PS::S32 i_single_front=group_ptcl_adr_offset;
+        PS::S32 i_group = 0;
+        while (i_group<group_ptcl_adr_offset) {
+            // if single find inside group_ptcl_adr_offset, exchange single with group member out of the offset
+            if(_ptcl_in_cluster[i_group].status.d==0) {
+                while(_ptcl_in_cluster[i_single_front].status.d==0) {
+                    i_single_front++;
+                    assert(i_single_front<_n_ptcl);
+                }
+                // Swap index
+                PS::S32 plist_tmp = ptcl_list_reorder[i_group];
+                ptcl_list_reorder[i_group] = ptcl_list_reorder[i_single_front];
+                ptcl_list_reorder[i_single_front] = plist_tmp;
+                i_single_front++; // avoild same particle be replaced
+            }
+            i_group++;
+        }
+
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        // check whether the list is correct
+        PS::S32 plist_new[group_ptcl_adr_offset];
+        for (int i=0; i<group_ptcl_adr_offset; i++) plist_new[i] = group_ptcl_adr_list[i];
+        std::sort(plist_new, plist_new+group_ptcl_adr_offset, [](const PS::S32 &a, const PS::S32 &b) {return a < b;});
+        std::sort(ptcl_list_reorder, ptcl_list_reorder+group_ptcl_adr_offset, [](const PS::S32 &a, const PS::S32 &b) {return a < b;});
+        for (int i=0; i<group_ptcl_adr_offset; i++) assert(ptcl_list_reorder[i]==plist_new[i]);
+#endif        
+
+        // overwrite the new ptcl list for group members by reorderd list
+        for (int i=0; i<group_ptcl_adr_offset; i++) ptcl_list_reorder[i] = group_ptcl_adr_list[i];
+
+        // templately copy ptcl data
+        Tptcl ptcl_tmp[_n_ptcl];
+        for (int i=0; i<_n_ptcl; i++) ptcl_tmp[i]=_ptcl_in_cluster[i];
+
+        // reorder ptcl
+        for (int i=0; i<_n_ptcl; i++) _ptcl_in_cluster[i]=ptcl_tmp[ptcl_list_reorder[i]];
+
+        //for (int i=0; i<_empty_list.size(); i++) {
+        //    PS::S32 ik = _empty_list[i];
+        //    _ptcl_in_cluster[ik].mass = 0.0;
+        //    _ptcl_in_cluster[ik].id = -1;
+        //    _ptcl_in_cluster[ik].status.d = -1;
+        //}
+
+    }
+
     //! Find groups and create aritfical particles to sys
     /* @param[in,out] _sys: global particle system
        @param[in,out] _ptcl_local: local saved particle data (will be reordered due to the groups)
@@ -216,8 +344,33 @@ private:
             // merge groups
             group.searchAndMerge(ptcl_in_cluster, n_ptcl);
 
+            // generate binary tree
+            /*
+            for (int i=0; i<group.getNumberOfGroups(); i++) {
+                const PS::S32 n_members = group.getNumberOfGroupMembers(i);
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+                assert(n_members<ARRAY_ALLOW_LIMIT);
+#endif        
+                PS::S32* member_list = group.getMemberList(i);
+
+                COMM::BinaryTree<PtclH4> bins[n_members-1];   // hierarch binary tree
+                
+                // build hierarch binary tree from the minimum distant neighbors
+                
+                COMM::BinaryTree<PtclH4>::generateBinaryTree(bins.getPointer(), member_list, n_members, ptcl_in_cluster);
+                
+                // reset status to 0
+                for (int j=0; j<n_members; j++) ptcl_in_cluster[member_list[j]].status.d=0;
+            
+                struct {PS::F64 mean_mass_inv, rin, rout, dt_tree; } ch = {Tptcl::mean_mass_inv, r_in_base, r_out_base, _dt_tree};
+                auto* chp = &ch;
+                // get new changeover and rsearch for c.m.
+                bins.back().processRootIter(chp, calcBinChangeOverAndRSearchIter);
+            }
+            */    
+
             // generate artificial particles,
-            ap_manager.createArtificialParticles(i, ptcl_in_cluster, n_ptcl, ptcl_artificial[ith], _n_group_in_cluster[i], group, _dt_tree);
+            createArtificialParticles(i, ptcl_in_cluster, n_ptcl, ptcl_artificial[ith], _n_group_in_cluster[i], group, _dt_tree);
         }
 
         // n_group_in_cluster_offset
@@ -382,7 +535,7 @@ private:
         const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, dr_eps);
 
         // linear cutoff 
-        const PS::F64 r_out = manager->ap_manager.r_out_base;
+        const PS::F64 r_out = manager->r_out_base;
         const PS::F64 r_out2 = r_out * r_out;
         const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
         const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
@@ -421,7 +574,7 @@ private:
         const PS::F64vec dr = _pi.pos - _pj.pos;
         const PS::F64 dr2 = dr * dr;
         const PS::F64 dr2_eps = dr2 + manager->eps_sq;
-        const PS::F64 r_out = manager->ap_manager.r_out_base;
+        const PS::F64 r_out = manager->r_out_base;
         const PS::F64 r_out2 = r_out * r_out;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
         const PS::F64 movr = _pj.mass * drinv;
@@ -612,7 +765,7 @@ private:
         // self-potential correction 
         // no correction for orbital artificial particles because the potential are not used for any purpose
         // no correction for member particles because their mass is zero during the soft force calculation, the self-potential contribution is also zero.
-        if (_psoft.status.d==0) _psoft.pot_tot += _psoft.mass/manager->ap_manager.r_out_base; // single
+        if (_psoft.status.d==0) _psoft.pot_tot += _psoft.mass/manager->r_out_base; // single
 
         // loop neighbors
         for(PS::S32 k=0; k<n_ngb; k++){
@@ -737,7 +890,7 @@ private:
                 assert(_sys[adr].id==_ptcl_local[j].id);
 #endif
                 //self-potential correction for non-group member, group member has mass zero, so no need correction
-                if(_sys[adr].status.d==0) _sys[adr].pot_tot += _sys[adr].mass/manager->ap_manager.r_out_base;
+                if(_sys[adr].status.d==0) _sys[adr].pot_tot += _sys[adr].mass/manager->r_out_base;
 
                 // cluster member
                 for (int k=adr_real_start; k<adr_real_end; k++) {
@@ -1042,7 +1195,7 @@ public:
             // calculate c.m. changeover
             auto& pcm = sym_int.particles.cm;
             PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
-            pcm.changeover.setR(m_fac, manager->ap_manager.r_in_base, manager->ap_manager.r_out_base);
+            pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
 
             // set tt gid
             sym_int.perturber.soft_pert->group_id = pcm.changeover.getRout();
@@ -1147,7 +1300,7 @@ public:
                     PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
 
                     ASSERT(m_fac>0.0);
-                    pcm.changeover.setR(m_fac, manager->ap_manager.r_in_base, manager->ap_manager.r_out_base);
+                    pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
 
 #ifdef HARD_DEBUG
                     PS::F64 r_out_cm = pcm.changeover.getRout();
@@ -1181,7 +1334,7 @@ public:
                 auto& pcm = groupi.particles.cm;
                 PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
                 ASSERT(m_fac>0.0);
-                pcm.changeover.setR(m_fac, manager->ap_manager.r_in_base, manager->ap_manager.r_out_base);
+                pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
 
 #ifdef SOFT_PERT                
                 // check whether all r_out are same (primoridal or not)
@@ -1243,7 +1396,7 @@ public:
                     auto& pcm = groupi.particles.cm;
                     PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
                     ASSERT(m_fac>0.0);
-                    pcm.changeover.setR(m_fac, manager->ap_manager.r_in_base, manager->ap_manager.r_out_base);
+                    pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
 
 #ifdef SOFT_PERT                
                     // check whether all r_out are same (primoridal or not)
@@ -2126,7 +2279,7 @@ public:
 #pragma omp parallel for 
         for (int i=0; i<n_ptcl; i++) {
             const PS::S32 k =_ptcl_list[i];
-            _sys[k].pot_tot += _sys[k].mass / manager->ap_manager.r_out_base;
+            _sys[k].pot_tot += _sys[k].mass / manager->r_out_base;
 //#ifdef HARD_DEBUG
             // status may not be zero after binary disrupted
             // assert(_sys[k].status==0);

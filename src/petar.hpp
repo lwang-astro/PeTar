@@ -2052,14 +2052,14 @@ public:
         hard_manager.setDtRange(input_parameters.dt_soft.value/input_parameters.dt_limit_hard_factor.value, input_parameters.dt_min_hermite_index.value);
         hard_manager.setEpsSq(input_parameters.eps.value);
         hard_manager.setG(1.0);
+        hard_manager.r_in_base = r_in;
+        hard_manager.r_out_base = r_out;
 #ifdef HARD_CHECK_ENERGY
         hard_manager.energy_error_max = input_parameters.e_err_hard.value;
 #else
         hard_manager.energy_error_max = NUMERIC_FLOAT_MAX;
 #endif
         hard_manager.ap_manager.r_tidal_tensor = r_bin;
-        hard_manager.ap_manager.r_in_base = r_in;
-        hard_manager.ap_manager.r_out_base = r_out;
         hard_manager.ap_manager.id_offset = id_offset;
         hard_manager.ap_manager.setOrbitalParticleSplitN(input_parameters.n_split.value);
         hard_manager.h4_manager.step.eta_4th = input_parameters.eta.value;

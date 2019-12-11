@@ -48,13 +48,25 @@ class ArtificialParticleManager{
         return _bin.id;
     }
 
-    // get new changeover and rsearch for c.m.
-    template <class Tchp, class Tptcl>
-    static Tchp* calcBinChangeOverAndRSearchIter (Tchp*& _ch, COMM::BinaryTree<Tptcl>& _bin) {
-        _bin.changeover.setR(_bin.mass*_ch->mean_mass_inv, _ch->rin, _ch->rout);
-        _bin.Ptcl::calcRSearch(_ch->dt_tree);
-        return _ch;
-    };
+
+public:
+    PS::S32 n_split;    // test
+    PS::F64 r_tidal_tensor;
+    PS::S64 id_offset;
+    PS::F64 G; // gravitational constant
+
+    ArtificialParticleManager(): n_split_(-1), n_artificial_(-1), index_offset_tt_(0), index_offset_orb_(8), index_cm_(-1), r_tidal_tensor(-1.0), id_offset(-1), G(-1.0) {}
+
+    //! check paramters
+    bool checkParams() {
+        ASSERT(n_split_>=4);
+        ASSERT(n_artificial_>=9);
+        ASSERT(index_cm_>=8);
+        ASSERT(r_tidal_tensor>=0.0);
+        ASSERT(id_offset>0);
+        ASSERT(G>0);
+        return true;
+    }
 
     //! generate kepler sampling artificial particles
     /*  Particle status:
@@ -208,29 +220,6 @@ class ArtificialParticleManager{
     }
 
 
-public:
-    PS::S32 n_split;    // test
-    PS::F64 r_tidal_tensor;
-    PS::F64 r_in_base;
-    PS::F64 r_out_base;
-    PS::S64 id_offset;
-    PS::F64 G; // gravitational constant
-
-    ArtificialParticleManager(): n_split_(-1), n_artificial_(-1), index_offset_tt_(0), index_offset_orb_(8), index_cm_(-1), r_tidal_tensor(-1.0), r_in_base(-1.0), r_out_base(-1.0), id_offset(-1), G(-1.0) {}
-
-    //! check paramters
-    bool checkParams() {
-        ASSERT(n_split_>=4);
-        ASSERT(n_artificial_>=9);
-        ASSERT(index_cm_>=8);
-        ASSERT(r_tidal_tensor>=0.0);
-        ASSERT(r_in_base>0.0);
-        ASSERT(r_out_base>0.0);
-        ASSERT(id_offset>0);
-        ASSERT(G>0);
-        return true;
-    }
-
     //! set orbital particle split number
     void setOrbitalParticleSplitN(const PS::S32& _n_split) {
         if (_n_split>(1<<ID_PHASE_SHIFT)) {
@@ -246,117 +235,6 @@ public:
         n_split = _n_split;
     }
       
-    //! generate artificial particles,
-    /*  
-        @param[in]     _i_cluster: cluster index
-        @param[in,out] _ptcl_in_cluster: particle data
-        @param[in]     _n_ptcl: total number of particle in _ptcl_in_cluster.
-        @param[out]    _ptcl_artificial: artificial particles that will be added
-        @param[out]    _n_groups: number of groups in current cluster
-        @param[in,out] _groups: searchgroup class, which contain 1-D group member index array, will be reordered by the minimum distance chain for each group
-        @param[in,out] _empty_list: the list of _ptcl_in_cluster that can be used to store new artificial particles, reduced when used
-        @param[in]     _dt_tree: tree time step for calculating r_search
-     */
-    template <class Tptcl>
-    void createArtificialParticles(const PS::S32 _i_cluster,
-                             Tptcl* _ptcl_in_cluster,
-                             const PS::S32 _n_ptcl,
-                             PS::ReallocatableArray<Tptcl> & _ptcl_artificial,
-                             PS::S32 &_n_groups,
-                             SearchGroup<Tptcl>& _groups,
-                             const PS::F64 _dt_tree) {
-
-        PS::S32 group_ptcl_adr_list[_n_ptcl];
-        PS::S32 group_ptcl_adr_offset=0;
-        _n_groups = 0;
-        for (int i=0; i<_groups.getNumberOfGroups(); i++) {
-            PS::ReallocatableArray<COMM::BinaryTree<Tptcl>> bins;   // hierarch binary tree
-            bins.reserve(_n_groups);
-
-            const PS::S32 n_members = _groups.getNumberOfGroupMembers(i);
-#ifdef ARTIFICIAL_PARTICLE_DEBUG
-            assert(n_members<ARRAY_ALLOW_LIMIT);
-#endif        
-            PS::S32* member_list = _groups.getMemberList(i);
-            bins.resizeNoInitialize(n_members-1);
-            // build hierarch binary tree from the minimum distant neighbors
-
-            COMM::BinaryTree<Tptcl>::generateBinaryTree(bins.getPointer(), member_list, n_members, _ptcl_in_cluster);
-
-            // reset status to 0
-            for (int j=0; j<n_members; j++) _ptcl_in_cluster[member_list[j]].status.d=0;
-
-            struct {PS::F64 mean_mass_inv, rin, rout, dt_tree; } ch = {Tptcl::mean_mass_inv, r_in_base, r_out_base, _dt_tree};
-            auto* chp = &ch;
-            // get new changeover and rsearch for c.m.
-            bins.back().processRootIter(chp, calcBinChangeOverAndRSearchIter);
-            
-            // stability check and break groups
-            Stability<Tptcl> stab;
-            // be careful, here t_crit should be >= hard slowdown_timescale_max to avoid using slowdown for wide binaries
-            stab.t_crit = _dt_tree;
-            stab.stable_binary_tree.reserve(_n_groups);
-            stab.findStableTree(bins.back());
-
-            for (int i=0; i<stab.stable_binary_tree.size(); i++) {
-                keplerOrbitGenerator(_i_cluster, _n_groups, _ptcl_in_cluster, _ptcl_artificial, &group_ptcl_adr_list[group_ptcl_adr_offset], *stab.stable_binary_tree[i]);
-                group_ptcl_adr_offset += stab.stable_binary_tree[i]->getMemberN();
-                _n_groups++;
-            }
-        }
-
-        assert(group_ptcl_adr_offset<=_n_ptcl);
-
-        // Reorder the ptcl that group member come first
-        PS::S32 ptcl_list_reorder[_n_ptcl];
-        for (int i=0; i<_n_ptcl; i++) ptcl_list_reorder[i] = i;
- 
-        // shift single after group members
-        PS::S32 i_single_front=group_ptcl_adr_offset;
-        PS::S32 i_group = 0;
-        while (i_group<group_ptcl_adr_offset) {
-            // if single find inside group_ptcl_adr_offset, exchange single with group member out of the offset
-            if(_ptcl_in_cluster[i_group].status.d==0) {
-                while(_ptcl_in_cluster[i_single_front].status.d==0) {
-                    i_single_front++;
-                    assert(i_single_front<_n_ptcl);
-                }
-                // Swap index
-                PS::S32 plist_tmp = ptcl_list_reorder[i_group];
-                ptcl_list_reorder[i_group] = ptcl_list_reorder[i_single_front];
-                ptcl_list_reorder[i_single_front] = plist_tmp;
-                i_single_front++; // avoild same particle be replaced
-            }
-            i_group++;
-        }
-
-#ifdef ARTIFICIAL_PARTICLE_DEBUG
-        // check whether the list is correct
-        PS::S32 plist_new[group_ptcl_adr_offset];
-        for (int i=0; i<group_ptcl_adr_offset; i++) plist_new[i] = group_ptcl_adr_list[i];
-        std::sort(plist_new, plist_new+group_ptcl_adr_offset, [](const PS::S32 &a, const PS::S32 &b) {return a < b;});
-        std::sort(ptcl_list_reorder, ptcl_list_reorder+group_ptcl_adr_offset, [](const PS::S32 &a, const PS::S32 &b) {return a < b;});
-        for (int i=0; i<group_ptcl_adr_offset; i++) assert(ptcl_list_reorder[i]==plist_new[i]);
-#endif        
-
-        // overwrite the new ptcl list for group members by reorderd list
-        for (int i=0; i<group_ptcl_adr_offset; i++) ptcl_list_reorder[i] = group_ptcl_adr_list[i];
-
-        // templately copy ptcl data
-        Tptcl ptcl_tmp[_n_ptcl];
-        for (int i=0; i<_n_ptcl; i++) ptcl_tmp[i]=_ptcl_in_cluster[i];
-
-        // reorder ptcl
-        for (int i=0; i<_n_ptcl; i++) _ptcl_in_cluster[i]=ptcl_tmp[ptcl_list_reorder[i]];
-
-        //for (int i=0; i<_empty_list.size(); i++) {
-        //    PS::S32 ik = _empty_list[i];
-        //    _ptcl_in_cluster[ik].mass = 0.0;
-        //    _ptcl_in_cluster[ik].id = -1;
-        //    _ptcl_in_cluster[ik].status.d = -1;
-        //}
-
-    }
 
     //! correct orbitial particles force
     /*!
@@ -489,8 +367,6 @@ public:
     //! print parameters
     void print(std::ostream & _fout) const{
         _fout<<"r_tidal_tensor   : "<<r_tidal_tensor<<std::endl
-             <<"r_in_base        : "<<r_in_base<<std::endl
-             <<"r_out_base       : "<<r_out_base<<std::endl
              <<"id_offset        : "<<id_offset<<std::endl
              <<"n_split          : "<<n_split_<<std::endl;
     }    
