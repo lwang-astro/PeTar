@@ -294,7 +294,7 @@ public:
     static PS::S32 stabilityCheckIter(Stability& _stab, const PS::S32& _stab_res1, const PS::S32& _stab_res2, BinTree& _bin) {
         // B-B system
         if (_stab_res1==1&&_stab_res2==1) {
-            bool stab4=stable4check(*(BinTree*)_bin.getLeftMember(), *(BinTree*)_bin.getRightMember(), _bin, _bin.changeover.getRin(), _stab.t_crit);
+            bool stab4=stable4check(*(BinTree*)_bin.getLeftMember(), *(BinTree*)_bin.getRightMember(), _bin, _bin.getRBreak(), _stab.t_crit);
             if (stab4) return 1;
             else {
                 _stab.stable_binary_tree.push_back((BinTree*)_bin.getLeftMember());
@@ -311,7 +311,7 @@ public:
         }
         // triple case
         if (_stab_res1==-1&&_stab_res2==1) {
-            bool stab3=stable3check(*(BinTree*)_bin.getRightMember(), _bin, _bin.changeover.getRin(), _stab.t_crit, false);
+            bool stab3=stable3check(*(BinTree*)_bin.getRightMember(), _bin, _bin.getRBreak(), _stab.t_crit, false);
             if (stab3) return 1;
             else {
                 _stab.stable_binary_tree.push_back((BinTree*)_bin.getRightMember());
@@ -319,7 +319,7 @@ public:
             }
         }
         if (_stab_res2==-1&&_stab_res1==1) {
-            bool stab3=stable3check(*(BinTree*)_bin.getLeftMember(), _bin, _bin.changeover.getRin(), _stab.t_crit, true);
+            bool stab3=stable3check(*(BinTree*)_bin.getLeftMember(), _bin, _bin.getRBreak(), _stab.t_crit, true);
             if (stab3) return 1;
             else {
                 _stab.stable_binary_tree.push_back((BinTree*)_bin.getLeftMember());
@@ -330,7 +330,7 @@ public:
 #ifdef STABLE_CHECK_DEBUG
         assert(_stab_res1==-1&&_stab_res2==-1);
 #endif
-        bool stab2 = stable2check(_bin, _bin.changeover.getRin(), _stab.t_crit);
+        bool stab2 = stable2check(_bin, _bin.getRBreak(), _stab.t_crit);
         if (stab2) return 1;
         else return 0;
     }
