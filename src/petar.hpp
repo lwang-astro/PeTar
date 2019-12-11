@@ -175,7 +175,7 @@ public:
                      write_style  (input_par_store, 1,    "File Writing style: 0, no output; 1. write snapshots and status separately; 2. write all data in one line per step (no MPI support)"),
                      fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]"),
                      fname_par(input_par_store, "input.par", "Input parameter file (this option should be used first before any other options)"),
-                     fname_inp(input_par_store, "input", "Input data file"),
+                     fname_inp(input_par_store, "", "Input data file"),
                      app_flag(false), print_flag(false) {}
 
     
@@ -211,140 +211,168 @@ public:
 
         int copt;
         int option_index;
+        int n_opt=0;
         while ((copt = getopt_long(argc, argv, "i:at:s:o:r:b:n:G:L:S:T:E:f:p:w:h", long_options, &option_index)) != -1) 
             switch (copt) {
             case 0:
                 n_split.value = atoi(optarg);
                 if(print_flag) n_split.print(std::cout);
                 assert(n_split.value>=8);
+                n_opt+=2;
                 break;
             case 1:
                 search_factor.value = atof(optarg);
                 if(print_flag) search_factor.print(std::cout);
                 assert(search_factor.value>0.0);
+                n_opt+=2;
                 break;
             case 2:
                 dt_limit_hard_factor.value = atof(optarg);
                 if(print_flag) dt_limit_hard_factor.print(std::cout);
                 assert(dt_limit_hard_factor.value > 0.0);
+                n_opt+=2;
                 break;
             case 3:
                 dt_min_hermite_index.value = atoi(optarg);
                 if(print_flag) dt_min_hermite_index.print(std::cout);
                 assert(dt_min_hermite_index.value > 0);
+                n_opt+=2;
                 break;
             case 7:
                 e_err_arc.value = atof(optarg);
                 if(print_flag) e_err_arc.print(std::cout);
                 assert(e_err_arc.value > 0.0);
+                n_opt+=2;
                 break;
             case 8:
                 eps.value = atof(optarg);
                 if(print_flag) eps.print(std::cout);
                 assert(eps.value>=0.0);
+                n_opt+=2;
                 break;
             case 9:
                 sd_factor.value = atof(optarg);
                 if(print_flag) sd_factor.print(std::cout);
                 assert(sd_factor.value>0.0);
+                n_opt+=2;
                 break;
             case 10:
                 ratio_r_cut.value = atof(optarg);
                 if(print_flag) ratio_r_cut.print(std::cout);
                 assert(ratio_r_cut.value>0.0);
                 assert(ratio_r_cut.value<1.0);
+                n_opt+=2;
                 break;
             case 11:
                 r_bin.value = atof(optarg);
                 if(print_flag) r_bin.print(std::cout);
                 assert(r_bin.value>0.0);
+                n_opt+=2;
                 break;
             case 12:
                 radius_factor.value = atof(optarg);
                 if(print_flag) radius_factor.print(std::cout);
                 assert(radius_factor.value>=1.0);
+                n_opt+=2;
                 break;
 #ifdef HARD_CHECK_ENERGY
             case 14:
                 e_err_hard.value = atof(optarg);
                 if(print_flag) e_err_hard.print(std::cout);
+                n_opt+=2;
                 break;
 #endif
 #ifdef AR_SYM
             case 15:
                 step_limit_arc.value = atoi(optarg);
                 if(print_flag) step_limit_arc.print(std::cout);
+                n_opt+=2;
                 break;
 #endif
             case 16:
                 print_flag = false;
+                n_opt++;
                 break;
             case 'i':
                 data_format.value = atoi(optarg);
                 if(print_flag) data_format.print(std::cout);
                 assert(data_format.value>=0&&data_format.value<=3);
+                n_opt+=2;
                 break;
             case 'a':
                 app_flag=true;
+                n_opt++;
                 break;
             case 't':
                 time_end.value = atof(optarg);
                 if(print_flag) time_end.print(std::cout);
                 assert(time_end.value>=0.0);
+                n_opt+=2;
                 break;
             case 's':
                 dt_soft.value = atof(optarg);
                 if(print_flag) dt_soft.print(std::cout);
                 assert(dt_soft.value>0.0);
+                n_opt+=2;
                 break;
             case 'o':
                 dt_snp.value = atof(optarg);
                 if(print_flag) dt_snp.print(std::cout);
                 assert(dt_snp.value>0.0);
+                n_opt+=2;
                 break;
             case 'r':
                 r_out.value = atof(optarg);
                 if(print_flag) r_out.print(std::cout);
                 assert(r_out.value>0.0);
+                n_opt+=2;
                 break;
             case 'b':
                 n_bin.value = atoi(optarg);
                 if(print_flag) n_bin.print(std::cout);
                 assert(n_bin.value>=0);
+                n_opt+=2;
                 break;
             case 'n':
                 n_glb.value = atol(optarg);
                 if(print_flag) n_glb.print(std::cout);
                 assert(n_glb.value>0);
+                n_opt+=2;
                 break;
             case 'G':
                 n_group_limit.value = atoi(optarg);
                 if(print_flag) n_group_limit.print(std::cout);
                 assert(n_group_limit.value>0);
+                n_opt+=2;
                 break;
             case 'L':
                 n_leaf_limit.value = atoi(optarg);
                 if(print_flag) n_leaf_limit.print(std::cout);
                 assert(n_leaf_limit.value>0);
+                n_opt+=2;
                 break;
             case 'S':
                 n_smp_ave.value = atoi(optarg);
                 if(print_flag) n_smp_ave.print(std::cout);
                 assert(n_smp_ave.value>0.0);
+                n_opt+=2;
                 break;
             case 'T':
                 theta.value = atof(optarg);
                 if(print_flag) theta.print(std::cout);
                 assert(theta.value>=0.0);
+                n_opt+=2;
                 break;
             case 'E':
                 eta.value = atof(optarg);
                 if(print_flag) eta.print(std::cout);
                 assert(eta.value>0.0);
+                n_opt+=2;
                 break;
             case 'f':
                 fname_snp.value = optarg;
                 if(print_flag) fname_snp.print(std::cout);
+                n_opt+=2;
                 break;
             case 'p':
                 fname_par.value = optarg;
@@ -362,10 +390,12 @@ public:
                 input_par_store.mpi_broadcast();
                 PS::Comm::barrier();
 #endif
+                n_opt+=2;
                 break;
             case 'w':
                 write_style.value = atoi(optarg);
                 if(print_flag) write_style.print(std::cout);
+                n_opt+=2;
                 break;
             case 'h':
                 if(print_flag){
@@ -434,7 +464,10 @@ public:
                 return -1;
             }
         
-        if (argc>0) fname_inp.value =argv[argc-1];
+        if (argc-n_opt>1) {
+            fname_inp.value =argv[argc-1];
+            if(print_flag) std::cout<<"Reading data file name: "<<fname_inp.value<<std::endl;
+        }        
 
         if(print_flag) std::cout<<"----- Finish reading input options -----\n";
 
@@ -1990,6 +2023,7 @@ public:
 
         // initial particles paramters
         if (!restart_flag) {
+#pragma omp parallel for
             for (PS::S32 i=0; i<stat.n_real_loc; i++) {
                 // ID safety check 
                 PS::S64 id = system_soft[i].id;
@@ -2003,6 +2037,14 @@ public:
                 // calculate r_search for particles, for binary, r_search depend on v_disp
                 if(id<=2*n_bin) system_soft[i].r_search = std::max(r_search_min,v_disp*dt_soft*search_factor + system_soft[i].changeover.getRout());
                 else system_soft[i].calcRSearch(dt_soft);
+            }
+        }
+        else {
+            // clear up status and mass_bk to avoid issue in search neighbor
+#pragma omp parallel for
+            for (PS::S32 i=0; i<stat.n_real_loc; i++) {
+                system_soft[i].status.f[0]  = system_soft[i].status.f[1] = 0.0;
+                system_soft[i].mass_bk.f[0] = system_soft[i].mass_bk.f[1] = 0.0;
             }
         }
     

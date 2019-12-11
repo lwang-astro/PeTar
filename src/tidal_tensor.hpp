@@ -202,12 +202,12 @@ public:
         PS::F64 x = dr.x;
         PS::F64 y = dr.y;
         PS::F64 z = dr.z;
-        PS::F64 x2 = x*x;
-        PS::F64 xy = x*y;
-        PS::F64 xz = x*z;
-        PS::F64 y2 = y*y;
-        PS::F64 yz = y*z;
-        PS::F64 z2 = z*z;
+        //PS::F64 x2 = x*x;
+        //PS::F64 xy = x*y;
+        //PS::F64 xz = x*z;
+        //PS::F64 y2 = y*y;
+        //PS::F64 yz = y*z;
+        //PS::F64 z2 = z*z;
 
         // T1 += T2^dr + dr^T3^dr
         /*! c.m. force need to be removed, otherwise the perturbation force sum of all particles are not zero 

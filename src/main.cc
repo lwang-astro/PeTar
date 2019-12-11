@@ -11,7 +11,7 @@ int main(int argc, char *argv[]){
 
     auto& inp = petar.input_parameters;
 
-    if (inp.n_glb.value==0) petar.readDataFromFile();
+    if (inp.fname_inp.value!="") petar.readDataFromFile();
     else petar.generatePlummer();
 
     petar.initialParameters();
