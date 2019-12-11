@@ -78,14 +78,14 @@ int main(int argc, char** argv)
   hard_manager.setDtRange(dt_limit, 40);
   hard_manager.setEpsSq(eps);
   hard_manager.setG(1.0);
+  hard_manager.r_in_base = rin;
+  hard_manager.r_out_base = rout;
 #ifdef HARD_CHECK_ENERGY
   hard_manager.energy_error_max = 1e-4;
 #else
   hard_manager.energy_error_max = NUMERIC_FLOAT_MAX;
 #endif
   hard_manager.ap_manager.r_tidal_tensor = rbin;
-  hard_manager.ap_manager.r_in_base = rin;
-  hard_manager.ap_manager.r_out_base = rout;
   hard_manager.ap_manager.id_offset = N;
   hard_manager.ap_manager.setOrbitalParticleSplitN(n_split);
   hard_manager.h4_manager.step.eta_4th = eta;

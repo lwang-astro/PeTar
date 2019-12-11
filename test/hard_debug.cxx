@@ -167,9 +167,12 @@ int main(int argc, char **argv){
 
       PS::ReallocatableArray<PtclH4> ptcl_new;
       PS::S32 n_group_in_cluster;
+
+      SystemHard sys;
+      sys.manager = &hard_manager;
       
       // generate artificial particles, stability test is included
-      hard_manager.ap_manager.createArtificialParticles(0, ptcl, n_ptcl, ptcl_new, n_group_in_cluster, group, hard_dump.time_end);
+      sys.createArtificialParticles(0, ptcl, n_ptcl, ptcl_new, n_group_in_cluster, group, hard_dump.time_end);
   }
 
   return 0;
