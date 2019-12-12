@@ -3,55 +3,12 @@
 #define ID_PHASE_SHIFT 4
 #define ID_PHASE_MASKER 0xF
 
-#include "search_group.hpp"
-#include "stability.hpp"
-#include "changeover.hpp"
-
 class ArtificialParticleManager{
     PS::S32 n_split_;    // oribital particle splitting number
     PS::S32 n_artificial_;     // number of artificial particles
     PS::S32 index_offset_tt_;  // tidal tensor particle starting index
     PS::S32 index_offset_orb_; // Orbital particle starting index
     PS::S32 index_cm_;        // center of mass index
-
-    template <class Tptcl>
-    struct BinPar {
-        Tptcl* adr_ref; PS::S32* group_list; PS::S32 n; ChangeOver* changeover;
-    };
-
-    //! set binary tree parameters 
-    /*! Set binary id as minimum member id (positive); store member index 
-     */
-    template <class Tptcl>
-    static PS::S64 setBinChangeOverIDAndGetMemberAdrIter(BinPar<Tptcl>& _par, const PS::S64& _id1, const PS::S64& _id2, COMM::BinaryTree<Tptcl>& _bin) {
-        // set bin id as the left member id
-        // _id1==-1 is the initial status, once id is obtained, it is bin.id of left member
-        if (_id1<0) _bin.id = _bin.getLeftMember()->id;
-        else _bin.id = _id1;
-        if (_id2<0) _bin.id = std::min(_bin.id, _bin.getRightMember()->id);
-        else _bin.id = std::min(_bin.id, _id2);
-#ifdef ARTIFICIAL_PARTICLE_DEBUG
-        assert(_bin.id>0);
-#endif
-
-        // leaf case
-        // collect address
-        for (int k=0; k<2; k++) {
-            if (!_bin.isMemberTree(k)) {
-                Tptcl* member = _bin.getMember(k);
-#ifdef ARTIFICIAL_PARTICLE_DEBUG
-                assert(member->mass>0.0);
-#endif                
-                _par.group_list[_par.n++] = member - _par.adr_ref;
-                member->status.d = 1; // used for number count later
-            }
-        }
-
-        //set changeover to the same (root) one
-        _bin.changeover = *(_par.changeover);
-        
-        return _bin.id;
-    }
 
 
 public:
@@ -73,53 +30,34 @@ public:
         return true;
     }
 
-    //! generate kepler sampling artificial particles
-    /*  Particle status:
-        member particle: 1
-        Artificial particles:
-        0: left member N
-        1: right member N
-        2: id_cluster
-        3: id_group
-        4-2*n_split: index+1
-        pcm: n_members
-        Particle mass_bk:
-        pcm: mass(cm)
+    //! create artificial particles 
+    /*! First 8 are tidal tensor particles; 9-2*n_split are orbitial sample particles; 2*n_split+1 is c.m.  
 
-        @param[in]     _i_cluster: cluster index
-        @param[in]     _i_group: group index in the cluster
-        @param[in,out] _ptcl_in_cluster: particle data in local cluster
-        @param[out]    _ptcl_new: artificial particles that will be added
-        @param[out]    _group_ptcl_adr_list: group member particle index list in _ptcl_in_cluster 
-        @param[in]     _bin: binary tree root
-     */
+      Particle status:
+      member particle: 1
+      Artificial particles:
+      0: left member N
+      1: right member N
+      2-2*n_split: _data_to_store; otherwises index+1
+      pcm: n_members
+
+      Particle mass_bk:
+      pcm: mass(cm)
+
+      @param[out]    _ptcl_new: artificial particles that will be added
+      @param[in]     _bin: binary tree root
+      @param[in]     _data_to_store: array of data to be stored in the status of artificial particles
+      @param[in]     _n_data: number of data
+    */
     template <class Tptcl>
-    void keplerOrbitGenerator(const PS::S32 _i_cluster,
-                              const PS::S32 _i_group,
-                              Tptcl* _ptcl_in_cluster,
-                              PS::ReallocatableArray<Tptcl> & _ptcl_new,
-                              PS::S32 *_group_ptcl_adr_list,
-                              COMM::BinaryTree<Tptcl> &_bin) {
-        const PS::F64 dE = 8.0*atan(1.0)/(n_split_-4);
-        //! Set member particle status=1, return orderd particle member index list
-        /*  _adr_ref: ptcl_org first particle address as reference to calculate the particle index.
-        */
-        BinPar<Tptcl> bin_par = {_ptcl_in_cluster, _group_ptcl_adr_list, 0, &_bin.changeover};
-        _bin.processTreeIter(bin_par, (PS::S64)-1, (PS::S64)-1, setBinChangeOverIDAndGetMemberAdrIter);
-#ifdef ARTIFICIAL_PARTICLE_DEBUG
-        const PS::S32 n_members = _bin.getMemberN();
-        assert(bin_par.n==n_members);
-#endif                
-
-        // Make sure the _ptcl_new will not make new array due to none enough capacity during the following loop, otherwise the p[j] pointer will point to wrong position
-        const int np = _ptcl_new.size();
-        _ptcl_new.increaseSize(n_artificial_);
-        Tptcl* p = &_ptcl_new[np];
-        
+    void createArtificialParticles(Tptcl* _ptcl_artificial,
+                                   COMM::BinaryTree<Tptcl> &_bin, 
+                                   const PS::F64* _data_to_store,
+                                   const PS::S32 _n_data) {
         // set id and status.d 
         for (int i=0; i<n_split_; i++) {
             for(int j=0; j<2; j++) {
-                Tptcl* pj = &p[2*i+j];
+                Tptcl* pj = &_ptcl_artificial[2*i+j];
                 Tptcl* member = _bin.getMember(j);
                 pj->id = id_offset + abs(member->id)*n_split_ +i;
                 pj->status.d = 2*i+j+1;
@@ -130,32 +68,24 @@ public:
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
         assert(r_tidal_tensor<=_bin.changeover.getRin());
 #endif
-        TidalTensor::createTidalTensorMeasureParticles(p, *((Tptcl*)&_bin), r_tidal_tensor);
-
-        // use c.m. r_search and changeover
-        for (int i=0; i<4; i++) {
-            for (int j=0; j<2; j++) {
-                Tptcl* pj = &p[2*i+j];
-                pj->r_search =_bin.getMember(j)->r_search;
-                pj->changeover = _bin.changeover;
-            }
-        }
+        TidalTensor::createTidalTensorMeasureParticles(_ptcl_artificial, *((Tptcl*)&_bin), r_tidal_tensor);
 
         // remaining is used for sample points
+        const PS::F64 dE = 8.0*atan(1.0)/(n_split_-4);
         PS::F64 mnormal=0.0;
         for (int i=4; i<n_split_; i++) {
             PS::S32 iph = i-4;
 
             // center_of_mass_shift(*(Tptcl*)&_bin,p,2);
             // generate particles at different orbitial phase
-            _bin.orbitToParticle(p[2*i], p[2*i+1], _bin, dE*iph, G);
+            _bin.orbitToParticle(_ptcl_artificial[2*i], _ptcl_artificial[2*i+1], _bin, dE*iph, G);
 
             // use velocity to weight mass
-            PS::F64vec dvvec= p[2*i].vel - p[2*i+1].vel;
+            PS::F64vec dvvec= _ptcl_artificial[2*i].vel - _ptcl_artificial[2*i+1].vel;
             PS::F64 odv = 1.0/std::sqrt(dvvec*dvvec);
 
             for (int j=0; j<2; j++) {
-                Tptcl* pj = &p[2*i+j];
+                Tptcl* pj = &_ptcl_artificial[2*i+j];
                 Tptcl* member = _bin.getMember(j);
 
                 // set mass
@@ -168,29 +98,7 @@ public:
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
                 assert(member->mass>0);
 #endif
-
-                // use member changeover, if new changeover is different, record the scale ratio 
-                pj->changeover =  member->changeover;
-                if (abs(pj->changeover.getRin()-_bin.changeover.getRin())>1e-10) {
-                    pj->changeover.r_scale_next = _bin.changeover.getRin()/pj->changeover.getRin();
-                    pj->r_search = std::max(pj->r_search, _bin.r_search);
-#ifdef ARTIFICIAL_PARTICLE_DEBUG
-                    // not necessary true since the member changeover may inherient from other binaries which can be larger than the new one here.
-                    //assert(_bin.changeover.getRin()>=pj->changeover.getRin());
-                    assert(pj->r_search > pj->changeover.getRout());
-#endif 
-                }
-                else pj->r_search = _bin.r_search;
-
-#ifdef ARTIFICIAL_PARTICLE_DEBUG
-                //check rsearch consistence:
-                PS::F64 rsearch_bin = _bin.r_search+_bin.semi*(1+_bin.ecc);
-                PS::F64vec dp = pj->pos-_bin.pos;
-                PS::F64 dr = dp*dp;
-                assert(dr<=rsearch_bin*rsearch_bin);
-#endif
             }
-
             mnormal += odv;
         }
 
@@ -198,30 +106,26 @@ public:
         PS::F64 mfactor = 1.0/mnormal;
         for (int i=4; i<n_split_; i++) 
             for (int j=0; j<2; j++) 
-                p[2*i+j].mass *= mfactor;
-
+                _ptcl_artificial[2*i+j].mass *= mfactor;
 
         // store the component member number 
         for (int j=0; j<2; j++) {
-            p[j].status.d = _bin.isMemberTree(j) ? ((COMM::BinaryTree<Tptcl>*)(_bin.getMember(j)))->getMemberN() : 1; 
+            _ptcl_artificial[j].status.d = _bin.isMemberTree(j) ? ((COMM::BinaryTree<Tptcl>*)(_bin.getMember(j)))->getMemberN() : 1; 
         }
-        // store the i_cluster and i_group for identify artificial particles, +1 to avoid 0 value (status.d>0)
-        p[2].status.d = _i_cluster+1;
-        p[3].status.d = _i_group+1;
+
+        // store the additional data (should be positive) 
+        // ensure the data size is not overflow
+        assert(_n_data+2<2*n_split_);
+        for (int j=0; j<_n_data; j++) _ptcl_artificial[j+2].status.d = _data_to_store[j];
 
         // last member is the c.m. particle
         Tptcl* pcm;
-        pcm = &_ptcl_new.back();
+        pcm = &_ptcl_artificial[2*n_split_];
         pcm->mass_bk.d = _bin.mass;
         pcm->mass = 0.0;
         pcm->pos = _bin.pos;
         pcm->vel = _bin.vel;
         pcm->id  = - std::abs(_bin.id);
-        pcm->r_search = _bin.r_search;
-        pcm->changeover = _bin.changeover;
-
-        pcm->r_search += _bin.semi*(1+_bin.ecc);  // depend on the mass ratio, the upper limit distance to c.m. from all members and artificial particles is apo-center distance
-
         pcm->status.d = _bin.getMemberN();
     }
 
@@ -311,6 +215,11 @@ public:
         return n_artificial_;
     }
 
+    //! get artificial particle total number
+    PS::S32 getTidalTensorParticleN() const {
+        return 8;
+    }
+
     //! get orbitial particle number 
     PS::S32 getOrbitalParticleN() const {
         return n_artificial_ - 9;
@@ -334,22 +243,16 @@ public:
         return PS::S32(_ptcl_list[1].status.d);
     }
 
-    //! get cluster id
-    template <class Tptcl>
-    PS::S32 getClusterID(const Tptcl* _ptcl_list) const {
-        return PS::S32(_ptcl_list[2].status.d)-1;
-    }
-
-    //! get group id
-    template <class Tptcl>
-    PS::S32 getGroupID(const Tptcl* _ptcl_list) const {
-        return PS::S32(_ptcl_list[3].status.d)-1;
-    }
-
     //! get center of mass id
     template <class Tptcl>
     PS::S64 getCMID(const Tptcl* _ptcl_list) const {
         return -PS::S64(_ptcl_list[index_cm_].id);
+    }
+
+    //! get stored data 
+    template <class Tptcl>
+    PS::F64 getStoredData(const Tptcl* _ptcl_list, const PS::S32 _index) const {
+        return _ptcl_list[_index+2].status.d;
     }
 
     //! write class data to file with binary format
@@ -415,28 +318,5 @@ public:
         assert(abs(dpos*dpos)<1e-20);
     }
 #endif
-
-//    void checkRoutChange(PS::ReallocatableArray<RCList> & r_out_change_list,
-//                         PS::ReallocatableArray<PS::ReallocatableArray<PS::S32>> & group_list,
-//                         Tptcl* ptcl){
-//        for (int i=0; i<group_list.size(); i++) {
-//            PS::S64 r_out_max = 0.0;
-//            for (int j=0; j<group_list[i].size(); i++) {
-//                PS::S32 k = group_list[i][j];
-//                r_out_max = std::max(r_out_max,ptcl[k].r_out);
-//            }
-//            for (int j=0; j<group_list[i].size(); i++) {
-//                PS::S32 k = group_list[i][j];
-//                if(ptcl[k].r_out != r_out_max) {
-//                    r_out_change_list.push_back(RCList(k,ptcl[k].r_out));
-//#ifdef ARTIFICIAL_PARTICLE_DEBUG
-//                    std::cerr<<"Rout change detected, p["<<k<<"].r_out: "<<ptcl[k].r_out<<" -> "<<r_out_max<<std::endl;
-//#endif
-//                    ptcl[k].r_out = r_out_max;
-//                }
-//            }
-//        }
-//    }
-
 
 };

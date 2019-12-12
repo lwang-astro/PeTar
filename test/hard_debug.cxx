@@ -172,7 +172,7 @@ int main(int argc, char **argv){
       sys.manager = &hard_manager;
       
       // generate artificial particles, stability test is included
-      sys.createArtificialParticles(0, ptcl, n_ptcl, ptcl_new, n_group_in_cluster, group, hard_dump.time_end);
+      sys.findGroupsAndCreateArtificialParticlesOneCluster(0, ptcl, n_ptcl, ptcl_new, n_group_in_cluster, group, hard_dump.time_end);
   }
 
   return 0;
