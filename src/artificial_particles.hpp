@@ -19,20 +19,25 @@ class ArtificialParticleManager{
         Tptcl* adr_ref; PS::S32* group_list; PS::S32 n; ChangeOver* changeover;
     };
 
-    // set binary tree parameters 
+    //! set binary tree parameters 
+    /*! Set binary id as minimum member id (positive); store member index 
+     */
     template <class Tptcl>
     static PS::S64 setBinChangeOverIDAndGetMemberAdrIter(BinPar<Tptcl>& _par, const PS::S64& _id1, const PS::S64& _id2, COMM::BinaryTree<Tptcl>& _bin) {
         // set bin id as the left member id
+        // _id1==-1 is the initial status, once id is obtained, it is bin.id of left member
         if (_id1<0) _bin.id = _bin.getLeftMember()->id;
         else _bin.id = _id1;
+        if (_id2<0) _bin.id = std::min(_bin.id, _bin.getRightMember()->id);
+        else _bin.id = std::min(_bin.id, _id2);
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
         assert(_bin.id>0);
 #endif
 
         // leaf case
-        if (_id1<0  && _id2<0) {
-            // collect address
-            for (int k=0; k<2; k++) {
+        // collect address
+        for (int k=0; k<2; k++) {
+            if (!_bin.isMemberTree(k)) {
                 Tptcl* member = _bin.getMember(k);
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
                 assert(member->mass>0.0);
@@ -170,7 +175,8 @@ public:
                     pj->changeover.r_scale_next = _bin.changeover.getRin()/pj->changeover.getRin();
                     pj->r_search = std::max(pj->r_search, _bin.r_search);
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-                    assert(_bin.changeover.getRin()>=pj->changeover.getRin());
+                    // not necessary true since the member changeover may inherient from other binaries which can be larger than the new one here.
+                    //assert(_bin.changeover.getRin()>=pj->changeover.getRin());
                     assert(pj->r_search > pj->changeover.getRout());
 #endif 
                 }
@@ -340,9 +346,9 @@ public:
         return PS::S32(_ptcl_list[3].status.d)-1;
     }
 
-    //! get first member id
+    //! get center of mass id
     template <class Tptcl>
-    PS::S64 getFirstMemberID(const Tptcl* _ptcl_list) const {
+    PS::S64 getCMID(const Tptcl* _ptcl_list) const {
         return -PS::S64(_ptcl_list[index_cm_].id);
     }
 
@@ -375,18 +381,21 @@ public:
     template <class Tptcl, class Tpart>
     void checkConsistence(Tptcl* _ptcl_member, Tpart* _ptcl_artificial) {
         // check id 
-        assert(getFirstMemberID(_ptcl_artificial) == _ptcl_member[0].id);
-        PS::S32 id_mem[2];
-        id_mem[0] = _ptcl_member[0].id;
-        id_mem[1] = _ptcl_member[getLeftMemberN(_ptcl_artificial)].id;
-        // id_offset unknown, try to substract id information via calculation between neighbor particles
-        for (int j=0; j<getArtificialParticleN()-1; j+=2) {
-            // first member
-            PS::S32 id_offset_j1 = _ptcl_artificial[j].id - j/2- id_mem[0]*(getArtificialParticleN()-1)/2;
-            // second member
-            PS::S32 id_offset_j2 = _ptcl_artificial[j+1].id - j/2 - id_mem[1]*(getArtificialParticleN()-1)/2;
-            assert(id_offset_j1==id_offset_j2);
-        }
+        PS::S64 id_min = _ptcl_member[0].id;
+        for(int j=0; j<getMemberN(_ptcl_artificial); j++)  id_min = std::min(id_min,_ptcl_member[j].id);
+        assert(getCMID(_ptcl_artificial) == id_min);
+        // not consistent if first member is single and second is binary
+        //PS::S32 id_mem[2];
+        //id_mem[0] = _ptcl_member[0].id;
+        //id_mem[1] = _ptcl_member[getLeftMemberN(_ptcl_artificial)].id;
+        //// id_offset unknown, try to substract id information via calculation between neighbor particles
+        //for (int j=0; j<getArtificialParticleN()-1; j+=2) {
+        //    // first member
+        //    PS::S32 id_offset_j1 = _ptcl_artificial[j].id - j/2- id_mem[0]*(getArtificialParticleN()-1)/2;
+        //    // second member
+        //    PS::S32 id_offset_j2 = _ptcl_artificial[j+1].id - j/2 - id_mem[1]*(getArtificialParticleN()-1)/2;
+        //    assert(id_offset_j1==id_offset_j2);
+        //}
 
         // check whether c.m. pos. are consistent
         // Cannot do velocity check because cm is not kicked

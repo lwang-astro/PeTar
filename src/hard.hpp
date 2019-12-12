@@ -314,17 +314,21 @@ private:
 
                 // changeover update flag
                 bool changeover_update_flag=false;
+#ifdef HARD_DEBUG
+                // check whether ID is consistent.
+                PS::S64 id_cm = ap_manager.getCMID(pj);
+                bool id_match_flag=false;
+#endif
                 // update member status
                 for (PS::S32 k=0; k<n_members; k++) {
                     PS::S32 kl = _n_ptcl_in_cluster_disp[i_cluster]+group_offset+k;
                     auto& p_loc = _ptcl_local[kl];
-#ifdef HARD_DEBUG
-                    // check whether ID is consistent.
-                    if(k==0) assert(p_loc.id==ap_manager.getFirstMemberID(pj));
-#endif
                     // save c.m. address 
                     p_loc.status.d = -pcm->adr_org;
 
+#ifdef HARD_DEBUG
+                    if(p_loc.id == id_cm) id_match_flag=true;
+#endif
                     // set changeover r_scale_next for updating changeover next tree step
                     // set rsearch to maximum of c.m. rsearch and member rsearch
                     PS::F64 rin_cm = changeover_cm.getRin();
@@ -362,6 +366,10 @@ private:
                     }
 
                 }
+
+#ifdef HARD_DEBUG
+                assert(id_match_flag);
+#endif
                 // record i_cluster if changeover change
                 if (changeover_update_flag) i_cluster_changeover_update_threads[i].push_back(i_cluster);
 
