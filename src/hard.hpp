@@ -16,7 +16,7 @@
 #include"hermite_perturber.hpp"
 #include"ar_interaction.hpp"
 #include"ar_perturber.hpp"
-#include"search_group.hpp"
+#include"search_group_candidate.hpp"
 #include"artificial_particles.hpp"
 #include"stability.hpp"
 
