@@ -159,11 +159,11 @@ int main(int argc, char **argv){
   else if (mode==1) {
       typedef H4::ParticleH4<PtclHard> PtclH4;
 
-      SearchGroup<PtclH4> group;
+      SearchGroupCandidate<PtclH4> group_candidate;
       auto* ptcl = hard_dump.ptcl_bk.getPointer();
       PS::S32 n_ptcl = hard_dump.n_ptcl;
 
-      group.searchAndMerge(ptcl, n_ptcl);
+      group_candidate.searchAndMerge(ptcl, n_ptcl);
 
       PS::ReallocatableArray<PtclH4> ptcl_new;
       PS::S32 n_group_in_cluster;
@@ -172,7 +172,7 @@ int main(int argc, char **argv){
       sys.manager = &hard_manager;
       
       // generate artificial particles, stability test is included
-      sys.findGroupsAndCreateArtificialParticlesOneCluster(0, ptcl, n_ptcl, ptcl_new, n_group_in_cluster, group, hard_dump.time_end);
+      sys.findGroupsAndCreateArtificialParticlesOneCluster(0, ptcl, n_ptcl, ptcl_new, n_group_in_cluster, group_candidate, hard_dump.time_end);
   }
 
   return 0;

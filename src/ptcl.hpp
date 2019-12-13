@@ -154,31 +154,22 @@ public:
         assert(r_search>changeover.getRout());
 #endif 
         return r_search;
-   }
+    }
 
-    //! Get neighbor distance criterion 
-    PS::F64 getRBreak() const {
+    //! Get group candidate distance criterion
+    PS::F64 getRGroupCandidate() const {
+        return changeover.getRin();
+    }
+
+    //! Get group distance criterion
+    PS::F64 getRGroup() const {
 #ifdef HARD_DEBUG
         assert(r_group_crit_ratio>0);
 #endif
         return changeover.getRin()*r_group_crit_ratio;
     }
 
-//    PS::F64 calcRSearch(const PS::F64 _dt_tree, const PS::F64 _v_max) {
-//        PS::F64 v = std::sqrt(vel*vel);
-//        PS::F64 dt_reduce_factor = 1.0;
-//        if (v>_v_max) {
-//            dt_reduce_factor = v/_v_max;
-//            v = _v_max;
-//        }
-//        r_search = std::max(v*_dt_tree*search_factor, r_search_min);
-//        //r_search = std::max(std::sqrt(vel*vel)*dt_tree*search_factor, std::sqrt(mass*mean_mass_inv)*r_search_min);
-//#ifdef HARD_DEBUG
-//        assert(r_search>0);
-//#endif
-//        return dt_reduce_factor;
-//    }
-
+    
 };
 
 PS::F64 Ptcl::r_search_min = 0.0;

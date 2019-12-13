@@ -714,7 +714,7 @@ public:
             for (PS::S32 i=0; i<n_members; i++) {
                 sym_int.particles.addMemberAndAddress(_ptcl_local[i]);
                 sym_int.info.particle_index.addMember(i);
-                sym_int.info.r_break_crit = std::max(sym_int.info.r_break_crit,_ptcl_local[i].getRBreak());
+                sym_int.info.r_break_crit = std::max(sym_int.info.r_break_crit,_ptcl_local[i].getRGroup());
                 Float r_neighbor_crit = _ptcl_local[i].getRNeighbor();
                 sym_int.perturber.r_neighbor_crit_sq = std::max(sym_int.perturber.r_neighbor_crit_sq, r_neighbor_crit*r_neighbor_crit);                
             }
@@ -1715,7 +1715,7 @@ public:
         @param[in]     _n_ptcl: total number of particle in _ptcl_in_cluster.
         @param[out]    _ptcl_artificial: artificial particles that will be added
         @param[out]    _n_groups: number of groups in current cluster
-        @param[in,out] _groups: searchgroup class, which contain 1-D group member index array, will be reordered by the minimum distance chain for each group
+        @param[in,out] _groups: searchGroupCandidate class, which contain 1-D group member index array, will be reordered by the minimum distance chain for each group
         @param[in,out] _empty_list: the list of _ptcl_in_cluster that can be used to store new artificial particles, reduced when used
         @param[in]     _dt_tree: tree time step for calculating r_search
      */
@@ -1725,7 +1725,7 @@ public:
                                                           const PS::S32 _n_ptcl,
                                                           PS::ReallocatableArray<Tptcl> & _ptcl_artificial,
                                                           PS::S32 &_n_groups,
-                                                          SearchGroup<Tptcl>& _groups,
+                                                          SearchGroupCandidate<Tptcl>& _groups,
                                                           const PS::F64 _dt_tree) {
 
         PS::S32 group_ptcl_adr_list[_n_ptcl];
@@ -1930,19 +1930,19 @@ public:
                 PS::S64 adr=ptcl_in_cluster[j].adr_org;
                 if(adr>=0) _sys[adr].status.d = 0;
             }
-            // search groups
-            SearchGroup<PtclH4> group;
-            // merge groups
-            group.searchAndMerge(ptcl_in_cluster, n_ptcl);
+            // search group_candidates
+            SearchGroupCandidate<PtclH4> group_candidate;
+            // merge group_candidates
+            group_candidate.searchAndMerge(ptcl_in_cluster, n_ptcl);
 
             // generate binary tree
             /*
-            for (int i=0; i<group.getNumberOfGroups(); i++) {
-                const PS::S32 n_members = group.getNumberOfGroupMembers(i);
+            for (int i=0; i<group_candidate.getNumberOfGroups(); i++) {
+                const PS::S32 n_members = group_candidate.getNumberOfGroupMembers(i);
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
                 assert(n_members<ARRAY_ALLOW_LIMIT);
 #endif        
-                PS::S32* member_list = group.getMemberList(i);
+                PS::S32* member_list = group_candidate.getMemberList(i);
 
                 COMM::BinaryTree<PtclH4> bins[n_members-1];   // hierarch binary tree
                 
@@ -1961,7 +1961,7 @@ public:
             */    
 
             // generate artificial particles,
-            findGroupsAndCreateArtificialParticlesOneCluster(i, ptcl_in_cluster, n_ptcl, ptcl_artificial[ith], n_group_in_cluster_[i], group, _dt_tree);
+            findGroupsAndCreateArtificialParticlesOneCluster(i, ptcl_in_cluster, n_ptcl, ptcl_artificial[ith], n_group_in_cluster_[i], group_candidate, _dt_tree);
         }
 
         // n_group_in_cluster_offset

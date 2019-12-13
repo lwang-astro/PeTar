@@ -6,7 +6,7 @@
 #endif
 
 template<class Tptcl>
-class SearchGroup{
+class SearchGroupCandidate{
 private:
     typedef std::pair<PS::S32, PS::S32> PLinker;
 
@@ -52,7 +52,7 @@ private:
                 PS::F64vec dr = _ptcl[i].pos-_ptcl[j].pos;
                 PS::F64 r2 = dr*dr;
                 // use simple criterion
-                PS::F64 rin_min = std::min(_ptcl[i].changeover.getRin(), _ptcl[j].changeover.getRin());
+                PS::F64 rin_min = std::min(_ptcl[i].getRGroupCandidate(), _ptcl[j].getRGroupCandidate());
                 if (r2<rin_min*rin_min) {
                     _part_list.push_back(j);
                     _part_list_n[i]++;
@@ -105,7 +105,7 @@ private:
         }
     }
 
-    void mergeCluster(PS::ReallocatableArray<PS::S32> & group_list,
+    void mergeGroup(PS::ReallocatableArray<PS::S32> & group_list,
                       PS::ReallocatableArray<PS::S32> & group_list_disp,
                       PS::ReallocatableArray<PS::S32> & group_list_n,
                       //PS::ReallocatableArray<PS::S32> & p_list,
@@ -227,7 +227,7 @@ public:
         PS::ReallocatableArray<PS::S32> part_list_n;      ///partner list
         
         searchPartner(part_list, part_list_disp, part_list_n, _ptcl_in_cluster, _n_ptcl);
-        mergeCluster(group_list_, group_list_disp_, group_list_n_, _n_ptcl, part_list.getPointer(), part_list_disp.getPointer(), part_list_n.getPointer());
+        mergeGroup(group_list_, group_list_disp_, group_list_n_, _n_ptcl, part_list.getPointer(), part_list_disp.getPointer(), part_list_n.getPointer());
     }
 
     PS::S32 getNumberOfGroups() const {
