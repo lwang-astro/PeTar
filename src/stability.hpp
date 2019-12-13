@@ -282,9 +282,68 @@ public:
         }
     }
 
+    //! Closed system check iteration function for BinaryTree
+    /*! check whether the orbit is closed system with apo-center distance less than r_group
+       @param[in,out] _stab: stability class
+       @param[in] _stab_res1/2: results from iteration of two branches. -1: branch is one particle; 0: unstable branch; 1: stable branch
+       @param[in]  _bins: binary tree data 
+     */
+    static PS::S32 closedSystemCheckIter(Stability& _stab, const PS::S32& _stab_res1, const PS::S32& _stab_res2, BinTree& _bin) {
+        // unstable case
+        if (_stab_res1==0||_stab_res2==0) {
+            // if any branch is stable, save data
+            if (_stab_res1==1)  _stab.stable_binary_tree.push_back((BinTree*)_bin.getLeftMember());
+            if (_stab_res2==1)  _stab.stable_binary_tree.push_back((BinTree*)_bin.getRightMember());
+            return 0;
+        }
+
+        PS::F64 apo = _bin.semi*(1+_bin.ecc);
+        bool stab_flag = (apo>0.0 && apo<=_bin.getRGroup());
+        // B-B system
+        if (_stab_res1==1&&_stab_res2==1) {
+            if (stab_flag) return 1;
+            else {
+                _stab.stable_binary_tree.push_back((BinTree*)_bin.getLeftMember());
+                _stab.stable_binary_tree.push_back((BinTree*)_bin.getRightMember());
+                return 0;
+            }
+        }
+        // triple case
+        if (_stab_res1==-1&&_stab_res2==1) {
+            if (stab_flag) return 1;
+            else {
+                _stab.stable_binary_tree.push_back((BinTree*)_bin.getRightMember());
+                return 0;
+            }
+        }
+        if (_stab_res2==-1&&_stab_res1==1) {
+            if (stab_flag) return 1;
+            else {
+                _stab.stable_binary_tree.push_back((BinTree*)_bin.getLeftMember());
+                return 0;
+            }
+        }
+        // binary case
+#ifdef STABLE_CHECK_DEBUG
+        assert(_stab_res1==-1&&_stab_res2==-1);
+#endif
+        if (stab_flag) return 1;
+        else return 0;
+    }
+
+    //! Check binary tree and collect closed systems subtree root
+    /*! Check the orbit of each binary and if apo-center distance is positive and < bin.getRGroup(), selected as candidates.
+        subtrees are stored in stable_binary_tree.
+       @param[in]  _bins: binary tree data 
+    */
+    void findClosedTree(BinTree& _bin) {
+        stable_binary_tree.resizeNoInitialize(0);
+        bool is_stable= _bin.processTreeIter(*this, -1, -1, closedSystemCheckIter);
+        if (is_stable) stable_binary_tree.push_back(&_bin);
+    }
 
     //! Stability check iteraction function for BinaryTree
-    /* Check stability of binary, triple and B-B for given binarytree, for sub branch of stable systems, save to stable_binary_tree
+    /*! Check stability of binary, triple and B-B for given binarytree, for sub branch of stable systems, save to stable_binary_tree
        @param[in,out] _stab: stability class
        @param[in] _stab_res1/2: results from iteration of two branches. -1: branch is one particle; 0: unstable branch; 1: stable branch
        @param[in]  _bins: binary tree data 
@@ -333,11 +392,12 @@ public:
         else return 0;
     }
 
-    //! Check binary tree and correct stable subtree
+    //! Check binary tree and collect stable subtree
     /*!
        @param[in]  _bins: binary tree data 
     */
     void findStableTree(BinTree& _bin) {
+        stable_binary_tree.resizeNoInitialize(0);
         bool is_stable= _bin.processTreeIter(*this, -1, -1, stabilityCheckIter);
         if (is_stable) stable_binary_tree.push_back(&_bin);
     }
