@@ -170,9 +170,11 @@ int main(int argc, char **argv){
 
       SystemHard sys;
       sys.manager = &hard_manager;
-      
+
+      PS::ReallocatableArray<COMM::BinaryTree<PtclH4>> binary_table;
+
       // generate artificial particles, stability test is included
-      sys.findGroupsAndCreateArtificialParticlesOneCluster(0, ptcl, n_ptcl, ptcl_new, n_group_in_cluster, group_candidate, hard_dump.time_end);
+      sys.findGroupsAndCreateArtificialParticlesOneCluster(0, ptcl, n_ptcl, ptcl_new, binary_table, n_group_in_cluster, group_candidate, hard_dump.time_end);
   }
 
   return 0;

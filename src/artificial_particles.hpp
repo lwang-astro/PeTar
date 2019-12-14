@@ -1,8 +1,147 @@
 #pragma once
 
+#include "Common/binary_tree.h"
+#include "tidal_tensor.hpp"
+
 #define ID_PHASE_SHIFT 4
 #define ID_PHASE_MASKER 0xF
 
+//! class to store necessary information for using artificial particles
+/*!
+                  single    c.m.             members          initial     artificial
+      mass_backup 0         mass      (+)    mass     (+)     -10         default is 0.0 / data stored (-/0)
+      status      0         n_members (+)    c.m. adr (-)     -10         position in artificial particle array / data stored (+)
+ */
+class ArtificialParticleInformation{
+public:
+    PS::F64 mass_backup;
+    PS::F64 status;
+
+    //! initializer
+    ArtificialParticleInformation(): mass_backup(-10.0), status(-10.0) {}
+
+    //! set particle type to single
+    void setParticleTypeToSingle() {
+        mass_backup = 0.0;
+        status = 0.0;
+    };
+
+    //! set particle type to member
+    /*! @param[in] _mass: mass to backup
+     */
+    void setParticleTypeToMember(const PS::F64 _mass) {
+        mass_backup = _mass;
+        status = -1;
+    };
+
+    //! return whether the particle type is single
+    bool isSingle() const {
+        return (status==0.0 && mass_backup==0.0);
+    }
+
+    //! return whether the particle type is member
+    bool isMember() const {
+        return (status<0.0);
+    }
+
+    //! return whether the particle type is artificial
+    bool isArtificial() const {
+        return (status>0.0);
+    }
+
+    //! return whether the particle is unused
+    bool isUnused() const {
+        return (status<0.0 && mass_backup<0.0);
+    }
+
+    //! return whether the particle type is c.m.
+    bool isCM() const {
+        return (status>0.0 && mass_backup>0.0);
+    }
+
+    //! store one data (only in artificial particles)
+    /*! positive data stored in status, otherwise in mass_backup;
+     */
+    void storeData(const PS::F64 _data) {
+        if (_data>0.0) status = _data;
+        else      mass_backup = _data;
+    }
+
+    //! get stored data (only in artificial particles)
+    /*! @param[in] is_positive: indicate whether stored data is positive (true) or negative (false)
+     */
+    PS::F64 getData(const bool is_positive) const {
+        if (is_positive) return status;
+        else             return mass_backup;
+    }
+
+    //! print titles of class members using column style
+    /*! print titles of class members in one line for column style
+      @param[out] _fout: std::ostream output object
+      @param[in] _width: print width (defaulted 20)
+     */
+    static void printColumnTitle(std::ostream & _fout, const int _width=20) {
+        _fout<<std::setw(_width)<<"mass_bk"
+             <<std::setw(_width)<<"status";
+    }
+
+    //! print data of class members using column style
+    /*! print data of class members in one line for column style. Notice no newline is printed at the end
+      @param[out] _fout: std::ostream output object
+      @param[in] _width: print width (defaulted 20)
+     */
+    void printColumn(std::ostream & _fout, const int _width=20){
+        _fout<<std::setw(_width)<<mass_backup
+             <<std::setw(_width)<<status;
+    }
+
+    //! write class data with ASCII format
+    /*! @param[in] _fout: file IO for write
+     */
+    void writeAscii(FILE* _fout) const{
+        fprintf(_fout, "%26.17e %26.17e ", 
+                this->mass_backup, this->status);
+    }
+
+    //! write class data with BINARY format
+    /*! @param[in] _fout: file IO for write
+     */
+    void writeBinary(FILE* _fin) const{
+        fwrite(this, sizeof(ArtificialParticleInformation), 1, _fin);
+    }
+
+    //! read class data with ASCII format
+    /*! @param[in] _fin: file IO for read
+     */
+    void readAscii(FILE* _fin) {
+        PS::S64 rcount=fscanf(_fin, "%lf %lf ",
+                              &this->mass_backup, &this->status);
+        if (rcount<2) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
+            abort();
+        }
+    }
+
+    //! read class data with BINARY format
+    /*! @param[in] _fin: file IO for read
+     */
+    void readBinary(FILE* _fin) {
+        size_t rcount = fread(this, sizeof(ArtificialParticleInformation), 1, _fin);
+        if (rcount<1) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            abort();
+        }
+    }
+
+    //! print parameters
+    void print(std::ostream & _fout) const{
+        _fout<<" mass_bk="<<mass_backup
+             <<" status="<<status;
+    }    
+    
+};
+
+//! class to organize artificial particles
 class ArtificialParticleManager{
     PS::S32 n_split_;    // oribital particle splitting number
     PS::S32 n_artificial_;     // number of artificial particles
@@ -32,17 +171,21 @@ public:
 
     //! create artificial particles 
     /*! First 8 are tidal tensor particles; 9-2*n_split are orbitial sample particles; 2*n_split+1 is c.m.  
+      id: 
+      0-2*n_split: id_offset + abs(member->id)*n_split_ + index/2;
+      cm: - abs(_bin.id)
 
-      Particle status:
-      member particle: 1
-      Artificial particles:
+      status:
+      Tidal tensors/orbital
       0: left member N
       1: right member N
-      2-2*n_split: _data_to_store; otherwises index+1
-      pcm: n_members
+      2-2*n_split: index+1 (_data_to_store>0.0)
 
-      Particle mass_bk:
-      pcm: mass(cm)
+      c.m.: n_members
+
+      mass_backup:
+      Tidial tensors/orbital: 0.0 (_data_to_store <=0.0)
+      c.m.:  mass(cm)
 
       @param[out]    _ptcl_new: artificial particles that will be added
       @param[in]     _bin: binary tree root
@@ -58,9 +201,14 @@ public:
         for (int i=0; i<n_split_; i++) {
             for(int j=0; j<2; j++) {
                 Tptcl* pj = &_ptcl_artificial[2*i+j];
-                Tptcl* member = _bin.getMember(j);
-                pj->id = id_offset + abs(member->id)*n_split_ +i;
-                pj->status.d = 2*i+j+1;
+                Tptcl* binary_member_j = _bin.getMember(j);
+                pj->id = id_offset + abs(binary_member_j->id)*n_split_ +i;
+                auto& pj_artificial = pj->group_data.artificial;
+                pj_artificial.status      = PS::F64(2*i+j+1);
+                pj_artificial.mass_backup = 0.0;
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+                assert(pj_artificial.isArtificial());
+#endif
             }
         }
 
@@ -84,19 +232,19 @@ public:
             PS::F64vec dvvec= _ptcl_artificial[2*i].vel - _ptcl_artificial[2*i+1].vel;
             PS::F64 odv = 1.0/std::sqrt(dvvec*dvvec);
 
+            PS::F64 mass_member[2]= {_bin.m1, _bin.m2};
             for (int j=0; j<2; j++) {
                 Tptcl* pj = &_ptcl_artificial[2*i+j];
-                Tptcl* member = _bin.getMember(j);
 
                 // set mass
-                pj->mass = member->mass * odv;
+                pj->mass = mass_member[j] * odv;
 
                 // center_of_mass_correction 
                 pj->pos += _bin.pos;
                 pj->vel += _bin.vel;
 
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-                assert(member->mass>0);
+                assert(mass_member[j]>0);
 #endif
             }
             mnormal += odv;
@@ -110,23 +258,34 @@ public:
 
         // store the component member number 
         for (int j=0; j<2; j++) {
-            _ptcl_artificial[j].status.d = _bin.isMemberTree(j) ? ((COMM::BinaryTree<Tptcl>*)(_bin.getMember(j)))->getMemberN() : 1; 
+            _ptcl_artificial[j].group_data.artificial.status = _bin.isMemberTree(j) ? ((COMM::BinaryTree<Tptcl>*)(_bin.getMember(j)))->getMemberN() : 1; 
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+            assert(_ptcl_artificial[j].group_data.artificial.isArtificial());
+#endif
         }
 
         // store the additional data (should be positive) 
         // ensure the data size is not overflow
         assert(_n_data+2<2*n_split_);
-        for (int j=0; j<_n_data; j++) _ptcl_artificial[j+2].status.d = _data_to_store[j];
+        for (int j=0; j<_n_data; j++) {
+            _ptcl_artificial[j+2].group_data.artificial.storeData(_data_to_store[j]);
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+            assert(_ptcl_artificial[j+2].group_data.artificial.isArtificial());
+#endif
+        }
 
         // last member is the c.m. particle
         Tptcl* pcm;
         pcm = &_ptcl_artificial[2*n_split_];
-        pcm->mass_bk.d = _bin.mass;
+        pcm->group_data.artificial.mass_backup = _bin.mass;
+        pcm->group_data.artificial.status      = _bin.getMemberN();
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert(pcm->group_data.artificial.isCM());
+#endif        
         pcm->mass = 0.0;
         pcm->pos = _bin.pos;
         pcm->vel = _bin.vel;
         pcm->id  = - std::abs(_bin.id);
-        pcm->status.d = _bin.getMemberN();
     }
 
 
@@ -168,7 +327,7 @@ public:
         acc_cm /= m_ob_tot;
 
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-        assert(abs(m_ob_tot-pcm->mass_bk.d)<1e-10);
+        assert(abs(m_ob_tot-pcm->group_data.artificial.mass_backup)<1e-10);
 #endif
     }
 
@@ -193,7 +352,7 @@ public:
     template <class Tptcl>
     Tptcl* getOrbitalParticles(Tptcl* _ptcl_list)  {
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-        assert((PS::S32)(_ptcl_list[index_offset_orb_].status.d)==index_offset_orb_+1);
+        assert(_ptcl_list[index_offset_orb_].group_data.artificial.isArtificial());
 #endif
         return &_ptcl_list[index_offset_orb_];
     }
@@ -201,12 +360,18 @@ public:
     //! get tidal tensor particle list address from a artificial particle array
     template <class Tptcl>
     Tptcl* getTidalTensorParticles(Tptcl* _ptcl_list) {
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert(_ptcl_list[index_offset_tt_].group_data.artificial.isArtificial());
+#endif
         return &_ptcl_list[index_offset_tt_];
     }
 
     //! get c.m. particle list address from a artificial particle array
     template <class Tptcl>
     Tptcl* getCMParticles(Tptcl* _ptcl_list)  {
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert(_ptcl_list[index_cm_].group_data.artificial.isCM());
+#endif
         return &_ptcl_list[index_cm_];
     }
 
@@ -228,31 +393,46 @@ public:
     //! get left member number
     template <class Tptcl>
     PS::S32 getLeftMemberN(const Tptcl* _ptcl_list) const {
-        return PS::S32(_ptcl_list[0].status.d);
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert(_ptcl_list[0].group_data.artificial.isArtificial());
+#endif
+        return PS::S32(_ptcl_list[0].group_data.artificial.getData());
     }
 
     //! get left member number
     template <class Tptcl>
     PS::S32 getMemberN(const Tptcl* _ptcl_list) const {
-        return PS::S32(_ptcl_list[index_cm_].status.d);
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert(_ptcl_list[index_cm_].group_data.artificial.isCM());
+#endif
+        return PS::S32(_ptcl_list[index_cm_].group_data.artificial.getData(true));
     }
 
     //! get left member number
     template <class Tptcl>
     PS::S32 getRightMemberN(const Tptcl* _ptcl_list) const {
-        return PS::S32(_ptcl_list[1].status.d);
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert(_ptcl_list[1].group_data.artificial.isArtificial());
+#endif
+        return PS::S32(_ptcl_list[1].group_data.artificial.getData(true));
     }
 
     //! get center of mass id
     template <class Tptcl>
     PS::S64 getCMID(const Tptcl* _ptcl_list) const {
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert(_ptcl_list[index_cm_].group_data.artificial.isCM());
+#endif
         return -PS::S64(_ptcl_list[index_cm_].id);
     }
 
     //! get stored data 
     template <class Tptcl>
-    PS::F64 getStoredData(const Tptcl* _ptcl_list, const PS::S32 _index) const {
-        return _ptcl_list[_index+2].status.d;
+    PS::F64 getStoredData(const Tptcl* _ptcl_list, const PS::S32 _index, const bool _is_positive) const {
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert(_ptcl_list[_index+2].group_data.artificial.isArtificial());
+#endif
+        return _ptcl_list[_index+2].group_data.artificial.getData(_is_positive);
     }
 
     //! write class data to file with binary format
@@ -313,7 +493,7 @@ public:
         pos_cm_check /= mass_cm_check;
 
         auto* pcm = getCMParticles(_ptcl_artificial);
-        assert(abs(mass_cm_check-pcm->mass)<1e-10);
+        assert(abs(mass_cm_check-pcm->group_data.artificial.mass_backup)<1e-10);
         PS::F64vec dpos = pos_cm_check-pcm->pos;
         assert(abs(dpos*dpos)<1e-20);
     }

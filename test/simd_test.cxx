@@ -53,8 +53,7 @@ int main(int argc, char **argv){
         ptcl[i].pos = pos[i];
         ptcl[i].vel = vel[i];
         ptcl[i].id =  i + 1;
-        ptcl[i].status.d = 0;
-        ptcl[i].mass_bk.d = 0;
+        ptcl[i].group_data.artificial.setParticleTypeToSingle();
         ptcl[i].changeover.setR(1.0, 0.001, 0.01);
     }    
     EPISoft epi[Nepi];

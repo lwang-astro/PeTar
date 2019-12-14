@@ -26,7 +26,9 @@ public:
                  const PS::F64vec & _pos, 
                  const PS::F64vec & _vel): mass(_mass), pos(_pos), vel(_vel) {}
 
-    //! for data write
+    //! write class data with ASCII format
+    /*! @param[in] _fout: file IO for write
+     */
     void writeAscii(FILE* fp) const{
         fprintf(fp, "%26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e ",
                 this->mass, 
@@ -34,11 +36,16 @@ public:
                 this->vel.x, this->vel.y, this->vel.z);
     }
 
+    //! write class data with BINARY format
+    /*! @param[in] _fout: file IO for write
+     */
     void writeBinary(FILE* fp) const{
         fwrite(&(this->mass), sizeof(ParticleBase), 1, fp);
     }
 
-    //! for data read
+    //! read class data with ASCII format
+    /*! @param[in] _fin: file IO for read
+     */
     void readAscii(FILE* fp) {
         PS::S64 rcount=fscanf(fp, "%lf %lf %lf %lf %lf %lf %lf ",
                               &this->mass, 
@@ -50,6 +57,9 @@ public:
         }
     }
 
+    //! read class data with BINARY format
+    /*! @param[in] _fin: file IO for read
+     */
     void readBinary(FILE* fp) {
         size_t rcount=fread(&(this->mass), sizeof(ParticleBase), 1, fp);
         if(rcount<1) {
@@ -70,7 +80,7 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    void printColumnTitle(std::ostream & _fout, const int _width=20) const {
+    static void printColumnTitle(std::ostream & _fout, const int _width=20) {
         _fout<<std::setw(_width)<<"mass"
              <<std::setw(_width)<<"pos.x"
              <<std::setw(_width)<<"pos.y"

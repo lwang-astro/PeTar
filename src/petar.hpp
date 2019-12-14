@@ -824,7 +824,7 @@ private:
             system_soft[i].rank_org = my_rank;
             system_soft[i].adr = i;
 #ifdef HARD_DEBUG
-            assert(system_soft[i].status.d>0);
+            assert(system_soft[i].group_data.artificial.isArtificial());
 #endif
         }
         // >3 Tree for force ----------------------------------------
@@ -1019,7 +1019,7 @@ private:
 
     //!leap frog kick for single----------------------------------------------
     /* modify the velocity of particle in global system
-       reset status to zero
+       reset particle type to single
        @param[in,out] _sys: particle system
        @param[in]: _dt: tree step
        @param[in]; _adr: address for single particles
@@ -1036,7 +1036,7 @@ private:
 #else
             _sys[k].vel  += _sys[k].acc * _dt;
 #endif
-            _sys[k].status.d = 0;
+            _sys[k].group_data.artificial.setParticleTypeToSingle();
         }
     }
 
@@ -1054,30 +1054,32 @@ private:
         const PS::S64 n= _ptcl.size();
 #pragma omp parallel for
         for(PS::S32 i=0; i<n; i++) {
-            const PS::S64 cm_adr=-_ptcl[i].status.d; // notice status is negative 
-            const PS::S64 i_adr =_ptcl[i].adr_org;
+            auto& pi_artificial = _ptcl[i].group_data.artificial;
             // if is group member, recover mass and kick due to c.m. force
-            if(cm_adr>0) {
+            if (pi_artificial.isMember()) {
+                const PS::S64 cm_adr=-pi_artificial.status; // notice status is negative of the cm address
 #ifdef HARD_DEBUG
-                assert(_ptcl[i].mass_bk.d>0); 
+                assert(cm_adr>0);
+                assert(pi_artificial.mass_backup>0); 
 #endif
-                _ptcl[i].mass = _ptcl[i].mass_bk.d;
+                _ptcl[i].mass = pi_artificial.mass_backup;
 #ifdef KDKDK_4TH
                 _ptcl[i].vel  += _dt*(_sys[cm_adr].acc + 9.0/192.0*_dt*_dt*_sys[cm_adr].acorr); 
 #else
                 _ptcl[i].vel += _sys[cm_adr].acc * _dt;
 #endif
-                // Suppressed because thread unsafe
-                //_sys[cm_adr].vel += _sys[cm_adr].acc * _dt/_sys[cm_adr].status; // status has total number of members, to avoid duplicate kick. 
             }
             // non-member particle
-            else if(i_adr>=0) {
-                // not remote particles
+            else {
+                const PS::S64 i_adr =_ptcl[i].adr_org;
+                if(i_adr>=0) {
+                    // not remote particles
 #ifdef KDKDK_4TH
-                _ptcl[i].vel  += _dt*(_sys[i_adr].acc + 9.0/192.0*_dt*_dt*_sys[i_adr].acorr); 
+                    _ptcl[i].vel  += _dt*(_sys[i_adr].acc + 9.0/192.0*_dt*_dt*_sys[i_adr].acorr); 
 #else
-                _ptcl[i].vel += _sys[i_adr].acc * _dt;
+                    _ptcl[i].vel += _sys[i_adr].acc * _dt;
 #endif
+                }
             }
         }
     }
@@ -1095,9 +1097,8 @@ private:
 #pragma omp parallel for
         for(PS::S32 i=0; i<n; i++) {
             const PS::S64 adr = _adr_ptcl_send[i];
-            const PS::S64 cm_adr=-_sys[adr].status.d; // notice status is negative 
             // if it is group member, should not do kick since c.m. particles are on remote nodes;
-            if(cm_adr==0)  {
+            if(_sys[adr].group_data.artificial.isSingle())  {
                 _sys[adr].vel += _sys[adr].acc * _dt;
 #ifdef KDKDK_4TH
                 _sys[adr].vel += _dt*_dt* _sys[adr].acorr /48; 
@@ -1105,8 +1106,8 @@ private:
             }
 
 #ifdef HARD_DEBUG
-            if(cm_adr==0) assert(_sys[adr].mass>0);
-            else assert(_sys[adr].mass_bk.d>0);
+            if(_sys[adr].group_data.artificial.isSingle()) assert(_sys[adr].mass>0);
+            else assert(_sys[adr].group_data.artificial.mass_backup>0);
 #endif
         }
     }
@@ -1132,7 +1133,7 @@ private:
             pcm->vel += _dt*_dt* pcm->acorr /48; 
 #endif
 #ifdef HARD_DEBUG
-            assert(pcm->id<0&&pcm->status.d>0);
+            assert(pcm->group_data.artificial.isCM());
 #endif
         }
     }
@@ -1155,7 +1156,7 @@ private:
         profile.kick.start();
 #endif
         /// Member mass are recovered
-        // single and reset status to zero (due to binary disruption)
+        // single and reset particle type to single (due to binary disruption)
         kickOne(system_soft, _dt_kick, search_cluster.getAdrSysOneCluster());
         // isolated
         kickClusterAndRecoverGroupMemberMass(system_soft, system_hard_isolated.getPtcl(), _dt_kick);
@@ -1320,14 +1321,14 @@ private:
 #endif        
     }
 
-    // update status and mass_bk to pcm data for search cluster after restart
-    inline void setParticleStatusToCMData() {
+    // update group_data.cm to pcm data for search cluster after restart
+    inline void setParticleGroupDataToCMData() {
 #ifdef CLUSTER_VELOCITY
         // update status and mass_bk to pcm data for search cluster after restart
-        system_hard_one_cluster.resetParticleStatus(system_soft);
-        system_hard_isolated.setParticleStatusToCMData(system_soft);
+        system_hard_one_cluster.resetParticleGroupData(system_soft);
+        system_hard_isolated.setParticleGroupDataToCMData(system_soft);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-        system_hard_connected.setParticleStatusToCMData(system_soft);
+        system_hard_connected.setParticleGroupDataToCMData(system_soft);
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
 #endif
     }
@@ -1783,10 +1784,9 @@ public:
                 system_soft[i].vel.x = _vx[i_h+i];
                 system_soft[i].vel.y = _vy[i_h+i];
                 system_soft[i].vel.z = _vz[i_h+i];
-                system_soft[i].mass_bk.d = 0;
                 system_soft[i].id = _id[i_h+i];
+                system_soft[i].group_data.artificial.setParticleTypeToSingle();
                 assert(_id[i_h+i]>0);
-                system_soft[i].status.d = 0;
             }
         }
         else {
@@ -1798,9 +1798,8 @@ public:
                 system_soft[i].vel.x = _vx[i_h+i];
                 system_soft[i].vel.y = _vy[i_h+i];
                 system_soft[i].vel.z = _vz[i_h+i];
-                system_soft[i].mass_bk.d = 0;
                 system_soft[i].id = i_h+i+1;
-                system_soft[i].status.d = 0;
+                system_soft[i].group_data.artificial.setParticleTypeToSingle();
             }
         }
         file_header.nfile = 0;
@@ -1848,8 +1847,7 @@ public:
             system_soft[i].pos = pos[i];
             system_soft[i].vel = vel[i];
             system_soft[i].id = i_h + i + 1;
-            system_soft[i].status.d = 0;
-            system_soft[i].mass_bk.d = 0;
+            system_soft[i].group_data.artificial.setParticleTypeToSingle();
         }
 
         file_header.nfile = 0;
@@ -1910,8 +1908,7 @@ public:
             system_soft[i].pos = pos[i];
             system_soft[i].vel = vel[i];
             system_soft[i].id = i_h + i + 1;
-            system_soft[i].status.d = 0;
-            system_soft[i].mass_bk.d = 0;
+            system_soft[i].group_data.artificial.setParticleTypeToSingle();
         }
 
         file_header.nfile = 0;
@@ -2040,11 +2037,11 @@ public:
             }
         }
         else {
-            // clear up status and mass_bk to avoid issue in search neighbor
+            // clear up group_data.cm to avoid issue in search neighbor
 #pragma omp parallel for
             for (PS::S32 i=0; i<stat.n_real_loc; i++) {
-                system_soft[i].status.f[0]  = system_soft[i].status.f[1] = 0.0;
-                system_soft[i].mass_bk.f[0] = system_soft[i].mass_bk.f[1] = 0.0;
+                auto& pi_cm = system_soft[i].group_data.cm;
+                pi_cm.mass = pi_cm.vel.x = pi_cm.vel.y = pi_cm.vel.z = 0.0;
             }
         }
     
@@ -2198,7 +2195,7 @@ public:
         system_soft.setNumberOfParticleLocal(stat.n_real_loc);
 
 #ifdef CLUSTER_VELOCITY
-        setParticleStatusToCMData();
+        setParticleGroupDataToCMData();
 #endif
 
         initial_step_flag = true;
@@ -2343,7 +2340,7 @@ public:
             // interupt
             if(interupt_flag) {
 #ifdef CLUSTER_VELOCITY
-                setParticleStatusToCMData();
+                setParticleGroupDataToCMData();
 #endif
                 // correct force due to the change over update
                 correctForceChangeOverUpdate();

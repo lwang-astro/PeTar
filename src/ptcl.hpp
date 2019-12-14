@@ -2,58 +2,58 @@
 #include<particle_simulator.hpp>
 #include"usr_define.hpp"
 #include"changeover.hpp"
+#define ASSERT assert
+#include"artificial_particles.hpp"
 
 const PS::F64 SAFTY_FACTOR_FOR_SEARCH = 0.99;
 //const PS::F64 SAFTY_FACTOR_FOR_SEARCH_SQ = SAFTY_FACTOR_FOR_SEARCH * SAFTY_FACTOR_FOR_SEARCH;
 //const PS::F64 SAFTY_OFFSET_FOR_SEARCH = 1e-7;
 //const PS::F64 SAFTY_OFFSET_FOR_SEARCH = 0.0;
 
-union Gdat{
-    PS::F64 d;
-    PS::F32 f[2];
+//! group data delivery, used for two purpose
+/*! artificial is used to store information of artificial particles
+    cm is used to store the c.m. particle mass and velocity
+ */
+union GroupDataDeliver{
+    ArtificialParticleInformation artificial;
+    struct {PS::F32 mass; PS::F32vec vel;} cm;
+
+    GroupDataDeliver(): artificial() {}
+    
+    GroupDataDeliver(const GroupDataDeliver& _data): artificial(_data.artificial) {}
+
+    GroupDataDeliver& operator= (const GroupDataDeliver& _data) {
+        artificial = _data.artificial;
+        return *this;
+    }
 };
 
 //! Particle class 
 class Ptcl: public ParticleBase{
 public:
-    /*
-                single           c.m.                       members               unused        suppressed c.m.
-      id         id          id of first member (-)            id                   -1          id of previous c.m. (-)
-      status      0          member number                  c.m. adr (-)            -1            -20 
-      mass_bk     0             mass                         mass                 unknown       unknown
-                artificial members                                                                            
-                id_offset+id*n_split+iphase                                             
-                1. first component member number 2. second. 3. i_cluster+1, 4. i_group+1, others: (c.m.id<<ID_PHASE_SHIFT)|i
-                  binary parameters                                                 
-
-      PS: mass_bk is used to store perturber force in searchpart
-          suppressed c.m. is set in HermiteIntegrator.removePtclList
-     */
     PS::F64 r_search;
-    Gdat mass_bk;
-    PS::S64 id;
-    Gdat status;
+    PS::S64 id; // positive for single, artificial but not cm, 0 for unused particle
+    GroupDataDeliver group_data;
     ChangeOver changeover;
     static PS::F64 search_factor;
     static PS::F64 r_search_min;
     static PS::F64 r_group_crit_ratio;
     static PS::F64 mean_mass_inv;
 
-    Ptcl(): r_search(-1.0), mass_bk({0.0}), id(-10), status({-10.0}), changeover() {}
+    Ptcl(): r_search(-1.0), id(0), group_data(), changeover() {}
 
     template<class Tptcl>
     Ptcl(const Tptcl& _p) { Ptcl::DataCopy(_p);  }
 
     template<class Tptcl>
-    Ptcl(const Tptcl& _p, const PS::F64 _r_search, const PS::F64 _mass_bk, const PS::S64 _id, const PS::F64 _status, const ChangeOver& _co): ParticleBase(_p), r_search(_r_search), mass_bk{_mass_bk}, id(_id), status{_status}, changeover(_co) {}
+    Ptcl(const Tptcl& _p, const PS::F64 _r_search, const PS::S64 _id, const GroupDataDeliver& _group_data, const ChangeOver& _co): ParticleBase(_p), r_search(_r_search), id(_id), group_data(_group_data), changeover(_co) {}
 
     template<class Tptcl>
     void DataCopy(const Tptcl& _p) {
         ParticleBase::DataCopy(_p);
-        r_search = _p.r_search;
-        mass_bk  = _p.mass_bk;
-        id       = _p.id;
-        status   = _p.status;
+        r_search   = _p.r_search;
+        id         = _p.id;
+        group_data = _p.group_data;
         changeover = _p.changeover;
     }
 
@@ -66,9 +66,8 @@ public:
     void print(std::ostream & _fout) const{
         ParticleBase::print(_fout);
         _fout<<" r_search="<<r_search
-             <<" mass_bk="<<mass_bk.d
-             <<" id="<<id
-             <<" status="<<status.d;
+             <<" id="<<id;
+        group_data.artificial.print(_fout);
         changeover.print(_fout);
     }
 
@@ -77,12 +76,11 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    void printColumnTitle(std::ostream & _fout, const int _width=20) {
+    static void printColumnTitle(std::ostream & _fout, const int _width=20) {
         ParticleBase::printColumnTitle(_fout, _width);
         _fout<<std::setw(_width)<<"r_search"
-             <<std::setw(_width)<<"mass_bk"
-             <<std::setw(_width)<<"id"
-             <<std::setw(_width)<<"status";
+             <<std::setw(_width)<<"id";
+        ArtificialParticleInformation::printColumnTitle(_fout, _width);
         ChangeOver::printColumnTitle(_fout, _width);
     }
 
@@ -94,43 +92,58 @@ public:
     void printColumn(std::ostream & _fout, const int _width=20){
         ParticleBase::printColumn(_fout, _width);
         _fout<<std::setw(_width)<<r_search
-             <<std::setw(_width)<<mass_bk.d
-             <<std::setw(_width)<<id
-             <<std::setw(_width)<<status.d;
+             <<std::setw(_width)<<id;
+        group_data.artificial.printColumn(_fout, _width);
         changeover.printColumn(_fout, _width);
     }
 
+    //! write class data with ASCII format
+    /*! @param[in] _fout: file IO for write
+     */
     void writeAscii(FILE* _fout) const{
         ParticleBase::writeAscii(_fout);
-        fprintf(_fout, "%26.17e %26.17e %lld %26.17e ", 
-                this->r_search, this->mass_bk.d, this->id, this->status.d);
+        fprintf(_fout, "%26.17e %lld ", 
+                this->r_search, this->id);
+        group_data.artificial.writeAscii(_fout);
         changeover.writeAscii(_fout);
     }
 
-    void writeBinary(FILE* _fin) const{
-        ParticleBase::writeBinary(_fin);
-        fwrite(&(this->r_search), sizeof(PS::F64), 4, _fin);
-        changeover.writeBinary(_fin);
+    //! write class data with BINARY format
+    /*! @param[in] _fout: file IO for write
+     */
+    void writeBinary(FILE* _fout) const{
+        ParticleBase::writeBinary(_fout);
+        fwrite(&(this->r_search), sizeof(PS::F64), 2, _fout);
+        group_data.artificial.writeBinary(_fout);
+        changeover.writeBinary(_fout);
     }
 
+    //! read class data with ASCII format
+    /*! @param[in] _fin: file IO for read
+     */
     void readAscii(FILE* _fin) {
         ParticleBase::readAscii(_fin);
-        PS::S64 rcount=fscanf(_fin, "%lf %lf %lld %lf ",
-                              &this->r_search, &this->mass_bk.d, &this->id, &this->status.d);
-        if (rcount<4) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
+        PS::S64 rcount=fscanf(_fin, "%lf %lld ",
+                              &this->r_search, &this->id);
+        if (rcount<2) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
             abort();
         }
+        group_data.artificial.readAscii(_fin);
         changeover.readAscii(_fin);
     }
 
+    //! read class data with BINARY format
+    /*! @param[in] _fin: file IO for read
+     */
     void readBinary(FILE* _fin) {
         ParticleBase::readBinary(_fin);
-        size_t rcount = fread(&(this->r_search), sizeof(PS::F64), 4, _fin);
-        if (rcount<4) {
+        size_t rcount = fread(&(this->r_search), sizeof(PS::F64), 2, _fin);
+        if (rcount<2) {
             std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
             abort();
         }
+        group_data.artificial.readBinary(_fin);
         changeover.readBinary(_fin);
     }
 
@@ -176,3 +189,5 @@ PS::F64 Ptcl::r_search_min = 0.0;
 PS::F64 Ptcl::search_factor= 0.0;
 PS::F64 Ptcl::mean_mass_inv= 0.0; // mean mass inverse
 PS::F64 Ptcl::r_group_crit_ratio =0.0;
+
+#undef ASSERT

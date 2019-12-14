@@ -43,7 +43,7 @@ private:
         PS::S32 offset = 0;
         for(int i=0; i<_n; i++) {
             //PS::S32 ip = p_list[i];
-            _ptcl[i].mass_bk.d = 0.0;
+            //_ptcl[i].mass_bk.d = 0.0;
             _part_list_n[i] = 0;
             _part_list_disp[i] = offset;
             for(int j=0; j<_n; j++) {
@@ -60,7 +60,7 @@ private:
                 }
                 else {
                     //store perturbation force
-                    _ptcl[i].mass_bk.d += _ptcl[j].mass/r2; 
+                    //_ptcl[i].mass_bk.d += _ptcl[j].mass/r2; 
                 }
 
                 //PS::F64vec dv = _ptcl[i].vel-_ptcl[j].vel;

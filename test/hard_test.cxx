@@ -54,7 +54,8 @@ int main(int argc, char** argv)
   for (int i=0; i<N; i++) {
       pin.readAscii(fin);
       ChangeOver co;
-      sys.addOneParticle(FPSoft(Ptcl(pin, rsearch, 0.0, i+1, 0, co), 0, i));
+      GroupDataDeliver gdata;
+      sys.addOneParticle(FPSoft(Ptcl(pin, rsearch, i+1, gdata, co), 0, i));
       p_list[i]=i;
       m_average = pin.mass;
   }
@@ -124,13 +125,14 @@ int main(int argc, char** argv)
 
   // recover mass
   for(int i=0; i<n; i++) {
-      const PS::S64 cm_adr=-hard_ptcl[i].status.d; // notice status is negative 
-      // if is group member, recover mass 
-      if(cm_adr>0) {
+      auto& pi_artificial = hard_ptcl[i].group_data.artificial;
+      if(pi_artificial.isMember()){
+          const PS::S64 cm_adr=-pi_artificial.status; // notice status is negative 
 #ifdef HARD_DEBUG
-          assert(hard_ptcl[i].mass_bk.d>0); 
+          assert(cm_adr>0);
+          assert(pi_artificial.mass_backup>0); 
 #endif
-          hard_ptcl[i].mass = hard_ptcl[i].mass_bk.d;
+          hard_ptcl[i].mass = pi_artificial.mass_backup;
       }
   }
 
@@ -149,13 +151,14 @@ int main(int argc, char** argv)
       for (int i=0; i<n; i++) hard_ptcl[i].changeover.updateWithRScale();
       // recover mass
       for(int i=0; i<n; i++) {
-          const PS::S64 cm_adr=-hard_ptcl[i].status.d; // notice status is negative 
-          // if is group member, recover mass 
-          if(cm_adr>0) {
+          auto& pi_artificial = hard_ptcl[i].group_data.artificial;
+          if(pi_artificial.isMember()){
+              const PS::S64 cm_adr=-pi_artificial.status; // notice status is negative 
 #ifdef HARD_DEBUG
-              assert(hard_ptcl[i].mass_bk.d>0); 
+              assert(cm_adr>0);
+              assert(pi_artificial.mass_backup>0); 
 #endif
-              hard_ptcl[i].mass = hard_ptcl[i].mass_bk.d;
+              hard_ptcl[i].mass = pi_artificial.mass_backup;
           }
       }
   } 

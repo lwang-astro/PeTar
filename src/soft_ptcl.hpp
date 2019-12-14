@@ -204,8 +204,7 @@ public:
     PS::F64 r_out;
     PS::F64 r_search;
     PS::F64 r_scale_next;
-    Gdat mass_bk;
-    Gdat status;
+    GroupDataDeliver group_data;
     PS::S32 rank_org;
     PS::S32 adr_org;
 //    static PS::F64 r_out;
@@ -223,8 +222,7 @@ public:
         r_out = fp.changeover.getRout();
         r_scale_next = fp.changeover.r_scale_next;
         r_search = fp.r_search;
-        mass_bk  = fp.mass_bk;
-        status   = fp.status;
+        group_data = fp.group_data;
         rank_org = fp.rank_org;
         adr_org = fp.adr;
     }

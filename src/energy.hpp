@@ -114,9 +114,10 @@ public:
         L = PS::F64vec(0.0);
         for(PS::S32 i=0; i<_n_particle; i++){
             PS::F64 mi = _particles[i].mass;
-            if(_particles[i].status.d<0) mi = _particles[i].mass_bk.d;
+            auto pi_artificial = _particles[i].group_data.artificial;
+            if(pi_artificial.isMember()) mi = pi_artificial.mass_backup;
 #ifdef HARD_DEBUG
-            assert(_particles[i].id>0&&_particles[i].status.d<=0);
+            assert(_particles[i].id>0&&(pi_artificial.isMember()||pi_artificial.isSingle()));
             assert(mi>0);
 #endif
             PS::F64vec vi = _particles[i].vel;

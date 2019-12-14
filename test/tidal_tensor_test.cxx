@@ -67,7 +67,7 @@ int main(int argc, char **argv){
         epi[i].id = i+1;
         epi[i].pos = ptcl_tt[i].pos;
         epi[i].r_search = r_scale*2;
-        ptcl_tt[i].mass_bk.d = 0.0;
+        ptcl_tt[i].group_data.artificial.setParticleTypeToSingle();
     }
     epi[8].id = 9;
     epi[8].pos = ptcl_binary_cm.pos;
