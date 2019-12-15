@@ -1,12 +1,13 @@
-sdissue.flyby: one flyby pass a binary, the timescale criterion depending on radial velocity has inverse peak near peri-center, which cause big energy jump, by using full velocity instead of radial. the problem is solved. : -k 1e-5
-sdissue.flyby2: two binary flyby, the slowdown timescale decrease too slow before the energy error increase too much, use acceleration in timescale calculation help : -k 1e-5
-sdissue.flyby3: two large slowdown factor when B-B encounter appear, use acc^2 instead of m*r^-4 help : -k 1e-5
-sdissue.triple: stable triple case: -k 1e-5
-sdissue.tscale: a wide binary pass by cause oscillation of timescale, use 1/r weighted dr/dv : -k 1e-5
-sdissue.5-body: 5 body encounter : -k 1e-5
-arerr:  3-body AR get large error due to fix step, use better fix step criterion (depending on apo-out/peri-in) : -k 1e-5
-ar.ds:  3-body AR get very small initial ds due to large energy_error with soft perturbation. Replace energy check by using error of extended H is better : -k 1e-5
-ar.ds2: 3-body AR get very small ds, always fix step : -k 1e-5
+wide.triple: outer orbit has a large semi, switch between triple AR and 2+1: -k 1e-4
+#sdissue.flyby: one flyby pass a binary, the timescale criterion depending on radial velocity has inverse peak near peri-center, which cause big energy jump, by using full velocity instead of radial. the problem is solved. : -k 1e-5
+#sdissue.flyby2: two binary flyby, the slowdown timescale decrease too slow before the energy error increase too much, use acceleration in timescale calculation help : -k 1e-5
+#sdissue.flyby3: two large slowdown factor when B-B encounter appear, use acc^2 instead of m*r^-4 help : -k 1e-5
+#sdissue.triple: stable triple case: -k 1e-5
+#sdissue.tscale: a wide binary pass by cause oscillation of timescale, use 1/r weighted dr/dv : -k 1e-5
+#sdissue.5-body: 5 body encounter : -k 1e-5
+#arerr:  3-body AR get large error due to fix step, use better fix step criterion (depending on apo-out/peri-in) : -k 1e-5
+#ar.ds:  3-body AR get very small initial ds due to large energy_error with soft perturbation. Replace energy check by using error of extended H is better : -k 1e-5
+#ar.ds2: 3-body AR get very small ds, always fix step : -k 1e-5
 #6body: 4-body strong encounter :
 #ce: two-body close encounter with one surrounding, break group too late for hyperbolic (bug) :
 #sdjump: slowdown for second binary jump to very large value (bug) :
