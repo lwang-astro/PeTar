@@ -1920,6 +1920,7 @@ public:
         for (PS::S32 i=0; i<num_thread; i++) 
             n_binary_table_offset_thread[i+1] = n_binary_table_offset_thread[i] + binary_table_thread[i].size();
         binary_table.resizeNoInitialize(n_binary_table_offset_thread[num_thread]);
+#pragma omp parallel for 
         for (PS::S32 i=0; i<num_thread; i++) {
             for (PS::S32 k=n_binary_table_offset_thread[i]; k<n_binary_table_offset_thread[i+1]; k++) {
                 binary_table[k] = binary_table_thread[i][k-n_binary_table_offset_thread[i]];
