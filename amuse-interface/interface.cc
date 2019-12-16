@@ -97,11 +97,10 @@ extern "C" {
             p.vel.y = vy;
             p.vel.z = vz;
 
-            p.mass_bk.d = 0.0;
-            p.id = n_glb+1;
-            p.status.d = 0.0;
             if (ptr->initial_parameters_flag) p.calcRSearch(ptr->input_parameters.dt_soft.value);
+            p.id = n_glb+1;
             if (p.id>=id_offset) return -1;
+            p.group_data.setParticleTypeToSingle();
 
             p.rank_org = ptr->my_rank;
             p.adr = n_loc;
