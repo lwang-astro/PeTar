@@ -28,7 +28,7 @@ extern "C" {
         // set print flag to rank 0
         ptr->input_parameters.print_flag = (ptr->my_rank==0) ? true: false;
         // set writing flag to false
-        ptr->input_parameters.write_flag = false;
+        ptr->input_parameters.write_style.value = 0;
 
         // default input
         int flag= ptr->readParameters(argc,argv);
@@ -100,7 +100,7 @@ extern "C" {
             if (ptr->initial_parameters_flag) p.calcRSearch(ptr->input_parameters.dt_soft.value);
             p.id = n_glb+1;
             if (p.id>=id_offset) return -1;
-            p.group_data.setParticleTypeToSingle();
+            p.group_data.artificial.setParticleTypeToSingle();
 
             p.rank_org = ptr->my_rank;
             p.adr = n_loc;

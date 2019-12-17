@@ -1300,18 +1300,6 @@ private:
     }
 
     
-    //! remove artificial and unused particles
-    inline void removeParticles() {
-        /////////////
-        // Remove ghost particles
-        system_soft.removeParticle(remove_list.getPointer(), remove_list.size());
-        // reset particle number
-        stat.n_real_loc = stat.n_real_loc-remove_list.size();
-        system_soft.setNumberOfParticleLocal(stat.n_real_loc);
-        stat.n_real_glb = system_soft.getNumberOfParticleGlobal();
-        remove_list.resizeNoInitialize(0);
-    }
-
     //! write back hard particles to global system
     inline void writeBackHardParticles() {
         system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
@@ -1659,6 +1647,19 @@ public:
             return adr;
         }
     }
+
+    //! remove artificial and unused particles
+    inline void removeParticles() {
+        /////////////
+        // Remove ghost particles
+        system_soft.removeParticle(remove_list.getPointer(), remove_list.size());
+        // reset particle number
+        stat.n_real_loc = stat.n_real_loc-remove_list.size();
+        system_soft.setNumberOfParticleLocal(stat.n_real_loc);
+        stat.n_real_glb = system_soft.getNumberOfParticleGlobal();
+        remove_list.resizeNoInitialize(0);
+    }
+
 
     //! exchange particles
     void exchangeParticle() {

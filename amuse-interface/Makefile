@@ -45,19 +45,19 @@ clean:
 	$(RM) -rf __pycache__
 	$(RM) -f *.so *.o *.pyc worker_code.cc worker_code.h 
 	$(RM) *~ petar_worker worker_code.cc
-	make -C src clean
+#	make -C src clean
 
-distclean: clean
-	make -C src distclean
+#distclean: clean
+#	make -C src distclean
 
-$(CODELIB):
-	make -C src all
+#$(CODELIB):
+#	make -C src all
 
 interface.py:
 	bash down.sh 
 
-test_interface:   $(OBJS) test_interface.o
-	$(MPICXX) $(CXXFLAGS) $(OBJS) -o $@
+test_interface: $(OBJS) test_interface.o
+	$(MPICXX) $(CXXFLAGS) $(OBJS) test_interface.o -o $@
 
 worker_code.cc: interface.py
 	$(CODE_GENERATOR) --type=c interface.py petarInterface -o $@
