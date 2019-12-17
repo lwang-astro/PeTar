@@ -47,7 +47,7 @@ def generate_cluster(number_of_stars, radius_of_cluster):
     return particles, convert_nbody
 
 
-def evolve_cluster(particles, convert_nbody, end_time=40 | units.Myr, dt=0.25 | units.Myr, plot_HRdiagram=True):
+def evolve_cluster(particles, convert_nbody, end_time=40 | units.Myr, dt=0.25 | units.Myr, R=1.0, plot_HRdiagram=True):
     
 
     #gravity = petar(convert_nbody,redirection='none')
@@ -81,7 +81,7 @@ def evolve_cluster(particles, convert_nbody, end_time=40 | units.Myr, dt=0.25 | 
     ncol= 2
     xsize=16
     fig, axe = plt.subplots(1,ncol,figsize=(xsize, 8))
-    boxsize=2
+    boxsize=2.0*R
     axe[0].set_xlim(-boxsize,boxsize)
     axe[0].set_ylim(-boxsize,boxsize)
     axe[0].set_aspect(1.0)
@@ -135,11 +135,21 @@ def evolve_cluster(particles, convert_nbody, end_time=40 | units.Myr, dt=0.25 | 
     temp_max = np.max(temperature_eff)
     temp_min = np.min(temperature_eff)
 
+    def getCM(x,y,m,boxsize):
+        sel=(x>-boxsize) & (x<boxsize) & (y>-boxsize) & (y<boxsize)
+        mtot =m[sel].sum()
+        xcm = (x[sel]*m[sel]).sum()/mtot
+        ycm = (y[sel]*m[sel]).sum()/mtot
+        return xcm, ycm
+
     def init():
 
         x_values = particles.position.x.value_in(units.parsec)
         y_values = particles.position.y.value_in(units.parsec)
         mass_values = particles.mass.value_in(units.MSun)
+        xcm,ycm = getCM(x_values,y_values,mass_values,0.1*R);
+        x_values = x_values - xcm
+        y_values = y_values - ycm
         axe[0].set_title('T=%f Myr' % 0)
         ptcls[itext  ].set_text(r"$M_{tot}: %f M_\odot$" % (particles.mass.sum().value_in(units.MSun)))
         ptcls[itext+1].set_text(r"$m_{max}: %f M_\odot$" % (particles.mass.max().value_in(units.MSun)))       
@@ -193,6 +203,9 @@ def evolve_cluster(particles, convert_nbody, end_time=40 | units.Myr, dt=0.25 | 
         x_values = particles.position.x.value_in(units.parsec)
         y_values = particles.position.y.value_in(units.parsec)
         mass_values = particles.mass.value_in(units.MSun)
+        xcm,ycm = getCM(x_values,y_values,mass_values,0.1*R);
+        x_values = x_values - xcm
+        y_values = y_values - ycm
         axe[0].set_title('T = %f Myr' % time.value_in(units.Myr))
         de = (total_energy_at_this_time - total_energy_at_t0) /total_energy_at_t0
         axe[1].set_title('dE = %f ' % de)
@@ -264,7 +277,7 @@ if __name__ == '__main__':
 
     particles, convert_nbody = generate_cluster(N, R)
 
-    anime = evolve_cluster(particles, convert_nbody, t_end| units.Myr, dt |units.Myr, plot_HRdiagram)
+    anime = evolve_cluster(particles, convert_nbody, t_end| units.Myr, dt |units.Myr, R, plot_HRdiagram)
 
     write_set_to_file(particles, output_file+".hdf5", "amuse", append_to_file=False)    
 
