@@ -1,6 +1,7 @@
 import sys
 sys.path.append('/home/lwang/code/amuse-git/src')
 import numpy as np
+import getopt
 import amuse
 import os
 
@@ -26,11 +27,27 @@ from amuse.ic.salpeter import new_salpeter_mass_distribution
 
 plt.style.use('dark_background')
 
-def generate_cluster(number_of_stars, radius_of_cluster):
+def generate_cluster(number_of_stars, mass_of_cluster, radius_of_cluster):
     # numpy.random.seed(1)
 
+    if (mass_of_cluster>0|units.MSun):
+        number_of_stars = int(mass_of_cluster.value_in(units.MSun))*5
+    
     salpeter_masses = new_salpeter_mass_distribution(number_of_stars)
-    total_mass = salpeter_masses.sum()
+    imf = salpeter_masses
+
+    if (mass_of_cluster>0|units.MSun):
+        print("sorted sampling salpeter IMF, total mass:",mass_of_cluster)
+        imf_cumsum = imf.cumsum()
+        pick_up_number = (imf_cumsum<=mass_of_cluster).sum()
+        if (pick_up_number<number_of_stars):
+            imf_pick_up = imf[:pick_up_number+1]
+            sorted_imf_pick_up = np.sort(imf_pick_up)
+            if (sorted_imf_pick_up[pick_up_number]-mass_of_cluster < mass_of_cluster-sorted_imf_pick_up[pick_up_number-1]):
+                pick_up_number+=1
+            imf = sorted_imf_pick_up[:pick_up_number]
+            number_of_stars = pick_up_number
+    total_mass = imf.sum()
         
     convert_nbody = nbody_system.nbody_to_si(total_mass, radius_of_cluster | units.parsec)
 
@@ -39,7 +56,7 @@ def generate_cluster(number_of_stars, radius_of_cluster):
 
     print("setting masses of the stars")
     particles.radius = 0.0 | units.RSun
-    particles.mass = salpeter_masses
+    particles.mass = imf
 
     #particles.mass[0] = 40.0 |units.MSun
     #particles.mass[1] = 50.0 |units.MSun
@@ -47,8 +64,7 @@ def generate_cluster(number_of_stars, radius_of_cluster):
     return particles, convert_nbody
 
 
-def evolve_cluster(particles, convert_nbody, end_time=40 | units.Myr, dt=0.25 | units.Myr, R=1.0, plot_HRdiagram=True):
-    
+def evolve_cluster(particles, convert_nbody, end_time=40 | units.Myr, dt=0.25 | units.Myr, R=1.0, plot_HRdiagram=True, framescale=20.0):
 
     #gravity = petar(convert_nbody,redirection='none')
     gravity = petar(convert_nbody)
@@ -85,31 +101,45 @@ def evolve_cluster(particles, convert_nbody, end_time=40 | units.Myr, dt=0.25 | 
     axe[0].set_xlim(-boxsize,boxsize)
     axe[0].set_ylim(-boxsize,boxsize)
     axe[0].set_aspect(1.0)
-
-    framescale=20.0
+    axe[0].set_xlabel('x[pc]')
+    axe[0].set_ylabel('y[pc]')
 
     if plot_HRdiagram:
         axe[1].set_xlim(30e3,1e3);
         axe[1].set_ylim(1e-5,1e5);
         axe[1].set_yscale('log');
         axe[1].set_xscale('log');
+        axe[1].set_xlabel(r'$T_{eff}[K]$')
+        axe[1].set_ylabel(r'$L[L_\odot]$')
     else :
         boxsize /= framescale
         axe[1].set_xlim(-boxsize,boxsize)
         axe[1].set_ylim(-boxsize,boxsize)
         axe[1].set_aspect(1.0)
+        axe[1].set_xlabel('x[pc]')
+        axe[1].set_ylabel('y[pc]')
 
-    nlayer=20
-    alphascale=np.linspace(1,nlayer,nlayer)*2.0/(nlayer*(nlayer+1))*2.0
-    print(alphascale,alphascale.sum())
-    sizescale=np.logspace(-1,2,nlayer)[::-1]
+    nlayer_cross=5
+    nlayer_point=10
+    nlayer = nlayer_cross + nlayer_point
+    alpha_amplifier = 2.5
+    alphascale=np.linspace(1,nlayer,nlayer)*2.0/(nlayer*(nlayer+1))*alpha_amplifier
+    print('Alpha layer sequence:',alphascale,' sum:',alphascale.sum())
+    sizescale=np.logspace(0,3,nlayer)[::-1]
+    print('Size layer sequence:',sizescale)
     #print(sizescale)
-    for i in range(nlayer):
-        pt =axe[0].scatter([],[],cmap='rainbow',alpha=alphascale[i],edgecolors='none')
+    for i in range(nlayer_cross):
+        pt =axe[0].scatter([],[],marker='+',alpha=alphascale[i],edgecolors='none')
+        ptcls.append(pt)
+    for i in range(nlayer_point):
+        pt =axe[0].scatter([],[],alpha=alphascale[i],edgecolors='none')
         ptcls.append(pt)
 
-    for i in range(nlayer):
-        pt =axe[1].scatter([],[],cmap='rainbow',alpha=alphascale[i],edgecolors='none')
+    for i in range(nlayer_cross):
+        pt =axe[1].scatter([],[],marker='+',alpha=alphascale[i],edgecolors='none')
+        ptcls.append(pt)
+    for i in range(nlayer_point):
+        pt =axe[1].scatter([],[],alpha=alphascale[i],edgecolors='none')
         ptcls.append(pt)
 
 
@@ -138,8 +168,9 @@ def evolve_cluster(particles, convert_nbody, end_time=40 | units.Myr, dt=0.25 | 
     def getCM(x,y,m,boxsize):
         sel=(x>-boxsize) & (x<boxsize) & (y>-boxsize) & (y<boxsize)
         mtot =m[sel].sum()
-        xcm = (x[sel]*m[sel]).sum()/mtot
-        ycm = (y[sel]*m[sel]).sum()/mtot
+        nsel=sel.sum()
+        xcm = (x[sel]).sum()/float(nsel)
+        ycm = (y[sel]).sum()/float(nsel)
         return xcm, ycm
 
     def init():
@@ -147,9 +178,9 @@ def evolve_cluster(particles, convert_nbody, end_time=40 | units.Myr, dt=0.25 | 
         x_values = particles.position.x.value_in(units.parsec)
         y_values = particles.position.y.value_in(units.parsec)
         mass_values = particles.mass.value_in(units.MSun)
-        xcm,ycm = getCM(x_values,y_values,mass_values,0.1*R);
-        x_values = x_values - xcm
-        y_values = y_values - ycm
+        #xcm,ycm = getCM(x_values,y_values,mass_values,R);
+        #x_values = x_values - xcm
+        #y_values = y_values - ycm
         axe[0].set_title('T=%f Myr' % 0)
         ptcls[itext  ].set_text(r"$M_{tot}: %f M_\odot$" % (particles.mass.sum().value_in(units.MSun)))
         ptcls[itext+1].set_text(r"$m_{max}: %f M_\odot$" % (particles.mass.max().value_in(units.MSun)))       
@@ -203,9 +234,9 @@ def evolve_cluster(particles, convert_nbody, end_time=40 | units.Myr, dt=0.25 | 
         x_values = particles.position.x.value_in(units.parsec)
         y_values = particles.position.y.value_in(units.parsec)
         mass_values = particles.mass.value_in(units.MSun)
-        xcm,ycm = getCM(x_values,y_values,mass_values,0.1*R);
-        x_values = x_values - xcm
-        y_values = y_values - ycm
+        #xcm,ycm = getCM(x_values,y_values,mass_values,R);
+        #x_values = x_values - xcm
+        #y_values = y_values - ycm
         axe[0].set_title('T = %f Myr' % time.value_in(units.Myr))
         de = (total_energy_at_this_time - total_energy_at_t0) /total_energy_at_t0
         axe[1].set_title('dE = %f ' % de)
@@ -256,28 +287,61 @@ def evolve_cluster(particles, convert_nbody, end_time=40 | units.Myr, dt=0.25 | 
 if __name__ == '__main__':
 
     N = 50
+    M = 0
     R = 1.0
     t_end = 10
     dt = 0.25
     output_file = 'test'
-    plot_HRdiagram=True
+    plot_HRdiagram = False
+    framescale = 20.0
 
-    if len(sys.argv) > 1:
-        N = int(sys.argv[1])
-    if len(sys.argv) > 2:
-        R = float(sys.argv[2])
-    if len(sys.argv) > 3:
-        t_end = float(sys.argv[3])
-    if len(sys.argv) > 4:
-        dt = float(sys.argv[4])
-    if len(sys.argv) > 5:
-        output_file = sys.argv[5]
-    if len(sys.argv) > 6:
-        plot_HRdiagram = False
+    def usage():
+        print("option:")
+        print("  -h(--help): help")
+        print("  -N: number of stars")
+        print("  -M: mass of cluster in Msun (sorted sampling)")
+        print("  -R: radius of cluster")
+        print("  -t: finishing time in Myr")
+        print("  -o(--output-filename): output filename")
+        print("  -s(--dt-output): output time interval in Myr")
+        print("  --frame-scale: second frame x,y enlarged ratio")
 
-    particles, convert_nbody = generate_cluster(N, R)
+    try:
+        shortargs = 'N:M:R:t:o:s:h'
+        longargs = ['output-filename=','plot-HRdiagram', 'frame-scale=','help','frame-scale=']
+        opts,args= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
-    anime = evolve_cluster(particles, convert_nbody, t_end| units.Myr, dt |units.Myr, R, plot_HRdiagram)
+        for opt,arg in opts:
+            if opt in ('-h','--help'):
+                usage()
+                sys.exit(1)
+            elif opt in ('-N'):
+                N = int(arg)
+            elif opt in ('-M'):
+                M = float(arg)
+            elif opt in ('-R'):
+                R = float(arg)
+            elif opt in ('-t'):
+                t_end = float(arg)
+            elif opt in ('-o','--output-filename'):
+                output_file = arg
+            elif opt in ('--plot-HRdiagram'):
+                plot_HRdiagram=True
+            elif opt in ('-s','--dt-output'):
+                dt = float(arg)
+            elif opt in ('--frame-scale'):
+                framescale = float(arg)
+            else:
+                assert False, "unhandeld option"
+
+    except getopt.GetoptError:
+        print('getopt error!')
+        usage()
+        sys.exit(1)
+
+    particles, convert_nbody = generate_cluster(N, M |units.MSun, R)
+
+    anime = evolve_cluster(particles, convert_nbody, t_end| units.Myr, dt |units.Myr, R, plot_HRdiagram, framescale)
 
     write_set_to_file(particles, output_file+".hdf5", "amuse", append_to_file=False)    
 
