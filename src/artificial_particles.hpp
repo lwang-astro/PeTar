@@ -148,15 +148,21 @@ class ArtificialParticleManager{
     PS::S32 index_offset_tt_;  // tidal tensor particle starting index
     PS::S32 index_offset_orb_; // Orbital particle starting index
     PS::S32 index_cm_;        // center of mass index
-
-
+    
+    PS::F64* decca_list_;   // d ecca per orbital particle 
+    PS::F64* dsin_ecca_list_;  // d sin(ecca) per orbital particle
+    PS::F64  decca_; // ecca interval
+    
+    inline PS::F64 calcMeanAnomaly(const PS::F64 _ecca, const PS::F64 _sin_ecca, const PS::F64 _ecc) {
+        return _ecca - _ecc*_sin_ecca;
+    }
+    
 public:
-    PS::S32 n_split;    // test
     PS::F64 r_tidal_tensor;
     PS::S64 id_offset;
     PS::F64 G; // gravitational constant
 
-    ArtificialParticleManager(): n_split_(-1), n_artificial_(-1), index_offset_tt_(0), index_offset_orb_(8), index_cm_(-1), r_tidal_tensor(-1.0), id_offset(-1), G(-1.0) {}
+    ArtificialParticleManager(): n_split_(-1), n_artificial_(-1), index_offset_tt_(0), index_offset_orb_(8), index_cm_(-1), decca_list_(NULL), dsin_ecca_list_(NULL), decca_(0.0), r_tidal_tensor(-1.0), id_offset(-1), G(-1.0) {}
 
     //! check paramters
     bool checkParams() {
@@ -166,6 +172,9 @@ public:
         ASSERT(r_tidal_tensor>=0.0);
         ASSERT(id_offset>0);
         ASSERT(G>0);
+        //ASSERT(decca_list_!=NULL);
+        //ASSERT(dsin_ecca_list_!=NULL);
+        //ASSERT(decca_>0.0);
         return true;
     }
 
@@ -215,29 +224,30 @@ public:
         // First 8 is used for tidal tensor points
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
         assert(r_tidal_tensor<=_bin.changeover.getRin());
+        PS::F64 m_check[2]={0.0,0.0};
 #endif
         TidalTensor::createTidalTensorMeasureParticles(_ptcl_artificial, *((Tptcl*)&_bin), r_tidal_tensor);
 
-        // remaining is used for sample points
-        const PS::F64 dE = 8.0*atan(1.0)/(n_split_-4);
-        PS::F64 mnormal=0.0;
+        // remaining is for orbital sample particles
+        PS::F64 inverse_twopi = 1.0/(decca_*(n_split_-4));
         for (int i=4; i<n_split_; i++) {
             PS::S32 iph = i-4;
 
             // center_of_mass_shift(*(Tptcl*)&_bin,p,2);
             // generate particles at different orbitial phase
-            _bin.orbitToParticle(_ptcl_artificial[2*i], _ptcl_artificial[2*i+1], _bin, dE*iph, G);
+            _bin.orbitToParticle(_ptcl_artificial[2*i], _ptcl_artificial[2*i+1], _bin, decca_*iph, G);
 
-            // use velocity to weight mass
-            PS::F64vec dvvec= _ptcl_artificial[2*i].vel - _ptcl_artificial[2*i+1].vel;
-            PS::F64 odv = 1.0/std::sqrt(dvvec*dvvec);
+            //// use velocity to weight mass (not accurate)
+            //PS::F64vec dvvec= _ptcl_artificial[2*i].vel - _ptcl_artificial[2*i+1].vel;
+            //PS::F64 odv = 1.0/std::sqrt(dvvec*dvvec);
 
             PS::F64 mass_member[2]= {_bin.m1, _bin.m2};
             for (int j=0; j<2; j++) {
                 Tptcl* pj = &_ptcl_artificial[2*i+j];
 
                 // set mass
-                pj->mass = mass_member[j] * odv;
+                PS::F64 dmean_anomaly = calcMeanAnomaly(decca_list_[iph], dsin_ecca_list_[iph], _bin.ecc);
+                pj->mass = mass_member[j] * dmean_anomaly * inverse_twopi;
 
                 // center_of_mass_correction 
                 pj->pos += _bin.pos;
@@ -245,16 +255,23 @@ public:
 
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
                 assert(mass_member[j]>0);
+                assert(pj->mass >0);
+                m_check[j] += pj->mass;
 #endif
             }
-            mnormal += odv;
+            //mnormal += odv;
         }
 
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert(abs(m_check[0]-_bin.m1)<1e-10);
+        assert(abs(m_check[1]-_bin.m2)<1e-10);
+#endif
+
         // normalized the mass of each particles to keep the total mass the same as c.m. mass
-        PS::F64 mfactor = 1.0/mnormal;
-        for (int i=4; i<n_split_; i++) 
-            for (int j=0; j<2; j++) 
-                _ptcl_artificial[2*i+j].mass *= mfactor;
+        //PS::F64 mfactor = 1.0/mnormal;
+        //for (int i=4; i<n_split_; i++) 
+        //    for (int j=0; j<2; j++) 
+        //        _ptcl_artificial[2*i+j].mass *= mfactor;
 
         // store the component member number 
         for (int j=0; j<2; j++) {
@@ -289,8 +306,10 @@ public:
     }
 
 
-    //! set orbital particle split number
-    void setOrbitalParticleSplitN(const PS::S32& _n_split) {
+    //! set particle split number
+    /*! @param[in] _n_split: particle split number, total artificial particle number is 2*_n_split+1, first 8 are tidal tensor particles, thus _n_split>=4
+     */
+    void setParticleSplitN(const PS::S32& _n_split) {
         if (_n_split>(1<<ID_PHASE_SHIFT)) {
             std::cerr<<"Error! ID_PHASE_SHIFT is too small for phase split! shift bit: "<<ID_PHASE_SHIFT<<" n_split_: "<<_n_split<<std::endl;
             abort();
@@ -301,7 +320,43 @@ public:
         index_offset_tt_  = 0;
         index_offset_orb_ = 8;
         index_cm_ = 2*_n_split;
-        n_split = _n_split;
+
+        // get interval of ecc anomaly
+        PS::S32 n_split_orbit = n_split_-4;
+        if (n_split_orbit>0) {
+            decca_ = 8.0*atan(1.0)/n_split_orbit;
+
+            // initial array
+            if (decca_list_    !=NULL) delete [] decca_list_;
+            if (dsin_ecca_list_!=NULL) delete [] dsin_ecca_list_;
+
+            decca_list_     = new PS::F64[n_split_orbit];
+            dsin_ecca_list_ = new PS::F64[n_split_orbit];
+
+            // calculate ecca boundary 
+            PS::F64 ecca_list    [n_split_orbit+1];
+            PS::F64 sin_ecca_list[n_split_orbit+1];
+            for (PS::S32 i=0; i<=n_split_orbit; i++) {
+                ecca_list[i]     = decca_*i-0.5*decca_;
+                sin_ecca_list[i] = std::sin(ecca_list[i]);
+            }
+            // get ecca interval per orbital particle
+            for (PS::S32 i=0; i<n_split_orbit; i++) {
+                decca_list_[i]     = ecca_list    [i+1] - ecca_list    [i];
+                dsin_ecca_list_[i] = sin_ecca_list[i+1] - sin_ecca_list[i];
+            }
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+            PS::F64 decca_sum=0.0;
+            std::cerr<<"dEcca:";
+            for (PS::S32 i=0; i<n_split_orbit; i++) {
+                std::cerr<<" "<<decca_list_[i]-dsin_ecca_list_[i];
+                decca_sum += decca_list_[i] - 0.5*dsin_ecca_list_[i];
+                assert(decca_list_[i]-dsin_ecca_list_[i]>=0.0);
+            }
+            ASSERT(abs(decca_sum-decca_*n_split_orbit)<1e-10);
+#endif            
+        } 
+
     }
       
 
@@ -390,6 +445,11 @@ public:
         return n_artificial_ - 9;
     }
 
+    //! get particle split number
+    PS::S32 getParticleSplitN() const{
+        return n_split_;
+    }
+
     //! get left member number
     template <class Tptcl>
     PS::S32 getLeftMemberN(const Tptcl* _ptcl_list) const {
@@ -459,6 +519,18 @@ public:
              <<"id_offset        : "<<id_offset<<std::endl
              <<"n_split          : "<<n_split_<<std::endl;
     }    
+
+    //! destructor 
+    ~ArtificialParticleManager() {
+        if (decca_list_!=NULL) {
+            delete [] decca_list_;
+            decca_list_=NULL;
+        }
+        if (dsin_ecca_list_!=NULL) {
+            delete [] dsin_ecca_list_;
+            dsin_ecca_list_=NULL;
+        }
+    }
 
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
     template <class Tptcl, class Tpart>

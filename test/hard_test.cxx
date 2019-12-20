@@ -88,7 +88,7 @@ int main(int argc, char** argv)
 #endif
   hard_manager.ap_manager.r_tidal_tensor = rbin;
   hard_manager.ap_manager.id_offset = N;
-  hard_manager.ap_manager.setOrbitalParticleSplitN(n_split);
+  hard_manager.ap_manager.setParticleSplitN(n_split);
   hard_manager.h4_manager.step.eta_4th = eta;
   hard_manager.h4_manager.step.eta_2nd = 0.01*eta;
   hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, rout);

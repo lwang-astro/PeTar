@@ -1582,7 +1582,7 @@ public:
             if(n_group>0) ptcl_artificial_ptr = &(_ptcl_soft[adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]]]);
 #ifdef HARD_DUMP
             assert(hard_dump.size>0);
-            hard_dump[0].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, dt, manager->ap_manager.n_split);
+            hard_dump[0].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, dt, manager->ap_manager.getParticleSplitN());
 #endif
             driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, dt);
 #else
@@ -1647,7 +1647,7 @@ public:
 #endif
 #ifdef HARD_DUMP
             assert(ith<hard_dump.size);
-            hard_dump[ith].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, dt, manager->ap_manager.n_split);
+            hard_dump[ith].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, dt, manager->ap_manager.getParticleSplitN());
 #endif
 
 #ifdef HARD_DEBUG_PROFILE

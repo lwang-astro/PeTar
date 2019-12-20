@@ -2059,7 +2059,7 @@ public:
 #endif
         hard_manager.ap_manager.r_tidal_tensor = r_bin;
         hard_manager.ap_manager.id_offset = id_offset;
-        hard_manager.ap_manager.setOrbitalParticleSplitN(input_parameters.n_split.value);
+        hard_manager.ap_manager.setParticleSplitN(input_parameters.n_split.value);
         hard_manager.h4_manager.step.eta_4th = input_parameters.eta.value;
         hard_manager.h4_manager.step.eta_2nd = 0.01*input_parameters.eta.value;
         hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, r_out);
