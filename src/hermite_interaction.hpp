@@ -66,15 +66,16 @@ public:
         const Float r = sqrt(dr2_eps);
         ASSERT(r>0.0);
         const Float rinv = 1.0/r;
+        const Float drdot = drdv*rinv;
         const Float k = ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, r);
-        const Float kdot = ChangeOver::calcAcc1WTwo(_pi.changeover, _pj.changeover, r);
+        const Float kdot = ChangeOver::calcAcc1WTwo(_pi.changeover, _pj.changeover, r, drdot);
           
         const Float rinv2 = rinv*rinv;
         const Float rinv3 = rinv2*rinv;
 
         const Float mor3 = G*_pj.mass*rinv3; 
         const Float mor3k = mor3*k;
-        const Float mor3kd = mor3*drdv*kdot;
+        const Float mor3kd = mor3*kdot;
         const Float acc0[3] = {mor3k*dr[0], mor3k*dr[1], mor3k*dr[2]};
         const Float acc1[3] = {mor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + mor3kd*dr[0],
                                mor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + mor3kd*dr[1],
@@ -121,15 +122,16 @@ public:
             const Float r = sqrt(dr2_eps);
             ASSERT(r>0.0);
             const Float rinv = 1.0/r;
+            const Float drdot = drdv*rinv;
             const Float k = ChangeOver::calcAcc0WTwo(_pi.changeover, pj.changeover, r);
-            const Float kdot = ChangeOver::calcAcc1WTwo(_pi.changeover, pj.changeover, r);
+            const Float kdot = ChangeOver::calcAcc1WTwo(_pi.changeover, pj.changeover, r, drdot);
           
             const Float rinv2 = rinv*rinv;
             const Float rinv3 = rinv2*rinv;
 
             const Float mor3 = G*pj.mass*rinv3; 
             const Float mor3k = mor3*k;
-            const Float mor3kd = mor3*drdv*kdot;
+            const Float mor3kd = mor3*kdot;
             const Float acc0[3] = {mor3k*dr[0], mor3k*dr[1], mor3k*dr[2]};
             const Float acc1[3] = {mor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + mor3kd*dr[0],
                                    mor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + mor3kd*dr[1],
@@ -174,19 +176,21 @@ public:
         const Float r = sqrt(dr2_eps);
         ASSERT(r>0.0);
         const Float rinv = 1.0/r;
+        const Float drdot = drdv*rinv;
+
         Float mk = 0.0;
         Float mkdot = 0.0;
         auto* ptcl_mem = _gj.particles.getDataAddress();
         ASSERT(_gj.particles.cm.mass==_pj.mass);
         for (int i=0; i<_gj.particles.getSize(); i++) {
             mk    += ptcl_mem[i].mass * ChangeOver::calcAcc0WTwo(_pi.changeover, ptcl_mem[i].changeover, r);
-            mkdot += ptcl_mem[i].mass * ChangeOver::calcAcc1WTwo(_pi.changeover, ptcl_mem[i].changeover, r);
+            mkdot += ptcl_mem[i].mass * ChangeOver::calcAcc1WTwo(_pi.changeover, ptcl_mem[i].changeover, r, drdot);
         }
         const Float rinv2 = rinv*rinv;
         const Float rinv3 = rinv2*rinv;
 
         const Float mor3k = G*mk*rinv3;
-        const Float mor3kd = G*mkdot*rinv3*drdv;
+        const Float mor3kd = G*mkdot*rinv3;
         const Float acc0[3] = {mor3k*dr[0], mor3k*dr[1], mor3k*dr[2]};
         const Float acc1[3] = {mor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + mor3kd*dr[0],
                                mor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + mor3kd*dr[1],
@@ -229,6 +233,7 @@ public:
         const Float r = sqrt(dr2_eps);
         ASSERT(r>0.0);
         const Float rinv = 1.0/r;
+        const Float drdot = drdv*rinv;
 
         Float k = 0.0;
         Float kdot = 0.0;
@@ -236,7 +241,7 @@ public:
         ASSERT(_gi.particles.cm.mass==_pi.mass);
         for (int i=0; i<_gi.particles.getSize(); i++) {
             k    += ptcl_mem[i].mass * ChangeOver::calcAcc0WTwo(_pj.changeover, ptcl_mem[i].changeover, r);
-            kdot += ptcl_mem[i].mass * ChangeOver::calcAcc1WTwo(_pj.changeover, ptcl_mem[i].changeover, r);
+            kdot += ptcl_mem[i].mass * ChangeOver::calcAcc1WTwo(_pj.changeover, ptcl_mem[i].changeover, r, drdot);
         }
         k    /= _pi.mass;
         kdot /= _pi.mass;
@@ -246,7 +251,7 @@ public:
 
         const Float mor3 = G*_pj.mass*rinv3; 
         const Float mor3k = mor3*k;
-        const Float mor3kd = mor3*drdv*kdot;
+        const Float mor3kd = mor3*kdot;
         const Float acc0[3] = {mor3k*dr[0], mor3k*dr[1], mor3k*dr[2]};
         const Float acc1[3] = {mor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + mor3kd*dr[0],
                                mor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + mor3kd*dr[1],
@@ -297,13 +302,14 @@ public:
             const Float r = sqrt(dr2_eps);
             ASSERT(r>0.0);
             const Float rinv = 1.0/r;
+            const Float drdot = drdv*rinv;
 
             Float k = 0.0;
             Float kdot = 0.0;
             auto* ptcl_mem = _gi.particles.getDataAddress();
             for (int i=0; i<_gi.particles.getSize(); i++) {
                 k    += ptcl_mem[i].mass * ChangeOver::calcAcc0WTwo(pj.changeover, ptcl_mem[i].changeover, r);
-                kdot += ptcl_mem[i].mass * ChangeOver::calcAcc1WTwo(pj.changeover, ptcl_mem[i].changeover, r);
+                kdot += ptcl_mem[i].mass * ChangeOver::calcAcc1WTwo(pj.changeover, ptcl_mem[i].changeover, r, drdot);
             }
             k    /= _pi.mass;
             kdot /= _pi.mass;
@@ -313,7 +319,7 @@ public:
 
             const Float mor3 = G*pj.mass*rinv3; 
             const Float mor3k = mor3*k;
-            const Float mor3kd = mor3*drdv*kdot;
+            const Float mor3kd = mor3*kdot;
             const Float acc0[3] = {mor3k*dr[0], mor3k*dr[1], mor3k*dr[2]};
             const Float acc1[3] = {mor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + mor3kd*dr[0],
                                    mor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + mor3kd*dr[1],
@@ -360,6 +366,7 @@ public:
         const Float r = sqrt(dr2_eps);
         ASSERT(r>0.0);
         const Float rinv = 1.0/r;
+        const Float drdot = drdv*rinv;
 
         // pj.mass * k
         Float mk = 0.0;
@@ -371,7 +378,7 @@ public:
             Float mkdotj = 0.0;
             for (int j=0; j<_gj.particles.getSize(); j++) {
                 mkj    += ptcl_mem_j[j].mass * ChangeOver::calcAcc0WTwo(ptcl_mem_i[i].changeover, ptcl_mem_j[j].changeover, r);
-                mkdotj += ptcl_mem_j[j].mass * ChangeOver::calcAcc1WTwo(ptcl_mem_i[i].changeover, ptcl_mem_j[j].changeover, r);
+                mkdotj += ptcl_mem_j[j].mass * ChangeOver::calcAcc1WTwo(ptcl_mem_i[i].changeover, ptcl_mem_j[j].changeover, r, drdot);
             }
             mk    += ptcl_mem_i[i].mass * mkj;
             mkdot += ptcl_mem_i[i].mass * mkdotj;
@@ -383,7 +390,7 @@ public:
         const Float rinv3 = rinv2*rinv;
 
         const Float mor3k = G*mk*rinv3;
-        const Float mor3kd = G*mkdot*rinv3*drdv;
+        const Float mor3kd = G*mkdot*rinv3;
         const Float acc0[3] = {mor3k*dr[0], mor3k*dr[1], mor3k*dr[2]};
         const Float acc1[3] = {mor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + mor3kd*dr[0],
                                mor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + mor3kd*dr[1],

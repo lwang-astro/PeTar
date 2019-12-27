@@ -392,13 +392,14 @@ private:
         const PS::F64 dr2_eps = dr2 + manager->eps_sq;
         const PS::F64 drda = dr*da;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
+        const PS::F64 drdadrinv = drda*drinv;
         const PS::F64 movr = _pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
         const PS::F64 movr3 = movr * drinv2;
         const PS::F64 dr_eps = drinv * dr2_eps;
 
         const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, dr_eps);
-        const PS::F64 kdot = - ChangeOver::calcAcc1WTwo(_pi.changeover, _pj.changeover, dr_eps);
+        const PS::F64 kdot = - ChangeOver::calcAcc1WTwo(_pi.changeover, _pj.changeover, dr_eps, drdadrinv);
 
         const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
         const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
@@ -427,6 +428,7 @@ private:
         const PS::F64 dr2_eps = dr2 + manager->eps_sq;
         const PS::F64 drda = dr*da;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
+        const PS::F64 drdadrinv = drda*drinv;
         const PS::F64 movr = _pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
         const PS::F64 movr3 = movr * drinv2;
@@ -434,7 +436,7 @@ private:
         ChangeOver chj;
         chj.setR(_pj.r_in, _pj.r_out);
         const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, chj, dr_eps);
-        const PS::F64 kdot = - ChangeOver::calcAcc1WTwo(_pi.changeover, chj, dr_eps);
+        const PS::F64 kdot = - ChangeOver::calcAcc1WTwo(_pi.changeover, chj, dr_eps, drdadrinv);
 
         const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
         const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
@@ -1728,8 +1730,8 @@ public:
             
             // find closed Kepler hierarchical systems
             stable_checker.stable_binary_tree.reserve(n_members);
-            stable_checker.findClosedTree(binary_tree.back())
-;
+            stable_checker.findClosedTree(binary_tree.back());
+
             // save group information to binary table.
             for (int i=0; i<stable_checker.stable_binary_tree.size(); i++) {
                 auto& closed_binary_tree_i = *stable_checker.stable_binary_tree[i];

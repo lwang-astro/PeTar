@@ -41,7 +41,7 @@ public:
       @param[in] _r_in:   changeover function inner boundary
       @param[in] _r_out:  changeover function outer boundary
     */
-    void setR(const Float _m_fac, const Float _r_in, const Float _r_out) {
+    void setR(const Float& _m_fac, const Float& _r_in, const Float& _r_out) {
 #ifdef FIX_CHANGEOVER
         Float m_fac3 = 1.0;
 #else
@@ -64,7 +64,7 @@ public:
       @param[in] _r_in:   changeover function inner boundary
       @param[in] _r_out:  changeover function outer boundary
     */
-    void setR(const Float _r_in, const Float _r_out) {
+    void setR(const Float& _r_in, const Float& _r_out) {
         r_in_     = _r_in;          
         r_out_    = _r_out;
         norm_    = 1.0/(_r_out-_r_in);
@@ -181,8 +181,9 @@ public:
 #ifdef INTEGRATED_CUTOFF_FUNCTION 
     //! changeover function for potential 
     /*! @param[in] _dr: particle separation
+      \return \f$ \int{W_0(x) dr} \f$
      */
-    inline Float calcPotW(const Float _dr) const {
+    inline Float calcPotW(const Float& _dr) const {
 #ifdef CHANGEOVER_DEBUG
         assert(r_in_>0.0);
         assert(r_out_>r_in_);
@@ -214,8 +215,11 @@ public:
 
     //! changeover function (Poly 3rd) for force
     /*! @param[in] _dr: particle separation
+      \f$ x = \frac{dr - r_{in}{r_{out} - r_{in}} \f$ \n 
+      \f$ W_0(x) = x^4 (-35 + 84 x - 70 x^2 + 20 x^3) + 1 \f$ 
+      \return \f$ W_0(x) \f$
      */
-    inline Float calcAcc0W(const Float _dr) const {
+    inline Float calcAcc0W(const Float& _dr) const {
 #ifdef CHANGEOVER_DEBUG
         assert(r_in_>0.0);
         assert(r_out_>r_in_);
@@ -232,14 +236,19 @@ public:
     //! changeover function for force derivative
     /*!
       @param[in] _dr: particle separation
+      @param[in] _drdot: time derivation of _dr
+      \f$ x = \frac{dr - r_{in}{r_{out} - r_{in}} \f$ \n 
+      \f$ \frac{dx}{dt} = \frac{1}{r_{out} - r_{in}} \frac{dr}{dt} \f$ \n 
+      \f$ W_1(x) = x^4 (-35 + 84 x - 70 x^2 + 20 x^3) + 1 \f$ 
+      \return \f$ W_1(x) dx/dt \f$
      */
-    inline Float calcAcc1W(const Float _dr) const {
+    inline Float calcAcc1W(const Float& _dr, const Float& _drdot) const {
 #ifdef CHANGEOVER_DEBUG
         assert(r_in_>0.0);
         assert(r_out_>r_in_);
 #endif
         Float x = (_dr - r_in_)*norm_;
-        Float xdot = norm_/_drdv;
+        Float xdot = norm_*_drdot;
         Float kdot = 0.0;
         if(x <= 0.0)
             kdot = 0.0;
@@ -256,12 +265,17 @@ public:
         return kdot;
     }
 
-// changeover function start from potential
 #else
+    // changeover function start from potential
+
     //! changeover function for potential 
     /*! @param[in] _dr: particle separation
+      \f$ x = \frac{dr - r_{in}{r_{out} - r_{in}} \f$ \n 
+      \f$ R_a = \frac{r_{in}}{r_{out} - r_{in}} \f$ \n 
+      \f$ W_pot(x) = \frac{x^5}{2 R_a + 1} (5 x^3 - 20 x^2 + 28 x - 14) \f$ 
+      \return \f$ W_pot(x) \f$
      */
-    inline Float calcPotW(const Float _dr) const {
+    inline Float calcPotW(const Float& _dr) const {
 #ifdef CHANGEOVER_DEBUG
         assert(r_in_>0.0);
         assert(r_out_>r_in_);
@@ -279,9 +293,13 @@ public:
     }
 
     //! changeover function for force
-    /*! @param[in] _dr: particle separation
+    /*! @param[in] _dr: particle separation  
+      \f$ x = \frac{dr - r_{in}{r_{out} - r_{in}} \f$ \n 
+      \f$ R_a = \frac{r_{in}}{r_{out} - r_{in}} \f$ \n 
+      \f$ W_0(x) = (x-1)^4 (1 + 4 x + 10 x^2 + 20 x^3 + \frac{35 x^4}{2 R_a + 1} \f$ 
+      \return \f$ W_0(x) \f$
      */
-    inline Float calcAcc0W(const Float _dr) const {
+    inline Float calcAcc0W(const Float& _dr) const {
 #ifdef CHANGEOVER_DEBUG
         assert(r_in_>0.0);
         assert(r_out_>r_in_);
@@ -302,15 +320,20 @@ public:
     //! changeover function for force derivative
     /*!
       @param[in] _dr: particle separation
-      @param[in] _drdv: particle relative position dot relative velocity
+      @param[in] _drdot: time derivation of _dr
+      \f$ R_a = \frac{r_{in}}{r_{out} - r_{in}} \f$ \n 
+      \f$ x = \frac{dr - r_{in}{r_{out} - r_{in}} \f$ \n 
+      \f$ \frac{dx}{dt} = \frac{1}{r_{out} - r_{in}} \frac{dr}{dt} \f$ \n 
+      \f$ W_1(x) = \frac{280 x^3 (R_a + x)(x-1)^3}{2 R_a + 1} \f$ 
+      \return \f$ W_1(x) dx/dt \f$
      */
-    inline Float calcAcc1W(const Float _dr) const {
+    inline Float calcAcc1W(const Float& _dr, const Float& _drdot) const {
 #ifdef CHANGEOVER_DEBUG
         assert(r_in_>0.0);
         assert(r_out_>r_in_);
 #endif
         Float x = (_dr - r_in_)*norm_;
-        Float xdot = norm_/_dr;
+        Float xdot = norm_*_drdot;
         Float kdot = 0.0;
         if(x > 0.0 && x < 1.0) {
             Float x3 = x*x*x;
@@ -324,21 +347,21 @@ public:
 #endif
 
     //! calculate changeover function Pot by selecting maximum rout
-    static Float calcPotWTwo(const ChangeOver& _ch1, const ChangeOver& _ch2, const Float _dr) {
+    static Float calcPotWTwo(const ChangeOver& _ch1, const ChangeOver& _ch2, const Float& _dr) {
         if (_ch1.getRout()> _ch2.getRout()) return _ch1.calcPotW(_dr);
         else return _ch2.calcPotW(_dr);
     }
 
     //! calculate changeover function Acc0 by selecting maximum rout
-    static Float calcAcc0WTwo(const ChangeOver& _ch1, const ChangeOver& _ch2, const Float _dr) {
+    static Float calcAcc0WTwo(const ChangeOver& _ch1, const ChangeOver& _ch2, const Float& _dr) {
         if (_ch1.getRout()> _ch2.getRout()) return _ch1.calcAcc0W(_dr);
         else return _ch2.calcAcc0W(_dr);
     }
 
     //! calculate changeover function Acc1 by selecting maximum rout
-    static Float calcAcc1WTwo(const ChangeOver& _ch1, const ChangeOver& _ch2, const Float _dr) {
-        if (_ch1.getRout()> _ch2.getRout()) return _ch1.calcAcc1W(_dr);
-        else return _ch2.calcAcc1W(_dr);
+    static Float calcAcc1WTwo(const ChangeOver& _ch1, const ChangeOver& _ch2, const Float& _dr, const Float& _drdot) {
+        if (_ch1.getRout()> _ch2.getRout()) return _ch1.calcAcc1W(_dr, _drdot);
+        else return _ch2.calcAcc1W(_dr, _drdot);
     }
     
 };
