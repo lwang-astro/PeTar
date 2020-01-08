@@ -1970,7 +1970,6 @@ public:
         getInitPar(system_soft, r_in, r_out, r_bin, r_search_min, r_search_max, v_max, m_average, m_max, dt_soft, v_disp, search_factor, ratio_r_cut, n_bin, theta);
 
         EPISoft::eps   = input_parameters.eps.value;
-        EPISoft::r_in  = r_in;
         EPISoft::r_out = r_out;
         Ptcl::search_factor = search_factor;
         Ptcl::r_search_min = r_search_min;

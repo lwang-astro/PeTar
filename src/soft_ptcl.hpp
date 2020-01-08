@@ -161,11 +161,6 @@ public:
 #endif
     static PS::F64 eps;
     static PS::F64 r_out;
-    static PS::F64 r_in;
-//    static PS::F64 r_search;
-//    static PS::F64 r_in;
-//    static PS::F64 m_average;
-//    static PS::F64 r_search_min;
     PS::F64vec getPos() const { return pos;}
     void copyFromFP(const FPSoft & fp){ 
         id = fp.id;
@@ -255,11 +250,3 @@ public:
 
 PS::F64 EPISoft::eps = 0.0;
 PS::F64 EPISoft::r_out = 0.0;
-PS::F64 EPISoft::r_in  = 0.0;
-
-//PS::F64 EPISoft::r_in; = 0.0;
-//PS::F64 EPJSoft::m_average;
-//PS::F64 EPJSoft::r_search_min;
-//PS::F64 EPISoft::m_average;
-//PS::F64 EPISoft::r_search_min;
-

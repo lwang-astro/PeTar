@@ -16,10 +16,6 @@ struct CalcForceEpEpWithLinearCutoffNoSimd{
                       ForceSoft * force){
         const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
         const PS::F64 r_out2 = EPISoft::r_out*EPISoft::r_out;
-        //        const PS::F64 r_crit2 = EPJSoft::r_search * EPJSoft::r_search * SAFTY_FACTOR_FOR_SEARCH_SQ;
-        // const PS::F64 r_out = EPISoft::r_out; 
-        // const PS::F64 r_in = EPISoft::r_in;
-        //std::cerr<<"r_out= "<<r_out<<" r_in= "<<r_in<<" eps2= "<<eps2<<" r_crit2= "<<r_crit2<<std::endl;
         for(PS::S32 i=0; i<n_ip; i++){
             const PS::F64vec xi = ep_i[i].pos;
             //PS::S64 id_i = ep_i[i].id;
@@ -189,7 +185,6 @@ struct CalcForcePPSimd{
         assert(n_jp<=pg.NJMAX);
         pg.set_eps2(0.0);
         pg.set_r_crit2(0.0);
-        //pg.set_cutoff(EPISoft::r_out, EPISoft::r_in);
         for(PS::S32 i=0; i<n_ip; i++){
             const PS::F64vec pos_i = ep_i[i].pos;
             pg.set_xi_one(i, pos_i.x, pos_i.y, pos_i.z, 0.0);
@@ -249,7 +244,6 @@ struct CalcForceEpEpWithLinearCutoffSimd{
         assert(n_jp<=pg.NJMAX);
         pg.set_eps2(eps2);
         pg.set_r_crit2(EPISoft::r_out*EPISoft::r_out);
-        //pg.set_cutoff(EPISoft::r_out, EPISoft::r_in);
         for(PS::S32 i=0; i<n_ip; i++){
             const PS::F64vec pos_i = ep_i[i].getPos();
             pg.set_xi_one(i, pos_i.x, pos_i.y, pos_i.z, ep_i[i].r_search);
