@@ -99,12 +99,13 @@ public:
     IOParams<PS::S64> n_bin;
     IOParams<PS::F64> time_end;
     IOParams<PS::F64> eta;
+    IOParams<PS::F64> gravitational_constant;
     IOParams<PS::S64> n_glb;
     IOParams<PS::S64> id_offset;
     IOParams<PS::F64> dt_soft;
     IOParams<PS::F64> dt_snp;
-    IOParams<PS::F64> search_factor;
-    IOParams<PS::F64> radius_factor;
+    IOParams<PS::F64> search_vel_factor;
+    IOParams<PS::F64> search_peri_factor;
     IOParams<PS::F64> dt_limit_hard_factor;
     IOParams<PS::S32> dt_min_hermite_index;
     IOParams<PS::S32> dt_min_arc_index;
@@ -147,12 +148,13 @@ public:
                      n_bin        (input_par_store, 0,    "Number of binaries used for initialization (assume binaries ID=1,2*n_bin)"),
                      time_end     (input_par_store, 10.0, "Finishing time"),
                      eta          (input_par_store, 0.1,  "Hermite time step coefficient eta"),
+                     gravitational_constant(input_par_store, 1.0,  "Gravitational constant"),
                      n_glb        (input_par_store, 0,    "Total number of particles, only used to generate particles if needed"),
                      id_offset    (input_par_store, -1,   "Starting id for artificial particles, total number of real particles must be always smaller than this","n_glb+1"),
                      dt_soft      (input_par_store, 0.0,  "Tree timestep","0.1*r_out/sigma_1D"),
                      dt_snp       (input_par_store, 0.0625,"Output time interval of particle dataset"),
-                     search_factor(input_par_store, 3.0,  "Neighbor searching coefficient for v*dt"),
-                     radius_factor(input_par_store, 1.5,  "Neighbor searching radius factor for peri-center check"),
+                     search_vel_factor (input_par_store, 3.0,  "Neighbor searching coefficient for velocity check (v*dt)"),
+                     search_peri_factor(input_par_store, 1.5,  "Neighbor searching coefficient for peri-center check"),
                      dt_limit_hard_factor(input_par_store, 4.0,  "Limit of tree time step/hard time step"),
                      dt_min_hermite_index(input_par_store, 40,   "Power index n for the smallest time step (0.5^n) allowed in Hermite integrator"),
                      dt_min_arc_index    (input_par_store, 64,   "Power index n for the smallest time step (0.5^n) allowed in ARC integrator, suppressed"),
@@ -189,15 +191,19 @@ public:
     int read(int argc, char *argv[]) {
         static struct option long_options[] = {
             {"n-split", required_argument, 0, 0},        
-            {"search-factor", required_argument, 0, 1},  
+            {"search-vel-factor", required_argument, 0, 1},  
             {"dt-max-factor", required_argument, 0, 2},  
             {"dt-min-hermite", required_argument, 0, 3}, 
+            {"number-group-limit", required_argument, 0, 4},
+            {"number-leaf-limit", required_argument, 0, 5},
+            {"number-sample-average", required_argument, 0, 6},
             {"energy-err-arc", required_argument, 0, 7}, 
             {"soft-eps", required_argument, 0, 8},       
             {"slowdown-factor", required_argument, 0, 9},
             {"r-ratio", required_argument, 0, 10},       
             {"r-bin",   required_argument, 0, 11},       
-            {"radius_factor", required_argument, 0, 12}, 
+            {"search-peri-factor", required_argument, 0, 12}, 
+            {"hermite-eta", required_argument, 0, 13}, 
             {"help",no_argument, 0, 'h'},                
 #ifdef HARD_CHECK_ENERGY
             {"energy-err-hard", required_argument, 0, 14},  
@@ -212,7 +218,7 @@ public:
         int copt;
         int option_index;
         int n_opt=0;
-        while ((copt = getopt_long(argc, argv, "i:at:s:o:r:b:n:G:L:S:T:E:f:p:w:h", long_options, &option_index)) != -1) 
+        while ((copt = getopt_long(argc, argv, "i:at:s:o:r:b:n:G:T:f:p:w:h", long_options, &option_index)) != -1) 
             switch (copt) {
             case 0:
                 n_split.value = atoi(optarg);
@@ -221,9 +227,9 @@ public:
                 n_opt+=2;
                 break;
             case 1:
-                search_factor.value = atof(optarg);
-                if(print_flag) search_factor.print(std::cout);
-                assert(search_factor.value>0.0);
+                search_vel_factor.value = atof(optarg);
+                if(print_flag) search_vel_factor.print(std::cout);
+                assert(search_vel_factor.value>0.0);
                 n_opt+=2;
                 break;
             case 2:
@@ -236,6 +242,24 @@ public:
                 dt_min_hermite_index.value = atoi(optarg);
                 if(print_flag) dt_min_hermite_index.print(std::cout);
                 assert(dt_min_hermite_index.value > 0);
+                n_opt+=2;
+                break;
+            case 4:
+                n_group_limit.value = atoi(optarg);
+                if(print_flag) n_group_limit.print(std::cout);
+                assert(n_group_limit.value>0);
+                n_opt+=2;
+                break;
+            case 5:
+                n_leaf_limit.value = atoi(optarg);
+                if(print_flag) n_leaf_limit.print(std::cout);
+                assert(n_leaf_limit.value>0);
+                n_opt+=2;
+                break;
+            case 6:
+                n_smp_ave.value = atoi(optarg);
+                if(print_flag) n_smp_ave.print(std::cout);
+                assert(n_smp_ave.value>0.0);
                 n_opt+=2;
                 break;
             case 7:
@@ -270,9 +294,15 @@ public:
                 n_opt+=2;
                 break;
             case 12:
-                radius_factor.value = atof(optarg);
-                if(print_flag) radius_factor.print(std::cout);
-                assert(radius_factor.value>=1.0);
+                search_peri_factor.value = atof(optarg);
+                if(print_flag) search_peri_factor.print(std::cout);
+                assert(search_peri_factor.value>=1.0);
+                n_opt+=2;
+                break;
+            case 13:
+                eta.value = atof(optarg);
+                if(print_flag) eta.print(std::cout);
+                assert(eta.value>0.0);
                 n_opt+=2;
                 break;
 #ifdef HARD_CHECK_ENERGY
@@ -340,33 +370,15 @@ public:
                 n_opt+=2;
                 break;
             case 'G':
-                n_group_limit.value = atoi(optarg);
-                if(print_flag) n_group_limit.print(std::cout);
-                assert(n_group_limit.value>0);
-                n_opt+=2;
-                break;
-            case 'L':
-                n_leaf_limit.value = atoi(optarg);
-                if(print_flag) n_leaf_limit.print(std::cout);
-                assert(n_leaf_limit.value>0);
-                n_opt+=2;
-                break;
-            case 'S':
-                n_smp_ave.value = atoi(optarg);
-                if(print_flag) n_smp_ave.print(std::cout);
-                assert(n_smp_ave.value>0.0);
+                gravitational_constant.value = atof(optarg);
+                if(print_flag) gravitational_constant.print(std::cout);
+                assert(gravitational_constant.value>0.0);
                 n_opt+=2;
                 break;
             case 'T':
                 theta.value = atof(optarg);
                 if(print_flag) theta.print(std::cout);
                 assert(theta.value>=0.0);
-                n_opt+=2;
-                break;
-            case 'E':
-                eta.value = atof(optarg);
-                if(print_flag) eta.print(std::cout);
-                assert(eta.value>0.0);
                 n_opt+=2;
                 break;
             case 'f':
@@ -425,32 +437,33 @@ public:
                     std::cout<<"  -t: [F] "<<time_end<<std::endl;
                     std::cout<<"  -s: [F] "<<dt_soft<<std::endl;
                     std::cout<<"  -o: [F] "<<dt_snp<<std::endl;
-                    std::cout<<"        --dt-max-factor:   [F] "<<dt_limit_hard_factor<<std::endl;
-                    std::cout<<"        --dt-min-hermite:  [I] "<<dt_min_hermite_index<<std::endl;
+                    std::cout<<"        --dt-max-factor:     [F] "<<dt_limit_hard_factor<<std::endl;
+                    std::cout<<"        --dt-min-hermite:    [I] "<<dt_min_hermite_index<<std::endl;
                     std::cout<<"        --disable-print-info:  "<<"Do not print information"<<std::endl;
                     std::cout<<"        --disable-write-info:  "<<"Do not write information"<<std::endl;
                     std::cout<<"  -r: [F] "<<r_out<<std::endl;
-                    std::cout<<"        --r-ratio:         [F] "<<ratio_r_cut<<std::endl;
-                    std::cout<<"        --r-bin:           [F] "<<r_bin<<std::endl;
+                    std::cout<<"        --r-ratio:           [F] "<<ratio_r_cut<<std::endl;
+                    std::cout<<"        --r-bin:             [F] "<<r_bin<<std::endl;
                     std::cout<<"  -b: [I] "<<n_bin<<std::endl;
                     std::cout<<"  -n: [I] "<<n_glb<<std::endl;
-                    std::cout<<"  -G: [I] "<<n_group_limit<<std::endl;
-                    std::cout<<"  -L: [I] "<<n_leaf_limit<<std::endl;
-                    std::cout<<"  -S: [I] "<<n_smp_ave<<std::endl;
-                    std::cout<<"        --n-split:         [I] "<<n_split<<std::endl;
+                    std::cout<<"        --n-split:           [I] "<<n_split<<std::endl;
+                    std::cout<<"        --n-group-limit:     [I] "<<n_group_limit<<std::endl;
+                    std::cout<<"        --n-leaf-limit:      [I] "<<n_leaf_limit<<std::endl;
+                    std::cout<<"        --n-sample-average:  [I] "<<n_smp_ave<<std::endl;
+                    std::cout<<"  -G: [F] "<<gravitational_constant<<std::endl;
                     std::cout<<"  -T: [F] "<<theta<<std::endl;
-                    std::cout<<"  -E: [F] "<<eta<<std::endl;
-                    std::cout<<"        --search-factor:   [F] "<<search_factor<<std::endl;
-                    std::cout<<"        --radius_factor:   [F] "<<radius_factor<<std::endl;
-                    std::cout<<"        --energy-err-arc:  [F] "<<e_err_arc<<std::endl;
+                    std::cout<<"        --hermite-eta:       [F] "<<eta<<std::endl;
+                    std::cout<<"        --search-vel-factor: [F] "<<search_vel_factor<<std::endl;
+                    std::cout<<"        --search-peri-factor:[F] "<<search_peri_factor<<std::endl;
+                    std::cout<<"        --energy-err-arc:    [F] "<<e_err_arc<<std::endl;
 #ifdef HARD_CHECK_ENERGY
-                    std::cout<<"        --energy-err-hard: [F] "<<e_err_hard<<std::endl;
+                    std::cout<<"        --energy-err-hard:   [F] "<<e_err_hard<<std::endl;
 #endif
 #ifdef AR_SYM
-                    std::cout<<"        --step-limit-arc:  [F] "<<step_limit_arc<<std::endl;
+                    std::cout<<"        --step-limit-arc:    [F] "<<step_limit_arc<<std::endl;
 #endif
-                    std::cout<<"        --slowdown-factor: [F] "<<sd_factor<<std::endl;
-                    std::cout<<"        --soft-eps:        [F] "<<eps<<std::endl;
+                    std::cout<<"        --slowdown-factor:   [F] "<<sd_factor<<std::endl;
+                    std::cout<<"        --soft-eps:          [F] "<<eps<<std::endl;
                     std::cout<<"  -f: [S] "<<fname_snp<<std::endl;
                     std::cout<<"  -p: [S] "<<fname_par<<std::endl;
                     std::cout<<"  -w: [I] "<<write_style<<std::endl;
@@ -477,7 +490,7 @@ public:
     //! check paramters
     bool checkParams() {
         assert(n_split.value>=8);
-        assert(search_factor.value>0.0);
+        assert(search_vel_factor.value>0.0);
         assert(dt_limit_hard_factor.value > 0.0);
         assert(dt_min_hermite_index.value > 0);
         assert(e_err_arc.value > 0.0);
@@ -486,7 +499,7 @@ public:
         assert(ratio_r_cut.value>0.0);
         assert(ratio_r_cut.value<1.0);
         assert(r_bin.value>0.0);
-        assert(radius_factor.value>=1.0);
+        assert(search_peri_factor.value>=1.0);
         assert(data_format.value>=0||data_format.value<=3);
         assert(time_end.value>=0.0);
         assert(dt_soft.value>0.0);
@@ -610,7 +623,7 @@ private:
       @param[out] _m_max: maximum mass of particles
       @param[in,out] _dt_tree: tree time step
       @param[out] _vel_disp: system velocity dispersion 
-      @param[in]     _search_factor: coefficient to calculate r_search
+      @param[in]     _search_vel_factor: coefficient to calculate r_search
       @param[in]     _ratio_r_cut: _r_out/_r_in
       @param[in]     _n_bin: number of binaries
     */
@@ -625,7 +638,7 @@ private:
                     PS::F64 &_m_max,
                     PS::F64 &_dt_tree,
                     PS::F64 &_vel_disp,
-                    const PS::F64 _search_factor,
+                    const PS::F64 _search_vel_factor,
                     const PS::F64 _ratio_r_cut,
                     const PS::S64 _n_bin,
                     const PS::F64 _theta) {
@@ -725,12 +738,12 @@ private:
         // if r_bin is not defined, set to theta * r_in
         if (_r_bin==0.0) _r_bin = _theta*_r_in;
 
-        // if r_search_min is not defined, calculate by search_factor*velocity_dispersion*tree_time_step + r_out
-        if (_r_search_min==0.0) _r_search_min = _search_factor*_vel_disp*_dt_tree + _r_out;
+        // if r_search_min is not defined, calculate by search_vel_factor*velocity_dispersion*tree_time_step + r_out
+        if (_r_search_min==0.0) _r_search_min = _search_vel_factor*_vel_disp*_dt_tree + _r_out;
         // if r_search_max is not defined, calcualte by 5*r_out
         if (_r_search_max==0.0) _r_search_max = 5*_r_out;
-        // calculate v_max based on r_search_max, tree time step and search_factor
-        _v_max = (_r_search_max - _r_out) / _dt_tree / _search_factor;
+        // calculate v_max based on r_search_max, tree time step and search_vel_factor
+        _v_max = (_r_search_max - _r_out) / _dt_tree / _search_vel_factor;
     }
 
     //! tree for neighbor searching.
@@ -758,7 +771,7 @@ private:
 #endif
         // >2.1 search clusters ----------------------------------------
         search_cluster.searchNeighborOMP<SystemSoft, TreeNB, EPJSoft>
-            (system_soft, tree_nb, pos_domain, 1.0, input_parameters.radius_factor.value);
+            (system_soft, tree_nb, pos_domain, 1.0, input_parameters.search_peri_factor.value);
 
         search_cluster.searchClusterLocal();
         search_cluster.setIdClusterLocal();
@@ -1962,16 +1975,16 @@ public:
         PS::F64& r_search_min = input_parameters.r_search_min.value;
         PS::F64& r_search_max = input_parameters.r_search_max.value;
         PS::F64& dt_soft = input_parameters.dt_soft.value;
-        PS::F64& search_factor =  input_parameters.search_factor.value;
+        PS::F64& search_vel_factor =  input_parameters.search_vel_factor.value;
         PS::F64& ratio_r_cut   =  input_parameters.ratio_r_cut.value;
         PS::S64& n_bin         =  input_parameters.n_bin.value;
         PS::F64& theta         =  input_parameters.theta.value;
 
-        getInitPar(system_soft, r_in, r_out, r_bin, r_search_min, r_search_max, v_max, m_average, m_max, dt_soft, v_disp, search_factor, ratio_r_cut, n_bin, theta);
+        getInitPar(system_soft, r_in, r_out, r_bin, r_search_min, r_search_max, v_max, m_average, m_max, dt_soft, v_disp, search_vel_factor, ratio_r_cut, n_bin, theta);
 
         EPISoft::eps   = input_parameters.eps.value;
         EPISoft::r_out = r_out;
-        Ptcl::search_factor = search_factor;
+        Ptcl::search_factor = search_vel_factor;
         Ptcl::r_search_min = r_search_min;
         Ptcl::mean_mass_inv = 1.0/m_average;
         Ptcl::r_group_crit_ratio = r_bin/r_in;
@@ -2032,7 +2045,7 @@ public:
                 system_soft[i].changeover.setR(m_fac, r_in, r_out);
 
                 // calculate r_search for particles, for binary, r_search depend on v_disp
-                if(id<=2*n_bin) system_soft[i].r_search = std::max(r_search_min,v_disp*dt_soft*search_factor + system_soft[i].changeover.getRout());
+                if(id<=2*n_bin) system_soft[i].r_search = std::max(r_search_min,v_disp*dt_soft*search_vel_factor + system_soft[i].changeover.getRout());
                 else system_soft[i].calcRSearch(dt_soft);
             }
         }
@@ -2048,7 +2061,7 @@ public:
         // set system hard paramters
         hard_manager.setDtRange(input_parameters.dt_soft.value/input_parameters.dt_limit_hard_factor.value, input_parameters.dt_min_hermite_index.value);
         hard_manager.setEpsSq(input_parameters.eps.value);
-        hard_manager.setG(1.0);
+        hard_manager.setGravitationalConstant(input_parameters.gravitational_constant.value);
         hard_manager.r_in_base = r_in;
         hard_manager.r_out_base = r_out;
 #ifdef HARD_CHECK_ENERGY

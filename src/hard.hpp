@@ -42,7 +42,7 @@ public:
     }
 
     //! set gravitational constant
-    void setG(const PS::F64 _g) {
+    void setGravitationalConstant(const PS::F64 _g) {
         ap_manager.G = _g;
         h4_manager.interaction.G = _g;
         ar_manager.interaction.G = _g;

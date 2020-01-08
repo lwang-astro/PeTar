@@ -78,7 +78,7 @@ int main(int argc, char** argv)
   HardManager hard_manager;
   hard_manager.setDtRange(dt_limit, 40);
   hard_manager.setEpsSq(eps);
-  hard_manager.setG(1.0);
+  hard_manager.setGravitationalConstant(1.0);
   hard_manager.r_in_base = rin;
   hard_manager.r_out_base = rout;
 #ifdef HARD_CHECK_ENERGY
