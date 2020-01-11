@@ -38,8 +38,8 @@ int main(int argc, char **argv){
     const int Nspj = 50000;
     const int N = Nepi+Nepj;
     EPISoft::r_out = 0.01;
-    EPISoft::r_in = 0.001;
     EPISoft::eps = 0.0;
+    ForceSoft::grav_const = 1.0;
     const PS::F64 DF_MAX=7e-3;
     
     SystemSoft ptcl;
