@@ -15,23 +15,23 @@ public:
     typedef H4::ParticleAR<PtclHard> ARPtcl;
     typedef H4::ParticleH4<PtclHard> H4Ptcl;
     Float eps_sq; ///> softening parameter
-    Float G;
+    Float gravitational_constant;
 
-    ARInteraction(): eps_sq(Float(-1.0)), G(Float(-1.0)) {}
+    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)) {}
 
     //! (Necessary) check whether publicly initialized parameters are correctly set
     /*! \return true: all parmeters are correct. In this case no parameters, return true;
      */
     bool checkParams() {
         ASSERT(eps_sq>=0.0);
-        ASSERT(G>0.0);
+        ASSERT(gravitational_constant>0.0);
         return true;
     }        
 
     //! print parameters
     void print(std::ostream & _fout) const{
         _fout<<"eps_sq : "<<eps_sq<<std::endl
-             <<"G      : "<<G<<std::endl;
+             <<"G      : "<<gravitational_constant<<std::endl;
     }    
 
     //! (Necessary) calculate inner member acceleration, potential and time transformation function gradient and factor for kick (two-body case)
@@ -284,7 +284,7 @@ public:
                     Float r  = sqrt(r2);
                     Float k  = ChangeOver::calcAcc0WTwo(chi, *changeover[j], r);
                     Float r3 = r*r2;
-                    Float mor3 = G*m[j]/r3 * k;
+                    Float mor3 = gravitational_constant*m[j]/r3 * k;
 
                     acc_pert[0] += mor3 * dr[0];
                     acc_pert[1] += mor3 * dr[1];
@@ -305,7 +305,7 @@ public:
                         mk += ptcl_mem[k].mass * ChangeOver::calcAcc0WTwo(chi, ptcl_mem[k].changeover, r);
                     }
                     Float r3 = r*r2;
-                    Float mor3 = G*mk/r3;
+                    Float mor3 = gravitational_constant*mk/r3;
 
                     acc_pert[0] += mor3 * dr[0];
                     acc_pert[1] += mor3 * dr[1];
@@ -556,7 +556,7 @@ public:
 
                 // force dependent method
                 // min sqrt(r^3/(G m))
-                Float mor3 = (mj+mcm)*r*r2/(G*mj*mcm);
+                Float mor3 = (mj+mcm)*r*r2/(gravitational_constant*mj*mcm);
                 trf2_min =  std::min(trf2_min, mor3);
 
                 //Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];

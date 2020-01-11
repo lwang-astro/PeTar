@@ -123,7 +123,8 @@ public:
                                const double a_ice = 0.0,
                                const double f_ice = 1.0,
                                const double power = -1.5,
-                               const int seed = 0
+                               const int seed = 0,
+                               const double gravitational_constant = 1.0
         ){
         static const double mass_sun_gram = 1.989e33; //[g]
         PS::MTTS mt;
@@ -156,7 +157,7 @@ public:
             bin.m1 = mass_sun;
             bin.m2 = m_planet;
             ParticleBase sun,planet;
-            bin.calcParticles(sun, planet);
+            bin.calcParticles(sun, planet, gravitational_constant);
             pos[i]=planet.pos;
             vel[i]=planet.vel;
             e_ave += bin.ecc*bin.ecc;

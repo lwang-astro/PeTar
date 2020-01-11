@@ -43,9 +43,9 @@ public:
 
     //! set gravitational constant
     void setGravitationalConstant(const PS::F64 _g) {
-        ap_manager.G = _g;
-        h4_manager.interaction.G = _g;
-        ar_manager.interaction.G = _g;
+        ap_manager.gravitational_constant = _g;
+        h4_manager.interaction.gravitational_constant = _g;
+        ar_manager.interaction.gravitational_constant = _g;
     }
 
     //! set time step range
@@ -691,14 +691,14 @@ public:
 #endif
 
         // manager
-        H4::HermiteManager<HermiteInteraction>* h4_manager = &(manager->h4_manager);
-        AR::SymplecticManager<ARInteraction>* ar_manager = &(manager->ar_manager);
+        auto& h4_manager = manager->h4_manager;
+        auto& ar_manager = manager->ar_manager;
 
         // Only one group with all particles in group
         if(_n_group==1&&n_single_init==0) {
 
             AR::SymplecticIntegrator<H4::ParticleAR<PtclHard>, PtclH4, ARPerturber, ARInteraction, H4::ARInformation<PtclHard>> sym_int;
-            sym_int.manager = ar_manager;
+            sym_int.manager = &ar_manager;
 
             sym_int.particles.setMode(COMM::ListMode::copy);
             auto* api = &(_ptcl_artificial[adr_first_ptcl[0]]);
@@ -714,7 +714,7 @@ public:
                 sym_int.perturber.r_neighbor_crit_sq = std::max(sym_int.perturber.r_neighbor_crit_sq, r_neighbor_crit*r_neighbor_crit);                
             }
             sym_int.reserveIntegratorMem();
-            sym_int.info.generateBinaryTree(sym_int.particles);
+            sym_int.info.generateBinaryTree(sym_int.particles, ar_manager.interaction.gravitational_constant);
             auto* apcm = ap_manager.getCMParticles(api);
             auto* aptt = ap_manager.getTidalTensorParticles(api);
             TidalTensor tt;
@@ -722,11 +722,11 @@ public:
             sym_int.perturber.soft_pert=&tt;
 
             // calculate soft_pert_min
-            sym_int.perturber.calcSoftPertMin(sym_int.info.getBinaryTreeRoot());
+            sym_int.perturber.calcSoftPertMin(sym_int.info.getBinaryTreeRoot(), ar_manager.interaction.gravitational_constant);
             
             // initialization 
             sym_int.initialIntegration(time_origin_int);
-            sym_int.info.calcDsAndStepOption(sym_int.slowdown.getSlowDownFactorOrigin(), ar_manager->step.getOrder()); 
+            sym_int.info.calcDsAndStepOption(sym_int.slowdown.getSlowDownFactorOrigin(), ar_manager.step.getOrder(),  ar_manager.interaction.gravitational_constant); 
 
             // calculate c.m. changeover
             auto& pcm = sym_int.particles.cm;
@@ -789,8 +789,8 @@ public:
         else {
             // integration -----------------------------
             H4::HermiteIntegrator<PtclHard, PtclH4, HermitePerturber, ARPerturber, HermiteInteraction, ARInteraction, HermiteInformation> h4_int;
-            h4_int.manager = h4_manager;
-            h4_int.ar_manager = ar_manager;
+            h4_int.manager = &h4_manager;
+            h4_int.ar_manager = &ar_manager;
 
             h4_int.particles.setMode(COMM::ListMode::link);
             h4_int.particles.linkMemberArray(_ptcl_local, _n_ptcl);
@@ -829,7 +829,7 @@ public:
                     groupi.perturber.soft_pert = &tidal_tensor[i];
 
                     // calculate soft_pert_min
-                    groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot());
+                    groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot(), ar_manager.interaction.gravitational_constant);
 
                     // calculate c.m. changeover
                     auto& pcm = groupi.particles.cm;
@@ -887,7 +887,7 @@ public:
                     ASSERT(tt_index<n_tt);
                     // calculate soft_pert_min
                     if (tt_index>=0) 
-                        groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot());
+                        groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot(), ar_manager.interaction.gravitational_constant);
 #ifdef HARD_DEBUG_PRINT
                     std::cerr<<"Find tidal tensor, group i: "<<group_index[i]<<" pcm.r_out: "<<r_out_cm;
                     std::cerr<<" member.r_out: ";
@@ -950,7 +950,7 @@ public:
                         ASSERT(tt_index<n_tt);
                         // calculate soft_pert_min
                         if (tt_index>=0) 
-                            groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot());
+                            groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot(),ar_manager.interaction.gravitational_constant);
 #ifdef HARD_DEBUG_PRINT
                         std::cerr<<"Find tidal tensor, group i: "<<group_index[i]<<" pcm.r_out: "<<groupi.particles.cm.changeover.getRout();
                         std::cerr<<" member.r_out: ";
@@ -986,7 +986,7 @@ public:
                 //if (n_group>0) dt_max = h4_int.groups[h4_int.getSortDtIndexGroup()[n_group-1]].particles.cm.dt;
                 //if (n_single>0) dt_max = std::max(dt_max, h4_int.particles[h4_int.getSortDtIndexSingle()[n_single-1]].dt);
                 //ASSERT(dt_max>0.0);
-                if (fmod(h4_int.getTime(), h4_manager->step.getDtMax()/HARD_DEBUG_PRINT_FEQ)==0.0) {
+                if (fmod(h4_int.getTime(), h4_manager.step.getDtMax()/HARD_DEBUG_PRINT_FEQ)==0.0) {
                     h4_int.calcEnergySlowDown(false);
 
                     h4_int.printColumn(std::cout, WRITE_WIDTH, n_group_sub_init, _n_group, n_group_sub_tot_init);
@@ -1015,7 +1015,7 @@ public:
                         abort();
                     }
                 }
-                if (fmod(h4_int.getTime(), h4_manager->step.getDtMax())==0.0) {
+                if (fmod(h4_int.getTime(), h4_manager.step.getDtMax())==0.0) {
                     h4_int.printStepHist();
                 }
 #endif
@@ -1048,7 +1048,7 @@ public:
                 auto& pcm = h4_int.groups[k].particles.cm;
                 pcm.vel += h4_pcm.vel;
 
-                //pcm.calcRSearch(h4_manager->interaction.G*(h4_pcm.mass-pcm.mass), abs(pcm.pot), h4_pcm.vel, _dt);
+                //pcm.calcRSearch(h4_manager.interaction.G*(h4_pcm.mass-pcm.mass), abs(pcm.pot), h4_pcm.vel, _dt);
                 pcm.Ptcl::calcRSearch(_dt);
                 const PS::S32 n_member = h4_int.groups[k].particles.getSize();
                 //const PS::S32 id_first = h4_int.groups[k].particles.getMemberOriginAddress(0)->id;
@@ -1078,7 +1078,7 @@ public:
                 pi.group_data.cm.vel[2]  = 0.0;
 #endif
                 pi.Ptcl::calcRSearch(_dt);
-//                pi.calcRSearch(h4_manager->interaction.G*(h4_pcm.mass-pi.mass), abs(pi.pot), h4_pcm.vel, _dt);
+//                pi.calcRSearch(h4_manager.interaction.G*(h4_pcm.mass-pi.mass), abs(pi.pot), h4_pcm.vel, _dt);
             }
 
 
@@ -1719,7 +1719,7 @@ public:
             binary_tree.resizeNoInitialize(n_members-1);
             // build hierarch binary tree from the minimum distant neighbors
 
-            COMM::BinaryTree<Tptcl>::generateBinaryTree(binary_tree.getPointer(), member_list, n_members, _ptcl_in_cluster);
+            COMM::BinaryTree<Tptcl>::generateBinaryTree(binary_tree.getPointer(), member_list, n_members, _ptcl_in_cluster, ap_manager.gravitational_constant);
 
             struct {PS::F64 mean_mass_inv, rin, rout, dt_tree; } changeover_rsearch_pars = {Tptcl::mean_mass_inv, manager->r_in_base, manager->r_out_base, _dt_tree};
             // get new changeover and rsearch for c.m.

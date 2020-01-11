@@ -16,6 +16,7 @@ struct CalcForceEpEpWithLinearCutoffNoSimd{
                       ForceSoft * force){
         const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
         const PS::F64 r_out2 = EPISoft::r_out*EPISoft::r_out;
+        const PS::F64 G = ForceSoft::grav_const;
         for(PS::S32 i=0; i<n_ip; i++){
             const PS::F64vec xi = ep_i[i].pos;
             //PS::S64 id_i = ep_i[i].id;
@@ -42,11 +43,11 @@ struct CalcForceEpEpWithLinearCutoffNoSimd{
                 poti -= m_r;
             }
             //std::cerr<<"poti= "<<poti<<std::endl;
-            force[i].acc += ai;
+            force[i].acc += G*ai;
 #ifdef KDKDK_4TH
             force[i].acorr = 0.0;
 #endif
-            force[i].pot += poti;
+            force[i].pot += G*poti;
             force[i].n_ngb = n_ngb_i;
         }
     }
@@ -96,6 +97,7 @@ struct CalcForceEpSpMonoNoSimd {
                       const PS::S32 n_jp,
                       ForceSoft * force){
         const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
+        const PS::F64 G = ForceSoft::grav_const;
         for(PS::S32 i=0; i<n_ip; i++){
             PS::F64vec xi = ep_i[i].pos;
             PS::F64vec ai = 0.0;
@@ -110,8 +112,8 @@ struct CalcForceEpSpMonoNoSimd {
                 ai -= r3_inv * rij;
                 poti -= r_inv;
             }
-            force[i].acc += ai;
-            force[i].pot += poti;
+            force[i].acc += G*ai;
+            force[i].pot += G*poti;
         }
     }
 };
@@ -124,6 +126,7 @@ struct CalcForceEpSpQuadNoSimd{
                       const PS::S32 n_jp,
                       ForceSoft * force){
         const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
+        const PS::F64 G = ForceSoft::grav_const;
 //        assert(n_jp==0);
         for(PS::S32 ip=0; ip<n_ip; ip++){
             PS::F64vec xi = ep_i[ip].pos;
@@ -151,8 +154,8 @@ struct CalcForceEpSpQuadNoSimd{
                 ai -= A*rij + B*qr;
                 poti -= mj*r_inv - 0.5*tr*r3_inv + qrr_r5;
             }
-            force[ip].acc += ai;
-            force[ip].pot += poti;
+            force[ip].acc += G*ai;
+            force[ip].pot += G*poti;
         }
     }
 };
@@ -165,6 +168,7 @@ struct CalcForcePPSimd{
                       const Tpj * ep_j,
                       const PS::S32 n_jp,
                       ForceSoft * force){
+        const PS::F64 G = ForceSoft::grav_const;
         PS::S32 ep_j_list[n_jp], n_jp_local=0;
         for (PS::S32 i=0; i<n_jp; i++){
             if(ep_j[i].mass>0) ep_j_list[n_jp_local++] = i;
@@ -208,6 +212,8 @@ struct CalcForcePPSimd{
                 PS::F64 * a = (PS::F64 * )(&force[i].acc[0]);
                 PS::F64 n_ngb = 0;
                 pg.accum_accp_one(i, a[0], a[1], a[2], *p, n_ngb);
+                force[i].acc *= G;
+                force[i].pot *= G;
                 force[i].n_ngb += (PS::S32)(n_ngb*1.00001);
             }
         }
@@ -222,6 +228,7 @@ struct CalcForceEpEpWithLinearCutoffSimd{
                       const PS::S32 n_jp,
                       ForceSoft * force){
         const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
+        const PS::F64 G = ForceSoft::grav_const;
         PS::S32 ep_j_list[n_jp], n_jp_local=0;
         for (PS::S32 i=0; i<n_jp; i++){
             if(ep_j[i].mass>0) ep_j_list[n_jp_local++] = i;
@@ -267,6 +274,8 @@ struct CalcForceEpEpWithLinearCutoffSimd{
                 PS::F64 * a = (PS::F64 * )(&force[i].acc[0]);
                 PS::F64 n_ngb = 0;
                 pg.accum_accp_one(i, a[0], a[1], a[2], *p, n_ngb);
+                force[i].acc *= G;
+                force[i].pot *= G;
                 force[i].n_ngb += (PS::S32)(n_ngb*1.00001);
             }
         }
@@ -282,6 +291,7 @@ struct CalcForceEpSpMonoSimd{
                       const PS::S32 n_jp,
                       ForceSoft * force){
         const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
+        const PS::F64 G = ForceSoft::grav_const;
 #ifdef __HPC_ACE__
         PhantomGrapeQuad pg;
 #else
@@ -314,6 +324,8 @@ struct CalcForceEpSpMonoSimd{
                 PS::F64 * p = &(force[i].pot);
                 PS::F64 * a = (PS::F64 * )(&force[i].acc[0]);
                 pg.accum_accp_one(i, a[0], a[1], a[2], *p);
+                force[i].acc *= G;
+                force[i].pot *= G;
             }
         }
     }
@@ -327,6 +339,7 @@ struct CalcForceEpSpQuadSimd{
                       const PS::S32 n_jp,
                       ForceSoft * force){
         const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
+        const PS::F64 G = ForceSoft::grav_const;
     #ifdef __HPC_ACE__
         PhantomGrapeQuad pg;
     #else
@@ -361,6 +374,8 @@ struct CalcForceEpSpQuadSimd{
                 PS::F64 * p = &(force[i].pot);
                 PS::F64 * a = (PS::F64 * )(&force[i].acc[0]);
                 pg.accum_accp_one(i, a[0], a[1], a[2], *p);
+                force[i].acc *= G;
+                force[i].pot *= G;
             }
         }
     }

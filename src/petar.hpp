@@ -1984,6 +1984,7 @@ public:
 
         EPISoft::eps   = input_parameters.eps.value;
         EPISoft::r_out = r_out;
+        ForceSoft::grav_const = input_parameters.gravitational_constant.value;
         Ptcl::search_factor = search_vel_factor;
         Ptcl::r_search_min = r_search_min;
         Ptcl::mean_mass_inv = 1.0/m_average;

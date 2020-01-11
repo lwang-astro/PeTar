@@ -101,12 +101,12 @@ public:
 
     //! calculate soft_pert_min
     template <class Tptcl>
-    void calcSoftPertMin(const COMM::BinaryTree<Tptcl>& _bin) {
+    void calcSoftPertMin(const COMM::BinaryTree<Tptcl>& _bin, const Float _G) {
         // hyperbolic case
         if(_bin.semi<0.0) soft_pert_min = 0.0;
         else { // close orbit
             ParticleBase p[2];
-            _bin.calcParticlesEcca(p[0], p[1], COMM::PI);
+            _bin.calcParticlesEcca(p[0], p[1], COMM::PI, _G);
             Float dacc_soft = calcSoftPertSlowDownBinary(p[0], p[1]);
             //soft_pert_min = _bin.mass*dacc_soft/(2.0*abs(_bin.semi));
             Float apo = _bin.semi*(1.0+_bin.ecc);

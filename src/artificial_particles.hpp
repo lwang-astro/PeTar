@@ -160,9 +160,9 @@ class ArtificialParticleManager{
 public:
     PS::F64 r_tidal_tensor;
     PS::S64 id_offset;
-    PS::F64 G; // gravitational constant
+    PS::F64 gravitational_constant; // gravitational constant
 
-    ArtificialParticleManager(): n_split_(-1), n_artificial_(-1), index_offset_tt_(0), index_offset_orb_(8), index_cm_(-1), decca_list_(NULL), dsin_ecca_list_(NULL), decca_(0.0), r_tidal_tensor(-1.0), id_offset(-1), G(-1.0) {}
+    ArtificialParticleManager(): n_split_(-1), n_artificial_(-1), index_offset_tt_(0), index_offset_orb_(8), index_cm_(-1), decca_list_(NULL), dsin_ecca_list_(NULL), decca_(0.0), r_tidal_tensor(-1.0), id_offset(-1), gravitational_constant(-1.0) {}
 
     //! check paramters
     bool checkParams() {
@@ -171,7 +171,7 @@ public:
         ASSERT(index_cm_>=8);
         ASSERT(r_tidal_tensor>=0.0);
         ASSERT(id_offset>0);
-        ASSERT(G>0);
+        ASSERT(gravitational_constant>0);
         //ASSERT(decca_list_!=NULL);
         //ASSERT(dsin_ecca_list_!=NULL);
         //ASSERT(decca_>0.0);
@@ -235,7 +235,7 @@ public:
 
             // center_of_mass_shift(*(Tptcl*)&_bin,p,2);
             // generate particles at different orbitial phase
-            _bin.orbitToParticle(_ptcl_artificial[2*i], _ptcl_artificial[2*i+1], _bin, decca_*iph, G);
+            _bin.orbitToParticle(_ptcl_artificial[2*i], _ptcl_artificial[2*i+1], _bin, decca_*iph, gravitational_constant);
 
             //// use velocity to weight mass (not accurate)
             //PS::F64vec dvvec= _ptcl_artificial[2*i].vel - _ptcl_artificial[2*i+1].vel;

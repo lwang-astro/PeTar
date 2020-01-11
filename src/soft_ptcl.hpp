@@ -8,13 +8,16 @@ public:
     PS::F64vec acorr; ///> soft gradient correction for 4th order KDKDK method
 #endif
     PS::F64 pot; ///> full potential
-    PS::S32 n_ngb; // neighbor number+1
+    PS::S32 n_ngb; ///> neighbor number+1
+    static PS::F64 grav_const; ///> gravitational constant
     void clear(){
         acc = 0.0;
         pot = 0.0;
         n_ngb = 0;
     }
 };
+
+PS::F64 ForceSoft::grav_const = 1.0;
 
 class FPSoft: public Ptcl{
 public:
