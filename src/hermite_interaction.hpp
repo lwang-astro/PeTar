@@ -438,9 +438,9 @@ public:
                 const Float rinv = 1.0/r;
                 const Float k = ChangeOver::calcPotWTwo(pi.changeover, pj.changeover, r);
         
-                poti += -gravitational_constant*pj.mass*rinv*k;
+                poti += -pj.mass*rinv*k;
             }
-            _energy.epot += poti*pi.mass;
+            _energy.epot += gravitational_constant*poti*pi.mass;
         }
 
 #ifdef SOFT_PERT

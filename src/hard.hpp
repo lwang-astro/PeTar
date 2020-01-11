@@ -227,11 +227,12 @@ private:
     template <class Tpi>
     inline void calcAccPotShortWithLinearCutoff(Tpi& _pi,
                                                 const Ptcl& _pj) {
+        PS::F64 G = ForceSoft::grav_const;
         const PS::F64vec dr = _pi.pos - _pj.pos;
         const PS::F64 dr2 = dr * dr;
         const PS::F64 dr2_eps = dr2 + manager->eps_sq;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
-        const PS::F64 movr = _pj.mass * drinv;
+        const PS::F64 movr = G*_pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
         const PS::F64 movr3 = movr * drinv2;
         const PS::F64 dr_eps = drinv * dr2_eps;
@@ -242,7 +243,7 @@ private:
         const PS::F64 r_out2 = r_out * r_out;
         const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
         const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
-        const PS::F64 movr_max = _pj.mass * drinv_max;
+        const PS::F64 movr_max = G*_pj.mass * drinv_max;
         const PS::F64 drinv2_max = drinv_max*drinv_max;
         const PS::F64 movr3_max = movr_max * drinv2_max;
 
@@ -275,13 +276,14 @@ private:
     template <class Tpi>
     inline void calcAccPotShortWithLinearCutoff(Tpi& _pi,
                                                 const EPJSoft& _pj) {
+        PS::F64 G = ForceSoft::grav_const;
         const PS::F64vec dr = _pi.pos - _pj.pos;
         const PS::F64 dr2 = dr * dr;
         const PS::F64 dr2_eps = dr2 + manager->eps_sq;
         const PS::F64 r_out = manager->r_out_base;
         const PS::F64 r_out2 = r_out * r_out;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
-        const PS::F64 movr = _pj.mass * drinv;
+        const PS::F64 movr = G*_pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
         const PS::F64 movr3 = movr * drinv2;
         const PS::F64 dr_eps = drinv * dr2_eps;
@@ -292,7 +294,7 @@ private:
         // linear cutoff 
         const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
         const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
-        const PS::F64 movr_max = _pj.mass * drinv_max;
+        const PS::F64 movr_max = G*_pj.mass * drinv_max;
         const PS::F64 drinv2_max = drinv_max*drinv_max;
         const PS::F64 movr3_max = movr_max * drinv2_max;
 
@@ -325,13 +327,14 @@ private:
     template <class Tpi>
     inline void calcAccChangeOverCorrection(Tpi& _pi,
                                             const Ptcl& _pj) {
+        PS::F64 G = ForceSoft::grav_const;
         const PS::F64vec dr = _pi.pos - _pj.pos;
         const PS::F64 dr2 = dr * dr;
         const PS::F64 dr2_eps = dr2 + manager->eps_sq;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
         const PS::F64 movr = _pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
-        const PS::F64 movr3 = movr * drinv2;
+        const PS::F64 movr3 = G*movr * drinv2;
         const PS::F64 dr_eps = drinv * dr2_eps;
 
         // old
@@ -355,11 +358,12 @@ private:
     template <class Tpi>
     inline void calcAccChangeOverCorrection(Tpi& _pi,
                                             const EPJSoft& _pj) {
+        PS::F64 G = ForceSoft::grav_const;
         const PS::F64vec dr = _pi.pos - _pj.pos;
         const PS::F64 dr2 = dr * dr;
         const PS::F64 dr2_eps = dr2 + manager->eps_sq;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
-        const PS::F64 movr = _pj.mass * drinv;
+        const PS::F64 movr = G*_pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
         const PS::F64 movr3 = movr * drinv2;
         const PS::F64 dr_eps = drinv * dr2_eps;
@@ -383,6 +387,7 @@ private:
     template <class Tpi>
     inline void calcAcorrShortWithLinearCutoff(Tpi& _pi,
                                                const Ptcl& _pj) {
+        PS::F64 G = ForceSoft::grav_const;
         const PS::F64 r_out = manager->changeover.getRout();
         const PS::F64 r_out2 = r_out * r_out;
 
@@ -393,7 +398,7 @@ private:
         const PS::F64 drda = dr*da;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
         const PS::F64 drdadrinv = drda*drinv;
-        const PS::F64 movr = _pj.mass * drinv;
+        const PS::F64 movr = G*_pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
         const PS::F64 movr3 = movr * drinv2;
         const PS::F64 dr_eps = drinv * dr2_eps;
@@ -403,7 +408,7 @@ private:
 
         const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
         const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
-        const PS::F64 movr_max = _pj.mass * drinv_max;
+        const PS::F64 movr_max = G*_pj.mass * drinv_max;
         const PS::F64 drinv2_max = drinv_max*drinv_max;
         const PS::F64 movr3_max = movr_max * drinv2_max;
 
@@ -419,6 +424,7 @@ private:
     template <class Tpi>
     inline void calcAcorrShortWithLinearCutoff(Tpi& _pi,
                                                const EPJSoft& _pj) {
+        PS::F64 G = ForceSoft::grav_const;
         const PS::F64 r_out = manager->changeover.getRout();
         const PS::F64 r_out2 = r_out * r_out;
 
@@ -429,7 +435,7 @@ private:
         const PS::F64 drda = dr*da;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
         const PS::F64 drdadrinv = drda*drinv;
-        const PS::F64 movr = _pj.mass * drinv;
+        const PS::F64 movr = G*_pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
         const PS::F64 movr3 = movr * drinv2;
         const PS::F64 dr_eps = drinv * dr2_eps;
@@ -440,7 +446,7 @@ private:
 
         const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
         const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
-        const PS::F64 movr_max = _pj.mass * drinv_max;
+        const PS::F64 movr_max = G*_pj.mass * drinv_max;
         const PS::F64 drinv2_max = drinv_max*drinv_max;
         const PS::F64 movr3_max = movr_max * drinv2_max;
 

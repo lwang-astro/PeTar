@@ -51,7 +51,7 @@ public:
         const Float mass2 = _p2.mass;
         const Float* pos2 = &_p2.pos.x;
 
-        Float m1m2 = mass1*mass2;
+        Float gm1m2 = gravitational_constant*mass1*mass2;
         
         Float dr[3] = {pos2[0] -pos1[0],
                        pos2[1] -pos1[1],
@@ -71,15 +71,15 @@ public:
         Float k = ChangeOver::calcAcc0WTwo(ch1,ch2,r);
         Float kpot = ChangeOver::calcPotWTwo(ch1,ch2,r);
 
-        Float mor3_1 = mass2*inv_r3*k;
-        Float mor3_2 = mass1*inv_r3*k;
+        Float mor3_1 = gravitational_constant*mass2*inv_r3*k;
+        Float mor3_2 = gravitational_constant*mass1*inv_r3*k;
 
-        Float m1m2or = m1m2*inv_r*kpot;
+        Float m1m2or = gm1m2*inv_r*kpot;
 #else
-        Float mor3_1 = mass2*inv_r3;
-        Float mor3_2 = mass1*inv_r3;
+        Float mor3_1 = gravitational_constant*mass2*inv_r3;
+        Float mor3_2 = gravitational_constant*mass1*inv_r3;
 
-        Float m1m2or = m1m2*inv_r;
+        Float m1m2or = gm1m2*inv_r;
 #endif
 
         acc1[0] = mor3_1 * dr[0];
