@@ -208,12 +208,14 @@ struct CalcForcePPSimd{
             }
             pg.run_epj_for_p3t_with_linear_cutoff(n_ip, n_jp_tmp);
             for(PS::S32 i=0; i<n_ip; i++){
-                PS::F64 * p = &(force[i].pot);
-                PS::F64 * a = (PS::F64 * )(&force[i].acc[0]);
+                PS::F64 p = 0;
+                PS::F64 a[3]= {0,0,0};
                 PS::F64 n_ngb = 0;
-                pg.accum_accp_one(i, a[0], a[1], a[2], *p, n_ngb);
-                force[i].acc *= G;
-                force[i].pot *= G;
+                pg.accum_accp_one(i, a[0], a[1], a[2], p, n_ngb);
+                force[i].acc[0] += G*a[0];
+                force[i].acc[1] += G*a[1];
+                force[i].acc[2] += G*a[2];
+                force[i].pot += G*p;
                 force[i].n_ngb += (PS::S32)(n_ngb*1.00001);
             }
         }
@@ -270,12 +272,14 @@ struct CalcForceEpEpWithLinearCutoffSimd{
             }
             pg.run_epj_for_p3t_with_linear_cutoff(n_ip, n_jp_tmp);
             for(PS::S32 i=0; i<n_ip; i++){
-                PS::F64 * p = &(force[i].pot);
-                PS::F64 * a = (PS::F64 * )(&force[i].acc[0]);
+                PS::F64 p = 0;
+                PS::F64 a[3]= {0,0,0};
                 PS::F64 n_ngb = 0;
-                pg.accum_accp_one(i, a[0], a[1], a[2], *p, n_ngb);
-                force[i].acc *= G;
-                force[i].pot *= G;
+                pg.accum_accp_one(i, a[0], a[1], a[2], p, n_ngb);
+                force[i].acc[0] += G*a[0];
+                force[i].acc[1] += G*a[1];
+                force[i].acc[2] += G*a[2];
+                force[i].pot += G*p;
                 force[i].n_ngb += (PS::S32)(n_ngb*1.00001);
             }
         }
@@ -321,11 +325,13 @@ struct CalcForceEpSpMonoSimd{
             }
             pg.run_epj(n_ip, n_jp_tmp);
             for(PS::S32 i=0; i<n_ip; i++){
-                PS::F64 * p = &(force[i].pot);
-                PS::F64 * a = (PS::F64 * )(&force[i].acc[0]);
-                pg.accum_accp_one(i, a[0], a[1], a[2], *p);
-                force[i].acc *= G;
-                force[i].pot *= G;
+                PS::F64 p = 0;
+                PS::F64 a[3]= {0,0,0};
+                pg.accum_accp_one(i, a[0], a[1], a[2], p);
+                force[i].acc[0] += G*a[0];
+                force[i].acc[1] += G*a[1];
+                force[i].acc[2] += G*a[2];
+                force[i].pot += G*p;
             }
         }
     }
@@ -371,11 +377,13 @@ struct CalcForceEpSpQuadSimd{
             }
             pg.run_spj(n_ip, n_jp_tmp);
             for(PS::S32 i=0; i<n_ip; i++){
-                PS::F64 * p = &(force[i].pot);
-                PS::F64 * a = (PS::F64 * )(&force[i].acc[0]);
-                pg.accum_accp_one(i, a[0], a[1], a[2], *p);
-                force[i].acc *= G;
-                force[i].pot *= G;
+                PS::F64 p = 0;
+                PS::F64 a[3]= {0,0,0};
+                pg.accum_accp_one(i, a[0], a[1], a[2], p);
+                force[i].acc[0] += G*a[0];
+                force[i].acc[1] += G*a[1];
+                force[i].acc[2] += G*a[2];
+                force[i].pot += G*p;
             }
         }
     }

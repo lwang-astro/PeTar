@@ -232,9 +232,9 @@ private:
         const PS::F64 dr2 = dr * dr;
         const PS::F64 dr2_eps = dr2 + manager->eps_sq;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
-        const PS::F64 movr = G*_pj.mass * drinv;
+        const PS::F64 gmor = G*_pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
-        const PS::F64 movr3 = movr * drinv2;
+        const PS::F64 gmor3 = gmor * drinv2;
         const PS::F64 dr_eps = drinv * dr2_eps;
         const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, dr_eps);
 
@@ -243,29 +243,29 @@ private:
         const PS::F64 r_out2 = r_out * r_out;
         const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
         const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
-        const PS::F64 movr_max = G*_pj.mass * drinv_max;
+        const PS::F64 gmor_max = G*_pj.mass * drinv_max;
         const PS::F64 drinv2_max = drinv_max*drinv_max;
-        const PS::F64 movr3_max = movr_max * drinv2_max;
+        const PS::F64 gmor3_max = gmor_max * drinv2_max;
 
         auto& pj_artificial = _pj.group_data.artificial;
 #ifdef ONLY_SOFT
         const PS::F64 kpot  = 1.0 - ChangeOver::calcPotWTwo(_pi.changeover, _pj.changeover, dr_eps);
         // single, remove linear cutoff, obtain changeover soft potential
-        if (pj_artificial.isSingle()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (movr*kpot  - movr_max);   
+        if (pj_artificial.isSingle()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
         // member, mass is zero, use backup mass
-        else if (pj.artificial.isMember()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (pj_artificial.mass_backup*drinv*kpot  - movr_max);   
-        // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, movr_max cancel it to 0.0
-        else _pi.pot_tot += movr_max; 
+        else if (pj.artificial.isMember()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (pj_artificial.mass_backup*drinv*kpot  - gmor_max);   
+        // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
+        else _pi.pot_tot += gmor_max; 
 #else
         // single/member, remove linear cutoff, obtain total potential
-        if (pj_artificial.isSingle()) _pi.pot_tot -= (movr - movr_max);   
+        if (pj_artificial.isSingle()) _pi.pot_tot -= (gmor - gmor_max);   
         // member, mass is zero, use backup mass
-        else if (pj_artificial.isMember()) _pi.pot_tot -= (pj_artificial.mass_backup*drinv  - movr_max);   
-        // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, movr_max cancel it to 0.0
-        else _pi.pot_tot += movr_max; 
+        else if (pj_artificial.isMember()) _pi.pot_tot -= (pj_artificial.mass_backup*drinv  - gmor_max);   
+        // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
+        else _pi.pot_tot += gmor_max; 
 #endif
         // correct to changeover soft acceleration
-        _pi.acc -= (movr3*k - movr3_max)*dr;
+        _pi.acc -= (gmor3*k - gmor3_max)*dr;
     }
 
     //! correct force and potential for soft force with changeover function
@@ -283,9 +283,9 @@ private:
         const PS::F64 r_out = manager->r_out_base;
         const PS::F64 r_out2 = r_out * r_out;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
-        const PS::F64 movr = G*_pj.mass * drinv;
+        const PS::F64 gmor = G*_pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
-        const PS::F64 movr3 = movr * drinv2;
+        const PS::F64 gmor3 = gmor * drinv2;
         const PS::F64 dr_eps = drinv * dr2_eps;
         ChangeOver chj;
         chj.setR(_pj.r_in, _pj.r_out);
@@ -294,29 +294,29 @@ private:
         // linear cutoff 
         const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
         const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
-        const PS::F64 movr_max = G*_pj.mass * drinv_max;
+        const PS::F64 gmor_max = G*_pj.mass * drinv_max;
         const PS::F64 drinv2_max = drinv_max*drinv_max;
-        const PS::F64 movr3_max = movr_max * drinv2_max;
+        const PS::F64 gmor3_max = gmor_max * drinv2_max;
 
         auto& pj_artificial = _pj.group_data.artificial;
 #ifdef ONLY_SOFT
         const PS::F64 kpot  = 1.0 - ChangeOver::calcPotWTwo(_pi.changeover, chj, dr_eps);
         // single, remove linear cutoff, obtain changeover soft potential
-        if (pj_artificial.isSingle()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (movr*kpot  - movr_max);   
+        if (pj_artificial.isSingle()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
         // member, mass is zero, use backup mass
-        else if (pj_artificial.isMember()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (pj_artificial.mass_backup*drinv*kpot  - movr_max);   
-        // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, movr_max cancel it to 0.0
-        else _pi.pot_tot += movr_max; 
+        else if (pj_artificial.isMember()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (pj_artificial.mass_backup*drinv*kpot  - gmor_max);   
+        // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
+        else _pi.pot_tot += gmor_max; 
 #else
         // single/member, remove linear cutoff, obtain total potential
-        if (pj_artificial.isSingle()) _pi.pot_tot -= (movr - movr_max);   
+        if (pj_artificial.isSingle()) _pi.pot_tot -= (gmor - gmor_max);   
         // member, mass is zero, use backup mass
-        else if (pj_artificial.isMember()) _pi.pot_tot -= (pj_artificial.mass_backup*drinv  - movr_max);   
-        // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, movr_max cancel it to 0.0
-        else _pi.pot_tot += movr_max; 
+        else if (pj_artificial.isMember()) _pi.pot_tot -= (pj_artificial.mass_backup*drinv  - gmor_max);   
+        // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
+        else _pi.pot_tot += gmor_max; 
 #endif
         // correct to changeover soft acceleration
-        _pi.acc -= (movr3*k - movr3_max)*dr;
+        _pi.acc -= (gmor3*k - gmor3_max)*dr;
     }
 
     //! correct force and potential for changeover function change
@@ -332,9 +332,9 @@ private:
         const PS::F64 dr2 = dr * dr;
         const PS::F64 dr2_eps = dr2 + manager->eps_sq;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
-        const PS::F64 movr = _pj.mass * drinv;
+        const PS::F64 gmor = G*_pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
-        const PS::F64 movr3 = G*movr * drinv2;
+        const PS::F64 gmor3 = gmor * drinv2;
         const PS::F64 dr_eps = drinv * dr2_eps;
 
         // old
@@ -347,7 +347,7 @@ private:
         const PS::F64 knew = 1.0 - ChangeOver::calcAcc0WTwo(chinew, chjnew, dr_eps);
 
         // correct to changeover soft acceleration
-        _pi.acc -= movr3*(knew-kold)*dr;
+        _pi.acc -= gmor3*(knew-kold)*dr;
     }
 
     //! correct force and potential for changeover function change
@@ -363,9 +363,9 @@ private:
         const PS::F64 dr2 = dr * dr;
         const PS::F64 dr2_eps = dr2 + manager->eps_sq;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
-        const PS::F64 movr = G*_pj.mass * drinv;
+        const PS::F64 gmor = G*_pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
-        const PS::F64 movr3 = movr * drinv2;
+        const PS::F64 gmor3 = gmor * drinv2;
         const PS::F64 dr_eps = drinv * dr2_eps;
 
         ChangeOver chjold;
@@ -380,7 +380,7 @@ private:
         const PS::F64 knew = 1.0 - ChangeOver::calcAcc0WTwo(chinew, chjnew, dr_eps);
 
         // correct to changeover soft acceleration
-        _pi.acc -= movr3*(knew-kold)*dr;
+        _pi.acc -= gmor3*(knew-kold)*dr;
     }
 
 #ifdef KDKDK_4TH
@@ -398,9 +398,9 @@ private:
         const PS::F64 drda = dr*da;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
         const PS::F64 drdadrinv = drda*drinv;
-        const PS::F64 movr = G*_pj.mass * drinv;
+        const PS::F64 gmor = G*_pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
-        const PS::F64 movr3 = movr * drinv2;
+        const PS::F64 gmor3 = gmor * drinv2;
         const PS::F64 dr_eps = drinv * dr2_eps;
 
         const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, dr_eps);
@@ -408,14 +408,14 @@ private:
 
         const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
         const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
-        const PS::F64 movr_max = G*_pj.mass * drinv_max;
+        const PS::F64 gmor_max = G*_pj.mass * drinv_max;
         const PS::F64 drinv2_max = drinv_max*drinv_max;
-        const PS::F64 movr3_max = movr_max * drinv2_max;
+        const PS::F64 gmor3_max = gmor_max * drinv2_max;
 
         const PS::F64 alpha = drda*drinv2;
         const PS::F64 alpha_max = drda * drinv2_max;
-        const PS::F64vec acorr_k = movr3 * (k*da - (3.0*k*alpha - kdot) * dr);
-        const PS::F64vec acorr_max = movr3_max * (da - 3.0*alpha_max * dr);
+        const PS::F64vec acorr_k = gmor3 * (k*da - (3.0*k*alpha - kdot) * dr);
+        const PS::F64vec acorr_max = gmor3_max * (da - 3.0*alpha_max * dr);
 
         _pi.acorr -= 2.0 * (acorr_k - acorr_max);
         //acci + dt_kick * dt_kick * acorri /48; 
@@ -435,9 +435,9 @@ private:
         const PS::F64 drda = dr*da;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
         const PS::F64 drdadrinv = drda*drinv;
-        const PS::F64 movr = G*_pj.mass * drinv;
+        const PS::F64 gmor = G*_pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
-        const PS::F64 movr3 = movr * drinv2;
+        const PS::F64 gmor3 = gmor * drinv2;
         const PS::F64 dr_eps = drinv * dr2_eps;
         ChangeOver chj;
         chj.setR(_pj.r_in, _pj.r_out);
@@ -446,14 +446,14 @@ private:
 
         const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
         const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
-        const PS::F64 movr_max = G*_pj.mass * drinv_max;
+        const PS::F64 gmor_max = G*_pj.mass * drinv_max;
         const PS::F64 drinv2_max = drinv_max*drinv_max;
-        const PS::F64 movr3_max = movr_max * drinv2_max;
+        const PS::F64 gmor3_max = gmor_max * drinv2_max;
 
         const PS::F64 alpha = drda*drinv2;
         const PS::F64 alpha_max = drda * drinv2_max;
-        const PS::F64vec acorr_k = movr3 * (k*da - (3.0*k*alpha - kdot) * dr);
-        const PS::F64vec acorr_max = movr3_max * (da - 3.0*alpha_max * dr);
+        const PS::F64vec acorr_k = gmor3 * (k*da - (3.0*k*alpha - kdot) * dr);
+        const PS::F64vec acorr_max = gmor3_max * (da - 3.0*alpha_max * dr);
 
         _pi.acorr -= 2.0 * (acorr_k - acorr_max);
         //acci + dt_kick * dt_kick * acorri /48; 

@@ -71,38 +71,37 @@ public:
         Float k = ChangeOver::calcAcc0WTwo(ch1,ch2,r);
         Float kpot = ChangeOver::calcPotWTwo(ch1,ch2,r);
 
-        Float mor3_1 = gravitational_constant*mass2*inv_r3*k;
-        Float mor3_2 = gravitational_constant*mass1*inv_r3*k;
+        Float gmor3_1 = gravitational_constant*mass2*inv_r3*k;
+        Float gmor3_2 = gravitational_constant*mass1*inv_r3*k;
 
-        Float m1m2or = gm1m2*inv_r*kpot;
+        Float gm1m2or = gm1m2*inv_r*kpot;
 #else
-        Float mor3_1 = gravitational_constant*mass2*inv_r3;
-        Float mor3_2 = gravitational_constant*mass1*inv_r3;
+        Float gmor3_1 = gravitational_constant*mass2*inv_r3;
+        Float gmor3_2 = gravitational_constant*mass1*inv_r3;
 
-        Float m1m2or = gm1m2*inv_r;
+        Float gm1m2or = gm1m2*inv_r;
 #endif
 
-        acc1[0] = mor3_1 * dr[0];
-        acc1[1] = mor3_1 * dr[1];
-        acc1[2] = mor3_1 * dr[2];
+        acc1[0] = gmor3_1 * dr[0];
+        acc1[1] = gmor3_1 * dr[1];
+        acc1[2] = gmor3_1 * dr[2];
 
-        acc2[0] = - mor3_2 * dr[0];
-        acc2[1] = - mor3_2 * dr[1];
-        acc2[2] = - mor3_2 * dr[2];
+        acc2[0] = - gmor3_2 * dr[0];
+        acc2[1] = - gmor3_2 * dr[1];
+        acc2[2] = - gmor3_2 * dr[2];
 
 #ifdef AR_TTL 
         // trans formation function gradient
 #ifdef AR_CHANGEOVER
-        Float m1m2or3 = m1m2*inv_r3*k;
+        Float gm1m2or3 = gm1m2*inv_r3*k;
 #else
-        Float m1m2or3 = m1m2*inv_r3;
+        Float gm1m2or3 = gm1m2*inv_r3;
 #endif
         Float* gtgrad1 = _f1.gtgrad;
         Float* gtgrad2 = _f2.gtgrad;
-
-        gtgrad1[0] = m1m2or3 * dr[0];
-        gtgrad1[1] = m1m2or3 * dr[1];
-        gtgrad1[2] = m1m2or3 * dr[2];
+        gtgrad1[0] = gm1m2or3 * dr[0];
+        gtgrad1[1] = gm1m2or3 * dr[1];
+        gtgrad1[2] = gm1m2or3 * dr[2];
 
         gtgrad2[0] = - gtgrad1[0];
         gtgrad2[1] = - gtgrad1[1];
@@ -110,10 +109,10 @@ public:
 #endif
 
         // potential energy
-        _epot = - m1m2or;
+        _epot = - gm1m2or;
 
         // transformation factor for kick
-        Float gt_kick = 1.0/m1m2or;
+        Float gt_kick = 1.0/gm1m2or;
 
         return gt_kick;
     }
@@ -159,25 +158,25 @@ public:
                 const Float kpot  = ChangeOver::calcPotWTwo(_particles[i].changeover, _particles[j].changeover, r);
                 const Float k     = ChangeOver::calcAcc0WTwo(_particles[i].changeover, _particles[j].changeover, r);
 
-                Float mor3 = massj*inv_r3*k;
-                Float mor = massj*inv_r*kpot;
+                Float gmor3 = gravitational_constant*massj*inv_r3*k;
+                Float gmor = gravitational_constant*massj*inv_r*kpot;
 #else
-                Float mor3 = massj*inv_r3;
-                Float mor = massj*inv_r;
+                Float gmor3 = gravitational_constant*massj*inv_r3;
+                Float gmor = gravitational_constant*massj*inv_r;
 #endif
-                acci[0] += mor3 * dr[0];
-                acci[1] += mor3 * dr[1];
-                acci[2] += mor3 * dr[2];
+                acci[0] += gmor3 * dr[0];
+                acci[1] += gmor3 * dr[1];
+                acci[2] += gmor3 * dr[2];
 
 #ifdef AR_TTL                     
-                Float mimjor3 = massi*mor3;
-                gtgradi[0] += mimjor3 * dr[0];
-                gtgradi[1] += mimjor3 * dr[1];
-                gtgradi[2] += mimjor3 * dr[2];
+                Float gmimjor3 = massi*gmor3;
+                gtgradi[0] += gmimjor3 * dr[0];
+                gtgradi[1] += gmimjor3 * dr[1];
+                gtgradi[2] += gmimjor3 * dr[2];
 #endif
 
-                poti -= mor;
-                gtki += mor;
+                poti -= gmor;
+                gtki += gmor;
                     
             }
             _epot += poti * massi;
@@ -284,11 +283,11 @@ public:
                     Float r  = sqrt(r2);
                     Float k  = ChangeOver::calcAcc0WTwo(chi, *changeover[j], r);
                     Float r3 = r*r2;
-                    Float mor3 = gravitational_constant*m[j]/r3 * k;
+                    Float gmor3 = gravitational_constant*m[j]/r3 * k;
 
-                    acc_pert[0] += mor3 * dr[0];
-                    acc_pert[1] += mor3 * dr[1];
-                    acc_pert[2] += mor3 * dr[2];
+                    acc_pert[0] += gmor3 * dr[0];
+                    acc_pert[1] += gmor3 * dr[1];
+                    acc_pert[2] += gmor3 * dr[2];
 
                 }
                 // group perturber
@@ -305,11 +304,11 @@ public:
                         mk += ptcl_mem[k].mass * ChangeOver::calcAcc0WTwo(chi, ptcl_mem[k].changeover, r);
                     }
                     Float r3 = r*r2;
-                    Float mor3 = gravitational_constant*mk/r3;
+                    Float gmor3 = gravitational_constant*mk/r3;
 
-                    acc_pert[0] += mor3 * dr[0];
-                    acc_pert[1] += mor3 * dr[1];
-                    acc_pert[2] += mor3 * dr[2];
+                    acc_pert[0] += gmor3 * dr[0];
+                    acc_pert[1] += gmor3 * dr[1];
+                    acc_pert[2] += gmor3 * dr[2];
                 }
 
 #ifdef SOFT_PERT
@@ -361,9 +360,9 @@ public:
     Float calcPertFromForce(const Float* _force, const Float _mp, const Float _mpert) {
         Float force2 = _force[0]*_force[0]+_force[1]*_force[1]+_force[2]*_force[2];
 #ifdef AR_SLOWDOWN_PERT_R4
-        return force2/(_mp*_mpert);
+        return force2/(gravitational_constant*_mp*_mpert);
 #else
-        Float force = sqrt(force2);
+        Float force = sqrt(force2)/gravitational_constant;
         return sqrt(force/(_mp*_mpert))*force;
 #endif
     }
@@ -440,8 +439,8 @@ public:
 
             // force dependent method
             // min sqrt(r^3/(G m))
-            Float mor3 = (mj+mcm)*r*r2/(mj*mcm);
-            trf2_min =  std::min(trf2_min, mor3);
+            Float gmor3 = (mj+mcm)*r*r2/(gravitational_constant*mj*mcm);
+            trf2_min =  std::min(trf2_min, gmor3);
 
 #endif
         }            
@@ -556,8 +555,8 @@ public:
 
                 // force dependent method
                 // min sqrt(r^3/(G m))
-                Float mor3 = (mj+mcm)*r*r2/(gravitational_constant*mj*mcm);
-                trf2_min =  std::min(trf2_min, mor3);
+                Float gmor3 = (mj+mcm)*r*r2/(gravitational_constant*mj*mcm);
+                trf2_min =  std::min(trf2_min, gmor3);
 
                 //Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
                 //Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];

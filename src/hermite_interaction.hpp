@@ -73,13 +73,13 @@ public:
         const Float rinv2 = rinv*rinv;
         const Float rinv3 = rinv2*rinv;
 
-        const Float mor3 = gravitational_constant*_pj.mass*rinv3; 
-        const Float mor3k = mor3*k;
-        const Float mor3kd = mor3*kdot;
-        const Float acc0[3] = {mor3k*dr[0], mor3k*dr[1], mor3k*dr[2]};
-        const Float acc1[3] = {mor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + mor3kd*dr[0],
-                               mor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + mor3kd*dr[1],
-                               mor3k*dv[2] - 3.0*drdv*rinv2*acc0[2] + mor3kd*dr[2]};
+        const Float gmor3 = gravitational_constant*_pj.mass*rinv3; 
+        const Float gmor3k = gmor3*k;
+        const Float gmor3kd = gmor3*kdot;
+        const Float acc0[3] = {gmor3k*dr[0], gmor3k*dr[1], gmor3k*dr[2]};
+        const Float acc1[3] = {gmor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + gmor3kd*dr[0],
+                               gmor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + gmor3kd*dr[1],
+                               gmor3k*dv[2] - 3.0*drdv*rinv2*acc0[2] + gmor3kd*dr[2]};
         _fi.acc0[0] += acc0[0];
         _fi.acc0[1] += acc0[1];
         _fi.acc0[2] += acc0[2];
@@ -129,13 +129,13 @@ public:
             const Float rinv2 = rinv*rinv;
             const Float rinv3 = rinv2*rinv;
 
-            const Float mor3 = gravitational_constant*pj.mass*rinv3; 
-            const Float mor3k = mor3*k;
-            const Float mor3kd = mor3*kdot;
-            const Float acc0[3] = {mor3k*dr[0], mor3k*dr[1], mor3k*dr[2]};
-            const Float acc1[3] = {mor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + mor3kd*dr[0],
-                                   mor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + mor3kd*dr[1],
-                                   mor3k*dv[2] - 3.0*drdv*rinv2*acc0[2] + mor3kd*dr[2]};
+            const Float gmor3 = gravitational_constant*pj.mass*rinv3; 
+            const Float gmor3k = gmor3*k;
+            const Float gmor3kd = gmor3*kdot;
+            const Float acc0[3] = {gmor3k*dr[0], gmor3k*dr[1], gmor3k*dr[2]};
+            const Float acc1[3] = {gmor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + gmor3kd*dr[0],
+                                   gmor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + gmor3kd*dr[1],
+                                   gmor3k*dv[2] - 3.0*drdv*rinv2*acc0[2] + gmor3kd*dr[2]};
             _fi.acc0[0] += acc0[0];
             _fi.acc0[1] += acc0[1];
             _fi.acc0[2] += acc0[2];
@@ -189,12 +189,12 @@ public:
         const Float rinv2 = rinv*rinv;
         const Float rinv3 = rinv2*rinv;
 
-        const Float mor3k = gravitational_constant*mk*rinv3;
-        const Float mor3kd = gravitational_constant*mkdot*rinv3;
-        const Float acc0[3] = {mor3k*dr[0], mor3k*dr[1], mor3k*dr[2]};
-        const Float acc1[3] = {mor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + mor3kd*dr[0],
-                               mor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + mor3kd*dr[1],
-                               mor3k*dv[2] - 3.0*drdv*rinv2*acc0[2] + mor3kd*dr[2]};
+        const Float gmor3k = gravitational_constant*mk*rinv3;
+        const Float gmor3kd = gravitational_constant*mkdot*rinv3;
+        const Float acc0[3] = {gmor3k*dr[0], gmor3k*dr[1], gmor3k*dr[2]};
+        const Float acc1[3] = {gmor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + gmor3kd*dr[0],
+                               gmor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + gmor3kd*dr[1],
+                               gmor3k*dv[2] - 3.0*drdv*rinv2*acc0[2] + gmor3kd*dr[2]};
         _fi.acc0[0] += acc0[0];
         _fi.acc0[1] += acc0[1];
         _fi.acc0[2] += acc0[2];
@@ -249,13 +249,13 @@ public:
         const Float rinv2 = rinv*rinv;
         const Float rinv3 = rinv2*rinv;
 
-        const Float mor3 = gravitational_constant*_pj.mass*rinv3; 
-        const Float mor3k = mor3*k;
-        const Float mor3kd = mor3*kdot;
-        const Float acc0[3] = {mor3k*dr[0], mor3k*dr[1], mor3k*dr[2]};
-        const Float acc1[3] = {mor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + mor3kd*dr[0],
-                               mor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + mor3kd*dr[1],
-                               mor3k*dv[2] - 3.0*drdv*rinv2*acc0[2] + mor3kd*dr[2]};
+        const Float gmor3 = gravitational_constant*_pj.mass*rinv3; 
+        const Float gmor3k = gmor3*k;
+        const Float gmor3kd = gmor3*kdot;
+        const Float acc0[3] = {gmor3k*dr[0], gmor3k*dr[1], gmor3k*dr[2]};
+        const Float acc1[3] = {gmor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + gmor3kd*dr[0],
+                               gmor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + gmor3kd*dr[1],
+                               gmor3k*dv[2] - 3.0*drdv*rinv2*acc0[2] + gmor3kd*dr[2]};
         _fi.acc0[0] += acc0[0];
         _fi.acc0[1] += acc0[1];
         _fi.acc0[2] += acc0[2];
@@ -317,13 +317,13 @@ public:
             const Float rinv2 = rinv*rinv;
             const Float rinv3 = rinv2*rinv;
 
-            const Float mor3 = gravitational_constant*pj.mass*rinv3; 
-            const Float mor3k = mor3*k;
-            const Float mor3kd = mor3*kdot;
-            const Float acc0[3] = {mor3k*dr[0], mor3k*dr[1], mor3k*dr[2]};
-            const Float acc1[3] = {mor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + mor3kd*dr[0],
-                                   mor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + mor3kd*dr[1],
-                                   mor3k*dv[2] - 3.0*drdv*rinv2*acc0[2] + mor3kd*dr[2]};
+            const Float gmor3 = gravitational_constant*pj.mass*rinv3; 
+            const Float gmor3k = gmor3*k;
+            const Float gmor3kd = gmor3*kdot;
+            const Float acc0[3] = {gmor3k*dr[0], gmor3k*dr[1], gmor3k*dr[2]};
+            const Float acc1[3] = {gmor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + gmor3kd*dr[0],
+                                   gmor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + gmor3kd*dr[1],
+                                   gmor3k*dv[2] - 3.0*drdv*rinv2*acc0[2] + gmor3kd*dr[2]};
             _fi.acc0[0] += acc0[0];
             _fi.acc0[1] += acc0[1];
             _fi.acc0[2] += acc0[2];
@@ -389,12 +389,12 @@ public:
         const Float rinv2 = rinv*rinv;
         const Float rinv3 = rinv2*rinv;
 
-        const Float mor3k = gravitational_constant*mk*rinv3;
-        const Float mor3kd = gravitational_constant*mkdot*rinv3;
-        const Float acc0[3] = {mor3k*dr[0], mor3k*dr[1], mor3k*dr[2]};
-        const Float acc1[3] = {mor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + mor3kd*dr[0],
-                               mor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + mor3kd*dr[1],
-                               mor3k*dv[2] - 3.0*drdv*rinv2*acc0[2] + mor3kd*dr[2]};
+        const Float gmor3k = gravitational_constant*mk*rinv3;
+        const Float gmor3kd = gravitational_constant*mkdot*rinv3;
+        const Float acc0[3] = {gmor3k*dr[0], gmor3k*dr[1], gmor3k*dr[2]};
+        const Float acc1[3] = {gmor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + gmor3kd*dr[0],
+                               gmor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + gmor3kd*dr[1],
+                               gmor3k*dv[2] - 3.0*drdv*rinv2*acc0[2] + gmor3kd*dr[2]};
         _fi.acc0[0] += acc0[0];
         _fi.acc0[1] += acc0[1];
         _fi.acc0[2] += acc0[2];

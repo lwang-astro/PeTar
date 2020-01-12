@@ -347,9 +347,9 @@ public:
             }
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
             PS::F64 decca_sum=0.0;
-            std::cerr<<"dEcca:";
+            //std::cerr<<"dEcca:";
             for (PS::S32 i=0; i<n_split_orbit; i++) {
-                std::cerr<<" "<<decca_list_[i]-dsin_ecca_list_[i];
+                //std::cerr<<" "<<decca_list_[i]-dsin_ecca_list_[i];
                 decca_sum += decca_list_[i] - 0.5*dsin_ecca_list_[i];
                 assert(decca_list_[i]-dsin_ecca_list_[i]>=0.0);
             }

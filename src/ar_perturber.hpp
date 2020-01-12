@@ -110,7 +110,7 @@ public:
             Float dacc_soft = calcSoftPertSlowDownBinary(p[0], p[1]);
             //soft_pert_min = _bin.mass*dacc_soft/(2.0*abs(_bin.semi));
             Float apo = _bin.semi*(1.0+_bin.ecc);
-            soft_pert_min = _bin.mass*dacc_soft/(apo*apo);
+            soft_pert_min = _bin.mass*dacc_soft/(_G*apo*apo);
             //soft_pert_min = _bin.mass*_bin.mass*dacc_soft;
         }
     }
