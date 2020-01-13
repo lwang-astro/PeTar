@@ -723,10 +723,14 @@ public:
             sym_int.info.generateBinaryTree(sym_int.particles, ar_manager.interaction.gravitational_constant);
             auto* apcm = ap_manager.getCMParticles(api);
             auto* aptt = ap_manager.getTidalTensorParticles(api);
+
+#ifdef SOFT_PERT
             TidalTensor tt;
             tt.fit(aptt, *apcm, ap_manager.r_tidal_tensor);
             sym_int.perturber.soft_pert=&tt;
-
+            // set tt group id to the total number of particles
+            sym_int.perturber.soft_pert->group_id = n_members;
+#endif
             // calculate soft_pert_min
             sym_int.perturber.calcSoftPertMin(sym_int.info.getBinaryTreeRoot(), ar_manager.interaction.gravitational_constant);
             
@@ -738,9 +742,6 @@ public:
             auto& pcm = sym_int.particles.cm;
             PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
             pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
-
-            // set tt gid
-            sym_int.perturber.soft_pert->group_id = pcm.changeover.getRout();
 
             //check paramters
             ASSERT(sym_int.info.checkParams());
@@ -812,9 +813,10 @@ public:
             // initial system 
             h4_int.initialSystemSingle(0.0);
 
+#ifdef SOFT_PERT
             // Tidal tensor 
-            TidalTensor tidal_tensor[n_group_size_max];
-            PS::S32 n_tt = 0;
+            TidalTensor tidal_tensor[_n_group+1];
+#endif
             
             // add groups
             if (_n_group>0) {
@@ -827,13 +829,26 @@ public:
                     auto* api = &(_ptcl_artificial[adr_first_ptcl[i]]);
                     auto* aptt = ap_manager.getTidalTensorParticles(api);
                     auto* apcm = ap_manager.getCMParticles(api);
+
                     // correct pos for t.t. cm
                     apcm->pos -= h4_int.particles.cm.pos;
-                    tidal_tensor[i].fit(aptt, *apcm, ap_manager.r_tidal_tensor);
-                    n_tt ++;
+
                     auto& groupi = h4_int.groups[i];
+
+#ifdef SOFT_PERT
+                    // fit tidal tensor
+                    tidal_tensor[i].fit(aptt, *apcm, ap_manager.r_tidal_tensor);
+
+                    // set tidal_tensor pointer
                     groupi.perturber.soft_pert = &tidal_tensor[i];
 
+                    // set group id of tidal tensor to the n_members
+                    groupi.perturber.soft_pert->group_id = groupi.particles.getSize();
+
+                    // same tidal_tensor id to member particle group_data for identification later
+                    for (PS::S32 k=0; k<groupi.particles.getSize(); k++) 
+                        groupi.particles[k].group_data.artificial.storeData(i+1);
+#endif
                     // calculate soft_pert_min
                     groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot(), ar_manager.interaction.gravitational_constant);
 
@@ -849,10 +864,17 @@ public:
                     for (PS::S32 k=0; k<groupi.particles.getSize(); k++) 
                         ASSERT(abs(groupi.particles[k].changeover.getRout()-r_out_cm)<1e-10);
 #endif
-                    // set group id of tidal tensor by r out.
-                    groupi.perturber.soft_pert->group_id = pcm.changeover.getRout();
                 }
             }
+
+            const PS::S32* single_index = h4_int.getSortDtIndexSingle();
+#ifdef SOFT_PERT
+            // set single particle group_data to _n_ptcl+1 to avoid confusion with tidal tensor id
+            for (PS::S32 i=0; i<h4_int.getNSingle(); i++) {
+                auto& pi = h4_int.particles[single_index[i]];
+                pi.group_data.artificial.storeData(_n_ptcl+1);
+            }
+#endif
 
             // initialization 
             h4_int.initialIntegration(); // get neighbors and min particles
@@ -878,6 +900,7 @@ public:
                 ASSERT(m_fac>0.0);
                 pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
 
+/*  It is not consistent to use tidal tensor for different group
 #ifdef SOFT_PERT                
                 // check whether all r_out are same (primoridal or not)
                 bool primordial_flag = true;
@@ -887,7 +910,7 @@ public:
                         primordial_flag =false;
                         break;
                     }
-                if (n_tt>0 && primordial_flag) {
+                if (_n_group>0 && primordial_flag) {
                     // check closed tt and only find consistent changeover 
                     PS::F32 tt_index=groupi.perturber.findCloseSoftPert(tidal_tensor, n_tt, n_group_size_max, groupi.particles.cm, r_out_cm);
                     ASSERT(tt_index<n_tt);
@@ -905,6 +928,7 @@ public:
                     tt_index=0;
                 }
 #endif
+*/
             }
 
             h4_int.initialIntegration();
@@ -941,6 +965,31 @@ public:
                     pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
 
 #ifdef SOFT_PERT                
+                    // find corresponding tidal tensor if exist
+                    PS::S32 tt_id_member = groupi.particles[0].group_data.artificial.getData(true);
+                    ASSERT(tt_id_member>0);
+
+                    if (tt_id_member<=_n_group) {
+                        PS::S32 n_members = groupi.particles.getSize();
+                        TidalTensor* tidal_tensor_i = &tidal_tensor[tt_id_member-1];
+
+                        // check whether n member is consistent
+                        if (int(tidal_tensor_i->group_id) == n_members) {
+                            // check member group_data to find whether all member has the same tidal tensor id
+                            bool tt_consistent = true;
+                            for (PS::S32 k=1; k<n_members; k++) {
+                                if (tt_id_member != groupi.particles[k].group_data.artificial.getData(true)) {
+                                    tt_consistent = false;
+                                    break;
+                                }
+                            }
+
+                            // if all match, set group tidal tensor 
+                            if (tt_consistent) groupi.perturber.soft_pert = tidal_tensor_i;
+                        }
+                    }
+
+                    /* not used anymore 
                     // check whether all r_out are same (primoridal or not)
                     bool primordial_flag = true;
                     PS::F64 r_out_cm = groupi.particles.cm.changeover.getRout();
@@ -967,9 +1016,11 @@ public:
 #endif
 
                     }
+                    */
 #endif
                 }
                 ASSERT(n_init_group<=n_act_group);
+/* Not consistent, should not shift
 #ifdef SOFT_PERT
                 // update c.m. for Tidal tensor
                 if (n_tt>0) {
@@ -980,6 +1031,7 @@ public:
                     }
                 }
 #endif
+*/
                 // initial after groups are modified
                 h4_int.initialIntegration();
                 h4_int.sortDtAndSelectActParticle();
@@ -1073,7 +1125,7 @@ public:
 #endif
                 }
             }
-            const PS::S32* single_index = h4_int.getSortDtIndexSingle();
+
             for (PS::S32 i=0; i<h4_int.getNSingle(); i++) {
                 auto& pi = h4_int.particles[single_index[i]];
 #ifdef CLUSTER_VELOCITY
