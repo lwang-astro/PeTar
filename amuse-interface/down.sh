@@ -1,5 +1,7 @@
 #!/bin/bash
 
+[ -e __init__.py ] || touch __init__.py
+
 npath=`pwd`
 [ ! -d src ] && mkdir src
 cd src
