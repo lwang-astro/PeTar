@@ -234,6 +234,16 @@ public:
             // generate particles at different orbitial phase
             COMM::Binary::orbitToParticle(_ptcl_artificial[2*i], _ptcl_artificial[2*i+1], _bin, decca_*iph, gravitational_constant);
 
+//#ifdef ARTIFICIAL_PARTICLE_DEBUG
+//            PS::F64 semi_i,ecc_i,r_i,rv_i;
+//            COMM::Binary::particleToSemiEcc(semi_i, ecc_i, r_i, rv_i, _ptcl_artificial[2*i], _ptcl_artificial[2*i+1], gravitational_constant);
+//            if (abs(semi_i-_bin.semi)>1e-10) {
+//                std::cerr<<"semi_i "<<semi_i<<" bin.semi "<<_bin.semi<<std::endl;
+//                abort();
+//            }
+//            assert(abs(ecc_i-_bin.ecc)<1e-10);
+//#endif
+
             //// use velocity to weight mass (not accurate)
             //PS::F64vec dvvec= _ptcl_artificial[2*i].vel - _ptcl_artificial[2*i+1].vel;
             //PS::F64 odv = 1.0/std::sqrt(dvvec*dvvec);
@@ -257,7 +267,7 @@ public:
 #endif
             }
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-            PS::F64vec pos_i_cm = (_ptcl_artificial[2*i].mass*_ptcl_artificial[2*i].pos+_ptcl_artificial[2*i].mass*_ptcl_artificial[2*i+1].pos)/(_ptcl_artificial[2*i].mass + _ptcl_artificial[2*i+1].mass);
+            PS::F64vec pos_i_cm = (_ptcl_artificial[2*i].mass*_ptcl_artificial[2*i].pos+_ptcl_artificial[2*i+1].mass*_ptcl_artificial[2*i+1].pos)/(_ptcl_artificial[2*i].mass + _ptcl_artificial[2*i+1].mass);
             assert(abs((pos_i_cm - _bin.pos)*(pos_i_cm - _bin.pos))<1e-10);
 #endif
             //mnormal += odv;
