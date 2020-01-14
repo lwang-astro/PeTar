@@ -3,9 +3,6 @@
 #include "Common/binary_tree.h"
 #include "tidal_tensor.hpp"
 
-#define ID_PHASE_SHIFT 4
-#define ID_PHASE_MASKER 0xF
-
 //! class to store necessary information for using artificial particles
 /*!
                   single    c.m.             members          initial     artificial
@@ -235,7 +232,7 @@ public:
 
             // center_of_mass_shift(*(Tptcl*)&_bin,p,2);
             // generate particles at different orbitial phase
-            _bin.orbitToParticle(_ptcl_artificial[2*i], _ptcl_artificial[2*i+1], _bin, decca_*iph, gravitational_constant);
+            COMM::Binary::orbitToParticle(_ptcl_artificial[2*i], _ptcl_artificial[2*i+1], _bin, decca_*iph, gravitational_constant);
 
             //// use velocity to weight mass (not accurate)
             //PS::F64vec dvvec= _ptcl_artificial[2*i].vel - _ptcl_artificial[2*i+1].vel;
@@ -259,12 +256,18 @@ public:
                 m_check[j] += pj->mass;
 #endif
             }
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+            PS::F64vec pos_i_cm = (_ptcl_artificial[2*i].mass*_ptcl_artificial[2*i].pos+_ptcl_artificial[2*i].mass*_ptcl_artificial[2*i+1].pos)/(_ptcl_artificial[2*i].mass + _ptcl_artificial[2*i+1].mass);
+            assert(abs((pos_i_cm - _bin.pos)*(pos_i_cm - _bin.pos))<1e-10);
+#endif
             //mnormal += odv;
         }
 
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-        assert(abs(m_check[0]-_bin.m1)<1e-10);
-        assert(abs(m_check[1]-_bin.m2)<1e-10);
+        if(getOrbitalParticleN()>0) {
+            assert(abs(m_check[0]-_bin.m1)<1e-10);
+            assert(abs(m_check[1]-_bin.m2)<1e-10);
+        }
 #endif
 
         // normalized the mass of each particles to keep the total mass the same as c.m. mass
@@ -299,7 +302,8 @@ public:
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
         assert(pcm->group_data.artificial.isCM());
 #endif        
-        pcm->mass = 0.0;
+        if (getOrbitalParticleN()>0) pcm->mass = 0.0;
+        else pcm->mass = _bin.mass;
         pcm->pos = _bin.pos;
         pcm->vel = _bin.vel;
         pcm->id  = - std::abs(_bin.id);
@@ -310,10 +314,6 @@ public:
     /*! @param[in] _n_split: particle split number, total artificial particle number is 2*_n_split+1, first 8 are tidal tensor particles, thus _n_split>=4
      */
     void setParticleSplitN(const PS::S32& _n_split) {
-        if (_n_split>(1<<ID_PHASE_SHIFT)) {
-            std::cerr<<"Error! ID_PHASE_SHIFT is too small for phase split! shift bit: "<<ID_PHASE_SHIFT<<" n_split_: "<<_n_split<<std::endl;
-            abort();
-        }
         ASSERT(_n_split>=4);
         n_split_  = _n_split;
         n_artificial_   = 2*_n_split+1;
@@ -367,23 +367,26 @@ public:
     */
     template <class Tptcl>
     void correctOrbitalParticleForce(Tptcl* _ptcl_artificial) {
-        auto* pcm = getCMParticles(_ptcl_artificial);
-        PS::F64vec& acc_cm = pcm->acc;
-        
-        acc_cm=PS::F64vec(0.0);
-        PS::F64 m_ob_tot = 0.0;
-
         auto* porb = getOrbitalParticles(_ptcl_artificial);
         const PS::S32 n_orb = getOrbitalParticleN();
-        for (int k=0; k<n_orb; k++) {
-            acc_cm += porb[k].mass*porb[k].acc; 
-            m_ob_tot += porb[k].mass;
-        }
-        acc_cm /= m_ob_tot;
+
+        if (n_orb>0) {
+            auto* pcm = getCMParticles(_ptcl_artificial);
+            PS::F64vec& acc_cm = pcm->acc;
+        
+            acc_cm=PS::F64vec(0.0);
+            PS::F64 m_ob_tot = 0.0;
+
+            for (int k=0; k<n_orb; k++) {
+                acc_cm += porb[k].mass*porb[k].acc; 
+                m_ob_tot += porb[k].mass;
+            }
+            acc_cm /= m_ob_tot;
 
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-        assert(abs(m_ob_tot-pcm->group_data.artificial.mass_backup)<1e-10);
+            assert(abs(m_ob_tot-pcm->group_data.artificial.mass_backup)<1e-10);
 #endif
+        }
     }
 
     //! correct artificial particles force for furture use

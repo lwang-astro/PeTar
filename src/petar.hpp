@@ -223,7 +223,7 @@ public:
             case 0:
                 n_split.value = atoi(optarg);
                 if(print_flag) n_split.print(std::cout);
-                assert(n_split.value>=8);
+                assert(n_split.value>=4);
                 n_opt+=2;
                 break;
             case 1:
@@ -489,7 +489,7 @@ public:
 
     //! check paramters
     bool checkParams() {
-        assert(n_split.value>=8);
+        assert(n_split.value>=4);
         assert(search_vel_factor.value>0.0);
         assert(dt_limit_hard_factor.value > 0.0);
         assert(dt_min_hermite_index.value > 0);
