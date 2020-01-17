@@ -5,10 +5,10 @@
 npath=`pwd`
 [ ! -d src ] && mkdir src
 cd src
-if [ ! -d ARModule ]; then
-    wget "https://github.com/lwang-astro/ARModule/archive/master.zip" 
+if [ ! -d SDAR ]; then
+    wget "https://github.com/lwang-astro/SDAR/archive/master.zip" 
     unzip master.zip
-    mv ARModule-master ARModule
+    mv SDAR-master SDAR
     rm -f master.zip
 fi
 if [ ! -d PeTar ]; then

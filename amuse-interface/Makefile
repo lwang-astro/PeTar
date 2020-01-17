@@ -5,7 +5,7 @@ AMUSE_DIR?=$(shell amusifier --get-amuse-dir)
 
 MPICXX   ?= mpicxx
 
-INCLUDE  += -I src/PeTar/src -I src/ARModule/src -I src/FDPS/src 
+INCLUDE  += -I src/PeTar/src -I src/SDAR/src -I src/FDPS/src 
 
 MPIFLAGS =  -DPARTICLE_SIMULATOR_MPI_PARALLEL -DMPICH_IGNORE_CXX_SEEKC
 

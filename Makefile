@@ -9,7 +9,7 @@ PS_PATH = -I../FDPS/src
 #PS_PATH  = -I/home/lwang/code/fdps/src
 
 ##ARC PATH
-ARC_PATH= -I../ARModule/src
+ARC_PATH= -I../SDAR/src
 #ARC_PATH = -I/home/lwang/code/ARC/include
 #ARC_PATH = -I/home/lwang/GitHub/ARModule/src
 
