@@ -205,6 +205,17 @@ public:
         nngb += accpbuf[ah][4][al];
     }
     template <typename real_t>
+    void accum_accp_one(const int addr, real_t &nngb){
+#ifdef USE__AVX512
+        const int ah = addr / 16;
+        const int al = addr % 16;
+#else
+        const int ah = addr / 8;
+        const int al = addr % 8;
+#endif
+        nngb += accpbuf[ah][4][al];
+    }
+    template <typename real_t>
     void get_accp_one(const int addr, real_t &ax, real_t &ay, real_t &az, real_t &pot, 
 		      real_t &nngb){
 #ifdef USE__AVX512
@@ -247,6 +258,34 @@ public:
         assert(ni <= NIMAX);
         assert(nj <= NJMAX);
         kernel_epj_nounroll_for_p3t_with_linear_cutoff(ni, nj);
+    }
+
+    void run_epj_for_neighbor_count(const int ni, const int nj){
+        if(ni > NIMAX || nj > NJMAX){
+            std::cout<<"ni= "<<ni<<" NIMAX= "<<NIMAX<<" nj= "<<nj<<" NJMAX= "<<NJMAX<<std::endl;
+#ifdef USE__AVX512
+            for(PS::S32 i=0; i<(ni-1)/16+1; i++){
+                for(PS::S32 j=0; i<16; j++){
+                    for(PS::S32 k=0; k<3; k++){
+                        std::cout<<"xibuf[i][k][j]="<<xibuf[i][k][j]<<std::endl;
+                    }
+                    std::cout<<std::endl;
+                }
+            }
+#else
+            for(PS::S32 i=0; i<(ni-1)/8+1; i++){
+                for(PS::S32 j=0; i<8; j++){
+                    for(PS::S32 k=0; k<3; k++){
+                        std::cout<<"xibuf[i][k][j]="<<xibuf[i][k][j]<<std::endl;
+                    }
+                    std::cout<<std::endl;
+                }
+            }
+#endif
+        }
+        assert(ni <= NIMAX);
+        assert(nj <= NJMAX);
+        kernel_epj_nounroll_for_neighbor_count(ni, nj);
     }
 
     void run_epj(const int ni, const int nj){
@@ -313,6 +352,76 @@ private:
     typedef __m256 v8sf;
     typedef __m512 v16sf;
     typedef __m512d v8df;
+
+
+    __attribute__ ((noinline))
+    void kernel_epj_nounroll_for_neighbor_count(const int ni, const int nj){
+        for(int i=0; i<ni; i+=16){
+            const v16sf xi = *(v16sf *)(xibuf[i/16][0]);
+            const v16sf yi = *(v16sf *)(xibuf[i/16][1]);
+            const v16sf zi = *(v16sf *)(xibuf[i/16][2]);
+            const v16sf rsi= *(v16sf *)(xibuf[i/16][3]);
+            
+            v16sf nngb = _mm512_set1_ps(0.0f);
+
+#ifdef AVX_PRELOAD
+            v16sf rsjbuf= _mm512_set1_ps(*rsearchj);
+            v16sf jbuf =  _mm512_broadcast_f32x4(*(v4sf *)epjbuf);
+
+            v16sf xj =  _mm512_shuffle_ps(jbuf, jbuf, 0x00);
+            v16sf yj =  _mm512_shuffle_ps(jbuf, jbuf, 0x55);
+            v16sf zj =  _mm512_shuffle_ps(jbuf, jbuf, 0xaa);
+
+
+            v16sf rsj = rsjbuf;
+#endif
+            for(int j=0; j<nj; j++) {
+#ifdef AVX_PRELOAD
+                rsjbuf = _mm512_set1_ps(rsearchj[j+1]);
+                jbuf = _mm512_broadcast_f32x4(*(v4sf *)(epjbuf + j+1));
+                //jbuf = _mm512_broadcast_f32x4(*(__m128 *)(&epjbuf[j+1][0]));
+                v16sf dx = _mm512_sub_ps(xi, xj);
+                v16sf dy = _mm512_sub_ps(yi, yj);
+                v16sf dz = _mm512_sub_ps(zi, zj);
+#else
+                v16sf dx = _mm512_sub_ps(xi, _mm512_set1_ps(epjbuf[j][0]));
+                v16sf dy = _mm512_sub_ps(yi, _mm512_set1_ps(epjbuf[j][1]));
+                v16sf dz = _mm512_sub_ps(zi, _mm512_set1_ps(epjbuf[j][2]));
+#endif
+                v16sf r2_real = _mm512_mul_ps(dx, dx);
+                r2_real = _mm512_fmadd_ps(dy, dy, r2_real);
+                r2_real = _mm512_fmadd_ps(dz, dz, r2_real);
+                
+#ifdef AVX_PRELOAD
+                v16sf mri1 = _mm512_mul_ps(ri1, mj);
+#else
+                v16sf mri1 = _mm512_mul_ps(ri1, _mm512_set1_ps(epjbuf[j][3]));
+#endif
+                v16sf mri3 = _mm512_mul_ps(mri1, ri2);
+#ifdef AVX_PRELOAD
+                xj =  _mm512_shuffle_ps(jbuf, jbuf, 0x00);
+                yj =  _mm512_shuffle_ps(jbuf, jbuf, 0x55);
+                zj =  _mm512_shuffle_ps(jbuf, jbuf, 0xaa);
+#endif
+
+#ifdef AVX_PRELOAD
+                v16sf vrcrit = _mm512_max_ps(rsi, rsj);
+#else
+                v16sf vrcrit = _mm512_max_ps(rsi, _mm512_set1_ps(rsearchj[j]));
+#endif
+                v16sf vrcrit2 = _mm512_mul_ps(vrcrit, vrcrit);
+                nngb = _mm512_add_ps(_mm512_mask_blend_ps(
+                                         _mm512_cmp_ps_mask(vrcrit2, r2_real, 0x01),
+                                         _mm512_set1_ps(1.0f),
+                                         _mm512_set1_ps(0.0f)),
+                                     nngb);
+#ifdef AVX_PRELOAD                
+                rsj = rsjbuf;
+#endif
+            }
+            *(v16sf *)(accpbuf[i/16][4]) = nngb;
+        }
+    }    
     
     __attribute__ ((noinline))
     void kernel_epj_nounroll_for_p3t_with_linear_cutoff(const int ni, const int nj){
@@ -440,6 +549,53 @@ private:
     typedef __m128 v4sf;
     typedef __m256 v8sf;
     typedef __m256d v4df;
+
+    __attribute__ ((noinline))
+    void kernel_epj_nounroll_for_neighbor_count(const int ni, const int nj){
+        const v8sf vone  = _mm256_set1_ps(1.0f);
+        const v8sf allbits = _mm256_cmp_ps(vone, vone, 0x00);
+
+        for(int i=0; i<ni; i+=8){
+            const v8sf xi = *(v8sf *)(xibuf[i/8][0]);
+            const v8sf yi = *(v8sf *)(xibuf[i/8][1]);
+            const v8sf zi = *(v8sf *)(xibuf[i/8][2]);
+            const v8sf rsi = *(v8sf *)(xibuf[i/8][3]);
+            
+            v8sf nngb = _mm256_set1_ps(0.0f);
+
+            v8sf jbuf = _mm256_broadcast_ps((v4sf *)epjbuf);
+            v8sf rsjbuf=  _mm256_broadcast_ss(rsearchj);
+
+            v8sf xj =  _mm256_shuffle_ps(jbuf, jbuf, 0x00);
+            v8sf yj =  _mm256_shuffle_ps(jbuf, jbuf, 0x55);
+            v8sf zj =  _mm256_shuffle_ps(jbuf, jbuf, 0xaa);
+
+            v8sf rsj= rsjbuf;
+            for(int j=0; j<nj; j++){
+                jbuf = _mm256_broadcast_ps((v4sf *)(epjbuf + j+1));
+                rsjbuf = _mm256_broadcast_ss(rsearchj+j+1);
+
+                v8sf dx = _mm256_sub_ps(xi, xj);
+                v8sf dy = _mm256_sub_ps(yi, yj);
+                v8sf dz = _mm256_sub_ps(zi, zj);
+
+                v8sf r2_real = _mm256_mul_ps(dx, dx);
+                r2_real = _mm256_fmadd_ps(dy, dy, r2_real);
+                r2_real = _mm256_fmadd_ps(dz, dz, r2_real);
+
+                xj =  _mm256_shuffle_ps(jbuf, jbuf, 0x00);
+                yj =  _mm256_shuffle_ps(jbuf, jbuf, 0x55);
+                zj =  _mm256_shuffle_ps(jbuf, jbuf, 0xaa);
+
+                v8sf vrcrit = _mm256_max_ps(rsi, rsj);
+                v8sf vrcrit2 = _mm256_mul_ps(vrcrit, vrcrit);
+                v8sf mask = _mm256_cmp_ps(vrcrit2, r2_real, 0x01); // for neighbour search
+                rsj= rsjbuf;
+                nngb = _mm256_add_ps(_mm256_and_ps( vone, _mm256_xor_ps(mask, allbits) ), nngb); // can remove
+            }
+            *(v8sf *)(accpbuf[i/8][4]) = nngb;
+        }
+    }
 
     __attribute__ ((noinline))
     void kernel_epj_nounroll_for_p3t_with_linear_cutoff(const int ni, const int nj){
@@ -1195,6 +1351,30 @@ public:
         nngb += accpbuf[ah][4][al];
     }
 
+    template <typename real_t>
+    void accum_accp_one(const int addr, real_t &nngb){
+        const int ah = addr / 8;
+        const int al = addr % 8;
+        nngb += accpbuf[ah][4][al];
+    }
+
+    void run_epj_for_neighbor_count(const int ni, const int nj){
+        if(ni > NIMAX || nj > NJMAX){
+            std::cout<<"ni= "<<ni<<" NIMAX= "<<NIMAX<<" nj= "<<nj<<" NJMAX= "<<NJMAX<<std::endl;
+            for(PS::S32 i=0; i<(ni-1)/8+1; i++){
+                for(PS::S32 j=0; i<8; j++){
+                    for(PS::S32 k=0; k<3; k++){
+                        std::cout<<"xibuf[i][k][j]="<<xibuf[i][k][j]<<std::endl;
+                    }
+                    std::cout<<std::endl;
+                }
+            }
+        }
+        assert(ni <= NIMAX);
+        assert(nj <= NJMAX);
+        kernel_epj_nounroll_for_neighbor_count(ni, nj);
+    }
+
     void run_epj_for_p3t_with_linear_cutoff(const int ni, const int nj){
         if(ni > NIMAX || nj > NJMAX){
             std::cout<<"ni= "<<ni<<" NIMAX= "<<NIMAX<<" nj= "<<nj<<" NJMAX= "<<NJMAX<<std::endl;
@@ -1467,6 +1647,68 @@ private:
     
 #ifdef USE__AVX512
     __attribute__ ((noinline))
+    void kernel_epj_nounroll_for_neighbor_count(const int ni, const int nj) {
+        for(int i=0; i<ni; i+=8){
+            const v8df xi = *(v8df *)(&xibuf[i/8][0]);
+            const v8df yi = *(v8df *)(&xibuf[i/8][1]);
+            const v8df zi = *(v8df *)(&xibuf[i/8][2]);
+            const v8df rsi= *(v8df *)(&xibuf[i/8][3]);
+            v8df nngb = _mm512_set1_pd(0.0);
+
+#ifdef AVX_PRELOAD            
+            v4df jbuf = *((v4df*)epjbuf);
+            v8df jbuf8= _mm512_broadcast_f64x4(jbuf);
+            v8df rsjbuf= _mm512_set1_pd(*rsearchj);
+            v8df xj =  _mm512_permutex_pd(jbuf8, 0x00);
+            v8df yj =  _mm512_permutex_pd(jbuf8, 0x55);
+            v8df zj =  _mm512_permutex_pd(jbuf8, 0xaa);
+            v8df rsj= rsjbuf;
+#endif
+            for(int j=0; j<nj; j++){
+#ifdef AVX_PRELOAD
+                jbuf = *((v4df*)(epjbuf+j+1));
+                rsjbuf = _mm512_set1_pd(*(rsearchj+j+1));
+                v8df dx = _mm512_sub_pd(xi, xj); 
+                v8df dy = _mm512_sub_pd(yi, yj); 
+                v8df dz = _mm512_sub_pd(zi, zj);
+#else
+                v8df dx = _mm512_sub_pd(xi, _mm512_set1_pd(epjbuf[j][0]));
+                v8df dy = _mm512_sub_pd(yi, _mm512_set1_pd(epjbuf[j][1]));
+                v8df dz = _mm512_sub_pd(zi, _mm512_set1_pd(epjbuf[j][2]));
+#endif
+                v8df r2_real = _mm512_mul_pd(dx, dx);
+                r2_real = _mm512_fmadd_pd(dy, dy, r2_real);
+                r2_real = _mm512_fmadd_pd(dz, dz, r2_real);
+                
+#ifdef AVX_PRELOAD
+                jbuf8= _mm512_broadcast_f64x4(jbuf);
+                xj =  _mm512_permutex_pd(jbuf8, 0x00);
+                yj =  _mm512_permutex_pd(jbuf8, 0x55);
+                zj =  _mm512_permutex_pd(jbuf8, 0xaa);
+#endif
+
+#ifdef AVX_PRELOAD
+                v8df vrcrit = _mm512_max_pd(rsi, rsj);
+#else
+                v8df vrcrit = _mm512_max_pd(rsi, _mm512_set1_pd(rsearchj[j]));
+#endif
+                v8df vrcrit2 = _mm512_max_pd(vrcrit, vrcrit);
+                //v8df mask = _mm256_cmp_pd(vrcrit2, r2_real, 0x01); // for neighbour search
+                //nngb += _mm256_and_pd( vone, _mm256_xor_pd(mask, allbits) ); // can remove
+                nngb = _mm512_add_pd(
+                    _mm512_mask_blend_pd(_mm512_cmp_pd_mask(vrcrit2, r2_real, 0x01),
+                                         _mm512_set1_pd(1.0),
+                                         _mm512_set1_pd(0.0)),
+                    nngb); // can
+#ifdef AVX_PRELOAD
+                rsj= rsjbuf;
+#endif
+            }
+            *(v8df *)(&accpbuf[i/8][4]) = nngb;
+        }
+    }
+
+    __attribute__ ((noinline))
     void kernel_epj_nounroll_for_p3t_with_linear_cutoff(const int ni, const int nj) {
         const v8df veps2 = _mm512_set1_pd(eps2);
         //const v8df vr_out  = _mm512_set1_pd(r_out);
@@ -1592,6 +1834,48 @@ private:
         }
     }
 #else
+    __attribute__ ((noinline))
+    void kernel_epj_nounroll_for_neighbor_count(const int ni, const int nj){
+        const v4df vone = _mm256_set1_pd(1.0);
+        const v4df allbits = _mm256_cmp_pd(vone, vone, 0x00);
+        for(int i=0; i<ni; i+=4){
+            const int il = i%8;
+            const v4df xi = *(v4df *)(&xibuf[i/8][0][il]);
+            const v4df yi = *(v4df *)(&xibuf[i/8][1][il]);
+            const v4df zi = *(v4df *)(&xibuf[i/8][2][il]);
+            const v4df rsi= *(v4df *)(&xibuf[i/8][3][il]);
+            v4df nngb = _mm256_set1_pd(0.0);
+            v4df jbuf = *((v4df*)epjbuf);
+            v4df rsjbuf=  _mm256_broadcast_sd(rsearchj);
+            v4df xj =  _mm256_permute4x64_pd(jbuf, 0x00);
+            v4df yj =  _mm256_permute4x64_pd(jbuf, 0x55);
+            v4df zj =  _mm256_permute4x64_pd(jbuf, 0xaa);
+            v4df rsj= rsjbuf;
+            for(int j=0; j<nj; j++){
+                jbuf = *((v4df*)(epjbuf+j+1));
+                rsjbuf  =  _mm256_broadcast_sd(rsearchj+j+1);
+                v4df dx = _mm256_sub_pd(xi, xj); 
+                v4df dy = _mm256_sub_pd(yi, yj); 
+                v4df dz = _mm256_sub_pd(zi, zj);
+
+                v4df r2_real = _mm256_mul_pd(dx, dx);
+                r2_real = _mm256_fmadd_pd(dy, dy, r2_real);
+                r2_real = _mm256_fmadd_pd(dz, dz, r2_real);
+
+                xj =  _mm256_permute4x64_pd(jbuf, 0x00);
+                yj =  _mm256_permute4x64_pd(jbuf, 0x55);
+                zj =  _mm256_permute4x64_pd(jbuf, 0xaa);
+
+                v4df vrcrit = _mm256_max_pd(rsi, rsj);
+                v4df vrcrit2 = _mm256_mul_pd(vrcrit, vrcrit);
+                v4df mask = _mm256_cmp_pd(vrcrit2, r2_real, 0x01); // for neighbour search
+                rsj= rsjbuf;
+                nngb = _mm256_add_pd(_mm256_and_pd( vone, _mm256_xor_pd(mask, allbits) ), nngb); // can remove
+            }
+            *(v4df *)(&accpbuf[i/8][4][il]) = nngb;
+        }
+    }
+
     __attribute__ ((noinline))
     void kernel_epj_nounroll_for_p3t_with_linear_cutoff(const int ni, const int nj){
         const v4df vone = _mm256_set1_pd(1.0);

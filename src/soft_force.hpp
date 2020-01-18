@@ -6,6 +6,76 @@
 #include"phantomquad_for_p3t_x86.hpp"
 #endif
 
+
+// Neighbor search function
+struct SearchNeighborEpEpNoSimd{
+    void operator () (const EPISoft * ep_i,
+                      const PS::S32 n_ip,
+                      const EPJSoft * ep_j,
+                      const PS::S32 n_jp,
+                      ForceSoft * force){
+        for(PS::S32 i=0; i<n_ip; i++){
+            const PS::F64vec xi = ep_i[i].pos;
+            PS::F64 n_ngb_i = 0;
+            for(PS::S32 j=0; j<n_jp; j++){
+                const PS::F64vec rij = xi - ep_j[j].pos;
+                const PS::F64 r2 = rij * rij;
+                const PS::F64 r_search = std::max(ep_i[i].r_search,ep_j[j].r_search);
+                if(r2 < r_search*r_search){
+                    n_ngb_i++;
+                }
+            }
+            force[i].n_ngb = n_ngb_i;
+        }
+    }    
+};
+
+struct SearchNeighborEpEpSimd{
+    void operator () (const EPISoft * ep_i,
+                      const PS::S32 n_ip,
+                      const EPJSoft * ep_j,
+                      const PS::S32 n_jp,
+                      ForceSoft * force){
+    #ifdef __HPC_ACE__
+        PhantomGrapeQuad pg;
+    #else
+        #if defined(CALC_EP_64bit) || defined(CALC_EP_MIX)
+        static __thread PhantomGrapeQuad64Bit pg;
+        #else
+        static __thread PhantomGrapeQuad pg;
+        #endif
+    #endif
+        if(n_ip > pg.NIMAX || n_jp > pg.NJMAX){
+            std::cout<<"ni= "<<n_ip<<" NIMAX= "<<pg.NIMAX<<" nj= "<<n_jp<<" NJMAX= "<<pg.NJMAX<<std::endl;
+        }
+        assert(n_ip<=pg.NIMAX);
+        assert(n_jp<=pg.NJMAX);
+        for(PS::S32 i=0; i<n_ip; i++){
+            const PS::F64vec pos_i = ep_i[i].getPos();
+            pg.set_xi_one(i, pos_i.x, pos_i.y, pos_i.z, ep_i[i].r_search);
+        }
+        PS::S32 loop_max = (n_jp-1) / PhantomGrapeQuad::NJMAX + 1;
+        for(PS::S32 loop=0; loop<loop_max; loop++){
+            const PS::S32 ih = PhantomGrapeQuad::NJMAX*loop;
+            const PS::S32 n_jp_tmp = ( (n_jp - ih) < PhantomGrapeQuad::NJMAX) ? (n_jp - ih) : PhantomGrapeQuad::NJMAX;
+            const PS::S32 it =ih + n_jp_tmp;
+            PS::S32 i_tmp = 0;
+            for(PS::S32 i=ih; i<it; i++, i_tmp++){
+                const PS::F64 m_j = ep_j[i].getCharge();
+                const PS::F64vec pos_j = ep_j[i].getPos();
+                pg.set_epj_one(i_tmp, pos_j.x, pos_j.y, pos_j.z, m_j, ep_j[i].r_search);
+
+            }
+            pg.run_epj_for_neighbor_count(n_ip, n_jp_tmp);
+            for(PS::S32 i=0; i<n_ip; i++){
+                PS::F64 n_ngb = 0;
+                pg.accum_accp_one(i, n_ngb);
+                force[i].n_ngb += (PS::S32)(n_ngb*1.00001);
+            }
+        }
+    }
+};
+
 ////////////////////
 /// FORCE FUNCTOR
 struct CalcForceEpEpWithLinearCutoffNoSimd{
@@ -232,6 +302,7 @@ struct CalcForceEpEpWithLinearCutoffSimd{
         const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
         const PS::F64 G = ForceSoft::grav_const;
         PS::S32 ep_j_list[n_jp], n_jp_local=0;
+        PS::S32 ep_i_list[n_ip], n_ip_local=0;
         for (PS::S32 i=0; i<n_jp; i++){
             if(ep_j[i].mass>0) ep_j_list[n_jp_local++] = i;
         }
@@ -254,8 +325,13 @@ struct CalcForceEpEpWithLinearCutoffSimd{
         pg.set_eps2(eps2);
         pg.set_r_crit2(EPISoft::r_out*EPISoft::r_out);
         for(PS::S32 i=0; i<n_ip; i++){
-            const PS::F64vec pos_i = ep_i[i].getPos();
-            pg.set_xi_one(i, pos_i.x, pos_i.y, pos_i.z, ep_i[i].r_search);
+            // remove the orbital sample for the force calculation
+            if (ep_i[i].type==1) {
+                ep_i_list[n_ip_local] = i;
+                const PS::F64vec pos_i = ep_i[i].getPos();
+                pg.set_xi_one(n_ip_local, pos_i.x, pos_i.y, pos_i.z, ep_i[i].r_search);
+                n_ip_local++;
+            }
         }
         PS::S32 loop_max = (n_jp_local-1) / PhantomGrapeQuad::NJMAX + 1;
         for(PS::S32 loop=0; loop<loop_max; loop++){
@@ -271,11 +347,12 @@ struct CalcForceEpEpWithLinearCutoffSimd{
 
             }
             pg.run_epj_for_p3t_with_linear_cutoff(n_ip, n_jp_tmp);
-            for(PS::S32 i=0; i<n_ip; i++){
+            for(PS::S32 k=0; k<n_ip_local; k++){
+                PS::S32 i=ep_i_list[k];
                 PS::F64 p = 0;
                 PS::F64 a[3]= {0,0,0};
                 PS::F64 n_ngb = 0;
-                pg.accum_accp_one(i, a[0], a[1], a[2], p, n_ngb);
+                pg.accum_accp_one(k, a[0], a[1], a[2], p, n_ngb);
                 force[i].acc[0] += G*a[0];
                 force[i].acc[1] += G*a[1];
                 force[i].acc[2] += G*a[2];
@@ -296,6 +373,7 @@ struct CalcForceEpSpMonoSimd{
                       ForceSoft * force){
         const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
         const PS::F64 G = ForceSoft::grav_const;
+        PS::S32 ep_i_list[n_ip], n_ip_local=0;
 #ifdef __HPC_ACE__
         PhantomGrapeQuad pg;
 #else
@@ -309,8 +387,13 @@ struct CalcForceEpSpMonoSimd{
         assert(n_jp<=pg.NJMAX);
         pg.set_eps2(eps2);
         for(PS::S32 i=0; i<n_ip; i++){
-            const PS::F64vec pos_i = ep_i[i].getPos();
-            pg.set_xi_one(i, pos_i.x, pos_i.y, pos_i.z, 0.0);
+            // remove the orbital sample for the force calculation
+            if (ep_i[i].type==1) {
+                ep_i_list[n_ip_local] = i;
+                const PS::F64vec pos_i = ep_i[i].getPos();
+                pg.set_xi_one(n_ip_local, pos_i.x, pos_i.y, pos_i.z, 0.0);
+                n_ip_local++;
+            }                
         }
         PS::S32 loop_max = (n_jp-1) / PhantomGrapeQuad::NJMAX + 1;
         for(PS::S32 loop=0; loop<loop_max; loop++){
@@ -324,10 +407,11 @@ struct CalcForceEpSpMonoSimd{
                 pg.set_epj_one(i_tmp, pos_j.x, pos_j.y, pos_j.z, m_j, 0.0);
             }
             pg.run_epj(n_ip, n_jp_tmp);
-            for(PS::S32 i=0; i<n_ip; i++){
+            for(PS::S32 k=0; k<n_ip_local; k++){
+                PS::S32 i=ep_i_list[k];
                 PS::F64 p = 0;
                 PS::F64 a[3]= {0,0,0};
-                pg.accum_accp_one(i, a[0], a[1], a[2], p);
+                pg.accum_accp_one(k, a[0], a[1], a[2], p);
                 force[i].acc[0] += G*a[0];
                 force[i].acc[1] += G*a[1];
                 force[i].acc[2] += G*a[2];
@@ -346,6 +430,7 @@ struct CalcForceEpSpQuadSimd{
                       ForceSoft * force){
         const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
         const PS::F64 G = ForceSoft::grav_const;
+        PS::S32 ep_i_list[n_ip], n_ip_local=0;
     #ifdef __HPC_ACE__
         PhantomGrapeQuad pg;
     #else
@@ -359,8 +444,13 @@ struct CalcForceEpSpQuadSimd{
         assert(n_jp<=pg.NJMAX);
         pg.set_eps2(eps2);
         for(PS::S32 i=0; i<n_ip; i++){
-            const PS::F64vec pos_i = ep_i[i].getPos();
-            pg.set_xi_one(i, pos_i.x, pos_i.y, pos_i.z, 0.0);
+            // remove the orbital sample for the force calculation
+            if (ep_i[i].type==1) {
+                ep_i_list[n_ip_local] = i;
+                const PS::F64vec pos_i = ep_i[i].getPos();
+                pg.set_xi_one(n_ip_local, pos_i.x, pos_i.y, pos_i.z, 0.0);
+                n_ip_local++;
+            }                
         }
         PS::S32 loop_max = (n_jp-1) / PhantomGrapeQuad::NJMAX + 1;
         for(PS::S32 loop=0; loop<loop_max; loop++){
@@ -376,10 +466,11 @@ struct CalcForceEpSpQuadSimd{
                                q.xx, q.yy, q.zz, q.xy, q.yz, q.xz);
             }
             pg.run_spj(n_ip, n_jp_tmp);
-            for(PS::S32 i=0; i<n_ip; i++){
+            for(PS::S32 k=0; k<n_ip_local; k++){
+                PS::S32 i=ep_i_list[k];
                 PS::F64 p = 0;
                 PS::F64 a[3]= {0,0,0};
-                pg.accum_accp_one(i, a[0], a[1], a[2], p);
+                pg.accum_accp_one(k, a[0], a[1], a[2], p);
                 force[i].acc[0] += G*a[0];
                 force[i].acc[1] += G*a[1];
                 force[i].acc[2] += G*a[2];

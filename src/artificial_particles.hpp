@@ -412,8 +412,9 @@ public:
         auto* ptt = getTidalTensorParticles(_ptcl_artificial);
         TidalTensor::subtractCMForce(ptt, *pcm);
 
+        // not consistent
         // After c.m. force used, it can be replaced by the averaged force on orbital particles
-        correctOrbitalParticleForce(_ptcl_artificial);
+        // correctOrbitalParticleForce(_ptcl_artificial);
     }
 
     //! get oribital particle list address from a artificial particle array

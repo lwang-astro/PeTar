@@ -517,14 +517,11 @@ private:
         auto& ap_manager = manager->ap_manager;
         for (int j=0; j<_n_group; j++) {  // j: j_group
             PS::S32 j_start = adr_first_ptcl_arti_in_cluster_[j];
-            auto* pj = &(_sys[j_start]);
+            auto* p_arti_j = &(_sys[j_start]);
+            auto* pj = ap_manager.getTidalTensorParticles(p_arti_j);
 
-            // loop all artificial particles: tidal tensor, orbital and c.m. particle
-            for (int k=0; k<ap_manager.getArtificialParticleN(); k++) {  
-                // k: k_ptcl_arti
-
+            auto correctionLoop = [&](const PS::S32 k) {
                 // loop orbital artificial particle
-                // group
                 for (int kj=0; kj<_n_group; kj++) { // group
                     PS::S32 kj_start = adr_first_ptcl_arti_in_cluster_[kj];
                     auto* porb_kj = ap_manager.getOrbitalParticles(&_sys[kj_start]);
@@ -552,9 +549,19 @@ private:
 #endif
                         calcAccPotShortWithLinearCutoff(pj[k], _ptcl_local[kj]);
                 }
+            };
+
+            // loop all tidal tensor particles 
+            for (int k=0; k<ap_manager.getTidalTensorParticleN(); k++) {  
+                // k: k_ptcl_arti
+                correctionLoop(k);
             }
+
+            // for c.m. particle
+            pj = ap_manager.getCMParticles(p_arti_j);
+            correctionLoop(0);
             
-            ap_manager.correctArtficialParticleForce(pj);
+            ap_manager.correctArtficialParticleForce(p_arti_j);
         }
     }
 
