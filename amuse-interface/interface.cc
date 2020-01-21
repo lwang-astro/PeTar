@@ -457,6 +457,7 @@ extern "C" {
         if (!ptr->initial_step_flag) return -1;
         ptr->input_parameters.time_end.value = time_next*2;
         ptr->evolveToTime(time_next);
+        reconstructIdAdrMap();
         return 0;
     }
 
@@ -466,6 +467,7 @@ extern "C" {
         ptr->input_parameters.n_glb.value = ptr->stat.n_real_glb;
         ptr->initialParameters();
         ptr->initialStep();
+        reconstructIdAdrMap();
 #ifdef INTERFACE_DEBUG_PRINT
         if(ptr->my_rank==0) std::cout<<"commit_particles\n";
 #endif
@@ -484,9 +486,8 @@ extern "C" {
         ptr->removeParticles();
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         ptr->exchangeParticle();
-#else
-        reconstructIdAdrMap();
 #endif
+        reconstructIdAdrMap();
         ptr->initialStep();
 #ifdef INTERFACE_DEBUG_PRINT
         if(ptr->my_rank==0) std::cout<<"recommit_particles\n";

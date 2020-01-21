@@ -1683,12 +1683,10 @@ public:
 
         const PS::S32 n_loc = system_soft.getNumberOfParticleLocal();
 
-        id_adr_map.clear();
-//#pragma omp parallel for
+#pragma omp parallel for
         for(PS::S32 i=0; i<n_loc; i++){
             system_soft[i].rank_org = my_rank;
             system_soft[i].adr = i;
-            id_adr_map[system_soft[i].id] = i;
         }
 
         // record real particle n_loc/glb
