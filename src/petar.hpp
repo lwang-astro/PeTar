@@ -160,7 +160,7 @@ public:
                      dt_min_arc_index    (input_par_store, 64,   "Power index n for the smallest time step (0.5^n) allowed in ARC integrator, suppressed"),
                      dt_err_pert  (input_par_store, 1e-6, "Time synchronization maximum (relative) error for perturbed ARC integrator, suppressed"),
                      dt_err_soft  (input_par_store, 1e-3, "Time synchronization maximum (relative) error for no-perturber (only soft perturbation) ARC integrator, suppressed"),
-                     e_err_arc    (input_par_store, 1e-10,"Maximum energy error allown for ARC integrator"),
+                     e_err_arc    (input_par_store, 1e-8,"Maximum energy error allown for ARC integrator"),
 #ifdef HARD_CHECK_ENERGY
                      e_err_hard   (input_par_store, 1e-4, "Maximum energy error allown for hard integrator"),
 #endif

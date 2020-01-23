@@ -155,6 +155,7 @@ class ArtificialParticleManager{
     }
     
 public:
+    // be careful to make consistent read/writeBinary and operator = if modified
     PS::F64 r_tidal_tensor;
     PS::S64 id_offset;
     PS::F64 gravitational_constant; // gravitational constant
@@ -513,18 +514,27 @@ public:
     /*! @param[in] _fp: FILE type file for output
      */
     void writeBinary(FILE *_fp) {
-        fwrite(this, sizeof(*this), 1, _fp);
+        fwrite(&n_split_,       sizeof(PS::S32), 1, _fp);
+        fwrite(&r_tidal_tensor, sizeof(PS::F64), 1, _fp);
+        fwrite(&id_offset,      sizeof(PS::S64), 1, _fp);
+        fwrite(&gravitational_constant, sizeof(PS::F64), 1, _fp);
     }    
 
     //! read class data to file with binary format
     /*! @param[in] _fp: FILE type file for reading
      */
     void readBinary(FILE *_fin) {
-        size_t rcount = fread(this, sizeof(*this), 1, _fin);
-        if (rcount<1) {
+        PS::S32 n_split;
+        size_t rcount = fread(&n_split,  sizeof(PS::S32), 1, _fin);
+        rcount += fread(&r_tidal_tensor, sizeof(PS::F64), 1, _fin);
+        rcount += fread(&id_offset,      sizeof(PS::S64), 1, _fin);
+        rcount += fread(&gravitational_constant, sizeof(PS::F64), 1, _fin);
+
+        if (rcount<4) {
             std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
             abort();
         }
+        setParticleSplitN(n_split);
     }    
 
     //! print parameters
@@ -545,6 +555,26 @@ public:
             dsin_ecca_list_=NULL;
         }
     }
+
+    //! operator = 
+    /*! Copy function will remove the local data and also copy the particle data or the link
+     */
+    ArtificialParticleManager& operator = (const ArtificialParticleManager& _ap_manager) {
+        if (decca_list_!=NULL) {
+            delete [] decca_list_;
+            decca_list_=NULL;
+        }
+        if (dsin_ecca_list_!=NULL) {
+            delete [] dsin_ecca_list_;
+            dsin_ecca_list_=NULL;
+        }
+        setParticleSplitN(_ap_manager.n_split_);
+        r_tidal_tensor = _ap_manager.r_tidal_tensor;
+        id_offset      = _ap_manager.id_offset;
+        gravitational_constant = _ap_manager.gravitational_constant;
+        return *this;
+    }
+
 
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
     template <class Tptcl, class Tpart>
