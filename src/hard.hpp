@@ -1873,11 +1873,16 @@ public:
                     if (abs( pj_r_in - bin_r_in)>1e-10) {
                         pj.changeover.r_scale_next = bin_r_in/pj_r_in;
                         pj.r_search = std::max(pj.r_search, binary_stable_i.r_search);
-#ifdef ARTIFICIAL_PARTICLE_DEBUG
                         // not necessary true since the member changeover may inherient from other binaries which can be larger than the new one here.
                         //assert(_bin.changeover.getRin()>=pj->changeover.getRin());
-                        assert(pj.r_search > pj.changeover.getRout());
+
+                        // in case the new changeover is small, r_search may be smaller than the previous r_out, which should be avoided
+                        if (pj.r_search < pj.changeover.getRout()) {
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+                            assert( pj.r_search > pj.changeover.getRout()*pj.changeover.r_scale_next);
 #endif 
+                            pj.r_search = pj.changeover.getRout(); 
+                        }
                     }
                     else pj.r_search = binary_stable_i.r_search;
 
@@ -2077,6 +2082,23 @@ public:
                         else {
                             p_loc.changeover.r_scale_next = changeover_cm.getRin()/p_loc.changeover.getRin();
                             p_loc.r_search = std::max(p_loc.r_search, rsearch_cm);
+#ifdef HARD_DEBUG                            
+                            if (p_loc.r_search<p_loc.changeover.getRout()) {
+                                std::cerr<<"Error, r_search<r_out found! \n"
+                                         <<"n_members: "<<n_members
+                                         <<"id: "<<p_loc.id
+                                         <<"bin_changeover: ";
+                                changeover_cm.print(std::cerr);
+                                std::cerr<<"member changeover: ";
+                                p_loc.changeover.print(std::cerr);
+                                std::cerr<<"member mass: "<<p_loc.mass
+                                         <<"cm mass: "<<pcm->mass
+                                         <<"member r_search: "<<p_loc.r_search
+                                         <<"cm research: "<<pcm->r_search
+                                         <<std::endl;
+                                abort();
+                            }
+#endif
                             changeover_update_flag = true;
                         }
                     }
@@ -2132,7 +2154,7 @@ public:
             PS::S32* i_end = std::unique(i_cluster_data, i_cluster_data+i_cluster_size);
 #ifdef HARD_DEBUG
             assert(i_end-i_cluster_data>=0&&i_end-i_cluster_data<=i_cluster_size);
-            std::cerr<<"Changeover change cluster found: ";
+            std::cerr<<"Changeover change cluster found: T="<<time_origin_<<" i_cluster=";
             for (auto k=i_cluster_data; k<i_end; k++) {
                 std::cerr<<*k<<" ";
             }
