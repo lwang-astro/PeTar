@@ -1,12 +1,58 @@
 # PeTar
 Particle-particle \& Particle-tree (_P<sup>3</sup>T_) with slow-down time-transformed symplectic integrator (slow-down algorithmic regularization; _SDAR_) code for simulating gravitational _N_-body systems including close encounters and few-body systems.
 
-## Dependence: 
+The Doxygen document will be provided in doc directory (not yet done)
+
+## Install:
+### Dependence:
 FDPS: https://github.com/FDPS/FDPS
 
 SDAR: https://github.com/lwang-astro/SDAR
 
 Please download these two codes and put in the same directory where the _PeTar_ directory exist, in order to successfully compile the code.
+
+### Make:
+Onces _FPDS_ and _SDAR_ are available, in the root directoy, use 
+```
+make
+```
+to create the excutable file _nbody.out_
+
+In the future, _GNU AutoConf_ will be implemented.
+
+## Use:
+The standard way to use the code is
+```
+[mpiexec -n X] ./nbody.out [options] [particle data filename]
+```
+where "[mpiexec -n X]" is used when multiple MPI processors are needed and "X" is the number of processors.
+
+All opitions are listed in the help information, which can be seen by use
+```
+./nbody.out -h
+```
+Please ignore the error message (a memory allication issue in _FDPS_) after the help information is printed.
+
+The description of the input particle data file is also shown in the help information. 
+All snapshots of particle data outputed in the simulation can be used to restart the simulation. 
+To restart the simulation with the same configuration of parameters, use
+```
+./nbody.out -p input.par [snapshot filename]
+```
+where _input.par_ is automatically generated from the last run (stored in the same diretory of the simulation).
+
+### Important tips:
+To avoid segmetantional fault in simulations in the case of large number of particles, make sure to set the OMP_STACKSIZE large enough.
+For example, use
+```
+OMP_STACKSIZE=128M [mpiexec -n X] ./nbody.out [options] [data filename] 
+```
+
+A convenient way is to add
+```
+export OMP_STACKSIZE=128M
+```
+in the shell configure/initial file (e.g. .bashrc for _bash_) to avoid type "OMP_STACKSIZE=128M" every time.
 
 ## Method:
 ### Algorithm of integration: 
