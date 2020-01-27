@@ -3,7 +3,7 @@ Particle-particle \& Particle-tree with Algorithmic regularization code for coll
 
 # Dependence: 
 FDPS: https://github.com/FDPS/FDPS
-AR: https://github.com/lwang-astro/ARModule
+SDAR: https://github.com/lwang-astro/SDAR
 
 # Current developement status:
 ## Schedule: 
