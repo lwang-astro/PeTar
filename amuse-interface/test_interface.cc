@@ -1,8 +1,11 @@
 #include "interface.h"
 #include <cstdio>
 #include <cassert>
+#include "mpi.h"
 
-int main() {
+int main(int argc, char **argv) {
+    
+    MPI_Init(&argc, &argv);
     initialize_code();
 
     commit_parameters();
@@ -11,6 +14,8 @@ int main() {
     new_particle(&index[0], 1, 2, 3, 4, 5, 6, 7, 8);
     new_particle(&index[1], 11, 12, 13, 14, 15, 16, 17, 18);
     new_particle(&index[2], 21, 22, 23, 24, 25, 26, 27, 28);
+
+    commit_particles();
 
     double m,x,y,z,vx,vy,vz,r;
     int error = get_state(index[0],&m,&x,&y,&z,&vx,&vy,&vz,&r);
@@ -97,7 +102,7 @@ int main() {
     assert(vy==56);
     assert(vz==57);
 
-    commit_particles();
+    recommit_particles();
 
     error = evolve_model(1);
     if (error<0) printf("evolve model error\n");

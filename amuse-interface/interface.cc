@@ -1,4 +1,5 @@
 #include "petar.hpp"
+#include "interface.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -454,10 +455,11 @@ extern "C" {
     }
 
     int evolve_model(double time_next) {
+        reconstruct_particle_list();
         if (!ptr->initial_step_flag) return -1;
         ptr->input_parameters.time_end.value = time_next*2;
         ptr->evolveToTime(time_next);
-        reconstructIdAdrMap();
+        ptr->reconstructIdAdrMap();
         return 0;
     }
 
@@ -467,7 +469,7 @@ extern "C" {
         ptr->input_parameters.n_glb.value = ptr->stat.n_real_glb;
         ptr->initialParameters();
         ptr->initialStep();
-        reconstructIdAdrMap();
+        ptr->reconstructIdAdrMap();
 #ifdef INTERFACE_DEBUG_PRINT
         if(ptr->my_rank==0) std::cout<<"commit_particles\n";
 #endif
@@ -481,14 +483,25 @@ extern "C" {
         return 0;
     }
 
-    int recommit_particles() {
-        ptr->initial_step_flag = false;
-        ptr->removeParticles();
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-        ptr->exchangeParticle();
+    int reconstruct_particle_list() {
+        if (ptr->initial_step_flag==false) {
+#ifdef INTERFACE_DEBUG_PRINT
+            if(ptr->my_rank==0) std::cout<<"reconstruct particle list and initial step\n";
 #endif
-        reconstructIdAdrMap();
-        ptr->initialStep();
+            ptr->removeParticles();
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+            ptr->exchangeParticle();
+#endif
+            //ptr->reconstructIdAdrMap();
+            ptr->initialStep();
+        }
+        return 0;
+    }
+
+    int recommit_particles() {
+        // this function is called too frequent (every time when set_xx is used).
+        // thus only register the flag and do update at once in the begining of evolve_model
+        ptr->initial_step_flag = false;
 #ifdef INTERFACE_DEBUG_PRINT
         if(ptr->my_rank==0) std::cout<<"recommit_particles\n";
 #endif
@@ -506,11 +519,15 @@ extern "C" {
     }
 
     int get_kinetic_energy(double * kinetic_energy) {
+        // update particle array first if necessary
+        reconstruct_particle_list();
         *kinetic_energy = ptr->stat.energy.ekin;
         return 0;
     }
 
     int get_potential_energy(double * potential_energy) {
+        // update particle array first if necessary
+        reconstruct_particle_list();
         *potential_energy = ptr->stat.energy.epot;
         return 0;
     }
@@ -537,11 +554,15 @@ extern "C" {
     }
 
     int get_total_mass(double * mass) {
+        // update particle array first if necessary
+        reconstruct_particle_list();
         * mass = ptr->stat.pcm.mass;
         return 0;
     }
 
     int get_center_of_mass_position(double * x, double * y, double * z) {
+        // update particle array first if necessary
+        reconstruct_particle_list();
         * x = ptr->stat.pcm.pos.x;
         * y = ptr->stat.pcm.pos.y;
         * z = ptr->stat.pcm.pos.z;
@@ -549,6 +570,8 @@ extern "C" {
     }
 
     int get_center_of_mass_velocity(double * x, double * y, double * z) {
+        // update particle array first if necessary
+        reconstruct_particle_list();
         * x = ptr->stat.pcm.pos.x;
         * y = ptr->stat.pcm.pos.y;
         * z = ptr->stat.pcm.pos.z;
@@ -556,11 +579,15 @@ extern "C" {
     }
 
     int get_total_radius(double * radius) {
+        // update particle array first if necessary
+        reconstruct_particle_list();
         * radius = ptr->stat.half_mass_radius;
         return 0;
     }
 
     int get_number_of_particles(int * number_of_particles) {
+        // update particle array first if necessary
+        reconstruct_particle_list();
         * number_of_particles = ptr->stat.n_real_glb;
         return 0;
     }
@@ -579,6 +606,9 @@ extern "C" {
 
     int get_gravity_at_point(double * eps, double * x, double * y, double * z, 
                              double * forcex, double * forcey, double * forcez, int n)  {
+        // update particle array first if necessary
+        reconstruct_particle_list();
+
         // transform data
         ParticleBase ptmp[n];
         ForceSoft force[n];
@@ -619,6 +649,9 @@ extern "C" {
     int get_potential_at_point(double * eps,
                                double * x, double * y, double * z, 
                                double * phi, int n)  {
+        // update particle array first if necessary
+        reconstruct_particle_list();
+
         // transform data
         ParticleBase ptmp[n];
         ForceSoft force[n];

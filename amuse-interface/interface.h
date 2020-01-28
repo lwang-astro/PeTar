@@ -52,6 +52,8 @@ int synchronize_model();
 
 int recommit_particles();
 
+int reconstruct_particle_list();
+
 int get_eps2(double * epsilon_squared);
 
 int set_eps2(double epsilon_squared);

@@ -961,7 +961,6 @@ public:
                 h4_int.adjustGroups(false);
 
                 const PS::S32 n_init_group = h4_int.getNInitGroup();
-                const PS::S32 n_act_group = h4_int.getNActGroup();
                 const PS::S32* group_index = h4_int.getSortDtIndexGroup();
                 for(int i=0; i<n_init_group; i++) {
                     auto& groupi = h4_int.groups[group_index[i]];
@@ -1026,7 +1025,8 @@ public:
                     */
 #endif
                 }
-                ASSERT(n_init_group<=n_act_group);
+                ASSERT(n_init_group<=h4_int.getNActGroup());
+
 /* Not consistent, should not shift
 #ifdef SOFT_PERT
                 // update c.m. for Tidal tensor
