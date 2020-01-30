@@ -1754,7 +1754,7 @@ public:
         @param[out]    _n_groups: number of groups in current cluster
         @param[in,out] _groups: searchGroupCandidate class, which contain 1-D group member index array, will be reordered by the minimum distance chain for each group
         @param[in,out] _empty_list: the list of _ptcl_in_cluster that can be used to store new artificial particles, reduced when used
-        @param[in]     _dt_tree: tree time step for calculating r_search
+        @param[in]     _dt_tree: tree time step for calculating r_search and set stablility checker period limit
      */
     template <class Tptcl>
     void findGroupsAndCreateArtificialParticlesOneCluster(const PS::S32 _i_cluster,

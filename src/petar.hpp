@@ -586,6 +586,7 @@ public:
     bool read_data_flag;
     bool initial_parameters_flag;
     bool initial_step_flag;
+    bool drift_interupt_flag;
 
     // initialization
     PeTar(): 
@@ -601,7 +602,7 @@ public:
         hard_manager(), system_hard_one_cluster(), system_hard_isolated(), system_hard_connected(), 
         remove_list(),
         search_cluster(),
-        initial_fdps_flag(false), read_parameters_flag(false), read_data_flag(false), initial_parameters_flag(false), initial_step_flag(false) {
+        initial_fdps_flag(false), read_parameters_flag(false), read_data_flag(false), initial_parameters_flag(false), initial_step_flag(false), drift_interupt_flag(false) {
         // set print format
         std::cout<<std::setprecision(PRINT_PRECISION);
         std::cerr<<std::setprecision(PRINT_PRECISION);
@@ -747,7 +748,7 @@ private:
     }
 
     //! tree for neighbor searching.
-    inline void treeNeighborSearch() {
+    void treeNeighborSearch() {
 #ifdef PROFILE
         profile.tree_nb.start();
 #endif
@@ -765,7 +766,7 @@ private:
     }
 
     //! search clusters
-    inline void searchCluster() {
+    void searchCluster() {
 #ifdef PROFILE
         profile.search_cluster.start();
 #endif
@@ -791,7 +792,9 @@ private:
     }
 
     //! and ground and create artificial particles
-    inline void createGroup(const PS::F64 _dt_tree) {
+    /*! @param[in] _dt_tree: tree time step for calculating r_search and set stablility checker period limit
+     */
+    void createGroup(const PS::F64 _dt_tree) {
 #ifdef PROFILE
         profile.create_group.start();
 #endif
@@ -849,7 +852,7 @@ private:
     }
 
     //! calculate tree solf force
-    inline void treeSoftForce() {
+    void treeSoftForce() {
 #ifdef PROFILE
         profile.tree_soft.start();
 
@@ -893,7 +896,7 @@ private:
     }
 
     // correct force due to change over function
-    inline void treeForceCorrectChangeover() {
+    void treeForceCorrectChangeover() {
 #ifdef PROFILE
         profile.force_correct.start();
 #endif
@@ -964,7 +967,7 @@ private:
 
 #ifdef KDKDK_4TH
     //! gradient kick for KDKDK_4TH method
-    inline void GradientKick() {
+    void GradientKick() {
 #ifdef PROFILE
         profile.tree_soft.start();
         tree_soft.clearNumberOfInteraction();
@@ -1037,9 +1040,9 @@ private:
        @param[in]: _dt: tree step
        @param[in]; _adr: address for single particles
     */
-    inline void kickOne(SystemSoft & _sys, 
-                        const PS::F64 _dt, 
-                        const PS::ReallocatableArray<PS::S32>& _adr) {
+    void kickOne(SystemSoft & _sys, 
+                 const PS::F64 _dt, 
+                 const PS::ReallocatableArray<PS::S32>& _adr) {
         const PS::S64 n= _adr.size();
 #pragma omp parallel for
         for(PS::S32 i=0; i<n; i++){
@@ -1061,9 +1064,9 @@ private:
        @param[in]: _dt: tree step
     */
     template<class Tptcl>
-    inline void kickClusterAndRecoverGroupMemberMass(SystemSoft& _sys,
-                                                     PS::ReallocatableArray<Tptcl>& _ptcl,
-                                                     const PS::F64 _dt) {
+    void kickClusterAndRecoverGroupMemberMass(SystemSoft& _sys,
+                                              PS::ReallocatableArray<Tptcl>& _ptcl,
+                                              const PS::F64 _dt) {
         const PS::S64 n= _ptcl.size();
 #pragma omp parallel for
         for(PS::S32 i=0; i<n; i++) {
@@ -1103,9 +1106,9 @@ private:
        @param[in,out] _ptcl: local particle array in system hard
        @param[in]: _dt: tree step
     */
-    inline void kickSend(SystemSoft& _sys,
-                         const PS::ReallocatableArray<PS::S32>& _adr_ptcl_send,
-                         const PS::F64 _dt) {
+    void kickSend(SystemSoft& _sys,
+                  const PS::ReallocatableArray<PS::S32>& _adr_ptcl_send,
+                  const PS::F64 _dt) {
         const PS::S64 n= _adr_ptcl_send.size();
 #pragma omp parallel for
         for(PS::S32 i=0; i<n; i++) {
@@ -1126,13 +1129,13 @@ private:
     }
 
     //! kick for artifical c.m. particles
-    /*! Kick c.m. velocity
+    /*! Kick c.m. velocity (both isolated and connected clusters)
       @param[in,out] _sys: particle system
       @param[in] _adr_artificial_start: c.m. particle starting address
       @param[in] _ap_manager: artificial particle manager
       @param[in] _dt: tree step
     */
-    inline void kickCM(SystemSoft& _sys,
+    void kickCM(SystemSoft& _sys,
                 const PS::S32 _adr_artificial_start,
                 ArtificialParticleManager& _ap_manager,
                 const PS::F64 _dt) {
@@ -1152,8 +1155,8 @@ private:
     }
 
     //! drift for single particles
-    inline void driftSingle(SystemSoft & system,
-                            const PS::F64 dt){
+    void driftSingle(SystemSoft & system,
+                     const PS::F64 dt){
         const PS::S32 n = system.getNumberOfParticleLocal();
 #pragma omp parallel for
         for(PS::S32 i=0; i<n; i++){
@@ -1164,7 +1167,7 @@ private:
     }
 
     //! kick
-    inline void kick(const PS::F64 _dt_kick) {
+    void kick(const PS::F64 _dt_kick) {
 #ifdef PROFILE
         profile.kick.start();
 #endif
@@ -1217,7 +1220,7 @@ private:
     }
 
     //! hard drift
-    inline void drift(const PS::F64 _dt_drift) {
+    void drift(const PS::F64 _dt_drift) {
         ////// set time
         system_hard_one_cluster.setTimeOrigin(stat.time);
         system_hard_isolated.setTimeOrigin(stat.time);
@@ -1285,9 +1288,9 @@ private:
       @param[in] _dt_max: maximum time step allown
       @param[in] _dt_min: minimum time step allown
     */
-    PS::F64 calcDtLimit(const PS::F64 _time,
-                        const PS::F64 _dt_max,
-                        const PS::F64 _dt_min){
+    inline PS::F64 calcDtLimit(const PS::F64 _time,
+                               const PS::F64 _dt_max,
+                               const PS::F64 _dt_min){
         // for first step, the maximum time step is OK
         if(_time==0.0) return _dt_max;
         else {
@@ -1314,7 +1317,7 @@ private:
 
     
     //! write back hard particles to global system
-    inline void writeBackHardParticles() {
+    void writeBackHardParticles() {
         system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         // update gloabl particle system and send receive remote particles
@@ -1323,7 +1326,7 @@ private:
     }
 
     // update group_data.cm to pcm data for search cluster after restart
-    inline void setParticleGroupDataToCMData() {
+    void setParticleGroupDataToCMData() {
 #ifdef CLUSTER_VELOCITY
         // update status and mass_bk to pcm data for search cluster after restart
         system_hard_one_cluster.resetParticleGroupData(system_soft);
@@ -1337,7 +1340,7 @@ private:
 #endif    
 
     //! correct force due to the change over update
-    inline void correctForceChangeOverUpdate() {
+    void correctForceChangeOverUpdate() {
 #ifdef PROFILE
         profile.force_correct.start();
 #endif
@@ -1360,7 +1363,7 @@ private:
     }
 
     //! domain decomposition
-    inline void domainDecompose() {
+    void domainDecompose() {
 #ifdef PROFILE
         // > 6. Domain decomposition
         profile.domain.start();
@@ -1381,7 +1384,7 @@ private:
     /*!
       \return true: if tree time need update
      */
-    inline bool adjustDtTreeReduce(PS::F64& _dt_reduce_factor, const PS::F64 _dt_tree_base, const PS::F64 _dt_tree_now) {
+    bool adjustDtTreeReduce(PS::F64& _dt_reduce_factor, const PS::F64 _dt_tree_base, const PS::F64 _dt_tree_now) {
         bool dt_mod_flag = false;
         PS::F64 dt_tree_new = _dt_tree_base / _dt_reduce_factor;
         if(_dt_tree_now!= dt_tree_new) {
@@ -1406,7 +1409,7 @@ private:
     }
 
     //! update system status
-    inline void updateStatus(const bool _initial_flag) {
+    void updateStatus(const bool _initial_flag) {
         if (_initial_flag) {
             // calculate initial energy
             stat.energy.clear();
@@ -1457,7 +1460,7 @@ private:
         }
     }
 
-    inline void output() {
+    void output() {
 #ifdef PROFILE
         profile.output.start();
 #endif
@@ -1508,7 +1511,7 @@ private:
     }
 
 #ifdef PROFILE
-    inline void calcProfile(const PS::F64 _dt_output) {
+    void calcProfile(const PS::F64 _dt_output) {
         
         // profile analysis
 
@@ -1662,7 +1665,7 @@ public:
     }
 
     //! remove artificial and unused particles
-    inline void removeParticles() {
+    void removeParticles() {
         /////////////
         // Remove ghost particles
         system_soft.removeParticle(remove_list.getPointer(), remove_list.size());
@@ -2214,7 +2217,8 @@ public:
     }
     
     //! integrate the system
-    /*! @param[in] _time_break: additional breaking time to interupt the integration, in default the system integrate to time_end
+    /*! @param[in] _time_break: additional breaking time to interupt the integration, in default (0.0) the system integrate to time_end
+      \return stop condition
      */
     PS::S32 evolveToTime(const PS::F64 _time_break=0.0) {
         // ensure it is initialized
