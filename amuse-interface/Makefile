@@ -7,7 +7,7 @@ MPICXX   ?= mpicxx
 
 INCLUDE  += -I src/PeTar/src -I src/SDAR/src -I src/FDPS/src 
 
-MPIFLAGS =  -DPARTICLE_SIMULATOR_MPI_PARALLEL -DMPICH_IGNORE_CXX_SEEKC
+MPIFLAGS +=  -DPARTICLE_SIMULATOR_MPI_PARALLEL -DMPICH_IGNORE_CXX_SEEKC
 
 CXXFLAGS = ${INCLUDE} -fPIC -O2 -Wall -std=c++11  -fopenmp
 
@@ -63,10 +63,10 @@ worker_code.cc: interface.py
 	$(CODE_GENERATOR) --type=c interface.py petarInterface -o $@
 
 worker_code.h: interface.py
-	$(CODE_GENERATOR) --type=H interface.py petarInterface -o $@
+	$(CODE_GENERATOR) --type=H -i amuse.support.codes.stopping_conditions.StoppingConditionInterface interface.py petarInterface -o $@
 
 petar_worker: worker_code.cc worker_code.h $(CODELIB) $(OBJS)
-	$(MPICXX) $(CXXFLAGS) $< $(OBJS) $(CODELIB) -o $@
+	$(MPICXX) $(CXXFLAGS) $(SC_FLAGS) $(AM_CFLAGS) $(LDFLAGS) $< $(OBJS) $(CODELIB) -o $@ $(SC_MPI_CLIBS) $(LIBS) $(AM_LIBS)
 
 .cc.o: $<
-	$(MPICXX) $(CXXFLAGS) -c -o $@ $< 
+	$(MPICXX) $(CXXFLAGS) $(SC_FLAGS) -c -o $@ $< 
