@@ -52,6 +52,10 @@ public:
 
     //! advance step count for continuing case
     void nextContinue() {
+        if (next_is_start_flag_||(mode_==0&&!next_is_kick_flag_)||(mode_==1&&next_is_kick_flag_)) {
+            std::cerr<<"Error: not finish one K-D pair, cannot go to next pair!\n";
+            abort();
+        }
         count_continue_++;
         count_continue_ %= coff_continue_.size();
     }

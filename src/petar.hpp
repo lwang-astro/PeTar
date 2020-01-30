@@ -1511,7 +1511,8 @@ private:
     }
 
 #ifdef PROFILE
-    void calcProfile(const PS::F64 _dt_output) {
+    //! measure profiles
+    void calcProfile() {
         
         // profile analysis
 
@@ -1571,65 +1572,64 @@ private:
 
         dn_loop++;
 
-        // output profile data
-        if(fmod(stat.time, _dt_output) == 0.0) {
+    }
 
-            //const int NProc=PS::Comm::getNumberOfProc();
+    // output profile data
+    void printProfile() {
 
-            const SysProfile& profile_min = profile.getMin();
-            const SysProfile& profile_max = profile.getMax();
+        const SysProfile& profile_min = profile.getMin();
+        const SysProfile& profile_max = profile.getMax();
         
-            if(input_parameters.print_flag) {
-                std::cout<<std::setprecision(5);
-                std::cout<<"Tree step number: "<<dn_loop<<std::endl;
+        if(input_parameters.print_flag) {
+            std::cout<<std::setprecision(5);
+            std::cout<<"Tree step number: "<<dn_loop<<std::endl;
                 
 
-                std::cout<<"**** Wallclock time per step (local): [Min/Max]\n";
-                //std::cout<<std::setw(PRINT_WIDTH)<<"Rank";
-                profile.dumpName(std::cout,PRINT_WIDTH);
-                std::cout<<std::endl;
+            std::cout<<"**** Wallclock time per step (local): [Min/Max]\n";
+            //std::cout<<std::setw(PRINT_WIDTH)<<"Rank";
+            profile.dumpName(std::cout,PRINT_WIDTH);
+            std::cout<<std::endl;
 
-                //std::cout<<std::setw(PRINT_WIDTH)<<my_rank;
-                profile_min.dump(std::cout,PRINT_WIDTH,dn_loop);
-                std::cout<<std::endl;
-                profile_max.dump(std::cout,PRINT_WIDTH,dn_loop);
-                std::cout<<std::endl;
+            //std::cout<<std::setw(PRINT_WIDTH)<<my_rank;
+            profile_min.dump(std::cout,PRINT_WIDTH,dn_loop);
+            std::cout<<std::endl;
+            profile_max.dump(std::cout,PRINT_WIDTH,dn_loop);
+            std::cout<<std::endl;
 
-                std::cout<<"**** FDPS time profile (local):\n";
-                ps_profile.dumpName(std::cout,PRINT_WIDTH);
-                std::cout<<std::endl;
-                ps_profile.dump(std::cout,PRINT_WIDTH,dn_loop);
-                std::cout<<std::endl;
+            std::cout<<"**** FDPS time profile (local):\n";
+            ps_profile.dumpName(std::cout,PRINT_WIDTH);
+            std::cout<<std::endl;
+            ps_profile.dump(std::cout,PRINT_WIDTH,dn_loop);
+            std::cout<<std::endl;
 
-                std::cout<<"**** Number per step (global):\n";
-                n_count_sum.dumpName(std::cout,PRINT_WIDTH);
-                std::cout<<std::endl;
-                n_count_sum.dump(std::cout,PRINT_WIDTH,dn_loop);
-                std::cout<<std::endl;
+            std::cout<<"**** Number per step (global):\n";
+            n_count_sum.dumpName(std::cout,PRINT_WIDTH);
+            std::cout<<std::endl;
+            n_count_sum.dump(std::cout,PRINT_WIDTH,dn_loop);
+            std::cout<<std::endl;
                 
-                std::cout<<"**** Number of members in clusters (local):\n";
-                n_count.printHist(std::cout,PRINT_WIDTH,dn_loop);
-            }
-
-            if(input_parameters.write_style.value>0) {
-                fprofile<<std::setprecision(WRITE_PRECISION);
-                fprofile<<std::setw(WRITE_WIDTH)<<my_rank;
-                fprofile<<std::setw(WRITE_WIDTH)<<stat.time
-                        <<std::setw(WRITE_WIDTH)<<dn_loop
-                        <<std::setw(WRITE_WIDTH)<<stat.n_real_loc;
-                profile.dump(fprofile, WRITE_WIDTH, dn_loop);
-                profile.dumpBarrier(fprofile, WRITE_WIDTH, dn_loop);
-                ps_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
-                n_count.dump(fprofile, WRITE_WIDTH, dn_loop);
-                fprofile<<std::endl;
-            }
-
-            profile.clear();
-            ps_profile.clear();
-            n_count.clear();
-            n_count_sum.clear();
-            dn_loop=0;
+            std::cout<<"**** Number of members in clusters (local):\n";
+            n_count.printHist(std::cout,PRINT_WIDTH,dn_loop);
         }
+
+        if(input_parameters.write_style.value>0) {
+            fprofile<<std::setprecision(WRITE_PRECISION);
+            fprofile<<std::setw(WRITE_WIDTH)<<my_rank;
+            fprofile<<std::setw(WRITE_WIDTH)<<stat.time
+                    <<std::setw(WRITE_WIDTH)<<dn_loop
+                    <<std::setw(WRITE_WIDTH)<<stat.n_real_loc;
+            profile.dump(fprofile, WRITE_WIDTH, dn_loop);
+            profile.dumpBarrier(fprofile, WRITE_WIDTH, dn_loop);
+            ps_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
+            n_count.dump(fprofile, WRITE_WIDTH, dn_loop);
+            fprofile<<std::endl;
+        }
+
+        profile.clear();
+        ps_profile.clear();
+        n_count.clear();
+        n_count_sum.clear();
+        dn_loop=0;
     }
 #endif
 
@@ -2223,25 +2223,35 @@ public:
       \return stop condition
      */
     PS::S32 evolveToTime(const PS::F64 _time_break=0.0) {
+
         // ensure it is initialized
         assert(initial_step_flag);
+
+        // check time break
+        PS::F64 time_break = _time_break==0.0? input_parameters.time_end.value: std::min(_time_break,input_parameters.time_end.value);
+        if (stat.time>=time_break) return 0;
 
 #ifdef PETAR_DEBUG
         PS::F64 time_drift = stat.time, time_kick = stat.time;
 #endif
-        // check time break
-        PS::F64 time_break = _time_break==0.0? input_parameters.time_end.value: std::min(_time_break,input_parameters.time_end.value);
-        if (stat.time>=time_break) return 0;
 
         PS::F64 dt_output = input_parameters.dt_snp.value;
         PS::F64 dt_tree = dt_manager.getStep();
 
         /// Main loop
         while(stat.time <= time_break) {
-
 #ifdef PROFILE
             profile.tot.start();
 #endif
+
+            // remove deletec particles in system_soft.
+            removeParticles();
+
+            // >9. Domain decomposition
+            domainDecompose();
+
+            // >10. exchange particles
+            exchangeParticle();
 
             // >1. Tree for neighbor searching 
             /// get neighbor list to tree_nb
@@ -2284,6 +2294,15 @@ public:
                 dt_kick = dt_manager.getDtStartContinue();
             }
             else {
+                // increase loop counter
+                n_loop++;
+
+                // for next kick-drift pair
+                dt_manager.nextContinue();
+
+                // advance stat.time and step count
+                stat.time += dt_manager.getStep();
+
                 // check whether output or changeover change are needed (only at the ending step)
                 if (dt_manager.isNextEndPossible()) {
 
@@ -2331,6 +2350,17 @@ public:
                 // update status
                 updateStatus(false);
                 output();
+
+#ifdef PROFILE
+                // profile
+                profile.tot.barrier();
+                PS::Comm::barrier();
+                profile.tot.end();
+
+                printProfile();
+
+                profile.tot.start();
+#endif
             }
 
             // modify the tree step
@@ -2397,32 +2427,21 @@ public:
             // get drift step
             dt_drift = dt_manager.getDtDriftContinue();
 
-            drift(dt_drift);
-            
-            // remove artificial and unused particles
-            removeParticles();
-
-            // >9. Domain decomposition
-            domainDecompose();
-            // >10. exchange particles
-            exchangeParticle();
-
-            // advance stat.time and step count
-            stat.time += dt_drift;
 #ifdef PETAR_DEBUG
             time_drift += dt_drift;
 #endif
-            dt_manager.nextContinue();
+
+            drift(dt_drift);
 
 #ifdef PROFILE
+            // calculate profile
             profile.tot.barrier();
             PS::Comm::barrier();
             profile.tot.end();
-#endif
-            // profile
-            calcProfile(dt_output);
 
-            n_loop++;
+            calcProfile();
+#endif
+
         }
 
         return 0;
