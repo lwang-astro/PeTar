@@ -557,8 +557,8 @@ public:
     PS::DomainInfo dinfo;
     PS::F64ort * pos_domain;
 
-    // dt_tree reduce factor
-    PS::F64 dt_reduce_factor;
+    // tree time step manager
+    KickDriftStep dt_manager;
 
     // tree
     TreeNB tree_nb;
@@ -597,7 +597,7 @@ public:
         stat(), fstatus(),
         file_header(), system_soft(), id_adr_map(),
         n_loop(0), domain_decompose_weight(1.0), dinfo(), pos_domain(NULL), 
-        dt_reduce_factor(1.0),
+        dt_manager(),
         tree_nb(), tree_soft(), 
         hard_manager(), system_hard_one_cluster(), system_hard_isolated(), system_hard_connected(), 
         remove_list(),
@@ -2150,6 +2150,9 @@ public:
         // initial search cluster
         search_cluster.initialize();
 
+        // initial tree step manager
+        dt_manager.setKDKMode();
+
         initial_parameters_flag = true;
     }
 
@@ -2159,8 +2162,7 @@ public:
         if (initial_step_flag) return;
 
         PS::F64 dt_tree = input_parameters.dt_soft.value;
-
-        dt_reduce_factor=1.0;
+        dt_manager.setStep(dt_tree);
 
         // >1. Tree for neighbor searching 
         /// get neighbor list to tree_nb
@@ -2228,16 +2230,14 @@ public:
         PS::F64 time_drift = stat.time, time_kick = stat.time;
 #endif
         // check time break
-        PS::F64 time_break = _time_break==0.0? NUMERIC_FLOAT_MAX: _time_break;
+        PS::F64 time_break = _time_break==0.0? input_parameters.time_end.value: std::min(_time_break,input_parameters.time_end.value);
         if (stat.time>=time_break) return 0;
 
-        PS::F64 dt_tree = input_parameters.dt_soft.value;
         PS::F64 dt_output = input_parameters.dt_snp.value;
-        KickDriftStep dt_manager(dt_tree/dt_reduce_factor);
-        bool first_step_flag = true;
+        PS::F64 dt_tree = dt_manager.getStep();
 
         /// Main loop
-        while(stat.time <= input_parameters.time_end.value){
+        while(stat.time <= time_break) {
 
 #ifdef PROFILE
             profile.tot.start();
@@ -2268,58 +2268,49 @@ public:
             if (dt_manager.getCountContinue() == 1) GradientKick();
 #endif
 
-            bool interupt_flag = false;  // for interupt integration 
+            bool interupt_flag = false;  // for interupt integration when time reach end
             bool output_flag = false;    // for output snapshot and information
-            bool dt_mod_flag = false;    // for check whether tree time step need update
+            //bool dt_mod_flag = false;    // for check whether tree time step need update
             bool changeover_flag = false; // for check whether changeover need update
             PS::F64 dt_kick, dt_drift;
 
             // for initial the system
-            if (first_step_flag) {
-                first_step_flag = false;
+            if (dt_manager.isNextStart()) {
 
+                // update changeover if last time it is modified.
                 correctForceChangeOverUpdate();
 
+                // set step to the begining step
                 dt_kick = dt_manager.getDtStartContinue();
             }
             else {
-                dt_kick = dt_manager.getDtKickContinue();
-
-                // check whether tree time step need update only when one full step finish
-                if (dt_manager.getCountContinue() == 0) {
+                // check whether output or changeover change are needed (only at the ending step)
+                if (dt_manager.isNextEndPossible()) {
 
                     // adjust tree step
-                    dt_mod_flag = adjustDtTreeReduce(dt_reduce_factor, dt_tree, dt_manager.getStep());
-                    if(dt_mod_flag) dt_kick = dt_manager.getDtEndContinue();
+                    //dt_mod_flag = adjustDtTreeReduce(dt_reduce_factor, dt_tree, dt_manager.getStep());
+                    //if(dt_mod_flag) dt_kick = dt_manager.getDtEndContinue();
 
                     // output step, get last kick step
-                    if( fmod(stat.time, dt_output) == 0.0) {
-                        output_flag = true;
-                        dt_kick = dt_manager.getDtEndContinue();
-                    }
+                    output_flag = (fmod(stat.time, dt_output) == 0.0);
 
                     // check changeover change
-                    if (system_hard_isolated.getNClusterChangeOverUpdate()>0) {
-                        changeover_flag = true;
-                        dt_kick = dt_manager.getDtEndContinue();
-                    }
+                    changeover_flag = (system_hard_isolated.getNClusterChangeOverUpdate()>0);
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
                     PS::S32 n_changeover_modify_local  = system_hard_connected.getNClusterChangeOverUpdate() + system_hard_isolated.getNClusterChangeOverUpdate();
                     PS::S32 n_changeover_modify_global = PS::Comm::getSum(n_changeover_modify_local);
-                    if (n_changeover_modify_global>0) {
-                        changeover_flag = true;
-                        dt_kick = dt_manager.getDtEndContinue();
-                    }
+                    if (n_changeover_modify_global>0) changeover_flag = true;
 #endif
 
                     // check interuption
-                    if (stat.time>=time_break) {
-                        interupt_flag = true;
-                        dt_kick = dt_manager.getDtEndContinue();
-                    }
-                    
+                    interupt_flag = (stat.time>=time_break);
+
+                    // set next step to be last
+                    if (output_flag||changeover_flag||interupt_flag) dt_kick = dt_manager.getDtEndContinue();
+                    else dt_kick = dt_manager.getDtKickContinue();
                 }
+                else dt_kick = dt_manager.getDtKickContinue();
             }
 
 
@@ -2343,15 +2334,15 @@ public:
             }
 
             // modify the tree step
-            if(dt_mod_flag) {
-                dt_manager.setStep(dt_tree/dt_reduce_factor);
-                if (input_parameters.print_flag) {
-                    std::cout<<"Tree time step change, time = "<<stat.time
-                             <<"  dt_soft = "<<dt_tree
-                             <<"  reduce factor = "<<dt_reduce_factor
-                             <<std::endl;
-                }
-            }
+            //if(dt_mod_flag) {
+            //    dt_manager.setStep(dt_tree/dt_reduce_factor);
+            //    if (input_parameters.print_flag) {
+            //        std::cout<<"Tree time step change, time = "<<stat.time
+            //                 <<"  dt_soft = "<<dt_tree
+            //                 <<"  reduce factor = "<<dt_reduce_factor
+            //                 <<std::endl;
+            //    }
+            //}
 
             // interupt
             if(interupt_flag) {
@@ -2376,12 +2367,20 @@ public:
                 return 0;
             }
 
-            // second kick if dt_tree is changed or output is done
-            if(dt_mod_flag||output_flag||changeover_flag) {
+            // second kick if output exists or changeover is modified
+            //if(dt_mod_flag||output_flag||changeover_flag) {
+            if(output_flag||changeover_flag) {
 #ifdef PETAR_DEBUG
                 assert(time_kick==time_drift);
                 assert(time_kick==stat.time);
 #endif
+
+                // determine the next tree time step
+                //PS::F64 dt_reduce_factor_org = 1.0;
+                //dt_reduce_factor_org = PS::Comm::getMaxValue(dt_reduce_factor_org);
+                //dt_reduce_factor = 1.0;
+                //while(dt_reduce_factor<dt_reduce_factor_org) dt_reduce_factor *=2.0;
+
                 //update new tree step if reduce factor is changed
                 dt_kick = dt_manager.getDtStartContinue();
 
@@ -2400,12 +2399,6 @@ public:
 
             drift(dt_drift);
             
-            // determine the next tree time step
-            PS::F64 dt_reduce_factor_org = 1.0;
-            dt_reduce_factor_org = PS::Comm::getMaxValue(dt_reduce_factor_org);
-            dt_reduce_factor = 1.0;
-            while(dt_reduce_factor<dt_reduce_factor_org) dt_reduce_factor *=2.0;
-
             // remove artificial and unused particles
             removeParticles();
 
