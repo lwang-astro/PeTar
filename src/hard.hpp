@@ -31,7 +31,7 @@ public:
     PS::F64 r_out_base;
     ArtificialParticleManager ap_manager;
     H4::HermiteManager<HermiteInteraction> h4_manager;
-    AR::SymplecticManager<ARInteraction> ar_manager;
+    AR::TimeTransformedSymplecticManager<ARInteraction> ar_manager;
 
     //! constructor
     HardManager(): energy_error_max(-1.0), eps_sq(-1.0), r_in_base(-1.0), r_out_base(-1.0), ap_manager(), h4_manager(), ar_manager() {}
@@ -139,7 +139,7 @@ struct HardEnergy{
 class HardIntegrator{
 public:
     H4::HermiteIntegrator<PtclHard, PtclH4, HermitePerturber, ARPerturber, HermiteInteraction, ARInteraction, HermiteInformation> h4_int; ///> hermite integrator
-    AR::SymplecticIntegrator<H4::ParticleAR<PtclHard>, PtclH4, ARPerturber, ARInteraction, H4::ARInformation<PtclHard>> sym_int; ///> AR integrator
+    AR::TimeTransformedSymplecticIntegrator<H4::ParticleAR<PtclHard>, PtclH4, ARPerturber, ARInteraction, H4::ARInformation<PtclHard>> sym_int; ///> AR integrator
     bool use_sym_int;  ///> use AR integrator flag
     HardManager* manager; ///> hard manager
     PS::ReallocatableArray<TidalTensor> tidal_tensor; ///> tidal tensor array
