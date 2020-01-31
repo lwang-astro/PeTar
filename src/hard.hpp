@@ -20,6 +20,8 @@
 #include"artificial_particles.hpp"
 #include"stability.hpp"
 
+typedef H4::ParticleH4<PtclHard> PtclH4;
+
 //! Hard integrator parameter manager
 class HardManager{
 public:
@@ -136,38 +138,88 @@ struct HardEnergy{
 //! hard integrator 
 class HardIntegrator{
 public:
-    H4::HermiteIntegrator<PtclHard, PtclH4, HermitePerturber, ARPerturber, HermiteInteraction, ARInteraction, HermiteInformation> h4_int;
-    AR::SymplecticIntegrator<H4::ParticleAR<PtclHard>, PtclH4, ARPerturber, ARInteraction, H4::ARInformation<PtclHard>> sym_int;
-    bool use_sym_int;
+    H4::HermiteIntegrator<PtclHard, PtclH4, HermitePerturber, ARPerturber, HermiteInteraction, ARInteraction, HermiteInformation> h4_int; ///> hermite integrator
+    AR::SymplecticIntegrator<H4::ParticleAR<PtclHard>, PtclH4, ARPerturber, ARInteraction, H4::ARInformation<PtclHard>> sym_int; ///> AR integrator
+    bool use_sym_int;  ///> use AR integrator flag
+    HardManager* manager; ///> hard manager
+    PS::ReallocatableArray<TidalTensor> tidal_tensor; ///> tidal tensor array
+    PS::F64 time_origin;  ///> origin physical time
+    PtclH4* ptcl_origin;  ///> original particle array
 
-#ifdef HARD_CHECK_ENERGY
-    PS::F64 ekin, epot, ekin_sd, epot_sd, de, de_sd, de_sd_change_cum;
+#ifdef HARD_DEBUG_PRINT
+    PS::ReallocatableArray<PS::S32> n_group_sub_init; ///> initial sub group number in each groups 
+    PS::S32 n_group_sub_tot_init; ///> total sub groups in all groups initially
 #endif
 
+#ifdef PROFILE
+    PS::S64 ARC_substep_sum;
+    PS::S64 ARC_tsyn_step_sum;
+    PS::S64 H4_step_sum;
+#endif
+#ifdef HARD_CHECK_ENERGY
+    HardEnergy energy;
+#endif
+
+    //! initializer
+    HardIntegrator(): h4_int(), sym_int(), use_sym_int(true), manager(NULL), tidal_tensor(), time_origin(-1.0), ptcl_origin(NULL),
+#ifdef HARD_DEBUG_PRINT
+                      n_group_sub_init(), n_group_sub_tot_init(0),
+#endif
+#ifdef PROFILE
+                      ARC_substep_sum(0), ARC_tsyn_step_sum(0), H4_step_sum(0) 
+#endif
+                      {
+#ifdef HARD_CHECK_ENERGY
+                          energy.clear();
+#endif
+                      }
+
+    //! check parameters
+    bool checkParams() {
+        ASSERT(manager!=NULL);
+        ASSERT(ptcl_origin!=NULL);
+        ASSERT(time_origin>=0.0);
+        return true;
+    }
+
     //! initial integration
-    void initial(PtclH4 * _ptcl_local,
+    /*!
+       @param[in,out] _ptcl: particle array
+       @param[in] _n_ptcl: particle number in cluster
+       @param[in,out] _ptcl_artificial: artificial particle array, c.m. are kicked 
+       @param[in] _n_group: group number in cluster
+       @param[in] _manager: hard manager
+       @param[in] _time_origin: initial physical time 
+     */
+    template <class Tsoft>
+    void initial(PtclH4 * _ptcl,
                  const PS::S32 _n_ptcl,
                  Tsoft* _ptcl_artificial,
-                 const PS::S32 _n_group) {
+                 const PS::S32 _n_group,
+                 HardManager* _manager,
+                 const PS::F64 _time_origin) {
+        
+        // set manager
+        manager = _manager;
+        time_origin = _time_origin;
+        ptcl_origin = _ptcl;
 
 #ifdef HARD_DEBUG
         if (_n_ptcl>400) {
             std::cerr<<"Large cluster, n_ptcl="<<_n_ptcl<<" n_group="<<_n_group<<std::endl;
             for (PS::S32 i=0; i<_n_ptcl; i++) {
-                if(_ptcl_local[i].r_search>10*_ptcl_local[i].r_search_min) {
+                if(ptcl_origin[i].r_search>10*ptcl_origin[i].r_search_min) {
                     std::cerr<<"i = "<<i<<" ";
-                    _ptcl_local[i].print(std::cerr);
+                    ptcl_origin[i].print(std::cerr);
                     std::cerr<<std::endl;
                 }
             }
         }
 #endif
 
-        const PS::F64 time_origin_int = 0.0; // to avoid precision issue
-
         // prepare initial groups with artificial particles
         PS::S32 adr_first_ptcl[_n_group+1];
-        PS::S32 n_group_offset[_n_group+1]; // ptcl member offset in _ptcl_local
+        PS::S32 n_group_offset[_n_group+1]; // ptcl member offset in ptcl_origin
         n_group_offset[0] = 0;
         
         auto& ap_manager = manager->ap_manager;
@@ -181,19 +233,19 @@ public:
             pcm->mass = pcm->group_data.artificial.mass_backup;
 
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-            ap_manager.checkConsistence(&_ptcl_local[n_group_offset[i]], &(_ptcl_artificial[adr_first_ptcl[i]]));
+            ap_manager.checkConsistence(&ptcl_origin[n_group_offset[i]], &(_ptcl_artificial[adr_first_ptcl[i]]));
 #endif
         }
 
 #ifdef HARD_DEBUG
         if(_n_group>0) {
             if(n_group_offset[_n_group]<_n_ptcl)
-                assert(_ptcl_local[n_group_offset[_n_group]].group_data.artificial.isSingle());
-            assert(_ptcl_local[n_group_offset[_n_group]-1].group_data.artificial.isMember());
+                assert(ptcl_origin[n_group_offset[_n_group]].group_data.artificial.isSingle());
+            assert(ptcl_origin[n_group_offset[_n_group]-1].group_data.artificial.isMember());
         }
 #endif
 
-        // single particle start index in _ptcl_local
+        // single particle start index in ptcl_origin
         PS::S32 i_single_start = n_group_offset[_n_group];
         // number of single particles
         PS::S32 n_single_init = _n_ptcl - i_single_start;
@@ -204,8 +256,8 @@ public:
 #ifdef HARD_DEBUG
         // check member consistence
         for(int i=0; i<i_single_start; i++) {
-            assert(_ptcl_local[i].group_data.artificial.isMember());
-            assert(_ptcl_local[i].mass>0);
+            assert(ptcl_origin[i].group_data.artificial.isMember());
+            assert(ptcl_origin[i].mass>0);
         }
 #endif
 
@@ -226,23 +278,27 @@ public:
             sym_int.particles.setMode(COMM::ListMode::copy);
             auto* api = &(_ptcl_artificial[adr_first_ptcl[0]]);
             const PS::S32 n_members = ap_manager.getMemberN(api);
+#ifdef HARD_DEBUG
+            ASSERT(n_members == _n_ptcl);
+#endif
             sym_int.particles.reserveMem(n_members);
             sym_int.info.reserveMem(n_members);
             //sym_int.perturber.r_crit_sq = h4_manager->r_neighbor_crit*h4_manager->r_neighbor_crit;
             for (PS::S32 i=0; i<n_members; i++) {
-                sym_int.particles.addMemberAndAddress(_ptcl_local[i]);
+                sym_int.particles.addMemberAndAddress(ptcl_origin[i]);
                 sym_int.info.particle_index.addMember(i);
-                sym_int.info.r_break_crit = std::max(sym_int.info.r_break_crit,_ptcl_local[i].getRGroup());
-                Float r_neighbor_crit = _ptcl_local[i].getRNeighbor();
+                sym_int.info.r_break_crit = std::max(sym_int.info.r_break_crit,ptcl_origin[i].getRGroup());
+                Float r_neighbor_crit = ptcl_origin[i].getRNeighbor();
                 sym_int.perturber.r_neighbor_crit_sq = std::max(sym_int.perturber.r_neighbor_crit_sq, r_neighbor_crit*r_neighbor_crit);                
             }
             sym_int.reserveIntegratorMem();
             sym_int.info.generateBinaryTree(sym_int.particles, ar_manager.interaction.gravitational_constant);
+#ifdef SOFT_PERT
             auto* apcm = ap_manager.getCMParticles(api);
             auto* aptt = ap_manager.getTidalTensorParticles(api);
 
-#ifdef SOFT_PERT
-            TidalTensor tt;
+            tidal_tensor.resizeNoInitialize(1);
+            auto& tt = tidal_tensor[0];
             tt.fit(aptt, *apcm, ap_manager.r_tidal_tensor);
             sym_int.perturber.soft_pert=&tt;
             // set tt group id to the total number of particles
@@ -252,7 +308,7 @@ public:
             sym_int.perturber.calcSoftPertMin(sym_int.info.getBinaryTreeRoot(), ar_manager.interaction.gravitational_constant);
             
             // initialization 
-            sym_int.initialIntegration(time_origin_int);
+            sym_int.initialIntegration(0.0);
             sym_int.info.calcDsAndStepOption(sym_int.slowdown.getSlowDownFactorOrigin(), ar_manager.step.getOrder(),  ar_manager.interaction.gravitational_constant); 
 
             // calculate c.m. changeover
@@ -271,7 +327,7 @@ public:
             h4_int.ar_manager = &ar_manager;
 
             h4_int.particles.setMode(COMM::ListMode::link);
-            h4_int.particles.linkMemberArray(_ptcl_local, _n_ptcl);
+            h4_int.particles.linkMemberArray(ptcl_origin, _n_ptcl);
 
             h4_int.particles.calcCenterOfMass();
             h4_int.particles.shiftToCenterOfMassFrame();
@@ -286,7 +342,7 @@ public:
 
 #ifdef SOFT_PERT
             // Tidal tensor 
-            TidalTensor tidal_tensor[_n_group+1];
+            tidal_tensor.resizeNoInitialize(_n_group+1);
 #endif
             
             // add groups
@@ -297,16 +353,16 @@ public:
                 h4_int.addGroups(ptcl_index_group, n_group_offset, _n_group);
 
                 for (PS::S32 i=0; i<_n_group; i++) {
+                    auto& groupi = h4_int.groups[i];
+
+#ifdef SOFT_PERT
                     auto* api = &(_ptcl_artificial[adr_first_ptcl[i]]);
-                    auto* aptt = ap_manager.getTidalTensorParticles(api);
                     auto* apcm = ap_manager.getCMParticles(api);
+                    auto* aptt = ap_manager.getTidalTensorParticles(api);
 
                     // correct pos for t.t. cm
                     apcm->pos -= h4_int.particles.cm.pos;
 
-                    auto& groupi = h4_int.groups[i];
-
-#ifdef SOFT_PERT
                     // fit tidal tensor
                     tidal_tensor[i].fit(aptt, *apcm, ap_manager.r_tidal_tensor);
 
@@ -338,8 +394,8 @@ public:
                 }
             }
 
-            const PS::S32* single_index = h4_int.getSortDtIndexSingle();
 #ifdef SOFT_PERT
+            const PS::S32* single_index = h4_int.getSortDtIndexSingle();
             // set single particle group_data to _n_ptcl+1 to avoid confusion with tidal tensor id
             for (PS::S32 i=0; i<h4_int.getNSingle(); i++) {
                 auto& pi = h4_int.particles[single_index[i]];
@@ -349,8 +405,11 @@ public:
 
             // initialization 
             h4_int.initialIntegration(); // get neighbors and min particles
+
+#ifdef HARD_DEBUG_PRINT
             // AR inner slowdown number
-            int n_group_sub_init[_n_group], n_group_sub_tot_init=0;
+            n_group_sub_init.resizeNoInitialize(_n_group);
+            n_group_sub_tot_init=0;
 #ifdef AR_SLOWDOWN_INNER
             for (int i=0; i<_n_group; i++) {
                 n_group_sub_init[i] = h4_int.groups[i].slowdown_inner.getSize();
@@ -358,6 +417,7 @@ public:
             }
 #else
             for (int i=0; i<_n_group; i++) n_group_sub_init[i] = 0;
+#endif
 #endif
             h4_int.adjustGroups(true);
 
@@ -404,31 +464,35 @@ public:
 
             h4_int.initialIntegration();
             h4_int.sortDtAndSelectActParticle();
-            h4_int.info.time_origin = h4_int.getTime() + time_origin_;
+            h4_int.info.time_origin = h4_int.getTime() + time_origin;
 
 #ifdef HARD_CHECK_ENERGY
             h4_int.calcEnergySlowDown(true);
 #endif
 
 #ifdef HARD_DEBUG_PRINT_TITLE
-            h4_int.printColumnTitle(std::cout, WRITE_WIDTH, n_group_sub_init, _n_group, n_group_sub_tot_init);
+            h4_int.printColumnTitle(std::cout, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
             std::cout<<std::endl;
 #endif
 #ifdef HARD_DEBUG_PRINT
-            h4_int.printColumn(std::cout, WRITE_WIDTH, n_group_sub_init, _n_group, n_group_sub_tot_init);
+            h4_int.printColumn(std::cout, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
             std::cout<<std::endl;
 #endif
         }
     }
 
     void integrateToTime(const PS::F64 _time_end) {
+        ASSERT(checkParams());
         // integration
         if (use_sym_int) {
-            sym_int.integrateToTime(time_end);
+            sym_int.integrateToTime(_time_end);
         }
         else {
+#ifdef SOFT_PERT
+            PS::S32 n_tt = tidal_tensor.size();
+#endif
             // integration loop
-            while (h4_int.getTime()<_dt) {
+            while (h4_int.getTime()<_time_end) {
 
                 h4_int.integrateOneStepAct();
                 h4_int.adjustGroups(false);
@@ -448,7 +512,7 @@ public:
                     PS::S32 tt_id_member = groupi.particles[0].group_data.artificial.getData(true);
                     ASSERT(tt_id_member>0);
 
-                    if (tt_id_member<=_n_group) {
+                    if (tt_id_member<n_tt) {
                         PS::S32 n_members = groupi.particles.getSize();
                         TidalTensor* tidal_tensor_i = &tidal_tensor[tt_id_member-1];
 
@@ -515,7 +579,7 @@ public:
                 // initial after groups are modified
                 h4_int.initialIntegration();
                 h4_int.sortDtAndSelectActParticle();
-                h4_int.info.time_origin = h4_int.getTime() + time_origin_;
+                h4_int.info.time_origin = h4_int.getTime() + time_origin;
 
 #ifdef HARD_DEBUG_PRINT
                 //PS::F64 dt_max = 0.0;
@@ -524,21 +588,22 @@ public:
                 //if (n_group>0) dt_max = h4_int.groups[h4_int.getSortDtIndexGroup()[n_group-1]].particles.cm.dt;
                 //if (n_single>0) dt_max = std::max(dt_max, h4_int.particles[h4_int.getSortDtIndexSingle()[n_single-1]].dt);
                 //ASSERT(dt_max>0.0);
+                auto& h4_manager = manager->h4_manager;
                 if (fmod(h4_int.getTime(), h4_manager.step.getDtMax()/HARD_DEBUG_PRINT_FEQ)==0.0) {
                     h4_int.calcEnergySlowDown(false);
 
-                    h4_int.printColumn(std::cout, WRITE_WIDTH, n_group_sub_init, _n_group, n_group_sub_tot_init);
+                    h4_int.printColumn(std::cout, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
                     std::cout<<std::endl;
 
-                    de_sd   = h4_int.getEnergyErrorSlowDown();
+                    PS::F64 de_sd   = h4_int.getEnergyErrorSlowDown();
                     if (abs(de_sd) > manager->energy_error_max) {
-                        ekin    = h4_int.getEkin();
-                        ekin_sd = h4_int.getEkinSlowDown();
-                        epot    = h4_int.getEpot();
-                        epot_sd = h4_int.getEpotSlowDown();
+                        PS::F64 ekin    = h4_int.getEkin();
+                        PS::F64 ekin_sd = h4_int.getEkinSlowDown();
+                        PS::F64 epot    = h4_int.getEpot();
+                        PS::F64 epot_sd = h4_int.getEpotSlowDown();
                         PS::F64 etot_sd = h4_int.getEtotSlowDownRef();
-                        de      = h4_int.getEnergyError();
-                        de_sd_change_cum = h4_int.getDESlowDownChangeCum();
+                        PS::F64 de      = h4_int.getEnergyError();
+                        PS::F64 de_sd_change_cum = h4_int.getDESlowDownChangeCum();
                         std::cerr<<"Hard energy significant ("<<de_sd<<") !"
                                  <<"  Ekin: "<<ekin
                                  <<"  Epot: "<<epot
@@ -563,18 +628,29 @@ public:
         
     }
 
-    void writeBack() {
+    //! drift c.m. particle of the cluster record group c.m. in group_data and write back data to original particle array
+    /*!
+       @param[in] _time_end: integration ending time (initial time is fixed to 0)
+     */
+    void driftClusterCMRecordGroupCMDataAndWriteBack(const PS::F64 _time_end) {
+        ASSERT(checkParams());
+#ifdef HARD_CHECK_ENERGY
+        PS::F64 ekin, epot, ekin_sd, epot_sd, de, de_sd, de_sd_change_cum;
+#endif
         if (use_sym_int) {
-            pcm.pos += pcm.vel * _dt;
+            auto& pcm = sym_int.particles.cm;
+            pcm.pos += pcm.vel * _time_end;
 
             // update rsearch
-            pcm.Ptcl::calcRSearch(_dt);
+            pcm.Ptcl::calcRSearch(_time_end);
             // copyback
             sym_int.particles.shiftToOriginFrame();
             sym_int.particles.template writeBackMemberAll<PtclH4>();
 
+            PS::S32 n_members = sym_int.particles.getSize();
+
             for (PS::S32 i=0; i<n_members; i++) {
-                auto& pi = _ptcl_local[i];
+                auto& pi = ptcl_origin[i];
                 pi.r_search = std::max(pcm.r_search, pi.r_search);
 #ifdef CLUSTER_VELOCITY
                 pi.group_data.cm.mass    = pcm.mass;
@@ -583,13 +659,12 @@ public:
                 pi.group_data.cm.vel[2]  = pcm.vel[2];
 #endif
 #ifdef HARD_DEBUG
-                ASSERT(_ptcl_local[i].r_search>_ptcl_local[i].changeover.getRout());
+                ASSERT(ptcl_origin[i].r_search>ptcl_origin[i].changeover.getRout());
 #endif
             }
 
 #ifdef PROFILE
             ARC_substep_sum += sym_int.profile.step_count;
-            ARC_n_groups += 1;
 #endif
 #ifdef HARD_CHECK_ENERGY
             PS::F64 kappa_inv = 1.0/sym_int.slowdown.getSlowDownFactor();
@@ -610,6 +685,7 @@ public:
         }
         else {
 #ifdef HARD_CHECK_ENERGY
+            // PS: writeBackGroupMembers is done inside calcEnergySlowDown
             h4_int.calcEnergySlowDown(false);
             ekin    = h4_int.getEkin();
             ekin_sd = h4_int.getEkinSlowDown();
@@ -621,12 +697,13 @@ public:
 #else
             h4_int.writeBackGroupMembers();
 #endif
-            h4_int.particles.cm.pos += h4_int.particles.cm.vel * _dt;
+            h4_int.particles.cm.pos += h4_int.particles.cm.vel * _time_end;
 
             h4_int.particles.shiftToOriginFrame();
 
             // update research and group_data.cm
             auto& h4_pcm = h4_int.particles.cm;
+            const PS::S32* group_index = h4_int.getSortDtIndexGroup();
             for(PS::S32 i=0; i<h4_int.getNGroup(); i++) {
                 const PS::S32 k =group_index[i];
 #ifdef HARD_DEBUG
@@ -637,7 +714,7 @@ public:
                 pcm.vel += h4_pcm.vel;
 
                 //pcm.calcRSearch(h4_manager.interaction.G*(h4_pcm.mass-pcm.mass), abs(pcm.pot), h4_pcm.vel, _dt);
-                pcm.Ptcl::calcRSearch(_dt);
+                pcm.Ptcl::calcRSearch(_time_end);
                 const PS::S32 n_member = h4_int.groups[k].particles.getSize();
                 //const PS::S32 id_first = h4_int.groups[k].particles.getMemberOriginAddress(0)->id;
                 for (PS::S32 j=0; j<n_member; j++) {
@@ -656,6 +733,7 @@ public:
                 }
             }
 
+            const PS::S32* single_index = h4_int.getSortDtIndexSingle();
             for (PS::S32 i=0; i<h4_int.getNSingle(); i++) {
                 auto& pi = h4_int.particles[single_index[i]];
 #ifdef CLUSTER_VELOCITY
@@ -665,7 +743,7 @@ public:
                 pi.group_data.cm.vel[1]  = 0.0;
                 pi.group_data.cm.vel[2]  = 0.0;
 #endif
-                pi.Ptcl::calcRSearch(_dt);
+                pi.Ptcl::calcRSearch(_time_end);
 //                pi.calcRSearch(h4_manager.interaction.G*(h4_pcm.mass-pi.mass), abs(pi.pot), h4_pcm.vel, _dt);
             }
 
@@ -675,7 +753,7 @@ public:
             H4_step_sum += h4_int.profile.hermite_single_step_count + h4_int.profile.hermite_group_step_count;
             ARC_substep_sum += h4_int.profile.ar_step_count;
             ARC_tsyn_step_sum += h4_int.profile.ar_step_count_tsyn;
-            ARC_n_groups += _n_group;
+
             if (h4_int.profile.ar_step_count>manager->ar_manager.step_count_max) {
                 std::cerr<<"Large AR step cluster found: step: "<<h4_int.profile.ar_step_count<<std::endl;
                 DATADUMP("dump_large_step");
@@ -685,8 +763,7 @@ public:
             for (PS::S32 i=0; i<h4_int.getNGroup(); i++) {
                 const PS::S32 k= group_index[i];
                 auto& groupk = h4_int.groups[k];
-                std::cerr<<"Group N:"<<std::setw(6)<<ARC_n_groups
-                         <<" k:"<<std::setw(2)<<k
+                std::cerr<<"Group k:"<<std::setw(2)<<k
                          <<" N_member: "<<std::setw(4)<<groupk.particles.getSize()
                          <<" step: "<<std::setw(12)<<groupk.profile.step_count_sum
                          <<" step(tsyn): "<<std::setw(10)<<groupk.profile.step_count_tsyn_sum
@@ -704,8 +781,7 @@ public:
                          <<" NB: "<<std::setw(4)<<groupk.perturber.neighbor_address.getSize()
                          <<std::endl;
                 if (groupk.profile.step_count_tsyn_sum>10000) {
-                    std::string dumpname="hard_dump."+std::to_string(int(ARC_n_groups));
-                    DATADUMP(dumpname.c_str());
+                    DATADUMP("hard_dump");
                 }
             }
 #endif
@@ -753,9 +829,24 @@ public:
 
     }
 
+    //! clear function
     void clear() {
         sym_int.clear();
         h4_int.clear();
+        manager = NULL;
+        tidal_tensor.resizeNoInitialize(0);
+        time_origin = 0;
+        ptcl_origin = NULL;
+
+#ifdef PROFILE
+        ARC_substep_sum = 0;
+        ARC_tsyn_step_sum = 0;
+        H4_step_sum = 0;
+#endif
+#ifdef HARD_CHECK_ENERGY
+        energy.clear();
+#endif
+
     }       
 
 };
@@ -763,7 +854,6 @@ public:
 //! Hard system
 class SystemHard{
 private:
-    typedef H4::ParticleH4<PtclHard> PtclH4;
     // Notice: if new variables added, change pardump also
     PS::F64 time_origin_;
     
@@ -786,11 +876,12 @@ public:
     PS::ReallocatableArray<COMM::BinaryTree<PtclH4>> binary_table;
     HardManager* manager;
     HardIntegrator* hard_int;
+    PS::S32 n_hard_int;
 
 #ifdef PROFILE
     PS::S64 ARC_substep_sum;
     PS::S64 ARC_tsyn_step_sum;
-    PS::F64 ARC_n_groups;
+    PS::S64 ARC_n_groups;
     PS::S64 H4_step_sum;
 #endif
 #ifdef HARD_CHECK_ENERGY
@@ -802,6 +893,7 @@ public:
         ASSERT(manager!=NULL);
         ASSERT(manager->checkParams());
         ASSERT(hard_int!=NULL);
+        ASSERT(n_hard_int>0);
         return true;
     }
 
@@ -1254,24 +1346,37 @@ public:
                                   const PS::F64 _dt,
                                   const PS::S32 _ithread=0) {
         ASSERT(checkParams());
+        ASSERT(_ithread<n_hard_int);
 //#ifdef HARD_DEBUG_PRINT
 //        PS::ReallocatableArray<PtclH4> ptcl_bk_pt;
 //        ptcl_bk_pt.reserve(_n_ptcl);
 //        ptcl_bk_pt.resizeNoInitialize(_n_ptcl);
 //#endif
-        hard_int[_ithread].initial(_ptcl_local, _n_ptcl, _ptcl_artificial, _n_group);
+        hard_int[_ithread].initial(_ptcl_local, _n_ptcl, _ptcl_artificial, _n_group, manager, time_origin_);
 
         hard_int[_ithread].integrateToTime(_dt);
-        hard_int[_ithread].writeBack();
+        hard_int[_ithread].driftClusterCMRecordGroupCMDataAndWriteBack(_dt);
+
+#ifdef PROFILE
+        ARC_substep_sum    += hard_int[_ithread].ARC_substep_sum;
+        ARC_tsyn_step_sum  += hard_int[_ithread].ARC_tsyn_step_sum;
+        H4_step_sum        += hard_int[_ithread].H4_step_sum;
+        ARC_n_groups       += _n_group;
+#endif
+#ifdef HARD_CHECK_ENERGY
+        energy += hard_int[_ithread].energy;
+#endif
+
         hard_int[_ithread].clear();
+        
     }
 
 public:
 
     SystemHard(){
         manager = NULL;
-        const PS::S32 num_thread = PS::Comm::getNumberOfThread();
-        hard_int = new HardIntegrator[num_thread];
+        hard_int = NULL;
+        n_hard_int = 0;
 
 #ifdef PROFILE
         ARC_substep_sum = 0;
@@ -1285,10 +1390,17 @@ public:
         //        PS::S32 n_threads = PS::Comm::getNumberOfThread();
     }
 
+    void allocateHardIntegrator() {
+        if (n_hard_int>0) delete [] hard_int;
+        const PS::S32 num_thread = PS::Comm::getNumberOfThread();
+        hard_int = new HardIntegrator[num_thread];
+        n_hard_int = num_thread;
+    }
+
     ~SystemHard() {
         delete [] hard_int;
-        hard_int = NULL;
     }
+
 
     void initializeForOneCluster(const PS::S32 n){
 #ifdef HARD_DEBUG

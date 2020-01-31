@@ -151,6 +151,7 @@ int main(int argc, char **argv){
   if (mode==0) {
       SystemHard sys;
       sys.manager = &hard_manager;
+      sys.allocateHardIntegrator();
 
       // change ARC parameters
       sys.driveForMultiClusterImpl(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, hard_dump.time_end, 0);

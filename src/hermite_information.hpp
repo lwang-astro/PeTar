@@ -31,4 +31,7 @@ public:
     void printColumn(std::ostream & _fout, const int _width=20){
         _fout<<std::setw(_width)<<time_origin;
     }
+
+    //! clear function
+    void clear(){ }
 };

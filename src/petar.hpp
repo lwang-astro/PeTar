@@ -2092,6 +2092,9 @@ public:
         hard_manager.checkParams();
 
         // initial hard class and parameters
+        system_hard_isolated.allocateHardIntegrator();
+        system_hard_connected.allocateHardIntegrator();
+
         system_hard_one_cluster.manager = &hard_manager;
         system_hard_isolated.manager = &hard_manager;
         system_hard_connected.manager = &hard_manager;

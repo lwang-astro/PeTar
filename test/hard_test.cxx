@@ -111,6 +111,7 @@ int main(int argc, char** argv)
 
   SystemHard sys_hard;
   sys_hard.manager = &hard_manager;
+  sys_hard.allocateHardIntegrator();
   sys_hard.setPtclForIsolatedMultiCluster(sys, p_list, n_cluster);
 
   PS::S32 n_sys = sys.getNumberOfParticleLocal();
