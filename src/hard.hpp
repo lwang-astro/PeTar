@@ -21,6 +21,7 @@
 #include"stability.hpp"
 
 typedef H4::ParticleH4<PtclHard> PtclH4;
+typedef H4::ParticleAR<PtclHard> PtclAR;
 
 //! Hard integrator parameter manager
 class HardManager{
@@ -135,16 +136,21 @@ struct HardEnergy{
 
 };
 
+enum InteruptState {none, binary, step};
+
 //! hard integrator 
 class HardIntegrator{
 public:
     H4::HermiteIntegrator<PtclHard, PtclH4, HermitePerturber, ARPerturber, HermiteInteraction, ARInteraction, HermiteInformation> h4_int; ///> hermite integrator
-    AR::TimeTransformedSymplecticIntegrator<H4::ParticleAR<PtclHard>, PtclH4, ARPerturber, ARInteraction, H4::ARInformation<PtclHard>> sym_int; ///> AR integrator
+    AR::TimeTransformedSymplecticIntegrator<PtclAR, PtclH4, ARPerturber, ARInteraction, H4::ARInformation<PtclHard>> sym_int; ///> AR integrator
     bool use_sym_int;  ///> use AR integrator flag
     HardManager* manager; ///> hard manager
     PS::ReallocatableArray<TidalTensor> tidal_tensor; ///> tidal tensor array
     PS::F64 time_origin;  ///> origin physical time
     PtclH4* ptcl_origin;  ///> original particle array
+
+    COMM::BinaryTree<PtclAR>* interupt_binary_adr; ///> interupt binary address
+    InteruptState interupt_state; ///> interupt state record
 
 #ifdef HARD_DEBUG_PRINT
     PS::ReallocatableArray<PS::S32> n_group_sub_init; ///> initial sub group number in each groups 
@@ -161,7 +167,8 @@ public:
 #endif
 
     //! initializer
-    HardIntegrator(): h4_int(), sym_int(), use_sym_int(true), manager(NULL), tidal_tensor(), time_origin(-1.0), ptcl_origin(NULL),
+    HardIntegrator(): h4_int(), sym_int(), use_sym_int(true), manager(NULL), tidal_tensor(), time_origin(-1.0), ptcl_origin(NULL), 
+                      interupt_binary_adr(NULL), interupt_state(InteruptState::none),
 #ifdef HARD_DEBUG_PRINT
                       n_group_sub_init(), n_group_sub_tot_init(0),
 #endif
@@ -198,7 +205,12 @@ public:
                  const PS::S32 _n_group,
                  HardManager* _manager,
                  const PS::F64 _time_origin) {
-        
+
+        // ensure the integrator is not used
+        ASSERT(ptcl_origin==NULL);
+        ASSERT(manager==NULL);
+        ASSERT(interupt_state==InteruptState::none);
+
         // set manager
         manager = _manager;
         time_origin = _time_origin;
@@ -481,11 +493,17 @@ public:
         }
     }
 
-    void integrateToTime(const PS::F64 _time_end) {
+    //! Integrate system to time
+    /*!
+      @param [in] _time_end: time to integrate
+      \return interupt state
+     */
+    InteruptState integrateToTime(const PS::F64 _time_end) {
         ASSERT(checkParams());
         // integration
         if (use_sym_int) {
-            sym_int.integrateToTime(_time_end);
+            interupt_binary_adr = sym_int.integrateToTime(_time_end);
+            if (interupt_binary_adr!=NULL) interupt_state = InteruptState::binary;
         }
         else {
 #ifdef SOFT_PERT
@@ -493,8 +511,16 @@ public:
 #endif
             // integration loop
             while (h4_int.getTime()<_time_end) {
+                // integrate groups
+                interupt_binary_adr = h4_int.integrateGroupsOneStep();
+                // when binary is interupted, break integration loop
+                if (interupt_binary_adr!=NULL) {
+                    interupt_state = InteruptState::binary;
+                    break;
+                }
 
-                h4_int.integrateOneStepAct();
+                // integrate singles
+                h4_int.integrateSingleOneStepAct();
                 h4_int.adjustGroups(false);
 
                 const PS::S32 n_init_group = h4_int.getNInitGroup();
@@ -625,7 +651,8 @@ public:
             }
 
         }
-        
+        interupt_state = InteruptState::none;
+        return interupt_state;
     }
 
     //! drift c.m. particle of the cluster record group c.m. in group_data and write back data to original particle array
@@ -837,6 +864,8 @@ public:
         tidal_tensor.resizeNoInitialize(0);
         time_origin = 0;
         ptcl_origin = NULL;
+        interupt_binary_adr = NULL;
+        interupt_state = InteruptState::none;
 
 #ifdef PROFILE
         ARC_substep_sum = 0;
@@ -1337,24 +1366,28 @@ public:
        @param[in] _n_group: group number in cluster
        @param[in] _dt: integration ending time (initial time is fixed to 0)
        @param[in] _ithread: omp thread id, default 0
+       \return interupt type
      */
     template <class Tsoft>
-    void driveForMultiClusterImpl(PtclH4 * _ptcl_local,
-                                  const PS::S32 _n_ptcl,
-                                  Tsoft* _ptcl_artificial,
-                                  const PS::S32 _n_group,
-                                  const PS::F64 _dt,
-                                  const PS::S32 _ithread=0) {
+    InteruptState driveForMultiClusterImpl(PtclH4 * _ptcl_local,
+                                           const PS::S32 _n_ptcl,
+                                           Tsoft* _ptcl_artificial,
+                                           const PS::S32 _n_group,
+                                           const PS::F64 _dt,
+                                           const PS::S32 _ithread=0) {
         ASSERT(checkParams());
         ASSERT(_ithread<n_hard_int);
-//#ifdef HARD_DEBUG_PRINT
-//        PS::ReallocatableArray<PtclH4> ptcl_bk_pt;
-//        ptcl_bk_pt.reserve(_n_ptcl);
-//        ptcl_bk_pt.resizeNoInitialize(_n_ptcl);
-//#endif
-        hard_int[_ithread].initial(_ptcl_local, _n_ptcl, _ptcl_artificial, _n_group, manager, time_origin_);
 
-        hard_int[_ithread].integrateToTime(_dt);
+        auto& hard_int_local = hard_int[_ithread];
+
+        // if interupt exist, escape initial
+        if (hard_in_local.interupt_state==InteruptState::none) 
+            hard_int_local.initial(_ptcl_local, _n_ptcl, _ptcl_artificial, _n_group, manager, time_origin_);
+
+        auto new_interupt_state = hard_int[_ithread].integrateToTime(_dt);
+        // when interupt is need, return interupt state
+        if (new_interupt_state!=InteruptState::none) return new_interupt_state;
+
         hard_int[_ithread].driftClusterCMRecordGroupCMDataAndWriteBack(_dt);
 
 #ifdef PROFILE
@@ -1368,7 +1401,8 @@ public:
 #endif
 
         hard_int[_ithread].clear();
-        
+
+        return NULL;
     }
 
 public:
