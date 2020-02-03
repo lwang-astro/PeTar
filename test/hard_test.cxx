@@ -142,7 +142,7 @@ int main(int argc, char** argv)
   sys_hard.setTimeOrigin(time_sys);
   while(time_sys < time){
       fprintf(stderr,"Time = %e\n", time_sys+dt_limit);
-      sys_hard.driveForMultiCluster(dt_limit, &sys[0]);
+      sys_hard.driveForMultiClusterOMP(dt_limit, &sys[0]);
       sys_hard.writeBackPtclForMultiCluster(sys, remove_list);
       time_sys += dt_limit;
       sys.setNumberOfParticleLocal(n_sys);

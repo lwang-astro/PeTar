@@ -143,7 +143,6 @@ class HardIntegrator{
 public:
     H4::HermiteIntegrator<PtclHard, PtclH4, HermitePerturber, ARPerturber, HermiteInteraction, ARInteraction, HermiteInformation> h4_int; ///> hermite integrator
     AR::TimeTransformedSymplecticIntegrator<PtclAR, PtclH4, ARPerturber, ARInteraction, H4::ARInformation<PtclHard>> sym_int; ///> AR integrator
-    bool use_sym_int;  ///> use AR integrator flag
     HardManager* manager; ///> hard manager
     PS::ReallocatableArray<TidalTensor> tidal_tensor; ///> tidal tensor array
     PS::F64 time_origin;  ///> origin physical time
@@ -157,6 +156,9 @@ public:
     PS::S32 n_group_sub_tot_init; ///> total sub groups in all groups initially
 #endif
 
+    bool use_sym_int;  ///> use AR integrator flag
+    bool is_initialized; ///> indicator whether initialization is done
+
 #ifdef PROFILE
     PS::S64 ARC_substep_sum;
     PS::S64 ARC_tsyn_step_sum;
@@ -166,14 +168,16 @@ public:
     HardEnergy energy;
 #endif
 
+
     //! initializer
-    HardIntegrator(): h4_int(), sym_int(), use_sym_int(true), manager(NULL), tidal_tensor(), time_origin(-1.0), ptcl_origin(NULL), 
+    HardIntegrator(): h4_int(), sym_int(), manager(NULL), tidal_tensor(), time_origin(-1.0), ptcl_origin(NULL), 
                       interupt_binary_adr(NULL), interupt_state(InteruptState::none),
 #ifdef HARD_DEBUG_PRINT
                       n_group_sub_init(), n_group_sub_tot_init(0),
 #endif
+                      use_sym_int(true), is_initialized(false),
 #ifdef PROFILE
-                      ARC_substep_sum(0), ARC_tsyn_step_sum(0), H4_step_sum(0) 
+                      ARC_substep_sum(0), ARC_tsyn_step_sum(0), H4_step_sum(0)
 #endif
                       {
 #ifdef HARD_CHECK_ENERGY
@@ -186,6 +190,7 @@ public:
         ASSERT(manager!=NULL);
         ASSERT(ptcl_origin!=NULL);
         ASSERT(time_origin>=0.0);
+        ASSERT(is_initialized);
         return true;
     }
 
@@ -210,6 +215,9 @@ public:
         ASSERT(ptcl_origin==NULL);
         ASSERT(manager==NULL);
         ASSERT(interupt_state==InteruptState::none);
+        ASSERT(!is_initialized);
+
+        is_initialized = true;
 
         // set manager
         manager = _manager;
@@ -866,6 +874,7 @@ public:
         ptcl_origin = NULL;
         interupt_binary_adr = NULL;
         interupt_state = InteruptState::none;
+        is_initialized = false;
 
 #ifdef PROFILE
         ARC_substep_sum = 0;
@@ -895,17 +904,21 @@ private:
     PS::ReallocatableArray<PS::S32> i_cluster_changeover_update_;     // cluster index that has member need changeover update
     PS::S32 n_group_member_remote_; // number of members in groups but in remote nodes
 
+    HardIntegrator* hard_int_; ///> hard integrator array
+    PS::S32 n_hard_int_max_; ///> array size of hard_int
+    PS::S32 n_hard_int_use_; ///> number of used hard integrator
+    PS::ReallocatableArray<HardIntegrator*> interupt_list_; ///> interupt integrator list
+
     struct OPLessIDCluster{
         template<class T> bool operator() (const T & left, const T & right) const {
             return left.id_cluster < right.id_cluster;
         }
     };
 
+
 public:
     PS::ReallocatableArray<COMM::BinaryTree<PtclH4>> binary_table;
     HardManager* manager;
-    HardIntegrator* hard_int;
-    PS::S32 n_hard_int;
 
 #ifdef PROFILE
     PS::S64 ARC_substep_sum;
@@ -921,8 +934,8 @@ public:
     bool checkParams() {
         ASSERT(manager!=NULL);
         ASSERT(manager->checkParams());
-        ASSERT(hard_int!=NULL);
-        ASSERT(n_hard_int>0);
+        ASSERT(hard_int_!=NULL);
+        ASSERT(n_hard_int_max_>0);
         return true;
     }
 
@@ -1354,63 +1367,13 @@ private:
 
     }
 
-#ifdef HARD_DEBUG
-public:
-#endif
-    //! Hard integration for clusters
-    /* The local particle array are integrated. 
-       No update of artificial particle pos and vel, eccept the artificial c.m. particle are kicked with acc. 
-       @param[in,out] _ptcl_local: local particle in system_hard for integration
-       @param[in] _n_ptcl: particle number in cluster
-       @param[in,out] _ptcl_artificial: artificial particle array, c.m. are kicked 
-       @param[in] _n_group: group number in cluster
-       @param[in] _dt: integration ending time (initial time is fixed to 0)
-       @param[in] _ithread: omp thread id, default 0
-       \return interupt type
-     */
-    template <class Tsoft>
-    InteruptState driveForMultiClusterImpl(PtclH4 * _ptcl_local,
-                                           const PS::S32 _n_ptcl,
-                                           Tsoft* _ptcl_artificial,
-                                           const PS::S32 _n_group,
-                                           const PS::F64 _dt,
-                                           const PS::S32 _ithread=0) {
-        ASSERT(checkParams());
-        ASSERT(_ithread<n_hard_int);
-
-        auto& hard_int_local = hard_int[_ithread];
-
-        // if interupt exist, escape initial
-        if (hard_in_local.interupt_state==InteruptState::none) 
-            hard_int_local.initial(_ptcl_local, _n_ptcl, _ptcl_artificial, _n_group, manager, time_origin_);
-
-        auto new_interupt_state = hard_int[_ithread].integrateToTime(_dt);
-        // when interupt is need, return interupt state
-        if (new_interupt_state!=InteruptState::none) return new_interupt_state;
-
-        hard_int[_ithread].driftClusterCMRecordGroupCMDataAndWriteBack(_dt);
-
-#ifdef PROFILE
-        ARC_substep_sum    += hard_int[_ithread].ARC_substep_sum;
-        ARC_tsyn_step_sum  += hard_int[_ithread].ARC_tsyn_step_sum;
-        H4_step_sum        += hard_int[_ithread].H4_step_sum;
-        ARC_n_groups       += _n_group;
-#endif
-#ifdef HARD_CHECK_ENERGY
-        energy += hard_int[_ithread].energy;
-#endif
-
-        hard_int[_ithread].clear();
-
-        return NULL;
-    }
-
 public:
 
     SystemHard(){
         manager = NULL;
-        hard_int = NULL;
-        n_hard_int = 0;
+        hard_int_ = NULL;
+        n_hard_int_max_ = 0;
+        n_hard_int_use_ = 0;
 
 #ifdef PROFILE
         ARC_substep_sum = 0;
@@ -1424,15 +1387,22 @@ public:
         //        PS::S32 n_threads = PS::Comm::getNumberOfThread();
     }
 
-    void allocateHardIntegrator() {
-        if (n_hard_int>0) delete [] hard_int;
+    //! allocate memorgy for HardIntegrator
+    /*! For record interupt clusters. A array of HardIntegrator is allocated
+      @param[in] _n_hard_int: number of HardIntegrator
+     */
+    void allocateHardIntegrator(const PS::S32 _n_hard_int) {
+        assert(_n_hard_int>0);
+        assert(n_hard_int_use_==0);
+        if (hard_int_!=NULL) delete [] hard_int_;
         const PS::S32 num_thread = PS::Comm::getNumberOfThread();
-        hard_int = new HardIntegrator[num_thread];
-        n_hard_int = num_thread;
+        n_hard_int_max_ = _n_hard_int + num_thread;
+        hard_int_ = new HardIntegrator[n_hard_int_max_];
+        n_hard_int_use_ = 0;
     }
 
     ~SystemHard() {
-        delete [] hard_int;
+        if (hard_int_!=NULL) delete [] hard_int_;
     }
 
 
@@ -1514,23 +1484,27 @@ public:
         return ptcl_hard_;
     }
 
-    PS::S32 getNCluster() const{
+    PS::S32 getNumberOfClusters() const{
         return n_ptcl_in_cluster_.size();
     }
 
-    PS::S32* getClusterNList(const std::size_t i=0) const{
+    PS::S32 getNumberOfInteruptClusters() const {
+        return interupt_list_.size();
+    }
+
+    PS::S32* getClusterNumberOfMemberList(const std::size_t i=0) const{
         return n_ptcl_in_cluster_.getPointer(i);
     }
 
-    PS::S32* getClusterNOffset(const std::size_t i=0) const{
+    PS::S32* getClusterNumberOfMemberListOffset(const std::size_t i=0) const{
         return n_ptcl_in_cluster_disp_.getPointer(i);
     }
 
-    PS::S32* getGroupNList(const std::size_t i=0) const{
+    PS::S32* getGroupNumberOfMemberList(const std::size_t i=0) const{
         return n_group_in_cluster_.getPointer(i);
     }
 
-    PS::S32* getGroupNOffset(const std::size_t i=0) const{
+    PS::S32* getGroupNumberOfMemberListOffset(const std::size_t i=0) const{
         return n_group_in_cluster_offset_.getPointer(i);
     }
 
@@ -1814,57 +1788,18 @@ public:
     void writeBackPtclForMultiClusterOMP(Tsys & _sys) { 
         writeBackPtclForOneClusterOMP(_sys);
     }
-// for isolated multi cluster only
-//////////////////
 
-//////////////////
-// for multi cluster
+    //! Hard integration for clusters
+    /*! Integrate (drift) all clusters with OpenMP
+      If interupt integration exist, record in the interupt_list_;
+       @param[in] _dt: integration ending time (initial time is fixed to 0)
+       @param[in] _ptcl_soft: global particle array which contains the artificial particles for constructing tidal tensors.
+       \return interupt cluster number
+     */
     template<class Tpsoft>
-    void driveForMultiCluster(const PS::F64 dt, Tpsoft* _ptcl_soft){
-        const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
-        /*
-          for(PS::S32 ith=0; ith<PS::Comm::getNumberOfThread(); ith++){
-          eng_disp_merge_omp_[ith] = 0.0;
-          merge_log_omp_[ith].clearSize();
-          }
-        */
-        for(PS::S32 i=0; i<n_cluster; i++){
-            const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
-            const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
-#ifndef ONLY_SOFT
-            const PS::S32 n_group = n_group_in_cluster_[i];
-            Tpsoft* ptcl_artificial_ptr=NULL;
-            if(n_group>0) ptcl_artificial_ptr = &(_ptcl_soft[adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]]]);
-#ifdef HARD_DUMP
-            assert(hard_dump.size>0);
-            hard_dump[0].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, dt, manager->ap_manager.getParticleSplitN());
-#endif
-            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, dt);
-#else
-            auto* pi = ptcl_hard_.getPointer(adr_head);
-            for (PS::S32 j=0; j<n_ptcl; j++) {
-                PS::F64vec dr = pi[j].vel * dt;
-                pi[j].pos += dr;
-#ifdef CLUSTER_VELOCITY
-                auto& pij_cm = pi[j].group_data.cm;
-                pij_cm.mass = pij_cm.vel.x = pij_cm.vel.y = pij_cm.vel.z = 0.0;
-#endif
-                pi[j].calcRSearch(dt);
-            }
-#endif
-//#ifdef HARD_DEBUG
-//            if(extra_ptcl.size()>0) fprintf(stderr,"New particle number = %d\n",extra_ptcl.size());
-//#endif
-//            for (PS::S32 j=0; j<extra_ptcl.size(); j++) {
-//                PS::S32 adr = sys.getNumberOfParticleLocal();
-//                PS::S32 rank = PS::Comm::getRank();
-//                sys.addOneParticle(Tsptcl(extra_ptcl[j],rank,adr));
-//            }
-        }
-    }
+    int driveForMultiClusterOMP(const PS::F64 dt, Tpsoft* _ptcl_soft){
+        assert(n_hard_int_use_==0);
 
-    template<class Tpsoft>
-    void driveForMultiClusterOMP(const PS::F64 dt, Tpsoft* _ptcl_soft){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         //PS::ReallocatableArray<PtclH4> extra_ptcl[num_thread];
         //// For test
@@ -1875,15 +1810,27 @@ public:
         //    n_sort_list[i].second= i;
         //}
         //std::sort(n_sort_list.getPointer(),n_sort_list.getPointer()+n_cluster,[](const std::pair<PS::S32,PS::S32> &a, const std::pair<PS::S32,PS::S32> &b){return a.first<b.first;});
-#ifdef OMP_PROFILE        
         const PS::S32 num_thread = PS::Comm::getNumberOfThread();
-        PS::ReallocatableArray<PS::F64> time_thread(num_thread);
-        PS::ReallocatableArray<PS::S64> num_cluster(num_thread);
+        assert(n_hard_int_max_>num_thread);
+
+#ifndef ONLY_SOFT
+        HardIntegrator* hard_int_thread[num_thread];
+        // set new hard_int front pointer 
+        HardIntegrator* hard_int_front_ptr = &hard_int_[num_thread];
+        for (PS::S32 i=0; i<num_thread; i++) {
+            hard_int_thread[i] = &hard_int_[i];
+        }
+#endif
+
+#ifdef OMP_PROFILE        
+        PS::F64 time_thread[num_thread];
+        PS::S64 num_cluster[num_thread];
         for (PS::S32 i=0; i<num_thread; i++) {
           time_thread[i] = 0;
           num_cluster[i] = 0;
         }
 #endif
+
 #pragma omp parallel for schedule(dynamic)
         for(PS::S32 i=0; i<n_cluster; i++){
             const PS::S32 ith = PS::Comm::getThreadNum();
@@ -1893,13 +1840,19 @@ public:
             //const PS::S32 i   = n_sort_list[k].second;
             const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
+
 #ifndef ONLY_SOFT
+            // Hermite + AR integration
             const PS::S32 n_group = n_group_in_cluster_[i];
             Tpsoft* ptcl_artificial_ptr=NULL;
             if(n_group>0) ptcl_artificial_ptr = &(_ptcl_soft[adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]]]);
 #ifdef OMP_PROFILE
             num_cluster[ith] += n_ptcl;
 #endif
+#ifdef PROFILE
+            ARC_n_groups  += n_group;
+#endif
+
 #ifdef HARD_DUMP
             assert(ith<hard_dump.size);
             hard_dump[ith].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, dt, manager->ap_manager.getParticleSplitN());
@@ -1908,15 +1861,49 @@ public:
 #ifdef HARD_DEBUG_PROFILE
             PS::F64 tstart = PS::GetWtime();
 #endif
-            driveForMultiClusterImpl(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, dt, ith);
+
+            // if interupt exist, escape initial
+            hard_int_thread[i]->initial(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, manager, time_origin_);
+
+            auto interupt_state = hard_int_thread[i]->integrateToTime(dt);
+
+            if (interupt_state!=InteruptState::none) {
+                #pragma omp atomic capture
+                hard_int_thread[i] = hard_int_front_ptr++;
+
+                assert(hard_int_thread[i]!=&hard_int_[n_hard_int_max_]);
+            }
+            else {
+                hard_int_thread[i]->driftClusterCMRecordGroupCMDataAndWriteBack(dt);
+
+#ifdef PROFILE
+                ARC_substep_sum    += hard_int_thread[i]->ARC_substep_sum;
+                ARC_tsyn_step_sum  += hard_int_thread[i]->ARC_tsyn_step_sum;
+                H4_step_sum        += hard_int_thread[i]->H4_step_sum;
+#endif
+#ifdef HARD_CHECK_ENERGY
+                energy += hard_int_thread[i]->energy;
+#endif
+                
+                hard_int_thread[i]->clear();
+            }
+
 #ifdef OMP_PROFILE
             time_thread[ith] += PS::GetWtime();
 #endif
+
 #ifdef HARD_DEBUG_PROFILE
             PS::F64 tend = PS::GetWtime();
             std::cerr<<"HT: "<<i<<" "<<ith<<" "<<n_cluster<<" "<<n_ptcl<<" "<<tend-tstart<<std::endl;
 #endif
+
+            // regist interupted hard integrator
+            assert(interupt_list_.size()==0);
+            for (auto* iptr = hard_int_; iptr<hard_int_front_ptr; iptr++) 
+                if (iptr->is_initialized) interupt_list_.push_back(iptr);
+            
 #else
+            // Only soft drift
             auto* pi = ptcl_hard_.getPointer(adr_head);
             for (PS::S32 j=0; j<n_ptcl; j++) {
                 PS::F64vec dr = pi[j].vel * dt;
@@ -1930,6 +1917,7 @@ public:
 #endif
 
         }
+        return interupt_list_.size();
     }
 
     //! generate artificial particles,

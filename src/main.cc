@@ -26,10 +26,13 @@ int main(int argc, char *argv[]){
     
     for (int i=0; i<n_loop; i++) {   
         time_break += dt_break;
-        petar.evolveToTime(time_break);
+        int n_interupt = 1;
+        while(n_interupt>0) n_interupt = petar.evolveToTime();
     }
 #else
-    petar.evolveToTime();
+    int n_interupt = 1;
+    while(n_interupt>0) n_interupt = petar.evolveToTime();
+    
 #endif
 
     return 0;

@@ -604,6 +604,14 @@ public:
         _slowdown.calcSlowDownFactor();
     }
 
+    //! (Necessary) interupt check 
+    /*! check the inner left binary whether their separation is smaller than particle radius sum and become close, if true, record their binary tree address and set particle status to touch; in the opposite condition, also report the address and set particle status to split
+      @param[in] _bin_interupt: interupt binary tree address 
+      @param[in] _bin: binarytree to check iteratively
+     */
+    static COMM::BinaryTree<ARPtcl>* checkInteruptIter(COMM::BinaryTree<ARPtcl>*& _bin_interupt, COMM::BinaryTree<ARPtcl>& _bin) {
+        return _bin_interupt;
+    }
 
 #ifndef AR_TTL
     //! (Necessary) calcualte the inverse time transformation factor for drift

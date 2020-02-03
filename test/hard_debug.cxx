@@ -149,12 +149,17 @@ int main(int argc, char **argv){
 
   // running mode
   if (mode==0) {
-      SystemHard sys;
-      sys.manager = &hard_manager;
-      sys.allocateHardIntegrator();
+      //SystemHard sys;
+      //sys.manager = &hard_manager;
+      //sys.allocateHardIntegrator();
 
       // change ARC parameters
-      sys.driveForMultiClusterImpl(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, hard_dump.time_end, 0);
+      //sys.driveForMultiClusterImpl(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, hard_dump.time_end, 0);
+      HardIntegrator hard_int;
+      hard_int.initial(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, &hard_manager, 0.0);
+
+      auto interupt_state = hard_int.integrateToTime(hard_dump.time_end);
+
   }
   // test stability
   else if (mode==1) {

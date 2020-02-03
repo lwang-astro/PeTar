@@ -1220,7 +1220,9 @@ private:
     }
 
     //! hard drift
-    void drift(const PS::F64 _dt_drift) {
+    /*! \return interupted cluster total number in all MPI processors
+     */
+    int drift(const PS::F64 _dt_drift) {
         ////// set time
         system_hard_one_cluster.setTimeOrigin(stat.time);
         system_hard_isolated.setTimeOrigin(stat.time);
@@ -1254,8 +1256,16 @@ private:
         // integrate multi cluster A
         system_hard_isolated.driveForMultiClusterOMP(_dt_drift, &(system_soft[0]));
         //system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_,remove_list);
-        system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
+        PS::S32 n_interupt_isolated = system_hard_isolated.getNumberOfInteruptClusters()==0;
+        if(n_interupt_isolated==0) system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
         // integrate multi cluster A
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+        PS::S32 n_interupt_glb = PS::Comm::getSum(n_interupt_isolated);
+#else 
+        PS::S32 n_interupt_glb = n_interupt_isolated;
+#endif
+
 #ifdef PROFILE
         profile.hard_isolated.barrier();
         profile.hard_isolated.end();
@@ -1269,8 +1279,14 @@ private:
 #endif
         // integrate multi cluster B
         system_hard_connected.driveForMultiClusterOMP(_dt_drift, &(system_soft[0]));
-        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+        PS::S32 n_interupt_connected = system_hard_connected.getNumberOfInteruptClusters();
+        PS::S32 n_interupt_connected_glb = PS::Comm::getSum(n_interupt_connected);
+
+        if (n_interupt_connected_glb==0) search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
         // integrate multi cluster B
+        
+        n_interupt_glb += n_interupt_connected_glb;
+
 #ifdef PROFILE
         profile.hard_connected.barrier();
         PS::Comm::barrier();
@@ -1278,6 +1294,7 @@ private:
 #endif
 
 #endif
+        return n_interupt_glb;
 
     }
 
@@ -1557,17 +1574,17 @@ private:
                                            
         n_count.cluster_count(1, n_hard_single);
 
-        const PS::S32  n_isolated_cluster = system_hard_isolated.getNCluster();
+        const PS::S32  n_isolated_cluster = system_hard_isolated.getNumberOfClusters();
         n_count.cluster_isolated += n_isolated_cluster;
         n_count_sum.cluster_isolated += PS::Comm::getSum(n_isolated_cluster);
 
-        const PS::S32* isolated_cluster_n_list = system_hard_isolated.getClusterNList();
+        const PS::S32* isolated_cluster_n_list = system_hard_isolated.getClusterNumberOfMemberList();
         for (PS::S32 i=0; i<n_isolated_cluster; i++) n_count.cluster_count(isolated_cluster_n_list[i]);
 
-        const PS::S32  n_connected_cluster = system_hard_connected.getNCluster();
+        const PS::S32  n_connected_cluster = system_hard_connected.getNumberOfClusters();
         n_count.cluster_connected += n_connected_cluster;
         n_count_sum.cluster_connected += PS::Comm::getSum(n_connected_cluster);
-        const PS::S32* connected_cluster_n_list = system_hard_connected.getClusterNList();
+        const PS::S32* connected_cluster_n_list = system_hard_connected.getClusterNumberOfMemberList();
         for (PS::S32 i=0; i<n_connected_cluster; i++) n_count.cluster_count(connected_cluster_n_list[i]);
 
         dn_loop++;
@@ -2092,8 +2109,8 @@ public:
         hard_manager.checkParams();
 
         // initial hard class and parameters
-        system_hard_isolated.allocateHardIntegrator();
-        system_hard_connected.allocateHardIntegrator();
+        system_hard_isolated.allocateHardIntegrator(input_parameters.n_group_limit.value);
+        system_hard_connected.allocateHardIntegrator(input_parameters.n_group_limit.value);
 
         system_hard_one_cluster.manager = &hard_manager;
         system_hard_isolated.manager = &hard_manager;
@@ -2223,7 +2240,7 @@ public:
     
     //! integrate the system
     /*! @param[in] _time_break: additional breaking time to interupt the integration, in default (0.0) the system integrate to time_end
-      \return stop condition
+      \return interupted cluster number
      */
     PS::S32 evolveToTime(const PS::F64 _time_break=0.0) {
 
@@ -2434,7 +2451,7 @@ public:
             time_drift += dt_drift;
 #endif
 
-            drift(dt_drift);
+            int n_interupt_glb = drift(dt_drift);
 
 #ifdef PROFILE
             // calculate profile
@@ -2444,6 +2461,9 @@ public:
 
             calcProfile();
 #endif
+            
+            // when interupt exist, quit the loop
+            if (n_interupt_glb>0) return n_interupt_glb;
 
         }
 
