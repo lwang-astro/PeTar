@@ -159,6 +159,8 @@ int main(int argc, char **argv){
       hard_int.initial(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, &hard_manager, 0.0);
 
       auto interupt_state = hard_int.integrateToTime(hard_dump.time_end);
+      if (interupt_state!=InteruptState::none)
+          hard_int.printInteruptBinaryInfo(std::cerr);
 
   }
   // test stability

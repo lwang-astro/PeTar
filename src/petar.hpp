@@ -543,6 +543,7 @@ public:
 
     Status stat;
     std::ofstream fstatus;
+    PS::F64 time_kick;
 
     // file system
     FileHeader file_header;
@@ -568,7 +569,9 @@ public:
     HardManager hard_manager;
     SystemHard system_hard_one_cluster;
     SystemHard system_hard_isolated;
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
     SystemHard system_hard_connected;
+#endif
 
     // remove list
     PS::ReallocatableArray<PS::S32> remove_list;
@@ -594,12 +597,15 @@ public:
         // profile
         dn_loop(0), profile(), n_count(), n_count_sum(), ps_profile(), fprofile(), 
 #endif
-        stat(), fstatus(),
+        stat(), fstatus(), time_kick(0.0),
         file_header(), system_soft(), id_adr_map(),
         n_loop(0), domain_decompose_weight(1.0), dinfo(), pos_domain(NULL), 
         dt_manager(),
         tree_nb(), tree_soft(), 
-        hard_manager(), system_hard_one_cluster(), system_hard_isolated(), system_hard_connected(), 
+        hard_manager(), system_hard_one_cluster(), system_hard_isolated(), 
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        system_hard_connected(), 
+#endif
         remove_list(),
         search_cluster(),
         initial_fdps_flag(false), read_parameters_flag(false), read_data_flag(false), initial_parameters_flag(false), initial_step_flag(false), drift_interupt_flag(false) {
@@ -801,7 +807,7 @@ private:
 
         // >2.3 Find ARC groups and create artificial particles
         // Set local ptcl_hard for isolated  clusters
-        system_hard_isolated.setPtclForIsolatedMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
+        system_hard_isolated.setPtclForIsolatedMultiClusterOMP(system_soft, search_cluster.adr_sys_multi_cluster_isolated_, search_cluster.n_ptcl_in_multi_cluster_isolated_);
 
 //#ifdef CLUSTER_DEBUG
 //        for (PS::S32 i=0; i<n_loc; i++) system_soft[i].status = -1000000;
@@ -828,6 +834,7 @@ private:
         system_hard_connected.findGroupsAndCreateArtificialParticlesOMP<SystemSoft, FPSoft>(system_soft, _dt_tree);
         // send updated particle back to original (set zero mass particle to origin)
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+        system_hard_connected.updateTimeWriteBack();
 #endif
 
         // update total particle number including artificial particles
@@ -1188,6 +1195,8 @@ private:
         search_cluster.SendSinglePtcl(system_soft, system_hard_connected.getPtcl());
 #endif
 
+        time_kick += _dt_kick;
+
 #ifdef HARD_DEBUG
         PS::S32 kick_regist[stat.n_real_loc];
         for(int i=0; i<stat.n_real_loc; i++) kick_regist[i] = 0;
@@ -1224,21 +1233,23 @@ private:
      */
     int drift(const PS::F64 _dt_drift) {
         ////// set time
-        system_hard_one_cluster.setTimeOrigin(stat.time);
-        system_hard_isolated.setTimeOrigin(stat.time);
-        system_hard_connected.setTimeOrigin(stat.time);
+        //system_hard_one_cluster.setTimeOrigin(stat.time);
+        //system_hard_isolated.setTimeOrigin(stat.time);
+        //system_hard_connected.setTimeOrigin(stat.time);
         ////// set time
 
         // reset slowdown energy correction
         system_hard_isolated.energy.resetEnergyCorrection();
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         system_hard_connected.energy.resetEnergyCorrection();
+#endif
         
 #ifdef PROFILE
         profile.hard_single.start();
 #endif
         ////// integrater one cluster
         system_hard_one_cluster.initializeForOneCluster(search_cluster.getAdrSysOneCluster().size());
-        system_hard_one_cluster.setPtclForOneCluster(system_soft, search_cluster.getAdrSysOneCluster());
+        system_hard_one_cluster.setPtclForOneClusterOMP(system_soft, search_cluster.getAdrSysOneCluster());
         system_hard_one_cluster.driveForOneClusterOMP(_dt_drift);
         //system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft, search_cluster.getAdrSysOneCluster());
         system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft);
@@ -1256,7 +1267,7 @@ private:
         // integrate multi cluster A
         system_hard_isolated.driveForMultiClusterOMP(_dt_drift, &(system_soft[0]));
         //system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_,remove_list);
-        PS::S32 n_interupt_isolated = system_hard_isolated.getNumberOfInteruptClusters()==0;
+        PS::S32 n_interupt_isolated = system_hard_isolated.getNumberOfInteruptClusters();
         if(n_interupt_isolated==0) system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
         // integrate multi cluster A
 
@@ -1282,7 +1293,10 @@ private:
         PS::S32 n_interupt_connected = system_hard_connected.getNumberOfInteruptClusters();
         PS::S32 n_interupt_connected_glb = PS::Comm::getSum(n_interupt_connected);
 
-        if (n_interupt_connected_glb==0) search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+        if (n_interupt_connected_glb==0) {
+            search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+            system_hard_connected.updateTimeWriteBack();
+        }
         // integrate multi cluster B
         
         n_interupt_glb += n_interupt_connected_glb;
@@ -1331,7 +1345,17 @@ private:
             return std::min(c*_dt_min,_dt_max);
         }
     }
-
+    
+    //! check time consistence
+    bool checkTimeConsistence() {
+        assert(time_kick==stat.time);
+        assert(stat.time == system_hard_one_cluster.getTimeOrigin());
+        assert(stat.time == system_hard_isolated.getTimeOrigin());
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        assert(stat.time == system_hard_connected.getTimeOrigin());
+#endif
+        return true;
+    }
     
     //! write back hard particles to global system
     void writeBackHardParticles() {
@@ -1339,6 +1363,7 @@ private:
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         // update gloabl particle system and send receive remote particles
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+        system_hard_connected.updateTimeWriteBack();
 #endif        
     }
 
@@ -1351,6 +1376,7 @@ private:
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         system_hard_connected.setParticleGroupDataToCMData(system_soft);
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+        system_hard_connected.updateTimeWriteBack();
 #endif
     }
     
@@ -1457,7 +1483,9 @@ private:
 
 #ifdef HARD_CHECK_ENERGY
             HardEnergy energy_local = system_hard_isolated.energy;
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
             energy_local += system_hard_connected.energy;
+#endif
             // hard energy error
             stat.energy_hard_diff += PS::Comm::getSum(energy_local.de);
             stat.energy_hard_sd_diff += PS::Comm::getSum(energy_local.de_sd);
@@ -1471,7 +1499,9 @@ private:
             stat.energy.etot_sd_ref += PS::Comm::getSum(energy_local.de_sd_change_cum) + etot_sd_correction;
 
             system_hard_isolated.energy.clear();
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
             system_hard_connected.energy.clear();
+#endif
 #endif
             stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);
         }
@@ -1535,24 +1565,30 @@ private:
 
         PS::S32 n_hard_single     = system_hard_one_cluster.getPtcl().size();
         PS::S32 n_hard_isolated   = system_hard_isolated.getPtcl().size();
-        PS::S32 n_hard_connected  = system_hard_connected.getPtcl().size();
 
         n_count.hard_single      += n_hard_single;
         n_count.hard_isolated    += n_hard_isolated;
-        n_count.hard_connected   += n_hard_connected;
 
         n_count_sum.hard_single      += PS::Comm::getSum(n_hard_single);
         n_count_sum.hard_isolated    += PS::Comm::getSum(n_hard_isolated);
-        n_count_sum.hard_connected   += PS::Comm::getSum(n_hard_connected);
-                                           
+
         PS::S64 ARC_substep_sum   = system_hard_isolated.ARC_substep_sum;
         ARC_substep_sum += system_hard_connected.ARC_substep_sum;
         PS::S64 ARC_tsyn_step_sum   = system_hard_isolated.ARC_tsyn_step_sum;
-        ARC_tsyn_step_sum += system_hard_connected.ARC_tsyn_step_sum;
         PS::S64 ARC_n_groups      = system_hard_isolated.ARC_n_groups;
-        ARC_n_groups += system_hard_connected.ARC_n_groups;
         PS::S64 H4_step_sum       = system_hard_isolated.H4_step_sum;
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        PS::S32 n_hard_connected  = system_hard_connected.getPtcl().size();
+        n_count.hard_connected   += n_hard_connected;
+        n_count_sum.hard_connected   += PS::Comm::getSum(n_hard_connected);
+
+        ARC_tsyn_step_sum += system_hard_connected.ARC_tsyn_step_sum;
+        ARC_n_groups += system_hard_connected.ARC_n_groups;
         H4_step_sum +=  system_hard_connected.H4_step_sum;
+
+#endif
+                                           
         n_count.ARC_substep_sum  += ARC_substep_sum;
         n_count.ARC_tsyn_step_sum+= ARC_tsyn_step_sum;
         n_count.ARC_n_groups     += ARC_n_groups;
@@ -1567,10 +1603,13 @@ private:
         system_hard_isolated.ARC_tsyn_step_sum=0;
         system_hard_isolated.ARC_n_groups = 0;
         system_hard_isolated.H4_step_sum = 0;
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         system_hard_connected.ARC_substep_sum = 0;
         system_hard_connected.ARC_tsyn_step_sum=0;
         system_hard_connected.ARC_n_groups = 0;
         system_hard_connected.H4_step_sum = 0;
+#endif
                                            
         n_count.cluster_count(1, n_hard_single);
 
@@ -2116,6 +2155,12 @@ public:
         system_hard_isolated.manager = &hard_manager;
         system_hard_connected.manager = &hard_manager;
 
+        system_hard_one_cluster.setTimeOrigin(stat.time);
+        system_hard_isolated.setTimeOrigin(stat.time);
+        system_hard_connected.setTimeOrigin(stat.time);
+
+        time_kick = stat.time;
+
         if(write_style>0&&my_rank==0) {
             // save initial parameters
             std::string& fname_par = input_parameters.fname_par.value;
@@ -2180,6 +2225,8 @@ public:
     void initialStep() {
         assert(initial_parameters_flag);
         if (initial_step_flag) return;
+
+        checkTimeConsistence();
 
         PS::F64 dt_tree = input_parameters.dt_soft.value;
         dt_manager.setStep(dt_tree);
@@ -2247,13 +2294,42 @@ public:
         // ensure it is initialized
         assert(initial_step_flag);
 
+        // finish interupt clusters first
+        PS::S32 n_interupt_isolated = 0;
+        if (system_hard_isolated.getNumberOfInteruptClusters()>0) {
+            system_hard_isolated.finishIntegrateInteruptClustersOMP();
+            n_interupt_isolated = system_hard_isolated.getNumberOfInteruptClusters();
+            if(n_interupt_isolated==0) system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
+        }
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        PS::S32 n_interupt_glb = PS::Comm::getSum(n_interupt_isolated);
+
+        PS::S32 n_interupt_connected = 0;
+        if (system_hard_connected.getNumberOfInteruptClusters()>0) {
+            system_hard_connected.finishIntegrateInteruptClustersOMP();
+            n_interupt_connected = system_hard_connected.getNumberOfInteruptClusters();
+        }
+        PS::S32 n_interupt_connected_glb = PS::Comm::getSum(n_interupt_connected);
+        if (n_interupt_connected_glb==0) {
+            search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+            system_hard_connected.updateTimeWriteBack();
+        }
+
+        n_interupt_glb += n_interupt_connected_glb;
+#else
+        PS::S32 n_interupt_glb = n_interupt_isolated;
+#endif
+
+        // if interupt cluster still exist, return the number immediately without new integration.
+        if (n_interupt_glb>0)  return n_interupt_glb;
+
+        // check time consistence
+        
+
         // check time break
         PS::F64 time_break = _time_break==0.0? input_parameters.time_end.value: std::min(_time_break,input_parameters.time_end.value);
         if (stat.time>=time_break) return 0;
-
-#ifdef PETAR_DEBUG
-        PS::F64 time_drift = stat.time, time_kick = stat.time;
-#endif
 
         PS::F64 dt_output = input_parameters.dt_snp.value;
         PS::F64 dt_tree = dt_manager.getStep();
@@ -2355,9 +2431,6 @@ public:
 
             // >6. kick 
             kick(dt_kick);
-#ifdef PETAR_DEBUG
-            time_kick += dt_kick;
-#endif
 
             // >7. write back data
             if(output_flag||interupt_flag) {
@@ -2404,10 +2477,8 @@ public:
 
                 // need remove artificial particles
                 system_soft.setNumberOfParticleLocal(stat.n_real_loc);
-#ifdef PETAR_DEBUG
-                assert(time_kick==time_drift);
-                assert(time_kick==stat.time);
-#endif
+
+                checkTimeConsistence();
 
 #ifdef PROFILE
                 profile.tot.barrier();
@@ -2420,10 +2491,8 @@ public:
             // second kick if output exists or changeover is modified
             //if(dt_mod_flag||output_flag||changeover_flag) {
             if(output_flag||changeover_flag) {
-#ifdef PETAR_DEBUG
-                assert(time_kick==time_drift);
-                assert(time_kick==stat.time);
-#endif
+
+                checkTimeConsistence();
 
                 // determine the next tree time step
                 //PS::F64 dt_reduce_factor_org = 1.0;
@@ -2437,19 +2506,12 @@ public:
                 correctForceChangeOverUpdate();
 
                 kick(dt_kick);
-#ifdef PETAR_DEBUG
-                time_kick += dt_kick;
-#endif
             }
 
 
             // >8. Hard integration 
             // get drift step
             dt_drift = dt_manager.getDtDriftContinue();
-
-#ifdef PETAR_DEBUG
-            time_drift += dt_drift;
-#endif
 
             int n_interupt_glb = drift(dt_drift);
 

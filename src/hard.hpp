@@ -864,6 +864,38 @@ public:
 
     }
 
+    //! print interupt binary information
+    /*!
+      @param[out] _fout: std::ostream output object
+    */
+    void printInteruptBinaryInfo(std::ostream & _fout) const{
+        _fout<<"Interupt condition triggered! ";
+        switch(interupt_state) {
+        case InteruptState::none:
+            std::cerr<<"Error: incorrect state (none)!\n";
+            abort();
+            break;
+        case InteruptState::binary:
+            _fout<<"(Binary) ";
+            break;
+        case InteruptState::step:
+            _fout<<"(Step) ";
+            break;
+        }
+        _fout<<" Time: "<<h4_int.getInteruptTime()<<std::endl;
+        interupt_binary_adr->printColumnTitle(_fout);
+        _fout<<std::endl;
+        interupt_binary_adr->printColumn(_fout);
+        _fout<<std::endl;
+        PtclAR::printColumnTitle(_fout);
+        _fout<<std::endl;
+        for (int j=0; j<2; j++) {
+            interupt_binary_adr->getMember(j)->printColumn(_fout);
+            _fout<<std::endl;
+        }
+
+    }
+
     //! clear function
     void clear() {
         sym_int.clear();
@@ -892,8 +924,8 @@ public:
 //! Hard system
 class SystemHard{
 private:
-    // Notice: if new variables added, change pardump also
-    PS::F64 time_origin_;
+    PS::F64 time_origin_; // physical origin time
+    PS::F64 time_write_back_; // time of writing back data
     
     PS::ReallocatableArray<PtclH4> ptcl_hard_;                        // particle data
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_;               // number of particles in one cluster
@@ -908,6 +940,7 @@ private:
     PS::S32 n_hard_int_max_; ///> array size of hard_int
     PS::S32 n_hard_int_use_; ///> number of used hard integrator
     PS::ReallocatableArray<HardIntegrator*> interupt_list_; ///> interupt integrator list
+    PS::F64 interupt_dt_; ///> time end record for interupt clusters;
 
     struct OPLessIDCluster{
         template<class T> bool operator() (const T & left, const T & right) const {
@@ -1520,6 +1553,14 @@ public:
         time_origin_ = _time_origin;
     }
 
+    void updateTimeWriteBack() {
+        time_write_back_ = time_origin_;
+    }
+
+    PS::F64 getTimeOrigin() const {
+        return time_origin_;
+    }
+
     //void setParam(const PS::F64 _rbin,
     //              const PS::F64 _rout,
     //              const PS::F64 _rin,
@@ -1569,21 +1610,6 @@ public:
 //////////////////
 // for one cluster
     template<class Tsys>
-    void setPtclForOneCluster(const Tsys & sys, 
-                              const PS::ReallocatableArray<PS::S32> & adr_array){
-        // for one cluster
-        const PS::S32 n = adr_array.size();
-        //ptcl_hard_.resizeNoInitialize(n);
-        //n_ptcl_in_cluster_.resizeNoInitialize(n);
-        for(PS::S32 i=0; i<n; i++){
-            PS::S32 adr = adr_array[i];
-            ptcl_hard_[i].DataCopy(sys[adr]);
-            ptcl_hard_[i].adr_org = adr;
-            //n_ptcl_in_cluster_[i] = 1;
-        }
-    }
-
-    template<class Tsys>
     void setPtclForOneClusterOMP(const Tsys & sys, 
                                  const PS::ReallocatableArray<PS::S32> & adr_array){
         // for one cluster
@@ -1603,35 +1629,6 @@ public:
     //! integrate one isolated particle
     /*! integrate one isolated particle and calculate new r_search
       @param[in] _dt: tree time step
-     */
-    void driveForOneCluster(const PS::F64 _dt) {
-        const PS::S32 n = ptcl_hard_.size();
-        for(PS::S32 i=0; i<n; i++){
-            PS::F64vec dr = ptcl_hard_[i].vel * _dt;
-            ptcl_hard_[i].pos += dr;
-            ptcl_hard_[i].Ptcl::calcRSearch(_dt);
-#ifdef HARD_DEBUG
-            // to avoid issue in cluster search with velocity
-            auto& pcm = ptcl_hard_[i].group_data.cm;
-            assert(pcm.mass==0.0);
-            assert(pcm.vel.x==0.0);
-            assert(pcm.vel.y==0.0);
-            assert(pcm.vel.z==0.0);
-#endif
-            // ptcl_hard_[i].r_search= r_search_single_;
-            /*
-              DriveKeplerRestricted(mass_sun_, 
-              pos_sun_, ptcl_hard_[i].pos, 
-              vel_sun_, ptcl_hard_[i].vel, dt); 
-            */
-        }
-
-    }
-
-    //! integrate one isolated particle
-    /*! integrate one isolated particle and calculate new r_search
-      @param[in] _dt: tree time step
-      @param[in] _v_max: maximum velocity used to calculate r_search
      */
     void driveForOneClusterOMP(const PS::F64 _dt) {
         const PS::S32 n = ptcl_hard_.size();
@@ -1654,11 +1651,12 @@ public:
               vel_sun_, ptcl_hard_[i].vel, dt); 
             */
         }
+        
+        time_origin_ += _dt;
     }
 
     template<class Tsys>
     void writeBackPtclForOneCluster(Tsys & sys, 
-//                                    const PS::ReallocatableArray<PS::S32> & adr_array,
                                     PS::ReallocatableArray<PS::S32> & _remove_list){
         const PS::S32 n = ptcl_hard_.size();
         //PS::ReallocatableArray<PS::S32> removelist(n);
@@ -1676,6 +1674,7 @@ public:
                 _remove_list.push_back(adr);
             }
         }
+        updateTimeWriteBack();
     }
 
     template<class Tsys>
@@ -1690,21 +1689,22 @@ public:
 #endif
             sys[adr].DataCopy(ptcl_hard_[i]);
         }
+        updateTimeWriteBack();
     }
 
-    template<class Tsys>
-    void writeBackPtclLocalOnlyOMP(Tsys & sys) {
-        const PS::S32 n = ptcl_hard_.size();
-#pragma omp parallel for schedule(dynamic)
-        for(PS::S32 i=0; i<n; i++){
-            PS::S32 adr = ptcl_hard_[i].adr_org;
-            //PS::S32 adr = adr_array[i];
-#ifdef HARD_DEBUG
-            if(adr>=0) assert(sys[adr].id == ptcl_hard_[i].id);
-#endif
-            if(adr>=0) sys[adr].DataCopy(ptcl_hard_[i]);
-        }
-    }
+//    template<class Tsys>
+//    void writeBackPtclLocalOnlyOMP(Tsys & sys) {
+//        const PS::S32 n = ptcl_hard_.size();
+//#pragma omp parallel for schedule(dynamic)
+//        for(PS::S32 i=0; i<n; i++){
+//            PS::S32 adr = ptcl_hard_[i].adr_org;
+//            //PS::S32 adr = adr_array[i];
+//#ifdef HARD_DEBUG
+//            if(adr>=0) assert(sys[adr].id == ptcl_hard_[i].id);
+//#endif
+//            if(adr>=0) sys[adr].DataCopy(ptcl_hard_[i]);
+//        }
+//    }
 // for one cluster
 //////////////////
 
@@ -1712,9 +1712,9 @@ public:
 //////////////////
 // for isolated multi cluster only
     template<class Tsys>
-    void setPtclForIsolatedMultiCluster(const Tsys & sys,
-                                        const PS::ReallocatableArray<PS::S32> & _adr_array,
-                                        const PS::ReallocatableArray<PS::S32> & _n_ptcl_in_cluster){
+    void setPtclForIsolatedMultiClusterOMP(const Tsys & sys,
+                                           const PS::ReallocatableArray<PS::S32> & _adr_array,
+                                           const PS::ReallocatableArray<PS::S32> & _n_ptcl_in_cluster){
         const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
 #ifdef HARD_DEBUG
         assert(n_cluster<ARRAY_ALLOW_LIMIT);
@@ -1734,48 +1734,15 @@ public:
         assert(n_ptcl<ARRAY_ALLOW_LIMIT);
 #endif        
         ptcl_hard_.resizeNoInitialize(n_ptcl);
+#pragma omp parallel for schedule(dynamic)
         for(PS::S32 i=0; i<n_ptcl; i++){
             PS::S32 adr = _adr_array[i];
             ptcl_hard_[i].DataCopy(sys[adr]);
             ptcl_hard_[i].adr_org = adr;
             //  ptcl_hard_[i].n_ngb= sys[adr].n_ngb;
         }
-    }
 
-    void initailizeForIsolatedMultiCluster(const PS::S32 _n_ptcl,
-                                           const PS::ReallocatableArray<PS::S32> & _n_ptcl_in_cluster){
-#ifdef HARD_DEBUG
-        assert(_n_ptcl<ARRAY_ALLOW_LIMIT);
-#endif        
-        ptcl_hard_.resizeNoInitialize(_n_ptcl);
-        const PS::S32 n_cluster = _n_ptcl_in_cluster.size();
-#ifdef HARD_DEBUG
-        assert(n_cluster<ARRAY_ALLOW_LIMIT);
-#endif        
-        n_ptcl_in_cluster_.resizeNoInitialize(n_cluster);
-        n_ptcl_in_cluster_disp_.resizeNoInitialize(n_cluster+1);
-        n_ptcl_in_cluster_disp_[0] = 0;
-        for(PS::S32 i=0; i<n_cluster; i++){
-            n_ptcl_in_cluster_[i] = _n_ptcl_in_cluster[i];
-#ifdef HARD_DEBUG
-            assert(n_ptcl_in_cluster_[i]>1);
-#endif
-            n_ptcl_in_cluster_disp_[i+1] = n_ptcl_in_cluster_disp_[i] + n_ptcl_in_cluster_[i];
-        }
-    }
-
-    template<class Tsys>
-    void setPtclForIsolatedMultiClusterOMP(const Tsys & sys,
-                                           const PS::ReallocatableArray<PS::S32> & _adr_array,
-                                           const PS::ReallocatableArray<PS::S32> & _n_ptcl_in_cluster){
-        const PS::S32 n_ptcl = _adr_array.size();
-#pragma omp parallel for schedule(dynamic)
-        for(PS::S32 i=0; i<n_ptcl; i++){
-            PS::S32 adr = _adr_array[i];
-            ptcl_hard_[i].DataCopy(sys[adr]);
-            ptcl_hard_[i].adr_org = adr;
-            //  ptcl_hard_[i].n_ngb = sys[adr].n_ngb;
-        }
+        interupt_list_.resizeNoInitialize(0);
     }
 
     template<class Tsys>
@@ -1863,29 +1830,29 @@ public:
 #endif
 
             // if interupt exist, escape initial
-            hard_int_thread[i]->initial(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, manager, time_origin_);
+            hard_int_thread[ith]->initial(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, manager, time_origin_);
 
-            auto interupt_state = hard_int_thread[i]->integrateToTime(dt);
+            auto interupt_state = hard_int_thread[ith]->integrateToTime(dt);
 
             if (interupt_state!=InteruptState::none) {
                 #pragma omp atomic capture
-                hard_int_thread[i] = hard_int_front_ptr++;
+                hard_int_thread[ith] = hard_int_front_ptr++;
 
-                assert(hard_int_thread[i]!=&hard_int_[n_hard_int_max_]);
+                assert(hard_int_thread[ith]!=&hard_int_[n_hard_int_max_]);
             }
             else {
-                hard_int_thread[i]->driftClusterCMRecordGroupCMDataAndWriteBack(dt);
+                hard_int_thread[ith]->driftClusterCMRecordGroupCMDataAndWriteBack(dt);
 
 #ifdef PROFILE
-                ARC_substep_sum    += hard_int_thread[i]->ARC_substep_sum;
-                ARC_tsyn_step_sum  += hard_int_thread[i]->ARC_tsyn_step_sum;
-                H4_step_sum        += hard_int_thread[i]->H4_step_sum;
+                ARC_substep_sum    += hard_int_thread[ith]->ARC_substep_sum;
+                ARC_tsyn_step_sum  += hard_int_thread[ith]->ARC_tsyn_step_sum;
+                H4_step_sum        += hard_int_thread[ith]->H4_step_sum;
 #endif
 #ifdef HARD_CHECK_ENERGY
-                energy += hard_int_thread[i]->energy;
+                energy += hard_int_thread[ith]->energy;
 #endif
                 
-                hard_int_thread[i]->clear();
+                hard_int_thread[ith]->clear();
             }
 
 #ifdef OMP_PROFILE
@@ -1897,11 +1864,6 @@ public:
             std::cerr<<"HT: "<<i<<" "<<ith<<" "<<n_cluster<<" "<<n_ptcl<<" "<<tend-tstart<<std::endl;
 #endif
 
-            // regist interupted hard integrator
-            assert(interupt_list_.size()==0);
-            for (auto* iptr = hard_int_; iptr<hard_int_front_ptr; iptr++) 
-                if (iptr->is_initialized) interupt_list_.push_back(iptr);
-            
 #else
             // Only soft drift
             auto* pi = ptcl_hard_.getPointer(adr_head);
@@ -1917,7 +1879,76 @@ public:
 #endif
 
         }
-        return interupt_list_.size();
+
+        // regist interupted hard integrator
+        assert(interupt_list_.size()==0);
+        for (auto iptr = hard_int_; iptr<hard_int_front_ptr; iptr++) 
+            if (iptr->is_initialized) {
+                assert(iptr->interupt_state!=InteruptState::none);
+#ifdef HARD_INTERUPT_PRINT
+                iptr->printInteruptBinaryInfo(std::cerr);
+#endif
+                interupt_list_.push_back(iptr);
+            }
+
+
+        // advance time_origin if all clusters finished
+        PS::S32 n_interupt = interupt_list_.size();
+        if (n_interupt==0) time_origin_ += dt;
+        else interupt_dt_ = dt;
+
+        return n_interupt;
+    }
+
+    //! Finish interupt integration
+    /*! Finish interupted integrations, if new interuption appear, record in the interupt_list and this function need to be called again after modification of interupt clusters
+      If no new interupt cluster appear, update time_origin_ with drift time.
+      @param [in] 
+     */
+    PS::S32 finishIntegrateInteruptClustersOMP() {
+        PS::S32 n_interupt = interupt_list_.size();
+#pragma omp parallel for schedule(dynamic)
+        for (PS::S32 i=0; i<n_interupt; i++) {
+            auto hard_int_ptr = interupt_list_[i];
+            auto interupt_state = hard_int_ptr->integrateToTime(interupt_dt_);
+
+            if (interupt_state==InteruptState::none) {
+                hard_int_ptr->driftClusterCMRecordGroupCMDataAndWriteBack(interupt_dt_);
+
+#ifdef PROFILE
+                ARC_substep_sum    += hard_int_ptr->ARC_substep_sum;
+                ARC_tsyn_step_sum  += hard_int_ptr->ARC_tsyn_step_sum;
+                H4_step_sum        += hard_int_ptr->H4_step_sum;
+#endif
+#ifdef HARD_CHECK_ENERGY
+                energy += hard_int_ptr->energy;
+#endif
+                
+                hard_int_ptr->clear();
+            }
+        }
+        
+        // record new interupt list
+        PS::S32 i_front = 0;
+        PS::S32 i_end = n_interupt;
+        while (i_front<i_end) {
+            auto hard_int_front_ptr = interupt_list_[i_front];
+            if (hard_int_front_ptr->interupt_state!=InteruptState::none) {
+                assert(hard_int_front_ptr->is_initialized);
+                i_front++;
+            }
+            else {
+                interupt_list_[i_front] = interupt_list_[--i_end];
+                interupt_list_.decreaseSize(1);
+            }
+        }
+
+        n_interupt =  interupt_list_.size();
+
+        // advance time_origin if all clusters finished
+        if (n_interupt==0) time_origin_ += interupt_dt_;
+
+        return n_interupt;
     }
 
     //! generate artificial particles,
