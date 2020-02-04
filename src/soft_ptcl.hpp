@@ -127,7 +127,7 @@ public:
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    void printColumnTitle(std::ostream & _fout, const int _width=20) {
+    static void printColumnTitle(std::ostream & _fout, const int _width=20) {
         Ptcl::printColumnTitle(_fout, _width);
         _fout<<std::setw(_width)<<"acc.x"
              <<std::setw(_width)<<"acc.y"

@@ -610,6 +610,37 @@ public:
       @param[in] _bin: binarytree to check iteratively
      */
     static COMM::BinaryTree<ARPtcl>* checkInteruptIter(COMM::BinaryTree<ARPtcl>*& _bin_interupt, COMM::BinaryTree<ARPtcl>& _bin) {
+#ifdef STELLAR_EVOLUTION
+        if (_bin.getMemberN()==2&&_bin_interupt==NULL) {
+            ARPtcl *p1,*p2;
+            p1 = _bin.getLeftMember();
+            p2 = _bin.getRightMember();
+            Float dr[3] = {p1->pos[0] - p2->pos[0], 
+                           p1->pos[1] - p2->pos[1], 
+                           p1->pos[2] - p2->pos[2]};
+            Float dv[3] = {p1->vel[0] - p2->vel[0], 
+                           p1->vel[1] - p2->vel[1], 
+                           p1->vel[2] - p2->vel[2]};
+            Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+            Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
+            Float radius = p1->radius + p2->radius;
+            Float radius_sq = radius*radius;
+            if (!(p1->binary_state == 1 && p2->binary_state == 1)) {
+                if (dr2<radius_sq&&drdv<0) {
+                    _bin_interupt = &_bin;
+                    p1->binary_state = 1;
+                    p2->binary_state = 1;
+                }
+            }
+            else {
+                if (dr2>radius_sq&&drdv>0) {
+                    _bin_interupt = &_bin;
+                    p1->binary_state = 0;
+                    p2->binary_state = 0;
+                }
+            }
+        }
+#endif
         return _bin_interupt;
     }
 

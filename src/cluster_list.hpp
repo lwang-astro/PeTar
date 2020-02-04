@@ -372,12 +372,12 @@ public:
 
         for (PS::S32 j=0; j<_nb; j++) {
             if (_pi.id==_pb[j].id) continue;
-            ParticleBase pj;
-            pj.DataCopy(_pb[j]);
             auto& pbj_cm = _pb[j].group_data.cm;
 #ifdef CLUSTER_DEBUG
             assert(pbj_cm.mass>=0.0);
 #endif
+            ParticleBase pj;
+            pj.pos = _pb[j].pos;
             // particle member case
             if (pbj_cm.mass>0.0) {
                 pj.vel[0] = pbj_cm.vel.x;
@@ -389,6 +389,11 @@ public:
                     std::cout<<"Warning: may not be pcm data! idj "<<_pb[j].id<<" status="<<_pb[j].group_data.artificial.status<<" mass_bk="<<_pb[j].group_data.artificial.mass_backup<<std::endl;
 #endif
             }
+            else {
+                pj.mass= _pb[j].mass;
+                pj.vel = _pb[j].vel;
+            }
+            
             PS::F64 semi,ecc, r,rv;
             COMM::Binary::particleToSemiEcc(semi, ecc, r, rv, pi, pj, _G);
             PS::F64 peri = semi*(1-ecc);

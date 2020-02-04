@@ -94,6 +94,7 @@ public:
 #else
     IOParams<PS::S32> n_group_limit;
 #endif
+    IOParams<PS::S32> n_interupt_limit;
     IOParams<PS::S32> n_smp_ave;
     IOParams<PS::S32> n_split;
     IOParams<PS::S64> n_bin;
@@ -143,6 +144,7 @@ public:
 #else
                      n_group_limit(input_par_store, 512,  "Tree group number limit", "optimized for x86-AVX2 (512)"),
 #endif
+                     n_interupt_limit(input_par_store, 512, "Interupt binary number limit"),
                      n_smp_ave    (input_par_store, 100,  "Average target number of sample particles per process"),
                      n_split      (input_par_store, 8,    "Number of binary sample points for tree perturbation force"),
                      n_bin        (input_par_store, 0,    "Number of binaries used for initialization (assume binaries ID=1,2*n_bin)"),
@@ -212,6 +214,7 @@ public:
             {"step-limit-arc", required_argument, 0, 15},   
 #endif
             {"disable-print-info", no_argument, 0, 16},
+            {"number-interupt-limt",required_argument, 0, 17},
             {0,0,0,0}
         };
 
@@ -323,6 +326,12 @@ public:
                 print_flag = false;
                 n_opt++;
                 break;
+            case 17:
+                n_interupt_limit.value = atoi(optarg);
+                if(print_flag) n_interupt_limit.print(std::cout);
+                assert(n_interupt_limit.value>0);
+                n_opt+=2;
+                break;
             case 'i':
                 data_format.value = atoi(optarg);
                 if(print_flag) data_format.print(std::cout);
@@ -419,7 +428,11 @@ public:
                              <<"             1. File_ID: 0 for initialization, else for restarting\n"
                              <<"             2. N_particle \n"
                              <<"             3. Time\n"
-                             <<"            Following lines:\n"
+                             <<"            Following lines:\n";
+                    std::cout<<"             ";
+                    FPSoft::printColumnTitle(std::cout,10);
+                    std::cout<<std::endl;
+/*
                              <<"             1. mass\n"
                              <<"             2. position[3]\n"
                              <<"             5. velocity[3]\n"
@@ -433,6 +446,7 @@ public:
                              <<"             17. Potential (0.0)\n"
                              <<"             18. N_neighbor (0)\n"
                              <<"             in () show initialization values which should be used together with FILE_ID = 0"<<std::endl;
+*/
                     std::cout<<"  -a:     data output style (except snapshot) becomes appending, defaulted: replace"<<std::endl;
                     std::cout<<"  -t: [F] "<<time_end<<std::endl;
                     std::cout<<"  -s: [F] "<<dt_soft<<std::endl;
@@ -449,6 +463,7 @@ public:
                     std::cout<<"        --n-split:           [I] "<<n_split<<std::endl;
                     std::cout<<"        --n-group-limit:     [I] "<<n_group_limit<<std::endl;
                     std::cout<<"        --n-leaf-limit:      [I] "<<n_leaf_limit<<std::endl;
+                    std::cout<<"        --n-interupt-limit:  [I] "<<n_interupt_limit<<std::endl;
                     std::cout<<"        --n-sample-average:  [I] "<<n_smp_ave<<std::endl;
                     std::cout<<"  -G: [F] "<<gravitational_constant<<std::endl;
                     std::cout<<"  -T: [F] "<<theta<<std::endl;
@@ -508,6 +523,7 @@ public:
         assert(n_bin.value>=0);
         assert(n_glb.value>0);
         assert(n_group_limit.value>0);
+        assert(n_interupt_limit.value>0);
         assert(n_leaf_limit.value>0);
         assert(n_smp_ave.value>0.0);
         assert(theta.value>=0.0);
@@ -2148,8 +2164,8 @@ public:
         hard_manager.checkParams();
 
         // initial hard class and parameters
-        system_hard_isolated.allocateHardIntegrator(input_parameters.n_group_limit.value);
-        system_hard_connected.allocateHardIntegrator(input_parameters.n_group_limit.value);
+        system_hard_isolated.allocateHardIntegrator(input_parameters.n_interupt_limit.value);
+        system_hard_connected.allocateHardIntegrator(input_parameters.n_interupt_limit.value);
 
         system_hard_one_cluster.manager = &hard_manager;
         system_hard_isolated.manager = &hard_manager;

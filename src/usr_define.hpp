@@ -13,6 +13,13 @@ public:
     PS::F64 mass;
     PS::F64vec pos;
     PS::F64vec vel;
+#ifdef STELLAR_EVOLUTION
+    // for stellar evolution
+    PS::F64 radius;
+    PS::F64 mdot;
+    PS::F64 time_interupt;
+    PS::S64 binary_state;
+#endif
     // -------------------------
 
     //! defaulted constructor 
@@ -26,6 +33,40 @@ public:
                  const PS::F64vec & _pos, 
                  const PS::F64vec & _vel): mass(_mass), pos(_pos), vel(_vel) {}
 
+#ifdef STELLAR_EVOLUTION
+    //! constructor 
+    ParticleBase(const PS::F64 _mass, const PS::F64vec & _pos, const PS::F64vec & _vel,
+                 const PS::F64 _radius, const PS::F64 _mdot, const PS::F64 _time_interupt, const PS::S64 _binary_state): 
+        mass(_mass), pos(_pos), vel(_vel), radius(_radius), mdot(_mdot), time_interupt(_time_interupt), binary_state(_binary_state) {}
+#endif
+
+#ifdef STELLAR_EVOLUTION
+    //! write class data with ASCII format
+    /*! @param[in] _fout: file IO for write
+     */
+    void writeAscii(FILE* fp) const{
+        fprintf(fp, "%26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %lld",
+                this->mass, 
+                this->pos.x, this->pos.y, this->pos.z,  
+                this->vel.x, this->vel.y, this->vel.z,
+                this->radius, this->mdot, this->time_interupt, this->binary_state);
+    }
+
+    //! read class data with ASCII format
+    /*! @param[in] _fin: file IO for read
+     */
+    void readAscii(FILE* fp) {
+        PS::S64 rcount=fscanf(fp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lld",
+                              &this->mass, 
+                              &this->pos.x, &this->pos.y, &this->pos.z,
+                              &this->vel.x, &this->vel.y, &this->vel.z,
+                              &this->radius,&this->mdot,  &this->time_interupt, &this->binary_state);
+        if(rcount<11) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 11, only obtain "<<rcount<<".\n";
+            abort();
+        }
+    }
+#else
     //! write class data with ASCII format
     /*! @param[in] _fout: file IO for write
      */
@@ -34,13 +75,6 @@ public:
                 this->mass, 
                 this->pos.x, this->pos.y, this->pos.z,  
                 this->vel.x, this->vel.y, this->vel.z);
-    }
-
-    //! write class data with BINARY format
-    /*! @param[in] _fout: file IO for write
-     */
-    void writeBinary(FILE* fp) const{
-        fwrite(&(this->mass), sizeof(ParticleBase), 1, fp);
     }
 
     //! read class data with ASCII format
@@ -56,6 +90,15 @@ public:
             abort();
         }
     }
+#endif
+
+    //! write class data with BINARY format
+    /*! @param[in] _fout: file IO for write
+     */
+    void writeBinary(FILE* fp) const{
+        fwrite(&(this->mass), sizeof(ParticleBase), 1, fp);
+    }
+
 
     //! read class data with BINARY format
     /*! @param[in] _fin: file IO for read
@@ -73,6 +116,12 @@ public:
         fout<<" mass="<<mass
             <<" pos="<<pos
             <<" vel="<<vel;
+#ifdef STELLAR_EVOLUTION
+        fout<<" radius="<<radius
+            <<" mdot="<<mdot
+            <<" time_interupt="<<time_interupt
+            <<" binary_state="<<binary_state;
+#endif
     }
 
     //! print titles of class members using column style
@@ -88,6 +137,12 @@ public:
              <<std::setw(_width)<<"vel.x"
              <<std::setw(_width)<<"vel.y"
              <<std::setw(_width)<<"vel.z";
+#ifdef STELLAR_EVOLUTION
+        _fout<<std::setw(_width)<<"radius"
+             <<std::setw(_width)<<"mdot"
+             <<std::setw(_width)<<"t_irpt"
+             <<std::setw(_width)<<"bin_stat";
+#endif
     }
 
     //! print data of class members using column style
@@ -103,6 +158,12 @@ public:
              <<std::setw(_width)<<vel.x
              <<std::setw(_width)<<vel.y
              <<std::setw(_width)<<vel.z;
+#ifdef STELLAR_EVOLUTION
+        _fout<<std::setw(_width)<<radius
+             <<std::setw(_width)<<mdot
+             <<std::setw(_width)<<time_interupt
+             <<std::setw(_width)<<binary_state;
+#endif
     }
     
 
@@ -115,6 +176,12 @@ public:
         mass = din.mass;
         pos  = din.pos;
         vel  = din.vel;
+#ifdef STELLAR_EVOLUTION
+        radius= din.radius;
+        mdot  = din.mdot;
+        time_interupt = din.time_interupt;
+        binary_state  = din.binary_state;
+#endif
     }
 
     //! Get mass (required for \ref ARC::chain)
