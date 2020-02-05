@@ -127,6 +127,7 @@ public:
     IOParams<PS::F64> sd_factor;
     IOParams<PS::S32> data_format;
     IOParams<PS::S32> write_style;
+    IOParams<PS::S32> interupt_detection_option;
     IOParams<std::string> fname_snp;
     IOParams<std::string> fname_par;
     IOParams<std::string> fname_inp;
@@ -177,6 +178,7 @@ public:
                      sd_factor    (input_par_store, 1e-4, "Slowdown perturbation criterion"),
                      data_format  (input_par_store, 1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),
                      write_style  (input_par_store, 1,    "File Writing style: 0, no output; 1. write snapshots and status separately; 2. write all data in one line per step (no MPI support)"),
+                     interupt_detection_option(input_par_store, 0, "detect interuption", "no"),
                      fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]"),
                      fname_par(input_par_store, "input.par", "Input parameter file (this option should be used first before any other options)"),
                      fname_inp(input_par_store, "", "Input data file"),
@@ -194,6 +196,7 @@ public:
         static struct option long_options[] = {
             {"n-split", required_argument, 0, 0},        
             {"search-vel-factor", required_argument, 0, 1},  
+            {"detect-interupt", no_argument, 0, 18},
             {"dt-max-factor", required_argument, 0, 2},  
             {"dt-min-hermite", required_argument, 0, 3}, 
             {"number-group-limit", required_argument, 0, 4},
@@ -332,6 +335,11 @@ public:
                 assert(n_interupt_limit.value>0);
                 n_opt+=2;
                 break;
+            case 18:
+                interupt_detection_option.value = 1;
+                if(print_flag) interupt_detection_option.print(std::cout);
+                n_opt++;
+                break;
             case 'i':
                 data_format.value = atoi(optarg);
                 if(print_flag) data_format.print(std::cout);
@@ -451,6 +459,7 @@ public:
                     std::cout<<"  -t: [F] "<<time_end<<std::endl;
                     std::cout<<"  -s: [F] "<<dt_soft<<std::endl;
                     std::cout<<"  -o: [F] "<<dt_snp<<std::endl;
+                    std::cout<<"        --detect-interupt:       "<<interupt_detection_option<<std::endl;
                     std::cout<<"        --dt-max-factor:     [F] "<<dt_limit_hard_factor<<std::endl;
                     std::cout<<"        --dt-min-hermite:    [I] "<<dt_min_hermite_index<<std::endl;
                     std::cout<<"        --disable-print-info:  "<<"Do not print information"<<std::endl;
@@ -2176,6 +2185,8 @@ public:
 #ifdef SLOWDOWN_MASSRATIO
         hard_manager.ar_manager.slowdown_mass_ref = m_average;
 #endif
+        hard_manager.ar_manager.interupt_detection_option = input_parameters.interupt_detection_option.value;
+
         // check consistence of paramters
         input_parameters.checkParams();
         hard_manager.checkParams();

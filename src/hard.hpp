@@ -136,7 +136,7 @@ struct HardEnergy{
 
 };
 
-enum InteruptState {none, binary, step};
+enum InteruptState {none, binary, disrupt, timeout, collision};
 
 //! hard integrator 
 class HardIntegrator{
@@ -876,10 +876,16 @@ public:
             abort();
             break;
         case InteruptState::binary:
-            _fout<<"(Binary) ";
+            _fout<<"(new-binary) ";
             break;
-        case InteruptState::step:
-            _fout<<"(Step) ";
+        case InteruptState::disrupt:
+            _fout<<"(disrupt) ";
+            break;
+        case InteruptState::timeout:
+            _fout<<"(timeout) ";
+            break;
+        case InteruptState::collision:
+            _fout<<"(collision) ";
             break;
         }
         _fout<<" Time: ";
@@ -1525,6 +1531,10 @@ public:
 
     PS::S32 getNumberOfInteruptClusters() const {
         return interupt_list_.size();
+    }
+
+    HardIntegrator* getInteruptHardIntegrator(const std::size_t i) {
+        return interupt_list_[i];
     }
 
     PS::S32* getClusterNumberOfMemberList(const std::size_t i=0) const{
