@@ -1062,7 +1062,7 @@ public:
         ////////////
     }
 
-    //! Send and receive the remote particles due to the change of kick
+    //! Send and receive the remote particles
     /* Send local single particles to remote nodes and receive remote single particles.
        Notice _ptcl_hard are not overlap with ptcl_send
        @param[in,out] _sys: particle system. Notice the local particles of non-group members are updated.
@@ -1071,17 +1071,6 @@ public:
     template<class Tsys, class Tphard>
     void SendSinglePtcl(Tsys & _sys,
                         PS::ReallocatableArray<Tphard> & _ptcl_hard){
-        //// First, write back local kicked single particles to sys.
-        //for(PS::S32 i=0; i<n; i++) {
-        //    const PS::S32 adr = _ptcl_hard[i].adr_org;
-        //    if(adr >=0){
-//#ifdef HARD_DEBUG
-        //        assert( _sys[adr].id == _ptcl_hard[i].id );
-//#endif  // 
-        //        _sys[adr].DataCopy(_ptcl_hard[i]);
-        //    }
-        //}
-        // write kicked single particle to sending buffer
         for(PS::S32 i=0; i<ptcl_send_.size(); i++){
             PS::S32 adr = adr_sys_ptcl_send_[i];
 #ifdef HARD_DEBUG
@@ -1121,6 +1110,62 @@ public:
         for(PS::S32 i=0; i<n; i++){
             const PS::S32 adr = _ptcl_hard[i].adr_org;
             if(adr <0 && _ptcl_hard[i].group_data.artificial.isSingle()){
+#ifdef HARD_DEBUG
+                assert( ptcl_recv_[-(adr+1)].id == _ptcl_hard[i].id );
+                assert( ptcl_recv_[-(adr+1)].group_data.artificial.isSingle());
+#endif
+                _ptcl_hard[i].DataCopy(ptcl_recv_[-(adr+1)]);
+            }
+        }
+
+    }
+
+    //! Send and receive the remote particles 
+    /* Send local single particles to remote nodes and receive remote single particles.
+       Notice _ptcl_hard are not overlap with ptcl_send
+       @param[in,out] _sys: particle system. 
+       @param[in,out] _ptcl_hard: local partical in system_hard_connected
+     */
+    template<class Tsys, class Tphard>
+    void SendPtcl(Tsys & _sys,
+                  PS::ReallocatableArray<Tphard> & _ptcl_hard){
+        for(PS::S32 i=0; i<ptcl_send_.size(); i++){
+            PS::S32 adr = adr_sys_ptcl_send_[i];
+#ifdef HARD_DEBUG
+            assert(_sys[adr].id == ptcl_send_[i].id);
+#endif
+            // write local single particle
+            ptcl_send_[i].DataCopy(_sys[adr]);
+        }
+        static PS::ReallocatableArray<MPI_Request> req_send;
+        static PS::ReallocatableArray<MPI_Status> stat_send;
+        static PS::ReallocatableArray<MPI_Request> req_recv;
+        static PS::ReallocatableArray<MPI_Status> stat_recv;
+        req_send.resizeNoInitialize(rank_send_ptcl_.size());
+        stat_send.resizeNoInitialize(rank_send_ptcl_.size());
+        req_recv.resizeNoInitialize(rank_recv_ptcl_.size());
+        stat_recv.resizeNoInitialize(rank_recv_ptcl_.size());
+
+        for(PS::S32 i=0; i<rank_send_ptcl_.size(); i++){
+            PS::S32 rank = rank_send_ptcl_[i];
+            MPI_Isend(ptcl_send_.getPointer(n_ptcl_disp_send_[i]),  n_ptcl_send_[i],
+                      PS::GetDataType<PtclComm>(),
+                      rank, 2239, MPI_COMM_WORLD, req_send.getPointer(i));
+        }
+        for(PS::S32 i=0; i<rank_recv_ptcl_.size(); i++){
+            PS::S32 rank = rank_recv_ptcl_[i];
+            MPI_Irecv(ptcl_recv_.getPointer(n_ptcl_disp_recv_[i]), n_ptcl_recv_[i],
+                      PS::GetDataType<PtclComm>(),
+                      rank, 2239, MPI_COMM_WORLD, req_recv.getPointer(i));
+        }
+        MPI_Waitall(rank_send_ptcl_.size(), req_send.getPointer(), stat_send.getPointer());
+        MPI_Waitall(rank_recv_ptcl_.size(), req_recv.getPointer(), stat_recv.getPointer());
+
+        // Receive remote single particle data
+        const PS::S32 n = _ptcl_hard.size();
+        for(PS::S32 i=0; i<n; i++){
+            const PS::S32 adr = _ptcl_hard[i].adr_org;
+            if(adr <0){
 #ifdef HARD_DEBUG
                 assert( ptcl_recv_[-(adr+1)].id == _ptcl_hard[i].id );
                 assert( ptcl_recv_[-(adr+1)].group_data.artificial.isSingle());
