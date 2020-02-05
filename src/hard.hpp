@@ -508,6 +508,7 @@ public:
      */
     InteruptState integrateToTime(const PS::F64 _time_end) {
         ASSERT(checkParams());
+        interupt_state = InteruptState::none;
         // integration
         if (use_sym_int) {
             interupt_binary_adr = sym_int.integrateToTime(_time_end);
@@ -659,7 +660,6 @@ public:
             }
 
         }
-        interupt_state = InteruptState::none;
         return interupt_state;
     }
 
@@ -882,7 +882,9 @@ public:
             _fout<<"(Step) ";
             break;
         }
-        _fout<<" Time: "<<h4_int.getInteruptTime()<<std::endl;
+        _fout<<" Time: ";
+        if (use_sym_int) _fout<<sym_int.slowdown.getRealTime()<<std::endl;
+        else _fout<<h4_int.getInteruptTime()<<std::endl;
         interupt_binary_adr->printColumnTitle(_fout);
         _fout<<std::endl;
         interupt_binary_adr->printColumn(_fout);
@@ -1935,6 +1937,9 @@ public:
             auto hard_int_front_ptr = interupt_list_[i_front];
             if (hard_int_front_ptr->interupt_state!=InteruptState::none) {
                 assert(hard_int_front_ptr->is_initialized);
+#ifdef HARD_INTERUPT_PRINT
+                hard_int_front_ptr->printInteruptBinaryInfo(std::cerr);
+#endif
                 i_front++;
             }
             else {

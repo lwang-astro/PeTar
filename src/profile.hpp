@@ -343,6 +343,7 @@ public:
 	Tprofile hard_single;	   
 	Tprofile hard_isolated;
 	Tprofile hard_connected;
+    Tprofile hard_interupt;
     //Tprofile hard_con_send;
 	Tprofile tree_nb;
     Tprofile tree_soft;
@@ -361,6 +362,7 @@ public:
                   hard_single   (Tprofile("Hard_single   ")),
                   hard_isolated (Tprofile("Hard_isolated ")),
                   hard_connected(Tprofile("Hard_connected")),
+                  hard_interupt (Tprofile("Hard_interupt ")),
                   //hard_con_send (Tprofile("Hard_con_send ")),
                   tree_nb       (Tprofile("Tree_neighbor ")),
                   tree_soft     (Tprofile("Tree_force    ")),
@@ -371,7 +373,7 @@ public:
                   domain        (Tprofile("Domain_decomp ")),
                   exchange      (Tprofile("Exchange_ptcl ")),
                   output        (Tprofile("Output        ")),
-                  n_profile(13) {}
+                  n_profile(14) {}
 
 	void print(std::ostream & fout, const PS::F64 time_sys, const PS::S64 n_loop=1){
         fout<<"Time: "<<time_sys<<std::endl;
@@ -451,6 +453,7 @@ public:
     NumCounter hard_single;
     NumCounter hard_isolated;
     NumCounter hard_connected;
+    NumCounter hard_interupt;
     NumCounter cluster_isolated;
     NumCounter cluster_connected;
     NumCounter ARC_substep_sum;
@@ -466,6 +469,7 @@ public:
     SysCounts(): hard_single      (NumCounter("Hard_single   ")),
                  hard_isolated    (NumCounter("Hard_isolated ")),
                  hard_connected   (NumCounter("Hard_connected")),
+                 hard_interupt    (NumCounter("Hard_interupt ")),
                  cluster_isolated (NumCounter("Cluster_isolated ")),
                  cluster_connected(NumCounter("Cluster_connected")),
                  ARC_substep_sum  (NumCounter("AR_step_sum")),
@@ -475,7 +479,7 @@ public:
                  ep_ep_interact   (NumCounter("Ep-Ep_interaction")),
                  ep_sp_interact   (NumCounter("Ep-Sp_interaction")),
                  //ARC_step_group   (NumCounter("ARC step per group")),
-                 n_counter(11) {}
+                 n_counter(12) {}
 
     void cluster_count(const PS::S32 n, const PS::S32 ntimes=1) {
         if (n_cluster.count(n)) n_cluster[n] += ntimes;

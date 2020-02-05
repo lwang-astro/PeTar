@@ -1287,6 +1287,11 @@ private:
         if(n_interupt_isolated==0) system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
         // integrate multi cluster A
 
+#ifdef PROFILE
+        n_count.hard_interupt += n_interupt_isolated;
+        profile.hard_isolated.barrier();
+#endif
+
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         PS::S32 n_interupt_glb = PS::Comm::getSum(n_interupt_isolated);
 #else 
@@ -1294,7 +1299,7 @@ private:
 #endif
 
 #ifdef PROFILE
-        profile.hard_isolated.barrier();
+        n_count_sum.hard_interupt += n_interupt_glb;
         profile.hard_isolated.end();
 #endif
         /////////////
@@ -1307,25 +1312,37 @@ private:
         // integrate multi cluster B
         system_hard_connected.driveForMultiClusterOMP(_dt_drift, &(system_soft[0]));
         PS::S32 n_interupt_connected = system_hard_connected.getNumberOfInteruptClusters();
+
+#ifdef PROFILE
+        n_count.hard_interupt += n_interupt_connected;
+        profile.hard_connected.barrier();
+#endif
+
         PS::S32 n_interupt_connected_glb = PS::Comm::getSum(n_interupt_connected);
+
+#ifdef PROFILE
+        n_count_sum.hard_interupt += n_interupt_connected_glb;
+        profile.hard_connected.end();
+        profile.hard_connected.start();
+#endif
+
 
         if (n_interupt_connected_glb==0) {
             search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
             system_hard_connected.updateTimeWriteBack();
         }
         // integrate multi cluster B
-        
-        n_interupt_glb += n_interupt_connected_glb;
 
 #ifdef PROFILE
         profile.hard_connected.barrier();
         PS::Comm::barrier();
         profile.hard_connected.end();
 #endif
-
+        
+        n_interupt_glb += n_interupt_connected_glb;
 #endif
-        return n_interupt_glb;
 
+        return n_interupt_glb;
     }
 
     //! Calculate the maximum time step limit for next block step
@@ -2310,7 +2327,13 @@ public:
         // ensure it is initialized
         assert(initial_step_flag);
 
+#ifdef PROFILE
+        profile.hard_interupt.start();
+        profile.hard_isolated.start();
+#endif
+
         // finish interupt clusters first
+        // isolated clusters
         PS::S32 n_interupt_isolated = 0;
         if (system_hard_isolated.getNumberOfInteruptClusters()>0) {
             system_hard_isolated.finishIntegrateInteruptClustersOMP();
@@ -2318,30 +2341,74 @@ public:
             if(n_interupt_isolated==0) system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
         }
 
+#ifdef PROFILE
+        n_count.hard_interupt += n_interupt_isolated;
+        profile.hard_isolated.barrier();
+#endif
+
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         PS::S32 n_interupt_glb = PS::Comm::getSum(n_interupt_isolated);
+#else
+        PS::S32 n_interupt_glb = n_interupt_isolated;
+#endif
 
+#ifdef PROFILE
+        n_count_sum.hard_interupt += n_interupt_glb;
+        profile.hard_isolated.end();
+#endif
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+#ifdef PROFILE
+        profile.hard_connected.start();
+#endif
+
+        // connected clusters
         PS::S32 n_interupt_connected = 0;
         if (system_hard_connected.getNumberOfInteruptClusters()>0) {
             system_hard_connected.finishIntegrateInteruptClustersOMP();
             n_interupt_connected = system_hard_connected.getNumberOfInteruptClusters();
         }
+
+#ifdef PROFILE
+        n_count.hard_interupt += n_interupt_connected;
+        profile.hard_connected.barrier();
+#endif
+
         PS::S32 n_interupt_connected_glb = PS::Comm::getSum(n_interupt_connected);
+
+#ifdef PROFILE
+        n_count_sum.hard_interupt += n_interupt_connected_glb;
+        profile.hard_connected.end();
+        profile.hard_connected.start();
+#endif
+
         if (n_interupt_connected_glb==0) {
             search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
             system_hard_connected.updateTimeWriteBack();
         }
 
+#ifdef PROFILE
+        profile.hard_connected.barrier();
+        PS::Comm::barrier();
+        profile.hard_connected.end();
+#endif
+
         n_interupt_glb += n_interupt_connected_glb;
-#else
-        PS::S32 n_interupt_glb = n_interupt_isolated;
+#endif
+
+#ifdef PROFILE
+        profile.hard_interupt.barrier();
+        profile.hard_interupt.end();
 #endif
 
         // if interupt cluster still exist, return the number immediately without new integration.
-        if (n_interupt_glb>0)  return n_interupt_glb;
+        if (n_interupt_glb>0)  {
+#ifdef HARD_INTERUPT_PRINT
+            std::cerr<<"Interupt detected, number: "<<n_interupt_glb<<std::endl;
+#endif
+            return n_interupt_glb;
+        }
 
-        // check time consistence
-        
 
         // check time break
         PS::F64 time_break = _time_break==0.0? input_parameters.time_end.value: std::min(_time_break,input_parameters.time_end.value);
@@ -2541,7 +2608,12 @@ public:
 #endif
             
             // when interupt exist, quit the loop
-            if (n_interupt_glb>0) return n_interupt_glb;
+            if (n_interupt_glb>0) {
+#ifdef HARD_INTERUPT_PRINT
+                std::cerr<<"Interupt detected, number: "<<n_interupt_glb<<std::endl;
+#endif
+                return n_interupt_glb;
+            }
 
         }
 
