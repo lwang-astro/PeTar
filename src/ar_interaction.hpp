@@ -628,8 +628,10 @@ public:
             if (!(p1->binary_state == 1 && p2->binary_state == 1)) {
                 if (dr2<radius_sq&&drdv<0) {
                     _bin_interupt = &_bin;
-                    p1->binary_state = 1;
-                    p2->binary_state = 1;
+                    p1->setBinaryPairID(p2->id);
+                    p2->setBinaryPairID(p1->id);
+                    p1->setBinaryInteruptState(BinaryInteruptState::collision);
+                    p2->setBinaryInteruptState(BinaryInteruptState::collision);
                 }
             }
             else {

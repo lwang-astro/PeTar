@@ -136,8 +136,6 @@ struct HardEnergy{
 
 };
 
-enum InteruptState {none, binary, disrupt, timeout, collision};
-
 //! hard integrator 
 class HardIntegrator{
 public:
@@ -149,7 +147,6 @@ public:
     PtclH4* ptcl_origin;  ///> original particle array
 
     COMM::BinaryTree<PtclAR>* interupt_binary_adr; ///> interupt binary address
-    InteruptState interupt_state; ///> interupt state record
 
 #ifdef HARD_DEBUG_PRINT
     PS::ReallocatableArray<PS::S32> n_group_sub_init; ///> initial sub group number in each groups 
@@ -171,7 +168,7 @@ public:
 
     //! initializer
     HardIntegrator(): h4_int(), sym_int(), manager(NULL), tidal_tensor(), time_origin(-1.0), ptcl_origin(NULL), 
-                      interupt_binary_adr(NULL), interupt_state(InteruptState::none),
+                      interupt_binary_adr(NULL), 
 #ifdef HARD_DEBUG_PRINT
                       n_group_sub_init(), n_group_sub_tot_init(0),
 #endif
@@ -214,7 +211,6 @@ public:
         // ensure the integrator is not used
         ASSERT(ptcl_origin==NULL);
         ASSERT(manager==NULL);
-        ASSERT(interupt_state==InteruptState::none);
         ASSERT(!is_initialized);
 
         is_initialized = true;
@@ -504,15 +500,13 @@ public:
     //! Integrate system to time
     /*!
       @param [in] _time_end: time to integrate
-      \return interupt state
+      \return interupt binary address, if no return NULL
      */
-    InteruptState integrateToTime(const PS::F64 _time_end) {
+    COMM::BinaryTree<PtclAR>* integrateToTime(const PS::F64 _time_end) {
         ASSERT(checkParams());
-        interupt_state = InteruptState::none;
         // integration
         if (use_sym_int) {
             interupt_binary_adr = sym_int.integrateToTime(_time_end);
-            if (interupt_binary_adr!=NULL) interupt_state = InteruptState::binary;
         }
         else {
 #ifdef SOFT_PERT
@@ -523,10 +517,7 @@ public:
                 // integrate groups
                 interupt_binary_adr = h4_int.integrateGroupsOneStep();
                 // when binary is interupted, break integration loop
-                if (interupt_binary_adr!=NULL) {
-                    interupt_state = InteruptState::binary;
-                    break;
-                }
+                if (interupt_binary_adr!=NULL) break;
 
                 // integrate singles
                 h4_int.integrateSingleOneStepAct();
@@ -660,7 +651,7 @@ public:
             }
 
         }
-        return interupt_state;
+        return interupt_binary_adr;
     }
 
     //! drift c.m. particle of the cluster record group c.m. in group_data and write back data to original particle array
@@ -869,28 +860,9 @@ public:
       @param[out] _fout: std::ostream output object
     */
     void printInteruptBinaryInfo(std::ostream & _fout) const{
-        _fout<<"Interupt condition triggered! ";
-        switch(interupt_state) {
-        case InteruptState::none:
-            std::cerr<<"Error: incorrect state (none)!\n";
-            abort();
-            break;
-        case InteruptState::binary:
-            _fout<<"(new-binary) ";
-            break;
-        case InteruptState::disrupt:
-            _fout<<"(disrupt) ";
-            break;
-        case InteruptState::timeout:
-            _fout<<"(timeout) ";
-            break;
-        case InteruptState::collision:
-            _fout<<"(collision) ";
-            break;
-        }
-        _fout<<" Time: ";
-        if (use_sym_int) _fout<<sym_int.slowdown.getRealTime()<<std::endl;
-        else _fout<<h4_int.getInteruptTime()<<std::endl;
+        _fout<<"Interupt condition triggered! Time: ";
+        if (use_sym_int) _fout<<"(AR) "<<sym_int.slowdown.getRealTime()<<std::endl;
+        else _fout<<"(Hermite) "<<h4_int.getInteruptTime()<<std::endl;
         interupt_binary_adr->printColumnTitle(_fout);
         _fout<<std::endl;
         interupt_binary_adr->printColumn(_fout);
@@ -901,7 +873,6 @@ public:
             interupt_binary_adr->getMember(j)->printColumn(_fout);
             _fout<<std::endl;
         }
-
     }
 
     //! clear function
@@ -913,7 +884,6 @@ public:
         time_origin = 0;
         ptcl_origin = NULL;
         interupt_binary_adr = NULL;
-        interupt_state = InteruptState::none;
         is_initialized = false;
 
 #ifdef PROFILE
@@ -1844,9 +1814,9 @@ public:
             // if interupt exist, escape initial
             hard_int_thread[ith]->initial(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, manager, time_origin_);
 
-            auto interupt_state = hard_int_thread[ith]->integrateToTime(dt);
+            auto interupt_binary_adr = hard_int_thread[ith]->integrateToTime(dt);
 
-            if (interupt_state!=InteruptState::none) {
+            if (interupt_binary_adr != NULL) {
                 #pragma omp atomic capture
                 hard_int_thread[ith] = hard_int_front_ptr++;
 
@@ -1896,7 +1866,7 @@ public:
         assert(interupt_list_.size()==0);
         for (auto iptr = hard_int_; iptr<hard_int_front_ptr; iptr++) 
             if (iptr->is_initialized) {
-                assert(iptr->interupt_state!=InteruptState::none);
+                assert(iptr->interupt_binary_adr!=NULL);
 #ifdef HARD_INTERUPT_PRINT
                 iptr->printInteruptBinaryInfo(std::cerr);
 #endif
@@ -1922,9 +1892,9 @@ public:
 #pragma omp parallel for schedule(dynamic)
         for (PS::S32 i=0; i<n_interupt; i++) {
             auto hard_int_ptr = interupt_list_[i];
-            auto interupt_state = hard_int_ptr->integrateToTime(interupt_dt_);
+            auto interupt_binary_adr = hard_int_ptr->integrateToTime(interupt_dt_);
 
-            if (interupt_state==InteruptState::none) {
+            if (interupt_binary_adr==NULL) {
                 hard_int_ptr->driftClusterCMRecordGroupCMDataAndWriteBack(interupt_dt_);
 
 #ifdef PROFILE
@@ -1945,7 +1915,7 @@ public:
         PS::S32 i_end = n_interupt;
         while (i_front<i_end) {
             auto hard_int_front_ptr = interupt_list_[i_front];
-            if (hard_int_front_ptr->interupt_state!=InteruptState::none) {
+            if (hard_int_front_ptr->interupt_binary_adr!=NULL) {
                 assert(hard_int_front_ptr->is_initialized);
 #ifdef HARD_INTERUPT_PRINT
                 hard_int_front_ptr->printInteruptBinaryInfo(std::cerr);

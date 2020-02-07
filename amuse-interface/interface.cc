@@ -111,6 +111,7 @@ extern "C" {
             p.vel.x = vx;
             p.vel.y = vy;
             p.vel.z = vz;
+            p.radius = radius;
 
             if (ptr->initial_parameters_flag) p.calcRSearch(ptr->input_parameters.dt_soft.value);
             p.id = n_glb+1;
@@ -167,6 +168,7 @@ extern "C" {
             *vx = p->vel.x;
             *vy = p->vel.y;
             *vz = p->vel.z;
+            *radius = p->radius;
         }
         else {
             if (ptr->my_rank==particle_rank) { // sender
@@ -184,6 +186,7 @@ extern "C" {
                 *vx = p.vel.x;
                 *vy = p.vel.y;
                 *vz = p.vel.z;
+                *radius = p.radius;
             }
         }
 #else
@@ -196,6 +199,7 @@ extern "C" {
             *vx = p->vel.x;
             *vy = p->vel.y;
             *vz = p->vel.z;
+            *radius = p->radius;
         }
         else return -1;
 #endif
@@ -216,6 +220,7 @@ extern "C" {
             p->vel.x = vx;
             p->vel.y = vy;
             p->vel.z = vz;
+            p->radius= radius;
         }
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         int check = PS::Comm::getMaxValue(index);
@@ -263,13 +268,39 @@ extern "C" {
     }
 
     int get_radius(int index_of_the_particle, double * radius) {
-        // not allown
-        return -1;
+        int index = ptr->getParticleAdrFromID(index_of_the_particle);
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        double radius_local = 0.0;
+        if (index>=0) {
+            FPSoft* p = &(ptr->system_soft[index]);
+            radius_local = p->radius;
+        }    
+        *radius = PS::Comm::getSum(radius_local);
+        int check = PS::Comm::getMaxValue(index);
+        if (check==-1) return -1;
+#else
+        if (index>=0) {
+            FPSoft* p = &(ptr->system_soft[index]);
+            *radius = p->radius;
+        }    
+        else return -1;
+#endif
+        return 0;
     }
 
     int set_radius(int index_of_the_particle, double radius) {
-        // not allown
-        return -1;
+        int index = ptr->getParticleAdrFromID(index_of_the_particle);
+        if (index>=0) {
+            FPSoft* p = &(ptr->system_soft[index]);
+            p->radius = radius;
+        }    
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        int check = PS::Comm::getMaxValue(index);
+        if (check==-1) return -1;
+#else
+        else return -1;
+#endif
+        return 0;
     }
 
     int set_position(int index_of_the_particle,
@@ -531,16 +562,21 @@ extern "C" {
             for (int i=0; i<n_interupt_isolated; i++) {
                 int stopping_index  = next_index_for_stopping_condition();
                 auto interupt_hard_int = ptr->system_hard_isolated.getInteruptHardIntegrator(i);
-                switch (interupt_hard_int->interupt_state) {
-                case InteruptState::binary:
+                auto interupt_state = interupt_hard_int->interupt_binary_adr->getLeftMember()->getBinaryInteruptState();
+                switch (interupt_state) {
+                case BinaryInteruptState::form:
                     set_stopping_condition_info(stopping_index, PAIR_DETECTION);
                     break;
-                case InteruptState::collision:
+                case BinaryInteruptState::exchange:
+                    set_stopping_condition_info(stopping_index, PAIR_DETECTION);
+                    break;
+                case BinaryInteruptState::collision:
                     set_stopping_condition_info(stopping_index, COLLISION_DETECTION);
                     break;
+                case BinaryInteruptState::none:
+                    continue;
                 default:
-                    set_stopping_condition_info(stopping_index, PAIR_DETECTION);
-                    break;
+                    return -1;
                 }
 
                 for (int k=0; k<2; k++) {
@@ -558,16 +594,21 @@ extern "C" {
             for (int i=0; i<n_interupt_connected; i++) {
                 int stopping_index  = next_index_for_stopping_condition();
                 auto interupt_hard_int = ptr->system_hard_connected.getInteruptHardIntegrator(i);
-                switch (interupt_hard_int->interupt_state) {
-                case InteruptState::binary:
+                auto interupt_state = interupt_hard_int->interupt_binary_adr->getLeftMember()->getBinaryInteruptState();
+                switch (interupt_state) {
+                case BinaryInteruptState::form:
                     set_stopping_condition_info(stopping_index, PAIR_DETECTION);
                     break;
-                case InteruptState::collision:
+                case BinaryInteruptState::exchange:
+                    set_stopping_condition_info(stopping_index, PAIR_DETECTION);
+                    break;
+                case BinaryInteruptState::collision:
                     set_stopping_condition_info(stopping_index, COLLISION_DETECTION);
                     break;
+                case BinaryInteruptState::none:
+                    continue;
                 default:
-                    set_stopping_condition_info(stopping_index, PAIR_DETECTION);
-                    break;
+                    return -1;
                 }
                 for (int k=0; k<2; k++) {
                     auto pk = interupt_hard_int->interupt_binary_adr->getMember(k);

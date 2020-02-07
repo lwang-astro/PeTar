@@ -6,6 +6,12 @@
 #endif
 #endif
 
+#ifdef STELLAR_EVOLUTION
+enum BinaryInteruptState:int {none = 0, form = 1, exchange = 2, collision = 3};
+#define BINARY_STATE_ID_SHIFT 4
+#define BINARY_INTERUPT_STATE_MASKER 0xF
+#endif
+
 /// Basic particle class
 class ParticleBase{
 public:
@@ -18,7 +24,28 @@ public:
     PS::F64 radius;
     PS::F64 mdot;
     PS::F64 time_interupt;
-    PS::S64 binary_state;
+    PS::S64 binary_state; // contain two parts, low bits (first BINARY_STATE_ID_SHIFT bits) is binary interupt state and high bits are pair ID
+
+    //! save pair id in binary_state with shift bit size of BINARY_STATE_ID_SHIFT
+    void setBinaryPairID(const PS::S64 _id) {
+        binary_state = (binary_state&BINARY_INTERUPT_STATE_MASKER) | (_id<<BINARY_STATE_ID_SHIFT);
+    }
+
+    //! save binary interupt state in the first  BINARY_STATE_ID_SHIFT bit in binary_state
+    void setBinaryInteruptState(const BinaryInteruptState _state) {
+        binary_state = ((binary_state>>BINARY_STATE_ID_SHIFT)<<BINARY_STATE_ID_SHIFT) | int(_state);
+    }
+
+    //! get binary interupt state from binary_state
+    BinaryInteruptState getBinaryInteruptState() const {
+        return static_cast<BinaryInteruptState>(binary_state&BINARY_INTERUPT_STATE_MASKER);
+    }
+
+    //! get pair ID from binary_state 
+    PS::S64 getBinaryPairID() const {
+        return (binary_state>>BINARY_STATE_ID_SHIFT);
+    }
+
 #endif
     // -------------------------
 
@@ -141,6 +168,7 @@ public:
         _fout<<std::setw(_width)<<"radius"
              <<std::setw(_width)<<"mdot"
              <<std::setw(_width)<<"t_irpt"
+             <<std::setw(_width)<<"pair_id"
              <<std::setw(_width)<<"bin_stat";
 #endif
     }
@@ -162,7 +190,8 @@ public:
         _fout<<std::setw(_width)<<radius
              <<std::setw(_width)<<mdot
              <<std::setw(_width)<<time_interupt
-             <<std::setw(_width)<<binary_state;
+             <<std::setw(_width)<<getBinaryPairID()
+             <<std::setw(_width)<<getBinaryInteruptState();
 #endif
     }
     
