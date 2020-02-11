@@ -35,3 +35,7 @@ class petar(GravitationalDynamics, GravityFieldCode):
                                        petarInterface(**keyword_arguments), 
                                        convert_nbody, 
                                        **keyword_arguments)
+
+    def define_state(self, handler):
+        GravitationalDynamics.define_state(self, handler)
+        self.stopping_conditions.define_state(handler)
