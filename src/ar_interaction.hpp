@@ -604,14 +604,14 @@ public:
         _slowdown.calcSlowDownFactor();
     }
 
-    //! (Necessary) interupt check 
+    //! (Necessary) interrupt check 
     /*! check the inner left binary whether their separation is smaller than particle radius sum and become close, if true, record their binary tree address and set particle status to touch; in the opposite condition, also report the address and set particle status to split
-      @param[in] _bin_interupt: interupt binary tree address 
+      @param[in] _bin_interrupt: interrupt binary tree address 
       @param[in] _bin: binarytree to check iteratively
      */
-    static COMM::BinaryTree<ARPtcl>* checkInteruptIter(COMM::BinaryTree<ARPtcl>*& _bin_interupt, COMM::BinaryTree<ARPtcl>& _bin) {
+    static COMM::BinaryTree<ARPtcl>* checkInterruptIter(COMM::BinaryTree<ARPtcl>*& _bin_interrupt, COMM::BinaryTree<ARPtcl>& _bin) {
 #ifdef STELLAR_EVOLUTION
-        if (_bin.getMemberN()==2&&_bin_interupt==NULL) {
+        if (_bin.getMemberN()==2&&_bin_interrupt==NULL) {
             ARPtcl *p1,*p2;
             p1 = _bin.getLeftMember();
             p2 = _bin.getRightMember();
@@ -627,23 +627,23 @@ public:
             Float radius_sq = radius*radius;
             if (!(p1->binary_state == 1 && p2->binary_state == 1)) {
                 if (dr2<radius_sq&&drdv<0) {
-                    _bin_interupt = &_bin;
+                    _bin_interrupt = &_bin;
                     p1->setBinaryPairID(p2->id);
                     p2->setBinaryPairID(p1->id);
-                    p1->setBinaryInteruptState(BinaryInteruptState::collision);
-                    p2->setBinaryInteruptState(BinaryInteruptState::collision);
+                    p1->setBinaryInterruptState(BinaryInterruptState::collision);
+                    p2->setBinaryInterruptState(BinaryInterruptState::collision);
                 }
             }
             else {
                 if (dr2>radius_sq&&drdv>0) {
-                    _bin_interupt = &_bin;
+                    _bin_interrupt = &_bin;
                     p1->binary_state = 0;
                     p2->binary_state = 0;
                 }
             }
         }
 #endif
-        return _bin_interupt;
+        return _bin_interrupt;
     }
 
 #ifndef AR_TTL

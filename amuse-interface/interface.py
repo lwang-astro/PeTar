@@ -38,4 +38,19 @@ class petar(GravitationalDynamics, GravityFieldCode):
 
     def define_state(self, handler):
         GravitationalDynamics.define_state(self, handler)
+        GravityFieldCode.define_state(self, handler)
         self.stopping_conditions.define_state(handler)
+
+    
+    def define_parameters(self, handler):
+        GravitationalDynamics.define_parameters(self, handler)
+        self.stopping_conditions.define_parameters(handler)
+
+    def define_methods(self, handler):
+        GravitationalDynamics.define_methods(self, handler)
+        self.stopping_conditions.define_methods(handler)
+
+    def define_particle_sets(self, handler):
+        GravitationalDynamics.define_particle_sets(self, handler)
+        self.stopping_conditions.define_particle_set(handler)
+    

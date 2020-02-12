@@ -94,7 +94,7 @@ public:
 #else
     IOParams<PS::S32> n_group_limit;
 #endif
-    IOParams<PS::S32> n_interupt_limit;
+    IOParams<PS::S32> n_interrupt_limit;
     IOParams<PS::S32> n_smp_ave;
     IOParams<PS::S32> n_split;
     IOParams<PS::S64> n_bin;
@@ -127,7 +127,7 @@ public:
     IOParams<PS::F64> sd_factor;
     IOParams<PS::S32> data_format;
     IOParams<PS::S32> write_style;
-    IOParams<PS::S32> interupt_detection_option;
+    IOParams<PS::S32> interrupt_detection_option;
     IOParams<std::string> fname_snp;
     IOParams<std::string> fname_par;
     IOParams<std::string> fname_inp;
@@ -145,7 +145,7 @@ public:
 #else
                      n_group_limit(input_par_store, 512,  "Tree group number limit", "optimized for x86-AVX2 (512)"),
 #endif
-                     n_interupt_limit(input_par_store, 512, "Interupt binary number limit"),
+                     n_interrupt_limit(input_par_store, 512, "Interrupt binary number limit"),
                      n_smp_ave    (input_par_store, 100,  "Average target number of sample particles per process"),
                      n_split      (input_par_store, 8,    "Number of binary sample points for tree perturbation force"),
                      n_bin        (input_par_store, 0,    "Number of binaries used for initialization (assume binaries ID=1,2*n_bin)"),
@@ -178,7 +178,7 @@ public:
                      sd_factor    (input_par_store, 1e-4, "Slowdown perturbation criterion"),
                      data_format  (input_par_store, 1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),
                      write_style  (input_par_store, 1,    "File Writing style: 0, no output; 1. write snapshots and status separately; 2. write all data in one line per step (no MPI support)"),
-                     interupt_detection_option(input_par_store, 0, "detect interuption", "no"),
+                     interrupt_detection_option(input_par_store, 0, "detect interruption", "no"),
                      fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]"),
                      fname_par(input_par_store, "input.par", "Input parameter file (this option should be used first before any other options)"),
                      fname_inp(input_par_store, "", "Input data file"),
@@ -196,7 +196,7 @@ public:
         static struct option long_options[] = {
             {"n-split", required_argument, 0, 0},        
             {"search-vel-factor", required_argument, 0, 1},  
-            {"detect-interupt", no_argument, 0, 18},
+            {"detect-interrupt", no_argument, 0, 18},
             {"dt-max-factor", required_argument, 0, 2},  
             {"dt-min-hermite", required_argument, 0, 3}, 
             {"number-group-limit", required_argument, 0, 4},
@@ -217,7 +217,7 @@ public:
             {"step-limit-arc", required_argument, 0, 15},   
 #endif
             {"disable-print-info", no_argument, 0, 16},
-            {"number-interupt-limt",required_argument, 0, 17},
+            {"number-interrupt-limt",required_argument, 0, 17},
             {0,0,0,0}
         };
 
@@ -330,14 +330,14 @@ public:
                 n_opt++;
                 break;
             case 17:
-                n_interupt_limit.value = atoi(optarg);
-                if(print_flag) n_interupt_limit.print(std::cout);
-                assert(n_interupt_limit.value>0);
+                n_interrupt_limit.value = atoi(optarg);
+                if(print_flag) n_interrupt_limit.print(std::cout);
+                assert(n_interrupt_limit.value>0);
                 n_opt+=2;
                 break;
             case 18:
-                interupt_detection_option.value = 1;
-                if(print_flag) interupt_detection_option.print(std::cout);
+                interrupt_detection_option.value = 1;
+                if(print_flag) interrupt_detection_option.print(std::cout);
                 n_opt++;
                 break;
             case 'i':
@@ -459,7 +459,7 @@ public:
                     std::cout<<"  -t: [F] "<<time_end<<std::endl;
                     std::cout<<"  -s: [F] "<<dt_soft<<std::endl;
                     std::cout<<"  -o: [F] "<<dt_snp<<std::endl;
-                    std::cout<<"        --detect-interupt:       "<<interupt_detection_option<<std::endl;
+                    std::cout<<"        --detect-interrupt:      "<<interrupt_detection_option<<std::endl;
                     std::cout<<"        --dt-max-factor:     [F] "<<dt_limit_hard_factor<<std::endl;
                     std::cout<<"        --dt-min-hermite:    [I] "<<dt_min_hermite_index<<std::endl;
                     std::cout<<"        --disable-print-info:  "<<"Do not print information"<<std::endl;
@@ -472,7 +472,7 @@ public:
                     std::cout<<"        --n-split:           [I] "<<n_split<<std::endl;
                     std::cout<<"        --n-group-limit:     [I] "<<n_group_limit<<std::endl;
                     std::cout<<"        --n-leaf-limit:      [I] "<<n_leaf_limit<<std::endl;
-                    std::cout<<"        --n-interupt-limit:  [I] "<<n_interupt_limit<<std::endl;
+                    std::cout<<"        --n-interrupt-limit: [I] "<<n_interrupt_limit<<std::endl;
                     std::cout<<"        --n-sample-average:  [I] "<<n_smp_ave<<std::endl;
                     std::cout<<"  -G: [F] "<<gravitational_constant<<std::endl;
                     std::cout<<"  -T: [F] "<<theta<<std::endl;
@@ -532,7 +532,7 @@ public:
         assert(n_bin.value>=0);
         assert(n_glb.value>0);
         assert(n_group_limit.value>0);
-        assert(n_interupt_limit.value>0);
+        assert(n_interrupt_limit.value>0);
         assert(n_leaf_limit.value>0);
         assert(n_smp_ave.value>0.0);
         assert(theta.value>=0.0);
@@ -597,6 +597,7 @@ public:
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
     SystemHard system_hard_connected;
 #endif
+    int n_interrupt_glb;
 
     // remove list
     PS::ReallocatableArray<PS::S32> remove_list;
@@ -614,7 +615,6 @@ public:
     bool read_data_flag;
     bool initial_parameters_flag;
     bool initial_step_flag;
-    bool drift_interupt_flag;
 
     // initialization
     PeTar(): 
@@ -631,9 +631,10 @@ public:
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         system_hard_connected(), 
 #endif
+        n_interrupt_glb(0),
         remove_list(),
         search_cluster(),
-        initial_fdps_flag(false), read_parameters_flag(false), read_data_flag(false), initial_parameters_flag(false), initial_step_flag(false), drift_interupt_flag(false) {
+        initial_fdps_flag(false), read_parameters_flag(false), read_data_flag(false), initial_parameters_flag(false), initial_step_flag(false) {
         // set print format
         std::cout<<std::setprecision(PRINT_PRECISION);
         std::cerr<<std::setprecision(PRINT_PRECISION);
@@ -1254,7 +1255,7 @@ private:
     }
 
     //! hard drift
-    /*! \return interupted cluster total number in all MPI processors
+    /*! \return interrupted cluster total number in all MPI processors
      */
     PS::S32 drift(const PS::F64 _dt_drift) {
         ////// set time
@@ -1292,23 +1293,23 @@ private:
         // integrate multi cluster A
         system_hard_isolated.driveForMultiClusterOMP(_dt_drift, &(system_soft[0]));
         //system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_,remove_list);
-        PS::S32 n_interupt_isolated = system_hard_isolated.getNumberOfInteruptClusters();
-        if(n_interupt_isolated==0) system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
+        PS::S32 n_interrupt_isolated = system_hard_isolated.getNumberOfInterruptClusters();
+        if(n_interrupt_isolated==0) system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
         // integrate multi cluster A
 
 #ifdef PROFILE
-        n_count.hard_interupt += n_interupt_isolated;
+        n_count.hard_interrupt += n_interrupt_isolated;
         profile.hard_isolated.barrier();
 #endif
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-        PS::S32 n_interupt_glb = PS::Comm::getSum(n_interupt_isolated);
+        n_interrupt_glb = PS::Comm::getSum(n_interrupt_isolated);
 #else 
-        PS::S32 n_interupt_glb = n_interupt_isolated;
+        n_interrupt_glb = n_interrupt_isolated;
 #endif
 
 #ifdef PROFILE
-        n_count_sum.hard_interupt += n_interupt_glb;
+        n_count_sum.hard_interrupt += n_interrupt_glb;
         profile.hard_isolated.end();
 #endif
         /////////////
@@ -1320,23 +1321,23 @@ private:
 #endif
         // integrate multi cluster B
         system_hard_connected.driveForMultiClusterOMP(_dt_drift, &(system_soft[0]));
-        PS::S32 n_interupt_connected = system_hard_connected.getNumberOfInteruptClusters();
+        PS::S32 n_interrupt_connected = system_hard_connected.getNumberOfInterruptClusters();
 
 #ifdef PROFILE
-        n_count.hard_interupt += n_interupt_connected;
+        n_count.hard_interrupt += n_interrupt_connected;
         profile.hard_connected.barrier();
 #endif
 
-        PS::S32 n_interupt_connected_glb = PS::Comm::getSum(n_interupt_connected);
+        PS::S32 n_interrupt_connected_glb = PS::Comm::getSum(n_interrupt_connected);
 
 #ifdef PROFILE
-        n_count_sum.hard_interupt += n_interupt_connected_glb;
+        n_count_sum.hard_interrupt += n_interrupt_connected_glb;
         profile.hard_connected.end();
         profile.hard_connected.start();
 #endif
 
 
-        if (n_interupt_connected_glb==0) {
+        if (n_interrupt_connected_glb==0) {
             search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
             system_hard_connected.updateTimeWriteBack();
         }
@@ -1348,43 +1349,43 @@ private:
         profile.hard_connected.end();
 #endif
         
-        n_interupt_glb += n_interupt_connected_glb;
+        n_interrupt_glb += n_interrupt_connected_glb;
 #endif
 
-        return n_interupt_glb;
+        return n_interrupt_glb;
     }
 
-    //! finish interupted drift
-    /*! \return new interupt number
+    //! finish interrupted drift
+    /*! \return new interrupt number
      */
-    PS::S32 finishInteruptDrift() {
+    PS::S32 finishInterruptDrift() {
 #ifdef PROFILE
-        profile.hard_interupt.start();
+        profile.hard_interrupt.start();
         profile.hard_isolated.start();
 #endif
 
-        // finish interupt clusters first
+        // finish interrupt clusters first
         // isolated clusters
-        PS::S32 n_interupt_isolated = 0;
-        if (system_hard_isolated.getNumberOfInteruptClusters()>0) {
-            system_hard_isolated.finishIntegrateInteruptClustersOMP();
-            n_interupt_isolated = system_hard_isolated.getNumberOfInteruptClusters();
-            if(n_interupt_isolated==0) system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
+        PS::S32 n_interrupt_isolated = 0;
+        if (system_hard_isolated.getNumberOfInterruptClusters()>0) {
+            system_hard_isolated.finishIntegrateInterruptClustersOMP();
+            n_interrupt_isolated = system_hard_isolated.getNumberOfInterruptClusters();
+            if(n_interrupt_isolated==0) system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
         }
 
 #ifdef PROFILE
-        n_count.hard_interupt += n_interupt_isolated;
+        n_count.hard_interrupt += n_interrupt_isolated;
         profile.hard_isolated.barrier();
 #endif
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-        PS::S32 n_interupt_glb = PS::Comm::getSum(n_interupt_isolated);
+        n_interrupt_glb = PS::Comm::getSum(n_interrupt_isolated);
 #else
-        PS::S32 n_interupt_glb = n_interupt_isolated;
+        n_interrupt_glb = n_interrupt_isolated;
 #endif
 
 #ifdef PROFILE
-        n_count_sum.hard_interupt += n_interupt_glb;
+        n_count_sum.hard_interrupt += n_interrupt_glb;
         profile.hard_isolated.end();
 #endif
 
@@ -1394,26 +1395,26 @@ private:
 #endif
 
         // connected clusters
-        PS::S32 n_interupt_connected = 0;
-        if (system_hard_connected.getNumberOfInteruptClusters()>0) {
-            system_hard_connected.finishIntegrateInteruptClustersOMP();
-            n_interupt_connected = system_hard_connected.getNumberOfInteruptClusters();
+        PS::S32 n_interrupt_connected = 0;
+        if (system_hard_connected.getNumberOfInterruptClusters()>0) {
+            system_hard_connected.finishIntegrateInterruptClustersOMP();
+            n_interrupt_connected = system_hard_connected.getNumberOfInterruptClusters();
         }
 
 #ifdef PROFILE
-        n_count.hard_interupt += n_interupt_connected;
+        n_count.hard_interrupt += n_interrupt_connected;
         profile.hard_connected.barrier();
 #endif
 
-        PS::S32 n_interupt_connected_glb = PS::Comm::getSum(n_interupt_connected);
+        PS::S32 n_interrupt_connected_glb = PS::Comm::getSum(n_interrupt_connected);
 
 #ifdef PROFILE
-        n_count_sum.hard_interupt += n_interupt_connected_glb;
+        n_count_sum.hard_interrupt += n_interrupt_connected_glb;
         profile.hard_connected.end();
         profile.hard_connected.start();
 #endif
 
-        if (n_interupt_connected_glb==0) {
+        if (n_interrupt_connected_glb==0) {
             search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
             system_hard_connected.updateTimeWriteBack();
         }
@@ -1424,21 +1425,21 @@ private:
         profile.hard_connected.end();
 #endif
 
-        n_interupt_glb += n_interupt_connected_glb;
+        n_interrupt_glb += n_interrupt_connected_glb;
 #endif
 
 #ifdef PROFILE
-        profile.hard_interupt.barrier();
-        profile.hard_interupt.end();
+        profile.hard_interrupt.barrier();
+        profile.hard_interrupt.end();
 #endif
 
-        // if interupt cluster still exist, return the number immediately without new integration.
-        if (n_interupt_glb>0)  {
-#ifdef HARD_INTERUPT_PRINT
-            std::cerr<<"Interupt detected, number: "<<n_interupt_glb<<std::endl;
+        // if interrupt cluster still exist, return the number immediately without new integration.
+        if (n_interrupt_glb>0)  {
+#ifdef HARD_INTERRUPT_PRINT
+            std::cerr<<"Interrupt detected, number: "<<n_interrupt_glb<<std::endl;
 #endif
         }
-        return n_interupt_glb;
+        return n_interrupt_glb;
     }
 
 
@@ -1853,6 +1854,7 @@ public:
     //! remove artificial and unused particles
     void removeParticles() {
         /////////////
+        assert(n_interrupt_glb==0);
         // Remove ghost particles
         system_soft.removeParticle(remove_list.getPointer(), remove_list.size());
         // reset particle number
@@ -1865,6 +1867,8 @@ public:
 
     //! exchange particles
     void exchangeParticle() {
+        assert(n_interrupt_glb==0);
+
 #ifdef PROFILE
         profile.exchange.start();
 #endif
@@ -2273,15 +2277,15 @@ public:
 #ifdef SLOWDOWN_MASSRATIO
         hard_manager.ar_manager.slowdown_mass_ref = m_average;
 #endif
-        hard_manager.ar_manager.interupt_detection_option = input_parameters.interupt_detection_option.value;
+        hard_manager.ar_manager.interrupt_detection_option = input_parameters.interrupt_detection_option.value;
 
         // check consistence of paramters
         input_parameters.checkParams();
         hard_manager.checkParams();
 
         // initial hard class and parameters
-        system_hard_isolated.allocateHardIntegrator(input_parameters.n_interupt_limit.value);
-        system_hard_connected.allocateHardIntegrator(input_parameters.n_interupt_limit.value);
+        system_hard_isolated.allocateHardIntegrator(input_parameters.n_interrupt_limit.value);
+        system_hard_connected.allocateHardIntegrator(input_parameters.n_interrupt_limit.value);
 
         system_hard_one_cluster.manager = &hard_manager;
         system_hard_isolated.manager = &hard_manager;
@@ -2358,7 +2362,7 @@ public:
         assert(initial_parameters_flag);
         if (initial_step_flag) return;
 
-        checkTimeConsistence();
+        assert(checkTimeConsistence());
 
         PS::F64 dt_tree = input_parameters.dt_soft.value;
         dt_manager.setStep(dt_tree);
@@ -2419,18 +2423,18 @@ public:
 
     
     //! integrate the system
-    /*! @param[in] _time_break: additional breaking time to interupt the integration, in default (0.0) the system integrate to time_end
-      \return interupted cluster number
+    /*! @param[in] _time_break: additional breaking time to interrupt the integration, in default (0.0) the system integrate to time_end
+      \return interrupted cluster number
      */
     PS::S32 evolveToTime(const PS::F64 _time_break=0.0) {
 
         // ensure it is initialized
         assert(initial_step_flag);
 
-        // finish interupted integrations
-        PS::S32 n_interupt_new = finishInteruptDrift();
-        // if interupt still exist, do not continue
-        if (n_interupt_new>0) return n_interupt_new;
+        // finish interrupted integrations
+        finishInterruptDrift();
+        // if interrupt still exist, do not continue
+        if (n_interrupt_glb>0) return n_interrupt_glb;
 
         // check time break
         PS::F64 time_break = _time_break==0.0? input_parameters.time_end.value: std::min(_time_break,input_parameters.time_end.value);
@@ -2479,7 +2483,7 @@ public:
             if (dt_manager.getCountContinue() == 1) GradientKick();
 #endif
 
-            bool interupt_flag = false;  // for interupt integration when time reach end
+            bool interrupt_flag = false;  // for interrupt integration when time reach end
             bool output_flag = false;    // for output snapshot and information
             //bool dt_mod_flag = false;    // for check whether tree time step need update
             bool changeover_flag = false; // for check whether changeover need update
@@ -2523,11 +2527,11 @@ public:
                     if (n_changeover_modify_global>0) changeover_flag = true;
 #endif
 
-                    // check interuption
-                    interupt_flag = (stat.time>=time_break);
+                    // check interruption
+                    interrupt_flag = (stat.time>=time_break);
 
                     // set next step to be last
-                    if (output_flag||changeover_flag||interupt_flag) dt_kick = dt_manager.getDtEndContinue();
+                    if (output_flag||changeover_flag||interrupt_flag) dt_kick = dt_manager.getDtEndContinue();
                     else dt_kick = dt_manager.getDtKickContinue();
                 }
                 else dt_kick = dt_manager.getDtKickContinue();
@@ -2538,7 +2542,7 @@ public:
             kick(dt_kick);
 
             // >7. write back data
-            if(output_flag||interupt_flag) {
+            if(output_flag||interrupt_flag) {
                 // update global particle system due to kick
                 writeBackHardParticles();
             }
@@ -2572,8 +2576,8 @@ public:
             //    }
             //}
 
-            // interupt
-            if(interupt_flag) {
+            // interrupt
+            if(interrupt_flag) {
 #ifdef CLUSTER_VELOCITY
                 setParticleGroupDataToCMData();
 #endif
@@ -2583,7 +2587,7 @@ public:
                 // need remove artificial particles
                 system_soft.setNumberOfParticleLocal(stat.n_real_loc);
 
-                checkTimeConsistence();
+                assert(checkTimeConsistence());
 
 #ifdef PROFILE
                 profile.tot.barrier();
@@ -2597,7 +2601,7 @@ public:
             //if(dt_mod_flag||output_flag||changeover_flag) {
             if(output_flag||changeover_flag) {
 
-                checkTimeConsistence();
+                assert(checkTimeConsistence());
 
                 // determine the next tree time step
                 //PS::F64 dt_reduce_factor_org = 1.0;
@@ -2618,7 +2622,7 @@ public:
             // get drift step
             dt_drift = dt_manager.getDtDriftContinue();
 
-            int n_interupt_glb = drift(dt_drift);
+            drift(dt_drift);
 
 #ifdef PROFILE
             // calculate profile
@@ -2629,12 +2633,12 @@ public:
             calcProfile();
 #endif
             
-            // when interupt exist, quit the loop
-            if (n_interupt_glb>0) {
-#ifdef HARD_INTERUPT_PRINT
-                std::cerr<<"Interupt detected, number: "<<n_interupt_glb<<std::endl;
+            // when interrupt exist, quit the loop
+            if (n_interrupt_glb>0) {
+#ifdef HARD_INTERRUPT_PRINT
+                std::cerr<<"Interrupt detected, number: "<<n_interrupt_glb<<std::endl;
 #endif
-                return n_interupt_glb;
+                return n_interrupt_glb;
             }
 
         }
@@ -2654,6 +2658,8 @@ public:
         }
 
         if (initial_fdps_flag) PS::Finalize();
+        remove_list.resizeNoInitialize(0);
+        n_interrupt_glb = 0;
         initial_fdps_flag = false;
         read_parameters_flag = false;
         read_data_flag = false;

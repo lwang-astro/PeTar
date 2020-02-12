@@ -146,7 +146,7 @@ public:
     PS::F64 time_origin;  ///> origin physical time
     PtclH4* ptcl_origin;  ///> original particle array
 
-    COMM::BinaryTree<PtclAR>* interupt_binary_adr; ///> interupt binary address
+    COMM::BinaryTree<PtclAR>* interrupt_binary_adr; ///> interrupt binary address
 
 #ifdef HARD_DEBUG_PRINT
     PS::ReallocatableArray<PS::S32> n_group_sub_init; ///> initial sub group number in each groups 
@@ -168,7 +168,7 @@ public:
 
     //! initializer
     HardIntegrator(): h4_int(), sym_int(), manager(NULL), tidal_tensor(), time_origin(-1.0), ptcl_origin(NULL), 
-                      interupt_binary_adr(NULL), 
+                      interrupt_binary_adr(NULL), 
 #ifdef HARD_DEBUG_PRINT
                       n_group_sub_init(), n_group_sub_tot_init(0),
 #endif
@@ -500,13 +500,13 @@ public:
     //! Integrate system to time
     /*!
       @param [in] _time_end: time to integrate
-      \return interupt binary address, if no return NULL
+      \return interrupt binary address, if no return NULL
      */
     COMM::BinaryTree<PtclAR>* integrateToTime(const PS::F64 _time_end) {
         ASSERT(checkParams());
         // integration
         if (use_sym_int) {
-            interupt_binary_adr = sym_int.integrateToTime(_time_end);
+            interrupt_binary_adr = sym_int.integrateToTime(_time_end);
         }
         else {
 #ifdef SOFT_PERT
@@ -515,9 +515,9 @@ public:
             // integration loop
             while (h4_int.getTime()<_time_end) {
                 // integrate groups
-                interupt_binary_adr = h4_int.integrateGroupsOneStep();
-                // when binary is interupted, break integration loop
-                if (interupt_binary_adr!=NULL) break;
+                interrupt_binary_adr = h4_int.integrateGroupsOneStep();
+                // when binary is interrupted, break integration loop
+                if (interrupt_binary_adr!=NULL) break;
 
                 // integrate singles
                 h4_int.integrateSingleOneStepAct();
@@ -651,7 +651,7 @@ public:
             }
 
         }
-        return interupt_binary_adr;
+        return interrupt_binary_adr;
     }
 
     //! drift c.m. particle of the cluster record group c.m. in group_data and write back data to original particle array
@@ -855,22 +855,22 @@ public:
 
     }
 
-    //! print interupt binary information
+    //! print interrupt binary information
     /*!
       @param[out] _fout: std::ostream output object
     */
-    void printInteruptBinaryInfo(std::ostream & _fout) const{
-        _fout<<"Interupt condition triggered! Time: ";
+    void printInterruptBinaryInfo(std::ostream & _fout) const{
+        _fout<<"Interrupt condition triggered! Time: ";
         if (use_sym_int) _fout<<"(AR) "<<sym_int.slowdown.getRealTime()<<std::endl;
-        else _fout<<"(Hermite) "<<h4_int.getInteruptTime()<<std::endl;
-        interupt_binary_adr->printColumnTitle(_fout);
+        else _fout<<"(Hermite) "<<h4_int.getInterruptTime()<<std::endl;
+        interrupt_binary_adr->printColumnTitle(_fout);
         _fout<<std::endl;
-        interupt_binary_adr->printColumn(_fout);
+        interrupt_binary_adr->printColumn(_fout);
         _fout<<std::endl;
         PtclAR::printColumnTitle(_fout);
         _fout<<std::endl;
         for (int j=0; j<2; j++) {
-            interupt_binary_adr->getMember(j)->printColumn(_fout);
+            interrupt_binary_adr->getMember(j)->printColumn(_fout);
             _fout<<std::endl;
         }
     }
@@ -883,7 +883,7 @@ public:
         tidal_tensor.resizeNoInitialize(0);
         time_origin = 0;
         ptcl_origin = NULL;
-        interupt_binary_adr = NULL;
+        interrupt_binary_adr = NULL;
         is_initialized = false;
 
 #ifdef PROFILE
@@ -917,8 +917,8 @@ private:
     HardIntegrator* hard_int_; ///> hard integrator array
     PS::S32 n_hard_int_max_; ///> array size of hard_int
     PS::S32 n_hard_int_use_; ///> number of used hard integrator
-    PS::ReallocatableArray<HardIntegrator*> interupt_list_; ///> interupt integrator list
-    PS::F64 interupt_dt_; ///> time end record for interupt clusters;
+    PS::ReallocatableArray<HardIntegrator*> interrupt_list_; ///> interrupt integrator list
+    PS::F64 interrupt_dt_; ///> time end record for interrupt clusters;
 
     struct OPLessIDCluster{
         template<class T> bool operator() (const T & left, const T & right) const {
@@ -1399,7 +1399,7 @@ public:
     }
 
     //! allocate memorgy for HardIntegrator
-    /*! For record interupt clusters. A array of HardIntegrator is allocated
+    /*! For record interrupt clusters. A array of HardIntegrator is allocated
       @param[in] _n_hard_int: number of HardIntegrator
      */
     void allocateHardIntegrator(const PS::S32 _n_hard_int) {
@@ -1499,12 +1499,12 @@ public:
         return n_ptcl_in_cluster_.size();
     }
 
-    PS::S32 getNumberOfInteruptClusters() const {
-        return interupt_list_.size();
+    PS::S32 getNumberOfInterruptClusters() const {
+        return interrupt_list_.size();
     }
 
-    HardIntegrator* getInteruptHardIntegrator(const std::size_t i) {
-        return interupt_list_[i];
+    HardIntegrator* getInterruptHardIntegrator(const std::size_t i) {
+        return interrupt_list_[i];
     }
 
     PS::S32* getClusterNumberOfMemberList(const std::size_t i=0) const{
@@ -1724,7 +1724,7 @@ public:
             //  ptcl_hard_[i].n_ngb= sys[adr].n_ngb;
         }
 
-        interupt_list_.resizeNoInitialize(0);
+        interrupt_list_.resizeNoInitialize(0);
     }
 
     template<class Tsys>
@@ -1740,10 +1740,10 @@ public:
 
     //! Hard integration for clusters
     /*! Integrate (drift) all clusters with OpenMP
-      If interupt integration exist, record in the interupt_list_;
+      If interrupt integration exist, record in the interrupt_list_;
        @param[in] _dt: integration ending time (initial time is fixed to 0)
        @param[in] _ptcl_soft: global particle array which contains the artificial particles for constructing tidal tensors.
-       \return interupt cluster number
+       \return interrupt cluster number
      */
     template<class Tpsoft>
     int driveForMultiClusterOMP(const PS::F64 dt, Tpsoft* _ptcl_soft){
@@ -1811,12 +1811,12 @@ public:
             PS::F64 tstart = PS::GetWtime();
 #endif
 
-            // if interupt exist, escape initial
+            // if interrupt exist, escape initial
             hard_int_thread[ith]->initial(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, manager, time_origin_);
 
-            auto interupt_binary_adr = hard_int_thread[ith]->integrateToTime(dt);
+            auto interrupt_binary_adr = hard_int_thread[ith]->integrateToTime(dt);
 
-            if (interupt_binary_adr != NULL) {
+            if (interrupt_binary_adr != NULL) {
                 #pragma omp atomic capture
                 hard_int_thread[ith] = hard_int_front_ptr++;
 
@@ -1862,40 +1862,40 @@ public:
 
         }
 
-        // regist interupted hard integrator
-        assert(interupt_list_.size()==0);
+        // regist interrupted hard integrator
+        assert(interrupt_list_.size()==0);
         for (auto iptr = hard_int_; iptr<hard_int_front_ptr; iptr++) 
             if (iptr->is_initialized) {
-                assert(iptr->interupt_binary_adr!=NULL);
-#ifdef HARD_INTERUPT_PRINT
-                iptr->printInteruptBinaryInfo(std::cerr);
+                assert(iptr->interrupt_binary_adr!=NULL);
+#ifdef HARD_INTERRUPT_PRINT
+                iptr->printInterruptBinaryInfo(std::cerr);
 #endif
-                interupt_list_.push_back(iptr);
+                interrupt_list_.push_back(iptr);
             }
 
 
         // advance time_origin if all clusters finished
-        PS::S32 n_interupt = interupt_list_.size();
-        if (n_interupt==0) time_origin_ += dt;
-        else interupt_dt_ = dt;
+        PS::S32 n_interrupt = interrupt_list_.size();
+        if (n_interrupt==0) time_origin_ += dt;
+        else interrupt_dt_ = dt;
 
-        return n_interupt;
+        return n_interrupt;
     }
 
-    //! Finish interupt integration
-    /*! Finish interupted integrations, if new interuption appear, record in the interupt_list and this function need to be called again after modification of interupt clusters
-      If no new interupt cluster appear, update time_origin_ with drift time.
+    //! Finish interrupt integration
+    /*! Finish interrupted integrations, if new interruption appear, record in the interrupt_list and this function need to be called again after modification of interrupt clusters
+      If no new interrupt cluster appear, update time_origin_ with drift time.
       @param [in] 
      */
-    PS::S32 finishIntegrateInteruptClustersOMP() {
-        PS::S32 n_interupt = interupt_list_.size();
+    PS::S32 finishIntegrateInterruptClustersOMP() {
+        PS::S32 n_interrupt = interrupt_list_.size();
 #pragma omp parallel for schedule(dynamic)
-        for (PS::S32 i=0; i<n_interupt; i++) {
-            auto hard_int_ptr = interupt_list_[i];
-            auto interupt_binary_adr = hard_int_ptr->integrateToTime(interupt_dt_);
+        for (PS::S32 i=0; i<n_interrupt; i++) {
+            auto hard_int_ptr = interrupt_list_[i];
+            auto interrupt_binary_adr = hard_int_ptr->integrateToTime(interrupt_dt_);
 
-            if (interupt_binary_adr==NULL) {
-                hard_int_ptr->driftClusterCMRecordGroupCMDataAndWriteBack(interupt_dt_);
+            if (interrupt_binary_adr==NULL) {
+                hard_int_ptr->driftClusterCMRecordGroupCMDataAndWriteBack(interrupt_dt_);
 
 #ifdef PROFILE
                 ARC_substep_sum    += hard_int_ptr->ARC_substep_sum;
@@ -1910,30 +1910,30 @@ public:
             }
         }
         
-        // record new interupt list
+        // record new interrupt list
         PS::S32 i_front = 0;
-        PS::S32 i_end = n_interupt;
+        PS::S32 i_end = n_interrupt;
         while (i_front<i_end) {
-            auto hard_int_front_ptr = interupt_list_[i_front];
-            if (hard_int_front_ptr->interupt_binary_adr!=NULL) {
+            auto hard_int_front_ptr = interrupt_list_[i_front];
+            if (hard_int_front_ptr->interrupt_binary_adr!=NULL) {
                 assert(hard_int_front_ptr->is_initialized);
-#ifdef HARD_INTERUPT_PRINT
-                hard_int_front_ptr->printInteruptBinaryInfo(std::cerr);
+#ifdef HARD_INTERRUPT_PRINT
+                hard_int_front_ptr->printInterruptBinaryInfo(std::cerr);
 #endif
                 i_front++;
             }
             else {
-                interupt_list_[i_front] = interupt_list_[--i_end];
-                interupt_list_.decreaseSize(1);
+                interrupt_list_[i_front] = interrupt_list_[--i_end];
+                interrupt_list_.decreaseSize(1);
             }
         }
 
-        n_interupt =  interupt_list_.size();
+        n_interrupt =  interrupt_list_.size();
 
         // advance time_origin if all clusters finished
-        if (n_interupt==0) time_origin_ += interupt_dt_;
+        if (n_interrupt==0) time_origin_ += interrupt_dt_;
 
-        return n_interupt;
+        return n_interrupt;
     }
 
     //! generate artificial particles,

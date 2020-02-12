@@ -343,7 +343,7 @@ public:
 	Tprofile hard_single;	   
 	Tprofile hard_isolated;
 	Tprofile hard_connected;
-    Tprofile hard_interupt;
+    Tprofile hard_interrupt;
     //Tprofile hard_con_send;
 	Tprofile tree_nb;
     Tprofile tree_soft;
@@ -362,7 +362,7 @@ public:
                   hard_single   (Tprofile("Hard_single   ")),
                   hard_isolated (Tprofile("Hard_isolated ")),
                   hard_connected(Tprofile("Hard_connected")),
-                  hard_interupt (Tprofile("Hard_interupt ")),
+                  hard_interrupt(Tprofile("Hard_interrupt")),
                   //hard_con_send (Tprofile("Hard_con_send ")),
                   tree_nb       (Tprofile("Tree_neighbor ")),
                   tree_soft     (Tprofile("Tree_force    ")),
@@ -453,7 +453,7 @@ public:
     NumCounter hard_single;
     NumCounter hard_isolated;
     NumCounter hard_connected;
-    NumCounter hard_interupt;
+    NumCounter hard_interrupt;
     NumCounter cluster_isolated;
     NumCounter cluster_connected;
     NumCounter ARC_substep_sum;
@@ -469,7 +469,7 @@ public:
     SysCounts(): hard_single      (NumCounter("Hard_single   ")),
                  hard_isolated    (NumCounter("Hard_isolated ")),
                  hard_connected   (NumCounter("Hard_connected")),
-                 hard_interupt    (NumCounter("Hard_interupt ")),
+                 hard_interrupt   (NumCounter("Hard_interrupt")),
                  cluster_isolated (NumCounter("Cluster_isolated ")),
                  cluster_connected(NumCounter("Cluster_connected")),
                  ARC_substep_sum  (NumCounter("AR_step_sum")),

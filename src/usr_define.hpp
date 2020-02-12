@@ -7,9 +7,9 @@
 #endif
 
 #ifdef STELLAR_EVOLUTION
-enum BinaryInteruptState:int {none = 0, form = 1, exchange = 2, collision = 3};
+enum BinaryInterruptState:int {none = 0, form = 1, exchange = 2, collision = 3};
 #define BINARY_STATE_ID_SHIFT 4
-#define BINARY_INTERUPT_STATE_MASKER 0xF
+#define BINARY_INTERRUPT_STATE_MASKER 0xF
 #endif
 
 /// Basic particle class
@@ -23,22 +23,22 @@ public:
     // for stellar evolution
     PS::F64 radius;
     PS::F64 mdot;
-    PS::F64 time_interupt;
-    PS::S64 binary_state; // contain two parts, low bits (first BINARY_STATE_ID_SHIFT bits) is binary interupt state and high bits are pair ID
+    PS::F64 time_interrupt;
+    PS::S64 binary_state; // contain two parts, low bits (first BINARY_STATE_ID_SHIFT bits) is binary interrupt state and high bits are pair ID
 
     //! save pair id in binary_state with shift bit size of BINARY_STATE_ID_SHIFT
     void setBinaryPairID(const PS::S64 _id) {
-        binary_state = (binary_state&BINARY_INTERUPT_STATE_MASKER) | (_id<<BINARY_STATE_ID_SHIFT);
+        binary_state = (binary_state&BINARY_INTERRUPT_STATE_MASKER) | (_id<<BINARY_STATE_ID_SHIFT);
     }
 
-    //! save binary interupt state in the first  BINARY_STATE_ID_SHIFT bit in binary_state
-    void setBinaryInteruptState(const BinaryInteruptState _state) {
+    //! save binary interrupt state in the first  BINARY_STATE_ID_SHIFT bit in binary_state
+    void setBinaryInterruptState(const BinaryInterruptState _state) {
         binary_state = ((binary_state>>BINARY_STATE_ID_SHIFT)<<BINARY_STATE_ID_SHIFT) | int(_state);
     }
 
-    //! get binary interupt state from binary_state
-    BinaryInteruptState getBinaryInteruptState() const {
-        return static_cast<BinaryInteruptState>(binary_state&BINARY_INTERUPT_STATE_MASKER);
+    //! get binary interrupt state from binary_state
+    BinaryInterruptState getBinaryInterruptState() const {
+        return static_cast<BinaryInterruptState>(binary_state&BINARY_INTERRUPT_STATE_MASKER);
     }
 
     //! get pair ID from binary_state 
@@ -63,8 +63,8 @@ public:
 #ifdef STELLAR_EVOLUTION
     //! constructor 
     ParticleBase(const PS::F64 _mass, const PS::F64vec & _pos, const PS::F64vec & _vel,
-                 const PS::F64 _radius, const PS::F64 _mdot, const PS::F64 _time_interupt, const PS::S64 _binary_state): 
-        mass(_mass), pos(_pos), vel(_vel), radius(_radius), mdot(_mdot), time_interupt(_time_interupt), binary_state(_binary_state) {}
+                 const PS::F64 _radius, const PS::F64 _mdot, const PS::F64 _time_interrupt, const PS::S64 _binary_state): 
+        mass(_mass), pos(_pos), vel(_vel), radius(_radius), mdot(_mdot), time_interrupt(_time_interrupt), binary_state(_binary_state) {}
 #endif
 
 #ifdef STELLAR_EVOLUTION
@@ -76,7 +76,7 @@ public:
                 this->mass, 
                 this->pos.x, this->pos.y, this->pos.z,  
                 this->vel.x, this->vel.y, this->vel.z,
-                this->radius, this->mdot, this->time_interupt, this->binary_state);
+                this->radius, this->mdot, this->time_interrupt, this->binary_state);
     }
 
     //! read class data with ASCII format
@@ -87,7 +87,7 @@ public:
                               &this->mass, 
                               &this->pos.x, &this->pos.y, &this->pos.z,
                               &this->vel.x, &this->vel.y, &this->vel.z,
-                              &this->radius,&this->mdot,  &this->time_interupt, &this->binary_state);
+                              &this->radius,&this->mdot,  &this->time_interrupt, &this->binary_state);
         if(rcount<11) {
             std::cerr<<"Error: Data reading fails! requiring data number is 11, only obtain "<<rcount<<".\n";
             abort();
@@ -146,7 +146,7 @@ public:
 #ifdef STELLAR_EVOLUTION
         fout<<" radius="<<radius
             <<" mdot="<<mdot
-            <<" time_interupt="<<time_interupt
+            <<" time_interrupt="<<time_interrupt
             <<" binary_state="<<binary_state;
 #endif
     }
@@ -189,9 +189,9 @@ public:
 #ifdef STELLAR_EVOLUTION
         _fout<<std::setw(_width)<<radius
              <<std::setw(_width)<<mdot
-             <<std::setw(_width)<<time_interupt
+             <<std::setw(_width)<<time_interrupt
              <<std::setw(_width)<<getBinaryPairID()
-             <<std::setw(_width)<<getBinaryInteruptState();
+             <<std::setw(_width)<<getBinaryInterruptState();
 #endif
     }
     
@@ -208,7 +208,7 @@ public:
 #ifdef STELLAR_EVOLUTION
         radius= din.radius;
         mdot  = din.mdot;
-        time_interupt = din.time_interupt;
+        time_interrupt = din.time_interrupt;
         binary_state  = din.binary_state;
 #endif
     }

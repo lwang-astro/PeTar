@@ -15,7 +15,7 @@ extern "C" {
     static PeTar* ptr=NULL;
     static double time_start = 0.0;
     static CalcForcePPSimd<ParticleBase,FPSoft> fcalc; // Force calculator
-    static int n_particle_in_interupt_connected_cluster_glb; // 
+    static int n_particle_in_interrupt_connected_cluster_glb; // 
 
     // common
 
@@ -25,7 +25,7 @@ extern "C" {
         int argc = 0;
         char **argv=NULL;
 
-        n_particle_in_interupt_connected_cluster_glb = 0;
+        n_particle_in_interrupt_connected_cluster_glb = 0;
 
         //No second MPI init
         //ptr->initialFDPS(argc,argv);
@@ -146,7 +146,6 @@ extern "C" {
 #else
         else return -1;
 #endif
-        ptr->stat.n_real_glb--;
         return 0;
     }
 
@@ -504,12 +503,12 @@ extern "C" {
         if (!ptr->initial_step_flag) return -1;
         ptr->input_parameters.time_end.value = time_next*2;
 
-        // check whether interupted cases, exist, if so, copy back data to local particles
-        int n_interupt_isolated = ptr->system_hard_isolated.getNumberOfInteruptClusters();
-        for (int i=0; i<n_interupt_isolated; i++) {
-            auto interupt_hard_int = ptr->system_hard_isolated.getInteruptHardIntegrator(i);
+        // check whether interrupted cases, exist, if so, copy back data to local particles
+        int n_interrupt_isolated = ptr->system_hard_isolated.getNumberOfInterruptClusters();
+        for (int i=0; i<n_interrupt_isolated; i++) {
+            auto interrupt_hard_int = ptr->system_hard_isolated.getInterruptHardIntegrator(i);
             for (int k=0; k<2; k++) {
-                auto pk = interupt_hard_int->interupt_binary_adr->getMember(k);
+                auto pk = interrupt_hard_int->interrupt_binary_adr->getMember(k);
                 
                 // copy data from global particle array
                 PtclHard* pk_org = pk->adr;
@@ -519,14 +518,14 @@ extern "C" {
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         // check connected cluster case
-        if (n_particle_in_interupt_connected_cluster_glb>0) {
+        if (n_particle_in_interrupt_connected_cluster_glb>0) {
             ptr->search_cluster.SendPtcl(ptr->system_soft, ptr->system_hard_connected.getPtcl());
-            int n_interupt_connected = ptr->system_hard_connected.getNumberOfInteruptClusters();
+            int n_interrupt_connected = ptr->system_hard_connected.getNumberOfInterruptClusters();
         
-            for (int i=0; i<n_interupt_connected; i++) {
-                auto interupt_hard_int = ptr->system_hard_connected.getInteruptHardIntegrator(i);
+            for (int i=0; i<n_interrupt_connected; i++) {
+                auto interrupt_hard_int = ptr->system_hard_connected.getInterruptHardIntegrator(i);
                 for (int k=0; k<2; k++) {
-                    auto pk = interupt_hard_int->interupt_binary_adr->getMember(k);
+                    auto pk = interrupt_hard_int->interrupt_binary_adr->getMember(k);
                     // copy data from ptcl hard or globall array
                     PtclHard* pk_org = pk->adr;
                     if (pk_org->adr_org>=0) pk->DataCopy(ptr->system_soft[pk_org->adr_org]);
@@ -543,44 +542,44 @@ extern "C" {
         int is_pair_detection_enabled;
         is_stopping_condition_enabled(PAIR_DETECTION, &is_pair_detection_enabled);
         if (is_collision_detection_enabled||is_pair_detection_enabled) {
-            ptr->input_parameters.interupt_detection_option.value = 1;
-            ptr->hard_manager.ar_manager.interupt_detection_option = 1;
+            ptr->input_parameters.interrupt_detection_option.value = 1;
+            ptr->hard_manager.ar_manager.interrupt_detection_option = 1;
         }
         else {
-            ptr->input_parameters.interupt_detection_option.value = 0;
-            ptr->hard_manager.ar_manager.interupt_detection_option = 0;
+            ptr->input_parameters.interrupt_detection_option.value = 0;
+            ptr->hard_manager.ar_manager.interrupt_detection_option = 0;
         }
 
-        // record interupt binaries in stopping condition container.
-        int n_interupt = ptr->evolveToTime(time_next);
+        // record interrupt binaries in stopping condition container.
+        int n_interrupt = ptr->evolveToTime(time_next);
 
         reset_stopping_conditions();    
 
-        if (n_interupt>0) {
+        if (n_interrupt>0) {
             // isolate clusters
-            int n_interupt_isolated = ptr->system_hard_isolated.getNumberOfInteruptClusters();
-            for (int i=0; i<n_interupt_isolated; i++) {
+            int n_interrupt_isolated = ptr->system_hard_isolated.getNumberOfInterruptClusters();
+            for (int i=0; i<n_interrupt_isolated; i++) {
                 int stopping_index  = next_index_for_stopping_condition();
-                auto interupt_hard_int = ptr->system_hard_isolated.getInteruptHardIntegrator(i);
-                auto interupt_state = interupt_hard_int->interupt_binary_adr->getLeftMember()->getBinaryInteruptState();
-                switch (interupt_state) {
-                case BinaryInteruptState::form:
+                auto interrupt_hard_int = ptr->system_hard_isolated.getInterruptHardIntegrator(i);
+                auto interrupt_state = interrupt_hard_int->interrupt_binary_adr->getLeftMember()->getBinaryInterruptState();
+                switch (interrupt_state) {
+                case BinaryInterruptState::form:
                     set_stopping_condition_info(stopping_index, PAIR_DETECTION);
                     break;
-                case BinaryInteruptState::exchange:
+                case BinaryInterruptState::exchange:
                     set_stopping_condition_info(stopping_index, PAIR_DETECTION);
                     break;
-                case BinaryInteruptState::collision:
+                case BinaryInterruptState::collision:
                     set_stopping_condition_info(stopping_index, COLLISION_DETECTION);
                     break;
-                case BinaryInteruptState::none:
+                case BinaryInterruptState::none:
                     continue;
                 default:
                     return -1;
                 }
 
                 for (int k=0; k<2; k++) {
-                    auto pk = interupt_hard_int->interupt_binary_adr->getMember(k);
+                    auto pk = interrupt_hard_int->interrupt_binary_adr->getMember(k);
                     set_stopping_condition_particle_index(stopping_index, k, pk->id);
                 
                     // copy back data to global particle array
@@ -589,29 +588,29 @@ extern "C" {
             }
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-            int n_particle_in_interupt_connected_cluster=0;
-            int n_interupt_connected = ptr->system_hard_connected.getNumberOfInteruptClusters();
-            for (int i=0; i<n_interupt_connected; i++) {
+            int n_particle_in_interrupt_connected_cluster=0;
+            int n_interrupt_connected = ptr->system_hard_connected.getNumberOfInterruptClusters();
+            for (int i=0; i<n_interrupt_connected; i++) {
                 int stopping_index  = next_index_for_stopping_condition();
-                auto interupt_hard_int = ptr->system_hard_connected.getInteruptHardIntegrator(i);
-                auto interupt_state = interupt_hard_int->interupt_binary_adr->getLeftMember()->getBinaryInteruptState();
-                switch (interupt_state) {
-                case BinaryInteruptState::form:
+                auto interrupt_hard_int = ptr->system_hard_connected.getInterruptHardIntegrator(i);
+                auto interrupt_state = interrupt_hard_int->interrupt_binary_adr->getLeftMember()->getBinaryInterruptState();
+                switch (interrupt_state) {
+                case BinaryInterruptState::form:
                     set_stopping_condition_info(stopping_index, PAIR_DETECTION);
                     break;
-                case BinaryInteruptState::exchange:
+                case BinaryInterruptState::exchange:
                     set_stopping_condition_info(stopping_index, PAIR_DETECTION);
                     break;
-                case BinaryInteruptState::collision:
+                case BinaryInterruptState::collision:
                     set_stopping_condition_info(stopping_index, COLLISION_DETECTION);
                     break;
-                case BinaryInteruptState::none:
+                case BinaryInterruptState::none:
                     continue;
                 default:
                     return -1;
                 }
                 for (int k=0; k<2; k++) {
-                    auto pk = interupt_hard_int->interupt_binary_adr->getMember(k);
+                    auto pk = interrupt_hard_int->interrupt_binary_adr->getMember(k);
                     set_stopping_condition_particle_index(stopping_index, k, pk->id);
                 
                     // copy back data to global particle array
@@ -619,14 +618,14 @@ extern "C" {
                     if (pk_org->adr_org>=0) ptr->system_soft[pk_org->adr_org].DataCopy(*pk);
                     else {
                         // if particle is in remote node, copy back to ptcl_hard and wait for MPI_send/recv
-                        n_particle_in_interupt_connected_cluster++;
+                        n_particle_in_interrupt_connected_cluster++;
                         pk_org->DataCopy(*pk);
                     }
                 }
             }
             // if particle in remote node need update, call MPI send/recv
-            n_particle_in_interupt_connected_cluster_glb = PS::Comm::getSum(n_particle_in_interupt_connected_cluster);
-            if (n_particle_in_interupt_connected_cluster_glb>0)
+            n_particle_in_interrupt_connected_cluster_glb = PS::Comm::getSum(n_particle_in_interrupt_connected_cluster);
+            if (n_particle_in_interrupt_connected_cluster_glb>0)
                 ptr->search_cluster.writeAndSendBackPtcl(ptr->system_soft, ptr->system_hard_connected.getPtcl(), ptr->remove_list);
 
             mpi_collect_stopping_conditions();
