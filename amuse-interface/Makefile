@@ -40,7 +40,7 @@ OBJS = interface.o
 
 CODELIB = 
 
-all: petar_worker __init__.py test_interface.py run_one_cluster_movie.py
+all: petar_worker __init__.py test_interface.py run_one_cluster_movie.py update
 
 clean:
 	$(RM) -rf __pycache__
@@ -64,7 +64,8 @@ src/PeTar: |src
 	unzip master.zip; \
 	mv PeTar-master PeTar; \
 	rm -f master.zip; \
-	cd $(npath);
+	cd $(npath); \
+	cp src/PeTar/amuse-interface/Makefile ./
 
 src/SDAR: |src
 	npath=$(shell pwd); \
