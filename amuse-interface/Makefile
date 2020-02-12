@@ -40,7 +40,7 @@ OBJS = interface.o
 
 CODELIB = 
 
-all: petar_worker __init__.py test_interface.py run_one_cluster_movie.py update
+all: petar_worker __init__.py test_interface.py run_one_cluster_movie.py
 
 clean:
 	$(RM) -rf __pycache__
