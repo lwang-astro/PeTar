@@ -17,8 +17,6 @@ public:
     }
 };
 
-PS::F64 ForceSoft::grav_const = 1.0;
-
 class FPSoft: public Ptcl{
 public:
     PS::F64vec acc; // soft
@@ -255,5 +253,3 @@ public:
     }
 };
 
-PS::F64 EPISoft::eps = 0.0;
-PS::F64 EPISoft::r_out = 0.0;

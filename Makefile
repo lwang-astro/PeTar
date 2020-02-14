@@ -1,30 +1,20 @@
-##FDPS PATH
-#PS_PATH = -I../../fdps/src/
-#PS_PATH = -I../fdps/src/
-#PS_PATH = -I../../../fdps/src/
-#PS_PATH = -I../../fdps/src/
-#PS_PATH = -I../../../../project/fdps/src
 PS_PATH = -I../FDPS/src
-#PS_PATH = -I../fdps.svn/
-#PS_PATH  = -I/home/lwang/code/fdps/src
-
-##ARC PATH
 ARC_PATH= -I../SDAR/src
-#ARC_PATH = -I/home/lwang/code/ARC/include
-#ARC_PATH = -I/home/lwang/GitHub/ARModule/src
-
-##Gperftools PATH
 #GPERF_PATH = ../../soft/gperftools-2.6.90
+CUDA_PATH=/usr/local/cuda
 
 ROOT_PATH= .
-INCLUDE  = -I${ROOT_PATH}/src
+INCLUDE  = -I${ROOT_PATH}/src $(PS_PATH) $(ARC_PATH)
 
 #use_k_computer = yes
 #use_xc30_naoj = yes
 use_x86 = yes
 use_mpi = yes
+#use_gpu_cuda=yes
 #debug_mode=yes
 #use_intel=yes
+
+all: petar petar.hard.debug
 
 ifeq ($(use_k_computer),yes)
 CXX = time mpiFCCpx
@@ -61,18 +51,23 @@ CXXFLAGS += -DINTRINSIC_X86
 endif
 
 ifeq ($(use_x86),yes)
-ifeq ($(use_mpi),yes)
+
+ifeq ($(use_mpi),yes) 
 CXX = time mpicxx
+
 ifeq ($(use_intel),yes)
 CXXNOMPI = time icc
 else
 CXXNOMPI = time g++
 endif
+
 #CXX = kinst-ompp mpicxx
 #CXX = tau_cxx.sh  -tau_makefile=/opt/tau-2.26.3/x86_64/lib/Makefile.tau-mpi-openmp -tau_options=-optCompInst
 FDPSFLAGS = -DPARTICLE_SIMULATOR_MPI_PARALLEL
 FDPSFLAGS += -DMPICH_IGNORE_CXX_SEEKC
-else
+
+else # no mpi
+
 ifeq ($(use_intel),yes)
 CXX = time icc
 CXXNOMPI = time icc
@@ -80,7 +75,8 @@ else
 CXX = time g++
 CXXNOMPI = time g++
 endif
-endif
+
+endif # end mpi
 
 ifeq ($(debug_mode),yes)
 OPTFLAGS = -g -O0 -fbounds-check -Wall -D SANITY_CHECK_REALLOCATABLE_ARRAY 
@@ -100,11 +96,21 @@ CXXFLAGS += -DINTRINSIC_X86
 FDPSFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL
 #FDPSFLAGS += -DPARTICLE_SIMULATOR_DEBUG_PRINT
 #FDPSFLAGS += -DUSE_GNU_PARALLEL_SORT
+
+endif # end x86
+
+ifeq ($(use_gpu_cuda),yes)
+NVCC = nvcc -std=c++11 -Xcompiler="$(OPTFLAGS) $(CXXFLAGS)"
+CXXLIBS += -L$(CUDA_PATH)/lib64 -lcudart -lgomp
+force_gpu_cuda.o: force_gpu_cuda.cu
+	$(NVCC) $(INCLUDE) -I$(CUDA_PATH)/samples/common/inc -c $< -o $@ 
+OBJS += force_gpu_cuda.o
+CXXFLAGS += -DUSE_GPU
 endif
 
 CXXFLAGS += -DDIV_FIX
 #CXXFLAGS += -DP3T_64BIT
-CXXFLAGS += -DUSE_QUAD
+#CXXFLAGS += -DUSE_QUAD
 CXXFLAGS += -DUSE_SIMD
 CXXFLAGS += -D PROFILE
 CXXFLAGS += -D HARD_CHECK_ENERGY
@@ -123,7 +129,7 @@ MT_FLAGS += -D CLUSTER_VELOCITY
 #MT_FLAGS += -D KDKDK_2ND
 #MT_FLAGS += -D KDKDK_4TH
 #MT_FLAGS += -D ONLY_SOFT
-MT_FLAGS += -D STELLAR_EVOLUTION
+#MT_FLAGS += -D STELLAR_EVOLUTION
 
 SIMD_DEBFLAGS += -DCALC_EP_64bit
 SIMD_DEBFLAGS += -DRSQRT_NR_EPJ_X2
@@ -170,22 +176,20 @@ VPATH=${ROOT_PATH}/src ${ROOT_PATH}/test
 
 SRC = main.cc ${shell ls ${ROOT_PATH}/src/*.hpp} 
 
-all: petar
+petar:  $(SRC) $(OBJS)
+	$(CXX) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(OBJS) $(CXXLIBS)
 
-petar:  $(SRC)
-	$(CXX) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(CXXLIBS)
+petar.hard.debug: hard_debug.cxx
+	$(CXXNOMPI) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
 
-hard_debug.out: hard_debug.cxx
-	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
+petar.hard.test: hard_test.cxx
+	$(CXXNOMPI) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
 
-hard_test.out: hard_test.cxx
-	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
+petar.simd.test: simd_test.cxx
+	$(CXXNOMPI) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(SIMD_DEBFLAGS)  $< -o $@  $(CXXLIBS)
 
-simd_test.out: simd_test.cxx
-	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(SIMD_DEBFLAGS)  $< -o $@  $(CXXLIBS)
-
-tidal_tensor_test.out: tidal_tensor_test.cxx
-	$(CXXNOMPI) $(PS_PATH) $(ARC_PATH) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS)  $< -o $@  $(CXXLIBS)
+petar.tt.test: tidal_tensor_test.cxx
+	$(CXXNOMPI) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS)  $< -o $@  $(CXXLIBS)
 
 clean:
 	rm *.out *.o 

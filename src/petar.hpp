@@ -5,17 +5,15 @@
 #define CALC_SP_64bit
 #define RSQRT_NR_EPJ_X4
 #define RSQRT_NR_SPJ_X4
+
 #elif P3T_MIXBIT
 #define CALC_EP_64bit
 #define RSQRT_NR_EPJ_X4
+
 #else
 #define RSQRT_NR_EPJ_X2
 //#define RSQRT_NR_SPJ_X2
-#endif //P3T_64BIT
-
-#ifdef FORCE_CHECK
-#define FORCE_DIRECT
-#endif
+#endif 
 
 #if defined(INTRINSIC_K) || defined(INTRINSIC_X86)
 #define INTRINSIC
@@ -28,11 +26,6 @@
 #include<sstream>
 //#include<unistd.h>
 #include<getopt.h>
-#ifdef USE_C03
-#include<map>
-#else //USE_C03
-#include<unordered_map>
-#endif //USE_C03
 
 #ifdef MPI_DEBUG
 #include <mpi.h>
@@ -69,6 +62,9 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #include"hard_assert.hpp"
 #include"soft_ptcl.hpp"
 #include"soft_force.hpp"
+#ifdef USE_GPU
+#include"force_gpu_cuda.hpp"
+#endif
 #include"energy.hpp"
 #include"hard.hpp"
 #include"io.hpp"
@@ -80,6 +76,7 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #ifdef PROFILE
 #include"profile.hpp"
 #endif
+#include"static_variables.hpp"
 
 //! IO parameters for Petar
 class IOParamsPeTar{
@@ -902,6 +899,15 @@ private:
 #endif
                                            system_soft,
                                            dinfo);
+#elif USE_GPU
+        const PS::S32 n_walk_limit = 200;
+        const PS::S32 tag_max = 1;
+        tree_soft.calcForceAllAndWriteBackMultiWalk(DispatchKernelWithSP,
+                                                    RetrieveKernel,
+                                                    tag_max,
+                                                    system_soft,
+                                                    dinfo,
+                                                    n_walk_limit);
 #else
         tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(),
 #ifdef USE_QUAD

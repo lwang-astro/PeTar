@@ -12,7 +12,7 @@
 #include "cluster_list.hpp"
 #include "hard.hpp"
 #include "soft_ptcl.hpp"
-
+#include "static_variables.hpp"
 
 int main(int argc, char **argv){
   int n_opt=0;
@@ -158,9 +158,9 @@ int main(int argc, char **argv){
       HardIntegrator hard_int;
       hard_int.initial(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, &hard_manager, 0.0);
 
-      auto interupt_state = hard_int.integrateToTime(hard_dump.time_end);
-      if (interupt_state!=InteruptState::none)
-          hard_int.printInteruptBinaryInfo(std::cerr);
+      auto interrupt_binary_adr = hard_int.integrateToTime(hard_dump.time_end);
+      if (interrupt_binary_adr!=NULL)
+          hard_int.printInterruptBinaryInfo(std::cerr);
 
   }
   // test stability
