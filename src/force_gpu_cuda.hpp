@@ -2,7 +2,6 @@
 #include <iostream>
 #include <particle_simulator.hpp>
 #include "soft_ptcl.hpp"
-#include "soft_force.hpp"
 
 #ifdef GPU_PROFILE
 #include "profile.hpp"
