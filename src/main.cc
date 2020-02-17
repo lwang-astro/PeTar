@@ -1,7 +1,13 @@
 #include "petar.hpp"
+#ifdef GPERF_PROFILE
+#include <gperftools/profiler.h>
+#endif
 
 int main(int argc, char *argv[]){
 
+#ifdef GPERF_PROFILE
+    ProfilerStart("prof.out");
+#endif
     PeTar petar;
 
     petar.initialFDPS(argc,argv);
@@ -33,6 +39,10 @@ int main(int argc, char *argv[]){
     int n_interupt = 1;
     while(n_interupt>0) n_interupt = petar.evolveToTime();
     
+#endif
+
+#ifdef GPERF_PROFILE
+    ProfilerStop();
 #endif
 
     return 0;

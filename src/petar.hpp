@@ -1240,6 +1240,7 @@ private:
             assert(adr>=0);
             kick_regist[adr]++;
         }
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         for(int i=0; i<system_hard_connected.getPtcl().size(); i++) {
             PS::S64 adr= system_hard_connected.getPtcl()[i].adr_org;
             if(adr>=0) kick_regist[adr]++;
@@ -1248,6 +1249,7 @@ private:
             PS::S64 adr= search_cluster.getAdrSysConnectClusterSend()[i];
             kick_regist[adr]++;
         }
+#endif
         for(int i=0; i<stat.n_real_loc; i++) {
             assert(kick_regist[i]==1);
         }
@@ -1710,7 +1712,6 @@ private:
         n_count_sum.hard_isolated    += PS::Comm::getSum(n_hard_isolated);
 
         PS::S64 ARC_substep_sum   = system_hard_isolated.ARC_substep_sum;
-        ARC_substep_sum += system_hard_connected.ARC_substep_sum;
         PS::S64 ARC_tsyn_step_sum   = system_hard_isolated.ARC_tsyn_step_sum;
         PS::S64 ARC_n_groups      = system_hard_isolated.ARC_n_groups;
         PS::S64 H4_step_sum       = system_hard_isolated.H4_step_sum;
@@ -1720,6 +1721,7 @@ private:
         n_count.hard_connected   += n_hard_connected;
         n_count_sum.hard_connected   += PS::Comm::getSum(n_hard_connected);
 
+        ARC_substep_sum += system_hard_connected.ARC_substep_sum;
         ARC_tsyn_step_sum += system_hard_connected.ARC_tsyn_step_sum;
         ARC_n_groups += system_hard_connected.ARC_n_groups;
         H4_step_sum +=  system_hard_connected.H4_step_sum;
@@ -1757,12 +1759,13 @@ private:
         const PS::S32* isolated_cluster_n_list = system_hard_isolated.getClusterNumberOfMemberList();
         for (PS::S32 i=0; i<n_isolated_cluster; i++) n_count.cluster_count(isolated_cluster_n_list[i]);
 
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         const PS::S32  n_connected_cluster = system_hard_connected.getNumberOfClusters();
         n_count.cluster_connected += n_connected_cluster;
         n_count_sum.cluster_connected += PS::Comm::getSum(n_connected_cluster);
         const PS::S32* connected_cluster_n_list = system_hard_connected.getClusterNumberOfMemberList();
         for (PS::S32 i=0; i<n_connected_cluster; i++) n_count.cluster_count(connected_cluster_n_list[i]);
-
+#endif
         dn_loop++;
 
     }
@@ -2304,16 +2307,18 @@ public:
         hard_manager.checkParams();
 
         // initial hard class and parameters
-        system_hard_isolated.allocateHardIntegrator(input_parameters.n_interrupt_limit.value);
-        system_hard_connected.allocateHardIntegrator(input_parameters.n_interrupt_limit.value);
-
         system_hard_one_cluster.manager = &hard_manager;
-        system_hard_isolated.manager = &hard_manager;
-        system_hard_connected.manager = &hard_manager;
-
         system_hard_one_cluster.setTimeOrigin(stat.time);
+
+        system_hard_isolated.allocateHardIntegrator(input_parameters.n_interrupt_limit.value);
+        system_hard_isolated.manager = &hard_manager;
         system_hard_isolated.setTimeOrigin(stat.time);
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        system_hard_connected.allocateHardIntegrator(input_parameters.n_interrupt_limit.value);
+        system_hard_connected.manager = &hard_manager;
         system_hard_connected.setTimeOrigin(stat.time);
+#endif
 
         time_kick = stat.time;
 
