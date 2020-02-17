@@ -51,6 +51,45 @@ public:
     }
 
 } gpu_profile;
+
+extern struct GPUCounter{
+public:
+    NumCounter n_walk;
+    NumCounter n_epi;
+    NumCounter n_epj;
+    NumCounter n_spj;
+    NumCounter n_call;
+    const PS::S32 n_counter;
+
+    GPUCounter(): 
+        n_walk (NumCounter("n_walk ")),
+        n_epi  (NumCounter("n_epi  ")),
+        n_epj  (NumCounter("n_epj  ")),
+        n_spj  (NumCounter("n_spj  ")),
+        n_call (NumCounter("n_call ")),
+        n_counter(5) {}
+
+    void dump(std::ostream & fout, const PS::S32 width=20, const PS::S64 n_loop=1) const{
+        for(PS::S32 i=0; i<n_counter; i++) {
+            NumCounter* iptr = (NumCounter*)this+i;
+            iptr->dump(fout, width, n_loop);
+        }
+    }
+    void dumpName(std::ostream & fout, const PS::S32 width=20) const{
+        for(PS::S32 i=0; i<n_counter; i++) {
+            NumCounter* iptr = (NumCounter*)this+i;
+            iptr->dumpName(fout, width);
+        }
+    }
+    
+    void clear() {
+        for(PS::S32 i=0; i<n_counter; i++) {
+            NumCounter* iptr = (NumCounter*)this+i;
+            *iptr = 0;
+        }
+    }
+
+} gpu_counter;
 #endif
 
 #ifdef USE_QUAD

@@ -97,8 +97,10 @@ FDPSFLAGS += -DPARTICLE_SIMULATOR_THREAD_PARALLEL
 
 endif # end x86
 
+#---------------------------------------------
+
 ifeq ($(use_gpu_cuda),yes)
-NVCC = nvcc -std=c++11 -Xcompiler="$(OPTFLAGS) $(CXXFLAGS)"
+NVCC = nvcc -std=c++11 -Xcompiler="$(OPTFLAGS) $(CXXFLAGS) -DPARTICLE_SIMULATOR_THREAD_PARALLEL"
 CXXLIBS += -L$(CUDA_PATH)/lib64 -lcudart -lgomp
 force_gpu_cuda.o: force_gpu_cuda.cu
 	$(NVCC) $(INCLUDE) -I$(CUDA_PATH)/samples/common/inc -c $< -o $@ 

@@ -467,8 +467,8 @@ public:
                     std::cout<<"  -b: [I] "<<n_bin<<std::endl;
                     std::cout<<"  -n: [I] "<<n_glb<<std::endl;
                     std::cout<<"        --n-split:           [I] "<<n_split<<std::endl;
-                    std::cout<<"        --n-group-limit:     [I] "<<n_group_limit<<std::endl;
-                    std::cout<<"        --n-leaf-limit:      [I] "<<n_leaf_limit<<std::endl;
+                    std::cout<<"        --number-group-limit:     [I] "<<n_group_limit<<std::endl;
+                    std::cout<<"        --number-leaf-limit:      [I] "<<n_leaf_limit<<std::endl;
                     std::cout<<"        --n-interrupt-limit: [I] "<<n_interrupt_limit<<std::endl;
                     std::cout<<"        --n-sample-average:  [I] "<<n_smp_ave<<std::endl;
                     std::cout<<"  -G: [F] "<<gravitational_constant<<std::endl;
@@ -1801,8 +1801,10 @@ private:
 #if defined(USE_GPU) && defined(GPU_PROFILE)
             std::cout<<"**** GPU time profile (local):\n";
             gpu_profile.dumpName(std::cout,PRINT_WIDTH);
+            gpu_counter.dumpName(std::cout,PRINT_WIDTH);
             std::cout<<std::endl;
             gpu_profile.dump(std::cout,PRINT_WIDTH,dn_loop);
+            gpu_counter.dump(std::cout,PRINT_WIDTH,dn_loop);
             std::cout<<std::endl;
 #endif
 
@@ -1836,6 +1838,7 @@ private:
         ps_profile.clear();
 #if defined(USE_GPU) && defined(GPU_PROFILE)
         gpu_profile.clear();
+        gpu_counter.clear();
 #endif
         n_count.clear();
         n_count_sum.clear();

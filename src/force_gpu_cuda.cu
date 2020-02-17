@@ -6,6 +6,7 @@
 
 #ifdef GPU_PROFILE
 GPUProfile gpu_profile;
+GPUCounter gpu_counter;
 #endif
 
 enum{
@@ -440,15 +441,7 @@ PS::S32 DispatchKernelWithSP(const PS::S32  tag,
     assert(ij_disp[n_walk].x < NI_LIMIT);
     assert(ij_disp[n_walk].y < NJ_LIMIT);
     assert(ij_disp[n_walk].z < NJ_LIMIT);
-#ifdef GPU_PROFILE
-    gpu_profile.copy.end();
-    gpu_profile.send.start();
-#endif
-    ij_disp.htod(n_walk + 2);
-#ifdef GPU_PROFILE
-    gpu_profile.send.end();
-    gpu_profile.copy.start();
-#endif
+
     int ni_tot_reg = ij_disp[n_walk].x;
     if(ni_tot_reg % N_THREAD_GPU){
         ni_tot_reg /= N_THREAD_GPU;
@@ -490,8 +483,14 @@ PS::S32 DispatchKernelWithSP(const PS::S32  tag,
 
 #ifdef GPU_PROFILE
     gpu_profile.copy.end();
+    gpu_counter.n_walk+= n_walk;
+    gpu_counter.n_epi += ni_tot;
+    gpu_counter.n_epj += nej_tot;
+    gpu_counter.n_spj += nsj_tot;
+    gpu_counter.n_call+= 1;
     gpu_profile.send.start();
 #endif
+    ij_disp.htod(n_walk + 2);
     dev_epi.htod(ni_tot_reg);
     dev_epj.htod(nej_tot);
     dev_spj.htod(nsj_tot);
