@@ -36,6 +36,9 @@ struct EpjGPU{
 struct SpjGPU{
     float3 pos;
     float  m;
+#ifdef USE_QUAD
+    float  qxx, qyy, qzz, qxy, qxz, qyz;
+#endif
 };
 
 struct ForceGPU{
@@ -233,14 +236,37 @@ inline __device__ float4 dev_gravity_ep_sp(
         float  G,
 		float3 posi,
 		SpjGPU spjj,
-        float4 accpi)
-{
-	float dx = spjj.pos.x - posi.x;
-	float dy = spjj.pos.y - posi.y;
-	float dz = spjj.pos.z - posi.z;
+        float4 accpi) {
+
+	float dx = posi.x - spjj.pos.x;
+	float dy = posi.y - spjj.pos.y;
+	float dz = posi.z - spjj.pos.z;
 
 	float r2   = eps2 + dx*dx + dy*dy + dz*dz;
 	float rinv = rsqrtf(r2);
+
+#ifdef USE_QUAD
+    float qrx = spjj.qxx*dx + spjj.qxy*dy + spjj.qxz*dz;
+    float qry = spjj.qxy*dx + spjj.qyy*dy + spjj.qyz*dz;
+    float qrz = spjj.qxz*dx + spjj.qyz*dy + spjj.qzz*dz;
+    float tr = spjj.qxx + spjj.qyy + spjj.qzz;
+    
+    float qrr = qrx*dx + qry*dy + qrz*dz;
+    float rinv2 = rinv*rinv;
+    float rinv3 = rinv2*rinv;
+    float rinv5 = rinv2*rinv3*1.5f;
+    float qrr_r5 = rinv5*qrr;
+    float qrr_r7 = rinv2*qrr_r5;
+    float A = G*(spjj.m*rinv3 - tr*rinv5 + 5.0f*qrr_r7);
+    float B = -2.0f*G*rinv5;
+    
+    accpi.x -= A*dx + B*qrx;
+    accpi.y -= A*dy + B*qry;
+    accpi.z -= A*dz + B*qrz;
+    accpi.w -= G*(spjj.m*rinv - 0.5f*tr*rinv3 + qrr_r5);
+
+#else
+    
 	float pij  = spjj.m * rinv;
 	float mri3 = G*rinv*rinv * pij;
 
@@ -248,6 +274,8 @@ inline __device__ float4 dev_gravity_ep_sp(
 	accpi.y += mri3 * dy;
 	accpi.z += mri3 * dz;
 	accpi.w -= G*pij;
+
+#endif
 
     return accpi;
 }
@@ -477,6 +505,14 @@ PS::S32 DispatchKernelWithSP(const PS::S32  tag,
             dev_spj[jk].pos.y  = spj[iw][j].pos.y;
             dev_spj[jk].pos.z  = spj[iw][j].pos.z;
             dev_spj[jk].m      = spj[iw][j].getCharge();
+#ifdef USE_QUAD
+            dev_spj[jk].qxx    = spj[iw][j].quad.xx;
+            dev_spj[jk].qyy    = spj[iw][j].quad.yy;
+            dev_spj[jk].qzz    = spj[iw][j].quad.zz;
+            dev_spj[jk].qxy    = spj[iw][j].quad.xy;
+            dev_spj[jk].qxz    = spj[iw][j].quad.xz;
+            dev_spj[jk].qyz    = spj[iw][j].quad.yz;
+#endif
         }
     }
     for(int i=ni_tot; i<ni_tot_reg; i++){
