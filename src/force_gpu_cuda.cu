@@ -449,32 +449,34 @@ PS::S32 DispatchKernelWithSP(const PS::S32  tag,
         ni_tot_reg *= N_THREAD_GPU;
     }
 
-    int ni_tot = 0;
-    int nej_tot = 0;
-    int nsj_tot = 0;
+    int ni_tot = ij_disp[n_walk].x;
+    int nej_tot = ij_disp[n_walk].y;
+    int nsj_tot = ij_disp[n_walk].z;
+
+#pragma omp parallel for schedule(dynamic)
     for(int iw=0; iw<n_walk; iw++){
         for(int i=0; i<n_epi[iw]; i++){
-            dev_epi[ni_tot].pos.x = epi[iw][i].pos.x;
-            dev_epi[ni_tot].pos.y = epi[iw][i].pos.y;
-            dev_epi[ni_tot].pos.z = epi[iw][i].pos.z;
-            dev_epi[ni_tot].r_search = epi[iw][i].r_search;
-            dev_epi[ni_tot].id_walk = iw;
-            ni_tot++;
+            int ik = i+ij_disp[iw].x;
+            dev_epi[ik].pos.x = epi[iw][i].pos.x;
+            dev_epi[ik].pos.y = epi[iw][i].pos.y;
+            dev_epi[ik].pos.z = epi[iw][i].pos.z;
+            dev_epi[ik].r_search = epi[iw][i].r_search;
+            dev_epi[ik].id_walk = iw;
         }
         for(int j=0; j<n_epj[iw]; j++){
-            dev_epj[nej_tot].pos.x  = epj[iw][j].pos.x;
-            dev_epj[nej_tot].pos.y  = epj[iw][j].pos.y;
-            dev_epj[nej_tot].pos.z  = epj[iw][j].pos.z;
-            dev_epj[nej_tot].m      = epj[iw][j].mass;
-            dev_epj[nej_tot].r_search = epj[iw][j].r_search;
-            nej_tot++;
+            int jk = j+ij_disp[iw].y;
+            dev_epj[jk].pos.x  = epj[iw][j].pos.x;
+            dev_epj[jk].pos.y  = epj[iw][j].pos.y;
+            dev_epj[jk].pos.z  = epj[iw][j].pos.z;
+            dev_epj[jk].m      = epj[iw][j].mass;
+            dev_epj[jk].r_search = epj[iw][j].r_search;
         }
         for(int j=0; j<n_spj[iw]; j++){
-            dev_spj[nsj_tot].pos.x  = spj[iw][j].pos.x;
-            dev_spj[nsj_tot].pos.y  = spj[iw][j].pos.y;
-            dev_spj[nsj_tot].pos.z  = spj[iw][j].pos.z;
-            dev_spj[nsj_tot].m      = spj[iw][j].getCharge();
-            nsj_tot++;
+            int jk = j+ij_disp[iw].z;
+            dev_spj[jk].pos.x  = spj[iw][j].pos.x;
+            dev_spj[jk].pos.y  = spj[iw][j].pos.y;
+            dev_spj[jk].pos.z  = spj[iw][j].pos.z;
+            dev_spj[jk].m      = spj[iw][j].getCharge();
         }
     }
     for(int i=ni_tot; i<ni_tot_reg; i++){
