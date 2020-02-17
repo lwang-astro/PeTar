@@ -1,3 +1,4 @@
+#pragma once
 #include<particle_simulator.hpp>
 #include<iomanip>
 #include<iostream>

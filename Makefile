@@ -103,15 +103,16 @@ CXXLIBS += -L$(CUDA_PATH)/lib64 -lcudart -lgomp
 force_gpu_cuda.o: force_gpu_cuda.cu
 	$(NVCC) $(INCLUDE) -I$(CUDA_PATH)/samples/common/inc -c $< -o $@ 
 OBJS += force_gpu_cuda.o
-CXXFLAGS += -DUSE_GPU
+CXXFLAGS += -D USE_GPU
+CXXFLAGS += -D GPU_PROFILE
 endif # gpu cuda
 
 #-------------------------------------
 
-CXXFLAGS += -DDIV_FIX
-#CXXFLAGS += -DP3T_64BIT
-CXXFLAGS += -DUSE_QUAD
-CXXFLAGS += -DUSE_SIMD
+CXXFLAGS += -D DIV_FIX
+#CXXFLAGS += -D P3T_64BIT
+CXXFLAGS += -D USE_QUAD
+CXXFLAGS += -D USE_SIMD
 CXXFLAGS += -D PROFILE
 CXXFLAGS += -D HARD_CHECK_ENERGY
 #CXXFLAGS += ${shell gsl-config --cflags}

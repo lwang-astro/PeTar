@@ -4,6 +4,10 @@
 #include "cuda_pointer.h"
 #include "force_gpu_cuda.hpp"
 
+#ifdef GPU_PROFILE
+GPUProfile gpu_profile;
+#endif
+
 enum{
 	N_THREAD_GPU = 32,
 	N_WALK_LIMIT = 1000,
@@ -400,14 +404,14 @@ static cudaPointer<ForceGPU>  dev_force;
 static cudaPointer<int3>      ij_disp;
 static bool init_call = true;
 
-PS::S32 DispatchKernelWithSP(const PS::S32          tag,
-                             const PS::S32          n_walk,
-                             const EPISoft         *epi[],
-                             const PS::S32          n_epi[],
-                             const EPJSoft          *epj[],
-                             const PS::S32          n_epj[],
-                             const PS::SPJMonopoleInAndOut *spj[],
-                             const PS::S32          n_spj[]){
+PS::S32 DispatchKernelWithSP(const PS::S32  tag,
+                             const PS::S32  n_walk,
+                             const EPISoft *epi[],
+                             const PS::S32  n_epi[],
+                             const EPJSoft  *epj[],
+                             const PS::S32  n_epj[],
+                             const SPJSoft *spj[],
+                             const PS::S32  n_spj[]){
     assert(n_walk <= N_WALK_LIMIT);
     if(init_call){
 		dev_epi  .allocate(NI_LIMIT);
@@ -417,6 +421,9 @@ PS::S32 DispatchKernelWithSP(const PS::S32          tag,
 		ij_disp  .allocate(N_WALK_LIMIT+2);
 		init_call = false;
     }
+#ifdef GPU_PROFILE
+    gpu_profile.copy.start();
+#endif
     const float eps2 = EPISoft::eps * EPISoft::eps;
     const PS::F64 rcut2 = EPISoft::r_out*EPISoft::r_out;
     const PS::F64 G = ForceSoft::grav_const;
@@ -433,8 +440,15 @@ PS::S32 DispatchKernelWithSP(const PS::S32          tag,
     assert(ij_disp[n_walk].x < NI_LIMIT);
     assert(ij_disp[n_walk].y < NJ_LIMIT);
     assert(ij_disp[n_walk].z < NJ_LIMIT);
+#ifdef GPU_PROFILE
+    gpu_profile.copy.end();
+    gpu_profile.send.start();
+#endif
     ij_disp.htod(n_walk + 2);
-
+#ifdef GPU_PROFILE
+    gpu_profile.send.end();
+    gpu_profile.copy.start();
+#endif
     int ni_tot_reg = ij_disp[n_walk].x;
     if(ni_tot_reg % N_THREAD_GPU){
         ni_tot_reg /= N_THREAD_GPU;
@@ -474,28 +488,47 @@ PS::S32 DispatchKernelWithSP(const PS::S32          tag,
         dev_epi[i].id_walk = n_walk;
     }
 
+#ifdef GPU_PROFILE
+    gpu_profile.copy.end();
+    gpu_profile.send.start();
+#endif
     dev_epi.htod(ni_tot_reg);
     dev_epj.htod(nej_tot);
     dev_spj.htod(nsj_tot);
 
+#ifdef GPU_PROFILE
+    gpu_profile.send.end();
+    gpu_profile.calc.start();
+#endif
     int nblocks  = ni_tot_reg / N_THREAD_GPU;
     int nthreads = N_THREAD_GPU;
     force_kernel_ep_ep <<<nblocks, nthreads>>> (ij_disp, dev_epi, dev_epj, dev_force, eps2, rcut2, G);
     force_kernel_ep_sp <<<nblocks, nthreads>>> (ij_disp, dev_epi, dev_spj, dev_force, eps2, G);
 
+#ifdef GPU_PROFILE
+    gpu_profile.calc.end();
+#endif
     return 0;
 }
 
 PS::S32 RetrieveKernel(const PS::S32 tag,
                        const PS::S32 n_walk,
                        const PS::S32 ni[],
-                       ForceSoft    *force[])
-{
+                       ForceSoft    *force[]) {
+
+#ifdef GPU_PROFILE
+    gpu_profile.recv.start();
+#endif
     int ni_tot = 0;
     for(int k=0; k<n_walk; k++){
         ni_tot += ni[k];
     }
     dev_force.dtoh(ni_tot);
+
+#ifdef GPU_PROFILE
+    gpu_profile.recv.end();
+    gpu_profile.copy.start();
+#endif
 
     int n_cnt = 0;
     for(int iw=0; iw<n_walk; iw++){
@@ -508,5 +541,8 @@ PS::S32 RetrieveKernel(const PS::S32 tag,
             n_cnt++;
         }
     }
+#ifdef GPU_PROFILE
+    gpu_profile.copy.end();
+#endif
     return 0;
 }

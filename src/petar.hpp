@@ -1795,6 +1795,14 @@ private:
             ps_profile.dump(std::cout,PRINT_WIDTH,dn_loop);
             std::cout<<std::endl;
 
+#if defined(USE_GPU) && defined(GPU_PROFILE)
+            std::cout<<"**** GPU time profile (local):\n";
+            gpu_profile.dumpName(std::cout,PRINT_WIDTH);
+            std::cout<<std::endl;
+            gpu_profile.dump(std::cout,PRINT_WIDTH,dn_loop);
+            std::cout<<std::endl;
+#endif
+
             std::cout<<"**** Number per step (global):\n";
             n_count_sum.dumpName(std::cout,PRINT_WIDTH);
             std::cout<<std::endl;
@@ -1814,12 +1822,18 @@ private:
             profile.dump(fprofile, WRITE_WIDTH, dn_loop);
             profile.dumpBarrier(fprofile, WRITE_WIDTH, dn_loop);
             ps_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
+#if defined(USE_GPU) && defined(GPU_PROFILE)
+            gpu_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
+#endif
             n_count.dump(fprofile, WRITE_WIDTH, dn_loop);
             fprofile<<std::endl;
         }
 
         profile.clear();
         ps_profile.clear();
+#if defined(USE_GPU) && defined(GPU_PROFILE)
+        gpu_profile.clear();
+#endif
         n_count.clear();
         n_count_sum.clear();
         dn_loop=0;
