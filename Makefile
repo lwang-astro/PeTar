@@ -16,6 +16,7 @@ use_mpi = yes
 
 all: petar petar.hard.debug
 
+#------------------------------------
 ifeq ($(use_k_computer),yes)
 CXX = time mpiFCCpx
 OPTFLAGS = -Kfast
@@ -37,6 +38,7 @@ FDPSFLAGS += -DFAST_WALK_K
 # profiling
 endif
 
+#------------------------------------
 ifeq ($(use_xc30_naoj),yes)
 CXX = time CC
 CXXNOMPI = time CC
@@ -48,42 +50,38 @@ CXXFLAGS += -std=c++11
 CXXFLAGS += -DINTRINSIC_X86
 
 #FDPSFLAGS += -DUSE_GNU_PARALLEL_SORT
-endif
+endif # xc30
 
+#------------------------------------
 ifeq ($(use_x86),yes)
 
 ifeq ($(use_mpi),yes) 
 CXX = time mpicxx
 
-ifeq ($(use_intel),yes)
-CXXNOMPI = time icc
-else
-CXXNOMPI = time g++
-endif
-
-#CXX = kinst-ompp mpicxx
-#CXX = tau_cxx.sh  -tau_makefile=/opt/tau-2.26.3/x86_64/lib/Makefile.tau-mpi-openmp -tau_options=-optCompInst
 FDPSFLAGS = -DPARTICLE_SIMULATOR_MPI_PARALLEL
 FDPSFLAGS += -DMPICH_IGNORE_CXX_SEEKC
-
 else # no mpi
 
 ifeq ($(use_intel),yes)
 CXX = time icc
-CXXNOMPI = time icc
-else
+else # no intel
 CXX = time g++
-CXXNOMPI = time g++
-endif
+endif # intel
 
-endif # end mpi
+endif # mpi
+
+ifeq ($(use_intel),yes)
+CXXNOMPI = time icc
+else # no intel
+CXXNOMPI = time g++
+endif # intel
 
 ifeq ($(debug_mode),yes)
 OPTFLAGS = -g -O0 -fbounds-check -Wall -D SANITY_CHECK_REALLOCATABLE_ARRAY 
-else
+else # no debug
 OPTFLAGS = -O2 -Wall 
 #OPTFLAGS += -ffast-math -funroll-loops
-endif
+endif # debug
 
 CXXFLAGS = -std=c++11
 CXXFLAGS += -Wall
@@ -106,11 +104,13 @@ force_gpu_cuda.o: force_gpu_cuda.cu
 	$(NVCC) $(INCLUDE) -I$(CUDA_PATH)/samples/common/inc -c $< -o $@ 
 OBJS += force_gpu_cuda.o
 CXXFLAGS += -DUSE_GPU
-endif
+endif # gpu cuda
+
+#-------------------------------------
 
 CXXFLAGS += -DDIV_FIX
 #CXXFLAGS += -DP3T_64BIT
-#CXXFLAGS += -DUSE_QUAD
+CXXFLAGS += -DUSE_QUAD
 CXXFLAGS += -DUSE_SIMD
 CXXFLAGS += -D PROFILE
 CXXFLAGS += -D HARD_CHECK_ENERGY
@@ -165,7 +165,7 @@ DEBFLAGS += -D ARTIFICIAL_PARTICLE_DEBUG
 #DEBFLAGS += -D CORRECT_FORCE_DEBUG
 
 DEBUG_OPT_FLAGS = -g -O0 -fbounds-check -Wall  -D SANITY_CHECK_REALLOCATABLE_ARRAY
-HARD_DEBFLAGS+= -D AR_DEBUG -D AR_DEBUG_DUMP -D AR_WARN -D HARD_DEBUG -D HARD_CHECK_ENERGY -D HARD_DEBUG_PRINT -D ADJUST_GROUP_DEBUG -D HERMITE_DEBUG -D AR_DEEP_DEBUG -D AR_COLLECT_DS_MODIFY_INFO
+HARD_DEBFLAGS+= -D AR_DEBUG -D AR_DEBUG_DUMP -D AR_WARN -D HARD_DEBUG -D HARD_CHECK_ENERGY -D HARD_DEBUG_PRINT -D ADJUST_GROUP_DEBUG -D HERMITE_DEBUG -D AR_COLLECT_DS_MODIFY_INFO
 HARD_MT_FLAGS += -D AR_TTL -D AR_SLOWDOWN_INNER -D AR_SLOWDOWN_TIMESCALE -D STABLE_CHECK_DEBUG_PRINT -D ARTIFICIAL_PARTICLE_DEBUG
 
 ifneq (x$(GPERF_PATH),x)
