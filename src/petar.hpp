@@ -191,7 +191,7 @@ public:
      */
     int read(int argc, char *argv[]) {
         static struct option long_options[] = {
-            {"n-split", required_argument, 0, 0},        
+            {"number-split", required_argument, 0, 0},        
             {"search-vel-factor", required_argument, 0, 1},  
             {"detect-interrupt", no_argument, 0, 18},
             {"dt-max-factor", required_argument, 0, 2},  
@@ -466,11 +466,11 @@ public:
                     std::cout<<"        --r-bin:             [F] "<<r_bin<<std::endl;
                     std::cout<<"  -b: [I] "<<n_bin<<std::endl;
                     std::cout<<"  -n: [I] "<<n_glb<<std::endl;
-                    std::cout<<"        --n-split:           [I] "<<n_split<<std::endl;
+                    std::cout<<"        --number-split:           [I] "<<n_split<<std::endl;
                     std::cout<<"        --number-group-limit:     [I] "<<n_group_limit<<std::endl;
                     std::cout<<"        --number-leaf-limit:      [I] "<<n_leaf_limit<<std::endl;
-                    std::cout<<"        --n-interrupt-limit: [I] "<<n_interrupt_limit<<std::endl;
-                    std::cout<<"        --n-sample-average:  [I] "<<n_smp_ave<<std::endl;
+                    std::cout<<"        --number-interrupt-limit: [I] "<<n_interrupt_limit<<std::endl;
+                    std::cout<<"        --number-sample-average:  [I] "<<n_smp_ave<<std::endl;
                     std::cout<<"  -G: [F] "<<gravitational_constant<<std::endl;
                     std::cout<<"  -T: [F] "<<theta<<std::endl;
                     std::cout<<"        --hermite-eta:       [F] "<<eta<<std::endl;
