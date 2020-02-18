@@ -432,6 +432,13 @@ static cudaPointer<SpjGPU>    dev_spj;
 static cudaPointer<ForceGPU>  dev_force;
 static cudaPointer<int3>      ij_disp;
 static bool init_call = true;
+#ifdef GPU_PROFILE
+static cudaEvent_t cu_event_disp;
+static cudaEvent_t cu_event_htod;
+static cudaEvent_t cu_event_calc;
+static cudaEvent_t cu_event_retr;
+static cudaEvent_t cu_event_dtoh;
+#endif
 
 PS::S32 DispatchKernelWithSP(const PS::S32  tag,
                              const PS::S32  n_walk,
@@ -448,6 +455,11 @@ PS::S32 DispatchKernelWithSP(const PS::S32  tag,
         dev_spj  .allocate(NJ_LIMIT);
 		dev_force.allocate(NI_LIMIT);
 		ij_disp  .allocate(N_WALK_LIMIT+2);
+        cudaEventCreate(&cu_event_disp);
+        cudaEventCreate(&cu_event_htod);
+        cudaEventCreate(&cu_event_calc);
+        cudaEventCreate(&cu_event_retr);
+        cudaEventCreate(&cu_event_dtoh);
 		init_call = false;
     }
 #ifdef GPU_PROFILE
@@ -526,7 +538,7 @@ PS::S32 DispatchKernelWithSP(const PS::S32  tag,
     gpu_counter.n_epj += nej_tot;
     gpu_counter.n_spj += nsj_tot;
     gpu_counter.n_call+= 1;
-    gpu_profile.send.start();
+    cudaEventRecord(cu_event_disp);
 #endif
     ij_disp.htod(n_walk + 2);
     dev_epi.htod(ni_tot_reg);
@@ -534,8 +546,7 @@ PS::S32 DispatchKernelWithSP(const PS::S32  tag,
     dev_spj.htod(nsj_tot);
 
 #ifdef GPU_PROFILE
-    gpu_profile.send.end();
-    gpu_profile.calc.start();
+    cudaEventRecord(cu_event_htod);
 #endif
     int nblocks  = ni_tot_reg / N_THREAD_GPU;
     int nthreads = N_THREAD_GPU;
@@ -543,7 +554,7 @@ PS::S32 DispatchKernelWithSP(const PS::S32  tag,
     force_kernel_ep_sp <<<nblocks, nthreads>>> (ij_disp, dev_epi, dev_spj, dev_force, eps2, G);
 
 #ifdef GPU_PROFILE
-    gpu_profile.calc.end();
+    cudaEventRecord(cu_event_calc);
 #endif
     return 0;
 }
@@ -554,7 +565,7 @@ PS::S32 RetrieveKernel(const PS::S32 tag,
                        ForceSoft    *force[]) {
 
 #ifdef GPU_PROFILE
-    gpu_profile.recv.start();
+    cudaEventRecord(cu_event_retr);
 #endif
     int ni_tot = 0;
     for(int k=0; k<n_walk; k++){
@@ -563,7 +574,15 @@ PS::S32 RetrieveKernel(const PS::S32 tag,
     dev_force.dtoh(ni_tot);
 
 #ifdef GPU_PROFILE
-    gpu_profile.recv.end();
+    cudaEventRecord(cu_event_dtoh);
+    cudaEventSynchronize(cu_event_dtoh);
+    float send_time=0, calc_time=0, recv_time=0;
+    cudaEventElapsedTime(&send_time, cu_event_disp, cu_event_htod);
+    cudaEventElapsedTime(&calc_time, cu_event_htod, cu_event_calc);
+    cudaEventElapsedTime(&recv_time, cu_event_retr, cu_event_dtoh);
+    gpu_profile.send.time += 0.001f*send_time;
+    gpu_profile.calc.time += 0.001f*calc_time;
+    gpu_profile.recv.time += 0.001f*recv_time;
     gpu_profile.copy.start();
 #endif
 
