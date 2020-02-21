@@ -1598,7 +1598,7 @@ public:
         const PS::S32 n = adr_array.size();
         //ptcl_hard_.resizeNoInitialize(n);
         //n_ptcl_in_cluster_.resizeNoInitialize(n);
-#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for 
         for(PS::S32 i=0; i<n; i++){
             PS::S32 adr = adr_array[i];
             ptcl_hard_[i].DataCopy(sys[adr]);
@@ -1614,7 +1614,7 @@ public:
      */
     void driveForOneClusterOMP(const PS::F64 _dt) {
         const PS::S32 n = ptcl_hard_.size();
-#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for
         for(PS::S32 i=0; i<n; i++){
             PS::F64vec dr = ptcl_hard_[i].vel * _dt;
             ptcl_hard_[i].pos += dr;
@@ -1662,7 +1662,7 @@ public:
     template<class Tsys>
     void writeBackPtclForOneClusterOMP(Tsys & sys){
         const PS::S32 n = ptcl_hard_.size();
-#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for 
         for(PS::S32 i=0; i<n; i++){
             PS::S32 adr = ptcl_hard_[i].adr_org;
             //PS::S32 adr = adr_array[i];
@@ -1716,7 +1716,7 @@ public:
         assert(n_ptcl<ARRAY_ALLOW_LIMIT);
 #endif        
         ptcl_hard_.resizeNoInitialize(n_ptcl);
-#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for 
         for(PS::S32 i=0; i<n_ptcl; i++){
             PS::S32 adr = _adr_array[i];
             ptcl_hard_[i].DataCopy(sys[adr]);
@@ -2364,7 +2364,7 @@ public:
     template <class Tsoft>
     void resetParticleGroupData(Tsoft& _ptcl_soft) {
         const PS::S32 n = ptcl_hard_.size();
-#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for 
         for(PS::S32 i=0; i<n; i++){
             // to avoid issue in cluster search with velocity
             auto& pi_cm = ptcl_hard_[i].group_data.cm;
