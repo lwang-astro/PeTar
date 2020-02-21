@@ -98,6 +98,24 @@ public:
 #define SPJSoft PS::SPJMonopoleInAndOut
 #endif
 
+#ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+
+PS::S32 DispatchKernelWithSPIndex(const PS::S32 tag,
+                                  const PS::S32 n_walk,
+                                  const EPISoft ** epi,
+                                  const PS::S32 *  n_epi,
+                                  const PS::S32 ** id_epj,
+                                  const PS::S32 *  n_epj,
+                                  const PS::S32 ** id_spj,
+                                  const PS::S32 *  n_spj,
+                                  const EPJSoft * epj,
+                                  const PS::S32 n_epj_tot,
+                                  const SPJSoft * spj,
+                                  const PS::S32 n_spj_tot,
+                                  const bool send_flag);
+
+#else
+
 PS::S32 DispatchKernelWithSP(const PS::S32 tag,
                              const PS::S32 n_walk,
                              const EPISoft ** epi,
@@ -107,7 +125,10 @@ PS::S32 DispatchKernelWithSP(const PS::S32 tag,
                              const SPJSoft ** spj,
                              const PS::S32  * n_spj);
 
+#endif
+
 PS::S32 RetrieveKernel(const PS::S32 tag,
                        const PS::S32 n_walk,
                        const PS::S32 * ni,
                        ForceSoft      ** force);
+

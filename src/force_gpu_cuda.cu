@@ -82,18 +82,25 @@ __device__ ForceGPU force_kernel_ep_ep_1walk(
 		const int     id_walk,
 		const int3   *ij_disp,
 		const EpjGPU *epj, 
+#ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+        const int*   *id_epj,
+#endif
 		ForceGPU      forcei,
 		const float   eps2,
         const float   rcut2,
-        const float   G)
-{
+        const float   G) {
+
     const int tid = threadIdx.x;
     const int j_head = ij_disp[id_walk  ].y;
     const int j_tail = ij_disp[id_walk+1].y;
 
 	for(int j=j_head; j<j_tail; j+=N_THREAD_GPU){
 		// __syncthreads();
+#ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+		jpsh[tid] = ((EpjGPU *)(epj + id_epj[j])) [tid];
+#else
 		jpsh[tid] = ((EpjGPU *)(epj + j)) [tid];
+#endif
 		// __syncthreads();
 
 		if(j_tail-j < N_THREAD_GPU){
@@ -119,11 +126,14 @@ __device__ ForceGPU force_kernel_ep_ep_2walk(
 		const int     iwalk1,
 		const int3   *ij_disp,
 		const EpjGPU *epj, 
+#ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+        const int*   *id_epj,
+#endif
 		ForceGPU      forcei,
 		const float   eps2,
         const float   rcut2,
-        const float   G)
-{
+        const float   G) {
+
 	const int jbeg0 = ij_disp[iwalk0].y;
 	const int jbeg1 = ij_disp[iwalk1].y;
 	const int jend0 = ij_disp[iwalk0 + 1].y;
@@ -140,8 +150,13 @@ __device__ ForceGPU force_kernel_ep_ep_2walk(
 
     const int tid = threadIdx.x;
 	for(int j=0; j<nj_shorter; j+=N_THREAD_GPU){
+#ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+		jpsh[0][tid] = ((EpjGPU *)(epj + id_epj[jbeg0 + j])) [tid];
+		jpsh[1][tid] = ((EpjGPU *)(epj + id_epj[jbeg1 + j])) [tid];
+#else
 		jpsh[0][tid] = ((EpjGPU *)(epj + jbeg0 + j)) [tid];
 		jpsh[1][tid] = ((EpjGPU *)(epj + jbeg1 + j)) [tid];
+#endif
 		if(nj_shorter-j < N_THREAD_GPU){
 			for(int jj=0; jj<nj_shorter-j; jj++){
 				forcei = dev_gravity_ep_ep(eps2, rcut2, G, epii, jpsh[mywalk][jj], forcei);
@@ -178,16 +193,23 @@ __device__ ForceGPU force_kernel_ep_ep_multiwalk(
 		const int     id_walk,
 		const int3   *ij_disp,
 		const EpjGPU *epj, 
+#ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+        const int*   *id_epj,
+#endif
 		ForceGPU      forcei,
 		const float   eps2,
         const float   rcut2,
-        const float   G)
-{
+        const float   G) {
+
     const int j_head = ij_disp[id_walk  ].y;
     const int j_tail = ij_disp[id_walk+1].y;
 
     for(int j=j_head; j<j_tail; j++){
+#ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+		EpjGPU epjj = epj[id_epj[j]];
+#else
 		EpjGPU epjj = epj[j];
+#endif
 		forcei = dev_gravity_ep_ep(eps2, rcut2, G, epii, epjj, forcei);
 	}
 	return forcei;
@@ -197,11 +219,14 @@ __global__ void force_kernel_ep_ep(
 		const int3   * ij_disp,
 		const EpiGPU * epi,
 		const EpjGPU * epj, 
+#ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+        const int*   *id_epj,
+#endif
 		ForceGPU     * force,
 		const float    eps2,
         const float    rcut2,
-        const float    G)
-{
+        const float    G) {
+
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
 	EpiDev epii;
     epii.pos       = epi[tid].pos;
@@ -217,6 +242,18 @@ __global__ void force_kernel_ep_ep(
 
 	__shared__ EpjGPU jpsh[2][N_THREAD_GPU];
 
+#ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+	if(1 == nwalk_in_block){
+		forcei = force_kernel_ep_ep_1walk(jpsh[0], epii, id_walk, ij_disp, epj, id_epj, forcei, eps2, rcut2, G);
+	} else if(2 == nwalk_in_block){
+		// accp = force_kernel_ep_ep_multiwalk(epii, id_walk, ij_disp, epj, accp, eps2);
+		int iwalk0 = epi[t_head].id_walk;
+		int iwalk1 = epi[t_tail].id_walk;
+		forcei = force_kernel_ep_ep_2walk(jpsh, epii, id_walk, iwalk0, iwalk1, ij_disp, epj, id_epj, forcei, eps2, rcut2, G);
+	} else{
+		forcei = force_kernel_ep_ep_multiwalk(epii, id_walk, ij_disp, epj, id_epj, forcei, eps2, rcut2, G);
+	}
+#else
 	if(1 == nwalk_in_block){
 		forcei = force_kernel_ep_ep_1walk(jpsh[0], epii, id_walk, ij_disp, epj, forcei, eps2, rcut2, G);
 	} else if(2 == nwalk_in_block){
@@ -227,6 +264,7 @@ __global__ void force_kernel_ep_ep(
 	} else{
 		forcei = force_kernel_ep_ep_multiwalk(epii, id_walk, ij_disp, epj, forcei, eps2, rcut2, G);
 	}
+#endif
 	force[tid] = forcei;
 }
 
@@ -286,17 +324,24 @@ __device__ float4 force_kernel_ep_sp_1walk(
 		const int     id_walk,
 		const int3   *ij_disp,
 		const SpjGPU *spj, 
+#ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+        const int*   *id_spj,
+#endif
 		float4        accpi,
 		const float   eps2,
-        const float   G)
-{
+        const float   G) {
+
     const int tid = threadIdx.x;
     const int j_head = ij_disp[id_walk  ].z;
     const int j_tail = ij_disp[id_walk+1].z;
 
 	for(int j=j_head; j<j_tail; j+=N_THREAD_GPU){
 		// __syncthreads();
+#ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+		jpsh[tid] = ((SpjGPU *)(spj + id_spj[j])) [tid];
+#else
 		jpsh[tid] = ((SpjGPU *)(spj + j)) [tid];
+#endif
 		// __syncthreads();
 
 		if(j_tail-j < N_THREAD_GPU){
@@ -322,6 +367,9 @@ __device__ float4 force_kernel_ep_sp_2walk(
 		const int     iwalk1,
 		const int3   *ij_disp,
 		const SpjGPU *spj, 
+#ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+        const int*   *id_spj,
+#endif
 		float4        accpi,
 		const float   eps2,
         const float   G)
@@ -342,8 +390,13 @@ __device__ float4 force_kernel_ep_sp_2walk(
 
     const int tid = threadIdx.x;
 	for(int j=0; j<nj_shorter; j+=N_THREAD_GPU){
+#ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+		jpsh[0][tid] = ((SpjGPU *)(spj + id_spj[jbeg0 + j])) [tid];
+		jpsh[1][tid] = ((SpjGPU *)(spj + id_spj[jbeg1 + j])) [tid];
+#else
 		jpsh[0][tid] = ((SpjGPU *)(spj + jbeg0 + j)) [tid];
 		jpsh[1][tid] = ((SpjGPU *)(spj + jbeg1 + j)) [tid];
+#endif
 		if(nj_shorter-j < N_THREAD_GPU){
 			for(int jj=0; jj<nj_shorter-j; jj++){
 				accpi = dev_gravity_ep_sp(eps2, G, posi, jpsh[mywalk][jj], accpi);
@@ -398,10 +451,13 @@ __global__ void force_kernel_ep_sp(
 		const int3   * ij_disp,
 		const EpiGPU * epi,
 		const SpjGPU * spj, 
+#ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+        const int*   *id_spj,
+#endif
 		ForceGPU     * force,
 		const float    eps2,
-        const float    G)
-{
+        const float    G) {
+
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
 	float3 posi    = epi[tid].pos;
 	int    id_walk = epi[tid].id_walk;
@@ -413,6 +469,18 @@ __global__ void force_kernel_ep_sp(
 
 	__shared__ SpjGPU jpsh[2][N_THREAD_GPU];
 
+#ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+	if(1 == nwalk_in_block){
+		accpi = force_kernel_ep_sp_1walk(jpsh[0], posi, id_walk, ij_disp, spj, id_spj, accpi, eps2, G);
+	} else if(2 == nwalk_in_block){
+		// accpi = force_kernel_ep_sp_multiwalk(posi, id_walk, ij_disp, spj, accpi, eps2);
+		int iwalk0 = epi[t_head].id_walk;
+		int iwalk1 = epi[t_tail].id_walk;
+		accpi = force_kernel_ep_sp_2walk(jpsh, posi, id_walk, iwalk0, iwalk1, ij_disp, spj, id_spj, accpi, eps2, G);
+	} else{
+		accpi = force_kernel_ep_sp_multiwalk(posi, id_walk, ij_disp, spj, id_spj, accpi, eps2, G);
+	}
+#else
 	if(1 == nwalk_in_block){
 		accpi = force_kernel_ep_sp_1walk(jpsh[0], posi, id_walk, ij_disp, spj, accpi, eps2, G);
 	} else if(2 == nwalk_in_block){
@@ -422,7 +490,8 @@ __global__ void force_kernel_ep_sp(
 		accpi = force_kernel_ep_sp_2walk(jpsh, posi, id_walk, iwalk0, iwalk1, ij_disp, spj, accpi, eps2, G);
 	} else{
 		accpi = force_kernel_ep_sp_multiwalk(posi, id_walk, ij_disp, spj, accpi, eps2, G);
-	}
+    }
+#endif
 	force[tid].accp = accpi;
 }
 
@@ -431,6 +500,7 @@ static cudaPointer<EpjGPU>    dev_epj;
 static cudaPointer<SpjGPU>    dev_spj;
 static cudaPointer<ForceGPU>  dev_force;
 static cudaPointer<int3>      ij_disp;
+
 static bool init_call = true;
 #ifdef GPU_PROFILE
 static cudaEvent_t cu_event_disp;
@@ -440,6 +510,169 @@ static cudaEvent_t cu_event_retr;
 static cudaEvent_t cu_event_dtoh;
 #endif
 
+#ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+
+static cudaPointer<int>      dev_id_epj;
+static cudaPointer<int>      dev_id_spj;
+
+PS::S32 DispatchKernelWithSPIndex(const PS::S32 tag,
+                                  const PS::S32 n_walk,
+                                  const EPISoft ** epi,
+                                  const PS::S32 *  n_epi,
+                                  const PS::S32 ** id_epj,
+                                  const PS::S32 *  n_epj,
+                                  const PS::S32 ** id_spj,
+                                  const PS::S32 *  n_spj,
+                                  const EPJSoft * epj,
+                                  const PS::S32 n_epj_tot,
+                                  const SPJSoft * spj,
+                                  const PS::S32 n_spj_tot,
+                                  const bool send_flag) {
+    assert(n_walk <= N_WALK_LIMIT);
+    if(init_call){
+		dev_epi  .allocate(NI_LIMIT);
+		dev_epj  .allocate(NJ_LIMIT);
+        dev_spj  .allocate(NJ_LIMIT);
+		dev_force.allocate(NI_LIMIT);
+		ij_disp  .allocate(N_WALK_LIMIT+2);
+        dev_id_epj .allocate(NJ_LIMIT);
+        dev_id_spj .allocate(NJ_LIMIT);
+        cudaEventCreate(&cu_event_disp);
+        cudaEventCreate(&cu_event_htod);
+        cudaEventCreate(&cu_event_calc);
+        cudaEventCreate(&cu_event_retr);
+        cudaEventCreate(&cu_event_dtoh);
+		init_call = false;
+    }
+
+    const float eps2 = EPISoft::eps * EPISoft::eps;
+    const PS::F64 rcut2 = EPISoft::r_out*EPISoft::r_out;
+    const PS::F64 G = ForceSoft::grav_const;
+
+    if(send_flag==true){
+#ifdef GPU_PROFILE
+        gpu_profile.copy.start();
+#endif
+        /*
+        if(dev_epj.size < n_epj_tot+n_spj_tot){
+            dev_epj.free();
+            dev_epj.allocate(n_epj_tot+n_spj_tot);
+        }
+        */
+#pragma omp parallel for
+        for(PS::S32 i=0; i<n_epj_tot; i++){
+            dev_epj[i].pos.x  = epj[i].pos.x;
+            dev_epj[i].pos.y  = epj[i].pos.y;
+            dev_epj[i].pos.z  = epj[i].pos.z;
+            dev_epj[i].m      = epj[i].mass;
+            dev_epj[i].r_search = epj[i].r_search;
+        }
+#pragma omp parallel for
+        for(PS::S32 i=0; i<n_spj_tot; i++){
+            dev_spj[i].pos.x  = spj[i].pos.x;
+            dev_spj[i].pos.y  = spj[i].pos.y;
+            dev_spj[i].pos.z  = spj[i].pos.z;
+            dev_spj[i].m      = spj[i].mass;
+#ifdef USE_QUAD
+            dev_spj[i].qxx    = spj[i].quad.xx;
+            dev_spj[i].qyy    = spj[i].quad.yy;
+            dev_spj[i].qzz    = spj[i].quad.zz;
+            dev_spj[i].qxy    = spj[i].quad.xy;
+            dev_spj[i].qxz    = spj[i].quad.xz;
+            dev_spj[i].qyz    = spj[i].quad.yz;
+#endif
+        }
+#ifdef GPU_PROFILE
+        gpu_profile.copy.end();
+        cudaEventRecord(cu_event_disp);
+#endif
+        dev_epj.htod(n_epj_tot);
+        dev_spj.htod(n_spj_tot);
+#ifdef GPU_PROFILE
+        cudaEventRecord(cu_event_htod);
+#endif
+        return 0;
+    }
+    else{
+#ifdef GPU_PROFILE
+        gpu_profile.copy.start();
+#endif
+        ij_disp[0].x = 0;
+        ij_disp[0].y = 0;
+        ij_disp[0].z = 0;
+        for(int k=0; k<n_walk; k++){
+            ij_disp[k+1].x = ij_disp[k].x + n_epi[k];
+            ij_disp[k+1].y = ij_disp[k].y + n_epj[k];
+            ij_disp[k+1].z = ij_disp[k].z + n_spj[k];
+        }
+        ij_disp[n_walk+1] = ij_disp[n_walk];
+        assert(ij_disp[n_walk].x < NI_LIMIT);
+        assert(ij_disp[n_walk].y < NJ_LIMIT);
+        assert(ij_disp[n_walk].z < NJ_LIMIT);
+
+        int ni_tot_reg = ij_disp[n_walk].x;
+        if(ni_tot_reg % N_THREAD_GPU){
+            ni_tot_reg /= N_THREAD_GPU;
+            ni_tot_reg++;
+            ni_tot_reg *= N_THREAD_GPU;
+        }
+
+        int ni_tot = ij_disp[n_walk].x;
+        int nej_tot = ij_disp[n_walk].y;
+        int nsj_tot = ij_disp[n_walk].z;
+
+#pragma omp parallel for schedule(dynamic)
+        for(int iw=0; iw<n_walk; iw++){
+            for(int i=0; i<n_epi[iw]; i++){
+                int ik = i+ij_disp[iw].x;
+                dev_epi[ik].pos.x = epi[iw][i].pos.x;
+                dev_epi[ik].pos.y = epi[iw][i].pos.y;
+                dev_epi[ik].pos.z = epi[iw][i].pos.z;
+                dev_epi[ik].r_search = epi[iw][i].r_search;
+                dev_epi[ik].id_walk = iw;
+            }
+            for(int j=0; j<n_epj[iw]; j++){
+                int jk = j+ij_disp[iw].y;
+                dev_id_epj[jk] = id_epj[iw][j];
+            }
+            for(int j=0; j<n_spj[iw]; j++){
+                int jk = j+ij_disp[iw].z;
+                dev_id_spj[jk] = id_spj[iw][j];
+            }
+        }
+        for(int i=ni_tot; i<ni_tot_reg; i++){
+            dev_epi[i].id_walk = n_walk;
+        }
+
+#ifdef GPU_PROFILE
+        gpu_profile.copy.end();
+        gpu_counter.n_walk+= n_walk;
+        gpu_counter.n_epi += ni_tot;
+        gpu_counter.n_epj += nej_tot;
+        gpu_counter.n_spj += nsj_tot;
+        gpu_counter.n_call+= 1;
+        cudaEventRecord(cu_event_disp);
+#endif
+        ij_disp.htod(n_walk + 2);
+        dev_epi.htod(ni_tot_reg);
+
+#ifdef GPU_PROFILE
+        cudaEventRecord(cu_event_htod);
+#endif
+
+        int nblocks  = ni_tot_reg / N_THREAD_GPU;
+        int nthreads = N_THREAD_GPU;
+        force_kernel_ep_ep <<<nblocks, nthreads>>> (ij_disp, dev_epi, dev_epj, dev_id_epj, dev_force, eps2, rcut2, G);
+        force_kernel_ep_sp <<<nblocks, nthreads>>> (ij_disp, dev_epi, dev_spj, dev_id_spj, dev_force, eps2, G);
+
+#ifdef GPU_PROFILE
+        cudaEventRecord(cu_event_calc);
+#endif
+        return 0;
+    }
+}
+
+#else
 PS::S32 DispatchKernelWithSP(const PS::S32  tag,
                              const PS::S32  n_walk,
                              const EPISoft *epi[],
@@ -559,6 +792,8 @@ PS::S32 DispatchKernelWithSP(const PS::S32  tag,
     return 0;
 }
 
+#endif
+
 PS::S32 RetrieveKernel(const PS::S32 tag,
                        const PS::S32 n_walk,
                        const PS::S32 ni[],
@@ -602,3 +837,4 @@ PS::S32 RetrieveKernel(const PS::S32 tag,
 #endif
     return 0;
 }
+
