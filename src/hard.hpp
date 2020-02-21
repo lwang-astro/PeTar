@@ -172,9 +172,9 @@ public:
 #ifdef HARD_DEBUG_PRINT
                       n_group_sub_init(), n_group_sub_tot_init(0),
 #endif
-                      use_sym_int(true), is_initialized(false),
+                      use_sym_int(true), is_initialized(false)
 #ifdef PROFILE
-                      ARC_substep_sum(0), ARC_tsyn_step_sum(0), H4_step_sum(0)
+                      , ARC_substep_sum(0), ARC_tsyn_step_sum(0), H4_step_sum(0)
 #endif
                       {
 #ifdef HARD_CHECK_ENERGY

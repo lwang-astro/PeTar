@@ -5,9 +5,6 @@
 
 int main(int argc, char *argv[]){
 
-#ifdef GPERF_PROFILE
-    ProfilerStart("prof.out");
-#endif
     PeTar petar;
 
     petar.initialFDPS(argc,argv);
@@ -23,6 +20,15 @@ int main(int argc, char *argv[]){
     petar.initialParameters();
 
     petar.initialStep();
+
+#ifdef GPERF_PROFILE
+    std::string rank_str;
+    std::stringstream atmp;
+    atmp<<petar.my_rank;
+    atmp>>rank_str;
+    std::string fproname=petar.input_parameters.fname_snp.value+".gperf.out.r"+rank_str;
+    ProfilerStart(fproname.c_str());
+#endif
 
 #if 0
     PS::F64 dt_break = inp.dt_snp.value;

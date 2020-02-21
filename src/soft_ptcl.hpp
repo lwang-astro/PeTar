@@ -4,10 +4,10 @@
 class ForceSoft{
 public:
     PS::F64vec acc; ///> soft acceleration (c.m.: averaged force from orbital particles; tensor: c.m. is substracted)
+    PS::F64 pot; ///> full potential
 #ifdef KDKDK_4TH
     PS::F64vec acorr; ///> soft gradient correction for 4th order KDKDK method
 #endif
-    PS::F64 pot; ///> full potential
     PS::S32 n_ngb; ///> neighbor number+1
     static PS::F64 grav_const; ///> gravitational constant
     void clear(){
@@ -234,6 +234,11 @@ public:
 //        return r_search * SAFTY_FACTOR_FOR_SEARCH + SAFTY_OFFSET_FOR_SEARCH;
         return r_search*SAFTY_FACTOR_FOR_SEARCH;
     }
+
+    PS::S64 getId() const {
+        return id;
+    }
+
     // FORDEBUG
     void print(std::ostream & fout=std::cout) const {
         fout<<" id="<<id
