@@ -100,10 +100,9 @@ endif # end x86
 #---------------------------------------------
 
 ifeq ($(use_gpu_cuda),yes)
-CUDAFLAGS  = -D PARTICLE_SIMULATOR_THREAD_PARALLEL 
-CUDAFLAGS += -D PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
-FDPSFLAGS += -D PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
-NVCC = nvcc -std=c++11 -Xcompiler="$(OPTFLAGS) $(CXXFLAGS) $(CUDAFLAGS)"
+CUDAFLAGS = -D PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+FDPSFLAGS += $(CUDAFLAGS)
+NVCC = nvcc -std=c++11 -Xcompiler="$(OPTFLAGS) $(CXXFLAGS) $(CUDAFLAGS) -D PARTICLE_SIMULATOR_THREAD_PARALLEL"
 CXXLIBS += -L$(CUDA_PATH)/lib64 -lcudart -lgomp
 force_gpu_cuda.o: force_gpu_cuda.cu
 	$(NVCC) $(INCLUDE) -I$(CUDA_PATH)/samples/common/inc -c $< -o $@ 

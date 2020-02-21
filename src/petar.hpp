@@ -902,22 +902,32 @@ private:
 #elif USE_GPU
         const PS::S32 n_walk_limit = 200;
         const PS::S32 tag_max = 1;
+#ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+        tree_soft.calcForceAllAndWriteBackMultiWalkIndex(DispatchKernelWithSPIndex,
+                                                         RetrieveKernel,
+                                                         tag_max,
+                                                         system_soft,
+                                                         dinfo,
+                                                         n_walk_limit);
+#else // no multi-walk index
         tree_soft.calcForceAllAndWriteBackMultiWalk(DispatchKernelWithSP,
                                                     RetrieveKernel,
                                                     tag_max,
                                                     system_soft,
                                                     dinfo,
                                                     n_walk_limit);
-#else
+#endif // multi-walk index
+
+#else // end gpu
         tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(),
 #ifdef USE_QUAD
                                            CalcForceEpSpQuadSimd(),
-#else
+#else // no quad
                                            CalcForceEpSpMonoSimd(),
-#endif
+#endif // end quad
                                            system_soft,
                                            dinfo);
-#endif
+#endif // end gpu
 
 #ifdef PROFILE
         n_count.ep_ep_interact     += tree_soft.getNumberOfInteractionEPEPLocal();
