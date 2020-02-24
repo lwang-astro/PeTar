@@ -256,9 +256,9 @@ struct NumCounter{
     }
 };
 
-class PsProfile: public PS::TimeProfile {
+class FDPSProfile: public PS::TimeProfile {
 public:
-    PsProfile &operator+=(const PS::TimeProfile _tp) {
+    FDPSProfile &operator+=(const PS::TimeProfile _tp) {
         *(TimeProfile*)this = *(TimeProfile*)this + _tp;
         return *this;
     }

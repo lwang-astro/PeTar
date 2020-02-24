@@ -559,7 +559,8 @@ public:
     SysProfile profile;
     SysCounts  n_count;
     SysCounts  n_count_sum;
-    PsProfile  ps_profile;
+    FDPSProfile  tree_soft_profile;
+    FDPSProfile  tree_nb_profile;
     std::ofstream fprofile;
 #endif
 
@@ -617,7 +618,7 @@ public:
     PeTar(): 
 #ifdef PROFILE
         // profile
-        dn_loop(0), profile(), n_count(), n_count_sum(), ps_profile(), fprofile(), 
+        dn_loop(0), profile(), n_count(), n_count_sum(), tree_soft_profile(), fprofile(), 
 #endif
         stat(), fstatus(), time_kick(0.0),
         file_header(), system_soft(), id_adr_map(),
@@ -780,6 +781,8 @@ private:
     void treeNeighborSearch() {
 #ifdef PROFILE
         profile.tree_nb.start();
+        tree_nb.clearNumberOfInteraction();
+        tree_nb.clearTimeProfile();
 #endif
 #ifndef USE_SIMD
         tree_nb.calcForceAllAndWriteBack(SearchNeighborEpEpNoSimd(), system_soft, dinfo);
@@ -788,6 +791,7 @@ private:
 #endif
         
 #ifdef PROFILE
+        tree_nb_profile += tree_nb.getTimeProfile();
         profile.tree_nb.barrier();
         PS::Comm::barrier();
         profile.tree_nb.end();
@@ -935,8 +939,8 @@ private:
         n_count.ep_sp_interact     += tree_soft.getNumberOfInteractionEPSPLocal();
         n_count_sum.ep_sp_interact += tree_soft.getNumberOfInteractionEPSPGlobal(); 
 
-        ps_profile += tree_soft.getTimeProfile();
-        domain_decompose_weight = ps_profile.calc_force;
+        tree_soft_profile += tree_soft.getTimeProfile();
+        domain_decompose_weight = tree_soft_profile.calc_force;
 
         profile.tree_soft.barrier();
         PS::Comm::barrier();
@@ -1040,8 +1044,8 @@ private:
         n_count.ep_sp_interact     += tree_soft.getNumberOfInteractionEPSPLocal();
         n_count_sum.ep_sp_interact += tree_soft.getNumberOfInteractionEPSPGlobal(); 
 
-        ps_profile += tree_soft.getTimeProfile();
-        domain_decompose_weight += ps_profile.calc_force;
+        tree_soft_profile += tree_soft.getTimeProfile();
+        domain_decompose_weight += tree_soft_profile.calc_force;
 
         profile.tree_soft.barrier();
         PS::Comm::barrier();
@@ -1802,10 +1806,16 @@ private:
             profile_max.dump(std::cout,PRINT_WIDTH,dn_loop);
             std::cout<<std::endl;
 
-            std::cout<<"**** FDPS time profile (local):\n";
-            ps_profile.dumpName(std::cout,PRINT_WIDTH);
+            std::cout<<"**** FDPS tree soft force time profile (local):\n";
+            tree_soft_profile.dumpName(std::cout,PRINT_WIDTH);
             std::cout<<std::endl;
-            ps_profile.dump(std::cout,PRINT_WIDTH,dn_loop);
+            tree_soft_profile.dump(std::cout,PRINT_WIDTH,dn_loop);
+            std::cout<<std::endl;
+
+            std::cout<<"**** Tree neighbor time profile (local):\n";
+            tree_nb_profile.dumpName(std::cout,PRINT_WIDTH);
+            std::cout<<std::endl;
+            tree_nb_profile.dump(std::cout,PRINT_WIDTH,dn_loop);
             std::cout<<std::endl;
 
 #if defined(USE_GPU) && defined(GPU_PROFILE)
@@ -1836,7 +1846,8 @@ private:
                     <<std::setw(WRITE_WIDTH)<<stat.n_real_loc;
             profile.dump(fprofile, WRITE_WIDTH, dn_loop);
             profile.dumpBarrier(fprofile, WRITE_WIDTH, dn_loop);
-            ps_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
+            tree_soft_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
+            tree_nb_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
 #if defined(USE_GPU) && defined(GPU_PROFILE)
             gpu_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
 #endif
@@ -1845,7 +1856,8 @@ private:
         }
 
         profile.clear();
-        ps_profile.clear();
+        tree_soft_profile.clear();
+        tree_nb_profile.clear();
 #if defined(USE_GPU) && defined(GPU_PROFILE)
         gpu_profile.clear();
         gpu_counter.clear();
