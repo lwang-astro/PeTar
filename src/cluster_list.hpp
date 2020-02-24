@@ -443,7 +443,7 @@ public:
             ptcl_cluster_[ith].clearSize();
             for(PS::S32 i=0; i<ptcl_outer[ith].size(); i++) ptcl_outer[ith][i].clear();
             ptcl_outer[ith].clearSize();
-#pragma omp for
+#pragma omp for 
             for(PS::S32 i=0; i<n_loc; i++){
                 if(sys[i].n_ngb == 1){
                     // no neighbor
@@ -466,10 +466,26 @@ public:
                 else{
                     // has neighbor
                     Tepj * nbl = NULL;
+
+#ifdef SAVE_NEIGHBOR_ID_IN_FORCE_KERNEL
+                    Tepj nb_pack[4];
+                    // use saved index to get epj
+                    PS::S32 n_ngb_force_i = sys[i].n_ngb;
+                    
+                    if (n_ngb_force_i<=4) {
+                        for (PS::S32 k=0; k<n_ngb_force_i; k++) {
+                            nb_pack[k] = *tree.getEpjFromId(sys[i].id_ngb[k]);
+                        }
+                        nbl = nb_pack;
+                        sys[i].n_ngb--;
+                    }
+                    else sys[i].n_ngb = tree.getNeighborListOneParticle(sys[i], nbl) - 1;
+#else
 #ifdef CLUSTER_DEBUG
                     PS::S32 n_ngb_force_i = sys[i].n_ngb;
 #endif
                     sys[i].n_ngb = tree.getNeighborListOneParticle(sys[i], nbl) - 1;
+#endif
 #ifdef CLUSTER_DEBUG
                     if(n_ngb_force_i<sys[i].n_ngb+1) {
                         std::cerr<<"Error: particle "<<i<<" Tree neighbor search number ("<<sys[i].n_ngb+1<<") is inconsistent with force kernel neighbor number ("<<n_ngb_force_i<<")!\n Neighbor ID from tree: ";

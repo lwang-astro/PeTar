@@ -16,12 +16,15 @@ struct SearchNeighborEpEpNoSimd{
                       ForceSoft * force){
         for(PS::S32 i=0; i<n_ip; i++){
             const PS::F64vec xi = ep_i[i].pos;
-            PS::F64 n_ngb_i = 0;
+            PS::S32 n_ngb_i = 0;
             for(PS::S32 j=0; j<n_jp; j++){
                 const PS::F64vec rij = xi - ep_j[j].pos;
                 const PS::F64 r2 = rij * rij;
                 const PS::F64 r_search = std::max(ep_i[i].r_search,ep_j[j].r_search);
                 if(r2 < r_search*r_search){
+#ifdef SAVE_NEIGHBOR_ID_IN_FORCE_KERNEL
+                    force[i].id_ngb[n_ngb_i & 0x3] = ep_j[j].id;
+#endif
                     n_ngb_i++;
                 }
             }

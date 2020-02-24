@@ -393,12 +393,6 @@ private:
                 r2_real = _mm512_fmadd_ps(dz, dz, r2_real);
                 
 #ifdef AVX_PRELOAD
-                v16sf mri1 = _mm512_mul_ps(ri1, mj);
-#else
-                v16sf mri1 = _mm512_mul_ps(ri1, _mm512_set1_ps(epjbuf[j][3]));
-#endif
-                v16sf mri3 = _mm512_mul_ps(mri1, ri2);
-#ifdef AVX_PRELOAD
                 xj =  _mm512_shuffle_ps(jbuf, jbuf, 0x00);
                 yj =  _mm512_shuffle_ps(jbuf, jbuf, 0x55);
                 zj =  _mm512_shuffle_ps(jbuf, jbuf, 0xaa);

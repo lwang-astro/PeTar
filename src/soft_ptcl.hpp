@@ -8,12 +8,18 @@ public:
 #ifdef KDKDK_4TH
     PS::F64vec acorr; ///> soft gradient correction for 4th order KDKDK method
 #endif
+#ifdef SAVE_NEIGHBOR_ID_IN_FORCE_KERNEL
+    PS::S64 id_ngb[4]; /// five neighbor id
+#endif
     PS::S32 n_ngb; ///> neighbor number+1
     static PS::F64 grav_const; ///> gravitational constant
     void clear(){
         acc = 0.0;
         pot = 0.0;
         n_ngb = 0;
+#ifdef SAVE_NEIGHBOR_ID_IN_FORCE_KERNEL
+        id_ngb[0] = id_ngb[1] = id_ngb[2] = id_ngb[3] = 0;
+#endif
     }
 };
 
@@ -24,6 +30,7 @@ public:
     PS::F64vec acorr;
 #endif
     PS::F64 pot_tot; // soft + hard
+    PS::S64 id_ngb[4];
     PS::S32 n_ngb;
     PS::S32 rank_org;
     PS::S32 adr;
@@ -66,10 +73,13 @@ public:
 
     void copyFromForce(const ForceSoft & force){
         acc = force.acc;
+        pot_tot = force.pot;
 #ifdef KDKDK_4TH
         acorr = force.acorr;
 #endif
-        pot_tot = force.pot;
+#ifdef SAVE_NEIGHBOR_ID_IN_FORCE_KERNEL
+        for (int k=0; k<4; k++) id_ngb[k] = force.id_ngb[k];
+#endif
         n_ngb = force.n_ngb;
     }
 
