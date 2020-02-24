@@ -30,7 +30,9 @@ public:
     PS::F64vec acorr;
 #endif
     PS::F64 pot_tot; // soft + hard
+#ifdef SAVE_NEIGHBOR_ID_IN_FORCE_KERNEL
     PS::S64 id_ngb[4];
+#endif
     PS::S32 n_ngb;
     PS::S32 rank_org;
     PS::S32 adr;

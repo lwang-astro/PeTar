@@ -832,20 +832,6 @@ public:
                  <<"  dE_SD_CHANGE: "<<de_sd_change_cum
                  <<std::endl;
 #endif        
-#ifdef HARD_CLUSTER_PRINT
-        std::cerr<<"Hard cluster: dE_SD: "<<de_sd
-                 <<" dE: "<<de
-                 <<" Ekin: "<<ekin
-                 <<" Epot: "<<epot
-                 <<" Ekin_SD: "<<ekin_sd
-                 <<" Epot_SD: "<<epot_sd
-                 <<" H4_step(single): "<<H4_step_sum
-                 <<" AR_step: "<<ARC_substep_sum
-                 <<" AR_step(tsyn): "<<ARC_tsyn_step_sum
-                 <<" n_ptcl: "<<_n_ptcl
-                 <<" n_group: "<<_n_group
-                 <<std::endl;
-#endif
         if (abs(de_sd) > manager->energy_error_max) {
             std::cerr<<"Hard energy significant ("<<de_sd<<") !\n";
             DATADUMP("hard_large_energy");
@@ -1053,6 +1039,9 @@ private:
         PS::F64 G = ForceSoft::grav_const;
         const PS::F64vec dr = _pi.pos - _pj.pos;
         const PS::F64 dr2 = dr * dr;
+#ifdef HARD_DEBUG
+        assert(dr2>0.0);
+#endif
         const PS::F64 dr2_eps = dr2 + manager->eps_sq;
         const PS::F64 r_out = manager->r_out_base;
         const PS::F64 r_out2 = r_out * r_out;
@@ -1104,6 +1093,9 @@ private:
         PS::F64 G = ForceSoft::grav_const;
         const PS::F64vec dr = _pi.pos - _pj.pos;
         const PS::F64 dr2 = dr * dr;
+#ifdef HARD_DEBUG
+        assert(dr2>0.0);
+#endif
         const PS::F64 dr2_eps = dr2 + manager->eps_sq;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
         const PS::F64 gmor = G*_pj.mass * drinv;
@@ -2346,11 +2338,7 @@ public:
             PS::S32* i_end = std::unique(i_cluster_data, i_cluster_data+i_cluster_size);
 #ifdef HARD_DEBUG
             assert(i_end-i_cluster_data>=0&&i_end-i_cluster_data<=i_cluster_size);
-            std::cerr<<"Changeover change cluster found: T="<<time_origin_<<" i_cluster=";
-            for (auto k=i_cluster_data; k<i_end; k++) {
-                std::cerr<<*k<<" ";
-            }
-            std::cerr<<std::endl;
+            std::cerr<<"Changeover change cluster found: T="<<time_origin_<<" n_cluster_change="<<int(i_end-i_cluster_data)<<std::endl;
 #endif
             i_cluster_changeover_update_.resizeNoInitialize(i_end-i_cluster_data);
         }
@@ -2575,17 +2563,18 @@ public:
     void correctForceForChangeOverUpdateOMP(Tsys& _sys, Ttree& _tree, 
                                             const PS::S32*  _adr_send=NULL, const PS::S32 _n_send=0) {
         const PS::S32 n_cluster = i_cluster_changeover_update_.size();
-        auto& ap_manager = manager->ap_manager;
+        //auto& ap_manager = manager->ap_manager;
 #pragma omp parallel for schedule(dynamic)
         for (int i=0; i<n_cluster; i++) {  // i: i_cluster
             PS::S32 i_cluster = i_cluster_changeover_update_[i];
             PS::S32 adr_real_start= n_ptcl_in_cluster_disp_[i_cluster];
             PS::S32 adr_real_end= n_ptcl_in_cluster_disp_[i_cluster+1];
+            
+            // correction for artificial particles
+            /* c.m. force is not sum of orbital force anymore, suppress this part
             // artificial particle group number
             PS::S32 n_group = n_group_in_cluster_[i_cluster];
             const PS::S32* adr_first_ptcl_arti = n_group>0? &adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i_cluster]] : NULL;
-            
-            // correction for artificial particles
             for (int j=0; j<n_group; j++) {  // j: j_group
                 PS::S32 j_start = adr_first_ptcl_arti[j];
                 auto* pj = &(_sys[j_start]);
@@ -2605,10 +2594,9 @@ public:
 
                         // particle arti orbital
                         if (porb_kj[0].changeover.r_scale_next!=1.0 || changek) {
-                            
                             for (int kk=0; kk<n_orb; kk++) {
                                 if(&porb_kj[kk]==&porb_j[k]) continue; //avoid same particle
-                         
+                                // in rare case, equal mass systems with circular orbit can have two members locating at the same positions, this can result in dr2=0 and NaN
                                 calcAccChangeOverCorrection(porb_j[k], porb_kj[kk]);
                             }
                         }
@@ -2625,6 +2613,7 @@ public:
                 // correct c.m. average force
                 ap_manager.correctOrbitalParticleForce(pj);
             }
+            */
 
             // correction for real particles
             for (int j=adr_real_start; j<adr_real_end; j++) {

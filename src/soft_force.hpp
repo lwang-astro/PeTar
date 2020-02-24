@@ -121,6 +121,12 @@ struct CalcForceEpEpWithLinearCutoffNoSimd{
             force[i].acorr = 0.0;
 #endif
             force[i].pot += G*poti;
+#ifdef NAN_CHECK_DEBUG
+            assert(!std::isnan(ai[0]));
+            assert(!std::isnan(ai[1]));
+            assert(!std::isnan(ai[2]));
+            assert(!std::isnan(poti));
+#endif
             force[i].n_ngb = n_ngb_i;
         }
     }
@@ -187,6 +193,12 @@ struct CalcForceEpSpMonoNoSimd {
             }
             force[i].acc += G*ai;
             force[i].pot += G*poti;
+#ifdef NAN_CHECK_DEBUG
+            assert(!std::isnan(ai[0]));
+            assert(!std::isnan(ai[1]));
+            assert(!std::isnan(ai[2]));
+            assert(!std::isnan(poti));
+#endif
         }
     }
 };
@@ -356,6 +368,12 @@ struct CalcForceEpEpWithLinearCutoffSimd{
                 PS::F64 a[3]= {0,0,0};
                 PS::F64 n_ngb = 0;
                 pg.accum_accp_one(k, a[0], a[1], a[2], p, n_ngb);
+#ifdef NAN_CHECK_DEBUG
+                assert(!std::isnan(a[0]));
+                assert(!std::isnan(a[1]));
+                assert(!std::isnan(a[2]));
+                assert(!std::isnan(p));
+#endif
                 force[i].acc[0] += G*a[0];
                 force[i].acc[1] += G*a[1];
                 force[i].acc[2] += G*a[2];
@@ -419,6 +437,12 @@ struct CalcForceEpSpMonoSimd{
                 force[i].acc[1] += G*a[1];
                 force[i].acc[2] += G*a[2];
                 force[i].pot += G*p;
+#ifdef NAN_CHECK_DEBUG
+                assert(!std::isnan(a[0]));
+                assert(!std::isnan(a[1]));
+                assert(!std::isnan(a[2]));
+                assert(!std::isnan(p));
+#endif
             }
         }
     }
@@ -474,6 +498,12 @@ struct CalcForceEpSpQuadSimd{
                 PS::F64 p = 0;
                 PS::F64 a[3]= {0,0,0};
                 pg.accum_accp_one(k, a[0], a[1], a[2], p);
+#ifdef NAN_CHECK_DEBUG
+                assert(!std::isnan(a[0]));
+                assert(!std::isnan(a[1]));
+                assert(!std::isnan(a[2]));
+                assert(!std::isnan(p));
+#endif
                 force[i].acc[0] += G*a[0];
                 force[i].acc[1] += G*a[1];
                 force[i].acc[2] += G*a[2];

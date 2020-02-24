@@ -5,6 +5,10 @@
 
 int main(int argc, char *argv[]){
 
+#ifdef NAN_CHECK_DEBUG
+    assert(std::isnan(NAN));
+#endif
+
     PeTar petar;
 
     petar.initialFDPS(argc,argv);

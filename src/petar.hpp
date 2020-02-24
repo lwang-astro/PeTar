@@ -1130,11 +1130,17 @@ private:
 #ifdef HARD_DEBUG
                 assert(cm_adr>0);
                 assert(pi_artificial.mass_backup>0); 
+                assert(cm_adr<stat.n_all_loc);
 #endif
                 _ptcl[i].mass = pi_artificial.mass_backup;
 #ifdef KDKDK_4TH
                 _ptcl[i].vel  += _dt*(_sys[cm_adr].acc + 9.0/192.0*_dt*_dt*_sys[cm_adr].acorr); 
 #else
+#ifdef NAN_CHECK_DEBUG
+                assert(!std::isnan(_sys[cm_adr].acc[0]));
+                assert(!std::isnan(_sys[cm_adr].acc[1]));
+                assert(!std::isnan(_sys[cm_adr].acc[2]));
+#endif
                 _ptcl[i].vel += _sys[cm_adr].acc * _dt;
 #endif
             }

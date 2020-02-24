@@ -30,6 +30,11 @@ public:
             auto& pi = _tsys[i];
             PS::F64 mi = pi.mass;
             mass  += mi;
+#ifdef NAN_CHECK_DEBUG
+            assert(!std::isnan(pi.vel.x));
+            assert(!std::isnan(pi.vel.y));
+            assert(!std::isnan(pi.vel.z));
+#endif
             x += mi*pi.pos.x;
             y += mi*pi.pos.y;
             z += mi*pi.pos.z;
