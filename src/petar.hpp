@@ -174,7 +174,7 @@ public:
                      r_search_min (input_par_store, 0.0,  "Minimum search radius  value","auto"),
                      sd_factor    (input_par_store, 1e-4, "Slowdown perturbation criterion"),
                      data_format  (input_par_store, 1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),
-                     write_style  (input_par_store, 1,    "File Writing style: 0, no output; 1. write snapshots and status separately; 2. write all data in one line per step (no MPI support)"),
+                     write_style  (input_par_store, 1,    "File Writing style: 0, no output; 1. write snapshots, status and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile"),
                      interrupt_detection_option(input_par_store, 0, "detect interruption", "no"),
                      fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]"),
                      fname_par(input_par_store, "input.par", "Input parameter file (this option should be used first before any other options)"),
@@ -1708,6 +1708,11 @@ private:
             for (int i=0; i<stat.n_real_loc; i++) system_soft[i].printColumn(fstatus, WRITE_WIDTH);
             fstatus<<std::endl;
         }
+        // write status only
+        else if(write_style==3&&my_rank==0) {
+            stat.printColumn(fstatus, WRITE_WIDTH);
+            fstatus<<std::endl;
+        }
 
 #ifdef PROFILE
         profile.output.barrier();
@@ -1790,7 +1795,21 @@ private:
 
     }
 
-    // output profile data
+    //! clear profile
+    void clearProfile() {
+        profile.clear();
+        tree_soft_profile.clear();
+        tree_nb_profile.clear();
+#if defined(USE_GPU) && defined(GPU_PROFILE)
+        gpu_profile.clear();
+        gpu_counter.clear();
+#endif
+        n_count.clear();
+        n_count_sum.clear();
+        dn_loop=0;
+    }
+
+    //! output profile data
     void printProfile() {
 
         const SysProfile& profile_min = profile.getMin();
@@ -1860,17 +1879,6 @@ private:
             n_count.dump(fprofile, WRITE_WIDTH, dn_loop);
             fprofile<<std::endl;
         }
-
-        profile.clear();
-        tree_soft_profile.clear();
-        tree_nb_profile.clear();
-#if defined(USE_GPU) && defined(GPU_PROFILE)
-        gpu_profile.clear();
-        gpu_counter.clear();
-#endif
-        n_count.clear();
-        n_count_sum.clear();
-        dn_loop=0;
     }
 #endif
 
@@ -2208,7 +2216,24 @@ public:
             atmp>>rank_str;
             std::string fproname=input_parameters.fname_snp.value+".prof.rank."+rank_str;
             if(input_parameters.app_flag) fprofile.open(fproname.c_str(),std::ofstream::out|std::ofstream::app);
-            else  fprofile.open(fproname.c_str(),std::ofstream::out);
+            else  {
+                fprofile.open(fproname.c_str(),std::ofstream::out);
+
+                fprofile<<std::setprecision(WRITE_PRECISION);
+                fprofile<<std::setw(WRITE_WIDTH)<<"my_rank"
+                        <<std::setw(WRITE_WIDTH)<<"Time"
+                        <<std::setw(WRITE_WIDTH)<<"N_steps"
+                        <<std::setw(WRITE_WIDTH)<<"N_real_loc";
+                profile.dumpName(fprofile, WRITE_WIDTH);
+                profile.dumpBarrierName(fprofile, WRITE_WIDTH);
+                tree_soft_profile.dumpName(fprofile, WRITE_WIDTH);
+                tree_nb_profile.dumpName(fprofile, WRITE_WIDTH);
+#if defined(USE_GPU) && defined(GPU_PROFILE)
+                gpu_profile.dumpName(fprofile, WRITE_WIDTH);
+#endif
+                n_count.dumpName(fprofile, WRITE_WIDTH);
+                fprofile<<std::endl;
+            }
         }
 #endif    
 
@@ -2474,6 +2499,9 @@ public:
         setParticleGroupDataToCMData();
 #endif
 
+#ifdef PROFILE
+        clearProfile();
+#endif
         initial_step_flag = true;
     }
 
@@ -2616,6 +2644,7 @@ public:
                 profile.tot.end();
 
                 printProfile();
+                clearProfile();
 
                 profile.tot.start();
 #endif

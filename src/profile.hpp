@@ -211,8 +211,14 @@ struct Tprofile{
         return PS::Comm::getMinValue(time-tbar);
     }
 
-    void dumpName(std::ostream & fout, const PS::S32 width=20) {
+    void dumpName(std::ostream & fout, const PS::S32 width=20) const {
         fout<<std::setw(width)<<name;
+    }
+
+    void dumpBarrierName(std::ostream & fout, const PS::S32 width=20) const {
+        std::string sname("Bar_");
+        sname += name;
+        fout<<std::setw(width)<<sname;
     }
 
     void reset() {
@@ -243,15 +249,15 @@ struct NumCounter{
         return *this;
     }
 
-    void print(std::ostream & fout, const PS::S32 divider=1){
+    void print(std::ostream & fout, const PS::S32 divider=1) const{
         fout<<name<<": "<<((divider==1)?n:(PS::F64)n/divider)<<std::endl;
     }
 
-    void dump(std::ostream & fout, const PS::S32 width=20, const PS::S32 divider=1){
+    void dump(std::ostream & fout, const PS::S32 width=20, const PS::S32 divider=1) const {
         fout<<std::setw(width)<<((divider==1)?n:(PS::F64)n/divider);
     }
 
-    void dumpName(std::ostream & fout, const PS::S32 width=20) {
+    void dumpName(std::ostream & fout, const PS::S32 width=20) const {
         fout<<std::setw(width)<<name;
     }
 };
@@ -263,22 +269,7 @@ public:
         return *this;
     }
 
-//    void dumpName(std::ofstream & fout, const PS::S32 width=20) {
-//        fout<<std::setw(width)<<"collect_sam_ptcl"
-//            <<std::setw(width)<<"decompose_domain"
-//            <<std::setw(width)<<"exchange_ptcl"
-//            <<std::setw(width)<<"make_local_tree"
-//            <<std::setw(width)<<"make_global_tree"
-//            <<std::setw(width)<<"calc_force"
-//            <<std::setw(width)<<"calc_mom_loc_tree"
-//            <<std::setw(width)<<"calc_mom_gb_tree"
-//            <<std::setw(width)<<"make_LET_1st"
-//            <<std::setw(width)<<"make_LET_2nd"
-//            <<std::setw(width)<<"exchange_LET_1st"
-//            <<std::setw(width)<<"exchange_LET_2nd";
-//    }
-
-    void dumpName(std::ostream & fout, const PS::S32 width=10) {
+    void dumpName(std::ostream & fout, const PS::S32 width=10) const {
         fout<<std::setw(width)<<"collect_sam_ptcl"
             <<std::setw(width)<<"decompose_domain"
             <<std::setw(width)<<"exchange_ptcl"
@@ -305,21 +296,6 @@ public:
 //            <<std::setw(width)<<"ex_LET_2";
     }
     
-//    void dump(std::ofstream & fout, const PS::S32 width=20, const PS::S64 n_loop=1){
-//        fout<<std::setw(width)<<collect_sample_particle/n_loop 
-//            <<std::setw(width)<<decompose_domain       /n_loop 
-//            <<std::setw(width)<<exchange_particle      /n_loop 
-//            <<std::setw(width)<<make_local_tree        /n_loop 
-//            <<std::setw(width)<<make_global_tree       /n_loop 
-//            <<std::setw(width)<<calc_force             /n_loop 
-//            <<std::setw(width)<<calc_moment_local_tree /n_loop 
-//            <<std::setw(width)<<calc_moment_global_tree/n_loop 
-//            <<std::setw(width)<<make_LET_1st           /n_loop 
-//            <<std::setw(width)<<make_LET_2nd           /n_loop 
-//            <<std::setw(width)<<exchange_LET_1st       /n_loop 
-//            <<std::setw(width)<<exchange_LET_2nd       /n_loop;
-//    }
-
     void dump(std::ostream & fout, const PS::S32 width=10, const PS::S64 n_loop=1){
         fout<<std::setw(width)<<collect_sample_particle/n_loop 
             <<std::setw(width)<<decompose_domain       /n_loop 
@@ -385,19 +361,6 @@ public:
         }
     }
 
-//    void dump(std::ofstream & fout, const PS::S32 width=20, const PS::S64 n_loop=1){
-//        for(PS::S32 i=0; i<n_profile; i++) {
-//            Tprofile* iptr = (Tprofile*)this+i;
-//            iptr->dump(fout, width, n_loop);
-//        }
-//    }
-// 
-//    void dumpName(std::ofstream & fout, const PS::S32 width=20) {
-//        for(PS::S32 i=0; i<n_profile; i++) {
-//            Tprofile* iptr = (Tprofile*)this+i;
-//            iptr->dumpName(fout, width);
-//        }
-//    }
     
     void dump(std::ostream & fout, const PS::S32 width=20, const PS::S64 n_loop=1) const {
         for(PS::S32 i=0; i<n_profile; i++) {
@@ -406,10 +369,24 @@ public:
         }
     }
 
+    void dumpName(std::ostream & fout, const PS::S32 width=20) const {
+        for(PS::S32 i=0; i<n_profile; i++) {
+            Tprofile* iptr = (Tprofile*)this+i;
+            iptr->dumpName(fout, width);
+        }
+    }
+
     void dumpBarrier(std::ostream & fout, const PS::S32 width=20, const PS::S64 n_loop=1) const {
         for(PS::S32 i=0; i<n_profile; i++) {
             Tprofile* iptr = (Tprofile*)this+i;
             iptr->dumpBarrier(fout, width, n_loop);
+        }
+    }
+
+    void dumpBarrierName(std::ostream & fout, const PS::S32 width=20) const {
+        for(PS::S32 i=0; i<n_profile; i++) {
+            Tprofile* iptr = (Tprofile*)this+i;
+            iptr->dumpBarrierName(fout, width);
         }
     }
 
@@ -433,13 +410,6 @@ public:
         return pmin;
     }
 
-    void dumpName(std::ostream & fout, const PS::S32 width=20) {
-        for(PS::S32 i=0; i<n_profile; i++) {
-            Tprofile* iptr = (Tprofile*)this+i;
-            iptr->dumpName(fout, width);
-        }
-    }
-    
     void clear(){
         for(PS::S32 i=0; i<n_profile; i++) {
             Tprofile* iptr = (Tprofile*)this+i;
