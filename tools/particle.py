@@ -2,28 +2,25 @@
 import numpy as np
 from scipy import spatial as sp
 
-# data class
 class ParticleArray:
-    def __init__ (self, _dat, _sel=True):
+    """ Particle class 
+    """
+    def __init__ (self, _dat=np.empty([0,18]), _sel=True):
+        """
+        _dat: np.ndarray type data reading from snapshot or ParticleArray type
+        _sel: if the value is true(bool), copy the data, else give the address (if _dat is ParticleArray type); if the value is bool array (same size as the particle number)CCCCCC, select the data based on array
+        """
+        # if _dat is same type
         if (isinstance(_dat,ParticleArray)):
             if (type(_sel)==bool):
                 if (_sel==True):
-                    self = _dat
+                    self = _dat.copy()
             elif (type(_sel)==np.ndarray):
-                self.m        = _dat.m       [_sel] 
-                self.pos      = _dat.pos     [_sel] 
-                self.vel      = _dat.vel     [_sel] 
-                self.r_search = _dat.r_search[_sel] 
-                self.id       = _dat.id      [_sel] 
-                self.mass_bk  = _dat.mass_bk [_sel] 
-                self.status   = _dat.status  [_sel] 
-                self.r_in     = _dat.r_in    [_sel] 
-                self.r_out    = _dat.r_out   [_sel] 
-                self.acc      = _dat.acc     [_sel] 
-                self.pot      = _dat.pot     [_sel] 
-                self.n_nb     = _dat.n_nb    [_sel] 
+                for key in _dat.__dict__.keys():
+                    self.__dict__[key] = _dat.__dict__[key][_sel]
             else:
-                raise ValueError('Initial fail: _sel type error',type(_sel))
+                raise ValueError('Initial fail: _sel type should be bool or np.ndarray, given ',type(_sel))
+        # if _dat is array
         elif (type(_dat)==np.ndarray):
             dat = _dat
             if (type(_sel)==bool):
@@ -32,7 +29,7 @@ class ParticleArray:
             elif (type(_sel)==np.ndarray):
                 dat = _dat[_sel]
             else:
-                raise ValueError('Initial fail: _sel type error',type(_sel))
+                raise ValueError('Initial fail: _sel type should be bool or np.ndarray, given ',type(_sel))
             self.m        = dat[:,0]
             self.pos      = dat[:,1:4]
             self.vel      = dat[:,4:7]
@@ -46,20 +43,37 @@ class ParticleArray:
             self.pot      = dat[:,16]
             self.n_nb     = dat[:,17]
         else:
-            raise ValueError("Initial fail, date type error",type(_dat))
+            raise ValueError('Initial fail, date type should be ParticleArray or np.ndarray, given ',type(_dat))
 
-# Unit class for scaling
+def JoinParticleArray(*_dat):
+    """
+    Join multiple particle array to one
+    """
+    for idat in _dat:
+        if (not isinstance(idat,ParticleArray)):
+            raise ValueError('Initial fail, date type should be ParticleArray or np.ndarray, given ',type(idat))
+    keys = _dat[0].__dict__.keys()
+    new_dat = ParticleArray()
+    for key in keys:
+        new_dat.__dict__[key] = np.concatenate(tuple(map(lambda x:x.__dict__[key], _dat)))
+    return new_dat
+
 class Units:
+    """
+    Unit class for scaling
+    """
     G = 1
     r = 1
     v = 1
     m = 1
 
-# calculate binary orbit from particles
-# _p1, _p2: data class
-# _units: unit class
-# return: semi, ecc
 def particleToBinary(_p1,_p2, _units):
+    """
+    calculate binary orbit from particles
+    _p1, _p2: data class
+    _units: unit class
+    return: semi, ecc
+    """
     dr = (_p1.pos - _p2.pos)*_units.r
     dv = (_p1.vel - _p2.vel)*_units.v
     
@@ -75,9 +89,12 @@ def particleToBinary(_p1,_p2, _units):
     ecc = np.sqrt(dr_semi*dr_semi + rvdot*rvdot/(_units.G*m*semi))
     return semi,ecc
 
-# _dat: snapshot array
-# return: members, semi, ecc, separation
 def findPair(_dat):
+    """
+    Find paris
+    _dat: snapshot array
+    return: members, semi, ecc, separation
+    """
     if (not isinstance(_dat,ParticleArray)):
         raise ValueError("Data type wrong",type(_dat))
     
