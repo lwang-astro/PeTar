@@ -1875,6 +1875,7 @@ private:
             tree_nb_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
 #if defined(USE_GPU) && defined(GPU_PROFILE)
             gpu_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
+            gpu_counter.dump(fprofile, WRITE_WIDTH, dn_loop);
 #endif
             n_count.dump(fprofile, WRITE_WIDTH, dn_loop);
             fprofile<<std::endl;
@@ -2230,6 +2231,7 @@ public:
                 tree_nb_profile.dumpName(fprofile, WRITE_WIDTH);
 #if defined(USE_GPU) && defined(GPU_PROFILE)
                 gpu_profile.dumpName(fprofile, WRITE_WIDTH);
+                gpu_counter.dumpName(fprofile, WRITE_WIDTH);
 #endif
                 n_count.dumpName(fprofile, WRITE_WIDTH);
                 fprofile<<std::endl;
