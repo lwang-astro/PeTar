@@ -153,18 +153,23 @@ public:
     PS::S32 n_group_sub_tot_init; ///> total sub groups in all groups initially
 #endif
 
-    bool use_sym_int;  ///> use AR integrator flag
-    bool is_initialized; ///> indicator whether initialization is done
-
 #ifdef PROFILE
     PS::S64 ARC_substep_sum;
     PS::S64 ARC_tsyn_step_sum;
     PS::S64 H4_step_sum;
 #endif
+
+#ifdef HARD_COUNT_NO_NEIGHBOR
+    PS::ReallocatableArray<bool> table_neighbor_exist;
+    PS::S32 n_neighbor_zero;
+#endif
+
+    bool use_sym_int;  ///> use AR integrator flag
+    bool is_initialized; ///> indicator whether initialization is done
+
 #ifdef HARD_CHECK_ENERGY
     HardEnergy energy;
 #endif
-
 
     //! initializer
     HardIntegrator(): h4_int(), sym_int(), manager(NULL), tidal_tensor(), time_origin(-1.0), ptcl_origin(NULL), 
@@ -172,11 +177,13 @@ public:
 #ifdef HARD_DEBUG_PRINT
                       n_group_sub_init(), n_group_sub_tot_init(0),
 #endif
-                      use_sym_int(true), is_initialized(false)
 #ifdef PROFILE
-                      , ARC_substep_sum(0), ARC_tsyn_step_sum(0), H4_step_sum(0)
+                      ARC_substep_sum(0), ARC_tsyn_step_sum(0), H4_step_sum(0), 
 #endif
-                      {
+#ifdef HARD_COUNT_NO_NEIGHBOR
+                      table_neighbor_exist(), n_neighbor_zero(0),
+#endif
+                      use_sym_int(true), is_initialized(false) {
 #ifdef HARD_CHECK_ENERGY
                           energy.clear();
 #endif
@@ -360,6 +367,10 @@ public:
             // Tidal tensor 
             tidal_tensor.resizeNoInitialize(_n_group+1);
 #endif
+#ifdef HARD_COUNT_NO_NEIGHBOR
+            table_neighbor_exist.resizeNoInitialize(_n_ptcl);
+            for (int k=0; k<_n_ptcl; k++) table_neighbor_exist[k] = false;
+#endif
             
             // add groups
             if (_n_group>0) {
@@ -519,6 +530,10 @@ public:
                 // when binary is interrupted, break integration loop
                 if (interrupt_binary_adr!=NULL) break;
 
+#ifdef HARD_COUNT_NO_NEIGHBOR
+                checkNeighborExist();
+#endif
+
                 // integrate singles
                 h4_int.integrateSingleOneStepAct();
                 h4_int.adjustGroups(false);
@@ -532,6 +547,7 @@ public:
                     PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
                     ASSERT(m_fac>0.0);
                     pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+                    
 
 #ifdef SOFT_PERT                
                     // find corresponding tidal tensor if exist
@@ -653,6 +669,45 @@ public:
         }
         return interrupt_binary_adr;
     }
+
+#ifdef HARD_COUNT_NO_NEIGHBOR
+    //! check whether the closest neighbor is < r_out
+    void checkNeighborExist() {
+        PS::S32 index_offset_group = h4_int.getIndexOffsetGroup();
+        PS::S32 n_act_single = h4_int.getNActSingle();
+        PS::S32* act_single_index = h4_int.getSortDtIndexSingle();
+        for (int k=0; k<n_act_single; k++) {
+            PS::S32 i = act_single_index[k];
+            ASSERT(i>=0&&i<h4_int.particles.getSize());
+            PS::S32 j = h4_int.neighbors[i].r_min_index;
+            ASSERT(j<h4_int.particles.getSizeMax()+h4_int.groups.getSize());
+            if (j<0) continue;
+            PS::F64 rij2 = h4_int.neighbors[i].r_min_sq;
+            PS::F64 r_out_i = h4_int.particles[i].changeover.getRout();
+            PS::F64 r_out_j = (j<index_offset_group)? h4_int.particles[j].changeover.getRout() : h4_int.groups[j-index_offset_group].particles.cm.changeover.getRout();
+            if (rij2<std::max(r_out_i, r_out_j)) table_neighbor_exist[i] = true;
+        }
+        PS::S32 n_act_group = h4_int.getNActGroup();
+        PS::S32* act_group_index = h4_int.getSortDtIndexGroup();
+        for (int k=0; k<n_act_group; k++) {
+            PS::S32 i = act_group_index[k];
+            ASSERT(i>=0&&i<h4_int.particles.getSizeMax()+h4_int.groups.getSize());
+            PS::S32 j = h4_int.groups[i].perturber.r_min_index;
+            ASSERT(j<h4_int.particles.getSizeMax()+h4_int.groups.getSize());
+            if (j<0) continue;
+            PS::F64 rij2 = h4_int.groups[i].perturber.r_min_sq;
+            PS::F64 r_out_i = h4_int.groups[i].particles.cm.changeover.getRout();
+            PS::F64 r_out_j = (j<index_offset_group)? h4_int.particles[j].changeover.getRout() : h4_int.groups[j-index_offset_group].particles.cm.changeover.getRout();
+            if (rij2<std::max(r_out_i, r_out_j)) {
+                for (int ki=0; ki<h4_int.groups[i].particles.getSize(); ki++) {
+                    PS::S32 ki_index = h4_int.groups[i].info.particle_index[ki];
+                    ASSERT(ki_index>=0&&ki_index<table_neighbor_exist.size());
+                    table_neighbor_exist[ki_index] = true;
+                }
+            }
+        }
+    }
+#endif
 
     //! drift c.m. particle of the cluster record group c.m. in group_data and write back data to original particle array
     /*!
@@ -785,6 +840,13 @@ public:
                 DATADUMP("dump_large_step");
             } 
 #endif
+
+#ifdef HARD_COUNT_NO_NEIGHBOR
+            for (PS::S32 i=0; i<table_neighbor_exist.size(); i++) {
+                if(!table_neighbor_exist[i]) n_neighbor_zero++;
+            }
+#endif
+
 #ifdef AR_DEBUG_PRINT
             for (PS::S32 i=0; i<h4_int.getNGroup(); i++) {
                 const PS::S32 k= group_index[i];
@@ -877,6 +939,10 @@ public:
         ARC_tsyn_step_sum = 0;
         H4_step_sum = 0;
 #endif
+#ifdef HARD_COUNT_NO_NEIGHBOR
+        table_neighbor_exist.resizeNoInitialize(0);
+        n_neighbor_zero = 0;
+#endif
 #ifdef HARD_CHECK_ENERGY
         energy.clear();
 #endif
@@ -922,6 +988,9 @@ public:
     PS::S64 ARC_tsyn_step_sum;
     PS::S64 ARC_n_groups;
     PS::S64 H4_step_sum;
+#endif
+#ifdef HARD_COUNT_NO_NEIGHBOR
+    PS::S64 n_neighbor_zero;
 #endif
 #ifdef HARD_CHECK_ENERGY
     HardEnergy energy;
@@ -1384,6 +1453,9 @@ public:
         ARC_n_groups = 0;
         H4_step_sum = 0;
 #endif
+#ifdef HARD_COUNT_NO_NEIGHBOR
+        n_neighbor_zero = 0;
+#endif
 #ifdef HARD_CHECK_ENERGY
         energy.clear();
 #endif
@@ -1821,6 +1893,9 @@ public:
                 ARC_substep_sum    += hard_int_thread[ith]->ARC_substep_sum;
                 ARC_tsyn_step_sum  += hard_int_thread[ith]->ARC_tsyn_step_sum;
                 H4_step_sum        += hard_int_thread[ith]->H4_step_sum;
+#endif
+#ifdef HARD_COUNT_NO_NEIGHBOR
+                n_neighbor_zero    += hard_int_thread[ith]->n_neighbor_zero;
 #endif
 #ifdef HARD_CHECK_ENERGY
                 energy += hard_int_thread[ith]->energy;

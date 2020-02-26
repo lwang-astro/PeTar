@@ -1764,39 +1764,56 @@ private:
         PS::S64 ARC_tsyn_step_sum   = system_hard_isolated.ARC_tsyn_step_sum;
         PS::S64 ARC_n_groups      = system_hard_isolated.ARC_n_groups;
         PS::S64 H4_step_sum       = system_hard_isolated.H4_step_sum;
+#ifdef HARD_COUNT_NO_NEIGHBOR
+        PS::S64 n_neighbor_zero   = system_hard_isolated.n_neighbor_zero;
+#endif
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         PS::S32 n_hard_connected  = system_hard_connected.getPtcl().size();
         n_count.hard_connected   += n_hard_connected;
-        n_count_sum.hard_connected   += PS::Comm::getSum(n_hard_connected);
+        n_count_sum.hard_connected += PS::Comm::getSum(n_hard_connected);
 
         ARC_substep_sum += system_hard_connected.ARC_substep_sum;
         ARC_tsyn_step_sum += system_hard_connected.ARC_tsyn_step_sum;
         ARC_n_groups += system_hard_connected.ARC_n_groups;
         H4_step_sum +=  system_hard_connected.H4_step_sum;
-
+#ifdef HARD_COUNT_NO_NEIGHBOR
+        n_neighbor_zero+= system_hard_connected.n_neighbor_zero;
+#endif
 #endif
                                            
         n_count.ARC_substep_sum  += ARC_substep_sum;
         n_count.ARC_tsyn_step_sum+= ARC_tsyn_step_sum;
         n_count.ARC_n_groups     += ARC_n_groups;
         n_count.H4_step_sum      += H4_step_sum;
+#ifdef HARD_COUNT_NO_NEIGHBOR
+        n_count.n_neighbor_zero  += n_neighbor_zero;
+#endif
 
         n_count_sum.ARC_substep_sum  += PS::Comm::getSum(ARC_substep_sum);
         n_count_sum.ARC_tsyn_step_sum+= PS::Comm::getSum(ARC_tsyn_step_sum);
         n_count_sum.ARC_n_groups     += PS::Comm::getSum(ARC_n_groups);
         n_count_sum.H4_step_sum      += PS::Comm::getSum(H4_step_sum);
+#ifdef HARD_COUNT_NO_NEIGHBOR
+        n_count_sum.n_neighbor_zero  += PS::Comm::getSum(n_neighbor_zero);
+#endif
 
         system_hard_isolated.ARC_substep_sum = 0;
         system_hard_isolated.ARC_tsyn_step_sum=0;
         system_hard_isolated.ARC_n_groups = 0;
         system_hard_isolated.H4_step_sum = 0;
+#ifdef HARD_COUNT_NO_NEIGHBOR
+        system_hard_isolated.n_neighbor_zero = 0;
+#endif
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         system_hard_connected.ARC_substep_sum = 0;
         system_hard_connected.ARC_tsyn_step_sum=0;
         system_hard_connected.ARC_n_groups = 0;
         system_hard_connected.H4_step_sum = 0;
+#ifdef HARD_COUNT_NO_NEIGHBOR
+        system_hard_connected.n_neighbor_zero = 0;
+#endif
 #endif
                                            
         n_count.cluster_count(1, n_hard_single);
