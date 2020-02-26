@@ -14,7 +14,7 @@ class PeTarProfile(DictNpArrayMix):
     """
     @InitialDictNpArrayMixMethod
     def __init__(self):
-        return [["total",1], ["hard_single",1], ["hard_isolated",1], ["hard_connected",1], ["hard_interrupt",1], ["tree_neighbor",1], ["tree_force",1], ["force_correct",1], ["kick",1], ["search_cluster",1], ["create_group",1], ["domain_decomp",1], ["exchange_ptcl",1], ["output",1]]
+        return [["total",1], ["hard_single",1], ["hard_isolated",1], ["hard_connected",1], ["hard_interrupt",1], ["tree_neighbor",1], ["tree_force",1], ["force_correct",1], ["kick",1], ["search_cluster",1], ["create_group",1], ["domain_decomp",1], ["exchange_ptcl",1], ["output",1], ["status",1],["other",1]]
 
 class GPUProfile(DictNpArrayMix):
     """ GPU time profile 
@@ -30,10 +30,10 @@ class PeTarCount(DictNpArrayMix):
     def __init__(self):
         return [["hard_single",1], ["hard_isolated",1], ["hard_connected",1], ["hard_interrupt",1], ["cluster_isolated",1], ["cluster_connected",1], ["AR_step_sum",1], ["AR_tsyn_step_sum",1], ["AR_group_number",1], ["Hermite_step_sum",1], ["Ep-Ep_interaction",1], ["Ep-Sp_interaction",1]]
 
-class Profile(DictNpArrayMix):
+class Profile():
     """ Profile class
     """
-    def __init__ (self, _dat=0, use_gpu=True, print_tree_nb=True):
+    def __init__ (self, _dat=0, use_gpu=True):
         """
         _dat: np.ndarray type data reading from profile data or Profile type data
         """
@@ -51,9 +51,8 @@ class Profile(DictNpArrayMix):
             icol += self.comp_bar.ncols
             self.tree_soft = FDPSProfile(_dat[:,icol:])
             icol += self.tree_soft.ncols
-            if (print_tree_nb):
-                self.tree_nb = FDPSProfile(_dat[:,icol:])
-                icol += self.tree_nb.ncols
+            self.tree_nb = FDPSProfile(_dat[:,icol:])
+            icol += self.tree_nb.ncols
             if (use_gpu):
                 self.gpu = GPUProfile(_dat[:,icol:])
                 icol += self.gpu.ncols

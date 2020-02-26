@@ -1292,12 +1292,6 @@ private:
         //system_hard_connected.setTimeOrigin(stat.time);
         ////// set time
 
-        // reset slowdown energy correction
-        system_hard_isolated.energy.resetEnergyCorrection();
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-        system_hard_connected.energy.resetEnergyCorrection();
-#endif
-        
 #ifdef PROFILE
         profile.hard_single.start();
 #endif
@@ -1310,6 +1304,7 @@ private:
         ////// integrater one cluster
 #ifdef PROFILE
         profile.hard_single.barrier();
+        PS::Comm::barrier();
         profile.hard_single.end();
 #endif
         ////////////////
@@ -1318,6 +1313,8 @@ private:
 #ifdef PROFILE
         profile.hard_isolated.start();
 #endif
+        // reset slowdown energy correction
+        system_hard_isolated.energy.resetEnergyCorrection();
         // integrate multi cluster A
         system_hard_isolated.driveForMultiClusterOMP(_dt_drift, &(system_soft[0]));
         //system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_,remove_list);
@@ -1347,6 +1344,8 @@ private:
 #ifdef PROFILE
         profile.hard_connected.start();
 #endif
+        // reset slowdown energy correction
+        system_hard_connected.energy.resetEnergyCorrection();
         // integrate multi cluster B
         system_hard_connected.driveForMultiClusterOMP(_dt_drift, &(system_soft[0]));
         PS::S32 n_interrupt_connected = system_hard_connected.getNumberOfInterruptClusters();
@@ -1371,13 +1370,12 @@ private:
         }
         // integrate multi cluster B
 
+        n_interrupt_glb += n_interrupt_connected_glb;
 #ifdef PROFILE
         profile.hard_connected.barrier();
         PS::Comm::barrier();
         profile.hard_connected.end();
 #endif
-        
-        n_interrupt_glb += n_interrupt_connected_glb;
 #endif
 
         return n_interrupt_glb;
@@ -1447,26 +1445,28 @@ private:
             system_hard_connected.updateTimeWriteBack();
         }
 
+        n_interrupt_glb += n_interrupt_connected_glb;
+
 #ifdef PROFILE
         profile.hard_connected.barrier();
         PS::Comm::barrier();
         profile.hard_connected.end();
 #endif
+#endif
 
-        n_interrupt_glb += n_interrupt_connected_glb;
+#ifdef HARD_INTERRUPT_PRINT
+        if (n_interrupt_glb>0)  {
+            std::cerr<<"Interrupt detected, number: "<<n_interrupt_glb<<std::endl;
+        }
 #endif
 
 #ifdef PROFILE
         profile.hard_interrupt.barrier();
+        PS::Comm::barrier();
         profile.hard_interrupt.end();
 #endif
 
         // if interrupt cluster still exist, return the number immediately without new integration.
-        if (n_interrupt_glb>0)  {
-#ifdef HARD_INTERRUPT_PRINT
-            std::cerr<<"Interrupt detected, number: "<<n_interrupt_glb<<std::endl;
-#endif
-        }
         return n_interrupt_glb;
     }
 
@@ -1518,16 +1518,27 @@ private:
     
     //! write back hard particles to global system
     void writeBackHardParticles() {
+#ifdef PROFILE
+        profile.output.start();
+#endif
         system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         // update gloabl particle system and send receive remote particles
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
         system_hard_connected.updateTimeWriteBack();
 #endif        
+#ifdef PROFILE
+        profile.output.barrier();
+        PS::Comm::barrier();
+        profile.output.end();
+#endif
     }
 
     // update group_data.cm to pcm data for search cluster after restart
     void setParticleGroupDataToCMData() {
+#ifdef PROFILE
+        profile.search_cluster.start();
+#endif
 #ifdef CLUSTER_VELOCITY
         // update status and mass_bk to pcm data for search cluster after restart
         system_hard_one_cluster.resetParticleGroupData(system_soft);
@@ -1536,6 +1547,11 @@ private:
         system_hard_connected.setParticleGroupDataToCMData(system_soft);
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
         system_hard_connected.updateTimeWriteBack();
+#endif
+#ifdef PROFILE
+        profile.search_cluster.barrier();
+        PS::Comm::barrier();
+        profile.search_cluster.end();
 #endif
     }
     
@@ -1612,6 +1628,9 @@ private:
 
     //! update system status
     void updateStatus(const bool _initial_flag) {
+#ifdef PROFILE
+        profile.status.start();
+#endif
         if (_initial_flag) {
             // calculate initial energy
             stat.energy.clear();
@@ -1664,6 +1683,11 @@ private:
 #endif
             stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);
         }
+#ifdef PROFILE
+        profile.status.barrier();
+        PS::Comm::barrier();
+        profile.status.end();
+#endif
     }
 
     void output() {
@@ -1813,7 +1837,6 @@ private:
     void printProfile() {
 
         const SysProfile& profile_min = profile.getMin();
-        const SysProfile& profile_max = profile.getMax();
         
         if(input_parameters.print_flag) {
             std::cout<<std::setprecision(5);
@@ -1828,7 +1851,7 @@ private:
             //std::cout<<std::setw(PRINT_WIDTH)<<my_rank;
             profile_min.dump(std::cout,PRINT_WIDTH,dn_loop);
             std::cout<<std::endl;
-            profile_max.dump(std::cout,PRINT_WIDTH,dn_loop);
+            profile.dump(std::cout,PRINT_WIDTH,dn_loop);
             std::cout<<std::endl;
 
             std::cout<<"**** FDPS tree soft force time profile (local):\n";
@@ -1918,6 +1941,10 @@ public:
     void removeParticles() {
         /////////////
         assert(n_interrupt_glb==0);
+#ifdef PROFILE
+        profile.other.start();
+#endif
+
         // Remove ghost particles
         system_soft.removeParticle(remove_list.getPointer(), remove_list.size());
         // reset particle number
@@ -1925,6 +1952,11 @@ public:
         system_soft.setNumberOfParticleLocal(stat.n_real_loc);
         stat.n_real_glb = system_soft.getNumberOfParticleGlobal();
         remove_list.resizeNoInitialize(0);
+#ifdef PROFILE
+        profile.other.barrier();
+        PS::Comm::barrier();
+        profile.other.end();
+#endif
     }
 
 
@@ -2518,7 +2550,7 @@ public:
         assert(initial_step_flag);
 
         // finish interrupted integrations
-        finishInterruptDrift();
+        if (n_interrupt_glb>0) finishInterruptDrift();
         // if interrupt still exist, do not continue
         if (n_interrupt_glb>0) return n_interrupt_glb;
 
@@ -2532,7 +2564,7 @@ public:
         /// Main loop
         while(stat.time <= time_break) {
 #ifdef PROFILE
-            profile.tot.start();
+            profile.total.start();
 #endif
 
             // remove deletec particles in system_soft.
@@ -2585,6 +2617,9 @@ public:
                 dt_kick = dt_manager.getDtStartContinue();
             }
             else {
+#ifdef PROFILE
+                profile.other.start();
+#endif
                 // increase loop counter
                 n_loop++;
 
@@ -2621,6 +2656,11 @@ public:
                     else dt_kick = dt_manager.getDtKickContinue();
                 }
                 else dt_kick = dt_manager.getDtKickContinue();
+#ifdef PROFILE
+                profile.other.barrier();
+                PS::Comm::barrier();
+                profile.other.end();
+#endif
             }
 
 
@@ -2641,14 +2681,15 @@ public:
 
 #ifdef PROFILE
                 // profile
-                profile.tot.barrier();
+                profile.total.barrier();
                 PS::Comm::barrier();
-                profile.tot.end();
+                profile.total.end();
 
                 printProfile();
                 clearProfile();
 
-                profile.tot.start();
+                PS::Comm::barrier();
+                profile.total.start();
 #endif
             }
 
@@ -2677,9 +2718,9 @@ public:
                 assert(checkTimeConsistence());
 
 #ifdef PROFILE
-                profile.tot.barrier();
+                profile.total.barrier();
                 PS::Comm::barrier();
-                profile.tot.end();
+                profile.total.end();
 #endif
                 return 0;
             }
@@ -2713,9 +2754,9 @@ public:
 
 #ifdef PROFILE
             // calculate profile
-            profile.tot.barrier();
+            profile.total.barrier();
             PS::Comm::barrier();
-            profile.tot.end();
+            profile.total.end();
 
             calcProfile();
 #endif
