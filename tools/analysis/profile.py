@@ -1,7 +1,6 @@
 # analysis profile data
-import numpy as np
-import collections
-from tools.base import DictNpArrayMix, InitialDictNpArrayMixMethod
+
+from .base import *
 
 class FDPSProfile(DictNpArrayMix):
     """ FDPS time profile for tree 
@@ -34,7 +33,7 @@ class PeTarCount(DictNpArrayMix):
 class Profile(DictNpArrayMix):
     """ Profile class
     """
-    def __init__ (self, _dat=0, use_gpu=True):
+    def __init__ (self, _dat=0, use_gpu=True, print_tree_nb=True):
         """
         _dat: np.ndarray type data reading from profile data or Profile type data
         """
@@ -52,8 +51,9 @@ class Profile(DictNpArrayMix):
             icol += self.comp_bar.ncols
             self.tree_soft = FDPSProfile(_dat[:,icol:])
             icol += self.tree_soft.ncols
-            self.tree_nb = FDPSProfile(_dat[:,icol:])
-            icol += self.tree_nb.ncols
+            if (print_tree_nb):
+                self.tree_nb = FDPSProfile(_dat[:,icol:])
+                icol += self.tree_nb.ncols
             if (use_gpu):
                 self.gpu = GPUProfile(_dat[:,icol:])
                 icol += self.gpu.ncols

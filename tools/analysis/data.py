@@ -1,8 +1,7 @@
 # read snapshot and obtain multiple systems
-import numpy as np
 import collections
 from scipy import spatial as sp
-from tools.base import DictNpArrayMix, InitialDictNpArrayMixMethod
+from .base import *
 
 class Particle(DictNpArrayMix):
     """ Particle class 
