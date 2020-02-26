@@ -22,10 +22,11 @@ public:
     template <class Tsoft>
     void calcCenterOfMass(Tsoft* _tsys, const PS::S64 _n) {
         PS::F64 mass = 0.0;
-        PS::F64 x,y,z,vx,vy,vz;
-        x = y = z = vx = vy = vz = 0.0;
+        PS::F64vec pos_cm = PS::F64vec(0.0);
+        PS::F64vec vel_cm = PS::F64vec(0.0);
 
-#pragma omp parallel for reduction(+:mass,x,y,z,vx,vy,vz)
+#pragma omp declare reduction(+:PS::F64vec:omp_out += omp_in) initializer (omp_priv=PS::F64vec(0.0))
+#pragma omp parallel for reduction(+:mass,pos_cm,vel_cm)
         for (int i=0; i<_n; i++) {
             auto& pi = _tsys[i];
             PS::F64 mi = pi.mass;
@@ -35,30 +36,18 @@ public:
             assert(!std::isnan(pi.vel.y));
             assert(!std::isnan(pi.vel.z));
 #endif
-            x += mi*pi.pos.x;
-            y += mi*pi.pos.y;
-            z += mi*pi.pos.z;
-            vx += mi*pi.vel.x;
-            vy += mi*pi.vel.y;
-            vz += mi*pi.vel.z;
+            pos_cm += mi*pi.pos;
+            vel_cm += mi*pi.vel;
         }        
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         pcm.mass = PS::Comm::getSum(mass);
-        pcm.pos.x  = PS::Comm::getSum(x);
-        pcm.pos.y  = PS::Comm::getSum(y);
-        pcm.pos.z  = PS::Comm::getSum(x);
-        pcm.vel.x  = PS::Comm::getSum(vx);
-        pcm.vel.y  = PS::Comm::getSum(vy);
-        pcm.vel.z  = PS::Comm::getSum(vz);
+        pcm.pos  = PS::Comm::getSum(pos_cm);
+        pcm.vel  = PS::Comm::getSum(vel_cm);
 #else
         pcm.mass = mass;
-        pcm.pos.x = x;
-        pcm.pos.y = y;
-        pcm.pos.z = z;
-        pcm.vel.x = vx;
-        pcm.vel.y = vy;
-        pcm.vel.z = vz;
+        pcm.pos  = pos_cm;
+        pcm.vel  = vel_cm;
 #endif
         pcm.pos /= pcm.mass;
         pcm.vel /= pcm.mass;

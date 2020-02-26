@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import os
 import collections as cl
 import sys
-import multiple
+import analysis
 
 filename='tlst'
 dout='semi-ecc'
@@ -46,8 +46,10 @@ path = path.split()
 fig,axes=plt.subplots(2,2,figsize=(8,8))
 
 for i in path:
-    dat = multiple.ParticleArray(np.loadtxt('data.'+str(i),skiprows=1))
-    p1,p2,semi,ecc,r = multiple.findPair(dat)
+    dat = analysis.Particle(np.loadtxt('data.'+str(i),skiprows=1))
+    p1,p2,binary = analysis.findPair(dat)
+    semi = binary.semi
+    ecc  = binary.ecc
     sel = (semi>amin) & (semi<amax)
     Nbin =sel.sum()
     
