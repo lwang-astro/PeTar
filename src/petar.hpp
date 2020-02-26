@@ -759,11 +759,13 @@ private:
                 while (_dt_tree<=dt_origin) _dt_tree *= 2.0;
                 _dt_tree *= 0.5;
             }
-            //// if r_out is not defined, calculate r_out based on tree step and velocity dispersion
-            //if (!r_out_flag) {
-            //    _r_out = 10.0*_dt_tree*_vel_disp;
-            //    _r_in = _r_out*_ratio_r_cut;
-            //}
+        }
+        else {
+            // if r_out is not defined, adjust r_out to minimum based on tree step
+            if (!r_out_flag) {
+                _r_out = 10.0*_dt_tree*_vel_disp;
+                _r_in = _r_out*_ratio_r_cut;
+            }
         }
 
         // if r_bin is not defined, set to theta * r_in

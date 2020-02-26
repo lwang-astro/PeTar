@@ -28,7 +28,7 @@ class PeTarCount(DictNpArrayMix):
     """
     @InitialDictNpArrayMixMethod
     def __init__(self):
-        return [["hard_single",1], ["hard_isolated",1], ["hard_connected",1], ["hard_interrupt",1], ["cluster_isolated",1], ["cluster_connected",1], ["AR_step_sum",1], ["AR_tsyn_step_sum",1], ["AR_group_number",1], ["Hermite_step_sum",1], ["Ep-Ep_interaction",1], ["Ep-Sp_interaction",1]]
+        return [["hard_single",1], ["hard_isolated",1], ["hard_connected",1], ["hard_interrupt",1], ["cluster_isolated",1], ["cluster_connected",1], ["AR_step_sum",1], ["AR_tsyn_step_sum",1], ["AR_group_number",1], ["Hermite_step_sum",1], ["n_neighbor_zero",1], ["Ep-Ep_interaction",1], ["Ep-Sp_interaction",1]]
 
 class Profile():
     """ Profile class
