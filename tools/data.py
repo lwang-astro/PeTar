@@ -2,75 +2,22 @@
 import numpy as np
 import collections
 from scipy import spatial as sp
-
-class DictNpArrayMix:
-    """ the Dictonary with numpy.ndarray function support
-    """
-
-    def __getitem__(self, k):
-        """ Map getitem to all dictory np.ndarray items
-        """
-        cls_type = type(self)
-        new_dat = cls_type()
-        for key, item in self.__dict__.items():
-            if (type(item) == np.ndarray):
-                new_dat.__dict__[key] = item[k]
-        return new_dat
+from tools.base import DictNpArrayMix, InitialDictNpArrayMixMethod
 
 class Particle(DictNpArrayMix):
     """ Particle class 
     """
-    def __init__ (self, _dat=np.empty([0,18])):
-        """
-        _dat: np.ndarray type data reading from snapshot or Particle type
-        """
-        if (isinstance(_dat, Particle)):
-            self = _dat.copy()
-        elif (type(_dat)==np.ndarray):
-            self.mass     = _dat[:,0]
-            self.pos      = _dat[:,1:4]
-            self.vel      = _dat[:,4:7]
-            self.r_search = _dat[:,7]
-            self.id       = _dat[:,8]
-            self.mass_bk  = _dat[:,9]
-            self.status   = _dat[:,10]
-            self.r_in     = _dat[:,11]
-            self.r_out    = _dat[:,12]
-            self.acc      = _dat[:,13:16]
-            self.pot      = _dat[:,16]
-            self.n_nb     = _dat[:,17]
-        else:
-            raise ValueError('Initial fail, date type should be Particle or np.ndarray, given ',type(_dat))
-
-def particleToSemiEcc(_p1,_p2, _G):
-    """
-    calculate binary semi-major axis and eccentricity from particle pairs
-    _p1, _p2: data class
-    _G: gravitational constant
-    return: semi, ecc
-    """
-    dr = (_p1.pos - _p2.pos)*_units.r
-    dv = (_p1.vel - _p2.vel)*_units.v
-    
-    dr2  = (dr*dr).sum(axis=1)
-    dv2  = (dv*dv).sum(axis=1)
-    rvdot= (dr*dv).sum(axis=1)
-    
-    dr   = np.sqrt(dr2)
-    m    = (_p1.mass+_p2.mass)
-    semi = 1.0/(2.0/dr - dv2/(_G*m))
-
-    dr_semi = 1.0 - dr/semi
-    ecc = np.sqrt(dr_semi*dr_semi + rvdot*rvdot/(_G*m*semi))
-    return semi, ecc
+    @InitialDictNpArrayMixMethod
+    def __init__ (self):
+        return [['mass',1], ['pos',3], ['vel',3], ['r_search',1], ['id',1], ['mass_bk',1], ['status',1], ['r_in',1], ['r_out',1], ['acc',3], ['pot',1], ['n_nb',1]]
 
 class Binary(DictNpArrayMix):
     """ Binary class
     """
     def __init__ (self, _p1=0, _p2=0, _G=0):
-        if (isinstance(_p1,Particle)) & (isinstance(_p2,Particle)):
+        if (isinstance(_p1, Particle)) & (isinstance(_p2,Particle)):
             self.particleToBinary(_p1.__dict__, _p2.__dict__, _G)
-        elif (isinstance(_p1,collections.OrderedDict)) & (isinstance(_p2,collections.OrderedDict)):
+        elif (isinstance(_p1, collections.OrderedDict)) & (isinstance(_p2,collections.OrderedDict)):
             self.particleToBinary(_p1, _p2, _G)
         elif (_p2==0) & (_G==0) & (type(_p1)==Binary):
             self = _p1.copy()
@@ -159,21 +106,6 @@ class Binary(DictNpArrayMix):
         l = binary['ecca'] - binary['ecc']*np.sin(binary['ecca'])
         binary['t_peri'] = l / n
 
-
-def join(*_dat):
-    """
-    Join multiple data to one
-    """
-    type0 = type(_dat[0])
-    for idat in _dat:
-        if (type(idat) != type0):
-            raise ValueError('Initial fail, date type not consistent, type [0] is ',type0,' given ',type(idat))
-    new_dat = type0()
-    for key, item in new_dat.__dict__.items():
-        if (type(item) == np.ndarray):
-            new_dat.__dict__[key] = np.concatenate(tuple(map(lambda x:x.__dict__[key], _dat)))
-    return new_dat
-
 def findPair(_dat, _G):
     """
     Find paris
@@ -205,3 +137,26 @@ def findPair(_dat, _G):
     binary = Binary(p1, p2, _G)
     
     return p1, p2, binary
+
+def particleToSemiEcc(_p1,_p2, _G):
+    """
+    calculate binary semi-major axis and eccentricity from particle pairs
+    _p1, _p2: data class
+    _G: gravitational constant
+    return: semi, ecc
+    """
+    dr = (_p1.pos - _p2.pos)*_units.r
+    dv = (_p1.vel - _p2.vel)*_units.v
+    
+    dr2  = (dr*dr).sum(axis=1)
+    dv2  = (dv*dv).sum(axis=1)
+    rvdot= (dr*dv).sum(axis=1)
+    
+    dr   = np.sqrt(dr2)
+    m    = (_p1.mass+_p2.mass)
+    semi = 1.0/(2.0/dr - dv2/(_G*m))
+
+    dr_semi = 1.0 - dr/semi
+    ecc = np.sqrt(dr_semi*dr_semi + rvdot*rvdot/(_G*m*semi))
+    return semi, ecc
+
