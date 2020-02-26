@@ -348,7 +348,7 @@ public:
             h4_int.particles.calcCenterOfMass();
             h4_int.particles.shiftToCenterOfMassFrame();
             
-            PS::S32 n_group_size_max = _n_group+_n_group/2+5;
+            PS::S32 n_group_size_max = _n_ptcl+_n_group;
             h4_int.groups.setMode(COMM::ListMode::local);
             h4_int.groups.reserveMem(n_group_size_max);
             h4_int.reserveIntegratorMem();
