@@ -112,8 +112,8 @@ public:
               const bool _init_flag=false) {
         ekin = epot = 0.0;
         L = PS::F64vec(0.0);
-#pragma omp declare reduction(+:PS::F64vec:omp_out += omp_in) initializer (omp_priv=PS::F64vec(0.0))
-#pragma omp parallel for reduction(+:epot,ekin,L) 
+//#pragma omp declare reduction(+:PS::F64vec:omp_out += omp_in) initializer (omp_priv=PS::F64vec(0.0))
+//#pragma omp parallel for reduction(+:epot,ekin,L) 
         for(PS::S32 i=0; i<_n_particle; i++){
             PS::F64 mi = _particles[i].mass;
             auto pi_artificial = _particles[i].group_data.artificial;
@@ -149,8 +149,8 @@ public:
               const bool _init_flag=false) {
         ekin = epot = 0.0;
         L = PS::F64vec(0.0);
-#pragma omp declare reduction(+:PS::F64vec:omp_out += omp_in) initializer (omp_priv=PS::F64vec(0.0))
-#pragma omp parallel for reduction(+:epot,ekin,L) 
+//#pragma omp declare reduction(+:PS::F64vec:omp_out += omp_in) initializer (omp_priv=PS::F64vec(0.0))
+//#pragma omp parallel for reduction(+:epot,ekin,L) 
         for(PS::S32 k=0; k<_n_particle; k++){
             PS::S32 i = _particle_index[k];
             PS::F64 mi = _particles[i].mass;

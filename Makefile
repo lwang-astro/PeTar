@@ -10,7 +10,7 @@ use_x86 = yes
 
 #use_intel=yes
 use_mpi = yes
-use_gpu_cuda=yes
+#use_gpu_cuda=yes
 use_simd= yes
 use_omp = yes
 

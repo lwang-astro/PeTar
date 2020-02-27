@@ -13,7 +13,8 @@ class DictNpArrayMix:
         for key, item in self.__dict__.items():
             if (type(item) == np.ndarray):
                 new_dat.__dict__[key] = item[k]
-                new_dat.size = new_dat.__dict__[key].size
+                new_dat.size += new_dat.__dict__[key].size
+        new_dat.size = int(new_dat.size/new_dat.ncols)
         return new_dat
 
 def InitialDictNpArrayMixMethod(func):
@@ -25,7 +26,7 @@ def InitialDictNpArrayMixMethod(func):
             self = _dat.copy()
         elif (type(_dat)==np.ndarray):
             keys = func(self)
-            icol = 0
+            icol = int(0)
             for key, dimension in keys:
                 if (dimension==1):
                     self.__dict__[key] = _dat[:,icol]
@@ -34,10 +35,9 @@ def InitialDictNpArrayMixMethod(func):
                 icol += dimension
             self.ncols = int(icol)
             self.size  = int(_dat.size/icol)
-
         elif (_dat==0):
             keys = func(self)
-            icol = 0
+            icol = int(0)
             for key, dimension in keys:
                 self.__dict__[key] = np.empty([0,dimension])
                 icol += dimension
@@ -63,3 +63,5 @@ def join(*_dat):
     new_dat.size = np.sum(tuple(map(lambda x:x.size, _dat)))
     return new_dat
 
+# vector dot of x, y 
+vec_dot = lambda x,y: np.sum(x*y,axis=1)

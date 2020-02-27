@@ -10,18 +10,45 @@ class Particle(DictNpArrayMix):
     def __init__ (self):
         return [['mass',1], ['pos',3], ['vel',3], ['r_search',1], ['id',1], ['mass_bk',1], ['status',1], ['r_in',1], ['r_out',1], ['acc',3], ['pot',1], ['n_nb',1]]
 
+def calculateParticleCMDict(pcm, _p1, _p2):
+    """ calculate cm of particle pair"""
+    if (isinstance(_p1, Particle)) & (isinstance(_p2,Particle)):
+        pcm['mass'] = _p1.mass + _p2.mass
+        pcm['pos']  = np.array(list(map(lambda m1,x1,m2,x2:(m1*x1+m2*x2)/(m1+m2), _p1.mass, _p1.pos, _p2.mass, _p2.pos)))
+        pcm['vel']  = np.array(list(map(lambda m1,x1,m2,x2:(m1*x1+m2*x2)/(m1+m2), _p1.mass, _p1.vel, _p2.mass, _p2.vel)))
+    elif (isinstance(_p1, collections.OrderedDict)) & (isinstance(_p2,collections.OrderedDict)) | (isinstance(_p1, dict)) & (isinstance(_p2, dict)):
+        pcm['mass'] = _p1['mass'] + _p2['mass']
+        pcm['pos']  = np.array(list(map(lambda m1,x1,m2,x2:(m1*x1+m2*x2)/(m1+m2), _p1['mass'], _p1['pos'], _p2['mass'], _p2['pos'])))
+        pcm['vel']  = np.array(list(map(lambda m1,x1,m2,x2:(m1*x1+m2*x2)/(m1+m2), _p1['mass'], _p1['vel'], _p2['mass'], _p2['vel'])))
+    else:
+        raise ValueError('Initial fail, date type should be Particle or collections.OrderDict, given',type(_p1))
+
 class Binary(DictNpArrayMix):
     """ Binary class
     """
     def __init__ (self, _p1=0, _p2=0, _G=0):
         if (isinstance(_p1, Particle)) & (isinstance(_p2,Particle)):
             self.particleToBinary(_p1.__dict__, _p2.__dict__, _G)
-        elif (isinstance(_p1, collections.OrderedDict)) & (isinstance(_p2,collections.OrderedDict)):
+            self.p1 = _p1
+            self.p2 = _p2
+            self.size = _p1.size
+            self.ncols= int(27)
+        elif (isinstance(_p1, collections.OrderedDict)) & (isinstance(_p2,collections.OrderedDict)) | (isinstance(_p1, dict)) & (isinstance(_p2, dict)):
             self.particleToBinary(_p1, _p2, _G)
+            self.p1 = Particle()
+            self.p1.__dict__ = _p1
+            self.p2 = Particle()
+            self.p2.__dict__ = _p2
+            self.size = self.semi.size
+            self.ncols= int(27)
         elif (_p2==0) & (_G==0) & (type(_p1)==Binary):
             self = _p1.copy()
         elif (_p1==0) & (_p2==0) & (_G==0):
-            keys=[['m1',1],['m2',1],['r',1],['semi',1],['am',3],['L',3],['eccvec',3],['incline',1],['rot_horizon',1],['ecc',1],['rot_self',1],['ecca',1],['period',1],['t_peri',1]]
+            keys=[['mass',1],['pos',3],['vel',3],['m1',1],['m2',1],['r',1],['semi',1],['am',3],['L',3],['eccvec',3],['incline',1],['rot_horizon',1],['ecc',1],['rot_self',1],['ecca',1],['period',1],['t_peri',1]]
+            self.p1 = Particle()
+            self.p2 = Particle()
+            self.size = int(0)
+            self.ncols= int(27)
             for key,dimension in keys:
                 self.__dict__[key] = np.empty([0,dimension])
         else:
@@ -35,12 +62,14 @@ class Binary(DictNpArrayMix):
         _G: gravitaitonal constant
         return: binary dicto
         """
+        binary=self.__dict__
      
         def regular_sign(_a,_a_err):
             _a[(_a<0) & (_a>-_a_err)] *= -1
      
         f_err = 1e-2
-        binary=self.__dict__
+        calculateParticleCMDict(binary, _p1, _p2)
+
         binary['m1'] = _p1['mass']
         binary['m2'] = _p2['mass']
         m_tot = _p1['mass'] + _p2['mass']
@@ -105,7 +134,7 @@ class Binary(DictNpArrayMix):
         l = binary['ecca'] - binary['ecc']*np.sin(binary['ecca'])
         binary['t_peri'] = l / n
 
-def findPair(_dat, _G):
+def findPair(_dat, _G, _rmax):
     """
     Find paris
     _dat: Particle type data 
@@ -131,11 +160,20 @@ def findPair(_dat, _G):
     # two members
     p1 = _dat[pair_index[0]]
     p2 = _dat[pair_index[1]]
-            
+
     # check orbits
     binary = Binary(p1, p2, _G)
+    apo =binary.semi*(binary.ecc+1.0)
+
+    bsel= ((binary.semi>0) & (apo<_rmax))
+    binary = binary[bsel]
     
-    return p1, p2, binary
+    single_mask = np.ones(_dat.size).astype(bool)
+    single_mask[pair_index[0][bsel]]=False
+    single_mask[pair_index[1][bsel]]=False
+    single = _dat[single_mask]
+    
+    return single, binary
 
 def particleToSemiEcc(_p1,_p2, _G):
     """
