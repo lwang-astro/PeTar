@@ -3,12 +3,32 @@ import collections
 from scipy import spatial as sp
 from .base import *
 
-class Particle(DictNpArrayMix):
+class SimpleParticle(DictNpArrayMix):
+    """ Simple particle class with only mass, postion, velocity and r2
+    """
+    def __init__(self, _dat=None, _offset=int(0)):
+        keys = [['mass',1], ['pos',3], ['vel',3]]
+        DictNpArrayMix.__init__(self, keys, _dat, _offset)
+
+    def calc_r2(self):
+        """ calculate distance square
+        """
+        self.r2 = vec_dot(self.pos,self.pos)
+
+    def correct_center(self, cm_pos, cm_vel):
+        self.pos -= cm_pos
+        self.vel -= cm_vel
+
+class Particle(SimpleParticle):
     """ Particle class 
     """
-    @InitialDictNpArrayMixMethod
-    def __init__ (self):
-        return [['mass',1], ['pos',3], ['vel',3], ['r_search',1], ['id',1], ['mass_bk',1], ['status',1], ['r_in',1], ['r_out',1], ['acc',3], ['pot',1], ['n_nb',1]]
+    def __init__ (self, _dat=None, _offset=0):
+        keys = [['r_search',1], ['id',1], ['mass_bk',1], ['status',1], ['r_in',1], ['r_out',1], ['acc',3], ['pot',1], ['n_nb',1]]
+        SimpleParticle.__init__(self, _dat, _offset)
+        icol = self.ncols
+        DictNpArrayMix.__init__(self, keys, _dat, icol)
+        self.ncols += icol
+        
 
 def calculateParticleCMDict(pcm, _p1, _p2):
     """ calculate cm of particle pair"""
@@ -26,34 +46,32 @@ def calculateParticleCMDict(pcm, _p1, _p2):
 class Binary(DictNpArrayMix):
     """ Binary class
     """
-    def __init__ (self, _p1=0, _p2=0, _G=0):
-        if (isinstance(_p1, Particle)) & (isinstance(_p2,Particle)):
+    def __init__ (self, _p1=None, _p2=None, _G=1):
+        if (issubclass(type(_p1), SimpleParticle)) & (issubclass(type(_p2),SimpleParticle)):
             self.particleToBinary(_p1.__dict__, _p2.__dict__, _G)
             self.p1 = _p1
             self.p2 = _p2
             self.size = _p1.size
-            self.ncols= int(27)
-        elif (isinstance(_p1, collections.OrderedDict)) & (isinstance(_p2,collections.OrderedDict)) | (isinstance(_p1, dict)) & (isinstance(_p2, dict)):
-            self.particleToBinary(_p1, _p2, _G)
-            self.p1 = Particle()
-            self.p1.__dict__ = _p1
-            self.p2 = Particle()
-            self.p2.__dict__ = _p2
-            self.size = self.semi.size
-            self.ncols= int(27)
-        elif (_p2==0) & (_G==0) & (type(_p1)==Binary):
-            self = _p1.copy()
-        elif (_p1==0) & (_p2==0) & (_G==0):
-            keys=[['mass',1],['pos',3],['vel',3],['m1',1],['m2',1],['r',1],['semi',1],['am',3],['L',3],['eccvec',3],['incline',1],['rot_horizon',1],['ecc',1],['rot_self',1],['ecca',1],['period',1],['t_peri',1]]
-            self.p1 = Particle()
-            self.p2 = Particle()
-            self.size = int(0)
-            self.ncols= int(27)
-            for key,dimension in keys:
-                self.__dict__[key] = np.empty([0,dimension])
+            self.ncols= int(27 + self.p1.ncols + self.p2.ncols)
+        elif (_p2==None):
+            keys=[['mass',1],['pos',3],['vel',3],['m1',1],['m2',1],['r',1],['semi',1],['am',3],['L',3],['eccvec',3],['incline',1],['rot_horizon',1],['ecc',1],['rot_self',1],['ecca',1],['period',1],['t_peri',1],['p1',SimpleParticle],['p2',SimpleParticle]]
+            DictNpArrayMix.__init__(self, keys, _p1)
         else:
             raise ValueError('Initial fail, date type should be Particle (2), Binary (1) or no argument (0)')
-            
+
+    def calc_r2(self, member_also=False):
+        """ calculate distance square
+        """
+        self.r2 = vec_dot(self.pos,self.pos)
+        if (member_also):
+            self.p1.calc_r2()
+            self.p2.calc_r2()
+
+    def correct_center(self, cm_pos, cm_vel):
+        self.pos -= cm_pos
+        self.vel -= cm_vel
+        self.p1.correct_center(cm_pos, cm_vel)
+        self.p2.correct_center(cm_pos, cm_vel)
 
     def particleToBinary(self, _p1, _p2, _G):
         """ 
@@ -138,7 +156,7 @@ def findPair(_dat, _G, _rmax):
     """
     Find paris
     _dat: Particle type data 
-    return: member 1, member 2, binary
+    return: KDtree, single, binary
     """
     if (not isinstance(_dat,Particle)):
         raise ValueError("Data type wrong",type(_dat))
@@ -173,7 +191,7 @@ def findPair(_dat, _G, _rmax):
     single_mask[pair_index[1][bsel]]=False
     single = _dat[single_mask]
     
-    return single, binary
+    return kdt, single, binary
 
 def particleToSemiEcc(_p1,_p2, _G):
     """
