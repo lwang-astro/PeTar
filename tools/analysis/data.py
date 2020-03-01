@@ -162,6 +162,7 @@ def findPair(_dat, _G, _rmax):
         raise ValueError("Data type wrong",type(_dat))
     
     # create KDTree
+    #print('create KDTree')
     kdt=sp.KDTree(_dat.pos)
 
     # find all close pairs
@@ -171,6 +172,7 @@ def findPair(_dat, _G, _rmax):
     #pair_index=np.unique(np.transpose(np.array([np.array([x[0],x[1]]) for x in pairs])),axis=0)
      
     # find pair index and distance
+    #print('Get index')
     r,index=kdt.query(_dat.pos,k=2)
 
     pair_index=np.transpose(np.unique(np.sort(index,axis=1),axis=0))
@@ -180,6 +182,7 @@ def findPair(_dat, _G, _rmax):
     p2 = _dat[pair_index[1]]
 
     # check orbits
+    #print('Create binary')
     binary = Binary(p1, p2, _G)
     apo =binary.semi*(binary.ecc+1.0)
 

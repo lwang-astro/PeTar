@@ -113,7 +113,35 @@ class DictNpArrayMix:
         if (self.size != int(member.size/dimension)):
             raise ValueError('New member has different size: ',member.size/dimension, ' host size: ',self.size)
             
+    def getherDataToArray(self):
+        """ gether all data to 2D np.ndarray
+        """
+        dat_out=np.zeros([self.size,self.ncols])
+        icol = int(0)
+        for key, member in self.__dict__.items():
+            if (type(member)==np.ndarray):
+                if len(member.shape)>1:
+                    dimension= member.shape[1]
+                    for k in range(dimension):
+                        dat_out[:,icol] = member[:,k]
+                        icol += 1
+                else:
+                    dat_out[:,icol] = member
+                    icol += 1
+            elif (issubclass(type(member), DictNpArrayMix)):
+                ncols = member.ncols
+                dat_out[:,icol:icol+ncols] = member.getherDataToArray()
+                icol += ncols
+        return dat_out
+                
+    def savetxt(self, fname, **karg):
+        dat_out= self.getherDataToArray()
+        np.savetxt(fname, dat_out, **karg)
 
+    def loadtxt(self, fname, **karg):
+        dat_int = np.loadtxt(fname, **karg)
+        __init__(self, self.n_frac, dat_int)
+        
 def join(*_dat):
     """
     Join multiple data to one
@@ -126,6 +154,10 @@ def join(*_dat):
     for key, item in _dat[0].__dict__.items():
         if (type(item) == np.ndarray):
             new_dat.__dict__[key] = np.concatenate(tuple(map(lambda x:x.__dict__[key], _dat)))
+        elif(issubclass(type(item), DictNpArrayMix)):
+            new_dat.__dict__[key] = join(tuple(map(lambda x:x.__dict__[key], _dat)))
+        else:
+            new_dat.__dict__[key] = _dat[0].__dict__[key]
     new_dat.size = np.sum(tuple(map(lambda x:x.size, _dat)))
     return new_dat
 

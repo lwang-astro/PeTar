@@ -72,6 +72,10 @@ class Lagrangian(DictNpArrayMix):
         if (self.n_frac != int(1+_mass_fraction.size)):
             raise ValueError('Mass fraction size ',mass_fraction.size,' is not consistent with Lagrangian array size ',self.n_frac)
 
+        self.size += 1
+        self.vel.size += 1
+        self.sigma.size += 1
+
         if (_particle.size<=1):
             self = Lagrangian(n_frac,np.zeros([n_frac, self.ncols]))
         else:
@@ -79,16 +83,18 @@ class Lagrangian(DictNpArrayMix):
             r = np.sqrt(_particle.r2)
             rindex= find_mass_index(mcum, _mass_fraction)
             rlagr = r[rindex]
-            self.r = np.append(self.r, [np.append(rlagr,_rc)])
+            if(len(self.r.shape)!=2):
+                raise ValueError('r shape is wrong',self.r.shape)
+            self.r = np.append(self.r, [np.append(rlagr,_rc)], axis=0)
             nlagr = rindex+1
             nlagr[1:] -= nlagr[:-1]
             nc = (_particle.r2<(_rc*_rc)).sum()
-            self.n = np.append(self.n, [np.append(nlagr,nc)])
+            self.n = np.append(self.n, [np.append(nlagr,nc)], axis=0)
             mlagr = mcum[rindex]
             mlagr[1:] -= mlagr[:-1]
             mlagr /= nlagr
             mc = mcum[nc-1]/nc
-            self.m = np.append(self.m, [np.append(mlagr,mc)])
+            self.m = np.append(self.m, [np.append(mlagr,mc)], axis=0)
 
             m   =_particle.mass 
             vel = _particle.vel
@@ -130,13 +136,13 @@ class Lagrangian(DictNpArrayMix):
                 vave[k] = np.array(vlagr)
                 
             
-            self.vel.x = np.append(self.vel.x, [vave[0]])
-            self.vel.y = np.append(self.vel.y, [vave[1]])
-            self.vel.z = np.append(self.vel.z, [vave[2]])
-            self.vel.abs= np.append(self.vel.abs, [np.sqrt(vave[0]*vave[0]+vave[1]*vave[1]+vave[2]*vave[2])])
-            self.vel.rad = np.append(self.vel.rad, [vave[3]])
-            self.vel.tan = np.append(self.vel.tan, [np.sqrt(vave[4]*vave[4]+vave[5]*vave[5]+vave[6]*vave[6])])
-            self.vel.rot = np.append(self.vel.rot, [vave[7]])
+            self.vel.x = np.append(self.vel.x, [vave[0]], axis=0)
+            self.vel.y = np.append(self.vel.y, [vave[1]], axis=0)
+            self.vel.z = np.append(self.vel.z, [vave[2]], axis=0)
+            self.vel.abs= np.append(self.vel.abs, [np.sqrt(vave[0]*vave[0]+vave[1]*vave[1]+vave[2]*vave[2])], axis=0)
+            self.vel.rad = np.append(self.vel.rad, [vave[3]], axis=0)
+            self.vel.tan = np.append(self.vel.tan, [np.sqrt(vave[4]*vave[4]+vave[5]*vave[5]+vave[6]*vave[6])], axis=0)
+            self.vel.rot = np.append(self.vel.rot, [vave[7]], axis=0)
             
             sigma = [None]*len(vlst)
             for k in range(len(vlst)):
@@ -145,36 +151,38 @@ class Lagrangian(DictNpArrayMix):
                 slagr.append(np.average(m[0:nc] * (vlst[k][0:nc] - vave[k][-1])**2) / mc)
                 sigma[k] = np.array(slagr)
 
-            self.sigma.x = np.append(self.sigma.x, [np.sqrt(sigma[0])])
-            self.sigma.y = np.append(self.sigma.y, [np.sqrt(sigma[1])])
-            self.sigma.z = np.append(self.sigma.z, [np.sqrt(sigma[2])])
-            self.sigma.abs= np.append(self.sigma.abs, [np.sqrt(sigma[0]+sigma[1]+sigma[2])])
-            self.sigma.rad = np.append(self.sigma.rad, [np.sqrt(sigma[3])])
-            self.sigma.tan = np.append(self.sigma.tan, [np.sqrt(sigma[4]+sigma[5]+sigma[6])])
-            self.sigma.rot = np.append(self.sigma.rot, [np.sqrt(sigma[7])])
+            self.sigma.x = np.append(self.sigma.x, [np.sqrt(sigma[0])], axis=0)
+            self.sigma.y = np.append(self.sigma.y, [np.sqrt(sigma[1])], axis=0)
+            self.sigma.z = np.append(self.sigma.z, [np.sqrt(sigma[2])], axis=0)
+            self.sigma.abs= np.append(self.sigma.abs, [np.sqrt(sigma[0]+sigma[1]+sigma[2])], axis=0)
+            self.sigma.rad = np.append(self.sigma.rad, [np.sqrt(sigma[3])], axis=0)
+            self.sigma.tan = np.append(self.sigma.tan, [np.sqrt(sigma[4]+sigma[5]+sigma[6])], axis=0)
+            self.sigma.rot = np.append(self.sigma.rot, [np.sqrt(sigma[7])], axis=0)
 
 class LagrangianMultiple(DictNpArrayMix):
     """ Lagrangian for single, binaries and all
     """
     def __init__ (self, _n_frac, _dat=None, _offset=int(0)):
-        ncols = int(0)
-        self.single = Lagrangian(_n_frac, _dat, _offset)
+        DictNpArrayMix.__init__(self, [['time',1]], _dat, _offset)
+        ncols = self.ncols
+        self.single = Lagrangian(_n_frac, _dat, ncols+_offset)
         ncols += self.single.ncols
         self.binary = Lagrangian(_n_frac, _dat, ncols+_offset)
         ncols += self.binary.ncols
         self.all    = Lagrangian(_n_frac, _dat, ncols+_offset)
         ncols += self.all.ncols
         self.ncols = ncols
+        self.size = self.all.size
         self.n_frac= _n_frac
 
-    def calcOneSnapshot(self, single, binary, mass_fraction, rc):
+    def calcOneSnapshot(self, time, single, binary, mass_fraction, rc):
         """ Calculate Lagrangian radii and related properties
         single: single partilces (cm corrected and r2 exist)
         binary: binaries (cm corrected and r2 exist)
         mass_fraction: Lagragian radius mass fraction
         rc: core radius
         """    
-
+        self.time = np.append(self.time, time)
         single_sim = SimpleParticle(single)
         single_sim.calc_r2()
         binary_sim = SimpleParticle(binary)
@@ -193,4 +201,24 @@ class LagrangianMultiple(DictNpArrayMix):
         self.single.calcOneSnapshot(single_sort, mass_fraction, rc)
         self.binary.calcOneSnapshot(binary_sort, mass_fraction, rc)
         self.all.calcOneSnapshot(all_sort, mass_fraction, rc)
+
+        self.size += 1
         
+def joinLagrangian(*_dat):
+    """
+    Join multiple data to one
+    """
+    type0 = type(_dat[0])
+    for idat in _dat:
+        if (type(idat) != type0):
+            raise ValueError('Initial fail, date type not consistent, type [0] is ',type0,' given ',type(idat))
+    new_dat = type0(_dat[0].n_frac)
+    for key, item in _dat[0].__dict__.items():
+        if (type(item) == np.ndarray):
+            new_dat.__dict__[key] = np.concatenate(tuple(map(lambda x:x.__dict__[key], _dat)))
+        elif(issubclass(type(item), DictNpArrayMix)):
+            new_dat.__dict__[key] = joinLagrangian(*tuple(map(lambda x:x.__dict__[key], _dat)))
+        else:
+            new_dat.__dict__[key] = _dat[0].__dict__[key]
+    new_dat.size = np.sum(tuple(map(lambda x:x.size, _dat)))
+    return new_dat
