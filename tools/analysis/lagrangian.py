@@ -5,7 +5,7 @@ from .data import *
 
 
 def density_six_nb(particle, kdtree):
-    """ calculate density based on six neighbors
+    """ calculate density based on six neighbors and return density center
     particle: all particles
     kdtree: 3D KDTree of all particle positions
     return: density_center_position
@@ -33,6 +33,35 @@ def core_radius(particle):
     rc = np.sqrt((particle.r2*rho2).sum()/(rho2.sum()))
 
     return rc
+
+def potential_center(single, binary, G):
+    """
+    get potential center of the system
+    r_cm = \sum_i pot_i *r_i /\sum_i pot_i (only count pot_i <0)
+    """
+    pot_s_sel = (single.pot<0)
+    pot_s = single.pot[pot_s_sel]
+    pos_s = single.pos[pot_s_sel]
+    vel_s = single.vel[pot_s_sel]
+    
+    pos_b1 = binary.p1.pos
+    pos_b2 = binary.p2.pos
+    m_b1 = binary.p1.mass
+    m_b2 = binary.p2.mass
+    dr = pos_b1-pos_b2
+    dr2 = vec_dot(dr,dr)
+    invr = 1/np.sqrt(dr2)
+    pot_b1 = binary.p1.pot + G*m_b2*invr
+    pot_b2 = binary.p2.pot + G*m_b1*invr
+    pot_b = (m_b2*pot_b1 + m_b1*pot_b2)/binary.mass
+    pos_b = binary.pos
+    vel_b = binary.vel
+    
+    pot_sum = pot_s.sum() + pot_b.sum()
+    cm_pos = np.array([(np.sum(pot_s*pos_s[:,i])+np.sum(pot_b*pos_b[:,i]))/pot_sum for i in range(3)])
+    cm_vel = np.array([(np.sum(pot_s*vel_s[:,i])+np.sum(pot_b*vel_b[:,i]))/pot_sum for i in range(3)])
+
+    return cm_pos, cm_vel
 
 class LagrangianVelocity(DictNpArrayMix):
     """ Lagrangian velocity component

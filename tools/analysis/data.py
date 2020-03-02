@@ -46,16 +46,28 @@ def calculateParticleCMDict(pcm, _p1, _p2):
 class Binary(DictNpArrayMix):
     """ Binary class
     """
-    def __init__ (self, _p1=None, _p2=None, _G=1):
+    def __init__ (self, _p1=None, _p2=None, _G=1, simple_mode=True):
+        """
+        simple_mode: only calculate semi and ecc
+        """
         if (issubclass(type(_p1), SimpleParticle)) & (issubclass(type(_p2),SimpleParticle)):
-            self.particleToBinary(_p1.__dict__, _p2.__dict__, _G)
+            if (simple_mode): 
+                self.particleToSemiEcc(_p1, _p2, _G)
+                self.ncols= int(10)
+            else:
+                self.particleToBinary(_p1, _p2, _G)
+                self.ncols= int(27)
             self.p1 = _p1
             self.p2 = _p2
             self.size = _p1.size
-            self.ncols= int(27 + self.p1.ncols + self.p2.ncols)
+            self.ncols += self.p1.ncols + self.p2.ncols
         elif (_p2==None):
-            keys=[['mass',1],['pos',3],['vel',3],['m1',1],['m2',1],['r',1],['semi',1],['am',3],['L',3],['eccvec',3],['incline',1],['rot_horizon',1],['ecc',1],['rot_self',1],['ecca',1],['period',1],['t_peri',1],['p1',SimpleParticle],['p2',SimpleParticle]]
-            DictNpArrayMix.__init__(self, keys, _p1)
+            if (simple_mode):
+                keys = [['mass',1],['pos',3],['vel',3],['r',1],['semi',1],['ecc',1]]
+                DictNpArrayMix.__init__(self, keys, _p1)
+            else:
+                keys=[['mass',1],['pos',3],['vel',3],['m1',1],['m2',1],['r',1],['semi',1],['am',3],['L',3],['eccvec',3],['incline',1],['rot_horizon',1],['ecc',1],['rot_self',1],['ecca',1],['period',1],['t_peri',1],['p1',SimpleParticle],['p2',SimpleParticle]]
+                DictNpArrayMix.__init__(self, keys, _p1)
         else:
             raise ValueError('Initial fail, date type should be Particle (2), Binary (1) or no argument (0)')
 
@@ -73,6 +85,33 @@ class Binary(DictNpArrayMix):
         self.p1.correct_center(cm_pos, cm_vel)
         self.p2.correct_center(cm_pos, cm_vel)
 
+    def particleToSemiEcc(self, _p1,_p2, _G):
+        """
+        calculate binary semi-major axis and eccentricity from particle pairs
+        _p1, _p2: data class
+        _G: gravitational constant
+        return: semi, ecc
+        """
+        calculateParticleCMDict(self.__dict__, _p1, _p2)
+
+        dr = (_p1.pos - _p2.pos)
+        dv = (_p1.vel - _p2.vel)
+        
+        dr2  = (dr*dr).sum(axis=1)
+        dv2  = (dv*dv).sum(axis=1)
+        rvdot= (dr*dv).sum(axis=1)
+    
+        dr   = np.sqrt(dr2)
+        m    = (_p1.mass+_p2.mass)
+        semi = 1.0/(2.0/dr - dv2/(_G*m))
+
+        dr_semi = 1.0 - dr/semi
+        ecc = np.sqrt(dr_semi*dr_semi + rvdot*rvdot/(_G*m*semi))
+
+        self.r = dr
+        self.semi = semi
+        self.ecc  = ecc
+
     def particleToBinary(self, _p1, _p2, _G):
         """ 
         Calculate binary orbit from particle pairs
@@ -88,23 +127,23 @@ class Binary(DictNpArrayMix):
         f_err = 1e-2
         calculateParticleCMDict(binary, _p1, _p2)
 
-        binary['m1'] = _p1['mass']
-        binary['m2'] = _p2['mass']
-        m_tot = _p1['mass'] + _p2['mass']
+        binary['m1'] = _p1.mass
+        binary['m2'] = _p2.mass
+        m_tot = binary['mass']
         Gm_tot = _G*m_tot
         
-        dx = _p1['pos']-_p2['pos']
-        dv = _p1['vel']-_p2['vel']
-        dr2  = np.array(list(map(lambda x:np.inner(x,x),dx)))
-        dv2  = np.array(list(map(lambda x:np.inner(x,x),dv)))
-        rvdot= np.array(list(map(lambda x,y:np.inner(x,y),dx,dv)))
+        dx = _p1.pos-_p2.pos
+        dv = _p1.vel-_p2.vel
+        dr2  = vec_dot(dx,dx)
+        dv2  = vec_dot(dv,dv)
+        rvdot= vec_dot(dx,dv)
         dr   = np.sqrt(dr2)
         binary['r'] = np.sqrt(dr2)
      
         inv_dr = 1.0 / binary['r']
         binary['semi'] = 1.0 / (2.0*inv_dr - dv2 / Gm_tot)
         binary['am'] = np.array(list(map(lambda x,y:np.cross(x,y),dx,dv)))
-        dp = np.array(list(map(lambda m1,x1,m2,x2:m1*x1-m2*x2,_p1['mass'],_p1['vel'],_p2['mass'],_p2['vel'])))
+        dp = np.array(list(map(lambda m1,x1,m2,x2:m1*x1-m2*x2,_p1.mass,_p1.vel,_p2.mass,_p2.vel)))
         binary['L'] = np.array(list(map(lambda x,y:np.cross(x,y),dx,dp)))
         binary['eccvec'] = np.array(list(map(lambda v,am,gm,dx,dr:np.cross(v,am)/gm-dx/dr,dv,binary['am'],Gm_tot,dx,dr)))
      
@@ -144,77 +183,72 @@ class Binary(DictNpArrayMix):
         #phi[phi>=np.pi-1e-5] -= 2*np.pi
      
         f = phi - binary['rot_self']
-        sinu = binary['r']*np.sin(f) / (binary['semi']*np.sqrt(1.0 - binary['ecc']*binary['ecc']))
-        cosu = (binary['r']*np.cos(f) / binary['semi']) + binary['ecc']
-        binary['ecca'] = np.arctan2(sinu,cosu)
-        n = np.sqrt(Gm_tot/(binary['semi']*binary['semi']*binary['semi']))
+        binary['ecca'] = np.arctan(np.sin(f)*np.sqrt(np.abs(binary['ecc']*binary['ecc'] - 1.0))/(binary['ecc']+np.cos(f)))
+        n = np.sqrt(Gm_tot/np.abs(binary['semi']*binary['semi']*binary['semi']))
         binary['period'] = 8.0*np.arctan(1.0)/n
         l = binary['ecca'] - binary['ecc']*np.sin(binary['ecca'])
         binary['t_peri'] = l / n
 
-def findPair(_dat, _G, _rmax):
+def findPair(_dat, _G, _rmax, use_kdtree=False, simple_binary=True):
     """
     Find paris
     _dat: Particle type data 
-    return: KDtree, single, binary
+    _G: gravitational constant
+    _rmax: maximum binary separation
+    use_kdtree: use KDtree to find all binaries (slow); otherwise use information from PeTar, only hard binaries are detected (fast)
+    simple_binary: only calculate semi and ecc (fast); otherwise calculating all binary parameters (slow)
+    return: [KDtree], single, binary
     """
     if (not isinstance(_dat,Particle)):
         raise ValueError("Data type wrong",type(_dat))
-    
-    # create KDTree
-    #print('create KDTree')
-    kdt=sp.KDTree(_dat.pos)
 
-    # find all close pairs
-    #pairs=kdt.query_pairs(_rmax*AU2PC)
-        
-    # only check nearest index
-    #pair_index=np.unique(np.transpose(np.array([np.array([x[0],x[1]]) for x in pairs])),axis=0)
+    if (use_kdtree):
+        # create KDTree
+        #print('create KDTree')
+        kdt=sp.cKDTree(_dat.pos)
      
-    # find pair index and distance
-    #print('Get index')
-    r,index=kdt.query(_dat.pos,k=2)
+        # find all close pairs
+        #pairs=kdt.query_pairs(_rmax*AU2PC)
+            
+        # only check nearest index
+        #pair_index=np.unique(np.transpose(np.array([np.array([x[0],x[1]]) for x in pairs])),axis=0)
+         
+        # find pair index and distance
+        #print('Get index')
+        r,index=kdt.query(_dat.pos,k=2)
+        pair_index=np.transpose(np.unique(np.sort(index,axis=1),axis=0))
+        #pair_index = np.transpose(index)
 
-    pair_index=np.transpose(np.unique(np.sort(index,axis=1),axis=0))
+        #index = kdt.query_pairs(_rmax,output_type='ndarray')
+        #pair_index = np.transpose(index)
 
-    # two members
-    p1 = _dat[pair_index[0]]
-    p2 = _dat[pair_index[1]]
+     
+        # two members
+        p1 = _dat[pair_index[0]]
+        p2 = _dat[pair_index[1]]
+     
+        # check orbits
+        #print('Create binary')
+        binary = Binary(p1, p2, _G)
+        apo =binary.semi*(binary.ecc+1.0)
+     
+        bsel= ((binary.semi>0) & (apo<_rmax))
+        binary = binary[bsel]
+        
+        single_mask = np.ones(_dat.size).astype(bool)
+        single_mask[pair_index[0][bsel]]=False
+        single_mask[pair_index[1][bsel]]=False
+        single = _dat[single_mask]
+        
+        return kdt, single, binary
+    else:
+        idx = _dat.status.argsort()
+        dat_sort = _dat[idx]
+        status, index, inverse, counts = np.unique(dat_sort.status, return_index=True, return_inverse=True, return_counts=True)
+        binary_i1 = index[counts==2]
+        binary_i2 = binary_i1+1
+        binary = Binary(dat_sort[binary_i1], dat_sort[binary_i2], _G)
+        single = dat_sort[index[-1]:]
 
-    # check orbits
-    #print('Create binary')
-    binary = Binary(p1, p2, _G)
-    apo =binary.semi*(binary.ecc+1.0)
-
-    bsel= ((binary.semi>0) & (apo<_rmax))
-    binary = binary[bsel]
-    
-    single_mask = np.ones(_dat.size).astype(bool)
-    single_mask[pair_index[0][bsel]]=False
-    single_mask[pair_index[1][bsel]]=False
-    single = _dat[single_mask]
-    
-    return kdt, single, binary
-
-def particleToSemiEcc(_p1,_p2, _G):
-    """
-    calculate binary semi-major axis and eccentricity from particle pairs
-    _p1, _p2: data class
-    _G: gravitational constant
-    return: semi, ecc
-    """
-    dr = (_p1.pos - _p2.pos)*_units.r
-    dv = (_p1.vel - _p2.vel)*_units.v
-    
-    dr2  = (dr*dr).sum(axis=1)
-    dv2  = (dv*dv).sum(axis=1)
-    rvdot= (dr*dv).sum(axis=1)
-    
-    dr   = np.sqrt(dr2)
-    m    = (_p1.mass+_p2.mass)
-    semi = 1.0/(2.0/dr - dv2/(_G*m))
-
-    dr_semi = 1.0 - dr/semi
-    ecc = np.sqrt(dr_semi*dr_semi + rvdot*rvdot/(_G*m*semi))
-    return semi, ecc
+        return single, binary
 
