@@ -1,0 +1,155 @@
+TARGET: @PROG_NAME@ petar.hard.debug petar.init
+
+use_x86=@use_x86@
+use_simd= @use_simd@
+use_mpi  = @use_mpi@
+use_gpu_cuda= @use_gpu@
+use_omp = @use_omp@
+use_gperf=@use_gperf@
+debug_flag=@debug_flag@
+debug_mode=@debug_mode@
+
+FDPS_PATH = @FDPS_PATH@
+SDAR_PATH = @SDAR_PATH@
+GPERF_PATH= @GPERF_PATH@
+CUDA_PATH = @CUDA_PATH@
+
+#MT_FLAGS += -D HARD_CM_KICK
+MT_FLAGS += -D USE_QUAD
+MT_FLAGS += -D SOFT_PERT
+MT_FLAGS += -D AR_TTL
+MT_FLAGS += -D AR_SLOWDOWN_INNER
+#MT_FLAGS += -D AR_TTL_GT_BINARY_INNER
+#MT_FLAGS += -D FIX_CHANGEOVER
+MT_FLAGS += -D AR_SLOWDOWN_TIMESCALE
+#MT_FLAGS += -D AR_SLOWDOWN_MASSRATIO
+MT_FLAGS += -D CLUSTER_VELOCITY
+MT_FLAGS += -D HARD_CHECK_ENERGY
+MT_FLAGS += -D HARD_COUNT_NO_NEIGHBOR
+#MT_FLAGS += -D KDKDK_2ND
+#MT_FLAGS += -D KDKDK_4TH
+#MT_FLAGS += -D ONLY_SOFT
+#MT_FLAGS += -D STELLAR_EVOLUTION
+#MT_FLAGS += -D INTEGRATED_CUTOFF_FUNCTION
+
+ifeq ($(debug_flag),yes)
+
+DEBFLAGS += -D PETAR_DEBUG
+DEBFLAGS += -D AR_DEBUG
+DEBFLAGS += -D STABLE_CHECK_DEBUG
+DEBFLAGS += -D AR_WARN
+DEBFLAGS += -D CLUSTER_DEBUG
+DEBFLAGS += -D ARTIFICIAL_PARTICLE_DEBUG
+DEBFLAGS += -D HARD_DEBUG
+DEBFLAGS += -D NAN_CHECK_DEBUG
+
+#DEBFLAGS += -D AR_DEBUG_DUMP
+#DEBFLAGS += -D AR_COLLECT_DS_MODIFY_INFO
+
+#DEBFLAGS += -D PARTICLE_SIMULATOR_DEBUG_PRINT
+#DEBFLAGS += -D HARD_INTERRUPT_PRINT
+#DEBFLAGS += -D AR_DEEP_DEBUG
+#DEBFLAGS += -D AR_DEBUG_PRINT
+#DEBFLAGS += -D CLUSTER_DEBUG_PRINT
+#DEBFLAGS += -D HARD_DEBUG_PRINT
+#DEBFLAGS += -D CORRECT_FORCE_DEBUG
+
+endif
+
+DEBFLAGS += -D HARD_DUMP
+
+
+#-------------------------------------
+ifeq ($(use_mpi),yes) 
+FDPSFLAGS = -DPARTICLE_SIMULATOR_MPI_PARALLEL
+FDPSFLAGS += -DMPICH_IGNORE_CXX_SEEKC
+endif # mpi
+
+#-------------------------------------
+
+ifeq ($(use_omp),yes)
+CXXFLAGS += @OPENMP_CXXFLAGS@
+CXXFLAGS += -D PARTICLE_SIMULATOR_THREAD_PARALLEL
+endif # omp
+
+#---------------------------------------------
+ifeq ($(use_gpu_cuda),yes)
+CUDAFLAGS = -D PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+FDPSFLAGS += $(CUDAFLAGS)
+NVCC = nvcc -std=c++11 -Xcompiler="$(OPTFLAGS) $(CXXFLAGS) $(CUDAFLAGS) $(MT_FLAGS)"
+CXXLIBS += -L$(CUDA_PATH)/lib64 -lcudart -lgomp
+OBJS += force_gpu_cuda.o
+CXXFLAGS += -D USE_GPU
+CXXFLAGS += -D GPU_PROFILE
+endif # gpu cuda
+
+#-------------------------------------
+ifeq ($(use_x86),yes)
+CXXFLAGS += -DINTRINSIC_X86
+
+#-------------------------------------
+ifeq ($(use_simd),yes)
+CXXFLAGS += @X86_FEATURE_CFLAGS@
+CXXFLAGS += -D DIV_FIX
+#CXXFLAGS += -D P3T_64BIT
+CXXFLAGS += -D USE_SIMD
+endif  # simd
+#-------------------------------------
+
+endif # x86
+
+#-------------------------------------
+ifeq (x$(use_gperf),yes)
+CXXFLAGS += -I$(GPERF_PATH)/include -D GPERF_PROFILE
+CXXLIBS += -L$(GPERF_PATH)/lib -lprofiler -ltcmalloc 
+endif # gperf
+#-------------------------------------
+
+
+CXXFLAGS += -D PROFILE
+
+
+VPATH=${ROOT_PATH}/src ${ROOT_PATH}/test
+INCLUDE  = -I${ROOT_PATH}/src $(FDPS_PATH) $(SDAR_PATH)
+
+SRC = main.cc ${shell ls ${ROOT_PATH}/src/*.hpp} 
+
+@PROG_NAME@:  $(SRC) $(OBJS)
+	$(CXX) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(OBJS) $(CXXLIBS)
+
+
+SIMD_DEBFLAGS += -DRSQRT_NR_EPJ_X2
+#SIMD_DEBFLAGS += -DRSQRT_NR_EPJ_X4
+#SIMD_DEBFLAGS += -DCALC_SP_64bit
+#SIMD_DEBFLAGS += -DRSQRT_NR_SPJ_X2
+#SIMD_DEBFLAGS += -DRSQRT_NR_SPJ_X4
+SIMD_DEBFLAGS += -DAVX_PRELOAD
+
+DEBUG_OPT_FLAGS = -g -O0 -fbounds-check -Wall  -D SANITY_CHECK_REALLOCATABLE_ARRAY
+HARD_DEBFLAGS+= -D AR_DEBUG -D AR_DEBUG_DUMP -D AR_WARN -D HARD_DEBUG -D HARD_CHECK_ENERGY -D HARD_DEBUG_PRINT -D ADJUST_GROUP_DEBUG -D HERMITE_DEBUG -D AR_COLLECT_DS_MODIFY_INFO
+HARD_MT_FLAGS += -D AR_TTL -D AR_SLOWDOWN_INNER -D AR_SLOWDOWN_TIMESCALE -D HARD_CHECK_ENERGY -D STABLE_CHECK_DEBUG_PRINT -D ARTIFICIAL_PARTICLE_DEBUG
+
+
+petar.hard.debug: hard_debug.cxx
+	$(CXXNOMPI) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
+
+petar.hard.test: hard_test.cxx
+	$(CXXNOMPI) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
+
+petar.simd.test: simd_test.cxx $(OBJS)
+	$(CXXNOMPI) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(SIMD_DEBFLAGS) -DPARTICLE_SIMULATOR_THREAD_PARALLEL $^ -o $@  $(CXXLIBS)
+
+petar.tt.test: tidal_tensor_test.cxx
+	$(CXXNOMPI) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS)  $< -o $@  $(CXXLIBS)
+
+force_gpu_cuda.o: force_gpu_cuda.cu
+	$(NVCC) $(INCLUDE) -I$(CUDA_PATH)/samples/common/inc -c $< -o $@ 
+
+install: $(TARGET)
+    install -d $(DESTDIR)$(PREFIX)/bin/
+    install -m 644 $(TARGET) $(DESTDIR)$(PREFIX)/bin/
+    install -d $(DESTDIR)$(PREFIX)/include/
+    install -m 755 tools/analysis $(DESTDIR)$(PREFIX)/include/
+
+clean:
+	rm *.out *.o 

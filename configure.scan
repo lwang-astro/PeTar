@@ -1,0 +1,98 @@
+
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
+
+AC_PREREQ([2.69])
+AC_INIT([PeTar], [1.0], [longwang.astro@live.com])
+#AC_CONFIG_SRCDIR([src/main.cc])
+#AC_CONFIG_HEADERS([config.h])
+
+PROG_NAME=petar
+
+# Checks for programs.
+# MPI
+  # If --with-mpi=auto is used, try to find MPI, but use standard C compiler if it is not found.
+  # If --with-mpi=yes is used, try to find MPI and fail if it isn't found.
+  # If --with-mpi=no is used, use a standard C compiler instead.
+AC_ARG_WITH(mpi, 
+            [AS_HELP_STRING([--with-mpi],
+                            [compile with MPI (parallelization) support. If none is found, MPI is not used. Default: auto])],
+            [],
+	    [with_mpi=auto])
+
+AX_PROG_CXX_MPI([test x"$with_mpi" != xno],
+		[use_mpi=yes
+		 PROG_NAME=$PROG_NAME'.mpi'],
+		[use_mpi=no
+		 if test x"$with_mpi" = xyes; then
+		      AC_MSG_FAILURE([MPI compiler requested, but couldn't use MPI.])
+		 else
+		      AC_MSG_WARN([No MPI compiler found, won't use MPI.])
+		 fi])
+
+# OpenMP
+AX_OPENMP([use_omp=yes
+	   PROG_NAME=$PROG_NAME'.omp'],
+	  [])
+
+# x86
+AC_DEFUN([AX_CHECK_X86_FEATURES],
+ [m4_foreach_w(
+   [ax_x86_feature],
+   [avx avx2 avx512dq],
+   [AX_GCC_X86_CPU_SUPPORTS(ax_x86_feature,
+     [X86_FEATURE_CFLAGS="$X86_FEATURE_CFLAGS -m[]ax_x86_feature"],
+     [])
+  ])
+  AC_SUBST([X86_FEATURE_CFLAGS])
+  m4_ifval([$1],[$1],
+    [CFLAGS="$CFLAGS $X86_FEATURE_CFLAGS"])
+  $2
+])
+
+AC_ARG_WITH(x86,
+	    [AS_HELP_STRING([--with-x86],
+                            [compile with x86 feature support. Default: enable])],
+            [],
+	    [with_x86=yes])
+
+AS_IF([test x"$with_x86$ != xno],
+      [use_x86=yes
+       AX_CHECK_X86_FEATURES([use_simd=yes],[])],
+      [])
+
+# cuda
+
+
+
+
+AC_PROG_AWK
+AC_PROG_LN_S
+AC_PROG_MAKE_SET
+
+# Checks for libraries.
+# FIXME: Replace `main' with a function in `-lcudart':
+AC_CHECK_LIB([cudart], [main])
+# FIXME: Replace `main' with a function in `-lgomp':
+AC_CHECK_LIB([gomp], [main])
+# FIXME: Replace `main' with a function in `-lm':
+AC_CHECK_LIB([m], [main])
+# FIXME: Replace `main' with a function in `-lprofiler':
+AC_CHECK_LIB([profiler], [main])
+# FIXME: Replace `main' with a function in `-ltcmalloc':
+AC_CHECK_LIB([tcmalloc], [main])
+
+# Checks for header files.
+AC_CHECK_HEADERS([unistd.h])
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_CHECK_HEADER_STDBOOL
+AC_C_INLINE
+AC_TYPE_SIZE_T
+
+# Checks for library functions.
+AC_CHECK_FUNCS([pow sqrt])
+
+AC_CONFIG_FILES([Makefile
+                 amuse-interface/Makefile])
+AC_OUTPUT
