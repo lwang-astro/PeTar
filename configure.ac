@@ -33,8 +33,9 @@ AC_ARG_WITH([mpi],
 AX_PROG_CXX_MPI([test x"$with_mpi" != xno],
                 [use_mpi=yes
                  PROG_NAME=$PROG_NAME".mpi"
-		 CXXNOMPI=``],
-                [use_mpi=no])
+                 CXXNOMPI=`$CXX -show|awk '{print $1}'`],
+                [use_mpi=no
+                 CXXNOMPI=$CXX])
 
 AS_IF([test x"$use_mpi" == xno],
       [AS_IF([test x"$with_mpi" = xyes],
@@ -52,11 +53,13 @@ AC_ARG_WITH([debug],
 AS_IF([test x"$with_debug" != xno],
       [AS_IF([test x"$with_debug" == xg],
              [AX_CHECK_COMPILE_FLAG([-g], 
-	                            [OPTFLAGS=" -g"],
+	                            [OPTFLAGS=" -g"
+                                     PROG_NAME=$PROG_NAME".g"],
 				    [AC_MSG_FAILURE([Compiler do not support -g ])])
               AX_CHECK_COMPILE_FLAG([-fbounds-check],
-	                            [OPTFLAGS=$OPTFLAGS" -fbounds-check"])])],
-      [AX_CHECK_COMPILE_FLAG([-O3],
+	                            [OPTFLAGS=$OPTFLAGS" -fbounds-check"])],
+             [PROG_NAME=$PROG_NAME".d"])
+       AX_CHECK_COMPILE_FLAG([-O3],
                              [OPTFLAGS=" -O3"])])
 
 

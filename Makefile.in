@@ -8,7 +8,7 @@ use_mpi =@use_mpi@
 use_gpu_cuda=@use_cuda@
 use_omp = @use_omp@
 use_gperf=@use_gperf@
-debug_flag=@with_debug@
+debug_mode=@with_debug@
 
 #MT_FLAGS += -D HARD_CM_KICK
 MT_FLAGS += -D USE_QUAD
@@ -30,7 +30,7 @@ MT_FLAGS += -D HARD_COUNT_NO_NEIGHBOR
 
 OPTFLAGS = @OPTFLAGS@
 
-ifeq ($(debug_flag),assert)
+ifneq ($(debug_mode),no)
 
 DEBFLAGS += -D PETAR_DEBUG
 DEBFLAGS += -D AR_DEBUG
@@ -158,4 +158,4 @@ install: $(TARGET)
 	install -m 755 tools/analysis/*.py @prefix@/include/petar/
 
 clean:
-	rm *.out *.o 
+	rm $(TARGET) *.o 
