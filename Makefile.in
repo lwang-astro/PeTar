@@ -3,16 +3,10 @@ TARGET: @PROG_NAME@ petar.hard.debug petar.init
 use_x86=@use_x86@
 use_simd= @use_simd@
 use_mpi  = @use_mpi@
-use_gpu_cuda= @use_gpu@
+use_gpu_cuda= @use_cuda@
 use_omp = @use_omp@
 use_gperf=@use_gperf@
-debug_flag=@debug_flag@
-debug_mode=@debug_mode@
-
-FDPS_PATH = @FDPS_PATH@
-SDAR_PATH = @SDAR_PATH@
-GPERF_PATH= @GPERF_PATH@
-CUDA_PATH = @CUDA_PATH@
+debug_flag=@with_debug@
 
 #MT_FLAGS += -D HARD_CM_KICK
 MT_FLAGS += -D USE_QUAD
@@ -32,7 +26,9 @@ MT_FLAGS += -D HARD_COUNT_NO_NEIGHBOR
 #MT_FLAGS += -D STELLAR_EVOLUTION
 #MT_FLAGS += -D INTEGRATED_CUTOFF_FUNCTION
 
-ifeq ($(debug_flag),yes)
+OPT_FLAGS = @OPTFLAGS@
+
+ifeq ($(debug_flag),assert)
 
 DEBFLAGS += -D PETAR_DEBUG
 DEBFLAGS += -D AR_DEBUG
@@ -56,8 +52,11 @@ DEBFLAGS += -D NAN_CHECK_DEBUG
 
 endif
 
-DEBFLAGS += -D HARD_DUMP
+ifeq ($(debug_flag),g)
+OPTFLAGS += -D SANITY_CHECK_REALLOCATABLE_ARRAY
+endif
 
+DEBFLAGS += -D HARD_DUMP
 
 #-------------------------------------
 ifeq ($(use_mpi),yes) 
@@ -76,8 +75,8 @@ endif # omp
 ifeq ($(use_gpu_cuda),yes)
 CUDAFLAGS = -D PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
 FDPSFLAGS += $(CUDAFLAGS)
-NVCC = nvcc -std=c++11 -Xcompiler="$(OPTFLAGS) $(CXXFLAGS) $(CUDAFLAGS) $(MT_FLAGS)"
-CXXLIBS += -L$(CUDA_PATH)/lib64 -lcudart -lgomp
+NVCC = @NVCC@ @CUDAFLAG@ -Xcompiler="$(OPTFLAGS) $(CXXFLAGS) $(CUDAFLAGS) $(MT_FLAGS)"
+CXXLIBS += @CUDALIBS@
 OBJS += force_gpu_cuda.o
 CXXFLAGS += -D USE_GPU
 CXXFLAGS += -D GPU_PROFILE
@@ -100,8 +99,9 @@ endif # x86
 
 #-------------------------------------
 ifeq (x$(use_gperf),yes)
-CXXFLAGS += -I$(GPERF_PATH)/include -D GPERF_PROFILE
-CXXLIBS += -L$(GPERF_PATH)/lib -lprofiler -ltcmalloc 
+CXXFLAGS += @GPERFFLAGS@
+CXXLFAGS += -D GPERF_PROFILE
+CXXLIBS += @GPERFLIBS@
 endif # gperf
 #-------------------------------------
 
@@ -109,10 +109,10 @@ endif # gperf
 CXXFLAGS += -D PROFILE
 
 
-VPATH=${ROOT_PATH}/src ${ROOT_PATH}/test
-INCLUDE  = -I${ROOT_PATH}/src $(FDPS_PATH) $(SDAR_PATH)
+VPATH=./src ./test
+INCLUDE  = -I./src @INCLUDE@
 
-SRC = main.cc ${shell ls ${ROOT_PATH}/src/*.hpp} 
+SRC = main.cc ${shell ls ./src/*.hpp} 
 
 @PROG_NAME@:  $(SRC) $(OBJS)
 	$(CXX) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(OBJS) $(CXXLIBS)
@@ -143,7 +143,7 @@ petar.tt.test: tidal_tensor_test.cxx
 	$(CXXNOMPI) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS)  $< -o $@  $(CXXLIBS)
 
 force_gpu_cuda.o: force_gpu_cuda.cu
-	$(NVCC) $(INCLUDE) -I$(CUDA_PATH)/samples/common/inc -c $< -o $@ 
+	$(NVCC) $(INCLUDE) -c $< -o $@ 
 
 install: $(TARGET)
     install -d $(DESTDIR)$(PREFIX)/bin/
