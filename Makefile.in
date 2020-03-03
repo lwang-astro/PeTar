@@ -1,9 +1,11 @@
-TARGET: @PROG_NAME@ petar.hard.debug petar.init
+TARGET=@PROG_NAME@ petar.hard.debug 
 
-use_x86=@use_x86@
-use_simd= @use_simd@
-use_mpi  = @use_mpi@
-use_gpu_cuda= @use_cuda@
+all: $(TARGET)
+
+use_x86 =@use_x86@
+use_simd=@use_simd@
+use_mpi =@use_mpi@
+use_gpu_cuda=@use_cuda@
 use_omp = @use_omp@
 use_gperf=@use_gperf@
 debug_flag=@with_debug@
@@ -26,7 +28,7 @@ MT_FLAGS += -D HARD_COUNT_NO_NEIGHBOR
 #MT_FLAGS += -D STELLAR_EVOLUTION
 #MT_FLAGS += -D INTEGRATED_CUTOFF_FUNCTION
 
-OPT_FLAGS = @OPTFLAGS@
+OPTFLAGS = @OPTFLAGS@
 
 ifeq ($(debug_flag),assert)
 
@@ -75,7 +77,7 @@ endif # omp
 ifeq ($(use_gpu_cuda),yes)
 CUDAFLAGS = -D PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
 FDPSFLAGS += $(CUDAFLAGS)
-NVCC = @NVCC@ @CUDAFLAG@ -Xcompiler="$(OPTFLAGS) $(CXXFLAGS) $(CUDAFLAGS) $(MT_FLAGS)"
+NVCC = @NVCC@ @CUDAFLAGS@ -Xcompiler="$(OPTFLAGS) $(CXXFLAGS) $(CUDAFLAGS) $(MT_FLAGS)"
 CXXLIBS += @CUDALIBS@
 OBJS += force_gpu_cuda.o
 CXXFLAGS += -D USE_GPU
@@ -88,7 +90,7 @@ CXXFLAGS += -DINTRINSIC_X86
 
 #-------------------------------------
 ifeq ($(use_simd),yes)
-CXXFLAGS += @X86_FEATURE_CFLAGS@
+CXXFLAGS += @SIMDFLAGS@
 CXXFLAGS += -D DIV_FIX
 #CXXFLAGS += -D P3T_64BIT
 CXXFLAGS += -D USE_SIMD
@@ -108,6 +110,8 @@ endif # gperf
 
 CXXFLAGS += -D PROFILE
 
+CXX=@CXX@
+CXXNOMPI=@CXXNOMPI@
 
 VPATH=./src ./test
 INCLUDE  = -I./src @INCLUDE@
@@ -146,10 +150,12 @@ force_gpu_cuda.o: force_gpu_cuda.cu
 	$(NVCC) $(INCLUDE) -c $< -o $@ 
 
 install: $(TARGET)
-    install -d $(DESTDIR)$(PREFIX)/bin/
-    install -m 644 $(TARGET) $(DESTDIR)$(PREFIX)/bin/
-    install -d $(DESTDIR)$(PREFIX)/include/
-    install -m 755 tools/analysis $(DESTDIR)$(PREFIX)/include/
+	install -d @prefix@/bin/
+	install -m 755 $(TARGET) @prefix@/bin/
+	install -m 755 tools/initdata.sh @prefix@/bin/petar.init
+	install -d @prefix@/include/
+	install -d @prefix@/include/petar
+	install -m 755 tools/analysis/*.py @prefix@/include/petar/
 
 clean:
 	rm *.out *.o 
