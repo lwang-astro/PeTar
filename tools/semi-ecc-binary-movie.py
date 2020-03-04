@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import os
 import collections as cl
 import sys
-import analysis
+import petar
 
 filename='tlst'
 dout='semi-ecc'
@@ -46,8 +46,8 @@ path = path.split()
 fig,axes=plt.subplots(2,2,figsize=(8,8))
 
 for i in path:
-    dat = analysis.Particle(np.loadtxt('data.'+str(i),skiprows=1))
-    p1,p2,binary = analysis.findPair(dat)
+    dat = petar.Particle(np.loadtxt('data.'+str(i),skiprows=1))
+    single,binary = petar.findPair(dat,G,1.0,use_kdtree=True)
     semi = binary.semi
     ecc  = binary.ecc
     sel = (semi>amin) & (semi<amax)

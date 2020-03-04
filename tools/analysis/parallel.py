@@ -75,12 +75,13 @@ def data_process_list(file_list, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), G=1.0,
     return lagr, time_profile
 
 
-def parllel_data_process_list(file_list, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), G=1.0, r_bin=0.1):
+def parallel_data_process_list(file_list, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), G=1.0, r_bin=0.1, n_cpu=int(0)):
     """ parellel process lagragian calculation for a list of file snapshots
     file_list: file path list
     """
-    n_cpu = mp.cpu_count()
-    print('n_cpu:',n_cpu)
+    if (n_cpu==int(0)):
+        n_cpu = mp.cpu_count()
+        #print('n_cpu:',n_cpu)
     pool = mp.Pool(n_cpu)
 
     n_files=len(file_list)
@@ -88,7 +89,7 @@ def parllel_data_process_list(file_list, m_frac=np.array([0.1,0.3,0.5,0.7,0.95])
     n_left = n_files%n_cpu
     n_pieces[:n_left]+=1
     n_offset=np.append([0],n_pieces.cumsum()).astype(int)
-    print('work_pieces',n_pieces)
+    #print('work_pieces',n_pieces)
 
     file_part = [file_list[n_offset[i]:n_offset[i+1]] for i in range(n_cpu)]
 
