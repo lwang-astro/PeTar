@@ -111,7 +111,7 @@ More useful tools will be implemented in the future.
 To avoid segmetantional fault in simulations in the case of large number of particles, make sure to set the OMP_STACKSIZE large enough.
 For example, use
 ```
-OMP_STACKSIZE=128M [mpiexec -n X] ./petar [options] [data filename] 
+OMP_STACKSIZE=128M [mpiexec -n X] petar.mpi.omp.avx2 [options] [data filename] 
 ```
 
 A convenient way is to add
