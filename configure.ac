@@ -107,7 +107,7 @@ AS_IF([test x"$with_x86" != xno],
                            [AX_GCC_X86_CPU_SUPPORTS(ax_x86_feature,
                                                     [SIMDFLAGS=" -m[]ax_x86_feature"
                                                      SIMD_TYPE="[]ax_x86_feature"
-                                                     use_simd=yes]
+                                                     use_simd=yes],
 						     [])])])
        PROG_NAME=$PROG_NAME"."$SIMD_TYPE],
       [use_x86=no])
@@ -268,7 +268,8 @@ AC_MSG_NOTICE([     Using x86 :     $use_x86])
 AS_IF([test "x$use_simd" != xno],
       [AC_MSG_NOTICE([     SIMD type:      $SIMD_TYPE ])
        AS_IF([test "x$with_simd" == xauto],
-             [AC_MSG_NOTICE([ Notice: this is auto-detected based on the local CPU architecture; be careful if your compling and running CPUs are different])])])
+             [AC_MSG_NOTICE([  Notice: this is auto-detected based on the local CPU architecture])
+              AC_MSG_NOTICE([          If different CPU is used for running, check whether $SIMD_TYPE is also supported])])])
 AC_MSG_NOTICE([     Using OpenMP:   $use_omp])
 AC_MSG_NOTICE([     Debug mode:     $with_debug])
 AC_MSG_NOTICE([--Compilers:])
@@ -278,13 +279,16 @@ AS_IF([test "x$use_cuda" != xno],
        AC_MSG_NOTICE([     CUDA version:   $CUDA_VERSION])])
 AC_MSG_NOTICE([--Targets:])
 AC_MSG_NOTICE([     Program name:   $PROG_NAME])
-AC_MSG_NOTICE([     Install path:   $prefix])
-AC_MSG_NOTICE([-----------------------------------------------------------])
-AC_MSG_NOTICE([  After install, please add $prefix/include into your PTHYON include path in order to use the analysis library in PYTHON3])
-AC_MSG_NOTICE([                        add $prefix/bin into your PATH)])
+AS_IF([test x"$prefix" != xNONE],
+      [AC_MSG_NOTICE([     Install path:   $prefix])
+       AC_MSG_NOTICE([-----------------------------------------------------------])
+       AC_MSG_NOTICE([  After install, please])
+       AC_MSG_NOTICE([      add $prefix/include into your PTHYON include path])
+       AC_MSG_NOTICE([      add $prefix/bin into your PATH])],
+      [AC_MSG_WARN([Install path is not defined, please provide it by using --prefix=INSTALL_PATH])])
 AC_MSG_NOTICE([-----------------------------------------------------------])
 AC_MSG_NOTICE([Reference paper: preparing...])
-AC_MSG_NOTICE([Questions can be checked and submitted to : https://github.com/lwang-astro/PeTar/issues])
+AC_MSG_NOTICE([Questions and bug reports: https://github.com/lwang-astro/PeTar/issues])
 AC_MSG_NOTICE([-----------------------------------------------------------])
 
 

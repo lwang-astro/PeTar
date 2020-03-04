@@ -4364,7 +4364,6 @@ $as_echo "#define HAVE_AVX_INSTRUCTIONS 1" >>confdefs.h
           SIMDFLAGS=" -mavx"
                                                      SIMD_TYPE="avx"
                                                      use_simd=yes
-
 fi
 
 
@@ -4429,7 +4428,6 @@ $as_echo "#define HAVE_AVX2_INSTRUCTIONS 1" >>confdefs.h
           SIMDFLAGS=" -mavx2"
                                                      SIMD_TYPE="avx2"
                                                      use_simd=yes
-
 fi
 
 
@@ -4494,7 +4492,6 @@ $as_echo "#define HAVE_AVX512DQ_INSTRUCTIONS 1" >>confdefs.h
           SIMDFLAGS=" -mavx512dq"
                                                      SIMD_TYPE="avx512dq"
                                                      use_simd=yes
-
 fi
 
 
@@ -5876,8 +5873,10 @@ if test "x$use_simd" != xno; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}:      SIMD type:      $SIMD_TYPE " >&5
 $as_echo "$as_me:      SIMD type:      $SIMD_TYPE " >&6;}
        if test "x$with_simd" == xauto; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}:  Notice: this is auto-detected based on the local CPU architecture; be careful if your compling and running CPUs are different" >&5
-$as_echo "$as_me:  Notice: this is auto-detected based on the local CPU architecture; be careful if your compling and running CPUs are different" >&6;}
+  { $as_echo "$as_me:${as_lineno-$LINENO}:   Notice: this is auto-detected based on the local CPU architecture" >&5
+$as_echo "$as_me:   Notice: this is auto-detected based on the local CPU architecture" >&6;}
+              { $as_echo "$as_me:${as_lineno-$LINENO}:           If different CPU is used for running, check whether $SIMD_TYPE is also supported" >&5
+$as_echo "$as_me:           If different CPU is used for running, check whether $SIMD_TYPE is also supported" >&6;}
 fi
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}:      Using OpenMP:   $use_omp" >&5
@@ -5898,20 +5897,27 @@ fi
 $as_echo "$as_me: --Targets:" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      Program name:   $PROG_NAME" >&5
 $as_echo "$as_me:      Program name:   $PROG_NAME" >&6;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}:      Install path:   $prefix" >&5
+if test x"$prefix" != xNONE; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}:      Install path:   $prefix" >&5
 $as_echo "$as_me:      Install path:   $prefix" >&6;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}: -----------------------------------------------------------" >&5
+       { $as_echo "$as_me:${as_lineno-$LINENO}: -----------------------------------------------------------" >&5
 $as_echo "$as_me: -----------------------------------------------------------" >&6;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}:   After install, please add $prefix/include into your PTHYON include path in order to use the analysis library in PYTHON3" >&5
-$as_echo "$as_me:   After install, please add $prefix/include into your PTHYON include path in order to use the analysis library in PYTHON3" >&6;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}:                         add $prefix/bin into your PATH)" >&5
-$as_echo "$as_me:                         add $prefix/bin into your PATH)" >&6;}
+       { $as_echo "$as_me:${as_lineno-$LINENO}:   After install, please" >&5
+$as_echo "$as_me:   After install, please" >&6;}
+       { $as_echo "$as_me:${as_lineno-$LINENO}:       add $prefix/include into your PTHYON include path" >&5
+$as_echo "$as_me:       add $prefix/include into your PTHYON include path" >&6;}
+       { $as_echo "$as_me:${as_lineno-$LINENO}:       add $prefix/bin into your PATH" >&5
+$as_echo "$as_me:       add $prefix/bin into your PATH" >&6;}
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Install path is not defined, please provide it by using --prefix=INSTALL_PATH" >&5
+$as_echo "$as_me: WARNING: Install path is not defined, please provide it by using --prefix=INSTALL_PATH" >&2;}
+fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: -----------------------------------------------------------" >&5
 $as_echo "$as_me: -----------------------------------------------------------" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: Reference paper: preparing..." >&5
 $as_echo "$as_me: Reference paper: preparing..." >&6;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}: Questions can be checked and submitted to : https://github.com/lwang-astro/PeTar/issues" >&5
-$as_echo "$as_me: Questions can be checked and submitted to : https://github.com/lwang-astro/PeTar/issues" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}: Questions and bug reports: https://github.com/lwang-astro/PeTar/issues" >&5
+$as_echo "$as_me: Questions and bug reports: https://github.com/lwang-astro/PeTar/issues" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: -----------------------------------------------------------" >&5
 $as_echo "$as_me: -----------------------------------------------------------" >&6;}
 
