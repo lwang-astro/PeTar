@@ -14,26 +14,65 @@ Please download these two codes and put in the same directory where the _PeTar_ 
 ### Make:
 Onces _FPDS_ and _SDAR_ are available, in the root directoy, use 
 ```
-make
+./configure
 ```
-to create the excutable file _petar_ and _petar.hard.debug_.
+to check the local enviroment and automatically detect the compilers and features.
+Options for configure can be found by 
+```
+./configure -h
+```
+#### A few useful options:
+1. Install path
+    ```
+    ./configure --prefix=[Install path]
+    ```
+   If the code is already installed before and the executable file (petar.\*\*) exists in the $PATH enviroment, the configure automatically use the same directory for installing.
+2. Use MPI
+   ```
+   ./configure --with-mpi=[auto/yes/no]
+   auto: automatical detection (default)
+   yes: use MPI c++ compiler
+   no: no MPI
+3. Use OpenMP
+    ```
+    ./configure --with-omp=[yes/no]
+    yes: (default)
+4. Use X86 with SIMD
+    ```
+    ./configure --with-simd=[auto/avx/avx2/avx512dq]
+    auto: automatical detection based on local CPU architecture (default)
+    avx: use AVX for tree force calculation and tree neighbor counting
+    avx2: use AVX2
+    avx512dq: use AVX512F and AVX512DQ
+    ```
+5. Use GPU (CUDA)
+    ```
+    ./configure --with-cuda=[yes/no]
+    yes: use GPU to calculate tree force
+    no: no GPU support (default)
+    ```
+
+Multiple options should be combined together, for example:
+```
+./configure --prefix=/opt --with-cuda=yes
+```
+will install the executable files in /opt and switch on GPU support.
+
+After configure, use 
+```
+make
+make install
+```
+to compile and install the code.
+
+The excutable file _petar.\*\*_, _petar.hard.debug_ and _petar.init_ will be installed in [Install path]/bin.
 _petar_ is the main routine.
 _petar.hard.debug_ is used for debugging if _hard\_dump_ files appears when the code crashes.
+_petar.init_ is used to generate the initial particle data file for start the simulation, the input data file should have the format: mass, position(x,y,z), velocity(x,y,z) each line for one particle
 
-### Parallelization options
-In defaulted, _MPI_, _OpenMP_ and _AVX2_ parallelization methods are used to compile the code.
-If users want to change the options, the Makefile should be modified.
-The _PATH_ to _FPDS_, _SDAR_, and _CUDA_ libraries and a few options of parallelization features (_use\_xx_) are shown in the head of the Makefile.
-Users can modify these parts.
-
-For example, when the comment symbol '#' is removed for the line
-```
-use_gpu_cuda=yes
-```
-the GPU feature is on. 
-Users should make sure the _CUDA_ compiler _nvcc_ is installed.
-
-In the future, _GNU AutoConf_ will be implemented.
+The data analysis tools are written in _PYTHON_.
+They are installed in [Install path]/include/petar
+Please add [Install path]/include to the _PYTHON_ include path in order to import the code.
 
 ## Use:
 The standard way to use the code is
@@ -55,6 +94,17 @@ To restart the simulation with the same configuration of parameters, use
 ./petar -p input.par [snapshot filename]
 ```
 where _input.par_ is automatically generated from the last run (stored in the same diretory of the simulation).
+
+### Data analysis in _PYTHON_
+The data analysis library provide the tools to identify binaries; calculate Lagrangian radii and core radii; obtain system energy error and check performance of each parts of the code.
+To use the tool, first 
+```
+import petar
+```
+in PYTHON script, IPYTHON or Jupyter. 
+petar.parallel_data_process_list can be used to calculate Lagrangian parameters using multiple CPU processors.
+For large _N_, the data process is quite slow, thus using multiple CPU processors can speed up the process. 
+More useful tools will be implemented in the future.
 
 ### Important tips:
 To avoid segmetantional fault in simulations in the case of large number of particles, make sure to set the OMP_STACKSIZE large enough.
