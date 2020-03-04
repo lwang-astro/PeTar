@@ -50,15 +50,13 @@ AC_ARG_WITH([debug],
             [with_debug=no])
 
 
-AS_IF([test x"$with_debug" != xno],
-      [AS_IF([test x"$with_debug" == xg],
-             [AX_CHECK_COMPILE_FLAG([-g], 
-	                            [OPTFLAGS=" -g"
-                                     PROG_NAME=$PROG_NAME".g"],
-				    [AC_MSG_FAILURE([Compiler do not support -g ])])
-              AX_CHECK_COMPILE_FLAG([-fbounds-check],
-	                            [OPTFLAGS=$OPTFLAGS" -fbounds-check"])],
-             [PROG_NAME=$PROG_NAME".d"])
+AS_IF([test x"$with_debug" == xg],
+      [OPTFLAGS=" -g -O0"
+       PROG_SUFFIX=".g"
+       AX_CHECK_COMPILE_FLAG([-fbounds-check],
+                             [OPTFLAGS=$OPTFLAGS" -fbounds-check"])],
+      [AS_IF([test x"$with_debug" != xno],
+             [PROG_SUFFIX=".d"])
        AX_CHECK_COMPILE_FLAG([-O3],
                              [OPTFLAGS=" -O3"])])
 
@@ -110,7 +108,8 @@ AS_IF([test x"$with_x86" != xno],
                                                     [SIMDFLAGS=" -m[]ax_x86_feature"
                                                      SIMD_TYPE="[]ax_x86_feature"
                                                      use_simd=yes]
-						     [])])])],
+						     [])])])
+       PROG_NAME=$PROG_NAME"."$SIMD_TYPE],
       [use_x86=no])
 
 # cuda
@@ -166,6 +165,9 @@ AS_IF([test "x$with_cuda" != xno],
                                    [CUDALIBS=$CUDALIBS" -lgomp"],
                                    [AC_MSG_FAILURE([Cannot find CUDA library -lgomp, please provide correct cuda PREFIX by using --with-cuda-prefix])])])],
        [use_cuda=no])
+
+
+PROG_NAME=$PROG_NAME$PROG_SUFFIX
 
 # gperftools
 AC_ARG_WITH([gperf],

@@ -3413,48 +3413,10 @@ fi
 
 
 
-if test x"$with_debug" != xno; then :
-  if test x"$with_debug" == xg; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -g" >&5
-$as_echo_n "checking whether C++ compiler accepts -g... " >&6; }
-if ${ax_cv_check_cxxflags___g+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-  ax_check_save_flags=$CXXFLAGS
-  CXXFLAGS="$CXXFLAGS  -g"
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-int
-main ()
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_cxx_try_compile "$LINENO"; then :
-  ax_cv_check_cxxflags___g=yes
-else
-  ax_cv_check_cxxflags___g=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-  CXXFLAGS=$ax_check_save_flags
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___g" >&5
-$as_echo "$ax_cv_check_cxxflags___g" >&6; }
-if test x"$ax_cv_check_cxxflags___g" = xyes; then :
-  OPTFLAGS=" -g"
-                                     PROG_NAME=$PROG_NAME".g"
-else
-  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "Compiler do not support -g
-See \`config.log' for more details" "$LINENO" 5; }
-fi
-
-              { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -fbounds-check" >&5
+if test x"$with_debug" == xg; then :
+  OPTFLAGS=" -g -O0"
+       PROG_SUFFIX=".g"
+       { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -fbounds-check" >&5
 $as_echo_n "checking whether C++ compiler accepts -fbounds-check... " >&6; }
 if ${ax_cv_check_cxxflags___fbounds_check+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -3490,7 +3452,8 @@ else
 fi
 
 else
-  PROG_NAME=$PROG_NAME".d"
+  if test x"$with_debug" != xno; then :
+  PROG_SUFFIX=".d"
 fi
        { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -O3" >&5
 $as_echo_n "checking whether C++ compiler accepts -O3... " >&6; }
@@ -4536,6 +4499,7 @@ fi
 
 
 fi
+       PROG_NAME=$PROG_NAME"."$SIMD_TYPE
 else
   use_x86=no
 fi
@@ -4910,6 +4874,9 @@ fi
 else
   use_cuda=no
 fi
+
+
+PROG_NAME=$PROG_NAME$PROG_SUFFIX
 
 # gperftools
 
