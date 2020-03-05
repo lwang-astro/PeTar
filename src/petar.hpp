@@ -95,6 +95,7 @@ public:
     IOParams<PS::S32> n_smp_ave;
     IOParams<PS::S32> n_split;
     IOParams<PS::S64> n_bin;
+    IOParams<PS::S64> n_step_per_orbit;
     IOParams<PS::F64> time_end;
     IOParams<PS::F64> eta;
     IOParams<PS::F64> gravitational_constant;
@@ -146,6 +147,7 @@ public:
                      n_smp_ave    (input_par_store, 100,  "Average target number of sample particles per process"),
                      n_split      (input_par_store, 8,    "Number of binary sample points for tree perturbation force"),
                      n_bin        (input_par_store, 0,    "Number of binaries used for initialization (assume binaries ID=1,2*n_bin)"),
+                     n_step_per_orbit(input_par_store, 8,    "Number of steps per binary orbits (binary period/tree timestep) to switch on tidal tensor method"),
                      time_end     (input_par_store, 10.0, "Finishing time"),
                      eta          (input_par_store, 0.1,  "Hermite time step coefficient eta"),
                      gravitational_constant(input_par_store, 1.0,  "Gravitational constant"),
@@ -193,7 +195,6 @@ public:
         static struct option long_options[] = {
             {"number-split", required_argument, 0, 0},        
             {"search-vel-factor", required_argument, 0, 1},  
-            {"detect-interrupt", no_argument, 0, 18},
             {"dt-max-factor", required_argument, 0, 2},  
             {"dt-min-hermite", required_argument, 0, 3}, 
             {"number-group-limit", required_argument, 0, 4},
@@ -215,6 +216,8 @@ public:
 #endif
             {"disable-print-info", no_argument, 0, 16},
             {"number-interrupt-limt",required_argument, 0, 17},
+            {"detect-interrupt", no_argument, 0, 18},
+            {"number-step-tt", required_argument, 0, 19},
             {0,0,0,0}
         };
 
@@ -336,6 +339,12 @@ public:
                 interrupt_detection_option.value = 1;
                 if(print_flag) interrupt_detection_option.print(std::cout);
                 n_opt++;
+                break;
+            case 19:
+                n_step_per_orbit.value = atof(optarg);
+                if(print_flag) n_step_per_orbit.print(std::cout);
+                assert(n_step_per_orbit.value>4);
+                n_opt+=2;
                 break;
             case 'i':
                 data_format.value = atoi(optarg);
@@ -1122,41 +1131,42 @@ private:
     void kickClusterAndRecoverGroupMemberMass(SystemSoft& _sys,
                                               PS::ReallocatableArray<Tptcl>& _ptcl,
                                               const PS::F64 _dt) {
+        assert(Ptcl::group_data_mode == GroupDataMode::artificial);
         const PS::S64 n= _ptcl.size();
 #pragma omp parallel for
         for(PS::S32 i=0; i<n; i++) {
             auto& pi_artificial = _ptcl[i].group_data.artificial;
             // if is group member, recover mass and kick due to c.m. force
             if (pi_artificial.isMember()) {
-                const PS::S64 cm_adr=-pi_artificial.status; // notice status is negative of the cm address
+                const PS::S64 cm_adr = _ptcl[i].getParticleCMAddress(); 
+                if (cm_adr>0) {
 #ifdef HARD_DEBUG
-                assert(cm_adr>0);
-                assert(pi_artificial.mass_backup>0); 
-                assert(cm_adr<stat.n_all_loc);
+                    assert(pi_artificial.getMassBackup()>0); 
+                    assert(cm_adr<stat.n_all_loc);
 #endif
-                _ptcl[i].mass = pi_artificial.mass_backup;
+                    _ptcl[i].mass = pi_artificial.getMassBackup();
 #ifdef KDKDK_4TH
-                _ptcl[i].vel  += _dt*(_sys[cm_adr].acc + 9.0/192.0*_dt*_dt*_sys[cm_adr].acorr); 
+                    _ptcl[i].vel  += _dt*(_sys[cm_adr].acc + 9.0/192.0*_dt*_dt*_sys[cm_adr].acorr); 
 #else
 #ifdef NAN_CHECK_DEBUG
-                assert(!std::isnan(_sys[cm_adr].acc[0]));
-                assert(!std::isnan(_sys[cm_adr].acc[1]));
-                assert(!std::isnan(_sys[cm_adr].acc[2]));
+                    assert(!std::isnan(_sys[cm_adr].acc[0]));
+                    assert(!std::isnan(_sys[cm_adr].acc[1]));
+                    assert(!std::isnan(_sys[cm_adr].acc[2]));
 #endif
-                _ptcl[i].vel += _sys[cm_adr].acc * _dt;
+                    _ptcl[i].vel += _sys[cm_adr].acc * _dt;
 #endif
+                    continue;
+                }
             }
             // non-member particle
-            else {
-                const PS::S64 i_adr =_ptcl[i].adr_org;
-                if(i_adr>=0) {
-                    // not remote particles
+            const PS::S64 i_adr =_ptcl[i].adr_org;
+            if(i_adr>=0) {
+                // not remote particles
 #ifdef KDKDK_4TH
-                    _ptcl[i].vel  += _dt*(_sys[i_adr].acc + 9.0/192.0*_dt*_dt*_sys[i_adr].acorr); 
+                _ptcl[i].vel  += _dt*(_sys[i_adr].acc + 9.0/192.0*_dt*_dt*_sys[i_adr].acorr); 
 #else
-                    _ptcl[i].vel += _sys[i_adr].acc * _dt;
+                _ptcl[i].vel += _sys[i_adr].acc * _dt;
 #endif
-                }
             }
         }
     }
@@ -1170,6 +1180,7 @@ private:
     void kickSend(SystemSoft& _sys,
                   const PS::ReallocatableArray<PS::S32>& _adr_ptcl_send,
                   const PS::F64 _dt) {
+        assert(Ptcl::group_data_mode == GroupDataMode::artificial);
         const PS::S64 n= _adr_ptcl_send.size();
 #pragma omp parallel for
         for(PS::S32 i=0; i<n; i++) {
@@ -1184,7 +1195,7 @@ private:
 
 #ifdef HARD_DEBUG
             if(_sys[adr].group_data.artificial.isSingle()) assert(_sys[adr].mass>0);
-            else assert(_sys[adr].group_data.artificial.mass_backup>0);
+            else assert(_sys[adr].group_data.artificial.getMassBackup()>0);
 #endif
         }
     }
@@ -1379,7 +1390,9 @@ private:
         profile.hard_connected.end();
 #endif
 #endif
-
+        
+        if (n_interrupt_glb==0) Ptcl::group_data_mode = GroupDataMode::cm;
+        
         return n_interrupt_glb;
     }
 
@@ -1467,6 +1480,8 @@ private:
         PS::Comm::barrier();
         profile.hard_interrupt.end();
 #endif
+
+        if (n_interrupt_glb==0) Ptcl::group_data_mode = GroupDataMode::cm;
 
         // if interrupt cluster still exist, return the number immediately without new integration.
         return n_interrupt_glb;
@@ -2391,8 +2406,9 @@ public:
 #ifdef HARD_CHECK_ENERGY
         hard_manager.energy_error_max = input_parameters.e_err_hard.value;
 #else
-        hard_manager.energy_error_max = NUMERIC_FLOAT_MAX;
+        hard_manager.energy_error_max = PS::LARGE_FLOAT;
 #endif
+        hard_manager.n_step_per_orbit = input_parameters.n_step_per_orbit.value;
         hard_manager.ap_manager.r_tidal_tensor = r_bin;
         hard_manager.ap_manager.id_offset = id_offset;
         hard_manager.ap_manager.setParticleSplitN(input_parameters.n_split.value);
@@ -2405,7 +2421,7 @@ public:
 #endif
         hard_manager.ar_manager.step.initialSymplecticCofficients(-6);
         hard_manager.ar_manager.slowdown_pert_ratio_ref = input_parameters.sd_factor.value;
-        hard_manager.ar_manager.slowdown_timescale_max = dt_soft;
+        hard_manager.ar_manager.slowdown_timescale_max = dt_soft*input_parameters.n_step_per_orbit.value;
 #ifdef SLOWDOWN_MASSRATIO
         hard_manager.ar_manager.slowdown_mass_ref = m_average;
 #endif
@@ -2507,6 +2523,7 @@ public:
 
         // >2. search clusters
         /// gether clusters information to search_cluster, using tree_nb and velocity criterion (particles status/mass_bk)
+        Ptcl::group_data_mode = GroupDataMode::cm;
         searchCluster();
 
         // >3. find group and create artificial particles

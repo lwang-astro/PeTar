@@ -364,10 +364,10 @@ public:
             pi.vel[0] = pi_cm.vel.x;
             pi.vel[1] = pi_cm.vel.y;
             pi.vel[2] = pi_cm.vel.z;
-#ifdef CLUSTER_DEBUG
-            if (_pi.group_data.artificial.status==0.0 && _pi.group_data.artificial.mass_backup!=0.0) 
-                std::cout<<"Warning: may not be pcm data! idi "<<_pi.id<<" status="<<_pi.group_data.artificial.status<<" mass_bk="<<_pi.group_data.artificial.mass_backup<<std::endl;
-#endif
+//#ifdef CLUSTER_DEBUG
+//            if (_pi.group_data.artificial.status==0.0 && _pi.group_data.artificial.mass_backup!=0.0) 
+//                std::cout<<"Warning: may not be pcm data! idi "<<_pi.id<<" status="<<_pi.group_data.artificial.status<<" mass_bk="<<_pi.group_data.artificial.mass_backup<<std::endl;
+//#endif
         }
 
         for (PS::S32 j=0; j<_nb; j++) {
@@ -384,10 +384,10 @@ public:
                 pj.vel[1] = pbj_cm.vel.y;
                 pj.vel[2] = pbj_cm.vel.z;
                 pj.mass   = pbj_cm.mass; 
-#ifdef CLUSTER_DEBUG
-                if (_pb[j].group_data.artificial.status==0.0 && _pb[j].group_data.artificial.mass_backup!=0.0) 
-                    std::cout<<"Warning: may not be pcm data! idj "<<_pb[j].id<<" status="<<_pb[j].group_data.artificial.status<<" mass_bk="<<_pb[j].group_data.artificial.mass_backup<<std::endl;
-#endif
+//#ifdef CLUSTER_DEBUG
+//                if (_pb[j].group_data.artificial.status==0.0 && _pb[j].group_data.artificial.mass_backup!=0.0) 
+//                    std::cout<<"Warning: may not be pcm data! idj "<<_pb[j].id<<" status="<<_pb[j].group_data.artificial.status<<" mass_bk="<<_pb[j].group_data.artificial.mass_backup<<std::endl;
+//#endif
             }
             else {
                 pj.mass= _pb[j].mass;
@@ -433,6 +433,10 @@ public:
         const PS::S32 my_rank = PS::Comm::getRank();
         //        const PS::S32 n_proc_tot = PS::Comm::getNumberOfProc();
         const PS::S32 n_loc = sys.getNumberOfParticleLocal();
+#ifdef CLUSTER_VELOCITY
+        assert(Ptcl::group_data_mode==GroupDataMode::cm);
+#endif
+
 #pragma omp parallel
         {
             const PS::S32 ith = PS::Comm::getThreadNum();

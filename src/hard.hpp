@@ -30,12 +30,13 @@ public:
     PS::F64 eps_sq;
     PS::F64 r_in_base;
     PS::F64 r_out_base;
+    PS::F64 n_step_per_orbit;
     ArtificialParticleManager ap_manager;
     H4::HermiteManager<HermiteInteraction> h4_manager;
     AR::TimeTransformedSymplecticManager<ARInteraction> ar_manager;
 
     //! constructor
-    HardManager(): energy_error_max(-1.0), eps_sq(-1.0), r_in_base(-1.0), r_out_base(-1.0), ap_manager(), h4_manager(), ar_manager() {}
+    HardManager(): energy_error_max(-1.0), eps_sq(-1.0), r_in_base(-1.0), r_out_base(-1.0), n_step_per_orbit(-1.0), ap_manager(), h4_manager(), ar_manager() {}
     
     //! set softening
     void setEpsSq(const PS::F64 _eps_sq) {
@@ -64,6 +65,7 @@ public:
         ASSERT(eps_sq>=0.0);
         ASSERT(r_in_base>0.0);
         ASSERT(r_out_base>0.0);
+        ASSERT(n_step_per_orbit>0.0);
         ASSERT(ap_manager.checkParams());
         ASSERT(h4_manager.checkParams());
         ASSERT(ar_manager.checkParams());
@@ -204,6 +206,7 @@ public:
        @param[in] _n_ptcl: particle number in cluster
        @param[in,out] _ptcl_artificial: artificial particle array, c.m. are kicked 
        @param[in] _n_group: group number in cluster
+       @param[in] _n_member_in_group: number of members in each group
        @param[in] _manager: hard manager
        @param[in] _time_origin: initial physical time 
      */
@@ -212,6 +215,7 @@ public:
                  const PS::S32 _n_ptcl,
                  Tsoft* _ptcl_artificial,
                  const PS::S32 _n_group,
+                 const PS::S32* _n_member_in_group,
                  HardManager* _manager,
                  const PS::F64 _time_origin) {
 
@@ -244,28 +248,38 @@ public:
         PS::S32 adr_first_ptcl[_n_group+1];
         PS::S32 n_group_offset[_n_group+1]; // ptcl member offset in ptcl_origin
         n_group_offset[0] = 0;
+        for(int i=0; i<_n_group; i++) 
+            n_group_offset[i+1] = n_group_offset[i] + _n_member_in_group[i];
         
         auto& ap_manager = manager->ap_manager;
-        for(int i=0; i<_n_group; i++) {
-            adr_first_ptcl[i] = i*ap_manager.getArtificialParticleN();
-            auto* pi = &(_ptcl_artificial[adr_first_ptcl[i]]);
-            n_group_offset[i+1] = n_group_offset[i] + ap_manager.getMemberN(pi);
-            // pre-process for c.m. particle
-            auto* pcm = ap_manager.getCMParticles(pi);
-            // recover mass
-            pcm->mass = pcm->group_data.artificial.mass_backup;
+        if (_ptcl_artificial!=NULL) {
+            for(int i=0; i<_n_group; i++) {
+                adr_first_ptcl[i] = i*ap_manager.getArtificialParticleN();
+                auto* pi = &(_ptcl_artificial[adr_first_ptcl[i]]);
+#ifdef HARD_DEBUG
+                assert(ap_manager.getMemberN(pi)==_n_member_in_group[i]);
+#endif
+                // pre-process for c.m. particle
+                auto* pcm = ap_manager.getCMParticles(pi);
+                // recover mass
+                pcm->mass = pcm->group_data.artificial.getMassBackup();
 
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-            ap_manager.checkConsistence(&ptcl_origin[n_group_offset[i]], &(_ptcl_artificial[adr_first_ptcl[i]]));
+                ap_manager.checkConsistence(&ptcl_origin[n_group_offset[i]], &(_ptcl_artificial[adr_first_ptcl[i]]));
 #endif
-        }
+            }
 
 #ifdef HARD_DEBUG
-        if(_n_group>0) {
-            if(n_group_offset[_n_group]<_n_ptcl)
-                assert(ptcl_origin[n_group_offset[_n_group]].group_data.artificial.isSingle());
-            assert(ptcl_origin[n_group_offset[_n_group]-1].group_data.artificial.isMember());
+            if(_n_group>0) {
+                if(n_group_offset[_n_group]<_n_ptcl)
+                    assert(ptcl_origin[n_group_offset[_n_group]].group_data.artificial.isSingle());
+                if (_ptcl_artificial!=NULL) assert(ptcl_origin[n_group_offset[_n_group]-1].group_data.artificial.isMember());
+                else assert(ptcl_origin[n_group_offset[_n_group]-1].group_data.artificial.isSingle());
+            }
+#endif
         }
+#ifdef HARD_DEBUG
+        else if(_n_group>0) assert(_n_ptcl==2); // right now only support isolated binary case without artificial particles
 #endif
 
         // single particle start index in ptcl_origin
@@ -299,8 +313,7 @@ public:
             sym_int.manager = &ar_manager;
 
             sym_int.particles.setMode(COMM::ListMode::copy);
-            auto* api = &(_ptcl_artificial[adr_first_ptcl[0]]);
-            const PS::S32 n_members = ap_manager.getMemberN(api);
+            const PS::S32 n_members = _n_member_in_group[0];
 #ifdef HARD_DEBUG
             ASSERT(n_members == _n_ptcl);
 #endif
@@ -317,15 +330,18 @@ public:
             sym_int.reserveIntegratorMem();
             sym_int.info.generateBinaryTree(sym_int.particles, ar_manager.interaction.gravitational_constant);
 #ifdef SOFT_PERT
-            auto* apcm = ap_manager.getCMParticles(api);
-            auto* aptt = ap_manager.getTidalTensorParticles(api);
+            if (_ptcl_artificial!=NULL) {
+                Tsoft* api=&(_ptcl_artificial[adr_first_ptcl[0]]);
+                auto* apcm = ap_manager.getCMParticles(api);
+                auto* aptt = ap_manager.getTidalTensorParticles(api);
 
-            tidal_tensor.resizeNoInitialize(1);
-            auto& tt = tidal_tensor[0];
-            tt.fit(aptt, *apcm, ap_manager.r_tidal_tensor);
-            sym_int.perturber.soft_pert=&tt;
-            // set tt group id to the total number of particles
-            sym_int.perturber.soft_pert->group_id = n_members;
+                tidal_tensor.resizeNoInitialize(1);
+                auto& tt = tidal_tensor[0];
+                tt.fit(aptt, *apcm, ap_manager.r_tidal_tensor);
+                sym_int.perturber.soft_pert=&tt;
+                // set tt group id to the total number of particles
+                sym_int.perturber.soft_pert->group_id = n_members;
+            }
 #endif
             // calculate soft_pert_min
             sym_int.perturber.calcSoftPertMin(sym_int.info.getBinaryTreeRoot(), ar_manager.interaction.gravitational_constant);
@@ -400,8 +416,10 @@ public:
                     groupi.perturber.soft_pert->group_id = groupi.particles.getSize();
 
                     // same tidal_tensor id to member particle group_data for identification later
-                    for (PS::S32 k=0; k<groupi.particles.getSize(); k++) 
-                        groupi.particles[k].group_data.artificial.storeData(i+1);
+                    for (PS::S32 k=0; k<groupi.particles.getSize(); k++) {
+                        groupi.particles[k].setTidalTensorID(i+1);
+                        ptcl_origin[n_group_offset[i]+k].setTidalTensorID(i+1);
+                    }
 #endif
                     // calculate soft_pert_min
                     groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot(), ar_manager.interaction.gravitational_constant);
@@ -420,15 +438,6 @@ public:
 #endif
                 }
             }
-
-#ifdef SOFT_PERT
-            const PS::S32* single_index = h4_int.getSortDtIndexSingle();
-            // set single particle group_data to _n_ptcl+1 to avoid confusion with tidal tensor id
-            for (PS::S32 i=0; i<h4_int.getNSingle(); i++) {
-                auto& pi = h4_int.particles[single_index[i]];
-                pi.group_data.artificial.storeData(_n_ptcl+1);
-            }
-#endif
 
             // initialization 
             h4_int.initialIntegration(); // get neighbors and min particles
@@ -551,10 +560,11 @@ public:
 
 #ifdef SOFT_PERT                
                     // find corresponding tidal tensor if exist
-                    PS::S32 tt_id_member = groupi.particles[0].group_data.artificial.getData(true);
-                    ASSERT(tt_id_member>0);
-
-                    if (tt_id_member<n_tt) {
+                    PS::S32 tt_id_member = groupi.particles[0].getTidalTensorID();
+#ifdef HARD_DEBUG
+                    ASSERT(tt_id_member>=0&&tt_id_member<n_tt);
+#endif
+                    if (tt_id_member>0&&tt_id_member<n_tt) {
                         PS::S32 n_members = groupi.particles.getSize();
                         TidalTensor* tidal_tensor_i = &tidal_tensor[tt_id_member-1];
 
@@ -563,7 +573,7 @@ public:
                             // check member group_data to find whether all member has the same tidal tensor id
                             bool tt_consistent = true;
                             for (PS::S32 k=1; k<n_members; k++) {
-                                if (tt_id_member != groupi.particles[k].group_data.artificial.getData(true)) {
+                                if (tt_id_member != groupi.particles[k].getTidalTensorID()) {
                                     tt_consistent = false;
                                     break;
                                 }
@@ -961,7 +971,8 @@ private:
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_;               // number of particles in one cluster
     PS::ReallocatableArray<PS::S32> n_ptcl_in_cluster_disp_;          // boundary of particle cluster
     PS::ReallocatableArray<PS::S32> n_group_in_cluster_;              // number of groups in one cluster
-    PS::ReallocatableArray<PS::S32> n_group_in_cluster_offset_;       // boundary of groups in _adr_first_ptcl_arti_in_cluster
+    PS::ReallocatableArray<PS::S32> n_group_in_cluster_offset_;       // boundary of groups in n_member_in_group_ and adr_first_ptcl_arti_in_cluster_
+    PS::ReallocatableArray<PS::S32> n_member_in_group_;               // number of members in each group
     PS::ReallocatableArray<PS::S32> adr_first_ptcl_arti_in_cluster_;  // address of the first artificial particle in each groups
     PS::ReallocatableArray<PS::S32> i_cluster_changeover_update_;     // cluster index that has member need changeover update
     PS::S32 n_group_member_remote_; // number of members in groups but in remote nodes
@@ -1007,10 +1018,26 @@ public:
 
 private:
 
-    //! collect member particle index and set type to member (backup mass also)
+    //! collect member particle index, set type to member (backup mass) and mass to zero
     /*!
       Collect member particle address (index) in _par.group_list;
       backup mass of member particle and set mass to zero
+      @param[in,out] _par: parameter container 
+      @param[in,out] _ptcl: member particle
+     */
+    template <class Tchp, class Tptcl>
+    static void collectGroupMemberAdrAndSetTypeMemberWithMassZeroIter(Tchp& _par, Tptcl*& _ptcl) {
+        _par.group_list[_par.n++] = _ptcl - _par.adr_ref;
+#ifdef HARD_DEBUG
+        assert(_ptcl->mass>0.0);
+#endif
+        _ptcl->group_data.artificial.setParticleTypeToMember(_ptcl->mass);
+        _ptcl->mass = 0.0;
+    }
+
+    //! collect member particle index and set type to member (backup mass also)
+    /*!
+      Collect member particle address (index) in _par.group_list;
       @param[in,out] _par: parameter container 
       @param[in,out] _ptcl: member particle
      */
@@ -1021,7 +1048,6 @@ private:
         assert(_ptcl->mass>0.0);
 #endif
         _ptcl->group_data.artificial.setParticleTypeToMember(_ptcl->mass);
-        _ptcl->mass = 0.0;
     }
 
 
@@ -1082,14 +1108,14 @@ private:
         // single, remove linear cutoff, obtain changeover soft potential
         if (pj_artificial.isSingle()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
         // member, mass is zero, use backup mass
-        else if (pj.artificial.isMember()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (pj_artificial.mass_backup*drinv*kpot  - gmor_max);   
+        else if (pj.artificial.isMember()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (pj_artificial.getMassBackup()*drinv*kpot  - gmor_max);   
         // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
         else _pi.pot_tot += gmor_max; 
 #else
         // single/member, remove linear cutoff, obtain total potential
         if (pj_artificial.isSingle()) _pi.pot_tot -= (gmor - gmor_max);   
         // member, mass is zero, use backup mass
-        else if (pj_artificial.isMember()) _pi.pot_tot -= (pj_artificial.mass_backup*drinv  - gmor_max);   
+        else if (pj_artificial.isMember()) _pi.pot_tot -= (pj_artificial.getMassBackup()*drinv  - gmor_max);   
         // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
         else _pi.pot_tot += gmor_max; 
 #endif
@@ -1136,14 +1162,14 @@ private:
         // single, remove linear cutoff, obtain changeover soft potential
         if (pj_artificial.isSingle()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
         // member, mass is zero, use backup mass
-        else if (pj_artificial.isMember()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (pj_artificial.mass_backup*drinv*kpot  - gmor_max);   
+        else if (pj_artificial.isMember()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (pj_artificial.getMassBackup()*drinv*kpot  - gmor_max);   
         // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
         else _pi.pot_tot += gmor_max; 
 #else
         // single/member, remove linear cutoff, obtain total potential
         if (pj_artificial.isSingle()) _pi.pot_tot -= (gmor - gmor_max);   
         // member, mass is zero, use backup mass
-        else if (pj_artificial.isMember()) _pi.pot_tot -= (pj_artificial.mass_backup*drinv  - gmor_max);   
+        else if (pj_artificial.isMember()) _pi.pot_tot -= (pj_artificial.getMassBackup()*drinv  - gmor_max);   
         // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
         else _pi.pot_tot += gmor_max; 
 #endif
@@ -1352,6 +1378,7 @@ private:
         auto& ap_manager = manager->ap_manager;
         for (int j=0; j<_n_group; j++) {  // j: j_group
             PS::S32 j_start = adr_first_ptcl_arti_in_cluster_[j];
+            if (j_start<0) continue;
             auto* p_arti_j = &(_sys[j_start]);
             auto* pj = ap_manager.getTidalTensorParticles(p_arti_j);
 
@@ -1359,6 +1386,7 @@ private:
                 // loop orbital artificial particle
                 for (int kj=0; kj<_n_group; kj++) { // group
                     PS::S32 kj_start = adr_first_ptcl_arti_in_cluster_[kj];
+                    if (kj_start<0) continue;
                     auto* porb_kj = ap_manager.getOrbitalParticles(&_sys[kj_start]);
 
                     // particle arti orbital
@@ -1858,7 +1886,13 @@ public:
             // Hermite + AR integration
             const PS::S32 n_group = n_group_in_cluster_[i];
             Tpsoft* ptcl_artificial_ptr=NULL;
-            if(n_group>0) ptcl_artificial_ptr = &(_ptcl_soft[adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]]]);
+            PS::S32* n_member_in_group_ptr=NULL;
+            if(n_group>0) {
+                PS::S32 ptcl_arti_first_index = adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]];
+                if (ptcl_arti_first_index>=0) ptcl_artificial_ptr = &(_ptcl_soft[ptcl_arti_first_index]);
+
+                n_member_in_group_ptr = &(n_member_in_group_[n_group_in_cluster_offset_[i]]);
+            }
 #ifdef OMP_PROFILE
             num_cluster[ith] += n_ptcl;
 #endif
@@ -1868,7 +1902,7 @@ public:
 
 #ifdef HARD_DUMP
             assert(ith<hard_dump.size);
-            hard_dump[ith].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, dt, manager->ap_manager.getParticleSplitN());
+            hard_dump[ith].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, dt, manager->ap_manager.getParticleSplitN());
 #endif
 
 #ifdef HARD_DEBUG_PROFILE
@@ -1876,7 +1910,7 @@ public:
 #endif
 
             // if interrupt exist, escape initial
-            hard_int_thread[ith]->initial(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, manager, time_origin_);
+            hard_int_thread[ith]->initial(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, manager, time_origin_);
 
             auto interrupt_binary_adr = hard_int_thread[ith]->integrateToTime(dt);
 
@@ -2003,6 +2037,13 @@ public:
         return n_interrupt;
     }
 
+    struct NMemberGroup{
+        PS::S32 cluster_index, group_index, n_members;
+        NMemberGroup() {}
+        NMemberGroup(PS::S32 _cluster, PS::S32 _group, PS::S32 _member): 
+            cluster_index(_cluster), group_index(_group), n_members(_member) {}
+    };
+
     //! generate artificial particles,
     /*  
         @param[in]     _i_cluster: cluster index
@@ -2011,6 +2052,7 @@ public:
         @param[out]    _ptcl_artificial: artificial particles that will be added
         @parma[out]    _binary_table: binary information table 
         @param[out]    _n_groups: number of groups in current cluster
+        @param[out]    _n_members_in_groups: number of members in each group, (cluster_index, group_index, n_members)
         @param[in,out] _groups: searchGroupCandidate class, which contain 1-D group member index array, will be reordered by the minimum distance chain for each group
         @param[in,out] _empty_list: the list of _ptcl_in_cluster that can be used to store new artificial particles, reduced when used
         @param[in]     _dt_tree: tree time step for calculating r_search and set stablility checker period limit
@@ -2022,6 +2064,7 @@ public:
                                                           PS::ReallocatableArray<Tptcl> & _ptcl_artificial,
                                                           PS::ReallocatableArray<COMM::BinaryTree<PtclH4>> & _binary_table,
                                                           PS::S32 &_n_groups,
+                                                          PS::ReallocatableArray<NMemberGroup>& _n_member_in_group,
                                                           SearchGroupCandidate<Tptcl>& _groups,
                                                           const PS::F64 _dt_tree) {
 
@@ -2065,9 +2108,32 @@ public:
                 closed_binary_tree_i.getherBinaryTreeIter(_binary_table.getPointer(start_index_binary_table));
             }
 
+
             // be careful, here t_crit should be >= hard slowdown_timescale_max to avoid using slowdown for wide binaries
             stable_checker.t_crit = _dt_tree;
             stable_checker.findStableTree(binary_tree.back());
+
+            // in isolated binary case, if the slowdown period can be larger than tree step * N_step_per_orbit, it is fine without tidal tensor
+            if (_n_ptcl==2&&stable_checker.stable_binary_tree.size()==1) {
+                // the criterion is: period < 0.5*pi^2 * slowdown_pert_ratio_pef * R_search/G(m1+m2) / (dt_soft*n_step_per_orbit)
+                auto& bin = *stable_checker.stable_binary_tree[i];
+                const PS::S32 n_members = bin.getMemberN();
+                PS::F64 pot_ch_inv = bin.r_search*bin.r_search*bin.r_search/(ap_manager.gravitational_constant*bin.mass);
+                PS::F64 dt_nstep = _dt_tree*manager->n_step_per_orbit;
+                if (bin.period < 4.93480220054 * manager->ar_manager.slowdown_pert_ratio_ref * pot_ch_inv / dt_nstep) {
+                    // Set member particle type, backup mass, collect member particle index to group_ptcl_adr_list
+                    //use _ptcl_in_cluster as the first particle address as reference to calculate the particle index.
+                    struct { Tptcl* adr_ref; PS::S32* group_list; PS::S32 n;}
+                    group_index_pars = { _ptcl_in_cluster,  &group_ptcl_adr_list[group_ptcl_adr_offset], 0};
+                    bin.processLeafIter(group_index_pars, collectGroupMemberAdrAndSetTypeMemberIter);
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+                    assert(group_index_pars.n==n_members);
+#endif                
+                    _n_member_in_group.push_back(NMemberGroup(_i_cluster, _n_groups, n_members));
+                    _n_groups++;
+                    continue;
+                }
+            }
 
             // save cluster and group index in artificial particle data as identification for later collection to global sys
             PS::F64 index_group[2];
@@ -2084,11 +2150,11 @@ public:
                 _ptcl_artificial.increaseSize(ap_manager.getArtificialParticleN());
                 Tptcl* ptcl_artificial_i = &_ptcl_artificial[n_ptcl_artificial];
 
-                // Set member particle type, backup mass, collect member particle index to group_ptcl_adr_list
+                // Set member particle type to member, set mass to zero, backup mass and collect member particle index to group_ptcl_adr_list
                 //use _ptcl_in_cluster as the first particle address as reference to calculate the particle index.
                 struct { Tptcl* adr_ref; PS::S32* group_list; PS::S32 n;}
                 group_index_pars = { _ptcl_in_cluster,  &group_ptcl_adr_list[group_ptcl_adr_offset], 0};
-                binary_stable_i.processLeafIter(group_index_pars, collectGroupMemberAdrAndSetTypeMemberIter);
+                binary_stable_i.processLeafIter(group_index_pars, collectGroupMemberAdrAndSetTypeMemberWithMassZeroIter);
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
                 assert(group_index_pars.n==n_members);
 #endif                
@@ -2155,6 +2221,7 @@ public:
                 }
 
                 group_ptcl_adr_offset += n_members;
+                _n_member_in_group.push_back(NMemberGroup(_i_cluster, _n_groups, n_members));
                 _n_groups++;
             }
         }
@@ -2222,6 +2289,10 @@ public:
         const PS::S32 num_thread = PS::Comm::getNumberOfThread();
         PS::ReallocatableArray<PtclH4> ptcl_artificial_thread[num_thread];
         PS::ReallocatableArray<COMM::BinaryTree<PtclH4>> binary_table_thread[num_thread];
+        PS::ReallocatableArray<NMemberGroup> n_member_in_group_thread[num_thread];
+        for (PS::S32 i=0; i<num_thread; i++) {
+            n_member_in_group_thread[i].resizeNoInitialize(0);
+        }
         auto& ap_manager = manager->ap_manager;
 
 #pragma omp parallel for schedule(dynamic)
@@ -2242,7 +2313,7 @@ public:
             group_candidate.searchAndMerge(ptcl_in_cluster, n_ptcl);
 
             // find groups and generate artificial particles for cluster i
-            findGroupsAndCreateArtificialParticlesOneCluster(i, ptcl_in_cluster, n_ptcl, ptcl_artificial_thread[ith], binary_table_thread[ith], n_group_in_cluster_[i], group_candidate, _dt_tree);
+            findGroupsAndCreateArtificialParticlesOneCluster(i, ptcl_in_cluster, n_ptcl, ptcl_artificial_thread[ith], binary_table_thread[ith], n_group_in_cluster_[i], n_member_in_group_thread[ith], group_candidate, _dt_tree);
         }
 
         // gether binary table
@@ -2261,12 +2332,28 @@ public:
         // n_group_in_cluster_offset
         n_group_in_cluster_offset_.resizeNoInitialize(n_cluster+1);
         n_group_in_cluster_offset_[0] = 0;
-        for (PS::S32 i=0; i<n_cluster; i++) 
+        for (PS::S32 i=0; i<n_cluster; i++) {
             n_group_in_cluster_offset_[i+1] = n_group_in_cluster_offset_[i] + n_group_in_cluster_[i];
+        }
+        n_member_in_group_.resizeNoInitialize(n_group_in_cluster_offset_[n_cluster]);
+#ifdef HARD_DEBUG
+        for (PS::S32 i=0; i<n_member_in_group_.size(); i++) n_member_in_group_[i] = 0;
+#endif
+#pragma omp parallel for 
+        for (PS::S32 i=0; i<num_thread; i++) {
+            for (PS::S32 k=0; k<n_member_in_group_thread[i].size(); k++) {
+                PS::S32 i_cluster = n_member_in_group_thread[i][k].cluster_index;
+                PS::S32 j_group = n_member_in_group_thread[i][k].group_index;
+                n_member_in_group_[n_group_in_cluster_offset_[i_cluster]+j_group] = n_member_in_group_thread[i][k].n_members;
+            }
+        }
+
 #ifdef HARD_DEBUG
         assert(n_group_in_cluster_offset_[n_cluster]<ARRAY_ALLOW_LIMIT);
+        for (PS::S32 i=0; i<n_member_in_group_.size(); i++) assert(n_member_in_group_[i] > 0);
 #endif        
         adr_first_ptcl_arti_in_cluster_.resizeNoInitialize(n_group_in_cluster_offset_[n_cluster]);
+        for (PS::S32 i=0; i<adr_first_ptcl_arti_in_cluster_.size(); i++) adr_first_ptcl_arti_in_cluster_[i] = -1;
 
 
         // add artificial particle to particle system
@@ -2292,14 +2379,17 @@ public:
                 ptcl_artificial_thread[i][j].adr_org=adr;
                 _sys[adr]=Tptcl(ptcl_artificial_thread[i][j],rank,adr);
             }
-            PS::S32 group_offset=0, j_group_recored=-1;
             // Update the status of group members to c.m. address in ptcl sys. Notice c.m. is at the end of an artificial particle group
+            PS::S32 group_offset=0, j_group_recored=-1;
             for (PS::S32 j=0; j<ptcl_artificial_thread[i].size(); j+=n_artificial_per_group) {
                 auto* pj = &ptcl_artificial_thread[i][j];
                 auto* pcm = ap_manager.getCMParticles(pj);
                 PS::S32 n_members = ap_manager.getMemberN(pj);
                 PS::S32 i_cluster = ap_manager.getStoredData(pj,0,true)-1; 
                 PS::S32 j_group = ap_manager.getStoredData(pj,1,true)-1;
+#ifdef HARD_DEBUG
+                assert(n_member_in_group_[n_group_in_cluster_offset_[i_cluster]+j_group]==n_members);
+#endif                
                 PS::F64 rsearch_cm = pcm->r_search;
                 auto& changeover_cm= pcm->changeover;
 #ifdef HARD_DEBUG
@@ -2321,7 +2411,7 @@ public:
                     PS::S32 kl = n_ptcl_in_cluster_disp_[i_cluster]+group_offset+k;
                     auto& p_loc = ptcl_hard_.getPointer()[kl];
                     // save c.m. address 
-                    p_loc.group_data.artificial.status = -pcm->adr_org;
+                    p_loc.setParticleCMAddress(pcm->adr_org);
 #ifdef HARD_DEBUG
                     assert(p_loc.group_data.artificial.isMember());
 #endif                    
@@ -2417,6 +2507,8 @@ public:
 #endif
             i_cluster_changeover_update_.resizeNoInitialize(i_end-i_cluster_data);
         }
+        
+        Ptcl::group_data_mode = GroupDataMode::artificial;
     }
 
 #ifdef CLUSTER_VELOCITY
@@ -2426,6 +2518,7 @@ public:
     */
     template <class Tsoft>
     void resetParticleGroupData(Tsoft& _ptcl_soft) {
+        Ptcl::group_data_mode = GroupDataMode::cm;
         const PS::S32 n = ptcl_hard_.size();
 #pragma omp parallel for 
         for(PS::S32 i=0; i<n; i++){
@@ -2446,6 +2539,7 @@ public:
     */
     template <class Tsoft>
     void setParticleGroupDataToCMData(Tsoft& _ptcl_soft) {
+        Ptcl::group_data_mode = GroupDataMode::cm;
         auto& ap_manager = manager->ap_manager;
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
 #pragma omp parallel for schedule(dynamic)
@@ -2455,32 +2549,60 @@ public:
             const PS::S32 n_group = n_group_in_cluster_[i];
             PtclH4* ptcl_local = ptcl_hard_.getPointer(adr_head);
 
-            PS::S32 n_group_offset = 0;
+            PS::S32 n_group_offset_local = 0;
             if(n_group>0) {
-                auto* ptcl_artificial = &(_ptcl_soft[adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]]]);
                 for(int k=0; k<n_group; k++) {
-                    PS::S32 adr_first_ptcl = k*ap_manager.getArtificialParticleN();
-                    auto* pi = &(ptcl_artificial[adr_first_ptcl]);
-                    const PS::S32 n_members = ap_manager.getMemberN(pi);
-                    auto* pcm = ap_manager.getCMParticles(pi);
-                    PS::F64 pcm_mass = pcm->group_data.artificial.mass_backup;
+                    PS::S32 n_group_in_cluster_offset_k = n_group_in_cluster_offset_[i]+k;
+                    PS::S32 ptcl_artificial_adr = adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_k];
+                    PS::S32 n_members = n_member_in_group_[n_group_in_cluster_offset_k];
+                    // when artificial particles exist
+                    if (ptcl_artificial_adr>=0) {
+                        auto* pi = &(_ptcl_soft[ptcl_artificial_adr]);
+                        auto* pcm = ap_manager.getCMParticles(pi);
+                        PS::F64 pcm_mass = pcm->group_data.artificial.getMassBackup();
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-                    ap_manager.checkConsistence(&ptcl_local[n_group_offset], pi);
+                        assert(n_members == ap_manager.getMemberN(pi));
+                        ap_manager.checkConsistence(&ptcl_local[n_group_offset_local], pi);
 #endif
-                    for (int j=n_group_offset; j<n_group_offset+n_members; j++) {
-                        ptcl_local[j].r_search = std::max(pcm->r_search, ptcl_local[j].r_search);
-                        auto& pj_cm = ptcl_local[j].group_data.cm;
-                        pj_cm.mass  = pcm_mass;
-                        pj_cm.vel.x = pcm->vel[0];
-                        pj_cm.vel.y = pcm->vel[1];
-                        pj_cm.vel.z = pcm->vel[2];
-                        PS::S32 adr = ptcl_local[j].adr_org;
-                        if(adr>=0) _ptcl_soft[adr].group_data.cm = pj_cm;
+                        for (int j=n_group_offset_local; j<n_group_offset_local+n_members; j++) {
+                            ptcl_local[j].r_search = std::max(pcm->r_search, ptcl_local[j].r_search);
+                            auto& pj_cm = ptcl_local[j].group_data.cm;
+                            pj_cm.mass  = pcm_mass;
+                            pj_cm.vel.x = pcm->vel[0];
+                            pj_cm.vel.y = pcm->vel[1];
+                            pj_cm.vel.z = pcm->vel[2];
+                            PS::S32 adr = ptcl_local[j].adr_org;
+                            if(adr>=0) _ptcl_soft[adr].group_data.cm = pj_cm;
+                        }
                     }
-                    n_group_offset += n_members;
+                    else {
+                        // when no artificial particles, calculate c.m. 
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+                        // current case only isolated binary 
+                        assert(n_members == 2&&n_group==1);
+#endif
+                        PS::F32 mass_cm=0.0;
+                        PS::F32vec vel_cm=PS::F32vec(0.0);
+                        for (int j=n_group_offset_local; j<n_group_offset_local+n_members; j++) {
+                            auto& pj = ptcl_local[j];
+                            mass_cm += pj.mass;
+                            vel_cm.x += pj.mass*pj.vel.x;
+                            vel_cm.y += pj.mass*pj.vel.y;
+                            vel_cm.z += pj.mass*pj.vel.z;
+                        }
+                        vel_cm /= mass_cm;
+                        for (int j=n_group_offset_local; j<n_group_offset_local+n_members; j++) {
+                            auto& pj_cm = ptcl_local[j].group_data.cm;
+                            pj_cm.mass = mass_cm;
+                            pj_cm.vel  = vel_cm;
+                            PS::S32 adr = ptcl_local[j].adr_org;
+                            if(adr>=0) _ptcl_soft[adr].group_data.cm = pj_cm;
+                        }
+                    }
+                    n_group_offset_local += n_members;
                 }
             }
-            for (int j=n_group_offset; j<n_ptcl; j++) {
+            for (int j=n_group_offset_local; j<n_ptcl; j++) {
                 auto& pj_cm = ptcl_local[j].group_data.cm;
                 pj_cm.mass  = pj_cm.vel.x = pj_cm.vel.y = pj_cm.vel.z = 0.0;
                 PS::S32 adr = ptcl_local[j].adr_org;
@@ -2570,6 +2692,7 @@ public:
     */
     template <class Tsys>
     void correctForceWithCutoffClusterOMP(Tsys& _sys, const bool _acorr_flag=false) { 
+        assert(Ptcl::group_data_mode == GroupDataMode::artificial);
 
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         auto& ap_manager = manager->ap_manager;
@@ -2612,6 +2735,7 @@ public:
                 for (int k=0; k<n_group; k++) {
                     // loop artificial particle orbital
                     PS::S32 k_start = adr_first_ptcl_arti[k];
+                    if (k_start<0) continue;
                     auto* porb_k = ap_manager.getOrbitalParticles(&(_sys[k_start]));
                     for (int ki=0; ki<ap_manager.getOrbitalParticleN(); ki++) {
 #ifdef KDKDK_4TH

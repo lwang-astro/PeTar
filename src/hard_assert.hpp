@@ -14,6 +14,7 @@ public:
     PS::S32 n_ptcl;
     PS::S32 n_arti;
     PS::S32 n_group;
+    PS::ReallocatableArray<PS::S32> n_member_in_group;
     PS::ReallocatableArray<FPSoft> ptcl_arti_bk;
     PS::ReallocatableArray<PtclH4> ptcl_bk;
 
@@ -30,15 +31,20 @@ public:
                 const PS::S32 _n_ptcl,
                 FPSoft* _ptcl_artifical,
                 const PS::S32 _n_group,
+                const PS::S32* _n_member_in_group,
                 const PS::F64 _time_end,
                 const PS::S32 _n_split) {
         ptcl_bk.resizeNoInitialize(_n_ptcl);
         for (int i=0; i<_n_ptcl; i++) ptcl_bk[i] = _ptcl_local[i];
         time_end = _time_end;
         n_ptcl =_n_ptcl;
-        n_arti = _n_group*(2*_n_split+1);
-        ptcl_arti_bk.resizeNoInitialize(n_arti);
-        for (int i=0; i<n_arti; i++) ptcl_arti_bk[i] = _ptcl_artifical[i];
+        n_member_in_group.resizeNoInitialize(_n_group);
+        for (int i=0; i<_n_group; i++) n_member_in_group[i] = _n_member_in_group[i];
+        if (_ptcl_artifical!=NULL) {
+            n_arti = _n_group*(2*_n_split+1);
+            ptcl_arti_bk.resizeNoInitialize(n_arti);
+            for (int i=0; i<n_arti; i++) ptcl_arti_bk[i] = _ptcl_artifical[i];
+        }
         n_group = _n_group;
     }                
 
@@ -66,6 +72,7 @@ public:
         // artificial 
         fwrite(&n_arti, sizeof(PS::S32),1,fp);
         fwrite(&n_group, sizeof(PS::S32), 1, fp);
+        fwrite(n_member_in_group.getPointer(), sizeof(PS::S32), n_group, fp);
         for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].writeBinary(fp);
         fclose(fp);
     }
@@ -115,6 +122,12 @@ public:
         rcount += fread(&n_group, sizeof(PS::S32), 1, fp);
         if (rcount<2) {
             std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
+            abort();
+        }
+        n_member_in_group.resizeNoInitialize(n_group);
+        rcount = fread(n_member_in_group.getPointer(), sizeof(PS::S32), n_group, fp);
+        if (rcount<(size_t)n_group) {
+            std::cerr<<"Error: Data reading fails! requiring data number is "<<n_group<<", only obtain "<<rcount<<".\n";
             abort();
         }
         if (n_arti<0) {

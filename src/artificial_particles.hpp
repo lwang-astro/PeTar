@@ -6,16 +6,65 @@
 //! class to store necessary information for using artificial particles
 /*!
                   single    c.m.             members          initial     artificial
-      mass_backup 0         mass      (+)    mass     (+)     -10         default is 0.0 / data stored (-/0)
-      status      0         n_members (+)    c.m. adr (-)     -10         position in artificial particle array / data stored (+)
+      mass_backup 0         mass      (+)    mass     (+)     -LARGE       default is 0.0 / data stored (-/0)
+      status      0         n_members (+)    c.m. adr (-)     -LARGE       position in artificial particle array / data stored (+)
  */
 class ArtificialParticleInformation{
-public:
+private:
     PS::F64 mass_backup;
     PS::F64 status;
 
+public:
     //! initializer
-    ArtificialParticleInformation(): mass_backup(-10.0), status(-10.0) {}
+    ArtificialParticleInformation(): mass_backup(-PS::LARGE_FLOAT), status(-PS::LARGE_FLOAT) {}
+
+    //! set particle type to member
+    /*! @param[in] _mass: mass to backup
+     */
+    void setParticleTypeToMember(const PS::F64 _mass = PS::LARGE_FLOAT, const PS::F64 _status = -PS::LARGE_FLOAT) {
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert(_status<0.0);
+#endif
+        mass_backup = _mass;
+        status = _status;
+    };
+
+    //! return whether the particle type is member
+    bool isMember() const {
+        return (status<0.0);
+    }
+
+    //! set particle type to artificial
+    /*! @param[in] _status: status to save
+     */
+    void setParticleTypeToCM(const PS::F64 _status=PS::LARGE_FLOAT, const PS::F64 _mass_backup = PS::LARGE_FLOAT) {
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert(_status>0.0&&_mass_backup>0.0);
+#endif
+        status = _status;
+        mass_backup = _mass_backup;
+    };
+
+    //! return whether the particle type is c.m.
+    bool isCM() const {
+        return (status>0.0 && mass_backup>0.0);
+    }
+
+    //! set backup mass
+    void setMassBackup(const PS::F64 _mass) {
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert((isMember()||isCM())&&_mass>0.0);
+#endif
+        mass_backup = _mass;
+    }
+
+    //! get backup mass
+    PS::F64 getMassBackup() const {
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert(isMember()||isCM());
+#endif
+        return mass_backup;
+    }
 
     //! set particle type to single
     void setParticleTypeToSingle() {
@@ -23,43 +72,34 @@ public:
         status = 0.0;
     };
 
-    //! set particle type to member
-    /*! @param[in] _mass: mass to backup
-     */
-    void setParticleTypeToMember(const PS::F64 _mass) {
-        mass_backup = _mass;
-        status = -1;
-    };
-
     //! return whether the particle type is single
     bool isSingle() const {
         return (status==0.0 && mass_backup==0.0);
     }
 
-    //! return whether the particle type is member
-    bool isMember() const {
-        return (status<0.0);
-    }
+    //! set particle type to artificial
+    /*! @param[in] _status: status to save
+     */
+    void setParticleTypeToArtificial(const PS::F64 _status=PS::LARGE_FLOAT, const PS::F64 _mass_backup = 0.0) {
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert(_status>0.0);
+#endif
+        status = _status;
+        mass_backup = _mass_backup;
+    };
 
     //! return whether the particle type is artificial
     bool isArtificial() const {
         return (status>0.0);
     }
 
-    //! return whether the particle is unused
-    bool isUnused() const {
-        return (status<0.0 && mass_backup<0.0);
-    }
-
-    //! return whether the particle type is c.m.
-    bool isCM() const {
-        return (status>0.0 && mass_backup>0.0);
-    }
-
     //! store one data (only in artificial particles)
     /*! positive data stored in status, otherwise in mass_backup;
      */
     void storeData(const PS::F64 _data) {
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert(isArtificial());
+#endif
         if (_data>0.0) status = _data;
         else      mass_backup = _data;
     }
@@ -68,9 +108,31 @@ public:
     /*! @param[in] is_positive: indicate whether stored data is positive (true) or negative (false)
      */
     PS::F64 getData(const bool is_positive) const {
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert(isArtificial());
+#endif
         if (is_positive) return status;
         else             return mass_backup;
     }
+
+    //! set status
+    void setStatus(const PS::F64 _status) {
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert((isMember()&&_status<0.0)||(isArtificial()&&_status>0.0));
+#endif        
+        status = _status;
+    }
+
+    //! get status
+    PS::F64 getStatus() const {
+        return status;
+    }
+
+    //! return whether the particle is unused
+    bool isUnused() const {
+        return (status<0.0 && mass_backup<0.0);
+    }
+
 
     //! print titles of class members using column style
     /*! print titles of class members in one line for column style
@@ -211,8 +273,7 @@ public:
                 Tptcl* binary_member_j = _bin.getMember(j);
                 pj->id = id_offset + abs(binary_member_j->id)*n_split_ +i;
                 auto& pj_artificial = pj->group_data.artificial;
-                pj_artificial.status      = PS::F64(2*i+j+1);
-                pj_artificial.mass_backup = 0.0;
+                pj_artificial.setParticleTypeToArtificial(PS::F64(2*i+j+1));
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
                 assert(pj_artificial.isArtificial());
 #endif
@@ -289,9 +350,10 @@ public:
 
         // store the component member number 
         for (int j=0; j<2; j++) {
-            _ptcl_artificial[j].group_data.artificial.status = _bin.isMemberTree(j) ? ((COMM::BinaryTree<Tptcl>*)(_bin.getMember(j)))->getMemberN() : 1; 
+            PS::S32 n_members = _bin.isMemberTree(j) ? ((COMM::BinaryTree<Tptcl>*)(_bin.getMember(j)))->getMemberN() : 1;
+            _ptcl_artificial[j].group_data.artificial.storeData(n_members); 
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-            assert(_ptcl_artificial[j].group_data.artificial.isArtificial());
+            assert(n_members>0);
 #endif
         }
 
@@ -301,15 +363,14 @@ public:
         for (int j=0; j<_n_data; j++) {
             _ptcl_artificial[j+2].group_data.artificial.storeData(_data_to_store[j]);
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-            assert(_ptcl_artificial[j+2].group_data.artificial.isArtificial());
+            assert(_data_to_store[j]>0);
 #endif
         }
 
         // last member is the c.m. particle
         Tptcl* pcm;
         pcm = &_ptcl_artificial[2*n_split_];
-        pcm->group_data.artificial.mass_backup = _bin.mass;
-        pcm->group_data.artificial.status      = _bin.getMemberN();
+        pcm->group_data.artificial.setParticleTypeToCM(_bin.getMemberN(), _bin.mass);
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
         assert(pcm->group_data.artificial.isCM());
 #endif        
@@ -395,7 +456,7 @@ public:
             acc_cm /= m_ob_tot;
 
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-            assert(abs(m_ob_tot-pcm->group_data.artificial.mass_backup)<1e-10);
+            assert(abs(m_ob_tot-pcm->group_data.artificial.getMassBackup())<1e-10);
 #endif
         }
     }
@@ -609,7 +670,7 @@ public:
         pos_cm_check /= mass_cm_check;
 
         auto* pcm = getCMParticles(_ptcl_artificial);
-        assert(abs(mass_cm_check-pcm->group_data.artificial.mass_backup)<1e-10);
+        assert(abs(mass_cm_check-pcm->group_data.artificial.getMassBackup())<1e-10);
         PS::F64vec dpos = pos_cm_check-pcm->pos;
         assert(abs(dpos*dpos)<1e-20);
     }

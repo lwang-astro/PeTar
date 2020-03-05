@@ -28,6 +28,9 @@ union GroupDataDeliver{
     }
 };
 
+//! group data deliver mode
+enum GroupDataMode{artificial, cm, none};
+
 //! Particle class 
 class Ptcl: public ParticleBase{
 public:
@@ -39,8 +42,9 @@ public:
     static PS::F64 r_search_min;
     static PS::F64 r_group_crit_ratio;
     static PS::F64 mean_mass_inv;
+    static GroupDataMode group_data_mode;
 
-    Ptcl(): r_search(-1.0), id(0), group_data(), changeover() {}
+    Ptcl(): r_search(-PS::LARGE_FLOAT), id(0), group_data(), changeover() {}
 
     template<class Tptcl>
     Ptcl(const Tptcl& _p) { Ptcl::DataCopy(_p);  }
@@ -145,6 +149,24 @@ public:
         }
         group_data.artificial.readBinary(_fin);
         changeover.readBinary(_fin);
+    }
+
+    //! set status to c.m. particle address 
+    void setParticleCMAddress(const PS::S64 _adr) {
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert(group_data.artificial.isMember()&&_adr>0);
+#endif
+        group_data.artificial.setStatus(-_adr);
+    }
+
+    //! get c.m. particle address
+    PS::S64 getParticleCMAddress() const {
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        assert(group_data.artificial.isMember());
+#endif
+        PS::F64 status = group_data.artificial.getStatus();
+        if (status==-PS::LARGE_FLOAT) return -1;
+        else return PS::S64(-status);
     }
 
     //! calculate new rsearch

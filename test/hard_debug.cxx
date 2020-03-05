@@ -156,7 +156,7 @@ int main(int argc, char **argv){
       // change ARC parameters
       //sys.driveForMultiClusterImpl(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, hard_dump.time_end, 0);
       HardIntegrator hard_int;
-      hard_int.initial(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, &hard_manager, 0.0);
+      hard_int.initial(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, hard_dump.n_member_in_group.getPointer(), &hard_manager, 0.0);
 
       auto interrupt_binary_adr = hard_int.integrateToTime(hard_dump.time_end);
       if (interrupt_binary_adr!=NULL)
@@ -180,9 +180,9 @@ int main(int argc, char **argv){
       sys.manager = &hard_manager;
 
       PS::ReallocatableArray<COMM::BinaryTree<PtclH4>> binary_table;
-
+      PS::ReallocatableArray<SystemHard::NMemberGroup> n_member_in_group;
       // generate artificial particles, stability test is included
-      sys.findGroupsAndCreateArtificialParticlesOneCluster(0, ptcl, n_ptcl, ptcl_new, binary_table, n_group_in_cluster, group_candidate, hard_dump.time_end);
+      sys.findGroupsAndCreateArtificialParticlesOneCluster(0, ptcl, n_ptcl, ptcl_new, binary_table, n_group_in_cluster, n_member_in_group, group_candidate, hard_dump.time_end);
   }
 
   return 0;

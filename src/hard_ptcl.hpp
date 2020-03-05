@@ -38,6 +38,17 @@ public:
         return *this;
     }
 
+    void setTidalTensorID(const PS::S32 _id) {
+#ifdef HARD_DEBUG
+        assert(_id>0);
+#endif
+        group_data.artificial.setStatus(PS::F64(-_id));
+    }
+
+    PS::S32 getTidalTensorID() const {
+        return PS::S32(- group_data.artificial.getStatus());
+    }
+
     // calculate reseach based on potential and velocity
     /*!
       Potential criterion: 
@@ -54,7 +65,7 @@ public:
     void calcRSearch(const PS::F64 _Gm, const PS::F64 _pot, const PS::F64vec& _vel_cm, const PS::F64 _dt_tree) {
         PS::F64vec vrel = Ptcl::vel-_vel_cm;
         PS::F64 v2rel = vrel*vrel;
-        PS::F64 r0 = _pot>0? _Gm/_pot : NUMERIC_FLOAT_MAX;
+        PS::F64 r0 = _pot>0? _Gm/_pot : PS::LARGE_FLOAT;
         PS::F64 q = 2.0*_pot/v2rel;
         if (q>1.0) r0 /= (q-1.0);
 

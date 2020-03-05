@@ -46,7 +46,7 @@ public:
     PS::S32 findCloseSoftPert(TidalTensor* _tt, int& _n_tt, const int _n_max, const H4::ParticleH4<PtclHard>& _cm, const PS::F64 _gid) {
         ASSERT(_gid>0.0);
         const PS::F64vec& pos = _cm.pos;
-        PS::F64 r_min2=NUMERIC_FLOAT_MAX;
+        PS::F64 r_min2=PS::LARGE_FLOAT;
         PS::S32 r_min_index=-1;
         for (int i=0; i<_n_tt; i++) {
             PS::F64vec dr = pos - _tt[i].pos;

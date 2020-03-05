@@ -110,6 +110,7 @@ public:
     void calc(const Tptcl* _particles,
               const PS::S32 _n_particle, 
               const bool _init_flag=false) {
+        assert(Ptcl::group_data_mode == GroupDataMode::artificial);
         ekin = epot = 0.0;
         L = PS::F64vec(0.0);
 //#pragma omp declare reduction(+:PS::F64vec:omp_out += omp_in) initializer (omp_priv=PS::F64vec(0.0))
@@ -117,7 +118,7 @@ public:
         for(PS::S32 i=0; i<_n_particle; i++){
             PS::F64 mi = _particles[i].mass;
             auto pi_artificial = _particles[i].group_data.artificial;
-            if(pi_artificial.isMember()) mi = pi_artificial.mass_backup;
+            if(pi_artificial.isMember()) mi = pi_artificial.getMassBackup();
 #ifdef HARD_DEBUG
             assert(_particles[i].id>0&&(pi_artificial.isMember()||pi_artificial.isSingle()));
             assert(mi>0);
