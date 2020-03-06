@@ -1097,7 +1097,7 @@ public:
             assert(_sys[adr].id == ptcl_send_[i].id);
 #endif
             // write local single particle
-            if(ptcl_send_[i].group_data.artificial.isSingle()) {
+            if(ptcl_send_[i].group_data.artificial.isSingle() || (ptcl_send_[i].group_data.artificial.isMember() && ptcl_send_[i].getParticleCMAddress()<0)) {
                 ptcl_send_[i].DataCopy(_sys[adr]);
             }
         }
@@ -1129,10 +1129,9 @@ public:
         const PS::S32 n = _ptcl_hard.size();
         for(PS::S32 i=0; i<n; i++){
             const PS::S32 adr = _ptcl_hard[i].adr_org;
-            if(adr <0 && _ptcl_hard[i].group_data.artificial.isSingle()){
+            if(adr <0 && (_ptcl_hard[i].group_data.artificial.isSingle() || (_ptcl_hard[i].group_data.artificial.isMember() && _ptcl_hard[i].getParticleCMAddress()<0) )){
 #ifdef HARD_DEBUG
                 assert( ptcl_recv_[-(adr+1)].id == _ptcl_hard[i].id );
-                assert( ptcl_recv_[-(adr+1)].group_data.artificial.isSingle());
 #endif
                 _ptcl_hard[i].DataCopy(ptcl_recv_[-(adr+1)]);
             }
@@ -1188,7 +1187,6 @@ public:
             if(adr <0){
 #ifdef HARD_DEBUG
                 assert( ptcl_recv_[-(adr+1)].id == _ptcl_hard[i].id );
-                assert( ptcl_recv_[-(adr+1)].group_data.artificial.isSingle());
 #endif
                 _ptcl_hard[i].DataCopy(ptcl_recv_[-(adr+1)]);
             }

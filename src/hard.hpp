@@ -355,6 +355,16 @@ public:
             PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
             pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
 
+#ifdef HARD_DEBUG
+            if(_ptcl_artificial==NULL) {
+                PS::F64 period = sym_int.info.getBinaryTreeRoot().period;
+                PS::F64 sd_factor = sym_int.slowdown.getSlowDownFactor();
+                PS::F64 sd_tmax = manager->ar_manager.slowdown_timescale_max;
+                if (sd_factor*period<sd_tmax) {
+                    std::cerr<<"Warning: isolated binary SD ("<<sd_factor<<") * period ("<<period<<") = "<<period*sd_factor<<"< SD_timescale_max = dt_tree*n_step_per_orbit ("<<sd_tmax<<")"<<std::endl;
+                }
+            }
+#endif
             //check paramters
             ASSERT(sym_int.info.checkParams());
             ASSERT(sym_int.perturber.checkParams());
@@ -1108,14 +1118,14 @@ private:
         // single, remove linear cutoff, obtain changeover soft potential
         if (pj_artificial.isSingle()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
         // member, mass is zero, use backup mass
-        else if (pj.artificial.isMember()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (pj_artificial.getMassBackup()*drinv*kpot  - gmor_max);   
+        else if (pj.artificial.isMember()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (G*pj_artificial.getMassBackup()*drinv*kpot  - gmor_max);   
         // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
         else _pi.pot_tot += gmor_max; 
 #else
         // single/member, remove linear cutoff, obtain total potential
         if (pj_artificial.isSingle()) _pi.pot_tot -= (gmor - gmor_max);   
         // member, mass is zero, use backup mass
-        else if (pj_artificial.isMember()) _pi.pot_tot -= (pj_artificial.getMassBackup()*drinv  - gmor_max);   
+        else if (pj_artificial.isMember()) _pi.pot_tot -= (G*pj_artificial.getMassBackup()*drinv  - gmor_max);   
         // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
         else _pi.pot_tot += gmor_max; 
 #endif
@@ -1340,6 +1350,8 @@ private:
         // no correction for orbital artificial particles because the potential are not used for any purpose
         // no correction for member particles because their mass is zero during the soft force calculation, the self-potential contribution is also zero.
         if (_psoft.group_data.artificial.isSingle()) _psoft.pot_tot += _psoft.mass/manager->r_out_base; 
+        // for binary without artificial particles, correction is needed.
+        if (_psoft.group_data.artificial.isMember() && _psoft.getParticleCMAddress()<0) _psoft.pot_tot += _psoft.mass/manager->r_out_base; 
 
         // loop neighbors
         for(PS::S32 k=0; k<n_ngb; k++){
@@ -1357,7 +1369,6 @@ private:
     //! soft force correction for artificial particles in one cluster
     /* 1. Correct cutoff for artificial particles
        2. The c.m. force is substracted from tidal tensor force
-       3. c.m. force is replaced by the averaged force on orbital particles
        @param[in,out] _sys: global particle system, acc is updated
        @param[in] _ptcl_local: particle in systme_hard
        @param[in] _adr_real_start: real particle start address in _ptcl_local
@@ -1378,6 +1389,9 @@ private:
         auto& ap_manager = manager->ap_manager;
         for (int j=0; j<_n_group; j++) {  // j: j_group
             PS::S32 j_start = adr_first_ptcl_arti_in_cluster_[j];
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+            if (j_start<0) assert(_n_group==1&&_adr_real_end-_adr_real_start==2);
+#endif
             if (j_start<0) continue;
             auto* p_arti_j = &(_sys[j_start]);
             auto* pj = ap_manager.getTidalTensorParticles(p_arti_j);
@@ -2110,7 +2124,7 @@ public:
 
 
             // be careful, here t_crit should be >= hard slowdown_timescale_max to avoid using slowdown for wide binaries
-            stable_checker.t_crit = _dt_tree;
+            stable_checker.t_crit = manager->ar_manager.slowdown_timescale_max;
             stable_checker.findStableTree(binary_tree.back());
 
             // in isolated binary case, if the slowdown period can be larger than tree step * N_step_per_orbit, it is fine without tidal tensor
@@ -2717,6 +2731,8 @@ public:
 #endif
                 //self-potential correction for non-group member, group member has mass zero, so no need correction
                 if(_sys[adr].group_data.artificial.isSingle()) _sys[adr].pot_tot += _sys[adr].mass/manager->r_out_base;
+                // for binary without artificial particles, correction is needed.
+                if (_sys[adr].group_data.artificial.isMember() && _sys[adr].getParticleCMAddress()<0) _sys[adr].pot_tot += _sys[adr].mass/manager->r_out_base; 
 
                 // cluster member
                 for (int k=adr_real_start; k<adr_real_end; k++) {
@@ -2735,6 +2751,9 @@ public:
                 for (int k=0; k<n_group; k++) {
                     // loop artificial particle orbital
                     PS::S32 k_start = adr_first_ptcl_arti[k];
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+                    if (k_start<0) assert(n_group==1&&adr_real_end-adr_real_start==2);
+#endif
                     if (k_start<0) continue;
                     auto* porb_k = ap_manager.getOrbitalParticles(&(_sys[k_start]));
                     for (int ki=0; ki<ap_manager.getOrbitalParticleN(); ki++) {

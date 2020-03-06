@@ -1185,8 +1185,9 @@ private:
 #pragma omp parallel for
         for(PS::S32 i=0; i<n; i++) {
             const PS::S64 adr = _adr_ptcl_send[i];
-            // if it is group member, should not do kick since c.m. particles are on remote nodes;
-            if(_sys[adr].group_data.artificial.isSingle())  {
+            // if it is group member with artificial particles, should not do kick since the required c.m. forces is on remote nodes;
+            // if it is group member without artificial particles, also kick
+            if(_sys[adr].group_data.artificial.isSingle() || (_sys[adr].group_data.artificial.isMember() && _sys[adr].getParticleCMAddress()<0)) {
                 _sys[adr].vel += _sys[adr].acc * _dt;
 #ifdef KDKDK_4TH
                 _sys[adr].vel += _dt*_dt* _sys[adr].acorr /48; 
@@ -2422,6 +2423,7 @@ public:
         hard_manager.ar_manager.step.initialSymplecticCofficients(-6);
         hard_manager.ar_manager.slowdown_pert_ratio_ref = input_parameters.sd_factor.value;
         hard_manager.ar_manager.slowdown_timescale_max = dt_soft*input_parameters.n_step_per_orbit.value;
+        //hard_manager.ar_manager.slowdown_timescale_max = dt_soft;
 #ifdef SLOWDOWN_MASSRATIO
         hard_manager.ar_manager.slowdown_mass_ref = m_average;
 #endif

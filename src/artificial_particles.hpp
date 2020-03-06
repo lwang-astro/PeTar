@@ -37,7 +37,7 @@ public:
     //! set particle type to artificial
     /*! @param[in] _status: status to save
      */
-    void setParticleTypeToCM(const PS::F64 _status=PS::LARGE_FLOAT, const PS::F64 _mass_backup = PS::LARGE_FLOAT) {
+    void setParticleTypeToCM(const PS::F64 _mass_backup = PS::LARGE_FLOAT, const PS::F64 _status=PS::LARGE_FLOAT) {
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
         assert(_status>0.0&&_mass_backup>0.0);
 #endif
@@ -370,7 +370,7 @@ public:
         // last member is the c.m. particle
         Tptcl* pcm;
         pcm = &_ptcl_artificial[2*n_split_];
-        pcm->group_data.artificial.setParticleTypeToCM(_bin.getMemberN(), _bin.mass);
+        pcm->group_data.artificial.setParticleTypeToCM(_bin.mass, _bin.getMemberN());
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
         assert(pcm->group_data.artificial.isCM());
 #endif        
