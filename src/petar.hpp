@@ -1153,6 +1153,10 @@ private:
             const PS::S64 i_adr =_ptcl[i].adr_org;
             if(i_adr>=0) {
                 // not remote particles
+#ifdef HARD_DEBUG
+                assert(pi_artificial.getStatus()==_sys[i_adr].group_data.artificial.getStatus());
+#endif
+
 #ifdef KDKDK_4TH
                 _ptcl[i].vel  += _dt*(_sys[i_adr].acc + 9.0/192.0*_dt*_dt*_sys[i_adr].acorr); 
 #else

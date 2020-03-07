@@ -983,6 +983,7 @@ private:
     PS::ReallocatableArray<PS::S32> n_group_in_cluster_;              // number of groups in one cluster
     PS::ReallocatableArray<PS::S32> n_group_in_cluster_offset_;       // boundary of groups in n_member_in_group_ and adr_first_ptcl_arti_in_cluster_
     PS::ReallocatableArray<PS::S32> n_member_in_group_;               // number of members in each group
+    PS::ReallocatableArray<PS::S32> n_member_in_group_offset_;        // number of members in group index offest in each cluster (for n_meber_in_group_, notice in each cluster, the first offset is zero)
     PS::ReallocatableArray<PS::S32> adr_first_ptcl_arti_in_cluster_;  // address of the first artificial particle in each groups
     PS::ReallocatableArray<PS::S32> i_cluster_changeover_update_;     // cluster index that has member need changeover update
     PS::S32 n_group_member_remote_; // number of members in groups but in remote nodes
@@ -1042,7 +1043,7 @@ private:
 #ifdef HARD_DEBUG
         assert(_ptcl->mass>0.0);
 #endif
-        _ptcl->group_data.artificial.setParticleTypeToMember(_ptcl->mass);
+        _ptcl->group_data.artificial.setParticleTypeToMember(_ptcl->mass, - (_par.pcm_id+1));
         _ptcl->mass = 0.0;
     }
 
@@ -2055,11 +2056,11 @@ public:
         return n_interrupt;
     }
 
-    struct NMemberGroup{
-        PS::S32 cluster_index, group_index, n_members;
-        NMemberGroup() {}
-        NMemberGroup(PS::S32 _cluster, PS::S32 _group, PS::S32 _member): 
-            cluster_index(_cluster), group_index(_group), n_members(_member) {}
+    struct GroupIndexInfo{
+        PS::S32 cluster_index, group_index, n_members, n_member_offset, isolated_case;
+        GroupIndexInfo() {}
+        GroupIndexInfo(PS::S32 _cluster, PS::S32 _group, PS::S32 _member, PS::S32 _offset, PS::S32 _isolated_case):
+            cluster_index(_cluster), group_index(_group), n_members(_member), n_member_offset(_offset), isolated_case(_isolated_case) {}
     };
 
     //! generate artificial particles,
@@ -2082,7 +2083,7 @@ public:
                                                           PS::ReallocatableArray<Tptcl> & _ptcl_artificial,
                                                           PS::ReallocatableArray<COMM::BinaryTree<PtclH4>> & _binary_table,
                                                           PS::S32 &_n_groups,
-                                                          PS::ReallocatableArray<NMemberGroup>& _n_member_in_group,
+                                                          PS::ReallocatableArray<GroupIndexInfo>& _n_member_in_group,
                                                           SearchGroupCandidate<Tptcl>& _groups,
                                                           const PS::F64 _dt_tree) {
 
@@ -2157,8 +2158,9 @@ public:
                              <<std::endl;
 #endif
 #endif                
-                    _n_member_in_group.push_back(NMemberGroup(_i_cluster, _n_groups, n_members));
+                    _n_member_in_group.push_back(GroupIndexInfo(_i_cluster, _n_groups, n_members, group_ptcl_adr_offset, 1));
                     _n_groups++;
+                    group_ptcl_adr_offset += n_members;
                     continue;
                 }
             }
@@ -2180,8 +2182,8 @@ public:
 
                 // Set member particle type to member, set mass to zero, backup mass and collect member particle index to group_ptcl_adr_list
                 //use _ptcl_in_cluster as the first particle address as reference to calculate the particle index.
-                struct { Tptcl* adr_ref; PS::S32* group_list; PS::S32 n;}
-                group_index_pars = { _ptcl_in_cluster,  &group_ptcl_adr_list[group_ptcl_adr_offset], 0};
+                struct { Tptcl* adr_ref; PS::S32* group_list; PS::S32 n; PS::S64 pcm_id;}
+                group_index_pars = { _ptcl_in_cluster,  &group_ptcl_adr_list[group_ptcl_adr_offset], 0, n_ptcl_artificial};
                 binary_stable_i.processLeafIter(group_index_pars, collectGroupMemberAdrAndSetTypeMemberWithMassZeroIter);
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
                 assert(group_index_pars.n==n_members);
@@ -2248,8 +2250,8 @@ public:
 #endif
                 }
 
+                _n_member_in_group.push_back(GroupIndexInfo(_i_cluster, _n_groups, n_members, group_ptcl_adr_offset, 0));
                 group_ptcl_adr_offset += n_members;
-                _n_member_in_group.push_back(NMemberGroup(_i_cluster, _n_groups, n_members));
                 _n_groups++;
             }
         }
@@ -2308,7 +2310,7 @@ public:
     void findGroupsAndCreateArtificialParticlesOMP(Tsys & _sys,
                                                    const PS::F64 _dt_tree) {
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
-#ifdef HARD_DEBUG
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
         assert(n_cluster<ARRAY_ALLOW_LIMIT);
 #endif        
         n_group_in_cluster_.resizeNoInitialize(n_cluster);
@@ -2317,7 +2319,7 @@ public:
         const PS::S32 num_thread = PS::Comm::getNumberOfThread();
         PS::ReallocatableArray<PtclH4> ptcl_artificial_thread[num_thread];
         PS::ReallocatableArray<COMM::BinaryTree<PtclH4>> binary_table_thread[num_thread];
-        PS::ReallocatableArray<NMemberGroup> n_member_in_group_thread[num_thread];
+        PS::ReallocatableArray<GroupIndexInfo> n_member_in_group_thread[num_thread];
         for (PS::S32 i=0; i<num_thread; i++) {
             n_member_in_group_thread[i].resizeNoInitialize(0);
         }
@@ -2364,25 +2366,55 @@ public:
             n_group_in_cluster_offset_[i+1] = n_group_in_cluster_offset_[i] + n_group_in_cluster_[i];
         }
         n_member_in_group_.resizeNoInitialize(n_group_in_cluster_offset_[n_cluster]);
-#ifdef HARD_DEBUG
+        n_member_in_group_offset_.resizeNoInitialize(n_group_in_cluster_offset_[n_cluster]);
+
+        // artificial particle first address array
+        adr_first_ptcl_arti_in_cluster_.resizeNoInitialize(n_group_in_cluster_offset_[n_cluster]);
+        for (PS::S32 i=0; i<adr_first_ptcl_arti_in_cluster_.size(); i++) adr_first_ptcl_arti_in_cluster_[i] = -1;
+
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
         for (PS::S32 i=0; i<n_member_in_group_.size(); i++) n_member_in_group_[i] = 0;
 #endif
+
 #pragma omp parallel for 
         for (PS::S32 i=0; i<num_thread; i++) {
             for (PS::S32 k=0; k<n_member_in_group_thread[i].size(); k++) {
                 PS::S32 i_cluster = n_member_in_group_thread[i][k].cluster_index;
                 PS::S32 j_group = n_member_in_group_thread[i][k].group_index;
-                n_member_in_group_[n_group_in_cluster_offset_[i_cluster]+j_group] = n_member_in_group_thread[i][k].n_members;
+                PS::S32 n_members = n_member_in_group_thread[i][k].n_members;
+                PS::S32 n_member_offset = n_member_in_group_thread[i][k].n_member_offset;
+                n_member_in_group_[n_group_in_cluster_offset_[i_cluster]+j_group] =  n_members;
+                n_member_in_group_offset_[n_group_in_cluster_offset_[i_cluster]+j_group] =  n_member_offset;
+                // update system soft 
+                if (n_member_in_group_thread[i][k].isolated_case) {
+                    for (PS::S32 j=0; j<n_members; j++) {
+                        auto& p_loc = ptcl_hard_[n_ptcl_in_cluster_disp_[i_cluster]+n_member_offset+j];
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+                        assert(p_loc.group_data.artificial.isMember());
+                        assert(p_loc.getParticleCMAddress()<0);
+                        assert(adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i_cluster]+j_group]<0);
+#endif
+                        const PS::S64 p_glb_adr= p_loc.adr_org;
+                        if(p_glb_adr>=0) {
+                            auto& p_glb = _sys[p_glb_adr];
+                            p_glb.group_data= p_loc.group_data;
+                            p_glb.changeover= p_loc.changeover;
+                            p_glb.r_search  = p_loc.r_search;
+                        }
+                        else {
+                            // this is remoted member;
+                            n_group_member_remote_++;
+                        }
+                    }
+                }
             }
         }
 
-#ifdef HARD_DEBUG
+
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
         assert(n_group_in_cluster_offset_[n_cluster]<ARRAY_ALLOW_LIMIT);
         for (PS::S32 i=0; i<n_member_in_group_.size(); i++) assert(n_member_in_group_[i] > 0);
 #endif        
-        adr_first_ptcl_arti_in_cluster_.resizeNoInitialize(n_group_in_cluster_offset_[n_cluster]);
-        for (PS::S32 i=0; i<adr_first_ptcl_arti_in_cluster_.size(); i++) adr_first_ptcl_arti_in_cluster_[i] = -1;
-
 
         // add artificial particle to particle system
         PS::S32 rank = PS::Comm::getRank();
@@ -2415,12 +2447,12 @@ public:
                 PS::S32 n_members = ap_manager.getMemberN(pj);
                 PS::S32 i_cluster = ap_manager.getStoredData(pj,0,true)-1; 
                 PS::S32 j_group = ap_manager.getStoredData(pj,1,true)-1;
-#ifdef HARD_DEBUG
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
                 assert(n_member_in_group_[n_group_in_cluster_offset_[i_cluster]+j_group]==n_members);
 #endif                
                 PS::F64 rsearch_cm = pcm->r_search;
                 auto& changeover_cm= pcm->changeover;
-#ifdef HARD_DEBUG
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
                 assert(rsearch_cm>changeover_cm.getRout());
 #endif                
                 // make sure group index increase one by one
@@ -2429,7 +2461,7 @@ public:
 
                 // changeover update flag
                 bool changeover_update_flag=false;
-#ifdef HARD_DEBUG
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
                 // check whether ID is consistent.
                 PS::S64 id_cm = ap_manager.getCMID(pj);
                 bool id_match_flag=false;
@@ -2439,12 +2471,14 @@ public:
                     PS::S32 kl = n_ptcl_in_cluster_disp_[i_cluster]+group_offset+k;
                     auto& p_loc = ptcl_hard_.getPointer()[kl];
                     // save c.m. address 
-                    p_loc.setParticleCMAddress(pcm->adr_org);
-#ifdef HARD_DEBUG
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+                    assert(group_offset == n_member_in_group_offset_[n_group_in_cluster_offset_[i_cluster]+j_group]);
+                    assert(p_loc.getParticleCMAddress()==j+1);
                     assert(p_loc.group_data.artificial.isMember());
 #endif                    
+                    p_loc.setParticleCMAddress(pcm->adr_org);
 
-#ifdef HARD_DEBUG
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
                     if(p_loc.id == id_cm) id_match_flag=true;
 #endif
                     // set changeover r_scale_next for updating changeover next tree step
@@ -2459,7 +2493,7 @@ public:
                         else {
                             p_loc.changeover.r_scale_next = changeover_cm.getRin()/p_loc.changeover.getRin();
                             p_loc.r_search = std::max(p_loc.r_search, rsearch_cm);
-#ifdef HARD_DEBUG                            
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
                             if (p_loc.r_search<p_loc.changeover.getRout()) {
                                 std::cerr<<"Error, r_search<r_out found! \n"
                                          <<"n_members: "<<n_members
@@ -2496,7 +2530,7 @@ public:
 
                 }
 
-#ifdef HARD_DEBUG
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
                 assert(id_match_flag);
 #endif
                 // record i_cluster if changeover change
@@ -2529,7 +2563,7 @@ public:
             std::sort(i_cluster_data, i_cluster_data+i_cluster_size, [] (const PS::S32 &a, const PS::S32 &b) { return a<b; });
             // remove dup
             PS::S32* i_end = std::unique(i_cluster_data, i_cluster_data+i_cluster_size);
-#ifdef HARD_DEBUG
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
             assert(i_end-i_cluster_data>=0&&i_end-i_cluster_data<=i_cluster_size);
             std::cerr<<"Changeover change cluster found: T="<<time_origin_<<" n_cluster_change="<<int(i_end-i_cluster_data)<<std::endl;
 #endif
