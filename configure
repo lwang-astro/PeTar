@@ -638,6 +638,7 @@ use_gperf
 use_omp
 use_cuda
 use_mpi
+use_simd_64
 use_simd
 use_x86
 ac_prefix_program
@@ -704,13 +705,14 @@ ac_user_opts='
 enable_option_checking
 with_mpi
 with_debug
-with_omp
+enable_openmp
 with_x86
 with_simd
-with_cuda
+enable_simd_64
+enable_cuda
 with_cuda_prefix
 with_cuda_sdk_prefix
-with_gperf
+enable_gperf
 with_gperf_prefix
 with_fdps_prefix
 with_sdar_prefix
@@ -1344,23 +1346,31 @@ if test -n "$ac_init_help"; then
    esac
   cat <<\_ACEOF
 
+Optional Features:
+  --disable-option-checking  ignore unrecognized --enable/--with options
+  --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
+  --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --disable-omp           disable OpenMP support
+  --enable-simd-64        enable x86 SIMD 64 bits floating point support for
+                          long-distant tree force
+  --enable-cuda           enable CUDA (GPU) acceleration support for
+                          long-distant tree force
+  --enable-gperf          enable gperftools for profiling
+
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-mpi              compile with MPI (parallelization) support. If none
-                          is found, MPI is not used. Default: auto
-  --with-debug            Switch on debugging mode. Options: g: enable
-                          debugger support; assert: enable assertion; no:
-                          none. Default: no
-  --with-omp              compile with OpenMP support. Default: yes
-  --with-x86              compile with x86 feature support. Default: yes
+                          is found, MPI is not used (auto, yes, no). Default:
+                          auto
+  --with-debug            Switch on debugging mode (g: enable debugger
+                          support; assert: enable assertion; no: none).
+                          Default: no
+  --with-arch             compile with architecture type (x86). Default: x86
   --with-simd             compile with x86 SIMD support for long-distant tree
-                          force. Options: avx, avx2, avx512dq. Default: auto
-  --with-cuda             compile with CUDA (GPU) acceleration support for
-                          long-distant tree force, Default: no
+                          force (avx, avx2, avx512dq). Default: auto
   --with-cuda-prefix      Prefix of your CUDA installation
   --with-cuda-sdk-prefix  Prefix of your CUDA samples (SDK) installation
-  --with-gperf            compile with gperftools for profiling, Default: no
   --with-gperf-prefix     Prefix of your gperftools installation
   --with-fdps-prefix      Prefix of your FDPS installation. Default: ../FDPS
   --with-sdar-prefix      Prefix of your FDPS installation. Default: ../SDAR
@@ -3569,16 +3579,15 @@ fi
 
 
 # OpenMP
-
-# Check whether --with-omp was given.
-if test "${with_omp+set}" = set; then :
-  withval=$with_omp;
+# Check whether --enable-openmp was given.
+if test "${enable_openmp+set}" = set; then :
+  enableval=$enable_openmp; use_omp=no
 else
-  with_omp=yes
+  use_omp=yes
 fi
 
 
-if test x"$with_omp" != xno; then :
+if test x"$use_omp" != xno; then :
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for OpenMP flag of C++ compiler" >&5
@@ -3657,7 +3666,7 @@ fi
 if test "${with_x86+set}" = set; then :
   withval=$with_x86;
 else
-  with_x86=yes
+  with_arch=x86
 fi
 
 
@@ -4255,7 +4264,7 @@ $as_echo "$ax_cv_gcc_check_x86_cpu_init" >&6; }
   as_fn_error $? "Need GCC to support X86 CPU features tests" "$LINENO" 5
 fi
 
-if test x"$with_x86" != xno; then :
+if test x"$with_arch" == xx86; then :
   use_x86=yes
        use_simd=no
        if test x"$with_simd" != xauto; then :
@@ -4501,13 +4510,21 @@ else
   use_x86=no
 fi
 
-# cuda
-
-# Check whether --with-cuda was given.
-if test "${with_cuda+set}" = set; then :
-  withval=$with_cuda;
+# Check whether --enable-simd-64 was given.
+if test "${enable_simd_64+set}" = set; then :
+  enableval=$enable_simd_64; PROG_NAME=$PROG_NAME".64b"
+	       use_simd_64=yes
 else
-  with_cuda=no
+  use_simd_64=no
+fi
+
+
+# cuda
+# Check whether --enable-cuda was given.
+if test "${enable_cuda+set}" = set; then :
+  enableval=$enable_cuda; use_cuda=yes
+else
+  use_cuda=no
 fi
 
 
@@ -4529,7 +4546,7 @@ else
 fi
 
 
-if test "x$with_cuda" != xno; then :
+if test "x$use_cuda" != xno; then :
   # Extract the first word of "nvcc", so it can be a program name with args.
 set dummy nvcc; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
@@ -4876,12 +4893,11 @@ fi
 PROG_NAME=$PROG_NAME$PROG_SUFFIX
 
 # gperftools
-
-# Check whether --with-gperf was given.
-if test "${with_gperf+set}" = set; then :
-  withval=$with_gperf;
+# Check whether --enable-gperf was given.
+if test "${enable_gperf+set}" = set; then :
+  enableval=$enable_gperf; use_gperf=yes
 else
-  with_gperf=no
+  use_gperf=no
 fi
 
 
@@ -4894,7 +4910,7 @@ else
 fi
 
 
-if test x"$with_gperf" != xno; then :
+if test x"$use_gperf" != xno; then :
   use_gperf=yes
        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lprofiler" >&5
 $as_echo_n "checking for main in -lprofiler... " >&6; }
@@ -5859,6 +5875,7 @@ done
 
 
 
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: ----------------------Configure Summary--------------------" >&5
 $as_echo "$as_me: ----------------------Configure Summary--------------------" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: --Features:" >&5
@@ -5870,8 +5887,13 @@ $as_echo "$as_me:      Using GPU:      $use_cuda" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      Using x86 :     $use_x86" >&5
 $as_echo "$as_me:      Using x86 :     $use_x86" >&6;}
 if test "x$use_simd" != xno; then :
+  if test "x$use_simd_64" != xno; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}:      SIMD type:      $SIMD_TYPE 64 bits" >&5
+$as_echo "$as_me:      SIMD type:      $SIMD_TYPE 64 bits" >&6;}
+else
   { $as_echo "$as_me:${as_lineno-$LINENO}:      SIMD type:      $SIMD_TYPE " >&5
 $as_echo "$as_me:      SIMD type:      $SIMD_TYPE " >&6;}
+fi
        if test "x$with_simd" == xauto; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}:   Notice: this is auto-detected based on the local CPU architecture" >&5
 $as_echo "$as_me:   Notice: this is auto-detected based on the local CPU architecture" >&6;}

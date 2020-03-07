@@ -4,6 +4,7 @@ all: $(TARGET)
 
 use_x86 =@use_x86@
 use_simd=@use_simd@
+use_simd_64=@use_simd_64@
 use_mpi =@use_mpi@
 use_gpu_cuda=@use_cuda@
 use_omp = @use_omp@
@@ -92,15 +93,17 @@ CXXFLAGS += -DINTRINSIC_X86
 ifeq ($(use_simd),yes)
 CXXFLAGS += @SIMDFLAGS@
 CXXFLAGS += -D DIV_FIX
-#CXXFLAGS += -D P3T_64BIT
 CXXFLAGS += -D USE_SIMD
+ifeq ($(use_simd_64),yes)
+CXXFLAGS += -D P3T_64BIT
+endif # simd 64
 endif  # simd
 #-------------------------------------
 
 endif # x86
 
 #-------------------------------------
-ifeq (x$(use_gperf),yes)
+ifeq ($(use_gperf),yes)
 CXXFLAGS += @GPERFFLAGS@
 CXXLFAGS += -D GPERF_PROFILE
 CXXLIBS += @GPERFLIBS@
@@ -123,11 +126,11 @@ SRC = main.cc ${shell ls ./src/*.hpp}
 
 
 SIMD_DEBFLAGS += -DRSQRT_NR_EPJ_X2
+SIMD_DEBFLAGS += -DAVX_PRELOAD
 #SIMD_DEBFLAGS += -DRSQRT_NR_EPJ_X4
 #SIMD_DEBFLAGS += -DCALC_SP_64bit
 #SIMD_DEBFLAGS += -DRSQRT_NR_SPJ_X2
 #SIMD_DEBFLAGS += -DRSQRT_NR_SPJ_X4
-SIMD_DEBFLAGS += -DAVX_PRELOAD
 
 DEBUG_OPT_FLAGS = -g -O0 -fbounds-check -Wall  -D SANITY_CHECK_REALLOCATABLE_ARRAY
 HARD_DEBFLAGS+= -D AR_DEBUG -D AR_DEBUG_DUMP -D AR_WARN -D HARD_DEBUG -D HARD_DEBUG_PRINT -D ADJUST_GROUP_DEBUG -D HERMITE_DEBUG -D AR_COLLECT_DS_MODIFY_INFO -D STABLE_CHECK_DEBUG_PRINT -D ARTIFICIAL_PARTICLE_DEBUG -D ARTIFICIAL_PARTICLE_DEBUG_PRINT

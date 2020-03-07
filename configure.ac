@@ -25,7 +25,7 @@ AC_PROG_AWK
 
 AC_ARG_WITH([mpi],
             [AS_HELP_STRING([--with-mpi],
-                            [compile with MPI (parallelization) support. If none is found, MPI is not used. Default: auto])],
+                            [compile with MPI (parallelization) support. If none is found, MPI is not used (auto, yes, no). Default: auto])],
             [],
             [with_mpi=auto])
 
@@ -45,7 +45,7 @@ AS_IF([test x"$use_mpi" == xno],
 # debug
 AC_ARG_WITH([debug],
             [AS_HELP_STRING([--with-debug],
-                            [Switch on debugging mode. Options: g: enable debugger support; assert: enable assertion; no: none. Default: no])],
+                            [Switch on debugging mode (g: enable debugger support; assert: enable assertion; no: none). Default: no])],
             [],
             [with_debug=no])
 
@@ -68,13 +68,13 @@ AX_CHECK_COMPILE_FLAG([-std=c++11],
                       [AC_MSG_FAILURE([c++11 support is required for the compiler])])
 
 # OpenMP
-AC_ARG_WITH([omp],
-	    [AS_HELP_STRING([--with-omp],
-                            [compile with OpenMP support. Default: yes])],
-            [],
-	    [with_omp=yes])
+AC_ARG_ENABLE([openmp],
+              [AS_HELP_STRING([--disable-omp],
+                              [disable OpenMP support])],
+              [use_omp=no],
+              [use_omp=yes])
 
-AS_IF([test x"$with_omp" != xno],
+AS_IF([test x"$use_omp" != xno],
       [AX_OPENMP([use_omp=yes
                   PROG_NAME=$PROG_NAME'.omp'],
                  [use_omp=no])],
@@ -82,18 +82,18 @@ AS_IF([test x"$with_omp" != xno],
 
 # x86
 AC_ARG_WITH([x86],
-	    [AS_HELP_STRING([--with-x86],
-                            [compile with x86 feature support. Default: yes])],
+	    [AS_HELP_STRING([--with-arch],
+                            [compile with architecture type (x86). Default: x86])],
             [],
-	    [with_x86=yes])
+	    [with_arch=x86])
 
 AC_ARG_WITH([simd],
             [AS_HELP_STRING([--with-simd],
-                [compile with x86 SIMD support for long-distant tree force. Options: avx, avx2, avx512dq. Default: auto])],
+                [compile with x86 SIMD support for long-distant tree force (avx, avx2, avx512dq). Default: auto])],
             [],
             [with_simd=auto])
 
-AS_IF([test x"$with_x86" != xno],
+AS_IF([test x"$with_arch" == xx86],
       [use_x86=yes
        use_simd=no
        AS_IF([test x"$with_simd" != xauto],
@@ -112,12 +112,19 @@ AS_IF([test x"$with_x86" != xno],
        PROG_NAME=$PROG_NAME"."$SIMD_TYPE],
       [use_x86=no])
 
+AC_ARG_ENABLE([simd-64],
+              [AS_HELP_STRING([--enable-simd-64],
+                              [enable x86 SIMD 64 bits floating point support for long-distant tree force])],
+              [PROG_NAME=$PROG_NAME".64b"
+	       use_simd_64=yes],
+              [use_simd_64=no])
+
 # cuda
-AC_ARG_WITH([cuda],
-            [AS_HELP_STRING([--with-cuda],
-                [compile with CUDA (GPU) acceleration support for long-distant tree force, Default: no])],
-            [],
-            [with_cuda=no])
+AC_ARG_ENABLE([cuda],
+              [AS_HELP_STRING([--enable-cuda],
+                              [enable CUDA (GPU) acceleration support for long-distant tree force])],
+              [use_cuda=yes],
+              [use_cuda=no])
 
 AC_ARG_WITH([cuda-prefix], 
             [AS_HELP_STRING([--with-cuda-prefix],
@@ -131,7 +138,7 @@ AC_ARG_WITH([cuda-sdk-prefix],
             [],
 	    [cuda_sdk_prefix="/usr/local/cuda/samples"])
 
-AS_IF([test "x$with_cuda" != xno],
+AS_IF([test "x$use_cuda" != xno],
       [AC_CHECK_PROG([NVCC], [nvcc], [nvcc], [none])
        use_cuda=yes
        AS_IF([test "x$NVCC" == xnone], 
@@ -170,11 +177,11 @@ AS_IF([test "x$with_cuda" != xno],
 PROG_NAME=$PROG_NAME$PROG_SUFFIX
 
 # gperftools
-AC_ARG_WITH([gperf],
-            [AS_HELP_STRING([--with-gperf],
-                [compile with gperftools for profiling, Default: no])],
-            [],
-            [with_gperf=no])
+AC_ARG_ENABLE([gperf],
+              [AS_HELP_STRING([--enable-gperf],
+                              [enable gperftools for profiling])],
+              [use_gperf=yes],
+              [use_gperf=no])
 
 AC_ARG_WITH([gperf-prefix], 
             [AS_HELP_STRING([--with-gperf-prefix],
@@ -182,7 +189,7 @@ AC_ARG_WITH([gperf-prefix],
             [],
 	    [gperf_prefix=/opt/gperftools])
 
-AS_IF([test x"$with_gperf" != xno],
+AS_IF([test x"$use_gperf" != xno],
       [use_gperf=yes
        AC_CHECK_LIB([profiler],
                     [main],
@@ -242,6 +249,7 @@ AC_CHECK_FUNCS([pow sqrt])
 
 AC_SUBST([use_x86])
 AC_SUBST([use_simd])
+AC_SUBST([use_simd_64])
 AC_SUBST([use_mpi])
 AC_SUBST([use_cuda])
 AC_SUBST([use_omp])
@@ -266,7 +274,9 @@ AC_MSG_NOTICE([     Using MPI:      $use_mpi])
 AC_MSG_NOTICE([     Using GPU:      $use_cuda])
 AC_MSG_NOTICE([     Using x86 :     $use_x86])
 AS_IF([test "x$use_simd" != xno],
-      [AC_MSG_NOTICE([     SIMD type:      $SIMD_TYPE ])
+      [AS_IF([test "x$use_simd_64" != xno],
+             [AC_MSG_NOTICE([     SIMD type:      $SIMD_TYPE 64 bits])],
+             [AC_MSG_NOTICE([     SIMD type:      $SIMD_TYPE ])])
        AS_IF([test "x$with_simd" == xauto],
              [AC_MSG_NOTICE([  Notice: this is auto-detected based on the local CPU architecture])
               AC_MSG_NOTICE([          If different CPU is used for running, check whether $SIMD_TYPE is also supported])])])
