@@ -114,9 +114,7 @@ public:
 #ifdef HARD_CHECK_ENERGY
     IOParams<PS::F64> e_err_hard;
 #endif
-#ifdef AR_SYM
     IOParams<PS::S32> step_limit_arc;
-#endif
     IOParams<PS::F64> eps;
     IOParams<PS::F64> r_out;
     IOParams<PS::F64> r_bin;
@@ -147,7 +145,7 @@ public:
                      n_smp_ave    (input_par_store, 100,  "Average target number of sample particles per process"),
                      n_split      (input_par_store, 8,    "Number of binary sample points for tree perturbation force"),
                      n_bin        (input_par_store, 0,    "Number of binaries used for initialization (assume binaries ID=1,2*n_bin)"),
-                     n_step_per_orbit(input_par_store, 8,    "Number of steps per binary orbits (binary period/tree timestep) to switch on tidal tensor method"),
+                     n_step_per_orbit(input_par_store, 32,    "Number of steps per binary orbits (binary period/tree timestep) to switch on tidal tensor method"),
                      time_end     (input_par_store, 10.0, "Finishing time"),
                      eta          (input_par_store, 0.1,  "Hermite time step coefficient eta"),
                      gravitational_constant(input_par_store, 1.0,  "Gravitational constant"),
@@ -166,9 +164,7 @@ public:
 #ifdef HARD_CHECK_ENERGY
                      e_err_hard   (input_par_store, 1e-4, "Maximum energy error allown for hard integrator"),
 #endif
-#ifdef AR_SYM
                      step_limit_arc(input_par_store, 1000000, "Maximum step allown for ARC sym integrator"),
-#endif
                      eps          (input_par_store, 0.0,  "Softerning eps"),
                      r_out        (input_par_store, 0.0,  "Transit function outer boundary radius", "<m>/sigma_1D^2/ratio_r_cut"),
                      r_bin        (input_par_store, 0.0,  "Tidal tensor box size and binary radius criterion", "theta*r_in"),
@@ -211,9 +207,7 @@ public:
 #ifdef HARD_CHECK_ENERGY
             {"energy-err-hard", required_argument, 0, 14},  
 #endif
-#ifdef AR_SYM
             {"step-limit-arc", required_argument, 0, 15},   
-#endif
             {"disable-print-info", no_argument, 0, 16},
             {"number-interrupt-limt",required_argument, 0, 17},
             {"detect-interrupt", no_argument, 0, 18},
@@ -318,13 +312,11 @@ public:
                 n_opt+=2;
                 break;
 #endif
-#ifdef AR_SYM
             case 15:
                 step_limit_arc.value = atoi(optarg);
                 if(print_flag) step_limit_arc.print(std::cout);
                 n_opt+=2;
                 break;
-#endif
             case 16:
                 print_flag = false;
                 n_opt++;
@@ -343,7 +335,7 @@ public:
             case 19:
                 n_step_per_orbit.value = atof(optarg);
                 if(print_flag) n_step_per_orbit.print(std::cout);
-                assert(n_step_per_orbit.value>4);
+                assert(n_step_per_orbit.value>=1.0);
                 n_opt+=2;
                 break;
             case 'i':
@@ -480,6 +472,7 @@ public:
                     std::cout<<"        --number-leaf-limit:      [I] "<<n_leaf_limit<<std::endl;
                     std::cout<<"        --number-interrupt-limit: [I] "<<n_interrupt_limit<<std::endl;
                     std::cout<<"        --number-sample-average:  [I] "<<n_smp_ave<<std::endl;
+                    std::cout<<"        --number-step-tt:         [F] "<<n_step_per_orbit<<std::endl;
                     std::cout<<"  -G: [F] "<<gravitational_constant<<std::endl;
                     std::cout<<"  -T: [F] "<<theta<<std::endl;
                     std::cout<<"        --hermite-eta:       [F] "<<eta<<std::endl;
@@ -489,9 +482,7 @@ public:
 #ifdef HARD_CHECK_ENERGY
                     std::cout<<"        --energy-err-hard:   [F] "<<e_err_hard<<std::endl;
 #endif
-#ifdef AR_SYM
                     std::cout<<"        --step-limit-arc:    [F] "<<step_limit_arc<<std::endl;
-#endif
                     std::cout<<"        --slowdown-factor:   [F] "<<sd_factor<<std::endl;
                     std::cout<<"        --soft-eps:          [F] "<<eps<<std::endl;
                     std::cout<<"  -f: [S] "<<fname_snp<<std::endl;
@@ -1781,6 +1772,7 @@ private:
         PS::S64 ARC_substep_sum   = system_hard_isolated.ARC_substep_sum;
         PS::S64 ARC_tsyn_step_sum   = system_hard_isolated.ARC_tsyn_step_sum;
         PS::S64 ARC_n_groups      = system_hard_isolated.ARC_n_groups;
+        PS::S64 ARC_n_groups_iso  = system_hard_isolated.ARC_n_groups_iso;
         PS::S64 H4_step_sum       = system_hard_isolated.H4_step_sum;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         PS::S64 n_neighbor_zero   = system_hard_isolated.n_neighbor_zero;
@@ -1794,6 +1786,7 @@ private:
         ARC_substep_sum += system_hard_connected.ARC_substep_sum;
         ARC_tsyn_step_sum += system_hard_connected.ARC_tsyn_step_sum;
         ARC_n_groups += system_hard_connected.ARC_n_groups;
+        ARC_n_groups_iso += system_hard_connected.ARC_n_groups_iso;
         H4_step_sum +=  system_hard_connected.H4_step_sum;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         n_neighbor_zero+= system_hard_connected.n_neighbor_zero;
@@ -1803,6 +1796,7 @@ private:
         n_count.ARC_substep_sum  += ARC_substep_sum;
         n_count.ARC_tsyn_step_sum+= ARC_tsyn_step_sum;
         n_count.ARC_n_groups     += ARC_n_groups;
+        n_count.ARC_n_groups_iso += ARC_n_groups_iso;
         n_count.H4_step_sum      += H4_step_sum;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         n_count.n_neighbor_zero  += n_neighbor_zero;
@@ -1811,6 +1805,7 @@ private:
         n_count_sum.ARC_substep_sum  += PS::Comm::getSum(ARC_substep_sum);
         n_count_sum.ARC_tsyn_step_sum+= PS::Comm::getSum(ARC_tsyn_step_sum);
         n_count_sum.ARC_n_groups     += PS::Comm::getSum(ARC_n_groups);
+        n_count_sum.ARC_n_groups_iso     += PS::Comm::getSum(ARC_n_groups_iso);
         n_count_sum.H4_step_sum      += PS::Comm::getSum(H4_step_sum);
 #ifdef HARD_COUNT_NO_NEIGHBOR
         n_count_sum.n_neighbor_zero  += PS::Comm::getSum(n_neighbor_zero);
@@ -1819,6 +1814,7 @@ private:
         system_hard_isolated.ARC_substep_sum = 0;
         system_hard_isolated.ARC_tsyn_step_sum=0;
         system_hard_isolated.ARC_n_groups = 0;
+        system_hard_isolated.ARC_n_groups_iso = 0;
         system_hard_isolated.H4_step_sum = 0;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         system_hard_isolated.n_neighbor_zero = 0;
@@ -1828,6 +1824,7 @@ private:
         system_hard_connected.ARC_substep_sum = 0;
         system_hard_connected.ARC_tsyn_step_sum=0;
         system_hard_connected.ARC_n_groups = 0;
+        system_hard_connected.ARC_n_groups_iso = 0;
         system_hard_connected.H4_step_sum = 0;
 #ifdef HARD_COUNT_NO_NEIGHBOR
         system_hard_connected.n_neighbor_zero = 0;
@@ -2417,9 +2414,7 @@ public:
         hard_manager.h4_manager.step.eta_2nd = 0.01*input_parameters.eta.value;
         hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, r_out);
         hard_manager.ar_manager.energy_error_relative_max = input_parameters.e_err_arc.value;
-#ifdef AR_SYM
         hard_manager.ar_manager.step_count_max = input_parameters.step_limit_arc.value;
-#endif
         hard_manager.ar_manager.step.initialSymplecticCofficients(-6);
         hard_manager.ar_manager.slowdown_pert_ratio_ref = input_parameters.sd_factor.value;
         hard_manager.ar_manager.slowdown_timescale_max = dt_soft*input_parameters.n_step_per_orbit.value;

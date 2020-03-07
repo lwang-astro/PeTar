@@ -360,7 +360,7 @@ public:
                 PS::F64 period = sym_int.info.getBinaryTreeRoot().period;
                 PS::F64 sd_factor = sym_int.slowdown.getSlowDownFactor();
                 PS::F64 sd_tmax = manager->ar_manager.slowdown_timescale_max;
-                if (sd_factor*period<sd_tmax) {
+                if (1.01*sd_factor*period<=sd_tmax) {
                     std::cerr<<"Warning: isolated binary SD ("<<sd_factor<<") * period ("<<period<<") = "<<period*sd_factor<<"< SD_timescale_max = dt_tree*n_step_per_orbit ("<<sd_tmax<<")"<<std::endl;
                 }
             }
@@ -1008,6 +1008,7 @@ public:
     PS::S64 ARC_substep_sum;
     PS::S64 ARC_tsyn_step_sum;
     PS::S64 ARC_n_groups;
+    PS::S64 ARC_n_groups_iso;
     PS::S64 H4_step_sum;
 #endif
 #ifdef HARD_COUNT_NO_NEIGHBOR
@@ -1172,14 +1173,14 @@ private:
         // single, remove linear cutoff, obtain changeover soft potential
         if (pj_artificial.isSingle()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
         // member, mass is zero, use backup mass
-        else if (pj_artificial.isMember()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (pj_artificial.getMassBackup()*drinv*kpot  - gmor_max);   
+        else if (pj_artificial.isMember()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (G*pj_artificial.getMassBackup()*drinv*kpot  - gmor_max);   
         // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
         else _pi.pot_tot += gmor_max; 
 #else
         // single/member, remove linear cutoff, obtain total potential
         if (pj_artificial.isSingle()) _pi.pot_tot -= (gmor - gmor_max);   
         // member, mass is zero, use backup mass
-        else if (pj_artificial.isMember()) _pi.pot_tot -= (pj_artificial.getMassBackup()*drinv  - gmor_max);   
+        else if (pj_artificial.isMember()) _pi.pot_tot -= (G*pj_artificial.getMassBackup()*drinv  - gmor_max);   
         // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
         else _pi.pot_tot += gmor_max; 
 #endif
@@ -1493,6 +1494,7 @@ public:
         ARC_substep_sum = 0;
         ARC_tsyn_step_sum =0;
         ARC_n_groups = 0;
+        ARC_n_groups_iso = 0;
         H4_step_sum = 0;
 #endif
 #ifdef HARD_COUNT_NO_NEIGHBOR
@@ -1904,7 +1906,9 @@ public:
             if(n_group>0) {
                 PS::S32 ptcl_arti_first_index = adr_first_ptcl_arti_in_cluster_[n_group_in_cluster_offset_[i]];
                 if (ptcl_arti_first_index>=0) ptcl_artificial_ptr = &(_ptcl_soft[ptcl_arti_first_index]);
-
+#ifdef PROFILE
+                else ARC_n_groups_iso += 1;
+#endif
                 n_member_in_group_ptr = &(n_member_in_group_[n_group_in_cluster_offset_[i]]);
             }
 #ifdef OMP_PROFILE
@@ -2142,6 +2146,16 @@ public:
                     bin.processLeafIter(group_index_pars, collectGroupMemberAdrAndSetTypeMemberIter);
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
                     assert(group_index_pars.n==n_members);
+#ifdef ARTIFICIAL_PARTICLE_DEBUG_PRINT
+                    std::cerr<<"Isolated binary case: "
+                             <<" period: "<<bin.period
+                             <<" semi: "<<bin.semi
+                             <<" ecc: "<<bin.ecc
+                             <<" r_serach: "<<bin.r_search
+                             <<" tree_step: "<<_dt_tree
+                             <<" n_step_per_orbit: "<<manager->n_step_per_orbit
+                             <<std::endl;
+#endif
 #endif                
                     _n_member_in_group.push_back(NMemberGroup(_i_cluster, _n_groups, n_members));
                     _n_groups++;

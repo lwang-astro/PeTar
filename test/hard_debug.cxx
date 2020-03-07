@@ -159,8 +159,12 @@ int main(int argc, char **argv){
       hard_int.initial(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, hard_dump.n_member_in_group.getPointer(), &hard_manager, 0.0);
 
       auto interrupt_binary_adr = hard_int.integrateToTime(hard_dump.time_end);
-      if (interrupt_binary_adr!=NULL)
+      if (interrupt_binary_adr!=NULL) {
           hard_int.printInterruptBinaryInfo(std::cerr);
+      }
+      else {
+          hard_int.driftClusterCMRecordGroupCMDataAndWriteBack(hard_dump.time_end);
+      }
 
   }
   // test stability

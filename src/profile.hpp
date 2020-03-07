@@ -428,6 +428,7 @@ public:
     NumCounter ARC_substep_sum;
     NumCounter ARC_tsyn_step_sum;
     NumCounter ARC_n_groups;
+    NumCounter ARC_n_groups_iso;
     NumCounter H4_step_sum;
     NumCounter n_neighbor_zero;
     NumCounter ep_ep_interact;
@@ -445,12 +446,13 @@ public:
                  ARC_substep_sum  (NumCounter("AR_step_sum")),
                  ARC_tsyn_step_sum(NumCounter("AR_tsyn_step_sum")),
                  ARC_n_groups     (NumCounter("AR_group_number")),
+                 ARC_n_groups_iso (NumCounter("Iso_gsoup_number")),
                  H4_step_sum      (NumCounter("Hermite_step_sum")),
                  n_neighbor_zero  (NumCounter("Hermite_no_NB")),
                  ep_ep_interact   (NumCounter("Ep-Ep_interaction")),
                  ep_sp_interact   (NumCounter("Ep-Sp_interaction")),
                  //ARC_step_group   (NumCounter("ARC step per group")),
-                 n_counter(13) {}
+                 n_counter(14) {}
 
     void cluster_count(const PS::S32 n, const PS::S32 ntimes=1) {
         if (n_cluster.count(n)) n_cluster[n] += ntimes;

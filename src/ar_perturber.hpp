@@ -75,43 +75,31 @@ public:
             return -1;
     }
 
-    //! calculate soft perturbation 
-    /*! calculate soft perturbation for two members of one binary
-      @param[in] _p1: member 1 
-      @param[in] _p2: member 2
-      \return soft perturbation for slowdown
+    //! calculate soft_pert_min for slowdown pert_out
+    /*! \Delta F = G m_cm m_p (apo) / rp^3
+        Pert_out = \Delta F /(G apo)
+        @param[in] _bin: binary parameters
+        @param[in] _G: gravitatioal constant
      */
     template <class Tptcl>
-    Float calcSoftPertSlowDownBinary(const Tptcl& _p1, const Tptcl& _p2) {
-        Float pert = 0.0;
+    void calcSoftPertMin(const COMM::BinaryTree<Tptcl>& _bin, const Float _G) {
+        soft_pert_min = 0.0;
 #ifdef SOFT_PERT
-        if(soft_pert!=NULL) {
+        if(soft_pert!=NULL&&_bin.semi>0.0) {
+            ParticleBase p[2];
+            _bin.calcParticlesEcca(p[0], p[1], COMM::PI, _G);
+            Float dacc_soft = 0.0;
             Float acc_p1[3] = {0.0, 0.0, 0.0};
             Float acc_p2[3] = {0.0, 0.0, 0.0};
-            soft_pert->eval(acc_p1, _p1.pos);
-            soft_pert->eval(acc_p2, _p2.pos);
+            soft_pert->eval(acc_p1, p[0].pos);
+            soft_pert->eval(acc_p2, p[1].pos);
             Float dacc[3] = {acc_p1[0]-acc_p2[0], 
                              acc_p1[1]-acc_p2[1],
                              acc_p1[2]-acc_p2[2]};
-            pert = dacc[0]*dacc[0] + dacc[1]*dacc[1] + dacc[2]*dacc[2];
+            dacc_soft = std::sqrt(dacc[0]*dacc[0] + dacc[1]*dacc[1] + dacc[2]*dacc[2]);
+            Float apo = _bin.semi*(1.0+_bin.ecc);
+            soft_pert_min = _bin.mass*dacc_soft/(_G*apo);
         }
 #endif
-        return pert;
-    }
-
-    //! calculate soft_pert_min
-    template <class Tptcl>
-    void calcSoftPertMin(const COMM::BinaryTree<Tptcl>& _bin, const Float _G) {
-        // hyperbolic case
-        if(_bin.semi<0.0) soft_pert_min = 0.0;
-        else { // close orbit
-            ParticleBase p[2];
-            _bin.calcParticlesEcca(p[0], p[1], COMM::PI, _G);
-            Float dacc_soft = calcSoftPertSlowDownBinary(p[0], p[1]);
-            //soft_pert_min = _bin.mass*dacc_soft/(2.0*abs(_bin.semi));
-            Float apo = _bin.semi*(1.0+_bin.ecc);
-            soft_pert_min = _bin.mass*dacc_soft/(_G*apo*apo);
-            //soft_pert_min = _bin.mass*_bin.mass*dacc_soft;
-        }
     }
 };

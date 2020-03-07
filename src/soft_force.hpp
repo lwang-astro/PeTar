@@ -307,7 +307,10 @@ struct CalcForcePPSimd{
     }
 };
 
-
+//! force calculation kernel for EP EP
+/*! Notice this function cannot be used for neighbor searching because type of EPISoft is not correct (the group_data is used as cm). 
+    Member particles will be excluded in the I particle list
+ */
 struct CalcForceEpEpWithLinearCutoffSimd{
     void operator () (const EPISoft * ep_i,
                       const PS::S32 n_ip,
@@ -321,7 +324,7 @@ struct CalcForceEpEpWithLinearCutoffSimd{
         for (PS::S32 i=0; i<n_jp; i++){
             if(ep_j[i].mass>0) ep_j_list[n_jp_local++] = i;
         }
-        //std::cerr<<"n_jp="<<n_jp<<" reduced n_jp="<<n_jp_local<<std::endl;
+//        std::cerr<<"n_jp="<<n_jp<<" reduced n_jp="<<n_jp_local<<std::endl;
 //        const PS::F64 r_crit2 = EPJSoft::r_search * EPJSoft::r_search;
     #ifdef __HPC_ACE__
         PhantomGrapeQuad pg;
@@ -348,6 +351,7 @@ struct CalcForceEpEpWithLinearCutoffSimd{
                 n_ip_local++;
             }
         }
+//        std::cerr<<"n_ip="<<n_ip<<" reduced n_ip="<<n_ip_local<<std::endl;
         PS::S32 loop_max = (n_jp_local-1) / PhantomGrapeQuad::NJMAX + 1;
         for(PS::S32 loop=0; loop<loop_max; loop++){
             const PS::S32 ih = PhantomGrapeQuad::NJMAX*loop;
