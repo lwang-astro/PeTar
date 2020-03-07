@@ -1030,36 +1030,54 @@ public:
 
 private:
 
-    //! collect member particle index, set type to member (backup mass) and mass to zero
-    /*!
+    //! collect member particle index, set member parameters
+    /*! Set type to member (backup mass) and mass to zero, update changeover and rsearch
       Collect member particle address (index) in _par.group_list;
       backup mass of member particle and set mass to zero
       @param[in,out] _par: parameter container 
       @param[in,out] _ptcl: member particle
      */
     template <class Tchp, class Tptcl>
-    static void collectGroupMemberAdrAndSetTypeMemberWithMassZeroIter(Tchp& _par, Tptcl*& _ptcl) {
+    static void collectGroupMemberAdrAndSetMemberParametersIter(Tchp& _par, Tptcl*& _ptcl) {
         _par.group_list[_par.n++] = _ptcl - _par.adr_ref;
 #ifdef HARD_DEBUG
         assert(_ptcl->mass>0.0);
 #endif
-        _ptcl->group_data.artificial.setParticleTypeToMember(_ptcl->mass, - (_par.pcm_id+1));
-        _ptcl->mass = 0.0;
-    }
-
-    //! collect member particle index and set type to member (backup mass also)
-    /*!
-      Collect member particle address (index) in _par.group_list;
-      @param[in,out] _par: parameter container 
-      @param[in,out] _ptcl: member particle
-     */
-    template <class Tchp, class Tptcl>
-    static void collectGroupMemberAdrAndSetTypeMemberIter(Tchp& _par, Tptcl*& _ptcl) {
-        _par.group_list[_par.n++] = _ptcl - _par.adr_ref;
-#ifdef HARD_DEBUG
-        assert(_ptcl->mass>0.0);
+        if (_par.pcm_id<0) { // isolated binary case
+            _ptcl->group_data.artificial.setParticleTypeToMember(_ptcl->mass);
+        }
+        else { // with artificial particles
+            _ptcl->group_data.artificial.setParticleTypeToMember(_ptcl->mass, - (_par.pcm_id+1));
+            _ptcl->mass = 0.0;
+        }
+        PS::F64 rin_cm = _par.changeover_cm->getRin();
+        PS::F64 rin_p  = _ptcl->changeover.getRin();
+        if (rin_p!=rin_cm) {
+            // avoid round-off error case
+            if (abs(rin_p-rin_cm)<1e-10) {
+                _ptcl->changeover = *_par.changeover_cm;
+            }
+            else {
+                _ptcl->changeover.r_scale_next = rin_cm/rin_p;
+                _ptcl->r_search = std::max(_ptcl->r_search, _par.rsearch_cm);
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+                if (_ptcl->r_search<rin_p) {
+                    std::cerr<<"Error, r_search<r_out found! \n"
+                             <<"id: "<<_ptcl->id
+                             <<"bin_changeover: ";
+                    _par.changeover_cm->print(std::cerr);
+                    std::cerr<<"member changeover: ";
+                    _ptcl->changeover.print(std::cerr);
+                    std::cerr<<"member mass: "<<_ptcl->mass
+                             <<"member r_search: "<<_ptcl->r_search
+                             <<"cm research: "<<_par.rsearch_cm
+                             <<std::endl;
+                    abort();
+                }
 #endif
-        _ptcl->group_data.artificial.setParticleTypeToMember(_ptcl->mass);
+                _par.changeover_update_flag = true;
+            }
+        }
     }
 
 
@@ -2072,8 +2090,8 @@ public:
         @parma[out]    _binary_table: binary information table 
         @param[out]    _n_groups: number of groups in current cluster
         @param[out]    _n_members_in_groups: number of members in each group, (cluster_index, group_index, n_members)
+        @param[out]    _changeover_update_list: cluster index list for particles with changeover updates
         @param[in,out] _groups: searchGroupCandidate class, which contain 1-D group member index array, will be reordered by the minimum distance chain for each group
-        @param[in,out] _empty_list: the list of _ptcl_in_cluster that can be used to store new artificial particles, reduced when used
         @param[in]     _dt_tree: tree time step for calculating r_search and set stablility checker period limit
      */
     template <class Tptcl>
@@ -2084,11 +2102,13 @@ public:
                                                           PS::ReallocatableArray<COMM::BinaryTree<PtclH4>> & _binary_table,
                                                           PS::S32 &_n_groups,
                                                           PS::ReallocatableArray<GroupIndexInfo>& _n_member_in_group,
+                                                          PS::ReallocatableArray<PS::S32>& _changeover_update_list,
                                                           SearchGroupCandidate<Tptcl>& _groups,
                                                           const PS::F64 _dt_tree) {
 
         PS::S32 group_ptcl_adr_list[_n_ptcl];
         PS::S32 group_ptcl_adr_offset=0;
+        bool changeover_update_flag = false;
         _n_groups = 0;
         auto& ap_manager = manager->ap_manager;
 
@@ -2142,9 +2162,10 @@ public:
                 if (bin.period < 4.93480220054 * manager->ar_manager.slowdown_pert_ratio_ref * pot_ch_inv / dt_nstep) {
                     // Set member particle type, backup mass, collect member particle index to group_ptcl_adr_list
                     //use _ptcl_in_cluster as the first particle address as reference to calculate the particle index.
-                    struct { Tptcl* adr_ref; PS::S32* group_list; PS::S32 n;}
-                    group_index_pars = { _ptcl_in_cluster,  &group_ptcl_adr_list[group_ptcl_adr_offset], 0};
-                    bin.processLeafIter(group_index_pars, collectGroupMemberAdrAndSetTypeMemberIter);
+                    struct { Tptcl* adr_ref; PS::S32* group_list; PS::S32 n; PS::S64 pcm_id; ChangeOver* changeover_cm; PS::F64 rsearch_cm; bool changeover_update_flag;}
+                    group_index_pars = { _ptcl_in_cluster,  &group_ptcl_adr_list[group_ptcl_adr_offset], 0, -1, &bin.changeover, bin.r_search, false};
+                    bin.processLeafIter(group_index_pars, collectGroupMemberAdrAndSetMemberParametersIter);
+                    if (group_index_pars.changeover_update_flag) changeover_update_flag = true;
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
                     assert(group_index_pars.n==n_members);
 #ifdef ARTIFICIAL_PARTICLE_DEBUG_PRINT
@@ -2181,13 +2202,15 @@ public:
                 Tptcl* ptcl_artificial_i = &_ptcl_artificial[n_ptcl_artificial];
 
                 // Set member particle type to member, set mass to zero, backup mass and collect member particle index to group_ptcl_adr_list
+                // set rsearch and changeover for members
                 //use _ptcl_in_cluster as the first particle address as reference to calculate the particle index.
-                struct { Tptcl* adr_ref; PS::S32* group_list; PS::S32 n; PS::S64 pcm_id;}
-                group_index_pars = { _ptcl_in_cluster,  &group_ptcl_adr_list[group_ptcl_adr_offset], 0, n_ptcl_artificial};
-                binary_stable_i.processLeafIter(group_index_pars, collectGroupMemberAdrAndSetTypeMemberWithMassZeroIter);
+                struct { Tptcl* adr_ref; PS::S32* group_list; PS::S32 n; PS::S64 pcm_id; ChangeOver* changeover_cm; PS::F64 rsearch_cm; bool changeover_update_flag;}
+                group_index_pars = { _ptcl_in_cluster,  &group_ptcl_adr_list[group_ptcl_adr_offset], 0, n_ptcl_artificial, &binary_stable_i.changeover, binary_stable_i.r_search, false};
+                binary_stable_i.processLeafIter(group_index_pars, collectGroupMemberAdrAndSetMemberParametersIter);
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
                 assert(group_index_pars.n==n_members);
 #endif                
+                if (group_index_pars.changeover_update_flag) changeover_update_flag = true;
 
                 // generate artificial particles
                 ap_manager.createArtificialParticles(ptcl_artificial_i, binary_stable_i, index_group, 2);
@@ -2197,6 +2220,9 @@ public:
                 pcm->r_search   = binary_stable_i.r_search;
                 pcm->r_search  += binary_stable_i.semi*(1+binary_stable_i.ecc);  // depend on the mass ratio, the upper limit distance to c.m. from all members and artificial particles is apo-center distance
                 pcm->changeover = binary_stable_i.changeover;
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+                assert(pcm->r_search > pcm->changeover.getRout());
+#endif                
 
                 // set rsearch and changeover for tidal tensor particles
                 Tptcl* ptcl_tt = ap_manager.getTidalTensorParticles(ptcl_artificial_i);
@@ -2300,6 +2326,8 @@ public:
         // reorder ptcl
         for (int i=0; i<_n_ptcl; i++) _ptcl_in_cluster[i]=ptcl_tmp[ptcl_list_reorder[i]];
 
+        // changeover update
+        if (changeover_update_flag) _changeover_update_list.push_back(_i_cluster);
     }
 
     //! Find groups and create aritfical particles to sys
@@ -2320,8 +2348,12 @@ public:
         PS::ReallocatableArray<PtclH4> ptcl_artificial_thread[num_thread];
         PS::ReallocatableArray<COMM::BinaryTree<PtclH4>> binary_table_thread[num_thread];
         PS::ReallocatableArray<GroupIndexInfo> n_member_in_group_thread[num_thread];
+        PS::ReallocatableArray<PS::S32> i_cluster_changeover_update_threads[num_thread];
         for (PS::S32 i=0; i<num_thread; i++) {
+            ptcl_artificial_thread[i].resizeNoInitialize(0);
+            binary_table_thread[i].resizeNoInitialize(0);
             n_member_in_group_thread[i].resizeNoInitialize(0);
+            i_cluster_changeover_update_threads[i].resizeNoInitialize(0);
         }
         auto& ap_manager = manager->ap_manager;
 
@@ -2343,7 +2375,7 @@ public:
             group_candidate.searchAndMerge(ptcl_in_cluster, n_ptcl);
 
             // find groups and generate artificial particles for cluster i
-            findGroupsAndCreateArtificialParticlesOneCluster(i, ptcl_in_cluster, n_ptcl, ptcl_artificial_thread[ith], binary_table_thread[ith], n_group_in_cluster_[i], n_member_in_group_thread[ith], group_candidate, _dt_tree);
+            findGroupsAndCreateArtificialParticlesOneCluster(i, ptcl_in_cluster, n_ptcl, ptcl_artificial_thread[ith], binary_table_thread[ith], n_group_in_cluster_[i], n_member_in_group_thread[ith], i_cluster_changeover_update_threads[ith], group_candidate, _dt_tree);
         }
 
         // gether binary table
@@ -2420,11 +2452,9 @@ public:
         PS::S32 rank = PS::Comm::getRank();
         // Get the address offset for new artificial ptcl array in each thread in _sys
         PS::S64 sys_ptcl_artificial_thread_offset[num_thread+1];
-        PS::ReallocatableArray<PS::S32> i_cluster_changeover_update_threads[num_thread];
         sys_ptcl_artificial_thread_offset[0] = _sys.getNumberOfParticleLocal();
         for(PS::S32 i=0; i<num_thread; i++) {
             sys_ptcl_artificial_thread_offset[i+1] = sys_ptcl_artificial_thread_offset[i] + ptcl_artificial_thread[i].size();
-            i_cluster_changeover_update_threads[i].resizeNoInitialize(0);
         }
         _sys.setNumberOfParticleLocal(sys_ptcl_artificial_thread_offset[num_thread]);
         
@@ -2450,23 +2480,15 @@ public:
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
                 assert(n_member_in_group_[n_group_in_cluster_offset_[i_cluster]+j_group]==n_members);
 #endif                
-                PS::F64 rsearch_cm = pcm->r_search;
-                auto& changeover_cm= pcm->changeover;
-#ifdef ARTIFICIAL_PARTICLE_DEBUG
-                assert(rsearch_cm>changeover_cm.getRout());
-#endif                
                 // make sure group index increase one by one
                 assert(j_group==j_group_recored+1);
                 j_group_recored=j_group;
 
-                // changeover update flag
-                bool changeover_update_flag=false;
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
                 // check whether ID is consistent.
                 PS::S64 id_cm = ap_manager.getCMID(pj);
                 bool id_match_flag=false;
 #endif
-                // update member status
                 for (PS::S32 k=0; k<n_members; k++) {
                     PS::S32 kl = n_ptcl_in_cluster_disp_[i_cluster]+group_offset+k;
                     auto& p_loc = ptcl_hard_.getPointer()[kl];
@@ -2481,40 +2503,7 @@ public:
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
                     if(p_loc.id == id_cm) id_match_flag=true;
 #endif
-                    // set changeover r_scale_next for updating changeover next tree step
-                    // set rsearch to maximum of c.m. rsearch and member rsearch
-                    PS::F64 rin_cm = changeover_cm.getRin();
-                    PS::F64 rin_p  = p_loc.changeover.getRin();
-                    if (rin_p!=rin_cm) {
-                        // avoid round-off error case
-                        if (abs(rin_p-rin_cm)<1e-10) {
-                            p_loc.changeover = changeover_cm;
-                        }
-                        else {
-                            p_loc.changeover.r_scale_next = changeover_cm.getRin()/p_loc.changeover.getRin();
-                            p_loc.r_search = std::max(p_loc.r_search, rsearch_cm);
-#ifdef ARTIFICIAL_PARTICLE_DEBUG
-                            if (p_loc.r_search<p_loc.changeover.getRout()) {
-                                std::cerr<<"Error, r_search<r_out found! \n"
-                                         <<"n_members: "<<n_members
-                                         <<"id: "<<p_loc.id
-                                         <<"bin_changeover: ";
-                                changeover_cm.print(std::cerr);
-                                std::cerr<<"member changeover: ";
-                                p_loc.changeover.print(std::cerr);
-                                std::cerr<<"member mass: "<<p_loc.mass
-                                         <<"cm mass: "<<pcm->mass
-                                         <<"member r_search: "<<p_loc.r_search
-                                         <<"cm research: "<<pcm->r_search
-                                         <<std::endl;
-                                abort();
-                            }
-#endif
-                            changeover_update_flag = true;
-                        }
-                    }
-
-                    // also update global particle to be consistent
+                    // update global particle to be consistent
                     const PS::S64 p_glb_adr= p_loc.adr_org;
                     if(p_glb_adr>=0) {
                         auto& p_glb = _sys[p_glb_adr];
@@ -2533,9 +2522,6 @@ public:
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
                 assert(id_match_flag);
 #endif
-                // record i_cluster if changeover change
-                if (changeover_update_flag) i_cluster_changeover_update_threads[i].push_back(i_cluster);
-
                 // shift cluster
                 if(j_group==n_group_in_cluster_[i_cluster]-1) {
                     group_offset=0;
@@ -2553,9 +2539,14 @@ public:
         // merge i_cluster_changeover
         i_cluster_changeover_update_.resizeNoInitialize(0);
         for(PS::S32 i=0; i<num_thread; i++) {
-            for (PS::S32 j=0; j<i_cluster_changeover_update_threads[i].size();j++)
+            for (PS::S32 j=0; j<i_cluster_changeover_update_threads[i].size();j++) 
                 i_cluster_changeover_update_.push_back(i_cluster_changeover_update_threads[i][j]);
         }
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        if (i_cluster_changeover_update_.size()>0) 
+            std::cerr<<"Changeover change cluster found: T="<<time_origin_<<" n_cluster_change="<<i_cluster_changeover_update_.size()<<std::endl;
+#endif
+        /*
         // sort data
         PS::S32 i_cluster_size = i_cluster_changeover_update_.size();
         if (i_cluster_size>0) {
@@ -2569,6 +2560,7 @@ public:
 #endif
             i_cluster_changeover_update_.resizeNoInitialize(i_end-i_cluster_data);
         }
+        */
         
         Ptcl::group_data_mode = GroupDataMode::artificial;
     }
