@@ -1,15 +1,29 @@
 #!/bin/bash
 
-#Initial data file generator, read data file (m,r[3],v[3])
+until [[ `echo x$1` == 'x' ]]
+do
+    case $1 in
+	-h) shift;
+	    echo 'Initial data file generator, read data file (mass, position[3], velocity[3] per line; 7 columns)';
+	    echo 'Options:';
+	    echo '  -f: output file name (default: intput file name + ".input")';
+	    echo '  -i: skip rows number (default: 0)';
+	    echo '  -s: add stellar evolution columns (default: no)';
+	    exit;;
+	-f) shift; fout=$1; shift;;
+	-i) shift; igline=$1; shift;;
+	-s) shift; seflag=y;;
+	*) fname=$1;shift;;
+    esac
+done
 
-read -p "Data filename: " fname
-[ -z $fname ] && echo 'No file name found!' && exit
-read -p "output filename (fname.input): " fout
 [ -z $fout ] && fout=$fname.input
-read -p "Ignore line number (0): " igline
 [ -z $igline ] && igline=0
-read -p "With stellar evolution y/n (y): " seflag
-[ -z $seflag ] && seflag=y
+[ -z $seflag ] && seflag=n
+
+echo 'Transfer "'$fname$'" to PeTar input data file "'$fout'"'
+echo 'Skip rows: '$igline
+echo 'Add stellar evolution columns: '$seflag
 
 n=`wc -l $fname|cut -d' ' -f1`
 n=`expr $n - $igline`
