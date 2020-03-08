@@ -67,7 +67,7 @@ Options for configure can be found by
 
 Multiple options should be combined together, for example:
 ```
-./configure --prefix=/opt --with-cuda=yes
+./configure --prefix=/opt --enable-cuda
 ```
 will install the executable files in /opt and switch on GPU support.
 
