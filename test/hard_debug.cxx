@@ -184,9 +184,10 @@ int main(int argc, char **argv){
       sys.manager = &hard_manager;
 
       PS::ReallocatableArray<COMM::BinaryTree<PtclH4>> binary_table;
-      PS::ReallocatableArray<SystemHard::NMemberGroup> n_member_in_group;
+      PS::ReallocatableArray<SystemHard::GroupIndexInfo> n_member_in_group;
+      PS::ReallocatableArray<PS::S32> i_cluster_changeover_update;
       // generate artificial particles, stability test is included
-      sys.findGroupsAndCreateArtificialParticlesOneCluster(0, ptcl, n_ptcl, ptcl_new, binary_table, n_group_in_cluster, n_member_in_group, group_candidate, hard_dump.time_end);
+      sys.findGroupsAndCreateArtificialParticlesOneCluster(0, ptcl, n_ptcl, ptcl_new, binary_table, n_group_in_cluster, n_member_in_group, i_cluster_changeover_update, group_candidate, hard_dump.time_end);
   }
 
   return 0;
