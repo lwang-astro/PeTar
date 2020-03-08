@@ -27,30 +27,43 @@ Options for configure can be found by
     ./configure --prefix=[Install path]
     ```
    If the code is already installed before and the executable file (petar.\*\*) exists in the $PATH enviroment, the configure automatically use the same directory for installing.
-2. Use MPI
+   
+2. Change MPI parallelization options
    ```
    ./configure --with-mpi=[auto/yes/no]
-   auto: automatical detection (default)
-   yes: use MPI c++ compiler
-   no: no MPI
-3. Use OpenMP
+   ```
+   - auto: automatical detection MPI, if exists, use MPI compiler, otherwise use non-MPI compiler (default)
+   - yes: use MPI c++ compiler
+   - no: non-MPI c++ compiler
+   
+3. Disable OpenMP parallelization
     ```
-    ./configure --with-omp=[yes/no]
-    yes: (default)
+    ./configure --disable-openmp
+    ```
+    By default OpenMP is used.
+    
 4. Use X86 with SIMD
     ```
     ./configure --with-simd=[auto/avx/avx2/avx512dq]
-    auto: automatical detection based on local CPU architecture (default)
-    avx: use AVX for tree force calculation and tree neighbor counting
-    avx2: use AVX2
-    avx512dq: use AVX512F and AVX512DQ
     ```
+    - auto: automatical detection based on local CPU architecture (default)
+    - avx: use AVX for tree force calculation and tree neighbor counting
+    - avx2: use AVX2
+    - avx512dq: use AVX512F and AVX512DQ
+    
 5. Use GPU (CUDA)
     ```
-    ./configure --with-cuda=[yes/no]
-    yes: use GPU to calculate tree force
-    no: no GPU support (default)
+    ./configure --enable-cuda
     ```
+    By default GPU is not used.
+    
+6. Debug mode
+    ```
+    ./configure --with-debug=[assert/g/no]
+    ```
+    - assert: switch on all assertion check
+    - g: switch on compiler option '-g -O0 -fbounds-check' in order to support debugger such as gdb
+    - no: no debugging, optimized performance (default)    
 
 Multiple options should be combined together, for example:
 ```
@@ -95,6 +108,20 @@ To restart the simulation with the same configuration of parameters, use
 [mpiexec -n X] petar.mpi.omp.avx2 -p input.par [snapshot filename]
 ```
 where _input.par_ is automatically generated from the last run (stored in the same diretory of the simulation).
+
+### Initial input data file
+PeTar has an internal Plummer model generator (equal mass system) by using Henon Unit and half-mass radius being 1.0.
+If users want to use their own initial particle data, _petar.init_ can help to transfer their particle data to _petar_ intput data file.
+To use _petar.init_:
+```
+petar.init [options] [particle data filename]
+```
+The particle data file should contain 7 columns: mass, position[3], velocity[3] and one particle each row.
+All Binaries come first and the two components should be next to each other. This is important to obtain a correct initial velocity dispersion. 
+Options can be found by
+```
+petar.init -h
+```
 
 ### Data analysis in _PYTHON_
 The data analysis library provide the tools to identify binaries; calculate Lagrangian radii and core radii; obtain system energy error and check performance of each parts of the code.
