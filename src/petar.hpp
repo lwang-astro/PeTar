@@ -95,7 +95,7 @@ public:
     IOParams<PS::S32> n_smp_ave;
     IOParams<PS::S32> n_split;
     IOParams<PS::S64> n_bin;
-    IOParams<PS::S64> n_step_per_orbit;
+    IOParams<PS::F64> n_step_per_orbit;
     IOParams<PS::F64> time_end;
     IOParams<PS::F64> eta;
     IOParams<PS::F64> gravitational_constant;
