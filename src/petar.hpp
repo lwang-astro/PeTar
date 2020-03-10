@@ -1521,6 +1521,7 @@ private:
     //! check time consistence
     bool checkTimeConsistence() {
         assert(abs(time_kick-stat.time)<1e-13);
+        time_kick = stat.time; // escape the problem of round-off error
         assert(stat.time == system_hard_one_cluster.getTimeOrigin());
         assert(stat.time == system_hard_isolated.getTimeOrigin());
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
