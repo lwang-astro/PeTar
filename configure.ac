@@ -49,22 +49,30 @@ AC_ARG_WITH([debug],
             [],
             [with_debug=no])
 
+DEBFLAGS=' -g'
+
+AX_CHECK_COMPILE_FLAG([-O0],
+                      [DEBFLAGS=$DEBFLAGS" -O0"])
+
+AX_CHECK_COMPILE_FLAG([-fbounds-check],
+                      [DEBFLAGS=$DEBFLAGS" -fbounds-check"])
 
 AS_IF([test x"$with_debug" == xg],
-      [OPTFLAGS=" -g -O0"
-       PROG_SUFFIX=".g"
-       AX_CHECK_COMPILE_FLAG([-fbounds-check],
-                             [OPTFLAGS=$OPTFLAGS" -fbounds-check"])],
+      [PROG_SUFFIX=".g"
+       OPTFLAGS=$DEBFLAGS],
       [AS_IF([test x"$with_debug" != xno],
              [PROG_SUFFIX=".d"])
        AX_CHECK_COMPILE_FLAG([-O3],
                              [OPTFLAGS=" -O3"])])
 
 
-AX_CHECK_COMPILE_FLAG([-Wall],[OPTFLAGS=$OPTFLAGS" -Wall"])
+AX_CHECK_COMPILE_FLAG([-Wall],
+                      [OPTFLAGS=$OPTFLAGS" -Wall"
+                       DEBFLAGS=$DEBFLAGS" -Wall"])
 
 AX_CHECK_COMPILE_FLAG([-std=c++11],
-                      [OPTFLAGS=$OPTFLAGS" -std=c++11"],
+                      [OPTFLAGS=$OPTFLAGS" -std=c++11"
+                       DEBFLAGS=$DEBFLAGS" -std=c++11"],
                       [AC_MSG_FAILURE([c++11 support is required for the compiler])])
 
 # OpenMP
@@ -256,6 +264,7 @@ AC_SUBST([use_omp])
 AC_SUBST([use_gperf])
 AC_SUBST([with_debug])
 AC_SUBST([OPTFLAGS])
+AC_SUBST([DEBFLAGS])
 AC_SUBST([OPENMP_CXXFLAGS])
 AC_SUBST([NVCC])
 AC_SUBST([CUDAFLAGS])

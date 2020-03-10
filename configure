@@ -632,6 +632,7 @@ SIMDFLAGS
 CUDALIBS
 CUDAFLAGS
 OPENMP_CXXFLAGS
+DEBFLAGS
 OPTFLAGS
 with_debug
 use_gperf
@@ -3422,11 +3423,45 @@ else
 fi
 
 
+DEBFLAGS=' -g'
 
-if test x"$with_debug" == xg; then :
-  OPTFLAGS=" -g -O0"
-       PROG_SUFFIX=".g"
-       { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -fbounds-check" >&5
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -O0" >&5
+$as_echo_n "checking whether C++ compiler accepts -O0... " >&6; }
+if ${ax_cv_check_cxxflags___O0+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+  ax_check_save_flags=$CXXFLAGS
+  CXXFLAGS="$CXXFLAGS  -O0"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+  ax_cv_check_cxxflags___O0=yes
+else
+  ax_cv_check_cxxflags___O0=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  CXXFLAGS=$ax_check_save_flags
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___O0" >&5
+$as_echo "$ax_cv_check_cxxflags___O0" >&6; }
+if test x"$ax_cv_check_cxxflags___O0" = xyes; then :
+  DEBFLAGS=$DEBFLAGS" -O0"
+else
+  :
+fi
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -fbounds-check" >&5
 $as_echo_n "checking whether C++ compiler accepts -fbounds-check... " >&6; }
 if ${ax_cv_check_cxxflags___fbounds_check+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -3456,11 +3491,15 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___fbounds_check" >&5
 $as_echo "$ax_cv_check_cxxflags___fbounds_check" >&6; }
 if test x"$ax_cv_check_cxxflags___fbounds_check" = xyes; then :
-  OPTFLAGS=$OPTFLAGS" -fbounds-check"
+  DEBFLAGS=$DEBFLAGS" -fbounds-check"
 else
   :
 fi
 
+
+if test x"$with_debug" == xg; then :
+  PROG_SUFFIX=".g"
+       OPTFLAGS=$DEBFLAGS
 else
   if test x"$with_debug" != xno; then :
   PROG_SUFFIX=".d"
@@ -3534,6 +3573,7 @@ fi
 $as_echo "$ax_cv_check_cxxflags___Wall" >&6; }
 if test x"$ax_cv_check_cxxflags___Wall" = xyes; then :
   OPTFLAGS=$OPTFLAGS" -Wall"
+                       DEBFLAGS=$DEBFLAGS" -Wall"
 else
   :
 fi
@@ -3570,6 +3610,7 @@ fi
 $as_echo "$ax_cv_check_cxxflags___std_cpp11" >&6; }
 if test x"$ax_cv_check_cxxflags___std_cpp11" = xyes; then :
   OPTFLAGS=$OPTFLAGS" -std=c++11"
+                       DEBFLAGS=$DEBFLAGS" -std=c++11"
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
@@ -5853,6 +5894,7 @@ _ACEOF
 
 fi
 done
+
 
 
 
