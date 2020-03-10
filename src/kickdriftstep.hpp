@@ -12,27 +12,7 @@ class KickDriftStep{
 
 public:
 
-    KickDriftStep(): ds_(0.0), mode_(0), count_one_step_(0), count_continue_(0), next_is_start_flag_(true), next_is_kick_flag_(true) {
-#if (defined KDKDK_2ND) || (defined KDKDK_4TH)
-        coff_one_step_.reserve(3);
-        coff_one_step_.push_back(KDPair({1.0/6.0, 0.5}));
-        coff_one_step_.push_back(KDPair({4.0/6.0, 0.5}));
-        coff_one_step_.push_back(KDPair({1.0/6.0, 0.0}));
-
-        coff_continue_.reserve(2);
-        coff_continue_.push_back(KDPair({2.0/6.0, 0.5}));
-        coff_continue_.push_back(KDPair({4.0/6.0, 0.5}));
-#else
-        coff_one_step_.reserve(2);
-        coff_one_step_.push_back(KDPair({0.5, 1.0}));
-        coff_one_step_.push_back(KDPair({0.5, 0.0}));
-        assert(coff_one_step_.size()==2);
-
-        coff_continue_.reserve(1);
-        coff_continue_.push_back(KDPair({1.0, 1.0}));
-        assert(coff_continue_.size()==1);
-#endif        
-    }
+    KickDriftStep(): ds_(0.0), mode_(0), count_one_step_(0), count_continue_(0), next_is_start_flag_(true), next_is_kick_flag_(true) {}
 
     //! reset step count for one full step case
     void resetCountOneStep() {
@@ -99,6 +79,26 @@ public:
             abort();
         }
         ds_ = _ds;
+#if (defined KDKDK_2ND) || (defined KDKDK_4TH)
+        coff_one_step_.reserve(3);
+        coff_one_step_.push_back(KDPair({ds_    /6.0, 0.5*ds_}));
+        // use ds_ - ** to remove roundoff error
+        coff_one_step_.push_back(KDPair({ds_*4.0/6.0, ds_ - coff_one_step_[0][1]}));
+        coff_one_step_.push_back(KDPair({ds_- coff_one_step_[0][0] - coff_one_step_[1][0], 0.0}));
+
+        coff_continue_.reserve(2);
+        coff_continue_.push_back(KDPair({coff_one_step_[0][0] + coff_one_step_[2][0], coff_one_step_[0][1]}));
+        coff_continue_.push_back(KDPair({coff_one_step_[1][0], coff_one_step_[1][1]}));
+#else
+        coff_one_step_.reserve(2);
+        coff_one_step_.push_back(KDPair({0.5*ds_, ds_}));
+        coff_one_step_.push_back(KDPair({ds_ - coff_one_step_[0][0], 0.0}));
+        assert(coff_one_step_.size()==2);
+
+        coff_continue_.reserve(1);
+        coff_continue_.push_back(KDPair({ds_, ds_}));
+        assert(coff_continue_.size()==1);
+#endif        
     }
 
     //! get base step size
@@ -108,12 +108,12 @@ public:
     
     //! Get kick step size for one full step
     PS::F64 getDtKickOneStep() const {
-        return coff_one_step_[count_one_step_][mode_]*ds_;
+        return coff_one_step_[count_one_step_][mode_];
     }
 
     //! Get drift step size for one full step   
     PS::F64 getDtDriftOneStep() const {
-        return coff_one_step_[count_one_step_][1-mode_]*ds_;
+        return coff_one_step_[count_one_step_][1-mode_];
     }
 
     //! Get kick step size for continue case
@@ -127,7 +127,7 @@ public:
             abort();
         }
         next_is_kick_flag_ = false;
-        return coff_continue_[count_continue_][mode_]*ds_;
+        return coff_continue_[count_continue_][mode_];
     }
 
     //! Get drift step size for continue case
@@ -141,7 +141,7 @@ public:
             abort();
         }
         next_is_kick_flag_ = true;
-        return coff_continue_[count_continue_][1-mode_]*ds_;
+        return coff_continue_[count_continue_][1-mode_];
     }
 
     //! Get staring step size for continue case
@@ -152,7 +152,7 @@ public:
         }
         next_is_start_flag_ = false;
         next_is_kick_flag_ = !next_is_kick_flag_;
-        return coff_one_step_[0][mode_]*ds_;
+        return coff_one_step_[0][mode_];
     }
 
     //! Get ending step size for continue case
@@ -163,7 +163,7 @@ public:
         }
         // reset start flag to true
         next_is_start_flag_ = true;
-        return coff_one_step_[coff_one_step_.size()-1][mode_]*ds_;
+        return coff_one_step_[coff_one_step_.size()-1][mode_];
     }
 
     //! get whether next is start 

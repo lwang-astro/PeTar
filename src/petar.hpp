@@ -1520,7 +1520,7 @@ private:
     
     //! check time consistence
     bool checkTimeConsistence() {
-        assert(time_kick==stat.time);
+        assert(abs(time_kick-stat.time)<1e-13);
         assert(stat.time == system_hard_one_cluster.getTimeOrigin());
         assert(stat.time == system_hard_isolated.getTimeOrigin());
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
@@ -2663,8 +2663,8 @@ public:
                 // for next kick-drift pair
                 dt_manager.nextContinue();
 
-                // advance stat.time and step count
-                stat.time += dt_manager.getStep();
+                // update stat time 
+                stat.time = system_hard_one_cluster.getTimeOrigin();
 
                 // check whether output or changeover change are needed (only at the ending step)
                 if (dt_manager.isNextEndPossible()) {
