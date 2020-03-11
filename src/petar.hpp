@@ -145,7 +145,7 @@ public:
                      n_smp_ave    (input_par_store, 100,  "Average target number of sample particles per process"),
                      n_split      (input_par_store, 8,    "Number of binary sample points for tree perturbation force"),
                      n_bin        (input_par_store, 0,    "Number of binaries used for initialization (assume binaries ID=1,2*n_bin)"),
-                     n_step_per_orbit(input_par_store, 32,    "Number of steps per binary orbits (binary period/tree timestep) to switch on tidal tensor method"),
+                     n_step_per_orbit(input_par_store, 8, "Number of steps per slow-down binary orbits (binary period/tree timestep) for isolated binaries; also the maximum criterion for switching on tidal tensor method"),
                      time_end     (input_par_store, 10.0, "Finishing time"),
                      eta          (input_par_store, 0.1,  "Hermite time step coefficient eta"),
                      gravitational_constant(input_par_store, 1.0,  "Gravitational constant"),
