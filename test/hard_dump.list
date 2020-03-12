@@ -1,4 +1,4 @@
-wide.triple: outer orbit has a large semi, switch between triple AR and 2+1: -k 1e-4
+#wide.triple: outer orbit has a large semi, switch between triple AR and 2+1: -k 1e-4
 #sdissue.flyby: one flyby pass a binary, the timescale criterion depending on radial velocity has inverse peak near peri-center, which cause big energy jump, by using full velocity instead of radial. the problem is solved. : -k 1e-5
 #sdissue.flyby2: two binary flyby, the slowdown timescale decrease too slow before the energy error increase too much, use acceleration in timescale calculation help : -k 1e-5
 #sdissue.flyby3: two large slowdown factor when B-B encounter appear, use acc^2 instead of m*r^-4 help : -k 1e-5

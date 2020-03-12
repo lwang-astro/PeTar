@@ -1,0 +1,9 @@
+#emacs backup
+*~
+
+# object files
+*.o
+
+# build
+build/*
+

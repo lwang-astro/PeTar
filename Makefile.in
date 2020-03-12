@@ -1,4 +1,4 @@
-TARGET=@PROG_NAME@ petar.hard.debug 
+TARGET=build/@PROG_NAME@ build/petar.hard.debug 
 
 all: $(TARGET)
 
@@ -116,14 +116,16 @@ CXXFLAGS += -D PROFILE
 CXX=@CXX@
 CXXNOMPI=@CXXNOMPI@
 
-VPATH=./src ./test
+VPATH=./src ./build
 INCLUDE  = -I./src @INCLUDE@
 
 SRC = main.cc ${shell ls ./src/*.hpp} 
 
-@PROG_NAME@:  $(SRC) $(OBJS)
-	$(CXX) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(OBJS) $(CXXLIBS)
+build:
+	mkdir build
 
+build/@PROG_NAME@:  $(SRC) $(OBJS) |build
+	$(CXX) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(OBJS) $(CXXLIBS)
 
 SIMD_DEBFLAGS += -DRSQRT_NR_EPJ_X2
 SIMD_DEBFLAGS += -DAVX_PRELOAD
@@ -137,19 +139,19 @@ HARD_DEBFLAGS+= -D AR_DEBUG -D AR_DEBUG_DUMP -D AR_WARN -D HARD_DEBUG -D HARD_DE
 HARD_MT_FLAGS += -D AR_TTL -D AR_SLOWDOWN_INNER -D AR_SLOWDOWN_TIMESCALE -D HARD_CHECK_ENERGY 
 
 
-petar.hard.debug: hard_debug.cxx
+build/petar.hard.debug: hard_debug.cxx |build
 	$(CXXNOMPI) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
 
-petar.hard.test: hard_test.cxx
+build/petar.hard.test: hard_test.cxx |build
 	$(CXXNOMPI) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
 
-petar.simd.test: simd_test.cxx $(OBJS)
+build/petar.simd.test: simd_test.cxx $(OBJS) |build
 	$(CXXNOMPI) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(SIMD_DEBFLAGS) -DPARTICLE_SIMULATOR_THREAD_PARALLEL $^ -o $@  $(CXXLIBS)
 
-petar.tt.test: tidal_tensor_test.cxx
+build/petar.tt.test: tidal_tensor_test.cxx |build
 	$(CXXNOMPI) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS)  $< -o $@  $(CXXLIBS)
 
-force_gpu_cuda.o: force_gpu_cuda.cu
+build/force_gpu_cuda.o: force_gpu_cuda.cu |build
 	$(NVCC) $(INCLUDE) -c $< -o $@ 
 
 install: $(TARGET)
@@ -161,4 +163,4 @@ install: $(TARGET)
 	install -m 755 tools/analysis/*.py @prefix@/include/petar/
 
 clean:
-	rm $(TARGET) *.o 
+	rm $(TARGET) build/*.o 
