@@ -5,6 +5,7 @@ do
     case $1 in
 	-h) shift;
 	    echo 'Initial data file generator, read data file (mass, position[3], velocity[3] per line; 7 columns)';
+	    echo 'Usage: petar.init [options] [data file name]';
 	    echo 'Options:';
 	    echo '  -f: output file name (default: intput file name + ".input")';
 	    echo '  -i: skip rows number (default: 0)';
@@ -17,6 +18,10 @@ do
     esac
 done
 
+if [ ! -e $fname ] | [ -z $fname ] ; then
+    echo 'Error, file name not provided' 
+    exit
+fi
 [ -z $fout ] && fout=$fname.input
 [ -z $igline ] && igline=0
 [ -z $seflag ] && seflag=n

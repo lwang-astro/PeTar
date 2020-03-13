@@ -152,7 +152,7 @@ public:
                      n_glb        (input_par_store, 0,    "Total number of particles, only used to generate particles if needed"),
                      id_offset    (input_par_store, -1,   "Starting id for artificial particles, total number of real particles must be always smaller than this","n_glb+1"),
                      dt_soft      (input_par_store, 0.0,  "Tree timestep","0.1*r_out/sigma_1D"),
-                     dt_snp       (input_par_store, 0.0625,"Output time interval of particle dataset"),
+                     dt_snp       (input_par_store, 1.0,  "Output time interval of particle dataset"),
                      search_vel_factor (input_par_store, 3.0,  "Neighbor searching coefficient for velocity check (v*dt)"),
                      search_peri_factor(input_par_store, 1.5,  "Neighbor searching coefficient for peri-center check"),
                      dt_limit_hard_factor(input_par_store, 4.0,  "Limit of tree time step/hard time step"),
@@ -761,6 +761,14 @@ private:
             }
         }
         else {
+            // regularize dt_tree
+            PS::F64 dt_origin = _dt_tree;
+            _dt_tree = 1.0;
+            if (dt_origin<1) while (_dt_tree>dt_origin) _dt_tree *= 0.5;
+            else {
+                while (_dt_tree<=dt_origin) _dt_tree *= 2.0;
+                _dt_tree *= 0.5;
+            }
             // if r_out is not defined, adjust r_out to minimum based on tree step
             if (!r_out_flag) {
                 _r_out = 10.0*_dt_tree*_vel_disp;
