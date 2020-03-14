@@ -30,9 +30,10 @@ fi
 [ -z $pbin ] && pbin=petar
 [ -z $nomp ] || prefix='env OMP_NUM_THREADS='$nomp
 [ -z $nmpi ] || prefix=$prefix' mpiexec -n '$nmpi
+[ -z $bnum ] && bnum=0
 
 if [ -z $dt_base ]; then
-    $prefix $pbin -w 0 -t 0.0 $fname &>.check.perf.test.log
+    $prefix $pbin -w 0 -b $bnum -t 0.0 $fname &>.check.perf.test.log
     dt_base=`egrep dt_soft .check.perf.test.log |awk '{OFMT="%.14g"; print $3/8}'`
     rm -f .check.perf.test.log
 else
@@ -47,7 +48,7 @@ while [[ $check_flag == true ]]
 do
     dt=`echo $dt|awk '{OFMT="%.14g"; print $1*2.0}'`
     tend=`echo $dt |awk '{print $1*6.01}' `
-    ${prefix} $pbin -w 0 -t $tend -s $dt -o $dt $fname &>.check.perf.$dt.log
+    ${prefix} $pbin -w 0 -t $tend -b $bnum -s $dt -o $dt $fname &>.check.perf.$dt.log
     tperf_list=`egrep 'Wallclock' -A 3 .check.perf.$dt.log |sed -n '/^\ *[0-9]/ p'|awk '{if (NR>1 && NR%2==0) print $1}'`
     #tperf=`echo $tperf_list|awk -v dt=$dt 'BEGIN{t=1e10;ns=1.0/dt} {if (NR>1 && NR%2==0) t=(t<$1)?t:$1} END{print t*ns}'`
     tperf=`echo $tperf_list|awk -v dt=$dt '{t=1e10;ns=1.0/dt; for(i=1;i<=NF;i++) t=(t<$i)?t:$i; print t*ns}'`

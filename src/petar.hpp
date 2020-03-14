@@ -166,7 +166,7 @@ public:
 #endif
                      step_limit_arc(input_par_store, 1000000, "Maximum step allown for ARC sym integrator"),
                      eps          (input_par_store, 0.0,  "Softerning eps"),
-                     r_out        (input_par_store, 0.0,  "Transit function outer boundary radius", "<m>/sigma_1D^2/ratio_r_cut"),
+                     r_out        (input_par_store, 0.0,  "Transit function outer boundary radius", "0.1 GM/[N^(1/3) sigma_3D^2]"),
                      r_bin        (input_par_store, 0.0,  "Tidal tensor box size and binary radius criterion", "theta*r_in"),
                      r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out"),
                      r_search_min (input_par_store, 0.0,  "Minimum search radius  value","auto"),
@@ -654,9 +654,10 @@ private:
       @param[out] _m_max: maximum mass of particles
       @param[in,out] _dt_tree: tree time step
       @param[out] _vel_disp: system velocity dispersion 
-      @param[in]     _search_vel_factor: coefficient to calculate r_search
-      @param[in]     _ratio_r_cut: _r_out/_r_in
-      @param[in]     _n_bin: number of binaries
+      @param[in]  _search_vel_factor: coefficient to calculate r_search
+      @param[in]  _ratio_r_cut: _r_out/_r_in
+      @param[in]  _n_bin: number of binaries
+      @param[in]  _G: gravitational constant
     */
     void getInitPar(const SystemSoft & _tsys,
                     PS::F64 &_r_in,
@@ -672,7 +673,8 @@ private:
                     const PS::F64 _search_vel_factor,
                     const PS::F64 _ratio_r_cut,
                     const PS::S64 _n_bin,
-                    const PS::F64 _theta) {
+                    const PS::F64 _theta,
+                    const PS::F64 _G) {
 
         // local particle number
         const PS::S64 n_loc = _tsys.getNumberOfParticleLocal();
@@ -744,10 +746,10 @@ private:
     
         // if r_out is already defined, calculate r_in based on _ratio_r_cut
         if (r_out_flag) _r_in = _r_out * _ratio_r_cut;
-        // calculate r_in based on velocity dispersion and averaged mass, calculate r_out by _ratio_r_cut
+        // calculate r_out based on virial radius scaled with (N)^(1/3), calculate r_in by _ratio_r_cut
         else {
-            _r_in = 0.5*average_mass_glb / (_vel_disp*_vel_disp);
-            _r_out = _r_in / _ratio_r_cut;
+            _r_out = 0.1*_G*mass_cm_glb/(std::pow(n_glb,1.0/3.0)) / (3*_vel_disp*_vel_disp);
+            _r_in = _r_out * _ratio_r_cut;
         }
 
         // if tree time step is not defined, calculate tree time step by r_out and velocity dispersion
@@ -2329,7 +2331,7 @@ public:
         PS::S64& n_bin         =  input_parameters.n_bin.value;
         PS::F64& theta         =  input_parameters.theta.value;
 
-        getInitPar(system_soft, r_in, r_out, r_bin, r_search_min, r_search_max, v_max, m_average, m_max, dt_soft, v_disp, search_vel_factor, ratio_r_cut, n_bin, theta);
+        getInitPar(system_soft, r_in, r_out, r_bin, r_search_min, r_search_max, v_max, m_average, m_max, dt_soft, v_disp, search_vel_factor, ratio_r_cut, n_bin, theta, input_parameters.gravitational_constant.value);
 
         EPISoft::eps   = input_parameters.eps.value;
         EPISoft::r_out = r_out;
