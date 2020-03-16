@@ -133,6 +133,19 @@ class DictNpArrayMix:
                 dat_out[:,icol:icol+ncols] = member.getherDataToArray()
                 icol += ncols
         return dat_out
+
+    def append(self, *_dat):
+        for idat in _dat:
+            if (type(idat) != type(self)):
+                raise ValueError('Initial fail, date type not consistent, type [0] is ',type(self),' given ',type(idat))
+        data_with_self = [self]+list(_dat)
+        for key, item in self.__dict__.items():
+            if (type(item) == np.ndarray):
+                self.__dict__[key] = np.concatenate(tuple(map(lambda x:x.__dict__[key], data_with_self)))
+            elif(issubclass(type(item), DictNpArrayMix)):
+                self.__dict__[key].append(*tuple(map(lambda x:x.__dict__[key], _dat)))
+        self.size += np.sum(tuple(map(lambda x:x.size, _dat)))
+        
                 
     def savetxt(self, fname, **karg):
         dat_out= self.getherDataToArray()

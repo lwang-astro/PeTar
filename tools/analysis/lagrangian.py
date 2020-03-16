@@ -63,6 +63,25 @@ def potential_center(single, binary, G):
 
     return cm_pos, cm_vel
 
+def joinLagrangian(*_dat):
+    """
+    Join multiple data to one
+    """
+    type0 = type(_dat[0])
+    for idat in _dat:
+        if (type(idat) != type0):
+            raise ValueError('Initial fail, date type not consistent, type [0] is ',type0,' given ',type(idat))
+    new_dat = type0(_dat[0].n_frac)
+    for key, item in _dat[0].__dict__.items():
+        if (type(item) == np.ndarray):
+            new_dat.__dict__[key] = np.concatenate(tuple(map(lambda x:x.__dict__[key], _dat)),axis=0)
+        elif(issubclass(type(item), DictNpArrayMix)):
+            new_dat.__dict__[key] = joinLagrangian(*tuple(map(lambda x:x.__dict__[key], _dat)))
+        else:
+            new_dat.__dict__[key] = _dat[0].__dict__[key]
+    new_dat.size = np.sum(tuple(map(lambda x:x.size, _dat)))
+    return new_dat
+
 class LagrangianVelocity(DictNpArrayMix):
     """ Lagrangian velocity component
     """
@@ -101,13 +120,16 @@ class Lagrangian(DictNpArrayMix):
         if (self.n_frac != int(1+_mass_fraction.size)):
             raise ValueError('Mass fraction size ',mass_fraction.size,' is not consistent with Lagrangian array size ',self.n_frac)
 
-        self.size += 1
-        self.vel.size += 1
-        self.sigma.size += 1
-
         if (_particle.size<=1):
-            self = Lagrangian(n_frac,np.zeros([n_frac, self.ncols]))
+            size = self.size
+            empty = Lagrangian(self.n_frac,np.zeros([1,self.n_frac*self.ncols]))
+            self.append(empty)
+            if (size+1!=self.size):
+                raise ValueError('Size should increase one, but increase', self.size-size)
         else:
+            self.size += 1
+            self.vel.size += 1
+            self.sigma.size += 1
             mcum=_particle.mass.cumsum()
             r = np.sqrt(_particle.r2)
             rindex= find_mass_index(mcum, _mass_fraction)
@@ -121,8 +143,10 @@ class Lagrangian(DictNpArrayMix):
             self.n = np.append(self.n, [np.append(nlagr,nc)], axis=0)
             mlagr = mcum[rindex]
             mlagr[1:] -= mlagr[:-1]
-            mlagr /= nlagr
-            mc = mcum[nc-1]/nc
+            sel = nlagr>0
+            mlagr[sel] /= nlagr[sel]
+            if (nc>0): mc = mcum[nc-1]/nc
+            else:      mc = 0.0
             self.m = np.append(self.m, [np.append(mlagr,mc)], axis=0)
 
             m   =_particle.mass 
@@ -159,9 +183,9 @@ class Lagrangian(DictNpArrayMix):
             vlst = [vx, vy, vz, vr, vt[0], vt[1], vt[2], vrot]
             vave = [None]*len(vlst)
             for k in range(len(vlst)):
-                vlagr = [np.average(m[n_offset[i]:n_offset[i+1]]*vlst[k][n_offset[i]:n_offset[i+1]])/mlagr[i] for i in range(mlagr.size)]
+                vlagr = [np.average(m[n_offset[i]:n_offset[i+1]]*vlst[k][n_offset[i]:n_offset[i+1]])/mlagr[i] if (n_offset[i]<n_offset[i+1]) else 0.0 for i in range(mlagr.size)]
                 # core radius
-                vlagr.append(np.average(m[0:nc]*vlst[k][0:nc])/mc)
+                vlagr.append(np.average(m[0:nc]*vlst[k][0:nc])/mc if (nc>0) else 0.0)
                 vave[k] = np.array(vlagr)
                 
             
@@ -175,9 +199,9 @@ class Lagrangian(DictNpArrayMix):
             
             sigma = [None]*len(vlst)
             for k in range(len(vlst)):
-                slagr = [np.average(m[n_offset[i]:n_offset[i+1]] * (vlst[k][n_offset[i]:n_offset[i+1]] - vave[k][i])**2) / mlagr[i] for i in range(_mass_fraction.size)]
+                slagr = [np.average(m[n_offset[i]:n_offset[i+1]] * (vlst[k][n_offset[i]:n_offset[i+1]] - vave[k][i])**2) / mlagr[i] if (n_offset[i]<n_offset[i+1]) else 0.0 for i in range(_mass_fraction.size)]
                 # core radius
-                slagr.append(np.average(m[0:nc] * (vlst[k][0:nc] - vave[k][-1])**2) / mc)
+                slagr.append(np.average(m[0:nc] * (vlst[k][0:nc] - vave[k][-1])**2) / mc if (nc>0) else 0.0)
                 sigma[k] = np.array(slagr)
 
             self.sigma.x = np.append(self.sigma.x, [np.sqrt(sigma[0])], axis=0)
@@ -230,24 +254,8 @@ class LagrangianMultiple(DictNpArrayMix):
         self.single.calcOneSnapshot(single_sort, mass_fraction, rc)
         self.binary.calcOneSnapshot(binary_sort, mass_fraction, rc)
         self.all.calcOneSnapshot(all_sort, mass_fraction, rc)
+        if (self.binary.size != self.single.size):
+            raise ValueError('Size inconsistence: single.size:', self.single.size, ' binary.size:', self.binary.size)
 
         self.size += 1
         
-def joinLagrangian(*_dat):
-    """
-    Join multiple data to one
-    """
-    type0 = type(_dat[0])
-    for idat in _dat:
-        if (type(idat) != type0):
-            raise ValueError('Initial fail, date type not consistent, type [0] is ',type0,' given ',type(idat))
-    new_dat = type0(_dat[0].n_frac)
-    for key, item in _dat[0].__dict__.items():
-        if (type(item) == np.ndarray):
-            new_dat.__dict__[key] = np.concatenate(tuple(map(lambda x:x.__dict__[key], _dat)))
-        elif(issubclass(type(item), DictNpArrayMix)):
-            new_dat.__dict__[key] = joinLagrangian(*tuple(map(lambda x:x.__dict__[key], _dat)))
-        else:
-            new_dat.__dict__[key] = _dat[0].__dict__[key]
-    new_dat.size = np.sum(tuple(map(lambda x:x.size, _dat)))
-    return new_dat
