@@ -41,13 +41,14 @@ else
 fi
 
 tperf_pre=1e10
+tzero=`head -1 $fname|awk '{print $3}'`
 dt=$dt_base
 dt_min=$dt
 check_flag=true
 while [[ $check_flag == true ]]
 do
     dt=`echo $dt|awk '{OFMT="%.14g"; print $1*2.0}'`
-    tend=`echo $dt |awk '{print $1*6.01}' `
+    tend=`echo $dt |awk -v tzero=$tzero '{print tzero+$1*6.01}' `
     ${prefix} $pbin -w 0 -t $tend -b $bnum -s $dt -o $dt $fname &>.check.perf.$dt.log
     tperf_list=`egrep 'Wallclock' -A 3 .check.perf.$dt.log |sed -n '/^\ *[0-9]/ p'|awk '{if (NR>1 && NR%2==0) print $1}'`
     #tperf=`echo $tperf_list|awk -v dt=$dt 'BEGIN{t=1e10;ns=1.0/dt} {if (NR>1 && NR%2==0) t=(t<$1)?t:$1} END{print t*ns}'`
