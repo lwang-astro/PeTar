@@ -13,3 +13,4 @@
 #sdjump: slowdown for second binary jump to very large value (bug) :
 #5ce: massive B + low-mass B + massive single 5-body encounter (bug of binarytree) :
 #eccflip: b-b encounter with one binary eccentricity >1.0 :
+step.timescale: hyperbolic encounters with a hard binary, the tmin (slow-down timescale) is very small, remove 0.1 factor beforem tmin in ar_interaction helps :

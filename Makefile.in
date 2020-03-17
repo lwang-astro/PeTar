@@ -122,7 +122,7 @@ INCLUDE  = -I./src @INCLUDE@
 SRC = main.cc ${shell ls ./src/*.hpp} 
 
 build:
-	mkdir build
+	[ -d build ] || mkdir build
 
 build/@PROG_NAME@:  $(SRC) $(OBJS) |build
 	$(CXX) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(OBJS) $(CXXLIBS)
@@ -139,7 +139,7 @@ HARD_DEBFLAGS+= -D AR_DEBUG -D AR_DEBUG_DUMP -D AR_WARN -D HARD_DEBUG -D HARD_DE
 HARD_MT_FLAGS += -D AR_TTL -D AR_SLOWDOWN_INNER -D AR_SLOWDOWN_TIMESCALE -D HARD_CHECK_ENERGY 
 
 
-build/petar.hard.debug: hard_debug.cxx |build
+build/petar.hard.debug: hard_debug.cxx io.hpp hard_assert.hpp cluster_list.hpp hard.hpp soft_ptcl.hpp static_variables.hpp |build
 	$(CXXNOMPI) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
 
 build/petar.hard.test: hard_test.cxx |build
