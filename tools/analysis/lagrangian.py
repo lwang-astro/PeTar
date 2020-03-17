@@ -3,65 +3,81 @@ import numpy as np
 from .base import *
 from .data import *
 
-
-def density_six_nb(particle, kdtree):
-    """ calculate density based on six neighbors and return density center
-    particle: all particles
-    kdtree: 3D KDTree of all particle positions
-    return: density_center_position
+class Core(DictNpArrayMix):
+    """ center of mass 
     """
-    # 6 nearest neighbors
-    nb_r_list6, nb_index_list6 = kdtree.query(particle.pos,k=6)
-    nb_mass_tot6=np.sum(particle[nb_index_list6].mass,axis=1) + particle.mass
     
-    nb_inv_r6 = 1/nb_r_list6[:,5]
-    rho = nb_mass_tot6*(nb_inv_r6*nb_inv_r6*nb_inv_r6)
-    particle.addNewMember('density',rho)
-    rho_tot = rho.sum()
+    def __init__(self, _dat=None, _offset=int(0)):
+        keys  = [['time',1],['pos', 3],['vel', 3], ['rc', 1]]
+        DictNpArrayMix.__init__(self, keys, _dat, _offset)
 
-    cm_pos = np.array([np.sum(rho*particle.pos[:,i])/rho_tot for i in range(3)])
-    cm_vel = np.array([np.sum(rho*particle.vel[:,i])/rho_tot for i in range(3)])
+    def calcPotentialCenter(self, single, binary, G):
+        """
+        get potential center of the system
+        r_cm = \sum_i pot_i *r_i /\sum_i pot_i (only count pot_i <0)
+        """
+        pot_s_sel = (single.pot<0)
+        pot_s = single.pot[pot_s_sel]
+        pos_s = single.pos[pot_s_sel]
+        vel_s = single.vel[pot_s_sel]
+        
+        pos_b1 = binary.p1.pos
+        pos_b2 = binary.p2.pos
+        m_b1 = binary.p1.mass
+        m_b2 = binary.p2.mass
+        dr = pos_b1-pos_b2
+        dr2 = vec_dot(dr,dr)
+        invr = 1/np.sqrt(dr2)
+        pot_b1 = binary.p1.pot + G*m_b2*invr
+        pot_b2 = binary.p2.pot + G*m_b1*invr
+        pot_b = (m_b2*pot_b1 + m_b1*pot_b2)/binary.mass
+        pos_b = binary.pos
+        vel_b = binary.vel
+        
+        pot_sum = pot_s.sum() + pot_b.sum()
+        cm_pos = np.array([(np.sum(pot_s*pos_s[:,i])+np.sum(pot_b*pos_b[:,i]))/pot_sum for i in range(3)])
+        cm_vel = np.array([(np.sum(pot_s*vel_s[:,i])+np.sum(pot_b*vel_b[:,i]))/pot_sum for i in range(3)])
 
-    return cm_pos, cm_vel
+        self.pos = np.append(self.pos,[cm_pos],axis=0)
+        self.vel = np.append(self.vel,[cm_vel],axis=0)
 
-def core_radius(particle):
-    """ 
-    calculate core radius, using Casertano & Hut (1985) method:
-    rc = sqrt(\sum_i rho_i^2 r_i^2 / \sum_i rho_i^2)
-    """
-    rho2 = particle.density*particle.density
-    rc = np.sqrt((particle.r2*rho2).sum()/(rho2.sum()))
-
-    return rc
-
-def potential_center(single, binary, G):
-    """
-    get potential center of the system
-    r_cm = \sum_i pot_i *r_i /\sum_i pot_i (only count pot_i <0)
-    """
-    pot_s_sel = (single.pot<0)
-    pot_s = single.pot[pot_s_sel]
-    pos_s = single.pos[pot_s_sel]
-    vel_s = single.vel[pot_s_sel]
+        return cm_pos, cm_vel
     
-    pos_b1 = binary.p1.pos
-    pos_b2 = binary.p2.pos
-    m_b1 = binary.p1.mass
-    m_b2 = binary.p2.mass
-    dr = pos_b1-pos_b2
-    dr2 = vec_dot(dr,dr)
-    invr = 1/np.sqrt(dr2)
-    pot_b1 = binary.p1.pot + G*m_b2*invr
-    pot_b2 = binary.p2.pot + G*m_b1*invr
-    pot_b = (m_b2*pot_b1 + m_b1*pot_b2)/binary.mass
-    pos_b = binary.pos
-    vel_b = binary.vel
-    
-    pot_sum = pot_s.sum() + pot_b.sum()
-    cm_pos = np.array([(np.sum(pot_s*pos_s[:,i])+np.sum(pot_b*pos_b[:,i]))/pot_sum for i in range(3)])
-    cm_vel = np.array([(np.sum(pot_s*vel_s[:,i])+np.sum(pot_b*vel_b[:,i]))/pot_sum for i in range(3)])
+    def calcDensityAndCenter(self, particle, kdtree):
+        """ calculate density based on six neighbors and return density center
+        particle: all particles
+        kdtree: 3D KDTree of all particle positions
+        return: density_center_position
+        """
+        # 6 nearest neighbors
+        nb_r_list6, nb_index_list6 = kdtree.query(particle.pos,k=6)
+        nb_mass_tot6=np.sum(particle[nb_index_list6].mass,axis=1) + particle.mass
+        
+        nb_inv_r6 = 1/nb_r_list6[:,5]
+        rho = nb_mass_tot6*(nb_inv_r6*nb_inv_r6*nb_inv_r6)
+        particle.addNewMember('density',rho)
+        rho_tot = rho.sum()
+     
+        cm_pos = np.array([np.sum(rho*particle.pos[:,i])/rho_tot for i in range(3)])
+        cm_vel = np.array([np.sum(rho*particle.vel[:,i])/rho_tot for i in range(3)])
+        self.pos = np.append(self.pos, [cm_pos], axis=0)
+        self.vel = np.append(self.vel, [cm_vel], axis=0)
 
-    return cm_pos, cm_vel
+        return cm_pos, cm_vel
+
+    def calcCoreRadius(self, particle):
+        """ 
+        calculate core radius, using Casertano & Hut (1985) method:
+        rc = sqrt(\sum_i rho_i^2 r_i^2 / \sum_i rho_i^2)
+        """
+        rho2 = particle.density*particle.density
+        rc = np.sqrt((particle.r2*rho2).sum()/(rho2.sum()))
+        self.rc = np.append(self.rc, rc)
+
+        return rc
+
+    def addTime(self, time):
+        self.time = np.append(self.time, time)
 
 def joinLagrangian(*_dat):
     """
@@ -104,12 +120,15 @@ class Lagrangian(DictNpArrayMix):
         self.ncols += self.sigma.ncols
         self.n_frac = _n_frac
 
-    def calcOneSnapshot(self, _particle, _mass_fraction, _rc):
+    def calcOneSnapshot(self, _particle, _mass_fraction, _rc, _mode='sphere'):
         """ calculate one snapshot lagrangian parameters
         _particle: sorted particles
         _mass_fraction: fraction of mass 
         _rc: core radius
+        _mode: sphere: calculate averaged properties from center to Lagrangian radii; shell: calculate properties between two neighbor radii
         """
+        shell_mode = True if (_mode == 'shell') else False
+
         def find_mass_index(_mass_cum,_mass_fraction):
             mass_bins=np.append(0,_mass_fraction*_mass_cum[-1])
             index,count=np.histogram(_mass_cum,bins=mass_bins)
@@ -138,11 +157,11 @@ class Lagrangian(DictNpArrayMix):
                 raise ValueError('r shape is wrong',self.r.shape)
             self.r = np.append(self.r, [np.append(rlagr,_rc)], axis=0)
             nlagr = rindex+1
-            nlagr[1:] -= nlagr[:-1]
+            if (shell_mode): nlagr[1:] -= nlagr[:-1]
             nc = (_particle.r2<(_rc*_rc)).sum()
             self.n = np.append(self.n, [np.append(nlagr,nc)], axis=0)
             mlagr = mcum[rindex]
-            mlagr[1:] -= mlagr[:-1]
+            if (shell_mode): mlagr[1:] -= mlagr[:-1]
             sel = nlagr>0
             mlagr[sel] /= nlagr[sel]
             if (nc>0): mc = mcum[nc-1]/nc
@@ -183,11 +202,14 @@ class Lagrangian(DictNpArrayMix):
             vlst = [vx, vy, vz, vr, vt[0], vt[1], vt[2], vrot]
             vave = [None]*len(vlst)
             for k in range(len(vlst)):
-                vlagr = [np.average(m[n_offset[i]:n_offset[i+1]]*vlst[k][n_offset[i]:n_offset[i+1]])/mlagr[i] if (n_offset[i]<n_offset[i+1]) else 0.0 for i in range(mlagr.size)]
+                vlagr = []
+                if (shell_mode):
+                    vlagr = [np.average(m[n_offset[i]:n_offset[i+1]]*vlst[k][n_offset[i]:n_offset[i+1]])/mlagr[i] if (n_offset[i]<n_offset[i+1]) else 0.0 for i in range(mlagr.size)]
+                else:
+                    vlagr = [np.average(m[:n_offset[i+1]]*vlst[k][:n_offset[i+1]])/mlagr[i] if (n_offset[i+1]>0) else 0.0 for i in range(mlagr.size)]
                 # core radius
                 vlagr.append(np.average(m[0:nc]*vlst[k][0:nc])/mc if (nc>0) else 0.0)
                 vave[k] = np.array(vlagr)
-                
             
             self.vel.x = np.append(self.vel.x, [vave[0]], axis=0)
             self.vel.y = np.append(self.vel.y, [vave[1]], axis=0)
@@ -199,7 +221,11 @@ class Lagrangian(DictNpArrayMix):
             
             sigma = [None]*len(vlst)
             for k in range(len(vlst)):
-                slagr = [np.average(m[n_offset[i]:n_offset[i+1]] * (vlst[k][n_offset[i]:n_offset[i+1]] - vave[k][i])**2) / mlagr[i] if (n_offset[i]<n_offset[i+1]) else 0.0 for i in range(_mass_fraction.size)]
+                slagr = []
+                if (shell_mode):
+                    slagr = [np.average(m[n_offset[i]:n_offset[i+1]] * (vlst[k][n_offset[i]:n_offset[i+1]] - vave[k][i])**2) / mlagr[i] if (n_offset[i]<n_offset[i+1]) else 0.0 for i in range(_mass_fraction.size)]
+                else:
+                    slagr = [np.average(m[:n_offset[i+1]] * (vlst[k][:n_offset[i+1]] - vave[k][i])**2) / mlagr[i] if (n_offset[i+1]>0) else 0.0 for i in range(_mass_fraction.size)]
                 # core radius
                 slagr.append(np.average(m[0:nc] * (vlst[k][0:nc] - vave[k][-1])**2) / mc if (nc>0) else 0.0)
                 sigma[k] = np.array(slagr)
@@ -228,7 +254,7 @@ class LagrangianMultiple(DictNpArrayMix):
         self.size = self.all.size
         self.n_frac= _n_frac
 
-    def calcOneSnapshot(self, time, single, binary, mass_fraction, rc):
+    def calcOneSnapshot(self, time, single, binary, mass_fraction, rc, mode):
         """ Calculate Lagrangian radii and related properties
         single: single partilces (cm corrected and r2 exist)
         binary: binaries (cm corrected and r2 exist)
@@ -251,8 +277,8 @@ class LagrangianMultiple(DictNpArrayMix):
         binary_sort = binary_sim[idx_binary]
         all_sort = all_sim[idx]
     
-        self.single.calcOneSnapshot(single_sort, mass_fraction, rc)
-        self.binary.calcOneSnapshot(binary_sort, mass_fraction, rc)
+        self.single.calcOneSnapshot(single_sort, mass_fraction, rc, mode)
+        self.binary.calcOneSnapshot(binary_sort, mass_fraction, rc, mode)
         self.all.calcOneSnapshot(all_sort, mass_fraction, rc)
         if (self.binary.size != self.single.size):
             raise ValueError('Size inconsistence: single.size:', self.single.size, ' binary.size:', self.binary.size)

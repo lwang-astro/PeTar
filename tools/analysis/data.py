@@ -221,7 +221,6 @@ def findPair(_dat, _G, _rmax, use_kdtree=False, simple_binary=True):
 
         #index = kdt.query_pairs(_rmax,output_type='ndarray')
         #pair_index = np.transpose(index)
-
      
         # two members
         p1 = _dat[pair_index[0]]
