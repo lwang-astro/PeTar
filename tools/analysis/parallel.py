@@ -6,7 +6,7 @@ from .lagrangian import *
 import time
 
 
-def data_process_one(file_path, lagr, core, time_profile, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), G=1.0, r_bin=0.1, average_mode='sphere'):
+def dataProcessOne(file_path, lagr, core, time_profile, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), G=1.0, r_bin=0.1, average_mode='sphere'):
     fp = open(file_path, 'r')
     header=fp.readline()
     file_id, n_glb, t = header.split()
@@ -63,7 +63,7 @@ def data_process_one(file_path, lagr, core, time_profile, m_frac=np.array([0.1,0
 
     return time_profile
 
-def data_process_list(file_list, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), G=1.0, r_bin=0.1, average_mode='sphere'):
+def dataProcessList(file_list, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), G=1.0, r_bin=0.1, average_mode='sphere'):
     """ process lagragian calculation for a list of file snapshots
     file_list: file path list
     """
@@ -77,13 +77,13 @@ def data_process_list(file_list, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), G=1.0,
     core=Core()
     for path in file_list:
         #print(' data:',path)
-        data_process_one(path, lagr, core, time_profile, m_frac, G, r_bin, average_mode)
+        dataProcessOne(path, lagr, core, time_profile, m_frac, G, r_bin, average_mode)
     for key, item in time_profile.items():
         item /= len(file_list)
     return lagr, core, time_profile
 
 
-def parallel_data_process_list(file_list, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), G=1.0, r_bin=0.1, average_mode='sphere', n_cpu=int(0)):
+def parallelDataProcessList(file_list, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), G=1.0, r_bin=0.1, average_mode='sphere', n_cpu=int(0)):
     """ parellel process lagragian calculation for a list of file snapshots
     file_list: file path list
     """
@@ -103,7 +103,7 @@ def parallel_data_process_list(file_list, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]
 
     result=[None]*n_cpu
     for rank in range(n_cpu):
-        result[rank] = pool.apply_async(data_process_list, args=(file_part[rank], m_frac, G, r_bin, average_mode))
+        result[rank] = pool.apply_async(dataProcessList, args=(file_part[rank], m_frac, G, r_bin, average_mode))
 
     # Step 3: Don't forget to close
     pool.close()

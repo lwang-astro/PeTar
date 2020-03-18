@@ -57,7 +57,7 @@ if __name__ == '__main__':
     file_list = file_list.splitlines()
     path_list = [file for file in file_list]
      
-    lagr,core,time_profile = petar.parallel_data_process_list(path_list,n_cpu=n_cpu)
+    lagr,core,time_profile = petar.parallelDataProcessList(path_list,n_cpu=n_cpu)
      
     lagr.savetxt(lagr_filename)
     core.savetxt(core_filename)
