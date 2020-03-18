@@ -153,7 +153,7 @@ class DictNpArrayMix:
 
     def loadtxt(self, fname, **karg):
         dat_int = np.loadtxt(fname, **karg)
-        self.__init__(self.n_frac, dat_int)
+        self.__init__(dat_int)
         
 def join(*_dat):
     """

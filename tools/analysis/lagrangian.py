@@ -107,6 +107,10 @@ class LagrangianVelocity(DictNpArrayMix):
         DictNpArrayMix.__init__(self, keys, _dat, _offset)
         self.n_frac = _n_frac
 
+    def loadtxt(self, fname, **karg):
+        dat_int = np.loadtxt(fname, **karg)
+        self.__init__(self.n_frac, dat_int)
+
 class Lagrangian(DictNpArrayMix):
     """ Lagrangian parameters
     """
@@ -119,6 +123,10 @@ class Lagrangian(DictNpArrayMix):
         self.sigma= LagrangianVelocity(_n_frac,_dat, self.ncols+_offset)
         self.ncols += self.sigma.ncols
         self.n_frac = _n_frac
+
+    def loadtxt(self, fname, **karg):
+        dat_int = np.loadtxt(fname, **karg)
+        self.__init__(self.n_frac, dat_int)
 
     def calcOneSnapshot(self, _particle, _mass_fraction, _rc, _mode='sphere'):
         """ calculate one snapshot lagrangian parameters
@@ -285,3 +293,6 @@ class LagrangianMultiple(DictNpArrayMix):
 
         self.size += 1
         
+    def loadtxt(self, fname, **karg):
+        dat_int = np.loadtxt(fname, **karg)
+        self.__init__(self.n_frac, dat_int)

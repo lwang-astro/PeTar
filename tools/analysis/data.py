@@ -46,7 +46,7 @@ def calculateParticleCMDict(pcm, _p1, _p2):
 class Binary(DictNpArrayMix):
     """ Binary class
     """
-    def __init__ (self, _p1=None, _p2=None, _G=1, simple_mode=True):
+    def __init__ (self, _p1=None, _p2=None, _G=1, simple_mode=True, member_particle_type=SimpleParticle):
         """
         simple_mode: only calculate semi and ecc
         """
@@ -63,10 +63,10 @@ class Binary(DictNpArrayMix):
             self.ncols += self.p1.ncols + self.p2.ncols
         elif (_p2==None):
             if (simple_mode):
-                keys = [['mass',1],['pos',3],['vel',3],['r',1],['semi',1],['ecc',1]]
+                keys = [['mass',1],['pos',3],['vel',3],['r',1],['semi',1],['ecc',1],['p1',member_particle_type], ['p2', member_particle_type]]
                 DictNpArrayMix.__init__(self, keys, _p1)
             else:
-                keys=[['mass',1],['pos',3],['vel',3],['m1',1],['m2',1],['r',1],['semi',1],['am',3],['L',3],['eccvec',3],['incline',1],['rot_horizon',1],['ecc',1],['rot_self',1],['ecca',1],['period',1],['t_peri',1],['p1',SimpleParticle],['p2',SimpleParticle]]
+                keys=[['mass',1],['pos',3],['vel',3],['m1',1],['m2',1],['r',1],['semi',1],['am',3],['L',3],['eccvec',3],['incline',1],['rot_horizon',1],['ecc',1],['rot_self',1],['ecca',1],['period',1],['t_peri',1],['p1', member_particle_type],['p2', member_particle_type]]
                 DictNpArrayMix.__init__(self, keys, _p1)
         else:
             raise ValueError('Initial fail, date type should be Particle (2), Binary (1) or no argument (0)')
