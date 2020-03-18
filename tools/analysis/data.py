@@ -46,16 +46,24 @@ def calculateParticleCMDict(pcm, _p1, _p2):
 class Binary(DictNpArrayMix):
     """ Binary class
     """
-    def __init__ (self, _p1=None, _p2=None, _G=1, simple_mode=True, member_particle_type=SimpleParticle):
+    def __init__ (self, _p1=None, _p2=None, **kwargs):
         """
         simple_mode: only calculate semi and ecc
         """
+        G=1
+        simple_mode=True
+        member_particle_type=SimpleParticle
+        
+        if 'G' in kwargs.keys(): G=kwargs['G']
+        if 'simple_mode' in kwargs.keys(): simple_mode=kwargs['simple_mode']
+        if 'member_particle_type' in kwargs.keys(): member_particle_type=kwargs['member_particle_type']
+
         if (issubclass(type(_p1), SimpleParticle)) & (issubclass(type(_p2),SimpleParticle)):
             if (simple_mode): 
-                self.particleToSemiEcc(_p1, _p2, _G)
+                self.particleToSemiEcc(_p1, _p2, G)
                 self.ncols= int(10)
             else:
-                self.particleToBinary(_p1, _p2, _G)
+                self.particleToBinary(_p1, _p2, G)
                 self.ncols= int(27)
             self.p1 = _p1
             self.p2 = _p2
@@ -70,6 +78,10 @@ class Binary(DictNpArrayMix):
                 DictNpArrayMix.__init__(self, keys, _p1)
         else:
             raise ValueError('Initial fail, date type should be Particle (2), Binary (1) or no argument (0)')
+
+    def loadtxt(self, fname, **karg):
+        dat_int = np.loadtxt(fname, **karg)
+        self.__init__(dat_int, member_particle_type=type(self.p1))
 
     def calc_r2(self, member_also=False):
         """ calculate distance square

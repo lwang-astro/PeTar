@@ -36,18 +36,21 @@ class DictNpArrayMix:
                         icol += self.__dict__[key].ncols
                     else:
                         raise ValueError('Initial fail, unknown key type, should be inherience of  DictNpArrayMix, given ',parameter)
+                    self.size += self.__dict__[key].size*self.__dict__[key].ncols
                 elif (type(parameter)==int):
                     if (parameter==1):
                         self.__dict__[key] = _dat[:,icol]
                     else:
                         self.__dict__[key] = _dat[:,icol:icol+parameter]
                     icol += parameter
+                    self.size += self.__dict__[key].size
                 else:
                     raise ValueError('Initial fail, unknown key parameter, should be DictNpArrayMix type name or value of int, given ',parameter)
-                self.size += self.__dict__[key].size
             icol -= _offset
             self.ncols = int(icol)
             self.size  = int(self.size/icol)
+            if (self.size != _dat.shape[0]):
+                raise ValueError('Reading error, final counted size ',self.size,' is not consistent with reading ndarray shape',_dat.shape[0])
         elif (_dat==None):
             icol = int(0)
             for key, parameter in keys:
