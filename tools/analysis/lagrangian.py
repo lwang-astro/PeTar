@@ -7,9 +7,9 @@ class Core(DictNpArrayMix):
     """ center of mass 
     """
     
-    def __init__(self, _dat=None, _offset=int(0)):
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         keys  = [['time',1],['pos', 3],['vel', 3], ['rc', 1]]
-        DictNpArrayMix.__init__(self, keys, _dat, _offset)
+        DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
     def calcPotentialCenter(self, single, binary, G):
         """
@@ -20,17 +20,9 @@ class Core(DictNpArrayMix):
         pot_s = single.pot[pot_s_sel]
         pos_s = single.pos[pot_s_sel]
         vel_s = single.vel[pot_s_sel]
-        
-        pos_b1 = binary.p1.pos
-        pos_b2 = binary.p2.pos
-        m_b1 = binary.p1.mass
-        m_b2 = binary.p2.mass
-        dr = pos_b1-pos_b2
-        dr2 = vec_dot(dr,dr)
-        invr = 1/np.sqrt(dr2)
-        pot_b1 = binary.p1.pot + G*m_b2*invr
-        pot_b2 = binary.p2.pot + G*m_b1*invr
-        pot_b = (m_b2*pot_b1 + m_b1*pot_b2)/binary.mass
+
+        binary.calcPot(G)
+        pot_b = binary.pot
         pos_b = binary.pos
         vel_b = binary.vel
         
@@ -79,77 +71,57 @@ class Core(DictNpArrayMix):
     def addTime(self, time):
         self.time = np.append(self.time, time)
 
-def joinLagrangian(*_dat):
-    """
-    Join multiple data to one
-    """
-    type0 = type(_dat[0])
-    for idat in _dat:
-        if (type(idat) != type0):
-            raise ValueError('Initial fail, date type not consistent, type [0] is ',type0,' given ',type(idat))
-    new_dat = type0(_dat[0].n_frac)
-    for key, item in _dat[0].__dict__.items():
-        if (type(item) == np.ndarray):
-            new_dat.__dict__[key] = np.concatenate(tuple(map(lambda x:x.__dict__[key], _dat)),axis=0)
-        elif(issubclass(type(item), DictNpArrayMix)):
-            new_dat.__dict__[key] = joinLagrangian(*tuple(map(lambda x:x.__dict__[key], _dat)))
-        else:
-            new_dat.__dict__[key] = _dat[0].__dict__[key]
-    new_dat.size = np.sum(tuple(map(lambda x:x.size, _dat)))
-    return new_dat
-
 class LagrangianVelocity(DictNpArrayMix):
     """ Lagrangian velocity component
     """
     
-    def __init__(self, _n_frac, _dat=None, _offset=int(0)):
-        keys  = [['abs',_n_frac],['x',_n_frac],['y',_n_frac],['z',_n_frac],['rad',_n_frac],['tan',_n_frac],['rot',_n_frac]] # all, x, y, z, radial, tangential, rotational
-        DictNpArrayMix.__init__(self, keys, _dat, _offset)
-        self.n_frac = _n_frac
-
-    def loadtxt(self, fname, **karg):
-        dat_int = np.loadtxt(fname, **karg)
-        self.__init__(self.n_frac, dat_int)
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        m_frac=np.array([0,1,0,3,0.5,0,7,0,9])
+        if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
+        n_frac = m_frac.size + 1
+        keys  = [['abs',n_frac],['x',n_frac],['y',n_frac],['z',n_frac],['rad',n_frac],['tan',n_frac],['rot',n_frac]] # all, x, y, z, radial, tangential, rotational
+        DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
+        self.kwargs['mass_fraction'] = m_frac
 
 class Lagrangian(DictNpArrayMix):
     """ Lagrangian parameters
     """
 
-    def __init__(self, _n_frac, _dat=None, _offset=int(0)):
-        keys = [['r', _n_frac],['m', _n_frac],['n', _n_frac]] # radius, mass, number
-        DictNpArrayMix.__init__(self, keys, _dat, _offset)
-        self.vel  = LagrangianVelocity(_n_frac,_dat, self.ncols+_offset)
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        m_frac=np.array([0,1,0,3,0.5,0,7,0,9])
+        if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
+        n_frac = m_frac.size + 1
+        keys = [['r', n_frac],['m', n_frac],['n', n_frac]] # radius, mass, number
+        DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
+        self.vel  = LagrangianVelocity(_dat, _offset+self.ncols, False, **kwargs)
         self.ncols += self.vel.ncols
-        self.sigma= LagrangianVelocity(_n_frac,_dat, self.ncols+_offset)
+        self.keys.append(['vel',LagrangianVelocity])
+        self.sigma= LagrangianVelocity(_dat, _offset+self.ncols, False, **kwargs)
         self.ncols += self.sigma.ncols
-        self.n_frac = _n_frac
+        self.keys.append(['sigma',LagrangianVelocity])
+        self.kwargs['mass_fraction'] = m_frac
 
-    def loadtxt(self, fname, **karg):
-        dat_int = np.loadtxt(fname, **karg)
-        self.__init__(self.n_frac, dat_int)
-
-    def calcOneSnapshot(self, _particle, _mass_fraction, _rc, _mode='sphere'):
+    def calcOneSnapshot(self, _particle, _rc, _mode='sphere'):
         """ calculate one snapshot lagrangian parameters
         _particle: sorted particles
-        _mass_fraction: fraction of mass 
         _rc: core radius
         _mode: sphere: calculate averaged properties from center to Lagrangian radii; shell: calculate properties between two neighbor radii
         """
         shell_mode = True if (_mode == 'shell') else False
 
-        def find_mass_index(_mass_cum,_mass_fraction):
-            mass_bins=np.append(0,_mass_fraction*_mass_cum[-1])
+        mass_fraction = self.kwargs['mass_fraction']
+        n_frac = mass_fraction.size+1
+
+        def find_mass_index(_mass_cum,mass_fraction):
+            mass_bins=np.append(0,mass_fraction*_mass_cum[-1])
             index,count=np.histogram(_mass_cum,bins=mass_bins)
             index=index.cumsum()
             index[index>=_mass_cum.size]=_mass_cum.size-1
             return index
 
-        if (self.n_frac != int(1+_mass_fraction.size)):
-            raise ValueError('Mass fraction size ',mass_fraction.size,' is not consistent with Lagrangian array size ',self.n_frac)
-
         if (_particle.size<=1):
             size = self.size
-            empty = Lagrangian(self.n_frac,np.zeros([1,self.n_frac*self.ncols]))
+            empty = Lagrangian(np.zeros([1,n_frac*self.ncols]),**self.kwargs)
             self.append(empty)
             if (size+1!=self.size):
                 raise ValueError('Size should increase one, but increase', self.size-size)
@@ -159,7 +131,7 @@ class Lagrangian(DictNpArrayMix):
             self.sigma.size += 1
             mcum=_particle.mass.cumsum()
             r = np.sqrt(_particle.r2)
-            rindex= find_mass_index(mcum, _mass_fraction)
+            rindex= find_mass_index(mcum, mass_fraction)
             rlagr = r[rindex]
             if(len(self.r.shape)!=2):
                 raise ValueError('r shape is wrong',self.r.shape)
@@ -231,9 +203,9 @@ class Lagrangian(DictNpArrayMix):
             for k in range(len(vlst)):
                 slagr = []
                 if (shell_mode):
-                    slagr = [np.average(m[n_offset[i]:n_offset[i+1]] * (vlst[k][n_offset[i]:n_offset[i+1]] - vave[k][i])**2) / mlagr[i] if (n_offset[i]<n_offset[i+1]) else 0.0 for i in range(_mass_fraction.size)]
+                    slagr = [np.average(m[n_offset[i]:n_offset[i+1]] * (vlst[k][n_offset[i]:n_offset[i+1]] - vave[k][i])**2) / mlagr[i] if (n_offset[i]<n_offset[i+1]) else 0.0 for i in range(mass_fraction.size)]
                 else:
-                    slagr = [np.average(m[:n_offset[i+1]] * (vlst[k][:n_offset[i+1]] - vave[k][i])**2) / mlagr[i] if (n_offset[i+1]>0) else 0.0 for i in range(_mass_fraction.size)]
+                    slagr = [np.average(m[:n_offset[i+1]] * (vlst[k][:n_offset[i+1]] - vave[k][i])**2) / mlagr[i] if (n_offset[i+1]>0) else 0.0 for i in range(mass_fraction.size)]
                 # core radius
                 slagr.append(np.average(m[0:nc] * (vlst[k][0:nc] - vave[k][-1])**2) / mc if (nc>0) else 0.0)
                 sigma[k] = np.array(slagr)
@@ -249,20 +221,25 @@ class Lagrangian(DictNpArrayMix):
 class LagrangianMultiple(DictNpArrayMix):
     """ Lagrangian for single, binaries and all
     """
-    def __init__ (self, _n_frac, _dat=None, _offset=int(0)):
-        DictNpArrayMix.__init__(self, [['time',1]], _dat, _offset)
-        ncols = self.ncols
-        self.single = Lagrangian(_n_frac, _dat, ncols+_offset)
-        ncols += self.single.ncols
-        self.binary = Lagrangian(_n_frac, _dat, ncols+_offset)
-        ncols += self.binary.ncols
-        self.all    = Lagrangian(_n_frac, _dat, ncols+_offset)
-        ncols += self.all.ncols
-        self.ncols = ncols
+    def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        m_frac=np.array([0,1,0,3,0.5,0,7,0,9])
+        if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
+        n_frac = m_frac.size + 1
+        
+        DictNpArrayMix.__init__(self, [['time',1]], _dat, _offset, _append, **kwargs)
+        self.single = Lagrangian(_dat, _offset+self.ncols, False, **kwargs)
+        self.ncols += self.single.ncols
+        self.keys.append(['single',Lagrangian])
+        self.binary = Lagrangian(_dat, _offset+self.ncols, False, **kwargs)
+        self.ncols += self.binary.ncols
+        self.keys.append(['binary',Lagrangian])
+        self.all    = Lagrangian(_dat, _offset+self.ncols, False, **kwargs)
+        self.ncols += self.all.ncols
+        self.keys.append(['all',Lagrangian])
         self.size = self.all.size
-        self.n_frac= _n_frac
+        self.kwargs['mass_fraction'] = m_frac
 
-    def calcOneSnapshot(self, time, single, binary, mass_fraction, rc, mode):
+    def calcOneSnapshot(self, time, single, binary, rc, mode):
         """ Calculate Lagrangian radii and related properties
         single: single partilces (cm corrected and r2 exist)
         binary: binaries (cm corrected and r2 exist)
@@ -271,9 +248,9 @@ class LagrangianMultiple(DictNpArrayMix):
         """    
         self.time = np.append(self.time, time)
         single_sim = SimpleParticle(single)
-        single_sim.calc_r2()
+        single_sim.calcR2()
         binary_sim = SimpleParticle(binary)
-        binary_sim.calc_r2()
+        binary_sim.calcR2()
         all_sim = join(single_sim, binary_sim)
         n_single = single.size
         n_binary = binary.size
@@ -285,14 +262,11 @@ class LagrangianMultiple(DictNpArrayMix):
         binary_sort = binary_sim[idx_binary]
         all_sort = all_sim[idx]
     
-        self.single.calcOneSnapshot(single_sort, mass_fraction, rc, mode)
-        self.binary.calcOneSnapshot(binary_sort, mass_fraction, rc, mode)
-        self.all.calcOneSnapshot(all_sort, mass_fraction, rc)
+        self.single.calcOneSnapshot(single_sort, rc, mode)
+        self.binary.calcOneSnapshot(binary_sort, rc, mode)
+        self.all.calcOneSnapshot(all_sort, rc, mode)
         if (self.binary.size != self.single.size):
             raise ValueError('Size inconsistence: single.size:', self.single.size, ' binary.size:', self.binary.size)
 
         self.size += 1
         
-    def loadtxt(self, fname, **karg):
-        dat_int = np.loadtxt(fname, **karg)
-        self.__init__(self.n_frac, dat_int)

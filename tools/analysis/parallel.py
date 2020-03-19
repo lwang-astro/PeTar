@@ -3,10 +3,11 @@ import multiprocessing as mp
 from .base import *
 from .data import *
 from .lagrangian import *
+from .escaper import *
 import time
 
 
-def dataProcessOne(file_path, lagr, core, time_profile, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), G=1.0, r_bin=0.1, average_mode='sphere'):
+def dataProcessOne(file_path, lagr, core, esc, time_profile, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), G=1.0, r_bin=0.1, average_mode='sphere'):
     fp = open(file_path, 'r')
     header=fp.readline()
     file_id, n_glb, t = header.split()
@@ -30,10 +31,10 @@ def dataProcessOne(file_path, lagr, core, time_profile, m_frac=np.array([0.1,0.3
     get_density_time = time.time()
 
     #print('Correct center')
-    particle.correct_center(cm_pos, cm_vel)
+    particle.correctCenter(cm_pos, cm_vel)
 
     # r2
-    particle.calc_r2()
+    particle.calcR2()
     # rc
 
     #print('Core radius')
@@ -44,16 +45,20 @@ def dataProcessOne(file_path, lagr, core, time_profile, m_frac=np.array([0.1,0.3
     core.size+=1
 
     n_frac=m_frac.size+1
-    single.correct_center(cm_pos, cm_vel)
-    binary.correct_center(cm_pos, cm_vel)
+    single.correctCenter(cm_pos, cm_vel)
+    binary.correctCenter(cm_pos, cm_vel)
     center_and_r2_time = time.time()
 
     single.savetxt(file_path+'.single')
     binary.savetxt(file_path+'.binary')
 
     #print('Lagrangian radius')
-    lagr.calcOneSnapshot(float(t), single, binary, m_frac, rc, average_mode)
+    lagr.calcOneSnapshot(float(t), single, binary, rc, average_mode)
     lagr_time = time.time()
+
+    rhindex=np.where(m_frac==0.5)[0]
+    esc.calcRCutIsolate(lagr.all.r[-1,rhindex])
+    esc.findEscaper(float(t),single,binary,G)
 
     time_profile['read'] += read_time-start_time
     time_profile['find_pair'] += find_pair_time-read_time
@@ -67,7 +72,7 @@ def dataProcessList(file_list, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), G=1.0, r
     """ process lagragian calculation for a list of file snapshots
     file_list: file path list
     """
-    lagr=LagrangianMultiple(m_frac.size+1)
+    lagr=LagrangianMultiple(mass_fraction=m_frac)
     time_profile=dict()
     time_profile['read'] = 0.0
     time_profile['find_pair'] = 0.0
@@ -75,12 +80,13 @@ def dataProcessList(file_list, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), G=1.0, r
     time_profile['center_core'] = 0.0   
     time_profile['lagr'] = 0.0
     core=Core()
+    esc=Escaper()
     for path in file_list:
         #print(' data:',path)
-        dataProcessOne(path, lagr, core, time_profile, m_frac, G, r_bin, average_mode)
+        dataProcessOne(path, lagr, core, esc, time_profile, m_frac, G, r_bin, average_mode)
     for key, item in time_profile.items():
         item /= len(file_list)
-    return lagr, core, time_profile
+    return lagr, core, esc, time_profile
 
 
 def parallelDataProcessList(file_list, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), G=1.0, r_bin=0.1, average_mode='sphere', n_cpu=int(0)):
@@ -110,16 +116,19 @@ def parallelDataProcessList(file_list, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), 
 
     lagri=[]
     corei=[]
+    esci=[]
     time_profilei=[]
     for i in range(n_cpu):
         lagri.append(result[i].get()[0])
         corei.append(result[i].get()[1])
-        time_profilei.append(result[i].get()[2])
-    lagr = joinLagrangian(*lagri)
+        esci.append(result[i].get()[2])
+        time_profilei.append(result[i].get()[3])
+    lagr = join(*lagri)
     core = join(*corei)
+    esc  = joinEscaper(*esci)
     time_profile=time_profilei[0]
     for key in time_profile.keys():
         for i in range(1,n_cpu):
             time_profile[key] += time_profilei[i][key]/n_cpu
-    return lagr, core, time_profile
+    return lagr, core, esc, time_profile
 

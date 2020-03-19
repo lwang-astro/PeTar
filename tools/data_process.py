@@ -11,6 +11,7 @@ if __name__ == '__main__':
     filename='dat.lst'
     lagr_filename='lagr.dat'
     core_filename='core.dat'
+    esc_prefix='esc'
     average_mode='sphere'
     n_cpu=0
 
@@ -23,11 +24,12 @@ if __name__ == '__main__':
         print("  -l(--lagr-filename): Lagrangian radii data filename (lagr.dat)")
         print("  -m(--average-mode): Lagrangian properity average mode: sphere: average from center to Lagragian radii; shell: average between two neighbor radii (sphere)")
         print("  -c(--core-filename): core data (time, density center, core radius) filename (core.dat)")
+        print("  -e(--esc-filename): esc data filename prefix (esc)")
         print("  -n(--n-cpu): number of CPU threads for parallel processing (all threads)")
 
     try:
         shortargs = 'N:M:R:t:o:s:h'
-        longargs = ['lagr-filename=','average-mode=', 'core-filename=','help','n-cpu=']
+        longargs = ['lagr-filename=','average-mode=', 'core-filename=','esc-filename=','help','n-cpu=']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         for opt,arg in opts:
@@ -40,6 +42,8 @@ if __name__ == '__main__':
                 average_mode = arg
             elif opt in ('-c','--core-filename'):
                 core_filename = arg
+            elif opt in ('-e','--esc-filename'):
+                esc_filename = arg
             elif opt in ('-n','--n-cpu'):
                 n_cpu = int(arg)
             else:
@@ -57,14 +61,16 @@ if __name__ == '__main__':
     file_list = file_list.splitlines()
     path_list = [file for file in file_list]
      
-    lagr,core,time_profile = petar.parallelDataProcessList(path_list,n_cpu=n_cpu)
+    lagr,core,esc,time_profile = petar.parallelDataProcessList(path_list,n_cpu=n_cpu)
      
     lagr.savetxt(lagr_filename)
     core.savetxt(core_filename)
+    esc.single.savetxt(esc_prefix+'.single')
+    esc.binary.savetxt(esc_prefix+'.binary')
      
     print ('Time profile:')
     for key, item in time_profile.items():
         print (key,item,)
      
-    print ("Lagr data is saved in file: ",lagr_filename, ' core data is saved in file: ', core_filename)
+    print ("Lagr data is saved in file: ",lagr_filename, ' core data is saved in file: ', core_filename, ' esc data are saved in file: ', esc_prefix,'.[single/binary]')
 

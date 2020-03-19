@@ -6,29 +6,43 @@ from .base import *
 class SimpleParticle(DictNpArrayMix):
     """ Simple particle class with only mass, postion, velocity and r2
     """
-    def __init__(self, _dat=None, _offset=int(0)):
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         keys = [['mass',1], ['pos',3], ['vel',3]]
-        DictNpArrayMix.__init__(self, keys, _dat, _offset)
+        DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
-    def calc_r2(self):
+    def calcR2(self):
         """ calculate distance square
         """
+        if (not 'r2' in self.__dict__.keys()): 
+            self.ncols += 1
+            self.keys.append(['r2',1])
         self.r2 = vec_dot(self.pos,self.pos)
 
-    def correct_center(self, cm_pos, cm_vel):
+    def calcEkin(self):
+        """ calculate kinetic energy
+        """
+        if (not 'ekin' in self.__dict__.keys()): 
+            self.ncols += 1
+            self.keys.append(['ekin',1])
+        self.ekin = 0.5*vec_dot(self.vel,self.vel)*self.mass
+
+    def correctCenter(self, cm_pos, cm_vel):
         self.pos -= cm_pos
         self.vel -= cm_vel
 
 class Particle(SimpleParticle):
     """ Particle class 
     """
-    def __init__ (self, _dat=None, _offset=0):
+    def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
         keys = [['r_search',1], ['id',1], ['mass_bk',1], ['status',1], ['r_in',1], ['r_out',1], ['acc',3], ['pot',1], ['n_nb',1]]
-        SimpleParticle.__init__(self, _dat, _offset)
-        icol = self.ncols
-        DictNpArrayMix.__init__(self, keys, _dat, icol)
-        self.ncols += icol
-        
+        SimpleParticle.__init__(self, _dat, _offset, _append, **kwargs)
+        DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
+
+    def calcEtot(self):
+        if (not 'etot' in self.__dict__.keys()): 
+            self.ncols += 1
+            self.keys.append(['etot',1])
+        self.etot = self.ekin + self.mass*self.pot
 
 def calculateParticleCMDict(pcm, _p1, _p2):
     """ calculate cm of particle pair"""
@@ -46,7 +60,7 @@ def calculateParticleCMDict(pcm, _p1, _p2):
 class Binary(DictNpArrayMix):
     """ Binary class
     """
-    def __init__ (self, _p1=None, _p2=None, **kwargs):
+    def __init__ (self, _p1=None, _p2=None, _offset=int(0), _append=False, **kwargs):
         """
         simple_mode: only calculate semi and ecc
         """
@@ -60,9 +74,11 @@ class Binary(DictNpArrayMix):
 
         if (issubclass(type(_p1), SimpleParticle)) & (issubclass(type(_p2),SimpleParticle)):
             if (simple_mode): 
+                self.keys = [['mass',1],['pos',3],['vel',3],['rrel',1],['semi',1],['ecc',1],['p1',member_particle_type], ['p2', member_particle_type]]
                 self.particleToSemiEcc(_p1, _p2, G)
                 self.ncols= int(10)
             else:
+                self.keys = [['mass',1],['pos',3],['vel',3],['m1',1],['m2',1],['rrel',1],['semi',1],['am',3],['L',3],['eccvec',3],['incline',1],['rot_horizon',1],['ecc',1],['rot_self',1],['ecca',1],['period',1],['t_peri',1],['p1', member_particle_type],['p2', member_particle_type]]
                 self.particleToBinary(_p1, _p2, G)
                 self.ncols= int(27)
             self.p1 = _p1
@@ -71,31 +87,67 @@ class Binary(DictNpArrayMix):
             self.ncols += self.p1.ncols + self.p2.ncols
         elif (_p2==None):
             if (simple_mode):
-                keys = [['mass',1],['pos',3],['vel',3],['r',1],['semi',1],['ecc',1],['p1',member_particle_type], ['p2', member_particle_type]]
-                DictNpArrayMix.__init__(self, keys, _p1)
+                keys = [['mass',1],['pos',3],['vel',3],['rrel',1],['semi',1],['ecc',1],['p1',member_particle_type], ['p2', member_particle_type]]
+                DictNpArrayMix.__init__(self, keys, _p1, _offset, _append, **kwargs)
             else:
-                keys=[['mass',1],['pos',3],['vel',3],['m1',1],['m2',1],['r',1],['semi',1],['am',3],['L',3],['eccvec',3],['incline',1],['rot_horizon',1],['ecc',1],['rot_self',1],['ecca',1],['period',1],['t_peri',1],['p1', member_particle_type],['p2', member_particle_type]]
-                DictNpArrayMix.__init__(self, keys, _p1)
+                keys=[['mass',1],['pos',3],['vel',3],['m1',1],['m2',1],['rrel',1],['semi',1],['am',3],['L',3],['eccvec',3],['incline',1],['rot_horizon',1],['ecc',1],['rot_self',1],['ecca',1],['period',1],['t_peri',1],['p1', member_particle_type],['p2', member_particle_type]]
+                DictNpArrayMix.__init__(self, keys, _p1, _offset, _append, **kwargs)
         else:
             raise ValueError('Initial fail, date type should be Particle (2), Binary (1) or no argument (0)')
+        self.kwargs = kwargs.copy()
+
+    def calcEkin(self):
+        """ calculate kinetic energy
+        """
+        if (not 'ekin' in self.__dict__.keys()): 
+            self.ncols += 1
+            self.keys.append(['ekin',1])
+        self.ekin = 0.5*vec_dot(self.vel,self.vel)*self.mass
+
+    def calcEtot(self):
+        if (not 'etot' in self.__dict__.keys()): 
+            self.ncols += 1
+            self.keys.append(['etot',1])
+        self.etot = self.ekin + self.mass*self.pot
 
     def loadtxt(self, fname, **karg):
         dat_int = np.loadtxt(fname, **karg)
         self.__init__(dat_int, member_particle_type=type(self.p1))
 
-    def calc_r2(self, member_also=False):
+    def calcR2(self, member_also=False):
         """ calculate distance square
         """
+        if (not 'r2' in self.__dict__.keys()): 
+            self.ncols += 1
+            self.keys.append(['r2',1])
         self.r2 = vec_dot(self.pos,self.pos)
         if (member_also):
-            self.p1.calc_r2()
-            self.p2.calc_r2()
+            ncols = self.p1.ncols + self.p2.ncols
+            self.p1.calcR2()
+            self.p2.calcR2()
+            ncols = self.p1.ncols + self.p2.ncols - ncols
+            self.ncols += ncols
 
-    def correct_center(self, cm_pos, cm_vel):
+    def calcPot(self, G):
+        pos_b1 = self.p1.pos
+        pos_b2 = self.p2.pos
+        m_b1 = self.p1.mass
+        m_b2 = self.p2.mass
+        dr = pos_b1-pos_b2
+        dr2 = vec_dot(dr,dr)
+        invr = 1/np.sqrt(dr2)
+        pot_b1 = self.p1.pot + G*m_b2*invr
+        pot_b2 = self.p2.pot + G*m_b1*invr
+        if (not 'pot' in self.__dict__.keys()): 
+            self.ncols += 1
+            self.keys.append(['pot',1])
+        self.pot = (m_b2*pot_b1 + m_b1*pot_b2)/self.mass
+            
+    def correctCenter(self, cm_pos, cm_vel):
         self.pos -= cm_pos
         self.vel -= cm_vel
-        self.p1.correct_center(cm_pos, cm_vel)
-        self.p2.correct_center(cm_pos, cm_vel)
+        self.p1.correctCenter(cm_pos, cm_vel)
+        self.p2.correctCenter(cm_pos, cm_vel)
 
     def particleToSemiEcc(self, _p1,_p2, _G):
         """
@@ -120,7 +172,7 @@ class Binary(DictNpArrayMix):
         dr_semi = 1.0 - dr/semi
         ecc = np.sqrt(dr_semi*dr_semi + rvdot*rvdot/(_G*m*semi))
 
-        self.r = dr
+        self.rrel = dr
         self.semi = semi
         self.ecc  = ecc
 
@@ -150,9 +202,9 @@ class Binary(DictNpArrayMix):
         dv2  = vec_dot(dv,dv)
         rvdot= vec_dot(dx,dv)
         dr   = np.sqrt(dr2)
-        binary['r'] = np.sqrt(dr2)
+        binary['rrel'] = np.sqrt(dr2)
      
-        inv_dr = 1.0 / binary['r']
+        inv_dr = 1.0 / binary['rrel']
         binary['semi'] = 1.0 / (2.0*inv_dr - dv2 / Gm_tot)
         binary['am'] = np.array(list(map(lambda x,y:np.cross(x,y),dx,dv)))
         dp = np.array(list(map(lambda m1,x1,m2,x2:m1*x1-m2*x2,_p1.mass,_p1.vel,_p2.mass,_p2.vel)))
@@ -240,7 +292,7 @@ def findPair(_dat, _G, _rmax, use_kdtree=False, simple_binary=True):
      
         # check orbits
         #print('Create binary')
-        binary = Binary(p1, p2, _G)
+        binary = Binary(p1, p2, G=_G)
         apo =binary.semi*(binary.ecc+1.0)
      
         bsel= ((binary.semi>0) & (apo<_rmax))
@@ -250,7 +302,6 @@ def findPair(_dat, _G, _rmax, use_kdtree=False, simple_binary=True):
         single_mask[pair_index[0][bsel]]=False
         single_mask[pair_index[1][bsel]]=False
         single = _dat[single_mask]
-        
         return kdt, single, binary
     else:
         idx = _dat.status.argsort()
