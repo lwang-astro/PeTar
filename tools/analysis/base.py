@@ -86,7 +86,7 @@ class DictNpArrayMix:
         for key, parameter in self.keys:
             if (type(parameter) == type):
                 if (issubclass(parameter, DictNpArrayMix)):
-                    self.__dict__[key].readArray(_dat, _offset, **kwargs)
+                    self.__dict__[key].readArray(_dat, icol, **kwargs)
                     icol += self.__dict__[key].ncols
                 else:
                     raise ValueError('Initial fail, unknown key type, should be inherience of  DictNpArrayMix, given ',parameter)
@@ -101,11 +101,11 @@ class DictNpArrayMix:
             else:
                 raise ValueError('Initial fail, unknown key parameter, should be DictNpArrayMix type name or value of int, given ',parameter)
         icol -= _offset
-        if (_append): self.ncols += int(icol)
-        else: self.ncols = int(icol)
         self.size  = int(self.size/icol)
         if (self.size != _dat.shape[0]):
             raise ValueError('Reading error, final counted size ',self.size,' is not consistent with reading ndarray shape',_dat.shape[0])
+        if (self.ncols != icol):
+            raise ValueError('Column number inconsistence, self ncols ',self.ncols,' key ncols ', icol)
 
     def __getitem__(self, k):
         """ Map getitem to all dictory np.ndarray items

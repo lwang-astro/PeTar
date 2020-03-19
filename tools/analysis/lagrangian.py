@@ -224,7 +224,6 @@ class LagrangianMultiple(DictNpArrayMix):
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
         m_frac=np.array([0,1,0,3,0.5,0,7,0,9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
-        n_frac = m_frac.size + 1
         
         DictNpArrayMix.__init__(self, [['time',1]], _dat, _offset, _append, **kwargs)
         self.single = Lagrangian(_dat, _offset+self.ncols, False, **kwargs)
