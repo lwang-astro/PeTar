@@ -110,10 +110,6 @@ class Binary(DictNpArrayMix):
             self.keys.append(['etot',1])
         self.etot = self.ekin + self.mass*self.pot
 
-    def loadtxt(self, fname, **karg):
-        dat_int = np.loadtxt(fname, **karg)
-        self.__init__(dat_int, member_particle_type=type(self.p1))
-
     def calcR2(self, member_also=False):
         """ calculate distance square
         """

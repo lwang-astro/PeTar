@@ -13,7 +13,7 @@ class DictNpArrayMix:
         self.initargs = kwargs.copy()
 
         if (_append): self.keys = self.keys + keys
-        else: self.keys = keys
+        else: self.keys = keys.copy()
         if (type(_dat) == type(self)):
             self = _dat.copy()
         elif (issubclass(type(_dat), DictNpArrayMix)):
@@ -164,7 +164,7 @@ class DictNpArrayMix:
             if(new_key_flag): self.keys.append([key,dimension])
         elif (issubclass(type(member), DictNpArrayMix)):
             dimension = member.ncols
-            if(new_key_flag): self.keys.append([key,member.keys])
+            if(new_key_flag): self.keys.append([key,type(member)])
         else:
             raise ValueError('New member type should be np.ndarray or DictNpArrayMix, but given ',type(member))
         self.ncols += dimension
