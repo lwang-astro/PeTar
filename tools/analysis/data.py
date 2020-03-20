@@ -94,7 +94,7 @@ class Binary(DictNpArrayMix):
                 DictNpArrayMix.__init__(self, keys, _p1, _offset, _append, **kwargs)
         else:
             raise ValueError('Initial fail, date type should be Particle (2), Binary (1) or no argument (0)')
-        self.kwargs = kwargs.copy()
+        self.initargs = kwargs.copy()
 
     def calcEkin(self):
         """ calculate kinetic energy

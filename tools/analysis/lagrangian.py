@@ -76,19 +76,19 @@ class LagrangianVelocity(DictNpArrayMix):
     """
     
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        m_frac=np.array([0,1,0,3,0.5,0,7,0,9])
+        m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
         n_frac = m_frac.size + 1
         keys  = [['abs',n_frac],['x',n_frac],['y',n_frac],['z',n_frac],['rad',n_frac],['tan',n_frac],['rot',n_frac]] # all, x, y, z, radial, tangential, rotational
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
-        self.kwargs['mass_fraction'] = m_frac
+        self.initargs['mass_fraction'] = m_frac
 
 class Lagrangian(DictNpArrayMix):
     """ Lagrangian parameters
     """
 
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        m_frac=np.array([0,1,0,3,0.5,0,7,0,9])
+        m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
         n_frac = m_frac.size + 1
         keys = [['r', n_frac],['m', n_frac],['n', n_frac]] # radius, mass, number
@@ -99,7 +99,7 @@ class Lagrangian(DictNpArrayMix):
         self.sigma= LagrangianVelocity(_dat, _offset+self.ncols, False, **kwargs)
         self.ncols += self.sigma.ncols
         self.keys.append(['sigma',LagrangianVelocity])
-        self.kwargs['mass_fraction'] = m_frac
+        self.initargs['mass_fraction'] = m_frac
 
     def calcOneSnapshot(self, _particle, _rc, _mode='sphere'):
         """ calculate one snapshot lagrangian parameters
@@ -109,7 +109,7 @@ class Lagrangian(DictNpArrayMix):
         """
         shell_mode = True if (_mode == 'shell') else False
 
-        mass_fraction = self.kwargs['mass_fraction']
+        mass_fraction = self.initargs['mass_fraction']
         n_frac = mass_fraction.size+1
 
         def find_mass_index(_mass_cum,mass_fraction):
@@ -121,7 +121,7 @@ class Lagrangian(DictNpArrayMix):
 
         if (_particle.size<=1):
             size = self.size
-            empty = Lagrangian(np.zeros([1,n_frac*self.ncols]),**self.kwargs)
+            empty = Lagrangian(np.zeros([1,n_frac*self.ncols]),**self.initargs)
             self.append(empty)
             if (size+1!=self.size):
                 raise ValueError('Size should increase one, but increase', self.size-size)
@@ -236,7 +236,8 @@ class LagrangianMultiple(DictNpArrayMix):
         self.ncols += self.all.ncols
         self.keys.append(['all',Lagrangian])
         self.size = self.all.size
-        self.kwargs['mass_fraction'] = m_frac
+        self.initargs['mass_fraction'] = m_frac
+
 
     def calcOneSnapshot(self, time, single, binary, rc, mode):
         """ Calculate Lagrangian radii and related properties

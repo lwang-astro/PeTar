@@ -7,7 +7,16 @@ from .escaper import *
 import time
 
 
-def dataProcessOne(file_path, lagr, core, esc, time_profile, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), G=1.0, r_bin=0.1, average_mode='sphere'):
+def dataProcessOne(file_path, lagr, core, esc, time_profile, **kwargs): 
+    m_frac = lagr.initargs['mass_fraction']
+    G=1.0
+    r_bin=0.1
+    average_mode='sphere'
+
+    if ('G' in kwargs.keys()): G=kwargs['G']
+    if ('r_max_binary' in kwargs.keys()): r_bin=kwargs['r_max_binary']
+    if ('average_mode' in kwargs.keys()): average_mode=kwargs['average_mode']
+
     fp = open(file_path, 'r')
     header=fp.readline()
     file_id, n_glb, t = header.split()
@@ -21,7 +30,7 @@ def dataProcessOne(file_path, lagr, core, esc, time_profile, m_frac=np.array([0.
 
     # find binary
     #print('Find pair')
-    kdtree,single,binary=findPair(particle,G,r_bin,use_kdtree=True)
+    kdtree,single,binary=findPair(particle,G,r_bin,True)
     find_pair_time = time.time()
     
     # get cm, density
@@ -45,6 +54,7 @@ def dataProcessOne(file_path, lagr, core, esc, time_profile, m_frac=np.array([0.
     core.size+=1
 
     n_frac=m_frac.size+1
+    cm_vel=np.array([0,0,0]) # avoid kinetic energy jump 
     single.correctCenter(cm_pos, cm_vel)
     binary.correctCenter(cm_pos, cm_vel)
     center_and_r2_time = time.time()
@@ -68,11 +78,11 @@ def dataProcessOne(file_path, lagr, core, esc, time_profile, m_frac=np.array([0.
 
     return time_profile
 
-def dataProcessList(file_list, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), G=1.0, r_bin=0.1, average_mode='sphere'):
+def dataProcessList(file_list, **kwargs):
     """ process lagragian calculation for a list of file snapshots
     file_list: file path list
     """
-    lagr=LagrangianMultiple(mass_fraction=m_frac)
+    lagr=LagrangianMultiple(**kwargs)
     time_profile=dict()
     time_profile['read'] = 0.0
     time_profile['find_pair'] = 0.0
@@ -83,13 +93,13 @@ def dataProcessList(file_list, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), G=1.0, r
     esc=Escaper()
     for path in file_list:
         #print(' data:',path)
-        dataProcessOne(path, lagr, core, esc, time_profile, m_frac, G, r_bin, average_mode)
+        dataProcessOne(path, lagr, core, esc, time_profile, **kwargs)
     for key, item in time_profile.items():
         item /= len(file_list)
     return lagr, core, esc, time_profile
 
 
-def parallelDataProcessList(file_list, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), G=1.0, r_bin=0.1, average_mode='sphere', n_cpu=int(0)):
+def parallelDataProcessList(file_list, n_cpu=int(0), **kwargs):
     """ parellel process lagragian calculation for a list of file snapshots
     file_list: file path list
     """
@@ -109,7 +119,7 @@ def parallelDataProcessList(file_list, m_frac=np.array([0.1,0.3,0.5,0.7,0.95]), 
 
     result=[None]*n_cpu
     for rank in range(n_cpu):
-        result[rank] = pool.apply_async(dataProcessList, args=(file_part[rank], m_frac, G, r_bin, average_mode))
+        result[rank] = pool.apply_async(dataProcessList, (file_part[rank],), kwargs)
 
     # Step 3: Don't forget to close
     pool.close()

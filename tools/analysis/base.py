@@ -10,7 +10,7 @@ class DictNpArrayMix:
         _offset: reading column offset of _dat if it is np.ndarray
         _append: whether append keys and ncols
         """
-        self.kwargs = kwargs.copy()
+        self.initargs = kwargs.copy()
 
         if (_append): self.keys = self.keys + keys
         else: self.keys = keys
@@ -114,7 +114,7 @@ class DictNpArrayMix:
             return self.__dict__[k]
         else:
             cls_type = type(self)
-            new_dat = cls_type(**self.kwargs)
+            new_dat = cls_type(**self.initargs)
             new_dat.ncols = self.ncols
             new_dat.size = int(0)
             new_dat.keys = self.keys.copy()
@@ -224,7 +224,7 @@ def join(*_dat):
     for idat in _dat:
         if (type(idat) != type0):
             raise ValueError('Initial fail, date type not consistent, type [0] is ',type0,' given ',type(idat))
-    new_dat = type0(**_dat[0].kwargs)
+    new_dat = type0(**_dat[0].initargs)
     for key, item in _dat[0].__dict__.items():
         if (type(item) == np.ndarray):
             new_dat.__dict__[key] = np.concatenate(tuple(map(lambda x:x.__dict__[key], _dat)))

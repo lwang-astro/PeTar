@@ -39,6 +39,8 @@ class Escaper:
         nssel = ssel.sum()
         single_esc.addNewMember('time',np.ones(nssel)*time)
         self.single.append(single_esc)
+        #idsinx = self.single.time.argsort()
+        #self.single=self.single[idsinx]
         unid, index= np.unique(self.single.id, return_index=True)
         self.single = self.single[index]
 
@@ -47,6 +49,8 @@ class Escaper:
         nbsel = bsel.sum()
         binary_esc.addNewMember('time',np.ones(nbsel)*time)
         self.binary.append(binary_esc)
+        #idsinx = self.binary.time.argsort()
+        #self.binary=self.binary[idsinx]
         unid, index= np.unique(self.binary.p1.id, return_index=True)
         self.binary =self.binary[index]
 
