@@ -45,7 +45,7 @@ public:
 #ifdef FIX_CHANGEOVER
         Float m_fac3 = 1.0;
 #else
-        Float m_fac3 = std::pow(_m_fac,(1.0/3.0));
+        Float m_fac3 = std::max(std::pow(_m_fac,(1.0/3.0)),1.0);
 #endif
         r_in_     = m_fac3*_r_in;          
         r_out_    = m_fac3*_r_out;
