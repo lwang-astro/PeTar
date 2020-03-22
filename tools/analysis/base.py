@@ -39,7 +39,7 @@ class DictNpArrayMix:
             for key, parameter in keys:
                 if (type(parameter) == type):
                     if (issubclass(parameter, DictNpArrayMix)):
-                        self.__dict__[key] = parameter(_dat, _offset, **kwargs)
+                        self.__dict__[key] = parameter(_dat, icol, False, **kwargs)
                         icol += self.__dict__[key].ncols
                     else:
                         raise ValueError('Initial fail, unknown key type, should be inherience of  DictNpArrayMix, given ',parameter)
