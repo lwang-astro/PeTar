@@ -46,7 +46,7 @@ class Particle(SimpleParticle):
 
 def calculateParticleCMDict(pcm, _p1, _p2):
     """ calculate cm of particle pair"""
-    if (isinstance(_p1, Particle)) & (isinstance(_p2,Particle)):
+    if (issubclass(type(_p1), SimpleParticle)) & (issubclass(type(_p2),SimpleParticle)):
         pcm['mass'] = _p1.mass + _p2.mass
         pcm['pos']  = np.array(list(map(lambda m1,x1,m2,x2:(m1*x1+m2*x2)/(m1+m2), _p1.mass, _p1.pos, _p2.mass, _p2.pos)))
         pcm['vel']  = np.array(list(map(lambda m1,x1,m2,x2:(m1*x1+m2*x2)/(m1+m2), _p1.mass, _p1.vel, _p2.mass, _p2.vel)))
@@ -73,6 +73,7 @@ class Binary(DictNpArrayMix):
         if 'member_particle_type' in kwargs.keys(): member_particle_type=kwargs['member_particle_type']
 
         if (issubclass(type(_p1), SimpleParticle)) & (issubclass(type(_p2),SimpleParticle)):
+            member_particle_type = type(_p1)
             if (simple_mode): 
                 self.keys = [['mass',1],['pos',3],['vel',3],['rrel',1],['semi',1],['ecc',1],['p1',member_particle_type], ['p2', member_particle_type]]
                 self.particleToSemiEcc(_p1, _p2, G)
@@ -259,8 +260,8 @@ def findPair(_dat, _G, _rmax, use_kdtree=False, simple_binary=True):
     simple_binary: only calculate semi and ecc (fast); otherwise calculating all binary parameters (slow)
     return: [KDtree], single, binary
     """
-    if (not isinstance(_dat,Particle)):
-        raise ValueError("Data type wrong",type(_dat))
+    if (not issubclass(type(_dat), SimpleParticle)):
+        raise ValueError("Data type wrong",type(_dat)," should be subclass of ", SimpleParticle)
 
     if (use_kdtree):
         # create KDTree

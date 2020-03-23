@@ -203,18 +203,20 @@ class DictNpArrayMix:
         data_with_self = [self]+list(_dat)
         for key, item in self.__dict__.items():
             if (type(item) == np.ndarray):
+                if (len(item.shape)!=len(_dat[0][key].shape)):
+                    raise ValueError('Appending data member ',key,' has shape',_dat[0][key].shape,' but self data has shape',item.shape)
                 self.__dict__[key] = np.concatenate(tuple(map(lambda x:x.__dict__[key], data_with_self)))
             elif(issubclass(type(item), DictNpArrayMix)):
                 self.__dict__[key].append(*tuple(map(lambda x:x.__dict__[key], _dat)))
         self.size += np.sum(tuple(map(lambda x:x.size, _dat)))
                 
-    def savetxt(self, fname, **karg):
+    def savetxt(self, fname, **kwargs):
         dat_out= self.getherDataToArray()
-        np.savetxt(fname, dat_out, **karg)
+        np.savetxt(fname, dat_out, **kwargs)
 
-    def loadtxt(self, fname, **karg):
-        dat_int = np.loadtxt(fname, **karg)
-        self.readArray(dat_int)
+    def loadtxt(self, fname, **kwargs):
+        dat_int = np.loadtxt(fname, ndmin=2, **kwargs)
+        self.readArray(dat_int, **kwargs)
         
 def join(*_dat):
     """

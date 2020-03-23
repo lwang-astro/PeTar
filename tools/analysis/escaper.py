@@ -6,13 +6,13 @@ class Escaper:
     """ escaper information
     """
 
-    def __init__(self):
-        self.single = Particle()
+    def __init__(self, single_type=Particle):
+        self.single = single_type()
         self.single.addNewMember('r2',np.empty(0))
         self.single.addNewMember('ekin',np.empty(0))
         self.single.addNewMember('etot',np.empty(0))
         self.single.addNewMember('time',np.empty(0))
-        self.binary = Binary(member_particle_type=Particle)
+        self.binary = Binary(member_particle_type=single_type)
         self.binary.addNewMember('r2',np.empty(0))
         self.binary.addNewMember('pot',np.empty(0))
         self.binary.addNewMember('ekin',np.empty(0))
@@ -55,7 +55,8 @@ class Escaper:
         self.binary =self.binary[index]
 
 def joinEscaper(*esc_list):
-    esc_merge = Escaper()
+    single_type = type(esc_list[0].single)
+    esc_merge = Escaper(single_type)
     for ei in esc_list:
         esc_merge.rcut = ei.rcut
         esc_merge.single.append(ei.single)
