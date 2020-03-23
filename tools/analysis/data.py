@@ -16,7 +16,7 @@ class SimpleParticle(DictNpArrayMix):
         if (not 'r2' in self.__dict__.keys()): 
             self.ncols += 1
             self.keys.append(['r2',1])
-        self.r2 = vec_dot(self.pos,self.pos)
+        self.r2 = vecDot(self.pos,self.pos)
 
     def calcEkin(self):
         """ calculate kinetic energy
@@ -24,7 +24,7 @@ class SimpleParticle(DictNpArrayMix):
         if (not 'ekin' in self.__dict__.keys()): 
             self.ncols += 1
             self.keys.append(['ekin',1])
-        self.ekin = 0.5*vec_dot(self.vel,self.vel)*self.mass
+        self.ekin = 0.5*vecDot(self.vel,self.vel)*self.mass
 
     def correctCenter(self, cm_pos, cm_vel):
         self.pos -= cm_pos
@@ -102,7 +102,7 @@ class Binary(DictNpArrayMix):
         if (not 'ekin' in self.__dict__.keys()): 
             self.ncols += 1
             self.keys.append(['ekin',1])
-        self.ekin = 0.5*vec_dot(self.vel,self.vel)*self.mass
+        self.ekin = 0.5*vecDot(self.vel,self.vel)*self.mass
 
     def calcEtot(self):
         if (not 'etot' in self.__dict__.keys()): 
@@ -116,7 +116,7 @@ class Binary(DictNpArrayMix):
         if (not 'r2' in self.__dict__.keys()): 
             self.ncols += 1
             self.keys.append(['r2',1])
-        self.r2 = vec_dot(self.pos,self.pos)
+        self.r2 = vecDot(self.pos,self.pos)
         if (member_also):
             ncols = self.p1.ncols + self.p2.ncols
             self.p1.calcR2()
@@ -130,7 +130,7 @@ class Binary(DictNpArrayMix):
         m_b1 = self.p1.mass
         m_b2 = self.p2.mass
         dr = pos_b1-pos_b2
-        dr2 = vec_dot(dr,dr)
+        dr2 = vecDot(dr,dr)
         invr = 1/np.sqrt(dr2)
         pot_b1 = self.p1.pot + G*m_b2*invr
         pot_b2 = self.p2.pot + G*m_b1*invr
@@ -194,9 +194,9 @@ class Binary(DictNpArrayMix):
         
         dx = _p1.pos-_p2.pos
         dv = _p1.vel-_p2.vel
-        dr2  = vec_dot(dx,dx)
-        dv2  = vec_dot(dv,dv)
-        rvdot= vec_dot(dx,dv)
+        dr2  = vecDot(dx,dx)
+        dv2  = vecDot(dv,dv)
+        rvdot= vecDot(dx,dv)
         dr   = np.sqrt(dr2)
         binary['rrel'] = np.sqrt(dr2)
      

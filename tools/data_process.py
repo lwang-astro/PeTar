@@ -70,8 +70,7 @@ if __name__ == '__main__':
 
     fl = open(filename,'r')
     file_list = fl.read()
-    file_list = file_list.splitlines()
-    path_list = [file for file in file_list]
+    path_list = file_list.splitlines()
      
     lagr,core,esc,time_profile = petar.parallelDataProcessList(path_list,n_cpu=n_cpu,**kwargs)
      

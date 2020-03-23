@@ -236,4 +236,4 @@ def join(*_dat):
     return new_dat
 
 # vector dot of x, y 
-vec_dot = lambda x,y: np.sum(x*y,axis=1)
+vecDot = lambda x,y: np.sum(x*y,axis=1)
