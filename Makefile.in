@@ -30,7 +30,7 @@ MT_FLAGS += -D HARD_COUNT_NO_NEIGHBOR
 
 ifeq ($(step_mode),kdkdk)
 MT_FLAGS += -D KDKDK_2ND
-else ($(step_mode),kdkdk4)
+else ifeq ($(step_mode),kdkdk4)
 MT_FLAGS += -D KDKDK_4TH
 endif
 
