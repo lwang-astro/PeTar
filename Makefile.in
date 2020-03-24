@@ -10,6 +10,7 @@ use_gpu_cuda=@use_cuda@
 use_omp = @use_omp@
 use_gperf=@use_gperf@
 debug_mode=@with_debug@
+step_mode=@with_step_mode@
 
 #MT_FLAGS += -D HARD_CM_KICK
 MT_FLAGS += -D USE_QUAD
@@ -23,11 +24,15 @@ MT_FLAGS += -D AR_SLOWDOWN_TIMESCALE
 MT_FLAGS += -D CLUSTER_VELOCITY
 MT_FLAGS += -D HARD_CHECK_ENERGY
 MT_FLAGS += -D HARD_COUNT_NO_NEIGHBOR
-#MT_FLAGS += -D KDKDK_2ND
-#MT_FLAGS += -D KDKDK_4TH
 #MT_FLAGS += -D ONLY_SOFT
 #MT_FLAGS += -D STELLAR_EVOLUTION
 #MT_FLAGS += -D INTEGRATED_CUTOFF_FUNCTION
+
+ifeq ($(step_mode),kdkdk)
+MT_FLAGS += -D KDKDK_2ND
+else ($(step_mode),kdkdk4)
+MT_FLAGS += -D KDKDK_4TH
+endif
 
 OPTFLAGS = @OPTFLAGS@
 

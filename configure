@@ -634,6 +634,7 @@ CUDAFLAGS
 OPENMP_CXXFLAGS
 DEBFLAGS
 OPTFLAGS
+with_step_mode
 with_debug
 use_gperf
 use_omp
@@ -717,6 +718,7 @@ enable_gperf
 with_gperf_prefix
 with_fdps_prefix
 with_sdar_prefix
+with_step_mode
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1375,6 +1377,9 @@ Optional Packages:
   --with-gperf-prefix     Prefix of your gperftools installation
   --with-fdps-prefix      Prefix of your FDPS installation. Default: ../FDPS
   --with-sdar-prefix      Prefix of your FDPS installation. Default: ../SDAR
+  --with-step-mode        Tree step mode: K[0.5]-D[1.0]-K[0.5] (kdk),
+                          K[1/6]-D[1/2]-K[4/6]-D[1/2]-K[1/6] (kdkdk). Default:
+                          kdk
 
 Some influential environment variables:
   MPICXX      MPI C++ compiler command
@@ -5152,6 +5157,16 @@ See \`config.log' for more details" "$LINENO" 5; }
 fi
 
 
+# Leap frog step method
+
+# Check whether --with-step-mode was given.
+if test "${with_step_mode+set}" = set; then :
+  withval=$with_step_mode; PROG_NAME=$PROG_NAME'.'$with_step_mode
+else
+  with_step_mode=kdk
+fi
+
+
 # others
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether ln -s works" >&5
 $as_echo_n "checking whether ln -s works... " >&6; }
@@ -5918,6 +5933,7 @@ done
 
 
 
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: ----------------------Configure Summary--------------------" >&5
 $as_echo "$as_me: ----------------------Configure Summary--------------------" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: --Features:" >&5
@@ -5947,6 +5963,8 @@ fi
 $as_echo "$as_me:      Using OpenMP:   $use_omp" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      Debug mode:     $with_debug" >&5
 $as_echo "$as_me:      Debug mode:     $with_debug" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:      Step mode:      $with_step_mode" >&5
+$as_echo "$as_me:      Step mode:      $with_step_mode" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: --Compilers:" >&5
 $as_echo "$as_me: --Compilers:" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      C++ compiler:      $CXX" >&5

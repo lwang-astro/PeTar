@@ -236,6 +236,13 @@ AC_CHECK_FILE(["$sdar_prefix/src/Hermite/hermite_integrator.h"],
 	      [INCLUDE=$INCLUDE" -I$sdar_prefix/src"],
 	      [AC_MSG_FAILURE([Cannot find SDAR library, please provide correct PREFIX by using --with-sdar-prefix])])
 
+# Leap frog step method
+AC_ARG_WITH([step-mode],
+	    [AS_HELP_STRING([--with-step-mode],
+	                    [Tree step mode: K[0.5]-D[1.0]-K[0.5] (kdk), K[1/6]-D[1/2]-K[4/6]-D[1/2]-K[1/6] (kdkdk). Default: kdk])],
+            [PROG_NAME=$PROG_NAME'.'$with_step_mode],
+	    [with_step_mode=kdk])
+
 # others
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
@@ -263,6 +270,7 @@ AC_SUBST([use_cuda])
 AC_SUBST([use_omp])
 AC_SUBST([use_gperf])
 AC_SUBST([with_debug])
+AC_SUBST([with_step_mode])
 AC_SUBST([OPTFLAGS])
 AC_SUBST([DEBFLAGS])
 AC_SUBST([OPENMP_CXXFLAGS])
@@ -291,6 +299,7 @@ AS_IF([test "x$use_simd" != xno],
               AC_MSG_NOTICE([          If different CPU is used for running, check whether $SIMD_TYPE is also supported])])])
 AC_MSG_NOTICE([     Using OpenMP:   $use_omp])
 AC_MSG_NOTICE([     Debug mode:     $with_debug])
+AC_MSG_NOTICE([     Step mode:      $with_step_mode])
 AC_MSG_NOTICE([--Compilers:])
 AC_MSG_NOTICE([     C++ compiler:      $CXX])
 AS_IF([test "x$use_cuda" != xno],
