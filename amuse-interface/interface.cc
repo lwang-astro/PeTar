@@ -499,10 +499,6 @@ extern "C" {
     }
 
     int evolve_model(double time_next) {
-        reconstruct_particle_list();
-        if (!ptr->initial_step_flag) return -1;
-        ptr->input_parameters.time_end.value = time_next*2;
-
         // check whether interrupted cases, exist, if so, copy back data to local particles
         int n_interrupt_isolated = ptr->system_hard_isolated.getNumberOfInterruptClusters();
         for (int i=0; i<n_interrupt_isolated; i++) {
@@ -536,6 +532,12 @@ extern "C" {
 
         int mpi_distribute_stopping_conditions();
 #endif
+
+        if (ptr->n_interrupt_glb==0) {
+            reconstruct_particle_list();
+            if (!ptr->initial_step_flag) return -1;
+            ptr->input_parameters.time_end.value = time_next*2;
+        }
 
         int is_collision_detection_enabled;
         is_stopping_condition_enabled(COLLISION_DETECTION, &is_collision_detection_enabled);
@@ -674,7 +676,7 @@ extern "C" {
     int recommit_particles() {
         // this function is called too frequent (every time when set_xx is used).
         // thus only register the flag and do update at once in the begining of evolve_model
-        ptr->initial_step_flag = false;
+        if (ptr->n_interrupt_glb==0) ptr->initial_step_flag = false;
 #ifdef INTERFACE_DEBUG_PRINT
         if(ptr->my_rank==0) std::cout<<"recommit_particles\n";
 #endif
