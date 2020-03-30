@@ -752,6 +752,16 @@ public:
 
             for (PS::S32 i=0; i<n_members; i++) {
                 auto& pi = ptcl_origin[i];
+#ifdef STELLAR_EVOLUTION
+                if (pi.mass==0.0) {
+                    ASSERT(pi.group_data.artificial.isUnused());
+                    continue;
+                }
+
+                // shift time interrupt in order to get consistent time for stellar evolution in the next drift
+                pi.time_interrupt -= _time_end;
+#endif
+
                 pi.r_search = std::max(pcm.r_search, pi.r_search);
 #ifdef CLUSTER_VELOCITY
                 pi.group_data.cm.mass    = pcm.mass;
@@ -821,6 +831,15 @@ public:
                 for (PS::S32 j=0; j<n_member; j++) {
                     auto* pj = h4_int.groups[k].particles.getMemberOriginAddress(j);
                     pj->r_search = std::max(pj->r_search, pcm.r_search);
+#ifdef STELLAR_EVOLUTION
+                    if (pj->mass==0.0) {
+                        ASSERT(pj->group_data.artificial.isUnused());
+                        continue;
+                    }
+
+                    // shift time interrupt in order to get consistent time for stellar evolution in the next drift
+                    pj->time_interrupt -= _time_end;
+#endif
 #ifdef CLUSTER_VELOCITY
                     // save c.m. velocity and mass for neighbor search
                     pj->group_data.cm.mass    = pcm.mass;
@@ -837,6 +856,15 @@ public:
             const PS::S32* single_index = h4_int.getSortDtIndexSingle();
             for (PS::S32 i=0; i<h4_int.getNSingle(); i++) {
                 auto& pi = h4_int.particles[single_index[i]];
+#ifdef STELLAR_EVOLUTION
+                if (pi.mass==0.0) {
+                    ASSERT(pi.group_data.artificial.isUnused());
+                    continue;
+                }
+
+                // shift time interrupt in order to get consistent time for stellar evolution in the next drift
+                pi.time_interrupt -= _time_end;
+#endif
 #ifdef CLUSTER_VELOCITY
                 // set group_data.cm to 0.0 for singles
                 pi.group_data.cm.mass    = 0.0;
@@ -1567,7 +1595,7 @@ public:
             ptcl_hard_.push_back(PtclHard(p, med[i].id_cluster_, med[i].adr_sys_));
 #ifdef HARD_DEBUG
             assert(med[i].adr_sys_<sys.getNumberOfParticleLocal());
-            if(p.id==0&&p.group_data.artificial.isUnused()) {
+            if(p.mass==0&&p.group_data.artificial.isUnused()) {
                 std::cerr<<"Error: unused particle is selected! i="<<i<<"; med[i].adr_sys="<<med[i].adr_sys_<<std::endl;
                 abort();
             }
@@ -1578,7 +1606,7 @@ public:
             const Tptcl & p = ptcl_recv[i];
             ptcl_hard_.push_back(PtclHard(p, p.id_cluster, -(i+1)));
 #ifdef HARD_DEBUG
-            if(p.id==0&&p.group_data.artificial.isUnused()) {
+            if(p.mass==0&&p.group_data.artificial.isUnused()) {
                 std::cerr<<"Error: receive usused particle! i="<<i<<std::endl;
                 abort();
             }
@@ -1777,10 +1805,7 @@ public:
             assert(sys[adr].id == ptcl_hard_[i].id);
 #endif
             sys[adr].DataCopy(ptcl_hard_[i]);
-            if(sys[adr].id==0&&sys[adr].group_data.artificial.isUnused()) {
-#ifdef HARD_DEBUG
-                assert(sys[adr].id==0);
-#endif
+            if(sys[adr].mass==0.0&&sys[adr].group_data.artificial.isUnused()) {
                 _remove_list.push_back(adr);
             }
         }

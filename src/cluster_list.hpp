@@ -986,7 +986,7 @@ public:
                     ptcl_send_.push_back(PtclComm(p));
                     ptcl_send_.back().id_cluster = cluster_loc[i].id_;
 #ifdef HARD_DEBUG
-                    if(ptcl_send_.back().id==0&&ptcl_send_.back().group_data.artificial.isUnused()) {
+                    if(ptcl_send_.back().mass==0&&ptcl_send_.back().group_data.artificial.isUnused()) {
                         std::cerr<<"Error! sending particle is unused! adr="<<adr_sys<<std::endl;
                         abort();
                     }
@@ -1213,7 +1213,7 @@ public:
                 assert( _sys[adr].id == _ptcl_hard[i].id);
 #endif
                 _sys[adr].DataCopy(_ptcl_hard[i]);
-                if(_sys[adr].id==0.0&&_sys[adr].group_data.artificial.isUnused()) _removelist.push_back(adr);
+                if(_sys[adr].mass==0.0&&_sys[adr].group_data.artificial.isUnused()) _removelist.push_back(adr);
             }
             else{
                 //assert( ptcl_recv_[-(adr+1)].id == _ptcl_hard[i].id );
@@ -1250,7 +1250,7 @@ public:
             assert(_sys[adr].id == ptcl_send_[i].id);
 #endif
             _sys[adr].DataCopy(ptcl_send_[i]);
-            if(_sys[adr].id==0&&_sys[adr].group_data.artificial.isUnused()) _removelist.push_back(adr);
+            if(_sys[adr].mass==0&&_sys[adr].group_data.artificial.isUnused()) _removelist.push_back(adr);
         }
         // remove empty particles cannot do here
         // _sys.removeParticle(_removelist.getPointer(), _removelist.size());

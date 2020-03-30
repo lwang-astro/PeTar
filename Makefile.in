@@ -11,6 +11,7 @@ use_omp = @use_omp@
 use_gperf=@use_gperf@
 debug_mode=@with_debug@
 step_mode=@with_step_mode@
+se_mode=@with_interrupt@
 
 #MT_FLAGS += -D HARD_CM_KICK
 MT_FLAGS += -D USE_QUAD
@@ -25,8 +26,11 @@ MT_FLAGS += -D CLUSTER_VELOCITY
 MT_FLAGS += -D HARD_CHECK_ENERGY
 MT_FLAGS += -D HARD_COUNT_NO_NEIGHBOR
 #MT_FLAGS += -D ONLY_SOFT
-#MT_FLAGS += -D STELLAR_EVOLUTION
 #MT_FLAGS += -D INTEGRATED_CUTOFF_FUNCTION
+
+ifneq ($(se_mode),off)
+MT_FLAGS += -D STELLAR_EVOLUTION
+endif
 
 ifeq ($(step_mode),kdkdk)
 MT_FLAGS += -D KDKDK_2ND

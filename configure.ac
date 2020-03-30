@@ -243,6 +243,13 @@ AC_ARG_WITH([step-mode],
             [PROG_NAME=$PROG_NAME'.'$with_step_mode],
 	    [with_step_mode=kdk])
 
+# interruption options
+AC_ARG_WITH([interrupt],
+	    [AS_HELP_STRING([--with-interrupt],
+	                    [Interruption detection mode: Default: off])],
+            [PROG_NAME=$PROG_NAME'.'$with_interrupt],
+	    [with_interrupt=off])
+
 # others
 AC_PROG_LN_S
 AC_PROG_MAKE_SET

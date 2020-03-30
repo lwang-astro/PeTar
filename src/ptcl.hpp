@@ -29,7 +29,7 @@ union GroupDataDeliver{
 };
 
 //! group data deliver mode
-enum GroupDataMode{artificial, cm, none};
+enum class GroupDataMode{artificial=1, cm=2, none=0};
 
 //! Particle class 
 class Ptcl: public ParticleBase{
@@ -44,7 +44,7 @@ public:
     static PS::F64 mean_mass_inv;
     static GroupDataMode group_data_mode;
 
-    Ptcl(): r_search(-PS::LARGE_FLOAT), id(0), group_data(), changeover() {}
+    Ptcl(): ParticleBase(), r_search(-PS::LARGE_FLOAT), id(0), group_data(), changeover() {}
 
     template<class Tptcl>
     Ptcl(const Tptcl& _p) { Ptcl::DataCopy(_p);  }

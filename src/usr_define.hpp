@@ -7,7 +7,7 @@
 #endif
 
 #ifdef STELLAR_EVOLUTION
-enum BinaryInterruptState:int {none = 0, form = 1, exchange = 2, collision = 3};
+enum class BinaryInterruptState:int {none = 0, form = 1, exchange = 2, collision = 3};
 #define BINARY_STATE_ID_SHIFT 4
 #define BINARY_INTERRUPT_STATE_MASKER 0xF
 #endif
@@ -50,7 +50,14 @@ public:
     // -------------------------
 
     //! defaulted constructor 
-    ParticleBase() {}
+    ParticleBase(): mass(0.0) { 
+#ifdef STELLAR_EVOLUTION
+        radius = 0.0;
+        mdot = 0.0;
+        time_interrupt = 0.0;
+        binary_state = 0;
+#endif
+    }
 
     template<class Tp>
     ParticleBase(const Tp &p) { DataCopy(p);}
@@ -58,7 +65,14 @@ public:
     //! constructor 
     ParticleBase(const PS::F64 _mass, 
                  const PS::F64vec & _pos, 
-                 const PS::F64vec & _vel): mass(_mass), pos(_pos), vel(_vel) {}
+                 const PS::F64vec & _vel): mass(_mass), pos(_pos), vel(_vel) {
+#ifdef STELLAR_EVOLUTION
+        radius = 0.0;
+        mdot = 0.0;
+        time_interrupt = 0.0;
+        binary_state = 0;
+#endif
+    }
 
 #ifdef STELLAR_EVOLUTION
     //! constructor 
@@ -168,7 +182,6 @@ public:
         _fout<<std::setw(_width)<<"radius"
              <<std::setw(_width)<<"mdot"
              <<std::setw(_width)<<"t_irpt"
-             <<std::setw(_width)<<"pair_id"
              <<std::setw(_width)<<"bin_stat";
 #endif
     }
@@ -190,8 +203,7 @@ public:
         _fout<<std::setw(_width)<<radius
              <<std::setw(_width)<<mdot
              <<std::setw(_width)<<time_interrupt
-             <<std::setw(_width)<<getBinaryPairID()
-             <<std::setw(_width)<<getBinaryInterruptState();
+             <<std::setw(_width)<<binary_state;
 #endif
     }
     

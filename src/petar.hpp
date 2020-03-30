@@ -102,7 +102,7 @@ public:
     IOParams<PS::S64> n_glb;
     IOParams<PS::S64> id_offset;
     IOParams<PS::F64> dt_soft;
-    IOParams<PS::F64> dt_snp;
+    IOParams<PS::F64> dt_snap;
     IOParams<PS::F64> search_vel_factor;
     IOParams<PS::F64> search_peri_factor;
     IOParams<PS::F64> dt_limit_hard_factor;
@@ -141,7 +141,7 @@ public:
 #else
                      n_group_limit(input_par_store, 512,  "Tree group number limit", "optimized for x86-AVX2 (512)"),
 #endif
-                     n_interrupt_limit(input_par_store, 512, "Interrupt binary number limit"),
+                     n_interrupt_limit(input_par_store, 128, "Interrupt binary number limit"),
                      n_smp_ave    (input_par_store, 100,  "Average target number of sample particles per process"),
                      n_split      (input_par_store, 8,    "Number of binary sample points for tree perturbation force"),
                      n_bin        (input_par_store, 0,    "Number of binaries used for initialization (assume binaries ID=1,2*n_bin)"),
@@ -152,7 +152,7 @@ public:
                      n_glb        (input_par_store, 0,    "Total number of particles, only used to generate particles if needed"),
                      id_offset    (input_par_store, -1,   "Starting id for artificial particles, total number of real particles must be always smaller than this","n_glb+1"),
                      dt_soft      (input_par_store, 0.0,  "Tree timestep","0.1*r_out/sigma_1D"),
-                     dt_snp       (input_par_store, 1.0,  "Output time interval of particle dataset"),
+                     dt_snap      (input_par_store, 1.0,  "Output time interval of particle dataset snapshot"),
                      search_vel_factor (input_par_store, 3.0,  "Neighbor searching coefficient for velocity check (v*dt)"),
                      search_peri_factor(input_par_store, 1.5,  "Neighbor searching coefficient for peri-center check"),
                      dt_limit_hard_factor(input_par_store, 4.0,  "Limit of tree time step/hard time step"),
@@ -173,7 +173,7 @@ public:
                      sd_factor    (input_par_store, 1e-4, "Slowdown perturbation criterion"),
                      data_format  (input_par_store, 1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),
                      write_style  (input_par_store, 1,    "File Writing style: 0, no output; 1. write snapshots, status and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile"),
-                     interrupt_detection_option(input_par_store, 0, "detect interruption", "no"),
+                     interrupt_detection_option(input_par_store, 0, "modify orbits and check interruption: 0: turn off; 1: modify the binary orbits based on detetion criterion; 2. modify and also interrupt integrations"),
                      fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]"),
                      fname_par(input_par_store, "input.par", "Input parameter file (this option should be used first before any other options)"),
                      fname_inp(input_par_store, "", "Input data file"),
@@ -361,9 +361,9 @@ public:
                 n_opt+=2;
                 break;
             case 'o':
-                dt_snp.value = atof(optarg);
-                if(print_flag) dt_snp.print(std::cout);
-                assert(dt_snp.value>0.0);
+                dt_snap.value = atof(optarg);
+                if(print_flag) dt_snap.print(std::cout);
+                assert(dt_snap.value>0.0);
                 n_opt+=2;
                 break;
             case 'r':
@@ -456,7 +456,7 @@ public:
                     std::cout<<"  -a:     data output style (except snapshot) becomes appending, defaulted: replace"<<std::endl;
                     std::cout<<"  -t: [F] "<<time_end<<std::endl;
                     std::cout<<"  -s: [F] "<<dt_soft<<std::endl;
-                    std::cout<<"  -o: [F] "<<dt_snp<<std::endl;
+                    std::cout<<"  -o: [F] "<<dt_snap<<std::endl;
                     std::cout<<"        --detect-interrupt:      "<<interrupt_detection_option<<std::endl;
                     std::cout<<"        --dt-max-factor:     [F] "<<dt_limit_hard_factor<<std::endl;
                     std::cout<<"        --dt-min-hermite:    [I] "<<dt_min_hermite_index<<std::endl;
@@ -524,7 +524,7 @@ public:
         assert(data_format.value>=0||data_format.value<=3);
         assert(time_end.value>=0.0);
         assert(dt_soft.value>0.0);
-        assert(dt_snp.value>0.0);
+        assert(dt_snap.value>0.0);
         assert(r_out.value>0.0);
         assert(n_bin.value>=0);
         assert(n_glb.value>0);
@@ -641,152 +641,16 @@ public:
 
 private:
 
-    //!initializaton of system parameters
-    /*! Obtain Radius parameters, consistent with the input help information
-      @param[in]     _tsys:   particle system (soft)
-      @param[in,out] _r_in:   changeover function inner boundary
-      @param[in,out] _r_out:  changeover function outer boundary
-      @param[in,out] _r_bin:  arc group radius criterion
-      @param[in,out] _r_search_min: minimum searching radius
-      @param[in,out] _r_search_max: maximum searching radius
-      @param[out] _v_max:  maximum velocity to calculate r_search
-      @param[out] _m_average: averaged mass of particles
-      @param[out] _m_max: maximum mass of particles
-      @param[in,out] _dt_tree: tree time step
-      @param[out] _vel_disp: system velocity dispersion 
-      @param[in]  _search_vel_factor: coefficient to calculate r_search
-      @param[in]  _ratio_r_cut: _r_out/_r_in
-      @param[in]  _n_bin: number of binaries
-      @param[in]  _G: gravitational constant
-    */
-    void getInitPar(const SystemSoft & _tsys,
-                    PS::F64 &_r_in,
-                    PS::F64 &_r_out,
-                    PS::F64 &_r_bin,
-                    PS::F64 &_r_search_min,
-                    PS::F64 &_r_search_max,
-                    PS::F64 &_v_max,
-                    PS::F64 &_m_average,
-                    PS::F64 &_m_max,
-                    PS::F64 &_dt_tree,
-                    PS::F64 &_vel_disp,
-                    const PS::F64 _search_vel_factor,
-                    const PS::F64 _ratio_r_cut,
-                    const PS::S64 _n_bin,
-                    const PS::F64 _theta,
-                    const PS::F64 _G) {
-
-        // local particle number
-        const PS::S64 n_loc = _tsys.getNumberOfParticleLocal();
-
-        // local c.m velocity
-        PS::F64vec vel_cm_loc = 0.0;
-        // local c.m. mass
-        PS::F64 mass_cm_loc = 0.0;
-        // local maximum mass
-        PS::F64 mass_max_loc = 0.0;
-
-        for(PS::S64 i=0; i<n_loc; i++){
-            PS::F64 mi = _tsys[i].mass;
-            PS::F64vec vi = _tsys[i].vel;
-
-#ifdef PETAR_DEBUG
-            assert(mi>0);
-#endif
-            mass_cm_loc += mi;
-            vel_cm_loc += mi * vi;
-            mass_max_loc = std::max(mi, mass_max_loc);
-        }
-
-        // global c.m. parameters
-        PS::F64    mass_cm_glb = PS::Comm::getSum(mass_cm_loc);
-        _m_max = PS::Comm::getMaxValue(mass_max_loc);
-        PS::F64vec vel_cm_glb  = PS::Comm::getSum(vel_cm_loc);
-        vel_cm_glb /= mass_cm_glb;
-
-        // local velocity square
-        PS::F64 vel_sq_loc = 0.0;
-        PS::S64 n_vel_loc_count = 0;
-
-        // single particle starting index
-        PS::S64 single_start_index = 0;
-        const PS::S64 bin_last_id = 2*_n_bin;
-        if (_tsys[0].id<bin_last_id) {
-            single_start_index = std::min(bin_last_id - _tsys[0].id + 1,n_loc);
-            if(single_start_index%2!=0) single_start_index--;
-        }
-        // binary particle starting index
-        const PS::S64 binary_start_index = (_tsys[0].id%2==0)?1:0;
-
-        // calculate velocity dispersion
-        for (PS::S64 i=binary_start_index; i<single_start_index; i+=2) {
-            PS::F64 m1 = _tsys[i].mass;
-            PS::F64 m2 = _tsys[i+1].mass;
-            PS::F64vec dv = (m1*_tsys[i].vel + m2*_tsys[i+1].vel)/(m1+m2) - vel_cm_glb;
-            vel_sq_loc += dv * dv;
-            n_vel_loc_count++;
-        }
-    
-        for (PS::S64 i=single_start_index; i<n_loc; i++){
-            PS::F64vec dv = _tsys[i].vel - vel_cm_glb;
-            vel_sq_loc += dv * dv;
-            n_vel_loc_count++;
-        }
-
-        const PS::S64    n_vel_glb_count= PS::Comm::getSum(n_vel_loc_count);
-        const PS::S64    n_glb          = PS::Comm::getSum(n_loc);
-        const PS::F64    vel_sq_glb     = PS::Comm::getSum(vel_sq_loc);
-        _vel_disp   = sqrt(vel_sq_glb / 3.0 / (PS::F64)n_vel_glb_count);
-
-        PS::F64 average_mass_glb = mass_cm_glb/(PS::F64)n_glb;
-        _m_average = average_mass_glb;
-
-        // flag to check whether r_ous is already defined
-        bool r_out_flag = (_r_out>0);
-    
-        // if r_out is already defined, calculate r_in based on _ratio_r_cut
-        if (r_out_flag) _r_in = _r_out * _ratio_r_cut;
-        // calculate r_out based on virial radius scaled with (N)^(1/3), calculate r_in by _ratio_r_cut
+    //! regular block time step
+    PS::F64 regularTimeStep(const PS::F64 _dt) {
+        // regularize dt_tree
+        PS::F64 dt = 1.0;
+        if (_dt<1) while (dt>_dt) dt *= 0.5;
         else {
-            _r_out = 0.1*_G*mass_cm_glb/(std::pow(n_glb,1.0/3.0)) / (3*_vel_disp*_vel_disp);
-            _r_in = _r_out * _ratio_r_cut;
+            while (dt<=_dt) dt *= 2.0;
+            dt *= 0.5;
         }
-
-        // if tree time step is not defined, calculate tree time step by r_out and velocity dispersion
-        if (_dt_tree==0.0) {
-            PS::F64 dt_origin = 0.1*_r_out / _vel_disp;
-            _dt_tree = 1.0;
-            if (dt_origin<1) while (_dt_tree>dt_origin) _dt_tree *= 0.5;
-            else {
-                while (_dt_tree<=dt_origin) _dt_tree *= 2.0;
-                _dt_tree *= 0.5;
-            }
-        }
-        else {
-            // regularize dt_tree
-            PS::F64 dt_origin = _dt_tree;
-            _dt_tree = 1.0;
-            if (dt_origin<1) while (_dt_tree>dt_origin) _dt_tree *= 0.5;
-            else {
-                while (_dt_tree<=dt_origin) _dt_tree *= 2.0;
-                _dt_tree *= 0.5;
-            }
-            // if r_out is not defined, adjust r_out to minimum based on tree step
-            if (!r_out_flag) {
-                _r_out = 10.0*_dt_tree*_vel_disp;
-                _r_in = _r_out*_ratio_r_cut;
-            }
-        }
-
-        // if r_bin is not defined, set to theta * r_in
-        if (_r_bin==0.0) _r_bin = _theta*_r_in;
-
-        // if r_search_min is not defined, calculate by search_vel_factor*velocity_dispersion*tree_time_step + r_out
-        if (_r_search_min==0.0) _r_search_min = _search_vel_factor*_vel_disp*_dt_tree + _r_out;
-        // if r_search_max is not defined, calcualte by 5*r_out
-        if (_r_search_max==0.0) _r_search_max = 5*_r_out;
-        // calculate v_max based on r_search_max, tree time step and search_vel_factor
-        _v_max = (_r_search_max - _r_out) / _dt_tree / _search_vel_factor;
+        return dt;
     }
 
     //! tree for neighbor searching.
@@ -2320,35 +2184,135 @@ public:
 
 
         // calculate system parameters
-        PS::F64 r_in, m_average, m_max, v_disp, v_max;
+        PS::F64 r_in, mass_average, vel_disp;// mass_max, vel_max;
         PS::F64& r_out = input_parameters.r_out.value;
         PS::F64& r_bin = input_parameters.r_bin.value;
         PS::F64& r_search_min = input_parameters.r_search_min.value;
         PS::F64& r_search_max = input_parameters.r_search_max.value;
         PS::F64& dt_soft = input_parameters.dt_soft.value;
+        PS::F64& dt_snap = input_parameters.dt_snap.value;
         PS::F64& search_vel_factor =  input_parameters.search_vel_factor.value;
         PS::F64& ratio_r_cut   =  input_parameters.ratio_r_cut.value;
         PS::S64& n_bin         =  input_parameters.n_bin.value;
         PS::F64& theta         =  input_parameters.theta.value;
+        PS::F64& G             =  input_parameters.gravitational_constant.value;
 
-        getInitPar(system_soft, r_in, r_out, r_bin, r_search_min, r_search_max, v_max, m_average, m_max, dt_soft, v_disp, search_vel_factor, ratio_r_cut, n_bin, theta, input_parameters.gravitational_constant.value);
+        // local particle number
+        const PS::S64 n_loc = system_soft.getNumberOfParticleLocal();
+
+        // local c.m velocity
+        PS::F64vec vel_cm_loc = 0.0;
+        // local c.m. mass
+        PS::F64 mass_cm_loc = 0.0;
+        // local maximum mass
+        //PS::F64 mass_max_loc = 0.0;
+
+        for(PS::S64 i=0; i<n_loc; i++){
+            PS::F64 mi = system_soft[i].mass;
+            PS::F64vec vi = system_soft[i].vel;
+
+#ifdef PETAR_DEBUG
+            assert(mi>0);
+#endif
+            mass_cm_loc += mi;
+            vel_cm_loc += mi * vi;
+            //mass_max_loc = std::max(mi, mass_max_loc);
+        }
+
+        // global c.m. parameters
+        PS::F64    mass_cm_glb = PS::Comm::getSum(mass_cm_loc);
+        //mass_max = PS::Comm::getMaxValue(mass_max_loc);
+        PS::F64vec vel_cm_glb  = PS::Comm::getSum(vel_cm_loc);
+        vel_cm_glb /= mass_cm_glb;
+
+        // local velocity square
+        PS::F64 vel_sq_loc = 0.0;
+        PS::S64 n_vel_loc_count = 0;
+
+        // single particle starting index
+        PS::S64 single_start_index = 0;
+        const PS::S64 bin_last_id = 2*n_bin;
+        if (system_soft[0].id<bin_last_id) {
+            single_start_index = std::min(bin_last_id - system_soft[0].id + 1,n_loc);
+            if(single_start_index%2!=0) single_start_index--;
+        }
+        // binary particle starting index
+        const PS::S64 binary_start_index = (system_soft[0].id%2==0)?1:0;
+
+        // calculate velocity dispersion
+        for (PS::S64 i=binary_start_index; i<single_start_index; i+=2) {
+            PS::F64 m1 = system_soft[i].mass;
+            PS::F64 m2 = system_soft[i+1].mass;
+            PS::F64vec dv = (m1*system_soft[i].vel + m2*system_soft[i+1].vel)/(m1+m2) - vel_cm_glb;
+            vel_sq_loc += dv * dv;
+            n_vel_loc_count++;
+        }
+    
+        for (PS::S64 i=single_start_index; i<n_loc; i++){
+            PS::F64vec dv = system_soft[i].vel - vel_cm_glb;
+            vel_sq_loc += dv * dv;
+            n_vel_loc_count++;
+        }
+
+        const PS::S64    n_vel_glb_count= PS::Comm::getSum(n_vel_loc_count);
+        const PS::S64    n_glb          = PS::Comm::getSum(n_loc);
+        const PS::F64    vel_sq_glb     = PS::Comm::getSum(vel_sq_loc);
+        vel_disp   = sqrt(vel_sq_glb / 3.0 / (PS::F64)n_vel_glb_count);
+
+        PS::F64 mass_average_glb = mass_cm_glb/(PS::F64)n_glb;
+        mass_average = mass_average_glb;
+
+        // flag to check whether r_ous is already defined
+        bool r_out_flag = (r_out>0);
+    
+        // if r_out is already defined, calculate r_in based on ratio_r_cut
+        if (r_out_flag) r_in = r_out * ratio_r_cut;
+        // calculate r_out based on virial radius scaled with (N)^(1/3), calculate r_in by ratio_r_cut
+        else {
+            r_out = 0.1*G*mass_cm_glb/(std::pow(n_glb,1.0/3.0)) / (3*vel_disp*vel_disp);
+            r_in = r_out * ratio_r_cut;
+        }
+
+        // if tree time step is not defined, calculate tree time step by r_out and velocity dispersion
+        if (dt_soft==0.0) dt_soft = regularTimeStep(0.1*r_out / vel_disp);
+        else {
+            dt_soft = regularTimeStep(dt_soft);
+            // if r_out is not defined, adjust r_out to minimum based on tree step
+            if (!r_out_flag) {
+                r_out = 10.0*dt_soft*vel_disp;
+                r_in = r_out * ratio_r_cut;
+            }
+        }
+
+        // if r_bin is not defined, set to theta * r_in
+        if (r_bin==0.0) r_bin = theta*r_in;
+
+        // if r_search_min is not defined, calculate by search_vel_factor*velocity_dispersion*tree_time_step + r_out
+        if (r_search_min==0.0) r_search_min = search_vel_factor*vel_disp*dt_soft + r_out;
+        // if r_search_max is not defined, calcualte by 5*r_out
+        if (r_search_max==0.0) r_search_max = 5*r_out;
+        // calculate v_max based on r_search_max, tree time step and search_vel_factor
+        //vel_max = (r_search_max - r_out) / dt_soft / search_vel_factor;
+
+        // regularize output time
+        dt_snap = regularTimeStep(dt_snap);
 
         EPISoft::eps   = input_parameters.eps.value;
         EPISoft::r_out = r_out;
         ForceSoft::grav_const = input_parameters.gravitational_constant.value;
         Ptcl::search_factor = search_vel_factor;
         Ptcl::r_search_min = r_search_min;
-        Ptcl::mean_mass_inv = 1.0/m_average;
+        Ptcl::mean_mass_inv = 1.0/mass_average;
         Ptcl::r_group_crit_ratio = r_bin/r_in;
 
         if(print_flag) {
             std::cout<<"----- Parameter list: -----\n";
-            std::cout<<" m_average    = "<<m_average      <<std::endl
+            std::cout<<" mass_average = "<<mass_average   <<std::endl
                      <<" r_in         = "<<r_in           <<std::endl
                      <<" r_out        = "<<r_out          <<std::endl
                      <<" r_bin        = "<<r_bin          <<std::endl
                      <<" r_search_min = "<<r_search_min   <<std::endl
-                     <<" vel_disp     = "<<v_disp         <<std::endl
+                     <<" vel_disp     = "<<vel_disp       <<std::endl
                      <<" dt_soft      = "<<dt_soft        <<std::endl;
         }
 
@@ -2396,8 +2360,8 @@ public:
                 PS::F64 m_fac = system_soft[i].mass*Ptcl::mean_mass_inv;
                 system_soft[i].changeover.setR(m_fac, r_in, r_out);
 
-                // calculate r_search for particles, for binary, r_search depend on v_disp
-                if(id<=2*n_bin) system_soft[i].r_search = std::max(r_search_min,v_disp*dt_soft*search_vel_factor + system_soft[i].changeover.getRout());
+                // calculate r_search for particles, for binary, r_search depend on vel_disp
+                if(id<=2*n_bin) system_soft[i].r_search = std::max(r_search_min,vel_disp*dt_soft*search_vel_factor + system_soft[i].changeover.getRout());
                 else system_soft[i].calcRSearch(dt_soft);
             }
         }
@@ -2427,7 +2391,7 @@ public:
         hard_manager.ap_manager.setParticleSplitN(input_parameters.n_split.value);
         hard_manager.h4_manager.step.eta_4th = input_parameters.eta.value;
         hard_manager.h4_manager.step.eta_2nd = 0.01*input_parameters.eta.value;
-        hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, r_out);
+        hard_manager.h4_manager.step.calcAcc0OffsetSq(mass_average, r_out);
         hard_manager.ar_manager.energy_error_relative_max = input_parameters.e_err_arc.value;
         hard_manager.ar_manager.step_count_max = input_parameters.step_limit_arc.value;
         hard_manager.ar_manager.step.initialSymplecticCofficients(-6);
@@ -2435,7 +2399,7 @@ public:
         hard_manager.ar_manager.slowdown_timescale_max = dt_soft*input_parameters.n_step_per_orbit.value;
         //hard_manager.ar_manager.slowdown_timescale_max = dt_soft;
 #ifdef SLOWDOWN_MASSRATIO
-        hard_manager.ar_manager.slowdown_mass_ref = m_average;
+        hard_manager.ar_manager.slowdown_mass_ref = mass_average;
 #endif
         hard_manager.ar_manager.interrupt_detection_option = input_parameters.interrupt_detection_option.value;
 
@@ -2606,7 +2570,7 @@ public:
         PS::F64 time_break = _time_break==0.0? input_parameters.time_end.value: std::min(_time_break,input_parameters.time_end.value);
         if (stat.time>=time_break) return 0;
 
-        PS::F64 dt_output = input_parameters.dt_snp.value;
+        PS::F64 dt_output = input_parameters.dt_snap.value;
         PS::F64 dt_tree = dt_manager.getStep();
 
         /// Main loop

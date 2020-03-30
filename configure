@@ -719,6 +719,7 @@ with_gperf_prefix
 with_fdps_prefix
 with_sdar_prefix
 with_step_mode
+with_interrupt
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1380,6 +1381,7 @@ Optional Packages:
   --with-step-mode        Tree step mode: K[0.5]-D[1.0]-K[0.5] (kdk),
                           K[1/6]-D[1/2]-K[4/6]-D[1/2]-K[1/6] (kdkdk). Default:
                           kdk
+  --with-interrupt        Interruption detection mode: Default: off
 
 Some influential environment variables:
   MPICXX      MPI C++ compiler command
@@ -5164,6 +5166,16 @@ if test "${with_step_mode+set}" = set; then :
   withval=$with_step_mode; PROG_NAME=$PROG_NAME'.'$with_step_mode
 else
   with_step_mode=kdk
+fi
+
+
+# interruption options
+
+# Check whether --with-interrupt was given.
+if test "${with_interrupt+set}" = set; then :
+  withval=$with_interrupt; PROG_NAME=$PROG_NAME'.'$with_interrupt
+else
+  with_interrupt=off
 fi
 
 

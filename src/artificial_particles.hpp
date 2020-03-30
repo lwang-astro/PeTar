@@ -133,6 +133,11 @@ public:
         return (status<0.0 && mass_backup<0.0);
     }
 
+    //! set particle type to unused
+    void setParticleTypeToUnused() {
+        status = - NUMERIC_FLOAT_MAX;
+        mass_backup = - NUMERIC_FLOAT_MAX;
+    }
 
     //! print titles of class members using column style
     /*! print titles of class members in one line for column style

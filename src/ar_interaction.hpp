@@ -619,15 +619,21 @@ public:
             auto merge = [&]() {
                 _bin_interrupt->adr = &_bin;
                 _bin_interrupt->status = AR::InterruptStatus::merge;
-                p1->setBinaryInterruptState(BinaryInterruptState::none);
+                std::cerr<<"Binary Merge: time: "<<_bin_interrupt->time_now<<std::endl;
+                _bin.printColumnTitle(std::cerr);
+                std::cerr<<std::endl;
+                _bin.printColumn(std::cerr);
+                std::cerr<<std::endl;
                 Float mcm = p1->mass + p2->mass;
                 for (int k=0; k<3; k++) {
                     p1->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
                     p1->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
                 }
-                p1->mass = mcm;
+                p1->setBinaryInterruptState(BinaryInterruptState::none);
                 p2->setBinaryInterruptState(BinaryInterruptState::none);
+                p1->mass = mcm;
                 p2->mass = 0.0;
+                p2->group_data.artificial.setParticleTypeToUnused();
             };
 
             if (p1->getBinaryInterruptState()== BinaryInterruptState::collision && 
