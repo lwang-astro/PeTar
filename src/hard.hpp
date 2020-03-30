@@ -148,7 +148,7 @@ public:
     PS::F64 time_origin;  ///> origin physical time
     PtclH4* ptcl_origin;  ///> original particle array
 
-    COMM::BinaryTree<PtclAR>* interrupt_binary_adr; ///> interrupt binary address
+    AR::InterruptBinary<PtclAR> interrupt_binary; ///> interrupt binary address
 
 #ifdef HARD_DEBUG_PRINT
     PS::ReallocatableArray<PS::S32> n_group_sub_init; ///> initial sub group number in each groups 
@@ -175,7 +175,7 @@ public:
 
     //! initializer
     HardIntegrator(): h4_int(), sym_int(), manager(NULL), tidal_tensor(), time_origin(-1.0), ptcl_origin(NULL), 
-                      interrupt_binary_adr(NULL), 
+                      interrupt_binary(), 
 #ifdef HARD_DEBUG_PRINT
                       n_group_sub_init(), n_group_sub_tot_init(0),
 #endif
@@ -532,11 +532,11 @@ public:
       @param [in] _time_end: time to integrate
       \return interrupt binary address, if no return NULL
      */
-    COMM::BinaryTree<PtclAR>* integrateToTime(const PS::F64 _time_end) {
+    AR::InterruptBinary<PtclAR>& integrateToTime(const PS::F64 _time_end) {
         ASSERT(checkParams());
         // integration
         if (use_sym_int) {
-            interrupt_binary_adr = sym_int.integrateToTime(_time_end);
+            interrupt_binary = sym_int.integrateToTime(_time_end);
         }
         else {
 #ifdef SOFT_PERT
@@ -545,9 +545,9 @@ public:
             // integration loop
             while (h4_int.getTime()<_time_end) {
                 // integrate groups
-                interrupt_binary_adr = h4_int.integrateGroupsOneStep();
+                interrupt_binary = h4_int.integrateGroupsOneStep();
                 // when binary is interrupted, break integration loop
-                if (interrupt_binary_adr!=NULL) break;
+                if (interrupt_binary.status!=AR::InterruptStatus::none) break;
 
 #ifdef HARD_COUNT_NO_NEIGHBOR
                 checkNeighborExist();
@@ -687,7 +687,7 @@ public:
             }
 
         }
-        return interrupt_binary_adr;
+        return interrupt_binary;
     }
 
 #ifdef HARD_COUNT_NO_NEIGHBOR
@@ -929,16 +929,17 @@ public:
     */
     void printInterruptBinaryInfo(std::ostream & _fout) const{
         _fout<<"Interrupt condition triggered! Time: ";
-        if (use_sym_int) _fout<<"(AR) "<<sym_int.slowdown.getRealTime()<<std::endl;
-        else _fout<<"(Hermite) "<<h4_int.getInterruptTime()<<std::endl;
-        interrupt_binary_adr->printColumnTitle(_fout);
+        if (use_sym_int) _fout<<"(AR) ";
+        else _fout<<"(Hermite) ";
+        _fout<<interrupt_binary.time_now<<std::endl;
+        interrupt_binary.adr->printColumnTitle(_fout);
         _fout<<std::endl;
-        interrupt_binary_adr->printColumn(_fout);
+        interrupt_binary.adr->printColumn(_fout);
         _fout<<std::endl;
         PtclAR::printColumnTitle(_fout);
         _fout<<std::endl;
         for (int j=0; j<2; j++) {
-            interrupt_binary_adr->getMember(j)->printColumn(_fout);
+            interrupt_binary.adr->getMember(j)->printColumn(_fout);
             _fout<<std::endl;
         }
     }
@@ -951,7 +952,7 @@ public:
         tidal_tensor.resizeNoInitialize(0);
         time_origin = 0;
         ptcl_origin = NULL;
-        interrupt_binary_adr = NULL;
+        interrupt_binary.clear();
         is_initialized = false;
 
 #ifdef PROFILE
@@ -1949,9 +1950,9 @@ public:
             // if interrupt exist, escape initial
             hard_int_thread[ith]->initial(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, manager, time_origin_);
 
-            auto interrupt_binary_adr = hard_int_thread[ith]->integrateToTime(dt);
+            auto& interrupt_binary = hard_int_thread[ith]->integrateToTime(dt);
 
-            if (interrupt_binary_adr != NULL) {
+            if (interrupt_binary.status!=AR::InterruptStatus::none) {
                 #pragma omp atomic capture
                 hard_int_thread[ith] = hard_int_front_ptr++;
 
@@ -2004,7 +2005,7 @@ public:
         assert(interrupt_list_.size()==0);
         for (auto iptr = hard_int_; iptr<hard_int_front_ptr; iptr++) 
             if (iptr->is_initialized) {
-                assert(iptr->interrupt_binary_adr!=NULL);
+                assert(iptr->interrupt_binary.status!=AR::InterruptStatus::none);
 #ifdef HARD_INTERRUPT_PRINT
                 iptr->printInterruptBinaryInfo(std::cerr);
 #endif
@@ -2030,9 +2031,9 @@ public:
 #pragma omp parallel for schedule(dynamic)
         for (PS::S32 i=0; i<n_interrupt; i++) {
             auto hard_int_ptr = interrupt_list_[i];
-            auto interrupt_binary_adr = hard_int_ptr->integrateToTime(interrupt_dt_);
+            auto& interrupt_binary = hard_int_ptr->integrateToTime(interrupt_dt_);
 
-            if (interrupt_binary_adr==NULL) {
+            if (interrupt_binary.status==AR::InterruptStatus::none) {
                 hard_int_ptr->driftClusterCMRecordGroupCMDataAndWriteBack(interrupt_dt_);
 
 #ifdef PROFILE
@@ -2053,7 +2054,7 @@ public:
         PS::S32 i_end = n_interrupt;
         while (i_front<i_end) {
             auto hard_int_front_ptr = interrupt_list_[i_front];
-            if (hard_int_front_ptr->interrupt_binary_adr!=NULL) {
+            if (hard_int_front_ptr->interrupt_binary.status!=AR::InterruptStatus::none) {
                 assert(hard_int_front_ptr->is_initialized);
 #ifdef HARD_INTERRUPT_PRINT
                 hard_int_front_ptr->printInterruptBinaryInfo(std::cerr);

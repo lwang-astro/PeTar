@@ -604,41 +604,62 @@ public:
         _slowdown.calcSlowDownFactor();
     }
 
-    //! (Necessary) interrupt check 
-    /*! check the inner left binary whether their separation is smaller than particle radius sum and become close, if true, record their binary tree address and set particle status to touch; in the opposite condition, also report the address and set particle status to split
-      @param[in] _bin_interrupt: interrupt binary tree address 
+    //! (Necessary) modify the orbits and interrupt check 
+    /*! check the inner left binary whether their separation is smaller than particle radius sum and become close, if true, set one component stauts to merger with cm mass and the other unused with zero mass. Return the binary tree address 
+      @param[in] _bin_interrupt: interrupt binary information: adr: binary tree address; time_now: current physical time; time_end: integration finishing time; status: interrupt status: change, merge,none
       @param[in] _bin: binarytree to check iteratively
      */
-    static COMM::BinaryTree<ARPtcl>* checkInterruptIter(COMM::BinaryTree<ARPtcl>*& _bin_interrupt, COMM::BinaryTree<ARPtcl>& _bin) {
+    static AR::InterruptBinary<ARPtcl>* modifyAndInterruptIter(AR::InterruptBinary<ARPtcl>*& _bin_interrupt, COMM::BinaryTree<ARPtcl>& _bin) {
 #ifdef STELLAR_EVOLUTION
-        if (_bin.getMemberN()==2&&_bin_interrupt==NULL) {
+        if (_bin.getMemberN()==2&&_bin_interrupt->status==AR::InterruptStatus::none) {
             ARPtcl *p1,*p2;
             p1 = _bin.getLeftMember();
             p2 = _bin.getRightMember();
-            Float dr[3] = {p1->pos[0] - p2->pos[0], 
-                           p1->pos[1] - p2->pos[1], 
-                           p1->pos[2] - p2->pos[2]};
-            Float dv[3] = {p1->vel[0] - p2->vel[0], 
-                           p1->vel[1] - p2->vel[1], 
-                           p1->vel[2] - p2->vel[2]};
-            Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
-            Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
-            Float radius = p1->radius + p2->radius;
-            Float radius_sq = radius*radius;
-            if (!(p1->binary_state == 1 && p2->binary_state == 1)) {
-                if (dr2<radius_sq&&drdv<0) {
-                    _bin_interrupt = &_bin;
-                    p1->setBinaryPairID(p2->id);
-                    p2->setBinaryPairID(p1->id);
-                    p1->setBinaryInterruptState(BinaryInterruptState::collision);
-                    p2->setBinaryInterruptState(BinaryInterruptState::collision);
+
+            auto merge = [&]() {
+                _bin_interrupt->adr = &_bin;
+                _bin_interrupt->status = AR::InterruptStatus::merge;
+                p1->setBinaryInterruptState(BinaryInterruptState::none);
+                Float mcm = p1->mass + p2->mass;
+                for (int k=0; k<3; k++) {
+                    p1->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
+                    p1->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
                 }
-            }
+                p1->mass = mcm;
+                p2->setBinaryInterruptState(BinaryInterruptState::none);
+                p2->mass = 0.0;
+            };
+
+            if (p1->getBinaryInterruptState()== BinaryInterruptState::collision && 
+                p2->getBinaryInterruptState()== BinaryInterruptState::collision &&
+                p1->time_interrupt<_bin_interrupt->time_end && p2->time_interrupt<_bin_interrupt->time_end) merge();
             else {
-                if (dr2>radius_sq&&drdv>0) {
-                    _bin_interrupt = &_bin;
-                    p1->binary_state = 0;
-                    p2->binary_state = 0;
+                Float peri = _bin.semi*(1-_bin.ecc);
+                Float radius = p1->radius + p2->radius;
+                if (peri<radius &&
+                    p1->getBinaryInterruptState()!=BinaryInterruptState::collision && 
+                    p2->getBinaryInterruptState()!=BinaryInterruptState::collision) {
+                    Float dr[3] = {p1->pos[0] - p2->pos[0], 
+                                   p1->pos[1] - p2->pos[1], 
+                                   p1->pos[2] - p2->pos[2]};
+                    Float dv[3] = {p1->vel[0] - p2->vel[0], 
+                                   p1->vel[1] - p2->vel[1], 
+                                   p1->vel[2] - p2->vel[2]};
+                    Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
+                    Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+                    Float drm = std::sqrt(dr2);
+                    Float ecc_anomaly=_bin.calcEccAnomaly(drm);
+                    Float mean_anomaly = _bin.calcMeanAnomaly(ecc_anomaly, _bin.ecc);
+                    Float t_peri = mean_anomaly/6.28318530718*_bin.period;
+                    if (drdv<0 && t_peri<_bin_interrupt->time_end-_bin_interrupt->time_now) merge();
+                    else {
+                        p1->setBinaryPairID(p2->id);
+                        p2->setBinaryPairID(p1->id);
+                        p1->setBinaryInterruptState(BinaryInterruptState::collision);
+                        p2->setBinaryInterruptState(BinaryInterruptState::collision);
+                        p1->time_interrupt = _bin_interrupt->time_now + drdv<0 ? t_peri : (_bin.period - t_peri);
+                        p2->time_interrupt = p1->time_interrupt;
+                    }
                 }
             }
         }
