@@ -453,7 +453,7 @@ public:
                     // no neighbor
                     adr_sys_one_cluster_[ith].push_back(i);
 #ifdef CLUSTER_DEBUG
-                    assert(sys[i].group_data.artificial.isSingle());
+//                    assert(sys[i].group_data.artificial.isSingle());
 
                     Tepj * nbl = NULL;
                     PS::S32 n_ngb_tree_i = tree.getNeighborListOneParticle(sys[i], nbl) ;

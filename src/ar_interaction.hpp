@@ -620,9 +620,13 @@ public:
                 _bin_interrupt->adr = &_bin;
                 _bin_interrupt->status = AR::InterruptStatus::merge;
                 std::cerr<<"Binary Merge: time: "<<_bin_interrupt->time_now<<std::endl;
-                _bin.printColumnTitle(std::cerr);
+                _bin.Binary::printColumnTitle(std::cerr);
+                ARPtcl::printColumnTitle(std::cerr);
+                ARPtcl::printColumnTitle(std::cerr);
                 std::cerr<<std::endl;
-                _bin.printColumn(std::cerr);
+                _bin.Binary::printColumn(std::cerr);
+                for (int k=0; k<2; k++) 
+                    _bin.getMember(k)->printColumn(std::cerr);
                 std::cerr<<std::endl;
                 Float mcm = p1->mass + p2->mass;
                 for (int k=0; k<3; k++) {

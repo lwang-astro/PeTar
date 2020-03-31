@@ -537,6 +537,7 @@ public:
         // integration
         if (use_sym_int) {
             interrupt_binary = sym_int.integrateToTime(_time_end);
+            if (manager->ar_manager.interrupt_detection_option==1) interrupt_binary.clear();
         }
         else {
 #ifdef SOFT_PERT
@@ -773,6 +774,7 @@ public:
                 ASSERT(ptcl_origin[i].r_search>ptcl_origin[i].changeover.getRout());
 #endif
             }
+
 
 #ifdef PROFILE
             ARC_substep_sum += sym_int.profile.step_count;

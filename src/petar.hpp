@@ -1856,6 +1856,8 @@ public:
         profile.other.start();
 #endif
 
+        // first remove artificial particles
+        system_soft.setNumberOfParticleLocal(stat.n_real_loc);
         // Remove ghost particles
         system_soft.removeParticle(remove_list.getPointer(), remove_list.size());
         // reset particle number
@@ -1863,6 +1865,14 @@ public:
         system_soft.setNumberOfParticleLocal(stat.n_real_loc);
         stat.n_real_glb = system_soft.getNumberOfParticleGlobal();
         remove_list.resizeNoInitialize(0);
+
+#ifdef PETAR_DEBUG
+#pragma omp parallel for
+        for(PS::S32 i=0; i<stat.n_real_loc; i++){
+            assert(system_soft[i].mass!=0.0);
+        }
+#endif
+
 #ifdef PROFILE
         profile.other.barrier();
         PS::Comm::barrier();
@@ -2579,7 +2589,7 @@ public:
             profile.total.start();
 #endif
 
-            // remove deletec particles in system_soft.
+            // remove artificial and ununsed particles in system_soft.
             removeParticles();
 
             // >9. Domain decomposition
