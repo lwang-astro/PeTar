@@ -32,10 +32,10 @@ AC_ARG_WITH([mpi],
 
 AX_PROG_CXX_MPI([test x"$with_mpi" != xno],
                 [use_mpi=yes
-                 PROG_NAME=$PROG_NAME".mpi"
-                 CXXNOMPI=`$CXX -show|awk '{print $1}'`],
-                [use_mpi=no
-                 CXXNOMPI=$CXX])
+                 PROG_NAME=$PROG_NAME".mpi"],
+                [use_mpi=no])
+#                 CXXNOMPI=`$CXX -show|awk '{print $1}'`],
+#                 CXXNOMPI=$CXX])
 
 AS_IF([test x"$use_mpi" == xno],
       [AS_IF([test x"$with_mpi" = xyes],

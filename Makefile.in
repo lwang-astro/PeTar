@@ -123,7 +123,7 @@ endif # gperf
 CXXFLAGS += -D PROFILE
 
 CXX=@CXX@
-CXXNOMPI=@CXXNOMPI@
+#CXXNOMPI=@CXXNOMPI@
 
 VPATH=./src ./build
 INCLUDE  = -I./src @INCLUDE@
@@ -150,16 +150,16 @@ HARD_MT_FLAGS += -D AR_TTL -D AR_SLOWDOWN_INNER -D AR_SLOWDOWN_TIMESCALE -D HARD
 HARD_SRC= io.hpp ptcl.hpp usr_define.hpp hard_assert.hpp cluster_list.hpp hard.hpp hard_ptcl.hpp hermite_interaction.hpp hermite_information.hpp hermite_perturber.hpp ar_interaction.hpp ar_perturber.hpp search_group_candidate.hpp artificial_particles.hpp stability.hpp soft_ptcl.hpp static_variables.hpp
 
 build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) |build
-	$(CXXNOMPI) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
+	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
 
 build/petar.hard.test: hard_test.cxx $(HARD_SRC) |build
-	$(CXXNOMPI) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
 
 build/petar.simd.test: simd_test.cxx $(OBJS) |build
-	$(CXXNOMPI) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(SIMD_DEBFLAGS) -DPARTICLE_SIMULATOR_THREAD_PARALLEL $^ -o $@  $(CXXLIBS)
+	$(CXX) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(SIMD_DEBFLAGS) -DPARTICLE_SIMULATOR_THREAD_PARALLEL $^ -o $@  $(CXXLIBS)
 
 build/petar.tt.test: tidal_tensor_test.cxx |build
-	$(CXXNOMPI) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS)  $< -o $@  $(CXXLIBS)
+	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS)  $< -o $@  $(CXXLIBS)
 
 build/force_gpu_cuda.o: force_gpu_cuda.cu |build
 	$(NVCC) $(INCLUDE) -c $< -o $@ 

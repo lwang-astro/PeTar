@@ -3395,18 +3395,17 @@ if test x"$_ax_prog_cxx_mpi_mpi_found" = xyes; then :
 
         use_mpi=yes
                  PROG_NAME=$PROG_NAME".mpi"
-                 CXXNOMPI=`$CXX -show|awk '{print $1}'`
         :
 
 else
 
         use_mpi=no
-                 CXXNOMPI=$CXX
         :
 
 fi
 
 
+#                 CXXNOMPI=$CXX])
 
 if test x"$use_mpi" == xno; then :
   if test x"$with_mpi" = xyes; then :
