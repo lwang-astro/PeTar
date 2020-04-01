@@ -634,6 +634,7 @@ CUDAFLAGS
 OPENMP_CXXFLAGS
 DEBFLAGS
 OPTFLAGS
+with_interrupt
 with_step_mode
 with_debug
 use_gperf
@@ -3405,6 +3406,7 @@ else
 fi
 
 
+#                 CXXNOMPI=`$CXX -show|awk '{print $1}'`],
 #                 CXXNOMPI=$CXX])
 
 if test x"$use_mpi" == xno; then :
@@ -5945,6 +5947,7 @@ done
 
 
 
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: ----------------------Configure Summary--------------------" >&5
 $as_echo "$as_me: ----------------------Configure Summary--------------------" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: --Features:" >&5
@@ -5976,6 +5979,8 @@ $as_echo "$as_me:      Using OpenMP:   $use_omp" >&6;}
 $as_echo "$as_me:      Debug mode:     $with_debug" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      Step mode:      $with_step_mode" >&5
 $as_echo "$as_me:      Step mode:      $with_step_mode" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:      interrupt mode: $with_interrupt" >&5
+$as_echo "$as_me:      interrupt mode: $with_interrupt" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: --Compilers:" >&5
 $as_echo "$as_me: --Compilers:" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      C++ compiler:      $CXX" >&5

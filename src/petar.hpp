@@ -149,7 +149,7 @@ public:
                      time_end     (input_par_store, 10.0, "Finishing time"),
                      eta          (input_par_store, 0.1,  "Hermite time step coefficient eta"),
                      gravitational_constant(input_par_store, 1.0,  "Gravitational constant"),
-                     n_glb        (input_par_store, 0,    "Total number of particles, only used to generate particles if needed"),
+                     n_glb        (input_par_store, 100000,  "Total number of particles, only used to generate particles if needed"),
                      id_offset    (input_par_store, -1,   "Starting id for artificial particles, total number of real particles must be always smaller than this","n_glb+1"),
                      dt_soft      (input_par_store, 0.0,  "Tree timestep","0.1*r_out/sigma_1D"),
                      dt_snap      (input_par_store, 1.0,  "Output time interval of particle dataset snapshot"),
@@ -1927,20 +1927,110 @@ public:
      */
     int readParameters(int argc, char *argv[]) {
         //assert(initial_fdps_flag);
+        assert(!read_parameters_flag);
         // reading parameters
         read_parameters_flag = true;
         if (my_rank==0) input_parameters.print_flag=true;
         else input_parameters.print_flag=false;
         int read_flag = input_parameters.read(argc,argv);
+
+        // help case, return directly
+        if (read_flag==-1) return read_flag;
+
+        bool print_flag = input_parameters.print_flag;
+        int write_style = input_parameters.write_style.value;
+
+#ifdef PROFILE
+        if(print_flag) {
+            std::cout<<"----- Parallelization information -----\n";
+            std::cout<<"MPI processors: "<<n_proc<<std::endl;
+            std::cout<<"OMP threads:    "<<PS::Comm::getNumberOfThread()<<std::endl;
+        }
+    
+        // open profile file
+        if(write_style>0) {
+            std::string rank_str;
+            std::stringstream atmp;
+            atmp<<my_rank;
+            atmp>>rank_str;
+            std::string fproname=input_parameters.fname_snp.value+".prof.rank."+rank_str;
+            if(input_parameters.app_flag) fprofile.open(fproname.c_str(),std::ofstream::out|std::ofstream::app);
+            else  {
+                fprofile.open(fproname.c_str(),std::ofstream::out);
+
+                fprofile<<std::setprecision(WRITE_PRECISION);
+                fprofile<<std::setw(WRITE_WIDTH)<<"my_rank"
+                        <<std::setw(WRITE_WIDTH)<<"Time"
+                        <<std::setw(WRITE_WIDTH)<<"N_steps"
+                        <<std::setw(WRITE_WIDTH)<<"N_real_loc";
+                profile.dumpName(fprofile, WRITE_WIDTH);
+                profile.dumpBarrierName(fprofile, WRITE_WIDTH);
+                tree_soft_profile.dumpName(fprofile, WRITE_WIDTH);
+                tree_nb_profile.dumpName(fprofile, WRITE_WIDTH);
+#if defined(USE_GPU) && defined(GPU_PROFILE)
+                gpu_profile.dumpName(fprofile, WRITE_WIDTH);
+                gpu_counter.dumpName(fprofile, WRITE_WIDTH);
+#endif
+                n_count.dumpName(fprofile, WRITE_WIDTH);
+                fprofile<<std::endl;
+            }
+        }
+#endif    
+
+        // open output files
+        // status information output
+        std::string& fname_snp = input_parameters.fname_snp.value;
+        if(write_style>0&&my_rank==0) {
+            if(input_parameters.app_flag) 
+                fstatus.open((fname_snp+".status").c_str(),std::ofstream::out|std::ofstream::app);
+            else {
+                fstatus.open((fname_snp+".status").c_str(),std::ofstream::out);
+                // write titles of columns
+                stat.printColumnTitle(fstatus,WRITE_WIDTH);
+                if (write_style==2) {
+                    for (int i=0; i<stat.n_real_loc; i++) system_soft[0].printColumnTitle(fstatus, WRITE_WIDTH);
+                }
+                fstatus<<std::endl;
+            }
+            fstatus<<std::setprecision(WRITE_PRECISION);
+        }
+
+#ifdef HARD_DUMP
+        // initial hard_dump 
+        const PS::S32 num_thread = PS::Comm::getNumberOfThread();
+        hard_dump.initial(num_thread);
+#endif
+
+        // particle system
+        system_soft.initialize();
+
+        // domain decomposition
+        system_soft.setAverageTargetNumberOfSampleParticlePerProcess(input_parameters.n_smp_ave.value);
+        const PS::F32 coef_ema = 0.2;
+        domain_decompose_weight=1.0;
+        dinfo.initialize(coef_ema);
+
+        if(pos_domain!=NULL) {
+            pos_domain = new PS::F64ort[n_proc];
+            for(PS::S32 i=0; i<n_proc; i++) pos_domain[i] = dinfo.getPosDomain(i);
+        }
+
+        // tree for neighbor search
+        tree_nb.initialize(input_parameters.n_glb.value, input_parameters.theta.value, input_parameters.n_leaf_limit.value, input_parameters.n_group_limit.value);
+
+        // tree for force
+        PS::S64 n_tree_init = input_parameters.n_glb.value + input_parameters.n_bin.value;
+        tree_soft.initialize(n_tree_init, input_parameters.theta.value, input_parameters.n_leaf_limit.value, input_parameters.n_group_limit.value);
+
+        // initial search cluster
+        search_cluster.initialize();
+
         return read_flag;
     }
     
     //! reading data set from file, filename is given by readParameters
     void readDataFromFile() {
         assert(read_parameters_flag);
-
-        // particle system
-        if (!read_data_flag) system_soft.initialize();
 
         PS::S32 data_format = input_parameters.data_format.value;
         auto* data_filename = input_parameters.fname_inp.value.c_str();
@@ -1968,6 +2058,54 @@ public:
     //! reading data from particle array
     /*!
       @param[in] _n_partcle: number of particles
+      @param[in] _particle_array
+     */
+    template <class Tptcl>
+    void readDataFromArray(PS::S64 _n_partcle, Tptcl* _particle) {
+        assert(read_parameters_flag);
+
+        PS::S64 n_glb = _n_partcle;
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+        PS::S64 n_loc = n_glb / n_proc; 
+        if( n_glb % n_proc > my_rank) n_loc++;
+        PS::S64 i_h = n_glb/n_proc*my_rank;
+        if( n_glb % n_proc  > my_rank) i_h += my_rank;
+        else i_h += n_glb % n_proc;
+#else
+        PS::S64 n_loc = n_glb;
+        PS::S64 i_h = 0;
+#endif
+
+        system_soft.setNumberOfParticleLocal(n_loc);
+        for(PS::S32 i=0; i<n_loc; i++){
+            int k = i_h+1;
+            system_soft[i].mass  = _particle[k].getMass();
+            system_soft[i].pos.x = _particle[k].getPos()[0];
+            system_soft[i].pos.y = _particle[k].getPos()[1];
+            system_soft[i].pos.z = _particle[k].getPos()[2];
+            system_soft[i].vel.x = _particle[k].getVel()[0];
+            system_soft[i].vel.y = _particle[k].getVel()[1];
+            system_soft[i].vel.z = _particle[k].getVel()[2];
+            system_soft[i].id = i_h+i+1;
+            system_soft[i].group_data.artificial.setParticleTypeToSingle();
+        }
+
+        file_header.nfile = 0;
+        file_header.n_body = n_glb;
+        file_header.time = 0.0;
+
+        stat.time = 0.0;
+        stat.n_real_glb = stat.n_all_glb = n_glb;
+        stat.n_real_loc = stat.n_all_loc = n_loc;
+
+        input_parameters.n_glb.value = n_glb;
+
+        read_data_flag = true;
+    }
+
+    //! reading data from particle array
+    /*!
+      @param[in] _n_partcle: number of particles
       @param[in] _mass: mass array
       @param[in] _x: position x array
       @param[in] _y: position y array
@@ -1979,9 +2117,6 @@ public:
      */
     void readDataFromArray(PS::S64 _n_partcle, PS::F64* _mass, PS::F64* _x, PS::F64* _y, PS::F64* _z, PS::F64* _vx, PS::F64* _vy, PS::F64* _vz, PS::S64* _id=NULL) {
         assert(read_parameters_flag);
-
-        // particle system
-        if (!read_data_flag) system_soft.initialize();
 
         PS::S64 n_glb = _n_partcle;
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
@@ -2040,9 +2175,6 @@ public:
     void generatePlummer() {
         // ensure parameters are used
         assert(read_parameters_flag);
-
-        // particle system
-        if (!read_data_flag) system_soft.initialize();
 
         PS::S64 n_glb = input_parameters.n_glb.value;
         assert(n_glb>0);
@@ -2103,9 +2235,6 @@ public:
         // ensure parameters are used
         assert(read_parameters_flag);
 
-        // particle system
-        if (!read_data_flag) system_soft.initialize();
-
         PS::S64 n_glb = input_parameters.n_glb.value;
         assert(n_glb>0);
 
@@ -2154,44 +2283,6 @@ public:
 
         bool print_flag = input_parameters.print_flag;
         int write_style = input_parameters.write_style.value;
-
-#ifdef PROFILE
-        if(print_flag) {
-            std::cout<<"----- Parallelization information -----\n";
-            std::cout<<"MPI processors: "<<n_proc<<std::endl;
-            std::cout<<"OMP threads:    "<<PS::Comm::getNumberOfThread()<<std::endl;
-        }
-    
-        // open profile file
-        if(write_style>0) {
-            std::string rank_str;
-            std::stringstream atmp;
-            atmp<<my_rank;
-            atmp>>rank_str;
-            std::string fproname=input_parameters.fname_snp.value+".prof.rank."+rank_str;
-            if(input_parameters.app_flag) fprofile.open(fproname.c_str(),std::ofstream::out|std::ofstream::app);
-            else  {
-                fprofile.open(fproname.c_str(),std::ofstream::out);
-
-                fprofile<<std::setprecision(WRITE_PRECISION);
-                fprofile<<std::setw(WRITE_WIDTH)<<"my_rank"
-                        <<std::setw(WRITE_WIDTH)<<"Time"
-                        <<std::setw(WRITE_WIDTH)<<"N_steps"
-                        <<std::setw(WRITE_WIDTH)<<"N_real_loc";
-                profile.dumpName(fprofile, WRITE_WIDTH);
-                profile.dumpBarrierName(fprofile, WRITE_WIDTH);
-                tree_soft_profile.dumpName(fprofile, WRITE_WIDTH);
-                tree_nb_profile.dumpName(fprofile, WRITE_WIDTH);
-#if defined(USE_GPU) && defined(GPU_PROFILE)
-                gpu_profile.dumpName(fprofile, WRITE_WIDTH);
-                gpu_counter.dumpName(fprofile, WRITE_WIDTH);
-#endif
-                n_count.dumpName(fprofile, WRITE_WIDTH);
-                fprofile<<std::endl;
-            }
-        }
-#endif    
-
 
         // calculate system parameters
         PS::F64 r_in, mass_average, vel_disp;// mass_max, vel_max;
@@ -2329,26 +2420,6 @@ public:
         // check restart
         bool restart_flag = file_header.nfile; // nfile = 0 is assumed as initial data file
 
-        // open output files
-        // status information output
-        std::string& fname_snp = input_parameters.fname_snp.value;
-        if(write_style>0&&my_rank==0) {
-            if(input_parameters.app_flag) 
-                fstatus.open((fname_snp+".status").c_str(),std::ofstream::out|std::ofstream::app);
-            else 
-                fstatus.open((fname_snp+".status").c_str(),std::ofstream::out);
-            fstatus<<std::setprecision(WRITE_PRECISION);
-
-            // write titles of columns
-            if(!restart_flag&&input_parameters.app_flag==false)  {
-                stat.printColumnTitle(fstatus,WRITE_WIDTH);
-                if (write_style==2) {
-                    for (int i=0; i<stat.n_real_loc; i++) system_soft[0].printColumnTitle(fstatus, WRITE_WIDTH);
-                }
-                fstatus<<std::endl;
-            }
-        }
-
         // set id_offset
 #ifdef PETAR_DEBUG
         assert(stat.n_real_glb == input_parameters.n_glb.value);
@@ -2456,37 +2527,6 @@ public:
             fclose(fpar_out);
         }
 
-#ifdef HARD_DUMP
-        // initial hard_dump 
-        const PS::S32 num_thread = PS::Comm::getNumberOfThread();
-        hard_dump.initial(num_thread);
-#endif
-
-        // domain decomposition
-        system_soft.setAverageTargetNumberOfSampleParticlePerProcess(input_parameters.n_smp_ave.value);
-        const PS::F32 coef_ema = 0.2;
-        domain_decompose_weight=1.0;
-        dinfo.initialize(coef_ema);
-        dinfo.decomposeDomainAll(system_soft,domain_decompose_weight);
-
-        if(pos_domain!=NULL) {
-            pos_domain = new PS::F64ort[n_proc];
-            for(PS::S32 i=0; i<n_proc; i++) pos_domain[i] = dinfo.getPosDomain(i);
-        }
-
-        // exchange particles
-        exchangeParticle();
-
-        // tree for neighbor search
-        tree_nb.initialize(stat.n_real_glb, input_parameters.theta.value, input_parameters.n_leaf_limit.value, input_parameters.n_group_limit.value);
-
-        // tree for force
-        PS::S64 n_tree_init = stat.n_real_glb + input_parameters.n_bin.value;
-        tree_soft.initialize(n_tree_init, input_parameters.theta.value, input_parameters.n_leaf_limit.value, input_parameters.n_group_limit.value);
-
-        // initial search cluster
-        search_cluster.initialize();
-
         // initial tree step manager
         dt_manager.setKDKMode();
 
@@ -2499,6 +2539,12 @@ public:
         if (initial_step_flag) return;
 
         assert(checkTimeConsistence());
+
+        // domain decomposition
+        domainDecompose();
+
+        // exchange particles
+        exchangeParticle();
 
         PS::F64 dt_tree = input_parameters.dt_soft.value;
         dt_manager.setStep(dt_tree);
