@@ -1,5 +1,14 @@
 #!/bin/bash
 
+unset run
+unset pbin
+unset dt_base
+unset bnum
+unset nmpi
+unset nomp
+unset fname
+unset prefix_flag
+
 until [[ `echo x$1` == 'x' ]]
 do
     case $1 in
@@ -7,12 +16,14 @@ do
 	    echo 'Check the tree soft step for best performance, ';
 	    echo 'Usage: petar.init [options] [data file name]';
 	    echo 'Options:';
+	    echo '  -r: user defined prefix before program name, if used -m and -o are suppressed (default: )'
 	    echo '  -p: petar commander name (default: petar)';
 	    echo '  -s: base tree step size (default: auto)';
 	    echo '  -b: binary number (default: 0)';
 	    echo '  -m: number of MPI processors (default: 1)';
 	    echo '  -o: number of OpenMP processors (default: auto)';
 	    exit;;
+	-r) shift; run=$1; prefix_flag=yes; shift;;
 	-p) shift; pbin=$1; shift;;
 	-s) shift; dt_base=$1; shift;;
 	-b) shift; bnum=$1; shift;;
@@ -31,10 +42,14 @@ fi
 [ -z $nomp ] || prefix='env OMP_NUM_THREADS='$nomp
 [ -z $nmpi ] || prefix=$prefix' mpiexec -n '$nmpi
 [ -z $bnum ] && bnum=0
+[ -z $prefix_flag ] || prefix=$run
+
+echo 'commander: '$prefix' '$pbin -b $bnum
 
 if [ -z $dt_base ]; then
     $prefix $pbin -w 0 -b $bnum -t 0.0 $fname &>.check.perf.test.log
     dt_base=`egrep dt_soft .check.perf.test.log |awk '{OFMT="%.14g"; print $3/4}'`
+    echo 'Auto determine dt_base: '$dt_base
     rm -f .check.perf.test.log
 else
     dt_base=`echo $dt_base|awk '{OFMT="%.14g"; print $1/2}'`
