@@ -43,11 +43,11 @@ int main(int argc, char *argv[]){
     for (int i=0; i<n_loop; i++) {   
         time_break += dt_break;
         int n_interupt = 1;
-        while(n_interupt>0) n_interupt = petar.evolveToTime();
+        while(n_interupt>0) n_interupt = petar.integrateToTime();
     }
 #else
     int n_interupt = 1;
-    while(n_interupt>0) n_interupt = petar.evolveToTime();
+    while(n_interupt>0) n_interupt = petar.integrateToTime();
     
 #endif
 

@@ -46,8 +46,6 @@ extern "C" {
         // set restart flat to false
         ptr->file_header.nfile = 0; 
         
-        ptr->system_soft.initialize();
-
         // set stopping condtions support
         set_support_for_condition(COLLISION_DETECTION);
         set_support_for_condition(PAIR_DETECTION);
@@ -82,10 +80,11 @@ extern "C" {
 
     int recommit_parameters() {
         // not allown
+        ptr->initialParameters();
 #ifdef INTERFACE_DEBUG_PRINT
         if(ptr->my_rank==0) std::cout<<"recommit_parameters(forbidden!)\n";
 #endif
-        return -1;
+        return 0;
     }
 
     // GravitationalDynamicsInterface
@@ -499,12 +498,18 @@ extern "C" {
     }
 
     int evolve_model(double time_next) {
+#ifdef INTERFACE_DEBUG_PRINT
+        if(ptr->my_rank==0) std::cout<<"evolve models\n";
+#endif
         // check whether interrupted cases, exist, if so, copy back data to local particles
         int n_interrupt_isolated = ptr->system_hard_isolated.getNumberOfInterruptClusters();
         for (int i=0; i<n_interrupt_isolated; i++) {
+#ifdef INTERFACE_DEBUG_PRINT
+            if(ptr->my_rank==0) std::cout<<"interrupt isolated: "<<i<<"\n";
+#endif
             auto interrupt_hard_int = ptr->system_hard_isolated.getInterruptHardIntegrator(i);
             for (int k=0; k<2; k++) {
-                auto pk = interrupt_hard_int->interrupt_binary_adr->getMember(k);
+                auto pk = interrupt_hard_int->interrupt_binary.adr->getMember(k);
                 
                 // copy data from global particle array
                 PtclHard* pk_org = pk->adr;
@@ -519,9 +524,12 @@ extern "C" {
             int n_interrupt_connected = ptr->system_hard_connected.getNumberOfInterruptClusters();
         
             for (int i=0; i<n_interrupt_connected; i++) {
+#ifdef INTERFACE_DEBUG_PRINT
+                if(ptr->my_rank==0) std::cout<<"interrupt connected: "<<i<<"\n";
+#endif
                 auto interrupt_hard_int = ptr->system_hard_connected.getInterruptHardIntegrator(i);
                 for (int k=0; k<2; k++) {
-                    auto pk = interrupt_hard_int->interrupt_binary_adr->getMember(k);
+                    auto pk = interrupt_hard_int->interrupt_binary.adr->getMember(k);
                     // copy data from ptcl hard or globall array
                     PtclHard* pk_org = pk->adr;
                     if (pk_org->adr_org>=0) pk->DataCopy(ptr->system_soft[pk_org->adr_org]);
@@ -553,7 +561,7 @@ extern "C" {
         }
 
         // record interrupt binaries in stopping condition container.
-        int n_interrupt = ptr->evolveToTime(time_next);
+        int n_interrupt = ptr->integrateToTime(time_next);
 
         reset_stopping_conditions();    
 
@@ -563,7 +571,7 @@ extern "C" {
             for (int i=0; i<n_interrupt_isolated; i++) {
                 int stopping_index  = next_index_for_stopping_condition();
                 auto interrupt_hard_int = ptr->system_hard_isolated.getInterruptHardIntegrator(i);
-                auto interrupt_state = interrupt_hard_int->interrupt_binary_adr->getLeftMember()->getBinaryInterruptState();
+                auto interrupt_state = interrupt_hard_int->interrupt_binary.adr->getLeftMember()->getBinaryInterruptState();
                 switch (interrupt_state) {
                 case BinaryInterruptState::form:
                     set_stopping_condition_info(stopping_index, PAIR_DETECTION);
@@ -581,7 +589,7 @@ extern "C" {
                 }
 
                 for (int k=0; k<2; k++) {
-                    auto pk = interrupt_hard_int->interrupt_binary_adr->getMember(k);
+                    auto pk = interrupt_hard_int->interrupt_binary.adr->getMember(k);
                     set_stopping_condition_particle_index(stopping_index, k, pk->id);
                 
                     // copy back data to global particle array
@@ -595,7 +603,7 @@ extern "C" {
             for (int i=0; i<n_interrupt_connected; i++) {
                 int stopping_index  = next_index_for_stopping_condition();
                 auto interrupt_hard_int = ptr->system_hard_connected.getInterruptHardIntegrator(i);
-                auto interrupt_state = interrupt_hard_int->interrupt_binary_adr->getLeftMember()->getBinaryInterruptState();
+                auto interrupt_state = interrupt_hard_int->interrupt_binary.adr->getLeftMember()->getBinaryInterruptState();
                 switch (interrupt_state) {
                 case BinaryInterruptState::form:
                     set_stopping_condition_info(stopping_index, PAIR_DETECTION);
@@ -612,7 +620,7 @@ extern "C" {
                     return -1;
                 }
                 for (int k=0; k<2; k++) {
-                    auto pk = interrupt_hard_int->interrupt_binary_adr->getMember(k);
+                    auto pk = interrupt_hard_int->interrupt_binary.adr->getMember(k);
                     set_stopping_condition_particle_index(stopping_index, k, pk->id);
                 
                     // copy back data to global particle array

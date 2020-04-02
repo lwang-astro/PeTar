@@ -79,6 +79,8 @@ public:
             abort();
         }
         ds_ = _ds;
+        coff_one_step_.clear();
+        coff_continue_.clear();
 #if (defined KDKDK_2ND) || (defined KDKDK_4TH)
         coff_one_step_.reserve(3);
         coff_one_step_.push_back(KDPair({ds_    /6.0, 0.5*ds_}));
