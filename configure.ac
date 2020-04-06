@@ -182,8 +182,6 @@ AS_IF([test "x$use_cuda" != xno],
        [use_cuda=no])
 
 
-PROG_NAME=$PROG_NAME$PROG_SUFFIX
-
 # gperftools
 AC_ARG_ENABLE([gperf],
               [AS_HELP_STRING([--enable-gperf],
@@ -250,6 +248,16 @@ AC_ARG_WITH([interrupt],
             [PROG_NAME=$PROG_NAME'.'$with_interrupt],
 	    [with_interrupt=off])
 
+# tidal tensor 3rd order mode
+AC_ARG_WITH([tidal-tensor],
+	    [AS_HELP_STRING([--with-tidal-tensor],
+	                    [Tidal tensor accuracy mode: 2nd/3rd: Default: 2nd])],
+            [PROG_NAME=$PROG_NAME'.'tt$with_tidal_tensor],
+	    [with_tidal_tensor=2nd])
+
+
+PROG_NAME=$PROG_NAME$PROG_SUFFIX
+
 # others
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
@@ -279,6 +287,7 @@ AC_SUBST([use_gperf])
 AC_SUBST([with_debug])
 AC_SUBST([with_step_mode])
 AC_SUBST([with_interrupt])
+AC_SUBST([with_tidal_tensor])
 AC_SUBST([OPTFLAGS])
 AC_SUBST([DEBFLAGS])
 AC_SUBST([OPENMP_CXXFLAGS])
@@ -295,29 +304,30 @@ AC_SUBST([CXXNOMPI])
 
 AC_MSG_NOTICE([----------------------Configure Summary--------------------])
 AC_MSG_NOTICE([--Features:])
-AC_MSG_NOTICE([     Using MPI:      $use_mpi])
-AC_MSG_NOTICE([     Using GPU:      $use_cuda])
-AC_MSG_NOTICE([     Using x86 :     $use_x86])
+AC_MSG_NOTICE([     Using MPI:         $use_mpi])
+AC_MSG_NOTICE([     Using GPU:         $use_cuda])
+AC_MSG_NOTICE([     Using x86 :        $use_x86])
 AS_IF([test "x$use_simd" != xno],
       [AS_IF([test "x$use_simd_64" != xno],
-             [AC_MSG_NOTICE([     SIMD type:      $SIMD_TYPE 64 bits])],
-             [AC_MSG_NOTICE([     SIMD type:      $SIMD_TYPE ])])
+             [AC_MSG_NOTICE([     SIMD type:         $SIMD_TYPE 64 bits])],
+             [AC_MSG_NOTICE([     SIMD type:         $SIMD_TYPE ])])
        AS_IF([test "x$with_simd" == xauto],
              [AC_MSG_NOTICE([  Notice: this is auto-detected based on the local CPU architecture])
               AC_MSG_NOTICE([          If different CPU is used for running, check whether $SIMD_TYPE is also supported])])])
-AC_MSG_NOTICE([     Using OpenMP:   $use_omp])
-AC_MSG_NOTICE([     Debug mode:     $with_debug])
-AC_MSG_NOTICE([     Step mode:      $with_step_mode])
-AC_MSG_NOTICE([     interrupt mode: $with_interrupt])
+AC_MSG_NOTICE([     Using OpenMP:      $use_omp])
+AC_MSG_NOTICE([     Debug mode:        $with_debug])
+AC_MSG_NOTICE([     Step mode:         $with_step_mode])
+AC_MSG_NOTICE([     interrupt mode:    $with_interrupt])
+AC_MSG_NOTICE([     tidal tensor mode: $with_tidal_tensor])
 AC_MSG_NOTICE([--Compilers:])
 AC_MSG_NOTICE([     C++ compiler:      $CXX])
 AS_IF([test "x$use_cuda" != xno],
-      [AC_MSG_NOTICE([     CUDA compiler:     $NVCC])
-       AC_MSG_NOTICE([     CUDA version:   $CUDA_VERSION])])
+      [AC_MSG_NOTICE([     CUDA compiler:        $NVCC])
+       AC_MSG_NOTICE([     CUDA version:      $CUDA_VERSION])])
 AC_MSG_NOTICE([--Targets:])
-AC_MSG_NOTICE([     Program name:   $PROG_NAME])
+AC_MSG_NOTICE([     Program name:      $PROG_NAME])
 AS_IF([test x"$prefix" != xNONE],
-      [AC_MSG_NOTICE([     Install path:   $prefix])
+      [AC_MSG_NOTICE([     Install path:      $prefix])
        AC_MSG_NOTICE([-----------------------------------------------------------])
        AC_MSG_NOTICE([  After install, please])
        AC_MSG_NOTICE([      add $prefix/include into your PTHYON include path])

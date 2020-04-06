@@ -227,13 +227,14 @@ public:
     PS::S64 id_offset;
     PS::F64 gravitational_constant; // gravitational constant
 
-    ArtificialParticleManager(): n_split_(-1), n_artificial_(-1), index_offset_tt_(0), index_offset_orb_(8), index_cm_(-1), decca_list_(NULL), dsin_ecca_list_(NULL), decca_(0.0), r_tidal_tensor(-1.0), id_offset(-1), gravitational_constant(-1.0) {}
+    ArtificialParticleManager(): n_split_(-1), n_artificial_(-1), index_offset_tt_(0), index_offset_orb_(TidalTensor::n_point), index_cm_(-1), decca_list_(NULL), dsin_ecca_list_(NULL), decca_(0.0), r_tidal_tensor(-1.0), id_offset(-1), gravitational_constant(-1.0) {}
 
     //! check paramters
     bool checkParams() {
-        ASSERT(n_split_>=4);
-        ASSERT(n_artificial_>=9);
-        ASSERT(index_cm_>=8);
+        ASSERT(TidalTensor::n_point%2==0);
+        ASSERT(n_split_>=0);
+        ASSERT(n_artificial_>=TidalTensor::n_point+1);
+        ASSERT(index_cm_>=TidalTensor::n_point);
         ASSERT(r_tidal_tensor>=0.0);
         ASSERT(id_offset>0);
         ASSERT(gravitational_constant>0);
@@ -244,16 +245,16 @@ public:
     }
 
     //! create artificial particles 
-    /*! First 8 are tidal tensor particles; 9-2*n_split are orbitial sample particles; 2*n_split+1 is c.m.  
+    /*! First TidalTensor::n_point are tidal tensor particles; others-1 are orbitial sample particles; last is c.m.  
       id: 
-      0-2*n_split: id_offset + abs(member->id)*n_split_ + index/2;
+      tt/orb: id_offset + abs(member->id)*(n_artificial-1)/2 + index/2;
       cm: - abs(_bin.id)
 
       status:
       Tidal tensors/orbital
       0: left member N
       1: right member N
-      2-2*n_split: index+1 (_data_to_store>0.0)
+      others: index+1 (_data_to_store>0.0)
 
       c.m.: n_members
 
@@ -272,11 +273,12 @@ public:
                                    const PS::F64* _data_to_store,
                                    const PS::S32 _n_data) {
         // set id and status.d 
-        for (int i=0; i<n_split_; i++) {
+        PS::S32 n_pair = n_split_ + TidalTensor::n_point/2;
+        for (int i=0; i<n_pair; i++) {
             for(int j=0; j<2; j++) {
                 Tptcl* pj = &_ptcl_artificial[2*i+j];
                 Tptcl* binary_member_j = _bin.getMember(j);
-                pj->id = id_offset + abs(binary_member_j->id)*n_split_ +i;
+                pj->id = id_offset + abs(binary_member_j->id)*n_pair +i;
                 auto& pj_artificial = pj->group_data.artificial;
                 pj_artificial.setParticleTypeToArtificial(PS::F64(2*i+j+1));
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
@@ -285,7 +287,7 @@ public:
             }
         }
 
-        // First 8 is used for tidal tensor points
+        // First TidalTensor::n_point is used for tidal tensor points
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
         assert(r_tidal_tensor<=_bin.changeover.getRin());
         PS::F64 m_check[2]={0.0,0.0};
@@ -293,9 +295,10 @@ public:
         TidalTensor::createTidalTensorMeasureParticles(_ptcl_artificial, *((Tptcl*)&_bin), r_tidal_tensor);
 
         // remaining is for orbital sample particles
-        PS::F64 inverse_twopi = 1.0/(decca_*(n_split_-4));
-        for (int i=4; i<n_split_; i++) {
-            PS::S32 iph = i-4;
+        PS::S32 i_start_orb = TidalTensor::n_point/2;
+        PS::F64 inverse_twopi = 1.0/(decca_*n_split_);
+        for (int i=i_start_orb; i<n_pair; i++) {
+            PS::S32 iph = i-i_start_orb;
 
             // center_of_mass_shift(*(Tptcl*)&_bin,p,2);
             // generate particles at different orbitial phase
@@ -349,7 +352,7 @@ public:
 
         // normalized the mass of each particles to keep the total mass the same as c.m. mass
         //PS::F64 mfactor = 1.0/mnormal;
-        //for (int i=4; i<n_split_; i++) 
+        //for (int i=i_start_orb; i<n_pair; i++) 
         //    for (int j=0; j<2; j++) 
         //        _ptcl_artificial[2*i+j].mass *= mfactor;
 
@@ -364,7 +367,7 @@ public:
 
         // store the additional data (should be positive) 
         // ensure the data size is not overflow
-        assert(_n_data+2<2*n_split_);
+        assert(_n_data+2<2*n_pair);
         for (int j=0; j<_n_data; j++) {
             _ptcl_artificial[j+2].group_data.artificial.storeData(_data_to_store[j]);
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
@@ -374,7 +377,7 @@ public:
 
         // last member is the c.m. particle
         Tptcl* pcm;
-        pcm = &_ptcl_artificial[2*n_split_];
+        pcm = &_ptcl_artificial[2*n_pair];
         pcm->group_data.artificial.setParticleTypeToCM(_bin.mass, _bin.getMemberN());
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
         assert(pcm->group_data.artificial.isCM());
@@ -388,49 +391,48 @@ public:
 
 
     //! set particle split number
-    /*! @param[in] _n_split: particle split number, total artificial particle number is 2*_n_split+1, first 8 are tidal tensor particles, thus _n_split>=4
+    /*! @param[in] _n_split: particle split number of orbital samples, total artificial particle number is 2*_n_split+TidalTensor::n_point+1, first TidalTensor::n_point are tidal tensor particles.
      */
     void setParticleSplitN(const PS::S32& _n_split) {
-        ASSERT(_n_split>=4);
-        n_split_  = _n_split;
-        n_artificial_   = 2*_n_split+1;
+        ASSERT(_n_split>=0);
+        n_split_ =  _n_split;
+        n_artificial_   = 2*_n_split+TidalTensor::n_point+1;
         index_offset_tt_  = 0;
-        index_offset_orb_ = 8;
-        index_cm_ = 2*_n_split;
+        index_offset_orb_ = TidalTensor::n_point;
+        index_cm_ = n_artificial_-1;
 
         // get interval of ecc anomaly
-        PS::S32 n_split_orbit = n_split_-4;
-        if (n_split_orbit>0) {
-            decca_ = 8.0*atan(1.0)/n_split_orbit;
+        if (n_split_>0) {
+            decca_ = 8.0*atan(1.0)/n_split_;
 
             // initial array
             if (decca_list_    !=NULL) delete [] decca_list_;
             if (dsin_ecca_list_!=NULL) delete [] dsin_ecca_list_;
 
-            decca_list_     = new PS::F64[n_split_orbit];
-            dsin_ecca_list_ = new PS::F64[n_split_orbit];
+            decca_list_     = new PS::F64[n_split_];
+            dsin_ecca_list_ = new PS::F64[n_split_];
 
             // calculate ecca boundary 
-            PS::F64 ecca_list    [n_split_orbit+1];
-            PS::F64 sin_ecca_list[n_split_orbit+1];
-            for (PS::S32 i=0; i<=n_split_orbit; i++) {
+            PS::F64 ecca_list    [n_split_+1];
+            PS::F64 sin_ecca_list[n_split_+1];
+            for (PS::S32 i=0; i<=n_split_; i++) {
                 ecca_list[i]     = decca_*i-0.5*decca_;
                 sin_ecca_list[i] = std::sin(ecca_list[i]);
             }
             // get ecca interval per orbital particle
-            for (PS::S32 i=0; i<n_split_orbit; i++) {
+            for (PS::S32 i=0; i<n_split_; i++) {
                 decca_list_[i]     = ecca_list    [i+1] - ecca_list    [i];
                 dsin_ecca_list_[i] = sin_ecca_list[i+1] - sin_ecca_list[i];
             }
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
             PS::F64 decca_sum=0.0;
             //std::cerr<<"dEcca:";
-            for (PS::S32 i=0; i<n_split_orbit; i++) {
+            for (PS::S32 i=0; i<n_split_; i++) {
                 //std::cerr<<" "<<decca_list_[i]-dsin_ecca_list_[i];
                 decca_sum += decca_list_[i] - 0.5*dsin_ecca_list_[i];
                 assert(decca_list_[i]-dsin_ecca_list_[i]>=0.0);
             }
-            ASSERT(abs(decca_sum-decca_*n_split_orbit)<1e-10);
+            ASSERT(abs(decca_sum-decca_*n_split_)<1e-10);
 #endif            
         } 
 
@@ -518,12 +520,12 @@ public:
 
     //! get artificial particle total number
     PS::S32 getTidalTensorParticleN() const {
-        return 8;
+        return TidalTensor::n_point;
     }
 
     //! get orbitial particle number 
     PS::S32 getOrbitalParticleN() const {
-        return n_artificial_ - 9;
+        return n_artificial_ - TidalTensor::n_point - 1;
     }
 
     //! get particle split number

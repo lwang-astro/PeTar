@@ -634,6 +634,7 @@ CUDAFLAGS
 OPENMP_CXXFLAGS
 DEBFLAGS
 OPTFLAGS
+with_tidal_tensor
 with_interrupt
 with_step_mode
 with_debug
@@ -721,6 +722,7 @@ with_fdps_prefix
 with_sdar_prefix
 with_step_mode
 with_interrupt
+with_tidal_tensor
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1383,6 +1385,7 @@ Optional Packages:
                           K[1/6]-D[1/2]-K[4/6]-D[1/2]-K[1/6] (kdkdk). Default:
                           kdk
   --with-interrupt        Interruption detection mode: Default: off
+  --with-tidal-tensor     Tidal tensor accuracy mode: 2nd/3rd: Default: 2nd
 
 Some influential environment variables:
   MPICXX      MPI C++ compiler command
@@ -4939,8 +4942,6 @@ else
 fi
 
 
-PROG_NAME=$PROG_NAME$PROG_SUFFIX
-
 # gperftools
 # Check whether --enable-gperf was given.
 if test "${enable_gperf+set}" = set; then :
@@ -5179,6 +5180,19 @@ else
   with_interrupt=off
 fi
 
+
+# tidal tensor 3rd order mode
+
+# Check whether --with-tidal-tensor was given.
+if test "${with_tidal_tensor+set}" = set; then :
+  withval=$with_tidal_tensor; PROG_NAME=$PROG_NAME'.'tt$with_tidal_tensor
+else
+  with_tidal_tensor=2nd
+fi
+
+
+
+PROG_NAME=$PROG_NAME$PROG_SUFFIX
 
 # others
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether ln -s works" >&5
@@ -5948,23 +5962,24 @@ done
 
 
 
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: ----------------------Configure Summary--------------------" >&5
 $as_echo "$as_me: ----------------------Configure Summary--------------------" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: --Features:" >&5
 $as_echo "$as_me: --Features:" >&6;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}:      Using MPI:      $use_mpi" >&5
-$as_echo "$as_me:      Using MPI:      $use_mpi" >&6;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}:      Using GPU:      $use_cuda" >&5
-$as_echo "$as_me:      Using GPU:      $use_cuda" >&6;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}:      Using x86 :     $use_x86" >&5
-$as_echo "$as_me:      Using x86 :     $use_x86" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:      Using MPI:         $use_mpi" >&5
+$as_echo "$as_me:      Using MPI:         $use_mpi" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:      Using GPU:         $use_cuda" >&5
+$as_echo "$as_me:      Using GPU:         $use_cuda" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:      Using x86 :        $use_x86" >&5
+$as_echo "$as_me:      Using x86 :        $use_x86" >&6;}
 if test "x$use_simd" != xno; then :
   if test "x$use_simd_64" != xno; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}:      SIMD type:      $SIMD_TYPE 64 bits" >&5
-$as_echo "$as_me:      SIMD type:      $SIMD_TYPE 64 bits" >&6;}
+  { $as_echo "$as_me:${as_lineno-$LINENO}:      SIMD type:         $SIMD_TYPE 64 bits" >&5
+$as_echo "$as_me:      SIMD type:         $SIMD_TYPE 64 bits" >&6;}
 else
-  { $as_echo "$as_me:${as_lineno-$LINENO}:      SIMD type:      $SIMD_TYPE " >&5
-$as_echo "$as_me:      SIMD type:      $SIMD_TYPE " >&6;}
+  { $as_echo "$as_me:${as_lineno-$LINENO}:      SIMD type:         $SIMD_TYPE " >&5
+$as_echo "$as_me:      SIMD type:         $SIMD_TYPE " >&6;}
 fi
        if test "x$with_simd" == xauto; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}:   Notice: this is auto-detected based on the local CPU architecture" >&5
@@ -5973,31 +5988,33 @@ $as_echo "$as_me:   Notice: this is auto-detected based on the local CPU archite
 $as_echo "$as_me:           If different CPU is used for running, check whether $SIMD_TYPE is also supported" >&6;}
 fi
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}:      Using OpenMP:   $use_omp" >&5
-$as_echo "$as_me:      Using OpenMP:   $use_omp" >&6;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}:      Debug mode:     $with_debug" >&5
-$as_echo "$as_me:      Debug mode:     $with_debug" >&6;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}:      Step mode:      $with_step_mode" >&5
-$as_echo "$as_me:      Step mode:      $with_step_mode" >&6;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}:      interrupt mode: $with_interrupt" >&5
-$as_echo "$as_me:      interrupt mode: $with_interrupt" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:      Using OpenMP:      $use_omp" >&5
+$as_echo "$as_me:      Using OpenMP:      $use_omp" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:      Debug mode:        $with_debug" >&5
+$as_echo "$as_me:      Debug mode:        $with_debug" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:      Step mode:         $with_step_mode" >&5
+$as_echo "$as_me:      Step mode:         $with_step_mode" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:      interrupt mode:    $with_interrupt" >&5
+$as_echo "$as_me:      interrupt mode:    $with_interrupt" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:      tidal tensor mode: $with_tidal_tensor" >&5
+$as_echo "$as_me:      tidal tensor mode: $with_tidal_tensor" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: --Compilers:" >&5
 $as_echo "$as_me: --Compilers:" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      C++ compiler:      $CXX" >&5
 $as_echo "$as_me:      C++ compiler:      $CXX" >&6;}
 if test "x$use_cuda" != xno; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}:      CUDA compiler:     $NVCC" >&5
-$as_echo "$as_me:      CUDA compiler:     $NVCC" >&6;}
-       { $as_echo "$as_me:${as_lineno-$LINENO}:      CUDA version:   $CUDA_VERSION" >&5
-$as_echo "$as_me:      CUDA version:   $CUDA_VERSION" >&6;}
+  { $as_echo "$as_me:${as_lineno-$LINENO}:      CUDA compiler:        $NVCC" >&5
+$as_echo "$as_me:      CUDA compiler:        $NVCC" >&6;}
+       { $as_echo "$as_me:${as_lineno-$LINENO}:      CUDA version:      $CUDA_VERSION" >&5
+$as_echo "$as_me:      CUDA version:      $CUDA_VERSION" >&6;}
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: --Targets:" >&5
 $as_echo "$as_me: --Targets:" >&6;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}:      Program name:   $PROG_NAME" >&5
-$as_echo "$as_me:      Program name:   $PROG_NAME" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:      Program name:      $PROG_NAME" >&5
+$as_echo "$as_me:      Program name:      $PROG_NAME" >&6;}
 if test x"$prefix" != xNONE; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}:      Install path:   $prefix" >&5
-$as_echo "$as_me:      Install path:   $prefix" >&6;}
+  { $as_echo "$as_me:${as_lineno-$LINENO}:      Install path:      $prefix" >&5
+$as_echo "$as_me:      Install path:      $prefix" >&6;}
        { $as_echo "$as_me:${as_lineno-$LINENO}: -----------------------------------------------------------" >&5
 $as_echo "$as_me: -----------------------------------------------------------" >&6;}
        { $as_echo "$as_me:${as_lineno-$LINENO}:   After install, please" >&5

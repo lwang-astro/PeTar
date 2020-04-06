@@ -6,14 +6,19 @@ private:
     PS::F64 T1[3];     // 0 constant 
     PS::F64 T2[9];  // 1st (9)    general tensor
     //PS::F64 T2[6];  // 1st (6)  symmetry tensor
+#ifdef TIDAL_TENSOR_3RD
     PS::F64 T3[10]; // 2nd Tensor (10)
+#endif
 public:
     PS::F64vec pos;  // position of c.m.
     PS::F64 group_id; // indicate which group use the tensor
+    static const PS::S32 n_point;
 
     TidalTensor(): T1{0.0, 0.0, 0.0}, 
                    T2{0.0, 0.0, 0.0,  0.0, 0.0, 0.0,  0.0, 0.0, 0.0}, 
+#ifdef TIDAL_TENSOR_3RD
                    T3{0.0, 0.0, 0.0,  0.0, 0.0, 0.0,  0.0, 0.0, 0.0,  0.0}, 
+#endif
                    pos(0.0), group_id(0.0) {}
 
     void dump(FILE *fp){
@@ -31,13 +36,17 @@ public:
     void clear(){
         T1[0] = T1[1] = T1[2] = 0;
         for(PS::S32 i=0; i<9; i++) T2[i] = 0;
+#ifdef TIDAL_TENSOR_3RD
         for(PS::S32 i=0; i<10; i++) T3[i] = 0;
+#endif
         pos = 0.0;
         group_id = 0.0;
     }
 
     //! create tidal tensor measurement particles 
-    /*! creat 8 zero-mass particles at the corners of cube with edige size of 0.16*_r_bin. the cente is c.m. particle
+    /*! 
+       2nd order: creat 4 zero-mass particles at the corners of regular tentrahedron with edge size of 0.16*_r_bin. the cente is c.m. particle
+       3rd order: creat 8 zero-mass particles at the corners of cube with edge size of 0.16*_r_bin. the cente is c.m. particle
      */
     template<class Tptcl>
     static void createTidalTensorMeasureParticles(Tptcl* _ptcl_tt, const Tptcl& _ptcl_cm, const PS::F64 _r_bin) {
@@ -49,6 +58,7 @@ public:
         // Use fixed 0.5*r_bin to determine lscale
         PS::F64 lscale = 0.16*_r_bin;
 
+#ifdef TIDAL_TENSOR_3RD
         // set box 
         _ptcl_tt[0].pos = PS::F64vec(lscale,   0,       -lscale) + _ptcl_cm.pos;
         _ptcl_tt[1].pos = PS::F64vec(0,        lscale,  -lscale) + _ptcl_cm.pos;
@@ -65,12 +75,30 @@ public:
             // no mass
             _ptcl_tt[i].mass = 0.0;
         }
+#else
+        // set tetrahedron
+        _ptcl_tt[0].pos = PS::F64vec( lscale,  0,       -lscale*0.707106781186548) + _ptcl_cm.pos;
+        _ptcl_tt[1].pos = PS::F64vec(-lscale,  0,       -lscale*0.707106781186548) + _ptcl_cm.pos;
+        _ptcl_tt[2].pos = PS::F64vec(0,        lscale,   lscale*0.707106781186548) + _ptcl_cm.pos;
+        _ptcl_tt[3].pos = PS::F64vec(0,       -lscale,   lscale*0.707106781186548) + _ptcl_cm.pos;
+
+        for (int i=0; i<4; i++) {
+            // co-moving velocity
+            _ptcl_tt[i].vel  = _ptcl_cm.vel;
+            // no mass
+            _ptcl_tt[i].mass = 0.0;
+        }
+#endif
     }
 
     //! subtract c.m. force from measure points
     template<class Tptcl>
     static void subtractCMForce(Tptcl* _ptcl_tt, const Tptcl& _ptcl_cm) {
+#ifdef TIDAL_TENSOR_3RD
         for (int k=0; k<8; k++) _ptcl_tt[k].acc -= _ptcl_cm.acc;
+#else
+        for (int k=0; k<4; k++) _ptcl_tt[k].acc -= _ptcl_cm.acc;
+#endif
     }
 
     //! tidal tensor fitting function,
@@ -107,6 +135,7 @@ public:
         // get c.m. position
         pos = _ptcl_cm.pos;
 
+#ifdef TIDAL_TENSOR_3RD
         PS::F64vec fi[8];
 
         // get acceleration
@@ -170,6 +199,39 @@ public:
         PS::F64 T3S = T2S*T2S;
         for (PS::S32 i=0; i<9;  i++) T2[i] *= T2S;
         for (PS::S32 i=0; i<10; i++) T3[i] *= T3S;
+
+#else
+
+        PS::F64vec fi[4];
+
+        // get acceleration
+        for (PS::S32 i=0; i<4; i++) fi[i] = _ptcl_tt[i].acc;
+
+        // get cofficients
+        // T1, assume input force already remove the c.m.
+        T1[0] = T1[1] = T1[2] = 0.0;
+        
+        // T2, general form
+        // 0 1 2
+        T2[0] =  0.500000000000000*fi[0][0]+   -0.500000000000000*fi[1][0];
+        T2[1] =  0.250000000000000*fi[0][1]+   -0.250000000000000*fi[1][1]+    0.250000000000000*fi[2][0]+   -0.250000000000000*fi[3][0];
+        T2[2] = -0.176776695296637*fi[0][0]+    0.250000000000000*fi[0][2]+   -0.176776695296637*fi[1][0]+   -0.250000000000000*fi[1][2]+    0.176776695296637*fi[2][0]+    0.176776695296637*fi[3][0];
+        
+        // 3 4 5
+        T2[3] = T2[1];
+        T2[4] =  0.500000000000000*fi[2][1]+   -0.500000000000000*fi[3][1];
+        T2[5] = -0.176776695296637*fi[0][1]+   -0.176776695296637*fi[1][1]+    0.176776695296637*fi[2][1]+    0.250000000000000*fi[2][2]+    0.176776695296637*fi[3][1]+   -0.250000000000000*fi[3][2];
+
+        // 6 7 8
+        T2[6] =  T2[2];
+        T2[7] =  T2[5];
+        T2[8] = -0.353553390593274*fi[0][2]+   -0.353553390593274*fi[1][2]+    0.353553390593274*fi[2][2]+    0.353553390593274*fi[3][2];
+
+        // Rescale
+        //PS::F64 T2S = 1.0/(_bin.semi*(1+_bin.ecc)*0.35);
+        PS::F64 T2S = 1.0/(_r_bin*0.16);
+        for (PS::S32 i=0; i<9;  i++) T2[i] *= T2S;
+#endif
     }
 
     //! Shift c.m. to new reference position
@@ -197,6 +259,7 @@ public:
       @param[in] _pos: new c.m. position
      */
     void shiftCM(const PS::F64vec & _pos) {
+#ifdef TIDAL_TENSOR_3RD
         PS::F64vec dr = _pos-pos;
 
         PS::F64 x = dr.x;
@@ -232,11 +295,21 @@ public:
         T2[7] += 2.0*(T3[4]*x + T3[7]*y + T3[8]*z); // zy: zxy*x + zyy*y + zzy*z
         T2[8] += 2.0*(T3[5]*x + T3[8]*y + T3[9]*z); // zy: zxz*x + zyz*y + zzz*z
 
+#endif
         // update c.m.
         pos = _pos;
     }
 
     void eval(PS::F64* acc, const PS::F64vec &pos) const {
+        PS::F64 acc0=acc[0];
+        PS::F64 acc1=acc[1];
+        PS::F64 acc2=acc[2];
+
+        PS::F64 x = pos.x;
+        PS::F64 y = pos.y;
+        PS::F64 z = pos.z;
+
+#ifdef TIDAL_TENSOR_3RD
         /*
           T2:
           [[0 1 2]
@@ -257,9 +330,6 @@ public:
             [11 14 15]]]
 
         */
-        PS::F64 x = pos.x;
-        PS::F64 y = pos.y;
-        PS::F64 z = pos.z;
         PS::F64 x2 = x*x;
         PS::F64 xy = x*y;
         PS::F64 xz = x*z;
@@ -267,16 +337,18 @@ public:
         PS::F64 yz = y*z;
         PS::F64 z2 = z*z;
 
-        PS::F64 acc0=acc[0];
-        PS::F64 acc1=acc[1];
-        PS::F64 acc2=acc[2];
-
         acc0 +=  T1[0] + T2[0]*x + T2[1]*y + T2[2]*z 
             +      T3[0]*x2 + 2*T3[1]*xy + 2*T3[2]*xz + T3[3]*y2 + 2*T3[4]*yz + T3[5]*z2;
         acc1 +=  T1[1] + T2[3]*x + T2[4]*y + T2[5]*z
             +      T3[1]*x2 + 2*T3[3]*xy + 2*T3[4]*xz + T3[6]*y2 + 2*T3[7]*yz + T3[8]*z2;
         acc2 +=  T1[2] + T2[6]*x + T2[7]*y + T2[8]*z
             +      T3[2]*x2 + 2*T3[4]*xy + 2*T3[5]*xz + T3[7]*y2 + 2*T3[8]*yz + T3[9]*z2;
+
+#else
+        acc0 +=  T1[0] + T2[0]*x + T2[1]*y + T2[2]*z;
+        acc1 +=  T1[1] + T2[3]*x + T2[4]*y + T2[5]*z;
+        acc2 +=  T1[2] + T2[6]*x + T2[7]*y + T2[8]*z;
+#endif
 
         acc[0] = acc0;
         acc[1] = acc1;
@@ -287,6 +359,7 @@ public:
         PS::F64 x = pos.x;
         PS::F64 y = pos.y;
         PS::F64 z = pos.z;
+#ifdef TIDAL_TENSOR_3RD
         PS::F64 x2 = x*x;
         PS::F64 xy = x*y;
         PS::F64 xz = x*z;
@@ -300,7 +373,12 @@ public:
             +      T3[1]*x2 + 2*T3[3]*xy + 2*T3[4]*xz + T3[6]*y2 + 2*T3[7]*yz + T3[8]*z2;
         PS::F64 acc2 =  T1[2] + T2[6]*x + T2[7]*y + T2[8]*z
             +      T3[2]*x2 + 2*T3[4]*xy + 2*T3[5]*xz + T3[7]*y2 + 2*T3[8]*yz + T3[9]*z2;
-        
+#else
+        PS::F64 acc0 =  T1[0] + T2[0]*x + T2[1]*y + T2[2]*z;
+        PS::F64 acc1 =  T1[1] + T2[3]*x + T2[4]*y + T2[5]*z;
+        PS::F64 acc2 =  T1[2] + T2[6]*x + T2[7]*y + T2[8]*z;
+#endif        
+
         return - x*acc0 - y*acc1 - z*acc2;
     }
 
@@ -322,6 +400,7 @@ public:
              <<std::setw(_width)<<T2[6]
              <<std::setw(_width)<<T2[7]
              <<std::setw(_width)<<T2[8]
+#ifdef TIDAL_TENSOR_3RD
              <<std::endl
              <<"T3: \n"
              <<"x: \n"
@@ -362,7 +441,13 @@ public:
              <<std::setw(_width)<<T3[5]
              <<std::setw(_width)<<T3[8]
              <<std::setw(_width)<<T3[9]
+#endif
              <<std::endl;
     }
 };
 
+#ifdef TIDAL_TENSOR_3RD
+const PS::S32 TidalTensor::n_point = 8;
+#else
+const PS::S32 TidalTensor::n_point = 4;
+#endif

@@ -12,6 +12,7 @@ use_gperf=@use_gperf@
 debug_mode=@with_debug@
 step_mode=@with_step_mode@
 se_mode=@with_interrupt@
+tt_mode=@with_tidal_tensor@
 
 #MT_FLAGS += -D HARD_CM_KICK
 MT_FLAGS += -D USE_QUAD
@@ -27,6 +28,10 @@ MT_FLAGS += -D HARD_CHECK_ENERGY
 MT_FLAGS += -D HARD_COUNT_NO_NEIGHBOR
 #MT_FLAGS += -D ONLY_SOFT
 #MT_FLAGS += -D INTEGRATED_CUTOFF_FUNCTION
+
+ifeq ($(tt_mode),3rd)
+MT_FLAGS += -D TIDAL_TENSOR_3RD
+endif
 
 ifneq ($(se_mode),off)
 MT_FLAGS += -D STELLAR_EVOLUTION

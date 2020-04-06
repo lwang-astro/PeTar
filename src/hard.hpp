@@ -1967,7 +1967,7 @@ public:
 
 #ifdef HARD_DUMP
             assert(ith<hard_dump.size);
-            hard_dump[ith].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, dt, manager->ap_manager.getParticleSplitN());
+            hard_dump[ith].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, dt, manager->ap_manager.getArtificialParticleN());
 #endif
 
 #ifdef HARD_DEBUG_PROFILE

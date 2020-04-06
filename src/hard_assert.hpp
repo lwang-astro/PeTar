@@ -25,7 +25,7 @@ public:
        @param[in] _ptcl_artifical: artifical particle backup
        @param[in] _n_group: number of groups
        @param[in] _time_end: time ending
-       @param[in] _n_split: artifical particle splitting number
+       @param[in] _n_artificial: artifical particle number
      */
     void backup(PtclH4 * _ptcl_local,
                 const PS::S32 _n_ptcl,
@@ -33,7 +33,7 @@ public:
                 const PS::S32 _n_group,
                 const PS::S32* _n_member_in_group,
                 const PS::F64 _time_end,
-                const PS::S32 _n_split) {
+                const PS::S32 _n_artificial) {
         ptcl_bk.resizeNoInitialize(_n_ptcl);
         for (int i=0; i<_n_ptcl; i++) ptcl_bk[i] = _ptcl_local[i];
         time_end = _time_end;
@@ -41,7 +41,7 @@ public:
         n_member_in_group.resizeNoInitialize(_n_group);
         for (int i=0; i<_n_group; i++) n_member_in_group[i] = _n_member_in_group[i];
         if (_ptcl_artifical!=NULL) {
-            n_arti = _n_group*(2*_n_split+1);
+            n_arti = _n_group*_n_artificial;
             ptcl_arti_bk.resizeNoInitialize(n_arti);
             for (int i=0; i<n_arti; i++) ptcl_arti_bk[i] = _ptcl_artifical[i];
         }
