@@ -599,6 +599,7 @@ public:
 
     // remove list
     PS::ReallocatableArray<PS::S32> remove_list;
+    PS::ReallocatableArray<PS::S64> remove_id_record;
 
     // search cluster
     SearchCluster search_cluster;
@@ -614,7 +615,7 @@ public:
     bool initial_parameters_flag;
     bool initial_step_flag;
 
-    // initialization
+    //! initialization
     PeTar(): 
 #ifdef PROFILE
         // profile
@@ -630,7 +631,7 @@ public:
         system_hard_connected(), 
 #endif
         n_interrupt_glb(0),
-        remove_list(),
+        remove_list(), remove_id_record(),
         search_cluster(),
         initial_fdps_flag(false), read_parameters_flag(false), read_data_flag(false), initial_parameters_flag(false), initial_step_flag(false) {
         // set print format
@@ -638,8 +639,6 @@ public:
         std::cerr<<std::setprecision(PRINT_PRECISION);
      }
 
-
-private:
 
     //! regular block time step
     PS::F64 regularTimeStep(const PS::F64 _dt) {
@@ -1817,8 +1816,6 @@ private:
     }
 #endif
 
-public:
-
     //! get address of particle from an id, if not found, return -1
     PS::S32 getParticleAdrFromID(const PS::S64 _id) {
         auto item = id_adr_map.find(_id);
@@ -1858,6 +1855,11 @@ public:
 
         // first remove artificial particles
         system_soft.setNumberOfParticleLocal(stat.n_real_loc);
+        // record remove id 
+        PS::S32 n_remove = remove_list.size();
+        for (PS::S32 i=0; i<n_remove; i++) {
+            remove_id_record.push_back(system_soft[remove_list[i]].id);
+        }
         // Remove ghost particles
         system_soft.removeParticle(remove_list.getPointer(), remove_list.size());
         // reset particle number
@@ -1880,6 +1882,22 @@ public:
 #endif
     }
 
+
+    //! get number of removed particles in local
+    PS::S32 getNumberOfRemovedParticlesLocal() const {
+        return remove_id_record.size();
+    }
+
+    //! get number of removed particles in global
+    PS::S32 getNumberOfRemovedParticlesGlobal() const {
+        PS::S32 n_remove_loc = remove_id_record.size();
+        return PS::Comm::getSum(n_remove_loc);
+    }
+
+    //! get removed particle ID list local
+    PS::S64* getRemovedIDListLocal() const {
+        return remove_id_record.getPointer();
+    }
 
     //! exchange particles
     void exchangeParticle() {
