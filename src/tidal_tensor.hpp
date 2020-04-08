@@ -45,20 +45,18 @@ public:
 
     //! create tidal tensor measurement particles 
     /*! 
-       2nd order: creat 4 zero-mass particles at the corners of regular tentrahedron with edge size of 0.16*_r_bin. the cente is c.m. particle
-       3rd order: creat 8 zero-mass particles at the corners of cube with edge size of 0.16*_r_bin. the cente is c.m. particle
+       2nd order: creat 4 zero-mass particles at the corners of regular tentrahedron with edge size of 0.16*_size. the cente is c.m. particle
+       3rd order: creat 8 zero-mass particles at the corners of cube with edge size of 0.16*_size. the cente is c.m. particle
      */
     template<class Tptcl>
-    static void createTidalTensorMeasureParticles(Tptcl* _ptcl_tt, const Tptcl& _ptcl_cm, const PS::F64 _r_bin) {
-        ///* Assume apo-center distance is the maximum length inside box
-        //   Then the lscale=apo/(2*sqrt(2))
-        // */
-        // PS::F64 lscale = _bin.semi*(1+_bin.ecc)*0.35;
-
-        // Use fixed 0.5*r_bin to determine lscale
-        PS::F64 lscale = 0.16*_r_bin;
-
+    static void createTidalTensorMeasureParticles(Tptcl* _ptcl_tt, const Tptcl& _ptcl_cm, const PS::F64 _size) {
 #ifdef TIDAL_TENSOR_3RD
+        ///* Assume _size is the maximum length inside box
+        //   Then the edge length=_size/(2*sqrt(2))
+        // */
+
+        PS::F64 lscale = 0.16*_size; // half edge size
+
         // set box 
         _ptcl_tt[0].pos = PS::F64vec(lscale,   0,       -lscale) + _ptcl_cm.pos;
         _ptcl_tt[1].pos = PS::F64vec(0,        lscale,  -lscale) + _ptcl_cm.pos;
@@ -69,36 +67,33 @@ public:
         _ptcl_tt[6].pos = PS::F64vec(-lscale,  0,        lscale) + _ptcl_cm.pos;
         _ptcl_tt[7].pos = PS::F64vec(0,       -lscale,   lscale) + _ptcl_cm.pos;
 
-        for (int i=0; i<8; i++) {
-            // co-moving velocity
-            _ptcl_tt[i].vel  = _ptcl_cm.vel;
-            // no mass
-            _ptcl_tt[i].mass = 0.0;
-        }
 #else
+        ///* Assume _size is the maximum length, 
+        //   Then the edge length=_size
+        // */
+
+        PS::F64 lscale = 0.5*_size; // half edge size
+
         // set tetrahedron
         _ptcl_tt[0].pos = PS::F64vec( lscale,  0,       -lscale*0.707106781186548) + _ptcl_cm.pos;
         _ptcl_tt[1].pos = PS::F64vec(-lscale,  0,       -lscale*0.707106781186548) + _ptcl_cm.pos;
         _ptcl_tt[2].pos = PS::F64vec(0,        lscale,   lscale*0.707106781186548) + _ptcl_cm.pos;
         _ptcl_tt[3].pos = PS::F64vec(0,       -lscale,   lscale*0.707106781186548) + _ptcl_cm.pos;
 
-        for (int i=0; i<4; i++) {
+#endif
+
+        for (int i=0; i<n_point; i++) {
             // co-moving velocity
             _ptcl_tt[i].vel  = _ptcl_cm.vel;
             // no mass
             _ptcl_tt[i].mass = 0.0;
         }
-#endif
     }
 
     //! subtract c.m. force from measure points
     template<class Tptcl>
     static void subtractCMForce(Tptcl* _ptcl_tt, const Tptcl& _ptcl_cm) {
-#ifdef TIDAL_TENSOR_3RD
-        for (int k=0; k<8; k++) _ptcl_tt[k].acc -= _ptcl_cm.acc;
-#else
-        for (int k=0; k<4; k++) _ptcl_tt[k].acc -= _ptcl_cm.acc;
-#endif
+        for (int k=0; k<n_point; k++) _ptcl_tt[k].acc -= _ptcl_cm.acc;
     }
 
     //! tidal tensor fitting function,
@@ -128,23 +123,23 @@ public:
        
        @param[in] _ptcl_tt: tidal tensor measure particles
        @param[in] _ptcl_cm: tidal tensor measure particle c.m.
-       @param[in] _r_bin: particle box size
+       @param[in] _size: particle box size
     */
     template<class Tptcl>
-    void fit(Tptcl* _ptcl_tt, Tptcl& _ptcl_cm,  const PS::F64 _r_bin) {
+    void fit(Tptcl* _ptcl_tt, Tptcl& _ptcl_cm,  const PS::F64 _size) {
         // get c.m. position
         pos = _ptcl_cm.pos;
 
-#ifdef TIDAL_TENSOR_3RD
-        PS::F64vec fi[8];
+        PS::F64vec fi[n_point];
 
         // get acceleration
-        for (PS::S32 i=0; i<8; i++) fi[i] = _ptcl_tt[i].acc;
+        for (PS::S32 i=0; i<n_point; i++) fi[i] = _ptcl_tt[i].acc;
 
         // get cofficients
         // T1, assume input force already remove the c.m.
         T1[0] = T1[1] = T1[2] = 0.0;
         
+#ifdef TIDAL_TENSOR_3RD
         // T2, general form
         // 0 1 2
         T2[0] =  0.250000000000000*fi[0][0] + -0.250000000000000*fi[2][0] +  0.250000000000000*fi[4][0] + -0.250000000000000*fi[6][0];
@@ -195,22 +190,13 @@ public:
 
         // Rescale
         //PS::F64 T2S = 1.0/(_bin.semi*(1+_bin.ecc)*0.35);
-        PS::F64 T2S = 1.0/(_r_bin*0.16);
+        PS::F64 T2S = 1.0/(_size*0.16);
         PS::F64 T3S = T2S*T2S;
         for (PS::S32 i=0; i<9;  i++) T2[i] *= T2S;
         for (PS::S32 i=0; i<10; i++) T3[i] *= T3S;
 
 #else
 
-        PS::F64vec fi[4];
-
-        // get acceleration
-        for (PS::S32 i=0; i<4; i++) fi[i] = _ptcl_tt[i].acc;
-
-        // get cofficients
-        // T1, assume input force already remove the c.m.
-        T1[0] = T1[1] = T1[2] = 0.0;
-        
         // T2, general form
         // 0 1 2
         T2[0] =  0.500000000000000*fi[0][0]+   -0.500000000000000*fi[1][0];
@@ -228,8 +214,7 @@ public:
         T2[8] = -0.353553390593274*fi[0][2]+   -0.353553390593274*fi[1][2]+    0.353553390593274*fi[2][2]+    0.353553390593274*fi[3][2];
 
         // Rescale
-        //PS::F64 T2S = 1.0/(_bin.semi*(1+_bin.ecc)*0.35);
-        PS::F64 T2S = 1.0/(_r_bin*0.16);
+        PS::F64 T2S = 2.0/_size;
         for (PS::S32 i=0; i<9;  i++) T2[i] *= T2S;
 #endif
     }

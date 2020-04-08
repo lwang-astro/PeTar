@@ -48,6 +48,9 @@ public:
     //! set gravitational constant
     void setGravitationalConstant(const PS::F64 _g) {
         ap_manager.gravitational_constant = _g;
+#ifdef ORBIT_SAMPLING
+        ap_manager.orbit_manager.gravitational_constant = _g;
+#endif
         h4_manager.interaction.gravitational_constant = _g;
         ar_manager.interaction.gravitational_constant = _g;
     }
@@ -2489,7 +2492,7 @@ public:
         const PS::S32 n_artificial_per_group = ap_manager.getArtificialParticleN();
 #pragma omp parallel for        
         for(PS::S32 i=0; i<num_thread; i++) {
-            // ptcl_artificial should be integer times of 2*n_split+1
+            // ptcl_artificial should be integer times of n_partificial_per_group 
             assert(ptcl_artificial_thread[i].size()%n_artificial_per_group==0);
             // Add particle to ptcl sys
             for (PS::S32 j=0; j<ptcl_artificial_thread[i].size(); j++) {

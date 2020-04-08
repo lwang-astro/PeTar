@@ -93,7 +93,9 @@ public:
 #endif
     IOParams<PS::S32> n_interrupt_limit;
     IOParams<PS::S32> n_smp_ave;
+#ifdef ORBIT_SAMPLING
     IOParams<PS::S32> n_split;
+#endif
     IOParams<PS::S64> n_bin;
     IOParams<PS::F64> n_step_per_orbit;
     IOParams<PS::F64> time_end;
@@ -143,7 +145,9 @@ public:
 #endif
                      n_interrupt_limit(input_par_store, 128, "Interrupt binary number limit"),
                      n_smp_ave    (input_par_store, 100,  "Average target number of sample particles per process"),
+#ifdef ORBIT_SAMPLING
                      n_split      (input_par_store, 4,    "Number of binary sample points for tree perturbation force"),
+#endif
                      n_bin        (input_par_store, 0,    "Number of binaries used for initialization (assume binaries ID=1,2*n_bin)"),
                      n_step_per_orbit(input_par_store, 8, "Number of steps per slow-down binary orbits (binary period/tree timestep) for isolated binaries; also the maximum criterion for switching on tidal tensor method"),
                      time_end     (input_par_store, 10.0, "Finishing time"),
@@ -189,7 +193,9 @@ public:
      */
     int read(int argc, char *argv[]) {
         static struct option long_options[] = {
+#ifdef ORBIT_SAMPLING
             {"number-split", required_argument, 0, 0},        
+#endif
             {"search-vel-factor", required_argument, 0, 1},  
             {"dt-max-factor", required_argument, 0, 2},  
             {"dt-min-hermite", required_argument, 0, 3}, 
@@ -220,12 +226,14 @@ public:
         int n_opt=0;
         while ((copt = getopt_long(argc, argv, "i:at:s:o:r:b:n:G:T:f:p:w:h", long_options, &option_index)) != -1) 
             switch (copt) {
+#ifdef ORBIT_SAMPLING
             case 0:
                 n_split.value = atoi(optarg);
                 if(print_flag) n_split.print(std::cout);
-                assert(n_split.value>=4);
+                assert(n_split.value>=0);
                 n_opt+=2;
                 break;
+#endif
             case 1:
                 search_vel_factor.value = atof(optarg);
                 if(print_flag) search_vel_factor.print(std::cout);
@@ -467,7 +475,9 @@ public:
                     std::cout<<"        --r-bin:             [F] "<<r_bin<<std::endl;
                     std::cout<<"  -b: [I] "<<n_bin<<std::endl;
                     std::cout<<"  -n: [I] "<<n_glb<<std::endl;
+#ifdef ORBIT_SAMPLING
                     std::cout<<"        --number-split:           [I] "<<n_split<<std::endl;
+#endif
                     std::cout<<"        --number-group-limit:     [I] "<<n_group_limit<<std::endl;
                     std::cout<<"        --number-leaf-limit:      [I] "<<n_leaf_limit<<std::endl;
                     std::cout<<"        --number-interrupt-limit: [I] "<<n_interrupt_limit<<std::endl;
@@ -510,7 +520,9 @@ public:
 
     //! check paramters
     bool checkParams() {
-        assert(n_split.value>=4);
+#ifdef ORBIT_SAMPLING
+        assert(n_split.value>=0);
+#endif
         assert(search_vel_factor.value>0.0);
         assert(dt_limit_hard_factor.value > 0.0);
         assert(dt_min_hermite_index.value > 0);
@@ -2487,7 +2499,9 @@ public:
         hard_manager.n_step_per_orbit = input_parameters.n_step_per_orbit.value;
         hard_manager.ap_manager.r_tidal_tensor = r_bin;
         hard_manager.ap_manager.id_offset = id_offset;
-        hard_manager.ap_manager.setParticleSplitN(input_parameters.n_split.value);
+#ifdef ORBIT_SAMPLING
+        hard_manager.ap_manager.orbit_manager.setParticleSplitN(input_parameters.n_split.value);
+#endif
         hard_manager.h4_manager.step.eta_4th = input_parameters.eta.value;
         hard_manager.h4_manager.step.eta_2nd = 0.01*input_parameters.eta.value;
         hard_manager.h4_manager.step.calcAcc0OffsetSq(mass_average, r_out);

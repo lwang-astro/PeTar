@@ -634,6 +634,7 @@ CUDAFLAGS
 OPENMP_CXXFLAGS
 DEBFLAGS
 OPTFLAGS
+with_orbit
 with_tidal_tensor
 with_interrupt
 with_step_mode
@@ -723,6 +724,7 @@ with_sdar_prefix
 with_step_mode
 with_interrupt
 with_tidal_tensor
+with_orbit
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1385,7 +1387,10 @@ Optional Packages:
                           K[1/6]-D[1/2]-K[4/6]-D[1/2]-K[1/6] (kdkdk). Default:
                           kdk
   --with-interrupt        Interruption detection mode: Default: off
-  --with-tidal-tensor     Tidal tensor accuracy mode: 2nd/3rd: Default: 2nd
+  --with-tidal-tensor     Tidal tensor accuracy mode: 2nd/3rd: Default: 3rd
+  --with-orbit            Orbit particle method for counter force: os:
+                          orbit-sampling; pm: pseudoparticle multipole.
+                          Default: pm
 
 Some influential environment variables:
   MPICXX      MPI C++ compiler command
@@ -5187,7 +5192,17 @@ fi
 if test "${with_tidal_tensor+set}" = set; then :
   withval=$with_tidal_tensor; PROG_NAME=$PROG_NAME'.'tt$with_tidal_tensor
 else
-  with_tidal_tensor=2nd
+  with_tidal_tensor=3rd
+fi
+
+
+# orbit particle methods
+
+# Check whether --with-orbit was given.
+if test "${with_orbit+set}" = set; then :
+  withval=$with_orbit; PROG_NAME=$PROG_NAME'.'$with_orbit
+else
+  with_orbit=pm
 fi
 
 
@@ -5963,6 +5978,7 @@ done
 
 
 
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: ----------------------Configure Summary--------------------" >&5
 $as_echo "$as_me: ----------------------Configure Summary--------------------" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: --Features:" >&5
@@ -5998,6 +6014,8 @@ $as_echo "$as_me:      Step mode:         $with_step_mode" >&6;}
 $as_echo "$as_me:      interrupt mode:    $with_interrupt" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      tidal tensor mode: $with_tidal_tensor" >&5
 $as_echo "$as_me:      tidal tensor mode: $with_tidal_tensor" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:      orbit mode:        $with_orbit" >&5
+$as_echo "$as_me:      orbit mode:        $with_orbit" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: --Compilers:" >&5
 $as_echo "$as_me: --Compilers:" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      C++ compiler:      $CXX" >&5

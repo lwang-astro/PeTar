@@ -179,7 +179,7 @@ public:
     void copyFromFP(const FPSoft & fp){ 
         id = fp.id;
         pos = fp.pos;
-        if (fp.group_data.artificial.isArtificial() && fp.mass>0 ) type = 0;
+        if (fp.group_data.artificial.isArtificial() && !fp.group_data.artificial.isCM() && fp.mass>0 ) type = 0;
         else type = 1;
 
 #ifdef KDKDK_4TH

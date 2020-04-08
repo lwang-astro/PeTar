@@ -251,9 +251,16 @@ AC_ARG_WITH([interrupt],
 # tidal tensor 3rd order mode
 AC_ARG_WITH([tidal-tensor],
 	    [AS_HELP_STRING([--with-tidal-tensor],
-	                    [Tidal tensor accuracy mode: 2nd/3rd: Default: 2nd])],
+	                    [Tidal tensor accuracy mode: 2nd/3rd: Default: 3rd])],
             [PROG_NAME=$PROG_NAME'.'tt$with_tidal_tensor],
-	    [with_tidal_tensor=2nd])
+	    [with_tidal_tensor=3rd])
+
+# orbit particle methods
+AC_ARG_WITH([orbit],
+	    [AS_HELP_STRING([--with-orbit],
+	                    [Orbit particle method for counter force: os: orbit-sampling; pm: pseudoparticle multipole. Default: pm])],
+            [PROG_NAME=$PROG_NAME'.'$with_orbit],
+	    [with_orbit=pm])
 
 
 PROG_NAME=$PROG_NAME$PROG_SUFFIX
@@ -288,6 +295,7 @@ AC_SUBST([with_debug])
 AC_SUBST([with_step_mode])
 AC_SUBST([with_interrupt])
 AC_SUBST([with_tidal_tensor])
+AC_SUBST([with_orbit])
 AC_SUBST([OPTFLAGS])
 AC_SUBST([DEBFLAGS])
 AC_SUBST([OPENMP_CXXFLAGS])
@@ -319,6 +327,7 @@ AC_MSG_NOTICE([     Debug mode:        $with_debug])
 AC_MSG_NOTICE([     Step mode:         $with_step_mode])
 AC_MSG_NOTICE([     interrupt mode:    $with_interrupt])
 AC_MSG_NOTICE([     tidal tensor mode: $with_tidal_tensor])
+AC_MSG_NOTICE([     orbit mode:        $with_orbit])
 AC_MSG_NOTICE([--Compilers:])
 AC_MSG_NOTICE([     C++ compiler:      $CXX])
 AS_IF([test "x$use_cuda" != xno],

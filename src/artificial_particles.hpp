@@ -3,6 +3,14 @@
 #include "Common/binary_tree.h"
 #include "tidal_tensor.hpp"
 
+#ifdef ORBIT_SAMPLING
+#include "orbit_sampling.hpp"
+typedef OrbitalSamplingManager OrbitManager;
+#else
+#include "pseudoparticle_multipole.hpp"
+typedef PseudoParticleMultipoleManager OrbitManager;
+#endif
+
 //! class to store necessary information for using artificial particles
 /*!
                   single    c.m.             members          initial     artificial
@@ -207,40 +215,23 @@ public:
 
 //! class to organize artificial particles
 class ArtificialParticleManager{
-    PS::S32 n_split_;    // oribital particle splitting number
-    PS::S32 n_artificial_;     // number of artificial particles
-    PS::S32 index_offset_tt_;  // tidal tensor particle starting index
-    PS::S32 index_offset_orb_; // Orbital particle starting index
-    PS::S32 index_cm_;        // center of mass index
-    
-    PS::F64* decca_list_;   // d ecca per orbital particle 
-    PS::F64* dsin_ecca_list_;  // d sin(ecca) per orbital particle
-    PS::F64  decca_; // ecca interval
-    
-    inline PS::F64 calcMeanAnomaly(const PS::F64 _ecca, const PS::F64 _sin_ecca, const PS::F64 _ecc) {
-        return _ecca - _ecc*_sin_ecca;
-    }
-    
 public:
     // be careful to make consistent read/writeBinary and operator = if modified
-    PS::F64 r_tidal_tensor;
-    PS::S64 id_offset;
-    PS::F64 gravitational_constant; // gravitational constant
+    PS::F64 r_tidal_tensor;  ///> tidal tensor maximum distance of particles
+    PS::S64 id_offset;       ///> offset to generate ID for artificial particles
+    PS::F64 gravitational_constant; ///> gravitational constant
+    OrbitManager orbit_manager; ///> orbit particle method
 
-    ArtificialParticleManager(): n_split_(-1), n_artificial_(-1), index_offset_tt_(0), index_offset_orb_(TidalTensor::n_point), index_cm_(-1), decca_list_(NULL), dsin_ecca_list_(NULL), decca_(0.0), r_tidal_tensor(-1.0), id_offset(-1), gravitational_constant(-1.0) {}
+    //! initializer, require setParticleSplitN later to initialize the size
+    ArtificialParticleManager(): r_tidal_tensor(-1.0), id_offset(-1), gravitational_constant(-1.0), orbit_manager() {}
 
     //! check paramters
     bool checkParams() {
         ASSERT(TidalTensor::n_point%2==0);
-        ASSERT(n_split_>=0);
-        ASSERT(n_artificial_>=TidalTensor::n_point+1);
-        ASSERT(index_cm_>=TidalTensor::n_point);
         ASSERT(r_tidal_tensor>=0.0);
         ASSERT(id_offset>0);
         ASSERT(gravitational_constant>0);
-        //ASSERT(decca_list_!=NULL);
-        //ASSERT(dsin_ecca_list_!=NULL);
-        //ASSERT(decca_>0.0);
+        ASSERT(orbit_manager.checkParams());
         return true;
     }
 
@@ -272,90 +263,29 @@ public:
                                    COMM::BinaryTree<Tptcl> &_bin, 
                                    const PS::F64* _data_to_store,
                                    const PS::S32 _n_data) {
-        // set id and status.d 
-        PS::S32 n_pair = n_split_ + TidalTensor::n_point/2;
-        for (int i=0; i<n_pair; i++) {
-            for(int j=0; j<2; j++) {
-                Tptcl* pj = &_ptcl_artificial[2*i+j];
-                Tptcl* binary_member_j = _bin.getMember(j);
-                pj->id = id_offset + abs(binary_member_j->id)*n_pair +i;
-                auto& pj_artificial = pj->group_data.artificial;
-                pj_artificial.setParticleTypeToArtificial(PS::F64(2*i+j+1));
+        ASSERT(checkParams());
+        // set id and status.d except cm particle
+        PS::S32 n_artificial = getArtificialParticleN();
+        for (int i=0; i<n_artificial-1; i++) {
+            Tptcl* pi = &_ptcl_artificial[i];
+            Tptcl* binary_member_i = _bin.getMember(i%2);
+            pi->id = id_offset + abs(binary_member_i->id)*n_artificial +i;
+            auto& pi_artificial = pi->group_data.artificial;
+            pi_artificial.setParticleTypeToArtificial(PS::F64(i+1));
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-                assert(pj_artificial.isArtificial());
+            assert(pi_artificial.isArtificial());
 #endif
-            }
         }
 
         // First TidalTensor::n_point is used for tidal tensor points
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
         assert(r_tidal_tensor<=_bin.changeover.getRin());
-        PS::F64 m_check[2]={0.0,0.0};
 #endif
         TidalTensor::createTidalTensorMeasureParticles(_ptcl_artificial, *((Tptcl*)&_bin), r_tidal_tensor);
 
         // remaining is for orbital sample particles
-        PS::S32 i_start_orb = TidalTensor::n_point/2;
-        PS::F64 inverse_twopi = 1.0/(decca_*n_split_);
-        for (int i=i_start_orb; i<n_pair; i++) {
-            PS::S32 iph = i-i_start_orb;
-
-            // center_of_mass_shift(*(Tptcl*)&_bin,p,2);
-            // generate particles at different orbitial phase
-            COMM::Binary::orbitToParticle(_ptcl_artificial[2*i], _ptcl_artificial[2*i+1], _bin, decca_*iph, gravitational_constant);
-
-//#ifdef ARTIFICIAL_PARTICLE_DEBUG
-//            PS::F64 semi_i,ecc_i,r_i,rv_i;
-//            COMM::Binary::particleToSemiEcc(semi_i, ecc_i, r_i, rv_i, _ptcl_artificial[2*i], _ptcl_artificial[2*i+1], gravitational_constant);
-//            if (abs(semi_i-_bin.semi)>1e-10) {
-//                std::cerr<<"semi_i "<<semi_i<<" bin.semi "<<_bin.semi<<std::endl;
-//                abort();
-//            }
-//            assert(abs(ecc_i-_bin.ecc)<1e-10);
-//#endif
-
-            //// use velocity to weight mass (not accurate)
-            //PS::F64vec dvvec= _ptcl_artificial[2*i].vel - _ptcl_artificial[2*i+1].vel;
-            //PS::F64 odv = 1.0/std::sqrt(dvvec*dvvec);
-
-            PS::F64 mass_member[2]= {_bin.m1, _bin.m2};
-            for (int j=0; j<2; j++) {
-                Tptcl* pj = &_ptcl_artificial[2*i+j];
-
-                // set mass
-                PS::F64 dmean_anomaly = calcMeanAnomaly(decca_list_[iph], dsin_ecca_list_[iph], _bin.ecc);
-                pj->mass = mass_member[j] * dmean_anomaly * inverse_twopi;
-
-                // center_of_mass_correction 
-                pj->pos += _bin.pos;
-                pj->vel += _bin.vel;
-
-#ifdef ARTIFICIAL_PARTICLE_DEBUG
-                assert(mass_member[j]>0);
-                assert(pj->mass >0);
-                m_check[j] += pj->mass;
-#endif
-            }
-#ifdef ARTIFICIAL_PARTICLE_DEBUG
-            PS::F64vec pos_i_cm = (_ptcl_artificial[2*i].mass*_ptcl_artificial[2*i].pos+_ptcl_artificial[2*i+1].mass*_ptcl_artificial[2*i+1].pos)/(_ptcl_artificial[2*i].mass + _ptcl_artificial[2*i+1].mass);
-            assert(abs((pos_i_cm - _bin.pos)*(pos_i_cm - _bin.pos))<1e-10);
-#endif
-            //mnormal += odv;
-        }
-
-#ifdef ARTIFICIAL_PARTICLE_DEBUG
-        if(getOrbitalParticleN()>0) {
-            assert(abs(m_check[0]-_bin.m1)<1e-10);
-            assert(abs(m_check[1]-_bin.m2)<1e-10);
-        }
-#endif
-
-        // normalized the mass of each particles to keep the total mass the same as c.m. mass
-        //PS::F64 mfactor = 1.0/mnormal;
-        //for (int i=i_start_orb; i<n_pair; i++) 
-        //    for (int j=0; j<2; j++) 
-        //        _ptcl_artificial[2*i+j].mass *= mfactor;
-
+        orbit_manager.createSampleParticles(&(_ptcl_artificial[getIndexOffsetOrb()]), _bin);
+        
         // store the component member number 
         for (int j=0; j<2; j++) {
             PS::S32 n_members = _bin.isMemberTree(j) ? ((COMM::BinaryTree<Tptcl>*)(_bin.getMember(j)))->getMemberN() : 1;
@@ -367,7 +297,7 @@ public:
 
         // store the additional data (should be positive) 
         // ensure the data size is not overflow
-        assert(_n_data+2<2*n_pair);
+        assert(_n_data+2<n_artificial-1);
         for (int j=0; j<_n_data; j++) {
             _ptcl_artificial[j+2].group_data.artificial.storeData(_data_to_store[j]);
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
@@ -377,7 +307,7 @@ public:
 
         // last member is the c.m. particle
         Tptcl* pcm;
-        pcm = &_ptcl_artificial[2*n_pair];
+        pcm = &_ptcl_artificial[getIndexOffsetCM()];
         pcm->group_data.artificial.setParticleTypeToCM(_bin.mass, _bin.getMemberN());
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
         assert(pcm->group_data.artificial.isCM());
@@ -389,59 +319,9 @@ public:
         pcm->id  = - std::abs(_bin.id);
     }
 
-
-    //! set particle split number
-    /*! @param[in] _n_split: particle split number of orbital samples, total artificial particle number is 2*_n_split+TidalTensor::n_point+1, first TidalTensor::n_point are tidal tensor particles.
-     */
-    void setParticleSplitN(const PS::S32& _n_split) {
-        ASSERT(_n_split>=0);
-        n_split_ =  _n_split;
-        n_artificial_   = 2*_n_split+TidalTensor::n_point+1;
-        index_offset_tt_  = 0;
-        index_offset_orb_ = TidalTensor::n_point;
-        index_cm_ = n_artificial_-1;
-
-        // get interval of ecc anomaly
-        if (n_split_>0) {
-            decca_ = 8.0*atan(1.0)/n_split_;
-
-            // initial array
-            if (decca_list_    !=NULL) delete [] decca_list_;
-            if (dsin_ecca_list_!=NULL) delete [] dsin_ecca_list_;
-
-            decca_list_     = new PS::F64[n_split_];
-            dsin_ecca_list_ = new PS::F64[n_split_];
-
-            // calculate ecca boundary 
-            PS::F64 ecca_list    [n_split_+1];
-            PS::F64 sin_ecca_list[n_split_+1];
-            for (PS::S32 i=0; i<=n_split_; i++) {
-                ecca_list[i]     = decca_*i-0.5*decca_;
-                sin_ecca_list[i] = std::sin(ecca_list[i]);
-            }
-            // get ecca interval per orbital particle
-            for (PS::S32 i=0; i<n_split_; i++) {
-                decca_list_[i]     = ecca_list    [i+1] - ecca_list    [i];
-                dsin_ecca_list_[i] = sin_ecca_list[i+1] - sin_ecca_list[i];
-            }
-#ifdef ARTIFICIAL_PARTICLE_DEBUG
-            PS::F64 decca_sum=0.0;
-            //std::cerr<<"dEcca:";
-            for (PS::S32 i=0; i<n_split_; i++) {
-                //std::cerr<<" "<<decca_list_[i]-dsin_ecca_list_[i];
-                decca_sum += decca_list_[i] - 0.5*dsin_ecca_list_[i];
-                assert(decca_list_[i]-dsin_ecca_list_[i]>=0.0);
-            }
-            ASSERT(abs(decca_sum-decca_*n_split_)<1e-10);
-#endif            
-        } 
-
-    }
-      
-
-    //! correct orbitial particles force
+    //! correct orbit-samping/pseudo particles force
     /*!
-      replace c.m. force by the averaged force on orbital particles
+      replace c.m. force by the averaged force on sample/pseudo particles
       @param[in,out] _ptcl_artificial: one group of artificial particles 
     */
     template <class Tptcl>
@@ -486,36 +366,51 @@ public:
         // correctOrbitalParticleForce(_ptcl_artificial);
     }
 
-    //! get oribital particle list address from a artificial particle array
+    //! get oribit/pseudo particle list address from a artificial particle array
     template <class Tptcl>
     Tptcl* getOrbitalParticles(Tptcl* _ptcl_list)  {
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-        assert(_ptcl_list[index_offset_orb_].group_data.artificial.isArtificial());
+        assert(_ptcl_list[getIndexOffsetOrb()].group_data.artificial.isArtificial());
 #endif
-        return &_ptcl_list[index_offset_orb_];
+        return &_ptcl_list[getIndexOffsetOrb()];
     }
 
     //! get tidal tensor particle list address from a artificial particle array
     template <class Tptcl>
     Tptcl* getTidalTensorParticles(Tptcl* _ptcl_list) {
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-        assert(_ptcl_list[index_offset_tt_].group_data.artificial.isArtificial());
+        assert(_ptcl_list[getIndexOffsetTT()].group_data.artificial.isArtificial());
 #endif
-        return &_ptcl_list[index_offset_tt_];
+        return &_ptcl_list[getIndexOffsetTT()];
     }
 
     //! get c.m. particle list address from a artificial particle array
     template <class Tptcl>
     Tptcl* getCMParticles(Tptcl* _ptcl_list)  {
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-        assert(_ptcl_list[index_cm_].group_data.artificial.isCM());
+        assert(_ptcl_list[getIndexOffsetCM()].group_data.artificial.isCM());
 #endif
-        return &_ptcl_list[index_cm_];
+        return &_ptcl_list[getIndexOffsetCM()];
+    }
+
+    //! tidal tensor particle index offset
+    PS::S32 getIndexOffsetTT() const {
+        return 0;
+    }
+
+    //! orbital/pseudo particle index offset
+    PS::S32 getIndexOffsetOrb() const {
+        return TidalTensor::n_point;
+    }
+
+    //! CM particle index offset
+    PS::S32 getIndexOffsetCM() const {
+        return TidalTensor::n_point + orbit_manager.getParticleN();
     }
 
     //! get artificial particle total number
     PS::S32 getArtificialParticleN() const {
-        return n_artificial_;
+        return TidalTensor::n_point + orbit_manager.getParticleN() + 1;
     }
 
     //! get artificial particle total number
@@ -525,12 +420,7 @@ public:
 
     //! get orbitial particle number 
     PS::S32 getOrbitalParticleN() const {
-        return n_artificial_ - TidalTensor::n_point - 1;
-    }
-
-    //! get particle split number
-    PS::S32 getParticleSplitN() const{
-        return n_split_;
+        return orbit_manager.getParticleN();
     }
 
     //! get left member number
@@ -542,16 +432,16 @@ public:
         return PS::S32(_ptcl_list[0].group_data.artificial.getData());
     }
 
-    //! get left member number
+    //! get member number
     template <class Tptcl>
     PS::S32 getMemberN(const Tptcl* _ptcl_list) const {
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-        assert(_ptcl_list[index_cm_].group_data.artificial.isCM());
+        assert(_ptcl_list[getIndexOffsetCM()].group_data.artificial.isCM());
 #endif
-        return PS::S32(_ptcl_list[index_cm_].group_data.artificial.getData(true));
+        return PS::S32(_ptcl_list[getIndexOffsetCM()].group_data.artificial.getData(true));
     }
 
-    //! get left member number
+    //! get right member number
     template <class Tptcl>
     PS::S32 getRightMemberN(const Tptcl* _ptcl_list) const {
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
@@ -564,9 +454,9 @@ public:
     template <class Tptcl>
     PS::S64 getCMID(const Tptcl* _ptcl_list) const {
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-        assert(_ptcl_list[index_cm_].group_data.artificial.isCM());
+        assert(_ptcl_list[getIndexOffsetCM()].group_data.artificial.isCM());
 #endif
-        return -PS::S64(_ptcl_list[index_cm_].id);
+        return -PS::S64(_ptcl_list[getIndexOffsetCM()].id);
     }
 
     //! get stored data 
@@ -582,67 +472,34 @@ public:
     /*! @param[in] _fp: FILE type file for output
      */
     void writeBinary(FILE *_fp) {
-        fwrite(&n_split_,       sizeof(PS::S32), 1, _fp);
         fwrite(&r_tidal_tensor, sizeof(PS::F64), 1, _fp);
         fwrite(&id_offset,      sizeof(PS::S64), 1, _fp);
         fwrite(&gravitational_constant, sizeof(PS::F64), 1, _fp);
+        orbit_manager.writeBinary(_fp);
     }    
 
     //! read class data to file with binary format
     /*! @param[in] _fp: FILE type file for reading
      */
     void readBinary(FILE *_fin) {
-        PS::S32 n_split;
-        size_t rcount = fread(&n_split,  sizeof(PS::S32), 1, _fin);
+        size_t rcount = 0;
         rcount += fread(&r_tidal_tensor, sizeof(PS::F64), 1, _fin);
         rcount += fread(&id_offset,      sizeof(PS::S64), 1, _fin);
         rcount += fread(&gravitational_constant, sizeof(PS::F64), 1, _fin);
-
-        if (rcount<4) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+        if (rcount<3) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
             abort();
         }
-        setParticleSplitN(n_split);
+        orbit_manager.readBinary(_fin);
     }    
 
     //! print parameters
     void print(std::ostream & _fout) const{
         _fout<<"r_tidal_tensor   : "<<r_tidal_tensor<<std::endl
              <<"id_offset        : "<<id_offset<<std::endl
-             <<"n_split          : "<<n_split_<<std::endl;
+             <<"G:               : "<<gravitational_constant<<std::endl;
+        orbit_manager.print(_fout);
     }    
-
-    //! destructor 
-    ~ArtificialParticleManager() {
-        if (decca_list_!=NULL) {
-            delete [] decca_list_;
-            decca_list_=NULL;
-        }
-        if (dsin_ecca_list_!=NULL) {
-            delete [] dsin_ecca_list_;
-            dsin_ecca_list_=NULL;
-        }
-    }
-
-    //! operator = 
-    /*! Copy function will remove the local data and also copy the particle data or the link
-     */
-    ArtificialParticleManager& operator = (const ArtificialParticleManager& _ap_manager) {
-        if (decca_list_!=NULL) {
-            delete [] decca_list_;
-            decca_list_=NULL;
-        }
-        if (dsin_ecca_list_!=NULL) {
-            delete [] dsin_ecca_list_;
-            dsin_ecca_list_=NULL;
-        }
-        setParticleSplitN(_ap_manager.n_split_);
-        r_tidal_tensor = _ap_manager.r_tidal_tensor;
-        id_offset      = _ap_manager.id_offset;
-        gravitational_constant = _ap_manager.gravitational_constant;
-        return *this;
-    }
-
 
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
     template <class Tptcl, class Tpart>

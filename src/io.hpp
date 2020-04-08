@@ -115,10 +115,7 @@ class FileHeader{
 public:
     PS::S64 nfile;  // file id
     PS::S64 n_body;
-    //PS::S64 id_offset; // file id offset for add new artificial particles, should be larger than the maximum file id
     PS::F64 time;
-    //PS::F64 dt_soft;   // tree time step should be recorded for restarting (soft kick of cm)
-    //PS::S64 n_split;   // n_split is also needed for restarting (soft kick of cm)
     FileHeader(){
         n_body = 0;
         time = 0.0;

@@ -13,6 +13,7 @@ debug_mode=@with_debug@
 step_mode=@with_step_mode@
 se_mode=@with_interrupt@
 tt_mode=@with_tidal_tensor@
+orb_mode=@with_orbit@
 
 #MT_FLAGS += -D HARD_CM_KICK
 MT_FLAGS += -D USE_QUAD
@@ -31,6 +32,10 @@ MT_FLAGS += -D HARD_COUNT_NO_NEIGHBOR
 
 ifeq ($(tt_mode),3rd)
 MT_FLAGS += -D TIDAL_TENSOR_3RD
+endif
+
+ifeq ($(orb_mode),os)
+MT_FLAGS += -D ORBIT_SAMPLING
 endif
 
 ifneq ($(se_mode),off)
@@ -152,7 +157,7 @@ DEBUG_OPT_FLAGS = @DEBFLAGS@ -D SANITY_CHECK_REALLOCATABLE_ARRAY
 HARD_DEBFLAGS+= -D AR_DEBUG -D AR_DEBUG_DUMP -D AR_WARN -D HARD_DEBUG -D HARD_DEBUG_PRINT -D ADJUST_GROUP_DEBUG -D HERMITE_DEBUG -D AR_COLLECT_DS_MODIFY_INFO -D STABLE_CHECK_DEBUG_PRINT -D ARTIFICIAL_PARTICLE_DEBUG -D ARTIFICIAL_PARTICLE_DEBUG_PRINT
 HARD_MT_FLAGS += -D AR_TTL -D AR_SLOWDOWN_INNER -D AR_SLOWDOWN_TIMESCALE -D HARD_CHECK_ENERGY 
 
-HARD_SRC= io.hpp ptcl.hpp usr_define.hpp hard_assert.hpp cluster_list.hpp hard.hpp hard_ptcl.hpp hermite_interaction.hpp hermite_information.hpp hermite_perturber.hpp ar_interaction.hpp ar_perturber.hpp search_group_candidate.hpp artificial_particles.hpp stability.hpp soft_ptcl.hpp static_variables.hpp
+HARD_SRC= io.hpp ptcl.hpp usr_define.hpp hard_assert.hpp cluster_list.hpp hard.hpp hard_ptcl.hpp hermite_interaction.hpp hermite_information.hpp hermite_perturber.hpp ar_interaction.hpp ar_perturber.hpp search_group_candidate.hpp artificial_particles.hpp stability.hpp soft_ptcl.hpp static_variables.hpp tidal_tensor.hpp orbit_sampling.hpp pseudoparticle_multipole.hpp
 
 build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) |build
 	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
