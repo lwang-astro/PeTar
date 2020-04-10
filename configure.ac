@@ -342,6 +342,8 @@ AS_IF([test x"$prefix" != xNONE],
        AC_MSG_NOTICE([      add $prefix/include into your PTHYON include path])
        AC_MSG_NOTICE([      add $prefix/bin into your PATH])],
       [AC_MSG_WARN([Install path is not defined, please provide it by using --prefix=INSTALL_PATH])])
+AS_IF([test "x$use_omp" != xno],
+      [AC_MSG_NOTICE([      add 'export OMP_STACKSIZE=128M' in your bash configure file (e.g. .bashrc) to avoid segmentational fault])])
 AC_MSG_NOTICE([-----------------------------------------------------------])
 AC_MSG_NOTICE([Reference paper: preparing...])
 AC_MSG_NOTICE([Questions and bug reports: https://github.com/lwang-astro/PeTar/issues])

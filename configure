@@ -6045,6 +6045,10 @@ else
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Install path is not defined, please provide it by using --prefix=INSTALL_PATH" >&5
 $as_echo "$as_me: WARNING: Install path is not defined, please provide it by using --prefix=INSTALL_PATH" >&2;}
 fi
+if test "x$use_omp" != xno; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}:       add 'export OMP_STACKSIZE=128M' in your bash configure file (e.g. .bashrc) to avoid segmentational fault" >&5
+$as_echo "$as_me:       add 'export OMP_STACKSIZE=128M' in your bash configure file (e.g. .bashrc) to avoid segmentational fault" >&6;}
+fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: -----------------------------------------------------------" >&5
 $as_echo "$as_me: -----------------------------------------------------------" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: Reference paper: preparing..." >&5
