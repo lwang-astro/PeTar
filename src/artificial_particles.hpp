@@ -227,7 +227,7 @@ public:
 
     //! check paramters
     bool checkParams() {
-        ASSERT(TidalTensor::n_point%2==0);
+        ASSERT(TidalTensor::getParticleN()%2==0);
         ASSERT(r_tidal_tensor>=0.0);
         ASSERT(id_offset>0);
         ASSERT(gravitational_constant>0);
@@ -236,7 +236,7 @@ public:
     }
 
     //! create artificial particles 
-    /*! First TidalTensor::n_point are tidal tensor particles; others-1 are orbitial sample particles; last is c.m.  
+    /*! First TidalTensor::getParticleN() are tidal tensor particles; others-1 are orbitial sample particles; last is c.m.  
       id: 
       tt/orb: id_offset + abs(member->id)*(n_artificial-1)/2 + index/2;
       cm: - abs(_bin.id)
@@ -277,7 +277,7 @@ public:
 #endif
         }
 
-        // First TidalTensor::n_point is used for tidal tensor points
+        // First TidalTensor::getParticleN() is used for tidal tensor points
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
         assert(r_tidal_tensor<=_bin.changeover.getRin());
 #endif
@@ -400,22 +400,22 @@ public:
 
     //! orbital/pseudo particle index offset
     PS::S32 getIndexOffsetOrb() const {
-        return TidalTensor::n_point;
+        return TidalTensor::getParticleN();
     }
 
     //! CM particle index offset
     PS::S32 getIndexOffsetCM() const {
-        return TidalTensor::n_point + orbit_manager.getParticleN();
+        return TidalTensor::getParticleN() + orbit_manager.getParticleN();
     }
 
     //! get artificial particle total number
     PS::S32 getArtificialParticleN() const {
-        return TidalTensor::n_point + orbit_manager.getParticleN() + 1;
+        return TidalTensor::getParticleN() + orbit_manager.getParticleN() + 1;
     }
 
     //! get artificial particle total number
     PS::S32 getTidalTensorParticleN() const {
-        return TidalTensor::n_point;
+        return TidalTensor::getParticleN();
     }
 
     //! get orbitial particle number 

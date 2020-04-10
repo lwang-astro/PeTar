@@ -5,8 +5,6 @@
 //! PseudoParticle Multipole method for counter force from binaries
 class PseudoParticleMultipoleManager{
 public:
-    static const PS::S32 n_point;
-
     //! check paramters
     bool checkParams() {
         return true;
@@ -57,8 +55,8 @@ public:
     }
 
     //! get particle number 
-    PS::S32 getParticleN() const {
-        return n_point;
+    static PS::S32 getParticleN() {
+        return 3;
     }
 
     //! write class data to file with binary format
@@ -77,5 +75,3 @@ public:
     void print(std::ostream & _fout) const{
     }
 };
-
-const PS::S32 PseudoParticleMultipoleManager::n_point = 3;

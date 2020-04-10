@@ -12,7 +12,6 @@ private:
 public:
     PS::F64vec pos;  // position of c.m.
     PS::F64 group_id; // indicate which group use the tensor
-    static const PS::S32 n_point;
 
     TidalTensor(): T1{0.0, 0.0, 0.0}, 
                    T2{0.0, 0.0, 0.0,  0.0, 0.0, 0.0,  0.0, 0.0, 0.0}, 
@@ -82,7 +81,7 @@ public:
 
 #endif
 
-        for (int i=0; i<n_point; i++) {
+        for (int i=0; i<getParticleN(); i++) {
             // co-moving velocity
             _ptcl_tt[i].vel  = _ptcl_cm.vel;
             // no mass
@@ -93,7 +92,7 @@ public:
     //! subtract c.m. force from measure points
     template<class Tptcl>
     static void subtractCMForce(Tptcl* _ptcl_tt, const Tptcl& _ptcl_cm) {
-        for (int k=0; k<n_point; k++) _ptcl_tt[k].acc -= _ptcl_cm.acc;
+        for (int k=0; k<getParticleN(); k++) _ptcl_tt[k].acc -= _ptcl_cm.acc;
     }
 
     //! tidal tensor fitting function,
@@ -129,6 +128,8 @@ public:
     void fit(Tptcl* _ptcl_tt, Tptcl& _ptcl_cm,  const PS::F64 _size) {
         // get c.m. position
         pos = _ptcl_cm.pos;
+
+        PS::S32 n_point = getParticleN();
 
         PS::F64vec fi[n_point];
 
@@ -429,10 +430,14 @@ public:
 #endif
              <<std::endl;
     }
+
+    //! get particle number 
+    static PS::S32 getParticleN() {
+#ifdef TIDAL_TENSOR_3RD
+        return 8;
+#else
+        return 4;
+#endif
+    }
 };
 
-#ifdef TIDAL_TENSOR_3RD
-const PS::S32 TidalTensor::n_point = 8;
-#else
-const PS::S32 TidalTensor::n_point = 4;
-#endif
