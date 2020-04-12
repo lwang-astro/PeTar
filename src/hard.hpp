@@ -945,6 +945,9 @@ public:
                  <<"  dE: "<<de
                  <<"  dE_SD: "<<de_sd
                  <<"  dE_SD_CHANGE: "<<de_sd_change_cum
+                 <<"  H4_step_sum: "<<H4_step_sum
+                 <<"  ARC_substep_sum: "<<ARC_substep_sum
+                 <<"  ARC_tsyn_step_sum: "<<ARC_tsyn_step_sum
                  <<std::endl;
 #endif        
         if (abs(de_sd) > manager->energy_error_max) {
