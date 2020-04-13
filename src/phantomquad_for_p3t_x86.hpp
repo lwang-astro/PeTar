@@ -6,10 +6,12 @@
 #define USE__AVX512
 #endif
 
+#ifndef __FMA__
 #define _mm256_fmadd_ps(x,y,z)  _mm256_add_ps(z, _mm256_mul_ps(x,y))
 #define _mm256_fnmadd_ps(x,y,z) _mm256_sub_ps(z, _mm256_mul_ps(x,y))
 #define _mm512_fmadd_ps(x,y,z)  _mm512_add_ps(z, _mm512_mul_ps(x,y))
 #define _mm512_fnmadd_ps(x,y,z) _mm512_sub_ps(z, _mm512_mul_ps(x,y))
+#endif
 
 class PhantomGrapeQuad{
 public:
@@ -840,12 +842,12 @@ private:
     }
 #endif
 
-#ifdef __FMA__    
-#undef _mm256_fmadd_ps
-#undef _mm256_fnmadd_ps
-#undef _mm512_fmadd_ps
-#undef _mm512_fnmadd_ps
-#endif
+//#ifndef __FMA__    
+//#undef _mm256_fmadd_ps
+//#undef _mm256_fnmadd_ps
+//#undef _mm512_fmadd_ps
+//#undef _mm512_fnmadd_ps
+//#endif
     
 #ifdef USE__AVX512
 	__attribute__ ((noinline))
