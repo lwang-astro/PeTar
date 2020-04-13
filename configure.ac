@@ -7,7 +7,6 @@ AC_INIT([PeTar], [1.0], [longwang.astro@live.com])
 m4_include([autoconf_m4/ax_check_compile_flag.m4])
 m4_include([autoconf_m4/ax_prog_cxx_mpi.m4])
 m4_include([autoconf_m4/ax_openmp.m4])
-m4_include([autoconf_m4/ax_gcc_x86_cpu_supports.m4])
 #AC_CONFIG_SRCDIR([src/main.cc])
 #AC_CONFIG_HEADERS([config.h])
 
@@ -98,7 +97,7 @@ AC_ARG_WITH([x86],
 
 AC_ARG_WITH([simd],
             [AS_HELP_STRING([--with-simd],
-                [compile with x86 architecture support (avx, core-avx2, skylake). Default: auto])],
+                [compile with x86 architecture support (avx, avx2, avx512). Default: auto])],
             [],
             [with_simd=auto])
 
@@ -106,23 +105,27 @@ AS_IF([test x"$with_arch" == xx86],
       [use_x86=yes
        use_simd=no
        AS_IF([test x"$with_simd" != xauto],
-             [AX_CHECK_COMPILE_FLAG([-march=$with_simd],
-                                    [SIMDFLAGS=" -march=$with_simd"
-		                     SIMD_TYPE=$with_simd
-				     use_simd=yes],
-				    [AC_MSG_FAILURE([$with_simd is not support by the compiler])])],
+             [AS_CASE($with_simd,
+                      [avx],[arch=core-avx-i],
+                      [avx2],[arch=core-avx2],
+		      [avx512],[arch=skylake-avx512],
+		      [AC_MSG_FAILURE([$with_simd is not support by the compiler])])
+	      AX_CHECK_COMPILE_FLAG([-march=$arch],
+                                    [SIMDFLAGS=" -march=$arch"
+                                     SIMD_TYPE=$with_simd
+                                     use_simd=yes],[])],
              [m4_foreach([ax_x86_feature],
-                         [[avx,avx], [core-avx2,avx2], [skylake,avx512dq]],
-                         [arch=m4_car(ax_x86_feature)
-                          simd_name=m4_cdr(ax_x86_feature)
+                         [[core-avx-i,avx], [core-avx2,avx2], [skylake-avx512,avx512dq]],
+                         [arch=m4_argn(1,ax_x86_feature)
+                          simd_name=m4_argn(2,ax_x86_feature)
                           AX_CHECK_COMPILE_FLAG([-march=$arch],
                                                 [simd_check=`grep -c $simd_name /proc/cpuinfo`
-                                                 AS_IF([test "$simd_check" -gt 0],
-                                                        [SIMDFLAGS=" -march=$arch"
-                                                         SIMD_TYPE="$arch"
-                                                         use_simd=yes],
-                                                        [])],
-                                                 [])])])
+                                                 AS_IF([test $simd_check -gt 0],
+                                                       [SIMDFLAGS=" -march=$arch"
+                                                        SIMD_TYPE="$simd_name"
+                                                        use_simd=yes],
+                                                       [])],
+                                                [])])])
        PROG_NAME=$PROG_NAME"."$SIMD_TYPE],
       [use_x86=no])
 
