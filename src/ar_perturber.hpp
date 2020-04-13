@@ -82,7 +82,7 @@ public:
         @param[in] _G: gravitatioal constant
      */
     template <class Tptcl>
-    void calcSoftPertMin(const COMM::BinaryTree<Tptcl>& _bin, const Float _G) {
+    void calcSoftPertMin(const AR::BinaryTree<Tptcl>& _bin, const Float _G) {
         soft_pert_min = 0.0;
 #ifdef SOFT_PERT
         if(soft_pert!=NULL&&_bin.semi>0.0) {

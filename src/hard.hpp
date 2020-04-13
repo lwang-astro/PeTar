@@ -461,7 +461,7 @@ public:
             n_group_sub_tot_init=0;
 #ifdef AR_SLOWDOWN_INNER
             for (int i=0; i<_n_group; i++) {
-                n_group_sub_init[i] = h4_int.groups[i].slowdown_inner.getSize();
+                n_group_sub_init[i] = h4_int.groups[i].binary_slowdown_inner.getSize();
                 n_group_sub_tot_init += n_group_sub_init[i];
             }
 #else
@@ -1039,7 +1039,7 @@ private:
 
 
 public:
-    PS::ReallocatableArray<COMM::BinaryTree<PtclH4>> binary_table;
+    PS::ReallocatableArray<COMM::BinaryTree<PtclH4,COMM::Binary>> binary_table;
     HardManager* manager;
 
 #ifdef PROFILE
@@ -1122,7 +1122,7 @@ private:
     /*! get new changeover, rsearch, id for c.m.
      */
     template <class Tchp, class Tptcl>
-    static PS::S64 calcBinaryIDChangeOverAndRSearchIter (Tchp& _par, const PS::S64& _id1, const PS::S64& _id2, COMM::BinaryTree<Tptcl>& _bin) {
+    static PS::S64 calcBinaryIDChangeOverAndRSearchIter (Tchp& _par, const PS::S64& _id1, const PS::S64& _id2, COMM::BinaryTree<Tptcl,COMM::Binary>& _bin) {
         // set bin id as the left member id
         // _id1==-1 is the initial status, once id is obtained, it is bin.id of left member
         if (_id1<0) _bin.id = _bin.getLeftMember()->id;
@@ -2133,7 +2133,7 @@ public:
                                                           Tptcl* _ptcl_in_cluster,
                                                           const PS::S32 _n_ptcl,
                                                           PS::ReallocatableArray<Tptcl> & _ptcl_artificial,
-                                                          PS::ReallocatableArray<COMM::BinaryTree<PtclH4>> & _binary_table,
+                                                          PS::ReallocatableArray<COMM::BinaryTree<PtclH4,COMM::Binary>> & _binary_table,
                                                           PS::S32 &_n_groups,
                                                           PS::ReallocatableArray<GroupIndexInfo>& _n_member_in_group,
                                                           PS::ReallocatableArray<PS::S32>& _changeover_update_list,
@@ -2147,7 +2147,7 @@ public:
         auto& ap_manager = manager->ap_manager;
 
         for (int i=0; i<_groups.getNumberOfGroups(); i++) {
-            PS::ReallocatableArray<COMM::BinaryTree<Tptcl>> binary_tree;   // hierarch binary tree
+            PS::ReallocatableArray<COMM::BinaryTree<Tptcl,COMM::Binary>> binary_tree;   // hierarch binary tree
 
             const PS::S32 n_members = _groups.getNumberOfGroupMembers(i);
             binary_tree.reserve(n_members);
@@ -2159,7 +2159,7 @@ public:
             binary_tree.resizeNoInitialize(n_members-1);
             // build hierarch binary tree from the minimum distant neighbors
 
-            COMM::BinaryTree<Tptcl>::generateBinaryTree(binary_tree.getPointer(), member_list, n_members, _ptcl_in_cluster, ap_manager.gravitational_constant);
+            COMM::BinaryTree<Tptcl,COMM::Binary>::generateBinaryTree(binary_tree.getPointer(), member_list, n_members, _ptcl_in_cluster, ap_manager.gravitational_constant);
 
             struct {PS::F64 mean_mass_inv, rin, rout, dt_tree; } changeover_rsearch_pars = {Tptcl::mean_mass_inv, manager->r_in_base, manager->r_out_base, _dt_tree};
             // get new changeover and rsearch for c.m.
@@ -2380,7 +2380,7 @@ public:
 
         const PS::S32 num_thread = PS::Comm::getNumberOfThread();
         PS::ReallocatableArray<PtclH4> ptcl_artificial_thread[num_thread];
-        PS::ReallocatableArray<COMM::BinaryTree<PtclH4>> binary_table_thread[num_thread];
+        PS::ReallocatableArray<COMM::BinaryTree<PtclH4,COMM::Binary>> binary_table_thread[num_thread];
         PS::ReallocatableArray<GroupIndexInfo> n_member_in_group_thread[num_thread];
         PS::ReallocatableArray<PS::S32> i_cluster_changeover_update_threads[num_thread];
         for (PS::S32 i=0; i<num_thread; i++) {

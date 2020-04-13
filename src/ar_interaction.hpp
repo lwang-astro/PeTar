@@ -368,7 +368,7 @@ public:
     }
 
     //! calculate perturbation from binary tree
-    static Float calcPertFromBinary(const COMM::BinaryTree<ARPtcl>& _bin) {
+    static Float calcPertFromBinary(const AR::BinaryTree<ARPtcl>& _bin) {
         Float apo = _bin.semi*(1.0+_bin.ecc);
         Float apo2 = apo*apo;
 #ifdef AR_SLOWDOWN_PERT_R4
@@ -392,14 +392,14 @@ public:
 
     //! information of perturbation for iteration function
     struct SlowDownPertCollector{
-        COMM::BinaryTree<ARPtcl>* bin;
+        AR::BinaryTree<ARPtcl>* bin;
         Float G;
         Float pert_pot;
         Float t_min_sq;
     }; 
 
     //! iteration function to calculate perturbation and timescale information
-    static SlowDownPertCollector* calcSlowDownPertBinIter(SlowDownPertCollector*& _sdt, COMM::BinaryTree<ARPtcl>& _bin) {
+    static SlowDownPertCollector* calcSlowDownPertBinIter(SlowDownPertCollector*& _sdt, AR::BinaryTree<ARPtcl>& _bin) {
         if (&_bin == _sdt->bin || (_bin.semi>0.0 && _bin.getMemberN()==2)) return _sdt;
 
         const Float* xcm = &(_sdt->bin->pos.x);
@@ -485,7 +485,7 @@ public:
       @param[in] _bin: binary tree for calculating slowdown
       @param[in] _bin_root: binary tree root of the AR group
      */
-    void calcSlowDownInnerBinary(AR::SlowDown& _slowdown, const AR::SlowDown& _slowdown_cm, COMM::BinaryTree<ARPtcl>& _bin, COMM::BinaryTree<ARPtcl>& _bin_root) {
+    void calcSlowDownInnerBinary(AR::SlowDown& _slowdown, const AR::SlowDown& _slowdown_cm, AR::BinaryTree<ARPtcl>& _bin, AR::BinaryTree<ARPtcl>& _bin_root) {
         _slowdown.pert_in = calcPertFromBinary(_bin);
         _slowdown.period = _bin.period;
 
@@ -519,7 +519,7 @@ public:
       @param[in] _bin_root: binary tree root
       @param[in] _perturber: pertuber container
     */
-    void calcSlowDownPert(AR::SlowDown& _slowdown, const H4Ptcl& _particle_cm, const COMM::BinaryTree<ARPtcl>& _bin_root, const ARPerturber& _perturber) {
+    void calcSlowDownPert(AR::SlowDown& _slowdown, const H4Ptcl& _particle_cm, const AR::BinaryTree<ARPtcl>& _bin_root, const ARPerturber& _perturber) {
         static const Float inv3 = 1.0 / 3.0;
 
         // slowdown inner perturbation: m1*m2/apo_in^4
@@ -661,7 +661,7 @@ public:
       @param[in] _bin_interrupt: interrupt binary information: adr: binary tree address; time_now: current physical time; time_end: integration finishing time; status: interrupt status: change, merge,none
       @param[in] _bin: binarytree to check iteratively
      */
-    static AR::InterruptBinary<ARPtcl>* modifyAndInterruptIter(AR::InterruptBinary<ARPtcl>*& _bin_interrupt, COMM::BinaryTree<ARPtcl>& _bin) {
+    static AR::InterruptBinary<ARPtcl>* modifyAndInterruptIter(AR::InterruptBinary<ARPtcl>*& _bin_interrupt, AR::BinaryTree<ARPtcl>& _bin) {
 #ifdef STELLAR_EVOLUTION
         if (_bin.getMemberN()==2&&_bin_interrupt->status==AR::InterruptStatus::none) {
             ARPtcl *p1,*p2;

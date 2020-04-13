@@ -5,7 +5,7 @@
 template <class Tptcl>
 class Stability {
 public:
-    typedef COMM::BinaryTree<Tptcl> BinTree;
+    typedef COMM::BinaryTree<Tptcl,COMM::Binary> BinTree;
     typedef COMM::Binary            Bin;
     PS::F64 t_crit;                             // period criterion to determine stability
     PS::ReallocatableArray<BinTree*> stable_binary_tree;  // to store the address of sub-branch of stable systems from a binary tree

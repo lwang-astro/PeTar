@@ -17,7 +17,7 @@ public:
      */
     template <class Tptcl>
     void createSampleParticles(Tptcl* _ptcl_artificial,
-                               COMM::BinaryTree<Tptcl> &_bin) {
+                               COMM::BinaryTree<Tptcl,COMM::Binary> &_bin) {
         PS::F64 m12 = _bin.mass;
         PS::F64 mu = _bin.m1*_bin.m2/m12;
         PS::F64 prefactor = _bin.semi*std::sqrt(mu/m12);

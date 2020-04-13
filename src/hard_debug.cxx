@@ -183,7 +183,7 @@ int main(int argc, char **argv){
       SystemHard sys;
       sys.manager = &hard_manager;
 
-      PS::ReallocatableArray<COMM::BinaryTree<PtclH4>> binary_table;
+      PS::ReallocatableArray<COMM::BinaryTree<PtclH4,COMM::Binary>> binary_table;
       PS::ReallocatableArray<SystemHard::GroupIndexInfo> n_member_in_group;
       PS::ReallocatableArray<PS::S32> i_cluster_changeover_update;
       // generate artificial particles, stability test is included

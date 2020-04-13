@@ -260,7 +260,7 @@ public:
     */
     template <class Tptcl>
     void createArtificialParticles(Tptcl* _ptcl_artificial,
-                                   COMM::BinaryTree<Tptcl> &_bin, 
+                                   COMM::BinaryTree<Tptcl,COMM::Binary> &_bin, 
                                    const PS::F64* _data_to_store,
                                    const PS::S32 _n_data) {
         ASSERT(checkParams());
@@ -288,7 +288,7 @@ public:
         
         // store the component member number 
         for (int j=0; j<2; j++) {
-            PS::S32 n_members = _bin.isMemberTree(j) ? ((COMM::BinaryTree<Tptcl>*)(_bin.getMember(j)))->getMemberN() : 1;
+            PS::S32 n_members = _bin.isMemberTree(j) ? ((COMM::BinaryTree<Tptcl,COMM::Binary>*)(_bin.getMember(j)))->getMemberN() : 1;
             _ptcl_artificial[j].group_data.artificial.storeData(n_members); 
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
             assert(n_members>0);
