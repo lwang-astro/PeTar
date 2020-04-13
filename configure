@@ -3787,7 +3787,7 @@ else
   :
 fi
 arch=skylake-avx512
-                          simd_name=avx512dq
+                          simd_name=avx512
                           as_CACHEVAR=`$as_echo "ax_cv_check_cxxflags__-march=$arch" | $as_tr_sh`
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -march=$arch" >&5
 $as_echo_n "checking whether C++ compiler accepts -march=$arch... " >&6; }

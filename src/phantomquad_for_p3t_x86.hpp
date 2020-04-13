@@ -6,12 +6,10 @@
 #define USE__AVX512
 #endif
 
-#ifndef __INTEL_COMPILER
 #define _mm256_fmadd_ps(x,y,z)  _mm256_add_ps(z, _mm256_mul_ps(x,y))
 #define _mm256_fnmadd_ps(x,y,z) _mm256_sub_ps(z, _mm256_mul_ps(x,y))
 #define _mm512_fmadd_ps(x,y,z)  _mm512_add_ps(z, _mm512_mul_ps(x,y))
 #define _mm512_fnmadd_ps(x,y,z) _mm512_sub_ps(z, _mm512_mul_ps(x,y))
-#endif
 
 class PhantomGrapeQuad{
 public:

@@ -115,7 +115,7 @@ AS_IF([test x"$with_arch" == xx86],
                                      SIMD_TYPE=$with_simd
                                      use_simd=yes],[])],
              [m4_foreach([ax_x86_feature],
-                         [[core-avx-i,avx], [core-avx2,avx2], [skylake-avx512,avx512dq]],
+                         [[core-avx-i,avx], [core-avx2,avx2], [skylake-avx512,avx512]],
                          [arch=m4_argn(1,ax_x86_feature)
                           simd_name=m4_argn(2,ax_x86_feature)
                           AX_CHECK_COMPILE_FLAG([-march=$arch],
