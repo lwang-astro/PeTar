@@ -1,9 +1,8 @@
 #include <iostream>
-#include <cstdio>
 #include <iomanip>
 #include <string>
-#include <unistd.h>
-#include <unordered_map>
+#include<getopt.h>
+
 #include <particle_simulator.hpp>
 #define HARD_DEBUG_PRINT_FEQ 1024
 

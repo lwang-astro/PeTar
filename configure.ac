@@ -16,6 +16,7 @@ PROG_NAME="petar"
 AC_LANG([C++])
 
 AC_PROG_AWK
+AC_PROG_GREP
 
 # Checks for programs.
 # MPI
@@ -97,7 +98,7 @@ AC_ARG_WITH([x86],
 
 AC_ARG_WITH([simd],
             [AS_HELP_STRING([--with-simd],
-                [compile with x86 SIMD support for long-distant tree force (avx, avx2, avx512dq). Default: auto])],
+                [compile with x86 architecture support (avx, core-avx2, skylake). Default: auto])],
             [],
             [with_simd=auto])
 
@@ -105,18 +106,23 @@ AS_IF([test x"$with_arch" == xx86],
       [use_x86=yes
        use_simd=no
        AS_IF([test x"$with_simd" != xauto],
-             [AX_CHECK_COMPILE_FLAG([-m$with_simd],
-                                    [SIMDFLAGS=" -m$with_simd"
+             [AX_CHECK_COMPILE_FLAG([-march=$with_simd],
+                                    [SIMDFLAGS=" -march=$with_simd"
 		                     SIMD_TYPE=$with_simd
 				     use_simd=yes],
 				    [AC_MSG_FAILURE([$with_simd is not support by the compiler])])],
-             [m4_foreach_w([ax_x86_feature],
-                           [avx avx2 avx512dq],
-                           [AX_GCC_X86_CPU_SUPPORTS(ax_x86_feature,
-                                                    [SIMDFLAGS=" -m[]ax_x86_feature"
-                                                     SIMD_TYPE="[]ax_x86_feature"
-                                                     use_simd=yes],
-						     [])])])
+             [m4_foreach([ax_x86_feature],
+                         [[avx,avx], [core-avx2,avx2], [skylake,avx512dq]],
+                         [arch=m4_car(ax_x86_feature)
+                          simd_name=m4_cdr(ax_x86_feature)
+                          AX_CHECK_COMPILE_FLAG([-march=$arch],
+                                                [simd_check=`grep -c $simd_name /proc/cpuinfo`
+                                                 AS_IF([test "$simd_check" -gt 0],
+                                                        [SIMDFLAGS=" -march=$arch"
+                                                         SIMD_TYPE="$arch"
+                                                         use_simd=yes],
+                                                        [])],
+                                                 [])])])
        PROG_NAME=$PROG_NAME"."$SIMD_TYPE],
       [use_x86=no])
 

@@ -2173,12 +2173,12 @@ public:
             stable_checker.findClosedTree(binary_tree.back());
 
             // save group information to binary table.
-            for (int i=0; i<stable_checker.stable_binary_tree.size(); i++) {
-                auto& closed_binary_tree_i = *stable_checker.stable_binary_tree[i];
-                const PS::S32 n_members = closed_binary_tree_i.getMemberN();
+            for (int k=0; k<stable_checker.stable_binary_tree.size(); k++) {
+                auto& closed_binary_tree_k = *stable_checker.stable_binary_tree[k];
+                const PS::S32 n_members = closed_binary_tree_k.getMemberN();
                 PS::S32 start_index_binary_table = _binary_table.size();
                 _binary_table.increaseSize(n_members);
-                closed_binary_tree_i.getherBinaryTreeIter(_binary_table.getPointer(start_index_binary_table));
+                closed_binary_tree_k.getherBinaryTreeIter(_binary_table.getPointer(start_index_binary_table));
             }
 
 
