@@ -58,8 +58,8 @@ public:
     //! set time step range
     void setDtRange(const PS::F64 _dt_max, const PS::S32 _dt_min_index) {
         h4_manager.step.setDtRange(_dt_max, _dt_min_index);
-        ar_manager.time_step_real_min = h4_manager.step.getDtMin();
-        ar_manager.time_error_max_real = 0.25*ar_manager.time_step_real_min;
+        ar_manager.time_step_min = h4_manager.step.getDtMin();
+        ar_manager.time_error_max = 0.25*ar_manager.time_step_min;
     }
 
     //! check paramters
@@ -351,7 +351,7 @@ public:
             
             // initialization 
             sym_int.initialIntegration(0.0);
-            sym_int.info.calcDsAndStepOption(sym_int.slowdown.getSlowDownFactorOrigin(), ar_manager.step.getOrder(),  ar_manager.interaction.gravitational_constant); 
+            sym_int.info.calcDsAndStepOption(ar_manager.step.getOrder(),  ar_manager.interaction.gravitational_constant); 
 
             // calculate c.m. changeover
             auto& pcm = sym_int.particles.cm;
@@ -361,7 +361,7 @@ public:
 #ifdef HARD_DEBUG
             if(_ptcl_artificial==NULL) {
                 PS::F64 period = sym_int.info.getBinaryTreeRoot().period;
-                PS::F64 sd_factor = sym_int.slowdown.getSlowDownFactor();
+                PS::F64 sd_factor = sym_int.info.getBinaryTreeRoot().slowdown.getSlowDownFactor();
                 PS::F64 sd_tmax = manager->ar_manager.slowdown_timescale_max;
                 if (1.01*sd_factor*period<=sd_tmax) {
                     std::cerr<<"Warning: isolated binary SD ("<<sd_factor<<") * period ("<<period<<") = "<<period*sd_factor<<"< SD_timescale_max = dt_tree*n_step_per_orbit ("<<sd_tmax<<")"<<std::endl;
@@ -459,15 +459,16 @@ public:
             // AR inner slowdown number
             n_group_sub_init.resizeNoInitialize(_n_group);
             n_group_sub_tot_init=0;
-#ifdef AR_SLOWDOWN_INNER
             for (int i=0; i<_n_group; i++) {
-                n_group_sub_init[i] = h4_int.groups[i].binary_slowdown_inner.getSize();
+#ifdef AR_SLOWDOWN_ARRAY
+                n_group_sub_init[i] = h4_int.groups[i].binary_slowdown.getSize();
+#else
+                n_group_sub_init[i] = h4_int.groups[i].info.binarytree.getSize();
+#endif
                 n_group_sub_tot_init += n_group_sub_init[i];
             }
-#else
-            for (int i=0; i<_n_group; i++) n_group_sub_init[i] = 0;
 #endif
-#endif
+
             h4_int.adjustGroups(true);
 
             const PS::S32 n_init = h4_int.getNInitGroup();
@@ -783,14 +784,13 @@ public:
             ARC_substep_sum += sym_int.profile.step_count;
 #endif
 #ifdef HARD_CHECK_ENERGY
-            PS::F64 kappa_inv = 1.0/sym_int.slowdown.getSlowDownFactor();
             ekin    = sym_int.getEkin();
             epot    = sym_int.getEpot();
             de      = sym_int.getEnergyError();
-#ifdef AR_SLOWDOWN_INNER
-            ekin_sd = kappa_inv*sym_int.getEkinSlowDownInner();
-            epot_sd = kappa_inv*sym_int.getEpotSlowDownInner();
-            de_sd   = kappa_inv*sym_int.getEnergyErrorSlowDownInner();
+#if (defined AR_SLOWDOWN_ARRAY) || (defined AR_SLOWDOWN_TREE)
+            ekin_sd = sym_int.getEkinSlowDownInner();
+            epot_sd = sym_int.getEpotSlowDownInner();
+            de_sd   = sym_int.getEnergyErrorSlowDownInner();
 #else
             ekin_sd = ekin;
             epot_sd = epot;
@@ -904,6 +904,7 @@ public:
             for (PS::S32 i=0; i<h4_int.getNGroup(); i++) {
                 const PS::S32 k= group_index[i];
                 auto& groupk = h4_int.groups[k];
+                auto& bink = groupk.info.getBinaryTreeRoot();
                 std::cerr<<"Group k:"<<std::setw(2)<<k
                          <<" N_member: "<<std::setw(4)<<groupk.particles.getSize()
                          <<" step: "<<std::setw(12)<<groupk.profile.step_count_sum
@@ -911,14 +912,13 @@ public:
 //                         <<" step(sum): "<<std::setw(12)<<h4_int.profile.ar_step_count
 //                         <<" step_tsyn(sum): "<<std::setw(12)<<h4_int.profile.ar_step_count_tsyn
                          <<" Soft_Pert: "<<std::setw(20)<<groupk.perturber.soft_pert_min
-                         <<" Pert_In: "<<std::setw(20)<<groupk.slowdown.getPertIn()
-                         <<" Pert_Out: "<<std::setw(20)<<groupk.slowdown.getPertOut()
-                         <<" SD: "<<std::setw(20)<<groupk.slowdown.getSlowDownFactor()
-                         <<" SD(org): "<<std::setw(20)<<groupk.slowdown.getSlowDownFactorOrigin();
-                auto& bin = groupk.info.getBinaryTreeRoot();
-                std::cerr<<" semi: "<<std::setw(20)<<bin.semi
-                         <<" ecc: "<<std::setw(20)<<bin.ecc
-                         <<" period: "<<std::setw(20)<<bin.period
+                         <<" Pert_In: "<<std::setw(20)<<bink.slowdown.getPertIn()
+                         <<" Pert_Out: "<<std::setw(20)<<bink.slowdown.getPertOut()
+                         <<" SD: "<<std::setw(20)<<bink.slowdown.getSlowDownFactor()
+                         <<" SD(org): "<<std::setw(20)<<bink.slowdown.getSlowDownFactorOrigin()
+                         <<" semi: "<<std::setw(20)<<bink.semi
+                         <<" ecc: "<<std::setw(20)<<bink.ecc
+                         <<" period: "<<std::setw(20)<<bink.period
                          <<" NB: "<<std::setw(4)<<groupk.perturber.neighbor_address.getSize()
                          <<std::endl;
                 if (groupk.profile.step_count_tsyn_sum>10000) {
