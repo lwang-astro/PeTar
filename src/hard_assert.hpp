@@ -45,6 +45,7 @@ public:
             ptcl_arti_bk.resizeNoInitialize(n_arti);
             for (int i=0; i<n_arti; i++) ptcl_arti_bk[i] = _ptcl_artifical[i];
         }
+        else n_arti = 0;
         n_group = _n_group;
     }                
 
