@@ -397,6 +397,8 @@ public:
       @param[in] _pj: particle j 
      */
     void calcSlowDownPertOne(Float& _pert_out, Float& _t_min_sq, const ARPtcl& pi, const ARPtcl& pj) {
+        const Float factor = 100.0;
+
         Float dr[3] = {pj.pos[0] - pi.pos[0],
                        pj.pos[1] - pi.pos[1],
                        pj.pos[2] - pi.pos[2]};
@@ -418,7 +420,7 @@ public:
 
         //hyperbolic, directly use velocity v
         if (semi<0) 
-            _t_min_sq = std::min(_t_min_sq, r2/v2);
+            _t_min_sq = std::min(_t_min_sq, factor*r2/v2);
         else {
             if (r<semi) {
                 // avoid decrese of vr once the orbit pass, calculate vr max at E=pi/2 (r==semi)
@@ -427,12 +429,12 @@ public:
                 Float er = 2*gm - rv2;
                 Float vcr2 = gm - rv2;
                 Float vrmax_sq = er*(drdv*drdv*er + r*vcr2*vcr2)/(gm*gm*r2);
-                _t_min_sq = std::min(_t_min_sq, semi*semi/vrmax_sq);
+                _t_min_sq = std::min(_t_min_sq, factor*semi*semi/vrmax_sq);
             }
             else {
                 // r/vr
                 Float rovr = r2/abs(drdv);
-                _t_min_sq = std::min(_t_min_sq, rovr*rovr);
+                _t_min_sq = std::min(_t_min_sq, factor*rovr*rovr);
             }
         }
 
@@ -453,6 +455,7 @@ public:
     */
     void calcSlowDownPert(Float& _pert_out, Float& _t_min_sq, const Float& _time, const H4Ptcl& _particle_cm, const ARPerturber& _perturber) {
         static const Float inv3 = 1.0 / 3.0;
+        const Float factor = 100.0;
 
         const int n_pert = _perturber.neighbor_address.getSize();
 
@@ -468,6 +471,7 @@ public:
             xcm[2] = _particle_cm.pos[2] + dt*(_particle_cm.vel[2] + 0.5*dt*(_particle_cm.acc0[2] + inv3*dt*_particle_cm.acc1[2]));
 
             Float mcm = _particle_cm.mass;
+            auto& chi = _particle_cm.changeover;
 
 #ifdef AR_SLOWDOWN_TIMESCALE
             // velocity dependent method 
@@ -491,13 +495,16 @@ public:
 
                 Float mj = pertj->mass;
 
+                auto& chj = pertj->changeover;
+
                 Float dr[3] = {xp[0] - xcm[0],
                                xp[1] - xcm[1],
                                xp[2] - xcm[2]};
 
                 Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2] + eps_sq;
                 Float r = sqrt(r2);
-                _pert_out += calcPertFromMR(r, mcm, mj);
+                Float k  = ChangeOver::calcAcc0WTwo(chi, chj, r);
+                _pert_out += calcPertFromMR(r, mcm, k*mj);
 
 #ifdef AR_SLOWDOWN_TIMESCALE
                 // velocity dependent method 
@@ -518,7 +525,7 @@ public:
 
                 //hyperbolic, directly use velocity v
                 if (semi<0) 
-                    _t_min_sq = std::min(_t_min_sq, r2/v2);
+                    _t_min_sq = std::min(_t_min_sq, factor*r2/v2);
                 else {
                     if (r<semi) {
                         // avoid decrese of vr once the orbit pass, calculate vr max at E=pi/2 (r==semi)
@@ -527,17 +534,21 @@ public:
                         Float er = 2*gm - rv2;
                         Float vcr2 = gm - rv2;
                         Float vrmax_sq = er*(drdv*drdv*er + r*vcr2*vcr2)/(gm*gm*r2);
-                        _t_min_sq = std::min(_t_min_sq, semi*semi/vrmax_sq);
+                        _t_min_sq = std::min(_t_min_sq, factor*semi*semi/vrmax_sq);
                     }
                     else {
                         // r/vr
                         Float rovr = r2/abs(drdv);
-                        _t_min_sq = std::min(_t_min_sq, rovr*rovr);
+                        _t_min_sq = std::min(_t_min_sq, factor*rovr*rovr);
                     }
                 }
 #endif
             }
         }
+
+        // add soft perturbation
+        _pert_out += _perturber.soft_pert_min;
+
     }
 #endif
 
@@ -545,18 +556,14 @@ public:
     /*! check the inner left binary whether their separation is smaller than particle radius sum and become close, if true, set one component stauts to merger with cm mass and the other unused with zero mass. Return the binary tree address 
       @param[in] _bin_interrupt: interrupt binary information: adr: binary tree address; time_now: current physical time; time_end: integration finishing time; status: interrupt status: change, merge,none
       @param[in] _bin: binarytree to check iteratively
-     */
-    static AR::InterruptBinary<ARPtcl>* modifyAndInterruptIter(AR::InterruptBinary<ARPtcl>*& _bin_interrupt, AR::BinaryTree<ARPtcl>& _bin) {
+    */
+    void modifyAndInterruptIter(AR::InterruptBinary<ARPtcl>& _bin_interrupt, AR::BinaryTree<ARPtcl>& _bin) {
 #ifdef STELLAR_EVOLUTION
-        if (_bin.getMemberN()==2&&_bin_interrupt->status==AR::InterruptStatus::none) {
-            ARPtcl *p1,*p2;
-            p1 = _bin.getLeftMember();
-            p2 = _bin.getRightMember();
-
+        if (_bin_interrupt.status==AR::InterruptStatus::none) {
             auto merge = [&]() {
-                _bin_interrupt->adr = &_bin;
-                _bin_interrupt->status = AR::InterruptStatus::merge;
-                std::cerr<<"Binary Merge: time: "<<_bin_interrupt->time_now<<std::endl;
+                _bin_interrupt.adr = &_bin;
+                _bin_interrupt.status = AR::InterruptStatus::merge;
+                std::cerr<<"Binary Merge: time: "<<_bin_interrupt.time_now<<std::endl;
                 _bin.Binary::printColumnTitle(std::cerr);
                 ARPtcl::printColumnTitle(std::cerr);
                 ARPtcl::printColumnTitle(std::cerr);
@@ -565,10 +572,12 @@ public:
                 for (int k=0; k<2; k++) 
                     _bin.getMember(k)->printColumn(std::cerr);
                 std::cerr<<std::endl;
+                p1->printColumn(std::cerr);
+                p2->printColumn(std::cerr);
                 Float mcm = p1->mass + p2->mass;
                 for (int k=0; k<3; k++) {
                     p1->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
-                    p1->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
+                    p2->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
                 }
                 p1->setBinaryInterruptState(BinaryInterruptState::none);
                 p2->setBinaryInterruptState(BinaryInterruptState::none);
@@ -577,41 +586,49 @@ public:
                 p2->group_data.artificial.setParticleTypeToUnused();
             };
 
-            if (p1->getBinaryInterruptState()== BinaryInterruptState::collision && 
-                p2->getBinaryInterruptState()== BinaryInterruptState::collision &&
-                p1->time_interrupt<_bin_interrupt->time_end && p2->time_interrupt<_bin_interrupt->time_end) merge();
-            else {
-                Float peri = _bin.semi*(1-_bin.ecc);
-                Float radius = p1->radius + p2->radius;
-                if (peri<radius &&
-                    p1->getBinaryInterruptState()!=BinaryInterruptState::collision && 
-                    p2->getBinaryInterruptState()!=BinaryInterruptState::collision) {
-                    Float dr[3] = {p1->pos[0] - p2->pos[0], 
-                                   p1->pos[1] - p2->pos[1], 
-                                   p1->pos[2] - p2->pos[2]};
-                    Float dv[3] = {p1->vel[0] - p2->vel[0], 
-                                   p1->vel[1] - p2->vel[1], 
-                                   p1->vel[2] - p2->vel[2]};
-                    Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
-                    Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
-                    Float drm = std::sqrt(dr2);
-                    Float ecc_anomaly=_bin.calcEccAnomaly(drm);
-                    Float mean_anomaly = _bin.calcMeanAnomaly(ecc_anomaly, _bin.ecc);
-                    Float t_peri = mean_anomaly/6.28318530718*_bin.period;
-                    if (drdv<0 && t_peri<_bin_interrupt->time_end-_bin_interrupt->time_now) merge();
-                    else {
-                        p1->setBinaryPairID(p2->id);
-                        p2->setBinaryPairID(p1->id);
-                        p1->setBinaryInterruptState(BinaryInterruptState::collision);
-                        p2->setBinaryInterruptState(BinaryInterruptState::collision);
-                        p1->time_interrupt = _bin_interrupt->time_now + drdv<0 ? t_peri : (_bin.period - t_peri);
-                        p2->time_interrupt = p1->time_interrupt;
+            if (_bin.getMemberN()==2) {
+                ARPtcl *p1,*p2;
+                p1 = _bin.getLeftMember();
+                p2 = _bin.getRightMember();
+                if (p1->getBinaryInterruptState()== BinaryInterruptState::collision && 
+                    p2->getBinaryInterruptState()== BinaryInterruptState::collision &&
+                    (p1->time_interrupt<_bin_interrupt.time_end || p2->time_interrupt<_bin_interrupt.time_end)) merge();
+                else {
+                    Float peri = _bin.semi*(1-_bin.ecc);
+                    Float radius = p1->radius + p2->radius;
+                    if (peri<radius &&
+                        p1->getBinaryInterruptState()!=BinaryInterruptState::collision && 
+                        p2->getBinaryInterruptState()!=BinaryInterruptState::collision) {
+                        Float dr[3] = {p1->pos[0] - p2->pos[0], 
+                                       p1->pos[1] - p2->pos[1], 
+                                       p1->pos[2] - p2->pos[2]};
+                        Float dv[3] = {p1->vel[0] - p2->vel[0], 
+                                       p1->vel[1] - p2->vel[1], 
+                                       p1->vel[2] - p2->vel[2]};
+                        Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
+                        Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+                        Float drm = std::sqrt(dr2);
+                        Float ecc_anomaly=_bin.calcEccAnomaly(drm);
+                        Float mean_anomaly = _bin.calcMeanAnomaly(ecc_anomaly, _bin.ecc);
+                        Float t_peri = mean_anomaly/6.28318530718*_bin.period;
+                        if (drdv<0 && t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) merge();
+                        else {
+                            p1->setBinaryPairID(p2->id);
+                            p2->setBinaryPairID(p1->id);
+                            p1->setBinaryInterruptState(BinaryInterruptState::collision);
+                            p2->setBinaryInterruptState(BinaryInterruptState::collision);
+                            p1->time_interrupt = _bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri);
+                            p2->time_interrupt = p1->time_interrupt;
+                        }
                     }
                 }
             }
+            else {
+                for (int k=0; k<2; k++) 
+                    if (_bin.isMemberTree(k)) modifyAndInterruptIter(_bin_interrupt, *_bin.getMemberAsTree(k));
+            }
         }
 #endif
-        return _bin_interrupt;
     }
 
 #ifndef AR_TTL
