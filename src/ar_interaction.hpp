@@ -187,25 +187,10 @@ public:
 
         return gt_kick_inv;
     }
-    
+
     //! (Necessary) calculate acceleration from perturber and the perturbation factor for slowdown calculation
-    /*! The Force class acc_pert should be updated
-      @param[out] _force: force array to store the calculation results (in acc_pert[3], notice acc_pert may need to reset zero to avoid accummulating old values)
-      @param[out] _epot: potential 
-      @param[in] _particles: member particle array
-      @param[in] _n_particle: number of member particles
-      @param[in] _particle_cm: center-of-mass particle
-      @param[in] _perturber: pertuber container
-      @param[in] _time: current time
-      \return perturbation energy to calculate slowdown factor
-    */
-    Float calcAccPotAndGTKickInv(AR::Force* _force, Float& _epot, const ARPtcl* _particles, const int _n_particle, const H4Ptcl& _particle_cm, const ARPerturber& _perturber, const Float _time) {
+    void calcAccPert(AR::Force* _force, const ARPtcl* _particles, const int _n_particle, const H4Ptcl& _particle_cm, const ARPerturber& _perturber, const Float _time) {
         static const Float inv3 = 1.0 / 3.0;
-        
-        // inner force
-        Float gt_kick_inv;
-        if (_n_particle==2) gt_kick_inv = calcInnerAccPotAndGTKickInvTwo(_force[0], _force[1], _epot, _particles[0], _particles[1]);
-        else gt_kick_inv = calcInnerAccPotAndGTKickInv(_force, _epot, _particles, _n_particle);
 
         // perturber force
         const int n_pert = _perturber.neighbor_address.getSize();
@@ -351,7 +336,26 @@ public:
             }
 #endif
         }
+    }
+    
+    //! (Necessary) calculate acceleration from internal members and perturbers
+    /*! The Force class acc_pert should be updated
+      @param[out] _force: force array to store the calculation results (in acc_pert[3], notice acc_pert may need to reset zero to avoid accummulating old values)
+      @param[out] _epot: potential 
+      @param[in] _particles: member particle array
+      @param[in] _n_particle: number of member particles
+      @param[in] _particle_cm: center-of-mass particle
+      @param[in] _perturber: pertuber container
+      @param[in] _time: current time
+      \return perturbation energy to calculate slowdown factor
+    */
+    Float calcAccPotAndGTKickInv(AR::Force* _force, Float& _epot, const ARPtcl* _particles, const int _n_particle, const H4Ptcl& _particle_cm, const ARPerturber& _perturber, const Float _time) {
+        // inner force
+        Float gt_kick_inv;
+        if (_n_particle==2) gt_kick_inv = calcInnerAccPotAndGTKickInvTwo(_force[0], _force[1], _epot, _particles[0], _particles[1]);
+        else gt_kick_inv = calcInnerAccPotAndGTKickInv(_force, _epot, _particles, _n_particle);
 
+        calcAccPert(_force, _particles, _n_particle, _particle_cm, _perturber, _time);
         return gt_kick_inv;
     }
 
