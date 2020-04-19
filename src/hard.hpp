@@ -788,9 +788,9 @@ public:
             epot    = sym_int.getEpot();
             de      = sym_int.getEnergyError();
 #if (defined AR_SLOWDOWN_ARRAY) || (defined AR_SLOWDOWN_TREE)
-            ekin_sd = sym_int.getEkinSlowDownInner();
-            epot_sd = sym_int.getEpotSlowDownInner();
-            de_sd   = sym_int.getEnergyErrorSlowDownInner();
+            ekin_sd = sym_int.getEkinSlowDown();
+            epot_sd = sym_int.getEpotSlowDown();
+            de_sd   = sym_int.getEnergyErrorSlowDown();
 #else
             ekin_sd = ekin;
             epot_sd = epot;
