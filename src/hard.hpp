@@ -538,10 +538,21 @@ public:
      */
     AR::InterruptBinary<PtclAR>& integrateToTime(const PS::F64 _time_end) {
         ASSERT(checkParams());
+
+        // dump flag
+        bool dump_flag=false;
+
         // integration
         if (use_sym_int) {
             interrupt_binary = sym_int.integrateToTime(_time_end);
             if (manager->ar_manager.interrupt_detection_option==1) interrupt_binary.clear();
+#ifdef PROFILE
+            if (sym_int.profile.step_count>manager->ar_manager.step_count_max&&!dump_flag) {
+                std::cerr<<"Large isolated AR step cluster found (dump): step: "<<sym_int.profile.step_count<<std::endl;
+                DATADUMP("dump_large_step");
+                dump_flag=true;
+            }
+#endif                
         }
         else {
 #ifdef SOFT_PERT
@@ -647,6 +658,14 @@ public:
                 h4_int.initialIntegration();
                 h4_int.sortDtAndSelectActParticle();
                 h4_int.info.time_origin = h4_int.getTime() + time_origin;
+
+#ifdef PROFILE
+                if (h4_int.profile.ar_step_count>manager->ar_manager.step_count_max&&!dump_flag) {
+                    std::cerr<<"Large H4-AR step cluster found (dump): step: "<<h4_int.profile.ar_step_count<<std::endl;
+                    DATADUMP("dump_large_step");
+                    dump_flag=true;
+                } 
+#endif                
 
 #ifdef HARD_DEBUG_PRINT
                 //PS::F64 dt_max = 0.0;
@@ -889,8 +908,8 @@ public:
             ARC_tsyn_step_sum += h4_int.profile.ar_step_count_tsyn;
 
             if (h4_int.profile.ar_step_count>manager->ar_manager.step_count_max) {
-                std::cerr<<"Large AR step cluster found: step: "<<h4_int.profile.ar_step_count<<std::endl;
-                DATADUMP("dump_large_step");
+                std::cerr<<"Large AR step cluster found: total step: "<<h4_int.profile.ar_step_count<<std::endl;
+                //DATADUMP("dump_large_step");
             } 
 #endif
 
