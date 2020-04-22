@@ -682,7 +682,7 @@ public:
                                  <<"  dE_SD_CHANGE: "<<de_sd_change_cum
                                  <<std::endl;
                         DATADUMP("hard_dump");
-                        abort();
+                        ///abort();
                     }
                 }
                 if (fmod(h4_int.getTime(), h4_manager.step.getDtMax())==0.0) {
