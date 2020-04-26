@@ -10,7 +10,7 @@ private:
     Float r_out_;     ///> r_out
     Float norm_;      ///> 1.0/(r_out-r_in)
     Float coff_;      ///> (r_out-r_in)/(r_out+r_in)
-    Float pot_off_;   ///> (1 + coff_)/r_out
+    Float pot_off_;   ///> (1 + coff_)/r_out = 2/(r_out+r_in)
 #ifdef INTEGRATED_CUTOFF_FUNCTION
     Float q_;         ///> r_in/r_out
 #endif

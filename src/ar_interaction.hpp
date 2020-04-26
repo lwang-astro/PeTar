@@ -51,7 +51,9 @@ public:
         const Float mass2 = _p2.mass;
         const Float* pos2 = &_p2.pos.x;
 
-        Float gm1m2 = gravitational_constant*mass1*mass2;
+        Float gm1 = gravitational_constant*mass1;
+        Float gm2 = gravitational_constant*mass2;
+        Float gm1m2 = gm1*mass2;
         
         Float dr[3] = {pos2[0] -pos1[0],
                        pos2[1] -pos1[1],
@@ -71,14 +73,19 @@ public:
         Float k = ChangeOver::calcAcc0WTwo(ch1,ch2,r);
         Float kpot = ChangeOver::calcPotWTwo(ch1,ch2,r);
 
-        Float gmor3_1 = gravitational_constant*mass2*inv_r3*k;
-        Float gmor3_2 = gravitational_constant*mass1*inv_r3*k;
+        Float gmor3_1 = gm2*inv_r3*k;
+        Float gmor3_2 = gm1*inv_r3*k;
 
-        Float gm1m2or = gm1m2*inv_r*kpot;
+        Float inv_rk = inv_r*kpot;
+        Float gm1or =  gm1*inv_rk;
+        Float gm2or =  gm2*inv_rk;
+        Float gm1m2or = gm1m2*inv_rk;
 #else
-        Float gmor3_1 = gravitational_constant*mass2*inv_r3;
-        Float gmor3_2 = gravitational_constant*mass1*inv_r3;
+        Float gmor3_1 = gm2*inv_r3;
+        Float gmor3_2 = gm1*inv_r3;
 
+        Float gm1or =  gm1*inv_r;
+        Float gm2or =  gm2*inv_r;
         Float gm1m2or = gm1m2*inv_r;
 #endif
 
@@ -86,9 +93,14 @@ public:
         acc1[1] = gmor3_1 * dr[1];
         acc1[2] = gmor3_1 * dr[2];
 
+        _f1.pot_in = -gm2or;
+
         acc2[0] = - gmor3_2 * dr[0];
         acc2[1] = - gmor3_2 * dr[1];
         acc2[2] = - gmor3_2 * dr[2];
+
+        _f2.pot_in = -gm1or;
+
 
 #ifdef AR_TTL 
         // trans formation function gradient
@@ -257,9 +269,11 @@ public:
             // calculate component perturbation
             for (int i=0; i<_n_particle; i++) {
                 Float* acc_pert = _force[i].acc_pert;
+                Float& pot_pert = _force[i].pot_pert;
                 const auto& pi = _particles[i];
                 auto& chi = pi.changeover;
                 acc_pert[0] = acc_pert[1] = acc_pert[2] = Float(0.0);
+                pot_pert = 0.0;
 
                 Float xi[3];
                 xi[0] = pi.pos[0] + xcm[0];
@@ -275,7 +289,8 @@ public:
                     Float r  = sqrt(r2);
                     Float k  = ChangeOver::calcAcc0WTwo(chi, *changeover[j], r);
                     Float r3 = r*r2;
-                    Float gmor3 = gravitational_constant*m[j]/r3 * k;
+                    Float gm = gravitational_constant*m[j];
+                    Float gmor3 = gm/r3 * k;
 
                     acc_pert[0] += gmor3 * dr[0];
                     acc_pert[1] += gmor3 * dr[1];
@@ -301,10 +316,14 @@ public:
                     acc_pert[0] += gmor3 * dr[0];
                     acc_pert[1] += gmor3 * dr[1];
                     acc_pert[2] += gmor3 * dr[2];
+
                 }
 
 #ifdef SOFT_PERT
-                if(_perturber.soft_pert!=NULL) _perturber.soft_pert->eval(acc_pert, pi.pos);
+                if(_perturber.soft_pert!=NULL) {
+                    _perturber.soft_pert->eval(acc_pert, pi.pos);
+                    pot_pert += _perturber.soft_pert->evalPot(pi.pos);
+                }
 #endif
 
                 acc_pert_cm[0] += pi.mass *acc_pert[0];
@@ -325,9 +344,13 @@ public:
             // remove cm. perturbation
             for (int i=0; i<_n_particle; i++) {
                 Float* acc_pert = _force[i].acc_pert;
+                Float& pot_pert = _force[i].pot_pert;
+                const auto& pi = _particles[i];
                 acc_pert[0] -= acc_pert_cm[0]; 
                 acc_pert[1] -= acc_pert_cm[1];        
                 acc_pert[2] -= acc_pert_cm[2]; 
+                
+                pot_pert -= acc_pert[0]*pi.pos[0] + acc_pert[1]*pi.pos[1] + acc_pert[2]*pi.pos[2];
             }
 
         }
@@ -336,9 +359,11 @@ public:
             if(_perturber.soft_pert!=NULL) {
                 for(int i=0; i<_n_particle; i++) {
                     Float* acc_pert = _force[i].acc_pert;
+                    Float& pot_pert = _force[i].pot_pert;
                     const auto& pi = _particles[i];
                     acc_pert[0] = acc_pert[1] = acc_pert[2] = Float(0.0);
                     _perturber.soft_pert->eval(acc_pert, pi.pos);
+                    pot_pert += _perturber.soft_pert->evalPot(pi.pos);
                 }
             }
 #endif
@@ -569,6 +594,9 @@ public:
     void modifyAndInterruptIter(AR::InterruptBinary<ARPtcl>& _bin_interrupt, AR::BinaryTree<ARPtcl>& _bin) {
 #ifdef STELLAR_EVOLUTION
         if (_bin_interrupt.status==AR::InterruptStatus::none) {
+            auto* p1 = _bin.getLeftMember();
+            auto* p2 = _bin.getRightMember();
+
             auto merge = [&]() {
                 _bin_interrupt.adr = &_bin;
                 _bin_interrupt.status = AR::InterruptStatus::merge;
@@ -590,9 +618,10 @@ public:
                 }
                 p1->setBinaryInterruptState(BinaryInterruptState::none);
                 p2->setBinaryInterruptState(BinaryInterruptState::none);
-                p1->mass = mcm;
+                p1->mass = mcm*0.8;
                 p2->mass = 0.0;
                 p2->group_data.artificial.setParticleTypeToUnused();
+                _bin_interrupt.dm = -mcm*0.2;
             };
 
             if (_bin.getMemberN()==2) {
@@ -601,34 +630,37 @@ public:
                 p2 = _bin.getRightMember();
                 if (p1->getBinaryInterruptState()== BinaryInterruptState::collision && 
                     p2->getBinaryInterruptState()== BinaryInterruptState::collision &&
-                    (p1->time_interrupt<_bin_interrupt.time_end || p2->time_interrupt<_bin_interrupt.time_end)) merge();
+                    (p1->time_check<_bin_interrupt.time_end || p2->time_check<_bin_interrupt.time_end) &&
+                    (p1->getBinaryPairID()==p2->id||p2->getBinaryPairID()==p1->id)) merge();
                 else {
-                    Float peri = _bin.semi*(1-_bin.ecc);
                     Float radius = p1->radius + p2->radius;
-                    if (peri<radius &&
-                        p1->getBinaryInterruptState()!=BinaryInterruptState::collision && 
-                        p2->getBinaryInterruptState()!=BinaryInterruptState::collision) {
+                    // slowdown case
+                    if (_bin.slowdown.getSlowDownFactor()>1.0) {
+                        Float drdv;
+                        _bin.particleToSemiEcc(_bin.semi, _bin.ecc, _bin.r, drdv, *_bin.getLeftMember(), *_bin.getRightMember(), gravitational_constant);
+                        Float peri = _bin.semi*(1 - _bin.ecc);
+                        if (peri<radius && p1->getBinaryPairID()!=p2->id&&p2->getBinaryPairID()!=p1->id) {
+                            Float ecc_anomaly  = _bin.calcEccAnomaly(_bin.r);
+                            Float mean_anomaly = _bin.calcMeanAnomaly(ecc_anomaly, _bin.ecc);
+                            Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi))); 
+                            Float t_peri = mean_anomaly/mean_motion;
+                            if (drdv<0 && t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) merge();
+                            else if (_bin.semi>0||(_bin.semi<0&&drdv<0)) {
+                                p1->setBinaryPairID(p2->id);
+                                p2->setBinaryPairID(p1->id);
+                                p1->setBinaryInterruptState(BinaryInterruptState::collision);
+                                p2->setBinaryInterruptState(BinaryInterruptState::collision);
+                                p1->time_check = std::min(p1->time_check, _bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri));
+                                p2->time_check = std::min(p1->time_check, p2->time_check);
+                            }
+                        }
+                    }
+                    else { // no slowdown case, check separation directly
                         Float dr[3] = {p1->pos[0] - p2->pos[0], 
                                        p1->pos[1] - p2->pos[1], 
                                        p1->pos[2] - p2->pos[2]};
-                        Float dv[3] = {p1->vel[0] - p2->vel[0], 
-                                       p1->vel[1] - p2->vel[1], 
-                                       p1->vel[2] - p2->vel[2]};
-                        Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
                         Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
-                        Float drm = std::sqrt(dr2);
-                        Float ecc_anomaly=_bin.calcEccAnomaly(drm);
-                        Float mean_anomaly = _bin.calcMeanAnomaly(ecc_anomaly, _bin.ecc);
-                        Float t_peri = mean_anomaly/6.28318530718*_bin.period;
-                        if (drdv<0 && t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) merge();
-                        else {
-                            p1->setBinaryPairID(p2->id);
-                            p2->setBinaryPairID(p1->id);
-                            p1->setBinaryInterruptState(BinaryInterruptState::collision);
-                            p2->setBinaryInterruptState(BinaryInterruptState::collision);
-                            p1->time_interrupt = _bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri);
-                            p2->time_interrupt = p1->time_interrupt;
-                        }
+                        if (dr2<radius*radius) merge();
                     }
                 }
             }
