@@ -157,6 +157,21 @@ public:
              <<std::setw(_width)<<"status";
     }
 
+    //! print column title with meaning (each line for one column)
+    /*! @param[out] _fout: std::ostream output object
+      @param[in] _counter: offset of the number counter for each line to indicate the column index (defaulted 0)
+      @param[in] _offset: the printing whitespace offset for each line (defaulted 0)
+      \return: the total counter of columns
+     */
+    static int printTitleWithMeaning(std::ostream & _fout, const int _counter=0, const int _offset=0) {
+        int counter = _counter;
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". mass_bk: artificial particle parameter 1 [formatted] (0.0)\n";
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". status: artificial particle parameter 2 [formatted] (0.0)\n";
+        return counter;
+    }
+
     //! print data of class members using column style
     /*! print data of class members in one line for column style. Notice no newline is printed at the end
       @param[out] _fout: std::ostream output object

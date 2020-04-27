@@ -3,15 +3,28 @@
 //! class for collecting and calculating the energy and angular momemtum of the system
 class EnergyAndMomemtum{
 public:
+    PS::F64 error_cum_pre;  // previous cumulative error
     PS::F64 ekin;
     PS::F64 epot;
     PS::F64 etot_ref; // energy reference (initial value) for calculating energy error
+#ifdef HARD_CHECK_ENERGY
+    PS::F64 de_change_cum; // cumulative energy change 
+    PS::F64 de_change_interrupt; // cumulative energy change due to interruption
+    PS::F64 error_hard_cum_pre;
+    PS::F64 error_hard_cum;
     // slowdown energy
+    PS::F64 error_sd_cum_pre;  // previous cumulative slowdown error
     PS::F64 ekin_sd;
     PS::F64 epot_sd;
     PS::F64 etot_sd_ref; // slowdown energy reference (initial value) for calculating energy error
-    PS::F64vec L; // angular momentum
+    PS::F64 de_sd_change_cum; // cumulative slowdown energy change 
+    PS::F64 de_sd_change_interrupt; // cumulative slowdown energy change du to interruption
+    PS::F64 error_hard_sd_cum_pre;
+    PS::F64 error_hard_sd_cum;
+#endif
+    PS::F64 error_Lt_cum_pre; // previous angular momentum error
     PS::F64 Lt; // total angular momemtum
+    PS::F64vec L; // angular mommentum;
     PS::F64vec L_ref; // total angular momemtum reference
 
     EnergyAndMomemtum() {
@@ -19,8 +32,9 @@ public:
     }
 
     void clear(){
-        ekin = epot = etot_ref = Lt = 0.0;
-        ekin_sd = epot_sd = etot_sd_ref = 0.0;
+        error_cum_pre = ekin = epot = etot_ref = de_change_cum = de_change_interrupt = 0.0;
+        error_sd_cum_pre = ekin_sd = epot_sd = etot_sd_ref = de_sd_change_cum = de_sd_change_interrupt = 0.0;
+        error_Lt_cum_pre = Lt = 0.0;
         L = L_ref = PS::F64vec(0.0);
     }
 
@@ -28,19 +42,49 @@ public:
     /*! print titles and values in one lines
       @param[out] _fout: std::ostream output object
     */
-    void print(std::ostream & _fout=std::cout) {
-        _fout<<"Energy:"
-             <<"  dE: "  <<getEnergyError()
-             <<"  Etot: "<<ekin + epot  
-             <<"  Ekin: "<<ekin         
-             <<"  Epot: "<<epot         
-             <<"  dE(SD): "  <<getEnergyErrorSlowDown()
-             <<"  Etot(SD): "<<ekin_sd + epot_sd
-             <<"  Ekin(SD): "<<ekin_sd
-             <<"  Epot(SD): "<<epot_sd
+    void print(std::ostream & _fout=std::cout, const PS::S32 _width=20) {
+        _fout<<"Energy:  "
+             <<std::setw(_width)<<"Error"
+             <<std::setw(_width)<<"Error_cum"
+             <<std::setw(_width)<<"Kinetic"
+             <<std::setw(_width)<<"Potential"
+             <<std::setw(_width)<<"Total"
+#ifdef HARD_CHECK_ENERGY
+             <<std::setw(_width)<<"Modify"
+             <<std::setw(_width)<<"Interrupt"
+             <<std::setw(_width)<<"Error_hard"
+             <<std::setw(_width)<<"Error_hard_cum"
+#endif
              <<std::endl;
+        _fout<<"Physic:  "
+             <<std::setw(_width)<<getEnergyError() - error_cum_pre
+             <<std::setw(_width)<<getEnergyError()
+             <<std::setw(_width)<<ekin + epot  
+             <<std::setw(_width)<<ekin         
+             <<std::setw(_width)<<epot         
+#ifdef HARD_CHECK_ENERGY
+             <<std::setw(_width)<<de_change_cum
+             <<std::setw(_width)<<de_change_interrupt
+             <<std::setw(_width)<<error_hard_cum - error_hard_cum_pre
+             <<std::setw(_width)<<error_hard_cum
+#endif
+             <<std::endl;
+#ifdef HARD_CHECK_ENERGY
+        _fout<<"Slowdown:"
+             <<std::setw(_width)<<getEnergyErrorSlowDown() - error_sd_cum_pre
+             <<std::setw(_width)<<getEnergyErrorSlowDown()
+             <<std::setw(_width)<<ekin_sd + epot_sd
+             <<std::setw(_width)<<ekin_sd
+             <<std::setw(_width)<<epot_sd
+             <<std::setw(_width)<<de_sd_change_cum
+             <<std::setw(_width)<<de_sd_change_interrupt
+             <<std::setw(_width)<<error_hard_sd_cum - error_hard_sd_cum_pre
+             <<std::setw(_width)<<error_hard_sd_cum
+             <<std::endl;
+#endif
         _fout<<"Angular Momemtum:"
-             <<"  dL: "<<getMomentumError()
+             <<"  |L|err: "<<getMomentumError() - error_Lt_cum_pre
+             <<"  |L|err_cum: "<<getMomentumError()
              <<"  L: "<<L
              <<"  |L|: "<<Lt
              <<std::endl;
@@ -52,15 +96,26 @@ public:
       @param[in] _width: print width (defaulted 20)
     */
     void printColumnTitle(std::ofstream & _fout, const PS::S32 _width=20) const {
-        _fout<<std::setw(_width)<<"dE"
+        _fout<<std::setw(_width)<<"Error"
+             <<std::setw(_width)<<"Error_cum"
              <<std::setw(_width)<<"Ekin"
              <<std::setw(_width)<<"Epot"
              <<std::setw(_width)<<"Etot"
-             <<std::setw(_width)<<"dE_SD"
+#ifdef HARD_CHECK_ENERGY
+             <<std::setw(_width)<<"dE_modify"
+             <<std::setw(_width)<<"dE_interrupt"
+             <<std::setw(_width)<<"Error_hard"
+             <<std::setw(_width)<<"Error_hard_cum"
+             <<std::setw(_width)<<"Error_SD"
+             <<std::setw(_width)<<"Error_SD_cum"
              <<std::setw(_width)<<"Ekin_SD"
              <<std::setw(_width)<<"Epot_SD"
              <<std::setw(_width)<<"Etot_SD"
-             <<std::setw(_width)<<"d|L|"
+             <<std::setw(_width)<<"Error_hard_SD"
+             <<std::setw(_width)<<"Error_hard_SD_cum"
+#endif
+             <<std::setw(_width)<<"|L|error"
+             <<std::setw(_width)<<"|L|error_cum"
              <<std::setw(_width)<<"Lx"
              <<std::setw(_width)<<"Ly"
              <<std::setw(_width)<<"Lz"
@@ -73,14 +128,26 @@ public:
       @param[in] _width: print width (defaulted 20)
     */
     void printColumn(std::ofstream & _fout, const PS::S32 _width=20) const {
-        _fout<<std::setw(_width)<<getEnergyError()
+        _fout<<std::setw(_width)<<getEnergyError() - error_cum_pre
+             <<std::setw(_width)<<getEnergyError()
              <<std::setw(_width)<<ekin
              <<std::setw(_width)<<epot
              <<std::setw(_width)<<ekin+epot
-             <<std::setw(_width)<<getEnergyErrorSlowDown()
+#ifdef HARD_CHECK_ENERGY
+             <<std::setw(_width)<<de_change_cum
+             <<std::setw(_width)<<de_change_interrupt
+             <<std::setw(_width)<<error_hard_cum - error_hard_cum_pre
+             <<std::setw(_width)<<error_hard_cum
+             <<std::setw(_width)<<getEnergyErrorSlowDown() - error_sd_cum_pre
              <<std::setw(_width)<<ekin_sd
              <<std::setw(_width)<<epot_sd
              <<std::setw(_width)<<ekin_sd+epot_sd
+             <<std::setw(_width)<<de_sd_change_cum
+             <<std::setw(_width)<<de_sd_change_interrupt
+             <<std::setw(_width)<<error_hard_sd_cum - error_hard_sd_cum_pre
+             <<std::setw(_width)<<error_hard_sd_cum
+#endif
+             <<std::setw(_width)<<getMomentumError() - error_Lt_cum_pre
              <<std::setw(_width)<<getMomentumError()
              <<std::setw(_width)<<L.x
              <<std::setw(_width)<<L.y
@@ -88,13 +155,22 @@ public:
              <<std::setw(_width)<<Lt;
     }
 
+#ifdef HARD_CHECK_ENERGY
     void writeAscii(FILE* _fout) {
-        fprintf(_fout, "%26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e ",
-                ekin, epot, etot_ref,
-                ekin_sd, epot_sd, etot_sd_ref, 
-                L[0], L[1], L[2], Lt,
+        fprintf(_fout, "%26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e ",
+                error_cum_pre, ekin, epot, etot_ref, de_change_cum, de_change_interrupt,
+                error_sd_cum_pre, ekin_sd, epot_sd, etot_sd_ref, de_sd_change_cum, de_sd_change_interrupt,
+                error_Lt_cum_pre, Lt, L[0], L[1], L[2], 
                 L_ref[0], L_ref[1], L_ref[2]);
     }
+#else
+    void writeAscii(FILE* _fout) {
+        fprintf(_fout, "%26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e ",
+                error_cum_pre, ekin, epot, etot_ref,
+                error_Lt_cum_pre, Lt, L[0], L[1], L[2], 
+                L_ref[0], L_ref[1], L_ref[2]);
+    }
+#endif
 
     void writeBinary(FILE* _fout) {
         fwrite(&ekin, sizeof(EnergyAndMomemtum), 1, _fout);
@@ -131,7 +207,9 @@ public:
         Lt = std::sqrt(L*L);
         if (_init_flag) {
             etot_ref = ekin + epot;
+#ifdef HARD_CHECK_ENERGY
             etot_sd_ref = etot_ref;
+#endif
             L_ref = L;
         }
     }
@@ -163,7 +241,9 @@ public:
         Lt   = std::sqrt(L*L);
         if (_init_flag) {
             etot_ref = ekin + epot;
+#ifdef HARD_CHECK_ENERGY
             etot_sd_ref = etot_ref;
+#endif
             L_ref = L;
         }
     }
@@ -179,9 +259,22 @@ public:
         Lt  = std::sqrt(L*L);
         if (_init_flag) {
             etot_ref = ekin + epot;
+#ifdef HARD_CHECK_ENERGY
             etot_sd_ref = etot_ref;
+#endif
             L_ref = L;
         }
+    }
+
+    //! save current energy error
+    void saveEnergyError() {
+        error_cum_pre = getEnergyError();
+#ifdef HARD_CHECK_ENERGY
+        error_sd_cum_pre = getEnergyErrorSlowDown();
+        error_hard_cum_pre  = error_hard_cum;
+        error_hard_sd_cum_pre = error_hard_sd_cum;
+#endif
+        error_Lt_cum_pre  = getMomentumError();
     }
 
     //! get energy error
@@ -189,10 +282,12 @@ public:
         return ekin + epot - etot_ref;
     }
 
+#ifdef HARD_CHECK_ENERGY
     //! get slowdown energy error
     PS::F64 getEnergyErrorSlowDown() const {
         return ekin_sd + epot_sd - etot_sd_ref;
     }
+#endif
 
     //! get angular momemtum (value) error
     PS::F64 getMomentumError() const {

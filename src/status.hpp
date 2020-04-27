@@ -14,8 +14,6 @@ public:
     PS::F64 half_mass_radius;
     ParticleBase pcm;
     EnergyAndMomemtum energy;
-    PS::F64 energy_hard_diff;
-    PS::F64 energy_hard_sd_diff;
 
     Status(): time(0.0), n_real_loc(0), n_real_glb(0), n_all_loc(0), n_all_glb(0), half_mass_radius(0), pcm() {}
 
@@ -65,10 +63,6 @@ public:
              <<std::setw(_width)<<"N_all_loc"
              <<std::setw(_width)<<"N_all_glb";
         energy.printColumnTitle(_fout, _width);
-#ifdef HARD_CHECK_ENERGY
-        _fout<<std::setw(_width)<<"dE_hard"
-             <<std::setw(_width)<<"dE_SD_hard";
-#endif
         _fout<<std::setw(_width)<<"CM.mass"
              <<std::setw(_width)<<"CM.pos.x"
              <<std::setw(_width)<<"CM.pos.y"
@@ -90,10 +84,6 @@ public:
              <<std::setw(_width)<<n_all_loc
              <<std::setw(_width)<<n_all_glb;
         energy.printColumn(_fout, _width);
-#ifdef HARD_CHECK_ENERGY
-        _fout<<std::setw(_width)<<energy_hard_diff
-             <<std::setw(_width)<<energy_hard_sd_diff;
-#endif
         _fout<<std::setw(_width)<<pcm.mass
              <<std::setw(_width)<<pcm.pos.x
              <<std::setw(_width)<<pcm.pos.y
@@ -114,16 +104,12 @@ public:
         _fout<<"  N_real(loc): "<<n_real_loc
              <<"  N_real(glb): "<<n_real_glb
              <<"  N_all(loc): "<<n_all_loc
-             <<"  N_all(glb): "<<n_all_glb;
-#ifdef HARD_CHECK_ENERGY
-        _fout<<"  Hard Energy: dE: "<<energy_hard_diff
-             <<"  dE_SD: "<<energy_hard_sd_diff
+             <<"  N_all(glb): "<<n_all_glb
              <<std::endl;
-#endif
+        energy.print(_fout);
         _fout<<"C.M.: mass: "<<pcm.mass
              <<" pos: "<<pcm.pos
              <<" vel: "<<pcm.vel
              <<std::endl;
-        energy.print(_fout);
     }
 };

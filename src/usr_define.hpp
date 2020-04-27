@@ -186,6 +186,33 @@ public:
 #endif
     }
 
+    //! print column title with meaning (each line for one column)
+    /*! @param[out] _fout: std::ostream output object
+      @param[in] _counter: offset of the number counter for each line to indicate the column index (defaulted 0)
+      @param[in] _offset: the printing whitespace offset for each line (defaulted 0)
+      \return: the total counter of columns
+     */
+    static int printTitleWithMeaning(std::ostream & _fout, const int _counter=0, const int _offset=0) {
+        int counter = _counter;
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". mass: mass of particle\n";
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<"-"<<counter+2<<". pos.[x/y/z]: 3D position of particle\n";
+        counter+=3;
+        _fout<<std::setw(_offset)<<" "<<counter<<"-"<<counter+2<<". vel.[x/y/z]: 3D velocity of particle\n";
+        counter+=3;
+#ifdef STELLAR_EVOLUTION
+        _fout<<std::setw(_offset)<<" "<<counter<<". radius: stellar radius for merger checker (0.0)\n";
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". mdot: mass change rate (0.0)\n";
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". t_irpt: time for next evolution check (0.0)\n";
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". bin_stat: binary status storing pair id and status [formatted] (0.0)\n";
+#endif
+        return counter;
+    }
+
     //! print data of class members using column style
     /*! print data of class members in one line for column style. Notice no newline is printed at the end
       @param[out] _fout: std::ostream output object

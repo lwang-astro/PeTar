@@ -443,24 +443,10 @@ public:
                              <<"             2. N_particle \n"
                              <<"             3. Time\n"
                              <<"            Following lines:\n";
-                    std::cout<<"             ";
-                    FPSoft::printColumnTitle(std::cout,10);
+                    FPSoft::printTitleWithMeaning(std::cout,0,13);
+                    std::cout<<"          PS: (*) show initialization values which should be used together with FILE_ID = 0"<<std::endl;
+                    std::cout<<"              [formatted] indicates that the value is only for save, cannot be directly read"<<std::endl;
                     std::cout<<std::endl;
-/*
-                             <<"             1. mass\n"
-                             <<"             2. position[3]\n"
-                             <<"             5. velocity[3]\n"
-                             <<"             8. r_search (0.0)\n"
-                             <<"             9. mass_backup (0.0)\n"
-                             <<"             10. ID (>0,unique)\n"
-                             <<"             11. status (0)\n"
-                             <<"             12. r_in (0.0)\n"
-                             <<"             13. r_out (0.0)\n"
-                             <<"             14. Acceleration[3] (0.0)\n"
-                             <<"             17. Potential (0.0)\n"
-                             <<"             18. N_neighbor (0)\n"
-                             <<"             in () show initialization values which should be used together with FILE_ID = 0"<<std::endl;
-*/
                     std::cout<<"  -a:     data output style (except snapshot) becomes appending, defaulted: replace"<<std::endl;
                     std::cout<<"  -t: [F] "<<time_end<<std::endl;
                     std::cout<<"  -s: [F] "<<dt_soft<<std::endl;
@@ -1540,8 +1526,6 @@ public:
 #ifdef HARD_CHECK_ENERGY
             stat.energy.ekin_sd = stat.energy.ekin;
             stat.energy.epot_sd = stat.energy.epot;
-            stat.energy_hard_diff = 0;
-            stat.energy_hard_sd_diff = 0;
 #endif
             stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);
 
@@ -1564,16 +1548,25 @@ public:
             energy_local += system_hard_connected.energy;
 #endif
             // hard energy error
-            stat.energy_hard_diff += PS::Comm::getSum(energy_local.de);
-            stat.energy_hard_sd_diff += PS::Comm::getSum(energy_local.de_sd);
+            stat.energy.error_hard_cum += PS::Comm::getSum(energy_local.de);
+            stat.energy.error_hard_sd_cum += PS::Comm::getSum(energy_local.de_sd);
             // energy correction due to slowdown 
             PS::F64 ekin_sd_correction = PS::Comm::getSum(energy_local.ekin_sd_correction);
             stat.energy.ekin_sd = stat.energy.ekin + ekin_sd_correction;
             PS::F64 epot_sd_correction = PS::Comm::getSum(energy_local.epot_sd_correction);
             stat.energy.epot_sd = stat.energy.epot + epot_sd_correction;
             PS::F64 etot_sd_correction = ekin_sd_correction + epot_sd_correction;
+            PS::F64 de_change_cum = PS::Comm::getSum(energy_local.de_change_cum);
+            PS::F64 de_change_interrupt = PS::Comm::getSum(energy_local.de_change_interrupt);
+            stat.energy.etot_ref += de_change_cum;
+            stat.energy.de_change_cum += de_change_cum;
+            stat.energy.de_change_interrupt += de_change_interrupt;
             // for total energy reference, first add the cumulative change due to slowdown change in the integration (referring to no slowdown case), then add slowdown energy correction from current time
-            stat.energy.etot_sd_ref += PS::Comm::getSum(energy_local.de_sd_change_cum) + etot_sd_correction;
+            PS::F64 de_sd_change_cum  = PS::Comm::getSum(energy_local.de_sd_change_cum) + etot_sd_correction;
+            PS::F64 de_sd_change_interrupt = PS::Comm::getSum(energy_local.de_sd_change_interrupt);
+            stat.energy.etot_sd_ref += de_sd_change_cum; 
+            stat.energy.de_sd_change_cum += de_sd_change_cum;
+            stat.energy.de_sd_change_interrupt += de_sd_change_interrupt;
 
             system_hard_isolated.energy.clear();
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
@@ -1636,6 +1629,9 @@ public:
             stat.printColumn(fstatus, WRITE_WIDTH);
             fstatus<<std::endl;
         }
+
+        // save current error
+        stat.energy.saveEnergyError();
 
 #ifdef PROFILE
         profile.output.barrier();

@@ -1212,7 +1212,10 @@ public:
 #ifdef HARD_DEBUG
                 assert( _sys[adr].id == _ptcl_hard[i].id);
 #endif
+                //PS::F64 mass_bk = sys[adr].mass;
                 _sys[adr].DataCopy(_ptcl_hard[i]);
+                //PS::F64 dm = sys[adr].mass - mass_bk;
+                //if (dm!=0.0) _mass_modify_list.push_back(Tmlist(dm,adr));
                 if(_sys[adr].mass==0.0&&_sys[adr].group_data.artificial.isUnused()) _removelist.push_back(adr);
             }
             else{
@@ -1249,7 +1252,10 @@ public:
 #ifdef HARD_DEBUG
             assert(_sys[adr].id == ptcl_send_[i].id);
 #endif
+            //PS::F64 mass_bk = sys[adr].mass;
             _sys[adr].DataCopy(ptcl_send_[i]);
+            //PS::F64 dm = sys[adr].mass - mass_bk;
+            //if (dm!=0.0) _mass_modify_list.push_back(Tmlist(dm,adr));
             if(_sys[adr].mass==0&&_sys[adr].group_data.artificial.isUnused()) _removelist.push_back(adr);
         }
         // remove empty particles cannot do here

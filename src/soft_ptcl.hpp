@@ -30,6 +30,7 @@ public:
     PS::F64vec acorr;
 #endif
     PS::F64 pot_tot; // soft + hard
+    PS::F64 pot_soft; // soft only
 #ifdef SAVE_NEIGHBOR_ID_IN_FORCE_KERNEL
     PS::S64 id_ngb[4];
 #endif
@@ -70,12 +71,14 @@ public:
         adr = adr_;
         acc = 0;
         pot_tot = 0;
+        pot_soft= 0;
         n_ngb = 0;
     }
 
     void copyFromForce(const ForceSoft & force){
         acc = force.acc;
         pot_tot = force.pot;
+        pot_soft= pot_tot;
 #ifdef KDKDK_4TH
         acorr = force.acorr;
 #endif
@@ -93,34 +96,34 @@ public:
 
     void writeAscii(FILE* fp) const{
         Ptcl::writeAscii(fp);
-        fprintf(fp, "%26.17e %26.17e %26.17e %26.17e %d\n", 
+        fprintf(fp, "%26.17e %26.17e %26.17e %26.17e %26.17e %d\n", 
                 this->acc.x, this->acc.y, this->acc.z,  // 9-11
-                this->pot_tot, this->n_ngb);
+                this->pot_tot, this->pot_soft, this->n_ngb);
     }
 
     void writeBinary(FILE* fp) const{
         Ptcl::writeBinary(fp);
-        fwrite(&(this->acc), sizeof(PS::F64), 4, fp);
+        fwrite(&(this->acc), sizeof(PS::F64), 5, fp);
         fwrite(&(this->n_ngb), sizeof(PS::S32), 1, fp);
     }
 
     void readAscii(FILE* fp) {
         Ptcl::readAscii(fp);
-        PS::S64 rcount=fscanf(fp, "%lf %lf %lf %lf %d\n",
+        PS::S64 rcount=fscanf(fp, "%lf %lf %lf %lf %lf %d\n",
                               &this->acc.x, &this->acc.y, &this->acc.z,  // 9-11
-                              &this->pot_tot, &this->n_ngb);
-        if (rcount<5) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 5, only obtain "<<rcount<<".\n";
+                              &this->pot_tot, &this->pot_soft, &this->n_ngb);
+        if (rcount<6) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 6, only obtain "<<rcount<<".\n";
             abort();
         }
     }
 
     void readBinary(FILE* fp) {
         Ptcl::readBinary(fp);
-        size_t rcount = fread(&(this->acc), sizeof(PS::F64), 4, fp);
+        size_t rcount = fread(&(this->acc), sizeof(PS::F64), 5, fp);
         rcount += fread(&(this->n_ngb), sizeof(PS::S32), 1, fp);
-        if (rcount<5) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 5, only obtain "<<rcount<<".\n";
+        if (rcount<6) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 6, only obtain "<<rcount<<".\n";
             abort();
         }
     }
@@ -129,6 +132,7 @@ public:
         Ptcl::print(fout);
         fout<<" acc= "<<acc
             <<" pot_tot= "<<pot_tot
+            <<" pot_soft= "<<pot_soft
             <<" N_b= "<<n_ngb;
     }
 
@@ -139,11 +143,32 @@ public:
      */
     static void printColumnTitle(std::ostream & _fout, const int _width=20) {
         Ptcl::printColumnTitle(_fout, _width);
-        _fout<<std::setw(_width)<<"acc.x"
-             <<std::setw(_width)<<"acc.y"
-             <<std::setw(_width)<<"acc.z"
+        _fout<<std::setw(_width)<<"acc_soft.x"
+             <<std::setw(_width)<<"acc_soft.y"
+             <<std::setw(_width)<<"acc_soft.z"
              <<std::setw(_width)<<"pot_tot"
+             <<std::setw(_width)<<"pot_soft"
              <<std::setw(_width)<<"n_b";
+    }
+
+    //! print column title with meaning (each line for one column)
+    /*! @param[out] _fout: std::ostream output object
+      @param[in] _counter: offset of the number counter for each line to indicate the column index (defaulted 0)
+      @param[in] _offset: the printing whitespace offset for each line (defaulted 0)
+      \return: the total counter of columns
+     */
+    static int printTitleWithMeaning(std::ostream & _fout, const int _counter=0, const int _offset=0) {
+        int counter = _counter;
+        counter = Ptcl::printTitleWithMeaning(_fout, counter, _offset);
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<"-"<<counter+2<<". acc_soft.[x/y/z]: 3D soft (long-range) acceleration (0.0)\n";
+        counter+=3;
+        _fout<<std::setw(_offset)<<" "<<counter<<". pot_tot: total potential (0.0)\n";
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". pot_soft: soft potential (0.0)\n";
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". n_b: number of neighbors (0)\n";
+        return counter;
     }
 
     //! print data of class members using column style
@@ -157,6 +182,7 @@ public:
              <<std::setw(_width)<<acc.y
              <<std::setw(_width)<<acc.z
              <<std::setw(_width)<<pot_tot
+             <<std::setw(_width)<<pot_soft
              <<std::setw(_width)<<n_ngb;
     }
 

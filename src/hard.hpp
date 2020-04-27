@@ -115,15 +115,18 @@ public:
 
 struct HardEnergy{
     PS::F64 de;                 // energy error
+    PS::F64 de_change_cum;      // cumulative energy change 
+    PS::F64 de_change_interrupt; // cumulative energy change due to interruption
     PS::F64 de_sd;              // slowdown energy error
-    PS::F64 de_sd_change_cum;   // cumulative Etot_SD change due to the change of slowdown factor
+    PS::F64 de_sd_change_cum;   // cumulative Etot_SD change due to the change of slowdown factor and interruption
+    PS::F64 de_sd_change_interrupt; // cumulative Etot_SD change due to interruption
     PS::F64 ekin_sd_correction; // correction from Ekin to Etot_sd
     PS::F64 epot_sd_correction; // correction from Epot to Etot_sd
 
     HardEnergy() {clear();}
 
     void clear() {
-        de = de_sd = de_sd_change_cum = ekin_sd_correction = epot_sd_correction = 0.0;
+        de = de_change_cum = de_change_interrupt = de_sd = de_sd_change_cum = de_sd_change_interrupt = ekin_sd_correction = epot_sd_correction = 0.0;
     }
 
     void resetEnergyCorrection() {
@@ -132,8 +135,11 @@ struct HardEnergy{
 
     HardEnergy& operator +=(const HardEnergy& _energy) {
         de    += _energy.de;
+        de_change_cum += _energy.de_change_cum;
+        de_change_interrupt += _energy.de_change_interrupt;
         de_sd += _energy.de_sd;
         de_sd_change_cum   += _energy.de_sd_change_cum;
+        de_sd_change_interrupt += _energy.de_sd_change_interrupt;
         ekin_sd_correction += _energy.ekin_sd_correction;
         epot_sd_correction += _energy.epot_sd_correction;
         return *this;
@@ -760,7 +766,8 @@ public:
     void driftClusterCMRecordGroupCMDataAndWriteBack(const PS::F64 _time_end) {
         ASSERT(checkParams());
 #ifdef HARD_CHECK_ENERGY
-        PS::F64 ekin, epot, ekin_sd, epot_sd, de, de_sd, de_sd_change_cum;
+        PS::F64 ekin, epot, ekin_sd, epot_sd;
+        HardEnergy energy_local;
 #endif
         if (use_sym_int) {
             auto& pcm = sym_int.particles.cm;
@@ -805,17 +812,22 @@ public:
 #ifdef HARD_CHECK_ENERGY
             ekin    = sym_int.getEkin();
             epot    = sym_int.getEpot();
-            de      = sym_int.getEnergyError();
+            energy_local.de = sym_int.getEnergyError();
+            energy_local.de_change_cum = sym_int.getDEChangeInterrupt();
+            energy_local.de_change_interrupt = sym_int.getDEChangeInterrupt();
 #if (defined AR_SLOWDOWN_ARRAY) || (defined AR_SLOWDOWN_TREE)
             ekin_sd = sym_int.getEkinSlowDown();
             epot_sd = sym_int.getEpotSlowDown();
-            de_sd   = sym_int.getEnergyErrorSlowDown();
+            energy_local.de_sd = sym_int.getEnergyErrorSlowDown();
+            energy_local.de_sd_change_cum = sym_int.getDESlowDownChangeCum();
+            energy_local.de_sd_change_interrupt = sym_int.getDESlowDownChangeInterrupt();
 #else
             ekin_sd = ekin;
             epot_sd = epot;
-            de_sd   = de;
+            energy_local.de_sd = energy_local.de;
+            energy_local.de_sd_change_cum = energy_local.de_change_cum;
+            energy_local.de_sd_change_interrupt = energy_local.de_change_interrupt;
 #endif
-            de_sd_change_cum = sym_int.getDESlowDownChangeCum();
 #endif
         }
         else {
@@ -823,12 +835,23 @@ public:
             // PS: writeBackGroupMembers is done inside calcEnergySlowDown
             h4_int.calcEnergySlowDown(false);
             ekin    = h4_int.getEkin();
-            ekin_sd = h4_int.getEkinSlowDown();
             epot    = h4_int.getEpot();
+            energy_local.de  = h4_int.getEnergyError();
+            energy_local.de_change_cum = h4_int.getDEChangeCum();
+            energy_local.de_change_interrupt = h4_int.getDEChangeInterrupt();
+#if (defined AR_SLOWDOWN_ARRAY) || (defined AR_SLOWDOWN_TREE)
+            ekin_sd = h4_int.getEkinSlowDown();
             epot_sd = h4_int.getEpotSlowDown();
-            de      = h4_int.getEnergyError();
-            de_sd   = h4_int.getEnergyErrorSlowDown();
-            de_sd_change_cum = h4_int.getDESlowDownChangeCum();
+            energy_local.de_sd = h4_int.getEnergyErrorSlowDown();
+            energy_local.de_sd_change_cum = h4_int.getDESlowDownChangeCum();
+            energy_local.de_sd_change_interrupt = h4_int.getDESlowDownChangeInterrupt();
+#else
+            ekin_sd = ekin;
+            epot_sd = epot;
+            energy_local.de_sd = energy_local.de;
+            energy_local.de_sd_change_cum = energy_local.de_change_cum;
+            energy_local.de_sd_change_interrupt = energy_local.de_change_interrupt;
+#endif
 #else
             h4_int.writeBackGroupMembers();
 #endif
@@ -948,29 +971,28 @@ public:
         }
 
 #ifdef HARD_CHECK_ENERGY
-        energy.de_sd += de_sd;
-        energy.de    += de;
-        PS::F64 ekin_sd_correction = ekin_sd - ekin;
-        PS::F64 epot_sd_correction = epot_sd - epot;
-        energy.ekin_sd_correction += ekin_sd_correction;
-        energy.epot_sd_correction += epot_sd_correction;
-        energy.de_sd_change_cum   += de_sd_change_cum - (ekin_sd_correction + epot_sd_correction);
+        energy_local.ekin_sd_correction = ekin_sd - ekin;
+        energy_local.epot_sd_correction = epot_sd - epot;
+        energy += energy_local;
+        // exclude the slowdown energy change due to the turn off of slowdown
+        energy.de_sd_change_cum  -= energy_local.ekin_sd_correction + energy_local.epot_sd_correction;
 #ifdef HARD_DEBUG_PRINT
         std::cerr<<"Hard Energy: "
                  <<"  Ekin: "<<ekin
                  <<"  Ekin_SD: "<<ekin_sd
                  <<"  Epot: "<<epot_sd
                  <<"  Epot_SD: "<<epot_sd
-                 <<"  dE: "<<de
-                 <<"  dE_SD: "<<de_sd
-                 <<"  dE_SD_CHANGE: "<<de_sd_change_cum
+                 <<"  dE: "<<energy_local.de
+                 <<"  dE_change: "<<energy_local.de_change_cum
+                 <<"  dE_SD: "<<energy_local.de_sd
+                 <<"  dE_SD_change: "<<energy_local.de_sd_change_cum
                  <<"  H4_step_sum: "<<H4_step_sum
                  <<"  ARC_substep_sum: "<<ARC_substep_sum
                  <<"  ARC_tsyn_step_sum: "<<ARC_tsyn_step_sum
                  <<std::endl;
 #endif        
-        if (abs(de_sd) > manager->energy_error_max) {
-            std::cerr<<"Hard energy significant ("<<de_sd<<") !\n";
+        if (abs(energy_local.de_sd) > manager->energy_error_max) {
+            std::cerr<<"Hard energy significant ("<<energy_local.de_sd<<") !\n";
             DATADUMP("hard_large_energy");
             //abort();
         }
@@ -1173,7 +1195,7 @@ private:
         const PS::F64 dr2 = dr * dr;
         const PS::F64 dr2_eps = dr2 + manager->eps_sq;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
-        const PS::F64 gmor = G*_pj.mass * drinv;
+        PS::F64 gmor = G*_pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
         const PS::F64 gmor3 = gmor * drinv2;
         const PS::F64 dr_eps = drinv * dr2_eps;
@@ -1189,21 +1211,25 @@ private:
         const PS::F64 gmor3_max = gmor_max * drinv2_max;
 
         auto& pj_artificial = _pj.group_data.artificial;
-#ifdef ONLY_SOFT
         const PS::F64 kpot  = 1.0 - ChangeOver::calcPotWTwo(_pi.changeover, _pj.changeover, dr_eps);
-        // single, remove linear cutoff, obtain changeover soft potential
-        if (pj_artificial.isSingle()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
+        // single, remove linear cutoff, obtain changeover soft and total potential
+        if (pj_artificial.isSingle()) {
+            _pi.pot_soft -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
+            _pi.pot_tot -= (gmor - gmor_max);
+        }
         // member, mass is zero, use backup mass
-        else if (pj.artificial.isMember()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (G*pj_artificial.getMassBackup()*drinv*kpot  - gmor_max);   
+        else if (pj_artificial.isMember()) {
+            gmor = G*pj_artificial.getMassBackup()*drinv;
+            _pi.pot_soft -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
+            _pi.pot_tot -= (gmor  - gmor_max);
+        }
         // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
-        else _pi.pot_tot += gmor_max; 
-#else
-        // single/member, remove linear cutoff, obtain total potential
-        if (pj_artificial.isSingle()) _pi.pot_tot -= (gmor - gmor_max);   
-        // member, mass is zero, use backup mass
-        else if (pj_artificial.isMember()) _pi.pot_tot -= (G*pj_artificial.getMassBackup()*drinv  - gmor_max);   
-        // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
-        else _pi.pot_tot += gmor_max; 
+        else {
+            _pi.pot_soft += gmor_max; 
+            _pi.pot_tot  += gmor_max; 
+        }
+#ifdef ONLY_SOFT
+        _pi.pot_tot = _pi.pot_soft;
 #endif
         // correct to changeover soft acceleration
         _pi.acc -= (gmor3*k - gmor3_max)*dr;
@@ -1227,7 +1253,7 @@ private:
         const PS::F64 r_out = manager->r_out_base;
         const PS::F64 r_out2 = r_out * r_out;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
-        const PS::F64 gmor = G*_pj.mass * drinv;
+        PS::F64 gmor = G*_pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
         const PS::F64 gmor3 = gmor * drinv2;
         const PS::F64 dr_eps = drinv * dr2_eps;
@@ -1243,21 +1269,25 @@ private:
         const PS::F64 gmor3_max = gmor_max * drinv2_max;
 
         auto& pj_artificial = _pj.group_data.artificial;
-#ifdef ONLY_SOFT
         const PS::F64 kpot  = 1.0 - ChangeOver::calcPotWTwo(_pi.changeover, chj, dr_eps);
-        // single, remove linear cutoff, obtain changeover soft potential
-        if (pj_artificial.isSingle()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
+        // single, remove linear cutoff, obtain changeover soft and total potential
+        if (pj_artificial.isSingle()) {
+            _pi.pot_soft -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
+            _pi.pot_tot -= (gmor - gmor_max);
+        }
         // member, mass is zero, use backup mass
-        else if (pj_artificial.isMember()) _pi.pot_tot -= dr2_eps>r_out2? 0.0: (G*pj_artificial.getMassBackup()*drinv*kpot  - gmor_max);   
+        else if (pj_artificial.isMember()) {
+            gmor = G*pj_artificial.getMassBackup()*drinv;
+            _pi.pot_soft -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
+            _pi.pot_tot -= (gmor  - gmor_max);
+        }
         // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
-        else _pi.pot_tot += gmor_max; 
-#else
-        // single/member, remove linear cutoff, obtain total potential
-        if (pj_artificial.isSingle()) _pi.pot_tot -= (gmor - gmor_max);   
-        // member, mass is zero, use backup mass
-        else if (pj_artificial.isMember()) _pi.pot_tot -= (G*pj_artificial.getMassBackup()*drinv  - gmor_max);   
-        // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
-        else _pi.pot_tot += gmor_max; 
+        else {
+            _pi.pot_soft += gmor_max; 
+            _pi.pot_tot  += gmor_max; 
+        }
+#ifdef ONLY_SOFT
+        _pi.pot_tot = _pi.pot_soft;
 #endif
         // correct to changeover soft acceleration
         _pi.acc -= (gmor3*k - gmor3_max)*dr;
@@ -1820,6 +1850,11 @@ public:
         time_origin_ += _dt;
     }
 
+    //! write back hard particles to global system and update time of write back
+    /*! 
+      @param[in,out] _sys: particle system
+      @param[out] _removelist: address on _sys of particles that are need to be removed are stored.
+     */
     template<class Tsys>
     void writeBackPtclForOneCluster(Tsys & sys, 
                                     PS::ReallocatableArray<PS::S32> & _remove_list){
@@ -1831,7 +1866,12 @@ public:
 #ifdef HARD_DEBUG
             assert(sys[adr].id == ptcl_hard_[i].id);
 #endif
+            //PS::F64 mass_bk = sys[adr].mass;
             sys[adr].DataCopy(ptcl_hard_[i]);
+            //// mass modified case, register adr
+            //PS::F64 dm = sys[adr].mass - mass_bk;
+            //if (dm!=0.0) _mass_modify_list.push_back(Tmlist(dm,adr));
+            // ghost particle case
             if(sys[adr].mass==0.0&&sys[adr].group_data.artificial.isUnused()) {
                 _remove_list.push_back(adr);
             }

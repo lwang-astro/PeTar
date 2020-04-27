@@ -106,8 +106,23 @@ public:
       @param[in] _width: print width (defaulted 20)
      */
     static void printColumnTitle(std::ostream & _fout, const int _width=20) {
-        _fout<<std::setw(_width)<<"R_in"
-             <<std::setw(_width)<<"R_out";
+        _fout<<std::setw(_width)<<"r_in"
+             <<std::setw(_width)<<"r_out";
+    }
+
+    //! print column title with meaning (each line for one column)
+    /*! @param[out] _fout: std::ostream output object
+      @param[in] _counter: offset of the number counter for each line to indicate the column index (defaulted 0)
+      @param[in] _offset: the printing whitespace offset for each line (defaulted 0)
+      \return: the total counter of columns
+     */
+    static int printTitleWithMeaning(std::ostream & _fout, const int _counter=0, const int _offset=0) {
+        int counter = _counter;
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". r_in: inner changeover radius (0.0)\n";
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". r_out: outer changeover radius (0.0)\n";
+        return counter;
     }
 
     //! print data of class members using column style

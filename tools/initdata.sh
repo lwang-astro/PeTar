@@ -35,7 +35,7 @@ n=`expr $n - $igline`
 if [[ $seflag -eq 'y' ]]; then
     read -p "Stellar radius (0)" radius
     [ -z $radius ] && radius=0
-    awk -v n=$n -v ig=$igline 'BEGIN{print 0,n,0} {if(NR>ig) print $LINE,'$radius',0,0,0,0,NR-ig,0,0,0,0,0,0,0,0,0}' $fname >$fout
+    awk -v n=$n -v ig=$igline 'BEGIN{print 0,n,0} {if(NR>ig) print $LINE,'$radius',0,0,0,0,NR-ig,0,0,0,0,0,0,0,0,0,0}' $fname >$fout
 else
-    awk -v n=$n -v ig=$igline 'BEGIN{print 0,n,0} {if(NR>ig) print $LINE,0,NR-ig,0,0,0,0,0,0,0,0,0}' $fname >$fout
+    awk -v n=$n -v ig=$igline 'BEGIN{print 0,n,0} {if(NR>ig) print $LINE,0,NR-ig,0,0,0,0,0,0,0,0,0,0}' $fname >$fout
 fi
