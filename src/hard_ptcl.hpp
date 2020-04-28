@@ -7,7 +7,7 @@ public:
     PS::S32 id_cluster;
     PS::S32 adr_org;
 
-    PtclHard() {}
+    PtclHard(): Ptcl(), id_cluster(-1), adr_org(-1) {}
 
     template<class Tptcl>
     PtclHard(const Tptcl& _p, const PS::F64 _r_search, const PS::F64 _mass_bk, const PS::S64 _id, const PS::S64 _status, const ChangeOver& _co, const PS::S32 _id_cluster, const PS::S32 _adr_org): 

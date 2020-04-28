@@ -606,15 +606,13 @@ public:
                 // print data
                 std::cerr<<"Binary Merge: time: "<<_bin_interrupt.time_now<<std::endl;
                 _bin.Binary::printColumnTitle(std::cerr);
-                PtclHard::printColumnTitle(std::cerr);
-                PtclHard::printColumnTitle(std::cerr);
+                //PtclHard::printColumnTitle(std::cerr);
+                //PtclHard::printColumnTitle(std::cerr);
                 std::cerr<<std::endl;
                 _bin.Binary::printColumn(std::cerr);
-                for (int k=0; k<2; k++) 
-                    _bin.getMember(k)->printColumn(std::cerr);
+                //p1->printColumn(std::cerr);
+                //p2->printColumn(std::cerr);
                 std::cerr<<std::endl;
-                p1->printColumn(std::cerr);
-                p2->printColumn(std::cerr);
 
                 // new particle data
                 Float mcm = p1->mass + p2->mass;
@@ -624,11 +622,12 @@ public:
                 }
                 p1->setBinaryInterruptState(BinaryInterruptState::none);
                 p2->setBinaryInterruptState(BinaryInterruptState::none);
-                p1->mass = mcm;
-                p1->dm = 0.0; // notice this also include the mass change of removed particle, used for correct soft potential energy
+                p1->mass = mcm*0.8;
+                p1->dm = -mcm*0.2; // notice this also include the mass change of removed particle for correcting soft potential energy
+                //unused particle will be immediately deleted after hard integration, any information saved on it will be lost
                 p2->mass = 0.0;
-                p2->dm = 0.0;
-                p2->group_data.artificial.setParticleTypeToUnused();
+                p2->dm = 0.0; 
+                p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
             };
 
             if (_bin.getMemberN()==2) {

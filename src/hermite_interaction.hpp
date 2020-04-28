@@ -67,6 +67,7 @@ public:
         ASSERT(r>0.0);
         const Float rinv = 1.0/r;
         const Float drdot = drdv*rinv;
+        const Float kp = ChangeOver::calcPotWTwo(_pi.changeover,_pj.changeover, r);
         const Float k = ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, r);
         const Float kdot = ChangeOver::calcAcc1WTwo(_pi.changeover, _pj.changeover, r, drdot);
           
@@ -88,7 +89,7 @@ public:
         _fi.acc1[1] += acc1[1];
         _fi.acc1[2] += acc1[2];
 
-        _fi.pot += - gmor;
+        _fi.pot += - gmor*kp;
 
         return dr2;
     }
@@ -123,6 +124,7 @@ public:
             ASSERT(r>0.0);
             const Float rinv = 1.0/r;
             const Float drdot = drdv*rinv;
+            const Float kp = ChangeOver::calcPotWTwo(_pi.changeover, pj.changeover, r);
             const Float k = ChangeOver::calcAcc0WTwo(_pi.changeover, pj.changeover, r);
             const Float kdot = ChangeOver::calcAcc1WTwo(_pi.changeover, pj.changeover, r, drdot);
           
@@ -144,7 +146,7 @@ public:
             _fi.acc1[1] += acc1[1];
             _fi.acc1[2] += acc1[2];
 
-            _fi.pot += - gmor;
+            _fi.pot += - gmor*kp;
 
             r2_min = std::min(r2_min, dr2);
         }
@@ -178,11 +180,13 @@ public:
         const Float rinv = 1.0/r;
         const Float drdot = drdv*rinv;
 
+        Float mkp = 0.0;
         Float mk = 0.0;
         Float mkdot = 0.0;
         auto* ptcl_mem = _gj.particles.getDataAddress();
         ASSERT(_gj.particles.cm.mass==_pj.mass);
         for (int i=0; i<_gj.particles.getSize(); i++) {
+            mkp   += ptcl_mem[i].mass * ChangeOver::calcPotWTwo(_pi.changeover, ptcl_mem[i].changeover, r);
             mk    += ptcl_mem[i].mass * ChangeOver::calcAcc0WTwo(_pi.changeover, ptcl_mem[i].changeover, r);
             mkdot += ptcl_mem[i].mass * ChangeOver::calcAcc1WTwo(_pi.changeover, ptcl_mem[i].changeover, r, drdot);
         }
@@ -203,7 +207,7 @@ public:
         _fi.acc1[1] += acc1[1];
         _fi.acc1[2] += acc1[2];
 
-        _fi.pot += - gravitational_constant*_pj.mass*rinv;
+        _fi.pot += - gravitational_constant*mkp*rinv;
 
         return dr2;
     }
@@ -235,14 +239,17 @@ public:
         const Float rinv = 1.0/r;
         const Float drdot = drdv*rinv;
 
+        Float kp = 0.0;
         Float k = 0.0;
         Float kdot = 0.0;
         auto* ptcl_mem = _gi.particles.getDataAddress();
         ASSERT(_gi.particles.cm.mass==_pi.mass);
         for (int i=0; i<_gi.particles.getSize(); i++) {
+            kp   += ptcl_mem[i].mass * ChangeOver::calcPotWTwo(_pi.changeover, ptcl_mem[i].changeover, r);
             k    += ptcl_mem[i].mass * ChangeOver::calcAcc0WTwo(_pj.changeover, ptcl_mem[i].changeover, r);
             kdot += ptcl_mem[i].mass * ChangeOver::calcAcc1WTwo(_pj.changeover, ptcl_mem[i].changeover, r, drdot);
         }
+        kp   /= _pi.mass;
         k    /= _pi.mass;
         kdot /= _pi.mass;
 
@@ -264,7 +271,7 @@ public:
         _fi.acc1[1] += acc1[1];
         _fi.acc1[2] += acc1[2];
 
-        _fi.pot += - gmor;
+        _fi.pot += - gmor*kp;
 
         return dr2;
     }
@@ -306,11 +313,14 @@ public:
 
             Float k = 0.0;
             Float kdot = 0.0;
+            Float kp = 0.0;
             auto* ptcl_mem = _gi.particles.getDataAddress();
             for (int i=0; i<_gi.particles.getSize(); i++) {
+                kp   += ptcl_mem[i].mass * ChangeOver::calcPotWTwo(_pi.changeover, ptcl_mem[i].changeover, r);
                 k    += ptcl_mem[i].mass * ChangeOver::calcAcc0WTwo(pj.changeover, ptcl_mem[i].changeover, r);
                 kdot += ptcl_mem[i].mass * ChangeOver::calcAcc1WTwo(pj.changeover, ptcl_mem[i].changeover, r, drdot);
             }
+            kp   /= _pi.mass;
             k    /= _pi.mass;
             kdot /= _pi.mass;
 
@@ -332,7 +342,7 @@ public:
             _fi.acc1[1] += acc1[1];
             _fi.acc1[2] += acc1[2];
 
-            _fi.pot += - gmor;
+            _fi.pot += - gmor*kp;
 
             r2_min = std::min(r2_min, dr2);
         }
@@ -371,18 +381,23 @@ public:
         // pj.mass * k
         Float mk = 0.0;
         Float mkdot = 0.0;
+        Float mkp = 0.0;
         auto* ptcl_mem_i = _gi.particles.getDataAddress();
         auto* ptcl_mem_j = _gj.particles.getDataAddress();
         for (int i=0; i<_gi.particles.getSize(); i++) {
             Float mkj = 0.0;
+            Float mkpj = 0.0;
             Float mkdotj = 0.0;
             for (int j=0; j<_gj.particles.getSize(); j++) {
+                mkpj   += ptcl_mem_j[j].mass * ChangeOver::calcPotWTwo(ptcl_mem_i[i].changeover, ptcl_mem_j[j].changeover, r);
                 mkj    += ptcl_mem_j[j].mass * ChangeOver::calcAcc0WTwo(ptcl_mem_i[i].changeover, ptcl_mem_j[j].changeover, r);
                 mkdotj += ptcl_mem_j[j].mass * ChangeOver::calcAcc1WTwo(ptcl_mem_i[i].changeover, ptcl_mem_j[j].changeover, r, drdot);
             }
+            mkp   += ptcl_mem_i[i].mass * mkpj;
             mk    += ptcl_mem_i[i].mass * mkj;
             mkdot += ptcl_mem_i[i].mass * mkdotj;
         }
+        mkp   /= _pi.mass;
         mk    /= _pi.mass;
         mkdot /= _pi.mass;
           
@@ -403,7 +418,7 @@ public:
         _fi.acc1[1] += acc1[1];
         _fi.acc1[2] += acc1[2];
 
-        _fi.pot += - gravitational_constant*_pj.mass*rinv;
+        _fi.pot += - gravitational_constant*mkp*rinv;
 
         return dr2;
     }

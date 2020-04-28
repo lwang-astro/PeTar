@@ -1543,7 +1543,8 @@ public:
 #endif
 
 #ifdef HARD_CHECK_ENERGY
-            HardEnergy energy_local = system_hard_isolated.energy;
+            HardEnergy energy_local = system_hard_one_cluster.energy;
+            energy_local += system_hard_isolated.energy;
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
             energy_local += system_hard_connected.energy;
 #endif
@@ -1568,6 +1569,7 @@ public:
             stat.energy.de_sd_change_cum += de_sd_change_cum;
             stat.energy.de_sd_change_interrupt += de_sd_change_interrupt;
 
+            system_hard_one_cluster.energy.clear();
             system_hard_isolated.energy.clear();
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
             system_hard_connected.energy.clear();

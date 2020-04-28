@@ -570,6 +570,7 @@ public:
                 if (interrupt_binary.status!=AR::InterruptStatus::none) {
                     if (manager->ar_manager.interrupt_detection_option==1) {
                         // correct potential difference due to the changeover function
+                        /*
                         auto& pi=interrupt_binary.particle_bk[0];
                         auto& pj=interrupt_binary.particle_bk[1];
                         PtclHard ptmpi(pi), ptmpj(pj);
@@ -584,6 +585,7 @@ public:
                         dpot -= epotij;
                         energy.de_sd += dpot;
                         energy.de += dpot;
+                        */
                         interrupt_binary.clear();
                     }
                     // when binary is interrupted, break integration loop
