@@ -12,7 +12,6 @@
 //! AR interaction clas
 class ARInteraction{
 public:
-    typedef H4::ParticleAR<PtclHard> ARPtcl;
     typedef H4::ParticleH4<PtclHard> H4Ptcl;
     Float eps_sq; ///> softening parameter
     Float gravitational_constant;
@@ -43,7 +42,7 @@ public:
       @param[in] _p2: particle 2
       \return the inverse time transformation factor (gt_kick_inv) for kick step
     */
-    inline Float calcInnerAccPotAndGTKickInvTwo(AR::Force& _f1, AR::Force& _f2, Float& _epot, const ARPtcl& _p1, const ARPtcl& _p2) {
+    inline Float calcInnerAccPotAndGTKickInvTwo(AR::Force& _f1, AR::Force& _f2, Float& _epot, const PtclHard& _p1, const PtclHard& _p2) {
         // acceleration
         const Float mass1 = _p1.mass;
         const Float* pos1 = &_p1.pos.x;
@@ -137,7 +136,7 @@ public:
       @param[in] _n_particle: number of member particles
       \return the inverse time transformation factor (gt_kick_inv) for kick step
     */
-    inline Float calcInnerAccPotAndGTKickInv(AR::Force* _force, Float& _epot, const ARPtcl* _particles, const int _n_particle) {
+    inline Float calcInnerAccPotAndGTKickInv(AR::Force* _force, Float& _epot, const PtclHard* _particles, const int _n_particle) {
         _epot = Float(0.0);
         Float gt_kick_inv = Float(0.0);
 
@@ -208,7 +207,7 @@ public:
       @param[in] _perturber: pertuber container
       @param[in] _time: current time
     */
-    void calcAccPert(AR::Force* _force, const ARPtcl* _particles, const int _n_particle, const H4Ptcl& _particle_cm, const ARPerturber& _perturber, const Float _time) {
+    void calcAccPert(AR::Force* _force, const PtclHard* _particles, const int _n_particle, const H4Ptcl& _particle_cm, const ARPerturber& _perturber, const Float _time) {
         static const Float inv3 = 1.0 / 3.0;
 
         // perturber force
@@ -381,7 +380,7 @@ public:
       @param[in] _time: current time
       \return perturbation energy to calculate slowdown factor
     */
-    Float calcAccPotAndGTKickInv(AR::Force* _force, Float& _epot, const ARPtcl* _particles, const int _n_particle, const H4Ptcl& _particle_cm, const ARPerturber& _perturber, const Float _time) {
+    Float calcAccPotAndGTKickInv(AR::Force* _force, Float& _epot, const PtclHard* _particles, const int _n_particle, const H4Ptcl& _particle_cm, const ARPerturber& _perturber, const Float _time) {
         // inner force
         Float gt_kick_inv;
         if (_n_particle==2) gt_kick_inv = calcInnerAccPotAndGTKickInvTwo(_force[0], _force[1], _epot, _particles[0], _particles[1]);
@@ -405,7 +404,7 @@ public:
     }
 
     //! calculate perturbation from binary tree
-    static Float calcPertFromBinary(const AR::BinaryTree<ARPtcl>& _bin) {
+    static Float calcPertFromBinary(const AR::BinaryTree<PtclHard>& _bin) {
         Float apo = _bin.semi*(1.0+_bin.ecc);
         Float apo2 = apo*apo;
 #ifdef AR_SLOWDOWN_PERT_R4
@@ -433,7 +432,7 @@ public:
       @param[in] _pi: particle i (cm of binary)
       @param[in] _pj: particle j 
      */
-    void calcSlowDownPertOne(Float& _pert_out, Float& _t_min_sq, const ARPtcl& pi, const ARPtcl& pj) {
+    void calcSlowDownPertOne(Float& _pert_out, Float& _t_min_sq, const PtclHard& pi, const PtclHard& pj) {
         Float dr[3] = {pj.pos[0] - pi.pos[0],
                        pj.pos[1] - pi.pos[1],
                        pj.pos[2] - pi.pos[2]};
@@ -591,7 +590,7 @@ public:
       @param[in] _bin_interrupt: interrupt binary information: adr: binary tree address; time_now: current physical time; time_end: integration finishing time; status: interrupt status: change, merge,none
       @param[in] _bin: binarytree to check iteratively
     */
-    void modifyAndInterruptIter(AR::InterruptBinary<ARPtcl>& _bin_interrupt, AR::BinaryTree<ARPtcl>& _bin) {
+    void modifyAndInterruptIter(AR::InterruptBinary<PtclHard>& _bin_interrupt, AR::BinaryTree<PtclHard>& _bin) {
 #ifdef STELLAR_EVOLUTION
         if (_bin_interrupt.status==AR::InterruptStatus::none) {
             auto* p1 = _bin.getLeftMember();
@@ -607,8 +606,8 @@ public:
                 // print data
                 std::cerr<<"Binary Merge: time: "<<_bin_interrupt.time_now<<std::endl;
                 _bin.Binary::printColumnTitle(std::cerr);
-                ARPtcl::printColumnTitle(std::cerr);
-                ARPtcl::printColumnTitle(std::cerr);
+                PtclHard::printColumnTitle(std::cerr);
+                PtclHard::printColumnTitle(std::cerr);
                 std::cerr<<std::endl;
                 _bin.Binary::printColumn(std::cerr);
                 for (int k=0; k<2; k++) 
@@ -633,7 +632,7 @@ public:
             };
 
             if (_bin.getMemberN()==2) {
-                ARPtcl *p1,*p2;
+                PtclHard *p1,*p2;
                 p1 = _bin.getLeftMember();
                 p2 = _bin.getRightMember();
                 if (p1->getBinaryInterruptState()== BinaryInterruptState::collision && 

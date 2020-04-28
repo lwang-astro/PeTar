@@ -21,7 +21,6 @@
 #include"stability.hpp"
 
 typedef H4::ParticleH4<PtclHard> PtclH4;
-typedef H4::ParticleAR<PtclHard> PtclAR;
 
 //! Hard integrator parameter manager
 class HardManager{
@@ -151,13 +150,13 @@ struct HardEnergy{
 class HardIntegrator{
 public:
     H4::HermiteIntegrator<PtclHard, PtclH4, HermitePerturber, ARPerturber, HermiteInteraction, ARInteraction, HermiteInformation> h4_int; ///> hermite integrator
-    AR::TimeTransformedSymplecticIntegrator<PtclAR, PtclH4, ARPerturber, ARInteraction, H4::ARInformation<PtclHard>> sym_int; ///> AR integrator
+    AR::TimeTransformedSymplecticIntegrator<PtclHard, PtclH4, ARPerturber, ARInteraction, H4::ARInformation<PtclHard>> sym_int; ///> AR integrator
     HardManager* manager; ///> hard manager
     PS::ReallocatableArray<TidalTensor> tidal_tensor; ///> tidal tensor array
     PS::F64 time_origin;  ///> origin physical time
     PtclH4* ptcl_origin;  ///> original particle array
 
-    AR::InterruptBinary<PtclAR> interrupt_binary; ///> interrupt binary address
+    AR::InterruptBinary<PtclHard> interrupt_binary; ///> interrupt binary address
 
 #ifdef HARD_DEBUG_PRINT
     PS::ReallocatableArray<PS::S32> n_group_sub_init; ///> initial sub group number in each groups 
@@ -542,7 +541,7 @@ public:
       @param [in] _time_end: time to integrate
       \return interrupt binary address, if no return NULL
      */
-    AR::InterruptBinary<PtclAR>& integrateToTime(const PS::F64 _time_end) {
+    AR::InterruptBinary<PtclHard>& integrateToTime(const PS::F64 _time_end) {
         ASSERT(checkParams());
 
         // dump flag
@@ -573,7 +572,7 @@ public:
                         // correct potential difference due to the changeover function
                         auto& pi=interrupt_binary.particle_bk[0];
                         auto& pj=interrupt_binary.particle_bk[1];
-                        PtclAR ptmpi(pi), ptmpj(pj);
+                        PtclHard ptmpi(pi), ptmpj(pj);
                         PS::F64 r_in_max = std::max(ptmpi.changeover.getRin(),ptmpj.changeover.getRin());
                         ptmpi.pos=PS::F64vec(r_in_max,0.0,0.0);
                         ptmpj.pos=PS::F64vec(0.0,0.0,0.0);
@@ -1055,7 +1054,7 @@ public:
         _fout<<std::endl;
         interrupt_binary.adr->printColumn(_fout);
         _fout<<std::endl;
-        PtclAR::printColumnTitle(_fout);
+        PtclHard::printColumnTitle(_fout);
         _fout<<std::endl;
         for (int j=0; j<2; j++) {
             interrupt_binary.adr->getMember(j)->printColumn(_fout);
