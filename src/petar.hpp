@@ -2688,7 +2688,7 @@ public:
             /// calculate tree force with linear cutoff, save to system_soft.acc
             treeSoftForce() ;
 
-            // >5 correct change over
+            // >5 correct change over and potential energy due to mass change
             /// correct system_soft.acc with changeover, using system_hard and system_soft particles
             treeForceCorrectChangeover();
 

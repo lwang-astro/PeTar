@@ -22,7 +22,7 @@ public:
 #ifdef STELLAR_EVOLUTION
     // for stellar evolution
     PS::F64 radius;
-    PS::F64 mdot;
+    PS::F64 dm;
     PS::F64 time_interrupt;
     PS::S64 binary_state; // contain two parts, low bits (first BINARY_STATE_ID_SHIFT bits) is binary interrupt state and high bits are pair ID
 
@@ -53,7 +53,7 @@ public:
     ParticleBase(): mass(0.0) { 
 #ifdef STELLAR_EVOLUTION
         radius = 0.0;
-        mdot = 0.0;
+        dm = 0.0;
         time_interrupt = 0.0;
         binary_state = 0;
 #endif
@@ -68,7 +68,7 @@ public:
                  const PS::F64vec & _vel): mass(_mass), pos(_pos), vel(_vel) {
 #ifdef STELLAR_EVOLUTION
         radius = 0.0;
-        mdot = 0.0;
+        dm = 0.0;
         time_interrupt = 0.0;
         binary_state = 0;
 #endif
@@ -77,8 +77,8 @@ public:
 #ifdef STELLAR_EVOLUTION
     //! constructor 
     ParticleBase(const PS::F64 _mass, const PS::F64vec & _pos, const PS::F64vec & _vel,
-                 const PS::F64 _radius, const PS::F64 _mdot, const PS::F64 _time_interrupt, const PS::S64 _binary_state): 
-        mass(_mass), pos(_pos), vel(_vel), radius(_radius), mdot(_mdot), time_interrupt(_time_interrupt), binary_state(_binary_state) {}
+                 const PS::F64 _radius, const PS::F64 _dm, const PS::F64 _time_interrupt, const PS::S64 _binary_state): 
+        mass(_mass), pos(_pos), vel(_vel), radius(_radius), dm(_dm), time_interrupt(_time_interrupt), binary_state(_binary_state) {}
 #endif
 
 #ifdef STELLAR_EVOLUTION
@@ -90,7 +90,7 @@ public:
                 this->mass, 
                 this->pos.x, this->pos.y, this->pos.z,  
                 this->vel.x, this->vel.y, this->vel.z,
-                this->radius, this->mdot, this->time_interrupt, this->binary_state);
+                this->radius, this->dm, this->time_interrupt, this->binary_state);
     }
 
     //! read class data with ASCII format
@@ -101,7 +101,7 @@ public:
                               &this->mass, 
                               &this->pos.x, &this->pos.y, &this->pos.z,
                               &this->vel.x, &this->vel.y, &this->vel.z,
-                              &this->radius,&this->mdot,  &this->time_interrupt, &this->binary_state);
+                              &this->radius,&this->dm,  &this->time_interrupt, &this->binary_state);
         if(rcount<11) {
             std::cerr<<"Error: Data reading fails! requiring data number is 11, only obtain "<<rcount<<".\n";
             abort();
@@ -159,7 +159,7 @@ public:
             <<" vel="<<vel;
 #ifdef STELLAR_EVOLUTION
         fout<<" radius="<<radius
-            <<" mdot="<<mdot
+            <<" dm="<<dm
             <<" time_interrupt="<<time_interrupt
             <<" binary_state="<<binary_state;
 #endif
@@ -180,7 +180,7 @@ public:
              <<std::setw(_width)<<"vel.z";
 #ifdef STELLAR_EVOLUTION
         _fout<<std::setw(_width)<<"radius"
-             <<std::setw(_width)<<"mdot"
+             <<std::setw(_width)<<"dm"
              <<std::setw(_width)<<"t_irpt"
              <<std::setw(_width)<<"bin_stat";
 #endif
@@ -204,7 +204,7 @@ public:
 #ifdef STELLAR_EVOLUTION
         _fout<<std::setw(_offset)<<" "<<counter<<". radius: stellar radius for merger checker (0.0)\n";
         counter++;
-        _fout<<std::setw(_offset)<<" "<<counter<<". mdot: mass change rate (0.0)\n";
+        _fout<<std::setw(_offset)<<" "<<counter<<". dm: mass change (0.0)\n";
         counter++;
         _fout<<std::setw(_offset)<<" "<<counter<<". t_irpt: time for next evolution check (0.0)\n";
         counter++;
@@ -228,7 +228,7 @@ public:
              <<std::setw(_width)<<vel.z;
 #ifdef STELLAR_EVOLUTION
         _fout<<std::setw(_width)<<radius
-             <<std::setw(_width)<<mdot
+             <<std::setw(_width)<<dm
              <<std::setw(_width)<<time_interrupt
              <<std::setw(_width)<<binary_state;
 #endif
@@ -246,7 +246,7 @@ public:
         vel  = din.vel;
 #ifdef STELLAR_EVOLUTION
         radius= din.radius;
-        mdot  = din.mdot;
+        dm  = din.dm;
         time_interrupt = din.time_interrupt;
         binary_state  = din.binary_state;
 #endif

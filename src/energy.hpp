@@ -46,9 +46,9 @@ public:
         _fout<<"Energy:  "
              <<std::setw(_width)<<"Error"
              <<std::setw(_width)<<"Error_cum"
+             <<std::setw(_width)<<"Total"
              <<std::setw(_width)<<"Kinetic"
              <<std::setw(_width)<<"Potential"
-             <<std::setw(_width)<<"Total"
 #ifdef HARD_CHECK_ENERGY
              <<std::setw(_width)<<"Modify"
              <<std::setw(_width)<<"Interrupt"
@@ -111,6 +111,8 @@ public:
              <<std::setw(_width)<<"Ekin_SD"
              <<std::setw(_width)<<"Epot_SD"
              <<std::setw(_width)<<"Etot_SD"
+             <<std::setw(_width)<<"dE_modify_SD"
+             <<std::setw(_width)<<"dE_interrupt_SD"
              <<std::setw(_width)<<"Error_hard_SD"
              <<std::setw(_width)<<"Error_hard_SD_cum"
 #endif
@@ -139,6 +141,7 @@ public:
              <<std::setw(_width)<<error_hard_cum - error_hard_cum_pre
              <<std::setw(_width)<<error_hard_cum
              <<std::setw(_width)<<getEnergyErrorSlowDown() - error_sd_cum_pre
+             <<std::setw(_width)<<getEnergyErrorSlowDown()
              <<std::setw(_width)<<ekin_sd
              <<std::setw(_width)<<epot_sd
              <<std::setw(_width)<<ekin_sd+epot_sd

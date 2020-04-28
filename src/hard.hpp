@@ -568,8 +568,28 @@ public:
             while (h4_int.getTime()<_time_end) {
                 // integrate groups
                 interrupt_binary = h4_int.integrateGroupsOneStep();
-                // when binary is interrupted, break integration loop
-                if (interrupt_binary.status!=AR::InterruptStatus::none) break;
+                if (interrupt_binary.status!=AR::InterruptStatus::none) {
+                    if (manager->ar_manager.interrupt_detection_option==1) {
+                        // correct potential difference due to the changeover function
+                        auto& pi=interrupt_binary.particle_bk[0];
+                        auto& pj=interrupt_binary.particle_bk[1];
+                        PtclAR ptmpi(pi), ptmpj(pj);
+                        PS::F64 r_in_max = std::max(ptmpi.changeover.getRin(),ptmpj.changeover.getRin());
+                        ptmpi.pos=PS::F64vec(r_in_max,0.0,0.0);
+                        ptmpj.pos=PS::F64vec(0.0,0.0,0.0);
+                        H4::ForceH4 fi;
+                        Float dpot = manager->h4_manager.interaction.calcEnergyPotSingleSingle(ptmpi,ptmpj);
+                        Float epotij=0.0;
+                        AR::Force f1,f2;
+                        manager->ar_manager.interaction.calcInnerAccPotAndGTKickInvTwo(f1,f2,epotij,ptmpi,ptmpj);
+                        dpot -= epotij;
+                        energy.de_sd += dpot;
+                        energy.de += dpot;
+                        interrupt_binary.clear();
+                    }
+                    // when binary is interrupted, break integration loop
+                    else break;
+                }
 
 #ifdef HARD_COUNT_NO_NEIGHBOR
                 checkNeighborExist();
@@ -687,7 +707,7 @@ public:
                     h4_int.printColumn(std::cout, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
                     std::cout<<std::endl;
 
-                    PS::F64 de_sd   = h4_int.getEnergyErrorSlowDown();
+                    PS::F64 de_sd   = h4_int.getEnergyErrorSlowDown() + energy.de_sd;
                     if (abs(de_sd) > manager->energy_error_max) {
                         PS::F64 ekin    = h4_int.getEkin();
                         PS::F64 ekin_sd = h4_int.getEkinSlowDown();
@@ -767,7 +787,6 @@ public:
         ASSERT(checkParams());
 #ifdef HARD_CHECK_ENERGY
         PS::F64 ekin, epot, ekin_sd, epot_sd;
-        HardEnergy energy_local;
 #endif
         if (use_sym_int) {
             auto& pcm = sym_int.particles.cm;
@@ -776,6 +795,16 @@ public:
             // update rsearch
             pcm.Ptcl::calcRSearch(_time_end);
             // copyback
+
+#ifdef HARD_CHECK_ENERGY
+            // correct cm kinetic energy
+            auto& bink = sym_int.info.getBinaryTreeRoot();
+            auto& vcm = pcm.vel;
+            Float dm = bink.mass - pcm.mass;
+            Float de_kin = 0.5*dm*(vcm[0]*vcm[0]+vcm[1]*vcm[1]+vcm[2]*vcm[2]);
+            auto& vbin = bink.vel;
+            de_kin += bink.mass*(vbin[0]*vcm[0]+vbin[1]*vcm[1]+vbin[2]*vcm[2]);
+#endif
             sym_int.particles.shiftToOriginFrame();
             sym_int.particles.template writeBackMemberAll<PtclH4>();
 
@@ -812,21 +841,21 @@ public:
 #ifdef HARD_CHECK_ENERGY
             ekin    = sym_int.getEkin();
             epot    = sym_int.getEpot();
-            energy_local.de = sym_int.getEnergyError();
-            energy_local.de_change_cum = sym_int.getDEChangeInterrupt();
-            energy_local.de_change_interrupt = sym_int.getDEChangeInterrupt();
+            energy.de = sym_int.getEnergyError();
+            energy.de_change_cum = sym_int.getDEChangeInterrupt() + de_kin;
+            energy.de_change_interrupt = sym_int.getDEChangeInterrupt() + de_kin;
 #if (defined AR_SLOWDOWN_ARRAY) || (defined AR_SLOWDOWN_TREE)
             ekin_sd = sym_int.getEkinSlowDown();
             epot_sd = sym_int.getEpotSlowDown();
-            energy_local.de_sd = sym_int.getEnergyErrorSlowDown();
-            energy_local.de_sd_change_cum = sym_int.getDESlowDownChangeCum();
-            energy_local.de_sd_change_interrupt = sym_int.getDESlowDownChangeInterrupt();
+            energy.de_sd = sym_int.getEnergyErrorSlowDown();
+            energy.de_sd_change_cum = sym_int.getDESlowDownChangeCum() + de_kin;
+            energy.de_sd_change_interrupt = sym_int.getDESlowDownChangeInterrupt() + de_kin;
 #else
             ekin_sd = ekin;
             epot_sd = epot;
-            energy_local.de_sd = energy_local.de;
-            energy_local.de_sd_change_cum = energy_local.de_change_cum;
-            energy_local.de_sd_change_interrupt = energy_local.de_change_interrupt;
+            energy.de_sd = energy.de;
+            energy.de_sd_change_cum = energy.de_change_cum;
+            energy.de_sd_change_interrupt = energy.de_change_interrupt;
 #endif
 #endif
         }
@@ -834,24 +863,6 @@ public:
 #ifdef HARD_CHECK_ENERGY
             // PS: writeBackGroupMembers is done inside calcEnergySlowDown
             h4_int.calcEnergySlowDown(false);
-            ekin    = h4_int.getEkin();
-            epot    = h4_int.getEpot();
-            energy_local.de  = h4_int.getEnergyError();
-            energy_local.de_change_cum = h4_int.getDEChangeCum();
-            energy_local.de_change_interrupt = h4_int.getDEChangeInterrupt();
-#if (defined AR_SLOWDOWN_ARRAY) || (defined AR_SLOWDOWN_TREE)
-            ekin_sd = h4_int.getEkinSlowDown();
-            epot_sd = h4_int.getEpotSlowDown();
-            energy_local.de_sd = h4_int.getEnergyErrorSlowDown();
-            energy_local.de_sd_change_cum = h4_int.getDESlowDownChangeCum();
-            energy_local.de_sd_change_interrupt = h4_int.getDESlowDownChangeInterrupt();
-#else
-            ekin_sd = ekin;
-            epot_sd = epot;
-            energy_local.de_sd = energy_local.de;
-            energy_local.de_sd_change_cum = energy_local.de_change_cum;
-            energy_local.de_sd_change_interrupt = energy_local.de_change_interrupt;
-#endif
 #else
             h4_int.writeBackGroupMembers();
 #endif
@@ -859,6 +870,37 @@ public:
 
             h4_int.particles.shiftToOriginFrame();
 
+#ifdef  HARD_CHECK_ENERGY
+            // update cm kinetic energy change
+            auto& pcm = h4_int.particles.cm;
+            Float vcm_org[3] = {pcm.vel[0], pcm.vel[1], pcm.vel[2]};
+            Float mcm_bk = pcm.mass;
+            h4_int.particles.calcCenterOfMass();
+            Float dm = pcm.mass - mcm_bk;
+            Float de_kin = 0.5*dm*(vcm_org[0]*vcm_org[0]+vcm_org[1]*vcm_org[1]+vcm_org[2]*vcm_org[2]);
+            Float dvcm[3] = {pcm.vel[0] - vcm_org[0], pcm.vel[1] - vcm_org[1], pcm.vel[2] - vcm_org[2]};
+            de_kin += pcm.mass*(dvcm[0]*vcm_org[0]+dvcm[1]*vcm_org[1]+dvcm[2]*vcm_org[2]);
+
+            ekin    = h4_int.getEkin();
+            epot    = h4_int.getEpot();
+            energy.de += h4_int.getEnergyError(); // notice += should be used since de may change before when changeover potential energy correction exist
+            energy.de_change_cum = h4_int.getDEChangeCum() + de_kin;
+            energy.de_change_interrupt = h4_int.getDEChangeInterrupt() + de_kin;
+#if (defined AR_SLOWDOWN_ARRAY) || (defined AR_SLOWDOWN_TREE)
+            ekin_sd = h4_int.getEkinSlowDown();
+            epot_sd = h4_int.getEpotSlowDown();
+            energy.de_sd += h4_int.getEnergyErrorSlowDown();
+            energy.de_sd_change_cum = h4_int.getDESlowDownChangeCum() + de_kin;
+            energy.de_sd_change_interrupt = h4_int.getDESlowDownChangeInterrupt() + de_kin;
+#else
+            ekin_sd = ekin;
+            epot_sd = epot;
+            energy.de_sd = energy.de;
+            energy.de_sd_change_cum = energy.de_change_cum;
+            energy.de_sd_change_interrupt = energy.de_change_interrupt;
+#endif
+#endif
+            
             // update research and group_data.cm
             auto& h4_pcm = h4_int.particles.cm;
             const PS::S32* group_index = h4_int.getSortDtIndexGroup();
@@ -971,28 +1013,28 @@ public:
         }
 
 #ifdef HARD_CHECK_ENERGY
-        energy_local.ekin_sd_correction = ekin_sd - ekin;
-        energy_local.epot_sd_correction = epot_sd - epot;
-        energy += energy_local;
+        energy.ekin_sd_correction = ekin_sd - ekin;
+        energy.epot_sd_correction = epot_sd - epot;
         // exclude the slowdown energy change due to the turn off of slowdown
-        energy.de_sd_change_cum  -= energy_local.ekin_sd_correction + energy_local.epot_sd_correction;
+        energy.de_sd_change_cum  -= energy.ekin_sd_correction + energy.epot_sd_correction;
+
 #ifdef HARD_DEBUG_PRINT
         std::cerr<<"Hard Energy: "
                  <<"  Ekin: "<<ekin
                  <<"  Ekin_SD: "<<ekin_sd
                  <<"  Epot: "<<epot_sd
                  <<"  Epot_SD: "<<epot_sd
-                 <<"  dE: "<<energy_local.de
-                 <<"  dE_change: "<<energy_local.de_change_cum
-                 <<"  dE_SD: "<<energy_local.de_sd
-                 <<"  dE_SD_change: "<<energy_local.de_sd_change_cum
+                 <<"  dE: "<<energy.de
+                 <<"  dE_change: "<<energy.de_change_cum
+                 <<"  dE_SD: "<<energy.de_sd
+                 <<"  dE_SD_change: "<<energy.de_sd_change_cum
                  <<"  H4_step_sum: "<<H4_step_sum
                  <<"  ARC_substep_sum: "<<ARC_substep_sum
                  <<"  ARC_tsyn_step_sum: "<<ARC_tsyn_step_sum
                  <<std::endl;
 #endif        
-        if (abs(energy_local.de_sd) > manager->energy_error_max) {
-            std::cerr<<"Hard energy significant ("<<energy_local.de_sd<<") !\n";
+        if (abs(energy.de_sd) > manager->energy_error_max) {
+            std::cerr<<"Hard energy significant ("<<energy.de_sd<<") !\n";
             DATADUMP("hard_large_energy");
             //abort();
         }
@@ -1327,6 +1369,19 @@ private:
         _pi.acc -= gmor3*(knew-kold)*dr;
     }
 
+#ifdef STELLAR_EVOLUTION
+    //! correct soft potential energy of one particle change due to mass change, reset dm to zero
+    template <class Tpi>
+    void correctSoftPotMassChangeOneParticle(Tpi& _pi) {
+        PS::F64 dpot = _pi.dm*_pi.pot_soft;
+        energy.de_change_interrupt += dpot;
+        energy.de_change_cum += dpot;
+        energy.de_sd_change_cum += dpot;
+        energy.de_sd_change_interrupt += dpot;
+        _pi.dm = 0.0;
+    }
+#endif
+
     //! correct force and potential for changeover function change
     /*!
       @param[in,out] _pi: particle for correction
@@ -1455,9 +1510,13 @@ private:
         // self-potential correction 
         // no correction for orbital artificial particles because the potential are not used for any purpose
         // no correction for member particles because their mass is zero during the soft force calculation, the self-potential contribution is also zero.
-        if (_psoft.group_data.artificial.isSingle()) _psoft.pot_tot += _psoft.mass/manager->r_out_base; 
         // for binary without artificial particles, correction is needed.
-        if (_psoft.group_data.artificial.isMember() && _psoft.getParticleCMAddress()<0) _psoft.pot_tot += _psoft.mass/manager->r_out_base; 
+        if (_psoft.group_data.artificial.isSingle() || (_psoft.group_data.artificial.isMember() && _psoft.getParticleCMAddress()<0)) {
+            PS::F64 pot_cor = _psoft.mass/manager->r_out_base; 
+            _psoft.pot_tot  += pot_cor;
+            _psoft.pot_soft += pot_cor;
+            
+        }
 
         // loop neighbors
         for(PS::S32 k=0; k<n_ngb; k++){
@@ -1470,6 +1529,10 @@ private:
 #endif
                 calcAccPotShortWithLinearCutoff(_psoft, ptcl_nb[k]);
         }
+#ifdef STELLAR_EVOLUTION
+        // correct soft potential energy of one particle change due to mass change
+        correctSoftPotMassChangeOneParticle(_psoft);
+#endif
     }
 
     //! soft force correction for artificial particles in one cluster
@@ -1868,8 +1931,8 @@ public:
 #endif
             //PS::F64 mass_bk = sys[adr].mass;
             sys[adr].DataCopy(ptcl_hard_[i]);
-            //// mass modified case, register adr
-            //PS::F64 dm = sys[adr].mass - mass_bk;
+            //// record mass change for later energy correction
+            //sys[adr].dm = sys[adr].mass - mass_bk;
             //if (dm!=0.0) _mass_modify_list.push_back(Tmlist(dm,adr));
             // ghost particle case
             if(sys[adr].mass==0.0&&sys[adr].group_data.artificial.isUnused()) {
@@ -2772,7 +2835,13 @@ public:
 #pragma omp parallel for 
         for (int i=0; i<n_ptcl; i++) {
             const PS::S32 k =_ptcl_list[i];
-            _sys[k].pot_tot += _sys[k].mass / manager->r_out_base;
+            PS::F64 pot_cor = _sys[k].mass/manager->r_out_base;
+            _sys[k].pot_tot  += pot_cor;
+            _sys[k].pot_soft += pot_cor;
+#ifdef STELLAR_EVOLUTION
+            // correct soft potential energy of one particle change due to mass change
+            correctSoftPotMassChangeOneParticle(_sys[k]);
+#endif
         }
     }
 
@@ -2863,9 +2932,13 @@ public:
                 assert(_sys[adr].id==ptcl_local[j].id);
 #endif
                 //self-potential correction for non-group member, group member has mass zero, so no need correction
-                if(_sys[adr].group_data.artificial.isSingle()) _sys[adr].pot_tot += _sys[adr].mass/manager->r_out_base;
                 // for binary without artificial particles, correction is needed.
-                if (_sys[adr].group_data.artificial.isMember() && _sys[adr].getParticleCMAddress()<0) _sys[adr].pot_tot += _sys[adr].mass/manager->r_out_base; 
+                if (_sys[adr].group_data.artificial.isSingle()
+                    || (_sys[adr].group_data.artificial.isMember() && _sys[adr].getParticleCMAddress()<0)) {
+                    PS::F64 pot_cor = _sys[adr].mass/manager->r_out_base;
+                    _sys[adr].pot_tot += pot_cor;
+                    _sys[adr].pot_soft += pot_cor;
+                }
 
                 // cluster member
                 for (int k=adr_real_start; k<adr_real_end; k++) {
@@ -2898,7 +2971,10 @@ public:
                             calcAccPotShortWithLinearCutoff(_sys[adr], porb_k[ki]);
                     }
                 }
-            
+#ifdef STELLAR_EVOLUTION
+                // correct soft potential energy of one particle change due to mass change
+                correctSoftPotMassChangeOneParticle(_sys[adr]);
+#endif
             }
         }
     }

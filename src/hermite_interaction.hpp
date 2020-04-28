@@ -71,9 +71,9 @@ public:
         const Float kdot = ChangeOver::calcAcc1WTwo(_pi.changeover, _pj.changeover, r, drdot);
           
         const Float rinv2 = rinv*rinv;
-        const Float rinv3 = rinv2*rinv;
 
-        const Float gmor3 = gravitational_constant*_pj.mass*rinv3; 
+        const Float gmor = gravitational_constant*_pj.mass*rinv;
+        const Float gmor3 = gmor*rinv2; 
         const Float gmor3k = gmor3*k;
         const Float gmor3kd = gmor3*kdot;
         const Float acc0[3] = {gmor3k*dr[0], gmor3k*dr[1], gmor3k*dr[2]};
@@ -88,7 +88,7 @@ public:
         _fi.acc1[1] += acc1[1];
         _fi.acc1[2] += acc1[2];
 
-        _fi.pot += gravitational_constant*_pj.mass*rinv;
+        _fi.pot += - gmor;
 
         return dr2;
     }
@@ -127,9 +127,9 @@ public:
             const Float kdot = ChangeOver::calcAcc1WTwo(_pi.changeover, pj.changeover, r, drdot);
           
             const Float rinv2 = rinv*rinv;
-            const Float rinv3 = rinv2*rinv;
 
-            const Float gmor3 = gravitational_constant*pj.mass*rinv3; 
+            const Float gmor = gravitational_constant*pj.mass*rinv;
+            const Float gmor3 = gmor*rinv2; 
             const Float gmor3k = gmor3*k;
             const Float gmor3kd = gmor3*kdot;
             const Float acc0[3] = {gmor3k*dr[0], gmor3k*dr[1], gmor3k*dr[2]};
@@ -144,7 +144,7 @@ public:
             _fi.acc1[1] += acc1[1];
             _fi.acc1[2] += acc1[2];
 
-            _fi.pot += gravitational_constant*pj.mass*rinv;
+            _fi.pot += - gmor;
 
             r2_min = std::min(r2_min, dr2);
         }
@@ -203,7 +203,7 @@ public:
         _fi.acc1[1] += acc1[1];
         _fi.acc1[2] += acc1[2];
 
-        _fi.pot += gravitational_constant*_pj.mass*rinv;
+        _fi.pot += - gravitational_constant*_pj.mass*rinv;
 
         return dr2;
     }
@@ -247,9 +247,9 @@ public:
         kdot /= _pi.mass;
 
         const Float rinv2 = rinv*rinv;
-        const Float rinv3 = rinv2*rinv;
 
-        const Float gmor3 = gravitational_constant*_pj.mass*rinv3; 
+        const Float gmor = gravitational_constant*_pj.mass*rinv;
+        const Float gmor3 = gmor*rinv2; 
         const Float gmor3k = gmor3*k;
         const Float gmor3kd = gmor3*kdot;
         const Float acc0[3] = {gmor3k*dr[0], gmor3k*dr[1], gmor3k*dr[2]};
@@ -264,7 +264,7 @@ public:
         _fi.acc1[1] += acc1[1];
         _fi.acc1[2] += acc1[2];
 
-        _fi.pot += gravitational_constant*_pj.mass*rinv;
+        _fi.pot += - gmor;
 
         return dr2;
     }
@@ -315,9 +315,9 @@ public:
             kdot /= _pi.mass;
 
             const Float rinv2 = rinv*rinv;
-            const Float rinv3 = rinv2*rinv;
 
-            const Float gmor3 = gravitational_constant*pj.mass*rinv3; 
+            const Float gmor = gravitational_constant*pj.mass*rinv;
+            const Float gmor3 = gmor*rinv2; 
             const Float gmor3k = gmor3*k;
             const Float gmor3kd = gmor3*kdot;
             const Float acc0[3] = {gmor3k*dr[0], gmor3k*dr[1], gmor3k*dr[2]};
@@ -332,7 +332,7 @@ public:
             _fi.acc1[1] += acc1[1];
             _fi.acc1[2] += acc1[2];
 
-            _fi.pot += gravitational_constant*pj.mass*rinv;
+            _fi.pot += - gmor;
 
             r2_min = std::min(r2_min, dr2);
         }
@@ -403,9 +403,25 @@ public:
         _fi.acc1[1] += acc1[1];
         _fi.acc1[2] += acc1[2];
 
-        _fi.pot += gravitational_constant*_pj.mass*rinv;
+        _fi.pot += - gravitational_constant*_pj.mass*rinv;
 
         return dr2;
+    }
+
+    //! calculate pair potential energy
+    template<class Tpi, class Tpj>
+    Float calcEnergyPotSingleSingle(const Tpi& pi, const Tpj& pj) {
+        const Float dr[3] = {pj.pos[0] - pi.pos[0], 
+                             pj.pos[1] - pi.pos[1],
+                             pj.pos[2] - pi.pos[2]};
+        Float dr2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+        Float dr2_eps = dr2 + eps_sq;
+        const Float r = sqrt(dr2_eps);
+        ASSERT(r>0.0);
+        const Float rinv = 1.0/r;
+        const Float k = ChangeOver::calcPotWTwo(pi.changeover, pj.changeover, r);
+        
+        return -gravitational_constant*pi.mass*pj.mass*rinv*k;
     }
 
     //! calculate kinetic and potential energy of the system

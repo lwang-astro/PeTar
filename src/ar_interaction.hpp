@@ -600,6 +600,11 @@ public:
             auto merge = [&]() {
                 _bin_interrupt.adr = &_bin;
                 _bin_interrupt.status = AR::InterruptStatus::merge;
+                // backup original particles for energy correction
+                _bin_interrupt.particle_bk[0] = *p1; 
+                _bin_interrupt.particle_bk[1] = *p2;
+                
+                // print data
                 std::cerr<<"Binary Merge: time: "<<_bin_interrupt.time_now<<std::endl;
                 _bin.Binary::printColumnTitle(std::cerr);
                 ARPtcl::printColumnTitle(std::cerr);
@@ -611,17 +616,20 @@ public:
                 std::cerr<<std::endl;
                 p1->printColumn(std::cerr);
                 p2->printColumn(std::cerr);
+
+                // new particle data
                 Float mcm = p1->mass + p2->mass;
                 for (int k=0; k<3; k++) {
                     p1->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
-                    p2->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
+                    p1->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
                 }
                 p1->setBinaryInterruptState(BinaryInterruptState::none);
                 p2->setBinaryInterruptState(BinaryInterruptState::none);
-                p1->mass = mcm*0.8;
+                p1->mass = mcm;
+                p1->dm = 0.0; // notice this also include the mass change of removed particle, used for correct soft potential energy
                 p2->mass = 0.0;
+                p2->dm = 0.0;
                 p2->group_data.artificial.setParticleTypeToUnused();
-                _bin_interrupt.dm = -mcm*0.2;
             };
 
             if (_bin.getMemberN()==2) {
@@ -630,7 +638,7 @@ public:
                 p2 = _bin.getRightMember();
                 if (p1->getBinaryInterruptState()== BinaryInterruptState::collision && 
                     p2->getBinaryInterruptState()== BinaryInterruptState::collision &&
-                    (p1->time_check<_bin_interrupt.time_end || p2->time_check<_bin_interrupt.time_end) &&
+                    (p1->time_interrupt<_bin_interrupt.time_end || p2->time_interrupt<_bin_interrupt.time_end) &&
                     (p1->getBinaryPairID()==p2->id||p2->getBinaryPairID()==p1->id)) merge();
                 else {
                     Float radius = p1->radius + p2->radius;
@@ -650,8 +658,8 @@ public:
                                 p2->setBinaryPairID(p1->id);
                                 p1->setBinaryInterruptState(BinaryInterruptState::collision);
                                 p2->setBinaryInterruptState(BinaryInterruptState::collision);
-                                p1->time_check = std::min(p1->time_check, _bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri));
-                                p2->time_check = std::min(p1->time_check, p2->time_check);
+                                p1->time_interrupt = std::min(p1->time_interrupt, _bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri));
+                                p2->time_interrupt = std::min(p1->time_interrupt, p2->time_interrupt);
                             }
                         }
                     }
