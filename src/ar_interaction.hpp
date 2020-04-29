@@ -622,11 +622,10 @@ public:
                 }
                 p1->setBinaryInterruptState(BinaryInterruptState::none);
                 p2->setBinaryInterruptState(BinaryInterruptState::none);
+                p1->dm = mcm*0.8-p1->mass; // dm is used to correct energy, thus must be correctly set 
                 p1->mass = mcm*0.8;
-                p1->dm = -mcm*0.2; // notice this also include the mass change of removed particle for correcting soft potential energy
-                //unused particle will be immediately deleted after hard integration, any information saved on it will be lost
+                p2->dm = -p2->mass; 
                 p2->mass = 0.0;
-                p2->dm = 0.0; 
                 p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
             };
 
