@@ -586,7 +586,8 @@ public:
                         energy.de_sd += dpot;
                         energy.de += dpot;
                         */
-                        interrupt_binary.clear();
+                        //for (int k=0; k<2; k++) correctSoftPotMassChangeOneParticle(*interrupt_binary.adr->getMember(k));
+                        //interrupt_binary.clear();
                     }
                     // when binary is interrupted, break integration loop
                     else break;
@@ -1257,13 +1258,15 @@ private:
         const PS::F64 kpot  = 1.0 - ChangeOver::calcPotWTwo(_pi.changeover, _pj.changeover, dr_eps);
         // single, remove linear cutoff, obtain changeover soft and total potential
         if (pj_artificial.isSingle()) {
-            _pi.pot_soft -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
+            //_pi.pot_soft -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
+            _pi.pot_soft -= gmor*kpot  - gmor_max;
             _pi.pot_tot -= (gmor - gmor_max);
         }
         // member, mass is zero, use backup mass
         else if (pj_artificial.isMember()) {
             gmor = G*pj_artificial.getMassBackup()*drinv;
-            _pi.pot_soft -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
+            //_pi.pot_soft -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
+            _pi.pot_soft -= gmor*kpot  - gmor_max;
             _pi.pot_tot -= (gmor  - gmor_max);
         }
         // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
@@ -1315,13 +1318,15 @@ private:
         const PS::F64 kpot  = 1.0 - ChangeOver::calcPotWTwo(_pi.changeover, chj, dr_eps);
         // single, remove linear cutoff, obtain changeover soft and total potential
         if (pj_artificial.isSingle()) {
-            _pi.pot_soft -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
+            //_pi.pot_soft -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
+            _pi.pot_soft -= gmor*kpot  - gmor_max;
             _pi.pot_tot -= (gmor - gmor_max);
         }
         // member, mass is zero, use backup mass
         else if (pj_artificial.isMember()) {
             gmor = G*pj_artificial.getMassBackup()*drinv;
-            _pi.pot_soft -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
+            //_pi.pot_soft -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
+            _pi.pot_soft -= gmor*kpot  - gmor_max;
             _pi.pot_tot -= (gmor  - gmor_max);
         }
         // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
@@ -1369,19 +1374,6 @@ private:
         // correct to changeover soft acceleration
         _pi.acc -= gmor3*(knew-kold)*dr;
     }
-
-#ifdef STELLAR_EVOLUTION
-    //! correct soft potential energy of one particle change due to mass change, reset dm to zero
-    template <class Tpi>
-    void correctSoftPotMassChangeOneParticle(Tpi& _pi) {
-        PS::F64 dpot = _pi.dm*_pi.pot_soft;
-        energy.de_change_interrupt += dpot;
-        energy.de_change_cum += dpot;
-        energy.de_sd_change_cum += dpot;
-        energy.de_sd_change_interrupt += dpot;
-        _pi.dm = 0.0;
-    }
-#endif
 
     //! correct force and potential for changeover function change
     /*!
@@ -1530,10 +1522,10 @@ private:
 #endif
                 calcAccPotShortWithLinearCutoff(_psoft, ptcl_nb[k]);
         }
-#ifdef STELLAR_EVOLUTION
-        // correct soft potential energy of one particle change due to mass change
-        correctSoftPotMassChangeOneParticle(_psoft);
-#endif
+//#ifdef STELLAR_EVOLUTION
+//        // correct soft potential energy of one particle change due to mass change
+//        correctSoftPotMassChangeOneParticle(_psoft);
+//#endif
     }
 
     //! soft force correction for artificial particles in one cluster
@@ -1885,6 +1877,19 @@ public:
     }
 
 
+#ifdef STELLAR_EVOLUTION
+    //! correct soft potential energy of one particle change due to mass change, reset dm to zero
+    template <class Tpi>
+    void correctSoftPotMassChangeOneParticle(Tpi& _pi) {
+        PS::F64 dpot = _pi.dm*_pi.pot_soft;
+        energy.de_change_interrupt += dpot;
+        energy.de_change_cum += dpot;
+        energy.de_sd_change_cum += dpot;
+        energy.de_sd_change_interrupt += dpot;
+        _pi.dm = 0.0;
+    }
+#endif
+
     //! integrate one isolated particle
     /*! integrate one isolated particle and calculate new r_search
       @param[in] _dt: tree time step
@@ -1932,6 +1937,12 @@ public:
 #endif
             //PS::F64 mass_bk = sys[adr].mass;
             sys[adr].DataCopy(ptcl_hard_[i]);
+            
+#ifdef STELLAR_EVOLUTION
+            // correct soft potential energy due to mass change
+            correctSoftPotMassChangeOneParticle(sys[adr]);
+#endif
+
             //// record mass change for later energy correction
             //sys[adr].dm = sys[adr].mass - mass_bk;
             //if (dm!=0.0) _mass_modify_list.push_back(Tmlist(dm,adr));
@@ -2839,10 +2850,10 @@ public:
             PS::F64 pot_cor = _sys[k].mass/manager->r_out_base;
             _sys[k].pot_tot  += pot_cor;
             _sys[k].pot_soft += pot_cor;
-#ifdef STELLAR_EVOLUTION
-            // correct soft potential energy of one particle change due to mass change
-            correctSoftPotMassChangeOneParticle(_sys[k]);
-#endif
+//#ifdef STELLAR_EVOLUTION
+//            // correct soft potential energy of one particle change due to mass change
+//            correctSoftPotMassChangeOneParticle(_sys[k]);
+//#endif
         }
     }
 
@@ -2972,10 +2983,10 @@ public:
                             calcAccPotShortWithLinearCutoff(_sys[adr], porb_k[ki]);
                     }
                 }
-#ifdef STELLAR_EVOLUTION
-                // correct soft potential energy of one particle change due to mass change
-                correctSoftPotMassChangeOneParticle(_sys[adr]);
-#endif
+//#ifdef STELLAR_EVOLUTION
+//                // correct soft potential energy of one particle change due to mass change
+//                correctSoftPotMassChangeOneParticle(_sys[adr]);
+//#endif
             }
         }
     }

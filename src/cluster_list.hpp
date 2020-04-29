@@ -1198,11 +1198,13 @@ public:
     /* @param[in,out] _sys: particle system
        @param[in] _ptcl_hard: local partical in system_hard_connected
        @param[out] _removelist: address on _sys of particles that are need to be removed are stored.
+       @param[out] _mass_modify_list: mass has been modified list
      */
     template<class Tsys, class Tphard>
     void writeAndSendBackPtcl(Tsys & _sys,
                               const PS::ReallocatableArray<Tphard> & _ptcl_hard,
-                              PS::ReallocatableArray<PS::S32> &_removelist){
+                              PS::ReallocatableArray<PS::S32> &_removelist,
+                              PS::ReallocatableArray<PS::S32> &_mass_modify_list){
         //  const PS::S32 my_rank = PS::Comm::getRank();
         //  const PS::S32 n_proc  = PS::Comm::getNumberOfProc();
         const PS::S32 n = _ptcl_hard.size();
@@ -1215,7 +1217,9 @@ public:
                 //PS::F64 mass_bk = sys[adr].mass;
                 _sys[adr].DataCopy(_ptcl_hard[i]);
                 //PS::F64 dm = sys[adr].mass - mass_bk;
-                //if (dm!=0.0) _mass_modify_list.push_back(Tmlist(dm,adr));
+#ifdef STELLAR_EVOLUTION
+                if (_sys[adr].dm!=0.0) _mass_modify_list.push_back(adr);
+#endif
                 if(_sys[adr].mass==0.0&&_sys[adr].group_data.artificial.isUnused()) _removelist.push_back(adr);
             }
             else{
@@ -1255,7 +1259,9 @@ public:
             //PS::F64 mass_bk = sys[adr].mass;
             _sys[adr].DataCopy(ptcl_send_[i]);
             //PS::F64 dm = sys[adr].mass - mass_bk;
-            //if (dm!=0.0) _mass_modify_list.push_back(Tmlist(dm,adr));
+#ifdef STELLAR_EVOLUTION
+            if (_sys[adr].dm!=0.0) _mass_modify_list.push_back(adr);
+#endif
             if(_sys[adr].mass==0&&_sys[adr].group_data.artificial.isUnused()) _removelist.push_back(adr);
         }
         // remove empty particles cannot do here

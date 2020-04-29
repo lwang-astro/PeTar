@@ -733,7 +733,8 @@ public:
         system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
         system_hard_connected.findGroupsAndCreateArtificialParticlesOMP<SystemSoft, FPSoft>(system_soft, _dt_tree);
         // send updated particle back to original (set zero mass particle to origin)
-        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+        PS::ReallocatableArray<PS::S32> mass_modify_list;
+        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list, mass_modify_list);
         system_hard_connected.updateTimeWriteBack();
 #endif
 
@@ -1245,7 +1246,12 @@ public:
 
 
         if (n_interrupt_connected_glb==0) {
-            search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+            PS::ReallocatableArray<PS::S32> mass_modify_list;
+            search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list, mass_modify_list);
+#ifdef STELLAR_EVOLUTION
+            // correct soft potential energy due to mass change
+            for (int k=0; k<mass_modify_list.size(); k++) system_hard_connected.correctSoftPotMassChangeOneParticle(system_soft[mass_modify_list[k]]);
+#endif
             system_hard_connected.updateTimeWriteBack();
         }
         // integrate multi cluster B
@@ -1323,7 +1329,12 @@ public:
 #endif
 
         if (n_interrupt_connected_glb==0) {
-            search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+            PS::ReallocatableArray<PS::S32> mass_modify_list;
+            search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list, mass_modify_list);
+#ifdef STELLAR_EVOLUTION
+            // correct soft potential energy due to mass change
+            for (int k=0; k<mass_modify_list.size(); k++) system_hard_connected.correctSoftPotMassChangeOneParticle(system_soft[mass_modify_list[k]]);
+#endif
             system_hard_connected.updateTimeWriteBack();
         }
 
@@ -1409,7 +1420,9 @@ public:
         system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         // update gloabl particle system and send receive remote particles
-        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+        PS::ReallocatableArray<PS::S32> mass_modify_list;
+        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list, mass_modify_list);
+        //for (int k=0; k<mass_modify_list.size(); k++) system_hard_connected.correctSoftPotMassChangeOneParticle(system_soft[mass_modify_list[k]]);
         system_hard_connected.updateTimeWriteBack();
 #endif        
 #ifdef PROFILE
@@ -1430,7 +1443,9 @@ public:
         system_hard_isolated.setParticleGroupDataToCMData(system_soft);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         system_hard_connected.setParticleGroupDataToCMData(system_soft);
-        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list);
+        PS::ReallocatableArray<PS::S32> mass_modify_list;
+        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list, mass_modify_list);
+        //for (int k=0; k<mass_modify_list.size(); k++) system_hard_connected.correctSoftPotMassChangeOneParticle(sys[mass_modify_list[k]]);
         system_hard_connected.updateTimeWriteBack();
 #endif
 #ifdef PROFILE

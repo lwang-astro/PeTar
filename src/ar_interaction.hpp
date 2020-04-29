@@ -331,9 +331,9 @@ public:
 
                 mcm += pi.mass;
             }
-#ifdef AR_DEBUG
-            ASSERT(abs(mcm-_particle_cm.mass)<1e-10);
-#endif
+//#ifdef AR_DEBUG
+//            ASSERT(abs(mcm-_particle_cm.mass)<1e-10);
+//#endif
                 
             // get cm perturbation
             acc_pert_cm[0] /= mcm;
