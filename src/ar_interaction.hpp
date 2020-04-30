@@ -599,9 +599,6 @@ public:
             auto merge = [&]() {
                 _bin_interrupt.adr = &_bin;
                 _bin_interrupt.status = AR::InterruptStatus::merge;
-                // backup original particles for energy correction
-                _bin_interrupt.particle_bk[0] = *p1; 
-                _bin_interrupt.particle_bk[1] = *p2;
                 
                 // print data
                 std::cerr<<"Binary Merge: time: "<<_bin_interrupt.time_now<<std::endl;

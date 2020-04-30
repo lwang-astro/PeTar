@@ -125,6 +125,9 @@ public:
     IOParams<PS::F64> sd_factor;
     IOParams<PS::S32> data_format;
     IOParams<PS::S32> write_style;
+#ifdef STELLAR_EVOLUTION
+    IOParams<PS::S32> stellar_evolution_option;
+#endif
     IOParams<PS::S32> interrupt_detection_option;
     IOParams<std::string> fname_snp;
     IOParams<std::string> fname_par;
@@ -177,6 +180,9 @@ public:
                      sd_factor    (input_par_store, 1e-4, "Slowdown perturbation criterion"),
                      data_format  (input_par_store, 1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),
                      write_style  (input_par_store, 1,    "File Writing style: 0, no output; 1. write snapshots, status and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile"),
+#ifdef STELLAR_EVOLUTION
+                     stellar_evolution_option(input_par_store, 0, "modify mass of particles: 0: turn off; 1: check every tree step"),
+#endif
                      interrupt_detection_option(input_par_store, 0, "modify orbits and check interruption: 0: turn off; 1: modify the binary orbits based on detetion criterion; 2. modify and also interrupt integrations"),
                      fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]"),
                      fname_par(input_par_store, "input.par", "Input parameter file (this option should be used first before any other options)"),
@@ -216,8 +222,11 @@ public:
             {"step-limit-arc", required_argument, 0, 15},   
             {"disable-print-info", no_argument, 0, 16},
             {"number-interrupt-limt",required_argument, 0, 17},
-            {"detect-interrupt", no_argument, 0, 18},
+            {"detect-interrupt", required_argument, 0, 18},
             {"number-step-tt", required_argument, 0, 19},
+#ifdef STELLAR_EVOLUTION
+            {"stellar-evolution", required_argument, 0, 20},
+#endif
             {0,0,0,0}
         };
 
@@ -336,7 +345,7 @@ public:
                 n_opt+=2;
                 break;
             case 18:
-                interrupt_detection_option.value = 1;
+                interrupt_detection_option.value = atoi(optarg);
                 if(print_flag) interrupt_detection_option.print(std::cout);
                 n_opt++;
                 break;
@@ -346,6 +355,13 @@ public:
                 assert(n_step_per_orbit.value>=1.0);
                 n_opt+=2;
                 break;
+#ifdef STELLAR_EVOLUTION
+            case 20:
+                stellar_evolution_option.value = atoi(optarg);
+                if(print_flag) stellar_evolution_option.print(std::cout);
+                n_opt++;
+                break;
+#endif
             case 'i':
                 data_format.value = atoi(optarg);
                 if(print_flag) data_format.print(std::cout);
@@ -451,7 +467,7 @@ public:
                     std::cout<<"  -t: [F] "<<time_end<<std::endl;
                     std::cout<<"  -s: [F] "<<dt_soft<<std::endl;
                     std::cout<<"  -o: [F] "<<dt_snap<<std::endl;
-                    std::cout<<"        --detect-interrupt:      "<<interrupt_detection_option<<std::endl;
+                    std::cout<<"        --detect-interrupt:  [I] "<<interrupt_detection_option<<std::endl;
                     std::cout<<"        --dt-max-factor:     [F] "<<dt_limit_hard_factor<<std::endl;
                     std::cout<<"        --dt-min-hermite:    [I] "<<dt_min_hermite_index<<std::endl;
                     std::cout<<"        --disable-print-info:  "<<"Do not print information"<<std::endl;
@@ -479,6 +495,9 @@ public:
                     std::cout<<"        --energy-err-hard:   [F] "<<e_err_hard<<std::endl;
 #endif
                     std::cout<<"        --step-limit-arc:    [F] "<<step_limit_arc<<std::endl;
+#ifdef STELLAR_EVOLUTION
+                    std::cout<<"        --stellar-evolution: [I] "<<stellar_evolution_option<<std::endl;
+#endif
                     std::cout<<"        --slowdown-factor:   [F] "<<sd_factor<<std::endl;
                     std::cout<<"        --soft-eps:          [F] "<<eps<<std::endl;
                     std::cout<<"  -f: [S] "<<fname_snp<<std::endl;
@@ -595,6 +614,9 @@ public:
 #endif
     int n_interrupt_glb;
 
+    // mass change particle list
+    PS::ReallocatableArray<PS::S32> mass_modify_list;
+
     // remove list
     PS::ReallocatableArray<PS::S32> remove_list;
     PS::ReallocatableArray<PS::S64> remove_id_record;
@@ -629,7 +651,7 @@ public:
         system_hard_connected(), 
 #endif
         n_interrupt_glb(0),
-        remove_list(), remove_id_record(),
+        mass_modify_list(), remove_list(), remove_id_record(),
         search_cluster(),
         initial_fdps_flag(false), read_parameters_flag(false), read_data_flag(false), initial_parameters_flag(false), initial_step_flag(false) {
         // set print format
@@ -733,8 +755,7 @@ public:
         system_hard_connected.setPtclForConnectedCluster(system_soft, search_cluster.mediator_sorted_id_cluster_, search_cluster.ptcl_recv_);
         system_hard_connected.findGroupsAndCreateArtificialParticlesOMP<SystemSoft, FPSoft>(system_soft, _dt_tree);
         // send updated particle back to original (set zero mass particle to origin)
-        PS::ReallocatableArray<PS::S32> mass_modify_list;
-        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list, mass_modify_list);
+        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), mass_modify_list);
         system_hard_connected.updateTimeWriteBack();
 #endif
 
@@ -1181,7 +1202,7 @@ public:
         system_hard_one_cluster.setPtclForOneClusterOMP(system_soft, search_cluster.getAdrSysOneCluster());
         system_hard_one_cluster.driveForOneClusterOMP(_dt_drift);
         //system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft, search_cluster.getAdrSysOneCluster());
-        system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft);
+        system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft, mass_modify_list);
         ////// integrater one cluster
 #ifdef PROFILE
         profile.hard_single.barrier();
@@ -1200,7 +1221,7 @@ public:
         system_hard_isolated.driveForMultiClusterOMP(_dt_drift, &(system_soft[0]));
         //system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_,remove_list);
         PS::S32 n_interrupt_isolated = system_hard_isolated.getNumberOfInterruptClusters();
-        if(n_interrupt_isolated==0) system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
+        if(n_interrupt_isolated==0) system_hard_isolated.writeBackPtclForMultiCluster(system_soft, mass_modify_list);
         // integrate multi cluster A
 
 #ifdef PROFILE
@@ -1246,12 +1267,7 @@ public:
 
 
         if (n_interrupt_connected_glb==0) {
-            PS::ReallocatableArray<PS::S32> mass_modify_list;
-            search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list, mass_modify_list);
-#ifdef STELLAR_EVOLUTION
-            // correct soft potential energy due to mass change
-            for (int k=0; k<mass_modify_list.size(); k++) system_hard_connected.correctSoftPotMassChangeOneParticle(system_soft[mass_modify_list[k]]);
-#endif
+            search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), mass_modify_list);
             system_hard_connected.updateTimeWriteBack();
         }
         // integrate multi cluster B
@@ -1284,7 +1300,7 @@ public:
         if (system_hard_isolated.getNumberOfInterruptClusters()>0) {
             system_hard_isolated.finishIntegrateInterruptClustersOMP();
             n_interrupt_isolated = system_hard_isolated.getNumberOfInterruptClusters();
-            if(n_interrupt_isolated==0) system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
+            if(n_interrupt_isolated==0) system_hard_isolated.writeBackPtclForMultiCluster(system_soft, mass_modify_list);
         }
 
 #ifdef PROFILE
@@ -1330,11 +1346,7 @@ public:
 
         if (n_interrupt_connected_glb==0) {
             PS::ReallocatableArray<PS::S32> mass_modify_list;
-            search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list, mass_modify_list);
-#ifdef STELLAR_EVOLUTION
-            // correct soft potential energy due to mass change
-            for (int k=0; k<mass_modify_list.size(); k++) system_hard_connected.correctSoftPotMassChangeOneParticle(system_soft[mass_modify_list[k]]);
-#endif
+            search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), mass_modify_list);
             system_hard_connected.updateTimeWriteBack();
         }
 
@@ -1417,12 +1429,10 @@ public:
 #ifdef PROFILE
         profile.output.start();
 #endif
-        system_hard_isolated.writeBackPtclForMultiCluster(system_soft, remove_list);
+        system_hard_isolated.writeBackPtclForMultiCluster(system_soft, mass_modify_list);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         // update gloabl particle system and send receive remote particles
-        PS::ReallocatableArray<PS::S32> mass_modify_list;
-        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list, mass_modify_list);
-        //for (int k=0; k<mass_modify_list.size(); k++) system_hard_connected.correctSoftPotMassChangeOneParticle(system_soft[mass_modify_list[k]]);
+        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), mass_modify_list);
         system_hard_connected.updateTimeWriteBack();
 #endif        
 #ifdef PROFILE
@@ -1443,9 +1453,7 @@ public:
         system_hard_isolated.setParticleGroupDataToCMData(system_soft);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         system_hard_connected.setParticleGroupDataToCMData(system_soft);
-        PS::ReallocatableArray<PS::S32> mass_modify_list;
-        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), remove_list, mass_modify_list);
-        //for (int k=0; k<mass_modify_list.size(); k++) system_hard_connected.correctSoftPotMassChangeOneParticle(sys[mass_modify_list[k]]);
+        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), mass_modify_list);
         system_hard_connected.updateTimeWriteBack();
 #endif
 #ifdef PROFILE
@@ -1858,6 +1866,30 @@ public:
         id_adr_map.clear();
         for (PS::S32 i=0; i<stat.n_real_loc; i++) id_adr_map[system_soft[i].id] = i;
     }
+
+#ifdef STELLAR_EVOLUTION
+    //! Correct potential energy due to modificaiton of particle mass
+    void correctSoftPotMassChange() {
+        // correct soft potential energy due to mass change
+        for (int k=0; k<mass_modify_list.size(); k++)  {
+            PS::S32 i = mass_modify_list[k];
+            auto& pi = system_soft[i];
+            PS::F64 dpot = pi.dm*pi.pot_soft;
+            stat.energy.etot_ref += dpot;
+            stat.energy.de_change_interrupt += dpot;
+            stat.energy.de_change_cum += dpot;
+            stat.energy.etot_sd_ref += dpot;
+            stat.energy.de_sd_change_cum += dpot;
+            stat.energy.de_sd_change_interrupt += dpot;
+            pi.dm = 0.0;
+            // ghost particle case
+            if(pi.mass==0.0&&pi.group_data.artificial.isUnused()) {
+                remove_list.push_back(i);
+            }
+        }
+        mass_modify_list.resizeNoInitialize(0);
+    }
+#endif
 
     //! remove particle with id from map, return particle index, if not found return -1
     PS::S32 removeParticleFromIdAdrMap(const PS::S64 _id) {
@@ -2678,6 +2710,11 @@ public:
         while(stat.time <= time_break) {
 #ifdef PROFILE
             profile.total.start();
+#endif
+
+#ifdef STELLAR_EVOLUTION
+            // correct soft potential energy due to mass change
+            correctSoftPotMassChange();
 #endif
 
             // remove artificial and ununsed particles in system_soft.

@@ -32,8 +32,13 @@ public:
     }
 
     void clear(){
-        error_cum_pre = ekin = epot = etot_ref = de_change_cum = de_change_interrupt = 0.0;
+        error_cum_pre = ekin = epot = etot_ref = 0.0;
+#ifdef HARD_CHECK_ENERGY
+        de_change_cum = de_change_interrupt = 0.0;
+        error_hard_cum = error_hard_cum_pre = 0.0;
         error_sd_cum_pre = ekin_sd = epot_sd = etot_sd_ref = de_sd_change_cum = de_sd_change_interrupt = 0.0;
+        error_hard_sd_cum = error_hard_sd_cum_pre = 0.0;
+#endif
         error_Lt_cum_pre = Lt = 0.0;
         L = L_ref = PS::F64vec(0.0);
     }

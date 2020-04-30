@@ -587,7 +587,7 @@ public:
                         energy.de += dpot;
                         */
                         //for (int k=0; k<2; k++) correctSoftPotMassChangeOneParticle(*interrupt_binary.adr->getMember(k));
-                        //interrupt_binary.clear();
+                        interrupt_binary.clear();
                     }
                     // when binary is interrupted, break integration loop
                     else break;
@@ -709,7 +709,7 @@ public:
                     h4_int.printColumn(std::cout, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
                     std::cout<<std::endl;
 
-                    PS::F64 de_sd   = h4_int.getEnergyErrorSlowDown() + energy.de_sd;
+                    PS::F64 de_sd   = h4_int.getEnergyErrorSlowDown();
                     if (abs(de_sd) > manager->energy_error_max) {
                         PS::F64 ekin    = h4_int.getEkin();
                         PS::F64 ekin_sd = h4_int.getEkinSlowDown();
@@ -1877,19 +1877,6 @@ public:
     }
 
 
-#ifdef STELLAR_EVOLUTION
-    //! correct soft potential energy of one particle change due to mass change, reset dm to zero
-    template <class Tpi>
-    void correctSoftPotMassChangeOneParticle(Tpi& _pi) {
-        PS::F64 dpot = _pi.dm*_pi.pot_soft;
-        energy.de_change_interrupt += dpot;
-        energy.de_change_cum += dpot;
-        energy.de_sd_change_cum += dpot;
-        energy.de_sd_change_interrupt += dpot;
-        _pi.dm = 0.0;
-    }
-#endif
-
     //! integrate one isolated particle
     /*! integrate one isolated particle and calculate new r_search
       @param[in] _dt: tree time step
@@ -1922,11 +1909,11 @@ public:
     //! write back hard particles to global system and update time of write back
     /*! 
       @param[in,out] _sys: particle system
-      @param[out] _removelist: address on _sys of particles that are need to be removed are stored.
+      @param[out] _mass_modify_list: address on _sys of particles where mass is modified
      */
     template<class Tsys>
     void writeBackPtclForOneCluster(Tsys & sys, 
-                                    PS::ReallocatableArray<PS::S32> & _remove_list){
+                                    PS::ReallocatableArray<PS::S32> & _mass_modify_list) {
         const PS::S32 n = ptcl_hard_.size();
         //PS::ReallocatableArray<PS::S32> removelist(n);
         for(PS::S32 i=0; i<n; i++){
@@ -1935,38 +1922,75 @@ public:
 #ifdef HARD_DEBUG
             assert(sys[adr].id == ptcl_hard_[i].id);
 #endif
-            //PS::F64 mass_bk = sys[adr].mass;
             sys[adr].DataCopy(ptcl_hard_[i]);
-            
-#ifdef STELLAR_EVOLUTION
-            // correct soft potential energy due to mass change
-            correctSoftPotMassChangeOneParticle(sys[adr]);
-#endif
 
+#ifdef STELLAR_EVOLUTION
             //// record mass change for later energy correction
-            //sys[adr].dm = sys[adr].mass - mass_bk;
-            //if (dm!=0.0) _mass_modify_list.push_back(Tmlist(dm,adr));
-            // ghost particle case
-            if(sys[adr].mass==0.0&&sys[adr].group_data.artificial.isUnused()) {
-                _remove_list.push_back(adr);
-            }
+            if (sys[adr].dm!=0.0) _mass_modify_list.push_back(adr);
+#endif
         }
         updateTimeWriteBack();
     }
 
+    //! write back hard particles to global system and update time of write back OMP version
+    /*! 
+      @param[in,out] _sys: particle system
+      @param[out] _mass_modify_list: address on _sys of particles where mass is modified
+     */
     template<class Tsys>
-    void writeBackPtclForOneClusterOMP(Tsys & sys){
+    void writeBackPtclForOneClusterOMP(Tsys & sys,
+                                       PS::ReallocatableArray<PS::S32> & _mass_modify_list) {
         const PS::S32 n = ptcl_hard_.size();
-#pragma omp parallel for 
-        for(PS::S32 i=0; i<n; i++){
-            PS::S32 adr = ptcl_hard_[i].adr_org;
-            //PS::S32 adr = adr_array[i];
+        const PS::S32 num_thread = PS::Comm::getNumberOfThread();
+        PS::ReallocatableArray<PS::S32> mass_modify_list_thx[num_thread];
+        for (int i=0; i<num_thread; i++) mass_modify_list_thx[i].resizeNoInitialize(0);
+
+#pragma omp parallel 
+        {
+            const PS::S32 ith = PS::Comm::getThreadNum();
+#pragma omp for 
+            for(PS::S32 i=0; i<n; i++){
+                PS::S32 adr = ptcl_hard_[i].adr_org;
+                //PS::S32 adr = adr_array[i];
 #ifdef HARD_DEBUG
-            assert(sys[adr].id == ptcl_hard_[i].id);
+                assert(sys[adr].id == ptcl_hard_[i].id);
 #endif
-            sys[adr].DataCopy(ptcl_hard_[i]);
+                sys[adr].DataCopy(ptcl_hard_[i]);
+
+#ifdef STELLAR_EVOLUTION
+                // record mass change for later energy correction
+                if (sys[adr].dm!=0.0) mass_modify_list_thx[ith].push_back(adr);
+#endif
+            }
+        }
+
+        for (int i=0; i<num_thread; i++) {
+            for (int k=0; k<mass_modify_list_thx[i].size(); k++) _mass_modify_list.push_back(mass_modify_list_thx[i][k]);
         }
         updateTimeWriteBack();
+    }
+
+    //! write back hard particles to global system and update time of write back 
+    /*! 
+      @param[in,out] _sys: particle system
+      @param[out] _mass_modify_list: address on _sys of particles where mass is modified
+     */
+    template<class Tsys>
+    void writeBackPtclForMultiCluster(Tsys & _sys, 
+                                      PS::ReallocatableArray<PS::S32> & _mass_modify_list) {
+        writeBackPtclForOneCluster(_sys, _mass_modify_list);
+    }
+
+    //! write back hard particles to global system and update time of write back OMP version
+    /*! 
+      @param[in,out] _sys: particle system
+      @param[out] _mass_modify_list: address on _sys of particles where mass is modified
+      @param[out] _removelist: address on _sys of particles that are need to be removed are stored.
+     */
+    template<class Tsys>
+    void writeBackPtclForMultiClusterOMP(Tsys & _sys,
+                                         PS::ReallocatableArray<PS::S32> & _mass_modify_list) {
+        writeBackPtclForOneClusterOMP(_sys, _mass_modify_list);
     }
 
 //    template<class Tsys>
@@ -2022,16 +2046,6 @@ public:
         interrupt_list_.resizeNoInitialize(0);
     }
 
-    template<class Tsys>
-    void writeBackPtclForMultiCluster(Tsys & _sys, 
-                                      PS::ReallocatableArray<PS::S32> & _remove_list){
-        writeBackPtclForOneCluster(_sys, _remove_list);
-    }
-
-    template<class Tsys>
-    void writeBackPtclForMultiClusterOMP(Tsys & _sys) { 
-        writeBackPtclForOneClusterOMP(_sys);
-    }
 
     //! Hard integration for clusters
     /*! Integrate (drift) all clusters with OpenMP
