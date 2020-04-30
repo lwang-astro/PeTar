@@ -585,6 +585,21 @@ public:
     }
 #endif
 
+    //! (Necessary) modify one particle function
+    template <class Tparticle>
+    bool modifyOneParticle(Tparticle& _p, const Float& _time_now, const Float& _time_end) {
+#ifdef STELLAR_EVOLUTION
+        // sample of mass loss
+        //if (_p.time_interrupt<_time_end) {
+        //    _p.dm = -_p.mass*0.1;
+        //    _p.mass *=0.9;
+        //    _p.time_interrupt = _time_end+1e-4;
+        //    return true;
+        //}
+#endif
+        return false;
+    }
+
     //! (Necessary) modify the orbits and interrupt check 
     /*! check the inner left binary whether their separation is smaller than particle radius sum and become close, if true, set one component stauts to merger with cm mass and the other unused with zero mass. Return the binary tree address 
       @param[in] _bin_interrupt: interrupt binary information: adr: binary tree address; time_now: current physical time; time_end: integration finishing time; status: interrupt status: change, merge,none
@@ -619,7 +634,7 @@ public:
                 }
                 p1->setBinaryInterruptState(BinaryInterruptState::none);
                 p2->setBinaryInterruptState(BinaryInterruptState::none);
-                p1->dm = mcm*0.8-p1->mass; // dm is used to correct energy, thus must be correctly set 
+                p1->dm = mcm*0.8-p1->mass; // dm is used to correct energy, thus must be correctly set, use += since it may change mass before or later
                 p1->mass = mcm*0.8;
                 p2->dm = -p2->mass; 
                 p2->mass = 0.0;

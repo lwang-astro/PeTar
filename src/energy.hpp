@@ -9,7 +9,8 @@ public:
     PS::F64 etot_ref; // energy reference (initial value) for calculating energy error
 #ifdef HARD_CHECK_ENERGY
     PS::F64 de_change_cum; // cumulative energy change 
-    PS::F64 de_change_interrupt; // cumulative energy change due to interruption
+    PS::F64 de_change_binary_interrupt; // cumulative energy change due to interruption (only hard, without cluster cm energy change)
+    PS::F64 de_change_modify_single; // cumulative energy change due to modification of particle (only hard, without cluster cm energy change)
     PS::F64 error_hard_cum_pre;
     PS::F64 error_hard_cum;
     // slowdown energy
@@ -18,7 +19,8 @@ public:
     PS::F64 epot_sd;
     PS::F64 etot_sd_ref; // slowdown energy reference (initial value) for calculating energy error
     PS::F64 de_sd_change_cum; // cumulative slowdown energy change 
-    PS::F64 de_sd_change_interrupt; // cumulative slowdown energy change du to interruption
+    PS::F64 de_sd_change_binary_interrupt; // cumulative slowdown energy change du to interruption (only hard, without cluster cm energy change)
+    PS::F64 de_sd_change_modify_single; // cumulative slowdown energy change due to modification of particle (only hard, without cluster cm energy change)
     PS::F64 error_hard_sd_cum_pre;
     PS::F64 error_hard_sd_cum;
 #endif
@@ -34,9 +36,9 @@ public:
     void clear(){
         error_cum_pre = ekin = epot = etot_ref = 0.0;
 #ifdef HARD_CHECK_ENERGY
-        de_change_cum = de_change_interrupt = 0.0;
+        de_change_cum = de_change_binary_interrupt = de_change_modify_single = 0.0;
         error_hard_cum = error_hard_cum_pre = 0.0;
-        error_sd_cum_pre = ekin_sd = epot_sd = etot_sd_ref = de_sd_change_cum = de_sd_change_interrupt = 0.0;
+        error_sd_cum_pre = ekin_sd = epot_sd = etot_sd_ref = de_sd_change_cum = de_sd_change_binary_interrupt = de_sd_change_modify_single = 0.0;
         error_hard_sd_cum = error_hard_sd_cum_pre = 0.0;
 #endif
         error_Lt_cum_pre = Lt = 0.0;
@@ -56,7 +58,8 @@ public:
              <<std::setw(_width)<<"Potential"
 #ifdef HARD_CHECK_ENERGY
              <<std::setw(_width)<<"Modify"
-             <<std::setw(_width)<<"Interrupt"
+             <<std::setw(_width)<<"Modify_group"
+             <<std::setw(_width)<<"Modify_single"
              <<std::setw(_width)<<"Error_hard"
              <<std::setw(_width)<<"Error_hard_cum"
 #endif
@@ -69,7 +72,8 @@ public:
              <<std::setw(_width)<<epot         
 #ifdef HARD_CHECK_ENERGY
              <<std::setw(_width)<<de_change_cum
-             <<std::setw(_width)<<de_change_interrupt
+             <<std::setw(_width)<<de_change_binary_interrupt
+             <<std::setw(_width)<<de_change_modify_single
              <<std::setw(_width)<<error_hard_cum - error_hard_cum_pre
              <<std::setw(_width)<<error_hard_cum
 #endif
@@ -82,7 +86,8 @@ public:
              <<std::setw(_width)<<ekin_sd
              <<std::setw(_width)<<epot_sd
              <<std::setw(_width)<<de_sd_change_cum
-             <<std::setw(_width)<<de_sd_change_interrupt
+             <<std::setw(_width)<<de_sd_change_binary_interrupt
+             <<std::setw(_width)<<de_sd_change_modify_single
              <<std::setw(_width)<<error_hard_sd_cum - error_hard_sd_cum_pre
              <<std::setw(_width)<<error_hard_sd_cum
              <<std::endl;
@@ -142,7 +147,7 @@ public:
              <<std::setw(_width)<<ekin+epot
 #ifdef HARD_CHECK_ENERGY
              <<std::setw(_width)<<de_change_cum
-             <<std::setw(_width)<<de_change_interrupt
+             <<std::setw(_width)<<de_change_binary_interrupt
              <<std::setw(_width)<<error_hard_cum - error_hard_cum_pre
              <<std::setw(_width)<<error_hard_cum
              <<std::setw(_width)<<getEnergyErrorSlowDown() - error_sd_cum_pre
@@ -151,7 +156,7 @@ public:
              <<std::setw(_width)<<epot_sd
              <<std::setw(_width)<<ekin_sd+epot_sd
              <<std::setw(_width)<<de_sd_change_cum
-             <<std::setw(_width)<<de_sd_change_interrupt
+             <<std::setw(_width)<<de_sd_change_binary_interrupt
              <<std::setw(_width)<<error_hard_sd_cum - error_hard_sd_cum_pre
              <<std::setw(_width)<<error_hard_sd_cum
 #endif
@@ -166,8 +171,8 @@ public:
 #ifdef HARD_CHECK_ENERGY
     void writeAscii(FILE* _fout) {
         fprintf(_fout, "%26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e ",
-                error_cum_pre, ekin, epot, etot_ref, de_change_cum, de_change_interrupt,
-                error_sd_cum_pre, ekin_sd, epot_sd, etot_sd_ref, de_sd_change_cum, de_sd_change_interrupt,
+                error_cum_pre, ekin, epot, etot_ref, de_change_cum, de_change_binary_interrupt,
+                error_sd_cum_pre, ekin_sd, epot_sd, etot_sd_ref, de_sd_change_cum, de_sd_change_binary_interrupt,
                 error_Lt_cum_pre, Lt, L[0], L[1], L[2], 
                 L_ref[0], L_ref[1], L_ref[2]);
     }

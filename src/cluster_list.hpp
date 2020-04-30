@@ -1212,8 +1212,13 @@ public:
 #ifdef HARD_DEBUG
                 assert( _sys[adr].id == _ptcl_hard[i].id);
 #endif
+#ifdef STELLAR_EVOLUTION
+                PS::F64 mass_bk = _sys[adr].group_data.artificial.isMember()? _sys[adr].group_data.artificial.getMassBackup(): _sys[adr].mass;
+                assert(mass_bk!=0.0);
+#endif
                 _sys[adr].DataCopy(_ptcl_hard[i]);
 #ifdef STELLAR_EVOLUTION
+                _sys[adr].dm = _sys[adr].mass - mass_bk;
                 if (_sys[adr].dm!=0.0) _mass_modify_list.push_back(adr);
 #endif
             }
@@ -1251,8 +1256,12 @@ public:
 #ifdef HARD_DEBUG
             assert(_sys[adr].id == ptcl_send_[i].id);
 #endif
+#ifdef STELLAR_EVOLUTION
+            PS::F64 mass_bk = _sys[adr].group_data.artificial.isMember()? _sys[adr].group_data.artificial.getMassBackup(): _sys[adr].mass;
+#endif
             _sys[adr].DataCopy(ptcl_send_[i]);
 #ifdef STELLAR_EVOLUTION
+            _sys[adr].dm = _sys[adr].mass - mass_bk;
             if (_sys[adr].dm!=0.0) _mass_modify_list.push_back(adr);
 #endif
         }

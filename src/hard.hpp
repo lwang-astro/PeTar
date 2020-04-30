@@ -115,17 +115,20 @@ public:
 struct HardEnergy{
     PS::F64 de;                 // energy error
     PS::F64 de_change_cum;      // cumulative energy change 
-    PS::F64 de_change_interrupt; // cumulative energy change due to interruption
+    PS::F64 de_change_binary_interrupt; // cumulative energy change due to interruption
+    PS::F64 de_change_modify_single;   // cumulative energy change due to modification of one particle
     PS::F64 de_sd;              // slowdown energy error
     PS::F64 de_sd_change_cum;   // cumulative Etot_SD change due to the change of slowdown factor and interruption
-    PS::F64 de_sd_change_interrupt; // cumulative Etot_SD change due to interruption
+    PS::F64 de_sd_change_binary_interrupt; // cumulative Etot_SD change due to interruption
+    PS::F64 de_sd_change_modify_single; // cumulative Etot_SD change due to modfication of one particle
     PS::F64 ekin_sd_correction; // correction from Ekin to Etot_sd
     PS::F64 epot_sd_correction; // correction from Epot to Etot_sd
 
     HardEnergy() {clear();}
 
     void clear() {
-        de = de_change_cum = de_change_interrupt = de_sd = de_sd_change_cum = de_sd_change_interrupt = ekin_sd_correction = epot_sd_correction = 0.0;
+        de = de_change_cum = de_change_binary_interrupt = de_change_modify_single = 0.0;
+        de_sd = de_sd_change_cum = de_sd_change_binary_interrupt = de_sd_change_modify_single = ekin_sd_correction = epot_sd_correction = 0.0;
     }
 
     void resetEnergyCorrection() {
@@ -135,10 +138,12 @@ struct HardEnergy{
     HardEnergy& operator +=(const HardEnergy& _energy) {
         de    += _energy.de;
         de_change_cum += _energy.de_change_cum;
-        de_change_interrupt += _energy.de_change_interrupt;
+        de_change_binary_interrupt += _energy.de_change_binary_interrupt;
+        de_change_modify_single += _energy.de_change_modify_single;
         de_sd += _energy.de_sd;
         de_sd_change_cum   += _energy.de_sd_change_cum;
-        de_sd_change_interrupt += _energy.de_sd_change_interrupt;
+        de_sd_change_binary_interrupt += _energy.de_sd_change_binary_interrupt;
+        de_sd_change_modify_single += _energy.de_sd_change_modify_single;
         ekin_sd_correction += _energy.ekin_sd_correction;
         epot_sd_correction += _energy.epot_sd_correction;
         return *this;
@@ -684,6 +689,7 @@ public:
 */
                 // initial after groups are modified
                 h4_int.initialIntegration();
+                h4_int.modifySingleParticles();
                 h4_int.sortDtAndSelectActParticle();
                 h4_int.info.time_origin = h4_int.getTime() + time_origin;
 
@@ -844,20 +850,20 @@ public:
             ekin    = sym_int.getEkin();
             epot    = sym_int.getEpot();
             energy.de = sym_int.getEnergyError();
-            energy.de_change_cum = sym_int.getDEChangeInterrupt() + de_kin;
-            energy.de_change_interrupt = sym_int.getDEChangeInterrupt() + de_kin;
+            energy.de_change_cum = sym_int.getDEChangeBinaryInterrupt() + de_kin;
+            energy.de_change_binary_interrupt = sym_int.getDEChangeBinaryInterrupt();
 #if (defined AR_SLOWDOWN_ARRAY) || (defined AR_SLOWDOWN_TREE)
             ekin_sd = sym_int.getEkinSlowDown();
             epot_sd = sym_int.getEpotSlowDown();
             energy.de_sd = sym_int.getEnergyErrorSlowDown();
             energy.de_sd_change_cum = sym_int.getDESlowDownChangeCum() + de_kin;
-            energy.de_sd_change_interrupt = sym_int.getDESlowDownChangeInterrupt() + de_kin;
+            energy.de_sd_change_binary_interrupt = sym_int.getDESlowDownChangeBinaryInterrupt();
 #else
             ekin_sd = ekin;
             epot_sd = epot;
             energy.de_sd = energy.de;
             energy.de_sd_change_cum = energy.de_change_cum;
-            energy.de_sd_change_interrupt = energy.de_change_interrupt;
+            energy.de_sd_change_binary_interrupt = energy.de_change_binary_interrupt;
 #endif
 #endif
         }
@@ -887,19 +893,22 @@ public:
             epot    = h4_int.getEpot();
             energy.de += h4_int.getEnergyError(); // notice += should be used since de may change before when changeover potential energy correction exist
             energy.de_change_cum = h4_int.getDEChangeCum() + de_kin;
-            energy.de_change_interrupt = h4_int.getDEChangeInterrupt() + de_kin;
+            energy.de_change_binary_interrupt = h4_int.getDEChangeBinaryInterrupt();
+            energy.de_change_modify_single = h4_int.getDEChangeModifySingle();
 #if (defined AR_SLOWDOWN_ARRAY) || (defined AR_SLOWDOWN_TREE)
             ekin_sd = h4_int.getEkinSlowDown();
             epot_sd = h4_int.getEpotSlowDown();
             energy.de_sd += h4_int.getEnergyErrorSlowDown();
             energy.de_sd_change_cum = h4_int.getDESlowDownChangeCum() + de_kin;
-            energy.de_sd_change_interrupt = h4_int.getDESlowDownChangeInterrupt() + de_kin;
+            energy.de_sd_change_binary_interrupt = h4_int.getDESlowDownChangeBinaryInterrupt();
+            energy.de_sd_change_modify_single = h4_int.getDESlowDownChangeModifySingle();
 #else
             ekin_sd = ekin;
             epot_sd = epot;
             energy.de_sd = energy.de;
             energy.de_sd_change_cum = energy.de_change_cum;
-            energy.de_sd_change_interrupt = energy.de_change_interrupt;
+            energy.de_sd_change_binary_interrupt = energy.de_change_binary_interrupt;
+            energy.de_sd_change_modify_single = energy.de_change_modify_single;
 #endif
 #endif
             
@@ -1906,7 +1915,7 @@ public:
         time_origin_ += _dt;
     }
 
-    //! write back hard particles to global system and update time of write back
+    //! write back hard particles to global system, check mass modification and update time of write back
     /*! 
       @param[in,out] _sys: particle system
       @param[out] _mass_modify_list: address on _sys of particles where mass is modified
@@ -1922,11 +1931,17 @@ public:
 #ifdef HARD_DEBUG
             assert(sys[adr].id == ptcl_hard_[i].id);
 #endif
+#ifdef STELLAR_EVOLUTION
+            PS::F64 mass_bk = sys[adr].group_data.artificial.isMember()? sys[adr].group_data.artificial.getMassBackup(): sys[adr].mass;
+            assert(mass_bk!=0.0);
+#endif
             sys[adr].DataCopy(ptcl_hard_[i]);
 
 #ifdef STELLAR_EVOLUTION
             //// record mass change for later energy correction
+            sys[adr].dm = sys[adr].mass - mass_bk;
             if (sys[adr].dm!=0.0) _mass_modify_list.push_back(adr);
+
 #endif
         }
         updateTimeWriteBack();
@@ -1947,7 +1962,9 @@ public:
 
 #pragma omp parallel 
         {
+#ifdef STELLAR_EVOLUTION
             const PS::S32 ith = PS::Comm::getThreadNum();
+#endif
 #pragma omp for 
             for(PS::S32 i=0; i<n; i++){
                 PS::S32 adr = ptcl_hard_[i].adr_org;
@@ -1955,10 +1972,15 @@ public:
 #ifdef HARD_DEBUG
                 assert(sys[adr].id == ptcl_hard_[i].id);
 #endif
+#ifdef STELLAR_EVOLUTION
+                PS::F64 mass_bk = sys[adr].group_data.artificial.isMember()? sys[adr].group_data.artificial.getMassBackup(): sys[adr].mass;
+                assert(mass_bk!=0.0);
+#endif
                 sys[adr].DataCopy(ptcl_hard_[i]);
 
 #ifdef STELLAR_EVOLUTION
                 // record mass change for later energy correction
+                sys[adr].dm = sys[adr].mass - mass_bk;
                 if (sys[adr].dm!=0.0) mass_modify_list_thx[ith].push_back(adr);
 #endif
             }
@@ -1970,7 +1992,7 @@ public:
         updateTimeWriteBack();
     }
 
-    //! write back hard particles to global system and update time of write back 
+    //! write back hard particles to global system, check mass modification and update time of write back 
     /*! 
       @param[in,out] _sys: particle system
       @param[out] _mass_modify_list: address on _sys of particles where mass is modified

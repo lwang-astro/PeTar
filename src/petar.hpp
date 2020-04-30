@@ -756,6 +756,7 @@ public:
         system_hard_connected.findGroupsAndCreateArtificialParticlesOMP<SystemSoft, FPSoft>(system_soft, _dt_tree);
         // send updated particle back to original (set zero mass particle to origin)
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), mass_modify_list);
+        mass_modify_list.resizeNoInitialize(0);
         system_hard_connected.updateTimeWriteBack();
 #endif
 
@@ -1435,6 +1436,8 @@ public:
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), mass_modify_list);
         system_hard_connected.updateTimeWriteBack();
 #endif        
+        mass_modify_list.resizeNoInitialize(0);
+
 #ifdef PROFILE
         profile.output.barrier();
         PS::Comm::barrier();
@@ -1455,6 +1458,7 @@ public:
         system_hard_connected.setParticleGroupDataToCMData(system_soft);
         search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), mass_modify_list);
         system_hard_connected.updateTimeWriteBack();
+        mass_modify_list.resizeNoInitialize(0);
 #endif
 #ifdef PROFILE
         profile.search_cluster.barrier();
@@ -1581,16 +1585,20 @@ public:
             stat.energy.epot_sd = stat.energy.epot + epot_sd_correction;
             PS::F64 etot_sd_correction = ekin_sd_correction + epot_sd_correction;
             PS::F64 de_change_cum = PS::Comm::getSum(energy_local.de_change_cum);
-            PS::F64 de_change_interrupt = PS::Comm::getSum(energy_local.de_change_interrupt);
+            PS::F64 de_change_binary_interrupt = PS::Comm::getSum(energy_local.de_change_binary_interrupt);
+            PS::F64 de_change_modify_single = PS::Comm::getSum(energy_local.de_change_modify_single);
             stat.energy.etot_ref += de_change_cum;
             stat.energy.de_change_cum += de_change_cum;
-            stat.energy.de_change_interrupt += de_change_interrupt;
+            stat.energy.de_change_binary_interrupt += de_change_binary_interrupt;
+            stat.energy.de_change_modify_single += de_change_modify_single;
             // for total energy reference, first add the cumulative change due to slowdown change in the integration (referring to no slowdown case), then add slowdown energy correction from current time
             PS::F64 de_sd_change_cum  = PS::Comm::getSum(energy_local.de_sd_change_cum) + etot_sd_correction;
-            PS::F64 de_sd_change_interrupt = PS::Comm::getSum(energy_local.de_sd_change_interrupt);
+            PS::F64 de_sd_change_binary_interrupt = PS::Comm::getSum(energy_local.de_sd_change_binary_interrupt);
+            PS::F64 de_sd_change_modify_single = PS::Comm::getSum(energy_local.de_sd_change_modify_single);
             stat.energy.etot_sd_ref += de_sd_change_cum; 
             stat.energy.de_sd_change_cum += de_sd_change_cum;
-            stat.energy.de_sd_change_interrupt += de_sd_change_interrupt;
+            stat.energy.de_sd_change_binary_interrupt += de_sd_change_binary_interrupt;
+            stat.energy.de_sd_change_modify_single += de_sd_change_modify_single;
 
             system_hard_one_cluster.energy.clear();
             system_hard_isolated.energy.clear();
@@ -1876,11 +1884,9 @@ public:
             auto& pi = system_soft[i];
             PS::F64 dpot = pi.dm*pi.pot_soft;
             stat.energy.etot_ref += dpot;
-            stat.energy.de_change_interrupt += dpot;
             stat.energy.de_change_cum += dpot;
             stat.energy.etot_sd_ref += dpot;
             stat.energy.de_sd_change_cum += dpot;
-            stat.energy.de_sd_change_interrupt += dpot;
             pi.dm = 0.0;
             // ghost particle case
             if(pi.mass==0.0&&pi.group_data.artificial.isUnused()) {
