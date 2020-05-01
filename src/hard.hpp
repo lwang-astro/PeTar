@@ -717,22 +717,20 @@ public:
 
                     PS::F64 de_sd   = h4_int.getEnergyErrorSlowDown();
                     if (abs(de_sd) > manager->energy_error_max) {
-                        PS::F64 ekin    = h4_int.getEkin();
-                        PS::F64 ekin_sd = h4_int.getEkinSlowDown();
-                        PS::F64 epot    = h4_int.getEpot();
-                        PS::F64 epot_sd = h4_int.getEpotSlowDown();
-                        PS::F64 etot_sd = h4_int.getEtotSlowDownRef();
-                        PS::F64 de      = h4_int.getEnergyError();
-                        PS::F64 de_sd_change_cum = h4_int.getDESlowDownChangeCum();
                         std::cerr<<"Hard energy significant ("<<de_sd<<") !"
-                                 <<"  Ekin: "<<ekin
-                                 <<"  Epot: "<<epot
-                                 <<"  Ekin_SD: "<<ekin_sd
-                                 <<"  Epot_SD: "<<epot_sd
-                                 <<"  Etot_SD_ref: "<<etot_sd
-                                 <<"  dE: "<<de
+                                 <<"  Ekin: "<<h4_int.getEkin()
+                                 <<"  Epot: "<<h4_int.getEpot()
+                                 <<"  Ekin_SD: "<<h4_int.getEkinSlowDown()
+                                 <<"  Epot_SD: "<<h4_int.getEpotSlowDown()
+                                 <<"  Etot_SD_ref: "<<h4_int.getEtotSlowDownRef()
+                                 <<"  dE: "<<h4_int.getEnergyError()
+                                 <<"  dE_change: "<<h4_int.getDEChangeCum()
+                                 <<"  dE_change_binary: "<<h4_int.getDEChangeBinaryInterrupt()
+                                 <<"  dE_change_single: "<<h4_int.getDEChangeModifySingle()
                                  <<"  dE_SD: "<<de_sd
-                                 <<"  dE_SD_CHANGE: "<<de_sd_change_cum
+                                 <<"  dE_SD_change: "<<h4_int.getDESlowDownChangeCum()
+                                 <<"  dE_SD_change_binary: "<<h4_int.getDESlowDownChangeBinaryInterrupt()
+                                 <<"  dE_SD_change_single: "<<h4_int.getDESlowDownChangeModifySingle()
                                  <<std::endl;
                         DATADUMP("hard_dump");
                         ///abort();
@@ -1037,8 +1035,12 @@ public:
                  <<"  Epot_SD: "<<epot_sd
                  <<"  dE: "<<energy.de
                  <<"  dE_change: "<<energy.de_change_cum
+                 <<"  dE_change_binary: "<<energy.de_change_binary_interrupt
+                 <<"  dE_change_single: "<<energy.de_change_modify_single
                  <<"  dE_SD: "<<energy.de_sd
                  <<"  dE_SD_change: "<<energy.de_sd_change_cum
+                 <<"  dE_SD_change_binary: "<<energy.de_sd_change_binary_interrupt
+                 <<"  dE_SD_change_single: "<<energy.de_sd_change_modify_single
                  <<"  H4_step_sum: "<<H4_step_sum
                  <<"  ARC_substep_sum: "<<ARC_substep_sum
                  <<"  ARC_tsyn_step_sum: "<<ARC_tsyn_step_sum
