@@ -1935,6 +1935,10 @@ public:
 #pragma omp parallel for
         for(PS::S32 i=0; i<stat.n_real_loc; i++){
             assert(system_soft[i].mass!=0.0);
+            assert(!std::isinf(system_soft[i].pos[0]));
+            assert(!std::isnan(system_soft[i].pos[0]));
+            assert(!std::isinf(system_soft[i].vel[0]));
+            assert(!std::isnan(system_soft[i].vel[0]));
         }
 #endif
 

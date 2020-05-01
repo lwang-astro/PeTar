@@ -835,6 +835,11 @@ public:
                 pi.group_data.cm.vel[1]  = pcm.vel[1];
                 pi.group_data.cm.vel[2]  = pcm.vel[2];
 #endif
+                ASSERT(!std::isinf(pi.pos[0]));
+                ASSERT(!std::isnan(pi.pos[0]));
+                ASSERT(!std::isinf(pi.vel[0]));
+                ASSERT(!std::isnan(pi.vel[0]));
+
 #ifdef HARD_DEBUG
                 ASSERT(ptcl_origin[i].r_search>ptcl_origin[i].changeover.getRout());
 #endif
@@ -948,6 +953,10 @@ public:
 #ifdef HARD_DEBUG
                     ASSERT(pj->r_search>pj->changeover.getRout());
 #endif
+                    ASSERT(!std::isinf(pj->pos[0]));
+                    ASSERT(!std::isnan(pj->pos[0]));
+                    ASSERT(!std::isinf(pj->vel[0]));
+                    ASSERT(!std::isnan(pj->vel[0]));
                 }
             }
 
@@ -970,6 +979,10 @@ public:
                 pi.group_data.cm.vel[1]  = 0.0;
                 pi.group_data.cm.vel[2]  = 0.0;
 #endif
+                ASSERT(!std::isinf(pi.pos[0]));
+                ASSERT(!std::isnan(pi.pos[0]));
+                ASSERT(!std::isinf(pi.vel[0]));
+                ASSERT(!std::isnan(pi.vel[0]));
                 pi.Ptcl::calcRSearch(_time_end);
 //                pi.calcRSearch(h4_manager.interaction.G*(h4_pcm.mass-pi.mass), abs(pi.pot), h4_pcm.vel, _dt);
             }
@@ -1943,8 +1956,11 @@ public:
             //// record mass change for later energy correction
             sys[adr].dm = sys[adr].mass - mass_bk;
             if (sys[adr].dm!=0.0) _mass_modify_list.push_back(adr);
-
 #endif
+            assert(!std::isinf(sys[adr].pos[0]));
+            assert(!std::isnan(sys[adr].pos[0]));
+            assert(!std::isinf(sys[adr].vel[0]));
+            assert(!std::isnan(sys[adr].vel[0]));
         }
         updateTimeWriteBack();
     }
@@ -1985,6 +2001,10 @@ public:
                 sys[adr].dm = sys[adr].mass - mass_bk;
                 if (sys[adr].dm!=0.0) mass_modify_list_thx[ith].push_back(adr);
 #endif
+                assert(!std::isinf(sys[adr].pos[0]));
+                assert(!std::isnan(sys[adr].pos[0]));
+                assert(!std::isinf(sys[adr].vel[0]));
+                assert(!std::isnan(sys[adr].vel[0]));
             }
         }
 

@@ -1221,6 +1221,10 @@ public:
                 _sys[adr].dm = _sys[adr].mass - mass_bk;
                 if (_sys[adr].dm!=0.0) _mass_modify_list.push_back(adr);
 #endif
+                assert(!std::isinf(_sys[adr].pos[0]));
+                assert(!std::isnan(_sys[adr].pos[0]));
+                assert(!std::isinf(_sys[adr].vel[0]));
+                assert(!std::isnan(_sys[adr].vel[0]));
             }
             else{
                 //assert( ptcl_recv_[-(adr+1)].id == _ptcl_hard[i].id );
@@ -1264,6 +1268,10 @@ public:
             _sys[adr].dm = _sys[adr].mass - mass_bk;
             if (_sys[adr].dm!=0.0) _mass_modify_list.push_back(adr);
 #endif
+            assert(!std::isinf(_sys[adr].pos[0]));
+            assert(!std::isnan(_sys[adr].pos[0]));
+            assert(!std::isinf(_sys[adr].vel[0]));
+            assert(!std::isnan(_sys[adr].vel[0]));
         }
     }
 
