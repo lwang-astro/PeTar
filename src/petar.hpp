@@ -2163,7 +2163,7 @@ public:
 
         system_soft.setNumberOfParticleLocal(n_loc);
         for(PS::S32 i=0; i<n_loc; i++){
-            int k = i_h+1;
+            int k = i_h+i;
             system_soft[i].mass  = _particle[k].getMass();
             system_soft[i].pos.x = _particle[k].getPos()[0];
             system_soft[i].pos.y = _particle[k].getPos()[1];
