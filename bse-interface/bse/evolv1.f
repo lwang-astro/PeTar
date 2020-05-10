@@ -1,6 +1,6 @@
 ***
       SUBROUTINE evolv1(kw,mass,mt,r,lum,mc,rc,menv,renv,ospin,
-     &                  epoch,tm,tphys,tphysf,dtp,z,zpars)
+     &                  epoch,tm,tphys,tphysf,dtp,z,zpars,vs)
 c-------------------------------------------------------------c
 c
 c     Evolves a single star.

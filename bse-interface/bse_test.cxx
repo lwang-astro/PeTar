@@ -13,6 +13,7 @@ int main(int argc, char** argv){
     int n=5000;
     double m_min=0.08, m_max=150.0;
     double time=100.0;
+    double dtmin=1.0;
     std::vector<double> mass0;
 
     auto printHelp= [&]() {
@@ -22,6 +23,7 @@ int main(int argc, char** argv){
                  <<"    -e [D]: maximum mass ("<<m_max<<")\n"
                  <<"    -n [I]: number of stars when evolve an IMF ("<<n<<")\n"
                  <<"    -t [D]: evolve time ("<<time<<")[Myr]\n"
+                 <<"    -d [D]: minimum time step ("<<dtmin<<")[Myr]\n"
                  <<"    -w [I]: print column width ("<<width<<")\n"
                  <<"    -h    : help\n";
     };
@@ -36,7 +38,7 @@ int main(int argc, char** argv){
     static struct option long_options[] = {{0,0,0,0}};
 
     int option_index;
-    while ((arg_label = getopt_long(argc, argv, "z:s:e:n:t:w:h", long_options, &option_index)) != -1)
+    while ((arg_label = getopt_long(argc, argv, "z:s:e:n:t:d:w:h", long_options, &option_index)) != -1)
         switch (arg_label) {
         case 'z':
             z = atof(optarg);
@@ -61,6 +63,10 @@ int main(int argc, char** argv){
         case 'w':
             width = atoi(optarg);
             std::cout<<"print width: "<<width<<std::endl;
+            break;
+        case 'd':
+            dtmin = atof(optarg);
+            std::cout<<"minimum time step "<<dtmin<<std::endl;
             break;
         case 'h':
             printHelp();
@@ -110,14 +116,13 @@ int main(int argc, char** argv){
 
 #pragma omp parallel for schedule(dynamic)
     for (int i=0; i<n; i++) {
-        output[i] = bse_manager.evolveStar(star[i],time);
-        //double time_next=0.0;
-        //while (star[i].tphys<time) {
-        //    output[i] = bse_manager.evolveStar(star[i],time_next);
-        //    assert(star[i].tphys>=time_next);
-        //    time_next += bse_manager.getTimeStep(star[i]);
-        //    time_next = std::min(time_next, time);
-        //}
+        //output[i] = bse_manager.evolveStar(star[i],time);
+        double time_next=0.0;
+        while (time_next<time) {
+            time_next += std::max(bse_manager.getTimeStep(star[i]),dtmin);
+            time_next = std::min(time_next, time);
+            output[i] = bse_manager.evolveStar(star[i],time_next);
+        }
     }
 
     std::cout<<std::setw(width)<<"Mass_init[Msun]";

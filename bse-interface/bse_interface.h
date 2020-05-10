@@ -47,7 +47,7 @@ extern "C" {
 
     //! SSE function for evolving one star
     void evolv1_(int* kw, double* mass, double* mt, double* r, double* lum, double* mc, double* rc, double* menv, double* renv, double* ospin,
-                 double* epoch, double* tm, double* tphys, double* tphysf, double* dtp, double* z, double* zpars);
+                 double* epoch, double* tm, double* tphys, double* tphysf, double* dtp, double* z, double* zpars, double* vs);
 
     void star_(int* kw, double* mass, double* mt, double* tm, double* tn, double* tscls, double* lums, double* GB, double* zpars);
 
@@ -103,6 +103,7 @@ struct StarParameterOut{
     double menv;  ///> mass of convective envelope 
     double renv;  ///> radius of convective envelope
     double tm;   ///> Main sequence lifetime
+    double vkick[3]; ///> kick velocity for NS/BH formation
 
     //! print titles of class members using column style
     /*! print titles of class members in one line for column style
@@ -115,7 +116,10 @@ struct StarParameterOut{
              <<std::setw(_width)<<"radius_core[Rsun]"
              <<std::setw(_width)<<"mass_CE[Msun]"
              <<std::setw(_width)<<"radius_CE[Rsun]"
-             <<std::setw(_width)<<"time_MS[Myr]";
+             <<std::setw(_width)<<"time_MS[Myr]"
+             <<std::setw(_width)<<"vkick.x[km/s]"
+             <<std::setw(_width)<<"vkick.y[km/s]"
+             <<std::setw(_width)<<"vkick.z[km/s]";
     }
     
     //! print data of class members using column style
@@ -129,7 +133,10 @@ struct StarParameterOut{
              <<std::setw(_width)<<rc
              <<std::setw(_width)<<menv
              <<std::setw(_width)<<renv
-             <<std::setw(_width)<<tm;
+             <<std::setw(_width)<<tm
+             <<std::setw(_width)<<vkick[0]
+             <<std::setw(_width)<<vkick[1]
+             <<std::setw(_width)<<vkick[2];
     }
 };
 
@@ -405,7 +412,7 @@ public:
         evolv1_(&_star.kw, &_star.m0, &_star.mt, &_star.r, 
                 &out.lum, &out.mc, &out.rc, &out.menv, &out.renv, 
                 &_star.ospin, &_star.epoch, 
-                &out.tm, &_star.tphys, &tphysf, &dtp, &z, zpars);
+                &out.tm, &_star.tphys, &tphysf, &dtp, &z, zpars, out.vkick);
 
         return out;
     }
