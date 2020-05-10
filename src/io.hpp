@@ -1,26 +1,27 @@
 #pragma once
+#include <vector>
 
 #define PRINT_WIDTH 18
 #define PRINT_PRECISION 14
 
 //! IO Params container
 class IOParamsContainer{
-    PS::ReallocatableArray<PS::F64*> d_f64;
-    PS::ReallocatableArray<PS::S64*> d_s64;
-    PS::ReallocatableArray<PS::S32*> d_s32;
-    PS::ReallocatableArray<std::string*> d_str;
+    std::vector<double*> d_f64;
+    std::vector<long long int*> d_s64;
+    std::vector<int*> d_s32;
+    std::vector<std::string*> d_str;
     
 public:
     
-    void store(PS::F64* _item) {
+    void store(double* _item) {
         d_f64.push_back(_item);
     }
 
-    void store(PS::S64* _item) {
+    void store(long long int* _item) {
         d_s64.push_back(_item);
     }
 
-    void store(PS::S32* _item) {
+    void store(int* _item) {
         d_s32.push_back(_item);
     }
 
@@ -29,37 +30,37 @@ public:
     }
 
     void writeAscii(FILE *_fout) {
-        for(PS::S32 i=0; i<d_f64.size(); i++) fprintf(_fout, "%26.15e ", *d_f64[i]);
-        for(PS::S32 i=0; i<d_s64.size(); i++) fprintf(_fout, "%lld ",    *d_s64[i]);
-        for(PS::S32 i=0; i<d_s32.size(); i++) fprintf(_fout, "%d ",      *d_s32[i]);
-        for(PS::S32 i=0; i<d_str.size(); i++) fprintf(_fout, "%s ",d_str[i]->c_str());
+        for(size_t i=0; i<d_f64.size(); i++) fprintf(_fout, "%26.15e ", *d_f64[i]);
+        for(size_t i=0; i<d_s64.size(); i++) fprintf(_fout, "%lld ",    *d_s64[i]);
+        for(size_t i=0; i<d_s32.size(); i++) fprintf(_fout, "%d ",      *d_s32[i]);
+        for(size_t i=0; i<d_str.size(); i++) fprintf(_fout, "%s ",d_str[i]->c_str());
         fprintf(_fout,"\n");
     }
     
     void readAscii(FILE *_fin) {
         size_t rcount=0;
-        for(PS::S32 i=0; i<d_f64.size(); i++) {
+        for(size_t i=0; i<d_f64.size(); i++) {
             rcount=fscanf(_fin, "%lf ", d_f64[i]);
             if (rcount<1) {
                 std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
                 abort();
             }
         }
-        for(PS::S32 i=0; i<d_s64.size(); i++) {
+        for(size_t i=0; i<d_s64.size(); i++) {
             rcount=fscanf(_fin, "%lld ", d_s64[i]);
             if (rcount<1) {
                 std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
                 abort();
             }
         }
-        for(PS::S32 i=0; i<d_s32.size(); i++) {
+        for(size_t i=0; i<d_s32.size(); i++) {
             rcount=fscanf(_fin, "%d ", d_s32[i]);
             if (rcount<1) {
                 std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
                 abort();
             }
         }
-        for(PS::S32 i=0; i<d_str.size(); i++) {
+        for(size_t i=0; i<d_str.size(); i++) {
             char dtmp[1024];
             rcount=fscanf(_fin, "%s ", dtmp);
             if (rcount<1) {
@@ -72,10 +73,10 @@ public:
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
     void mpi_broadcast() {
-        for(PS::S32 i=0; i<d_f64.size(); i++) PS::Comm::broadcast(d_f64[i], 1, 0);
-        for(PS::S32 i=0; i<d_s64.size(); i++) PS::Comm::broadcast(d_s64[i], 1, 0);
-        for(PS::S32 i=0; i<d_s32.size(); i++) PS::Comm::broadcast(d_s32[i], 1, 0);
-        for(PS::S32 i=0; i<d_str.size(); i++) {
+        for(size_t i=0; i<d_f64.size(); i++) PS::Comm::broadcast(d_f64[i], 1, 0);
+        for(size_t i=0; i<d_s64.size(); i++) PS::Comm::broadcast(d_s64[i], 1, 0);
+        for(size_t i=0; i<d_s32.size(); i++) PS::Comm::broadcast(d_s32[i], 1, 0);
+        for(size_t i=0; i<d_str.size(); i++) {
             size_t str_size=d_str[i]->size();
             PS::Comm::broadcast(&str_size, 1, 0);
             char stmp[str_size+1];
@@ -113,20 +114,20 @@ std::ostream& operator <<(std::ostream& os, const IOParams<Type>& par) {
 
 class FileHeader{
 public:
-    PS::S64 nfile;  // file id
-    PS::S64 n_body;
-    PS::F64 time;
+    long long int nfile;  // file id
+    long long int n_body;
+    double time;
     FileHeader(){
         n_body = 0;
         time = 0.0;
     }
-    FileHeader(const PS::S64 ni, const PS::S64 n, const PS::F64 t){
+    FileHeader(const long long int ni, const long long int n, const double t){
         nfile = ni;
         n_body = n;
         time = t;
     }
-    PS::S32 readAscii(FILE * fp){
-        PS::S32 rcount=fscanf(fp, "%lld %lld %lf\n", &nfile, &n_body, &time);
+    int readAscii(FILE * fp){
+        int rcount=fscanf(fp, "%lld %lld %lf\n", &nfile, &n_body, &time);
         if (rcount<3) {
           std::cerr<<"Error: cannot read header, please check your data file header!\n";
           abort();
@@ -135,7 +136,7 @@ public:
         return n_body;
     }
 
-    PS::S32 readBinary(FILE* fp){
+    int readBinary(FILE* fp){
         size_t rcount=fread(this, sizeof(FileHeader), 1, fp);
         if(rcount<1) {
             std::cerr<<"Error: Data reading fails! requiring data number is "<<1<<" bytes, only obtain "<<rcount<<" bytes.\n";

@@ -198,232 +198,206 @@ public:
       \return -1 if help is used
      */
     int read(int argc, char *argv[]) {
+        static int petar_flag=-1;
         static struct option long_options[] = {
 #ifdef ORBIT_SAMPLING
-            {"number-split", required_argument, 0, 0},        
+            {"number-split",          required_argument, &petar_flag, 0},        
 #endif
-            {"search-vel-factor", required_argument, 0, 1},  
-            {"dt-max-factor", required_argument, 0, 2},  
-            {"dt-min-hermite", required_argument, 0, 3}, 
-            {"number-group-limit", required_argument, 0, 4},
-            {"number-leaf-limit", required_argument, 0, 5},
-            {"number-sample-average", required_argument, 0, 6},
-            {"energy-err-arc", required_argument, 0, 7}, 
-            {"soft-eps", required_argument, 0, 8},       
-            {"slowdown-factor", required_argument, 0, 9},
-            {"r-ratio", required_argument, 0, 10},       
-            {"r-bin",   required_argument, 0, 11},       
-            {"search-peri-factor", required_argument, 0, 12}, 
-            {"hermite-eta", required_argument, 0, 13}, 
-            {"help",no_argument, 0, 'h'},                
+            {"search-vel-factor",     required_argument, &petar_flag, 1},  
+            {"dt-max-factor",         required_argument, &petar_flag, 2},  
+            {"dt-min-hermite",        required_argument, &petar_flag, 3}, 
+            {"number-group-limit",    required_argument, &petar_flag, 4},
+            {"number-leaf-limit",     required_argument, &petar_flag, 5},
+            {"number-sample-average", required_argument, &petar_flag, 6},
+            {"energy-err-arc",        required_argument, &petar_flag, 7}, 
+            {"soft-eps",              required_argument, &petar_flag, 8},       
+            {"slowdown-factor",       required_argument, &petar_flag, 9},
+            {"r-ratio",               required_argument, &petar_flag, 10},       
+            {"r-bin",                 required_argument, &petar_flag, 11},       
+            {"search-peri-factor",    required_argument, &petar_flag, 12}, 
+            {"hermite-eta",           required_argument, &petar_flag, 13}, 
 #ifdef HARD_CHECK_ENERGY
-            {"energy-err-hard", required_argument, 0, 14},  
+            {"energy-err-hard",       required_argument, &petar_flag, 14},  
 #endif
-            {"step-limit-arc", required_argument, 0, 15},   
-            {"disable-print-info", no_argument, 0, 16},
-            {"number-interrupt-limt",required_argument, 0, 17},
-            {"detect-interrupt", required_argument, 0, 18},
-            {"number-step-tt", required_argument, 0, 19},
+            {"step-limit-arc",        required_argument, &petar_flag, 15},   
+            {"disable-print-info",    no_argument,       &petar_flag, 16},
+            {"number-interrupt-limt", required_argument, &petar_flag, 17},
+            {"detect-interrupt",      required_argument, &petar_flag, 18},
+            {"number-step-tt",        required_argument, &petar_flag, 19},
 #ifdef STELLAR_EVOLUTION
-            {"stellar-evolution", required_argument, 0, 20},
+            {"stellar-evolution",     required_argument, &petar_flag, 20},
 #endif
+            {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
         };
 
         int copt;
         int option_index;
-        int n_opt=0;
+        optind = 1;
         while ((copt = getopt_long(argc, argv, "i:at:s:o:r:b:n:G:T:f:p:w:h", long_options, &option_index)) != -1) 
             switch (copt) {
-#ifdef ORBIT_SAMPLING
             case 0:
-                n_split.value = atoi(optarg);
-                if(print_flag) n_split.print(std::cout);
-                assert(n_split.value>=0);
-                n_opt+=2;
-                break;
+                switch (petar_flag) {
+#ifdef ORBIT_SAMPLING
+                case 0:
+                    n_split.value = atoi(optarg);
+                    if(print_flag) n_split.print(std::cout);
+                    assert(n_split.value>=0);
+                    break;
 #endif
-            case 1:
-                search_vel_factor.value = atof(optarg);
-                if(print_flag) search_vel_factor.print(std::cout);
-                assert(search_vel_factor.value>0.0);
-                n_opt+=2;
-                break;
-            case 2:
-                dt_limit_hard_factor.value = atof(optarg);
-                if(print_flag) dt_limit_hard_factor.print(std::cout);
-                assert(dt_limit_hard_factor.value > 0.0);
-                n_opt+=2;
-                break;
-            case 3:
-                dt_min_hermite_index.value = atoi(optarg);
-                if(print_flag) dt_min_hermite_index.print(std::cout);
-                assert(dt_min_hermite_index.value > 0);
-                n_opt+=2;
-                break;
-            case 4:
-                n_group_limit.value = atoi(optarg);
-                if(print_flag) n_group_limit.print(std::cout);
-                assert(n_group_limit.value>0);
-                n_opt+=2;
-                break;
-            case 5:
-                n_leaf_limit.value = atoi(optarg);
-                if(print_flag) n_leaf_limit.print(std::cout);
-                assert(n_leaf_limit.value>0);
-                n_opt+=2;
-                break;
-            case 6:
-                n_smp_ave.value = atoi(optarg);
-                if(print_flag) n_smp_ave.print(std::cout);
-                assert(n_smp_ave.value>0.0);
-                n_opt+=2;
-                break;
-            case 7:
-                e_err_arc.value = atof(optarg);
-                if(print_flag) e_err_arc.print(std::cout);
-                assert(e_err_arc.value > 0.0);
-                n_opt+=2;
-                break;
-            case 8:
-                eps.value = atof(optarg);
-                if(print_flag) eps.print(std::cout);
-                assert(eps.value>=0.0);
-                n_opt+=2;
-                break;
-            case 9:
-                sd_factor.value = atof(optarg);
-                if(print_flag) sd_factor.print(std::cout);
-                assert(sd_factor.value>0.0);
-                n_opt+=2;
-                break;
-            case 10:
-                ratio_r_cut.value = atof(optarg);
-                if(print_flag) ratio_r_cut.print(std::cout);
-                assert(ratio_r_cut.value>0.0);
-                assert(ratio_r_cut.value<1.0);
-                n_opt+=2;
-                break;
-            case 11:
-                r_bin.value = atof(optarg);
-                if(print_flag) r_bin.print(std::cout);
-                assert(r_bin.value>0.0);
-                n_opt+=2;
-                break;
-            case 12:
-                search_peri_factor.value = atof(optarg);
-                if(print_flag) search_peri_factor.print(std::cout);
-                assert(search_peri_factor.value>=1.0);
-                n_opt+=2;
-                break;
-            case 13:
-                eta.value = atof(optarg);
-                if(print_flag) eta.print(std::cout);
-                assert(eta.value>0.0);
-                n_opt+=2;
-                break;
+                case 1:
+                    search_vel_factor.value = atof(optarg);
+                    if(print_flag) search_vel_factor.print(std::cout);
+                    assert(search_vel_factor.value>0.0);
+                    break;
+                case 2:
+                    dt_limit_hard_factor.value = atof(optarg);
+                    if(print_flag) dt_limit_hard_factor.print(std::cout);
+                    assert(dt_limit_hard_factor.value > 0.0);
+                    break;
+                case 3:
+                    dt_min_hermite_index.value = atoi(optarg);
+                    if(print_flag) dt_min_hermite_index.print(std::cout);
+                    assert(dt_min_hermite_index.value > 0);
+                    break;
+                case 4:
+                    n_group_limit.value = atoi(optarg);
+                    if(print_flag) n_group_limit.print(std::cout);
+                    assert(n_group_limit.value>0);
+                    break;
+                case 5:
+                    n_leaf_limit.value = atoi(optarg);
+                    if(print_flag) n_leaf_limit.print(std::cout);
+                    assert(n_leaf_limit.value>0);
+                    break;
+                case 6:
+                    n_smp_ave.value = atoi(optarg);
+                    if(print_flag) n_smp_ave.print(std::cout);
+                    assert(n_smp_ave.value>0.0);
+                    break;
+                case 7:
+                    e_err_arc.value = atof(optarg);
+                    if(print_flag) e_err_arc.print(std::cout);
+                    assert(e_err_arc.value > 0.0);
+                    break;
+                case 8:
+                    eps.value = atof(optarg);
+                    if(print_flag) eps.print(std::cout);
+                    assert(eps.value>=0.0);
+                    break;
+                case 9:
+                    sd_factor.value = atof(optarg);
+                    if(print_flag) sd_factor.print(std::cout);
+                    assert(sd_factor.value>0.0);
+                    break;
+                case 10:
+                    ratio_r_cut.value = atof(optarg);
+                    if(print_flag) ratio_r_cut.print(std::cout);
+                    assert(ratio_r_cut.value>0.0);
+                    assert(ratio_r_cut.value<1.0);
+                    break;
+                case 11:
+                    r_bin.value = atof(optarg);
+                    if(print_flag) r_bin.print(std::cout);
+                    assert(r_bin.value>0.0);
+                    break;
+                case 12:
+                    search_peri_factor.value = atof(optarg);
+                    if(print_flag) search_peri_factor.print(std::cout);
+                    assert(search_peri_factor.value>=1.0);
+                    break;
+                case 13:
+                    eta.value = atof(optarg);
+                    if(print_flag) eta.print(std::cout);
+                    assert(eta.value>0.0);
+                    break;
 #ifdef HARD_CHECK_ENERGY
-            case 14:
-                e_err_hard.value = atof(optarg);
-                if(print_flag) e_err_hard.print(std::cout);
-                n_opt+=2;
-                break;
+                case 14:
+                    e_err_hard.value = atof(optarg);
+                    if(print_flag) e_err_hard.print(std::cout);
+                    break;
 #endif
-            case 15:
-                step_limit_arc.value = atoi(optarg);
-                if(print_flag) step_limit_arc.print(std::cout);
-                n_opt+=2;
-                break;
-            case 16:
-                print_flag = false;
-                n_opt++;
-                break;
-            case 17:
-                n_interrupt_limit.value = atoi(optarg);
-                if(print_flag) n_interrupt_limit.print(std::cout);
-                assert(n_interrupt_limit.value>0);
-                n_opt+=2;
-                break;
-            case 18:
-                interrupt_detection_option.value = atoi(optarg);
-                if(print_flag) interrupt_detection_option.print(std::cout);
-                n_opt++;
-                break;
-            case 19:
-                n_step_per_orbit.value = atof(optarg);
-                if(print_flag) n_step_per_orbit.print(std::cout);
-                assert(n_step_per_orbit.value>=1.0);
-                n_opt+=2;
-                break;
+                case 15:
+                    step_limit_arc.value = atoi(optarg);
+                    if(print_flag) step_limit_arc.print(std::cout);
+                    break;
+                case 16:
+                    print_flag = false;
+                    break;
+                case 17:
+                    n_interrupt_limit.value = atoi(optarg);
+                    if(print_flag) n_interrupt_limit.print(std::cout);
+                    assert(n_interrupt_limit.value>0);
+                    break;
+                case 18:
+                    interrupt_detection_option.value = atoi(optarg);
+                    if(print_flag) interrupt_detection_option.print(std::cout);
+                    break;
+                case 19:
+                    n_step_per_orbit.value = atof(optarg);
+                    if(print_flag) n_step_per_orbit.print(std::cout);
+                    assert(n_step_per_orbit.value>=1.0);
+                    break;
 #ifdef STELLAR_EVOLUTION
-            case 20:
-                stellar_evolution_option.value = atoi(optarg);
-                if(print_flag) stellar_evolution_option.print(std::cout);
-                n_opt++;
-                break;
+                case 20:
+                    stellar_evolution_option.value = atoi(optarg);
+                    if(print_flag) stellar_evolution_option.print(std::cout);
+                    break;
 #endif
+                default:
+                    break;
+                }
             case 'i':
                 data_format.value = atoi(optarg);
                 if(print_flag) data_format.print(std::cout);
                 assert(data_format.value>=0&&data_format.value<=3);
-                n_opt+=2;
                 break;
             case 'a':
                 app_flag=true;
-                n_opt++;
                 break;
             case 't':
                 time_end.value = atof(optarg);
                 if(print_flag) time_end.print(std::cout);
                 assert(time_end.value>=0.0);
-                n_opt+=2;
                 break;
             case 's':
                 dt_soft.value = atof(optarg);
                 if(print_flag) dt_soft.print(std::cout);
                 assert(dt_soft.value>0.0);
-                n_opt+=2;
                 break;
             case 'o':
                 dt_snap.value = atof(optarg);
                 if(print_flag) dt_snap.print(std::cout);
                 assert(dt_snap.value>0.0);
-                n_opt+=2;
                 break;
             case 'r':
                 r_out.value = atof(optarg);
                 if(print_flag) r_out.print(std::cout);
                 assert(r_out.value>0.0);
-                n_opt+=2;
                 break;
             case 'b':
                 n_bin.value = atoi(optarg);
                 if(print_flag) n_bin.print(std::cout);
                 assert(n_bin.value>=0);
-                n_opt+=2;
                 break;
             case 'n':
                 n_glb.value = atol(optarg);
                 if(print_flag) n_glb.print(std::cout);
                 assert(n_glb.value>0);
-                n_opt+=2;
                 break;
             case 'G':
                 gravitational_constant.value = atof(optarg);
                 if(print_flag) gravitational_constant.print(std::cout);
                 assert(gravitational_constant.value>0.0);
-                n_opt+=2;
                 break;
             case 'T':
                 theta.value = atof(optarg);
                 if(print_flag) theta.print(std::cout);
                 assert(theta.value>=0.0);
-                n_opt+=2;
                 break;
             case 'f':
                 fname_snp.value = optarg;
                 if(print_flag) fname_snp.print(std::cout);
-                n_opt+=2;
                 break;
             case 'p':
                 fname_par.value = optarg;
@@ -441,12 +415,10 @@ public:
                 input_par_store.mpi_broadcast();
                 PS::Comm::barrier();
 #endif
-                n_opt+=2;
                 break;
             case 'w':
                 write_style.value = atoi(optarg);
                 if(print_flag) write_style.print(std::cout);
-                n_opt+=2;
                 break;
             case 'h':
                 if(print_flag){
@@ -511,10 +483,12 @@ public:
                              <<"        <m>  : averaged mass"<<std::endl;
                 }
                 return -1;
+            default:
+                break;
             }
         
-        if (argc-n_opt>1) {
-            fname_inp.value =argv[argc-1];
+        if (optind<argc) {
+            fname_inp.value =argv[optind++];
             if(print_flag) std::cout<<"Reading data file name: "<<fname_inp.value<<std::endl;
         }        
 
