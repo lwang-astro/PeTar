@@ -14,7 +14,6 @@
 #include "static_variables.hpp"
 
 int main(int argc, char **argv){
-  int n_opt=0;
   int arg_label;
   int mode=0; // 0: integrate to time; 1: times stability
   PS::F64 slowdown_factor=0;
@@ -25,47 +24,51 @@ int main(int argc, char **argv){
   PS::S32 dt_min_power = -1;
   PS::F64 dt_max = -1;
   PS::S32 step_arc_limit = 100000;
+  std::string filename="hard_dump";
+  std::string fhardpar="input.par.hard";
+#ifdef BSE
+  std::string fbsepar = "input.par.bse";
+#endif
 
-  while ((arg_label = getopt(argc, argv, "k:E:A:a:D:d:e:s:m:h")) != -1)
+  while ((arg_label = getopt(argc, argv, "k:E:A:a:D:d:e:s:m:b:h")) != -1)
     switch (arg_label) {
     case 'k':
         slowdown_factor = atof(optarg);
-        n_opt+=2;
         break;
     case 'E':
         eta_4th = atof(optarg);
-        n_opt+=2;
         break;
     case 'A':
         eta_2nd = atof(optarg);
-        n_opt+=2;
         break;
     case 'a':
         e_err_ar = atof(optarg);
-        n_opt+=2;
         break;
     case 'D':
         dt_max = atof(optarg);
-        n_opt+=2;
         break;
     case 'd':
         dt_min_power = atoi(optarg);
-        n_opt+=2;
         break;
 #ifdef HARD_CHECK_ENERGY
     case 'e':
         e_err_hard = atof(optarg);
-        n_opt+=2;
         break;
 #endif
     case 's':
         step_arc_limit = atoi(optarg);
-        n_opt+=2;
         break;
     case 'm':
         mode = atoi(optarg);
-        n_opt+=2;
         break;
+    case 'p':
+        fhardpar = optarg;
+        break;
+#ifdef BSE
+    case 'b':
+        fbsepar = optarg;
+        break;
+#endif
     case 'h':
         std::cout<<"hard_debug.out [options] [hard_manager (defaulted: input.par.hard)] [cluster_data] (defaulted: hard_dump)\n"
                  <<"options:\n"
@@ -80,6 +83,10 @@ int main(int argc, char **argv){
                  <<"    -D [double]:  hard time step max \n"
                  <<"    -d [int]:     hard time step min power \n"
                  <<"    -m [int]:     running mode: 0: evolve system to time_end (default); 1: stability check \n"
+                 <<"    -p [string]:  hard parameter file name ("<<fhardpar<<"\n"
+#ifdef BSE
+                 <<"    -b [string]:  bse parameter file name ("<<fbsepar<<")\n"
+#endif
                  <<"    -h         :  help\n";
         return 0;
     default:
@@ -87,12 +94,8 @@ int main(int argc, char **argv){
         abort();
     }
 
-  std::string filename="hard_dump";
-  std::string fhardpar="input.par.hard";
-  if (argc-n_opt>1) {
+  if (optind<argc) {
       filename=argv[argc-1];
-      if (argc-n_opt>2) 
-          fhardpar=argv[argc-2];
   }
 
   std::cerr<<"Reading dump file:"<<filename<<std::endl;
@@ -108,6 +111,19 @@ int main(int argc, char **argv){
   }
   hard_manager.readBinary(fpar_in);
   fclose(fpar_in);
+
+
+#ifdef BSE
+  std::cerr<<"BSE parameter file:"<<fbsepar<<std::endl;
+  if( (fpar_in = fopen(fbsepar.c_str(),"r")) == NULL) {
+      fprintf(stderr,"Error: Cannot open file %s.\n", fbsepar.c_str());
+      abort();
+  }
+  IOParamsBSE bse_io;
+  bse_io.input_par_store.readAscii(fpar_in);
+  fclose(fpar_in);
+  hard_manager.ar_manager.interaction.bse_manager.initial(bse_io);
+#endif
 
 #ifdef HARD_CHECK_ENERGY
   // Set hard energy limit

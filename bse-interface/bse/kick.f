@@ -1,5 +1,5 @@
 ***
-      SUBROUTINE kick(kw,m1,m1n,m2,ecc,sep,jorb,vs,fbfac,fbtot,mco,ecs)
+      SUBROUTINE kick(kw,m1,m1n,m2,ecc,sep,jorb,v,fbfac,fbtot,mco,ecs)
       implicit none
 *
       integer kw,k
@@ -131,6 +131,7 @@
  20   continue
       vk2 = v(1)**2 + v(2)**2 + v(3)**2
       vk = SQRT(vk2)
+      v(4) = vk
 * Impose the maximum WD kick velocity. 
       IF(KW.GE.10.AND.KW.LE.12.AND.vk.GT.WDKMAX)THEN
          vk = WDKMAX
@@ -172,6 +173,13 @@
           
          ENDIF     
       ENDIF
+
+*     rescale base on new vk
+      do k = 1,3
+         v(k) = v(k)*vk/v(4)
+      end do
+      v(4) = vk
+
       sphi = -1.d0 + 2.d0*u1
       phi = ASIN(sphi)
       cphi = COS(phi)

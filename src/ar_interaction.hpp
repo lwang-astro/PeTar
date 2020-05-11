@@ -8,6 +8,9 @@
 #include "hard_ptcl.hpp"
 #include "Hermite/hermite_particle.h"
 #include "ar_perturber.hpp"
+#ifdef BSE
+#include "bse_interface.h"
+#endif
 
 //! AR interaction clas
 class ARInteraction{
@@ -15,8 +18,13 @@ public:
     typedef H4::ParticleH4<PtclHard> H4Ptcl;
     Float eps_sq; ///> softening parameter
     Float gravitational_constant;
+#ifdef BSE
+    BSEManager bse_manager;
 
+    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), bse_manager() {}
+#else
     ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)) {}
+#endif
 
     //! (Necessary) check whether publicly initialized parameters are correctly set
     /*! \return true: all parmeters are correct. In this case no parameters, return true;
@@ -24,6 +32,9 @@ public:
     bool checkParams() {
         ASSERT(eps_sq>=0.0);
         ASSERT(gravitational_constant>0.0);
+#ifdef BSE
+        ASSERT(bse_manager.checkParams());
+#endif
         return true;
     }        
 
@@ -591,11 +602,31 @@ public:
 #ifdef STELLAR_EVOLUTION
         // sample of mass loss
         //if (_p.time_interrupt<_time_end) {
-        //    _p.dm = -_p.mass*0.1;
-        //    _p.mass *=0.9;
-        //    _p.time_interrupt = _time_end+1e-4;
+        //    _p.dm = -_p.mass*1e-4;
+        //    _p.mass +=_p.dm;
+        //    _p.time_interrupt = _time_end+1e-5;
         //    return true;
         //}
+#ifdef BSE
+        ASSERT(bse_manager.checkParams());
+        // SSE/BSE stellar evolution 
+        if (_p.time_interrupt<_time_end&&_p.star.kw<15) {
+            // time_interrupt include offset
+            Float dt_myr = (_time_end - _p.time_record)*bse_manager.tscale;
+            StarParameterOut output = bse_manager.evolveStar(_p.star, dt_myr);
+            _p.time_record = _time_end;
+            _p.time_interrupt = _p.time_record + bse_manager.getTimeStep(_p.star)/bse_manager.tscale;
+            _p.dm = _p.star.mt/bse_manager.mscale - _p.mass;
+            _p.mass += _p.dm;
+            // set merger check radius core radius
+            _p.radius = output.rc/bse_manager.rscale;
+            // add velocity change if exist
+            for (int k=0; k<3; k++)
+                _p.vel[k] += output.vkick[k]/bse_manager.vscale;
+            if (_p.star.mt==0.0) _p.group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+            return true;
+        }
+#endif
 #endif
         return false;
     }
@@ -607,6 +638,12 @@ public:
     */
     void modifyAndInterruptIter(AR::InterruptBinary<PtclHard>& _bin_interrupt, AR::BinaryTree<PtclHard>& _bin) {
 #ifdef STELLAR_EVOLUTION
+#ifdef BSE
+        // if member is star, evolve single star using SSE
+        for (int k=0; k<2; k++) 
+            if (!_bin.isMemberTree(k)) modifyOneParticle(*_bin.getMember(k), _bin_interrupt.time_now, _bin_interrupt.time_end);
+#endif
+
         if (_bin_interrupt.status==AR::InterruptStatus::none) {
             auto* p1 = _bin.getLeftMember();
             auto* p2 = _bin.getRightMember();

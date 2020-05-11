@@ -716,8 +716,8 @@ public:
                     std::cout<<std::endl;
 
                     PS::F64 de_sd   = h4_int.getEnergyErrorSlowDown();
-                    if (abs(de_sd) > manager->energy_error_max) {
-                        std::cerr<<"Hard energy significant ("<<de_sd<<") !"
+                    if (abs(de_sd/h4_int.getEtotSlowDownRef()) > manager->energy_error_max) {
+                        std::cerr<<"Hard energy significant ("<<de_sd/h4_int.getEtotSlowDownRef()<<") !"
                                  <<"  Ekin: "<<h4_int.getEkin()
                                  <<"  Epot: "<<h4_int.getEpot()
                                  <<"  Ekin_SD: "<<h4_int.getEkinSlowDown()
@@ -825,6 +825,7 @@ public:
                 }
 
                 // shift time interrupt in order to get consistent time for stellar evolution in the next drift
+                pi.time_record -= _time_end;
                 pi.time_interrupt -= _time_end;
 #endif
 
@@ -941,6 +942,7 @@ public:
                     }
 
                     // shift time interrupt in order to get consistent time for stellar evolution in the next drift
+                    pj->time_record -= _time_end;
                     pj->time_interrupt -= _time_end;
 #endif
 #ifdef CLUSTER_VELOCITY
@@ -970,6 +972,7 @@ public:
                 }
 
                 // shift time interrupt in order to get consistent time for stellar evolution in the next drift
+                pi.time_record -= _time_end;
                 pi.time_interrupt -= _time_end;
 #endif
 #ifdef CLUSTER_VELOCITY
@@ -1059,8 +1062,8 @@ public:
                  <<"  ARC_tsyn_step_sum: "<<ARC_tsyn_step_sum
                  <<std::endl;
 #endif        
-        if (abs(energy.de_sd) > manager->energy_error_max) {
-            std::cerr<<"Hard energy significant ("<<energy.de_sd<<") !\n";
+        if (abs(energy.de_sd/(ekin_sd+epot_sd)) > manager->energy_error_max) {
+            std::cerr<<"Hard energy significant ("<<energy.de_sd/(ekin_sd+epot_sd)<<") !\n";
             DATADUMP("hard_large_energy");
             //abort();
         }
@@ -1519,6 +1522,7 @@ private:
     void correctForceWithCutoffTreeNeighborOneParticleImp(Tpsoft& _psoft, 
                                                           Ttree& _tree,
                                                           const bool _acorr_flag=false) {
+        PS::F64 G = ForceSoft::grav_const;
         Tepj * ptcl_nb = NULL;
         PS::S32 n_ngb = _tree.getNeighborListOneParticle(_psoft, ptcl_nb);
 #ifdef HARD_DEBUG
@@ -1529,7 +1533,7 @@ private:
         // no correction for member particles because their mass is zero during the soft force calculation, the self-potential contribution is also zero.
         // for binary without artificial particles, correction is needed.
         if (_psoft.group_data.artificial.isSingle() || (_psoft.group_data.artificial.isMember() && _psoft.getParticleCMAddress()<0)) {
-            PS::F64 pot_cor = _psoft.mass/manager->r_out_base; 
+            PS::F64 pot_cor = G*_psoft.mass/manager->r_out_base; 
             _psoft.pot_tot  += pot_cor;
             _psoft.pot_soft += pot_cor;
             
@@ -1911,6 +1915,12 @@ public:
         for(PS::S32 i=0; i<n; i++){
             PS::F64vec dr = ptcl_hard_[i].vel * _dt;
             ptcl_hard_[i].pos += dr;
+#ifdef STELLAR_EVOLUTION
+            // shift time interrupt in order to get consistent time for stellar evolution in the next drift
+            ptcl_hard_[i].time_record    -= _dt;
+            ptcl_hard_[i].time_interrupt -= _dt;
+#endif
+
 #ifdef HARD_DEBUG
             // to avoid issue in cluster search with velocity
             auto& pcm = ptcl_hard_[i].group_data.cm;
@@ -2901,11 +2911,12 @@ public:
     template <class Tsys> 
     void correctPotWithCutoffOMP(Tsys& _sys, 
                                  const PS::ReallocatableArray<PS::S32>& _ptcl_list) {
+        PS::F64 G = ForceSoft::grav_const;
         const PS::S32 n_ptcl = _ptcl_list.size();
 #pragma omp parallel for 
         for (int i=0; i<n_ptcl; i++) {
             const PS::S32 k =_ptcl_list[i];
-            PS::F64 pot_cor = _sys[k].mass/manager->r_out_base;
+            PS::F64 pot_cor = G*_sys[k].mass/manager->r_out_base;
             _sys[k].pot_tot  += pot_cor;
             _sys[k].pot_soft += pot_cor;
 //#ifdef STELLAR_EVOLUTION
@@ -2980,6 +2991,7 @@ public:
     void correctForceWithCutoffClusterOMP(Tsys& _sys, const bool _acorr_flag=false) { 
         assert(Ptcl::group_data_mode == GroupDataMode::artificial);
 
+        PS::F64 G = ForceSoft::grav_const;
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         auto& ap_manager = manager->ap_manager;
         const PtclH4* ptcl_local = ptcl_hard_.getPointer();
@@ -3005,7 +3017,7 @@ public:
                 // for binary without artificial particles, correction is needed.
                 if (_sys[adr].group_data.artificial.isSingle()
                     || (_sys[adr].group_data.artificial.isMember() && _sys[adr].getParticleCMAddress()<0)) {
-                    PS::F64 pot_cor = _sys[adr].mass/manager->r_out_base;
+                    PS::F64 pot_cor = G*_sys[adr].mass/manager->r_out_base;
                     _sys[adr].pot_tot += pot_cor;
                     _sys[adr].pot_soft += pot_cor;
                 }

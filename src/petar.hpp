@@ -101,6 +101,7 @@ public:
     IOParams<PS::F64> time_end;
     IOParams<PS::F64> eta;
     IOParams<PS::F64> gravitational_constant;
+    IOParams<PS::S32> unit_set;
     IOParams<PS::S64> n_glb;
     IOParams<PS::S64> id_offset;
     IOParams<PS::F64> dt_soft;
@@ -156,6 +157,7 @@ public:
                      time_end     (input_par_store, 10.0, "Finishing time"),
                      eta          (input_par_store, 0.1,  "Hermite time step coefficient eta"),
                      gravitational_constant(input_par_store, 1.0,  "Gravitational constant"),
+                     unit_set     (input_par_store, 0,    "Input data unit, 0: unknown, referring to G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr"),
                      n_glb        (input_par_store, 100000,  "Total number of particles, only used to generate particles if needed"),
                      id_offset    (input_par_store, -1,   "Starting id for artificial particles, total number of real particles must be always smaller than this","n_glb+1"),
                      dt_soft      (input_par_store, 0.0,  "Tree timestep","0.1*r_out/sigma_1D"),
@@ -234,7 +236,7 @@ public:
         int copt;
         int option_index;
         optind = 1;
-        while ((copt = getopt_long(argc, argv, "i:at:s:o:r:b:n:G:T:f:p:w:h", long_options, &option_index)) != -1) 
+        while ((copt = getopt_long(argc, argv, "i:at:s:o:r:b:n:G:u:T:f:p:w:h", long_options, &option_index)) != -1) 
             switch (copt) {
             case 0:
                 switch (petar_flag) {
@@ -347,6 +349,7 @@ public:
                 default:
                     break;
                 }
+                break;
             case 'i':
                 data_format.value = atoi(optarg);
                 if(print_flag) data_format.print(std::cout);
@@ -389,6 +392,11 @@ public:
                 gravitational_constant.value = atof(optarg);
                 if(print_flag) gravitational_constant.print(std::cout);
                 assert(gravitational_constant.value>0.0);
+                break;
+            case 'u':
+                unit_set.value = atoi(optarg);
+                if(print_flag) unit_set.print(std::cout);
+                assert(unit_set.value>=0);
                 break;
             case 'T':
                 theta.value = atof(optarg);
@@ -458,6 +466,7 @@ public:
                     std::cout<<"        --number-sample-average:  [I] "<<n_smp_ave<<std::endl;
                     std::cout<<"        --number-step-tt:         [F] "<<n_step_per_orbit<<std::endl;
                     std::cout<<"  -G: [F] "<<gravitational_constant<<std::endl;
+                    std::cout<<"  -u: [I] "<<unit_set<<std::endl;
                     std::cout<<"  -T: [F] "<<theta<<std::endl;
                     std::cout<<"        --hermite-eta:       [F] "<<eta<<std::endl;
                     std::cout<<"        --search-vel-factor: [F] "<<search_vel_factor<<std::endl;
@@ -488,7 +497,7 @@ public:
             }
         
         if (optind<argc) {
-            fname_inp.value =argv[optind++];
+            fname_inp.value =argv[argc-1];
             if(print_flag) std::cout<<"Reading data file name: "<<fname_inp.value<<std::endl;
         }        
 
@@ -535,6 +544,9 @@ public:
 class PeTar {
 public:
     IOParamsPeTar input_parameters;
+#ifdef BSE
+    IOParamsBSE bse_parameters;
+#endif
 #ifdef USE_QUAD
     typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::QuadrupoleWithSymmetrySearch TreeForce; 
 #else
@@ -1098,6 +1110,11 @@ public:
         for(PS::S32 i=0; i<n; i++){
             if(system[i].n_ngb <= 0){
                 system[i].pos  += system[i].vel * dt;
+#ifdef STELLAR_EVOLUTION
+                // shift time interrupt in order to get consistent time for stellar evolution in the next drift
+                system[i].time_record    -= dt;
+                system[i].time_interrupt -= dt;
+#endif
             }
         }
     }
@@ -1992,6 +2009,11 @@ public:
         if (my_rank==0) input_parameters.print_flag=true;
         else input_parameters.print_flag=false;
         int read_flag = input_parameters.read(argc,argv);
+#ifdef BSE
+        if (my_rank==0) bse_parameters.print_flag=true;
+        else bse_parameters.print_flag=false;
+        bse_parameters.read(argc,argv);
+#endif
 
         // help case, return directly
         if (read_flag==-1) return read_flag;
@@ -2259,6 +2281,16 @@ public:
             system_soft[i].pos = pos[i];
             system_soft[i].vel = vel[i];
             system_soft[i].id = i_h + i + 1;
+#ifdef STELLAR_EVOLUTION
+            system_soft[i].radius = 0.0;
+            system_soft[i].dm = 0.0;
+            system_soft[i].time_record = 0.0;
+            system_soft[i].time_interrupt = 0.0;
+            system_soft[i].binary_state = 0;
+#ifdef BSE
+            system_soft[i].star.initial(mass[i]*bse_parameters.mscale.value);
+#endif
+#endif
             system_soft[i].group_data.artificial.setParticleTypeToSingle();
         }
 
@@ -2342,6 +2374,29 @@ public:
 
         bool print_flag = input_parameters.print_flag;
         int write_style = input_parameters.write_style.value;
+
+        // units
+        if (input_parameters.unit_set.value==1) {
+            input_parameters.gravitational_constant.value = 0.00449830997959438; // pc^3/(Msun*Myr^2)
+#ifdef BSE
+            bse_parameters.tscale.value = 1.0; // Myr
+            bse_parameters.rscale.value = 44353565.919218; // pc -> rsun
+            bse_parameters.mscale.value = 1.0; // Msun
+            bse_parameters.vscale.value = 0.977813107686401; // pc/Myr -> km/s
+#endif
+            if(print_flag) {
+                std::cout<<"Unit set 1: Msun, pc, Myr\n"
+                         <<"gravitational_constant = "<<input_parameters.gravitational_constant.value<<" pc^3/(Msun*Myr^2)\n";
+#ifdef BSE
+                std::cout<<"BSE scaling: \n"
+                         <<" tscale = "<<bse_parameters.tscale.value<<" Myr/Myr\n"
+                         <<" mscale = "<<bse_parameters.mscale.value<<" Msun/Msun\n"
+                         <<" rscale = "<<bse_parameters.rscale.value<<" Rsun/pc\n"
+                         <<" vscale = "<<bse_parameters.vscale.value<<" [km/s]/[pc/Myr]\n";
+#endif
+            }
+
+        }
 
         // calculate system parameters
         PS::F64 r_in, mass_average, vel_disp;// mass_max, vel_max;
@@ -2544,6 +2599,9 @@ public:
         hard_manager.ar_manager.slowdown_mass_ref = mass_average;
 #endif
         hard_manager.ar_manager.interrupt_detection_option = input_parameters.interrupt_detection_option.value;
+#ifdef BSE
+        hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters);
+#endif
 
         // check consistence of paramters
         input_parameters.checkParams();
@@ -2586,6 +2644,18 @@ public:
             }
             hard_manager.writeBinary(fpar_out);
             fclose(fpar_out);
+
+#ifdef BSE
+            // save bse parameters
+            std::string fbse_par = input_parameters.fname_par.value + ".bse";
+            if (print_flag) std::cout<<"Save bse_parameters to file "<<fbse_par<<std::endl;
+            if( (fpar_out = fopen(fbse_par.c_str(),"w")) == NULL) {
+                fprintf(stderr,"Error: Cannot open file %s.\n", fbse_par.c_str());
+                abort();
+            }
+            bse_parameters.input_par_store.writeAscii(fpar_out);
+            fclose(fpar_out);
+#endif
         }
 
         // initial tree step manager

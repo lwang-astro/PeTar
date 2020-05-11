@@ -1,6 +1,6 @@
 ***
       SUBROUTINE evolv1(kw,mass,mt,r,lum,mc,rc,menv,renv,ospin,
-     &                  epoch,tm,tphys,tphysf,dtp,z,zpars,vs)
+     &                  epoch,tm,tphys,tphysf,dtp,z,zpars,vkick)
 c-------------------------------------------------------------c
 c
 c     Evolves a single star.
@@ -43,7 +43,7 @@ c-------------------------------------------------------------c
       real*8 epoch,tphys,tphys2,tmold,tbgold
       real*8 mt,tm,tn,tphysf,dtp
       real*8 tscls(20),lums(10),GB(10),zpars(20)
-      real*8 r,lum,mc,teff,rc,menv,renv,vs(3)
+      real*8 r,lum,mc,teff,rc,menv,renv,vkick(4)
       real*8 ospin,jspin,djt,djmb,k2,k3
       parameter(k3=0.21d0)
       real*8 m0,r1,lum1,mc1,rc1,menv1,renv1,k21
@@ -232,7 +232,7 @@ c-------------------------------------------------------------c
             if(kw.eq.13.or.kw.eq.14)then
                ospin = 2.0d+08
                jspin = k3*rc*rc*mc*ospin
-               CALL kick(kw,mass,mt,0.d0,0.d0,-1.d0,0.d0,vs,
+               CALL kick(kw,mass,mt,0.d0,0.d0,-1.d0,0.d0,vkick,
      &              fbfac,fbtot,mco,ecs)
             endif
 *            jp = jp + 1
@@ -365,7 +365,7 @@ c-------------------------------------------------------------c
 *
  90   continue
 *
-      if (tphys.lt.tphysf) then
+      if (j.eq.nv) then
          write(*,*) 'SSE Warning, too many iteration loop >',nv,
      &        ' time_now=',tphys,' time_end=',tphysf,' mass=',mt,
      &        ' kw=',kw, ' r=',r, ' dtm=',dtm

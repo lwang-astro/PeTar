@@ -26,7 +26,7 @@
       REAL*8 CONST,DELY,DERI,DELMF,MC3,FAGE1,FAGE2
       REAL*8 ECC,SEP,JORB,TB,OORB,OSPIN1,OSPIN2,TWOPI
       REAL*8 RC1,RC2,Q1,Q2,RL1,RL2,LAMB1,LAMB2
-      REAL*8 MENV,RENV,MENVD,RZAMS,VS(3)
+      REAL*8 MENV,RENV,MENVD,RZAMS,VKICK(4)
       REAL*8 AURSUN,K3,ALPHA1,LAMBDA
       real*8 FBFAC,FBTOT,MCO
       integer ECS
@@ -134,7 +134,7 @@
             CALL hrdiag(M01,AJ1,M1,TM1,TN,TSCLS1,LUMS,GB,ZPARS,
      &           R1,L1,KW1,MC1,RC1,MENV,RENV,K21,fbfac,fbtot,mco,ecs)
             IF(KW1.GE.13)THEN
-               CALL kick(KW1,MF,M1,M2,ECC,SEPF,JORB,VS,
+               CALL kick(KW1,MF,M1,M2,ECC,SEPF,JORB,VKICK,
      &              fbfac,fbtot,mco,ecs)
                IF(ECC.GT.1.D0) GOTO 30
             ENDIF
@@ -225,7 +225,7 @@
             CALL hrdiag(M01,AJ1,M1,TM1,TN,TSCLS1,LUMS,GB,ZPARS,
      &           R1,L1,KW1,MC1,RC1,MENV,RENV,K21,fbfac,fbtot,mco,ecs)
             IF(KW1.GE.13)THEN
-               CALL kick(KW1,MF,M1,M2,ECC,SEPF,JORB,VS,
+               CALL kick(KW1,MF,M1,M2,ECC,SEPF,JORB,VKICK,
      &              fbfac,fbtot,mco,ecs)
                IF(ECC.GT.1.D0) GOTO 30
             ENDIF
@@ -236,7 +236,7 @@
             CALL hrdiag(M02,AJ2,M2,TM2,TN,TSCLS2,LUMS,GB,ZPARS,
      &           R2,L2,KW2,MC2,RC2,MENV,RENV,K22,fbfac,fbtot,mco,ecs)
             IF(KW2.GE.13.AND.KW.LT.13)THEN
-               CALL kick(KW2,MF,M2,M1,ECC,SEPF,JORB,VS,
+               CALL kick(KW2,MF,M2,M1,ECC,SEPF,JORB,VKICK,
      &              fbfac,fbtot,mco,ecs)
                IF(ECC.GT.1.D0) GOTO 30
             ENDIF

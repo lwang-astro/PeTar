@@ -34,12 +34,17 @@ class Particle(SimpleParticle):
     """ Particle class 
     """
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        keys_se  = [['radius',1],['dm',1],['time_check',1],['binary_state',1]]
+        keys_se  = [['radius',1],['dm',1],['time_record',1],['time_interrupt',1],['binary_state',1]]
+        keys_bse = [['star_type',1],['star_mass0',1],['star_mass',1],['star_radius',1],['star_spin',1],['star_epoch',1],['star_time',1]]
         keys_std = [['r_search',1], ['id',1], ['mass_bk',1], ['status',1], ['r_in',1], ['r_out',1], ['acc_soft',3], ['pot_tot',1], ['pot_soft',1], ['n_nb',1]]
         keys=keys_std
         if ('use_SE' in kwargs.keys()):
             if (kwargs['use_SE']==True):
                 keys = keys_se+keys_std
+        elif ('use_BSE' in kwargs.keys()):
+            if (kwargs['use_BSE']==True):
+                keys = keys_se+keys_bse+keys_std
+                
         SimpleParticle.__init__(self, _dat, _offset, _append, **kwargs)
         DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
 

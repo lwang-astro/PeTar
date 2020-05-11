@@ -1,4 +1,7 @@
 #pragma once
+#ifdef BSE
+#include "bse_interface.h"
+#endif
 
 #ifdef NAN_CHECK_DEBUG
 #ifndef NAN_CHECK
@@ -23,8 +26,12 @@ public:
     // for stellar evolution
     PS::F64 radius;
     PS::F64 dm;
+    PS::F64 time_record; 
     PS::F64 time_interrupt;
     PS::S64 binary_state; // contain two parts, low bits (first BINARY_STATE_ID_SHIFT bits) is binary interrupt state and high bits are pair ID
+#ifdef BSE
+    StarParameter star; // SSE/BSE stellar parameters
+#endif
 
     //! save pair id in binary_state with shift bit size of BINARY_STATE_ID_SHIFT
     void setBinaryPairID(const PS::S64 _id) {
@@ -54,6 +61,7 @@ public:
 #ifdef STELLAR_EVOLUTION
         radius = 0.0;
         dm = 0.0;
+        time_record = 0.0;
         time_interrupt = 0.0;
         binary_state = 0;
 #endif
@@ -69,16 +77,22 @@ public:
 #ifdef STELLAR_EVOLUTION
         radius = 0.0;
         dm = 0.0;
+        time_record = 0.0;
         time_interrupt = 0.0;
         binary_state = 0;
+#ifdef BSE
+        star.initial(0.0);
+#endif
 #endif
     }
 
 #ifdef STELLAR_EVOLUTION
     //! constructor 
     ParticleBase(const PS::F64 _mass, const PS::F64vec & _pos, const PS::F64vec & _vel,
-                 const PS::F64 _radius, const PS::F64 _dm, const PS::F64 _time_interrupt, const PS::S64 _binary_state): 
-        mass(_mass), pos(_pos), vel(_vel), radius(_radius), dm(_dm), time_interrupt(_time_interrupt), binary_state(_binary_state) {}
+                 const PS::F64 _radius, const PS::F64 _dm, 
+                 const PS::F64 _time_record, const PS::F64 _time_interrupt, const PS::S64 _binary_state, const StarParameter& _star): 
+        mass(_mass), pos(_pos), vel(_vel), radius(_radius), dm(_dm), 
+        time_record(_time_record), time_interrupt(_time_interrupt), binary_state(_binary_state), star(_star) {}
 #endif
 
 #ifdef STELLAR_EVOLUTION
@@ -86,26 +100,28 @@ public:
     /*! @param[in] _fout: file IO for write
      */
     void writeAscii(FILE* fp) const{
-        fprintf(fp, "%26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %lld",
+        fprintf(fp, "%26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %lld ",
                 this->mass, 
                 this->pos.x, this->pos.y, this->pos.z,  
                 this->vel.x, this->vel.y, this->vel.z,
-                this->radius, this->dm, this->time_interrupt, this->binary_state);
+                this->radius, this->dm, this->time_record, this->time_interrupt, this->binary_state);
+        star.writeAscii(fp);
     }
 
     //! read class data with ASCII format
     /*! @param[in] _fin: file IO for read
      */
     void readAscii(FILE* fp) {
-        PS::S64 rcount=fscanf(fp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lld",
+        PS::S64 rcount=fscanf(fp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lld",
                               &this->mass, 
                               &this->pos.x, &this->pos.y, &this->pos.z,
                               &this->vel.x, &this->vel.y, &this->vel.z,
-                              &this->radius,&this->dm,  &this->time_interrupt, &this->binary_state);
-        if(rcount<11) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 11, only obtain "<<rcount<<".\n";
+                              &this->radius,&this->dm, &this->time_record, &this->time_interrupt, &this->binary_state);
+        if(rcount<12) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 12, only obtain "<<rcount<<".\n";
             abort();
         }
+        star.readAscii(fp);
     }
 #else
     //! write class data with ASCII format
@@ -160,8 +176,12 @@ public:
 #ifdef STELLAR_EVOLUTION
         fout<<" radius="<<radius
             <<" dm="<<dm
+            <<" time_record="<<time_record
             <<" time_interrupt="<<time_interrupt
             <<" binary_state="<<binary_state;
+#ifdef BSE
+        star.print(fout);
+#endif
 #endif
     }
 
@@ -181,8 +201,12 @@ public:
 #ifdef STELLAR_EVOLUTION
         _fout<<std::setw(_width)<<"radius"
              <<std::setw(_width)<<"dm"
-             <<std::setw(_width)<<"t_irpt"
+             <<std::setw(_width)<<"t_record"
+             <<std::setw(_width)<<"t_interrupt"
              <<std::setw(_width)<<"bin_stat";
+#ifdef BSE
+        StarParameter::printColumnTitle(_fout, _width);
+#endif
 #endif
     }
 
@@ -206,9 +230,14 @@ public:
         counter++;
         _fout<<std::setw(_offset)<<" "<<counter<<". dm: mass change (0.0)\n";
         counter++;
-        _fout<<std::setw(_offset)<<" "<<counter<<". t_irpt: time for next evolution check (0.0)\n";
+        _fout<<std::setw(_offset)<<" "<<counter<<". t_record: time record of last check (0.0)\n";
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". t_interrupt: time for next evolution check (0.0)\n";
         counter++;
         _fout<<std::setw(_offset)<<" "<<counter<<". bin_stat: binary status storing pair id and status [formatted] (0.0)\n";
+#ifdef BSE
+        counter = StarParameter::printTitleWithMeaning(_fout, counter, _offset);
+#endif
 #endif
         return counter;
     }
@@ -229,8 +258,12 @@ public:
 #ifdef STELLAR_EVOLUTION
         _fout<<std::setw(_width)<<radius
              <<std::setw(_width)<<dm
+             <<std::setw(_width)<<time_record
              <<std::setw(_width)<<time_interrupt
              <<std::setw(_width)<<binary_state;
+#ifdef BSE
+        star.printColumn(_fout, _width);
+#endif
 #endif
     }
     
@@ -247,8 +280,12 @@ public:
 #ifdef STELLAR_EVOLUTION
         radius= din.radius;
         dm  = din.dm;
+        time_record  = din.time_record;
         time_interrupt = din.time_interrupt;
         binary_state  = din.binary_state;
+#ifdef BSE
+        star = din.star;
+#endif
 #endif
     }
 

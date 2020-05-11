@@ -169,7 +169,7 @@
       REAL*8 mass0(2),mass(2),massc(2),menv(2),mass00(2),mcxx(2)
       REAL*8 rad(2),rol(2),rol0(2),rdot(2),radc(2),renv(2),radx(2)
       REAL*8 lumin(2),k2str(2),q(2),dms(2),dmr(2),dmt(2)
-      REAL*8 dml,vorb2,vwind2,omv2,ivsqm,lacc,vs(3)
+      REAL*8 dml,vorb2,vwind2,omv2,ivsqm,lacc,vkick(4)
       REAL*8 sep,dr,tb,dme,tdyn,taum,dm1,dm2,dmchk,qc,dt,pd,rlperi
       REAL*8 m1ce,m2ce,mch,tmsnew,dm22,mew
       PARAMETER(mch=1.44d0)
@@ -730,10 +730,10 @@
          if(kw.ne.kstar(k).and.kstar(k).le.12.and.
      &      (kw.ge.10.and.kw.le.14))then
             if(sgl)then
-               CALL kick(kw,mass(k),mt,0.d0,0.d0,-1.d0,0.d0,vs,
+               CALL kick(kw,mass(k),mt,0.d0,0.d0,-1.d0,0.d0,vkick,
      &              fbfac,fbtot,mco,ecs)
             else
-               CALL kick(kw,mass(k),mt,mass(3-k),ecc,sep,jorb,vs,
+               CALL kick(kw,mass(k),mt,mass(3-k),ecc,sep,jorb,vkick,
      &              fbfac,fbtot,mco,ecs)
                if(ecc.gt.1.d0)then
                   kstar(k) = kw
@@ -1961,7 +1961,7 @@
          if(kw.ne.kstar(k).and.kstar(k).le.12.and.
      &      (kw.ge.10.and.kw.le.14))then
             dms(k) = mass(k) - mt
-            CALL kick(kw,mass(k),mt,mass(3-k),ecc,sep,jorb,vs,
+            CALL kick(kw,mass(k),mt,mass(3-k),ecc,sep,jorb,vkick,
      &           fbfac,fbtot,mco,ecs)
             if(ecc.gt.1.d0)then
                kstar(k) = kw

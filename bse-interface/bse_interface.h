@@ -2,6 +2,7 @@
 #include <iostream>
 #include <iomanip>
 #include <cassert>
+#include <string>
 #include "../src/io.hpp"
 
 extern "C" {
@@ -64,19 +65,66 @@ struct StarParameter{
     double epoch;  ///> starting time of one evolution phase, age = tphys - epoch
     double tphys;  ///> physical evolve time in Myr
 
+    //! initial zero age main sequence
+    /*!
+      @param[in] _mass: initial mass
+      @param[in] _kw: initial type (default: 1: MS)
+      @param[in] _ospin: initial spin (default: 0.0)
+      @param[in] _epoch: initial age for the given type (default: 0.0)
+     */
+    void initial(double _mass, int _kw=1, double _ospin=0.0, double _epoch=0.0) {
+        kw = _kw;
+        m0 = _mass;
+        mt = _mass;
+        ospin = _ospin;
+        epoch = _epoch;
+        tphys = _epoch;
+    }
+
+    //! write class data with ASCII format
+    /*! @param[in] _fout: file IO for write
+     */
+    void writeAscii(FILE* fp) const{
+        fprintf(fp, "%d %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e ",
+                this->kw, this->m0, this->mt, this->r, this->ospin, this->epoch, this->tphys);
+    }
+
+        //! read class data with ASCII format
+    /*! @param[in] _fin: file IO for read
+     */
+    void readAscii(FILE* fp) {
+        int rcount=fscanf(fp, "%d %lf %lf %lf %lf %lf %lf ",
+                              &this->kw, &this->m0, &this->mt, &this->r, &this->ospin, &this->epoch, &this->tphys);
+        if(rcount<7) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 7, only obtain "<<rcount<<".\n";
+            abort();
+        }
+    }
+
+    //! for print debugging
+    void print(std::ostream & fout) const{
+        fout<<" star_type="<<kw
+            <<" star_mass0="<<m0
+            <<" star_mass="<<mt
+            <<" star_radius="<<r
+            <<" star_spin="<<ospin
+            <<" star_epoch="<<epoch
+            <<" star_time[myr]="<<tphys;
+    }
+
     //! print titles of class members using column style
     /*! print titles of class members in one line for column style
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
     static void printColumnTitle(std::ostream & _fout, const int _width=20) {
-        _fout<<std::setw(_width)<<"type"
-             <<std::setw(_width)<<"mass0[Msun]"
-             <<std::setw(_width)<<"mass[Msun]"
-             <<std::setw(_width)<<"radius[Rsun]"
-             <<std::setw(_width)<<"spin"
-             <<std::setw(_width)<<"epoch[Myr]"
-             <<std::setw(_width)<<"time[Myr]";
+        _fout<<std::setw(_width)<<"star_type"
+             <<std::setw(_width)<<"star_mass0[Msun]"
+             <<std::setw(_width)<<"star_mass[Msun]"
+             <<std::setw(_width)<<"star_radius[Rsun]"
+             <<std::setw(_width)<<"star_spin"
+             <<std::setw(_width)<<"star_epoch[Myr]"
+             <<std::setw(_width)<<"star_time[Myr]";
     }    
 
     //! print data of class members using column style
@@ -84,7 +132,7 @@ struct StarParameter{
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    void printColumn(std::ostream & _fout, const int _width=20){
+    void printColumn(std::ostream & _fout, const int _width=20) const{
         _fout<<std::setw(_width)<<kw
              <<std::setw(_width)<<m0
              <<std::setw(_width)<<mt
@@ -92,6 +140,31 @@ struct StarParameter{
              <<std::setw(_width)<<ospin
              <<std::setw(_width)<<epoch
              <<std::setw(_width)<<tphys;
+    }
+
+    //! print column title with meaning (each line for one column)
+    /*! @param[out] _fout: std::ostream output object
+      @param[in] _counter: offset of the number counter for each line to indicate the column index (defaulted 0)
+      @param[in] _offset: the printing whitespace offset for each line (defaulted 0)
+      \return: the total counter of columns
+     */
+    static int printTitleWithMeaning(std::ostream & _fout, const int _counter=0, const int _offset=0) {
+        int counter = _counter;
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". star_type: SSE/BSE stellar type\n";
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". star_mass0: initial mass at each evolution stage [Msun]\n";
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". star_mass: current mass at each evolution stage [Msun]\n";
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". star_radius: stellar radius [Rsun]\n";        
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". star_spin: stellar rotation\n";        
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". star_epoch: time offset at each evolution stage [Myr]\n";
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". star_time: physical time [Myr]\n";
+        return counter;
     }
 };
 
@@ -103,7 +176,9 @@ struct StarParameterOut{
     double menv;  ///> mass of convective envelope 
     double renv;  ///> radius of convective envelope
     double tm;   ///> Main sequence lifetime
-    double vkick[3]; ///> kick velocity for NS/BH formation
+    double vkick[4]; ///> kick velocity for NS/BH formation
+
+    StarParameterOut(): lum(0.0), mc(0.0), rc(0.0), menv(0.0), renv(0.0), tm(0.0), vkick{0.0} {}
 
     //! print titles of class members using column style
     /*! print titles of class members in one line for column style
@@ -119,7 +194,8 @@ struct StarParameterOut{
              <<std::setw(_width)<<"time_MS[Myr]"
              <<std::setw(_width)<<"vkick.x[km/s]"
              <<std::setw(_width)<<"vkick.y[km/s]"
-             <<std::setw(_width)<<"vkick.z[km/s]";
+             <<std::setw(_width)<<"vkick.z[km/s]"
+             <<std::setw(_width)<<"vkick[km/s]";
     }
     
     //! print data of class members using column style
@@ -136,7 +212,8 @@ struct StarParameterOut{
              <<std::setw(_width)<<tm
              <<std::setw(_width)<<vkick[0]
              <<std::setw(_width)<<vkick[1]
-             <<std::setw(_width)<<vkick[2];
+             <<std::setw(_width)<<vkick[2]
+             <<std::setw(_width)<<vkick[3];
     }
 };
 
@@ -161,6 +238,11 @@ public:
     IOParams<double> pts2;
     IOParams<double> pts3;
     IOParams<int> idum;
+    IOParams<double> tscale;
+    IOParams<double> rscale;
+    IOParams<double> mscale;
+    IOParams<double> vscale;
+    IOParams<double> z;
 
     bool print_flag;
 
@@ -183,6 +265,11 @@ public:
                    pts2  (input_par_store, 0.01, "time step of GB, CHeB, AGB, HeGB"),
                    pts3  (input_par_store, 0.02, "time step of HG, HeMS"),
                    idum  (input_par_store, 1234, "random number seed used by the kick routine"),
+                   tscale(input_par_store, 1.0, "Time scale factor from NB to Myr (time[Myr]=time[NB]*tscale)"),
+                   rscale(input_par_store, 1.0, "Radius scale factor from NB to Rsun (r[Rsun]=r[NB]*rscale)"),
+                   mscale(input_par_store, 1.0, "Mass scale factor from NB to Msun (m[Msun]=m[NB]*mscale)"),
+                   vscale(input_par_store, 1.0, "Velocity scale factor from NB to km/s (v[km/s]=v[NB]*mscale)"),
+                   z     (input_par_store, 0.001, "Metallicity"),
                    print_flag(false) {}
 
     int read(int argc, char *argv[]) {
@@ -206,14 +293,20 @@ public:
             {"pts2",   required_argument, &sse_flag, 15},       
             {"pts3",   required_argument, &sse_flag, 16},
             {"idum",   required_argument, &sse_flag, 17}, 
+            {"tscale", required_argument, &sse_flag, 18},
+            {"rscale", required_argument, &sse_flag, 19},
+            {"mscale", required_argument, &sse_flag, 20},
+            {"vscale", required_argument, &sse_flag, 21},
+            {"metallicity", required_argument, 0, 'z'},
             {"help",   no_argument,       0, 'h'},
             {0,0,0,0}
         };
 
         int copt;
         int option_index;
+        std::string fname_par;
         optind = 1;
-        while ((copt = getopt_long(argc, argv, "h", long_options, &option_index)) != -1) 
+        while ((copt = getopt_long(argc, argv, "z:p:h", long_options, &option_index)) != -1) 
             switch (copt) {
             case 0:
                 switch (sse_flag) {
@@ -285,9 +378,47 @@ public:
                     idum.value = atof(optarg);
                     if(print_flag) idum.print(std::cout);
                     break;
+                case 18:
+                    tscale.value = atof(optarg);
+                    if(print_flag) tscale.print(std::cout);
+                    break;
+                case 19:
+                    rscale.value = atof(optarg);
+                    if(print_flag) rscale.print(std::cout);
+                    break;
+                case 20:
+                    mscale.value = atof(optarg);
+                    if(print_flag) mscale.print(std::cout);
+                    break;
+                case 21:
+                    vscale.value = atof(optarg);
+                    if(print_flag) vscale.print(std::cout);
+                    break;
                 default:
                     break;
                 }
+                break;
+            case 'z':
+                z.value = atof(optarg);
+                if(print_flag) z.print(std::cout);
+                break;
+            case 'p':
+                fname_par = optarg;
+                if(print_flag) {
+                    std::string fbse_par = fname_par+".bse"; 
+                    FILE* fpar_in;
+                    if( (fpar_in = fopen(fbse_par.c_str(),"r")) == NULL) {
+                        fprintf(stderr,"Error: Cannot open file %s.\n", fbse_par.c_str());
+                        abort();
+                    }
+                    input_par_store.readAscii(fpar_in);
+                    fclose(fpar_in);
+                }
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+                input_par_store.mpi_broadcast();
+                PS::Comm::barrier();
+#endif
+                break;
             case 'h':
                 if(print_flag){
                     std::cout<<"SSE/BSE options:"<<std::endl;
@@ -308,7 +439,12 @@ public:
                              <<"        --pts1:   [D] "<<pts1<<std::endl
                              <<"        --pts2:   [D] "<<pts2<<std::endl
                              <<"        --pts3:   [D] "<<pts3<<std::endl
-                             <<"        --idum:   [I] "<<idum<<std::endl;
+                             <<"        --idum:   [I] "<<idum<<std::endl
+                             <<"        --tscale: [D] "<<tscale<<std::endl
+                             <<"        --rscale: [D] "<<rscale<<std::endl
+                             <<"        --mscale: [D] "<<mscale<<std::endl
+                             <<"        --vscale: [D] "<<vscale<<std::endl
+                             <<"        --metallicity (-z): [D] "<<z<<std::endl;
                 }
                 return -1;
             default:
@@ -323,17 +459,23 @@ class BSEManager{
 public:
     double z, zpars[20]; ///> metallicity parameters
     double tscale; ///> time scaling factor from NB to Myr (t[Myr]=t[NB]*tscale)
+    double rscale; ///> radius scaling factor from NB to Rsun
+    double mscale; ///> mass scaling factor from NB to Msun
+    double vscale; ///> velocity scaling factor from NB to km/s
 
-    BSEManager(): z(0.0), zpars{0}, tscale(0.0) {}
+    BSEManager(): z(0.0), zpars{0}, tscale(0.0), rscale(0.0), mscale(0.0), vscale(0.0) {}
 
     bool checkParams() {
         assert(z>0.0);
         assert(tscale>0.0);
+        assert(rscale>0.0);
+        assert(mscale>0.0);
+        assert(vscale>0.0);
         return true;
     }
 
     //! initial SSE/BSE global parameters
-    void initial(const IOParamsBSE& _input, const double _z) {
+    void initial(const IOParamsBSE& _input) {
         // common block
         value1_.neta  = _input.neta.value;
         value1_.bwind = _input.bwind.value;
@@ -358,8 +500,13 @@ public:
         points_.pts2 = _input.pts2.value;
         points_.pts3 = _input.pts3.value;
 
+        tscale = _input.tscale.value;
+        rscale = _input.rscale.value;
+        mscale = _input.mscale.value;
+        vscale = _input.vscale.value;
+
         // Set parameters which depend on the metallicity 
-        z = _z;
+        z = _input.z.value;
         zcnsts_(&z, zpars);
         value3_.idum = (_input.idum.value>0)? -_input.idum.value: _input.idum.value;
     }
@@ -403,17 +550,16 @@ public:
     //! call SSE evolve1 for single star
     /*!
       @param[in,out] _star: star parameter
-      @param[in] _tphysf: physical time in Myr to evolve
+      @param[in] _dt_nb: physical time step in Myr to evolve
      */
-    StarParameterOut evolveStar(StarParameter& _star, const double _time_nb) {
+    StarParameterOut evolveStar(StarParameter& _star, const double _dt_nb) {
         StarParameterOut out;
-        double tphysf = _time_nb*tscale;
+        double tphysf = _dt_nb*tscale + _star.tphys;
         double dtp=tphysf*100.0+1000.0;
         evolv1_(&_star.kw, &_star.m0, &_star.mt, &_star.r, 
                 &out.lum, &out.mc, &out.rc, &out.menv, &out.renv, 
                 &_star.ospin, &_star.epoch, 
                 &out.tm, &_star.tphys, &tphysf, &dtp, &z, zpars, out.vkick);
-
         return out;
     }
 

@@ -40,6 +40,12 @@ endif
 
 ifneq ($(se_mode),off)
 MT_FLAGS += -D STELLAR_EVOLUTION
+ifeq ($(se_mode),bse)
+MT_FLAGS += -D BSE
+CXXLIBS += -L ./bse-interface -lbse -lgfortran
+LIBFILES+= bse-interface/libbse.a
+INCLUDE += -I ./bse-interface
+endif
 endif
 
 ifeq ($(step_mode),kdkdk)
@@ -136,14 +142,14 @@ CXX=@CXX@
 #CXXNOMPI=@CXXNOMPI@
 
 VPATH=./src ./build
-INCLUDE  = -I./src @INCLUDE@
+INCLUDE += -I./src @INCLUDE@
 
 SRC = main.cc ${shell ls ./src/*.hpp} 
 
 build:
 	[ -d build ] || mkdir build
 
-build/@PROG_NAME@:  $(SRC) $(OBJS) |build
+build/@PROG_NAME@:  $(SRC) $(OBJS) $(LIBFILES) |build
 	$(CXX) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(OBJS) $(CXXLIBS)
 
 SIMD_DEBFLAGS += -DRSQRT_NR_EPJ_X2
@@ -174,6 +180,9 @@ build/petar.tt.test: tidal_tensor_test.cxx |build
 build/force_gpu_cuda.o: force_gpu_cuda.cu |build
 	$(NVCC) $(INCLUDE) -c $< -o $@ 
 
+bse-interface/libbse.a: 
+	$(MAKE) -C bse-interface
+
 install: $(TARGET)
 	install -d @prefix@/bin/
 	install -m 755 $(TARGET) @prefix@/bin/
@@ -186,4 +195,5 @@ install: $(TARGET)
 	install -m 755 tools/analysis/*.py @prefix@/include/petar/
 
 clean:
-	rm $(TARGET) build/*.o 
+	rm -f $(TARGET) build/*.o 
+	$(MAKE) -C bse-interface clean
