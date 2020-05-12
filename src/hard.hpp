@@ -716,8 +716,9 @@ public:
                     std::cout<<std::endl;
 
                     PS::F64 de_sd   = h4_int.getEnergyErrorSlowDown();
-                    if (abs(de_sd/h4_int.getEtotSlowDownRef()) > manager->energy_error_max) {
-                        std::cerr<<"Hard energy significant ("<<de_sd/h4_int.getEtotSlowDownRef()<<") !"
+                    if (abs(de_sd/std::max(1.0,abs(h4_int.getEtotSlowDownRef()))) > manager->energy_error_max) {
+                        std::cerr<<"Hard energy significant!"
+                                 <<"  dE_SD/Etot_SD "<<de_sd/h4_int.getEtotSlowDownRef()
                                  <<"  Ekin: "<<h4_int.getEkin()
                                  <<"  Epot: "<<h4_int.getEpot()
                                  <<"  Ekin_SD: "<<h4_int.getEkinSlowDown()
@@ -1062,8 +1063,11 @@ public:
                  <<"  ARC_tsyn_step_sum: "<<ARC_tsyn_step_sum
                  <<std::endl;
 #endif        
-        if (abs(energy.de_sd/(ekin_sd+epot_sd)) > manager->energy_error_max) {
-            std::cerr<<"Hard energy significant ("<<energy.de_sd/(ekin_sd+epot_sd)<<") !\n";
+        if (abs(energy.de_sd/std::max(1.0,abs(ekin_sd+epot_sd))) > manager->energy_error_max) {
+            std::cerr<<"Hard energy significant !"
+                     <<" dE_SD: "<<energy.de_sd
+                     <<" dE_SD/Etot_SD: "<<energy.de_sd/(ekin_sd+epot_sd)
+                     <<std::endl;
             DATADUMP("hard_large_energy");
             //abort();
         }
@@ -1919,7 +1923,6 @@ public:
             pi.pos += dr;
 
 #ifdef STELLAR_EVOLUTION
-            PS::S32 adr = pi.adr_org;
             PS::F64 mbk = pi.mass;
 
             PS::F64vec vbk = pi.vel; //back up velocity in case of change

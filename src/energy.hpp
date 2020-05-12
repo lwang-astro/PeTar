@@ -51,6 +51,7 @@ public:
     */
     void print(std::ostream & _fout=std::cout, const PS::S32 _width=20) {
         _fout<<"Energy:  "
+             <<std::setw(_width)<<"Error/Total"
              <<std::setw(_width)<<"Error"
              <<std::setw(_width)<<"Error_cum"
              <<std::setw(_width)<<"Total"
@@ -65,6 +66,7 @@ public:
 #endif
              <<std::endl;
         _fout<<"Physic:  "
+             <<std::setw(_width)<<(getEnergyError() - error_cum_pre)/(ekin+epot)
              <<std::setw(_width)<<getEnergyError() - error_cum_pre
              <<std::setw(_width)<<getEnergyError()
              <<std::setw(_width)<<ekin + epot  
@@ -80,6 +82,7 @@ public:
              <<std::endl;
 #ifdef HARD_CHECK_ENERGY
         _fout<<"Slowdown:"
+             <<std::setw(_width)<<(getEnergyErrorSlowDown() - error_sd_cum_pre)/(ekin_sd+epot_sd)
              <<std::setw(_width)<<getEnergyErrorSlowDown() - error_sd_cum_pre
              <<std::setw(_width)<<getEnergyErrorSlowDown()
              <<std::setw(_width)<<ekin_sd + epot_sd
