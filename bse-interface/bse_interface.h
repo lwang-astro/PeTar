@@ -177,8 +177,9 @@ struct StarParameterOut{
     double renv;  ///> radius of convective envelope
     double tm;   ///> Main sequence lifetime
     double vkick[4]; ///> kick velocity for NS/BH formation
+    double dm;   ///> mass loss
 
-    StarParameterOut(): lum(0.0), mc(0.0), rc(0.0), menv(0.0), renv(0.0), tm(0.0), vkick{0.0} {}
+    StarParameterOut(): lum(0.0), mc(0.0), rc(0.0), menv(0.0), renv(0.0), tm(0.0), vkick{0.0}, dm(0.0) {}
 
     //! print titles of class members using column style
     /*! print titles of class members in one line for column style
@@ -195,7 +196,8 @@ struct StarParameterOut{
              <<std::setw(_width)<<"vkick.x[km/s]"
              <<std::setw(_width)<<"vkick.y[km/s]"
              <<std::setw(_width)<<"vkick.z[km/s]"
-             <<std::setw(_width)<<"vkick[km/s]";
+             <<std::setw(_width)<<"vkick[km/s]"
+             <<std::setw(_width)<<"mass_loss[Msun]";
     }
     
     //! print data of class members using column style
@@ -213,7 +215,8 @@ struct StarParameterOut{
              <<std::setw(_width)<<vkick[0]
              <<std::setw(_width)<<vkick[1]
              <<std::setw(_width)<<vkick[2]
-             <<std::setw(_width)<<vkick[3];
+             <<std::setw(_width)<<vkick[3]
+             <<std::setw(_width)<<dm;
     }
 };
 
@@ -272,7 +275,14 @@ public:
                    z     (input_par_store, 0.001, "Metallicity"),
                    print_flag(false) {}
 
-    int read(int argc, char *argv[]) {
+    //! reading parameters from GNU option API
+    /*!
+      @param[in] argc: number of options
+      @param[in] argv: string of options
+      @param[in] opt_used_pre: already used option number from previous reading, use to correctly count the remaining argument number
+      \return -1 if help is used; else the used number of argv
+     */
+    int read(int argc, char *argv[], const int opt_used_pre=0) {
         static int sse_flag=-1;
         static struct option long_options[] = {
             {"neta",   required_argument, &sse_flag, 0},  
@@ -302,6 +312,7 @@ public:
             {0,0,0,0}
         };
 
+        int opt_unknown=0;
         int copt;
         int option_index;
         std::string fname_par;
@@ -447,10 +458,14 @@ public:
                              <<"        --metallicity (-z): [D] "<<z<<std::endl;
                 }
                 return -1;
+            case '?':
+                opt_unknown++;
+                break;
             default:
                 break;
             }
-        return 0;
+        int opt_used = opt_used_pre + optind-1 - opt_unknown;
+        return opt_used;
     }    
 };
 
@@ -545,26 +560,55 @@ public:
         if (value3_.idum>0) value3_.idum = -_idum;
         else value3_.idum = _idum;
     }
+
+    //! get current mass in NB unit
+    double getMass(StarParameter& _star) {
+        return _star.mt/mscale;
+    }
     
+    //! get mass loss in NB unit
+    double getMassLoss(StarParameterOut& _out) {
+        return _out.dm/mscale;
+    }
+
+    //! get merger radius in NB unit
+    double getMergerRadius(StarParameterOut& _out) {
+        // use core radius as merger radius
+        return _out.rc/rscale;
+    }
+
+    //! get velocity change in NB unit
+    /*!
+      @param[in] _dv: 3-D array to record velocity change
+      \return value of velocity change
+     */
+    double getVelocityChange(double* dv, StarParameterOut& _out) {
+        for (int k=0; k<3; k++) dv[k] = _out.vkick[k]/vscale;
+        return _out.vkick[3]/vscale;
+    }
 
     //! call SSE evolve1 for single star
     /*!
       @param[in,out] _star: star parameter
       @param[in] _dt_nb: physical time step in Myr to evolve
+      \return required finishing time - actually evolved time (in NB unit)
      */
-    StarParameterOut evolveStar(StarParameter& _star, const double _dt_nb) {
-        StarParameterOut out;
+    double evolveStar(StarParameter& _star, StarParameterOut& _out, const double _dt_nb) {
         double tphysf = _dt_nb*tscale + _star.tphys;
         double dtp=tphysf*100.0+1000.0;
+        _out.dm = _star.mt;
         evolv1_(&_star.kw, &_star.m0, &_star.mt, &_star.r, 
-                &out.lum, &out.mc, &out.rc, &out.menv, &out.renv, 
+                &_out.lum, &_out.mc, &_out.rc, &_out.menv, &_out.renv, 
                 &_star.ospin, &_star.epoch, 
-                &out.tm, &_star.tphys, &tphysf, &dtp, &z, zpars, out.vkick);
-        return out;
+                &_out.tm, &_star.tphys, &tphysf, &dtp, &z, zpars, _out.vkick);
+        _out.dm = _star.mt - _out.dm;
+        return (tphysf - _star.tphys)/tscale;
     }
 
     //! get next time step to check in Myr
     double getTimeStep(StarParameter& _star) {
+        if (_star.kw==15) return 1.0e30/tscale; // give very large value to avoid evolve
+
         double tm, tn, tscls[20], lums[10], gb[10], dtm, dtr;
         
         // obtain star parameters
@@ -577,7 +621,7 @@ public:
         assert(dtr>0.0);
         assert(dtm>0.0);
 
-        return std::min(dtr, dtm);
+        return std::min(dtr, dtm)/tscale;
     }
     
 };

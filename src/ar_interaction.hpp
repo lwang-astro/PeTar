@@ -597,8 +597,14 @@ public:
 #endif
 
     //! (Necessary) modify one particle function
+    /*!
+      @param[in] _p: particle
+      @param[in] _time_now: current time (not physical time, NB unit)
+      @param[in] _time_end: required evolved time (not physical time, do not directly use, NB unit)
+      \return 0: no modification; 1: modify mass; 2: modify mass and velocity
+     */
     template <class Tparticle>
-    bool modifyOneParticle(Tparticle& _p, const Float& _time_now, const Float& _time_end) {
+    int modifyOneParticle(Tparticle& _p, const Float& _time_now, const Float& _time_end) {
 #ifdef STELLAR_EVOLUTION
         // sample of mass loss
         //if (_p.time_interrupt<_time_end) {
@@ -610,25 +616,48 @@ public:
 #ifdef BSE
         ASSERT(bse_manager.checkParams());
         // SSE/BSE stellar evolution 
-        if (_p.time_interrupt<_time_end&&_p.star.kw<15) {
-            // time_interrupt include offset
-            Float dt_myr = (_time_end - _p.time_record)*bse_manager.tscale;
-            StarParameterOut output = bse_manager.evolveStar(_p.star, dt_myr);
-            _p.time_record = _time_end;
-            _p.time_interrupt = _p.time_record + bse_manager.getTimeStep(_p.star)/bse_manager.tscale;
-            _p.dm = _p.star.mt/bse_manager.mscale - _p.mass;
-            _p.mass += _p.dm;
-            // set merger check radius core radius
-            _p.radius = output.rc/bse_manager.rscale;
+        if (_p.time_interrupt<=_time_end) {
+
+            int modify_flag = 1;
+
+            // time_record and time_interrupt have offsets, thus use difference to obtain true dt
+            Float dt = _time_end - _p.time_record;
+
+            // evolve star
+            StarParameterOut output;
+            double dt_miss = bse_manager.evolveStar(_p.star, output, dt);
+
+            // if expected time not reach, record actually evolved time
+            _p.time_record += dt-dt_miss;
+
+            // estimate next time to check 
+            _p.time_interrupt = _p.time_record + bse_manager.getTimeStep(_p.star);
+
+            // record mass change (if loss, negative)
+            _p.dm = bse_manager.getMassLoss(output);
+            if (_p.dm==0.0) modify_flag = 0;
+            
+            // change mass in main data
+            _p.mass = bse_manager.getMass(_p.star);
+
+            // set merger check radius to core radius
+            _p.radius = bse_manager.getMergerRadius(output);
+
             // add velocity change if exist
-            for (int k=0; k<3; k++)
-                _p.vel[k] += output.vkick[k]/bse_manager.vscale;
-            if (_p.star.mt==0.0) _p.group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
-            return true;
+            double dv[3];
+            double dvabs=bse_manager.getVelocityChange(dv, output);
+            if (dvabs>0) {
+                for (int k=0; k<3; k++) _p.vel[k] += dv[k];
+                modify_flag = 2;
+            }
+            // if mass become zero, set to unused for removing
+            if (_p.mass==0.0) _p.group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+
+            return modify_flag;
         }
 #endif
 #endif
-        return false;
+        return 0;
     }
 
     //! (Necessary) modify the orbits and interrupt check 

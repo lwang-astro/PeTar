@@ -196,10 +196,10 @@ public:
     /*!
       @param[in] argc: number of options
       @param[in] argv: string of options
-      @param[in] print_flag: true: print input
-      \return -1 if help is used
+      @param[in] opt_used_pre: already used option number from previous reading, use to correctly count the remaining argument number
+      \return -1 if help is used; else the used number of argv
      */
-    int read(int argc, char *argv[]) {
+    int read(int argc, char *argv[], const int opt_used_pre=0) {
         static int petar_flag=-1;
         static struct option long_options[] = {
 #ifdef ORBIT_SAMPLING
@@ -233,6 +233,7 @@ public:
             {0,0,0,0}
         };
 
+        int opt_unknown=0;
         int copt;
         int option_index;
         optind = 1;
@@ -430,10 +431,9 @@ public:
                 break;
             case 'h':
                 if(print_flag){
-                    std::cout<<"Usage: nbody.out [option] [filename]"<<std::endl;
-                    std::cout<<"       Option defaulted values are shown after ':'\n"<<std::endl;
-                    std::cout<<"  -i: [I] "<<data_format<<std::endl;
-                    std::cout<<"          File content:\n"
+                    std::cout<<"Usage: nbody.out [option] filename"<<std::endl;
+                    std::cout<<"       filename: initial or restart data (snapshot) filename\n"
+                             <<"       Data file content:\n"
                              <<"            First line: \n"
                              <<"             1. File_ID: 0 for initialization, else for restarting\n"
                              <<"             2. N_particle \n"
@@ -442,7 +442,8 @@ public:
                     FPSoft::printTitleWithMeaning(std::cout,0,13);
                     std::cout<<"          PS: (*) show initialization values which should be used together with FILE_ID = 0"<<std::endl;
                     std::cout<<"              [formatted] indicates that the value is only for save, cannot be directly read"<<std::endl;
-                    std::cout<<std::endl;
+                    std::cout<<"Options:  defaulted values are shown after ':'"<<std::endl;
+                    std::cout<<"  -i: [I] "<<data_format<<std::endl;
                     std::cout<<"  -a:     data output style (except snapshot) becomes appending, defaulted: replace"<<std::endl;
                     std::cout<<"  -t: [F] "<<time_end<<std::endl;
                     std::cout<<"  -s: [F] "<<dt_soft<<std::endl;
@@ -492,18 +493,25 @@ public:
                              <<"        <m>  : averaged mass"<<std::endl;
                 }
                 return -1;
+            case '?':
+                opt_unknown++;
+                break;
             default:
                 break;
             }
-        
-        if (optind<argc) {
+
+        // count used options
+        int opt_used = opt_used_pre + optind - opt_unknown;
+
+        if (opt_used<argc) {
             fname_inp.value =argv[argc-1];
             if(print_flag) std::cout<<"Reading data file name: "<<fname_inp.value<<std::endl;
-        }        
+        }
+        else opt_used--;
 
         if(print_flag) std::cout<<"----- Finish reading input options -----\n";
 
-        return 0;
+        return opt_used;
     }
 
     //! check paramters
@@ -1192,7 +1200,7 @@ public:
         ////// integrater one cluster
         system_hard_one_cluster.initializeForOneCluster(search_cluster.getAdrSysOneCluster().size());
         system_hard_one_cluster.setPtclForOneClusterOMP(system_soft, search_cluster.getAdrSysOneCluster());
-        system_hard_one_cluster.driveForOneClusterOMP(_dt_drift);
+        system_hard_one_cluster.driveForOneClusterOMP(_dt_drift, mass_modify_list);
         //system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft, search_cluster.getAdrSysOneCluster());
         system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft, mass_modify_list);
         ////// integrater one cluster

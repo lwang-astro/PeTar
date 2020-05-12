@@ -371,7 +371,7 @@ c-------------------------------------------------------------c
      &        ' kw=',kw, ' r=',r, ' dtm=',dtm
       endif
 
-      tphysf = tphys
+*      tphysf = tphys
 *      scm(ip+1,1) = -1.0
 *      spp(jp+1,1) = -1.0
 *      if(ip.ge.nv)then

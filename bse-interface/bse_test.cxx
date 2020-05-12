@@ -29,10 +29,10 @@ int main(int argc, char** argv){
     IOParamsBSE bse_io;
     opterr = 0;
     bse_io.print_flag = true;
-    bse_io.read(argc,argv);
+    int opt_used = bse_io.read(argc,argv);
 
+    // reset optind
     optind=1;
-    
     static struct option long_options[] = {{0,0,0,0}};
 
     int option_index;
@@ -65,15 +65,20 @@ int main(int argc, char** argv){
         case 'h':
             printHelp();
             return 0;
+        case '?':
+            opt_used--;
+            break;
         default:
             break;
         }        
 
+    // argc and optind are 1 when no input is given
+    opt_used += optind;
     // read initial mass list
     bool read_mass_flag = false;
-    if (optind<argc) {
-        while (optind<argc) 
-            mass0.push_back(atof(argv[optind++]));
+    if (opt_used<argc) {
+        while (opt_used<argc) 
+            mass0.push_back(atof(argv[opt_used++]));
         read_mass_flag = true;
     }
 
@@ -104,12 +109,12 @@ int main(int argc, char** argv){
 
 #pragma omp parallel for schedule(dynamic)
     for (int i=0; i<n; i++) {
-        //output[i] = bse_manager.evolveStar(star[i],time);
-        while (star[i].tphys<time) {
-            if (star[i].kw>=15) break;
+        //bse_manager.evolveStar(star[i],output[i],time);
+        while (star[i].tphys/bse_manager.tscale<time) {
             double dt = std::max(bse_manager.getTimeStep(star[i]),dtmin);
-            dt = std::min(time-star[i].tphys, dt);
-            output[i] = bse_manager.evolveStar(star[i],dt);
+            dt = std::min(time-star[i].tphys/bse_manager.tscale, dt);
+            double dt_miss=bse_manager.evolveStar(star[i],output[i],dt);
+            if (dt_miss!=0.0&&star[i].kw>=15) break;
         }
     }
 
