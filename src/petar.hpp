@@ -1200,7 +1200,7 @@ public:
         ////// integrater one cluster
         system_hard_one_cluster.initializeForOneCluster(search_cluster.getAdrSysOneCluster().size());
         system_hard_one_cluster.setPtclForOneClusterOMP(system_soft, search_cluster.getAdrSysOneCluster());
-        system_hard_one_cluster.driveForOneClusterOMP(_dt_drift, mass_modify_list);
+        system_hard_one_cluster.driveForOneClusterOMP(_dt_drift);
         //system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft, search_cluster.getAdrSysOneCluster());
         system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft, mass_modify_list);
         ////// integrater one cluster

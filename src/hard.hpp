@@ -1908,17 +1908,12 @@ public:
     //! integrate one isolated particle
     /*! integrate one isolated particle and calculate new r_search
       @param[in] _dt: tree time step
-      @param[out] _mass_modify_list: address on _sys of particles where mass is modified
      */
-    void driveForOneClusterOMP(const PS::F64 _dt, PS::ReallocatableArray<PS::S32> & _mass_modify_list) {
+    void driveForOneClusterOMP(const PS::F64 _dt) {
         const PS::S32 n = ptcl_hard_.size();
-        const PS::S32 num_thread = PS::Comm::getNumberOfThread();
-        PS::ReallocatableArray<PS::S32> mass_modify_list_thx[num_thread];
-        for (int i=0; i<num_thread; i++) mass_modify_list_thx[i].resizeNoInitialize(0);
 
 #pragma omp parallel for
         for(PS::S32 i=0; i<n; i++){
-            const PS::S32 ith = PS::Comm::getThreadNum();
             auto& pi = ptcl_hard_[i];
             PS::F64vec dr = pi.vel * _dt;
             pi.pos += dr;
@@ -1930,19 +1925,12 @@ public:
             PS::F64vec vbk = pi.vel; //back up velocity in case of change
             int modify_flag = manager->ar_manager.interaction.modifyOneParticle(pi, 0.0, _dt);
             if (modify_flag) {
-                //// record mass change for later energy correction
-                PS::F64 dm = pi.mass - mbk;
-                if (dm!=0.0) mass_modify_list_thx[ith].push_back(adr);
-
-                // if velocity change, correct kinetic energy
-                if(modify_flag==2) {
-                    auto& v = pi.vel;
-                    Float de_kin = 0.5*(pi.mass*(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]) - mbk*(vbk[0]*vbk[0]+vbk[1]*vbk[1]+vbk[2]*vbk[2]));
-                    energy.de_sd_change_cum += de_kin;
-                    energy.de_sd_change_modify_single += de_kin;
-                    energy.de_change_cum += de_kin;
-                    energy.de_change_modify_single += de_kin;
-                }
+                auto& v = pi.vel;
+                Float de_kin = 0.5*(pi.mass*(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]) - mbk*(vbk[0]*vbk[0]+vbk[1]*vbk[1]+vbk[2]*vbk[2]));
+                energy.de_sd_change_cum += de_kin;
+                energy.de_sd_change_modify_single += de_kin;
+                energy.de_change_cum += de_kin;
+                energy.de_change_modify_single += de_kin;
             }
             // shift time interrupt in order to get consistent time for stellar evolution in the next drift
             pi.time_record    -= _dt;
@@ -1963,10 +1951,6 @@ public:
               pos_sun_, pi.pos, 
               vel_sun_, pi.vel, dt); 
             */
-        }
-        
-        for (int i=0; i<num_thread; i++) {
-            for (int k=0; k<mass_modify_list_thx[i].size(); k++) _mass_modify_list.push_back(mass_modify_list_thx[i][k]);
         }
 
         time_origin_ += _dt;
