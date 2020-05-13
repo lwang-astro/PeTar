@@ -53,7 +53,7 @@ if __name__ == '__main__':
             elif opt in ('-c','--core-filename'):
                 core_filename = arg
             elif opt in ('-e','--esc-filename'):
-                esc_filename = arg
+                esc_prefix = arg
             elif opt in ('-n','--n-cpu'):
                 n_cpu = int(arg)
             else:
