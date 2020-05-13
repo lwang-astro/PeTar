@@ -176,8 +176,10 @@ c-------------------------------------------------------------c
                if(it.gt.30)then
                   WRITE(*,*)' DANGER1! ',it,kw,mass,dr,rm0
                   WRITE(*,*)' STOP: EVOLV1 FATAL ERROR '
-                  CALL exit(0)
-                  STOP 
+                  kw = -kw 
+                  RETURN
+*                  CALL exit(0)
+*                  STOP 
                endif
                dtdr = dtm/ABS(dr)
                dtm = alpha2*MAX(rm0,r)*dtdr
@@ -335,8 +337,10 @@ c-------------------------------------------------------------c
          if(it.gt.30)then
             WRITE(*,*)' DANGER2! ',it,kw,mass,dr,rm0
             WRITE(*,*)' STOP: EVOLV1 FATAL ERROR '
-            CALL exit(0)
-            STOP 
+            kw = -kw 
+            RETURN
+*            CALL exit(0)
+*            STOP 
          endif
          if(ABS(dr).gt.0.1d0*rm0)then
             dtdr = dtm/ABS(dr)

@@ -170,6 +170,7 @@ struct StarParameter{
 
 //! SSE/BSE star parameter for output
 struct StarParameterOut{
+    int error;    ///> error flag, >0 indicate error
     double lum;   ///> Landmark luminosities 
     double mc;    ///> core mass in solar units 
     double rc;    ///> core radius in solar units (output)
@@ -179,7 +180,7 @@ struct StarParameterOut{
     double vkick[4]; ///> kick velocity for NS/BH formation
     double dm;   ///> mass loss
 
-    StarParameterOut(): lum(0.0), mc(0.0), rc(0.0), menv(0.0), renv(0.0), tm(0.0), vkick{0.0}, dm(0.0) {}
+    StarParameterOut(): error(0), lum(0.0), mc(0.0), rc(0.0), menv(0.0), renv(0.0), tm(0.0), vkick{0.0}, dm(0.0) {}
 
     //! print titles of class members using column style
     /*! print titles of class members in one line for column style
@@ -602,6 +603,7 @@ public:
                 &_star.ospin, &_star.epoch, 
                 &_out.tm, &_star.tphys, &tphysf, &dtp, &z, zpars, _out.vkick);
         _out.dm = _star.mt - _out.dm;
+        if (_star.kw<0) _out.error=1;
         return (tphysf - _star.tphys)/tscale;
     }
 

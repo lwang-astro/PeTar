@@ -110,6 +110,11 @@ int main(int argc, char** argv){
 #pragma omp parallel for schedule(dynamic)
     for (int i=0; i<n; i++) {
         bse_manager.evolveStar(star[i],output[i],time);
+        if (output[i].error) {
+            std::cerr<<"Error: i="<<i<<" mass0="<<mass0[i];
+            star[i].print(std::cerr);
+            std::cerr<<std::endl;
+        }
         //while (star[i].tphys/bse_manager.tscale<time) {
         //    double dt = std::max(bse_manager.getTimeStep(star[i]),dtmin);
         //    dt = std::min(time-star[i].tphys/bse_manager.tscale, dt);
