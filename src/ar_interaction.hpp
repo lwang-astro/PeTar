@@ -649,6 +649,11 @@ public:
             if (dvabs>0) {
                 for (int k=0; k<3; k++) _p.vel[k] += dv[k];
                 modify_flag = 2;
+#ifdef BSE_PRINT
+                std::cout<<"ID="<<_p.id<<" SN kick, vkick="<<dvabs<<" ";
+                _p.star.print(std::cout);
+                std::cout<<std::endl;
+#endif
             }
             // if mass become zero, set to unused for removing
             if (_p.mass==0.0) _p.group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove

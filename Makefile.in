@@ -41,7 +41,7 @@ endif
 ifneq ($(se_mode),off)
 MT_FLAGS += -D STELLAR_EVOLUTION
 ifeq ($(se_mode),bse)
-MT_FLAGS += -D BSE
+MT_FLAGS += -D BSE -D BSE_PRINT
 CXXLIBS += -L ./bse-interface -lbse -lgfortran
 LIBFILES+= bse-interface/libbse.a
 INCLUDE += -I ./bse-interface
@@ -165,7 +165,7 @@ HARD_MT_FLAGS += -D AR_TTL -D AR_SLOWDOWN_INNER -D AR_SLOWDOWN_TIMESCALE -D HARD
 
 HARD_SRC= io.hpp ptcl.hpp usr_define.hpp hard_assert.hpp cluster_list.hpp hard.hpp hard_ptcl.hpp hermite_interaction.hpp hermite_information.hpp hermite_perturber.hpp ar_interaction.hpp ar_perturber.hpp search_group_candidate.hpp artificial_particles.hpp stability.hpp soft_ptcl.hpp static_variables.hpp tidal_tensor.hpp orbit_sampling.hpp pseudoparticle_multipole.hpp
 
-build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) |build
+build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(LIBFILES) |build
 	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
 
 build/petar.hard.test: hard_test.cxx $(HARD_SRC) |build

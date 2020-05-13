@@ -2731,6 +2731,7 @@ public:
         updateStatus(true);
 
         // output initial data
+        file_header.nfile--; // avoid repeating files
         output();
 
         // remove artificial particles

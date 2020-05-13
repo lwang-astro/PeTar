@@ -116,8 +116,8 @@
          ELSE
             DISP0 = MAX(ECSIG,0.D0)
          ENDIF
-         write(6,*) "ECS-NS formation MASS KS DISP: ",
-     &   m1n, KW, DISP0
+*         write(6,*) "ECS-NS formation MASS KS DISP: ",
+*     &   m1n, KW, DISP0
       ENDIF
 * Use Henon's method for pairwise components (Douglas Heggie 22/5/97).
       do 20 k = 1,2
@@ -166,10 +166,10 @@
             ENDIF
           ENDIF
             vk2 = vk*vk
-            WRITE(6,*) "Heavy-NS/BH formation", 
-     &" (mechanism/fallback control) MASS0 MASS KS",
-     &" FBFAC FBTOT MCO VKICK KMECH: ",
-     &           m1, m1n, KW, FBFAC, FBTOT, MCO, vk, KMECH
+*            WRITE(6,*) "Heavy-NS/BH formation", 
+*     &" (mechanism/fallback control) MASS0 MASS KS",
+*     &" FBFAC FBTOT MCO VKICK KMECH: ",
+*     &           m1, m1n, KW, FBFAC, FBTOT, MCO, vk, KMECH
           
          ENDIF     
       ENDIF

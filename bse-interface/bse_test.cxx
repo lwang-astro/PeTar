@@ -109,13 +109,13 @@ int main(int argc, char** argv){
 
 #pragma omp parallel for schedule(dynamic)
     for (int i=0; i<n; i++) {
-        //bse_manager.evolveStar(star[i],output[i],time);
-        while (star[i].tphys/bse_manager.tscale<time) {
-            double dt = std::max(bse_manager.getTimeStep(star[i]),dtmin);
-            dt = std::min(time-star[i].tphys/bse_manager.tscale, dt);
-            double dt_miss=bse_manager.evolveStar(star[i],output[i],dt);
-            if (dt_miss!=0.0&&star[i].kw>=15) break;
-        }
+        bse_manager.evolveStar(star[i],output[i],time);
+        //while (star[i].tphys/bse_manager.tscale<time) {
+        //    double dt = std::max(bse_manager.getTimeStep(star[i]),dtmin);
+        //    dt = std::min(time-star[i].tphys/bse_manager.tscale, dt);
+        //    double dt_miss=bse_manager.evolveStar(star[i],output[i],dt);
+        //    if (dt_miss!=0.0&&star[i].kw>=15) break;
+        //}
     }
 
     std::cout<<std::setw(width)<<"Mass_init[Msun]";
