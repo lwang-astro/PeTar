@@ -14,6 +14,11 @@ extern "C" {
     } value1_;
 
     extern struct{
+        double alpha; ///>the common-envelope efficiency parameter (3.0).
+        double lambda; ///>the binding energy factor for common envelope evolution (0.5).
+    } value2_;
+
+    extern struct{
         int idum; ///> the random number seed used in the kick routine. 
     } value3_;
 
@@ -21,6 +26,16 @@ extern "C" {
         double sigma; ///> the dispersion in the Maxwellian for the SN kick speed
         int bhflag;   ///> BH kick 
     } value4_;
+
+    // only set but not actually used...
+    //extern struct{
+    //    double beta;   ///> wind velocity factor: proportional to vwind**2 (1/8). 
+    //    double xi;     ///> wind accretion efficiency factor (1.0). 
+    //    double bhwacc;   ///> the Bondi-Hoyle wind accretion factor (3/2). 
+    //    double epsnov; ///>the fraction of accreted matter retained in nova eruption (0.001). 
+    //    double eddfac; ///> Eddington limit factor for mass transfer (1.0).
+    //    double gamma;  ///> the angular momentum factor for mass lost during Roche (-1.0). 
+    //} value5_;
 
     extern struct{
         int ceflag; ///> common envelope model
@@ -227,6 +242,8 @@ public:
     IOParams<double> neta;
     IOParams<double> bwind;
     IOParams<double> hewind;
+    IOParams<double> alpha;
+    IOParams<double> lambda;
     //IOParams<double> mxns;
     IOParams<double> sigma;
     IOParams<int> ceflag;
@@ -254,8 +271,10 @@ public:
                    neta  (input_par_store, 0.5, "Reimers mass-loss coefficent [neta*4x10^-13]"),
                    bwind (input_par_store, 0.0, "Binary enhanced mass loss parameter; inactive for single"),
                    hewind(input_par_store, 1.0, "Helium star mass loss factor"),
+                   alpha (input_par_store, 3.0, "Common-envelope efficiency parameter"),
+                   lambda(input_par_store, 0.5, "Binding energy factor for common envelope evolution"),
                    //mxns  (input_par_store, 1.0, "Helium star mass loss factor"),
-                   sigma (input_par_store, 265.0, "the dispersion in the Maxwellian for the SN kick speed [km/s]"),
+                   sigma (input_par_store, 265.0, "Dispersion in the Maxwellian for the SN kick speed [km/s]"),
                    ceflag(input_par_store, 0,  "if =3, activates de Kool common-envelope model"),
                    tflag (input_par_store, 1,  "if >0, activates tidal circularisation"),
                    //ifflag(input_par_store, 2,   "if > 0 uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
@@ -289,6 +308,8 @@ public:
             {"neta",   required_argument, &sse_flag, 0},  
             {"bwind",  required_argument, &sse_flag, 1},  
             {"hewind", required_argument, &sse_flag, 2},  
+            {"alpha",  required_argument, &sse_flag, 22},
+            {"lambda", required_argument, &sse_flag, 23},
           //{"mxns",   required_argument, &sse_flag, 3}, 
             {"sigma",  required_argument, &sse_flag, 4},
             {"ceflag", required_argument, &sse_flag, 5},
@@ -406,6 +427,14 @@ public:
                     vscale.value = atof(optarg);
                     if(print_flag) vscale.print(std::cout);
                     break;
+                case 22:
+                    alpha.value = atof(optarg);
+                    if(print_flag) alpha.print(std::cout);
+                    break;
+                case 23:
+                    lambda.value = atof(optarg);
+                    if(print_flag) lambda.print(std::cout);
+                    break;
                 default:
                     break;
                 }
@@ -498,6 +527,9 @@ public:
         value1_.hewind= _input.hewind.value;
         value1_.mxns  = 1.8;
         if (_input.nsflag.value>0) value1_.mxns = 2.5;
+
+        value2_.alpha  = _input.alpha.value;
+        value2_.lambda = _input.lambda.value;
         
         value4_.sigma  = _input.sigma.value;
         value4_.bhflag = _input.bhflag.value;
