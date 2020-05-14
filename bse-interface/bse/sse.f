@@ -41,6 +41,7 @@ c-------------------------------------------------------------c
       real*8 epoch,tms,tphys,tphysf,dtp
       real*8 r,lum,ospin
       real*8 mc,rc,menv,renv
+      real*8 vkick(4)
 *      character*50 text1,text2,text3
       character*30 label(16)
       data label /' Low Mass MS Star ',' Main sequence Star ',
@@ -141,7 +142,7 @@ c-------------------------------------------------------------c
      &     ' epoch                spin' 
 
       CALL evolv1(kw,mass,mt,r,lum,mc,rc,menv,renv,ospin,
-     &            epoch,tms,tphys,tphysf,dtp,z,zpars)
+     &            epoch,tms,tphys,tphysf,dtp,z,zpars,vkick)
 *
 *************************************************************************
 ** Output:

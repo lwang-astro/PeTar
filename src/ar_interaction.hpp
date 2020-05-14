@@ -625,9 +625,18 @@ public:
 
             // evolve star
             StarParameterOut output;
-            double dt_miss = bse_manager.evolveStar(_p.star, output, dt);
+            int error_flag = bse_manager.evolveStar(_p.star, output, dt);
+
+            // error 
+            if (error_flag) {
+                std::cerr<<"SSE/BSE Error: ID="<<_p.id;
+                _p.star.print(std::cerr);
+                std::cerr<<std::endl;
+                abort();
+            }
 
             // if expected time not reach, record actually evolved time
+            double dt_miss = bse_manager.getDTMiss(output);
             _p.time_record += dt-dt_miss;
 
             // estimate next time to check 

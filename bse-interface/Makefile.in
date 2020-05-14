@@ -1,0 +1,25 @@
+TARGET: libbse.a
+
+BSE_PATH=bse
+FC=@FC@
+
+#FFLAGS = -O2 -Wall -finit-real=nan 
+CXXFLAGS += @OPTFLAGS@
+FFLAGS += @FCFLAGS@
+#FFLIBS += @FLIBS@
+#FFLAGS= -g -O0 -Wall -finit-real=nan -fbounds-check
+#CXXFLAGS= -g -O2 -Wall -std=c++11 -fbounds-check
+
+VPATH=$(BSE_PATH)
+
+SRC:= $(shell find $(BSE_PATH) -type f  \( -iname '*.f' ! -iname '.*' ! -iname '[sb]se.f' ! -iname 'popbin.f' \) )
+OBJ:= $(SRC:.f=.o)
+
+libbse.a: $(OBJ)
+	ar rcs $@ $^
+
+bse_test: bse_test.cxx libbse.a bse_interface.h
+	$(CXX) $(CXXFLAGS) $< -o $@ -L./ -lbse -lgfortran 
+
+clean:
+	rm -f $(BSE_PATH)/*.o *.o bse_test libbse.a

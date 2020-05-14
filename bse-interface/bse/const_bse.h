@@ -21,8 +21,8 @@
       COMMON /VALUE5/ beta,xi,acc2,epsnov,eddfac,gamma
       REAL*8 pts1,pts2,pts3
       COMMON /POINTS/ pts1,pts2,pts3
-      REAL*8 dmmax,drmax
-      COMMON /TSTEPC/ dmmax,drmax
+*      REAL*8 dmmax,drmax
+*      COMMON /TSTEPC/ dmmax,drmax
 *      REAL scm(50000,14),spp(20,3)
 *      COMMON /SINGLE/ scm,spp
 *      REAL bcm(50000,34),bpp(80,10)

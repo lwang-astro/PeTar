@@ -61,6 +61,12 @@ c-------------------------------------------------------------c
       COMMON /POINTS/ pts1,pts2,pts3
       real*8 FBFAC,FBTOT,MCO
       integer ECS
+*     for kick, arguments must be variables
+      real*8 m2,ecc,sep,jorb
+      m2 = 0.d0
+      ecc= 0.d0
+      sep= -1.d0
+      jorb= 0.d0
       
 *      REAL scm(50000,14),spp(20,3)
 *      COMMON /SINGLE/ scm,spp
@@ -234,7 +240,7 @@ c-------------------------------------------------------------c
             if(kw.eq.13.or.kw.eq.14)then
                ospin = 2.0d+08
                jspin = k3*rc*rc*mc*ospin
-               CALL kick(kw,mass,mt,0.d0,0.d0,-1.d0,0.d0,vkick,
+               CALL kick(kw,mass,mt,m2,ecc,sep,jorb,vkick,
      &              fbfac,fbtot,mco,ecs)
             endif
 *            jp = jp + 1

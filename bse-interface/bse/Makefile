@@ -1,6 +1,6 @@
 IGNORE:
 CMPLR = gfortran
-FFLAGS = -Wall 
+FFLAGS = -Wall -g -O0
 LFLAGS = const_bse.h zdata.h 
 
 .f.o:

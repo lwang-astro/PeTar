@@ -2013,6 +2013,7 @@ public:
         //assert(initial_fdps_flag);
         assert(!read_parameters_flag);
         // reading parameters
+        opterr = 0;
         read_parameters_flag = true;
         if (my_rank==0) input_parameters.print_flag=true;
         else input_parameters.print_flag=false;
@@ -2608,7 +2609,12 @@ public:
 #endif
         hard_manager.ar_manager.interrupt_detection_option = input_parameters.interrupt_detection_option.value;
 #ifdef BSE
-        hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters);
+#ifdef BSE_PRINT
+        bool bse_print_flag = print_flag;
+#else
+        bool bse_print_flag = false;
+#endif
+        hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters, bse_print_flag);
 #endif
 
         // check consistence of paramters

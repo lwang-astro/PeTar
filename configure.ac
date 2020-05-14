@@ -254,7 +254,9 @@ AC_ARG_WITH([step-mode],
 AC_ARG_WITH([interrupt],
 	    [AS_HELP_STRING([--with-interrupt],
 	                    [Interruption detection mode: Default: off])],
-            [PROG_NAME=$PROG_NAME'.'$with_interrupt],
+            [PROG_NAME=$PROG_NAME'.'$with_interrupt
+	     AS_IF([test x"$with_interrupt" == xbse],
+	           [AC_PROG_FC([gfortran, ifort])])],
 	    [with_interrupt=off])
 
 # tidal tensor 3rd order mode
@@ -360,5 +362,6 @@ AC_MSG_NOTICE([-----------------------------------------------------------])
 
 
 AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([bse-interface/Makefile])
 
 AC_OUTPUT

@@ -27,15 +27,14 @@ extern "C" {
         int bhflag;   ///> BH kick 
     } value4_;
 
-    // only set but not actually used...
-    //extern struct{
-    //    double beta;   ///> wind velocity factor: proportional to vwind**2 (1/8). 
-    //    double xi;     ///> wind accretion efficiency factor (1.0). 
-    //    double bhwacc;   ///> the Bondi-Hoyle wind accretion factor (3/2). 
-    //    double epsnov; ///>the fraction of accreted matter retained in nova eruption (0.001). 
-    //    double eddfac; ///> Eddington limit factor for mass transfer (1.0).
-    //    double gamma;  ///> the angular momentum factor for mass lost during Roche (-1.0). 
-    //} value5_;
+    extern struct{
+        double beta;   ///> wind velocity factor: proportional to vwind**2 (1/8). 
+        double xi;     ///> wind accretion efficiency factor (1.0). 
+        double bhwacc;   ///> the Bondi-Hoyle wind accretion factor (3/2). 
+        double epsnov; ///>the fraction of accreted matter retained in nova eruption (0.001). 
+        double eddfac; ///> Eddington limit factor for mass transfer (1.0).
+        double gamma;  ///> the angular momentum factor for mass lost during Roche (-1.0). 
+    } value5_;
 
     extern struct{
         int ceflag; ///> common envelope model
@@ -68,6 +67,8 @@ extern "C" {
     void star_(int* kw, double* mass, double* mt, double* tm, double* tn, double* tscls, double* lums, double* GB, double* zpars);
 
     void deltat_(int* kw, double* age, double* tm, double* tn, double* tscls, double* dt, double* dtr);
+
+    void printconst_();
 }
 
 //! SSE/BSE star parameter for saving
@@ -185,7 +186,7 @@ struct StarParameter{
 
 //! SSE/BSE star parameter for output
 struct StarParameterOut{
-    int error;    ///> error flag, >0 indicate error
+    double dtmiss; ///> required evolution time - actually evolved time
     double lum;   ///> Landmark luminosities 
     double mc;    ///> core mass in solar units 
     double rc;    ///> core radius in solar units (output)
@@ -195,7 +196,7 @@ struct StarParameterOut{
     double vkick[4]; ///> kick velocity for NS/BH formation
     double dm;   ///> mass loss
 
-    StarParameterOut(): error(0), lum(0.0), mc(0.0), rc(0.0), menv(0.0), renv(0.0), tm(0.0), vkick{0.0}, dm(0.0) {}
+    StarParameterOut(): dtmiss(0.0), lum(0.0), mc(0.0), rc(0.0), menv(0.0), renv(0.0), tm(0.0), vkick{0.0}, dm(0.0) {}
 
     //! print titles of class members using column style
     /*! print titles of class members in one line for column style
@@ -244,6 +245,12 @@ public:
     IOParams<double> hewind;
     IOParams<double> alpha;
     IOParams<double> lambda;
+    IOParams<double> beta;
+    IOParams<double> xi;
+    IOParams<double> bhwacc;
+    IOParams<double> epsnov;
+    IOParams<double> eddfac;
+    IOParams<double> gamma;
     //IOParams<double> mxns;
     IOParams<double> sigma;
     IOParams<int> ceflag;
@@ -271,9 +278,15 @@ public:
                    neta  (input_par_store, 0.5, "Reimers mass-loss coefficent [neta*4x10^-13]"),
                    bwind (input_par_store, 0.0, "Binary enhanced mass loss parameter; inactive for single"),
                    hewind(input_par_store, 1.0, "Helium star mass loss factor"),
+                   //mxns  (input_par_store, 1.0, "Helium star mass loss factor"),
                    alpha (input_par_store, 3.0, "Common-envelope efficiency parameter"),
                    lambda(input_par_store, 0.5, "Binding energy factor for common envelope evolution"),
-                   //mxns  (input_par_store, 1.0, "Helium star mass loss factor"),
+                   beta  (input_par_store, 0.125, "wind velocity factor: proportional to vwind**2"),
+                   xi    (input_par_store, 1.0, "wind accretion efficiency factor"),
+                   bhwacc(input_par_store, 1.5, "Bondi-Hoyle wind accretion factor"),
+                   epsnov(input_par_store, 0.001, "The fraction of accreted matter retained in nova eruption"),
+                   eddfac(input_par_store, 1.0, "Eddington limit factor for mass transfer"),
+                   gamma (input_par_store, -1.0, "Angular momentum factor for mass lost during Roche"),
                    sigma (input_par_store, 265.0, "Dispersion in the Maxwellian for the SN kick speed [km/s]"),
                    ceflag(input_par_store, 0,  "if =3, activates de Kool common-envelope model"),
                    tflag (input_par_store, 1,  "if >0, activates tidal circularisation"),
@@ -308,9 +321,15 @@ public:
             {"neta",   required_argument, &sse_flag, 0},  
             {"bwind",  required_argument, &sse_flag, 1},  
             {"hewind", required_argument, &sse_flag, 2},  
+          //{"mxns",   required_argument, &sse_flag, 3}, 
             {"alpha",  required_argument, &sse_flag, 22},
             {"lambda", required_argument, &sse_flag, 23},
-          //{"mxns",   required_argument, &sse_flag, 3}, 
+            {"beta",   required_argument, &sse_flag, 24},
+            {"xi",     required_argument, &sse_flag, 25},
+            {"bhwacc", required_argument, &sse_flag, 26},
+            {"epsnov", required_argument, &sse_flag, 27},
+            {"eddfac", required_argument, &sse_flag, 28},
+            {"gamma",  required_argument, &sse_flag, 29},
             {"sigma",  required_argument, &sse_flag, 4},
             {"ceflag", required_argument, &sse_flag, 5},
             {"tflag",  required_argument, &sse_flag, 6},
@@ -435,6 +454,10 @@ public:
                     lambda.value = atof(optarg);
                     if(print_flag) lambda.print(std::cout);
                     break;
+                case 24:
+                    beta.value = atof(optarg);
+                    if(print_flag) beta.print(std::cout);
+                    break;
                 default:
                     break;
                 }
@@ -520,7 +543,7 @@ public:
     }
 
     //! initial SSE/BSE global parameters
-    void initial(const IOParamsBSE& _input) {
+    void initial(const IOParamsBSE& _input, const bool _print_flag=false) {
         // common block
         value1_.neta  = _input.neta.value;
         value1_.bwind = _input.bwind.value;
@@ -557,6 +580,14 @@ public:
         z = _input.z.value;
         zcnsts_(&z, zpars);
         value3_.idum = (_input.idum.value>0)? -_input.idum.value: _input.idum.value;
+
+        if (_print_flag) {
+            printconst_();
+            std::cout<<"z: "<<z<<" zpars: ";
+            for (int i=0;i<20;i++) std::cout<<zpars[i]<<" ";
+            std::cout<<std::endl;
+        }
+
     }
 
     //! initial SSE/BSE global parameters
@@ -610,6 +641,16 @@ public:
         return _out.rc/rscale;
     }
 
+    //! get evolved Time in NB unit
+    double getTime(StarParameter& _star) {
+        return _star.tphys/tscale;
+    }
+
+    //! get the difference of required finishing time and actually evolved time in NB unit
+    double getDTMiss(StarParameterOut& _out) {
+        return _out.dtmiss/tscale;
+    }
+
     //! get velocity change in NB unit
     /*!
       @param[in] _dv: 3-D array to record velocity change
@@ -624,9 +665,9 @@ public:
     /*!
       @param[in,out] _star: star parameter
       @param[in] _dt_nb: physical time step in Myr to evolve
-      \return required finishing time - actually evolved time (in NB unit)
+      \return error flag: 0: success; 1: error
      */
-    double evolveStar(StarParameter& _star, StarParameterOut& _out, const double _dt_nb) {
+    int evolveStar(StarParameter& _star, StarParameterOut& _out, const double _dt_nb) {
         double tphysf = _dt_nb*tscale + _star.tphys;
         double dtp=tphysf*100.0+1000.0;
         _out.dm = _star.mt;
@@ -635,8 +676,9 @@ public:
                 &_star.ospin, &_star.epoch, 
                 &_out.tm, &_star.tphys, &tphysf, &dtp, &z, zpars, _out.vkick);
         _out.dm = _star.mt - _out.dm;
-        if (_star.kw<0) _out.error=1;
-        return (tphysf - _star.tphys)/tscale;
+        _out.dtmiss = tphysf - _star.tphys;
+        if (_star.kw<0) return 1;
+        else return 0;
     }
 
     //! get next time step to check in Myr
@@ -652,8 +694,8 @@ public:
         double age = _star.tphys-_star.epoch;
         deltat_(&_star.kw, &age, &tm, &tn, tscls, &dtm, &dtr);
 
-        assert(dtr>0.0);
-        assert(dtm>0.0);
+        //assert(dtr>0.0);
+        //assert(dtm>0.0);
 
         return std::min(dtr, dtm)/tscale;
     }

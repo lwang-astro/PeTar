@@ -84,7 +84,7 @@ int main(int argc, char** argv){
 
     BSEManager bse_manager;
 
-    bse_manager.initial(bse_io);
+    bse_manager.initial(bse_io,true);
 
     assert(bse_manager.checkParams());
 
@@ -109,18 +109,28 @@ int main(int argc, char** argv){
 
 #pragma omp parallel for schedule(dynamic)
     for (int i=0; i<n; i++) {
-        bse_manager.evolveStar(star[i],output[i],time);
-        if (output[i].error) {
-            std::cerr<<"Error: i="<<i<<" mass0="<<mass0[i];
-            star[i].print(std::cerr);
-            std::cerr<<std::endl;
+        //int error_flag = bse_manager.evolveStar(star[i],output[i],time);
+        while (star[i].tphys/bse_manager.tscale<time) {
+            double dt = std::max(bse_manager.getTimeStep(star[i]),dtmin);
+            dt = std::min(time-bse_manager.getTime(star[i]), dt);
+            //StarParameterOut outi;
+            int error_flag=bse_manager.evolveStar(star[i],output[i],dt);
+            //output[i] = outi;
+            double dv[3];
+            double dvabs = bse_manager.getVelocityChange(dv, output[i]);
+            if (dvabs>0) {
+                std::cout<<"SN kick, i="<<i<<" vkick="<<dvabs<<" ";
+                star[i].print(std::cout);
+                std::cout<<std::endl;
+            }
+            if (error_flag) {
+                std::cerr<<"Error: i="<<i<<" mass0="<<mass0[i]<<" ";
+                star[i].print(std::cerr);
+                std::cerr<<std::endl;
+            }
+            double dt_miss = bse_manager.getDTMiss(output[i]);
+            if (dt_miss!=0.0&&star[i].kw>=15) break;
         }
-        //while (star[i].tphys/bse_manager.tscale<time) {
-        //    double dt = std::max(bse_manager.getTimeStep(star[i]),dtmin);
-        //    dt = std::min(time-star[i].tphys/bse_manager.tscale, dt);
-        //    double dt_miss=bse_manager.evolveStar(star[i],output[i],dt);
-        //    if (dt_miss!=0.0&&star[i].kw>=15) break;
-        //}
     }
 
     std::cout<<std::setw(width)<<"Mass_init[Msun]";
