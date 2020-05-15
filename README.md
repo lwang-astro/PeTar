@@ -78,8 +78,8 @@ make install
 ```
 to compile and install the code.
 
-The excutable file _petar.\*\*_, _petar.hard.debug_ and _petar.init_ will be installed in [Install path]/bin.
-1. _petar.\*\*_ is the main routine. Here \*\* are suffixes which represent the feature of the code based on the configure.
+The excutable file _petar_, _petar.hard.debug_ and _petar.init_ will be installed in [Install path]/bin.
+1. _petar_ is the main routine. It is actually a soft link to _petar.\*\*_, where the suffix represents the feature of the code based on the configure.
 2. _petar.hard.debug_ is used for debugging if _hard\_dump_ files appears when the code crashes.
 3. _petar.init_ is used to generate the initial particle data file for start the simulation, the input data file should have the format: mass, position(x,y,z), velocity(x,y,z) each line for one particle
 
@@ -89,15 +89,14 @@ Please add [Install path]/include to the _PYTHON_ include path in order to impor
 
 ## Use:
 After installation, if the [Install path]/bin is in system $PATH envirnoment, the standard way to use the code is
-(Assume the executable file name is _petar.mpi.omp.avx2_, in other cases, please replace it to the corresponding name)
 ```
-[mpiexec -n X] petar.mpi.omp.avx2 [options] [particle data filename]
+[mpiexec -n X] petar [options] [particle data filename]
 ```
 where "[mpiexec -n X]" is used when multiple MPI processors are needed and "X" is the number of processors.
 
 All opitions are listed in the help information, which can be seen by use
 ```
-petar.mpi.omp.avx2 -h
+petar -h
 ```
 Please ignore the error message (a memory allication issue in _FDPS_) after the help information is printed.
 
@@ -105,7 +104,7 @@ The description of the input particle data file is also shown in the help inform
 All snapshots of particle data outputed in the simulation can be used to restart the simulation. 
 To restart the simulation with the same configuration of parameters, use
 ```
-[mpiexec -n X] petar.mpi.omp.avx2 -p input.par [snapshot filename]
+[mpiexec -n X] petar -p input.par [snapshot filename]
 ```
 where _input.par_ is automatically generated from the last run (stored in the same diretory of the simulation).
 
@@ -199,7 +198,7 @@ More useful tools will be implemented in the future.
 To avoid segmetantional fault in simulations in the case of large number of particles, make sure to set the OMP_STACKSIZE large enough.
 For example, use
 ```
-OMP_STACKSIZE=128M [mpiexec -n X] petar.mpi.omp.avx2 [options] [data filename] 
+OMP_STACKSIZE=128M [mpiexec -n X] petar [options] [data filename] 
 ```
 
 A convenient way is to add
