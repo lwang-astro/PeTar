@@ -60,9 +60,17 @@ extern "C" {
     //! function for initial metallicity parameters
     void zcnsts_(double* z, double* zpars);
 
+    //!function for collison matrix
+    void instar_();
+
     //! SSE function for evolving one star
     void evolv1_(int* kw, double* mass, double* mt, double* r, double* lum, double* mc, double* rc, double* menv, double* renv, double* ospin,
                  double* epoch, double* tm, double* tphys, double* tphysf, double* dtp, double* z, double* zpars, double* vs);
+
+    //! BSE function for evolving one binary
+    void evolv2_(int* kw, double* mass, double* mt, double* r, double* lum, double* mc, double* rc, double* menv, double* renv, double* ospin,
+                 double* epoch, double* tm, double* tphys, double* tphysf, double* dtp, double* z, double* zpars, 
+                 double* period, double* ecc, int* btype, int* ikick, double* vkick);
 
     void star_(int* kw, double* mass, double* mt, double* tm, double* tn, double* tscls, double* lums, double* GB, double* zpars);
 
@@ -77,6 +85,8 @@ struct StarParameter{
     double m0;    ///> Initial stellar mass in solar units
     double mt;    ///> Current mass in solar units (used for R)
     double r;     ///> Stellar radius in solar units
+    double mc;    ///> core mass in solar units 
+    double rc;    ///> core radius in solar units (output)
     double ospin;  ///> spin of star
     double epoch;  ///> starting time of one evolution phase, age = tphys - epoch
     double tphys;  ///> physical evolve time in Myr
@@ -92,6 +102,9 @@ struct StarParameter{
         kw = _kw;
         m0 = _mass;
         mt = _mass;
+        r  = 0.0;
+        mc = 0.0;
+        rc = 0.0;
         ospin = _ospin;
         epoch = _epoch;
         tphys = _epoch;
@@ -101,31 +114,33 @@ struct StarParameter{
     /*! @param[in] _fout: file IO for write
      */
     void writeAscii(FILE* fp) const{
-        fprintf(fp, "%d %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e ",
-                this->kw, this->m0, this->mt, this->r, this->ospin, this->epoch, this->tphys);
+        fprintf(fp, "%d %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e ",
+                this->kw, this->m0, this->mt, this->r, this->mc, this->rc, this->ospin, this->epoch, this->tphys);
     }
 
-        //! read class data with ASCII format
+    //! read class data with ASCII format
     /*! @param[in] _fin: file IO for read
      */
     void readAscii(FILE* fp) {
-        int rcount=fscanf(fp, "%d %lf %lf %lf %lf %lf %lf ",
-                              &this->kw, &this->m0, &this->mt, &this->r, &this->ospin, &this->epoch, &this->tphys);
-        if(rcount<7) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 7, only obtain "<<rcount<<".\n";
+        int rcount=fscanf(fp, "%d %lf %lf %lf %lf %lf %lf %lf %lf ",
+                              &this->kw, &this->m0, &this->mt, &this->r, &this->mc, &this->rc, &this->ospin, &this->epoch, &this->tphys);
+        if(rcount<9) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 9, only obtain "<<rcount<<".\n";
             abort();
         }
     }
 
     //! for print debugging
     void print(std::ostream & fout) const{
-        fout<<" star_type="<<kw
-            <<" star_mass0="<<m0
-            <<" star_mass="<<mt
-            <<" star_radius="<<r
-            <<" star_spin="<<ospin
-            <<" star_epoch="<<epoch
-            <<" star_time[myr]="<<tphys;
+        fout<<" type="<<kw
+            <<" mass0="<<m0
+            <<" mass="<<mt
+            <<" radius="<<r
+            <<" mcore="<<mc
+            <<" rcore="<<rc
+            <<" spin="<<ospin
+            <<" epoch="<<epoch
+            <<" time[myr]="<<tphys;
     }
 
     //! print titles of class members using column style
@@ -138,6 +153,8 @@ struct StarParameter{
              <<std::setw(_width)<<"star_mass0[Msun]"
              <<std::setw(_width)<<"star_mass[Msun]"
              <<std::setw(_width)<<"star_radius[Rsun]"
+             <<std::setw(_width)<<"star_mcore[Msun]"
+             <<std::setw(_width)<<"star_rcore[Rsun]"
              <<std::setw(_width)<<"star_spin"
              <<std::setw(_width)<<"star_epoch[Myr]"
              <<std::setw(_width)<<"star_time[Myr]";
@@ -153,6 +170,8 @@ struct StarParameter{
              <<std::setw(_width)<<m0
              <<std::setw(_width)<<mt
              <<std::setw(_width)<<r
+             <<std::setw(_width)<<mc
+             <<std::setw(_width)<<rc
              <<std::setw(_width)<<ospin
              <<std::setw(_width)<<epoch
              <<std::setw(_width)<<tphys;
@@ -171,9 +190,13 @@ struct StarParameter{
         counter++;
         _fout<<std::setw(_offset)<<" "<<counter<<". star_mass0: initial mass at each evolution stage [Msun]\n";
         counter++;
-        _fout<<std::setw(_offset)<<" "<<counter<<". star_mass: current mass at each evolution stage [Msun]\n";
+        _fout<<std::setw(_offset)<<" "<<counter<<". star_mass: current mass [Msun]\n";
         counter++;
         _fout<<std::setw(_offset)<<" "<<counter<<". star_radius: stellar radius [Rsun]\n";        
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". star_mcore: stellar core mass [Msun]\n";
+        counter++;
+        _fout<<std::setw(_offset)<<" "<<counter<<". star_rcore: stellar core radius [Rsun]\n";        
         counter++;
         _fout<<std::setw(_offset)<<" "<<counter<<". star_spin: stellar rotation\n";        
         counter++;
@@ -188,15 +211,13 @@ struct StarParameter{
 struct StarParameterOut{
     double dtmiss; ///> required evolution time - actually evolved time
     double lum;   ///> Landmark luminosities 
-    double mc;    ///> core mass in solar units 
-    double rc;    ///> core radius in solar units (output)
     double menv;  ///> mass of convective envelope 
     double renv;  ///> radius of convective envelope
     double tm;   ///> Main sequence lifetime
     double vkick[4]; ///> kick velocity for NS/BH formation
     double dm;   ///> mass loss
 
-    StarParameterOut(): dtmiss(0.0), lum(0.0), mc(0.0), rc(0.0), menv(0.0), renv(0.0), tm(0.0), vkick{0.0}, dm(0.0) {}
+    StarParameterOut(): dtmiss(0.0), lum(0.0), menv(0.0), renv(0.0), tm(0.0), vkick{0.0}, dm(0.0) {}
 
     //! print titles of class members using column style
     /*! print titles of class members in one line for column style
@@ -205,8 +226,6 @@ struct StarParameterOut{
      */
     static void printColumnTitle(std::ostream & _fout, const int _width=20) {
         _fout<<std::setw(_width)<<"luminosity"
-             <<std::setw(_width)<<"mass_core[Msun]"
-             <<std::setw(_width)<<"radius_core[Rsun]"
              <<std::setw(_width)<<"mass_CE[Msun]"
              <<std::setw(_width)<<"radius_CE[Rsun]"
              <<std::setw(_width)<<"time_MS[Myr]"
@@ -224,8 +243,6 @@ struct StarParameterOut{
      */
     void printColumn(std::ostream & _fout, const int _width=20){
         _fout<<std::setw(_width)<<lum
-             <<std::setw(_width)<<mc
-             <<std::setw(_width)<<rc
              <<std::setw(_width)<<menv
              <<std::setw(_width)<<renv
              <<std::setw(_width)<<tm
@@ -558,8 +575,25 @@ public:
     double rscale; ///> radius scaling factor from NB to Rsun
     double mscale; ///> mass scaling factor from NB to Msun
     double vscale; ///> velocity scaling factor from NB to km/s
+    const char* binary_type[15]; ///> name of binary type return from BSE evolv2
 
-    BSEManager(): z(0.0), zpars{0}, tscale(0.0), rscale(0.0), mscale(0.0), vscale(0.0) {}
+    BSEManager(): z(0.0), zpars{0}, tscale(0.0), rscale(0.0), mscale(0.0), vscale(0.0),
+                  binary_type{"Unset",               //0
+                              "Initial",             //1
+                              "Type_change",         //2
+                              "Start_Roche",         //3
+                              "End_Roche",           //4
+                              "Contact",             //5
+                              "Coalescence",         //6
+                              "Common_envelope",     //7
+                              "Giant",               //8
+                              "No_remain",           //9
+                              "Max_time",            //10
+                              "Disrupt",             //11
+                              "Start_Symbiotic",     //12
+                              "End_Symbiotic",       //13
+                              "Blue_straggler"} {}   //14
+    
 
     bool checkParams() {
         assert(z>0.0);
@@ -585,6 +619,13 @@ public:
         if (_input.nsflag.value>0) value4_.mxns = 2.5;
         value4_.bhflag = _input.bhflag.value;
 
+        value5_.beta = _input.beta.value;
+        value5_.xi   = _input.xi.value;
+        value5_.bhwacc = _input.bhwacc.value;
+        value5_.epsnov = _input.epsnov.value;
+        value5_.eddfac = _input.eddfac.value;
+        value5_.gamma  = _input.gamma.value;
+
         flags_.ceflag = _input.ceflag.value;
         flags_.tflag  = _input.tflag.value;
         //flags_.ifflag = _input.ifflag.value;
@@ -609,6 +650,9 @@ public:
         zcnsts_(&z, zpars);
         value3_.idum = (_input.idum.value>0)? -_input.idum.value: _input.idum.value;
 
+        // collision matrix
+        instar_();
+
         if (_print_flag) {
             printconst_();
             std::cout<<"z: "<<z<<" zpars: ";
@@ -629,9 +673,9 @@ public:
     }
 
     //! get merger radius in NB unit
-    double getMergerRadius(StarParameterOut& _out) {
+    double getMergerRadius(StarParameter& _star) {
         // use core radius as merger radius
-        return _out.rc/rscale;
+        return _star.rc/rscale;
     }
 
     //! get evolved Time in NB unit
@@ -654,10 +698,11 @@ public:
         return _out.vkick[3]/vscale;
     }
 
-    //! call SSE evolve1 for single star
+    //! call SSE evolv1 for single star
     /*!
       @param[in,out] _star: star parameter
-      @param[in] _dt_nb: physical time step in Myr to evolve
+      @param[out] _out: output parameter from evolv1
+      @param[in] _dt_nb: physical time step in NB unit to evolve
       \return error flag: 0: success; 1: error
      */
     int evolveStar(StarParameter& _star, StarParameterOut& _out, const double _dt_nb) {
@@ -665,13 +710,106 @@ public:
         double dtp=tphysf*100.0+1000.0;
         _out.dm = _star.mt;
         evolv1_(&_star.kw, &_star.m0, &_star.mt, &_star.r, 
-                &_out.lum, &_out.mc, &_out.rc, &_out.menv, &_out.renv, 
+                &_out.lum, &_star.mc, &_star.rc, &_out.menv, &_out.renv, 
                 &_star.ospin, &_star.epoch, 
                 &_out.tm, &_star.tphys, &tphysf, &dtp, &z, zpars, _out.vkick);
         _out.dm = _star.mt - _out.dm;
         _out.dtmiss = tphysf - _star.tphys;
         if (_star.kw<0) return 1;
         else return 0;
+    }
+
+    //! call BSE evolv2 for a binary
+    /*!
+      @param[in,out] _star1: star parameter of first
+      @param[in,out] _star2: star parameter of second
+      @param[out] _out1: output parameter of first from evolv2
+      @param[out] _out2: output parameter of second from evolv2
+      @param[out] _binary_type: binary type defined in BSE
+      @param[in,out] _period: period of binary in NB unit
+      @param[in,out] _ecc: eccentricity of binary 
+      @param[in] _dt_nb: physical time step in Myr to evolve
+      \return error flag: 0: success; 1: error
+     */
+    int evolveBinary(StarParameter& _star1, StarParameter& _star2, StarParameterOut& _out1, StarParameterOut& _out2, 
+                     double& _period, double& _ecc, int& _binary_type, const double _dt_nb) {
+        double tphys = std::max(_star1.tphys, _star2.tphys);
+        double tphysf = _dt_nb*tscale + tphys;
+        double dtp=tphysf*100.0+1000.0;
+        double period_days = _period*tscale*3.6524e8;
+        // in case two component have different tphys, evolve to the same time first
+        int error_flag = 0 ;
+        _out1.dm = _star1.mt;
+        _out2.dm = _star2.mt;
+
+        if (_star1.tphys<tphys) error_flag = evolveStar(_star1, _out1, tphys);
+        if (error_flag) return error_flag;
+        if (_star2.tphys<tphys) error_flag = evolveStar(_star2, _out2, tphys);
+        if (error_flag) return error_flag;
+        
+        int ikick=0, kw[2];
+        double m0[2],mt[2],r[2],lum[2],mc[2],rc[2],menv[2],renv[2],ospin[2],epoch[2],tm[2],vkick[4];
+        kw[0] = _star1.kw;
+        m0[0] = _star1.m0;
+        mt[0] = _star1.mt;
+        r[0]  = _star1.r;
+        mc[0] = _star1.mc;
+        rc[0] = _star1.rc;
+        ospin[0] = _star1.ospin;
+        epoch[0] = _star1.epoch;
+ 
+        kw[1] = _star2.kw;
+        m0[1] = _star2.m0;
+        mt[1] = _star2.mt;
+        r[1]  = _star2.r;
+        mc[1] = _star2.mc;
+        rc[1] = _star2.rc;
+        ospin[1] = _star2.ospin;
+        epoch[1] = _star2.epoch;
+        
+        evolv2_(kw, m0, mt, r, lum, mc, rc, menv, renv, ospin, epoch, tm, &tphys, &tphysf, &dtp, &z, zpars, &period_days, &_ecc, &_binary_type, &ikick, vkick);
+        _period = period_days/3.6524e8/tscale;
+
+        _star1.kw = kw[0];
+        _star1.m0 = m0[0];
+        _star1.mt = mt[0];
+        _star1.r  = r[0];
+        _star1.mc = mc[0];
+        _star1.rc = rc[0];
+        _star1.ospin  = ospin[0];
+        _star1.epoch  = epoch[0];
+        _star1.tphys  = tphys;
+
+        _star2.kw = kw[1];
+        _star2.m0 = m0[1];
+        _star2.mt = mt[1];
+        _star2.r  = r[1];
+        _star2.mc = mc[1];
+        _star2.rc = rc[1];
+        _star2.ospin  = ospin[1];
+        _star2.epoch  = epoch[1];
+        _star2.tphys  = tphys;
+
+        _out1.lum = lum[0];
+        _out1.menv = menv[0];
+        _out1.renv = renv[0];
+        _out1.tm = tm[0];
+        _out1.dm = _star1.mt - _out1.dm;
+        _out1.dtmiss = tphysf - _star1.tphys;
+
+        _out2.lum = lum[1];
+        _out2.menv = menv[1];
+        _out2.renv = renv[1];
+        _out2.tm = tm[1];
+        _out2.dm = _star2.mt - _out2.dm;
+        _out2.dtmiss = tphysf - _star2.tphys;
+
+        if (ikick==1) for (int k=0; k<4; k++) _out1.vkick[k]=vkick[k];
+        if (ikick==2) for (int k=0; k<4; k++) _out2.vkick[k]=vkick[k];
+
+        if (kw[0]<0||kw[1]<0) return 1; // error case
+
+        return 0;
     }
 
     //! get next time step to check in Myr

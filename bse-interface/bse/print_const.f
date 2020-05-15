@@ -6,11 +6,12 @@
       integer k
 
       write(*,*) '------SSE/BSE common block parameter list: ----------'
-      write(*,*) 'value1: neta:',neta,' bwind:',bwind,' hewind:',hewind,
-     &     ' mxns:',mxns
+      write(*,*) 'value1: neta:',neta,' bwind:',bwind,' hewind:',hewind
       write(*,*) 'value2: alpha:',alpha1,' lambda:',lambda
       write(*,*) 'value3: idum:',idum
-      write(*,*) 'value4: sigma:',sigma,' bhflag:',bhflag
+      write(*,*) 'value4: sigma:',sigma,' mxns:',mxns,' bhflag:',bhflag
+      write(*,*) 'value5: beta:',beta,' xi:',xi,' bhwacc:',acc2,
+     &     ' epsnov:',epsnov,' eddfac:',eddfac,' gamma:',gamma
 *      write(*,*) 'rand3: idum2:',idum2,' iy:',iy,' ir:',ir
       write(*,*) 'flags: ceflag:',ceflag,' tflag:',tflag,
      &     ' ifflag:',ifflag,' nsflag:',nsflag,' wdflag:',wdflag

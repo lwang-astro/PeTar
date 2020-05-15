@@ -650,7 +650,7 @@ public:
             _p.mass = bse_manager.getMass(_p.star);
 
             // set merger check radius to core radius
-            _p.radius = bse_manager.getMergerRadius(output);
+            _p.radius = bse_manager.getMergerRadius(_p.star);
 
             // add velocity change if exist
             double dv[3];
