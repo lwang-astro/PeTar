@@ -4,6 +4,17 @@
 # object files
 *.o
 
+# lib files
+*.a
+*.so
+
 # build
 build/*
 
+config.log
+config.status
+Makefile
+bse-interface/Makefile
+GPATH
+GRTAGS
+GTAGS
