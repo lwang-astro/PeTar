@@ -15,9 +15,9 @@
 *
       REAL*8 neta,bwind,hewind,mxns,alpha1,lambda
       REAL*8 sigma,beta,xi,acc2,epsnov,eddfac,gamma
-      COMMON /VALUE1/ neta,bwind,hewind,mxns
+      COMMON /VALUE1/ neta,bwind,hewind
       COMMON /VALUE2/ alpha1,lambda
-      COMMON /VALUE4/ sigma,bhflag
+      COMMON /VALUE4/ sigma,mxns,bhflag
       COMMON /VALUE5/ beta,xi,acc2,epsnov,eddfac,gamma
       REAL*8 pts1,pts2,pts3
       COMMON /POINTS/ pts1,pts2,pts3

@@ -35,17 +35,17 @@
 *
       integer kw,kwp
       integer ceflag,tflag,ifflag,nsflag,wdflag 
-      integer psflag,kmech,ecflag
+      integer psflag,kmech,ecflag,bhflag
 *
       real*8 mass,aj,mt,tm,tn,tscls(20),lums(10),GB(10),zpars(20)
       real*8 r,lum,mc,rc,menv,renv,k2
       real*8 mch,mlp,tiny
       parameter(mch=1.44d0,mlp=12.d0,tiny=1.0d-14)
-      real*8 neta,bwind,hewind,mxns 
+      real*8 mxns,sigma
       real*8 mass0,mt0,mtc
 * 
       real*8 thook,thg,tbagb,tau,tloop,taul,tauh,tau1,tau2,dtau,texp
-      real*8 lx,ly,dell,alpha,beta
+      real*8 lx,ly,dell,alpha,beta,neta
       real*8 rx,ry,delr,rzams,rtms,gamma,rmin,taumin,rg
       parameter(taumin=5.0d-08)
       real*8 mcmax,mcx,mcy,mcbagb,lambda
@@ -69,7 +69,7 @@
       external mctmsf,mcgbtf,mcgbf,mcheif,mcagbf,lzahbf
       COMMON /FLAGS/ ceflag,tflag,ifflag,nsflag,wdflag
       COMMON /FLAGS2/ psflag,kmech,ecflag
-      COMMON /VALUE1/ neta,bwind,hewind,mxns
+      COMMON /VALUE4/ sigma,mxns,bhflag
 *
 *
 *       ---------------------------------------------------------------------

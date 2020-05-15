@@ -10,7 +10,6 @@ extern "C" {
         double neta;  ///> the Reimers mass-loss coefficent (neta*4x10^-13; 0.5 normally).
         double bwind; ///> the binary enhanced mass loss parameter (inactive for single).
         double hewind; ///> the helium star mass loss factor (1.0 normally). 
-        double mxns;  ///> the maximum NS mass (1.8, nsflag=0; 2.5, nsflag>=1). 
     } value1_;
 
     extern struct{
@@ -24,6 +23,7 @@ extern "C" {
 
     extern struct{
         double sigma; ///> the dispersion in the Maxwellian for the SN kick speed
+        double mxns;  ///> the maximum NS mass (1.8, nsflag=0; 2.5, nsflag>=1). 
         int bhflag;   ///> BH kick 
     } value4_;
 
@@ -458,6 +458,26 @@ public:
                     beta.value = atof(optarg);
                     if(print_flag) beta.print(std::cout);
                     break;
+                case 25:
+                    xi.value = atof(optarg);
+                    if(print_flag) xi.print(std::cout);
+                    break;
+                case 26:
+                    bhwacc.value = atof(optarg);
+                    if(print_flag) bhwacc.print(std::cout);
+                    break;
+                case 27:
+                    epsnov.value = atof(optarg);
+                    if(print_flag) epsnov.print(std::cout);
+                    break;
+                case 28:
+                    eddfac.value = atof(optarg);
+                    if(print_flag) eddfac.print(std::cout);
+                    break;
+                case 29:
+                    gamma.value = atof(optarg);
+                    if(print_flag) gamma.print(std::cout);
+                    break;
                 default:
                     break;
                 }
@@ -491,6 +511,14 @@ public:
                              <<"        --bwind:  [D] "<<bwind<<std::endl
                              <<"        --hewind: [D] "<<hewind<<std::endl
                         //<<"        --mxns:   [D] "<<mxns<<std::endl
+                             <<"        --alpha:  [D] "<<alpha<<std::endl
+                             <<"        --lambda: [D] "<<lambda<<std::endl
+                             <<"        --beta:   [D] "<<beta<<std::endl
+                             <<"        --xi:     [D] "<<xi<<std::endl
+                             <<"        --bhwacc  [D] "<<bhwacc<<std::endl
+                             <<"        --epsnov: [D] "<<epsnov<<std::endl
+                             <<"        --eddfac: [D] "<<eddfac<<std::endl
+                             <<"        --gamma:  [D] "<<gamma<<std::endl
                              <<"        --sigma:  [D] "<<sigma<<std::endl
                              <<"        --ceflag: [I] "<<ceflag<<std::endl
                              <<"        --tflag:  [I] "<<tflag<<std::endl
@@ -548,13 +576,13 @@ public:
         value1_.neta  = _input.neta.value;
         value1_.bwind = _input.bwind.value;
         value1_.hewind= _input.hewind.value;
-        value1_.mxns  = 1.8;
-        if (_input.nsflag.value>0) value1_.mxns = 2.5;
 
         value2_.alpha  = _input.alpha.value;
         value2_.lambda = _input.lambda.value;
         
         value4_.sigma  = _input.sigma.value;
+        value4_.mxns  = 1.8;
+        if (_input.nsflag.value>0) value4_.mxns = 2.5;
         value4_.bhflag = _input.bhflag.value;
 
         flags_.ceflag = _input.ceflag.value;
@@ -588,41 +616,6 @@ public:
             std::cout<<std::endl;
         }
 
-    }
-
-    //! initial SSE/BSE global parameters
-    void initial(const double _z, 
-                 const double _neta, const double _bwind, const double _hewind, 
-                 const double _sigma, 
-                 const int _ceflag, const int _tflag, const int _wdflag, const int _bhflag, const int _nsflag, 
-                 const double _pts1, const double _pts2, const double _pts3, 
-                 const int _idum) {
-
-        // common block
-        value1_.neta  = _neta;
-        value1_.bwind = _bwind;
-        value1_.hewind= _hewind;
-        value1_.mxns  = 1.8;
-        if (_nsflag==1) value1_.mxns = 3.0;
-        
-        value4_.sigma = _sigma;
-        value4_.bhflag = _bhflag;
-
-        flags_.ceflag = _ceflag;
-        flags_.tflag = _tflag;
-        //flags_.ifflag = _ifflag;
-        flags_.wdflag = _wdflag;
-        flags_.nsflag = _nsflag;
-
-        points_.pts1 = _pts1;
-        points_.pts2 = _pts2;
-        points_.pts3 = _pts3;
-
-        // Set parameters which depend on the metallicity 
-        z = _z;
-        zcnsts_(&z, zpars);
-        if (value3_.idum>0) value3_.idum = -_idum;
-        else value3_.idum = _idum;
     }
 
     //! get current mass in NB unit

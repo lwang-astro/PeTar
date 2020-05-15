@@ -184,8 +184,8 @@
       REAL*8 jspin(2),ospin(2),jorb,oorb,jspbru,ospbru
       REAL*8 delet,delet1,dspint(2),djspint(2),djtx(2)
       REAL*8 dtj,djorb,djgr,djmb,djt,djtt,rmin,rdisk
-      REAL*8 neta,bwind,hewind,mxns
-      COMMON /VALUE1/ neta,bwind,hewind,mxns
+      REAL*8 neta,bwind,hewind
+      COMMON /VALUE1/ neta,bwind,hewind
       REAL*8 beta,xi,acc2,epsnov,eddfac,gamma
       COMMON /VALUE5/ beta,xi,acc2,epsnov,eddfac,gamma
       real*8 FBFAC,FBTOT,MCO

@@ -43,7 +43,7 @@ MT_FLAGS += -D STELLAR_EVOLUTION
 ifeq ($(se_mode),bse)
 MT_FLAGS += -D BSE -D BSE_PRINT
 CXXLIBS += -L ./bse-interface -lbse -lgfortran
-LIBFILES+= bse-interface/libbse.a
+LIBFILES+= bse-interface/libbse.a bse-interface/bse_interface.h
 INCLUDE += -I ./bse-interface
 endif
 endif

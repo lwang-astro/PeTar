@@ -113,22 +113,28 @@ int main(int argc, char** argv){
         while (star[i].tphys/bse_manager.tscale<time) {
             double dt = std::max(bse_manager.getTimeStep(star[i]),dtmin);
             dt = std::min(time-bse_manager.getTime(star[i]), dt);
-            //StarParameterOut outi;
-            int error_flag=bse_manager.evolveStar(star[i],output[i],dt);
-            //output[i] = outi;
-            double dv[3];
-            double dvabs = bse_manager.getVelocityChange(dv, output[i]);
-            if (dvabs>0) {
-                std::cout<<"SN kick, i="<<i<<" vkick="<<dvabs<<" ";
+            StarParameterOut outi;
+            int error_flag=bse_manager.evolveStar(star[i],outi,dt);
+            double dv[4];
+            dv[3] = bse_manager.getVelocityChange(dv, outi);
+            if (dv[3]>0) {
+                std::cout<<"SN kick, i="<<i<<" vkick="<<dv[3]<<" ";
                 star[i].print(std::cout);
                 std::cout<<std::endl;
+                output[i] = outi;
+            }
+            else {
+                // backup kick velocity
+                for (int k=0; k<4; k++) dv[k] = output[i].vkick[k];
+                output[i] = outi;
+                for (int k=0; k<4; k++) output[i].vkick[k] = dv[k];
             }
             if (error_flag) {
                 std::cerr<<"Error: i="<<i<<" mass0="<<mass0[i]<<" ";
                 star[i].print(std::cerr);
                 std::cerr<<std::endl;
             }
-            double dt_miss = bse_manager.getDTMiss(output[i]);
+            double dt_miss = bse_manager.getDTMiss(outi);
             if (dt_miss!=0.0&&star[i].kw>=15) break;
         }
     }

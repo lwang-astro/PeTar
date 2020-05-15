@@ -16,12 +16,14 @@
       REAL*8 TSCLS(20),LUMS(10),GB(10),TMS1,TMS2,TMS3,TN
       REAL*8 M01,M02,M03,M1,M2,M3,AGE1,AGE2,AGE3,MC3,MCH
       PARAMETER(MCH=1.44D0)
+
 ****
       REAL*8 ftzacc
       PARAMETER (ftzacc=0.5D0)
 ****
-      REAL*8 NETA,BWIND,HEWIND,MXNS
-      COMMON /VALUE1/ NETA,BWIND,HEWIND,MXNS
+      REAL*8 sigma, mxns
+      INTEGER bhflag
+      COMMON /VALUE4/ sigma, mxns, bhflag
 *
 *
 *       Define global indices with body #I1 being most evolved.

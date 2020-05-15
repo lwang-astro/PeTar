@@ -55,8 +55,8 @@ c-------------------------------------------------------------c
       real*8 mlwind,vrotf
       external mlwind,vrotf
 *      logical iplot,isave
-      REAL*8 neta,bwind,hewind,mxns
-      COMMON /VALUE1/ neta,bwind,hewind,mxns
+      REAL*8 neta,bwind,hewind
+      COMMON /VALUE1/ neta,bwind,hewind
       REAL*8 pts1,pts2,pts3
       COMMON /POINTS/ pts1,pts2,pts3
       real*8 FBFAC,FBTOT,MCO
@@ -233,7 +233,7 @@ c-------------------------------------------------------------c
 *
 * Test for changes in evolution type.
 *
-         if(j.eq.1.or.kw.ne.kwold)then
+         if(kw.ne.kwold)then
 *
 * Force new NS or BH to have a one second period. 
 * 

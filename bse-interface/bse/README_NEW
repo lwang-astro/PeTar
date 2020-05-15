@@ -4,6 +4,11 @@ Modification Log for PeTar
    Thus, COMMON/FBACK/ is removed and additional arguments are added to hrdiag and kick (also change in evolv1.f evolv2.f comenv.f)
 2. Array for saving data COMMON block cannot be used, i.e., scm, spp, bcm, bpp arrays are removed. 
    Direct writing in data file (10) is used instead.
+3. The common block value mxns is moved from /value1/ to /value4/. 
+   The common block /value1/ is removed in hrdiag.f to avoid neta rewritting bug. 
+   Corresponding changes are also made in evolv1/2.f, mix.f
+4. j.eq.1 criterion for call kick in evolve1 is removed to avoid mutiple times call of kick.
+5. The commob block /TSTEPC/ is removed since not used.
 
 ------------------------------------------------------------
 The new standalone SSE/BSE as of 25 December 2018
