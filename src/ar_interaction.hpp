@@ -728,6 +728,14 @@ public:
                     abort();
                 }
 
+                double dt_miss = bse_manager.getDTMiss(out[0]);
+                p1->time_record += dt-dt_miss;
+                p2->time_record = p1->time_record;
+
+                // estimate next time to check 
+                p1->time_interrupt = p1->time_record + std::min(bse_manager.getTimeStep(p1->star), bse_manager.getTimeStep(p2->star));
+                p2->time_interrupt = p1->time_interrupt;
+
                 // record mass change (if loss, negative)
                 p1->dm = bse_manager.getMassLoss(out[0]);
                 p2->dm = bse_manager.getMassLoss(out[1]);
