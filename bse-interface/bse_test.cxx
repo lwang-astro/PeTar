@@ -179,7 +179,8 @@ int main(int argc, char** argv){
                     }
                 }
                 if (error_flag) {
-                    std::cerr<<"Error: i="<<i<<" mass0[IN]="<<bin[i].m1<<" "<<bin[i].m2<<" period[IN]="<<bin[i].period<<" ecc[IN]="<<bin[i].ecc<<std::endl;
+                    std::cerr<<"Error: i="<<i<<" mass0[IN]="<<bin[i].m1<<" "<<bin[i].m2<<" period[IN]="<<bin[i].period<<" ecc[IN]="<<bin[i].ecc
+                             <<std::endl;
                     std::cerr<<"Star 1:";
                     bin[i].star[0].print(std::cerr);
                     std::cerr<<"\nStar 2:";

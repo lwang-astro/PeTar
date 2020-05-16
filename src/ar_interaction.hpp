@@ -629,7 +629,7 @@ public:
 
             // error 
             if (error_flag) {
-                std::cerr<<"SSE/BSE Error: ID="<<_p.id;
+                std::cerr<<"SSE Error: ID="<<_p.id;
                 _p.star.print(std::cerr);
                 std::cerr<<std::endl;
                 abort();
@@ -649,7 +649,7 @@ public:
             // change mass in main data
             _p.mass = bse_manager.getMass(_p.star);
 
-            // set merger check radius to core radius
+            // set merger check radius 
             _p.radius = bse_manager.getMergerRadius(_p.star);
 
             // add velocity change if exist
@@ -681,55 +681,190 @@ public:
     */
     void modifyAndInterruptIter(AR::InterruptBinary<PtclHard>& _bin_interrupt, AR::BinaryTree<PtclHard>& _bin) {
 #ifdef STELLAR_EVOLUTION
+        if (_bin.getMemberN()>2) {
+            for (int k=0; k<2; k++) {
+                if (_bin.isMemberTree(k)) modifyAndInterruptIter(_bin_interrupt, *_bin.getMemberAsTree(k));
 #ifdef BSE
-        // if member is star, evolve single star using SSE
-        for (int k=0; k<2; k++) 
-            if (!_bin.isMemberTree(k)) modifyOneParticle(*_bin.getMember(k), _bin_interrupt.time_now, _bin_interrupt.time_end);
+                // if member is star, evolve single star using SSE
+                else modifyOneParticle(*_bin.getMember(k), _bin_interrupt.time_now, _bin_interrupt.time_end);
 #endif
-
-        if (_bin_interrupt.status==AR::InterruptStatus::none) {
+            }
+        }
+        else {
             auto* p1 = _bin.getLeftMember();
             auto* p2 = _bin.getRightMember();
 
-            auto merge = [&]() {
-                _bin_interrupt.adr = &_bin;
-                _bin_interrupt.status = AR::InterruptStatus::merge;
-                
-                // print data
-                std::cerr<<"Binary Merge: time: "<<_bin_interrupt.time_now<<std::endl;
-                _bin.Binary::printColumnTitle(std::cerr);
-                //PtclHard::printColumnTitle(std::cerr);
-                //PtclHard::printColumnTitle(std::cerr);
-                std::cerr<<std::endl;
-                _bin.Binary::printColumn(std::cerr);
-                //p1->printColumn(std::cerr);
-                //p2->printColumn(std::cerr);
-                std::cerr<<std::endl;
-
-                // new particle data
-                Float mcm = p1->mass + p2->mass;
-                for (int k=0; k<3; k++) {
-                    p1->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
-                    p1->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
+#ifdef BSE
+            double time_check = std::min(p1->time_interrupt, p2->time_interrupt);
+            if (time_check<=_bin_interrupt.time_end) {
+                // first evolve two components to the same starting time
+                if (p1->time_record!=p2->time_record) {
+                    if (p1->time_record<p2->time_record) modifyOneParticle(*p1, _bin_interrupt.time_now, p2->time_record);
+                    else  modifyOneParticle(*p2, _bin_interrupt.time_now, p1->time_record);
                 }
-                p1->setBinaryInterruptState(BinaryInterruptState::none);
-                p2->setBinaryInterruptState(BinaryInterruptState::none);
-                p1->dm = mcm*0.8-p1->mass; // dm is used to correct energy, thus must be correctly set, use += since it may change mass before or later
-                p1->mass = mcm*0.8;
-                p2->dm = -p2->mass; 
-                p2->mass = 0.0;
-                p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
-            };
 
-            if (_bin.getMemberN()==2) {
-                PtclHard *p1,*p2;
-                p1 = _bin.getLeftMember();
-                p2 = _bin.getRightMember();
+                // time_record and time_interrupt have offsets, thus use difference to obtain true dt
+                Float dt = _bin_interrupt.time_end - p1->time_record;
+
+                StarParameterOut out[2];
+                Float drdv, ecc, semi, r;
+                _bin.particleToSemiEcc(semi, ecc, r, drdv, *p1, *p2, gravitational_constant);
+                Float mtot = p1->mass+p2->mass;
+                Float period = _bin.semiToPeriod(semi, mtot, gravitational_constant);
+                int binary_type = 0;
+                int error_flag = bse_manager.evolveBinary(p1->star, p2->star, out[0], out[1], period, ecc, binary_type, dt);
+                
+                // error 
+                if (error_flag) {
+                    std::cerr<<"BSE Error: ID="<<p1->id<<" "<<p2->id<<" binary_type="<<bse_manager.binary_type[binary_type]<<std::endl;
+                    _bin.printColumnTitle(std::cerr);
+                    std::cerr<<std::endl;
+                    _bin.printColumn(std::cerr);
+                    std::cerr<<std::endl;
+                    std::cerr<<"Star 1:";
+                    p1->star.print(std::cerr);
+                    std::cerr<<"\nStar 2:";
+                    p2->star.print(std::cerr);
+                    abort();
+                }
+
+                // record mass change (if loss, negative)
+                p1->dm = bse_manager.getMassLoss(out[0]);
+                p2->dm = bse_manager.getMassLoss(out[1]);
+                // update masses
+                p1->mass = bse_manager.getMass(p1->star);
+                p2->mass = bse_manager.getMass(p2->star);
+
+                // set merger check radius
+                p1->radius = bse_manager.getMergerRadius(p1->star);
+                p2->radius = bse_manager.getMergerRadius(p2->star);
+
+#ifdef BSE_PRINT
+                if (binary_type) {
+                    std::cout<<bse_manager.binary_type[binary_type]
+                             <<" ID="<<p1->id<<" "<<p2->id<<" period="<<_bin.period<<" ecc="<<_bin.ecc
+                             <<std::endl;
+                    std::cout<<"Star 1:";
+                    p1->star.print(std::cout);
+                    std::cout<<"\nStar 2:";
+                    p2->star.print(std::cout);
+                    std::cout<<std::endl;
+                }
+#endif
+
+                // case when SN kick appears
+                bool kick_flag = false;
+                for (int k=0; k<2; k++) {
+                    double dv[4];
+                    auto* pk = _bin.getMember(k);
+                    dv[3] = bse_manager.getVelocityChange(dv,out[k]);
+                    for (int k=0; k<3; k++) pk->vel[k] += dv[k];
+                    if (dv[3]>0) {
+#ifdef BSE_PRINT
+                        std::cout<<"ID="<<pk->id<<" Binary SN kick, vkick="<<dv[3]<<" ";
+                        pk->star.print(std::cout);
+                        std::cout<<std::endl;
+#endif 
+                        kick_flag =true;
+                    }
+                }
+
+                // if mass become zero, set to unused for removing and merger status
+                if (p1->mass==0.0) {
+                    p1->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+                    _bin_interrupt.status = AR::InterruptStatus::merge;
+                    p1->setBinaryInterruptState(BinaryInterruptState::none);
+                    p2->setBinaryInterruptState(BinaryInterruptState::none);
+                }
+                if (p2->mass==0.0) {
+                    p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+                    _bin_interrupt.status = AR::InterruptStatus::merge;
+                    p1->setBinaryInterruptState(BinaryInterruptState::none);
+                    p2->setBinaryInterruptState(BinaryInterruptState::none);
+                }
+
+                if (_bin_interrupt.status != AR::InterruptStatus::merge) {
+                    // case when orbital parameter is modified
+                    if (bse_manager.isMassTransfer(binary_type)&&!kick_flag) {
+                        ASSERT(ecc>=0&&ecc<=1.0); // in mass transfer case disruption is not allown
+                        // obtain full orbital parameters
+                        _bin.calcOrbit(gravitational_constant);
+                        // update new period, ecc
+                        _bin.period = period;
+                        _bin.ecc = ecc;
+                        _bin.m1 = p1->mass;
+                        _bin.m2 = p2->mass;
+                        _bin.calcSemiFromPeriod(gravitational_constant);
+                        // kepler orbit to particles using the same ecc anomaly
+                        _bin.calcParticles(gravitational_constant);
+                    }
+
+                    // in case of disruption
+                    if (!kick_flag&&bse_manager.isDisrupt(binary_type)) {
+#ifdef BSE_PRINT
+                        std::cout<<"ID="<<p1->id<<" "<<p2->id<<" Binary disrupt by tide\n";
+                        std::cout<<"Star 1:";
+                        p1->star.print(std::cout);
+                        std::cout<<"\nStar 2:";
+                        p2->star.print(std::cout);
+                        std::cout<<std::endl;
+#endif
+                        // obtain full orbital parameters
+                        _bin.calcOrbit(gravitational_constant);
+                        // assume energy no change
+                        _bin.semi = -_bin.semi;
+                        _bin.ecc = ecc;
+                        _bin.m1 = p1->mass;
+                        _bin.m2 = p2->mass;
+                        ASSERT(ecc>=1.0);
+                        // kepler orbit to particles using the same ecc anomaly
+                        _bin.calcParticles(gravitational_constant);
+                    }
+                }
+                
+            }
+#endif
+
+            // dynamical merger check
+            if (_bin_interrupt.status==AR::InterruptStatus::none) {
+
+                auto merge = [&]() {
+                    _bin_interrupt.adr = &_bin;
+                    _bin_interrupt.status = AR::InterruptStatus::merge;
+                
+                    // print data
+                    std::cerr<<"Binary Merge: time: "<<_bin_interrupt.time_now<<std::endl;
+                    _bin.Binary::printColumnTitle(std::cerr);
+                    //PtclHard::printColumnTitle(std::cerr);
+                    //PtclHard::printColumnTitle(std::cerr);
+                    std::cerr<<std::endl;
+                    _bin.Binary::printColumn(std::cerr);
+                    //p1->printColumn(std::cerr);
+                    //p2->printColumn(std::cerr);
+                    std::cerr<<std::endl;
+
+                    // new particle data
+                    Float mcm = p1->mass + p2->mass;
+                    for (int k=0; k<3; k++) {
+                        p1->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
+                        p1->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
+                    }
+                    p1->setBinaryInterruptState(BinaryInterruptState::none);
+                    p2->setBinaryInterruptState(BinaryInterruptState::none);
+                    p1->dm = mcm*0.8-p1->mass; // dm is used to correct energy, thus must be correctly set, use += since it may change mass before or later
+                    p1->mass = mcm*0.8;
+                    p2->dm = -p2->mass; 
+                    p2->mass = 0.0;
+                    p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+                };
+                
+                // delayed merger
                 if (p1->getBinaryInterruptState()== BinaryInterruptState::collision && 
                     p2->getBinaryInterruptState()== BinaryInterruptState::collision &&
                     (p1->time_interrupt<_bin_interrupt.time_end || p2->time_interrupt<_bin_interrupt.time_end) &&
                     (p1->getBinaryPairID()==p2->id||p2->getBinaryPairID()==p1->id)) merge();
                 else {
+                    // check merger
                     Float radius = p1->radius + p2->radius;
                     // slowdown case
                     if (_bin.slowdown.getSlowDownFactor()>1.0) {
@@ -760,10 +895,6 @@ public:
                         if (dr2<radius*radius) merge();
                     }
                 }
-            }
-            else {
-                for (int k=0; k<2; k++) 
-                    if (_bin.isMemberTree(k)) modifyAndInterruptIter(_bin_interrupt, *_bin.getMemberAsTree(k));
             }
         }
 #endif

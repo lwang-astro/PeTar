@@ -42,8 +42,8 @@
       real*8 epoch(2),tms(2),tphys,tphysf,dtp,aj
       real*8 rad(2),lum(2),ospin(2)
       real*8 massc(2),radc(2),menv(2),renv(2)
-      real*8 tb,ecc,yearsc,vkick(4)
-      integer btype,ikick
+      real*8 tb,ecc,yearsc,vkick(8)
+      integer btype
       PARAMETER(yearsc=3.1557d+07)
       CHARACTER*8 label(14)
 *
@@ -173,7 +173,7 @@
 * 
       CALL evolv2(kstar,mass0,mass,rad,lum,massc,radc,
      &            menv,renv,ospin,epoch,tms,
-     &            tphys,tphysf,dtp,z,zpars,tb,ecc,btype,ikick,vkick)
+     &            tphys,tphysf,dtp,z,zpars,tb,ecc,btype,vkick)
 *
 ************************************************************************
 ** Output:

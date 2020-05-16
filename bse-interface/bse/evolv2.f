@@ -2,7 +2,7 @@
       SUBROUTINE evolv2(kstar,mass0,mass,rad,lumin,massc,radc,
      &                  menv,renv,ospin,epoch,tms,
      &                  tphys,tphysf,dtp,z,zpars,tb,ecc,
-     &                  btype,ikick,vkick)
+     &                  btype,vkick)
       implicit none
 ***
 *
@@ -170,7 +170,7 @@
       REAL*8 mass0(2),mass(2),massc(2),menv(2),mass00(2),mcxx(2)
       REAL*8 rad(2),rol(2),rol0(2),rdot(2),radc(2),renv(2),radx(2)
       REAL*8 lumin(2),k2str(2),q(2),dms(2),dmr(2),dmt(2)
-      REAL*8 dml,vorb2,vwind2,omv2,ivsqm,lacc,vkick(4)
+      REAL*8 dml,vorb2,vwind2,omv2,ivsqm,lacc,vkick(8)
       REAL*8 sep,dr,tb,dme,tdyn,taum,dm1,dm2,dmchk,qc,dt,pd,rlperi
       REAL*8 m1ce,m2ce,mch,tmsnew,dm22,mew
       PARAMETER(mch=1.44d0)
@@ -179,6 +179,7 @@
       REAL*8 acc1,tiny
       PARAMETER(acc1=3.920659d+08,tiny=1.0d-14)
       REAL*8 ecc,ecc1,tc,tcirc,ttid,ecc2,omecc2,sqome2,sqome3,sqome5
+      REAL*8 ecc_bk
       REAL*8 f1,f2,f3,f4,f5,f,raa2,raa6,eqspin,rg2,tcqr
       REAL*8 k3,mr23yr,twopi
       PARAMETER(k3=0.21d0,mr23yr=0.4311d0)
@@ -422,11 +423,11 @@
 *               bpp(jp,8) = rad(1)/rol(1)
 *               bpp(jp,9) = rad(2)/rol(2)
                if(bsymb)then
-                  btype = 13
+                  btype = 7
 *                  bpp(jp,10) = 13.0
                   esymb = .true.
                else
-                  btype = 12
+                  btype = 6
 *                  bpp(jp,10) = 12.0
                   bsymb = .true.
                endif
@@ -736,13 +737,11 @@
          if(kw.ne.kstar(k).and.kstar(k).le.12.and.
      &      (kw.ge.10.and.kw.le.14))then
             if(sgl)then
-               ikick = k
-               CALL kick(kw,mass(k),mt,0.d0,0.d0,-1.d0,0.d0,vkick,
-     &              fbfac,fbtot,mco,ecs)
+               CALL kick(kw,mass(k),mt,0.d0,0.d0,-1.d0,0.d0,
+     &              vkick(4*(k-1)+1),fbfac,fbtot,mco,ecs)
             else
-               ikick = k
-               CALL kick(kw,mass(k),mt,mass(3-k),ecc,sep,jorb,vkick,
-     &              fbfac,fbtot,mco,ecs)
+               CALL kick(kw,mass(k),mt,mass(3-k),ecc,sep,jorb,
+     &              vkick(4*(k-1)+1),fbfac,fbtot,mco,ecs)
                if(ecc.gt.1.d0)then
                   kstar(k) = kw
                   mass(k) = mt
@@ -826,7 +825,7 @@
 *            bpp(jp,8) = rad(1)/rol(1)
 *            bpp(jp,9) = rad(2)/rol(2)
 *            bpp(jp,10) = 14.0
-            btype = 14
+            btype = 11
          endif
 *
  6    continue
@@ -1287,7 +1286,8 @@
          m2ce = mass(j2)
          CALL comenv(mass0(j1),mass(j1),massc(j1),aj(j1),jspin(j1),
      &               kstar(j1),mass0(j2),mass(j2),massc(j2),aj(j2),
-     &               jspin(j2),kstar(j2),zpars,ecc,sep,jorb,coel)
+     &               jspin(j2),kstar(j2),zpars,ecc,sep,jorb,
+     &               vkick(4*(j1-1)+1),vkick(4*(j2-1)+1),coel)
 *
 *         jp = MIN(80,jp + 1)
 *         bpp(jp,1) = tphys
@@ -1302,7 +1302,7 @@
 *         bpp(jp,8) = rad(1)/rol(1)
 *         bpp(jp,9) = rad(2)/rol(2)
 *         bpp(jp,10) = 7.0
-         btype = 7
+         btype = 8
 *
          epoch(j1) = tphys - aj(j1)
          if(coel)then
@@ -1549,7 +1549,7 @@
 *                  bpp(jp,8) = rad(1)/rol(1)
 *                  bpp(jp,9) = rad(2)/rol(2)
 *                  bpp(jp,10) = 8.0
-                  btype = 8
+                  btype = 9
 *                  if(j1.eq.2)then
 *                     bpp(jp,2) = mt2
 *                     bpp(jp,3) = mass(j1)
@@ -1607,7 +1607,7 @@
 *                  bpp(jp,8) = rad(1)/rol(1)
 *                  bpp(jp,9) = rad(2)/rol(2)
 *                  bpp(jp,10) = 8.0
-                  btype = 8
+                  btype = 9
 *                  if(j1.eq.2)then
 *                     bpp(jp,2) = mt2
 *                     bpp(jp,3) = mass(j1)
@@ -1977,8 +1977,8 @@
          if(kw.ne.kstar(k).and.kstar(k).le.12.and.
      &      (kw.ge.10.and.kw.le.14))then
             dms(k) = mass(k) - mt
-            CALL kick(kw,mass(k),mt,mass(3-k),ecc,sep,jorb,vkick,
-     &           fbfac,fbtot,mco,ecs)
+            CALL kick(kw,mass(k),mt,mass(3-k),ecc,sep,jorb,
+     &           vkick(4*(k-1)+1),fbfac,fbtot,mco,ecs)
             if(ecc.gt.1.d0)then
                kstar(k) = kw
                mass(k) = mt
@@ -2044,7 +2044,7 @@
 *            bpp(jp,8) = rad(1)/rol(1)
 *            bpp(jp,9) = rad(2)/rol(2)
 *            bpp(jp,10) = 14.0
-            btype = 14
+            btype = 11
          endif
 *
  90   continue
@@ -2192,12 +2192,14 @@
       if(kstar(j1).ge.2.and.kstar(j1).le.9.and.kstar(j1).ne.7)then
          CALL comenv(mass0(j1),mass(j1),massc(j1),aj(j1),jspin(j1),
      &               kstar(j1),mass0(j2),mass(j2),massc(j2),aj(j2),
-     &               jspin(j2),kstar(j2),zpars,ecc,sep,jorb,coel)
+     &               jspin(j2),kstar(j2),zpars,ecc,sep,jorb,
+     &               vkick(4*(j1-1)+1),vkick(4*(j2-1)+1),coel)
          com = .true.
       elseif(kstar(j2).ge.2.and.kstar(j2).le.9.and.kstar(j2).ne.7)then
          CALL comenv(mass0(j2),mass(j2),massc(j2),aj(j2),jspin(j2),
      &               kstar(j2),mass0(j1),mass(j1),massc(j1),aj(j1),
-     &               jspin(j1),kstar(j1),zpars,ecc,sep,jorb,coel)
+     &               jspin(j1),kstar(j1),zpars,ecc,sep,jorb,
+     &               vkick(4*(j2-1)+1),vkick(4*(j1-1)+1),coel)
          com = .true.
       else
          CALL mix(mass0,mass,aj,kstar,zpars)
@@ -2218,7 +2220,7 @@
 *         bpp(jp,8) = rrl1
 *         bpp(jp,9) = rrl2
 *         bpp(jp,10) = 7.0
-         btype = 7
+         btype = 8
       endif
       epoch(1) = tphys - aj(1)
       epoch(2) = tphys - aj(2)
@@ -2267,7 +2269,7 @@
 *            bpp(jp,9) = ngtv
             if(coel)then
 *               bpp(jp,10) = 6.0
-               btype = 6
+               btype = 10
             elseif(ecc.gt.1.d0)then
 **
 ** Binary dissolved by a supernova or tides.
@@ -2276,9 +2278,11 @@
 *               bpp(jp,7) = ecc
 *               bpp(jp,9) = ngtv2
 *               bpp(jp,10) = 11.0
-               btype = 11
+               btype = 13
+*     record disrupt ecc
+               ecc_bk = ecc 
             else
-               btype = 9
+               btype = 12
 *               bpp(jp,10) = 9.0
             endif
          endif
@@ -2321,22 +2325,21 @@
          if(coel)then
 *            bpp(jp,9) = ngtv
 *            bpp(jp,10) = 6.0
-            btype =6
+            btype = 10
          elseif(kstar(1).eq.15.and.kstar(2).eq.15)then
 **
 ** Cases of accretion induced supernova or single star supernova.
 ** No remnant is left in either case.
 **
 *            bpp(jp,9) = ngtv2
-*            bpp(jp,10) = 9.0
-            btype = 9
+*            bpp(jp,10) = 11.0
+            btype = 13
          else
 *            bpp(jp,6) = sep
 *            bpp(jp,7) = ecc
 *            bpp(jp,8) = rad(1)/rol(1)
 *            bpp(jp,9) = rad(2)/rol(2)
 *            bpp(jp,10) = 10.0
-*            btype = 10
          endif
       endif
 *
@@ -2408,11 +2411,15 @@
 *      endif
 *
 *      tphysf = tphys
-      if(sgl)then
-         if(ecc.ge.0.d0.and.ecc.le.1.d0) ecc = -1.d0
-         tb = -1.d0
-      endif
+*      if(sgl)then
+*         if(ecc.ge.0.d0.and.ecc.le.1.d0) ecc = -1.d0
+*         tb = -1.d0
+*      endif
+
+*     use backup hyperbolic orbit eccentricity
+      if(btype==13) ecc = ecc_bk
       tb = tb*yeardy
+
 *      if(jp.ge.80)then
 *         WRITE(99,*)' EVOLV2 ARRAY ERROR ',mass1i,mass2i,tbi,ecci
 *         WRITE(*,*)' STOP: EVOLV2 ARRAY ERROR '

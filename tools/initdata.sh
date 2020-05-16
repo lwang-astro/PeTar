@@ -40,7 +40,7 @@ if [[ $seflag != 'no' ]]; then
     elif [[ $seflag == 'bse' ]]; then
 	read -p 'mass scale from NB to Msun (m[Msun] = m[NB]*mscale) (1.0): ' mscale
 	[ -z $mscale ] && mscale=1.0
-	awk -v n=$n -v ig=$igline -v ms=$mscale -v rs=$rscale 'BEGIN{print 0,n,0} {if(NR>ig) print $LINE, 0,0,0,0,0, 1,$1*ms,$1*ms,0.0,0.0,0.0,0.0, 0.0,NR-ig,0,0,0,0,0,0,0,0,0,0}' $fname >$fout
+	awk -v n=$n -v ig=$igline -v ms=$mscale -v rs=$rscale 'BEGIN{print 0,n,0} {if(NR>ig) print $LINE, 0,0,0,0,0, 1,$1*ms,$1*ms,0.0,0.0,0.0,0.0,0.0,0.0, 0.0,NR-ig,0,0,0,0,0,0,0,0,0,0}' $fname >$fout
     else
 	echo 'Error: unknown option for stellar evolution: '$seflag
     fi

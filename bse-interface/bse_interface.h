@@ -70,7 +70,7 @@ extern "C" {
     //! BSE function for evolving one binary
     void evolv2_(int* kw, double* mass, double* mt, double* r, double* lum, double* mc, double* rc, double* menv, double* renv, double* ospin,
                  double* epoch, double* tm, double* tphys, double* tphysf, double* dtp, double* z, double* zpars, 
-                 double* period, double* ecc, int* btype, int* ikick, double* vkick);
+                 double* period, double* ecc, int* btype, double* vkick);
 
     void star_(int* kw, double* mass, double* mt, double* tm, double* tn, double* tscls, double* lums, double* GB, double* zpars);
 
@@ -575,7 +575,7 @@ public:
     double rscale; ///> radius scaling factor from NB to Rsun
     double mscale; ///> mass scaling factor from NB to Msun
     double vscale; ///> velocity scaling factor from NB to km/s
-    const char* binary_type[15]; ///> name of binary type return from BSE evolv2
+    const char* binary_type[14]; ///> name of binary type return from BSE evolv2
 
     BSEManager(): z(0.0), zpars{0}, tscale(0.0), rscale(0.0), mscale(0.0), vscale(0.0),
                   binary_type{"Unset",               //0
@@ -584,15 +584,15 @@ public:
                               "Start_Roche",         //3
                               "End_Roche",           //4
                               "Contact",             //5
-                              "Coalescence",         //6
-                              "Common_envelope",     //7
-                              "Giant",               //8
-                              "No_remain",           //9
-                              "Max_time",            //10
-                              "Disrupt",             //11
-                              "Start_Symbiotic",     //12
-                              "End_Symbiotic",       //13
-                              "Blue_straggler"} {}   //14
+                              "Start_Symbiotic",     //6
+                              "End_Symbiotic",       //7
+                              "Common_envelope",     //8
+                              "Giant",               //9
+                              "Coalescence",         //10
+                              "Blue_straggler",      //11
+                              "No_remain",           //12
+                              "Disrupt"              //13
+                              } {}
     
 
     bool checkParams() {
@@ -602,6 +602,23 @@ public:
         assert(mscale>0.0);
         assert(vscale>0.0);
         return true;
+    }
+
+    bool isMassTransfer(const int _binary_type) {
+        return (_binary_type>=3&&_binary_type<=9);
+    }
+
+    //! notice kick priority is higher than others
+    bool isKick(const int _binary_type) {
+        return (_binary_type==13);
+    }
+
+    bool isMerger(const int _binary_type) {
+        return (_binary_type>=10&&_binary_type<=12);
+    }
+
+    bool isDisrupt(const int _binary_type) {
+        return (_binary_type==14);
     }
 
     //! initial SSE/BSE global parameters
@@ -747,8 +764,10 @@ public:
         if (_star2.tphys<tphys) error_flag = evolveStar(_star2, _out2, tphys);
         if (error_flag) return error_flag;
         
-        int ikick=0, kw[2];
-        double m0[2],mt[2],r[2],lum[2],mc[2],rc[2],menv[2],renv[2],ospin[2],epoch[2],tm[2],vkick[4];
+        int kw[2];
+        double m0[2],mt[2],r[2],lum[2],mc[2],rc[2],menv[2],renv[2],ospin[2],epoch[2],tm[2],vkick[8];
+        for (int k =0; k<8; k++) vkick[k]=0.0;
+
         kw[0] = _star1.kw;
         m0[0] = _star1.m0;
         mt[0] = _star1.mt;
@@ -767,7 +786,7 @@ public:
         ospin[1] = _star2.ospin;
         epoch[1] = _star2.epoch;
         
-        evolv2_(kw, m0, mt, r, lum, mc, rc, menv, renv, ospin, epoch, tm, &tphys, &tphysf, &dtp, &z, zpars, &period_days, &_ecc, &_binary_type, &ikick, vkick);
+        evolv2_(kw, m0, mt, r, lum, mc, rc, menv, renv, ospin, epoch, tm, &tphys, &tphysf, &dtp, &z, zpars, &period_days, &_ecc, &_binary_type, vkick);
         _period = period_days/3.6524e8/tscale;
 
         _star1.kw = kw[0];
@@ -804,8 +823,8 @@ public:
         _out2.dm = _star2.mt - _out2.dm;
         _out2.dtmiss = tphysf - _star2.tphys;
 
-        if (ikick==1) for (int k=0; k<4; k++) _out1.vkick[k]=vkick[k];
-        if (ikick==2) for (int k=0; k<4; k++) _out2.vkick[k]=vkick[k];
+        for (int k=0; k<4; k++) _out1.vkick[k]=vkick[k];
+        for (int k=0; k<4; k++) _out2.vkick[k]=vkick[k+4];
 
         if (kw[0]<0||kw[1]<0) return 1; // error case
 
