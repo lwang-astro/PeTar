@@ -183,9 +183,16 @@ public:
                      data_format  (input_par_store, 1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),
                      write_style  (input_par_store, 1,    "File Writing style: 0, no output; 1. write snapshots, status and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile"),
 #ifdef STELLAR_EVOLUTION
-                     stellar_evolution_option(input_par_store, 0, "modify mass of particles: 0: turn off; 1: check every tree step"),
+#ifdef BSE
+                     stellar_evolution_option(input_par_store, 1, "modify single star: 0: turn off; 1: modify mass and velocity using SSE every Hermite step"),
+                     interrupt_detection_option(input_par_store, 1, "modify orbits of binaries: 0: no modifications (also no stellar evolution); 1: modify the binary orbits using BSE (if '--stellar-evolution 1' is set) and merger checker in AR integrator"),
+#else
+                     stellar_evolution_option(input_par_store, 0, "modify mass of particles: 0: turn off; 1: check every Hermite steps"),
+                     interrupt_detection_option(input_par_store, 0, "modify orbits of AR groups and check interruption: 0: turn off; 1: modify the binary orbits based on detetion criterion; 2. modify and also interrupt the hard drift"),
 #endif
-                     interrupt_detection_option(input_par_store, 0, "modify orbits and check interruption: 0: turn off; 1: modify the binary orbits based on detetion criterion; 2. modify and also interrupt integrations"),
+#else
+                     interrupt_detection_option(input_par_store, 0, "modify orbits of AR groups based on the interruption function: 0: turn off; 1: modify inside AR integration and accumulate energy change; 2. modify and also interrupt the hard drift"),
+#endif
                      fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]"),
                      fname_par(input_par_store, "input.par", "Input parameter file (this option should be used first before any other options)"),
                      fname_inp(input_par_store, "", "Input data file"),
@@ -2493,12 +2500,26 @@ public:
         if (r_out_flag) r_in = r_out * ratio_r_cut;
         // calculate r_out based on virial radius scaled with (N)^(1/3), calculate r_in by ratio_r_cut
         else {
-            r_out = 0.1*G*mass_cm_glb/(std::pow(n_glb,1.0/3.0)) / (3*vel_disp*vel_disp);
-            r_in = r_out * ratio_r_cut;
+            if (vel_disp>0) {
+                r_out = 0.1*G*mass_cm_glb/(std::pow(n_glb,1.0/3.0)) / (3*vel_disp*vel_disp);
+                r_in = r_out * ratio_r_cut;
+            }
+            else if (n_glb==1) {
+                // give two small values, no meaning at all
+                r_out = 1e-30;
+                r_in = r_out*ratio_r_cut;
+                if (print_flag) std::cout<<"In one particle case, changeover radius is set to a small value\n";
+            }
         }
 
         // if tree time step is not defined, calculate tree time step by r_out and velocity dispersion
-        if (dt_soft==0.0) dt_soft = regularTimeStep(0.1*r_out / vel_disp);
+        if (dt_soft==0.0) {
+            if (vel_disp>0) dt_soft = regularTimeStep(0.1*r_out / vel_disp);
+            else if (n_glb==1) {
+                if (print_flag) std::cout<<"In one particle case, tree time step is finishing - starting time\n";
+                dt_soft = input_parameters.time_end.value - stat.time;
+            }
+        }
         else {
             dt_soft = regularTimeStep(dt_soft);
             // if r_out is not defined, adjust r_out to minimum based on tree step
@@ -2608,13 +2629,17 @@ public:
         hard_manager.ar_manager.slowdown_mass_ref = mass_average;
 #endif
         hard_manager.ar_manager.interrupt_detection_option = input_parameters.interrupt_detection_option.value;
+#ifdef STELLAR_EVOLUTION
+        hard_manager.ar_manager.interaction.stellar_evolution_option = input_parameters.stellar_evolution_option.value;
+#endif
 #ifdef BSE
 #ifdef BSE_PRINT
         bool bse_print_flag = print_flag;
 #else
         bool bse_print_flag = false;
 #endif
-        hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters, bse_print_flag);
+        if (input_parameters.stellar_evolution_option.value==1) 
+            hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters, bse_print_flag);
 #endif
 
         // check consistence of paramters

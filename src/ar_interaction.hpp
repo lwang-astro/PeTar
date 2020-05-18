@@ -18,10 +18,15 @@ public:
     typedef H4::ParticleH4<PtclHard> H4Ptcl;
     Float eps_sq; ///> softening parameter
     Float gravitational_constant;
+#ifdef STELLAR_EVOLUTION
+    int stellar_evolution_option;
 #ifdef BSE
     BSEManager bse_manager;
 
-    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), bse_manager() {}
+    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), stellar_evolution_option(1), bse_manager() {}
+#else
+    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), stellar_evolution_option(0) {}
+#endif
 #else
     ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)) {}
 #endif
@@ -33,7 +38,7 @@ public:
         ASSERT(eps_sq>=0.0);
         ASSERT(gravitational_constant>0.0);
 #ifdef BSE
-        ASSERT(bse_manager.checkParams());
+        ASSERT(stellar_evolution_option!=1||(stellar_evolution_option==1&&bse_manager.checkParams()));
 #endif
         return true;
     }        
@@ -41,7 +46,8 @@ public:
     //! print parameters
     void print(std::ostream & _fout) const{
         _fout<<"eps_sq : "<<eps_sq<<std::endl
-             <<"G      : "<<gravitational_constant<<std::endl;
+             <<"G      : "<<gravitational_constant<<std::endl
+             <<"SE_opt : "<<stellar_evolution_option<<std::endl;
     }    
 
     //! (Necessary) calculate inner member acceleration, potential and inverse time transformation function gradient and factor for kick (two-body case)
@@ -616,7 +622,7 @@ public:
 #ifdef BSE
         ASSERT(bse_manager.checkParams());
         // SSE/BSE stellar evolution 
-        if (_p.time_interrupt<=_time_end) {
+        if (_p.time_interrupt<=_time_end&&stellar_evolution_option==1) {
 
             int modify_flag = 1;
 
@@ -686,7 +692,7 @@ public:
                 if (_bin.isMemberTree(k)) modifyAndInterruptIter(_bin_interrupt, *_bin.getMemberAsTree(k));
 #ifdef BSE
                 // if member is star, evolve single star using SSE
-                else modifyOneParticle(*_bin.getMember(k), _bin_interrupt.time_now, _bin_interrupt.time_end);
+                else if (stellar_evolution_option==1) modifyOneParticle(*_bin.getMember(k), _bin_interrupt.time_now, _bin_interrupt.time_end);
 #endif
             }
         }
@@ -696,7 +702,7 @@ public:
 
 #ifdef BSE
             double time_check = std::min(p1->time_interrupt, p2->time_interrupt);
-            if (time_check<=_bin_interrupt.time_end) {
+            if (time_check<=_bin_interrupt.time_end&&stellar_evolution_option==1) {
                 // first evolve two components to the same starting time
                 if (p1->time_record!=p2->time_record) {
                     if (p1->time_record<p2->time_record) modifyOneParticle(*p1, _bin_interrupt.time_now, p2->time_record);
