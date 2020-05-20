@@ -132,7 +132,7 @@ public:
           std::cerr<<"Error: cannot read header, please check your data file header!\n";
           abort();
         }
-        std::cout<<"Number of particles ="<<n_body<<";  Time="<<time<<std::endl;
+        //std::cout<<"Number of particles ="<<n_body<<";  Time="<<time<<std::endl;
         return n_body;
     }
 
@@ -142,7 +142,7 @@ public:
             std::cerr<<"Error: Data reading fails! requiring data number is "<<1<<" bytes, only obtain "<<rcount<<" bytes.\n";
             abort();
         }
-        std::cout<<"Number of particles ="<<n_body<<";  Time="<<time<<std::endl;
+        //std::cout<<"Number of particles ="<<n_body<<";  Time="<<time<<std::endl;
         return n_body;
     }
 

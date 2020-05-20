@@ -54,46 +54,52 @@ int main(int argc, char** argv){
     int opt_used = bse_io.read(argc,argv);
 
     // reset optind
-    optind=1;
     static struct option long_options[] = {{0,0,0,0}};
 
     std::string fbin_name;
 
+    optind=0;
     int option_index;
-    while ((arg_label = getopt_long(argc, argv, "s:e:n:t:d:b:w:h", long_options, &option_index)) != -1)
+    while ((arg_label = getopt_long(argc, argv, "-s:e:n:t:d:b:w:h", long_options, &option_index)) != -1)
         switch (arg_label) {
         case 's':
             m_min = atof(optarg);
             std::cout<<"min mass: "<<m_min<<std::endl;
+            opt_used+=2;
             break;
         case 'e':
             m_max = atof(optarg);
             std::cout<<"max mass: "<<m_max<<std::endl;
+            opt_used+=2;
             break;
         case 'n':
             n = atof(optarg);
             std::cout<<"N: "<<n<<std::endl;
+            opt_used+=2;
             break;
         case 't':
             time = atof(optarg);
             std::cout<<"finish time[Myr]: "<<time<<std::endl;
+            opt_used+=2;
             break;
         case 'w':
             width = atoi(optarg);
             std::cout<<"print width: "<<width<<std::endl;
+            opt_used+=2;
             break;
         case 'd':
             dtmin = atof(optarg);
             std::cout<<"minimum time step "<<dtmin<<std::endl;
+            opt_used+=2;
             break;
         case 'b':
             fbin_name = optarg;
+            opt_used+=2;
             break;
         case 'h':
             printHelp();
             return 0;
         case '?':
-            opt_used--;
             break;
         default:
             break;
@@ -118,11 +124,11 @@ int main(int argc, char** argv){
         }
     }
 
-    // argc and optind are 1 when no input is given
-    opt_used += optind;
-    // read initial mass list
+    // argc is 1 no input is given
+    opt_used++;
     bool read_mass_flag = false;
     if (opt_used<argc) {
+        // read initial mass list
         while (opt_used<argc) 
             mass0.push_back(atof(argv[opt_used++]));
         read_mass_flag = true;

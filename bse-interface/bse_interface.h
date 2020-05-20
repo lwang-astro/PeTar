@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <cassert>
 #include <string>
+#include <getopt.h>
 #include "../src/io.hpp"
 
 extern "C" {
@@ -334,7 +335,7 @@ public:
      */
     int read(int argc, char *argv[], const int opt_used_pre=0) {
         static int sse_flag=-1;
-        static struct option long_options[] = {
+        const struct option long_options[] = {
             {"neta",   required_argument, &sse_flag, 0},  
             {"bwind",  required_argument, &sse_flag, 1},  
             {"hewind", required_argument, &sse_flag, 2},  
@@ -370,26 +371,29 @@ public:
             {0,0,0,0}
         };
 
-        int opt_unknown=0;
+        int opt_used=0;
         int copt;
         int option_index;
         std::string fname_par;
-        optind = 1;
-        while ((copt = getopt_long(argc, argv, "z:p:h", long_options, &option_index)) != -1) 
+        optind = 0;
+        while ((copt = getopt_long(argc, argv, "-z:p:h", long_options, &option_index)) != -1) 
             switch (copt) {
             case 0:
                 switch (sse_flag) {
                 case 0:
                     neta.value = atof(optarg);
                     if(print_flag) neta.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 1:
                     bwind.value = atof(optarg);
                     if(print_flag) bwind.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 2:
                     hewind.value = atof(optarg);
                     if(print_flag) hewind.print(std::cout);
+                    opt_used+=2;
                     break;
                 //case 3:
                 //    mxns.value = atof(optarg);
@@ -398,102 +402,127 @@ public:
                 case 4:
                     sigma.value = atof(optarg);
                     if(print_flag) sigma.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 5:
                     ceflag.value = atof(optarg);
                     if(print_flag) ceflag.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 6:
                     tflag.value = atof(optarg);
                     if(print_flag) tflag.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 8:
                     wdflag.value = atof(optarg);
                     if(print_flag) wdflag.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 9:
                     bhflag.value = atof(optarg);
                     if(print_flag) bhflag.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 10:
                     nsflag.value = atof(optarg);
                     if(print_flag) nsflag.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 11:
                     psflag.value = atof(optarg);
                     if(print_flag) psflag.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 12:
                     kmech.value = atof(optarg);
                     if(print_flag) kmech.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 13:
                     ecflag.value = atof(optarg);
                     if(print_flag) ecflag.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 14:
                     pts1.value = atof(optarg);
                     if(print_flag) pts1.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 15:
                     pts2.value = atof(optarg);
                     if(print_flag) pts2.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 16:
                     pts3.value = atof(optarg);
                     if(print_flag) pts3.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 17:
                     idum.value = atof(optarg);
                     if(print_flag) idum.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 18:
                     tscale.value = atof(optarg);
                     if(print_flag) tscale.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 19:
                     rscale.value = atof(optarg);
                     if(print_flag) rscale.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 20:
                     mscale.value = atof(optarg);
                     if(print_flag) mscale.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 21:
                     vscale.value = atof(optarg);
                     if(print_flag) vscale.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 22:
                     alpha.value = atof(optarg);
                     if(print_flag) alpha.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 23:
                     lambda.value = atof(optarg);
                     if(print_flag) lambda.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 24:
                     beta.value = atof(optarg);
                     if(print_flag) beta.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 25:
                     xi.value = atof(optarg);
                     if(print_flag) xi.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 26:
                     bhwacc.value = atof(optarg);
                     if(print_flag) bhwacc.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 27:
                     epsnov.value = atof(optarg);
                     if(print_flag) epsnov.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 28:
                     eddfac.value = atof(optarg);
                     if(print_flag) eddfac.print(std::cout);
+                    opt_used+=2;
                     break;
                 case 29:
                     gamma.value = atof(optarg);
                     if(print_flag) gamma.print(std::cout);
+                    opt_used+=2;
                     break;
                 default:
                     break;
@@ -502,6 +531,7 @@ public:
             case 'z':
                 z.value = atof(optarg);
                 if(print_flag) z.print(std::cout);
+                opt_used+=2;
                 break;
             case 'p':
                 fname_par = optarg;
@@ -515,6 +545,7 @@ public:
                     input_par_store.readAscii(fpar_in);
                     fclose(fpar_in);
                 }
+                opt_used+=2;
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
                 input_par_store.mpi_broadcast();
                 PS::Comm::barrier();
@@ -557,12 +588,13 @@ public:
                 }
                 return -1;
             case '?':
-                opt_unknown++;
                 break;
             default:
                 break;
             }
-        int opt_used = opt_used_pre + optind-1 - opt_unknown;
+
+        if(print_flag) std::cout<<"----- Finish reading input options of SSE/BSE -----\n";
+
         return opt_used;
     }    
 };

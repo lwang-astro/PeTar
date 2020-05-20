@@ -240,11 +240,11 @@ public:
             {0,0,0,0}
         };
 
-        int opt_unknown=0;
+        int opt_used = opt_used_pre;
         int copt;
         int option_index;
-        optind = 1;
-        while ((copt = getopt_long(argc, argv, "i:at:s:o:r:b:n:G:u:T:f:p:w:h", long_options, &option_index)) != -1) 
+        optind = 0; // reset getopt
+        while ((copt = getopt_long(argc, argv, "-i:at:s:o:r:b:n:G:u:T:f:p:w:h", long_options, &option_index)) != -1) 
             switch (copt) {
             case 0:
                 switch (petar_flag) {
@@ -252,106 +252,127 @@ public:
                 case 0:
                     n_split.value = atoi(optarg);
                     if(print_flag) n_split.print(std::cout);
+                    opt_used += 2;
                     assert(n_split.value>=0);
                     break;
 #endif
                 case 1:
                     search_vel_factor.value = atof(optarg);
                     if(print_flag) search_vel_factor.print(std::cout);
+                    opt_used += 2;
                     assert(search_vel_factor.value>0.0);
                     break;
                 case 2:
                     dt_limit_hard_factor.value = atof(optarg);
                     if(print_flag) dt_limit_hard_factor.print(std::cout);
+                    opt_used += 2;
                     assert(dt_limit_hard_factor.value > 0.0);
                     break;
                 case 3:
                     dt_min_hermite_index.value = atoi(optarg);
                     if(print_flag) dt_min_hermite_index.print(std::cout);
+                    opt_used += 2;
                     assert(dt_min_hermite_index.value > 0);
                     break;
                 case 4:
                     n_group_limit.value = atoi(optarg);
                     if(print_flag) n_group_limit.print(std::cout);
+                    opt_used += 2;
                     assert(n_group_limit.value>0);
                     break;
                 case 5:
                     n_leaf_limit.value = atoi(optarg);
                     if(print_flag) n_leaf_limit.print(std::cout);
+                    opt_used += 2;
                     assert(n_leaf_limit.value>0);
                     break;
                 case 6:
                     n_smp_ave.value = atoi(optarg);
                     if(print_flag) n_smp_ave.print(std::cout);
+                    opt_used += 2;
                     assert(n_smp_ave.value>0.0);
                     break;
                 case 7:
                     e_err_arc.value = atof(optarg);
                     if(print_flag) e_err_arc.print(std::cout);
+                    opt_used += 2;
                     assert(e_err_arc.value > 0.0);
                     break;
                 case 8:
                     eps.value = atof(optarg);
                     if(print_flag) eps.print(std::cout);
+                    opt_used += 2;
                     assert(eps.value>=0.0);
                     break;
                 case 9:
                     sd_factor.value = atof(optarg);
                     if(print_flag) sd_factor.print(std::cout);
+                    opt_used += 2;
                     assert(sd_factor.value>0.0);
                     break;
                 case 10:
                     ratio_r_cut.value = atof(optarg);
                     if(print_flag) ratio_r_cut.print(std::cout);
+                    opt_used += 2;
                     assert(ratio_r_cut.value>0.0);
                     assert(ratio_r_cut.value<1.0);
                     break;
                 case 11:
                     r_bin.value = atof(optarg);
                     if(print_flag) r_bin.print(std::cout);
+                    opt_used += 2;
                     assert(r_bin.value>0.0);
                     break;
                 case 12:
                     search_peri_factor.value = atof(optarg);
                     if(print_flag) search_peri_factor.print(std::cout);
+                    opt_used += 2;
                     assert(search_peri_factor.value>=1.0);
                     break;
                 case 13:
                     eta.value = atof(optarg);
                     if(print_flag) eta.print(std::cout);
+                    opt_used += 2;
                     assert(eta.value>0.0);
                     break;
 #ifdef HARD_CHECK_ENERGY
                 case 14:
                     e_err_hard.value = atof(optarg);
                     if(print_flag) e_err_hard.print(std::cout);
+                    opt_used += 2;
                     break;
 #endif
                 case 15:
                     step_limit_arc.value = atoi(optarg);
                     if(print_flag) step_limit_arc.print(std::cout);
+                    opt_used += 2;
                     break;
                 case 16:
                     print_flag = false;
+                    opt_used ++;
                     break;
                 case 17:
                     n_interrupt_limit.value = atoi(optarg);
                     if(print_flag) n_interrupt_limit.print(std::cout);
+                    opt_used += 2;
                     assert(n_interrupt_limit.value>0);
                     break;
                 case 18:
                     interrupt_detection_option.value = atoi(optarg);
                     if(print_flag) interrupt_detection_option.print(std::cout);
+                    opt_used += 2;
                     break;
                 case 19:
                     n_step_per_orbit.value = atof(optarg);
                     if(print_flag) n_step_per_orbit.print(std::cout);
+                    opt_used += 2;
                     assert(n_step_per_orbit.value>=1.0);
                     break;
 #ifdef STELLAR_EVOLUTION
                 case 20:
                     stellar_evolution_option.value = atoi(optarg);
                     if(print_flag) stellar_evolution_option.print(std::cout);
+                    opt_used += 2;
                     break;
 #endif
                 default:
@@ -362,58 +383,70 @@ public:
                 data_format.value = atoi(optarg);
                 if(print_flag) data_format.print(std::cout);
                 assert(data_format.value>=0&&data_format.value<=3);
+                opt_used += 2;
                 break;
             case 'a':
                 app_flag=true;
+                opt_used ++;
                 break;
             case 't':
                 time_end.value = atof(optarg);
                 if(print_flag) time_end.print(std::cout);
+                opt_used += 2;
                 assert(time_end.value>=0.0);
                 break;
             case 's':
                 dt_soft.value = atof(optarg);
                 if(print_flag) dt_soft.print(std::cout);
+                opt_used += 2;
                 assert(dt_soft.value>0.0);
                 break;
             case 'o':
                 dt_snap.value = atof(optarg);
                 if(print_flag) dt_snap.print(std::cout);
+                opt_used += 2;
                 assert(dt_snap.value>0.0);
                 break;
             case 'r':
                 r_out.value = atof(optarg);
                 if(print_flag) r_out.print(std::cout);
+                opt_used += 2;
                 assert(r_out.value>0.0);
                 break;
             case 'b':
                 n_bin.value = atoi(optarg);
                 if(print_flag) n_bin.print(std::cout);
+                opt_used += 2;
                 assert(n_bin.value>=0);
                 break;
             case 'n':
                 n_glb.value = atol(optarg);
                 if(print_flag) n_glb.print(std::cout);
+                opt_used += 2;
                 assert(n_glb.value>0);
                 break;
             case 'G':
                 gravitational_constant.value = atof(optarg);
                 if(print_flag) gravitational_constant.print(std::cout);
+                opt_used += 2;
                 assert(gravitational_constant.value>0.0);
                 break;
             case 'u':
                 unit_set.value = atoi(optarg);
                 if(print_flag) unit_set.print(std::cout);
+                opt_used += 2;
                 assert(unit_set.value>=0);
                 break;
             case 'T':
                 theta.value = atof(optarg);
                 if(print_flag) theta.print(std::cout);
+                opt_used += 2;
                 assert(theta.value>=0.0);
                 break;
             case 'f':
                 fname_snp.value = optarg;
                 if(print_flag) fname_snp.print(std::cout);
+                opt_used += 2;
                 break;
             case 'p':
                 fname_par.value = optarg;
@@ -427,6 +460,7 @@ public:
                     input_par_store.readAscii(fpar_in);
                     fclose(fpar_in);
                 }
+                opt_used += 2;
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
                 input_par_store.mpi_broadcast();
                 PS::Comm::barrier();
@@ -435,6 +469,7 @@ public:
             case 'w':
                 write_style.value = atoi(optarg);
                 if(print_flag) write_style.print(std::cout);
+                opt_used += 2;
                 break;
             case 'h':
                 if(print_flag){
@@ -501,24 +536,21 @@ public:
                 }
                 return -1;
             case '?':
-                opt_unknown++;
                 break;
             default:
                 break;
             }
 
         // count used options
-        int opt_used = opt_used_pre + optind - opt_unknown;
-
+        opt_used ++;
         if (opt_used<argc) {
             fname_inp.value =argv[argc-1];
             if(print_flag) std::cout<<"Reading data file name: "<<fname_inp.value<<std::endl;
         }
-        else opt_used--;
 
-        if(print_flag) std::cout<<"----- Finish reading input options -----\n";
+        if(print_flag) std::cout<<"----- Finish reading input options of PeTar -----\n";
 
-        return opt_used;
+        return opt_used-1;
     }
 
     //! check paramters
@@ -2139,9 +2171,11 @@ public:
         PS::S64 n_glb = system_soft.getNumberOfParticleGlobal();
         PS::S64 n_loc = system_soft.getNumberOfParticleLocal();
 
-        if(input_parameters.print_flag)
-            std::cout<<"Reading file "<<data_filename<<std::endl
-                     <<"N_tot = "<<n_glb<<"\nN_loc = "<<n_loc<<std::endl;
+        if(input_parameters.print_flag) {
+            std::cout<<"----- Reading file: "<<data_filename<<" -----"<<std::endl
+                     <<"Number of particles = "<<n_glb<<std::endl
+                     <<"Time = "<<file_header.time<<std::endl;
+        }
 
         stat.time = file_header.time;
         stat.n_real_glb = stat.n_all_glb = n_glb;
@@ -2401,10 +2435,10 @@ public:
             bse_parameters.vscale.value = 0.977813107686401; // pc/Myr -> km/s
 #endif
             if(print_flag) {
-                std::cout<<"Unit set 1: Msun, pc, Myr\n"
+                std::cout<<"----- Unit set 1: Msun, pc, Myr -----\n"
                          <<"gravitational_constant = "<<input_parameters.gravitational_constant.value<<" pc^3/(Msun*Myr^2)\n";
 #ifdef BSE
-                std::cout<<"BSE scaling: \n"
+                std::cout<<"----- BSE scaling ----- \n"
                          <<" tscale = "<<bse_parameters.tscale.value<<" Myr/Myr\n"
                          <<" mscale = "<<bse_parameters.mscale.value<<" Msun/Msun\n"
                          <<" rscale = "<<bse_parameters.rscale.value<<" Rsun/pc\n"
@@ -2663,6 +2697,7 @@ public:
         time_kick = stat.time;
 
         if(write_style>0&&my_rank==0) {
+            if (print_flag) std::cout<<"-----  Dump parameter files -----"<<std::endl;
             // save initial parameters
             std::string& fname_par = input_parameters.fname_par.value;
             if (print_flag) std::cout<<"Save input parameters to file "<<fname_par<<std::endl;
@@ -2699,6 +2734,8 @@ public:
 
         // initial tree step manager
         dt_manager.setKDKMode();
+
+        if (print_flag) std::cout<<"-----  Finish parameter initialization -----"<<std::endl;
 
         initial_parameters_flag = true;
     }

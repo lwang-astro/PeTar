@@ -1048,7 +1048,7 @@ public:
         std::cerr<<"Hard Energy: "
                  <<"  Ekin: "<<ekin
                  <<"  Ekin_SD: "<<ekin_sd
-                 <<"  Epot: "<<epot_sd
+                 <<"  Epot: "<<epot
                  <<"  Epot_SD: "<<epot_sd
                  <<"  dE: "<<energy.de
                  <<"  dE_change: "<<energy.de_change_cum

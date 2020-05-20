@@ -5,7 +5,7 @@
       INCLUDE 'const_bse.h'
       integer k
 
-      write(*,*) '------SSE/BSE common block parameter list: ----------'
+      write(*,*) '----- SSE/BSE common block parameter list: -----'
       write(*,*) 'value1: neta:',neta,' bwind:',bwind,' hewind:',hewind
       write(*,*) 'value2: alpha:',alpha1,' lambda:',lambda
       write(*,*) 'value3: idum:',idum
