@@ -4,7 +4,7 @@ BSE_PATH=bse
 FC=@FC@
 
 #FFLAGS = -O2 -Wall -finit-real=nan 
-CXXFLAGS += @OPTFLAGS@
+CXXFLAGS += @OPTFLAGS@ @OPENMP_CXXFLAGS@
 FFLAGS += @FCFLAGS@
 #FFLIBS += @FLIBS@
 #FFLAGS= -g -O0 -Wall -finit-real=nan -fbounds-check

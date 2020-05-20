@@ -150,15 +150,15 @@ struct StarParameter{
       @param[in] _width: print width (defaulted 20)
      */
     static void printColumnTitle(std::ostream & _fout, const int _width=20) {
-        _fout<<std::setw(_width)<<"star_type"
-             <<std::setw(_width)<<"star_mass0[Msun]"
-             <<std::setw(_width)<<"star_mass[Msun]"
-             <<std::setw(_width)<<"star_radius[Rsun]"
-             <<std::setw(_width)<<"star_mcore[Msun]"
-             <<std::setw(_width)<<"star_rcore[Rsun]"
-             <<std::setw(_width)<<"star_spin"
-             <<std::setw(_width)<<"star_epoch[Myr]"
-             <<std::setw(_width)<<"star_time[Myr]";
+        _fout<<std::setw(_width)<<"s.type"
+             <<std::setw(_width)<<"s.mass0[M*]"
+             <<std::setw(_width)<<"s.mass[M*]"
+             <<std::setw(_width)<<"s.rad[R*]"
+             <<std::setw(_width)<<"s.mcore[M*]"
+             <<std::setw(_width)<<"s.rcore[R*]"
+             <<std::setw(_width)<<"s.spin"
+             <<std::setw(_width)<<"s.epoch[Myr]"
+             <<std::setw(_width)<<"s.time[Myr]";
     }    
 
     //! print data of class members using column style
@@ -226,15 +226,15 @@ struct StarParameterOut{
       @param[in] _width: print width (defaulted 20)
      */
     static void printColumnTitle(std::ostream & _fout, const int _width=20) {
-        _fout<<std::setw(_width)<<"luminosity"
-             <<std::setw(_width)<<"mass_CE[Msun]"
-             <<std::setw(_width)<<"radius_CE[Rsun]"
-             <<std::setw(_width)<<"time_MS[Myr]"
-             <<std::setw(_width)<<"vkick.x[km/s]"
-             <<std::setw(_width)<<"vkick.y[km/s]"
-             <<std::setw(_width)<<"vkick.z[km/s]"
-             <<std::setw(_width)<<"vkick[km/s]"
-             <<std::setw(_width)<<"mass_loss[Msun]";
+        _fout<<std::setw(_width)<<"lum(L*)"
+             <<std::setw(_width)<<"m_CE[M*]"
+             <<std::setw(_width)<<"r_CE[R*]"
+             <<std::setw(_width)<<"t_MS[Myr]"
+             <<std::setw(_width)<<"vk.x[km/s]"
+             <<std::setw(_width)<<"vk.y[km/s]"
+             <<std::setw(_width)<<"vk.z[km/s]"
+             <<std::setw(_width)<<"vk[km/s]"
+             <<std::setw(_width)<<"m_loss[M*]";
     }
     
     //! print data of class members using column style

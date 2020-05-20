@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <getopt.h>
 #include <cmath>
 #include <vector>
@@ -26,13 +27,15 @@ struct BinaryBase{
 int main(int argc, char** argv){
 
     int arg_label;
-    int width=20;
+    int width=13;
     int n=5000;
     double m_min=0.08, m_max=150.0;
     double time=100.0;
     double dtmin=1.0;
     std::vector<double> mass0;
     std::vector<BinaryBase> bin;
+    std::string fprint_name;
+    std::string fbin_name;
 
     auto printHelp= [&]() {
         std::cout<<"BSE_test [options] [initial mass of stars, can be multiple values]\n"
@@ -45,6 +48,7 @@ int main(int argc, char** argv){
                  <<"    -d [D]: minimum time step ("<<dtmin<<")[Myr]\n"
                  <<"    -b [S]: a file of binary table: First line: number of binary; After: m1, m2, period, ecc per line\n"
                  <<"    -w [I]: print column width ("<<width<<")\n"
+                 <<"    -o [S]: a file to output data every step\n"
                  <<"    -h    : help\n";
     };
 
@@ -56,11 +60,9 @@ int main(int argc, char** argv){
     // reset optind
     static struct option long_options[] = {{0,0,0,0}};
 
-    std::string fbin_name;
-
     optind=0;
     int option_index;
-    while ((arg_label = getopt_long(argc, argv, "-s:e:n:t:d:b:w:h", long_options, &option_index)) != -1)
+    while ((arg_label = getopt_long(argc, argv, "-s:e:n:t:d:b:w:o:h", long_options, &option_index)) != -1)
         switch (arg_label) {
         case 's':
             m_min = atof(optarg);
@@ -94,6 +96,12 @@ int main(int argc, char** argv){
             break;
         case 'b':
             fbin_name = optarg;
+            std::cout<<"Binary data file "<<fbin_name<<std::endl;
+            opt_used+=2;
+            break;
+        case 'o':
+            fprint_name = optarg;
+            std::cout<<"Output data file "<<fprint_name<<std::endl;
             opt_used+=2;
             break;
         case 'h':
@@ -140,6 +148,44 @@ int main(int argc, char** argv){
 
     assert(bse_manager.checkParams());
 
+    auto printBinaryTitle=[&](std::ostream & _fout) {
+        _fout<<std::setw(width)<<"mass0_1[M*]"
+             <<std::setw(width)<<"mass0_2[M*]"
+             <<std::setw(width)<<"P[days]"
+             <<std::setw(width)<<"ecc";
+        StarParameter::printColumnTitle(_fout, width);
+        StarParameterOut::printColumnTitle(_fout, width);
+        StarParameter::printColumnTitle(_fout, width);
+        StarParameterOut::printColumnTitle(_fout, width);
+        _fout<<std::endl;
+    };
+
+    auto printBinary=[&](std::ostream & _fout, BinaryBase& _bin){
+        _fout<<std::setw(width)<<_bin.m1*bse_manager.mscale;
+        _fout<<std::setw(width)<<_bin.m2*bse_manager.mscale;
+        _fout<<std::setw(width)<<_bin.period*bse_manager.mscale*3.6524e8;
+        _fout<<std::setw(width)<<_bin.ecc;
+        for (int k=0; k<2; k++) {
+            _bin.star[k].printColumn(_fout, width);
+            _bin.out[k].printColumn(_fout, width);
+        }
+        _fout<<std::endl;
+    };
+
+    auto printSingleTitle=[&](std::ostream & _fout) {
+        _fout<<std::setw(width)<<"Mass_init[Msun]";
+        StarParameter::printColumnTitle(_fout, width);
+        StarParameterOut::printColumnTitle(_fout, width);
+        _fout<<std::endl;
+    };
+
+    auto printSingle=[&](std::ostream & _fout, double& _mass0, StarParameter& _star, StarParameterOut& _out) {
+        _fout<<std::setw(width)<<_mass0*bse_manager.mscale;
+        _star.printColumn(_fout, width);
+        _out.printColumn(_fout, width);
+        _fout<<std::endl;
+    };
+
     // first check whether binary exist
     if (bin.size()>0) {
         int nbin = bin.size();
@@ -150,6 +196,16 @@ int main(int argc, char** argv){
             bin[i].star[1].initial(bin[i].m2*bse_manager.mscale);
             bin[i].tphys = 0.0;
             bin[i].binary_type = 0;
+
+            // output file
+            std::ofstream fout;
+            bool print_flag=false;
+            if (fprint_name!="") {
+                std::string fi = fprint_name+std::string(".b.")+std::to_string(i);
+                fout.open(fi.c_str(),std::ofstream::out);
+                printBinaryTitle(fout);
+                print_flag = true;
+            }
 
             bool kick_print_flag[2]={false,false};
             // evolve
@@ -195,31 +251,15 @@ int main(int argc, char** argv){
                     std::cerr<<std::endl;
                 }
                 double dt_miss = bse_manager.getDTMiss(bin[i].out[0]);
+
+                if (print_flag) printBinary(fout,bin[i]);
                 if (dt_miss!=0.0&&bin[i].star[0].kw>=15&&bin[i].star[1].kw>=15) break;
             }
+            fout.close();
         }
 
-        std::cout<<std::setw(width)<<"Mass_init1[Msun]"
-                 <<std::setw(width)<<"Mass_init2[Msun]"
-                 <<std::setw(width)<<"Period[days]"
-                 <<std::setw(width)<<"Eccentricty";
-        StarParameter::printColumnTitle(std::cout, width);
-        StarParameterOut::printColumnTitle(std::cout, width);
-        StarParameter::printColumnTitle(std::cout, width);
-        StarParameterOut::printColumnTitle(std::cout, width);
-        std::cout<<std::endl;
-
-        for (int i=0; i<nbin; i++) {
-            std::cout<<std::setw(width)<<bin[i].m1*bse_manager.mscale;
-            std::cout<<std::setw(width)<<bin[i].m2*bse_manager.mscale;
-            std::cout<<std::setw(width)<<bin[i].period*bse_manager.mscale*3.6524e8;
-            std::cout<<std::setw(width)<<bin[i].ecc;
-            for (int k=0; k<2; k++) {
-                bin[i].star[k].printColumn(std::cout, width);
-                bin[i].out[k].printColumn(std::cout, width);
-            }
-            std::cout<<std::endl;
-        }
+        printBinaryTitle(std::cout);
+        for (int i=0; i<nbin; i++) printBinary(std::cout, bin[i]);
     }
 
     // if no mass is read, use a mass range
@@ -244,6 +284,16 @@ int main(int argc, char** argv){
 
 #pragma omp parallel for schedule(dynamic)
         for (int i=0; i<n; i++) {
+            // output file
+            std::ofstream fout;
+            bool print_flag=false;
+            if (fprint_name!="") {
+                std::string fi = fprint_name+std::string(".s.")+std::to_string(i);
+                fout.open(fi.c_str(),std::ofstream::out);
+                printSingleTitle(fout);
+                print_flag = true;
+            }
+
             //int error_flag = bse_manager.evolveStar(star[i],output[i],time);
             bool kick_print_flag=false;
             while (bse_manager.getTime(star[i])<time) {
@@ -264,20 +314,15 @@ int main(int argc, char** argv){
                     std::cerr<<std::endl;
                 }
                 double dt_miss = bse_manager.getDTMiss(output[i]);
+                if (print_flag) printSingle(fout, mass0[i], star[i], output[i]);
                 if (dt_miss!=0.0&&star[i].kw>=15) break;
             }
+            fout.close();
         }
 
-        std::cout<<std::setw(width)<<"Mass_init[Msun]";
-        StarParameter::printColumnTitle(std::cout, width);
-        StarParameterOut::printColumnTitle(std::cout, width);
-        std::cout<<std::endl;
-
+        printSingleTitle(std::cout);
         for (int i=0; i<n; i++) {
-            std::cout<<std::setw(width)<<mass0[i]*bse_manager.mscale;
-            star[i].printColumn(std::cout, width);
-            output[i].printColumn(std::cout, width);
-            std::cout<<std::endl;
+            printSingle(std::cout, mass0[i], star[i], output[i]);
         }
     }
 
