@@ -636,6 +636,13 @@ public:
         return true;
     }
 
+    //! print reference to cite
+    static void printReference(std::ostream & fout, const int offset=4) {
+        for (int i=0; i<offset; i++) fout<<" ";
+        fout<<"SSE/BSE: Banerjee S., Belczynski K., Fryer C.~L., Berczik P., Hurley J.~R., Spurzem R., Wang L., 2019, A&A, in press"
+            <<std::endl;
+    }
+    
     bool isMassTransfer(const int _binary_type) {
         return (_binary_type>=3&&_binary_type<=9);
     }

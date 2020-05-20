@@ -2042,6 +2042,24 @@ public:
         initial_fdps_flag = true;
     }
 
+    //! print reference to cite
+    void printReference(std::ostream & fout) const{
+        fout<<"============== PeTar ================\n"
+            <<" Online document: (preparing)\n"
+            <<" GitHub page: https://github.com/lwang-astro/PeTar\n"
+            <<" License: MIT\n"
+            <<" Please cite the following papers when you use PeTar for any publications\n"
+            <<"    FDPS: see above FPDS Logo message\n";
+        AR::printReference(fout);
+#ifdef BSE
+        BSEManager::printReference(fout);
+#endif
+        fout<<" Copyright (C) 2017\n"
+            <<"    Long Wang, Masaki Iwasawa, Keigo Nitadori, Junichiro Makino and many others\n";
+        fout<<"====================================="
+            <<std::endl;
+    }
+
     //! reading input parameters using getopt method
     /*! 
       @param[in] argc: number of options
@@ -2049,6 +2067,9 @@ public:
       \return -1 if help is used
      */
     int readParameters(int argc, char *argv[]) {
+        // print reference
+        printReference(std::cerr);
+
         //assert(initial_fdps_flag);
         assert(!read_parameters_flag);
         // reading parameters
@@ -2064,7 +2085,13 @@ public:
 #endif
 
         // help case, return directly
-        if (read_flag==-1) return read_flag;
+        if (read_flag==-1) {
+            // avoid segmentation fault due to FDPS clear function bug
+            tree_nb.initialize(input_parameters.n_glb.value, input_parameters.theta.value, input_parameters.n_leaf_limit.value, input_parameters.n_group_limit.value);
+            tree_soft.initialize(input_parameters.n_glb.value, input_parameters.theta.value, input_parameters.n_leaf_limit.value, input_parameters.n_group_limit.value);
+
+            return read_flag;
+        }
 
         bool print_flag = input_parameters.print_flag;
         int write_style = input_parameters.write_style.value;
