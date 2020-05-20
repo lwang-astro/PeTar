@@ -684,17 +684,36 @@ public:
     /*! check the inner left binary whether their separation is smaller than particle radius sum and become close, if true, set one component stauts to merger with cm mass and the other unused with zero mass. Return the binary tree address 
       @param[in] _bin_interrupt: interrupt binary information: adr: binary tree address; time_now: current physical time; time_end: integration finishing time; status: interrupt status: change, merge,none
       @param[in] _bin: binarytree to check iteratively
+      \return 0: no modification; >0: modified
     */
-    void modifyAndInterruptIter(AR::InterruptBinary<PtclHard>& _bin_interrupt, AR::BinaryTree<PtclHard>& _bin) {
+    int modifyAndInterruptIter(AR::InterruptBinary<PtclHard>& _bin_interrupt, AR::BinaryTree<PtclHard>& _bin) {
+        int modify_return = 0;
 #ifdef STELLAR_EVOLUTION
         if (_bin.getMemberN()>2) {
+            int modify_count=0;
             for (int k=0; k<2; k++) {
-                if (_bin.isMemberTree(k)) modifyAndInterruptIter(_bin_interrupt, *_bin.getMemberAsTree(k));
+                if (_bin.isMemberTree(k)) {
+                    int modify_flag = modifyAndInterruptIter(_bin_interrupt, *_bin.getMemberAsTree(k));
+                    if (modify_flag) modify_count++;
+                }
 #ifdef BSE
                 // if member is star, evolve single star using SSE
-                else if (stellar_evolution_option==1) modifyOneParticle(*_bin.getMember(k), _bin_interrupt.time_now, _bin_interrupt.time_end);
+                else if (stellar_evolution_option==1) {
+                    int modify_flag = modifyOneParticle(*_bin.getMember(k), _bin_interrupt.time_now, _bin_interrupt.time_end);
+                    if (modify_flag) {
+                        modify_count++;
+                        // single case, root binary tree is recored
+                        _bin_interrupt.adr = &_bin;
+                        // if status not set, set to change
+                        if (_bin_interrupt.status == AR::InterruptStatus::none) 
+                            _bin_interrupt.status = AR::InterruptStatus::change;
+                    }
+                }
 #endif
             }
+            // in case of Tree-Tree pair, ensure to record the root binary tree to include all changed members
+            if (modify_count==2) _bin_interrupt.adr = &_bin;
+            modify_return = modify_count;
         }
         else {
             auto* p1 = _bin.getLeftMember();
@@ -703,6 +722,14 @@ public:
 #ifdef BSE
             double time_check = std::min(p1->time_interrupt, p2->time_interrupt);
             if (time_check<=_bin_interrupt.time_end&&stellar_evolution_option==1) {
+                // record address of modified binary
+                _bin_interrupt.adr = &_bin;
+                // if status not set, set to change
+                if (_bin_interrupt.status == AR::InterruptStatus::none) 
+                    _bin_interrupt.status = AR::InterruptStatus::change;
+                // set return flag >0
+                modify_return = 1;
+
                 // first evolve two components to the same starting time
                 if (p1->time_record!=p2->time_record) {
                     if (p1->time_record<p2->time_record) modifyOneParticle(*p1, _bin_interrupt.time_now, p2->time_record);
@@ -840,9 +867,10 @@ public:
 #endif
 
             // dynamical merger check
-            if (_bin_interrupt.status==AR::InterruptStatus::none) {
+            if (_bin_interrupt.status!=AR::InterruptStatus::merge) {
 
                 auto merge = [&]() {
+                    modify_return = 1;
                     _bin_interrupt.adr = &_bin;
                     _bin_interrupt.status = AR::InterruptStatus::merge;
                 
@@ -912,6 +940,7 @@ public:
             }
         }
 #endif
+        return modify_return;
     }
 
 #ifndef AR_TTL
