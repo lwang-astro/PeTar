@@ -87,12 +87,21 @@ public:
     }
 
 #ifdef STELLAR_EVOLUTION
+#ifdef BSE
     //! constructor 
     ParticleBase(const PS::F64 _mass, const PS::F64vec & _pos, const PS::F64vec & _vel,
                  const PS::F64 _radius, const PS::F64 _dm, 
                  const PS::F64 _time_record, const PS::F64 _time_interrupt, const PS::S64 _binary_state, const StarParameter& _star): 
         mass(_mass), pos(_pos), vel(_vel), radius(_radius), dm(_dm), 
         time_record(_time_record), time_interrupt(_time_interrupt), binary_state(_binary_state), star(_star) {}
+#else
+    //! constructor 
+    ParticleBase(const PS::F64 _mass, const PS::F64vec & _pos, const PS::F64vec & _vel,
+                 const PS::F64 _radius, const PS::F64 _dm, 
+                 const PS::F64 _time_record, const PS::F64 _time_interrupt, const PS::S64 _binary_state):
+        mass(_mass), pos(_pos), vel(_vel), radius(_radius), dm(_dm), 
+        time_record(_time_record), time_interrupt(_time_interrupt), binary_state(_binary_state) {}
+#endif
 #endif
 
 #ifdef STELLAR_EVOLUTION
@@ -105,7 +114,9 @@ public:
                 this->pos.x, this->pos.y, this->pos.z,  
                 this->vel.x, this->vel.y, this->vel.z,
                 this->radius, this->dm, this->time_record, this->time_interrupt, this->binary_state);
+#ifdef BSE
         star.writeAscii(fp);
+#endif
     }
 
     //! read class data with ASCII format
@@ -121,7 +132,9 @@ public:
             std::cerr<<"Error: Data reading fails! requiring data number is 12, only obtain "<<rcount<<".\n";
             abort();
         }
+#ifdef BSE
         star.readAscii(fp);
+#endif
     }
 #else
     //! write class data with ASCII format
