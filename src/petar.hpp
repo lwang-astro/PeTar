@@ -1455,11 +1455,13 @@ public:
     bool checkTimeConsistence() {
         assert(abs(time_kick-stat.time)<1e-13);
         time_kick = stat.time; // escape the problem of round-off error
-        assert(stat.time == system_hard_one_cluster.getTimeOrigin());
-        assert(stat.time == system_hard_isolated.getTimeOrigin());
+        if (stat.n_real_glb>1) {
+            assert(stat.time == system_hard_one_cluster.getTimeOrigin());
+            assert(stat.time == system_hard_isolated.getTimeOrigin());
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-        assert(stat.time == system_hard_connected.getTimeOrigin());
+            assert(stat.time == system_hard_connected.getTimeOrigin());
 #endif
+        }
         return true;
     }
     
@@ -2585,8 +2587,15 @@ public:
             dt_soft = regularTimeStep(dt_soft);
             // if r_out is not defined, adjust r_out to minimum based on tree step
             if (!r_out_flag) {
-                r_out = 10.0*dt_soft*vel_disp;
-                r_in = r_out * ratio_r_cut;
+                if (vel_disp>0) {
+                    r_out = 10.0*dt_soft*vel_disp;
+                    r_in = r_out * ratio_r_cut;
+                }
+                else {
+                    r_out = 1e-30;
+                    r_in = r_out*ratio_r_cut;
+                    if (print_flag) std::cout<<"In one particle case, changeover radius is set to a small value\n";
+                }
             }
         }
 
@@ -2774,6 +2783,25 @@ public:
 
         assert(checkTimeConsistence());
 
+        // one particle case
+        if (stat.n_real_glb==1) {
+            Ptcl::group_data_mode = GroupDataMode::artificial;
+
+            // initial status and energy
+            updateStatus(true);
+
+            // output initial data
+            file_header.nfile--; // avoid repeating files
+            output();
+
+#ifdef PROFILE
+            clearProfile();
+#endif
+            initial_step_flag = true;
+
+            return;
+        }
+
         // domain decomposition
         domainDecompose();
 
@@ -2842,6 +2870,88 @@ public:
         initial_step_flag = true;
     }
 
+    //! integrate one particle with modification function
+    PS::S32 integrateOneToTime(const PS::F64 _time_break=0.0) {
+        // ensure it is initialized
+        assert(initial_step_flag);
+
+        assert(stat.n_real_glb==1);
+
+        // check time break
+        PS::F64 time_break = _time_break==0.0? input_parameters.time_end.value: std::min(_time_break,input_parameters.time_end.value);
+        if (stat.time>=time_break) return 0;
+
+        PS::F64 dt = input_parameters.dt_soft.value;
+        PS::F64 dt_output = input_parameters.dt_snap.value;
+        bool start_flag=true;
+        while (stat.time <= time_break) {
+#ifdef PROFILE
+            profile.total.start();
+            profile.hard_single.start();
+#endif
+            if (stat.n_real_loc==1) { 
+                assert(system_soft.getNumberOfParticleLocal()==1);
+                auto& p = system_soft[0];
+                p.pos + p.vel * dt;
+
+#ifdef STELLAR_EVOLUTION
+                PS::F64 mbk = p.mass;
+                PS::F64vec vbk = p.vel; //back up velocity in case of change
+                int modify_flag = hard_manager.ar_manager.interaction.modifyOneParticle(p, 0.0, dt);
+                if (modify_flag) {
+                    auto& v = p.vel;
+                    PS::F64 de_kin = 0.5*(p.mass*(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]) - mbk*(vbk[0]*vbk[0]+vbk[1]*vbk[1]+vbk[2]*vbk[2]));
+                    stat.energy.de_sd_change_cum += de_kin;
+                    stat.energy.de_sd_change_modify_single += de_kin;
+                    stat.energy.de_change_cum += de_kin;
+                    stat.energy.de_change_modify_single += de_kin;
+                    stat.energy.etot_ref += de_kin;
+                    stat.energy.etot_sd_ref += de_kin;
+                }
+                // shift time interrupt in order to get consistent time for stellar evolution in the next drift
+                p.time_record    -= dt;
+                p.time_interrupt -= dt;
+#endif
+            }
+
+            stat.time += dt;
+            time_kick = stat.time;
+
+#ifdef PROFILE
+            profile.hard_single.barrier();
+            PS::Comm::barrier();
+            profile.hard_single.end();
+#endif
+            // output 
+            if (!start_flag&&fmod(stat.time, dt_output) == 0.0) {
+                updateStatus(false);
+                output();
+#ifdef PROFILE
+                // profile
+                profile.total.barrier();
+                PS::Comm::barrier();
+                profile.total.end();
+
+                printProfile();
+                clearProfile();
+
+                PS::Comm::barrier();
+                profile.total.start();
+#endif
+            }
+#ifdef PROFILE
+            profile.total.barrier();
+            PS::Comm::barrier();
+            profile.total.end();
+
+            calcProfile();
+#endif
+            start_flag = false;
+        }
+
+        return 0;
+    }
+
     
     //! integrate the system
     /*! @param[in] _time_break: additional breaking time to interrupt the integration, in default (0.0) the system integrate to time_end
@@ -2851,6 +2961,9 @@ public:
 
         // ensure it is initialized
         assert(initial_step_flag);
+
+        // for one particle case
+        if (stat.n_real_loc==1) return integrateOneToTime(_time_break);
 
         // finish interrupted integrations
         if (n_interrupt_glb>0) finishInterruptDrift();
