@@ -46,8 +46,10 @@ public:
     //! print parameters
     void print(std::ostream & _fout) const{
         _fout<<"eps_sq : "<<eps_sq<<std::endl
-             <<"G      : "<<gravitational_constant<<std::endl
-             <<"SE_opt : "<<stellar_evolution_option<<std::endl;
+             <<"G      : "<<gravitational_constant<<std::endl;
+#ifdef STELLAR_EVOLUTION
+        _fout<<"SE_opt : "<<stellar_evolution_option<<std::endl;
+#endif
     }    
 
     //! (Necessary) calculate inner member acceleration, potential and inverse time transformation function gradient and factor for kick (two-body case)

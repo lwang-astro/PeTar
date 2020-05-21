@@ -473,7 +473,7 @@ public:
                 break;
             case 'h':
                 if(print_flag){
-                    std::cout<<"Usage: nbody.out [option] filename"<<std::endl;
+                    std::cout<<"Usage: petar [option] filename"<<std::endl;
                     std::cout<<"       filename: initial or restart data (snapshot) filename\n"
                              <<"       Data file content:\n"
                              <<"            First line: \n"

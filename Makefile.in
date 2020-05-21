@@ -1,7 +1,3 @@
-TARGET=build/@PROG_NAME@ build/petar.hard.debug 
-
-all: $(TARGET)
-
 use_x86 =@use_x86@
 use_simd=@use_simd@
 use_simd_64=@use_simd_64@
@@ -14,6 +10,8 @@ step_mode=@with_step_mode@
 se_mode=@with_interrupt@
 tt_mode=@with_tidal_tensor@
 orb_mode=@with_orbit@
+
+TARGET=build/@PROG_NAME@ build/petar.hard.debug 
 
 #MT_FLAGS += -D HARD_CM_KICK
 MT_FLAGS += -D USE_QUAD
@@ -45,6 +43,7 @@ MT_FLAGS += -D BSE -D BSE_PRINT
 CXXLIBS += -L ./bse-interface -lbse -lgfortran
 LIBFILES+= bse-interface/libbse.a bse-interface/bse_interface.h
 INCLUDE += -I ./bse-interface
+TARGET += bse-interface/petar.bse
 endif
 endif
 
@@ -146,6 +145,8 @@ INCLUDE += -I./src @INCLUDE@
 
 SRC = main.cc ${shell ls ./src/*.hpp} 
 
+all: $(TARGET)
+
 build:
 	[ -d build ] || mkdir build
 
@@ -180,8 +181,10 @@ build/petar.tt.test: tidal_tensor_test.cxx |build
 build/force_gpu_cuda.o: force_gpu_cuda.cu |build
 	$(NVCC) $(INCLUDE) -c $< -o $@ 
 
-bse-interface/libbse.a: 
+bse-interface/petar.bse: bse-interface
 	$(MAKE) -C bse-interface
+
+bse-interface/libbse.a: bse-interface/petar.bse
 
 install: $(TARGET)
 	install -d @prefix@/bin/

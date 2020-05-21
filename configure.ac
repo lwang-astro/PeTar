@@ -356,7 +356,7 @@ AS_IF([test x"$prefix" != xNONE],
 AS_IF([test "x$use_omp" != xno],
       [AC_MSG_NOTICE([      add 'export OMP_STACKSIZE=128M' in your bash configure file (e.g. .bashrc) to avoid segmentational fault])])
 AC_MSG_NOTICE([-----------------------------------------------------------])
-AC_MSG_NOTICE([Reference paper: preparing...])
+AC_MSG_NOTICE([Reference paper: see the beginning of the output when using PeTar])
 AC_MSG_NOTICE([Questions and bug reports: https://github.com/lwang-astro/PeTar/issues])
 AC_MSG_NOTICE([-----------------------------------------------------------])
 

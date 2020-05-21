@@ -5511,8 +5511,8 @@ $as_echo "$as_me:       add 'export OMP_STACKSIZE=128M' in your bash configure f
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: -----------------------------------------------------------" >&5
 $as_echo "$as_me: -----------------------------------------------------------" >&6;}
-{ $as_echo "$as_me:${as_lineno-$LINENO}: Reference paper: preparing..." >&5
-$as_echo "$as_me: Reference paper: preparing..." >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}: Reference paper: see the beginning of the output when using PeTar" >&5
+$as_echo "$as_me: Reference paper: see the beginning of the output when using PeTar" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: Questions and bug reports: https://github.com/lwang-astro/PeTar/issues" >&5
 $as_echo "$as_me: Questions and bug reports: https://github.com/lwang-astro/PeTar/issues" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: -----------------------------------------------------------" >&5

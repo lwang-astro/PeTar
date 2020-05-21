@@ -38,9 +38,11 @@ int main(int argc, char** argv){
     std::string fbin_name;
 
     auto printHelp= [&]() {
-        std::cout<<"BSE_test [options] [initial mass of stars, can be multiple values]\n"
-                 <<"  If no initial mass or no binary table (-b) is provided, N single stars (-n) with equal mass interal in Log scale will be evolved\n"
-                 <<"  The default unit set is: Msun, Myr. If input data have different units, please modify the scaling fators\n"
+        std::cout<<"The tool to evolve single stars or binaries using SSE/BSE\n"
+                 <<"Usage: petar.bse [options] [initial mass of stars, can be multiple values]\n"
+                 <<"       If no initial mass or no binary table (-b) is provided, N single stars (-n) with equal mass interal in Log scale will be evolved\n"
+                 <<"       The default unit set is: Msun, Myr. If input data have different units, please modify the scaling fators\n"
+                 <<"Options:\n"
                  <<"    -s [D]: mimimum mass ("<<m_min<<")\n"
                  <<"    -e [D]: maximum mass ("<<m_max<<")\n"
                  <<"    -n [I]: number of stars when evolve an IMF ("<<n<<")\n"
@@ -54,14 +56,14 @@ int main(int argc, char** argv){
 
     IOParamsBSE bse_io;
     opterr = 0;
-    bse_io.print_flag = true;
-    int opt_used = bse_io.read(argc,argv);
 
     // reset optind
     static struct option long_options[] = {{0,0,0,0}};
 
+    int opt_used = 0;
     optind=0;
     int option_index;
+    bool help_flag=false;
     while ((arg_label = getopt_long(argc, argv, "-s:e:n:t:d:b:w:o:h", long_options, &option_index)) != -1)
         switch (arg_label) {
         case 's':
@@ -106,12 +108,18 @@ int main(int argc, char** argv){
             break;
         case 'h':
             printHelp();
-            return 0;
+            help_flag=true;
+            break;
         case '?':
             break;
         default:
             break;
         }        
+
+    bse_io.print_flag = true;
+    opt_used += bse_io.read(argc,argv);
+
+    if (help_flag) return 0;
 
     if (fbin_name!="") {
         FILE* fbin;
