@@ -2963,7 +2963,7 @@ public:
         assert(initial_step_flag);
 
         // for one particle case
-        if (stat.n_real_loc==1) return integrateOneToTime(_time_break);
+        if (stat.n_real_glb==1) return integrateOneToTime(_time_break);
 
         // finish interrupted integrations
         if (n_interrupt_glb>0) finishInterruptDrift();
