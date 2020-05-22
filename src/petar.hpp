@@ -2070,7 +2070,7 @@ public:
      */
     int readParameters(int argc, char *argv[]) {
         // print reference
-        printReference(std::cerr);
+        if (my_rank==0) printReference(std::cerr);
 
         //assert(initial_fdps_flag);
         assert(!read_parameters_flag);
