@@ -77,6 +77,8 @@ extern "C" {
 
     void deltat_(int* kw, double* age, double* tm, double* tn, double* tscls, double* dt, double* dtr);
 
+    void mix_(double* m0, double* mt, double* age, int* kw, double* zpars);
+
     void printconst_();
 }
 
@@ -868,6 +870,34 @@ public:
         if (kw[0]<0||kw[1]<0) return 1; // error case
 
         return 0;
+    }
+
+    //! merge two star using BSE mix function, star 2 will becomes zero mass
+    void merge(StarParameter& _star1, StarParameter& _star2) {
+        double m0[2],mt[2],age[2];
+        int kw[2];
+
+        kw[0] = _star1.kw;
+        m0[0] = _star1.m0;
+        mt[0] = _star1.mt;
+        age[0]= _star1.tphys-_star1.epoch;
+
+        kw[1] = _star2.kw;
+        m0[1] = _star2.m0;
+        mt[1] = _star2.mt;
+        age[1]= _star2.tphys-_star2.epoch;
+        
+        mix_(m0,mt,age,kw,zpars);
+
+        _star1.kw = kw[0];
+        _star1.m0 = m0[0];
+        _star1.mt = mt[0];
+        _star1.epoch = _star1.tphys - age[0];
+
+        _star2.kw = kw[1];
+        _star2.m0 = m0[1];
+        _star2.mt = mt[1];
+        _star2.epoch = _star2.tphys - age[1];
     }
 
     //! get next time step to check in Myr

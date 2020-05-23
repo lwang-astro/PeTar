@@ -893,13 +893,28 @@ public:
                         p1->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
                         p1->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
                     }
-                    p1->setBinaryInterruptState(BinaryInterruptState::none);
-                    p2->setBinaryInterruptState(BinaryInterruptState::none);
-                    p1->dm = mcm*0.8-p1->mass; // dm is used to correct energy, thus must be correctly set, use += since it may change mass before or later
+#ifdef BSE
+                    Float m1_bk = p1->mass;
+                    Float m2_bk = p2->mass;
+                    // call BSE function to merge two stars
+                    bse_manager.merge(p1->star, p2->star);
+                    // get new masses
+                    p1->mass = bse_manager.getMass(p1->star);
+                    p2->mass = bse_manager.getMass(p2->star);
+                    // dm is used to correct energy, thus must be correctly set, use += since it may change mass before merge
+                    p1->dm += p1->mass - m1_bk;
+                    p2->dm += p2->mass - m2_bk;
+#else
+                    p1->dm = mcm*0.8-p1->mass; 
                     p1->mass = mcm*0.8;
                     p2->dm = -p2->mass; 
                     p2->mass = 0.0;
-                    p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+#endif
+                    if (p1->mass==0.0) p1->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+                    if (p2->mass==0.0) p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+
+                    p1->setBinaryInterruptState(BinaryInterruptState::none);
+                    p2->setBinaryInterruptState(BinaryInterruptState::none);
                 };
                 
                 // delayed merger
