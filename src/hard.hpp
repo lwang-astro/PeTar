@@ -1263,12 +1263,15 @@ private:
       @param[in] _pj: j particle to calculate correction
      */
     template <class Tpi>
-    inline void calcAccPotShortWithLinearCutoff(Tpi& _pi,
+    static void calcAccPotShortWithLinearCutoff(Tpi& _pi,
                                                 const Ptcl& _pj) {
-        PS::F64 G = ForceSoft::grav_const;
+        const PS::F64 G = ForceSoft::grav_const;
+        const PS::F64 eps_sq = EPISoft::eps * EPISoft::eps;
+        const PS::F64 r_out = EPISoft::r_out;
+
         const PS::F64vec dr = _pi.pos - _pj.pos;
         const PS::F64 dr2 = dr * dr;
-        const PS::F64 dr2_eps = dr2 + manager->eps_sq;
+        const PS::F64 dr2_eps = dr2 + eps_sq;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
         PS::F64 gmor = G*_pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
@@ -1277,7 +1280,6 @@ private:
         const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, dr_eps);
 
         // linear cutoff 
-        const PS::F64 r_out = manager->r_out_base;
         const PS::F64 r_out2 = r_out * r_out;
         const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
         const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
@@ -1318,16 +1320,18 @@ private:
       @param[in] _pj: j particle to calculate correction
      */
     template <class Tpi>
-    inline void calcAccPotShortWithLinearCutoff(Tpi& _pi,
+    static void calcAccPotShortWithLinearCutoff(Tpi& _pi,
                                                 const EPJSoft& _pj) {
-        PS::F64 G = ForceSoft::grav_const;
+        const PS::F64 G = ForceSoft::grav_const;
+        const PS::F64 eps_sq = EPISoft::eps * EPISoft::eps;
+        const PS::F64 r_out = EPISoft::r_out;
+
         const PS::F64vec dr = _pi.pos - _pj.pos;
         const PS::F64 dr2 = dr * dr;
 #ifdef HARD_DEBUG
         assert(dr2>0.0);
 #endif
-        const PS::F64 dr2_eps = dr2 + manager->eps_sq;
-        const PS::F64 r_out = manager->r_out_base;
+        const PS::F64 dr2_eps = dr2 + eps_sq;
         const PS::F64 r_out2 = r_out * r_out;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
         PS::F64 gmor = G*_pj.mass * drinv;
@@ -1378,15 +1382,17 @@ private:
       @param[in] _pj: j particle to calculate correction
      */
     template <class Tpi>
-    inline void calcAccChangeOverCorrection(Tpi& _pi,
+    static void calcAccChangeOverCorrection(Tpi& _pi,
                                             const Ptcl& _pj) {
-        PS::F64 G = ForceSoft::grav_const;
+        const PS::F64 G = ForceSoft::grav_const;
+        const PS::F64 eps_sq = EPISoft::eps * EPISoft::eps;
+
         const PS::F64vec dr = _pi.pos - _pj.pos;
         const PS::F64 dr2 = dr * dr;
 #ifdef HARD_DEBUG
         assert(dr2>0.0);
 #endif
-        const PS::F64 dr2_eps = dr2 + manager->eps_sq;
+        const PS::F64 dr2_eps = dr2 + eps_sq;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
         const PS::F64 gmor = G*_pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
@@ -1412,12 +1418,14 @@ private:
       @param[in] _pj: j particle to calculate correction
      */
     template <class Tpi>
-    inline void calcAccChangeOverCorrection(Tpi& _pi,
+    static void calcAccChangeOverCorrection(Tpi& _pi,
                                             const EPJSoft& _pj) {
-        PS::F64 G = ForceSoft::grav_const;
+        const PS::F64 G = ForceSoft::grav_const;
+        const PS::F64 eps_sq = EPISoft::eps * EPISoft::eps;
+
         const PS::F64vec dr = _pi.pos - _pj.pos;
         const PS::F64 dr2 = dr * dr;
-        const PS::F64 dr2_eps = dr2 + manager->eps_sq;
+        const PS::F64 dr2_eps = dr2 + eps_sq;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
         const PS::F64 gmor = G*_pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
@@ -1441,16 +1449,17 @@ private:
 
 #ifdef KDKDK_4TH
     template <class Tpi>
-    inline void calcAcorrShortWithLinearCutoff(Tpi& _pi,
+    static void calcAcorrShortWithLinearCutoff(Tpi& _pi,
                                                const Ptcl& _pj) {
-        PS::F64 G = ForceSoft::grav_const;
-        const PS::F64 r_out = manager->changeover.getRout();
+        const PS::F64 G = ForceSoft::grav_const;
+        const PS::F64 eps_sq = EPISoft::eps * EPISoft::eps;
+        const PS::F64 r_out = EPISoft::r_out;
         const PS::F64 r_out2 = r_out * r_out;
 
         const PS::F64vec dr = _pi.pos - _pj.pos;
         const PS::F64vec da = _pi.acc - _pi.acc;
         const PS::F64 dr2 = dr * dr;
-        const PS::F64 dr2_eps = dr2 + manager->eps_sq;
+        const PS::F64 dr2_eps = dr2 + eps_sq;
         const PS::F64 drda = dr*da;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
         const PS::F64 drdadrinv = drda*drinv;
@@ -1478,16 +1487,17 @@ private:
     }
 
     template <class Tpi>
-    inline void calcAcorrShortWithLinearCutoff(Tpi& _pi,
+    static void calcAcorrShortWithLinearCutoff(Tpi& _pi,
                                                const EPJSoft& _pj) {
-        PS::F64 G = ForceSoft::grav_const;
-        const PS::F64 r_out = manager->changeover.getRout();
+        const PS::F64 G = ForceSoft::grav_const;
+        const PS::F64 eps_sq = EPISoft::eps * EPISoft::eps;
+        const PS::F64 r_out = EPISoft::r_out;
         const PS::F64 r_out2 = r_out * r_out;
 
         const PS::F64vec dr = _pi.pos - _pj.pos;
         const PS::F64vec da = _pi.acc - _pi.acc;
         const PS::F64 dr2 = dr * dr;
-        const PS::F64 dr2_eps = dr2 + manager->eps_sq;
+        const PS::F64 dr2_eps = dr2 + eps_sq;
         const PS::F64 drda = dr*da;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
         const PS::F64 drdadrinv = drda*drinv;
@@ -1523,9 +1533,9 @@ private:
       @param[in] _acorr_flag: flag to do acorr for KDKDK_4TH case
      */
     template <class Tpsoft, class Ttree, class Tepj>
-    void correctForceWithCutoffTreeNeighborOneParticleImp(Tpsoft& _psoft, 
-                                                          Ttree& _tree,
-                                                          const bool _acorr_flag=false) {
+    static void correctForceWithCutoffTreeNeighborOneParticleImp(Tpsoft& _psoft, 
+                                                                 Ttree& _tree,
+                                                                 const bool _acorr_flag=false) {
         PS::F64 G = ForceSoft::grav_const;
         Tepj * ptcl_nb = NULL;
         PS::S32 n_ngb = _tree.getNeighborListOneParticle(_psoft, ptcl_nb);
@@ -1537,7 +1547,7 @@ private:
         // no correction for member particles because their mass is zero during the soft force calculation, the self-potential contribution is also zero.
         // for binary without artificial particles, correction is needed.
         if (_psoft.group_data.artificial.isSingle() || (_psoft.group_data.artificial.isMember() && _psoft.getParticleCMAddress()<0)) {
-            PS::F64 pot_cor = G*_psoft.mass/manager->r_out_base; 
+            PS::F64 pot_cor = G*_psoft.mass/EPISoft::r_out;
             _psoft.pot_tot  += pot_cor;
             _psoft.pot_soft += pot_cor;
             
@@ -1859,7 +1869,7 @@ public:
     //              const PS::S64 _id_offset,
     //              const PS::S32 _n_split){
     //    /// Set chain pars (L.Wang)
-	//    Int_pars_.rin  = _rin;
+    //    Int_pars_.rin  = _rin;
     //    Int_pars_.rout = _rout;
     //    Int_pars_.r_oi_inv = 1.0/(_rout-_rin);
     //    Int_pars_.r_A      = (_rout-_rin)/(_rout+_rin);
@@ -3189,12 +3199,14 @@ public:
        @param[in] _sys: global particle system, acc is updated
        @param[in] _tree: tree for force
        @param[in] _adr_ptcl_artificial_start: start address of artificial particle in _sys
+       @param[in] _ap_manager: artificial particle manager
     */
     template <class Tsys, class Tpsoft, class Ttree, class Tepj>
-    void correctForceWithCutoffTreeNeighborOMP(Tsys& _sys,
-                                               Ttree& _tree,
-                                               const PS::S32 _adr_ptcl_artificial_start,
-                                               const bool _acorr_flag=false) {
+    static void correctForceWithCutoffTreeNeighborOMP(Tsys& _sys,
+                                                      Ttree& _tree,
+                                                      const PS::S32 _adr_ptcl_artificial_start,
+                                                      ArtificialParticleManager& _ap_manager,
+                                                      const bool _acorr_flag=false) {
         // for artificial particle
         const PS::S32 n_tot = _sys.getNumberOfParticleLocal();
 
@@ -3202,14 +3214,13 @@ public:
         for (int i=0; i<n_tot; i++) {
             correctForceWithCutoffTreeNeighborOneParticleImp<Tpsoft, Ttree, Tepj>(_sys[i], _tree, _acorr_flag);
         }
-        auto& ap_manager = manager->ap_manager;
-        const PS::S32 n_artificial = ap_manager.getArtificialParticleN();
+        const PS::S32 n_artificial = _ap_manager.getArtificialParticleN();
 #ifdef HARD_DEBUG
         assert((n_tot-_adr_ptcl_artificial_start)%n_artificial==0);
 #endif
 #pragma omp parallel for schedule(dynamic)
         for (int i=_adr_ptcl_artificial_start; i<n_tot; i+=n_artificial)
-            ap_manager.correctArtficialParticleForce(&(_sys[i]));
+            _ap_manager.correctArtficialParticleForce(&(_sys[i]));
     }
 
 };

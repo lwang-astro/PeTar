@@ -121,7 +121,7 @@ public:
     IOParams<PS::F64> eps;
     IOParams<PS::F64> r_out;
     IOParams<PS::F64> r_bin;
-    IOParams<PS::F64> r_search_max;
+//    IOParams<PS::F64> r_search_max;
     IOParams<PS::F64> r_search_min;
     IOParams<PS::F64> sd_factor;
     IOParams<PS::S32> data_format;
@@ -177,7 +177,7 @@ public:
                      eps          (input_par_store, 0.0,  "Softerning eps"),
                      r_out        (input_par_store, 0.0,  "Transit function outer boundary radius", "0.1 GM/[N^(1/3) sigma_3D^2]"),
                      r_bin        (input_par_store, 0.0,  "Tidal tensor box size and binary radius criterion", "theta*r_in"),
-                     r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out"),
+//                     r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out"),
                      r_search_min (input_par_store, 0.0,  "Minimum search radius  value","auto"),
                      sd_factor    (input_par_store, 1e-4, "Slowdown perturbation criterion"),
                      data_format  (input_par_store, 1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),
@@ -877,7 +877,13 @@ public:
 #endif
     }
 
-    // correct force due to change over function
+    //! correct force due to change over function by using particle tree neighbor search
+    void treeForceCorrectChangeoverTreeNeighbor() {
+        // all particles
+        SystemHard::correctForceWithCutoffTreeNeighborOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, system_soft.getNumberOfParticleLocal(), hard_manager.ap_manager);        
+    }
+
+    //! correct force due to change over function
     void treeForceCorrectChangeover() {
 #ifdef PROFILE
         profile.force_correct.start();
@@ -914,7 +920,7 @@ public:
         }
 
         // all particles
-        system_hard_isolated.correctForceWithCutoffTreeNeighborOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, n_loc);
+        SystemHard::correctForceWithCutoffTreeNeighborOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, n_loc, hard_manager.ap_manager);
 
         // single 
         //system_hard_one_cluster.correctPotWithCutoffOMP(system_soft, search_cluster.getAdrSysOneCluster());
@@ -2482,7 +2488,7 @@ public:
         PS::F64& r_out = input_parameters.r_out.value;
         PS::F64& r_bin = input_parameters.r_bin.value;
         PS::F64& r_search_min = input_parameters.r_search_min.value;
-        PS::F64& r_search_max = input_parameters.r_search_max.value;
+//        PS::F64& r_search_max = input_parameters.r_search_max.value;
         PS::F64& dt_soft = input_parameters.dt_soft.value;
         PS::F64& dt_snap = input_parameters.dt_snap.value;
         PS::F64& search_vel_factor =  input_parameters.search_vel_factor.value;
@@ -2500,18 +2506,28 @@ public:
         PS::F64 mass_cm_loc = 0.0;
         // local maximum mass
         //PS::F64 mass_max_loc = 0.0;
+        // box size
+        PS::F64 rmin=PS::LARGE_FLOAT, rmax=0.0;
 
         for(PS::S64 i=0; i<n_loc; i++){
             PS::F64 mi = system_soft[i].mass;
             PS::F64vec vi = system_soft[i].vel;
+            PS::F64vec ri = system_soft[i].pos;
 
 #ifdef PETAR_DEBUG
             assert(mi>0);
 #endif
             mass_cm_loc += mi;
             vel_cm_loc += mi * vi;
+            PS::F64 r2 = ri*ri;
+            rmin = std::min(r2,rmin);
+            rmax = std::max(r2,rmax);
             //mass_max_loc = std::max(mi, mass_max_loc);
         }
+        rmin = std::sqrt(rmin);
+        rmax = std::sqrt(rmax);
+        PS::F64 rmin_glb = PS::Comm::getMinValue(rmin);
+        PS::F64 rmax_glb = PS::Comm::getMaxValue(rmax);
 
         // global c.m. parameters
         PS::F64    mass_cm_glb = PS::Comm::getSum(mass_cm_loc);
@@ -2563,13 +2579,13 @@ public:
         if (r_out_flag) r_in = r_out * ratio_r_cut;
         // calculate r_out based on virial radius scaled with (N)^(1/3), calculate r_in by ratio_r_cut
         else {
-            if (vel_disp>0) {
-                r_out = 0.1*G*mass_cm_glb/(std::pow(n_glb,1.0/3.0)) / (3*vel_disp*vel_disp);
+            if (n_glb>1) {
+                r_out = std::min(0.1*G*mass_cm_glb/(std::pow(n_glb,1.0/3.0)) / (3*vel_disp*vel_disp), 3.0*(rmax_glb-rmin_glb));
                 r_in = r_out * ratio_r_cut;
             }
-            else if (n_glb==1) {
+            else {
                 // give two small values, no meaning at all
-                r_out = 1e-30;
+                r_out = 1e-16;
                 r_in = r_out*ratio_r_cut;
                 if (print_flag) std::cout<<"In one particle case, changeover radius is set to a small value\n";
             }
@@ -2587,12 +2603,12 @@ public:
             dt_soft = regularTimeStep(dt_soft);
             // if r_out is not defined, adjust r_out to minimum based on tree step
             if (!r_out_flag) {
-                if (vel_disp>0) {
+                if (vel_disp>0&&n_glb>1) {
                     r_out = 10.0*dt_soft*vel_disp;
                     r_in = r_out * ratio_r_cut;
                 }
                 else {
-                    r_out = 1e-30;
+                    r_out = 1e-16;
                     r_in = r_out*ratio_r_cut;
                     if (print_flag) std::cout<<"In one particle case, changeover radius is set to a small value\n";
                 }
@@ -2605,7 +2621,7 @@ public:
         // if r_search_min is not defined, calculate by search_vel_factor*velocity_dispersion*tree_time_step + r_out
         if (r_search_min==0.0) r_search_min = search_vel_factor*vel_disp*dt_soft + r_out;
         // if r_search_max is not defined, calcualte by 5*r_out
-        if (r_search_max==0.0) r_search_max = 5*r_out;
+//        if (r_search_max==0.0) r_search_max = 5*r_out;
         // calculate v_max based on r_search_max, tree time step and search_vel_factor
         //vel_max = (r_search_max - r_out) / dt_soft / search_vel_factor;
 

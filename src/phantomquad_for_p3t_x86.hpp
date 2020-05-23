@@ -600,6 +600,8 @@ private:
         //const v8sf vr_out  = _mm256_set1_ps((float)r_out);
         //const v8sf vr_out2 = _mm256_mul_ps(vr_out, vr_out);
         const v8sf vr_out2 = _mm256_set1_ps((float)r_crit2);
+        //std::cerr<<"r_crit2 "<<*(float*)&vr_out2<<std::endl;
+        //std::cerr<<"veps2 "<<*(float*)&veps2<<std::endl;
         const v8sf allbits = _mm256_cmp_ps(vone, vone, 0x00);
         for(int i=0; i<ni; i+=8){
 	    //const v8sf xi = *(v8sf *)(&xibuf[i/8][0][0]);
@@ -646,6 +648,8 @@ private:
                 r2_real = _mm256_fmadd_ps(dz, dz, r2_real);
                 v8sf r2 = _mm256_max_ps(r2_real, vr_out2);
                 v8sf ri1 = _mm256_rsqrt_ps(r2);
+                //std::cerr<<"r2 "<<*(float*)&r2<<std::endl;
+                //std::cerr<<"ri1 "<<*(float*)&ri1<<std::endl;
 
                 v8sf ri2 = _mm256_mul_ps(ri1, ri1);
 #ifdef RSQRT_NR_EPJ_X4
@@ -675,8 +679,15 @@ private:
                 //v8sf v0p5 = {0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f};
                 //ri1 *= (v3p0 - r2*(ri1*ri1))*v0p5;
 #endif
+                //std::cerr<<"ri1 "<<*(float*)&ri1<<std::endl;
+                //std::cerr<<"ri2 "<<*(float*)&ri2<<std::endl;
+
                 v8sf mri1 = _mm256_mul_ps(mj, ri1);
                 v8sf mri3 = _mm256_mul_ps(mri1, ri2);
+
+                //std::cerr<<"mj "<<*(float*)&mj<<std::endl;
+                //std::cerr<<"mri1 "<<*(float*)&mri1<<std::endl;
+                //std::cerr<<"mri3 "<<*(float*)&mri3<<std::endl;
 
                 xj =  _mm256_shuffle_ps(jbuf, jbuf, 0x00);
                 yj =  _mm256_shuffle_ps(jbuf, jbuf, 0x55);
@@ -689,6 +700,10 @@ private:
                 ay = _mm256_fnmadd_ps(mri3, dy, ay);
                 az = _mm256_fnmadd_ps(mri3, dz, az);
                 
+                //std::cerr<<"pot "<<*(float*)&pot<<std::endl;
+                //std::cerr<<"dx "<<*(float*)&dx<<std::endl;
+                //std::cerr<<"ax "<<*(float*)&ax<<std::endl;
+
                 v8sf vrcrit = _mm256_max_ps(rsi, rsj);
                 v8sf vrcrit2 = _mm256_mul_ps(vrcrit, vrcrit);
                 v8sf mask = _mm256_cmp_ps(vrcrit2, r2_real, 0x01); // for neighbour search
