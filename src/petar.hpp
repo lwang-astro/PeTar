@@ -2113,11 +2113,7 @@ public:
     
         // open profile file
         if(write_style>0) {
-            std::string rank_str;
-            std::stringstream atmp;
-            atmp<<my_rank;
-            atmp>>rank_str;
-            std::string fproname=input_parameters.fname_snp.value+".prof.rank."+rank_str;
+            std::string fproname=input_parameters.fname_snp.value+".prof.rank."+std::to_string(my_rank);
             if(input_parameters.app_flag) fprofile.open(fproname.c_str(),std::ofstream::out|std::ofstream::app);
             else  {
                 fprofile.open(fproname.c_str(),std::ofstream::out);
@@ -2721,6 +2717,16 @@ public:
 #ifdef BSE
 #ifdef BSE_PRINT
         bool bse_print_flag = print_flag;
+        std::string fsse_name = input_parameters.fname_snp.value+std::string(".sse.")+std::to_string(my_rank);
+        std::string fbse_name = input_parameters.fname_snp.value+std::string(".bse.")+std::to_string(my_rank);
+        if (input_parameters.app_flag) {
+            hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out|std::ofstream::app);
+            hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out|std::ofstream::app);
+        }
+        else {
+            hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out);
+            hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out);
+        }
 #else
         bool bse_print_flag = false;
 #endif
@@ -3216,6 +3222,11 @@ public:
         if (fstatus.is_open()) fstatus.close();
 #ifdef PROFILE
         if (fprofile.is_open()) fprofile.close();
+#endif
+
+#ifdef BSE_PRINT
+        hard_manager.ar_manager.interaction.fout_sse.close();
+        hard_manager.ar_manager.interaction.fout_bse.close();
 #endif
         if (pos_domain) {
             delete[] pos_domain;

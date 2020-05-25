@@ -22,8 +22,10 @@ public:
     int stellar_evolution_option;
 #ifdef BSE
     BSEManager bse_manager;
+    std::ofstream fout_sse; ///> log file for SSE event
+    std::ofstream fout_bse; ///> log file for BSE event
 
-    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), stellar_evolution_option(1), bse_manager() {}
+    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), stellar_evolution_option(1), bse_manager(), fout_sse(), fout_bse() {}
 #else
     ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), stellar_evolution_option(0) {}
 #endif
@@ -39,6 +41,10 @@ public:
         ASSERT(gravitational_constant>0.0);
 #ifdef BSE
         ASSERT(stellar_evolution_option!=1||(stellar_evolution_option==1&&bse_manager.checkParams()));
+#ifdef BSE_PRINT
+        ASSERT(fout_sse.is_open());
+        ASSERT(fout_bse.is_open());
+#endif
 #endif
         return true;
     }        
@@ -633,12 +639,13 @@ public:
 
             // evolve star
             StarParameterOut output;
-            int error_flag = bse_manager.evolveStar(_p.star, output, dt);
+            int event_flag = bse_manager.evolveStar(_p.star, output, dt);
 
             // error 
-            if (error_flag) {
-                std::cerr<<"SSE Error: ID="<<_p.id;
+            if (event_flag<0) {
+                std::cerr<<"SSE Error: ID= "<<_p.id;
                 _p.star.print(std::cerr);
+                output.print(std::cerr);
                 std::cerr<<std::endl;
                 abort();
             }
@@ -660,16 +667,33 @@ public:
             // set merger check radius 
             _p.radius = bse_manager.getMergerRadius(_p.star);
 
+#ifdef BSE_PRINT
+            // type change
+            if (event_flag==1) {
+#pragma omp critical
+                {
+                    fout_sse<<"Type_change ID= "<<_p.id;
+                    bse_manager.printTypeChange(fout_sse,_p.star, output);
+                    _p.star.print(fout_sse);
+                    fout_sse<<std::endl;
+                }
+            }
+#endif
+
             // add velocity change if exist
-            double dv[3];
-            double dvabs=bse_manager.getVelocityChange(dv, output);
-            if (dvabs>0) {
+            if (event_flag==2) {
+                double dv[3];
+                double dvabs=bse_manager.getVelocityChange(dv, output);
+                assert(dvabs>0);
                 for (int k=0; k<3; k++) _p.vel[k] += dv[k];
                 modify_flag = 2;
 #ifdef BSE_PRINT
-                std::cout<<"ID="<<_p.id<<" SN kick, vkick="<<dvabs<<" ";
-                _p.star.print(std::cout);
-                std::cout<<std::endl;
+#pragma omp critical
+                {
+                    fout_sse<<"SN_kick ID= "<<_p.id;
+                    _p.star.print(fout_sse);
+                    fout_sse<<" vkick[PUnit]= "<<dvabs<<std::endl;
+                }
 #endif
             }
             // if mass become zero, set to unused for removing
@@ -747,19 +771,24 @@ public:
                 Float mtot = p1->mass+p2->mass;
                 Float period = _bin.semiToPeriod(semi, mtot, gravitational_constant);
                 int binary_type = 0;
-                int error_flag = bse_manager.evolveBinary(p1->star, p2->star, out[0], out[1], period, ecc, binary_type, dt);
+                int event_flag = bse_manager.evolveBinary(p1->star, p2->star, out[0], out[1], period, ecc, binary_type, dt);
                 
-                // error 
-                if (error_flag) {
-                    std::cerr<<"BSE Error: ID="<<p1->id<<" "<<p2->id<<" binary_type="<<bse_manager.binary_type[binary_type]<<std::endl;
-                    _bin.printColumnTitle(std::cerr);
-                    std::cerr<<std::endl;
-                    _bin.printColumn(std::cerr);
-                    std::cerr<<std::endl;
-                    std::cerr<<"Star 1:";
-                    p1->star.print(std::cerr);
-                    std::cerr<<"\nStar 2:";
-                    p2->star.print(std::cerr);
+                auto printEvent=[&](std::ostream& _fout) {
+                    _fout<<bse_manager.binary_type[binary_type];
+                    _fout<<" ID="<<p1->id<<" "<<p2->id<<" period[PUnit]= "<<_bin.period<<" semi[Punit]= "<<_bin.semi<<" ecc= "<<_bin.ecc;
+                    _fout<<" Star1: ";
+                    p1->star.print(_fout);
+                    out[0].print(_fout);
+                    _fout<<" Star2: ";
+                    p2->star.print(_fout);
+                    out[1].print(_fout);
+                    _fout<<std::endl;
+                };
+
+                // error case
+                if (event_flag<0) {
+                    std::cerr<<"BSE Error: ";
+                    printEvent(std::cerr);
                     abort();
                 }
 
@@ -782,33 +811,13 @@ public:
                 p1->radius = bse_manager.getMergerRadius(p1->star);
                 p2->radius = bse_manager.getMergerRadius(p2->star);
 
-#ifdef BSE_PRINT
-                if (binary_type) {
-                    std::cout<<bse_manager.binary_type[binary_type]
-                             <<" ID="<<p1->id<<" "<<p2->id<<" period="<<_bin.period<<" ecc="<<_bin.ecc
-                             <<std::endl;
-                    std::cout<<"Star 1:";
-                    p1->star.print(std::cout);
-                    std::cout<<"\nStar 2:";
-                    p2->star.print(std::cout);
-                    std::cout<<std::endl;
-                }
-#endif
-
                 // case when SN kick appears
-                bool kick_flag = false;
-                for (int k=0; k<2; k++) {
-                    double dv[4];
-                    auto* pk = _bin.getMember(k);
-                    dv[3] = bse_manager.getVelocityChange(dv,out[k]);
-                    for (int k=0; k<3; k++) pk->vel[k] += dv[k];
-                    if (dv[3]>0) {
-#ifdef BSE_PRINT
-                        std::cout<<"ID="<<pk->id<<" Binary SN kick, vkick="<<dv[3]<<" ";
-                        pk->star.print(std::cout);
-                        std::cout<<std::endl;
-#endif 
-                        kick_flag =true;
+                if (event_flag==3) {
+                    for (int k=0; k<2; k++) {
+                        double dv[4];
+                        auto* pk = _bin.getMember(k);
+                        dv[3] = bse_manager.getVelocityChange(dv,out[k]);
+                        for (int k=0; k<3; k++) pk->vel[k] += dv[k];
                     }
                 }
 
@@ -828,7 +837,7 @@ public:
 
                 if (_bin_interrupt.status != AR::InterruptStatus::merge) {
                     // case when orbital parameter is modified
-                    if (bse_manager.isMassTransfer(binary_type)&&!kick_flag) {
+                    if (event_flag==2) {
                         ASSERT(ecc>=0&&ecc<=1.0); // in mass transfer case disruption is not allown
                         // obtain full orbital parameters
                         _bin.calcOrbit(gravitational_constant);
@@ -842,16 +851,8 @@ public:
                         _bin.calcParticles(gravitational_constant);
                     }
 
-                    // in case of disruption
-                    if (!kick_flag&&bse_manager.isDisrupt(binary_type)) {
-#ifdef BSE_PRINT
-                        std::cout<<"ID="<<p1->id<<" "<<p2->id<<" Binary disrupt by tide\n";
-                        std::cout<<"Star 1:";
-                        p1->star.print(std::cout);
-                        std::cout<<"\nStar 2:";
-                        p2->star.print(std::cout);
-                        std::cout<<std::endl;
-#endif
+                    // in case of disruption but no kick
+                    if (event_flag==4) {
                         // obtain full orbital parameters
                         _bin.calcOrbit(gravitational_constant);
                         // assume energy no change
@@ -865,6 +866,14 @@ public:
                     }
                 }
                 
+#ifdef BSE_PRINT
+                // print event information
+                if (event_flag>0) {
+#pragma omp critical
+                    printEvent(fout_bse);
+                }
+#endif
+
             }
 #endif
 
@@ -877,15 +886,15 @@ public:
                     _bin_interrupt.status = AR::InterruptStatus::merge;
                 
                     // print data
-                    std::cerr<<"Binary Merge: time: "<<_bin_interrupt.time_now<<std::endl;
-                    _bin.Binary::printColumnTitle(std::cerr);
+                    //std::cerr<<"Binary Merge: time: "<<_bin_interrupt.time_now<<std::endl;
+                    //_bin.Binary::printColumnTitle(std::cerr);
                     //PtclHard::printColumnTitle(std::cerr);
                     //PtclHard::printColumnTitle(std::cerr);
-                    std::cerr<<std::endl;
-                    _bin.Binary::printColumn(std::cerr);
+                    //std::cerr<<std::endl;
+                    //_bin.Binary::printColumn(std::cerr);
                     //p1->printColumn(std::cerr);
                     //p2->printColumn(std::cerr);
-                    std::cerr<<std::endl;
+                    //std::cerr<<std::endl;
 
                     // new particle data
                     Float mcm = p1->mass + p2->mass;
@@ -904,6 +913,18 @@ public:
                     // dm is used to correct energy, thus must be correctly set, use += since it may change mass before merge
                     p1->dm += p1->mass - m1_bk;
                     p2->dm += p2->mass - m2_bk;
+#ifdef BSE_PRINT
+#pragma omp critical
+                    {
+                        fout_bse<<"Dynamic_merge: ";
+                        fout_bse<<" ID="<<p1->id<<" "<<p2->id<<" period[PUnit]= "<<_bin.period<<" semi[Punit]= "<<_bin.semi<<" ecc= "<<_bin.ecc;
+                        fout_bse<<"Star1: ";
+                        p1->star.print(fout_bse);
+                        fout_bse<<"Star2: ";
+                        p2->star.print(fout_bse);
+                        fout_bse<<std::endl;
+                    }
+#endif
 #else
                     p1->dm = mcm*0.8-p1->mass; 
                     p1->mass = mcm*0.8;
