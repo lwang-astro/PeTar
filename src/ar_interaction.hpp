@@ -20,14 +20,15 @@ public:
     Float gravitational_constant;
 #ifdef STELLAR_EVOLUTION
     int stellar_evolution_option;
+    bool stellar_evolution_write_flag;
 #ifdef BSE
     BSEManager bse_manager;
     std::ofstream fout_sse; ///> log file for SSE event
     std::ofstream fout_bse; ///> log file for BSE event
 
-    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), stellar_evolution_option(1), bse_manager(), fout_sse(), fout_bse() {}
+    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), stellar_evolution_option(1), stellar_evolution_write_flag(true), bse_manager(), fout_sse(), fout_bse() {}
 #else
-    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), stellar_evolution_option(0) {}
+    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), stellar_evolution_option(0), stellar_evolution_write_flag(true) {}
 #endif
 #else
     ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)) {}
@@ -41,10 +42,8 @@ public:
         ASSERT(gravitational_constant>0.0);
 #ifdef BSE
         ASSERT(stellar_evolution_option!=1||(stellar_evolution_option==1&&bse_manager.checkParams()));
-#ifdef BSE_PRINT
-        ASSERT(fout_sse.is_open());
-        ASSERT(fout_bse.is_open());
-#endif
+        ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_sse.is_open()));
+        ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_bse.is_open()));
 #endif
         return true;
     }        
@@ -667,9 +666,8 @@ public:
             // set merger check radius 
             _p.radius = bse_manager.getMergerRadius(_p.star);
 
-#ifdef BSE_PRINT
             // type change
-            if (event_flag==1) {
+            if (stellar_evolution_write_flag&&event_flag==1) {
 #pragma omp critical
                 {
                     fout_sse<<"Type_change ID= "<<_p.id;
@@ -678,7 +676,6 @@ public:
                     fout_sse<<std::endl;
                 }
             }
-#endif
 
             // add velocity change if exist
             if (event_flag==2) {
@@ -687,22 +684,22 @@ public:
                 assert(dvabs>0);
                 for (int k=0; k<3; k++) _p.vel[k] += dv[k];
                 modify_flag = 2;
-#ifdef BSE_PRINT
+                if (stellar_evolution_write_flag) {
 #pragma omp critical
-                {
-                    fout_sse<<"SN_kick ID= "<<_p.id;
-                    _p.star.print(fout_sse);
-                    fout_sse<<" vkick[PUnit]= "<<dvabs<<std::endl;
+                    {
+                        fout_sse<<"SN_kick ID= "<<_p.id;
+                        _p.star.print(fout_sse);
+                        fout_sse<<" vkick[PUnit]= "<<dvabs<<std::endl;
+                    }
                 }
-#endif
             }
             // if mass become zero, set to unused for removing
             if (_p.mass==0.0) _p.group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
 
             return modify_flag;
         }
-#endif
-#endif
+#endif // BSE
+#endif // STELLAR_EVOLUTION
         return 0;
     }
 
@@ -866,16 +863,13 @@ public:
                     }
                 }
                 
-#ifdef BSE_PRINT
                 // print event information
-                if (event_flag>0) {
+                if (stellar_evolution_write_flag&&event_flag>0) {
 #pragma omp critical
                     printEvent(fout_bse);
                 }
-#endif
-
             }
-#endif
+#endif // BSE
 
             // dynamical merger check
             if (_bin_interrupt.status!=AR::InterruptStatus::merge) {
@@ -913,24 +907,24 @@ public:
                     // dm is used to correct energy, thus must be correctly set, use += since it may change mass before merge
                     p1->dm += p1->mass - m1_bk;
                     p2->dm += p2->mass - m2_bk;
-#ifdef BSE_PRINT
+                    if (stellar_evolution_write_flag) {
 #pragma omp critical
-                    {
-                        fout_bse<<"Dynamic_merge: ";
-                        fout_bse<<" ID="<<p1->id<<" "<<p2->id<<" period[PUnit]= "<<_bin.period<<" semi[Punit]= "<<_bin.semi<<" ecc= "<<_bin.ecc;
-                        fout_bse<<"Star1: ";
-                        p1->star.print(fout_bse);
-                        fout_bse<<"Star2: ";
-                        p2->star.print(fout_bse);
-                        fout_bse<<std::endl;
+                        {
+                            fout_bse<<"Dynamic_merge: ";
+                            fout_bse<<" ID="<<p1->id<<" "<<p2->id<<" period[PUnit]= "<<_bin.period<<" semi[Punit]= "<<_bin.semi<<" ecc= "<<_bin.ecc;
+                            fout_bse<<"Star1: ";
+                            p1->star.print(fout_bse);
+                            fout_bse<<"Star2: ";
+                            p2->star.print(fout_bse);
+                            fout_bse<<std::endl;
+                        }
                     }
-#endif
-#else
+#else // NO BSE
                     p1->dm = mcm*0.8-p1->mass; 
                     p1->mass = mcm*0.8;
                     p2->dm = -p2->mass; 
                     p2->mass = 0.0;
-#endif
+#endif // BSE
                     if (p1->mass==0.0) p1->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
                     if (p2->mass==0.0) p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
 

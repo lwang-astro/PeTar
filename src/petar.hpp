@@ -77,6 +77,7 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #include"profile.hpp"
 #endif
 #include"static_variables.hpp"
+#include"escaper.hpp"
 
 //! IO parameters for Petar
 class IOParamsPeTar{
@@ -123,6 +124,7 @@ public:
     IOParams<PS::F64> r_bin;
 //    IOParams<PS::F64> r_search_max;
     IOParams<PS::F64> r_search_min;
+    IOParams<PS::F64> r_escape;
     IOParams<PS::F64> sd_factor;
     IOParams<PS::S32> data_format;
     IOParams<PS::S32> write_style;
@@ -179,6 +181,7 @@ public:
                      r_bin        (input_par_store, 0.0,  "Tidal tensor box size and binary radius criterion", "theta*r_in"),
 //                     r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out"),
                      r_search_min (input_par_store, 0.0,  "Minimum search radius  value","auto"),
+                     r_escape     (input_par_store, PS::LARGE_FLOAT,  "escape radius criterion"),
                      sd_factor    (input_par_store, 1e-4, "Slowdown perturbation criterion"),
                      data_format  (input_par_store, 1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),
                      write_style  (input_par_store, 1,    "File Writing style: 0, no output; 1. write snapshots, status and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile"),
@@ -223,6 +226,7 @@ public:
             {"slowdown-factor",       required_argument, &petar_flag, 9},
             {"r-ratio",               required_argument, &petar_flag, 10},       
             {"r-bin",                 required_argument, &petar_flag, 11},       
+            {"r-escape",              required_argument, &petar_flag, 21},       
             {"search-peri-factor",    required_argument, &petar_flag, 12}, 
             {"hermite-eta",           required_argument, &petar_flag, 13}, 
 #ifdef HARD_CHECK_ENERGY
@@ -375,6 +379,11 @@ public:
                     opt_used += 2;
                     break;
 #endif
+                case 21:
+                    r_escape.value = atof(optarg);
+                    if(print_flag) r_escape.print(std::cout);
+                    opt_used += 2;
+                    break;
                 default:
                     break;
                 }
@@ -498,6 +507,7 @@ public:
                     std::cout<<"  -r: [F] "<<r_out<<std::endl;
                     std::cout<<"        --r-ratio:           [F] "<<ratio_r_cut<<std::endl;
                     std::cout<<"        --r-bin:             [F] "<<r_bin<<std::endl;
+                    std::cout<<"        --r-escape:          [F] "<<r_escape<<std::endl;
                     std::cout<<"  -b: [I] "<<n_bin<<std::endl;
                     std::cout<<"  -n: [I] "<<n_glb<<std::endl;
 #ifdef ORBIT_SAMPLING
@@ -618,6 +628,10 @@ public:
     std::ofstream fstatus;
     PS::F64 time_kick;
 
+    // escaper
+    Escaper escaper;
+    std::ofstream fesc;
+
     // file system
     FileHeader file_header;
     SystemSoft system_soft;
@@ -653,6 +667,7 @@ public:
     // remove list
     PS::ReallocatableArray<PS::S32> remove_list;
     PS::ReallocatableArray<PS::S64> remove_id_record;
+    PS::S32 n_remove;
 
     // search cluster
     SearchCluster search_cluster;
@@ -675,6 +690,7 @@ public:
         dn_loop(0), profile(), n_count(), n_count_sum(), tree_soft_profile(), fprofile(), 
 #endif
         stat(), fstatus(), time_kick(0.0),
+        escaper(), fesc(),
         file_header(), system_soft(), id_adr_map(),
         n_loop(0), domain_decompose_weight(1.0), dinfo(), pos_domain(NULL), 
         dt_manager(),
@@ -1925,6 +1941,7 @@ public:
     //! Correct potential energy due to modificaiton of particle mass
     void correctSoftPotMassChange() {
         // correct soft potential energy due to mass change
+#pragma omp parallel for
         for (int k=0; k<mass_modify_list.size(); k++)  {
             PS::S32 i = mass_modify_list[k];
             auto& pi = system_soft[i];
@@ -1934,10 +1951,10 @@ public:
             stat.energy.etot_sd_ref += dpot;
             stat.energy.de_sd_change_cum += dpot;
             pi.dm = 0.0;
-            // ghost particle case
-            if(pi.mass==0.0&&pi.group_data.artificial.isUnused()) {
-                remove_list.push_back(i);
-            }
+            // ghost particle case, check in remove_particle instead
+            //if(pi.mass==0.0&&pi.group_data.artificial.isUnused()) {
+            //    remove_list.push_back(i);
+            //}
         }
         mass_modify_list.resizeNoInitialize(0);
     }
@@ -1964,13 +1981,62 @@ public:
 
         // first remove artificial particles
         system_soft.setNumberOfParticleLocal(stat.n_real_loc);
-        // record remove id 
+
+        // set flag for particles in remove_list
         PS::S32 n_remove = remove_list.size();
         for (PS::S32 i=0; i<n_remove; i++) {
-            remove_id_record.push_back(system_soft[remove_list[i]].id);
+            system_soft[remove_list[i]].group_data.artificial.setParticleTypeToUnused(); // sign for removing
+            //remove_id_record.push_back(system_soft[remove_list[i]].id);
         }
-        // Remove ghost particles
+        remove_list.resizeNoInitialize(0);
+
+        // check all particles escaper status and remove
+        const PS::S32 num_thread = PS::Comm::getNumberOfThread();
+        PS::ReallocatableArray<PS::S32> remove_list_thx[num_thread];
+        for (PS::S32 i=0; i<num_thread; i++) remove_list_thx[i].resizeNoInitialize(0);
+
+#pragma omp parallel
+        { 
+            const PS::S32 ith = PS::Comm::getThreadNum();
+#pragma omp for 
+            for (PS::S32 i=0; i<stat.n_real_loc; i++) {
+                auto& pi = system_soft[i];
+                if (escaper.isEscaper(pi,stat.pcm)||(pi.mass==0.0&&pi.group_data.artificial.isUnused())) {
+                    remove_list_thx[ith].push_back(i);
+                    PS::F64 dpot = pi.mass*pi.pot_tot;
+                    PS::F64 dkin = 0.5*pi.mass*(pi.vel*pi.vel);
+                    PS::F64 eloss = dpot + dkin;
+                    stat.energy.etot_ref -= eloss;
+                    stat.energy.de_change_cum -= eloss;
+                    stat.energy.etot_sd_ref -= eloss;
+                    stat.energy.de_sd_change_cum -= eloss;
+                }
+            }
+        }
+
+        // gether remove indices
+        int n_esc=0;
+        for (PS::S32 i=0; i<num_thread; i++) 
+            for (PS::S32 k=0; k<remove_list_thx[i].size(); k++) {
+                PS::S32 index=remove_list_thx[i][k];
+                remove_list.push_back(index);
+                if (system_soft[index].mass>0) {
+                    if (input_parameters.write_style.value>0) {
+                        fesc<<std::setw(WRITE_WIDTH)<<stat.time;
+                        system_soft[index].printColumn(fesc,WRITE_WIDTH);
+                        fesc<<std::endl;
+                    }
+                    n_esc++;
+                }
+            }
+
+        // Remove particles
+        n_remove = remove_list.size();
         system_soft.removeParticle(remove_list.getPointer(), remove_list.size());
+
+        stat.n_escape_glb += PS::Comm::getSum(n_esc);
+        stat.n_remove_glb += PS::Comm::getSum(n_remove);
+
         // reset particle number
         stat.n_real_loc = stat.n_real_loc-remove_list.size();
         system_soft.setNumberOfParticleLocal(stat.n_real_loc);
@@ -2153,6 +2219,35 @@ public:
                 fstatus<<std::endl;
             }
             fstatus<<std::setprecision(WRITE_PRECISION);
+        }
+
+        if(write_style>0) {
+            // open escaper file
+            std::string my_rank_str = std::to_string(my_rank);
+            std::string fname_esc = fname_snp + ".esc." + my_rank_str;
+            if(input_parameters.app_flag) 
+                fesc.open(fname_esc.c_str(), std::ofstream::out|std::ofstream::app);
+            else {
+                fesc.open(fname_esc.c_str(), std::ofstream::out);
+                // write titles of columns
+                fesc<<std::setw(WRITE_WIDTH)<<"Time";
+                FPSoft::printColumnTitle(fesc,WRITE_WIDTH);
+                fesc<<std::endl;
+            }
+
+#ifdef BSE
+            // open SSE/BSE file
+            std::string fsse_name = fname_snp + ".sse." + my_rank_str;
+            std::string fbse_name = fname_snp + ".bse." + my_rank_str;
+            if(input_parameters.app_flag) {
+                hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out|std::ofstream::app);
+                hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out|std::ofstream::app);
+            }
+            else {
+                hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out);
+                hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out);
+            }
+#endif 
         }
 
 #ifdef HARD_DUMP
@@ -2631,6 +2726,7 @@ public:
         Ptcl::r_search_min = r_search_min;
         Ptcl::mean_mass_inv = 1.0/mass_average;
         Ptcl::r_group_crit_ratio = r_bin/r_in;
+        escaper.r_escape = input_parameters.r_escape.value;
 
         if(print_flag) {
             std::cout<<"----- Parameter list: -----\n";
@@ -2713,27 +2809,12 @@ public:
         hard_manager.ar_manager.interrupt_detection_option = input_parameters.interrupt_detection_option.value;
 #ifdef STELLAR_EVOLUTION
         hard_manager.ar_manager.interaction.stellar_evolution_option = input_parameters.stellar_evolution_option.value;
-#endif
+        if (write_style) hard_manager.ar_manager.interaction.stellar_evolution_write_flag = true;
 #ifdef BSE
-#ifdef BSE_PRINT
-        bool bse_print_flag = print_flag;
-        std::string fsse_name = input_parameters.fname_snp.value+std::string(".sse.")+std::to_string(my_rank);
-        std::string fbse_name = input_parameters.fname_snp.value+std::string(".bse.")+std::to_string(my_rank);
-        if (input_parameters.app_flag) {
-            hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out|std::ofstream::app);
-            hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out|std::ofstream::app);
-        }
-        else {
-            hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out);
-            hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out);
-        }
-#else
-        bool bse_print_flag = false;
-#endif
         if (input_parameters.stellar_evolution_option.value==1) 
-            hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters, bse_print_flag);
+            hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters, print_flag);
 #endif
-
+#endif
         // check consistence of paramters
         input_parameters.checkParams();
         hard_manager.checkParams();
@@ -3220,13 +3301,15 @@ public:
     void clear() {
 
         if (fstatus.is_open()) fstatus.close();
+        if (fesc.is_open()) fesc.close();
 #ifdef PROFILE
         if (fprofile.is_open()) fprofile.close();
 #endif
 
-#ifdef BSE_PRINT
-        hard_manager.ar_manager.interaction.fout_sse.close();
-        hard_manager.ar_manager.interaction.fout_bse.close();
+#ifdef BSE
+        auto& interaction = hard_manager.ar_manager.interaction;
+        if (interaction.fout_sse.is_open()) interaction.fout_sse.close();
+        if (interaction.fout_bse.is_open()) interaction.fout_bse.close();
 #endif
         if (pos_domain) {
             delete[] pos_domain;

@@ -1,6 +1,6 @@
 #pragma once
 #include<particle_simulator.hpp>
-#include"usr_define.hpp"
+#include"particle_base.hpp"
 #include"changeover.hpp"
 #define ASSERT assert
 #include"artificial_particles.hpp"

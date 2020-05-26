@@ -1,6 +1,6 @@
 #pragma once
 
-#include "usr_define.hpp"
+#include "particle_base.hpp"
 #include "energy.hpp"
 
 //! class for measure the status of the system
@@ -11,11 +11,13 @@ public:
     PS::S64 n_real_glb;
     PS::S64 n_all_loc;
     PS::S64 n_all_glb;
+    PS::S32 n_remove_glb;
+    PS::S32 n_escape_glb;
     PS::F64 half_mass_radius;
     ParticleBase pcm;
     EnergyAndMomemtum energy;
 
-    Status(): time(0.0), n_real_loc(0), n_real_glb(0), n_all_loc(0), n_all_glb(0), half_mass_radius(0), pcm() {}
+    Status(): time(0.0), n_real_loc(0), n_real_glb(0), n_all_loc(0), n_all_glb(0), n_remove_glb(0), n_escape_glb(0), half_mass_radius(0), pcm() {}
 
     template <class Tsoft>
     void calcCenterOfMass(Tsoft* _tsys, const PS::S64 _n) {
@@ -61,7 +63,9 @@ public:
              <<std::setw(_width)<<"N_real_loc"
              <<std::setw(_width)<<"N_real_glb"
              <<std::setw(_width)<<"N_all_loc"
-             <<std::setw(_width)<<"N_all_glb";
+             <<std::setw(_width)<<"N_all_glb"
+             <<std::setw(_width)<<"N_rm_glb"
+             <<std::setw(_width)<<"N_esc_glb";
         energy.printColumnTitle(_fout, _width);
         _fout<<std::setw(_width)<<"CM.mass"
              <<std::setw(_width)<<"CM.pos.x"
@@ -82,7 +86,9 @@ public:
              <<std::setw(_width)<<n_real_loc
              <<std::setw(_width)<<n_real_glb
              <<std::setw(_width)<<n_all_loc
-             <<std::setw(_width)<<n_all_glb;
+             <<std::setw(_width)<<n_all_glb
+             <<std::setw(_width)<<n_remove_glb
+             <<std::setw(_width)<<n_escape_glb;
         energy.printColumn(_fout, _width);
         _fout<<std::setw(_width)<<pcm.mass
              <<std::setw(_width)<<pcm.pos.x
@@ -105,6 +111,8 @@ public:
              <<"  N_real(glb): "<<n_real_glb
              <<"  N_all(loc): "<<n_all_loc
              <<"  N_all(glb): "<<n_all_glb
+             <<"  N_remove(glb): "<<n_remove_glb
+             <<"  N_escape(glb): "<<n_escape_glb
              <<std::endl;
         energy.print(_fout);
         _fout<<"C.M.: mass: "<<pcm.mass
