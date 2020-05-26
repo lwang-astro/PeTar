@@ -24,25 +24,37 @@ if __name__ == '__main__':
     temp_min = 2000
     temp_max = 50000
     output_file = 'movie'
+    skiprows = 0
+    xcol = -1
+    ycol = -1
+    mcol = -1
+    interrupt_mode='bse'
+    plot_HRdiagram=True
 
     def usage():
         print("A tool for processing a list of snapshot data to detect binaries, calculate Langragian radii and properties, get the density center and core radius")
-        print("Usage: petar.data.process [options] data_filename")
-        print("data_filename: A list of snapshot data path, each line for one snapshot")
-        print("option:")
+        print("Usage: petar.motion.movie [options] data_list_filename")
+        print("data_list_filename: A list of snapshot data path, each line for one snapshot")
+        print("option: default values are shown at last")
         print("  -h(--help): help")
         print("  -s: output frame speed: ",dt)
         print("  -R: movie box length: ",R)
-        print("  -z: framescale to zoom in: ",framescale)
+        print("  -z: plot zoom frame instead of HR digram, framescale to zoom in: ",framescale)
         print("  -o: output movie filename: ",output_file)
         print("  --lum-min: mimimum lumonisity: ",lum_min)
         print("  --lum-max: maximum lumonisity: ",lum_max)
         print("  --temp-min: mimimum temperature: ",temp_min)
         print("  --temp-max: maximum temperature: ",temp_max)
+        print("  --interrupt-mode: no, base, bse: ",interrupt_mode)
+        print("  --xcol: column index for x-axis: Unset")
+        print("  --ycol: column index for x-axis: Unset")
+        print("  --mcol: column index for mass, if not set and not PeTar output, assume equal mass: Unset")
+        print("  --skiprows: number of rows to escape when read snapshot: Unset")
+        print("PS:: when xcol, ycol, skiprows are not provided, the snapshot files are assumed to be the output of PeTar")
 
     try:
         shortargs = 's:R:z:o:h'
-        longargs = ['help','lum-min=','lum-max=','temp-min=','temp-max=']
+        longargs = ['help','lum-min=','lum-max=','temp-min=','temp-max=','interrupt-mode=','xcol=','ycol=','mcol=','skiprows=']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         for opt,arg in opts:
@@ -55,6 +67,7 @@ if __name__ == '__main__':
                 R = float(arg)
             elif opt in ('-z'):
                 framescale = float(arg)
+                plot_HRdiagram = False
             elif opt in ('-o'):
                 output_file = arg
             elif opt in ('--lum-min'):
@@ -65,13 +78,24 @@ if __name__ == '__main__':
                 temp_min = float(arg)
             elif opt in ('--temp-max'):
                 temp_max = float(arg)
+            elif opt in ('--interrupt-mode'):
+                interrupt_mode = arg
+                if (interrupt_mode!='bse'): plot_HRdiagram = False
+            elif opt in ('--xcol'):
+                xcol = int(arg)
+            elif opt in ('--ycol'):
+                ycol = int(arg)
+            elif opt in ('--mcol'):
+                mcol = int(arg)
+            elif opt in ('--skiprows'):
+                skiprows = int(arg)
             else:
                 assert False, "unhandeld option"
 
-    except getopt.GetoptError:
-        print('getopt error!')
+    except getopt.GetoptError as err:
+        print(err)
         usage()
-        sys.exit(1)
+        sys.exit(2)
 
 
     ncol= 2
@@ -103,12 +127,20 @@ if __name__ == '__main__':
         axe[0].set_xlabel('x')
         axe[0].set_ylabel('y')
 
-        boxsize /= framescale
-        axe[1].set_xlim(-boxsize,boxsize)
-        axe[1].set_ylim(-boxsize,boxsize)
-        axe[1].set_aspect(1.0)
-        axe[1].set_xlabel('x[pc]')
-        axe[1].set_ylabel('y[pc]')
+        if plot_HRdiagram:
+            axe[1].set_xlim(30e3,1e3);
+            axe[1].set_ylim(1e-5,1e5);
+            axe[1].set_yscale('log');
+            axe[1].set_xscale('log');
+            axe[1].set_xlabel(r'$T_{eff}[K]$')
+            axe[1].set_ylabel(r'$L[L_\odot]$')
+        else:
+            boxsize /= framescale
+            axe[1].set_xlim(-boxsize,boxsize)
+            axe[1].set_ylim(-boxsize,boxsize)
+            axe[1].set_aspect(1.0)
+            axe[1].set_xlabel('x')
+            axe[1].set_ylabel('y')
      
         for i in range(nlayer_cross):
             pt =axe[0].scatter([],[],marker='+',alpha=alphascale[i],edgecolors='none')
@@ -131,17 +163,34 @@ if __name__ == '__main__':
     def animate(k):
 
         file_path = path_list[k]
-        fp = open(file_path, 'r')
-        header=fp.readline()
-        file_id, n_glb, t = header.split()
-        fp.close()
+        print('process ',file_path)
+        data=dict()
+        if (xcol>=0) & (ycol>=0):
+            if (mcol>=0):
+                data['x'], data['y'] ,data['mass'] = np.loadtxt(file_path, unpack=True, usecols=(xcol,ycol,mcol), ndmin=2, skiprows=skiprows)
+            else:
+                data['x'], data['y'] = np.loadtxt(file_path, unpack=True, usecols=(xcol,ycol), ndmin=2, skiprows=skiprows)
+                data['mass'] = np.ones(data['x'].size)
+            data['t'] = file_path
+        else:
+            fp = open(file_path, 'r')
+            header=fp.readline()
+            file_id, n_glb, data['t'] = header.split()
+            fp.close()
 
-        time = float(t)
-        particles=petar.Particle(use_BSE=True)
-        particles.loadtxt(file_path,skiprows=1)
-        x = particles.pos[:,0]
-        y = particles.pos[:,1]
-        mass =particles.mass
+            particles=petar.Particle(use_BSE=(interrupt_mode=='bse'))
+            particles.loadtxt(file_path,skiprows=1)
+            data['x'] = particles.pos[:,0]
+            data['y'] = particles.pos[:,1]
+            data['mass'] =particles.mass
+            if (interrupt_mode=='bse'):
+                data['lum'] = particles.s_lum
+                data['rad'] = particles.s_rad
+                data['type']= particles.s_type
+
+        x = data['x']
+        y = data['y']
+        mass = data['mass']
         boxsize = 2.0*R
         sel=(x-pos_cm[0]>-boxsize) & (x-pos_cm[1]<boxsize) & (y-pos_cm[0]>-boxsize) & (y-pos_cm[1]<boxsize)
         nsel=sel.sum()
@@ -149,13 +198,15 @@ if __name__ == '__main__':
         pos_cm[1] = (y[sel]).sum()/float(nsel)
         x = x - pos_cm[0]
         y = y - pos_cm[1]
-        axe[0].set_title('T = %f' % time)
+        axe[0].set_title('T = '+data['t'])
 
-        luminosity = particles.s_lum
-        radius = particles.s_rad
-        temperature_eff = 5778*(luminosity/(radius*radius))**0.25
-        LogTeff=(np.log10(temperature_eff)-np.log10(temp_min))/(np.log10(temp_max)-np.log10(temp_min))
-        colors=cm.rainbow(1.0-LogTeff)
+        colors='w'
+        if ('lum' in data.keys()):
+            luminosity = data['lum']
+            radius = data['rad']
+            temperature_eff = 5778*(luminosity/(radius*radius))**0.25
+            LogTeff=(np.log10(temperature_eff)-np.log10(temp_min))/(np.log10(temp_max)-np.log10(temp_min))
+            colors=cm.rainbow(1.0-LogTeff)
         #sizes = (np.log10(luminosity)-np.log10(lum_min)+1)*100
         #sizes = luminosity
 
@@ -167,11 +218,17 @@ if __name__ == '__main__':
             ptcls[i].set_sizes(sizes)
             ptcls[i].set_color(colors)
 
-        for i in range(nlayer):
-            sizes = mass*framescale*sizescale[i]
-            ptcls[nlayer+i].set_offsets(np.array([x,y]).transpose())
-            ptcls[nlayer+i].set_sizes(sizes)
-            ptcls[nlayer+i].set_color(colors)
+        if plot_HRdiagram:
+            types = data['type']
+            colors = cm.rainbow(types/15.0)
+            ptcls[2*nlayer-1].set_offsets(np.array([temperature_eff, luminosity]).transpose())
+            ptcls[2*nlayer-1].set_color(colors)
+        else:
+            for i in range(nlayer):
+                sizes = mass*framescale*sizescale[i]
+                ptcls[nlayer+i].set_offsets(np.array([x,y]).transpose())
+                ptcls[nlayer+i].set_sizes(sizes)
+                ptcls[nlayer+i].set_color(colors)
 
         return ptcls
 
