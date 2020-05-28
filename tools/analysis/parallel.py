@@ -123,6 +123,7 @@ def parallelDataProcessList(file_list, n_cpu=int(0), **kwargs):
 
     # Step 3: Don't forget to close
     pool.close()
+    pool.join()
 
     lagri=[]
     corei=[]
