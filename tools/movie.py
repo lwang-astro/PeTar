@@ -138,6 +138,7 @@ class Data:
         self.interrupt_mode = 'bse'
         self.G = 0.00449830997959438 # pc^3/(Msun*Myr^2)
         self.semi_max = 0.1
+        self.cm_mode = 'density'
 
         for key in self.__dict__.keys():
             if (key in kwargs.keys()): self.__dict__[key] = kwargs[key]
@@ -232,16 +233,34 @@ class Data:
                     data['type']= particles.s_type
         
     def correctCM(self, boxsize):
-        xcm = self.x.sum()/self.x.size
-        ycm = self.y.sum()/self.y.size
-        self.x = self.x - xcm
-        self.y = self.y - ycm
-        sel=(self.x-xcm>-boxsize) & (self.x-xcm<boxsize) & (self.y-ycm>-boxsize) & (self.y-ycm<boxsize)
-        nsel=sel.sum()
-        xcm = (self.x[sel]).sum()/float(nsel)
-        ycm = (self.y[sel]).sum()/float(nsel)
-        self.x = self.x - xcm
-        self.y = self.y - ycm
+        if (self.cm_mode=='density'):
+            nbins=200
+            xmin = -boxsize
+            xmax =  boxsize
+            ymin = -boxsize
+            ymax =  boxsize
+            xbins=np.linspace(xmin,xmax,nbins)
+            ybins=np.linspace(ymin,ymax,nbins)
+            lbin=[xbins,ybins]
+            counts, _, _ = np.histogram2d(self.x,self.y, bins=lbin)
+            xp,yp=np.where(counts>0.2*counts.max())
+            m = counts[xp,yp]
+            mtot = m.sum()
+            xcm=(xp*m).sum()/mtot/nbins*(xmax-xmin)+xmin
+            ycm=(yp*m).sum()/mtot/nbins*(ymax-ymin)+ymin
+            self.x = self.x - xcm
+            self.y = self.y - ycm
+        else:
+            xcm = self.x.sum()/self.x.size
+            ycm = self.y.sum()/self.y.size
+            self.x = self.x - xcm
+            self.y = self.y - ycm
+            sel=(self.x-xcm>-boxsize) & (self.x-xcm<boxsize) & (self.y-ycm>-boxsize) & (self.y-ycm<boxsize)
+            nsel=sel.sum()
+            xcm = (self.x[sel]).sum()/float(nsel)
+            ycm = (self.y[sel]).sum()/float(nsel)
+            self.x = self.x - xcm
+            self.y = self.y - ycm
 
 def plotOne(file_path, axe, plots, **kwargs):
     data = Data(**kwargs)
@@ -273,8 +292,10 @@ def initPlot(axe, plot_zoom, plot_HRdiagram, plot_semi_ecc, **kwargs):
     plots=dict()
 
     iaxe=0
-    framescale = kwargs['framescale']
-    kwargs['framescale'] = 1
+    framescale=1
+    if 'framescale' in kwargs.keys(): 
+        framescale = kwargs['framescale']
+        kwargs['framescale'] = 1
     plots['xy']=PlotXY()
     plots['xy'].init(axe[iaxe],**kwargs)
 
@@ -387,13 +408,14 @@ if __name__ == '__main__':
         print("  --plot-ncols: column number of panels: same as panels")
         print("  --plot-xsize: x size of panel: ",frame_xsize)
         print("  --plot-ysize: y size of panel: ",frame_ysize)
+        print("  --cm-mode: plot origin position determination: density: density center; average: average of x,y: ", data.cm_mode)
         print("  --suppress-images: do not plot snapshot images (png files) and use matplotlib.animation instead of imageio, this cannot use multi-processing, much slower")
         print("  --format: video format, require imageio installed, for some formats (e.g. avi, mp4) may require ffmpeg and imageio-ffmpeg installed: ", plot_format)
         print("PS:: when xcol, ycol, skiprows are not provided, the snapshot files are assumed to be the output of PeTar")
 
     try:
         shortargs = 's:R:z:o:G:Hbh'
-        longargs = ['help','lum-min=','lum-max=','temp-min=','temp-max=','semi-min=','semi-max=','ecc-min=','ecc-max=','interrupt-mode=','xcol=','ycol=','mcol=','skiprows=','generate-binary=','plot-ncols=','plot-xsize=','plot-ysize=','suppress-images','format=']
+        longargs = ['help','lum-min=','lum-max=','temp-min=','temp-max=','semi-min=','semi-max=','ecc-min=','ecc-max=','interrupt-mode=','xcol=','ycol=','mcol=','skiprows=','generate-binary=','plot-ncols=','plot-xsize=','plot-ysize=','suppress-images','format=','cm-mode=']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -434,6 +456,8 @@ if __name__ == '__main__':
                 kwargs['ecc_max'] = float(arg)
             elif opt in ('--interrupt-mode'):
                 kwargs['interrupt_mode'] = arg
+            elif opt in ('--cm-mode'):
+                kwargs['cm_mode']= arg
             elif opt in ('--xcol'):
                 kwargs['xcol'] = int(arg)
             elif opt in ('--ycol'):
