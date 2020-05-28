@@ -25,6 +25,7 @@ def create_movie(filenames, fps, output_file):
 class PlotXY:
     def __init__(self):
         self.boxsize = 2
+        self.framescale = 1
         self.nlayer_cross = 5
         self.nlayer_point = 10
         self.alpha_amplifier = 2.5
@@ -67,7 +68,7 @@ class PlotXY:
 
     def plot(self, x, y, mass, colors):
         for i in range(self.nlayer):
-            sizes = mass*self.sizescale[i]
+            sizes = mass*self.sizescale[i]*self.framescale
             #sizes = (np.log10(luminosity)-np.log10(lum_min)+1)
             #sizes = luminosity
             self.ptcls[i].set_offsets(np.array([x,y]).transpose())
@@ -272,12 +273,15 @@ def initPlot(axe, plot_zoom, plot_HRdiagram, plot_semi_ecc, **kwargs):
     plots=dict()
 
     iaxe=0
+    framescale = kwargs['framescale']
+    kwargs['framescale'] = 1
     plots['xy']=PlotXY()
     plots['xy'].init(axe[iaxe],**kwargs)
 
     if (plot_zoom): 
         iaxe +=1 
-        kwargs['boxsize'] = plots['xy'].boxsize / kwargs['framescale']
+        kwargs['boxsize'] = plots['xy'].boxsize / framescale
+        kwargs['framescale'] = framescale
         plots['xyzoom']=PlotXY()
         plots['xyzoom'].init(axe[iaxe], **kwargs)
         
