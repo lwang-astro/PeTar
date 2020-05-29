@@ -112,7 +112,7 @@ int main(int argc, char **argv){
   hard_manager.readBinary(fpar_in);
   fclose(fpar_in);
 
-
+#ifdef STELLAR_EVOLUTION
 #ifdef BSE
   std::cerr<<"BSE parameter file:"<<fbsepar<<std::endl;
   if( (fpar_in = fopen(fbsepar.c_str(),"r")) == NULL) {
@@ -123,6 +123,12 @@ int main(int argc, char **argv){
   bse_io.input_par_store.readAscii(fpar_in);
   fclose(fpar_in);
   hard_manager.ar_manager.interaction.bse_manager.initial(bse_io);
+
+  if (hard_manager.ar_manager.interaction.stellar_evolution_write_flag) {
+      hard_manager.ar_manager.interaction.fout_sse.open((filename+".sse").c_str(), std::ofstream::out);
+      hard_manager.ar_manager.interaction.fout_bse.open((filename+".bse").c_str(), std::ofstream::out);
+  }
+#endif
 #endif
 
 #ifdef HARD_CHECK_ENERGY
@@ -205,5 +211,12 @@ int main(int argc, char **argv){
       sys.findGroupsAndCreateArtificialParticlesOneCluster(0, ptcl, n_ptcl, ptcl_new, binary_table, n_group_in_cluster, n_member_in_group, i_cluster_changeover_update, group_candidate, hard_dump.time_end);
   }
 
+#ifdef STELLAR_EVOLUTION
+#ifdef BSE
+  auto& interaction = hard_manager.ar_manager.interaction;
+  if (interaction.fout_sse.is_open()) interaction.fout_sse.close();
+  if (interaction.fout_bse.is_open()) interaction.fout_bse.close();
+#endif
+#endif
   return 0;
 }

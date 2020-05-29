@@ -808,6 +808,12 @@ public:
                 p1->radius = bse_manager.getMergerRadius(p1->star);
                 p2->radius = bse_manager.getMergerRadius(p2->star);
 
+                // set binary status
+                //p1->setBinaryPairID(p2->id);
+                //p2->setBinaryPairID(p1->id);
+                p1->setBinaryInterruptState(static_cast<BinaryInterruptState>(binary_type));
+                p2->setBinaryInterruptState(static_cast<BinaryInterruptState>(binary_type));
+
                 // case when SN kick appears
                 if (event_flag==3) {
                     for (int k=0; k<2; k++) {
@@ -816,6 +822,8 @@ public:
                         dv[3] = bse_manager.getVelocityChange(dv,out[k]);
                         for (int k=0; k<3; k++) pk->vel[k] += dv[k];
                     }
+                    // update orbital parameteres
+                    _bin.calcOrbit(gravitational_constant);
                 }
 
                 // if mass become zero, set to unused for removing and merger status
@@ -928,6 +936,8 @@ public:
                     if (p1->mass==0.0) p1->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
                     if (p2->mass==0.0) p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
 
+                    p1->setBinaryPairID(0);
+                    p2->setBinaryPairID(0);
                     p1->setBinaryInterruptState(BinaryInterruptState::none);
                     p2->setBinaryInterruptState(BinaryInterruptState::none);
                 };
@@ -997,18 +1007,32 @@ public:
     /*! @param[in] _fp: FILE type file for output
      */
     void writeBinary(FILE *_fp) const {
-        fwrite(this, sizeof(*this),1,_fp);
+        fwrite(&eps_sq, sizeof(Float),1,_fp);
+        fwrite(&gravitational_constant, sizeof(Float),1,_fp);
+#ifdef STELLAR_EVOLUTION
+        fwrite(&stellar_evolution_option, sizeof(int),1,_fp);
+        fwrite(&stellar_evolution_write_flag, sizeof(bool),1,_fp);
+#endif
     }
 
     //! read class data to file with binary format
     /*! @param[in] _fp: FILE type file for reading
      */
     void readBinary(FILE *_fin) {
-        size_t rcount = fread(this, sizeof(*this), 1, _fin);
-        if (rcount<1) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+        size_t rcount = fread(&eps_sq, sizeof(Float),1,_fin);
+        rcount += fread(&gravitational_constant, sizeof(Float),1,_fin);
+        if (rcount<2) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
             abort();
         }
+#ifdef STELLAR_EVOLUTION
+        rcount += fread(&stellar_evolution_option, sizeof(int),1,_fin);
+        rcount += fread(&stellar_evolution_write_flag, sizeof(bool),1,_fin);
+        if (rcount<4) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
+            abort();
+        }
+#endif
     }    
 };
 

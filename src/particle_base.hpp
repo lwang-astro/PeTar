@@ -10,7 +10,11 @@
 #endif
 
 #ifdef STELLAR_EVOLUTION
+#ifdef BSE
+enum class BinaryInterruptState:int {none = 0, form = 1, type_change = 2, start_roche = 3, end_roche = 4, contact = 5, start_symbiotic = 6, end_symbiotic = 7, common_envelope = 8 , giant = 9, collision = 10, blue_straggler = 11, no_remain = 12, disrupt = 13};
+#else
 enum class BinaryInterruptState:int {none = 0, form = 1, exchange = 2, collision = 3};
+#endif
 #define BINARY_STATE_ID_SHIFT 4
 #define BINARY_INTERRUPT_STATE_MASKER 0xF
 #endif
