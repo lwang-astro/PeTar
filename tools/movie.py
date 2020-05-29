@@ -257,17 +257,22 @@ class Data:
             self.y = self.y - ycm
             sel=(self.x-xcm>-boxsize) & (self.x-xcm<boxsize) & (self.y-ycm>-boxsize) & (self.y-ycm<boxsize)
             nsel=sel.sum()
-            xcm = (self.x[sel]).sum()/float(nsel)
-            ycm = (self.y[sel]).sum()/float(nsel)
-            self.x = self.x - xcm
-            self.y = self.y - ycm
+            xcm2 = (self.x[sel]).sum()/float(nsel)
+            ycm2 = (self.y[sel]).sum()/float(nsel)
+            self.x = self.x - xcm2 
+            self.y = self.y - ycm2
+            xcm += xcm2
+            ycm += ycm2
+        return xcm, ycm
 
 def plotOne(file_path, axe, plots, **kwargs):
     data = Data(**kwargs)
     data.read(file_path)
-    data.correctCM(plots['xy'].boxsize)
+    xcm, ycm=data.correctCM(plots['xy'].boxsize)
 
     axe[0].set_title('T = '+data['t'])
+    axe[0].text(.05, 0.95, r'$x_{cm}=%f$' % xcm, transform = axe[0].transAxes, color='white')
+    axe[0].text(.35, 0.95, r'$y_{cm}=%f$' % ycm, transform = axe[0].transAxes, color='white')
     
     colors='w'
     if ('lum' in data.keys()): colors = plots['xy'].getColor(data['temp'])
