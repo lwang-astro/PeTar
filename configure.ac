@@ -152,7 +152,7 @@ AC_ARG_WITH([cuda-prefix],
 AC_ARG_WITH([cuda-sdk-prefix], 
             [AS_HELP_STRING([--with-cuda-sdk-prefix],
 	                    [Prefix of your CUDA samples (SDK) installation])],
-            [],
+            [cuda_sdk_prefix=$withval],
 	    [cuda_sdk_prefix="/usr/local/cuda/samples"])
 
 AS_IF([test "x$use_cuda" != xno],
@@ -201,23 +201,23 @@ AC_ARG_ENABLE([gperf],
 AC_ARG_WITH([gperf-prefix], 
             [AS_HELP_STRING([--with-gperf-prefix],
 	                    [Prefix of your gperftools installation])],
-            [],
+            [gperf_prefix=$withval],
 	    [gperf_prefix=/opt/gperftools])
 
 AS_IF([test x"$use_gperf" != xno],
       [use_gperf=yes
        AC_CHECK_LIB([profiler],
                     [main],
-		    [GPERFLIBS=' -lprofiler']
+		    [GPERFLIBS=' -lprofiler'],
 		    [AC_CHECK_FILE(["$gperf_prefix/lib/libprofiler.so"],
-                                   [GPREFFLAGS=" -I$gperf_prefix/include"
+                                   [GPERFFLAGS=" -I$gperf_prefix/include"
                                     GPERFLIBS=" -L$gperf_prefix/lib -lprofiler"],
 				   [AC_MSG_FAILURE([Cannot find gperftools library -lprofiler, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])
        AC_CHECK_LIB([tcmalloc],
                     [main],
-		    [GPERFLIBS=' -ltcmalloc']
+		    [GPERFLIBS=' -ltcmalloc'],
 		    [AC_CHECK_FILE(["$gperf_prefix/lib/libtcmalloc.so"],
-                                   [GPERFLIBS=GPERFLIBS" -ltcmalloc"],
+                                   [GPERFLIBS=$GPERFLIBS" -ltcmalloc"],
 				   [AC_MSG_FAILURE([Cannot find gperftools library -ltcmalloc, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])],
        [use_gperf=no])
 
@@ -225,7 +225,7 @@ AS_IF([test x"$use_gperf" != xno],
 AC_ARG_WITH([fdps-prefix], 
             [AS_HELP_STRING([--with-fdps-prefix],
 	                    [Prefix of your FDPS installation. Default: ../FDPS])],
-            [],
+            [fdps_prefix=$withval],
 	    [fdps_prefix="../FDPS"])
 
 AC_CHECK_FILE(["$fdps_prefix/src/particle_simulator.hpp"],
@@ -236,7 +236,7 @@ AC_CHECK_FILE(["$fdps_prefix/src/particle_simulator.hpp"],
 AC_ARG_WITH([sdar-prefix], 
             [AS_HELP_STRING([--with-sdar-prefix],
 	                    [Prefix of your FDPS installation. Default: ../SDAR])],
-            [],
+            [sdar_prefix=$withval],
 	    [sdar_prefix="../SDAR"])
 
 AC_CHECK_FILE(["$sdar_prefix/src/Hermite/hermite_integrator.h"],
@@ -263,7 +263,8 @@ AC_ARG_WITH([interrupt],
 AC_ARG_WITH([tidal-tensor],
 	    [AS_HELP_STRING([--with-tidal-tensor],
 	                    [Tidal tensor accuracy mode: 2nd/3rd: Default: 3rd])],
-            [PROG_NAME=$PROG_NAME'.'tt$with_tidal_tensor],
+            [with_tidal_tensor=$withval
+	     PROG_NAME=$PROG_NAME'.'tt$with_tidal_tensor],
 	    [with_tidal_tensor=3rd])
 
 # orbit particle methods
