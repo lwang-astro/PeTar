@@ -16,6 +16,7 @@
 int main(int argc, char **argv){
   int arg_label;
   int mode=0; // 0: integrate to time; 1: times stability
+  int idum=0;
   PS::F64 slowdown_factor=0;
   PS::F64 eta_4th=0;
   PS::F64 eta_2nd=0;
@@ -30,7 +31,7 @@ int main(int argc, char **argv){
   std::string fbsepar = "input.par.bse";
 #endif
 
-  while ((arg_label = getopt(argc, argv, "k:E:A:a:D:d:e:s:m:b:h")) != -1)
+  while ((arg_label = getopt(argc, argv, "k:E:A:a:D:d:e:s:m:b:i:h")) != -1)
     switch (arg_label) {
     case 'k':
         slowdown_factor = atof(optarg);
@@ -65,6 +66,9 @@ int main(int argc, char **argv){
         fhardpar = optarg;
         break;
 #ifdef BSE
+    case 'i':
+        idum = atoi(optarg);
+        break;
     case 'b':
         fbsepar = optarg;
         break;
@@ -74,18 +78,19 @@ int main(int argc, char **argv){
                  <<"options:\n"
                  <<"    -k [double]:  change slowdown factor\n"
 #ifdef HARD_CHECK_ENERGY
-                 <<"    -e [double]:  hard energy limit ("<<e_err_hard<<")\n"
+                 <<"    -e [double]:  hard energy limit\n"
 #endif
-                 <<"    -s [int]:     AR step count limit ("<<step_arc_limit<<")\n"
+                 <<"    -s [int]:     AR step count limit\n"
                  <<"    -E [double]:  Eta 4th for hermite \n"
                  <<"    -A [double]:  Eta 2nd for hermite \n"
                  <<"    -a [double]:  AR energy limit \n"
                  <<"    -D [double]:  hard time step max \n"
-                 <<"    -d [int]:     hard time step min power \n"
-                 <<"    -m [int]:     running mode: 0: evolve system to time_end (default); 1: stability check \n"
-                 <<"    -p [string]:  hard parameter file name ("<<fhardpar<<"\n"
+                 <<"    -d [int]:     hard time step min power\n"
+                 <<"    -m [int]:     running mode: 0: evolve system to time_end; 1: stability check: "<<mode<<std::endl
+                 <<"    -p [string]:  hard parameter file name: "<<fhardpar<<std::endl
 #ifdef BSE
-                 <<"    -b [string]:  bse parameter file name ("<<fbsepar<<")\n"
+                 <<"    -i [int]      random seed to generate kick velocity\n"
+                 <<"    -b [string]:  bse parameter file name: "<<fbsepar<<std::endl
 #endif
                  <<"    -h         :  help\n";
         return 0;
@@ -122,6 +127,7 @@ int main(int argc, char **argv){
   IOParamsBSE bse_io;
   bse_io.input_par_store.readAscii(fpar_in);
   fclose(fpar_in);
+  if (idum!=0) bse_io.idum.value = idum;
   hard_manager.ar_manager.interaction.bse_manager.initial(bse_io);
 
   if (hard_manager.ar_manager.interaction.stellar_evolution_write_flag) {
