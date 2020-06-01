@@ -711,7 +711,7 @@ enable_option_checking
 with_mpi
 with_debug
 enable_openmp
-with_x86
+with_arch
 with_simd
 enable_simd_64
 enable_cuda
@@ -3671,9 +3671,9 @@ fi
 
 # x86
 
-# Check whether --with-x86 was given.
-if test "${with_x86+set}" = set; then :
-  withval=$with_x86;
+# Check whether --with-arch was given.
+if test "${with_arch+set}" = set; then :
+  withval=$with_arch;
 else
   with_arch=x86
 fi

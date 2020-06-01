@@ -129,7 +129,7 @@ endif # x86
 #-------------------------------------
 ifeq ($(use_gperf),yes)
 CXXFLAGS += @GPERFFLAGS@
-CXXLFAGS += -D GPERF_PROFILE
+CXXFLAGS += -D GPERF_PROFILE
 CXXLIBS += @GPERFLIBS@
 endif # gperf
 #-------------------------------------

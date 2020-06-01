@@ -89,7 +89,7 @@ AS_IF([test x"$use_omp" != xno],
       [use_omp=no])
 
 # x86
-AC_ARG_WITH([x86],
+AC_ARG_WITH([arch],
 	    [AS_HELP_STRING([--with-arch],
                             [compile with architecture type (x86). Default: x86])],
             [],

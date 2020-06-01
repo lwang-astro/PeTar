@@ -769,6 +769,12 @@ public:
                 _bin.particleToSemiEcc(semi, ecc, r, drdv, *p1, *p2, gravitational_constant);
                 Float mtot = p1->mass+p2->mass;
                 Float period = _bin.semiToPeriod(semi, mtot, gravitational_constant);
+                // backup c.m. information 
+                Float pos_cm[3], vel_cm[3];
+                for (int k=0; k<3; k++) {
+                    pos_cm[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mtot;
+                    vel_cm[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mtot;
+                }
                 int binary_type = 0;
                 int event_flag = bse_manager.evolveBinary(p1->star, p2->star, out[0], out[1], period, ecc, binary_type, dt);
                 
@@ -834,12 +840,22 @@ public:
                     _bin_interrupt.status = AR::InterruptStatus::merge;
                     p1->setBinaryInterruptState(BinaryInterruptState::none);
                     p2->setBinaryInterruptState(BinaryInterruptState::none);
+                    // set new particle position and velocity to be the original cm
+                    for (int k=0; k<3; k++) {
+                        p2->pos[k] = pos_cm[k];
+                        p2->vel[k] = vel_cm[k];
+                    }
                 }
                 if (p2->mass==0.0) {
                     p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
                     _bin_interrupt.status = AR::InterruptStatus::merge;
                     p1->setBinaryInterruptState(BinaryInterruptState::none);
                     p2->setBinaryInterruptState(BinaryInterruptState::none);
+                    // set new particle position and velocity to be the original cm
+                    for (int k=0; k<3; k++) {
+                        p1->pos[k] = pos_cm[k];
+                        p1->vel[k] = vel_cm[k];
+                    }
                 }
 
                 if (_bin_interrupt.status != AR::InterruptStatus::merge) {
