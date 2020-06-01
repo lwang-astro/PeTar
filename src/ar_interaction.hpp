@@ -627,9 +627,9 @@ public:
         //    return true;
         //}
 #ifdef BSE
-        ASSERT(bse_manager.checkParams());
         // SSE/BSE stellar evolution 
         if (_p.time_interrupt<=_time_end&&stellar_evolution_option==1) {
+            ASSERT(bse_manager.checkParams());
 
             int modify_flag = 1;
 
@@ -722,6 +722,7 @@ public:
 #ifdef BSE
                 // if member is star, evolve single star using SSE
                 else if (stellar_evolution_option==1) {
+                    ASSERT(bse_manager.checkParams());
                     int modify_flag = modifyOneParticle(*_bin.getMember(k), _bin_interrupt.time_now, _bin_interrupt.time_end);
                     if (modify_flag) {
                         modify_count++;
@@ -745,6 +746,7 @@ public:
 #ifdef BSE
             double time_check = std::min(p1->time_interrupt, p2->time_interrupt);
             if (time_check<=_bin_interrupt.time_end&&stellar_evolution_option==1) {
+                ASSERT(bse_manager.checkParams());
                 // record address of modified binary
                 _bin_interrupt.adr = &_bin;
                 // if status not set, set to change
