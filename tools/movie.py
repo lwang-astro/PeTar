@@ -234,11 +234,14 @@ class Data:
         
     def correctCM(self, boxsize):
         if (self.cm_mode=='density'):
-            nbins=200
-            xmin = -boxsize
-            xmax =  boxsize
-            ymin = -boxsize
-            ymax =  boxsize
+            nbins=100
+            xmid = np.average(np.abs(self.x))
+            ymid = np.average(np.abs(self.y))
+            #print(xmid,ymid)
+            xmin = -5*xmid
+            xmax =  5*xmid
+            ymin = -5*ymid
+            ymax =  5*ymid
             xbins=np.linspace(xmin,xmax,nbins)
             ybins=np.linspace(ymin,ymax,nbins)
             lbin=[xbins,ybins]
@@ -250,12 +253,33 @@ class Data:
             ycm=(yp*m).sum()/mtot/nbins*(ymax-ymin)+ymin
             self.x = self.x - xcm
             self.y = self.y - ycm
+
+            nbins=200
+            xmid = np.average(np.abs(self.x))
+            ymid = np.average(np.abs(self.y))
+            xmin = -boxsize
+            xmax =  boxsize
+            ymin = -boxsize
+            ymax =  boxsize
+            xbins=np.linspace(xmin,xmax,nbins)
+            ybins=np.linspace(ymin,ymax,nbins)
+            lbin=[xbins,ybins]
+            counts, _, _ = np.histogram2d(self.x,self.y, bins=lbin)
+            xp,yp=np.where(counts>0.2*counts.max())
+            m = counts[xp,yp]
+            mtot = m.sum()
+            xcm2=(xp*m).sum()/mtot/nbins*(xmax-xmin)+xmin
+            ycm2=(yp*m).sum()/mtot/nbins*(ymax-ymin)+ymin
+            self.x = self.x - xcm2
+            self.y = self.y - ycm2
+            xcm += xcm2
+            ycm += ycm2
         else:
             xcm = self.x.sum()/self.x.size
             ycm = self.y.sum()/self.y.size
             self.x = self.x - xcm
             self.y = self.y - ycm
-            sel=(self.x-xcm>-boxsize) & (self.x-xcm<boxsize) & (self.y-ycm>-boxsize) & (self.y-ycm<boxsize)
+            sel=(self.x>-boxsize) & (self.x<boxsize) & (self.y>-boxsize) & (self.y<boxsize)
             nsel=sel.sum()
             xcm2 = (self.x[sel]).sum()/float(nsel)
             ycm2 = (self.y[sel]).sum()/float(nsel)
