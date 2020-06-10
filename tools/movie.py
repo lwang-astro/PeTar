@@ -443,7 +443,7 @@ if __name__ == '__main__':
         print("PS:: when xcol, ycol, skiprows are not provided, the snapshot files are assumed to be the output of PeTar")
 
     try:
-        shortargs = 's:R:z:o:G:Hbh'
+        shortargs = 's:f:R:z:o:G:Hbh'
         longargs = ['help','lum-min=','lum-max=','temp-min=','temp-max=','semi-min=','semi-max=','ecc-min=','ecc-max=','interrupt-mode=','xcol=','ycol=','mcol=','skiprows=','generate-binary=','plot-ncols=','plot-xsize=','plot-ysize=','suppress-images','format=','cm-mode=']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
@@ -467,6 +467,8 @@ if __name__ == '__main__':
                 output_file = arg
             elif opt in ('-G'):
                 kwargs['G'] = float(arg)
+            elif opt in ('-f'):
+                fps = int(arg)
             elif opt in ('--lum-min'):
                 kwargs['lum_min'] = float(arg)
             elif opt in ('--lum-max'):
