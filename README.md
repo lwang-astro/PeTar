@@ -1,5 +1,5 @@
 # PeTar
-Particle-particle \& Particle-tree (_P<sup>3</sup>T_) with slow-down time-transformed symplectic integrator (slow-down algorithmic regularization; _SDAR_) code for simulating gravitational _N_-body systems including close encounters and few-body systems.
+A particle-particle \& Particle-tree (_P<sup>3</sup>T_) with slow-down time-transformed symplectic integrator (slow-down algorithmic regularization; _SDAR_) code for simulating gravitational _N_-body systems including close encounters and few-body systems.
 
 The Doxygen document will be provided in doc directory (not yet done)
 
@@ -196,13 +196,15 @@ By the way, the _petar_ code also generates escaper data by using the energy and
 
 #### Movie generator
 The _petar.movie_ is a covenient tool to generate a movie from the snapshot files.
-It can generate the movies of the positions (x,y) of stars (x, y of positions), the HR diagram if stellar evolution (SSE/BSE) is switched on, the and 2D distribution of semi-major axis vs. eccentricity of binaries.
+It can generate the movies of the positions (x,y) of stars (x, y of positions), the HR diagram if stellar evolution (SSE/BSE) is switched on, the 2D distribution of semi-major axis and eccentricity of binaries.
 The snapshot file list is required to generat the movie.
 The basic way to use:
 ```
 petar.movie [options] [snapshot path list filename]
 ```
-If users want to plot information of binaries, it is better to use petar.data.process first to generate detect binaries with multiple CPU cores. This movie generator can only use one CPU core. Thus detecting binaries can be slower.
+If users want to plot information of binaries, it is better to use petar.data.process first to generate detect binaries with multiple CPU cores. Then the next time binary detection is not necessary to run again (use option '--generate-binary 2').
+
+This tool use either _imageio_ or _matplotlib.animation_ to generate movies. It is suggested to install _imageio_ in order to generate movie using mutliple CPU cores. This is much faster than the _matplotlib.animation_ which can only use one CPU core. On the other hand, The ffmpeg is also suggested to install in order to support several commonly used movie formats (e.g. mp4, avi).
 
 #### SSE/BSE steller evolution tool
 The _petar.bse_ will be generated when --with-interrupt=bse is used during the configuration.
@@ -255,7 +257,7 @@ There are also several functions.
 - _findPair_: detect binaries of one particle list by using _scipy.cKDTree_
 - _parallelDataProcessList_: use mutliple CPU cores to process a list of snapshot files and generate single and binary snapshots, Lagrangian data, core data and escaper data. For large _N_, the data process is quite slow, thus using multiple CPU processors can speed up the process. 
 
-More useful tools will be implemented in the future.
+More useful tools will be implemented in the future. The tools/analysis/parallel.py is a good example to learn how to use this analysis module.
 
 ## Method:
 ### Algorithm of integration: 
