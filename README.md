@@ -12,10 +12,10 @@ SDAR: https://github.com/lwang-astro/SDAR
 Please download these two codes and put in the same directory where the _PeTar_ directory exist, in order to successfully compile the code.
 
 ### Environment:
-To successfully compile the code, the C++ compiler (e.g. gcc, icpc) needs the support of the C++11 standard. To use SSE/BSE package, a Fortran (77) compiler (e.g. gfortran) is needed and should be possile to provide API to c++ code (Currently ifort is not supported yet). The MPI compiler (e.g. mpic++) is required to use MPI. NVIDIA GPU and CUDA compiler is required to use GPU acceleration. The SIMD support is designed for the GNU and Intel compilers and is not tested using other compilers. Thus the GNU or Intel compilers are suggested to use. 
+To successfully compile the code, the C++ compiler (e.g. gcc, icpc) needs the support of the C++11 standard. To use SSE/BSE package, a Fortran (77) compiler (e.g. gfortran) is needed and should be possile to provide API to c++ code (Currently ifort is not supported yet). The MPI compiler (e.g. mpic++) is required to use MPI. NVIDIA GPU and CUDA compiler is required to use GPU acceleration. The SIMD support is designed for the GNU and Intel compilers. It is not tested for other compilers, thus the GNU or Intel compilers are suggested to use. 
 
 ### Make:
-Onces _FPDS_ and _SDAR_ are available, in the root directoy, use 
+Once _FPDS_ and _SDAR_ are available, in the root directoy, use 
 ```
 ./configure
 ```
@@ -94,7 +94,7 @@ to compile and install the code.
 The excutable file _petar_, _petar.hard.debug_, _petar.init_, _petar.find.dt_, _petar.data.process_, _petar.movie_ and _petar.bse_ (if SSE/BSE is used) will be installed in [Install path]/bin.
 1. _petar_ is the main routine. It is actually a soft link to _petar.\*\*_, where the suffix represents the feature of the code based on the configure.
 2. _petar.hard.debug_ is used for debugging if _hard\_dump_ files appears when the code crashes.
-3. _petar.[tool name]_ are a group of tools for initialization, optimize the performance and data analysis. The details can be checked in the following section "Useful tools".
+3. _petar.[tool name]_ are a group of tools for initialization, optimize the performance and data analysis. The details can be checked in the section [Useful tools](#useful-tools).
 
 The data analysis module are written in _PYTHON_.
 They are installed in [Install path]/include/petar
