@@ -512,8 +512,8 @@ extern "C" {
                 auto pk = interrupt_hard_int->interrupt_binary.adr->getMember(k);
                 
                 // copy data from global particle array
-                PtclHard* pk_org = pk->adr;
-                pk->DataCopy(ptr->system_soft[pk_org->adr_org]);
+                assert(pk->id==ptr->system_soft[pk->adr_org].id);
+                pk->DataCopy(ptr->system_soft[pk->adr_org]);
             }
         }            
 
@@ -530,10 +530,16 @@ extern "C" {
                 auto interrupt_hard_int = ptr->system_hard_connected.getInterruptHardIntegrator(i);
                 for (int k=0; k<2; k++) {
                     auto pk = interrupt_hard_int->interrupt_binary.adr->getMember(k);
+                    int pk_index = interrupt_hard_int->interrupt_binary.adr->getMemberIndex(k);
                     // copy data from ptcl hard or globall array
-                    PtclHard* pk_org = pk->adr;
-                    if (pk_org->adr_org>=0) pk->DataCopy(ptr->system_soft[pk_org->adr_org]);
-                    else pk->DataCopy(*pk_org);
+                    if (pk->adr_org>=0) {
+                        assert(pk->id==ptr->system_soft[pk->adr_org].id);
+                        pk->DataCopy(ptr->system_soft[pk->adr_org]);
+                    }
+                    else {
+                        assert(pk->id==interrupt_hard_int->ptcl_origin[pk_index].id);
+                        pk->DataCopy(interrupt_hard_int->ptcl_origin[pk_index]);
+                    }
                 }
             }
         }
@@ -593,7 +599,7 @@ extern "C" {
                     set_stopping_condition_particle_index(stopping_index, k, pk->id);
                 
                     // copy back data to global particle array
-                    ptr->system_soft[pk->adr->adr_org].DataCopy(*pk);
+                    ptr->system_soft[pk->adr_org].DataCopy(*pk);
                 }
             }
 
@@ -621,15 +627,19 @@ extern "C" {
                 }
                 for (int k=0; k<2; k++) {
                     auto pk = interrupt_hard_int->interrupt_binary.adr->getMember(k);
+                    int pk_index = interrupt_hard_int->interrupt_binary.adr->getMemberIndex(k);
                     set_stopping_condition_particle_index(stopping_index, k, pk->id);
                 
                     // copy back data to global particle array
-                    PtclHard* pk_org = pk->adr;
-                    if (pk_org->adr_org>=0) ptr->system_soft[pk_org->adr_org].DataCopy(*pk);
+                    if (pk->adr_org>=0) {
+                        assert(ptr->system_soft[pk->adr_org].id==pk->id);
+                        ptr->system_soft[pk->adr_org].DataCopy(*pk);
+                    }
                     else {
                         // if particle is in remote node, copy back to ptcl_hard and wait for MPI_send/recv
                         n_particle_in_interrupt_connected_cluster++;
-                        pk_org->DataCopy(*pk);
+                        assert(pk->id == interrupt_hard_int->ptcl_origin[pk_index].id);
+                        interrupt_hard_int->ptcl_origin[pk_index].DataCopy(*pk);
                     }
                 }
             }
