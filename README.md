@@ -11,6 +11,9 @@ SDAR: https://github.com/lwang-astro/SDAR
 
 Please download these two codes and put in the same directory where the _PeTar_ directory exist, in order to successfully compile the code.
 
+### Environment:
+To successfully compile the code, the C++ compiler (e.g. gcc, icpc) needs the support of the C++11 standard. To use SSE/BSE package, a Fortran (77) compiler (e.g. gfortran) is needed and should be possile to provide API to c++ code (Currently ifort is not supported yet). The MPI compiler (e.g. mpic++) is required to use MPI. NVIDIA GPU and CUDA compiler is required to use GPU acceleration. The SIMD support is designed for the GNU and Intel compilers and is not tested using other compilers. Thus the GNU or Intel compilers are suggested to use. 
+
 ### Make:
 Onces _FPDS_ and _SDAR_ are available, in the root directoy, use 
 ```
@@ -51,11 +54,13 @@ Options for configure can be found by
     - avx2: use AVX2
     - avx512dq: use AVX512F and AVX512DQ
     
+    This option switch on the SIMD support for force calculation, the _auto_ case check whether the compiler (GNU or Intel) support the SIMD instructions and choose the newest one. Notice that the supported options of the compiler and the running CPU are different. Please check your CPU instruction whether the compiled option is supported or not. If the CPU can support more than the compiler, it is suggested to change or update the compiler to get better performance.
+    
 5. Use GPU (CUDA)
     ```
     ./configure --enable-cuda
     ```
-    By default GPU is not used.
+    By default GPU is not used. To switch on it, make sure the NVIDIA CUDA is installed and consistent with the c++ compiler.
     
 6. Debug mode
     ```
@@ -65,19 +70,19 @@ Options for configure can be found by
     - g: switch on compiler option '-g -O0 -fbounds-check' in order to support debugger such as gdb
     - no: no debugging, optimized performance (default)   
    
-7. Use stellar evolution (e.g. SSE/BSE)
+7. Use stellar evolution
     ```
-    ./configure --with-interrupt=bse
+    ./configure --with-interrupt=[bse]
     ```
-    Currently only SSE/BSE is the available stellar evolution package.
+    Currently only SSE/BSE is the available stellar evolution package. Notice SSE/BSE is a combined package, the option argument "sse" not work, only "bse" switches on both.
     When this option is switched on, the standard alone tool _petar.bse_ will also be compiled and installed.
     This is a c++ based tool which uses the API of the SSE/BSE from Fortran77 to c++. It can be used to evolve a group of single and binary stars with OpenMP parallelization.
 
 Multiple options should be combined together, for example:
 ```
-./configure --prefix=/opt --enable-cuda
+./configure --prefix=/opt/petar --enable-cuda
 ```
-will install the executable files in /opt and switch on GPU support.
+will install the executable files in /opt/petar (this directory requires root permission) and switch on GPU support.
 
 After configure, use 
 ```
@@ -86,12 +91,12 @@ make install
 ```
 to compile and install the code.
 
-The excutable file _petar_, _petar.hard.debug_ and _petar.init_ will be installed in [Install path]/bin.
+The excutable file _petar_, _petar.hard.debug_, _petar.init_, _petar.find.dt_, _petar.data.process_, _petar.movie_ and _petar.bse_ (if SSE/BSE is used) will be installed in [Install path]/bin.
 1. _petar_ is the main routine. It is actually a soft link to _petar.\*\*_, where the suffix represents the feature of the code based on the configure.
 2. _petar.hard.debug_ is used for debugging if _hard\_dump_ files appears when the code crashes.
-3. _petar.init_ is used to generate the initial particle data file for start the simulation, the input data file should have the format: mass, position(x,y,z), velocity(x,y,z) each line for one particle
+3. _petar.[tool name]_ are a group of tools for initialization, optimize the performance and data analysis. The details can be checked in the following section "Useful tools".
 
-The data analysis tools are written in _PYTHON_.
+The data analysis module are written in _PYTHON_.
 They are installed in [Install path]/include/petar
 Please add [Install path]/include to the _PYTHON_ include path in order to import the code.
 
@@ -146,8 +151,9 @@ The usage:
 petar.init [options] [particle data filename]
 ```
 The particle data file should contain 7 columns: mass, position[3], velocity[3] and one particle per row.
-All Binaries come first and the two components should be next to each other. This is important to obtain a correct initial velocity dispersion. 
-Notice when stellar evolution is switched on, the corresponding options should be used together to generate the correct initial files.
+All Binaries come first and the two components should be next to each other. Besides, when binaries exist, the option '-b [binary number]' should be added to the _petar_ commander. This is important to obtain a correct initial velocity dispersion, tree time step and changeover radii. 
+
+Notice when stellar evolution is switched on, the corresponding options "-s bse" should be used together to generate the correct initial files. In this case, the astronomical unit set (Solar mass [Msun], parsec [PC] and Million year [Myr]) are suggested to use for the initial data. Notice the velocity unit should be PC/Myr. Then the corresponding mass scaling factor is 1.0 between units of PeTar and SSE/BSE. Besides, the option "-u 1" should be added to the _petar_ commander in order to use this astronomical unit set.
 
 #### Find tree time step
 The performance of _petar_ is very sensitive to the tree time step.
