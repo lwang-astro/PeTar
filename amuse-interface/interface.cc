@@ -685,7 +685,7 @@ extern "C" {
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
             ptr->exchangeParticle();
 #endif
-            //ptr->reconstructIdAdrMap();
+            ptr->reconstructIdAdrMap();
             ptr->initialStep();
         }
         return 0;
@@ -695,6 +695,7 @@ extern "C" {
         // this function is called too frequent (every time when set_xx is used).
         // thus only register the flag and do update at once in the begining of evolve_model
         if (ptr->n_interrupt_glb==0) ptr->initial_step_flag = false;
+        reconstruct_particle_list();
 #ifdef INTERFACE_DEBUG_PRINT
         if(ptr->my_rank==0) std::cout<<"recommit_particles\n";
 #endif
