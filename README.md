@@ -1,5 +1,5 @@
 # PeTar
-Particle-particle \& Particle-tree (_P<sup>3</sup>T_) with slow-down time-transformed symplectic integrator (slow-down algorithmic regularization; _SDAR_) code for simulating gravitational _N_-body systems including close encounters and few-body systems.
+A particle-particle \& Particle-tree (_P<sup>3</sup>T_) with slow-down time-transformed symplectic integrator (slow-down algorithmic regularization; _SDAR_) code for simulating gravitational _N_-body systems including close encounters and few-body systems.
 
 The Doxygen document will be provided in doc directory (not yet done)
 
@@ -11,8 +11,11 @@ SDAR: https://github.com/lwang-astro/SDAR
 
 Please download these two codes and put in the same directory where the _PeTar_ directory exist, in order to successfully compile the code.
 
+### Environment:
+To successfully compile the code, the C++ compiler (e.g. gcc, icpc) needs the support of the C++11 standard. To use SSE/BSE package, a Fortran (77) compiler (e.g. gfortran) is needed and should be possile to provide API to c++ code (Currently ifort is not supported yet). The MPI compiler (e.g. mpic++) is required to use MPI. NVIDIA GPU and CUDA compiler is required to use GPU acceleration. The SIMD support is designed for the GNU and Intel compilers. It is not tested for other compilers, thus the GNU or Intel compilers are suggested to use. 
+
 ### Make:
-Onces _FPDS_ and _SDAR_ are available, in the root directoy, use 
+Once _FPDS_ and _SDAR_ are available, in the root directoy, use 
 ```
 ./configure
 ```
@@ -51,11 +54,13 @@ Options for configure can be found by
     - avx2: use AVX2
     - avx512dq: use AVX512F and AVX512DQ
     
+    This option switch on the SIMD support for force calculation, the _auto_ case check whether the compiler (GNU or Intel) support the SIMD instructions and choose the newest one. Notice that the supported options of the compiler and the running CPU are different. Please check your CPU instruction whether the compiled option is supported or not. If the CPU can support more than the compiler, it is suggested to change or update the compiler to get better performance.
+    
 5. Use GPU (CUDA)
     ```
     ./configure --enable-cuda
     ```
-    By default GPU is not used.
+    By default GPU is not used. To switch on it, make sure the NVIDIA CUDA is installed and consistent with the c++ compiler.
     
 6. Debug mode
     ```
@@ -63,13 +68,21 @@ Options for configure can be found by
     ```
     - assert: switch on all assertion check
     - g: switch on compiler option '-g -O0 -fbounds-check' in order to support debugger such as gdb
-    - no: no debugging, optimized performance (default)    
+    - no: no debugging, optimized performance (default)   
+   
+7. Use stellar evolution
+    ```
+    ./configure --with-interrupt=[bse]
+    ```
+    Currently only SSE/BSE is the available stellar evolution package. Notice SSE/BSE is a combined package, the option argument "sse" not work, only "bse" switches on both.
+    When this option is switched on, the standard alone tool _petar.bse_ will also be compiled and installed.
+    This is a c++ based tool which uses the API of the SSE/BSE from Fortran77 to c++. It can be used to evolve a group of single and binary stars with OpenMP parallelization.
 
 Multiple options should be combined together, for example:
 ```
-./configure --prefix=/opt --enable-cuda
+./configure --prefix=/opt/petar --enable-cuda
 ```
-will install the executable files in /opt and switch on GPU support.
+will install the executable files in /opt/petar (this directory requires root permission) and switch on GPU support.
 
 After configure, use 
 ```
@@ -78,12 +91,12 @@ make install
 ```
 to compile and install the code.
 
-The excutable file _petar_, _petar.hard.debug_ and _petar.init_ will be installed in [Install path]/bin.
+The excutable file _petar_, _petar.hard.debug_, _petar.init_, _petar.find.dt_, _petar.data.process_, _petar.movie_ and _petar.bse_ (if SSE/BSE is used) will be installed in [Install path]/bin.
 1. _petar_ is the main routine. It is actually a soft link to _petar.\*\*_, where the suffix represents the feature of the code based on the configure.
 2. _petar.hard.debug_ is used for debugging if _hard\_dump_ files appears when the code crashes.
-3. _petar.init_ is used to generate the initial particle data file for start the simulation, the input data file should have the format: mass, position(x,y,z), velocity(x,y,z) each line for one particle
+3. _petar.[tool name]_ are a group of tools for initialization, optimize the performance and data analysis. The details can be checked in the section [Useful tools](#useful-tools).
 
-The data analysis tools are written in _PYTHON_.
+The data analysis module are written in _PYTHON_.
 They are installed in [Install path]/include/petar
 Please add [Install path]/include to the _PYTHON_ include path in order to import the code.
 
@@ -94,12 +107,25 @@ After installation, if the [Install path]/bin is in system $PATH envirnoment, th
 ```
 where "[mpiexec -n X]" is used when multiple MPI processors are needed and "X" is the number of processors.
 
+### Important tips:
+To avoid segmetantional fault in simulations in the case of large number of particles, make sure to set the OMP_STACKSIZE large enough.
+For example, use
+```
+OMP_STACKSIZE=128M [mpiexec -n X] petar [options] [data filename] 
+```
+
+A convenient way is to add
+```
+export OMP_STACKSIZE=128M
+```
+in the shell configure/initial file (e.g. .bashrc for _bash_) to avoid type "OMP_STACKSIZE=128M" every time.
+
+### Help information
+
 All opitions are listed in the help information, which can be seen by use
 ```
 petar -h
 ```
-Please ignore the error message (a memory allication issue in _FDPS_) after the help information is printed.
-
 The description of the input particle data file is also shown in the help information. 
 All snapshots of particle data outputed in the simulation can be used to restart the simulation. 
 To restart the simulation with the same configuration of parameters, use
@@ -120,44 +146,83 @@ petar.[tool name] -h
 #### Initial input data file
 PeTar has an internal Plummer model generator (equal mass system) by using Henon Unit and half-mass radius being 1.0.
 If users want to use their own initial particle data, _petar.init_ can help to transfer their particle data to _petar_ intput data file.
-To use _petar.init_:
+The usage:
 ```
 petar.init [options] [particle data filename]
 ```
-The particle data file should contain 7 columns: mass, position[3], velocity[3] and one particle each row.
-All Binaries come first and the two components should be next to each other. This is important to obtain a correct initial velocity dispersion. 
-Options can be found by
-```
-petar.init -h
-```
+The particle data file should contain 7 columns: mass, position[3], velocity[3] and one particle per row.
+All Binaries come first and the two components should be next to each other. Besides, when binaries exist, the option '-b [binary number]' should be added to the _petar_ commander. This is important to obtain a correct initial velocity dispersion, tree time step and changeover radii. 
+
+Notice when stellar evolution is switched on, the corresponding options "-s bse" should be used together to generate the correct initial files. In this case, the astronomical unit set (Solar mass [Msun], parsec [PC] and Million year [Myr]) are suggested to use for the initial data. Notice the velocity unit should be PC/Myr. Then the corresponding mass scaling factor is 1.0 between units of PeTar and SSE/BSE. Besides, the option "-u 1" should be added to the _petar_ commander in order to use this astronomical unit set.
 
 #### Find tree time step
 The performance of _petar_ is very sensitive to the tree time step.
-Use _petar.find.dt_ can help to find a proper time step in order to obtain the best performance.
-This tool is used as
+_petar.find.dt_ can help to find a proper time step in order to obtain the best performance.
+The usage:
 ```
-petar.find.dt [particle data filename]
+petar.find.dt [options] [particle data filename]
 ```
-The performance depends on the initial particle data file.
+The performance of _petar_ depends on the initial particle data file.
 The tools will try to perform a short simulations with different tree time steps and listed the performance one by one.
 Users can decide which step is the best one.
 Notice if a too large time step is tested, the tool may have no response for long time. This suggests that the testing time step is a very bad choice. Users can kill the test.
-A few options support to change the numbers of OpenMP threads and MPI processors, the starting time step and the number of primordial binaries.
+A few options are available in this tool to change the numbers of OpenMP threads and MPI processors, the starting time step and the number of primordial binaries.
 
 #### Parallel data process
 The _petar.data.process_ can be used to process snapshot data to detect binaries and calculate Langragian, core radii, averaged mass and velocity dispersion.
 The single and binary data are stored for each snapshot with additional suffix ".single" and ".binary".
 The data of Lagrangian, core and escapers are generated in separate files.
 The multiple CPU cores are used to process the data since the KDTree neighbor search for calculating density and detect binaries is very slow.
-The basic way to use is
+The basic way to use:
 ```
-petar.data.process [snapshot path list filename]
+petar.data.process [options] [snapshot path list filename]
 ```
 Users should provide a file that contains a list of pathes for the snapshot data files.
 Notice it is better to sort the path in the increasing order of evolution time.
+The _sort_ tool is very convenient to get the time-sorted list.
+For example, if the data files have the prefix name of 'data.' (the defaulted case), use
+```
+ls data.[0-9]* |sort -n -k 1.6 >snap.lst
+```
+will find all data files in the current directory, sort files by using the suffix (values after 'data.') with an increasing order and save the list to the file of _snap.lst_.
+Here '-n' indicates that the values to sort are floating-point number.
+'-k' defines the starting position of the number in the filename.
+In this example, 'data.' has 5 characters and '1.6' represents the 6th chararcters in the first word (here only one word exists).
+
 The data order in Lagrangian, escapers and core data file follows the order in the snapshot path list.
 The Lagrangian and core data can be read by _LagrangianMultiple_ and _Core_ modules by using _loadtxt_(filename).
 The escaper data (single and binary) can be read by _Particle_ and _Binary_.
+By the way, the _petar_ code also generates escaper data by using the energy and distance criterion (see help of _petar_).
+
+#### Movie generator
+The _petar.movie_ is a covenient tool to generate a movie from the snapshot files.
+It can generate the movies of the positions (x,y) of stars (x, y of positions), the HR diagram if stellar evolution (SSE/BSE) is switched on, the 2D distribution of semi-major axis and eccentricity of binaries.
+The snapshot file list is required to generat the movie.
+The basic way to use:
+```
+petar.movie [options] [snapshot path list filename]
+```
+If users want to plot information of binaries, it is better to use petar.data.process first to generate detect binaries with multiple CPU cores. Then the next time binary detection is not necessary to run again (use option '--generate-binary 2').
+
+This tool use either _imageio_ or _matplotlib.animation_ to generate movies. It is suggested to install _imageio_ in order to generate movie using mutliple CPU cores. This is much faster than the _matplotlib.animation_ which can only use one CPU core. On the other hand, The ffmpeg is also suggested to install in order to support several commonly used movie formats (e.g. mp4, avi).
+
+#### SSE/BSE steller evolution tool
+The _petar.bse_ will be generated when --with-interrupt=bse is used during the configuration.
+This is the standard alone SSE/BSE tool to evolve stars and binaries to a given time.
+All SSE/BSE global parameters can be set in options.
+The basic way to evolve a group of stars:
+```
+petar.bse [options] mass1, mass2 ...
+```
+If no mass is provided, the tool can evolve a group of stars with equal logarithmic mass interval.
+
+The basic way to evolve a group of binaries:
+```
+petar.bse [options] -b [binary data file]
+```
+where the binary data file contain 4 values (mass1, mass2, period, eccentricity) per line.
+Notice that the first line has only one value which is the number of binaries.
+The units of mass and period depend on the option '--mscale' and '--tscale'. In defaulted case, the units set are Msun and Myr. For example, when the tscale are not 1.0, the period in Myr is calculated by the input period value x tscale. 
 
 ### Data analysis in _PYTHON3_
 The data analysis library provide the tools to identify binaries; calculate Lagrangian radii and core radii; obtain system energy error and check performance of each parts of the code.
@@ -192,20 +257,7 @@ There are also several functions.
 - _findPair_: detect binaries of one particle list by using _scipy.cKDTree_
 - _parallelDataProcessList_: use mutliple CPU cores to process a list of snapshot files and generate single and binary snapshots, Lagrangian data, core data and escaper data. For large _N_, the data process is quite slow, thus using multiple CPU processors can speed up the process. 
 
-More useful tools will be implemented in the future.
-
-### Important tips:
-To avoid segmetantional fault in simulations in the case of large number of particles, make sure to set the OMP_STACKSIZE large enough.
-For example, use
-```
-OMP_STACKSIZE=128M [mpiexec -n X] petar [options] [data filename] 
-```
-
-A convenient way is to add
-```
-export OMP_STACKSIZE=128M
-```
-in the shell configure/initial file (e.g. .bashrc for _bash_) to avoid type "OMP_STACKSIZE=128M" every time.
+More useful tools will be implemented in the future. The tools/analysis/parallel.py is a good example to learn how to use this analysis module.
 
 ## Method:
 ### Algorithm of integration: 

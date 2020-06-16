@@ -25,7 +25,7 @@ def dataProcessOne(file_path, lagr, core, esc, time_profile, **kwargs):
     start_time = time.time()
     #print('Loadfile')
     snap=np.loadtxt(file_path, skiprows=1)
-    particle=Particle(snap)
+    particle=Particle(snap, **kwargs)
     read_time = time.time()
 
     # find binary
@@ -123,6 +123,7 @@ def parallelDataProcessList(file_list, n_cpu=int(0), **kwargs):
 
     # Step 3: Don't forget to close
     pool.close()
+    pool.join()
 
     lagri=[]
     corei=[]

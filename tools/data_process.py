@@ -23,16 +23,17 @@ if __name__ == '__main__':
         print("  -h(--help): help")
         print("  -l(--lagr-filename): Lagrangian radii data filename (lagr.dat)")
         print("  -m(--mass-fraction): Lagrangian radii mass fraction (0.1,0.3,0.5,0.7,0.9)")
-        print("  -G(--gravitational-constant): Gravitational constant (1.0)")
+        print("  -G(--gravitational-constant): Gravitational constant (if interrupt-mode=bse: 0.00449830997959438; else 1.0)")
         print("  -r(--r-max-binary): maximum sepration for detecting binaries (0.1)")
         print("  -a(--average-mode): Lagrangian properity average mode: sphere: average from center to Lagragian radii; shell: average between two neighbor radii (sphere)")
         print("  -c(--core-filename): core data (time, density center, core radius) filename (core.dat)")
         print("  -e(--esc-filename): esc data filename prefix (esc)")
+        print("  --interrupt-mode: interruption mode: no, base, bse (no)")
         print("  -n(--n-cpu): number of CPU threads for parallel processing (all threads)")
 
     try:
         shortargs = 'l:m:G:r:a:c:e:n:h'
-        longargs = ['lagr-filename=','mass-fraction=','gravitational-constant=','r-max-binary=','average-mode=', 'core-filename=','esc-filename=','n-cpu=','help']
+        longargs = ['lagr-filename=','mass-fraction=','gravitational-constant=','r-max-binary=','average-mode=', 'core-filename=','esc-filename=','interrupt-mode=','n-cpu=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -56,6 +57,8 @@ if __name__ == '__main__':
                 esc_prefix = arg
             elif opt in ('-n','--n-cpu'):
                 n_cpu = int(arg)
+            elif opt in ('--interrupt-mode'):
+                kwargs['interrupt_mode'] = arg
             else:
                 assert False, "unhandeld option"
 
@@ -65,6 +68,10 @@ if __name__ == '__main__':
         sys.exit(1)
 
     filename = remainder[0]
+
+    if (not 'G' in kwargs.keys()):
+        if ('interrupt_mode' in kwargs.keys()):
+            if (kwargs['interrupt_mode']=='bse'): kwargs['G'] = 0.00449830997959438 # pc^3/(Msun*Myr^2)
 
     for key, item in kwargs.items(): print(key,':',item)
 

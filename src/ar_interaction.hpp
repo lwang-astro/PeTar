@@ -627,9 +627,9 @@ public:
         //    return true;
         //}
 #ifdef BSE
-        ASSERT(bse_manager.checkParams());
         // SSE/BSE stellar evolution 
         if (_p.time_interrupt<=_time_end&&stellar_evolution_option==1) {
+            ASSERT(bse_manager.checkParams());
 
             int modify_flag = 1;
 
@@ -722,6 +722,7 @@ public:
 #ifdef BSE
                 // if member is star, evolve single star using SSE
                 else if (stellar_evolution_option==1) {
+                    ASSERT(bse_manager.checkParams());
                     int modify_flag = modifyOneParticle(*_bin.getMember(k), _bin_interrupt.time_now, _bin_interrupt.time_end);
                     if (modify_flag) {
                         modify_count++;
@@ -745,6 +746,7 @@ public:
 #ifdef BSE
             double time_check = std::min(p1->time_interrupt, p2->time_interrupt);
             if (time_check<=_bin_interrupt.time_end&&stellar_evolution_option==1) {
+                ASSERT(bse_manager.checkParams());
                 // record address of modified binary
                 _bin_interrupt.adr = &_bin;
                 // if status not set, set to change
@@ -767,6 +769,12 @@ public:
                 _bin.particleToSemiEcc(semi, ecc, r, drdv, *p1, *p2, gravitational_constant);
                 Float mtot = p1->mass+p2->mass;
                 Float period = _bin.semiToPeriod(semi, mtot, gravitational_constant);
+                // backup c.m. information 
+                Float pos_cm[3], vel_cm[3];
+                for (int k=0; k<3; k++) {
+                    pos_cm[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mtot;
+                    vel_cm[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mtot;
+                }
                 int binary_type = 0;
                 int event_flag = bse_manager.evolveBinary(p1->star, p2->star, out[0], out[1], period, ecc, binary_type, dt);
                 
@@ -808,6 +816,12 @@ public:
                 p1->radius = bse_manager.getMergerRadius(p1->star);
                 p2->radius = bse_manager.getMergerRadius(p2->star);
 
+                // set binary status
+                //p1->setBinaryPairID(p2->id);
+                //p2->setBinaryPairID(p1->id);
+                p1->setBinaryInterruptState(static_cast<BinaryInterruptState>(binary_type));
+                p2->setBinaryInterruptState(static_cast<BinaryInterruptState>(binary_type));
+
                 // case when SN kick appears
                 if (event_flag==3) {
                     for (int k=0; k<2; k++) {
@@ -816,6 +830,8 @@ public:
                         dv[3] = bse_manager.getVelocityChange(dv,out[k]);
                         for (int k=0; k<3; k++) pk->vel[k] += dv[k];
                     }
+                    // update orbital parameteres
+                    _bin.calcOrbit(gravitational_constant);
                 }
 
                 // if mass become zero, set to unused for removing and merger status
@@ -824,12 +840,22 @@ public:
                     _bin_interrupt.status = AR::InterruptStatus::merge;
                     p1->setBinaryInterruptState(BinaryInterruptState::none);
                     p2->setBinaryInterruptState(BinaryInterruptState::none);
+                    // set new particle position and velocity to be the original cm
+                    for (int k=0; k<3; k++) {
+                        p2->pos[k] = pos_cm[k];
+                        p2->vel[k] = vel_cm[k];
+                    }
                 }
                 if (p2->mass==0.0) {
                     p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
                     _bin_interrupt.status = AR::InterruptStatus::merge;
                     p1->setBinaryInterruptState(BinaryInterruptState::none);
                     p2->setBinaryInterruptState(BinaryInterruptState::none);
+                    // set new particle position and velocity to be the original cm
+                    for (int k=0; k<3; k++) {
+                        p1->pos[k] = pos_cm[k];
+                        p1->vel[k] = vel_cm[k];
+                    }
                 }
 
                 if (_bin_interrupt.status != AR::InterruptStatus::merge) {
@@ -928,6 +954,8 @@ public:
                     if (p1->mass==0.0) p1->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
                     if (p2->mass==0.0) p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
 
+                    p1->setBinaryPairID(0);
+                    p2->setBinaryPairID(0);
                     p1->setBinaryInterruptState(BinaryInterruptState::none);
                     p2->setBinaryInterruptState(BinaryInterruptState::none);
                 };
@@ -997,18 +1025,32 @@ public:
     /*! @param[in] _fp: FILE type file for output
      */
     void writeBinary(FILE *_fp) const {
-        fwrite(this, sizeof(*this),1,_fp);
+        fwrite(&eps_sq, sizeof(Float),1,_fp);
+        fwrite(&gravitational_constant, sizeof(Float),1,_fp);
+#ifdef STELLAR_EVOLUTION
+        fwrite(&stellar_evolution_option, sizeof(int),1,_fp);
+        fwrite(&stellar_evolution_write_flag, sizeof(bool),1,_fp);
+#endif
     }
 
     //! read class data to file with binary format
     /*! @param[in] _fp: FILE type file for reading
      */
     void readBinary(FILE *_fin) {
-        size_t rcount = fread(this, sizeof(*this), 1, _fin);
-        if (rcount<1) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+        size_t rcount = fread(&eps_sq, sizeof(Float),1,_fin);
+        rcount += fread(&gravitational_constant, sizeof(Float),1,_fin);
+        if (rcount<2) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
             abort();
         }
+#ifdef STELLAR_EVOLUTION
+        rcount += fread(&stellar_evolution_option, sizeof(int),1,_fin);
+        rcount += fread(&stellar_evolution_write_flag, sizeof(bool),1,_fin);
+        if (rcount<4) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
+            abort();
+        }
+#endif
     }    
 };
 

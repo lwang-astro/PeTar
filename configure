@@ -711,7 +711,7 @@ enable_option_checking
 with_mpi
 with_debug
 enable_openmp
-with_x86
+with_arch
 with_simd
 enable_simd_64
 enable_cuda
@@ -3671,9 +3671,9 @@ fi
 
 # x86
 
-# Check whether --with-x86 was given.
-if test "${with_x86+set}" = set; then :
-  withval=$with_x86;
+# Check whether --with-arch was given.
+if test "${with_arch+set}" = set; then :
+  withval=$with_arch;
 else
   with_arch=x86
 fi
@@ -3911,7 +3911,7 @@ fi
 
 # Check whether --with-cuda-sdk-prefix was given.
 if test "${with_cuda_sdk_prefix+set}" = set; then :
-  withval=$with_cuda_sdk_prefix;
+  withval=$with_cuda_sdk_prefix; cuda_sdk_prefix=$withval
 else
   cuda_sdk_prefix="/usr/local/cuda/samples"
 fi
@@ -4273,7 +4273,7 @@ fi
 
 # Check whether --with-gperf-prefix was given.
 if test "${with_gperf_prefix+set}" = set; then :
-  withval=$with_gperf_prefix;
+  withval=$with_gperf_prefix; gperf_prefix=$withval
 else
   gperf_prefix=/opt/gperftools
 fi
@@ -4313,7 +4313,8 @@ fi
 $as_echo "$ac_cv_lib_profiler_main" >&6; }
 if test "x$ac_cv_lib_profiler_main" = xyes; then :
   GPERFLIBS=' -lprofiler'
-		    as_ac_File=`$as_echo "ac_cv_file_"$gperf_prefix/lib/libprofiler.so"" | $as_tr_sh`
+else
+  as_ac_File=`$as_echo "ac_cv_file_"$gperf_prefix/lib/libprofiler.so"" | $as_tr_sh`
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for \"$gperf_prefix/lib/libprofiler.so\"" >&5
 $as_echo_n "checking for \"$gperf_prefix/lib/libprofiler.so\"... " >&6; }
 if eval \${$as_ac_File+:} false; then :
@@ -4331,7 +4332,7 @@ eval ac_res=\$$as_ac_File
 	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
 $as_echo "$ac_res" >&6; }
 if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
-  GPREFFLAGS=" -I$gperf_prefix/include"
+  GPERFFLAGS=" -I$gperf_prefix/include"
                                     GPERFLIBS=" -L$gperf_prefix/lib -lprofiler"
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
@@ -4374,7 +4375,8 @@ fi
 $as_echo "$ac_cv_lib_tcmalloc_main" >&6; }
 if test "x$ac_cv_lib_tcmalloc_main" = xyes; then :
   GPERFLIBS=' -ltcmalloc'
-		    as_ac_File=`$as_echo "ac_cv_file_"$gperf_prefix/lib/libtcmalloc.so"" | $as_tr_sh`
+else
+  as_ac_File=`$as_echo "ac_cv_file_"$gperf_prefix/lib/libtcmalloc.so"" | $as_tr_sh`
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for \"$gperf_prefix/lib/libtcmalloc.so\"" >&5
 $as_echo_n "checking for \"$gperf_prefix/lib/libtcmalloc.so\"... " >&6; }
 if eval \${$as_ac_File+:} false; then :
@@ -4392,7 +4394,7 @@ eval ac_res=\$$as_ac_File
 	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
 $as_echo "$ac_res" >&6; }
 if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
-  GPERFLIBS=GPERFLIBS" -ltcmalloc"
+  GPERFLIBS=$GPERFLIBS" -ltcmalloc"
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
@@ -4410,7 +4412,7 @@ fi
 
 # Check whether --with-fdps-prefix was given.
 if test "${with_fdps_prefix+set}" = set; then :
-  withval=$with_fdps_prefix;
+  withval=$with_fdps_prefix; fdps_prefix=$withval
 else
   fdps_prefix="../FDPS"
 fi
@@ -4447,7 +4449,7 @@ fi
 
 # Check whether --with-sdar-prefix was given.
 if test "${with_sdar_prefix+set}" = set; then :
-  withval=$with_sdar_prefix;
+  withval=$with_sdar_prefix; sdar_prefix=$withval
 else
   sdar_prefix="../SDAR"
 fi
@@ -4717,7 +4719,8 @@ fi
 
 # Check whether --with-tidal-tensor was given.
 if test "${with_tidal_tensor+set}" = set; then :
-  withval=$with_tidal_tensor; PROG_NAME=$PROG_NAME'.'tt$with_tidal_tensor
+  withval=$with_tidal_tensor; with_tidal_tensor=$withval
+	     PROG_NAME=$PROG_NAME'.'tt$with_tidal_tensor
 else
   with_tidal_tensor=3rd
 fi

@@ -33,52 +33,6 @@ struct SearchNeighborEpEpNoSimd{
     }    
 };
 
-struct SearchNeighborEpEpSimd{
-    void operator () (const EPISoft * ep_i,
-                      const PS::S32 n_ip,
-                      const EPJSoft * ep_j,
-                      const PS::S32 n_jp,
-                      ForceSoft * force){
-    #ifdef __HPC_ACE__
-        PhantomGrapeQuad pg;
-    #else
-        #if defined(CALC_EP_64bit) || defined(CALC_EP_MIX)
-        static __thread PhantomGrapeQuad64Bit pg;
-        #else
-        static __thread PhantomGrapeQuad pg;
-        #endif
-    #endif
-        if(n_ip > pg.NIMAX || n_jp > pg.NJMAX){
-            std::cout<<"ni= "<<n_ip<<" NIMAX= "<<pg.NIMAX<<" nj= "<<n_jp<<" NJMAX= "<<pg.NJMAX<<std::endl;
-        }
-        assert(n_ip<=pg.NIMAX);
-        assert(n_jp<=pg.NJMAX);
-        for(PS::S32 i=0; i<n_ip; i++){
-            const PS::F64vec pos_i = ep_i[i].getPos();
-            pg.set_xi_one(i, pos_i.x, pos_i.y, pos_i.z, ep_i[i].r_search);
-        }
-        PS::S32 loop_max = (n_jp-1) / PhantomGrapeQuad::NJMAX + 1;
-        for(PS::S32 loop=0; loop<loop_max; loop++){
-            const PS::S32 ih = PhantomGrapeQuad::NJMAX*loop;
-            const PS::S32 n_jp_tmp = ( (n_jp - ih) < PhantomGrapeQuad::NJMAX) ? (n_jp - ih) : PhantomGrapeQuad::NJMAX;
-            const PS::S32 it =ih + n_jp_tmp;
-            PS::S32 i_tmp = 0;
-            for(PS::S32 i=ih; i<it; i++, i_tmp++){
-                const PS::F64 m_j = ep_j[i].getCharge();
-                const PS::F64vec pos_j = ep_j[i].getPos();
-                pg.set_epj_one(i_tmp, pos_j.x, pos_j.y, pos_j.z, m_j, ep_j[i].r_search);
-
-            }
-            pg.run_epj_for_neighbor_count(n_ip, n_jp_tmp);
-            for(PS::S32 i=0; i<n_ip; i++){
-                PS::F64 n_ngb = 0;
-                pg.accum_accp_one(i, n_ngb);
-                force[i].n_ngb += (PS::S32)(n_ngb*1.00001);
-            }
-        }
-    }
-};
-
 ////////////////////
 /// FORCE FUNCTOR
 struct CalcForceEpEpWithLinearCutoffNoSimd{
@@ -246,6 +200,52 @@ struct CalcForceEpSpQuadNoSimd{
 };
 
 #ifdef USE_SIMD
+struct SearchNeighborEpEpSimd{
+    void operator () (const EPISoft * ep_i,
+                      const PS::S32 n_ip,
+                      const EPJSoft * ep_j,
+                      const PS::S32 n_jp,
+                      ForceSoft * force){
+    #ifdef __HPC_ACE__
+        PhantomGrapeQuad pg;
+    #else
+        #if defined(CALC_EP_64bit) || defined(CALC_EP_MIX)
+        static __thread PhantomGrapeQuad64Bit pg;
+        #else
+        static __thread PhantomGrapeQuad pg;
+        #endif
+    #endif
+        if(n_ip > pg.NIMAX || n_jp > pg.NJMAX){
+            std::cout<<"ni= "<<n_ip<<" NIMAX= "<<pg.NIMAX<<" nj= "<<n_jp<<" NJMAX= "<<pg.NJMAX<<std::endl;
+        }
+        assert(n_ip<=pg.NIMAX);
+        assert(n_jp<=pg.NJMAX);
+        for(PS::S32 i=0; i<n_ip; i++){
+            const PS::F64vec pos_i = ep_i[i].getPos();
+            pg.set_xi_one(i, pos_i.x, pos_i.y, pos_i.z, ep_i[i].r_search);
+        }
+        PS::S32 loop_max = (n_jp-1) / PhantomGrapeQuad::NJMAX + 1;
+        for(PS::S32 loop=0; loop<loop_max; loop++){
+            const PS::S32 ih = PhantomGrapeQuad::NJMAX*loop;
+            const PS::S32 n_jp_tmp = ( (n_jp - ih) < PhantomGrapeQuad::NJMAX) ? (n_jp - ih) : PhantomGrapeQuad::NJMAX;
+            const PS::S32 it =ih + n_jp_tmp;
+            PS::S32 i_tmp = 0;
+            for(PS::S32 i=ih; i<it; i++, i_tmp++){
+                const PS::F64 m_j = ep_j[i].getCharge();
+                const PS::F64vec pos_j = ep_j[i].getPos();
+                pg.set_epj_one(i_tmp, pos_j.x, pos_j.y, pos_j.z, m_j, ep_j[i].r_search);
+
+            }
+            pg.run_epj_for_neighbor_count(n_ip, n_jp_tmp);
+            for(PS::S32 i=0; i<n_ip; i++){
+                PS::F64 n_ngb = 0;
+                pg.accum_accp_one(i, n_ngb);
+                force[i].n_ngb += (PS::S32)(n_ngb*1.00001);
+            }
+        }
+    }
+};
+
 template <class Tpi, class Tpj>
 struct CalcForcePPSimd{
     void operator () (const Tpi * ep_i,

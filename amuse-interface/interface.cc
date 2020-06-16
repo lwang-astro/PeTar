@@ -17,6 +17,9 @@ extern "C" {
     static CalcForcePPSimd<ParticleBase,FPSoft> fcalc; // Force calculator
     static int n_particle_in_interrupt_connected_cluster_glb; // 
 
+    // flags
+    static bool particle_list_change_flag=true;
+
     // common
 
     int initialize_code() {
@@ -32,6 +35,7 @@ extern "C" {
         //ptr->initial_fdps_flag = true;
         ptr->my_rank= PS::Comm::getRank();
         ptr->n_proc = PS::Comm::getNumberOfProc();
+
         // set print flag to rank 0
         ptr->input_parameters.print_flag = (ptr->my_rank==0) ? true: false;
         // set writing flag to false
@@ -45,14 +49,6 @@ extern "C" {
 
         // set restart flat to false
         ptr->file_header.nfile = 0; 
-        
-        // set stopping condtions support
-        set_support_for_condition(COLLISION_DETECTION);
-        set_support_for_condition(PAIR_DETECTION);
-
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-        mpi_setup_stopping_conditions();
-#endif
 
 #ifdef INTERFACE_DEBUG_PRINT
         if(ptr->my_rank==0) std::cout<<"Initialize_code\n";
@@ -71,6 +67,14 @@ extern "C" {
 
     int commit_parameters() {
         if (!ptr->read_parameters_flag) return -1;
+
+        // set stopping condtions support
+        set_support_for_condition(COLLISION_DETECTION);
+        set_support_for_condition(PAIR_DETECTION);
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        mpi_setup_stopping_conditions();
+#endif
         
 #ifdef INTERFACE_DEBUG_PRINT
         if(ptr->my_rank==0) std::cout<<"commit_parameters\n";
@@ -81,6 +85,15 @@ extern "C" {
     int recommit_parameters() {
         // not allown
         ptr->initialParameters();
+
+        // set stopping condtions support
+        set_support_for_condition(COLLISION_DETECTION);
+        set_support_for_condition(PAIR_DETECTION);
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        mpi_setup_stopping_conditions();
+#endif
+
 #ifdef INTERFACE_DEBUG_PRINT
         if(ptr->my_rank==0) std::cout<<"recommit_parameters(forbidden!)\n";
 #endif
@@ -127,6 +140,8 @@ extern "C" {
         }
         ptr->stat.n_real_glb++;
 
+        particle_list_change_flag = true;
+
         return 0;
     }
 
@@ -145,6 +160,8 @@ extern "C" {
 #else
         else return -1;
 #endif
+        particle_list_change_flag = true;
+
         return 0;
     }
 
@@ -512,8 +529,8 @@ extern "C" {
                 auto pk = interrupt_hard_int->interrupt_binary.adr->getMember(k);
                 
                 // copy data from global particle array
-                PtclHard* pk_org = pk->adr;
-                pk->DataCopy(ptr->system_soft[pk_org->adr_org]);
+                assert(pk->id==ptr->system_soft[pk->adr_org].id);
+                pk->DataCopy(ptr->system_soft[pk->adr_org]);
             }
         }            
 
@@ -530,10 +547,16 @@ extern "C" {
                 auto interrupt_hard_int = ptr->system_hard_connected.getInterruptHardIntegrator(i);
                 for (int k=0; k<2; k++) {
                     auto pk = interrupt_hard_int->interrupt_binary.adr->getMember(k);
+                    int pk_index = interrupt_hard_int->interrupt_binary.adr->getMemberIndex(k);
                     // copy data from ptcl hard or globall array
-                    PtclHard* pk_org = pk->adr;
-                    if (pk_org->adr_org>=0) pk->DataCopy(ptr->system_soft[pk_org->adr_org]);
-                    else pk->DataCopy(*pk_org);
+                    if (pk->adr_org>=0) {
+                        assert(pk->id==ptr->system_soft[pk->adr_org].id);
+                        pk->DataCopy(ptr->system_soft[pk->adr_org]);
+                    }
+                    else {
+                        assert(pk->id==interrupt_hard_int->ptcl_origin[pk_index].id);
+                        pk->DataCopy(interrupt_hard_int->ptcl_origin[pk_index]);
+                    }
                 }
             }
         }
@@ -543,7 +566,7 @@ extern "C" {
 
         if (ptr->n_interrupt_glb==0) {
             reconstruct_particle_list();
-            if (!ptr->initial_step_flag) return -1;
+            if (!ptr->initial_step_flag) ptr->initialStep();
             ptr->input_parameters.time_end.value = time_next*2;
         }
 
@@ -593,7 +616,7 @@ extern "C" {
                     set_stopping_condition_particle_index(stopping_index, k, pk->id);
                 
                     // copy back data to global particle array
-                    ptr->system_soft[pk->adr->adr_org].DataCopy(*pk);
+                    ptr->system_soft[pk->adr_org].DataCopy(*pk);
                 }
             }
 
@@ -621,15 +644,19 @@ extern "C" {
                 }
                 for (int k=0; k<2; k++) {
                     auto pk = interrupt_hard_int->interrupt_binary.adr->getMember(k);
+                    int pk_index = interrupt_hard_int->interrupt_binary.adr->getMemberIndex(k);
                     set_stopping_condition_particle_index(stopping_index, k, pk->id);
                 
                     // copy back data to global particle array
-                    PtclHard* pk_org = pk->adr;
-                    if (pk_org->adr_org>=0) ptr->system_soft[pk_org->adr_org].DataCopy(*pk);
+                    if (pk->adr_org>=0) {
+                        assert(ptr->system_soft[pk->adr_org].id==pk->id);
+                        ptr->system_soft[pk->adr_org].DataCopy(*pk);
+                    }
                     else {
                         // if particle is in remote node, copy back to ptcl_hard and wait for MPI_send/recv
                         n_particle_in_interrupt_connected_cluster++;
-                        pk_org->DataCopy(*pk);
+                        assert(pk->id == interrupt_hard_int->ptcl_origin[pk_index].id);
+                        interrupt_hard_int->ptcl_origin[pk_index].DataCopy(*pk);
                     }
                 }
             }
@@ -653,6 +680,7 @@ extern "C" {
         ptr->initialParameters();
         ptr->initialStep();
         ptr->reconstructIdAdrMap();
+        particle_list_change_flag = false;
 #ifdef INTERFACE_DEBUG_PRINT
         if(ptr->my_rank==0) std::cout<<"commit_particles\n";
 #endif
@@ -667,16 +695,16 @@ extern "C" {
     }
 
     int reconstruct_particle_list() {
-        if (ptr->initial_step_flag==false) {
+        if (particle_list_change_flag) {
 #ifdef INTERFACE_DEBUG_PRINT
-            if(ptr->my_rank==0) std::cout<<"reconstruct particle list and initial step\n";
+            if(ptr->my_rank==0) std::cout<<"reconstruct particle list\n";
 #endif
             ptr->removeParticles();
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
             ptr->exchangeParticle();
 #endif
-            //ptr->reconstructIdAdrMap();
-            ptr->initialStep();
+            ptr->reconstructIdAdrMap();
+            particle_list_change_flag = false;
         }
         return 0;
     }
@@ -685,6 +713,7 @@ extern "C" {
         // this function is called too frequent (every time when set_xx is used).
         // thus only register the flag and do update at once in the begining of evolve_model
         if (ptr->n_interrupt_glb==0) ptr->initial_step_flag = false;
+        reconstruct_particle_list();
 #ifdef INTERFACE_DEBUG_PRINT
         if(ptr->my_rank==0) std::cout<<"recommit_particles\n";
 #endif
@@ -704,6 +733,7 @@ extern "C" {
     int get_kinetic_energy(double * kinetic_energy) {
         // update particle array first if necessary
         reconstruct_particle_list();
+        if (!ptr->initial_step_flag) ptr->initialStep();
         *kinetic_energy = ptr->stat.energy.ekin;
         return 0;
     }
@@ -711,6 +741,7 @@ extern "C" {
     int get_potential_energy(double * potential_energy) {
         // update particle array first if necessary
         reconstruct_particle_list();
+        if (!ptr->initial_step_flag) ptr->initialStep();
         *potential_energy = ptr->stat.energy.epot;
         return 0;
     }
