@@ -16,7 +16,6 @@
 int main(int argc, char **argv){
   int arg_label;
   int mode=0; // 0: integrate to time; 1: times stability
-  int idum=0;
   PS::F64 slowdown_factor=0;
   PS::F64 eta_4th=0;
   PS::F64 eta_2nd=0;
@@ -28,6 +27,7 @@ int main(int argc, char **argv){
   std::string filename="hard_dump";
   std::string fhardpar="input.par.hard";
 #ifdef BSE
+  int idum=0;
   std::string fbsepar = "input.par.bse";
 #endif
 

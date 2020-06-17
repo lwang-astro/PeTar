@@ -11,6 +11,7 @@ import multiprocessing as mp
 import getopt
 import petar
 import imageio
+import os
 #from pygifsicle import optimize
 
 plt.style.use('dark_background')
@@ -175,8 +176,10 @@ class Data:
                     p1 = petar.Particle(interrupt_mode=self.interrupt_mode)
                     p2 = petar.Particle(interrupt_mode=self.interrupt_mode)
                     binary = petar.Binary(p1,p2)
-                    single.loadtxt(file_path+'.single')
-                    binary.loadtxt(file_path+'.binary')
+                    if os.path.getsize(file_path+'.single')>0:
+                        single.loadtxt(file_path+'.single')
+                    if os.path.getsize(file_path+'.binary')>0:
+                        binary.loadtxt(file_path+'.binary')
                     data['x'] = np.concatenate((single.pos[:,0], binary.p1.pos[:,0], binary.p2.pos[:,0])) 
                     data['y'] = np.concatenate((single.pos[:,1], binary.p1.pos[:,1], binary.p2.pos[:,1])) 
                     data['mass'] = np.concatenate((single.mass, binary.p1.mass, binary.p2.mass))

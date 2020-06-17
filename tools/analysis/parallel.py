@@ -76,7 +76,7 @@ def dataProcessOne(file_path, lagr, core, esc, time_profile, **kwargs):
     time_profile['center_core'] += center_and_r2_time-get_density_time
     time_profile['lagr'] += lagr_time-center_and_r2_time
 
-    return time_profile
+#    return time_profile
 
 def dataProcessList(file_list, **kwargs):
     """ process lagragian calculation for a list of file snapshots
@@ -94,8 +94,9 @@ def dataProcessList(file_list, **kwargs):
     for path in file_list:
         #print(' data:',path)
         dataProcessOne(path, lagr, core, esc, time_profile, **kwargs)
-    for key, item in time_profile.items():
-        item /= len(file_list)
+    if (len(file_list)>0):
+        for key, item in time_profile.items():
+            item /= len(file_list)
     return lagr, core, esc, time_profile
 
 

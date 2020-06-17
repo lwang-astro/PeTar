@@ -1179,11 +1179,11 @@ public:
         for(PS::S32 i=0; i<n; i++){
             if(system[i].n_ngb <= 0){
                 system[i].pos  += system[i].vel * dt;
-#ifdef STELLAR_EVOLUTION
+//#ifdef STELLAR_EVOLUTION
                 // shift time interrupt in order to get consistent time for stellar evolution in the next drift
-                system[i].time_record    -= dt;
-                system[i].time_interrupt -= dt;
-#endif
+                //system[i].time_record    -= dt;
+                //system[i].time_interrupt -= dt;
+//#endif
             }
         }
     }
@@ -3012,8 +3012,8 @@ public:
                     stat.energy.etot_sd_ref += de_kin;
                 }
                 // shift time interrupt in order to get consistent time for stellar evolution in the next drift
-                p.time_record    -= dt;
-                p.time_interrupt -= dt;
+                //p.time_record    -= dt;
+                //p.time_interrupt -= dt;
 #endif
             }
 

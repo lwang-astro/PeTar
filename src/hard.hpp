@@ -361,6 +361,7 @@ public:
             
             // initialization 
             sym_int.initialIntegration(0.0);
+            sym_int.info.time_offset = time_origin;
             sym_int.info.calcDsAndStepOption(ar_manager.step.getOrder(),  ar_manager.interaction.gravitational_constant); 
 
             // calculate c.m. changeover
@@ -401,6 +402,7 @@ public:
 
             // initial system 
             h4_int.initialSystemSingle(0.0);
+            h4_int.setTimeOffset(time_origin);
 
 #ifdef SOFT_PERT
             // Tidal tensor 
@@ -524,7 +526,7 @@ public:
 
             h4_int.initialIntegration();
             h4_int.sortDtAndSelectActParticle();
-            h4_int.info.time_origin = h4_int.getTime() + time_origin;
+            h4_int.info.time_origin = h4_int.getTime();
 
 #ifdef HARD_CHECK_ENERGY
             h4_int.calcEnergySlowDown(true);
@@ -569,7 +571,7 @@ public:
             PS::S32 n_tt = tidal_tensor.size();
 #endif
             // integration loop
-            while (h4_int.getTime()<_time_end) {
+            while (h4_int.getTimeInt()<_time_end) {
                 // integrate groups
                 interrupt_binary = h4_int.integrateGroupsOneStep();
                 if (interrupt_binary.status!=AR::InterruptStatus::none) {
@@ -691,7 +693,7 @@ public:
                 h4_int.initialIntegration();
                 h4_int.modifySingleParticles();
                 h4_int.sortDtAndSelectActParticle();
-                h4_int.info.time_origin = h4_int.getTime() + time_origin;
+                h4_int.info.time_origin = h4_int.getTime();
 
 #ifdef PROFILE
                 if (h4_int.profile.ar_step_count>manager->ar_manager.step_count_max&&!dump_flag) {
@@ -709,7 +711,7 @@ public:
                 //if (n_single>0) dt_max = std::max(dt_max, h4_int.particles[h4_int.getSortDtIndexSingle()[n_single-1]].dt);
                 //ASSERT(dt_max>0.0);
                 auto& h4_manager = manager->h4_manager;
-                if (fmod(h4_int.getTime(), h4_manager.step.getDtMax()/HARD_DEBUG_PRINT_FEQ)==0.0) {
+                if (fmod(h4_int.getTimeInt(), h4_manager.step.getDtMax()/HARD_DEBUG_PRINT_FEQ)==0.0) {
                     h4_int.calcEnergySlowDown(false);
 
                     h4_int.printColumn(std::cout, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
@@ -737,7 +739,7 @@ public:
                         ///abort();
                     }
                 }
-                if (fmod(h4_int.getTime(), h4_manager.step.getDtMax())==0.0) {
+                if (fmod(h4_int.getTimeInt(), h4_manager.step.getDtMax())==0.0) {
                     h4_int.printStepHist();
                 }
 #endif
@@ -826,8 +828,8 @@ public:
                 }
 
                 // shift time interrupt in order to get consistent time for stellar evolution in the next drift
-                pi.time_record -= _time_end;
-                pi.time_interrupt -= _time_end;
+                //pi.time_record -= _time_end;
+                //pi.time_interrupt -= _time_end;
 #endif
 
                 pi.r_search = std::max(pcm.r_search, pi.r_search);
@@ -943,8 +945,8 @@ public:
                     }
 
                     // shift time interrupt in order to get consistent time for stellar evolution in the next drift
-                    pj->time_record -= _time_end;
-                    pj->time_interrupt -= _time_end;
+                    //pj->time_record -= _time_end;
+                    //pj->time_interrupt -= _time_end;
 #endif
 #ifdef CLUSTER_VELOCITY
                     // save c.m. velocity and mass for neighbor search
@@ -973,8 +975,8 @@ public:
                 }
 
                 // shift time interrupt in order to get consistent time for stellar evolution in the next drift
-                pi.time_record -= _time_end;
-                pi.time_interrupt -= _time_end;
+                //pi.time_record -= _time_end;
+                //pi.time_interrupt -= _time_end;
 #endif
 #ifdef CLUSTER_VELOCITY
                 // set group_data.cm to 0.0 for singles
@@ -1946,8 +1948,8 @@ public:
                 energy.de_change_modify_single += de_kin;
             }
             // shift time interrupt in order to get consistent time for stellar evolution in the next drift
-            pi.time_record    -= _dt;
-            pi.time_interrupt -= _dt;
+            //pi.time_record    -= _dt;
+            //pi.time_interrupt -= _dt;
 #endif
 
 #ifdef HARD_DEBUG
