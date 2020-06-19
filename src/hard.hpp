@@ -382,6 +382,14 @@ public:
             //check paramters
             ASSERT(sym_int.info.checkParams());
             ASSERT(sym_int.perturber.checkParams());
+
+#ifdef ADJUST_GROUP_PRINT
+            if (manager->h4_manager.adjust_group_write_flag) {
+                // print new group information
+                sym_int.printGroupInfo(0, manager->h4_manager.fgroup, WRITE_WIDTH, &pcm);
+            }
+#endif
+
         }
         else { // use hermite
             use_sym_int = false;
@@ -557,6 +565,13 @@ public:
         // integration
         if (use_sym_int) {
             interrupt_binary = sym_int.integrateToTime(_time_end);
+#ifdef ADJUST_GROUP_PRINT
+            if (manager->h4_manager.adjust_group_write_flag) {
+                // print new group information
+                sym_int.printGroupInfo(1, manager->h4_manager.fgroup, WRITE_WIDTH, &(sym_int.particles.cm));
+            }
+#endif
+
             if (manager->ar_manager.interrupt_detection_option==1) interrupt_binary.clear();
 #ifdef PROFILE
             if (sym_int.profile.step_count>manager->ar_manager.step_count_max&&!dump_flag) {
