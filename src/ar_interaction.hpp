@@ -646,7 +646,7 @@ public:
                 _p.star.print(std::cerr);
                 output.print(std::cerr);
                 std::cerr<<std::endl;
-                abort();
+                //abort();
             }
 
             // if expected time not reach, record actually evolved time
@@ -794,7 +794,7 @@ public:
                 if (event_flag<0) {
                     std::cerr<<"BSE Error: ";
                     printEvent(std::cerr);
-                    abort();
+                    //abort();
                 }
 
                 double dt_miss = bse_manager.getDTMiss(out[0]);
@@ -954,8 +954,8 @@ public:
                     if (p1->mass==0.0) p1->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
                     if (p2->mass==0.0) p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
 
-                    p1->setBinaryPairID(0);
-                    p2->setBinaryPairID(0);
+                    //p1->setBinaryPairID(0);
+                    //p2->setBinaryPairID(0);
                     p1->setBinaryInterruptState(BinaryInterruptState::none);
                     p2->setBinaryInterruptState(BinaryInterruptState::none);
                 };
