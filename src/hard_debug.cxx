@@ -137,6 +137,12 @@ int main(int argc, char **argv){
 #endif
 #endif
 
+#ifdef ADJUST_GROUP_PRINT
+  if (hard_manager.h4_manager.adjust_group_write_flag) {
+      hard_manager.h4_manager.fgroup.open((filename+".group").c_str(), std::ofstream::out);
+  }
+#endif
+
 #ifdef HARD_CHECK_ENERGY
   // Set hard energy limit
   if (e_err_hard>0 )

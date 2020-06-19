@@ -132,6 +132,9 @@ public:
     IOParams<PS::S32> stellar_evolution_option;
 #endif
     IOParams<PS::S32> interrupt_detection_option;
+#ifdef ADJUST_GROUP_PRINT
+    IOParams<PS::S32> adjust_group_write_option;
+#endif
     IOParams<std::string> fname_snp;
     IOParams<std::string> fname_par;
     IOParams<std::string> fname_inp;
@@ -187,7 +190,7 @@ public:
                      write_style  (input_par_store, 1,    "File Writing style: 0, no output; 1. write snapshots, status and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile"),
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE
-                     stellar_evolution_option(input_par_store, 1, "modify single star: 0: turn off; 1: modify mass and velocity using SSE every Hermite step"),
+                     stellar_evolution_option(input_par_store, 1, "modify single star: 0: turn off; 1: modify mass and velocity using SSE every Hermite step, log files with names of [data filename prefix].[sse/bse].[MPI rank] are generated if -w >0"),
                      interrupt_detection_option(input_par_store, 1, "modify orbits of binaries: 0: no modifications (also no stellar evolution); 1: modify the binary orbits using BSE (if '--stellar-evolution 1' is set) and merger checker in AR integrator"),
 #else
                      stellar_evolution_option(input_par_store, 0, "modify mass of particles: 0: turn off; 1: check every Hermite steps"),
@@ -195,6 +198,9 @@ public:
 #endif
 #else
                      interrupt_detection_option(input_par_store, 0, "modify orbits of AR groups based on the interruption function: 0: turn off; 1: modify inside AR integration and accumulate energy change; 2. modify and also interrupt the hard drift"),
+#endif
+#ifdef ADJUST_GROUP_PRINT
+                     adjust_group_write_option(input_par_store, 1, "print new and end of groups: 0: no print; 1: print to file [data filename prefix].group.[MPI rank] if -w >0"),
 #endif
                      fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]"),
                      fname_par(input_par_store, "input.par", "Input parameter file (this option should be used first before any other options)"),
@@ -240,6 +246,9 @@ public:
 #ifdef STELLAR_EVOLUTION
             {"stellar-evolution",     required_argument, &petar_flag, 20},
 #endif
+#ifdef ADJUST_GROUP_PRINT
+            {"write-group-info",      required_argument, &petar_flag, 22},
+#endif            
             {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
         };
@@ -384,6 +393,13 @@ public:
                     if(print_flag) r_escape.print(std::cout);
                     opt_used += 2;
                     break;
+#ifdef ADJUST_GROUP_PRINT
+                case 22:
+                    adjust_group_write_option.value = atoi(optarg);
+                    if(print_flag) adjust_group_write_option.print(std::cout);
+                    opt_used += 2;
+                    break;
+#endif
                 default:
                     break;
                 }
@@ -537,6 +553,9 @@ public:
                     std::cout<<"  -f: [S] "<<fname_snp<<std::endl;
                     std::cout<<"  -p: [S] "<<fname_par<<std::endl;
                     std::cout<<"  -w: [I] "<<write_style<<std::endl;
+#ifdef ADJUST_GROUP_PRINT
+                    std::cout<<"        --write-group-info:  [I] "<<adjust_group_write_option<<std::endl;
+#endif
                     std::cout<<"  -h(--help):               print help"<<std::endl;
                     std::cout<<"*** PS: r_in : transit function inner boundary radius\n"
                              <<"        r_out: transit function outer boundary radius\n"
@@ -2248,6 +2267,17 @@ public:
                 hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out);
             }
 #endif 
+
+#ifdef ADJUST_GROUP_PRINT
+            // open file for new/end group information
+            if (input_parameters.adjust_group_write_option.value==1) {
+                std::string fgroup_name = fname_snp + ".group." + my_rank_str;
+                if(input_parameters.app_flag) 
+                    hard_manager.h4_manager.fgroup.open(fgroup_name.c_str(), std::ofstream::out|std::ofstream::app);
+                else 
+                    hard_manager.h4_manager.fgroup.open(fgroup_name.c_str(), std::ofstream::out);
+            }
+#endif
         }
 
 #ifdef HARD_DUMP
@@ -2815,6 +2845,12 @@ public:
             hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters, print_flag);
 #endif
 #endif
+#ifdef ADJUST_GROUP_PRINT
+        // group information
+        if (write_style&&input_parameters.adjust_group_write_option.value==1) 
+            hard_manager.h4_manager.adjust_group_write_flag=true;
+#endif        
+
         // check consistence of paramters
         input_parameters.checkParams();
         hard_manager.checkParams();
@@ -2869,6 +2905,7 @@ public:
             bse_parameters.input_par_store.writeAscii(fpar_out);
             fclose(fpar_out);
 #endif
+
         }
 
         // initial tree step manager
@@ -3310,6 +3347,9 @@ public:
         auto& interaction = hard_manager.ar_manager.interaction;
         if (interaction.fout_sse.is_open()) interaction.fout_sse.close();
         if (interaction.fout_bse.is_open()) interaction.fout_bse.close();
+#endif
+#ifdef ADJUST_GROUP_PRINT
+        if (hard_manager.h4_manager.fgroup.is_open()) hard_manager.h4_manager.fgroup.close();
 #endif
         if (pos_domain) {
             delete[] pos_domain;
