@@ -1953,7 +1953,7 @@ public:
             PS::F64 mbk = pi.mass;
 
             PS::F64vec vbk = pi.vel; //back up velocity in case of change
-            int modify_flag = manager->ar_manager.interaction.modifyOneParticle(pi, 0.0, _dt);
+            int modify_flag = manager->ar_manager.interaction.modifyOneParticle(pi, time_origin_, time_origin_ + _dt);
             if (modify_flag) {
                 auto& v = pi.vel;
                 Float de_kin = 0.5*(pi.mass*(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]) - mbk*(vbk[0]*vbk[0]+vbk[1]*vbk[1]+vbk[2]*vbk[2]));

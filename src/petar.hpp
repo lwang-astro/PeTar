@@ -3037,7 +3037,7 @@ public:
 #ifdef STELLAR_EVOLUTION
                 PS::F64 mbk = p.mass;
                 PS::F64vec vbk = p.vel; //back up velocity in case of change
-                int modify_flag = hard_manager.ar_manager.interaction.modifyOneParticle(p, 0.0, dt);
+                int modify_flag = hard_manager.ar_manager.interaction.modifyOneParticle(p, stat.time, stat.time + dt);
                 if (modify_flag) {
                     auto& v = p.vel;
                     PS::F64 de_kin = 0.5*(p.mass*(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]) - mbk*(vbk[0]*vbk[0]+vbk[1]*vbk[1]+vbk[2]*vbk[2]));
@@ -3094,7 +3094,7 @@ public:
 
     
     //! integrate the system
-    /*! @param[in] _time_break: additional breaking time to interrupt the integration, in default (0.0) the system integrate to time_end
+    /*! @param[in] _time_break: additional breaking time to interrupt the integration, in default (0.0) the system integrate to time_end (without time_offset)
       \return interrupted cluster number
      */
     PS::S32 integrateToTime(const PS::F64 _time_break=0.0) {

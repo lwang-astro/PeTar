@@ -248,7 +248,7 @@ int main(int argc, char** argv){
                         kick_print_flag[k]=true;
                     }
                 }
-                if (error_flag) {
+                if (error_flag<0) {
                     std::cerr<<"Error: i="<<i<<" mass0[IN]="<<bin[i].m1<<" "<<bin[i].m2<<" period[IN]="<<bin[i].period<<" ecc[IN]="<<bin[i].ecc
                              <<std::endl;
                     std::cerr<<"Star 1:";
@@ -316,7 +316,7 @@ int main(int argc, char** argv){
                     std::cout<<std::endl;
                     kick_print_flag=true;
                 }
-                if (error_flag) {
+                if (error_flag<0) {
                     std::cerr<<"Error: i="<<i<<" mass0[IN]="<<mass0[i]<<" ";
                     star[i].print(std::cerr);
                     std::cerr<<std::endl;
