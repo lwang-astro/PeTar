@@ -311,15 +311,16 @@ def plotOne(file_path, axe, plots, **kwargs):
         axe[0].set_title('T = '+data['t']+unit_label)
     else:
         axe[0].set_title('T = '+data['t'])
-    axe[0].text(.05, 0.95, r'$x_{cm}=%f$' % xcm, transform = axe[0].transAxes, color='white')
-    axe[0].text(.35, 0.95, r'$y_{cm}=%f$' % ycm, transform = axe[0].transAxes, color='white')
     
     colors='w'
     if ('lum' in data.keys()): colors = plots['xy'].getColor(data['temp'])
 
     ptcls=[]
     ptcls = ptcls + plots['xy'].plot(data.x, data.y, data.mass, colors)
-    
+    plots['xcm'].set_text(r'$x_{cm}=%f$' % xcm)
+    plots['ycm'].set_text(r'$y_{cm}=%f$' % ycm)
+    ptcls = ptcls + [plots['xcm'], plots['ycm']]
+                                     
     if ('xyzoom' in plots.keys()): 
         ptcls = ptcls + plots['xyzoom'].plot(data.x, data.y, data.mass, colors)
 
@@ -337,13 +338,15 @@ def initPlot(axe, plot_zoom, plot_HRdiagram, plot_semi_ecc, **kwargs):
     plots=dict()
 
     iaxe=0
-    framescale=1
-    if 'framescale' in kwargs.keys(): 
+    framescale = 1
+    if 'framescale' in kwargs.keys():
         framescale = kwargs['framescale']
         kwargs['framescale'] = 1
-    plots['xy']=PlotXY()
-    plots['xy'].init(axe[iaxe],**kwargs)
-
+    plots['xy'] = PlotXY()
+    plots['xy'].init(axe[iaxe], **kwargs)
+    plots['xcm'] = axe[0].text(.05, 0.95, '', transform = axe[0].transAxes, color='white')
+    plots['ycm'] = axe[0].text(.35, 0.95, '', transform = axe[0].transAxes, color='white')
+    
     if (plot_zoom): 
         iaxe +=1 
         kwargs['boxsize'] = plots['xy'].boxsize / framescale
