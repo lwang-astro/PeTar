@@ -872,6 +872,7 @@ public:
             ekin    = sym_int.getEkin();
             epot    = sym_int.getEpot();
             energy.de = sym_int.getEnergyError();
+            ASSERT(!std::isnan(energy.de));
             energy.de_change_cum = sym_int.getDEChangeBinaryInterrupt() + de_kin;
             energy.de_change_binary_interrupt = sym_int.getDEChangeBinaryInterrupt();
 #if (defined AR_SLOWDOWN_ARRAY) || (defined AR_SLOWDOWN_TREE)
@@ -914,6 +915,7 @@ public:
             ekin    = h4_int.getEkin();
             epot    = h4_int.getEpot();
             energy.de += h4_int.getEnergyError(); // notice += should be used since de may change before when changeover potential energy correction exist
+            ASSERT(!std::isnan(energy.de));
             energy.de_change_cum = h4_int.getDEChangeCum() + de_kin;
             energy.de_change_binary_interrupt = h4_int.getDEChangeBinaryInterrupt();
             energy.de_change_modify_single = h4_int.getDEChangeModifySingle();
@@ -2221,7 +2223,7 @@ public:
 
 #ifdef HARD_DUMP
             assert(ith<hard_dump.size);
-            hard_dump[ith].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, dt, manager->ap_manager.getArtificialParticleN());
+            hard_dump[ith].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, time_origin_, dt, manager->ap_manager.getArtificialParticleN());
 #endif
 
 #ifdef HARD_DEBUG_PROFILE

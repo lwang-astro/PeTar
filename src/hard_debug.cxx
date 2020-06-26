@@ -189,7 +189,7 @@ int main(int argc, char **argv){
       // change ARC parameters
       //sys.driveForMultiClusterImpl(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, hard_dump.time_end, 0);
       HardIntegrator hard_int;
-      hard_int.initial(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, hard_dump.n_member_in_group.getPointer(), &hard_manager, 0.0);
+      hard_int.initial(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, hard_dump.n_member_in_group.getPointer(), &hard_manager, hard_dump.time_offset);
 
       auto& interrupt_binary = hard_int.integrateToTime(hard_dump.time_end);
       if (interrupt_binary.status!=AR::InterruptStatus::none) {

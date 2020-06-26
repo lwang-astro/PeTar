@@ -71,7 +71,7 @@ extern "C" {
     //! BSE function for evolving one binary
     void evolv2_(int* kw, double* mass, double* mt, double* r, double* lum, double* mc, double* rc, double* menv, double* renv, double* ospin,
                  double* epoch, double* tm, double* tphys, double* tphysf, double* dtp, double* z, double* zpars, 
-                 double* period, double* ecc, int* btype, double* vkick);
+                 double* period, double* ecc, float* bse_event, double* vkick);
 
     void star_(int* kw, double* mass, double* mt, double* tm, double* tn, double* tscls, double* lums, double* GB, double* zpars);
 
@@ -137,15 +137,15 @@ struct StarParameter{
     //! for print in one line
     void print(std::ostream & fout) const{
         fout<<" type= "<<kw
-            <<" mass0= "<<m0
-            <<" mass= "<<mt
-            <<" radius= "<<r
-            <<" mcore= "<<mc
-            <<" rcore= "<<rc
+            <<" m0[M*]= "<<m0
+            <<" m[M*]= "<<mt
+            <<" rad[R*]= "<<r
+            <<" mc[M*]= "<<mc
+            <<" rc[M*]= "<<rc
             <<" spin= "<<ospin
             <<" epoch= "<<epoch
             <<" t[myr]= "<<tphys
-            <<" lum= "<<lum;
+            <<" lum[L*]= "<<lum;
     }
 
     //! print titles of class members using column style
@@ -277,6 +277,64 @@ struct StarParameterOut{
 
 };
 
+//! BSE event recorder class
+class BinaryEvent{
+public:
+    float record[10][8];
+    
+    int getEventNMax() const {
+        return 8;
+    }
+
+    int getType(const int index) const {
+        return int(record[9][index]);
+    }
+
+    //! for print in one line
+    void print(std::ostream & fout, const int index) const{
+        fout<<" t[Myr]= "<<record[0][index]
+            <<" m1[M*]= "<<record[1][index]
+            <<" m2[M*]= "<<record[2][index]
+            <<" type1= "<<int(record[3][index])
+            <<" type2= "<<int(record[4][index])
+            <<" semi[R*]= "<<record[5][index]
+            <<" ecc= "<<record[6][index]
+            <<" rad1[R*]= "<<record[7][index]
+            <<" rad2[R*]= "<<record[8][index];
+    }
+
+    //! print titles of class members using column style
+    /*! print titles of class members in one line for column style
+      @param[out] _fout: std::ostream output object
+      @param[in] _width: print width (defaulted 20)
+     */
+    static void printColumnTitle(std::ostream & _fout, const int _width=20) {
+        _fout<<std::setw(_width)<<"t[Myr]"
+             <<std::setw(_width)<<"m1[M*]"
+             <<std::setw(_width)<<"m2[M*]"
+             <<std::setw(_width)<<"type1"
+             <<std::setw(_width)<<"type2"
+             <<std::setw(_width)<<"semi[R*]"
+             <<std::setw(_width)<<"ecc"
+             <<std::setw(_width)<<"rad1[R*]"
+             <<std::setw(_width)<<"rad2[R*]"
+             <<std::setw(_width)<<"btype";
+    }
+
+    //! print data of class members using column style
+    /*! print data of class members in one line for column style. Notice no newline is printed at the end
+      @param[out] _fout: std::ostream output object
+      @param[in] _width: print width (defaulted 20)
+      @param[in] _index: event index to print
+     */
+    void printColumn(std::ostream & _fout, const int _index, const int _width=20){
+        for (int i=0; i<3; i++) _fout<<std::setw(_width)<<record[i][_index];
+        for (int i=3; i<5; i++) _fout<<std::setw(_width)<<int(record[i][_index]);
+        for (int i=5; i<9; i++) _fout<<std::setw(_width)<<record[i][_index];
+        _fout<<std::setw(_width)<<int(record[9][_index]);
+    }
+};
+
 class IOParamsBSE{
 public:
     IOParamsContainer input_par_store;
@@ -341,10 +399,10 @@ public:
                    pts2  (input_par_store, 0.01, "time step of GB, CHeB, AGB, HeGB"),
                    pts3  (input_par_store, 0.02, "time step of HG, HeMS"),
                    idum  (input_par_store, 1234, "random number seed used by the kick routine"),
-                   tscale(input_par_store, 1.0, "Time scale factor from NB to Myr (time[Myr]=time[NB]*tscale)"),
-                   rscale(input_par_store, 1.0, "Radius scale factor from NB to Rsun (r[Rsun]=r[NB]*rscale)"),
-                   mscale(input_par_store, 1.0, "Mass scale factor from NB to Msun (m[Msun]=m[NB]*mscale)"),
-                   vscale(input_par_store, 1.0, "Velocity scale factor from NB to km/s (v[km/s]=v[NB]*mscale)"),
+                   tscale(input_par_store, 1.0, "Time scale factor from input data unit (IN) to Myr (time[Myr]=time[IN]*tscale)"),
+                   rscale(input_par_store, 1.0, "Radius scale factor from input dat unit (IN) to Rsun (r[Rsun]=r[IN]*rscale)"),
+                   mscale(input_par_store, 1.0, "Mass scale factor from input data unit (IN) to Msun (m[Msun]=m[IN]*mscale)"),
+                   vscale(input_par_store, 1.0, "Velocity scale factor from input data unit(IN) to km/s (v[km/s]=v[IN]*vscale)"),
                    z     (input_par_store, 0.001, "Metallicity"),
                    print_flag(false) {}
 
@@ -630,7 +688,7 @@ public:
     double mscale; ///> mass scaling factor from NB to Msun
     double vscale; ///> velocity scaling factor from NB to km/s
     const char* single_type[16]; ///> name of single type from SSE
-    const char* binary_type[14]; ///> name of binary type return from BSE evolv2
+    const char* binary_type[14]; ///> name of binary type return from BSE evolv2, notice if it is -1, it indicate the end of record
 
     BSEManager(): z(0.0), zpars{0}, tscale(0.0), rscale(0.0), mscale(0.0), vscale(0.0),
                   single_type{"LMS", "MS", "HG", "GB", "CHeB", "FAGB", "SAGB", "HeMS", "HG", "HeGB", "HeWD", "COWD", "ONWD", "NS", "BH", "SN"},
@@ -773,6 +831,31 @@ public:
         _fout<<" "<<std::setw(_width)<<single_type[_out.kw0]<<" -> "<<std::setw(_width)<<single_type[_star.kw];
     }
 
+    //! print BSE event
+    void printBinaryEvent(std::ostream& _fout, const BinaryEvent& _bin_event) {
+        int nmax = _bin_event.getEventNMax();
+        for (int k=0; k<nmax; k++) {
+            int type = _bin_event.getType(k);
+            if(type>0) {
+#pragma omp critical 
+                {
+                    _fout<<std::setw(16)<<binary_type[type];
+                    _bin_event.print(_fout, k);
+                    _fout<<std::endl;
+                }
+            }
+            else if(type<0) break;
+        }
+    }
+
+    //! print BSE event one
+    void printBinaryEventOne(std::ostream& _fout, const BinaryEvent& _bin_event, const int k) {
+        int type = _bin_event.getType(k);
+        assert(type>=0&&type<14);
+        _fout<<std::setw(16)<<binary_type[type];
+        _bin_event.print(_fout, k);
+    }
+
     //! get velocity change in NB unit
     /*!
       @param[in] _dv: 3-D array to record velocity change
@@ -814,14 +897,14 @@ public:
       @param[in,out] _star2: star parameter of second
       @param[out] _out1: output parameter of first from evolv2
       @param[out] _out2: output parameter of second from evolv2
-      @param[out] _binary_type: binary type defined in BSE
+      @param[out] _bse_event: BSE event record (bpp array)
       @param[in,out] _period: period of binary in NB unit
       @param[in,out] _ecc: eccentricity of binary 
       @param[in] _dt_nb: physical time step in Myr to evolve
-      \return error flag: -1: error, 0: normal; 1: type change; 2: modify mass and orbit
+      \return error flag: -1: error, 0: normal
      */
     int evolveBinary(StarParameter& _star1, StarParameter& _star2, StarParameterOut& _out1, StarParameterOut& _out2, 
-                     double& _period, double& _ecc, int& _binary_type, const double _dt_nb) {
+                     double& _period, double& _ecc, BinaryEvent& _bse_event, const double _dt_nb) {
         double tphys = std::max(_star1.tphys, _star2.tphys);
         double tphysf = _dt_nb*tscale + tphys;
         double dtp=tphysf*100.0+1000.0;
@@ -861,7 +944,7 @@ public:
         ospin[1] = _star2.ospin;
         epoch[1] = _star2.epoch;
         
-        evolv2_(kw, m0, mt, r, lum, mc, rc, menv, renv, ospin, epoch, tm, &tphys, &tphysf, &dtp, &z, zpars, &period_days, &_ecc, &_binary_type, vkick);
+        evolv2_(kw, m0, mt, r, lum, mc, rc, menv, renv, ospin, epoch, tm, &tphys, &tphysf, &dtp, &z, zpars, &period_days, &_ecc, _bse_event.record[0], vkick);
         _period = period_days/3.6524e8/tscale;
 
         _star1.kw = kw[0];
@@ -902,11 +985,11 @@ public:
         for (int k=0; k<4; k++) _out2.vkick[k]=vkick[k+4];
 
         if (kw[0]<0||kw[1]<0) return -1; // error case
-        else if (vkick[3]>0||vkick[7]>0) return 3; // kick
-        else if (isDisrupt(_binary_type)) return 4; // disrupt without kick
-        else if (isMerger(_binary_type)) return 5; // Merger
-        else if (isMassTransfer(_binary_type)) return 2; // orbit change
-        else if (_binary_type>0) return 1; // type change
+        //else if (vkick[3]>0||vkick[7]>0) return 3; // kick
+        //else if (isDisrupt(_binary_type)) return 4; // disrupt without kick
+        //else if (isMerger(_binary_type)) return 5; // Merger
+        //else if (isMassTransfer(_binary_type)) return 2; // orbit change
+        //else if (_binary_type>0) return 1; // type change
         else return 0;
     }
 

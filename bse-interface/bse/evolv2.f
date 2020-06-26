@@ -2,7 +2,7 @@
       SUBROUTINE evolv2(kstar,mass0,mass,rad,lumin,massc,radc,
      &                  menv,renv,ospin,epoch,tms,
      &                  tphys,tphysf,dtp,z,zpars,tb,ecc,
-     &                  btype,vkick)
+     &                  bpp,vkick)
       implicit none
 ***
 *
@@ -198,18 +198,21 @@
       REAL*8 zero,ngtv,ngtv2,mt2,rrl1,rrl2,mcx,teff1,teff2
       REAL*8 mass1i,mass2i,tbi,ecci
 *     kick information 
-      INTEGER ikick,btype
+      INTEGER ikick,jp,jpmax
+      PARAMETER(jpmax=8)
 
       LOGICAL coel,com,prec,inttry,change,snova,sgl,bsymb,esymb,bss
       LOGICAL supedd,novae,disk
 *      LOGICAL isave,iplot
       REAL*8 rl,mlwind,vrotf,corerd
       EXTERNAL rl,mlwind,vrotf,corerd
+      REAL bpp(jpmax,10)
 *      REAL bcm(50000,34),bpp(80,10)
 *      COMMON /BINARY/ bcm,bpp
 *
 * Save the initial state.
 *
+      ecc_bk = -1
       mass1i = mass0(1)
       mass2i = mass0(2)
       tbi = tb
@@ -338,7 +341,7 @@
 * Setup variables which control the output (if it is required).
 *
 *      ip = 0
-*      jp = 0
+      jp = 0
 *      tsave = tphys
 *      isave = .true.
 *      iplot = .false.
@@ -412,23 +415,25 @@
             lacc = lacc/lumin(j1)
             if((lacc.gt.0.01d0.and..not.bsymb).or.
      &         (lacc.lt.0.01d0.and.bsymb))then
-*               jp = MIN(80,jp + 1)
-*               bpp(jp,1) = tphys
-*               bpp(jp,2) = mass(1)
-*               bpp(jp,3) = mass(2)
-*               bpp(jp,4) = float(kstar(1))
-*               bpp(jp,5) = float(kstar(2))
-*               bpp(jp,6) = sep
-*               bpp(jp,7) = ecc
-*               bpp(jp,8) = rad(1)/rol(1)
-*               bpp(jp,9) = rad(2)/rol(2)
+               jp = MIN(jpmax,jp + 1)
+               bpp(jp,1) = tphys
+               bpp(jp,2) = mass(1)
+               bpp(jp,3) = mass(2)
+               bpp(jp,4) = float(kstar(1))
+               bpp(jp,5) = float(kstar(2))
+               bpp(jp,6) = sep
+               bpp(jp,7) = ecc
+               bpp(jp,8) = rad(1)/rol(1)
+               bpp(jp,9) = rad(2)/rol(2)
                if(bsymb)then
-                  btype = 7
+*                  btype = 7
 *                  bpp(jp,10) = 13.0
+                  bpp(jp,10) = 7.0
                   esymb = .true.
                else
-                  btype = 6
+*                  btype = 6
 *                  bpp(jp,10) = 12.0
+                  bpp(jp,10) = 6.0
                   bsymb = .true.
                endif
             endif
@@ -814,18 +819,19 @@
 *
          if(kw.le.1.and.tm.lt.tphys.and..not.bss)then
             bss = .true.
-*            jp = MIN(80,jp + 1)
-*            bpp(jp,1) = tphys
-*            bpp(jp,2) = mass(1)
-*            bpp(jp,3) = mass(2)
-*            bpp(jp,4) = float(kstar(1))
-*            bpp(jp,5) = float(kstar(2))
-*            bpp(jp,6) = sep
-*            bpp(jp,7) = ecc
-*            bpp(jp,8) = rad(1)/rol(1)
-*            bpp(jp,9) = rad(2)/rol(2)
+            jp = MIN(jpmax,jp + 1)
+            bpp(jp,1) = tphys
+            bpp(jp,2) = mass(1)
+            bpp(jp,3) = mass(2)
+            bpp(jp,4) = float(kstar(1))
+            bpp(jp,5) = float(kstar(2))
+            bpp(jp,6) = sep
+            bpp(jp,7) = ecc
+            bpp(jp,8) = rad(1)/rol(1)
+            bpp(jp,9) = rad(2)/rol(2)
 *            bpp(jp,10) = 14.0
-            btype = 11
+            bpp(jp,10) = 11.0
+*            btype = 11
          endif
 *
  6    continue
@@ -855,21 +861,21 @@
 *
       if((tphys.lt.tiny.and.ABS(dtm).lt.tiny.and.
      &    (mass2i.lt.0.1d0.or..not.sgl)).or.snova)then
-*         jp = MIN(80,jp + 1)
-*         bpp(jp,1) = tphys
-*         bpp(jp,2) = mass(1)
-*         bpp(jp,3) = mass(2)
-*         bpp(jp,4) = float(kstar(1))
-*         bpp(jp,5) = float(kstar(2))
-*         bpp(jp,6) = sep
-*         bpp(jp,7) = ecc
-*         bpp(jp,8) = rad(1)/rol(1)
-*         bpp(jp,9) = rad(2)/rol(2)
-*         bpp(jp,10) = 1.0
-         btype = 1
+         jp = MIN(jpmax,jp + 1)
+         bpp(jp,1) = tphys
+         bpp(jp,2) = mass(1)
+         bpp(jp,3) = mass(2)
+         bpp(jp,4) = float(kstar(1))
+         bpp(jp,5) = float(kstar(2))
+         bpp(jp,6) = sep
+         bpp(jp,7) = ecc
+         bpp(jp,8) = rad(1)/rol(1)
+         bpp(jp,9) = rad(2)/rol(2)
+         bpp(jp,10) = 1.0
+*         btype = 1
          if(snova)then
-*            bpp(jp,10) = 2.0
-            btype = 2
+            bpp(jp,10) = 2.0
+*            btype = 2
             dtm = 0.d0
             goto 4
          endif
@@ -1036,18 +1042,18 @@
       if(tphys.ge.tphysf.and.intpol.eq.0) goto 140
       if(change)then
          change = .false.
-*         jp = MIN(80,jp + 1)
-*         bpp(jp,1) = tphys
-*         bpp(jp,2) = mass(1)
-*         bpp(jp,3) = mass(2)
-*         bpp(jp,4) = float(kstar(1))
-*         bpp(jp,5) = float(kstar(2))
-*         bpp(jp,6) = sep
-*         bpp(jp,7) = ecc
-*         bpp(jp,8) = rad(1)/rol(1)
-*         bpp(jp,9) = rad(2)/rol(2)
-*         bpp(jp,10) = 2.0
-         btype = 2
+         jp = MIN(jpmax,jp + 1)
+         bpp(jp,1) = tphys
+         bpp(jp,2) = mass(1)
+         bpp(jp,3) = mass(2)
+         bpp(jp,4) = float(kstar(1))
+         bpp(jp,5) = float(kstar(2))
+         bpp(jp,6) = sep
+         bpp(jp,7) = ecc
+         bpp(jp,8) = rad(1)/rol(1)
+         bpp(jp,9) = rad(2)/rol(2)
+         bpp(jp,10) = 2.0
+*         btype = 2
       endif
 *
       iter = iter + 1
@@ -1078,18 +1084,18 @@
       radx(j1) = MAX(radc(j1),rol(j1))
       radx(j2) = rad(j2)
 *
-*      jp = MIN(80,jp + 1)
-*      bpp(jp,1) = tphys
-*      bpp(jp,2) = mass(1)
-*      bpp(jp,3) = mass(2)
-*      bpp(jp,4) = float(kstar(1))
-*      bpp(jp,5) = float(kstar(2))
-*      bpp(jp,6) = sep
-*      bpp(jp,7) = ecc
-*      bpp(jp,8) = rad(1)/rol(1)
-*      bpp(jp,9) = rad(2)/rol(2)
-*      bpp(jp,10) = 3.0
-      btype = 3
+      jp = MIN(jpmax,jp + 1)
+      bpp(jp,1) = tphys
+      bpp(jp,2) = mass(1)
+      bpp(jp,3) = mass(2)
+      bpp(jp,4) = float(kstar(1))
+      bpp(jp,5) = float(kstar(2))
+      bpp(jp,6) = sep
+      bpp(jp,7) = ecc
+      bpp(jp,8) = rad(1)/rol(1)
+      bpp(jp,9) = rad(2)/rol(2)
+      bpp(jp,10) = 3.0
+*      btype = 3
 *
       if(tphys.ge.tprint) then
             teff1 = 1000.d0*((1130.d0*lumin(1)/
@@ -1289,20 +1295,21 @@
      &               jspin(j2),kstar(j2),zpars,ecc,sep,jorb,
      &               vkick(4*(j1-1)+1),vkick(4*(j2-1)+1),coel)
 *
-*         jp = MIN(80,jp + 1)
-*         bpp(jp,1) = tphys
-*         bpp(jp,2) = mass(1)
-*         if(kstar(1).eq.15) bpp(jp,2) = mass0(1)
-*         bpp(jp,3) = mass(2)
-*         if(kstar(2).eq.15) bpp(jp,3) = mass0(2)
-*         bpp(jp,4) = float(kstar(1))
-*         bpp(jp,5) = float(kstar(2))
-*         bpp(jp,6) = sep
-*         bpp(jp,7) = ecc
-*         bpp(jp,8) = rad(1)/rol(1)
-*         bpp(jp,9) = rad(2)/rol(2)
+         jp = MIN(jpmax,jp + 1)
+         bpp(jp,1) = tphys
+         bpp(jp,2) = mass(1)
+         if(kstar(1).eq.15) bpp(jp,2) = mass0(1)
+         bpp(jp,3) = mass(2)
+         if(kstar(2).eq.15) bpp(jp,3) = mass0(2)
+         bpp(jp,4) = float(kstar(1))
+         bpp(jp,5) = float(kstar(2))
+         bpp(jp,6) = sep
+         bpp(jp,7) = ecc
+         bpp(jp,8) = rad(1)/rol(1)
+         bpp(jp,9) = rad(2)/rol(2)
 *         bpp(jp,10) = 7.0
-         btype = 8
+         bpp(jp,10) = 8.0
+*         btype = 8
 *
          epoch(j1) = tphys - aj(j1)
          if(coel)then
@@ -1538,24 +1545,25 @@
                   CALL gntage(mcx,mt2,kst,zpars,mass0(j2),aj(j2))
                   epoch(j2) = tphys + dtm - aj(j2)
 *
-*                  jp = MIN(80,jp + 1)
-*                  bpp(jp,1) = tphys
-*                  bpp(jp,2) = mass(j1)
-*                  bpp(jp,3) = mt2
-*                  bpp(jp,4) = float(kstar(j1))
-*                  bpp(jp,5) = float(kst)
-*                  bpp(jp,6) = sep
-*                  bpp(jp,7) = ecc
-*                  bpp(jp,8) = rad(1)/rol(1)
-*                  bpp(jp,9) = rad(2)/rol(2)
+                  jp = MIN(80,jp + 1)
+                  bpp(jp,1) = tphys
+                  bpp(jp,2) = mass(j1)
+                  bpp(jp,3) = mt2
+                  bpp(jp,4) = float(kstar(j1))
+                  bpp(jp,5) = float(kst)
+                  bpp(jp,6) = sep
+                  bpp(jp,7) = ecc
+                  bpp(jp,8) = rad(1)/rol(1)
+                  bpp(jp,9) = rad(2)/rol(2)
 *                  bpp(jp,10) = 8.0
-                  btype = 9
-*                  if(j1.eq.2)then
-*                     bpp(jp,2) = mt2
-*                     bpp(jp,3) = mass(j1)
-*                     bpp(jp,4) = float(kst)
-*                     bpp(jp,5) = float(kstar(j1))
-*                  endif
+                  bpp(jp,10) = 9.0
+*                 btype = 9
+                  if(j1.eq.2)then
+                     bpp(jp,2) = mt2
+                     bpp(jp,3) = mass(j1)
+                     bpp(jp,4) = float(kst)
+                     bpp(jp,5) = float(kstar(j1))
+                  endif
 *
                endif
             endif            
@@ -1596,24 +1604,25 @@
                   CALL gntage(massc(j2),mt2,kst,zpars,mass0(j2),aj(j2))
                   epoch(j2) = tphys + dtm - aj(j2)
 *
-*                  jp = MIN(80,jp + 1)
-*                  bpp(jp,1) = tphys
-*                  bpp(jp,2) = mass(j1)
-*                  bpp(jp,3) = mt2
-*                  bpp(jp,4) = float(kstar(j1))
-*                  bpp(jp,5) = float(kst)
-*                  bpp(jp,6) = sep
-*                  bpp(jp,7) = ecc
-*                  bpp(jp,8) = rad(1)/rol(1)
-*                  bpp(jp,9) = rad(2)/rol(2)
+                  jp = MIN(jpmax,jp + 1)
+                  bpp(jp,1) = tphys
+                  bpp(jp,2) = mass(j1)
+                  bpp(jp,3) = mt2
+                  bpp(jp,4) = float(kstar(j1))
+                  bpp(jp,5) = float(kst)
+                  bpp(jp,6) = sep
+                  bpp(jp,7) = ecc
+                  bpp(jp,8) = rad(1)/rol(1)
+                  bpp(jp,9) = rad(2)/rol(2)
 *                  bpp(jp,10) = 8.0
-                  btype = 9
-*                  if(j1.eq.2)then
-*                     bpp(jp,2) = mt2
-*                     bpp(jp,3) = mass(j1)
-*                     bpp(jp,4) = float(kst)
-*                     bpp(jp,5) = float(kstar(j1))
-*                  endif
+                  bpp(jp,10) = 9.0
+*                  btype = 9
+                  if(j1.eq.2)then
+                     bpp(jp,2) = mt2
+                     bpp(jp,3) = mass(j1)
+                     bpp(jp,4) = float(kst)
+                     bpp(jp,5) = float(kstar(j1))
+                  endif
 *
                endif
 *
@@ -2033,18 +2042,19 @@
 *
          if(kw.le.1.and.tm.lt.tphys.and..not.bss)then
             bss = .true.
-*            jp = MIN(80,jp + 1)
-*            bpp(jp,1) = tphys
-*            bpp(jp,2) = mass(1)
-*            bpp(jp,3) = mass(2)
-*            bpp(jp,4) = float(kstar(1))
-*            bpp(jp,5) = float(kstar(2))
-*            bpp(jp,6) = sep
-*            bpp(jp,7) = ecc
-*            bpp(jp,8) = rad(1)/rol(1)
-*            bpp(jp,9) = rad(2)/rol(2)
+            jp = MIN(jpmax,jp + 1)
+            bpp(jp,1) = tphys
+            bpp(jp,2) = mass(1)
+            bpp(jp,3) = mass(2)
+            bpp(jp,4) = float(kstar(1))
+            bpp(jp,5) = float(kstar(2))
+            bpp(jp,6) = sep
+            bpp(jp,7) = ecc
+            bpp(jp,8) = rad(1)/rol(1)
+            bpp(jp,9) = rad(2)/rol(2)
 *            bpp(jp,10) = 14.0
-            btype = 11
+            bpp(jp,10) = 11.0
+*            btype = 11
          endif
 *
  90   continue
@@ -2123,18 +2133,18 @@
 *
       if(change)then
          change = .false.
-*         jp = MIN(80,jp + 1)
-*         bpp(jp,1) = tphys
-*         bpp(jp,2) = mass(1)
-*         bpp(jp,3) = mass(2)
-*         bpp(jp,4) = float(kstar(1))
-*         bpp(jp,5) = float(kstar(2))
-*         bpp(jp,6) = sep
-*         bpp(jp,7) = ecc
-*         bpp(jp,8) = rad(1)/rol(1)
-*         bpp(jp,9) = rad(2)/rol(2)
-*         bpp(jp,10) = 2.0
-         btype = 2
+         jp = MIN(jpmax,jp + 1)
+         bpp(jp,1) = tphys
+         bpp(jp,2) = mass(1)
+         bpp(jp,3) = mass(2)
+         bpp(jp,4) = float(kstar(1))
+         bpp(jp,5) = float(kstar(2))
+         bpp(jp,6) = sep
+         bpp(jp,7) = ecc
+         bpp(jp,8) = rad(1)/rol(1)
+         bpp(jp,9) = rad(2)/rol(2)
+         bpp(jp,10) = 2.0
+*         btype = 2
       endif
 *
 * Test whether the primary still fills its Roche lobe.
@@ -2147,18 +2157,18 @@
          iter = iter + 1
          goto 8
       else
-*         jp = MIN(80,jp + 1)
-*         bpp(jp,1) = tphys
-*         bpp(jp,2) = mass(1)
-*         bpp(jp,3) = mass(2)
-*         bpp(jp,4) = float(kstar(1))
-*         bpp(jp,5) = float(kstar(2))
-*         bpp(jp,6) = sep
-*         bpp(jp,7) = ecc
-*         bpp(jp,8) = rad(1)/rol(1)
-*         bpp(jp,9) = rad(2)/rol(2)
-*         bpp(jp,10) = 4.0
-         btype = 4
+         jp = MIN(jpmax,jp + 1)
+         bpp(jp,1) = tphys
+         bpp(jp,2) = mass(1)
+         bpp(jp,3) = mass(2)
+         bpp(jp,4) = float(kstar(1))
+         bpp(jp,5) = float(kstar(2))
+         bpp(jp,6) = sep
+         bpp(jp,7) = ecc
+         bpp(jp,8) = rad(1)/rol(1)
+         bpp(jp,9) = rad(2)/rol(2)
+         bpp(jp,10) = 4.0
+*         btype = 4
          dtm = 0.d0
          goto 4
       endif
@@ -2176,18 +2186,18 @@
       rrl1 = MIN(999.999d0,rad(1)/rol(1))
       rrl2 = MIN(999.999d0,rad(2)/rol(2))
 *
-*      jp = MIN(80,jp + 1)
-*      bpp(jp,1) = tphys
-*      bpp(jp,2) = mass(1)
-*      bpp(jp,3) = mass(2)
-*      bpp(jp,4) = float(kstar(1))
-*      bpp(jp,5) = float(kstar(2))
-*      bpp(jp,6) = sep
-*      bpp(jp,7) = ecc
-*      bpp(jp,8) = rrl1
-*      bpp(jp,9) = rrl2
-*      bpp(jp,10) = 5.0
-      btype = 5
+      jp = MIN(jpmax,jp + 1)
+      bpp(jp,1) = tphys
+      bpp(jp,2) = mass(1)
+      bpp(jp,3) = mass(2)
+      bpp(jp,4) = float(kstar(1))
+      bpp(jp,5) = float(kstar(2))
+      bpp(jp,6) = sep
+      bpp(jp,7) = ecc
+      bpp(jp,8) = rrl1
+      bpp(jp,9) = rrl2
+      bpp(jp,10) = 5.0
+*      btype = 5
 *
       if(kstar(j1).ge.2.and.kstar(j1).le.9.and.kstar(j1).ne.7)then
          CALL comenv(mass0(j1),mass(j1),massc(j1),aj(j1),jspin(j1),
@@ -2205,22 +2215,22 @@
          CALL mix(mass0,mass,aj,kstar,zpars)
       endif
       if(com)then
-*         jp = MIN(80,jp + 1)
-*         bpp(jp,1) = tphys
-*         bpp(jp,2) = mass(1)
-*         if(kstar(1).eq.15) bpp(jp,2) = mass0(1)
-*         bpp(jp,3) = mass(2)
-*         if(kstar(2).eq.15) bpp(jp,3) = mass0(2)
-*         bpp(jp,4) = float(kstar(1))
-*         bpp(jp,5) = float(kstar(2))
-*         bpp(jp,6) = sep
-*         bpp(jp,7) = ecc
-*         rrl1 = MIN(rrl1,0.99d0)
-*         rrl2 = MIN(rrl2,0.99d0)
-*         bpp(jp,8) = rrl1
-*         bpp(jp,9) = rrl2
-*         bpp(jp,10) = 7.0
-         btype = 8
+         jp = MIN(jpmax,jp + 1)
+         bpp(jp,1) = tphys
+         bpp(jp,2) = mass(1)
+         if(kstar(1).eq.15) bpp(jp,2) = mass0(1)
+         bpp(jp,3) = mass(2)
+         if(kstar(2).eq.15) bpp(jp,3) = mass0(2)
+         bpp(jp,4) = float(kstar(1))
+         bpp(jp,5) = float(kstar(2))
+         bpp(jp,6) = sep
+         bpp(jp,7) = ecc
+         rrl1 = MIN(rrl1,0.99d0)
+         rrl2 = MIN(rrl2,0.99d0)
+         bpp(jp,8) = rrl1
+         bpp(jp,9) = rrl2
+         bpp(jp,10) = 7.0
+*         btype = 8
       endif
       epoch(1) = tphys - aj(1)
       epoch(2) = tphys - aj(2)
@@ -2255,35 +2265,38 @@
          if(com)then
             com = .false.
          else
-*            jp = MIN(80,jp + 1)
-*            bpp(jp,1) = tphys
-*            bpp(jp,2) = mass(1)
-*            if(kstar(1).eq.15) bpp(jp,2) = mass0(1)
-*            bpp(jp,3) = mass(2)
-*            if(kstar(2).eq.15) bpp(jp,3) = mass0(2)
-*            bpp(jp,4) = float(kstar(1))
-*            bpp(jp,5) = float(kstar(2))
-*            bpp(jp,6) = zero
-*            bpp(jp,7) = zero
-*            bpp(jp,8) = zero
-*            bpp(jp,9) = ngtv
+            jp = MIN(jpmax,jp + 1)
+            bpp(jp,1) = tphys
+            bpp(jp,2) = mass(1)
+            if(kstar(1).eq.15) bpp(jp,2) = mass0(1)
+            bpp(jp,3) = mass(2)
+            if(kstar(2).eq.15) bpp(jp,3) = mass0(2)
+            bpp(jp,4) = float(kstar(1))
+            bpp(jp,5) = float(kstar(2))
+            bpp(jp,6) = zero
+            bpp(jp,7) = zero
+            bpp(jp,8) = zero
+            bpp(jp,9) = ngtv
             if(coel)then
 *               bpp(jp,10) = 6.0
-               btype = 10
+               bpp(jp,10) = 10.0
+*               btype = 10
             elseif(ecc.gt.1.d0)then
-**
-** Binary dissolved by a supernova or tides.
-**
-*               bpp(jp,6) = sep
-*               bpp(jp,7) = ecc
-*               bpp(jp,9) = ngtv2
+*
+* Binary dissolved by a supernova or tides.
+*
+               bpp(jp,6) = sep
+               bpp(jp,7) = ecc
+               bpp(jp,9) = ngtv2
 *               bpp(jp,10) = 11.0
-               btype = 13
+               bpp(jp,10) = 13.0
+*               btype = 13
 *     record disrupt ecc
                ecc_bk = ecc 
             else
-               btype = 12
+*               btype = 12
 *               bpp(jp,10) = 9.0
+               bpp(jp,10) = 12.0
             endif
          endif
          if(kstar(2).eq.15)then
@@ -2307,39 +2320,41 @@
       if(com)then
          com = .false.
       else
-*         jp = MIN(80,jp + 1)
-*         bpp(jp,1) = tphys
-*         bpp(jp,2) = mass(1)
-*         if(kstar(1).eq.15.and.bpp(jp-1,4).lt.15.0)then
-*            bpp(jp,2) = mass0(1)
-*         endif
-*         bpp(jp,3) = mass(2)
-*         if(kstar(2).eq.15.and.bpp(jp-1,5).lt.15.0)then
-*            bpp(jp,3) = mass0(2)
-*         endif
-*         bpp(jp,4) = float(kstar(1))
-*         bpp(jp,5) = float(kstar(2))
-*         bpp(jp,6) = zero
-*         bpp(jp,7) = zero
-*         bpp(jp,8) = zero
+         jp = MIN(jpmax,jp + 1)
+         bpp(jp,1) = tphys
+         bpp(jp,2) = mass(1)
+         if(kstar(1).eq.15.and.bpp(jp-1,4).lt.15.0)then
+            bpp(jp,2) = mass0(1)
+         endif
+         bpp(jp,3) = mass(2)
+         if(kstar(2).eq.15.and.bpp(jp-1,5).lt.15.0)then
+            bpp(jp,3) = mass0(2)
+         endif
+         bpp(jp,4) = float(kstar(1))
+         bpp(jp,5) = float(kstar(2))
+         bpp(jp,6) = zero
+         bpp(jp,7) = zero
+         bpp(jp,8) = zero
          if(coel)then
-*            bpp(jp,9) = ngtv
+            bpp(jp,9) = ngtv
 *            bpp(jp,10) = 6.0
-            btype = 10
+            bpp(jp,10) = 10.0
+*            btype = 10
          elseif(kstar(1).eq.15.and.kstar(2).eq.15)then
-**
-** Cases of accretion induced supernova or single star supernova.
-** No remnant is left in either case.
-**
-*            bpp(jp,9) = ngtv2
+*
+* Cases of accretion induced supernova or single star supernova.
+* No remnant is left in either case.
+*
+            bpp(jp,9) = ngtv2
 *            bpp(jp,10) = 11.0
-            btype = 13
+            bpp(jp,10) = 13.0
+*            btype = 13
          else
-*            bpp(jp,6) = sep
-*            bpp(jp,7) = ecc
-*            bpp(jp,8) = rad(1)/rol(1)
-*            bpp(jp,9) = rad(2)/rol(2)
-*            bpp(jp,10) = 10.0
+            bpp(jp,6) = sep
+            bpp(jp,7) = ecc
+            bpp(jp,8) = rad(1)/rol(1)
+            bpp(jp,9) = rad(2)/rol(2)
+            bpp(jp,10) = -1.0
          endif
       endif
 *
@@ -2416,10 +2431,15 @@
 *         tb = -1.d0
 *      endif
 
-*     use backup hyperbolic orbit eccentricity
-      if(btype==13) ecc = ecc_bk
+**     use backup hyperbolic orbit eccentricity
+      if(ecc_bk.ge.1.0) ecc = ecc_bk
       tb = tb*yeardy
 
+      if (jp.ge.jpmax) then
+         write(*,*) 'Warning: BSE event storage overflow!'
+      else 
+         bpp(jp+1,10) = -1.0
+      endif
 *      if(jp.ge.80)then
 *         WRITE(99,*)' EVOLV2 ARRAY ERROR ',mass1i,mass2i,tbi,ecci
 *         WRITE(*,*)' STOP: EVOLV2 ARRAY ERROR '

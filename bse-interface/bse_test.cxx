@@ -9,14 +9,15 @@
 
 struct BinaryBase{
     double m1,m2,period,ecc;
+    int kw1,kw2;
     double tphys;
-    int binary_type;
     StarParameter star[2];
     StarParameterOut out[2];
+    BinaryEvent bse_event;
 
     void readAscii(FILE* fp) {
-        int rcount=fscanf(fp, "%lf %lf %lf %lf",
-                          &m1, &m2, &period, &ecc);
+        int rcount=fscanf(fp, "%lf %lf %d %d %lf %lf %lf",
+                          &m1, &m2, &kw1, &kw2, &period, &ecc, &tphys);
         if(rcount<4) {
             std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
             abort();
@@ -31,24 +32,31 @@ int main(int argc, char** argv){
     int n=5000;
     double m_min=0.08, m_max=150.0;
     double time=100.0;
+    double time0=0.0;
     double dtmin=1.0;
+    std::vector<StarParameter> star;
     std::vector<double> mass0;
     std::vector<BinaryBase> bin;
     std::string fprint_name;
     std::string fbin_name;
+    std::string fsin_name;
+    bool read_mass_flag = false;
 
     auto printHelp= [&]() {
         std::cout<<"The tool to evolve single stars or binaries using SSE/BSE\n"
                  <<"Usage: petar.bse [options] [initial mass of stars, can be multiple values]\n"
-                 <<"       If no initial mass or no binary table (-b) is provided, N single stars (-n) with equal mass interal in Log scale will be evolved\n"
-                 <<"       The default unit set is: Msun, Myr. If input data have different units, please modify the scaling fators\n"
+                 <<"       If no initial mass or no single/binary table (-s or -b) is provided, N single stars (-n) with equal mass interal in Log scale will be evolved\n"
+                 <<"       When single table is provided, times and types can be set individually\n"
+                 <<"       The default unit set is: Msun, Myr. If input data have different units [IN], please modify the scaling fators\n"
                  <<"Options:\n"
-                 <<"    -s [D]: mimimum mass ("<<m_min<<")\n"
-                 <<"    -e [D]: maximum mass ("<<m_max<<")\n"
                  <<"    -n [I]: number of stars when evolve an IMF ("<<n<<")\n"
-                 <<"    -t [D]: evolve time ("<<time<<")[Myr]\n"
-                 <<"    -d [D]: minimum time step ("<<dtmin<<")[Myr]\n"
-                 <<"    -b [S]: a file of binary table: First line: number of binary; After: m1, m2, period, ecc per line\n"
+                 <<"    -i [D]: start time ("<<time0<<") [IN]\n"
+                 <<"    -t [D]: finish time ("<<time<<") [IN]\n"
+                 <<"        --mmin [D]: mimimum mass ("<<m_min<<") [M*]\n"
+                 <<"        --mmax [D]: maximum mass ("<<m_max<<") [M*]\n"
+                 <<"    -d [D]: minimum time step ("<<dtmin<<")[IN]\n"
+                 <<"    -s [S]: a file of single table: First line: number of single (unit:IN); After: mass, type, time per line\n"
+                 <<"    -b [S]: a file of binary table: First line: number of binary (unit:IN); After: m1, m2, type1, type2, period, ecc, time per line\n"
                  <<"    -w [I]: print column width ("<<width<<")\n"
                  <<"    -o [S]: a file to output data every step\n"
                  <<"    -h    : help\n";
@@ -58,32 +66,48 @@ int main(int argc, char** argv){
     opterr = 0;
 
     // reset optind
-    static struct option long_options[] = {{0,0,0,0}};
+    static int long_flag=-1;
+    static struct option long_options[] = {
+        {"mmin", required_argument, &long_flag, 0},
+        {"mmax", required_argument, &long_flag, 1},
+        {0,0,0,0}
+    };
 
     int opt_used = 0;
     optind=0;
     int option_index;
     bool help_flag=false;
-    while ((arg_label = getopt_long(argc, argv, "-s:e:n:t:d:b:w:o:h", long_options, &option_index)) != -1)
+    while ((arg_label = getopt_long(argc, argv, "-s:n:t:d:b:w:o:h", long_options, &option_index)) != -1)
         switch (arg_label) {
-        case 's':
-            m_min = atof(optarg);
-            std::cout<<"min mass: "<<m_min<<std::endl;
-            opt_used+=2;
-            break;
-        case 'e':
-            m_max = atof(optarg);
-            std::cout<<"max mass: "<<m_max<<std::endl;
-            opt_used+=2;
+        case 0:
+            switch (long_flag) {
+            case 0:
+                m_min = atof(optarg);
+                std::cout<<"min mass: "<<m_min<<std::endl;
+                opt_used+=2;
+                break;
+            case 1:
+                m_max = atof(optarg);
+                std::cout<<"max mass: "<<m_max<<std::endl;
+                opt_used+=2;
+                break;
+            default:
+                break;
+            }
             break;
         case 'n':
             n = atof(optarg);
             std::cout<<"N: "<<n<<std::endl;
             opt_used+=2;
             break;
+        case 'i':
+            time0 = atof(optarg);
+            std::cout<<"start time: "<<time0<<std::endl;
+            opt_used+=2;
+            break;
         case 't':
             time = atof(optarg);
-            std::cout<<"finish time[Myr]: "<<time<<std::endl;
+            std::cout<<"finish time: "<<time<<std::endl;
             opt_used+=2;
             break;
         case 'w':
@@ -96,8 +120,15 @@ int main(int argc, char** argv){
             std::cout<<"minimum time step "<<dtmin<<std::endl;
             opt_used+=2;
             break;
+        case 's':
+            fsin_name = optarg;
+            read_mass_flag = true;
+            std::cout<<"Single data file "<<fsin_name<<std::endl;
+            opt_used+=2;
+            break;
         case 'b':
             fbin_name = optarg;
+            read_mass_flag = true;
             std::cout<<"Binary data file "<<fbin_name<<std::endl;
             opt_used+=2;
             break;
@@ -121,6 +152,45 @@ int main(int argc, char** argv){
 
     if (help_flag) return 0;
 
+    BSEManager bse_manager;
+    bse_manager.initial(bse_io,true);
+
+    // if no mass is read, use a mass range
+    if (!read_mass_flag) {
+        double dm_factor = exp((log(m_max) - log(m_min))/n);
+
+        mass0.resize(n);
+        star.resize(n);
+
+        mass0[0] = m_min;
+        star[0].initial(m_min);
+        for (int i=1; i<n; i++) {
+            mass0[i] = mass0[i-1]*dm_factor;
+            star[i].initial(mass0[i]);
+        }
+    }
+
+    if (fsin_name!="") {
+        FILE* fsin;
+        if( (fsin = fopen(fsin_name.c_str(),"r")) == NULL) {
+            fprintf(stderr,"Error: Cannot open file %s.\n", fsin_name.c_str());
+            abort();
+        }
+        int rcount=fscanf(fsin, "%d", &n);
+        if(rcount<1) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            abort();
+        }
+        mass0.resize(n);
+        star.resize(n);
+        for (int k=0; k<n; k++) {
+            int type;
+            double tphys;
+            fscanf(fsin, "%lf %d %lf", &mass0[k], &type, &tphys);
+            star[k].initial(mass0[k]*bse_manager.mscale, type, 0.0, tphys*bse_manager.tscale);
+        }
+    }
+
     if (fbin_name!="") {
         FILE* fbin;
         if( (fbin = fopen(fbin_name.c_str(),"r")) == NULL) {
@@ -136,23 +206,32 @@ int main(int argc, char** argv){
         for (int k=0; k<nb; k++) {
             BinaryBase bink;
             bink.readAscii(fbin);
+            bink.star[0].initial(bink.m1*bse_manager.mscale);
+            bink.star[1].initial(bink.m2*bse_manager.mscale);
+            bink.tphys *= bse_manager.tscale;
+            bink.star[0].tphys = bink.tphys;
+            bink.star[1].tphys = bink.tphys;
+            bink.star[0].kw = bink.kw1;
+            bink.star[1].kw = bink.kw2;
             bin.push_back(bink);
+            // initial
         }
     }
 
     // argc is 1 no input is given
     opt_used++;
-    bool read_mass_flag = false;
     if (opt_used<argc) {
         // read initial mass list
-        while (opt_used<argc) 
+        while (opt_used<argc) {
             mass0.push_back(atof(argv[opt_used++]));
+        }
+        n = mass0.size();
+        star.resize(n);
+        for (int i=0; i<n; i++) {
+            star[i].initial(mass0[i]*bse_manager.mscale);
+        }
         read_mass_flag = true;
     }
-
-    BSEManager bse_manager;
-
-    bse_manager.initial(bse_io,true);
 
     assert(bse_manager.checkParams());
 
@@ -171,7 +250,7 @@ int main(int argc, char** argv){
     auto printBinary=[&](std::ostream & _fout, BinaryBase& _bin){
         _fout<<std::setw(width)<<_bin.m1*bse_manager.mscale;
         _fout<<std::setw(width)<<_bin.m2*bse_manager.mscale;
-        _fout<<std::setw(width)<<_bin.period*bse_manager.mscale*3.6524e8;
+        _fout<<std::setw(width)<<_bin.period*bse_manager.tscale*3.6524e8;
         _fout<<std::setw(width)<<_bin.ecc;
         for (int k=0; k<2; k++) {
             _bin.star[k].printColumn(_fout, width);
@@ -199,12 +278,6 @@ int main(int argc, char** argv){
         int nbin = bin.size();
 #pragma omp parallel for schedule(dynamic)
         for (int i=0; i<nbin; i++) {
-            // initial
-            bin[i].star[0].initial(bin[i].m1*bse_manager.mscale);
-            bin[i].star[1].initial(bin[i].m2*bse_manager.mscale);
-            bin[i].tphys = 0.0;
-            bin[i].binary_type = 0;
-
             // output file
             std::ofstream fout;
             bool print_flag=false;
@@ -217,46 +290,44 @@ int main(int argc, char** argv){
 
             bool kick_print_flag[2]={false,false};
             // evolve
-            while (bse_manager.getTime(bin[i].star[0])<time) {
+            double tend = time*bse_manager.tscale;
+            while (bse_manager.getTime(bin[i].star[0])<tend) {
                 // time step
                 double dt1 = bse_manager.getTimeStep(bin[i].star[0]);
                 double dt2 = bse_manager.getTimeStep(bin[i].star[1]);
                 double dt = std::min(dt1,dt2);
                 dt = std::max(dt,dtmin);
-                dt = std::min(time-bse_manager.getTime(bin[i].star[0]), dt);
+                dt = std::min(tend-bse_manager.getTime(bin[i].star[0]), dt);
 
                 // evolve function
-                bin[i].binary_type = 0;
-                int error_flag=bse_manager.evolveBinary(bin[i].star[0],bin[i].star[1],bin[i].out[0],bin[i].out[1],bin[i].period,bin[i].ecc,bin[i].binary_type, dt);
-                if (bin[i].binary_type) {
-                    std::cout<<bse_manager.binary_type[bin[i].binary_type]
-                             <<" i="<<i<<" period[in]="<<bin[i].period<<" ecc="<<bin[i].ecc
-                             <<std::endl;
-                    std::cout<<"Star 1:";
-                    bin[i].star[0].print(std::cout);
-                    std::cout<<"\nStar 2:";
-                    bin[i].star[1].print(std::cout);
-                    std::cout<<std::endl;
-                }
+                int error_flag=bse_manager.evolveBinary(bin[i].star[0],bin[i].star[1],bin[i].out[0],bin[i].out[1],bin[i].period,bin[i].ecc,bin[i].bse_event, dt);
+                bse_manager.printBinaryEvent(std::cout, bin[i].bse_event);
+
                 for (int k=0; k<2; k++) {
                     double dv[4];
                     dv[3] = bse_manager.getVelocityChange(dv,bin[i].out[k]);
                     if (dv[3]>0&&!kick_print_flag[k]) {
-                        std::cout<<"SN kick, i="<<i<<" vkick[IN]="<<dv[3]<<" ";
-                        bin[i].star[k].print(std::cout);
-                        std::cout<<std::endl;
+#pragma omp critical 
+                        {
+                            std::cout<<"SN kick, i="<<i<<" vkick[IN]="<<dv[3]<<" ";
+                            bin[i].star[k].print(std::cout);
+                            std::cout<<std::endl;
+                        }
                         kick_print_flag[k]=true;
                     }
                 }
                 if (error_flag<0) {
-                    std::cerr<<"Error: i="<<i<<" mass0[IN]="<<bin[i].m1<<" "<<bin[i].m2<<" period[IN]="<<bin[i].period<<" ecc[IN]="<<bin[i].ecc
-                             <<std::endl;
-                    std::cerr<<"Star 1:";
-                    bin[i].star[0].print(std::cerr);
-                    std::cerr<<"\nStar 2:";
-                    bin[i].star[1].print(std::cerr);
-                    std::cerr<<std::endl;
-                    std::cerr<<std::endl;
+#pragma omp critical 
+                    {
+                        std::cerr<<"Error: i="<<i<<" mass0[IN]="<<bin[i].m1<<" "<<bin[i].m2<<" period[IN]="<<bin[i].period<<" ecc[IN]="<<bin[i].ecc
+                                 <<std::endl;
+                        std::cerr<<"Star 1:";
+                        bin[i].star[0].print(std::cerr);
+                        std::cerr<<"\nStar 2:";
+                        bin[i].star[1].print(std::cerr);
+                        std::cerr<<std::endl;
+                        std::cerr<<std::endl;
+                    }
                 }
                 double dt_miss = bse_manager.getDTMiss(bin[i].out[0]);
 
@@ -270,28 +341,11 @@ int main(int argc, char** argv){
         for (int i=0; i<nbin; i++) printBinary(std::cout, bin[i]);
     }
 
-    // if no mass is read, use a mass range
-    if (!read_mass_flag&&bin.size()==0) {
-        double dm_factor = exp((log(m_max) - log(m_min))/n);
-
-        mass0.push_back(m_min);
-        for (int i=1; i<n; i++) {
-            mass0.push_back(mass0.back()*dm_factor);
-        }
-    }
-    else n = mass0.size();
-
-    if (n>0) {
-        StarParameter star[n];
-        StarParameterOut output[n];
-
-        // initial parameter
-        for (int i=0; i<n; i++) {
-            star[i].initial(mass0[i]/bse_manager.mscale);
-        }
+    if (star.size()>0) {
+        StarParameterOut output[star.size()];
 
 #pragma omp parallel for schedule(dynamic)
-        for (int i=0; i<n; i++) {
+        for (size_t i=0; i<star.size(); i++) {
             // output file
             std::ofstream fout;
             bool print_flag=false;
@@ -304,22 +358,29 @@ int main(int argc, char** argv){
 
             //int error_flag = bse_manager.evolveStar(star[i],output[i],time);
             bool kick_print_flag=false;
-            while (bse_manager.getTime(star[i])<time) {
+            double tend = time*bse_manager.tscale;
+            while (bse_manager.getTime(star[i])<tend) {
                 double dt = std::max(bse_manager.getTimeStep(star[i]),dtmin);
-                dt = std::min(time-bse_manager.getTime(star[i]), dt);
+                dt = std::min(tend-bse_manager.getTime(star[i]), dt);
                 int error_flag=bse_manager.evolveStar(star[i],output[i],dt);
                 double dv[4];
                 dv[3] = bse_manager.getVelocityChange(dv, output[i]);
                 if (dv[3]>0&&!kick_print_flag) {
-                    std::cout<<"SN kick, i="<<i<<" vkick[IN]="<<dv[3]<<" ";
-                    star[i].print(std::cout);
-                    std::cout<<std::endl;
+#pragma omp critical 
+                    {
+                        std::cout<<"SN kick, i="<<i<<" vkick[IN]="<<dv[3]<<" ";
+                        star[i].print(std::cout);
+                        std::cout<<std::endl;
+                    }
                     kick_print_flag=true;
                 }
                 if (error_flag<0) {
-                    std::cerr<<"Error: i="<<i<<" mass0[IN]="<<mass0[i]<<" ";
-                    star[i].print(std::cerr);
-                    std::cerr<<std::endl;
+#pragma omp critical 
+                    {
+                        std::cerr<<"Error: i="<<i<<" mass0[IN]="<<mass0[i]<<" ";
+                        star[i].print(std::cerr);
+                        std::cerr<<std::endl;
+                    }
                 }
                 double dt_miss = bse_manager.getDTMiss(output[i]);
                 if (print_flag) printSingle(fout, mass0[i], star[i], output[i]);
@@ -329,7 +390,7 @@ int main(int argc, char** argv){
         }
 
         printSingleTitle(std::cout);
-        for (int i=0; i<n; i++) {
+        for (size_t i=0; i<star.size(); i++) {
             printSingle(std::cout, mass0[i], star[i], output[i]);
         }
     }
