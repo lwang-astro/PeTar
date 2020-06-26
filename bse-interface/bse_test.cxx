@@ -186,7 +186,11 @@ int main(int argc, char** argv){
         for (int k=0; k<n; k++) {
             int type;
             double tphys;
-            fscanf(fsin, "%lf %d %lf", &mass0[k], &type, &tphys);
+            rcount=fscanf(fsin, "%lf %d %lf", &mass0[k], &type, &tphys);
+            if(rcount<3) {
+                std::cerr<<"Error: Data reading fails! requiring data number is 3, only obtain "<<rcount<<".\n";
+                abort();
+            }
             star[k].initial(mass0[k]*bse_manager.mscale, type, 0.0, tphys*bse_manager.tscale);
         }
     }
@@ -301,7 +305,19 @@ int main(int argc, char** argv){
 
                 // evolve function
                 int error_flag=bse_manager.evolveBinary(bin[i].star[0],bin[i].star[1],bin[i].out[0],bin[i].out[1],bin[i].period,bin[i].ecc,bin[i].bse_event, dt);
-                bse_manager.printBinaryEvent(std::cout, bin[i].bse_event);
+                int nmax = bin[i].bse_event.getEventNMax();
+                for (int k=0; k<nmax; k++) {
+                    int binary_type = bin[i].bse_event.getType(k);
+                    if (binary_type>0) {
+#pragma omp critical
+                        {
+                            std::cout<<" ID="<<i<<" index="<<k<<" ";
+                            bse_manager.printBinaryEventOne(std::cout, bin[i].bse_event, k);
+                            std::cout<<std::endl;
+                        }
+                    }
+                    else if (binary_type<0) break;
+                }
 
                 for (int k=0; k<2; k++) {
                     double dv[4];

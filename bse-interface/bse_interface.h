@@ -837,12 +837,9 @@ public:
         for (int k=0; k<nmax; k++) {
             int type = _bin_event.getType(k);
             if(type>0) {
-#pragma omp critical 
-                {
-                    _fout<<std::setw(16)<<binary_type[type];
-                    _bin_event.print(_fout, k);
-                    _fout<<std::endl;
-                }
+                _fout<<std::setw(16)<<binary_type[type];
+                _bin_event.print(_fout, k);
+                _fout<<std::endl;
             }
             else if(type<0) break;
         }
