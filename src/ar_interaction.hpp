@@ -889,7 +889,16 @@ public:
                         double dv[4];
                         auto* pk = _bin.getMember(k);
                         dv[3] = bse_manager.getVelocityChange(dv,out[k]);
-                        for (int k=0; k<3; k++) pk->vel[k] += dv[k];
+                        if (dv[3]>0) {
+#pragma omp critical 
+                            {
+                                fout_bse<<" ID="<<p1->id<<" "<<p2->id<<" "
+                                        <<" SN_Kick vel["<<k+1<<"][IN]="<<dv[3]<<" ";
+                                pk->star.print(fout_bse);
+                                fout_bse<<std::endl;
+                            }
+                            for (int k=0; k<3; k++) pk->vel[k] += dv[k];
+                        }
                     }
 
                     if (_bin_interrupt.status != AR::InterruptStatus::merge) {
