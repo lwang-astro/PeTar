@@ -2840,6 +2840,7 @@ public:
 #ifdef STELLAR_EVOLUTION
         hard_manager.ar_manager.interaction.stellar_evolution_option = input_parameters.stellar_evolution_option.value;
         if (write_style) hard_manager.ar_manager.interaction.stellar_evolution_write_flag = true;
+        else hard_manager.ar_manager.interaction.stellar_evolution_write_flag = false;
 #ifdef BSE
         if (input_parameters.stellar_evolution_option.value==1) 
             hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters, print_flag);
@@ -2849,6 +2850,8 @@ public:
         // group information
         if (write_style&&input_parameters.adjust_group_write_option.value==1) 
             hard_manager.h4_manager.adjust_group_write_flag=true;
+        else 
+            hard_manager.h4_manager.adjust_group_write_flag=false;
 #endif        
 
         // check consistence of paramters
