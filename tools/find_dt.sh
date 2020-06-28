@@ -34,7 +34,7 @@ do
 	-m) shift; nmpi=$1; shift;;
 	-o) shift; nomp=$1; shift;;
 	-u) shift; unit=$1; shift;;
-	-G) shift: G=$1; shift;;
+	-G) shift; G=$1; shift;;
 	*) fname=$1;shift;;
     esac
 done
