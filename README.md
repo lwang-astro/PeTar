@@ -107,6 +107,15 @@ After installation, if the [Install path]/bin is in system $PATH envirnoment, th
 ```
 where "[mpiexec -n X]" is used when multiple MPI processors are needed and "X" is the number of processors.
 
+All snapshots of particle data outputed in the simulation can be used to restart the simulation. 
+To restart the simulation with the same configuration of parameters, use
+```
+[mpiexec -n X] petar -p input.par [options] [snapshot filename]
+```
+where _input.par_ is automatically generated from the last run (stored in the same diretory of the simulation).
+If the user change the name of this file and restart, the next new parameter file also follows the new name.
+Notice if the users want to use new options, these options must be put after "-p input.par", otherwises they are rewrited by values stored in input.par.
+
 ### Important tips:
 To avoid segmetantional fault in simulations in the case of large number of particles, make sure to set the OMP_STACKSIZE large enough.
 For example, use
@@ -127,13 +136,48 @@ All opitions are listed in the help information, which can be seen by use
 petar -h
 ```
 The description of the input particle data file is also shown in the help information. 
-All snapshots of particle data outputed in the simulation can be used to restart the simulation. 
-To restart the simulation with the same configuration of parameters, use
-```
-[mpiexec -n X] petar -p input.par [snapshot filename]
-```
-where _input.par_ is automatically generated from the last run (stored in the same diretory of the simulation).
 
+### Output
+#### Printed information
+When _petar_ is running, there are a few information printed in the front:
+- The _FDPS_ logo and _PETAR_ information are printed, where the copyright, and references for citing are shown.
+- The input parameters are listed if they are modified when the corresponding options of _petar_ are used.
+- If stellar evolution package (SSE/BSE) is used, the common block and global parameters are printed.
+- The name of dumped files for the input parameters are shown, in default, they are input.par, input.par.hard, input.par.bse (if BSE is used)
+    - input.par: input parameters of petar, can be used to restart the simulation from a snapshot.
+    - input.par.hard: input paremeters of hard (short-range interaction part; Hermite + SDAR), can be used for _petar.hard.debug_ to test the dumped hard cluster.
+    - input.par.bse: the BSE parameters, if BSE is used, this is the necessary file to restart the simulation and also for _petar.hard.debug_.
+
+Then after the line "Finish parameter initialization",
+The status of the simulation is updated every output time interval (the option -o).
+The cotent style is like:
+- Time, number of real particles, all particles (including artificial particles), removed particles and escaped particles; in local (first MPI process) and in global (all MPI process)
+- Energy check: two rows are printed. First shows the physical energy; Second shows the slow-down energy (see reference printed in _petar_ commander).
+    - Error/Total: relative error of current step
+    - Error: absolute error of current step
+    - Error_cum: cumulative absolute error
+    - Total: total energy
+    - Kinetic: kinetic energy
+    - Potential: potential energy
+    - Modify: total modified energy (due to e.g. stellar evolution)
+    - Modify_group: modified energy from SDAR groups
+    - Modify_single: modified energy from singles
+    - Error_hard: energy error in short-range interaction (hard part)
+    - Error_hard_cum: cumulative energy error in hard part
+- Angular momentum: error at current step, cumulative error, components in x, y, z directions and value
+- System total mass, center position and velocity
+- Other information if conditions are triggered. 
+
+#### Output files
+There are a few output files:
+- [data filename prefix].[index]: the snapshot files, the format is the same as the input data file. In the help information of _petar_ commander, users can find the definitions of the columns and header
+- [data filename prefix].esc.[MPI rank]: the escaped particle information, first lines show column definition
+- [data filename prefix].group.[MPI rank]: the information of new and end of groups (binary, triple ...), since the items in each row can be different because of different numbers of members in groups, there is no universal column headers. It is suggested to use petar.gether first to separate groups with different numbers of members into different files. Then use the python tool _petar.Group_ to read the new files.
+- [data filename prefix].[s/b]se.[MPI rank]: if BSE is switched on, the files record the SSE and BSE events, such as type changes, Supernovae, binary evolution phase changes. Each line contain the definition of values, thus can be directly read.
+
+Before access these files, it is suggested to run _petar.gether_ tool first to gether the separated files with different MPI ranks to one file for convenience.
+This tool also separate groups with different number of members in xx.group to individual files with suffixe ".n[number of members in groups]".
+    
 ### Useful tools
 There are a few useful tools helping users to generate initial input data, find a proper tree time step to start the simulations and data analysis.
 Each of the tools are stored in the user defined install_path/bin.
@@ -160,13 +204,27 @@ The performance of _petar_ is very sensitive to the tree time step.
 _petar.find.dt_ can help to find a proper time step in order to obtain the best performance.
 The usage:
 ```
-petar.find.dt [options] [particle data filename]
+petar.find.dt [options] [petar data filename]
 ```
-The performance of _petar_ depends on the initial particle data file.
+The performance of _petar_ depends on the initial particle data file in petar input format.
 The tools will try to perform a short simulations with different tree time steps and listed the performance one by one.
 Users can decide which step is the best one.
-Notice if a too large time step is tested, the tool may have no response for long time. This suggests that the testing time step is a very bad choice. Users can kill the test.
-A few options are available in this tool to change the numbers of OpenMP threads and MPI processors, the starting time step and the number of primordial binaries.
+Notice if a too large time step is tested, the test will have no response for long time, which indicates a bad choices of time step.
+In such case, this tool terminates the test and return the best result from the previous test.
+
+A few options are available in this tool to change the numbers of OpenMP threads and MPI processors, the minimum tree time step to start the test.
+If other options are used in _petar_ commander, e.g. -b [binary number], -u [unit set], -G [gravitational constant], these options should also be added with the option -a and the content enclosed by "":
+```
+petar.find.dt [options] -a "[petar options]" [petar data filename]. 
+```
+For example,
+```
+petar.find.dt -m 2 -o 4 -a "-b 100 -u 1" input
+```
+use 2 MPI processes, 4 OpenMP threads per MPI, 100 primordial binaries and unit set of 1 [Myr, PC, M*] to select the best dt.
+
+Notice that _petar_ only accepts a tree time step of 0.5^[integer number]. 
+Thus in the test, if the user specify the minimum step size by '-s [value]', the step size will be regularized if it does not satisfy this requirement.  
 
 #### Parallel data process
 The _petar.data.process_ can be used to process snapshot data to detect binaries and calculate Langragian, core radii, averaged mass and velocity dispersion.
@@ -205,6 +263,10 @@ petar.movie [options] [snapshot path list filename]
 If users want to plot information of binaries, it is better to use petar.data.process first to generate detect binaries with multiple CPU cores. Then the next time binary detection is not necessary to run again (use option '--generate-binary 2').
 
 This tool use either _imageio_ or _matplotlib.animation_ to generate movies. It is suggested to install _imageio_ in order to generate movie using mutliple CPU cores. This is much faster than the _matplotlib.animation_ which can only use one CPU core. On the other hand, The ffmpeg is also suggested to install in order to support several commonly used movie formats (e.g. mp4, avi).
+
+#### gether output files from different MPI ranks
+The _petar.gether_ is used to gether output files from different MPI ranks to one file (e.g. xx.group.[MPI rank]).
+For group files, it also generate individual files with suffix ".n[number of members in groups]'.
 
 #### SSE/BSE steller evolution tool
 The _petar.bse_ will be generated when --with-interrupt=bse is used during the configuration.
