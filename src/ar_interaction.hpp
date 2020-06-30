@@ -885,11 +885,13 @@ public:
                     }
 
                     // case when SN kick appears
+                    bool kick_flag=false;
                     for (int k=0; k<2; k++) {
                         double dv[4];
                         auto* pk = _bin.getMember(k);
                         dv[3] = bse_manager.getVelocityChange(dv,out[k]);
                         if (dv[3]>0) {
+                            kick_flag=true;
 #pragma omp critical 
                             {
                                 fout_bse<<" ID="<<p1->id<<" "<<p2->id<<" "
@@ -901,13 +903,14 @@ public:
                         }
                     }
 
-                    if (_bin_interrupt.status != AR::InterruptStatus::merge) {
-                        // case when orbital parameter is modified
-                        if (event_flag==2) {
-                            ASSERT(ecc>=0&&ecc<=1.0); // in mass transfer case disruption is not allown
+                    if (!kick_flag&&_bin_interrupt.status != AR::InterruptStatus::merge) {
+                        // case for elliptic case
+                        if (ecc>=0.0&&ecc<=1.0) {
                             // obtain full orbital parameters
                             _bin.calcOrbit(gravitational_constant);
                             // update new period, ecc
+//#pragma omp critical
+//                            std::cerr<<"Event: "<<event_flag<<" "<<_bin.period<<" "<<period<<" "<<_bin.ecc<<" "<<ecc<<std::endl;
                             _bin.period = period;
                             _bin.ecc = ecc;
                             _bin.m1 = p1->mass;
@@ -916,9 +919,8 @@ public:
                             // kepler orbit to particles using the same ecc anomaly
                             _bin.calcParticles(gravitational_constant);
                         }
-                                      
                         // in case of disruption but no kick
-                        if (event_flag==3) {
+                        else {
                             // obtain full orbital parameters
                             _bin.calcOrbit(gravitational_constant);
                             // assume energy no change
