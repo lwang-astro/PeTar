@@ -2,6 +2,7 @@
 A particle-particle \& Particle-tree (_P<sup>3</sup>T_) with slow-down time-transformed symplectic integrator (slow-down algorithmic regularization; _SDAR_) code for simulating gravitational _N_-body systems including close encounters and few-body systems.
 
 The Doxygen document will be provided in doc directory (not yet done)
+The reference paper: https://arxiv.org/abs/2006.16560
 
 ## Install:
 ### Dependence:
@@ -74,7 +75,7 @@ Options for configure can be found by
     ```
     ./configure --with-interrupt=[bse]
     ```
-    Currently only SSE/BSE is the available stellar evolution package. Notice SSE/BSE is a combined package, the option argument "sse" not work, only "bse" switches on both.
+    Currently only SSE/BSE is the available stellar evolution package (Now still in test phase). Notice SSE/BSE is a combined package, the option argument "sse" not work, only "bse" switches on both.
     When this option is switched on, the standard alone tool _petar.bse_ will also be compiled and installed.
     This is a c++ based tool which uses the API of the SSE/BSE from Fortran77 to c++. It can be used to evolve a group of single and binary stars with OpenMP parallelization.
 
