@@ -715,8 +715,8 @@ public:
     */
     int modifyAndInterruptIter(AR::InterruptBinary<PtclHard>& _bin_interrupt, AR::BinaryTree<PtclHard>& _bin) {
         int modify_return = 0;
-        int modify_branch[2];
 #ifdef STELLAR_EVOLUTION
+        int modify_branch[2];
         if (_bin.getMemberN()>2) {
             for (int k=0; k<2; k++) {
                 if (_bin.isMemberTree(k)) {

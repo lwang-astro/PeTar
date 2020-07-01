@@ -721,7 +721,11 @@ public:
     //! print reference to cite
     static void printReference(std::ostream & fout, const int offset=4) {
         for (int i=0; i<offset; i++) fout<<" ";
-        fout<<"SSE/BSE: Banerjee S., Belczynski K., Fryer C.~L., Berczik P., Hurley J.~R., Spurzem R., Wang L., 2019, A&A, in press"
+        fout<<"SSE: Hurley J.~R., Pols O.~R., Tout C.~A., 2000, MNRAS, 315, 543\n";
+        for (int i=0; i<offset; i++) fout<<" ";
+        fout<<"BSE: Hurley J.~R., Tout C.~A., Pols O.~R., 2002, MNRAS, 329, 897\n";
+        for (int i=0; i<offset; i++) fout<<" ";
+        fout<<"Updated BSE: Banerjee S., Belczynski K., Fryer C.~L., Berczik P., Hurley J.~R., Spurzem R., Wang L., 2019, A&A, in press"
             <<std::endl;
     }
     

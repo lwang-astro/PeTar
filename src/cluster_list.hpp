@@ -503,9 +503,9 @@ public:
 
                     // no neighbor
                     if(sys[i].n_ngb == 0){
-#ifdef CLUSTER_DEBUG
-                        assert(sys[i].group_data.artificial.isSingle());
-#endif
+//#ifdef CLUSTER_DEBUG
+//                        assert(sys[i].group_data.artificial.isSingle()); // in cm mode, this should not be used
+//#endif
                         adr_sys_one_cluster_[ith].push_back(i);
                         continue;
                     }

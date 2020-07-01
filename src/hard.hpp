@@ -2910,7 +2910,11 @@ public:
                             pj_cm.vel.y = pcm->vel[1];
                             pj_cm.vel.z = pcm->vel[2];
                             PS::S32 adr = ptcl_local[j].adr_org;
-                            if(adr>=0) _ptcl_soft[adr].group_data.cm = pj_cm;
+                            if(adr>=0) {
+                                assert(ptcl_local[j].id==_ptcl_soft[adr].id);
+                                _ptcl_soft[adr].group_data.cm = pj_cm;
+                                _ptcl_soft[adr].r_search = ptcl_local[j].r_search;
+                            }
                         }
                     }
                     else {
@@ -2934,7 +2938,10 @@ public:
                             pj_cm.mass = mass_cm;
                             pj_cm.vel  = vel_cm;
                             PS::S32 adr = ptcl_local[j].adr_org;
-                            if(adr>=0) _ptcl_soft[adr].group_data.cm = pj_cm;
+                            if(adr>=0) {
+                                assert(ptcl_local[j].id==_ptcl_soft[adr].id);
+                                _ptcl_soft[adr].group_data.cm = pj_cm;
+                            }
                         }
                     }
                     n_group_offset_local += n_members;

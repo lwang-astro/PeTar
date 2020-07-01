@@ -1,8 +1,9 @@
 # PeTar
 A particle-particle \& Particle-tree (_P<sup>3</sup>T_) with slow-down time-transformed symplectic integrator (slow-down algorithmic regularization; _SDAR_) code for simulating gravitational _N_-body systems including close encounters and few-body systems.
 
-The Doxygen document will be provided in doc directory (not yet done)
-The reference paper: https://arxiv.org/abs/2006.16560
+The Doxygen document will be provided in doc directory (not yet done).
+
+The reference paper on ArXiv: https://arxiv.org/abs/2006.16560
 
 ## Install:
 ### Dependence:
