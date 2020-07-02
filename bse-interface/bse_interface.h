@@ -832,6 +832,8 @@ public:
 
     //! print type change 
     void printTypeChange(std::ostream& _fout, StarParameter& _star, StarParameterOut& _out, const int _width=4) {
+        assert(_out.kw0>=0&&_out.kw0<16);
+        assert(_star.kw>=0&&_star.kw<16);
         _fout<<" "<<std::setw(_width)<<single_type[_out.kw0]<<" -> "<<std::setw(_width)<<single_type[_star.kw];
     }
 
@@ -886,7 +888,10 @@ public:
         _out.dm = _star.mt - _out.dm;
         _out.dtmiss = tphysf - _star.tphys;
 
-        if (_star.kw<0) return -1; // error 
+        if (_star.kw<0) {
+            _star.kw = -_star.kw;
+            return -1; // error 
+        }
         else if (_out.vkick[3]>0) return 2; // kick
         else if (_star.kw!=_out.kw0) return 1; // kw change
         else return 0;
@@ -985,7 +990,11 @@ public:
         for (int k=0; k<4; k++) _out1.vkick[k]=vkick[k];
         for (int k=0; k<4; k++) _out2.vkick[k]=vkick[k+4];
 
-        if (kw[0]<0||kw[1]<0) return -1; // error case
+        if (kw[0]<0||kw[1]<0) {
+            kw[0] = abs(kw[0]);
+            kw[1] = abs(kw[1]);
+            return -1; // error case
+        }
         //else if (vkick[3]>0||vkick[7]>0) return 3; // kick
         //else if (isDisrupt(_binary_type)) return 4; // disrupt without kick
         //else if (isMerger(_binary_type)) return 5; // Merger

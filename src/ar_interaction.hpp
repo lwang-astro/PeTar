@@ -646,6 +646,7 @@ public:
                 _p.star.print(std::cerr);
                 output.print(std::cerr);
                 std::cerr<<std::endl;
+                DATADUMP("dump_sse_error");
                 //abort();
             }
 
@@ -797,6 +798,7 @@ public:
                     p2->star.print(std::cerr);
                     out[1].print(std::cerr);
                     std::cerr<<std::endl;
+                    DATADUMP("dump_bse_error");
                 }
                 
                 // check binary type and print event information
