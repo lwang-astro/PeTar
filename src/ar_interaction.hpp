@@ -913,7 +913,7 @@ public:
                         // case for elliptic case
                         if (ecc>=0.0&&ecc<=1.0) {
                             // obtain full orbital parameters
-                            _bin.calcOrbit(gravitational_constant);
+                            //_bin.calcOrbit(gravitational_constant);
                             // update new period, ecc
 //#pragma omp critical
 //                            std::cerr<<"Event: "<<event_flag<<" "<<_bin.period<<" "<<period<<" "<<_bin.ecc<<" "<<ecc<<std::endl;
@@ -928,9 +928,9 @@ public:
                         // in case of disruption but no kick
                         else {
                             // obtain full orbital parameters
-                            _bin.calcOrbit(gravitational_constant);
+                            // _bin.calcOrbit(gravitational_constant);
                             // assume energy no change
-                            _bin.semi = -_bin.semi;
+                            if(_bin.semi>0) _bin.semi = -_bin.semi;
                             _bin.ecc = ecc;
                             _bin.m1 = p1->mass;
                             _bin.m2 = p2->mass;
