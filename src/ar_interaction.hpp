@@ -810,6 +810,12 @@ public:
                             {
                                 fout_bse<<" ID="<<p1->id<<" "<<p2->id<<" ";
                                 bse_manager.printBinaryEventOne(fout_bse, bin_event, i);
+                                fout_bse<<" semi_0[R*]= "<<semi*bse_manager.rscale
+                                        <<" ecc_0= "<<ecc
+                                        <<" m1_0[M*]= "<<p1->mass*bse_manager.mscale
+                                        <<" m2_0[M*]= "<<p2->mass*bse_manager.mscale
+                                        <<" drdv_0[R*.km/s]= "<<drdv*bse_manager.rscale*bse_manager.vscale
+                                        <<" dr_0[R*]= "<<r*bse_manager.rscale<<" ";
                                 fout_bse<<std::endl;
                             }
                         }
