@@ -80,6 +80,13 @@ Options for configure can be found by
     When this option is switched on, the standard alone tool _petar.bse_ will also be compiled and installed.
     This is a c++ based tool which uses the API of the SSE/BSE from Fortran77 to c++. It can be used to evolve a group of single and binary stars with OpenMP parallelization.
 
+    PS: the currently implemented version of BSE has a known problem of evolving stars with about 6.28 solar mass and z=0.001. 
+    The error message "DANGER2!" appears in the output, but the code ignores that and continues. 
+    The following evolution of this star won't be correct any more. 
+    Be careful when you see that!
+    There is no fix from the corresponding developer yet.
+    If you feel that this is an important issue, please contact the corresponding authors of SSE/BSE and updated BSE.
+
 Multiple options should be combined together, for example:
 ```
 ./configure --prefix=/opt/petar --enable-cuda
@@ -344,4 +351,15 @@ For each cycle, three major steps are done:
 3. Hard calculation use _OpenMP_ for the loop of clusters
 
 ### AMUSE API:
-Current support API: gravitational dynamics, gravity field, stopping conditions
+Current support API: gravitational dynamics, gravity field, stopping conditions.
+Now the official AMUSE version has included the petar as a module. 
+When _petar_ is updated, it is suggested to update the version in AMUSE as well.
+
+This can be done by use 
+```
+make distclean
+make
+```
+in the petar module directory: [AMUSE path]/src/amuse/community/petar/.
+Be careful that this commander deletes src directory and all original existing files in the petar module directory. 
+If you have modified any file, make a backup first!
