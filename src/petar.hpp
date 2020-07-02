@@ -2004,7 +2004,19 @@ public:
         // set flag for particles in remove_list
         PS::S32 n_remove = remove_list.size();
         for (PS::S32 i=0; i<n_remove; i++) {
-            system_soft[remove_list[i]].group_data.artificial.setParticleTypeToUnused(); // sign for removing
+            auto& pi = system_soft[remove_list[i]];
+            pi.group_data.artificial.setParticleTypeToUnused(); // sign for removing
+            // if mass is not zero, correct energy
+            if (pi.mass>0) {
+                PS::F64 dpot = pi.mass*pi.pot_tot;
+                PS::F64 dkin = 0.5*pi.mass*(pi.vel*pi.vel);
+                PS::F64 eloss = dpot + dkin;
+                stat.energy.etot_ref -= eloss;
+                stat.energy.de_change_cum -= eloss;
+                stat.energy.etot_sd_ref -= eloss;
+                stat.energy.de_sd_change_cum -= eloss;
+                pi.mass = 0.0;
+            }
             //remove_id_record.push_back(system_soft[remove_list[i]].id);
         }
         remove_list.resizeNoInitialize(0);
@@ -2020,7 +2032,7 @@ public:
 #pragma omp for 
             for (PS::S32 i=0; i<stat.n_real_loc; i++) {
                 auto& pi = system_soft[i];
-                if (escaper.isEscaper(pi,stat.pcm)||(pi.mass==0.0&&pi.group_data.artificial.isUnused())) {
+                if (escaper.isEscaper(pi,stat.pcm)) {
                     remove_list_thx[ith].push_back(i);
                     PS::F64 dpot = pi.mass*pi.pot_tot;
                     PS::F64 dkin = 0.5*pi.mass*(pi.vel*pi.vel);
@@ -2030,6 +2042,9 @@ public:
                     stat.energy.etot_sd_ref -= eloss;
                     stat.energy.de_sd_change_cum -= eloss;
                 }
+                // Registered removed particles have already done energy correction
+                else if (pi.mass==0.0&&pi.group_data.artificial.isUnused()) 
+                    remove_list_thx[ith].push_back(i);
             }
         }
 

@@ -1,5 +1,6 @@
 # standard amuse configuration include
 # config.mk will be made after ./configure has run
+# don't run make directly in the PeTar/amuse-interface directory, this is used inside amuse.
 AMUSE_DIR?=$(shell amusifier --get-amuse-dir)
 -include $(AMUSE_DIR)/config.mk
 
@@ -39,6 +40,8 @@ LDFLAGS  += -lm $(MUSE_LD_FLAGS)
 
 OBJS = interface.o 
 
+FILELIST=interface.cc interface.py interface.h test_interface.cc test_interface.py run_one_cluster_movie.py
+
 CODELIB = 
 
 all: petar_worker __init__.py test_interface.py run_one_cluster_movie.py
@@ -49,8 +52,8 @@ clean:
 	$(RM) *~ petar_worker worker_code.cc
 #	make -C src clean
 
-#distclean: clean
-#	make -C src distclean
+distclean: clean
+	rm -rf src $(FILELIST)
 
 #$(CODELIB):
 #	make -C src all
@@ -86,7 +89,6 @@ src/FDPS: |src
 	rm -f v5.0g.zip; \
 	cd $(npath);
 
-FILELIST=interface.cc interface.py interface.h test_interface.cc test_interface.py run_one_cluster_movie.py
 
 
 __init__.py:
