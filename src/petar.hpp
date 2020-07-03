@@ -2311,7 +2311,7 @@ public:
         domain_decompose_weight=1.0;
         dinfo.initialize(coef_ema);
 
-        if(pos_domain!=NULL) {
+        if(pos_domain==NULL) {
             pos_domain = new PS::F64ort[n_proc];
             for(PS::S32 i=0; i<n_proc; i++) pos_domain[i] = dinfo.getPosDomain(i);
         }
