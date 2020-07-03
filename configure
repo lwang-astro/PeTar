@@ -2495,6 +2495,31 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 PROG_NAME="petar"
 
+build_linux=no
+build_windows=no
+build_mac=no
+host_os=`uname`
+
+# Detect the target system
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking system type" >&5
+$as_echo_n "checking system type... " >&6; }
+case "${host_os}" in
+    Linux*)
+        build_linux=yes
+        ;;
+    Cygwin*|Mingw*)
+        build_windows=yes
+        ;;
+    Darwin*)
+        build_mac=yes
+        ;;
+    *)
+        as_fn_error $? "\"OS $host_os is not supported\"" "$LINENO" 5
+        ;;
+esac
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $host_os" >&5
+$as_echo "$host_os" >&6; }
+
 ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
 ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -3779,11 +3804,22 @@ eval ac_res=\$$as_CACHEVAR
 	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
 $as_echo "$ac_res" >&6; }
 if test x"`eval 'as_val=${'$as_CACHEVAR'};$as_echo "$as_val"'`" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether host CPU support $simd_name" >&5
+$as_echo_n "checking whether host CPU support $simd_name... " >&6; }
+                                                 if test x"$build_mac" != xno; then :
+  simd_check=`sysctl -a|grep -i -c $simd_name`
+else
   simd_check=`grep -c $simd_name /proc/cpuinfo`
+fi
                                                  if test $simd_check -gt 0; then :
   SIMDFLAGS=" -march=$arch"
                                                         SIMD_TYPE="$simd_name"
+                                                        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
                                                         use_simd=yes
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 fi
 else
   :
@@ -3822,11 +3858,22 @@ eval ac_res=\$$as_CACHEVAR
 	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
 $as_echo "$ac_res" >&6; }
 if test x"`eval 'as_val=${'$as_CACHEVAR'};$as_echo "$as_val"'`" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether host CPU support $simd_name" >&5
+$as_echo_n "checking whether host CPU support $simd_name... " >&6; }
+                                                 if test x"$build_mac" != xno; then :
+  simd_check=`sysctl -a|grep -i -c $simd_name`
+else
   simd_check=`grep -c $simd_name /proc/cpuinfo`
+fi
                                                  if test $simd_check -gt 0; then :
   SIMDFLAGS=" -march=$arch"
                                                         SIMD_TYPE="$simd_name"
+                                                        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
                                                         use_simd=yes
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 fi
 else
   :
@@ -3865,18 +3912,31 @@ eval ac_res=\$$as_CACHEVAR
 	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
 $as_echo "$ac_res" >&6; }
 if test x"`eval 'as_val=${'$as_CACHEVAR'};$as_echo "$as_val"'`" = xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether host CPU support $simd_name" >&5
+$as_echo_n "checking whether host CPU support $simd_name... " >&6; }
+                                                 if test x"$build_mac" != xno; then :
+  simd_check=`sysctl -a|grep -i -c $simd_name`
+else
   simd_check=`grep -c $simd_name /proc/cpuinfo`
+fi
                                                  if test $simd_check -gt 0; then :
   SIMDFLAGS=" -march=$arch"
                                                         SIMD_TYPE="$simd_name"
+                                                        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
                                                         use_simd=yes
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 fi
 else
   :
 fi
 
 fi
-       PROG_NAME=$PROG_NAME"."$SIMD_TYPE
+       if test x"$use_simd" != xno; then :
+  PROG_NAME=$PROG_NAME"."$SIMD_TYPE
+fi
 else
   use_x86=no
 fi
@@ -5461,8 +5521,8 @@ else
 $as_echo "$as_me:      SIMD type:         $SIMD_TYPE " >&6;}
 fi
        if test "x$with_simd" == xauto; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}:   Notice: this is auto-detected based on the local CPU architecture" >&5
-$as_echo "$as_me:   Notice: this is auto-detected based on the local CPU architecture" >&6;}
+  { $as_echo "$as_me:${as_lineno-$LINENO}:   Notice: this is auto-detected based on the host CPU architecture" >&5
+$as_echo "$as_me:   Notice: this is auto-detected based on the host CPU architecture" >&6;}
               { $as_echo "$as_me:${as_lineno-$LINENO}:           If different CPU is used for running, check whether $SIMD_TYPE is also supported" >&5
 $as_echo "$as_me:           If different CPU is used for running, check whether $SIMD_TYPE is also supported" >&6;}
 fi

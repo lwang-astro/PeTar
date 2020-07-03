@@ -1,4 +1,3 @@
-
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -11,6 +10,29 @@ m4_include([autoconf_m4/ax_openmp.m4])
 #AC_CONFIG_HEADERS([config.h])
 
 PROG_NAME="petar"
+
+build_linux=no 
+build_windows=no
+build_mac=no
+host_os=`uname`
+
+# Detect the target system
+AC_MSG_CHECKING([system type])
+case "${host_os}" in
+    Linux*)
+        build_linux=yes
+        ;;
+    Cygwin*|Mingw*)
+        build_windows=yes
+        ;;
+    Darwin*)
+        build_mac=yes
+        ;;
+    *)
+        AC_MSG_ERROR(["OS $host_os is not supported"])
+        ;;
+esac
+AC_MSG_RESULT([$host_os])
 
 AC_LANG([C++])
 
@@ -119,14 +141,19 @@ AS_IF([test x"$with_arch" == xx86],
                          [arch=m4_argn(1,ax_x86_feature)
                           simd_name=m4_argn(2,ax_x86_feature)
                           AX_CHECK_COMPILE_FLAG([-march=$arch],
-                                                [simd_check=`grep -c $simd_name /proc/cpuinfo`
+                                                [AC_MSG_CHECKING([whether host CPU support $simd_name])
+                                                 AS_IF([test x"$build_mac" != xno],
+						       [simd_check=`sysctl -a|grep -i -c $simd_name`],
+						       [simd_check=`grep -c $simd_name /proc/cpuinfo`])
                                                  AS_IF([test $simd_check -gt 0],
                                                        [SIMDFLAGS=" -march=$arch"
                                                         SIMD_TYPE="$simd_name"
+                                                        AC_MSG_RESULT([yes])
                                                         use_simd=yes],
-                                                       [])],
+                                                       [AC_MSG_RESULT([no])])],
                                                 [])])])
-       PROG_NAME=$PROG_NAME"."$SIMD_TYPE],
+       AS_IF([test x"$use_simd" != xno],
+             [PROG_NAME=$PROG_NAME"."$SIMD_TYPE])],
       [use_x86=no])
 
 AC_ARG_ENABLE([simd-64],
@@ -332,7 +359,7 @@ AS_IF([test "x$use_simd" != xno],
              [AC_MSG_NOTICE([     SIMD type:         $SIMD_TYPE 64 bits])],
              [AC_MSG_NOTICE([     SIMD type:         $SIMD_TYPE ])])
        AS_IF([test "x$with_simd" == xauto],
-             [AC_MSG_NOTICE([  Notice: this is auto-detected based on the local CPU architecture])
+             [AC_MSG_NOTICE([  Notice: this is auto-detected based on the host CPU architecture])
               AC_MSG_NOTICE([          If different CPU is used for running, check whether $SIMD_TYPE is also supported])])])
 AC_MSG_NOTICE([     Using OpenMP:      $use_omp])
 AC_MSG_NOTICE([     Debug mode:        $with_debug])
