@@ -143,7 +143,7 @@ AS_IF([test x"$with_arch" == xx86],
                           AX_CHECK_COMPILE_FLAG([-march=$arch],
                                                 [AC_MSG_CHECKING([whether host CPU support $simd_name])
                                                  AS_IF([test x"$build_mac" != xno],
-						       [simd_check=`sysctl -a|grep -i -c $simd_name`],
+						       [simd_check=`sysctl -a|grep 'machdep.cpu.*features'|grep -i -c $simd_name`],
 						       [simd_check=`grep -c $simd_name /proc/cpuinfo`])
                                                  AS_IF([test $simd_check -gt 0],
                                                        [SIMDFLAGS=" -march=$arch"

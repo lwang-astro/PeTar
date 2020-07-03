@@ -3807,7 +3807,7 @@ if test x"`eval 'as_val=${'$as_CACHEVAR'};$as_echo "$as_val"'`" = xyes; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether host CPU support $simd_name" >&5
 $as_echo_n "checking whether host CPU support $simd_name... " >&6; }
                                                  if test x"$build_mac" != xno; then :
-  simd_check=`sysctl -a|grep -i -c $simd_name`
+  simd_check=`sysctl -a|grep 'machdep.cpu.*features'|grep -i -c $simd_name`
 else
   simd_check=`grep -c $simd_name /proc/cpuinfo`
 fi
@@ -3861,7 +3861,7 @@ if test x"`eval 'as_val=${'$as_CACHEVAR'};$as_echo "$as_val"'`" = xyes; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether host CPU support $simd_name" >&5
 $as_echo_n "checking whether host CPU support $simd_name... " >&6; }
                                                  if test x"$build_mac" != xno; then :
-  simd_check=`sysctl -a|grep -i -c $simd_name`
+  simd_check=`sysctl -a|grep 'machdep.cpu.*features'|grep -i -c $simd_name`
 else
   simd_check=`grep -c $simd_name /proc/cpuinfo`
 fi
@@ -3915,7 +3915,7 @@ if test x"`eval 'as_val=${'$as_CACHEVAR'};$as_echo "$as_val"'`" = xyes; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether host CPU support $simd_name" >&5
 $as_echo_n "checking whether host CPU support $simd_name... " >&6; }
                                                  if test x"$build_mac" != xno; then :
-  simd_check=`sysctl -a|grep -i -c $simd_name`
+  simd_check=`sysctl -a|grep 'machdep.cpu.*features'|grep -i -c $simd_name`
 else
   simd_check=`grep -c $simd_name /proc/cpuinfo`
 fi
