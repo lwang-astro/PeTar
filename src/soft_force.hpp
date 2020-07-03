@@ -210,9 +210,9 @@ struct SearchNeighborEpEpSimd{
         PhantomGrapeQuad pg;
     #else
         #if defined(CALC_EP_64bit) || defined(CALC_EP_MIX)
-        static __thread PhantomGrapeQuad64Bit pg;
+        static thread_local PhantomGrapeQuad64Bit pg;
         #else
-        static __thread PhantomGrapeQuad pg;
+        static thread_local PhantomGrapeQuad pg;
         #endif
     #endif
         if(n_ip > pg.NIMAX || n_jp > pg.NJMAX){
@@ -262,9 +262,9 @@ struct CalcForcePPSimd{
         PhantomGrapeQuad pg;
     #else
         #if defined(CALC_EP_64bit) || defined(CALC_EP_MIX)
-        static __thread PhantomGrapeQuad64Bit pg;
+        static thread_local PhantomGrapeQuad64Bit pg;
         #else
-        static __thread PhantomGrapeQuad pg;
+        static thread_local PhantomGrapeQuad pg;
         #endif
     #endif
         if(n_ip > pg.NIMAX || n_jp > pg.NJMAX){
@@ -330,9 +330,9 @@ struct CalcForceEpEpWithLinearCutoffSimd{
         PhantomGrapeQuad pg;
     #else
         #if defined(CALC_EP_64bit) || defined(CALC_EP_MIX)
-        static __thread PhantomGrapeQuad64Bit pg;
+        static thread_local PhantomGrapeQuad64Bit pg;
         #else
-        static __thread PhantomGrapeQuad pg;
+        static thread_local PhantomGrapeQuad pg;
         #endif
     #endif
         if(n_ip > pg.NIMAX || n_jp > pg.NJMAX){
@@ -403,9 +403,9 @@ struct CalcForceEpSpMonoSimd{
         PhantomGrapeQuad pg;
 #else
     #if defined(CALC_EP_64bit)
-        static __thread PhantomGrapeQuad64Bit pg;
+        static thread_local PhantomGrapeQuad64Bit pg;
     #else
-        static __thread PhantomGrapeQuad pg;
+        static thread_local PhantomGrapeQuad pg;
     #endif
 #endif
         assert(n_ip<=pg.NIMAX);
@@ -466,9 +466,9 @@ struct CalcForceEpSpQuadSimd{
         PhantomGrapeQuad pg;
     #else
         #if defined(CALC_EP_64bit)
-        static __thread PhantomGrapeQuad64Bit pg;
+        static thread_local PhantomGrapeQuad64Bit pg;
         #else
-        static __thread PhantomGrapeQuad pg;
+        static thread_local PhantomGrapeQuad pg;
         #endif
     #endif
         assert(n_ip<=pg.NIMAX);

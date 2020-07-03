@@ -162,6 +162,8 @@ public:
     int dump_number;
     HardDump* hard_dump;
 
+    HardDumpList(): size(0), dump_number(0), hard_dump(NULL) {}
+
     void initial(const int _n) {
         size = _n;
         dump_number = 0;
@@ -171,7 +173,10 @@ public:
     void clear() {
         size = 0;
         dump_number = 0;
-        delete[] hard_dump;
+        if (hard_dump!=NULL) {
+            delete[] hard_dump;
+            hard_dump=NULL;
+        }
     }
 
     ~HardDumpList() {
