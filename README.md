@@ -14,7 +14,7 @@ SDAR: https://github.com/lwang-astro/SDAR
 Please download these two codes and put in the same directory where the _PeTar_ directory exist, in order to successfully compile the code.
 
 ### Environment:
-To successfully compile the code, the C++ compiler (e.g. gcc, icpc) needs the support of the C++11 standard. To use SSE/BSE package, a Fortran (77) compiler (e.g. gfortran) is needed and should be possile to provide API to c++ code (Currently ifort is not supported yet). The MPI compiler (e.g. mpic++) is required to use MPI. NVIDIA GPU and CUDA compiler is required to use GPU acceleration. The SIMD support is designed for the GNU and Intel compilers. It is not tested for other compilers, thus the GNU or Intel compilers are suggested to use. 
+To successfully compile the code, the C++ compiler (e.g. GNU gcc, Intel icpc, LLVM clang++) needs the support of the C++11 standard. To use SSE/BSE package, a Fortran (77) compiler, GNU gfortran, is needed and should be possile to provide API to the c++ code, i.e., the libgfortran is required. Currently Intel ifort is not supported yet. The MPI compiler (e.g. mpic++) is required to use MPI. NVIDIA GPU and CUDA compiler is required to use GPU acceleration. The SIMD support is tested for the GNU, Intel and LLVM compilers. It is not tested for others, thus these three kinds of compilers are suggested to use. 
 
 ### Make:
 Once _FPDS_ and _SDAR_ are available, in the root directoy, use 
