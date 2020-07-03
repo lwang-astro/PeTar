@@ -731,8 +731,10 @@ public:
                     modify_branch[k] = modifyOneParticle(*_bin.getMember(k), _bin_interrupt.time_now, _bin_interrupt.time_end);
                     modify_return = std::max(modify_return, modify_branch[k]);
                     // if status not set, set to change
-                    if (modify_branch[k]>0&&_bin_interrupt.status == AR::InterruptStatus::none) 
+                    if (modify_branch[k]>0&&_bin_interrupt.status == AR::InterruptStatus::none) {
                         _bin_interrupt.status = AR::InterruptStatus::change;
+                        _bin_interrupt.adr = &_bin;
+                    }
                 }
 #endif
             }
