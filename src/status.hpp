@@ -74,8 +74,8 @@ public:
         PS::F64vec vel_cm = PS::F64vec(0.0);
 
         if (_mode==1) { // center of the mass
-#pragma omp declare reduction(+:PS::F64vec:omp_out += omp_in) initializer (omp_priv=PS::F64vec(0.0))
-#pragma omp parallel for reduction(+:mass,pos_cm,vel_cm)
+//#pragma omp declare reduction(+:PS::F64vec:omp_out += omp_in) initializer (omp_priv=PS::F64vec(0.0))
+//#pragma omp parallel for reduction(+:mass,pos_cm,vel_cm)
             for (int i=0; i<_n; i++) {
                 auto& pi = _tsys[i];
                 PS::F64 mi = pi.mass;
