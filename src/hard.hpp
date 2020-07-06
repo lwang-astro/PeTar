@@ -559,9 +559,10 @@ public:
     AR::InterruptBinary<PtclHard>& integrateToTime(const PS::F64 _time_end) {
         ASSERT(checkParams());
 
+#ifdef HARD_DUMP
         // dump flag
         bool dump_flag=false;
-
+#endif
         // integration
         if (use_sym_int) {
             interrupt_binary = sym_int.integrateToTime(_time_end);
@@ -574,11 +575,13 @@ public:
 
             if (manager->ar_manager.interrupt_detection_option==1) interrupt_binary.clear();
 #ifdef PROFILE
+#ifdef HARD_DUMP
             if (sym_int.profile.step_count>manager->ar_manager.step_count_max&&!dump_flag) {
                 std::cerr<<"Large isolated AR step cluster found (dump): step: "<<sym_int.profile.step_count<<std::endl;
                 DATADUMP("dump_large_step");
                 dump_flag=true;
             }
+#endif
 #endif                
         }
         else {
@@ -711,11 +714,13 @@ public:
                 h4_int.info.time_origin = h4_int.getTime();
 
 #ifdef PROFILE
+#ifdef HARD_DUMP
                 if (h4_int.profile.ar_step_count>manager->ar_manager.step_count_max&&!dump_flag) {
                     std::cerr<<"Large H4-AR step cluster found (dump): step: "<<h4_int.profile.ar_step_count<<std::endl;
                     DATADUMP("dump_large_step");
                     dump_flag=true;
                 } 
+#endif
 #endif                
 
 #ifdef HARD_DEBUG_PRINT
@@ -750,7 +755,9 @@ public:
                                  <<"  dE_SD_change_binary: "<<h4_int.getDESlowDownChangeBinaryInterrupt()
                                  <<"  dE_SD_change_single: "<<h4_int.getDESlowDownChangeModifySingle()
                                  <<std::endl;
+#ifdef HARD_DUMP
                         DATADUMP("hard_dump");
+#endif
                         ///abort();
                     }
                 }
@@ -1050,9 +1057,11 @@ public:
                          <<" period: "<<std::setw(20)<<bink.period
                          <<" NB: "<<std::setw(4)<<groupk.perturber.neighbor_address.getSize()
                          <<std::endl;
+#ifdef HARD_DUMP
                 if (groupk.profile.step_count_tsyn_sum>10000) {
                     DATADUMP("hard_dump");
                 }
+#endif
             }
 #endif
         }
@@ -1087,7 +1096,9 @@ public:
                      <<" dE_SD: "<<energy.de_sd
                      <<" dE_SD/Etot_SD: "<<energy.de_sd/(ekin_sd+epot_sd)
                      <<std::endl;
+#ifdef HARD_DUMP
             DATADUMP("hard_large_energy");
+#endif
             //abort();
         }
 #endif
@@ -1969,13 +1980,19 @@ public:
             //pi.time_interrupt -= _dt;
 #endif
 
+            //// to avoid issue in cluster search with velocity
+            //auto& pi_cm = pi.group_data.cm;
+            //pi_cm.mass = pi_cm.vel.x = pi_cm.vel.y = pi_cm.vel.z = 0.0;
+
 #ifdef HARD_DEBUG
             // to avoid issue in cluster search with velocity
-            auto& pcm = pi.group_data.cm;
-            assert(pcm.mass==0.0);
-            assert(pcm.vel.x==0.0);
-            assert(pcm.vel.y==0.0);
-            assert(pcm.vel.z==0.0);
+            if (!pi.group_data.artificial.isUnused()) {
+                auto& pcm = pi.group_data.cm;
+                assert(pcm.mass==0.0);
+                assert(pcm.vel.x==0.0);
+                assert(pcm.vel.y==0.0);
+                assert(pcm.vel.z==0.0);
+            }
 #endif
             pi.Ptcl::calcRSearch(_dt);
             /*
