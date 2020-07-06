@@ -22,7 +22,8 @@ do
 	    echo '  -r: user defined prefix before program name, please use " " to enclose the options.'
             echo '      If used, -m and -o are suppressed (default: "")'
 	    echo '  -a: user defined options used for petar commander, please use " " to enclose the options.'
-	    echo '      For example, "-b [binary number], -u [unit set] -G [gravitaitonal constant]" (default: "")'
+	    echo '      For example, "-b [binary number], -u [unit set] -G [gravitaitonal constant]".'
+	    echo '      Notice that "-o", "-w", "-t" and "-s" from the petar commander cannot be used inside this -a block (default: "")'
 	    echo '  -p: petar commander name (default: petar)';
 	    echo '  -s: base tree step size (default: auto)';
 #	    echo '  -b: binary number (default: 0)';
