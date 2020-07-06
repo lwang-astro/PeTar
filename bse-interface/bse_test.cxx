@@ -77,7 +77,7 @@ int main(int argc, char** argv){
     optind=0;
     int option_index;
     bool help_flag=false;
-    while ((arg_label = getopt_long(argc, argv, "-s:n:t:d:b:w:o:h", long_options, &option_index)) != -1)
+    while ((arg_label = getopt_long(argc, argv, "-n:i:t:w:d:s:b:o:h", long_options, &option_index)) != -1)
         switch (arg_label) {
         case 0:
             switch (long_flag) {
@@ -154,6 +154,22 @@ int main(int argc, char** argv){
 
     BSEManager bse_manager;
     bse_manager.initial(bse_io,true);
+    assert(bse_manager.checkParams());
+
+    // argc is 1 no input is given
+    opt_used++;
+    if (opt_used<argc) {
+        // read initial mass list
+        while (opt_used<argc) {
+            mass0.push_back(atof(argv[opt_used++]));
+        }
+        n = mass0.size();
+        star.resize(n);
+        for (int i=0; i<n; i++) {
+            star[i].initial(mass0[i]*bse_manager.mscale);
+        }
+        read_mass_flag = true;
+    }
 
     // if no mass is read, use a mass range
     if (!read_mass_flag) {
@@ -176,14 +192,17 @@ int main(int argc, char** argv){
             fprintf(stderr,"Error: Cannot open file %s.\n", fsin_name.c_str());
             abort();
         }
-        int rcount=fscanf(fsin, "%d", &n);
+        int n0 = mass0.size();
+        int nadd;
+        int rcount=fscanf(fsin, "%d", &nadd);
         if(rcount<1) {
             std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
             abort();
         }
+        n = n0+nadd;
         mass0.resize(n);
         star.resize(n);
-        for (int k=0; k<n; k++) {
+        for (int k=n0; k<n; k++) {
             int type;
             double tphys;
             rcount=fscanf(fsin, "%lf %d %lf", &mass0[k], &type, &tphys);
@@ -221,23 +240,6 @@ int main(int argc, char** argv){
             // initial
         }
     }
-
-    // argc is 1 no input is given
-    opt_used++;
-    if (opt_used<argc) {
-        // read initial mass list
-        while (opt_used<argc) {
-            mass0.push_back(atof(argv[opt_used++]));
-        }
-        n = mass0.size();
-        star.resize(n);
-        for (int i=0; i<n; i++) {
-            star[i].initial(mass0[i]*bse_manager.mscale);
-        }
-        read_mass_flag = true;
-    }
-
-    assert(bse_manager.checkParams());
 
     auto printBinaryTitle=[&](std::ostream & _fout) {
         _fout<<std::setw(width)<<"mass0_1[M*]"
