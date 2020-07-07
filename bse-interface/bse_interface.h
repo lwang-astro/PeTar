@@ -816,8 +816,8 @@ public:
 
     //! get merger radius in NB unit
     double getMergerRadius(StarParameter& _star) {
-        // use core radius as merger radius
-        return _star.rc/rscale;
+        // use stellar radius as merger radius
+        return _star.r/rscale;
     }
 
     //! get evolved Time in NB unit

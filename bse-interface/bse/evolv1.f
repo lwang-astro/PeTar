@@ -340,6 +340,8 @@ c-------------------------------------------------------------c
          dr = r1 - rm0
          it = it + 1
          if(it.eq.20.and.kw.eq.4) goto 50
+* Bug fix, do not iterate if the star is compact object, thanks to Ataru Takikawa
+         if(kw.ge.13) goto 50
          if(it.gt.30)then
             WRITE(*,*)' DANGER2! ',it,kw,mass,dr,rm0
             WRITE(*,*)' STOP: EVOLV1 FATAL ERROR '
