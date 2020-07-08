@@ -94,7 +94,8 @@ AX_CHECK_COMPILE_FLAG([-Wall],
 
 AX_CHECK_COMPILE_FLAG([-std=c++11],
                       [OPTFLAGS=$OPTFLAGS" -std=c++11"
-                       DEBFLAGS=$DEBFLAGS" -std=c++11"],
+                       DEBFLAGS=$DEBFLAGS" -std=c++11"
+		       CUDAFLAGS=$CUDAFLAGS" -std=c++11"],
                       [AC_MSG_FAILURE([c++11 support is required for the compiler])])
 
 # OpenMP
