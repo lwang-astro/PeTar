@@ -80,13 +80,6 @@ Options for configure can be found by
     When this option is switched on, the standard alone tool _petar.bse_ will also be compiled and installed.
     This is a c++ based tool which uses the API of the SSE/BSE from Fortran77 to c++. It can be used to evolve a group of single and binary stars with OpenMP parallelization.
 
-    PS: the currently implemented version of BSE has a known problem of evolving stars with about 6.28 solar mass and z=0.001. 
-    The error message "DANGER2!" appears in the output, but the code ignores that and continues. 
-    The following evolution of this star won't be correct any more. 
-    Be careful when you see that!
-    There is no fix from the corresponding developer yet.
-    If you feel that this is an important issue, please contact the corresponding authors of SSE/BSE and updated BSE.
-
 Multiple options should be combined together, for example:
 ```
 ./configure --prefix=/opt/petar --enable-cuda
@@ -187,6 +180,19 @@ There are a few output files:
 Before access these files, it is suggested to run _petar.gether_ tool first to gether the separated files with different MPI ranks to one file for convenience.
 This tool also separate groups with different number of members in xx.group to individual files with suffixe ".n[number of members in groups]".
     
+##### Debug dump files
+During a long-term simulation, a large number of files of "hard_large_energy.xx", "dump_large_step.xx" and "hard_dump.xx" may be generated.
+In the main output, the corresponding warning messages are also printed.
+This files record the clusters of stars initial conditions for the hard integration (Hermite+SDAR) of one tree step.
+- If the integration error exceeds the limit set in the input option (see _petar -h_), the dump file "hard_large_energy.xx" appears.
+- If the AR step count is so large (exceeding the step limit, which can also be set in the input option) that the performance significantly drops, the dump file "dump_large_step.xx" appears.
+- If an error appears so that the code may behaviour abnormaly later on, "hard_dump.xx" appears and the code terminates.
+
+In the first two cases, the simulation continues. The users can ignore them if the results of simulations are acceptable. But if something is not correct, this files can help to finger out the issues, by using the debug tool _petar.hard.debug_.
+
+In the third case, the simulation is terminated in order to avoid unpredictable behaviours. The "hard_dump.xx" usually indicates that a bug may exist. It is suggested to report the issues to the developers by attaching "input.par.hard", "input.par.bse" and "hard_dump.xx" files.
+Users can also check the details by using the debug tool _petar.hard.debug_ together with the GDB tool, if users prefer to understand the problems themselves. The knowledge of the source codes of SDAR is required to understand the messages from the debug tool.
+  
 ### Useful tools
 There are a few useful tools helping users to generate initial input data, find a proper tree time step to start the simulations and data analysis.
 Each of the tools are stored in the user defined install_path/bin.
