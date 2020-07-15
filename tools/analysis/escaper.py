@@ -43,6 +43,7 @@ class Escaper:
         #self.single=self.single[idsinx]
         unid, index= np.unique(self.single.id, return_index=True)
         self.single = self.single[index]
+        single = single[np.logical_not(ssel)]
 
         bsel = (binary.r2>rcut2) & (binary.etot>0.0)
         binary_esc = binary[bsel]
@@ -53,6 +54,7 @@ class Escaper:
         #self.binary=self.binary[idsinx]
         unid, index= np.unique(self.binary.p1.id, return_index=True)
         self.binary =self.binary[index]
+        binary = binary[np.logical_not(bsel)]
 
 def joinEscaper(*esc_list):
     single_type = type(esc_list[0].single)

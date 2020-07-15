@@ -26,6 +26,7 @@ def create_movie(filenames, fps, output_file):
 class PlotXY:
     def __init__(self):
         self.boxsize = 2
+        self.cm_boxsize = 2
         self.framescale = 1
         self.nlayer_cross = 5
         self.nlayer_point = 10
@@ -40,6 +41,8 @@ class PlotXY:
         #if ('boxsize' in kwargs.keys()): boxsize = kwargs['boxsize']
         #if ('nlayer_cross' in kwargs.keys()): nlayer_cross = kwargs['nlayer_cross']
         #if ('alpha_amplifier' in kwargs.keys()): alpha_amplifier = kwargs['alpha_amplifier']
+        if (not 'cm_boxsize' in kwargs.keys()):
+            self.cm_boxsize = self.boxsize
 
         nlayer = self.nlayer_cross + self.nlayer_point
         self.nlayer = nlayer
@@ -245,6 +248,8 @@ class Data:
                     data['type']= particles.s_type
         
     def correctCM(self, boxsize):
+        xcm = 0.0
+        ycm = 0.0
         if (self.cm_mode=='density'):
             nbins=100
             xmid = np.average(np.abs(self.x))
@@ -286,7 +291,7 @@ class Data:
             self.y = self.y - ycm2
             xcm += xcm2
             ycm += ycm2
-        else:
+        elif (self.cm_mode=='average'):
             xcm = self.x.sum()/self.x.size
             ycm = self.y.sum()/self.y.size
             self.x = self.x - xcm
@@ -304,7 +309,7 @@ class Data:
 def plotOne(file_path, axe, plots, **kwargs):
     data = Data(**kwargs)
     data.read(file_path)
-    xcm, ycm=data.correctCM(plots['xy'].boxsize)
+    xcm, ycm=data.correctCM(plots['xy'].cm_boxsize)
 
     if ('unit_time' in kwargs.keys()):
         unit_label = ' '+kwargs['unit_time']
@@ -387,6 +392,9 @@ def initFig(frame_xsize, frame_ysize, ncol, nplots):
 
 def createImage(_path_list, frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdiagram, plot_semi_ecc, **kwargs):
     n_frame = len(_path_list)
+    use_previous = False
+    if ('use_previous' in kwargs.keys): use_previous = kwargs['use_previous']
+        
     if (n_frame>0):
         nplots = 1
         if (plot_zoom): nplots+=1
@@ -399,6 +407,10 @@ def createImage(_path_list, frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdi
 
         for k in range(n_frame):
             file_path = _path_list[k]
+            if (use_previous):
+                if (os.path.exists(file_path+'.png')):
+                    print('find existing %s' % file_path)
+                    continue
             plotOne(file_path, axe, plots,  **kwargs)
             fig.savefig(file_path+'.png',bbox_inches = "tight")
             print(file_path)
@@ -438,6 +450,7 @@ if __name__ == '__main__':
         print("  -b: plot semi-ecc diagram for binaries")
         print("  -G: gravitational constant for calculating binary orbit: ",data.G)
         print("  -o: output movie filename: ",output_file)
+        print("  -i: Use previous generated png images to speed up the movie generation")
         print("  --n-cpu: number of CPU processors to use, only work for gif format: all CPU cores")
         print("  --lum-min: minimum lumonisity: ",phr.lum_min)
         print("  --lum-max: maximum lumonisity: ",phr.lum_max)
@@ -458,14 +471,18 @@ if __name__ == '__main__':
         print("  --plot-ncols: column number of panels: same as panels")
         print("  --plot-xsize: x size of panel: ",frame_xsize)
         print("  --plot-ysize: y size of panel: ",frame_ysize)
-        print("  --cm-mode: plot origin position determination: density: density center; average: average of x,y: ", data.cm_mode)
+        print("  --cm-mode: plot origin position determination: density: density center; average: average of x,y; none: use origin of snapshots: ", data.cm_mode)
+        print("  --cm-boxsize: boxsize to search the coordinate center for the x-y plot: 5.0 times ploting size (-R)")
+        print("  --n-layer-cross: number of layers of crosses for particles in the x-y plot: 5")
+        print("  --n-layer-point: number of layers of points for particles in the x-y plot: 10")
+        print("  --layer-alpha: transparency factor of layers in the x-y plot: 2.5")
         print("  --suppress-images: do not plot snapshot images (png files) and use matplotlib.animation instead of imageio, this cannot use multi-processing, much slower")
         print("  --format: video format, require imageio installed, for some formats (e.g. avi, mp4) may require ffmpeg and imageio-ffmpeg installed: ", plot_format)
         print("PS:: when xcol, ycol, skiprows are not provided, the snapshot files are assumed to be the output of PeTar")
 
     try:
-        shortargs = 's:f:R:z:o:G:Hbh'
-        longargs = ['help','lum-min=','lum-max=','temp-min=','temp-max=','semi-min=','semi-max=','ecc-min=','ecc-max=','interrupt-mode=','xcol=','ycol=','mcol=','unit-length=','unit-time=','skiprows=','generate-binary=','plot-ncols=','plot-xsize=','plot-ysize=','suppress-images','format=','cm-mode=']
+        shortargs = 's:f:R:z:o:G:iHbh'
+        longargs = ['help','n-cpu=','lum-min=','lum-max=','temp-min=','temp-max=','semi-min=','semi-max=','ecc-min=','ecc-max=','interrupt-mode=','xcol=','ycol=','mcol=','unit-length=','unit-time=','skiprows=','generate-binary=','plot-ncols=','plot-xsize=','plot-ysize=','suppress-images','format=','cm-mode=','n-layer-cross=','n-layer-point=','layer-alpha=','cm-boxsize=']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -490,6 +507,10 @@ if __name__ == '__main__':
                 kwargs['G'] = float(arg)
             elif opt in ('-f'):
                 fps = int(arg)
+            elif opt in ('-i'):
+                kwargs['use_previous'] = True
+            elif opt in ('--n-cpu'):
+                n_cpu = int(arg)
             elif opt in ('--lum-min'):
                 kwargs['lum_min'] = float(arg)
             elif opt in ('--lum-max'):
@@ -510,6 +531,8 @@ if __name__ == '__main__':
                 kwargs['interrupt_mode'] = arg
             elif opt in ('--cm-mode'):
                 kwargs['cm_mode']= arg
+            elif opt in ('--cm-boxsize'):
+                kwargs['cm_boxsize'] = float(arg)
             elif opt in ('--xcol'):
                 kwargs['xcol'] = int(arg)
             elif opt in ('--ycol'):
@@ -530,6 +553,12 @@ if __name__ == '__main__':
                 frame_xsize = float(arg)
             elif opt in ('--plot-ysize'):
                 frame_ysize = float(arg)
+            elif opt in ('--n-layer-cross'):
+                kwargs['nlayer_cross'] = int(arg)
+            elif opt in ('--n-layer-point'):
+                kwargs['nlayer_point'] = int(arg)
+            elif opt in ('--layer-alpha'):
+                kwargs['alpha_amplifier'] = float(arg)
             elif opt in ('--suppress-images'):
                 plot_images = False
             elif opt in ('--format'):
@@ -563,7 +592,7 @@ if __name__ == '__main__':
         file_part = [path_list[n_offset[i]:n_offset[i+1]] for i in range(n_cpu)]
         results=[None]*n_cpu
         for rank in range(n_cpu):
-#            createImage(file_part[rank], frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdiagram, plot_semi_ecc, **kwargs)
+            #createImage(file_part[rank], frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdiagram, plot_semi_ecc, **kwargs)
             results[rank]=pool.apply_async(createImage, (file_part[rank], frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdiagram, plot_semi_ecc, ), kwargs)
 
         # Step 3: Don't forget to close
