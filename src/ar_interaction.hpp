@@ -741,11 +741,11 @@ public:
             // ensure to record the root binary tree to include all changed members
             if (modify_branch[0]>0&&modify_branch[1]>0) {
                 _bin_interrupt.adr = &_bin;
-                if (_bin_interrupt.status == AR::InterruptStatus::destroy) {
-                    // if both branch has destroyed, set destroy status, otherwise set merge status
-                    if (!(modify_branch[0]==3&&modify_branch[1]==3))
-                        _bin_interrupt.status = AR::InterruptStatus::merge;
-                }
+            }
+            if (_bin_interrupt.status == AR::InterruptStatus::destroy) {
+                // if both branch has destroyed, set destroy status, otherwise set merge status
+                if (!(modify_branch[0]==3&&modify_branch[1]==3))
+                    _bin_interrupt.status = AR::InterruptStatus::merge;
             }
         }
         else {
