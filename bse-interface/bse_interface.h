@@ -691,7 +691,7 @@ public:
     const char* binary_type[14]; ///> name of binary type return from BSE evolv2, notice if it is -1, it indicate the end of record
 
     BSEManager(): z(0.0), zpars{0}, tscale(0.0), rscale(0.0), mscale(0.0), vscale(0.0),
-                  single_type{"LMS", "MS", "HG", "GB", "CHeB", "FAGB", "SAGB", "HeMS", "HG", "HeGB", "HeWD", "COWD", "ONWD", "NS", "BH", "SN"},
+                  single_type{"LMS", "MS", "HG", "GB", "CHeB", "FAGB", "SAGB", "HeMS", "HeHG", "HeGB", "HeWD", "COWD", "ONWD", "NS", "BH", "SN"},
                   binary_type{"Unset",               //0
                               "Initial",             //1
                               "Type_change",         //2

@@ -10,6 +10,7 @@ if __name__ == '__main__':
 
     filename_prefix='data'
     average_mode='sphere'
+    read_flag=False
     n_cpu=0
 
     def usage():
@@ -53,7 +54,7 @@ if __name__ == '__main__':
             elif opt in ('-i','--interrupt-mode'):
                 kwargs['interrupt_mode'] = arg
             elif opt in ('-r','--read-data'):
-                kwargs['read_data'] = True
+                read_flag = True
             elif opt in ('-e','--r-escape'):
                 kwargs['r_escape'] = float(arg)
             else:
@@ -71,8 +72,6 @@ if __name__ == '__main__':
             if (kwargs['interrupt_mode']=='bse'): kwargs['G'] = 0.00449830997959438 # pc^3/(Msun*Myr^2)
 
     kwargs['filename_prefix'] = filename_prefix
-    read_flag=False
-    if ('read_data' in kwargs.keys()): read_flag=kwargs['read_data']
 
     for key, item in kwargs.items(): print(key,':',item)
 
@@ -80,19 +79,19 @@ if __name__ == '__main__':
     file_list = fl.read()
     path_list = file_list.splitlines()
      
-    lagr,core,esc,time_profile = petar.parallelDataProcessList(path_list,n_cpu=n_cpu,**kwargs)
-    lagr_filename = filename_prefix + '.lagr'
-    core_filename = filename_prefix + '.core'
+    result,time_profile = petar.parallelDataProcessList(path_list, n_cpu, read_flag, **kwargs)
 
-    lagr.savetxt(lagr_filename)
-    if (not read_flag):
-        core.savetxt(core_filename)
-    esc.single.savetxt(filename_prefix+'.esc.single')
-    esc.binary.savetxt(filename_prefix+'.esc.binary')
+    for key in ['lagr','core','bse']:
+        if key in result.keys():
+            key_filename  = filename_prefix + '.' + key
+            result[key].savetxt(key_filename)
+            print (key,"data is saved in file:",key_filename)
+
+    if 'esc' in result.keys():
+        result['esc'].single.savetxt(filename_prefix+'.esc.single')
+        result['esc'].binary.savetxt(filename_prefix+'.esc.binary')
+        print ("esc data is saved in files: %s.esc.[single/binary]" % filename_prefix)
      
-    print ('Time profile:')
+    print ('CPU time profile:')
     for key, item in time_profile.items():
         print (key,item,)
-     
-    print ("Lagr data is saved in file: ",lagr_filename, ' core data is saved in file: ', core_filename, ' esc data are saved in file: ', filename_prefix,'.esc.[single/binary]')
-

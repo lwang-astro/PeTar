@@ -4,21 +4,40 @@ from .base import *
 from .data import *
 from .lagrangian import *
 from .escaper import *
+from .bse import *
 import time
 import os
 
 
-def dataProcessOne(file_path, lagr, core, esc, time_profile, **kwargs): 
+def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs): 
+    """Process one snapshot.
+
+    Find binaries of one snapshot, calculate Lagrangian radii, find the system core and find escapers.
+    
+    Parameters
+    ----------
+    file_path: list
+        The pathes of snapshots
+    result: dict
+        The results, keys: lagr, core, esc, [bse]
+    time_profile: dict
+        The CPU (wallclock) time for each parts of calculations
+    read_flag: bool
+        If true, read single, binary snapshots and core data instead of calculating them
+    kwargs: dict
+        Option arguments
+    """
+    lagr = result['lagr']
+    esc  = result['esc']
+
     m_frac = lagr.initargs['mass_fraction']
     G=1.0
     r_bin=0.1
     average_mode='sphere'
-    read_flag=False
 
     if ('G' in kwargs.keys()): G=kwargs['G']
     if ('r_max_binary' in kwargs.keys()): r_bin=kwargs['r_max_binary']
     if ('average_mode' in kwargs.keys()): average_mode=kwargs['average_mode']
-    if ('read_data' in kwargs.keys()): read_flag=kwargs['read_data']
 
     fp = open(file_path, 'r')
     header=fp.readline()
@@ -27,6 +46,8 @@ def dataProcessOne(file_path, lagr, core, esc, time_profile, **kwargs):
     
     if (not read_flag):
         start_time = time.time()
+
+        core = result['core']
         #print('Loadfile')
         snap=np.loadtxt(file_path, skiprows=1)
         particle=Particle(snap, **kwargs)
@@ -68,13 +89,17 @@ def dataProcessOne(file_path, lagr, core, esc, time_profile, **kwargs):
     else:
         start_time = time.time()
         
+        core = result['core_read']
+
         single = Particle(**kwargs)
         p1 = Particle(**kwargs)
         p2 = Particle(**kwargs)
         binary = Binary(p1,p2)
 
-        single.loadtxt(file_path+'.single')
-        binary.loadtxt(file_path+'.binary')
+        if os.path.getsize(file_path+'.single')>0:
+            single.loadtxt(file_path+'.single')
+        if os.path.getsize(file_path+'.binary')>0:
+            binary.loadtxt(file_path+'.binary')
 
         # read from core data
         rc = core.rc[core.time==float(t)]
@@ -85,14 +110,15 @@ def dataProcessOne(file_path, lagr, core, esc, time_profile, **kwargs):
         get_density_time = read_time
         center_and_r2_time = read_time
     
-    if ('r_escape' in kwargs.keys()): 
+    
+    if ('esc' in result.keys()) & ('r_escape' in kwargs.keys()) : 
         esc.rcut = kwargs['r_escape']
         esc.findEscaper(float(t),single,binary,G)
     
     #print('Lagrangian radius')
     lagr.calcOneSnapshot(float(t), single, binary, rc, average_mode)
 
-    if (not 'r_escape' in kwargs.keys()):
+    if ('esc' in result.keys()) & (not 'r_escape' in kwargs.keys()):
         rhindex=np.where(m_frac==0.5)[0]
         esc.calcRCutIsolate(lagr.all.r[-1,rhindex])
         esc.findEscaper(float(t),single,binary,G)
@@ -104,37 +130,73 @@ def dataProcessOne(file_path, lagr, core, esc, time_profile, **kwargs):
     time_profile['center_core'] += center_and_r2_time-get_density_time
     time_profile['lagr'] += lagr_time-center_and_r2_time
 
+    if ('bse' in result.keys()):
+        bse = result['bse']
+        bse.findEvents(float(t),single,binary)
+        bse_time = time.time()
+        time_profile['bse'] += bse_time - lagr_time
+
 #    return time_profile
 
-def dataProcessList(file_list, **kwargs):
+def dataProcessList(file_list, read_flag, **kwargs):
     """ process lagragian calculation for a list of file snapshots
-    file_list: file path list
+
+    Parameters
+    ----------
+    file_list: list
+        file path list
+    read_flag: bool
+        indicate whether to read single, binary and core instead of calculating 
+    kwargs: dict
+        keyword arguments
     """
-    lagr=LagrangianMultiple(**kwargs)
+    result = dict()
+    result['lagr']=LagrangianMultiple(**kwargs)
+    result['esc']=Escaper()
+
     time_profile=dict()
     time_profile['read'] = 0.0
     time_profile['find_pair'] = 0.0
     time_profile['density'] = 0.0   
     time_profile['center_core'] = 0.0   
     time_profile['lagr'] = 0.0
-    core=Core()
-    if ('read_data' in kwargs.keys()):
-        if (kwargs['read_data'] == True):
-            core_filename=kwargs['filename_prefix']+'.core'
-            core.loadtxt(core_filename)
-    esc=Escaper()
+
+    if (read_flag):
+        core_filename=kwargs['filename_prefix']+'.core'
+        result['core_read']=Core()
+        result['core_read'].loadtxt(core_filename)
+    else:
+        result['core'] = Core()
+
+    if ('interrupt_mode' in kwargs.keys()): 
+        interrupt_mode=kwargs['interrupt_mode']
+        if (interrupt_mode=='bse'):
+            result['bse'] = BSEEvent()
+            time_profile['bse'] = 0.0
+
     for path in file_list:
         #print(' data:',path)
-        dataProcessOne(path, lagr, core, esc, time_profile, **kwargs)
+        dataProcessOne(path, result, time_profile, read_flag, **kwargs)
+
     if (len(file_list)>0):
         for key, item in time_profile.items():
             item /= len(file_list)
-    return lagr, core, esc, time_profile
+    return result, time_profile
 
 
-def parallelDataProcessList(file_list, n_cpu=int(0), **kwargs):
+def parallelDataProcessList(file_list, n_cpu=int(0), read_flag=False, **kwargs):
     """ parellel process lagragian calculation for a list of file snapshots
-    file_list: file path list
+
+    Parameters
+    ----------
+    file_list: list
+        file path list
+    n_cpu: int
+        number of CPU cores to run parallelly
+    read_flag: bool
+        indicate whether to read single, binary and core instead of calculating 
+    kwargs: dict
+        keyword arguments
     """
     if (n_cpu==int(0)):
         n_cpu = mp.cpu_count()
@@ -152,27 +214,36 @@ def parallelDataProcessList(file_list, n_cpu=int(0), **kwargs):
 
     result=[None]*n_cpu
     for rank in range(n_cpu):
-        result[rank] = pool.apply_async(dataProcessList, (file_part[rank],), kwargs)
+        result[rank] = pool.apply_async(dataProcessList, (file_part[rank], read_flag,), kwargs)
 
     # Step 3: Don't forget to close
     pool.close()
     pool.join()
 
-    lagri=[]
-    corei=[]
-    esci=[]
-    time_profilei=[]
+    time_profile_all=[]
+    result_all=dict()
     for i in range(n_cpu):
-        lagri.append(result[i].get()[0])
-        corei.append(result[i].get()[1])
-        esci.append(result[i].get()[2])
-        time_profilei.append(result[i].get()[3])
-    lagr = join(*lagri)
-    core = join(*corei)
-    esc  = joinEscaper(*esci)
-    time_profile=time_profilei[0]
-    for key in time_profile.keys():
-        for i in range(1,n_cpu):
-            time_profile[key] += time_profilei[i][key]/n_cpu
-    return lagr, core, esc, time_profile
+        resi = result[i].get()[0]
+        for key in ['lagr','core','esc','bse']:
+            if (key in resi.keys()):
+                if (not key in result_all.keys()):
+                    result_all[key]=[]
+                result_all[key].append(resi[key])
+        time_profile_all.append(result[i].get()[1])
+
+    result_gether=dict()
+    for key in result_all.keys():
+        if (key != 'esc'):
+            result_gether[key] = join(*result_all[key])
+        else:
+            result_gether[key] = joinEscaper(*result_all[key])
+
+    time_profile=dict()
+
+    for key in time_profile_all[0].keys():
+        time_profile[key] = 0.0
+        for i in range(n_cpu):
+            time_profile[key] += time_profile_all[i][key]/n_cpu
+
+    return result_gether, time_profile
 

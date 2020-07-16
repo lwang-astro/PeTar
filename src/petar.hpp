@@ -3113,7 +3113,7 @@ public:
 
     
     //! integrate the system
-    /*! @param[in] _time_break: additional breaking time to interrupt the integration, in default (0.0) the system integrate to time_end (without time_offset)
+    /*! @param[in] _time_break: additional breaking time to interrupt the integration, in default (0.0) the system integrate to time_end 
       \return interrupted cluster number
      */
     PS::S32 integrateToTime(const PS::F64 _time_break=0.0) {

@@ -139,6 +139,16 @@ class DictNpArrayMix:
                 raise ValueError('Column number inconsistent, coutned:',icol,' saved ncols:',new_dat.ncols)
             return new_dat
 
+    def __setitem__(self, k, data):
+        """ Map setitem to all dictory np.ndarray items
+        """
+        if (type(k)==str):
+            self.__dict__[k] = data
+        else:
+            for key_type in self.keys:
+                key = key_type[0]
+                self.__dict__[key] = data[key]
+
 #    def keys(self):
 #        return self.__dict__.keys()
 
@@ -217,6 +227,17 @@ class DictNpArrayMix:
     def loadtxt(self, fname, **kwargs):
         dat_int = np.loadtxt(fname, ndmin=2, **kwargs)
         self.readArray(dat_int, **kwargs)
+
+    def printSize(self):
+        for key_type in self.keys:
+            key = key_type[0]
+            member = self.__dict__[key]
+            if (type(member)==np.ndarray):
+                print(key,member.shape)
+            elif (issubclass(type(member), DictNpArrayMix)):
+                member.printSize()
+                
+                
         
 def join(*_dat):
     """

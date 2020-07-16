@@ -23,3 +23,4 @@ class Status(DictNpArrayMix):
                 ["energy",Energy], ["energy_sd",Energy], ["angular_momentum",AngularMomentum],
                 ["CM_mass",1],["CM_pos",3],["CM_vel",3]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
+
