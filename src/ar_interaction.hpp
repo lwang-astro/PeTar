@@ -638,6 +638,7 @@ public:
 
             // evolve star
             StarParameterOut output;
+            StarParameter star_bk = _p.star;
             int event_flag = bse_manager.evolveStar(_p.star, output, dt);
 
             // error 
@@ -672,9 +673,12 @@ public:
             if (stellar_evolution_write_flag&&event_flag==1) {
 #pragma omp critical
                 {
-                    fout_sse<<"Type_change ID= "<<_p.id;
-                    bse_manager.printTypeChange(fout_sse,_p.star, output);
-                    _p.star.print(fout_sse);
+                    fout_sse<<"Type_change ";
+                    //bse_manager.printTypeChange(fout_sse, _p.star, output);
+                    fout_sse<<std::setw(WRITE_WIDTH)<<_p.id;
+                    star_bk.printColumn(fout_sse, WRITE_WIDTH);
+                    _p.star.printColumn(fout_sse, WRITE_WIDTH);
+                    //output.printColumn(fout_sse, WRITE_WIDTH);
                     fout_sse<<std::endl;
                 }
             }
@@ -689,9 +693,11 @@ public:
                 if (stellar_evolution_write_flag) {
 #pragma omp critical
                     {
-                        fout_sse<<"SN_kick ID= "<<_p.id;
-                        _p.star.print(fout_sse);
-                        fout_sse<<" vkick[PUnit]= "<<dvabs<<std::endl;
+                        fout_sse<<"SN_kick "
+                                <<std::setw(WRITE_WIDTH)<<_p.id
+                                <<std::setw(WRITE_WIDTH)<<dvabs*bse_manager.vscale;
+                        _p.star.printColumn(fout_sse, WRITE_WIDTH);
+                        fout_sse<<std::endl;
                     }
                 }
             }
@@ -784,16 +790,26 @@ public:
                     pos_cm[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mtot;
                     vel_cm[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mtot;
                 }
-                BinaryEvent bin_event;
+                // backup star
+                StarParameter p1_star_bk = p1->star;
+                StarParameter p2_star_bk = p2->star;
 
+                BinaryEvent bin_event;
                 // loop until the time_end reaches
-                int event_flag = bse_manager.evolveBinary(p1->star, p2->star, out[0], out[1], period, ecc, bin_event, dt);
+                int event_flag = bse_manager.evolveBinary(p1->star, p2->star, out[0], out[1], semi, period, ecc, bin_event, dt);
 
                 // error
                 if (event_flag<0) {
                     std::cerr<<"BSE Error! ";
                     std::cerr<<" ID="<<p1->id<<" "<<p2->id<<" ";
-                    std::cerr<<" Star1: ";
+                    std::cerr<<" semi[R*]: "
+                             <<semi*bse_manager.rscale
+                             <<" ecc: "<<ecc;
+                    std::cerr<<" Init: Star1: ";
+                    p1_star_bk.print(std::cerr);
+                    std::cerr<<" Star2: ";
+                    p2_star_bk.print(std::cerr);
+                    std::cerr<<" final: Star1: ";
                     p1->star.print(std::cerr);
                     out[0].print(std::cerr);
                     std::cerr<<" Star2: ";
@@ -812,14 +828,11 @@ public:
                         if (stellar_evolution_write_flag) {
 #pragma omp critical
                             {
-                                fout_bse<<" ID="<<p1->id<<" "<<p2->id<<" ";
-                                bse_manager.printBinaryEventOne(fout_bse, bin_event, i);
-                                fout_bse<<" semi_0[R*]= "<<semi*bse_manager.rscale
-                                        <<" ecc_0= "<<ecc
-                                        <<" m1_0[M*]= "<<p1->mass*bse_manager.mscale
-                                        <<" m2_0[M*]= "<<p2->mass*bse_manager.mscale
-                                        <<" drdv_0[R*.km/s]= "<<drdv*bse_manager.rscale*bse_manager.vscale
-                                        <<" dr_0[R*]= "<<r*bse_manager.rscale<<" ";
+                                bse_manager.printBinaryEventColumnOne(fout_bse, bin_event, i, WRITE_WIDTH);
+                                fout_bse<<std::setw(WRITE_WIDTH)<<p1->id
+                                        <<std::setw(WRITE_WIDTH)<<p2->id
+                                        <<std::setw(WRITE_WIDTH)<<drdv*bse_manager.rscale*bse_manager.vscale
+                                        <<std::setw(WRITE_WIDTH)<<r*bse_manager.rscale;
                                 fout_bse<<std::endl;
                             }
                         }
@@ -904,9 +917,12 @@ public:
                             kick_flag=true;
 #pragma omp critical 
                             {
-                                fout_bse<<" ID="<<p1->id<<" "<<p2->id<<" "
-                                        <<" SN_Kick vel["<<k+1<<"][IN]="<<dv[3]<<" ";
-                                pk->star.print(fout_bse);
+                                fout_bse<<"SN_kick "
+                                        <<std::setw(WRITE_WIDTH)<<p1->id
+                                        <<std::setw(WRITE_WIDTH)<<p2->id
+                                        <<std::setw(WRITE_WIDTH)<<k+1
+                                        <<std::setw(WRITE_WIDTH)<<dv[3]*bse_manager.vscale;
+                                pk->star.printColumn(fout_bse, WRITE_WIDTH);
                                 fout_bse<<std::endl;
                             }
                             for (int k=0; k<3; k++) pk->vel[k] += dv[k];
@@ -975,6 +991,10 @@ public:
 #ifdef BSE
                     Float m1_bk = p1->mass;
                     Float m2_bk = p2->mass;
+                    // backup original data for print
+                    StarParameter p1_star_bk, p2_star_bk;
+                    p1_star_bk = p1->star;
+                    p2_star_bk = p2->star;
                     // call BSE function to merge two stars
                     bse_manager.merge(p1->star, p2->star);
                     // get new masses
@@ -986,12 +1006,18 @@ public:
                     if (stellar_evolution_write_flag) {
 #pragma omp critical
                         {
-                            fout_bse<<"Dynamic_merge: ";
-                            fout_bse<<" ID="<<p1->id<<" "<<p2->id<<" period[PUnit]= "<<_bin.period<<" semi[Punit]= "<<_bin.semi<<" ecc= "<<_bin.ecc;
-                            fout_bse<<"Star1: ";
-                            p1->star.print(fout_bse);
-                            fout_bse<<"Star2: ";
-                            p2->star.print(fout_bse);
+                            fout_bse<<"Dynamic_merge: "
+                                    <<std::setw(WRITE_WIDTH)<<p1->id
+                                    <<std::setw(WRITE_WIDTH)<<p2->id
+                                    <<std::setw(WRITE_WIDTH)<<_bin.period*bse_manager.tscale*3.6524e8
+                                    <<std::setw(WRITE_WIDTH)<<_bin.semi*bse_manager.rscale
+                                    <<std::setw(WRITE_WIDTH)<<_bin.ecc;
+                            // before
+                            p1_star_bk.printColumn(fout_bse, WRITE_WIDTH);
+                            p2_star_bk.printColumn(fout_bse, WRITE_WIDTH);
+                            // after
+                            p1->star.printColumn(fout_bse, WRITE_WIDTH);
+                            p2->star.printColumn(fout_bse, WRITE_WIDTH);
                             fout_bse<<std::endl;
                         }
                     }

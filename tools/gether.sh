@@ -29,9 +29,10 @@ fi
 
 echo 'data filename prefix: '$fout
 
-for s in $suffixes:
+for s in $suffixes
 do
     file=$fname.$s
+    echo $file
     if [ -e $file.0 ]; then
 	if [ -e $fout.$s ]; then
 	    if [ -z $rmi ]; then
@@ -62,4 +63,17 @@ if [ -e $fout.group ]; then
 	echo 'get n_member= '$i' in '$fout.group' to '$fout.group.n$i
 	awk -v n=$i '{if ($2==n) print $LINE}' $fout.group >$fout.group.n$i
     done	    
+fi
+
+if [ -e $fout.sse ]; then
+    echo 'get sse type_change, sn_kick'
+    egrep '^Type_change ' $fout.sse |sed 's/Type_change//g' >$fout.sse.type_change
+    egrep '^SN_kick ' $fout.sse |sed 's/SN_kick//g' >$fout.sse.sn_kick
+fi
+
+if [ -e $fout.bse ]; then
+    echo 'get bse type_change, sn_kick, dynamic_merge'
+    egrep '^Dynamic_merge' $fout.bse |sed 's/Dynamic_merge//g' >$fout.bse.dynamic_merge
+    egrep '^SN_kick' $fout.bse |sed 's/SN_kick//g' >$fout.bse.sn_kick
+    egrep -v '^(Dynamic_merge|SN_kick)' $fout.bse |awk '{for (i=2;i<=NF;i++) printf("%s ", $i); printf("\n")}' >$fout.bse.type_change
 fi

@@ -8,7 +8,7 @@
 #include "../src/io.hpp"
 
 struct BinaryBase{
-    double m1,m2,period,ecc;
+    double m1,m2,semi,period,ecc;
     int kw1,kw2;
     double tphys;
     StarParameter star[2];
@@ -304,9 +304,15 @@ int main(int argc, char** argv){
                 double dt = std::min(dt1,dt2);
                 dt = std::max(dt,dtmin);
                 dt = std::min(tend-bse_manager.getTime(bin[i].star[0]), dt);
-
+                double mtot = bin[i].star[0].mt + bin[i].star[1].mt;
+                double period_myr = bin[i].period*bse_manager.tscale;
+                double G= 0.00449830997959438;
+                const double PI = 4.0*atan(1.0);
+                double pc_to_rsun = 44334448.006896;
+                bin[i].semi = std::pow(period_myr*period_myr*G*mtot/(4*PI*PI),1.0/3.0)*pc_to_rsun;
+                
                 // evolve function
-                int error_flag=bse_manager.evolveBinary(bin[i].star[0],bin[i].star[1],bin[i].out[0],bin[i].out[1],bin[i].period,bin[i].ecc,bin[i].bse_event, dt);
+                int error_flag=bse_manager.evolveBinary(bin[i].star[0],bin[i].star[1],bin[i].out[0],bin[i].out[1],bin[i].semi,bin[i].period,bin[i].ecc,bin[i].bse_event, dt);
                 int nmax = bin[i].bse_event.getEventNMax();
                 for (int k=0; k<nmax; k++) {
                     int binary_type = bin[i].bse_event.getType(k);

@@ -2,6 +2,7 @@
 import collections
 from scipy import spatial as sp
 from .base import *
+from .bse import *
 
 class SimpleParticle(DictNpArrayMix):
     """ Simple particle class with only mass, postion, velocity and r2
@@ -36,7 +37,6 @@ class Particle(SimpleParticle):
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
         keys_add = [['binary_state',1]]
         keys_se  = [['radius',1],['dm',1],['time_record',1],['time_interrupt',1]]
-        keys_bse = [['s_type',1],['s_mass0',1],['s_mass',1],['s_rad',1],['s_mcore',1],['s_rcore',1],['s_spin',1],['s_epoch',1],['s_time',1],['s_lum',1]]
         keys_ptcl_add = [['r_search',1], ['id',1], ['mass_bk',1], ['status',1], ['r_in',1], ['r_out',1]]
         keys_hermite_add = [['dt',1],['time',1],['acc',3],['jerk',3],['pot',1]]
         keys_soft_add = [['acc_soft',3], ['pot',1], ['pot_soft',1], ['n_nb',1]]
@@ -51,7 +51,7 @@ class Particle(SimpleParticle):
             if (kwargs['interrupt_mode']=='base'):
                 keys = keys_add+keys_se+keys_end
             elif (kwargs['interrupt_mode']=='bse'):
-                keys = keys_add+keys_se+keys_bse+keys_end
+                keys = keys_add+keys_se+[['star',SSEStarParameter]]+keys_end
             
         SimpleParticle.__init__(self, _dat, _offset, _append, **kwargs)
         DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)

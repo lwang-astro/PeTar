@@ -250,7 +250,7 @@ struct StarParameterOut{
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    void printColumn(std::ostream & _fout, const int _width=20){
+    void printColumn(std::ostream & _fout, const int _width=20) const{
         _fout<<std::setw(_width)<<kw0
              <<std::setw(_width)<<menv
              <<std::setw(_width)<<renv
@@ -280,9 +280,27 @@ struct StarParameterOut{
 //! BSE event recorder class
 class BinaryEvent{
 public:
-    float record[10][8];
+    float record[10][9];
+
+    void recordInitial(const StarParameter& _p1, const StarParameter& _p2, const double _semi, const double _ecc) {
+        const int init_index = getEventIndexInit();
+        record[0][init_index] = float(std::min(_p1.tphys, _p2.tphys));
+        record[1][init_index] = float(_p1.mt);
+        record[2][init_index] = float(_p2.mt);
+        record[3][init_index] = float(_p1.kw);
+        record[4][init_index] = float(_p2.kw);
+        record[5][init_index] = float(_semi);
+        record[6][init_index] = float(_ecc);
+        record[7][init_index] = float(_p1.r);
+        record[8][init_index] = float(_p2.r);
+        record[9][init_index] = 0.0;
+    }
     
     int getEventNMax() const {
+        return 8;
+    }
+    
+    int getEventIndexInit() const {
         return 8;
     }
 
@@ -327,7 +345,7 @@ public:
       @param[in] _width: print width (defaulted 20)
       @param[in] _index: event index to print
      */
-    void printColumn(std::ostream & _fout, const int _index, const int _width=20){
+    void printColumn(std::ostream & _fout, const int _index, const int _width=20) const{
         for (int i=0; i<3; i++) _fout<<std::setw(_width)<<record[i][_index];
         for (int i=3; i<5; i++) _fout<<std::setw(_width)<<int(record[i][_index]);
         for (int i=5; i<9; i++) _fout<<std::setw(_width)<<record[i][_index];
@@ -856,7 +874,19 @@ public:
         int type = _bin_event.getType(k);
         assert(type>=0&&type<14);
         _fout<<std::setw(16)<<binary_type[type];
+        if (k==0) _bin_event.print(_fout, _bin_event.getEventIndexInit());
+        else _bin_event.print(_fout, k-1);
         _bin_event.print(_fout, k);
+    }
+
+    //! print BSE event one
+    void printBinaryEventColumnOne(std::ostream& _fout, const BinaryEvent& _bin_event, const int k, const int _width=20) {
+        int type = _bin_event.getType(k);
+        assert(type>=0&&type<14);
+        _fout<<std::setw(16)<<binary_type[type];
+        if (k==0) _bin_event.printColumn(_fout, _bin_event.getEventIndexInit(), _width);
+        else _bin_event.printColumn(_fout, k-1, _width);
+        _bin_event.printColumn(_fout, k, _width);
     }
 
     //! get velocity change in NB unit
@@ -904,21 +934,26 @@ public:
       @param[out] _out1: output parameter of first from evolv2
       @param[out] _out2: output parameter of second from evolv2
       @param[out] _bse_event: BSE event record (bpp array)
-      @param[in,out] _period: period of binary in NB unit
-      @param[in,out] _ecc: eccentricity of binary 
+      @param[in] _semi: semi-major axis, only used to record initial semi
+      @param[in,out] _period: period of binary in NB unit, used for BSE
+      @param[in,out] _ecc: eccentricity of binary, used for BSE
       @param[in] _dt_nb: physical time step in Myr to evolve
       \return error flag: -1: error, 0: normal
      */
     int evolveBinary(StarParameter& _star1, StarParameter& _star2, StarParameterOut& _out1, StarParameterOut& _out2, 
-                     double& _period, double& _ecc, BinaryEvent& _bse_event, const double _dt_nb) {
+                     double& _semi, double& _period, double& _ecc, BinaryEvent& _bse_event, const double _dt_nb) {
         double tphys = std::max(_star1.tphys, _star2.tphys);
         double tphysf = _dt_nb*tscale + tphys;
         double dtp=tphysf*100.0+1000.0;
         double period_days = _period*tscale*3.6524e8;
+        double semi_rsun = _semi*rscale;
         // in case two component have different tphys, evolve to the same time first
         int event_flag = 0 ;
         _out1.dm = _star1.mt;
         _out2.dm = _star2.mt;
+
+        // backup initial state
+        _bse_event.recordInitial(_star1, _star2, semi_rsun, _ecc);
 
         if (_star1.tphys<tphys) event_flag = evolveStar(_star1, _out1, tphys);
         if (event_flag<0) return event_flag;
