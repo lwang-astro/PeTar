@@ -2,13 +2,25 @@
 import numpy as np
 
 class DictNpArrayMix:
-    """ the Dictonary with numpy.ndarray function support
+    """ The basic class of data structure
+        The member functions are initialized by provided keys in initial function
+        Member functions can be accessed by using the stype of either Dictonary or numpy.ndarray
     """
     def __init__(self, keys, _dat=None, _offset=int(0), _append=False, **kwargs):
         """
-        _dat: np.ndarray type data reading from np.ndarray data or same class type 
-        _offset: reading column offset of _dat if it is np.ndarray
-        _append: whether append keys and ncols
+        Parameters
+        ----------
+        keys: list
+            Class members list description. 
+            For exmaple: keys=[['mass',1],['pos',3]], will provide class members: mass (1D numpy.ndarray) and pos ( 2D numpy.ndarray with a shape of (*,3))
+        _dat: numpy.ndarray | same class type (None)
+            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
+        _offset: int (0)
+            Reading column offset of _dat if it is 2D np.ndarray
+        _append: bool (False)
+            If true, append keys and ncols to the current class instead of create new class members
+        kwaygs: dict ()
+            keyword arguments
         """
         self.initargs = kwargs.copy()
 
@@ -81,6 +93,17 @@ class DictNpArrayMix:
             raise ValueError('Initial fail, date type should be ',type(self),' or np.ndarray, given ',type(_dat))
 
     def readArray(self, _dat, _offset=int(0),**kwargs):
+        """ Read class member data from a 2D numpy.ndarray
+        Parameters
+        ----------
+        _dat: numpy.ndarray 
+            Read 2D array, rows are the event, columns are members. The class members are filled in the order of items in keys provided in the initial function.
+            For exmaple: if keys are [['mass',1],['pos',3]], the member mass = _dat[:,_offset] and pos = _dat[:,_offset+1:_offset+3]
+        _offset: int (0)
+            Reading column offset of _dat if it is 2D np.ndarray
+        kwaygs: dict ()
+            keyword arguments
+        """
         icol = _offset
         self.size = int(0)
         for key, parameter in self.keys:
@@ -108,7 +131,13 @@ class DictNpArrayMix:
             raise ValueError('Column number inconsistence, self ncols ',self.ncols,' key ncols ', icol)
 
     def __getitem__(self, k):
-        """ Map getitem to all dictory np.ndarray items
+        """ Map getitem to all members generated from the keys in the initial function, and return a new data filtered by k
+        If the member is an inherited type of DictNpArrayMix, also map all sub-members if it.
+
+        Parameters
+        ----------
+        k: filter
+            The same type of arguments for numpy.ndarray.__getitem__
         """
         if (type(k)==str):
             return self.__dict__[k]
@@ -140,7 +169,15 @@ class DictNpArrayMix:
             return new_dat
 
     def __setitem__(self, k, data):
-        """ Map setitem to all dictory np.ndarray items
+        """ Map setitem to all members generated from the keys in the initial function
+        If the member is an inherited type of DictNpArrayMix, also map all sub-members if it.
+
+        Parameters
+        ----------
+        k: filter
+            The same type of arguments for numpy.ndarray.__getitem__
+        data: numpy.ndarray | DictNpArrayNix
+            The new data to set
         """
         if (type(k)==str):
             self.__dict__[k] = data
@@ -153,6 +190,15 @@ class DictNpArrayMix:
 #        return self.__dict__.keys()
 
     def addNewMember(self, key, member):
+        """ Add a new class member
+        
+        Parameters
+        ----------
+        key: string
+            new member name
+        member: numpy.ndarray | DictNpArrayNix
+            data binding to the member, should be the same size as existing members in the class
+        """
         new_key_flag=False
         if (key in self.__dict__.keys()):
             member_old = self.__dict__[key]
@@ -182,7 +228,8 @@ class DictNpArrayMix:
             raise ValueError('New member has different size: ',member.size/dimension, ' host size: ',self.size)
             
     def getherDataToArray(self):
-        """ gether all data to 2D np.ndarray
+        """ gether all data to a 2D numpy.ndarray and return it
+        An inverse function to readArray
         """
         dat_out=np.zeros([self.size,self.ncols])
         icol = int(0)
@@ -207,6 +254,13 @@ class DictNpArrayMix:
         return dat_out
 
     def append(self, *_dat):
+        """ Map the numpy.append function to each member
+        Append the numpy.ndarray of each member in _dat to the corresponding member in self
+
+        Parameters
+        _dat: DictNpArrayMix
+            The same class type data used to append to self
+        """
         for idat in _dat:
             if (type(idat) != type(self)):
                 raise ValueError('Initial fail, date type not consistent, type [0] is ',type(self),' given ',type(idat))
@@ -221,14 +275,37 @@ class DictNpArrayMix:
         self.size += np.sum(tuple(map(lambda x:x.size, _dat)))
                 
     def savetxt(self, fname, **kwargs):
+        """ Save class member data to a file
+        Use the getherDataToArray and then numpy.savetxt
+
+        Parameters
+        ----------
+        fname: string
+            name of the output file
+        kwargs: dict
+            keyword arguments for numpy.savetxt
+        """
         dat_out= self.getherDataToArray()
         np.savetxt(fname, dat_out, **kwargs)
 
     def loadtxt(self, fname, **kwargs):
+        """ Load class member data from a file
+        Use numpy.loadtxt to read data and then use readArray
+
+        Parameters
+        ----------
+        fname: string
+            name of the input file
+        kwargs: dict
+            keyword arguments for numpy.loadtxt
+        """
         dat_int = np.loadtxt(fname, ndmin=2, **kwargs)
         self.readArray(dat_int, **kwargs)
 
     def printSize(self):
+        """ print size of each member
+        Print the shape of each members, used for testing whether the members have consistent size
+        """
         for key_type in self.keys:
             key = key_type[0]
             member = self.__dict__[key]
@@ -240,8 +317,14 @@ class DictNpArrayMix:
                 
         
 def join(*_dat):
-    """
-    Join multiple data to one
+    """ Join multiple data to one
+    For a list of data with the same type of inherited DictNpArrayNix, this function join all data to one 
+    
+    Parameters
+    ----------
+    *_dat: inherited DictNpArrayNix
+        a group of data to join
+
     """
     type0 = type(_dat[0])
     for idat in _dat:

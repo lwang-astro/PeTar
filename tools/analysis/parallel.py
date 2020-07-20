@@ -24,8 +24,14 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         The CPU (wallclock) time for each parts of calculations
     read_flag: bool
         If true, read single, binary snapshots and core data instead of calculating them
-    kwargs: dict
-        Option arguments
+    kwargs: dict ()
+        Keywords arguments:
+            G: gravitational constant (1.0)
+            r_max_binary: maximum separation to detect binaries (0.1)
+            average_mode: mode in calculating lagrangian radii (sphere)
+            mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
+                               Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
+            interrupt_mode: PeTar interrupt mode: base, bse, none. If not provided, type is none 
     """
     lagr = result['lagr']
     esc  = result['esc']
@@ -146,9 +152,16 @@ def dataProcessList(file_list, read_flag, **kwargs):
     file_list: list
         file path list
     read_flag: bool
-        indicate whether to read single, binary and core instead of calculating 
+        indicate whether to read single, binary and core data instead of calculating 
     kwargs: dict
-        keyword arguments
+        keyword arguments:
+            filename_prefix: filename prefix for output data (data)
+            G: gravitational constant (1.0)
+            r_max_binary: maximum separation to detect binaries (0.1)
+            average_mode: mode in calculating lagrangian radii (sphere)
+            mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
+                               Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
+            interrupt_mode: PeTar interrupt mode: base, bse, none. If not provided, type is none 
     """
     result = dict()
     result['lagr']=LagrangianMultiple(**kwargs)
@@ -196,7 +209,14 @@ def parallelDataProcessList(file_list, n_cpu=int(0), read_flag=False, **kwargs):
     read_flag: bool
         indicate whether to read single, binary and core instead of calculating 
     kwargs: dict
-        keyword arguments
+        keyword arguments:
+            filename_prefix: filename prefix for output data (data)
+            G: gravitational constant (1.0)
+            r_max_binary: maximum separation to detect binaries (0.1)
+            average_mode: mode in calculating lagrangian radii (sphere)
+            mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
+                               Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
+            interrupt_mode: PeTar interrupt mode: base, bse, none. If not provided, type is none 
     """
     if (n_cpu==int(0)):
         n_cpu = mp.cpu_count()
