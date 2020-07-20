@@ -184,7 +184,7 @@ def dataProcessList(file_list, read_flag, **kwargs):
     if ('interrupt_mode' in kwargs.keys()): 
         interrupt_mode=kwargs['interrupt_mode']
         if (interrupt_mode=='bse'):
-            result['bse'] = BSEEvent()
+            result['bse'] = BSEStatus()
             time_profile['bse'] = 0.0
 
     for path in file_list:

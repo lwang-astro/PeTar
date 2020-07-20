@@ -378,9 +378,9 @@ class BSEStatus(DictNpArrayMix):
         
         for ki in range(len(keys)):
             key = keys[ki][0]
-            ssel = (single.s_type==ki)
-            b1sel = (binary.p1.s_type==ki)
-            b2sel = (binary.p2.s_type==ki)
+            ssel = (single.star.type==ki)
+            b1sel = (binary.p1.star.type==ki)
+            b2sel = (binary.p2.star.type==ki)
 
             bsidesel = (b1sel & np.logical_not(b2sel)) | (b2sel & np.logical_not(b1sel))
             bbothsel = b1sel & b2sel
