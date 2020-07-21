@@ -353,6 +353,7 @@ public:
     }
 };
 
+//! IO parameters for BSE manager
 class IOParamsBSE{
 public:
     IOParamsContainer input_par_store;
