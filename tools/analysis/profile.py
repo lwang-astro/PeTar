@@ -11,7 +11,7 @@ class FDPSProfile(DictNpArrayMix):
 
 class PeTarProfile(DictNpArrayMix):
     """ PeTar computing wallclock time profile for one tree step
-    Keys:
+    Keys: (class members)
         total (1D): total time per tree step
         hard_single (1D): short-range integration of clusters with only one particle (pure drift)
         hard_isolated (1D): short-range integration of clusters with multiple particles in local MPI process (Hermite + SDAR)
@@ -37,7 +37,7 @@ class PeTarProfile(DictNpArrayMix):
 
 class GPUProfile(DictNpArrayMix):
     """ GPU time profile for one tree force calculation
-    Keys:
+    Keys: (class members)
         copy: copy data for sending 
         send: host to GPU memory sending
         receive: GPU to host memory receiving
@@ -56,7 +56,7 @@ class GPUProfile(DictNpArrayMix):
 
 class PeTarCount(DictNpArrayMix):
     """ PeTar number count for one tree step
-    Keys:
+    Keys: (class members)
         hard_single: number of particles in single clusters
         hard_isolated:  number of particles in isolated clusters
         hard_connected:  number of particles in connected clusters
@@ -79,7 +79,7 @@ class PeTarCount(DictNpArrayMix):
 
 class Profile(DictNpArrayMix):
     """ Profile class
-    Keys:
+    Keys: (class members)
         rank (1D): MPI rank
         time (1D): evolved time
         nstep (1D): number of steps per output

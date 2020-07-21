@@ -5,7 +5,7 @@ from .data import *
 
 class Core(DictNpArrayMix):
     """ Core of a star cluster
-    Keys:
+    Keys: (class members)
         time (1D): evolved time of the star cluster
         pos  (2D,3): center of the star cluster
         vel  (2D,3): center velocity of the cluster
@@ -118,7 +118,7 @@ class LagrangianVelocity(DictNpArrayMix):
         For example, in default case, mass_fraction array is np.array([0.1, 0.3, 0.5, 0.7, 0.9]). 
         The member 'abs' has the shape (*,6), each row contain the velocity referring to the 0.1, 0.3, 0.5, 0.7, 0.9 of Langragian radii and the core radius (last value).
     
-    Keys:
+    Keys: (class members)
         abs (2D,n_frac): absolute 3D velocity value
         x   (2D,n_frac): velocity in x axis
         y   (2D,n_frac): velocity in y axis
@@ -149,7 +149,7 @@ class LagrangianVelocity(DictNpArrayMix):
 
 class Lagrangian(DictNpArrayMix):
     """ Lagrangian parameters
-    Keys:
+    Keys: (class members)
         r (2D,n_frac): Lagrangian radii
         m (2D,n_frac): average mass referring to Lagrangian radii
         n (2D,n_frac): number of particles referring to Lagrangian radii
@@ -305,7 +305,7 @@ class Lagrangian(DictNpArrayMix):
 
 class LagrangianMultiple(DictNpArrayMix):
     """ Lagrangian for single, binaries and all
-    Keys:
+    Keys: (class members)
         single (Lagrangian): Lagrangian data for single particles
         binary (Lagrangian): Lagrangian data for binaries
         all (Lagrangian): Lagrangian data for all data (binary is treated as c.m., count once)

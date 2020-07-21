@@ -199,17 +199,17 @@ class Data:
                     data['ecc'] = binary.ecc
                     data['state'] = binary.p1.binary_state
                     if (self.interrupt_mode=='bse'):
-                        data['lum'] = np.concatenate((single.s_lum, binary.p1.s_lum, binary.p2.s_lum))
-                        data['rad'] = np.concatenate((single.s_rad, binary.p1.s_rad, binary.p2.s_rad))
-                        data['type']= np.concatenate((single.s_type,binary.p1.s_type,binary.p2.s_type))
-                        temp_single = 5778*(single.s_lum/(single.s_rad*single.s_rad))**0.25
-                        temp_b1 = 5778*(binary.p1.s_lum/(binary.p1.s_rad*binary.p1.s_rad))**0.25
-                        temp_b2 = 5778*(binary.p2.s_lum/(binary.p2.s_rad*binary.p2.s_rad))**0.25
-                        temp_binary = (temp_b1*binary.p1.s_lum+temp_b2*binary.p2.s_lum)/(binary.p1.s_lum+binary.p2.s_lum)
+                        data['lum'] = np.concatenate((single.star.lum, binary.p1.star.lum, binary.p2.star.lum))
+                        data['rad'] = np.concatenate((single.star.rad, binary.p1.star.rad, binary.p2.star.rad))
+                        data['type']= np.concatenate((single.star.type,binary.p1.star.type,binary.p2.star.type))
+                        temp_single = 5778*(single.star.lum/(single.star.rad*single.star.rad))**0.25
+                        temp_b1 = 5778*(binary.p1.star.lum/(binary.p1.star.rad*binary.p1.star.rad))**0.25
+                        temp_b2 = 5778*(binary.p2.star.lum/(binary.p2.star.rad*binary.p2.star.rad))**0.25
+                        temp_binary = (temp_b1*binary.p1.star.lum+temp_b2*binary.p2.star.lum)/(binary.p1.star.lum+binary.p2.star.lum)
                         data['temp']= np.concatenate((temp_single, temp_b1, temp_b2))
-                        data['lum_cm'] = np.append(single.s_lum, binary.p1.s_lum+binary.p2.s_lum)
+                        data['lum_cm'] = np.append(single.star.lum, binary.p1.star.lum+binary.p2.star.lum)
                         data['temp_cm']= np.append(temp_single,temp_binary)
-                        data['type_cm']= np.append(single.s_type,np.max([binary.p1.s_type,binary.p2.s_type],axis=0))
+                        data['type_cm']= np.append(single.star.type,np.max([binary.p1.star.type,binary.p2.star.type],axis=0))
                 else:
                     particles=petar.Particle(interrupt_mode=self.interrupt_mode)
                     particles.loadtxt(file_path,skiprows=1)
@@ -221,21 +221,21 @@ class Data:
                     data['ecc'] = binary.ecc
                     data['state'] = binary.p1.binary_state
                     if (self.interrupt_mode=='bse'):
-                        data['lum'] = particles.s_lum
-                        data['rad'] = particles.s_rad
-                        data['type']= particles.s_type
-                        data['lum_cm'] = np.append(single.s_lum, binary.p1.s_lum+binary.p2.s_lum)
+                        data['lum'] = particles.star.lum
+                        data['rad'] = particles.star.rad
+                        data['type']= particles.star.type
+                        data['lum_cm'] = np.append(single.star.lum, binary.p1.star.lum+binary.p2.star.lum)
                         data['temp']= 5778*(data['lum']/(data['rad']*data['rad']))**0.25
-                        temp_single = 5778*(single.s_lum/(single.s_rad*single.s_rad))**0.25
-                        temp_b1 = 5778*(binary.p1.s_lum/(binary.p1.s_rad*binary.p1.s_rad))**0.25
-                        temp_b2 = 5778*(binary.p2.s_lum/(binary.p2.s_rad*binary.p2.s_rad))**0.25
-                        temp_binary = (temp_b1*binary.p1.s_lum+temp_b2*binary.p2.s_lum)/(binary.p1.s_lum+binary.p2.s_lum)
+                        temp_single = 5778*(single.star.lum/(single.star.rad*single.star.rad))**0.25
+                        temp_b1 = 5778*(binary.p1.star.lum/(binary.p1.star.rad*binary.p1.star.rad))**0.25
+                        temp_b2 = 5778*(binary.p2.star.lum/(binary.p2.star.rad*binary.p2.star.rad))**0.25
+                        temp_binary = (temp_b1*binary.p1.star.lum+temp_b2*binary.p2.star.lum)/(binary.p1.star.lum+binary.p2.star.lum)
                         #temp_binary = temp_b1
-                        #sel = (binary.p1.s_lum<binary.p2.s_lum)
+                        #sel = (binary.p1.star.lum<binary.p2.star.lum)
                         #temp_binary[sel] = temp_b2[sel]
                         #print(temp_single.size,temp_binary.size,data['lum_cm'].size)
                         data['temp_cm']= np.append(temp_single,temp_binary)
-                        data['type_cm']= np.append(single.s_type,np.max([binary.p1.s_type,binary.p2.s_type],axis=0))
+                        data['type_cm']= np.append(single.star.type,np.max([binary.p1.star.type,binary.p2.star.type],axis=0))
             else:
                 particles=petar.Particle(interrupt_mode=interrupt_mode)
                 particles.loadtxt(file_path,skiprows=1)
@@ -243,9 +243,9 @@ class Data:
                 data['y'] = particles.pos[:,1]
                 data['mass'] =particles.mass
                 if (interrupt_mode=='bse'):
-                    data['lum'] = particles.s_lum
-                    data['rad'] = particles.s_rad
-                    data['type']= particles.s_type
+                    data['lum'] = particles.star.lum
+                    data['rad'] = particles.star.rad
+                    data['type']= particles.star.type
         
     def correctCM(self, boxsize):
         xcm = 0.0
@@ -393,7 +393,7 @@ def initFig(frame_xsize, frame_ysize, ncol, nplots):
 def createImage(_path_list, frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdiagram, plot_semi_ecc, **kwargs):
     n_frame = len(_path_list)
     use_previous = False
-    if ('use_previous' in kwargs.keys): use_previous = kwargs['use_previous']
+    if ('use_previous' in kwargs.keys()): use_previous = kwargs['use_previous']
         
     if (n_frame>0):
         nplots = 1

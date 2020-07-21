@@ -10,9 +10,9 @@ class DictNpArrayMix:
         """
         Parameters
         ----------
-        keys: list
+        keys: list of class member name and the corresponding types or numpy.ndarray shape
             Class members list description. Defined by inherited types
-            For exmaple: keys=[['mass',1],['pos',3]], will provide class members: mass (1D numpy.ndarray) and pos ( 2D numpy.ndarray with a shape of (*,3))
+            For exmaple: keys=[['mass',1],['pos',3],['sub',typename]], will provide class members: mass (1D numpy.ndarray), pos ( 2D numpy.ndarray with a shape of (*,3)) and sub (a class instance with the type of typename)
         _dat: numpy.ndarray | type(self) | None
             If it is 2D numpy.ndarray type data, read data as readArray function
             If it is the same class type, copy the data 

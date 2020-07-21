@@ -4,7 +4,7 @@ from .data import *
 
 class BinaryTree(DictNpArrayMix):
     """ Binary tree data output from SDAR and PeTar
-    Keys:
+    Keys: (class members)
         semi (1D): semi-major axis
         ecc  (1D): eccentricity
         incline (1D): inclination
@@ -40,7 +40,7 @@ class BinaryTree(DictNpArrayMix):
         
 class GroupInfo(DictNpArrayMix):
     """ Group information output from PeTar
-    Keys:
+    Keys: (class members)
         The keys contain n groups with the name of 'binX' where 'X' is replaced by the group index starting from 0
         Each group is the type of BinaryTree.
         n is determined in the keywords argument in initial function

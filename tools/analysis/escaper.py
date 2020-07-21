@@ -4,7 +4,7 @@ from .data import *
 
 class SingleEscaper(Particle):
     """ Single escaper recorder output from PeTar
-    Keys:
+    Keys: (class members)
         time (1D): escaping time
         [Particle] (inherited)
     """
@@ -62,7 +62,7 @@ class SingleEscaper(Particle):
 
 class BinaryEscaper(Binary):
     """ Binary escaper information
-    Keys:
+    Keys: (class members)
         time (1D): escaping time
         [Binary] (inherited)
         

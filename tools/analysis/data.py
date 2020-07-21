@@ -6,7 +6,7 @@ from .bse import *
 
 class SimpleParticle(DictNpArrayMix):
     """ Simple particle class with only mass, postion, velocity
-    keys:
+    keys: (class members)
         mass (1D): mass
         pos (2D,3): postion x, y, z
         vel (2D,3): velocity vx, vy, vz
@@ -39,7 +39,7 @@ class SimpleParticle(DictNpArrayMix):
 
 class Particle(SimpleParticle):
     """ Particle class 
-    keys:
+    keys: (class members)
         The final keys are a combination of sub keys depending on kwargs of initial function
 
         Sub key list:

@@ -3,7 +3,7 @@ from .base import *
 
 class Energy(DictNpArrayMix):
     """ Energy data
-    Keys:
+    Keys: (class members)
         error (1D): current energy error
         error_cum (1D): cumulative energy error
         ekin (1D): kinetic energy
@@ -23,7 +23,7 @@ class Energy(DictNpArrayMix):
 
 class AngularMomentum(DictNpArrayMix):
     """ Angular momemtum
-    Keys:
+    Keys: (class members)
         error: current error of angular momemtum value
         error_cum: cumulative error of angular momemtum value
         Lx: x component of angular momemtum
@@ -39,7 +39,7 @@ class AngularMomentum(DictNpArrayMix):
 
 class Status(DictNpArrayMix):
     """ Status data output from PeTar
-    Keys:
+    Keys: (class members)
         time (1D): current evolved time
         n_real_loc (1D): number of real particles in the local MPI process
         n_real_glb (1D): total number of real particles in all MPI processes

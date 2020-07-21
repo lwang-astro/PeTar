@@ -4,7 +4,7 @@ from .base import *
 
 class SSEStarParameter(DictNpArrayMix):
     """ SSE star parameter class from bse_interface.h
-    Keys:
+    Keys: (class members)
         type  (1D): SSE stellar type
         mass0 (1D): initial mass at each evolution stage (Msun)
         mass  (1D): current mass (Msun)
@@ -25,7 +25,7 @@ class SSEStarParameter(DictNpArrayMix):
 
 class SSETypeChange(DictNpArrayMix):
     """ SSE type change output data from PeTar
-    Keys:
+    Keys: (class members)
         id (1D): particle id
         init (SSEStarParameter): initial status of star
         final (SSEStarParameter): final status of star after stellar evolution
@@ -38,7 +38,7 @@ class SSETypeChange(DictNpArrayMix):
 
 class SSESNKick(DictNpArrayMix):
     """ SSE SN kick output data from PeTar
-    Keys:
+    Keys: (class members)
         id (1D): particle id
         vkick (1D): kick velocity value (km/s)
         star (SSEStarParameter): final status of star after stellar evolution
@@ -51,7 +51,7 @@ class SSESNKick(DictNpArrayMix):
 
 class SSEType(DictNpArrayMix):
     """ SSE stellar types
-    Keys: 
+    Keys: (class members) 
         LMS (1D): deeply or fully convective low mass MS star
         MS  (1D): Main Sequence star
         HG  (1D): Hertzsprung Gap
@@ -77,7 +77,7 @@ class SSEType(DictNpArrayMix):
 
 class BSEBinaryEvent(DictNpArrayMix):
     """ BSE binary event data from PeTar
-    Keys:
+    Keys: (class members)
         time (1D): evolved time (Myr)
         m1   (1D): mass component 1 (Msun)
         m2   (1D): mass component 2 (Msun)
@@ -97,7 +97,7 @@ class BSEBinaryEvent(DictNpArrayMix):
 
 class BSETypeChange(DictNpArrayMix):
     """ BSE type change output data from PeTar
-    Keys:
+    Keys: (class members)
         init (BSEBinaryEvent): initial status of binary
         final (BSEBinaryEvent): final status of binary after binary stellar evolution
         id1 (1D): particle id of component 1
@@ -113,7 +113,7 @@ class BSETypeChange(DictNpArrayMix):
 
 class BSESNKick(DictNpArrayMix):
     """ BSE SN kick output data from PeTar
-    Keys:
+    Keys: (class members)
         id1 (1D): particle id of component 1
         id2 (1D): particle id of component 2
         kindex (1D): index of component which has SN kick
@@ -128,7 +128,7 @@ class BSESNKick(DictNpArrayMix):
     
 class SSEStarParameterPair(DictNpArrayMix):
     """ SSE star parameter pair
-    Keys:
+    Keys: (class members)
         p1 (SSEStarParameter): SSE status of component 1
         p2 (SSEStarParameter): SSE status of component 2
     """
@@ -140,7 +140,7 @@ class SSEStarParameterPair(DictNpArrayMix):
 
 class BSEDynamicMerge(DictNpArrayMix):
     """ BSE Dynamical merger from PeTar
-    Keys:
+    Keys: (class members)
         id1 (1D): particle id of component 1
         id2 (1D): particle id of component 2
         period (1D): period  before merge (days)
@@ -176,7 +176,7 @@ class BSEDynamicMerge(DictNpArrayMix):
 
 class BSEType(DictNpArrayMix):
     """ BSE binary types
-    Keys:
+    Keys: (class members)
         Unset   (1D): no special
         Initial (1D): initialization
         Type_change (1D): stellar type change
@@ -201,7 +201,7 @@ class BSEType(DictNpArrayMix):
 
 class BSENumberCount(DictNpArrayMix):
     """ BSE count single/binary numbers of different stellar types
-    Keys:
+    Keys: (class members)
         single (SSEType) number of stars for each stellar type 
         binary_one (SSEType) binary with one component being the certain stellar type
         binary_both (SSEType) binary with both components being the certain stellar type
@@ -215,7 +215,7 @@ class BSENumberCount(DictNpArrayMix):
 
 class BSEStatus(DictNpArrayMix):
     """ BSE event record
-    Keys:
+    Keys: (class members)
         time (1D): evolved time
         count (BSENumberCount): number count for different stellar types
         mmax (SSEType): maximum mass of each stellar type
