@@ -12,18 +12,7 @@ class SimpleParticle(DictNpArrayMix):
         vel (2D,3): velocity vx, vy, vz
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys = [['mass',1], ['pos',3], ['vel',3]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -92,19 +81,13 @@ class Particle(SimpleParticle):
     """
 
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+
         Parameters
         ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments:
-                particle_type: basic particle type: hermite, hard, soft. If not provided, type is soft
-                interrupt_mode: PeTar interrupt mode: base, bse, none. If not provided, type is none 
+        keyword arguments:
+            particle_type: basic particle type: hermite, hard, soft (soft)
+            interrupt_mode: PeTar interrupt mode: base, bse, none (none)
         """
 
         keys_add = [['binary_state',1]]
@@ -205,6 +188,7 @@ class Binary(DictNpArrayMix):
         _p1: inherited SimpleParticle | 2D numpy.ndarray | Binary | None
             If the type is inherited SimpleParticle, it is the first component of binary (_p2 should be the same type).
             If the type is Binary, the class instance is initialized by copy the data of _p1.
+            If it is None, initialize class with empty data
         _p2: inherited SimpleParticle | None
             If the type is inherited SimpleParticle, it is the second component of binary 
             If it is None, _p1 should be either 2D numpy.ndarray or Bina
@@ -214,9 +198,9 @@ class Binary(DictNpArrayMix):
             If true, append keys and ncols to the current class instead of create new class members
         kwaygs: dict ()
             keyword arguments:
-                simple_mode: only calculate semi and ecc, save computing time significantly
-                G: gravitational constant
-                member_particle_type: type of component particle
+                simple_mode: only calculate semi and ecc, save computing time significantly (True)
+                G: gravitational constant (1.0)
+                member_particle_type: type of component particle (SimpleParticle)
         """
         G=1
         simple_mode=True

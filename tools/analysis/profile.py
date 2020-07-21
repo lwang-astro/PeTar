@@ -30,18 +30,7 @@ class PeTarProfile(DictNpArrayMix):
         other (1D): other cost
     """
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys = [["total",1], ["hard_single",1], ["hard_isolated",1], ["hard_connected",1], ["hard_interrupt",1], ["tree_neighbor",1], ["tree_force",1], ["force_correct",1], ["kick",1], ["search_cluster",1], ["create_group",1], ["domain_decomp",1], ["exchange_ptcl",1], ["output",1], ["status",1],["other",1]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -60,18 +49,7 @@ class GPUProfile(DictNpArrayMix):
         n_call: number of calls of force kernel function 
     """
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys = [["copy",1], ["send",1], ["receive",1], ["calc_force",1], ["n_walk",1], ["n_epi",1], ["n_epj",1], ["n_spj",1], ["n_call",1]]    
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -94,18 +72,7 @@ class PeTarCount(DictNpArrayMix):
         Ep_Sp_interaction: number of essential (active) i and superparticle interactions
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys = [["hard_single",1], ["hard_isolated",1], ["hard_connected",1], ["hard_interrupt",1], ["cluster_isolated",1], ["cluster_connected",1], ["AR_step_sum",1], ["AR_tsyn_step_sum",1], ["AR_group_number",1], ["Hermite_step_sum",1], ["n_neighbor_zero",1], ["Ep_Ep_interaction",1], ["Ep_Sp_interaction",1]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -126,18 +93,7 @@ class Profile(DictNpArrayMix):
         count (PeTarCount): number counts
     """
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         use_gpu=True
         if ('use_gpu' in kwargs.keys()): use_gpu=kwargs['use_gpu']

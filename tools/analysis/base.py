@@ -11,16 +11,18 @@ class DictNpArrayMix:
         Parameters
         ----------
         keys: list
-            Class members list description. 
+            Class members list description. Defined by inherited types
             For exmaple: keys=[['mass',1],['pos',3]], will provide class members: mass (1D numpy.ndarray) and pos ( 2D numpy.ndarray with a shape of (*,3))
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
+        _dat: numpy.ndarray | type(self) | None
+            If it is 2D numpy.ndarray type data, read data as readArray function
+            If it is the same class type, copy the data 
+            If it is None, initial class with empty data
         _offset: int (0)
             Reading column offset of _dat if it is 2D np.ndarray
         _append: bool (False)
             If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
+        kwargs: dict ()
+            keyword arguments, defined by inherited types
         """
         self.initargs = kwargs.copy()
 
@@ -255,15 +257,15 @@ class DictNpArrayMix:
 
     def append(self, *_dat):
         """ Map the numpy.append function to each member
-        Append the numpy.ndarray of each member in _dat to the corresponding member in self
+        Append the numpy.ndarray of each member in a group of input data to the corresponding member in self
 
         Parameters
-        _dat: DictNpArrayMix
-            The same class type data used to append to self
+        *_dat: inherited DictNpArrayMix
+            The data should contain all members existing in the self 
         """
-        for idat in _dat:
-            if (type(idat) != type(self)):
-                raise ValueError('Initial fail, date type not consistent, type [0] is ',type(self),' given ',type(idat))
+        #for idat in _dat:
+        #    if (type(idat) != type(self)):
+        #        raise ValueError('Initial fail, date type not consistent, type [0] is ',type(self),' given ',type(idat))
         data_with_self = [self]+list(_dat)
         for key, item in self.__dict__.items():
             if (type(item) == np.ndarray):

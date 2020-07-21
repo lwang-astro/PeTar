@@ -13,17 +13,7 @@ class Core(DictNpArrayMix):
     """
     
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """ 
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys  = [['time',1],['pos', 3],['vel', 3], ['rc', 1]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -141,19 +131,13 @@ class LagrangianVelocity(DictNpArrayMix):
     """
     
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+
         Parameters
         ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments:
-                mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
-                               Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
+        keyword arguments:
+            mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
+                           Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
         """
         
         m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
@@ -174,19 +158,13 @@ class Lagrangian(DictNpArrayMix):
     """
 
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+
         Parameters
         ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments:
-                mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
-                               Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
+        keyword arguments:
+            mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
+                           Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
         """
         m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
@@ -333,18 +311,12 @@ class LagrangianMultiple(DictNpArrayMix):
         all (Lagrangian): Lagrangian data for all data (binary is treated as c.m., count once)
     """
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+
         Parameters
         ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments:
-                mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
+        keyword arguments:
+            mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
                                Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
         """
         m_frac=np.array([0,1,0,3,0.5,0,7,0,9])
@@ -367,7 +339,8 @@ class LagrangianMultiple(DictNpArrayMix):
     def calcOneSnapshot(self, time, single, binary, rc, mode):
         """ Calculate Lagrangian radii and related properties for one snapshot
 
-        Parameters:
+        Parameters
+        ----------
         time: float
             current evolved time of the system
         single: inherited SimpleParticle

@@ -25,6 +25,13 @@ class BinaryTree(DictNpArrayMix):
         p2 (member_particle_type) component two
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+
+        Parameters
+        ----------
+        keyword arguments:
+            member_particle_type: type of particle (Particle)
+        """
         member_particle_type=Particle
         if 'member_particle_type' in kwargs.keys(): member_particle_type=kwargs['member_particle_type']
 
@@ -39,19 +46,13 @@ class GroupInfo(DictNpArrayMix):
         n is determined in the keywords argument in initial function
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+
         Parameters
         ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments:
-                particle_type: hard in default, do not change this
-                N: number of groups, default is 2 (binary)
+        keyword arguments:
+            particle_type: particle type (hard), do not change this!
+            N: number of groups (2)
         """
         kwargs['particle_type']='hard'
         keys=[['type',1],['n',1],['time',1],['pos',3],['vel',3]]

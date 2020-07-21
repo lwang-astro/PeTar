@@ -19,7 +19,9 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
     file_path: list
         The pathes of snapshots
     result: dict
-        The results, keys: lagr, core, esc, [bse]
+        The results, keys: lagr, core|core_read, esc_single, esc_binary, [bse]
+        If read_flag = True, core_read is needed, else core is needed
+        If interrupt_mode = bse, bse is needed
     time_profile: dict
         The CPU (wallclock) time for each parts of calculations
     read_flag: bool
@@ -34,7 +36,8 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
             interrupt_mode: PeTar interrupt mode: base, bse, none. If not provided, type is none 
     """
     lagr = result['lagr']
-    esc  = result['esc']
+    esc_single  = result['esc_single']
+    esc_binary  = result['esc_binary']
 
     m_frac = lagr.initargs['mass_fraction']
     G=1.0
@@ -118,16 +121,18 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
     
     
     if ('esc' in result.keys()) & ('r_escape' in kwargs.keys()) : 
-        esc.rcut = kwargs['r_escape']
-        esc.findEscaper(float(t),single,binary,G)
+        rcut = kwargs['r_escape']
+        esc_single.findEscaper(float(t), single, rcut)
+        esc_binary.findEscaper(float(t), binary, rcut, G)
     
     #print('Lagrangian radius')
     lagr.calcOneSnapshot(float(t), single, binary, rc, average_mode)
 
     if ('esc' in result.keys()) & (not 'r_escape' in kwargs.keys()):
         rhindex=np.where(m_frac==0.5)[0]
-        esc.calcRCutIsolate(lagr.all.r[-1,rhindex])
-        esc.findEscaper(float(t),single,binary,G)
+        rcut = calcRCutIsolate(lagr.all.r[-1,rhindex])
+        esc_single.findEscaper(float(t), single, rcut)
+        esc_binary.findEscaper(float(t), binary, rcut, G)
     lagr_time = time.time()
 
     time_profile['read'] += read_time-start_time
@@ -165,7 +170,8 @@ def dataProcessList(file_list, read_flag, **kwargs):
     """
     result = dict()
     result['lagr']=LagrangianMultiple(**kwargs)
-    result['esc']=Escaper()
+    result['esc_single']=SingleEscaper()
+    result['esc_binary']=BinaryEscaper()
 
     time_profile=dict()
     time_profile['read'] = 0.0
@@ -244,7 +250,7 @@ def parallelDataProcessList(file_list, n_cpu=int(0), read_flag=False, **kwargs):
     result_all=dict()
     for i in range(n_cpu):
         resi = result[i].get()[0]
-        for key in ['lagr','core','esc','bse']:
+        for key in ['lagr','core','esc_single','esc_binary','bse']:
             if (key in resi.keys()):
                 if (not key in result_all.keys()):
                     result_all[key]=[]
@@ -253,10 +259,10 @@ def parallelDataProcessList(file_list, n_cpu=int(0), read_flag=False, **kwargs):
 
     result_gether=dict()
     for key in result_all.keys():
-        if (key != 'esc'):
-            result_gether[key] = join(*result_all[key])
-        else:
-            result_gether[key] = joinEscaper(*result_all[key])
+        result_gether[key] = join(*result_all[key])
+
+    for key in ['esc_single','esc_binary']:
+        result_gether[key].removeDuplicate()
 
     time_profile=dict()
 

@@ -17,18 +17,7 @@ class SSEStarParameter(DictNpArrayMix):
         lum   (1D): bolometric luminosity (Lsun)
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys = [['type',1],['mass0',1],['mass',1],['rad',1],['mcore',1],['rcore',1],['spin',1],['epoch',1],['time',1],['lum',1]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -42,18 +31,7 @@ class SSETypeChange(DictNpArrayMix):
         final (SSEStarParameter): final status of star after stellar evolution
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys = [['id',1],['init',SSEStarParameter],['final',SSEStarParameter]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -66,18 +44,7 @@ class SSESNKick(DictNpArrayMix):
         star (SSEStarParameter): final status of star after stellar evolution
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys = [['id',1],['vkick',1],['star',SSEStarParameter]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -103,18 +70,7 @@ class SSEType(DictNpArrayMix):
         SN (1D): Massless Supernova
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys = [["LMS",1], ["MS",1], ["HG",1], ["GB",1], ["CHeB",1], ["FABG",1], ["SABG",1], ["HeMS",1], ["HeHG",1], ["HeGB",1], ["HeWD",1], ["COWD",1], ["ONWD",1], ["NS",1], ["BH",1], ["SN",1]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -134,18 +90,7 @@ class BSEBinaryEvent(DictNpArrayMix):
         binary_type (1D): BSE binary type
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys = [['time',1],['m1',1],['m2',1],['type1',1],['type2',1],['semi',1],['ecc',1],['rad1',1],['rad2',1],['binary_type',1]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -161,18 +106,7 @@ class BSETypeChange(DictNpArrayMix):
         dr (1D): relative distance
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys = [['init',BSEBinaryEvent],['final',BSEBinaryEvent],['id1',1],['id2',1],['drdv',1],['dr',1]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -187,18 +121,7 @@ class BSESNKick(DictNpArrayMix):
         star (SSEStarParameter): final status of kicked star after binary stellar evolution
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys = [['id1',1],['id2',1],['kindex',1],['vkick',1],['star',SSEStarParameter]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -210,18 +133,7 @@ class SSEStarParameterPair(DictNpArrayMix):
         p2 (SSEStarParameter): SSE status of component 2
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys = [['p1',SSEStarParameter],['p2',SSEStarParameter]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -238,18 +150,7 @@ class BSEDynamicMerge(DictNpArrayMix):
         final (SSEStarParameter): final status of star after stellar evolution
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys = [['id1',1],['id2',1],['period',1],['semi',1],['ecc',1],['init',SSEStarParameterPair],['final',SSEStarParameterPair]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -292,18 +193,7 @@ class BSEType(DictNpArrayMix):
         Disrupt (1D): binary disrupt
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys = [["Unset",1], ["Initial",1], ["Type_change",1], ["Start_Roche",1], ["End_Roche",1], ["Contact",1], ["Start_Symbiotic",1], ["End_Symbiotic",1], ["Common_envelop",1], ["Giant",1],[ "Coalescence",1], ["Blue_straggler",1], ["No_remain",1], ["Disrupt",1]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -317,18 +207,7 @@ class BSENumberCount(DictNpArrayMix):
         binary_both (SSEType) binary with both components being the certain stellar type
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys = [["single", SSEType], ["binary_one", SSEType], ["binary_both",SSEType]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -343,18 +222,7 @@ class BSEStatus(DictNpArrayMix):
         mave (SSEType): average mass of each stellar type
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys = [["time",1], ["count", BSENumberCount], ["mmax",SSEType], ["mave", SSEType]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)

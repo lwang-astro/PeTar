@@ -16,20 +16,8 @@ class Energy(DictNpArrayMix):
         
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
-        """
-        
         keys = [["error",1],["error_cum",1],["ekin",1],["epot",1],["etot",1],["dE_modify",1],["dE_interrupt",1],["error_hard",1],["error_hard_cum",1]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
@@ -44,18 +32,7 @@ class AngularMomentum(DictNpArrayMix):
         L: value of angular momentum
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys = [["error",1],["error_cum",1],["Lx",1],["Ly",1],["Lz",1],["L",1]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -78,18 +55,7 @@ class Status(DictNpArrayMix):
         CM_vel  (2D,3): c.m. velocity of the system
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        """
-        Parameters
-        ----------
-        _dat: numpy.ndarray | same class type (None)
-            If it is 2D numpy.ndarray type data, read data as readArray function; if it is the same class type, copy the data 
-        _offset: int (0)
-            Reading column offset of _dat if it is 2D np.ndarray
-        _append: bool (False)
-            If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments
-
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys = [["time",1],["n_real_loc",1],["n_real_glb",1],["n_all_loc",1],["n_all_glb",1],["n_rm_glb",1],["n_esc_glb",1],
                 ["energy",Energy], ["energy_sd",Energy], ["angular_momentum",AngularMomentum],
