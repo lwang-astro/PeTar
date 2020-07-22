@@ -1026,7 +1026,7 @@ public:
         for (int k=0; k<4; k++) _out1.vkick[k]=vkick[k];
         for (int k=0; k<4; k++) _out2.vkick[k]=vkick[k+4];
 
-        if (kw[0]<0||kw[1]<0) {
+        if (kw[0]<0||kw[1]<0||(_star1.mt<0&&_star1.kw==15)||(_star2.mt<0&&_star2.kw==15)) {
             kw[0] = abs(kw[0]);
             kw[1] = abs(kw[1]);
             return -1; // error case

@@ -803,8 +803,9 @@ public:
                     std::cerr<<"BSE Error! ";
                     std::cerr<<" ID="<<p1->id<<" "<<p2->id<<" ";
                     std::cerr<<" semi[R*]: "
-                             <<semi*bse_manager.rscale
-                             <<" ecc: "<<ecc;
+                             <<_bin.semi*bse_manager.rscale
+                             <<" ecc: "<<_bin.ecc
+                             <<" period[days]: "<<_bin.period*bse_manager.tscale*3.6524e8;
                     std::cerr<<" Init: Star1: ";
                     p1_star_bk.print(std::cerr);
                     std::cerr<<" Star2: ";
