@@ -181,7 +181,7 @@ public:
                      step_limit_arc(input_par_store, 1000000, "Maximum step allown for ARC sym integrator"),
                      eps          (input_par_store, 0.0,  "Softerning eps"),
                      r_out        (input_par_store, 0.0,  "Transit function outer boundary radius", "0.1 GM/[N^(1/3) sigma_3D^2]"),
-                     r_bin        (input_par_store, 0.0,  "Tidal tensor box size and binary radius criterion", "theta*r_in"),
+                     r_bin        (input_par_store, 0.0,  "Tidal tensor box size and binary radius criterion", "0.8*r_in"),
 //                     r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out"),
                      r_search_min (input_par_store, 0.0,  "Minimum search radius  value","auto"),
                      r_escape     (input_par_store, PS::LARGE_FLOAT,  "escape radius criterion"),
@@ -2631,7 +2631,7 @@ public:
         PS::F64& search_vel_factor =  input_parameters.search_vel_factor.value;
         PS::F64& ratio_r_cut   =  input_parameters.ratio_r_cut.value;
         PS::S64& n_bin         =  input_parameters.n_bin.value;
-        PS::F64& theta         =  input_parameters.theta.value;
+        //PS::F64& theta         =  input_parameters.theta.value;
         PS::F64& G             =  input_parameters.gravitational_constant.value;
 
         // local particle number
@@ -2753,7 +2753,7 @@ public:
         }
 
         // if r_bin is not defined, set to theta * r_in
-        if (r_bin==0.0) r_bin = theta*r_in;
+        if (r_bin==0.0) r_bin = 0.8*r_in;
 
         // if r_search_min is not defined, calculate by search_vel_factor*velocity_dispersion*tree_time_step + r_out
         if (r_search_min==0.0) r_search_min = search_vel_factor*vel_disp*dt_soft + r_out;
