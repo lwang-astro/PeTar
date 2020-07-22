@@ -5,10 +5,10 @@ from .base import *
 class SSEStarParameter(DictNpArrayMix):
     """ SSE star parameter class from bse_interface.h
     Keys: (class members)
-        type  (1D): SSE stellar type
+        type  (1D): SSE stellar type, see help(petar.SSEType)
         mass0 (1D): initial mass at each evolution stage (Msun)
         mass  (1D): current mass (Msun)
-        rad   (1D):  stellar radius
+        rad   (1D): stellar radius (Rsun)
         mcore (1D): core mass (Msun)
         rcore (1D): core radius (Rsun)
         spin  (1D): stellar rotation
@@ -51,23 +51,23 @@ class SSESNKick(DictNpArrayMix):
 
 class SSEType(DictNpArrayMix):
     """ SSE stellar types
-    Keys: (class members) 
-        LMS (1D): deeply or fully convective low mass MS star
-        MS  (1D): Main Sequence star
-        HG  (1D): Hertzsprung Gap
-        GB  (1D): First Giant Branch
-        CHeB (1D): Core Helium Burning
-        FAGB (1D): First Asymptotic Giant Branch
-        SAGB (1D): Second Asymptotic Giant Branch
-        HeMS (1D): Main Sequence Naked Helium star
-        HeHG (1D): Hertzsprung Gap Naked Helium star
-        HeGB (1D): Giant Branch Naked Helium star
-        HeWD (1D): Helium White Dwarf
-        COWD (1D): Carbon/Oxygen White Dwarf
-        ONWD (1D): Oxygen/Neon White Dwarf
-        NS (1D): Neutron Star
-        BH (1D): Black Hole
-        SN (1D): Massless Supernova
+    Keys: (class members), the corresponding stellar type index used in SSE is shown in [] at the end
+        LMS (1D): deeply or fully convective low mass MS star [0]
+        MS  (1D): Main Sequence star [1]
+        HG  (1D): Hertzsprung Gap [2]
+        GB  (1D): First Giant Branch [3]
+        CHeB (1D): Core Helium Burning [4]
+        FAGB (1D): First Asymptotic Giant Branch [5]
+        SAGB (1D): Second Asymptotic Giant Branch [6]
+        HeMS (1D): Main Sequence Naked Helium star [7]
+        HeHG (1D): Hertzsprung Gap Naked Helium star [8]
+        HeGB (1D): Giant Branch Naked Helium star [9]
+        HeWD (1D): Helium White Dwarf [10]
+        COWD (1D): Carbon/Oxygen White Dwarf [11]
+        ONWD (1D): Oxygen/Neon White Dwarf [12]
+        NS (1D): Neutron Star [13]
+        BH (1D): Black Hole [14]
+        SN (1D): Massless Supernova [15]
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
@@ -98,6 +98,7 @@ class BSEBinaryEvent(DictNpArrayMix):
 class BSETypeChange(DictNpArrayMix):
     """ BSE type change output data from PeTar
     Keys: (class members)
+        type (1D): binary type, see help(petar.BSEType)
         init (BSEBinaryEvent): initial status of binary
         final (BSEBinaryEvent): final status of binary after binary stellar evolution
         id1 (1D): particle id of component 1
@@ -108,7 +109,7 @@ class BSETypeChange(DictNpArrayMix):
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        keys = [['init',BSEBinaryEvent],['final',BSEBinaryEvent],['id1',1],['id2',1],['drdv',1],['dr',1]]
+        keys = [['type',1],['init',BSEBinaryEvent],['final',BSEBinaryEvent],['id1',1],['id2',1],['drdv',1],['dr',1]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
 class BSESNKick(DictNpArrayMix):
@@ -177,20 +178,20 @@ class BSEDynamicMerge(DictNpArrayMix):
 class BSEType(DictNpArrayMix):
     """ BSE binary types
     Keys: (class members)
-        Unset   (1D): no special
-        Initial (1D): initialization
-        Type_change (1D): stellar type change
-        Start_Roche (1D): start Roche event
-        End_Roche (1D): end Roche event
-        Contact   (1D): contact binary
-        Start_Symbiotic (1D): start symbiotic evolution
-        End_Symbiotic (1D): end symbiotic evolution
-        Common_envelop (1D): common envelope
-        Giant (1D):
-        Coalescence (1D): binary coalescence
-        Blue_straggler (1D): blue straggler formation
-        No_remain (1D): no SN remainent 
-        Disrupt (1D): binary disrupt
+        Unset   (1D): no special [0]
+        Initial (1D): initialization [1]
+        Type_change (1D): stellar type change [2]
+        Start_Roche (1D): start Roche event [3]
+        End_Roche (1D): end Roche event [4]
+        Contact   (1D): contact binary [5]
+        Start_Symbiotic (1D): start symbiotic evolution [6]
+        End_Symbiotic (1D): end symbiotic evolution [7]
+        Common_envelop (1D): common envelope [8]
+        Giant (1D): giant envelope [9]
+        Coalescence (1D): binary coalescence [10]
+        Blue_straggler (1D): blue straggler formation [11]
+        No_remain (1D): no SN remainent [12]
+        Disrupt (1D): binary disrupt [13]
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
