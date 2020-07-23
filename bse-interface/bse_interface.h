@@ -419,7 +419,7 @@ public:
                    pts3  (input_par_store, 0.02, "time step of HG, HeMS"),
                    idum  (input_par_store, 1234, "random number seed used by the kick routine"),
                    tscale(input_par_store, 1.0, "Time scale factor from input data unit (IN) to Myr (time[Myr]=time[IN]*tscale)"),
-                   rscale(input_par_store, 1.0, "Radius scale factor from input dat unit (IN) to Rsun (r[Rsun]=r[IN]*rscale)"),
+                   rscale(input_par_store, 1.0, "Radius scale factor from input data unit (IN) to Rsun (r[Rsun]=r[IN]*rscale)"),
                    mscale(input_par_store, 1.0, "Mass scale factor from input data unit (IN) to Msun (m[Msun]=m[IN]*mscale)"),
                    vscale(input_par_store, 1.0, "Velocity scale factor from input data unit(IN) to km/s (v[km/s]=v[IN]*vscale)"),
                    z     (input_par_store, 0.001, "Metallicity"),
@@ -435,37 +435,37 @@ public:
     int read(int argc, char *argv[], const int opt_used_pre=0) {
         static int sse_flag=-1;
         const struct option long_options[] = {
-            {"neta",   required_argument, &sse_flag, 0},  
-            {"bwind",  required_argument, &sse_flag, 1},  
-            {"hewind", required_argument, &sse_flag, 2},  
-          //{"mxns",   required_argument, &sse_flag, 3}, 
-            {"alpha",  required_argument, &sse_flag, 22},
-            {"lambda", required_argument, &sse_flag, 23},
-            {"beta",   required_argument, &sse_flag, 24},
-            {"xi",     required_argument, &sse_flag, 25},
-            {"bhwacc", required_argument, &sse_flag, 26},
-            {"epsnov", required_argument, &sse_flag, 27},
-            {"eddfac", required_argument, &sse_flag, 28},
-            {"gamma",  required_argument, &sse_flag, 29},
-            {"sigma",  required_argument, &sse_flag, 4},
-            {"ceflag", required_argument, &sse_flag, 5},
-            {"tflag",  required_argument, &sse_flag, 6},
-          //{"ifflag", required_argument, &sse_flag, 7},
-            {"wdflag", required_argument, &sse_flag, 8},
-            {"bhflag", required_argument, &sse_flag, 9}, 
-            {"nsflag", required_argument, &sse_flag, 10}, 
-            {"psflag", required_argument, &sse_flag, 11},
-            {"kmech",  required_argument, &sse_flag, 12},
-            {"ecflag", required_argument, &sse_flag, 13},
-            {"pts1",   required_argument, &sse_flag, 14},
-            {"pts2",   required_argument, &sse_flag, 15},       
-            {"pts3",   required_argument, &sse_flag, 16},
-            {"idum",   required_argument, &sse_flag, 17}, 
-            {"tscale", required_argument, &sse_flag, 18},
-            {"rscale", required_argument, &sse_flag, 19},
-            {"mscale", required_argument, &sse_flag, 20},
-            {"vscale", required_argument, &sse_flag, 21},
-            {"metallicity", required_argument, 0, 'z'},
+            {"bse-neta",   required_argument, &sse_flag, 0},  
+            {"bse-bwind",  required_argument, &sse_flag, 1},  
+            {"bse-hewind", required_argument, &sse_flag, 2},  
+          //{"bse-mxns",   required_argument, &sse_flag, 3}, 
+            {"bse-alpha",  required_argument, &sse_flag, 22},
+            {"bse-lambda", required_argument, &sse_flag, 23},
+            {"bse-beta",   required_argument, &sse_flag, 24},
+            {"bse-xi",     required_argument, &sse_flag, 25},
+            {"bse-bhwacc", required_argument, &sse_flag, 26},
+            {"bse-epsnov", required_argument, &sse_flag, 27},
+            {"bse-eddfac", required_argument, &sse_flag, 28},
+            {"bse-gamma",  required_argument, &sse_flag, 29},
+            {"bse-sigma",  required_argument, &sse_flag, 4},
+            {"bse-ceflag", required_argument, &sse_flag, 5},
+            {"bse-tflag",  required_argument, &sse_flag, 6},
+          //{"bse-ifflag", required_argument, &sse_flag, 7},
+            {"bse-wdflag", required_argument, &sse_flag, 8},
+            {"bse-bhflag", required_argument, &sse_flag, 9}, 
+            {"bse-nsflag", required_argument, &sse_flag, 10}, 
+            {"bse-psflag", required_argument, &sse_flag, 11},
+            {"bse-kmech",  required_argument, &sse_flag, 12},
+            {"bse-ecflag", required_argument, &sse_flag, 13},
+            {"bse-pts1",   required_argument, &sse_flag, 14},
+            {"bse-pts2",   required_argument, &sse_flag, 15},       
+            {"bse-pts3",   required_argument, &sse_flag, 16},
+            {"bse-idum",   required_argument, &sse_flag, 17}, 
+            {"bse-tscale", required_argument, &sse_flag, 18},
+            {"bse-rscale", required_argument, &sse_flag, 19},
+            {"bse-mscale", required_argument, &sse_flag, 20},
+            {"bse-vscale", required_argument, &sse_flag, 21},
+            {"bse-metallicity", required_argument, 0, 'z'},
             {"help",   no_argument,       0, 'h'},
             {0,0,0,0}
         };
@@ -654,36 +654,36 @@ public:
                 if(print_flag){
                     std::cout<<"SSE/BSE options:"<<std::endl;
                     std::cout<<"       Option defaulted values are shown after ':'"<<std::endl;
-                    std::cout<<"        --neta:   [D] "<<neta<<std::endl
-                             <<"        --bwind:  [D] "<<bwind<<std::endl
-                             <<"        --hewind: [D] "<<hewind<<std::endl
+                    std::cout<<"        --bse-neta:   [D] "<<neta<<std::endl
+                             <<"        --bse-bwind:  [D] "<<bwind<<std::endl
+                             <<"        --bse-hewind: [D] "<<hewind<<std::endl
                         //<<"        --mxns:   [D] "<<mxns<<std::endl
-                             <<"        --alpha:  [D] "<<alpha<<std::endl
-                             <<"        --lambda: [D] "<<lambda<<std::endl
-                             <<"        --beta:   [D] "<<beta<<std::endl
-                             <<"        --xi:     [D] "<<xi<<std::endl
-                             <<"        --bhwacc  [D] "<<bhwacc<<std::endl
-                             <<"        --epsnov: [D] "<<epsnov<<std::endl
-                             <<"        --eddfac: [D] "<<eddfac<<std::endl
-                             <<"        --gamma:  [D] "<<gamma<<std::endl
-                             <<"        --sigma:  [D] "<<sigma<<std::endl
-                             <<"        --ceflag: [I] "<<ceflag<<std::endl
-                             <<"        --tflag:  [I] "<<tflag<<std::endl
-                             <<"        --wdflag: [I] "<<wdflag<<std::endl
-                             <<"        --bhflag: [I] "<<bhflag<<std::endl
-                             <<"        --nsflag: [I] "<<nsflag<<std::endl
-                             <<"        --psflag: [I] "<<psflag<<std::endl
-                             <<"        --kmech:  [I] "<<kmech<<std::endl
-                             <<"        --ecflag: [I] "<<ecflag<<std::endl
-                             <<"        --pts1:   [D] "<<pts1<<std::endl
-                             <<"        --pts2:   [D] "<<pts2<<std::endl
-                             <<"        --pts3:   [D] "<<pts3<<std::endl
-                             <<"        --idum:   [I] "<<idum<<std::endl
-                             <<"        --tscale: [D] "<<tscale<<std::endl
-                             <<"        --rscale: [D] "<<rscale<<std::endl
-                             <<"        --mscale: [D] "<<mscale<<std::endl
-                             <<"        --vscale: [D] "<<vscale<<std::endl
-                             <<"        --metallicity (-z): [D] "<<z<<std::endl;
+                             <<"        --bse-alpha:  [D] "<<alpha<<std::endl
+                             <<"        --bse-lambda: [D] "<<lambda<<std::endl
+                             <<"        --bse-beta:   [D] "<<beta<<std::endl
+                             <<"        --bse-xi:     [D] "<<xi<<std::endl
+                             <<"        --bse-bhwacc  [D] "<<bhwacc<<std::endl
+                             <<"        --bse-epsnov: [D] "<<epsnov<<std::endl
+                             <<"        --bse-eddfac: [D] "<<eddfac<<std::endl
+                             <<"        --bse-gamma:  [D] "<<gamma<<std::endl
+                             <<"        --bse-sigma:  [D] "<<sigma<<std::endl
+                             <<"        --bse-ceflag: [I] "<<ceflag<<std::endl
+                             <<"        --bse-tflag:  [I] "<<tflag<<std::endl
+                             <<"        --bse-wdflag: [I] "<<wdflag<<std::endl
+                             <<"        --bse-bhflag: [I] "<<bhflag<<std::endl
+                             <<"        --bse-nsflag: [I] "<<nsflag<<std::endl
+                             <<"        --bse-psflag: [I] "<<psflag<<std::endl
+                             <<"        --bse-kmech:  [I] "<<kmech<<std::endl
+                             <<"        --bse-ecflag: [I] "<<ecflag<<std::endl
+                             <<"        --bse-pts1:   [D] "<<pts1<<std::endl
+                             <<"        --bse-pts2:   [D] "<<pts2<<std::endl
+                             <<"        --bse-pts3:   [D] "<<pts3<<std::endl
+                             <<"        --bse-idum:   [I] "<<idum<<std::endl
+                             <<"        --bse-tscale: [D] "<<tscale<<std::endl
+                             <<"        --bse-rscale: [D] "<<rscale<<std::endl
+                             <<"        --bse-mscale: [D] "<<mscale<<std::endl
+                             <<"        --bse-vscale: [D] "<<vscale<<std::endl
+                             <<"        --bse-metallicity (-z): [D] "<<z<<std::endl;
                 }
                 return -1;
             case '?':

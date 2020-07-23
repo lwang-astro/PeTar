@@ -15,6 +15,11 @@ public:
     IOParams<std::string> type_args; // potential type and argument list
     IOParams<std::string> pre_define_type; // pre defined type name
     IOParams<std::string> pos_offset; // offset of the system position
+    IOParams<double> rscale; 
+    IOParams<double> tscale; 
+    IOParams<double> vscale; 
+    IOParams<double> fscale; 
+    IOParams<double> pscale; 
     
     bool print_flag;
 
@@ -22,6 +27,11 @@ public:
                      type_args (input_par_store, "", "Description of potential type and arguments"),
                      pre_define_type (input_par_store, "", "Add additional Pre-defined potential type to potential list, options are: MWPotential2014"),
                      pos_offset(input_par_store, "0:0:0", "3D position offset to obtain the particle position in the potential field, x, y, z are separated by ':'"),
+                     rscale(input_par_store, 1.0, "Radius scale factor from input data unit (IN) to Galpy distance unit (r[Galpy]=r[IN]*rscale)"),
+                     tscale(input_par_store, 1.0, "Time scale factor from input data unit (IN) to Galpy time (time[Galpy]=time[IN]*tscale)"),
+                     vscale(input_par_store, 1.0, "Velocity scale factor from input data unit(IN) to Galpy velocity unit (v[Galpy]=v[IN]*vscale)"),
+                     fscale(input_par_store, 1.0, "Acceleration scale factor from input data unit(IN) to Galpy acceleration unit (v[Galpy]=v[IN]*vscale)"),
+                     pscale(input_par_store, 1.0, "Potential factor from input data unit(IN) to Galpy potential unit (v[Galpy]=v[IN]*vscale)"),
                      print_flag(false) {}
 
     //! reading parameters from GNU option API
@@ -34,9 +44,14 @@ public:
     int read(int argc, char *argv[], const int opt_used_pre=0) {
         static int galpy_flag=-1;
         const struct option long_options[] = {
-            {"type-arg", required_argument, &galpy_flag, 0},  
-            {"pos-offset", required_argument, &galpy_flag, 1}, 
-            {"pre-define-type", required_argument, &galpy_flag, 2}, 
+            {"galpy-type-arg",   required_argument, &galpy_flag, 0},  
+            {"galpy-pos-offset", required_argument, &galpy_flag, 1}, 
+            {"galpy-set",        required_argument, &galpy_flag, 2}, 
+            {"galpy-rscale",     required_argument, &galpy_flag, 3}, 
+            {"galpy-tscale",     required_argument, &galpy_flag, 4}, 
+            {"galpy-vscale",     required_argument, &galpy_flag, 5}, 
+            {"galpy-fscale",     required_argument, &galpy_flag, 6}, 
+            {"galpy-pscale",     required_argument, &galpy_flag, 7}, 
             {"help", no_argument, 0, 'h'},
             {0,0,0,0}
         };
@@ -65,6 +80,31 @@ public:
                     if (print_flag) pre_define_type.print(std::cout);
                     opt_used+=2;
                     break;
+                case 3:
+                    rscale.value = atof(optarg);
+                    if(print_flag) rscale.print(std::cout);
+                    opt_used+=2;
+                    break;
+                case 4:
+                    tscale.value = atof(optarg);
+                    if(print_flag) tscale.print(std::cout);
+                    opt_used+=2;
+                    break;
+                case 5:
+                    vscale.value = atof(optarg);
+                    if(print_flag) vscale.print(std::cout);
+                    opt_used+=2;
+                    break;
+                case 6:
+                    fscale.value = atof(optarg);
+                    if(print_flag) fscale.print(std::cout);
+                    opt_used+=2;
+                    break;
+                case 7:
+                    pscale.value = atof(optarg);
+                    if(print_flag) pscale.print(std::cout);
+                    opt_used+=2;
+                    break;
                 default:
                     break;
                 }
@@ -91,19 +131,29 @@ public:
                 if(print_flag){
                     std::cout<<"Galpy options:"<<std::endl;
                     std::cout<<"       Option defaulted values are shown after ':'"<<std::endl;
-                    std::cout<<"         --type-arg:  [S] "<<type_args<<std::endl
-                             <<"         --pos-offset:[S] "<<pos_offset<<std::endl
-                             <<"         --pre-define-type:[S] "<<pre_define_type<<std::endl
-                             <<"  Potential type index and corresponding arguments can be found by the Python commander:\n"
-                             <<"\n"
-                             <<"    from galpy.orbit.integrateFullOrbit import _parse_pot\n"
-                             <<"    npot, pot_type, pot_args= _parse_pot(pot_name)\n"
-                             <<"  where pot_name is the name of potential, see details of Galpy document\n"
-                             <<"  The format of a combination of types and arguments is (no space in the middle):\n"
-                             <<"    [type1 index]:[arg1],[arg2],**|[type2 index]:[arg1],[arg2],**\n"
-                             <<"  For example:\n"
-                             <<"    --type-arg 15:0.0299946,1.8,0.2375|5:0.7574802,0.375,0.035|9:4.85223053,2.0\n"
-                             <<"  generate the MWPotential2014 (same to --pre-define-type MWPotential2014) from Galpy\n";
+                    std::cout<<"         --galpy-type-arg:  [S] "<<type_args<<std::endl
+                             <<"             The format of a combination of types and arguments have two styles: (no space in the middle):\n"
+                             <<"             1) [type1]:[arg1-1],[arg1-2],**|[type2]:[arg2-1],[arg2-2],**\n"
+                             <<"             2) [type1],[type2],..:[arg1-1],[arg1-2],[arg2-1],**\n"
+                             <<"             where '|' split different potential types;\n"
+                             <<"                   ':' separates the type indices and the argument list\n"
+                             <<"                   ',' separates the items of types or arguments in their lists\n"
+                             <<"             For example:\n"
+                             <<"                1) --galpy-type-arg 15:0.0299946,1.8,0.2375|5:0.7574802,0.375,0.035|9:4.85223053,2.0\n"
+                             <<"                2) --galpy-type-arg 15,5,9:0.0299946,1.8,0.2375,0.7574802,0.375,0.035,4.85223053,2.0\n"
+                             <<"                both can generate the MWPotential2014 from Galpy (same to --galpy-set MWPotential2014)\n"
+                             <<"             The defaults values of types and arguments for supported potentials can be found by using the commander, petar.galpy.help.\n"
+                             <<"         --galpy-pos-offset:[S] "<<pos_offset<<std::endl
+                             <<"         --galpy-set:       [S] "<<pre_define_type<<std::endl
+                             <<"              When the set potential is used, the natural units defined in Galpy are used.\n"
+                             <<"              If the option '-u 1' is used in petar, the unit scaling factors will be automatically determined.\n"
+                             <<"         --galpy-rscale:    [F] "<<rscale<<std::endl
+                             <<"         --galpy-tscale:    [F] "<<tscale<<std::endl
+                             <<"         --galpy-vscale:    [F] "<<vscale<<std::endl
+                             <<"         --galpy-fscale:    [F] "<<fscale<<std::endl
+                             <<"         --galpy-pscale:    [F] "<<pscale<<std::endl
+                             <<"              If users define the potential arguments manually, be careful to set the proper unit scaling factors"<<std::endl;
+
                 }
                 return -1;
             case '?':
@@ -124,11 +174,45 @@ public:
     struct potentialArg* potential_args;
     int npot; // number of potential models 
     double pos_offset[3]; // position offset
+    double rscale;
+    double tscale;
+    double vscale;
+    double fscale;
+    double pscale;
 
-    GalpyManager(): potential_args(NULL), npot(0), pos_offset{0.0,0.0,0.0} {}
+    GalpyManager(): potential_args(NULL), npot(0), pos_offset{0.0,0.0,0.0}, rscale(1.0), tscale(1.0), vscale(1.0), fscale(1.0), pscale(1.0) {}
+
+    //! set nature unit scaling to match Galpy unit and astronomical unit set (Myr, Msun, pc)
+    void setStdUnit(const bool print_flag=true) {
+        double two_pi = 8.0*std::atan(1.0);
+        double kms_pcmyr=1.0227121655399913;
+        double vbase=220.0;
+        double rbase=8.0;
+        double vb_pcmyr = vbase*kms_pcmyr;
+        rscale = 0.001/rbase; // pc to solar position in Milkyway
+        vscale = 1.0/vb_pcmyr; // pc/Myr to solar velocity in Milkyway
+        tscale = 0.001*vb_pcmyr/(rbase*two_pi); // myr to 2 pi / solar orbital period in Milkway
+        fscale = rbase/(vb_pcmyr*vb_pcmyr*0.001); // pc/myr^2 to acc unit in galpy
+        pscale = rbase*rbase/(vb_pcmyr*vb_pcmyr*1e-6); // pc^2/myr^2 to pot unit in galpy
+
+        if (print_flag) {
+            std::cout<<"Unit scaler for Galpy:\n"
+                     <<"rscale = "<<rscale<<" pc -> solar position (8 kpc) in Milkyway\n"
+                     <<"vscale = "<<vscale<<" pc/myr -> solar velocity (220 km/s) in Milkyway\n"
+                     <<"tscale = "<<tscale<<" myr -> solar orbital period /(2 pi) in Milkyway\n"
+                     <<"fscale = "<<fscale<<" pc/myr^2 -> galpy acceleration unit\n"
+                     <<"pscale = "<<pscale<<" pc^2/myr^2 -> galpy potential unit\n";
+        }
+    }
 
     //! initialization function
     void initial(const IOParamsGalpy& _input, const bool _print_flag=false) {
+        rscale = _input.rscale.value;
+        vscale = _input.vscale.value;
+        tscale = _input.tscale.value;
+        fscale = _input.fscale.value;
+        pscale = _input.pscale.value;
+
         std::size_t istart = 0;
         const std::string& pos_offset_str=_input.pos_offset.value;
         std::size_t inext = pos_offset_str.find_first_of(":");
@@ -173,21 +257,36 @@ public:
                 std::cerr<<"Error: potential type index delimiter ':' is not found in input string "<<type_args_pair[i]<<std::endl;
                 abort();
             }
-            int type_i=std::stoi(type_args_pair[i].substr(0,inext));
-            pot_type.push_back(type_i);
-            if (_print_flag) std::cout<<"Type index: "<<type_i<<"  args:";
+            std::string type_str = type_args_pair[i].substr(0,inext);
+            std::string arg_str = type_args_pair[i].substr(inext+1);
             
-            istart = inext+1;
-            inext = type_args_pair[i].find_first_of(",",istart);
+            inext = type_str.find_first_of(",");
+            if (_print_flag) std::cout<<"Type index: ";
             while (inext!=std::string::npos) {
-                double arg_i = std::stod(type_args_pair[i].substr(istart, inext-istart));
+                int type_i=std::stoi(type_str.substr(istart, inext-istart));
+                pot_type.push_back(type_i);
+                if (_print_flag) std::cout<<type_i<<" ";
+                istart = inext+1;
+                inext = type_str.find_first_of(",",istart);
+            }
+            if (istart!=type_str.size()) {
+                int type_i=std::stoi(type_str.substr(istart));
+                pot_type.push_back(type_i);
+                if (_print_flag) std::cout<<type_i<<" ";
+            }
+            if (_print_flag) std::cout<<"args:";
+            
+            istart = 0;
+            inext = arg_str.find_first_of(",",istart);
+            while (inext!=std::string::npos) {
+                double arg_i = std::stod(arg_str.substr(istart, inext-istart));
                 pot_args.push_back(arg_i);
                 if (_print_flag) std::cout<<" "<<arg_i;
                 istart = inext+1;
-                inext = type_args_pair[i].find_first_of(",",istart);
+                inext = arg_str.find_first_of(",",istart);
             }
-            if(istart!=type_args.size()) {
-                double arg_i = std::stod(type_args_pair[i].substr(istart));
+            if(istart!=arg_str.size()) {
+                double arg_i = std::stod(arg_str.substr(istart));
                 pot_args.push_back(arg_i);
                 if (_print_flag) std::cout<<" "<<arg_i;
             }
@@ -206,13 +305,16 @@ public:
     /*!
       @param[out] acc: [3] acceleration to return
       @param[out] pot: potential to return 
-      @param[in] pos: position of particles
+      @param[in] time: time in input unit
+      @param[in] pos: position of particles in input unit
      */
-    void calcAccPot(double* acc, double& pot, const double t, const double* pos) {
+    void calcAccPot(double* acc, double& pot, const double time, const double* pos) {
         if (npot>0) {
-            double x = pos[0] + pos_offset[0];
-            double y = pos[1] + pos_offset[1];
-            double z = pos[2] + pos_offset[2];
+            
+            double x = (pos[0] + pos_offset[0])*rscale;
+            double y = (pos[1] + pos_offset[1])*rscale;
+            double z = (pos[2] + pos_offset[2])*rscale;
+            double t = time*tscale;
         
             double rxy = std::sqrt(x*x+y*y);
             double phi = std::acos(x/rxy);
@@ -221,11 +323,12 @@ public:
             double acc_rxy = calcRforce(rxy, z, phi, t, npot, potential_args);
             double acc_z   = calczforce(rxy, z, phi, t, npot, potential_args);
             double acc_phi = calcPhiforce(rxy, z, phi, t, npot, potential_args);
-            acc[0] = cosphi*acc_rxy - sinphi*acc_phi/rxy;
-            acc[1] = sinphi*acc_rxy + cosphi*acc_phi/rxy;
-            acc[2] = acc_z;
+            pot = evaluatePotentials(rxy, z, npot, potential_args)/pscale;
+            acc[0] = (cosphi*acc_rxy - sinphi*acc_phi/rxy)/fscale;
+            acc[1] = (sinphi*acc_rxy + cosphi*acc_phi/rxy)/fscale;
+            acc[2] = acc_z/fscale;
         
-            pot = acc[0]*x+acc[1]*y+acc[2]*z;
+            //pot = acc[0]*x+acc[1]*y+acc[2]*z;
         }
         else {
             acc[0] = acc[1] = acc[2] = pot = 0.0;

@@ -78,7 +78,8 @@ int main(int argc, char** argv){
     optind=0;
     int option_index;
     bool help_flag=false;
-    while ((arg_label = getopt_long(argc, argv, "-t:h", long_options, &option_index)) != -1)
+    bool unit_astro_flag = false;
+    while ((arg_label = getopt_long(argc, argv, "-t:uh", long_options, &option_index)) != -1)
         switch (arg_label) {
         case 0:
             switch (long_flag) {
@@ -91,13 +92,19 @@ int main(int argc, char** argv){
             std::cout<<"Time: "<<time<<std::endl;
             opt_used +=2;
             break;
+        case 'u':
+            unit_astro_flag = true;
+            std::cout<<"Use astronomical unit set\n";
+            opt_used ++;
+            break;
         case 'h':
             std::cout<<"The tool to calculate acceleration and potential for a given particle list \n"
                      <<"Usage: petar.galpy [options] [particle data file]\n"
                      <<"       data file format: first line: number of particles\n"
                      <<"                         following lines: mass, pos(3), vel(3)\n"
                      <<"Options:\n"
-                     <<"    -t [F]: time\n"
+                     <<"    -u    : input data use astronomical unit set (Myr, pc, Msun)\n"
+                     <<"    -t [F]: time (0.0)\n"
                      <<"    -h    : help\n";
             help_flag=true;
             break;
@@ -114,6 +121,7 @@ int main(int argc, char** argv){
 
     GalpyManager galpy_manager;
     galpy_manager.initial(galpy_io,true);
+    if (unit_astro_flag) galpy_manager.setStdUnit();
 
     // argc is 1 no input is given
     opt_used++;
