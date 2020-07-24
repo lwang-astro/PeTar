@@ -470,7 +470,7 @@ public:
             {0,0,0,0}
         };
 
-        int opt_used=0;
+        int opt_used=opt_used_pre;
         int copt;
         int option_index;
         std::string fname_par;
@@ -687,6 +687,7 @@ public:
                 }
                 return -1;
             case '?':
+                opt_used +=2;
                 break;
             default:
                 break;

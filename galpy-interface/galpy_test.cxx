@@ -94,7 +94,7 @@ int main(int argc, char** argv){
             break;
         case 'u':
             unit_astro_flag = true;
-            std::cout<<"Use astronomical unit set\n";
+            std::cout<<"Use the astronomical unit set (Myr, pc, Msun)\n";
             opt_used ++;
             break;
         case 'h':
@@ -103,25 +103,26 @@ int main(int argc, char** argv){
                      <<"       data file format: first line: number of particles\n"
                      <<"                         following lines: mass, pos(3), vel(3)\n"
                      <<"Options:\n"
-                     <<"    -u    : input data use astronomical unit set (Myr, pc, Msun)\n"
+                     <<"    -u    : input data use astronomical unit set (Myr, pc, Msun) and set unit scaling factor for Galpy automatically\n"
                      <<"    -t [F]: time (0.0)\n"
                      <<"    -h    : help\n";
             help_flag=true;
             break;
         case '?':
+            opt_used +=2;
             break;
         default:
             break;
         }
     
     galpy_io.print_flag = true;
-    opt_used += galpy_io.read(argc,argv);
+    galpy_io.read(argc,argv);
     
     if (help_flag) return 0;
 
     GalpyManager galpy_manager;
+    if (unit_astro_flag) galpy_io.setStdUnit();
     galpy_manager.initial(galpy_io,true);
-    if (unit_astro_flag) galpy_manager.setStdUnit();
 
     // argc is 1 no input is given
     opt_used++;

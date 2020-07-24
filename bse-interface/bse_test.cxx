@@ -142,13 +142,14 @@ int main(int argc, char** argv){
             help_flag=true;
             break;
         case '?':
+            opt_used +=2;
             break;
         default:
             break;
         }        
 
     bse_io.print_flag = true;
-    opt_used += bse_io.read(argc,argv);
+    bse_io.read(argc,argv);
 
     if (help_flag) return 0;
 

@@ -565,6 +565,7 @@ public:
                 }
                 return -1;
             case '?':
+                opt_used +=2;
                 break;
             default:
                 break;
@@ -572,6 +573,7 @@ public:
 
         // count used options
         opt_used ++;
+        //std::cout<<"Opt used:"<<opt_used<<std::endl;
         if (opt_used<argc) {
             fname_inp.value =argv[argc-1];
             if(print_flag) std::cout<<"Reading data file name: "<<fname_inp.value<<std::endl;
