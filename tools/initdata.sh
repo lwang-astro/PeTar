@@ -57,6 +57,8 @@ if [ $convert == 1 ]; then
 elif [ $kms_pcmyr == 1 ]; then
     echo 'Convert velocity from km/s to pc/myr'
     awk -v ig=$igline -v vs=1.02269032 '{OFMT="%.15g"; if(NR>ig) print $1,$2,$3,$4,$5*vs,$6*vs,$7*vs}' $fname >$fout
+else; then
+    cp $fname $fout
 fi
 mv $fout $fout.scale__
 
