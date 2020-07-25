@@ -7,14 +7,27 @@ The reference paper on ArXiv: https://arxiv.org/abs/2006.16560
 
 ## Install:
 ### Dependence:
-FDPS: https://github.com/FDPS/FDPS
+_FDPS_: https://github.com/FDPS/FDPS
 
-SDAR: https://github.com/lwang-astro/SDAR
+_SDAR_: https://github.com/lwang-astro/SDAR
 
-Please download these two codes and put in the same directory where the _PeTar_ directory exist, in order to successfully compile the code.
+These two libraries are necessary to compile _PeTar_. 
+
+If users want to use external potential, the _Galpy_ interface is available. Users need to install _Galpy_ either by 
+```
+pip3 install galpy
+```
+Or download the source code from https://github.com/jobovy/galpy.
+
+If the source codes of these libraries are put in the same directory where the _PeTar_ directory exist, the configure script can detect them automatically. Otherwise users need to provide the pathes of them by adding configure options
+```
+./configure --with-[code name in lower case]-prefix=[code path]
+```
 
 ### Environment:
-To successfully compile the code, the C++ compiler (e.g. GNU gcc, Intel icpc, LLVM clang++) needs the support of the C++11 standard. To use SSE/BSE package, a Fortran (77) compiler, GNU gfortran, is needed and should be possile to provide API to the c++ code, i.e., the libgfortran is required. Currently Intel ifort is not supported yet. The MPI compiler (e.g. mpic++) is required to use MPI. NVIDIA GPU and CUDA compiler is required to use GPU acceleration. The SIMD support is tested for the GNU, Intel and LLVM compilers. It is not tested for others, thus these three kinds of compilers are suggested to use. 
+To successfully compile the code, the C++ compiler (e.g. GNU gcc/g++, Intel icc/icpc, LLVM clang/clang++) needs the support of the C++11 standard. To use SSE/BSE package, a Fortran (77) compiler, GNU gfortran, is needed and should be possile to provide API to the c++ code, i.e., the libgfortran is required. Currently Intel ifort is not supported yet. The MPI compiler (e.g. mpic++) is required to use MPI. NVIDIA GPU and CUDA compiler is required to use GPU acceleration. The SIMD support is tested for the GNU, Intel and LLVM compilers. It is not tested for others, thus these three kinds of compilers are suggested to use. 
+
+To use _Galpy_ and the analysis tools, the _Python3_ should be available. _Galpy_ also requires the _GSL_ library being installed and can be detected in the load library path.
 
 ### Make:
 Once _FPDS_ and _SDAR_ are available, in the root directoy, use 
@@ -77,8 +90,20 @@ Options for configure can be found by
     ./configure --with-interrupt=[bse]
     ```
     Currently only SSE/BSE is the available stellar evolution package (Now still in test phase). Notice SSE/BSE is a combined package, the option argument "sse" not work, only "bse" switches on both.
-    When this option is switched on, the standard alone tool _petar.bse_ will also be compiled and installed.
+    
+    When this option is switched on, the standalone tool _petar.bse_ will also be compiled and installed.
     This is a c++ based tool which uses the API of the SSE/BSE from Fortran77 to c++. It can be used to evolve a group of single and binary stars with OpenMP parallelization.
+
+8. Use _Galpy_ external potential library
+    ```
+    ./configure --with-external=galpy
+    ```
+    The _Galpy_ library is a _Python_ and c based external potential library, which provides a plenty choices of potentials. 
+    It is also flexible to combine multiple potentials together (require to use _Galpy_ _Python_ interface to generate the instance, see their document in details.
+    
+    When this option is switched on, the standalone tool _petar.galpy_ and _petar.galpy.help_ will also be compiled and installed.
+    - _petar.galpy_ is a simple tool to call _Galpy_ c interface to evaluate the acceleration and potentials for a list of particles with a given potential model.
+    - _petar.galpy.help_ is a tool (python script) to help users to generate the input options for potential models. When users use _Galpy_ _Python_ interface to design a specific potential, this tool also provides a function to convert a _Galpy_ potential instance to an option or a configure file used by _PeTar_.
 
 Multiple options should be combined together, for example:
 ```
@@ -130,6 +155,10 @@ A convenient way is to add
 export OMP_STACKSIZE=128M
 ```
 in the shell configure/initial file (e.g. .bashrc for _bash_) to avoid type "OMP_STACKSIZE=128M" every time.
+
+### Reference
+Remember to cite the necessary references when you publish the results using _PeTar_. The references are shown in the help function of _petar_ and the begining of the output after a simulation starts.
+When a feature imported from an external library is switched on, e.g. (_SSE_/_BSE_, _Galpy_), the corresponding references are automatically added in the output.
 
 ### Help information
 
@@ -285,7 +314,7 @@ For group files, it also generate individual files with suffix ".n[number of mem
 
 #### SSE/BSE steller evolution tool
 The _petar.bse_ will be generated when --with-interrupt=bse is used during the configuration.
-This is the standard alone SSE/BSE tool to evolve stars and binaries to a given time.
+This is the standalone SSE/BSE tool to evolve stars and binaries to a given time.
 All SSE/BSE global parameters can be set in options.
 The basic way to evolve a group of stars:
 ```
@@ -300,6 +329,32 @@ petar.bse [options] -b [binary data file]
 where the binary data file contain 4 values (mass1, mass2, period, eccentricity) per line.
 Notice that the first line has only one value which is the number of binaries.
 The units of mass and period depend on the option '--mscale' and '--tscale'. In defaulted case, the units set are Msun and Myr. For example, when the tscale are not 1.0, the period in Myr is calculated by the input period value x tscale. 
+
+#### Galpy tool
+The _petar.galpy_ and _petar.galpy.help_ will be generated when --with-external=galpy is used during the configuration.
+
+_petar.galpy_ is the standalone tool to calculate accelerations and potentials for a particle list with a given potential model.
+The basic way to use it:
+```
+petar.galpy [options] [particle data filename]
+```
+
+_petar.galpy.help_ is a helper to generate --galpy-type-arg options used in _petar_.
+By
+```
+petar.galpy.help
+```
+A list of supported potentials are shown with the corresponding --galpy-type-arg options (using default arguments).
+Users can check the detail of one potential by
+```
+petar.galpy.help -d [potential name]
+```
+This will show the definition of this potential from _Galpy_ document.
+The option '-o' can be used to generate a configure file of a given potential. This file can be read by the _petar_ commander option: --galpy-conf-file. 
+
+Notice that in _petar_ commander, there are three options used to read the configuration of potential models: --galpy-type-arg, --galpy-set and --galpy-conf-file.
+These three options can be used together, i.e., potential models from all three options will be added together to become a multiple potential. 
+Thus be careful not to dupplicate potentials. Whether the potential is dupplicated (printed multiple times) can be checked in the output of _petar_.
 
 ### Data analysis in _PYTHON3_
 The data analysis library provide the tools to identify binaries; calculate Lagrangian radii and core radii; obtain system energy error and check performance of each parts of the code.
