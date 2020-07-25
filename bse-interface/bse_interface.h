@@ -71,7 +71,7 @@ extern "C" {
     //! BSE function for evolving one binary
     void evolv2_(int* kw, double* mass, double* mt, double* r, double* lum, double* mc, double* rc, double* menv, double* renv, double* ospin,
                  double* epoch, double* tm, double* tphys, double* tphysf, double* dtp, double* z, double* zpars, 
-                 double* period, double* ecc, float* bse_event, double* vkick);
+                 double* period, double* ecc, double* bse_event, double* vkick);
 
     void star_(int* kw, double* mass, double* mt, double* tm, double* tn, double* tscls, double* lums, double* GB, double* zpars);
 
@@ -280,19 +280,19 @@ struct StarParameterOut{
 //! BSE event recorder class
 class BinaryEvent{
 public:
-    float record[10][9];
+    double record[10][9];
 
     void recordInitial(const StarParameter& _p1, const StarParameter& _p2, const double _semi, const double _ecc) {
         const int init_index = getEventIndexInit();
-        record[0][init_index] = float(std::min(_p1.tphys, _p2.tphys));
-        record[1][init_index] = float(_p1.mt);
-        record[2][init_index] = float(_p2.mt);
-        record[3][init_index] = float(_p1.kw);
-        record[4][init_index] = float(_p2.kw);
-        record[5][init_index] = float(_semi);
-        record[6][init_index] = float(_ecc);
-        record[7][init_index] = float(_p1.r);
-        record[8][init_index] = float(_p2.r);
+        record[0][init_index] = std::min(_p1.tphys, _p2.tphys);
+        record[1][init_index] = _p1.mt;
+        record[2][init_index] = _p2.mt;
+        record[3][init_index] = _p1.kw;
+        record[4][init_index] = _p2.kw;
+        record[5][init_index] = _semi;
+        record[6][init_index] = _ecc;
+        record[7][init_index] = _p1.r;
+        record[8][init_index] = _p2.r;
         record[9][init_index] = 0.0;
     }
     
@@ -411,7 +411,7 @@ public:
                    wdflag(input_par_store, 1,  "if >0, uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
                    bhflag(input_par_store, 2,  "BH kick option: 0: no kick; 1: same as NS; 2: scaled by fallback"),
                    nsflag(input_par_store, 3,  "NS/BH foramtion options: 0: original SSE; 1: Belczynski (2002); 2: Belczynski (2008); 3: Fryer (2012) rapid SN; 4: Fryer (2012) delayed SN; 5: Eldridge & Tout (2004)"),
-                   psflag(input_par_store, 1,  "PPSN condition (Leung 2019): 0: no PPSN; 1: strong; 2: moderate; 3: weak"),
+                   psflag(input_par_store, 1,  "PPSN condition (Belczynski 2016): 0: no PPSN; 1: strong; (Leung 2019): 2: moderate; 3: weak"),
                    kmech (input_par_store, 1,  "Kick mechanism: 1: standard momentum-conserving; 2: convection-asymmetry-driven; 3: collapse-asymmerty-driven; 4: neutrino driven"),
                    ecflag(input_par_store, 1,  "if >0, ECS is switched on"),
                    pts1  (input_par_store, 0.05, "time step of MS"),

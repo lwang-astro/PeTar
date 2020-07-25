@@ -1,9 +1,9 @@
 TARGET: libgalpy.a petar.galpy
 
-CXX=mpic++
-CC=gcc
+CXX=@CXX@
+CC=@CC@
 
-GALPY_PATH=$(HOME)/.local/lib/python3.6/site-packages/galpy
+GALPY_PATH=@GALPY_PATH@
 GALPY_INCLUDE_PATH= $(shell find $(GALPY_PATH) -type d )
 GALPY_INCLUDE = $(addprefix -I, $(GALPY_INCLUDE_PATH))
 

@@ -78,6 +78,9 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #endif
 #include"static_variables.hpp"
 #include"escaper.hpp"
+#ifdef GALPY
+#include"galpy_interface.h"
+#endif
 
 //! IO parameters for Petar
 class IOParamsPeTar{
@@ -621,10 +624,6 @@ public:
 //! main control class
 class PeTar {
 public:
-    IOParamsPeTar input_parameters;
-#ifdef BSE
-    IOParamsBSE bse_parameters;
-#endif
 #ifdef USE_QUAD
     typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::QuadrupoleWithSymmetrySearch TreeForce; 
 #else
@@ -634,6 +633,15 @@ public:
 
     // For neighbor searching
     typedef PS::TreeForForceShort<ForceSoft, EPISoft, EPJSoft>::Symmetry TreeNB;
+
+    // IO
+    IOParamsPeTar input_parameters;
+#ifdef BSE
+    IOParamsBSE bse_parameters;
+#endif
+#ifdef GALPY
+    IOParamsGalpy galpy_parameters;
+#endif
 
 #ifdef PROFILE
     PS::S32 dn_loop;
@@ -673,6 +681,10 @@ public:
     TreeNB tree_nb;
     TreeForce tree_soft;
 
+#ifdef GALPY
+    GalpyManager galpy_manager;
+#endif
+
     // hard integrator
     HardManager hard_manager;
     SystemHard system_hard_one_cluster;
@@ -706,6 +718,13 @@ public:
 
     //! initialization
     PeTar(): 
+        input_parameters(),
+#ifdef BSE
+        bse_parameters(),
+#endif
+#ifdef GALPY
+        galpy_parameters(),
+#endif
 #ifdef PROFILE
         // profile
         dn_loop(0), profile(), n_count(), n_count_sum(), tree_soft_profile(), fprofile(), 
@@ -716,6 +735,9 @@ public:
         n_loop(0), domain_decompose_weight(1.0), dinfo(), pos_domain(NULL), 
         dt_manager(),
         tree_nb(), tree_soft(), 
+#ifdef GALPY
+        galpy_manager(),
+#endif
         hard_manager(), system_hard_one_cluster(), system_hard_isolated(), 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         system_hard_connected(), 
@@ -987,6 +1009,62 @@ public:
         profile.force_correct.barrier();
         PS::Comm::barrier();
         profile.force_correct.end();
+#endif
+    }
+
+    //! calculate external force
+    void externalForce() {
+#ifdef PROFILE
+        profile.other.start();
+#endif
+
+#ifdef GALPY
+        // external force and potential
+        PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
+#pragma omp parallel for
+        for (int i=0; i<n_loc_all; i++) {
+            auto& pi = system_soft[i];
+            double acc[3], pot;
+            galpy_manager.calcAccPot(acc, pot, stat.time, &pi.pos[0]);
+            pi.acc[0] += acc[0]; 
+            pi.acc[1] += acc[1]; 
+            pi.acc[2] += acc[2]; 
+            pi.pot_tot += pot;
+            pi.pot_soft += pot;
+        }
+#endif //GALPY
+        
+#ifdef PROFILE
+        profile.other.barrier();
+        PS::Comm::barrier();
+        profile.other.end();
+#endif
+    }
+
+    // correct vel_cm due to external potential for rsearch calculation
+    void correctPtclVelCM(const PS::F64& _dt) {
+#ifdef PROFILE
+        profile.other.start();
+#endif
+        PS::F64vec dv=PS::F64vec(0.0);
+
+#ifdef GALPY
+        PS::F64vec acc;
+        PS::F64 pot;
+        // evaluate center of mass acceleration
+        galpy_manager.calcAccPot(&acc[0], pot, stat.time, &stat.pcm.pos[0]);
+        dv = acc*_dt;
+#endif        
+
+        Ptcl::vel_cm += dv;
+//#ifdef PETAR_DEBUG
+//        if (my_rank==0) std::cerr<<"Ptcl::vel_cm: "<<Ptcl::vel_cm<<std::endl;
+//#endif
+
+#ifdef PROFILE
+        profile.other.barrier();
+        PS::Comm::barrier();
+        profile.other.end();
 #endif
     }
 
@@ -1626,6 +1704,7 @@ public:
 #ifdef PROFILE
         profile.status.start();
 #endif
+//        stat.shiftToOriginFrame(&system_soft[0], stat.n_real_loc);
         if (_initial_flag) {
             // calculate initial energy
             stat.energy.clear();
@@ -1638,6 +1717,8 @@ public:
             stat.energy.epot_sd = stat.energy.epot;
 #endif
             stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);
+            Ptcl::vel_cm = stat.pcm.vel;
+            //stat.calcAndShiftCenterOfMass(&system_soft[0], stat.n_real_loc, 1, true);
 
         }
         else {
@@ -1690,7 +1771,10 @@ public:
 #endif
 #endif
             stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);
+            Ptcl::vel_cm = stat.pcm.vel;
         }
+        //stat.shiftToCenterOfMassFrame(&system_soft[0], stat.n_real_loc);
+
 #ifdef PROFILE
         profile.status.barrier();
         PS::Comm::barrier();
@@ -1698,6 +1782,7 @@ public:
 #endif
     }
 
+    //! output data
     void output() {
 #ifdef PROFILE
         profile.output.start();
@@ -2165,6 +2250,9 @@ public:
 #ifdef BSE
         BSEManager::printReference(fout);
 #endif
+#ifdef GALPY
+        GalpyManager::printReference(fout);
+#endif
         fout<<" Copyright (C) 2017\n"
             <<"    Long Wang, Masaki Iwasawa, Keigo Nitadori, Junichiro Makino and many others\n";
         fout<<"====================================="
@@ -2193,6 +2281,11 @@ public:
         if (my_rank==0) bse_parameters.print_flag=true;
         else bse_parameters.print_flag=false;
         bse_parameters.read(argc,argv);
+#endif
+#ifdef GALPY
+        if (my_rank==0) galpy_parameters.print_flag=true;
+        else galpy_parameters.print_flag=false;
+        galpy_parameters.read(argc,argv);
 #endif
 
         // help case, return directly
@@ -2612,13 +2705,17 @@ public:
                 std::cout<<"----- Unit set 1: Msun, pc, Myr -----\n"
                          <<"gravitational_constant = "<<input_parameters.gravitational_constant.value<<" pc^3/(Msun*Myr^2)\n";
 #ifdef BSE
-                std::cout<<"----- BSE scaling ----- \n"
-                         <<" tscale = "<<bse_parameters.tscale.value<<" Myr/Myr\n"
-                         <<" mscale = "<<bse_parameters.mscale.value<<" Msun/Msun\n"
-                         <<" rscale = "<<bse_parameters.rscale.value<<" Rsun/pc\n"
-                         <<" vscale = "<<bse_parameters.vscale.value<<" [km/s]/[pc/Myr]\n";
+                std::cout<<"----- Unit conversion for BSE ----- \n"
+                         <<" tscale = "<<bse_parameters.tscale.value<<"  Myr / Myr\n"
+                         <<" mscale = "<<bse_parameters.mscale.value<<"  Msun / Msun\n"
+                         <<" rscale = "<<bse_parameters.rscale.value<<"  Rsun / pc\n"
+                         <<" vscale = "<<bse_parameters.vscale.value<<"  [km/s] / [pc/Myr]\n";
 #endif
+
             }
+#ifdef GALPY
+            galpy_parameters.setStdUnit(print_flag);
+#endif
 
         }
 
@@ -2774,6 +2871,7 @@ public:
         Ptcl::r_search_min = r_search_min;
         Ptcl::mean_mass_inv = 1.0/mass_average;
         Ptcl::r_group_crit_ratio = r_bin/r_in;
+        Ptcl::vel_cm = vel_cm_glb;
         escaper.r_escape = input_parameters.r_escape.value;
 
         if(print_flag) {
@@ -2823,7 +2921,13 @@ public:
                 auto& pi_cm = system_soft[i].group_data.cm;
                 pi_cm.mass = pi_cm.vel.x = pi_cm.vel.y = pi_cm.vel.z = 0.0;
             }
+            stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);
+            Ptcl::vel_cm = stat.pcm.vel;
         }
+
+#ifdef GALPY
+        galpy_manager.initial(galpy_parameters, print_flag);
+#endif
     
         // set system hard paramters
         hard_manager.setDtRange(input_parameters.dt_soft.value/input_parameters.dt_limit_hard_factor.value, input_parameters.dt_min_hermite_index.value);
@@ -2927,6 +3031,17 @@ public:
             fclose(fpar_out);
 #endif
 
+#ifdef GALPY
+            // save galpy parameters
+            std::string fgalpy_par = input_parameters.fname_par.value + ".galpy";
+            if (print_flag) std::cout<<"Save galpy_parameters to file "<<fgalpy_par<<std::endl;
+            if( (fpar_out = fopen(fgalpy_par.c_str(),"w")) == NULL) {
+                fprintf(stderr,"Error: Cannot open file %s.\n", fgalpy_par.c_str());
+                abort();
+            }
+            galpy_parameters.input_par_store.writeAscii(fpar_out);
+            fclose(fpar_out);
+#endif
         }
 
         // initial tree step manager
@@ -2992,6 +3107,9 @@ public:
         // >5 correct change over
         /// correct system_soft.acc with changeover, using system_hard and system_soft particles
         treeForceCorrectChangeover();
+
+        /// force from external potential
+        externalForce();
 
         // correct force due to the change over update
         correctForceChangeOverUpdate();
@@ -3178,6 +3296,9 @@ public:
             /// correct system_soft.acc with changeover, using system_hard and system_soft particles
             treeForceCorrectChangeover();
 
+            /// force from external potential
+            externalForce();
+
 #ifdef KDKDK_4TH
             // only do correction at middle step
             if (dt_manager.getCountContinue() == 1) GradientKick();
@@ -3248,6 +3369,9 @@ public:
 
             // >6. kick 
             kick(dt_kick);
+
+            // correct Ptcl:vel_cm
+            correctPtclVelCM(dt_kick);
 
             // >7. write back data
             if(output_flag||interrupt_flag) {
@@ -3325,6 +3449,9 @@ public:
                 correctForceChangeOverUpdate();
 
                 kick(dt_kick);
+
+                // correct Ptcl:vel_cm
+                correctPtclVelCM(dt_kick);
             }
 
 

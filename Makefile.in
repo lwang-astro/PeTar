@@ -8,10 +8,11 @@ use_gperf=@use_gperf@
 debug_mode=@with_debug@
 step_mode=@with_step_mode@
 se_mode=@with_interrupt@
+ext_mode=@with_external@
 tt_mode=@with_tidal_tensor@
 orb_mode=@with_orbit@
 
-TARGET=build/@PROG_NAME@ build/petar.hard.debug 
+TARGET=build/@PROG_NAME@ build/petar.hard.debug
 
 #MT_FLAGS += -D HARD_CM_KICK
 MT_FLAGS += -D USE_QUAD
@@ -46,6 +47,17 @@ LIBFILES+= bse-interface/libbse.a bse-interface/bse_interface.h
 INCLUDE += -I ./bse-interface
 TARGET += bse-interface/petar.bse
 endif
+endif
+
+ifeq ($(ext_mode),galpy)
+MT_FLAGS += -D GALPY
+CXXLIBS += -L ./galpy-interface -lgalpy -lgsl -lgslcblas
+LIBFILES+= galpy-interface/libgalpy.a galpy-interface/galpy_interface.h
+GALPY_PATH=@GALPY_PATH@
+GALPY_INCLUDE_PATH= $(shell find $(GALPY_PATH) -type d )
+GALPY_INCLUDE = $(addprefix -I, $(GALPY_INCLUDE_PATH))
+INCLUDE += -I ./galpy-interface $(GALPY_INCLUDE)
+TARGET += galpy-interface/petar.galpy galpy-interface/petar.galpy.help
 endif
 
 ifeq ($(step_mode),kdkdk)
@@ -186,6 +198,11 @@ bse-interface/petar.bse: bse-interface
 	$(MAKE) -C bse-interface
 
 bse-interface/libbse.a: bse-interface/petar.bse
+
+galpy-interface/petar.galpy: galpy-interface
+	$(MAKE) -C galpy-interface
+
+galpy-interface/libgalpy.a: galpy-interface/petar.galpy
 
 install: $(TARGET)
 	install -d @prefix@/bin/

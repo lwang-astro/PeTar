@@ -206,7 +206,7 @@
 *      LOGICAL isave,iplot
       REAL*8 rl,mlwind,vrotf,corerd
       EXTERNAL rl,mlwind,vrotf,corerd
-      REAL bpp(9,10)
+      REAL*8 bpp(9,10)
 *      REAL bcm(50000,34),bpp(80,10)
 *      COMMON /BINARY/ bcm,bpp
 *

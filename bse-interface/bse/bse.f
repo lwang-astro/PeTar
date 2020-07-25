@@ -43,7 +43,7 @@
       real*8 rad(2),lum(2),ospin(2)
       real*8 massc(2),radc(2),menv(2),renv(2)
       real*8 tb,ecc,yearsc,vkick(8)
-      real bpp(8,10)
+      real*8 bpp(9,10)
       PARAMETER(yearsc=3.1557d+07)
       CHARACTER*8 label(14)
 *

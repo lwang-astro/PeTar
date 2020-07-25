@@ -271,6 +271,13 @@ AC_CHECK_FILE(["$sdar_prefix/src/Hermite/hermite_integrator.h"],
 	      [INCLUDE=$INCLUDE" -I$sdar_prefix/src"],
 	      [AC_MSG_FAILURE([Cannot find SDAR library, please provide correct PREFIX by using --with-sdar-prefix])])
 
+# GALPY
+AC_ARG_WITH([galpy-prefix],
+            [AS_HELP_STRING([--with-galpy-prefix],
+	                    [Prefix of your Galpy installation. Default: search $HOME/.local, ../galpy])],
+            [galpy_prefix=$withval],
+	    [galpy_prefix="__search__"])
+
 # Leap frog step method
 AC_ARG_WITH([step-mode],
 	    [AS_HELP_STRING([--with-step-mode],
@@ -284,8 +291,29 @@ AC_ARG_WITH([interrupt],
 	                    [Interruption detection mode: Default: off])],
             [PROG_NAME=$PROG_NAME'.'$with_interrupt
 	     AS_IF([test x"$with_interrupt" == xbse],
-	           [AC_PROG_FC([gfortran, ifort])])],
+	           [AC_PROG_FC([gfortran ifort])])],
 	    [with_interrupt=off])
+
+# external potential
+AC_ARG_WITH([external],
+	    [AS_HELP_STRING([--with-external],
+	                    [External potential: Default: off])],
+            [PROG_NAME=$PROG_NAME'.'$with_external
+	     AS_IF([test x"$with_external" == xgalpy],
+	           [AC_PROG_CC([gcc icc cc])
+                    AS_IF([test x"$galpy_prefix" == x__search__],
+                          [AC_CHECK_PROG([FIND_CHECK], [find], [find])
+			   AS_IF([test x"$FIND_CHECK" == xfind],
+                                 [galpy_prefix=`find $HOME/.local -type d -name galpy|tail -1`
+                                  AS_IF([test x"$galpy_prefix" == x],
+                                        [galpy_prefix=`find ../ -type d -name galpy|tail -1`])])])
+                    AC_CHECK_FILE(["$galpy_prefix/potential/potential_c_ext/galpy_potentials.h"],
+                                  [GALPY_PATH=$galpy_prefix],
+                                  [AC_MSG_FAILURE([Cannot find Galpy library, please provide correct PREFIX by using --with-galpy-prefix])])
+                    AC_CHECK_LIB([gsl],[main])
+                    AC_CHECK_LIB([gslcblas],[main])])],
+	    [with_external=off])
+            
 
 # tidal tensor 3rd order mode
 AC_ARG_WITH([tidal-tensor],
@@ -334,6 +362,7 @@ AC_SUBST([use_gperf])
 AC_SUBST([with_debug])
 AC_SUBST([with_step_mode])
 AC_SUBST([with_interrupt])
+AC_SUBST([with_external])
 AC_SUBST([with_tidal_tensor])
 AC_SUBST([with_orbit])
 AC_SUBST([OPTFLAGS])
@@ -345,6 +374,7 @@ AC_SUBST([CUDALIBS])
 AC_SUBST([SIMDFLAGS])
 AC_SUBST([GPERFFLAGS])
 AC_SUBST([GPERFLIBS])
+AC_SUBST([GALPY_PATH])
 AC_SUBST([INCLUDE])
 AC_SUBST([PROG_NAME])
 AC_SUBST([CXX])
@@ -366,6 +396,7 @@ AC_MSG_NOTICE([     Using OpenMP:      $use_omp])
 AC_MSG_NOTICE([     Debug mode:        $with_debug])
 AC_MSG_NOTICE([     Step mode:         $with_step_mode])
 AC_MSG_NOTICE([     interrupt mode:    $with_interrupt])
+AC_MSG_NOTICE([     external mode:     $with_external])
 AC_MSG_NOTICE([     tidal tensor mode: $with_tidal_tensor])
 AC_MSG_NOTICE([     orbit mode:        $with_orbit])
 AC_MSG_NOTICE([--Compilers:])
@@ -392,5 +423,6 @@ AC_MSG_NOTICE([-----------------------------------------------------------])
 
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([bse-interface/Makefile])
+AC_CONFIG_FILES([galpy-interface/Makefile])
 
 AC_OUTPUT
