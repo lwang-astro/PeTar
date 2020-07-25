@@ -247,10 +247,16 @@ class Data:
                     data['rad'] = particles.star.rad
                     data['type']= particles.star.type
         
-    def correctCM(self, boxsize):
+    def correctCM(self, boxsize, pos):
         xcm = 0.0
         ycm = 0.0
-        if (self.cm_mode=='density'):
+        if (self.cm_mode=='core'):
+            xcm = pos[0]
+            ycm = pos[1]
+            if (self.generate_binary!=2): # data from petar.data.process already remove c.m. from core center
+                self.x = self.x-ycm
+                self.y = self.y-ycm
+        elif (self.cm_mode=='density'):
             nbins=100
             xmid = np.average(np.abs(self.x))
             ymid = np.average(np.abs(self.y))
@@ -306,10 +312,15 @@ class Data:
             ycm += ycm2
         return xcm, ycm
 
-def plotOne(file_path, axe, plots, **kwargs):
+def plotOne(file_path, axe, plots, core, **kwargs):
     data = Data(**kwargs)
     data.read(file_path)
-    xcm, ycm=data.correctCM(plots['xy'].cm_boxsize)
+
+    pos=np.array([0,0])
+    if (data.cm_mode=='core'):
+        sel=(core.time==float(data['t']))
+        pos=core[sel].pos[0]
+    xcm, ycm=data.correctCM(plots['xy'].cm_boxsize, pos)
 
     if ('unit_time' in kwargs.keys()):
         unit_label = ' '+kwargs['unit_time']
@@ -390,11 +401,11 @@ def initFig(frame_xsize, frame_ysize, ncol, nplots):
     return fig, axe
 
 
-def createImage(_path_list, frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdiagram, plot_semi_ecc, **kwargs):
+def createImage(_path_list, frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdiagram, plot_semi_ecc, core, **kwargs):
     n_frame = len(_path_list)
     use_previous = False
     if ('use_previous' in kwargs.keys()): use_previous = kwargs['use_previous']
-        
+
     if (n_frame>0):
         nplots = 1
         if (plot_zoom): nplots+=1
@@ -411,7 +422,7 @@ def createImage(_path_list, frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdi
                 if (os.path.exists(file_path+'.png')):
                     print('find existing %s' % file_path)
                     continue
-            plotOne(file_path, axe, plots,  **kwargs)
+            plotOne(file_path, axe, plots, core, **kwargs)
             fig.savefig(file_path+'.png',bbox_inches = "tight")
             print(file_path)
     return n_frame
@@ -419,6 +430,7 @@ def createImage(_path_list, frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdi
 if __name__ == '__main__':
 
     filename='dat.lst'
+    core_file='data.core'
     fps = 30
     output_file = 'movie'
     plot_HRdiagram=False
@@ -471,7 +483,8 @@ if __name__ == '__main__':
         print("  --plot-ncols: column number of panels: same as panels")
         print("  --plot-xsize: x size of panel: ",frame_xsize)
         print("  --plot-ysize: y size of panel: ",frame_ysize)
-        print("  --cm-mode: plot origin position determination: density: density center; average: average of x,y; none: use origin of snapshots: ", data.cm_mode)
+        print("  --cm-mode: plot origin position determination: density: density center; average: average of x,y; core: use core data file generated from petar.data.process; none: use origin of snapshots: ", data.cm_mode)
+        print("  --core-file: core data file name: ",core_file)
         print("  --cm-boxsize: boxsize to search the coordinate center for the x-y plot: 5.0 times ploting size (-R)")
         print("  --n-layer-cross: number of layers of crosses for particles in the x-y plot: 5")
         print("  --n-layer-point: number of layers of points for particles in the x-y plot: 10")
@@ -482,7 +495,7 @@ if __name__ == '__main__':
 
     try:
         shortargs = 's:f:R:z:o:G:iHbh'
-        longargs = ['help','n-cpu=','lum-min=','lum-max=','temp-min=','temp-max=','semi-min=','semi-max=','ecc-min=','ecc-max=','interrupt-mode=','xcol=','ycol=','mcol=','unit-length=','unit-time=','skiprows=','generate-binary=','plot-ncols=','plot-xsize=','plot-ysize=','suppress-images','format=','cm-mode=','n-layer-cross=','n-layer-point=','layer-alpha=','cm-boxsize=']
+        longargs = ['help','n-cpu=','lum-min=','lum-max=','temp-min=','temp-max=','semi-min=','semi-max=','ecc-min=','ecc-max=','interrupt-mode=','xcol=','ycol=','mcol=','unit-length=','unit-time=','skiprows=','generate-binary=','plot-ncols=','plot-xsize=','plot-ysize=','suppress-images','format=','cm-mode=','core-file=','n-layer-cross=','n-layer-point=','layer-alpha=','cm-boxsize=']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -533,6 +546,8 @@ if __name__ == '__main__':
                 kwargs['cm_mode']= arg
             elif opt in ('--cm-boxsize'):
                 kwargs['cm_boxsize'] = float(arg)
+            elif opt in ('--core-file'):
+                core_file = arg
             elif opt in ('--xcol'):
                 kwargs['xcol'] = int(arg)
             elif opt in ('--ycol'):
@@ -578,6 +593,11 @@ if __name__ == '__main__':
     file_list = fl.read()
     path_list = file_list.splitlines()
 
+    core=petar.Core()
+    if ('cm_mode' in kwargs.keys()): 
+        if (kwargs['cm_mode']=='core'):
+            core.loadtxt(core_file)
+
     if (plot_images):
         if (n_cpu==int(0)):
             n_cpu = mp.cpu_count()
@@ -593,7 +613,7 @@ if __name__ == '__main__':
         results=[None]*n_cpu
         for rank in range(n_cpu):
             #createImage(file_part[rank], frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdiagram, plot_semi_ecc, **kwargs)
-            results[rank]=pool.apply_async(createImage, (file_part[rank], frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdiagram, plot_semi_ecc, ), kwargs)
+            results[rank]=pool.apply_async(createImage, (file_part[rank], frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdiagram, plot_semi_ecc, core), kwargs)
 
         # Step 3: Don't forget to close
         pool.close()
@@ -626,7 +646,7 @@ if __name__ == '__main__':
      
             file_path = path_list[k]
             print('process ',file_path)
-            ptcls=plotOne(file_path, axe, plots,  **kwargs)
+            ptcls=plotOne(file_path, axe, plots, core, **kwargs)
      
             return ptcls
 
