@@ -8,7 +8,7 @@
 #include "../src/io.hpp"
 
 struct BinaryBase{
-    double m1,m2,semi,period,ecc;
+    double m1,m2,semi,period,ecc,period0,ecc0;
     int kw1,kw2;
     double tphys;
     StarParameter star[2];
@@ -245,6 +245,8 @@ int main(int argc, char** argv){
     auto printBinaryTitle=[&](std::ostream & _fout) {
         _fout<<std::setw(width)<<"mass0_1[M*]"
              <<std::setw(width)<<"mass0_2[M*]"
+             <<std::setw(width)<<"P0[days]"
+             <<std::setw(width)<<"ecc0"
              <<std::setw(width)<<"P[days]"
              <<std::setw(width)<<"ecc";
         StarParameter::printColumnTitle(_fout, width);
@@ -257,6 +259,8 @@ int main(int argc, char** argv){
     auto printBinary=[&](std::ostream & _fout, BinaryBase& _bin){
         _fout<<std::setw(width)<<_bin.m1*bse_manager.mscale;
         _fout<<std::setw(width)<<_bin.m2*bse_manager.mscale;
+        _fout<<std::setw(width)<<_bin.period0*bse_manager.tscale*3.6524e8;
+        _fout<<std::setw(width)<<_bin.ecc0;
         _fout<<std::setw(width)<<_bin.period*bse_manager.tscale*3.6524e8;
         _fout<<std::setw(width)<<_bin.ecc;
         for (int k=0; k<2; k++) {
@@ -298,6 +302,8 @@ int main(int argc, char** argv){
             bool kick_print_flag[2]={false,false};
             // evolve
             double tend = time*bse_manager.tscale;
+            bin[i].period0 = bin[i].period;
+            bin[i].ecc0 = bin[i].ecc;
             while (bse_manager.getTime(bin[i].star[0])<tend) {
                 // time step
                 double dt1 = bse_manager.getTimeStep(bin[i].star[0]);

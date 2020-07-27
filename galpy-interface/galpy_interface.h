@@ -169,7 +169,7 @@ public:
 
     //! set nature unit scaling to match Galpy unit and astronomical unit set (Myr, Msun, pc)
     void setStdUnit(const bool print_flag=true) {
-        double kms_pcmyr=1.0227121655399913;
+        double kms_pcmyr=1.022712165045695; // pc = 30856775814913673 m, yr = 365.25 days
         double vbase=220.0;
         double rbase=8.0;
         double vb_pcmyr = vbase*kms_pcmyr;

@@ -707,10 +707,11 @@ public:
     double rscale; ///> radius scaling factor from NB to Rsun
     double mscale; ///> mass scaling factor from NB to Msun
     double vscale; ///> velocity scaling factor from NB to km/s
+    const double year_to_day; ///> year to day 
     const char* single_type[16]; ///> name of single type from SSE
     const char* binary_type[14]; ///> name of binary type return from BSE evolv2, notice if it is -1, it indicate the end of record
 
-    BSEManager(): z(0.0), zpars{0}, tscale(0.0), rscale(0.0), mscale(0.0), vscale(0.0),
+    BSEManager(): z(0.0), zpars{0}, tscale(0.0), rscale(0.0), mscale(0.0), vscale(0.0), year_to_day(3.6525e8),
                   single_type{"LMS", "MS", "HG", "GB", "CHeB", "FAGB", "SAGB", "HeMS", "HeHG", "HeGB", "HeWD", "COWD", "ONWD", "NS", "BH", "SN"},
                   binary_type{"Unset",               //0
                               "Initial",             //1
@@ -948,7 +949,7 @@ public:
         double tphys = std::max(_star1.tphys, _star2.tphys);
         double tphysf = _dt_nb*tscale + tphys;
         double dtp=tphysf*100.0+1000.0;
-        double period_days = _period*tscale*3.6524e8;
+        double period_days = _period*tscale*year_to_day;
         double semi_rsun = _semi*rscale;
         // in case two component have different tphys, evolve to the same time first
         int event_flag = 0 ;
@@ -989,7 +990,7 @@ public:
         epoch[1] = _star2.epoch;
         
         evolv2_(kw, m0, mt, r, lum, mc, rc, menv, renv, ospin, epoch, tm, &tphys, &tphysf, &dtp, &z, zpars, &period_days, &_ecc, _bse_event.record[0], vkick);
-        _period = period_days/3.6524e8/tscale;
+        _period = period_days/year_to_day/tscale;
 
         _star1.kw = kw[0];
         _star1.m0 = m0[0];
