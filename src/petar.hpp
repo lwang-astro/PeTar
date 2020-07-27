@@ -2237,6 +2237,19 @@ public:
         initial_fdps_flag = true;
     }
 
+    //! print terminal Logo
+    void printLogo(std::ostream & fout) const {
+        fout<<"\n ******************************************\n"
+            <<"  ██████╗ ███████╗████████╗ █████╗ ██████╗\n"
+            <<"  ██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔══██╗\n"
+            <<"  ██████╔╝█████╗     ██║   ███████║██████╔╝\n"
+            <<"  ██╔═══╝ ██╔══╝     ██║   ██╔══██║██╔══██╗\n"
+            <<"  ██║     ███████╗   ██║   ██║  ██║██║  ██║\n"
+            <<"  ╚═╝     ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝\n"
+            <<" ******************************************\n"
+            <<std::endl;
+    }
+
     //! print reference to cite
     void printReference(std::ostream & fout) const{
         fout<<"============== PeTar ================\n"
@@ -2267,7 +2280,10 @@ public:
      */
     int readParameters(int argc, char *argv[]) {
         // print reference
-        if (my_rank==0) printReference(std::cerr);
+        if (my_rank==0) {
+            printLogo(std::cerr);
+            printReference(std::cerr);
+        }
 
         //assert(initial_fdps_flag);
         assert(!read_parameters_flag);
