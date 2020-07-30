@@ -81,16 +81,11 @@ if __name__ == '__main__':
      
     result,time_profile = petar.parallelDataProcessList(path_list, n_cpu, read_flag, **kwargs)
 
-    for key in ['lagr','core','bse']:
+    for key in ['lagr','core','bse', 'esc_single', 'esc_binary']:
         if key in result.keys():
             key_filename  = filename_prefix + '.' + key
             result[key].savetxt(key_filename)
             print (key,"data is saved in file:",key_filename)
-
-    if 'esc' in result.keys():
-        result['esc'].single.savetxt(filename_prefix+'.esc.single')
-        result['esc'].binary.savetxt(filename_prefix+'.esc.binary')
-        print ("esc data is saved in files: %s.esc.[single/binary]" % filename_prefix)
      
     print ('CPU time profile:')
     for key, item in time_profile.items():

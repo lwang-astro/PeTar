@@ -49,16 +49,15 @@ class SingleEscaper(Particle):
         self.append(single_esc)
         #idsinx = self.single.time.argsort()
         #self.single=self.single[idsinx]
-        unid, index= np.unique(self.id, return_index=True)
-        self = self[index]
-        single = single[np.logical_not(ssel)]
+        if (self.size>0): self.removeDuplicate()
+        return single[np.logical_not(ssel)]
 
     def removeDuplicate(self):
         """ removed duplicated escapers, keep the first appearing one
         """
         unid, index= np.unique(self.id, return_index=True)
-        self = self[index]
-        
+        newdata=self[index]
+        self.__init__(newdata,**self.initargs)
 
 class BinaryEscaper(Binary):
     """ Binary escaper information
@@ -107,6 +106,7 @@ class BinaryEscaper(Binary):
         binary.calcEkin()
         binary.calcEtot()
 
+        rcut2 = rcut*rcut
         bsel = (binary.r2>rcut2) & (binary.etot>0.0)
         binary_esc = binary[bsel]
         nbsel = bsel.sum()
@@ -114,16 +114,16 @@ class BinaryEscaper(Binary):
         self.append(binary_esc)
         #idsinx = self.binary.time.argsort()
         #self.binary=self.binary[idsinx]
-        unid, index= np.unique(self.p1.id, return_index=True)
-        self = self[index]
-        binary = binary[np.logical_not(bsel)]
+        if (self.size>0): self.removeDuplicate()
+        return binary[np.logical_not(bsel)]
 
     def removeDuplicate(self):
         """ removed duplicated escapers, keep the first appearing one
         Use the first component id to check duplicate. 
         """
         unid, index= np.unique(self.p1.id, return_index=True)
-        self = self[index]
+        newdata=self[index]
+        self.__init__(newdata,**self.initargs)
 
 def calcRCutIsolate(rh):
     """ For isolated star clusters, set rcut to 20 * half-mass radius

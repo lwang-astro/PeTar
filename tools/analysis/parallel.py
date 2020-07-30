@@ -119,16 +119,18 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         get_density_time = read_time
         center_and_r2_time = read_time
     
-    
-    if ('esc' in result.keys()) & ('r_escape' in kwargs.keys()) : 
+
+    if ('r_escape' in kwargs.keys()) : 
+        #print('b',single.size,binary.size)    
         rcut = kwargs['r_escape']
-        esc_single.findEscaper(float(t), single, rcut)
-        esc_binary.findEscaper(float(t), binary, rcut, G)
+        single = esc_single.findEscaper(float(t), single, rcut)
+        binary = esc_binary.findEscaper(float(t), binary, rcut, G)
+        #print('a',single.size,binary.size,esc_single.size,esc_binary.size)
     
     #print('Lagrangian radius')
     lagr.calcOneSnapshot(float(t), single, binary, rc, average_mode)
 
-    if ('esc' in result.keys()) & (not 'r_escape' in kwargs.keys()):
+    if (not 'r_escape' in kwargs.keys()):
         rhindex=np.where(m_frac==0.5)[0]
         rcut = calcRCutIsolate(lagr.all.r[-1,rhindex])
         esc_single.findEscaper(float(t), single, rcut)
@@ -170,8 +172,8 @@ def dataProcessList(file_list, read_flag, **kwargs):
     """
     result = dict()
     result['lagr']=LagrangianMultiple(**kwargs)
-    result['esc_single']=SingleEscaper()
-    result['esc_binary']=BinaryEscaper()
+    result['esc_single']=SingleEscaper(**kwargs)
+    result['esc_binary']=BinaryEscaper(**kwargs)
 
     time_profile=dict()
     time_profile['read'] = 0.0

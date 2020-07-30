@@ -28,11 +28,9 @@ class DictNpArrayMix:
 
         if (_append): self.keys = self.keys + keys
         else: self.keys = keys.copy()
-        if (type(_dat) == type(self)):
-            self = _dat.copy()
-        elif (issubclass(type(_dat), DictNpArrayMix)):
+        if (issubclass(type(_dat), DictNpArrayMix)):
             icol = int(0)
-            for key, parameter in self.keys:
+            for key, parameter in keys:
                 if (type(parameter) == type):
                     if (issubclass(parameter, DictNpArrayMix)):
                         self.__dict__[key] = parameter(_dat.__dict__[key], **kwargs)
@@ -167,7 +165,7 @@ class DictNpArrayMix:
                     icol += new_item.ncols
             new_dat.size = int(new_dat.size/new_dat.ncols)
             if (icol != new_dat.ncols):
-                raise ValueError('Column number inconsistent, coutned:',icol,' saved ncols:',new_dat.ncols)
+                raise ValueError('Column number inconsistent, counted:',icol,' saved ncols:',new_dat.ncols,'keys:',new_dat.keys,'fileter: ',k,' original size:',self.size,' original ncols:',self.ncols)
             return new_dat
 
     def __setitem__(self, k, data):
@@ -186,7 +184,7 @@ class DictNpArrayMix:
         else:
             for key_type in self.keys:
                 key = key_type[0]
-                self.__dict__[key] = data[key]
+                self.__dict__[key][k] = data[key]
 
 #    def keys(self):
 #        return self.__dict__.keys()
