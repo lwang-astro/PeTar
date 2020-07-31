@@ -454,11 +454,13 @@ public:
         _energy.ekin = _energy.epot = _energy.epert = 0.0;
         for (int i=0; i<_n_particle; i++) {
             auto& pi = _particles[i];
+            if (pi.mass==0.0) continue;
             _energy.ekin += pi.mass* (pi.vel[0]*pi.vel[0] + pi.vel[1]*pi.vel[1] + pi.vel[2]*pi.vel[2]);
             Float poti = 0.0;
             for (int j=0; j<i; j++) {
                 if (i==j) continue;
                 auto& pj = _particles[j];
+                if (pj.mass==0.0) continue;
                 const Float dr[3] = {pj.pos[0] - pi.pos[0], 
                                      pj.pos[1] - pi.pos[1],
                                      pj.pos[2] - pi.pos[2]};

@@ -7,7 +7,7 @@
       COMMON /VALUE3/ idum
       INTEGER idum2,iy,ir(32)
       COMMON /RAND3/ idum2,iy,ir
-      integer bhflag
+      integer bhflag,mxns
       real*8 m1,m2,m1n,ecc,sep,jorb,ecc2
       real*8 pi,twopi,gmrkm,yearsc,rsunkm
       parameter(yearsc=3.1557d+07,rsunkm=6.96d+05)
@@ -22,7 +22,7 @@
       INTEGER psflag,kmech,ecflag
       real*8 sigma
       real*8 DISP0,ECSIG,WDSIG1,WDSIG2,WDKMAX
-      COMMON /VALUE4/ sigma,bhflag
+      COMMON /VALUE4/ sigma,mxns,bhflag
       real ran3,xx
       external ran3
       COMMON /FLAGS2/ psflag,kmech,ecflag

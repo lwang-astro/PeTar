@@ -4,17 +4,38 @@ from .base import *
 from .data import *
 
 class Core(DictNpArrayMix):
-    """ center of mass 
+    """ Core of a star cluster
+    Keys: (class members)
+        time (1D): evolved time of the star cluster
+        pos  (2D,3): center of the star cluster
+        vel  (2D,3): center velocity of the cluster
+        rc   (1D): core radius of the star cluster
     """
     
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+        """
         keys  = [['time',1],['pos', 3],['vel', 3], ['rc', 1]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
     def calcPotentialCenter(self, single, binary, G):
-        """
-        get potential center of the system
+        """ Calculate potential center of the system and return the result
         r_cm = \sum_i pot_i *r_i /\sum_i pot_i (only count pot_i <0)
+
+        Parameters
+        ----------
+        single: inhermited SimpleParticle
+            Single particle data
+        binary: Binary
+            Binary particle data
+        G: float
+            Gravitational constant
+
+        Return
+        ----------
+        cm_pos: c.m. position, numpy.ndarray with shape (*,3)
+        cm_vel: c.m. velocity, numpy.ndarray with shape (*,3)
+
         """
         pot_s_sel = (single.pot<0)
         pot_s = single.pot[pot_s_sel]
@@ -36,10 +57,19 @@ class Core(DictNpArrayMix):
         return cm_pos, cm_vel
     
     def calcDensityAndCenter(self, particle, kdtree):
-        """ calculate density based on six neighbors and return density center
-        particle: all particles
-        kdtree: 3D KDTree of all particle positions
-        return: density_center_position
+        """ Calculate density based on nearest six neighbors and return the result
+        
+        Parameters
+        ----------
+        particle: inherited SimpleParticle
+            Particle data set
+        kdtree: scipy.spatial.cKDtree
+            3D KDTree of all particle positions, can be generated from findPair
+
+        Return
+        ----------
+        cm_pos: c.m. position, numpy.ndarray with shape (*,3)
+        cm_vel: c.m. velocity, numpy.ndarray with shape (*,3)
         """
         # 6 nearest neighbors
         nb_r_list6, nb_index_list6 = kdtree.query(particle.pos,k=6)
@@ -58,9 +88,18 @@ class Core(DictNpArrayMix):
         return cm_pos, cm_vel
 
     def calcCoreRadius(self, particle):
-        """ 
-        calculate core radius, using Casertano & Hut (1985) method:
+        """ Calculate core radius, using Casertano & Hut (1985) method:
         rc = sqrt(\sum_i rho_i^2 r_i^2 / \sum_i rho_i^2)
+
+        Parameters
+        ----------
+        particle: inherited SimpleParticle
+            Particle data set
+
+        Return
+        ----------
+        rc: core radius
+
         """
         rho2 = particle.density*particle.density
         rc = np.sqrt((particle.r2*rho2).sum()/(rho2.sum()))
@@ -69,13 +108,38 @@ class Core(DictNpArrayMix):
         return rc
 
     def addTime(self, time):
+        """ Append a new time to current member 'time'
+        """
         self.time = np.append(self.time, time)
 
 class LagrangianVelocity(DictNpArrayMix):
     """ Lagrangian velocity component
+        Each velocity member is a 2D numpy.ndarray, the row contain the values corresponding to each Langragian radius and the core radius (last value).
+        For example, in default case, mass_fraction array is np.array([0.1, 0.3, 0.5, 0.7, 0.9]). 
+        The member 'abs' has the shape (*,6), each row contain the velocity referring to the 0.1, 0.3, 0.5, 0.7, 0.9 of Langragian radii and the core radius (last value).
+    
+    Keys: (class members)
+        abs (2D,n_frac): absolute 3D velocity value
+        x   (2D,n_frac): velocity in x axis
+        y   (2D,n_frac): velocity in y axis
+        z   (2D,n_frac): velocity in z axis
+        rad (2D,n_frac): velocity in radial direction
+        tan (2D,n_frac): velocity in tangential direction
+        rot (2D,n_frac): rotational velocity in x-y plane
+
+        n_frac: number of Lagrangian radii + 1, determined by keyword argument 'mass_fraction'
     """
     
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+
+        Parameters
+        ----------
+        keyword arguments:
+            mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
+                           Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
+        """
+        
         m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
         n_frac = m_frac.size + 1
@@ -85,9 +149,23 @@ class LagrangianVelocity(DictNpArrayMix):
 
 class Lagrangian(DictNpArrayMix):
     """ Lagrangian parameters
+    Keys: (class members)
+        r (2D,n_frac): Lagrangian radii
+        m (2D,n_frac): average mass referring to Lagrangian radii
+        n (2D,n_frac): number of particles referring to Lagrangian radii
+        vel   (LagrangianVelocity): average velocity referring to Lagrangian radii
+        sigma (LagrangianVelocity): velocity dispersion referring to Lagrangian radii
     """
 
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+
+        Parameters
+        ----------
+        keyword arguments:
+            mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
+                           Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
+        """
         m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
         n_frac = m_frac.size + 1
@@ -102,10 +180,17 @@ class Lagrangian(DictNpArrayMix):
         self.initargs['mass_fraction'] = m_frac
 
     def calcOneSnapshot(self, _particle, _rc, _mode='sphere'):
-        """ calculate one snapshot lagrangian parameters
-        _particle: sorted particles
-        _rc: core radius
-        _mode: sphere: calculate averaged properties from center to Lagrangian radii; shell: calculate properties between two neighbor radii
+        """ Calculate one snapshot lagrangian parameters
+
+        Parameters
+        ----------
+        _particle: inherited SimpleParticle
+            particles data set sorted by distance to the coordinate center
+        _rc: float
+            core radius
+        _mode: string (sphere)
+            sphere: calculate averaged properties from center to Lagrangian radii
+            shell: calculate properties between two neighbor Lagrangian radii
         """
         shell_mode = True if (_mode == 'shell') else False
 
@@ -220,8 +305,20 @@ class Lagrangian(DictNpArrayMix):
 
 class LagrangianMultiple(DictNpArrayMix):
     """ Lagrangian for single, binaries and all
+    Keys: (class members)
+        single (Lagrangian): Lagrangian data for single particles
+        binary (Lagrangian): Lagrangian data for binaries
+        all (Lagrangian): Lagrangian data for all data (binary is treated as c.m., count once)
     """
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+
+        Parameters
+        ----------
+        keyword arguments:
+            mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
+                               Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
+        """
         m_frac=np.array([0,1,0,3,0.5,0,7,0,9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
         
@@ -240,11 +337,23 @@ class LagrangianMultiple(DictNpArrayMix):
 
 
     def calcOneSnapshot(self, time, single, binary, rc, mode):
-        """ Calculate Lagrangian radii and related properties
-        single: single partilces (cm corrected and r2 exist)
-        binary: binaries (cm corrected and r2 exist)
-        mass_fraction: Lagragian radius mass fraction
-        rc: core radius
+        """ Calculate Lagrangian radii and related properties for one snapshot
+
+        Parameters
+        ----------
+        time: float
+            current evolved time of the system
+        single: inherited SimpleParticle
+            single partilces (center is corrected and r2 exist)
+        binary: Binary
+            binaries (center is corrected and r2 exist)
+        mass_fraction: 1D numpy.ndarray
+            Lagragian radii corresponding mass fractions
+        rc: float
+            Core radius
+        mode: string
+            sphere: calculate averaged properties from center to Lagrangian radii
+            shell: calculate properties between two neighbor Lagrangian radii
         """    
         self.time = np.append(self.time, time)
         single_sim = SimpleParticle(single)

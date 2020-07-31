@@ -39,28 +39,28 @@ for index in [1,2,3]:
     print( gravity.get_potential(index))
     print("")
 
-print("set state of particle id=2 to particle id=3(index=2)")
+print("set state of petar.particle[1](id=2) to particle[2](id=3)")
 gravity.set_state(2,particles[2].mass,particles[2].position.x,particles[2].position.y,particles[2].position.z,particles[2].velocity.x,particles[2].velocity.y,particles[2].velocity.z,particles[2].radius)
-print("get state")
+print("get state of petar.particle[1](id=2), now should be original particle[2](id=3)")
 print(gravity.particles[1])
 
-print("set mass of particle id=2 to particle id=2(index=1)")
+print("set mass of petar.particle[1](id=2) to original particle[1](id=2)")
 gravity.set_mass(2,particles[1].mass)
-print("set position of particle id=2 to particle id=2(index=1)")
+print("set position of petar.particle[1](id=2) to original particle[1](id=2)")
 gravity.set_position(2,*particles[1].position)
-print("set velocity of particle id=2 to particle id=2(index=1)")
+print("set velocity of petar.particle[1](id=20 to original particle[1](id=2)")
 gravity.set_velocity(2,*particles[1].velocity)
-print("get state")
+print("get state of petar.particle[1](id=2)")
 print(gravity.particles[1])
 
 
-print("Del particle 2 from code")
+print("Delete petar.particle[2](id=3) from code")
 gravity.delete_particle(2)
 
-print("Get particle 3 from code again,:")
-print("result from API petar.particles[",2,"] :")
+print("Get petar.particle[2] from code again,:")
+print("result from API petar.particles[2] :")
 print( gravity.particles[2])
-print("Using API peter.get_mass(",3,"), should return the same mass :")
+print("Using API peter.get_mass(3), should return the same mass :")
 print( gravity.get_mass(3))
 
 print("evaluate potential at deleted particle position")

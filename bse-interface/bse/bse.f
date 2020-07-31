@@ -36,14 +36,14 @@
       INCLUDE 'const_bse.h'
 *
 *      integer kw,kw2,kstar(2),j,k,time
-      integer kstar(2)
+      integer kstar(2),j,k,kw
 *
       real*8 mass0(2),mass(2),z,zpars(20)
       real*8 epoch(2),tms(2),tphys,tphysf,dtp,aj
       real*8 rad(2),lum(2),ospin(2)
       real*8 massc(2),radc(2),menv(2),renv(2)
       real*8 tb,ecc,yearsc,vkick(8)
-      integer btype
+      real*8 bpp(9,10)
       PARAMETER(yearsc=3.1557d+07)
       CHARACTER*8 label(14)
 *
@@ -149,15 +149,25 @@
       label(3) = 'BEG RCHE'
       label(4) = 'END RCHE'
       label(5) = 'CONTACT '
-      label(6) = 'COELESCE'
-      label(7) = 'COMENV  '
-      label(8) = 'GNTAGE  '
-      label(9) = 'NO REMNT'
-      label(10) = 'MAX TIME'
-      label(11) = 'DISRUPT '
-      label(12) = 'BEG SYMB'
-      label(13) = 'END SYMB'
-      label(14) = 'BEG BSS'
+      label(6) = 'BEG SYMB'
+      label(7) = 'END SYMB'
+      label(8) = 'COMENV  '
+      label(9) = 'GNTAGE  '
+      label(10) = 'COELESCE'
+      label(11) = 'BEG BSS'
+      label(12) = 'NO REMNT'
+      label(13) = 'DISRUPT '
+
+*      label(6) = 'COELESCE'
+*      label(7) = 'COMENV  '
+*      label(8) = 'GNTAGE  '
+*      label(9) = 'NO REMNT'
+*      label(10) = 'MAX TIME'
+*      label(11) = 'DISRUPT '
+*      label(12) = 'BEG SYMB'
+*      label(13) = 'END SYMB'
+*      label(14) = 'BEG BSS'
+
 *
 * Set the data-save parameter. If dtp is zero then the parameters of the 
 * star will be stored in the bcm array at each timestep otherwise they 
@@ -173,7 +183,7 @@
 * 
       CALL evolv2(kstar,mass0,mass,rad,lum,massc,radc,
      &            menv,renv,ospin,epoch,tms,
-     &            tphys,tphysf,dtp,z,zpars,tb,ecc,btype,vkick)
+     &            tphys,tphysf,dtp,z,zpars,tb,ecc,bpp,vkick)
 *
 ************************************************************************
 ** Output:
@@ -211,23 +221,23 @@
 * 99   FORMAT(f10.4,2i3,10f10.4,5e12.4,f7.3)
 * 999  FORMAT(f10.4,2f10.4,1p,2e12.4)
 **
-** The bpp array acts as a log, storing parameters at each change
-** of evolution stage.
-**
-* 50   j = 0
-*      WRITE(*,*)'     TIME      M1       M2   K1 K2        SEP    ECC',
-*     &          '  R1/ROL1 R2/ROL2  TYPE'
-* 52   j = j + 1
-*      if(bpp(j,1).lt.0.0) goto 60
-*      kstar(1) = INT(bpp(j,4))
-*      kstar(2) = INT(bpp(j,5))
-*      kw = INT(bpp(j,10))
-*      WRITE(*,100)(bpp(j,k),k=1,3),kstar,(bpp(j,k),k=6,9),label(kw)
-*      goto 52
-* 60   continue
-* 100  FORMAT(f11.4,2f9.3,2i3,f13.3,f6.2,2f8.3,2x,a8)
-*      WRITE(*,*)
-**
+* The bpp array acts as a log, storing parameters at each change
+* of evolution stage.
+*
+      j = 0
+      WRITE(*,*)'     TIME      M1       M2   K1 K2        SEP    ECC',
+     &          '  R1/ROL1 R2/ROL2  TYPE'
+ 52   j = j + 1
+      if(bpp(j,1).lt.0.0) goto 60
+      kstar(1) = INT(bpp(j,4))
+      kstar(2) = INT(bpp(j,5))
+      kw = INT(bpp(j,10))
+      WRITE(*,100)(bpp(j,k),k=1,3),kstar,(bpp(j,k),k=6,9),label(kw)
+      goto 52
+ 60   continue
+ 100  FORMAT(f11.4,2f9.3,2i3,f13.3,f6.2,2f8.3,2x,a8)
+      WRITE(*,*)
+*
 *************************************************************************
 *
       STOP

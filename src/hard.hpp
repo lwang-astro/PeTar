@@ -361,6 +361,7 @@ public:
             
             // initialization 
             sym_int.initialIntegration(0.0);
+            sym_int.info.time_offset = time_origin;
             sym_int.info.calcDsAndStepOption(ar_manager.step.getOrder(),  ar_manager.interaction.gravitational_constant); 
 
             // calculate c.m. changeover
@@ -381,6 +382,14 @@ public:
             //check paramters
             ASSERT(sym_int.info.checkParams());
             ASSERT(sym_int.perturber.checkParams());
+
+#ifdef ADJUST_GROUP_PRINT
+            if (manager->h4_manager.adjust_group_write_flag) {
+                // print new group information
+                sym_int.printGroupInfo(0, manager->h4_manager.fgroup, WRITE_WIDTH, &pcm);
+            }
+#endif
+
         }
         else { // use hermite
             use_sym_int = false;
@@ -401,6 +410,7 @@ public:
 
             // initial system 
             h4_int.initialSystemSingle(0.0);
+            h4_int.setTimeOffset(time_origin);
 
 #ifdef SOFT_PERT
             // Tidal tensor 
@@ -524,7 +534,7 @@ public:
 
             h4_int.initialIntegration();
             h4_int.sortDtAndSelectActParticle();
-            h4_int.info.time_origin = h4_int.getTime() + time_origin;
+            h4_int.info.time_origin = h4_int.getTime();
 
 #ifdef HARD_CHECK_ENERGY
             h4_int.calcEnergySlowDown(true);
@@ -549,19 +559,29 @@ public:
     AR::InterruptBinary<PtclHard>& integrateToTime(const PS::F64 _time_end) {
         ASSERT(checkParams());
 
+#ifdef HARD_DUMP
         // dump flag
         bool dump_flag=false;
-
+#endif
         // integration
         if (use_sym_int) {
             interrupt_binary = sym_int.integrateToTime(_time_end);
+#ifdef ADJUST_GROUP_PRINT
+            if (manager->h4_manager.adjust_group_write_flag) {
+                // print new group information
+                sym_int.printGroupInfo(1, manager->h4_manager.fgroup, WRITE_WIDTH, &(sym_int.particles.cm));
+            }
+#endif
+
             if (manager->ar_manager.interrupt_detection_option==1) interrupt_binary.clear();
 #ifdef PROFILE
+#ifdef HARD_DUMP
             if (sym_int.profile.step_count>manager->ar_manager.step_count_max&&!dump_flag) {
                 std::cerr<<"Large isolated AR step cluster found (dump): step: "<<sym_int.profile.step_count<<std::endl;
                 DATADUMP("dump_large_step");
                 dump_flag=true;
             }
+#endif
 #endif                
         }
         else {
@@ -569,7 +589,7 @@ public:
             PS::S32 n_tt = tidal_tensor.size();
 #endif
             // integration loop
-            while (h4_int.getTime()<_time_end) {
+            while (h4_int.getTimeInt()<_time_end) {
                 // integrate groups
                 interrupt_binary = h4_int.integrateGroupsOneStep();
                 if (interrupt_binary.status!=AR::InterruptStatus::none) {
@@ -691,14 +711,16 @@ public:
                 h4_int.initialIntegration();
                 h4_int.modifySingleParticles();
                 h4_int.sortDtAndSelectActParticle();
-                h4_int.info.time_origin = h4_int.getTime() + time_origin;
+                h4_int.info.time_origin = h4_int.getTime();
 
 #ifdef PROFILE
+#ifdef HARD_DUMP
                 if (h4_int.profile.ar_step_count>manager->ar_manager.step_count_max&&!dump_flag) {
                     std::cerr<<"Large H4-AR step cluster found (dump): step: "<<h4_int.profile.ar_step_count<<std::endl;
                     DATADUMP("dump_large_step");
                     dump_flag=true;
                 } 
+#endif
 #endif                
 
 #ifdef HARD_DEBUG_PRINT
@@ -709,7 +731,7 @@ public:
                 //if (n_single>0) dt_max = std::max(dt_max, h4_int.particles[h4_int.getSortDtIndexSingle()[n_single-1]].dt);
                 //ASSERT(dt_max>0.0);
                 auto& h4_manager = manager->h4_manager;
-                if (fmod(h4_int.getTime(), h4_manager.step.getDtMax()/HARD_DEBUG_PRINT_FEQ)==0.0) {
+                if (fmod(h4_int.getTimeInt(), h4_manager.step.getDtMax()/HARD_DEBUG_PRINT_FEQ)==0.0) {
                     h4_int.calcEnergySlowDown(false);
 
                     h4_int.printColumn(std::cout, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
@@ -733,11 +755,13 @@ public:
                                  <<"  dE_SD_change_binary: "<<h4_int.getDESlowDownChangeBinaryInterrupt()
                                  <<"  dE_SD_change_single: "<<h4_int.getDESlowDownChangeModifySingle()
                                  <<std::endl;
+#ifdef HARD_DUMP
                         DATADUMP("hard_dump");
+#endif
                         ///abort();
                     }
                 }
-                if (fmod(h4_int.getTime(), h4_manager.step.getDtMax())==0.0) {
+                if (fmod(h4_int.getTimeInt(), h4_manager.step.getDtMax())==0.0) {
                     h4_int.printStepHist();
                 }
 #endif
@@ -826,8 +850,8 @@ public:
                 }
 
                 // shift time interrupt in order to get consistent time for stellar evolution in the next drift
-                pi.time_record -= _time_end;
-                pi.time_interrupt -= _time_end;
+                //pi.time_record -= _time_end;
+                //pi.time_interrupt -= _time_end;
 #endif
 
                 pi.r_search = std::max(pcm.r_search, pi.r_search);
@@ -855,6 +879,7 @@ public:
             ekin    = sym_int.getEkin();
             epot    = sym_int.getEpot();
             energy.de = sym_int.getEnergyError();
+            ASSERT(!std::isnan(energy.de));
             energy.de_change_cum = sym_int.getDEChangeBinaryInterrupt() + de_kin;
             energy.de_change_binary_interrupt = sym_int.getDEChangeBinaryInterrupt();
 #if (defined AR_SLOWDOWN_ARRAY) || (defined AR_SLOWDOWN_TREE)
@@ -897,6 +922,7 @@ public:
             ekin    = h4_int.getEkin();
             epot    = h4_int.getEpot();
             energy.de += h4_int.getEnergyError(); // notice += should be used since de may change before when changeover potential energy correction exist
+            ASSERT(!std::isnan(energy.de));
             energy.de_change_cum = h4_int.getDEChangeCum() + de_kin;
             energy.de_change_binary_interrupt = h4_int.getDEChangeBinaryInterrupt();
             energy.de_change_modify_single = h4_int.getDEChangeModifySingle();
@@ -943,8 +969,8 @@ public:
                     }
 
                     // shift time interrupt in order to get consistent time for stellar evolution in the next drift
-                    pj->time_record -= _time_end;
-                    pj->time_interrupt -= _time_end;
+                    //pj->time_record -= _time_end;
+                    //pj->time_interrupt -= _time_end;
 #endif
 #ifdef CLUSTER_VELOCITY
                     // save c.m. velocity and mass for neighbor search
@@ -973,8 +999,8 @@ public:
                 }
 
                 // shift time interrupt in order to get consistent time for stellar evolution in the next drift
-                pi.time_record -= _time_end;
-                pi.time_interrupt -= _time_end;
+                //pi.time_record -= _time_end;
+                //pi.time_interrupt -= _time_end;
 #endif
 #ifdef CLUSTER_VELOCITY
                 // set group_data.cm to 0.0 for singles
@@ -1031,9 +1057,11 @@ public:
                          <<" period: "<<std::setw(20)<<bink.period
                          <<" NB: "<<std::setw(4)<<groupk.perturber.neighbor_address.getSize()
                          <<std::endl;
+#ifdef HARD_DUMP
                 if (groupk.profile.step_count_tsyn_sum>10000) {
                     DATADUMP("hard_dump");
                 }
+#endif
             }
 #endif
         }
@@ -1068,7 +1096,9 @@ public:
                      <<" dE_SD: "<<energy.de_sd
                      <<" dE_SD/Etot_SD: "<<energy.de_sd/(ekin_sd+epot_sd)
                      <<std::endl;
+#ifdef HARD_DUMP
             DATADUMP("hard_large_energy");
+#endif
             //abort();
         }
 #endif
@@ -1936,7 +1966,7 @@ public:
             PS::F64 mbk = pi.mass;
 
             PS::F64vec vbk = pi.vel; //back up velocity in case of change
-            int modify_flag = manager->ar_manager.interaction.modifyOneParticle(pi, 0.0, _dt);
+            int modify_flag = manager->ar_manager.interaction.modifyOneParticle(pi, time_origin_, time_origin_ + _dt);
             if (modify_flag) {
                 auto& v = pi.vel;
                 Float de_kin = 0.5*(pi.mass*(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]) - mbk*(vbk[0]*vbk[0]+vbk[1]*vbk[1]+vbk[2]*vbk[2]));
@@ -1946,17 +1976,23 @@ public:
                 energy.de_change_modify_single += de_kin;
             }
             // shift time interrupt in order to get consistent time for stellar evolution in the next drift
-            pi.time_record    -= _dt;
-            pi.time_interrupt -= _dt;
+            //pi.time_record    -= _dt;
+            //pi.time_interrupt -= _dt;
 #endif
+
+            //// to avoid issue in cluster search with velocity
+            //auto& pi_cm = pi.group_data.cm;
+            //pi_cm.mass = pi_cm.vel.x = pi_cm.vel.y = pi_cm.vel.z = 0.0;
 
 #ifdef HARD_DEBUG
             // to avoid issue in cluster search with velocity
-            auto& pcm = pi.group_data.cm;
-            assert(pcm.mass==0.0);
-            assert(pcm.vel.x==0.0);
-            assert(pcm.vel.y==0.0);
-            assert(pcm.vel.z==0.0);
+            if (!pi.group_data.artificial.isUnused()) {
+                auto& pcm = pi.group_data.cm;
+                assert(pcm.mass==0.0);
+                assert(pcm.vel.x==0.0);
+                assert(pcm.vel.y==0.0);
+                assert(pcm.vel.z==0.0);
+            }
 #endif
             pi.Ptcl::calcRSearch(_dt);
             /*
@@ -2204,7 +2240,7 @@ public:
 
 #ifdef HARD_DUMP
             assert(ith<hard_dump.size);
-            hard_dump[ith].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, dt, manager->ap_manager.getArtificialParticleN());
+            hard_dump[ith].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, time_origin_, dt, manager->ap_manager.getArtificialParticleN());
 #endif
 
 #ifdef HARD_DEBUG_PROFILE
@@ -2891,7 +2927,11 @@ public:
                             pj_cm.vel.y = pcm->vel[1];
                             pj_cm.vel.z = pcm->vel[2];
                             PS::S32 adr = ptcl_local[j].adr_org;
-                            if(adr>=0) _ptcl_soft[adr].group_data.cm = pj_cm;
+                            if(adr>=0) {
+                                assert(ptcl_local[j].id==_ptcl_soft[adr].id);
+                                _ptcl_soft[adr].group_data.cm = pj_cm;
+                                _ptcl_soft[adr].r_search = ptcl_local[j].r_search;
+                            }
                         }
                     }
                     else {
@@ -2915,7 +2955,10 @@ public:
                             pj_cm.mass = mass_cm;
                             pj_cm.vel  = vel_cm;
                             PS::S32 adr = ptcl_local[j].adr_org;
-                            if(adr>=0) _ptcl_soft[adr].group_data.cm = pj_cm;
+                            if(adr>=0) {
+                                assert(ptcl_local[j].id==_ptcl_soft[adr].id);
+                                _ptcl_soft[adr].group_data.cm = pj_cm;
+                            }
                         }
                     }
                     n_group_offset_local += n_members;

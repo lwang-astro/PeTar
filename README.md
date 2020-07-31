@@ -1,18 +1,41 @@
-# PeTar
+```
+    ██████╗ ███████╗████████╗ █████╗ ██████╗ 
+    ██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔══██╗
+    ██████╔╝█████╗     ██║   ███████║██████╔╝
+    ██╔═══╝ ██╔══╝     ██║   ██╔══██║██╔══██╗
+    ██║     ███████╗   ██║   ██║  ██║██║  ██║
+    ╚═╝     ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝
+```
+
 A particle-particle \& Particle-tree (_P<sup>3</sup>T_) with slow-down time-transformed symplectic integrator (slow-down algorithmic regularization; _SDAR_) code for simulating gravitational _N_-body systems including close encounters and few-body systems.
 
-The Doxygen document will be provided in doc directory (not yet done)
+The Doxygen document will be provided in doc directory (not yet done).
+
+The reference paper on ArXiv: https://arxiv.org/abs/2006.16560
 
 ## Install:
 ### Dependence:
-FDPS: https://github.com/FDPS/FDPS
+_FDPS_: https://github.com/FDPS/FDPS
 
-SDAR: https://github.com/lwang-astro/SDAR
+_SDAR_: https://github.com/lwang-astro/SDAR
 
-Please download these two codes and put in the same directory where the _PeTar_ directory exist, in order to successfully compile the code.
+These two libraries are necessary to compile _PeTar_. 
+
+If users want to use external potential, the _Galpy_ interface is available. Users need to install _Galpy_ either by 
+```
+pip3 install galpy
+```
+Or download the source code from https://github.com/jobovy/galpy.
+
+If the source codes of these libraries are put in the same directory where the _PeTar_ directory exist, the configure script can detect them automatically. Otherwise users need to provide the pathes of them by adding configure options
+```
+./configure --with-[code name in lower case]-prefix=[code path]
+```
 
 ### Environment:
-To successfully compile the code, the C++ compiler (e.g. gcc, icpc) needs the support of the C++11 standard. To use SSE/BSE package, a Fortran (77) compiler (e.g. gfortran) is needed and should be possile to provide API to c++ code (Currently ifort is not supported yet). The MPI compiler (e.g. mpic++) is required to use MPI. NVIDIA GPU and CUDA compiler is required to use GPU acceleration. The SIMD support is designed for the GNU and Intel compilers. It is not tested for other compilers, thus the GNU or Intel compilers are suggested to use. 
+To successfully compile the code, the C++ compiler (e.g. GNU gcc/g++, Intel icc/icpc, LLVM clang/clang++) needs the support of the C++11 standard. To use SSE/BSE package, a Fortran (77) compiler, GNU gfortran, is needed and should be possile to provide API to the c++ code, i.e., the libgfortran is required. Currently Intel ifort is not supported yet. The MPI compiler (e.g. mpic++) is required to use MPI. NVIDIA GPU and CUDA compiler is required to use GPU acceleration. The SIMD support is tested for the GNU, Intel and LLVM compilers. It is not tested for others, thus these three kinds of compilers are suggested to use. 
+
+To use _Galpy_ and the analysis tools, the _Python3_ should be available. _Galpy_ also requires the _GSL_ library being installed and can be detected in the load library path.
 
 ### Make:
 Once _FPDS_ and _SDAR_ are available, in the root directoy, use 
@@ -74,9 +97,21 @@ Options for configure can be found by
     ```
     ./configure --with-interrupt=[bse]
     ```
-    Currently only SSE/BSE is the available stellar evolution package. Notice SSE/BSE is a combined package, the option argument "sse" not work, only "bse" switches on both.
-    When this option is switched on, the standard alone tool _petar.bse_ will also be compiled and installed.
+    Currently only SSE/BSE is the available stellar evolution package (Now still in test phase). Notice SSE/BSE is a combined package, the option argument "sse" not work, only "bse" switches on both.
+    
+    When this option is switched on, the standalone tool _petar.bse_ will also be compiled and installed.
     This is a c++ based tool which uses the API of the SSE/BSE from Fortran77 to c++. It can be used to evolve a group of single and binary stars with OpenMP parallelization.
+
+8. Use _Galpy_ external potential library
+    ```
+    ./configure --with-external=galpy
+    ```
+    The _Galpy_ library is a _Python_ and c based external potential library, which provides a plenty choices of potentials. 
+    It is also flexible to combine multiple potentials together (require to use _Galpy_ _Python_ interface to generate the instance, see their document in details.
+    
+    When this option is switched on, the standalone tool _petar.galpy_ and _petar.galpy.help_ will also be compiled and installed.
+    - _petar.galpy_ is a simple tool to call _Galpy_ c interface to evaluate the acceleration and potentials for a list of particles with a given potential model.
+    - _petar.galpy.help_ is a tool (python script) to help users to generate the input options for potential models. When users use _Galpy_ _Python_ interface to design a specific potential, this tool also provides a function to convert a _Galpy_ potential instance to an option or a configure file used by _PeTar_.
 
 Multiple options should be combined together, for example:
 ```
@@ -107,6 +142,15 @@ After installation, if the [Install path]/bin is in system $PATH envirnoment, th
 ```
 where "[mpiexec -n X]" is used when multiple MPI processors are needed and "X" is the number of processors.
 
+All snapshots of particle data outputed in the simulation can be used to restart the simulation. 
+To restart the simulation with the same configuration of parameters, use
+```
+[mpiexec -n X] petar -p input.par [options] [snapshot filename]
+```
+where _input.par_ is automatically generated from the last run (stored in the same diretory of the simulation).
+If the user change the name of this file and restart, the next new parameter file also follows the new name.
+Notice if the users want to use new options, these options must be put after "-p input.par", otherwises they are rewrited by values stored in input.par.
+
 ### Important tips:
 To avoid segmetantional fault in simulations in the case of large number of particles, make sure to set the OMP_STACKSIZE large enough.
 For example, use
@@ -120,6 +164,10 @@ export OMP_STACKSIZE=128M
 ```
 in the shell configure/initial file (e.g. .bashrc for _bash_) to avoid type "OMP_STACKSIZE=128M" every time.
 
+### Reference
+Remember to cite the necessary references when you publish the results using _PeTar_. The references are shown in the help function of _petar_ and the begining of the output after a simulation starts.
+When a feature imported from an external library is switched on, e.g. (_SSE_/_BSE_, _Galpy_), the corresponding references are automatically added in the output.
+
 ### Help information
 
 All opitions are listed in the help information, which can be seen by use
@@ -127,13 +175,61 @@ All opitions are listed in the help information, which can be seen by use
 petar -h
 ```
 The description of the input particle data file is also shown in the help information. 
-All snapshots of particle data outputed in the simulation can be used to restart the simulation. 
-To restart the simulation with the same configuration of parameters, use
-```
-[mpiexec -n X] petar -p input.par [snapshot filename]
-```
-where _input.par_ is automatically generated from the last run (stored in the same diretory of the simulation).
 
+### Output
+#### Printed information
+When _petar_ is running, there are a few information printed in the front:
+- The _FDPS_ logo and _PETAR_ information are printed, where the copyright, and references for citing are shown.
+- The input parameters are listed if they are modified when the corresponding options of _petar_ are used.
+- If stellar evolution package (SSE/BSE) is used, the common block and global parameters are printed.
+- The name of dumped files for the input parameters are shown, in default, they are input.par, input.par.hard, input.par.bse (if BSE is used)
+    - input.par: input parameters of petar, can be used to restart the simulation from a snapshot.
+    - input.par.hard: input paremeters of hard (short-range interaction part; Hermite + SDAR), can be used for _petar.hard.debug_ to test the dumped hard cluster.
+    - input.par.bse: the BSE parameters, if BSE is used, this is the necessary file to restart the simulation and also for _petar.hard.debug_.
+
+Then after the line "Finish parameter initialization",
+The status of the simulation is updated every output time interval (the option -o).
+The cotent style is like:
+- Time, number of real particles, all particles (including artificial particles), removed particles and escaped particles; in local (first MPI process) and in global (all MPI process)
+- Energy check: two rows are printed. First shows the physical energy; Second shows the slow-down energy (see reference printed in _petar_ commander).
+    - Error/Total: relative error of current step
+    - Error: absolute error of current step
+    - Error_cum: cumulative absolute error
+    - Total: total energy
+    - Kinetic: kinetic energy
+    - Potential: potential energy
+    - Modify: total modified energy (due to e.g. stellar evolution)
+    - Modify_group: modified energy from SDAR groups
+    - Modify_single: modified energy from singles
+    - Error_hard: energy error in short-range interaction (hard part)
+    - Error_hard_cum: cumulative energy error in hard part
+- Angular momentum: error at current step, cumulative error, components in x, y, z directions and value
+- System total mass, center position and velocity
+- Other information if conditions are triggered. 
+
+#### Output files
+There are a few output files:
+- [data filename prefix].[index]: the snapshot files, the format is the same as the input data file. In the help information of _petar_ commander, users can find the definitions of the columns and header
+- [data filename prefix].esc.[MPI rank]: the escaped particle information, first lines show column definition
+- [data filename prefix].group.[MPI rank]: the information of new and end of groups (binary, triple ...), since the items in each row can be different because of different numbers of members in groups, there is no universal column headers. It is suggested to use petar.gether first to separate groups with different numbers of members into different files. Then use the python tool _petar.Group_ to read the new files.
+- [data filename prefix].[s/b]se.[MPI rank]: if BSE is switched on, the files record the SSE and BSE events, such as type changes, Supernovae, binary evolution phase changes. Each line contain the definition of values, thus can be directly read.
+
+Before access these files, it is suggested to run _petar.gether_ tool first to gether the separated files with different MPI ranks to one file for convenience.
+This tool also separate groups with different number of members in xx.group to individual files with suffixe ".n[number of members in groups]".
+    
+##### Debug dump files
+During a long-term simulation, a large number of files of "hard_large_energy.xx", "dump_large_step.xx" and "hard_dump.xx" may be generated.
+In the main output, the corresponding warning messages are also printed.
+This files record the clusters of stars initial conditions for the hard integration (Hermite+SDAR) of one tree step.
+- If the integration error exceeds the limit set in the input option (see _petar -h_), the dump file "hard_large_energy.xx" appears.
+- If the AR step count is so large (exceeding the step limit, which can also be set in the input option) that the performance significantly drops, the dump file "dump_large_step.xx" appears.
+- If an error appears so that the code may behaviour abnormaly later on, "hard_dump.xx" appears and the code terminates.
+
+In the first two cases, the simulation continues. The users can ignore them if the results of simulations are acceptable. But if something is not correct, this files can help to finger out the issues, by using the debug tool _petar.hard.debug_.
+
+In the third case, the simulation is terminated in order to avoid unpredictable behaviours. The "hard_dump.xx" usually indicates that a bug may exist. It is suggested to report the issues to the developers by attaching "input.par.hard", "input.par.bse" and "hard_dump.xx" files.
+Users can also check the details by using the debug tool _petar.hard.debug_ together with the GDB tool, if users prefer to understand the problems themselves. The knowledge of the source codes of SDAR is required to understand the messages from the debug tool.
+  
 ### Useful tools
 There are a few useful tools helping users to generate initial input data, find a proper tree time step to start the simulations and data analysis.
 Each of the tools are stored in the user defined install_path/bin.
@@ -160,13 +256,27 @@ The performance of _petar_ is very sensitive to the tree time step.
 _petar.find.dt_ can help to find a proper time step in order to obtain the best performance.
 The usage:
 ```
-petar.find.dt [options] [particle data filename]
+petar.find.dt [options] [petar data filename]
 ```
-The performance of _petar_ depends on the initial particle data file.
+The performance of _petar_ depends on the initial particle data file in petar input format.
 The tools will try to perform a short simulations with different tree time steps and listed the performance one by one.
 Users can decide which step is the best one.
-Notice if a too large time step is tested, the tool may have no response for long time. This suggests that the testing time step is a very bad choice. Users can kill the test.
-A few options are available in this tool to change the numbers of OpenMP threads and MPI processors, the starting time step and the number of primordial binaries.
+Notice if a too large time step is tested, the test will have no response for long time, which indicates a bad choices of time step.
+In such case, this tool terminates the test and return the best result from the previous test.
+
+A few options are available in this tool to change the numbers of OpenMP threads and MPI processors, the minimum tree time step to start the test.
+If other options are used in _petar_ commander, e.g. -b [binary number], -u [unit set], -G [gravitational constant], these options should also be added with the option -a and the content enclosed by "":
+```
+petar.find.dt [options] -a "[petar options]" [petar data filename]. 
+```
+For example,
+```
+petar.find.dt -m 2 -o 4 -a "-b 100 -u 1" input
+```
+use 2 MPI processes, 4 OpenMP threads per MPI, 100 primordial binaries and unit set of 1 [Myr, PC, M*] to select the best dt.
+
+Notice that _petar_ only accepts a tree time step of 0.5^[integer number]. 
+Thus in the test, if the user specify the minimum step size by '-s [value]', the step size will be regularized if it does not satisfy this requirement.  
 
 #### Parallel data process
 The _petar.data.process_ can be used to process snapshot data to detect binaries and calculate Langragian, core radii, averaged mass and velocity dispersion.
@@ -206,9 +316,13 @@ If users want to plot information of binaries, it is better to use petar.data.pr
 
 This tool use either _imageio_ or _matplotlib.animation_ to generate movies. It is suggested to install _imageio_ in order to generate movie using mutliple CPU cores. This is much faster than the _matplotlib.animation_ which can only use one CPU core. On the other hand, The ffmpeg is also suggested to install in order to support several commonly used movie formats (e.g. mp4, avi).
 
+#### gether output files from different MPI ranks
+The _petar.gether_ is used to gether output files from different MPI ranks to one file (e.g. xx.group.[MPI rank]).
+For group files, it also generate individual files with suffix ".n[number of members in groups]'.
+
 #### SSE/BSE steller evolution tool
 The _petar.bse_ will be generated when --with-interrupt=bse is used during the configuration.
-This is the standard alone SSE/BSE tool to evolve stars and binaries to a given time.
+This is the standalone SSE/BSE tool to evolve stars and binaries to a given time.
 All SSE/BSE global parameters can be set in options.
 The basic way to evolve a group of stars:
 ```
@@ -223,6 +337,32 @@ petar.bse [options] -b [binary data file]
 where the binary data file contain 4 values (mass1, mass2, period, eccentricity) per line.
 Notice that the first line has only one value which is the number of binaries.
 The units of mass and period depend on the option '--mscale' and '--tscale'. In defaulted case, the units set are Msun and Myr. For example, when the tscale are not 1.0, the period in Myr is calculated by the input period value x tscale. 
+
+#### Galpy tool
+The _petar.galpy_ and _petar.galpy.help_ will be generated when --with-external=galpy is used during the configuration.
+
+_petar.galpy_ is the standalone tool to calculate accelerations and potentials for a particle list with a given potential model.
+The basic way to use it:
+```
+petar.galpy [options] [particle data filename]
+```
+
+_petar.galpy.help_ is a helper to generate --galpy-type-arg options used in _petar_.
+By
+```
+petar.galpy.help
+```
+A list of supported potentials are shown with the corresponding --galpy-type-arg options (using default arguments).
+Users can check the detail of one potential by
+```
+petar.galpy.help -d [potential name]
+```
+This will show the definition of this potential from _Galpy_ document.
+The option '-o' can be used to generate a configure file of a given potential. This file can be read by the _petar_ commander option: --galpy-conf-file. 
+
+Notice that in _petar_ commander, there are three options used to read the configuration of potential models: --galpy-type-arg, --galpy-set and --galpy-conf-file.
+These three options can be used together, i.e., potential models from all three options will be added together to become a multiple potential. 
+Thus be careful not to dupplicate potentials. Whether the potential is dupplicated (printed multiple times) can be checked in the output of _petar_.
 
 ### Data analysis in _PYTHON3_
 The data analysis library provide the tools to identify binaries; calculate Lagrangian radii and core radii; obtain system energy error and check performance of each parts of the code.
@@ -280,4 +420,15 @@ For each cycle, three major steps are done:
 3. Hard calculation use _OpenMP_ for the loop of clusters
 
 ### AMUSE API:
-Current support API: gravitational dynamics, gravity field, stopping conditions
+Current support API: gravitational dynamics, gravity field, stopping conditions.
+Now the official AMUSE version has included the petar as a module. 
+When _petar_ is updated, it is suggested to update the version in AMUSE as well.
+
+This can be done by use 
+```
+make distclean
+make
+```
+in the petar module directory: [AMUSE path]/src/amuse/community/petar/.
+Be careful that this commander deletes src directory and all original existing files in the petar module directory. 
+If you have modified any file, make a backup first!

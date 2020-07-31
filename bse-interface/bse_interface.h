@@ -71,7 +71,7 @@ extern "C" {
     //! BSE function for evolving one binary
     void evolv2_(int* kw, double* mass, double* mt, double* r, double* lum, double* mc, double* rc, double* menv, double* renv, double* ospin,
                  double* epoch, double* tm, double* tphys, double* tphysf, double* dtp, double* z, double* zpars, 
-                 double* period, double* ecc, int* btype, double* vkick);
+                 double* period, double* ecc, double* bse_event, double* vkick);
 
     void star_(int* kw, double* mass, double* mt, double* tm, double* tn, double* tscls, double* lums, double* GB, double* zpars);
 
@@ -137,15 +137,15 @@ struct StarParameter{
     //! for print in one line
     void print(std::ostream & fout) const{
         fout<<" type= "<<kw
-            <<" mass0= "<<m0
-            <<" mass= "<<mt
-            <<" radius= "<<r
-            <<" mcore= "<<mc
-            <<" rcore= "<<rc
+            <<" m0[M*]= "<<m0
+            <<" m[M*]= "<<mt
+            <<" rad[R*]= "<<r
+            <<" mc[M*]= "<<mc
+            <<" rc[M*]= "<<rc
             <<" spin= "<<ospin
             <<" epoch= "<<epoch
             <<" t[myr]= "<<tphys
-            <<" lum= "<<lum;
+            <<" lum[L*]= "<<lum;
     }
 
     //! print titles of class members using column style
@@ -250,7 +250,7 @@ struct StarParameterOut{
       @param[out] _fout: std::ostream output object
       @param[in] _width: print width (defaulted 20)
      */
-    void printColumn(std::ostream & _fout, const int _width=20){
+    void printColumn(std::ostream & _fout, const int _width=20) const{
         _fout<<std::setw(_width)<<kw0
              <<std::setw(_width)<<menv
              <<std::setw(_width)<<renv
@@ -277,6 +277,83 @@ struct StarParameterOut{
 
 };
 
+//! BSE event recorder class
+class BinaryEvent{
+public:
+    double record[10][9];
+
+    void recordInitial(const StarParameter& _p1, const StarParameter& _p2, const double _semi, const double _ecc) {
+        const int init_index = getEventIndexInit();
+        record[0][init_index] = std::min(_p1.tphys, _p2.tphys);
+        record[1][init_index] = _p1.mt;
+        record[2][init_index] = _p2.mt;
+        record[3][init_index] = _p1.kw;
+        record[4][init_index] = _p2.kw;
+        record[5][init_index] = _semi;
+        record[6][init_index] = _ecc;
+        record[7][init_index] = _p1.r;
+        record[8][init_index] = _p2.r;
+        record[9][init_index] = 0.0;
+    }
+    
+    int getEventNMax() const {
+        return 8;
+    }
+    
+    int getEventIndexInit() const {
+        return 8;
+    }
+
+    int getType(const int index) const {
+        return int(record[9][index]);
+    }
+
+    //! for print in one line
+    void print(std::ostream & fout, const int index) const{
+        fout<<" t[Myr]= "<<record[0][index]
+            <<" m1[M*]= "<<record[1][index]
+            <<" m2[M*]= "<<record[2][index]
+            <<" type1= "<<int(record[3][index])
+            <<" type2= "<<int(record[4][index])
+            <<" semi[R*]= "<<record[5][index]
+            <<" ecc= "<<record[6][index]
+            <<" rad1[R*]= "<<record[7][index]
+            <<" rad2[R*]= "<<record[8][index];
+    }
+
+    //! print titles of class members using column style
+    /*! print titles of class members in one line for column style
+      @param[out] _fout: std::ostream output object
+      @param[in] _width: print width (defaulted 20)
+     */
+    static void printColumnTitle(std::ostream & _fout, const int _width=20) {
+        _fout<<std::setw(_width)<<"t[Myr]"
+             <<std::setw(_width)<<"m1[M*]"
+             <<std::setw(_width)<<"m2[M*]"
+             <<std::setw(_width)<<"type1"
+             <<std::setw(_width)<<"type2"
+             <<std::setw(_width)<<"semi[R*]"
+             <<std::setw(_width)<<"ecc"
+             <<std::setw(_width)<<"rad1[R*]"
+             <<std::setw(_width)<<"rad2[R*]"
+             <<std::setw(_width)<<"btype";
+    }
+
+    //! print data of class members using column style
+    /*! print data of class members in one line for column style. Notice no newline is printed at the end
+      @param[out] _fout: std::ostream output object
+      @param[in] _width: print width (defaulted 20)
+      @param[in] _index: event index to print
+     */
+    void printColumn(std::ostream & _fout, const int _index, const int _width=20) const{
+        for (int i=0; i<3; i++) _fout<<std::setw(_width)<<record[i][_index];
+        for (int i=3; i<5; i++) _fout<<std::setw(_width)<<int(record[i][_index]);
+        for (int i=5; i<9; i++) _fout<<std::setw(_width)<<record[i][_index];
+        _fout<<std::setw(_width)<<int(record[9][_index]);
+    }
+};
+
+//! IO parameters for BSE manager
 class IOParamsBSE{
 public:
     IOParamsContainer input_par_store;
@@ -334,17 +411,17 @@ public:
                    wdflag(input_par_store, 1,  "if >0, uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
                    bhflag(input_par_store, 2,  "BH kick option: 0: no kick; 1: same as NS; 2: scaled by fallback"),
                    nsflag(input_par_store, 3,  "NS/BH foramtion options: 0: original SSE; 1: Belczynski (2002); 2: Belczynski (2008); 3: Fryer (2012) rapid SN; 4: Fryer (2012) delayed SN; 5: Eldridge & Tout (2004)"),
-                   psflag(input_par_store, 1,  "PPSN condition (Leung 2019): 0: no PPSN; 1: strong; 2: moderate; 3: weak"),
+                   psflag(input_par_store, 1,  "PPSN condition (Belczynski 2016): 0: no PPSN; 1: strong; (Leung 2019): 2: moderate; 3: weak"),
                    kmech (input_par_store, 1,  "Kick mechanism: 1: standard momentum-conserving; 2: convection-asymmetry-driven; 3: collapse-asymmerty-driven; 4: neutrino driven"),
                    ecflag(input_par_store, 1,  "if >0, ECS is switched on"),
                    pts1  (input_par_store, 0.05, "time step of MS"),
                    pts2  (input_par_store, 0.01, "time step of GB, CHeB, AGB, HeGB"),
                    pts3  (input_par_store, 0.02, "time step of HG, HeMS"),
                    idum  (input_par_store, 1234, "random number seed used by the kick routine"),
-                   tscale(input_par_store, 1.0, "Time scale factor from NB to Myr (time[Myr]=time[NB]*tscale)"),
-                   rscale(input_par_store, 1.0, "Radius scale factor from NB to Rsun (r[Rsun]=r[NB]*rscale)"),
-                   mscale(input_par_store, 1.0, "Mass scale factor from NB to Msun (m[Msun]=m[NB]*mscale)"),
-                   vscale(input_par_store, 1.0, "Velocity scale factor from NB to km/s (v[km/s]=v[NB]*mscale)"),
+                   tscale(input_par_store, 1.0, "Time scale factor from input data unit (IN) to Myr (time[Myr]=time[IN]*tscale)"),
+                   rscale(input_par_store, 1.0, "Radius scale factor from input data unit (IN) to Rsun (r[Rsun]=r[IN]*rscale)"),
+                   mscale(input_par_store, 1.0, "Mass scale factor from input data unit (IN) to Msun (m[Msun]=m[IN]*mscale)"),
+                   vscale(input_par_store, 1.0, "Velocity scale factor from input data unit(IN) to km/s (v[km/s]=v[IN]*vscale)"),
                    z     (input_par_store, 0.001, "Metallicity"),
                    print_flag(false) {}
 
@@ -358,42 +435,42 @@ public:
     int read(int argc, char *argv[], const int opt_used_pre=0) {
         static int sse_flag=-1;
         const struct option long_options[] = {
-            {"neta",   required_argument, &sse_flag, 0},  
-            {"bwind",  required_argument, &sse_flag, 1},  
-            {"hewind", required_argument, &sse_flag, 2},  
-          //{"mxns",   required_argument, &sse_flag, 3}, 
-            {"alpha",  required_argument, &sse_flag, 22},
-            {"lambda", required_argument, &sse_flag, 23},
-            {"beta",   required_argument, &sse_flag, 24},
-            {"xi",     required_argument, &sse_flag, 25},
-            {"bhwacc", required_argument, &sse_flag, 26},
-            {"epsnov", required_argument, &sse_flag, 27},
-            {"eddfac", required_argument, &sse_flag, 28},
-            {"gamma",  required_argument, &sse_flag, 29},
-            {"sigma",  required_argument, &sse_flag, 4},
-            {"ceflag", required_argument, &sse_flag, 5},
-            {"tflag",  required_argument, &sse_flag, 6},
-          //{"ifflag", required_argument, &sse_flag, 7},
-            {"wdflag", required_argument, &sse_flag, 8},
-            {"bhflag", required_argument, &sse_flag, 9}, 
-            {"nsflag", required_argument, &sse_flag, 10}, 
-            {"psflag", required_argument, &sse_flag, 11},
-            {"kmech",  required_argument, &sse_flag, 12},
-            {"ecflag", required_argument, &sse_flag, 13},
-            {"pts1",   required_argument, &sse_flag, 14},
-            {"pts2",   required_argument, &sse_flag, 15},       
-            {"pts3",   required_argument, &sse_flag, 16},
-            {"idum",   required_argument, &sse_flag, 17}, 
-            {"tscale", required_argument, &sse_flag, 18},
-            {"rscale", required_argument, &sse_flag, 19},
-            {"mscale", required_argument, &sse_flag, 20},
-            {"vscale", required_argument, &sse_flag, 21},
-            {"metallicity", required_argument, 0, 'z'},
+            {"bse-neta",   required_argument, &sse_flag, 0},  
+            {"bse-bwind",  required_argument, &sse_flag, 1},  
+            {"bse-hewind", required_argument, &sse_flag, 2},  
+          //{"bse-mxns",   required_argument, &sse_flag, 3}, 
+            {"bse-alpha",  required_argument, &sse_flag, 22},
+            {"bse-lambda", required_argument, &sse_flag, 23},
+            {"bse-beta",   required_argument, &sse_flag, 24},
+            {"bse-xi",     required_argument, &sse_flag, 25},
+            {"bse-bhwacc", required_argument, &sse_flag, 26},
+            {"bse-epsnov", required_argument, &sse_flag, 27},
+            {"bse-eddfac", required_argument, &sse_flag, 28},
+            {"bse-gamma",  required_argument, &sse_flag, 29},
+            {"bse-sigma",  required_argument, &sse_flag, 4},
+            {"bse-ceflag", required_argument, &sse_flag, 5},
+            {"bse-tflag",  required_argument, &sse_flag, 6},
+          //{"bse-ifflag", required_argument, &sse_flag, 7},
+            {"bse-wdflag", required_argument, &sse_flag, 8},
+            {"bse-bhflag", required_argument, &sse_flag, 9}, 
+            {"bse-nsflag", required_argument, &sse_flag, 10}, 
+            {"bse-psflag", required_argument, &sse_flag, 11},
+            {"bse-kmech",  required_argument, &sse_flag, 12},
+            {"bse-ecflag", required_argument, &sse_flag, 13},
+            {"bse-pts1",   required_argument, &sse_flag, 14},
+            {"bse-pts2",   required_argument, &sse_flag, 15},       
+            {"bse-pts3",   required_argument, &sse_flag, 16},
+            {"bse-idum",   required_argument, &sse_flag, 17}, 
+            {"bse-tscale", required_argument, &sse_flag, 18},
+            {"bse-rscale", required_argument, &sse_flag, 19},
+            {"bse-mscale", required_argument, &sse_flag, 20},
+            {"bse-vscale", required_argument, &sse_flag, 21},
+            {"bse-metallicity", required_argument, 0, 'z'},
             {"help",   no_argument,       0, 'h'},
             {0,0,0,0}
         };
 
-        int opt_used=0;
+        int opt_used=opt_used_pre;
         int copt;
         int option_index;
         std::string fname_par;
@@ -577,39 +654,40 @@ public:
                 if(print_flag){
                     std::cout<<"SSE/BSE options:"<<std::endl;
                     std::cout<<"       Option defaulted values are shown after ':'"<<std::endl;
-                    std::cout<<"        --neta:   [D] "<<neta<<std::endl
-                             <<"        --bwind:  [D] "<<bwind<<std::endl
-                             <<"        --hewind: [D] "<<hewind<<std::endl
+                    std::cout<<"        --bse-neta:   [D] "<<neta<<std::endl
+                             <<"        --bse-bwind:  [D] "<<bwind<<std::endl
+                             <<"        --bse-hewind: [D] "<<hewind<<std::endl
                         //<<"        --mxns:   [D] "<<mxns<<std::endl
-                             <<"        --alpha:  [D] "<<alpha<<std::endl
-                             <<"        --lambda: [D] "<<lambda<<std::endl
-                             <<"        --beta:   [D] "<<beta<<std::endl
-                             <<"        --xi:     [D] "<<xi<<std::endl
-                             <<"        --bhwacc  [D] "<<bhwacc<<std::endl
-                             <<"        --epsnov: [D] "<<epsnov<<std::endl
-                             <<"        --eddfac: [D] "<<eddfac<<std::endl
-                             <<"        --gamma:  [D] "<<gamma<<std::endl
-                             <<"        --sigma:  [D] "<<sigma<<std::endl
-                             <<"        --ceflag: [I] "<<ceflag<<std::endl
-                             <<"        --tflag:  [I] "<<tflag<<std::endl
-                             <<"        --wdflag: [I] "<<wdflag<<std::endl
-                             <<"        --bhflag: [I] "<<bhflag<<std::endl
-                             <<"        --nsflag: [I] "<<nsflag<<std::endl
-                             <<"        --psflag: [I] "<<psflag<<std::endl
-                             <<"        --kmech:  [I] "<<kmech<<std::endl
-                             <<"        --ecflag: [I] "<<ecflag<<std::endl
-                             <<"        --pts1:   [D] "<<pts1<<std::endl
-                             <<"        --pts2:   [D] "<<pts2<<std::endl
-                             <<"        --pts3:   [D] "<<pts3<<std::endl
-                             <<"        --idum:   [I] "<<idum<<std::endl
-                             <<"        --tscale: [D] "<<tscale<<std::endl
-                             <<"        --rscale: [D] "<<rscale<<std::endl
-                             <<"        --mscale: [D] "<<mscale<<std::endl
-                             <<"        --vscale: [D] "<<vscale<<std::endl
-                             <<"        --metallicity (-z): [D] "<<z<<std::endl;
+                             <<"        --bse-alpha:  [D] "<<alpha<<std::endl
+                             <<"        --bse-lambda: [D] "<<lambda<<std::endl
+                             <<"        --bse-beta:   [D] "<<beta<<std::endl
+                             <<"        --bse-xi:     [D] "<<xi<<std::endl
+                             <<"        --bse-bhwacc  [D] "<<bhwacc<<std::endl
+                             <<"        --bse-epsnov: [D] "<<epsnov<<std::endl
+                             <<"        --bse-eddfac: [D] "<<eddfac<<std::endl
+                             <<"        --bse-gamma:  [D] "<<gamma<<std::endl
+                             <<"        --bse-sigma:  [D] "<<sigma<<std::endl
+                             <<"        --bse-ceflag: [I] "<<ceflag<<std::endl
+                             <<"        --bse-tflag:  [I] "<<tflag<<std::endl
+                             <<"        --bse-wdflag: [I] "<<wdflag<<std::endl
+                             <<"        --bse-bhflag: [I] "<<bhflag<<std::endl
+                             <<"        --bse-nsflag: [I] "<<nsflag<<std::endl
+                             <<"        --bse-psflag: [I] "<<psflag<<std::endl
+                             <<"        --bse-kmech:  [I] "<<kmech<<std::endl
+                             <<"        --bse-ecflag: [I] "<<ecflag<<std::endl
+                             <<"        --bse-pts1:   [D] "<<pts1<<std::endl
+                             <<"        --bse-pts2:   [D] "<<pts2<<std::endl
+                             <<"        --bse-pts3:   [D] "<<pts3<<std::endl
+                             <<"        --bse-idum:   [I] "<<idum<<std::endl
+                             <<"        --bse-tscale: [D] "<<tscale<<std::endl
+                             <<"        --bse-rscale: [D] "<<rscale<<std::endl
+                             <<"        --bse-mscale: [D] "<<mscale<<std::endl
+                             <<"        --bse-vscale: [D] "<<vscale<<std::endl
+                             <<"        --bse-metallicity (-z): [D] "<<z<<std::endl;
                 }
                 return -1;
             case '?':
+                opt_used +=2;
                 break;
             default:
                 break;
@@ -629,11 +707,12 @@ public:
     double rscale; ///> radius scaling factor from NB to Rsun
     double mscale; ///> mass scaling factor from NB to Msun
     double vscale; ///> velocity scaling factor from NB to km/s
+    const double year_to_day; ///> year to day 
     const char* single_type[16]; ///> name of single type from SSE
-    const char* binary_type[14]; ///> name of binary type return from BSE evolv2
+    const char* binary_type[14]; ///> name of binary type return from BSE evolv2, notice if it is -1, it indicate the end of record
 
-    BSEManager(): z(0.0), zpars{0}, tscale(0.0), rscale(0.0), mscale(0.0), vscale(0.0),
-                  single_type{"LMS", "MS", "HG", "GB", "CHeB", "FAGB", "SAGB", "HeMS", "HG", "HeGB", "HeWD", "COWD", "ONWD", "NS", "BH", "SN"},
+    BSEManager(): z(0.0), zpars{0}, tscale(0.0), rscale(0.0), mscale(0.0), vscale(0.0), year_to_day(3.6525e8),
+                  single_type{"LMS", "MS", "HG", "GB", "CHeB", "FAGB", "SAGB", "HeMS", "HeHG", "HeGB", "HeWD", "COWD", "ONWD", "NS", "BH", "SN"},
                   binary_type{"Unset",               //0
                               "Initial",             //1
                               "Type_change",         //2
@@ -663,7 +742,11 @@ public:
     //! print reference to cite
     static void printReference(std::ostream & fout, const int offset=4) {
         for (int i=0; i<offset; i++) fout<<" ";
-        fout<<"SSE/BSE: Banerjee S., Belczynski K., Fryer C.~L., Berczik P., Hurley J.~R., Spurzem R., Wang L., 2019, A&A, in press"
+        fout<<"SSE: Hurley J.~R., Pols O.~R., Tout C.~A., 2000, MNRAS, 315, 543\n";
+        for (int i=0; i<offset; i++) fout<<" ";
+        fout<<"BSE: Hurley J.~R., Tout C.~A., Pols O.~R., 2002, MNRAS, 329, 897\n";
+        for (int i=0; i<offset; i++) fout<<" ";
+        fout<<"Updated BSE: Banerjee S., Belczynski K., Fryer C.~L., Berczik P., Hurley J.~R., Spurzem R., Wang L., 2019, A&A, in press"
             <<std::endl;
     }
     
@@ -754,8 +837,8 @@ public:
 
     //! get merger radius in NB unit
     double getMergerRadius(StarParameter& _star) {
-        // use core radius as merger radius
-        return _star.rc/rscale;
+        // use stellar radius as merger radius
+        return _star.r/rscale;
     }
 
     //! get evolved Time in NB unit
@@ -770,7 +853,44 @@ public:
 
     //! print type change 
     void printTypeChange(std::ostream& _fout, StarParameter& _star, StarParameterOut& _out, const int _width=4) {
+        assert(_out.kw0>=0&&_out.kw0<16);
+        assert(_star.kw>=0&&_star.kw<16);
         _fout<<" "<<std::setw(_width)<<single_type[_out.kw0]<<" -> "<<std::setw(_width)<<single_type[_star.kw];
+    }
+
+    //! print BSE event
+    void printBinaryEvent(std::ostream& _fout, const BinaryEvent& _bin_event) {
+        int nmax = _bin_event.getEventNMax();
+        for (int k=0; k<nmax; k++) {
+            int type = _bin_event.getType(k);
+            if(type>0) {
+                _fout<<std::setw(16)<<binary_type[type];
+                _bin_event.print(_fout, k);
+                _fout<<std::endl;
+            }
+            else if(type<0) break;
+        }
+    }
+
+    //! print BSE event one
+    void printBinaryEventOne(std::ostream& _fout, const BinaryEvent& _bin_event, const int k) {
+        int type = _bin_event.getType(k);
+        assert(type>=0&&type<14);
+        _fout<<std::setw(16)<<binary_type[type];
+        if (k==0) _bin_event.print(_fout, _bin_event.getEventIndexInit());
+        else _bin_event.print(_fout, k-1);
+        _bin_event.print(_fout, k);
+    }
+
+    //! print BSE event one
+    void printBinaryEventColumnOne(std::ostream& _fout, const BinaryEvent& _bin_event, const int k, const int _width=20) {
+        int type = _bin_event.getType(k);
+        assert(type>=0&&type<14);
+        _fout<<std::setw(16)<<binary_type[type]
+             <<std::setw(_width)<<type;
+        if (k==0) _bin_event.printColumn(_fout, _bin_event.getEventIndexInit(), _width);
+        else _bin_event.printColumn(_fout, k-1, _width);
+        _bin_event.printColumn(_fout, k, _width);
     }
 
     //! get velocity change in NB unit
@@ -802,7 +922,10 @@ public:
         _out.dm = _star.mt - _out.dm;
         _out.dtmiss = tphysf - _star.tphys;
 
-        if (_star.kw<0) return -1; // error 
+        if (_star.kw<0) {
+            _star.kw = -_star.kw;
+            return -1; // error 
+        }
         else if (_out.vkick[3]>0) return 2; // kick
         else if (_star.kw!=_out.kw0) return 1; // kw change
         else return 0;
@@ -814,22 +937,27 @@ public:
       @param[in,out] _star2: star parameter of second
       @param[out] _out1: output parameter of first from evolv2
       @param[out] _out2: output parameter of second from evolv2
-      @param[out] _binary_type: binary type defined in BSE
-      @param[in,out] _period: period of binary in NB unit
-      @param[in,out] _ecc: eccentricity of binary 
+      @param[out] _bse_event: BSE event record (bpp array)
+      @param[in] _semi: semi-major axis, only used to record initial semi
+      @param[in,out] _period: period of binary in NB unit, used for BSE
+      @param[in,out] _ecc: eccentricity of binary, used for BSE
       @param[in] _dt_nb: physical time step in Myr to evolve
-      \return error flag: -1: error, 0: normal; 1: type change; 2: modify mass and orbit
+      \return error flag: -1: error, 0: normal
      */
     int evolveBinary(StarParameter& _star1, StarParameter& _star2, StarParameterOut& _out1, StarParameterOut& _out2, 
-                     double& _period, double& _ecc, int& _binary_type, const double _dt_nb) {
+                     double& _semi, double& _period, double& _ecc, BinaryEvent& _bse_event, const double _dt_nb) {
         double tphys = std::max(_star1.tphys, _star2.tphys);
         double tphysf = _dt_nb*tscale + tphys;
         double dtp=tphysf*100.0+1000.0;
-        double period_days = _period*tscale*3.6524e8;
+        double period_days = _period*tscale*year_to_day;
+        double semi_rsun = _semi*rscale;
         // in case two component have different tphys, evolve to the same time first
         int event_flag = 0 ;
         _out1.dm = _star1.mt;
         _out2.dm = _star2.mt;
+
+        // backup initial state
+        _bse_event.recordInitial(_star1, _star2, semi_rsun, _ecc);
 
         if (_star1.tphys<tphys) event_flag = evolveStar(_star1, _out1, tphys);
         if (event_flag<0) return event_flag;
@@ -861,8 +989,8 @@ public:
         ospin[1] = _star2.ospin;
         epoch[1] = _star2.epoch;
         
-        evolv2_(kw, m0, mt, r, lum, mc, rc, menv, renv, ospin, epoch, tm, &tphys, &tphysf, &dtp, &z, zpars, &period_days, &_ecc, &_binary_type, vkick);
-        _period = period_days/3.6524e8/tscale;
+        evolv2_(kw, m0, mt, r, lum, mc, rc, menv, renv, ospin, epoch, tm, &tphys, &tphysf, &dtp, &z, zpars, &period_days, &_ecc, _bse_event.record[0], vkick);
+        _period = period_days/year_to_day/tscale;
 
         _star1.kw = kw[0];
         _star1.m0 = m0[0];
@@ -901,12 +1029,16 @@ public:
         for (int k=0; k<4; k++) _out1.vkick[k]=vkick[k];
         for (int k=0; k<4; k++) _out2.vkick[k]=vkick[k+4];
 
-        if (kw[0]<0||kw[1]<0) return -1; // error case
-        else if (vkick[3]>0||vkick[7]>0) return 3; // kick
-        else if (isDisrupt(_binary_type)) return 4; // disrupt without kick
-        else if (isMerger(_binary_type)) return 5; // Merger
-        else if (isMassTransfer(_binary_type)) return 2; // orbit change
-        else if (_binary_type>0) return 1; // type change
+        if (kw[0]<0||kw[1]<0||(_star1.mt<0&&_star1.kw==15)||(_star2.mt<0&&_star2.kw==15)) {
+            kw[0] = abs(kw[0]);
+            kw[1] = abs(kw[1]);
+            return -1; // error case
+        }
+        //else if (vkick[3]>0||vkick[7]>0) return 3; // kick
+        //else if (isDisrupt(_binary_type)) return 4; // disrupt without kick
+        //else if (isMerger(_binary_type)) return 5; // Merger
+        //else if (isMassTransfer(_binary_type)) return 2; // orbit change
+        //else if (_binary_type>0) return 1; // type change
         else return 0;
     }
 

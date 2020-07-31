@@ -2,6 +2,7 @@ TARGET: libbse.a petar.bse
 
 BSE_PATH=bse
 FC=@FC@
+CXX=@CXX@
 
 #FFLAGS = -O2 -Wall -finit-real=nan 
 CXXFLAGS += @OPTFLAGS@ @OPENMP_CXXFLAGS@

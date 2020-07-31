@@ -19,8 +19,9 @@ public:
         PS::F64 mass;
         PS::F64vec pos;
         PS::F64vec vel;
+        bool is_center_shift_flag;
 
-        ParticleCM(): mass(0.0), pos(PS::F64vec(0.0)), vel(PS::F64vec(0.0)) {}
+        ParticleCM(): mass(0.0), pos(PS::F64vec(0.0)), vel(PS::F64vec(0.0)), is_center_shift_flag(false) {}
 
         //! print titles of class members using column style
         /*! print titles of class members in one line for column style
@@ -62,11 +63,55 @@ public:
                  <<" vel: "<<vel;
         }
 
+        void clear() {
+            is_center_shift_flag = false;
+            mass = 0.0;
+            pos = PS::F64vec(0.0);
+            vel = PS::F64vec(0.0);
+        }
+
     } pcm;
 
     Status(): time(0.0), n_real_loc(0), n_real_glb(0), n_all_loc(0), n_all_glb(0), n_remove_glb(0), n_escape_glb(0), half_mass_radius(0), energy(), pcm() {}
 
-    //! calculate the center of the system
+    //! shift particle system center to c.m. frame 
+    /*! set is_center_shift_flag to true
+      @param[in,out] _tsys: particle system
+      @param[in] _n: number of particle
+    */
+    template <class Tsoft>
+    void shiftToCenterOfMassFrame(Tsoft* _tsys, const PS::S64 _n) {
+        if (!pcm.is_center_shift_flag) {
+            for (int i=0; i<_n; i++) {
+                _tsys[i].pos -= pcm.pos;
+                _tsys[i].vel -= pcm.vel;
+            }
+        }
+        pcm.is_center_shift_flag = true;
+    }
+
+    //! shift particle system center back to original frame
+    /*! set is_center_shift_flag to false
+      @param[in,out] _tsys: particle system
+      @param[in] _n: number of particle
+    */
+    template <class Tsoft>
+    void shiftToOriginFrame(Tsoft* _tsys, const PS::S64 _n) {
+        if (pcm.is_center_shift_flag) {
+            for (int i=0; i<_n; i++) {
+                _tsys[i].pos += pcm.pos;
+                _tsys[i].vel += pcm.vel;
+            }
+        }
+        pcm.is_center_shift_flag = false;
+    }
+
+    //! calculate the center of system 
+    /*!
+      @param[in] _tsys: particle system
+      @param[in] _n: number of particle
+      @param[in] _mode: calculation mode, 1: center-of-the-mass; 2: number (no mass) weighted center
+     */
     template <class Tsoft>
     void calcCenterOfMass(Tsoft* _tsys, const PS::S64 _n, int _mode=2) {
         PS::F64 mass = 0.0;
@@ -74,8 +119,8 @@ public:
         PS::F64vec vel_cm = PS::F64vec(0.0);
 
         if (_mode==1) { // center of the mass
-#pragma omp declare reduction(+:PS::F64vec:omp_out += omp_in) initializer (omp_priv=PS::F64vec(0.0))
-#pragma omp parallel for reduction(+:mass,pos_cm,vel_cm)
+//#pragma omp declare reduction(+:PS::F64vec:omp_out += omp_in) initializer (omp_priv=PS::F64vec(0.0))
+//#pragma omp parallel for reduction(+:mass,pos_cm,vel_cm)
             for (int i=0; i<_n; i++) {
                 auto& pi = _tsys[i];
                 PS::F64 mi = pi.mass;
@@ -131,6 +176,36 @@ public:
             pcm.pos /= PS::F64(n_glb);
             pcm.vel /= PS::F64(n_glb);
         }
+    }
+
+    //! calculate the center of system and shift particle systems to center frame
+    /*!
+      @param[in] _tsys: particle system
+      @param[in] _n: number of particle
+      @param[in] _mode: calculation mode, 1: center-of-the-mass; 2: number (no mass) weighted center
+     */
+    template <class Tsoft>
+    void calcAndShiftCenterOfMass(Tsoft* _tsys, const PS::S64 _n, const int _mode=1, const bool initial_flag=false) {
+        if (initial_flag) {
+            if(pcm.is_center_shift_flag) {
+                std::cerr<<"Error: particle system is in c.m. frame, cannot initial c.m."<<std::endl;
+                abort();
+            }
+            pcm.clear();
+            pcm.is_center_shift_flag=true;
+        }
+        assert(pcm.is_center_shift_flag);
+
+        ParticleCM pcm_bk = pcm;
+        calcCenterOfMass(_tsys, _n, _mode);
+
+        // correct particle 
+        for (int i=0; i<_n; i++) {
+            _tsys[i].pos -= pcm.pos;
+            _tsys[i].vel -= pcm.vel;
+        }
+        pcm.pos += pcm_bk.pos;
+        pcm.vel += pcm_bk.vel;
     }
 
     //! print titles of class members using column style

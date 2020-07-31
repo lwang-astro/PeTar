@@ -78,6 +78,9 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #endif
 #include"static_variables.hpp"
 #include"escaper.hpp"
+#ifdef GALPY
+#include"galpy_interface.h"
+#endif
 
 //! IO parameters for Petar
 class IOParamsPeTar{
@@ -132,6 +135,9 @@ public:
     IOParams<PS::S32> stellar_evolution_option;
 #endif
     IOParams<PS::S32> interrupt_detection_option;
+#ifdef ADJUST_GROUP_PRINT
+    IOParams<PS::S32> adjust_group_write_option;
+#endif
     IOParams<std::string> fname_snp;
     IOParams<std::string> fname_par;
     IOParams<std::string> fname_inp;
@@ -178,7 +184,7 @@ public:
                      step_limit_arc(input_par_store, 1000000, "Maximum step allown for ARC sym integrator"),
                      eps          (input_par_store, 0.0,  "Softerning eps"),
                      r_out        (input_par_store, 0.0,  "Transit function outer boundary radius", "0.1 GM/[N^(1/3) sigma_3D^2]"),
-                     r_bin        (input_par_store, 0.0,  "Tidal tensor box size and binary radius criterion", "theta*r_in"),
+                     r_bin        (input_par_store, 0.0,  "Tidal tensor box size and binary radius criterion", "0.8*r_in"),
 //                     r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out"),
                      r_search_min (input_par_store, 0.0,  "Minimum search radius  value","auto"),
                      r_escape     (input_par_store, PS::LARGE_FLOAT,  "escape radius criterion"),
@@ -187,7 +193,7 @@ public:
                      write_style  (input_par_store, 1,    "File Writing style: 0, no output; 1. write snapshots, status and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile"),
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE
-                     stellar_evolution_option(input_par_store, 1, "modify single star: 0: turn off; 1: modify mass and velocity using SSE every Hermite step"),
+                     stellar_evolution_option(input_par_store, 1, "modify single star: 0: turn off; 1: modify mass and velocity using SSE every Hermite step, log files with names of [data filename prefix].[sse/bse].[MPI rank] are generated if -w >0"),
                      interrupt_detection_option(input_par_store, 1, "modify orbits of binaries: 0: no modifications (also no stellar evolution); 1: modify the binary orbits using BSE (if '--stellar-evolution 1' is set) and merger checker in AR integrator"),
 #else
                      stellar_evolution_option(input_par_store, 0, "modify mass of particles: 0: turn off; 1: check every Hermite steps"),
@@ -195,6 +201,9 @@ public:
 #endif
 #else
                      interrupt_detection_option(input_par_store, 0, "modify orbits of AR groups based on the interruption function: 0: turn off; 1: modify inside AR integration and accumulate energy change; 2. modify and also interrupt the hard drift"),
+#endif
+#ifdef ADJUST_GROUP_PRINT
+                     adjust_group_write_option(input_par_store, 1, "print new and end of groups: 0: no print; 1: print to file [data filename prefix].group.[MPI rank] if -w >0"),
 #endif
                      fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]"),
                      fname_par(input_par_store, "input.par", "Input parameter file (this option should be used first before any other options)"),
@@ -240,6 +249,9 @@ public:
 #ifdef STELLAR_EVOLUTION
             {"stellar-evolution",     required_argument, &petar_flag, 20},
 #endif
+#ifdef ADJUST_GROUP_PRINT
+            {"write-group-info",      required_argument, &petar_flag, 22},
+#endif            
             {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
         };
@@ -384,6 +396,13 @@ public:
                     if(print_flag) r_escape.print(std::cout);
                     opt_used += 2;
                     break;
+#ifdef ADJUST_GROUP_PRINT
+                case 22:
+                    adjust_group_write_option.value = atoi(optarg);
+                    if(print_flag) adjust_group_write_option.print(std::cout);
+                    opt_used += 2;
+                    break;
+#endif
                 default:
                     break;
                 }
@@ -537,6 +556,9 @@ public:
                     std::cout<<"  -f: [S] "<<fname_snp<<std::endl;
                     std::cout<<"  -p: [S] "<<fname_par<<std::endl;
                     std::cout<<"  -w: [I] "<<write_style<<std::endl;
+#ifdef ADJUST_GROUP_PRINT
+                    std::cout<<"        --write-group-info:  [I] "<<adjust_group_write_option<<std::endl;
+#endif
                     std::cout<<"  -h(--help):               print help"<<std::endl;
                     std::cout<<"*** PS: r_in : transit function inner boundary radius\n"
                              <<"        r_out: transit function outer boundary radius\n"
@@ -546,6 +568,7 @@ public:
                 }
                 return -1;
             case '?':
+                opt_used +=2;
                 break;
             default:
                 break;
@@ -553,6 +576,7 @@ public:
 
         // count used options
         opt_used ++;
+        //std::cout<<"Opt used:"<<opt_used<<std::endl;
         if (opt_used<argc) {
             fname_inp.value =argv[argc-1];
             if(print_flag) std::cout<<"Reading data file name: "<<fname_inp.value<<std::endl;
@@ -600,10 +624,6 @@ public:
 //! main control class
 class PeTar {
 public:
-    IOParamsPeTar input_parameters;
-#ifdef BSE
-    IOParamsBSE bse_parameters;
-#endif
 #ifdef USE_QUAD
     typedef PS::TreeForForceLong<ForceSoft, EPISoft, EPJSoft>::QuadrupoleWithSymmetrySearch TreeForce; 
 #else
@@ -613,6 +633,15 @@ public:
 
     // For neighbor searching
     typedef PS::TreeForForceShort<ForceSoft, EPISoft, EPJSoft>::Symmetry TreeNB;
+
+    // IO
+    IOParamsPeTar input_parameters;
+#ifdef BSE
+    IOParamsBSE bse_parameters;
+#endif
+#ifdef GALPY
+    IOParamsGalpy galpy_parameters;
+#endif
 
 #ifdef PROFILE
     PS::S32 dn_loop;
@@ -652,6 +681,10 @@ public:
     TreeNB tree_nb;
     TreeForce tree_soft;
 
+#ifdef GALPY
+    GalpyManager galpy_manager;
+#endif
+
     // hard integrator
     HardManager hard_manager;
     SystemHard system_hard_one_cluster;
@@ -685,6 +718,13 @@ public:
 
     //! initialization
     PeTar(): 
+        input_parameters(),
+#ifdef BSE
+        bse_parameters(),
+#endif
+#ifdef GALPY
+        galpy_parameters(),
+#endif
 #ifdef PROFILE
         // profile
         dn_loop(0), profile(), n_count(), n_count_sum(), tree_soft_profile(), fprofile(), 
@@ -695,6 +735,9 @@ public:
         n_loop(0), domain_decompose_weight(1.0), dinfo(), pos_domain(NULL), 
         dt_manager(),
         tree_nb(), tree_soft(), 
+#ifdef GALPY
+        galpy_manager(),
+#endif
         hard_manager(), system_hard_one_cluster(), system_hard_isolated(), 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         system_hard_connected(), 
@@ -969,6 +1012,62 @@ public:
 #endif
     }
 
+    //! calculate external force
+    void externalForce() {
+#ifdef PROFILE
+        profile.other.start();
+#endif
+
+#ifdef GALPY
+        // external force and potential
+        PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
+#pragma omp parallel for
+        for (int i=0; i<n_loc_all; i++) {
+            auto& pi = system_soft[i];
+            double acc[3], pot;
+            galpy_manager.calcAccPot(acc, pot, stat.time, &pi.pos[0]);
+            pi.acc[0] += acc[0]; 
+            pi.acc[1] += acc[1]; 
+            pi.acc[2] += acc[2]; 
+            pi.pot_tot += pot;
+            pi.pot_soft += pot;
+        }
+#endif //GALPY
+        
+#ifdef PROFILE
+        profile.other.barrier();
+        PS::Comm::barrier();
+        profile.other.end();
+#endif
+    }
+
+    // correct vel_cm due to external potential for rsearch calculation
+    void correctPtclVelCM(const PS::F64& _dt) {
+#ifdef PROFILE
+        profile.other.start();
+#endif
+        PS::F64vec dv=PS::F64vec(0.0);
+
+#ifdef GALPY
+        PS::F64vec acc;
+        PS::F64 pot;
+        // evaluate center of mass acceleration
+        galpy_manager.calcAccPot(&acc[0], pot, stat.time, &stat.pcm.pos[0]);
+        dv = acc*_dt;
+#endif        
+
+        Ptcl::vel_cm += dv;
+//#ifdef PETAR_DEBUG
+//        if (my_rank==0) std::cerr<<"Ptcl::vel_cm: "<<Ptcl::vel_cm<<std::endl;
+//#endif
+
+#ifdef PROFILE
+        profile.other.barrier();
+        PS::Comm::barrier();
+        profile.other.end();
+#endif
+    }
+
 #ifdef KDKDK_4TH
     //! gradient kick for KDKDK_4TH method
     void GradientKick() {
@@ -1179,11 +1278,11 @@ public:
         for(PS::S32 i=0; i<n; i++){
             if(system[i].n_ngb <= 0){
                 system[i].pos  += system[i].vel * dt;
-#ifdef STELLAR_EVOLUTION
+//#ifdef STELLAR_EVOLUTION
                 // shift time interrupt in order to get consistent time for stellar evolution in the next drift
-                system[i].time_record    -= dt;
-                system[i].time_interrupt -= dt;
-#endif
+                //system[i].time_record    -= dt;
+                //system[i].time_interrupt -= dt;
+//#endif
             }
         }
     }
@@ -1605,6 +1704,7 @@ public:
 #ifdef PROFILE
         profile.status.start();
 #endif
+//        stat.shiftToOriginFrame(&system_soft[0], stat.n_real_loc);
         if (_initial_flag) {
             // calculate initial energy
             stat.energy.clear();
@@ -1617,6 +1717,8 @@ public:
             stat.energy.epot_sd = stat.energy.epot;
 #endif
             stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);
+            Ptcl::vel_cm = stat.pcm.vel;
+            //stat.calcAndShiftCenterOfMass(&system_soft[0], stat.n_real_loc, 1, true);
 
         }
         else {
@@ -1669,7 +1771,10 @@ public:
 #endif
 #endif
             stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);
+            Ptcl::vel_cm = stat.pcm.vel;
         }
+        //stat.shiftToCenterOfMassFrame(&system_soft[0], stat.n_real_loc);
+
 #ifdef PROFILE
         profile.status.barrier();
         PS::Comm::barrier();
@@ -1677,6 +1782,7 @@ public:
 #endif
     }
 
+    //! output data
     void output() {
 #ifdef PROFILE
         profile.output.start();
@@ -1985,7 +2091,19 @@ public:
         // set flag for particles in remove_list
         PS::S32 n_remove = remove_list.size();
         for (PS::S32 i=0; i<n_remove; i++) {
-            system_soft[remove_list[i]].group_data.artificial.setParticleTypeToUnused(); // sign for removing
+            auto& pi = system_soft[remove_list[i]];
+            pi.group_data.artificial.setParticleTypeToUnused(); // sign for removing
+            // if mass is not zero, correct energy
+            if (pi.mass>0) {
+                PS::F64 dpot = pi.mass*pi.pot_tot;
+                PS::F64 dkin = 0.5*pi.mass*(pi.vel*pi.vel);
+                PS::F64 eloss = dpot + dkin;
+                stat.energy.etot_ref -= eloss;
+                stat.energy.de_change_cum -= eloss;
+                stat.energy.etot_sd_ref -= eloss;
+                stat.energy.de_sd_change_cum -= eloss;
+                pi.mass = 0.0;
+            }
             //remove_id_record.push_back(system_soft[remove_list[i]].id);
         }
         remove_list.resizeNoInitialize(0);
@@ -2001,7 +2119,7 @@ public:
 #pragma omp for 
             for (PS::S32 i=0; i<stat.n_real_loc; i++) {
                 auto& pi = system_soft[i];
-                if (escaper.isEscaper(pi,stat.pcm)||(pi.mass==0.0&&pi.group_data.artificial.isUnused())) {
+                if (escaper.isEscaper(pi,stat.pcm)) {
                     remove_list_thx[ith].push_back(i);
                     PS::F64 dpot = pi.mass*pi.pot_tot;
                     PS::F64 dkin = 0.5*pi.mass*(pi.vel*pi.vel);
@@ -2011,6 +2129,9 @@ public:
                     stat.energy.etot_sd_ref -= eloss;
                     stat.energy.de_sd_change_cum -= eloss;
                 }
+                // Registered removed particles have already done energy correction
+                else if (pi.mass==0.0&&pi.group_data.artificial.isUnused()) 
+                    remove_list_thx[ith].push_back(i);
             }
         }
 
@@ -2116,6 +2237,19 @@ public:
         initial_fdps_flag = true;
     }
 
+    //! print terminal Logo
+    void printLogo(std::ostream & fout) const {
+        fout<<"\n ******************************************\n"
+            <<"  ██████╗ ███████╗████████╗ █████╗ ██████╗\n"
+            <<"  ██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔══██╗\n"
+            <<"  ██████╔╝█████╗     ██║   ███████║██████╔╝\n"
+            <<"  ██╔═══╝ ██╔══╝     ██║   ██╔══██║██╔══██╗\n"
+            <<"  ██║     ███████╗   ██║   ██║  ██║██║  ██║\n"
+            <<"  ╚═╝     ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝\n"
+            <<" ******************************************\n"
+            <<std::endl;
+    }
+
     //! print reference to cite
     void printReference(std::ostream & fout) const{
         fout<<"============== PeTar ================\n"
@@ -2125,8 +2259,12 @@ public:
             <<" Please cite the following papers when you use PeTar for any publications\n"
             <<"    FDPS: see above FPDS Logo message\n";
         AR::printReference(fout);
+        fout<<"    PeTar: Wang L., Iwasawa M., Nitadori K., Makino J., 2020, MNRAS, accepted, ArXiv: 2006.16560 [astro-ph]\n";
 #ifdef BSE
         BSEManager::printReference(fout);
+#endif
+#ifdef GALPY
+        GalpyManager::printReference(fout);
 #endif
         fout<<" Copyright (C) 2017\n"
             <<"    Long Wang, Masaki Iwasawa, Keigo Nitadori, Junichiro Makino and many others\n";
@@ -2142,7 +2280,10 @@ public:
      */
     int readParameters(int argc, char *argv[]) {
         // print reference
-        if (my_rank==0) printReference(std::cerr);
+        if (my_rank==0) {
+            printLogo(std::cerr);
+            printReference(std::cerr);
+        }
 
         //assert(initial_fdps_flag);
         assert(!read_parameters_flag);
@@ -2156,6 +2297,11 @@ public:
         if (my_rank==0) bse_parameters.print_flag=true;
         else bse_parameters.print_flag=false;
         bse_parameters.read(argc,argv);
+#endif
+#ifdef GALPY
+        if (my_rank==0) galpy_parameters.print_flag=true;
+        else galpy_parameters.print_flag=false;
+        galpy_parameters.read(argc,argv);
 #endif
 
         // help case, return directly
@@ -2248,6 +2394,17 @@ public:
                 hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out);
             }
 #endif 
+
+#ifdef ADJUST_GROUP_PRINT
+            // open file for new/end group information
+            if (input_parameters.adjust_group_write_option.value==1) {
+                std::string fgroup_name = fname_snp + ".group." + my_rank_str;
+                if(input_parameters.app_flag) 
+                    hard_manager.h4_manager.fgroup.open(fgroup_name.c_str(), std::ofstream::out|std::ofstream::app);
+                else 
+                    hard_manager.h4_manager.fgroup.open(fgroup_name.c_str(), std::ofstream::out);
+            }
+#endif
         }
 
 #ifdef HARD_DUMP
@@ -2265,7 +2422,7 @@ public:
         domain_decompose_weight=1.0;
         dinfo.initialize(coef_ema);
 
-        if(pos_domain!=NULL) {
+        if(pos_domain==NULL) {
             pos_domain = new PS::F64ort[n_proc];
             for(PS::S32 i=0; i<n_proc; i++) pos_domain[i] = dinfo.getPosDomain(i);
         }
@@ -2564,13 +2721,17 @@ public:
                 std::cout<<"----- Unit set 1: Msun, pc, Myr -----\n"
                          <<"gravitational_constant = "<<input_parameters.gravitational_constant.value<<" pc^3/(Msun*Myr^2)\n";
 #ifdef BSE
-                std::cout<<"----- BSE scaling ----- \n"
-                         <<" tscale = "<<bse_parameters.tscale.value<<" Myr/Myr\n"
-                         <<" mscale = "<<bse_parameters.mscale.value<<" Msun/Msun\n"
-                         <<" rscale = "<<bse_parameters.rscale.value<<" Rsun/pc\n"
-                         <<" vscale = "<<bse_parameters.vscale.value<<" [km/s]/[pc/Myr]\n";
+                std::cout<<"----- Unit conversion for BSE ----- \n"
+                         <<" tscale = "<<bse_parameters.tscale.value<<"  Myr / Myr\n"
+                         <<" mscale = "<<bse_parameters.mscale.value<<"  Msun / Msun\n"
+                         <<" rscale = "<<bse_parameters.rscale.value<<"  Rsun / pc\n"
+                         <<" vscale = "<<bse_parameters.vscale.value<<"  [km/s] / [pc/Myr]\n";
 #endif
+
             }
+#ifdef GALPY
+            galpy_parameters.setStdUnit(print_flag);
+#endif
 
         }
 
@@ -2585,7 +2746,7 @@ public:
         PS::F64& search_vel_factor =  input_parameters.search_vel_factor.value;
         PS::F64& ratio_r_cut   =  input_parameters.ratio_r_cut.value;
         PS::S64& n_bin         =  input_parameters.n_bin.value;
-        PS::F64& theta         =  input_parameters.theta.value;
+        //PS::F64& theta         =  input_parameters.theta.value;
         PS::F64& G             =  input_parameters.gravitational_constant.value;
 
         // local particle number
@@ -2707,7 +2868,7 @@ public:
         }
 
         // if r_bin is not defined, set to theta * r_in
-        if (r_bin==0.0) r_bin = theta*r_in;
+        if (r_bin==0.0) r_bin = 0.8*r_in;
 
         // if r_search_min is not defined, calculate by search_vel_factor*velocity_dispersion*tree_time_step + r_out
         if (r_search_min==0.0) r_search_min = search_vel_factor*vel_disp*dt_soft + r_out;
@@ -2726,6 +2887,7 @@ public:
         Ptcl::r_search_min = r_search_min;
         Ptcl::mean_mass_inv = 1.0/mass_average;
         Ptcl::r_group_crit_ratio = r_bin/r_in;
+        Ptcl::vel_cm = vel_cm_glb;
         escaper.r_escape = input_parameters.r_escape.value;
 
         if(print_flag) {
@@ -2775,7 +2937,13 @@ public:
                 auto& pi_cm = system_soft[i].group_data.cm;
                 pi_cm.mass = pi_cm.vel.x = pi_cm.vel.y = pi_cm.vel.z = 0.0;
             }
+            stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);
+            Ptcl::vel_cm = stat.pcm.vel;
         }
+
+#ifdef GALPY
+        galpy_manager.initial(galpy_parameters, print_flag);
+#endif
     
         // set system hard paramters
         hard_manager.setDtRange(input_parameters.dt_soft.value/input_parameters.dt_limit_hard_factor.value, input_parameters.dt_min_hermite_index.value);
@@ -2810,11 +2978,20 @@ public:
 #ifdef STELLAR_EVOLUTION
         hard_manager.ar_manager.interaction.stellar_evolution_option = input_parameters.stellar_evolution_option.value;
         if (write_style) hard_manager.ar_manager.interaction.stellar_evolution_write_flag = true;
+        else hard_manager.ar_manager.interaction.stellar_evolution_write_flag = false;
 #ifdef BSE
         if (input_parameters.stellar_evolution_option.value==1) 
             hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters, print_flag);
 #endif
 #endif
+#ifdef ADJUST_GROUP_PRINT
+        // group information
+        if (write_style&&input_parameters.adjust_group_write_option.value==1) 
+            hard_manager.h4_manager.adjust_group_write_flag=true;
+        else 
+            hard_manager.h4_manager.adjust_group_write_flag=false;
+#endif        
+
         // check consistence of paramters
         input_parameters.checkParams();
         hard_manager.checkParams();
@@ -2867,6 +3044,18 @@ public:
                 abort();
             }
             bse_parameters.input_par_store.writeAscii(fpar_out);
+            fclose(fpar_out);
+#endif
+
+#ifdef GALPY
+            // save galpy parameters
+            std::string fgalpy_par = input_parameters.fname_par.value + ".galpy";
+            if (print_flag) std::cout<<"Save galpy_parameters to file "<<fgalpy_par<<std::endl;
+            if( (fpar_out = fopen(fgalpy_par.c_str(),"w")) == NULL) {
+                fprintf(stderr,"Error: Cannot open file %s.\n", fgalpy_par.c_str());
+                abort();
+            }
+            galpy_parameters.input_par_store.writeAscii(fpar_out);
             fclose(fpar_out);
 #endif
         }
@@ -2935,6 +3124,9 @@ public:
         /// correct system_soft.acc with changeover, using system_hard and system_soft particles
         treeForceCorrectChangeover();
 
+        /// force from external potential
+        externalForce();
+
         // correct force due to the change over update
         correctForceChangeOverUpdate();
 
@@ -3000,7 +3192,7 @@ public:
 #ifdef STELLAR_EVOLUTION
                 PS::F64 mbk = p.mass;
                 PS::F64vec vbk = p.vel; //back up velocity in case of change
-                int modify_flag = hard_manager.ar_manager.interaction.modifyOneParticle(p, 0.0, dt);
+                int modify_flag = hard_manager.ar_manager.interaction.modifyOneParticle(p, stat.time, stat.time + dt);
                 if (modify_flag) {
                     auto& v = p.vel;
                     PS::F64 de_kin = 0.5*(p.mass*(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]) - mbk*(vbk[0]*vbk[0]+vbk[1]*vbk[1]+vbk[2]*vbk[2]));
@@ -3012,8 +3204,8 @@ public:
                     stat.energy.etot_sd_ref += de_kin;
                 }
                 // shift time interrupt in order to get consistent time for stellar evolution in the next drift
-                p.time_record    -= dt;
-                p.time_interrupt -= dt;
+                //p.time_record    -= dt;
+                //p.time_interrupt -= dt;
 #endif
             }
 
@@ -3057,7 +3249,7 @@ public:
 
     
     //! integrate the system
-    /*! @param[in] _time_break: additional breaking time to interrupt the integration, in default (0.0) the system integrate to time_end
+    /*! @param[in] _time_break: additional breaking time to interrupt the integration, in default (0.0) the system integrate to time_end 
       \return interrupted cluster number
      */
     PS::S32 integrateToTime(const PS::F64 _time_break=0.0) {
@@ -3119,6 +3311,9 @@ public:
             // >5 correct change over and potential energy due to mass change
             /// correct system_soft.acc with changeover, using system_hard and system_soft particles
             treeForceCorrectChangeover();
+
+            /// force from external potential
+            externalForce();
 
 #ifdef KDKDK_4TH
             // only do correction at middle step
@@ -3190,6 +3385,9 @@ public:
 
             // >6. kick 
             kick(dt_kick);
+
+            // correct Ptcl:vel_cm
+            correctPtclVelCM(dt_kick);
 
             // >7. write back data
             if(output_flag||interrupt_flag) {
@@ -3267,6 +3465,9 @@ public:
                 correctForceChangeOverUpdate();
 
                 kick(dt_kick);
+
+                // correct Ptcl:vel_cm
+                correctPtclVelCM(dt_kick);
             }
 
 
@@ -3310,6 +3511,9 @@ public:
         auto& interaction = hard_manager.ar_manager.interaction;
         if (interaction.fout_sse.is_open()) interaction.fout_sse.close();
         if (interaction.fout_bse.is_open()) interaction.fout_bse.close();
+#endif
+#ifdef ADJUST_GROUP_PRINT
+        if (hard_manager.h4_manager.fgroup.is_open()) hard_manager.h4_manager.fgroup.close();
 #endif
         if (pos_domain) {
             delete[] pos_domain;

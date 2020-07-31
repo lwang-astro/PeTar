@@ -92,7 +92,7 @@ public:
 	*/
     } // default NaN
 
-    ~PhantomGrapeQuad(){
+    //~PhantomGrapeQuad(){
 	/*
 	std::cerr<<"destructor"<<std::endl;
 	for(int i=0; i<NIMAX/8; i++){
@@ -117,7 +117,7 @@ public:
 	delete [] epjbuf;
 	delete [] spjbuf;
 	*/
-    }
+    //}
 
 //    void set_cutoff(const double _r_out, const double _r_in){
 //        r_out = _r_out;
@@ -239,7 +239,7 @@ public:
             std::cout<<"ni= "<<ni<<" NIMAX= "<<NIMAX<<" nj= "<<nj<<" NJMAX= "<<NJMAX<<std::endl;
 #ifdef USE__AVX512
             for(PS::S32 i=0; i<(ni-1)/16+1; i++){
-                for(PS::S32 j=0; i<16; j++){
+                for(PS::S32 j=0; j<16; j++){
                     for(PS::S32 k=0; k<3; k++){
                         std::cout<<"xibuf[i][k][j]="<<xibuf[i][k][j]<<std::endl;
                     }
@@ -248,7 +248,7 @@ public:
             }
 #else
             for(PS::S32 i=0; i<(ni-1)/8+1; i++){
-                for(PS::S32 j=0; i<8; j++){
+                for(PS::S32 j=0; j<8; j++){
                     for(PS::S32 k=0; k<3; k++){
                         std::cout<<"xibuf[i][k][j]="<<xibuf[i][k][j]<<std::endl;
                     }
@@ -267,7 +267,7 @@ public:
             std::cout<<"ni= "<<ni<<" NIMAX= "<<NIMAX<<" nj= "<<nj<<" NJMAX= "<<NJMAX<<std::endl;
 #ifdef USE__AVX512
             for(PS::S32 i=0; i<(ni-1)/16+1; i++){
-                for(PS::S32 j=0; i<16; j++){
+                for(PS::S32 j=0; j<16; j++){
                     for(PS::S32 k=0; k<3; k++){
                         std::cout<<"xibuf[i][k][j]="<<xibuf[i][k][j]<<std::endl;
                     }
@@ -276,7 +276,7 @@ public:
             }
 #else
             for(PS::S32 i=0; i<(ni-1)/8+1; i++){
-                for(PS::S32 j=0; i<8; j++){
+                for(PS::S32 j=0; j<8; j++){
                     for(PS::S32 k=0; k<3; k++){
                         std::cout<<"xibuf[i][k][j]="<<xibuf[i][k][j]<<std::endl;
                     }

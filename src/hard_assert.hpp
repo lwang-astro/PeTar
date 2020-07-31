@@ -10,6 +10,7 @@
 class HardDump{
 public:
     typedef H4::ParticleH4<PtclHard> PtclH4;
+    PS::F64 time_offset;
     PS::F64 time_end;
     PS::S32 n_ptcl;
     PS::S32 n_arti;
@@ -24,7 +25,8 @@ public:
        @param[in] _n_ptcl: cluster member number
        @param[in] _ptcl_artifical: artifical particle backup
        @param[in] _n_group: number of groups
-       @param[in] _time_end: time ending
+       @param[in] _time_offset: offset of time
+       @param[in] _time_end: time ending without offset
        @param[in] _n_artificial: artifical particle number
      */
     void backup(PtclH4 * _ptcl_local,
@@ -32,10 +34,12 @@ public:
                 FPSoft* _ptcl_artifical,
                 const PS::S32 _n_group,
                 const PS::S32* _n_member_in_group,
+                const PS::F64 _time_offset,
                 const PS::F64 _time_end,
                 const PS::S32 _n_artificial) {
         ptcl_bk.resizeNoInitialize(_n_ptcl);
         for (int i=0; i<_n_ptcl; i++) ptcl_bk[i] = _ptcl_local[i];
+        time_offset = _time_offset;
         time_end = _time_end;
         n_ptcl =_n_ptcl;
         n_member_in_group.resizeNoInitialize(_n_group);
@@ -59,6 +63,7 @@ public:
             std::cerr<<"Error: filename "<<_fname<<" cannot be open!\n";
             abort();
         }
+        fwrite(&time_offset, sizeof(PS::F64),1,fp);
         fwrite(&time_end, sizeof(PS::F64),1,fp);
         // hard particles
         fwrite(&n_ptcl, sizeof(PS::S32), 1, fp);
@@ -89,9 +94,10 @@ public:
             abort();
         }
         // read time
-        size_t rcount = fread(&time_end, sizeof(PS::F64),1,fp);
-        if (rcount<1) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+        size_t rcount = fread(&time_offset, sizeof(PS::F64),1,fp);
+        rcount += fread(&time_end, sizeof(PS::F64),1,fp);
+        if (rcount<2) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
             abort();
         }
         // read hard particles
@@ -156,6 +162,8 @@ public:
     int dump_number;
     HardDump* hard_dump;
 
+    HardDumpList(): size(0), dump_number(0), hard_dump(NULL) {}
+
     void initial(const int _n) {
         size = _n;
         dump_number = 0;
@@ -165,7 +173,10 @@ public:
     void clear() {
         size = 0;
         dump_number = 0;
-        delete[] hard_dump;
+        if (hard_dump!=NULL) {
+            delete[] hard_dump;
+            hard_dump=NULL;
+        }
     }
 
     ~HardDumpList() {

@@ -16,7 +16,6 @@
 int main(int argc, char **argv){
   int arg_label;
   int mode=0; // 0: integrate to time; 1: times stability
-  int idum=0;
   PS::F64 slowdown_factor=0;
   PS::F64 eta_4th=0;
   PS::F64 eta_2nd=0;
@@ -28,6 +27,7 @@ int main(int argc, char **argv){
   std::string filename="hard_dump";
   std::string fhardpar="input.par.hard";
 #ifdef BSE
+  int idum=0;
   std::string fbsepar = "input.par.bse";
 #endif
 
@@ -137,6 +137,12 @@ int main(int argc, char **argv){
 #endif
 #endif
 
+#ifdef ADJUST_GROUP_PRINT
+  if (hard_manager.h4_manager.adjust_group_write_flag) {
+      hard_manager.h4_manager.fgroup.open((filename+".group").c_str(), std::ofstream::out);
+  }
+#endif
+
 #ifdef HARD_CHECK_ENERGY
   // Set hard energy limit
   if (e_err_hard>0 )
@@ -183,7 +189,7 @@ int main(int argc, char **argv){
       // change ARC parameters
       //sys.driveForMultiClusterImpl(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, hard_dump.time_end, 0);
       HardIntegrator hard_int;
-      hard_int.initial(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, hard_dump.n_member_in_group.getPointer(), &hard_manager, 0.0);
+      hard_int.initial(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, hard_dump.n_member_in_group.getPointer(), &hard_manager, hard_dump.time_offset);
 
       auto& interrupt_binary = hard_int.integrateToTime(hard_dump.time_end);
       if (interrupt_binary.status!=AR::InterruptStatus::none) {

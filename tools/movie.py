@@ -11,6 +11,7 @@ import multiprocessing as mp
 import getopt
 import petar
 import imageio
+import os
 #from pygifsicle import optimize
 
 plt.style.use('dark_background')
@@ -25,6 +26,7 @@ def create_movie(filenames, fps, output_file):
 class PlotXY:
     def __init__(self):
         self.boxsize = 2
+        self.cm_boxsize = 2
         self.framescale = 1
         self.nlayer_cross = 5
         self.nlayer_point = 10
@@ -39,6 +41,8 @@ class PlotXY:
         #if ('boxsize' in kwargs.keys()): boxsize = kwargs['boxsize']
         #if ('nlayer_cross' in kwargs.keys()): nlayer_cross = kwargs['nlayer_cross']
         #if ('alpha_amplifier' in kwargs.keys()): alpha_amplifier = kwargs['alpha_amplifier']
+        if (not 'cm_boxsize' in kwargs.keys()):
+            self.cm_boxsize = self.boxsize
 
         nlayer = self.nlayer_cross + self.nlayer_point
         self.nlayer = nlayer
@@ -50,8 +54,13 @@ class PlotXY:
         axe.set_xlim(-self.boxsize,self.boxsize)
         axe.set_ylim(-self.boxsize,self.boxsize)
         axe.set_aspect(1.0)
-        axe.set_xlabel('x')
-        axe.set_ylabel('y')
+        if ('unit_length' in kwargs.keys()):
+            unit_label = '['+kwargs['unit_length']+']'
+            axe.set_xlabel('x'+unit_label)
+            axe.set_ylabel('y'+unit_label)
+        else:
+            axe.set_xlabel('x')
+            axe.set_ylabel('y')
 
         for i in range(self.nlayer_cross):
             pt =axe.scatter([],[],marker='+',alpha=alphascale[i],edgecolors='none')
@@ -118,7 +127,11 @@ class PlotSemiEcc:
         axe.set_xscale('log')
         axe.set_xlim(self.semi_min,self.semi_max)
         axe.set_ylim(self.ecc_min,self.ecc_max)
-        axe.set_xlabel('semi')
+        if ('unit_length' in kwargs.keys()):
+            unit_label = '['+kwargs['unit_length']+']'
+            axe.set_xlabel('semi'+unit_label)
+        else:
+            axe.set_xlabel('semi')
         axe.set_ylabel('ecc')
         return self.ptcls
 
@@ -175,8 +188,10 @@ class Data:
                     p1 = petar.Particle(interrupt_mode=self.interrupt_mode)
                     p2 = petar.Particle(interrupt_mode=self.interrupt_mode)
                     binary = petar.Binary(p1,p2)
-                    single.loadtxt(file_path+'.single')
-                    binary.loadtxt(file_path+'.binary')
+                    if os.path.getsize(file_path+'.single')>0:
+                        single.loadtxt(file_path+'.single')
+                    if os.path.getsize(file_path+'.binary')>0:
+                        binary.loadtxt(file_path+'.binary')
                     data['x'] = np.concatenate((single.pos[:,0], binary.p1.pos[:,0], binary.p2.pos[:,0])) 
                     data['y'] = np.concatenate((single.pos[:,1], binary.p1.pos[:,1], binary.p2.pos[:,1])) 
                     data['mass'] = np.concatenate((single.mass, binary.p1.mass, binary.p2.mass))
@@ -184,17 +199,17 @@ class Data:
                     data['ecc'] = binary.ecc
                     data['state'] = binary.p1.binary_state
                     if (self.interrupt_mode=='bse'):
-                        data['lum'] = np.concatenate((single.s_lum, binary.p1.s_lum, binary.p2.s_lum))
-                        data['rad'] = np.concatenate((single.s_rad, binary.p1.s_rad, binary.p2.s_rad))
-                        data['type']= np.concatenate((single.s_type,binary.p1.s_type,binary.p2.s_type))
-                        temp_single = 5778*(single.s_lum/(single.s_rad*single.s_rad))**0.25
-                        temp_b1 = 5778*(binary.p1.s_lum/(binary.p1.s_rad*binary.p1.s_rad))**0.25
-                        temp_b2 = 5778*(binary.p2.s_lum/(binary.p2.s_rad*binary.p2.s_rad))**0.25
-                        temp_binary = (temp_b1*binary.p1.s_lum+temp_b2*binary.p2.s_lum)/(binary.p1.s_lum+binary.p2.s_lum)
+                        data['lum'] = np.concatenate((single.star.lum, binary.p1.star.lum, binary.p2.star.lum))
+                        data['rad'] = np.concatenate((single.star.rad, binary.p1.star.rad, binary.p2.star.rad))
+                        data['type']= np.concatenate((single.star.type,binary.p1.star.type,binary.p2.star.type))
+                        temp_single = 5778*(single.star.lum/(single.star.rad*single.star.rad))**0.25
+                        temp_b1 = 5778*(binary.p1.star.lum/(binary.p1.star.rad*binary.p1.star.rad))**0.25
+                        temp_b2 = 5778*(binary.p2.star.lum/(binary.p2.star.rad*binary.p2.star.rad))**0.25
+                        temp_binary = (temp_b1*binary.p1.star.lum+temp_b2*binary.p2.star.lum)/(binary.p1.star.lum+binary.p2.star.lum)
                         data['temp']= np.concatenate((temp_single, temp_b1, temp_b2))
-                        data['lum_cm'] = np.append(single.s_lum, binary.p1.s_lum+binary.p2.s_lum)
+                        data['lum_cm'] = np.append(single.star.lum, binary.p1.star.lum+binary.p2.star.lum)
                         data['temp_cm']= np.append(temp_single,temp_binary)
-                        data['type_cm']= np.append(single.s_type,np.max([binary.p1.s_type,binary.p2.s_type],axis=0))
+                        data['type_cm']= np.append(single.star.type,np.max([binary.p1.star.type,binary.p2.star.type],axis=0))
                 else:
                     particles=petar.Particle(interrupt_mode=self.interrupt_mode)
                     particles.loadtxt(file_path,skiprows=1)
@@ -206,21 +221,21 @@ class Data:
                     data['ecc'] = binary.ecc
                     data['state'] = binary.p1.binary_state
                     if (self.interrupt_mode=='bse'):
-                        data['lum'] = particles.s_lum
-                        data['rad'] = particles.s_rad
-                        data['type']= particles.s_type
-                        data['lum_cm'] = np.append(single.s_lum, binary.p1.s_lum+binary.p2.s_lum)
+                        data['lum'] = particles.star.lum
+                        data['rad'] = particles.star.rad
+                        data['type']= particles.star.type
+                        data['lum_cm'] = np.append(single.star.lum, binary.p1.star.lum+binary.p2.star.lum)
                         data['temp']= 5778*(data['lum']/(data['rad']*data['rad']))**0.25
-                        temp_single = 5778*(single.s_lum/(single.s_rad*single.s_rad))**0.25
-                        temp_b1 = 5778*(binary.p1.s_lum/(binary.p1.s_rad*binary.p1.s_rad))**0.25
-                        temp_b2 = 5778*(binary.p2.s_lum/(binary.p2.s_rad*binary.p2.s_rad))**0.25
-                        temp_binary = (temp_b1*binary.p1.s_lum+temp_b2*binary.p2.s_lum)/(binary.p1.s_lum+binary.p2.s_lum)
+                        temp_single = 5778*(single.star.lum/(single.star.rad*single.star.rad))**0.25
+                        temp_b1 = 5778*(binary.p1.star.lum/(binary.p1.star.rad*binary.p1.star.rad))**0.25
+                        temp_b2 = 5778*(binary.p2.star.lum/(binary.p2.star.rad*binary.p2.star.rad))**0.25
+                        temp_binary = (temp_b1*binary.p1.star.lum+temp_b2*binary.p2.star.lum)/(binary.p1.star.lum+binary.p2.star.lum)
                         #temp_binary = temp_b1
-                        #sel = (binary.p1.s_lum<binary.p2.s_lum)
+                        #sel = (binary.p1.star.lum<binary.p2.star.lum)
                         #temp_binary[sel] = temp_b2[sel]
                         #print(temp_single.size,temp_binary.size,data['lum_cm'].size)
                         data['temp_cm']= np.append(temp_single,temp_binary)
-                        data['type_cm']= np.append(single.s_type,np.max([binary.p1.s_type,binary.p2.s_type],axis=0))
+                        data['type_cm']= np.append(single.star.type,np.max([binary.p1.star.type,binary.p2.star.type],axis=0))
             else:
                 particles=petar.Particle(interrupt_mode=interrupt_mode)
                 particles.loadtxt(file_path,skiprows=1)
@@ -228,12 +243,20 @@ class Data:
                 data['y'] = particles.pos[:,1]
                 data['mass'] =particles.mass
                 if (interrupt_mode=='bse'):
-                    data['lum'] = particles.s_lum
-                    data['rad'] = particles.s_rad
-                    data['type']= particles.s_type
+                    data['lum'] = particles.star.lum
+                    data['rad'] = particles.star.rad
+                    data['type']= particles.star.type
         
-    def correctCM(self, boxsize):
-        if (self.cm_mode=='density'):
+    def correctCM(self, boxsize, pos):
+        xcm = 0.0
+        ycm = 0.0
+        if (self.cm_mode=='core'):
+            xcm = pos[0]
+            ycm = pos[1]
+            if (self.generate_binary!=2): # data from petar.data.process already remove c.m. from core center
+                self.x = self.x-ycm
+                self.y = self.y-ycm
+        elif (self.cm_mode=='density'):
             nbins=100
             xmid = np.average(np.abs(self.x))
             ymid = np.average(np.abs(self.y))
@@ -274,7 +297,7 @@ class Data:
             self.y = self.y - ycm2
             xcm += xcm2
             ycm += ycm2
-        else:
+        elif (self.cm_mode=='average'):
             xcm = self.x.sum()/self.x.size
             ycm = self.y.sum()/self.y.size
             self.x = self.x - xcm
@@ -289,21 +312,31 @@ class Data:
             ycm += ycm2
         return xcm, ycm
 
-def plotOne(file_path, axe, plots, **kwargs):
+def plotOne(file_path, axe, plots, core, **kwargs):
     data = Data(**kwargs)
     data.read(file_path)
-    xcm, ycm=data.correctCM(plots['xy'].boxsize)
 
-    axe[0].set_title('T = '+data['t'])
-    axe[0].text(.05, 0.95, r'$x_{cm}=%f$' % xcm, transform = axe[0].transAxes, color='white')
-    axe[0].text(.35, 0.95, r'$y_{cm}=%f$' % ycm, transform = axe[0].transAxes, color='white')
+    pos=np.array([0,0])
+    if (data.cm_mode=='core'):
+        sel=(core.time==float(data['t']))
+        pos=core[sel].pos[0]
+    xcm, ycm=data.correctCM(plots['xy'].cm_boxsize, pos)
+
+    if ('unit_time' in kwargs.keys()):
+        unit_label = ' '+kwargs['unit_time']
+        axe[0].set_title('T = '+data['t']+unit_label)
+    else:
+        axe[0].set_title('T = '+data['t'])
     
     colors='w'
     if ('lum' in data.keys()): colors = plots['xy'].getColor(data['temp'])
 
     ptcls=[]
     ptcls = ptcls + plots['xy'].plot(data.x, data.y, data.mass, colors)
-    
+    plots['xcm'].set_text(r'$x_{cm}=%f$' % xcm)
+    plots['ycm'].set_text(r'$y_{cm}=%f$' % ycm)
+    ptcls = ptcls + [plots['xcm'], plots['ycm']]
+                                     
     if ('xyzoom' in plots.keys()): 
         ptcls = ptcls + plots['xyzoom'].plot(data.x, data.y, data.mass, colors)
 
@@ -321,13 +354,15 @@ def initPlot(axe, plot_zoom, plot_HRdiagram, plot_semi_ecc, **kwargs):
     plots=dict()
 
     iaxe=0
-    framescale=1
-    if 'framescale' in kwargs.keys(): 
+    framescale = 1
+    if 'framescale' in kwargs.keys():
         framescale = kwargs['framescale']
         kwargs['framescale'] = 1
-    plots['xy']=PlotXY()
-    plots['xy'].init(axe[iaxe],**kwargs)
-
+    plots['xy'] = PlotXY()
+    plots['xy'].init(axe[iaxe], **kwargs)
+    plots['xcm'] = axe[0].text(.05, 0.95, '', transform = axe[0].transAxes, color='white')
+    plots['ycm'] = axe[0].text(.35, 0.95, '', transform = axe[0].transAxes, color='white')
+    
     if (plot_zoom): 
         iaxe +=1 
         kwargs['boxsize'] = plots['xy'].boxsize / framescale
@@ -366,8 +401,11 @@ def initFig(frame_xsize, frame_ysize, ncol, nplots):
     return fig, axe
 
 
-def createImage(_path_list, frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdiagram, plot_semi_ecc, **kwargs):
+def createImage(_path_list, frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdiagram, plot_semi_ecc, core, **kwargs):
     n_frame = len(_path_list)
+    use_previous = False
+    if ('use_previous' in kwargs.keys()): use_previous = kwargs['use_previous']
+
     if (n_frame>0):
         nplots = 1
         if (plot_zoom): nplots+=1
@@ -380,7 +418,11 @@ def createImage(_path_list, frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdi
 
         for k in range(n_frame):
             file_path = _path_list[k]
-            plotOne(file_path, axe, plots,  **kwargs)
+            if (use_previous):
+                if (os.path.exists(file_path+'.png')):
+                    print('find existing %s' % file_path)
+                    continue
+            plotOne(file_path, axe, plots, core, **kwargs)
             fig.savefig(file_path+'.png',bbox_inches = "tight")
             print(file_path)
     return n_frame
@@ -388,6 +430,7 @@ def createImage(_path_list, frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdi
 if __name__ == '__main__':
 
     filename='dat.lst'
+    core_file='data.core'
     fps = 30
     output_file = 'movie'
     plot_HRdiagram=False
@@ -419,6 +462,7 @@ if __name__ == '__main__':
         print("  -b: plot semi-ecc diagram for binaries")
         print("  -G: gravitational constant for calculating binary orbit: ",data.G)
         print("  -o: output movie filename: ",output_file)
+        print("  -i: Use previous generated png images to speed up the movie generation")
         print("  --n-cpu: number of CPU processors to use, only work for gif format: all CPU cores")
         print("  --lum-min: minimum lumonisity: ",phr.lum_min)
         print("  --lum-max: maximum lumonisity: ",phr.lum_max)
@@ -432,19 +476,26 @@ if __name__ == '__main__':
         print("  --xcol: column index for x-axis: Unset")
         print("  --ycol: column index for x-axis: Unset")
         print("  --mcol: column index for mass, if not set and not PeTar output, assume equal mass: Unset")
+        print("  --unit-length: set label of length unit for x, y and semi: no print")
+        print("  --unit-time: set label of time unit: no print")
         print("  --skiprows: number of rows to escape when read snapshot: Unset")
         print("  --generate-binary: 0: no binary, 1: detect binary by using KDtree (slow), 2: read single and binary data generated by petar.data.process: ", data.generate_binary)
         print("  --plot-ncols: column number of panels: same as panels")
         print("  --plot-xsize: x size of panel: ",frame_xsize)
         print("  --plot-ysize: y size of panel: ",frame_ysize)
-        print("  --cm-mode: plot origin position determination: density: density center; average: average of x,y: ", data.cm_mode)
+        print("  --cm-mode: plot origin position determination: density: density center; average: average of x,y; core: use core data file generated from petar.data.process; none: use origin of snapshots: ", data.cm_mode)
+        print("  --core-file: core data file name: ",core_file)
+        print("  --cm-boxsize: boxsize to search the coordinate center for the x-y plot: 5.0 times ploting size (-R)")
+        print("  --n-layer-cross: number of layers of crosses for particles in the x-y plot: 5")
+        print("  --n-layer-point: number of layers of points for particles in the x-y plot: 10")
+        print("  --layer-alpha: transparency factor of layers in the x-y plot: 2.5")
         print("  --suppress-images: do not plot snapshot images (png files) and use matplotlib.animation instead of imageio, this cannot use multi-processing, much slower")
         print("  --format: video format, require imageio installed, for some formats (e.g. avi, mp4) may require ffmpeg and imageio-ffmpeg installed: ", plot_format)
         print("PS:: when xcol, ycol, skiprows are not provided, the snapshot files are assumed to be the output of PeTar")
 
     try:
-        shortargs = 's:f:R:z:o:G:Hbh'
-        longargs = ['help','lum-min=','lum-max=','temp-min=','temp-max=','semi-min=','semi-max=','ecc-min=','ecc-max=','interrupt-mode=','xcol=','ycol=','mcol=','skiprows=','generate-binary=','plot-ncols=','plot-xsize=','plot-ysize=','suppress-images','format=','cm-mode=']
+        shortargs = 's:f:R:z:o:G:iHbh'
+        longargs = ['help','n-cpu=','lum-min=','lum-max=','temp-min=','temp-max=','semi-min=','semi-max=','ecc-min=','ecc-max=','interrupt-mode=','xcol=','ycol=','mcol=','unit-length=','unit-time=','skiprows=','generate-binary=','plot-ncols=','plot-xsize=','plot-ysize=','suppress-images','format=','cm-mode=','core-file=','n-layer-cross=','n-layer-point=','layer-alpha=','cm-boxsize=']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -469,6 +520,10 @@ if __name__ == '__main__':
                 kwargs['G'] = float(arg)
             elif opt in ('-f'):
                 fps = int(arg)
+            elif opt in ('-i'):
+                kwargs['use_previous'] = True
+            elif opt in ('--n-cpu'):
+                n_cpu = int(arg)
             elif opt in ('--lum-min'):
                 kwargs['lum_min'] = float(arg)
             elif opt in ('--lum-max'):
@@ -489,12 +544,20 @@ if __name__ == '__main__':
                 kwargs['interrupt_mode'] = arg
             elif opt in ('--cm-mode'):
                 kwargs['cm_mode']= arg
+            elif opt in ('--cm-boxsize'):
+                kwargs['cm_boxsize'] = float(arg)
+            elif opt in ('--core-file'):
+                core_file = arg
             elif opt in ('--xcol'):
                 kwargs['xcol'] = int(arg)
             elif opt in ('--ycol'):
                 kwargs['ycol'] = int(arg)
             elif opt in ('--mcol'):
                 kwargs['mcol'] = int(arg)
+            elif opt in ('--unit-length'):
+                kwargs['unit_length'] = arg
+            elif opt in ('--unit-time'):
+                kwargs['unit_time'] = arg
             elif opt in ('--skiprows'):
                 kwargs['skiprows'] = int(arg)
             elif opt in ('--generate-binary'):
@@ -505,6 +568,12 @@ if __name__ == '__main__':
                 frame_xsize = float(arg)
             elif opt in ('--plot-ysize'):
                 frame_ysize = float(arg)
+            elif opt in ('--n-layer-cross'):
+                kwargs['nlayer_cross'] = int(arg)
+            elif opt in ('--n-layer-point'):
+                kwargs['nlayer_point'] = int(arg)
+            elif opt in ('--layer-alpha'):
+                kwargs['alpha_amplifier'] = float(arg)
             elif opt in ('--suppress-images'):
                 plot_images = False
             elif opt in ('--format'):
@@ -524,6 +593,11 @@ if __name__ == '__main__':
     file_list = fl.read()
     path_list = file_list.splitlines()
 
+    core=petar.Core()
+    if ('cm_mode' in kwargs.keys()): 
+        if (kwargs['cm_mode']=='core'):
+            core.loadtxt(core_file)
+
     if (plot_images):
         if (n_cpu==int(0)):
             n_cpu = mp.cpu_count()
@@ -538,8 +612,8 @@ if __name__ == '__main__':
         file_part = [path_list[n_offset[i]:n_offset[i+1]] for i in range(n_cpu)]
         results=[None]*n_cpu
         for rank in range(n_cpu):
-#            createImage(file_part[rank], frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdiagram, plot_semi_ecc, **kwargs)
-            results[rank]=pool.apply_async(createImage, (file_part[rank], frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdiagram, plot_semi_ecc, ), kwargs)
+            #createImage(file_part[rank], frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdiagram, plot_semi_ecc, **kwargs)
+            results[rank]=pool.apply_async(createImage, (file_part[rank], frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdiagram, plot_semi_ecc, core), kwargs)
 
         # Step 3: Don't forget to close
         pool.close()
@@ -560,15 +634,19 @@ if __name__ == '__main__':
         def init():
             iaxe=0
             ptcls=[]
-            axe[0].set_title('T = %f' % 0)
-     
+            if ('unit_time' in kwargs.keys()):
+                unit_label = ' '+kwargs['unit_time']
+                axe[0].set_title('T = ' + str(0) + unit_label)
+            else:
+                axe[0].set_title('T = %f' % 0)
+                
             return ptcls
      
         def animate(k):
      
             file_path = path_list[k]
             print('process ',file_path)
-            ptcls=plotOne(file_path, axe, plots,  **kwargs)
+            ptcls=plotOne(file_path, axe, plots, core, **kwargs)
      
             return ptcls
 
