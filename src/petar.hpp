@@ -2259,7 +2259,7 @@ public:
             <<" Please cite the following papers when you use PeTar for any publications\n"
             <<"    FDPS: see above FPDS Logo message\n";
         AR::printReference(fout);
-        fout<<"    PeTar: Wang L., Iwasawa M., Nitadori K., Makino J., 2020, MNRAS, accepted, ArXiv: 2006.16560 [astro-ph]\n";
+        fout<<"    PeTar: Wang L., Iwasawa M., Nitadori K., Makino J., 2020, MNRAS, 497, 536\n";
 #ifdef BSE
         BSEManager::printReference(fout);
 #endif

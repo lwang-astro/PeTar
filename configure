@@ -4116,7 +4116,7 @@ fi
               if test "x$NVCC" == xnone; then :
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "Cannot find CUDA compiler nvcc, please check whether nvcc is in environment PATH or use --with-cuda-prefix to provide the PATH of CUDA installation
+as_fn_error $? "can't find CUDA compiler nvcc, please check whether nvcc is in environment PATH or use --with-cuda-prefix to provide the PATH of CUDA installation
 See \`config.log' for more details" "$LINENO" 5; }
 fi
 else
@@ -4241,7 +4241,7 @@ if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "Cannot find CUDA sample inc file helper_cuda.h, please provide correct cuda SDK prefix by using --with-cuda-sdk-prefix
+as_fn_error $? "can't find CUDA sample inc file helper_cuda.h, please provide correct cuda SDK prefix by using --with-cuda-sdk-prefix
 See \`config.log' for more details" "$LINENO" 5; }
 fi
 
@@ -4303,7 +4303,7 @@ if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "Cannot find CUDA library -lcudart, please provide correct cuda PREFIX by using --with-cuda-prefix
+as_fn_error $? "can't find CUDA library -lcudart, please provide correct cuda PREFIX by using --with-cuda-prefix
 See \`config.log' for more details" "$LINENO" 5; }
 fi
 
@@ -4364,7 +4364,7 @@ if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "Cannot find CUDA library -lgomp, please provide correct cuda PREFIX by using --with-cuda-prefix
+as_fn_error $? "can't find CUDA library -lgomp, please provide correct cuda PREFIX by using --with-cuda-prefix
 See \`config.log' for more details" "$LINENO" 5; }
 fi
 
@@ -4451,7 +4451,7 @@ if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "Cannot find gperftools library -lprofiler, please provide correct gperftools PREFIX by using --with-gperf-prefix
+as_fn_error $? "can't find gperftools library -lprofiler, please provide correct gperftools PREFIX by using --with-gperf-prefix
 See \`config.log' for more details" "$LINENO" 5; }
 fi
 
@@ -4512,7 +4512,7 @@ if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "Cannot find gperftools library -ltcmalloc, please provide correct gperftools PREFIX by using --with-gperf-prefix
+as_fn_error $? "can't find gperftools library -ltcmalloc, please provide correct gperftools PREFIX by using --with-gperf-prefix
 See \`config.log' for more details" "$LINENO" 5; }
 fi
 
@@ -4554,7 +4554,7 @@ if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "Cannot find FDPS library, please provide correct PREFIX by using --with-fdps-prefix
+as_fn_error $? "can't find FDPS library, please provide correct PREFIX by using --with-fdps-prefix
 See \`config.log' for more details" "$LINENO" 5; }
 fi
 
@@ -4591,7 +4591,7 @@ if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "Cannot find SDAR library, please provide correct PREFIX by using --with-sdar-prefix
+as_fn_error $? "can't find SDAR library, please provide correct PREFIX by using --with-sdar-prefix
 See \`config.log' for more details" "$LINENO" 5; }
 fi
 
@@ -5259,7 +5259,7 @@ if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "Cannot find Galpy library, please provide correct PREFIX by using --with-galpy-prefix
+as_fn_error $? "can't find Galpy library, please provide correct PREFIX by using --with-galpy-prefix
 See \`config.log' for more details" "$LINENO" 5; }
 fi
 
@@ -5300,6 +5300,11 @@ _ACEOF
 
   LIBS="-lgsl $LIBS"
 
+else
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "can't find GSL library, please install it first, e.g. in Ubuntu 20.04, use sudo apt-get install libgsl-dev
+See \`config.log' for more details" "$LINENO" 5; }
 fi
 
                     { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lgslcblas" >&5
@@ -5339,6 +5344,11 @@ _ACEOF
 
   LIBS="-lgslcblas $LIBS"
 
+else
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "can't find GSL library, please install it first, e.g. in Ubuntu 20.04, use sudo apt-get install libgsl-dev
+See \`config.log' for more details" "$LINENO" 5; }
 fi
 
 fi
