@@ -58,7 +58,7 @@ Options for configure can be found by
    ```
    ./configure --with-mpi=[auto/yes/no]
    ```
-   - auto: automatical detection MPI, if exists, use MPI compiler, otherwise use non-MPI compiler (default)
+   - auto (default): automatical detection MPI, if exists, use MPI compiler, otherwise use non-MPI compiler
    - yes: use MPI c++ compiler
    - no: non-MPI c++ compiler
    
@@ -72,7 +72,7 @@ Options for configure can be found by
     ```
     ./configure --with-simd=[auto/avx/avx2/avx512dq]
     ```
-    - auto: automatical detection based on local CPU architecture (default)
+    - auto (default): automatical detection based on local CPU architecture 
     - avx: use AVX for tree force calculation and tree neighbor counting
     - avx2: use AVX2
     - avx512dq: use AVX512F and AVX512DQ
@@ -97,17 +97,17 @@ Options for configure can be found by
     ```
     ./configure --with-interrupt=[bse]
     ```
-    Currently only SSE/BSE is the available stellar evolution package (Now still in test phase). Notice SSE/BSE is a combined package, the option argument "sse" not work, only "bse" switches on both.
+    Currently only SSE/BSE is the available stellar evolution package. Notice SSE/BSE is a combined package, the option argument "sse" not work, only "bse" switches on both.
     
     When this option is switched on, the standalone tool _petar.bse_ will also be compiled and installed.
-    This is a c++ based tool which uses the API of the SSE/BSE from Fortran77 to c++. It can be used to evolve a group of single and binary stars with OpenMP parallelization.
+    This is a c++ based tool which call the SSE/BSE functions to evolve single and binary stars to the given age and metallicity. OpenMP parallelization is used to speed up the calculation if a large group of stars and binaries are provided.
 
 8. Use _Galpy_ external potential library
     ```
     ./configure --with-external=galpy
     ```
-    The _Galpy_ library is a _Python_ and c based external potential library, which provides a plenty choices of potentials. 
-    It is also flexible to combine multiple potentials together (require to use _Galpy_ _Python_ interface to generate the instance, see their document in details.
+    The _Galpy_ library is a _Python_ and _c_ based external potential library, which provides a plenty choices of potentials. 
+    It is also flexible to combine multiple potentials together (require to use _Galpy_ _Python_ interface to generate the instance, see their document in details).
     
     When this option is switched on, the standalone tool _petar.galpy_ and _petar.galpy.help_ will also be compiled and installed.
     - _petar.galpy_ is a simple tool to call _Galpy_ c interface to evaluate the acceleration and potentials for a list of particles with a given potential model.
@@ -131,25 +131,25 @@ The excutable file _petar_, _petar.hard.debug_, _petar.init_, _petar.find.dt_, _
 2. _petar.hard.debug_ is used for debugging if _hard\_dump_ files appears when the code crashes.
 3. _petar.[tool name]_ are a group of tools for initialization, optimize the performance and data analysis. The details can be checked in the section [Useful tools](#useful-tools).
 
-The data analysis module are written in _PYTHON_.
+The data analysis module are written in _Python_.
 They are installed in [Install path]/include/petar
-Please add [Install path]/include to the _PYTHON_ include path in order to import the code.
+Please add [Install path]/include to the _Python_ include path (the environment variable, $PYTHONPATH) in order to import the code.
 
 ## Use:
-After installation, if the [Install path]/bin is in system $PATH envirnoment, the standard way to use the code is
+After installation, if the [Install path]/bin is in the envirnoment variable, $PATH, the standard way to use the code is
 ```
 [mpiexec -n X] petar [options] [particle data filename]
 ```
 where "[mpiexec -n X]" is used when multiple MPI processors are needed and "X" is the number of processors.
 
-All snapshots of particle data outputed in the simulation can be used to restart the simulation. 
-To restart the simulation with the same configuration of parameters, use
+All snapshots of particle data generated in the simulation can be used to restart the simulation. 
+To restart the simulation with the same configuration of parameters as before, use
 ```
 [mpiexec -n X] petar -p input.par [options] [snapshot filename]
 ```
 where _input.par_ is automatically generated from the last run (stored in the same diretory of the simulation).
-If the user change the name of this file and restart, the next new parameter file also follows the new name.
-Notice if the users want to use new options, these options must be put after "-p input.par", otherwises they are rewrited by values stored in input.par.
+If users change the name of this file and restart, the next new parameter file also uses the new filename.
+Notice if users want to use new options in additional to _input.par_, these options must be put after "-p input.par", otherwises they are rewrited by values stored in _input.par_.
 
 ### Important tips:
 To avoid segmetantional fault in simulations in the case of large number of particles, make sure to set the OMP_STACKSIZE large enough.
@@ -162,7 +162,7 @@ A convenient way is to add
 ```
 export OMP_STACKSIZE=128M
 ```
-in the shell configure/initial file (e.g. .bashrc for _bash_) to avoid type "OMP_STACKSIZE=128M" every time.
+in the shell configure/initial file (e.g. .bashrc for _bash_) to avoid typing "OMP_STACKSIZE=128M" every time.
 
 ### Reference
 Remember to cite the necessary references when you publish the results using _PeTar_. The references are shown in the help function of _petar_ and the begining of the output after a simulation starts.
@@ -170,7 +170,7 @@ When a feature imported from an external library is switched on, e.g. (_SSE_/_BS
 
 ### Help information
 
-All opitions are listed in the help information, which can be seen by use
+All options are listed in the help information. This can be checked by using the commander
 ```
 petar -h
 ```
@@ -189,7 +189,7 @@ When _petar_ is running, there are a few information printed in the front:
 
 Then after the line "Finish parameter initialization",
 The status of the simulation is updated every output time interval (the option -o).
-The cotent style is like:
+The content of the status has a style like:
 - Time, number of real particles, all particles (including artificial particles), removed particles and escaped particles; in local (first MPI process) and in global (all MPI process)
 - Energy check: two rows are printed. First shows the physical energy; Second shows the slow-down energy (see reference printed in _petar_ commander).
     - Error/Total: relative error of current step
@@ -215,13 +215,13 @@ There are a few output files:
 - [data filename prefix].[s/b]se.[MPI rank]: if BSE is switched on, the files record the SSE and BSE events, such as type changes, Supernovae, binary evolution phase changes. Each line contain the definition of values, thus can be directly read.
 
 Before access these files, it is suggested to run _petar.gether_ tool first to gether the separated files with different MPI ranks to one file for convenience.
-This tool also separate groups with different number of members in xx.group to individual files with suffixe ".n[number of members in groups]".
+This tool also separate the few-body groups with different number of members in xx.group files to individual files with suffixe ".n[number of members in groups]".
     
 ##### Debug dump files
 During a long-term simulation, a large number of files of "hard_large_energy.xx", "dump_large_step.xx" and "hard_dump.xx" may be generated.
 In the main output, the corresponding warning messages are also printed.
 This files record the clusters of stars initial conditions for the hard integration (Hermite+SDAR) of one tree step.
-- If the integration error exceeds the limit set in the input option (see _petar -h_), the dump file "hard_large_energy.xx" appears.
+- If the integration error exceeds the limit set in the input option (see ```petar -h```), the dump file "hard_large_energy.xx" appears.
 - If the AR step count is so large (exceeding the step limit, which can also be set in the input option) that the performance significantly drops, the dump file "dump_large_step.xx" appears.
 - If an error appears so that the code may behaviour abnormaly later on, "hard_dump.xx" appears and the code terminates.
 
@@ -290,19 +290,20 @@ petar.data.process [options] [snapshot path list filename]
 Users should provide a file that contains a list of pathes for the snapshot data files.
 Notice it is better to sort the path in the increasing order of evolution time.
 The _sort_ tool is very convenient to get the time-sorted list.
-For example, if the data files have the prefix name of 'data.' (the defaulted case), use
+For example, if the data files have the prefix name of 'data.' (default), the commander,
 ```
 ls data.[0-9]* |sort -n -k 1.6 >snap.lst
 ```
 will find all data files in the current directory, sort files by using the suffix (values after 'data.') with an increasing order and save the list to the file of _snap.lst_.
 Here '-n' indicates that the values to sort are floating-point number.
-'-k' defines the starting position of the number in the filename.
-In this example, 'data.' has 5 characters and '1.6' represents the 6th chararcters in the first word (here only one word exists).
+'-k' defines which word (separated by space) and which character in the word is the starting position of the number for sorting.
+In this example, '1.6' represents the 6th chararcters in the first word is the starting position to recognize the numbers for sorting.
+This is because only one word exists per line in the snap.lst file, and the word 'data.\*\*' has 5 characters before the number (index of the snapshot). 
 
 The data order in Lagrangian, escapers and core data file follows the order in the snapshot path list.
 The Lagrangian and core data can be read by _LagrangianMultiple_ and _Core_ modules by using _loadtxt_(filename).
-The escaper data (single and binary) can be read by _Particle_ and _Binary_.
-By the way, the _petar_ code also generates escaper data by using the energy and distance criterion (see help of _petar_).
+The escaper data (single and binary) can be read by _SingleEscaper_ and _BinaryEscaper_.
+By the way, the _petar_ code can also remove escapers and stored the data of escapers by using the energy and distance criterion (see help of _petar_).
 
 #### Movie generator
 The _petar.movie_ is a covenient tool to generate a movie from the snapshot files.
@@ -312,7 +313,7 @@ The basic way to use:
 ```
 petar.movie [options] [snapshot path list filename]
 ```
-If users want to plot information of binaries, it is better to use petar.data.process first to generate detect binaries with multiple CPU cores. Then the next time binary detection is not necessary to run again (use option '--generate-binary 2').
+If users want to plot information of binaries, it is better to use petar.data.process first to generate detect binaries with multiple CPU cores. Then the movie generator do not need to use expensive KDTree function to detect binaries (use option '--generate-binary 2').
 
 This tool use either _imageio_ or _matplotlib.animation_ to generate movies. It is suggested to install _imageio_ in order to generate movie using mutliple CPU cores. This is much faster than the _matplotlib.animation_ which can only use one CPU core. On the other hand, The ffmpeg is also suggested to install in order to support several commonly used movie formats (e.g. mp4, avi).
 
@@ -364,45 +365,123 @@ Notice that in _petar_ commander, there are three options used to read the confi
 These three options can be used together, i.e., potential models from all three options will be added together to become a multiple potential. 
 Thus be careful not to dupplicate potentials. Whether the potential is dupplicated (printed multiple times) can be checked in the output of _petar_.
 
-### Data analysis in _PYTHON3_
+### Data analysis in _Python3_
 The data analysis library provide the tools to identify binaries; calculate Lagrangian radii and core radii; obtain system energy error and check performance of each parts of the code.
 To use the tool, first 
 ```
 import petar
 ```
-in PYTHON script, IPYTHON or Jupyter. 
+in _Python_ script, _IPython_ or _Jupyter_. 
 The structure of each module in the data analysis tool is based on a mixture of _collection.OrderedDict_ and _numpy.ndarray_.
-Each member of the class that store the data is a _numpy.ndarray_. 
+Each member of the class stores one type of data, which is corresponding to one column in the data file. The member is a _numpy.ndarray_.
+The array index is corresponding to the line index in data file (counting from the keyword arguments --skiprows).
 For example, the member _mass_ in _petar.Particle_ is a 1D _numpy.ndarray_, the size of array is the total number of particles.
-All other 1D members in the same class have the same size. For two dimensional data, the shape of array is column_number x size.
+All other one-dimensional members in the same class have the same size. For two dimensional data, the shape of array is column_number x size.
+For example, the member _pos_ in _petar.Particle_ is the 3D positions of particles, thus it has the shape of (size, 3).
 
-By use _module-name.keys()_, the name of members are listed.
+By using ```[class instance].keys()```, the name of members are listed.
+By using ```help([class instance])```, the definition of keys are shown.
 The two special members are _size_ and _ncols_.
 - _size_ is the size of one member of 1D _numpy.ndarray_ type.
 - _ncols_ is the total number of columns of all data members, if a member has a 2 dimension array, such as _pos_ of 3 x _size_, it is counted as 3. 
 
-Here listed the supported modules.
-- Modules for reading outputs of _petar_:
-    - _Particle_: the basic particle data (snapshot files).
-    - _Status_: the global parameter of the system such as energy and number of particles (status files).
-    - _Profile_: the wall-clock time of different parts of the code (profile files).
-- Modules for data analysis:
+Here is the list of classes.
+- For reading outputs of _petar_ (need to use _petar.gether_ to generate data files first):
+    - _Particle_: the basic particle data (snapshot files, [data filename prefix].[index]).
+    - _Status_: the global parameter of the system such as energy and number of particles ([data filename prefix].status).
+    - _Profile_: the wall-clock time of different parts of the code ([data filename prefix].prof.rank.[rank index]).
+    - _GroupInfo_: the formation and disruption of few-body groups log ([data filename prefix].group.n[number of members]).
+- For outputs when SSE/BSE is switched on (need to use _petar.gether_ to generate data files first):
+    - _SSETypeChange_: the log of type change of single stars ([data filename prefix].sse.type_change)
+    - _SSESNKick_: the log of SNe kick events of single stars ([data filename prefix].sse.sn_kick)
+    - _BSETypeChange_: the log of type change of binary stars ([data filename prefix].bse.type_change)
+    - _BSESNKick_: the log of SNe kick events of binary stars ([data filename prefix].bse.sn_kick)
+- For data generated by using the _petar.data.process_:
+    - _SingleEscaper_: single star escapers, this can read both the escapers generated by _petar.data.process_ and the output from _petar_ ([data filename prefix].esc(\_single)).
+    - _BinaryEscaper_: binary star escapers ([data filename prefix].esc\_binary).
+    - _LagrangianMultiple_: properties related to Lagrangian and core radii: radii, number, averaged mass, velocity dispersion, rotational velocity in x-y plane ([data filename prefix].lagr).
+    - _Core_: data of core radius, center position and velocity of the system ([data filename prefix].core). 
     - _Binary_: the basic binary data, store two member particles and the Kepler orbital information. Can be generated by using _findPair_ function.
-    - _LagrangianMultiple_: for calculating the Lagrangian radii and corresponding properties (averaged mass, number of stars and velocity dispersions)
-    - _Core_: for calculating the density, density center and core radius
 
-There are also several functions.
+There are also several useful functions.
 - _join_: join two same type instances of modules. For example, _join_(particle1, particle2) will generate a new _Particle_ instance that contain both two data. Each member is numpy.append(particle1.member, particle2.member).
-- _joinLagrangian_: for join two Lagrangian type of data
 - _findPair_: detect binaries of one particle list by using _scipy.cKDTree_
 - _parallelDataProcessList_: use mutliple CPU cores to process a list of snapshot files and generate single and binary snapshots, Lagrangian data, core data and escaper data. For large _N_, the data process is quite slow, thus using multiple CPU processors can speed up the process. 
 
 More useful tools will be implemented in the future. The tools/analysis/parallel.py is a good example to learn how to use this analysis module.
 
+Here is one example to use the _Particle_ class to do data analysys for a snapshot.
+To read a snapshot, data.0, generated by _petar_ with SSE/BSE switching on, in the _Python_ script:
+```
+import petar
+
+particle=petar.Particle(interrupt_mode=bse)
+particle.loadtxt('data.0',skiprows=1)
+```
+Here the keyword argument ```interrupt_mode``` is important to set properly in order to read the snapshot correctly.
+The column definitions of snapshots depends on the stellar evolution option (--with-interrupt) used during the configure.
+Thus the correct argument should be given.
+
+To get the number of particles (line numbers in snapshots excluding the first line):
+```
+print(particle.size)
+```
+
+To make a filter and create a subset of data with particle mass less than 1.0,
+```
+pset = particle[particle.mass<1.0]
+```
+This is similar to the _getitem_ function of numpy.ndarray.
+
+To plot the mass-distance relation of the subset,
+```
+import matplotlib.pyplot as plt
+fig, axes=plt.subplots(1,1)
+pset.calcR2()
+axes.plot(np.sqrt(pset.r2), pset.mass, '.')
+```
+To save the subset to a file
+```
+pset.savetxt([file path of new data])
+```
+
+Notice that when additional members are added to the particle instance, the saved data will also include the additional column.
+In this example, ```pset.calcR2()``` generate a new class member, _r2_, (distance square).
+Thus the saved data will have an additional column, _r2_, at the end, which does not exists in the original snapshot.
+When users read this saved data, they should add the _r2_ member first in order to read columns correctly:
+```
+import numpy as np
+pnew = petar.Particle(interrupt_mode=bse)
+pnew.addNewMember('r2',np.array([]))
+pnew.loadtxt([file path of saved data])
+```
+
+To read a binary snapshot generated from _findPair_ or _petar.data.process_,
+Users should be careful for the member particle type, a safe way to read snapshot when _SSE/BSE_ is used:
+```
+p1 = petar.Particle(interrupt_mode=bse)
+p2 = petar.Particle(interrupt_mode=bse)
+binary =petar.Binary(p1,p2)
+binary.loadtxt([binary data file path])
+```
+
+To join two subset of data, p1 and p2, to one,
+```
+pnew=petar.join(p1,p2)
+```
+For example, if p1 and p2 have sizes of 3 and 5, respectively, the new instance, pnew, has a size of 8.
+
+This example show how to read and use Particle class, the way to use other classes is very similar, only the class member is different.
+The information of class member can be checked by the help function, e.g.
+```
+help(petar.Particle)
+help(petar.GroupInfo)
+```
+
 ## Method:
 ### Algorithm of integration: 
-The calculation using the kick-drift-kick mode.
-For each cycle, three major steps are done:
+The basic cycle of integration the orbits of particles are described in detail in the reference paper.
+Here is the short description:
 1. Search clusters and few-body systems
     1. Construct particle-tree including all real particles for neighbor searching.
     2. Search clusters where each real particle stay in the same cluster as its neighbors.
@@ -414,10 +493,10 @@ For each cycle, three major steps are done:
     1. For clusters with more than one memeber, Use _SDAR_ _Hermite_ module (4th order Hermite with slow-down AR method) to integrate the orbits.
     2. For one cluster, just do drift.  
 
-### Parallelization:
+### Parallelization methods:
 1. Tree construction is done by _FPDS_, using _MPI_ and _OpenMP_ .
 2. Soft force calculation kernel use _SIMD_ (_AVX_, _AVX2_, _AVX512_) or _GPU_ (_CUDA_).
-3. Hard calculation use _OpenMP_ for the loop of clusters
+3. Hard calculation (Hermite, SDAR) use _OpenMP_ for the loop of clusters.
 
 ### AMUSE API:
 Current support API: gravitational dynamics, gravity field, stopping conditions.
