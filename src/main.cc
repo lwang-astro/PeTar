@@ -18,7 +18,7 @@ int main(int argc, char *argv[]){
 
     auto& inp = petar.input_parameters;
 
-    if (inp.fname_inp.value=="__Plummer"||inp.fname_inp.value=="") petar.generatePlummer();
+    if (inp.fname_inp.value=="__Plummer"||inp.fname_inp.value=="__NONE__") petar.generatePlummer();
     //else if (inp.fname_inp.value!="__KeplerDisk") petar.generateKeplerDisk();
     else petar.readDataFromFile();
 

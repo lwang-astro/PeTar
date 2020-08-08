@@ -24,9 +24,9 @@ public:
     bool print_flag;
 
     IOParamsGalpy(): input_par_store(),
-                     type_args (input_par_store, "None", "Description of potential type and arguments"),
-                     pre_define_type (input_par_store, "None", "Add additional Pre-defined potential type to the potential list, options are: MWPotential2014"),
-                     config_filename(input_par_store, "None", "A configure file that store the types and arguments of potential, will be added to the potential list"),
+                     type_args (input_par_store, "__NONE__", "Description of potential type and arguments"),
+                     pre_define_type (input_par_store, "__NONE__", "Add additional Pre-defined potential type to the potential list, options are: MWPotential2014"),
+                     config_filename(input_par_store, "__NONE__", "A configure file that store the types and arguments of potential, will be added to the potential list"),
                      rscale(input_par_store, 1.0, "Radius scale factor from unit of the input particle data (IN) to Galpy distance unit (r[Galpy]=r[IN]*rscale)"),
                      tscale(input_par_store, 1.0, "Time scale factor from unit of the input particle data (IN) to Galpy time (time[Galpy]=time[IN]*tscale)"),
                      vscale(input_par_store, 1.0, "Velocity scale factor from unit of the input particle data (IN) to Galpy velocity unit (v[Galpy]=v[IN]*vscale)"),
@@ -215,10 +215,10 @@ public:
         // add pre-defined type-argu groups
         std::string type_args = _input.type_args.value;
         if (_input.pre_define_type.value=="MWPotential2014") {
-            if (type_args=="None") type_args="15:0.0299946,1.8,0.2375|5:0.7574802,0.375,0.035|9:4.85223053,2.0";
+            if (type_args=="__NONE__") type_args="15:0.0299946,1.8,0.2375|5:0.7574802,0.375,0.035|9:4.85223053,2.0";
             else type_args += "|15:0.0299946,1.8,0.2375|5:0.7574802,0.375,0.035|9:4.85223053,2.0";
         }
-        if (type_args=="None") type_args="";
+        if (type_args=="__NONE__") type_args="";
 
         std::vector<std::string> type_args_pair;
         std::vector<int> pot_type;
@@ -283,7 +283,7 @@ public:
         npot = pot_type.size();
 
         // add type arguments from configure file if exist
-        if (_input.config_filename.value!="None") {
+        if (_input.config_filename.value!="__NONE__") {
             std::ifstream fin;
             fin.open(_input.config_filename.value.c_str(), std::ifstream::in);
             int nadd=0;

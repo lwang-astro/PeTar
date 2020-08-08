@@ -138,12 +138,12 @@ public:
 #ifdef ADJUST_GROUP_PRINT
     IOParams<PS::S32> adjust_group_write_option;
 #endif
+    IOParams<PS::S32> append_switcher;
     IOParams<std::string> fname_snp;
     IOParams<std::string> fname_par;
     IOParams<std::string> fname_inp;
 
     // flag
-    bool app_flag; // appending data flag
     bool print_flag; 
 
     IOParamsPeTar(): input_par_store(), 
@@ -166,7 +166,7 @@ public:
                      eta          (input_par_store, 0.1,  "Hermite time step coefficient eta"),
                      gravitational_constant(input_par_store, 1.0,  "Gravitational constant"),
                      unit_set     (input_par_store, 0,    "Input data unit, 0: unknown, referring to G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr"),
-                     n_glb        (input_par_store, 100000,  "Total number of particles, only used to generate particles if needed"),
+                     n_glb        (input_par_store, 100000,  "Total number of particles, only used to generate particles if no input datafile exists"),
                      id_offset    (input_par_store, -1,   "Starting id for artificial particles, total number of real particles must be always smaller than this","n_glb+1"),
                      dt_soft      (input_par_store, 0.0,  "Tree timestep","0.1*r_out/sigma_1D"),
                      dt_snap      (input_par_store, 1.0,  "Output time interval of particle dataset snapshot"),
@@ -205,10 +205,11 @@ public:
 #ifdef ADJUST_GROUP_PRINT
                      adjust_group_write_option(input_par_store, 1, "print new and end of groups: 0: no print; 1: print to file [data filename prefix].group.[MPI rank] if -w >0"),
 #endif
+                     append_switcher(input_par_store, 1, "data output style, 0: create new output files and overwrite existing ones except snapshots; 1: append new data to existing files"),
                      fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]"),
                      fname_par(input_par_store, "input.par", "Input parameter file (this option should be used first before any other options)"),
-                     fname_inp(input_par_store, "", "Input data file"),
-                     app_flag(false), print_flag(false) {}
+                     fname_inp(input_par_store, "__NONE__", "Input data file"),
+                     print_flag(false) {}
 
     
     //! reading parameters from GNU option API
@@ -414,8 +415,10 @@ public:
                 opt_used += 2;
                 break;
             case 'a':
-                app_flag=true;
-                opt_used ++;
+                append_switcher.value=atoi(optarg);
+                if(print_flag) append_switcher.print(std::cout);
+                assert(append_switcher.value>=0&&append_switcher.value<=1);
+                opt_used += 2;
                 break;
             case 't':
                 time_end.value = atof(optarg);
@@ -514,7 +517,7 @@ public:
                     std::cout<<"              [formatted] indicates that the value is only for save, cannot be directly read"<<std::endl;
                     std::cout<<"Options:  defaulted values are shown after ':'"<<std::endl;
                     std::cout<<"  -i: [I] "<<data_format<<std::endl;
-                    std::cout<<"  -a:     data output style (except snapshot) becomes appending, defaulted: replace"<<std::endl;
+                    std::cout<<"  -a: [I] "<<append_switcher<<std::endl;
                     std::cout<<"  -t: [F] "<<time_end<<std::endl;
                     std::cout<<"  -s: [F] "<<dt_soft<<std::endl;
                     std::cout<<"  -o: [F] "<<dt_snap<<std::endl;
@@ -2326,7 +2329,7 @@ public:
         // open profile file
         if(write_style>0) {
             std::string fproname=input_parameters.fname_snp.value+".prof.rank."+std::to_string(my_rank);
-            if(input_parameters.app_flag) fprofile.open(fproname.c_str(),std::ofstream::out|std::ofstream::app);
+            if(input_parameters.append_switcher.value==1) fprofile.open(fproname.c_str(),std::ofstream::out|std::ofstream::app);
             else  {
                 fprofile.open(fproname.c_str(),std::ofstream::out);
 
@@ -2353,7 +2356,7 @@ public:
         // status information output
         std::string& fname_snp = input_parameters.fname_snp.value;
         if(write_style>0&&my_rank==0) {
-            if(input_parameters.app_flag) 
+            if(input_parameters.append_switcher.value==1) 
                 fstatus.open((fname_snp+".status").c_str(),std::ofstream::out|std::ofstream::app);
             else {
                 fstatus.open((fname_snp+".status").c_str(),std::ofstream::out);
@@ -2371,7 +2374,7 @@ public:
             // open escaper file
             std::string my_rank_str = std::to_string(my_rank);
             std::string fname_esc = fname_snp + ".esc." + my_rank_str;
-            if(input_parameters.app_flag) 
+            if(input_parameters.append_switcher.value==1) 
                 fesc.open(fname_esc.c_str(), std::ofstream::out|std::ofstream::app);
             else {
                 fesc.open(fname_esc.c_str(), std::ofstream::out);
@@ -2385,7 +2388,7 @@ public:
             // open SSE/BSE file
             std::string fsse_name = fname_snp + ".sse." + my_rank_str;
             std::string fbse_name = fname_snp + ".bse." + my_rank_str;
-            if(input_parameters.app_flag) {
+            if(input_parameters.append_switcher.value==1) {
                 hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out|std::ofstream::app);
                 hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out|std::ofstream::app);
             }
@@ -2399,7 +2402,7 @@ public:
             // open file for new/end group information
             if (input_parameters.adjust_group_write_option.value==1) {
                 std::string fgroup_name = fname_snp + ".group." + my_rank_str;
-                if(input_parameters.app_flag) 
+                if(input_parameters.append_switcher.value==1) 
                     hard_manager.h4_manager.fgroup.open(fgroup_name.c_str(), std::ofstream::out|std::ofstream::app);
                 else 
                     hard_manager.h4_manager.fgroup.open(fgroup_name.c_str(), std::ofstream::out);

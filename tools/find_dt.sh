@@ -72,6 +72,7 @@ fi
 
 tperf_pre=1e10
 tzero=`head -1 $fname|awk '{print $3}'`
+echo 'time start: '$tzero
 dt=$dt_base
 dt_min=$dt
 check_flag=true
@@ -79,8 +80,9 @@ tcum=10000 # sec
 while [[ $check_flag == true ]]
 do
     dt=`echo $dt|awk '{OFMT="%.14g"; print $1*2.0}'`
-    tend=`echo $dt |awk -v tzero=$tzero '{print tzero+$1*6.01}' `
-    ${prefix} timeout $tcum $pbin -w 0 -t $tend $opts  -s $dt -o $dt $fname &>.check.perf.$dt.log
+    tend=`echo $dt |awk -v tzero=$tzero '{OFMT="%.14g"; print tzero+$1*6.01}' `
+    echo 'test ending time '$tend' dt '$dt
+    ${prefix} timeout $tcum $pbin $opts -w 0 -t $tend  -s $dt -o $dt $fname &>.check.perf.$dt.log
     egrep 'Wallclock' -A 3 .check.perf.$dt.log |sed -n '/^\ *[0-9]/ p'|awk '{if (NR>1 && NR%2==0) print $1,$2+$3+$4+$8,$7+$9,$6+$10+$11,$12+$13}' >.check.perf.$dt.tperf
     if [[ `wc -l .check.perf.$dt.tperf|awk '{print $1}'` -ge 6 ]]; then 
 	dt_reg=`egrep dt_soft .check.perf.$dt.log|awk '{OFMT="%.14g"; print $3}'`
