@@ -204,6 +204,8 @@ galpy-interface/petar.galpy: galpy-interface
 
 galpy-interface/libgalpy.a: galpy-interface/petar.galpy
 
+galpy-interface/petar.galpy.help: galpy-interface/petar.galpy
+
 install: $(TARGET)
 	install -d @prefix@/bin/
 	install -m 755 $(TARGET) @prefix@/bin/
@@ -220,3 +222,5 @@ install: $(TARGET)
 clean:
 	rm -f $(TARGET) build/*.o 
 	$(MAKE) -C bse-interface clean
+	$(MAKE) -C galpy-interface clean
+

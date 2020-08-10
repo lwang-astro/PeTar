@@ -261,7 +261,7 @@ public:
         int copt;
         int option_index;
         optind = 0; // reset getopt
-        while ((copt = getopt_long(argc, argv, "-i:at:s:o:r:b:n:G:u:T:f:p:w:h", long_options, &option_index)) != -1) 
+        while ((copt = getopt_long(argc, argv, "-i:a:t:s:o:r:b:n:G:u:T:f:p:w:h", long_options, &option_index)) != -1) 
             switch (copt) {
             case 0:
                 switch (petar_flag) {
