@@ -168,7 +168,7 @@ public:
                      unit_set     (input_par_store, 0,    "Input data unit, 0: unknown, referring to G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr"),
                      n_glb        (input_par_store, 100000,  "Total number of particles, only used to generate particles if no input datafile exists"),
                      id_offset    (input_par_store, -1,   "Starting id for artificial particles, total number of real particles must be always smaller than this","n_glb+1"),
-                     dt_soft      (input_par_store, 0.0,  "Tree timestep","0.1*r_out/sigma_1D"),
+                     dt_soft      (input_par_store, 0.0,  "Tree timestep, if value is zero, use 0.1*r_out/sigma_1D"),
                      dt_snap      (input_par_store, 1.0,  "Output time interval of particle dataset snapshot"),
                      search_vel_factor (input_par_store, 3.0,  "Neighbor searching coefficient for velocity check (v*dt)"),
                      search_peri_factor(input_par_store, 1.5,  "Neighbor searching coefficient for peri-center check"),
@@ -183,8 +183,8 @@ public:
 #endif
                      step_limit_arc(input_par_store, 1000000, "Maximum step allown for ARC sym integrator"),
                      eps          (input_par_store, 0.0,  "Softerning eps"),
-                     r_out        (input_par_store, 0.0,  "Transit function outer boundary radius", "0.1 GM/[N^(1/3) sigma_3D^2]"),
-                     r_bin        (input_par_store, 0.0,  "Tidal tensor box size and binary radius criterion", "0.8*r_in"),
+                     r_out        (input_par_store, 0.0,  "Transit function outer boundary radius, if value is zero, use 0.1 GM/[N^(1/3) sigma_3D^2]"),
+                     r_bin        (input_par_store, 0.0,  "Tidal tensor box size and binary radius criterion, if value iszero, use 0.8*r_in"),
 //                     r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out"),
                      r_search_min (input_par_store, 0.0,  "Minimum search radius  value","auto"),
                      r_escape     (input_par_store, PS::LARGE_FLOAT,  "escape radius criterion"),
@@ -338,7 +338,7 @@ public:
                     r_bin.value = atof(optarg);
                     if(print_flag) r_bin.print(std::cout);
                     opt_used += 2;
-                    assert(r_bin.value>0.0);
+                    assert(r_bin.value>=0.0);
                     break;
                 case 12:
                     search_peri_factor.value = atof(optarg);
@@ -430,7 +430,7 @@ public:
                 dt_soft.value = atof(optarg);
                 if(print_flag) dt_soft.print(std::cout);
                 opt_used += 2;
-                assert(dt_soft.value>0.0);
+                assert(dt_soft.value>=0.0);
                 break;
             case 'o':
                 dt_snap.value = atof(optarg);
@@ -442,7 +442,7 @@ public:
                 r_out.value = atof(optarg);
                 if(print_flag) r_out.print(std::cout);
                 opt_used += 2;
-                assert(r_out.value>0.0);
+                assert(r_out.value>=0.0);
                 break;
             case 'b':
                 n_bin.value = atoi(optarg);
@@ -603,13 +603,13 @@ public:
         assert(sd_factor.value>0.0);
         assert(ratio_r_cut.value>0.0);
         assert(ratio_r_cut.value<1.0);
-        assert(r_bin.value>0.0);
+        assert(r_bin.value>=0.0);
         assert(search_peri_factor.value>=1.0);
         assert(data_format.value>=0||data_format.value<=3);
         assert(time_end.value>=0.0);
-        assert(dt_soft.value>0.0);
+        assert(dt_soft.value>=0.0);
         assert(dt_snap.value>0.0);
-        assert(r_out.value>0.0);
+        assert(r_out.value>=0.0);
         assert(n_bin.value>=0);
         assert(n_glb.value>0);
         assert(n_group_limit.value>0);
