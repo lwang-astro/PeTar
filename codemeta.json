@@ -1,0 +1,49 @@
+{
+    "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+    "@type": "SoftwareSourceCode",
+    "name": "PeTar: ParticlE Tree & particle-particle & Algorithmic Regularization code for simulating massive star clusters",
+    "description": "The N-body code PETAR (ParticlE Tree & particle-particle & Algorithmic Regularization) combines the methods of Barnes-Hut tree, Hermite integrator and slow-down algorithmic regularization (SDAR). It accurately handles an arbitrary fraction of multiple systems (<i>e.g.</i> binaries, triples) while keeping a high performance by using the hybrid parallelization methods with MPI, OpenMP, SIMD instructions and GPU. PETAR has very good agreement with NBODY6++GPU results on the long-term evolution of the global structure, binary orbits and escapers and is significantly faster when used on a highly configured GPU desktop computer. PETAR scales well when the number of cores increase on the Cray XC50 supercomputer, allowing a solution to the ten million-body problem which covers the region of ultra compact dwarfs and nuclear star clusters.",
+    "identifier": "ascl:2007.005",
+    "author": [
+        {
+            "@type": "Person",
+            "givenName": "Long",
+            "familyName": "Wang",
+            "@id": "https://orcid.org/0000-0001-8713-0366"
+        },
+        {
+            "@type": "Person",
+            "givenName": "Masaki",
+            "familyName": "Iwasawa",
+            "@id": "PLACEHOLDER: Add ORCID (https://orcid.org/xxxxxx) here"
+        },
+        {
+            "@type": "Person",
+            "givenName": "Keigo",
+            "familyName": "Nitadori",
+            "@id": "PLACEHOLDER: Add ORCID (https://orcid.org/xxxxxx) here"
+        },
+        {
+            "@type": "Person",
+            "givenName": "Junichiro",
+            "familyName": "Makino",
+            "@id": "PLACEHOLDER: Add ORCID (https://orcid.org/xxxxxx) here"
+        }
+    ],
+    "citation": "Depends on the chosen packages during configure, the list of references are shown at the beginning of output when using the petar (-h) commander",
+    "relatedLink": [
+        "PLACEHOLDER: Add related links (if any) here"
+    ],
+    "codeRepository": [
+        "https://github.com/lwang-astro/PeTar"
+    ],
+    "referencePublication": [
+        {
+            "@type": "ScholarlyArticle",
+            "url": "https://ui.adsabs.harvard.edu/abs/2020MNRAS.497..536W",
+            "@id": "https://doi.org/10.1093/mnras/staa1915"
+        }
+    ],
+    "version": "1.0-alpha",
+    "license": "https://spdx.org/licenses/MIT.html"
+}
