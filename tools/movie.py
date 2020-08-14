@@ -463,7 +463,7 @@ if __name__ == '__main__':
         print("  -G: gravitational constant for calculating binary orbit: ",data.G)
         print("  -o: output movie filename: ",output_file)
         print("  -i: Use previous generated png images to speed up the movie generation")
-        print("  --n-cpu: number of CPU processors to use, only work for gif format: all CPU cores")
+        print("  --n-cpu: number of CPU processors to use: all CPU cores")
         print("  --lum-min: minimum lumonisity: ",phr.lum_min)
         print("  --lum-max: maximum lumonisity: ",phr.lum_max)
         print("  --temp-min: minimum temperature: ",phr.temp_min)
