@@ -855,6 +855,12 @@ public:
                 p1->time_interrupt = p1->time_record + std::min(bse_manager.getTimeStep(p1->star), bse_manager.getTimeStep(p2->star));
                 p2->time_interrupt = p1->time_interrupt;
 
+                // reset collision state since binary orbit changes
+                if (p1->getBinaryInterruptState()== BinaryInterruptState::collision) 
+                    p1->setBinaryInterruptState(BinaryInterruptState::none);
+                if (p2->getBinaryInterruptState()== BinaryInterruptState::collision)
+                    p2->setBinaryInterruptState(BinaryInterruptState::none);
+
                 // record mass change (if loss, negative)
                 p1->dm += bse_manager.getMassLoss(out[0]);
                 p2->dm += bse_manager.getMassLoss(out[1]);
@@ -1042,7 +1048,7 @@ public:
                 // delayed merger
                 if (p1->getBinaryInterruptState()== BinaryInterruptState::collision && 
                     p2->getBinaryInterruptState()== BinaryInterruptState::collision &&
-                    (p1->time_interrupt<_bin_interrupt.time_end || p2->time_interrupt<_bin_interrupt.time_end) &&
+                    (p1->time_interrupt<_bin_interrupt.time_end && p2->time_interrupt<_bin_interrupt.time_end) &&
                     (p1->getBinaryPairID()==p2->id||p2->getBinaryPairID()==p1->id)) merge();
                 else {
                     // check merger
@@ -1064,7 +1070,7 @@ public:
                                 p1->setBinaryInterruptState(BinaryInterruptState::collision);
                                 p2->setBinaryInterruptState(BinaryInterruptState::collision);
                                 p1->time_interrupt = std::min(p1->time_interrupt, _bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri));
-                                p2->time_interrupt = std::min(p1->time_interrupt, p2->time_interrupt);
+                                //p2->time_interrupt = std::min(p1->time_interrupt, p2->time_interrupt); // ensure bse can still be called to evolve stars
                             }
                         }
                     }
