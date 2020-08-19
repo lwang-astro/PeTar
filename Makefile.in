@@ -12,6 +12,8 @@ ext_mode=@with_external@
 tt_mode=@with_tidal_tensor@
 orb_mode=@with_orbit@
 
+CXXFLAGS=@CXXFLAGS@
+
 TARGET=build/@PROG_NAME@ build/petar.hard.debug
 
 #MT_FLAGS += -D HARD_CM_KICK

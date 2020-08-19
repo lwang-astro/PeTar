@@ -34,7 +34,11 @@ case "${host_os}" in
 esac
 AC_MSG_RESULT([$host_os])
 
+CXXFLAGS_BK=$CXXFLAGS
+
 AC_LANG([C++])
+
+CXXFLAGS=$CXXFLAGS_BK
 
 AC_PROG_AWK
 AC_PROG_GREP
