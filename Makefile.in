@@ -212,9 +212,10 @@ install: $(TARGET)
 	ln -sf @prefix@/bin/@PROG_NAME@ @prefix@/bin/petar
 	install -m 755 tools/initdata.sh @prefix@/bin/petar.init
 	install -m 755 tools/find_dt.sh @prefix@/bin/petar.find.dt
+	install -m 755 tools/data_clear.sh @prefix@/bin/petar.data.clear
 	install -m 755 tools/data_process.py @prefix@/bin/petar.data.process
 	install -m 755 tools/movie.py @prefix@/bin/petar.movie
-	install -m 755 tools/gether.sh @prefix@/bin/petar.gether
+	install -m 755 tools/data_gether.sh @prefix@/bin/petar.data.gether
 	install -d @prefix@/include/
 	install -d @prefix@/include/petar
 	install -m 644 tools/analysis/*.py @prefix@/include/petar/

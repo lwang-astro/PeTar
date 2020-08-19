@@ -154,6 +154,9 @@ where _input.par_ is automatically generated from the last run (stored in the sa
 If users change the name of this file and restart, the next new parameter file also uses the new filename.
 Notice if users want to use new options in additional to _input.par_, these options must be put after "-p input.par", otherwises they are rewrited by values stored in _input.par_.
 
+In default, after restart, the new data will be appended to the existing output files (with suffixes of esc, group ...).
+If users want to restart not from the last time but from a middle _t_, _petar.data.clear_ can be used to remove the data with time > _t_ in the output files.
+
 ### Important tips:
 To avoid segmetantional fault in simulations in the case of large number of particles, make sure to set the OMP_STACKSIZE large enough.
 For example, use
@@ -214,10 +217,10 @@ The content of the status has a style like:
 There are a few output files:
 - [data filename prefix].[index]: the snapshot files, the format is the same as the input data file. In the help information of _petar_ commander, users can find the definitions of the columns and header
 - [data filename prefix].esc.[MPI rank]: the escaped particle information, first lines show column definition
-- [data filename prefix].group.[MPI rank]: the information of new and end of groups (binary, triple ...), since the items in each row can be different because of different numbers of members in groups, there is no universal column headers. It is suggested to use petar.gether first to separate groups with different numbers of members into different files. Then use the python tool _petar.Group_ to read the new files.
+- [data filename prefix].group.[MPI rank]: the information of new and end of groups (binary, triple ...), since the items in each row can be different because of different numbers of members in groups, there is no universal column headers. It is suggested to use petar.data.gether first to separate groups with different numbers of members into different files. Then use the python tool _petar.Group_ to read the new files.
 - [data filename prefix].[s/b]se.[MPI rank]: if BSE is switched on, the files record the SSE and BSE events, such as type changes, Supernovae, binary evolution phase changes. Each line contain the definition of values, thus can be directly read.
 
-Before access these files, it is suggested to run _petar.gether_ tool first to gether the separated files with different MPI ranks to one file for convenience.
+Before access these files, it is suggested to run _petar.data.gether_ tool first to gether the separated files with different MPI ranks to one file for convenience.
 This tool also separate the few-body groups with different number of members in xx.group files to individual files with suffixe ".n[number of members in groups]".
     
 ##### Debug dump files
@@ -321,8 +324,19 @@ If users want to plot information of binaries, it is better to use petar.data.pr
 This tool use either _imageio_ or _matplotlib.animation_ to generate movies. It is suggested to install _imageio_ in order to generate movie using mutliple CPU cores. This is much faster than the _matplotlib.animation_ which can only use one CPU core. On the other hand, The ffmpeg is also suggested to install in order to support several commonly used movie formats (e.g. mp4, avi).
 
 #### gether output files from different MPI ranks
-The _petar.gether_ is used to gether output files from different MPI ranks to one file (e.g. xx.group.[MPI rank]).
+The _petar.data.gether_ is used to gether output files from different MPI ranks to one file (e.g. xx.group.[MPI rank]).
 For group files, it also generate individual files with suffix ".n[number of members in groups]'.
+
+#### remove data after a given time
+The _petar.data.clear_ is used to remove data after a given time for all output files except the snapshots.
+The base usage is 
+```
+petar.data.clear -t [time] [data filename prefix]
+```
+All output files will be firstly backup by rename the file name with an additional suffix '.bk'.
+If this tool is mistakely used, the files can be recovered.
+If the tool is used again, it will check the backup data files.
+Thus a new time criterion larger than the previous one can be to include more data in the new files.
 
 #### SSE/BSE steller evolution tool
 The _petar.bse_ will be generated when --with-interrupt=bse is used during the configuration.
@@ -389,12 +403,12 @@ The two special members are _size_ and _ncols_.
 - _ncols_ is the total number of columns of all data members, if a member has a 2 dimension array, such as _pos_ of 3 x _size_, it is counted as 3. 
 
 Here is the list of classes.
-- For reading outputs of _petar_ (need to use _petar.gether_ to generate data files first):
+- For reading outputs of _petar_ (need to use _petar.data.gether_ to generate data files first):
     - _Particle_: the basic particle data (snapshot files, [data filename prefix].[index]).
     - _Status_: the global parameter of the system such as energy and number of particles ([data filename prefix].status).
     - _Profile_: the wall-clock time of different parts of the code ([data filename prefix].prof.rank.[rank index]).
     - _GroupInfo_: the formation and disruption of few-body groups log ([data filename prefix].group.n[number of members]).
-- For outputs when SSE/BSE is switched on (need to use _petar.gether_ to generate data files first):
+- For outputs when SSE/BSE is switched on (need to use _petar.data.gether_ to generate data files first):
     - _SSETypeChange_: the log of type change of single stars ([data filename prefix].sse.type_change)
     - _SSESNKick_: the log of SNe kick events of single stars ([data filename prefix].sse.sn_kick)
     - _BSETypeChange_: the log of type change of binary stars ([data filename prefix].bse.type_change)
