@@ -73,7 +73,7 @@ fi
 
 if [ -e $fout.bse ]; then
     echo 'get bse type_change, sn_kick, dynamic_merge'
-    egrep '^Dynamic_merge' $fout.bse |sed 's/Dynamic_merge//g' >$fout.bse.dynamic_merge
+    egrep '^Dynamic_merge' $fout.bse |sed 's/Dynamic_merge://g' >$fout.bse.dynamic_merge
     egrep '^SN_kick' $fout.bse |sed 's/SN_kick//g' >$fout.bse.sn_kick
     egrep -v '^(Dynamic_merge|SN_kick)' $fout.bse |awk '{for (i=2;i<=NF;i++) printf("%s ", $i); printf("\n")}' >$fout.bse.type_change
 fi
