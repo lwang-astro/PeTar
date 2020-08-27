@@ -776,7 +776,7 @@ public:
                     else  modifyOneParticle(*p2, _bin_interrupt.time_now, p1->time_record);
                 }
 
-                // time_record and time_interrupt have offsets, thus use difference to obtain true dt
+                // time_record and time_end have offsets, thus use difference to obtain true dt
                 Float dt = _bin_interrupt.time_end - p1->time_record;
 
                 StarParameterOut out[2];
@@ -999,6 +999,13 @@ public:
                     Float m1_bk = p1->mass;
                     Float m2_bk = p2->mass;
                     // backup original data for print
+
+                    // first evolve two components to the current time
+                    if (stellar_evolution_option==1) {
+                        if (p1->time_record<_bin_interrupt.time_end) modifyOneParticle(*p1, p1->time_record, _bin_interrupt.time_end);
+                        if (p2->time_record<_bin_interrupt.time_end) modifyOneParticle(*p2, p2->time_record, _bin_interrupt.time_end);
+                    }
+
                     StarParameter p1_star_bk, p2_star_bk;
                     p1_star_bk = p1->star;
                     p2_star_bk = p2->star;
