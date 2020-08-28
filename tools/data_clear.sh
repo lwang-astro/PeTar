@@ -44,7 +44,9 @@ do
     tindex=${tindices[$i]}
     file=$fname.$s
     echo $file'; time column: '$tindex
-    if [ ! -z $nmpi ]; then
+    if [ $s == 'status' ]; then
+	lst=$file
+    elif [ ! -z $nmpi ]; then
 	nend=`expr $nmpi - 1`
 	lst=`seq 0 $nend|awk -v f=$file '{printf("$s.$d\n", f,$1)}`
     else
