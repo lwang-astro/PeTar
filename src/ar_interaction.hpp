@@ -772,8 +772,14 @@ public:
 
                 // first evolve two components to the same starting time
                 if (p1->time_record!=p2->time_record) {
-                    if (p1->time_record<p2->time_record) modifyOneParticle(*p1, _bin_interrupt.time_now, p2->time_record);
-                    else  modifyOneParticle(*p2, _bin_interrupt.time_now, p1->time_record);
+                    if (p1->time_record<p2->time_record) {
+                        p1->time_interrupt = p1->time_record;
+                        modifyOneParticle(*p1, _bin_interrupt.time_now, p2->time_record);
+                    }
+                    else {
+                        p2->time_interrupt = p2->time_record;
+                        modifyOneParticle(*p2, _bin_interrupt.time_now, p1->time_record);
+                    }
                 }
 
                 // time_record and time_end have offsets, thus use difference to obtain true dt
@@ -1002,9 +1008,17 @@ public:
 
                     // first evolve two components to the current time
                     if (stellar_evolution_option==1) {
-                        if (p1->time_record<_bin_interrupt.time_end) modifyOneParticle(*p1, p1->time_record, _bin_interrupt.time_end);
-                        if (p2->time_record<_bin_interrupt.time_end) modifyOneParticle(*p2, p2->time_record, _bin_interrupt.time_end);
+                        if (p1->time_record<_bin_interrupt.time_end) {
+                            p1->time_interrupt = p1->time_record; // force SSE evolution
+                            modifyOneParticle(*p1, p1->time_record, _bin_interrupt.time_end);
+                        }
+                        if (p2->time_record<_bin_interrupt.time_end) {
+                            p2->time_interrupt = p2->time_record; // force SSE evolution
+                            modifyOneParticle(*p2, p2->time_record, _bin_interrupt.time_end);
+                        }
                     }
+
+                    ASSERT(p1->star.tphys==p2->star.tphys);
 
                     StarParameter p1_star_bk, p2_star_bk;
                     p1_star_bk = p1->star;
