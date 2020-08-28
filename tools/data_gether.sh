@@ -12,7 +12,7 @@ do
 	    echo 'Options:';
 	    echo '  -f: output filename prefix (default: data filename prefix)';
 	    echo '  -n: MPI processes number (default: auto detect)';
-	    echo '  -i: before remove existing gethered files, ask first (default: false)';
+	    echo '  -i: before remove existing gethered files, ask first (default: no ask)';
 	    exit;;
 	-f) shift; fout=$1; shift;;
 	-n) shift; nmpi=$1; shift;;
@@ -36,9 +36,9 @@ do
     if [ -e $file.0 ]; then
 	if [ -e $fout.$s ]; then
 	    if [ -z $rmi ]; then
-		rm -i $fout.$s
-	    else
 		rm -f $fout.$s
+	    else
+		rm -i $fout.$s
 	    fi
 	fi
 	

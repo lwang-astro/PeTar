@@ -15,11 +15,11 @@ do
 	    echo 'Options:';
 	    echo '  -t: time criterion (default: none)'
 	    echo '  -n: MPI processes number (default: auto detect)';
-	    echo '  -i: replace backup files (default: false)';
+	    echo '  -b: use previous backup files instead of replacing (default: replacing)';
 	    exit;;
 	-n) shift; nmpi=$1; shift;;
 	-t) shift; tcrit=$1; shift;;
-	-i) rmi=1; shift;;
+	-b) rmi=1; shift;;
 	*) fname=$1;shift;;
     esac
 done
@@ -54,7 +54,7 @@ do
     do
 	echo 'process '$f
 	if [ -e $f.bk ]; then
-	    if [ ! -z $rmi ]; then
+	    if [ -z $rmi ]; then
 		rm -i $f.bk
 		mv $f $f.bk
 	    fi
