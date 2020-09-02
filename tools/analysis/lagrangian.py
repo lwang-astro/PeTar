@@ -57,7 +57,7 @@ class Core(DictNpArrayMix):
         return cm_pos, cm_vel
     
     def calcDensityAndCenter(self, particle, kdtree):
-        """ Calculate density based on nearest six neighbors and return the result
+        """ Calculate density based on nearest six neighbors and return the result (Casertano & Hut 1985)
         
         Parameters
         ----------
