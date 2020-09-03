@@ -145,6 +145,8 @@ public:
 
     // flag
     bool print_flag; 
+    bool update_changeover_flag;
+    bool update_rsearch_flag;
 
     IOParamsPeTar(): input_par_store(), 
                      ratio_r_cut  (input_par_store, 0.1,  "r_in / r_out"),
@@ -187,7 +189,7 @@ public:
                      r_bin        (input_par_store, 0.0,  "Tidal tensor box size and binary radius criterion, if value iszero, use 0.8*r_in"),
 //                     r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out"),
                      r_search_min (input_par_store, 0.0,  "Minimum search radius  value","auto"),
-                     r_escape     (input_par_store, PS::LARGE_FLOAT,  "escape radius criterion"),
+                     r_escape     (input_par_store, PS::LARGE_FLOAT,  "escape radius criterion, if <0, remove particles when r>-r_escape; else, remove particle when r>r_escape and energy>0"),
                      sd_factor    (input_par_store, 1e-4, "Slowdown perturbation criterion"),
                      data_format  (input_par_store, 1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),
                      write_style  (input_par_store, 1,    "File Writing style: 0, no output; 1. write snapshots, status and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile"),
@@ -209,7 +211,7 @@ public:
                      fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]"),
                      fname_par(input_par_store, "input.par", "Input parameter file (this option should be used first before any other options)"),
                      fname_inp(input_par_store, "__NONE__", "Input data file"),
-                     print_flag(false) {}
+                     print_flag(false), update_changeover_flag(false), update_rsearch_flag(false) {}
 
     
     //! reading parameters from GNU option API
@@ -234,9 +236,10 @@ public:
             {"energy-err-arc",        required_argument, &petar_flag, 7}, 
             {"soft-eps",              required_argument, &petar_flag, 8},       
             {"slowdown-factor",       required_argument, &petar_flag, 9},
-            {"r-ratio",               required_argument, &petar_flag, 10},       
+            {"r-ratio",               required_argument, &petar_flag, 10},
             {"r-bin",                 required_argument, &petar_flag, 11},       
-            {"r-escape",              required_argument, &petar_flag, 21},       
+            {"r-escape",              required_argument, &petar_flag, 21},
+	    {"r-search-min",          required_argument, &petar_flag, 22},
             {"search-peri-factor",    required_argument, &petar_flag, 12}, 
             {"hermite-eta",           required_argument, &petar_flag, 13}, 
 #ifdef HARD_CHECK_ENERGY
@@ -251,7 +254,7 @@ public:
             {"stellar-evolution",     required_argument, &petar_flag, 20},
 #endif
 #ifdef ADJUST_GROUP_PRINT
-            {"write-group-info",      required_argument, &petar_flag, 22},
+            {"write-group-info",      required_argument, &petar_flag, 23},
 #endif            
             {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
@@ -330,6 +333,7 @@ public:
                 case 10:
                     ratio_r_cut.value = atof(optarg);
                     if(print_flag) ratio_r_cut.print(std::cout);
+                    update_changeover_flag = true;
                     opt_used += 2;
                     assert(ratio_r_cut.value>0.0);
                     assert(ratio_r_cut.value<1.0);
@@ -397,8 +401,14 @@ public:
                     if(print_flag) r_escape.print(std::cout);
                     opt_used += 2;
                     break;
-#ifdef ADJUST_GROUP_PRINT
                 case 22:
+                    r_search_min.value = atof(optarg);
+                    if(print_flag) r_search_min.print(std::cout);
+                    update_rsearch_flag = true;
+                    opt_used += 2;
+                    break;
+#ifdef ADJUST_GROUP_PRINT
+                case 23:
                     adjust_group_write_option.value = atoi(optarg);
                     if(print_flag) adjust_group_write_option.print(std::cout);
                     opt_used += 2;
@@ -429,6 +439,7 @@ public:
             case 's':
                 dt_soft.value = atof(optarg);
                 if(print_flag) dt_soft.print(std::cout);
+                update_rsearch_flag = true;
                 opt_used += 2;
                 assert(dt_soft.value>=0.0);
                 break;
@@ -441,6 +452,8 @@ public:
             case 'r':
                 r_out.value = atof(optarg);
                 if(print_flag) r_out.print(std::cout);
+                update_rsearch_flag = true;
+                update_changeover_flag = true;
                 opt_used += 2;
                 assert(r_out.value>=0.0);
                 break;
@@ -530,6 +543,7 @@ public:
                     std::cout<<"        --r-ratio:           [F] "<<ratio_r_cut<<std::endl;
                     std::cout<<"        --r-bin:             [F] "<<r_bin<<std::endl;
                     std::cout<<"        --r-escape:          [F] "<<r_escape<<std::endl;
+		    std::cout<<"        --r-search-min:      [F] "<<r_search_min<<std::endl;
                     std::cout<<"  -b: [I] "<<n_bin<<std::endl;
                     std::cout<<"  -n: [I] "<<n_glb<<std::endl;
 #ifdef ORBIT_SAMPLING
@@ -2891,7 +2905,8 @@ public:
         Ptcl::mean_mass_inv = 1.0/mass_average;
         Ptcl::r_group_crit_ratio = r_bin/r_in;
         Ptcl::vel_cm = vel_cm_glb;
-        escaper.r_escape = input_parameters.r_escape.value;
+        escaper.r_escape_sq = input_parameters.r_escape.value*input_parameters.r_escape.value;
+	escaper.check_energy_flag = (input_parameters.r_escape.value>=0);
 
         if(print_flag) {
             std::cout<<"----- Parameter list: -----\n";
@@ -2934,10 +2949,26 @@ public:
             }
         }
         else {
-            // clear up group_data.cm to avoid issue in search neighbor
+            // clear up group_data.cm to avoid issue in search neighbor; update changeover and r_search
 #pragma omp parallel for
             for (PS::S32 i=0; i<stat.n_real_loc; i++) {
                 auto& pi_cm = system_soft[i].group_data.cm;
+
+                // update changeover
+                if (input_parameters.update_changeover_flag) {
+                    PS::F64 m_fac = system_soft[i].mass*Ptcl::mean_mass_inv;
+                    system_soft[i].changeover.setR(m_fac, r_in, r_out);
+                }
+
+                // update research
+                if (input_parameters.update_rsearch_flag) {
+                    if (pi_cm.mass>0.0) {
+                        PS::F64 vcm = std::sqrt(pi_cm.vel*pi_cm.vel);
+                        system_soft[i].r_search = std::max(r_search_min,vcm*dt_soft*search_vel_factor + system_soft[i].changeover.getRout());
+                    }
+                    else system_soft[i].calcRSearch(dt_soft);
+                }
+
                 pi_cm.mass = pi_cm.vel.x = pi_cm.vel.y = pi_cm.vel.z = 0.0;
             }
             stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);
