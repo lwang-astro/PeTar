@@ -66,7 +66,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
 
         # find binary
         #print('Find pair')
-        kdtree,single,binary=findPair(particle,G,r_bin,simple_binary)
+        kdtree,single,binary=findPair(particle,G,r_bin,True,simple_binary)
         find_pair_time = time.time()
     
         # get cm, density
