@@ -43,10 +43,12 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
     G=1.0
     r_bin=0.1
     average_mode='sphere'
+    simple_binary=True
 
     if ('G' in kwargs.keys()): G=kwargs['G']
     if ('r_max_binary' in kwargs.keys()): r_bin=kwargs['r_max_binary']
     if ('average_mode' in kwargs.keys()): average_mode=kwargs['average_mode']
+    if ('simple_binary' in kwargs.keys()): simple_binary=kwargs['simple_binary']
 
     fp = open(file_path, 'r')
     header=fp.readline()
@@ -64,7 +66,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
 
         # find binary
         #print('Find pair')
-        kdtree,single,binary=findPair(particle,G,r_bin,True)
+        kdtree,single,binary=findPair(particle,G,r_bin,simple_binary)
         find_pair_time = time.time()
     
         # get cm, density
