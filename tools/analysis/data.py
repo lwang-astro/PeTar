@@ -456,7 +456,7 @@ def findPair(_dat, _G, _rmax, use_kdtree=False, simple_binary=True):
      
         # check orbits
         #print('Create binary')
-        binary = Binary(p1, p2, G=_G)
+        binary = Binary(p1, p2, G=_G, simple_mode=simple_binary)
         apo =binary.semi*(binary.ecc+1.0)
      
         bsel= ((binary.semi>0) & (apo<_rmax))
