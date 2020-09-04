@@ -239,7 +239,8 @@ public:
             {"r-ratio",               required_argument, &petar_flag, 10},
             {"r-bin",                 required_argument, &petar_flag, 11},       
             {"r-escape",              required_argument, &petar_flag, 21},
-	    {"r-search-min",          required_argument, &petar_flag, 22},
+            {"r-search-min",          required_argument, &petar_flag, 22},
+            {"id-offset",             required_argument, &petar_flag, 23},
             {"search-peri-factor",    required_argument, &petar_flag, 12}, 
             {"hermite-eta",           required_argument, &petar_flag, 13}, 
 #ifdef HARD_CHECK_ENERGY
@@ -254,7 +255,7 @@ public:
             {"stellar-evolution",     required_argument, &petar_flag, 20},
 #endif
 #ifdef ADJUST_GROUP_PRINT
-            {"write-group-info",      required_argument, &petar_flag, 23},
+            {"write-group-info",      required_argument, &petar_flag, 24},
 #endif            
             {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
@@ -407,8 +408,13 @@ public:
                     update_rsearch_flag = true;
                     opt_used += 2;
                     break;
-#ifdef ADJUST_GROUP_PRINT
                 case 23:
+                    id_offset.value = atoi(optarg);
+                    if(print_flag) id_offset.print(std::cout);
+                    opt_used += 2;
+                    break;
+#ifdef ADJUST_GROUP_PRINT
+                case 24:
                     adjust_group_write_option.value = atoi(optarg);
                     if(print_flag) adjust_group_write_option.print(std::cout);
                     opt_used += 2;
@@ -530,6 +536,7 @@ public:
                     std::cout<<"              [formatted] indicates that the value is only for save, cannot be directly read"<<std::endl;
                     std::cout<<"Options:  defaulted values are shown after ':'"<<std::endl;
                     std::cout<<"  -i: [I] "<<data_format<<std::endl;
+                    std::cout<<"         --id-offset:        [I]"<<id_offset<<std::endl;
                     std::cout<<"  -a: [I] "<<append_switcher<<std::endl;
                     std::cout<<"  -t: [F] "<<time_end<<std::endl;
                     std::cout<<"  -s: [F] "<<dt_soft<<std::endl;
@@ -2946,6 +2953,9 @@ public:
                 // calculate r_search for particles, for binary, r_search depend on vel_disp
                 if(id<=2*n_bin) system_soft[i].r_search = std::max(r_search_min,vel_disp*dt_soft*search_vel_factor + system_soft[i].changeover.getRout());
                 else system_soft[i].calcRSearch(dt_soft);
+
+                auto& pi_cm = system_soft[i].group_data.cm;
+                pi_cm.mass = pi_cm.vel.x = pi_cm.vel.y = pi_cm.vel.z = 0.0;
             }
         }
         else {
@@ -2962,9 +2972,13 @@ public:
 
                 // update research
                 if (input_parameters.update_rsearch_flag) {
-                    if (pi_cm.mass>0.0) {
+                    if (pi_cm.mass!=0.0) {
+#ifdef GROUP_DATA_WRITE_ARTIFICIAL
+                        system_soft[i].r_search = std::max(r_search_min, vel_disp*dt_soft*search_vel_factor + system_soft[i].changeover.getRout());
+#else
                         PS::F64 vcm = std::sqrt(pi_cm.vel*pi_cm.vel);
                         system_soft[i].r_search = std::max(r_search_min,vcm*dt_soft*search_vel_factor + system_soft[i].changeover.getRout());
+#endif
                     }
                     else system_soft[i].calcRSearch(dt_soft);
                 }
