@@ -58,11 +58,13 @@ done
 
 if [ -e $fout.group ]; then
     nmax=`awk '{print $2'} $fout.group|sort |tail -1`
-    for ((i=2;i<=$nmax;i=i+1))
-    do
-	echo 'get n_member= '$i' in '$fout.group' to '$fout.group.n$i
-	awk -v n=$i '{if ($2==n) print $LINE}' $fout.group >$fout.group.n$i
-    done	    
+    if [[ x$nmax != x ]]; then
+	for ((i=2;i<=$nmax;i=i+1))
+	do
+	    echo 'get n_member= '$i' in '$fout.group' to '$fout.group.n$i
+	    awk -v n=$i '{if ($2==n) print $LINE}' $fout.group >$fout.group.n$i
+	done	    
+    fi
 fi
 
 if [ -e $fout.sse ]; then
@@ -77,3 +79,6 @@ if [ -e $fout.bse ]; then
     egrep '^SN_kick' $fout.bse |sed 's/SN_kick//g' >$fout.bse.sn_kick
     egrep -v '^(Dynamic_merge|SN_kick)' $fout.bse |awk '{for (i=2;i<=NF;i++) printf("%s ", $i); printf("\n")}' >$fout.bse.type_change
 fi
+
+flen=`expr ${#fname} + 2`
+ls|egrep $fname'.[0-9]+$' |sort -n -k 1.${flen} >$fout.snap.lst

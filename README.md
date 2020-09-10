@@ -1,5 +1,5 @@
 ```
-    ██████╗ ███████╗████████╗ █████╗ ██████╗ 
+0;10;1c    ██████╗ ███████╗████████╗ █████╗ ██████╗ 
     ██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔══██╗
     ██████╔╝█████╗     ██║   ███████║██████╔╝
     ██╔═══╝ ██╔══╝     ██║   ██╔══██║██╔══██╗
@@ -221,7 +221,7 @@ There are a few output files:
 - [data filename prefix].[s/b]se.[MPI rank]: if BSE is switched on, the files record the SSE and BSE events, such as type changes, Supernovae, binary evolution phase changes. Each line contain the definition of values, thus can be directly read.
 
 Before access these files, it is suggested to run _petar.data.gether_ tool first to gether the separated files with different MPI ranks to one file for convenience.
-This tool also separate the few-body groups with different number of members in xx.group files to individual files with suffixe ".n[number of members in groups]".
+This tool also separate the few-body groups with different number of members in xx.group files to individual files with suffix ".n[number of members in groups]".
     
 ##### Debug dump files
 During a long-term simulation, a large number of files of "hard_large_energy.xx", "dump_large_step.xx" and "hard_dump.xx" may be generated.
@@ -326,10 +326,16 @@ This tool use either _imageio_ or _matplotlib.animation_ to generate movies. It 
 #### gether output files from different MPI ranks
 The _petar.data.gether_ is used to gether output files from different MPI ranks to one file (e.g. xx.group.[MPI rank]).
 For group files, it also generate individual files with suffix ".n[number of members in groups]'.
+In addition, the tool generates a file, "[output prefix].snap.lst" , that contains the list of all snapshot files sorted by time. This can be used as the input for _petar.data.process_ and _petar.movie_.
+The basic usage is
+```
+petar.data.gether [options] [data filename prefix]
+```
+If the [output prefix] is not given (option -f), the [output prefix] is the same as [data filename prefix].
 
 #### remove data after a given time
 The _petar.data.clear_ is used to remove data after a given time for all output files except the snapshots.
-The base usage is 
+The basic usage is 
 ```
 petar.data.clear -t [time] [data filename prefix]
 ```

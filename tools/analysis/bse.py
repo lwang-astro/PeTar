@@ -147,13 +147,30 @@ class BSEDynamicMerge(DictNpArrayMix):
         period (1D): period  before merge (days)
         semi (1D): semi-major axis before merge (Rsun)
         ecc (1D): eccentricity before merge
+        *dr (1D): separation at merger time (Rsun)
+        *t_peri (1D): if merger is binary, this is the left time to peri-center, else it is 0.0 (days)
+        *sd (1D): slowdown factor for the binary
         init (SSEStarParameter): initial status of star
         final (SSEStarParameter): final status of star after stellar evolution
+
+    kwargs['less_output'] (bool)
+        True: 
+           class member (key) with the prefix '*" shown above are excluded (for old version of PeTar)
+        False: (default)
+           all members exists 
+        
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        keys = [['id1',1],['id2',1],['period',1],['semi',1],['ecc',1],['init',SSEStarParameterPair],['final',SSEStarParameterPair]]
+        less_output = False
+        if 'less_output' in kwargs.keys(): less_output = kwargs['less_output']
+
+        keys_bin = [['id1',1],['id2',1],['period',1],['semi',1],['ecc',1]]
+        keys_extra = [['dr',1],['t_peri',1],['sd',1]]
+        keys_p= [['init',SSEStarParameterPair],['final',SSEStarParameterPair]]
+        keys = keys_bin + keys_extra + keys_p
+        if (less_output): keys = keys_bin + keys_p
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
 #class BSESingleCount(DictNpArrayMix):
