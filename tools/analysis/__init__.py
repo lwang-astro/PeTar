@@ -5,6 +5,6 @@ from .data import *
 from .status import *
 from .lagrangian import *
 from .escaper import *
-from .parallel import *
+from .parallel_data_process import *
 from .group import *
 from .bse import *

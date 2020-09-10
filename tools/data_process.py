@@ -21,7 +21,7 @@ if __name__ == '__main__':
         print("  -h(--help): help")
         print("  -p(--filename-prefix): prefix of output file names for: [prefix].[lagr|esc.[single|binary]|core] (data)")
         print("  -m(--mass-fraction): Lagrangian radii mass fraction (0.1,0.3,0.5,0.7,0.9)")
-        print("  -G(--gravitational-constant): Gravitational constant (if interrupt-mode=bse: 0.00449830997959438; else 1.0)")
+        print("  -G(--gravitational-constant): Gravitational constant (if interrupt-mode=bse: ",petar.G_MSUN_PC_MYR,"; else 1.0)")
         print("  -b(--r-max-binary): maximum sepration for detecting binaries (0.1)")
         print("  -B(--full-binary): calculate full binary orbital parameters (simple_mode=False in Binary class), this option increases computing time")
         print("  -a(--average-mode): Lagrangian properity average mode: sphere: average from center to Lagragian radii; shell: average between two neighbor radii (sphere)")

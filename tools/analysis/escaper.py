@@ -84,7 +84,7 @@ class BinaryEscaper(Binary):
         DictNpArrayMix.__init__(self, [['time',1]], _dat, _offset, _append, **kwargs)
         Binary.__init__(self, _dat, None, _offset+self.ncols, True, **kwargs)
 
-    def findEscaper(self, time, binary, rcut, G=1):
+    def findEscaper(self, time, binary, rcut):
         """ Find escaper from a binary snapshot
         Functions, calcR2, calcEkin, calcPot and calcEtot, are used first for input binary data set,
         then c.m. distance <rcut and etot>0 will be selected as escapers.
@@ -98,11 +98,9 @@ class BinaryEscaper(Binary):
             binary particle data set
         rcut: float
             distance criterion
-        G: float (1.0)
-            gravitational constant
         """
         binary.calcR2()
-        binary.calcPot(G)
+        binary.calcPot()
         binary.calcEkin()
         binary.calcEtot()
 
