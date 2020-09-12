@@ -734,8 +734,8 @@ if __name__ == '__main__':
         file_part = [path_list[n_offset[i]:n_offset[i+1]] for i in range(n_cpu)]
         results=[None]*n_cpu
         for rank in range(n_cpu):
-            createImage(file_part[rank], model_list, frame_xsize, frame_ysize, ncol, plot_item, core, lagr, **kwargs)
-            #results[rank]=pool.apply_async(createImage, (file_part[rank], model_list, frame_xsize, frame_ysize, ncol, plot_item, core, lagr), kwargs)
+            #createImage(file_part[rank], model_list, frame_xsize, frame_ysize, ncol, plot_item, core, lagr, **kwargs)
+            results[rank]=pool.apply_async(createImage, (file_part[rank], model_list, frame_xsize, frame_ysize, ncol, plot_item, core, lagr), kwargs)
 
         # Step 3: Don't forget to close
         pool.close()
