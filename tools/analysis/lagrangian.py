@@ -57,7 +57,7 @@ class Core(DictNpArrayMix):
         return cm_pos, cm_vel
     
     def calcDensityAndCenter(self, particle, kdtree):
-        """ Calculate density based on nearest six neighbors and return the result
+        """ Calculate density based on nearest six neighbors and return the result (Casertano & Hut 1985)
         
         Parameters
         ----------
@@ -169,15 +169,19 @@ class Lagrangian(DictNpArrayMix):
         m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
         n_frac = m_frac.size + 1
-        keys = [['r', n_frac],['m', n_frac],['n', n_frac]] # radius, mass, number
+        keys = [['r', n_frac],['m', n_frac],['n', n_frac], ['vel', LagrangianVelocity], ['sigma', LagrangianVelocity]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
-        self.vel  = LagrangianVelocity(_dat, _offset+self.ncols, False, **kwargs)
-        self.ncols += self.vel.ncols
-        self.keys.append(['vel',LagrangianVelocity])
-        self.sigma= LagrangianVelocity(_dat, _offset+self.ncols, False, **kwargs)
-        self.ncols += self.sigma.ncols
-        self.keys.append(['sigma',LagrangianVelocity])
         self.initargs['mass_fraction'] = m_frac
+
+        #keys = [['r', n_frac],['m', n_frac],['n', n_frac]] # radius, mass, number
+        #DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
+        #self.vel  = LagrangianVelocity(_dat, _offset+self.ncols, False, **kwargs)
+        #self.ncols += self.vel.ncols
+        #self.keys.append(['vel',LagrangianVelocity])
+        #self.sigma= LagrangianVelocity(_dat, _offset+self.ncols, False, **kwargs)
+        #self.ncols += self.sigma.ncols
+        #self.keys.append(['sigma',LagrangianVelocity])
+        #self.initargs['mass_fraction'] = m_frac
 
     def calcOneSnapshot(self, _particle, _rc, _mode='sphere'):
         """ Calculate one snapshot lagrangian parameters
@@ -319,21 +323,23 @@ class LagrangianMultiple(DictNpArrayMix):
             mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
                                Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
         """
-        m_frac=np.array([0,1,0,3,0.5,0,7,0,9])
+        m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
-        
-        DictNpArrayMix.__init__(self, [['time',1]], _dat, _offset, _append, **kwargs)
-        self.single = Lagrangian(_dat, _offset+self.ncols, False, **kwargs)
-        self.ncols += self.single.ncols
-        self.keys.append(['single',Lagrangian])
-        self.binary = Lagrangian(_dat, _offset+self.ncols, False, **kwargs)
-        self.ncols += self.binary.ncols
-        self.keys.append(['binary',Lagrangian])
-        self.all    = Lagrangian(_dat, _offset+self.ncols, False, **kwargs)
-        self.ncols += self.all.ncols
-        self.keys.append(['all',Lagrangian])
-        self.size = self.all.size
+        keys=[['time',1], ['single',Lagrangian], ['binary', Lagrangian], ['all', Lagrangian]]
+        DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
         self.initargs['mass_fraction'] = m_frac
+
+        #DictNpArrayMix.__init__(self, [['time',1]], _dat, _offset, _append, **kwargs)
+        #self.single = Lagrangian(_dat, _offset+self.ncols, False, **kwargs)
+        #self.ncols += self.single.ncols
+        #self.keys.append(['single',Lagrangian])
+        #self.binary = Lagrangian(_dat, _offset+self.ncols, False, **kwargs)
+        #self.ncols += self.binary.ncols
+        #self.keys.append(['binary',Lagrangian])
+        #self.all    = Lagrangian(_dat, _offset+self.ncols, False, **kwargs)
+        #self.ncols += self.all.ncols
+        #self.keys.append(['all',Lagrangian])
+        #self.size = self.all.size
 
 
     def calcOneSnapshot(self, time, single, binary, rc, mode):

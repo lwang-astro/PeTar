@@ -45,7 +45,7 @@ fi
 [ -z $convert ] && convert=0
 [ -z $cm ] && cm='none'
 
-echo 'Transfer "'$fname$'" to PeTar input data file "'$fout'"'
+echo 'Transfer "'$fname'" to PeTar input data file "'$fout'"'
 echo 'Skip rows: '$igline
 echo 'Add stellar evolution columns: '$seflag
 

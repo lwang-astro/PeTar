@@ -490,7 +490,7 @@ public:
         }
 #endif
         _energy.ekin *= 0.5;
-        _energy.epert *= 0.5;
+        //_energy.epert *= 0.5;
     }
 
     //! write class data to file with binary format

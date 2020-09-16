@@ -10,6 +10,7 @@ from amuse.community.interface.gd import (
     GravityFieldInterface,
     GravityFieldCode,
 )
+from amuse.units import nbody_system
 
 
 class petarInterface(
@@ -58,9 +59,36 @@ class petar(GravitationalDynamics, GravityFieldCode):
         GravitationalDynamics.define_parameters(self, handler)
         self.stopping_conditions.define_parameters(handler)
 
+        handler.add_method_parameter(
+            "get_eps2",
+            "set_eps2",
+            "epsilon_squared", 
+            "smoothing  parameter for gravity calculations", 
+            default_value = 0.0 | nbody_system.length * nbody_system.length
+        )
+
     def define_methods(self, handler):
         GravitationalDynamics.define_methods(self, handler)
         self.stopping_conditions.define_methods(handler)
+
+        handler.add_method(
+            "set_eps2",
+            (
+                nbody_system.length * nbody_system.length
+            ),
+            (
+                handler.ERROR_CODE
+            )
+        )
+
+        handler.add_method(
+            "get_eps2",
+            (),
+            (
+                nbody_system.length * nbody_system.length,
+                handler.ERROR_CODE
+            )
+        )
 
     def define_particle_sets(self, handler):
         GravitationalDynamics.define_particle_sets(self, handler)

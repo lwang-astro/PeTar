@@ -31,6 +31,7 @@ class PlotXY:
         self.nlayer_cross = 5
         self.nlayer_point = 10
         self.alpha_amplifier = 2.5
+        self.marker_scale = 1.0
         self.temp_min = 1000
         self.temp_max = 50000
         self.ptcls=[]
@@ -77,7 +78,7 @@ class PlotXY:
 
     def plot(self, x, y, mass, colors):
         for i in range(self.nlayer):
-            sizes = mass*self.sizescale[i]*self.framescale
+            sizes = mass*self.sizescale[i]*self.framescale*self.marker_scale
             #sizes = (np.log10(luminosity)-np.log10(lum_min)+1)
             #sizes = luminosity
             self.ptcls[i].set_offsets(np.array([x,y]).transpose())
@@ -141,6 +142,49 @@ class PlotSemiEcc:
         self.ptcls[0].set_color(colors)
         return self.ptcls
 
+class PlotLagr:
+    def __init__(self):
+        self.rlagr_min = 0
+        self.rlagr_max = 1
+        self.time_min = 0
+        self.time_max = 1
+        self.rlagr_scale= 'linear'
+        self.ptcls = []
+
+    def init(self, axe, lagr, **kwargs):
+        for key in self.__dict__.keys():
+            if (key in kwargs.keys()): self.__dict__[key] = kwargs[key]
+        mfrac=list(lagr.initargs['mass_fraction']) + ['Rc']
+        for mi in range(len(mfrac)):
+            mlabel=mfrac[mi]
+            pt, = axe.plot([],[], '*', markersize=8, markeredgecolor='none', label=mlabel)
+            self.ptcls.append(pt)
+        for mi in range(len(mfrac)):
+            pt, = axe.plot(lagr.time, lagr.all.r[:,mi],'-', color='grey')
+            self.ptcls.append(pt)
+        axe.set_yscale(self.rlagr_scale)
+        axe.set_xlim(self.time_min, self.time_max)
+        axe.set_ylim(self.rlagr_min, self.rlagr_max)
+        if ('unit_length' in kwargs.keys()):
+            unit_label = '['+kwargs['unit_length']+']'
+            axe.set_ylabel(r'$R_{lagr}$'+unit_label)
+        else:
+            axe.set_ylabel(r'$R_{lagr}$')
+        if ('unit_time' in kwargs.keys()):
+            unit_label = ' '+kwargs['unit_time']
+            axe.set_xlabel('Time'+unit_label)
+        else:
+            axe.set_xlabel('Time')
+        axe.legend(loc='upper right')
+
+
+    def plot(self, lagr, tnow):
+        nfrac=lagr.initargs['mass_fraction'].size + 1
+        sel = (lagr.time==tnow)
+        for mi in range(nfrac):
+            self.ptcls[mi].set_data(lagr.time[sel], lagr.all.r[sel,mi])
+        return self.ptcls
+
 class Data:
     def __init__(self, **kwargs):
         self.xcol = -1
@@ -177,10 +221,8 @@ class Data:
                 data['mass'] = np.ones(data['x'].size)
             data['t'] = file_path
         else:
-            fp = open(file_path, 'r')
-            header=fp.readline()
-            file_id, n_glb, data['t'] = header.split()
-            fp.close()
+            header=petar.PeTarDataHeader(file_path)
+            data['t'] = str(header.time)
 
             if (self.generate_binary>0):
                 if (self.generate_binary==2):
@@ -312,7 +354,7 @@ class Data:
             ycm += ycm2
         return xcm, ycm
 
-def plotOne(file_path, axe, plots, core, **kwargs):
+def plotOne(file_path, axe, plots, core, lagr, **kwargs):
     data = Data(**kwargs)
     data.read(file_path)
 
@@ -337,56 +379,83 @@ def plotOne(file_path, axe, plots, core, **kwargs):
     plots['ycm'].set_text(r'$y_{cm}=%f$' % ycm)
     ptcls = ptcls + [plots['xcm'], plots['ycm']]
                                      
-    if ('xyzoom' in plots.keys()): 
-        ptcls = ptcls + plots['xyzoom'].plot(data.x, data.y, data.mass, colors)
+    plot_item = plots['label']
+    iaxe=0
+    for pi in plot_item:
+        iaxe +=1
+        if pi[0] == 'plot_zoom':
+            ptcls = ptcls + plots['extra'][iaxe].plot(data.x, data.y, data.mass, colors)
 
-    if ('hr' in plots.keys()): 
-        if ('lum_cm' in data.keys()):
-            ptcls = ptcls + plots['hr'].plot(data.lum_cm, data.temp_cm, data.type_cm)
-        else:
-            ptcls = ptcls + plots['hr'].plot(data.lum, data.temp. data.type)
+        if pi[0] == 'plot_HRdiagram':
+            if ('lum_cm' in data.keys()):
+                ptcls = ptcls + plots['extra'][iaxe].plot(data.lum_cm, data.temp_cm, data.type_cm)
+            else:
+                ptcls = ptcls + plots['extra'][iaxe].plot(data.lum, data.temp. data.type)
 
-    if ('se' in plots.keys()):
-        ptcls = ptcls + plots['se'].plot(data.semi, data.ecc, data.state)
+        if pi[0] == 'plot_semi_ecc':
+            ptcls = ptcls + plots['extra'][iaxe].plot(data.semi, data.ecc, data.state)
+
+        if pi[0] == 'plot_lagr':
+            ptcls = ptcls + plots['extra'][iaxe].plot(lagr, float(data['t']))
+                              
     return ptcls
 
-def initPlot(axe, plot_zoom, plot_HRdiagram, plot_semi_ecc, **kwargs):
+def initPlot(axe, model_title, plot_item, lagr, **kwargs):
     plots=dict()
 
     iaxe=0
-    framescale = 1
-    if 'framescale' in kwargs.keys():
-        framescale = kwargs['framescale']
-        kwargs['framescale'] = 1
     plots['xy'] = PlotXY()
     plots['xy'].init(axe[iaxe], **kwargs)
     plots['xcm'] = axe[0].text(.05, 0.95, '', transform = axe[0].transAxes, color='white')
-    plots['ycm'] = axe[0].text(.35, 0.95, '', transform = axe[0].transAxes, color='white')
-    
-    if (plot_zoom): 
-        iaxe +=1 
-        kwargs['boxsize'] = plots['xy'].boxsize / framescale
-        kwargs['framescale'] = framescale
-        plots['xyzoom']=PlotXY()
-        plots['xyzoom'].init(axe[iaxe], **kwargs)
-        
-    if (plot_HRdiagram): 
-        iaxe +=1
-        plots['hr']=PlotHR()
-        plots['hr'].init(axe[iaxe],**kwargs)
+    #plots['ycm'] = axe[0].text(.35, 0.95, '', transform = axe[0].transAxes, color='white')
+    plots['ycm'] = axe[0].text(.05, 0.9, '', transform = axe[0].transAxes, color='white')
+    if ('compare_in_column' in kwargs.keys()):
+        plots['title'] = axe[0].text(0.5, 1.2, model_title, verticalalignment='center', horizontalalignment='center',  transform = axe[0].transAxes, color='white')
+    else:
+        plots['title'] = axe[0].text(-0.2, 0.5, model_title, verticalalignment='center', horizontalalignment='center',  transform = axe[0].transAxes, color='white', rotation=90)
+    plots['extra'] = dict()
+    plots['label'] = plot_item
 
-    if (plot_semi_ecc): 
+    for pi in plot_item:
         iaxe +=1 
-        plots['se']=PlotSemiEcc()
-        plots['se'].init(axe[iaxe],**kwargs)
+        if pi[0] == 'plot_zoom':
+            kwargs['boxsize'] = plots['xy'].boxsize / pi[1]
+            kwargs['framescale'] = pi[1]
+            plots['extra'][iaxe]=PlotXY()
+            plots['extra'][iaxe].init(axe[iaxe], **kwargs)
+        
+        if pi[0] == 'plot_HRdiagram':
+            plots['extra'][iaxe]=PlotHR()
+            plots['extra'][iaxe].init(axe[iaxe],**kwargs)
+
+        if pi[0] == 'plot_semi_ecc':
+            plots['extra'][iaxe]=PlotSemiEcc()
+            plots['extra'][iaxe].init(axe[iaxe],**kwargs)
+
+        if pi[0] == 'plot_lagr':
+            if not 'rlagr_max' in kwargs.keys():
+                kwargs['rlagr_max'] = plots['xy'].boxsize
+            if not 'time_min' in kwargs.keys():
+                kwargs['time_min'] = lagr.time[0]
+            if not 'time_max' in kwargs.keys():
+                kwargs['time_max'] = lagr.time[-1]
+            plots['extra'][iaxe]=PlotLagr()
+            plots['extra'][iaxe].init(axe[iaxe], lagr, **kwargs)
 
     return plots
 
-def initFig(frame_xsize, frame_ysize, ncol, nplots):
+def initFig(model_list, frame_xsize, frame_ysize, ncol, nplots, compare_in_column):
     xsize=frame_xsize
     ysize=frame_ysize
     nrow= 1
-    if (ncol<0):
+    if (len(model_list)>1): 
+        nrow = len(model_list)
+        if (compare_in_column):
+            nrow = ncol
+            ncol = len(model_list)
+        ysize = frame_ysize*nrow
+        xsize = frame_xsize*ncol
+    elif (ncol<0):
         ncol = nplots
         xsize = frame_xsize*nplots
     else:
@@ -396,25 +465,30 @@ def initFig(frame_xsize, frame_ysize, ncol, nplots):
         ysize = nrow*frame_ysize
 
     fig, axe = plt.subplots(nrow,ncol,figsize=(xsize, ysize))
-    if (nrow>1) & (ncol>1): axe=axe.flatten()
-    if (nrow==1) & (ncol==1): axe=[axe]
+    if (len(model_list)>1) & compare_in_column: axe=[[axe[i][j] for i in range(nrow)] for j in range(ncol)]
+    #if (nrow>1) & (ncol>1): axe=axe.flatten()
+    if (nrow==1) | (ncol==1): axe=[axe]
+    if (nrow==1) & (ncol==1): axe=[[axe]]
     return fig, axe
 
 
-def createImage(_path_list, frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdiagram, plot_semi_ecc, core, **kwargs):
+def createImage(_path_list, model_list, frame_xsize, frame_ysize, ncol, plot_item, core, lagr, **kwargs):
     n_frame = len(_path_list)
     use_previous = False
     if ('use_previous' in kwargs.keys()): use_previous = kwargs['use_previous']
 
     if (n_frame>0):
-        nplots = 1
-        if (plot_zoom): nplots+=1
-        if (plot_HRdiagram): nplots+=1
-        if (plot_semi_ecc): nplots+=1
+        nplots = 1 + len(plot_item)
 
-        fig, axe = initFig(frame_xsize, frame_ysize, ncol, nplots)
+        if (len(model_list)>1): ncol = nplots
+        compare_in_column = False
+        if ('compare_in_column' in kwargs.keys()): compare_in_column = kwargs['compare_in_column']
 
-        plots=initPlot(axe, plot_zoom, plot_HRdiagram, plot_semi_ecc, **kwargs)
+        fig, axe = initFig(model_list, frame_xsize, frame_ysize, ncol, nplots, compare_in_column)
+
+        plots=dict()
+        for i in range(len(model_list)):
+            plots[i] = initPlot(axe[i], model_list[i][1],plot_item, lagr[i], **kwargs)
 
         for k in range(n_frame):
             file_path = _path_list[k]
@@ -422,23 +496,28 @@ def createImage(_path_list, frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdi
                 if (os.path.exists(file_path+'.png')):
                     print('find existing %s' % file_path)
                     continue
-            plotOne(file_path, axe, plots, core, **kwargs)
+
+            for i in range(len(model_list)):
+                mi = model_list[i][0]
+                plotOne(mi+'/'+file_path, axe[i], plots[i], core[i], lagr[i], **kwargs)
+            print('processing ',file_path)
             fig.savefig(file_path+'.png',bbox_inches = "tight")
-            print(file_path)
+
     return n_frame
 
 if __name__ == '__main__':
 
     filename='dat.lst'
+    model_path=''
     core_file='data.core'
+    lagr_file='data.lagr'
+    read_lagr_data = False
     fps = 30
     output_file = 'movie'
-    plot_HRdiagram=False
-    plot_zoom=False
-    plot_semi_ecc=False
+    plot_item=[]
     ncol= -1
-    frame_xsize= 8
-    frame_ysize= 8
+    frame_xsize= 4
+    frame_ysize= 4
     plot_format='mp4'
     n_cpu = 0
     plot_images=True
@@ -447,6 +526,7 @@ if __name__ == '__main__':
     pxy_zoom = PlotXY()
     phr = PlotHR()
     pse = PlotSemiEcc()
+    plagr=PlotLagr()
     data = Data()
     
     def usage():
@@ -455,47 +535,65 @@ if __name__ == '__main__':
         print("data_list_filename: A list of snapshot data path, each line for one snapshot")
         print("option: default values are shown at last")
         print("  -h(--help): help")
-        print("  -f: output frame FPS: ",fps)
-        print("  -R: movie box length: ",pxy.boxsize)
-        print("  -z: plot zoom frame with emplification factor: not set")
-        print("  -H: plot HR-diagram")
-        print("  -b: plot semi-ecc diagram for binaries")
-        print("  -G: gravitational constant for calculating binary orbit: ",data.G)
-        print("  -o: output movie filename: ",output_file)
-        print("  -i: Use previous generated png images to speed up the movie generation")
-        print("  --n-cpu: number of CPU processors to use, only work for gif format: all CPU cores")
-        print("  --lum-min: minimum lumonisity: ",phr.lum_min)
-        print("  --lum-max: maximum lumonisity: ",phr.lum_max)
-        print("  --temp-min: minimum temperature: ",phr.temp_min)
-        print("  --temp-max: maximum temperature: ",phr.temp_max)
-        print("  --semi-min: minimum semi-major axis: ",pse.semi_min)
-        print("  --semi-max: minimum semi-major axis: ",pse.semi_max)
-        print("  --ecc-min: minimum eccentricity: ",pse.ecc_min)
-        print("  --ecc-max: maximum eccentricity: ",pse.ecc_max)
-        print("  --interrupt-mode: no, base, bse: ",data.interrupt_mode)
-        print("  --xcol: column index for x-axis: Unset")
-        print("  --ycol: column index for x-axis: Unset")
-        print("  --mcol: column index for mass, if not set and not PeTar output, assume equal mass: Unset")
-        print("  --unit-length: set label of length unit for x, y and semi: no print")
-        print("  --unit-time: set label of time unit: no print")
-        print("  --skiprows: number of rows to escape when read snapshot: Unset")
-        print("  --generate-binary: 0: no binary, 1: detect binary by using KDtree (slow), 2: read single and binary data generated by petar.data.process: ", data.generate_binary)
-        print("  --plot-ncols: column number of panels: same as panels")
-        print("  --plot-xsize: x size of panel: ",frame_xsize)
-        print("  --plot-ysize: y size of panel: ",frame_ysize)
-        print("  --cm-mode: plot origin position determination: density: density center; average: average of x,y; core: use core data file generated from petar.data.process; none: use origin of snapshots: ", data.cm_mode)
-        print("  --core-file: core data file name: ",core_file)
-        print("  --cm-boxsize: boxsize to search the coordinate center for the x-y plot: 5.0 times ploting size (-R)")
-        print("  --n-layer-cross: number of layers of crosses for particles in the x-y plot: 5")
-        print("  --n-layer-point: number of layers of points for particles in the x-y plot: 10")
-        print("  --layer-alpha: transparency factor of layers in the x-y plot: 2.5")
+        print("  -f [F]: output frame FPS: ",fps)
+        print("  -R [F]: movie box length: ",pxy.boxsize)
+        print("  -z [F]: add one panel of zoom frame of x-y with emplification factor: not set")
+        print("  -H    : add one panel of HR-diagram")
+        print("  -b    : add one panel of semi-ecc diagram for binaries")
+        print("  -L [S]: add one panel of Lagrangian radii evolution, argument is filename of lagrangian data", lagr_file)
+        print("  -G [F]: gravitational constant for calculating binary orbit: ",data.G)
+        print("  -o [S]: output movie filename: ",output_file)
+        print("  -i    : Use previous generated png images to speed up the movie generation")
+        print("  -l [S]: the filename of a list of pathes to different models, this will switch on the comparison mode.")
+        print("          Each line contains two values: directory path of model, name of model.")
+        print("          When data is reading, pathes will be added in front of the filenames. ")
+        print("          Notice it is assumed that all reading data have the same naming style in each path.")
+        print("          The number of snapshots should also be the same for all models.")
+        print("  --compare-in-column: in comparison mode, models are compared in columns instead of rows.")
+        print("  --interrupt-mode  [S]: no, base, bse: ",data.interrupt_mode)
+        print("  --generate-binary [I]: 0: no binary, 1: detect binary by using KDtree (slow), 2: read single and binary data generated by petar.data.process: ", data.generate_binary)
+        print("  --n-cpu       [I]: number of CPU processors to use: all CPU cores")
+        print("  --lum-min     [F]: minimum lumonisity: ",phr.lum_min)
+        print("  --lum-max     [F]: maximum lumonisity: ",phr.lum_max)
+        print("  --temp-min    [F]: minimum temperature: ",phr.temp_min)
+        print("  --temp-max    [F]: maximum temperature: ",phr.temp_max)
+        print("  --semi-min    [F]: minimum semi-major axis: ",pse.semi_min)
+        print("  --semi-max    [F]: minimum semi-major axis: ",pse.semi_max)
+        print("  --ecc-min     [F]: minimum eccentricity: ",pse.ecc_min)
+        print("  --ecc-max     [F]: maximum eccentricity: ",pse.ecc_max)
+        print("  --time-min    [F]: minimum time in evolution plot (x-axis): auto determine from Lagrangian data")
+        print("  --time-max    [F]: maximum time in evolution plot (x-axis)): auto determine from Lagrangian data")
+        print("  --rlagr-min   [F]: minimum radius in Lagrangian plot: ", plagr.rlagr_min)
+        print("  --rlagr-max   [F]: maximum radius in Lagrangian plot: same as movie box length")
+        print("  --rlagr-scale [S]: scaling of Lagrangian radii in the plot (y-axis): ",plagr.rlagr_scale)
+        print("  --xcol        [I]: column index for x-axis: Unset")
+        print("  --ycol        [I]: column index for x-axis: Unset")
+        print("  --mcol        [I]: column index for mass, if not set and not PeTar output, assume equal mass: Unset")
+        print("  --unit-length [S]: set label of length unit for x, y and semi: no print")
+        print("  --unit-time   [S]: set label of time unit: no print")
+        print("  --skiprows    [I]: number of rows to escape when read snapshot: Unset")
+        print("  --plot-ncols  [I]: column number of panels: same as panels")
+        print("  --plot-xsize  [F]: x size of panel: ",frame_xsize)
+        print("  --plot-ysize  [F]: y size of panel: ",frame_ysize)
+        print("  --cm-mode     [S]: plot origin position determination: ",data.cm_mode)
+        print("                       density: density center;")
+        print("                       average: average of x,y;")
+        print("                       core: use core data file generated from petar.data.process;")
+        print("                       none: use origin of snapshots.")
+        print("  --core-file   [S]: core data file name: ",core_file)
+        print("  --cm-boxsize  [F]: boxsize to search the coordinate center for the x-y plot: 5.0 times ploting size (-R)")
+        print("  --n-layer-cross [I]: number of layers of crosses for particles in the x-y plot: 5")
+        print("  --n-layer-point [I]: number of layers of points for particles in the x-y plot: 10")
+        print("  --layer-alpha   [F]: transparency factor of layers in the x-y plot: 2.5")
+        print("  --marker-scale  [F]: amplify the size of markers in x-y plot: 1.0")
         print("  --suppress-images: do not plot snapshot images (png files) and use matplotlib.animation instead of imageio, this cannot use multi-processing, much slower")
-        print("  --format: video format, require imageio installed, for some formats (e.g. avi, mp4) may require ffmpeg and imageio-ffmpeg installed: ", plot_format)
-        print("PS:: when xcol, ycol, skiprows are not provided, the snapshot files are assumed to be the output of PeTar")
+        print("  --format      [S]: video format, require imageio installed, for some formats (e.g. avi, mp4) may require ffmpeg and imageio-ffmpeg installed: ", plot_format)
+        print("PS:: When xcol, ycol, skiprows are not provided, the snapshot files are assumed to be the output of PeTar")
+        print("     Each panel of plots can be added mutliple times (the order is recored)")
 
     try:
-        shortargs = 's:f:R:z:o:G:iHbh'
-        longargs = ['help','n-cpu=','lum-min=','lum-max=','temp-min=','temp-max=','semi-min=','semi-max=','ecc-min=','ecc-max=','interrupt-mode=','xcol=','ycol=','mcol=','unit-length=','unit-time=','skiprows=','generate-binary=','plot-ncols=','plot-xsize=','plot-ysize=','suppress-images','format=','cm-mode=','core-file=','n-layer-cross=','n-layer-point=','layer-alpha=','cm-boxsize=']
+        shortargs = 's:f:R:z:o:G:l:L:iHbh'
+        longargs = ['help','n-cpu=','lum-min=','lum-max=','temp-min=','temp-max=','semi-min=','semi-max=','ecc-min=','ecc-max=','rlagr-min=','rlagr-max=','rlagr-scale=','time-min=','time-max=','interrupt-mode=','xcol=','ycol=','mcol=','unit-length=','unit-time=','skiprows=','generate-binary=','plot-ncols=','plot-xsize=','plot-ysize=','suppress-images','format=','cm-mode=','core-file=','n-layer-cross=','n-layer-point=','layer-alpha=','marker-scale=','cm-boxsize=','compare-in-column']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -508,12 +606,11 @@ if __name__ == '__main__':
             elif opt in ('-R'):
                 kwargs['boxsize'] = float(arg)
             elif opt in ('-z'):
-                kwargs['framescale'] = float(arg)
-                plot_zoom = True
+                plot_item.append(['plot_zoom',float(arg)])
             elif opt in ('-H'):
-                plot_HRdiagram = True
+                plot_item.append(['plot_HRdiagram'])
             elif opt in ('-b'):
-                plot_semi_ecc = True
+                plot_item.append(['plot_semi_ecc'])
             elif opt in ('-o'):
                 output_file = arg
             elif opt in ('-G'):
@@ -522,6 +619,12 @@ if __name__ == '__main__':
                 fps = int(arg)
             elif opt in ('-i'):
                 kwargs['use_previous'] = True
+            elif opt in ('-l'):
+                model_path = arg
+            elif opt in ('-L'):
+                plot_item.append(['plot_lagr'])
+                lagr_file = arg
+                read_lagr_data=True
             elif opt in ('--n-cpu'):
                 n_cpu = int(arg)
             elif opt in ('--lum-min'):
@@ -540,6 +643,16 @@ if __name__ == '__main__':
                 kwargs['ecc_min'] = float(arg)
             elif opt in ('--ecc-max'):
                 kwargs['ecc_max'] = float(arg)
+            elif opt in ('--rlagr-min'):
+                kwargs['rlagr_min'] = float(arg)
+            elif opt in ('--rlagr-max'):
+                kwargs['rlagr_max'] = float(arg)
+            elif opt in ('--time-min'):
+                kwargs['time_min'] = float(arg)
+            elif opt in ('--time-max'):
+                kwargs['time_max'] = float(arg)
+            elif opt in ('--rlagr-scale'):
+                kwargs['rlagr_scale'] = arg
             elif opt in ('--interrupt-mode'):
                 kwargs['interrupt_mode'] = arg
             elif opt in ('--cm-mode'):
@@ -574,10 +687,14 @@ if __name__ == '__main__':
                 kwargs['nlayer_point'] = int(arg)
             elif opt in ('--layer-alpha'):
                 kwargs['alpha_amplifier'] = float(arg)
+            elif opt in ('--marker-scale'):
+                kwargs['marker_scale'] = float(arg)
             elif opt in ('--suppress-images'):
                 plot_images = False
             elif opt in ('--format'):
                 plot_format = arg
+            elif opt in ('--compare-in-column'):
+                kwargs['compare_in_column'] = True
             else:
                 assert False, "unhandeld option"
 
@@ -592,11 +709,27 @@ if __name__ == '__main__':
     fl = open(filename,'r')
     file_list = fl.read()
     path_list = file_list.splitlines()
+    fl.close()
 
-    core=petar.Core()
-    if ('cm_mode' in kwargs.keys()): 
-        if (kwargs['cm_mode']=='core'):
-            core.loadtxt(core_file)
+    model_list= [['.','']]
+    if (model_path!=''):
+        fl = open(model_path,'r')
+        lines = fl.read().splitlines()
+        model_list = [lines[i].split() for i in range(len(lines))]
+        fl.close()
+
+    core=dict()
+    for i in range(len(model_list)):
+        core[i] = petar.Core()
+        if ('cm_mode' in kwargs.keys()): 
+            if (kwargs['cm_mode']=='core'):
+                core[i].loadtxt(model_list[i][0]+'/'+core_file)
+
+    lagr=dict()
+    for i in range(len(model_list)):
+        lagr[i] = petar.LagrangianMultiple(**kwargs)
+        if (read_lagr_data):
+            lagr[i].loadtxt(model_list[i][0]+'/'+lagr_file)
 
     if (plot_images):
         if (n_cpu==int(0)):
@@ -612,8 +745,8 @@ if __name__ == '__main__':
         file_part = [path_list[n_offset[i]:n_offset[i+1]] for i in range(n_cpu)]
         results=[None]*n_cpu
         for rank in range(n_cpu):
-            #createImage(file_part[rank], frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdiagram, plot_semi_ecc, **kwargs)
-            results[rank]=pool.apply_async(createImage, (file_part[rank], frame_xsize, frame_ysize, ncol, plot_zoom, plot_HRdiagram, plot_semi_ecc, core), kwargs)
+            #createImage(file_part[rank], model_list, frame_xsize, frame_ysize, ncol, plot_item, core, lagr, **kwargs)
+            results[rank]=pool.apply_async(createImage, (file_part[rank], model_list, frame_xsize, frame_ysize, ncol, plot_item, core, lagr), kwargs)
 
         # Step 3: Don't forget to close
         pool.close()
@@ -623,22 +756,27 @@ if __name__ == '__main__':
         create_movie(png_list, fps, output_file+'.'+plot_format)
 
     else:
-        nplots = 1
-        if (plot_zoom): nplots+=1
-        if (plot_HRdiagram): nplots+=1
-        if (plot_semi_ecc): nplots+=1
+        nplots = 1 + len(plot_item)
 
-        fig, axe = initFig(frame_xsize, frame_ysize, ncol, nplots)
-        plots=initPlot(axe, plot_zoom, plot_HRdiagram, plot_semi_ecc, **kwargs)
+        if (len(model_list)>1): ncol = nplots
+        compare_in_column = False
+        if ('compare_in_column' in kwargs.keys()): compare_in_column = kwargs['compare_in_column']
+
+        fig, axe = initFig(model_list, frame_xsize, frame_ysize, ncol, nplots, compare_in_column)
+        plots=dict()
+        for i in range(len(model_list)):
+            mi = model_list[i][0]
+            plots[i]=initPlot(axe[i], model_list[i][1], plot_item, lagr[i], **kwargs)
 
         def init():
             iaxe=0
             ptcls=[]
-            if ('unit_time' in kwargs.keys()):
-                unit_label = ' '+kwargs['unit_time']
-                axe[0].set_title('T = ' + str(0) + unit_label)
-            else:
-                axe[0].set_title('T = %f' % 0)
+            for i in range(len(model_list)):
+                if ('unit_time' in kwargs.keys()):
+                    unit_label = ' '+kwargs['unit_time']
+                    axe[i][0].set_title('T = ' + str(0) + unit_label)
+                else:
+                    axe[i][0].set_title('T = %f' % 0)
                 
             return ptcls
      
@@ -646,7 +784,11 @@ if __name__ == '__main__':
      
             file_path = path_list[k]
             print('process ',file_path)
-            ptcls=plotOne(file_path, axe, plots, core, **kwargs)
+            ptcls=[]
+            for i in range(len(model_list)):
+                mi = model_list[i][0]
+                pi=plotOne(mi+'/'+file_path, axe[i], plots[i], core[i], lagr[i], **kwargs)
+                ptcls=ptcls+pi
      
             return ptcls
 

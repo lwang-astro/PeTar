@@ -138,13 +138,15 @@ public:
 #ifdef ADJUST_GROUP_PRINT
     IOParams<PS::S32> adjust_group_write_option;
 #endif
+    IOParams<PS::S32> append_switcher;
     IOParams<std::string> fname_snp;
     IOParams<std::string> fname_par;
     IOParams<std::string> fname_inp;
 
     // flag
-    bool app_flag; // appending data flag
     bool print_flag; 
+    bool update_changeover_flag;
+    bool update_rsearch_flag;
 
     IOParamsPeTar(): input_par_store(), 
                      ratio_r_cut  (input_par_store, 0.1,  "r_in / r_out"),
@@ -166,9 +168,9 @@ public:
                      eta          (input_par_store, 0.1,  "Hermite time step coefficient eta"),
                      gravitational_constant(input_par_store, 1.0,  "Gravitational constant"),
                      unit_set     (input_par_store, 0,    "Input data unit, 0: unknown, referring to G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr"),
-                     n_glb        (input_par_store, 100000,  "Total number of particles, only used to generate particles if needed"),
+                     n_glb        (input_par_store, 100000,  "Total number of particles, only used to generate particles if no input datafile exists"),
                      id_offset    (input_par_store, -1,   "Starting id for artificial particles, total number of real particles must be always smaller than this","n_glb+1"),
-                     dt_soft      (input_par_store, 0.0,  "Tree timestep","0.1*r_out/sigma_1D"),
+                     dt_soft      (input_par_store, 0.0,  "Tree timestep, if value is zero, use 0.1*r_out/sigma_1D"),
                      dt_snap      (input_par_store, 1.0,  "Output time interval of particle dataset snapshot"),
                      search_vel_factor (input_par_store, 3.0,  "Neighbor searching coefficient for velocity check (v*dt)"),
                      search_peri_factor(input_par_store, 1.5,  "Neighbor searching coefficient for peri-center check"),
@@ -183,11 +185,11 @@ public:
 #endif
                      step_limit_arc(input_par_store, 1000000, "Maximum step allown for ARC sym integrator"),
                      eps          (input_par_store, 0.0,  "Softerning eps"),
-                     r_out        (input_par_store, 0.0,  "Transit function outer boundary radius", "0.1 GM/[N^(1/3) sigma_3D^2]"),
-                     r_bin        (input_par_store, 0.0,  "Tidal tensor box size and binary radius criterion", "0.8*r_in"),
+                     r_out        (input_par_store, 0.0,  "Transit function outer boundary radius, if value is zero, use 0.1 GM/[N^(1/3) sigma_3D^2]"),
+                     r_bin        (input_par_store, 0.0,  "Tidal tensor box size and binary radius criterion, if value iszero, use 0.8*r_in"),
 //                     r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out"),
                      r_search_min (input_par_store, 0.0,  "Minimum search radius  value","auto"),
-                     r_escape     (input_par_store, PS::LARGE_FLOAT,  "escape radius criterion"),
+                     r_escape     (input_par_store, PS::LARGE_FLOAT,  "escape radius criterion, if <0, remove particles when r>-r_escape; else, remove particle when r>r_escape and energy>0"),
                      sd_factor    (input_par_store, 1e-4, "Slowdown perturbation criterion"),
                      data_format  (input_par_store, 1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),
                      write_style  (input_par_store, 1,    "File Writing style: 0, no output; 1. write snapshots, status and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile"),
@@ -205,10 +207,11 @@ public:
 #ifdef ADJUST_GROUP_PRINT
                      adjust_group_write_option(input_par_store, 1, "print new and end of groups: 0: no print; 1: print to file [data filename prefix].group.[MPI rank] if -w >0"),
 #endif
+                     append_switcher(input_par_store, 1, "data output style, 0: create new output files and overwrite existing ones except snapshots; 1: append new data to existing files"),
                      fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]"),
                      fname_par(input_par_store, "input.par", "Input parameter file (this option should be used first before any other options)"),
-                     fname_inp(input_par_store, "", "Input data file"),
-                     app_flag(false), print_flag(false) {}
+                     fname_inp(input_par_store, "__NONE__", "Input data file"),
+                     print_flag(false), update_changeover_flag(false), update_rsearch_flag(false) {}
 
     
     //! reading parameters from GNU option API
@@ -233,9 +236,11 @@ public:
             {"energy-err-arc",        required_argument, &petar_flag, 7}, 
             {"soft-eps",              required_argument, &petar_flag, 8},       
             {"slowdown-factor",       required_argument, &petar_flag, 9},
-            {"r-ratio",               required_argument, &petar_flag, 10},       
+            {"r-ratio",               required_argument, &petar_flag, 10},
             {"r-bin",                 required_argument, &petar_flag, 11},       
-            {"r-escape",              required_argument, &petar_flag, 21},       
+            {"r-escape",              required_argument, &petar_flag, 21},
+            {"r-search-min",          required_argument, &petar_flag, 22},
+            {"id-offset",             required_argument, &petar_flag, 23},
             {"search-peri-factor",    required_argument, &petar_flag, 12}, 
             {"hermite-eta",           required_argument, &petar_flag, 13}, 
 #ifdef HARD_CHECK_ENERGY
@@ -250,7 +255,7 @@ public:
             {"stellar-evolution",     required_argument, &petar_flag, 20},
 #endif
 #ifdef ADJUST_GROUP_PRINT
-            {"write-group-info",      required_argument, &petar_flag, 22},
+            {"write-group-info",      required_argument, &petar_flag, 24},
 #endif            
             {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
@@ -260,7 +265,7 @@ public:
         int copt;
         int option_index;
         optind = 0; // reset getopt
-        while ((copt = getopt_long(argc, argv, "-i:at:s:o:r:b:n:G:u:T:f:p:w:h", long_options, &option_index)) != -1) 
+        while ((copt = getopt_long(argc, argv, "-i:a:t:s:o:r:b:n:G:u:T:f:p:w:h", long_options, &option_index)) != -1) 
             switch (copt) {
             case 0:
                 switch (petar_flag) {
@@ -329,6 +334,7 @@ public:
                 case 10:
                     ratio_r_cut.value = atof(optarg);
                     if(print_flag) ratio_r_cut.print(std::cout);
+                    update_changeover_flag = true;
                     opt_used += 2;
                     assert(ratio_r_cut.value>0.0);
                     assert(ratio_r_cut.value<1.0);
@@ -337,7 +343,7 @@ public:
                     r_bin.value = atof(optarg);
                     if(print_flag) r_bin.print(std::cout);
                     opt_used += 2;
-                    assert(r_bin.value>0.0);
+                    assert(r_bin.value>=0.0);
                     break;
                 case 12:
                     search_peri_factor.value = atof(optarg);
@@ -396,8 +402,19 @@ public:
                     if(print_flag) r_escape.print(std::cout);
                     opt_used += 2;
                     break;
-#ifdef ADJUST_GROUP_PRINT
                 case 22:
+                    r_search_min.value = atof(optarg);
+                    if(print_flag) r_search_min.print(std::cout);
+                    update_rsearch_flag = true;
+                    opt_used += 2;
+                    break;
+                case 23:
+                    id_offset.value = atoi(optarg);
+                    if(print_flag) id_offset.print(std::cout);
+                    opt_used += 2;
+                    break;
+#ifdef ADJUST_GROUP_PRINT
+                case 24:
                     adjust_group_write_option.value = atoi(optarg);
                     if(print_flag) adjust_group_write_option.print(std::cout);
                     opt_used += 2;
@@ -414,8 +431,10 @@ public:
                 opt_used += 2;
                 break;
             case 'a':
-                app_flag=true;
-                opt_used ++;
+                append_switcher.value=atoi(optarg);
+                if(print_flag) append_switcher.print(std::cout);
+                assert(append_switcher.value>=0&&append_switcher.value<=1);
+                opt_used += 2;
                 break;
             case 't':
                 time_end.value = atof(optarg);
@@ -426,8 +445,9 @@ public:
             case 's':
                 dt_soft.value = atof(optarg);
                 if(print_flag) dt_soft.print(std::cout);
+                update_rsearch_flag = true;
                 opt_used += 2;
-                assert(dt_soft.value>0.0);
+                assert(dt_soft.value>=0.0);
                 break;
             case 'o':
                 dt_snap.value = atof(optarg);
@@ -438,8 +458,10 @@ public:
             case 'r':
                 r_out.value = atof(optarg);
                 if(print_flag) r_out.print(std::cout);
+                update_rsearch_flag = true;
+                update_changeover_flag = true;
                 opt_used += 2;
-                assert(r_out.value>0.0);
+                assert(r_out.value>=0.0);
                 break;
             case 'b':
                 n_bin.value = atoi(optarg);
@@ -514,7 +536,8 @@ public:
                     std::cout<<"              [formatted] indicates that the value is only for save, cannot be directly read"<<std::endl;
                     std::cout<<"Options:  defaulted values are shown after ':'"<<std::endl;
                     std::cout<<"  -i: [I] "<<data_format<<std::endl;
-                    std::cout<<"  -a:     data output style (except snapshot) becomes appending, defaulted: replace"<<std::endl;
+                    std::cout<<"         --id-offset:        [I]"<<id_offset<<std::endl;
+                    std::cout<<"  -a: [I] "<<append_switcher<<std::endl;
                     std::cout<<"  -t: [F] "<<time_end<<std::endl;
                     std::cout<<"  -s: [F] "<<dt_soft<<std::endl;
                     std::cout<<"  -o: [F] "<<dt_snap<<std::endl;
@@ -527,6 +550,7 @@ public:
                     std::cout<<"        --r-ratio:           [F] "<<ratio_r_cut<<std::endl;
                     std::cout<<"        --r-bin:             [F] "<<r_bin<<std::endl;
                     std::cout<<"        --r-escape:          [F] "<<r_escape<<std::endl;
+		    std::cout<<"        --r-search-min:      [F] "<<r_search_min<<std::endl;
                     std::cout<<"  -b: [I] "<<n_bin<<std::endl;
                     std::cout<<"  -n: [I] "<<n_glb<<std::endl;
 #ifdef ORBIT_SAMPLING
@@ -600,13 +624,13 @@ public:
         assert(sd_factor.value>0.0);
         assert(ratio_r_cut.value>0.0);
         assert(ratio_r_cut.value<1.0);
-        assert(r_bin.value>0.0);
+        assert(r_bin.value>=0.0);
         assert(search_peri_factor.value>=1.0);
         assert(data_format.value>=0||data_format.value<=3);
         assert(time_end.value>=0.0);
-        assert(dt_soft.value>0.0);
+        assert(dt_soft.value>=0.0);
         assert(dt_snap.value>0.0);
-        assert(r_out.value>0.0);
+        assert(r_out.value>=0.0);
         assert(n_bin.value>=0);
         assert(n_glb.value>0);
         assert(n_group_limit.value>0);
@@ -2259,7 +2283,7 @@ public:
             <<" Please cite the following papers when you use PeTar for any publications\n"
             <<"    FDPS: see above FPDS Logo message\n";
         AR::printReference(fout);
-        fout<<"    PeTar: Wang L., Iwasawa M., Nitadori K., Makino J., 2020, MNRAS, accepted, ArXiv: 2006.16560 [astro-ph]\n";
+        fout<<"    PeTar: Wang L., Iwasawa M., Nitadori K., Makino J., 2020, MNRAS, 497, 536\n";
 #ifdef BSE
         BSEManager::printReference(fout);
 #endif
@@ -2326,7 +2350,7 @@ public:
         // open profile file
         if(write_style>0) {
             std::string fproname=input_parameters.fname_snp.value+".prof.rank."+std::to_string(my_rank);
-            if(input_parameters.app_flag) fprofile.open(fproname.c_str(),std::ofstream::out|std::ofstream::app);
+            if(input_parameters.append_switcher.value==1) fprofile.open(fproname.c_str(),std::ofstream::out|std::ofstream::app);
             else  {
                 fprofile.open(fproname.c_str(),std::ofstream::out);
 
@@ -2353,7 +2377,7 @@ public:
         // status information output
         std::string& fname_snp = input_parameters.fname_snp.value;
         if(write_style>0&&my_rank==0) {
-            if(input_parameters.app_flag) 
+            if(input_parameters.append_switcher.value==1) 
                 fstatus.open((fname_snp+".status").c_str(),std::ofstream::out|std::ofstream::app);
             else {
                 fstatus.open((fname_snp+".status").c_str(),std::ofstream::out);
@@ -2371,7 +2395,7 @@ public:
             // open escaper file
             std::string my_rank_str = std::to_string(my_rank);
             std::string fname_esc = fname_snp + ".esc." + my_rank_str;
-            if(input_parameters.app_flag) 
+            if(input_parameters.append_switcher.value==1) 
                 fesc.open(fname_esc.c_str(), std::ofstream::out|std::ofstream::app);
             else {
                 fesc.open(fname_esc.c_str(), std::ofstream::out);
@@ -2385,7 +2409,7 @@ public:
             // open SSE/BSE file
             std::string fsse_name = fname_snp + ".sse." + my_rank_str;
             std::string fbse_name = fname_snp + ".bse." + my_rank_str;
-            if(input_parameters.app_flag) {
+            if(input_parameters.append_switcher.value==1) {
                 hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out|std::ofstream::app);
                 hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out|std::ofstream::app);
             }
@@ -2399,7 +2423,7 @@ public:
             // open file for new/end group information
             if (input_parameters.adjust_group_write_option.value==1) {
                 std::string fgroup_name = fname_snp + ".group." + my_rank_str;
-                if(input_parameters.app_flag) 
+                if(input_parameters.append_switcher.value==1) 
                     hard_manager.h4_manager.fgroup.open(fgroup_name.c_str(), std::ofstream::out|std::ofstream::app);
                 else 
                     hard_manager.h4_manager.fgroup.open(fgroup_name.c_str(), std::ofstream::out);
@@ -2888,7 +2912,8 @@ public:
         Ptcl::mean_mass_inv = 1.0/mass_average;
         Ptcl::r_group_crit_ratio = r_bin/r_in;
         Ptcl::vel_cm = vel_cm_glb;
-        escaper.r_escape = input_parameters.r_escape.value;
+        escaper.r_escape_sq = input_parameters.r_escape.value*input_parameters.r_escape.value;
+	escaper.check_energy_flag = (input_parameters.r_escape.value>=0);
 
         if(print_flag) {
             std::cout<<"----- Parameter list: -----\n";
@@ -2928,13 +2953,36 @@ public:
                 // calculate r_search for particles, for binary, r_search depend on vel_disp
                 if(id<=2*n_bin) system_soft[i].r_search = std::max(r_search_min,vel_disp*dt_soft*search_vel_factor + system_soft[i].changeover.getRout());
                 else system_soft[i].calcRSearch(dt_soft);
+
+                auto& pi_cm = system_soft[i].group_data.cm;
+                pi_cm.mass = pi_cm.vel.x = pi_cm.vel.y = pi_cm.vel.z = 0.0;
             }
         }
         else {
-            // clear up group_data.cm to avoid issue in search neighbor
+            // clear up group_data.cm to avoid issue in search neighbor; update changeover and r_search
 #pragma omp parallel for
             for (PS::S32 i=0; i<stat.n_real_loc; i++) {
                 auto& pi_cm = system_soft[i].group_data.cm;
+
+                // update changeover
+                if (input_parameters.update_changeover_flag) {
+                    PS::F64 m_fac = system_soft[i].mass*Ptcl::mean_mass_inv;
+                    system_soft[i].changeover.setR(m_fac, r_in, r_out);
+                }
+
+                // update research
+                if (input_parameters.update_rsearch_flag) {
+                    if (pi_cm.mass!=0.0) {
+#ifdef GROUP_DATA_WRITE_ARTIFICIAL
+                        system_soft[i].r_search = std::max(r_search_min, vel_disp*dt_soft*search_vel_factor + system_soft[i].changeover.getRout());
+#else
+                        PS::F64 vcm = std::sqrt(pi_cm.vel*pi_cm.vel);
+                        system_soft[i].r_search = std::max(r_search_min,vcm*dt_soft*search_vel_factor + system_soft[i].changeover.getRout());
+#endif
+                    }
+                    else system_soft[i].calcRSearch(dt_soft);
+                }
+
                 pi_cm.mass = pi_cm.vel.x = pi_cm.vel.y = pi_cm.vel.z = 0.0;
             }
             stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);

@@ -5,7 +5,7 @@ FC=@FC@
 CXX=@CXX@
 
 #FFLAGS = -O2 -Wall -finit-real=nan 
-CXXFLAGS += @OPTFLAGS@ @OPENMP_CXXFLAGS@
+CXXFLAGS = @CXXFLAGS@ @OPTFLAGS@ @OPENMP_CXXFLAGS@
 FFLAGS += @FCFLAGS@
 #FFLIBS += @FLIBS@
 #FFLAGS= -g -O0 -Wall -finit-real=nan -fbounds-check

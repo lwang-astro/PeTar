@@ -43,15 +43,14 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
     G=1.0
     r_bin=0.1
     average_mode='sphere'
+    simple_binary=True
 
     if ('G' in kwargs.keys()): G=kwargs['G']
     if ('r_max_binary' in kwargs.keys()): r_bin=kwargs['r_max_binary']
     if ('average_mode' in kwargs.keys()): average_mode=kwargs['average_mode']
+    if ('simple_binary' in kwargs.keys()): simple_binary=kwargs['simple_binary']
 
-    fp = open(file_path, 'r')
-    header=fp.readline()
-    file_id, n_glb, t = header.split()
-    fp.close()
+    header = PeTarDataHeader(file_path)
     
     if (not read_flag):
         start_time = time.time()
@@ -64,7 +63,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
 
         # find binary
         #print('Find pair')
-        kdtree,single,binary=findPair(particle,G,r_bin,True)
+        kdtree,single,binary=findPair(particle,G,r_bin,True,simple_binary)
         find_pair_time = time.time()
     
         # get cm, density
@@ -84,7 +83,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         rc = core.calcCoreRadius(particle)
         #print('rc: ',rc)
 
-        core.addTime(float(t))
+        core.addTime(header.time)
         core.size+=1
 
         n_frac=m_frac.size+1
@@ -111,7 +110,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
             binary.loadtxt(file_path+'.binary')
 
         # read from core data
-        rc = core.rc[core.time==float(t)]
+        rc = core.rc[core.time==header.time]
 
         read_time = time.time()
 
@@ -123,18 +122,18 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
     if ('r_escape' in kwargs.keys()) : 
         #print('b',single.size,binary.size)    
         rcut = kwargs['r_escape']
-        single = esc_single.findEscaper(float(t), single, rcut)
-        binary = esc_binary.findEscaper(float(t), binary, rcut, G)
+        single = esc_single.findEscaper(header.time, single, rcut)
+        binary = esc_binary.findEscaper(header.time, binary, rcut)
         #print('a',single.size,binary.size,esc_single.size,esc_binary.size)
     
     #print('Lagrangian radius')
-    lagr.calcOneSnapshot(float(t), single, binary, rc, average_mode)
+    lagr.calcOneSnapshot(header.time, single, binary, rc, average_mode)
 
     if (not 'r_escape' in kwargs.keys()):
         rhindex=np.where(m_frac==0.5)[0]
         rcut = calcRCutIsolate(lagr.all.r[-1,rhindex])
-        esc_single.findEscaper(float(t), single, rcut)
-        esc_binary.findEscaper(float(t), binary, rcut, G)
+        esc_single.findEscaper(header.time, single, rcut)
+        esc_binary.findEscaper(header.time, binary, rcut)
     lagr_time = time.time()
 
     time_profile['read'] += read_time-start_time
@@ -145,7 +144,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
 
     if ('bse' in result.keys()):
         bse = result['bse']
-        bse.findEvents(float(t),single,binary)
+        bse.findEvents(header.time,single,binary)
         bse_time = time.time()
         time_profile['bse'] += bse_time - lagr_time
 

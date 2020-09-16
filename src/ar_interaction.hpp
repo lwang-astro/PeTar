@@ -772,11 +772,17 @@ public:
 
                 // first evolve two components to the same starting time
                 if (p1->time_record!=p2->time_record) {
-                    if (p1->time_record<p2->time_record) modifyOneParticle(*p1, _bin_interrupt.time_now, p2->time_record);
-                    else  modifyOneParticle(*p2, _bin_interrupt.time_now, p1->time_record);
+                    if (p1->time_record<p2->time_record) {
+                        p1->time_interrupt = p1->time_record;
+                        modifyOneParticle(*p1, _bin_interrupt.time_now, p2->time_record);
+                    }
+                    else {
+                        p2->time_interrupt = p2->time_record;
+                        modifyOneParticle(*p2, _bin_interrupt.time_now, p1->time_record);
+                    }
                 }
 
-                // time_record and time_interrupt have offsets, thus use difference to obtain true dt
+                // time_record and time_end have offsets, thus use difference to obtain true dt
                 Float dt = _bin_interrupt.time_end - p1->time_record;
 
                 StarParameterOut out[2];
@@ -854,6 +860,12 @@ public:
                 // estimate next time to check 
                 p1->time_interrupt = p1->time_record + std::min(bse_manager.getTimeStep(p1->star), bse_manager.getTimeStep(p2->star));
                 p2->time_interrupt = p1->time_interrupt;
+
+                // reset collision state since binary orbit changes
+                if (p1->getBinaryInterruptState()== BinaryInterruptState::collision) 
+                    p1->setBinaryInterruptState(BinaryInterruptState::none);
+                if (p2->getBinaryInterruptState()== BinaryInterruptState::collision)
+                    p2->setBinaryInterruptState(BinaryInterruptState::none);
 
                 // record mass change (if loss, negative)
                 p1->dm += bse_manager.getMassLoss(out[0]);
@@ -967,7 +979,7 @@ public:
             // dynamical merger check
             if (_bin_interrupt.status!=AR::InterruptStatus::merge&&_bin_interrupt.status!=AR::InterruptStatus::destroy) {
 
-                auto merge = [&]() {
+                auto merge = [&](const Float& dr, const Float& t_peri, const Float& sd_factor) {
                     modify_return = 2;
                     _bin_interrupt.adr = &_bin;
                     _bin_interrupt.status = AR::InterruptStatus::merge;
@@ -993,6 +1005,22 @@ public:
                     Float m1_bk = p1->mass;
                     Float m2_bk = p2->mass;
                     // backup original data for print
+
+                    // first evolve two components to the current time
+                    if (stellar_evolution_option==1) {
+                        if (p1->time_record<_bin_interrupt.time_end) {
+                            p1->time_interrupt = p1->time_record; // force SSE evolution
+                            modifyOneParticle(*p1, p1->time_record, _bin_interrupt.time_end);
+                        }
+                        if (p2->time_record<_bin_interrupt.time_end) {
+                            p2->time_interrupt = p2->time_record; // force SSE evolution
+                            modifyOneParticle(*p2, p2->time_record, _bin_interrupt.time_end);
+                        }
+                    }
+
+                    ASSERT(p1->star.tphys==p2->star.tphys);
+                    //ASSERT(p1->star.mass>0&&p2->star.mass>0); // one may have SNe before merge
+
                     StarParameter p1_star_bk, p2_star_bk;
                     p1_star_bk = p1->star;
                     p2_star_bk = p2->star;
@@ -1013,6 +1041,11 @@ public:
                                     <<std::setw(WRITE_WIDTH)<<_bin.period*bse_manager.tscale*bse_manager.year_to_day
                                     <<std::setw(WRITE_WIDTH)<<_bin.semi*bse_manager.rscale
                                     <<std::setw(WRITE_WIDTH)<<_bin.ecc;
+#ifndef DYNAMIC_MERGER_LESS_OUTPUT
+                            fout_bse<<std::setw(WRITE_WIDTH)<<dr*bse_manager.rscale
+                                    <<std::setw(WRITE_WIDTH)<<t_peri*bse_manager.tscale*bse_manager.year_to_day
+                                    <<std::setw(WRITE_WIDTH)<<sd_factor;
+#endif
                             // before
                             p1_star_bk.printColumn(fout_bse, WRITE_WIDTH);
                             p2_star_bk.printColumn(fout_bse, WRITE_WIDTH);
@@ -1042,13 +1075,20 @@ public:
                 // delayed merger
                 if (p1->getBinaryInterruptState()== BinaryInterruptState::collision && 
                     p2->getBinaryInterruptState()== BinaryInterruptState::collision &&
-                    (p1->time_interrupt<_bin_interrupt.time_end || p2->time_interrupt<_bin_interrupt.time_end) &&
-                    (p1->getBinaryPairID()==p2->id||p2->getBinaryPairID()==p1->id)) merge();
+                    (p1->time_interrupt<_bin_interrupt.time_end && p2->time_interrupt<_bin_interrupt.time_end) &&
+                    (p1->getBinaryPairID()==p2->id||p2->getBinaryPairID()==p1->id)) {
+                    Float dr[3] = {p1->pos[0] - p2->pos[0], 
+                                   p1->pos[1] - p2->pos[1], 
+                                   p1->pos[2] - p2->pos[2]};
+                    Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+                    merge(std::sqrt(dr2), 0.0, 1.0);
+                }
                 else {
                     // check merger
                     Float radius = p1->radius + p2->radius;
                     // slowdown case
                     if (_bin.slowdown.getSlowDownFactor()>1.0) {
+                        ASSERT(_bin.semi>0.0);
                         Float drdv;
                         _bin.particleToSemiEcc(_bin.semi, _bin.ecc, _bin.r, drdv, *_bin.getLeftMember(), *_bin.getRightMember(), gravitational_constant);
                         Float peri = _bin.semi*(1 - _bin.ecc);
@@ -1057,14 +1097,20 @@ public:
                             Float mean_anomaly = _bin.calcMeanAnomaly(ecc_anomaly, _bin.ecc);
                             Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi))); 
                             Float t_peri = mean_anomaly/mean_motion;
-                            if (drdv<0 && t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) merge();
+                            if (drdv<0 && t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
+                                Float dr[3] = {p1->pos[0] - p2->pos[0], 
+                                               p1->pos[1] - p2->pos[1], 
+                                               p1->pos[2] - p2->pos[2]};
+                                Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+                                merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor());
+                            }
                             else if (_bin.semi>0||(_bin.semi<0&&drdv<0)) {
                                 p1->setBinaryPairID(p2->id);
                                 p2->setBinaryPairID(p1->id);
                                 p1->setBinaryInterruptState(BinaryInterruptState::collision);
                                 p2->setBinaryInterruptState(BinaryInterruptState::collision);
                                 p1->time_interrupt = std::min(p1->time_interrupt, _bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri));
-                                p2->time_interrupt = std::min(p1->time_interrupt, p2->time_interrupt);
+                                //p2->time_interrupt = std::min(p1->time_interrupt, p2->time_interrupt); // ensure bse can still be called to evolve stars
                             }
                         }
                     }
@@ -1073,7 +1119,7 @@ public:
                                        p1->pos[1] - p2->pos[1], 
                                        p1->pos[2] - p2->pos[2]};
                         Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
-                        if (dr2<radius*radius) merge();
+                        if (dr2<radius*radius) merge(std::sqrt(dr2), 0.0, 1.0);
                     }
                 }
             }

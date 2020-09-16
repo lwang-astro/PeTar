@@ -34,7 +34,11 @@ case "${host_os}" in
 esac
 AC_MSG_RESULT([$host_os])
 
+CXXFLAGS_BK=$CXXFLAGS
+
 AC_LANG([C++])
+
+CXXFLAGS=$CXXFLAGS_BK
 
 AC_PROG_AWK
 AC_PROG_GREP
@@ -189,7 +193,7 @@ AS_IF([test "x$use_cuda" != xno],
        AS_IF([test "x$NVCC" == xnone], 
              [AC_PATH_PROG([NVCC], [nvcc], [none], [$cuda_prefix/bin])
               AS_IF([test "x$NVCC" == xnone], 
-                    [AC_MSG_FAILURE([Cannot find CUDA compiler nvcc, please check whether nvcc is in environment PATH or use --with-cuda-prefix to provide the PATH of CUDA installation])])],
+                    [AC_MSG_FAILURE([can't find CUDA compiler nvcc, please check whether nvcc is in environment PATH or use --with-cuda-prefix to provide the PATH of CUDA installation])])],
              [AC_PROG_SED
               cuda_prefix=`which nvcc|sed 's:/bin/nvcc::'`])
 
@@ -202,20 +206,20 @@ AS_IF([test "x$use_cuda" != xno],
                      [CUDAFLAGS=$CUDAFLAGS" -I $cuda_prefix/samples/common/inc"],
                      [AC_CHECK_FILE(["$cuda_sdk_prefix/common/inc/helper_cuda.h"],
                                     [CUDAFLAGS=$CUDAFLAGS" -I $cuda_sdk_prefix/common/inc"],
-                                    [AC_MSG_FAILURE([Cannot find CUDA sample inc file helper_cuda.h, please provide correct cuda SDK prefix by using --with-cuda-sdk-prefix])])])
+                                    [AC_MSG_FAILURE([can't find CUDA sample inc file helper_cuda.h, please provide correct cuda SDK prefix by using --with-cuda-sdk-prefix])])])
 
        AC_CHECK_LIB([cudart],
                     [main], 
                     [CUDALIBS=' -lcudart'],
                     [AC_CHECK_FILE(["$cuda_prefix/lib64/libcudart.so"],
                                    [CUDALIBS=" -L$cuda_prefix/lib64 -lcudart"],
-                                   [AC_MSG_FAILURE([Cannot find CUDA library -lcudart, please provide correct cuda PREFIX by using --with-cuda-prefix])])])
+                                   [AC_MSG_FAILURE([can't find CUDA library -lcudart, please provide correct cuda PREFIX by using --with-cuda-prefix])])])
        AC_CHECK_LIB([gomp], 
                     [main],
 		    [CUDALIBS=$CUDALIBS' -lgomp'],
 		    [AC_CHECK_FILE(["$cuda_prefix/lib64/libgomp.so"],
                                    [CUDALIBS=$CUDALIBS" -lgomp"],
-                                   [AC_MSG_FAILURE([Cannot find CUDA library -lgomp, please provide correct cuda PREFIX by using --with-cuda-prefix])])])],
+                                   [AC_MSG_FAILURE([can't find CUDA library -lgomp, please provide correct cuda PREFIX by using --with-cuda-prefix])])])],
        [use_cuda=no])
 
 
@@ -240,13 +244,13 @@ AS_IF([test x"$use_gperf" != xno],
 		    [AC_CHECK_FILE(["$gperf_prefix/lib/libprofiler.so"],
                                    [GPERFFLAGS=" -I$gperf_prefix/include"
                                     GPERFLIBS=" -L$gperf_prefix/lib -lprofiler"],
-				   [AC_MSG_FAILURE([Cannot find gperftools library -lprofiler, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])
+				   [AC_MSG_FAILURE([can't find gperftools library -lprofiler, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])
        AC_CHECK_LIB([tcmalloc],
                     [main],
 		    [GPERFLIBS=' -ltcmalloc'],
 		    [AC_CHECK_FILE(["$gperf_prefix/lib/libtcmalloc.so"],
                                    [GPERFLIBS=$GPERFLIBS" -ltcmalloc"],
-				   [AC_MSG_FAILURE([Cannot find gperftools library -ltcmalloc, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])],
+				   [AC_MSG_FAILURE([can't find gperftools library -ltcmalloc, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])],
        [use_gperf=no])
 
 # FDPS
@@ -258,7 +262,7 @@ AC_ARG_WITH([fdps-prefix],
 
 AC_CHECK_FILE(["$fdps_prefix/src/particle_simulator.hpp"],
 	      [INCLUDE=$INCLUDE" -I$fdps_prefix/src"],
-	      [AC_MSG_FAILURE([Cannot find FDPS library, please provide correct PREFIX by using --with-fdps-prefix])])
+	      [AC_MSG_FAILURE([can't find FDPS library, please provide correct PREFIX by using --with-fdps-prefix])])
 
 # SDAR
 AC_ARG_WITH([sdar-prefix], 
@@ -269,7 +273,7 @@ AC_ARG_WITH([sdar-prefix],
 
 AC_CHECK_FILE(["$sdar_prefix/src/Hermite/hermite_integrator.h"],
 	      [INCLUDE=$INCLUDE" -I$sdar_prefix/src"],
-	      [AC_MSG_FAILURE([Cannot find SDAR library, please provide correct PREFIX by using --with-sdar-prefix])])
+	      [AC_MSG_FAILURE([can't find SDAR library, please provide correct PREFIX by using --with-sdar-prefix])])
 
 # GALPY
 AC_ARG_WITH([galpy-prefix],
@@ -309,9 +313,13 @@ AC_ARG_WITH([external],
                                         [galpy_prefix=`find ../ -type d -name galpy|tail -1`])])])
                     AC_CHECK_FILE(["$galpy_prefix/potential/potential_c_ext/galpy_potentials.h"],
                                   [GALPY_PATH=$galpy_prefix],
-                                  [AC_MSG_FAILURE([Cannot find Galpy library, please provide correct PREFIX by using --with-galpy-prefix])])
-                    AC_CHECK_LIB([gsl],[main])
-                    AC_CHECK_LIB([gslcblas],[main])])],
+                                  [AC_MSG_FAILURE([can't find Galpy library, please provide correct PREFIX by using --with-galpy-prefix])])
+                    AC_CHECK_LIB([gsl],[main],
+		                 [],
+				 [AC_MSG_FAILURE([can't find GSL library, please install it first, e.g. in Ubuntu 20.04, use sudo apt-get install libgsl-dev])])
+                    AC_CHECK_LIB([gslcblas],[main],
+		                 [],
+				 [AC_MSG_FAILURE([can't find GSL library, please install it first, e.g. in Ubuntu 20.04, use sudo apt-get install libgsl-dev])])])],
 	    [with_external=off])
             
 

@@ -4,6 +4,50 @@ from scipy import spatial as sp
 from .base import *
 from .bse import *
 
+G_MSUN_PC_MYR=0.00449830997959438 # Msun, pc, myr
+G_HENON=1 # Henon unit
+
+class PeTarDataHeader():
+    """ Petar snapshot data header
+    members:
+        fid: file id
+        n: number of particles
+        time: time of snapshot
+    """
+
+    def __init__(self, _filename=None):
+        """ Initial data header
+        
+        Parameters:
+        -----------
+        _filename: string
+            PeTar snapshot file name to read the header, if not provide, all members are initialized to zero (None)
+        """
+        self.fid = 0
+        self.n = 0
+        self.time = 0.0
+        
+        if (_filename!=None): self.read(_filename)
+
+    def read(self, _filename):
+        """ Read snapshot file to obtain the header information
+
+        Parameters:
+        -----------
+        _filename: string
+            PeTar snapshot file name to read the header
+        """
+
+        fp = open(_filename, 'r')
+        header=fp.readline()
+        file_id, n_glb, t = header.split()
+        fp.close()
+
+        self.fid = int(file_id)
+        self.n = int(n_glb)
+        self.time = float(t)
+        
+
 class SimpleParticle(DictNpArrayMix):
     """ Simple particle class with only mass, postion, velocity
     keys: (class members)
@@ -234,6 +278,7 @@ class Binary(DictNpArrayMix):
         else:
             raise ValueError('Initial fail, date type should be Particle (2), Binary (1) or no argument (0)')
         self.initargs = kwargs.copy()
+        self.initargs['G'] = G
 
     def calcEkin(self):
         """ Calculate c.m. kinetic energy, ekin, and add it as a member
@@ -265,9 +310,20 @@ class Binary(DictNpArrayMix):
             ncols = self.p1.ncols + self.p2.ncols - ncols
             self.ncols += ncols
 
-    def calcPot(self, G):
-        """ Calculate potential of c.m., pot, and add it as a member
+    def calcEbin(self):
+        """ Calculate binding energy, ebin, and add it as a member 
+            Notice G should be given the correct value in initialization (keyword argument 'G')
         """
+        if (not 'ebin' in self.__dict__.keys()):
+            self.ncols += 1
+            self.keys.append(['ebin',1])
+        self.ebin = self.initargs['G']*self.p1.mass*self.p2.mass/(2*self.semi)
+
+    def calcPot(self):
+        """ Calculate potential of c.m., pot, and add it as a member
+            Notice G should be given the correct value in initialization (keyword argument 'G')
+        """
+        G = self.initargs['G']
         pos_b1 = self.p1.pos
         pos_b2 = self.p2.pos
         m_b1 = self.p1.mass
@@ -456,7 +512,7 @@ def findPair(_dat, _G, _rmax, use_kdtree=False, simple_binary=True):
      
         # check orbits
         #print('Create binary')
-        binary = Binary(p1, p2, G=_G)
+        binary = Binary(p1, p2, G=_G, simple_mode=simple_binary)
         apo =binary.semi*(binary.ecc+1.0)
      
         bsel= ((binary.semi>0) & (apo<_rmax))

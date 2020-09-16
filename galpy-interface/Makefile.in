@@ -1,4 +1,4 @@
-TARGET: libgalpy.a petar.galpy
+TARGET: libgalpy.a petar.galpy petar.galpy.help
 
 CXX=@CXX@
 CC=@CC@
@@ -19,5 +19,7 @@ libgalpy.a: $(OBJ)
 petar.galpy: galpy_test.cxx libgalpy.a galpy_interface.h 
 	$(CXX) $(CXXFLAGS) $(GALPY_INCLUDE) $< -o $@ -L./ -lgalpy -lgsl -lgslcblas
 
+petar.galpy.help: galpy_help.py
+	ln -s galpy_help.py petar.galpy.help
 clean: 
-	rm -f *.o petar.galpy libgalpy.a
+	rm -f *.o petar.galpy libgalpy.a petar.galpy.help

@@ -21,8 +21,9 @@ if __name__ == '__main__':
         print("  -h(--help): help")
         print("  -p(--filename-prefix): prefix of output file names for: [prefix].[lagr|esc.[single|binary]|core] (data)")
         print("  -m(--mass-fraction): Lagrangian radii mass fraction (0.1,0.3,0.5,0.7,0.9)")
-        print("  -G(--gravitational-constant): Gravitational constant (if interrupt-mode=bse: 0.00449830997959438; else 1.0)")
+        print("  -G(--gravitational-constant): Gravitational constant (if interrupt-mode=bse: ",petar.G_MSUN_PC_MYR,"; else 1.0)")
         print("  -b(--r-max-binary): maximum sepration for detecting binaries (0.1)")
+        print("  -B(--full-binary): calculate full binary orbital parameters (simple_mode=False in Binary class), this option increases computing time")
         print("  -a(--average-mode): Lagrangian properity average mode: sphere: average from center to Lagragian radii; shell: average between two neighbor radii (sphere)")
         print("  -r(--read-data): read existing single, binary and core data to avoid expensive KDTree construction, no argument, disabled in default")
         print("  -e(--r-escape): a constant escape distance criterion, in default, it is 20*half-mass radius")
@@ -30,8 +31,8 @@ if __name__ == '__main__':
         print("  -n(--n-cpu): number of CPU threads for parallel processing (all threads)")
 
     try:
-        shortargs = 'p:m:G:b:a:re:i:n:h'
-        longargs = ['mass-fraction=','gravitational-constant=','r-max-binary=','average-mode=', 'filename-prefix=','read-data','r-escape=','interrupt-mode=','n-cpu=','help']
+        shortargs = 'p:m:G:b:Ba:re:i:n:h'
+        longargs = ['mass-fraction=','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','r-escape=','interrupt-mode=','n-cpu=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -47,6 +48,8 @@ if __name__ == '__main__':
                 kwargs['G'] = float(arg)
             elif opt in ('-b','--r-max-binary'):
                 kwargs['r_max_binary'] = float(arg)
+            elif opt in ('-B','--full-binary'):
+                kwargs['simple_binary'] = False
             elif opt in ('-a','--average-mode'):
                 kwargs['average_mode'] = arg
             elif opt in ('-n','--n-cpu'):

@@ -17,13 +17,14 @@ const PS::F64 SAFTY_FACTOR_FOR_SEARCH = 0.99;
 union GroupDataDeliver{
     ArtificialParticleInformation artificial;
     struct {PS::F32 mass; PS::F32vec vel;} cm;
+    struct {PS::S64 data1, data2;} data_int64;
 
     GroupDataDeliver(): artificial() {}
     
     GroupDataDeliver(const GroupDataDeliver& _data): artificial(_data.artificial) {}
 
     GroupDataDeliver& operator= (const GroupDataDeliver& _data) {
-        artificial = _data.artificial;
+        data_int64 = _data.data_int64;
         return *this;
     }
 };
@@ -125,9 +126,14 @@ public:
      */
     void writeAscii(FILE* _fout) const{
         ParticleBase::writeAscii(_fout);
+#ifdef GROUP_DATA_WRITE_ARTIFICIAL
         fprintf(_fout, "%26.17e %lld ", 
                 this->r_search, this->id);
         group_data.artificial.writeAscii(_fout);
+#else
+        fprintf(_fout, "%26.17e %lld %lld %lld", 
+                this->r_search, this->id, this->group_data.data_int64.data1, this->group_data.data_int64.data2);
+#endif
         changeover.writeAscii(_fout);
     }
 
@@ -136,8 +142,8 @@ public:
      */
     void writeBinary(FILE* _fout) const{
         ParticleBase::writeBinary(_fout);
-        fwrite(&(this->r_search), sizeof(PS::F64), 2, _fout);
-        group_data.artificial.writeBinary(_fout);
+        fwrite(&(this->r_search), sizeof(PS::F64), 4, _fout);
+        //group_data.artificial.writeBinary(_fout);
         changeover.writeBinary(_fout);
     }
 
@@ -146,6 +152,7 @@ public:
      */
     void readAscii(FILE* _fin) {
         ParticleBase::readAscii(_fin);
+#ifdef GROUP_DATA_WRITE_ARTIFICIAL
         PS::S64 rcount=fscanf(_fin, "%lf %lld ",
                               &this->r_search, &this->id);
         if (rcount<2) {
@@ -153,6 +160,14 @@ public:
             abort();
         }
         group_data.artificial.readAscii(_fin);
+#else
+        PS::S64 rcount=fscanf(_fin, "%lf %lld %lld %lld",
+                              &this->r_search, &this->id, &this->group_data.data_int64.data1, &this->group_data.data_int64.data2);
+        if (rcount<4) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
+            abort();
+        }
+#endif
         changeover.readAscii(_fin);
     }
 
@@ -161,12 +176,12 @@ public:
      */
     void readBinary(FILE* _fin) {
         ParticleBase::readBinary(_fin);
-        size_t rcount = fread(&(this->r_search), sizeof(PS::F64), 2, _fin);
-        if (rcount<2) {
+        size_t rcount = fread(&(this->r_search), sizeof(PS::F64), 4, _fin);
+        if (rcount<4) {
             std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
             abort();
         }
-        group_data.artificial.readBinary(_fin);
+        //group_data.artificial.readBinary(_fin);
         changeover.readBinary(_fin);
     }
 

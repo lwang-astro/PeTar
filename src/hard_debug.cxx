@@ -30,8 +30,11 @@ int main(int argc, char **argv){
   int idum=0;
   std::string fbsepar = "input.par.bse";
 #endif
+#ifdef SOFT_PERT
+  bool soft_pert_flag=true;
+#endif
 
-  while ((arg_label = getopt(argc, argv, "k:E:A:a:D:d:e:s:m:b:i:h")) != -1)
+  while ((arg_label = getopt(argc, argv, "k:E:A:a:D:d:e:s:m:b:p:i:Sh")) != -1)
     switch (arg_label) {
     case 'k':
         slowdown_factor = atof(optarg);
@@ -65,6 +68,11 @@ int main(int argc, char **argv){
     case 'p':
         fhardpar = optarg;
         break;
+#ifdef SOFT_PERT
+    case 'S':
+        soft_pert_flag=false;
+        break;
+#endif
 #ifdef BSE
     case 'i':
         idum = atoi(optarg);
@@ -74,9 +82,9 @@ int main(int argc, char **argv){
         break;
 #endif
     case 'h':
-        std::cout<<"hard_debug.out [options] [hard_manager (defaulted: input.par.hard)] [cluster_data] (defaulted: hard_dump)\n"
+        std::cout<<"petar.hard.debug [options] [hard_manager (defaulted: input.par.hard)] [cluster_data] (defaulted: hard_dump)\n"
                  <<"options:\n"
-                 <<"    -k [double]:  change slowdown factor\n"
+                 <<"    -k [double]:  change slowdown factor reference\n"
 #ifdef HARD_CHECK_ENERGY
                  <<"    -e [double]:  hard energy limit\n"
 #endif
@@ -84,15 +92,18 @@ int main(int argc, char **argv){
                  <<"    -E [double]:  Eta 4th for hermite \n"
                  <<"    -A [double]:  Eta 2nd for hermite \n"
                  <<"    -a [double]:  AR energy limit \n"
-                 <<"    -D [double]:  hard time step max \n"
-                 <<"    -d [int]:     hard time step min power\n"
+                 <<"    -D [double]:  hard time step max (should use together with -d)\n"
+                 <<"    -d [int]:     hard time step min power (should use together with -D)\n"
                  <<"    -m [int]:     running mode: 0: evolve system to time_end; 1: stability check: "<<mode<<std::endl
                  <<"    -p [string]:  hard parameter file name: "<<fhardpar<<std::endl
 #ifdef BSE
                  <<"    -i [int]      random seed to generate kick velocity\n"
                  <<"    -b [string]:  bse parameter file name: "<<fbsepar<<std::endl
 #endif
-                 <<"    -h         :  help\n";
+#ifdef SOFT_PERT
+                 <<"    -S:           Suppress soft perturbation (tidal tensor)\n"
+#endif
+                 <<"    -h:           help\n";
         return 0;
     default:
         std::cerr<<"Unknown argument. check '-h' for help.\n";
@@ -145,40 +156,73 @@ int main(int argc, char **argv){
 
 #ifdef HARD_CHECK_ENERGY
   // Set hard energy limit
-  if (e_err_hard>0 )
+  if (e_err_hard>0 ) {
+      std::cerr<<"New hard energy error max: "<<e_err_hard<<std::endl;
       hard_manager.energy_error_max = e_err_hard;
+  }
 #endif
 
   // Set step limit for ARC sym
-  if (step_arc_limit>0) 
+  if (step_arc_limit>0) {
+      std::cerr<<"New AR step count max: "<<step_arc_limit<<std::endl;
       hard_manager.ar_manager.step_count_max = step_arc_limit;
+  }
 
   // set slowdown factor
-  if(slowdown_factor>0)    
+  if(slowdown_factor>0) {
+      std::cerr<<"New slowdown perturbation ratio reference: "<<slowdown_factor<<std::endl;
       hard_manager.ar_manager.slowdown_pert_ratio_ref = slowdown_factor;
+  }
 
   // set eta
   if(eta_4th>0) {
+      std::cerr<<"New eta_4th: "<<eta_4th<<std::endl;
       hard_manager.h4_manager.step.eta_4th = eta_4th;
   }
 
   if(eta_2nd>0) {
+      std::cerr<<"New eta_2nd: "<<eta_2nd<<std::endl;
       hard_manager.h4_manager.step.eta_2nd = eta_2nd;
   }
 
   // time step
-  if(dt_min_power>0&&dt_max>0) 
+  if(dt_min_power>0&&dt_max>0) {
+      std::cerr<<"New time step max: "<<dt_max<<"   min power index: "<<dt_min_power<<std::endl;
       hard_manager.setDtRange(dt_max, dt_min_power);
+  }
 
-  if(e_err_ar>0) 
+  if(e_err_ar>0) {
+      std::cerr<<"New AR relative energy error maximum: "<<e_err_ar<<std::endl;
       hard_manager.ar_manager.energy_error_relative_max = e_err_ar;
+  }
 
   hard_manager.checkParams();
   hard_manager.print(std::cerr);
 
   HardDump hard_dump;
   hard_dump.readOneCluster(filename.c_str());
-  std::cerr<<"Dt: "<<hard_dump.time_end<<std::endl;
+  std::cerr<<"Time end: "<<hard_dump.time_end<<std::endl;
+
+#ifdef SOFT_PERT
+  if (!soft_pert_flag) {
+      std::cerr<<"Suppress soft perturbation\n";
+      if (hard_dump.n_group>0) {
+          // if no artificial particles, continue
+          if (hard_dump.ptcl_arti_bk.getPointer()!=NULL) {
+              // set all tidal tensor force to zero
+              for (int i=0; i<hard_dump.n_group; i++) {
+                  int offset= i*hard_manager.ap_manager.getArtificialParticleN();
+                  auto* pi = &(hard_dump.ptcl_arti_bk[offset]);
+                  //auto* pcm = ap_manager.getCMParticles(pi);
+                  auto* ptt = hard_manager.ap_manager.getTidalTensorParticles(pi);
+                  for (int j=0; j<hard_manager.ap_manager.getTidalTensorParticleN(); j++) {
+                      ptt[j].acc = PS::F64vec(0.0);
+                  }
+              }
+          }
+      }
+  }
+#endif
 
   // running mode
   if (mode==0) {
