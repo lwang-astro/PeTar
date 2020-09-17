@@ -4625,8 +4625,8 @@ fi
 # Check whether --with-interrupt was given.
 if test "${with_interrupt+set}" = set; then :
   withval=$with_interrupt; PROG_NAME=$PROG_NAME'.'$with_interrupt
-	     if test x"$with_interrupt" == xbse; then :
-  ac_ext=${ac_fc_srcext-f}
+  if test x"$with_interrupt" == xbse || test x"$with_interrupt" == xmobse; then :
+    ac_ext=${ac_fc_srcext-f}
 ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
 ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_fc_compiler_gnu
@@ -6175,7 +6175,11 @@ $as_echo "$as_me: -----------------------------------------------------------" >
 
 ac_config_files="$ac_config_files Makefile"
 
-ac_config_files="$ac_config_files bse-interface/Makefile"
+if test "x$with_interrupt" == xmobse; then :
+  ac_config_files="$ac_config_files mobse-interface/Makefile"
+elif test "x$with_interrupt" == xbse; then :
+  ac_config_files="$ac_config_files bse-interface/Makefile"
+fi
 
 ac_config_files="$ac_config_files galpy-interface/Makefile"
 
@@ -6887,6 +6891,7 @@ for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
+    "mobse-interface/Makefile") CONFIG_FILES="$CONFIG_FILES mobse-interface/Makefile" ;;
     "bse-interface/Makefile") CONFIG_FILES="$CONFIG_FILES bse-interface/Makefile" ;;
     "galpy-interface/Makefile") CONFIG_FILES="$CONFIG_FILES galpy-interface/Makefile" ;;
 

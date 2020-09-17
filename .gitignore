@@ -11,10 +11,15 @@
 # build
 build/*
 
+# for install
+bin/*
+include/*
+
 config.log
 config.status
 Makefile
 bse-interface/Makefile
+mobse-interface/Makefile
 GPATH
 GRTAGS
 GTAGS

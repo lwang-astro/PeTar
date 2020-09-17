@@ -44,7 +44,13 @@ endif
 
 ifneq ($(se_mode),off)
 MT_FLAGS += -D STELLAR_EVOLUTION
-ifeq ($(se_mode),bse)
+ifeq ($(se_mode),mobse)
+MT_FLAGS += -D MOBSE
+CXXLIBS += -L ./mobse-interface -lmobse -lgfortran
+LIBFILES+= mobse-interface/libmobse.a mobse-interface/mobse_interface.h
+INCLUDE += -I ./mobse-interface
+TARGET += mobse-interface/petar.mobse
+else  ifeq ($(se_mode),bse)
 MT_FLAGS += -D BSE
 CXXLIBS += -L ./bse-interface -lbse -lgfortran
 LIBFILES+= bse-interface/libbse.a bse-interface/bse_interface.h
@@ -203,6 +209,11 @@ bse-interface/petar.bse: bse-interface
 
 bse-interface/libbse.a: bse-interface/petar.bse
 
+mobse-interface/petar.mobse: mobse-interface
+	$(MAKE) -C mobse-interface
+
+mobse-interface/libmobse.a: mobse-interface/petar.mobse
+
 galpy-interface/petar.galpy: galpy-interface
 	$(MAKE) -C galpy-interface
 
@@ -226,6 +237,7 @@ install: $(TARGET)
 
 clean:
 	rm -f $(TARGET) build/*.o 
+	rm -rf @prefix@/bin/petar*
 	$(MAKE) -C bse-interface clean
+	$(MAKE) -C mobse-interface clean
 	$(MAKE) -C galpy-interface clean
-
