@@ -10,6 +10,8 @@
 #include "ar_perturber.hpp"
 #ifdef BSE
 #include "bse_interface.h"
+#elif MOBSE
+#include "mobse_interface.h"
 #endif
 
 //! AR interaction clas
@@ -23,6 +25,12 @@ public:
     bool stellar_evolution_write_flag;
 #ifdef BSE
     BSEManager bse_manager;
+    std::ofstream fout_sse; ///> log file for SSE event
+    std::ofstream fout_bse; ///> log file for BSE event
+
+    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), stellar_evolution_option(1), stellar_evolution_write_flag(true), bse_manager(), fout_sse(), fout_bse() {}
+#elif MOBSE
+    MOBSEManager bse_manager;
     std::ofstream fout_sse; ///> log file for SSE event
     std::ofstream fout_bse; ///> log file for BSE event
 
@@ -41,6 +49,10 @@ public:
         ASSERT(eps_sq>=0.0);
         ASSERT(gravitational_constant>0.0);
 #ifdef BSE
+        ASSERT(stellar_evolution_option!=1||(stellar_evolution_option==1&&bse_manager.checkParams()));
+        ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_sse.is_open()));
+        ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_bse.is_open()));
+#elif MOBSE
         ASSERT(stellar_evolution_option!=1||(stellar_evolution_option==1&&bse_manager.checkParams()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_sse.is_open()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_bse.is_open()));
@@ -709,7 +721,90 @@ public:
 
             return modify_flag;
         }
-#endif // BSE
+#elif MOBSE
+        // SSE/BSE stellar evolution 
+        if (_p.time_interrupt<=_time_end&&stellar_evolution_option==1) {
+            ASSERT(bse_manager.checkParams());
+
+            int modify_flag = 1;
+
+            // time_record and time_interrupt have offsets, thus use difference to obtain true dt
+            Float dt = _time_end - _p.time_record;
+
+            // evolve star
+            StarParameterOut output;
+            StarParameter star_bk = _p.star;
+            int event_flag = bse_manager.evolveStar(_p.star, output, dt);
+
+            // error 
+            if (event_flag<0) {
+                std::cerr<<"SSE Error: ID= "<<_p.id;
+                _p.star.print(std::cerr);
+                output.print(std::cerr);
+                std::cerr<<std::endl;
+                DATADUMP("dump_sse_error");
+                //abort();
+            }
+
+            // if expected time not reach, record actually evolved time
+            double dt_miss = bse_manager.getDTMiss(output);
+            _p.time_record += dt-dt_miss;
+
+            // estimate next time to check 
+            _p.time_interrupt = _p.time_record + bse_manager.getTimeStep(_p.star);
+
+            // record mass change (if loss, negative)
+            double dm = bse_manager.getMassLoss(output);
+            _p.dm += dm;
+            if (dm==0.0) modify_flag = 0;
+            
+            // change mass in main data
+            _p.mass = bse_manager.getMass(_p.star);
+
+            // set merger check radius 
+            _p.radius = bse_manager.getMergerRadius(_p.star);
+
+            // type change
+            if (stellar_evolution_write_flag&&event_flag==1) {
+#pragma omp critical
+                {
+                    fout_sse<<"Type_change ";
+                    //bse_manager.printTypeChange(fout_sse, _p.star, output);
+                    fout_sse<<std::setw(WRITE_WIDTH)<<_p.id;
+                    star_bk.printColumn(fout_sse, WRITE_WIDTH);
+                    _p.star.printColumn(fout_sse, WRITE_WIDTH);
+                    //output.printColumn(fout_sse, WRITE_WIDTH);
+                    fout_sse<<std::endl;
+                }
+            }
+
+            // add velocity change if exist
+            if (event_flag==2) {
+                double dv[3];
+                double dvabs=bse_manager.getVelocityChange(dv, output);
+                assert(dvabs>0);
+                for (int k=0; k<3; k++) _p.vel[k] += dv[k];
+                modify_flag = 2;
+                if (stellar_evolution_write_flag) {
+#pragma omp critical
+                    {
+                        fout_sse<<"SN_kick "
+                                <<std::setw(WRITE_WIDTH)<<_p.id
+                                <<std::setw(WRITE_WIDTH)<<dvabs*bse_manager.vscale;
+                        _p.star.printColumn(fout_sse, WRITE_WIDTH);
+                        fout_sse<<std::endl;
+                    }
+                }
+            }
+            // if mass become zero, set to unused for removing
+            if (_p.mass==0.0) {
+                _p.group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+                modify_flag = 3;
+            }
+
+            return modify_flag;
+        }
+#endif // MOBSE
 #endif // STELLAR_EVOLUTION
         return 0;
     }
@@ -731,6 +826,18 @@ public:
                     modify_return = std::max(modify_return, modify_branch[k]);
                 }
 #ifdef BSE
+                // if member is star, evolve single star using SSE
+                else if (stellar_evolution_option==1) {
+                    ASSERT(bse_manager.checkParams());
+                    modify_branch[k] = modifyOneParticle(*_bin.getMember(k), _bin_interrupt.time_now, _bin_interrupt.time_end);
+                    modify_return = std::max(modify_return, modify_branch[k]);
+                    // if status not set, set to change
+                    if (modify_branch[k]>0&&_bin_interrupt.status == AR::InterruptStatus::none) {
+                        _bin_interrupt.status = AR::InterruptStatus::change;
+                        _bin_interrupt.adr = &_bin;
+                    }
+                }
+#elif MOBSE
                 // if member is star, evolve single star using SSE
                 else if (stellar_evolution_option==1) {
                     ASSERT(bse_manager.checkParams());
@@ -974,8 +1081,223 @@ public:
                     }
                 }
             }
-#endif // BSE
+#elif BSE
+            double time_check = std::min(p1->time_interrupt, p2->time_interrupt);
+            if (time_check<=_bin_interrupt.time_end&&stellar_evolution_option==1) {
+                ASSERT(bse_manager.checkParams());
+                // record address of modified binary
+                _bin_interrupt.adr = &_bin;
+                // if status not set, set to change
+                if (_bin_interrupt.status == AR::InterruptStatus::none) 
+                    _bin_interrupt.status = AR::InterruptStatus::change;
+                // set return flag >0
+                modify_return = 2;
 
+                // first evolve two components to the same starting time
+                if (p1->time_record!=p2->time_record) {
+                    if (p1->time_record<p2->time_record) {
+                        p1->time_interrupt = p1->time_record;
+                        modifyOneParticle(*p1, _bin_interrupt.time_now, p2->time_record);
+                    }
+                    else {
+                        p2->time_interrupt = p2->time_record;
+                        modifyOneParticle(*p2, _bin_interrupt.time_now, p1->time_record);
+                    }
+                }
+
+                // time_record and time_end have offsets, thus use difference to obtain true dt
+                Float dt = _bin_interrupt.time_end - p1->time_record;
+
+                StarParameterOut out[2];
+                Float drdv, ecc, semi, r;
+                _bin.particleToSemiEcc(semi, ecc, r, drdv, *p1, *p2, gravitational_constant);
+                Float mtot = p1->mass+p2->mass;
+                Float period = _bin.semiToPeriod(semi, mtot, gravitational_constant);
+                // backup c.m. information 
+                Float pos_cm[3], vel_cm[3];
+                for (int k=0; k<3; k++) {
+                    pos_cm[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mtot;
+                    vel_cm[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mtot;
+                }
+                // backup star
+                StarParameter p1_star_bk = p1->star;
+                StarParameter p2_star_bk = p2->star;
+
+                BinaryEvent bin_event;
+                // loop until the time_end reaches
+                int event_flag = bse_manager.evolveBinary(p1->star, p2->star, out[0], out[1], semi, period, ecc, bin_event, dt);
+
+                // error
+                if (event_flag<0) {
+                    std::cerr<<"MOBSE Error! ";
+                    std::cerr<<" ID="<<p1->id<<" "<<p2->id<<" ";
+                    std::cerr<<" semi[R*]: "
+                             <<_bin.semi*bse_manager.rscale
+                             <<" ecc: "<<_bin.ecc
+                             <<" period[days]: "<<_bin.period*bse_manager.tscale*bse_manager.year_to_day;
+                    std::cerr<<" Init: Star1: ";
+                    p1_star_bk.print(std::cerr);
+                    std::cerr<<" Star2: ";
+                    p2_star_bk.print(std::cerr);
+                    std::cerr<<" final: Star1: ";
+                    p1->star.print(std::cerr);
+                    out[0].print(std::cerr);
+                    std::cerr<<" Star2: ";
+                    p2->star.print(std::cerr);
+                    out[1].print(std::cerr);
+                    std::cerr<<std::endl;
+                    DATADUMP("dump_mobse_error");
+                }
+                
+                // check binary type and print event information
+                int binary_type_final=0;
+                int nmax = bin_event.getEventNMax();
+                for (int i=0; i<nmax; i++) {
+                    int binary_type = bin_event.getType(i);
+                    if (binary_type>0) {
+                        if (stellar_evolution_write_flag) {
+#pragma omp critical
+                            {
+                                bse_manager.printBinaryEventColumnOne(fout_bse, bin_event, i, WRITE_WIDTH);
+                                fout_bse<<std::setw(WRITE_WIDTH)<<p1->id
+                                        <<std::setw(WRITE_WIDTH)<<p2->id
+                                        <<std::setw(WRITE_WIDTH)<<drdv*bse_manager.rscale*bse_manager.vscale
+                                        <<std::setw(WRITE_WIDTH)<<r*bse_manager.rscale;
+                                fout_bse<<std::endl;
+                            }
+                        }
+                        //if (vkick[3]>0||vkick[7]>0) event_flag = 3; // kick
+                        if (binary_type>0) event_flag = std::max(event_flag, 1); // type change
+                        else if (bse_manager.isMassTransfer(binary_type)) event_flag = std::max(event_flag, 2); // orbit change
+                        else if (bse_manager.isDisrupt(binary_type)) event_flag = std::max(event_flag, 3); // disrupt
+                        else if (bse_manager.isMerger(binary_type)) event_flag = std::max(event_flag, 4); // Merger
+                        binary_type_final = binary_type;
+                    }
+                    else if(binary_type<0) break;
+                }
+
+                double dt_miss = bse_manager.getDTMiss(out[0]);
+                p1->time_record += dt-dt_miss;
+                p2->time_record = p1->time_record;
+
+                // estimate next time to check 
+                p1->time_interrupt = p1->time_record + std::min(bse_manager.getTimeStep(p1->star), bse_manager.getTimeStep(p2->star));
+                p2->time_interrupt = p1->time_interrupt;
+
+                // reset collision state since binary orbit changes
+                if (p1->getBinaryInterruptState()== BinaryInterruptState::collision) 
+                    p1->setBinaryInterruptState(BinaryInterruptState::none);
+                if (p2->getBinaryInterruptState()== BinaryInterruptState::collision)
+                    p2->setBinaryInterruptState(BinaryInterruptState::none);
+
+                // record mass change (if loss, negative)
+                p1->dm += bse_manager.getMassLoss(out[0]);
+                p2->dm += bse_manager.getMassLoss(out[1]);
+                
+                // update masses
+                p1->mass = bse_manager.getMass(p1->star);
+                p2->mass = bse_manager.getMass(p2->star);
+
+                // set merger check radius
+                p1->radius = bse_manager.getMergerRadius(p1->star);
+                p2->radius = bse_manager.getMergerRadius(p2->star);
+
+                // set binary status
+                //p1->setBinaryPairID(p2->id);
+                //p2->setBinaryPairID(p1->id);
+                p1->setBinaryInterruptState(static_cast<BinaryInterruptState>(binary_type_final));
+                p2->setBinaryInterruptState(static_cast<BinaryInterruptState>(binary_type_final));
+
+                // if both mass becomes zero, set destroy state
+                if (p1->mass==0.0&&p2->mass==0.0) {
+                    p1->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+                    p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+                    _bin_interrupt.status = AR::InterruptStatus::destroy;
+                    modify_return = 3;
+                }
+                else {
+                    // if mass become zero, set to unused for removing and merger status
+                    if (p1->mass==0.0) {
+                        p1->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+                        _bin_interrupt.status = AR::InterruptStatus::merge;
+                        p1->setBinaryInterruptState(BinaryInterruptState::none);
+                        p2->setBinaryInterruptState(BinaryInterruptState::none);
+                        // set new particle position and velocity to be the original cm
+                        for (int k=0; k<3; k++) {
+                            p2->pos[k] = pos_cm[k];
+                            p2->vel[k] = vel_cm[k];
+                        }
+                        modifyOneParticle(*p2, _bin_interrupt.time_now, _bin_interrupt.time_end);
+                    }
+
+                    if (p2->mass==0.0) {
+                        p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+                        _bin_interrupt.status = AR::InterruptStatus::merge;
+                        p1->setBinaryInterruptState(BinaryInterruptState::none);
+                        p2->setBinaryInterruptState(BinaryInterruptState::none);
+                        // set new particle position and velocity to be the original cm
+                        for (int k=0; k<3; k++) {
+                            p1->pos[k] = pos_cm[k];
+                            p1->vel[k] = vel_cm[k];
+                        }
+                        modifyOneParticle(*p1, _bin_interrupt.time_now, _bin_interrupt.time_end);
+                    }
+
+                    // case when SN kick appears
+                    bool kick_flag=false;
+                    for (int k=0; k<2; k++) {
+                        double dv[4];
+                        auto* pk = _bin.getMember(k);
+                        dv[3] = bse_manager.getVelocityChange(dv,out[k]);
+                        if (dv[3]>0) {
+                            kick_flag=true;
+#pragma omp critical 
+                            {
+                                fout_bse<<"SN_kick "
+                                        <<std::setw(WRITE_WIDTH)<<p1->id
+                                        <<std::setw(WRITE_WIDTH)<<p2->id
+                                        <<std::setw(WRITE_WIDTH)<<k+1
+                                        <<std::setw(WRITE_WIDTH)<<dv[3]*bse_manager.vscale;
+                                pk->star.printColumn(fout_bse, WRITE_WIDTH);
+                                fout_bse<<std::endl;
+                            }
+                            for (int k=0; k<3; k++) pk->vel[k] += dv[k];
+                        }
+                    }
+
+                    if (!kick_flag&&_bin_interrupt.status != AR::InterruptStatus::merge) {
+                        // case for elliptic case
+                        if (ecc>=0.0&&ecc<=1.0) {
+                            // obtain full orbital parameters
+                            //_bin.calcOrbit(gravitational_constant);
+                            // update new period, ecc
+//#pragma omp critical
+//                            std::cerr<<"Event: "<<event_flag<<" "<<_bin.period<<" "<<period<<" "<<_bin.ecc<<" "<<ecc<<std::endl;
+                            _bin.period = period;
+                            _bin.ecc = ecc;
+                            _bin.m1 = p1->mass;
+                            _bin.m2 = p2->mass;
+                            _bin.calcSemiFromPeriod(gravitational_constant);
+                            // kepler orbit to particles using the same ecc anomaly
+                            _bin.calcParticles(gravitational_constant);
+                        }
+                        // in case of disruption but no kick
+                        else {
+                            // obtain full orbital parameters
+                            // _bin.calcOrbit(gravitational_constant);
+                            // assume energy no change
+                            if(_bin.semi>0) _bin.semi = -_bin.semi;
+                            _bin.ecc = ecc;
+                            _bin.m1 = p1->mass;
+                            _bin.m2 = p2->mass;
+                            ASSERT(ecc>=1.0);
+                            // kepler orbit to particles using the same ecc anomaly
+                            _bin.calcParticles(gravitational_constant);
+                        }
+                    }
+                }
+            }
+#endif // MOBSE
             // dynamical merger check
             if (_bin_interrupt.status!=AR::InterruptStatus::merge&&_bin_interrupt.status!=AR::InterruptStatus::destroy) {
 
@@ -1055,12 +1377,66 @@ public:
                             fout_bse<<std::endl;
                         }
                     }
-#else // NO BSE
+#elif MOBSE
+                    Float m1_bk = p1->mass;
+                    Float m2_bk = p2->mass;
+                    // backup original data for print
+
+                    // first evolve two components to the current time
+                    if (stellar_evolution_option==1) {
+                        if (p1->time_record<_bin_interrupt.time_end) {
+                            p1->time_interrupt = p1->time_record; // force SSE evolution
+                            modifyOneParticle(*p1, p1->time_record, _bin_interrupt.time_end);
+                        }
+                        if (p2->time_record<_bin_interrupt.time_end) {
+                            p2->time_interrupt = p2->time_record; // force SSE evolution
+                            modifyOneParticle(*p2, p2->time_record, _bin_interrupt.time_end);
+                        }
+                    }
+
+                    ASSERT(p1->star.tphys==p2->star.tphys);
+                    //ASSERT(p1->star.mass>0&&p2->star.mass>0); // one may have SNe before merge
+
+                    StarParameter p1_star_bk, p2_star_bk;
+                    p1_star_bk = p1->star;
+                    p2_star_bk = p2->star;
+                    // call MOBSE function to merge two stars
+                    bse_manager.merge(p1->star, p2->star);
+                    // get new masses
+                    p1->mass = bse_manager.getMass(p1->star);
+                    p2->mass = bse_manager.getMass(p2->star);
+                    // dm is used to correct energy, thus must be correctly set, use += since it may change mass before merge
+                    p1->dm += p1->mass - m1_bk;
+                    p2->dm += p2->mass - m2_bk;
+                    if (stellar_evolution_write_flag) {
+#pragma omp critical
+                        {
+                            fout_bse<<"Dynamic_merge: "
+                                    <<std::setw(WRITE_WIDTH)<<p1->id
+                                    <<std::setw(WRITE_WIDTH)<<p2->id
+                                    <<std::setw(WRITE_WIDTH)<<_bin.period*bse_manager.tscale*bse_manager.year_to_day
+                                    <<std::setw(WRITE_WIDTH)<<_bin.semi*bse_manager.rscale
+                                    <<std::setw(WRITE_WIDTH)<<_bin.ecc;
+#ifndef DYNAMIC_MERGER_LESS_OUTPUT
+                            fout_bse<<std::setw(WRITE_WIDTH)<<dr*bse_manager.rscale
+                                    <<std::setw(WRITE_WIDTH)<<t_peri*bse_manager.tscale*bse_manager.year_to_day
+                                    <<std::setw(WRITE_WIDTH)<<sd_factor;
+#endif
+                            // before
+                            p1_star_bk.printColumn(fout_bse, WRITE_WIDTH);
+                            p2_star_bk.printColumn(fout_bse, WRITE_WIDTH);
+                            // after
+                            p1->star.printColumn(fout_bse, WRITE_WIDTH);
+                            p2->star.printColumn(fout_bse, WRITE_WIDTH);
+                            fout_bse<<std::endl;
+                        }
+                    }
+#else // NO BSE/MOBSE
                     p1->dm = mcm*0.8-p1->mass; 
                     p1->mass = mcm*0.8;
                     p2->dm = -p2->mass; 
                     p2->mass = 0.0;
-#endif // BSE
+#endif // BSE/MOBSE
                     if (p1->mass==0.0) p1->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
                     if (p2->mass==0.0) p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
                     if (p1->mass==0.0&&p2->mass==0.0) 

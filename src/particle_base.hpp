@@ -1,6 +1,8 @@
 #pragma once
 #ifdef BSE
 #include "bse_interface.h"
+#elif MOBSE
+#include "mobse_interface.h"
 #endif
 
 #ifdef NAN_CHECK_DEBUG
@@ -10,6 +12,8 @@
 #endif
 
 #ifdef BSE
+enum class BinaryInterruptState:int {none = 0, form = 1, type_change = 2, start_roche = 3, end_roche = 4, contact = 5, start_symbiotic = 6, end_symbiotic = 7, common_envelope = 8 , giant = 9, collision = 10, blue_straggler = 11, no_remain = 12, disrupt = 13};
+#elif MOBSE
 enum class BinaryInterruptState:int {none = 0, form = 1, type_change = 2, start_roche = 3, end_roche = 4, contact = 5, start_symbiotic = 6, end_symbiotic = 7, common_envelope = 8 , giant = 9, collision = 10, blue_straggler = 11, no_remain = 12, disrupt = 13};
 #else
 enum class BinaryInterruptState:int {none = 0, form = 1, exchange = 2, collision = 3};
@@ -33,6 +37,8 @@ public:
     PS::F64 time_interrupt;
 #ifdef BSE
     StarParameter star; // SSE/BSE stellar parameters
+#elif MOBSE
+    StarParameter star; // MOBSE stellar parameters
 #endif
 #endif
 
@@ -84,12 +90,21 @@ public:
         time_interrupt = 0.0;
 #ifdef BSE
         star.initial(0.0);
+#elif MOBSE
+        star.initial(0.0);
 #endif
 #endif
     }
 
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE
+    //! constructor 
+    ParticleBase(const PS::F64 _mass, const PS::F64vec & _pos, const PS::F64vec & _vel, const PS::S64 _binary_state,
+                 const PS::F64 _radius, const PS::F64 _dm, 
+                 const PS::F64 _time_record, const PS::F64 _time_interrupt, const StarParameter& _star): 
+        mass(_mass), pos(_pos), vel(_vel), binary_state(_binary_state), radius(_radius), dm(_dm), 
+        time_record(_time_record), time_interrupt(_time_interrupt), star(_star) {}
+#elif MOBSE
     //! constructor 
     ParticleBase(const PS::F64 _mass, const PS::F64vec & _pos, const PS::F64vec & _vel, const PS::S64 _binary_state,
                  const PS::F64 _radius, const PS::F64 _dm, 
@@ -122,6 +137,8 @@ public:
                 this->binary_state, this->radius, this->dm, this->time_record, this->time_interrupt);
 #ifdef BSE
         star.writeAscii(fp);
+#elif MOBSE
+        star.writeAscii(fp);
 #endif
     }
 
@@ -140,6 +157,8 @@ public:
             abort();
         }
 #ifdef BSE
+        star.readAscii(fp);
+#elif MOBSE
         star.readAscii(fp);
 #endif
     }
@@ -203,6 +222,8 @@ public:
             <<" time_interrupt="<<time_interrupt;
 #ifdef BSE
         star.print(fout);
+#elif MOBSE
+        star.print(fout);
 #endif
 #endif
     }
@@ -227,6 +248,8 @@ public:
              <<std::setw(_width)<<"t_record"
              <<std::setw(_width)<<"t_interrupt";
 #ifdef BSE
+        StarParameter::printColumnTitle(_fout, _width);
+#elif MOBSE
         StarParameter::printColumnTitle(_fout, _width);
 #endif
 #endif
@@ -259,6 +282,8 @@ public:
         _fout<<std::setw(_offset)<<" "<<counter<<". t_interrupt: time for next evolution check (0.0)\n";
 #ifdef BSE
         counter = StarParameter::printTitleWithMeaning(_fout, counter, _offset);
+#elif MOBSE
+        counter = StarParameter::printTitleWithMeaning(_fout, counter, _offset);
 #endif
 #endif
         return counter;
@@ -285,6 +310,8 @@ public:
              <<std::setw(_width)<<time_interrupt;
 #ifdef BSE
         star.printColumn(_fout, _width);
+#elif MOBSE
+        star.printColumn(_fout, _width);
 #endif
 #endif
     }
@@ -306,6 +333,8 @@ public:
         time_record  = din.time_record;
         time_interrupt = din.time_interrupt;
 #ifdef BSE
+        star = din.star;
+#elif MOBSE
         star = din.star;
 #endif
 #endif

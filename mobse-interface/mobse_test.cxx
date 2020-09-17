@@ -43,11 +43,13 @@ int main(int argc, char** argv){
     bool read_mass_flag = false;
 
     auto printHelp= [&]() {
-        std::cout<<"The tool to evolve single stars or binaries using MOSSE/MOBSE\n"
-                 <<"Usage: petar.mobse [options] [initial mass of stars, can be multiple values]\n"
+        std::cout<<"\nThe tool used to evolve single stars or binaries is based on:\n";
+	MOBSEManager::printLogo(std::cerr);
+	std::cout<<"Usage: petar.mobse [options] [initial mass of stars, can be multiple values]\n"
                  <<"       If no initial mass or no single/binary table (-s or -b) is provided, N single stars (-n) with equal mass interal in Log scale will be evolved\n"
                  <<"       When single table is provided, times and types can be set individually\n"
                  <<"       The default unit set is: Msun, Myr. If input data have different units [IN], please modify the scaling fators\n"
+                 <<"\n"
                  <<"Options:\n"
                  <<"    -n [I]: number of stars when evolve an IMF ("<<n<<")\n"
                  <<"    -i [D]: start time ("<<time0<<") [IN]\n"
@@ -59,7 +61,9 @@ int main(int argc, char** argv){
                  <<"    -b [S]: a file of binary table: First line: number of binary (unit:IN); After: m1, m2, type1, type2, period, ecc, time per line\n"
                  <<"    -w [I]: print column width ("<<width<<")\n"
                  <<"    -o [S]: a file to output data every step\n"
-                 <<"    -h    : help\n";
+                 <<"    -h    : help\n"
+                 <<"\n";
+
     };
 
     IOParamsMOBSE bse_io;

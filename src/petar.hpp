@@ -197,6 +197,9 @@ public:
 #ifdef BSE
                      stellar_evolution_option(input_par_store, 1, "modify single star: 0: turn off; 1: modify mass and velocity using SSE every Hermite step, log files with names of [data filename prefix].[sse/bse].[MPI rank] are generated if -w >0"),
                      interrupt_detection_option(input_par_store, 1, "modify orbits of binaries: 0: no modifications (also no stellar evolution); 1: modify the binary orbits using BSE (if '--stellar-evolution 1' is set) and merger checker in AR integrator"),
+#elif MOBSE
+                     stellar_evolution_option(input_par_store, 1, "modify single star: 0: turn off; 1: modify mass and velocity using SSE every Hermite step, log files with names of [data filename prefix].[mosse/mobse].[MPI rank] are generated if -w >0"),
+                     interrupt_detection_option(input_par_store, 1, "modify orbits of binaries: 0: no modifications (also no stellar evolution); 1: modify the binary orbits using MOBSE (if '--stellar-evolution 1' is set) and merger checker in AR integrator"),
 #else
                      stellar_evolution_option(input_par_store, 0, "modify mass of particles: 0: turn off; 1: check every Hermite steps"),
                      interrupt_detection_option(input_par_store, 0, "modify orbits of AR groups and check interruption: 0: turn off; 1: modify the binary orbits based on detetion criterion; 2. modify and also interrupt the hard drift"),
@@ -662,6 +665,8 @@ public:
     IOParamsPeTar input_parameters;
 #ifdef BSE
     IOParamsBSE bse_parameters;
+#elif MOBSE
+    IOParamsMOBSE mobse_parameters;
 #endif
 #ifdef GALPY
     IOParamsGalpy galpy_parameters;
@@ -745,6 +750,8 @@ public:
         input_parameters(),
 #ifdef BSE
         bse_parameters(),
+#elif MOBSE
+        mobse_parameters(),
 #endif
 #ifdef GALPY
         galpy_parameters(),
@@ -2286,6 +2293,8 @@ public:
         fout<<"    PeTar: Wang L., Iwasawa M., Nitadori K., Makino J., 2020, MNRAS, 497, 536\n";
 #ifdef BSE
         BSEManager::printReference(fout);
+#elif MOBSE
+        MOBSEManager::printReference(fout);
 #endif
 #ifdef GALPY
         GalpyManager::printReference(fout);
@@ -2321,6 +2330,10 @@ public:
         if (my_rank==0) bse_parameters.print_flag=true;
         else bse_parameters.print_flag=false;
         bse_parameters.read(argc,argv);
+#elif MOBSE
+        if (my_rank==0) mobse_parameters.print_flag=true;
+        else mobse_parameters.print_flag=false;
+        mobse_parameters.read(argc,argv);
 #endif
 #ifdef GALPY
         if (my_rank==0) galpy_parameters.print_flag=true;
@@ -2409,6 +2422,18 @@ public:
             // open SSE/BSE file
             std::string fsse_name = fname_snp + ".sse." + my_rank_str;
             std::string fbse_name = fname_snp + ".bse." + my_rank_str;
+            if(input_parameters.append_switcher.value==1) {
+                hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out|std::ofstream::app);
+                hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out|std::ofstream::app);
+            }
+            else {
+                hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out);
+                hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out);
+            }
+#elif MOBSE
+            // open MOSSE/MOBSE file
+            std::string fsse_name = fname_snp + ".mosse." + my_rank_str;
+            std::string fbse_name = fname_snp + ".mobse." + my_rank_str;
             if(input_parameters.append_switcher.value==1) {
                 hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out|std::ofstream::app);
                 hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out|std::ofstream::app);
@@ -2646,6 +2671,8 @@ public:
             system_soft[i].binary_state = 0;
 #ifdef BSE
             system_soft[i].star.initial(mass[i]*bse_parameters.mscale.value);
+#elif MOBSE
+            system_soft[i].star.initial(mass[i]*mobse_parameters.mscale.value);
 #endif
 #endif
             system_soft[i].group_data.artificial.setParticleTypeToSingle();
@@ -2740,6 +2767,11 @@ public:
             bse_parameters.rscale.value = 44353565.919218; // pc -> rsun
             bse_parameters.mscale.value = 1.0; // Msun
             bse_parameters.vscale.value = 0.977813107686401; // pc/Myr -> km/s
+#elif MOBSE
+            mobse_parameters.tscale.value = 1.0; // Myr
+            mobse_parameters.rscale.value = 44353565.919218; // pc -> rsun
+            mobse_parameters.mscale.value = 1.0; // Msun
+            mobse_parameters.vscale.value = 0.977813107686401; // pc/Myr -> km/s
 #endif
             if(print_flag) {
                 std::cout<<"----- Unit set 1: Msun, pc, Myr -----\n"
@@ -2750,6 +2782,12 @@ public:
                          <<" mscale = "<<bse_parameters.mscale.value<<"  Msun / Msun\n"
                          <<" rscale = "<<bse_parameters.rscale.value<<"  Rsun / pc\n"
                          <<" vscale = "<<bse_parameters.vscale.value<<"  [km/s] / [pc/Myr]\n";
+#elif MOBSE
+                std::cout<<"----- Unit conversion for MOBSE ----- \n"
+                         <<" tscale = "<<mobse_parameters.tscale.value<<"  Myr / Myr\n"
+                         <<" mscale = "<<mobse_parameters.mscale.value<<"  Msun / Msun\n"
+                         <<" rscale = "<<mobse_parameters.rscale.value<<"  Rsun / pc\n"
+                         <<" vscale = "<<mobse_parameters.vscale.value<<"  [km/s] / [pc/Myr]\n";
 #endif
 
             }
@@ -3030,6 +3068,9 @@ public:
 #ifdef BSE
         if (input_parameters.stellar_evolution_option.value==1) 
             hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters, print_flag);
+#elif MOBSE
+        if (input_parameters.stellar_evolution_option.value==1) 
+            hard_manager.ar_manager.interaction.bse_manager.initial(mobse_parameters, print_flag);
 #endif
 #endif
 #ifdef ADJUST_GROUP_PRINT
@@ -3092,6 +3133,16 @@ public:
                 abort();
             }
             bse_parameters.input_par_store.writeAscii(fpar_out);
+            fclose(fpar_out);
+#elif MOBSE
+            // save mobse parameters
+            std::string fbse_par = input_parameters.fname_par.value + ".mobse";
+            if (print_flag) std::cout<<"Save mobse_parameters to file "<<fbse_par<<std::endl;
+            if( (fpar_out = fopen(fbse_par.c_str(),"w")) == NULL) {
+                fprintf(stderr,"Error: Cannot open file %s.\n", fbse_par.c_str());
+                abort();
+            }
+            mobse_parameters.input_par_store.writeAscii(fpar_out);
             fclose(fpar_out);
 #endif
 
@@ -3556,6 +3607,10 @@ public:
 #endif
 
 #ifdef BSE
+        auto& interaction = hard_manager.ar_manager.interaction;
+        if (interaction.fout_sse.is_open()) interaction.fout_sse.close();
+        if (interaction.fout_bse.is_open()) interaction.fout_bse.close();
+#elif MOBSE
         auto& interaction = hard_manager.ar_manager.interaction;
         if (interaction.fout_sse.is_open()) interaction.fout_sse.close();
         if (interaction.fout_bse.is_open()) interaction.fout_bse.close();

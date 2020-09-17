@@ -29,6 +29,9 @@ int main(int argc, char **argv){
 #ifdef BSE
   int idum=0;
   std::string fbsepar = "input.par.bse";
+#elif MOBSE
+  int idum=0;
+  std::string fbsepar = "input.par.bse";
 #endif
 #ifdef SOFT_PERT
   bool soft_pert_flag=true;
@@ -80,6 +83,13 @@ int main(int argc, char **argv){
     case 'b':
         fbsepar = optarg;
         break;
+#elif MOBSE
+    case 'i':
+        idum = atoi(optarg);
+        break;
+    case 'b':
+        fbsepar = optarg;
+        break;
 #endif
     case 'h':
         std::cout<<"petar.hard.debug [options] [hard_manager (defaulted: input.par.hard)] [cluster_data] (defaulted: hard_dump)\n"
@@ -99,6 +109,9 @@ int main(int argc, char **argv){
 #ifdef BSE
                  <<"    -i [int]      random seed to generate kick velocity\n"
                  <<"    -b [string]:  bse parameter file name: "<<fbsepar<<std::endl
+#elif MOBSE
+                 <<"    -i [int]      random seed to generate kick velocity\n"
+                 <<"    -b [string]:  mobse parameter file name: "<<fbsepar<<std::endl
 #endif
 #ifdef SOFT_PERT
                  <<"    -S:           Suppress soft perturbation (tidal tensor)\n"
@@ -136,6 +149,22 @@ int main(int argc, char **argv){
       abort();
   }
   IOParamsBSE bse_io;
+  bse_io.input_par_store.readAscii(fpar_in);
+  fclose(fpar_in);
+  if (idum!=0) bse_io.idum.value = idum;
+  hard_manager.ar_manager.interaction.bse_manager.initial(bse_io);
+
+  if (hard_manager.ar_manager.interaction.stellar_evolution_write_flag) {
+      hard_manager.ar_manager.interaction.fout_sse.open((filename+".sse").c_str(), std::ofstream::out);
+      hard_manager.ar_manager.interaction.fout_bse.open((filename+".bse").c_str(), std::ofstream::out);
+  }
+#elif MOBSE
+  std::cerr<<"MOBSE parameter file:"<<fbsepar<<std::endl;
+  if( (fpar_in = fopen(fbsepar.c_str(),"r")) == NULL) {
+      fprintf(stderr,"Error: Cannot open file %s.\n", fbsepar.c_str());
+      abort();
+  }
+  IOParamsMOBSE bse_io;
   bse_io.input_par_store.readAscii(fpar_in);
   fclose(fpar_in);
   if (idum!=0) bse_io.idum.value = idum;
@@ -269,6 +298,10 @@ int main(int argc, char **argv){
 
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE
+  auto& interaction = hard_manager.ar_manager.interaction;
+  if (interaction.fout_sse.is_open()) interaction.fout_sse.close();
+  if (interaction.fout_bse.is_open()) interaction.fout_bse.close();
+#elif MOBSE
   auto& interaction = hard_manager.ar_manager.interaction;
   if (interaction.fout_sse.is_open()) interaction.fout_sse.close();
   if (interaction.fout_bse.is_open()) interaction.fout_bse.close();
