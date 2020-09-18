@@ -468,7 +468,7 @@ def initFig(model_list, frame_xsize, frame_ysize, ncol, nplots, compare_in_colum
     if (len(model_list)>1) & compare_in_column: axe=[[axe[i][j] for i in range(nrow)] for j in range(ncol)]
     #if (nrow>1) & (ncol>1): axe=axe.flatten()
     if (nrow==1) | (ncol==1): axe=[axe]
-    if (nrow==1) & (ncol==1): axe=[[axe]]
+    if (nrow==1) & (ncol==1): axe=[axe]
     return fig, axe
 
 

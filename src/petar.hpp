@@ -2296,6 +2296,109 @@ public:
             <<std::endl;
     }
 
+    //! print features
+    void printFeatures(std::ostream & fout) const {
+#ifdef USE_QUAD
+        fout<<"Use quadrupole moment in tree force calculation\n";
+#endif        
+
+#ifdef SOFT_PERT
+#ifdef TIDAL_TENSOR_3RD
+        fout<<"Use 3rd order tidal tensor method\n";
+#else
+        fout<<"Use 2nd order tidal tensor method\n";
+#endif
+#endif
+
+#ifdef ORBIT_SAMPLING
+        fout<<"Use orbit-sampling method\n";
+#else
+        fout<<"Use Pseudoparticle multipole method\n";
+#endif
+
+#ifdef STELLAR_EVOLUTION
+        fout<<"Use stellare evolution method: ";
+#ifdef BSE
+        fout<<"BSE\n";
+#else
+        fout<<"Base\n";
+#endif
+#endif
+
+#ifdef GALPY
+        fout<<"Use external potential: Galpy\n";
+#endif 
+
+#ifdef KDKDK_2ND
+        fout<<"Use 2nd-order KDKDK mode for tree step\n";
+#endif
+#ifdef KDKDK_4TH
+        fout<<"Use 4th-order KDKDK mode for tree step\n";
+#endif
+
+#ifdef CLUSTER_VELOCITY
+        fout<<"Use orbit-dependent neighbor criterion\n";
+#endif
+
+#ifdef HARD_CHECK_ENERGY
+        fout<<"Check energy of short-range (hard) integration\n";
+#endif
+
+#ifdef HARD_COUNT_NO_NEIGHBOR
+        fout<<"Count isolated particles in hard clusters\n";
+#endif
+
+#ifdef USE_SIMD
+        fout<<"Use SIMD\n";
+#ifdef P3T_64BIT
+        fout<<"Use 64 bit SIMD n";
+#endif
+#endif
+
+#ifdef USE_GPU
+        fout<<"Use GPU\n";
+#endif
+
+#ifdef GPERF_PROFILE
+        fout<<"Use gperftools\n";
+#endif
+
+#ifdef PROFILE
+        fout<<"Calculate profile\n";
+#endif
+
+#ifdef GPU_PROFILE
+        fout<<"Calculate GPU profile\n";
+#endif
+
+        AR::printFeatures(fout);
+        H4::printFeatures(fout);
+    }
+
+    //! print features
+    void printDebugFeatures(std::ostream & fout) const {
+#ifdef PETAR_DEBUG
+        fout<<"Debug mode: PETAR\n";
+#endif
+#ifdef STABLE_CHECK_DEBUG
+        fout<<"Debug mode: STABLE_CHECK\n";
+#endif
+#ifdef CLUSTER_DEBUG
+        fout<<"Debug mode: CLUSTER\n";
+#endif
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        fout<<"Debug mode: ARTIFICIAL_PARTICLE\n";
+#endif
+#ifdef HARD_DEBUG
+        fout<<"Debug mode: HARD\n";
+#endif
+#ifdef NAN_CHECK_DEBUG
+        fout<<"Debug mode: NAN_CHECK\n";
+#endif
+        AR::printDebugFeatures(fout);
+        H4::printDebugFeatures(fout);
+    }
+
     //! reading input parameters using getopt method
     /*! 
       @param[in] argc: number of options
@@ -2307,6 +2410,9 @@ public:
         if (my_rank==0) {
             printLogo(std::cerr);
             printReference(std::cerr);
+            printFeatures(std::cerr);
+            printDebugFeatures(std::cerr);
+            std::cerr<<"====================================="<<std::endl;
         }
 
         //assert(initial_fdps_flag);
