@@ -142,8 +142,8 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
     time_profile['center_core'] += center_and_r2_time-get_density_time
     time_profile['lagr'] += lagr_time-center_and_r2_time
 
-    if ('bse' in result.keys()):
-        bse = result['bse']
+    if ('bse_status' in result.keys()):
+        bse = result['bse_status']
         bse.findEvents(header.time,single,binary)
         bse_time = time.time()
         time_profile['bse'] += bse_time - lagr_time
@@ -191,7 +191,7 @@ def dataProcessList(file_list, read_flag, **kwargs):
     if ('interrupt_mode' in kwargs.keys()): 
         interrupt_mode=kwargs['interrupt_mode']
         if (interrupt_mode=='bse'):
-            result['bse'] = BSEStatus()
+            result['bse_status'] = BSEStatus()
             time_profile['bse'] = 0.0
 
     for path in file_list:
@@ -251,7 +251,7 @@ def parallelDataProcessList(file_list, n_cpu=int(0), read_flag=False, **kwargs):
     result_all=dict()
     for i in range(n_cpu):
         resi = result[i].get()[0]
-        for key in ['lagr','core','esc_single','esc_binary','bse']:
+        for key in ['lagr','core','esc_single','esc_binary','bse_status']:
             if (key in resi.keys()):
                 if (not key in result_all.keys()):
                     result_all[key]=[]

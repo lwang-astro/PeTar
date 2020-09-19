@@ -84,7 +84,7 @@ if __name__ == '__main__':
      
     result,time_profile = petar.parallelDataProcessList(path_list, n_cpu, read_flag, **kwargs)
 
-    for key in ['lagr','core','bse', 'esc_single', 'esc_binary']:
+    for key in ['lagr','core','bse_status', 'esc_single', 'esc_binary']:
         if key in result.keys():
             key_filename  = filename_prefix + '.' + key
             result[key].savetxt(key_filename)
