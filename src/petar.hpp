@@ -3330,7 +3330,7 @@ public:
         PS::F64 time_break = _time_break==0.0? input_parameters.time_end.value: std::min(_time_break,input_parameters.time_end.value);
         if (stat.time>=time_break) return 0;
 
-        PS::F64 dt = input_parameters.dt_soft.value;
+        PS::F64 dt = std::min(input_parameters.dt_soft.value, time_break-stat.time);
         PS::F64 dt_output = input_parameters.dt_snap.value;
         bool start_flag=true;
         while (stat.time <= time_break) {
@@ -3341,7 +3341,7 @@ public:
             if (stat.n_real_loc==1) { 
                 assert(system_soft.getNumberOfParticleLocal()==1);
                 auto& p = system_soft[0];
-                p.pos + p.vel * dt;
+                p.pos += p.vel * dt;
 
 #ifdef STELLAR_EVOLUTION
                 PS::F64 mbk = p.mass;
