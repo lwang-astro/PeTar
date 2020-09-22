@@ -59,6 +59,30 @@ int get_eps2(double * epsilon_squared);
 
 int set_eps2(double epsilon_squared);
 
+int get_theta(double * theta);
+
+int set_theta(double theta);
+
+int get_changeover_rout(double * r_out);
+
+int set_changeover_rout(double r_out);
+
+int get_changeover_ratio(double * ratio_r_cut);
+
+int set_changeover_ratio(double ratio_r_cut);
+
+int get_group_radius(double * r_bin);
+
+int set_group_radius(double r_bin);
+
+int get_rsearch_min(double * r_search_min);
+
+int set_rsearch_min(double r_search_min);
+
+int get_tree_step(double * dt_soft);
+
+int set_tree_step(double dt_soft);
+
 int get_kinetic_energy(double * kinetic_energy);
 
 int get_potential_energy(double * potential_energy);
