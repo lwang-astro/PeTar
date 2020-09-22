@@ -67,6 +67,54 @@ class petar(GravitationalDynamics, GravityFieldCode):
             default_value = 0.0 | nbody_system.length * nbody_system.length
         )
 
+#        handler.add_method_parameter(
+#            "get_changeover_rout",
+#            "set_changeover_rout",
+#            "r_out", 
+#            "changeover radius outer boundary reference for switching long/short-range interactions (if zero, auto-determine)", 
+#            default_value = 0.0 | nbody_system.length
+#        )
+# 
+#        handler.add_method_parameter(
+#            "get_changeover_ratio",
+#            "set_changeover_ratio",
+#            "ratio_r_cut", 
+#            "Changeover radius ratio between the inner and outer boundaries", 
+#            default_value = 0.1
+#        )
+# 
+#        handler.add_method_parameter(
+#            "get_group_radius",
+#            "set_group_radius",
+#            "r_bin", 
+#            "Group detection maximum radius to switch on AR (if zero, auto-determine)", 
+#            default_value = 0.0 | nbody_system.length
+#        )
+# 
+#        handler.add_method_parameter(
+#            "get_rsearch_min",
+#            "set_rsearch_min",
+#            "r_search_min", 
+#            "Minimum neighbor searching radius (if zero, auto-determine)", 
+#            default_value = 0.0 | nbody_system.length
+#        )
+# 
+#        handler.add_method_parameter(
+#            "get_theta",
+#            "set_theta",
+#            "theta", 
+#            "Tree opening angle", 
+#            default_value = 0.3
+#        )
+# 
+#        handler.add_method_parameter(
+#            "get_tree_step",
+#            "set_tree_step",
+#            "dt_soft", 
+#            "Tree time step (if zero, auto-determine)", 
+#            default_value = 0.0 | nbody_system.time
+#        )
+
     def define_methods(self, handler):
         GravitationalDynamics.define_methods(self, handler)
         self.stopping_conditions.define_methods(handler)
@@ -74,10 +122,10 @@ class petar(GravitationalDynamics, GravityFieldCode):
         handler.add_method(
             "set_eps2",
             (
-                nbody_system.length * nbody_system.length
+                nbody_system.length * nbody_system.length,
             ),
             (
-                handler.ERROR_CODE
+                handler.ERROR_CODE,
             )
         )
 
@@ -86,9 +134,124 @@ class petar(GravitationalDynamics, GravityFieldCode):
             (),
             (
                 nbody_system.length * nbody_system.length,
-                handler.ERROR_CODE
+                handler.ERROR_CODE,
             )
         )
+
+#        handler.add_method(
+#            "set_changeover_rout",
+#            (
+#                nbody_system.length,
+#            ),
+#            (
+#                handler.ERROR_CODE,
+#            )
+#        )
+# 
+#        handler.add_method(
+#            "get_changeover_rout",
+#            (),
+#            (
+#                nbody_system.length,
+#                handler.ERROR_CODE,
+#            )
+#        )
+# 
+#        handler.add_method(
+#            "set_changeover_ratio",
+#            (
+#                handler.NO_UNIT,
+#            ),
+#            (
+#                handler.ERROR_CODE,
+#            )
+#        )
+# 
+#        handler.add_method(
+#            "get_changeover_ratio",
+#            (),
+#            (
+#                handler.NO_UNIT,
+#                handler.ERROR_CODE,
+#            )
+#        )
+# 
+#        handler.add_method(
+#            "set_group_radius",
+#            (
+#                nbody_system.length,
+#            ),
+#            (
+#                handler.ERROR_CODE,
+#            )
+#        )
+# 
+#        handler.add_method(
+#            "get_group_radius",
+#            (),
+#            (
+#                nbody_system.length,
+#                handler.ERROR_CODE,
+#            )
+#        )
+# 
+#        handler.add_method(
+#            "set_rsearch_min",
+#            (
+#                nbody_system.length,
+#            ),
+#            (
+#                handler.ERROR_CODE,
+#            )
+#        )
+# 
+#        handler.add_method(
+#            "get_rsearch_min",
+#            (),
+#            (
+#                nbody_system.length,
+#                handler.ERROR_CODE,
+#            )
+#        )
+# 
+#        handler.add_method(
+#            "set_theta",
+#            (
+#                handler.NO_UNIT,
+#            ),
+#            (
+#                handler.ERROR_CODE,
+#            )
+#        )
+# 
+#        handler.add_method(
+#            "get_theta",
+#            (),
+#            (
+#                handler.NO_UNIT,
+#                handler.ERROR_CODE,
+#            )
+#        )
+# 
+#        handler.add_method(
+#            "set_tree_step",
+#            (
+#                nbody_system.time,
+#            ),
+#            (
+#                handler.ERROR_CODE,
+#            )
+#        )
+# 
+#        handler.add_method(
+#            "get_tree_step",
+#            (),
+#            (
+#                nbody_system.time,
+#                handler.ERROR_CODE,
+#            )
+#        )
+
 
     def define_particle_sets(self, handler):
         GravitationalDynamics.define_particle_sets(self, handler)

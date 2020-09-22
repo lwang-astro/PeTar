@@ -83,7 +83,6 @@ extern "C" {
     }
 
     int recommit_parameters() {
-        // not allown
         ptr->initialParameters();
 
         // set stopping condtions support
@@ -729,6 +728,73 @@ extern "C" {
         ptr->input_parameters.eps.value = epsilon_squared;
         return 0;
     }
+
+    // set changeover radius outer boundary (if zero, auto-determine)
+    int set_changeover_rout(double r_out) {
+        ptr->input_parameters.r_out.value = r_out;
+        return 0;
+    }
+
+    int get_changeover_rout(double* r_out) {
+        *r_out = ptr->input_parameters.r_out.value;
+        return 0;
+    }
+
+    // set changeover ratio of inner / outer boundary (if zero, auto-determine)
+    int set_changeover_ratio(double ratio_r_cut) {
+        ptr->input_parameters.ratio_r_cut.value = ratio_r_cut;
+        return 0;
+    }
+
+    int get_changeover_ratio(double* ratio_r_cut) {
+        *ratio_r_cut = ptr->input_parameters.ratio_r_cut.value;
+        return 0;
+    }
+
+    // set group detection maximum radius to switch on AR (if zero, auto-determine)
+    int set_group_radius(double r_bin) {
+        ptr->input_parameters.r_bin.value = r_bin;
+        return 0;
+    }
+
+    int get_group_radius(double* r_bin) {
+        *r_bin = ptr->input_parameters.r_bin.value;
+        return 0;
+    }
+
+    // set neighbor search radius minimum (if zero, auto-determine)
+    int set_rsearch_min(double r_search_min) {
+        ptr->input_parameters.r_search_min.value = r_search_min;
+        return 0;
+    }
+
+    int get_rsearch_min(double* r_search_min) {
+        *r_search_min = ptr->input_parameters.r_search_min.value;
+        return 0;
+    }
+
+    // set tree opening angle
+    int set_theta(double theta) {
+        ptr->input_parameters.theta.value = theta;
+        return 0;
+    }
+
+    int get_theta(double* theta) {
+        *theta = ptr->input_parameters.theta.value;
+        return 0;
+    }
+
+    // set tree time step
+    int set_tree_step(double dt_soft) {
+        ptr->input_parameters.dt_soft.value = dt_soft;
+        return 0;
+    }
+
+    int get_tree_step(double* dt_soft) {
+        *dt_soft = ptr->input_parameters.dt_soft.value;
+        return 0;
+    }
+
 
     int get_kinetic_energy(double * kinetic_energy) {
         // update particle array first if necessary

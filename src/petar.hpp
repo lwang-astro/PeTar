@@ -2884,12 +2884,14 @@ public:
 
         // local c.m velocity
         PS::F64vec vel_cm_loc = 0.0;
+        // local c.m. pos
+        PS::F64vec pos_cm_loc = 0.0;
         // local c.m. mass
         PS::F64 mass_cm_loc = 0.0;
         // local maximum mass
         //PS::F64 mass_max_loc = 0.0;
         // box size
-        PS::F64 rmin=PS::LARGE_FLOAT, rmax=0.0;
+        PS::F64 rmax=0.0;
 
         for(PS::S64 i=0; i<n_loc; i++){
             PS::F64 mi = system_soft[i].mass;
@@ -2901,21 +2903,23 @@ public:
 #endif
             mass_cm_loc += mi;
             vel_cm_loc += mi * vi;
+            pos_cm_loc += mi * ri;
             PS::F64 r2 = ri*ri;
-            rmin = std::min(r2,rmin);
             rmax = std::max(r2,rmax);
             //mass_max_loc = std::max(mi, mass_max_loc);
         }
-        rmin = std::sqrt(rmin);
         rmax = std::sqrt(rmax);
-        PS::F64 rmin_glb = PS::Comm::getMinValue(rmin);
         PS::F64 rmax_glb = PS::Comm::getMaxValue(rmax);
 
         // global c.m. parameters
         PS::F64    mass_cm_glb = PS::Comm::getSum(mass_cm_loc);
         //mass_max = PS::Comm::getMaxValue(mass_max_loc);
+        PS::F64vec pos_cm_glb  = PS::Comm::getSum(pos_cm_loc);
         PS::F64vec vel_cm_glb  = PS::Comm::getSum(vel_cm_loc);
+        pos_cm_glb /= mass_cm_glb;
         vel_cm_glb /= mass_cm_glb;
+
+        PS::F64 rmin_glb = std::sqrt(pos_cm_glb*pos_cm_glb);
 
         // local velocity square
         PS::F64 vel_sq_loc = 0.0;
@@ -3333,7 +3337,7 @@ public:
         PS::F64 dt = std::min(input_parameters.dt_soft.value, time_break-stat.time);
         PS::F64 dt_output = input_parameters.dt_snap.value;
         bool start_flag=true;
-        while (stat.time <= time_break) {
+        while (stat.time < time_break) {
 #ifdef PROFILE
             profile.total.start();
             profile.hard_single.start();
