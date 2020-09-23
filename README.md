@@ -434,7 +434,8 @@ Here is the list of classes.
 
 There are also several useful functions.
 - _join_: join two same type instances of modules. For example, _join_(particle1, particle2) will generate a new _Particle_ instance that contain both two data. Each member is numpy.append(particle1.member, particle2.member).
-- _findPair_: detect binaries of one particle list by using _scipy.cKDTree_
+- _findPair_: detect binaries of one particle list by using _scipy.cKDTree_.
+- _findMultiple_: detect triples and quadruples (binary-binary) from single and binary data (generated from _findPair_).
 - _parallelDataProcessList_: use mutliple CPU cores to process a list of snapshot files and generate single and binary snapshots, Lagrangian data, core data and escaper data. For large _N_, the data process is quite slow, thus using multiple CPU processors can speed up the process. 
 
 More useful tools will be implemented in the future. The tools/analysis/parallel_data_process.py is a good example to learn how to use this analysis module.

@@ -186,7 +186,7 @@ def calculateParticleCMDict(pcm, _p1, _p2):
     else:
         raise ValueError('Initial fail, date type should be Particle or collections.OrderDict, given',type(_p1))
 
-class Binary(DictNpArrayMix):
+class Binary(SimpleParticle):
     """ Binary class
     Keys:
         The final keys depends on kwargs of initial function
@@ -270,11 +270,13 @@ class Binary(DictNpArrayMix):
             self.ncols += self.p1.ncols + self.p2.ncols
         elif (_p2==None):
             if (simple_mode):
-                keys = [['mass',1],['pos',3],['vel',3],['rrel',1],['semi',1],['ecc',1],['p1',member_particle_type], ['p2', member_particle_type]]
-                DictNpArrayMix.__init__(self, keys, _p1, _offset, _append, **kwargs)
+                keys = [['rrel',1],['semi',1],['ecc',1],['p1',member_particle_type], ['p2', member_particle_type]]
+                SimpleParticle.__init__(self, _p1, _offset, _append, **kwargs)
+                DictNpArrayMix.__init__(self, keys, _p1, _offset+self.ncols, True, **kwargs)
             else:
-                keys=[['mass',1],['pos',3],['vel',3],['m1',1],['m2',1],['rrel',1],['semi',1],['am',3],['L',3],['eccvec',3],['incline',1],['rot_horizon',1],['ecc',1],['rot_self',1],['ecca',1],['period',1],['t_peri',1],['p1', member_particle_type],['p2', member_particle_type]]
-                DictNpArrayMix.__init__(self, keys, _p1, _offset, _append, **kwargs)
+                keys=[['m1',1],['m2',1],['rrel',1],['semi',1],['am',3],['L',3],['eccvec',3],['incline',1],['rot_horizon',1],['ecc',1],['rot_self',1],['ecca',1],['period',1],['t_peri',1],['p1', member_particle_type],['p2', member_particle_type]]
+                SimpleParticle.__init__(self, _p1, _offset, _append, **kwargs)
+                DictNpArrayMix.__init__(self, keys, _p1, _offset+self.ncols, True, **kwargs)
         else:
             raise ValueError('Initial fail, date type should be Particle (2), Binary (1) or no argument (0)')
         self.initargs = kwargs.copy()
@@ -534,3 +536,124 @@ def findPair(_dat, _G, _rmax, use_kdtree=False, simple_binary=True):
 
         return single, binary
 
+def findMultiple(_single, _binary, _G, _rmax, simple_binary=True):
+    """  Find triples and quadruples from single and binary data
+    The scipy.spatial.cKDTree is used to find pairs
+
+    Parameters
+    ----------
+    _single: inhermited SimpleParticle
+        Single particle data set
+    _binary: Binary
+        Binary data set
+    _G: float
+        Gravitational constant
+    _rmax: float
+        Maximum binary separation
+    simple_binary: bool (True)
+        If True, only calculate semi and ecc (fast); otherwise calculating all binary parameters (slow)
+
+    Return
+    ----------
+    kdt: KDtree structure if use_kdtree=True
+    single: type of _dat
+        single particle data set
+    binary: Binary(simple_mode=simple_binary, member_particle_type=type(single), G=_G)
+        binary data set
+    triple: Binary(p1: type(single), p2: type(binary), G=_G)
+        triple data set
+    quadruple: Binary(p1: type(binary), p2: type(binary), G=_G)
+        quadruple (binary-binary) data set
+    """
+    if (not issubclass(type(_single), SimpleParticle)):
+        raise ValueError("Data type wrong",type(_single)," should be subclass of ", SimpleParticle)
+
+    single_sin = SimpleParticle(_single)
+    binary_sin = SimpleParticle(_binary)
+    all_sin = join(single_sin, binary_sin)
+
+    # create KDTree
+    kdt=sp.cKDTree(all_sin.pos)
+     
+    # find pair index and distance
+    r,index=kdt.query(all_sin.pos,k=2)
+    pair_index=np.transpose(np.unique(np.sort(index,axis=1),axis=0))
+
+    # two members
+    p1 = all_sin[pair_index[0]]
+    p2 = all_sin[pair_index[1]]
+     
+    # check orbits
+    binary_out = Binary(p1, p2, G=_G, simple_mode=simple_binary)
+    apo =binary_out.semi*(binary_out.ecc+1.0)
+     
+    bsel= ((binary_out.semi>0) & (apo<_rmax))
+    bout_i1=pair_index[0][bsel]
+    bout_i2=pair_index[1][bsel]
+    # check single or cm
+    Ns = _single.size
+    Nb = _binary.size
+    quad_sel= (bout_i1>=Ns) & (bout_i2>=Ns)
+    tri_sel = (bout_i1<Ns) & (bout_i2>=Ns)
+    bin_sel = (bout_i1<Ns) & (bout_i2<Ns)
+
+    if (bout_i1.size != quad_sel.sum()+tri_sel.sum()+bin_sel.sum()):
+        raise ValueError('Error: select size miss match: dat:',bout_i1.size,'quad:',quad_sel.sum(),'tri:',tri_sel.sum(),'bin:',bin_sel.sum())
+
+    multiple = binary_out[bsel]
+
+    quadruple = multiple[quad_sel]
+    ncol_diff_bin = _binary.ncols - binary_sin.ncols
+    ncol_diff_sin = _single.ncols - single_sin.ncols
+    if (quad_sel.sum()):
+        q1_index = bout_i1[quad_sel]-Ns
+        quadruple.p1 = _binary[q1_index]
+        q2_index = bout_i2[quad_sel]-Ns
+        quadruple.p2 = _binary[q2_index]
+        quadruple.initargs['member_particle_type'] = Binary
+        quadruple.ncols += 2*ncol_diff_bin
+        if (quadruple.size != quadruple.p1.size):
+            raise ValueError('Error: quadruple size', quadruple.size,' mismatch member size ',quadruple.p1.size)
+
+    triple = multiple[tri_sel]
+    if (tri_sel.sum()):
+        s_index = bout_i1[tri_sel]
+        triple.p1 = _single[s_index]
+        b_index = bout_i2[tri_sel]-Ns
+        triple.p2 = _binary[b_index]
+        triple.ncols += ncol_diff_bin + ncol_diff_sin
+        if (triple.size != triple.p1.size):
+            raise ValueError('Error: triple size', triple.size,' mismatch member size ',triple.p1.size)
+
+    binary_new = multiple[bin_sel]
+    if (bin_sel.sum()):
+        s1_index = bout_i1[bin_sel]
+        binary_new.p1 = _single[s1_index]
+        s2_index = bout_i2[bin_sel]
+        binary_new.p2 = _single[s2_index]
+        binary_new.ncols += 2*ncol_diff_sin
+        binary_new.initargs['member_particle_type'] = type(_single)
+        if (binary_new.size != binary_new.p1.size):
+            raise ValueError('Error: binary_new size', binary_new.size,' mismatch member size ',binary_new.p1.size)
+
+        if (binary_new.ncols != _binary.ncols): 
+            raise ValueError('Error: old binary ncols', _binary.ncols,' mismatch new binary ncols', binary_new.ncols)
+
+    # delete used singles
+    s_del_index = np.append(bout_i1[bout_i1<Ns],bout_i2[bout_i2<Ns])
+    smask=np.ones(Ns).astype(bool)
+    smask[s_del_index]=False
+    single = _single[smask]
+
+    # delete used binaries
+    b_del_index = np.append(bout_i1[bout_i1>=Ns],bout_i2[bout_i2>=Ns])-Ns
+    bmask=np.ones(Nb).astype(bool)
+    bmask[b_del_index]=False
+    binary = _binary[bmask]
+    if (bmask.sum()+b_del_index.size != Nb):
+        raise ValueError('Error: binary size not match: origin:',Nb,'remain:',bmask.sum(),'del:',b_del_index.size,'del(unique):',np.unique(b_del_index).size)
+
+    if (binary_new.size>0):
+        binary = join(binary,binary_new)
+
+    return single, binary, triple, quadruple
