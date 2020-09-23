@@ -279,12 +279,12 @@ class Data:
                         data['temp_cm']= np.append(temp_single,temp_binary)
                         data['type_cm']= np.append(single.star.type,np.max([binary.p1.star.type,binary.p2.star.type],axis=0))
             else:
-                particles=petar.Particle(interrupt_mode=interrupt_mode)
+                particles=petar.Particle(interrupt_mode=self.interrupt_mode)
                 particles.loadtxt(file_path,skiprows=1)
                 data['x'] = particles.pos[:,0]
                 data['y'] = particles.pos[:,1]
                 data['mass'] =particles.mass
-                if (interrupt_mode=='bse'):
+                if (self.interrupt_mode=='bse'):
                     data['lum'] = particles.star.lum
                     data['rad'] = particles.star.rad
                     data['type']= particles.star.type
