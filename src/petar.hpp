@@ -1678,13 +1678,16 @@ public:
     }
 
     //! domain decomposition
-    void domainDecompose() {
+    /*!
+      @param[in] _enforce: do domain decompose without check n_loop (false)
+     */
+    void domainDecompose(const bool _enforce=false) {
 #ifdef PROFILE
         // > 6. Domain decomposition
         profile.domain.start();
 #endif
         // Domain decomposition, parrticle exchange and force calculation
-        if(n_loop % 16 == 0) {
+        if(n_loop % 16 == 0 || _enforce) {
             dinfo.decomposeDomainAll(system_soft,domain_decompose_weight);
             //std::cout<<"rank: "<<my_rank<<" weight: "<<domain_decompose_weight<<std::endl;
         }

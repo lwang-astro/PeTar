@@ -36,6 +36,10 @@ extern "C" {
         ptr->my_rank= PS::Comm::getRank();
         ptr->n_proc = PS::Comm::getNumberOfProc();
 
+#ifdef INTERFACE_DEBUG_PRINT
+        if(ptr->my_rank==0) std::cout<<"PETAR: Initialize_code start\n";
+#endif
+
         // set print flag to rank 0
         ptr->input_parameters.print_flag = (ptr->my_rank==0) ? true: false;
         // set writing flag to false
@@ -51,21 +55,27 @@ extern "C" {
         ptr->file_header.nfile = 0; 
 
 #ifdef INTERFACE_DEBUG_PRINT
-        if(ptr->my_rank==0) std::cout<<"Initialize_code\n";
+        if(ptr->my_rank==0) std::cout<<"PETAR: Initialize_code end\n";
 #endif
         return flag;
     }
 
     int cleanup_code() {
 #ifdef INTERFACE_DEBUG_PRINT
-        if(ptr->my_rank==0) std::cout<<"cleanup_code\n";
+        if(ptr->my_rank==0) std::cout<<"PETAR: cleanup_code start\n";
 #endif
         delete ptr;
         ptr=NULL;
+#ifdef INTERFACE_DEBUG_PRINT
+        if(ptr->my_rank==0) std::cout<<"PETAR: cleanup_code end\n";
+#endif
         return 0;
     }
 
     int commit_parameters() {
+#ifdef INTERFACE_DEBUG_PRINT
+        if(ptr->my_rank==0) std::cout<<"PETAR: commit_parameters start\n";
+#endif
         if (!ptr->read_parameters_flag) return -1;
 
         // set stopping condtions support
@@ -77,12 +87,15 @@ extern "C" {
 #endif
         
 #ifdef INTERFACE_DEBUG_PRINT
-        if(ptr->my_rank==0) std::cout<<"commit_parameters\n";
+        if(ptr->my_rank==0) std::cout<<"PETAR: commit_parameters end\n";
 #endif
         return 0;
     }
 
     int recommit_parameters() {
+#ifdef INTERFACE_DEBUG_PRINT
+        if(ptr->my_rank==0) std::cout<<"PETAR: recommit_parameters start\n";
+#endif
         ptr->initialParameters();
 
         // set stopping condtions support
@@ -94,7 +107,7 @@ extern "C" {
 #endif
 
 #ifdef INTERFACE_DEBUG_PRINT
-        if(ptr->my_rank==0) std::cout<<"recommit_parameters(forbidden!)\n";
+        if(ptr->my_rank==0) std::cout<<"PETAR: recommit_parameters end\n";
 #endif
         return 0;
     }
@@ -515,7 +528,7 @@ extern "C" {
 
     int evolve_model(double time_next) {
 #ifdef INTERFACE_DEBUG_PRINT
-        if(ptr->my_rank==0) std::cout<<"evolve models\n";
+        if(ptr->my_rank==0) std::cout<<"PETAR: evolve models start\n";
 #endif
         // check whether interrupted cases, exist, if so, copy back data to local particles
         int n_interrupt_isolated = ptr->system_hard_isolated.getNumberOfInterruptClusters();
@@ -669,10 +682,17 @@ extern "C" {
         }
 
         ptr->reconstructIdAdrMap();
+#ifdef INTERFACE_DEBUG_PRINT
+        if(ptr->my_rank==0) std::cout<<"PETAR: evolve models end\n";
+#endif
         return 0;
     }
 
     int commit_particles() {
+#ifdef INTERFACE_DEBUG_PRINT
+        if(ptr->my_rank==0) std::cout<<"PETAR: commit_particles start\n";
+#endif
+        
         if (!ptr->read_parameters_flag) return -1;
         if (!ptr->read_data_flag) return -1;
         ptr->input_parameters.n_glb.value = ptr->stat.n_real_glb;
@@ -681,14 +701,14 @@ extern "C" {
         ptr->reconstructIdAdrMap();
         particle_list_change_flag = false;
 #ifdef INTERFACE_DEBUG_PRINT
-        if(ptr->my_rank==0) std::cout<<"commit_particles\n";
+        if(ptr->my_rank==0) std::cout<<"PETAR: commit_particles end\n";
 #endif
         return 0;
     }
 
     int synchronize_model() {
 #ifdef INTERFACE_DEBUG_PRINT
-        if(ptr->my_rank==0) std::cout<<"synchronize_model\n";
+        if(ptr->my_rank==0) std::cout<<"PETAR: synchronize_model\n";
 #endif
         return 0;
     }
@@ -696,13 +716,23 @@ extern "C" {
     int reconstruct_particle_list() {
         if (particle_list_change_flag) {
 #ifdef INTERFACE_DEBUG_PRINT
-            if(ptr->my_rank==0) std::cout<<"reconstruct particle list\n";
+            if(ptr->my_rank==0) std::cout<<"PETAR: reconstruct particle list start\n";
 #endif
             ptr->removeParticles();
+#ifdef INTERFACE_DEBUG_PRINT
+            if(ptr->my_rank==0) std::cout<<"PETAR: remove particles end\n";
+#endif
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+            ptr->domainDecompose(true);
             ptr->exchangeParticle();
+#ifdef INTERFACE_DEBUG_PRINT
+            if(ptr->my_rank==0) std::cout<<"PETAR: exchange particles end\n";
+#endif
 #endif
             ptr->reconstructIdAdrMap();
+#ifdef INTERFACE_DEBUG_PRINT
+            if(ptr->my_rank==0) std::cout<<"PETAR: reconstruct particle list end\n";
+#endif
             particle_list_change_flag = false;
         }
         return 0;
@@ -711,10 +741,13 @@ extern "C" {
     int recommit_particles() {
         // this function is called too frequent (every time when set_xx is used).
         // thus only register the flag and do update at once in the begining of evolve_model
+#ifdef INTERFACE_DEBUG_PRINT
+        if(ptr->my_rank==0) std::cout<<"PETAR: recommit_particles start\n";
+#endif
         if (ptr->n_interrupt_glb==0) ptr->initial_step_flag = false;
         reconstruct_particle_list();
 #ifdef INTERFACE_DEBUG_PRINT
-        if(ptr->my_rank==0) std::cout<<"recommit_particles\n";
+        if(ptr->my_rank==0) std::cout<<"PETAR: recommit_particles end\n";
 #endif
         return 0;
     }
