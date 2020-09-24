@@ -459,6 +459,7 @@ extern "C" {
     }
 
     int get_acceleration(int index_of_the_particle, double * ax, double * ay, double * az) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         int rank_mask = index==-1 ? 0 : ptr->my_rank;
@@ -517,6 +518,7 @@ extern "C" {
     }
 
     int get_potential(int index_of_the_particle, double * potential) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         double pot_local = 0.0;
