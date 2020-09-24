@@ -181,6 +181,7 @@ extern "C" {
                   double * mass, 
                   double * x, double * y, double * z,
                   double * vx, double * vy, double * vz, double * radius){
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         int rank_mask = index==-1 ? 0 : ptr->my_rank;
@@ -237,6 +238,7 @@ extern "C" {
                   double mass, 
                   double x, double y, double z,
                   double vx, double vy, double vz, double radius) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
         if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
@@ -259,6 +261,7 @@ extern "C" {
     }
 
     int get_mass(int index_of_the_particle, double * mass) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         double mass_local = 0.0;
@@ -280,6 +283,7 @@ extern "C" {
     }
 
     int set_mass(int index_of_the_particle, double mass) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
         if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
@@ -295,6 +299,7 @@ extern "C" {
     }
 
     int get_radius(int index_of_the_particle, double * radius) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         double radius_local = 0.0;
@@ -316,6 +321,7 @@ extern "C" {
     }
 
     int set_radius(int index_of_the_particle, double radius) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
         if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
@@ -332,6 +338,7 @@ extern "C" {
 
     int set_position(int index_of_the_particle,
                      double x, double y, double z) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
         if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
@@ -350,6 +357,7 @@ extern "C" {
 
     int get_position(int index_of_the_particle,
                      double * x, double * y, double * z) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         int rank_mask = index==-1 ? 0 : ptr->my_rank;
@@ -391,6 +399,7 @@ extern "C" {
 
     int set_velocity(int index_of_the_particle,
                      double vx, double vy, double vz) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
         if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
@@ -409,6 +418,7 @@ extern "C" {
 
     int get_velocity(int index_of_the_particle,
                      double * vx, double * vy, double * vz) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         int rank_mask = index==-1 ? 0 : ptr->my_rank;
@@ -489,6 +499,7 @@ extern "C" {
     }
 
     int set_acceleration(int index_of_the_particle, double ax, double ay, double az) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
         if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
