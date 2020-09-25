@@ -3279,7 +3279,7 @@ public:
 
         // >4 tree soft force
         /// calculate tree force with linear cutoff, save to system_soft.acc
-        treeSoftForce() ;
+        treeSoftForce();
 
         // >5 correct change over
         /// correct system_soft.acc with changeover, using system_hard and system_soft particles
