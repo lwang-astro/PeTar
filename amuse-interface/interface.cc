@@ -66,9 +66,9 @@ extern "C" {
 #endif
         delete ptr;
         ptr=NULL;
-#ifdef INTERFACE_DEBUG_PRINT
-        if(ptr->my_rank==0) std::cout<<"PETAR: cleanup_code end\n";
-#endif
+//#ifdef INTERFACE_DEBUG_PRINT
+//        if(ptr->my_rank==0) std::cout<<"PETAR: cleanup_code end\n";
+//#endif
         return 0;
     }
 
