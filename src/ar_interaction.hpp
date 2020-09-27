@@ -344,8 +344,11 @@ public:
 
 #ifdef SOFT_PERT
                 if(_perturber.soft_pert!=NULL) {
-                    _perturber.soft_pert->eval(acc_pert, pi.pos);
-                    pot_pert += _perturber.soft_pert->evalPot(pi.pos);
+                    // avoid too large perturbation force if system is disruptted
+                    if (pi.pos*pi.pos<pi.changeover.getRout()*pi.changeover.getRout()) {
+                        _perturber.soft_pert->eval(acc_pert, pi.pos);
+                        pot_pert += _perturber.soft_pert->evalPot(pi.pos);
+                    }
                 }
 #endif
 
@@ -385,8 +388,11 @@ public:
                     Float& pot_pert = _force[i].pot_pert;
                     const auto& pi = _particles[i];
                     acc_pert[0] = acc_pert[1] = acc_pert[2] = Float(0.0);
-                    _perturber.soft_pert->eval(acc_pert, pi.pos);
-                    pot_pert += _perturber.soft_pert->evalPot(pi.pos);
+                    // avoid too large perturbation force if system is disruptted
+                    if (pi.pos*pi.pos<pi.changeover.getRout()*pi.changeover.getRout()) {
+                        _perturber.soft_pert->eval(acc_pert, pi.pos);
+                        pot_pert += _perturber.soft_pert->evalPot(pi.pos);
+                    }
                 }
             }
 #endif
