@@ -6,6 +6,7 @@ from .bse import *
 
 G_MSUN_PC_MYR=0.00449830997959438 # Msun, pc, myr
 G_HENON=1 # Henon unit
+HEADER_OFFSET=24 # header offset in bytes for snapshots with the BINARY format
 
 class PeTarDataHeader():
     """ Petar snapshot data header
