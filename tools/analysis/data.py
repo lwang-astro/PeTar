@@ -58,7 +58,7 @@ class SimpleParticle(DictNpArrayMix):
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        keys = [['mass',1], ['pos',3], ['vel',3]]
+        keys = [['mass', np.float64], ['pos', (np.float64, 3)], ['vel', (np.float64, 3)]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
     def calcR2(self):
@@ -134,11 +134,11 @@ class Particle(SimpleParticle):
             interrupt_mode: PeTar interrupt mode: base, bse, none (none)
         """
 
-        keys_add = [['binary_state',1]]
-        keys_se  = [['radius',1],['dm',1],['time_record',1],['time_interrupt',1]]
-        keys_ptcl_add = [['r_search',1], ['id',1], ['mass_bk',1], ['status',1], ['r_in',1], ['r_out',1]]
-        keys_hermite_add = [['dt',1],['time',1],['acc',3],['jerk',3],['pot',1]]
-        keys_soft_add = [['acc_soft',3], ['pot',1], ['pot_soft',1], ['n_nb',1]]
+        keys_add = [['binary_state',np.int64]]
+        keys_se  = [['radius',np.float64],['dm',np.float64],['time_record',np.float64],['time_interrupt',np.float64]]
+        keys_ptcl_add = [['r_search',np.float64], ['id',np.int64], ['mass_bk',np.int64], ['status',np.int64], ['r_in',np.float64], ['r_out',np.float64]]
+        keys_hermite_add = [['dt',np.float64],['time',np.float64],['acc',(np.float64,3)],['jerk',(np.float64,3)],['pot',np.float64]]
+        keys_soft_add = [['acc_soft',(np.float64,3)], ['pot',np.float64], ['pot_soft',np.float64], ['n_nb',np.int64]]
         keys_end =  keys_ptcl_add + keys_soft_add
         if ('particle_type' in kwargs.keys()):
             if (kwargs['particle_type']=='hermite'):
@@ -160,7 +160,7 @@ class Particle(SimpleParticle):
         """
         if (not 'etot' in self.__dict__.keys()): 
             self.ncols += 1
-            self.keys.append(['etot',1])
+            self.keys.append(['etot',np.float64])
         self.etot = self.ekin + self.mass*self.pot
 
 def calculateParticleCMDict(pcm, _p1, _p2):
@@ -257,11 +257,11 @@ class Binary(SimpleParticle):
         if (issubclass(type(_p1), SimpleParticle)) & (issubclass(type(_p2),SimpleParticle)):
             member_particle_type = type(_p1)
             if (simple_mode): 
-                self.keys = [['mass',1],['pos',3],['vel',3],['rrel',1],['semi',1],['ecc',1],['p1',member_particle_type], ['p2', member_particle_type]]
+                self.keys = [['mass',np.float64],['pos',(np.float64,3)],['vel',(np.float64,3)],['rrel',np.float64],['semi',np.float64],['ecc',np.float64],['p1',member_particle_type], ['p2', member_particle_type]]
                 self.particleToSemiEcc(_p1, _p2, G)
                 self.ncols= int(10)
             else:
-                self.keys = [['mass',1],['pos',3],['vel',3],['m1',1],['m2',1],['rrel',1],['semi',1],['am',3],['L',3],['eccvec',3],['incline',1],['rot_horizon',1],['ecc',1],['rot_self',1],['ecca',1],['period',1],['t_peri',1],['p1', member_particle_type],['p2', member_particle_type]]
+                self.keys = [['mass',np.float64],['pos',(np.float64,3)],['vel',(np.float64,3)],['m1',np.float64],['m2',np.float64],['rrel',np.float64],['semi',np.float64],['am',(np.float64,3)],['L',(np.float64,3)],['eccvec',(np.float64,3)],['incline',np.float64],['rot_horizon',np.float64],['ecc',np.float64],['rot_self',np.float64],['ecca',np.float64],['period',np.float64],['t_peri',np.float64],['p1', member_particle_type],['p2', member_particle_type]]
                 self.particleToBinary(_p1, _p2, G)
                 self.ncols= int(27)
             self.p1 = _p1
@@ -270,11 +270,11 @@ class Binary(SimpleParticle):
             self.ncols += self.p1.ncols + self.p2.ncols
         elif (_p2==None):
             if (simple_mode):
-                keys = [['rrel',1],['semi',1],['ecc',1],['p1',member_particle_type], ['p2', member_particle_type]]
+                keys = [['rrel',np.float64],['semi',np.float64],['ecc',np.float64],['p1',member_particle_type], ['p2', member_particle_type]]
                 SimpleParticle.__init__(self, _p1, _offset, _append, **kwargs)
                 DictNpArrayMix.__init__(self, keys, _p1, _offset+self.ncols, True, **kwargs)
             else:
-                keys=[['m1',1],['m2',1],['rrel',1],['semi',1],['am',3],['L',3],['eccvec',3],['incline',1],['rot_horizon',1],['ecc',1],['rot_self',1],['ecca',1],['period',1],['t_peri',1],['p1', member_particle_type],['p2', member_particle_type]]
+                keys=[['m1',np.float64],['m2',np.float64],['rrel',np.float64],['semi',np.float64],['am',(np.float64,3)],['L',(np.float64,3)],['eccvec',(np.float64,3)],['incline',np.float64],['rot_horizon',np.float64],['ecc',np.float64],['rot_self',np.float64],['ecca',np.float64],['period',np.float64],['t_peri',np.float64],['p1', member_particle_type],['p2', member_particle_type]]
                 SimpleParticle.__init__(self, _p1, _offset, _append, **kwargs)
                 DictNpArrayMix.__init__(self, keys, _p1, _offset+self.ncols, True, **kwargs)
         else:
@@ -287,7 +287,7 @@ class Binary(SimpleParticle):
         """
         if (not 'ekin' in self.__dict__.keys()): 
             self.ncols += 1
-            self.keys.append(['ekin',1])
+            self.keys.append(['ekin',np.float64])
         self.ekin = 0.5*vecDot(self.vel,self.vel)*self.mass
 
     def calcEtot(self):
@@ -295,7 +295,7 @@ class Binary(SimpleParticle):
         """
         if (not 'etot' in self.__dict__.keys()): 
             self.ncols += 1
-            self.keys.append(['etot',1])
+            self.keys.append(['etot',np.float64])
         self.etot = self.ekin + self.mass*self.pot
 
     def calcR2(self, member_also=False):
@@ -303,7 +303,7 @@ class Binary(SimpleParticle):
         """
         if (not 'r2' in self.__dict__.keys()): 
             self.ncols += 1
-            self.keys.append(['r2',1])
+            self.keys.append(['r2',np.float64])
         self.r2 = vecDot(self.pos,self.pos)
         if (member_also):
             ncols = self.p1.ncols + self.p2.ncols
@@ -318,7 +318,7 @@ class Binary(SimpleParticle):
         """
         if (not 'ebin' in self.__dict__.keys()):
             self.ncols += 1
-            self.keys.append(['ebin',1])
+            self.keys.append(['ebin',np.float64])
         self.ebin = self.initargs['G']*self.p1.mass*self.p2.mass/(2*self.semi)
 
     def calcPot(self):
@@ -337,7 +337,7 @@ class Binary(SimpleParticle):
         pot_b2 = self.p2.pot + G*m_b1*invr
         if (not 'pot' in self.__dict__.keys()): 
             self.ncols += 1
-            self.keys.append(['pot',1])
+            self.keys.append(['pot',np.float64])
         self.pot = (m_b2*pot_b1 + m_b1*pot_b2)/self.mass
             
     def correctCenter(self, cm_pos, cm_vel):
