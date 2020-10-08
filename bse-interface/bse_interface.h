@@ -57,6 +57,11 @@ extern "C" {
         double pts3;  ///> time step of HG, HeMS (0.02)
     } points_;
 
+    extern struct{
+        int idum2;
+        int iy;
+        int ir[32];
+    } rand3_;
 
     //! function for initial metallicity parameters
     void zcnsts_(double* z, double* zpars);
@@ -737,6 +742,32 @@ public:
         assert(mscale>0.0);
         assert(vscale>0.0);
         return true;
+    }
+
+    //! dump BSE rand constant to file
+    void dumpRandConstant(const char* _fname) {
+        FILE* fin;
+        if( (fin = fopen(_fname,"w")) == NULL) {
+            fprintf(stderr,"Error: Cannot open file %s.\n", _fname);
+            abort();
+        }
+        fprintf(fin, "%d %d %d ", value3_.idum, rand3_.idum2, rand3_.iy);
+        for (int i=0; i<32; i++) fprintf(fin, "%d ", rand3_.ir[i]);
+        fprintf(fin, "\n");
+        fclose(fin);
+    }
+
+    //! read BSE rand constant from file
+    void readRandConstant(const char* _fname) {
+        FILE* fin;
+        if( (fin = fopen(_fname,"r")) == NULL) {
+            printf("Not found.\n");
+        }
+        else {
+            fscanf(fin, "%d %d %d ", &value3_.idum, &rand3_.idum2, &rand3_.iy);
+            for (int i=0; i<32; i++) fscanf(fin, "%d ", &rand3_.ir[i]);
+            fclose(fin);
+        }
     }
 
     //! print reference to cite

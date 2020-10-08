@@ -29,12 +29,13 @@ int main(int argc, char **argv){
 #ifdef BSE
   int idum=0;
   std::string fbsepar = "input.par.bse";
+  std::string fbserandpar = "bse.rand.par";
 #endif
 #ifdef SOFT_PERT
   bool soft_pert_flag=true;
 #endif
 
-  while ((arg_label = getopt(argc, argv, "k:E:A:a:D:d:e:s:m:b:p:i:Sh")) != -1)
+  while ((arg_label = getopt(argc, argv, "k:E:A:a:D:d:e:s:m:b:B:p:i:Sh")) != -1)
     switch (arg_label) {
     case 'k':
         slowdown_factor = atof(optarg);
@@ -80,6 +81,9 @@ int main(int argc, char **argv){
     case 'b':
         fbsepar = optarg;
         break;
+    case 'B':
+        fbserandpar = optarg;
+        break;
 #endif
     case 'h':
         std::cout<<"petar.hard.debug [options] [hard_manager (defaulted: input.par.hard)] [cluster_data] (defaulted: hard_dump)\n"
@@ -98,6 +102,7 @@ int main(int argc, char **argv){
                  <<"    -p [string]:  hard parameter file name: "<<fhardpar<<std::endl
 #ifdef BSE
                  <<"    -i [int]      random seed to generate kick velocity\n"
+                 <<"    -B [string]:  read bse random parameter dump file with filename: "<<fbserandpar<<"\n"
                  <<"    -b [string]:  bse parameter file name: "<<fbsepar<<std::endl
 #endif
 #ifdef SOFT_PERT
@@ -140,6 +145,9 @@ int main(int argc, char **argv){
   fclose(fpar_in);
   if (idum!=0) bse_io.idum.value = idum;
   hard_manager.ar_manager.interaction.bse_manager.initial(bse_io);
+
+  std::cerr<<"Check BSE rand parameter file: "<<fbserandpar<<std::endl;
+  hard_manager.ar_manager.interaction.bse_manager.readRandConstant(fbserandpar.c_str());
 
   if (hard_manager.ar_manager.interaction.stellar_evolution_write_flag) {
       hard_manager.ar_manager.interaction.fout_sse.open((filename+".sse").c_str(), std::ofstream::out);

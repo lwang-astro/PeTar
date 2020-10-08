@@ -830,6 +830,7 @@ public:
                     out[1].print(std::cerr);
                     std::cerr<<std::endl;
                     DATADUMP("dump_bse_error");
+                    bse_manager.dumpRandConstant("bse.rand.par");
                 }
                 
                 // check binary type and print event information
