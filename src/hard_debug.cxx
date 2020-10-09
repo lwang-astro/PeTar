@@ -31,7 +31,7 @@ int main(int argc, char **argv){
   std::string fbsepar = "input.par.bse";
 #elif MOBSE
   int idum=0;
-  std::string fbsepar = "input.par.bse";
+  std::string fbsepar = "input.par.mobse";
 #endif
 #ifdef SOFT_PERT
   bool soft_pert_flag=true;
@@ -171,8 +171,8 @@ int main(int argc, char **argv){
   hard_manager.ar_manager.interaction.bse_manager.initial(bse_io);
 
   if (hard_manager.ar_manager.interaction.stellar_evolution_write_flag) {
-      hard_manager.ar_manager.interaction.fout_sse.open((filename+".sse").c_str(), std::ofstream::out);
-      hard_manager.ar_manager.interaction.fout_bse.open((filename+".bse").c_str(), std::ofstream::out);
+      hard_manager.ar_manager.interaction.fout_sse.open((filename+".mosse").c_str(), std::ofstream::out);
+      hard_manager.ar_manager.interaction.fout_bse.open((filename+".mobse").c_str(), std::ofstream::out);
   }
 #endif
 #endif

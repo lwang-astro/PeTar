@@ -1081,7 +1081,7 @@ public:
                     }
                 }
             }
-#elif BSE
+#elif MOBSE
             double time_check = std::min(p1->time_interrupt, p2->time_interrupt);
             if (time_check<=_bin_interrupt.time_end&&stellar_evolution_option==1) {
                 ASSERT(bse_manager.checkParams());

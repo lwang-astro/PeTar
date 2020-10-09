@@ -10,7 +10,7 @@ do
 	    echo 'Options:';
 	    echo '  -f: output file (petar input data) name (default: intput file name + ".input")';
 	    echo '  -i: skip rows number (default: 0)';
-	    echo '  -s: stellar evolution columns:  base | bse | no (default: no)';
+	    echo '  -s: stellar evolution columns:  base | bse/mobse | no (default: no)';
 	    echo '  -m: mass scaling factor from input data unit to [Msun], used for stellar evolution (BSE): mass[input unit]*m_scale=mass[Msun] (default: 1.0)';
 	    echo '  -r: radius scaling factor from input data unit to [pc] (default: 1.0)';
 	    echo '  -v: velocity scaling factor from input data unit to [pc/myr]. If the string "kms2pcmyr" is given, convert velocity unit from [km/s] to [pc/myr] (default: 1.0)';
@@ -81,7 +81,7 @@ if [[ $seflag != 'no' ]]; then
     if [[ $seflag == 'base' ]]; then
 	echo "Stellar radius (0): " $radius
 	awk -v n=$n  'BEGIN{print 0,n,0} {OFMT="%.15g"; print $LINE,0,'$radius',0,0,0,0,NR-ig,0,0,0,0,0,0,0,0,0,0}' $fout.scale__ >$fout
-    elif [[ $seflag == 'bse' ]]; then
+    elif [[ $seflag == 'bse' || $seflag == 'mobse' ]]; then
 	echo 'mass scale from PeTar unit (PT) to Msun (m[Msun] = m[PT]*mscale): ' $mscale
 	awk -v n=$n -v ms=$mscale  'BEGIN{print 0,n,0} {OFMT="%.15g"; print $LINE, 0,0,0,0,0, 1,$1*ms,$1*ms,0.0,0.0,0.0,0.0,0.0,0.0,0.0, 0.0,NR-ig,0,0,0,0,0,0,0,0,0,0}' $fout.scale__ >$fout
     else
