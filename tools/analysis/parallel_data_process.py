@@ -34,6 +34,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
             mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
                                Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
             interrupt_mode: PeTar interrupt mode: base, bse, none. If not provided, type is none 
+            snapshot_format: snapshot format: ascii or binary (ascii)
     """
     lagr = result['lagr']
     esc_single  = result['esc_single']
@@ -41,6 +42,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
 
     m_frac = lagr.initargs['mass_fraction']
     G=1.0
+    snapshot_format='ascii'
     r_bin=0.1
     average_mode='sphere'
     simple_binary=True
@@ -49,16 +51,21 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
     if ('r_max_binary' in kwargs.keys()): r_bin=kwargs['r_max_binary']
     if ('average_mode' in kwargs.keys()): average_mode=kwargs['average_mode']
     if ('simple_binary' in kwargs.keys()): simple_binary=kwargs['simple_binary']
+    if ('snapshot_format' in kwargs.keys()): snapshot_format=kwargs['snapshot_format']
 
-    header = PeTarDataHeader(file_path)
+    header = PeTarDataHeader(file_path, **kwargs)
     
     if (not read_flag):
         start_time = time.time()
 
         core = result['core']
         #print('Loadfile')
-        snap=np.loadtxt(file_path, skiprows=1)
-        particle=Particle(snap, **kwargs)
+        #snap=np.loadtxt(file_path, skiprows=1)
+        #particle=Particle(snap, **kwargs)
+        particle=Particle(**kwargs)
+        if (snapshot_format=='ascii'): particle.loadtxt(file_path, skiprows=1)
+        elif (snapshot_format=='binary'): particle.fromfile(file_path, offset=HEADER_OFFSET)
+        else: raise ValueError('Snapshot format unknown, should be binary or ascii, given', snapshot_format)
         read_time = time.time()
 
         # find binary

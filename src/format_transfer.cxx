@@ -11,7 +11,7 @@ int main(int argc, char *argv[]){
     // IO parameters
     IOParamsContainer input_par_store;
     IOParams<PS::S32> direction         (input_par_store, 0, "If 0: BINARY to ASCII; 1 : ASCII to BINARY");
-    IOParams<PS::S32> write_mode        (input_par_store, 0, "If 0: replace snapshot data; 1: create new file with suffix [.binary|.ascii]");
+    IOParams<PS::S32> write_mode        (input_par_store, 0, "If 0: replace the snapshot data; 1: create a new file with a suffix of [.B|.A]");
     //IOParams<PS::S32> group_data_format (input_par_store, 0, "When read ASCII mode, if 0: treat group_data as 64bit Integer; 1: treat group_data as artificial particles (old version)");
     IOParams<std::string> fname_list    (input_par_store, "data.snap.lst","The filename of a file containing the list of snapshot data pathes");
 
@@ -103,14 +103,14 @@ int main(int argc, char *argv[]){
             if (write_mode.value==0) 
                 data.writeParticleAscii(filename.c_str(), file_header);
             else
-                data.writeParticleAscii((filename+".ascii").c_str(), file_header);
+                data.writeParticleAscii((filename+".A").c_str(), file_header);
         }
         else {
             data.readParticleAscii(filename.c_str(), file_header);
             if (write_mode.value==0) 
                 data.writeParticleBinary(filename.c_str(), file_header);
             else
-                data.writeParticleBinary((filename+".binary").c_str(), file_header);
+                data.writeParticleBinary((filename+".B").c_str(), file_header);
         }
     }
 

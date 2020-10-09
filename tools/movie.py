@@ -196,6 +196,7 @@ class Data:
         self.G = 0.00449830997959438 # pc^3/(Msun*Myr^2)
         self.semi_max = 0.1
         self.cm_mode = 'density'
+        self.snapshot_format = 'ascii'
 
         for key in self.__dict__.keys():
             if (key in kwargs.keys()): self.__dict__[key] = kwargs[key]
@@ -221,7 +222,7 @@ class Data:
                 data['mass'] = np.ones(data['x'].size)
             data['t'] = file_path
         else:
-            header=petar.PeTarDataHeader(file_path)
+            header=petar.PeTarDataHeader(file_path, snapshot_format=self.snapshot_format)
             data['t'] = str(header.time)
 
             if (self.generate_binary>0):
@@ -254,7 +255,8 @@ class Data:
                         data['type_cm']= np.append(single.star.type,np.max([binary.p1.star.type,binary.p2.star.type],axis=0))
                 else:
                     particles=petar.Particle(interrupt_mode=self.interrupt_mode)
-                    particles.loadtxt(file_path,skiprows=1)
+                    if (self.snapshot_format=='ascii'): particle.loadtxt(file_path, skiprows=1)
+                    else: particle.fromfile(file_path, offset=HEADER_OFFSET)
                     kdtree,single,binary = petar.findPair(particles, self.G, self.semi_max*2.0, True)
                     data['x'] = particles.pos[:,0]
                     data['y'] = particles.pos[:,1]
@@ -543,7 +545,8 @@ if __name__ == '__main__':
         print("  -L [S]: add one panel of Lagrangian radii evolution, argument is filename of lagrangian data", lagr_file)
         print("  -G [F]: gravitational constant for calculating binary orbit: ",data.G)
         print("  -o [S]: output movie filename: ",output_file)
-        print("  -i    : Use previous generated png images to speed up the movie generation")
+        print("  -p    : Use previous generated png images to speed up the movie generation")
+        print("  -s [S]: snapshot format: binary or ascii: ", data.snapshot_format)
         print("  -l [S]: the filename of a list of pathes to different models, this will switch on the comparison mode.")
         print("          Each line contains two values: directory path of model, name of model.")
         print("          When data is reading, pathes will be added in front of the filenames. ")
@@ -592,7 +595,7 @@ if __name__ == '__main__':
         print("     Each panel of plots can be added mutliple times (the order is recored)")
 
     try:
-        shortargs = 's:f:R:z:o:G:l:L:iHbh'
+        shortargs = 's:f:R:z:o:G:l:L:p:sHbh'
         longargs = ['help','n-cpu=','lum-min=','lum-max=','temp-min=','temp-max=','semi-min=','semi-max=','ecc-min=','ecc-max=','rlagr-min=','rlagr-max=','rlagr-scale=','time-min=','time-max=','interrupt-mode=','xcol=','ycol=','mcol=','unit-length=','unit-time=','skiprows=','generate-binary=','plot-ncols=','plot-xsize=','plot-ysize=','suppress-images','format=','cm-mode=','core-file=','n-layer-cross=','n-layer-point=','layer-alpha=','marker-scale=','cm-boxsize=','compare-in-column']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
@@ -601,7 +604,7 @@ if __name__ == '__main__':
             if opt in ('-h','--help'):
                 usage()
                 sys.exit(1)
-            elif opt in ('-s'):
+            elif opt in ('-f'):
                 fps = float(arg)
             elif opt in ('-R'):
                 kwargs['boxsize'] = float(arg)
@@ -615,9 +618,7 @@ if __name__ == '__main__':
                 output_file = arg
             elif opt in ('-G'):
                 kwargs['G'] = float(arg)
-            elif opt in ('-f'):
-                fps = int(arg)
-            elif opt in ('-i'):
+            elif opt in ('-p'):
                 kwargs['use_previous'] = True
             elif opt in ('-l'):
                 model_path = arg
@@ -625,6 +626,8 @@ if __name__ == '__main__':
                 plot_item.append(['plot_lagr'])
                 lagr_file = arg
                 read_lagr_data=True
+            elif opt in ('-s'):
+                kwargs['snapshot_format'] = arg
             elif opt in ('--n-cpu'):
                 n_cpu = int(arg)
             elif opt in ('--lum-min'):

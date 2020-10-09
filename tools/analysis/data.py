@@ -16,38 +16,56 @@ class PeTarDataHeader():
         time: time of snapshot
     """
 
-    def __init__(self, _filename=None):
+    def __init__(self, _filename=None, **kwargs):
         """ Initial data header
         
         Parameters:
         -----------
         _filename: string
             PeTar snapshot file name to read the header, if not provide, all members are initialized to zero (None)
+        kwargs: dict
+            Keyword arguments:
+            snapshot_format: string (ascii)
+                Data format of snapshot files: binary or ascii
         """
-        self.fid = 0
-        self.n = 0
+        self.fid = int(0)
+        self.n = int(0)
         self.time = 0.0
         
-        if (_filename!=None): self.read(_filename)
+        if (_filename!=None): self.read(_filename,**kwargs)
 
-    def read(self, _filename):
+    def read(self, _filename, **kwargs):
         """ Read snapshot file to obtain the header information
 
         Parameters:
         -----------
         _filename: string
             PeTar snapshot file name to read the header
+        kwargs: dict
+            Keyword arguments:
+            snapshot_format: string (ascii)
+                Data format of snapshot files: binary or ascii
         """
+        snapshot_format='ascii'
+        if ('snapshot_format' in kwargs.keys()): snapshot_format=kwargs['snapshot_format']
 
-        fp = open(_filename, 'r')
-        header=fp.readline()
-        file_id, n_glb, t = header.split()
-        fp.close()
+        if (snapshot_format=='ascii'):
+            fp = open(_filename, 'r')
+            header=fp.readline()
+            file_id, n_glb, t = header.split()
+            fp.close()
 
-        self.fid = int(file_id)
-        self.n = int(n_glb)
-        self.time = float(t)
-        
+            self.fid = int(file_id)
+            self.n = int(n_glb)
+            self.time = float(t)
+
+        elif (snapshot_format=='binary'):
+            fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',np.float64)]),count=1)
+            self.file_id = fp['file_id'][0]
+            self.n_glb = fp['n_glb'][0]
+            self.time = fp['time'][0]
+        else: 
+            raise ValueError('Snapshot format unknown, should be binary or ascii, given', snapshot_format)
 
 class SimpleParticle(DictNpArrayMix):
     """ Simple particle class with only mass, postion, velocity
