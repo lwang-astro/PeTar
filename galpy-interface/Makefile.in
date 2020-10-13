@@ -20,6 +20,6 @@ petar.galpy: galpy_test.cxx libgalpy.a galpy_interface.h
 	$(CXX) $(CXXFLAGS) $(GALPY_INCLUDE) $< -o $@ -L./ -lgalpy -lgsl -lgslcblas
 
 petar.galpy.help: galpy_help.py
-	ln -s galpy_help.py petar.galpy.help
+	ln -sf galpy_help.py petar.galpy.help
 clean: 
 	rm -f *.o petar.galpy libgalpy.a petar.galpy.help

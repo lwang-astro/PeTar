@@ -15,7 +15,7 @@ class Core(DictNpArrayMix):
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        keys  = [['time',1],['pos', 3],['vel', 3], ['rc', 1]]
+        keys  = [['time',np.float64],['pos', (np.float64,3)],['vel', (np.float64,3)], ['rc', np.float64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
     def calcPotentialCenter(self, single, binary, G):
@@ -143,7 +143,7 @@ class LagrangianVelocity(DictNpArrayMix):
         m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
         n_frac = m_frac.size + 1
-        keys  = [['abs',n_frac],['x',n_frac],['y',n_frac],['z',n_frac],['rad',n_frac],['tan',n_frac],['rot',n_frac]] # all, x, y, z, radial, tangential, rotational
+        keys  = [['abs',(np.float64,n_frac)],['x',(np.float64,n_frac)],['y',(np.float64,n_frac)],['z',(np.float64,n_frac)],['rad',(np.float64,n_frac)],['tan',(np.float64,n_frac)],['rot',(np.float64,n_frac)]] # all, x, y, z, radial, tangential, rotational
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
         self.initargs['mass_fraction'] = m_frac
 
@@ -169,11 +169,11 @@ class Lagrangian(DictNpArrayMix):
         m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
         n_frac = m_frac.size + 1
-        keys = [['r', n_frac],['m', n_frac],['n', n_frac], ['vel', LagrangianVelocity], ['sigma', LagrangianVelocity]]
+        keys = [['r', (np.float64, n_frac)],['m', (np.float64, n_frac)],['n', (np.int64, n_frac)], ['vel', LagrangianVelocity], ['sigma', LagrangianVelocity]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
         self.initargs['mass_fraction'] = m_frac
 
-        #keys = [['r', n_frac],['m', n_frac],['n', n_frac]] # radius, mass, number
+        #keys = [['r', (np.float64, n_frac)],['m', (np.float64, n_frac)],['n', (np.float64, n_frac)]] # radius, mass, number
         #DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
         #self.vel  = LagrangianVelocity(_dat, _offset+self.ncols, False, **kwargs)
         #self.ncols += self.vel.ncols
@@ -325,11 +325,11 @@ class LagrangianMultiple(DictNpArrayMix):
         """
         m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
-        keys=[['time',1], ['single',Lagrangian], ['binary', Lagrangian], ['all', Lagrangian]]
+        keys=[['time',np.float64], ['single',Lagrangian], ['binary', Lagrangian], ['all', Lagrangian]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
         self.initargs['mass_fraction'] = m_frac
 
-        #DictNpArrayMix.__init__(self, [['time',1]], _dat, _offset, _append, **kwargs)
+        #DictNpArrayMix.__init__(self, [['time',np.float64]], _dat, _offset, _append, **kwargs)
         #self.single = Lagrangian(_dat, _offset+self.ncols, False, **kwargs)
         #self.ncols += self.single.ncols
         #self.keys.append(['single',Lagrangian])

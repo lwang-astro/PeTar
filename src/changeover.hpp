@@ -139,18 +139,19 @@ public:
     /*! @param[in] _fp: FILE type file for output
      */
     void writeBinary(FILE *_fp) const {
-        fwrite(this, sizeof(*this),1,_fp);
+        fwrite(this, sizeof(Float),2,_fp);
     }
 
     //! read class data to file with binary format
     /*! @param[in] _fp: FILE type file for reading
      */
     void readBinary(FILE *_fin) {
-        size_t rcount = fread(this, sizeof(*this),1,_fin);
+        size_t rcount = fread(this, sizeof(Float),2,_fin);
         if (rcount<1) {
             std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
             abort();
         }
+        setR(1.0, r_in_, r_out_);
     }
 
     //! write class data to file with binary format

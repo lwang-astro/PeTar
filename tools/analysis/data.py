@@ -6,6 +6,7 @@ from .bse import *
 
 G_MSUN_PC_MYR=0.00449830997959438 # Msun, pc, myr
 G_HENON=1 # Henon unit
+HEADER_OFFSET=24 # header offset in bytes for snapshots with the BINARY format
 
 class PeTarDataHeader():
     """ Petar snapshot data header
@@ -15,38 +16,56 @@ class PeTarDataHeader():
         time: time of snapshot
     """
 
-    def __init__(self, _filename=None):
+    def __init__(self, _filename=None, **kwargs):
         """ Initial data header
         
         Parameters:
         -----------
         _filename: string
             PeTar snapshot file name to read the header, if not provide, all members are initialized to zero (None)
+        kwargs: dict
+            Keyword arguments:
+            snapshot_format: string (ascii)
+                Data format of snapshot files: binary or ascii
         """
-        self.fid = 0
-        self.n = 0
+        self.fid = int(0)
+        self.n = int(0)
         self.time = 0.0
         
-        if (_filename!=None): self.read(_filename)
+        if (_filename!=None): self.read(_filename,**kwargs)
 
-    def read(self, _filename):
+    def read(self, _filename, **kwargs):
         """ Read snapshot file to obtain the header information
 
         Parameters:
         -----------
         _filename: string
             PeTar snapshot file name to read the header
+        kwargs: dict
+            Keyword arguments:
+            snapshot_format: string (ascii)
+                Data format of snapshot files: binary or ascii
         """
+        snapshot_format='ascii'
+        if ('snapshot_format' in kwargs.keys()): snapshot_format=kwargs['snapshot_format']
 
-        fp = open(_filename, 'r')
-        header=fp.readline()
-        file_id, n_glb, t = header.split()
-        fp.close()
+        if (snapshot_format=='ascii'):
+            fp = open(_filename, 'r')
+            header=fp.readline()
+            file_id, n_glb, t = header.split()
+            fp.close()
 
-        self.fid = int(file_id)
-        self.n = int(n_glb)
-        self.time = float(t)
-        
+            self.fid = int(file_id)
+            self.n = int(n_glb)
+            self.time = float(t)
+
+        elif (snapshot_format=='binary'):
+            fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',np.float64)]),count=1)
+            self.file_id = fp['file_id'][0]
+            self.n_glb = fp['n_glb'][0]
+            self.time = fp['time'][0]
+        else: 
+            raise ValueError('Snapshot format unknown, should be binary or ascii, given', snapshot_format)
 
 class SimpleParticle(DictNpArrayMix):
     """ Simple particle class with only mass, postion, velocity
@@ -58,7 +77,7 @@ class SimpleParticle(DictNpArrayMix):
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        keys = [['mass',1], ['pos',3], ['vel',3]]
+        keys = [['mass', np.float64], ['pos', (np.float64, 3)], ['vel', (np.float64, 3)]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
     def calcR2(self):
@@ -134,11 +153,11 @@ class Particle(SimpleParticle):
             interrupt_mode: PeTar interrupt mode: base, bse, none (none)
         """
 
-        keys_add = [['binary_state',1]]
-        keys_se  = [['radius',1],['dm',1],['time_record',1],['time_interrupt',1]]
-        keys_ptcl_add = [['r_search',1], ['id',1], ['mass_bk',1], ['status',1], ['r_in',1], ['r_out',1]]
-        keys_hermite_add = [['dt',1],['time',1],['acc',3],['jerk',3],['pot',1]]
-        keys_soft_add = [['acc_soft',3], ['pot',1], ['pot_soft',1], ['n_nb',1]]
+        keys_add = [['binary_state',np.int64]]
+        keys_se  = [['radius',np.float64],['dm',np.float64],['time_record',np.float64],['time_interrupt',np.float64]]
+        keys_ptcl_add = [['r_search',np.float64], ['id',np.int64], ['mass_bk',np.int64], ['status',np.int64], ['r_in',np.float64], ['r_out',np.float64]]
+        keys_hermite_add = [['dt',np.float64],['time',np.float64],['acc',(np.float64,3)],['jerk',(np.float64,3)],['pot',np.float64]]
+        keys_soft_add = [['acc_soft',(np.float64,3)], ['pot',np.float64], ['pot_soft',np.float64], ['n_nb',np.int64]]
         keys_end =  keys_ptcl_add + keys_soft_add
         if ('particle_type' in kwargs.keys()):
             if (kwargs['particle_type']=='hermite'):
@@ -160,7 +179,7 @@ class Particle(SimpleParticle):
         """
         if (not 'etot' in self.__dict__.keys()): 
             self.ncols += 1
-            self.keys.append(['etot',1])
+            self.keys.append(['etot',np.float64])
         self.etot = self.ekin + self.mass*self.pot
 
 def calculateParticleCMDict(pcm, _p1, _p2):
@@ -186,7 +205,7 @@ def calculateParticleCMDict(pcm, _p1, _p2):
     else:
         raise ValueError('Initial fail, date type should be Particle or collections.OrderDict, given',type(_p1))
 
-class Binary(DictNpArrayMix):
+class Binary(SimpleParticle):
     """ Binary class
     Keys:
         The final keys depends on kwargs of initial function
@@ -257,11 +276,11 @@ class Binary(DictNpArrayMix):
         if (issubclass(type(_p1), SimpleParticle)) & (issubclass(type(_p2),SimpleParticle)):
             member_particle_type = type(_p1)
             if (simple_mode): 
-                self.keys = [['mass',1],['pos',3],['vel',3],['rrel',1],['semi',1],['ecc',1],['p1',member_particle_type], ['p2', member_particle_type]]
+                self.keys = [['mass',np.float64],['pos',(np.float64,3)],['vel',(np.float64,3)],['rrel',np.float64],['semi',np.float64],['ecc',np.float64],['p1',member_particle_type], ['p2', member_particle_type]]
                 self.particleToSemiEcc(_p1, _p2, G)
                 self.ncols= int(10)
             else:
-                self.keys = [['mass',1],['pos',3],['vel',3],['m1',1],['m2',1],['rrel',1],['semi',1],['am',3],['L',3],['eccvec',3],['incline',1],['rot_horizon',1],['ecc',1],['rot_self',1],['ecca',1],['period',1],['t_peri',1],['p1', member_particle_type],['p2', member_particle_type]]
+                self.keys = [['mass',np.float64],['pos',(np.float64,3)],['vel',(np.float64,3)],['m1',np.float64],['m2',np.float64],['rrel',np.float64],['semi',np.float64],['am',(np.float64,3)],['L',(np.float64,3)],['eccvec',(np.float64,3)],['incline',np.float64],['rot_horizon',np.float64],['ecc',np.float64],['rot_self',np.float64],['ecca',np.float64],['period',np.float64],['t_peri',np.float64],['p1', member_particle_type],['p2', member_particle_type]]
                 self.particleToBinary(_p1, _p2, G)
                 self.ncols= int(27)
             self.p1 = _p1
@@ -270,11 +289,13 @@ class Binary(DictNpArrayMix):
             self.ncols += self.p1.ncols + self.p2.ncols
         elif (_p2==None):
             if (simple_mode):
-                keys = [['mass',1],['pos',3],['vel',3],['rrel',1],['semi',1],['ecc',1],['p1',member_particle_type], ['p2', member_particle_type]]
-                DictNpArrayMix.__init__(self, keys, _p1, _offset, _append, **kwargs)
+                keys = [['rrel',np.float64],['semi',np.float64],['ecc',np.float64],['p1',member_particle_type], ['p2', member_particle_type]]
+                SimpleParticle.__init__(self, _p1, _offset, _append, **kwargs)
+                DictNpArrayMix.__init__(self, keys, _p1, _offset+self.ncols, True, **kwargs)
             else:
-                keys=[['mass',1],['pos',3],['vel',3],['m1',1],['m2',1],['rrel',1],['semi',1],['am',3],['L',3],['eccvec',3],['incline',1],['rot_horizon',1],['ecc',1],['rot_self',1],['ecca',1],['period',1],['t_peri',1],['p1', member_particle_type],['p2', member_particle_type]]
-                DictNpArrayMix.__init__(self, keys, _p1, _offset, _append, **kwargs)
+                keys=[['m1',np.float64],['m2',np.float64],['rrel',np.float64],['semi',np.float64],['am',(np.float64,3)],['L',(np.float64,3)],['eccvec',(np.float64,3)],['incline',np.float64],['rot_horizon',np.float64],['ecc',np.float64],['rot_self',np.float64],['ecca',np.float64],['period',np.float64],['t_peri',np.float64],['p1', member_particle_type],['p2', member_particle_type]]
+                SimpleParticle.__init__(self, _p1, _offset, _append, **kwargs)
+                DictNpArrayMix.__init__(self, keys, _p1, _offset+self.ncols, True, **kwargs)
         else:
             raise ValueError('Initial fail, date type should be Particle (2), Binary (1) or no argument (0)')
         self.initargs = kwargs.copy()
@@ -285,7 +306,7 @@ class Binary(DictNpArrayMix):
         """
         if (not 'ekin' in self.__dict__.keys()): 
             self.ncols += 1
-            self.keys.append(['ekin',1])
+            self.keys.append(['ekin',np.float64])
         self.ekin = 0.5*vecDot(self.vel,self.vel)*self.mass
 
     def calcEtot(self):
@@ -293,7 +314,7 @@ class Binary(DictNpArrayMix):
         """
         if (not 'etot' in self.__dict__.keys()): 
             self.ncols += 1
-            self.keys.append(['etot',1])
+            self.keys.append(['etot',np.float64])
         self.etot = self.ekin + self.mass*self.pot
 
     def calcR2(self, member_also=False):
@@ -301,7 +322,7 @@ class Binary(DictNpArrayMix):
         """
         if (not 'r2' in self.__dict__.keys()): 
             self.ncols += 1
-            self.keys.append(['r2',1])
+            self.keys.append(['r2',np.float64])
         self.r2 = vecDot(self.pos,self.pos)
         if (member_also):
             ncols = self.p1.ncols + self.p2.ncols
@@ -316,7 +337,7 @@ class Binary(DictNpArrayMix):
         """
         if (not 'ebin' in self.__dict__.keys()):
             self.ncols += 1
-            self.keys.append(['ebin',1])
+            self.keys.append(['ebin',np.float64])
         self.ebin = self.initargs['G']*self.p1.mass*self.p2.mass/(2*self.semi)
 
     def calcPot(self):
@@ -335,7 +356,7 @@ class Binary(DictNpArrayMix):
         pot_b2 = self.p2.pot + G*m_b1*invr
         if (not 'pot' in self.__dict__.keys()): 
             self.ncols += 1
-            self.keys.append(['pot',1])
+            self.keys.append(['pot',np.float64])
         self.pot = (m_b2*pot_b1 + m_b1*pot_b2)/self.mass
             
     def correctCenter(self, cm_pos, cm_vel):
@@ -534,3 +555,124 @@ def findPair(_dat, _G, _rmax, use_kdtree=False, simple_binary=True):
 
         return single, binary
 
+def findMultiple(_single, _binary, _G, _rmax, simple_binary=True):
+    """  Find triples and quadruples from single and binary data
+    The scipy.spatial.cKDTree is used to find pairs
+
+    Parameters
+    ----------
+    _single: inhermited SimpleParticle
+        Single particle data set
+    _binary: Binary
+        Binary data set
+    _G: float
+        Gravitational constant
+    _rmax: float
+        Maximum binary separation
+    simple_binary: bool (True)
+        If True, only calculate semi and ecc (fast); otherwise calculating all binary parameters (slow)
+
+    Return
+    ----------
+    kdt: KDtree structure if use_kdtree=True
+    single: type of _dat
+        single particle data set
+    binary: Binary(simple_mode=simple_binary, member_particle_type=type(single), G=_G)
+        binary data set
+    triple: Binary(p1: type(single), p2: type(binary), G=_G)
+        triple data set
+    quadruple: Binary(p1: type(binary), p2: type(binary), G=_G)
+        quadruple (binary-binary) data set
+    """
+    if (not issubclass(type(_single), SimpleParticle)):
+        raise ValueError("Data type wrong",type(_single)," should be subclass of ", SimpleParticle)
+
+    single_sin = SimpleParticle(_single)
+    binary_sin = SimpleParticle(_binary)
+    all_sin = join(single_sin, binary_sin)
+
+    # create KDTree
+    kdt=sp.cKDTree(all_sin.pos)
+     
+    # find pair index and distance
+    r,index=kdt.query(all_sin.pos,k=2)
+    pair_index=np.transpose(np.unique(np.sort(index,axis=1),axis=0))
+
+    # two members
+    p1 = all_sin[pair_index[0]]
+    p2 = all_sin[pair_index[1]]
+     
+    # check orbits
+    binary_out = Binary(p1, p2, G=_G, simple_mode=simple_binary)
+    apo =binary_out.semi*(binary_out.ecc+1.0)
+     
+    bsel= ((binary_out.semi>0) & (apo<_rmax))
+    bout_i1=pair_index[0][bsel]
+    bout_i2=pair_index[1][bsel]
+    # check single or cm
+    Ns = _single.size
+    Nb = _binary.size
+    quad_sel= (bout_i1>=Ns) & (bout_i2>=Ns)
+    tri_sel = (bout_i1<Ns) & (bout_i2>=Ns)
+    bin_sel = (bout_i1<Ns) & (bout_i2<Ns)
+
+    if (bout_i1.size != quad_sel.sum()+tri_sel.sum()+bin_sel.sum()):
+        raise ValueError('Error: select size miss match: dat:',bout_i1.size,'quad:',quad_sel.sum(),'tri:',tri_sel.sum(),'bin:',bin_sel.sum())
+
+    multiple = binary_out[bsel]
+
+    quadruple = multiple[quad_sel]
+    ncol_diff_bin = _binary.ncols - binary_sin.ncols
+    ncol_diff_sin = _single.ncols - single_sin.ncols
+    if (quad_sel.sum()):
+        q1_index = bout_i1[quad_sel]-Ns
+        quadruple.p1 = _binary[q1_index]
+        q2_index = bout_i2[quad_sel]-Ns
+        quadruple.p2 = _binary[q2_index]
+        quadruple.initargs['member_particle_type'] = Binary
+        quadruple.ncols += 2*ncol_diff_bin
+        if (quadruple.size != quadruple.p1.size):
+            raise ValueError('Error: quadruple size', quadruple.size,' mismatch member size ',quadruple.p1.size)
+
+    triple = multiple[tri_sel]
+    if (tri_sel.sum()):
+        s_index = bout_i1[tri_sel]
+        triple.p1 = _single[s_index]
+        b_index = bout_i2[tri_sel]-Ns
+        triple.p2 = _binary[b_index]
+        triple.ncols += ncol_diff_bin + ncol_diff_sin
+        if (triple.size != triple.p1.size):
+            raise ValueError('Error: triple size', triple.size,' mismatch member size ',triple.p1.size)
+
+    binary_new = multiple[bin_sel]
+    if (bin_sel.sum()):
+        s1_index = bout_i1[bin_sel]
+        binary_new.p1 = _single[s1_index]
+        s2_index = bout_i2[bin_sel]
+        binary_new.p2 = _single[s2_index]
+        binary_new.ncols += 2*ncol_diff_sin
+        binary_new.initargs['member_particle_type'] = type(_single)
+        if (binary_new.size != binary_new.p1.size):
+            raise ValueError('Error: binary_new size', binary_new.size,' mismatch member size ',binary_new.p1.size)
+
+        if (binary_new.ncols != _binary.ncols): 
+            raise ValueError('Error: old binary ncols', _binary.ncols,' mismatch new binary ncols', binary_new.ncols)
+
+    # delete used singles
+    s_del_index = np.append(bout_i1[bout_i1<Ns],bout_i2[bout_i2<Ns])
+    smask=np.ones(Ns).astype(bool)
+    smask[s_del_index]=False
+    single = _single[smask]
+
+    # delete used binaries
+    b_del_index = np.append(bout_i1[bout_i1>=Ns],bout_i2[bout_i2>=Ns])-Ns
+    bmask=np.ones(Nb).astype(bool)
+    bmask[b_del_index]=False
+    binary = _binary[bmask]
+    if (bmask.sum()+b_del_index.size != Nb):
+        raise ValueError('Error: binary size not match: origin:',Nb,'remain:',bmask.sum(),'del:',b_del_index.size,'del(unique):',np.unique(b_del_index).size)
+
+    if (binary_new.size>0):
+        binary = join(binary,binary_new)
+
+    return single, binary, triple, quadruple

@@ -36,10 +36,15 @@ class DictNpArrayMix:
                         self.__dict__[key] = parameter(_dat.__dict__[key], **kwargs)
                         icol += self.__dict__[key].ncols
                     else:
-                        raise ValueError('Initial fail, unknown key type, should be inherience of  DictNpArrayMix, given ',parameter)
-                elif (type(parameter)==int):
-                    self.__dict__[key] = _dat.__dict__[key].copy()
-                    icol += parameter
+                        self.__dict__[key] = _dat.__dict__[key].copy()
+                        icol += 1
+                        #raise ValueError('Initial fail, unknown key type, should be inherience of  DictNpArrayMix, given ',parameter)
+                elif (type(parameter)==tuple):
+                    if (type(parameter[0]) == type) & (type(parameter[1]) == int):
+                        self.__dict__[key] = _dat.__dict__[key].copy()
+                        icol += parameter[1]
+                    else:
+                        raise ValueError('Initial fail, unknown key type ',parameter[0],' and column count ', parameter[1] )
                 else:
                     raise ValueError('Initial fail, unknown key parameter, should be DictNpArrayMix type name or value of int, given ',parameter)
             if (_append): self.ncols += int(icol)
@@ -53,16 +58,19 @@ class DictNpArrayMix:
                     if (issubclass(parameter, DictNpArrayMix)):
                         self.__dict__[key] = parameter(_dat, icol, False, **kwargs)
                         icol += self.__dict__[key].ncols
+                        self.size += self.__dict__[key].size*self.__dict__[key].ncols
                     else:
-                        raise ValueError('Initial fail, unknown key type, should be inherience of  DictNpArrayMix, given ',parameter)
-                    self.size += self.__dict__[key].size*self.__dict__[key].ncols
-                elif (type(parameter)==int):
-                    if (parameter==1):
-                        self.__dict__[key] = _dat[:,icol]
+                        self.__dict__[key] = _dat[:,icol].astype(parameter)
+                        icol += 1
+                        self.size += self.__dict__[key].size
+                        #raise ValueError('Initial fail, unknown key type, should be inherience of  DictNpArrayMix, given ',parameter)
+                elif (type(parameter)==tuple):
+                    if (type(parameter[0]) == type) & (type(parameter[1]) == int):
+                        self.__dict__[key] = _dat[:,icol:icol+parameter[1]].astype(parameter[0])
+                        icol += parameter[1]
+                        self.size += self.__dict__[key].size
                     else:
-                        self.__dict__[key] = _dat[:,icol:icol+parameter]
-                    icol += parameter
-                    self.size += self.__dict__[key].size
+                        raise ValueError('Initial fail, unknown key type ',parameter[0],' and column count ', parameter[1] )
                 else:
                     raise ValueError('Initial fail, unknown key parameter, should be DictNpArrayMix type name or value of int, given ',parameter)
             icol -= _offset
@@ -79,11 +87,15 @@ class DictNpArrayMix:
                         self.__dict__[key] = parameter(**kwargs)
                         icol += self.__dict__[key].ncols
                     else:
-                        raise ValueError('Initial fail, unknown key type, should be inherience of  DictNpArrayMix, given ',parameter)
-                elif (type(parameter)==int):
-                    if (parameter==1): self.__dict__[key] = np.empty(0)
-                    else: self.__dict__[key] = np.empty([0,parameter])
-                    icol += parameter
+                        self.__dict__[key] = np.empty(0).astype(parameter)
+                        icol += 1
+                        #raise ValueError('Initial fail, unknown key type, should be inherience of  DictNpArrayMix, given ',parameter)
+                elif (type(parameter)==tuple):
+                    if (type(parameter[0]) == type) & (type(parameter[1]) == int):
+                        self.__dict__[key] = np.empty([0,parameter[1]]).astype(parameter[0])
+                        icol += parameter[1]
+                    else:
+                        raise ValueError('Initial fail, unknown key type ',parameter[0],' and column count ', parameter[1] )
                 else:
                     raise ValueError('Initial fail, unknown key parameter, should be DictNpArrayMix type name or value of int, given ',parameter)
             if (_append): self.ncols += int(icol)
@@ -111,16 +123,19 @@ class DictNpArrayMix:
                 if (issubclass(parameter, DictNpArrayMix)):
                     self.__dict__[key].readArray(_dat, icol, **kwargs)
                     icol += self.__dict__[key].ncols
+                    self.size += self.__dict__[key].size*self.__dict__[key].ncols
                 else:
-                    raise ValueError('Initial fail, unknown key type, should be inherience of  DictNpArrayMix, given ',parameter)
-                self.size += self.__dict__[key].size*self.__dict__[key].ncols
-            elif (type(parameter)==int):
-                if (parameter==1):
-                    self.__dict__[key] = _dat[:,icol]
+                    self.__dict__[key] = _dat[:,icol].astype(parameter)
+                    icol += 1
+                    self.size += self.__dict__[key].size
+                    #raise ValueError('Initial fail, unknown key type, should be inherience of  DictNpArrayMix, given ',parameter)
+            elif (type(parameter)==tuple):
+                if (type(parameter[0]) == type) & (type(parameter[1]) == int):
+                    self.__dict__[key] = _dat[:,icol:icol+parameter[1]].astype(parameter[0])
+                    icol += parameter[1]
+                    self.size += self.__dict__[key].size
                 else:
-                    self.__dict__[key] = _dat[:,icol:icol+parameter]
-                icol += parameter
-                self.size += self.__dict__[key].size
+                    raise ValueError('Initial fail, unknown key type ',parameter[0],' and column count ', parameter[1] )
             else:
                 raise ValueError('Initial fail, unknown key parameter, should be DictNpArrayMix type name or value of int, given ',parameter)
         icol -= _offset
@@ -301,6 +316,82 @@ class DictNpArrayMix:
         """
         dat_int = np.loadtxt(fname, ndmin=2, **kwargs)
         self.readArray(dat_int, **kwargs)
+
+    def collectDtype(self):
+        """ Collect dtype from keys iteratively for reading BINARY format
+        For member with type of DictNpArrayMix, use column name with the prefix of member name + '.'
+        """
+        dt=[]
+        for key, parameter in self.keys:
+            if (type(parameter) == type):
+                if (issubclass(parameter, DictNpArrayMix)):
+                    dt_sub = self.__dict__[key].collectDtype()
+                    for item in dt_sub:
+                        dt.append((key+'.'+item[0], item[1]))
+                else:
+                    dt.append((key, parameter))
+            elif (type(parameter) == tuple):
+                if (type(parameter[0]) == type) & (type(parameter[1]) == int):
+                    dt.append((key, parameter))
+                else:
+                    raise ValueError('Initial fail, unknown key type ',parameter[0],' and column count ', parameter[1] )
+            else:
+                raise ValueError('Initial fail, unknown key parameter, should be DictNpArrayMix type name or value of int, given ',parameter)
+        return dt
+
+    def readArrayWithName(self, _dat, _prefix='', **kwargs):
+        """ Read class member data from a numpy.ndarray with names
+        Parameters
+        ----------
+        _dat: numpy.ndarray 
+            Read array with names of columns (key/member name of class)
+        _prefix: string ('')
+            The prefix add in front of the name of columns to read. This is used when the current class instance is a sub member (member name is consistent with prefix)
+        kwaygs: dict ()
+            keyword arguments
+        """
+        icol = int(0)
+        self.size = int(0)
+        for key, parameter in self.keys:
+            if (type(parameter) == type):
+                if (issubclass(parameter, DictNpArrayMix)):
+                    self.__dict__[key].readArrayWithName(_dat, _prefix+key+'.', **kwargs)
+                    icol += self.__dict__[key].ncols
+                    self.size += self.__dict__[key].size*self.__dict__[key].ncols
+                else:
+                    self.__dict__[key] = _dat[_prefix+key]
+                    icol += 1
+                    self.size += self.__dict__[key].size
+            elif (type(parameter) == tuple):
+                if (type(parameter[0]) == type) & (type(parameter[1]) == int):
+                    self.__dict__[key] = _dat[_prefix+key]
+                    icol += parameter[1]
+                    self.size += self.__dict__[key].size
+                else:
+                    raise ValueError('Initial fail, unknown key type ',parameter[0],' and column count ', parameter[1] )
+            else:
+                raise ValueError('Initial fail, unknown key parameter, should be DictNpArrayMix type name or value of int, given ',parameter)
+        self.size = int(self.size/icol)
+        if (self.size != _dat.size):
+            raise ValueError('Reading error, final counted size ',self.size,' is not consistent with reading ndarray shape',_dat.size)
+        if (self.ncols != icol):
+            raise ValueError('Column number inconsistence, self ncols ',self.ncols,' key ncols ', icol)
+
+    def fromfile(self, fname, **kwargs):
+        """ Load clas member data from a file using BINARY format
+        Use numpy.fromfile to read data, the dtype is defined by keys (members)
+        Notice if the first line is header, offset counts in byte should be used
+
+        Parameters
+        ----------
+        fname: string
+            name of the input file
+        kwargs: dict
+            keyword arguments for numpy.fromfile, notice dtype is already defined, do not provide that
+        """
+        dt = self.collectDtype()
+        dat_int = np.fromfile(fname, dtype=dt, **kwargs)
+        self.readArrayWithName(dat_int, '', **kwargs)
 
     def printSize(self):
         """ print size of each member

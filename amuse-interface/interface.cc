@@ -36,6 +36,10 @@ extern "C" {
         ptr->my_rank= PS::Comm::getRank();
         ptr->n_proc = PS::Comm::getNumberOfProc();
 
+#ifdef INTERFACE_DEBUG_PRINT
+        if(ptr->my_rank==0) std::cout<<"PETAR: Initialize_code start\n";
+#endif
+
         // set print flag to rank 0
         ptr->input_parameters.print_flag = (ptr->my_rank==0) ? true: false;
         // set writing flag to false
@@ -51,21 +55,27 @@ extern "C" {
         ptr->file_header.nfile = 0; 
 
 #ifdef INTERFACE_DEBUG_PRINT
-        if(ptr->my_rank==0) std::cout<<"Initialize_code\n";
+        if(ptr->my_rank==0) std::cout<<"PETAR: Initialize_code end\n";
 #endif
         return flag;
     }
 
     int cleanup_code() {
 #ifdef INTERFACE_DEBUG_PRINT
-        if(ptr->my_rank==0) std::cout<<"cleanup_code\n";
+        if(ptr->my_rank==0) std::cout<<"PETAR: cleanup_code start\n";
 #endif
         delete ptr;
         ptr=NULL;
+//#ifdef INTERFACE_DEBUG_PRINT
+//        if(ptr->my_rank==0) std::cout<<"PETAR: cleanup_code end\n";
+//#endif
         return 0;
     }
 
     int commit_parameters() {
+#ifdef INTERFACE_DEBUG_PRINT
+        if(ptr->my_rank==0) std::cout<<"PETAR: commit_parameters start\n";
+#endif
         if (!ptr->read_parameters_flag) return -1;
 
         // set stopping condtions support
@@ -77,13 +87,15 @@ extern "C" {
 #endif
         
 #ifdef INTERFACE_DEBUG_PRINT
-        if(ptr->my_rank==0) std::cout<<"commit_parameters\n";
+        if(ptr->my_rank==0) std::cout<<"PETAR: commit_parameters end\n";
 #endif
         return 0;
     }
 
     int recommit_parameters() {
-        // not allown
+#ifdef INTERFACE_DEBUG_PRINT
+        if(ptr->my_rank==0) std::cout<<"PETAR: recommit_parameters start\n";
+#endif
         ptr->initialParameters();
 
         // set stopping condtions support
@@ -95,7 +107,7 @@ extern "C" {
 #endif
 
 #ifdef INTERFACE_DEBUG_PRINT
-        if(ptr->my_rank==0) std::cout<<"recommit_parameters(forbidden!)\n";
+        if(ptr->my_rank==0) std::cout<<"PETAR: recommit_parameters end\n";
 #endif
         return 0;
     }
@@ -169,6 +181,7 @@ extern "C" {
                   double * mass, 
                   double * x, double * y, double * z,
                   double * vx, double * vy, double * vz, double * radius){
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         int rank_mask = index==-1 ? 0 : ptr->my_rank;
@@ -225,6 +238,7 @@ extern "C" {
                   double mass, 
                   double x, double y, double z,
                   double vx, double vy, double vz, double radius) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
         if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
@@ -247,6 +261,7 @@ extern "C" {
     }
 
     int get_mass(int index_of_the_particle, double * mass) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         double mass_local = 0.0;
@@ -268,6 +283,7 @@ extern "C" {
     }
 
     int set_mass(int index_of_the_particle, double mass) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
         if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
@@ -283,6 +299,7 @@ extern "C" {
     }
 
     int get_radius(int index_of_the_particle, double * radius) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         double radius_local = 0.0;
@@ -304,6 +321,7 @@ extern "C" {
     }
 
     int set_radius(int index_of_the_particle, double radius) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
         if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
@@ -320,6 +338,7 @@ extern "C" {
 
     int set_position(int index_of_the_particle,
                      double x, double y, double z) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
         if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
@@ -338,6 +357,7 @@ extern "C" {
 
     int get_position(int index_of_the_particle,
                      double * x, double * y, double * z) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         int rank_mask = index==-1 ? 0 : ptr->my_rank;
@@ -379,6 +399,7 @@ extern "C" {
 
     int set_velocity(int index_of_the_particle,
                      double vx, double vy, double vz) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
         if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
@@ -397,6 +418,7 @@ extern "C" {
 
     int get_velocity(int index_of_the_particle,
                      double * vx, double * vy, double * vz) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         int rank_mask = index==-1 ? 0 : ptr->my_rank;
@@ -437,6 +459,7 @@ extern "C" {
     }
 
     int get_acceleration(int index_of_the_particle, double * ax, double * ay, double * az) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         int rank_mask = index==-1 ? 0 : ptr->my_rank;
@@ -477,6 +500,7 @@ extern "C" {
     }
 
     int set_acceleration(int index_of_the_particle, double ax, double ay, double az) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
         if (index>=0) {
             FPSoft* p = &(ptr->system_soft[index]);
@@ -494,6 +518,7 @@ extern "C" {
     }
 
     int get_potential(int index_of_the_particle, double * potential) {
+        reconstruct_particle_list();
         int index = ptr->getParticleAdrFromID(index_of_the_particle);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         double pot_local = 0.0;
@@ -516,7 +541,7 @@ extern "C" {
 
     int evolve_model(double time_next) {
 #ifdef INTERFACE_DEBUG_PRINT
-        if(ptr->my_rank==0) std::cout<<"evolve models\n";
+        if(ptr->my_rank==0) std::cout<<"PETAR: evolve models start\n";
 #endif
         // check whether interrupted cases, exist, if so, copy back data to local particles
         int n_interrupt_isolated = ptr->system_hard_isolated.getNumberOfInterruptClusters();
@@ -670,10 +695,17 @@ extern "C" {
         }
 
         ptr->reconstructIdAdrMap();
+#ifdef INTERFACE_DEBUG_PRINT
+        if(ptr->my_rank==0) std::cout<<"PETAR: evolve models end\n";
+#endif
         return 0;
     }
 
     int commit_particles() {
+#ifdef INTERFACE_DEBUG_PRINT
+        if(ptr->my_rank==0) std::cout<<"PETAR: commit_particles start\n";
+#endif
+        
         if (!ptr->read_parameters_flag) return -1;
         if (!ptr->read_data_flag) return -1;
         ptr->input_parameters.n_glb.value = ptr->stat.n_real_glb;
@@ -682,14 +714,14 @@ extern "C" {
         ptr->reconstructIdAdrMap();
         particle_list_change_flag = false;
 #ifdef INTERFACE_DEBUG_PRINT
-        if(ptr->my_rank==0) std::cout<<"commit_particles\n";
+        if(ptr->my_rank==0) std::cout<<"PETAR: commit_particles end\n";
 #endif
         return 0;
     }
 
     int synchronize_model() {
 #ifdef INTERFACE_DEBUG_PRINT
-        if(ptr->my_rank==0) std::cout<<"synchronize_model\n";
+        if(ptr->my_rank==0) std::cout<<"PETAR: synchronize_model\n";
 #endif
         return 0;
     }
@@ -697,13 +729,23 @@ extern "C" {
     int reconstruct_particle_list() {
         if (particle_list_change_flag) {
 #ifdef INTERFACE_DEBUG_PRINT
-            if(ptr->my_rank==0) std::cout<<"reconstruct particle list\n";
+            if(ptr->my_rank==0) std::cout<<"PETAR: reconstruct particle list start\n";
 #endif
             ptr->removeParticles();
+#ifdef INTERFACE_DEBUG_PRINT
+            if(ptr->my_rank==0) std::cout<<"PETAR: remove particles end\n";
+#endif
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+            ptr->domainDecompose(true);
             ptr->exchangeParticle();
+#ifdef INTERFACE_DEBUG_PRINT
+            if(ptr->my_rank==0) std::cout<<"PETAR: exchange particles end\n";
+#endif
 #endif
             ptr->reconstructIdAdrMap();
+#ifdef INTERFACE_DEBUG_PRINT
+            if(ptr->my_rank==0) std::cout<<"PETAR: reconstruct particle list end\n";
+#endif
             particle_list_change_flag = false;
         }
         return 0;
@@ -712,10 +754,13 @@ extern "C" {
     int recommit_particles() {
         // this function is called too frequent (every time when set_xx is used).
         // thus only register the flag and do update at once in the begining of evolve_model
+#ifdef INTERFACE_DEBUG_PRINT
+        if(ptr->my_rank==0) std::cout<<"PETAR: recommit_particles start\n";
+#endif
         if (ptr->n_interrupt_glb==0) ptr->initial_step_flag = false;
         reconstruct_particle_list();
 #ifdef INTERFACE_DEBUG_PRINT
-        if(ptr->my_rank==0) std::cout<<"recommit_particles\n";
+        if(ptr->my_rank==0) std::cout<<"PETAR: recommit_particles end\n";
 #endif
         return 0;
     }
@@ -729,6 +774,73 @@ extern "C" {
         ptr->input_parameters.eps.value = epsilon_squared;
         return 0;
     }
+
+    // set changeover radius outer boundary (if zero, auto-determine)
+    int set_changeover_rout(double r_out) {
+        ptr->input_parameters.r_out.value = r_out;
+        return 0;
+    }
+
+    int get_changeover_rout(double* r_out) {
+        *r_out = ptr->input_parameters.r_out.value;
+        return 0;
+    }
+
+    // set changeover ratio of inner / outer boundary (if zero, auto-determine)
+    int set_changeover_ratio(double ratio_r_cut) {
+        ptr->input_parameters.ratio_r_cut.value = ratio_r_cut;
+        return 0;
+    }
+
+    int get_changeover_ratio(double* ratio_r_cut) {
+        *ratio_r_cut = ptr->input_parameters.ratio_r_cut.value;
+        return 0;
+    }
+
+    // set group detection maximum radius to switch on AR (if zero, auto-determine)
+    int set_group_radius(double r_bin) {
+        ptr->input_parameters.r_bin.value = r_bin;
+        return 0;
+    }
+
+    int get_group_radius(double* r_bin) {
+        *r_bin = ptr->input_parameters.r_bin.value;
+        return 0;
+    }
+
+    // set neighbor search radius minimum (if zero, auto-determine)
+    int set_rsearch_min(double r_search_min) {
+        ptr->input_parameters.r_search_min.value = r_search_min;
+        return 0;
+    }
+
+    int get_rsearch_min(double* r_search_min) {
+        *r_search_min = ptr->input_parameters.r_search_min.value;
+        return 0;
+    }
+
+    // set tree opening angle
+    int set_theta(double theta) {
+        ptr->input_parameters.theta.value = theta;
+        return 0;
+    }
+
+    int get_theta(double* theta) {
+        *theta = ptr->input_parameters.theta.value;
+        return 0;
+    }
+
+    // set tree time step
+    int set_tree_step(double dt_soft) {
+        ptr->input_parameters.dt_soft.value = dt_soft;
+        return 0;
+    }
+
+    int get_tree_step(double* dt_soft) {
+        *dt_soft = ptr->input_parameters.dt_soft.value;
+        return 0;
+    }
+
 
     int get_kinetic_energy(double * kinetic_energy) {
         // update particle array first if necessary

@@ -1685,13 +1685,16 @@ public:
     }
 
     //! domain decomposition
-    void domainDecompose() {
+    /*!
+      @param[in] _enforce: do domain decompose without check n_loop (false)
+     */
+    void domainDecompose(const bool _enforce=false) {
 #ifdef PROFILE
         // > 6. Domain decomposition
         profile.domain.start();
 #endif
         // Domain decomposition, parrticle exchange and force calculation
-        if(n_loop % 16 == 0) {
+        if(n_loop % 16 == 0 || _enforce) {
             dinfo.decomposeDomainAll(system_soft,domain_decompose_weight);
             //std::cout<<"rank: "<<my_rank<<" weight: "<<domain_decompose_weight<<std::endl;
         }
@@ -2305,6 +2308,109 @@ public:
             <<std::endl;
     }
 
+    //! print features
+    void printFeatures(std::ostream & fout) const {
+#ifdef USE_QUAD
+        fout<<"Use quadrupole moment in tree force calculation\n";
+#endif        
+
+#ifdef SOFT_PERT
+#ifdef TIDAL_TENSOR_3RD
+        fout<<"Use 3rd order tidal tensor method\n";
+#else
+        fout<<"Use 2nd order tidal tensor method\n";
+#endif
+#endif
+
+#ifdef ORBIT_SAMPLING
+        fout<<"Use orbit-sampling method\n";
+#else
+        fout<<"Use Pseudoparticle multipole method\n";
+#endif
+
+#ifdef STELLAR_EVOLUTION
+        fout<<"Use stellare evolution method: ";
+#ifdef BSE
+        fout<<"BSE\n";
+#else
+        fout<<"Base\n";
+#endif
+#endif
+
+#ifdef GALPY
+        fout<<"Use external potential: Galpy\n";
+#endif 
+
+#ifdef KDKDK_2ND
+        fout<<"Use 2nd-order KDKDK mode for tree step\n";
+#endif
+#ifdef KDKDK_4TH
+        fout<<"Use 4th-order KDKDK mode for tree step\n";
+#endif
+
+#ifdef CLUSTER_VELOCITY
+        fout<<"Use orbit-dependent neighbor criterion\n";
+#endif
+
+#ifdef HARD_CHECK_ENERGY
+        fout<<"Check energy of short-range (hard) integration\n";
+#endif
+
+#ifdef HARD_COUNT_NO_NEIGHBOR
+        fout<<"Count isolated particles in hard clusters\n";
+#endif
+
+#ifdef USE_SIMD
+        fout<<"Use SIMD\n";
+#ifdef P3T_64BIT
+        fout<<"Use 64 bit SIMD n";
+#endif
+#endif
+
+#ifdef USE_GPU
+        fout<<"Use GPU\n";
+#endif
+
+#ifdef GPERF_PROFILE
+        fout<<"Use gperftools\n";
+#endif
+
+#ifdef PROFILE
+        fout<<"Calculate profile\n";
+#endif
+
+#ifdef GPU_PROFILE
+        fout<<"Calculate GPU profile\n";
+#endif
+
+        AR::printFeatures(fout);
+        H4::printFeatures(fout);
+    }
+
+    //! print features
+    void printDebugFeatures(std::ostream & fout) const {
+#ifdef PETAR_DEBUG
+        fout<<"Debug mode: PETAR\n";
+#endif
+#ifdef STABLE_CHECK_DEBUG
+        fout<<"Debug mode: STABLE_CHECK\n";
+#endif
+#ifdef CLUSTER_DEBUG
+        fout<<"Debug mode: CLUSTER\n";
+#endif
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+        fout<<"Debug mode: ARTIFICIAL_PARTICLE\n";
+#endif
+#ifdef HARD_DEBUG
+        fout<<"Debug mode: HARD\n";
+#endif
+#ifdef NAN_CHECK_DEBUG
+        fout<<"Debug mode: NAN_CHECK\n";
+#endif
+        AR::printDebugFeatures(fout);
+        H4::printDebugFeatures(fout);
+    }
+
     //! reading input parameters using getopt method
     /*! 
       @param[in] argc: number of options
@@ -2316,6 +2422,9 @@ public:
         if (my_rank==0) {
             printLogo(std::cerr);
             printReference(std::cerr);
+            printFeatures(std::cerr);
+            printDebugFeatures(std::cerr);
+            std::cerr<<"====================================="<<std::endl;
         }
 
         //assert(initial_fdps_flag);
@@ -2816,12 +2925,14 @@ public:
 
         // local c.m velocity
         PS::F64vec vel_cm_loc = 0.0;
+        // local c.m. pos
+        PS::F64vec pos_cm_loc = 0.0;
         // local c.m. mass
         PS::F64 mass_cm_loc = 0.0;
         // local maximum mass
         //PS::F64 mass_max_loc = 0.0;
         // box size
-        PS::F64 rmin=PS::LARGE_FLOAT, rmax=0.0;
+        PS::F64 rmax=0.0;
 
         for(PS::S64 i=0; i<n_loc; i++){
             PS::F64 mi = system_soft[i].mass;
@@ -2833,21 +2944,23 @@ public:
 #endif
             mass_cm_loc += mi;
             vel_cm_loc += mi * vi;
+            pos_cm_loc += mi * ri;
             PS::F64 r2 = ri*ri;
-            rmin = std::min(r2,rmin);
             rmax = std::max(r2,rmax);
             //mass_max_loc = std::max(mi, mass_max_loc);
         }
-        rmin = std::sqrt(rmin);
         rmax = std::sqrt(rmax);
-        PS::F64 rmin_glb = PS::Comm::getMinValue(rmin);
         PS::F64 rmax_glb = PS::Comm::getMaxValue(rmax);
 
         // global c.m. parameters
         PS::F64    mass_cm_glb = PS::Comm::getSum(mass_cm_loc);
         //mass_max = PS::Comm::getMaxValue(mass_max_loc);
+        PS::F64vec pos_cm_glb  = PS::Comm::getSum(pos_cm_loc);
         PS::F64vec vel_cm_glb  = PS::Comm::getSum(vel_cm_loc);
+        pos_cm_glb /= mass_cm_glb;
         vel_cm_glb /= mass_cm_glb;
+
+        PS::F64 rmin_glb = std::sqrt(pos_cm_glb*pos_cm_glb);
 
         // local velocity square
         PS::F64 vel_sq_loc = 0.0;
@@ -3217,7 +3330,7 @@ public:
 
         // >4 tree soft force
         /// calculate tree force with linear cutoff, save to system_soft.acc
-        treeSoftForce() ;
+        treeSoftForce();
 
         // >5 correct change over
         /// correct system_soft.acc with changeover, using system_hard and system_soft particles
@@ -3275,10 +3388,10 @@ public:
         PS::F64 time_break = _time_break==0.0? input_parameters.time_end.value: std::min(_time_break,input_parameters.time_end.value);
         if (stat.time>=time_break) return 0;
 
-        PS::F64 dt = input_parameters.dt_soft.value;
+        PS::F64 dt = std::min(input_parameters.dt_soft.value, time_break-stat.time);
         PS::F64 dt_output = input_parameters.dt_snap.value;
         bool start_flag=true;
-        while (stat.time <= time_break) {
+        while (stat.time < time_break) {
 #ifdef PROFILE
             profile.total.start();
             profile.hard_single.start();
@@ -3286,7 +3399,7 @@ public:
             if (stat.n_real_loc==1) { 
                 assert(system_soft.getNumberOfParticleLocal()==1);
                 auto& p = system_soft[0];
-                p.pos + p.vel * dt;
+                p.pos += p.vel * dt;
 
 #ifdef STELLAR_EVOLUTION
                 PS::F64 mbk = p.mass;

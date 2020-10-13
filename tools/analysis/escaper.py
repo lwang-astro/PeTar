@@ -19,7 +19,7 @@ class SingleEscaper(Particle):
             interrupt_mode: PeTar interrupt mode: base, bse, none (none)
         """
         
-        DictNpArrayMix.__init__(self, [['time',1]], _dat, _offset, _append, **kwargs)
+        DictNpArrayMix.__init__(self, [['time',np.float64]], _dat, _offset, _append, **kwargs)
         Particle.__init__(self, _dat, _offset+self.ncols, True, **kwargs)
 
     def findEscaper(self, time, single, rcut):
@@ -81,7 +81,7 @@ class BinaryEscaper(Binary):
         """
         if not 'member_particle_type' in kwargs.keys(): kwargs['member_particle_type']=Particle
 
-        DictNpArrayMix.__init__(self, [['time',1]], _dat, _offset, _append, **kwargs)
+        DictNpArrayMix.__init__(self, [['time',np.float64]], _dat, _offset, _append, **kwargs)
         Binary.__init__(self, _dat, None, _offset+self.ncols, True, **kwargs)
 
     def findEscaper(self, time, binary, rcut):

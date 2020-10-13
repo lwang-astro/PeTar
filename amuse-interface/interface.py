@@ -1,3 +1,4 @@
+from amuse.rfi.core import legacy_function, LegacyFunctionSpecification
 from amuse.community import (
     CodeInterface,
     LiteratureReferencesMixIn,
@@ -38,6 +39,279 @@ class petarInterface(
             self, name_of_the_worker="petar_worker", **keyword_arguments)
         LiteratureReferencesMixIn.__init__(self)
 
+    @legacy_function
+    def get_theta():
+        """
+        Get theta, the opening angle for building the tree
+        """
+        function = LegacyFunctionSpecification()
+        function.addParameter(
+            'theta_for_tree', dtype='float64', direction=function.OUT,
+            description=(
+                "theta, the opening angle for building the tree:"
+                " between 0 and 1"
+            )
+        )
+        function.result_type = 'int32'
+        function.result_doc = """
+        0 - OK
+            the parameter was retrieved
+        -1 - ERROR
+            could not retrieve parameter
+        """
+        return function
+
+    @legacy_function
+    def set_theta():
+        """
+        Set theta, the opening angle for building the tree
+        """
+        function = LegacyFunctionSpecification()
+        function.addParameter(
+            'theta', dtype='float64', direction=function.IN,
+            description=(
+                "theta, the opening angle for building the tree:"
+                " between 0 and 1"
+            )
+        )
+        function.result_type = 'int32'
+        function.result_doc = """
+        0 - OK
+            the parameter was set
+        -1 - ERROR
+            could not set parameter
+        """
+        return function
+
+    @legacy_function
+    def get_changeover_rout():
+        """
+        Get r_out, the changeover radius outer boundary reference for
+        switching long/short-range interactions (if zero, auto-determine)
+        """
+        function = LegacyFunctionSpecification()
+        function.addParameter(
+            'r_out', dtype='float64', direction=function.OUT,
+            description=(
+                "r_out, the changeover radius outer boundary reference"
+                " for switching long/short-range interactions (if zero,"
+                " auto-determine)"
+            )
+        )
+        function.result_type = 'int32'
+        function.result_doc = """
+        0 - OK
+            the parameter was retrieved
+        -1 - ERROR
+            could not retrieve parameter
+        """
+        return function
+
+    @legacy_function
+    def set_changeover_rout():
+        """
+        Set r_out, the changeover radius outer boundary reference for
+        switching long/short-range interactions (if zero, auto-determine)
+        """
+        function = LegacyFunctionSpecification()
+        function.addParameter(
+            'r_out', dtype='float64', direction=function.IN,
+            description=(
+                "r_out, the changeover radius outer boundary reference"
+                " for switching long/short-range interactions (if zero,"
+                " auto-determine)"
+            )
+        )
+        function.result_type = 'int32'
+        function.result_doc = """
+        0 - OK
+            the parameter was set
+        -1 - ERROR
+            could not set parameter
+        """
+        return function
+
+    @legacy_function
+    def get_changeover_ratio():
+        """
+        Get ratio_r_cut, the changeover radius ratio between the inner and
+        outer boundaries
+        """
+        function = LegacyFunctionSpecification()
+        function.addParameter(
+            'ratio_r_cut', dtype='float64', direction=function.OUT,
+            description=(
+                "ratio_r_cut, the changeover radius ratio between the inner"
+                " and outer boundaries"
+            )
+        )
+        function.result_type = 'int32'
+        function.result_doc = """
+        0 - OK
+            the parameter was retrieved
+        -1 - ERROR
+            could not retrieve parameter
+        """
+        return function
+
+    @legacy_function
+    def set_changeover_ratio():
+        """
+        Set ratio_r_cut, the changeover radius ratio between the inner and
+        outer boundaries
+        """
+        function = LegacyFunctionSpecification()
+        function.addParameter(
+            'ratio_r_cut', dtype='float64', direction=function.IN,
+            description=(
+                "ratio_r_cut, the changeover radius ratio between the inner"
+                " and outer boundaries"
+            )
+        )
+        function.result_type = 'int32'
+        function.result_doc = """
+        0 - OK
+            the parameter was set
+        -1 - ERROR
+            could not set parameter
+        """
+        return function
+
+    @legacy_function
+    def get_group_radius():
+        """
+        Get r_bin, the group detection maximum radius to switch on AR
+        (if zero, auto-determine)
+        """
+        function = LegacyFunctionSpecification()
+        function.addParameter(
+            'r_bin', dtype='float64', direction=function.OUT,
+            description=(
+                "r_bin, the group detection maximum radius to switch on AR"
+                " (if zero, auto-determine)"
+            )
+        )
+        function.result_type = 'int32'
+        function.result_doc = """
+        0 - OK
+            the parameter was retrieved
+        -1 - ERROR
+            could not retrieve parameter
+        """
+        return function
+
+    @legacy_function
+    def set_group_radius():
+        """
+        Set r_bin, the group detection maximum radius to switch on AR
+        (if zero, auto-determine)
+        """
+        function = LegacyFunctionSpecification()
+        function.addParameter(
+            'r_bin', dtype='float64', direction=function.IN,
+            description=(
+                "r_bin, the group detection maximum radius to switch on AR"
+                " (if zero, auto-determine)"
+            )
+        )
+        function.result_type = 'int32'
+        function.result_doc = """
+        0 - OK
+            the parameter was set
+        -1 - ERROR
+            could not set parameter
+        """
+        return function
+
+    @legacy_function
+    def get_rsearch_min():
+        """
+        Get r_search_min, the minimum neighbor searching radius (if zero,
+        auto-determine)
+        """
+        function = LegacyFunctionSpecification()
+        function.addParameter(
+            'r_search_min', dtype='float64', direction=function.OUT,
+            description=(
+                "r_search_min, the minimum neighbor searching radius"
+                " (if zero, auto-determine)"
+            )
+        )
+        function.result_type = 'int32'
+        function.result_doc = """
+        0 - OK
+            the parameter was retrieved
+        -1 - ERROR
+            could not retrieve parameter
+        """
+        return function
+
+    @legacy_function
+    def set_rsearch_min():
+        """
+        Set r_search_min, the minimum neighbor searching radius (if zero,
+        auto-determine)
+        """
+        function = LegacyFunctionSpecification()
+        function.addParameter(
+            'r_search_min', dtype='float64', direction=function.IN,
+            description=(
+                "r_search_min, the minimum neighbor searching radius"
+                " (if zero, auto-determine)"
+            )
+        )
+        function.result_type = 'int32'
+        function.result_doc = """
+        0 - OK
+            the parameter was set
+        -1 - ERROR
+            could not set parameter
+        """
+        return function
+
+    @legacy_function
+    def get_tree_step():
+        """
+        Get dt_soft, the tree time step (if zero, auto-determine)
+        """
+        function = LegacyFunctionSpecification()
+        function.addParameter(
+            'dt_soft', dtype='float64', direction=function.OUT,
+            description=(
+                "dt_soft, the tree time step (if zero, auto-determine)"
+            )
+        )
+        function.result_type = 'int32'
+        function.result_doc = """
+        0 - OK
+            the parameter was retrieved
+        -1 - ERROR
+            could not retrieve parameter
+        """
+        return function
+
+    @legacy_function
+    def set_tree_step():
+        """
+        Set dt_soft, the minimum neighbor searching radius (if zero,
+        auto-determine)
+        """
+        function = LegacyFunctionSpecification()
+        function.addParameter(
+            'dt_soft', dtype='float64', direction=function.IN,
+            description=(
+                "dt_soft, the tree time step (if zero, auto-determine)"
+            )
+        )
+        function.result_type = 'int32'
+        function.result_doc = """
+        0 - OK
+            the parameter was set
+        -1 - ERROR
+            could not set parameter
+        """
+        return function
+
 
 class petar(GravitationalDynamics, GravityFieldCode):
 
@@ -62,9 +336,59 @@ class petar(GravitationalDynamics, GravityFieldCode):
         handler.add_method_parameter(
             "get_eps2",
             "set_eps2",
-            "epsilon_squared", 
-            "smoothing  parameter for gravity calculations", 
-            default_value = 0.0 | nbody_system.length * nbody_system.length
+            "epsilon_squared",
+            "smoothing  parameter for gravity calculations",
+            default_value=0.0 | nbody_system.length * nbody_system.length
+        )
+
+        handler.add_method_parameter(
+            "get_changeover_rout",
+            "set_changeover_rout",
+            "r_out",
+            ("changeover radius outer boundary reference for switching"
+             " long/short-range interactions (if zero, auto-determine)"),
+            default_value=0.0 | nbody_system.length
+        )
+
+        handler.add_method_parameter(
+            "get_changeover_ratio",
+            "set_changeover_ratio",
+            "ratio_r_cut",
+            "Changeover radius ratio between the inner and outer boundaries",
+            default_value=0.1
+        )
+
+        handler.add_method_parameter(
+            "get_group_radius",
+            "set_group_radius",
+            "r_bin",
+            ("Group detection maximum radius to switch on AR (if zero,"
+             " auto-determine)"),
+            default_value=0.0 | nbody_system.length
+        )
+
+        handler.add_method_parameter(
+            "get_rsearch_min",
+            "set_rsearch_min",
+            "r_search_min",
+            "Minimum neighbor searching radius (if zero, auto-determine)",
+            default_value=0.0 | nbody_system.length
+        )
+
+        handler.add_method_parameter(
+            "get_theta",
+            "set_theta",
+            "theta",
+            "Tree opening angle",
+            default_value=0.3
+        )
+
+        handler.add_method_parameter(
+            "get_tree_step",
+            "set_tree_step",
+            "dt_soft",
+            "Tree time step (if zero, auto-determine)",
+            default_value=0.0 | nbody_system.time
         )
 
     def define_methods(self, handler):
@@ -74,10 +398,10 @@ class petar(GravitationalDynamics, GravityFieldCode):
         handler.add_method(
             "set_eps2",
             (
-                nbody_system.length * nbody_system.length
+                nbody_system.length * nbody_system.length,
             ),
             (
-                handler.ERROR_CODE
+                handler.ERROR_CODE,
             )
         )
 
@@ -86,7 +410,83 @@ class petar(GravitationalDynamics, GravityFieldCode):
             (),
             (
                 nbody_system.length * nbody_system.length,
-                handler.ERROR_CODE
+                handler.ERROR_CODE,
+            )
+        )
+
+        handler.add_method(
+            "set_changeover_rout",
+            (
+                nbody_system.length,
+            ),
+            (
+                handler.ERROR_CODE,
+            )
+        )
+
+        handler.add_method(
+            "get_changeover_rout",
+            (),
+            (
+                nbody_system.length,
+                handler.ERROR_CODE,
+            )
+        )
+
+        handler.add_method(
+            "set_group_radius",
+            (
+                nbody_system.length,
+            ),
+            (
+                handler.ERROR_CODE,
+            )
+        )
+
+        handler.add_method(
+            "get_group_radius",
+            (),
+            (
+                nbody_system.length,
+                handler.ERROR_CODE,
+            )
+        )
+
+        handler.add_method(
+            "set_rsearch_min",
+            (
+                nbody_system.length,
+            ),
+            (
+                handler.ERROR_CODE,
+            )
+        )
+
+        handler.add_method(
+            "get_rsearch_min",
+            (),
+            (
+                nbody_system.length,
+                handler.ERROR_CODE,
+            )
+        )
+
+        handler.add_method(
+            "set_tree_step",
+            (
+                nbody_system.time,
+            ),
+            (
+                handler.ERROR_CODE,
+            )
+        )
+
+        handler.add_method(
+            "get_tree_step",
+            (),
+            (
+                nbody_system.time,
+                handler.ERROR_CODE,
             )
         )
 

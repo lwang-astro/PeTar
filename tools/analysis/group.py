@@ -35,7 +35,7 @@ class BinaryTree(DictNpArrayMix):
         member_particle_type=Particle
         if 'member_particle_type' in kwargs.keys(): member_particle_type=kwargs['member_particle_type']
 
-        keys = [['semi',1], ['ecc',1], ['incline',1],['rot_horizon',1],['rot_self',1],['t_peri',1],['period',1],['ecca',1],['m1',1],['m2',1],['r',1],['am',3],['stab',1],['sd',1],['sd_org',1],['sd_max',1],['p1',member_particle_type],['p2',member_particle_type]]
+        keys = [['semi',np.float64], ['ecc',np.float64], ['incline',np.float64],['rot_horizon',np.float64],['rot_self',np.float64],['t_peri',np.float64],['period',np.float64],['ecca',np.float64],['m1',np.float64],['m2',np.float64],['r',np.float64],['am',(np.float64,3)],['stab',np.float64],['sd',np.float64],['sd_org',np.float64],['sd_max',np.float64],['p1',member_particle_type],['p2',member_particle_type]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append,**kwargs)
         
 class GroupInfo(DictNpArrayMix):
@@ -55,7 +55,7 @@ class GroupInfo(DictNpArrayMix):
             N: number of groups (2)
         """
         kwargs['particle_type']='hard'
-        keys=[['type',1],['n',1],['time',1],['pos',3],['vel',3]]
+        keys=[['type',np.int64],['n',np.int64],['time',np.float64],['pos',(np.float64,3)],['vel',(np.float64,3)]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
         n=2

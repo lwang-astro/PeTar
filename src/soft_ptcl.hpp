@@ -11,7 +11,7 @@ public:
 #ifdef SAVE_NEIGHBOR_ID_IN_FORCE_KERNEL
     PS::S64 id_ngb[4]; /// five neighbor id
 #endif
-    PS::S32 n_ngb; ///> neighbor number+1
+    PS::S64 n_ngb; ///> neighbor number+1
     static PS::F64 grav_const; ///> gravitational constant
     void clear(){
         acc = 0.0;
@@ -34,7 +34,7 @@ public:
 #ifdef SAVE_NEIGHBOR_ID_IN_FORCE_KERNEL
     PS::S64 id_ngb[4];
 #endif
-    PS::S32 n_ngb;
+    PS::S64 n_ngb;
     PS::S32 rank_org;
     PS::S32 adr;
 //    static PS::F64 r_out;
@@ -96,20 +96,19 @@ public:
 
     void writeAscii(FILE* fp) const{
         Ptcl::writeAscii(fp);
-        fprintf(fp, "%26.17e %26.17e %26.17e %26.17e %26.17e %d\n", 
+        fprintf(fp, "%26.17e %26.17e %26.17e %26.17e %26.17e %lld\n", 
                 this->acc.x, this->acc.y, this->acc.z,  // 9-11
                 this->pot_tot, this->pot_soft, this->n_ngb);
     }
 
     void writeBinary(FILE* fp) const{
         Ptcl::writeBinary(fp);
-        fwrite(&(this->acc), sizeof(PS::F64), 5, fp);
-        fwrite(&(this->n_ngb), sizeof(PS::S32), 1, fp);
+        fwrite(&(this->acc), sizeof(PS::F64), 6, fp);
     }
 
     void readAscii(FILE* fp) {
         Ptcl::readAscii(fp);
-        PS::S64 rcount=fscanf(fp, "%lf %lf %lf %lf %lf %d\n",
+        PS::S64 rcount=fscanf(fp, "%lf %lf %lf %lf %lf %lld\n",
                               &this->acc.x, &this->acc.y, &this->acc.z,  // 9-11
                               &this->pot_tot, &this->pot_soft, &this->n_ngb);
         if (rcount<6) {
@@ -120,8 +119,7 @@ public:
 
     void readBinary(FILE* fp) {
         Ptcl::readBinary(fp);
-        size_t rcount = fread(&(this->acc), sizeof(PS::F64), 5, fp);
-        rcount += fread(&(this->n_ngb), sizeof(PS::S32), 1, fp);
+        size_t rcount = fread(&(this->acc), sizeof(PS::F64), 6, fp);
         if (rcount<6) {
             std::cerr<<"Error: Data reading fails! requiring data number is 6, only obtain "<<rcount<<".\n";
             abort();

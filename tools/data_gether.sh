@@ -25,7 +25,7 @@ if [ ! -e $fname ] | [ -z $fname ] ; then
     echo 'Error, file name not provided' 
     exit
 fi
-[ -z $fout ] && fout=data
+[ -z $fout ] && fout=$fname
 
 echo 'data filename prefix: '$fout
 
@@ -81,4 +81,4 @@ if [ -e $fout.bse ]; then
 fi
 
 flen=`expr ${#fname} + 2`
-ls|egrep $fname'.[0-9]+$' |sort -n -k 1.${flen} >$fout.snap.lst
+ls|egrep '^'$fname'.[0-9]+$' |sort -n -k 1.${flen} >$fout.snap.lst

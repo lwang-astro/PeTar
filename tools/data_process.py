@@ -28,11 +28,12 @@ if __name__ == '__main__':
         print("  -r(--read-data): read existing single, binary and core data to avoid expensive KDTree construction, no argument, disabled in default")
         print("  -e(--r-escape): a constant escape distance criterion, in default, it is 20*half-mass radius")
         print("  -i(--interrupt-mode): interruption mode: no, base, bse (no)")
+        print("  -s(--snapshot-format): snapshot data format: binary, ascii (ascii)")
         print("  -n(--n-cpu): number of CPU threads for parallel processing (all threads)")
 
     try:
-        shortargs = 'p:m:G:b:Ba:re:i:n:h'
-        longargs = ['mass-fraction=','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','r-escape=','interrupt-mode=','n-cpu=','help']
+        shortargs = 'p:m:G:b:Ba:re:i:s:n:h'
+        longargs = ['mass-fraction=','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','r-escape=','interrupt-mode=','snapshot-format=','n-cpu=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -56,6 +57,8 @@ if __name__ == '__main__':
                 n_cpu = int(arg)
             elif opt in ('-i','--interrupt-mode'):
                 kwargs['interrupt_mode'] = arg
+            elif opt in ('-s','--snapshot-format'):
+                kwargs['snapshot_format'] = arg
             elif opt in ('-r','--read-data'):
                 read_flag = True
             elif opt in ('-e','--r-escape'):
@@ -84,7 +87,7 @@ if __name__ == '__main__':
      
     result,time_profile = petar.parallelDataProcessList(path_list, n_cpu, read_flag, **kwargs)
 
-    for key in ['lagr','core','bse', 'esc_single', 'esc_binary']:
+    for key in ['lagr','core','bse_status', 'esc_single', 'esc_binary']:
         if key in result.keys():
             key_filename  = filename_prefix + '.' + key
             result[key].savetxt(key_filename)

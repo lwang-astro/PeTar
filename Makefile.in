@@ -14,7 +14,7 @@ orb_mode=@with_orbit@
 
 CXXFLAGS=@CXXFLAGS@
 
-TARGET=build/@PROG_NAME@ build/petar.hard.debug
+TARGET=build/@PROG_NAME@ build/petar.hard.debug build/petar.format.transfer
 
 #MT_FLAGS += -D HARD_CM_KICK
 MT_FLAGS += -D USE_QUAD
@@ -188,6 +188,9 @@ HARD_DEBFLAGS+= -D AR_DEBUG -D AR_DEBUG_DUMP -D AR_DEBUG_PRINT -D AR_WARN -D HAR
 HARD_MT_FLAGS += -D AR_TTL -D AR_SLOWDOWN_INNER -D AR_SLOWDOWN_TIMESCALE -D HARD_CHECK_ENERGY 
 
 HARD_SRC= io.hpp ptcl.hpp particle_base.hpp hard_assert.hpp cluster_list.hpp hard.hpp hard_ptcl.hpp hermite_interaction.hpp hermite_information.hpp hermite_perturber.hpp ar_interaction.hpp ar_perturber.hpp search_group_candidate.hpp artificial_particles.hpp stability.hpp soft_ptcl.hpp static_variables.hpp tidal_tensor.hpp orbit_sampling.hpp pseudoparticle_multipole.hpp
+
+build/petar.format.transfer: format_transfer.cxx |build
+	$(CXX) $(INCLUDE) $(CXXFLAGS) $(MT_FLAGS) -o $@ $< $(CXXLIBS)
 
 build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(LIBFILES) |build
 	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
