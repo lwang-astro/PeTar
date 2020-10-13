@@ -59,6 +59,11 @@ extern "C" {
         double pts3;  ///> time step of HG, HeMS (0.02)
     } points_;
 
+    extern struct{
+        int idum2;
+        int iy;
+        int ir[32];
+    } rand3_;
 
     //! function for initial metallicity parameters
     void zcnsts_(double* z, double* zpars);
@@ -86,7 +91,7 @@ extern "C" {
 
 //! MOBSE star parameter for saving
 struct StarParameter{
-    int kw;       ///> stellar type
+    long long int kw;       ///> stellar type
     double m0;    ///> Initial stellar mass in solar units
     double mt;    ///> Current mass in solar units (used for R)
     double r;     ///> Stellar radius in solar units
@@ -120,7 +125,7 @@ struct StarParameter{
     /*! @param[in] _fout: file IO for write
      */
     void writeAscii(FILE* fp) const{
-        fprintf(fp, "%d %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e ",
+        fprintf(fp, "%lld %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e ",
                 this->kw, this->m0, this->mt, this->r, this->mc, this->rc, this->ospin, this->epoch, this->tphys, this->lum);
     }
 
@@ -128,7 +133,7 @@ struct StarParameter{
     /*! @param[in] _fin: file IO for read
      */
     void readAscii(FILE* fp) {
-        int rcount=fscanf(fp, "%d %lf %lf %lf %lf %lf %lf %lf %lf %lf ",
+        int rcount=fscanf(fp, "%lld %lf %lf %lf %lf %lf %lf %lf %lf %lf ",
                           &this->kw, &this->m0, &this->mt, &this->r, &this->mc, &this->rc, &this->ospin, &this->epoch, &this->tphys, & this->lum);
         if(rcount<10) {
             std::cerr<<"Error: Data reading fails! requiring data number is 10, only obtain "<<rcount<<".\n";
@@ -220,7 +225,7 @@ struct StarParameter{
 
 //! MOBSE star parameter for output
 struct StarParameterOut{
-    int kw0;       ///> original type before evolution
+    long long int kw0;       ///> original type before evolution
     double dtmiss; ///> required evolution time - actually evolved time
     double menv;  ///> mass of convective envelope 
     double renv;  ///> radius of convective envelope
@@ -740,6 +745,32 @@ public:
         return true;
     }
 
+    //! dump MOBSE rand constant to file
+    void dumpRandConstant(const char* _fname) {
+        FILE* fin;
+        if( (fin = fopen(_fname,"w")) == NULL) {
+            fprintf(stderr,"Error: Cannot open file %s.\n", _fname);
+            abort();
+        }
+        fprintf(fin, "%d %d %d ", value3_.idum, rand3_.idum2, rand3_.iy);
+        for (int i=0; i<32; i++) fprintf(fin, "%d ", rand3_.ir[i]);
+        fprintf(fin, "\n");
+        fclose(fin);
+    }
+
+    //! read MOBSE rand constant from file
+    void readRandConstant(const char* _fname) {
+        FILE* fin;
+        if( (fin = fopen(_fname,"r")) == NULL) {
+            printf("Not found.\n");
+        }
+        else {
+            fscanf(fin, "%d %d %d ", &value3_.idum, &rand3_.idum2, &rand3_.iy);
+            for (int i=0; i<32; i++) fscanf(fin, "%d ", &rand3_.ir[i]);
+            fclose(fin);
+        }
+    }
+        
     //! print terminal Logo
     static void printLogo(std::ostream & fout) {
         fout<<"---------------------------------------\n"
@@ -925,10 +956,12 @@ public:
         double dtp=tphysf*100.0+1000.0;
         _out.dm = _star.mt;
         _out.kw0 = _star.kw;
-        evolv1_(&_star.kw, &_star.m0, &_star.mt, &_star.r, 
+        int kw = _star.kw;
+        evolv1_(&kw, &_star.m0, &_star.mt, &_star.r, 
                 &_star.lum, &_star.mc, &_star.rc, &_out.menv, &_out.renv, 
                 &_star.ospin, &_star.epoch, 
                 &_out.tm, &_star.tphys, &tphysf, &dtp, &z, zpars, _out.vkick);
+                _star.kw = kw;
         _out.dm = _star.mt - _out.dm;
         _out.dtmiss = tphysf - _star.tphys;
 
@@ -1087,11 +1120,13 @@ public:
         double tm, tn, tscls[20], lums[10], gb[10], dtm, dtr;
         
         // obtain star parameters
-        star_(&_star.kw, &_star.m0, &_star.mt, &tm, &tn, tscls, lums, gb, zpars);
+        int kw = _star.kw;
+        star_(&kw, &_star.m0, &_star.mt, &tm, &tn, tscls, lums, gb, zpars);
 
         // get next step
         double age = _star.tphys-_star.epoch;
-        deltat_(&_star.kw, &age, &tm, &tn, tscls, &dtm, &dtr);
+        deltat_(&kw, &age, &tm, &tn, tscls, &dtm, &dtr);
+        _star.kw = kw;
 
         //assert(dtr>0.0);
         //assert(dtm>0.0);

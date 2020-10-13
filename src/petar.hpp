@@ -2332,6 +2332,8 @@ public:
         fout<<"Use stellare evolution method: ";
 #ifdef BSE
         fout<<"BSE\n";
+#elif MOBSE
+        fout<<"MOBSE\n";
 #else
         fout<<"Base\n";
 #endif
