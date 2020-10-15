@@ -462,15 +462,25 @@ def initFig(model_list, frame_xsize, frame_ysize, ncol, nplots, compare_in_colum
         xsize = frame_xsize*nplots
     else:
         xsize = ncol*frame_xsize
-        nrow = nplots/ncol
+        nrow = int(nplots/ncol)
         if (nrow*ncol<nplots): nrow+=1
         ysize = nrow*frame_ysize
 
     fig, axe = plt.subplots(nrow,ncol,figsize=(xsize, ysize))
-    if (len(model_list)>1) & compare_in_column: axe=[[axe[i][j] for i in range(nrow)] for j in range(ncol)]
-    #if (nrow>1) & (ncol>1): axe=axe.flatten()
-    if (nrow==1) | (ncol==1): axe=[axe]
-    if (nrow==1) & (ncol==1): axe=[axe]
+    # axe should be two dimension, rows contain different models and columns contain different types of plots
+    if (len(model_list)>1):
+        if compare_in_column: 
+            if (nrow>1): # swap rows and columns
+                axe=[[axe[i][j] for i in range(nrow)] for j in range(ncol)]
+            else: 
+                axe=[[axe[i]] for i in range(ncol)] # enclose each model in additional []
+        else:
+            if (ncol==1): axe=[[axe[i]] for i in range(nrow)] # enclose each model in additional []
+    else:
+        # in only one model case, only one row exist, cols of plots should be flatten into one row and enclosed by []
+        if (nrow>1) & (ncol>1): axe=[axe.flatten()]  
+        if (nrow==1) | (ncol==1): axe=[axe] # one row or one column case, enclosed by []
+        if (nrow==1) & (ncol==1): axe=[axe] # only one plot case, one more [] is needed: axe should be 2D [[axe]]
     return fig, axe
 
 
@@ -747,9 +757,11 @@ if __name__ == '__main__':
         
         file_part = [path_list[n_offset[i]:n_offset[i+1]] for i in range(n_cpu)]
         results=[None]*n_cpu
-        for rank in range(n_cpu):
-            #createImage(file_part[rank], model_list, frame_xsize, frame_ysize, ncol, plot_item, core, lagr, **kwargs)
-            results[rank]=pool.apply_async(createImage, (file_part[rank], model_list, frame_xsize, frame_ysize, ncol, plot_item, core, lagr), kwargs)
+        if (n_cpu==1):
+            createImage(file_part[0], model_list, frame_xsize, frame_ysize, ncol, plot_item, core, lagr, **kwargs)
+        else:
+            for rank in range(n_cpu):
+                results[rank]=pool.apply_async(createImage, (file_part[rank], model_list, frame_xsize, frame_ysize, ncol, plot_item, core, lagr), kwargs)
 
         # Step 3: Don't forget to close
         pool.close()
