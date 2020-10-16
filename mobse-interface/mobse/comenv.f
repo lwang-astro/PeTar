@@ -58,7 +58,9 @@ C        write(*,*)KTYPE(KW1,KW2),kw1,kw2
       KW = KW1
       CALL star(KW1,M01,M1,TM1,TN,TSCLS1,LUMS,GB,ZPARS)
       CALL hrdiag(M01,AJ1,M1,TM1,TN,TSCLS1,LUMS,GB,ZPARS,
-     &            R1,L1,KW1,MC1,RC1,MENV,RENV,K21)
+     &            R1,L1,KW1,MC1,RC1,MENV,RENV,K21,
+     &            ffb,ECS,mfin)
+
       OSPIN1 = JSPIN1/(K21*R1*R1*(M1-MC1)+K3*RC1*RC1*MC1)
       MENVD = MENV/(M1-MC1)
       RZAMS = RZAMSF(M01)
@@ -66,7 +68,8 @@ C        write(*,*)KTYPE(KW1,KW2),kw1,kw2
       KW = KW2
       CALL star(KW2,M02,M2,TM2,TN,TSCLS2,LUMS,GB,ZPARS)
       CALL hrdiag(M02,AJ2,M2,TM2,TN,TSCLS2,LUMS,GB,ZPARS,
-     &            R2,L2,KW2,MC2,RC2,MENV,RENV,K22)
+     &            R2,L2,KW2,MC2,RC2,MENV,RENV,K22,
+     &            ffb,ECS,mfin)
       OSPIN2 = JSPIN2/(K22*R2*R2*(M2-MC2)+K3*RC2*RC2*MC2)
 *
 * Calculate the binding energy of the giant envelope (multiplied by lambda).

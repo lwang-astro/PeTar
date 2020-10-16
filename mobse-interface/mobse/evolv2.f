@@ -179,7 +179,7 @@
 *
       INTEGER loop,iter,intpol,k,j1,j2
       PARAMETER(loop=60000)
-      INTEGER kstar(2),kw,kst,kw1,kw2,kmin,kmax,helper(2)
+      INTEGER kstar(2),kw,kst,kw1,kw2,kmin,kmax,kwdon,kwacc
       INTEGER ktype(0:14,0:14)
       COMMON /TYPES/ ktype
       INTEGER ceflag,tflag,ifflag,nsflag,wdflag,piflag
@@ -1344,9 +1344,11 @@ c      endif
             m1ce = mass(j1)
             m2ce = mass(j2)
 * We need the donor in the first place of the array
-            helper(1) = j1
-            helper(2) = j2
-            CALL mix(mass0,mass,aj,kstar,zpars,helper)
+c            helper(1) = j1
+c            helper(2) = j2
+            kwdon = kstar(1)
+            kwacc = kstar(2)
+            CALL mix(mass0,mass,aj,kstar,zpars)
 * we return to the usual way
             dm1 = m1ce - mass(j1)
             dm2 = mass(j2) - m2ce
@@ -1362,6 +1364,7 @@ c      endif
 *
          m1ce = mass(j1)
          m2ce = mass(j2)
+         write(*,*)'qui 1?'
          CALL comenv(mass0(j1),mass(j1),massc(j1),aj(j1),jspin(j1),
      &               kstar(j1),mass0(j2),mass(j2),massc(j2),aj(j2),
      &               jspin(j2),kstar(j2),zpars,ecc,sep,jorb,
@@ -1534,9 +1537,11 @@ c          btype = 8
             m1ce = mass(j1)
             m2ce = mass(j2)
 * Beacuse the collisional matrix is not symmetric 
-            helper(1) = j1
-            helper(2) = j2
-            CALL mix(mass0,mass,aj,kstar,zpars,helper)
+c            helper(1) = j1
+c            helper(2) = j2
+            kwdon = kstar(1)
+            kwacc = kstar(2)
+            CALL mix(mass0,mass,aj,kstar,zpars)
 * we return to the usual way
             dm1 = m1ce - mass(j1)
             dm2 = mass(j2) - m2ce
@@ -1815,7 +1820,7 @@ c          btype = 8
 * For very close systems include angular momentum loss mechanisms.
 * GW are important only for compact objects
 * 
-       if((kstar(1).ge.10 .and. kstar(2).ge.10).and.sep.gt.0.d0)then
+         if((kstar(1).ge.10 .and. kstar(2).ge.10).and.sep.gt.0.d0)then
             djgr = 8.315d-10*mass(1)*mass(2)*(mass(1)+mass(2))/
      &             (sep*sep*sep*sep)
             f1 = (19.d0/6.d0) + (121.d0/96.d0)*ecc2
@@ -2300,12 +2305,14 @@ c      endif
 * HG donors behave like MS stars
 *
       if(kstar(j1).ge.3.and.kstar(j1).le.9.and.kstar(j1).ne.7)then
+         write(*,*)'qui 2?'
          CALL comenv(mass0(j1),mass(j1),massc(j1),aj(j1),jspin(j1),
      &               kstar(j1),mass0(j2),mass(j2),massc(j2),aj(j2),
      &               jspin(j2),kstar(j2),zpars,ecc,sep,jorb,
      &               vkick(4*(j1-1)+1),vkick(4*(j2-1)+1),coel)
          com = .true.
       elseif(kstar(j2).ge.3.and.kstar(j2).le.9.and.kstar(j2).ne.7)then
+         write(*,*)'qui 3?'
          CALL comenv(mass0(j2),mass(j2),massc(j2),aj(j2),jspin(j2),
      &               kstar(j2),mass0(j1),mass(j1),massc(j1),aj(j1),
      &               jspin(j1),kstar(j1),zpars,ecc,sep,jorb,
@@ -2313,9 +2320,11 @@ c      endif
          com = .true.
       else
 * beacuse the collisional matrix is not symmetric 
-            helper(1) = j1
-            helper(2) = j2
-            CALL mix(mass0,mass,aj,kstar,zpars,helper)
+c            helper(1) = j1
+c            helper(2) = j2
+            kwdon = kstar(1)
+            kwacc = kstar(2)
+            CALL mix(mass0,mass,aj,kstar,zpars)
 * we return to the usual way
 *
       endif
@@ -2462,6 +2471,7 @@ c      endif
             bpp(jp,10) = -1.0
          endif
       endif
+*
       if(tphys.ge.tprint) then
             teff1 = 1000.d0*((1130.d0*lumin(1)/
      &        (rad(1)**2.d0))**(1.d0/4.d0))

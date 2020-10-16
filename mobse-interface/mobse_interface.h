@@ -1099,7 +1099,9 @@ public:
         m0[1] = _star2.m0;
         mt[1] = _star2.mt;
         age[1]= _star2.tphys-_star2.epoch;
-        
+        int kwdon = _star1.kw;
+        int kwacc = _star2.kw;
+
         mix_(m0,mt,age,kw,zpars);
 
         _star1.kw = kw[0];
