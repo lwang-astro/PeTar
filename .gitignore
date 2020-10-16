@@ -19,7 +19,9 @@ config.log
 config.status
 Makefile
 bse-interface/Makefile
+bse-interface/petar.bse
 mobse-interface/Makefile
+mobse-interface/petar.mobse
 GPATH
 GRTAGS
 GTAGS
