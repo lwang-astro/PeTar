@@ -735,8 +735,12 @@ public:
             printf("Not found.\n");
         }
         else {
-            fscanf(fin, "%d %d %d ", &value3_.idum, &rand3_.idum2, &rand3_.iy);
-            for (int i=0; i<32; i++) fscanf(fin, "%d ", &rand3_.ir[i]);
+            int rcount = fscanf(fin, "%d %d %d ", &value3_.idum, &rand3_.idum2, &rand3_.iy);
+            for (int i=0; i<32; i++) rcount += fscanf(fin, "%d ", &rand3_.ir[i]);
+            if(rcount<35) {
+                std::cerr<<"Error: Data reading fails! requiring data number is 35, only obtain "<<rcount<<".\n";
+                abort();
+            }
             fclose(fin);
         }
     }
