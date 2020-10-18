@@ -84,8 +84,13 @@ if __name__ == '__main__':
     fl = open(filename,'r')
     file_list = fl.read()
     path_list = file_list.splitlines()
-     
-    result,time_profile = petar.parallelDataProcessList(path_list, n_cpu, read_flag, **kwargs)
+
+    result=dict()
+    time_profile=dict()
+    if (n_cpu==1):
+        result,time_profile = petar.dataProcessList(path_list, read_flag, **kwargs)
+    else:
+        result,time_profile = petar.parallelDataProcessList(path_list, n_cpu, read_flag, **kwargs)
 
     for key in ['lagr','core','bse_status', 'esc_single', 'esc_binary']:
         if key in result.keys():
