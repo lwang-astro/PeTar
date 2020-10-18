@@ -2,6 +2,7 @@
 #include <iostream>
 #include <iomanip>
 #include <cassert>
+#include <cstdio>
 #include <string>
 #include <getopt.h>
 #include "../src/io.hpp"
@@ -375,19 +376,19 @@ public:
     IOParams<double> gamma;
     //IOParams<double> mxns;
     IOParams<double> sigma;
-    IOParams<int> ceflag;
-    IOParams<int> tflag;
-    //IOParams<int> ifflag;
-    IOParams<int> wdflag;
-    IOParams<int> bhflag;
-    IOParams<int> nsflag;
-    IOParams<int> psflag;
-    IOParams<int> kmech;
-    IOParams<int> ecflag;
+    IOParams<long long int> ceflag;
+    IOParams<long long int> tflag;
+    //IOParams<long long int> ifflag;
+    IOParams<long long int> wdflag;
+    IOParams<long long int> bhflag;
+    IOParams<long long int> nsflag;
+    IOParams<long long int> psflag;
+    IOParams<long long int> kmech;
+    IOParams<long long int> ecflag;
     IOParams<double> pts1;
     IOParams<double> pts2;
     IOParams<double> pts3;
-    IOParams<int> idum;
+    IOParams<long long int> idum;
     IOParams<double> tscale;
     IOParams<double> rscale;
     IOParams<double> mscale;
@@ -397,37 +398,37 @@ public:
     bool print_flag;
 
     IOParamsBSE(): input_par_store(),
-                   neta  (input_par_store, 0.5, "Reimers mass-loss coefficent [neta*4x10^-13]"),
-                   bwind (input_par_store, 0.0, "Binary enhanced mass loss parameter; inactive for single"),
-                   hewind(input_par_store, 1.0, "Helium star mass loss factor"),
-                   //mxns  (input_par_store, 1.0, "Helium star mass loss factor"),
-                   alpha (input_par_store, 3.0, "Common-envelope efficiency parameter"),
-                   lambda(input_par_store, 0.5, "Binding energy factor for common envelope evolution"),
-                   beta  (input_par_store, 0.125, "wind velocity factor: proportional to vwind**2"),
-                   xi    (input_par_store, 1.0, "wind accretion efficiency factor"),
-                   bhwacc(input_par_store, 1.5, "Bondi-Hoyle wind accretion factor"),
-                   epsnov(input_par_store, 0.001, "The fraction of accreted matter retained in nova eruption"),
-                   eddfac(input_par_store, 1.0, "Eddington limit factor for mass transfer"),
-                   gamma (input_par_store, -1.0, "Angular momentum factor for mass lost during Roche"),
-                   sigma (input_par_store, 265.0, "Dispersion in the Maxwellian for the SN kick speed [km/s]"),
-                   ceflag(input_par_store, 0,  "if =3, activates de Kool common-envelope model"),
-                   tflag (input_par_store, 1,  "if >0, activates tidal circularisation"),
-                   //ifflag(input_par_store, 2,   "if > 0 uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
-                   wdflag(input_par_store, 1,  "if >0, uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
-                   bhflag(input_par_store, 2,  "BH kick option: 0: no kick; 1: same as NS; 2: scaled by fallback"),
-                   nsflag(input_par_store, 3,  "NS/BH foramtion options: 0: original SSE; 1: Belczynski (2002); 2: Belczynski (2008); 3: Fryer (2012) rapid SN; 4: Fryer (2012) delayed SN; 5: Eldridge & Tout (2004)"),
-                   psflag(input_par_store, 1,  "PPSN condition (Belczynski 2016): 0: no PPSN; 1: strong; (Leung 2019): 2: moderate; 3: weak"),
-                   kmech (input_par_store, 1,  "Kick mechanism: 1: standard momentum-conserving; 2: convection-asymmetry-driven; 3: collapse-asymmerty-driven; 4: neutrino driven"),
-                   ecflag(input_par_store, 1,  "if >0, ECS is switched on"),
-                   pts1  (input_par_store, 0.05, "time step of MS"),
-                   pts2  (input_par_store, 0.01, "time step of GB, CHeB, AGB, HeGB"),
-                   pts3  (input_par_store, 0.02, "time step of HG, HeMS"),
-                   idum  (input_par_store, 1234, "random number seed used by the kick routine"),
-                   tscale(input_par_store, 1.0, "Time scale factor from input data unit (IN) to Myr (time[Myr]=time[IN]*tscale)"),
-                   rscale(input_par_store, 1.0, "Radius scale factor from input data unit (IN) to Rsun (r[Rsun]=r[IN]*rscale)"),
-                   mscale(input_par_store, 1.0, "Mass scale factor from input data unit (IN) to Msun (m[Msun]=m[IN]*mscale)"),
-                   vscale(input_par_store, 1.0, "Velocity scale factor from input data unit(IN) to km/s (v[km/s]=v[IN]*vscale)"),
-                   z     (input_par_store, 0.001, "Metallicity"),
+                   neta  (input_par_store, 0.5, "bse-neta",  "Reimers mass-loss coefficent [neta*4x10^-13]"),
+                   bwind (input_par_store, 0.0, "bse-bwind", "Binary enhanced mass loss parameter; inactive for single"),
+                   hewind(input_par_store, 1.0, "bse-hewind","Helium star mass loss factor"),
+                   //mxns  (input_par_store, 1.0, "bse-mxns",   "Helium star mass loss factor"),
+                   alpha (input_par_store, 3.0,   "bse-alpha",  "Common-envelope efficiency parameter"),
+                   lambda(input_par_store, 0.5,   "bse-lambda", "Binding energy factor for common envelope evolution"),
+                   beta  (input_par_store, 0.125, "bse-beta",   "wind velocity factor: proportional to vwind**2"),
+                   xi    (input_par_store, 1.0,   "bse-xi",     "wind accretion efficiency factor"),
+                   bhwacc(input_par_store, 1.5,   "bse-bhwacc", "Bondi-Hoyle wind accretion factor"),
+                   epsnov(input_par_store, 0.001, "bse-epsnov", "The fraction of accreted matter retained in nova eruption"),
+                   eddfac(input_par_store, 1.0,   "bse-eddfac", "Eddington limit factor for mass transfer"),
+                   gamma (input_par_store, -1.0,  "bse-gamma",  "Angular momentum factor for mass lost during Roche"),
+                   sigma (input_par_store, 265.0, "bse-sigma",  "Dispersion in the Maxwellian for the SN kick speed [km/s]"),
+                   ceflag(input_par_store, 0,     "bse-ceflag", "if =3, activates de Kool common-envelope model"),
+                   tflag (input_par_store, 1,     "bse-tflag",  "if >0, activates tidal circularisation"),
+                   //ifflag(input_par_store, 2,   "bse-ifflag", "if > 0 uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
+                   wdflag(input_par_store, 1,     "bse-wdflag", "if >0, uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
+                   bhflag(input_par_store, 2,     "bse-bhflag", "BH kick option: 0: no kick; 1: same as NS; 2: scaled by fallback"),
+                   nsflag(input_par_store, 3,     "bse-nsflag", "NS/BH foramtion options: 0: original SSE; 1: Belczynski (2002); 2: Belczynski (2008); 3: Fryer (2012) rapid SN; 4: Fryer (2012) delayed SN; 5: Eldridge & Tout (2004)"),
+                   psflag(input_par_store, 1,     "bse-psflag", "PPSN condition (Belczynski 2016): 0: no PPSN; 1: strong; (Leung 2019): 2: moderate; 3: weak"),
+                   kmech (input_par_store, 1,     "bse-kmech",  "Kick mechanism: 1: standard momentum-conserving; 2: convection-asymmetry-driven; 3: collapse-asymmerty-driven; 4: neutrino driven"),
+                   ecflag(input_par_store, 1,     "bse-ecflag", "if >0, ECS is switched on"),
+                   pts1  (input_par_store, 0.05,  "bse-pts1",   "time step of MS"),
+                   pts2  (input_par_store, 0.01,  "bse-pts2",   "time step of GB, CHeB, AGB, HeGB"),
+                   pts3  (input_par_store, 0.02,  "bse-pts3",   "time step of HG, HeMS"),
+                   idum  (input_par_store, 1234,  "bse-idum",   "random number seed used by the kick routine"),
+                   tscale(input_par_store, 1.0,   "bse-tscale", "Time scale factor from input data unit (IN) to Myr (time[Myr]=time[IN]*tscale)"),
+                   rscale(input_par_store, 1.0,   "bse-rscale", "Radius scale factor from input data unit (IN) to Rsun (r[Rsun]=r[IN]*rscale)"),
+                   mscale(input_par_store, 1.0,   "bse-mscale", "Mass scale factor from input data unit (IN) to Msun (m[Msun]=m[IN]*mscale)"),
+                   vscale(input_par_store, 1.0,   "bse-vscale", "Velocity scale factor from input data unit(IN) to km/s (v[km/s]=v[IN]*vscale)"),
+                   z     (input_par_store, 0.001, "bse-metallicity", "Metallicity"),
                    print_flag(false) {}
 
     //! reading parameters from GNU option API
@@ -440,38 +441,38 @@ public:
     int read(int argc, char *argv[], const int opt_used_pre=0) {
         static int sse_flag=-1;
         const struct option long_options[] = {
-            {"bse-neta",   required_argument, &sse_flag, 0},  
-            {"bse-bwind",  required_argument, &sse_flag, 1},  
-            {"bse-hewind", required_argument, &sse_flag, 2},  
-          //{"bse-mxns",   required_argument, &sse_flag, 3}, 
-            {"bse-alpha",  required_argument, &sse_flag, 22},
-            {"bse-lambda", required_argument, &sse_flag, 23},
-            {"bse-beta",   required_argument, &sse_flag, 24},
-            {"bse-xi",     required_argument, &sse_flag, 25},
-            {"bse-bhwacc", required_argument, &sse_flag, 26},
-            {"bse-epsnov", required_argument, &sse_flag, 27},
-            {"bse-eddfac", required_argument, &sse_flag, 28},
-            {"bse-gamma",  required_argument, &sse_flag, 29},
-            {"bse-sigma",  required_argument, &sse_flag, 4},
-            {"bse-ceflag", required_argument, &sse_flag, 5},
-            {"bse-tflag",  required_argument, &sse_flag, 6},
-          //{"bse-ifflag", required_argument, &sse_flag, 7},
-            {"bse-wdflag", required_argument, &sse_flag, 8},
-            {"bse-bhflag", required_argument, &sse_flag, 9}, 
-            {"bse-nsflag", required_argument, &sse_flag, 10}, 
-            {"bse-psflag", required_argument, &sse_flag, 11},
-            {"bse-kmech",  required_argument, &sse_flag, 12},
-            {"bse-ecflag", required_argument, &sse_flag, 13},
-            {"bse-pts1",   required_argument, &sse_flag, 14},
-            {"bse-pts2",   required_argument, &sse_flag, 15},       
-            {"bse-pts3",   required_argument, &sse_flag, 16},
-            {"bse-idum",   required_argument, &sse_flag, 17}, 
-            {"bse-tscale", required_argument, &sse_flag, 18},
-            {"bse-rscale", required_argument, &sse_flag, 19},
-            {"bse-mscale", required_argument, &sse_flag, 20},
-            {"bse-vscale", required_argument, &sse_flag, 21},
-            {"bse-metallicity", required_argument, 0, 'z'},
-            {"help",   no_argument,       0, 'h'},
+            {neta.key,   required_argument, &sse_flag, 0},  
+            {bwind.key,  required_argument, &sse_flag, 1},  
+            {hewind.key, required_argument, &sse_flag, 2},  
+          //{mxns.key,   required_argument, &sse_flag, 3}, 
+            {alpha.key,  required_argument, &sse_flag, 22},
+            {lambda.key, required_argument, &sse_flag, 23},
+            {beta.key,   required_argument, &sse_flag, 24},
+            {xi.key,     required_argument, &sse_flag, 25},
+            {bhwacc.key, required_argument, &sse_flag, 26},
+            {epsnov.key, required_argument, &sse_flag, 27},
+            {eddfac.key, required_argument, &sse_flag, 28},
+            {gamma.key,  required_argument, &sse_flag, 29},
+            {sigma.key,  required_argument, &sse_flag, 4},
+            {ceflag.key, required_argument, &sse_flag, 5},
+            {tflag.key,  required_argument, &sse_flag, 6},
+          //{ifflag.key, required_argument, &sse_flag, 7},
+            {wdflag.key, required_argument, &sse_flag, 8},
+            {bhflag.key, required_argument, &sse_flag, 9}, 
+            {nsflag.key, required_argument, &sse_flag, 10}, 
+            {psflag.key, required_argument, &sse_flag, 11},
+            {kmech.key,  required_argument, &sse_flag, 12},
+            {ecflag.key, required_argument, &sse_flag, 13},
+            {pts1.key,   required_argument, &sse_flag, 14},
+            {pts2.key,   required_argument, &sse_flag, 15},       
+            {pts3.key,   required_argument, &sse_flag, 16},
+            {idum.key,   required_argument, &sse_flag, 17}, 
+            {tscale.key, required_argument, &sse_flag, 18},
+            {rscale.key, required_argument, &sse_flag, 19},
+            {mscale.key, required_argument, &sse_flag, 20},
+            {vscale.key, required_argument, &sse_flag, 21},
+            {z.key,      required_argument, 0, 'z'},
+            {"help",     no_argument,       0, 'h'},
             {0,0,0,0}
         };
 
@@ -658,37 +659,7 @@ public:
             case 'h':
                 if(print_flag){
                     std::cout<<"SSE/BSE options:"<<std::endl;
-                    std::cout<<"       Option defaulted values are shown after ':'"<<std::endl;
-                    std::cout<<"        --bse-neta:   [D] "<<neta<<std::endl
-                             <<"        --bse-bwind:  [D] "<<bwind<<std::endl
-                             <<"        --bse-hewind: [D] "<<hewind<<std::endl
-                        //<<"        --mxns:   [D] "<<mxns<<std::endl
-                             <<"        --bse-alpha:  [D] "<<alpha<<std::endl
-                             <<"        --bse-lambda: [D] "<<lambda<<std::endl
-                             <<"        --bse-beta:   [D] "<<beta<<std::endl
-                             <<"        --bse-xi:     [D] "<<xi<<std::endl
-                             <<"        --bse-bhwacc  [D] "<<bhwacc<<std::endl
-                             <<"        --bse-epsnov: [D] "<<epsnov<<std::endl
-                             <<"        --bse-eddfac: [D] "<<eddfac<<std::endl
-                             <<"        --bse-gamma:  [D] "<<gamma<<std::endl
-                             <<"        --bse-sigma:  [D] "<<sigma<<std::endl
-                             <<"        --bse-ceflag: [I] "<<ceflag<<std::endl
-                             <<"        --bse-tflag:  [I] "<<tflag<<std::endl
-                             <<"        --bse-wdflag: [I] "<<wdflag<<std::endl
-                             <<"        --bse-bhflag: [I] "<<bhflag<<std::endl
-                             <<"        --bse-nsflag: [I] "<<nsflag<<std::endl
-                             <<"        --bse-psflag: [I] "<<psflag<<std::endl
-                             <<"        --bse-kmech:  [I] "<<kmech<<std::endl
-                             <<"        --bse-ecflag: [I] "<<ecflag<<std::endl
-                             <<"        --bse-pts1:   [D] "<<pts1<<std::endl
-                             <<"        --bse-pts2:   [D] "<<pts2<<std::endl
-                             <<"        --bse-pts3:   [D] "<<pts3<<std::endl
-                             <<"        --bse-idum:   [I] "<<idum<<std::endl
-                             <<"        --bse-tscale: [D] "<<tscale<<std::endl
-                             <<"        --bse-rscale: [D] "<<rscale<<std::endl
-                             <<"        --bse-mscale: [D] "<<mscale<<std::endl
-                             <<"        --bse-vscale: [D] "<<vscale<<std::endl
-                             <<"        --bse-metallicity (-z): [D] "<<z<<std::endl;
+                    input_par_store.printHelp(std::cout, 2, 10, 23);
                 }
                 return -1;
             case '?':

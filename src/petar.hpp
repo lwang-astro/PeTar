@@ -89,23 +89,19 @@ public:
     IOParamsContainer input_par_store;
     IOParams<PS::F64> ratio_r_cut;
     IOParams<PS::F64> theta;
-    IOParams<PS::S32> n_leaf_limit;
-#ifdef USE__AVX512
-    IOParams<PS::S32> n_group_limit;
-#else
-    IOParams<PS::S32> n_group_limit;
-#endif
-    IOParams<PS::S32> n_interrupt_limit;
-    IOParams<PS::S32> n_smp_ave;
+    IOParams<PS::S64> n_leaf_limit;
+    IOParams<PS::S64> n_group_limit;
+    IOParams<PS::S64> n_interrupt_limit;
+    IOParams<PS::S64> n_smp_ave;
 #ifdef ORBIT_SAMPLING
-    IOParams<PS::S32> n_split;
+    IOParams<PS::S64> n_split;
 #endif
     IOParams<PS::S64> n_bin;
-    IOParams<PS::F64> n_step_per_orbit;
+    IOParams<PS::S64> n_step_per_orbit;
     IOParams<PS::F64> time_end;
     IOParams<PS::F64> eta;
     IOParams<PS::F64> gravitational_constant;
-    IOParams<PS::S32> unit_set;
+    IOParams<PS::S64> unit_set;
     IOParams<PS::S64> n_glb;
     IOParams<PS::S64> id_offset;
     IOParams<PS::F64> dt_soft;
@@ -113,15 +109,15 @@ public:
     IOParams<PS::F64> search_vel_factor;
     IOParams<PS::F64> search_peri_factor;
     IOParams<PS::F64> dt_limit_hard_factor;
-    IOParams<PS::S32> dt_min_hermite_index;
-    IOParams<PS::S32> dt_min_arc_index;
-    IOParams<PS::F64> dt_err_pert;
-    IOParams<PS::F64> dt_err_soft;
-    IOParams<PS::F64> e_err_arc;
+    IOParams<PS::S64> dt_min_hermite_index;
+    //IOParams<PS::S64> dt_min_ar_index;
+    //IOParams<PS::F64> dt_err_pert;
+    //IOParams<PS::F64> dt_err_soft;
+    IOParams<PS::F64> e_err_ar;
 #ifdef HARD_CHECK_ENERGY
     IOParams<PS::F64> e_err_hard;
 #endif
-    IOParams<PS::S32> step_limit_arc;
+    IOParams<PS::S64> step_limit_ar;
     IOParams<PS::F64> eps;
     IOParams<PS::F64> r_out;
     IOParams<PS::F64> r_bin;
@@ -129,16 +125,16 @@ public:
     IOParams<PS::F64> r_search_min;
     IOParams<PS::F64> r_escape;
     IOParams<PS::F64> sd_factor;
-    IOParams<PS::S32> data_format;
-    IOParams<PS::S32> write_style;
+    IOParams<PS::S64> data_format;
+    IOParams<PS::S64> write_style;
 #ifdef STELLAR_EVOLUTION
-    IOParams<PS::S32> stellar_evolution_option;
+    IOParams<PS::S64> stellar_evolution_option;
 #endif
-    IOParams<PS::S32> interrupt_detection_option;
+    IOParams<PS::S64> interrupt_detection_option;
 #ifdef ADJUST_GROUP_PRINT
-    IOParams<PS::S32> adjust_group_write_option;
+    IOParams<PS::S64> adjust_group_write_option;
 #endif
-    IOParams<PS::S32> append_switcher;
+    IOParams<PS::S64> append_switcher;
     IOParams<std::string> fname_snp;
     IOParams<std::string> fname_par;
     IOParams<std::string> fname_inp;
@@ -149,68 +145,68 @@ public:
     bool update_rsearch_flag;
 
     IOParamsPeTar(): input_par_store(), 
-                     ratio_r_cut  (input_par_store, 0.1,  "r_in / r_out"),
-                     theta        (input_par_store, 0.3,  "Openning angle theta"),
-                     n_leaf_limit (input_par_store, 20,   "Tree leaf number limit", "optimized value shoudl be slightly >=11+N_bin_sample (20)"),
+                     ratio_r_cut      (input_par_store, 0.1,  "r-ratio", "r_in / r_out"),
+                     theta            (input_par_store, 0.3,  "T",  "Openning angle theta"),
+                     n_leaf_limit     (input_par_store, 20,   "number-leaf-limit", "Tree leaf number limit", "optimized value shoudl be slightly >=11+N_bin_sample (20)"),
 #ifdef USE__AVX512
-                     n_group_limit(input_par_store, 1024, "Tree group number limit", "optimized for x86-AVX512 (1024)"),    
+                     n_group_limit    (input_par_store, 1024, "number-group-limit", "Tree group number limit", "optimized for x86-AVX512 (1024)"),    
 #else
-                     n_group_limit(input_par_store, 512,  "Tree group number limit", "optimized for x86-AVX2 (512)"),
+                     n_group_limit    (input_par_store, 512,  "number-group-limit", "Tree group number limit", "optimized for x86-AVX2 (512)"),
 #endif
-                     n_interrupt_limit(input_par_store, 128, "Interrupt binary number limit"),
-                     n_smp_ave    (input_par_store, 100,  "Average target number of sample particles per process"),
+                     n_interrupt_limit(input_par_store, 128,  "number-interrupt-limit", "Interrupt binary number limit"),
+                     n_smp_ave        (input_par_store, 100,  "number-sample-average", "Average target number of sample particles per process"),
 #ifdef ORBIT_SAMPLING
-                     n_split      (input_par_store, 4,    "Number of binary sample points for tree perturbation force"),
+                     n_split          (input_par_store, 4,    "number-split", "Number of binary sample points for tree perturbation force"),
 #endif
-                     n_bin        (input_par_store, 0,    "Number of binaries used for initialization (assume binaries ID=1,2*n_bin)"),
-                     n_step_per_orbit(input_par_store, 8, "Number of steps per slow-down binary orbits (binary period/tree timestep) for isolated binaries; also the maximum criterion for switching on tidal tensor method"),
-                     time_end     (input_par_store, 10.0, "Finishing time"),
-                     eta          (input_par_store, 0.1,  "Hermite time step coefficient eta"),
-                     gravitational_constant(input_par_store, 1.0,  "Gravitational constant"),
-                     unit_set     (input_par_store, 0,    "Input data unit, 0: unknown, referring to G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr"),
-                     n_glb        (input_par_store, 100000,  "Total number of particles, only used to generate particles if no input datafile exists"),
-                     id_offset    (input_par_store, -1,   "Starting id for artificial particles, total number of real particles must be always smaller than this","n_glb+1"),
-                     dt_soft      (input_par_store, 0.0,  "Tree timestep, if value is zero, use 0.1*r_out/sigma_1D"),
-                     dt_snap      (input_par_store, 1.0,  "Output time interval of particle dataset snapshot"),
-                     search_vel_factor (input_par_store, 3.0,  "Neighbor searching coefficient for velocity check (v*dt)"),
-                     search_peri_factor(input_par_store, 1.5,  "Neighbor searching coefficient for peri-center check"),
-                     dt_limit_hard_factor(input_par_store, 4.0,  "Limit of tree time step/hard time step"),
-                     dt_min_hermite_index(input_par_store, 40,   "Power index n for the smallest time step (0.5^n) allowed in Hermite integrator"),
-                     dt_min_arc_index    (input_par_store, 64,   "Power index n for the smallest time step (0.5^n) allowed in ARC integrator, suppressed"),
-                     dt_err_pert  (input_par_store, 1e-6, "Time synchronization maximum (relative) error for perturbed ARC integrator, suppressed"),
-                     dt_err_soft  (input_par_store, 1e-3, "Time synchronization maximum (relative) error for no-perturber (only soft perturbation) ARC integrator, suppressed"),
-                     e_err_arc    (input_par_store, 1e-8,"Maximum energy error allown for ARC integrator"),
+                     n_bin            (input_par_store, 0,    "b", "Number of binaries used for initialization (assume binaries ID=1,2*n_bin)"),
+                     n_step_per_orbit (input_par_store, 8,    "number-step-tt", "Number of steps per slow-down binary orbits (binary period/tree timestep) for isolated binaries; also the maximum criterion for switching on tidal tensor method"),
+                     time_end         (input_par_store, 10.0, "t", "Finishing time"),
+                     eta              (input_par_store, 0.1,  "hermite-eta", "Hermite time step coefficient eta"),
+                     gravitational_constant(input_par_store, 1.0, "G", "Gravitational constant"),
+                     unit_set         (input_par_store, 0,    "u", "Input data unit, 0: unknown, referring to G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr"),
+                     n_glb            (input_par_store, 100000, "n", "Total number of particles, only used to generate particles if no input datafile exists"),
+                     id_offset        (input_par_store, -1,   "id-offset", "Starting id for artificial particles, total number of real particles must be always smaller than this","n_glb+1"),
+                     dt_soft          (input_par_store, 0.0,  "s", "Tree timestep, if value is zero, use 0.1*r_out/sigma_1D"),
+                     dt_snap          (input_par_store, 1.0,  "o", "Output time interval of particle dataset snapshot"),
+                     search_vel_factor(input_par_store, 3.0,  "search-vel-factor", "Neighbor searching coefficient for velocity check (v*dt)"),
+                     search_peri_factor  (input_par_store, 1.5, "search-peri-factor", "Neighbor searching coefficient for peri-center check"),
+                     dt_limit_hard_factor(input_par_store, 4.0, "dt-max-factor", "Limit of tree time step/hard time step"),
+                     dt_min_hermite_index(input_par_store, 40,  "dt-min-hermite",  "Power index n for the smallest time step (0.5^n) allowed in Hermite integrator"),
+                     //dt_min_ar_index     (input_par_store, 64,  "dt-min-ar",  "Power index n for the smallest time step (0.5^n) allowed in ARC integrator, suppressed"),
+                     //dt_err_pert  (input_par_store, 1e-6, "dt-error-pert", "Time synchronization maximum (relative) error for perturbed ARC integrator, suppressed"),
+                     //dt_err_soft  (input_par_store, 1e-3, "dt-error-iso", "Time synchronization maximum (relative) error for no-perturber (only soft perturbation) ARC integrator, suppressed"),
+                     e_err_ar     (input_par_store, 1e-8, "energy-err-ar", "Maximum energy error allown for ARC integrator"),
 #ifdef HARD_CHECK_ENERGY
-                     e_err_hard   (input_par_store, 1e-4, "Maximum energy error allown for hard integrator"),
+                     e_err_hard   (input_par_store, 1e-4, "energy-err-hard", "Maximum energy error allown for hard integrator"),
 #endif
-                     step_limit_arc(input_par_store, 1000000, "Maximum step allown for ARC sym integrator"),
-                     eps          (input_par_store, 0.0,  "Softerning eps"),
-                     r_out        (input_par_store, 0.0,  "Transit function outer boundary radius, if value is zero, use 0.1 GM/[N^(1/3) sigma_3D^2]"),
-                     r_bin        (input_par_store, 0.0,  "Tidal tensor box size and binary radius criterion, if value iszero, use 0.8*r_in"),
+                     step_limit_ar(input_par_store, 1000000, "step-limit-ar", "Maximum step allown for ARC sym integrator"),
+                     eps          (input_par_store, 0.0,  "soft-eps", "Softerning eps"),
+                     r_out        (input_par_store, 0.0,  "r", "Changeover function outer boundary radius, if value is zero, use 0.1 GM/[N^(1/3) sigma_3D^2]"),
+                     r_bin        (input_par_store, 0.0,  "r-bin", "Tidal tensor box size and binary radius criterion, if value is zero, use 0.8*r_in"),
 //                     r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out"),
-                     r_search_min (input_par_store, 0.0,  "Minimum search radius  value","auto"),
-                     r_escape     (input_par_store, PS::LARGE_FLOAT,  "escape radius criterion, if <0, remove particles when r>-r_escape; else, remove particle when r>r_escape and energy>0"),
-                     sd_factor    (input_par_store, 1e-4, "Slowdown perturbation criterion"),
-                     data_format  (input_par_store, 1,    "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),
-                     write_style  (input_par_store, 1,    "File Writing style: 0, no output; 1. write snapshots, status and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile"),
+                     r_search_min (input_par_store, 0.0,  "r-search-min", "Minimum search radius  value","auto"),
+                     r_escape     (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Escape radius criterion, if <0, remove particles when r>-r_escape; else, remove particle when r>r_escape and energy>0"),
+                     sd_factor    (input_par_store, 1e-4, "slowdown-factor", "Slowdown perturbation criterion"),
+                     data_format  (input_par_store, 1,    "i", "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),
+                     write_style  (input_par_store, 1,    "w", "File Writing style: 0, no output; 1. write snapshots, status and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile"),
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE
-                     stellar_evolution_option(input_par_store, 1, "modify single star: 0: turn off; 1: modify mass and velocity using SSE every Hermite step, log files with names of [data filename prefix].[sse/bse].[MPI rank] are generated if -w >0"),
-                     interrupt_detection_option(input_par_store, 1, "modify orbits of binaries: 0: no modifications (also no stellar evolution); 1: modify the binary orbits using BSE (if '--stellar-evolution 1' is set) and merger checker in AR integrator"),
+                     stellar_evolution_option  (input_par_store, 1, "stellar-evolution", "modify single star: 0: turn off; 1: modify mass and velocity using SSE every Hermite step, log files with names of [data filename prefix].[sse/bse].[MPI rank] are generated if -w >0"),
+                     interrupt_detection_option(input_par_store, 1, "detect-interrupt", "modify orbits of binaries: 0: no modifications (also no stellar evolution); 1: modify the binary orbits using BSE (if '--stellar-evolution 1' is set) and merger checker in AR integrator"),
 #else
-                     stellar_evolution_option(input_par_store, 0, "modify mass of particles: 0: turn off; 1: check every Hermite steps"),
-                     interrupt_detection_option(input_par_store, 0, "modify orbits of AR groups and check interruption: 0: turn off; 1: modify the binary orbits based on detetion criterion; 2. modify and also interrupt the hard drift"),
+                     stellar_evolution_option  (input_par_store, 0, "stellar-evolution", "modify mass of particles: 0: turn off; 1: check every Hermite steps"),
+                     interrupt_detection_option(input_par_store, 0, "detect-interrupt", "modify orbits of AR groups and check interruption: 0: turn off; 1: modify the binary orbits based on detetion criterion; 2. modify and also interrupt the hard drift"),
 #endif
 #else
-                     interrupt_detection_option(input_par_store, 0, "modify orbits of AR groups based on the interruption function: 0: turn off; 1: modify inside AR integration and accumulate energy change; 2. modify and also interrupt the hard drift"),
+                     interrupt_detection_option(input_par_store, 0, "detect-interrupt", "modify orbits of AR groups based on the interruption function: 0: turn off; 1: modify inside AR integration and accumulate energy change; 2. modify and also interrupt the hard drift"),
 #endif
 #ifdef ADJUST_GROUP_PRINT
-                     adjust_group_write_option(input_par_store, 1, "print new and end of groups: 0: no print; 1: print to file [data filename prefix].group.[MPI rank] if -w >0"),
+                     adjust_group_write_option(input_par_store, 1, "write-group-info", "print new and end of groups: 0: no print; 1: print to file [data filename prefix].group.[MPI rank] if -w >0"),
 #endif
-                     append_switcher(input_par_store, 1, "data output style, 0: create new output files and overwrite existing ones except snapshots; 1: append new data to existing files"),
-                     fname_snp(input_par_store, "data","Prefix filename of dataset: [prefix].[File ID]"),
-                     fname_par(input_par_store, "input.par", "Input parameter file (this option should be used first before any other options)"),
-                     fname_inp(input_par_store, "__NONE__", "Input data file"),
+                     append_switcher(input_par_store, 1, "a", "data output style, 0: create new output files and overwrite existing ones except snapshots; 1: append new data to existing files"),
+                     fname_snp(input_par_store, "data", "f", "Prefix filename of dataset: [prefix].[File ID]"),
+                     fname_par(input_par_store, "input.par", "p", "Input parameter file (this option should be used first before any other options)"),
+                     fname_inp(input_par_store, "__NONE__", "snap-filename", "Input data file", NULL, false),
                      print_flag(false), update_changeover_flag(false), update_rsearch_flag(false) {}
 
     
@@ -225,37 +221,37 @@ public:
         static int petar_flag=-1;
         static struct option long_options[] = {
 #ifdef ORBIT_SAMPLING
-            {"number-split",          required_argument, &petar_flag, 0},        
+            {n_split.key,              required_argument, &petar_flag, 0},        
 #endif
-            {"search-vel-factor",     required_argument, &petar_flag, 1},  
-            {"dt-max-factor",         required_argument, &petar_flag, 2},  
-            {"dt-min-hermite",        required_argument, &petar_flag, 3}, 
-            {"number-group-limit",    required_argument, &petar_flag, 4},
-            {"number-leaf-limit",     required_argument, &petar_flag, 5},
-            {"number-sample-average", required_argument, &petar_flag, 6},
-            {"energy-err-arc",        required_argument, &petar_flag, 7}, 
-            {"soft-eps",              required_argument, &petar_flag, 8},       
-            {"slowdown-factor",       required_argument, &petar_flag, 9},
-            {"r-ratio",               required_argument, &petar_flag, 10},
-            {"r-bin",                 required_argument, &petar_flag, 11},       
-            {"r-escape",              required_argument, &petar_flag, 21},
-            {"r-search-min",          required_argument, &petar_flag, 22},
-            {"id-offset",             required_argument, &petar_flag, 23},
-            {"search-peri-factor",    required_argument, &petar_flag, 12}, 
-            {"hermite-eta",           required_argument, &petar_flag, 13}, 
+            {search_vel_factor.key,    required_argument, &petar_flag, 1},  
+            {dt_limit_hard_factor.key, required_argument, &petar_flag, 2},  
+            {dt_min_hermite_index.key, required_argument, &petar_flag, 3}, 
+            {n_group_limit.key,        required_argument, &petar_flag, 4},
+            {n_leaf_limit.key,         required_argument, &petar_flag, 5},
+            {n_smp_ave.key,            required_argument, &petar_flag, 6},
+            {e_err_ar.key,             required_argument, &petar_flag, 7}, 
+            {eps.key,                  required_argument, &petar_flag, 8},       
+            {sd_factor.key,            required_argument, &petar_flag, 9},
+            {ratio_r_cut.key,          required_argument, &petar_flag, 10},
+            {r_bin.key,                required_argument, &petar_flag, 11},       
+            {search_peri_factor.key,   required_argument, &petar_flag, 12}, 
+            {eta.key,                  required_argument, &petar_flag, 13}, 
 #ifdef HARD_CHECK_ENERGY
-            {"energy-err-hard",       required_argument, &petar_flag, 14},  
+            {e_err_hard.key,           required_argument, &petar_flag, 14},  
 #endif
-            {"step-limit-arc",        required_argument, &petar_flag, 15},   
-            {"disable-print-info",    no_argument,       &petar_flag, 16},
-            {"number-interrupt-limt", required_argument, &petar_flag, 17},
-            {"detect-interrupt",      required_argument, &petar_flag, 18},
-            {"number-step-tt",        required_argument, &petar_flag, 19},
+            {step_limit_ar.key,        required_argument, &petar_flag, 15},   
+            {"disable-print-info",     no_argument,       &petar_flag, 16},
+            {n_interrupt_limit.key,    required_argument, &petar_flag, 17},
+            {interrupt_detection_option.key,  required_argument, &petar_flag, 18},
+            {n_step_per_orbit.key,     required_argument, &petar_flag, 19},
 #ifdef STELLAR_EVOLUTION
-            {"stellar-evolution",     required_argument, &petar_flag, 20},
+            {stellar_evolution_option.key,    required_argument, &petar_flag, 20},
 #endif
+            {r_escape.key,             required_argument, &petar_flag, 21},
+            {r_search_min.key,         required_argument, &petar_flag, 22},
+            {id_offset.key,            required_argument, &petar_flag, 23},
 #ifdef ADJUST_GROUP_PRINT
-            {"write-group-info",      required_argument, &petar_flag, 24},
+            {adjust_group_write_option.key,   required_argument, &petar_flag, 24},
 #endif            
             {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
@@ -314,10 +310,10 @@ public:
                     assert(n_smp_ave.value>0.0);
                     break;
                 case 7:
-                    e_err_arc.value = atof(optarg);
-                    if(print_flag) e_err_arc.print(std::cout);
+                    e_err_ar.value = atof(optarg);
+                    if(print_flag) e_err_ar.print(std::cout);
                     opt_used += 2;
-                    assert(e_err_arc.value > 0.0);
+                    assert(e_err_ar.value > 0.0);
                     break;
                 case 8:
                     eps.value = atof(optarg);
@@ -365,8 +361,8 @@ public:
                     break;
 #endif
                 case 15:
-                    step_limit_arc.value = atoi(optarg);
-                    if(print_flag) step_limit_arc.print(std::cout);
+                    step_limit_ar.value = atoi(optarg);
+                    if(print_flag) step_limit_ar.print(std::cout);
                     opt_used += 2;
                     break;
                 case 16:
@@ -534,55 +530,10 @@ public:
                     FPSoft::printTitleWithMeaning(std::cout,0,13);
                     std::cout<<"          PS: (*) show initialization values which should be used together with FILE_ID = 0"<<std::endl;
                     std::cout<<"              [formatted] indicates that the value is only for save, cannot be directly read"<<std::endl;
-                    std::cout<<"Options:  defaulted values are shown after ':'"<<std::endl;
-                    std::cout<<"  -i: [I] "<<data_format<<std::endl;
-                    std::cout<<"         --id-offset:        [I]"<<id_offset<<std::endl;
-                    std::cout<<"  -a: [I] "<<append_switcher<<std::endl;
-                    std::cout<<"  -t: [F] "<<time_end<<std::endl;
-                    std::cout<<"  -s: [F] "<<dt_soft<<std::endl;
-                    std::cout<<"  -o: [F] "<<dt_snap<<std::endl;
-                    std::cout<<"        --detect-interrupt:  [I] "<<interrupt_detection_option<<std::endl;
-                    std::cout<<"        --dt-max-factor:     [F] "<<dt_limit_hard_factor<<std::endl;
-                    std::cout<<"        --dt-min-hermite:    [I] "<<dt_min_hermite_index<<std::endl;
+                    std::cout<<"Options:\n";
+                    input_par_store.printHelp(std::cout, 2, 10, 23);
                     std::cout<<"        --disable-print-info:  "<<"Do not print information"<<std::endl;
                     std::cout<<"        --disable-write-info:  "<<"Do not write information"<<std::endl;
-                    std::cout<<"  -r: [F] "<<r_out<<std::endl;
-                    std::cout<<"        --r-ratio:           [F] "<<ratio_r_cut<<std::endl;
-                    std::cout<<"        --r-bin:             [F] "<<r_bin<<std::endl;
-                    std::cout<<"        --r-escape:          [F] "<<r_escape<<std::endl;
-		    std::cout<<"        --r-search-min:      [F] "<<r_search_min<<std::endl;
-                    std::cout<<"  -b: [I] "<<n_bin<<std::endl;
-                    std::cout<<"  -n: [I] "<<n_glb<<std::endl;
-#ifdef ORBIT_SAMPLING
-                    std::cout<<"        --number-split:           [I] "<<n_split<<std::endl;
-#endif
-                    std::cout<<"        --number-group-limit:     [I] "<<n_group_limit<<std::endl;
-                    std::cout<<"        --number-leaf-limit:      [I] "<<n_leaf_limit<<std::endl;
-                    std::cout<<"        --number-interrupt-limit: [I] "<<n_interrupt_limit<<std::endl;
-                    std::cout<<"        --number-sample-average:  [I] "<<n_smp_ave<<std::endl;
-                    std::cout<<"        --number-step-tt:         [F] "<<n_step_per_orbit<<std::endl;
-                    std::cout<<"  -G: [F] "<<gravitational_constant<<std::endl;
-                    std::cout<<"  -u: [I] "<<unit_set<<std::endl;
-                    std::cout<<"  -T: [F] "<<theta<<std::endl;
-                    std::cout<<"        --hermite-eta:       [F] "<<eta<<std::endl;
-                    std::cout<<"        --search-vel-factor: [F] "<<search_vel_factor<<std::endl;
-                    std::cout<<"        --search-peri-factor:[F] "<<search_peri_factor<<std::endl;
-                    std::cout<<"        --energy-err-arc:    [F] "<<e_err_arc<<std::endl;
-#ifdef HARD_CHECK_ENERGY
-                    std::cout<<"        --energy-err-hard:   [F] "<<e_err_hard<<std::endl;
-#endif
-                    std::cout<<"        --step-limit-arc:    [F] "<<step_limit_arc<<std::endl;
-#ifdef STELLAR_EVOLUTION
-                    std::cout<<"        --stellar-evolution: [I] "<<stellar_evolution_option<<std::endl;
-#endif
-                    std::cout<<"        --slowdown-factor:   [F] "<<sd_factor<<std::endl;
-                    std::cout<<"        --soft-eps:          [F] "<<eps<<std::endl;
-                    std::cout<<"  -f: [S] "<<fname_snp<<std::endl;
-                    std::cout<<"  -p: [S] "<<fname_par<<std::endl;
-                    std::cout<<"  -w: [I] "<<write_style<<std::endl;
-#ifdef ADJUST_GROUP_PRINT
-                    std::cout<<"        --write-group-info:  [I] "<<adjust_group_write_option<<std::endl;
-#endif
                     std::cout<<"  -h(--help):               print help"<<std::endl;
                     std::cout<<"*** PS: r_in : transit function inner boundary radius\n"
                              <<"        r_out: transit function outer boundary radius\n"
@@ -619,7 +570,7 @@ public:
         assert(search_vel_factor.value>0.0);
         assert(dt_limit_hard_factor.value > 0.0);
         assert(dt_min_hermite_index.value > 0);
-        assert(e_err_arc.value > 0.0);
+        assert(e_err_ar.value > 0.0);
         assert(eps.value>=0.0);
         assert(sd_factor.value>0.0);
         assert(ratio_r_cut.value>0.0);
@@ -3126,8 +3077,8 @@ public:
         hard_manager.h4_manager.step.eta_4th = input_parameters.eta.value;
         hard_manager.h4_manager.step.eta_2nd = 0.01*input_parameters.eta.value;
         hard_manager.h4_manager.step.calcAcc0OffsetSq(mass_average, r_out);
-        hard_manager.ar_manager.energy_error_relative_max = input_parameters.e_err_arc.value;
-        hard_manager.ar_manager.step_count_max = input_parameters.step_limit_arc.value;
+        hard_manager.ar_manager.energy_error_relative_max = input_parameters.e_err_ar.value;
+        hard_manager.ar_manager.step_count_max = input_parameters.step_limit_ar.value;
         hard_manager.ar_manager.step.initialSymplecticCofficients(-6);
         hard_manager.ar_manager.slowdown_pert_ratio_ref = input_parameters.sd_factor.value;
         hard_manager.ar_manager.slowdown_timescale_max = dt_soft*input_parameters.n_step_per_orbit.value;

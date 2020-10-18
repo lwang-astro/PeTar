@@ -170,6 +170,22 @@ export OMP_STACKSIZE=128M
 ```
 in the shell configure/initial file (e.g. .bashrc for _bash_) to avoid typing "OMP_STACKSIZE=128M" every time.
 
+#### data format update
+The data formats of snapshots, input parameter files and a part of output files have been updated in the past.
+If users want to use new version of code to read the old version data, the data transfer is possible.
+
+For snapshot data in ASCII format, after [the version on Aug 8, 2020](https://github.com/lwang-astro/PeTar/commit/0592d70875626071e1bd7aa13dbab30165a98309#diff-25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26), the output format of group_data.artificial changes from 64bit floating to 64bit integer in order to keep the full information.
+The BINARY format is not affected.
+In order to read the old snapshot data, it is needed to transfer the data first by 
+```
+petar.format.transfer -g [other options] [snapshot path list filename]
+```
+The new data with BINARY format are created, using the same tool with option `-b`, users can transfer the BINARY format back to the new ASCII format.
+
+The formats of input parameter files generated during simulations (including files from _SSE_/_BSE_ and _Galpy_) update on Oct 18, 2020.
+Use [`petar.update.par`](#input-parameter-file-format-update) to update the input files in order to restart the simulations with the newer versions of _PeTar_.
+After the update, the reading and modification of input parameter files become much easier.
+
 ### Reference
 Remember to cite the necessary references when you publish the results using _PeTar_. The references are shown in the help function of _petar_ and the begining of the output after a simulation starts.
 When a feature imported from an external library is switched on, e.g. (_SSE_/_BSE_, _Galpy_), the corresponding references are automatically added in the output.
@@ -181,6 +197,8 @@ All options are listed in the help information. This can be checked by using the
 petar -h
 ```
 The description of the input particle data file is also shown in the help information. 
+Before using _PeTar_ and its tools, it is suggested to read the help information first to avoid mistakes.
+When new versions of _PeTar_ release, the help information always has the corresponding update.
 
 ### Output
 #### Printed information
@@ -341,6 +359,10 @@ petar.data.gether [options] [data filename prefix]
 ```
 If the [output prefix] is not given (option -f), the [output prefix] is the same as [data filename prefix].
 
+When _SSE_/_BSE_ is used and the code version is before Sep 10, 2020, the data with suffix [.dynamic_merge] has three column less than that of the new version.
+The corresponding data are dr, t_peri and sd_factor.
+This tool will automatically fill the missing columns with zero (from Column 6 to 8)
+
 #### remove data after a given time
 The _petar.data.clear_ is used to remove data after a given time for all output files except the snapshots.
 The basic usage is 
@@ -363,7 +385,28 @@ On the other hand, it is also possible to transfer the snapshots data between BI
 petar.format.transfer [options] [snapshot path list filename]
 ```
 The snapshot file list contain pathes of snapshots that users want to transfer.
-In default, the files will be replaced by the new format. Users can also use option "-w -1" to generate new files instead of replacement.
+In default, new files are generated with a suffix '.B' or '.A'.
+To replace the file in order to save space, users can use the option "-r".
+This tool can also update the old version of snapshot in ASCII format (before Aug 8, 2020) to the new versions (option -g).
+Notice that in the old version, the information stored in the group_data (group c.m. mass and velocities in 64bit floating) is lost.
+This is not important since the data can be calculated from data processing.
+Also it does not affect restart.
+
+#### Input parameter file format update
+The formats of input parameter files generated during simulations (including files from _SSE_/_BSE_ and _Galpy_) update on Oct 18, 2020.
+In order to use new version of _PeTar_ to restart the simulations using the old version of input parameter files, the update is needed:
+```
+petar.update.par [options] [input parameter filename] 
+```
+Using options `-p`, `-b` and `-t`, users can update input parameters from _PeTar_, _SSE_/_BSE_ and _Galpy_, respectively.
+Additional options are used for different features chosen in configure.
+
+After update, the new input parameters files are easier to read.
+There are three columns in the file defined as (1) data type of argument, (2) option names and (3) values of arguments.
+The reference of first two columns are shown by using the commander `petar -h`.
+Users can directly modify the values of arguments in the file.
+Besides, it is not necessary to list all options there.
+Thus, if new options are implemented in the future version, there is no need to update the file again (unless existing option names change).
 
 #### SSE/BSE steller evolution tool
 The _petar.bse_ will be generated when --with-interrupt=bse is used during the configuration.
