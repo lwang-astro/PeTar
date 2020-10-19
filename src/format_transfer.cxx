@@ -96,7 +96,7 @@ int main(int argc, char *argv[]){
                 std::cout<<"Usage: petar.format.transfer [option] filelist"<<std::endl;
                 std::cout<<"       filelist: "<<fname_list<<std::endl;
                 std::cout<<"Options:  defaulted values are shown after ':'"<<std::endl
-                         <<"   -b:  transfer snapshot data format from BINARY to ASCII"<<std::endl
+                         <<"   -b:  transfer snapshot data format from BINARY to ASCII. If this option is not used, it is ASCII to BINARY"<<std::endl
                          <<"   -r:  Replace snapshot data. If this option is not used, new files are created with a suffix of '.B' or '.A'"<<std::endl
                          <<"   -g:  Treat group_data as 64bit floating when read ASCII snapshots\n"
                          <<"        This is from the old version before Sep 4, 2020 (GitHub), or -D GROUP_DATA_WRITE_ARTIFICIAL is used in Makefile\n"
