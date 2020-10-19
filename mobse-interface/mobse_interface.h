@@ -84,7 +84,7 @@ extern "C" {
 
     void deltat_(int* kw, double* age, double* tm, double* tn, double* tscls, double* dt, double* dtr);
 
-    void mix_(double* m0, double* mt, double* age, int* kw, double* zpars);
+    void mix_(double* m0, double* mt, double* age, int* kw, double* zpars, int* krol);
 
     void printconst_();
 }
@@ -777,17 +777,17 @@ public:
             <<"             ╔╦╗╔═╗╔╗ ╔═╗╔═╗\n"
             <<"             ║║║║ ║╠╩╗╚═╗║╣ \n"
             <<"             ╩ ╩╚═╝╚═╝╚═╝╚═╝\n"
-            <<"---------------------------------------"
+            <<"---------------------------------------"<<std::endl;
+            fout<<" Online document: https://mobse-webpage.netlify.app/\n"
             <<std::endl;
     }
 
     //! print reference to cite
     static void printReference(std::ostream & fout, const int offset=4) {
-        fout<<"============== MOBSE ================\n"
-        <<" Online document: https://mobse-webpage.netlify.app/\n";
         for (int i=0; i<offset; i++) fout<<" ";
-        fout<<"MOBSE: Giacobbo N., Mapelli M. & Spera M., 2018, MNRAS, 474, 2959\n"
-            <<std::endl;
+        fout<<"MOBSE: Giacobbo N., Mapelli M. & Spera M., 2018, MNRAS, 474, 2959\n";
+        fout<<"\t \t (Online document: https://mobse-webpage.netlify.app/)\n"
+        <<std::endl;
     }
     
     bool isMassTransfer(const int _binary_type) {
@@ -1088,7 +1088,7 @@ public:
     //! merge two star using MOBSE mix function, star 2 will becomes zero mass
     void merge(StarParameter& _star1, StarParameter& _star2) {
         double m0[2],mt[2],age[2];
-        int kw[2];
+        int kw[2],krol[2];
 
         kw[0] = _star1.kw;
         m0[0] = _star1.m0;
@@ -1099,10 +1099,12 @@ public:
         m0[1] = _star2.m0;
         mt[1] = _star2.mt;
         age[1]= _star2.tphys-_star2.epoch;
-        int kwdon = _star1.kw;
-        int kwacc = _star2.kw;
 
-        mix_(m0,mt,age,kw,zpars);
+        //! This is necessary for the collision matrix
+        krol[0] = _star1.kw;
+        krol[1] = _star2.kw;
+
+        mix_(m0,mt,age,kw,zpars,krol);
 
         _star1.kw = kw[0];
         _star1.m0 = m0[0];

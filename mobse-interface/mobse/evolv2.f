@@ -179,7 +179,7 @@
 *
       INTEGER loop,iter,intpol,k,j1,j2
       PARAMETER(loop=60000)
-      INTEGER kstar(2),kw,kst,kw1,kw2,kmin,kmax,kwdon,kwacc
+      INTEGER kstar(2),kw,kst,kw1,kw2,kmin,kmax,krol(2)
       INTEGER ktype(0:14,0:14)
       COMMON /TYPES/ ktype
       INTEGER ceflag,tflag,ifflag,nsflag,wdflag,piflag
@@ -1346,9 +1346,9 @@ c      endif
 * We need the donor in the first place of the array
 c            helper(1) = j1
 c            helper(2) = j2
-            kwdon = kstar(1)
-            kwacc = kstar(2)
-            CALL mix(mass0,mass,aj,kstar,zpars)
+            krol(1) = kstar(j1)
+            krol(2) = kstar(j2)
+            CALL mix(mass0,mass,aj,kstar,zpars,krol)
 * we return to the usual way
             dm1 = m1ce - mass(j1)
             dm2 = mass(j2) - m2ce
@@ -1539,9 +1539,9 @@ c          btype = 8
 * Beacuse the collisional matrix is not symmetric 
 c            helper(1) = j1
 c            helper(2) = j2
-            kwdon = kstar(1)
-            kwacc = kstar(2)
-            CALL mix(mass0,mass,aj,kstar,zpars)
+            krol(1) = kstar(j1)
+            krol(2) = kstar(j2)
+            CALL mix(mass0,mass,aj,kstar,zpars,krol)
 * we return to the usual way
             dm1 = m1ce - mass(j1)
             dm2 = mass(j2) - m2ce
@@ -2322,9 +2322,9 @@ c      endif
 * beacuse the collisional matrix is not symmetric 
 c            helper(1) = j1
 c            helper(2) = j2
-            kwdon = kstar(1)
-            kwacc = kstar(2)
-            CALL mix(mass0,mass,aj,kstar,zpars)
+            krol(1) = kstar(j1)
+            krol(2) = kstar(j2)
+            CALL mix(mass0,mass,aj,kstar,zpars,krol)
 * we return to the usual way
 *
       endif

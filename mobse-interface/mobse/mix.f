@@ -1,5 +1,5 @@
 ***
-      SUBROUTINE MIX(M0,M,AJ,KS,ZPARS)
+      SUBROUTINE MIX(M0,M,AJ,KS,ZPARS,KROL)
 *
 *     Author : J. R. Hurley
 *     Date :   7th July 1998
@@ -12,7 +12,7 @@
 *
       implicit none
 *
-      INTEGER KS(2),I1,I2,K1,K2,KW,ICASE,DON,ACC
+      INTEGER KS(2),I1,I2,K1,K2,KW,ICASE,KROL(2)
       INTEGER KTYPE(0:14,0:14)
       COMMON /TYPES/ KTYPE
       REAL*8 M0(2),M(2),AJ(2),ZPARS(20)
@@ -27,9 +27,7 @@
 * First compute ICASE and then define I1 to be the most evolved star. 
 * It is necessary because of the new collisional matrix is not symmetric
 *
-      DON = 1
-      ACC = 2
-      ICASE = KTYPE(DON,ACC)
+      ICASE = KTYPE(KROL(1),KROL(2))
 *
 ***
 *       Define global indices with body #I1 being most evolved.
