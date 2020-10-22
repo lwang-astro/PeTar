@@ -96,6 +96,18 @@ int main(int argc, char *argv[]){
                 std::cout<<"The tool to transfer the format of snapshot data between BINARY and ASCII\n";
                 std::cout<<"Usage: petar.format.transfer [option] filelist"<<std::endl;
                 std::cout<<"       filelist: "<<fname_list<<std::endl;
+                std::cout<<"Stellar evolution method: ";
+#ifdef STELLAR_EVOLUTION
+#ifdef BSE
+                std::cout<<"BSE\n";
+#else
+                std::cout<<"Base\n";
+#endif
+#else
+                std::cout<<"None\n";
+#endif
+                std::cout<<"Important: Ensure that the stellar evolution methods used in the snapshots and this tool are consistent.\n"
+                         <<"           If the replace option (-r) is used and the methods are not consistent, the data cannot be recovered!"<<std::endl;
                 std::cout<<"Options: "<<std::endl
                          <<"   -b  transfer snapshot data format from BINARY to ASCII. If this option is not used, it is ASCII to BINARY"<<std::endl
                          <<"   -r  Replace snapshot data. If this option is not used, new files are created with a suffix of '.B' or '.A'"<<std::endl
