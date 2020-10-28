@@ -157,6 +157,25 @@ Notice if users want to use new options in additional to _input.par_, these opti
 In default, after restart, the new data will be appended to the existing output files (with suffixes of esc, group ...).
 If users want to restart not from the last time but from a middle _t_, _petar.data.clear_ can be used to remove the data with time > _t_ in the output files.
 
+### options
+For _petar_, two types of options exist: single-character options starting with '-' and long options starting with '--'.
+It is better for users to first check all single-character options listed by `petar -h`.
+Here a few useful options are listed.
+-  -u: the unit set of input data. When `-u 1` is used, the initial snapshot data should use the units of Msun, pc, pc/myr. Otherwise the gravitational constant (G) is assumed to be 1 (Henon unit). When use _petar.init_ tool, users should also be careful to set the consistent unit (see `petar.init -h`). There is no scaling of unit in _petar_, only G can be modified. The option `-u 1` set the value of G in the unit set of [Msun, pc, myr] and when stellar evolution and galactic tidal field are used, it also set the unit scaling factors. 
+-  -t: the finishing time. Notice that the tree time steps used in petar is the integer power of 0.5. So if the finishing time does not satisify this criterion. The simulation may not finsh at the exact given time.
+-  -o: the time interval for outputing data (snapshot and status). Should be also the integer power of 0.5.
+-  -s: the tree time step, should be the integer power of 0.5. When this is set, the changeover radius is automatically determined (see paper for reference), unless `-r` is used manually.
+-  -r: set the outer boundary of changeover radii. When this is set, tree time step is automatically determined.
+-  -a: data appending option. If `-a 1` is used (default), the new data will be appended to existing files after restart, otherwise files are rewritten. Be careful when you want to restart the simulations with this option.
+-  -b: the initial binary fraction number. This is important to correctly calculate the velocity dispersion, which is used to automatically determine tree time step and changeover radii. So it must be correctly set when primordial binaries exist. Besides, all primordial binaries should appear first in the input data file (two neighbor lines per pair).
+-  -w: output style. Users can control the whether to output snapshot data. If `-w 2` is used, all particle data will be printed in one line together with a status information of the system per output time. This can be convenient for data analysis when N is small. 
+-  -i: the format of snapshot data. This can be used to determine whether read or write snapshot data in BINARY or ASCII format.
+-  -G: gravitational constant. 
+
+Notice that `-s` and `-r` significantly affect the accuracy and performance of the simulations. 
+Users should be careful for these two options. The _petar.find.dt_ tool can help users to find the optimized values for star clusters.
+For a deep understanding and a better configuration, users may need to read the reference paper.
+
 ### Important tips:
 To avoid segmetantional fault in simulations in the case of large number of particles, make sure to set the OMP_STACKSIZE large enough.
 For example, use
