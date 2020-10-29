@@ -24,14 +24,14 @@ public:
     bool print_flag;
 
     IOParamsGalpy(): input_par_store(),
-                     type_args (input_par_store, "__NONE__", "Description of potential type and arguments"),
-                     pre_define_type (input_par_store, "__NONE__", "Add additional Pre-defined potential type to the potential list, options are: MWPotential2014"),
-                     config_filename(input_par_store, "__NONE__", "A configure file that store the types and arguments of potential, will be added to the potential list"),
-                     rscale(input_par_store, 1.0, "Radius scale factor from unit of the input particle data (IN) to Galpy distance unit (r[Galpy]=r[IN]*rscale)"),
-                     tscale(input_par_store, 1.0, "Time scale factor from unit of the input particle data (IN) to Galpy time (time[Galpy]=time[IN]*tscale)"),
-                     vscale(input_par_store, 1.0, "Velocity scale factor from unit of the input particle data (IN) to Galpy velocity unit (v[Galpy]=v[IN]*vscale)"),
-                     fscale(input_par_store, 1.0, "Acceleration scale factor from unit of the input particle data (IN) to Galpy acceleration unit (v[Galpy]=v[IN]*vscale)"),
-                     pscale(input_par_store, 1.0, "Potential factor from unit of the input particle data (IN) to Galpy potential unit (v[Galpy]=v[IN]*vscale)"),
+                     type_args (input_par_store, "__NONE__", "galpy-type-arg", "Description of potential type and arguments"),
+                     pre_define_type (input_par_store, "__NONE__", "galpy-set", "Add additional Pre-defined potential type to the potential list, options are: MWPotential2014"),
+                     config_filename(input_par_store, "__NONE__", "galpy-conf-file", "A configure file that store the types and arguments of potential, will be added to the potential list"),
+                     rscale(input_par_store, 1.0, "galpy-rscale", "Radius scale factor from unit of the input particle data (IN) to Galpy distance unit (r[Galpy]=r[IN]*rscale)"),
+                     tscale(input_par_store, 1.0, "galpy-tscale", "Time scale factor from unit of the input particle data (IN) to Galpy time (time[Galpy]=time[IN]*tscale)"),
+                     vscale(input_par_store, 1.0, "galpy-vscale", "Velocity scale factor from unit of the input particle data (IN) to Galpy velocity unit (v[Galpy]=v[IN]*vscale)"),
+                     fscale(input_par_store, 1.0, "galpy-fscale", "Acceleration scale factor from unit of the input particle data (IN) to Galpy acceleration unit (v[Galpy]=v[IN]*vscale)"),
+                     pscale(input_par_store, 1.0, "galpy-pscale", "Potential factor from unit of the input particle data (IN) to Galpy potential unit (v[Galpy]=v[IN]*vscale)"),
                      print_flag(false) {}
 
     //! reading parameters from GNU option API
@@ -44,14 +44,14 @@ public:
     int read(int argc, char *argv[], const int opt_used_pre=0) {
         static int galpy_flag=-1;
         const struct option long_options[] = {
-            {"galpy-type-arg",   required_argument, &galpy_flag, 0}, 
-            {"galpy-conf-file",  required_argument, &galpy_flag, 1}, 
-            {"galpy-set",        required_argument, &galpy_flag, 2}, 
-            {"galpy-rscale",     required_argument, &galpy_flag, 3}, 
-            {"galpy-tscale",     required_argument, &galpy_flag, 4}, 
-            {"galpy-vscale",     required_argument, &galpy_flag, 5}, 
-            {"galpy-fscale",     required_argument, &galpy_flag, 6}, 
-            {"galpy-pscale",     required_argument, &galpy_flag, 7}, 
+            {type_args.key,       required_argument, &galpy_flag, 0}, 
+            {config_filename.key, required_argument, &galpy_flag, 1}, 
+            {pre_define_type.key, required_argument, &galpy_flag, 2}, 
+            {rscale.key,     required_argument, &galpy_flag, 3}, 
+            {tscale.key,     required_argument, &galpy_flag, 4}, 
+            {vscale.key,     required_argument, &galpy_flag, 5}, 
+            {fscale.key,     required_argument, &galpy_flag, 6}, 
+            {pscale.key,     required_argument, &galpy_flag, 7}, 
             {"help", no_argument, 0, 'h'},
             {0,0,0,0}
         };
@@ -130,9 +130,8 @@ public:
             case 'h':
                 if(print_flag){
                     std::cout<<"Galpy options:"<<std::endl;
-                    std::cout<<"       Option defaulted values are shown after ':'"<<std::endl;
-                    std::cout<<"         --galpy-type-arg:  [S] "<<type_args<<std::endl
-                             <<"             The format of a combination of types and arguments have two styles: (no space in the middle):\n"
+                    input_par_store.printHelp(std::cout, 2, 10, 23);
+                    std::cout<<"Type and arguments: the format of a combination of types and arguments have two styles: (no space in the middle):\n"
                              <<"             1) [type1]:[arg1-1],[arg1-2],**|[type2]:[arg2-1],[arg2-2],**\n"
                              <<"             2) [type1],[type2],..:[arg1-1],[arg1-2],[arg2-1],**\n"
                              <<"             where '|' split different potential types;\n"
@@ -143,16 +142,8 @@ public:
                              <<"                2) --galpy-type-arg 15,5,9:0.0299946,1.8,0.2375,0.7574802,0.375,0.035,4.85223053,2.0\n"
                              <<"                both can generate the MWPotential2014 from Galpy (same to --galpy-set MWPotential2014)\n"
                              <<"             The defaults values of types and arguments for supported potentials can be found by using the commander, petar.galpy.help.\n"
-                             <<"         --galpy-set:       [S] "<<pre_define_type<<std::endl
-                             <<"         --galpy-conf-file  [S] "<<config_filename<<std::endl
-                             <<"         --galpy-rscale:    [F] "<<rscale<<std::endl
-                             <<"         --galpy-tscale:    [F] "<<tscale<<std::endl
-                             <<"         --galpy-vscale:    [F] "<<vscale<<std::endl
-                             <<"         --galpy-fscale:    [F] "<<fscale<<std::endl
-                             <<"         --galpy-pscale:    [F] "<<pscale<<std::endl
-                             <<"              The default arguments in potentials are using the Galpy (natural) unit (velocity in [220 km/s], distance in [8 kpc]).\n"
-                             <<"              If the input particle data have different units, the scaling factor should be properly set."<<std::endl;
-
+                             <<"             The default arguments in potentials are using the Galpy (natural) unit (velocity in [220 km/s], distance in [8 kpc]).\n"
+                             <<"             If the input particle data have different units, the scaling factor should be properly set."<<std::endl;
                 }
                 return -1;
             case '?':
