@@ -191,16 +191,11 @@ public:
                      write_style  (input_par_store, 1,    "w", "File Writing style: 0, no output; 1. write snapshots, status and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile"),
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE
-<<<<<<< HEAD
-                     stellar_evolution_option(input_par_store, 1, "modify single star: 0: turn off; 1: modify mass and velocity using SSE every Hermite step, log files with names of [data filename prefix].[sse/bse].[MPI rank] are generated if -w >0"),
-                     interrupt_detection_option(input_par_store, 1, "modify orbits of binaries: 0: no modifications (also no stellar evolution); 1: modify the binary orbits using BSE (if '--stellar-evolution 1' is set) and merger checker in AR integrator"),
-#elif MOBSE
-                     stellar_evolution_option(input_par_store, 1, "modify single star: 0: turn off; 1: modify mass and velocity using SSE every Hermite step, log files with names of [data filename prefix].[mosse/mobse].[MPI rank] are generated if -w >0"),
-                     interrupt_detection_option(input_par_store, 1, "modify orbits of binaries: 0: no modifications (also no stellar evolution); 1: modify the binary orbits using MOBSE (if '--stellar-evolution 1' is set) and merger checker in AR integrator"),
-=======
                      stellar_evolution_option  (input_par_store, 1, "stellar-evolution", "modify single star: 0: turn off; 1: modify mass and velocity using SSE every Hermite step, log files with names of [data filename prefix].[sse/bse].[MPI rank] are generated if -w >0"),
                      interrupt_detection_option(input_par_store, 1, "detect-interrupt", "modify orbits of binaries: 0: no modifications (also no stellar evolution); 1: modify the binary orbits using BSE (if '--stellar-evolution 1' is set) and merger checker in AR integrator"),
->>>>>>> deb9d04f712cdf0662c846d99141f773c7346533
+#elif MOBSE
+                     stellar_evolution_option  (input_par_store, 1, "stellar-evolution", "modify single star: 0: turn off; 1: modify mass and velocity using SSE every Hermite step, log files with names of [data filename prefix].[sse/bse].[MPI rank] are generated if -w >0"),
+                     interrupt_detection_option(input_par_store, 1, "detect-interrupt", "modify orbits of binaries: 0: no modifications (also no stellar evolution); 1: modify the binary orbits using BSE (if '--stellar-evolution 1' is set) and merger checker in AR integrator"),
 #else
                      stellar_evolution_option  (input_par_store, 0, "stellar-evolution", "modify mass of particles: 0: turn off; 1: check every Hermite steps"),
                      interrupt_detection_option(input_par_store, 0, "detect-interrupt", "modify orbits of AR groups and check interruption: 0: turn off; 1: modify the binary orbits based on detetion criterion; 2. modify and also interrupt the hard drift"),
