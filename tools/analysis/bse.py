@@ -157,7 +157,10 @@ class BSEDynamicMerge(DictNpArrayMix):
 
     kwargs['less_output'] (bool)
         True: 
-           class member (key) with the prefix '*" shown above are excluded (for old version of PeTar)
+           class member (key) with the prefix '*" shown above are excluded.
+           This option is for the old version of PeTar before Sep 10, 2020. 
+           Notice after the version of Oct 18, 2020, it is not need to use this option anymore.
+           The petar.data.gether automatically fills the three columns by zero (this means dr, t_peri and sd are not correct).
         False: (default)
            all members exists 
         
