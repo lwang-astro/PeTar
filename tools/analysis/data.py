@@ -112,6 +112,7 @@ class Particle(SimpleParticle):
             dm:            (1D): mass loss
             time_record    (1D): last time of interruption check
             time_interrupt (1D): next interruption time
+        bse: star  (SSEStarParameter): SSE/BSE parameters
         ptcl: r_search (1D): searching radius
               id       (1D): identification
               mass_bk  (1D): artificial particle parameter 1 
@@ -138,7 +139,7 @@ class Particle(SimpleParticle):
         keys:
             kwargs['interrupt_mode']:
                 base:      basic + add + se + ends
-                bse:       basic + add + se + ['star',SSEStarParameter] + ends
+                bse:       basic + add + se + bse + ends
                 none (default): basic + add + ends
 
     """
