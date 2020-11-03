@@ -277,6 +277,7 @@ public:
                     search_vel_factor.value = atof(optarg);
                     if(print_flag) search_vel_factor.print(std::cout);
                     opt_used += 2;
+                    update_rsearch_flag = true;
                     assert(search_vel_factor.value>0.0);
                     break;
                 case 2:
@@ -3037,12 +3038,13 @@ public:
                 // update research
                 if (input_parameters.update_rsearch_flag) {
                     if (pi_cm.mass!=0.0) {
-#ifdef GROUP_DATA_WRITE_ARTIFICIAL
+//#ifdef GROUP_DATA_WRITE_ARTIFICIAL
                         system_soft[i].r_search = std::max(r_search_min, vel_disp*dt_soft*search_vel_factor + system_soft[i].changeover.getRout());
-#else
-                        PS::F64 vcm = std::sqrt(pi_cm.vel*pi_cm.vel);
-                        system_soft[i].r_search = std::max(r_search_min,vcm*dt_soft*search_vel_factor + system_soft[i].changeover.getRout());
-#endif
+// not correct, when data is dumped, it is not cm information but artificial particle data
+//#else
+//                        PS::F64 vcm = std::sqrt(pi_cm.vel*pi_cm.vel);
+//                        system_soft[i].r_search = std::max(r_search_min,vcm*dt_soft*search_vel_factor + system_soft[i].changeover.getRout());
+//#endif
                     }
                     else system_soft[i].calcRSearch(dt_soft);
                 }
