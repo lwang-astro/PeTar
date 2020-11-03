@@ -3,14 +3,12 @@
 unset run
 unset pbin
 unset dt_base
-unset bnum
 unset nmpi
 unset nomp
 unset fname
 unset prefix_flag
 unset opts
-unset unit
-unset G
+unset sfmt
 
 until [[ `echo x$1` == 'x' ]]
 do
@@ -29,6 +27,7 @@ do
 #	    echo '  -b: binary number (default: 0)';
 	    echo '  -m: number of MPI processors (default: 1)';
 	    echo '  -o: number of OpenMP processors (default: auto)';
+	    echo '  -i: format of snapshot: 0: BINARY; 1: ASCII (default: 1)';
 #	    echo '  -u: petar unit set (default: 0)';
 #	    echo '  -G: gravitational constant (default: 1)'
 	    exit;;
@@ -39,6 +38,7 @@ do
 #	-b) shift; bnum=$1; shift;;
 	-m) shift; nmpi=$1; shift;;
 	-o) shift; nomp=$1; shift;;
+	-i) shift; sfmt=$1; shift;;
 #	-u) shift; unit=$1; shift;;
 #	-G) shift; G=$1; shift;;
 	*) fname=$1;shift;;
@@ -50,10 +50,11 @@ if [ ! -e $fname ] | [ -z $fname ] ; then
     exit
 fi
 
-#[ -z $opts ] && opts=''
+#[ -z $opts ] || opts=''
 [ -z $pbin ] && pbin=petar
 [ -z $nomp ] || prefix='env OMP_NUM_THREADS='$nomp
 [ -z $nmpi ] || prefix=$prefix' mpiexec -n '$nmpi
+[ -z $sfmt ] && sfmt=1
 #[ -z $bnum ] || opts=$opts' -b '$bnum
 [ -z $prefix_flag ] || prefix=$run
 #[ -z $unit ] || opts=$opts' -u '$unit
@@ -62,7 +63,7 @@ fi
 echo 'commander: '$prefix' '$pbin' '$opts
 
 if [ -z $dt_base ]; then
-    $prefix $pbin -w 0 $opts -t 0.0 $fname &>.check.perf.test.log
+    $prefix $pbin -w 0 $opts -i $sfmt -t 0.0 $fname &>.check.perf.test.log
     dt_base=`egrep dt_soft .check.perf.test.log |awk '{OFMT="%.14g"; print $3/4}'`
     echo 'Auto determine dt_base: '$dt_base
     rm -f .check.perf.test.log
@@ -71,7 +72,12 @@ else
 fi
 
 tperf_pre=1e10
-tzero=`head -1 $fname|awk '{print $3}'`
+if [[ $sfmt == 1 ]]; then
+    tzero=`head -1 $fname|awk '{print $3}'`
+else
+    petar.format.transfer -b -H -f $fname
+    tzero=`head -1 $fname.H|awk '{print $3}'`
+fi
 echo 'time start: '$tzero
 dt=$dt_base
 dt_min=$dt
@@ -82,7 +88,7 @@ do
     dt=`echo $dt|awk '{OFMT="%.14g"; print $1*2.0}'`
     tend=`echo $dt |awk -v tzero=$tzero '{OFMT="%.14g"; print tzero+$1*6.01}' `
     echo 'test ending time '$tend' dt '$dt
-    ${prefix} timeout $tcum $pbin $opts -w 0 -t $tend  -s $dt -o $dt $fname &>.check.perf.$dt.log
+    ${prefix} timeout $tcum $pbin $opts -w 0 -i $sfmt -t $tend  -s $dt -o $dt $fname &>.check.perf.$dt.log
     egrep 'Wallclock' -A 3 .check.perf.$dt.log |sed -n '/^\ *[0-9]/ p'|awk '{if (NR>1 && NR%2==0) print $1,$2+$3+$4+$8,$7+$9,$6+$10+$11,$12+$13}' >.check.perf.$dt.tperf
     if [[ `wc -l .check.perf.$dt.tperf|awk '{print $1}'` -ge 6 ]]; then 
 	dt_reg=`egrep dt_soft .check.perf.$dt.log|awk '{OFMT="%.14g"; print $3}'`

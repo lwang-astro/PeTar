@@ -48,6 +48,7 @@ int main(int argc, char *argv[]){
     bool replace_flag=false; // If true: replace the snapshot data; false: create a new file with a suffix of [.B|.A]
     bool group_data_format_f64_flag=false; // When read ASCII mode, if true: treat group_data as 64bit floating (old version); else: treat group_data as 64bit integer
     bool read_one_file_flag=false; // If true: the input file is not a list but the filename of one snapshot
+    bool write_ascii_header_flag=false; // If true: only output ascii header
     std::string fname_list("data.snap.lst"); // The filename of a file containing the list of snapshot data pathes
 
     static int long_flag=-1;
@@ -63,7 +64,7 @@ int main(int argc, char *argv[]){
     optind = 0; // reset getopt
     bool print_flag = true;
 
-    while ((copt = getopt_long(argc, argv, "brgfh", long_options, &option_index)) != -1) 
+    while ((copt = getopt_long(argc, argv, "brgfHh", long_options, &option_index)) != -1) 
         switch (copt) {
         case 0:
             switch (long_flag) {
@@ -97,6 +98,11 @@ int main(int argc, char *argv[]){
             if(print_flag) std::cout<<"Read one file instead of a filelist\n";
             opt_used ++;
             break;
+        case 'H':
+            write_ascii_header_flag = true;
+            if(print_flag) std::cout<<"Write only header data of snapshot in ASCII format\n";
+            opt_used ++;
+            break;
         case 'h':
             if(print_flag){
                 std::cout<<"The tool to transfer the format of snapshot data between BINARY and ASCII\n";
@@ -121,6 +127,7 @@ int main(int argc, char *argv[]){
                          <<"        This is from the old version before Sep 4, 2020 (GitHub), or -D GROUP_DATA_WRITE_ARTIFICIAL is used in Makefile\n"
                          <<"        After the data transfer, the data will be in new format (64bit Integer)\n"
                          <<"   -f  Read one snapshot instead of a list, the filelist should be replaced by the filename of the snapshot\n"
+                         <<"   -H  Write only header data of snapshots in ascii format with suffix '.H'. This option suppress '-r' so that data are not replaced"<<std::endl
                          <<"   -h(--help)   print help"<<std::endl;
             }
             return -1;
@@ -149,10 +156,21 @@ int main(int argc, char *argv[]){
         // Binary to ASCII
         if (b_to_a_flag) {
             data.readParticleBinary(filename.c_str(), file_header);
-            if (replace_flag) 
-                data.writeParticleAscii(filename.c_str(), file_header);
-            else
-                data.writeParticleAscii((filename+".A").c_str(), file_header);
+            if (write_ascii_header_flag) {
+                FILE* fout;
+                std::string fname_header = filename+".H";
+                if( (fout = fopen(fname_header.c_str(),"w")) == NULL) {
+                    std::cerr<<"Error: Cannot open file "<<fname_header<<"!\n";
+                    abort();
+                }
+                file_header.writeAscii(fout);
+            }
+            else {
+                if (replace_flag) 
+                    data.writeParticleAscii(filename.c_str(), file_header);
+                else
+                    data.writeParticleAscii((filename+".A").c_str(), file_header);
+            }
         }
         else {
             if (group_data_format_f64_flag) {
