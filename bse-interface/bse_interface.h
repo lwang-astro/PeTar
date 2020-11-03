@@ -732,7 +732,7 @@ public:
     void readRandConstant(const char* _fname) {
         FILE* fin;
         if( (fin = fopen(_fname,"r")) == NULL) {
-            printf("Not found.\n");
+            std::cerr<<_fname<<" not found.\n";
         }
         else {
             int rcount = fscanf(fin, "%d %d %d ", &value3_.idum, &rand3_.idum2, &rand3_.iy);

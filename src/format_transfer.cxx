@@ -47,6 +47,7 @@ int main(int argc, char *argv[]){
     bool b_to_a_flag=false; // If true: BINARY to ASCII; else : ASCII to BINARY
     bool replace_flag=false; // If true: replace the snapshot data; false: create a new file with a suffix of [.B|.A]
     bool group_data_format_f64_flag=false; // When read ASCII mode, if true: treat group_data as 64bit floating (old version); else: treat group_data as 64bit integer
+    bool read_one_file_flag=false; // If true: the input file is not a list but the filename of one snapshot
     std::string fname_list("data.snap.lst"); // The filename of a file containing the list of snapshot data pathes
 
     static int long_flag=-1;
@@ -62,7 +63,7 @@ int main(int argc, char *argv[]){
     optind = 0; // reset getopt
     bool print_flag = true;
 
-    while ((copt = getopt_long(argc, argv, "brgh", long_options, &option_index)) != -1) 
+    while ((copt = getopt_long(argc, argv, "brgfh", long_options, &option_index)) != -1) 
         switch (copt) {
         case 0:
             switch (long_flag) {
@@ -91,6 +92,11 @@ int main(int argc, char *argv[]){
             if(print_flag) std::cout<<"Group data in snapshot uses 64bit floating\n";
             opt_used ++;
             break;
+        case 'f':
+            read_one_file_flag = true;
+            if(print_flag) std::cout<<"Read one file instead of a filelist\n";
+            opt_used ++;
+            break;
         case 'h':
             if(print_flag){
                 std::cout<<"The tool to transfer the format of snapshot data between BINARY and ASCII\n";
@@ -114,6 +120,7 @@ int main(int argc, char *argv[]){
                          <<"   -g  Treat group_data as 64bit floating when read ASCII snapshots\n"
                          <<"        This is from the old version before Sep 4, 2020 (GitHub), or -D GROUP_DATA_WRITE_ARTIFICIAL is used in Makefile\n"
                          <<"        After the data transfer, the data will be in new format (64bit Integer)\n"
+                         <<"   -f  Read one snapshot instead of a list, the filelist should be replaced by the filename of the snapshot\n"
                          <<"   -h(--help)   print help"<<std::endl;
             }
             return -1;
@@ -132,24 +139,13 @@ int main(int argc, char *argv[]){
         if(print_flag) std::cout<<"Reading file list: "<<fname_list<<std::endl;
     }
 
-    std::fstream fin;
-    fin.open(fname_list,std::fstream::in);
-    if(!fin.is_open()) {
-        std::cerr<<"Error: data file "<<fname_list<<" cannot be open!\n";
-        abort();
-    }
-
     if(print_flag) std::cout<<"----- Finish reading input options -----\n";
 
     SystemSoft data;
     SystemSoftWriteArtificial data_wa;
     FileHeader file_header;
 
-    while(true) {
-        std::string filename;
-        fin>>filename;
-        if (fin.eof()) break;
-        if (print_flag) std::cout<<"Tranfer: "<<filename<<std::endl;
+    auto transferOneFile = [&] (const std::string& filename) {
         // Binary to ASCII
         if (b_to_a_flag) {
             data.readParticleBinary(filename.c_str(), file_header);
@@ -174,7 +170,24 @@ int main(int argc, char *argv[]){
                     data.writeParticleBinary((filename+".B").c_str(), file_header);
             }
         }
-    }
+    };
 
+    if (read_one_file_flag) transferOneFile(std::string(fname_list));
+    else {
+        std::fstream fin;
+        fin.open(fname_list,std::fstream::in);
+        if(!fin.is_open()) {
+            std::cerr<<"Error: data file "<<fname_list<<" cannot be open!\n";
+            abort();
+        }
+
+        while(true) {
+            std::string filename;
+            fin>>filename;
+            if (fin.eof()) break;
+            if (print_flag) std::cout<<"Tranfer: "<<filename<<std::endl;
+            transferOneFile(filename);
+        }
+    }
     return 0;
 }
