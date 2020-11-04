@@ -14,14 +14,14 @@ until [[ `echo x$1` == 'x' ]]
 do
     case $1 in
 	-h) shift;
-	    echo 'Check the tree soft step for best performance, ';
+	    echo 'Check the tree soft step for best performance with auto-determined changeover radii';
 	    echo 'Usage: petar.init [options] [data file name]';
 	    echo 'Options:';
 	    echo '  -r: user defined prefix before program name, please use " " to enclose the options.'
             echo '      If used, -m and -o are suppressed (default: "")'
 	    echo '  -a: user defined options used for petar commander, please use " " to enclose the options.'
 	    echo '      For example, "-b [binary number], -u [unit set] -G [gravitaitonal constant]".'
-	    echo '      Notice that "-o", "-w", "-t" and "-s" from the petar commander cannot be used inside this -a block (default: "")'
+	    echo '      Notice that "-o", "-w", "-t", "-i" and "-s" from the petar commander cannot be used inside this -a block (default: "")'
 	    echo '  -p: petar commander name (default: petar)';
 	    echo '  -s: base tree step size (default: auto)';
 #	    echo '  -b: binary number (default: 0)';
@@ -30,6 +30,12 @@ do
 	    echo '  -i: format of snapshot: 0: BINARY; 1: ASCII (default: 1)';
 #	    echo '  -u: petar unit set (default: 0)';
 #	    echo '  -G: gravitational constant (default: 1)'
+	    echo 'PS: 1) since the test is only based on the first 6 steps, the suggested tree step may not be the best for a long-term simulation'
+	    echo '       Sometimes, the best tree step may result in a large changeover radii that the wallclock time for hard part increase after some steps.'
+	    echo '       In such a case, the next smallest choice of tree step (0.5*best one) can be better.'
+	    echo "    2) if changeover radii (-r) and binary criterion (-r-bin) is not set in the petar options (inside the argument of -a), they are auto-determined."
+	    echo "       But if the input data is a snapshot for restarting, and the input parameter files (input.par[.bse/.galpy]) exist,"
+	    echo "       -a '-p input.par -r 0 --r-bin 0' can update changeover radii and binary criterion based on the new tree step size."
 	    exit;;
 	-r) shift; run=$1; prefix_flag=yes; shift;;
 	-a) shift; opts=$1; shift;;
