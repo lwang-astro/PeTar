@@ -24,12 +24,14 @@ if __name__ == '__main__':
         print("  -G(--gravitational-constant): Gravitational constant (if interrupt-mode=bse: ",petar.G_MSUN_PC_MYR,"; else 1.0)")
         print("  -b(--r-max-binary): maximum sepration for detecting binaries (0.1)")
         print("  -B(--full-binary): calculate full binary orbital parameters (simple_mode=False in Binary class), this option increases computing time")
-        print("  -a(--average-mode): Lagrangian properity average mode: sphere: average from center to Lagragian radii; shell: average between two neighbor radii (sphere)")
+        print("  -a(--average-mode): Lagrangian properity average mode, choices: sphere: average from center to Lagragian radii; shell: average between two neighbor radii (sphere)")
         print("  -r(--read-data): read existing single, binary and core data to avoid expensive KDTree construction, no argument, disabled in default")
         print("  -e(--r-escape): a constant escape distance criterion, in default, it is 20*half-mass radius")
-        print("  -i(--interrupt-mode): interruption mode: no, base, bse (no)")
+        print("  -i(--interrupt-mode): the interruption mode used in petar, choices: no, base, bse (no)")
         print("  -s(--snapshot-format): snapshot data format: binary, ascii (ascii)")
         print("  -n(--n-cpu): number of CPU threads for parallel processing (all threads)")
+        print("Important note: users should be careful to set the consistent '-i' or -'G' options in order to correctly calculate the Kepler orbital parameters of binaries.")
+        print("                when data are written in BINARY format, '-s binary' should be used.")
 
     try:
         shortargs = 'p:m:G:b:Ba:re:i:s:n:h'

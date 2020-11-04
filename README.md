@@ -323,6 +323,7 @@ Thus in the test, if the user specify the minimum step size by '-s [value]', the
 
 #### Parallel data process
 The _petar.data.process_ can be used to process snapshot data to detect binaries and calculate Langragian, core radii, averaged mass and velocity dispersion.
+Notice that the tool calculate the core (density) center and use it to obtain Langrangian radii.
 The single and binary data are stored for each snapshot with additional suffix ".single" and ".binary".
 The data of Lagrangian, core and escapers are generated in separate files.
 The multiple CPU cores are used to process the data since the KDTree neighbor search for calculating density and detect binaries is very slow.
@@ -354,7 +355,12 @@ The escaper data (single and binary) can be read by _SingleEscaper_ and _BinaryE
 By the way, the _petar_ code can also remove escapers and stored the data of escapers by using the energy and distance criterion (see help of _petar_).
 
 When the snapshot files are in BINARY format, the option `-s binary` can be used to read the snapshot correctly.
-Notice the generated data from _petar.data.process_ are all in ASCII format.
+Notice that the generated data from _petar.data.process_ are all in ASCII format.
+
+Users should be careful to set the correct gravitational constant in the analysis (option `-G`).
+This is important to correctly calculate the Kepler orbital parameters of binaries.
+When users apply the astronomical unit set (`-u 1` in the _petar_ commander) in simulations, `-G 0.00449830997959438` should be used in the data analysis.
+Or, if the SSE/BSE is used, the interrupt mode option `-i bse` can also set the correct value of G.
 
 #### Movie generator
 The _petar.movie_ is a covenient tool to generate a movie from the snapshot files.
