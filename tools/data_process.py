@@ -14,7 +14,9 @@ if __name__ == '__main__':
     n_cpu=0
 
     def usage():
-        print("A tool for processing a list of snapshot data to detect binaries, calculate Langragian radii and properties, get the density center and core radius")
+        print("A tool for processing a list of snapshot data to detect binaries,")
+        print("   calculate the density center, the core radius, the Langragian radii (using the density center)")
+        print("   and the corresponding properties inside each radius: number of objects, average masses, mean velocities and velocity dispersions")
         print("Usage: petar.data.process [options] data_filename")
         print("data_filename: A list of snapshot data path, each line for one snapshot")
         print("option:")
@@ -30,8 +32,8 @@ if __name__ == '__main__':
         print("  -i(--interrupt-mode): the interruption mode used in petar, choices: no, base, bse (no)")
         print("  -s(--snapshot-format): snapshot data format: binary, ascii (ascii)")
         print("  -n(--n-cpu): number of CPU threads for parallel processing (all threads)")
-        print("Important note: users should be careful to set the consistent '-i' or -'G' options in order to correctly calculate the Kepler orbital parameters of binaries.")
-        print("                when data are written in BINARY format, '-s binary' should be used.")
+        print("Important note: 1) users should be careful to set the consistent '-i' or -'G' options in order to correctly calculate the Kepler orbital parameters of binaries.")
+        print("                2) when data are written in BINARY format, '-s binary' should be used.")
 
     try:
         shortargs = 'p:m:G:b:Ba:re:i:s:n:h'
