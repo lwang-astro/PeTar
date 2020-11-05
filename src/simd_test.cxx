@@ -11,9 +11,12 @@
 #include "soft_force.hpp"
 #include "io.hpp"
 #include "particle_distribution_generator.hpp"
+#ifdef USE_GPU
 #include "force_gpu_cuda.hpp"
+#endif
 #include "static_variables.hpp"
 
+#ifdef USE_QUAD
 void setQuad(const PS::F64 N, SPJSoft& sp) {
     sp.mass =  1.0/N+0.001/N*rand()/(float)RAND_MAX;
     sp.pos.x = 1.0+10.0*rand()/(float)RAND_MAX;
@@ -26,11 +29,14 @@ void setQuad(const PS::F64 N, SPJSoft& sp) {
     sp.quad.yz = 10.0*rand()/(float)RAND_MAX;
     sp.quad.xz = 10.0*rand()/(float)RAND_MAX;
 }
+#endif
 
 int main(int argc, char **argv){
     const int Nepi = 10000;
     const int Nepj = 50000;
+#ifdef USE_QUAD
     const int Nspj = 50000;
+#endif
     const int N = Nepi+Nepj;
     EPISoft::r_out = 0.01;
     EPISoft::eps = 0.0;
@@ -56,10 +62,23 @@ int main(int argc, char **argv){
 
     EPISoft epi[Nepi];
     EPJSoft epj[Nepj];
+
+    ForceSoft force[Nepi];
+    ForceSoft force_sp[Nepi];
+#ifdef USE_QUAD
     SPJSoft spj[Nspj];
-    ForceSoft force[Nepi], force_simd[Nepi], force_gpu[Nepi];
-    ForceSoft force_sp[Nepi], force_sp_simd[Nepi];
-    ForceSoft force_sp_quad[Nepi], force_sp_quad_simd[Nepi];
+    ForceSoft force_sp_quad[Nepi];
+#endif
+#ifdef USE_GPU
+    ForceSoft force_gpu[Nepi];
+#endif
+#ifdef USE_SIMD
+    ForceSoft force_simd[Nepi];
+    ForceSoft force_sp_simd[Nepi];
+#ifdef USE_QUAD
+    ForceSoft force_sp_quad_simd[Nepi];
+#endif
+#endif
 #pragma omp parallel for
     for (int i=0; i<N; i++) ptcl[i].calcRSearch(1.0/2048.0);
 #pragma omp parallel for    
@@ -67,57 +86,28 @@ int main(int argc, char **argv){
         epi[i].copyFromFP(ptcl[i]);
         epj[i].copyFromFP(ptcl[i+Nepi]);
         force[i].clear();
-        force_simd[i].clear();
+#ifdef USE_GPU
         force_gpu[i].clear();
-        force_sp_simd[i].clear();
+#endif
         force_sp[i].clear();
-        force_sp_quad_simd[i].clear();
+#ifdef USE_QUAD
         force_sp_quad[i].clear();
+#endif
+#ifdef USE_SIMD
+        force_simd[i].clear();
+        force_sp_simd[i].clear();
+#ifdef USE_QUAD
+        force_sp_quad_simd[i].clear();
+#endif
+#endif
     }
     //for (int i=0; i<Nepj; i++) epj[i].copyFromFP(ptcl[i]);
 #ifdef USE_QUAD    
     for (int i=0; i<Nspj; i++) setQuad((PS::F64)N, spj[i]);
 #endif
 
-    CalcForceEpEpWithLinearCutoffSimd f_ep_ep_simd;
-    CalcForceEpEpWithLinearCutoffNoSimd f_ep_ep;
-    CalcForceEpSpMonoSimd f_ep_sp_simd;
-    CalcForceEpSpMonoNoSimd f_ep_sp;
-    CalcForceEpSpQuadSimd f_ep_sp_quad_simd;
-    CalcForceEpSpQuadNoSimd  f_ep_sp_quad;
-
-    PS::F64 t_ep_simd=0, t_ep_no=0, t_sp_simd=0, t_sp_no=0, t_sp_quad_simd=0, t_sp_quad_no=0, t_gpu=0;
-    std::cout<<"calc Ep Ep simd\n";
-    t_ep_simd -= PS::GetWtime();
-    f_ep_ep_simd(epi, Nepi, epj, Nepj, force_simd);
-    t_ep_simd += PS::GetWtime();
-
-    std::cout<<"calc Ep Ep\n";
-    t_ep_no -= PS::GetWtime();
-    f_ep_ep(epi, Nepi, epj, Nepj, force);
-    t_ep_no += PS::GetWtime();
-
-    std::cout<<"calc Ep Sp mono simd\n";
-    t_sp_simd -= PS::GetWtime();
-    f_ep_sp_simd(epi, Nepi, epj, Nepj, force_sp_simd);
-    t_sp_simd += PS::GetWtime();
-
-    std::cout<<"calc Ep Sp mono\n";
-    t_sp_no -= PS::GetWtime();
-    f_ep_sp(epi, Nepi, epj, Nepj, force_sp);
-    t_sp_no += PS::GetWtime();
-
-#ifdef USE_QUAD
-    std::cout<<"calc Ep Sp quad simd\n";
-    t_sp_quad_simd -= PS::GetWtime();
-    f_ep_sp_quad_simd(epi, Nepi, spj, Nspj, force_sp_quad_simd);
-    t_sp_quad_simd += PS::GetWtime();
-
-    std::cout<<"calc Ep Sp quad\n";
-    t_sp_quad_no -= PS::GetWtime();
-    f_ep_sp_quad(epi, Nepi, spj, Nspj, force_sp_quad);
-    t_sp_quad_no += PS::GetWtime();
-#endif
+#ifdef USE_GPU
+    PS::F64 t_gpu=0;
 
     std::cout<<"calc GPU\n";
     t_gpu -= PS::GetWtime();
@@ -128,11 +118,69 @@ int main(int argc, char **argv){
     DispatchKernelWithSP(1, 1, &epi_ptr, &Nepi, &epj_ptr, &Nepj, &spj_ptr, &Nspj);
     RetrieveKernel(1, 1, &Nepi, &force_gpu_ptr);
     t_gpu += PS::GetWtime();
+#endif
+
+#ifdef USE_SIMD
+    std::cout<<"calc Ep Ep simd\n";
+    CalcForceEpEpWithLinearCutoffSimd f_ep_ep_simd;
+    PS::F64 t_ep_simd=0;
+    t_ep_simd -= PS::GetWtime();
+    f_ep_ep_simd(epi, Nepi, epj, Nepj, force_simd);
+    t_ep_simd += PS::GetWtime();
+
+    std::cout<<"calc Ep Sp mono simd\n";
+    CalcForceEpSpMonoSimd f_ep_sp_simd;
+    PS::F64 t_sp_simd=0;
+    t_sp_simd -= PS::GetWtime();
+    f_ep_sp_simd(epi, Nepi, epj, Nepj, force_sp_simd);
+    t_sp_simd += PS::GetWtime();
+
+#ifdef USE_QUAD
+    std::cout<<"calc Ep Sp quad simd\n";
+    CalcForceEpSpQuadSimd f_ep_sp_quad_simd;
+    PS::F64 t_sp_quad_simd=0;
+    t_sp_quad_simd -= PS::GetWtime();
+    f_ep_sp_quad_simd(epi, Nepi, spj, Nspj, force_sp_quad_simd);
+    t_sp_quad_simd += PS::GetWtime();
+#endif
+#endif
+    std::cout<<"calc Ep Ep\n";
+    CalcForceEpEpWithLinearCutoffNoSimd f_ep_ep;
+    PS::F64 t_ep_no=0;
+    t_ep_no -= PS::GetWtime();
+    f_ep_ep(epi, Nepi, epj, Nepj, force);
+    t_ep_no += PS::GetWtime();
+
+    std::cout<<"calc Ep Sp mono\n";
+    CalcForceEpSpMonoNoSimd f_ep_sp;
+    PS::F64 t_sp_no=0;
+    t_sp_no -= PS::GetWtime();
+    f_ep_sp(epi, Nepi, epj, Nepj, force_sp);
+    t_sp_no += PS::GetWtime();
+
+#ifdef USE_QUAD
+    std::cout<<"calc Ep Sp quad\n";
+    CalcForceEpSpQuadNoSimd  f_ep_sp_quad;
+    PS::F64 t_sp_quad_no=0;
+    t_sp_quad_no -= PS::GetWtime();
+    f_ep_sp_quad(epi, Nepi, spj, Nspj, force_sp_quad);
+    t_sp_quad_no += PS::GetWtime();
+#endif
 
     std::cout<<"compare results\n";
-    PS::F64 dfmax=0,dsmax=0,dqmax=0,dgmax=0,dfpmax=0,dspmax=0,dqpmax=0,dgpmax=0;
+#ifdef USE_SIMD
+    PS::F64 dfmax=0,dsmax=0;
+    PS::F64 dfpmax=0,dspmax=0;
+#ifdef USE_QUAD
+    PS::F64 dqmax=0,dqpmax=0;
+#endif
+#endif
+#ifdef USE_GPU
+    PS::F64 dgmax=0,dgpmax=0;
+#endif
     for(int i=0; i<Nepi; i++) {
         for (int j=0; j<3; j++) {
+#ifdef USE_SIMD
             PS::F64 df=(force[i].acc[j]-force_simd[i].acc[j])/force[i].acc[j];
             dfmax = std::max(dfmax, df);
             if(df>DF_MAX) std::cerr<<"Force diff: i="<<i<<" nosimd["<<j<<"] "<<force[i].acc[j]<<" simd["<<j<<"] "<<force_simd[i].acc[j]<<std::endl;
@@ -143,30 +191,41 @@ int main(int argc, char **argv){
             df = (force_sp_quad[i].acc[j]-force_sp_quad_simd[i].acc[j])/force_sp_quad[i].acc[j];
             dqmax = std::max(dqmax, df);
             if(df>DF_MAX) std::cerr<<"Force sp_quad diff: i="<<i<<" nosimd["<<j<<"] "<<force_sp_quad[i].acc[j]<<" simd["<<j<<"] "<<force_sp_quad_simd[i].acc[j]<<std::endl;
-
+#endif
+#endif
+#ifdef USE_GPU
+#ifdef USE_QUAD
             df = (force[i].acc[j]+force_sp_quad[i].acc[j] - force_gpu[i].acc[j])/force_gpu[i].acc[j];
             dgmax = std::max(dgmax, df);
             if(df>DF_MAX) std::cerr<<"Force diff: i="<<i<<" nosimd["<<j<<"] "<<force[i].acc[j]+force_sp_quad[i].acc[j]<<" gpu["<<j<<"] "<<force_gpu[i].acc[j]<<std::endl;
-#else
             df = (force[i].acc[j]+force_sp[i].acc[j] - force_gpu[i].acc[j])/force_gpu[i].acc[j];
+#else
             dgmax = std::max(dgmax, df);
             if(df>DF_MAX) std::cerr<<"Force diff: i="<<i<<" nosimd["<<j<<"] "<<force[i].acc[j]+force_sp[i].acc[j]<<" gpu["<<j<<"] "<<force_gpu[i].acc[j]<<std::endl;
 #endif
+#endif
         }
+#ifdef USE_SIMD
         dfpmax = std::max(dfpmax, (force[i].pot-force_simd[i].pot)/force[i].pot);
         dspmax = std::max(dspmax, (force_sp[i].pot-force_sp_simd[i].pot)/force_sp[i].pot);
 #ifdef USE_QUAD
         dqpmax = std::max(dqpmax, (force_sp_quad[i].pot-force_sp_quad_simd[i].pot)/force_sp_quad[i].pot);
         dgpmax = std::max(dqpmax, (force_sp_quad[i].pot+force[i].pot - force_gpu[i].pot)/force_gpu[i].pot);
-#else
+#endif
+#endif
+#ifdef USE_GPU
         dgpmax = std::max(dqpmax, (force_sp[i].pot+force[i].pot - force_gpu[i].pot)/force_gpu[i].pot);
 #endif
+#ifdef USE_SIMD
         if(force[i].n_ngb!=force_simd[i].n_ngb) {
             std::cerr<<"Neighbor diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" simd "<<force_simd[i].n_ngb<<std::endl;
         }
+#endif
+#ifdef USE_GPU
         if(force[i].n_ngb!=force_gpu[i].n_ngb) {
             std::cerr<<"Neighbor diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" gpu "<<force_gpu[i].n_ngb<<std::endl;
         }
+#endif
     }
 #ifdef USE__AVX512
     std::cout<<"Use AVX512";
@@ -204,17 +263,27 @@ int main(int argc, char **argv){
     std::cout<<" PRELOAD";
 #endif
     std::cout<<std::endl;
-    
+
+#ifdef USE_SIMD    
     std::cout<<"Force diff max: "<<dfmax<<" Pot diff max: "<<dfpmax
-             <<"\nSp diff max: "<<dsmax<<" Pot diff max: "<<dspmax
-             <<"\nQuad diff max: "<<dqmax<<" Pot diff max: "<<dqpmax
-             <<"\nGPU diff max: "<<dgmax<<" Pot diff max: "<<dgpmax
-             <<std::endl;
+             <<"\nSp diff max: "<<dsmax<<" Pot diff max: "<<dspmax;
+#ifdef USE_QUAD       
+    std::cout<<"\nQuad diff max: "<<dqmax<<" Pot diff max: "<<dqpmax;
+#endif
+#endif
+#ifdef USE_GPU
+    std::cout<<"\nGPU diff max: "<<dgmax<<" Pot diff max: "<<dgpmax;
+#endif
+    std::cout<<std::endl;
     
     std::cout<<"Time: epj  simd="<<t_ep_simd<<" no="<<t_ep_no<<" ratio="<<t_ep_no/t_ep_simd<<std::endl;
     std::cout<<"Time: spj  simd="<<t_sp_simd<<" no="<<t_sp_no<<" ratio="<<t_sp_no/t_sp_simd<<std::endl;
+#ifdef USE_QUAD
     std::cout<<"Time: quad simd="<<t_sp_quad_simd<<" no="<<t_sp_quad_no<<" ratio="<<t_sp_quad_no/t_sp_quad_simd<<std::endl;
+#endif
+#ifdef USE_GPU
     std::cout<<"Time: gpu ="<<t_gpu<<" no="<<t_ep_no+t_sp_no<<" ratio="<<t_gpu/(t_ep_no+t_sp_no)<<std::endl;
+#endif
 
 //    for (int i=0; i<Nepi; i++) {
 //        force_sp_quad_simd[i].clear();
