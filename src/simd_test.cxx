@@ -11,10 +11,17 @@
 #include "soft_force.hpp"
 #include "io.hpp"
 #include "particle_distribution_generator.hpp"
+#include "static_variables.hpp"
 #ifdef USE_GPU
 #include "force_gpu_cuda.hpp"
+#else
+#ifdef USE_QUAD
+#define SPJSoft PS::SPJQuadrupoleInAndOut
+#else
+#define SPJSoft PS::SPJMonopoleInAndOut
 #endif
-#include "static_variables.hpp"
+#endif
+
 
 #ifdef USE_QUAD
 void setQuad(const PS::F64 N, SPJSoft& sp) {
@@ -115,7 +122,17 @@ int main(int argc, char **argv){
     const EPJSoft *epj_ptr = epj;
     const SPJSoft *spj_ptr = spj;
     ForceSoft *force_gpu_ptr = force_gpu;
+#ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
+    PS::S32 id_epj[Nepj], id_spj[Nspj];
+    const PS::S32* id_epj_ptr=id_epj;
+    const PS::S32* id_spj_ptr=id_spj;
+    for (int i=0; i<Nepj; i++) id_epj[i]=i;
+    for (int i=0; i<Nspj; i++) id_spj[i]=i;
+    DispatchKernelWithSPIndex(1, 1, &epi_ptr, &Nepi, &id_epj_ptr, &Nepj, &id_spj_ptr, &Nspj, epj_ptr, Nepj, spj_ptr, Nspj, true);
+    DispatchKernelWithSPIndex(1, 1, &epi_ptr, &Nepi, &id_epj_ptr, &Nepj, &id_spj_ptr, &Nspj, epj_ptr, Nepj, spj_ptr, Nspj, false);
+#else
     DispatchKernelWithSP(1, 1, &epi_ptr, &Nepi, &epj_ptr, &Nepj, &spj_ptr, &Nspj);
+#endif
     RetrieveKernel(1, 1, &Nepi, &force_gpu_ptr);
     t_gpu += PS::GetWtime();
 #endif
@@ -210,11 +227,14 @@ int main(int argc, char **argv){
         dspmax = std::max(dspmax, (force_sp[i].pot-force_sp_simd[i].pot)/force_sp[i].pot);
 #ifdef USE_QUAD
         dqpmax = std::max(dqpmax, (force_sp_quad[i].pot-force_sp_quad_simd[i].pot)/force_sp_quad[i].pot);
-        dgpmax = std::max(dqpmax, (force_sp_quad[i].pot+force[i].pot - force_gpu[i].pot)/force_gpu[i].pot);
 #endif
 #endif
 #ifdef USE_GPU
+#ifdef USE_QUAD
+        dgpmax = std::max(dqpmax, (force_sp_quad[i].pot+force[i].pot - force_gpu[i].pot)/force_gpu[i].pot);
+#else
         dgpmax = std::max(dqpmax, (force_sp[i].pot+force[i].pot - force_gpu[i].pot)/force_gpu[i].pot);
+#endif
 #endif
 #ifdef USE_SIMD
         if(force[i].n_ngb!=force_simd[i].n_ngb) {
