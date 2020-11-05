@@ -1,4 +1,4 @@
-use_x86 =@use_x86@
+use_arch=@with_arch@
 use_simd=@use_simd@
 use_simd_64=@use_simd_64@
 use_mpi =@use_mpi@
@@ -127,7 +127,7 @@ CXXFLAGS += -D GPU_PROFILE
 endif # gpu cuda
 
 #-------------------------------------
-ifeq ($(use_x86),yes)
+ifeq ($(use_arch),x86)
 CXXFLAGS += -DINTRINSIC_X86
 
 #-------------------------------------
@@ -142,6 +142,11 @@ endif  # simd
 #-------------------------------------
 
 endif # x86
+
+#-------------------------------------
+ifeq ($(use_arch),fugaku)
+CXXFLAGS += -D USE_FUGAKU
+endif # fugaku
 
 #-------------------------------------
 ifeq ($(use_gperf),yes)

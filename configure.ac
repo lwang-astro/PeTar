@@ -118,7 +118,7 @@ AS_IF([test x"$use_omp" != xno],
 # x86
 AC_ARG_WITH([arch],
 	    [AS_HELP_STRING([--with-arch],
-                            [compile with architecture type (x86). Default: x86])],
+                            [compile with architecture type (x86, fugaku). Default: x86])],
             [],
 	    [with_arch=x86])
 
@@ -129,8 +129,7 @@ AC_ARG_WITH([simd],
             [with_simd=auto])
 
 AS_IF([test x"$with_arch" == xx86],
-      [use_x86=yes
-       use_simd=no
+      [use_simd=no
        AS_IF([test x"$with_simd" != xauto],
              [AS_CASE($with_simd,
                       [avx],[arch=core-avx-i],
@@ -159,7 +158,7 @@ AS_IF([test x"$with_arch" == xx86],
                                                 [])])])
        AS_IF([test x"$use_simd" != xno],
              [PROG_NAME=$PROG_NAME"."$SIMD_TYPE])],
-      [use_x86=no])
+      [use_simd=no])
 
 AC_ARG_ENABLE([simd-64],
               [AS_HELP_STRING([--enable-simd-64],
@@ -360,7 +359,7 @@ AC_PREFIX_PROGRAM(petar)
 # Checks for library functions.
 AC_CHECK_FUNCS([pow sqrt])
 
-AC_SUBST([use_x86])
+AC_SUBST([with_arch])
 AC_SUBST([use_simd])
 AC_SUBST([use_simd_64])
 AC_SUBST([use_mpi])
@@ -392,7 +391,7 @@ AC_MSG_NOTICE([----------------------Configure Summary--------------------])
 AC_MSG_NOTICE([--Features:])
 AC_MSG_NOTICE([     Using MPI:         $use_mpi])
 AC_MSG_NOTICE([     Using GPU:         $use_cuda])
-AC_MSG_NOTICE([     Using x86 :        $use_x86])
+AC_MSG_NOTICE([     Using arch:        $with_arch])
 AS_IF([test "x$use_simd" != xno],
       [AS_IF([test "x$use_simd_64" != xno],
              [AC_MSG_NOTICE([     SIMD type:         $SIMD_TYPE 64 bits])],
