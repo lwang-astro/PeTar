@@ -34,6 +34,7 @@ If the source codes of these libraries are put in the same directory where the _
 
 ### Environment:
 To successfully compile the code, the C++ compiler (e.g. GNU gcc/g++, Intel icc/icpc, LLVM clang/clang++) needs the support of the C++11 standard. To use SSE/BSE package, a Fortran (77) compiler, GNU gfortran, is needed and should be possile to provide API to the c++ code, i.e., the libgfortran is required. Currently Intel ifort is not supported yet. The MPI compiler (e.g. mpic++) is required to use MPI. NVIDIA GPU and CUDA compiler is required to use GPU acceleration. The SIMD support is tested for the GNU, Intel and LLVM compilers. It is not tested for others, thus these three kinds of compilers are suggested to use. 
+The Fugaku ARM A64FX architecture is also supported. 
 
 To use _Galpy_ and the analysis tools, the _Python3_ should be available. _Galpy_ also requires the _GSL_ library being installed and can be detected in the load library path.
 
@@ -85,7 +86,7 @@ Options for configure can be found by
    ```
 
    The tree force and neighbor search functions using Fugaku A64FX instruction set are supported now. 
-   Notice tha in Fugaku supercomputer, the configure only work on the running nodes. 
+   Notice that in Fugaku supercomputer, the configure only work on the running nodes. 
    Users should launch an interactive job to configure and compile the code.
     
 6. Use GPU (CUDA)
