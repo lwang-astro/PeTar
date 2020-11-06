@@ -78,14 +78,23 @@ Options for configure can be found by
     - avx512dq: use AVX512F and AVX512DQ
     
     This option switch on the SIMD support for force calculation, the _auto_ case check whether the compiler (GNU or Intel) support the SIMD instructions and choose the newest one. Notice that the supported options of the compiler and the running CPU are different. Please check your CPU instruction whether the compiled option is supported or not. If the CPU can support more than the compiler, it is suggested to change or update the compiler to get better performance.
+
+5. Use Fugaku A64FX architecture
+   ```
+   ./configure --with-arch=fugaku
+   ```
+
+   The tree force and neighbor search functions using Fugaku A64FX instruction set are supported now. 
+   Notice tha in Fugaku supercomputer, the configure only work on the running nodes. 
+   Users should launch an interactive job to configure and compile the code.
     
-5. Use GPU (CUDA)
+6. Use GPU (CUDA)
     ```
     ./configure --enable-cuda
     ```
     By default GPU is not used. To switch on it, make sure the NVIDIA CUDA is installed and consistent with the c++ compiler.
     
-6. Debug mode
+7. Debug mode
     ```
     ./configure --with-debug=[assert/g/no]
     ```
@@ -93,7 +102,7 @@ Options for configure can be found by
     - g: switch on compiler option '-g -O0 -fbounds-check' in order to support debugger such as gdb
     - no: no debugging, optimized performance (default)   
    
-7. Use stellar evolution
+8. Use stellar evolution
     ```
     ./configure --with-interrupt=[bse]
     ```
@@ -102,7 +111,7 @@ Options for configure can be found by
     When this option is switched on, the standalone tool _petar.bse_ will also be compiled and installed.
     This is a c++ based tool which call the SSE/BSE functions to evolve single and binary stars to the given age and metallicity. OpenMP parallelization is used to speed up the calculation if a large group of stars and binaries are provided.
 
-8. Use _Galpy_ external potential library
+9. Use _Galpy_ external potential library
     ```
     ./configure --with-external=galpy
     ```
