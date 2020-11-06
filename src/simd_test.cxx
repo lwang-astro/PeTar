@@ -90,16 +90,19 @@ int main(int argc, char **argv){
 
     ForceSoft force[Nepi];
     ForceSoft force_sp[Nepi];
+    ForceSoft force_nb[Nepi];
 #ifdef USE_GPU
     ForceSoft force_gpu[Nepi];
 #endif
 #ifdef USE_SIMD
     ForceSoft force_simd[Nepi];
     ForceSoft force_sp_simd[Nepi];
+    ForceSoft force_nb_simd[Nepi];
 #endif
 #ifdef USE_FUGAKU
     ForceSoft force_fgk[Nepi];
     ForceSoft force_sp_fgk[Nepi];
+    ForceSoft force_nb_fgk[Nepi];
 #endif
 
     for (int i=0; i<N; i++) ptcl[i].calcRSearch(1.0/2048.0);
@@ -114,10 +117,12 @@ int main(int argc, char **argv){
 #ifdef USE_SIMD
         force_simd[i].clear();
         force_sp_simd[i].clear();
+        force_nb_simd[i].clear();
 #endif
 #ifdef USE_FUGAKU
         force_fgk[i].clear();
         force_sp_fgk[i].clear();
+        force_nb_fgk[i].clear();
 #endif
     }
     for (int i=0; i<Nepj; i++) 
@@ -168,6 +173,13 @@ int main(int argc, char **argv){
     t_sp_simd -= PS::GetWtime();
     f_ep_sp_simd(epi, Nepi, spj, Nspj, force_sp_simd);
     t_sp_simd += PS::GetWtime();
+
+    std::cout<<"neighbor search simd\n";
+    SearchNeighborEpEpSimd f_nb_simd();
+    PS::F64 t_nb_simd=0;
+    t_nb_simd -= PS::GetWtime();
+    f_nb_simd(epi, Nepi, epj, Nepj, force_nb_simd);
+    t_nb_simd += PS::GetWtime();
 #endif
 
 #ifdef USE_FUGAKU
@@ -178,12 +190,24 @@ int main(int argc, char **argv){
     f_ep_ep_fgk(epi, Nepi, epj, Nepj, force_fgk);
     t_ep_fgk += PS::GetWtime();
 
+#ifdef USE_QUAD
+    std::cout<<"calc Ep Sp quad fugaku\n";
+    CalcForceEpSpQuadFugaku f_ep_sp_fgk(EPISoft::eps*EPISoft::eps, ForceSoft::grav_const);
+#else
     std::cout<<"calc Ep Sp mono fugaku\n";
     CalcForceEpSpMonoFugaku f_ep_sp_fgk(EPISoft::eps*EPISoft::eps, ForceSoft::grav_const);
+#endif
     PS::F64 t_sp_fgk=0;
     t_sp_fgk -= PS::GetWtime();
     f_ep_sp_fgk(epi, Nepi, spj, Nspj, force_sp_fgk);
     t_sp_fgk += PS::GetWtime();
+
+    std::cout<<"neighbor search fugaku\n";
+    SearchNeighborEpEpFugaku f_nb_fgk;
+    PS::F64 t_nb_fgk=0;
+    t_nb_fgk -= PS::GetWtime();
+    f_nb_fgk(epi, Nepi, epj, Nepj, force_nb_fgk);
+    t_nb_fgk += PS::GetWtime();
 #endif
 
     std::cout<<"calc Ep Ep\n";
@@ -204,6 +228,13 @@ int main(int argc, char **argv){
     t_sp_no -= PS::GetWtime();
     f_ep_sp(epi, Nepi, spj, Nspj, force_sp);
     t_sp_no += PS::GetWtime();
+
+    std::cout<<"neighbor search\n";
+    SearchNeighborEpEpNoSimd f_nb;
+    PS::F64 t_nb=0;
+    t_nb -= PS::GetWtime();
+    f_nb(epi, Nepi, epj, Nepj, force_nb);
+    t_nb += PS::GetWtime();
 
     std::cout<<"compare results\n";
     PS::S32 nbcount[20];
@@ -258,6 +289,9 @@ int main(int argc, char **argv){
         if(force[i].n_ngb!=force_simd[i].n_ngb) {
             std::cerr<<"Neighbor diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" simd "<<force_simd[i].n_ngb<<std::endl;
         }
+        if(force_nb[i].n_ngb!=force_nb_simd[i].n_ngb) {
+            std::cerr<<"NB search diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" simd "<<force_fgk[i].n_ngb<<std::endl;
+        }
         nbcount_ave_simd += force_simd[i].n_ngb;
 #endif
 #ifdef USE_GPU
@@ -275,6 +309,9 @@ int main(int argc, char **argv){
         if(force[i].n_ngb!=force_fgk[i].n_ngb) {
             std::cerr<<"Neighbor diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" fugaku "<<force_fgk[i].n_ngb<<std::endl;
         }
+        if(force_nb[i].n_ngb!=force_nb_fgk[i].n_ngb) {
+            std::cerr<<"NB search diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" fugaku "<<force_fgk[i].n_ngb<<std::endl;
+        }
         nbcount_ave_fgk += force_fgk[i].n_ngb;
 #endif
         nbcount_ave += force[i].n_ngb;
@@ -289,7 +326,11 @@ int main(int argc, char **argv){
     std::cout<<"Use AVX";
 #endif
 #ifdef USE_FUGAKU
-    std::cout<<" FUGAKU";
+#ifdef USE_QUAD
+    std::cout<<" FUGAKU_quad";
+#else
+    std::cout<<" FUGAKU_mono";
+#endif
 #endif
 #ifdef USE_GPU
 #ifdef USE_QUAD
