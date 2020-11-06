@@ -645,6 +645,7 @@ use_gperf
 use_omp
 use_cuda
 use_mpi
+use_quad
 use_simd_64
 use_simd
 with_arch
@@ -691,6 +692,7 @@ infodir
 docdir
 oldincludedir
 includedir
+runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -719,6 +721,7 @@ enable_openmp
 with_arch
 with_simd
 enable_simd_64
+enable_quad
 enable_cuda
 with_cuda_prefix
 with_cuda_sdk_prefix
@@ -786,6 +789,7 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
+runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
@@ -1038,6 +1042,15 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
+  -runstatedir | --runstatedir | --runstatedi | --runstated \
+  | --runstate | --runstat | --runsta | --runst | --runs \
+  | --run | --ru | --r)
+    ac_prev=runstatedir ;;
+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
+  | --run=* | --ru=* | --r=*)
+    runstatedir=$ac_optarg ;;
+
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1175,7 +1188,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir
+		libdir localedir mandir runstatedir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1328,6 +1341,7 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
+  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -1360,6 +1374,8 @@ Optional Features:
   --disable-omp           disable OpenMP support
   --enable-simd-64        enable x86 SIMD 64 bits floating point support for
                           long-distant tree force
+  --disable-quad          disable quadrupole-moment calculation for super
+                          particles
   --enable-cuda           enable CUDA (GPU) acceleration support for
                           long-distant tree force
   --enable-gperf          enable gperftools for profiling
@@ -3996,6 +4012,15 @@ else
 fi
 
 
+# QUAD
+# Check whether --enable-quad was given.
+if test "${enable_quad+set}" = set; then :
+  enableval=$enable_quad; use_quad=no
+else
+  use_quad=yes
+fi
+
+
 # cuda
 # Check whether --enable-cuda was given.
 if test "${enable_cuda+set}" = set; then :
@@ -6079,6 +6104,7 @@ done
 
 
 
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: ----------------------Configure Summary--------------------" >&5
 $as_echo "$as_me: ----------------------Configure Summary--------------------" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: --Features:" >&5
@@ -6118,6 +6144,8 @@ $as_echo "$as_me:      external mode:     $with_external" >&6;}
 $as_echo "$as_me:      tidal tensor mode: $with_tidal_tensor" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      orbit mode:        $with_orbit" >&5
 $as_echo "$as_me:      orbit mode:        $with_orbit" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:      Using quad:        $use_quad" >&5
+$as_echo "$as_me:      Using quad:        $use_quad" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: --Compilers:" >&5
 $as_echo "$as_me: --Compilers:" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      C++ compiler:      $CXX" >&5

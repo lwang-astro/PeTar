@@ -5,6 +5,7 @@ use_mpi =@use_mpi@
 use_gpu_cuda=@use_cuda@
 use_omp = @use_omp@
 use_gperf=@use_gperf@
+use_quad = @use_quad@
 debug_mode=@with_debug@
 step_mode=@with_step_mode@
 se_mode=@with_interrupt@
@@ -17,7 +18,9 @@ CXXFLAGS=@CXXFLAGS@
 TARGET=build/@PROG_NAME@ build/petar.hard.debug build/petar.format.transfer
 
 #MT_FLAGS += -D HARD_CM_KICK
+ifeq ($(use_quad),yes)
 MT_FLAGS += -D USE_QUAD
+endif
 MT_FLAGS += -D SOFT_PERT
 MT_FLAGS += -D AR_TTL
 MT_FLAGS += -D AR_SLOWDOWN_TREE

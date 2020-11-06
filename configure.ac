@@ -167,6 +167,13 @@ AC_ARG_ENABLE([simd-64],
 	       use_simd_64=yes],
               [use_simd_64=no])
 
+# QUAD
+AC_ARG_ENABLE([quad],
+              [AS_HELP_STRING([--disable-quad],
+                              [disable quadrupole-moment calculation for super particles])],
+              [use_quad=no],
+              [use_quad=yes])
+
 # cuda
 AC_ARG_ENABLE([cuda],
               [AS_HELP_STRING([--enable-cuda],
@@ -362,6 +369,7 @@ AC_CHECK_FUNCS([pow sqrt])
 AC_SUBST([with_arch])
 AC_SUBST([use_simd])
 AC_SUBST([use_simd_64])
+AC_SUBST([use_quad])
 AC_SUBST([use_mpi])
 AC_SUBST([use_cuda])
 AC_SUBST([use_omp])
@@ -406,6 +414,7 @@ AC_MSG_NOTICE([     interrupt mode:    $with_interrupt])
 AC_MSG_NOTICE([     external mode:     $with_external])
 AC_MSG_NOTICE([     tidal tensor mode: $with_tidal_tensor])
 AC_MSG_NOTICE([     orbit mode:        $with_orbit])
+AC_MSG_NOTICE([     Using quad:        $use_quad])
 AC_MSG_NOTICE([--Compilers:])
 AC_MSG_NOTICE([     C++ compiler:      $CXX])
 AS_IF([test "x$use_cuda" != xno],
