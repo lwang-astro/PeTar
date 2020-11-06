@@ -238,7 +238,7 @@ int main(int argc, char **argv){
             if(df>DF_MAX) std::cerr<<"Force sp diff: i="<<i<<" nosimd["<<j<<"] "<<force_sp[i].acc[j]<<" simd["<<j<<"] "<<force_sp_simd[i].acc[j]<<std::endl;
 #endif
 #ifdef USE_GPU
-            dgmax = std::max(dgmax, df);
+            dfmax_gpu = std::max(dfmax_gpu, df);
             if(df>DF_MAX) std::cerr<<"Force diff: i="<<i<<" nosimd["<<j<<"] "<<force[i].acc[j]+force_sp[i].acc[j]<<" gpu["<<j<<"] "<<force_gpu[i].acc[j]<<std::endl;
 #endif
 #ifdef USE_FUGAKU

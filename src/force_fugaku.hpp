@@ -25,10 +25,20 @@ struct EPJ32{
     PIKG::F32 mass,rs;
 };
 
+struct SPJMono32{
+    PIKG::F32vec pos;
+    PIKG::F32 mass;
+};
+
 struct FORCE32{
     PIKG::F32vec acc;
     PIKG::F32 pot;
     PIKG::S32 nnb;
+};
+
+struct FORCESP32{
+    PIKG::F32vec acc;
+    PIKG::F32 pot;
 };
 
 struct CalcForceEpEpWithLinearCutoffFugaku{
@@ -99,6 +109,7 @@ struct CalcForceEpEpWithLinearCutoffFugaku{
         PIKG::S32 j;
 
         PIKG::S32 ni_act;
+        PIKG::S32 nj_act;
         PIKG::S32 epi_list[ni];
         EPI32 epi_loc[ni];
         EPJ32 epj_loc[nj];
@@ -591,12 +602,12 @@ struct CalcForceEpSpMonoFugaku{
     void operator()(const EPISoft* __restrict__ epi, const int ni, const SPJSoft* __restrict__ epj, const int nj, ForceSoft* __restrict__ force, const int kernel_select = 1){
 
         static_assert(sizeof(EPI32) == 16,"check consistency of EPI member variable definition between PIKG source and original source");
-        static_assert(sizeof(EPJ32) == 20,"check consistency of EPJ member variable definition between PIKG source and original source");
-        static_assert(sizeof(FORCE32) == 20,"check consistency of FORCE member variable definition between PIKG source and original source");
+        static_assert(sizeof(SPJMono32) == 16,"check consistency of EPJ member variable definition between PIKG source and original source");
+        static_assert(sizeof(FORCESP32) == 16,"check consistency of FORCE member variable definition between PIKG source and original source");
         if(kernel_select>=0) kernel_id = kernel_select;
         if(kernel_id == 0){
             std::cout << "ni: " << ni << " nj:" << nj << std::endl;
-            FORCE* force_tmp = new FORCE[ni];
+            ForceSoft* force_tmp = new ForceSoft[ni];
             std::chrono::system_clock::time_point  start, end;
             double min_time = std::numeric_limits<double>::max();
             { // test Kernel_I16_J1
@@ -636,8 +647,8 @@ struct CalcForceEpSpMonoFugaku{
         PIKG::S32 ni_act;
         PIKG::S32 epi_list[ni];
         EPI32 epi_loc[ni];
-        EPJ32 epj_loc[nj];
-        FORCE32 force_loc[ni];
+        SPJMono32 epj_loc[nj];
+        FORCESP32 force_loc[ni];
 
         ni_act=0;
         for(i=0; i<ni; ++i){
@@ -665,13 +676,13 @@ struct CalcForceEpSpMonoFugaku{
             svbool_t pg0 = svwhilelt_b32_s32(i,ni_act);
             svfloat32x3_t xi;
 
-            uint32_t index_gather_load0[16] = {0,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45};
+            uint32_t index_gather_load0[16] = {0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60};
             svuint32_t vindex_gather_load0 = svld1_u32(pg0,index_gather_load0);
             xi.v0 = svld1_gather_u32index_f32(pg0,((float*)&epi_loc[i+0].pos.x),vindex_gather_load0);
-            uint32_t index_gather_load1[16] = {0,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45};
+            uint32_t index_gather_load1[16] = {0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60};
             svuint32_t vindex_gather_load1 = svld1_u32(pg0,index_gather_load1);
             xi.v1 = svld1_gather_u32index_f32(pg0,((float*)&epi_loc[i+0].pos.y),vindex_gather_load1);
-            uint32_t index_gather_load2[16] = {0,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45};
+            uint32_t index_gather_load2[16] = {0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60};
             svuint32_t vindex_gather_load2 = svld1_u32(pg0,index_gather_load2);
             xi.v2 = svld1_gather_u32index_f32(pg0,((float*)&epi_loc[i+0].pos.z),vindex_gather_load2);
             svfloat32x3_t acc;
@@ -780,15 +791,15 @@ struct CalcForceEpSpMonoFugaku{
         }
     } // Kernel_I16_J1 definition 
 
-    void Kernel_I1_J16(const EPISoft* __restrict__ epi, const PIKG::S32 ni, const EPJSoft* __restrict__ epj, const PIKG::S32 nj, ForceSoft* __restrict__ force){
+    void Kernel_I1_J16(const EPISoft* __restrict__ epi, const PIKG::S32 ni, const SPJSoft* __restrict__ epj, const PIKG::S32 nj, ForceSoft* __restrict__ force){
         PIKG::S32 i;
         PIKG::S32 j;
 
         PIKG::S32 ni_act;
         PIKG::S32 epi_list[ni];
         EPI32 epi_loc[ni];
-        EPJ32 epj_loc[nj];
-        FORCE32 force_loc[ni];
+        SPJMono32 epj_loc[nj];
+        FORCESP32 force_loc[ni];
 
         ni_act=0;
         for(i=0; i<ni; ++i){
@@ -797,28 +808,21 @@ struct CalcForceEpSpMonoFugaku{
                 epi_loc[ni_act].pos.x = epi[i].pos.x;
                 epi_loc[ni_act].pos.y = epi[i].pos.y;
                 epi_loc[ni_act].pos.z = epi[i].pos.z;
-                epi_loc[ni_act].rs = epi[i].r_search;
 
                 force_loc[ni_act].acc = 0.f;
                 force_loc[ni_act].pot = 0.0;
-                force_loc[ni_act].nnb = 0;
                 ni_act++;
             }
         }
 
-        nj_act=0;
         for(j=0; j<nj; ++j) {
-            if (epj[j].mass>0) {
-                epj_loc[nj_act].pos.x = epj[j].pos.x;
-                epj_loc[nj_act].pos.y = epj[j].pos.y;
-                epj_loc[nj_act].pos.z = epj[j].pos.z;
-                epj_loc[nj_act].mass = epj[j].mass;
-                epj_loc[nj_act].rs = epj[j].r_search;
-                nj_act++;
-            }
+            epj_loc[j].pos.x = epj[j].pos.x;
+            epj_loc[j].pos.y = epj[j].pos.y;
+            epj_loc[j].pos.z = epj[j].pos.z;
+            epj_loc[j].mass = epj[j].mass;
         }
 
-        for(i = 0;i < ((ni_loc + 1 - 1)/1)*1;++i){
+        for(i = 0;i < ((ni_act + 1 - 1)/1)*1;++i){
             svfloat32x3_t xi;
 
             xi.v0 = svdup_n_f32(epi_loc[i+0].pos.x);
@@ -925,8 +929,8 @@ struct CalcForceEpSpMonoFugaku{
     PIKG::F32 to_float(PIKG::U32 op){return (PIKG::F32)op;}
     PIKG::F64 to_float(PIKG::S64 op){return (PIKG::F64)op;}
     PIKG::F32 to_float(PIKG::S32 op){return (PIKG::F32)op;}
-    PIKG::S64   to_int(PIKG::F64 op){return (PIKG::S64)op;}
-    PIKG::S32   to_int(PIKG::F32 op){return (PIKG::S32)op;}
+    //PIKG::S64   to_int(PIKG::F64 op){return (PIKG::S64)op;}
+    //PIKG::S32   to_int(PIKG::F32 op){return (PIKG::S32)op;}
     PIKG::U64  to_uint(PIKG::F64 op){return (PIKG::U64)op;}
     PIKG::U32  to_uint(PIKG::F32 op){return (PIKG::U32)op;}
     template<typename T> PIKG::F64 to_f64(const T& op){return (PIKG::F64)op;}
@@ -1031,8 +1035,8 @@ struct CalcForceEpSpMonoFugaku{
     svfloat32_t to_float(svbool_t pg, svint32_t op){ return svcvt_f32_s32_z(pg,op);}
     svfloat64_t to_float(svbool_t pg,svuint64_t op){ return svcvt_f64_u64_z(pg,op);}
     svfloat32_t to_float(svbool_t pg,svuint32_t op){ return svcvt_f32_u32_z(pg,op);}
-    svint64_t  to_int(svbool_t pg,svfloat64_t op){ return svcvt_s64_f64_z(pg,op);}
-    svint32_t  to_int(svbool_t pg,svfloat32_t op){ return svcvt_s32_f32_z(pg,op);}
+    //svint64_t  to_int(svbool_t pg,svfloat64_t op){ return svcvt_s64_f64_z(pg,op);}
+    //svint32_t  to_int(svbool_t pg,svfloat32_t op){ return svcvt_s32_f32_z(pg,op);}
     svuint64_t to_uint(svbool_t pg,svfloat64_t op){ return svcvt_u64_f64_z(pg,op);}
     svuint32_t to_uint(svbool_t pg,svfloat32_t op){ return svcvt_u32_f32_z(pg,op);}
 };// kernel functor definition 
