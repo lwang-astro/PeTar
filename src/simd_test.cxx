@@ -175,7 +175,7 @@ int main(int argc, char **argv){
     t_sp_simd += PS::GetWtime();
 
     std::cout<<"neighbor search simd\n";
-    SearchNeighborEpEpSimd f_nb_simd();
+    SearchNeighborEpEpSimd f_nb_simd;
     PS::F64 t_nb_simd=0;
     t_nb_simd -= PS::GetWtime();
     f_nb_simd(epi, Nepi, epj, Nepj, force_nb_simd);
@@ -290,7 +290,7 @@ int main(int argc, char **argv){
             std::cerr<<"Neighbor diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" simd "<<force_simd[i].n_ngb<<std::endl;
         }
         if(force_nb[i].n_ngb!=force_nb_simd[i].n_ngb) {
-            std::cerr<<"NB search diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" simd "<<force_fgk[i].n_ngb<<std::endl;
+            std::cerr<<"NB search diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" simd "<<force_nb_simd[i].n_ngb<<std::endl;
         }
         nbcount_ave_simd += force_simd[i].n_ngb;
 #endif
@@ -310,7 +310,7 @@ int main(int argc, char **argv){
             std::cerr<<"Neighbor diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" fugaku "<<force_fgk[i].n_ngb<<std::endl;
         }
         if(force_nb[i].n_ngb!=force_nb_fgk[i].n_ngb) {
-            std::cerr<<"NB search diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" fugaku "<<force_fgk[i].n_ngb<<std::endl;
+            std::cerr<<"NB search diff: i="<<i<<" nosimd "<<force_nb[i].n_ngb<<" fugaku "<<force_nb_fgk[i].n_ngb<<std::endl;
         }
         nbcount_ave_fgk += force_fgk[i].n_ngb;
 #endif
