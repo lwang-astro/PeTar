@@ -105,6 +105,10 @@ struct CalcForceEpEpWithLinearCutoffFugaku{
                 epi_loc[ni_act].pos.y = epi[i].pos.y;
                 epi_loc[ni_act].pos.z = epi[i].pos.z;
                 epi_loc[ni_act].rs = epi[i].r_search;
+
+		force_loc[ni_act].acc = 0.f;
+		force_loc[ni_act].pot = 0.0;
+		force_loc[ni_act].nnb = 0;
                 ni_act++;
             }
         }

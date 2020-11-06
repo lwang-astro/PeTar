@@ -41,10 +41,10 @@ void setQuad(const PS::F64 N, SPJSoft& sp) {
 #endif
 
 int main(int argc, char **argv){
-    const int Nepi = 10;
-    const int Nepj = 20;
+    const int Nepi = 1000;
+    const int Nepj = 2000;
 #ifdef USE_QUAD
-    const int Nspj = 10;
+    const int Nspj = 1000;
 #endif
     const int N = Nepi+Nepj;
     EPISoft::r_out = 0.01;
@@ -98,7 +98,7 @@ int main(int argc, char **argv){
 #pragma omp parallel for    
     for (int i=0; i<Nepi; i++) {
         epi[i].copyFromFP(ptcl[i]);
-        epj[i].copyFromFP(ptcl[i+Nepi]);
+        epj[i].copyFromFP(ptcl[i]);
         force[i].clear();
 #ifdef USE_GPU
         force_gpu[i].clear();
@@ -120,7 +120,7 @@ int main(int argc, char **argv){
 #endif
     }
     for (int i=Nepi; i<Nepj; i++) 
-      epj[i].copyFromFP(ptcl[i+Nepi]);
+      epj[i].copyFromFP(ptcl[i]);
     //for (int i=0; i<Nepj; i++) epj[i].copyFromFP(ptcl[i]);
 #ifdef USE_QUAD    
     for (int i=0; i<Nspj; i++) setQuad((PS::F64)N, spj[i]);
@@ -208,20 +208,27 @@ int main(int argc, char **argv){
 #endif
 
     std::cout<<"compare results\n";
+    PS::S32 nbcount[20];
+    for(int i=0; i<20; i++) nbcount[i]=0;
+    PS::F64 nbcount_ave=0;
 #ifdef USE_SIMD
     PS::F64 dfmax=0,dsmax=0;
     PS::F64 dfpmax=0,dspmax=0;
+    PS::F64 nbcount_ave_simd=0;
 #ifdef USE_QUAD
     PS::F64 dqmax=0,dqpmax=0;
 #endif
 #endif
 #ifdef USE_GPU
     PS::F64 dgmax=0,dgpmax=0;
+    PS::F64 nbcount_ave_gpu=0;
 #endif
 #ifdef USE_FUGAKU
     PS::F64 dfgkmax=0,dfgkpmax=0;
+    PS::F64 nbcount_ave_fgk=0;
 #endif
     PS::F64 df;
+
     for(int i=0; i<Nepi; i++) {
         for (int j=0; j<3; j++) {
 #ifdef USE_SIMD
@@ -263,6 +270,7 @@ int main(int argc, char **argv){
         if(force[i].n_ngb!=force_simd[i].n_ngb) {
             std::cerr<<"Neighbor diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" simd "<<force_simd[i].n_ngb<<std::endl;
         }
+	nbcount_ave_simd += force_simd[i].n_ngb;
 #endif
 #ifdef USE_GPU
 #ifdef USE_QUAD
@@ -273,13 +281,17 @@ int main(int argc, char **argv){
         if(force[i].n_ngb!=force_gpu[i].n_ngb) {
             std::cerr<<"Neighbor diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" gpu "<<force_gpu[i].n_ngb<<std::endl;
         }
+	nbcount_ave_gpu += force_gpu[i].n_ngb;
 #endif
 #ifdef USE_FUGAKU
 	dfgkpmax = std::max(dfgkpmax, (force[i].pot-force_fgk[i].pot)/force[i].pot);
         if(force[i].n_ngb!=force_fgk[i].n_ngb) {
             std::cerr<<"Neighbor diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" fugaku "<<force_fgk[i].n_ngb<<std::endl;
         }
+	nbcount_ave_fgk += force_fgk[i].n_ngb;
 #endif
+	nbcount_ave += force[i].n_ngb;
+	if (force[i].n_ngb<20) nbcount[force[i].n_ngb]++;
     }
 #ifdef USE__AVX512
     std::cout<<"Use AVX512";
@@ -335,6 +347,20 @@ int main(int argc, char **argv){
 #endif
     std::cout<<std::endl;
 
+    for (int i=0; i<20; i++)
+      if (nbcount[i]>0) std::cout<<"NNB: "<<i<<" "<<nbcount[i]<<std::endl;
+    std::cout<<"<NNB>:";
+#ifdef USE_SIMD
+    std::cout<<" no_simd: "<<nbcount_ave;
+#endif
+#ifdef USE_GPU
+    std::cout<<" gpu: "<<nbcount_ave_gpu;
+#endif
+#ifdef USE_FUGAKU
+    std::cout<<" fugaku: "<<nbcount_ave_fgk;
+#endif
+    std::cout<<std::endl;
+    
 #ifdef USE_SIMD
     std::cout<<"Time: epj  simd="<<t_ep_simd<<" no="<<t_ep_no<<" ratio="<<t_ep_no/t_ep_simd<<std::endl;
     std::cout<<"Time: spj  simd="<<t_sp_simd<<" no="<<t_sp_no<<" ratio="<<t_sp_no/t_sp_simd<<std::endl;
