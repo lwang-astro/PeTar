@@ -883,11 +883,14 @@ public:
 #endif // multi-walk index
 
 #elif USE_FUGAKU
-        tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffFugaku(),
+        PS::F64 eps2 = EPISoft::eps*EPISoft::eps;
+        PS::F64 rout2 = EPISoft::r_out*EPISoft::r_out;
+        PS::F64 G= ForceSoft::grav_const;
+        tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffFugaku(eps2, rout2, G),
 #ifdef USE_QUAD
-                                           CalcForceEpSpQuadFugaku(),
+                                           CalcForceEpSpQuadFugaku(eps2, G),
 #else // no quad
-                                           CalcForceEpSpMonoFugaku(),
+                                           CalcForceEpSpMonoFugaku(eps2, G),
 #endif // end quad
                                            system_soft,
                                            dinfo);
