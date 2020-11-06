@@ -159,6 +159,9 @@ AS_IF([test x"$with_arch" == xx86],
        AS_IF([test x"$use_simd" != xno],
              [PROG_NAME=$PROG_NAME"."$SIMD_TYPE])],
       [use_simd=no])
+      
+AS_IF([test x"$with_arch" == xfugaku],
+      [PROG_NAME=$PROG_NAME".fugaku"])
 
 AC_ARG_ENABLE([simd-64],
               [AS_HELP_STRING([--enable-simd-64],

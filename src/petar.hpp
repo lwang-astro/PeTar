@@ -65,6 +65,9 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #ifdef USE_GPU
 #include"force_gpu_cuda.hpp"
 #endif
+#ifdef USE_FUGAKU
+#include "force_fugaku.hpp"
+#endif
 #include"energy.hpp"
 #include"hard.hpp"
 #include"io.hpp"
@@ -747,10 +750,12 @@ public:
         tree_nb.clearNumberOfInteraction();
         tree_nb.clearTimeProfile();
 #endif
-#ifndef USE_SIMD
-        tree_nb.calcForceAllAndWriteBack(SearchNeighborEpEpNoSimd(), system_soft, dinfo);
-#else
+#ifdef USE_SIMD
         tree_nb.calcForceAllAndWriteBack(SearchNeighborEpEpSimd(), system_soft, dinfo);
+#elif USE_FUGAKU
+        tree_nb.calcForceAllAndWriteBack(SearchNeighborEpEpFugaku(), system_soft, dinfo);
+#else
+        tree_nb.calcForceAllAndWriteBack(SearchNeighborEpEpNoSimd(), system_soft, dinfo);
 #endif
         
 #ifdef PROFILE
@@ -858,16 +863,7 @@ public:
         tree_soft.clearTimeProfile();
 #endif
 
-#ifndef USE_SIMD
-        tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSimd(),
-#ifdef USE_QUAD
-                                           CalcForceEpSpQuadNoSimd(),
-#else
-                                           CalcForceEpSpMonoNoSimd(),
-#endif
-                                           system_soft,
-                                           dinfo);
-#elif USE_GPU
+#ifdef USE_GPU
         const PS::S32 n_walk_limit = 200;
         const PS::S32 tag_max = 1;
 #ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
@@ -886,7 +882,17 @@ public:
                                                     n_walk_limit);
 #endif // multi-walk index
 
-#else // end gpu
+#elif USE_FUGAKU
+        tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffFugaku(),
+#ifdef USE_QUAD
+                                           CalcForceEpSpQuadFugaku(),
+#else // no quad
+                                           CalcForceEpSpMonoFugaku(),
+#endif // end quad
+                                           system_soft,
+                                           dinfo);
+        
+#elif USE_SIMD // end use_gpu
         tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffSimd(),
 #ifdef USE_QUAD
                                            CalcForceEpSpQuadSimd(),
@@ -895,7 +901,16 @@ public:
 #endif // end quad
                                            system_soft,
                                            dinfo);
-#endif // end gpu
+#else // end use_simd
+        tree_soft.calcForceAllAndWriteBack(CalcForceEpEpWithLinearCutoffNoSimd(),
+#ifdef USE_QUAD
+                                           CalcForceEpSpQuadNoSimd(),
+#else
+                                           CalcForceEpSpMonoNoSimd(),
+#endif
+                                           system_soft,
+                                           dinfo);
+#endif // end else
 
 #ifdef PROFILE
         n_count.ep_ep_interact     += tree_soft.getNumberOfInteractionEPEPLocal();
@@ -2308,6 +2323,10 @@ public:
 #ifdef P3T_64BIT
         fout<<"Use 64 bit SIMD n";
 #endif
+#endif
+
+#ifdef USE_FUGAKU
+        fout<<"Use Fugaku\n";
 #endif
 
 #ifdef USE_GPU
