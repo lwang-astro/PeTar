@@ -63,7 +63,7 @@ int main(int argc, char **argv){
 
     const int N = std::max(Nepi,Nepj);
     EPISoft::r_out = 0.01;
-    EPISoft::eps = 0.0;
+    EPISoft::eps = 1e-4;
     ForceSoft::grav_const = 1.0;
     const PS::F64 DF_MAX=7e-3;
     
@@ -270,6 +270,7 @@ int main(int argc, char **argv){
 #endif
 #ifdef USE_FUGAKU
         dfpmax_fgk = std::max(dfpmax_fgk, (force[i].pot-force_fgk[i].pot)/force[i].pot);
+        dspmax_fgk = std::max(dspmax_fgk, (force_sp[i].pot-force_sp_fgk[i].pot)/force_sp[i].pot);
 
         if(force[i].n_ngb!=force_fgk[i].n_ngb) {
             std::cerr<<"Neighbor diff: i="<<i<<" nosimd "<<force[i].n_ngb<<" fugaku "<<force_fgk[i].n_ngb<<std::endl;

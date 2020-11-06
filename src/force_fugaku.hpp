@@ -197,6 +197,8 @@ struct CalcForceEpEpWithLinearCutoffFugaku{
 
                 svfloat32_t r2;
 
+                svfloat32_t r2_eps;
+
                 svfloat32_t r2_cut;
 
                 svfloat32_t r_inv;
@@ -212,10 +214,11 @@ struct CalcForceEpEpWithLinearCutoffFugaku{
                 rij.v0 = svsub_f32_z(pg0,xi.v0,xj.v0);
                 rij.v1 = svsub_f32_z(pg0,xi.v1,xj.v1);
                 rij.v2 = svsub_f32_z(pg0,xi.v2,xj.v2);
-		__fkg_tmp2 = svmad_f32_z(pg0,rij.v0,rij.v0,svdup_n_f32(eps2));
-		__fkg_tmp1 = svmad_f32_z(pg0,rij.v1,rij.v1,__fkg_tmp2);
-		r2 = svmad_f32_z(pg0,rij.v2,rij.v2,__fkg_tmp1);
-		r2_cut = max(pg0,r2,svdup_n_f32(rcut2));
+                __fkg_tmp2 = svmul_f32_z(pg0,rij.v1,rij.v1);
+                __fkg_tmp1 = svmad_f32_z(pg0,rij.v0,rij.v0,__fkg_tmp2);
+                r2 = svmad_f32_z(pg0,rij.v2,rij.v2,__fkg_tmp1);
+                r2_eps = svadd_f32_z(pg0,r2,svdup_n_f32(eps2));
+                r2_cut = max(pg0,r2_eps,svdup_n_f32(rcut2));
                 r_inv = rsqrt(pg0,r2_cut);
                 r2_inv = svmul_f32_z(pg0,r_inv,r_inv);
                 mr_inv = svmul_f32_z(pg0,mj,r_inv);
@@ -393,6 +396,8 @@ struct CalcForceEpEpWithLinearCutoffFugaku{
 
                 svfloat32_t r2;
 
+                svfloat32_t r2_eps;
+
                 svfloat32_t r2_cut;
 
                 svfloat32_t r_inv;
@@ -408,10 +413,11 @@ struct CalcForceEpEpWithLinearCutoffFugaku{
                 rij.v0 = svsub_f32_z(pg0,xi.v0,xj.v0);
                 rij.v1 = svsub_f32_z(pg0,xi.v1,xj.v1);
                 rij.v2 = svsub_f32_z(pg0,xi.v2,xj.v2);
-                __fkg_tmp2 = svmad_f32_z(pg0,rij.v0,rij.v0,svdup_n_f32(eps2));
-                __fkg_tmp1 = svmad_f32_z(pg0,rij.v1,rij.v1,__fkg_tmp2);
+                __fkg_tmp2 = svmul_f32_z(pg0,rij.v1,rij.v1);
+                __fkg_tmp1 = svmad_f32_z(pg0,rij.v0,rij.v0,__fkg_tmp2);
                 r2 = svmad_f32_z(pg0,rij.v2,rij.v2,__fkg_tmp1);
-                r2_cut = max(pg0,r2,svdup_n_f32(rcut2));
+                r2_eps = svadd_f32_z(pg0,r2,svdup_n_f32(eps2));
+                r2_cut = max(pg0,r2_eps,svdup_n_f32(rcut2));
                 r_inv = rsqrt(pg0,r2_cut);
                 r2_inv = svmul_f32_z(pg0,r_inv,r_inv);
                 mr_inv = svmul_f32_z(pg0,mj,r_inv);
