@@ -15,8 +15,11 @@ class SingleEscaper(Particle):
         Parameters
         ----------
         keyword arguments:
-            particle_type: basic particle type: hermite, hard, soft (soft), do not change this, if read PeTar data.
-            interrupt_mode: PeTar interrupt mode: base, bse, none (none)
+            particle_type: string (soft)
+                Basic particle type: hermite, hard, soft
+                When read PeTar data, do not change this
+            interrupt_mode: string (none)
+                PeTar interrupt mode: base, bse, none
         """
         
         DictNpArrayMix.__init__(self, [['time',np.float64]], _dat, _offset, _append, **kwargs)
@@ -73,11 +76,16 @@ class BinaryEscaper(Binary):
         Parameters
         ----------
         keyword arguments:
-            particle_type: basic particle type: hermite, hard, soft (soft)
-            interrupt_mode: PeTar interrupt mode: base, bse, none (none)
-            simple_mode: only calculate semi and ecc, save computing time significantly (True)
-            member_particle_type: binary member particle type (Particle)
-            G: gravitational constant (1.0)
+            particle_type: string (soft)
+                Basic particle type: hermite, hard, soft
+            interrupt_mode: string (none)
+                PeTar interrupt mode: base, bse, none
+            simple_mode: bool (True)
+                If True, only calculate semi and ecc, save computing time significantly
+            member_particle_type: type (Particle)
+                Binary member particle type
+            G: float (1.0) 
+                gravitational constant (1.0)
         """
         if not 'member_particle_type' in kwargs.keys(): kwargs['member_particle_type']=Particle
 

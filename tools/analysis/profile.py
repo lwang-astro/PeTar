@@ -95,6 +95,12 @@ class Profile(DictNpArrayMix):
     """
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+
+        Parameters
+        ----------
+        keyword arguments:
+            use_gpu: bool (True)
+                whether cuda is used 
         """
         use_gpu=True
         if ('use_gpu' in kwargs.keys()): use_gpu=kwargs['use_gpu']

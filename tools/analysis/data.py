@@ -150,8 +150,10 @@ class Particle(SimpleParticle):
         Parameters
         ----------
         keyword arguments:
-            particle_type: basic particle type: hermite, hard, soft (soft)
-            interrupt_mode: PeTar interrupt mode: base, bse, none (none)
+            particle_type: string (soft)
+               basic particle type: hermite, hard, soft
+            interrupt_mode: string (none)
+               PeTar interrupt mode: base, bse, none
         """
 
         keys_add = [['binary_state',np.int64]]
@@ -260,11 +262,14 @@ class Binary(SimpleParticle):
             Reading column offset of _dat if it is 2D np.ndarray
         _append: bool (False)
             If true, append keys and ncols to the current class instead of create new class members
-        kwaygs: dict ()
-            keyword arguments:
-                simple_mode: only calculate semi and ecc, save computing time significantly (True)
-                G: gravitational constant (1.0)
-                member_particle_type: type of component particle (SimpleParticle)
+
+        keyword arguments:
+            simple_mode: bool (True)
+                If True, only calculate semi and ecc, save computing time significantly
+            G: float (1.0)
+                Gravitational constant
+            member_particle_type: type (SimpleParticle)
+                Type of component particle
         """
         G=1
         simple_mode=True

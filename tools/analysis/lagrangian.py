@@ -136,8 +136,8 @@ class LagrangianVelocity(DictNpArrayMix):
         Parameters
         ----------
         keyword arguments:
-            mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
-                           Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
+            mass_fraction: 1D numpy.ndarray (np.array([0.1, 0.3, 0.5, 0.7, 0.9]))
+                An array to indicate the mass fractions to calculate lagrangian radii.
         """
         
         m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
@@ -163,8 +163,8 @@ class Lagrangian(DictNpArrayMix):
         Parameters
         ----------
         keyword arguments:
-            mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
-                           Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
+            mass_fraction: 1D numpy.ndarray (np.array([0.1, 0.3, 0.5, 0.7, 0.9]))
+                An array to indicate the mass fractions to calculate lagrangian radii.
         """
         m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
@@ -320,8 +320,8 @@ class LagrangianMultiple(DictNpArrayMix):
         Parameters
         ----------
         keyword arguments:
-            mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
-                               Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
+            mass_fraction: 1D numpy.ndarray (np.array([0.1, 0.3, 0.5, 0.7, 0.9]))
+                An array to indicate the mass fractions to calculate lagrangian radii.
         """
         m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
