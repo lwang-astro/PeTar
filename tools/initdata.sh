@@ -1,5 +1,4 @@
 #!/bin/bash
-0;10;1c0;10;1c
 until [[ `echo x$1` == 'x' ]]
 do
     case $1 in
