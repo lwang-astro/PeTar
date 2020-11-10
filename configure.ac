@@ -161,7 +161,9 @@ AS_IF([test x"$with_arch" == xx86],
       [use_simd=no])
       
 AS_IF([test x"$with_arch" == xfugaku],
-      [PROG_NAME=$PROG_NAME".fugaku"])
+      [AX_CHECK_COMPILE_FLAG([-Kfast,parallel],
+                             [OPTFLAGS=$OPTFLAGS" -Kfast,parallel"])
+       PROG_NAME=$PROG_NAME".fugaku"])
 
 AC_ARG_ENABLE([simd-64],
               [AS_HELP_STRING([--enable-simd-64],
