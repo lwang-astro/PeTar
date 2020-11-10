@@ -704,6 +704,11 @@ PS::S32 DispatchKernelWithSP(const PS::S32  tag,
                              const PS::S32  n_spj[]){
     assert(n_walk <= N_WALK_LIMIT);
     if(init_call){
+        int ngpu;
+        int my_rank = PS::Comm::getRank();
+        cudaGetDeviceCount(&ngpu);
+        cudaSetDevice(my_rank % ngpu);
+        
 		dev_epi  .allocate(NI_LIMIT);
 		dev_epj  .allocate(NJ_LIMIT);
         dev_spj  .allocate(NJ_LIMIT);
