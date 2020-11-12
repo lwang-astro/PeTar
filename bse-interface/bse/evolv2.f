@@ -290,6 +290,8 @@
 *
       do 500 , k = kmin,kmax
          age = tphys - epoch(k)
+         mc = massc(k)
+         rc = radc(k)
          CALL star(kstar(k),mass0(k),mass(k),tm,tn,tscls,lums,GB,zpars)
          CALL hrdiag(mass0(k),age,mass(k),tm,tn,tscls,lums,GB,zpars,
      &        rm,lum,kstar(k),mc,rc,me,re,k2,fbfac,fbtot,mco,ecs)
