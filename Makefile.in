@@ -61,7 +61,7 @@ MT_FLAGS += -D EXTERNAL_POT_IN_PTCL
 endif
 ifeq ($(ext_mode),galpy)
 MT_FLAGS += -D GALPY
-CXXLIBS += -L ./galpy-interface -lgalpy @GSL_CONFIG@
+CXXLIBS += -L ./galpy-interface -lgalpy @GSL_LIBS@
 LIBFILES+= galpy-interface/libgalpy.a galpy-interface/galpy_interface.h
 GALPY_PATH=@GALPY_PATH@
 GALPY_INCLUDE_PATH= $(shell find $(GALPY_PATH) -type d )

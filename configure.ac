@@ -325,15 +325,16 @@ AC_ARG_WITH([external],
                     AC_CHECK_FILE(["$galpy_prefix/potential/potential_c_ext/galpy_potentials.h"],
                                   [GALPY_PATH=$galpy_prefix],
                                   [AC_MSG_FAILURE([can't find Galpy library, please provide correct PREFIX by using --with-galpy-prefix])])
-                    AC_CHECK_PROG([GSL_CONFIG],[gsl-config],[`gsl-config --libs`],[none])
-		    AS_IF([test x"$GSL_CONFIG" == xnone],
+                    AC_CHECK_PROG([GSL_CFLAGS],[gsl-config],[`gsl-config --cflags`],[])
+                    AC_CHECK_PROG([GSL_LIBS],[gsl-config],[`gsl-config --libs`],[none])
+		    AS_IF([test x"$GSL_LIBS" == xnone],
                           [AC_CHECK_LIB([gslcblas],[main],
                                         [],
                                         [AC_MSG_FAILURE([can't find GSL library, please install it first, e.g. in Ubuntu 20.04, use sudo apt-get install libgsl-dev])])
                            AC_CHECK_LIB([gsl],[main],
                                         [],
                                         [AC_MSG_FAILURE([can't find GSL library, please install it first, e.g. in Ubuntu 20.04, use sudo apt-get install libgsl-dev])],[-lgslcblas])
-                           GSL_CONFIG='-lgsl -lgslcblas'])])],
+                           GSL_LIBS='-lgsl -lgslcblas'])])],
 	    [with_external=off])
             
 
@@ -398,7 +399,8 @@ AC_SUBST([SIMDFLAGS])
 AC_SUBST([GPERFFLAGS])
 AC_SUBST([GPERFLIBS])
 AC_SUBST([GALPY_PATH])
-AC_SUBST([GSL_CONFIG])
+AC_SUBST([GSL_CFLAGS])
+AC_SUBST([GSL_LIBS])
 AC_SUBST([INCLUDE])
 AC_SUBST([PROG_NAME])
 AC_SUBST([CXX])

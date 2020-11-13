@@ -654,7 +654,8 @@ EGREP
 CXXCPP
 SET_MAKE
 LN_S
-GSL_CONFIG
+GSL_LIBS
+GSL_CFLAGS
 FIND_CHECK
 ac_ct_CC
 CFLAGS
@@ -5312,11 +5313,11 @@ fi
 set dummy gsl-config; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
-if ${ac_cv_prog_GSL_CONFIG+:} false; then :
+if ${ac_cv_prog_GSL_CFLAGS+:} false; then :
   $as_echo_n "(cached) " >&6
 else
-  if test -n "$GSL_CONFIG"; then
-  ac_cv_prog_GSL_CONFIG="$GSL_CONFIG" # Let the user override the test.
+  if test -n "$GSL_CFLAGS"; then
+  ac_cv_prog_GSL_CFLAGS="$GSL_CFLAGS" # Let the user override the test.
 else
 as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
 for as_dir in $PATH
@@ -5325,7 +5326,7 @@ do
   test -z "$as_dir" && as_dir=.
     for ac_exec_ext in '' $ac_executable_extensions; do
   if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
-    ac_cv_prog_GSL_CONFIG="`gsl-config --libs`"
+    ac_cv_prog_GSL_CFLAGS="`gsl-config --cflags`"
     $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
     break 2
   fi
@@ -5333,20 +5334,57 @@ done
   done
 IFS=$as_save_IFS
 
-  test -z "$ac_cv_prog_GSL_CONFIG" && ac_cv_prog_GSL_CONFIG="none"
 fi
 fi
-GSL_CONFIG=$ac_cv_prog_GSL_CONFIG
-if test -n "$GSL_CONFIG"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $GSL_CONFIG" >&5
-$as_echo "$GSL_CONFIG" >&6; }
+GSL_CFLAGS=$ac_cv_prog_GSL_CFLAGS
+if test -n "$GSL_CFLAGS"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $GSL_CFLAGS" >&5
+$as_echo "$GSL_CFLAGS" >&6; }
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
 fi
 
 
-		    if test x"$GSL_CONFIG" == xnone; then :
+                    # Extract the first word of "gsl-config", so it can be a program name with args.
+set dummy gsl-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_GSL_LIBS+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$GSL_LIBS"; then
+  ac_cv_prog_GSL_LIBS="$GSL_LIBS" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_GSL_LIBS="`gsl-config --libs`"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  test -z "$ac_cv_prog_GSL_LIBS" && ac_cv_prog_GSL_LIBS="none"
+fi
+fi
+GSL_LIBS=$ac_cv_prog_GSL_LIBS
+if test -n "$GSL_LIBS"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $GSL_LIBS" >&5
+$as_echo "$GSL_LIBS" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+		    if test x"$GSL_LIBS" == xnone; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lgslcblas" >&5
 $as_echo_n "checking for main in -lgslcblas... " >&6; }
 if ${ac_cv_lib_gslcblas_main+:} false; then :
@@ -5435,7 +5473,7 @@ as_fn_error $? "can't find GSL library, please install it first, e.g. in Ubuntu 
 See \`config.log' for more details" "$LINENO" 5; }
 fi
 
-                           GSL_CONFIG='-lgsl -lgslcblas'
+                           GSL_LIBS='-lgsl -lgslcblas'
 fi
 fi
 else
@@ -6143,6 +6181,7 @@ _ACEOF
 
 fi
 done
+
 
 
 
