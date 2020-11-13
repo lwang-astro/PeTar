@@ -216,7 +216,11 @@ public:
             assert(mi>0);
 #endif
             PS::F64vec vi = _particles[i].vel;
+#ifdef EXTERNAL_POT_IN_PTCL
+            epot += 0.5 * mi * (_particles[i].pot_tot + _particles[i].pot_ext);
+#else
             epot += 0.5 * mi * _particles[i].pot_tot;
+#endif
             ekin += 0.5 * mi * vi * vi;
             L += _particles[i].pos ^ (mi*vi);
         }
@@ -250,7 +254,11 @@ public:
             PS::S32 i = _particle_index[k];
             PS::F64 mi = _particles[i].mass;
             PS::F64vec vi = _particles[i].vel;
+#ifdef EXTERNAL_POT_IN_PTCL
+            epot += 0.5 * mi * (_particles[i].pot_tot + _particles[i].pot_ext);
+#else
             epot += 0.5 * mi * _particles[i].pot_tot;
+#endif
             ekin += 0.5 * mi * vi * vi;
             L += _particles[i].pos ^ (mi*vi);
         }

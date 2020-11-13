@@ -31,6 +31,9 @@ public:
 #endif
     PS::F64 pot_tot; // soft + hard
     PS::F64 pot_soft; // soft only
+#ifdef EXTERNAL_POT_IN_PTCL
+    PS::F64 pot_ext; // external potential
+#endif
 #ifdef SAVE_NEIGHBOR_ID_IN_FORCE_KERNEL
     PS::S64 id_ngb[4];
 #endif
@@ -72,6 +75,9 @@ public:
         acc = 0;
         pot_tot = 0;
         pot_soft= 0;
+#ifdef EXTERNAL_POT_IN_PTCL
+        pot_ext = 0;
+#endif
         n_ngb = 0;
     }
 
@@ -96,34 +102,62 @@ public:
 
     void writeAscii(FILE* fp) const{
         Ptcl::writeAscii(fp);
-        fprintf(fp, "%26.17e %26.17e %26.17e %26.17e %26.17e %lld\n", 
+        fprintf(fp, "%26.17e %26.17e %26.17e %26.17e %26.17e ",
                 this->acc.x, this->acc.y, this->acc.z,  // 9-11
-                this->pot_tot, this->pot_soft, this->n_ngb);
+                this->pot_tot, this->pot_soft);
+#ifdef EXTERNAL_POT_IN_PTCL
+        fprintf(fp, "%26.17e ",this->pot_ext);
+#endif        
+        fprintf(fp, "%lld\n",this->n_ngb);
     }
 
     void writeBinary(FILE* fp) const{
         Ptcl::writeBinary(fp);
+#ifdef EXTERNAL_POT_IN_PTCL
+        fwrite(&(this->acc), sizeof(PS::F64), 7, fp);
+#else
         fwrite(&(this->acc), sizeof(PS::F64), 6, fp);
+#endif
     }
 
     void readAscii(FILE* fp) {
         Ptcl::readAscii(fp);
-        PS::S64 rcount=fscanf(fp, "%lf %lf %lf %lf %lf %lld\n",
+        PS::S64 rcount=fscanf(fp, "%lf %lf %lf %lf %lf ",
                               &this->acc.x, &this->acc.y, &this->acc.z,  // 9-11
-                              &this->pot_tot, &this->pot_soft, &this->n_ngb);
-        if (rcount<6) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 6, only obtain "<<rcount<<".\n";
+                              &this->pot_tot, &this->pot_soft);
+        if (rcount<5) {
+            std::cerr<<"Error: FPSoft Data reading fails! requiring data number is 6, only obtain "<<rcount<<".\n";
+            abort();
+        }
+#ifdef EXTERNAL_POT_IN_PTCL
+        rcount=fscanf(fp, "%lf ", &this->pot_ext);
+        if (rcount<1) {
+            std::cerr<<"Error: FPSoft Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            abort();
+        }
+#endif
+        rcount=fscanf(fp, "%lld\n", &this->n_ngb);
+        if (rcount<1) {
+            std::cerr<<"Error: FPSoft Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
             abort();
         }
     }
 
     void readBinary(FILE* fp) {
         Ptcl::readBinary(fp);
+#ifdef EXTERNAL_POT_IN_PTCL
+        size_t rcount = fread(&(this->acc), sizeof(PS::F64), 7, fp);
+        if (rcount<7) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 7, only obtain "<<rcount<<".\n";
+            abort();
+        }
+#else
         size_t rcount = fread(&(this->acc), sizeof(PS::F64), 6, fp);
         if (rcount<6) {
             std::cerr<<"Error: Data reading fails! requiring data number is 6, only obtain "<<rcount<<".\n";
             abort();
         }
+#endif
     }
 
     void print(std::ostream & fout){
@@ -131,6 +165,9 @@ public:
         fout<<" acc= "<<acc
             <<" pot_tot= "<<pot_tot
             <<" pot_soft= "<<pot_soft
+#ifdef EXTERNAL_POT_IN_PTCL
+            <<" pot_ext= "<<pot_ext
+#endif
             <<" N_b= "<<n_ngb;
     }
 
@@ -146,6 +183,9 @@ public:
              <<std::setw(_width)<<"acc_soft.z"
              <<std::setw(_width)<<"pot_tot"
              <<std::setw(_width)<<"pot_soft"
+#ifdef EXTERNAL_POT_IN_PTCL
+             <<std::setw(_width)<<"pot_ext"
+#endif
              <<std::setw(_width)<<"n_b";
     }
 
@@ -165,6 +205,10 @@ public:
         counter++;
         _fout<<std::setw(_offset)<<" "<<counter<<". pot_soft: soft potential (0.0)\n";
         counter++;
+#ifdef EXTERNAL_POT_IN_PTCL
+        _fout<<std::setw(_offset)<<" "<<counter<<". pot_ext: external potential (0.0)\n";
+        counter++;
+#endif
         _fout<<std::setw(_offset)<<" "<<counter<<". n_b: number of neighbors (0)\n";
         return counter;
     }
@@ -181,6 +225,9 @@ public:
              <<std::setw(_width)<<acc.z
              <<std::setw(_width)<<pot_tot
              <<std::setw(_width)<<pot_soft
+#ifdef EXTERNAL_POT_IN_PTCL
+             <<std::setw(_width)<<pot_ext
+#endif
              <<std::setw(_width)<<n_ngb;
     }
 

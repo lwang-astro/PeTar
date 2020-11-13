@@ -156,7 +156,7 @@ public:
         PS::S64 rcount=fscanf(_fin, "%lf %lld ",
                               &this->r_search, &this->id);
         if (rcount<2) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Ptcl data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
             abort();
         }
         group_data.artificial.readAscii(_fin);
@@ -164,7 +164,7 @@ public:
         PS::S64 rcount=fscanf(_fin, "%lf %lld %lld %lld",
                               &this->r_search, &this->id, &this->group_data.data_int64.data1, &this->group_data.data_int64.data2);
         if (rcount<4) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Ptcl data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
             abort();
         }
 #endif
@@ -178,7 +178,7 @@ public:
         ParticleBase::readBinary(_fin);
         size_t rcount = fread(&(this->r_search), sizeof(PS::F64), 4, _fin);
         if (rcount<4) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Ptcl data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
             abort();
         }
         //group_data.artificial.readBinary(_fin);

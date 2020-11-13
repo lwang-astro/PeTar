@@ -16,6 +16,7 @@ do
 	    echo '  -v: velocity scaling factor from input data unit to [pc/myr]. If the string "kms2pcmyr" is given, convert velocity unit from [km/s] to [pc/myr] (default: 1.0)';
 	    echo '  -u: calculate the velocity scaling factor based on -m and -r, then convert data unit to (Msun, pc, pc/myr), input data should use the Henon unit (total mass=1, G=1)';
 	    echo '  -c: add position and velocity offset to all particles [input unit], values are separated by "," (0,0,0,0,0,0)';
+	    echo '  -t: add external potential column. This is required when the external potential (e.g. Galpy) is switched on (--with-external in configure)'
 	    echo '  -R: initial stellar radius for "-s base" mode (default: 0.0)';
 	    echo "PS: 1) When stellar evolution (e.g. BSE) is used, be careful for the scaling factor. It is recommended to use the unit set [Msun, pc, pc/myr] for the input data. If velocities use the unit of km/s, use '-v kms2pcmyr' to convert the unit to pc/myr."
 	    echo "    2) If the input data are in the Henon unit, given '-m' and '-r', the option '-u' can calculate the correct velocity scaling factor."
@@ -33,6 +34,7 @@ do
 	-u) convert=2; shift;;
 	-R) shift; radius=$1; shift;;
 	-c) shift; cm=$1; shift;;
+	-t) extflag='yes'; shift;;
 	*) fname=$1;shift;;
     esac
 done
@@ -44,6 +46,7 @@ fi
 [ -z $fout ] && fout=$fname.input
 [ -z $igline ] && igline=0
 [ -z $seflag ] && seflag='no'
+[ -z $extflag ] && extflag='no'
 [ -z $rscale ] && rscale=1.0
 [ -z $mscale ] && mscale=1.0
 [ -z $vscale ] && vscale=1.0
@@ -83,17 +86,35 @@ else
 fi
 rm -f $fname.off__
 
+#         m,  r,        v,        bdata
+base_col='$1, $2,$3,$4, $5,$6,$7, 0,' 
+#         rs, id,    mbk, stat, rin, rout, acc_s, pot_t, pot_s, 
+soft_col='0,  NR-ig, 0,   0,    0,   0,    0,0,0, 0,     0,'
+if [[ $extflag == 'yes' ]]; then
+    echo 'Add the external potential column (pot_ext)'
+    soft_col=$soft_col' 0,' # pot_ext
+fi
+soft_col=$soft_col' 0' # nb
+
 if [[ $seflag != 'no' ]]; then
+    #       radius,  dm, t_record, t_interrupt
+    se_col=$radius', 0,  0,        0,' 
+
     if [[ $seflag == 'base' ]]; then
-	echo "Stellar radius (0): " $radius
-	awk -v n=$n  'BEGIN{print 0,n,0} {OFMT="%.15g"; print $1,$2,$3,$4,$5,$6,$7,0,'$radius',0,0,0,0,NR-ig,0,0,0,0,0,0,0,0,0,0}' $fout.scale__ >$fout
+	echo "Interrupt mode: base'
+	echo 'Stellar radius (0): " $radius
+	awk -v n=$n  'BEGIN{print 0,n,0} {OFMT="%.15g"; print '"$base_col$se_col$soft_col"'}' $fout.scale__ >$fout
     elif [[ $seflag == 'bse' ]]; then
+	#       type, m0,  m,     rad, mc,  rc,  spin, epoch, time, lum
+	bse_col='1, $1*ms, $1*ms, 0.0, 0.0, 0.0, 0.0,  0.0,   0.0,  0.0,'
+
+	echo 'Interrupt mode: bse'
 	echo 'mass scale from PeTar unit (PT) to Msun (m[Msun] = m[PT]*mscale): ' $mscale
-	awk -v n=$n -v ms=$mscale  'BEGIN{print 0,n,0} {OFMT="%.15g"; print $1,$2,$3,$4,$5,$6,$7, 0,0,0,0,0, 1,$1*ms,$1*ms,0.0,0.0,0.0,0.0,0.0,0.0,0.0, 0.0,NR-ig,0,0,0,0,0,0,0,0,0,0}' $fout.scale__ >$fout
+	awk -v n=$n -v ms=$mscale  'BEGIN{print 0,n,0} {OFMT="%.15g"; print '"$base_col$se_col$bse_col$soft_col"'}' $fout.scale__ >$fout
     else
 	echo 'Error: unknown option for stellar evolution: '$seflag
     fi
 else
-    awk -v n=$n 'BEGIN{print 0,n,0} {OFMT="%.15g"; print $1,$2,$3,$4,$5,$6,$7, 0,0,NR-ig,0,0,0,0,0,0,0,0,0,0}' $fout.scale__ >$fout
+    awk -v n=$n 'BEGIN{print 0,n,0} {OFMT="%.15g"; print '"$base_col$soft_col"'}' $fout.scale__ >$fout
 fi
 rm -f $fout.scale__

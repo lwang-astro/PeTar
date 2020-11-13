@@ -17,7 +17,7 @@ libgalpy.a: $(OBJ)
 	ar rcs $@ $^
 
 petar.galpy: galpy_test.cxx libgalpy.a galpy_interface.h 
-	$(CXX) $(CXXFLAGS) $(GALPY_INCLUDE) $< -o $@ -L./ -lgalpy -lgsl -lgslcblas
+	$(CXX) $(CXXFLAGS) $(GALPY_INCLUDE) $< -o $@ -L./ -lgalpy @GSL_CONFIG@
 
 petar.galpy.help: galpy_help.py
 	ln -sf galpy_help.py petar.galpy.help

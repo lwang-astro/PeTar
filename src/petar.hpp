@@ -1025,6 +1025,9 @@ public:
             pi.acc[2] += acc[2]; 
             pi.pot_tot += pot;
             pi.pot_soft += pot;
+#ifdef EXTERNAL_POT_IN_PTCL
+            pi.pot_ext = pot;
+#endif
         }
 #endif //GALPY
         

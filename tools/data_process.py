@@ -30,14 +30,15 @@ if __name__ == '__main__':
         print("  -r(--read-data): read existing single, binary and core data to avoid expensive KDTree construction, no argument, disabled in default")
         print("  -e(--r-escape): a constant escape distance criterion, in default, it is 20*half-mass radius")
         print("  -i(--interrupt-mode): the interruption mode used in petar, choices: no, base, bse (no)")
+        print("  -t(--external-mode): external mode used in petar, choices: galpy, no (no)")
         print("  -s(--snapshot-format): snapshot data format: binary, ascii (ascii)")
         print("  -n(--n-cpu): number of CPU threads for parallel processing (all threads)")
         print("Important note: 1) users should be careful to set the consistent '-i' or -'G' options in order to correctly calculate the Kepler orbital parameters of binaries.")
         print("                2) when data are written in BINARY format, '-s binary' should be used.")
 
     try:
-        shortargs = 'p:m:G:b:Ba:re:i:s:n:h'
-        longargs = ['mass-fraction=','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','r-escape=','interrupt-mode=','snapshot-format=','n-cpu=','help']
+        shortargs = 'p:m:G:b:Ba:re:t:i:s:n:h'
+        longargs = ['mass-fraction=','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','r-escape=','external-mode=','interrupt-mode=','snapshot-format=','n-cpu=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -61,6 +62,8 @@ if __name__ == '__main__':
                 n_cpu = int(arg)
             elif opt in ('-i','--interrupt-mode'):
                 kwargs['interrupt_mode'] = arg
+            elif opt in ('-t','--external-mode'):
+                kwargs['external_mode'] = arg
             elif opt in ('-s','--snapshot-format'):
                 kwargs['snapshot_format'] = arg
             elif opt in ('-r','--read-data'):

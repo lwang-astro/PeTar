@@ -118,7 +118,12 @@ int main(int argc, char *argv[]){
 #else
                 std::cout<<"None\n";
 #endif
-                std::cout<<"Important: Ensure that the stellar evolution methods used in the snapshots and this tool are consistent.\n"
+#ifdef EXTERNAL_POT_IN_PTCL
+                std::cout<<"External potential column exists\n";
+#else
+                std::cout<<"External potential column not exists\n";
+#endif
+                std::cout<<"Important: Ensure that the stellar evolution method and external mode used in the snapshots and this tool are consistent.\n"
                          <<"           If the replace option (-r) is used and the methods are not consistent, the data cannot be recovered!"<<std::endl;
                 std::cout<<"Options: "<<std::endl
                          <<"   -b  transfer snapshot data format from BINARY to ASCII. If this option is not used, it is ASCII to BINARY"<<std::endl

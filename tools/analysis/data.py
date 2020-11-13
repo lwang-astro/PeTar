@@ -103,11 +103,12 @@ class SimpleParticle(DictNpArrayMix):
 class Particle(SimpleParticle):
     """ Particle class 
     keys: (class members)
-        The final keys are a combination of sub keys depending on kwargs of initial function
+        The final keys are a combination of sub keys depending on keyword arguments (kwargs) of initial function
 
         Sub key list:
-        basic: [inherit SimpleParticle]
-        add: binary_state: binary interruption state 
+
+        std: [inherit SimpleParticle]
+        bstat: binary_state: binary interruption state 
         se: radius:        (1D): radius for merger checker
             dm:            (1D): mass loss
             time_record    (1D): last time of interruption check
@@ -127,20 +128,23 @@ class Particle(SimpleParticle):
         soft: acc_soft (2D,3): long-range interaction acceleration (particle-tree) x, y, z
               pot      (1D): total potential
               pot_soft (1D): long-range interaction potential
+              *pot_ext  (1D): external potential (only exist when keyword argument 'external_mode' is not 'none')
               n_nb:    (1D): number of neighbors (short-interaction)
+        hermite: dt   (1D): hermite time step size
+                 time (1D): current time of particle
+                 acc  (2D,3): acceleration 
+                 jerk (2D,3): first derivates of acceleration
+                 pot  (1D): potential
 
-        Combination: 
-        ends:
-            kwargs['particle_type']:
-                hermite:   ptcl + hermite
-                hard:      ptcl
-                soft (default): ptcl + soft
-        Final:
-        keys:
-            kwargs['interrupt_mode']:
-                base:      basic + add + se + ends
-                bse:       basic + add + se + bse + ends
-                none (default): basic + add + ends
+        ends: the end part of keys depends on kwargs['particle_type']:
+             hermite:   ptcl + hermite
+             hard:      ptcl
+             soft (default): ptcl + soft 
+
+        final: the final combination of keys depends on kwargs['interrupt_mode']:
+             base:      std + bstat + se + ends
+             bse:       std + bstat + se + bse + ends
+             none (default): std + bstat + ends
 
     """
 
@@ -153,26 +157,34 @@ class Particle(SimpleParticle):
             particle_type: string (soft)
                basic particle type: hermite, hard, soft
             interrupt_mode: string (none)
-               PeTar interrupt mode: base, bse, none
+               PeTar interrupt mode (set in configure): base, bse, none
+               This option indicates whether columns of stellar evolution exist
+            external_mode: string (none)
+               PeTar external mode (set in configure): galpy, none 
+               This option indicates whether the column of externa potential exist
         """
 
-        keys_add = [['binary_state',np.int64]]
+        keys_bstat = [['binary_state',np.int64]]
         keys_se  = [['radius',np.float64],['dm',np.float64],['time_record',np.float64],['time_interrupt',np.float64]]
         keys_ptcl_add = [['r_search',np.float64], ['id',np.int64], ['mass_bk',np.int64], ['status',np.int64], ['r_in',np.float64], ['r_out',np.float64]]
         keys_hermite_add = [['dt',np.float64],['time',np.float64],['acc',(np.float64,3)],['jerk',(np.float64,3)],['pot',np.float64]]
         keys_soft_add = [['acc_soft',(np.float64,3)], ['pot',np.float64], ['pot_soft',np.float64], ['n_nb',np.int64]]
+        if ('external_pot' in kwargs.keys()):
+            if (kwargs['external_pot']!='none'):
+                keys_soft_add = [['acc_soft',(np.float64,3)], ['pot',np.float64], ['pot_soft',np.float64], ['pot_ext',np.float64], ['n_nb',np.int64]]
+
         keys_end =  keys_ptcl_add + keys_soft_add
         if ('particle_type' in kwargs.keys()):
             if (kwargs['particle_type']=='hermite'):
                 keys_end = keys_ptcl_add + keys_hermite_add
             elif (kwargs['particle_type']=='hard'):
                 keys_end = keys_ptcl_add
-        keys=keys_add+keys_end
+        keys=keys_bstat+keys_end
         if ('interrupt_mode' in kwargs.keys()):
             if (kwargs['interrupt_mode']=='base'):
-                keys = keys_add+keys_se+keys_end
+                keys = keys_bstat+keys_se+keys_end
             elif (kwargs['interrupt_mode']=='bse'):
-                keys = keys_add+keys_se+[['star',SSEStarParameter]]+keys_end
+                keys = keys_bstat+keys_se+[['star',SSEStarParameter]]+keys_end
             
         SimpleParticle.__init__(self, _dat, _offset, _append, **kwargs)
         DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
