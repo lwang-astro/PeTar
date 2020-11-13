@@ -49,8 +49,10 @@ ifneq ($(se_mode),off)
 MT_FLAGS += -D STELLAR_EVOLUTION
 ifeq ($(se_mode),bse)
 MT_FLAGS += -D BSE
-CXXLIBS += -L ./bse-interface -lbse -lgfortran
-LIBFILES+= bse-interface/libbse.a bse-interface/bse_interface.h
+BSELIBS = -L ./bse-interface -lbse -lgfortran
+BSELIBFILES= bse-interface/libbse.a bse-interface/bse_interface.h
+CXXLIBS += $(BSELIBS)
+LIBFILES+= $(BSELIBFILES)
 INCLUDE += -I ./bse-interface
 TARGET += bse-interface/petar.bse
 endif
@@ -61,12 +63,14 @@ MT_FLAGS += -D EXTERNAL_POT_IN_PTCL
 endif
 ifeq ($(ext_mode),galpy)
 MT_FLAGS += -D GALPY
-CXXLIBS += -L ./galpy-interface -lgalpy @GSL_LIBS@
-LIBFILES+= galpy-interface/libgalpy.a galpy-interface/galpy_interface.h
+GALPYLIBS = -L ./galpy-interface -lgalpy @GSL_LIBS@
+CXXLIBS += $(GALPYLIBS)
+GALPYLIBFILES=galpy-interface/libgalpy.a galpy-interface/galpy_interface.h
+LIBFILES+= $(GALPYLIBFILES)
 GALPY_PATH=@GALPY_PATH@
 GALPY_INCLUDE_PATH= $(shell find $(GALPY_PATH) -type d )
 GALPY_INCLUDE = $(addprefix -I, $(GALPY_INCLUDE_PATH))
-INCLUDE += -I ./galpy-interface $(GALPY_INCLUDE)
+INCLUDE += -I ./galpy-interface $(GALPY_INCLUDE) @GSL_CFLAGS@
 TARGET += galpy-interface/petar.galpy galpy-interface/petar.galpy.help
 endif
 
@@ -197,8 +201,8 @@ HARD_SRC= io.hpp ptcl.hpp particle_base.hpp hard_assert.hpp cluster_list.hpp har
 build/petar.format.transfer: format_transfer.cxx |build
 	$(CXX) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(MT_FLAGS) -o $@ $< $(CXXLIBS)
 
-build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(LIBFILES) |build
-	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
+build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(BSELIBFILES) |build
+	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(BSELIBS)
 
 build/petar.hard.test: hard_test.cxx $(HARD_SRC) |build
 	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)

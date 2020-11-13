@@ -161,8 +161,8 @@ AS_IF([test x"$with_arch" == xx86],
       [use_simd=no])
       
 AS_IF([test x"$with_arch" == xfugaku],
-      [AX_CHECK_COMPILE_FLAG([-Kfast,parallel],
-                             [OPTFLAGS=$OPTFLAGS" -Kfast,parallel"])
+      [AX_CHECK_COMPILE_FLAG(['-Kfast -Nclang'],
+                             [OPTFLAGS=$OPTFLAGS" -Kfast -Nclang"])
        PROG_NAME=$PROG_NAME".fugaku"])
 
 AC_ARG_ENABLE([simd-64],
@@ -315,7 +315,14 @@ AC_ARG_WITH([external],
 	                    [External potential: Default: off])],
             [PROG_NAME=$PROG_NAME'.'$with_external
 	     AS_IF([test x"$with_external" == xgalpy],
-	           [AC_PROG_CC([gcc icc cc])
+	           [AC_PROG_CC([fcc gcc icc cc])
+                    AX_CHECK_COMPILE_FLAG([-O3],
+                                          [COPTFLAGS=" -O3"])
+                    AX_CHECK_COMPILE_FLAG([-Wall],
+                                          [COPTFLAGS=$COPTFLAGS" -Wall"])
+                    AS_IF([test x"$with_arch" == xfugaku],
+                          [AX_CHECK_COMPILE_FLAG(['-Kfast -Nclang'],
+                                                 [COPTFLAGS=$COPTFLAGS" -Kfast -Nclang"])])
                     AS_IF([test x"$galpy_prefix" == x__search__],
                           [AC_CHECK_PROG([FIND_CHECK], [find], [find])
 			   AS_IF([test x"$FIND_CHECK" == xfind],
@@ -390,6 +397,7 @@ AC_SUBST([with_external])
 AC_SUBST([with_tidal_tensor])
 AC_SUBST([with_orbit])
 AC_SUBST([OPTFLAGS])
+AC_SUBST([COPTFLAGS])
 AC_SUBST([DEBFLAGS])
 AC_SUBST([OPENMP_CXXFLAGS])
 AC_SUBST([NVCC])
