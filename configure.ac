@@ -306,7 +306,22 @@ AC_ARG_WITH([interrupt],
 	                    [Interruption detection mode: Default: off])],
             [PROG_NAME=$PROG_NAME'.'$with_interrupt
 	     AS_IF([test x"$with_interrupt" == xbse],
-	           [AC_PROG_FC([gfortran ifort])])],
+	           [FCFLAGS_BK=$FCFLAGS
+		    AC_PROG_FC([gfortran ifort])
+                    FCFLAGS=$FCFLAGS_BK
+		    AS_IF([test x"$with_debug" == xg],
+                          [AX_CHECK_COMPILE_FLAG([-g],
+                                                 [FCFLAGS=$FCFLAGS" -g"])
+                           AX_CHECK_COMPILE_FLAG([-O0],
+                                                 [FCFLAGS=$FCFLAGS" -O0"])
+                           AX_CHECK_COMPILE_FLAG([-finit-real=nan],
+                                                 [FCFLAGS=$FCFLAGS" -finit-real=nan"])
+                           AX_CHECK_COMPILE_FLAG([-fbounds-check],
+                                                 [FCFLAGS=$FCFLAGS" -fbounds-check"])],
+                          [AX_CHECK_COMPILE_FLAG([-O3],
+                                                 [FCFLAGS=$FCFLAGS" -O3"])])
+                    AX_CHECK_COMPILE_FLAG([-Wall],
+                                          [FCFLAGS=$FCFLAGS" -Wall"])])],
 	    [with_interrupt=off])
 
 # external potential
@@ -316,8 +331,13 @@ AC_ARG_WITH([external],
             [PROG_NAME=$PROG_NAME'.'$with_external
 	     AS_IF([test x"$with_external" == xgalpy],
 	           [AC_PROG_CC([fcc gcc icc cc])
-                    AX_CHECK_COMPILE_FLAG([-O3],
-                                          [COPTFLAGS=" -O3"])
+		    AS_IF([test x"$with_debug" == xg],
+                          [AX_CHECK_COMPILE_FLAG([-g],
+                                                 [COPTFLAGS=$COPTFLAGS" -g"])
+                           AX_CHECK_COMPILE_FLAG([-O0],
+                                                 [COPTFLAGS=$COPTFLAGS" -O0"])],
+                          [AX_CHECK_COMPILE_FLAG([-O3],
+                                                 [COPTFLAGS=" -O3"])])
                     AX_CHECK_COMPILE_FLAG([-Wall],
                                           [COPTFLAGS=$COPTFLAGS" -Wall"])
                     AS_IF([test x"$with_arch" == xfugaku],

@@ -695,6 +695,7 @@ infodir
 docdir
 oldincludedir
 includedir
+runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -791,6 +792,7 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
+runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
@@ -1043,6 +1045,15 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
+  -runstatedir | --runstatedir | --runstatedi | --runstated \
+  | --runstate | --runstat | --runsta | --runst | --runs \
+  | --run | --ru | --r)
+    ac_prev=runstatedir ;;
+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
+  | --run=* | --ru=* | --r=*)
+    runstatedir=$ac_optarg ;;
+
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1180,7 +1191,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir
+		libdir localedir mandir runstatedir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1333,6 +1344,7 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
+  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -4671,7 +4683,8 @@ fi
 if test "${with_interrupt+set}" = set; then :
   withval=$with_interrupt; PROG_NAME=$PROG_NAME'.'$with_interrupt
 	     if test x"$with_interrupt" == xbse; then :
-  ac_ext=${ac_fc_srcext-f}
+  FCFLAGS_BK=$FCFLAGS
+		    ac_ext=${ac_fc_srcext-f}
 ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
 ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_fc_compiler_gnu
@@ -4881,6 +4894,220 @@ ac_cpp='$CXXCPP $CPPFLAGS'
 ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+                    FCFLAGS=$FCFLAGS_BK
+		    if test x"$with_debug" == xg; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -g" >&5
+$as_echo_n "checking whether C++ compiler accepts -g... " >&6; }
+if ${ax_cv_check_cxxflags___g+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+  ax_check_save_flags=$CXXFLAGS
+  CXXFLAGS="$CXXFLAGS  -g"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+  ax_cv_check_cxxflags___g=yes
+else
+  ax_cv_check_cxxflags___g=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  CXXFLAGS=$ax_check_save_flags
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___g" >&5
+$as_echo "$ax_cv_check_cxxflags___g" >&6; }
+if test x"$ax_cv_check_cxxflags___g" = xyes; then :
+  FCFLAGS=$FCFLAGS" -g"
+else
+  :
+fi
+
+                           { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -O0" >&5
+$as_echo_n "checking whether C++ compiler accepts -O0... " >&6; }
+if ${ax_cv_check_cxxflags___O0+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+  ax_check_save_flags=$CXXFLAGS
+  CXXFLAGS="$CXXFLAGS  -O0"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+  ax_cv_check_cxxflags___O0=yes
+else
+  ax_cv_check_cxxflags___O0=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  CXXFLAGS=$ax_check_save_flags
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___O0" >&5
+$as_echo "$ax_cv_check_cxxflags___O0" >&6; }
+if test x"$ax_cv_check_cxxflags___O0" = xyes; then :
+  FCFLAGS=$FCFLAGS" -O0"
+else
+  :
+fi
+
+                           { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -finit-real=nan" >&5
+$as_echo_n "checking whether C++ compiler accepts -finit-real=nan... " >&6; }
+if ${ax_cv_check_cxxflags___finit_real_nan+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+  ax_check_save_flags=$CXXFLAGS
+  CXXFLAGS="$CXXFLAGS  -finit-real=nan"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+  ax_cv_check_cxxflags___finit_real_nan=yes
+else
+  ax_cv_check_cxxflags___finit_real_nan=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  CXXFLAGS=$ax_check_save_flags
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___finit_real_nan" >&5
+$as_echo "$ax_cv_check_cxxflags___finit_real_nan" >&6; }
+if test x"$ax_cv_check_cxxflags___finit_real_nan" = xyes; then :
+  FCFLAGS=$FCFLAGS" -finit-real=nan"
+else
+  :
+fi
+
+                           { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -fbounds-check" >&5
+$as_echo_n "checking whether C++ compiler accepts -fbounds-check... " >&6; }
+if ${ax_cv_check_cxxflags___fbounds_check+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+  ax_check_save_flags=$CXXFLAGS
+  CXXFLAGS="$CXXFLAGS  -fbounds-check"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+  ax_cv_check_cxxflags___fbounds_check=yes
+else
+  ax_cv_check_cxxflags___fbounds_check=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  CXXFLAGS=$ax_check_save_flags
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___fbounds_check" >&5
+$as_echo "$ax_cv_check_cxxflags___fbounds_check" >&6; }
+if test x"$ax_cv_check_cxxflags___fbounds_check" = xyes; then :
+  FCFLAGS=$FCFLAGS" -fbounds-check"
+else
+  :
+fi
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -O3" >&5
+$as_echo_n "checking whether C++ compiler accepts -O3... " >&6; }
+if ${ax_cv_check_cxxflags___O3+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+  ax_check_save_flags=$CXXFLAGS
+  CXXFLAGS="$CXXFLAGS  -O3"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+  ax_cv_check_cxxflags___O3=yes
+else
+  ax_cv_check_cxxflags___O3=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  CXXFLAGS=$ax_check_save_flags
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___O3" >&5
+$as_echo "$ax_cv_check_cxxflags___O3" >&6; }
+if test x"$ax_cv_check_cxxflags___O3" = xyes; then :
+  FCFLAGS=$FCFLAGS" -O3"
+else
+  :
+fi
+
+fi
+                    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -Wall" >&5
+$as_echo_n "checking whether C++ compiler accepts -Wall... " >&6; }
+if ${ax_cv_check_cxxflags___Wall+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+  ax_check_save_flags=$CXXFLAGS
+  CXXFLAGS="$CXXFLAGS  -Wall"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+  ax_cv_check_cxxflags___Wall=yes
+else
+  ax_cv_check_cxxflags___Wall=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  CXXFLAGS=$ax_check_save_flags
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___Wall" >&5
+$as_echo "$ax_cv_check_cxxflags___Wall" >&6; }
+if test x"$ax_cv_check_cxxflags___Wall" = xyes; then :
+  FCFLAGS=$FCFLAGS" -Wall"
+else
+  :
+fi
 
 fi
 else
@@ -5241,7 +5468,79 @@ ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 
-                    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -O3" >&5
+		    if test x"$with_debug" == xg; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -g" >&5
+$as_echo_n "checking whether C++ compiler accepts -g... " >&6; }
+if ${ax_cv_check_cxxflags___g+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+  ax_check_save_flags=$CXXFLAGS
+  CXXFLAGS="$CXXFLAGS  -g"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+  ax_cv_check_cxxflags___g=yes
+else
+  ax_cv_check_cxxflags___g=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  CXXFLAGS=$ax_check_save_flags
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___g" >&5
+$as_echo "$ax_cv_check_cxxflags___g" >&6; }
+if test x"$ax_cv_check_cxxflags___g" = xyes; then :
+  COPTFLAGS=$COPTFLAGS" -g"
+else
+  :
+fi
+
+                           { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -O0" >&5
+$as_echo_n "checking whether C++ compiler accepts -O0... " >&6; }
+if ${ax_cv_check_cxxflags___O0+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+  ax_check_save_flags=$CXXFLAGS
+  CXXFLAGS="$CXXFLAGS  -O0"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+  ax_cv_check_cxxflags___O0=yes
+else
+  ax_cv_check_cxxflags___O0=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  CXXFLAGS=$ax_check_save_flags
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___O0" >&5
+$as_echo "$ax_cv_check_cxxflags___O0" >&6; }
+if test x"$ax_cv_check_cxxflags___O0" = xyes; then :
+  COPTFLAGS=$COPTFLAGS" -O0"
+else
+  :
+fi
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -O3" >&5
 $as_echo_n "checking whether C++ compiler accepts -O3... " >&6; }
 if ${ax_cv_check_cxxflags___O3+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -5276,6 +5575,7 @@ else
   :
 fi
 
+fi
                     { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -Wall" >&5
 $as_echo_n "checking whether C++ compiler accepts -Wall... " >&6; }
 if ${ax_cv_check_cxxflags___Wall+:} false; then :
