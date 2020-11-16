@@ -137,6 +137,7 @@ public:
                               &this->radius, &this->dm, &this->time_record, &this->time_interrupt);
         if(rcount<12) {
             std::cerr<<"Error: Data reading fails! requiring data number is 12, only obtain "<<rcount<<".\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
 #ifdef BSE
@@ -166,6 +167,7 @@ public:
                               &this->binary_state);
         if(rcount<8) {
             std::cerr<<"Error: Data reading fails! requiring data number is 7, only obtain "<<rcount<<".\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
     }
@@ -186,6 +188,7 @@ public:
         size_t rcount=fread(&(this->mass), sizeof(ParticleBase), 1, fp);
         if(rcount<1) {
             std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
     }

@@ -127,18 +127,21 @@ public:
                               &this->pot_tot, &this->pot_soft);
         if (rcount<5) {
             std::cerr<<"Error: FPSoft Data reading fails! requiring data number is 6, only obtain "<<rcount<<".\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
 #ifdef EXTERNAL_POT_IN_PTCL
         rcount=fscanf(fp, "%lf ", &this->pot_ext);
         if (rcount<1) {
             std::cerr<<"Error: FPSoft Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
 #endif
         rcount=fscanf(fp, "%lld\n", &this->n_ngb);
         if (rcount<1) {
             std::cerr<<"Error: FPSoft Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
     }
@@ -149,12 +152,14 @@ public:
         size_t rcount = fread(&(this->acc), sizeof(PS::F64), 7, fp);
         if (rcount<7) {
             std::cerr<<"Error: Data reading fails! requiring data number is 7, only obtain "<<rcount<<".\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
 #else
         size_t rcount = fread(&(this->acc), sizeof(PS::F64), 6, fp);
         if (rcount<6) {
             std::cerr<<"Error: Data reading fails! requiring data number is 6, only obtain "<<rcount<<".\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
 #endif
