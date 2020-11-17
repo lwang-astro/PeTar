@@ -126,12 +126,16 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         center_and_r2_time = read_time
     
 
-    if ('r_escape' in kwargs.keys()) : 
-        #print('b',single.size,binary.size)    
+    if ('r_escape' in kwargs.keys()):
         rcut = kwargs['r_escape']
-        single = esc_single.findEscaper(header.time, single, rcut)
-        binary = esc_binary.findEscaper(header.time, binary, rcut)
-        #print('a',single.size,binary.size,esc_single.size,esc_binary.size)
+        if ('e_escape' in kwargs.keys()): 
+            ecut = kwargs['e_escape']
+            single = esc_single.findEscaper(header.time, single, rcut, ecut)
+            binary = esc_binary.findEscaper(header.time, binary, rcut, ecut)
+        else:
+            single = esc_single.findEscaper(header.time, single, rcut)
+            binary = esc_binary.findEscaper(header.time, binary, rcut)
+            #print('a',single.size,binary.size,esc_single.size,esc_binary.size)
     
     #print('Lagrangian radius')
     lagr.calcOneSnapshot(header.time, single, binary, rc, average_mode)

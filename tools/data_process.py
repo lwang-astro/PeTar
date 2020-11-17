@@ -28,7 +28,8 @@ if __name__ == '__main__':
         print("  -B(--full-binary): calculate full binary orbital parameters (simple_mode=False in Binary class), this option increases computing time")
         print("  -a(--average-mode): Lagrangian properity average mode, choices: sphere: average from center to Lagragian radii; shell: average between two neighbor radii (sphere)")
         print("  -r(--read-data): read existing single, binary and core data to avoid expensive KDTree construction, no argument, disabled in default")
-        print("  -e(--r-escape): a constant escape distance criterion, in default, it is 20*half-mass radius")
+        print("     --r-escape: a constant escape distance criterion, in default, it is 20*half-mass radius")
+        print("     --e-escape: escape energy criterion, only work together with --r-escape, in default, it is 0.0")
         print("  -i(--interrupt-mode): the interruption mode used in petar, choices: no, base, bse (no)")
         print("  -t(--external-mode): external mode used in petar, choices: galpy, no (no)")
         print("  -s(--snapshot-format): snapshot data format: binary, ascii (ascii)")
@@ -37,8 +38,8 @@ if __name__ == '__main__':
         print("                2) when data are written in BINARY format, '-s binary' should be used.")
 
     try:
-        shortargs = 'p:m:G:b:Ba:re:t:i:s:n:h'
-        longargs = ['mass-fraction=','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','r-escape=','external-mode=','interrupt-mode=','snapshot-format=','n-cpu=','help']
+        shortargs = 'p:m:G:b:Ba:rt:i:s:n:h'
+        longargs = ['mass-fraction=','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','r-escape=','e-escape=','external-mode=','interrupt-mode=','snapshot-format=','n-cpu=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -68,8 +69,10 @@ if __name__ == '__main__':
                 kwargs['snapshot_format'] = arg
             elif opt in ('-r','--read-data'):
                 read_flag = True
-            elif opt in ('-e','--r-escape'):
+            elif opt in ('--r-escape'):
                 kwargs['r_escape'] = float(arg)
+            elif opt in ('--e-escape'):
+                kwargs['e_escape'] = float(arg)
             else:
                 assert False, "unhandeld option"
 
