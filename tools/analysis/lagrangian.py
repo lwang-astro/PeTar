@@ -2,6 +2,7 @@ import collections
 import numpy as np
 from .base import *
 from .data import *
+from .bse import *
 
 class Core(DictNpArrayMix):
     """ Core of a star cluster
@@ -183,7 +184,7 @@ class Lagrangian(DictNpArrayMix):
         #self.keys.append(['sigma',LagrangianVelocity])
         #self.initargs['mass_fraction'] = m_frac
 
-    def calcOneSnapshot(self, _particle, _rc, _mode='sphere'):
+    def calcOneSnapshot(self, _particle, _rc, _mode='sphere', **kwargs):
         """ Calculate one snapshot lagrangian parameters
 
         Parameters
@@ -195,6 +196,16 @@ class Lagrangian(DictNpArrayMix):
         _mode: string (sphere)
             sphere: calculate averaged properties from center to Lagrangian radii
             shell: calculate properties between two neighbor Lagrangian radii
+        ----------
+        keyword arguments:
+            read_rlagr: 1D np.array([])
+                 When this option is used, Lagragian radii are not calculated,
+                 but are given by the argument (an array that contain Lagragian radii).
+                 Other properties (e.g. average mass, velocity, disperion) are calculated based on these.
+        ----------
+        return
+            rlagr: 1D np.array
+                Lagrangian radii of current data
         """
         shell_mode = True if (_mode == 'shell') else False
 
@@ -214,13 +225,21 @@ class Lagrangian(DictNpArrayMix):
             self.append(empty)
             if (size+1!=self.size):
                 raise ValueError('Size should increase one, but increase', self.size-size)
+            return np.zeros(mass_fraction.size)
         else:
             self.size += 1
             self.vel.size += 1
             self.sigma.size += 1
-            mcum=_particle.mass.cumsum()
             r = np.sqrt(_particle.r2)
-            rindex= find_mass_index(mcum, mass_fraction)
+            rindex=np.array([])
+            mcum=_particle.mass.cumsum()
+            if ('read_rlagr' in kwargs.keys()):
+                rbin = np.append(0,kwargs['read_rlagr'])
+                rindex, e = np.histogram(r, bins=rbin)
+                rindex=rindex.cumsum()
+                rindex[rindex>=r.size]=r.size-1
+            else:
+                rindex= find_mass_index(mcum, mass_fraction)
             rlagr = r[rindex]
             if(len(self.r.shape)!=2):
                 raise ValueError('r shape is wrong',self.r.shape)
@@ -306,6 +325,8 @@ class Lagrangian(DictNpArrayMix):
             self.sigma.rad = np.append(self.sigma.rad, [np.sqrt(sigma[3])], axis=0)
             self.sigma.tan = np.append(self.sigma.tan, [np.sqrt(sigma[4]+sigma[5]+sigma[6])], axis=0)
             self.sigma.rot = np.append(self.sigma.rot, [np.sqrt(sigma[7])], axis=0)
+            
+            return rlagr
 
 class LagrangianMultiple(DictNpArrayMix):
     """ Lagrangian for single, binaries and all
@@ -313,6 +334,13 @@ class LagrangianMultiple(DictNpArrayMix):
         single (Lagrangian): Lagrangian data for single particles
         binary (Lagrangian): Lagrangian data for binaries
         all (Lagrangian): Lagrangian data for all data (binary is treated as c.m., count once)
+
+        Additional members that depend on the keyword argument 'bse_star_type', see __init__ for details
+            [bse_star_type] (Lagrangian): Lagrangian data for specific BSE type of stars by only counting this type
+            [bse_star_type]_cross (Lagrangian): Lagrangian data for specific BSE type of stars by using Lagragian radii of all stars
+
+        Here [bse_tar_type]
+
     """
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
@@ -322,12 +350,31 @@ class LagrangianMultiple(DictNpArrayMix):
         keyword arguments:
             mass_fraction: 1D numpy.ndarray (np.array([0.1, 0.3, 0.5, 0.7, 0.9]))
                 An array to indicate the mass fractions to calculate lagrangian radii.
+            bse_star_type: list of string ([])
+                In case when interrupt_mode='bse', a list of star type (see help(petar.SSEType)) can be given,
+                so that the Lagrangian properties for these specific types will be calculated.
+                First, the Lagrangian properties by only counting the type of stars are calculated
+                Then, the Lagragian properties of these type of stars using the Lagragian radii of all stars are calculated.
+                For example, if bse_star_type=['BH','NS']
+                Four additional class members will be added:
+                      BH: Lagragian data by only counting BHs, Lagragian radii are determined by only BHs
+                      BH_cross: Lagragian data of by only counting BHs but using Lagragian radii of all stars.
+                      NS: Lagragian data by only counting NSs, ...
+                      NS_cross: ...
         """
         m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
+
         keys=[['time',np.float64], ['single',Lagrangian], ['binary', Lagrangian], ['all', Lagrangian]]
+        bse_star_type=[]
+        if ('bse_star_type' in kwargs.keys()): 
+            bse_star_type=kwargs['bse_star_type'].copy()
+            for name in bse_star_type:
+                keys += [[name, Lagrangian], [name+'_cross', Lagrangian]]
+
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
         self.initargs['mass_fraction'] = m_frac
+        self.initargs['bse_star_type'] = bse_star_type
 
         #DictNpArrayMix.__init__(self, [['time',np.float64]], _dat, _offset, _append, **kwargs)
         #self.single = Lagrangian(_dat, _offset+self.ncols, False, **kwargs)
@@ -366,6 +413,11 @@ class LagrangianMultiple(DictNpArrayMix):
         single_sim.calcR2()
         binary_sim = SimpleParticle(binary)
         binary_sim.calcR2()
+        if len(self.initargs['bse_star_type'])>0:
+            single_sim.addNewMember('type1',single.star.type)
+            single_sim.addNewMember('type2',single.star.type)
+            binary_sim.addNewMember('type1',binary.p1.star.type)
+            binary_sim.addNewMember('type2',binary.p2.star.type)
         all_sim = join(single_sim, binary_sim)
         n_single = single.size
         n_binary = binary.size
@@ -379,9 +431,16 @@ class LagrangianMultiple(DictNpArrayMix):
     
         self.single.calcOneSnapshot(single_sort, rc, mode)
         self.binary.calcOneSnapshot(binary_sort, rc, mode)
-        self.all.calcOneSnapshot(all_sort, rc, mode)
+        rlagr = self.all.calcOneSnapshot(all_sort, rc, mode)
         if (self.binary.size != self.single.size):
             raise ValueError('Size inconsistence: single.size:', self.single.size, ' binary.size:', self.binary.size)
+
+        for name in self.initargs['bse_star_type']:
+            type_index = BSE_STAR_TYPE_INDEX[name]
+            sel = (all_sort.type1==type_index) | ( all_sort.type2==type_index)
+            all_sel_sort = all_sort[sel]
+            self.__dict__[name].calcOneSnapshot(all_sel_sort, rc, mode)
+            self.__dict__[name+'_cross'].calcOneSnapshot(all_sel_sort, rc, mode, read_rlagr=rlagr)
 
         self.size += 1
         

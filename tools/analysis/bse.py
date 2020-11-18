@@ -2,6 +2,14 @@
 
 from .base import *
 
+BSE_STAR_TYPE_INDEX={'LMS':0, 'MS':1, 'HG':2, 'GB':3, 'CHeB':4, 
+                     'FAGB':5, 'SAGB':6, 'HeMS':7, 'HeHG':8, 'HeGB':9, 
+                     'HeWD':10, 'COWD':11, 'ONWD':12, 'NS':13, 'BH':14, 'SN':15}
+
+BSE_STAR_TYPE_NAME={0:'LMS', 1:'MS', 2:'HG', 3:'GB', 4:'CHeB', 
+                    5:'FAGB', 6:'SAGB', 7:'HeMS', 8:'HeHG', 9:'HeGB', 
+                    10:'HeWD', 11:'COWD', 12:'ONWD', 13:'NS', 14:'BH', 15:'SN'}
+
 class SSEStarParameter(DictNpArrayMix):
     """ SSE star parameter class from bse_interface.h
     Keys: (class members)

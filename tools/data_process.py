@@ -34,12 +34,13 @@ if __name__ == '__main__':
         print("  -t(--external-mode): external mode used in petar, choices: galpy, no (no)")
         print("  -s(--snapshot-format): snapshot data format: binary, ascii (ascii)")
         print("  -n(--n-cpu): number of CPU threads for parallel processing (all threads)")
+        print("     --add-star-type: calculate Lagragian radii and properties for spefic (SSE) types of stars, a list of type type names (see help(petar.SSEType) in Python3) should be provided, for example: MS,BH,NS ")
         print("Important note: 1) users should be careful to set the consistent '-i' or -'G' options in order to correctly calculate the Kepler orbital parameters of binaries.")
         print("                2) when data are written in BINARY format, '-s binary' should be used.")
 
     try:
         shortargs = 'p:m:G:b:Ba:rt:i:s:n:h'
-        longargs = ['mass-fraction=','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','r-escape=','e-escape=','external-mode=','interrupt-mode=','snapshot-format=','n-cpu=','help']
+        longargs = ['mass-fraction=','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','r-escape=','e-escape=','external-mode=','interrupt-mode=','snapshot-format=','add-star-type=','n-cpu=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -73,6 +74,8 @@ if __name__ == '__main__':
                 kwargs['r_escape'] = float(arg)
             elif opt in ('--e-escape'):
                 kwargs['e_escape'] = float(arg)
+            elif opt in ('--add-star-type'):
+                kwargs['bse_star_type'] = [x for x in arg.split(',')]
             else:
                 assert False, "unhandeld option"
 
