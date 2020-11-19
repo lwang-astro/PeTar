@@ -2485,10 +2485,10 @@ public:
                 fesc.open(fname_esc.c_str(), std::ofstream::out|std::ofstream::app);
             else {
                 fesc.open(fname_esc.c_str(), std::ofstream::out);
-                // write titles of columns
-                fesc<<std::setw(WRITE_WIDTH)<<"Time";
-                FPSoft::printColumnTitle(fesc,WRITE_WIDTH);
-                fesc<<std::endl;
+                // write titles of columns, will cause issue when gether different MPI ranks
+                // fesc<<std::setw(WRITE_WIDTH)<<"Time";
+                // FPSoft::printColumnTitle(fesc,WRITE_WIDTH);
+                // fesc<<std::endl;
             }
 
 #ifdef BSE
