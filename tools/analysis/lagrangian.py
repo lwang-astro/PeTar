@@ -334,12 +334,37 @@ class LagrangianMultiple(DictNpArrayMix):
         single (Lagrangian): Lagrangian data for single particles
         binary (Lagrangian): Lagrangian data for binaries
         all (Lagrangian): Lagrangian data for all data (binary is treated as c.m., count once)
+        Additional members that depend on the keyword argument 'add_star_type':
+            [add_star_type] (Lagrangian): Lagrangian data for specific BSE type of stars by only counting this type
+            [add_star_type]_cross (Lagrangian): Lagrangian data for specific BSE type of stars by using Lagragian radii of all stars
 
-        Additional members that depend on the keyword argument 'bse_star_type', see __init__ for details
-            [bse_star_type] (Lagrangian): Lagrangian data for specific BSE type of stars by only counting this type
-            [bse_star_type]_cross (Lagrangian): Lagrangian data for specific BSE type of stars by using Lagragian radii of all stars
+    Keyword argument 'add_star_type':       
+        In case when interrupt_mode='bse', a list of star type (see help(petar.SSEType)) can be given,
+        so that the Lagrangian properties for these specific types will be calculated.
+        For each star type, firstly, the Lagrangian properties by only counting this type are calculated;
+        then, the properties of this type of star within the spheres or shells of Lagragian radii of all stars are calculated.
 
-        Here [bse_tar_type]
+        For example, if add_star_type=['BH','NS'], four additional class members, 
+        BH, BH_cross, NS, NS_cross are added (type is class Lagrangian). 
+        In the case of 'BH', the definitions are:
+            BH: Lagrangian radii are determined by only BHs, 
+                then the properties (average mass, velocity...) of BHs are calculated using these Lagrangian radii.
+            BH_cross: using Lagrangian radii of all stars to calculate the properties of BHs within each radii (or shells)
+
+        The star type can be a combination of different types connected by '_'.
+        For example, if add_star_type=['BH_NS_WD','MS'], four additional class members, 
+        BH_NS_WD, BH_NS_WD_cross, MS, MS_cross are added, 
+        where BH_NS_WD indicate the Lagrangian properties count BHs, NSs and WDs together.
+
+        If 'no' is added in front of the star type, e.g. 'noBH', 
+        the additional class members, noBH and noBH_cross, include Lagrangian properties of all type of stars except BHs.
+
+    For binaries:
+        One binary is counted once in class member 'binary', its c.m. data is used.
+
+        In case of [add_star_type], one binary is counted once using its c.m. position and velocity.
+        If two components are both this type of star, the total mass is used.
+        If one component is this type of star, its mass and c.m. position and velocity are used.
 
     """
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
@@ -350,31 +375,22 @@ class LagrangianMultiple(DictNpArrayMix):
         keyword arguments:
             mass_fraction: 1D numpy.ndarray (np.array([0.1, 0.3, 0.5, 0.7, 0.9]))
                 An array to indicate the mass fractions to calculate lagrangian radii.
-            bse_star_type: list of string ([])
-                In case when interrupt_mode='bse', a list of star type (see help(petar.SSEType)) can be given,
-                so that the Lagrangian properties for these specific types will be calculated.
-                First, the Lagrangian properties by only counting the type of stars are calculated
-                Then, the Lagragian properties of these type of stars using the Lagragian radii of all stars are calculated.
-                For example, if bse_star_type=['BH','NS']
-                Four additional class members will be added:
-                      BH: Lagragian data by only counting BHs, Lagragian radii are determined by only BHs
-                      BH_cross: Lagragian data of by only counting BHs but using Lagragian radii of all stars.
-                      NS: Lagragian data by only counting NSs, ...
-                      NS_cross: ...
+            add_star_type: list of string ([])
+                An array containing the star type names to calculate additional Lagrangian properties for specific star types.
         """
         m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
 
         keys=[['time',np.float64], ['single',Lagrangian], ['binary', Lagrangian], ['all', Lagrangian]]
-        bse_star_type=[]
-        if ('bse_star_type' in kwargs.keys()): 
-            bse_star_type=kwargs['bse_star_type'].copy()
-            for name in bse_star_type:
+        add_star_type=[]
+        if ('add_star_type' in kwargs.keys()): 
+            add_star_type=kwargs['add_star_type'].copy()
+            for name in add_star_type:
                 keys += [[name, Lagrangian], [name+'_cross', Lagrangian]]
 
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
         self.initargs['mass_fraction'] = m_frac
-        self.initargs['bse_star_type'] = bse_star_type
+        self.initargs['add_star_type'] = add_star_type
 
         #DictNpArrayMix.__init__(self, [['time',np.float64]], _dat, _offset, _append, **kwargs)
         #self.single = Lagrangian(_dat, _offset+self.ncols, False, **kwargs)
@@ -413,11 +429,15 @@ class LagrangianMultiple(DictNpArrayMix):
         single_sim.calcR2()
         binary_sim = SimpleParticle(binary)
         binary_sim.calcR2()
-        if len(self.initargs['bse_star_type'])>0:
+        if len(self.initargs['add_star_type'])>0:
             single_sim.addNewMember('type1',single.star.type)
+            single_sim.addNewMember('m1',single.mass)
             single_sim.addNewMember('type2',single.star.type)
+            single_sim.addNewMember('m2',np.zeros(single.size))
             binary_sim.addNewMember('type1',binary.p1.star.type)
+            binary_sim.addNewMember('m1',binary.p1.mass)
             binary_sim.addNewMember('type2',binary.p2.star.type)
+            binary_sim.addNewMember('m2',binary.p2.mass)
         all_sim = join(single_sim, binary_sim)
         n_single = single.size
         n_binary = binary.size
@@ -435,10 +455,26 @@ class LagrangianMultiple(DictNpArrayMix):
         if (self.binary.size != self.single.size):
             raise ValueError('Size inconsistence: single.size:', self.single.size, ' binary.size:', self.binary.size)
 
-        for name in self.initargs['bse_star_type']:
-            type_index = BSE_STAR_TYPE_INDEX[name]
-            sel = (all_sort.type1==type_index) | ( all_sort.type2==type_index)
+        for name in self.initargs['add_star_type']:
+            sel = np.zeros(all_sort.size).astype(bool)
+            all_sort.mass = np.zeros(all_sort.size) # clear up mass, final mass is the sum of matched component masses
+            name_list = name.split('_')
+            for subname in name_list:
+                sel1 = np.array([]).astype(bool)
+                sel2 = np.array([]).astype(bool)
+                if (subname[:2]=='no'):
+                    type_index = BSE_STAR_TYPE_INDEX[subname[2:]]
+                    sel1 = (all_sort.type1!=type_index) 
+                    sel2 = (all_sort.type2!=type_index)
+                else:
+                    type_index = BSE_STAR_TYPE_INDEX[subname]
+                    sel1 = (all_sort.type1==type_index)
+                    sel2 = (all_sort.type2==type_index)
+                sel = sel | (sel1 | sel2)
+                all_sort.mass[sel1] += all_sort.m1[sel1]
+                all_sort.mass[sel2] += all_sort.m2[sel2]
             all_sel_sort = all_sort[sel]
+            print(name,all_sel_sort.size,all_sort.size)
             self.__dict__[name].calcOneSnapshot(all_sel_sort, rc, mode)
             self.__dict__[name+'_cross'].calcOneSnapshot(all_sel_sort, rc, mode, read_rlagr=rlagr)
 
