@@ -474,7 +474,6 @@ class LagrangianMultiple(DictNpArrayMix):
                 all_sort.mass[sel1] += all_sort.m1[sel1]
                 all_sort.mass[sel2] += all_sort.m2[sel2]
             all_sel_sort = all_sort[sel]
-            print(name,all_sel_sort.size,all_sort.size)
             self.__dict__[name].calcOneSnapshot(all_sel_sort, rc, mode)
             self.__dict__[name+'_cross'].calcOneSnapshot(all_sel_sort, rc, mode, read_rlagr=rlagr)
 
