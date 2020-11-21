@@ -866,16 +866,19 @@ public:
 #ifdef USE_GPU
         const PS::S32 n_walk_limit = 200;
         const PS::S32 tag_max = 1;
+        PS::F64 eps2 = EPISoft::eps*EPISoft::eps;
+        PS::F64 rout2 = EPISoft::r_out*EPISoft::r_out;
+        PS::F64 G= ForceSoft::grav_const;
 #ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
-        tree_soft.calcForceAllAndWriteBackMultiWalkIndex(DispatchKernelWithSPIndex,
-                                                         RetrieveKernel,
+        tree_soft.calcForceAllAndWriteBackMultiWalkIndex(CalcForceWithLinearCutoffCUDAMultiWalk(my_rank, eps2, rout2, G),
+                                                         RetrieveForceCUDA,
                                                          tag_max,
                                                          system_soft,
                                                          dinfo,
                                                          n_walk_limit);
 #else // no multi-walk index
-        tree_soft.calcForceAllAndWriteBackMultiWalk(DispatchKernelWithSP,
-                                                    RetrieveKernel,
+        tree_soft.calcForceAllAndWriteBackMultiWalk(CalcForceWithLinearCutoffCUDA(my_rank, eps2, rout2, G),
+                                                    RetrieveForceCUDA,
                                                     tag_max,
                                                     system_soft,
                                                     dinfo,

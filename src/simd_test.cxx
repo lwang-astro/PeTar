@@ -145,12 +145,14 @@ int main(int argc, char **argv){
     const PS::S32* id_spj_ptr=id_spj;
     for (int i=0; i<Nepj; i++) id_epj[i]=i;
     for (int i=0; i<Nspj; i++) id_spj[i]=i;
-    DispatchKernelWithSPIndex(1, 1, &epi_ptr, &Nepi, &id_epj_ptr, &Nepj, &id_spj_ptr, &Nspj, epj_ptr, Nepj, spj_ptr, Nspj, true);
-    DispatchKernelWithSPIndex(1, 1, &epi_ptr, &Nepi, &id_epj_ptr, &Nepj, &id_spj_ptr, &Nspj, epj_ptr, Nepj, spj_ptr, Nspj, false);
+    CalcForceWithLinearCutoffCUDAMultiWalk f_ep_ep_gpu(0, EPISoft::eps*EPISoft::eps, EPISoft::r_out*EPISoft::r_out, ForceSoft::grav_const);
+    f_ep_ep_gpu(1, 1, &epi_ptr, &Nepi, &id_epj_ptr, &Nepj, &id_spj_ptr, &Nspj, epj_ptr, Nepj, spj_ptr, Nspj, true);
+    f_ep_ep_gpu(1, 1, &epi_ptr, &Nepi, &id_epj_ptr, &Nepj, &id_spj_ptr, &Nspj, epj_ptr, Nepj, spj_ptr, Nspj, false);
 #else
-    DispatchKernelWithSP(1, 1, &epi_ptr, &Nepi, &epj_ptr, &Nepj, &spj_ptr, &Nspj);
+    CalcForceWithLinearCutoffCUDA f_ep_ep_gpu(0, EPISoft::eps*EPISoft::eps, EPISoft::r_out*EPISoft::r_out, ForceSoft::grav_const);
+    f_ep_ep_gpu(1, 1, &epi_ptr, &Nepi, &epj_ptr, &Nepj, &spj_ptr, &Nspj);
 #endif
-    RetrieveKernel(1, 1, &Nepi, &force_gpu_ptr);
+    RetrieveForceCUDA(1, 1, &Nepi, &force_gpu_ptr);
     t_gpu += PS::GetWtime();
 #endif
 
