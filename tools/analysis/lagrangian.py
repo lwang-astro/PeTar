@@ -335,29 +335,32 @@ class LagrangianMultiple(DictNpArrayMix):
         binary (Lagrangian): Lagrangian data for binaries
         all (Lagrangian): Lagrangian data for all data (binary is treated as c.m., count once)
         Additional members that depend on the keyword argument 'add_star_type':
-            [add_star_type] (Lagrangian): Lagrangian data for specific BSE type of stars by only counting this type
-            [add_star_type]_cross (Lagrangian): Lagrangian data for specific BSE type of stars by using Lagragian radii of all stars
+            [add_star_type] (Lagrangian): Lagrangian data for specific type of stars, see the following content for details
 
-    Keyword argument 'add_star_type':       
-        In case when interrupt_mode='bse', a list of star type (see help(petar.SSEType)) can be given,
+    Keyword argument 'add_star_type' (list of string):       
+        In case when interrupt_mode='bse', a list of star types can be given,
         so that the Lagrangian properties for these specific types will be calculated.
-        For each star type, firstly, the Lagrangian properties by only counting this type are calculated;
-        then, the properties of this type of star within the spheres or shells of Lagragian radii of all stars are calculated.
-
-        For example, if add_star_type=['BH','NS'], four additional class members, 
-        BH, BH_cross, NS, NS_cross are added (type is class Lagrangian). 
-        In the case of 'BH', the definitions are:
-            BH: Lagrangian radii are determined by only BHs, 
-                then the properties (average mass, velocity...) of BHs are calculated using these Lagrangian radii.
-            BH_cross: using Lagrangian radii of all stars to calculate the properties of BHs within each radii (or shells)
-
-        The star type can be a combination of different types connected by '_'.
-        For example, if add_star_type=['BH_NS_WD','MS'], four additional class members, 
-        BH_NS_WD, BH_NS_WD_cross, MS, MS_cross are added, 
-        where BH_NS_WD indicate the Lagrangian properties count BHs, NSs and WDs together.
-
-        If 'no' is added in front of the star type, e.g. 'noBH', 
-        the additional class members, noBH and noBH_cross, include Lagrangian properties of all type of stars except BHs.
+        There are four styles of star types:
+           (1) a single SSE type name (see help(petar.SSEType))
+               For example, if 'BH' is given, one additional class member (type is class Lagrangian), BH, is added.
+               The Lagrangian radii are determined by only counting BHs, 
+               then the properties (average mass, velocity...) of BHs are calculated using these Lagrangian radii.
+           (2) a combination of different SSE types connected by '_'.
+               This will include mutliple SSE types in the calculation.
+               For example, if 'BH_NS_WD' is given, the additional class member, BH_NS_WD,
+               count BHs, NSs and WDs together to calculate the Lagrangian properties.
+           (3) a single SSE type name with the prefix 'no'
+               This will exclude the given SSE type name in the calculation.
+               For exmaple, if 'noBH' is given, the additional class member, noBH, 
+               count all stars except BHs to calculate the Lagrangian properties.
+           (4) two types (can be any case of the style 1-3) are given by '[type 1]__in__[type 2]'
+               Then, the properties of type 1 stars within the spheres or shells of 
+               Lagragian radii of type 2 stars are calculated. The Lagrangian radii of type 1 are not calculated.
+               For example, if 'BH__in__all' is given, Lagrangian properties of BHs are calculated 
+               within the shell or sphere of Lagrangian radii of all stars (instead of Lagrangian radii of BHs).
+               Notice that the two type names (except 'all') should also be added separately in the list.
+               In the case of 'BH__in__all', add_star_type must contain 'BH', i.e. add_star_type=['BH','BH__in__all', ...].
+               In another example, 'BH__in__MS', add_star_type=['BH','MS','BH__in__MS',...].
 
     For binaries:
         One binary is counted once in class member 'binary', its c.m. data is used.
@@ -386,7 +389,7 @@ class LagrangianMultiple(DictNpArrayMix):
         if ('add_star_type' in kwargs.keys()): 
             add_star_type=kwargs['add_star_type'].copy()
             for name in add_star_type:
-                keys += [[name, Lagrangian], [name+'_cross', Lagrangian]]
+                keys += [[name, Lagrangian]]
 
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
         self.initargs['mass_fraction'] = m_frac
@@ -451,15 +454,26 @@ class LagrangianMultiple(DictNpArrayMix):
     
         self.single.calcOneSnapshot(single_sort, rc, mode)
         self.binary.calcOneSnapshot(binary_sort, rc, mode)
-        rlagr = self.all.calcOneSnapshot(all_sort, rc, mode)
+        rlagr=dict()
+        rlagr['all'] = self.all.calcOneSnapshot(all_sort, rc, mode)
         if (self.binary.size != self.single.size):
             raise ValueError('Size inconsistence: single.size:', self.single.size, ' binary.size:', self.binary.size)
 
-        for name in self.initargs['add_star_type']:
+        name_list=[]
+        cross_list=[]
+        obj_sort=dict()
+        for name_org in self.initargs['add_star_type']:
+            name_cross= name_org.split('__in__')
+            if (len(name_cross)>1):
+                cross_list.append(name_cross)
+                obj_sort[name_cross[0]]=np.array([])
+            else:
+                name_list.append(name_cross[0])
+
+        for name in name_list:
             sel = np.zeros(all_sort.size).astype(bool)
             all_sort.mass = np.zeros(all_sort.size) # clear up mass, final mass is the sum of matched component masses
-            name_list = name.split('_')
-            for subname in name_list:
+            for subname in name.split('_'):
                 sel1 = np.array([]).astype(bool)
                 sel2 = np.array([]).astype(bool)
                 if (subname[:2]=='no'):
@@ -474,8 +488,14 @@ class LagrangianMultiple(DictNpArrayMix):
                 all_sort.mass[sel1] += all_sort.m1[sel1]
                 all_sort.mass[sel2] += all_sort.m2[sel2]
             all_sel_sort = all_sort[sel]
-            self.__dict__[name].calcOneSnapshot(all_sel_sort, rc, mode)
-            self.__dict__[name+'_cross'].calcOneSnapshot(all_sel_sort, rc, mode, read_rlagr=rlagr)
+            rlagr[name]=self.__dict__[name].calcOneSnapshot(all_sel_sort, rc, mode)
+            # save particle list for cross check
+            if (name in obj_sort.keys()): obj_sort[name] = all_sel_sort
+            #self.__dict__[name+'_cross'].calcOneSnapshot(all_sel_sort, rc, mode, read_rlagr=rlagr)
+
+        # cross check
+        for name_pair in cross_list:
+            self.__dict__[name_pair[0]+'__in__'+name_pair[1]].calcOneSnapshot(obj_sort[name_pair[0]], rc, mode, read_rlagr=rlagr[name_pair[1]])
 
         self.size += 1
         
