@@ -43,7 +43,6 @@
 *
 * Common envelope evolution - entered only when KW1 = 3, 4, 5, 6, 8 or 9.
 * (in old verios entered only when KW1 = 2, 3, 4, 5, 6, 8 or 9.
-C        write(*,*)KTYPE(KW1,KW2),kw1,kw2
 *
 * For simplicity energies are divided by -G.
 *
@@ -59,8 +58,7 @@ C        write(*,*)KTYPE(KW1,KW2),kw1,kw2
       CALL star(KW1,M01,M1,TM1,TN,TSCLS1,LUMS,GB,ZPARS)
       CALL hrdiag(M01,AJ1,M1,TM1,TN,TSCLS1,LUMS,GB,ZPARS,
      &            R1,L1,KW1,MC1,RC1,MENV,RENV,K21,
-     &            ffb,ECS,mfin)
-
+     &            FFB,ECS,MFIN)
       OSPIN1 = JSPIN1/(K21*R1*R1*(M1-MC1)+K3*RC1*RC1*MC1)
       MENVD = MENV/(M1-MC1)
       RZAMS = RZAMSF(M01)
@@ -69,7 +67,7 @@ C        write(*,*)KTYPE(KW1,KW2),kw1,kw2
       CALL star(KW2,M02,M2,TM2,TN,TSCLS2,LUMS,GB,ZPARS)
       CALL hrdiag(M02,AJ2,M2,TM2,TN,TSCLS2,LUMS,GB,ZPARS,
      &            R2,L2,KW2,MC2,RC2,MENV,RENV,K22,
-     &            ffb,ECS,mfin)
+     &            FFB,ECS,MFIN)
       OSPIN2 = JSPIN2/(K22*R2*R2*(M2-MC2)+K3*RC2*RC2*MC2)
 *
 * Calculate the binding energy of the giant envelope (multiplied by lambda).
@@ -125,6 +123,7 @@ C        write(*,*)KTYPE(KW1,KW2),kw1,kw2
          ENDIF
          IF(COEL)THEN
 *
+            SEPF = 0.D0
             KW = KTYPE(KW1,KW2) - 100
             MC3 = MC1
             IF(KW2.EQ.7.AND.KW.EQ.4) MC3 = MC3 + M2
@@ -142,10 +141,10 @@ C        write(*,*)KTYPE(KW1,KW2),kw1,kw2
             CALL star(KW1,M01,M1,TM1,TN,TSCLS1,LUMS,GB,ZPARS)
             CALL hrdiag(M01,AJ1,M1,TM1,TN,TSCLS1,LUMS,GB,ZPARS,
      &                  R1,L1,KW1,MC1,RC1,MENV,RENV,K21,
-     &                  ffb,ECS,mfin)
+     &                  FFB,ECS,MFIN)
             IF(KW1.GE.13)THEN
                CALL kick(KW1,MF,M1,M2,ECC,SEPF,JORB,VKICK1,
-     &                   ffb,ECS,mfin)
+     &                   FFB,ECS,MFIN)
                SNexplosion = 1
                IF(ECC.GT.1.D0) GOTO 30
             ENDIF
@@ -233,10 +232,10 @@ C        write(*,*)KTYPE(KW1,KW2),kw1,kw2
             CALL star(KW1,M01,M1,TM1,TN,TSCLS1,LUMS,GB,ZPARS)
             CALL hrdiag(M01,AJ1,M1,TM1,TN,TSCLS1,LUMS,GB,ZPARS,
      &                  R1,L1,KW1,MC1,RC1,MENV,RENV,K21,
-     &                  ffb,ECS,mfin)
+     &                  FFB,ECS,MFIN)
             IF(KW1.GE.13)THEN
                CALL kick(KW1,MF,M1,M2,ECC,SEPF,JORB,VKICK1,
-     &                   ffb,ECS,mfin)
+     &                   FFB,ECS,MFIN)
                SNexplosion = 1
                IF(ECC.GT.1.D0) GOTO 30
             ENDIF
@@ -246,10 +245,10 @@ C        write(*,*)KTYPE(KW1,KW2),kw1,kw2
             CALL star(KW2,M02,M2,TM2,TN,TSCLS2,LUMS,GB,ZPARS)
             CALL hrdiag(M02,AJ2,M2,TM2,TN,TSCLS2,LUMS,GB,ZPARS,
      &                  R2,L2,KW2,MC2,RC2,MENV,RENV,K22,
-     &                  ffb,ECS,mfin)
+     &                  FFB,ECS,MFIN)
             IF(KW2.GE.13.AND.KW.LT.13)THEN
                CALL kick(KW2,MF,M2,M1,ECC,SEPF,JORB,VKICK2,
-     &                   ffb,ECS,mfin)
+     &                   FFB,ECS,MFIN)
                SNexplosion = 1
                IF(ECC.GT.1.D0) GOTO 30
             ENDIF

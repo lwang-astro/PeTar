@@ -1364,7 +1364,6 @@ c            helper(2) = j2
 *
          m1ce = mass(j1)
          m2ce = mass(j2)
-         write(*,*)'qui 1?'
          CALL comenv(mass0(j1),mass(j1),massc(j1),aj(j1),jspin(j1),
      &               kstar(j1),mass0(j2),mass(j2),massc(j2),aj(j2),
      &               jspin(j2),kstar(j2),zpars,ecc,sep,jorb,
@@ -1493,6 +1492,11 @@ c          btype = 8
          kstar(j1) = 15
          dm2 = dm1
          mass(j2) = mass(j2) + dm2
+         if(mass(j2).gt.mxns)then
+            kstar(j2) = 14
+          else
+            kstar(j2) = 13
+          endif
          coel = .true.
          goto 135
       else
@@ -2305,14 +2309,12 @@ c      endif
 * HG donors behave like MS stars
 *
       if(kstar(j1).ge.3.and.kstar(j1).le.9.and.kstar(j1).ne.7)then
-         write(*,*)'qui 2?'
          CALL comenv(mass0(j1),mass(j1),massc(j1),aj(j1),jspin(j1),
      &               kstar(j1),mass0(j2),mass(j2),massc(j2),aj(j2),
      &               jspin(j2),kstar(j2),zpars,ecc,sep,jorb,
      &               vkick(4*(j1-1)+1),vkick(4*(j2-1)+1),coel)
          com = .true.
       elseif(kstar(j2).ge.3.and.kstar(j2).le.9.and.kstar(j2).ne.7)then
-         write(*,*)'qui 3?'
          CALL comenv(mass0(j2),mass(j2),massc(j2),aj(j2),jspin(j2),
      &               kstar(j2),mass0(j1),mass(j1),massc(j1),aj(j1),
      &               jspin(j1),kstar(j1),zpars,ecc,sep,jorb,

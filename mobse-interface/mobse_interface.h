@@ -2,6 +2,7 @@
 #include <iostream>
 #include <iomanip>
 #include <cassert>
+#include <cstdio>
 #include <string>
 #include <getopt.h>
 #include "../src/io.hpp"
@@ -378,19 +379,19 @@ public:
     //IOParams<double> mxns;
     IOParams<double> sigma1;
     IOParams<double> sigma2;
-    IOParams<int> ceflag;
-    IOParams<int> tflag;
-    //IOParams<int> ifflag;
-    IOParams<int> wdflag;
-    IOParams<int> bhflag;
-    IOParams<int> nsflag;
-    IOParams<int> piflag;
+    IOParams<long long int> ceflag;
+    IOParams<long long int> tflag;
+    //IOParams<long long int> ifflag;
+    IOParams<long long int> wdflag;
+    IOParams<long long int> bhflag;
+    IOParams<long long int> nsflag;
+    IOParams<long long int> piflag;
     //IOParams<int> kmech;
     //IOParams<int> ecflag;
     IOParams<double> pts1;
     IOParams<double> pts2;
     IOParams<double> pts3;
-    IOParams<int> idum;
+    IOParams<long long int> idum;
     IOParams<double> tscale;
     IOParams<double> rscale;
     IOParams<double> mscale;
@@ -400,39 +401,39 @@ public:
     bool print_flag;
 
     IOParamsMOBSE(): input_par_store(),
-                   neta  (input_par_store, 0.5, "Reimers mass-loss coefficent [neta*4x10^-13]"),
-                   bwind (input_par_store, 0.0, "Binary enhanced mass loss parameter; inactive for single"),
-                   hewind(input_par_store, 1.0, "Helium star mass loss factor"),
+                   neta  (input_par_store, 0.5,     "mobse-neta",   "Reimers mass-loss coefficent [neta*4x10^-13]"),
+                   bwind (input_par_store, 0.0,     "mobse-wind",   "Binary enhanced mass loss parameter; inactive for single"),
+                   hewind(input_par_store, 1.0,     "mobse-hewind", "Helium star mass loss factor"),
                    //mxns  (input_par_store, 1.0, "Helium star mass loss factor"),
-                   alpha (input_par_store, 3.0, "Common-envelope efficiency parameter"),
-                   lambda(input_par_store, 0.1, "Binding energy factor for common envelope evolution"),
-                   beta  (input_par_store, 0.125, "wind velocity factor: proportional to vwind**2"),
-                   xi    (input_par_store, 1.0, "wind accretion efficiency factor"),
-                   bhwacc(input_par_store, 1.5, "Bondi-Hoyle wind accretion factor"),
-                   epsnov(input_par_store, 0.001, "The fraction of accreted matter retained in nova eruption"),
-                   eddfac(input_par_store, 1.0, "Eddington limit factor for mass transfer"),
-                   gamma (input_par_store, -1.0, "Angular momentum factor for mass lost during Roche"),
-                   sigma1 (input_par_store, 265.0, "Dispersion in the Maxwellian for the CCSN kick speed [km/s]"),
-                   sigma2 (input_par_store, 265.0, "Dispersion in the Maxwellian for the ECSN kick speed [km/s]"),
-                   ceflag(input_par_store, 0,  "if =3, activates de Kool common-envelope model"),
-                   tflag (input_par_store, 1,  "if >0, activates tidal circularisation"),
+                   alpha (input_par_store, 3.0,     "mobse-alpha",  "Common-envelope efficiency parameter"),
+                   lambda(input_par_store, 0.1,     "mobse-lambda", "Binding energy factor for common envelope evolution"),
+                   beta  (input_par_store, 0.125,   "mobse-beta",   "wind velocity factor: proportional to vwind**2"),
+                   xi    (input_par_store, 1.0,     "mobse-xi",       "wind accretion efficiency factor"),
+                   bhwacc(input_par_store, 1.5,     "mobse-bwacc",  "Bondi-Hoyle wind accretion factor"),
+                   epsnov(input_par_store, 0.001,   "mobse-epsnov", "The fraction of accreted matter retained in nova eruption"),
+                   eddfac(input_par_store, 1.0,     "mobse-eddfac", "Eddington limit factor for mass transfer"),
+                   gamma (input_par_store, -1.0,    "mobse-gamma",  "Angular momentum factor for mass lost during Roche"),
+                   sigma1 (input_par_store, 265.0,  "mobse-sigma1", "Dispersion in the Maxwellian for the CCSN kick speed [km/s]"),
+                   sigma2 (input_par_store, 265.0,  "mobse-sigma2", "Dispersion in the Maxwellian for the ECSN kick speed [km/s]"),
+                   ceflag(input_par_store, 0,       "mobse-cflag",  "if =3, activates de Kool common-envelope model"),
+                   tflag (input_par_store, 1,       "mobse-tflag",  "if >0, activates tidal circularisation"),
                    //ifflag(input_par_store, 2,   "if > 0 uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
-                   wdflag(input_par_store, 1,  "if >0, uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
-                   bhflag(input_par_store, 3,  "BH kick option: 0: no kick; 1: same as NS; 2: scaled by fallback; 3: Giacobbo&Mapelli (2020)"),
-                   nsflag(input_par_store, 3,  "NS/BH foramtion options: 0: original SSE; 2: Belczynski (2008); 2: Fryer (2012) rapid SN; 2: Fryer (2012) delayed SN; 4: Belczynski (2008); 5: no SN explosion"),
-                   piflag(input_par_store, 1,  "PPSN condition (Spera et al. 2015)"),
+                   wdflag(input_par_store, 1,       "mobse-wdflag", "if >0, uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
+                   bhflag(input_par_store, 3,       "mobse-bhflag", "BH kick option: 0: no kick; 1: same as NS; 2: scaled by fallback; 3: Giacobbo&Mapelli (2020)"),
+                   nsflag(input_par_store, 3,       "mobse-nsflag", "NS/BH foramtion options: 0: original SSE; 2: Belczynski (2008); 2: Fryer (2012) rapid SN; 2: Fryer (2012) delayed SN; 4: Belczynski (2008); 5: no SN explosion"),
+                   piflag(input_par_store, 1,       "mobse-piflag", "PPSN condition (Spera et al. 2015)"),
                    //psflag(input_par_store, 1,  "PPSN condition (Belczynski 2016): 0: no PPSN; 1: strong; (Leung 2019): 2: moderate; 3: weak"),
                    //kmech (input_par_store, 1,  "Kick mechanism: 1: standard momentum-conserving; 2: convection-asymmetry-driven; 3: collapse-asymmerty-driven; 4: neutrino driven"),
                    //ecflag(input_par_store, 1,  "if >0, ECS is switched on"),
-                   pts1  (input_par_store, 0.05, "time step of MS"),
-                   pts2  (input_par_store, 0.01, "time step of GB, CHeB, AGB, HeGB"),
-                   pts3  (input_par_store, 0.02, "time step of HG, HeMS"),
-                   idum  (input_par_store, 1234, "random number seed used by the kick routine"),
-                   tscale(input_par_store, 1.0, "Time scale factor from input data unit (IN) to Myr (time[Myr]=time[IN]*tscale)"),
-                   rscale(input_par_store, 1.0, "Radius scale factor from input data unit (IN) to Rsun (r[Rsun]=r[IN]*rscale)"),
-                   mscale(input_par_store, 1.0, "Mass scale factor from input data unit (IN) to Msun (m[Msun]=m[IN]*mscale)"),
-                   vscale(input_par_store, 1.0, "Velocity scale factor from input data unit(IN) to km/s (v[km/s]=v[IN]*vscale)"),
-                   z     (input_par_store, 0.001, "Metallicity"),
+                   pts1  (input_par_store, 0.05,    "mobse-pts1",   "time step of MS"),
+                   pts2  (input_par_store, 0.01,    "mobse-pts2",   "time step of GB, CHeB, AGB, HeGB"),
+                   pts3  (input_par_store, 0.02,    "mobse-pts3",   "time step of HG, HeMS"),
+                   idum  (input_par_store, 1234,    "mobse-idum",   "random number seed used by the kick routine"),
+                   tscale(input_par_store, 1.0,     "mobse-tscale", "Time scale factor from input data unit (IN) to Myr (time[Myr]=time[IN]*tscale)"),
+                   rscale(input_par_store, 1.0,     "mobse-rscale", "Radius scale factor from input data unit (IN) to Rsun (r[Rsun]=r[IN]*rscale)"),
+                   mscale(input_par_store, 1.0,     "mobse-msclae", "Mass scale factor from input data unit (IN) to Msun (m[Msun]=m[IN]*mscale)"),
+                   vscale(input_par_store, 1.0,     "mobse-vsclae",  "Velocity scale factor from input data unit(IN) to km/s (v[km/s]=v[IN]*vscale)"),
+                   z     (input_par_store, 0.001,   "mobse-metallicity",    "Metallicity"),
                    print_flag(false) {}
 
     //! reading parameters from GNU option API
@@ -445,40 +446,40 @@ public:
     int read(int argc, char *argv[], const int opt_used_pre=0) {
         static int sse_flag=-1;
         const struct option long_options[] = {
-            {"mobse-neta",   required_argument, &sse_flag, 0},  
-            {"mobse-bwind",  required_argument, &sse_flag, 1},  
-            {"mobse-hewind", required_argument, &sse_flag, 2},  
-          //{"mobse-mxns",   required_argument, &sse_flag, 3}, 
-            {"mobse-alpha",  required_argument, &sse_flag, 22},
-            {"mobse-lambda", required_argument, &sse_flag, 23},
-            {"mobse-beta",   required_argument, &sse_flag, 24},
-            {"mobse-xi",     required_argument, &sse_flag, 25},
-            {"mobse-bhwacc", required_argument, &sse_flag, 26},
-            {"mobse-epsnov", required_argument, &sse_flag, 27},
-            {"mobse-eddfac", required_argument, &sse_flag, 28},
-            {"mobse-gamma",  required_argument, &sse_flag, 29},
-            {"mobse-sigma1",  required_argument, &sse_flag, 4},
-            {"mobse-sigma2",  required_argument, &sse_flag, 5},
-            {"mobse-ceflag", required_argument, &sse_flag, 6},
-            {"mobse-tflag",  required_argument, &sse_flag, 7},
-          //{"mobse-ifflag", required_argument, &sse_flag, 7},
-            {"mobse-wdflag", required_argument, &sse_flag, 8},
-            {"mobse-bhflag", required_argument, &sse_flag, 9}, 
-            {"mobse-nsflag", required_argument, &sse_flag, 10}, 
-            {"mobse-piflag", required_argument, &sse_flag, 11},
-          //{"mobse-psflag", required_argument, &sse_flag, 11},
-          //{"mobse-kmech",  required_argument, &sse_flag, 12},
-          //{"mobse-ecflag", required_argument, &sse_flag, 13},
-            {"mobse-pts1",   required_argument, &sse_flag, 14},
-            {"mobse-pts2",   required_argument, &sse_flag, 15},       
-            {"mobse-pts3",   required_argument, &sse_flag, 16},
-            {"mobse-idum",   required_argument, &sse_flag, 17}, 
-            {"mobse-tscale", required_argument, &sse_flag, 18},
-            {"mobse-rscale", required_argument, &sse_flag, 19},
-            {"mobse-mscale", required_argument, &sse_flag, 20},
-            {"mobse-vscale", required_argument, &sse_flag, 21},
-            {"mobse-metallicity", required_argument, 0, 'z'},
-            {"help",   no_argument,       0, 'h'},
+            {neta.key,   required_argument, &sse_flag, 0},  
+            {bwind.key,  required_argument, &sse_flag, 1},  
+            {hewind.key, required_argument, &sse_flag, 2},  
+          //{mxns",   required_argument, &sse_flag, 3}, 
+            {alpha.key,  required_argument, &sse_flag, 22},
+            {lambda.key, required_argument, &sse_flag, 23},
+            {beta.key,   required_argument, &sse_flag, 24},
+            {xi.key,     required_argument, &sse_flag, 25},
+            {bhwacc.key, required_argument, &sse_flag, 26},
+            {epsnov.key, required_argument, &sse_flag, 27},
+            {eddfac.key, required_argument, &sse_flag, 28},
+            {gamma.key,  required_argument, &sse_flag, 29},
+            {sigma1.key, required_argument, &sse_flag, 4},
+            {sigma2.key, required_argument, &sse_flag, 5},
+            {ceflag.key, required_argument, &sse_flag, 6},
+            {tflag.key,  required_argument, &sse_flag, 7},
+          //{ifflag", required_argument, &sse_flag, 7},
+            {wdflag.key, required_argument, &sse_flag, 8},
+            {bhflag.key, required_argument, &sse_flag, 9}, 
+            {nsflag.key, required_argument, &sse_flag, 10}, 
+            {piflag.key, required_argument, &sse_flag, 11},
+          //{psflag", required_argument, &sse_flag, 11},
+          //{kmech",  required_argument, &sse_flag, 12},
+          //{ecflag", required_argument, &sse_flag, 13},
+            {pts1.key,   required_argument, &sse_flag, 14},
+            {pts2.key,   required_argument, &sse_flag, 15},       
+            {pts3.key,   required_argument, &sse_flag, 16},
+            {idum.key,   required_argument, &sse_flag, 17}, 
+            {tscale.key, required_argument, &sse_flag, 18},
+            {rscale.key, required_argument, &sse_flag, 19},
+            {mscale.key, required_argument, &sse_flag, 20},
+            {vscale.key, required_argument, &sse_flag, 21},
+            {z.key,      required_argument, 0, 'z'},
+            {"help",     no_argument,       0, 'h'},
             {0,0,0,0}
         };
 
@@ -660,36 +661,7 @@ public:
             case 'h':
                 if(print_flag){
                     std::cout<<"MOBSE options:"<<std::endl;
-                    std::cout<<"       Option defaulted values are shown after ':'"<<std::endl;
-                    std::cout<<"        --mobse-neta:   [D] "<<neta<<std::endl
-                             <<"        --mobse-bwind:  [D] "<<bwind<<std::endl
-                             <<"        --mobse-hewind: [D] "<<hewind<<std::endl
-                        //<<"        --mxns:   [D] "<<mxns<<std::endl
-                             <<"        --mobse-alpha:  [D] "<<alpha<<std::endl
-                             <<"        --mobse-lambda: [D] "<<lambda<<std::endl
-                             <<"        --mobse-beta:   [D] "<<beta<<std::endl
-                             <<"        --mobse-xi:     [D] "<<xi<<std::endl
-                             <<"        --mobse-bhwacc  [D] "<<bhwacc<<std::endl
-                             <<"        --mobse-epsnov: [D] "<<epsnov<<std::endl
-                             <<"        --mobse-eddfac: [D] "<<eddfac<<std::endl
-                             <<"        --mobse-gamma:  [D] "<<gamma<<std::endl
-                             <<"        --mobse-sigma1:  [D] "<<sigma1<<std::endl
-                             <<"        --mobse-sigma2:  [D] "<<sigma2<<std::endl                             
-                             <<"        --mobse-ceflag: [I] "<<ceflag<<std::endl
-                             <<"        --mobse-tflag:  [I] "<<tflag<<std::endl
-                             <<"        --mobse-wdflag: [I] "<<wdflag<<std::endl
-                             <<"        --mobse-bhflag: [I] "<<bhflag<<std::endl
-                             <<"        --mobse-nsflag: [I] "<<nsflag<<std::endl
-                             <<"        --mobse-piflag: [I] "<<piflag<<std::endl
-                             <<"        --mobse-pts1:   [D] "<<pts1<<std::endl
-                             <<"        --mobse-pts2:   [D] "<<pts2<<std::endl
-                             <<"        --mobse-pts3:   [D] "<<pts3<<std::endl
-                             <<"        --mobse-idum:   [I] "<<idum<<std::endl
-                             <<"        --mobse-tscale: [D] "<<tscale<<std::endl
-                             <<"        --mobse-rscale: [D] "<<rscale<<std::endl
-                             <<"        --mobse-mscale: [D] "<<mscale<<std::endl
-                             <<"        --mobse-vscale: [D] "<<vscale<<std::endl
-                             <<"        --mobse-metallicity (-z): [D] "<<z<<std::endl;
+                    input_par_store.printHelp(std::cout, 2, 10, 23);
                 }
                 return -1;
             case '?':
@@ -765,8 +737,12 @@ public:
             printf("Not found.\n");
         }
         else {
-            fscanf(fin, "%d %d %d ", &value3_.idum, &rand3_.idum2, &rand3_.iy);
-            for (int i=0; i<32; i++) fscanf(fin, "%d ", &rand3_.ir[i]);
+            int rcount = fscanf(fin, "%d %d %d ", &value3_.idum, &rand3_.idum2, &rand3_.iy);
+            for (int i=0; i<32; i++) rcount += fscanf(fin, "%d ", &rand3_.ir[i]);
+            if(rcount<35) {
+                std::cerr<<"Error: Data reading fails! requiring data number is 35, only obtain "<<rcount<<".\n";
+                abort();
+            }
             fclose(fin);
         }
     }
