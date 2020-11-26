@@ -299,7 +299,7 @@ class Data:
             xcm = pos[0]
             ycm = pos[1]
             if (self.generate_binary!=2): # data from petar.data.process already remove c.m. from core center
-                self.x = self.x-ycm
+                self.x = self.x-xcm
                 self.y = self.y-ycm
         elif (self.cm_mode=='density'):
             nbins=100
