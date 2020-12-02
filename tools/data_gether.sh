@@ -29,6 +29,9 @@ fi
 
 echo 'data filename prefix: '$fout
 
+flen=`expr ${#fname} + 2`
+ls|egrep '^'$fname'.[0-9]+$' |sort -n -k 1.${flen} >$fout.snap.lst
+
 for s in $suffixes
 do
     file=$fname.$s
@@ -82,5 +85,3 @@ if [ -e $fout.bse ]; then
     egrep -v '^(Dynamic_merge|SN_kick)' $fout.bse |awk '{for (i=2;i<=NF;i++) printf("%s ", $i); printf("\n")}' >$fout.bse.type_change
 fi
 
-flen=`expr ${#fname} + 2`
-ls|egrep '^'$fname'.[0-9]+$' |sort -n -k 1.${flen} >$fout.snap.lst
