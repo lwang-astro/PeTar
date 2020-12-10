@@ -244,18 +244,21 @@ public:
         time_origin = _time_origin;
         ptcl_origin = _ptcl;
 
-#ifdef HARD_DEBUG
+//#ifdef HARD_DEBUG
         if (_n_ptcl>400) {
             std::cerr<<"Large cluster, n_ptcl="<<_n_ptcl<<" n_group="<<_n_group<<std::endl;
+            std::pair<PS::S32,PS::F64> r_search_max={-1,0.0};
             for (PS::S32 i=0; i<_n_ptcl; i++) {
-                if(ptcl_origin[i].r_search>10*ptcl_origin[i].r_search_min) {
-                    std::cerr<<"i = "<<i<<" ";
-                    ptcl_origin[i].print(std::cerr);
-                    std::cerr<<std::endl;
+                if(ptcl_origin[i].r_search>r_search_max.second) {
+                    r_search_max.first = i;
+                    r_search_max.second = ptcl_origin[i].r_search;
                 }
             }
+            std::cerr<<"Maximum rsearch particle i = "<<r_search_max.first<<" ";
+            ptcl_origin[r_search_max.first].print(std::cerr);
+            std::cerr<<std::endl;
         }
-#endif
+//#endif
 
         // prepare initial groups with artificial particles
         PS::S32 adr_first_ptcl[_n_group+1];

@@ -152,6 +152,8 @@ int main(int argc, char **argv){
   if (hard_manager.ar_manager.interaction.stellar_evolution_write_flag) {
       hard_manager.ar_manager.interaction.fout_sse.open((filename+".sse").c_str(), std::ofstream::out);
       hard_manager.ar_manager.interaction.fout_bse.open((filename+".bse").c_str(), std::ofstream::out);
+      hard_manager.ar_manager.interaction.fout_sse<<std::setprecision(WRITE_PRECISION);
+      hard_manager.ar_manager.interaction.fout_bse<<std::setprecision(WRITE_PRECISION);
   }
 #endif
 #endif
@@ -159,6 +161,7 @@ int main(int argc, char **argv){
 #ifdef ADJUST_GROUP_PRINT
   if (hard_manager.h4_manager.adjust_group_write_flag) {
       hard_manager.h4_manager.fgroup.open((filename+".group").c_str(), std::ofstream::out);
+      hard_manager.h4_manager.fgroup<<std::setprecision(WRITE_PRECISION);
   }
 #endif
 

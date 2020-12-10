@@ -302,7 +302,7 @@ class Data:
                 self.x = self.x-xcm
                 self.y = self.y-ycm
         elif (self.cm_mode=='density'):
-            nbins=100
+            nbins=1000
             xmid = np.average(np.abs(self.x))
             ymid = np.average(np.abs(self.y))
             #print(xmid,ymid)
@@ -317,12 +317,12 @@ class Data:
             xp,yp=np.where(counts>0.2*counts.max())
             m = counts[xp,yp]
             mtot = m.sum()
-            xcm=(xp*m).sum()/mtot/nbins*(xmax-xmin)+xmin
-            ycm=(yp*m).sum()/mtot/nbins*(ymax-ymin)+ymin
+            xcm=((xp*m).sum()/mtot+0.5)*(xmax-xmin)/nbins+xmin
+            ycm=((yp*m).sum()/mtot+0.5)*(ymax-ymin)/nbins+ymin
             self.x = self.x - xcm
             self.y = self.y - ycm
 
-            nbins=200
+            nbins=500
             xmid = np.average(np.abs(self.x))
             ymid = np.average(np.abs(self.y))
             xmin = -boxsize
@@ -336,8 +336,8 @@ class Data:
             xp,yp=np.where(counts>0.2*counts.max())
             m = counts[xp,yp]
             mtot = m.sum()
-            xcm2=(xp*m).sum()/mtot/nbins*(xmax-xmin)+xmin
-            ycm2=(yp*m).sum()/mtot/nbins*(ymax-ymin)+ymin
+            xcm2=((xp*m).sum()/mtot+0.5)*(xmax-xmin)/nbins+xmin
+            ycm2=((yp*m).sum()/mtot+0.5)*(ymax-ymin)/nbins+ymin
             self.x = self.x - xcm2
             self.y = self.y - ycm2
             xcm += xcm2

@@ -2493,6 +2493,7 @@ public:
                 // FPSoft::printColumnTitle(fesc,WRITE_WIDTH);
                 // fesc<<std::endl;
             }
+            fesc<<std::setprecision(WRITE_PRECISION);
 
 #ifdef BSE
             // open SSE/BSE file
@@ -2506,6 +2507,8 @@ public:
                 hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out);
                 hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out);
             }
+            hard_manager.ar_manager.interaction.fout_sse<<std::setprecision(WRITE_PRECISION);
+            hard_manager.ar_manager.interaction.fout_bse<<std::setprecision(WRITE_PRECISION);
 #endif 
 
 #ifdef ADJUST_GROUP_PRINT
@@ -2516,6 +2519,7 @@ public:
                     hard_manager.h4_manager.fgroup.open(fgroup_name.c_str(), std::ofstream::out|std::ofstream::app);
                 else 
                     hard_manager.h4_manager.fgroup.open(fgroup_name.c_str(), std::ofstream::out);
+                hard_manager.h4_manager.fgroup<<std::setprecision(WRITE_PRECISION);
             }
 #endif
         }

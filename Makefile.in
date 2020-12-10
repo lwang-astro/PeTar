@@ -222,14 +222,17 @@ build/force_gpu_cuda.o: force_gpu_cuda.cu |build
 bse-interface/petar.bse: bse-interface
 	$(MAKE) -C bse-interface
 
-bse-interface/libbse.a: bse-interface/petar.bse
+bse-interface/libbse.a: bse-interface
+	$(MAKE) -C bse-interface libbse.a
 
 galpy-interface/petar.galpy: galpy-interface
 	$(MAKE) -C galpy-interface
 
-galpy-interface/libgalpy.a: galpy-interface/petar.galpy
+galpy-interface/libgalpy.a: galpy-interface
+	$(MAKE) -C galpy-interface libgalpy.a
 
-galpy-interface/petar.galpy.help: galpy-interface/petar.galpy
+galpy-interface/petar.galpy.help: galpy-interface
+	$(MAKE) -C galpy-interface petar.galpy.help
 
 install: $(TARGET)
 	install -d @prefix@/bin/

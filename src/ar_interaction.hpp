@@ -387,7 +387,7 @@ public:
                     Float* acc_pert = _force[i].acc_pert;
                     Float& pot_pert = _force[i].pot_pert;
                     const auto& pi = _particles[i];
-                    acc_pert[0] = acc_pert[1] = acc_pert[2] = Float(0.0);
+                    acc_pert[0] = acc_pert[1] = acc_pert[2] = pot_pert = Float(0.0);
                     // avoid too large perturbation force if system is disruptted
                     if (pi.pos*pi.pos<pi.changeover.getRout()*pi.changeover.getRout()) {
                         _perturber.soft_pert->eval(acc_pert, pi.pos);
@@ -662,7 +662,7 @@ public:
             _p.time_record += dt-dt_miss;
 
             // estimate next time to check 
-            _p.time_interrupt = _p.time_record + bse_manager.getTimeStep(_p.star);
+            _p.time_interrupt = _p.time_record + bse_manager.getTimeStepStar(_p.star);
 
             // record mass change (if loss, negative)
             double dm = bse_manager.getMassLoss(output);
@@ -765,8 +765,21 @@ public:
             auto* p2 = _bin.getRightMember();
 
 #ifdef BSE
+            // time_record and time_end have offsets, thus use difference to obtain true dt
+            Float dt = _bin_interrupt.time_end - p1->time_record;
+
+            // pre simple check whether calling BSE is needed
+            bool check_flag = false;
+            int binary_type_p1 = static_cast<int>(p1->getBinaryInterruptState());
+            int binary_type_p2 = static_cast<int>(p2->getBinaryInterruptState());
+            int binary_type_init = 0;
+            if (binary_type_p1==binary_type_p2) binary_type_init = binary_type_p1;
+            if (dt>0&&_bin.semi>0 && (!bse_manager.isMassTransfer(binary_type_init)) && (!bse_manager.isDisrupt(binary_type_init))) {
+                check_flag=bse_manager.isCallBSENeeded(p1->star, p2->star, _bin.semi, _bin.ecc, dt);
+            }
+
             double time_check = std::min(p1->time_interrupt, p2->time_interrupt);
-            if (time_check<=_bin_interrupt.time_end&&stellar_evolution_option==1) {
+            if ((time_check<=_bin_interrupt.time_end||check_flag)&&dt>0&&stellar_evolution_option==1) {
                 ASSERT(bse_manager.checkParams());
                 // record address of modified binary
                 _bin_interrupt.adr = &_bin;
@@ -788,14 +801,19 @@ public:
                     }
                 }
 
-                // time_record and time_end have offsets, thus use difference to obtain true dt
-                Float dt = _bin_interrupt.time_end - p1->time_record;
 
                 StarParameterOut out[2];
-                Float drdv, ecc, semi, r;
-                _bin.particleToSemiEcc(semi, ecc, r, drdv, *p1, *p2, gravitational_constant);
+                _bin.calcOrbit(gravitational_constant);
+                Float ecc = _bin.ecc;
+                Float ecc_bk = ecc;
+                Float semi = _bin.semi;
+                //Float semi_bk =semi;
                 Float mtot = p1->mass+p2->mass;
-                Float period = _bin.semiToPeriod(semi, mtot, gravitational_constant);
+                Float period = _bin.period;
+                Float period_bk = period;
+                COMM::Vector3<Float> pos_red(p2->pos[0] - p1->pos[0], p2->pos[1] - p1->pos[1], p2->pos[2] - p1->pos[2]);
+                COMM::Vector3<Float> vel_red(p2->vel[0] - p1->vel[0], p2->vel[1] - p1->vel[1], p2->vel[2] - p1->vel[2]);
+                Float drdv = pos_red * vel_red;
                 // backup c.m. information 
                 Float pos_cm[3], vel_cm[3];
                 for (int k=0; k<3; k++) {
@@ -808,7 +826,7 @@ public:
 
                 BinaryEvent bin_event;
                 // loop until the time_end reaches
-                int event_flag = bse_manager.evolveBinary(p1->star, p2->star, out[0], out[1], semi, period, ecc, bin_event, dt);
+                int event_flag = bse_manager.evolveBinary(p1->star, p2->star, out[0], out[1], semi, period, ecc, bin_event, binary_type_init, dt);
 
                 // error
                 if (event_flag<0) {
@@ -836,20 +854,33 @@ public:
                 // check binary type and print event information
                 int binary_type_final=0;
                 int nmax = bin_event.getEventNMax();
+                int binary_type_init = bin_event.getType(bin_event.getEventIndexInit());
                 for (int i=0; i<nmax; i++) {
                     int binary_type = bin_event.getType(i);
                     if (binary_type>0) {
+                        bool first_event = (i==0);
                         if (stellar_evolution_write_flag) {
+                            if ((first_event&&binary_type_init!=binary_type)||!first_event) {
 #pragma omp critical
-                            {
-                                bse_manager.printBinaryEventColumnOne(fout_bse, bin_event, i, WRITE_WIDTH);
-                                fout_bse<<std::setw(WRITE_WIDTH)<<p1->id
-                                        <<std::setw(WRITE_WIDTH)<<p2->id
-                                        <<std::setw(WRITE_WIDTH)<<drdv*bse_manager.rscale*bse_manager.vscale
-                                        <<std::setw(WRITE_WIDTH)<<r*bse_manager.rscale;
-                                fout_bse<<std::endl;
+                                {
+                                    bse_manager.printBinaryEventColumnOne(fout_bse, bin_event, i, WRITE_WIDTH);
+                                    fout_bse<<std::setw(WRITE_WIDTH)<<p1->id
+                                            <<std::setw(WRITE_WIDTH)<<p2->id
+                                            <<std::setw(WRITE_WIDTH)<<drdv*bse_manager.rscale*bse_manager.vscale
+                                            <<std::setw(WRITE_WIDTH)<<_bin.r*bse_manager.rscale;
+                                    fout_bse<<std::endl;
+                                }
                             }
                         }
+                        //if (binary_type==10) {
+                        //    DATADUMP("co_dump");
+                        //    abort();
+                        //}
+                        //if (binary_type==3&&p1->time_record>=2499.0114383817) {
+                        //    DATADUMP("re_dump");
+                        //    abort();
+                        //}
+
                         //if (vkick[3]>0||vkick[7]>0) event_flag = 3; // kick
                         if (binary_type>0) event_flag = std::max(event_flag, 1); // type change
                         else if (bse_manager.isMassTransfer(binary_type)) event_flag = std::max(event_flag, 2); // orbit change
@@ -865,7 +896,7 @@ public:
                 p2->time_record = p1->time_record;
 
                 // estimate next time to check 
-                p1->time_interrupt = p1->time_record + std::min(bse_manager.getTimeStep(p1->star), bse_manager.getTimeStep(p2->star));
+                p1->time_interrupt = p1->time_record + bse_manager.getTimeStepBinary(p1->star, p2->star, semi, ecc, binary_type_final);
                 p2->time_interrupt = p1->time_interrupt;
 
                 // reset collision state since binary orbit changes
@@ -962,8 +993,10 @@ public:
                             _bin.m1 = p1->mass;
                             _bin.m2 = p2->mass;
                             _bin.calcSemiFromPeriod(gravitational_constant);
-                            // kepler orbit to particles using the same ecc anomaly
-                            _bin.calcParticles(gravitational_constant);
+                            if (((ecc-ecc_bk)/(1-ecc)>0.01||(period-period_bk)/period>1e-2)) {
+                                // kepler orbit to particles using the same ecc anomaly
+                                _bin.calcParticles(gravitational_constant);
+                            }
                         }
                         // in case of disruption but no kick
                         else {
@@ -976,7 +1009,9 @@ public:
                             _bin.m2 = p2->mass;
                             ASSERT(ecc>=1.0);
                             // kepler orbit to particles using the same ecc anomaly
-                            _bin.calcParticles(gravitational_constant);
+                            if ((ecc-ecc_bk)/ecc>1e-6) {
+                                _bin.calcParticles(gravitational_constant);
+                            }
                         }
                     }
                 }

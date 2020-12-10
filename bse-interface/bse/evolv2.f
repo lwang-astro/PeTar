@@ -1737,7 +1737,7 @@
 *
 * For very close systems include angular momentum loss mechanisms.
 *
-         if(sep.le.10.d0)then
+         if(sep.gt.0.d0)then
             djgr = 8.315d-10*mass(1)*mass(2)*(mass(1)+mass(2))/
      &             (sep*sep*sep*sep)
             f1 = (19.d0/6.d0) + (121.d0/96.d0)*ecc2

@@ -82,6 +82,10 @@ extern "C" {
     void star_(int* kw, double* mass, double* mt, double* tm, double* tn, double* tscls, double* lums, double* GB, double* zpars);
 
     void deltat_(int* kw, double* age, double* tm, double* tn, double* tscls, double* dt, double* dtr);
+    
+    void trdot_(int* kw, double* m0, double* mt, double* r, double* mc, double* rc, double* age, double* dt, double* dtr, double* zpars);
+
+    void trflow_(int* kw, double* m0, double* mt, double* r, double* mc, double* rc, double* age, double* dt, double* semi, double* zpars);
 
     void mix_(double* m0, double* mt, double* age, int* kw, double* zpars);
 
@@ -288,7 +292,7 @@ class BinaryEvent{
 public:
     double record[10][9];
 
-    void recordInitial(const StarParameter& _p1, const StarParameter& _p2, const double _semi, const double _ecc) {
+    void recordInitial(const StarParameter& _p1, const StarParameter& _p2, const double _semi, const double _ecc, const int _type) {
         const int init_index = getEventIndexInit();
         record[0][init_index] = std::min(_p1.tphys, _p2.tphys);
         record[1][init_index] = _p1.mt;
@@ -299,7 +303,7 @@ public:
         record[6][init_index] = _ecc;
         record[7][init_index] = _p1.r;
         record[8][init_index] = _p2.r;
-        record[9][init_index] = 0.0;
+        record[9][init_index] = _type;
     }
     
     int getEventNMax() const {
@@ -761,16 +765,16 @@ public:
     }
 
     //! notice kick priority is higher than others
-    bool isKick(const int _binary_type) {
-        return (_binary_type==13);
-    }
+    //bool isKick(const int _binary_type) {
+    //    return (_binary_type==13);
+    //}
 
     bool isMerger(const int _binary_type) {
         return (_binary_type>=10&&_binary_type<=12);
     }
 
     bool isDisrupt(const int _binary_type) {
-        return (_binary_type==14);
+        return (_binary_type==13);
     }
 
     //! initial SSE/BSE global parameters
@@ -946,14 +950,15 @@ public:
       @param[out] _out1: output parameter of first from evolv2
       @param[out] _out2: output parameter of second from evolv2
       @param[out] _bse_event: BSE event record (bpp array)
-      @param[in] _semi: semi-major axis, only used to record initial semi
-      @param[in,out] _period: period of binary in NB unit, used for BSE
+      @param[in] _semi: semi-major axis, only used to record initial semi [IN unit]
+      @param[in,out] _period: period of binary in NB unit, used for BSE [IN unit]
       @param[in,out] _ecc: eccentricity of binary, used for BSE
+      @param[in] _binary_init_type: initial type of binary
       @param[in] _dt_nb: physical time step in Myr to evolve
       \return error flag: -1: error, 0: normal
      */
     int evolveBinary(StarParameter& _star1, StarParameter& _star2, StarParameterOut& _out1, StarParameterOut& _out2, 
-                     double& _semi, double& _period, double& _ecc, BinaryEvent& _bse_event, const double _dt_nb) {
+                     double& _semi, double& _period, double& _ecc, BinaryEvent& _bse_event, int& _binary_init_type, const double _dt_nb) {
         double tphys = std::max(_star1.tphys, _star2.tphys);
         double tphysf = _dt_nb*tscale + tphys;
         double dtp=tphysf*100.0+1000.0;
@@ -965,7 +970,7 @@ public:
         _out2.dm = _star2.mt;
 
         // backup initial state
-        _bse_event.recordInitial(_star1, _star2, semi_rsun, _ecc);
+        _bse_event.recordInitial(_star1, _star2, semi_rsun, _ecc, _binary_init_type);
 
         if (_star1.tphys<tphys) event_flag = evolveStar(_star1, _out1, tphys);
         if (event_flag<0) return event_flag;
@@ -1079,24 +1084,166 @@ public:
     }
 
     //! get next time step to check in Myr
-    double getTimeStep(StarParameter& _star) {
+    /*!
+      @param[in] _star: star parameter 
+      \return next time step
+    */
+    double getTimeStepStar(StarParameter& _star) {
         if (_star.kw==15) return 1.0e30/tscale; // give very large value to avoid evolve
 
-        double tm, tn, tscls[20], lums[10], gb[10], dtm, dtr;
-        
-        // obtain star parameters
+        // make a copy to avoid overwriting the origin values
         int kw = _star.kw;
-        star_(&kw, &_star.m0, &_star.mt, &tm, &tn, tscls, lums, gb, zpars);
-
-        // get next step
+        double m0 = _star.m0;
+        double mt = _star.mt;
+        double r = _star.r;
+        double mc = _star.mc;
+        double rc = _star.rc;
         double age = _star.tphys-_star.epoch;
-        deltat_(&kw, &age, &tm, &tn, tscls, &dtm, &dtr);
-        _star.kw = kw;
+        double dtm, dtr;
+        // get next step
+        trdot_(&kw, &m0, &mt, &r, &mc, &rc, &age, &dtm, &dtr, zpars);
 
         //assert(dtr>0.0);
         //assert(dtm>0.0);
 
         return std::min(dtr, dtm)/tscale;
     }
-    
+
+    //! call BSE evolv2 for a binary
+    /*!
+      @param[in] _star1: star parameter of first
+      @param[in] _star2: star parameter of second
+      @param[in] _semi: semi-major axis, [IN unit]
+      @param[in] _ecc: eccentricity of binary, used for BSE
+      @param[in] _binary_type: binary type
+      \return next time step in IN unit
+    */
+    double getTimeStepBinary(StarParameter& _star1, StarParameter& _star2,
+                             double& _semi, double& _ecc, int &_binary_type) {
+
+        double dt = getTimeStepStar(_star1);
+        dt = std::min(dt,getTimeStepStar(_star2));
+
+        // mass transfer case
+        if (isMassTransfer(_binary_type)) {
+            int kw[2];
+            double m0[2],mt[2],r[2],mc[2],rc[2],age[2];
+            kw[0] = _star1.kw;
+            m0[0] = _star1.m0;
+            mt[0] = _star1.mt;
+            r[0]  = _star1.r;
+            mc[0] = _star1.mc;
+            rc[0] = _star1.rc;
+            age[0]= _star1.tphys-_star1.epoch;
+
+            kw[1] = _star2.kw;
+            m0[1] = _star2.m0;
+            mt[1] = _star2.mt;
+            r[1]  = _star2.r;
+            mc[1] = _star2.mc;
+            rc[1] = _star2.rc;
+            age[1]= _star2.tphys-_star2.epoch;
+
+            double dtr;
+            double semi_rsun = _semi*rscale;
+            trflow_(kw,m0,mt,r,mc,rc,age,&dtr,&semi_rsun,zpars);
+            dt = std::min(dt,dtr);
+
+        }
+        else if (_star1.kw>=10&&_star1.kw<15&&_star2.kw>=10&&_star2.kw<15) // GR effect
+            dt = std::min(dt, estimateGRTimescale(_star1, _star2, _semi, _ecc)*tscale);
+        
+        return dt/tscale;
+    }
+
+    //! a simple check to determine whether the GR effect is important
+    /*!
+      calculate the relative angular momentum change timescale dJ/J, suggested by Ataru Tanikawa
+      @param[in] _star1: star parameter of first
+      @param[in] _star2: star parameter of second
+      @param[in] _semi: semi-major axis, [IN unit]
+      @param[in] _ecc: eccentricity of binary, used for BSE
+      \return timescale in IN unit
+    */
+    double estimateGRTimescale(StarParameter& _star1, StarParameter& _star2, double& _semi, double& _ecc) {
+        double ecc2 = _ecc*_ecc;
+        double omecc2 = 1.0 - ecc2;
+        double sqome2 = std::sqrt(omecc2);
+        double sqome5 = std::pow(sqome2,5.0);
+        double semi_rsun = _semi*rscale;
+        double semi_rsun2 = semi_rsun*semi_rsun;
+        // (32/5)(G^{7/2}/c^5 is ~8.3x10^{-10} in the unit of Msun, Rsun, and year.
+        double djgr = 8.315e-10*_star1.mt*_star2.mt*(_star1.mt+_star2.mt)/(semi_rsun2*semi_rsun2)*(1.0+0.875*ecc2)/sqome5;
+        double dtr = 1.0e-6/djgr; // in Myr
+        return dtr/tscale;
+    }
+
+    //! estimate roche radius/semi
+    /*!
+      @param[in] _q: mass ratio
+      \return roche radius/semi
+     */
+    double estimateRocheRadiusOverSemi(double& _q) {
+        double p = std::pow(_q,1.0/3.0);
+        double p2= p*p;
+        double rad_semi = 0.49*p2/(0.6*p2 + std::log(1.0+p));
+        return rad_semi;
+    }
+
+    //! a simple check to determine whether call BSE is necessary by given a reference of time step
+    /*!
+      When calling BSE is necessary within the given time step, return true.
+      If KW type <10, check whether peri-center distance < 100*stellar radii (sum); 
+      If KW type >10, check GR effect timescale.
+      @param[in] _star1: star parameter of first
+      @param[in] _star2: star parameter of second
+      @param[in] _semi: semi-major axis, [IN unit]
+      @param[in] _ecc: eccentricity of binary, used for BSE
+      @param[in] _dt: the time step [In unit]
+      \return true: necessary
+    */
+    bool isCallBSENeeded(StarParameter& _star1, StarParameter& _star2, double& _semi, double& _ecc, double& _dt) {
+        if (_star1.kw>=10&&_star1.kw<15&&_star2.kw>=10&&_star2.kw<15) {
+            // check GR effect
+            double dt_gr = estimateGRTimescale(_star1, _star2, _semi, _ecc);
+            if (dt_gr<_dt) return true;
+        }
+        else {
+            // check Roche overflow
+            assert(_star2.mt>0);
+            double q = _star1.mt/_star2.mt;
+            double rl_over_semi1 = estimateRocheRadiusOverSemi(q);
+            q = 1.0/q;
+            double rl_over_semi2 = estimateRocheRadiusOverSemi(q);
+            double rl_over_semi_max =std::max(rl_over_semi1,rl_over_semi2); 
+            double rad = _star1.r + _star2.r;
+            double semi_rsun = _semi*rscale;
+            double rcrit = std::max(rad,rl_over_semi_max*semi_rsun);
+            double peri_rsun = semi_rsun*(1-_ecc);
+            if (rcrit>0.5*peri_rsun) {
+                int kw[2];
+                double m0[2],mt[2],r[2],mc[2],rc[2],age[2];
+                kw[0] = _star1.kw;
+                m0[0] = _star1.m0;
+                mt[0] = _star1.mt;
+                r[0]  = _star1.r;
+                mc[0] = _star1.mc;
+                rc[0] = _star1.rc;
+                age[0]= _star1.tphys-_star1.epoch;
+
+                kw[1] = _star2.kw;
+                m0[1] = _star2.m0;
+                mt[1] = _star2.mt;
+                r[1]  = _star2.r;
+                mc[1] = _star2.mc;
+                rc[1] = _star2.rc;
+                age[1]= _star2.tphys-_star2.epoch;
+
+                double dtr;
+                trflow_(kw,m0,mt,r,mc,rc,age,&dtr,&semi_rsun,zpars);
+                if (dtr<_dt) return true;
+            }
+        }
+        return false;
+    }
 };

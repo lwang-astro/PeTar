@@ -304,11 +304,14 @@ int main(int argc, char** argv){
             double tend = time*bse_manager.tscale;
             bin[i].period0 = bin[i].period;
             bin[i].ecc0 = bin[i].ecc;
+            int bin_type_init=0;
+            int bin_type_last=1;
             while (bse_manager.getTime(bin[i].star[0])<tend) {
                 // time step
-                double dt1 = bse_manager.getTimeStep(bin[i].star[0]);
-                double dt2 = bse_manager.getTimeStep(bin[i].star[1]);
-                double dt = std::min(dt1,dt2);
+                //double dt1 = bse_manager.getTimeStep(bin[i].star[0]);
+                //double dt2 = bse_manager.getTimeStep(bin[i].star[1]);
+                //double dt = std::min(dt1,dt2);
+                double dt = bse_manager.getTimeStepBinary(bin[i].star[0],bin[i].star[1],bin[i].semi,bin[i].ecc,bin_type_last);
                 dt = std::max(dt,dtmin);
                 dt = std::min(tend-bse_manager.getTime(bin[i].star[0]), dt);
                 double mtot = bin[i].star[0].mt + bin[i].star[1].mt;
@@ -319,20 +322,22 @@ int main(int argc, char** argv){
                 bin[i].semi = std::pow(period_myr*period_myr*G*mtot/(4*PI*PI),1.0/3.0)*pc_to_rsun;
                 
                 // evolve function
-                int error_flag=bse_manager.evolveBinary(bin[i].star[0],bin[i].star[1],bin[i].out[0],bin[i].out[1],bin[i].semi,bin[i].period,bin[i].ecc,bin[i].bse_event, dt);
+                int error_flag=bse_manager.evolveBinary(bin[i].star[0],bin[i].star[1],bin[i].out[0],bin[i].out[1],bin[i].semi,bin[i].period,bin[i].ecc,bin[i].bse_event, bin_type_init, dt);
                 int nmax = bin[i].bse_event.getEventNMax();
                 for (int k=0; k<nmax; k++) {
                     int binary_type = bin[i].bse_event.getType(k);
                     if (binary_type>0) {
+                        bin_type_last = binary_type;
 #pragma omp critical
                         {
-                            std::cout<<" ID="<<i<<" index="<<k<<" ";
+                            std::cout<<" ID="<<i<<" index="<<k<<" "<<" dt="<<dt;
                             bse_manager.printBinaryEventOne(std::cout, bin[i].bse_event, k);
                             std::cout<<std::endl;
                         }
                     }
                     else if (binary_type<0) break;
                 }
+                bin_type_init = bin_type_last;
 
                 for (int k=0; k<2; k++) {
                     double dv[4];
@@ -391,7 +396,7 @@ int main(int argc, char** argv){
             bool kick_print_flag=false;
             double tend = time*bse_manager.tscale;
             while (bse_manager.getTime(star[i])<tend) {
-                double dt = std::max(bse_manager.getTimeStep(star[i]),dtmin);
+                double dt = std::max(bse_manager.getTimeStepStar(star[i]),dtmin);
                 dt = std::min(tend-bse_manager.getTime(star[i]), dt);
                 int error_flag=bse_manager.evolveStar(star[i],output[i],dt);
                 double dv[4];
