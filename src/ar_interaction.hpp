@@ -805,12 +805,12 @@ public:
                 StarParameterOut out[2];
                 _bin.calcOrbit(gravitational_constant);
                 Float ecc = _bin.ecc;
-                Float ecc_bk = ecc;
+                //Float ecc_bk = ecc;
                 Float semi = _bin.semi;
                 //Float semi_bk =semi;
                 Float mtot = p1->mass+p2->mass;
                 Float period = _bin.period;
-                Float period_bk = period;
+                //Float period_bk = period;
                 COMM::Vector3<Float> pos_red(p2->pos[0] - p1->pos[0], p2->pos[1] - p1->pos[1], p2->pos[2] - p1->pos[2]);
                 COMM::Vector3<Float> vel_red(p2->vel[0] - p1->vel[0], p2->vel[1] - p1->vel[1], p2->vel[2] - p1->vel[2]);
                 Float drdv = pos_red * vel_red;
@@ -993,10 +993,10 @@ public:
                             _bin.m1 = p1->mass;
                             _bin.m2 = p2->mass;
                             _bin.calcSemiFromPeriod(gravitational_constant);
-                            if (((ecc-ecc_bk)/(1-ecc)>0.01||(period-period_bk)/period>1e-2)) {
+                            //if (((ecc-ecc_bk)/(1-ecc)>0.01||(period-period_bk)/period>1e-2)) {
                                 // kepler orbit to particles using the same ecc anomaly
-                                _bin.calcParticles(gravitational_constant);
-                            }
+                            _bin.calcParticles(gravitational_constant);
+                            //}
                         }
                         // in case of disruption but no kick
                         else {
@@ -1009,9 +1009,9 @@ public:
                             _bin.m2 = p2->mass;
                             ASSERT(ecc>=1.0);
                             // kepler orbit to particles using the same ecc anomaly
-                            if ((ecc-ecc_bk)/ecc>1e-6) {
-                                _bin.calcParticles(gravitational_constant);
-                            }
+                            //if ((ecc-ecc_bk)/ecc>1e-6) {
+                            _bin.calcParticles(gravitational_constant);
+                            //}
                         }
                     }
                 }
