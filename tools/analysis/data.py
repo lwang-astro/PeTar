@@ -11,9 +11,18 @@ HEADER_OFFSET=24 # header offset in bytes for snapshots with the BINARY format
 class PeTarDataHeader():
     """ Petar snapshot data header
     members:
-        fid: file id
-        n: number of particles
-        time: time of snapshot
+        fid: int 
+           file id
+        n: int 
+           number of particles
+        time: float 
+           time of snapshot
+        *pos_offset: list of float (length of 3)
+           position offset of particle system
+        *vel_offset: list of float (length of 3)
+           velocity offset of particle system
+  
+        pos_offset and vel_offset only exist when keyword argument 'external_mode' is not none
     """
 
     def __init__(self, _filename=None, **kwargs):
@@ -27,10 +36,17 @@ class PeTarDataHeader():
             Keyword arguments:
             snapshot_format: string (ascii)
                 Data format of snapshot files: binary or ascii
+            external_mode: string (none)
+                PeTar external mode (set in configure): galpy, none 
+                If not none, this option indicates the pos_offset and vel_offset exists 
         """
         self.fid = int(0)
         self.n = int(0)
         self.time = 0.0
+        if ('external_mode' in kwargs.keys()):
+            if (kwargs['external_mode']!='none'):
+                self.pos_offset=[0.0,0.0,0.0]
+                self.vel_offset=[0.0,0.0,0.0]
         
         if (_filename!=None): self.read(_filename,**kwargs)
 
@@ -45,25 +61,49 @@ class PeTarDataHeader():
             Keyword arguments:
             snapshot_format: string (ascii)
                 Data format of snapshot files: binary or ascii
+            external_mode: string (none)
+                PeTar external mode (set in configure): galpy, none 
+                If not none, this option indicates the pos_offset and vel_offset exists 
         """
         snapshot_format='ascii'
         if ('snapshot_format' in kwargs.keys()): snapshot_format=kwargs['snapshot_format']
+        offset_flag=False
+        if ('external_mode' in kwargs.keys()):
+            if (kwargs['external_mode']!='none'): offset_flag=True
 
         if (snapshot_format=='ascii'):
             fp = open(_filename, 'r')
             header=fp.readline()
-            file_id, n_glb, t = header.split()
-            fp.close()
+            if (offset_flag):
+                file_id, n_glb, t, x, y, z, vx, vy, vz = header.split()
+                fp.close()
 
-            self.fid = int(file_id)
-            self.n = int(n_glb)
-            self.time = float(t)
+                self.fid = int(file_id)
+                self.n = int(n_glb)
+                self.time = float(t)
+                self.pos_offset = [float(x),float(y),float(z)]
+                self.vel_offset = [float(vx),float(vy),float(vz)]
+            else:
+                file_id, n_glb, t = header.split()
+                fp.close()
+
+                self.fid = int(file_id)
+                self.n = int(n_glb)
+                self.time = float(t)
 
         elif (snapshot_format=='binary'):
-            fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',np.float64)]),count=1)
-            self.file_id = fp['file_id'][0]
-            self.n_glb = fp['n_glb'][0]
-            self.time = fp['time'][0]
+            if (offset_flag):
+                fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',np.float64),('x',np.float64),('y',np.float64),('z',np.float64),('vx',np.float64),('vy',np.float64),('vz',np.float64)]),count=1)
+                self.file_id = fp['file_id'][0]
+                self.n_glb = fp['n_glb'][0]
+                self.time = fp['time'][0]
+                self.pos_offset = [fp['x'][0], fp['y'][0], fp['z'][0]]
+                self.vel_offset = [fp['vx'][0], fp['vy'][0], fp['vz'][0]]
+            else:
+                fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',np.float64)]),count=1)
+                self.file_id = fp['file_id'][0]
+                self.n_glb = fp['n_glb'][0]
+                self.time = fp['time'][0]
         else: 
             raise ValueError('Snapshot format unknown, should be binary or ascii, given', snapshot_format)
 
@@ -169,8 +209,8 @@ class Particle(SimpleParticle):
         keys_ptcl_add = [['r_search',np.float64], ['id',np.int64], ['mass_bk',np.int64], ['status',np.int64], ['r_in',np.float64], ['r_out',np.float64]]
         keys_hermite_add = [['dt',np.float64],['time',np.float64],['acc',(np.float64,3)],['jerk',(np.float64,3)],['pot',np.float64]]
         keys_soft_add = [['acc_soft',(np.float64,3)], ['pot',np.float64], ['pot_soft',np.float64], ['n_nb',np.int64]]
-        if ('external_pot' in kwargs.keys()):
-            if (kwargs['external_pot']!='none'):
+        if ('external_mode' in kwargs.keys()):
+            if (kwargs['external_mode']!='none'):
                 keys_soft_add = [['acc_soft',(np.float64,3)], ['pot',np.float64], ['pot_soft',np.float64], ['pot_ext',np.float64], ['n_nb',np.int64]]
 
         keys_end =  keys_ptcl_add + keys_soft_add

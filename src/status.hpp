@@ -185,7 +185,7 @@ public:
       @param[in] _mode: calculation mode, 1: center-of-the-mass; 2: number (no mass) weighted center
      */
     template <class Tsoft>
-    void calcAndShiftCenterOfMass(Tsoft* _tsys, const PS::S64 _n, const int _mode=1, const bool initial_flag=false) {
+    void calcAndShiftCenterOfMass(Tsoft* _tsys, const PS::S64 _n, const int _mode=2, const bool initial_flag=false) {
         if (initial_flag) {
             if(pcm.is_center_shift_flag) {
                 std::cerr<<"Error: particle system is in c.m. frame, cannot initial c.m."<<std::endl;

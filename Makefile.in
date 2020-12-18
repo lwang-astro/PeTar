@@ -60,6 +60,7 @@ endif
 
 ifneq ($(ext_mode),off)
 MT_FLAGS += -D EXTERNAL_POT_IN_PTCL
+MT_FLAGS += -D RECORD_CM_IN_HEADER
 endif
 ifeq ($(ext_mode),galpy)
 MT_FLAGS += -D GALPY

@@ -530,6 +530,10 @@ public:
                              <<"             1. File_ID: 0 for initialization, else for restarting\n"
                              <<"             2. N_particle \n"
                              <<"             3. Time\n"
+#ifdef RECORD_CM_IN_HEADER
+                             <<"             4-6: offset of system centeral position (assuming galactic center is the coordiante origin in the case of Galpy)\n"
+                             <<"             7-9: offset of system centeral velocity\n"
+#endif
                              <<"            Following lines:\n";
                     FPSoft::printTitleWithMeaning(std::cout,0,13);
                     std::cout<<"          PS: (*) show initialization values which should be used together with FILE_ID = 0"<<std::endl;
@@ -1022,7 +1026,12 @@ public:
         for (int i=0; i<n_loc_all; i++) {
             auto& pi = system_soft[i];
             double acc[3], pot;
+#ifdef RECORD_CM_IN_HEADER
+            PS::F64vec pos_correct=pi.pos + stat.pcm.pos;
+            galpy_manager.calcAccPot(acc, pot, stat.time, &pos_correct[0]);
+#else
             galpy_manager.calcAccPot(acc, pot, stat.time, &pi.pos[0]);
+#endif
             pi.acc[0] += acc[0]; 
             pi.acc[1] += acc[1]; 
             pi.acc[2] += acc[2]; 
@@ -1041,13 +1050,10 @@ public:
 #endif
     }
 
-    // correct vel_cm due to external potential for rsearch calculation
+    // correct c.m. vel due to external potential to avoid large rsearch 
     void correctPtclVelCM(const PS::F64& _dt) {
-#ifdef PROFILE
-        profile.other.start();
-#endif
         PS::F64vec dv=PS::F64vec(0.0);
-
+ 
 #ifdef GALPY
         PS::F64vec acc;
         PS::F64 pot;
@@ -1056,16 +1062,31 @@ public:
         dv = acc*_dt;
 #endif        
 
-        Ptcl::vel_cm += dv;
+        stat.pcm.vel += dv;
+        for (int i=0; i<stat.n_all_loc; i++) system_soft[i].vel -= dv;
+
+        //auto& adr = search_cluster.getAdrSysOneCluster();
+        //for (int i=0; i<adr.size(); i++) system_soft[adr[i]].vel -= dv;
+
+        auto& ptcl_iso=system_hard_isolated.getPtcl();
+        for (int i=0; i<ptcl_iso.size(); i++) ptcl_iso[i].vel -= dv;
+
+        //const PS::S64 n_tot= system_soft.getNumberOfParticleLocal();
+        //const PS::S32 n_artifical_per_group = hard_manager.ap_manager.getArtificialParticleN();
+        //for(PS::S32 i=stat.n_real_loc; i<n_tot; i+= n_artifical_per_group) {
+        //    auto* pcm = hard_manager.ap_manager.getCMParticles(&(system_soft[i]));
+        //    pcm->vel -= dv;
+        //}        
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        auto& ptcl_con=system_hard_connected.getPtcl();
+        for (int i=0; i<ptcl_con.size(); i++) ptcl_con[i].vel -= dv;
+#endif
+
+      //Ptcl::vel_cm += dv;
 //#ifdef PETAR_DEBUG
 //        if (my_rank==0) std::cerr<<"Ptcl::vel_cm: "<<Ptcl::vel_cm<<std::endl;
 //#endif
-
-#ifdef PROFILE
-        profile.other.barrier();
-        PS::Comm::barrier();
-        profile.other.end();
-#endif
     }
 
 #ifdef KDKDK_4TH
@@ -1292,6 +1313,7 @@ public:
 #ifdef PROFILE
         profile.kick.start();
 #endif
+
         /// Member mass are recovered
         // single and reset particle type to single (due to binary disruption)
         kickOne(system_soft, _dt_kick, search_cluster.getAdrSysOneCluster());
@@ -1308,6 +1330,12 @@ public:
         // send kicked particle from sending list, and receive remote single particle
         search_cluster.SendSinglePtcl(system_soft, system_hard_connected.getPtcl());
 #endif
+
+#ifdef RECORD_CM_IN_HEADER
+        // correct Ptcl:vel_cm
+        correctPtclVelCM(_dt_kick);
+#endif
+
 
         time_kick += _dt_kick;
 
@@ -1439,6 +1467,8 @@ public:
         profile.hard_connected.end();
 #endif
 #endif
+        // drift cm
+        stat.pcm.pos += stat.pcm.vel*_dt_drift;
         
         if (n_interrupt_glb==0) Ptcl::group_data_mode = GroupDataMode::cm;
         
@@ -1711,7 +1741,11 @@ public:
         if (_initial_flag) {
             // calculate initial energy
             stat.energy.clear();
+#ifdef RECORD_CM_IN_HEADER
+            stat.energy.calc(&system_soft[0], stat.n_real_loc, true, &(stat.pcm.pos), &(stat.pcm.vel));
+#else
             stat.energy.calc(&system_soft[0], stat.n_real_loc, true);
+#endif
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
             stat.energy.getSumMultiNodes(true);
 #endif
@@ -1719,9 +1753,10 @@ public:
             stat.energy.ekin_sd = stat.energy.ekin;
             stat.energy.epot_sd = stat.energy.epot;
 #endif
+#ifndef RECORD_CM_IN_HEADER
             stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);
-            Ptcl::vel_cm = stat.pcm.vel;
-            //stat.calcAndShiftCenterOfMass(&system_soft[0], stat.n_real_loc, 1, true);
+#endif
+            //Ptcl::vel_cm = stat.pcm.vel;
 
         }
         else {
@@ -1730,8 +1765,11 @@ public:
             PS::F64 energy_old = stat.energy.ekin + stat.energy.epot;
             stat.energy.etot_sd_ref -= stat.energy.ekin_sd + stat.energy.epot_sd - energy_old;
 #endif
-
+#ifdef RECORD_CM_IN_HEADER
+            stat.energy.calc(&system_soft[0], stat.n_real_loc,false, &(stat.pcm.pos), &(stat.pcm.vel));
+#else
             stat.energy.calc(&system_soft[0], stat.n_real_loc);
+#endif
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
             stat.energy.getSumMultiNodes();
 #endif
@@ -1773,8 +1811,10 @@ public:
             system_hard_connected.energy.clear();
 #endif
 #endif
+#ifndef RECORD_CM_IN_HEADER
             stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);
-            Ptcl::vel_cm = stat.pcm.vel;
+#endif
+            //Ptcl::vel_cm = stat.pcm.vel;
         }
         //stat.shiftToCenterOfMassFrame(&system_soft[0], stat.n_real_loc);
 
@@ -1810,6 +1850,11 @@ public:
             file_header.n_body = stat.n_real_glb;
             file_header.time = stat.time;
             file_header.nfile++;
+#ifdef RECORD_CM_IN_HEADER
+            file_header.pos_offset = stat.pcm.pos;
+            file_header.vel_offset = stat.pcm.vel;
+#endif
+
             std::string fname = input_parameters.fname_snp.value+"."+std::to_string(file_header.nfile);
 #ifdef PETAR_DEBUG
             assert(system_soft.getNumberOfParticleLocal()== stat.n_all_loc);
@@ -2580,6 +2625,18 @@ public:
         stat.time = file_header.time;
         stat.n_real_glb = stat.n_all_glb = n_glb;
         stat.n_real_loc = stat.n_all_loc = n_loc;
+#ifdef RECORD_CM_IN_HEADER
+        PS::F64 mass = 0.0;
+        for (int i=0; i<n_loc; i++) mass += system_soft[i].mass;
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        stat.pcm.mass = PS::Comm::getSum(mass);
+#else        
+        stat.pcm.mass = mass;
+#endif
+        stat.pcm.pos = file_header.pos_offset;
+        stat.pcm.vel = file_header.vel_offset;
+        stat.pcm.is_center_shift_flag = true;
+#endif        
 
         input_parameters.n_glb.value = n_glb;
 
@@ -2628,7 +2685,11 @@ public:
         stat.time = 0.0;
         stat.n_real_glb = stat.n_all_glb = n_glb;
         stat.n_real_loc = stat.n_all_loc = n_loc;
-
+#ifdef RECORD_CM_IN_HEADER
+        stat.calcAndShiftCenterOfMass(&system_soft[0], n_loc, 2, true);
+        file_header.pos_offset = stat.pcm.pos;
+        file_header.vel_offset = stat.pcm.vel;
+#endif
         input_parameters.n_glb.value = n_glb;
 
         read_data_flag = true;
@@ -2696,6 +2757,12 @@ public:
         stat.time = 0.0;
         stat.n_real_glb = stat.n_all_glb = n_glb;
         stat.n_real_loc = stat.n_all_loc = n_loc;
+#ifdef RECORD_CM_IN_HEADER
+        stat.calcAndShiftCenterOfMass(&system_soft[0], n_loc, 2, true);
+
+        file_header.pos_offset = stat.pcm.pos;
+        file_header.vel_offset = stat.pcm.vel;
+#endif
 
         input_parameters.n_glb.value = n_glb;
 
@@ -3008,7 +3075,7 @@ public:
         Ptcl::r_search_min = r_search_min;
         Ptcl::mean_mass_inv = 1.0/mass_average;
         Ptcl::r_group_crit_ratio = r_bin/r_in;
-        Ptcl::vel_cm = vel_cm_glb;
+        //Ptcl::vel_cm = vel_cm_glb;
         escaper.r_escape_sq = input_parameters.r_escape.value*input_parameters.r_escape.value;
 	escaper.check_energy_flag = (input_parameters.r_escape.value>=0);
 
@@ -3083,8 +3150,12 @@ public:
 
                 pi_cm.mass = pi_cm.vel.x = pi_cm.vel.y = pi_cm.vel.z = 0.0;
             }
+#ifdef RECORD_CM_IN_HEADER
+            stat.calcAndShiftCenterOfMass(&system_soft[0], stat.n_real_loc);
+#else
             stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);
-            Ptcl::vel_cm = stat.pcm.vel;
+#endif
+            //Ptcl::vel_cm = stat.pcm.vel;
         }
 
 #ifdef GALPY
@@ -3432,6 +3503,9 @@ public:
             // remove artificial and ununsed particles in system_soft.
             removeParticles();
 
+            // update center
+            stat.calcAndShiftCenterOfMass(&system_soft[0], stat.n_real_loc);
+
             // >9. Domain decomposition
             domainDecompose();
 
@@ -3532,9 +3606,6 @@ public:
             // >6. kick 
             kick(dt_kick);
 
-            // correct Ptcl:vel_cm
-            correctPtclVelCM(dt_kick);
-
             // >7. write back data
             if(output_flag||interrupt_flag) {
                 // update global particle system due to kick
@@ -3612,8 +3683,6 @@ public:
 
                 kick(dt_kick);
 
-                // correct Ptcl:vel_cm
-                correctPtclVelCM(dt_kick);
             }
 
 

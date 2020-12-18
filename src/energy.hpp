@@ -197,11 +197,12 @@ public:
       @param[in] _particles: particle array
       @param[in] _n_particle: number of particles
       @param[in] _init_flag: if true, set etot, etot_sd and L reference
+      @param[in] _vel_offset: velocity shift to calculate kinetic energy, if not given, assume it is zero
      */
     template<class Tptcl>
     void calc(const Tptcl* _particles,
               const PS::S32 _n_particle, 
-              const bool _init_flag=false) {
+              const bool _init_flag=false, const PS::F64vec* _pos_offset=NULL, const PS::F64vec* _vel_offset=NULL) {
         assert(Ptcl::group_data_mode == GroupDataMode::artificial);
         ekin = epot = 0.0;
         L = PS::F64vec(0.0);
@@ -215,14 +216,20 @@ public:
             assert(_particles[i].id>0&&(pi_artificial.isMember()||pi_artificial.isSingle()));
             assert(mi>0);
 #endif
+
+            PS::F64vec pi = _particles[i].pos;
+            if (_pos_offset!=NULL) pi += *_pos_offset;
+
             PS::F64vec vi = _particles[i].vel;
+            if (_vel_offset!=NULL) vi += *_vel_offset;
+
 #ifdef EXTERNAL_POT_IN_PTCL
             epot += 0.5 * mi * (_particles[i].pot_tot + _particles[i].pot_ext);
 #else
             epot += 0.5 * mi * _particles[i].pot_tot;
 #endif
             ekin += 0.5 * mi * vi * vi;
-            L += _particles[i].pos ^ (mi*vi);
+            L += pi ^ (mi*vi);
         }
         Lt = std::sqrt(L*L);
         if (_init_flag) {

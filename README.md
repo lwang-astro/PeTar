@@ -576,6 +576,8 @@ header=petar.PeTarDataHeader('data.0',snapshot_format='binary')
 ```
 After reading, header contain three members: `fid`,`n` and `time`, which represent the file ID, number of particles and time (in unit as that of the input model) of the snapshot respectively.
 
+If `external_mode=galpy`, the header contain additional members: the offset of position and velocity, `pos_offset` and `vel_offset`, which represent the shift of center of the system in the Galactic tidal field (assuming the coordinate origin is the galactic center).
+
 To read the particle content in ASCII format:
 ```
 particle=petar.Particle(interrupt_mode='bse')
