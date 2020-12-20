@@ -77,7 +77,7 @@ if [ $convert == 2 ]; then
     awk -v ig=$igline -v rs=$rscale -v G=$G -v ms=$mscale 'BEGIN{vs=sqrt(G*ms/rs)} {OFMT="%.15g"; if (NR>ig) print $1*ms,$2*rs,$3*rs,$4*rs,$5*vs,$6*vs,$7*vs}' $fname>$fout.scale__
     if [[ x$cm_array != x ]]; then
 	cm_array_scale=(`echo ${cm_array[@]} | awk -v rs=$rscale -v G=$G -v ms=$mscale 'BEGIN{vs=sqrt(G*ms/rs)} {OFMT="%.15g"; print $1*rs,$2*rs,$3*rs,$4*vs,$5*vs,$6*vs}'`)
-	cm_array=cm_array_scale
+	cm_array=${cm_array_scale[@]}
 	echo 'cm offset (scaled): pos: '${cm_array[0]}' '${cm_array[1]}' '${cm_array[2]}' vel: '${cm_array[3]}' '${cm_array[4]}' '${cm_array[5]}
     fi
     mscale=1.0 # use for scaling from Petar unit to stellar evolution unit, since now two units are same, set mscale to 1.0
@@ -88,7 +88,7 @@ elif [ $convert == 1 ]; then
     mscale=1.0 # use for scaling from Petar unit to stellar evolution unit, since now two units are same, set mscale to 1.0
     if [[ x$cm_array != x ]]; then
 	cm_array_scale=(`echo ${cm_array[@]} | awk -v rs=$rscale -v vs=$vscale '{OFMT="%.15g"; print $1*rs,$2*rs,$3*rs,$4*vs,$5*vs,$6*vs}'`)
-	cm_array=cm_array_scale
+	cm_array=${cm_array_scale[@]}
 	echo 'cm offset (scaled): pos: '${cm_array[0]}' '${cm_array[1]}' '${cm_array[2]}' vel: '${cm_array[3]}' '${cm_array[4]}' '${cm_array[5]}
     fi
 else
