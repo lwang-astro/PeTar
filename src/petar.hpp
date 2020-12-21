@@ -3503,8 +3503,10 @@ public:
             // remove artificial and ununsed particles in system_soft.
             removeParticles();
 
+#ifdef RECORD_CM_IN_HEADER
             // update center
             stat.calcAndShiftCenterOfMass(&system_soft[0], stat.n_real_loc);
+#endif
 
             // >9. Domain decomposition
             domainDecompose();
