@@ -7,7 +7,7 @@ do
     case $1 in
 	-h) shift;
 	    echo 'Gether separated output data due to multiple MPI processes (file suffixes: '$suffixes')';
-	    echo 'Usage: petar.gether [options] [data filename prefix]';
+	    echo 'Usage: petar.data.gether [options] [data filename prefix]';
 	    echo '       data filename prefix is defined by "petar -f", defaulted case is "data".'
 	    echo 'Options:';
 	    echo '  -f: output filename prefix (default: data filename prefix)';
