@@ -861,7 +861,7 @@ public:
                         bool first_event = (i==0);
                         if (stellar_evolution_write_flag) {
                             if ((first_event&&binary_type_init!=binary_type)||!first_event) {
-                                if (!(binary_type_init==11&&binary_type==3)) {// avoid repeating printing Start Roche and BSS
+                                if (!(binary_type_init==11&&(binary_type==3||binary_type==11))) {// avoid repeating printing Start Roche and BSS
 #pragma omp critical
                                     {
                                         bse_manager.printBinaryEventColumnOne(fout_bse, bin_event, i, WRITE_WIDTH);

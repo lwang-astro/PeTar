@@ -292,7 +292,7 @@ struct StarParameterOut{
   @param[in] _q: mass ratio
   \return roche radius/semi
 */
-double EstimateRocheRadiusOverSemi(double& _q) {
+static double EstimateRocheRadiusOverSemi(double& _q) {
     double p = std::pow(_q,1.0/3.0);
     double p2= p*p;
     double rad_semi = 0.49*p2/(0.6*p2 + std::log(1.0+p));
@@ -308,7 +308,7 @@ double EstimateRocheRadiusOverSemi(double& _q) {
   @param[in] _ecc: eccentricity of binary, used for BSE
   \return timescale in Myr
 */
-double EstimateGRTimescale(StarParameter& _star1, StarParameter& _star2, double& _semi, double& _ecc) {
+static double EstimateGRTimescale(StarParameter& _star1, StarParameter& _star2, double& _semi, double& _ecc) {
     double ecc2 = _ecc*_ecc;
     double omecc2 = 1.0 - ecc2;
     double sqome2 = std::sqrt(omecc2);
