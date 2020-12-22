@@ -287,6 +287,40 @@ struct StarParameterOut{
 
 };
 
+//! estimate roche radius/semi
+/*!
+  @param[in] _q: mass ratio
+  \return roche radius/semi
+*/
+double EstimateRocheRadiusOverSemi(double& _q) {
+    double p = std::pow(_q,1.0/3.0);
+    double p2= p*p;
+    double rad_semi = 0.49*p2/(0.6*p2 + std::log(1.0+p));
+    return rad_semi;
+}
+
+//! a simple check to determine whether the GR effect is important
+/*!
+  calculate the relative angular momentum change timescale dJ/J, suggested by Ataru Tanikawa
+  @param[in] _star1: star parameter of first
+  @param[in] _star2: star parameter of second
+  @param[in] _semi: semi-major axis, [Rsun]
+  @param[in] _ecc: eccentricity of binary, used for BSE
+  \return timescale in Myr
+*/
+double EstimateGRTimescale(StarParameter& _star1, StarParameter& _star2, double& _semi, double& _ecc) {
+    double ecc2 = _ecc*_ecc;
+    double omecc2 = 1.0 - ecc2;
+    double sqome2 = std::sqrt(omecc2);
+    double sqome5 = std::pow(sqome2,5.0);
+    double semi2 = _semi*_semi;
+    // (32/5)(G^{7/2}/c^5 is ~8.3x10^{-10} in the unit of Msun, Rsun, and year.
+    double djgr = 8.315e-10*_star1.mt*_star2.mt*(_star1.mt+_star2.mt)/(semi2*semi2)*(1.0+0.875*ecc2)/sqome5;
+    double dtr = 1.0e-6/djgr; // in Myr
+    return dtr;
+}
+
+
 //! BSE event recorder class
 class BinaryEvent{
 public:
@@ -301,8 +335,12 @@ public:
         record[4][init_index] = _p2.kw;
         record[5][init_index] = _semi;
         record[6][init_index] = _ecc;
-        record[7][init_index] = _p1.r;
-        record[8][init_index] = _p2.r;
+        double q = _p1.mt/_p2.mt;
+        double rl1 = EstimateRocheRadiusOverSemi(q);
+        q = 1.0/q;
+        double rl2 = EstimateRocheRadiusOverSemi(q);
+        record[7][init_index] = _p1.r/(rl1*_semi); 
+        record[8][init_index] = _p2.r/(rl2*_semi);
         record[9][init_index] = _type;
     }
     
@@ -327,8 +365,8 @@ public:
             <<" type2= "<<int(record[4][index])
             <<" semi[R*]= "<<record[5][index]
             <<" ecc= "<<record[6][index]
-            <<" rad1[R*]= "<<record[7][index]
-            <<" rad2[R*]= "<<record[8][index];
+            <<" rad1[Ro]= "<<record[7][index]
+            <<" rad2[Ro]= "<<record[8][index];
     }
 
     //! print titles of class members using column style
@@ -344,8 +382,8 @@ public:
              <<std::setw(_width)<<"type2"
              <<std::setw(_width)<<"semi[R*]"
              <<std::setw(_width)<<"ecc"
-             <<std::setw(_width)<<"rad1[R*]"
-             <<std::setw(_width)<<"rad2[R*]"
+             <<std::setw(_width)<<"rad1[Ro]"
+             <<std::setw(_width)<<"rad2[Ro]"
              <<std::setw(_width)<<"btype";
     }
 
@@ -1150,45 +1188,14 @@ public:
             dt = std::min(dt,dtr);
 
         }
-        else if (_star1.kw>=10&&_star1.kw<15&&_star2.kw>=10&&_star2.kw<15) // GR effect
-            dt = std::min(dt, estimateGRTimescale(_star1, _star2, _semi, _ecc)*tscale);
+        else if (_star1.kw>=10&&_star1.kw<15&&_star2.kw>=10&&_star2.kw<15) {// GR effect
+            double semi_rsun = _semi*rscale;
+            dt = std::min(dt, EstimateGRTimescale(_star1, _star2, semi_rsun, _ecc));
+        }
         
         return dt/tscale;
     }
 
-    //! a simple check to determine whether the GR effect is important
-    /*!
-      calculate the relative angular momentum change timescale dJ/J, suggested by Ataru Tanikawa
-      @param[in] _star1: star parameter of first
-      @param[in] _star2: star parameter of second
-      @param[in] _semi: semi-major axis, [IN unit]
-      @param[in] _ecc: eccentricity of binary, used for BSE
-      \return timescale in IN unit
-    */
-    double estimateGRTimescale(StarParameter& _star1, StarParameter& _star2, double& _semi, double& _ecc) {
-        double ecc2 = _ecc*_ecc;
-        double omecc2 = 1.0 - ecc2;
-        double sqome2 = std::sqrt(omecc2);
-        double sqome5 = std::pow(sqome2,5.0);
-        double semi_rsun = _semi*rscale;
-        double semi_rsun2 = semi_rsun*semi_rsun;
-        // (32/5)(G^{7/2}/c^5 is ~8.3x10^{-10} in the unit of Msun, Rsun, and year.
-        double djgr = 8.315e-10*_star1.mt*_star2.mt*(_star1.mt+_star2.mt)/(semi_rsun2*semi_rsun2)*(1.0+0.875*ecc2)/sqome5;
-        double dtr = 1.0e-6/djgr; // in Myr
-        return dtr/tscale;
-    }
-
-    //! estimate roche radius/semi
-    /*!
-      @param[in] _q: mass ratio
-      \return roche radius/semi
-     */
-    double estimateRocheRadiusOverSemi(double& _q) {
-        double p = std::pow(_q,1.0/3.0);
-        double p2= p*p;
-        double rad_semi = 0.49*p2/(0.6*p2 + std::log(1.0+p));
-        return rad_semi;
-    }
 
     //! a simple check to determine whether call BSE is necessary by given a reference of time step
     /*!
@@ -1205,16 +1212,17 @@ public:
     bool isCallBSENeeded(StarParameter& _star1, StarParameter& _star2, double& _semi, double& _ecc, double& _dt) {
         if (_star1.kw>=10&&_star1.kw<15&&_star2.kw>=10&&_star2.kw<15) {
             // check GR effect
-            double dt_gr = estimateGRTimescale(_star1, _star2, _semi, _ecc);
-            if (dt_gr<_dt) return true;
+            double semi_rsun = _semi*rscale;
+            double dt_gr = EstimateGRTimescale(_star1, _star2, semi_rsun, _ecc);
+            if (dt_gr<_dt*tscale) return true;
         }
         else {
             // check Roche overflow
             assert(_star2.mt>0);
             double q = _star1.mt/_star2.mt;
-            double rl_over_semi1 = estimateRocheRadiusOverSemi(q);
+            double rl_over_semi1 = EstimateRocheRadiusOverSemi(q);
             q = 1.0/q;
-            double rl_over_semi2 = estimateRocheRadiusOverSemi(q);
+            double rl_over_semi2 = EstimateRocheRadiusOverSemi(q);
             double rl_over_semi_max =std::max(rl_over_semi1,rl_over_semi2); 
             double rad = _star1.r + _star2.r;
             double semi_rsun = _semi*rscale;
@@ -1241,7 +1249,7 @@ public:
 
                 double dtr;
                 trflow_(kw,m0,mt,r,mc,rc,age,&dtr,&semi_rsun,zpars);
-                if (dtr<_dt) return true;
+                if (dtr<_dt*tscale) return true;
             }
         }
         return false;

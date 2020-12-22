@@ -95,8 +95,8 @@ class BSEBinaryEvent(DictNpArrayMix):
         type2 (1D): stellar type of component 2
         semi (1D): semi-major axis (Rsun)
         ecc  (1D): eccentricity
-        rad1 (1D): stellar radius of component 1 (Rsun)
-        rad2 (1D): stellar radius of component 2 (Rsun)
+        rad1 (1D): stellar radius of component 1 (Roche radius 1)
+        rad2 (1D): stellar radius of component 2 (Roche radius 2)
         binary_type (1D): BSE binary type
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
