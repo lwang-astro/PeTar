@@ -223,7 +223,7 @@ class Data:
                 data['mass'] = np.ones(data['x'].size)
             data['t'] = file_path
         else:
-            header=petar.PeTarDataHeader(file_path, snapshot_format=self.snapshot_format)
+            header=petar.PeTarDataHeader(file_path, snapshot_format=self.snapshot_format, external_mode=self.external_mode)
             data['t'] = str(header.time)
 
             if (self.generate_binary>0):
