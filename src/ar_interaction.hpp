@@ -342,27 +342,18 @@ public:
 
                 }
 
-#ifdef SOFT_PERT
-                if(_perturber.soft_pert!=NULL) {
-                    // avoid too large perturbation force if system is disruptted
-                    if (pi.pos*pi.pos<pi.changeover.getRout()*pi.changeover.getRout()) {
-                        _perturber.soft_pert->eval(acc_pert, pi.pos);
-                        pot_pert += _perturber.soft_pert->evalPot(pi.pos);
-                    }
-                }
-#endif
-
                 acc_pert_cm[0] += pi.mass *acc_pert[0];
                 acc_pert_cm[1] += pi.mass *acc_pert[1];
                 acc_pert_cm[2] += pi.mass *acc_pert[2];
 
                 mcm += pi.mass;
+
             }
 //#ifdef AR_DEBUG
 //            ASSERT(abs(mcm-_particle_cm.mass)<1e-10);
 //#endif
                 
-            // get cm perturbation
+            // get cm perturbation (exclude soft pert)
             acc_pert_cm[0] /= mcm;
             acc_pert_cm[1] /= mcm;
             acc_pert_cm[2] /= mcm;
@@ -377,6 +368,16 @@ public:
                 acc_pert[2] -= acc_pert_cm[2]; 
                 
                 pot_pert -= acc_pert[0]*pi.pos[0] + acc_pert[1]*pi.pos[1] + acc_pert[2]*pi.pos[2];
+
+#ifdef SOFT_PERT
+                if(_perturber.soft_pert!=NULL) {
+                    // avoid too large perturbation force if system is disruptted
+                    if (pi.pos*pi.pos<pi.changeover.getRout()*pi.changeover.getRout()) {
+                        _perturber.soft_pert->eval(acc_pert, pi.pos);
+                        pot_pert += _perturber.soft_pert->evalPot(pi.pos);
+                    }
+                }
+#endif
             }
 
         }

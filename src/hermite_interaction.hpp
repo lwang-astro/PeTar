@@ -486,6 +486,12 @@ public:
                 for (int j=0; j<n_member; j++) {
                     _energy.epert += _groups[i].particles[j].mass*pert->evalPot(_groups[i].particles[j].pos);
                 }
+                auto& bink = _groups[i].info.getBinaryTreeRoot();
+                auto& pcm = _groups[i].particles.cm;
+                auto& vcm = pcm.vel;
+                auto& vbin = bink.vel;
+                Float de_kin = bink.mass*(vbin[0]*vcm[0]+vbin[1]*vcm[1]+vbin[2]*vcm[2]);
+                _energy.epert -= de_kin;
             }
         }
 #endif
