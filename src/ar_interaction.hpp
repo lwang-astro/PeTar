@@ -741,7 +741,7 @@ public:
                 // if member is star, evolve single star using SSE
                 else if (stellar_evolution_option==1) {
                     ASSERT(bse_manager.checkParams());
-                    modify_branch[k] = modifyOneParticle(*_bin.getMember(k), _bin_interrupt.time_now, _bin_interrupt.time_end);
+                    modify_branch[k] = modifyOneParticle(*_bin.getMember(k), _bin.getMember(k)->time_record, _bin_interrupt.time_now);
                     modify_return = std::max(modify_return, modify_branch[k]);
                     // if status not set, set to change
                     if (modify_branch[k]>0&&_bin_interrupt.status == AR::InterruptStatus::none) {
@@ -766,8 +766,7 @@ public:
             auto* p2 = _bin.getRightMember();
 
 #ifdef BSE
-            // time_record and time_end have offsets, thus use difference to obtain true dt
-            Float dt = _bin_interrupt.time_end - p1->time_record;
+            Float dt = _bin_interrupt.time_now - p1->time_record;
 
             // pre simple check whether calling BSE is needed
             bool check_flag = false;
@@ -780,7 +779,7 @@ public:
             }
 
             double time_check = std::min(p1->time_interrupt, p2->time_interrupt);
-            if ((time_check<=_bin_interrupt.time_end||check_flag)&&dt>0&&stellar_evolution_option==1) {
+            if ((time_check<=_bin_interrupt.time_now||check_flag)&&dt>0&&stellar_evolution_option==1) {
                 ASSERT(bse_manager.checkParams());
                 // record address of modified binary
                 _bin_interrupt.adr = &_bin;
@@ -794,11 +793,11 @@ public:
                 if (p1->time_record!=p2->time_record) {
                     if (p1->time_record<p2->time_record) {
                         p1->time_interrupt = p1->time_record;
-                        modifyOneParticle(*p1, _bin_interrupt.time_now, p2->time_record);
+                        modifyOneParticle(*p1, p1->time_record, p2->time_record);
                     }
                     else {
                         p2->time_interrupt = p2->time_record;
-                        modifyOneParticle(*p2, _bin_interrupt.time_now, p1->time_record);
+                        modifyOneParticle(*p2, p2->time_record, p1->time_record);
                     }
                 }
 
@@ -945,7 +944,7 @@ public:
                             p2->pos[k] = pos_cm[k];
                             p2->vel[k] = vel_cm[k];
                         }
-                        modifyOneParticle(*p2, _bin_interrupt.time_now, _bin_interrupt.time_end);
+                        modifyOneParticle(*p2, p2->time_record, _bin_interrupt.time_now);
                     }
 
                     if (p2->mass==0.0) {
@@ -958,7 +957,7 @@ public:
                             p1->pos[k] = pos_cm[k];
                             p1->vel[k] = vel_cm[k];
                         }
-                        modifyOneParticle(*p1, _bin_interrupt.time_now, _bin_interrupt.time_end);
+                        modifyOneParticle(*p1, p1->time_record, _bin_interrupt.time_now);
                     }
 
                     // case when SN kick appears
@@ -1053,13 +1052,13 @@ public:
 
                     // first evolve two components to the current time
                     if (stellar_evolution_option==1) {
-                        if (p1->time_record<_bin_interrupt.time_end) {
+                        if (p1->time_record<_bin_interrupt.time_now) {
                             p1->time_interrupt = p1->time_record; // force SSE evolution
-                            modifyOneParticle(*p1, p1->time_record, _bin_interrupt.time_end);
+                            modifyOneParticle(*p1, p1->time_record, _bin_interrupt.time_now);
                         }
-                        if (p2->time_record<_bin_interrupt.time_end) {
+                        if (p2->time_record<_bin_interrupt.time_now) {
                             p2->time_interrupt = p2->time_record; // force SSE evolution
-                            modifyOneParticle(*p2, p2->time_record, _bin_interrupt.time_end);
+                            modifyOneParticle(*p2, p2->time_record, _bin_interrupt.time_now);
                         }
                     }
 
@@ -1120,7 +1119,7 @@ public:
                 // delayed merger
                 if (p1->getBinaryInterruptState()== BinaryInterruptState::collision && 
                     p2->getBinaryInterruptState()== BinaryInterruptState::collision &&
-                    (p1->time_interrupt<_bin_interrupt.time_end && p2->time_interrupt<_bin_interrupt.time_end) &&
+                    (p1->time_interrupt<_bin_interrupt.time_now && p2->time_interrupt<_bin_interrupt.time_now) &&
                     (p1->getBinaryPairID()==p2->id||p2->getBinaryPairID()==p1->id)) {
                     Float dr[3] = {p1->pos[0] - p2->pos[0], 
                                    p1->pos[1] - p2->pos[1], 
