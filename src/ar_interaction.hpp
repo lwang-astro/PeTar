@@ -766,7 +766,8 @@ public:
             auto* p2 = _bin.getRightMember();
 
 #ifdef BSE
-            Float dt = _bin_interrupt.time_now - p1->time_record;
+            Float t_record_min = std::min(p1->time_record,p2->time_record);
+            Float dt = _bin_interrupt.time_now - std::max(p1->time_record,p2->time_record);
 
             // pre simple check whether calling BSE is needed
             bool check_flag = false;
@@ -774,7 +775,7 @@ public:
             int binary_type_p2 = static_cast<int>(p2->getBinaryInterruptState());
             int binary_type_init = 0;
             if (binary_type_p1==binary_type_p2) binary_type_init = binary_type_p1;
-            if (dt>0&&_bin.semi>0 && (!bse_manager.isMassTransfer(binary_type_init)) && (!bse_manager.isDisrupt(binary_type_init))) {
+            if (t_record_min<_bin_interrupt.time_now&&_bin.semi>0 && (!bse_manager.isMassTransfer(binary_type_init)) && (!bse_manager.isDisrupt(binary_type_init))) {
                 check_flag=bse_manager.isCallBSENeeded(p1->star, p2->star, _bin.semi, _bin.ecc, dt);
             }
 

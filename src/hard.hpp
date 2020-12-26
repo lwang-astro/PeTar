@@ -871,6 +871,9 @@ public:
 
 #ifdef HARD_DEBUG
                 ASSERT(ptcl_origin[i].r_search>ptcl_origin[i].changeover.getRout());
+#ifdef BSE
+                ASSERT(pi.star.tphys<=time_origin+_time_end);
+#endif
 #endif
             }
 
@@ -970,6 +973,9 @@ public:
                         ASSERT(pj->group_data.artificial.isUnused());
                         continue;
                     }
+#ifdef BSE
+                    ASSERT(pj->star.tphys<=time_origin+_time_end);
+#endif
 
                     // shift time interrupt in order to get consistent time for stellar evolution in the next drift
                     //pj->time_record -= _time_end;
@@ -998,6 +1004,9 @@ public:
 #ifdef STELLAR_EVOLUTION
                 if (pi.mass==0.0) {
                     ASSERT(pi.group_data.artificial.isUnused());
+#ifdef BSE
+                    ASSERT(pi.star.tphys<=time_origin+_time_end);
+#endif
                     continue;
                 }
 
