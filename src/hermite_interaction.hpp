@@ -440,7 +440,7 @@ public:
     }
 
     //! calculate kinetic and potential energy of the system
-    /*!
+    /*! 
       @param[out] _energy: hermite energy
       @param[in] _particles: (all) particle list
       @param[in] _n_particle: number of particles
@@ -490,7 +490,10 @@ public:
                 auto& pcm = _groups[i].particles.cm;
                 auto& vcm = pcm.vel;
                 auto& vbin = bink.vel;
-                Float de_kin = bink.mass*(vbin[0]*vcm[0]+vbin[1]*vcm[1]+vbin[2]*vcm[2]);
+                auto& vbin_bk = _groups[i].info.vcm_record;
+                //Float vbcm[3] = {vcm[0] + vbin_bk[0], vcm[1] + vbin_bk[1], vcm[2] + vbin_bk[2]};
+                Float dvbin[3] = {vbin[0] - vbin_bk[0], vbin[1] - vbin_bk[1], vbin[2] - vbin_bk[2]};
+                Float de_kin = bink.mass*(dvbin[0]*vcm[0]+dvbin[1]*vcm[1]+dvbin[2]*vcm[2]);
                 _energy.epert -= de_kin;
             }
         }
