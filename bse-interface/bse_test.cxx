@@ -37,15 +37,17 @@ int main(int argc, char** argv){
     std::vector<StarParameter> star;
     std::vector<double> mass0;
     std::vector<BinaryBase> bin;
+    std::vector<BinaryBase> hyb;
     std::string fprint_name;
     std::string fbin_name;
     std::string fsin_name;
+    std::string fhyb_name;
     bool read_mass_flag = false;
 
     auto printHelp= [&]() {
         std::cout<<"The tool to evolve single stars or binaries using SSE/BSE\n"
                  <<"Usage: petar.bse [options] [initial mass of stars, can be multiple values]\n"
-                 <<"       If no initial mass or no single/binary table (-s or -b) is provided, N single stars (-n) with equal mass interal in Log scale will be evolved\n"
+                 <<"       If no initial mass or no single/binary/hyprbolic table (-s, -b or -m) is provided, N single stars (-n) with equal mass interal in Log scale will be evolved\n"
                  <<"       When single table is provided, times and types can be set individually\n"
                  <<"       The default unit set is: Msun, Myr. If input data have different units [IN], please modify the scaling fators\n"
                  <<"Options:\n"
@@ -57,6 +59,7 @@ int main(int argc, char** argv){
                  <<"    -d [D]: minimum time step ("<<dtmin<<")[IN]\n"
                  <<"    -s [S]: a file of single table: First line: number of single (unit:IN); After: mass, type, time per line\n"
                  <<"    -b [S]: a file of binary table: First line: number of binary (unit:IN); After: m1, m2, type1, type2, period, ecc, time per line\n"
+                 <<"    -m [S]: a file of hyperbolic orbit table for checking merger: First line: number of orbit (unit:IN); After: m1, m2, type1, type2, semi, ecc, time\n"
                  <<"    -w [I]: print column width ("<<width<<")\n"
                  <<"    -o [S]: a file to output data every step\n"
                  <<"    -h    : help\n";
@@ -77,7 +80,7 @@ int main(int argc, char** argv){
     optind=0;
     int option_index;
     bool help_flag=false;
-    while ((arg_label = getopt_long(argc, argv, "-n:i:t:w:d:s:b:o:h", long_options, &option_index)) != -1)
+    while ((arg_label = getopt_long(argc, argv, "-n:i:m:t:w:d:s:b:o:h", long_options, &option_index)) != -1)
         switch (arg_label) {
         case 0:
             switch (long_flag) {
@@ -130,6 +133,12 @@ int main(int argc, char** argv){
             fbin_name = optarg;
             read_mass_flag = true;
             std::cout<<"Binary data file "<<fbin_name<<std::endl;
+            opt_used+=2;
+            break;
+        case 'm':
+            fhyb_name= optarg;
+            read_mass_flag = true;
+            std::cout<<"hyperbolic data file "<<fhyb_name<<std::endl;
             opt_used+=2;
             break;
         case 'o':
@@ -238,6 +247,37 @@ int main(int argc, char** argv){
             bink.star[0].kw = bink.kw1;
             bink.star[1].kw = bink.kw2;
             bin.push_back(bink);
+            // initial
+        }
+    }
+
+    if (fhyb_name!="") {
+        FILE* fhyb;
+        if( (fhyb = fopen(fhyb_name.c_str(),"r")) == NULL) {
+            fprintf(stderr,"Error: Cannot open file %s.\n", fhyb_name.c_str());
+            abort();
+        }
+        int nb;
+        int rcount=fscanf(fhyb, "%d", &nb);
+        if(rcount<1) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            abort();
+        }
+        for (int k=0; k<nb; k++) {
+            BinaryBase hybk;
+            hybk.readAscii(fhyb);
+            hybk.star[0].initial(hybk.m1*bse_manager.mscale);
+            hybk.star[1].initial(hybk.m2*bse_manager.mscale);
+            hybk.tphys *= bse_manager.tscale;
+            hybk.star[0].tphys = hybk.tphys;
+            hybk.star[1].tphys = hybk.tphys;
+            hybk.star[0].kw = hybk.kw1;
+            hybk.star[1].kw = hybk.kw2;
+            hybk.semi = hybk.period;
+            hybk.period = 0.0;
+            hybk.period0 = 0.0;
+            hybk.ecc0 = hybk.ecc;
+            hyb.push_back(hybk);
             // initial
         }
     }
@@ -428,6 +468,20 @@ int main(int argc, char** argv){
         printSingleTitle(std::cout);
         for (size_t i=0; i<star.size(); i++) {
             printSingle(std::cout, mass0[i], star[i], output[i]);
+        }
+    }
+
+    if (hyb.size()>0) {
+        int nhyb = hyb.size();
+        printBinaryTitle(std::cout);
+#pragma omp parallel for schedule(dynamic)
+        for (int i=0; i<nhyb; i++) {
+            bse_manager.evolveStar(hyb[i].star[0],hyb[i].out[0],1e-8);
+            bse_manager.evolveStar(hyb[i].star[1],hyb[i].out[1],1e-8);
+
+            bse_manager.merge(hyb[i].star[0],hyb[i].star[1],hyb[i].out[0],hyb[i].out[1],hyb[i].semi,hyb[i].ecc);
+
+            printBinary(std::cout,hyb[i]);
         }
     }
 

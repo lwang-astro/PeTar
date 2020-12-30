@@ -775,13 +775,13 @@ public:
 
                 // check whether need to update
                 double time_check = std::min(p1->time_interrupt, p2->time_interrupt);
-                if (time_check<=_bin_interrupt.time_now) check_flag = true;
+                Float dt = _bin_interrupt.time_now - std::max(p1->time_record,p2->time_record);
+                if (time_check<=_bin_interrupt.time_now&&dt>0) check_flag = true;
 
                 if (!check_flag) {
                     // pre simple check whether calling BSE is needed
                     Float t_record_min = std::min(p1->time_record,p2->time_record);
-                    Float dt = _bin_interrupt.time_now - std::max(p1->time_record,p2->time_record);
-
+                    
 
                     if (t_record_min<_bin_interrupt.time_now&&_bin.semi>0 && (!bse_manager.isMassTransfer(binary_type_init)) && (!bse_manager.isDisrupt(binary_type_init))) {
                         check_flag=bse_manager.isCallBSENeeded(p1->star, p2->star, _bin.semi, _bin.ecc, dt);
@@ -1037,7 +1037,6 @@ public:
                 auto merge = [&](const Float& dr, const Float& t_peri, const Float& sd_factor) {
                     modify_return = 2;
                     _bin_interrupt.adr = &_bin;
-                    _bin_interrupt.status = AR::InterruptStatus::merge;
                 
                     // print data
                     //std::cerr<<"Binary Merge: time: "<<_bin_interrupt.time_now<<std::endl;
@@ -1077,16 +1076,26 @@ public:
                     //ASSERT(p1->star.mass>0&&p2->star.mass>0); // one may have SNe before merge
 
                     StarParameter p1_star_bk, p2_star_bk;
+                    StarParameterOut out[2];
+                    Float pos_cm[3], vel_cm[3];
+                    Float mtot = p1->mass+p2->mass;
+
+                    for (int k=0; k<3; k++) {
+                        pos_cm[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mtot;
+                        vel_cm[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mtot;
+                    }
+
                     p1_star_bk = p1->star;
                     p2_star_bk = p2->star;
                     // call BSE function to merge two stars
-                    bse_manager.merge(p1->star, p2->star);
+                    bse_manager.merge(p1->star, p2->star, out[0], out[1], _bin.semi, _bin.ecc);
                     // get new masses
                     p1->mass = bse_manager.getMass(p1->star);
                     p2->mass = bse_manager.getMass(p2->star);
                     // dm is used to correct energy, thus must be correctly set, use += since it may change mass before merge
                     p1->dm += p1->mass - m1_bk;
                     p2->dm += p2->mass - m2_bk;
+
                     if (stellar_evolution_write_flag) {
 #pragma omp critical
                         {
@@ -1110,21 +1119,42 @@ public:
                             fout_bse<<std::endl;
                         }
                     }
-#else // NO BSE
-                    p1->dm = mcm*0.8-p1->mass; 
-                    p1->mass = mcm*0.8;
-                    p2->dm = -p2->mass; 
-                    p2->mass = 0.0;
-#endif // BSE
-                    if (p1->mass==0.0) p1->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
-                    if (p2->mass==0.0) p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
-                    if (p1->mass==0.0&&p2->mass==0.0) 
-                        _bin_interrupt.status = AR::InterruptStatus::destroy; // in case all masses become zero
 
+                    ASSERT(p1->mass==0.0||p2->mass==0.0);
+                    if (p1->mass==0.0) {
+                        p1->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+                        _bin_interrupt.status = AR::InterruptStatus::merge;
+                        p1->setBinaryInterruptState(BinaryInterruptState::none);
+                        p2->setBinaryInterruptState(BinaryInterruptState::none);
+                        // set new particle position and velocity to be the original cm
+                        for (int k=0; k<3; k++) {
+                            p2->pos[k] = pos_cm[k];
+                            p2->vel[k] = vel_cm[k];
+                        }
+                        modifyOneParticle(*p2, p2->time_record, _bin_interrupt.time_now);
+                    }
+                    if (p2->mass==0.0) {
+                        p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+                        _bin_interrupt.status = AR::InterruptStatus::merge;
+                        p1->setBinaryInterruptState(BinaryInterruptState::none);
+                        p2->setBinaryInterruptState(BinaryInterruptState::none);
+                        // set new particle position and velocity to be the original cm
+                        for (int k=0; k<3; k++) {
+                            p1->pos[k] = pos_cm[k];
+                            p1->vel[k] = vel_cm[k];
+                        }
+                        modifyOneParticle(*p1, p1->time_record, _bin_interrupt.time_now);
+                        
+                    }
+                    if (p1->mass==0.0&&p2->mass==0.0) {
+                        p1->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+                        p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+                        _bin_interrupt.status = AR::InterruptStatus::destroy; // in case all masses become zero
+                        modify_return = 3;
+                    }
+#endif //BSE
                     //p1->setBinaryPairID(0);
                     //p2->setBinaryPairID(0);
-                    p1->setBinaryInterruptState(BinaryInterruptState::none);
-                    p2->setBinaryInterruptState(BinaryInterruptState::none);
                 };
                 
                 // delayed merger

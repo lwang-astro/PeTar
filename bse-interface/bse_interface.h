@@ -89,6 +89,12 @@ extern "C" {
 
     void mix_(double* m0, double* mt, double* age, int* kw, double* zpars);
 
+    //void comenv_(double* m01, double* m1, double* mc1, double* aj1, double* jspin1, int* kw1, 
+    //             double* m02, double* m2, double* mc2, double* aj2, double* jspin2, int* kw2, 
+    //             double* zpars, double* ecc, double* sep, double* jorb, double* vkick1, double* vkick2, int* coel);
+
+    void merge_(int* kw, double* m0, double* mt, double* r, double* mc, double* rc, double* menv, double* renv, double* ospin, double* age, double* semi, double* ecc, double* vkick, double* zpars);
+
     void printconst_();
 }
 
@@ -1093,32 +1099,102 @@ public:
         else return 0;
     }
 
+    //! check Roche fill condition
+    /* Use BSE Roche Radius estimation
+      @param[in] _star1: star parameter of first
+      @param[in] _star2: star parameter of second
+      @param[in] _semi: semi-major axis, [IN unit]
+      @param[in] _ecc: eccentricity of binary, used for BSE
+      \return true: Roche fill
+     */
+    bool isRocheFill(StarParameter& _star1, StarParameter& _star2, double& _semi, double& _ecc) {
+        assert(_star2.mt>0);
+        double q = _star1.mt/_star2.mt;
+        double rl_over_semi1 = EstimateRocheRadiusOverSemi(q);
+        q = 1.0/q;
+        double rl_over_semi2 = EstimateRocheRadiusOverSemi(q);
+        double rl_over_semi_max =std::max(rl_over_semi1,rl_over_semi2); 
+        double rad = _star1.r + _star2.r;
+        double semi_rsun = _semi*rscale;
+        double rcrit = std::max(rad,rl_over_semi_max*semi_rsun);
+        double peri_rsun = semi_rsun*(1-_ecc);
+        bool is_fill= (rcrit>0.5*peri_rsun);
+        return is_fill;
+    }
+
+
     //! merge two star using BSE mix function, star 2 will becomes zero mass
-    void merge(StarParameter& _star1, StarParameter& _star2) {
-        double m0[2],mt[2],age[2];
+    /*!
+      @param[in,out] _star1: star parameter of first
+      @param[in,out] _star2: star parameter of second
+      @param[out] _out1: output parameter of first from evolv2
+      @param[out] _out2: output parameter of second from evolv2
+      @param[in] _semi: semi-major axis, only used to record initial semi [IN unit]
+      @param[in] _ecc: eccentricity of hyperbolic orbit, used for BSE
+    */
+    void merge(StarParameter& _star1, StarParameter& _star2, StarParameterOut& _out1, StarParameterOut& _out2, double& _semi, double& _ecc) {
+
+        double m0[2],mt[2],r[2],mc[2],rc[2],menv[2],renv[2],ospin[2],age[2],vkick[8];
         int kw[2];
 
         kw[0] = _star1.kw;
         m0[0] = _star1.m0;
         mt[0] = _star1.mt;
+        r[0]  = _star1.r;
+        mc[0] = _star1.mc;
+        rc[0] = _star1.rc;
+        ospin[0] = _star1.ospin;
         age[0]= _star1.tphys-_star1.epoch;
 
         kw[1] = _star2.kw;
         m0[1] = _star2.m0;
         mt[1] = _star2.mt;
+        r[1]  = _star2.r;
+        mc[1] = _star2.mc;
+        rc[1] = _star2.rc;
+        ospin[1] = _star2.ospin;
         age[1]= _star2.tphys-_star2.epoch;
-        
-        mix_(m0,mt,age,kw,zpars);
+
+        _out1.dm = _star1.mt;
+        _out2.dm = _star2.mt;
+
+        double semi_rsun = _semi*rscale;
+
+        merge_(kw, m0, mt, r, mc, rc, menv, renv, ospin, age, &semi_rsun, &_ecc, vkick, zpars);
 
         _star1.kw = kw[0];
         _star1.m0 = m0[0];
         _star1.mt = mt[0];
+        _star1.r  = r[0];
+        _star1.mc = mc[0];
+        _star1.rc = rc[0];
+        _star1.ospin  = ospin[0];
         _star1.epoch = _star1.tphys - age[0];
 
         _star2.kw = kw[1];
         _star2.m0 = m0[1];
         _star2.mt = mt[1];
+        _star2.r  = r[1];
+        _star2.mc = mc[1];
+        _star2.rc = rc[1];
+        _star2.ospin  = ospin[1];
         _star2.epoch = _star2.tphys - age[1];
+
+        _out1.menv = menv[0];
+        _out1.renv = renv[0];
+        _out1.tm = 0;
+        _out1.dm = _star1.mt - _out1.dm;
+        _out1.dtmiss = 0;
+
+        _out2.menv = menv[1];
+        _out2.renv = renv[1];
+        _out2.tm = 0;
+        _out2.dm = _star2.mt - _out2.dm;
+        _out2.dtmiss = 0;
+
+        for (int k=0; k<4; k++) _out1.vkick[k]=vkick[k];
+        for (int k=0; k<4; k++) _out2.vkick[k]=vkick[k+4];
+
     }
 
     //! get next time step to check in Myr
@@ -1196,7 +1272,6 @@ public:
         return dt/tscale;
     }
 
-
     //! a simple check to determine whether call BSE is necessary by given a reference of time step
     /*!
       When calling BSE is necessary within the given time step, return true.
@@ -1218,17 +1293,7 @@ public:
         }
         else {
             // check Roche overflow
-            assert(_star2.mt>0);
-            double q = _star1.mt/_star2.mt;
-            double rl_over_semi1 = EstimateRocheRadiusOverSemi(q);
-            q = 1.0/q;
-            double rl_over_semi2 = EstimateRocheRadiusOverSemi(q);
-            double rl_over_semi_max =std::max(rl_over_semi1,rl_over_semi2); 
-            double rad = _star1.r + _star2.r;
-            double semi_rsun = _semi*rscale;
-            double rcrit = std::max(rad,rl_over_semi_max*semi_rsun);
-            double peri_rsun = semi_rsun*(1-_ecc);
-            if (rcrit>0.5*peri_rsun) {
+            if (isRocheFill(_star1, _star2, _semi, _ecc)) {
                 int kw[2];
                 double m0[2],mt[2],r[2],mc[2],rc[2],age[2];
                 kw[0] = _star1.kw;
@@ -1248,6 +1313,7 @@ public:
                 age[1]= _star2.tphys-_star2.epoch;
 
                 double dtr;
+                double semi_rsun = _semi*rscale;
                 trflow_(kw,m0,mt,r,mc,rc,age,&dtr,&semi_rsun,zpars);
                 if (dtr<_dt*tscale) return true;
             }
