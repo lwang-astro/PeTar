@@ -1,14 +1,15 @@
 ***
       SUBROUTINE MERGE(kstar,mass0,mass,rad,massc,radc,menv,renv,ospin,
      &     age,semi,ecc,vkick,zpars)
+      implicit none
 *
 *
 *     Hyperbolic merger
 *
 
-      INTEGER kstar(2),I1,I2
+      INTEGER kstar(2),I1,I2,k
       REAL*8  mass0(2),mass(2),rad(2),massc(2),radc(2),age(2)
-      REAL*8  semi,peri
+      REAL*8  semi,peri,ecc
       REAL*8  TSCLS(20),LUMS(10),GB(10),zpars(20),TM,TN
       REAL*8  LUM,Q,RL1,RL2
       REAL*8  MENV(2),RENV(2),K2,ospin(2),jspin(2),jorb,vkick(8)

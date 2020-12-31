@@ -2341,7 +2341,7 @@ public:
 #endif
 
 #ifdef STELLAR_EVOLUTION
-        fout<<"Use stellare evolution method: ";
+        fout<<"Use stellar evolution method: ";
 #ifdef BSE
         fout<<"BSE\n";
 #else

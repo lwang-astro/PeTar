@@ -263,6 +263,7 @@ int main(int argc, char** argv){
             std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
             abort();
         }
+        double pc_to_rsun = 44334448.006896;
         for (int k=0; k<nb; k++) {
             BinaryBase hybk;
             hybk.readAscii(fhyb);
@@ -273,7 +274,7 @@ int main(int argc, char** argv){
             hybk.star[1].tphys = hybk.tphys;
             hybk.star[0].kw = hybk.kw1;
             hybk.star[1].kw = hybk.kw2;
-            hybk.semi = hybk.period;
+            hybk.semi = hybk.period*pc_to_rsun;
             hybk.period = 0.0;
             hybk.period0 = 0.0;
             hybk.ecc0 = hybk.ecc;

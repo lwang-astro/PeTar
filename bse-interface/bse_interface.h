@@ -1264,7 +1264,7 @@ public:
             dt = std::min(dt,dtr);
 
         }
-        else if (_star1.kw>=10&&_star1.kw<15&&_star2.kw>=10&&_star2.kw<15) {// GR effect
+        else if (_star1.kw>=10&&_star1.kw<15&&_star2.kw>=10&&_star2.kw<15&&_semi>0.0) {// GR effect
             double semi_rsun = _semi*rscale;
             dt = std::min(dt, EstimateGRTimescale(_star1, _star2, semi_rsun, _ecc));
         }
