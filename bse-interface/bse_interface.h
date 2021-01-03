@@ -1162,6 +1162,8 @@ public:
 
         merge_(kw, m0, mt, r, mc, rc, menv, renv, ospin, age, &semi_rsun, &_ecc, vkick, zpars);
 
+        _semi = semi_rsun/rscale;
+
         _star1.kw = kw[0];
         _star1.m0 = m0[0];
         _star1.mt = mt[0];

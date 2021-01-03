@@ -767,6 +767,12 @@ public:
 
 #ifdef BSE
             auto postProcess =[&](StarParameterOut* out, Float* pos_cm, Float*vel_cm, Float& semi, Float& ecc, int binary_type_final) {
+                // if status not set, set to change
+                if (_bin_interrupt.status == AR::InterruptStatus::none) 
+                    _bin_interrupt.status = AR::InterruptStatus::change;
+
+                // set return flag >0
+                modify_return = 2;
 
                 p1->time_record = _bin_interrupt.time_now - bse_manager.getDTMiss(out[0]);
                 p2->time_record = _bin_interrupt.time_now - bse_manager.getDTMiss(out[1]);
@@ -866,8 +872,8 @@ public:
                             // update new period, ecc
 //#pragma omp critical
 //                            std::cerr<<"Event: "<<event_flag<<" "<<_bin.period<<" "<<period<<" "<<_bin.ecc<<" "<<ecc<<std::endl;
-                            ASSERT(_bin.semi>0);
                             _bin.semi = semi;
+                            ASSERT(_bin.semi>0);
                             _bin.ecc = ecc;
                             _bin.m1 = p1->mass;
                             _bin.m2 = p2->mass;
@@ -921,11 +927,6 @@ public:
                     ASSERT(bse_manager.checkParams());
                     // record address of modified binary
                     _bin_interrupt.adr = &_bin;
-                    // if status not set, set to change
-                    if (_bin_interrupt.status == AR::InterruptStatus::none) 
-                        _bin_interrupt.status = AR::InterruptStatus::change;
-                    // set return flag >0
-                    modify_return = 2;
 
                     // first evolve two components to the same starting time
                     if (p1->time_record!=p2->time_record) {
@@ -1045,7 +1046,6 @@ public:
             if (_bin_interrupt.status!=AR::InterruptStatus::merge&&_bin_interrupt.status!=AR::InterruptStatus::destroy) {
 
                 auto merge = [&](const Float& dr, const Float& t_peri, const Float& sd_factor) {
-                    modify_return = 2;
                     _bin_interrupt.adr = &_bin;
                 
                     // print data
