@@ -403,6 +403,11 @@ public:
             h4_int.particles.setMode(COMM::ListMode::link);
             h4_int.particles.linkMemberArray(ptcl_origin, _n_ptcl);
 
+            h4_int.step = h4_manager.step;
+            PS::F64 mmax = 0.0;
+            for (int k=0; k<_n_ptcl; k++) mmax=std::max(mmax, ptcl_origin[k].mass);
+            h4_int.step.eta_4th /= std::pow(mmax*Ptcl::mean_mass_inv, 0.25);
+
             h4_int.particles.calcCenterOfMass();
             h4_int.particles.shiftToCenterOfMassFrame();
             
