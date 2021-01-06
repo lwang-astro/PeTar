@@ -12,6 +12,7 @@ if __name__ == '__main__':
     snap_type='origin'
     snapshot_format='ascii'
     interrupt_mode='bse'
+    write_option='w'
 
     def usage():
         print("A tool to gether objects from a list of snapshots into one file. Only work when interrupt-mode is bse")
@@ -127,51 +128,49 @@ if __name__ == '__main__':
                 sel = sel | (_data.star.type==type_index)
         return sel
 
-    select_data=[]
-    for path in path_list:
-        print('process ',path)
-        header_temp = petar.PeTarDataHeader(path, **kwargs)
-        time = header_temp.time
-        sel = np.array([])
-        read_flag=False
-        if (snap_type=='binary'):
-            p1_temp = petar.Particle(**kwargs)
-            p2_temp = petar.Particle(**kwargs)
-            data_temp=petar.Binary(p1_temp, p2_temp, **kwargs)
-            if os.path.getsize(path+'.binary')>0:
-                data_temp.loadtxt(path+'.binary')
-                sel1 = select_type(data_temp.p1, sse_type)
-                sel2 = select_type(data_temp.p2, sse_type2)
-                sel = sel1 & sel2
-                 
-                sel1 = select_type(data_temp.p1, sse_type2)
-                sel2 = select_type(data_temp.p2, sse_type)
-                sel = sel | (sel1 & sel2)
-                read_flag=True
-            
-        else:
-            data_temp=petar.Particle(**kwargs)
-            read_flag=False
-            if (snap_type=='origin'):
-                if (snapshot_format=='ascii'): data_temp.loadtxt(path, skiprows=1)
-                else: data_temp.fromfile(path, offset=petar.HEADER_OFFSET)
-                read_flag=True
-            else:
-                if os.path.getsize(path+'.single')>0:
-                    data_temp.loadtxt(path)
-                    read_flag=True
-            if (read_flag):
-                sel = select_type(data_temp, sse_type)
-
-        if(read_flag):
-            data_sel = data_temp[sel]
-            data_sel.addNewMember('time',np.ones(data_sel.size)*time)
-            select_data.append(data_sel)
-
-    output_data=petar.join(*select_data)
-
     filename_out = filename_prefix+'.'+sse_type+'.'+snap_type
     if (snap_type=='binary'):     filename_out = filename_prefix+'.'+sse_type+'.'+sse_type2+'.'+snap_type
     print('Output file: ',filename_out)
 
-    output_data.savetxt(filename_out)
+    with open(filename_out, write_option) as f:
+        for path in path_list:
+            print('process ',path)
+            header_temp = petar.PeTarDataHeader(path, **kwargs)
+            time = header_temp.time
+            sel = np.array([])
+            read_flag=False
+            if (snap_type=='binary'):
+                p1_temp = petar.Particle(**kwargs)
+                p2_temp = petar.Particle(**kwargs)
+                data_temp=petar.Binary(p1_temp, p2_temp, **kwargs)
+                if os.path.getsize(path+'.binary')>0:
+                    data_temp.loadtxt(path+'.binary')
+                    sel1 = select_type(data_temp.p1, sse_type)
+                    sel2 = select_type(data_temp.p2, sse_type2)
+                    sel = sel1 & sel2
+                     
+                    sel1 = select_type(data_temp.p1, sse_type2)
+                    sel2 = select_type(data_temp.p2, sse_type)
+                    sel = sel | (sel1 & sel2)
+                    read_flag=True
+                
+            else:
+                data_temp=petar.Particle(**kwargs)
+                read_flag=False
+                if (snap_type=='origin'):
+                    if (snapshot_format=='ascii'): data_temp.loadtxt(path, skiprows=1)
+                    else: data_temp.fromfile(path, offset=petar.HEADER_OFFSET)
+                    read_flag=True
+                else:
+                    if os.path.getsize(path+'.single')>0:
+                        data_temp.loadtxt(path)
+                        read_flag=True
+                if (read_flag):
+                    sel = select_type(data_temp, sse_type)
+     
+            if(read_flag):
+                data_sel = data_temp[sel]
+                data_sel.addNewMember('time',np.ones(data_sel.size)*time)
+                data_sel.savetxt(f)
+                f.flush()
+    
