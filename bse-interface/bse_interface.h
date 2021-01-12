@@ -1137,6 +1137,11 @@ public:
         double m0[2],mt[2],r[2],mc[2],rc[2],menv[2],renv[2],ospin[2],age[2],vkick[8];
         int kw[2];
 
+        for (int k =0; k<4; k++) {
+            vkick[k]  = _out1.vkick[k];
+            vkick[k+4]= _out2.vkick[k];
+        }
+
         kw[0] = _star1.kw;
         m0[0] = _star1.m0;
         mt[0] = _star1.mt;
