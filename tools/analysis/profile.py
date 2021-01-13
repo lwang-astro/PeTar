@@ -65,7 +65,8 @@ class PeTarCount(DictNpArrayMix):
         cluster_connected: number of clusters with multiple particles crosing multiple MPI processes
         AR_step_sum: total AR steps
         AR_tsyn_step_sum: total AR steps for time synchronization
-        AR_group_numer: number of AR groups
+        AR_group_number: number of AR groups
+        iso_group_number: number of isolated AR groups 
         Hermite_step_sum: total Hermite steps
         n_neighbor_zero: particles have zero neighbors in Hermite 
         Ep_Ep_interaction: number of essential (active) i and j particle interactions 
@@ -74,7 +75,7 @@ class PeTarCount(DictNpArrayMix):
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        keys = [["hard_single",np.int64], ["hard_isolated",np.int64], ["hard_connected",np.int64], ["hard_interrupt",np.int64], ["cluster_isolated",np.int64], ["cluster_connected",np.int64], ["AR_step_sum",np.int64], ["AR_tsyn_step_sum",np.int64], ["AR_group_number",np.int64], ["Hermite_step_sum",np.int64], ["n_neighbor_zero",np.int64], ["Ep_Ep_interaction",np.int64], ["Ep_Sp_interaction",np.int64]]
+        keys = [["hard_single",np.int64], ["hard_isolated",np.int64], ["hard_connected",np.int64], ["hard_interrupt",np.int64], ["cluster_isolated",np.int64], ["cluster_connected",np.int64], ["AR_step_sum",np.int64], ["AR_tsyn_step_sum",np.int64], ["AR_group_number",np.int64], ["iso_group_number",np.int64], ["Hermite_step_sum",np.int64], ["n_neighbor_zero",np.int64], ["Ep_Ep_interaction",np.int64], ["Ep_Sp_interaction",np.int64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
 class Profile(DictNpArrayMix):
@@ -94,6 +95,12 @@ class Profile(DictNpArrayMix):
     """
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+
+        Parameters
+        ----------
+        keyword arguments:
+            use_gpu: bool (True)
+                whether cuda is used 
         """
         use_gpu=True
         if ('use_gpu' in kwargs.keys()): use_gpu=kwargs['use_gpu']

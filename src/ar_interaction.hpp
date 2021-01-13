@@ -906,7 +906,14 @@ public:
                             _bin.calcParticles(gravitational_constant);
                             //}
                         }
+                        else if(binary_type<0) break;
                     }
+
+                    // update semi
+                    mtot = bse_manager.getMass(p1->star) + bse_manager.getMass(p2->star);
+                    semi = COMM::Binary::periodToSemi(period, mtot, gravitational_constant);
+
+                    postProcess(out, pos_cm, vel_cm, semi, ecc, binary_type_final);
                 }
             };
 
@@ -1113,32 +1120,32 @@ public:
                         postProcess(out, pos_cm, vel_cm, semi, ecc, 0);
                         if (stellar_evolution_write_flag&&(p1->mass==0.0||p2->mass==0.0)) {
 #pragma omp critical
-                        {
-                            fout_bse<<"Dynamic_merge: "
-                                    <<std::setw(WRITE_WIDTH)<<p1->id
-                                    <<std::setw(WRITE_WIDTH)<<p2->id
-                                    <<std::setw(WRITE_WIDTH)<<_bin.period*bse_manager.tscale*bse_manager.year_to_day
-                                    <<std::setw(WRITE_WIDTH)<<_bin.semi*bse_manager.rscale
-                                    <<std::setw(WRITE_WIDTH)<<_bin.ecc;
+                            {
+                                fout_bse<<"Dynamic_merge: "
+                                        <<std::setw(WRITE_WIDTH)<<p1->id
+                                        <<std::setw(WRITE_WIDTH)<<p2->id
+                                        <<std::setw(WRITE_WIDTH)<<_bin.period*bse_manager.tscale*bse_manager.year_to_day
+                                        <<std::setw(WRITE_WIDTH)<<_bin.semi*bse_manager.rscale
+                                        <<std::setw(WRITE_WIDTH)<<_bin.ecc;
 #ifndef DYNAMIC_MERGER_LESS_OUTPUT
-                            fout_bse<<std::setw(WRITE_WIDTH)<<dr*bse_manager.rscale
-                                    <<std::setw(WRITE_WIDTH)<<t_peri*bse_manager.tscale*bse_manager.year_to_day
-                                    <<std::setw(WRITE_WIDTH)<<sd_factor;
+                                fout_bse<<std::setw(WRITE_WIDTH)<<dr*bse_manager.rscale
+                                        <<std::setw(WRITE_WIDTH)<<t_peri*bse_manager.tscale*bse_manager.year_to_day
+                                        <<std::setw(WRITE_WIDTH)<<sd_factor;
 #endif
-                            // before
-                            p1_star_bk.printColumn(fout_bse, WRITE_WIDTH);
-                            p2_star_bk.printColumn(fout_bse, WRITE_WIDTH);
-                            // after
-                            p1->star.printColumn(fout_bse, WRITE_WIDTH);
-                            p2->star.printColumn(fout_bse, WRITE_WIDTH);
-                            fout_bse<<std::endl;
+                                // before
+                                p1_star_bk.printColumn(fout_bse, WRITE_WIDTH);
+                                p2_star_bk.printColumn(fout_bse, WRITE_WIDTH);
+                                // after
+                                p1->star.printColumn(fout_bse, WRITE_WIDTH);
+                                p2->star.printColumn(fout_bse, WRITE_WIDTH);
+                                fout_bse<<std::endl;
+                            }
                         }
                     }
                 }
 #endif //BSE/MOBSE
                     //p1->setBinaryPairID(0);
                     //p2->setBinaryPairID(0);
-
                 };
                 
                 // delayed merger

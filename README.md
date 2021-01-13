@@ -34,6 +34,7 @@ If the source codes of these libraries are put in the same directory where the _
 
 ### Environment:
 To successfully compile the code, the C++ compiler (e.g. GNU gcc/g++, Intel icc/icpc, LLVM clang/clang++) needs the support of the C++11 standard. To use SSE/BSE package, a Fortran (77) compiler, GNU gfortran, is needed and should be possile to provide API to the c++ code, i.e., the libgfortran is required. Currently Intel ifort is not supported yet. The MPI compiler (e.g. mpic++) is required to use MPI. NVIDIA GPU and CUDA compiler is required to use GPU acceleration. The SIMD support is tested for the GNU, Intel and LLVM compilers. It is not tested for others, thus these three kinds of compilers are suggested to use. 
+The Fugaku ARM A64FX architecture is also supported. 
 
 To use _Galpy_ and the analysis tools, the _Python3_ should be available. _Galpy_ also requires the _GSL_ library being installed and can be detected in the load library path.
 
@@ -78,14 +79,23 @@ Options for configure can be found by
     - avx512dq: use AVX512F and AVX512DQ
     
     This option switch on the SIMD support for force calculation, the _auto_ case check whether the compiler (GNU or Intel) support the SIMD instructions and choose the newest one. Notice that the supported options of the compiler and the running CPU are different. Please check your CPU instruction whether the compiled option is supported or not. If the CPU can support more than the compiler, it is suggested to change or update the compiler to get better performance.
+
+5. Use Fugaku A64FX architecture
+   ```
+   ./configure --with-arch=fugaku
+   ```
+
+   The tree force and neighbor search functions using Fugaku A64FX instruction set are supported now. 
+   Notice that in Fugaku supercomputer, the configure only work on the running nodes. 
+   Users should launch an interactive job to configure and compile the code.
     
-5. Use GPU (CUDA)
+6. Use GPU (CUDA)
     ```
     ./configure --enable-cuda
     ```
     By default GPU is not used. To switch on it, make sure the NVIDIA CUDA is installed and consistent with the c++ compiler.
     
-6. Debug mode
+7. Debug mode
     ```
     ./configure --with-debug=[assert/g/no]
     ```
@@ -93,7 +103,7 @@ Options for configure can be found by
     - g: switch on compiler option '-g -O0 -fbounds-check' in order to support debugger such as gdb
     - no: no debugging, optimized performance (default)   
    
-7. Use stellar evolution
+8. Use stellar evolution
     ```
     ./configure --with-interrupt=[bse]
     ```
@@ -102,7 +112,7 @@ Options for configure can be found by
     When this option is switched on, the standalone tool _petar.bse_ will also be compiled and installed.
     This is a c++ based tool which call the SSE/BSE functions to evolve single and binary stars to the given age and metallicity. OpenMP parallelization is used to speed up the calculation if a large group of stars and binaries are provided.
 
-8. Use _Galpy_ external potential library
+9. Use _Galpy_ external potential library
     ```
     ./configure --with-external=galpy
     ```
@@ -294,6 +304,8 @@ All Binaries come first and the two components should be next to each other. Bes
 
 Notice when stellar evolution is switched on, the corresponding options "-s bse" should be used together to generate the correct initial files. In this case, the astronomical unit set (Solar mass [Msun], parsec [PC] and Million year [Myr]) are suggested to use for the initial data. Notice the velocity unit should be PC/Myr. Then the corresponding mass scaling factor is 1.0 between units of PeTar and SSE/BSE. Besides, the option "-u 1" should be added to the _petar_ commander in order to use this astronomical unit set.
 
+Similarly, when external mode (potential) is switched on, the option '-t' should be used to generate correct number of columns.
+
 #### Find tree time step
 The performance of _petar_ is very sensitive to the tree time step.
 _petar.find.dt_ can help to find a proper time step in order to obtain the best performance.
@@ -323,6 +335,7 @@ Thus in the test, if the user specify the minimum step size by '-s [value]', the
 
 #### Parallel data process
 The _petar.data.process_ can be used to process snapshot data to detect binaries and calculate Langragian, core radii, averaged mass and velocity dispersion.
+Notice that the tool calculate the core (density) center and use it to obtain Langrangian radii.
 The single and binary data are stored for each snapshot with additional suffix ".single" and ".binary".
 The data of Lagrangian, core and escapers are generated in separate files.
 The multiple CPU cores are used to process the data since the KDTree neighbor search for calculating density and detect binaries is very slow.
@@ -354,7 +367,12 @@ The escaper data (single and binary) can be read by _SingleEscaper_ and _BinaryE
 By the way, the _petar_ code can also remove escapers and stored the data of escapers by using the energy and distance criterion (see help of _petar_).
 
 When the snapshot files are in BINARY format, the option `-s binary` can be used to read the snapshot correctly.
-Notice the generated data from _petar.data.process_ are all in ASCII format.
+Notice that the generated data from _petar.data.process_ are all in ASCII format.
+
+Users should be careful to set the correct options of gravitational constant (`-G`), interrupt mode (`-i`) and external mode (`-t`) in the analysis.
+This is important to correctly read the snapshots and calculate the Kepler orbital parameters of binaries.
+When users apply the astronomical unit set (`-u 1` in the _petar_ commander) in simulations, `-G 0.00449830997959438` should be used in the data analysis.
+Or, if the SSE/BSE is used, the interrupt mode option `-i bse` can also set the correct value of G.
 
 #### Movie generator
 The _petar.movie_ is a covenient tool to generate a movie from the snapshot files.
@@ -367,6 +385,8 @@ petar.movie [options] [snapshot path list filename]
 If users want to plot information of binaries, it is better to use _petar.data.process_ first to generate detect binaries with multiple CPU cores. Then the movie generator do not need to use expensive KDTree function to detect binaries (use option '--generate-binary 2').
 
 This tool use either _imageio_ or _matplotlib.animation_ (_Python_ modules) to generate movies. It is suggested to install the _imageio_ in order to generate movie using mutliple CPU cores. This is much faster than the _matplotlib.animation_ which can only use one CPU core. On the other hand, The _ffmpeg_ library is also suggested to install in order to support several commonly used movie formats (e.g. mp4, avi). Notice that this is a standalone library, not a _Python_ module. Users should install it in the OS system (e.g. via the apt tool in Ubuntu).
+
+Similar to _petar.data.process_, users should also set correct options of gravitational constant (`-G`), interrupt mode (`-i`) and external mode (`-t`).
 
 #### gether output files from different MPI ranks
 The _petar.data.gether_ is used to gether output files from different MPI ranks to one file (e.g. xx.group.[MPI rank]).
@@ -410,6 +430,9 @@ This tool can also update the old version of snapshot in ASCII format (before Au
 Notice that in the old version, the information stored in the group_data (group c.m. mass and velocities in 64bit floating) is lost.
 This is not important since the data can be calculated from data processing.
 Also it does not affect restart.
+
+Be careful that the version of _petar.format.transfer_ and _petar_ should be consistent (the same configuration of interrupt mode and external mode).
+If snapshots are generated by different version of _petar_, _petar.format.transfer_ can fails to read data or provides wrong tranferred data.
 
 #### Input parameter file format update
 The formats of input parameter files generated during simulations (including files from _SSE_/_BSE_ and _Galpy_) update on Oct 18, 2020.
@@ -478,20 +501,38 @@ To use the tool, first
 import petar
 ```
 in _Python_ script, _IPython_ or _Jupyter_. 
-The structure of each module in the data analysis tool is based on a mixture of _collection.OrderedDict_ and _numpy.ndarray_.
-Each member of the class stores one type of data, which is corresponding to one column in the data file. The member is a _numpy.ndarray_.
-The array index is corresponding to the line index in data file (counting from the keyword arguments --skiprows).
+
+The tools contains classes and functions.
+The structure of the class type is based on a mixture of _collection.OrderedDict_ and _numpy.ndarray_.
+Each member of the class stores one type of data or a subset of data.
+In the former case, the member is a 1D or 2D _numpy.ndarray_.
+The 1D array is corresponding to one column in the data file
+The array index is corresponding to the row index in data file.
+If the first few lines are skiped by using the keyword argument (--skiprows), then it counts after these lines.
 For example, the member _mass_ in _petar.Particle_ is a 1D _numpy.ndarray_, the size of array is the total number of particles.
-All other one-dimensional members in the same class have the same size. For two dimensional data, the shape of array is column_number x size.
+All other one-dimensional members in the same class have the same size.
+
+The 2D array contain multiple columns of the data file.
+The shape of array is column number x row number.
 For example, the member _pos_ in _petar.Particle_ is the 3D positions of particles, thus it has the shape of (size, 3).
 
-By using ```[class instance].keys()```, the name of members are listed.
-By using ```help([class instance])```, the definition of keys are shown.
-The two special members are _size_ and _ncols_.
+The two special members in all classes are _size_ and _ncols_.
 - _size_ is the size of one member of 1D _numpy.ndarray_ type.
 - _ncols_ is the total number of columns of all data members, if a member has a 2 dimension array, such as _pos_ of 3 x _size_, it is counted as 3. 
 
-Here is the list of classes.
+Once users create a class instance, e.g. by `[class instance]=petar.[class name]`, 
+they can use `[class instance].keys()` to obtain the list of members.
+
+By using ```help([class instance])```, the names, types and definitions of members (keys) are shown.
+The type "1D" or "2D" indicates that the member is _numpy.ndarray_. 
+Otherwise, it is the name of the class type and the corresponding member is its class instance which contains a subset of data (multiple columns in data files).
+Users can use `help([class instance].[member name])` to obtain the definitions of members in the subset of data.
+
+In some classes, the list of members can change depending on the keyword arguments.
+_Particle_ is one typical case. In its help information, members are separated by groups and the final member list are a combination based on the keyword arguments.
+After the class instance is created, users can always use `[class instance].keys()` to check the actual list of members.
+
+Here is the list of all classes.
 - For reading outputs of _petar_ (need to use _petar.data.gether_ to generate data files first):
     - _Particle_: the basic particle data (snapshot files, [data filename prefix].[index]).
     - _Status_: the global parameter of the system such as energy and number of particles ([data filename prefix].status).
@@ -514,9 +555,9 @@ There are also several useful functions.
 - _join_: join two same type instances of modules. For example, _join_(particle1, particle2) will generate a new _Particle_ instance that contain both two data. Each member is numpy.append(particle1.member, particle2.member).
 - _findPair_: detect binaries of one particle list by using _scipy.cKDTree_.
 - _findMultiple_: detect triples and quadruples (binary-binary) from single and binary data (generated from _findPair_).
-- _parallelDataProcessList_: use mutliple CPU cores to process a list of snapshot files and generate single and binary snapshots, Lagrangian data, core data and escaper data. For large _N_, the data process is quite slow, thus using multiple CPU processors can speed up the process. 
+- _parallelDataProcessList_: use mutliple CPU cores to process a list of snapshot files and generate single and binary snapshots, Lagrangian data, core data and escaper data. For large _N_, the data process is quite slow, thus using multiple CPU processors can speed up the process. This is the main function used in _petar.data.process_.
 
-More useful tools will be implemented in the future. The tools/analysis/parallel_data_process.py is a good example to learn how to use this analysis module.
+More useful tools will be implemented in the future. The tools/analysis/parallel_data_process.py is a good example to learn how to use the analysis tool.
 
 Here is one example to use the _Particle_ class to do data analysis for a snapshot.
 The snapshot generated by _petar_ contain two parts: hearder and data
@@ -535,17 +576,22 @@ header=petar.PeTarDataHeader('data.0',snapshot_format='binary')
 ```
 After reading, header contain three members: `fid`,`n` and `time`, which represent the file ID, number of particles and time (in unit as that of the input model) of the snapshot respectively.
 
+If `external_mode=galpy`, the header contain additional members: the offset of position and velocity, `pos_offset` and `vel_offset`, which represent the shift of center of the system in the Galactic tidal field (assuming the coordinate origin is the galactic center).
+
 To read the particle content in ASCII format:
 ```
 particle=petar.Particle(interrupt_mode='bse')
 particle.loadtxt('data.0',skiprows=1)
 ```
 Here the keyword argument ```interrupt_mode``` is important to set properly in order to read the snapshot correctly.
-The column definitions of snapshots depends on the stellar evolution option (--with-interrupt) used during the configure.
+The column definitions of snapshots depends on the stellar evolution option (--with-interrupt) and the external potential option (--with-external) used during the configure.
 The argument 'bse' indicates that the SSE/BSE is used so that external columns of SSE/BSE parameters exist in the snapshots.
+Then, here `particle` contains a member `star` with the class type `petar.SSEStarParameter`.
+Similary, if external potential is added, one more column of 'pot_ext' is added.
+
 Since the first line in the snapshot file is the header, `skiprows=1` jumps this line when read data.
 
-If the snapshot data is in BINARY format, the _fromfile_ function should be used instead of _loadtxt_:
+If the snapshot data is in the BINARY format, the _fromfile_ function should be used instead of _loadtxt_:
 ```
 particle.fromfile('data.0', offset=petar.HEADER_OFFSET)
 ```
@@ -569,18 +615,18 @@ pos_set = particle.pos[particle.mass<1.0]
 ```
 which generates a 2D numpy.ndarray of particle positions with masses below 1.0.
 
-To plot the mass-distance relation of the subset,
+To plot the mass-distance relation of the subset using _matplotlib_,
 ```
 import matplotlib.pyplot as plt
 fig, axes=plt.subplots(1,1)
 particle_set.calcR2()
 axes.plot(np.sqrt(particle_set.r2), particle_set.mass, '.')
 ```
+
 To save the subset to a file (ASCII format)
 ```
 particle_set.savetxt([file path of new data])
 ```
-
 Notice that when additional members are added to the particle instance, the saved data will also include the additional column.
 In this example, ```particle_set.calcR2()``` generate a new class member, _r2_, (distance square).
 Thus the saved data will have an additional column, _r2_, at the end, which does not exists in the original snapshot.
@@ -615,7 +661,7 @@ particle_merge=petar.join(p1,p2)
 For example, if p1 and p2 have sizes of 3 and 5, respectively, the new instance, particle_merge, has a size of 8.
 
 This example show how to read and use Particle class, the way to use other classes is very similar, only the class member is different.
-The information of class member can be checked by the help function, e.g.
+As described above, the information of class member can be checked by the help function, e.g.
 ```
 help(petar.Particle)
 help(petar.GroupInfo)

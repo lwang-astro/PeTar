@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <getopt.h>
+#include <cmath>
 #include "../src/io.hpp"
 
 #include <integrateFullOrbit.h>
