@@ -82,8 +82,18 @@ extern "C" {
     void star_(int* kw, double* mass, double* mt, double* tm, double* tn, double* tscls, double* lums, double* GB, double* zpars);
 
     void deltat_(int* kw, double* age, double* tm, double* tn, double* tscls, double* dt, double* dtr);
+    
+    void trdot_(int* kw, double* m0, double* mt, double* r, double* mc, double* rc, double* age, double* dt, double* dtr, double* zpars);
+
+    void trflow_(int* kw, double* m0, double* mt, double* r, double* mc, double* rc, double* age, double* dt, double* semi, double* zpars);
 
     void mix_(double* m0, double* mt, double* age, int* kw, double* zpars);
+
+    //void comenv_(double* m01, double* m1, double* mc1, double* aj1, double* jspin1, int* kw1, 
+    //             double* m02, double* m2, double* mc2, double* aj2, double* jspin2, int* kw2, 
+    //             double* zpars, double* ecc, double* sep, double* jorb, double* vkick1, double* vkick2, int* coel);
+
+    void merge_(int* kw, double* m0, double* mt, double* r, double* mc, double* rc, double* menv, double* renv, double* ospin, double* age, double* semi, double* ecc, double* vkick, double* zpars);
 
     void printconst_();
 }
@@ -283,12 +293,46 @@ struct StarParameterOut{
 
 };
 
+//! estimate roche radius/semi
+/*!
+  @param[in] _q: mass ratio
+  \return roche radius/semi
+*/
+static double EstimateRocheRadiusOverSemi(double& _q) {
+    double p = std::pow(_q,1.0/3.0);
+    double p2= p*p;
+    double rad_semi = 0.49*p2/(0.6*p2 + std::log(1.0+p));
+    return rad_semi;
+}
+
+//! a simple check to determine whether the GR effect is important
+/*!
+  calculate the relative angular momentum change timescale dJ/J, suggested by Ataru Tanikawa
+  @param[in] _star1: star parameter of first
+  @param[in] _star2: star parameter of second
+  @param[in] _semi: semi-major axis, [Rsun]
+  @param[in] _ecc: eccentricity of binary, used for BSE
+  \return timescale in Myr
+*/
+static double EstimateGRTimescale(StarParameter& _star1, StarParameter& _star2, double& _semi, double& _ecc) {
+    double ecc2 = _ecc*_ecc;
+    double omecc2 = 1.0 - ecc2;
+    double sqome2 = std::sqrt(omecc2);
+    double sqome5 = std::pow(sqome2,5.0);
+    double semi2 = _semi*_semi;
+    // (32/5)(G^{7/2}/c^5 is ~8.3x10^{-10} in the unit of Msun, Rsun, and year.
+    double djgr = 8.315e-10*_star1.mt*_star2.mt*(_star1.mt+_star2.mt)/(semi2*semi2)*(1.0+0.875*ecc2)/sqome5;
+    double dtr = 1.0e-6/djgr; // in Myr
+    return dtr;
+}
+
+
 //! BSE event recorder class
 class BinaryEvent{
 public:
     double record[10][9];
 
-    void recordInitial(const StarParameter& _p1, const StarParameter& _p2, const double _semi, const double _ecc) {
+    void recordInitial(const StarParameter& _p1, const StarParameter& _p2, const double _semi, const double _ecc, const int _type) {
         const int init_index = getEventIndexInit();
         record[0][init_index] = std::min(_p1.tphys, _p2.tphys);
         record[1][init_index] = _p1.mt;
@@ -297,9 +341,13 @@ public:
         record[4][init_index] = _p2.kw;
         record[5][init_index] = _semi;
         record[6][init_index] = _ecc;
-        record[7][init_index] = _p1.r;
-        record[8][init_index] = _p2.r;
-        record[9][init_index] = 0.0;
+        double q = _p1.mt/_p2.mt;
+        double rl1 = EstimateRocheRadiusOverSemi(q);
+        q = 1.0/q;
+        double rl2 = EstimateRocheRadiusOverSemi(q);
+        record[7][init_index] = _p1.r/(rl1*_semi); 
+        record[8][init_index] = _p2.r/(rl2*_semi);
+        record[9][init_index] = _type;
     }
     
     int getEventNMax() const {
@@ -323,8 +371,8 @@ public:
             <<" type2= "<<int(record[4][index])
             <<" semi[R*]= "<<record[5][index]
             <<" ecc= "<<record[6][index]
-            <<" rad1[R*]= "<<record[7][index]
-            <<" rad2[R*]= "<<record[8][index];
+            <<" rad1[Ro]= "<<record[7][index]
+            <<" rad2[Ro]= "<<record[8][index];
     }
 
     //! print titles of class members using column style
@@ -340,8 +388,8 @@ public:
              <<std::setw(_width)<<"type2"
              <<std::setw(_width)<<"semi[R*]"
              <<std::setw(_width)<<"ecc"
-             <<std::setw(_width)<<"rad1[R*]"
-             <<std::setw(_width)<<"rad2[R*]"
+             <<std::setw(_width)<<"rad1[Ro]"
+             <<std::setw(_width)<<"rad2[Ro]"
              <<std::setw(_width)<<"btype";
     }
 
@@ -732,7 +780,7 @@ public:
     void readRandConstant(const char* _fname) {
         FILE* fin;
         if( (fin = fopen(_fname,"r")) == NULL) {
-            printf("Not found.\n");
+            std::cerr<<_fname<<" not found.\n";
         }
         else {
             int rcount = fscanf(fin, "%d %d %d ", &value3_.idum, &rand3_.idum2, &rand3_.iy);
@@ -761,16 +809,16 @@ public:
     }
 
     //! notice kick priority is higher than others
-    bool isKick(const int _binary_type) {
-        return (_binary_type==13);
-    }
+    //bool isKick(const int _binary_type) {
+    //    return (_binary_type==13);
+    //}
 
     bool isMerger(const int _binary_type) {
         return (_binary_type>=10&&_binary_type<=12);
     }
 
     bool isDisrupt(const int _binary_type) {
-        return (_binary_type==14);
+        return (_binary_type==13);
     }
 
     //! initial SSE/BSE global parameters
@@ -946,14 +994,15 @@ public:
       @param[out] _out1: output parameter of first from evolv2
       @param[out] _out2: output parameter of second from evolv2
       @param[out] _bse_event: BSE event record (bpp array)
-      @param[in] _semi: semi-major axis, only used to record initial semi
-      @param[in,out] _period: period of binary in NB unit, used for BSE
+      @param[in] _semi: semi-major axis, only used to record initial semi [IN unit]
+      @param[in,out] _period: period of binary in NB unit, used for BSE [IN unit]
       @param[in,out] _ecc: eccentricity of binary, used for BSE
+      @param[in] _binary_init_type: initial type of binary
       @param[in] _dt_nb: physical time step in Myr to evolve
       \return error flag: -1: error, 0: normal
      */
     int evolveBinary(StarParameter& _star1, StarParameter& _star2, StarParameterOut& _out1, StarParameterOut& _out2, 
-                     double& _semi, double& _period, double& _ecc, BinaryEvent& _bse_event, const double _dt_nb) {
+                     double& _semi, double& _period, double& _ecc, BinaryEvent& _bse_event, int& _binary_init_type, const double _dt_nb) {
         double tphys = std::max(_star1.tphys, _star2.tphys);
         double tphysf = _dt_nb*tscale + tphys;
         double dtp=tphysf*100.0+1000.0;
@@ -965,7 +1014,7 @@ public:
         _out2.dm = _star2.mt;
 
         // backup initial state
-        _bse_event.recordInitial(_star1, _star2, semi_rsun, _ecc);
+        _bse_event.recordInitial(_star1, _star2, semi_rsun, _ecc, _binary_init_type);
 
         if (_star1.tphys<tphys) event_flag = evolveStar(_star1, _out1, tphys);
         if (event_flag<0) return event_flag;
@@ -1050,53 +1099,232 @@ public:
         else return 0;
     }
 
+    //! check Roche fill condition
+    /* Use BSE Roche Radius estimation
+      @param[in] _star1: star parameter of first
+      @param[in] _star2: star parameter of second
+      @param[in] _semi: semi-major axis, [IN unit]
+      @param[in] _ecc: eccentricity of binary, used for BSE
+      \return true: Roche fill
+     */
+    bool isRocheFill(StarParameter& _star1, StarParameter& _star2, double& _semi, double& _ecc) {
+        assert(_star2.mt>0);
+        double q = _star1.mt/_star2.mt;
+        double rl_over_semi1 = EstimateRocheRadiusOverSemi(q);
+        q = 1.0/q;
+        double rl_over_semi2 = EstimateRocheRadiusOverSemi(q);
+        double rl_over_semi_max =std::max(rl_over_semi1,rl_over_semi2); 
+        double rad = _star1.r + _star2.r;
+        double semi_rsun = _semi*rscale;
+        double rcrit = std::max(rad,rl_over_semi_max*semi_rsun);
+        double peri_rsun = semi_rsun*(1-_ecc);
+        bool is_fill= (rcrit>0.5*peri_rsun);
+        return is_fill;
+    }
+
+
     //! merge two star using BSE mix function, star 2 will becomes zero mass
-    void merge(StarParameter& _star1, StarParameter& _star2) {
-        double m0[2],mt[2],age[2];
+    /*!
+      @param[in,out] _star1: star parameter of first
+      @param[in,out] _star2: star parameter of second
+      @param[out] _out1: output parameter of first from evolv2
+      @param[out] _out2: output parameter of second from evolv2
+      @param[in] _semi: semi-major axis, only used to record initial semi [IN unit]
+      @param[in] _ecc: eccentricity of hyperbolic orbit, used for BSE
+    */
+    void merge(StarParameter& _star1, StarParameter& _star2, StarParameterOut& _out1, StarParameterOut& _out2, double& _semi, double& _ecc) {
+
+        double m0[2],mt[2],r[2],mc[2],rc[2],menv[2],renv[2],ospin[2],age[2],vkick[8];
         int kw[2];
+
+        for (int k =0; k<4; k++) {
+            vkick[k]  = _out1.vkick[k];
+            vkick[k+4]= _out2.vkick[k];
+        }
 
         kw[0] = _star1.kw;
         m0[0] = _star1.m0;
         mt[0] = _star1.mt;
+        r[0]  = _star1.r;
+        mc[0] = _star1.mc;
+        rc[0] = _star1.rc;
+        ospin[0] = _star1.ospin;
         age[0]= _star1.tphys-_star1.epoch;
 
         kw[1] = _star2.kw;
         m0[1] = _star2.m0;
         mt[1] = _star2.mt;
+        r[1]  = _star2.r;
+        mc[1] = _star2.mc;
+        rc[1] = _star2.rc;
+        ospin[1] = _star2.ospin;
         age[1]= _star2.tphys-_star2.epoch;
-        
-        mix_(m0,mt,age,kw,zpars);
+
+        _out1.dm = _star1.mt;
+        _out2.dm = _star2.mt;
+
+        double semi_rsun = _semi*rscale;
+
+        merge_(kw, m0, mt, r, mc, rc, menv, renv, ospin, age, &semi_rsun, &_ecc, vkick, zpars);
+
+        _semi = semi_rsun/rscale;
 
         _star1.kw = kw[0];
         _star1.m0 = m0[0];
         _star1.mt = mt[0];
+        _star1.r  = r[0];
+        _star1.mc = mc[0];
+        _star1.rc = rc[0];
+        _star1.ospin  = ospin[0];
         _star1.epoch = _star1.tphys - age[0];
 
         _star2.kw = kw[1];
         _star2.m0 = m0[1];
         _star2.mt = mt[1];
+        _star2.r  = r[1];
+        _star2.mc = mc[1];
+        _star2.rc = rc[1];
+        _star2.ospin  = ospin[1];
         _star2.epoch = _star2.tphys - age[1];
+
+        _out1.menv = menv[0];
+        _out1.renv = renv[0];
+        _out1.tm = 0;
+        _out1.dm = _star1.mt - _out1.dm;
+        _out1.dtmiss = 0;
+
+        _out2.menv = menv[1];
+        _out2.renv = renv[1];
+        _out2.tm = 0;
+        _out2.dm = _star2.mt - _out2.dm;
+        _out2.dtmiss = 0;
+
+        for (int k=0; k<4; k++) _out1.vkick[k]=vkick[k];
+        for (int k=0; k<4; k++) _out2.vkick[k]=vkick[k+4];
+
     }
 
     //! get next time step to check in Myr
-    double getTimeStep(StarParameter& _star) {
+    /*!
+      @param[in] _star: star parameter 
+      \return next time step
+    */
+    double getTimeStepStar(StarParameter& _star) {
         if (_star.kw==15) return 1.0e30/tscale; // give very large value to avoid evolve
 
-        double tm, tn, tscls[20], lums[10], gb[10], dtm, dtr;
-        
-        // obtain star parameters
+        // make a copy to avoid overwriting the origin values
         int kw = _star.kw;
-        star_(&kw, &_star.m0, &_star.mt, &tm, &tn, tscls, lums, gb, zpars);
-
-        // get next step
+        double m0 = _star.m0;
+        double mt = _star.mt;
+        double r = _star.r;
+        double mc = _star.mc;
+        double rc = _star.rc;
         double age = _star.tphys-_star.epoch;
-        deltat_(&kw, &age, &tm, &tn, tscls, &dtm, &dtr);
-        _star.kw = kw;
+        double dtm, dtr;
+        // get next step
+        trdot_(&kw, &m0, &mt, &r, &mc, &rc, &age, &dtm, &dtr, zpars);
 
         //assert(dtr>0.0);
         //assert(dtm>0.0);
 
         return std::min(dtr, dtm)/tscale;
     }
-    
+
+    //! call BSE evolv2 for a binary
+    /*!
+      @param[in] _star1: star parameter of first
+      @param[in] _star2: star parameter of second
+      @param[in] _semi: semi-major axis, [IN unit]
+      @param[in] _ecc: eccentricity of binary, used for BSE
+      @param[in] _binary_type: binary type
+      \return next time step in IN unit
+    */
+    double getTimeStepBinary(StarParameter& _star1, StarParameter& _star2,
+                             double& _semi, double& _ecc, int &_binary_type) {
+
+        double dt = getTimeStepStar(_star1);
+        dt = std::min(dt,getTimeStepStar(_star2));
+
+        // mass transfer case
+        if (isMassTransfer(_binary_type)) {
+            int kw[2];
+            double m0[2],mt[2],r[2],mc[2],rc[2],age[2];
+            kw[0] = _star1.kw;
+            m0[0] = _star1.m0;
+            mt[0] = _star1.mt;
+            r[0]  = _star1.r;
+            mc[0] = _star1.mc;
+            rc[0] = _star1.rc;
+            age[0]= _star1.tphys-_star1.epoch;
+
+            kw[1] = _star2.kw;
+            m0[1] = _star2.m0;
+            mt[1] = _star2.mt;
+            r[1]  = _star2.r;
+            mc[1] = _star2.mc;
+            rc[1] = _star2.rc;
+            age[1]= _star2.tphys-_star2.epoch;
+
+            double dtr;
+            double semi_rsun = _semi*rscale;
+            trflow_(kw,m0,mt,r,mc,rc,age,&dtr,&semi_rsun,zpars);
+            dt = std::min(dt,dtr);
+
+        }
+        else if (_star1.kw>=10&&_star1.kw<15&&_star2.kw>=10&&_star2.kw<15&&_semi>0.0) {// GR effect
+            double semi_rsun = _semi*rscale;
+            dt = std::min(dt, EstimateGRTimescale(_star1, _star2, semi_rsun, _ecc));
+        }
+        
+        return dt/tscale;
+    }
+
+    //! a simple check to determine whether call BSE is necessary by given a reference of time step
+    /*!
+      When calling BSE is necessary within the given time step, return true.
+      If KW type <10, check whether peri-center distance < 100*stellar radii (sum); 
+      If KW type >10, check GR effect timescale.
+      @param[in] _star1: star parameter of first
+      @param[in] _star2: star parameter of second
+      @param[in] _semi: semi-major axis, [IN unit]
+      @param[in] _ecc: eccentricity of binary, used for BSE
+      @param[in] _dt: the time step [In unit]
+      \return true: necessary
+    */
+    bool isCallBSENeeded(StarParameter& _star1, StarParameter& _star2, double& _semi, double& _ecc, double& _dt) {
+        if (_star1.kw>=10&&_star1.kw<15&&_star2.kw>=10&&_star2.kw<15) {
+            // check GR effect
+            double semi_rsun = _semi*rscale;
+            double dt_gr = EstimateGRTimescale(_star1, _star2, semi_rsun, _ecc);
+            if (dt_gr<_dt*tscale) return true;
+        }
+        else {
+            // check Roche overflow
+            if (isRocheFill(_star1, _star2, _semi, _ecc)) {
+                int kw[2];
+                double m0[2],mt[2],r[2],mc[2],rc[2],age[2];
+                kw[0] = _star1.kw;
+                m0[0] = _star1.m0;
+                mt[0] = _star1.mt;
+                r[0]  = _star1.r;
+                mc[0] = _star1.mc;
+                rc[0] = _star1.rc;
+                age[0]= _star1.tphys-_star1.epoch;
+
+                kw[1] = _star2.kw;
+                m0[1] = _star2.m0;
+                mt[1] = _star2.mt;
+                r[1]  = _star2.r;
+                mc[1] = _star2.mc;
+                rc[1] = _star2.rc;
+                age[1]= _star2.tphys-_star2.epoch;
+
+                double dtr;
+                double semi_rsun = _semi*rscale;
+                trflow_(kw,m0,mt,r,mc,rc,age,&dtr,&semi_rsun,zpars);
+                if (dtr<_dt*tscale) return true;
+            }
+        }
+        return false;
+    }
 };

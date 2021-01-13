@@ -47,7 +47,7 @@ public:
         PS::F64 g = std::sqrt(std::max(_bin_in.m1,_bin_in.m2) /min)*(1.0 + mout/min);
     
         //Adopt at least 10,000 outer orbits for random walk time-scale.
-        PS::F64 q = 1.52*std::pow(std::sqrt(std::min(_t_crit/_bin_out.period,10000.0))/(1.0 - _bin_out.ecc),1.0/6.0)*std::pow(fac*g,1.0/3.0);
+        PS::F64 q = 1.52*std::pow(std::sqrt(_t_crit/_bin_out.period)/(1.0 - _bin_out.ecc),1.0/6.0)*std::pow(fac*g,1.0/3.0);
 
         PS::F64 peri_out = _bin_out.semi * (_bin_out.ecc + 1.0);
         PS::F64 rp = peri_out/_bin_in.semi;

@@ -100,35 +100,70 @@ public:
 
 #ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
 
-PS::S32 DispatchKernelWithSPIndex(const PS::S32 tag,
-                                  const PS::S32 n_walk,
-                                  const EPISoft ** epi,
-                                  const PS::S32 *  n_epi,
-                                  const PS::S32 ** id_epj,
-                                  const PS::S32 *  n_epj,
-                                  const PS::S32 ** id_spj,
-                                  const PS::S32 *  n_spj,
-                                  const EPJSoft * epj,
-                                  const PS::S32 n_epj_tot,
-                                  const SPJSoft * spj,
-                                  const PS::S32 n_spj_tot,
-                                  const bool send_flag);
+struct CalcForceWithLinearCutoffCUDAMultiWalk{
+    PS::S32 my_rank;
+    PS::F64 eps2;
+    PS::F64 rcut2;
+    PS::F64 G;
+
+    CalcForceWithLinearCutoffCUDAMultiWalk(){}
+
+    CalcForceWithLinearCutoffCUDAMultiWalk(PS::S32 _rank, PS::F64 _eps2, PS::F64 _rcut2, PS::F64 _G): my_rank(_rank), eps2(_eps2), rcut2(_rcut2), G(_G) {}
+
+    void initialize(PS::S32 _rank, PS::F64 _eps2, PS::F64 _rcut2, PS::F64 _G){
+        my_rank = _rank;
+        eps2 = _eps2;
+        rcut2 = _rcut2;
+        G = _G;
+    }
+
+    PS::S32 operator()(const PS::S32 tag,
+                       const PS::S32 n_walk,
+                       const EPISoft ** epi,
+                       const PS::S32 *  n_epi,
+                       const PS::S32 ** id_epj,
+                       const PS::S32 *  n_epj,
+                       const PS::S32 ** id_spj,
+                       const PS::S32 *  n_spj,
+                       const EPJSoft * epj,
+                       const PS::S32 n_epj_tot,
+                       const SPJSoft * spj,
+                       const PS::S32 n_spj_tot,
+                       const bool send_flag);
+};
 
 #else
 
-PS::S32 DispatchKernelWithSP(const PS::S32 tag,
-                             const PS::S32 n_walk,
-                             const EPISoft ** epi,
-                             const PS::S32 *  n_epi,
-                             const EPJSoft ** epj,
-                             const PS::S32 *  n_epj,
-                             const SPJSoft ** spj,
-                             const PS::S32  * n_spj);
+struct CalcForceWithLinearCutoffCUDA{
+    PS::S32 my_rank;
+    PS::F64 eps2;
+    PS::F64 rcut2;
+    PS::F64 G;
 
+    CalcForceWithLinearCutoffCUDA(){}
+
+    CalcForceWithLinearCutoffCUDA(PS::S32 _rank, PS::F64 _eps2, PS::F64 _rcut2, PS::F64 _G): my_rank(_rank), eps2(_eps2), rcut2(_rcut2), G(_G) {}
+
+    void initialize(PS::S32 _rank, PS::F64 _eps2, PS::F64 _rcut2, PS::F64 _G){
+        my_rank = _rank;
+        eps2 = _eps2;
+        rcut2 = _rcut2;
+        G = _G;
+    }
+
+    PS::S32 operator()(const PS::S32  tag,
+                       const PS::S32  n_walk,
+                       const EPISoft *epi[],
+                       const PS::S32  n_epi[],
+                       const EPJSoft  *epj[],
+                       const PS::S32  n_epj[],
+                       const SPJSoft *spj[],
+                       const PS::S32  n_spj[]);
+};
 #endif
 
-PS::S32 RetrieveKernel(const PS::S32 tag,
-                       const PS::S32 n_walk,
-                       const PS::S32 * ni,
-                       ForceSoft      ** force);
+PS::S32 RetrieveForceCUDA(const PS::S32 tag,
+                          const PS::S32 n_walk,
+                          const PS::S32 * ni,
+                          ForceSoft      ** force);
 

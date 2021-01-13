@@ -43,7 +43,7 @@ public:
     static PS::F64 r_search_min;
     static PS::F64 r_group_crit_ratio;
     static PS::F64 mean_mass_inv;
-    static PS::F64vec vel_cm;
+    //static PS::F64vec vel_cm;
     static GroupDataMode group_data_mode;
 
     Ptcl(): ParticleBase(), r_search(-PS::LARGE_FLOAT), id(0), group_data(), changeover() {}
@@ -156,7 +156,8 @@ public:
         PS::S64 rcount=fscanf(_fin, "%lf %lld ",
                               &this->r_search, &this->id);
         if (rcount<2) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Ptcl data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
         group_data.artificial.readAscii(_fin);
@@ -164,7 +165,8 @@ public:
         PS::S64 rcount=fscanf(_fin, "%lf %lld %lld %lld",
                               &this->r_search, &this->id, &this->group_data.data_int64.data1, &this->group_data.data_int64.data2);
         if (rcount<4) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Ptcl data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
 #endif
@@ -178,7 +180,8 @@ public:
         ParticleBase::readBinary(_fin);
         size_t rcount = fread(&(this->r_search), sizeof(PS::F64), 4, _fin);
         if (rcount<4) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Ptcl data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
         //group_data.artificial.readBinary(_fin);
@@ -207,9 +210,10 @@ public:
     /*! calculate r_search based on velocity and tree step 
      */
     void calcRSearch(const PS::F64 _dt_tree) {
-        PS::F64vec dv = vel- vel_cm;
-        PS::F64 v = std::sqrt(dv*dv);
-        r_search = std::max(v*_dt_tree*search_factor+changeover.getRout(), r_search_min);
+        //PS::F64vec dv = vel- vel_cm;
+        //PS::F64 v = std::sqrt(dv*dv);
+        //r_search = std::max(v*_dt_tree*search_factor+changeover.getRout(), r_search_min);
+        r_search = std::max(std::sqrt(vel*vel)*_dt_tree*search_factor+changeover.getRout(), r_search_min);
         //r_search = std::max(std::sqrt(vel*vel)*dt_tree*search_factor, std::sqrt(mass*mean_mass_inv)*r_search_min);
 #ifdef HARD_DEBUG
         assert(r_search>0);

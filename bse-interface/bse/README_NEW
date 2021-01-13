@@ -1,4 +1,4 @@
-Modification Log for PeTar
+Modification Log for PeTar (Long Wang)
 
 1. For thread parallelization, variables belong to individual star can not be in COMMON block.
    Thus, COMMON/FBACK/ is removed and additional arguments are added to hrdiag and kick (also change in evolv1.f evolv2.f comenv.f)
@@ -13,6 +13,8 @@ Modification Log for PeTar
    Corresponding changes are also made in evolv1/2.f, mix.f
 4. j.eq.1 criterion for call kick in evolve1 is removed to avoid mutiple times call of kick.
 5. The commob block /TSTEPC/ is removed since not used.
+6. trdot.f is added as an extended version of deltat.f (import from NBODY6++) to calculate the next evolv time for a star
+7. trflow.f is added to calculate the next evolve time for Roche overflow binary (import from NBODY6++)
 
 ------------------------------------------------------------
 The new standalone SSE/BSE as of 25 December 2018

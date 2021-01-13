@@ -290,6 +290,8 @@
 *
       do 500 , k = kmin,kmax
          age = tphys - epoch(k)
+         mc = massc(k)
+         rc = radc(k)
          CALL star(kstar(k),mass0(k),mass(k),tm,tn,tscls,lums,GB,zpars)
          CALL hrdiag(mass0(k),age,mass(k),tm,tn,tscls,lums,GB,zpars,
      &        rm,lum,kstar(k),mc,rc,me,re,k2,fbfac,fbtot,mco,ecs)
@@ -1735,7 +1737,7 @@
 *
 * For very close systems include angular momentum loss mechanisms.
 *
-         if(sep.le.10.d0)then
+         if(sep.gt.0.d0)then
             djgr = 8.315d-10*mass(1)*mass(2)*(mass(1)+mass(2))/
      &             (sep*sep*sep*sep)
             f1 = (19.d0/6.d0) + (121.d0/96.d0)*ecc2

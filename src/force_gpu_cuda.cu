@@ -48,12 +48,12 @@ struct ForceGPU{
 
 //! device pair force of Epi and Epi with linear cutoff
 inline __device__ ForceGPU dev_gravity_ep_ep(
-		float  eps2,
-        float  rcut2,
-        float  G,
-		EpiDev epii,
-		EpjGPU epjj,
-        ForceGPU forcei)
+    float  eps2,
+    float  rcut2,
+    float  G,
+    EpiDev epii,
+    EpjGPU epjj,
+    ForceGPU forcei)
 {
 	float dx = epjj.pos.x - epii.pos.x;
 	float dy = epjj.pos.y - epii.pos.y;
@@ -77,18 +77,18 @@ inline __device__ ForceGPU dev_gravity_ep_ep(
 }
 
 __device__ ForceGPU force_kernel_ep_ep_1walk(
-		EpjGPU       *jpsh,
-		const EpiDev  epii,
-		const int     id_walk,
-		const int3   *ij_disp,
-		const EpjGPU *epj, 
+    EpjGPU       *jpsh,
+    const EpiDev  epii,
+    const int     id_walk,
+    const int3   *ij_disp,
+    const EpjGPU *epj, 
 #ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
-        const int    *id_epj,
+    const int    *id_epj,
 #endif
-		ForceGPU      forcei,
-		const float   eps2,
-        const float   rcut2,
-        const float   G) {
+    ForceGPU      forcei,
+    const float   eps2,
+    const float   rcut2,
+    const float   G) {
 
     const int tid = threadIdx.x;
     const int j_head = ij_disp[id_walk  ].y;
@@ -119,20 +119,20 @@ __device__ ForceGPU force_kernel_ep_ep_1walk(
 }
 
 __device__ ForceGPU force_kernel_ep_ep_2walk(
-		EpjGPU        jpsh[2][N_THREAD_GPU],
-		const EpiDev  epii,
-		const int     id_walk,
-		const int     iwalk0,
-		const int     iwalk1,
-		const int3   *ij_disp,
-		const EpjGPU *epj, 
+    EpjGPU        jpsh[2][N_THREAD_GPU],
+    const EpiDev  epii,
+    const int     id_walk,
+    const int     iwalk0,
+    const int     iwalk1,
+    const int3   *ij_disp,
+    const EpjGPU *epj, 
 #ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
-        const int    *id_epj,
+    const int    *id_epj,
 #endif
-		ForceGPU      forcei,
-		const float   eps2,
-        const float   rcut2,
-        const float   G) {
+    ForceGPU      forcei,
+    const float   eps2,
+    const float   rcut2,
+    const float   G) {
 
 	const int jbeg0 = ij_disp[iwalk0].y;
 	const int jbeg1 = ij_disp[iwalk1].y;
@@ -193,17 +193,17 @@ __device__ ForceGPU force_kernel_ep_ep_2walk(
 }
 
 __device__ ForceGPU force_kernel_ep_ep_multiwalk(
-		const EpiDev  epii,
-		const int     id_walk,
-		const int3   *ij_disp,
-		const EpjGPU *epj, 
+    const EpiDev  epii,
+    const int     id_walk,
+    const int3   *ij_disp,
+    const EpjGPU *epj, 
 #ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
-        const int    *id_epj,
+    const int    *id_epj,
 #endif
-		ForceGPU      forcei,
-		const float   eps2,
-        const float   rcut2,
-        const float   G) {
+    ForceGPU      forcei,
+    const float   eps2,
+    const float   rcut2,
+    const float   G) {
 
     const int j_head = ij_disp[id_walk  ].y;
     const int j_tail = ij_disp[id_walk+1].y;
@@ -220,16 +220,16 @@ __device__ ForceGPU force_kernel_ep_ep_multiwalk(
 }
 
 __global__ void force_kernel_ep_ep(
-		const int3   * ij_disp,
-		const EpiGPU * epi,
-		const EpjGPU * epj, 
+    const int3   * ij_disp,
+    const EpiGPU * epi,
+    const EpjGPU * epj, 
 #ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
-        const int    *id_epj,
+    const int    *id_epj,
 #endif
-		ForceGPU     * force,
-		const float    eps2,
-        const float    rcut2,
-        const float    G) {
+    ForceGPU     * force,
+    const float    eps2,
+    const float    rcut2,
+    const float    G) {
 
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
 	EpiDev epii;
@@ -274,11 +274,11 @@ __global__ void force_kernel_ep_ep(
 
 //! device pair force of Epi and Spi 
 inline __device__ float4 dev_gravity_ep_sp(
-		float  eps2,
-        float  G,
-		float3 posi,
-		SpjGPU spjj,
-        float4 accpi) {
+    float  eps2,
+    float  G,
+    float3 posi,
+    SpjGPU spjj,
+    float4 accpi) {
 
 	float dx = posi.x - spjj.pos.x;
 	float dy = posi.y - spjj.pos.y;
@@ -323,17 +323,17 @@ inline __device__ float4 dev_gravity_ep_sp(
 }
 
 __device__ float4 force_kernel_ep_sp_1walk(
-		SpjGPU   *jpsh,
-		const float3  posi,
-		const int     id_walk,
-		const int3   *ij_disp,
-		const SpjGPU *spj, 
+    SpjGPU   *jpsh,
+    const float3  posi,
+    const int     id_walk,
+    const int3   *ij_disp,
+    const SpjGPU *spj, 
 #ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
-        const int    *id_spj,
+    const int    *id_spj,
 #endif
-		float4        accpi,
-		const float   eps2,
-        const float   G) {
+    float4        accpi,
+    const float   eps2,
+    const float   G) {
 
     const int tid = threadIdx.x;
     const int j_head = ij_disp[id_walk  ].z;
@@ -364,19 +364,19 @@ __device__ float4 force_kernel_ep_sp_1walk(
 }
 
 __device__ float4 force_kernel_ep_sp_2walk(
-		SpjGPU        jpsh[2][N_THREAD_GPU],
-		const float3  posi,
-		const int     id_walk,
-		const int     iwalk0,
-		const int     iwalk1,
-		const int3   *ij_disp,
-		const SpjGPU *spj, 
+    SpjGPU        jpsh[2][N_THREAD_GPU],
+    const float3  posi,
+    const int     id_walk,
+    const int     iwalk0,
+    const int     iwalk1,
+    const int3   *ij_disp,
+    const SpjGPU *spj, 
 #ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
-        const int    *id_spj,
+    const int    *id_spj,
 #endif
-		float4        accpi,
-		const float   eps2,
-        const float   G)
+    float4        accpi,
+    const float   eps2,
+    const float   G)
 {
 	const int jbeg0 = ij_disp[iwalk0].z;
 	const int jbeg1 = ij_disp[iwalk1].z;
@@ -437,16 +437,16 @@ __device__ float4 force_kernel_ep_sp_2walk(
 }
 
 __device__ float4 force_kernel_ep_sp_multiwalk(
-		const float3  posi,
-		const int     id_walk,
-		const int3   *ij_disp,
-		const SpjGPU *spj, 
+    const float3  posi,
+    const int     id_walk,
+    const int3   *ij_disp,
+    const SpjGPU *spj, 
 #ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
-        const int    *id_spj,
+    const int    *id_spj,
 #endif
-		float4        accpi,
-		const float   eps2,
-        const float   G)
+    float4        accpi,
+    const float   eps2,
+    const float   G)
 {
     const int j_head = ij_disp[id_walk  ].z;
     const int j_tail = ij_disp[id_walk+1].z;
@@ -463,15 +463,15 @@ __device__ float4 force_kernel_ep_sp_multiwalk(
 }
 
 __global__ void force_kernel_ep_sp(
-		const int3   * ij_disp,
-		const EpiGPU * epi,
-		const SpjGPU * spj, 
+    const int3   * ij_disp,
+    const EpiGPU * epi,
+    const SpjGPU * spj, 
 #ifdef PARTICLE_SIMULATOR_GPU_MULIT_WALK_INDEX
-        const int    *id_spj,
+    const int    *id_spj,
 #endif
-		ForceGPU     * force,
-		const float    eps2,
-        const float    G) {
+    ForceGPU     * force,
+    const float    eps2,
+    const float    G) {
 
     int tid = blockDim.x * blockIdx.x + threadIdx.x;
 	float3 posi    = epi[tid].pos;
@@ -532,26 +532,32 @@ static cudaEvent_t cu_event_dtoh;
 static cudaPointer<int>      dev_id_epj;
 static cudaPointer<int>      dev_id_spj;
 
-PS::S32 DispatchKernelWithSPIndex(const PS::S32 tag,
-                                  const PS::S32 n_walk,
-                                  const EPISoft ** epi,
-                                  const PS::S32 *  n_epi,
-                                  const PS::S32 ** id_epj,
-                                  const PS::S32 *  n_epj,
-                                  const PS::S32 ** id_spj,
-                                  const PS::S32 *  n_spj,
-                                  const EPJSoft * epj,
-                                  const PS::S32 n_epj_tot,
-                                  const SPJSoft * spj,
-                                  const PS::S32 n_spj_tot,
-                                  const bool send_flag) {
+PS::S32 CalcForceWithLinearCutoffCUDAMultiWalk::operator()(const PS::S32 tag,
+                                                           const PS::S32 n_walk,
+                                                           const EPISoft ** epi,
+                                                           const PS::S32 *  n_epi,
+                                                           const PS::S32 ** id_epj,
+                                                           const PS::S32 *  n_epj,
+                                                           const PS::S32 ** id_spj,
+                                                           const PS::S32 *  n_spj,
+                                                           const EPJSoft * epj,
+                                                           const PS::S32 n_epj_tot,
+                                                           const SPJSoft * spj,
+                                                           const PS::S32 n_spj_tot,
+                                                           const bool send_flag) {
     assert(n_walk <= N_WALK_LIMIT);
     if(init_call){
-		dev_epi  .allocate(NI_LIMIT);
-		dev_epj  .allocate(NJ_LIMIT);
+        int ngpu;
+        cudaGetDeviceCount(&ngpu);
+        int device_index=my_rank % ngpu;
+        cudaSetDevice(device_index);
+        //std::cerr<<"MPI rank "<<my_rank<<" set GPU device "<<device_index<<std::endl;
+        
+        dev_epi  .allocate(NI_LIMIT);
+        dev_epj  .allocate(NJ_LIMIT);
         dev_spj  .allocate(NJ_LIMIT);
-		dev_force.allocate(NI_LIMIT);
-		ij_disp  .allocate(N_WALK_LIMIT+2);
+        dev_force.allocate(NI_LIMIT);
+        ij_disp  .allocate(N_WALK_LIMIT+2);
         dev_id_epj .allocate(NJ_LIMIT);
         dev_id_spj .allocate(NJ_LIMIT);
         cudaEventCreate(&cu_event_sends);
@@ -561,22 +567,22 @@ PS::S32 DispatchKernelWithSPIndex(const PS::S32 tag,
         cudaEventCreate(&cu_event_calc);
         cudaEventCreate(&cu_event_retr);
         cudaEventCreate(&cu_event_dtoh);
-		init_call = false;
+        init_call = false;
     }
 
-    const float eps2 = EPISoft::eps * EPISoft::eps;
-    const PS::F64 rcut2 = EPISoft::r_out*EPISoft::r_out;
-    const PS::F64 G = ForceSoft::grav_const;
+    //const float eps2 = EPISoft::eps * EPISoft::eps;
+    //const PS::F64 rcut2 = EPISoft::r_out*EPISoft::r_out;
+    //const PS::F64 G = ForceSoft::grav_const;
 
     if(send_flag==true){
 #ifdef GPU_PROFILE
         gpu_profile.copy.start();
 #endif
         /*
-        if(dev_epj.size < n_epj_tot+n_spj_tot){
-            dev_epj.free();
-            dev_epj.allocate(n_epj_tot+n_spj_tot);
-        }
+          if(dev_epj.size < n_epj_tot+n_spj_tot){
+          dev_epj.free();
+          dev_epj.allocate(n_epj_tot+n_spj_tot);
+          }
         */
 #pragma omp parallel for
         for(PS::S32 i=0; i<n_epj_tot; i++){
@@ -694,34 +700,41 @@ PS::S32 DispatchKernelWithSPIndex(const PS::S32 tag,
 }
 
 #else
-PS::S32 DispatchKernelWithSP(const PS::S32  tag,
-                             const PS::S32  n_walk,
-                             const EPISoft *epi[],
-                             const PS::S32  n_epi[],
-                             const EPJSoft  *epj[],
-                             const PS::S32  n_epj[],
-                             const SPJSoft *spj[],
-                             const PS::S32  n_spj[]){
+
+PS::S32 CalcForceWithLinearCutoffCUDA::operator()(const PS::S32  tag,
+                                                  const PS::S32  n_walk,
+                                                  const EPISoft *epi[],
+                                                  const PS::S32  n_epi[],
+                                                  const EPJSoft  *epj[],
+                                                  const PS::S32  n_epj[],
+                                                  const SPJSoft *spj[],
+                                                  const PS::S32  n_spj[]){
     assert(n_walk <= N_WALK_LIMIT);
     if(init_call){
-		dev_epi  .allocate(NI_LIMIT);
-		dev_epj  .allocate(NJ_LIMIT);
+        int ngpu;
+        cudaGetDeviceCount(&ngpu);
+        int device_index=my_rank % ngpu;
+        cudaSetDevice(device_index);
+        //std::cerr<<"MPI rank "<<my_rank<<"set GPU device "<<device_index<<std::endl;
+        
+        dev_epi  .allocate(NI_LIMIT);
+        dev_epj  .allocate(NJ_LIMIT);
         dev_spj  .allocate(NJ_LIMIT);
-		dev_force.allocate(NI_LIMIT);
-		ij_disp  .allocate(N_WALK_LIMIT+2);
+        dev_force.allocate(NI_LIMIT);
+        ij_disp  .allocate(N_WALK_LIMIT+2);
         cudaEventCreate(&cu_event_disp);
         cudaEventCreate(&cu_event_htod);
         cudaEventCreate(&cu_event_calc);
         cudaEventCreate(&cu_event_retr);
         cudaEventCreate(&cu_event_dtoh);
-		init_call = false;
+        init_call = false;
     }
 #ifdef GPU_PROFILE
     gpu_profile.copy.start();
 #endif
-    const float eps2 = EPISoft::eps * EPISoft::eps;
-    const PS::F64 rcut2 = EPISoft::r_out*EPISoft::r_out;
-    const PS::F64 G = ForceSoft::grav_const;
+    //const float eps2 = EPISoft::eps * EPISoft::eps;
+    //const PS::F64 rcut2 = EPISoft::r_out*EPISoft::r_out;
+    //const PS::F64 G = ForceSoft::grav_const;
     ij_disp[0].x = 0;
     ij_disp[0].y = 0;
     ij_disp[0].z = 0;
@@ -815,10 +828,10 @@ PS::S32 DispatchKernelWithSP(const PS::S32  tag,
 
 #endif
 
-PS::S32 RetrieveKernel(const PS::S32 tag,
-                       const PS::S32 n_walk,
-                       const PS::S32 ni[],
-                       ForceSoft    *force[]) {
+PS::S32 RetrieveForceCUDA(const PS::S32 tag,
+                          const PS::S32 n_walk,
+                          const PS::S32 ni[],
+                          ForceSoft    *force[]) {
 
 #ifdef GPU_PROFILE
     cudaEventRecord(cu_event_retr);
@@ -865,4 +878,3 @@ PS::S32 RetrieveKernel(const PS::S32 tag,
 #endif
     return 0;
 }
-

@@ -1,14 +1,20 @@
-Modification Log for PeTar
+Modification Log for PeTar (Long Wang)
 
 1. For thread parallelization, variables belong to individual star can not be in COMMON block.
    Thus, COMMON/KICKSN/ is removed and additional arguments are added to hrdiag and kick (also change in evolv1.f evolv2.f comenv.f)
-2. Array for saving data COMMON block cannot be used, i.e., scm, spp, bcm, bpp arrays are removed. 
-   Direct writing in data file (10) is used instead.
+   kick is an array with the size of 4, first three are x, y, z components of kick velocity, last is the value of velocity.
+   In evolve2.f, vkick has 8 members, first and second 4 members are for the first and secondary components, respectively.
+2. Array for saving data COMMON block cannot be used, i.e., scm, spp, bcm arrays are removed. 
+   Direct writing in data file (10) is used instead. The output interval is controlled by the argument, dtp.
+   bpp array now is an argument in evolve2 to store the event information, the array size is fixed to (8,10).
+   The stellar type of bpp is modified compare to the original value. The definition is shown in bse.f and bse_interface.h:binary_type.
 3. The common block value mxns is moved from /value1/ to /value4/. 
    The common block /value1/ is removed in hrdiag.f to avoid neta rewritting bug. 
    Corresponding changes are also made in evolv1/2.f, mix.f
 4. j.eq.1 criterion for call kick in evolve1 is removed to avoid mutiple times call of kick.
 5. The common block /TSTEPC/ is removed since not used.
+6. trdot.f is added as an extended version of deltat.f (import from NBODY6++) to calculate the next evolv time for a star
+7. trflow.f is added to calculate the next evolve time for Roche overflow binary (import from NBODY6++)
 
 ------------------------------------------------------------
 The new standalone MOBSE available at https://mobse-webpage.netlify.app/

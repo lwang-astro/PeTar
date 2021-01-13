@@ -446,7 +446,7 @@ public:
                  ARC_substep_sum  (NumCounter("AR_step_sum")),
                  ARC_tsyn_step_sum(NumCounter("AR_tsyn_step_sum")),
                  ARC_n_groups     (NumCounter("AR_group_number")),
-                 ARC_n_groups_iso (NumCounter("Iso_gsoup_number")),
+                 ARC_n_groups_iso (NumCounter("Iso_group_number")),
                  H4_step_sum      (NumCounter("Hermite_step_sum")),
                  n_neighbor_zero  (NumCounter("Hermite_no_NB")),
                  ep_ep_interact   (NumCounter("Ep-Ep_interaction")),

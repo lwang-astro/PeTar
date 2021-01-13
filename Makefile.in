@@ -1,10 +1,12 @@
-use_x86 =@use_x86@
+#use_x86 =@use_x86@
+use_arch=@with_arch@
 use_simd=@use_simd@
 use_simd_64=@use_simd_64@
 use_mpi =@use_mpi@
 use_gpu_cuda=@use_cuda@
 use_omp = @use_omp@
 use_gperf=@use_gperf@
+use_quad = @use_quad@
 debug_mode=@with_debug@
 step_mode=@with_step_mode@
 se_mode=@with_interrupt@
@@ -17,7 +19,9 @@ CXXFLAGS=@CXXFLAGS@
 TARGET=build/@PROG_NAME@ build/petar.hard.debug build/petar.format.transfer
 
 #MT_FLAGS += -D HARD_CM_KICK
+ifeq ($(use_quad),yes)
 MT_FLAGS += -D USE_QUAD
+endif
 MT_FLAGS += -D SOFT_PERT
 MT_FLAGS += -D AR_TTL
 MT_FLAGS += -D AR_SLOWDOWN_TREE
@@ -46,27 +50,37 @@ ifneq ($(se_mode),off)
 MT_FLAGS += -D STELLAR_EVOLUTION
 ifeq ($(se_mode),mobse)
 MT_FLAGS += -D MOBSE
-CXXLIBS += -L ./mobse-interface -lmobse -lgfortran
-LIBFILES+= mobse-interface/libmobse.a mobse-interface/mobse_interface.h
+MOBSELIBS = -L ./mobse-interface -lmobse -lgfortran
+MOBSELIBFILES= mobse-interface/libmobse.a mobse-interface/mobse_interface.h 
+CXXLIBS += $(MOBSELIBS)
+LIBFILES+= $(MOBSELIBFILES)
 INCLUDE += -I ./mobse-interface
 TARGET += mobse-interface/petar.mobse
 else  ifeq ($(se_mode),bse)
 MT_FLAGS += -D BSE
-CXXLIBS += -L ./bse-interface -lbse -lgfortran
-LIBFILES+= bse-interface/libbse.a bse-interface/bse_interface.h
+BSELIBS = -L ./bse-interface -lbse -lgfortran
+BSELIBFILES= bse-interface/libbse.a bse-interface/bse_interface.h 
+CXXLIBS += $(BSELIBS)
+LIBFILES+= $(BSELIBFILES)
 INCLUDE += -I ./bse-interface
 TARGET += bse-interface/petar.bse
 endif
 endif
 
+ifneq ($(ext_mode),off)
+MT_FLAGS += -D EXTERNAL_POT_IN_PTCL
+MT_FLAGS += -D RECORD_CM_IN_HEADER
+endif
 ifeq ($(ext_mode),galpy)
 MT_FLAGS += -D GALPY
-CXXLIBS += -L ./galpy-interface -lgalpy -lgsl -lgslcblas
-LIBFILES+= galpy-interface/libgalpy.a galpy-interface/galpy_interface.h
+GALPYLIBS = -L ./galpy-interface -lgalpy @GSL_LIBS@
+CXXLIBS += $(GALPYLIBS)
+GALPYLIBFILES=galpy-interface/libgalpy.a galpy-interface/galpy_interface.h
+LIBFILES+= $(GALPYLIBFILES)
 GALPY_PATH=@GALPY_PATH@
 GALPY_INCLUDE_PATH= $(shell find $(GALPY_PATH) -type d )
 GALPY_INCLUDE = $(addprefix -I, $(GALPY_INCLUDE_PATH))
-INCLUDE += -I ./galpy-interface $(GALPY_INCLUDE)
+INCLUDE += -I ./galpy-interface $(GALPY_INCLUDE) @GSL_CFLAGS@
 TARGET += galpy-interface/petar.galpy galpy-interface/petar.galpy.help
 endif
 
@@ -133,7 +147,7 @@ CXXFLAGS += -D GPU_PROFILE
 endif # gpu cuda
 
 #-------------------------------------
-ifeq ($(use_x86),yes)
+ifeq ($(use_arch),x86)
 CXXFLAGS += -DINTRINSIC_X86
 
 #-------------------------------------
@@ -148,6 +162,11 @@ endif  # simd
 #-------------------------------------
 
 endif # x86
+
+#-------------------------------------
+ifeq ($(use_arch),fugaku)
+CXXFLAGS += -D USE_FUGAKU
+endif # fugaku
 
 #-------------------------------------
 ifeq ($(use_gperf),yes)
@@ -189,17 +208,21 @@ HARD_MT_FLAGS += -D AR_TTL -D AR_SLOWDOWN_INNER -D AR_SLOWDOWN_TIMESCALE -D HARD
 
 HARD_SRC= io.hpp ptcl.hpp particle_base.hpp hard_assert.hpp cluster_list.hpp hard.hpp hard_ptcl.hpp hermite_interaction.hpp hermite_information.hpp hermite_perturber.hpp ar_interaction.hpp ar_perturber.hpp search_group_candidate.hpp artificial_particles.hpp stability.hpp soft_ptcl.hpp static_variables.hpp tidal_tensor.hpp orbit_sampling.hpp pseudoparticle_multipole.hpp
 
-build/petar.format.transfer: format_transfer.cxx |build
+build/petar.format.transfer: format_transfer.cxx galpy-interface/libgalpy.a|build
 	$(CXX) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(MT_FLAGS) -o $@ $< $(CXXLIBS)
 
-build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(LIBFILES) |build
-	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
-
+ifeq ($(se_mode),mobse)
+build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(MOBSELIBFILES) |build
+	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(MOBSELIBS)
+else
+build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(BSELIBFILES) |build
+	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(BSELIBS)
+endif
 build/petar.hard.test: hard_test.cxx $(HARD_SRC) |build
 	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
 
 build/petar.simd.test: simd_test.cxx $(OBJS) |build
-	$(CXX) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(SIMD_DEBFLAGS) -DPARTICLE_SIMULATOR_THREAD_PARALLEL $^ -o $@  $(CXXLIBS)
+	$(CXX) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(CUDAFLAGS) $(MT_FLAGS) $^ -o $@  $(CXXLIBS)
 
 build/petar.tt.test: tidal_tensor_test.cxx |build
 	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS)  $< -o $@  $(CXXLIBS)
@@ -211,21 +234,25 @@ build/force_gpu_cuda.o: force_gpu_cuda.cu |build
 	$(NVCC) $(INCLUDE) -c $< -o $@ 
 
 bse-interface/petar.bse: bse-interface
-	$(MAKE) -C bse-interface
+	$(MAKE) -C bse-interface petar.bse
 
-bse-interface/libbse.a: bse-interface/petar.bse
+bse-interface/libbse.a: bse-interface
+	$(MAKE) -C bse-interface libbse.a
 
 mobse-interface/petar.mobse: mobse-interface
-	$(MAKE) -C mobse-interface
+	$(MAKE) -C mobse-interface petar.mobse
 
-mobse-interface/libmobse.a: mobse-interface/petar.mobse
+mobse-interface/libmobse.a: mobse-interface
+	$(MAKE) -C mobse-interface libmobse.a
 
 galpy-interface/petar.galpy: galpy-interface
-	$(MAKE) -C galpy-interface
+	$(MAKE) -C galpy-interface petar.galpy
 
-galpy-interface/libgalpy.a: galpy-interface/petar.galpy
+galpy-interface/libgalpy.a: galpy-interface
+	$(MAKE) -C galpy-interface libgalpy.a
 
-galpy-interface/petar.galpy.help: galpy-interface/petar.galpy
+galpy-interface/petar.galpy.help: galpy-interface
+	$(MAKE) -C galpy-interface petar.galpy.help
 
 install: $(TARGET)
 	install -d @prefix@/bin/
@@ -238,6 +265,7 @@ install: $(TARGET)
 	install -m 755 tools/data_process.py @prefix@/bin/petar.data.process
 	install -m 755 tools/movie.py @prefix@/bin/petar.movie
 	install -m 755 tools/data_gether.sh @prefix@/bin/petar.data.gether
+	install -m 755 tools/get_object_snapshot.py @prefix@/bin/petar.get.object.snap
 	install -d @prefix@/include/
 	install -d @prefix@/include/petar
 	install -m 644 tools/analysis/*.py @prefix@/include/petar/
@@ -248,3 +276,4 @@ clean:
 	$(MAKE) -C bse-interface clean
 	$(MAKE) -C mobse-interface clean
 	$(MAKE) -C galpy-interface clean
+
