@@ -46,12 +46,14 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
     r_bin=0.1
     average_mode='sphere'
     simple_binary=True
+    external_mode='none'
 
     if ('G' in kwargs.keys()): G=kwargs['G']
     if ('r_max_binary' in kwargs.keys()): r_bin=kwargs['r_max_binary']
     if ('average_mode' in kwargs.keys()): average_mode=kwargs['average_mode']
     if ('simple_binary' in kwargs.keys()): simple_binary=kwargs['simple_binary']
     if ('snapshot_format' in kwargs.keys()): snapshot_format=kwargs['snapshot_format']
+    if ('external_mode' in kwargs.keys()): external_mode=kwargs['external_mode']
 
     header = PeTarDataHeader(file_path, **kwargs)
     
@@ -76,6 +78,11 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         # get cm, density
         #print('Get density')
         cm_pos, cm_vel=core.calcDensityAndCenter(particle,kdtree)
+
+        # add global offset
+        if (external_mode!='none'): 
+            core.pos[-1] += header.pos_offset
+            core.vel[-1] += header.vel_offset
         #print('cm pos:',cm_pos,' vel:',cm_vel)
         get_density_time = time.time()
 
@@ -126,12 +133,16 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         center_and_r2_time = read_time
     
 
-    if ('r_escape' in kwargs.keys()) : 
-        #print('b',single.size,binary.size)    
+    if ('r_escape' in kwargs.keys()):
         rcut = kwargs['r_escape']
-        single = esc_single.findEscaper(header.time, single, rcut)
-        binary = esc_binary.findEscaper(header.time, binary, rcut)
-        #print('a',single.size,binary.size,esc_single.size,esc_binary.size)
+        if ('e_escape' in kwargs.keys()): 
+            ecut = kwargs['e_escape']
+            single = esc_single.findEscaper(header.time, single, rcut, ecut)
+            binary = esc_binary.findEscaper(header.time, binary, rcut, ecut)
+        else:
+            single = esc_single.findEscaper(header.time, single, rcut)
+            binary = esc_binary.findEscaper(header.time, binary, rcut)
+            #print('a',single.size,binary.size,esc_single.size,esc_binary.size)
     
     #print('Lagrangian radius')
     lagr.calcOneSnapshot(header.time, single, binary, rc, average_mode)

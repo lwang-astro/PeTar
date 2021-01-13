@@ -30,7 +30,8 @@ class BinaryTree(DictNpArrayMix):
         Parameters
         ----------
         keyword arguments:
-            member_particle_type: type of particle (Particle)
+            member_particle_type: type (Particle)
+                Type of component particle 
         """
         member_particle_type=Particle
         if 'member_particle_type' in kwargs.keys(): member_particle_type=kwargs['member_particle_type']
@@ -51,8 +52,10 @@ class GroupInfo(DictNpArrayMix):
         Parameters
         ----------
         keyword arguments:
-            particle_type: particle type (hard), do not change this!
-            N: number of groups (2)
+            particle_type: string (hard)
+                Particle type, do not change this!
+            N: int (2)
+                Number of members of one group
         """
         kwargs['particle_type']='hard'
         keys=[['type',np.int64],['n',np.int64],['time',np.float64],['pos',(np.float64,3)],['vel',(np.float64,3)]]

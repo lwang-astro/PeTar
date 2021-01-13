@@ -543,6 +543,14 @@ extern "C" {
 #ifdef INTERFACE_DEBUG_PRINT
         if(ptr->my_rank==0) std::cout<<"PETAR: evolve models start\n";
 #endif
+
+        if (ptr->stat.n_real_glb==0) {// escape if no particle
+#ifdef INTERFACE_DEBUG_PRINT
+            if(ptr->my_rank==0) std::cout<<"PETAR: evolve models end\n";
+#endif
+            return 0;
+        }
+
         // check whether interrupted cases, exist, if so, copy back data to local particles
         int n_interrupt_isolated = ptr->system_hard_isolated.getNumberOfInterruptClusters();
         for (int i=0; i<n_interrupt_isolated; i++) {

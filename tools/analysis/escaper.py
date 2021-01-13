@@ -15,17 +15,22 @@ class SingleEscaper(Particle):
         Parameters
         ----------
         keyword arguments:
-            particle_type: basic particle type: hermite, hard, soft (soft), do not change this, if read PeTar data.
-            interrupt_mode: PeTar interrupt mode: base, bse, none (none)
+            particle_type: string (soft)
+                Basic particle type: hermite, hard, soft
+                When read PeTar data, do not change this
+            interrupt_mode: string (none)
+                PeTar interrupt mode: base, bse, none
         """
+
+        
         
         DictNpArrayMix.__init__(self, [['time',np.float64]], _dat, _offset, _append, **kwargs)
         Particle.__init__(self, _dat, _offset+self.ncols, True, **kwargs)
 
-    def findEscaper(self, time, single, rcut):
+    def findEscaper(self, time, single, rcut, ecut=0.0):
         """ Find escaper from a snapshot
         Functions, calcR2, calcEkin and calcEtot, are used first for input single data set,
-        then distance <rcut and etot>0 will be selected as escapers.
+        then distance r<rcut and energy etot>ecut will be selected as escapers.
         The escapers will be removed from the input single
         
         Parameters
@@ -36,13 +41,15 @@ class SingleEscaper(Particle):
             single particle data set
         rcut: float
             distance criterion
+        ecut: float (0.0)
+            energy criterion
         """
         single.calcR2()
         single.calcEkin()
         single.calcEtot()
         
         rcut2 = rcut*rcut
-        ssel = ((single.r2>rcut2) & (single.etot>0.0))
+        ssel = ((single.r2>rcut2) & (single.etot>ecut))
         single_esc = single[ssel]
         nssel = ssel.sum()
         single_esc.addNewMember('time',np.ones(nssel)*time)
@@ -73,21 +80,26 @@ class BinaryEscaper(Binary):
         Parameters
         ----------
         keyword arguments:
-            particle_type: basic particle type: hermite, hard, soft (soft)
-            interrupt_mode: PeTar interrupt mode: base, bse, none (none)
-            simple_mode: only calculate semi and ecc, save computing time significantly (True)
-            member_particle_type: binary member particle type (Particle)
-            G: gravitational constant (1.0)
+            particle_type: string (soft)
+                Basic particle type: hermite, hard, soft
+            interrupt_mode: string (none)
+                PeTar interrupt mode: base, bse, none
+            simple_mode: bool (True)
+                If True, only calculate semi and ecc, save computing time significantly
+            member_particle_type: type (Particle)
+                Binary member particle type
+            G: float (1.0) 
+                gravitational constant (1.0)
         """
         if not 'member_particle_type' in kwargs.keys(): kwargs['member_particle_type']=Particle
 
         DictNpArrayMix.__init__(self, [['time',np.float64]], _dat, _offset, _append, **kwargs)
         Binary.__init__(self, _dat, None, _offset+self.ncols, True, **kwargs)
 
-    def findEscaper(self, time, binary, rcut):
+    def findEscaper(self, time, binary, rcut, ecut=0.0):
         """ Find escaper from a binary snapshot
         Functions, calcR2, calcEkin, calcPot and calcEtot, are used first for input binary data set,
-        then c.m. distance <rcut and etot>0 will be selected as escapers.
+        then c.m. distance r<rcut and c.m. energy etot>ecut will be selected as escapers.
         The escapers will be removed from the input binary
         
         Parameters
@@ -98,6 +110,8 @@ class BinaryEscaper(Binary):
             binary particle data set
         rcut: float
             distance criterion
+        ecut: float (0.0)
+            energy criterion
         """
         binary.calcR2()
         binary.calcPot()
@@ -105,7 +119,7 @@ class BinaryEscaper(Binary):
         binary.calcEtot()
 
         rcut2 = rcut*rcut
-        bsel = (binary.r2>rcut2) & (binary.etot>0.0)
+        bsel = (binary.r2>rcut2) & (binary.etot>ecut)
         binary_esc = binary[bsel]
         nbsel = bsel.sum()
         binary_esc.addNewMember('time',np.ones(nbsel)*time)

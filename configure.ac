@@ -118,7 +118,7 @@ AS_IF([test x"$use_omp" != xno],
 # x86
 AC_ARG_WITH([arch],
 	    [AS_HELP_STRING([--with-arch],
-                            [compile with architecture type (x86). Default: x86])],
+                            [compile with architecture type (x86, fugaku). Default: x86])],
             [],
 	    [with_arch=x86])
 
@@ -129,8 +129,7 @@ AC_ARG_WITH([simd],
             [with_simd=auto])
 
 AS_IF([test x"$with_arch" == xx86],
-      [use_x86=yes
-       use_simd=no
+      [use_simd=no
        AS_IF([test x"$with_simd" != xauto],
              [AS_CASE($with_simd,
                       [avx],[arch=core-avx-i],
@@ -159,7 +158,12 @@ AS_IF([test x"$with_arch" == xx86],
                                                 [])])])
        AS_IF([test x"$use_simd" != xno],
              [PROG_NAME=$PROG_NAME"."$SIMD_TYPE])],
-      [use_x86=no])
+      [use_simd=no])
+      
+AS_IF([test x"$with_arch" == xfugaku],
+      [AX_CHECK_COMPILE_FLAG(['-Kfast -Nclang'],
+                             [OPTFLAGS=$OPTFLAGS" -Kfast -Nclang"])
+       PROG_NAME=$PROG_NAME".fugaku"])
 
 AC_ARG_ENABLE([simd-64],
               [AS_HELP_STRING([--enable-simd-64],
@@ -167,6 +171,13 @@ AC_ARG_ENABLE([simd-64],
               [PROG_NAME=$PROG_NAME".64b"
 	       use_simd_64=yes],
               [use_simd_64=no])
+
+# QUAD
+AC_ARG_ENABLE([quad],
+              [AS_HELP_STRING([--disable-quad],
+                              [disable quadrupole-moment calculation for super particles])],
+              [use_quad=no],
+              [use_quad=yes])
 
 # cuda
 AC_ARG_ENABLE([cuda],
@@ -295,7 +306,22 @@ AC_ARG_WITH([interrupt],
 	                    [Interruption detection mode: Default: off])],
             [PROG_NAME=$PROG_NAME'.'$with_interrupt
 	     AS_IF([test x"$with_interrupt" == xbse],
-	           [AC_PROG_FC([gfortran ifort])])],
+	           [FCFLAGS_BK=$FCFLAGS
+		    AC_PROG_FC([gfortran ifort])
+                    FCFLAGS=$FCFLAGS_BK
+		    AS_IF([test x"$with_debug" == xg],
+                          [AX_CHECK_COMPILE_FLAG([-g],
+                                                 [FCFLAGS=$FCFLAGS" -g"])
+                           AX_CHECK_COMPILE_FLAG([-O0],
+                                                 [FCFLAGS=$FCFLAGS" -O0"])
+                           AX_CHECK_COMPILE_FLAG([-finit-real=nan],
+                                                 [FCFLAGS=$FCFLAGS" -finit-real=nan"])
+                           AX_CHECK_COMPILE_FLAG([-fbounds-check],
+                                                 [FCFLAGS=$FCFLAGS" -fbounds-check"])],
+                          [AX_CHECK_COMPILE_FLAG([-O3],
+                                                 [FCFLAGS=$FCFLAGS" -O3"])])
+                    AX_CHECK_COMPILE_FLAG([-Wall],
+                                          [FCFLAGS=$FCFLAGS" -Wall"])])],
 	    [with_interrupt=off])
 
 # external potential
@@ -304,22 +330,38 @@ AC_ARG_WITH([external],
 	                    [External potential: Default: off])],
             [PROG_NAME=$PROG_NAME'.'$with_external
 	     AS_IF([test x"$with_external" == xgalpy],
-	           [AC_PROG_CC([gcc icc cc])
+	           [AC_PROG_CC([fcc gcc icc cc])
+		    AS_IF([test x"$with_debug" == xg],
+                          [AX_CHECK_COMPILE_FLAG([-g],
+                                                 [COPTFLAGS=$COPTFLAGS" -g"])
+                           AX_CHECK_COMPILE_FLAG([-O0],
+                                                 [COPTFLAGS=$COPTFLAGS" -O0"])],
+                          [AX_CHECK_COMPILE_FLAG([-O3],
+                                                 [COPTFLAGS=" -O3"])])
+                    AX_CHECK_COMPILE_FLAG([-Wall],
+                                          [COPTFLAGS=$COPTFLAGS" -Wall"])
+                    AS_IF([test x"$with_arch" == xfugaku],
+                          [AX_CHECK_COMPILE_FLAG(['-Kfast -Nclang'],
+                                                 [COPTFLAGS=$COPTFLAGS" -Kfast -Nclang"])])
                     AS_IF([test x"$galpy_prefix" == x__search__],
                           [AC_CHECK_PROG([FIND_CHECK], [find], [find])
 			   AS_IF([test x"$FIND_CHECK" == xfind],
                                  [galpy_prefix=`find $HOME/.local -type d -name galpy|tail -1`
                                   AS_IF([test x"$galpy_prefix" == x],
-                                        [galpy_prefix=`find ../ -type d -name galpy|tail -1`])])])
+                                        [galpy_prefix=`pwd`'/'`find ../ -type d -name galpy|tail -1`])])])
                     AC_CHECK_FILE(["$galpy_prefix/potential/potential_c_ext/galpy_potentials.h"],
                                   [GALPY_PATH=$galpy_prefix],
                                   [AC_MSG_FAILURE([can't find Galpy library, please provide correct PREFIX by using --with-galpy-prefix])])
-                    AC_CHECK_LIB([gsl],[main],
-		                 [],
-				 [AC_MSG_FAILURE([can't find GSL library, please install it first, e.g. in Ubuntu 20.04, use sudo apt-get install libgsl-dev])])
-                    AC_CHECK_LIB([gslcblas],[main],
-		                 [],
-				 [AC_MSG_FAILURE([can't find GSL library, please install it first, e.g. in Ubuntu 20.04, use sudo apt-get install libgsl-dev])])])],
+                    AC_CHECK_PROG([GSL_CFLAGS],[gsl-config],[`gsl-config --cflags`],[])
+                    AC_CHECK_PROG([GSL_LIBS],[gsl-config],[`gsl-config --libs`],[none])
+		    AS_IF([test x"$GSL_LIBS" == xnone],
+                          [AC_CHECK_LIB([gslcblas],[main],
+                                        [],
+                                        [AC_MSG_FAILURE([can't find GSL library, please install it first, e.g. in Ubuntu 20.04, use sudo apt-get install libgsl-dev])])
+                           AC_CHECK_LIB([gsl],[main],
+                                        [],
+                                        [AC_MSG_FAILURE([can't find GSL library, please install it first, e.g. in Ubuntu 20.04, use sudo apt-get install libgsl-dev])],[-lgslcblas])
+                           GSL_LIBS='-lgsl -lgslcblas'])])],
 	    [with_external=off])
             
 
@@ -360,9 +402,10 @@ AC_PREFIX_PROGRAM(petar)
 # Checks for library functions.
 AC_CHECK_FUNCS([pow sqrt])
 
-AC_SUBST([use_x86])
+AC_SUBST([with_arch])
 AC_SUBST([use_simd])
 AC_SUBST([use_simd_64])
+AC_SUBST([use_quad])
 AC_SUBST([use_mpi])
 AC_SUBST([use_cuda])
 AC_SUBST([use_omp])
@@ -374,6 +417,7 @@ AC_SUBST([with_external])
 AC_SUBST([with_tidal_tensor])
 AC_SUBST([with_orbit])
 AC_SUBST([OPTFLAGS])
+AC_SUBST([COPTFLAGS])
 AC_SUBST([DEBFLAGS])
 AC_SUBST([OPENMP_CXXFLAGS])
 AC_SUBST([NVCC])
@@ -383,6 +427,8 @@ AC_SUBST([SIMDFLAGS])
 AC_SUBST([GPERFFLAGS])
 AC_SUBST([GPERFLIBS])
 AC_SUBST([GALPY_PATH])
+AC_SUBST([GSL_CFLAGS])
+AC_SUBST([GSL_LIBS])
 AC_SUBST([INCLUDE])
 AC_SUBST([PROG_NAME])
 AC_SUBST([CXX])
@@ -392,7 +438,7 @@ AC_MSG_NOTICE([----------------------Configure Summary--------------------])
 AC_MSG_NOTICE([--Features:])
 AC_MSG_NOTICE([     Using MPI:         $use_mpi])
 AC_MSG_NOTICE([     Using GPU:         $use_cuda])
-AC_MSG_NOTICE([     Using x86 :        $use_x86])
+AC_MSG_NOTICE([     Using arch:        $with_arch])
 AS_IF([test "x$use_simd" != xno],
       [AS_IF([test "x$use_simd_64" != xno],
              [AC_MSG_NOTICE([     SIMD type:         $SIMD_TYPE 64 bits])],
@@ -407,6 +453,7 @@ AC_MSG_NOTICE([     interrupt mode:    $with_interrupt])
 AC_MSG_NOTICE([     external mode:     $with_external])
 AC_MSG_NOTICE([     tidal tensor mode: $with_tidal_tensor])
 AC_MSG_NOTICE([     orbit mode:        $with_orbit])
+AC_MSG_NOTICE([     Using quad:        $use_quad])
 AC_MSG_NOTICE([--Compilers:])
 AC_MSG_NOTICE([     C++ compiler:      $CXX])
 AS_IF([test "x$use_cuda" != xno],

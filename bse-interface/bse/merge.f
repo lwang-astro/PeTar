@@ -55,8 +55,7 @@
      &        kstar(i1),mass0(i2),mass(i2),massc(i2),age(i2),
      &        jspin(i2),kstar(i2),zpars,ecc,semi,jorb,
      &        vkick(4*(i1-1)+1),vkick(4*(i2-1)+1),coel)
-
-c TODO: send to mix enve the case with donor HG.
+         
       ELSE
          CALL MIX(mass0,mass,age,kstar,zpars)
       END IF

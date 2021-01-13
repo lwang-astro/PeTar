@@ -232,7 +232,9 @@ class DictNpArrayMix:
         if (type(member)==np.ndarray):
             if len(member.shape)>1:
                 dimension = member.shape[1]
-            if(new_key_flag): self.keys.append([key,dimension])
+                if(new_key_flag): self.keys.append([key,(type(member[:,0]),dimension)])
+            else:
+                if(new_key_flag): self.keys.append([key,type(member)])
         elif (issubclass(type(member), DictNpArrayMix)):
             dimension = member.ncols
             if(new_key_flag): self.keys.append([key,type(member)])

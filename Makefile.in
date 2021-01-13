@@ -1,4 +1,3 @@
-#use_x86 =@use_x86@
 use_arch=@with_arch@
 use_simd=@use_simd@
 use_simd_64=@use_simd_64@
@@ -59,7 +58,7 @@ TARGET += mobse-interface/petar.mobse
 else  ifeq ($(se_mode),bse)
 MT_FLAGS += -D BSE
 BSELIBS = -L ./bse-interface -lbse -lgfortran
-BSELIBFILES= bse-interface/libbse.a bse-interface/bse_interface.h 
+BSELIBFILES= bse-interface/libbse.a bse-interface/bse_interface.h
 CXXLIBS += $(BSELIBS)
 LIBFILES+= $(BSELIBFILES)
 INCLUDE += -I ./bse-interface

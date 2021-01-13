@@ -86,6 +86,52 @@ public:
 };
 
 
+//! old version without c.m. pos and vel offset
+class FileHeaderNoOffset{
+public:
+    long long int nfile;  // file id
+    long long int n_body;
+    double time;
+    FileHeaderNoOffset(){
+        n_body = 0;
+        time = 0.0;
+    }
+    FileHeaderNoOffset(const long long int ni, const long long int n, const double t) {
+        nfile = ni;
+        n_body = n;
+        time = t;
+    }
+
+    int readAscii(FILE * fp){
+        int rcount=fscanf(fp, "%lld %lld %lf\n", &nfile, &n_body, &time);
+        if (rcount<3) {
+          std::cerr<<"Error: cannot read header, please check your data file header!\n";
+          abort();
+        }
+        //std::cout<<"Number of particles ="<<n_body<<";  Time="<<time<<std::endl;
+        return n_body;
+    }
+
+    void writeAscii(FILE* fp) const{
+        fprintf(fp, "%lld %lld %26.17e\n", nfile, n_body, time);
+    }
+
+    int readBinary(FILE* fp){
+        size_t rcount=fread(this, sizeof(FileHeader), 1, fp);
+        if(rcount<1) {
+            std::cerr<<"Error: Data reading fails! requiring data number is "<<1<<" bytes, only obtain "<<rcount<<" bytes.\n";
+            abort();
+        }
+        //std::cout<<"Number of particles ="<<n_body<<";  Time="<<time<<std::endl;
+        return n_body;
+    }
+
+    void writeBinary(FILE* fp) const{
+        fwrite(this, sizeof(FileHeader), 1, fp);
+    }
+};
+
+
 typedef PS::ParticleSystem<FPSoftWriteArtificial> SystemSoftWriteArtificial;
 
 int main(int argc, char *argv[]){
@@ -177,7 +223,7 @@ int main(int argc, char *argv[]){
 #else
                 std::cout<<"External potential column not exists\n";
 #endif
-                std::cout<<"Important: Ensure that the stellar evolution method and external mode used in the snapshots and this tool are consistent.\n"                         
+                std::cout<<"Important: Ensure that the stellar evolution method and external mode used in the snapshots and this tool are consistent.\n"
                          <<"           If the replace option (-r) is used and the methods are not consistent, the data cannot be recovered!"<<std::endl;
                 std::cout<<"Options: "<<std::endl
                          <<"   -b  transfer snapshot data format from BINARY to ASCII. If this option is not used, it is ASCII to BINARY"<<std::endl
@@ -293,7 +339,7 @@ int main(int argc, char *argv[]){
         if(!fin.is_open()) {
             std::cerr<<"Error: data file "<<fname_list<<" cannot be open!\n";
             abort();
-    }
+        }
 
         while(true) {
             std::string filename;

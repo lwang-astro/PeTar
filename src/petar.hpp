@@ -1057,7 +1057,7 @@ public:
     // correct c.m. vel due to external potential to avoid large rsearch 
     void correctPtclVelCM(const PS::F64& _dt) {
         PS::F64vec dv=PS::F64vec(0.0);
-
+ 
 #ifdef GALPY
         PS::F64vec acc;
         PS::F64 pot;
@@ -1817,7 +1817,7 @@ public:
 #endif
 #ifndef RECORD_CM_IN_HEADER
             stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);
-#endif            
+#endif
             //Ptcl::vel_cm = stat.pcm.vel;
         }
         //stat.shiftToCenterOfMassFrame(&system_soft[0], stat.n_real_loc);
@@ -2564,7 +2564,7 @@ public:
                 hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out);
                 hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out);
             }
-                        hard_manager.ar_manager.interaction.fout_sse<<std::setprecision(WRITE_PRECISION);
+            hard_manager.ar_manager.interaction.fout_sse<<std::setprecision(WRITE_PRECISION);
             hard_manager.ar_manager.interaction.fout_bse<<std::setprecision(WRITE_PRECISION);
 #elif MOBSE
             // open MOSSE/MOBSE file
@@ -2662,7 +2662,7 @@ public:
         stat.pcm.pos = file_header.pos_offset;
         stat.pcm.vel = file_header.vel_offset;
         stat.pcm.is_center_shift_flag = true;
-#endif
+#endif        
 
         input_parameters.n_glb.value = n_glb;
 
