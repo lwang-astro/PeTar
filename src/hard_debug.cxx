@@ -78,17 +78,7 @@ int main(int argc, char **argv){
         soft_pert_flag=false;
         break;
 #endif
-#ifdef BSE
-    case 'i':
-        idum = atoi(optarg);
-        break;
-    case 'b':
-        fbsepar = optarg;
-        break;
-    case 'B':
-        fbserandpar = optarg;
-        break;
-#elif MOBSE
+if (defined BSE) || (defined MOBSE)
     case 'i':
         idum = atoi(optarg);
         break;
@@ -114,7 +104,7 @@ int main(int argc, char **argv){
                  <<"    -d [int]:     hard time step min power (should use together with -D)\n"
                  <<"    -m [int]:     running mode: 0: evolve system to time_end; 1: stability check: "<<mode<<std::endl
                  <<"    -p [string]:  hard parameter file name: "<<fhardpar<<std::endl
-#ifdef BSE
+#ifdef  
                  <<"    -i [int]      random seed to generate kick velocity\n"
                  <<"    -B [string]:  read bse random parameter dump file with filename: "<<fbserandpar<<"\n"
                  <<"    -b [string]:  bse parameter file name: "<<fbsepar<<std::endl

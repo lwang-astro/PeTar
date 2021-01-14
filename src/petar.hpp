@@ -621,8 +621,12 @@ public:
     IOParamsPeTar input_parameters;
 #ifdef BSE
     IOParamsBSE bse_parameters;
+    std::string fbse_par_suffix='.bse';
+    std::string fbse_par_suffix='.sse';
 #elif MOBSE
-    IOParamsMOBSE mobse_parameters;
+    IOParamsMOBSE bse_parameters;
+    std::string fbse_par_suffix='.mobse';
+    std::string fbse_par_suffix='.mosse';
 #endif
 #ifdef GALPY
     IOParamsGalpy galpy_parameters;
@@ -704,10 +708,8 @@ public:
     //! initialization
     PeTar(): 
         input_parameters(),
-#ifdef BSE
+#if (defined BSE) || (defined MOBSE)
         bse_parameters(),
-#elif MOBSE
-        mobse_parameters(),
 #endif
 #ifdef GALPY
         galpy_parameters(),
@@ -2459,14 +2461,10 @@ public:
         if (my_rank==0) input_parameters.print_flag=true;
         else input_parameters.print_flag=false;
         int read_flag = input_parameters.read(argc,argv);
-#ifdef BSE
+#if (defined BSE) || (defined MOBSE)
         if (my_rank==0) bse_parameters.print_flag=true;
         else bse_parameters.print_flag=false;
         bse_parameters.read(argc,argv);
-#elif MOBSE
-        if (my_rank==0) mobse_parameters.print_flag=true;
-        else mobse_parameters.print_flag=false;
-        mobse_parameters.read(argc,argv);
 #endif
 #ifdef GALPY
         if (my_rank==0) galpy_parameters.print_flag=true;
@@ -2552,24 +2550,10 @@ public:
             }
             fesc<<std::setprecision(WRITE_PRECISION);
 
-#ifdef BSE
+#if (defined BSE) || (defined MOBSE)
             // open SSE/BSE file
-            std::string fsse_name = fname_snp + ".sse." + my_rank_str;
-            std::string fbse_name = fname_snp + ".bse." + my_rank_str;
-            if(input_parameters.append_switcher.value==1) {
-                hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out|std::ofstream::app);
-                hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out|std::ofstream::app);
-            }
-            else {
-                hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out);
-                hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out);
-            }
-            hard_manager.ar_manager.interaction.fout_sse<<std::setprecision(WRITE_PRECISION);
-            hard_manager.ar_manager.interaction.fout_bse<<std::setprecision(WRITE_PRECISION);
-#elif MOBSE
-            // open MOSSE/MOBSE file
-            std::string fsse_name = fname_snp + ".mosse." + my_rank_str;
-            std::string fbse_name = fname_snp + ".mobse." + my_rank_str;
+            std::string fsse_name = fname_snp + fsse_par_suffix + "." + my_rank_str;
+            std::string fbse_name = fname_snp + fbse_par_suffix + "." + my_rank_str;
             if(input_parameters.append_switcher.value==1) {
                 hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out|std::ofstream::app);
                 hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out|std::ofstream::app);
@@ -2830,10 +2814,8 @@ public:
             system_soft[i].time_record = 0.0;
             system_soft[i].time_interrupt = 0.0;
             system_soft[i].binary_state = 0;
-#ifdef BSE
+#if (defined BSE) || (defined MOBSE)
             system_soft[i].star.initial(mass[i]*bse_parameters.mscale.value);
-#elif MOBSE
-            system_soft[i].star.initial(mass[i]*mobse_parameters.mscale.value);
 #endif
 #endif
             system_soft[i].group_data.artificial.setParticleTypeToSingle();
@@ -2923,32 +2905,21 @@ public:
         // units
         if (input_parameters.unit_set.value==1) {
             input_parameters.gravitational_constant.value = 0.00449830997959438; // pc^3/(Msun*Myr^2)
-#ifdef BSE
+#if (defined BSE) || (defined MOBSE)
             bse_parameters.tscale.value = 1.0; // Myr
             bse_parameters.rscale.value = 44353565.919218; // pc -> rsun
             bse_parameters.mscale.value = 1.0; // Msun
             bse_parameters.vscale.value = 0.977813107686401; // pc/Myr -> km/s
-#elif MOBSE
-            mobse_parameters.tscale.value = 1.0; // Myr
-            mobse_parameters.rscale.value = 44353565.919218; // pc -> rsun
-            mobse_parameters.mscale.value = 1.0; // Msun
-            mobse_parameters.vscale.value = 0.977813107686401; // pc/Myr -> km/s
 #endif
             if(print_flag) {
                 std::cout<<"----- Unit set 1: Msun, pc, Myr -----\n"
                          <<"gravitational_constant = "<<input_parameters.gravitational_constant.value<<" pc^3/(Msun*Myr^2)\n";
-#ifdef BSE
+#if (defined BSE) || (defined MOBSE)
                 std::cout<<"----- Unit conversion for BSE ----- \n"
                          <<" tscale = "<<bse_parameters.tscale.value<<"  Myr / Myr\n"
                          <<" mscale = "<<bse_parameters.mscale.value<<"  Msun / Msun\n"
                          <<" rscale = "<<bse_parameters.rscale.value<<"  Rsun / pc\n"
                          <<" vscale = "<<bse_parameters.vscale.value<<"  [km/s] / [pc/Myr]\n";
-#elif MOBSE
-                std::cout<<"----- Unit conversion for MOBSE ----- \n"
-                         <<" tscale = "<<mobse_parameters.tscale.value<<"  Myr / Myr\n"
-                         <<" mscale = "<<mobse_parameters.mscale.value<<"  Msun / Msun\n"
-                         <<" rscale = "<<mobse_parameters.rscale.value<<"  Rsun / pc\n"
-                         <<" vscale = "<<mobse_parameters.vscale.value<<"  [km/s] / [pc/Myr]\n";
 #endif
 
             }
@@ -3235,12 +3206,9 @@ public:
         hard_manager.ar_manager.interaction.stellar_evolution_option = input_parameters.stellar_evolution_option.value;
         if (write_style) hard_manager.ar_manager.interaction.stellar_evolution_write_flag = true;
         else hard_manager.ar_manager.interaction.stellar_evolution_write_flag = false;
-#ifdef BSE
+#if (defined BSE) || (defined MOBSE)
         if (input_parameters.stellar_evolution_option.value==1) 
             hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters, print_flag);
-#elif MOBSE
-        if (input_parameters.stellar_evolution_option.value==1) 
-            hard_manager.ar_manager.interaction.bse_manager.initial(mobse_parameters, print_flag);
 #endif
 #endif
 #ifdef ADJUST_GROUP_PRINT
@@ -3294,25 +3262,15 @@ public:
             hard_manager.writeBinary(fpar_out);
             fclose(fpar_out);
 
-#ifdef BSE
+#if (defined BSE) || (defined MOBSE)
             // save bse parameters
-            std::string fbse_par = input_parameters.fname_par.value + ".bse";
+            std::string fbse_par = input_parameters.fname_par.value + fbse_par_suffix;
             if (print_flag) std::cout<<"Save bse_parameters to file "<<fbse_par<<std::endl;
             if( (fpar_out = fopen(fbse_par.c_str(),"w")) == NULL) {
                 fprintf(stderr,"Error: Cannot open file %s.\n", fbse_par.c_str());
                 abort();
             }
             bse_parameters.input_par_store.writeAscii(fpar_out);
-            fclose(fpar_out);
-#elif MOBSE
-            // save mobse parameters
-            std::string fbse_par = input_parameters.fname_par.value + ".mobse";
-            if (print_flag) std::cout<<"Save mobse_parameters to file "<<fbse_par<<std::endl;
-            if( (fpar_out = fopen(fbse_par.c_str(),"w")) == NULL) {
-                fprintf(stderr,"Error: Cannot open file %s.\n", fbse_par.c_str());
-                abort();
-            }
-            mobse_parameters.input_par_store.writeAscii(fpar_out);
             fclose(fpar_out);
 #endif
 

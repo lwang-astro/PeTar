@@ -40,51 +40,6 @@ public:
         }
     }
 };
-//! old version without c.m. pos and vel offset
-class FileHeaderNoOffset{
-public:
-    long long int nfile;  // file id
-    long long int n_body;
-    double time;
-    FileHeaderNoOffset(){
-        n_body = 0;
-        time = 0.0;
-    }
-    FileHeaderNoOffset(const long long int ni, const long long int n, const double t) {
-        nfile = ni;
-        n_body = n;
-        time = t;
-    }
-
-    int readAscii(FILE * fp){
-        int rcount=fscanf(fp, "%lld %lld %lf\n", &nfile, &n_body, &time);
-        if (rcount<3) {
-          std::cerr<<"Error: cannot read header, please check your data file header!\n";
-          abort();
-        }
-        //std::cout<<"Number of particles ="<<n_body<<";  Time="<<time<<std::endl;
-        return n_body;
-    }
-
-    void writeAscii(FILE* fp) const{
-        fprintf(fp, "%lld %lld %26.17e\n", nfile, n_body, time);
-    }
-
-    int readBinary(FILE* fp){
-        size_t rcount=fread(this, sizeof(FileHeader), 1, fp);
-        if(rcount<1) {
-            std::cerr<<"Error: Data reading fails! requiring data number is "<<1<<" bytes, only obtain "<<rcount<<" bytes.\n";
-            abort();
-        }
-        //std::cout<<"Number of particles ="<<n_body<<";  Time="<<time<<std::endl;
-        return n_body;
-    }
-
-    void writeBinary(FILE* fp) const{
-        fwrite(this, sizeof(FileHeader), 1, fp);
-    }
-};
-
 
 //! old version without c.m. pos and vel offset
 class FileHeaderNoOffset{
