@@ -1,6 +1,8 @@
 #pragma once
 #ifdef BSE
 #include "bse_interface.h"
+#elif MOBSE
+#include "mobse_interface.h"
 #endif
 
 #ifdef NAN_CHECK_DEBUG
@@ -9,7 +11,7 @@
 #endif
 #endif
 
-#ifdef BSE
+#if defined (BSE) || defined (MOBSE)
 enum class BinaryInterruptState:int {none = 0, form = 1, type_change = 2, start_roche = 3, end_roche = 4, contact = 5, start_symbiotic = 6, end_symbiotic = 7, common_envelope = 8 , giant = 9, collision = 10, blue_straggler = 11, no_remain = 12, disrupt = 13};
 #else
 enum class BinaryInterruptState:int {none = 0, form = 1, exchange = 2, collision = 3};
@@ -31,8 +33,8 @@ public:
     PS::F64 dm;
     PS::F64 time_record; 
     PS::F64 time_interrupt;
-#ifdef BSE
-    StarParameter star; // SSE/BSE stellar parameters
+#if defined (BSE) || defined (MOBSE)
+    StarParameter star; // SSE/BSE/MOBSE stellar parameters
 #endif
 #endif
 
@@ -82,14 +84,14 @@ public:
         dm = 0.0;
         time_record = 0.0;
         time_interrupt = 0.0;
-#ifdef BSE
+#if defined (BSE) || defined (MOBSE)
         star.initial(0.0);
 #endif
 #endif
     }
 
 #ifdef STELLAR_EVOLUTION
-#ifdef BSE
+#if defined (BSE) || defined (MOBSE)
     //! constructor 
     ParticleBase(const PS::F64 _mass, const PS::F64vec & _pos, const PS::F64vec & _vel, const PS::S64 _binary_state,
                  const PS::F64 _radius, const PS::F64 _dm, 
@@ -120,7 +122,7 @@ public:
                 this->pos.x, this->pos.y, this->pos.z,  
                 this->vel.x, this->vel.y, this->vel.z,
                 this->binary_state, this->radius, this->dm, this->time_record, this->time_interrupt);
-#ifdef BSE
+#if defined (BSE) || defined (MOBSE)
         star.writeAscii(fp);
 #endif
     }
@@ -140,7 +142,7 @@ public:
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
-#ifdef BSE
+#if defined (BSE) || defined (MOBSE)
         star.readAscii(fp);
 #endif
     }
@@ -204,7 +206,7 @@ public:
             <<" dm="<<dm
             <<" time_record="<<time_record
             <<" time_interrupt="<<time_interrupt;
-#ifdef BSE
+#if defined (BSE) || defined (MOBSE)
         star.print(fout);
 #endif
 #endif
@@ -229,7 +231,7 @@ public:
              <<std::setw(_width)<<"dm"
              <<std::setw(_width)<<"t_record"
              <<std::setw(_width)<<"t_interrupt";
-#ifdef BSE
+#if defined (BSE) || defined (MOBSE)
         StarParameter::printColumnTitle(_fout, _width);
 #endif
 #endif
@@ -260,7 +262,7 @@ public:
         _fout<<std::setw(_offset)<<" "<<counter<<". t_record: time record of last check (0.0)\n";
         counter++;
         _fout<<std::setw(_offset)<<" "<<counter<<". t_interrupt: time for next evolution check (0.0)\n";
-#ifdef BSE
+#if defined (BSE) || defined (MOBSE)
         counter = StarParameter::printTitleWithMeaning(_fout, counter, _offset);
 #endif
 #endif
@@ -286,7 +288,7 @@ public:
              <<std::setw(_width)<<dm
              <<std::setw(_width)<<time_record
              <<std::setw(_width)<<time_interrupt;
-#ifdef BSE
+#if defined (BSE) || defined (MOBSE)
         star.printColumn(_fout, _width);
 #endif
 #endif
@@ -308,7 +310,7 @@ public:
         dm  = din.dm;
         time_record  = din.time_record;
         time_interrupt = din.time_interrupt;
-#ifdef BSE
+#if defined (BSE) || defined (MOBSE)
         star = din.star;
 #endif
 #endif

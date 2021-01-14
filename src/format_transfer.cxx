@@ -165,6 +165,8 @@ int main(int argc, char *argv[]){
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE
                 std::cout<<"BSE\n";
+#elif MOBSE
+                std::cout<<"MOBSE\n";
 #else
                 std::cout<<"Base\n";
 #endif

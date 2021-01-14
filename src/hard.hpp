@@ -876,7 +876,7 @@ public:
 
 #ifdef HARD_DEBUG
                 ASSERT(ptcl_origin[i].r_search>ptcl_origin[i].changeover.getRout());
-#ifdef BSE
+#if defined (BSE) || defined (MOBSE)
                 ASSERT(pi.star.tphys<=time_origin+_time_end);
 #endif
 #endif
@@ -978,7 +978,7 @@ public:
                         ASSERT(pj->group_data.artificial.isUnused());
                         continue;
                     }
-#ifdef BSE
+#if defined (BSE) || defined (MOBSE)
                     ASSERT(pj->star.tphys<=time_origin+_time_end);
 #endif
 
@@ -1009,9 +1009,10 @@ public:
 #ifdef STELLAR_EVOLUTION
                 if (pi.mass==0.0) {
                     ASSERT(pi.group_data.artificial.isUnused());
-#ifdef BSE
+#if defined (BSE) || defined (MOBSE)
                     ASSERT(pi.star.tphys<=time_origin+_time_end);
 #endif
+
                     continue;
                 }
 
