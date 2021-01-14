@@ -1,5 +1,4 @@
 #pragma once
-
 #include <cmath>
 #include "Common/Float.h"
 #include "Common/binary_tree.h"
@@ -906,14 +905,7 @@ public:
                             _bin.calcParticles(gravitational_constant);
                             //}
                         }
-                        else if(binary_type<0) break;
                     }
-
-                    // update semi
-                    mtot = bse_manager.getMass(p1->star) + bse_manager.getMass(p2->star);
-                    semi = COMM::Binary::periodToSemi(period, mtot, gravitational_constant);
-
-                    postProcess(out, pos_cm, vel_cm, semi, ecc, binary_type_final);
                 }
             };
 
@@ -1142,7 +1134,6 @@ public:
                             }
                         }
                     }
-                }
 #endif //BSE/MOBSE
                     //p1->setBinaryPairID(0);
                     //p2->setBinaryPairID(0);

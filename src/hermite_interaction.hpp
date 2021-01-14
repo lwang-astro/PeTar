@@ -439,6 +439,26 @@ public:
         return -gravitational_constant*pi.mass*pj.mass*rinv*k;
     }
 
+    //! calculate peturbation energy to one group
+    /*!
+      @param[in] _group: target group
+      @param[in] _perturber: perturber 
+     */
+    template<class Tgroup, class Tpert>
+    Float calcEnergyPertOneGroup(const Tgroup& _group, const Tpert& _perturber) {
+        Float epert = 0.0;
+#ifdef SOFT_PERT
+        if (_group.perturber.soft_pert!=NULL) {
+            auto* pert = _group.perturber.soft_pert;
+            const int n_member = _group.particles.getSize();
+            for (int j=0; j<n_member; j++) {
+                epert += _group.particles[j].mass*pert->evalPot(_group.particles[j].pos);
+            }
+        }
+#endif
+        return epert;
+    }
+
     //! calculate kinetic and potential energy of the system
     /*! 
       @param[out] _energy: hermite energy
@@ -480,22 +500,16 @@ public:
         // tidal tensor energy
         for (int k=0; k<_n_group; k++) {
             const int i = _group_index[k];
-            const int n_member = _groups[i].particles.getSize();
-            if (_groups[i].perturber.soft_pert!=NULL) {
-                auto* pert = _groups[i].perturber.soft_pert;
-                for (int j=0; j<n_member; j++) {
-                    _energy.epert += _groups[i].particles[j].mass*pert->evalPot(_groups[i].particles[j].pos);
-                }
-                auto& bink = _groups[i].info.getBinaryTreeRoot();
-                auto& pcm = _groups[i].particles.cm;
-                auto& vcm = pcm.vel;
-                auto& vbin = bink.vel;
-                auto& vbin_bk = _groups[i].info.vcm_record;
-                //Float vbcm[3] = {vcm[0] + vbin_bk[0], vcm[1] + vbin_bk[1], vcm[2] + vbin_bk[2]};
-                Float dvbin[3] = {vbin[0] - vbin_bk[0], vbin[1] - vbin_bk[1], vbin[2] - vbin_bk[2]};
-                Float de_kin = bink.mass*(dvbin[0]*vcm[0]+dvbin[1]*vcm[1]+dvbin[2]*vcm[2]);
-                _energy.epert -= de_kin;
-            }
+            _energy.epert += calcEnergyPertOneGroup(_groups[i], _perturber);
+            auto& bink = _groups[i].info.getBinaryTreeRoot();
+            auto& pcm = _groups[i].particles.cm;
+            auto& vcm = pcm.vel;
+            auto& vbin = bink.vel;
+            auto& vbin_bk = _groups[i].info.vcm_record;
+            //Float vbcm[3] = {vcm[0] + vbin_bk[0], vcm[1] + vbin_bk[1], vcm[2] + vbin_bk[2]};
+            Float dvbin[3] = {vbin[0] - vbin_bk[0], vbin[1] - vbin_bk[1], vbin[2] - vbin_bk[2]};
+            Float de_kin = bink.mass*(dvbin[0]*vcm[0]+dvbin[1]*vcm[1]+dvbin[2]*vcm[2]);
+            _energy.epert -= de_kin;
         }
 #endif
         _energy.ekin *= 0.5;

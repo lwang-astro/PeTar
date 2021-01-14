@@ -49,10 +49,10 @@ ifneq ($(se_mode),off)
 MT_FLAGS += -D STELLAR_EVOLUTION
 ifeq ($(se_mode),mobse)
 MT_FLAGS += -D MOBSE
-MOBSELIBS = -L ./mobse-interface -lmobse -lgfortran
-MOBSELIBFILES= mobse-interface/libmobse.a mobse-interface/mobse_interface.h 
-CXXLIBS += $(MOBSELIBS)
-LIBFILES+= $(MOBSELIBFILES)
+BSELIBS = -L ./mobse-interface -lmobse -lgfortran
+BSELIBFILES= mobse-interface/libmobse.a mobse-interface/mobse_interface.h 
+CXXLIBS += $(BSELIBS)
+LIBFILES+= $(BSELIBFILES)
 INCLUDE += -I ./mobse-interface
 TARGET += mobse-interface/petar.mobse
 else  ifeq ($(se_mode),bse)
@@ -210,13 +210,9 @@ HARD_SRC= io.hpp ptcl.hpp particle_base.hpp hard_assert.hpp cluster_list.hpp har
 build/petar.format.transfer: format_transfer.cxx galpy-interface/libgalpy.a|build
 	$(CXX) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(MT_FLAGS) -o $@ $< $(CXXLIBS)
 
-ifeq ($(se_mode),mobse)
-build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(MOBSELIBFILES) |build
-	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(MOBSELIBS)
-else
 build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(BSELIBFILES) |build
 	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(BSELIBS)
-endif
+
 build/petar.hard.test: hard_test.cxx $(HARD_SRC) |build
 	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
 

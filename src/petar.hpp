@@ -621,12 +621,12 @@ public:
     IOParamsPeTar input_parameters;
 #ifdef BSE
     IOParamsBSE bse_parameters;
-    std::string fbse_par_suffix='.bse';
-    std::string fbse_par_suffix='.sse';
+    std::string fbse_par_suffix=".bse";
+    std::string fsse_par_suffix=".sse";
 #elif MOBSE
     IOParamsMOBSE bse_parameters;
-    std::string fbse_par_suffix='.mobse';
-    std::string fbse_par_suffix='.mosse';
+    std::string fbse_par_suffix=".mobse";
+    std::string fsse_par_suffix=".mosse";
 #endif
 #ifdef GALPY
     IOParamsGalpy galpy_parameters;
