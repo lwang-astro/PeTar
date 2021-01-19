@@ -267,7 +267,6 @@ install: $(TARGET)
 
 clean:
 	rm -f $(TARGET) build/*.o 
-	rm -rf @prefix@/bin/petar*
 	$(MAKE) -C bse-interface clean
 	$(MAKE) -C mobse-interface clean
 	$(MAKE) -C galpy-interface clean
