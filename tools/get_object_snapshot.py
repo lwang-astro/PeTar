@@ -61,10 +61,10 @@ if __name__ == '__main__':
         print("  -t(--external-mode): external mode used in petar, choices: galpy, no (no)")
         print("  -s(--snapshot-format): snapshot data format: binary, ascii; only for reading original snapshots (ascii)")
         print("  -B(--full-binary): this indicates that the snapshot contains full binary information (when petar.data.process -B is used to generated the binary snapshot)")
-
+        print("  -a(--append): appending data to existing data files")
     try:
-        shortargs = 'p:f:Bt:i:s:h'
-        longargs = ['snapshot-type','full-binary','filename-prefix=','external-mode=','interrupt-mode=','snapshot-format=','help']
+        shortargs = 'p:f:Bt:i:s:ah'
+        longargs = ['append','snapshot-type','full-binary','filename-prefix=','external-mode=','interrupt-mode=','snapshot-format=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -78,6 +78,8 @@ if __name__ == '__main__':
                 snap_type = arg
             elif opt in ('-B','--full-binary'):
                 kwargs['simple_binary'] = False
+            elif opt in ('-a','--append'):
+                write_option='a'
             elif opt in ('-i','--interrupt-mode'):
                 interrupt_mode = arg
             elif opt in ('-t','--external-mode'):
@@ -163,7 +165,7 @@ if __name__ == '__main__':
                     read_flag=True
                 else:
                     if os.path.getsize(path+'.single')>0:
-                        data_temp.loadtxt(path)
+                        data_temp.loadtxt(path+'.single')
                         read_flag=True
                 if (read_flag):
                     sel = select_type(data_temp, sse_type)

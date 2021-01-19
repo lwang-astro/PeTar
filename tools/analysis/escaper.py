@@ -62,8 +62,10 @@ class SingleEscaper(Particle):
     def removeDuplicate(self):
         """ removed duplicated escapers, keep the first appearing one
         """
-        unid, index= np.unique(self.id, return_index=True)
-        newdata=self[index]
+        sindex=self.time.argsort()
+        data_sort=self[sindex]
+        unid, index= np.unique(data_sort.id, return_index=True)
+        newdata=data_sort[index]
         self.__init__(newdata,**self.initargs)
 
 class BinaryEscaper(Binary):

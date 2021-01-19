@@ -3,6 +3,7 @@
 import numpy as np
 import multiprocessing as mp
 import sys
+import os
 import petar
 import getopt
 
@@ -12,6 +13,7 @@ if __name__ == '__main__':
     average_mode='sphere'
     read_flag=False
     n_cpu=0
+    write_option='w'
 
     def usage():
         print("A tool for processing a list of snapshot data to detect binaries,")
@@ -28,6 +30,7 @@ if __name__ == '__main__':
         print("  -b(--r-max-binary): maximum sepration for detecting binaries (0.1)")
         print("  -B(--full-binary): calculate full binary orbital parameters (simple_mode=False in Binary class), this option increases computing time")
         print("  -a(--average-mode): Lagrangian properity average mode, choices: sphere: average from center to Lagragian radii; shell: average between two neighbor radii (sphere)")
+        print("  -A(--append): append new data to existing data files")
         print("  -r(--read-data): read existing single, binary and core data to avoid expensive KDTree construction, no argument, disabled in default")
         print("     --r-escape: a constant escape distance criterion, in default, it is 20*half-mass radius")
         print("     --e-escape: escape energy criterion, only work together with --r-escape, in default, it is 0.0")
@@ -85,8 +88,8 @@ if __name__ == '__main__':
         print("                2) when data are written in BINARY format, '-s binary' should be used.")
         print("                3) '--add-star-type' only works when the interrupt mode is 'bse'.")
     try:
-        shortargs = 'p:m:G:b:Ba:rt:i:s:n:h'
-        longargs = ['mass-fraction=','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','r-escape=','e-escape=','external-mode=','interrupt-mode=','snapshot-format=','add-star-type=','n-cpu=','help']
+        shortargs = 'p:m:G:b:BAa:rt:i:s:n:h'
+        longargs = ['mass-fraction=','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','snapshot-format=','add-star-type=','n-cpu=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -106,6 +109,8 @@ if __name__ == '__main__':
                 kwargs['simple_binary'] = False
             elif opt in ('-a','--average-mode'):
                 kwargs['average_mode'] = arg
+            elif opt in ('-A','--append'):
+                write_option='a'
             elif opt in ('-n','--n-cpu'):
                 n_cpu = int(arg)
             elif opt in ('-i','--interrupt-mode'):
@@ -151,12 +156,53 @@ if __name__ == '__main__':
     else:
         result,time_profile = petar.parallelDataProcessList(path_list, n_cpu, read_flag, **kwargs)
 
-    for key in ['lagr','core','bse_status', 'esc_single', 'esc_binary']:
+    for key in ['lagr','core','bse_status']:
         if key in result.keys():
             key_filename  = filename_prefix + '.' + key
-            result[key].savetxt(key_filename)
-            print (key,"data is saved in file:",key_filename)
+            with open(key_filename, write_option) as f:
+                result[key].savetxt(f)
+                print (key,"data is saved in file:",key_filename)
      
+
+    if (write_option=='a'):
+        if 'esc_single' in result.keys():
+            key_filename  = filename_prefix + '.esc_single'
+            data_read=petar.SingleEscaper(**kwargs)
+            if os.path.getsize(key_filename)>0:
+                data_read.loadtxt(key_filename)
+                result_mix=petar.join(data_read,result['esc_single'])
+                result_mix.removeDuplicate()
+                with open(key_filename, 'w') as f:
+                    result_mix.savetxt(f)
+                    print ("esc_single data is saved in file:",key_filename)
+            else:
+                with open(key_filename, 'w') as f:
+                    result['esc_single'].savetxt(f)
+                    print ("esc_single data is saved in file:",key_filename)
+        if 'esc_binary' in result.keys():
+            key_filename  = filename_prefix + '.esc_binary'
+            data_read=petar.BinaryEscaper(**kwargs)
+            if os.path.getsize(key_filename)>0:
+                data_read.loadtxt(key_filename)
+                result_mix=petar.join(data_read,result['esc_binary'])
+                result_mix.removeDuplicate()
+                with open(key_filename, 'w') as f:
+                    result_mix.savetxt(f)
+                    print ("esc_binary data is saved in file:",key_filename)
+            else:
+                with open(key_filename, 'w') as f:
+                    result['esc_binary'].savetxt(f)
+                    print ("esc_binary data is saved in file:",key_filename)
+
+    else:
+        for key in ['esc_single','esc_binary']:
+            if key in result.keys():
+                key_filename  = filename_prefix + '.' + key
+                with open(key_filename, write_option) as f:
+                    result[key].savetxt(f)
+                    print (key,"data is saved in file:",key_filename)
+            
+
     print ('CPU time profile:')
     for key, item in time_profile.items():
         print (key,item,)
