@@ -19,7 +19,7 @@ class SingleEscaper(Particle):
                 Basic particle type: hermite, hard, soft
                 When read PeTar data, do not change this
             interrupt_mode: string (none)
-                PeTar interrupt mode: base, bse, none
+                PeTar interrupt mode: base, bse, mobse, none
         """
 
         
@@ -85,7 +85,7 @@ class BinaryEscaper(Binary):
             particle_type: string (soft)
                 Basic particle type: hermite, hard, soft
             interrupt_mode: string (none)
-                PeTar interrupt mode: base, bse, none
+                PeTar interrupt mode: base, bse, mobse, none
             simple_mode: bool (True)
                 If True, only calculate semi and ecc, save computing time significantly
             member_particle_type: type (Particle)

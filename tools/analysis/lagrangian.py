@@ -338,7 +338,7 @@ class LagrangianMultiple(DictNpArrayMix):
             [add_star_type] (Lagrangian): Lagrangian data for specific type of stars, see the following content for details
 
     Keyword argument 'add_star_type' (list of string):       
-        In case when interrupt_mode='bse', a list of star types can be given,
+        In case when interrupt_mode='(mo)bse', a list of star types can be given,
         so that the Lagrangian properties for these specific types will be calculated.
         There are four styles of star types:
            (1) a single SSE type name (see help(petar.SSEType))

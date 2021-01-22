@@ -153,7 +153,7 @@ class Particle(SimpleParticle):
             dm:            (1D): mass loss
             time_record    (1D): last time of interruption check
             time_interrupt (1D): next interruption time
-        bse: star  (SSEStarParameter): SSE/BSE parameters
+        bse: star  (SSEStarParameter): BSE based stellar evolution parameters
         ptcl: r_search (1D): searching radius
               id       (1D): identification
               mass_bk  (1D): artificial particle parameter 1 
@@ -197,7 +197,7 @@ class Particle(SimpleParticle):
             particle_type: string (soft)
                basic particle type: hermite, hard, soft
             interrupt_mode: string (none)
-               PeTar interrupt mode (set in configure): base, bse, none
+               PeTar interrupt mode (set in configure): base, bse, mobse, none
                This option indicates whether columns of stellar evolution exist
             external_mode: string (none)
                PeTar external mode (set in configure): galpy, none 
@@ -223,7 +223,7 @@ class Particle(SimpleParticle):
         if ('interrupt_mode' in kwargs.keys()):
             if (kwargs['interrupt_mode']=='base'):
                 keys = keys_bstat+keys_se+keys_end
-            elif (kwargs['interrupt_mode']=='bse'):
+            elif ('bse' in kwargs['interrupt_mode']):
                 keys = keys_bstat+keys_se+[['star',SSEStarParameter]]+keys_end
             
         SimpleParticle.__init__(self, _dat, _offset, _append, **kwargs)

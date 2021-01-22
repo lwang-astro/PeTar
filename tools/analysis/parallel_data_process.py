@@ -21,7 +21,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
     result: dict
         The results, keys: lagr, core|core_read, esc_single, esc_binary, [bse]
         If read_flag = True, core_read is needed, else core is needed
-        If interrupt_mode = bse, bse is needed
+        If interrupt_mode = bse, mobse, BSE based stellar evolution is needed
     time_profile: dict
         The CPU (wallclock) time for each parts of calculations
     read_flag: bool
@@ -33,7 +33,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
             average_mode: mode in calculating lagrangian radii (sphere)
             mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
                                Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
-            interrupt_mode: PeTar interrupt mode: base, bse, none. If not provided, type is none 
+            interrupt_mode: PeTar interrupt mode: base, bse, mobse, none. If not provided, type is none 
             snapshot_format: snapshot format: ascii or binary (ascii)
     """
     lagr = result['lagr']
@@ -208,7 +208,7 @@ def dataProcessList(file_list, read_flag, **kwargs):
 
     if ('interrupt_mode' in kwargs.keys()): 
         interrupt_mode=kwargs['interrupt_mode']
-        if (interrupt_mode=='bse'):
+        if ('bse' in interrupt_mode):
             result['bse_status'] = BSEStatus()
             time_profile['bse'] = 0.0
 
@@ -241,7 +241,7 @@ def parallelDataProcessList(file_list, n_cpu=int(0), read_flag=False, **kwargs):
             average_mode: mode in calculating lagrangian radii (sphere)
             mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
                                Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
-            interrupt_mode: PeTar interrupt mode: base, bse, none. If not provided, type is none 
+            interrupt_mode: PeTar interrupt mode: base, bse, mobse, none. If not provided, type is none 
     """
     if (n_cpu==int(0)):
         n_cpu = mp.cpu_count()

@@ -26,7 +26,7 @@ if __name__ == '__main__':
         print("  -h(--help): help")
         print("  -p(--filename-prefix): prefix of output file names for: [prefix].[lagr|esc.[single|binary]|core] (data)")
         print("  -m(--mass-fraction): Lagrangian radii mass fraction (0.1,0.3,0.5,0.7,0.9)")
-        print("  -G(--gravitational-constant): Gravitational constant (if interrupt-mode=bse: ",petar.G_MSUN_PC_MYR,"; else 1.0)")
+        print("  -G(--gravitational-constant): Gravitational constant (if interrupt-mode=(mo)bse: ",petar.G_MSUN_PC_MYR,"; else 1.0)")
         print("  -b(--r-max-binary): maximum sepration for detecting binaries (0.1)")
         print("  -B(--full-binary): calculate full binary orbital parameters (simple_mode=False in Binary class), this option increases computing time")
         print("  -a(--average-mode): Lagrangian properity average mode, choices: sphere: average from center to Lagragian radii; shell: average between two neighbor radii (sphere)")
@@ -34,7 +34,7 @@ if __name__ == '__main__':
         print("  -r(--read-data): read existing single, binary and core data to avoid expensive KDTree construction, no argument, disabled in default")
         print("     --r-escape: a constant escape distance criterion, in default, it is 20*half-mass radius")
         print("     --e-escape: escape energy criterion, only work together with --r-escape, in default, it is 0.0")
-        print("  -i(--interrupt-mode): the interruption mode used in petar, choices: no, base, bse (no)")
+        print("  -i(--interrupt-mode): the interruption mode used in petar, choices: no, base, bse, mobse (no)")
         print("  -t(--external-mode): external mode used in petar, choices: galpy, no (no)")
         print("  -s(--snapshot-format): snapshot data format: binary, ascii (ascii)")
         print("  -n(--n-cpu): number of CPU threads for parallel processing (all threads)")
@@ -86,7 +86,7 @@ if __name__ == '__main__':
         print("          lagr = petar.LagrangianMultiple(add_star_type=['BH','MS']) .")
         print("Important note: 1) users should be careful to set the consistent '-i' or -'G' options in order to correctly calculate the Kepler orbital parameters of binaries.")
         print("                2) when data are written in BINARY format, '-s binary' should be used.")
-        print("                3) '--add-star-type' only works when the interrupt mode is 'bse'.")
+        print("                3) '--add-star-type' only works when the interrupt mode is 'bse' or 'mobse'.")
     try:
         shortargs = 'p:m:G:b:BAa:rt:i:s:n:h'
         longargs = ['mass-fraction=','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','snapshot-format=','add-star-type=','n-cpu=','help']
@@ -139,7 +139,7 @@ if __name__ == '__main__':
 
     if (not 'G' in kwargs.keys()):
         if ('interrupt_mode' in kwargs.keys()):
-            if (kwargs['interrupt_mode']=='bse'): kwargs['G'] = 0.00449830997959438 # pc^3/(Msun*Myr^2)
+            if ('bse' in kwargs['interrupt_mode']): kwargs['G'] = 0.00449830997959438 # pc^3/(Msun*Myr^2)
 
     kwargs['filename_prefix'] = filename_prefix
 
