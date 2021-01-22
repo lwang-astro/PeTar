@@ -478,7 +478,6 @@ AC_MSG_NOTICE([-----------------------------------------------------------])
 
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([bse-interface/Makefile])
-AC_CONFIG_FILES([mobse-interface/Makefile])
 AC_CONFIG_FILES([galpy-interface/Makefile])
 
 AC_OUTPUT

@@ -10,7 +10,7 @@ do
 	    echo 'Options:';
 	    echo '  -f: output file (petar input data) name (default: intput file name + ".input")';
 	    echo '  -i: skip rows number (default: 0)';
-	    echo '  -s: stellar evolution columns:  base | bse/mobse | no (default: no)';
+	    echo '  -s: stellar evolution columns:  base | bse | mobse | no (default: no)';
 	    echo '  -m: mass scaling factor from input data unit to [Msun], used for stellar evolution (BSE): mass[input unit]*m_scale=mass[Msun] (default: 1.0)';
 	    echo '  -r: radius scaling factor from input data unit to [pc] (default: 1.0)';
 	    echo '  -v: velocity scaling factor from input data unit to [pc/myr]. If the string "kms2pcmyr" is given, convert velocity unit from [km/s] to [pc/myr] (default: 1.0)';

@@ -7,10 +7,11 @@
 #include "hard_ptcl.hpp"
 #include "Hermite/hermite_particle.h"
 #include "ar_perturber.hpp"
-#ifdef BSE
+#if defined(BSE) || defined (MOBSE)
+#ifndef BSE_BASE
+#define BSE_BASE
+#endif
 #include "bse_interface.h"
-#elif MOBSE
-#include "mobse_interface.h"
 #endif
 
 //! AR interaction clas
@@ -22,14 +23,8 @@ public:
 #ifdef STELLAR_EVOLUTION
     int stellar_evolution_option;
     bool stellar_evolution_write_flag;
-#ifdef BSE
+#ifdef BSE_BASE
     BSEManager bse_manager;
-    std::ofstream fout_sse; ///> log file for SSE event
-    std::ofstream fout_bse; ///> log file for BSE event
-
-    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), stellar_evolution_option(1), stellar_evolution_write_flag(true), bse_manager(), fout_sse(), fout_bse() {}
-#elif MOBSE
-    MOBSEManager bse_manager;
     std::ofstream fout_sse; ///> log file for SSE event
     std::ofstream fout_bse; ///> log file for BSE event
 
@@ -47,7 +42,7 @@ public:
     bool checkParams() {
         ASSERT(eps_sq>=0.0);
         ASSERT(gravitational_constant>0.0);
-#if defined (BSE) || defined (MOBSE)
+#ifdef BSE_BASE
         ASSERT(stellar_evolution_option!=1||(stellar_evolution_option==1&&bse_manager.checkParams()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_sse.is_open()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_bse.is_open()));
@@ -640,7 +635,7 @@ public:
         //    _p.time_interrupt = _time_end+1e-5;
         //    return true;
         //}
-#if defined (BSE) || defined (MOBSE)
+#ifdef BSE_BASE
         // SSE/BSE stellar evolution 
         if (_p.time_interrupt<=_time_end&&stellar_evolution_option==1) {
             ASSERT(bse_manager.checkParams());
@@ -724,7 +719,7 @@ public:
             return modify_flag;
         }
 
-#endif // MOBSE/BSE
+#endif // BSE_BASE
 #endif // STELLAR_EVOLUTION
         return 0;
     }
@@ -745,7 +740,7 @@ public:
                     modify_branch[k] = modifyAndInterruptIter(_bin_interrupt, *_bin.getMemberAsTree(k));
                     modify_return = std::max(modify_return, modify_branch[k]);
                 }
-#if defined (BSE) || defined (MOBSE)
+#ifdef BSE_BASE
                 // if member is star, evolve single star using SSE
                 else if (stellar_evolution_option==1) {
                     ASSERT(bse_manager.checkParams());
@@ -773,7 +768,7 @@ public:
             auto* p1 = _bin.getLeftMember();
             auto* p2 = _bin.getRightMember();
 
-#if defined (BSE) || defined (MOBSE)
+#ifdef BSE_BASE
             auto postProcess =[&](StarParameterOut* out, Float* pos_cm, Float*vel_cm, Float& semi, Float& ecc, int binary_type_final) {
                 // if status not set, set to change
                 if (_bin_interrupt.status == AR::InterruptStatus::none) 
@@ -1048,7 +1043,7 @@ public:
                     postProcess(out, pos_cm, vel_cm, semi, ecc, binary_type_final);
                 }
             }
-#endif // BSE/MOBSE
+#endif // BSE_BASE
 
             // dynamical merger check
             if (_bin_interrupt.status!=AR::InterruptStatus::merge&&_bin_interrupt.status!=AR::InterruptStatus::destroy) {
@@ -1073,7 +1068,7 @@ public:
                         p1->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
                         p1->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
                     }
-#if defined (BSE) || defined (MOBSE)
+#ifdef BSE_BASE
                     //Float m1_bk = p1->mass;
                     //Float m2_bk = p2->mass;
                     // backup original data for print
@@ -1134,7 +1129,7 @@ public:
                             }
                         }
                     }
-#endif //BSE/MOBSE
+#endif //BSE_BASE
                     //p1->setBinaryPairID(0);
                     //p2->setBinaryPairID(0);
                 };
@@ -1153,7 +1148,7 @@ public:
                 else {
                     // check merger
                     Float radius = p1->radius + p2->radius;
-#if !defined (BSE) && !defined (MOBSE)
+#ifndef BSE_BASE
                     // slowdown case
                     if (_bin.slowdown.getSlowDownFactor()>1.0) {
                         ASSERT(_bin.semi>0.0);

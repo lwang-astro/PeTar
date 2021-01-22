@@ -6715,8 +6715,6 @@ ac_config_files="$ac_config_files Makefile"
 
 ac_config_files="$ac_config_files bse-interface/Makefile"
 
-ac_config_files="$ac_config_files mobse-interface/Makefile"
-
 ac_config_files="$ac_config_files galpy-interface/Makefile"
 
 
@@ -7428,7 +7426,6 @@ do
   case $ac_config_target in
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "bse-interface/Makefile") CONFIG_FILES="$CONFIG_FILES bse-interface/Makefile" ;;
-    "mobse-interface/Makefile") CONFIG_FILES="$CONFIG_FILES mobse-interface/Makefile" ;;
     "galpy-interface/Makefile") CONFIG_FILES="$CONFIG_FILES galpy-interface/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;

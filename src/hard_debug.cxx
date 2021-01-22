@@ -78,7 +78,7 @@ int main(int argc, char **argv){
         soft_pert_flag=false;
         break;
 #endif
-#if (defined BSE) || (defined MOBSE)
+#ifdef BSE_BASE
     case 'i':
         idum = atoi(optarg);
         break;
@@ -104,7 +104,7 @@ int main(int argc, char **argv){
                  <<"    -d [int]:     hard time step min power (should use together with -D)\n"
                  <<"    -m [int]:     running mode: 0: evolve system to time_end; 1: stability check: "<<mode<<std::endl
                  <<"    -p [string]:  hard parameter file name: "<<fhardpar<<std::endl
-#if (defined BSE) || (defined MOBSE)
+#ifdef BSE_BASE
                  <<"    -i [int]      random seed to generate kick velocity\n"
                  <<"    -B [string]:  read bse random parameter dump file with filename: "<<fbserandpar<<"\n"
                  <<"    -b [string]:  bse parameter file name: "<<fbsepar<<std::endl
@@ -138,18 +138,17 @@ int main(int argc, char **argv){
   fclose(fpar_in);
 
 #ifdef STELLAR_EVOLUTION
-#if (defined BSE) || (defined MOBSE)
+#ifdef BSE_BASE
 #ifdef BSE
   std::string bse_name="BSE";
   std::string fsse_suffix=".sse";
   std::string fbse_suffix=".sse";
-  IOParamsBSE bse_io;
 #elif MOBSE
   std::string bse_name="MOBSE";
   std::string fsse_suffix=".mosse";
   std::string fbse_suffix=".mobse";
-  IOParamsMOBSE bse_io;
 #endif // BSE/MOBSE
+  IOParamsBSE bse_io;
   std::cerr<<bse_name<<" parameter file:"<<fbsepar<<std::endl;
   if( (fpar_in = fopen(fbsepar.c_str(),"r")) == NULL) {
       fprintf(stderr,"Error: Cannot open file %s.\n", fbsepar.c_str());
@@ -293,7 +292,7 @@ int main(int argc, char **argv){
   }
 
 #ifdef STELLAR_EVOLUTION
-#if defined (BSE) || defined (MOBSE)
+#ifdef BSE_BASE
   auto& interaction = hard_manager.ar_manager.interaction;
   if (interaction.fout_sse.is_open()) interaction.fout_sse.close();
   if (interaction.fout_bse.is_open()) interaction.fout_bse.close();

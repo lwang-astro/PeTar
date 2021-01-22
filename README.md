@@ -107,10 +107,12 @@ Options for configure can be found by
     ```
     ./configure --with-interrupt=[bse]
     ```
-    Currently only SSE/BSE is the available stellar evolution package. Notice SSE/BSE is a combined package, the option argument "sse" not work, only "bse" switches on both.
+    Currently there are two options of stellar evolution packages based on SSE/BSE (Hurley et al. 2000, MNRAS, 315, 543; 2002, MNRAS, 329, 897):
+    - bse: the updated SSE/BSE version from Banerjee et al. 2020, A&A, 639, A41.
+    - mobse: the MOBSE from Giacobbo et al. 2018, MNRAS, 474, 2959.
     
-    When this option is switched on, the standalone tool _petar.bse_ will also be compiled and installed.
-    This is a c++ based tool which call the SSE/BSE functions to evolve single and binary stars to the given age and metallicity. OpenMP parallelization is used to speed up the calculation if a large group of stars and binaries are provided.
+    When this option is switched on, the standalone tool _petar.(mo)bse_ will also be compiled and installed.
+    This is a c++ based tool which call the SSE/BSE/MOBSE functions to evolve single and binary stars to the given age and metallicity. OpenMP parallelization is used to speed up the calculation if a large group of stars and binaries are provided.
 
 9. Use _Galpy_ external potential library
     ```
@@ -136,7 +138,7 @@ make install
 ```
 to compile and install the code.
 
-The excutable file _petar_, _petar.hard.debug_, _petar.init_, _petar.find.dt_, _petar.data.process_, _petar.movie_ and _petar.bse_ (if SSE/BSE is used) will be installed in [Install path]/bin.
+The excutable file _petar_, _petar.hard.debug_, _petar.init_, _petar.find.dt_, _petar.data.process_, _petar.movie_ and _petar.(mo)bse_ (if SSE/BSE/MOBSE is used) will be installed in [Install path]/bin.
 1. _petar_ is the main routine. It is actually a soft link to _petar.\*\*_, where the suffix represents the feature of the code based on the configure.
 2. _petar.hard.debug_ is used for debugging if _hard\_dump_ files appears when the code crashes.
 3. _petar.[tool name]_ are a group of tools for initialization, optimize the performance and data analysis. The details can be checked in the section [Useful tools](#useful-tools).
@@ -234,11 +236,11 @@ When new versions of _PeTar_ release, the help information always has the corres
 When _petar_ is running, there are a few information printed in the front:
 - The _FDPS_ logo and _PETAR_ information are printed, where the copyright, and references for citing are shown.
 - The input parameters are listed if they are modified when the corresponding options of _petar_ are used.
-- If stellar evolution package (SSE/BSE) is used, the common block and global parameters are printed.
-- The name of dumped files for the input parameters are shown, in default, they are input.par, input.par.hard, input.par.bse (if BSE is used)
+- If stellar evolution package (updated SSE/BSE or MOBSE) is used, the common block and global parameters are printed.
+- The name of dumped files for the input parameters are shown, in default, they are input.par, input.par.hard, input.par.(mo)bse (if (MO)BSE is used)
     - input.par: input parameters of petar, can be used to restart the simulation from a snapshot.
     - input.par.hard: input paremeters of hard (short-range interaction part; Hermite + SDAR), can be used for _petar.hard.debug_ to test the dumped hard cluster.
-    - input.par.bse: the BSE parameters, if BSE is used, this is the necessary file to restart the simulation and also for _petar.hard.debug_.
+    - input.par.(mo)bse: the (MO)BSE parameters, if (MO)BSE is used, this is the necessary file to restart the simulation and also for _petar.hard.debug_.
 
 Then after the line "Finish parameter initialization",
 The status of the simulation is updated every output time interval (the option -o).
@@ -265,7 +267,7 @@ There are a few output files:
 - [data filename prefix].[index]: the snapshot files, the format is the same as the input data file. In the help information of _petar_ commander, users can find the definitions of the columns and header
 - [data filename prefix].esc.[MPI rank]: the escaped particle information, first lines show column definition
 - [data filename prefix].group.[MPI rank]: the information of new and end of groups (binary, triple ...), since the items in each row can be different because of different numbers of members in groups, there is no universal column headers. It is suggested to use petar.data.gether first to separate groups with different numbers of members into different files. Then use the python tool _petar.Group_ to read the new files.
-- [data filename prefix].[s/b]se.[MPI rank]: if BSE is switched on, the files record the SSE and BSE events, such as type changes, Supernovae, binary evolution phase changes. Each line contain the definition of values, thus can be directly read.
+- [data filename prefix].[s/b]se.[MPI rank]: if BSE based code is switched on, the files record the single and binary stellar evolution events, such as type changes, Supernovae, binary evolution phase changes. Each line contain the definition of values, thus can be directly read.
 
 Before access these files, it is suggested to run _petar.data.gether_ tool first to gether the separated files with different MPI ranks to one file for convenience.
 This tool also separate the few-body groups with different number of members in xx.group files to individual files with suffix ".n[number of members in groups]".
@@ -280,7 +282,7 @@ This files record the clusters of stars initial conditions for the hard integrat
 
 In the first two cases, the simulation continues. The users can ignore them if the results of simulations are acceptable. But if something is not correct, this files can help to finger out the issues, by using the debug tool _petar.hard.debug_.
 
-In the third case, the simulation is terminated in order to avoid unpredictable behaviours. The "hard_dump.xx" usually indicates that a bug may exist. It is suggested to report the issues to the developers by attaching "input.par.hard", "input.par.bse" and "hard_dump.xx" files.
+In the third case, the simulation is terminated in order to avoid unpredictable behaviours. The "hard_dump.xx" usually indicates that a bug may exist. It is suggested to report the issues to the developers by attaching "input.par.hard", "input.par.(mo)bse" and "hard_dump.xx" files.
 Users can also check the details by using the debug tool _petar.hard.debug_ together with the GDB tool, if users prefer to understand the problems themselves. The knowledge of the source codes of SDAR is required to understand the messages from the debug tool.
   
 ### Useful tools
@@ -302,7 +304,7 @@ petar.init [options] [particle data filename]
 The particle data file should contain 7 columns: mass, position[3], velocity[3] and one particle per row.
 All Binaries come first and the two components should be next to each other. Besides, when binaries exist, the option '-b [binary number]' should be added to the _petar_ commander. This is important to obtain a correct initial velocity dispersion, tree time step and changeover radii. 
 
-Notice when stellar evolution is switched on, the corresponding options "-s bse" should be used together to generate the correct initial files. In this case, the astronomical unit set (Solar mass [Msun], parsec [PC] and Million year [Myr]) are suggested to use for the initial data. Notice the velocity unit should be PC/Myr. Then the corresponding mass scaling factor is 1.0 between units of PeTar and SSE/BSE. Besides, the option "-u 1" should be added to the _petar_ commander in order to use this astronomical unit set.
+Notice when stellar evolution is switched on, the corresponding options "-s (mo)bse" should be used together to generate the correct initial files. In this case, the astronomical unit set (Solar mass [Msun], parsec [PC] and Million year [Myr]) are suggested to use for the initial data. Notice the velocity unit should be PC/Myr. Then the corresponding mass scaling factor is 1.0 between units of PeTar and BSE based code. Besides, the option "-u 1" should be added to the _petar_ commander in order to use this astronomical unit set.
 
 Similarly, when external mode (potential) is switched on, the option '-t' should be used to generate correct number of columns.
 
@@ -372,7 +374,7 @@ Notice that the generated data from _petar.data.process_ are all in ASCII format
 Users should be careful to set the correct options of gravitational constant (`-G`), interrupt mode (`-i`) and external mode (`-t`) in the analysis.
 This is important to correctly read the snapshots and calculate the Kepler orbital parameters of binaries.
 When users apply the astronomical unit set (`-u 1` in the _petar_ commander) in simulations, `-G 0.00449830997959438` should be used in the data analysis.
-Or, if the SSE/BSE is used, the interrupt mode option `-i bse` can also set the correct value of G.
+Or, if the BSE based package is used, the interrupt mode option `-i (mo)bse` can also set the correct value of G.
 
 #### Movie generator
 The _petar.movie_ is a covenient tool to generate a movie from the snapshot files.
@@ -450,19 +452,19 @@ Users can directly modify the values of arguments in the file.
 Besides, it is not necessary to list all options there.
 Thus, if new options are implemented in the future version, there is no need to update the file again (unless existing option names change).
 
-#### SSE/BSE steller evolution tool
-The _petar.bse_ will be generated when --with-interrupt=bse is used during the configuration.
-This is the standalone SSE/BSE tool to evolve stars and binaries to a given time.
-All SSE/BSE global parameters can be set in options.
+#### BSE based steller evolution tool
+The _petar.(mo)bse_ will be generated when --with-interrupt=bse is used during the configuration.
+This is the standalone tool to evolve stars and binaries to a given time.
+All global parameters needed can be set in options.
 The basic way to evolve a group of stars:
 ```
-petar.bse [options] mass1, mass2 ...
+petar.(mo)bse [options] mass1, mass2 ...
 ```
 If no mass is provided, the tool can evolve a group of stars with equal logarithmic mass interval.
 
 The basic way to evolve a group of binaries:
 ```
-petar.bse [options] -b [binary data file]
+petar.(mo)bse [options] -b [binary data file]
 ```
 where the binary data file contain 4 values (mass1, mass2, period, eccentricity) per line.
 Notice that the first line has only one value which is the number of binaries.
@@ -538,7 +540,7 @@ Here is the list of all classes.
     - _Status_: the global parameter of the system such as energy and number of particles ([data filename prefix].status).
     - _Profile_: the wall-clock time of different parts of the code ([data filename prefix].prof.rank.[rank index]).
     - _GroupInfo_: the formation and disruption of few-body groups log ([data filename prefix].group.n[number of members]).
-- For outputs when SSE/BSE is switched on (need to use _petar.data.gether_ to generate data files first):
+- For outputs when BSE based package is switched on (need to use _petar.data.gether_ to generate data files first):
     - _SSETypeChange_: the log of type change of single stars ([data filename prefix].sse.type_change)
     - _SSESNKick_: the log of SNe kick events of single stars ([data filename prefix].sse.sn_kick)
     - _BSETypeChange_: the log of type change of binary stars ([data filename prefix].bse.type_change)
@@ -585,7 +587,7 @@ particle.loadtxt('data.0',skiprows=1)
 ```
 Here the keyword argument ```interrupt_mode``` is important to set properly in order to read the snapshot correctly.
 The column definitions of snapshots depends on the stellar evolution option (--with-interrupt) and the external potential option (--with-external) used during the configure.
-The argument 'bse' indicates that the SSE/BSE is used so that external columns of SSE/BSE parameters exist in the snapshots.
+The argument 'bse' indicates that the updated SSE/BSE is used so that external columns exist in the snapshots.
 Then, here `particle` contains a member `star` with the class type `petar.SSEStarParameter`.
 Similary, if external potential is added, one more column of 'pot_ext' is added.
 
