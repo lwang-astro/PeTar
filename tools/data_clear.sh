@@ -1,7 +1,8 @@
 #!/bin/bash
 
-suffixes=(esc group sse bse status prof.rank)
-tindices=(1 3 21 13 1 2)
+suffixes=(esc group sse mosse bse mobse status prof.rank)
+tindices=(1 3 21 21 13 13 1 2)
+nsuffixes=8
 # sn single 12 binary 14
 unset tcrit
 less_out=0
@@ -41,7 +42,7 @@ echo 'data filename prefix: '$fname
 echo 'time criterion: '$tcrit
 
 # esc group
-for ((i=0;i<6;i=i+1))
+for ((i=0;i<$nsuffixes;i=i+1))
 do
     s=${suffixes[$i]}
     tindex=${tindices[$i]}
@@ -66,9 +67,9 @@ do
 	else
 	    mv $f $f.bk
 	fi
-	if [ $s == 'sse' ]; then
+	if [[ $s == *'sse'* ]]; then
 	    awk -v t=$tcrit -v ti=$tindex '{if (($1!="SN_kick" && $ti<=t) || ($1=="SN_kick" && $12<=t)) print $LINE}' $f.bk >$f
-	elif [ $s == 'bse' ]; then
+	elif [[ $s == *'bse'* ]]; then
 	    if [ $less_out == 0 ]; then
 		awk -v t=$tcrit -v ti=$tindex '{if ($1=="SN_kick") {if ($14<=t) print $LINE} else if ($1=="Dynamic_merge:") {if($38<=t) print $LINE} else if ($ti<=t) print $LINE;}' $f.bk >$f
 	    else
