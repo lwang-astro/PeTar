@@ -70,7 +70,7 @@ if [ -e $fout.group ]; then
     fi
 fi
 
-sse_opt='sse mosse'
+sse_opt='.sse .mosse'
 for s in $sse_opt
 do
     if [ -e $fout$s ]; then
@@ -80,7 +80,7 @@ do
     fi
 done
 
-bse_opt='bse mobse'
+bse_opt='.bse .mobse'
 for s in $bse_opt
 do
     if [ -e $fout$s ]; then
