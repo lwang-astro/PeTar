@@ -362,26 +362,20 @@ class Binary(SimpleParticle):
     def calcEkin(self):
         """ Calculate c.m. kinetic energy, ekin, and add it as a member
         """
-        if (not 'ekin' in self.__dict__.keys()): 
-            self.ncols += 1
-            self.keys.append(['ekin',np.float64])
-        self.ekin = 0.5*vecDot(self.vel,self.vel)*self.mass
+        ekin = 0.5*vecDot(self.vel,self.vel)*self.mass
+        self.addNewMember('ekin',ekin)
 
     def calcEtot(self):
         """ Calculate c.m. total energy (binary energy is excluded) , etot, and add it as a member
         """
-        if (not 'etot' in self.__dict__.keys()): 
-            self.ncols += 1
-            self.keys.append(['etot',np.float64])
-        self.etot = self.ekin + self.mass*self.pot
+        etot = self.ekin + self.mass*self.pot
+        self.addNewMember('etot',etot)
 
     def calcR2(self, member_also=False):
         """ Calculate c.m. distance square, r2, and add it as a member
         """
-        if (not 'r2' in self.__dict__.keys()): 
-            self.ncols += 1
-            self.keys.append(['r2',np.float64])
-        self.r2 = vecDot(self.pos,self.pos)
+        r2 = vecDot(self.pos,self.pos)
+        self.addNewMember('r2',r2)
         if (member_also):
             ncols = self.p1.ncols + self.p2.ncols
             self.p1.calcR2()
@@ -393,10 +387,8 @@ class Binary(SimpleParticle):
         """ Calculate binding energy, ebin, and add it as a member 
             Notice G should be given the correct value in initialization (keyword argument 'G')
         """
-        if (not 'ebin' in self.__dict__.keys()):
-            self.ncols += 1
-            self.keys.append(['ebin',np.float64])
-        self.ebin = self.initargs['G']*self.p1.mass*self.p2.mass/(2*self.semi)
+        ebin = elf.initargs['G']*self.p1.mass*self.p2.mass/(2*self.semi)
+        self.addNewMember('ebin',ebin)
 
     def calcPot(self):
         """ Calculate potential of c.m., pot, and add it as a member
@@ -412,10 +404,15 @@ class Binary(SimpleParticle):
         invr = 1/np.sqrt(dr2)
         pot_b1 = self.p1.pot + G*m_b2*invr
         pot_b2 = self.p2.pot + G*m_b1*invr
-        if (not 'pot' in self.__dict__.keys()): 
-            self.ncols += 1
-            self.keys.append(['pot',np.float64])
-        self.pot = (m_b2*pot_b1 + m_b1*pot_b2)/self.mass
+        pot = (m_b2*pot_b1 + m_b1*pot_b2)/self.mass
+        self.addNewMember('pot',pot)
+
+    def generateBinaryID(self):
+        """ Use CantorPairing to map two components id to one binary id
+            Add new member bid 
+        """
+        bid = cantorPairing(self.p1.id, self.p2.id)
+        self.addNewMember('bid',bid)
             
     def correctCenter(self, cm_pos, cm_vel):
         """ Corrent c.m and component position and velocity by subtracting cm_pos and cm_vel
@@ -734,3 +731,4 @@ def findMultiple(_single, _binary, _G, _rmax, simple_binary=True):
         binary = join(binary,binary_new)
 
     return single, binary, triple, quadruple
+
