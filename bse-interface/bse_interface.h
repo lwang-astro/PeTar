@@ -406,6 +406,9 @@ static double EstimateRocheRadiusOverSemi(double& _q) {
 //! a simple check to determine whether the GR effect is important
 /*!
   calculate the relative angular momentum change timescale dJ/J, suggested by Ataru Tanikawa
+  With the correction factor (1-ecc), J/dJ*(1-ecc) is roughly 1-10 times of GR merger time.
+  The return value is reduced by 1e-3: 0.001*J/dJ*(1-ecc)
+  
   @param[in] _star1: star parameter of first
   @param[in] _star2: star parameter of second
   @param[in] _semi: semi-major axis, [Rsun]
@@ -420,7 +423,7 @@ static double EstimateGRTimescale(StarParameter& _star1, StarParameter& _star2, 
     double semi2 = _semi*_semi;
     // (32/5)(G^{7/2}/c^5 is ~8.3x10^{-10} in the unit of Msun, Rsun, and year.
     double djgr = 8.315e-10*_star1.mt*_star2.mt*(_star1.mt+_star2.mt)/(semi2*semi2)*(1.0+0.875*ecc2)/sqome5;
-    double dtr = 1.0e-6/djgr; // in Myr
+    double dtr = 1.0e-9/djgr*(1-_ecc); // in Myr,  with 0.001 coefficent and ecc correction factor
     return dtr;
 }
 
