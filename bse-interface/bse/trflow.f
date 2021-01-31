@@ -10,14 +10,14 @@
 *
       INTEGER kstar(2),I1,I2,IT,KW
       REAL*8  mass0(2),mass(2),rad(2),massc(2),radc(2),age(2),dtr
-      REAL*8  semi
+      REAL*8  semi,aursun
       REAL*8  TSCLS(20),LUMS(10),GB(10),zpars(20),TM,TN
       REAL*8  M0,M1,LUM,MC,RC,Q,RL1,RL2
       REAL*8  MENV,RENV,K2
       REAL*8  AJ,RHIGH,THIGH,T,RR,RX,TLOW,RLOW,DEL,DER,EPS,TOL
       real*8 FBFAC,FBTOT,MCO
       integer ECS
-      PARAMETER (EPS = 1.0D-06, TOL = 1.0D-04)
+      PARAMETER (EPS = 1.0D-06, TOL = 1.0D-04, aursun=215.95d0)
       REAL*8 RL,RTMSF,RGBF,RGBDF,RAGBF,RAGBDF,RZHEF
       EXTERNAL RL,RTMSF,RGBF,RGBDF,RAGBF,RAGBDF,RZHEF
       REAL*8 RSJ,CM
@@ -63,7 +63,14 @@
 * If the star already fills its Roche lobe exit with DTR = 0.
 *
       IF(RSJ.GE.RL1)THEN
-         DTR = 0.D0
+*        get one period
+         IF(SEMI.LE.0.D0) THEN
+            DTR = 0.D0
+         ELSE 
+            DTR = semi/aursun*sqrt(semi/(aursun*(MASS(I1)+MASS(I2))))
+            DTR = DTR/1.0d6
+         END IF
+*         DTR = 0.D0
 *         RAD(I1) = RS1
          GOTO 210
       ENDIF

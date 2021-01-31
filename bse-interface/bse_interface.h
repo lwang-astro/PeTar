@@ -1183,7 +1183,7 @@ public:
     /*!
       @param[in,out] _star: star parameter
       @param[out] _out: output parameter from evolv1
-      @param[in] _dt_nb: physical time step in NB unit to evolve
+      @param[in] _dt_nb: physical time step to evolve [In unit]
       \return event flag: -1: error, 0: normal, 1: type change, 2: velocity kick
      */
     int evolveStar(StarParameter& _star, StarParameterOut& _out, const double _dt_nb) {
@@ -1220,11 +1220,11 @@ public:
       @param[in,out] _period: period of binary in NB unit [IN unit]
       @param[in,out] _ecc: eccentricity of binary
       @param[in] _binary_init_type: initial type of binary
-      @param[in] _dt_nb: physical time step in Myr to evolve
+      @param[in] _dt_nb: physical time step to evolve [In unit]
       \return error flag: -1: error, 0: normal
      */
     int evolveBinary(StarParameter& _star1, StarParameter& _star2, StarParameterOut& _out1, StarParameterOut& _out2, 
-                     double& _semi, double& _period, double& _ecc, BinaryEvent& _bse_event, int& _binary_init_type, const double _dt_nb) {
+                     double& _semi, double& _period, double& _ecc, BinaryEvent& _bse_event, const int& _binary_init_type, const double _dt_nb) {
         double tphys = std::max(_star1.tphys, _star2.tphys);
         double tphysf = _dt_nb*tscale + tphys;
         double dtp=tphysf*100.0+1000.0;
