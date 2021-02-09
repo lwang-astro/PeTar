@@ -54,7 +54,9 @@ do
 		cat $file.$i >>$fout.$s
 	    done
 	else
-	    cat `ls |egrep $file'.[0-9]+'` >$fout.$s
+	    flist=`ls |egrep $file'.[0-9]+$'`
+	    echo $flist
+	    cat $flist >$fout.$s
 	fi
     fi
 done
