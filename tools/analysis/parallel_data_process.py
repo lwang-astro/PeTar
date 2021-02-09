@@ -66,7 +66,11 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         #particle=Particle(snap, **kwargs)
         particle=Particle(**kwargs)
         if (snapshot_format=='ascii'): particle.loadtxt(file_path, skiprows=1)
-        elif (snapshot_format=='binary'): particle.fromfile(file_path, offset=HEADER_OFFSET)
+        elif (snapshot_format=='binary'): 
+            if (external_mode!='none'):
+                particle.fromfile(file_path, offset=HEADER_OFFSET_WITH_CM)
+            else:
+                particle.fromfile(file_path, offset=HEADER_OFFSET)
         else: raise ValueError('Snapshot format unknown, should be binary or ascii, given', snapshot_format)
         read_time = time.time()
 
