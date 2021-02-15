@@ -184,6 +184,61 @@ class Lagrangian(DictNpArrayMix):
         #self.keys.append(['sigma',LagrangianVelocity])
         #self.initargs['mass_fraction'] = m_frac
 
+    def calcTrh(self, G, gamma=0.02, mode='sphere'):
+        """ Calculate Spitzer one-component half-mass relaxation time
+            Trh = 0.138 N^0.5 Rh^1.5 /( G^0.5 m^0.5 ln(gamma N))
+            Then add the result as a new member 'trh'.
+
+            Notice mass fraction must contain 0.5 to use this function
+            m use the average mass within half-mass radius
+
+        Parameters
+        ----------
+        G: float
+           Gravitational constant
+        gamma: float (0.02 # Giersz M., Heggie D. C., 1996, MNRAS, 279, 1037)
+           The coefficient for Coulomb logarithm
+        mode: string (sphere)
+            sphere: calculate averaged properties from center to Lagrangian radii
+            shell: calculate properties between two neighbor Lagrangian radii
+
+        """
+        rhindex=np.where(self.initargs['mass_fraction']==0.5)[0][0]
+        if (mode=='shell'): 
+            n=self.n[:,0:(rhindex+1)].sum(axis=1)
+            m=(self.m[:,0:(rhindex+1)]*self.n[:,0:(rhindex+1)]).sum(axis=1)/n
+            trh=calcTrh(2*n, self.r[:,rhindex], m, G, gamma)
+            self.addNewMember('trh',trh)
+        else:
+            trh=calcTrh(2*self.n[:,rhindex], self.r[:,rhindex], self.m[:,rhindex], G, gamma)
+            self.addNewMember('trh',trh)
+
+    def calcTcr(self, G, mode='sphere'):
+        """ Calculate half-mass crossing time
+            Tcr = Rh^1.5/sqrt(G M)
+            Then add the result as a new member 'tcr'.
+
+            Notice mass fraction must contain 0.5 to use this function
+
+        Parameters
+        ----------
+        G: float
+           Gravitational constant
+        mode: string (sphere)
+            sphere: calculate averaged properties from center to Lagrangian radii
+            shell: calculate properties between two neighbor Lagrangian radii
+
+        """
+        rhindex=np.where(self.initargs['mass_fraction']==0.5)[0][0]
+        if (mode=='shell'): 
+            M=(self.m[:,0:(rhindex+1)]*self.n[:,0:(rhindex+1)]).sum(axis=1)*2
+            tcr=calcTcr(M, self.r[:,rhindex], G)
+            self.addNewMember('tcr',tcr)
+        else:
+            tcr=calcTcr(self.n[:,rhindex]*self.m[:,rhindex]*2, self.r[:,rhindex], G)
+            self.addNewMember('tcr',tcr)
+            
+
     def calcOneSnapshot(self, _particle, _rc, _mode='sphere', **kwargs):
         """ Calculate one snapshot lagrangian parameters
 
