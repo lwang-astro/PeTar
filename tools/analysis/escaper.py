@@ -19,7 +19,7 @@ class SingleEscaper(Particle):
                 Basic particle type: hermite, hard, soft
                 When read PeTar data, do not change this
             interrupt_mode: string (none)
-                PeTar interrupt mode: base, bse, none
+                PeTar interrupt mode: base, bse, mobse, none
         """
 
         
@@ -62,8 +62,10 @@ class SingleEscaper(Particle):
     def removeDuplicate(self):
         """ removed duplicated escapers, keep the first appearing one
         """
-        unid, index= np.unique(self.id, return_index=True)
-        newdata=self[index]
+        sindex=self.time.argsort()
+        data_sort=self[sindex]
+        unid, index= np.unique(data_sort.id, return_index=True)
+        newdata=data_sort[index]
         self.__init__(newdata,**self.initargs)
 
 class BinaryEscaper(Binary):
@@ -83,7 +85,7 @@ class BinaryEscaper(Binary):
             particle_type: string (soft)
                 Basic particle type: hermite, hard, soft
             interrupt_mode: string (none)
-                PeTar interrupt mode: base, bse, none
+                PeTar interrupt mode: base, bse, mobse, none
             simple_mode: bool (True)
                 If True, only calculate semi and ecc, save computing time significantly
             member_particle_type: type (Particle)

@@ -193,7 +193,7 @@ public:
                      data_format  (input_par_store, 1,    "i", "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),
                      write_style  (input_par_store, 1,    "w", "File Writing style: 0, no output; 1. write snapshots, status and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile"),
 #ifdef STELLAR_EVOLUTION
-#if defined (BSE) || defined (MOBSE)
+#ifdef BSE_BASE
                      stellar_evolution_option  (input_par_store, 1, "stellar-evolution", "modify single star: 0: turn off; 1: modify mass and velocity using SSE every Hermite step, log files with names of [data filename prefix].[sse/bse].[MPI rank] are generated if -w >0"),
                      interrupt_detection_option(input_par_store, 1, "detect-interrupt", "modify orbits of binaries: 0: no modifications (also no stellar evolution); 1: modify the binary orbits using BSE (if '--stellar-evolution 1' is set) and merger checker in AR integrator"),
 #else
@@ -619,15 +619,16 @@ public:
 
     // IO
     IOParamsPeTar input_parameters;
-#ifdef BSE
+#ifdef BSE_BASE
     IOParamsBSE bse_parameters;
+#ifdef BSE
     std::string fbse_par_suffix=".bse";
     std::string fsse_par_suffix=".sse";
 #elif MOBSE
-    IOParamsMOBSE bse_parameters;
     std::string fbse_par_suffix=".mobse";
     std::string fsse_par_suffix=".mosse";
-#endif
+#endif // BSE/MOBSE
+#endif // BSE_BASE
 #ifdef GALPY
     IOParamsGalpy galpy_parameters;
 #endif
@@ -708,7 +709,7 @@ public:
     //! initialization
     PeTar(): 
         input_parameters(),
-#if (defined BSE) || (defined MOBSE)
+#ifdef BSE_BASE
         bse_parameters(),
 #endif
 #ifdef GALPY
@@ -2314,10 +2315,8 @@ public:
             <<"    FDPS: see above FPDS Logo message\n";
         AR::printReference(fout);
         fout<<"    PeTar: Wang L., Iwasawa M., Nitadori K., Makino J., 2020, MNRAS, 497, 536\n";
-#ifdef BSE
+#ifdef BSE_BASE
         BSEManager::printReference(fout);
-#elif MOBSE
-        MOBSEManager::printReference(fout);
 #endif
 #ifdef GALPY
         GalpyManager::printReference(fout);
@@ -2461,7 +2460,7 @@ public:
         if (my_rank==0) input_parameters.print_flag=true;
         else input_parameters.print_flag=false;
         int read_flag = input_parameters.read(argc,argv);
-#if (defined BSE) || (defined MOBSE)
+#ifdef BSE_BASE
         if (my_rank==0) bse_parameters.print_flag=true;
         else bse_parameters.print_flag=false;
         bse_parameters.read(argc,argv);
@@ -2550,7 +2549,7 @@ public:
             }
             fesc<<std::setprecision(WRITE_PRECISION);
 
-#if (defined BSE) || (defined MOBSE)
+#ifdef BSE_BASE
             // open SSE/BSE file
             std::string fsse_name = fname_snp + fsse_par_suffix + "." + my_rank_str;
             std::string fbse_name = fname_snp + fbse_par_suffix + "." + my_rank_str;
@@ -2814,7 +2813,7 @@ public:
             system_soft[i].time_record = 0.0;
             system_soft[i].time_interrupt = 0.0;
             system_soft[i].binary_state = 0;
-#if (defined BSE) || (defined MOBSE)
+#ifdef BSE_BASE
             system_soft[i].star.initial(mass[i]*bse_parameters.mscale.value);
 #endif
 #endif
@@ -2905,7 +2904,7 @@ public:
         // units
         if (input_parameters.unit_set.value==1) {
             input_parameters.gravitational_constant.value = 0.00449830997959438; // pc^3/(Msun*Myr^2)
-#if (defined BSE) || (defined MOBSE)
+#ifdef BSE_BASE
             bse_parameters.tscale.value = 1.0; // Myr
             bse_parameters.rscale.value = 44353565.919218; // pc -> rsun
             bse_parameters.mscale.value = 1.0; // Msun
@@ -2914,7 +2913,7 @@ public:
             if(print_flag) {
                 std::cout<<"----- Unit set 1: Msun, pc, Myr -----\n"
                          <<"gravitational_constant = "<<input_parameters.gravitational_constant.value<<" pc^3/(Msun*Myr^2)\n";
-#if (defined BSE) || (defined MOBSE)
+#ifdef BSE_BASE
                 std::cout<<"----- Unit conversion for BSE ----- \n"
                          <<" tscale = "<<bse_parameters.tscale.value<<"  Myr / Myr\n"
                          <<" mscale = "<<bse_parameters.mscale.value<<"  Msun / Msun\n"
@@ -3206,7 +3205,7 @@ public:
         hard_manager.ar_manager.interaction.stellar_evolution_option = input_parameters.stellar_evolution_option.value;
         if (write_style) hard_manager.ar_manager.interaction.stellar_evolution_write_flag = true;
         else hard_manager.ar_manager.interaction.stellar_evolution_write_flag = false;
-#if (defined BSE) || (defined MOBSE)
+#ifdef BSE_BASE
         if (input_parameters.stellar_evolution_option.value==1) 
             hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters, print_flag);
 #endif
@@ -3262,7 +3261,7 @@ public:
             hard_manager.writeBinary(fpar_out);
             fclose(fpar_out);
 
-#if (defined BSE) || (defined MOBSE)
+#ifdef BSE_BASE
             // save bse parameters
             std::string fbse_par = input_parameters.fname_par.value + fbse_par_suffix;
             if (print_flag) std::cout<<"Save bse_parameters to file "<<fbse_par<<std::endl;
@@ -3734,7 +3733,7 @@ public:
         if (fprofile.is_open()) fprofile.close();
 #endif
 
-#if defined (BSE) || defined (MOBSE)
+#ifdef BSE_BASE
         auto& interaction = hard_manager.ar_manager.interaction;
         if (interaction.fout_sse.is_open()) interaction.fout_sse.close();
         if (interaction.fout_bse.is_open()) interaction.fout_bse.close();

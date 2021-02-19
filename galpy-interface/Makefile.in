@@ -21,5 +21,9 @@ petar.galpy: galpy_test.cxx libgalpy.a galpy_interface.h
 
 petar.galpy.help: galpy_help.py
 	ln -sf galpy_help.py petar.galpy.help
+
+install:
+	install -m 755 petar.galpy petar.galpy.help @prefix@/bin/
+
 clean: 
 	rm -f $(OBJ) petar.galpy libgalpy.a petar.galpy.help

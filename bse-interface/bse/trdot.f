@@ -123,6 +123,8 @@
       dr = rm - rm0
       it = it + 1
       if(it.eq.20.and.kw.eq.4) goto 30
+* Bug fix, do not iterate if the star is compact object, thanks to Ataru Takikawa
+      if(kw.ge.13) goto 30
       IF(IT.GT.30)THEN
          WRITE (6,22) IT, KW, M0, DR, RM0
    22    FORMAT (' BSE DANGER!    deltat: Iter KW M0 DR RM0 ',

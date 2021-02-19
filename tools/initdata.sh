@@ -10,8 +10,8 @@ do
 	    echo 'Options:';
 	    echo '  -f: output file (petar input data) name (default: intput file name + ".input")';
 	    echo '  -i: skip rows number (default: 0)';
-	    echo '  -s: stellar evolution columns:  base | bse/mobse | no (default: no)';
-	    echo '  -m: mass scaling factor from input data unit to [Msun], used for stellar evolution (BSE): mass[input unit]*m_scale=mass[Msun] (default: 1.0)';
+	    echo '  -s: stellar evolution columns:  base | (mo)bse | no (default: no)';
+	    echo '  -m: mass scaling factor from input data unit to [Msun], used for stellar evolution (BSE based): mass[input unit]*m_scale=mass[Msun] (default: 1.0)';
 	    echo '  -r: radius scaling factor from input data unit to [pc] (default: 1.0)';
 	    echo '  -v: velocity scaling factor from input data unit to [pc/myr]. If the string "kms2pcmyr" is given, convert velocity unit from [km/s] to [pc/myr] (default: 1.0)';
 	    echo '  -u: calculate the velocity scaling factor based on -m and -r, then convert data unit to (Msun, pc, pc/myr), input data should use the Henon unit (total mass=1, G=1)';
@@ -123,11 +123,11 @@ if [[ $seflag != 'no' ]]; then
 	echo "Interrupt mode: base'
 	echo 'Stellar radius (0): " $radius
 	awk '{OFMT="%.15g"; print '"$base_col$se_col$soft_col"'}' $fout.scale__ >>$fout
-    elif [[ $seflag == 'bse' || $seflag == 'mobse' ]]; then
+    elif [[ "$seflag" == *"bse"* ]]; then
 	#       type, m0,  m,     rad, mc,  rc,  spin, epoch, time, lum
 	bse_col='1, $1*ms, $1*ms, 0.0, 0.0, 0.0, 0.0,  0.0,   0.0,  0.0,'
 
-	echo 'Interrupt mode: bse'
+	echo 'Interrupt mode: '$seflag
 	echo 'mass scale from PeTar unit (PT) to Msun (m[Msun] = m[PT]*mscale): ' $mscale
 	awk -v ms=$mscale  '{OFMT="%.15g"; print '"$base_col$se_col$bse_col$soft_col"'}' $fout.scale__ >>$fout
     else

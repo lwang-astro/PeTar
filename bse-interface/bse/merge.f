@@ -37,7 +37,8 @@
           RL1 = RL2
       END IF
 
-      IF(RAD(I1).GE.RL1)THEN
+      IF(RAD(I1).GE.RL1.AND.((kstar(i1).ge.2.AND.kstar(i1).le.6).or.
+     &     (kstar(i1).ge.8.and.kstar(i1).le.9)) )THEN
 
 *     Convert Roche radius, radius and initial & current mass to SU.
          

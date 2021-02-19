@@ -96,6 +96,16 @@
 *
       IF(KW2.LE.1.OR.KW2.EQ.7)THEN
          SEPF = MC1*M2/(2.D0*EORBF)
+* Check if any eccentricity remains in the orbit by first using 
+* energy to circularise the orbit before removing angular momentum. 
+* (note this should not be done in case of CE SN ... fix).  
+*
+         IF(EORBF.LT.ECIRC)THEN
+            ECC = SQRT(1.D0 - EORBF/ECIRC)
+         ELSE
+            ECC = 0.D0
+         ENDIF
+
          Q1 = MC1/M2
          Q2 = 1.D0/Q1
          RL1 = RL(Q1)
@@ -146,6 +156,15 @@
 * Roche lobe.
 *
          SEPF = MC1*MC2/(2.D0*EORBF)
+* Check if any eccentricity remains in the orbit by first using 
+* energy to circularise the orbit before removing angular momentum. 
+* (note this should not be done in case of CE SN ... fix).  
+*
+         IF(EORBF.LT.ECIRC)THEN
+            ECC = SQRT(1.D0 - EORBF/ECIRC)
+         ELSE
+            ECC = 0.D0
+         ENDIF
          Q1 = MC1/MC2
          Q2 = 1.D0/Q1
          RL1 = RL(Q1)

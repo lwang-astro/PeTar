@@ -63,6 +63,10 @@ int get_theta(double * theta);
 
 int set_theta(double theta);
 
+int get_gravitational_constant(double * G);
+
+int set_gravitational_constant(double G);
+
 int get_changeover_rout(double * r_out);
 
 int set_changeover_rout(double r_out);

@@ -7,6 +7,7 @@
 #include <getopt.h>
 #include "../src/io.hpp"
 
+#ifdef BSE
 extern "C" {
     extern struct{
         double neta;  ///> the Reimers mass-loss coefficent (neta*4x10^-13; 0.5 normally).
@@ -98,7 +99,104 @@ extern "C" {
     void printconst_();
 }
 
-//! SSE/BSE star parameter for saving
+#elif MOBSE
+extern "C" {
+    extern struct{
+        double neta;  ///> the Reimers mass-loss coefficent (neta*4x10^-13; 0.5 normally).
+        double bwind; ///> the binary enhanced mass loss parameter (0.0 normally).
+        double hewind; ///> the helium star mass loss factor (1.0 normally). 
+    } value1_;
+
+    extern struct{
+        double alpha; ///>the common-envelope efficiency parameter (3.0).
+        double lambda; ///>the binding energy factor for common envelope evolution (0.1).
+    } value2_;
+
+    extern struct{
+        int idum; ///> the random number seed used in the kick routine. 
+    } value3_;
+
+    extern struct{
+        double sigma1; ///> the dispersion in the Maxwellian for the CCSN kick speed
+        double sigma2; ///> the dispersion in the Maxwellian for the ECSN kick speed
+        double mxns;  ///> the maximum NS mass (1.8, nsflag=0; 3.0, nsflag>=1). 
+        int bhflag;   ///> BH kick (3 normally Giacobbo & Mapelli ApJ 2020)
+    } value4_;
+
+    extern struct{
+        double beta;   ///> wind velocity factor: proportional to vwind**2 (1/8). 
+        double xi;     ///> wind accretion efficiency factor (1.0). 
+        double bhwacc;   ///> the Bondi-Hoyle wind accretion factor (3/2). 
+        double epsnov; ///>the fraction of accreted matter retained in nova eruption (0.001). 
+        double eddfac; ///> Eddington limit factor for mass transfer (1.0).
+        double gamma;  ///> the angular momentum factor for mass lost during Roche (-1.0). 
+    } value5_;
+
+    extern struct{
+        int ceflag; ///> common envelope model (0 normally)
+        int tflag;  ///> tidal circularization (1 normally)
+        int ifflag; ///> if > 0 uses WD IFMR of HPE, 1995, MNRAS, 272, 800 (0).  (not work any more)
+        int nsflag; ///> NS/BH formation (3 normally Delayed)
+        int wdflag; ///> WD formation (1 normally)
+        int piflag; ///> (Pulsational) Pair Instability (1 normally)
+    } flags_;
+
+//    extern struct{
+//        int psflag; ///> PPSN condition
+//        int kmech;  ///> kick mechanism
+//        int ecflag; ///> ECS switcher
+//    } flags2_;
+
+    extern struct{
+        double pts1;  ///> time step of MS (0.05)
+        double pts2;  ///> time step of GB, CHeB, AGB, HeGB (0.01)
+        double pts3;  ///> time step of HG, HeMS (0.02)
+    } points_;
+
+    extern struct{
+        int idum2;
+        int iy;
+        int ir[32];
+    } rand3_;
+
+    //! function for initial metallicity parameters
+    void zcnsts_(double* z, double* zpars);
+
+    //!function for collison matrix
+    void instar_();
+
+    //! function for evolving one star
+    void evolv1_(int* kw, double* mass, double* mt, double* r, double* lum, double* mc, double* rc, double* menv, double* renv, double* ospin,
+                 double* epoch, double* tm, double* tphys, double* tphysf, double* dtp, double* z, double* zpars, double* vkick);
+
+    //! function for evolving one binary
+    void evolv2_(int* kw, double* mass, double* mt, double* r, double* lum, double* mc, double* rc, double* menv, double* renv, double* ospin,
+                 double* epoch, double* tm, double* tphys, double* tphysf, double* dtp, double* z, double* zpars, 
+                 double* period, double* ecc, double* bse_event, double* vkick);
+
+    void star_(int* kw, double* mass, double* mt, double* tm, double* tn, double* tscls, double* lums, double* GB, double* zpars);
+
+    void deltat_(int* kw, double* age, double* tm, double* tn, double* tscls, double* dt, double* dtr);
+
+    void trdot_(int* kw, double* m0, double* mt, double* r, double* mc, double* rc, double* age, double* dt, double* dtr, double* zpars);
+
+    void trflow_(int* kw, double* m0, double* mt, double* r, double* mc, double* rc, double* age, double* dt, double* semi, double* zpars);
+
+    //void mix_(double* m0, double* mt, double* age, int* kw, double* zpars);
+
+    void mix_(double* m0, double* mt, double* age, int* kw, double* zpars, int* krol);
+
+    //void comenv_(double* m01, double* m1, double* mc1, double* aj1, double* jspin1, int* kw1, 
+    //             double* m02, double* m2, double* mc2, double* aj2, double* jspin2, int* kw2, 
+    //             double* zpars, double* ecc, double* sep, double* jorb, double* vkick1, double* vkick2, int* coel);
+
+    void merge_(int* kw, double* m0, double* mt, double* r, double* mc, double* rc, double* menv, double* renv, double* ospin, double* age, double* semi, double* ecc, double* vkick, double* zpars);
+
+    void printconst_();
+}
+#endif
+
+//! SSE/BSE based code star parameter for saving
 struct StarParameter{
     long long int kw;       ///> stellar type
     double m0;    ///> Initial stellar mass in solar units
@@ -209,7 +307,7 @@ struct StarParameter{
     static int printTitleWithMeaning(std::ostream & _fout, const int _counter=0, const int _offset=0) {
         int counter = _counter;
         counter++;
-        _fout<<std::setw(_offset)<<" "<<counter<<". s_type: SSE/BSE stellar type\n";
+        _fout<<std::setw(_offset)<<" "<<counter<<". s_type: SSE/BSE based code stellar type\n";
         counter++;
         _fout<<std::setw(_offset)<<" "<<counter<<". s_mass0: initial mass at each evolution stage [Msun]\n";
         counter++;
@@ -232,7 +330,7 @@ struct StarParameter{
     }
 };
 
-//! SSE/BSE star parameter for output
+//! SSE/BSE based code star parameter for output
 struct StarParameterOut{
     long long int kw0;       ///> original type before evolution
     double dtmiss; ///> required evolution time - actually evolved time
@@ -308,6 +406,9 @@ static double EstimateRocheRadiusOverSemi(double& _q) {
 //! a simple check to determine whether the GR effect is important
 /*!
   calculate the relative angular momentum change timescale dJ/J, suggested by Ataru Tanikawa
+  With the correction factor (1-ecc), J/dJ*(1-ecc) is roughly 1-10 times of GR merger time.
+  The return value is reduced by 1e-3: 0.001*J/dJ*(1-ecc)
+  
   @param[in] _star1: star parameter of first
   @param[in] _star2: star parameter of second
   @param[in] _semi: semi-major axis, [Rsun]
@@ -322,12 +423,12 @@ static double EstimateGRTimescale(StarParameter& _star1, StarParameter& _star2, 
     double semi2 = _semi*_semi;
     // (32/5)(G^{7/2}/c^5 is ~8.3x10^{-10} in the unit of Msun, Rsun, and year.
     double djgr = 8.315e-10*_star1.mt*_star2.mt*(_star1.mt+_star2.mt)/(semi2*semi2)*(1.0+0.875*ecc2)/sqome5;
-    double dtr = 1.0e-6/djgr; // in Myr
+    double dtr = 1.0e-9/djgr*(1-_ecc); // in Myr,  with 0.001 coefficent and ecc correction factor
     return dtr;
 }
 
 
-//! BSE event recorder class
+//! BSE based code event recorder class
 class BinaryEvent{
 public:
     double record[10][9];
@@ -345,7 +446,7 @@ public:
         double rl1 = EstimateRocheRadiusOverSemi(q);
         q = 1.0/q;
         double rl2 = EstimateRocheRadiusOverSemi(q);
-        record[7][init_index] = _p1.r/(rl1*_semi); 
+        record[7][init_index] = _p1.r/(rl1*_semi);
         record[8][init_index] = _p2.r/(rl2*_semi);
         record[9][init_index] = _type;
     }
@@ -407,7 +508,7 @@ public:
     }
 };
 
-//! IO parameters for BSE manager
+//! IO parameters manager for BSE based code 
 class IOParamsBSE{
 public:
     IOParamsContainer input_par_store;
@@ -423,16 +524,25 @@ public:
     IOParams<double> eddfac;
     IOParams<double> gamma;
     //IOParams<double> mxns;
+#ifdef BSE
     IOParams<double> sigma;
+#elif MOBSE
+    IOParams<double> sigma1;
+    IOParams<double> sigma2;
+#endif
     IOParams<long long int> ceflag;
     IOParams<long long int> tflag;
     //IOParams<long long int> ifflag;
     IOParams<long long int> wdflag;
     IOParams<long long int> bhflag;
     IOParams<long long int> nsflag;
+#ifdef BSE
     IOParams<long long int> psflag;
     IOParams<long long int> kmech;
     IOParams<long long int> ecflag;
+#elif MOBSE
+    IOParams<long long int> piflag;
+#endif
     IOParams<double> pts1;
     IOParams<double> pts2;
     IOParams<double> pts3;
@@ -445,6 +555,7 @@ public:
 
     bool print_flag;
 
+#ifdef BSE
     IOParamsBSE(): input_par_store(),
                    neta  (input_par_store, 0.5, "bse-neta",  "Reimers mass-loss coefficent [neta*4x10^-13]"),
                    bwind (input_par_store, 0.0, "bse-bwind", "Binary enhanced mass loss parameter; inactive for single"),
@@ -478,6 +589,43 @@ public:
                    vscale(input_par_store, 1.0,   "bse-vscale", "Velocity scale factor from input data unit(IN) to km/s (v[km/s]=v[IN]*vscale)"),
                    z     (input_par_store, 0.001, "bse-metallicity", "Metallicity"),
                    print_flag(false) {}
+#elif MOBSE
+    IOParamsBSE(): input_par_store(),
+                   neta  (input_par_store, 0.5,     "mobse-neta",   "Reimers mass-loss coefficent [neta*4x10^-13]"),
+                   bwind (input_par_store, 0.0,     "mobse-wind",   "Binary enhanced mass loss parameter; inactive for single"),
+                   hewind(input_par_store, 1.0,     "mobse-hewind", "Helium star mass loss factor"),
+                   //mxns  (input_par_store, 1.0, "Helium star mass loss factor"),
+                   alpha (input_par_store, 3.0,     "mobse-alpha",  "Common-envelope efficiency parameter"),
+                   lambda(input_par_store, 0.1,     "mobse-lambda", "Binding energy factor for common envelope evolution"),
+                   beta  (input_par_store, 0.125,   "mobse-beta",   "wind velocity factor: proportional to vwind**2"),
+                   xi    (input_par_store, 1.0,     "mobse-xi",       "wind accretion efficiency factor"),
+                   bhwacc(input_par_store, 1.5,     "mobse-bwacc",  "Bondi-Hoyle wind accretion factor"),
+                   epsnov(input_par_store, 0.001,   "mobse-epsnov", "The fraction of accreted matter retained in nova eruption"),
+                   eddfac(input_par_store, 1.0,     "mobse-eddfac", "Eddington limit factor for mass transfer"),
+                   gamma (input_par_store, -1.0,    "mobse-gamma",  "Angular momentum factor for mass lost during Roche"),
+                   sigma1 (input_par_store, 265.0,  "mobse-sigma1", "Dispersion in the Maxwellian for the CCSN kick speed [km/s]"),
+                   sigma2 (input_par_store, 265.0,  "mobse-sigma2", "Dispersion in the Maxwellian for the ECSN kick speed [km/s]"),
+                   ceflag(input_par_store, 0,       "mobse-cflag",  "if =3, activates de Kool common-envelope model"),
+                   tflag (input_par_store, 1,       "mobse-tflag",  "if >0, activates tidal circularisation"),
+                   //ifflag(input_par_store, 2,   "if > 0 uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
+                   wdflag(input_par_store, 1,       "mobse-wdflag", "if >0, uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
+                   bhflag(input_par_store, 3,       "mobse-bhflag", "BH kick option: 0: no kick; 1: same as NS; 2: scaled by fallback; 3: Giacobbo&Mapelli (2020)"),
+                   nsflag(input_par_store, 3,       "mobse-nsflag", "NS/BH foramtion options: 0: original SSE; 2: Belczynski (2008); 2: Fryer (2012) rapid SN; 2: Fryer (2012) delayed SN; 4: Belczynski (2008); 5: no SN explosion"),
+                   piflag(input_par_store, 1,       "mobse-piflag", "PPSN condition (Spera et al. 2015)"),
+                   //psflag(input_par_store, 1,  "PPSN condition (Belczynski 2016): 0: no PPSN; 1: strong; (Leung 2019): 2: moderate; 3: weak"),
+                   //kmech (input_par_store, 1,  "Kick mechanism: 1: standard momentum-conserving; 2: convection-asymmetry-driven; 3: collapse-asymmerty-driven; 4: neutrino driven"),
+                   //ecflag(input_par_store, 1,  "if >0, ECS is switched on"),
+                   pts1  (input_par_store, 0.05,    "mobse-pts1",   "time step of MS"),
+                   pts2  (input_par_store, 0.01,    "mobse-pts2",   "time step of GB, CHeB, AGB, HeGB"),
+                   pts3  (input_par_store, 0.02,    "mobse-pts3",   "time step of HG, HeMS"),
+                   idum  (input_par_store, 1234,    "mobse-idum",   "random number seed used by the kick routine"),
+                   tscale(input_par_store, 1.0,     "mobse-tscale", "Time scale factor from input data unit (IN) to Myr (time[Myr]=time[IN]*tscale)"),
+                   rscale(input_par_store, 1.0,     "mobse-rscale", "Radius scale factor from input data unit (IN) to Rsun (r[Rsun]=r[IN]*rscale)"),
+                   mscale(input_par_store, 1.0,     "mobse-msclae", "Mass scale factor from input data unit (IN) to Msun (m[Msun]=m[IN]*mscale)"),
+                   vscale(input_par_store, 1.0,     "mobse-vsclae",  "Velocity scale factor from input data unit(IN) to km/s (v[km/s]=v[IN]*vscale)"),
+                   z     (input_par_store, 0.001,   "mobse-metallicity",    "Metallicity"),
+                   print_flag(false) {}
+#endif
 
     //! reading parameters from GNU option API
     /*!
@@ -501,16 +649,25 @@ public:
             {epsnov.key, required_argument, &sse_flag, 27},
             {eddfac.key, required_argument, &sse_flag, 28},
             {gamma.key,  required_argument, &sse_flag, 29},
+#ifdef BSE
             {sigma.key,  required_argument, &sse_flag, 4},
-            {ceflag.key, required_argument, &sse_flag, 5},
-            {tflag.key,  required_argument, &sse_flag, 6},
+#elif MOBSE
+            {sigma1.key, required_argument, &sse_flag, 4},
+            {sigma2.key, required_argument, &sse_flag, 5},
+#endif
           //{ifflag.key, required_argument, &sse_flag, 7},
+            {ceflag.key, required_argument, &sse_flag, 6},
+            {tflag.key,  required_argument, &sse_flag, 7},
             {wdflag.key, required_argument, &sse_flag, 8},
             {bhflag.key, required_argument, &sse_flag, 9}, 
             {nsflag.key, required_argument, &sse_flag, 10}, 
+#ifdef BSE
             {psflag.key, required_argument, &sse_flag, 11},
             {kmech.key,  required_argument, &sse_flag, 12},
             {ecflag.key, required_argument, &sse_flag, 13},
+#elif MOBSE
+            {piflag.key, required_argument, &sse_flag, 11},
+#endif
             {pts1.key,   required_argument, &sse_flag, 14},
             {pts2.key,   required_argument, &sse_flag, 15},       
             {pts3.key,   required_argument, &sse_flag, 16},
@@ -552,17 +709,30 @@ public:
                 //    mxns.value = atof(optarg);
                 //    if(print_flag) mxns.print(std::cout);
                 //    break;
+#ifdef BSE
                 case 4:
                     sigma.value = atof(optarg);
                     if(print_flag) sigma.print(std::cout);
                     opt_used+=2;
                     break;
+#elif MOBSE
+                case 4:
+                    sigma1.value = atof(optarg);
+                    if(print_flag) sigma1.print(std::cout);
+                    opt_used+=2;
+                    break;
                 case 5:
+                    sigma2.value = atof(optarg);
+                    if(print_flag) sigma2.print(std::cout);
+                    opt_used+=2;
+                    break;
+#endif
+                case 6:
                     ceflag.value = atof(optarg);
                     if(print_flag) ceflag.print(std::cout);
                     opt_used+=2;
                     break;
-                case 6:
+                case 7:
                     tflag.value = atof(optarg);
                     if(print_flag) tflag.print(std::cout);
                     opt_used+=2;
@@ -582,6 +752,7 @@ public:
                     if(print_flag) nsflag.print(std::cout);
                     opt_used+=2;
                     break;
+#ifdef BSE
                 case 11:
                     psflag.value = atof(optarg);
                     if(print_flag) psflag.print(std::cout);
@@ -597,6 +768,13 @@ public:
                     if(print_flag) ecflag.print(std::cout);
                     opt_used+=2;
                     break;
+#elif MOBSE
+                case 11:
+                    piflag.value = atof(optarg);
+                    if(print_flag) piflag.print(std::cout);
+                    opt_used+=2;
+                    break;
+#endif
                 case 14:
                     pts1.value = atof(optarg);
                     if(print_flag) pts1.print(std::cout);
@@ -689,7 +867,11 @@ public:
             case 'p':
                 fname_par = optarg;
                 if(print_flag) {
+#ifdef BSE
                     std::string fbse_par = fname_par+".bse"; 
+#elif MOBSE
+                    std::string fbse_par = fname_par+".mobse"; 
+#endif
                     FILE* fpar_in;
                     if( (fpar_in = fopen(fbse_par.c_str(),"r")) == NULL) {
                         fprintf(stderr,"Error: Cannot open file %s.\n", fbse_par.c_str());
@@ -706,7 +888,11 @@ public:
                 break;
             case 'h':
                 if(print_flag){
+#ifdef BSE
                     std::cout<<"SSE/BSE options:"<<std::endl;
+#elif MOBSE
+                    std::cout<<"MOBSE options:"<<std::endl;
+#endif
                     input_par_store.printHelp(std::cout, 2, 10, 23);
                 }
                 return -1;
@@ -717,7 +903,11 @@ public:
                 break;
             }
 
+#ifdef BSE
         if(print_flag) std::cout<<"----- Finish reading input options of SSE/BSE -----\n";
+#elif MOBSE
+        if(print_flag) std::cout<<"----- Finish reading input options of MOBSE -----\n";
+#endif
 
         return opt_used;
     }    
@@ -763,7 +953,7 @@ public:
         return true;
     }
 
-    //! dump BSE rand constant to file
+    //! dump rand constant to file
     void dumpRandConstant(const char* _fname) {
         FILE* fin;
         if( (fin = fopen(_fname,"w")) == NULL) {
@@ -793,15 +983,35 @@ public:
         }
     }
 
+#ifdef MOBSE
+    //! print terminal Logo
+    static void printLogo(std::ostream & fout) {
+        fout<<"---------------------------------------\n"
+            <<"             ╔╦╗╔═╗╔╗ ╔═╗╔═╗\n"
+            <<"             ║║║║ ║╠╩╗╚═╗║╣ \n"
+            <<"             ╩ ╩╚═╝╚═╝╚═╝╚═╝\n"
+            <<"---------------------------------------"<<std::endl;
+            fout<<" Online document: https://mobse-webpage.netlify.app/\n"
+            <<std::endl;
+    }
+#endif
+
     //! print reference to cite
     static void printReference(std::ostream & fout, const int offset=4) {
         for (int i=0; i<offset; i++) fout<<" ";
         fout<<"SSE: Hurley J. R., Pols O. R., Tout C. A., 2000, MNRAS, 315, 543\n";
         for (int i=0; i<offset; i++) fout<<" ";
         fout<<"BSE: Hurley J. R., Tout C. A., Pols O. R., 2002, MNRAS, 329, 897\n";
+#ifdef BSE
         for (int i=0; i<offset; i++) fout<<" ";
         fout<<"Updated BSE: Banerjee S., Belczynski K., Fryer C. L., Berczik P., Hurley J. R., Spurzem R., Wang L., 2020, A&A, 639, A41"
             <<std::endl;
+#elif MOBSE
+        for (int i=0; i<offset; i++) fout<<" ";
+        fout<<"MOBSE: Giacobbo N., Mapelli M. & Spera M., 2018, MNRAS, 474, 2959\n";
+        fout<<"\t \t (Online document: https://mobse-webpage.netlify.app/)"
+            <<std::endl;
+#endif
     }
     
     bool isMassTransfer(const int _binary_type) {
@@ -821,7 +1031,7 @@ public:
         return (_binary_type==13);
     }
 
-    //! initial SSE/BSE global parameters
+    //! initial SSE/BSE based code global parameters
     void initial(const IOParamsBSE& _input, const bool _print_flag=false) {
         // common block
         value1_.neta  = _input.neta.value;
@@ -830,10 +1040,19 @@ public:
 
         value2_.alpha  = _input.alpha.value;
         value2_.lambda = _input.lambda.value;
-        
+
+#ifdef BSE        
         value4_.sigma  = _input.sigma.value;
+#elif MOBSE
+        value4_.sigma1  = _input.sigma1.value;
+        value4_.sigma2  = _input.sigma2.value;
+#endif
         value4_.mxns  = 1.8;
+#ifdef BSE        
         if (_input.nsflag.value>0) value4_.mxns = 2.5;
+#elif MOBSE
+        if (_input.nsflag.value>0) value4_.mxns = 3.0;
+#endif
         value4_.bhflag = _input.bhflag.value;
 
         value5_.beta = _input.beta.value;
@@ -848,10 +1067,13 @@ public:
         //flags_.ifflag = _input.ifflag.value;
         flags_.wdflag = _input.wdflag.value;
         flags_.nsflag = _input.nsflag.value;
-
+#ifdef BSE
         flags2_.psflag = _input.psflag.value;
         flags2_.kmech  = _input.kmech.value;
         flags2_.ecflag = _input.ecflag.value;
+#elif MOBSE
+        flags_.piflag = _input.piflag.value;
+#endif
 
         points_.pts1 = _input.pts1.value;
         points_.pts2 = _input.pts2.value;
@@ -912,7 +1134,7 @@ public:
         _fout<<" "<<std::setw(_width)<<single_type[_out.kw0]<<" -> "<<std::setw(_width)<<single_type[_star.kw];
     }
 
-    //! print BSE event
+    //! print binary event
     void printBinaryEvent(std::ostream& _fout, const BinaryEvent& _bin_event) {
         int nmax = _bin_event.getEventNMax();
         for (int k=0; k<nmax; k++) {
@@ -926,7 +1148,7 @@ public:
         }
     }
 
-    //! print BSE event one
+    //! print binary event one
     void printBinaryEventOne(std::ostream& _fout, const BinaryEvent& _bin_event, const int k) {
         int type = _bin_event.getType(k);
         assert(type>=0&&type<14);
@@ -936,7 +1158,7 @@ public:
         _bin_event.print(_fout, k);
     }
 
-    //! print BSE event one
+    //! print binary event one in column
     void printBinaryEventColumnOne(std::ostream& _fout, const BinaryEvent& _bin_event, const int k, const int _width=20) {
         int type = _bin_event.getType(k);
         assert(type>=0&&type<14);
@@ -961,7 +1183,7 @@ public:
     /*!
       @param[in,out] _star: star parameter
       @param[out] _out: output parameter from evolv1
-      @param[in] _dt_nb: physical time step in NB unit to evolve
+      @param[in] _dt_nb: physical time step to evolve [In unit]
       \return event flag: -1: error, 0: normal, 1: type change, 2: velocity kick
      */
     int evolveStar(StarParameter& _star, StarParameterOut& _out, const double _dt_nb) {
@@ -987,22 +1209,22 @@ public:
         else return 0;
     }
 
-    //! call BSE evolv2 for a binary
+    //! call evolv2 for a binary
     /*!
       @param[in,out] _star1: star parameter of first
       @param[in,out] _star2: star parameter of second
       @param[out] _out1: output parameter of first from evolv2
       @param[out] _out2: output parameter of second from evolv2
-      @param[out] _bse_event: BSE event record (bpp array)
+      @param[out] _bse_event: binary event record (bpp array)
       @param[in] _semi: semi-major axis, only used to record initial semi [IN unit]
-      @param[in,out] _period: period of binary in NB unit, used for BSE [IN unit]
-      @param[in,out] _ecc: eccentricity of binary, used for BSE
+      @param[in,out] _period: period of binary in NB unit [IN unit]
+      @param[in,out] _ecc: eccentricity of binary
       @param[in] _binary_init_type: initial type of binary
-      @param[in] _dt_nb: physical time step in Myr to evolve
+      @param[in] _dt_nb: physical time step to evolve [In unit]
       \return error flag: -1: error, 0: normal
      */
     int evolveBinary(StarParameter& _star1, StarParameter& _star2, StarParameterOut& _out1, StarParameterOut& _out2, 
-                     double& _semi, double& _period, double& _ecc, BinaryEvent& _bse_event, int& _binary_init_type, const double _dt_nb) {
+                     double& _semi, double& _period, double& _ecc, BinaryEvent& _bse_event, const int& _binary_init_type, const double _dt_nb) {
         double tphys = std::max(_star1.tphys, _star2.tphys);
         double tphysf = _dt_nb*tscale + tphys;
         double dtp=tphysf*100.0+1000.0;
@@ -1100,7 +1322,7 @@ public:
     }
 
     //! check Roche fill condition
-    /* Use BSE Roche Radius estimation
+    /* Use Roche Radius estimation
       @param[in] _star1: star parameter of first
       @param[in] _star2: star parameter of second
       @param[in] _semi: semi-major axis, [IN unit]
@@ -1123,7 +1345,7 @@ public:
     }
 
 
-    //! merge two star using BSE mix function, star 2 will becomes zero mass
+    //! merge two star using mix function, star 2 will becomes zero mass
     /*!
       @param[in,out] _star1: star parameter of first
       @param[in,out] _star2: star parameter of second
@@ -1131,6 +1353,7 @@ public:
       @param[out] _out2: output parameter of second from evolv2
       @param[in] _semi: semi-major axis, only used to record initial semi [IN unit]
       @param[in] _ecc: eccentricity of hyperbolic orbit, used for BSE
+      TODO: we must to consider the donor!
     */
     void merge(StarParameter& _star1, StarParameter& _star2, StarParameterOut& _out1, StarParameterOut& _out2, double& _semi, double& _ecc) {
 

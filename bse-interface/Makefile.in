@@ -1,11 +1,25 @@
-TARGET: libbse.a petar.bse
+se_mode=@with_interrupt@
 
+BSE_LIB=libbse.a
+
+ifeq ($(se_mode),bse)
+BSE_TEST=petar.bse
 BSE_PATH=bse
+CXXFLAGS = -D BSE
+else ifeq ($(se_mode),mobse)
+BSE_TEST=petar.mobse
+BSE_PATH=mobse
+CXXFLAGS = -D MOBSE
+endif
+
+
+TARGET: $(BSE_LIB) $(BSE_TEST)
+
 FC=@FC@
 CXX=@CXX@
 
 #FFLAGS = -O2 -Wall -finit-real=nan 
-CXXFLAGS = @CXXFLAGS@ @OPTFLAGS@ @OPENMP_CXXFLAGS@
+CXXFLAGS += @CXXFLAGS@ @OPTFLAGS@ @OPENMP_CXXFLAGS@
 FFLAGS += @FCFLAGS@
 #FFLIBS += @FLIBS@
 #FFLAGS= -g -O0 -Wall -finit-real=nan -fbounds-check
@@ -13,14 +27,17 @@ FFLAGS += @FCFLAGS@
 
 VPATH=$(BSE_PATH)
 
-SRC:= $(shell find $(BSE_PATH) -type f  \( -iname '*.f' ! -iname '.*' ! -iname '[sb]se.f' ! -iname 'popbin.f' \) )
+SRC:= $(shell find $(BSE_PATH) -type f  \( -iname '*.f' ! -iname '.*' ! -iname '[sb]se.f' ! -iname 'mo[sb]se.f' ! -iname 'popbin.f' \) )
 OBJ:= $(SRC:.f=.o)
 
-libbse.a: $(OBJ)
+$(BSE_LIB): $(OBJ)
 	ar rcs $@ $^
 
-petar.bse: bse_test.cxx libbse.a bse_interface.h
+$(BSE_TEST): bse_test.cxx $(BSE_LIB) bse_interface.h
 	$(CXX) $(CXXFLAGS) $< -o $@ -L./ -lbse -lgfortran 
 
+install:
+	install -m 755 $(BSE_TEST) @prefix@/bin/
+
 clean:
-	rm -f $(BSE_PATH)/*.o *.o petar.bse libbse.a
+	rm -f $(BSE_PATH)/*.o *.o $(BSE_TEST) $(BSE_LIB)

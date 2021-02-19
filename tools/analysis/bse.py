@@ -122,6 +122,13 @@ class BSETypeChange(DictNpArrayMix):
         keys = [['type',np.int64],['init',BSEBinaryEvent],['final',BSEBinaryEvent],['id1',np.int64],['id2',np.int64],['drdv',np.float64],['dr',np.float64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
+    def generateBinaryID(self):
+        """ Use CantorPairing to map two components id to one binary id
+            Add new member bid 
+        """
+        bid = cantorPairing(self.id1, self.id2)
+        self.addNewMember('bid',bid)
+
 class BSESNKick(DictNpArrayMix):
     """ BSE SN kick output data from PeTar
     Keys: (class members)
@@ -136,6 +143,14 @@ class BSESNKick(DictNpArrayMix):
         """
         keys = [['id1',np.int64],['id2',np.int64],['kindex',np.int64],['vkick',np.float64],['star',SSEStarParameter]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
+
+    def generateBinaryID(self):
+        """ Use CantorPairing to map two components id to one binary id
+            Add new member bid 
+        """
+        bid = cantorPairing(self.id1, self.id2)
+        self.addNewMember('bid',bid)
+
     
 class SSEStarParameterPair(DictNpArrayMix):
     """ SSE star parameter pair
@@ -185,6 +200,14 @@ class BSEDynamicMerge(DictNpArrayMix):
         keys = keys_bin + keys_extra + keys_p
         if (less_output): keys = keys_bin + keys_p
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
+
+
+    def generateBinaryID(self):
+        """ Use CantorPairing to map two components id to one binary id
+            Add new member bid 
+        """
+        bid = cantorPairing(self.id1, self.id2)
+        self.addNewMember('bid',bid)
 
 #class BSESingleCount(DictNpArrayMix):
 #    """ BSE single event record

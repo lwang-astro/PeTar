@@ -38,6 +38,13 @@ class BinaryTree(DictNpArrayMix):
 
         keys = [['semi',np.float64], ['ecc',np.float64], ['incline',np.float64],['rot_horizon',np.float64],['rot_self',np.float64],['t_peri',np.float64],['period',np.float64],['ecca',np.float64],['m1',np.float64],['m2',np.float64],['r',np.float64],['am',(np.float64,3)],['stab',np.float64],['sd',np.float64],['sd_org',np.float64],['sd_max',np.float64],['p1',member_particle_type],['p2',member_particle_type]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append,**kwargs)
+
+    def generateBinaryID(self):
+        """ Use CantorPairing to map two components id to one binary id
+            Add new member bid 
+        """
+        bid = cantorPairing(self.p1.id, self.p2.id)
+        self.addNewMember('bid',bid)
         
 class GroupInfo(DictNpArrayMix):
     """ Group information output from PeTar
@@ -68,3 +75,18 @@ class GroupInfo(DictNpArrayMix):
         keys_bin = [['bin'+str(i),BinaryTree] for i in range(n-1)]
         DictNpArrayMix.__init__(self, keys_bin, _dat, _offset+self.ncols, True, **kwargs)
             
+    def generateBinaryID(self, i):
+        """ Use CantorPairing to map two components id to one binary id for one binary group
+            Add new member bid into this group
+
+        Parameters
+        ----------
+           i: int 
+              binary group index, counting from 0
+        """
+        key='bin'+str(i)
+        if key in self.__dict__.keys():
+            self[key].generateBinaryID()
+            self.ncols += 1
+        else:
+            raise ValueError('Error: failed to find ',key)

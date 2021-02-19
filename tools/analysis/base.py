@@ -206,7 +206,11 @@ class DictNpArrayMix:
 
     def addNewMember(self, key, member):
         """ Add a new class member
-        
+            The ncols is updated also.
+            Be careful if the target for adding members is a sub member, the ncols of its parent is not updated.
+            This can cause issue for the parent when the size of data is needed to calculate.
+            Thus after calling of this function, please also increase the ncols of parents for consistence.
+
         Parameters
         ----------
         key: string
@@ -418,6 +422,7 @@ def join(*_dat):
     *_dat: inherited DictNpArrayNix
         a group of data to join
 
+    return: new joined data
     """
     type0 = type(_dat[0])
     for idat in _dat:
@@ -436,3 +441,57 @@ def join(*_dat):
 
 # vector dot of x, y 
 vecDot = lambda x,y: np.sum(x*y,axis=1)
+
+def cantorPairing(id1, id2):
+    """ Use CantorPairing to map two components id to one binary id
+
+    Parameters
+    ----------
+    id1: 1D numpy.ndarray or int
+        ID for component 1
+    id2: 1D numpy.ndarray or int
+        ID for component 2
+    
+    return: binary id
+    """ 
+    i1=np.minimum(id1,id2).astype('int64')
+    i2=np.maximum(id1,id2).astype('int64')
+    return ((i1+i2+1)*(i1+i2)/2+i2).astype('int64')
+
+def calcTrh(N, rh, m, G, gamma=0.02): 
+    """ Calculate Spitzer one-component half-mass relaxation time
+        Trh = 0.138 N^0.5 Rh^1.5 /( G^0.5 m^0.5 ln(gamma N))
+
+    Parameters
+    ----------
+    N: 1D numpy.ndarray or int
+       Total number of particles
+    rh: 1D numpy.ndarray or float
+       Half-mass radius
+    m: 1D numpy.ndarray or float
+       mass of one particle
+    G: float
+       Gravitational constant
+    gamma: float (0.02 # Giersz M., Heggie D. C., 1996, MNRAS, 279, 1037)
+       The coefficient for Coulomb logarithm
+
+    return: half-mass relaxation time
+    """
+    return 0.138*N**0.5*rh**1.5/(m**0.5*np.log(gamma*N)*G**0.5)
+
+def calcTcr(M, rh, G): 
+    """ Calculate half-mass crossing time
+        Tcr = Rh^1.5/sqrt(G M)
+
+    Parameters
+    ----------
+    M: 1D numpy.ndarray or float
+       total mass of the system
+    rh: 1D numpy.ndarray or float
+       Half-mass radius
+    G: float
+       Gravitational constant
+
+    return: half-mass crossing time
+    """
+    return rh**1.5/np.sqrt(G*M)
