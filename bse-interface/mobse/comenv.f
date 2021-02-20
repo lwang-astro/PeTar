@@ -13,7 +13,8 @@
 *     Date :   7th July 1998
 *
 *     Updated : N. Giacobbo
-*     Date :  15th May 2017
+*     Date :  15th May 2017 (SNexplosion)
+*     Date :  19th February 2021 (Hyperbolic orbits)
 *
       IMPLICIT NONE
 *
@@ -40,7 +41,15 @@
       EXTERNAL CELAMF,RL,RZAMSF
       INTEGER ECS
       real*8 ffb,mfin
-*
+* Variable to compute ecc in the case of hyperpolic orbits
+      INTEGER idum
+      COMMON /VALUE3/ idum
+      real*8 mu,var,elo,ehi,num1,num2,r_pi,x
+      PARAMETER (mu=0.8d0,var=0.2d0,elo=0.d0,ehi=1.d0)
+      PARAMETER (r_pi=3.141592653589793E+00)
+      real RAN3
+      EXTERNAL RAN3
+***
 * Common envelope evolution - entered only when KW1 = 3, 4, 5, 6, 8 or 9.
 * (in old verios entered only when KW1 = 2, 3, 4, 5, 6, 8 or 9.
 *
@@ -52,6 +61,14 @@
 * We do not know if the is a SNe during the CE phase
       SNexplosion = 0 
 *
+c      if(ecc.ge.1.d0)THEN
+c         do while(ecc.lt.0.d0 .or. ecc.gt.1.d0)
+c            num1 = RAN3(idum)
+c            num2 = RAN3(idum)
+c            x = SQRT(-2.d0*LOG(num1)) * COS(2.d0*r_pi*num2)
+c            ecc = mu + var*x
+c         enddo
+c      endif
 * Obtain the core masses and radii.
 *
       KW = KW1

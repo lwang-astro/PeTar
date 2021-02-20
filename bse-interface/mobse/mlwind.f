@@ -4,9 +4,9 @@
       integer kw
       real*8 lum,r,mt,mc,rl,z,sigma,lgdms,edfac,FOURPI,tem,ind,Xh
       real*8 ad11,ad12,ad13,ad14,ad15,ad21,ad22,ad23,ad24,ad25,ad26
-      real*8 ad01,ad02,ad03,ad04,ad31,ad32,ad33,ad34
-      real*8 gamma0,beta
-      real*8 dml,dms,dmt,p0,x,xx,mew,neta,bwind,hewind
+c      real*8 ad01,ad02,ad03,ad04,ad31,ad32,ad33,ad34
+c      real*8 gamma0,beta,mew
+      real*8 dml,dms,dmt,p0,x,xx,neta,bwind,hewind
       real*8 lum0,kap,V1,V2,Zsun,eddington
       parameter(lum0=7.0d+04,kap=-0.5d0,V1=1.3d0,V2=2.6d0,Zsun=0.02)
       external eddington
