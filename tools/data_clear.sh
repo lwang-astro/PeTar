@@ -12,7 +12,7 @@ do
     case $1 in
 	-h) shift;
 	    echo 'Remove data after a given time criterion if users want to restart simulations at middle and overwrite the output files (file suffixes: '${suffixes[@]}')';
-	    echo 'Usage: petar.gether [options] [data filename prefix]';
+	    echo 'Usage: petar.data.clear [options] [data filename prefix]';
 	    echo '       data filename prefix is defined by "petar -f", defaulted case is "data".'
 	    echo 'Options:';
 	    echo '  -t: time criterion (default: none)'
