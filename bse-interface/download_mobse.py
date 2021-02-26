@@ -39,20 +39,24 @@ class GetMOBSE:
             while os.path.exists(self.name+'.{0}'.format(counter)):
                 counter += 1
                 if counter > 2: 
-                    print(" -----> Be carefull! Too many copy of the folder.")
+                    print("    WARNING: Be carefull! Too many copy of the folder.")
             os.rename(self.name, self.name+'.{0}'.format(counter))
         os.rename(self.tarname, self.name)
         
     def main(self):
         print("-----------------------------------------------------------------------------------")
-        print("downloading version", self.version) 
+        print("downloading") 
+        print("     ╔╦╗╔═╗╔╗ ╔═╗╔═╗" ) 
+        print("     ║║║║ ║╠╩╗╚═╗║╣ " )  
+        print("     ╩ ╩╚═╝╚═╝╚═╝╚═╝" ) 
+        print("version", self.version) 
         print("from", self.url) 
         print("to", self.directory())
-        print("website: https://mobse-webpage.netlify.app/"
+        print("website: https://mobse-webpage.netlify.app/")
         print("-----------------------------------------------------------------------------------")
-
+        
         self.tar_mobse_from_gitlab()
-
+        
         print("---> download completed")
         print("---> Untar files")
 
