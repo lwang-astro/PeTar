@@ -20,8 +20,9 @@ config.status
 Makefile
 bse-interface/Makefile
 bse-interface/petar.bse
-mobse-interface/Makefile
-mobse-interface/petar.mobse
+bse-interface/petar.mobse
+bse-interface/mobse*
+bse-interface/source-code-petar.tar.gz
 GPATH
 GRTAGS
 GTAGS

@@ -64,12 +64,21 @@ BSELIBS = -L ./bse-interface -lbse -lgfortran
 CXXLIBS += $(BSELIBS)
 LIBFILES+= $(BSELIBFILES)
 INCLUDE += -I ./bse-interface
+ifeq ($(se_mode),mobse)
+SE_DOWNLOAD:
+	$(MAKE) -C bse_interface download
+endif
 SE_INSTALL:
 	$(MAKE) -C bse-interface install
 SE_CLEAN:
 	$(MAKE) -C bse-interface clean
 bse-interface/libbse.a: bse-interface
 	$(MAKE) -C bse-interface 
+ifeq ($(se_mode),mobse)
+bse-interface/libbse.a: bse-interface
+	$(MAKE) -C bse-interface download 
+	$(MAKE) -C bse-interface 
+endif
 endif
 endif
 
