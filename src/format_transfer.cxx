@@ -221,7 +221,7 @@ int main(int argc, char *argv[]){
         if (b_to_a_flag) {
             if (add_record_cm_flag) {
                 data.readParticleBinary(filename.c_str(), file_header_no_offset);
-                status.calcAndShiftCenterOfMass(&data[0],data.getNumberOfParticleLocal(), 2, true);
+                status.calcAndShiftCenterOfMass(&data[0],data.getNumberOfParticleLocal(), 3, true);
                 file_header.nfile  = file_header_no_offset.nfile;
                 file_header.n_body = file_header_no_offset.n_body;
                 file_header.time   = file_header_no_offset.time;
@@ -251,7 +251,7 @@ int main(int argc, char *argv[]){
             if (group_data_format_f64_flag) {
                 if (add_record_cm_flag) {
                     data_wa.readParticleAscii(filename.c_str(), file_header_no_offset);
-                    status.calcAndShiftCenterOfMass(&data_wa[0], data_wa.getNumberOfParticleLocal(), 2, true);
+                    status.calcAndShiftCenterOfMass(&data_wa[0], data_wa.getNumberOfParticleLocal(), 3, true);
                     file_header.nfile  = file_header_no_offset.nfile;
                     file_header.n_body = file_header_no_offset.n_body;
                     file_header.time   = file_header_no_offset.time;
@@ -269,7 +269,7 @@ int main(int argc, char *argv[]){
             else {
                 if (add_record_cm_flag) {
                     data.readParticleAscii(filename.c_str(), file_header_no_offset);
-                    status.calcAndShiftCenterOfMass(&data[0], data.getNumberOfParticleLocal(), 2, true);
+                    status.calcAndShiftCenterOfMass(&data[0], data.getNumberOfParticleLocal(), 3, true);
                     file_header.nfile  = file_header_no_offset.nfile;
                     file_header.n_body = file_header_no_offset.n_body;
                     file_header.time   = file_header_no_offset.time;
