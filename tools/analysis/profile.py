@@ -4,6 +4,19 @@ from .base import *
 
 class FDPSProfile(DictNpArrayMix):
     """ FDPS time profile for tree for one tree step
+    Keys: (class members)
+        collect_sam_ptcl (1D): collect sample
+        decompose_domain (1D): decompose domains
+        exchange_ptcl (1D): exchange particles
+        make_local_tree (1D): make local tree
+        make_global_tree (1D): make global tree
+        calc_force (1D): calculate force
+        calc_mom_loc_tree: calculate superparticle momentum in local tree
+        calc_mom_gb_tree: calcualte superparticle momentum in global tree
+        make_LET_1st: make local essential tree 1st
+        make_LET_2nd: make local essential tree 2nd
+        exchange_LET_1st: exchange local essential tree 1st
+        exchange_LET_2nd: exchange local essential tree 2nd
     """
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
         keys = [["collect_sam_ptcl",np.float64], ["decompose_domain",np.float64], ["exchange_ptcl",np.float64], ["make_local_tree",np.float64], ["make_global_tree",np.float64], ["calc_force",np.float64], ["calc_mom_loc_tree",np.float64], ["calc_mom_gb_tree",np.float64], ["make_LET_1st",np.float64], ["make_LET_2nd",np.float64], ["exchange_LET_1st",np.float64], ["exchange_LET_2nd",np.float64]]

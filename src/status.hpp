@@ -110,10 +110,10 @@ public:
     /*!
       @param[in] _tsys: particle system
       @param[in] _n: number of particle
-      @param[in] _mode: calculation mode, 1: center-of-the-mass; 2: number (no mass) weighted center
+      @param[in] _mode: calculation mode, 1: center-of-the-mass; 2: number (no mass) weighted center; 3: soft potential weighted center
      */
     template <class Tsoft>
-    void calcCenterOfMass(Tsoft* _tsys, const PS::S64 _n, int _mode=2) {
+    void calcCenterOfMass(Tsoft* _tsys, const PS::S64 _n, int _mode=3) {
         PS::F64 mass = 0.0;
         PS::F64vec pos_cm = PS::F64vec(0.0);
         PS::F64vec vel_cm = PS::F64vec(0.0);
@@ -176,16 +176,50 @@ public:
             pcm.pos /= PS::F64(n_glb);
             pcm.vel /= PS::F64(n_glb);
         }
+        else if (_mode==3) { // soft potential
+            PS::F64 pot_tot = 0.0;
+            for (int i=0; i<_n; i++) {
+                auto& pi = _tsys[i];
+                PS::F64 mi = pi.mass;
+                PS::F64 poti = pi.pot_soft;
+#ifdef EXTERNAL_POT_IN_PTCL
+                poti -= pi.pot_ext; // remove external potential
+#endif
+                mass  += mi;
+#ifdef NAN_CHECK_DEBUG
+                assert(!std::isnan(pi.vel.x));
+                assert(!std::isnan(pi.vel.y));
+                assert(!std::isnan(pi.vel.z));
+#endif
+                pos_cm += poti*pi.pos;
+                vel_cm += poti*pi.vel;
+                pot_tot += poti;
+            }        
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+            pcm.mass = PS::Comm::getSum(mass);
+            pcm.pos  = PS::Comm::getSum(pos_cm);
+            pcm.vel  = PS::Comm::getSum(vel_cm);
+            PS::F64 pot_tot_glb = PS::Comm::getSum(pot_tot);
+#else
+            pcm.mass = mass;
+            pcm.pos  = pos_cm;
+            pcm.vel  = vel_cm;
+            PS::F64 pot_tot_glb = pot_tot;
+#endif
+            pcm.pos /= pot_tot_glb;
+            pcm.vel /= pot_tot_glb;
+        }
     }
 
     //! calculate the center of system and shift particle systems to center frame
     /*!
       @param[in] _tsys: particle system
       @param[in] _n: number of particle
-      @param[in] _mode: calculation mode, 1: center-of-the-mass; 2: number (no mass) weighted center
+      @param[in] _mode: calculation mode, 1: center-of-the-mass; 2: number (no mass) weighted center; 3: soft potential weighted center
      */
     template <class Tsoft>
-    void calcAndShiftCenterOfMass(Tsoft* _tsys, const PS::S64 _n, const int _mode=2, const bool initial_flag=false) {
+    void calcAndShiftCenterOfMass(Tsoft* _tsys, const PS::S64 _n, const int _mode=3, const bool initial_flag=false) {
         if (initial_flag) {
             if(pcm.is_center_shift_flag) {
                 std::cerr<<"Error: particle system is in c.m. frame, cannot initial c.m."<<std::endl;
