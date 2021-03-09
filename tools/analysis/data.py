@@ -75,8 +75,12 @@ class PeTarDataHeader():
         if (snapshot_format=='ascii'):
             fp = open(_filename, 'r')
             header=fp.readline()
+            header_items=header.split()
             if (offset_flag):
-                file_id, n_glb, t, x, y, z, vx, vy, vz = header.split()
+                if (len(header_items)!=9):
+                    raise ValueError('Snapshot header item number mismatch! Need 9 (file_id, N, time, xcm, ycm, zcm, vxcm, vycm, vzcm), got %d. Make sure the external_mode keyword set correctly.' % len(header_items))
+
+                file_id, n_glb, t, x, y, z, vx, vy, vz = header_items
                 fp.close()
 
                 self.fid = int(file_id)
@@ -85,7 +89,10 @@ class PeTarDataHeader():
                 self.pos_offset = [float(x),float(y),float(z)]
                 self.vel_offset = [float(vx),float(vy),float(vz)]
             else:
-                file_id, n_glb, t = header.split()
+                if (len(header_items)!=3):
+                    raise ValueError('Snapshot header item number mismatch! Need 3 (file_id, N, time), got %d. Make sure the external_mode keyword set correctly.' % len(header_items))
+
+                file_id, n_glb, t = header_items
                 fp.close()
 
                 self.fid = int(file_id)
