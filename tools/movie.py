@@ -193,7 +193,7 @@ class Data:
         self.skiprows = 0
         self.generate_binary=2
         self.interrupt_mode = 'bse'
-        self.external_mode = 'no'
+        self.external_mode = 'none'
         self.G = 0.00449830997959438 # pc^3/(Msun*Myr^2)
         self.semi_max = 0.1
         self.cm_mode = 'density'
@@ -256,8 +256,8 @@ class Data:
                         data['type_cm']= np.append(single.star.type,np.max([binary.p1.star.type,binary.p2.star.type],axis=0))
                 else:
                     particles=petar.Particle(interrupt_mode=self.interrupt_mode, external_mode=self.external_mode)
-                    if (self.snapshot_format=='ascii'): particle.loadtxt(file_path, skiprows=1)
-                    else: particle.fromfile(file_path, offset=HEADER_OFFSET)
+                    if (self.snapshot_format=='ascii'): particles.loadtxt(file_path, skiprows=1)
+                    else: particles.fromfile(file_path, offset=petar.HEADER_OFFSET)
                     kdtree,single,binary = petar.findPair(particles, self.G, self.semi_max*2.0, True)
                     data['x'] = particles.pos[:,0]
                     data['y'] = particles.pos[:,1]
@@ -283,7 +283,8 @@ class Data:
                         data['type_cm']= np.append(single.star.type,np.max([binary.p1.star.type,binary.p2.star.type],axis=0))
             else:
                 particles=petar.Particle(interrupt_mode=self.interrupt_mode, external_mode=self.external_mode)
-                particles.loadtxt(file_path,skiprows=1)
+                if (self.snapshot_format=='ascii'): particles.loadtxt(file_path, skiprows=1)
+                else: particles.fromfile(file_path, offset=petar.HEADER_OFFSET)
                 data['x'] = particles.pos[:,0]
                 data['y'] = particles.pos[:,1]
                 data['mass'] =particles.mass
@@ -291,6 +292,7 @@ class Data:
                     data['lum'] = particles.star.lum
                     data['rad'] = particles.star.rad
                     data['type']= particles.star.type
+                    data['temp']= 5778*(data['lum']/(data['rad']*data['rad']))**0.25
         
     def correctCM(self, boxsize, pos):
         xcm = 0.0
