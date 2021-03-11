@@ -16,14 +16,18 @@ public:
         bool is_escape=true;
 
         if (check_energy_flag) { 
-	  // check energy
-	  PS::F64 kin = _p.vel*_p.vel;
-	  PS::F64 tot = _p.pot_tot + kin;
-	  if (tot<0) is_escape=false;
-	}
+            // check energy
+            PS::F64 kin = _p.vel*_p.vel;
+            PS::F64 tot = _p.pot_tot + kin;
+            if (tot<0) is_escape=false;
+        }
 
-	// check distance
+        // check distance
+#ifdef RECORD_CM_IN_HEADER
+        PS::F64vec dr = _p.pos;
+#else
         PS::F64vec dr = _p.pos - _pcm.pos;
+#endif
         PS::F64 r2 = dr*dr;
         if (r2<r_escape_sq) is_escape=false;
 

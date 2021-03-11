@@ -3110,7 +3110,7 @@ public:
         Ptcl::r_group_crit_ratio = r_bin/r_in;
         //Ptcl::vel_cm = vel_cm_glb;
         escaper.r_escape_sq = input_parameters.r_escape.value*input_parameters.r_escape.value;
-	escaper.check_energy_flag = (input_parameters.r_escape.value>=0);
+        escaper.check_energy_flag = (input_parameters.r_escape.value>=0);
 
         if(print_flag) {
             std::cout<<"----- Parameter list: -----\n";
