@@ -495,10 +495,10 @@ class Binary(SimpleParticle):
      
         inv_dr = 1.0 / binary['rrel']
         binary['semi'] = 1.0 / (2.0*inv_dr - dv2 / Gm_tot)
-        binary['am'] = np.array(list(map(lambda x,y:np.cross(x,y),dx,dv)))
-        dp = np.array(list(map(lambda m1,x1,m2,x2:m1*x1-m2*x2,_p1.mass,_p1.vel,_p2.mass,_p2.vel)))
-        binary['L'] = np.array(list(map(lambda x,y:np.cross(x,y),dx,dp)))
-        binary['eccvec'] = np.array(list(map(lambda v,am,gm,dx,dr:np.cross(v,am)/gm-dx/dr,dv,binary['am'],Gm_tot,dx,dr)))
+        binary['am'] = np.cross(dx,dv)
+        dp = _p1.vel*_p1.mass[:,None] - _p2.vel*_p2.mass[:,None]
+        binary['L'] = np.cross(dx,dp)
+        binary['eccvec'] = np.cross(dv,binary['am'])/Gm_tot[:,None]-dx/dr[:,None]
      
         binary['incline'] = np.arctan2(np.sqrt(binary['am'][:,0]*binary['am'][:,0]+binary['am'][:,1]*binary['am'][:,1]),binary['am'][:,2])
         binary['rot_horizon'] = np.arctan2(binary['am'][:,0],-binary['am'][:,1])
@@ -519,7 +519,7 @@ class Binary(SimpleParticle):
         vel_bar_y = (-dv[:,0]*sinOMG + dv[:,1]*cosOMG)*cosinc + dv[:,2]*sininc
         vel_bar_z = 0.0
      
-        h = np.array(list(map(lambda x:np.sqrt(np.inner(x,x)),binary['am'])))
+        h = np.sqrt(np.sum(binary['am']*binary['am'],axis=1))
         ecccosomg =  h/Gm_tot*vel_bar_y - pos_bar_x*inv_dr
         eccsinomg = -h/Gm_tot*vel_bar_x - pos_bar_y*inv_dr
         binary['ecc'] = np.sqrt( ecccosomg*ecccosomg + eccsinomg*eccsinomg )
