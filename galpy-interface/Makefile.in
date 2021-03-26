@@ -23,6 +23,7 @@ petar.galpy.help: galpy_help.py
 	ln -sf galpy_help.py petar.galpy.help
 
 install:
+	install -d @prefix@/bin/
 	install -m 755 petar.galpy petar.galpy.help @prefix@/bin/
 
 clean: 

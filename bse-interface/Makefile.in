@@ -37,6 +37,7 @@ $(BSE_TEST): bse_test.cxx $(BSE_LIB) bse_interface.h
 	$(CXX) $(CXXFLAGS) $< -o $@ -L./ -lbse -lgfortran 
 
 install:
+	install -d @prefix@/bin/
 	install -m 755 $(BSE_TEST) @prefix@/bin/
 
 clean:

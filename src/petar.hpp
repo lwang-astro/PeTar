@@ -188,7 +188,7 @@ public:
                      r_bin        (input_par_store, 0.0,  "r-bin", "Tidal tensor box size and binary radius criterion, if value is zero, use 0.8*r_in"),
 //                     r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out"),
                      r_search_min (input_par_store, 0.0,  "r-search-min", "Minimum search radius  value","auto"),
-                     r_escape     (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Escape radius criterion, if <0, remove particles when r>-r_escape; else, remove particle when r>r_escape and energy>0"),
+                     r_escape     (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Escape radius criterion, 0: no escaper removement; <0: remove particles when r>-r_escape; >0: remove particle when r>r_escape and energy>0"),
                      sd_factor    (input_par_store, 1e-4, "slowdown-factor", "Slowdown perturbation criterion"),
                      data_format  (input_par_store, 1,    "i", "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),
                      write_style  (input_par_store, 1,    "w", "File Writing style: 0, no output; 1. write snapshots, status and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile"),
