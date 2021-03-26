@@ -395,7 +395,7 @@ class Binary(SimpleParticle):
         """ Calculate binding energy, ebin, and add it as a member 
             Notice G should be given the correct value in initialization (keyword argument 'G')
         """
-        ebin = elf.initargs['G']*self.p1.mass*self.p2.mass/(2*self.semi)
+        ebin = self.initargs['G']*self.p1.mass*self.p2.mass/(2*self.semi)
         self.addNewMember('ebin',ebin)
 
     def calcPot(self):
