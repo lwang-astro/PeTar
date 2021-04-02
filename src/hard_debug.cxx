@@ -35,11 +35,14 @@ int main(int argc, char **argv){
   std::string fbsepar = "input.par.mobse";
   std::string fbserandpar = "mobse.rand.par";
 #endif
+#ifdef STELLAR_EVOLUTION
+  int stellar_evolution_option = -1;
+#endif
 #ifdef SOFT_PERT
   bool soft_pert_flag=true;
 #endif
 
-  while ((arg_label = getopt(argc, argv, "k:E:A:a:D:d:e:s:m:b:B:p:i:Sh")) != -1)
+  while ((arg_label = getopt(argc, argv, "k:E:A:a:D:d:e:s:m:b:B:p:I:i:Sh")) != -1)
     switch (arg_label) {
     case 'k':
         slowdown_factor = atof(optarg);
@@ -78,6 +81,11 @@ int main(int argc, char **argv){
         soft_pert_flag=false;
         break;
 #endif
+#ifdef STELLAR_EVOLUTION
+    case 'I':
+        stellar_evolution_option = atoi(optarg);
+        break;
+#endif
 #ifdef BSE_BASE
     case 'i':
         idum = atoi(optarg);
@@ -104,6 +112,9 @@ int main(int argc, char **argv){
                  <<"    -d [int]:     hard time step min power (should use together with -D)\n"
                  <<"    -m [int]:     running mode: 0: evolve system to time_end; 1: stability check: "<<mode<<std::endl
                  <<"    -p [string]:  hard parameter file name: "<<fhardpar<<std::endl
+#ifdef STELLAR_EVOLUTION
+                 <<"    -I [int]:     Stellar evolution option: \n"
+#endif
 #ifdef BSE_BASE
                  <<"    -i [int]      random seed to generate kick velocity\n"
                  <<"    -B [string]:  read bse random parameter dump file with filename: "<<fbserandpar<<"\n"
@@ -138,6 +149,11 @@ int main(int argc, char **argv){
   fclose(fpar_in);
 
 #ifdef STELLAR_EVOLUTION
+  if (stellar_evolution_option>=0) {
+      hard_manager.ar_manager.interaction.stellar_evolution_option = stellar_evolution_option;
+      if (stellar_evolution_option==0) 
+          hard_manager.ar_manager.interaction.stellar_evolution_write_flag = false;
+  }
 #ifdef BSE_BASE
 #ifdef BSE
   std::string bse_name="BSE";
