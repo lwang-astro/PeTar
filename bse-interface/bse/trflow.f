@@ -60,7 +60,7 @@
       CALL hrdiag(M0,AGE(I1),M1,TM,TN,TSCLS,LUMS,GB,ZPARS,
      &            RSJ,LUM,KW,MC,RC,MENV,RENV,K2,fbfac,fbtot,mco,ecs)
 *
-* If the star already fills its Roche lobe exit with DTR = 0.
+* If the star already fills its Roche lobe return one period
 *
       IF(RSJ.GE.RL1)THEN
 *        get one period

@@ -1469,7 +1469,11 @@ public:
         dt = std::min(dt,getTimeStepStar(_star2));
 
         // mass transfer case
-        if (isMassTransfer(_binary_type)) {
+        if (_star1.kw>=10&&_star1.kw<15&&_star2.kw>=10&&_star2.kw<15&&_semi>0.0) {// GR effect
+            double semi_rsun = _semi*rscale;
+            dt = std::min(dt, EstimateGRTimescale(_star1, _star2, semi_rsun, _ecc));
+        }
+        else if (isMassTransfer(_binary_type)) {
             int kw[2];
             double m0[2],mt[2],r[2],mc[2],rc[2],age[2];
             kw[0] = _star1.kw;
@@ -1493,10 +1497,6 @@ public:
             trflow_(kw,m0,mt,r,mc,rc,age,&dtr,&semi_rsun,zpars);
             dt = std::min(dt,dtr);
 
-        }
-        else if (_star1.kw>=10&&_star1.kw<15&&_star2.kw>=10&&_star2.kw<15&&_semi>0.0) {// GR effect
-            double semi_rsun = _semi*rscale;
-            dt = std::min(dt, EstimateGRTimescale(_star1, _star2, semi_rsun, _ecc));
         }
         
         return dt/tscale;
