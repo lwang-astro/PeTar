@@ -12,7 +12,7 @@ class DictNpArrayMix:
         ----------
         keys: list of class member name and the corresponding types or numpy.ndarray shape
             Class members list description. Defined by inherited types
-            For exmaple: keys=[['mass',1],['pos',3],['sub',typename]], will provide class members: mass (1D numpy.ndarray), pos ( 2D numpy.ndarray with a shape of (*,3)) and sub (a class instance with the type of typename)
+            For exmaple: keys=[['mass',numpy.float64],['pos',(numpy.float64,3)],['sub1',typename],['sub2',(typename,kwargs)]], will provide class members: mass (1D numpy.ndarray), pos ( 2D numpy.ndarray with a shape of (*,3)), sub1 (a class instance with the type of typename) and sub2 (a type based on DictNpArrayMix with additional keyword arguments, kwargs)
         _dat: numpy.ndarray | type(self) | None
             If it is 2D numpy.ndarray type data, read data as readArray function
             If it is the same class type, copy the data 
@@ -43,6 +43,13 @@ class DictNpArrayMix:
                     if (type(parameter[0]) == type) & (type(parameter[1]) == int):
                         self.__dict__[key] = _dat.__dict__[key].copy()
                         icol += parameter[1]
+                    elif (type(parameter[0]) == type) & (type(parameter[1])==dict):
+                        if(issubclass(parameter[0], DictNpArrayMix)):
+                            self.__dict__[key] = parameter[0](_dat.__dict__[key], **{**kwargs, **parameter[1]})
+                            icol += self.__dict__[key].ncols
+                        else:
+                            self.__dict__[key] = _dat.__dict__[key].copy()
+                            icol += 1
                     else:
                         raise ValueError('Initial fail, unknown key type ',parameter[0],' and column count ', parameter[1] )
                 else:
@@ -69,6 +76,15 @@ class DictNpArrayMix:
                         self.__dict__[key] = _dat[:,icol:icol+parameter[1]].astype(parameter[0])
                         icol += parameter[1]
                         self.size += self.__dict__[key].size
+                    elif (type(parameter[0]) == type) & (type(parameter[1])==dict):
+                        if(issubclass(parameter[0], DictNpArrayMix)):
+                            self.__dict__[key] = parameter[0](_dat, icol, False, **{**kwargs, **parameter[1]})
+                            icol += self.__dict__[key].ncols
+                            self.size += self.__dict__[key].size*self.__dict__[key].ncols
+                        else:
+                            self.__dict__[key] = _dat[:,icol].astype(parameter[0])
+                            icol += 1
+                            self.size += self.__dict__[key].size
                     else:
                         raise ValueError('Initial fail, unknown key type ',parameter[0],' and column count ', parameter[1] )
                 else:
@@ -89,11 +105,18 @@ class DictNpArrayMix:
                     else:
                         self.__dict__[key] = np.empty(0).astype(parameter)
                         icol += 1
-                        #raise ValueError('Initial fail, unknown key type, should be inherience of  DictNpArrayMix, given ',parameter)
+                        #raise ValueError('Initial fail, unknown key type, should be inherience of  DictNpArrayMix, given b',parameter)
                 elif (type(parameter)==tuple):
                     if (type(parameter[0]) == type) & (type(parameter[1]) == int):
                         self.__dict__[key] = np.empty([0,parameter[1]]).astype(parameter[0])
                         icol += parameter[1]
+                    elif (type(parameter[0]) == type) & (type(parameter[1])==dict):
+                        if(issubclass(parameter[0], DictNpArrayMix)):
+                            self.__dict__[key] = parameter[0](**{**kwargs, **parameter[1]})
+                            icol += self.__dict__[key].ncols
+                        else:
+                            self.__dict__[key] = np.empty(0).astype(parameter[0])
+                            icol += 1
                     else:
                         raise ValueError('Initial fail, unknown key type ',parameter[0],' and column count ', parameter[1] )
                 else:
@@ -134,6 +157,15 @@ class DictNpArrayMix:
                     self.__dict__[key] = _dat[:,icol:icol+parameter[1]].astype(parameter[0])
                     icol += parameter[1]
                     self.size += self.__dict__[key].size
+                elif (type(parameter[0]) == type) & (type(parameter[1])==dict):
+                    if(issubclass(parameter[0], DictNpArrayMix)):
+                        self.__dict__[key].readArray(_dat, icol, **kwargs,**parameter[1])
+                        icol += self.__dict__[key].ncols
+                        self.size += self.__dict__[key].size*self.__dict__[key].ncols
+                    else:
+                        self.__dict__[key] = _dat[:,icol].astype(parameter[0])
+                        icol += 1
+                        self.size += self.__dict__[key].size
                 else:
                     raise ValueError('Initial fail, unknown key type ',parameter[0],' and column count ', parameter[1] )
             else:
@@ -339,6 +371,13 @@ class DictNpArrayMix:
             elif (type(parameter) == tuple):
                 if (type(parameter[0]) == type) & (type(parameter[1]) == int):
                     dt.append((key, parameter))
+                elif (type(parameter[0]) == type) & (type(parameter[1])==dict):
+                    if(issubclass(parameter[0], DictNpArrayMix)):
+                        dt_sub = self.__dict__[key].collectDtype()
+                        for item in dt_sub:
+                            dt.append((key+'.'+item[0], item[1]))
+                    else:
+                        dt.append((key, parameter[0]))
                 else:
                     raise ValueError('Initial fail, unknown key type ',parameter[0],' and column count ', parameter[1] )
             else:
@@ -373,6 +412,15 @@ class DictNpArrayMix:
                     self.__dict__[key] = _dat[_prefix+key]
                     icol += parameter[1]
                     self.size += self.__dict__[key].size
+                elif (type(parameter[0]) == type) & (type(parameter[1])==dict):
+                    if(issubclass(parameter[0], DictNpArrayMix)):
+                        self.__dict__[key].readArrayWithName(_dat, _prefix+key+'.', **kwargs,**parameter[1])
+                        icol += self.__dict__[key].ncols
+                        self.size += self.__dict__[key].size*self.__dict__[key].ncols
+                    else:
+                        self.__dict__[key] = _dat[_prefix+key]
+                        icol += 1
+                        self.size += self.__dict__[key].size
                 else:
                     raise ValueError('Initial fail, unknown key type ',parameter[0],' and column count ', parameter[1] )
             else:

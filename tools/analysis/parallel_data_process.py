@@ -47,6 +47,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
     average_mode='sphere'
     simple_binary=True
     external_mode='none'
+    find_multiple=False
 
     if ('G' in kwargs.keys()): G=kwargs['G']
     if ('r_max_binary' in kwargs.keys()): r_bin=kwargs['r_max_binary']
@@ -54,6 +55,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
     if ('simple_binary' in kwargs.keys()): simple_binary=kwargs['simple_binary']
     if ('snapshot_format' in kwargs.keys()): snapshot_format=kwargs['snapshot_format']
     if ('external_mode' in kwargs.keys()): external_mode=kwargs['external_mode']
+    if ('find_multiple' in kwargs.keys()): find_multiple=kwargs['find_multiple']
 
     header = PeTarDataHeader(file_path, **kwargs)
     
@@ -77,6 +79,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         # find binary
         #print('Find pair')
         kdtree,single,binary=findPair(particle,G,r_bin,True,simple_binary)
+
         find_pair_time = time.time()
     
         # get cm, density
@@ -110,8 +113,17 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         binary.correctCenter(cm_pos, cm_vel)
         center_and_r2_time = time.time()
 
-        single.savetxt(file_path+'.single')
-        binary.savetxt(file_path+'.binary')
+        if (find_multiple): 
+            single_t, binary_t, triple_t, quadruple_t = findMultiple(single,binary,G,r_bin,simple_binary)
+            single_t.savetxt(file_path+'.single')
+            binary_t.savetxt(file_path+'.binary')
+            triple_t.savetxt(file_path+'.triple')
+            quadruple_t.savetxt(file_path+'.quadruple')
+        else:
+            single.savetxt(file_path+'.single')
+            binary.savetxt(file_path+'.binary')
+
+
     else:
         start_time = time.time()
         

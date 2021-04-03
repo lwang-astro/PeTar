@@ -24,11 +24,14 @@ if __name__ == '__main__':
         print("data_filename: A list of snapshot data path, each line for one snapshot")
         print("option:")
         print("  -h(--help): help")
-        print("  -p(--filename-prefix): prefix of output file names for: [prefix].[lagr|esc.[single|binary]|core] (data)")
+        print("  -p(--filename-prefix): prefix of output file names for: [prefix].[lagr|esc_[single|binary]|core] (data)")
         print("  -m(--mass-fraction): Lagrangian radii mass fraction (0.1,0.3,0.5,0.7,0.9)")
         print("  -G(--gravitational-constant): Gravitational constant (if interrupt-mode=(mo)bse: ",petar.G_MSUN_PC_MYR,"; else 1.0)")
         print("  -b(--r-max-binary): maximum sepration for detecting binaries (0.1)")
         print("  -B(--full-binary): calculate full binary orbital parameters (simple_mode=False in Binary class), this option increases computing time")
+        print("  -M(--multiple): detect multiple systems (binaries, triples and quadruples) and save to snapshot files [snapshot_filename].[single|binary|triple|quadruple];")
+        print("                  without this option, only singles and binaries are detected;")
+        print("                  when this option is used, -r cannot be used to restart data process")
         print("  -a(--average-mode): Lagrangian properity average mode, choices: sphere: average from center to Lagragian radii; shell: average between two neighbor radii (sphere)")
         print("  -A(--append): append new data to existing data files")
         print("  -r(--read-data): read existing single, binary and core data to avoid expensive KDTree construction, no argument, disabled in default")
@@ -88,8 +91,8 @@ if __name__ == '__main__':
         print("                2) when data are written in BINARY format, '-s binary' should be used.")
         print("                3) '--add-star-type' only works when the interrupt mode is 'bse' or 'mobse'.")
     try:
-        shortargs = 'p:m:G:b:BAa:rt:i:s:n:h'
-        longargs = ['mass-fraction=','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','snapshot-format=','add-star-type=','n-cpu=','help']
+        shortargs = 'p:m:G:b:MBAa:rt:i:s:n:h'
+        longargs = ['mass-fraction=','multiple','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','snapshot-format=','add-star-type=','n-cpu=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -101,6 +104,8 @@ if __name__ == '__main__':
                 filename_prefix = arg
             elif opt in ('-m','--mass-fraction'):
                 kwargs['mass_fraction'] = np.array([float(x) for x in arg.split(',')])
+            elif opt in ('-M','--multiple'):
+                kwargs['find_multiple'] = True
             elif opt in ('-G','--gravitational-constant'):
                 kwargs['G'] = float(arg)
             elif opt in ('-b','--r-max-binary'):

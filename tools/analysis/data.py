@@ -150,6 +150,10 @@ class SimpleParticle(DictNpArrayMix):
 
 class Particle(SimpleParticle):
     """ Particle class 
+        The particle data of PeTar. Depending on the compile configuration of PeTar, 
+        The data structures (columns) of the particle snapshots are different.
+        Using the correct keyword arguments in the initialization to control the member definition (Keys)
+
     keys: (class members)
         The final keys are a combination of sub keys depending on keyword arguments (kwargs) of initial function
 
@@ -270,6 +274,10 @@ def calculateParticleCMDict(pcm, _p1, _p2):
 
 class Binary(SimpleParticle):
     """ Binary class
+        The binary (tree) data. Depending on the definition of two members 
+        (keyword argument member_particle_type(|_one|_two), 
+        The binary can refer to any type of multiple system.
+
     Keys:
         The final keys depends on kwargs of initial function
   
@@ -281,8 +289,8 @@ class Binary(SimpleParticle):
                 rrel (1D): relative distance
                 semi (1D): semi-major axis
                 ecc  (1D): eccentricity
-                p1   (member_particle_type) component one
-                p2   (member_particle_type) component two
+                p1   (member_particle_type_one) component one
+                p2   (member_particle_type_two) component two
             False:
                 mass (1D): total mass of two components
                 pos  (2D,3): c.m. position x, y, z
@@ -301,10 +309,17 @@ class Binary(SimpleParticle):
                 ecca (1D): eccentric anomaly
                 period (1D): period
                 t_peri (1D): time to peri-center
-                p1 (member_particle_type) component one
-                p2 (member_particle_type) component two
+                p1 (member_particle_type_one) component one
+                p2 (member_particle_type_two) component two
 
-        member_particle_type is given by kwargs['member_particle_type'], in default it is SimpleParticle
+        The member_particle_type(|_one|_two) is given by keyword arguments:
+           'member_particle_type' (for both members),'member_particle_type_one','member_particle_type_two'.
+        In default, it is petar.SimpleParticle.
+        If a type (e.g., petar.Particle) is given, the member is a single star.
+        If a list with two members (e.g., [petar.Particle, petar.Particle]) is given, 
+        the member is a binary with two single stars.
+        A hierarchical list can be provided, e.g., [petar.Particle, [petar.Particle, petar.Particle]]
+        to indicate a triple system.
                
     """
     def __init__ (self, _p1=None, _p2=None, _offset=int(0), _append=False, **kwargs):
@@ -328,44 +343,63 @@ class Binary(SimpleParticle):
                 If True, only calculate semi and ecc, save computing time significantly
             G: float (1.0)
                 Gravitational constant
-            member_particle_type: type (SimpleParticle)
-                Type of component particle
+            member_particle_type: type or list (SimpleParticle)
+                Type of component particle (both)
+            member_particle_type_one: type or list (SimpleParticle)
+                Type of 1st component
+            member_particle_type_two: type or list (SimpleParticle)
+                Type of 2nd component 
         """
         G=1
         simple_mode=True
         member_particle_type=SimpleParticle
+        member_particle_type_one=member_particle_type
+        member_particle_type_two=member_particle_type
         
         if 'G' in kwargs.keys(): G=kwargs['G']
         if 'simple_mode' in kwargs.keys(): simple_mode=kwargs['simple_mode']
-        if 'member_particle_type' in kwargs.keys(): member_particle_type=kwargs['member_particle_type']
+        if 'member_particle_type' in kwargs.keys(): 
+            member_particle_type=kwargs['member_particle_type']
+            member_particle_type_one=member_particle_type
+            member_particle_type_two=member_particle_type
+        if 'member_particle_type_one' in kwargs.keys(): member_particle_type_one=kwargs['member_particle_type_one']
+        if 'member_particle_type_two' in kwargs.keys(): member_particle_type_two=kwargs['member_particle_type_two']
 
         if (issubclass(type(_p1), SimpleParticle)) & (issubclass(type(_p2),SimpleParticle)):
-            member_particle_type = type(_p1)
             if (simple_mode): 
-                self.keys = [['mass',np.float64],['pos',(np.float64,3)],['vel',(np.float64,3)],['rrel',np.float64],['semi',np.float64],['ecc',np.float64],['p1',member_particle_type], ['p2', member_particle_type]]
+                self.keys = [['mass',np.float64],['pos',(np.float64,3)],['vel',(np.float64,3)],['rrel',np.float64],['semi',np.float64],['ecc',np.float64],['p1',(type(_p1),_p1.initargs)], ['p2', (type(_p2),_p2.initargs)]]
                 self.particleToSemiEcc(_p1, _p2, G)
                 self.ncols= int(10)
             else:
-                self.keys = [['mass',np.float64],['pos',(np.float64,3)],['vel',(np.float64,3)],['m1',np.float64],['m2',np.float64],['rrel',np.float64],['semi',np.float64],['am',(np.float64,3)],['L',(np.float64,3)],['eccvec',(np.float64,3)],['incline',np.float64],['rot_horizon',np.float64],['ecc',np.float64],['rot_self',np.float64],['ecca',np.float64],['period',np.float64],['t_peri',np.float64],['p1', member_particle_type],['p2', member_particle_type]]
+                self.keys = [['mass',np.float64],['pos',(np.float64,3)],['vel',(np.float64,3)],['m1',np.float64],['m2',np.float64],['rrel',np.float64],['semi',np.float64],['am',(np.float64,3)],['L',(np.float64,3)],['eccvec',(np.float64,3)],['incline',np.float64],['rot_horizon',np.float64],['ecc',np.float64],['rot_self',np.float64],['ecca',np.float64],['period',np.float64],['t_peri',np.float64],['p1',(type(_p1),_p1.initargs)], ['p2', (type(_p2),_p2.initargs)]]
                 self.particleToBinary(_p1, _p2, G)
                 self.ncols= int(27)
             self.p1 = _p1
             self.p2 = _p2
             self.size = _p1.size
             self.ncols += self.p1.ncols + self.p2.ncols
+            self.initargs = kwargs.copy()
+            binary_tree = self.createMemberParticleTypeTree()
+            self.initargs['member_particle_type_one']=binary_tree[0]
+            self.initargs['member_particle_type_two']=binary_tree[1]
         elif (_p2==None):
+            type_one = member_particle_type_one
+            if (type(member_particle_type_one) == list):
+                type_one = (Binary, {'member_particle_type_one':member_particle_type_one[0],'member_particle_type_two':member_particle_type_one[1]})
+            type_two = member_particle_type_two
+            if (type(member_particle_type_two) == list):
+                type_two = (Binary, {'member_particle_type_one':member_particle_type_two[0],'member_particle_type_two':member_particle_type_two[1]})
             if (simple_mode):
-                keys = [['rrel',np.float64],['semi',np.float64],['ecc',np.float64],['p1',member_particle_type], ['p2', member_particle_type]]
+                keys = [['rrel',np.float64],['semi',np.float64],['ecc',np.float64],['p1',type_one], ['p2', type_two]]
                 SimpleParticle.__init__(self, _p1, _offset, _append, **kwargs)
                 DictNpArrayMix.__init__(self, keys, _p1, _offset+self.ncols, True, **kwargs)
             else:
-                keys=[['m1',np.float64],['m2',np.float64],['rrel',np.float64],['semi',np.float64],['am',(np.float64,3)],['L',(np.float64,3)],['eccvec',(np.float64,3)],['incline',np.float64],['rot_horizon',np.float64],['ecc',np.float64],['rot_self',np.float64],['ecca',np.float64],['period',np.float64],['t_peri',np.float64],['p1', member_particle_type],['p2', member_particle_type]]
+                keys=[['m1',np.float64],['m2',np.float64],['rrel',np.float64],['semi',np.float64],['am',(np.float64,3)],['L',(np.float64,3)],['eccvec',(np.float64,3)],['incline',np.float64],['rot_horizon',np.float64],['ecc',np.float64],['rot_self',np.float64],['ecca',np.float64],['period',np.float64],['t_peri',np.float64],['p1', type_one],['p2', type_two]]
                 SimpleParticle.__init__(self, _p1, _offset, _append, **kwargs)
                 DictNpArrayMix.__init__(self, keys, _p1, _offset+self.ncols, True, **kwargs)
+            self.initargs = kwargs.copy()
         else:
             raise ValueError('Initial fail, date type should be Particle (2), Binary (1) or no argument (0)')
-        self.initargs = kwargs.copy()
-        self.initargs['G'] = G
 
     def calcEkin(self):
         """ Calculate c.m. kinetic energy, ekin, and add it as a member
@@ -542,6 +576,22 @@ class Binary(SimpleParticle):
         l = binary['ecca'] - binary['ecc']*np.sin(binary['ecca'])
         binary['t_peri'] = l / n
 
+    def createMemberParticleTypeTree(self):
+        """ scan the members to create the member particle type tree list
+            For example, if the binary structure is a triple: p1: single, p2: binary.
+            Then the returned tree list is [particle_typename, [particle_typename, particle_typename]]
+        """
+        binary_tree=[None,None]
+        if (type(self.p1) == Binary):
+            binary_tree[0] = self.p1.createMemberParticleTypeTree()
+        else:
+            binary_tree[0] = type(self.p1)
+        if (type(self.p2) == Binary):
+            binary_tree[1] = self.p2.createMemberParticleTypeTree()
+        else:
+            binary_tree[1] = type(self.p2)
+        return binary_tree
+
 def findPair(_dat, _G, _rmax, use_kdtree=False, simple_binary=True):
     """  Find binaries in a particle data set
     The scipy.spatial.cKDTree is used to find pairs
@@ -661,82 +711,63 @@ def findMultiple(_single, _binary, _G, _rmax, simple_binary=True):
     r,index=kdt.query(all_sin.pos,k=2)
     pair_index=np.transpose(np.unique(np.sort(index,axis=1),axis=0))
 
-    # two members
-    p1 = all_sin[pair_index[0]]
-    p2 = all_sin[pair_index[1]]
-     
-    # check orbits
-    binary_out = Binary(p1, p2, G=_G, simple_mode=simple_binary)
-    apo =binary_out.semi*(binary_out.ecc+1.0)
-     
-    bsel= ((binary_out.semi>0) & (apo<_rmax))
-    bout_i1=pair_index[0][bsel]
-    bout_i2=pair_index[1][bsel]
-    # check single or cm
+    bout_i1 = pair_index[0]
+    bout_i2 = pair_index[1]
+
     Ns = _single.size
     Nb = _binary.size
-    quad_sel= (bout_i1>=Ns) & (bout_i2>=Ns)
-    tri_sel = (bout_i1<Ns) & (bout_i2>=Ns)
-    bin_sel = (bout_i1<Ns) & (bout_i2<Ns)
+    quad_pre_sel= (bout_i1>=Ns) & (bout_i2>=Ns)
+    tri_pre_sel = (bout_i1<Ns) & (bout_i2>=Ns)
+    bin_pre_sel = (bout_i1<Ns) & (bout_i2<Ns)
 
-    if (bout_i1.size != quad_sel.sum()+tri_sel.sum()+bin_sel.sum()):
-        raise ValueError('Error: select size miss match: dat:',bout_i1.size,'quad:',quad_sel.sum(),'tri:',tri_sel.sum(),'bin:',bin_sel.sum())
+    n_quad_pre = quad_pre_sel.sum()
+    n_tri_pre = tri_pre_sel.sum()
+    n_bin_pre = bin_pre_sel.sum()
+    if (bout_i1.size != n_quad_pre + n_tri_pre + n_bin_pre):
+        raise ValueError('Error: multiple index selection size miss match: dat:',bout_i1.size,'quad:',n_quad_pre,'tri:',n_tri_pre,'bin:',n_bin_pre)
 
-    multiple = binary_out[bsel]
+    s_del_index=np.array([])
+    b_del_index=np.array([])
 
-    quadruple = multiple[quad_sel]
-    ncol_diff_bin = _binary.ncols - binary_sin.ncols
-    ncol_diff_sin = _single.ncols - single_sin.ncols
-    if (quad_sel.sum()):
-        q1_index = bout_i1[quad_sel]-Ns
-        quadruple.p1 = _binary[q1_index]
-        q2_index = bout_i2[quad_sel]-Ns
-        quadruple.p2 = _binary[q2_index]
-        quadruple.initargs['member_particle_type'] = Binary
-        quadruple.ncols += 2*ncol_diff_bin
-        if (quadruple.size != quadruple.p1.size):
-            raise ValueError('Error: quadruple size', quadruple.size,' mismatch member size ',quadruple.p1.size)
+    quadruple = Binary(member_particle_type = [type(_single), type(_single)], **{**_single.initargs, 'G':_G, 'simple_mode':simple_binary})
+    if (quad_pre_sel.sum()):
+        q1_index = bout_i1[quad_pre_sel]-Ns
+        q2_index = bout_i2[quad_pre_sel]-Ns
+        quad_pre = Binary(_binary[q1_index], _binary[q2_index], **{**_single.initargs, 'G':_G, 'simple_mode':simple_binary})
+        apo = quad_pre.semi*(quad_pre.ecc+1.0)
+        quad_sel = (quad_pre.semi>0) & (apo<_rmax)
+        quadruple = quad_pre[quad_sel]
+        b_del_index=np.append(q1_index[quad_sel],q2_index[quad_sel])
 
-    triple = multiple[tri_sel]
-    if (tri_sel.sum()):
-        s_index = bout_i1[tri_sel]
-        triple.p1 = _single[s_index]
-        b_index = bout_i2[tri_sel]-Ns
-        triple.p2 = _binary[b_index]
-        triple.ncols += ncol_diff_bin + ncol_diff_sin
-        if (triple.size != triple.p1.size):
-            raise ValueError('Error: triple size', triple.size,' mismatch member size ',triple.p1.size)
+    triple = Binary(member_particle_type_one = type(_single), 
+                    member_particle_type_two = [type(_single), type(_single)], 
+                    **{**_single.initargs, 'G':_G, 'simple_mode':simple_binary})
+    if (tri_pre_sel.sum()):
+        s_index = bout_i1[tri_pre_sel]
+        b_index = bout_i2[tri_pre_sel]-Ns
+        tri_pre = Binary(_single[s_index], _binary[b_index], **{**_single.initargs, 'G':_G, 'simple_mode':simple_binary})
+        apo = tri_pre.semi*(tri_pre.ecc+1.0)
+        tri_sel = (tri_pre.semi>0) & (apo<_rmax)
+        triple = tri_pre[tri_sel]
+        b_del_index=np.append(b_del_index,b_index[tri_sel])
+        s_del_index=s_index[tri_sel]
+        
+    bmask=np.ones(Nb).astype(bool)
+    if (b_del_index.size>0): bmask[b_del_index]=False;
+    binary = _binary[bmask]
 
-    binary_new = multiple[bin_sel]
-    if (bin_sel.sum()):
-        s1_index = bout_i1[bin_sel]
-        binary_new.p1 = _single[s1_index]
-        s2_index = bout_i2[bin_sel]
-        binary_new.p2 = _single[s2_index]
-        binary_new.ncols += 2*ncol_diff_sin
-        binary_new.initargs['member_particle_type'] = type(_single)
-        if (binary_new.size != binary_new.p1.size):
-            raise ValueError('Error: binary_new size', binary_new.size,' mismatch member size ',binary_new.p1.size)
+    if (bin_pre_sel.sum()):
+        s1_index = bout_i1[bin_pre_sel]
+        s2_index = bout_i2[bin_pre_sel]
+        bin_pre = Binary(_single[s1_index], _single[s2_index], **{**_single.initargs, 'G':_G, 'simple_mode':simple_binary})
+        apo = bin_pre.semi*(bin_pre.ecc+1.0)
+        bin_sel = (bin_pre.semi>0) & (apo<_rmax)
+        binary.append(bin_pre[bin_sel])
+        s_del_index = np.concatenate((s_del_index, s1_index[bin_sel], s2_index[bin_sel]))
 
-        if (binary_new.ncols != _binary.ncols): 
-            raise ValueError('Error: old binary ncols', _binary.ncols,' mismatch new binary ncols', binary_new.ncols)
-
-    # delete used singles
-    s_del_index = np.append(bout_i1[bout_i1<Ns],bout_i2[bout_i2<Ns])
     smask=np.ones(Ns).astype(bool)
     smask[s_del_index]=False
     single = _single[smask]
-
-    # delete used binaries
-    b_del_index = np.append(bout_i1[bout_i1>=Ns],bout_i2[bout_i2>=Ns])-Ns
-    bmask=np.ones(Nb).astype(bool)
-    bmask[b_del_index]=False
-    binary = _binary[bmask]
-    if (bmask.sum()+b_del_index.size != Nb):
-        raise ValueError('Error: binary size not match: origin:',Nb,'remain:',bmask.sum(),'del:',b_del_index.size,'del(unique):',np.unique(b_del_index).size)
-
-    if (binary_new.size>0):
-        binary = join(binary,binary_new)
 
     return single, binary, triple, quadruple
 
