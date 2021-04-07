@@ -726,8 +726,8 @@ def findMultiple(_single, _binary, _G, _rmax, simple_binary=True):
     if (bout_i1.size != n_quad_pre + n_tri_pre + n_bin_pre):
         raise ValueError('Error: multiple index selection size miss match: dat:',bout_i1.size,'quad:',n_quad_pre,'tri:',n_tri_pre,'bin:',n_bin_pre)
 
-    s_del_index=np.array([])
-    b_del_index=np.array([])
+    s_del_index=np.array([]).astype(int)
+    b_del_index=np.array([]).astype(int)
 
     quadruple = Binary(member_particle_type = [type(_single), type(_single)], **{**_single.initargs, 'G':_G, 'simple_mode':simple_binary})
     if (quad_pre_sel.sum()):
