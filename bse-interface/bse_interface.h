@@ -86,7 +86,7 @@ extern "C" {
     
     void trdot_(int* kw, double* m0, double* mt, double* r, double* mc, double* rc, double* age, double* dt, double* dtr, double* zpars);
 
-    void trflow_(int* kw, double* m0, double* mt, double* r, double* mc, double* rc, double* age, double* dt, double* semi, double* zpars);
+    void trflow_(int* kw, double* m0, double* mt, double* r, double* mc, double* rc, double* age, double* dt, double* semi, double* ecc, double* zpars);
 
     void mix_(double* m0, double* mt, double* age, int* kw, double* zpars);
 
@@ -180,7 +180,7 @@ extern "C" {
 
     void trdot_(int* kw, double* m0, double* mt, double* r, double* mc, double* rc, double* age, double* dt, double* dtr, double* zpars);
 
-    void trflow_(int* kw, double* m0, double* mt, double* r, double* mc, double* rc, double* age, double* dt, double* semi, double* zpars);
+    void trflow_(int* kw, double* m0, double* mt, double* r, double* mc, double* rc, double* age, double* dt, double* semi, double* ecc, double* zpars);
 
     //void mix_(double* m0, double* mt, double* age, int* kw, double* zpars);
 
@@ -1494,7 +1494,7 @@ public:
 
             double dtr;
             double semi_rsun = _semi*rscale;
-            trflow_(kw,m0,mt,r,mc,rc,age,&dtr,&semi_rsun,zpars);
+            trflow_(kw,m0,mt,r,mc,rc,age,&dtr,&semi_rsun,&_ecc,zpars);
             dt = std::min(dt,dtr);
 
         }
@@ -1544,7 +1544,7 @@ public:
 
                 double dtr;
                 double semi_rsun = _semi*rscale;
-                trflow_(kw,m0,mt,r,mc,rc,age,&dtr,&semi_rsun,zpars);
+                trflow_(kw,m0,mt,r,mc,rc,age,&dtr,&semi_rsun,&_ecc,zpars);
                 if (dtr<_dt*tscale) return true;
             }
         }

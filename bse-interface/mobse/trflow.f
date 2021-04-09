@@ -1,6 +1,6 @@
 ***
       SUBROUTINE TRFLOW(kstar,mass0,mass,rad,massc,radc,age,
-     &     dtr,semi,zpars)
+     &     dtr,semi,ecc,zpars)
       implicit none
 *
 *
@@ -10,7 +10,7 @@
 *
       INTEGER kstar(2),I1,I2,IT,KW
       REAL*8  mass0(2),mass(2),rad(2),massc(2),radc(2),age(2),dtr
-      REAL*8  semi,aursun
+      REAL*8  semi,aursun,ecc
       REAL*8  TSCLS(20),LUMS(10),GB(10),zpars(20),TM,TN
       REAL*8  M0,M1,LUM,MC,RC,Q,RL1,RL2
       REAL*8  MENV,RENV,K2
@@ -60,16 +60,12 @@
       CALL hrdiag(M0,AGE(I1),M1,TM,TN,TSCLS,LUMS,GB,ZPARS,
      &            RSJ,LUM,KW,MC,RC,MENV,RENV,K2,fbfac,fbtot,mco,ecs)
 *
-* If the star already fills its Roche lobe exit with DTR = 0.
+* If the star already fills its Roche lobe or will fill after peri-center, return one period
 *
-      IF(RSJ.GE.RL1)THEN
+      IF(RSJ.GE.RL1.OR.SEMI*(1-ECC).LT.MAX(RSJ,RL1))THEN
 *        get one period
-         IF(SEMI.LE.0.D0) THEN
-            DTR = 0.D0
-         ELSE 
-            DTR = semi/aursun*sqrt(semi/(aursun*(MASS(I1)+MASS(I2))))
-            DTR = DTR/1.0d6
-         END IF
+         DTR = semi/aursun*sqrt(semi/(aursun*(MASS(I1)+MASS(I2))))
+         DTR = DTR/1.0d6
 *         DTR = 0.D0
 *         RAD(I1) = RS1
          GOTO 210
