@@ -1988,31 +1988,8 @@ public:
         n_count_sum.cluster_connected += PS::Comm::getSum(n_connected_cluster);
         const PS::S32* connected_cluster_n_list = system_hard_connected.getClusterNumberOfMemberList();
         for (PS::S32 i=0; i<n_connected_cluster; i++) n_count.clusterCount(connected_cluster_n_list[i]);
-
-        PS::S32 cluster_hist_size_loc = n_count.n_cluster.size();
-        PS::S32 n_member_in_cluster_loc[cluster_hist_size_loc];
-        PS::S32 n_cluster_loc[cluster_hist_size_loc];
-        n_count.getherClusterCount(n_member_in_cluster_loc, n_cluster_loc, cluster_hist_size_loc);
-        PS::S32 cluster_hist_size_recv[n_proc];
-        PS::S32 cluster_hist_size_disp[n_proc+1];
-        PS::Comm::allGather(&cluster_hist_size_loc, 1, cluster_hist_size_recv);
-        cluster_hist_size_disp[0] = 0;
-        for (PS::S32 i=0; i<n_proc; i++){
-            cluster_hist_size_disp[i+1] = cluster_hist_size_recv[i] + cluster_hist_size_disp[i];
-        }
-        PS::S32 cluster_hist_size_total = cluster_hist_size_disp[n_proc];
-        PS::S32 n_member_in_cluster_recv[cluster_hist_size_total];
-        PS::S32 n_cluster_recv[cluster_hist_size_total];
-        PS::Comm::allGatherV(n_member_in_cluster_loc, cluster_hist_size_loc, 
-                             n_member_in_cluster_recv, cluster_hist_size_recv, cluster_hist_size_disp);
-        PS::Comm::allGatherV(n_cluster_loc, cluster_hist_size_loc, 
-                             n_cluster_recv, cluster_hist_size_recv, cluster_hist_size_disp);
-        for (PS::S32 i=0; i<cluster_hist_size_total; i++) {
-            n_count_sum.clusterCount(n_member_in_cluster_recv[i], n_cluster_recv[i]);
-        }
-#else
-        n_count_sum.copyClusterCount(n_count);
 #endif
+
         dn_loop++;
 
     }
@@ -2080,6 +2057,31 @@ public:
             n_count_sum.dump(std::cout,PRINT_WIDTH,dn_loop);
             std::cout<<std::endl;
                 
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+            PS::S32 cluster_hist_size_loc = n_count.n_cluster.size();
+            PS::S32 n_member_in_cluster_loc[cluster_hist_size_loc];
+            PS::S32 n_cluster_loc[cluster_hist_size_loc];
+            n_count.getherClusterCount(n_member_in_cluster_loc, n_cluster_loc, cluster_hist_size_loc);
+            PS::S32 cluster_hist_size_recv[n_proc];
+            PS::S32 cluster_hist_size_disp[n_proc+1];
+            PS::Comm::allGather(&cluster_hist_size_loc, 1, cluster_hist_size_recv);
+            cluster_hist_size_disp[0] = 0;
+            for (PS::S32 i=0; i<n_proc; i++){
+                cluster_hist_size_disp[i+1] = cluster_hist_size_recv[i] + cluster_hist_size_disp[i];
+            }
+            PS::S32 cluster_hist_size_total = cluster_hist_size_disp[n_proc];
+            PS::S32 n_member_in_cluster_recv[cluster_hist_size_total];
+            PS::S32 n_cluster_recv[cluster_hist_size_total];
+            PS::Comm::allGatherV(n_member_in_cluster_loc, cluster_hist_size_loc, 
+                                 n_member_in_cluster_recv, cluster_hist_size_recv, cluster_hist_size_disp);
+            PS::Comm::allGatherV(n_cluster_loc, cluster_hist_size_loc, 
+                                 n_cluster_recv, cluster_hist_size_recv, cluster_hist_size_disp);
+            for (PS::S32 i=0; i<cluster_hist_size_total; i++) {
+                n_count_sum.clusterCount(n_member_in_cluster_recv[i], n_cluster_recv[i]);
+            }
+#else
+            n_count_sum.copyClusterCount(n_count);
+#endif
             std::cout<<"**** Number of members in clusters (global):\n";
             n_count_sum.printHist(std::cout,PRINT_WIDTH,dn_loop);
         }
