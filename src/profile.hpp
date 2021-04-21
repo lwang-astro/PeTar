@@ -459,6 +459,10 @@ public:
         else n_cluster[n]=ntimes;
     }
 
+    void clearClusterCount() {
+        n_cluster.clear();
+    }
+
     void getherClusterCount(int* n, int* count, const long unsigned int size) {
         assert(size==n_cluster.size());
         int index=0;
@@ -472,6 +476,13 @@ public:
     void copyClusterCount(SysCounts& n_count) {
         for(auto i=n_count.n_cluster.begin(); i!=n_count.n_cluster.end(); ++i) {
             n_cluster[i->first] = i->second;
+        }
+    }
+
+    void addClusterCount(SysCounts& n_count) {
+        for(auto i=n_count.n_cluster.begin(); i!=n_count.n_cluster.end(); ++i) {
+            if(n_cluster.count(i->first)) n_cluster[i->first] += i->second;
+            else n_cluster[i->first] = i->second;
         }
     }
 
