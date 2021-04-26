@@ -2,8 +2,8 @@ import collections
 from .base import *
 from .data import *
 
-class BinaryTree(DictNpArrayMix):
-    """ Binary tree data output from SDAR and PeTar
+class BinaryTreeSDAR(DictNpArrayMix):
+    """ Binary tree data output from SDAR 
     Keys: (class members)
         semi (1D): semi-major axis
         ecc  (1D): eccentricity
@@ -49,9 +49,15 @@ class BinaryTree(DictNpArrayMix):
 class GroupInfo(DictNpArrayMix):
     """ Group information output from PeTar
     Keys: (class members)
-        The keys contain n groups with the name of 'binX' where 'X' is replaced by the group index starting from 0
-        Each group is the type of BinaryTree.
-        n is determined in the keywords argument in initial function
+        type (1D): group type, 0: new group; 1: end group
+        n    (1D): number of members in group (should be consistent with keyword argument N
+        time (1D): current time
+        pos  (2D,3): position of the group c.m. in the framework of the global system (without shift of global system c.m. if external_mode is on)
+        vel  (2D,3): velocity of the group c.m. in the framework of the global system (without shift of global system c.m.)
+        bin[X] (BinaryTreeSDAR): members of the group in a hierarchical binary tree
+               Here X indicates the order. 0 represents the root (outer most) binary; 1,2,3 ... are inner binaries
+               For a triple, bin0 is outer binary, bin1 is inner binary.
+               p2 of bin0 is the c.m. of bin1, the id of p2 is the minimum id from the two components in bin1.
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
@@ -72,7 +78,7 @@ class GroupInfo(DictNpArrayMix):
         if 'N' in kwargs.keys(): n = kwargs['N']
         elif (_dat!=None) & (self.size>0): n = self.N[0]
 
-        keys_bin = [['bin'+str(i),BinaryTree] for i in range(n-1)]
+        keys_bin = [['bin'+str(i),BinaryTreeSDAR] for i in range(n-1)]
         DictNpArrayMix.__init__(self, keys_bin, _dat, _offset+self.ncols, True, **kwargs)
             
     def generateBinaryID(self, i):
