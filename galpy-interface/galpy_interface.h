@@ -25,9 +25,9 @@ public:
     bool print_flag;
 
     IOParamsGalpy(): input_par_store(),
-                     type_args (input_par_store, "__NONE__", "galpy-type-arg", "Description of potential type and arguments"),
+                     type_args (input_par_store, "__NONE__", "galpy-type-arg", "Add potential types and arguments"),
                      pre_define_type (input_par_store, "__NONE__", "galpy-set", "Add additional Pre-defined potential type to the potential list, options are: MWPotential2014"),
-                     config_filename(input_par_store, "__NONE__", "galpy-conf-file", "A configure file that store the types and arguments of potential, will be added to the potential list"),
+                     config_filename(input_par_store, "__NONE__", "galpy-conf-file", "A configure file that store the times, types and arguments of potential, will be added to the potential list"),
                      rscale(input_par_store, 1.0, "galpy-rscale", "Radius scale factor from unit of the input particle data (IN) to Galpy distance unit (r[Galpy]=r[IN]*rscale)"),
                      tscale(input_par_store, 1.0, "galpy-tscale", "Time scale factor from unit of the input particle data (IN) to Galpy time (time[Galpy]=time[IN]*tscale)"),
                      vscale(input_par_store, 1.0, "galpy-vscale", "Velocity scale factor from unit of the input particle data (IN) to Galpy velocity unit (v[Galpy]=v[IN]*vscale)"),
@@ -132,7 +132,7 @@ public:
                 if(print_flag){
                     std::cout<<"Galpy options:"<<std::endl;
                     input_par_store.printHelp(std::cout, 2, 10, 23);
-                    std::cout<<"Type and arguments: the format of a combination of types and arguments have two styles: (no space in the middle):\n"
+                    std::cout<<"*** PS: for --galpy-type-arg: the format of a combination of types and arguments have two styles: (no space in the middle):\n"
                              <<"             1) [type1]:[arg1-1],[arg1-2],**|[type2]:[arg2-1],[arg2-2],**\n"
                              <<"             2) [type1],[type2],..:[arg1-1],[arg1-2],[arg2-1],**\n"
                              <<"             where '|' split different potential types;\n"
@@ -144,7 +144,31 @@ public:
                              <<"                both can generate the MWPotential2014 from Galpy (same to --galpy-set MWPotential2014)\n"
                              <<"             The defaults values of types and arguments for supported potentials can be found by using the commander, petar.galpy.help.\n"
                              <<"             The default arguments in potentials are using the Galpy (natural) unit (velocity in [220 km/s], distance in [8 kpc]).\n"
-                             <<"             If the input particle data have different units, the scaling factor should be properly set."<<std::endl;
+                             <<"             If the input particle data have different units, the scaling factor should be properly set."
+                             <<"             The potentials defined in --galpy-type-arg and --galpy-set are both added.\n"
+                             <<"             Thus, don't repeat the same potential sets in the two options.\n"
+                             <<"       for --galpy-conf-file: the configure file can have time-dependent types and arguments, which --galpy-type-arg does not support.\n"
+                             <<"             Users can add arbitrary number of sets of types and arguments at given times;\n"
+                             <<"             and the time interval should be integer times of the tree time step used in PeTar.\n"
+                             <<"             Each set contains three lines: \n"
+                             <<"                 1st: Update_time[Galpy unit] Number_of_types\n"
+                             <<"                 2nd: type1 type2 ...\n"
+                             <<"                 3rd: arg1-1 arg1-2 ... arg2-1 ...\n"
+                             <<"             If users want to switch off the external potential, only add the 1st line with Number_of_types=0.\n"
+                             <<"             In other cases, if no argument exists, the 3rd line is still necessary (empty line)."
+                             <<"             The Update_time of sets must be sorted in increasing order.\n"
+                             <<"             At each time of update, the old types and arguments are replaced by the new ones.\n"
+                             <<"             PeTar will read the configure file during the running time once the Update_time is reached.\n"
+                             <<"             Thus, don't rename, delete or modify the configure file before the simulation ends.\n"
+                             <<"             For example, to add the MWPotential2014 after 1.0 Galpy time unit:\n"
+                             <<"                 1.0 3\n"
+                             <<"                 15 5 9\n"
+                             <<"                 0.029994597188218 1.8 0.2375 0.75748020193716 0.375 0.035 4.852230533528 2.0\n"
+                             <<"             If there is other sets following this one, this set will be used until the simulation time reaches the next Update_time.\n"
+                             <<"             If no more set is provided, this set will be used until the end of the simulation.\n"
+                             <<"             Users can use Galpy (_parse_pot function, see its online manual) to generate the types and arguments.\n"
+                             <<"       Users can either use --galpy-type-arg and --galpy-set or --galpy-conf-file. But if both are used, the error will appear."
+                             <<std::endl;
                 }
                 return -1;
             case '?':
@@ -187,15 +211,21 @@ class GalpyManager{
 public:
     struct potentialArg* potential_args;
     int npot; // number of potential models 
+    double update_time;
     double rscale;
     double tscale;
     double vscale;
     double fscale;
     double pscale;
+    std::ifstream fconf;
 
-    GalpyManager(): potential_args(NULL), npot(0), rscale(1.0), tscale(1.0), vscale(1.0), fscale(1.0), pscale(1.0) {}
+    GalpyManager(): potential_args(NULL), npot(0), update_time(0.0), rscale(1.0), tscale(1.0), vscale(1.0), fscale(1.0), pscale(1.0), fconf() {}
 
     //! initialization function
+    /*!
+      @param[in] _input: input parameters 
+      @param[in] _print_flag: if true, printing information to std::cout
+     */
     void initial(const IOParamsGalpy& _input, const bool _print_flag=false) {
         // unit scale
         rscale = _input.rscale.value;
@@ -210,109 +240,191 @@ public:
             if (type_args=="__NONE__") type_args="15:0.0299946,1.8,0.2375|5:0.7574802,0.375,0.035|9:4.85223053,2.0";
             else type_args += "|15:0.0299946,1.8,0.2375|5:0.7574802,0.375,0.035|9:4.85223053,2.0";
         }
-        if (type_args=="__NONE__") type_args="";
-
-        std::vector<std::string> type_args_pair;
-        std::vector<int> pot_type;
-        std::vector<double> pot_args;
-
-        // split type-arg groups
-        std::size_t istart = 0;
-        std::size_t inext = type_args.find_first_of("|");
-        while (inext!=std::string::npos) {
-            type_args_pair.push_back(type_args.substr(istart,inext-istart));
-            istart = inext+1;
-            inext = type_args.find_first_of("|",istart);
+        if (type_args!="__NONE__"&&_input.config_filename.value!="__NONE__")  {
+            std::cerr<<"Galpy Error: both --galpy-type-arg|--galpy-set and --galpy-conf-file are used, please choose one of them."<<std::endl;
+            abort();
         }
-        if (istart!=type_args.size()) type_args_pair.push_back(type_args.substr(istart));
+        if (type_args!="__NONE__") {
 
-        if (_print_flag) std::cout<<"Potential combination list:\n";
-        // loop group
-        for (std::size_t i=0; i<type_args_pair.size(); i++) {
-            // get types
-            istart = 0;
-            inext = type_args_pair[i].find_first_of(":");
-            if (inext==std::string::npos) {
-                std::cerr<<"Error: potential type index delimiter ':' is not found in input string "<<type_args_pair[i]<<std::endl;
-                abort();
-            }
-            std::string type_str = type_args_pair[i].substr(0,inext);
-            std::string arg_str = type_args_pair[i].substr(inext+1);
-            
-            inext = type_str.find_first_of(",");
-            if (_print_flag) std::cout<<"Type index: ";
+            std::vector<std::string> type_args_pair;
+            std::vector<int> pot_type;
+            std::vector<double> pot_args;
+
+            // split type-arg groups
+            std::size_t istart = 0;
+            std::size_t inext = type_args.find_first_of("|");
             while (inext!=std::string::npos) {
-                int type_i=std::stoi(type_str.substr(istart, inext-istart));
-                pot_type.push_back(type_i);
-                if (_print_flag) std::cout<<type_i<<" ";
+                type_args_pair.push_back(type_args.substr(istart,inext-istart));
                 istart = inext+1;
-                inext = type_str.find_first_of(",",istart);
+                inext = type_args.find_first_of("|",istart);
             }
-            if (istart!=type_str.size()) {
-                int type_i=std::stoi(type_str.substr(istart));
-                pot_type.push_back(type_i);
-                if (_print_flag) std::cout<<type_i<<" ";
-            }
-            if (_print_flag) std::cout<<"args:";
+            if (istart!=type_args.size()) type_args_pair.push_back(type_args.substr(istart));
+
+            if (_print_flag) std::cout<<"Potential combination list:\n";
+            // loop group
+            for (std::size_t i=0; i<type_args_pair.size(); i++) {
+                // get types
+                istart = 0;
+                inext = type_args_pair[i].find_first_of(":");
+                if (inext==std::string::npos) {
+                    std::cerr<<"Error: potential type index delimiter ':' is not found in input string "<<type_args_pair[i]<<std::endl;
+                    abort();
+                }
+                std::string type_str = type_args_pair[i].substr(0,inext);
+                std::string arg_str = type_args_pair[i].substr(inext+1);
             
-            // get arguments
-            istart = 0;
-            inext = arg_str.find_first_of(",",istart);
-            while (inext!=std::string::npos) {
-                double arg_i = std::stod(arg_str.substr(istart, inext-istart));
-                pot_args.push_back(arg_i);
-                if (_print_flag) std::cout<<" "<<arg_i;
-                istart = inext+1;
+                inext = type_str.find_first_of(",");
+                if (_print_flag) std::cout<<"Type index: ";
+                while (inext!=std::string::npos) {
+                    int type_i=std::stoi(type_str.substr(istart, inext-istart));
+                    pot_type.push_back(type_i);
+                    if (_print_flag) std::cout<<type_i<<" ";
+                    istart = inext+1;
+                    inext = type_str.find_first_of(",",istart);
+                }
+                if (istart!=type_str.size()) {
+                    int type_i=std::stoi(type_str.substr(istart));
+                    pot_type.push_back(type_i);
+                    if (_print_flag) std::cout<<type_i<<" ";
+                }
+                if (_print_flag) std::cout<<"args:";
+            
+                // get arguments
+                istart = 0;
                 inext = arg_str.find_first_of(",",istart);
+                while (inext!=std::string::npos) {
+                    double arg_i = std::stod(arg_str.substr(istart, inext-istart));
+                    pot_args.push_back(arg_i);
+                    if (_print_flag) std::cout<<" "<<arg_i;
+                    istart = inext+1;
+                    inext = arg_str.find_first_of(",",istart);
+                }
+                if(istart!=arg_str.size()) {
+                    double arg_i = std::stod(arg_str.substr(istart));
+                    pot_args.push_back(arg_i);
+                    if (_print_flag) std::cout<<" "<<arg_i;
+                }
+                if (_print_flag) std::cout<<std::endl;
             }
-            if(istart!=arg_str.size()) {
-                double arg_i = std::stod(arg_str.substr(istart));
-                pot_args.push_back(arg_i);
-                if (_print_flag) std::cout<<" "<<arg_i;
-            }
-            if (_print_flag) std::cout<<std::endl;
+            npot = pot_type.size();
+
+            // generate galpy potential argument 
+            potential_args = new struct potentialArg[npot];
+            int* pot_type_ptr = pot_type.data();
+            double* pot_args_ptr = pot_args.data();
+
+            parse_leapFuncArgs_Full(npot, potential_args, &pot_type_ptr, &pot_args_ptr);
         }
-        npot = pot_type.size();
 
         // add type arguments from configure file if exist
         if (_input.config_filename.value!="__NONE__") {
-            std::ifstream fin;
-            fin.open(_input.config_filename.value.c_str(), std::ifstream::in);
-            int nadd=0;
-            fin>>nadd;
-            assert(nadd>0);
-            npot += nadd;
-            if (_print_flag) std::cout<<"Type index: ";
-            for (int i=0; i<nadd; i++) {
-                int type_i;
-                fin>>type_i;
-                if (fin.eof()) {
-                    std::cerr<<"Read type fails! required number is "<<nadd<<" only get "<<i;
-                    abort();
-                }
-                pot_type.push_back(type_i);
-                if (_print_flag) std::cout<<type_i<<" ";
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+            int my_rank = PS::Comm::getRank();
+            if (my_rank==0) {
+#endif
+                fconf.open(_input.config_filename.value.c_str(), std::ifstream::in);
+                fconf>>update_time;
+                if(fconf.eof()) fconf.close();
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
             }
-            if (_print_flag) std::cout<<"args:";
-            while (true) {
-                double arg_i;
-                fin>>arg_i;
-                if (fin.eof()) break;
-                pot_args.push_back(arg_i);
-                if (_print_flag) std::cout<<" "<<arg_i;
-            }
-            if (_print_flag) std::cout<<std::endl;
+            PS::Comm::broadcast(&update_time, 1, 0);
+#endif
         }
-        
-        // generate galpy potential argument 
-        potential_args = new struct potentialArg[npot];
-        int* pot_type_ptr = pot_type.data();
-        double* pot_args_ptr = pot_args.data();
-
-        parse_leapFuncArgs_Full(npot, potential_args, &pot_type_ptr, &pot_args_ptr);
 
         if(_print_flag) std::cout<<"----- Finish initialize Galpy potential -----\n";
 
+    }
+
+    //! Update types and arguments from configure file if update_time <= particle system time
+    /*! 
+      @param[in] _system_time: the time of globular particley system in PeTar. The time is transferred based on the time scaling factor
+      @param[in] _print_flag: if true, print the read types and arguments.
+     */
+    void updateTypesAndArgsFromFile(const double& _system_time, const bool _print_flag) {
+        double time_scaled= _system_time*tscale;
+        int npot_next=-1;
+        std::vector<int> pot_type;
+        std::vector<double> pot_args;
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+        int my_rank = PS::Comm::getRank();
+        if (my_rank==0) {
+#endif
+            if (!fconf.is_open())  {
+                if (time_scaled>=update_time) {
+
+
+                    double update_time_next;
+
+                    while(true) {
+                        fconf>>npot_next;
+                        if(fconf.eof()) {
+                            std::cerr<<"Reading update_time fails! File reaches EOF.";
+                            abort();
+                        }
+                        if (npot_next>0) {
+                            for (int i=0; i<npot_next; i++) {
+                                int type_i;
+                                fconf>>type_i;
+                                if (fconf.eof()) {
+                                    std::cerr<<"Reading type fails! required number is "<<npot_next<<" only get "<<i;
+                                    abort();
+                                }
+                                pot_type.push_back(type_i);
+                            }
+                            std::string line;
+                            std::getline(fconf, line);
+                            std::istringstream fin(line);
+                            double arg_i;
+                            while (fin>>arg_i) {
+                                pot_args.push_back(arg_i);
+                            }
+                        }
+
+                        fconf>>update_time_next;
+                        if(fconf.eof()) {
+                            fconf.close();
+                            break;
+                        }
+                        if (update_time_next>time_scaled) {
+                            update_time = update_time_next;
+                            break;
+                        }
+                    };
+
+                    if (_print_flag) {
+                        std::cout<<"Galpy update time: "<<update_time
+                                 <<" Type index: ";
+                        for (size_t i=0; i<pot_type.size(); i++) std::cout<<pot_type[i]<<" ";
+                        for (size_t i=0; i<pot_args.size(); i++) std::cout<<pot_args[i]<<" ";
+                        std::cout<<std::endl;
+                    }
+                }
+            }
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+        }
+        PS::Comm::broadcast(&npot_next, 1, 0);
+#endif
+        // update potentials
+        if (npot_next>=0) {
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+            PS::Comm::broadcast(&update_time, 1, 0);
+            PS::Comm::broadcast(pot_type.data(), pot_type.size(), 0);
+            int n_pot_args=0;
+            if (my_rank==0) n_pot_args = pot_args.size();
+            PS::Comm::broadcast(&n_pot_args, 1, 0);
+            if (n_pot_args>0) PS::Comm::broadcast(pot_args.data(), n_pot_args, 0);
+#endif
+            // generate galpy potential argument 
+            freePotentialArgs();
+            npot = npot_next;
+            if (npot>0) {
+                potential_args = new struct potentialArg[npot];
+                int* pot_type_ptr = pot_type.data();
+                double* pot_args_ptr = pot_args.data();
+
+                parse_leapFuncArgs_Full(npot, potential_args, &pot_type_ptr, &pot_args_ptr);
+            }
+        }
     }
 
     //! print reference to cite
@@ -355,16 +467,24 @@ public:
         }
     }
 
-    void clear() {
+    void freePotentialArgs() {
         if (potential_args!=NULL) {
             free_potentialArgs(npot, potential_args);
             free(potential_args);
-            npot = 0;
         }
+        npot = 0;
+        potential_args=NULL;
+    }
+
+    void clear() {
+        freePotentialArgs();
+        update_time = 0;
+        if (fconf.is_open()) fconf.close();
     }
 
     ~GalpyManager() {
         clear();
     }
 };
+
 
