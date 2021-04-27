@@ -192,16 +192,18 @@ public:
         rscale.value = 0.001/rbase; // pc to solar position in Milkyway
         vscale.value = 1.0/vb_pcmyr; // pc/Myr to solar velocity in Milkyway
         tscale.value = rscale.value/vscale.value; // myr to time unit in galpy
-        fscale.value = vscale.value*vscale.value/rscale.value; // pc/myr^2 to acc unit in galpy
-        pscale.value = vscale.value*vscale.value; // pc^2/myr^2 to pot unit in galpy
+        fscale.value = vscale.value*vscale.value/rscale.value; // pc/Myr^2 to acc unit in galpy
+        pscale.value = vscale.value*vscale.value; // pc^2/Myr^2 to pot unit in galpy
 
         if (print_flag) {
+            double GMscale = pscale.value*rscale.value; // pc^3/Myr^2
             std::cout<<"----- Unit conversion for Galpy -----\n"
                      <<"rscale = "<<rscale.value<<"  [8 kpc] / [pc]\n"
-                     <<"vscale = "<<vscale.value<<"  [220 km/s] / [pc/myr]\n"
-                     <<"tscale = "<<tscale.value<<"  [Solar orbital period/2 pi] / myr\n"
-                     <<"fscale = "<<fscale.value<<"  [galpy acceleration unit] / [pc/myr^2]\n"
-                     <<"pscale = "<<pscale.value<<"  [galpy potential unit] / [pc^2/myr^2]\n";
+                     <<"vscale = "<<vscale.value<<"  [220 km/s] / [pc/Myr]\n"
+                     <<"tscale = "<<tscale.value<<"  [Solar orbital period/2 pi] / Myr\n"
+                     <<"fscale = "<<fscale.value<<"  [galpy acceleration unit] / [pc/Myr^2]\n"
+                     <<"pscale = "<<pscale.value<<"  [galpy potential unit] / [pc^2/Myr^2]\n"
+                     <<"GMscale = "<<GMscale<<"  [galpy GM unit] / [pc^3/Myr^2]\n";
         }
     }
 };
@@ -349,7 +351,7 @@ public:
         int my_rank = PS::Comm::getRank();
         if (my_rank==0) {
 #endif
-            if (!fconf.is_open())  {
+            if (fconf.is_open())  {
                 if (time_scaled>=update_time) {
 
 
@@ -372,6 +374,7 @@ public:
                                 pot_type.push_back(type_i);
                             }
                             std::string line;
+                            std::getline(fconf, line); // skip 2nd line
                             std::getline(fconf, line);
                             std::istringstream fin(line);
                             double arg_i;
@@ -392,8 +395,10 @@ public:
                     };
 
                     if (_print_flag) {
-                        std::cout<<"Galpy update time: "<<update_time
-                                 <<" Type index: ";
+                        std::cout<<"Galpy time: "<<time_scaled;
+                        if (fconf.is_open()) std::cout<<" Next update time: "<<update_time;
+                        else std::cout<<" Next update time: End_of_simulation";
+                        std::cout<<" Type index: ";
                         for (size_t i=0; i<pot_type.size(); i++) std::cout<<pot_type[i]<<" ";
                         for (size_t i=0; i<pot_args.size(); i++) std::cout<<pot_args[i]<<" ";
                         std::cout<<std::endl;

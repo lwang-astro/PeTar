@@ -2859,6 +2859,12 @@ public:
         stat.n_real_glb = stat.n_all_glb = n_glb;
         stat.n_real_loc = stat.n_all_loc = n_loc;
 
+#ifdef RECORD_CM_IN_HEADER
+        stat.calcAndShiftCenterOfMass(&system_soft[0], n_loc, 3, true);
+        file_header.pos_offset = stat.pcm.pos;
+        file_header.vel_offset = stat.pcm.vel;
+#endif
+
         read_data_flag = true;
 
         delete [] mass;
@@ -2915,6 +2921,12 @@ public:
 
         stat.n_real_glb = stat.n_all_glb = n_glb;
         stat.n_real_loc = stat.n_all_loc = n_loc;
+
+#ifdef RECORD_CM_IN_HEADER
+        stat.calcAndShiftCenterOfMass(&system_soft[0], n_loc, 3, true);
+        file_header.pos_offset = stat.pcm.pos;
+        file_header.vel_offset = stat.pcm.vel;
+#endif
 
         read_data_flag = true;
 

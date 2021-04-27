@@ -57,7 +57,7 @@ def savePotTypeArg(config_filename, n_pot, pot_type, pot_arg):
         argument list
     """
     with open(config_filename,'w') as f:
-        f.write("%d\n" % n_pot)
+        f.write("0 %d\n" % n_pot)
         for item in pot_type:
             f.write("%d " % item)
         f.write("\n")
