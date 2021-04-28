@@ -1038,9 +1038,10 @@ public:
             double acc[3], pot;
 #ifdef RECORD_CM_IN_HEADER
             PS::F64vec pos_correct=pi.pos + stat.pcm.pos;
-            galpy_manager.calcAccPot(acc, pot, stat.time, &pos_correct[0]);
+            galpy_manager.calcAccPot(acc, pot, stat.time, &pos_correct[0], &pi.pos[0]);
 #else
-            galpy_manager.calcAccPot(acc, pot, stat.time, &pi.pos[0]);
+            PS::F64vec pos_center=pi.pos - stat.pcm.pos;
+            galpy_manager.calcAccPot(acc, pot, stat.time, &pi.pos[0], &pos_center[0]);
 #endif
             pi.acc[0] += acc[0]; 
             pi.acc[1] += acc[1]; 
@@ -1068,7 +1069,8 @@ public:
         PS::F64vec acc;
         PS::F64 pot;
         // evaluate center of mass acceleration
-        galpy_manager.calcAccPot(&acc[0], pot, stat.time, &stat.pcm.pos[0]);
+        PS::F64vec pos_zero=PS::F64vec(0.0);
+        galpy_manager.calcAccPot(&acc[0], pot, stat.time, &stat.pcm.pos[0], &pos_zero[0]);
         dv = acc*_dt;
 #endif        
 
