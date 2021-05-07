@@ -161,13 +161,13 @@ public:
 #ifdef ORBIT_SAMPLING
                      n_split          (input_par_store, 4,    "number-split", "Number of binary sample points for tree perturbation force"),
 #endif
-                     n_bin            (input_par_store, 0,    "b", "Number of binaries used for initialization (assume binaries ID=1,2*n_bin)"),
+                     n_bin            (input_par_store, 0,    "b", "Number of binaries used for initialization (assuming the binaries ID=1,2*n_bin)"),
                      n_step_per_orbit (input_par_store, 8,    "number-step-tt", "Number of steps per slow-down binary orbits (binary period/tree timestep) for isolated binaries; also the maximum criterion for switching on tidal tensor method"),
                      time_end         (input_par_store, 10.0, "t", "Finishing time"),
                      eta              (input_par_store, 0.1,  "hermite-eta", "Hermite time step coefficient eta"),
                      gravitational_constant(input_par_store, 1.0, "G", "Gravitational constant"),
                      unit_set         (input_par_store, 0,    "u", "Input data unit, 0: unknown, referring to G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr"),
-                     n_glb            (input_par_store, 100000, "n", "Total number of particles, only used to generate particles if no input datafile exists"),
+                     n_glb            (input_par_store, 100000, "n", "Total number of particles, only used for a test using the internal equal-mass Plummer model generator (assuming G=1 and the input data filename is __Plummer)"),
                      id_offset        (input_par_store, -1,   "id-offset", "Starting id for artificial particles, total number of real particles must be always smaller than this","n_glb+1"),
                      dt_soft          (input_par_store, 0.0,  "s", "Tree timestep, if value is zero, use 0.1*r_out/sigma_1D"),
                      dt_snap          (input_par_store, 1.0,  "o", "Output time interval of particle dataset snapshot"),
@@ -2647,9 +2647,14 @@ public:
     //! reading data set from file, filename is given by readParameters
     void readDataFromFile() {
         assert(read_parameters_flag);
+        if(input_parameters.fname_inp.value=="__NONE__") {
+            std::cerr<<"Error: the input data filename is not provided, make sure your options have the correct format."<<std::endl;
+            abort();
+        }
 
         PS::S32 data_format = input_parameters.data_format.value;
         auto* data_filename = input_parameters.fname_inp.value.c_str();
+                
         if(data_format==1||data_format==2||data_format==4)
             system_soft.readParticleAscii(data_filename, file_header);
         else
@@ -2862,7 +2867,7 @@ public:
         stat.n_real_loc = stat.n_all_loc = n_loc;
 
 #ifdef RECORD_CM_IN_HEADER
-        stat.calcAndShiftCenterOfMass(&system_soft[0], n_loc, 3, true);
+        stat.calcAndShiftCenterOfMass(&system_soft[0], n_loc, 1, true);
         file_header.pos_offset = stat.pcm.pos;
         file_header.vel_offset = stat.pcm.vel;
 #endif
@@ -2925,7 +2930,7 @@ public:
         stat.n_real_loc = stat.n_all_loc = n_loc;
 
 #ifdef RECORD_CM_IN_HEADER
-        stat.calcAndShiftCenterOfMass(&system_soft[0], n_loc, 3, true);
+        stat.calcAndShiftCenterOfMass(&system_soft[0], n_loc, 1, true);
         file_header.pos_offset = stat.pcm.pos;
         file_header.vel_offset = stat.pcm.vel;
 #endif

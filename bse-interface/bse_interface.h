@@ -587,7 +587,7 @@ public:
                    rscale(input_par_store, 1.0,   "bse-rscale", "Radius scale factor from input data unit (IN) to Rsun (r[Rsun]=r[IN]*rscale)"),
                    mscale(input_par_store, 1.0,   "bse-mscale", "Mass scale factor from input data unit (IN) to Msun (m[Msun]=m[IN]*mscale)"),
                    vscale(input_par_store, 1.0,   "bse-vscale", "Velocity scale factor from input data unit(IN) to km/s (v[km/s]=v[IN]*vscale)"),
-                   z     (input_par_store, 0.001, "bse-metallicity", "Metallicity"),
+                   z     (input_par_store, 0.001, "bse-metallicity", "Metallicity Z, ranging from 0.0001 to 0.03"),
                    print_flag(false) {}
 #elif MOBSE
     IOParamsBSE(): input_par_store(),
@@ -1086,6 +1086,8 @@ public:
 
         // Set parameters which depend on the metallicity 
         z = _input.z.value;
+        if (_print_flag&&(z<0.0001||z>0.03))
+            std::cerr<<"BSE warning! metallicity Z is not in (0.0001, 0.03); given value:"<<z<<std::endl;
         zcnsts_(&z, zpars);
         value3_.idum = (_input.idum.value>0)? -_input.idum.value: _input.idum.value;
 
