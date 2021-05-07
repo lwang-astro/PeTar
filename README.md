@@ -7,11 +7,17 @@
     ╚═╝     ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝
 ```
 
-A particle-particle \& Particle-tree (_P<sup>3</sup>T_) with slow-down time-transformed symplectic integrator (slow-down algorithmic regularization; _SDAR_) code for simulating gravitational _N_-body systems including close encounters and few-body systems.
+PeTar is a N-body code designed to model collisional stellar systems, where multiplicity, close encounters are important for dynamical evolution. 
+It combines three integration methods:
+- The Barnes-Hut tree (Barnes & Hut 1986) is used to calculate long-range forces between particles, which are integrated with a second-order symplectic leap-frog integrator.
+- The fourth-order Hermite integrator with block time steps (e.g., Aarseth 2003) is applied to integrate the orbits of stars and the centers-of-mass of multiple systems with short-range forces.
+- The slow-down algorithmic regularization method (SDAR; Wang, Nitadori & Makino 2020) is used to integrate the multiple systems, such as hyperbolic encounters, binaries and hierarchical few-body systems.
 
-The Doxygen document will be provided in doc directory (not yet done).
+The details of the algorithms are described in Wang et al. (2020; arXiv: https://arxiv.org/abs/2006.16560).
+This readme provide a complete and short documentation to describe how to install and use the code. 
+Please carefully read it first before asking questions to developers.
 
-The reference paper on ArXiv: https://arxiv.org/abs/2006.16560
+Right now the detailed documentation to describe the codes is not yet ready. It will appears as a Doxygen document.
 
 ## Install:
 ### Dependence:
