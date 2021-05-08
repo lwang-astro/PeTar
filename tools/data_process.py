@@ -12,6 +12,7 @@ if __name__ == '__main__':
     filename_prefix='data'
     average_mode='sphere'
     read_flag=False
+    ftid_file_flag=False
     n_cpu=0
     write_option='w'
 
@@ -35,8 +36,8 @@ if __name__ == '__main__':
         print("  -a(--average-mode): Lagrangian properity average mode, choices: sphere: average from center to Lagragian radii; shell: average between two neighbor radii (sphere)")
         print("  -A(--append): append new data to existing data files")
         print("  -r(--read-data): read existing single, binary and core data to avoid expensive KDTree construction, no argument, disabled in default")
-        print("     --r-escape: a constant escape distance criterion, in default, it is 20*half-mass radius")
-        print("     --e-escape: escape energy criterion, only work together with --r-escape, in default, it is 0.0")
+        print("     --r-escape: if the value is 'tidal', calculate the tidal radius (only work when external-mode is on); otherwise it is a constant escape distance criterion. If not given, it is 20*half-mass radius")
+        print("     --e-escape: specific energy criterion for escapers (etot > mass * e-escape), only work together with --r-escape!='tidal', in default, it is 0.0")
         print("  -i(--interrupt-mode): the interruption mode used in petar, choices: no, base, bse, mobse (no)")
         print("  -t(--external-mode): external mode used in petar, choices: galpy, no (no)")
         print("  -s(--snapshot-format): snapshot data format: binary, ascii (ascii)")
@@ -127,7 +128,10 @@ if __name__ == '__main__':
             elif opt in ('-r','--read-data'):
                 read_flag = True
             elif opt in ('--r-escape'):
-                kwargs['r_escape'] = float(arg)
+                if (arg=='tidal'): 
+                    kwargs['r_escape'] = arg
+                    ftid_file_flag = True
+                else: kwargs['r_escape'] = float(arg)
             elif opt in ('--e-escape'):
                 kwargs['e_escape'] = float(arg)
             elif opt in ('--add-star-type'):
@@ -161,7 +165,10 @@ if __name__ == '__main__':
     else:
         result,time_profile = petar.parallelDataProcessList(path_list, n_cpu, read_flag, **kwargs)
 
-    for key in ['lagr','core','bse_status']:
+    fout_list=['lagr','core','bse_status']
+    if (ftid_file_flag): fout_list.append('tidal')
+
+    for key in fout_list:
         if key in result.keys():
             key_filename  = filename_prefix + '.' + key
             with open(key_filename, write_option) as f:

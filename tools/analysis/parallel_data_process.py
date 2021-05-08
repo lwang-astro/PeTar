@@ -112,7 +112,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         single.correctCenter(cm_pos, cm_vel)
         binary.correctCenter(cm_pos, cm_vel)
         center_and_r2_time = time.time()
-
+        
         if (find_multiple): 
             single_t, binary_t, triple_t, quadruple_t = findMultiple(single,binary,G,r_bin,simple_binary)
             single_t.savetxt(file_path+'.single')
@@ -151,14 +151,24 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
 
     if ('r_escape' in kwargs.keys()):
         rcut = kwargs['r_escape']
-        if ('e_escape' in kwargs.keys()): 
-            ecut = kwargs['e_escape']
-            single = esc_single.findEscaper(header.time, single, rcut, ecut)
-            binary = esc_binary.findEscaper(header.time, binary, rcut, ecut)
+
+        if (rcut == 'tidal'):
+            if (external_mode!='none'): 
+                tidal = result['tidal']
+                rcut, es_cut = tidal.calcTidalSphere(header.time, particle.mass, particle.r2, particle.pot_ext, rc, core.pos[-1], G);
+                single = esc_single.findEscaper(header.time, single, rcut, es_cut)
+                binary = esc_binary.findEscaper(header.time, binary, rcut, es_cut)
+            else:
+                raise ValueError('Escape radius is set to tidal radius but the external mode is off')
         else:
-            single = esc_single.findEscaper(header.time, single, rcut)
-            binary = esc_binary.findEscaper(header.time, binary, rcut)
-            #print('a',single.size,binary.size,esc_single.size,esc_binary.size)
+            if ('e_escape' in kwargs.keys()): 
+                es_cut = kwargs['e_escape']
+                single = esc_single.findEscaper(header.time, single, rcut, es_cut)
+                binary = esc_binary.findEscaper(header.time, binary, rcut, es_cut)
+            else:
+                single = esc_single.findEscaper(header.time, single, rcut)
+                binary = esc_binary.findEscaper(header.time, binary, rcut)
+                #print('a',single.size,binary.size,esc_single.size,esc_binary.size)
     
     #print('Lagrangian radius')
     lagr.calcOneSnapshot(header.time, single, binary, rc, average_mode)
@@ -207,6 +217,7 @@ def dataProcessList(file_list, read_flag, **kwargs):
     result['lagr']=LagrangianMultiple(**kwargs)
     result['esc_single']=SingleEscaper(**kwargs)
     result['esc_binary']=BinaryEscaper(**kwargs)
+    result['tidal']=Tidal(**kwargs)
 
     time_profile=dict()
     time_profile['read'] = 0.0
@@ -285,7 +296,7 @@ def parallelDataProcessList(file_list, n_cpu=int(0), read_flag=False, **kwargs):
     result_all=dict()
     for i in range(n_cpu):
         resi = result[i].get()[0]
-        for key in ['lagr','core','esc_single','esc_binary','bse_status']:
+        for key in ['lagr','core','esc_single','esc_binary','bse_status','tidal']:
             if (key in resi.keys()):
                 if (not key in result_all.keys()):
                     result_all[key]=[]

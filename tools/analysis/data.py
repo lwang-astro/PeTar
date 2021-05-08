@@ -129,20 +129,16 @@ class SimpleParticle(DictNpArrayMix):
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
     def calcR2(self):
-        """ calculate distance square, r2, and add it as a class member
+        """ calculate distance square, r2, and add/update it as a class member
         """
-        if (not 'r2' in self.__dict__.keys()): 
-            self.ncols += 1
-            self.keys.append(['r2',1])
-        self.r2 = vecDot(self.pos,self.pos)
+        r2 = vecDot(self.pos,self.pos)
+        self.addNewMember('r2',r2)
 
     def calcEkin(self):
-        """ calculate kinetic energy
+        """ calculate kinetic energy, ekin, and add/update it as a class member
         """
-        if (not 'ekin' in self.__dict__.keys()): 
-            self.ncols += 1
-            self.keys.append(['ekin',1])
-        self.ekin = 0.5*vecDot(self.vel,self.vel)*self.mass
+        ekin = 0.5*vecDot(self.vel,self.vel)*self.mass
+        self.addNewMember('ekin',ekin)
 
     def correctCenter(self, cm_pos, cm_vel):
         self.pos -= cm_pos
@@ -244,10 +240,8 @@ class Particle(SimpleParticle):
     def calcEtot(self):
         """ Calculate total energy and add it as the member, etot
         """
-        if (not 'etot' in self.__dict__.keys()): 
-            self.ncols += 1
-            self.keys.append(['etot',np.float64])
-        self.etot = self.ekin + self.mass*self.pot
+        etot = self.ekin + self.mass*self.pot
+        self.addNewMember('etot',etot)
 
 def calculateParticleCMDict(pcm, _p1, _p2):
     """ Calculate the center-of-the-mass of two particle sets
