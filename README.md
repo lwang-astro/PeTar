@@ -113,7 +113,7 @@ The options for configure can be found by
    
 8. Use stellar evolution
     ```
-    ./configure --with-interrupt=[bse]
+    ./configure --with-interrupt=[bse/mobse]
     ```
     Currently there are two options of stellar evolution packages based on SSE/BSE (Hurley et al. 2000, MNRAS, 315, 543; 2002, MNRAS, 329, 897):
     - bse: the updated SSE/BSE version from Banerjee et al. 2020, A&A, 639, A41.
