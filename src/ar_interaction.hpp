@@ -883,6 +883,10 @@ public:
                             //if (((ecc-ecc_bk)/(1-ecc)>0.01||(period-period_bk)/period>1e-2)) {
                             // kepler orbit to particles using the same ecc anomaly
                             _bin.calcParticles(gravitational_constant);
+                            p1->pos += _bin.pos;
+                            p2->pos += _bin.pos;
+                            p1->vel += _bin.vel;
+                            p2->vel += _bin.vel;
                             //}
                         }
                         // in case of disruption but no kick
@@ -898,6 +902,10 @@ public:
                             // kepler orbit to particles using the same ecc anomaly
                             //if ((ecc-ecc_bk)/ecc>1e-6) {
                             _bin.calcParticles(gravitational_constant);
+                            p1->pos += _bin.pos;
+                            p2->pos += _bin.pos;
+                            p1->vel += _bin.vel;
+                            p2->vel += _bin.vel;
                             //}
                         }
                     }
