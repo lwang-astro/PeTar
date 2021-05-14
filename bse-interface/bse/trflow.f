@@ -62,7 +62,7 @@
 *
 * If the star already fills its Roche lobe or will fill after peri-center, return one period
 *
-      IF(RSJ.GE.RL1.OR.SEMI*(1-ECC).LT.MAX(RSJ,RL1))THEN
+      IF(RSJ.GE.RL1.OR.SEMI*(1-ECC).LT.(RAD(I1)+RAD(I2)))THEN
          DTR = semi/aursun*sqrt(semi/(aursun*(MASS(I1)+MASS(I2))))
          DTR = DTR/1.0d6
 *         DTR = 0.D0
