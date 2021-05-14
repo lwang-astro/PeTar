@@ -147,12 +147,13 @@ class SimpleParticle(DictNpArrayMix):
 
     def toSkyCoord(self, **kwargs):
         """ generate astropy.coordinates.SkyCoord data
+            Be careful when external_mode is used, remember to use the keyword arguments pos_offset and vel_offset to add the center shift in the header of PeTar snapshot.
         Parameters
         -----------------
         kwargs: dict()
-            pos_offset: numpy.ndarray ([0,0,0]) floating with astropy.units
+            pos_offset: numpy.ndarray ([0.0,0.0,0.0])
                  position offset to add
-            vel_offset: numpy.ndarray ([0,0,0]) floating with astropy.units
+            vel_offset: numpy.ndarray ([0.0,0.0,0.0]) 
                  velocity offset to add
             pos_unit: astropy.units (units.pc)
                  position unit of the particle data
@@ -175,7 +176,6 @@ class SimpleParticle(DictNpArrayMix):
         from astropy.coordinates import ICRS, Galactic, Galactocentric, FK4, FK5  # Low-level frames
         from astropy.coordinates import Angle, Latitude, Longitude  # Angles
         from astropy.coordinates import CartesianDifferential
-        from astropy import SkyCoord
         import astropy.units as u
 
         cm_cor=np.zeros(6)
@@ -187,7 +187,7 @@ class SimpleParticle(DictNpArrayMix):
                 cm_cor[2] = pos_offset[2]
             else:
                 raise ValueError('pos_offset should be an array or a list with size of 3, given ', pos_offset)
-        if ('vel_offset' in kwargs.keys):
+        if ('vel_offset' in kwargs.keys()):
             vel_offset = kwargs['vel_offset']
             if(type(vel_offset)==np.ndarray) | (type(vel_offset)==list):
                 cm_cor[3] = vel_offset[0]
@@ -206,12 +206,12 @@ class SimpleParticle(DictNpArrayMix):
             if key in kwargs.keys():
                 parameter[key] = kwargs[key]
 
-        snap = SkyCoord(x=self.pos[:,0]*pos_unit+cm_cor[0],
-                        y=self.pos[:,1]*pos_unit+cm_cor[1],
-                        z=self.pos[:,2]*pos_unit+cm_cor[2],
-                        v_x=self.vel[:,0]*vel_unit+cm_cor[3],
-                        v_y=self.vel[:,1]*vel_unit+cm_cor[4],
-                        v_z=self.vel[:,2]*vel_unit+cm_cor[5],
+        snap = SkyCoord(x=(self.pos[:,0]+cm_cor[0])*pos_unit, 
+                        y=(self.pos[:,1]+cm_cor[1])*pos_unit, 
+                        z=(self.pos[:,2]+cm_cor[2])*pos_unit, 
+                        v_x=(self.vel[:,0]+cm_cor[3])*vel_unit,
+                        v_y=(self.vel[:,1]+cm_cor[4])*vel_unit,
+                        v_z=(self.vel[:,2]+cm_cor[5])*vel_unit,
                         frame='galactocentric', representation_type='cartesian', **parameters)
         return snap
         
