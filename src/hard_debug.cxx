@@ -158,7 +158,7 @@ int main(int argc, char **argv){
 #ifdef BSE
   std::string bse_name="BSE";
   std::string fsse_suffix=".sse";
-  std::string fbse_suffix=".sse";
+  std::string fbse_suffix=".bse";
 #elif MOBSE
   std::string bse_name="MOBSE";
   std::string fsse_suffix=".mosse";
