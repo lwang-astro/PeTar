@@ -144,6 +144,78 @@ class SimpleParticle(DictNpArrayMix):
         self.pos -= cm_pos
         self.vel -= cm_vel
 
+
+    def toSkyCoord(self, **kwargs):
+        """ generate astropy.coordinates.SkyCoord data
+        Parameters
+        -----------------
+        kwargs: dict()
+            pos_offset: numpy.ndarray ([0,0,0]) floating with astropy.units
+                 position offset to add
+            vel_offset: numpy.ndarray ([0,0,0]) floating with astropy.units
+                 velocity offset to add
+            pos_unit: astropy.units (units.pc)
+                 position unit of the particle data
+            vel_unit: astropy.units (units.pc/units.Myr)
+                 velocity unit of the particle data
+            galcen_distance: floating with length units (8.0*units.kpc [Galpy])
+                 galactic central distance of the Sun
+            z_sun: floating with length units (15.0*units.pc [Galpy])
+                 z direction distance of the Sun
+            galcen_v_sun: astropy.coordinates.CartesianDifferential ([10.0, 235.0, 7.0]*units.km/units.s [Galpy])
+                 velocity of the Sun
+
+        Return
+        ----------------
+        snap: astropy.coordinates.SkyCoord
+            snapshot data using SkyCoord
+        """
+        import astropy 
+        from astropy.coordinates import SkyCoord  # High-level coordinates
+        from astropy.coordinates import ICRS, Galactic, Galactocentric, FK4, FK5  # Low-level frames
+        from astropy.coordinates import Angle, Latitude, Longitude  # Angles
+        from astropy.coordinates import CartesianDifferential
+        from astropy import SkyCoord
+        import astropy.units as u
+
+        cm_cor=np.zeros(6)
+        if ('pos_offset' in kwargs.keys()):
+            pos_offset = kwargs['pos_offset']
+            if(type(pos_offset)==np.ndarray) | (type(pos_offset)==list):
+                cm_cor[0] = pos_offset[0]
+                cm_cor[1] = pos_offset[1]
+                cm_cor[2] = pos_offset[2]
+            else:
+                raise ValueError('pos_offset should be an array or a list with size of 3, given ', pos_offset)
+        if ('vel_offset' in kwargs.keys):
+            vel_offset = kwargs['vel_offset']
+            if(type(vel_offset)==np.ndarray) | (type(vel_offset)==list):
+                cm_cor[3] = vel_offset[0]
+                cm_cor[4] = vel_offset[1]
+                cm_cor[5] = vel_offset[2]
+            else:
+                raise ValueError('vel_offset should be an array or a list with size of 3, given ', vel_offset)
+
+        pos_unit = u.pc
+        if ('pos_unit' in kwargs.keys()): pos_unit = kwargs['pos_unit']
+        vel_unit = u.pc/u.Myr
+        if ('vel_unit' in kwargs.keys()): vel_unit = kwargs['vel_unit']
+
+        parameters={'galcen_distance':8.0*u.kpc, 'z_sun':15.*u.pc, 'galcen_v_sun':CartesianDifferential([10.0,235.,7.]*u.km/u.s)}
+        for key in parameters.keys():
+            if key in kwargs.keys():
+                parameter[key] = kwargs[key]
+
+        snap = SkyCoord(x=self.pos[:,0]*pos_unit+cm_cor[0],
+                        y=self.pos[:,1]*pos_unit+cm_cor[1],
+                        z=self.pos[:,2]*pos_unit+cm_cor[2],
+                        v_x=self.vel[:,0]*vel_unit+cm_cor[3],
+                        v_y=self.vel[:,1]*vel_unit+cm_cor[4],
+                        v_z=self.vel[:,2]*vel_unit+cm_cor[5],
+                        frame='galactocentric', representation_type='cartesian', **parameters)
+        return snap
+        
+
 class Particle(SimpleParticle):
     """ Particle class 
         The particle data of PeTar. Depending on the compile configuration of PeTar, 
