@@ -3,6 +3,7 @@ import collections
 from scipy import spatial as sp
 from .base import *
 from .bse import *
+from .functions import *
 
 G_MSUN_PC_MYR=0.00449830997959438 # Msun, pc, myr
 G_HENON=1 # Henon unit

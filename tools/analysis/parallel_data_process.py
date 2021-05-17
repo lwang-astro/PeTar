@@ -5,6 +5,7 @@ from .data import *
 from .lagrangian import *
 from .escaper import *
 from .bse import *
+from .functions import *
 import time
 import os
 
