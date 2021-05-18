@@ -207,7 +207,7 @@ public:
                      adjust_group_write_option(input_par_store, 1, "write-group-info", "print new and end of groups: 0: no print; 1: print to file [data filename prefix].group.[MPI rank] if -w >0"),
 #endif
                      append_switcher(input_par_store, 1, "a", "data output style, 0: create new output files and overwrite existing ones except snapshots; 1: append new data to existing files"),
-                     fname_snp(input_par_store, "data", "f", "Prefix filename of dataset: [prefix].[File ID]"),
+                     fname_snp(input_par_store, "data", "f", "The prefix of filenames for output data: [prefix].**"),
                      fname_par(input_par_store, "input.par", "p", "Input parameter file (this option should be used first before any other options)"),
                      fname_inp(input_par_store, "__NONE__", "snap-filename", "Input data file", NULL, false),
                      print_flag(false), update_changeover_flag(false), update_rsearch_flag(false) {}
