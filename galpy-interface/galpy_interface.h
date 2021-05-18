@@ -133,7 +133,7 @@ public:
                     std::cout<<"Galpy options:"<<std::endl;
                     input_par_store.printHelp(std::cout, 2, 10, 23);
                     std::cout<<"*** PS: for --galpy-type-arg: the parameters to set up a set of potentials fixed at the center of the galactic reference frame.\n"
-                             <<"        This is for a quick set-up of potentials. For a more complex and flexible set of ptentials, use --galpy-conf-file.\n"
+                             <<"        This is for a quick set-up of potentials. For a more complex and flexible set of potentials, use --galpy-conf-file.\n"
                              <<"        The format for a combination of the types and arguments of potentials have two styles: (no space in the middle):\n"
                              <<"             1) [type1]:[arg1-1],[arg1-2],**|[type2]:[arg2-1],[arg2-2],**\n"
                              <<"             2) [type1],[type2],..:[arg1-1],[arg1-2],[arg2-1],**\n"
@@ -179,8 +179,8 @@ public:
                              <<"             2nd and 3rd lines are types and arguments of each potential, similar to those in --galpy-type-arg.\n"
                              <<"             The number of items in the 2nd line must be the same as Number_of_types.\n"
                              <<"\n"
-                             <<"             For example, to add the MWPotential2014 fixed at the galactic center and a Plummer sphere following the motion of the particle system,\n"
-                             <<"             and then, remove the plummer model after 1.0 Galpy time unit, the configure file looks like:\n"
+                             <<"             For example, to add the MWPotential2014 fixed at the galactic center and a Plummer potential following the motion of the particle system,\n"
+                             <<"             and then, remove the Plummer potential after 1.0 Galpy time unit, the configure file looks like:\n"
                              <<"                 0.0 2                           #[Update_time N_sets]\n"
                              <<"                 3 0 0.0 0.0 0.0 0.0 0.0 0.0     #[N_types, Mode, x, y, z, vx, vy, vz]\n"
                              <<"                 15 5 9                          #[type1, type2, type3 (MWPotential2014)]\n"
