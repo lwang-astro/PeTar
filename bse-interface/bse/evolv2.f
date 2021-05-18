@@ -1549,7 +1549,7 @@
                   CALL gntage(mcx,mt2,kst,zpars,mass0(j2),aj(j2))
                   epoch(j2) = tphys + dtm - aj(j2)
 *
-                  jp = MIN(80,jp + 1)
+                  jp = MIN(jpmax,jp + 1)
                   bpp(jp,1) = tphys
                   bpp(jp,2) = mass(j1)
                   bpp(jp,3) = mt2
