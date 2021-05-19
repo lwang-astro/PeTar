@@ -232,7 +232,7 @@ build/petar.simd.test: simd_test.cxx $(OBJS) |build
 	$(CXX) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(CUDAFLAGS) $(MT_FLAGS) $^ -o $@  $(CXXLIBS)
 
 build/petar.tt.test: tidal_tensor_test.cxx |build
-	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS)  $< -o $@  $(CXXLIBS)
+	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $< -o $@  $(CXXLIBS)
 
 build/petar.io.test: io_test.cxx |build
 	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS)  $< -o $@  $(CXXLIBS)
