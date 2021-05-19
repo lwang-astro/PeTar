@@ -97,6 +97,7 @@ extern "C" {
         if(ptr->my_rank==0) std::cout<<"PETAR: recommit_parameters start\n";
 #endif
         ptr->initialParameters();
+        ptr->initial_step_flag = false;
 
         // set stopping condtions support
         set_support_for_condition(COLLISION_DETECTION);
