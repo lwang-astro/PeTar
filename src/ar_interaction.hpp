@@ -437,7 +437,7 @@ public:
     }
 
     //! calculate perturbation from binary tree
-    static Float calcPertFromBinary(const AR::BinaryTree<PtclHard>& _bin) {
+    static Float calcPertFromBinary(const COMM::Binary& _bin) {
         Float apo = _bin.semi*(1.0+_bin.ecc);
         Float apo2 = apo*apo;
 #ifdef AR_SLOWDOWN_PERT_R4

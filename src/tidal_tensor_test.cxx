@@ -246,11 +246,17 @@ int main(int argc, char **argv){
     }
 #endif
 
+    // print acc at box
+    std::cout<<"Original acc at tensor box:\n";
+    for (int i=0; i<n_tt; i++) 
+        std::cout<<"I"<<i<<" "<<ptcl_tt[i].acc<<std::endl;
+
     TidalTensor::subtractCMForce(ptcl_tt, ptcl_binary_cm);
     TidalTensor tt;
     tt.fit(ptcl_tt, ptcl_binary_cm, r_scale);
     
     // print matrix
+    std::cout<<"Tidal tensor:\n";
     tt.print(std::cout,PRINT_WIDTH);
 
     // evolve force at box and compare with original force;

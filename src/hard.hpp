@@ -244,6 +244,12 @@ public:
         time_origin = _time_origin;
         ptcl_origin = _ptcl;
 
+        //for (int i=0; i<_n_ptcl; i++) {
+        //    if (ptcl_origin[i].id==301) {
+        //        DATADUMP((std::string("dump_301")+std::to_string(_time_origin)).c_str());
+        //    }
+        //}
+
 //#ifdef HARD_DEBUG
         if (_n_ptcl>400) {
             std::cerr<<"Large cluster, n_ptcl="<<_n_ptcl<<" n_group="<<_n_group<<std::endl;
@@ -2529,12 +2535,34 @@ public:
 
             // in isolated binary case, if the slowdown period can be larger than tree step * N_step_per_orbit, it is fine without tidal tensor
             if (_n_ptcl==2&&stable_checker.stable_binary_tree.size()==1) {
-                // the criterion is: period < 0.5*pi^2 * slowdown_pert_ratio_pef * R_search/G(m1+m2) / (dt_soft*n_step_per_orbit)
                 auto& bin = *stable_checker.stable_binary_tree[i];
                 const PS::S32 n_members = bin.getMemberN();
-                PS::F64 pot_ch_inv = bin.r_search*bin.r_search*bin.r_search/(ap_manager.gravitational_constant*bin.mass);
+
+                /* old criterion
+                   P k / dt > ns
+                   P^2/a^3 = 4 pi^2 / (G (m1 + m2))
+                   k = kr pert_in/pert_out  = rs^3/a^3 kr (assume no mass and ecc dependence)
+                   => P < 4pi^2 kr rs^3 / (G (m1 + m2) dt ns)  
+
+                   //PS::F64 pot_ch_inv = bin.r_search*bin.r_search*bin.r_search/(ap_manager.gravitational_constant*bin.mass);
+                   //if (bin.period < 4.93480220054 * manager->ar_manager.slowdown_pert_ratio_ref * pot_ch_inv / dt_nstep) {
+                */
+                
+                // directly estimate slowdown based on perturbation calculation method for more general cases
+                AR::SlowDown sd;
+                sd.initialSlowDownReference(manager->ar_manager.slowdown_pert_ratio_ref,manager->ar_manager.slowdown_timescale_max);
+                sd.pert_in = manager->ar_manager.interaction.calcPertFromBinary(bin);
+                sd.pert_out = manager->ar_manager.interaction.calcPertFromMR(bin.r_search, bin.mass, 1.0/Ptcl::mean_mass_inv);
+                sd.period = bin.period;
+                // here use twice to ensure the period*sd can be larger than dt_nstep
+                sd.timescale = 2*manager->ar_manager.slowdown_timescale_max;
+                sd.calcSlowDownFactor();
+
                 PS::F64 dt_nstep = _dt_tree*manager->n_step_per_orbit;
-                if (bin.period < 4.93480220054 * manager->ar_manager.slowdown_pert_ratio_ref * pot_ch_inv / dt_nstep) {
+
+                //std::cerr<<"GROUP_SEL_RECORD: "<<sd.pert_in<<" "<<sd.pert_out<<" "<<sd.getSlowDownFactor()<<" "<<sd.getSlowDownFactorOrigin()<<" "<<bin.m1<<" "<<bin.m2<<" "<<bin.semi<<" "<<bin.ecc<<" "<<bin.period<<" "<<dt_nstep<<" "<<(bin.period*sd.getSlowDownFactor() > dt_nstep)<<std::endl;
+
+                if (bin.period*sd.getSlowDownFactor() > dt_nstep) {
                     // Set member particle type, backup mass, collect member particle index to group_ptcl_adr_list
                     //use _ptcl_in_cluster as the first particle address as reference to calculate the particle index.
                     struct { Tptcl* adr_ref; PS::S32* group_list; PS::S32 n; PS::S64 pcm_id; ChangeOver* changeover_cm; PS::F64 rsearch_cm; bool changeover_update_flag;}

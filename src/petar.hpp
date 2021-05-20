@@ -3396,12 +3396,12 @@ public:
         /// calculate tree force with linear cutoff, save to system_soft.acc
         treeSoftForce();
 
+        /// force from external potential
+        externalForce();
+
         // >5 correct change over
         /// correct system_soft.acc with changeover, using system_hard and system_soft particles
         treeForceCorrectChangeover();
-
-        /// force from external potential
-        externalForce();
 
         // correct force due to the change over update
         correctForceChangeOverUpdate();
@@ -3589,12 +3589,14 @@ public:
             /// calculate tree force with linear cutoff, save to system_soft.acc
             treeSoftForce() ;
 
-            // >5 correct change over and potential energy due to mass change
-            /// correct system_soft.acc with changeover, using system_hard and system_soft particles
-            treeForceCorrectChangeover();
-
             /// force from external potential
             externalForce();
+
+            // >5 correct change over and potential energy due to mass change
+            /// correct system_soft.acc with changeover, using system_hard and system_soft particles
+            /// substract tidal tensor measure point force
+            treeForceCorrectChangeover();
+
 
 #ifdef KDKDK_4TH
             // only do correction at middle step
