@@ -87,8 +87,9 @@ public:
 
     //! read class data to file with binary format
     /*! @param[in] _fp: FILE type file for reading
+      @param[in] _version: version of parameter file, default: 0
      */
-    void readBinary(FILE *_fin) {
+    void readBinary(FILE *_fin, int _version=0) {
         size_t size = sizeof(*this) - sizeof(ap_manager) - sizeof(h4_manager) - sizeof(ar_manager);
         size_t rcount = fread(this, size, 1, _fin);
         if (rcount<1) {
@@ -97,7 +98,7 @@ public:
         }
         ap_manager.readBinary(_fin);
         h4_manager.readBinary(_fin);
-        ar_manager.readBinary(_fin);
+        ar_manager.readBinary(_fin, _version);
     }
 
     //! print parameters
@@ -371,7 +372,7 @@ public:
             // initialization 
             sym_int.initialIntegration(0.0);
             sym_int.info.time_offset = time_origin;
-            sym_int.info.calcDsAndStepOption(ar_manager.step.getOrder(),  ar_manager.interaction.gravitational_constant); 
+            sym_int.info.calcDsAndStepOption(ar_manager.step.getOrder(),  ar_manager.interaction.gravitational_constant, ar_manager.ds_scale); 
 
             // calculate c.m. changeover
             auto& pcm = sym_int.particles.cm;

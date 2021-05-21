@@ -23,6 +23,8 @@ int main(int argc, char **argv){
   PS::F64 e_err_hard = 1e-4;
   PS::S32 dt_min_power = -1;
   PS::F64 dt_max = -1;
+  PS::F64 ds_scale = -1.0;
+  PS::S32 par_version = -1;
   PS::S32 step_arc_limit = 100000;
   std::string filename="hard_dump";
   std::string fhardpar="input.par.hard";
@@ -42,7 +44,7 @@ int main(int argc, char **argv){
   bool soft_pert_flag=true;
 #endif
 
-  while ((arg_label = getopt(argc, argv, "k:E:A:a:D:d:e:s:m:b:B:p:I:i:Sh")) != -1)
+  while ((arg_label = getopt(argc, argv, "k:E:A:a:D:d:e:s:c:m:b:B:p:I:v:i:Sh")) != -1)
     switch (arg_label) {
     case 'k':
         slowdown_factor = atof(optarg);
@@ -70,6 +72,9 @@ int main(int argc, char **argv){
     case 's':
         step_arc_limit = atoi(optarg);
         break;
+    case 'c':
+        ds_scale = atof(optarg);
+        break;
     case 'm':
         mode = atoi(optarg);
         break;
@@ -96,6 +101,9 @@ int main(int argc, char **argv){
     case 'B':
         fbserandpar = optarg;
         break;
+    case 'v':
+        par_version = atoi(optarg);
+        break;
 #endif
     case 'h':
         std::cout<<"petar.hard.debug [options] [hard_manager (defaulted: input.par.hard)] [cluster_data] (defaulted: hard_dump)\n"
@@ -105,6 +113,7 @@ int main(int argc, char **argv){
                  <<"    -e [double]:  hard energy limit\n"
 #endif
                  <<"    -s [int]:     AR step count limit\n"
+                 <<"    -c [double]:  AR step scaling factor\n"
                  <<"    -E [double]:  Eta 4th for hermite \n"
                  <<"    -A [double]:  Eta 2nd for hermite \n"
                  <<"    -a [double]:  AR energy limit \n"
@@ -123,6 +132,7 @@ int main(int argc, char **argv){
 #ifdef SOFT_PERT
                  <<"    -S:           Suppress soft perturbation (tidal tensor)\n"
 #endif
+                 <<"    -v [int]:     version of hard parameters: 0: default, 1: mssing ds_scale in ar_manager: 0\n"
                  <<"    -h:           help\n";
         return 0;
     default:
@@ -145,7 +155,8 @@ int main(int argc, char **argv){
       fprintf(stderr,"Error: Cannot open file %s.\n", fhardpar.c_str());
       abort();
   }
-  hard_manager.readBinary(fpar_in);
+  if (par_version<0) par_version = 0;
+  hard_manager.readBinary(fpar_in, par_version);
   fclose(fpar_in);
 
 #ifdef STELLAR_EVOLUTION
@@ -229,6 +240,11 @@ int main(int argc, char **argv){
   if(dt_min_power>0&&dt_max>0) {
       std::cerr<<"New time step max: "<<dt_max<<"   min power index: "<<dt_min_power<<std::endl;
       hard_manager.setDtRange(dt_max, dt_min_power);
+  }
+
+  if(ds_scale>0) {
+      std::cerr<<"New ds scale: "<<ds_scale<<std::endl;
+      hard_manager.ar_manager.ds_scale = ds_scale;
   }
 
   if(e_err_ar>0) {
