@@ -58,6 +58,7 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 }
 #endif
 
+#include<get_version.hpp>
 #include<particle_simulator.hpp>
 #include"hard_assert.hpp"
 #include"soft_ptcl.hpp"
@@ -2335,6 +2336,7 @@ public:
             <<"  ██║     ███████╗   ██║   ██║  ██║██║  ██║\n"
             <<"  ╚═╝     ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝\n"
             <<" ******************************************\n"
+            <<"Version: "<<GetVersion()
             <<std::endl;
     }
 

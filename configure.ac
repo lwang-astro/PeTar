@@ -402,6 +402,15 @@ AC_PREFIX_PROGRAM(petar)
 # Checks for library functions.
 AC_CHECK_FUNCS([pow sqrt])
 
+# version
+AC_CHECK_FILE([$sdar_prefix/VERSION],
+	      [sdar_version=`cat $sdar_prefix/VERSION`],
+	      [AC_MSG_FAILURE([can't find the file VERSION in SDAR directory, please update SDAR])])
+AC_CHECK_FILE([VERSION],
+	      [petar_version=`cat VERSION`],
+	      [AC_MSG_FAILURE([can't find the file VERSION])])
+VERSION=$petar_version'_'$sdar_version
+
 AC_SUBST([with_arch])
 AC_SUBST([use_simd])
 AC_SUBST([use_simd_64])
@@ -433,9 +442,11 @@ AC_SUBST([INCLUDE])
 AC_SUBST([PROG_NAME])
 AC_SUBST([CXX])
 AC_SUBST([CXXNOMPI])
+AC_SUBST([VERSION])
 
 AC_MSG_NOTICE([----------------------Configure Summary--------------------])
 AC_MSG_NOTICE([--Features:])
+AC_MSG_NOTICE([     Version:           $VERSION])
 AC_MSG_NOTICE([     Using MPI:         $use_mpi])
 AC_MSG_NOTICE([     Using GPU:         $use_cuda])
 AC_MSG_NOTICE([     Using arch:        $with_arch])
@@ -479,5 +490,6 @@ AC_MSG_NOTICE([-----------------------------------------------------------])
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_FILES([bse-interface/Makefile])
 AC_CONFIG_FILES([galpy-interface/Makefile])
+AC_CONFIG_FILES([src/get_version.hpp])
 
 AC_OUTPUT
