@@ -37,10 +37,11 @@ if __name__ == '__main__':
         print("  -A(--append): append new data to existing data files")
         print("  -r(--read-data): read existing single, binary and core data to avoid expensive KDTree construction, no argument, disabled in default")
         print("     --r-escape: if the value is 'tidal', calculate the tidal radius (only work when external-mode is on); otherwise it is a constant escape distance criterion. If not given, it is 20*half-mass radius")
-        print("     --e-escape: specific energy criterion for escapers (etot > mass * e-escape), only work together with --r-escape!='tidal', in default, it is 0.0")
+        print("     --e-escape: potential criterion for escapers: etot > mass * e-escape (0.0)")
         print("  -i(--interrupt-mode): the interruption mode used in petar, choices: no, base, bse, mobse (no)")
         print("  -t(--external-mode): external mode used in petar, choices: galpy, no (no)")
         print("  -s(--snapshot-format): snapshot data format: binary, ascii (ascii)")
+        print("  -e(--calc-energy): enable to calculate potential energy and virial ratio of different lagrangian radii")
         print("  -n(--n-cpu): number of CPU threads for parallel processing (all threads)")
         print("     --add-star-type: calculate Lagrangian radii and properties for specific types of stars.")
         print("          This argument contain a list of type names, separated by ',' (no space)")
@@ -92,8 +93,8 @@ if __name__ == '__main__':
         print("                2) when data are written in BINARY format, '-s binary' should be used.")
         print("                3) '--add-star-type' only works when the interrupt mode is 'bse' or 'mobse'.")
     try:
-        shortargs = 'p:m:G:b:MBAa:rt:i:s:n:h'
-        longargs = ['mass-fraction=','multiple','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','snapshot-format=','add-star-type=','n-cpu=','help']
+        shortargs = 'p:m:G:b:MBAea:rt:i:s:n:h'
+        longargs = ['mass-fraction=','multiple','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','calc-energy','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','snapshot-format=','add-star-type=','n-cpu=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -117,6 +118,8 @@ if __name__ == '__main__':
                 kwargs['average_mode'] = arg
             elif opt in ('-A','--append'):
                 write_option='a'
+            elif opt in ('-e','--calc-energy'):
+                kwargs['calc_energy']=True
             elif opt in ('-n','--n-cpu'):
                 n_cpu = int(arg)
             elif opt in ('-i','--interrupt-mode'):

@@ -156,6 +156,11 @@ class Lagrangian(DictNpArrayMix):
         n (2D,n_frac): number of particles referring to Lagrangian radii
         vel   (LagrangianVelocity): average velocity referring to Lagrangian radii
         sigma (LagrangianVelocity): velocity dispersion referring to Lagrangian radii
+
+        Additional members ff the keyword argument 'calc_energy' is true:
+          epot (2D, n_frac): potential energy
+          vr (2D, n_frac); virial ratio -(2*ekin/epot); notice that here the external potential energy is reduced by half.
+          *epot_ext (2D, n_frac): external potential energy (exists if the keyword argument 'external_mode' is switch on)
     """
 
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
@@ -166,13 +171,29 @@ class Lagrangian(DictNpArrayMix):
         keyword arguments:
             mass_fraction: 1D numpy.ndarray (np.array([0.1, 0.3, 0.5, 0.7, 0.9]))
                 An array to indicate the mass fractions to calculate lagrangian radii.
+            calc_energy: bool (False)
+                If true, add kinetic, potential energies and virial ratio calculation
+            external_mode: string (none)
+                PeTar external mode (set in configure): galpy, none 
+                If it is not none, epot_ext will be added if calc_energy=True
         """
         m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
+        calc_energy=False
+        if ('calc_energy' in kwargs.keys()): calc_energy=kwargs['calc_energy']
+        external_mode='none'
+        if ('external_mode' in kwargs.keys()): external_mode=kwargs['external_mode']
+        
         n_frac = m_frac.size + 1
         keys = [['r', (np.float64, n_frac)],['m', (np.float64, n_frac)],['n', (np.int64, n_frac)], ['vel', LagrangianVelocity], ['sigma', LagrangianVelocity]]
+        if (calc_energy):
+            keys = keys + [['epot',(np.float64, n_frac)], ['vr',(np.float64, n_frac)]]
+            if (external_mode!='none'):
+                keys = keys + [['epot_ext',(np.float64, n_frac)]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
         self.initargs['mass_fraction'] = m_frac
+        self.initargs['calc_energy'] = calc_energy
+        self.initargs['external_mode'] = external_mode
 
         #keys = [['r', (np.float64, n_frac)],['m', (np.float64, n_frac)],['n', (np.float64, n_frac)]] # radius, mass, number
         #DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -265,6 +286,8 @@ class Lagrangian(DictNpArrayMix):
         shell_mode = True if (_mode == 'shell') else False
 
         mass_fraction = self.initargs['mass_fraction']
+        calc_energy = self.initargs['calc_energy']
+        external_mode = self.initargs['external_mode']
         n_frac = mass_fraction.size+1
 
         def find_mass_index(_mass_cum,mass_fraction):
@@ -373,14 +396,36 @@ class Lagrangian(DictNpArrayMix):
                 slagr.append(np.average(m[0:nc] * (vlst[k][0:nc] - vave[k][-1])**2) / mc if (nc>0) else 0.0)
                 sigma[k] = np.array(slagr)
 
+            sigma_all = sigma[0]+sigma[1]+sigma[2]
             self.sigma.x = np.append(self.sigma.x, [np.sqrt(sigma[0])], axis=0)
             self.sigma.y = np.append(self.sigma.y, [np.sqrt(sigma[1])], axis=0)
             self.sigma.z = np.append(self.sigma.z, [np.sqrt(sigma[2])], axis=0)
-            self.sigma.abs= np.append(self.sigma.abs, [np.sqrt(sigma[0]+sigma[1]+sigma[2])], axis=0)
+            self.sigma.abs= np.append(self.sigma.abs, [np.sqrt(sigma_all)], axis=0)
             self.sigma.rad = np.append(self.sigma.rad, [np.sqrt(sigma[3])], axis=0)
             self.sigma.tan = np.append(self.sigma.tan, [np.sqrt(sigma[4]+sigma[5]+sigma[6])], axis=0)
             self.sigma.rot = np.append(self.sigma.rot, [np.sqrt(sigma[7])], axis=0)
-            
+
+            if (calc_energy):
+                epot = []
+                if (shell_mode):
+                    epot = [np.sum(_particle.pot[n_offset[i]:n_offset[i+1]] * _particle.mass[n_offset[i]:n_offset[i+1]]) if (n_offset[i]<n_offset[i+1]) else 0.0 for i in range(mass_fraction.size)]
+
+                else:
+                    epot = [np.sum(_particle.pot[:n_offset[i+1]] * _particle.mass[:n_offset[i+1]]) if (n_offset[i+1]>0) else 0.0 for i in range(mass_fraction.size)]
+
+                epot.append(np.sum(_particle.pot[:nc]*_particle.mass[:nc]  if (nc>0) else 0.0))
+                ekin = sigma_all*np.append(mlagr,mc)*np.append(nlagr,nc)
+                epot = np.array(epot)
+                self.epot = np.append(self.epot, [epot], axis=0)
+                self.vr = np.append(self.vr, [-2.0*ekin/epot], axis=0)
+                if (external_mode != 'none'):
+                    epot_ext = []
+                    if (shell_mode):
+                        epot_ext = [np.sum(_particle.pot_ext[n_offset[i]:n_offset[i+1]] * _particle.mass[n_offset[i]:n_offset[i+1]]) if (n_offset[i]<n_offset[i+1]) else 0.0 for i in range(mass_fraction.size)]
+                    else:
+                        epot_ext = [np.sum(_particle.pot_ext[:n_offset[i+1]] * _particle.mass[:n_offset[i+1]]) if (n_offset[i+1]>0) else 0.0 for i in range(mass_fraction.size)]
+                    epot_ext.append(np.sum(_particle.pot_ext[:nc]*_particle.mass[:nc]  if (nc>0) else 0.0))
+                    self.epot_ext = np.append(self.epot_ext, [np.array(epot_ext)], axis=0)
             return rlagr
 
 class LagrangianMultiple(DictNpArrayMix):
@@ -485,8 +530,16 @@ class LagrangianMultiple(DictNpArrayMix):
         self.time = np.append(self.time, time)
         single_sim = SimpleParticle(single)
         single_sim.calcR2()
+        single_sim.addNewMember('pot',single.pot)
+        if (self.initargs['external_mode']!='none'):
+            single_sim.addNewMember('pot_ext',single.pot_ext)
         binary_sim = SimpleParticle(binary)
         binary_sim.calcR2()
+        binary.calcPot()
+        binary_sim.addNewMember('pot',binary.pot)
+        if (self.initargs['external_mode']!='none'):
+            binary.calcPotExt()
+            binary_sim.addNewMember('pot_ext',binary.pot_ext)
         if len(self.initargs['add_star_type'])>0:
             single_sim.addNewMember('type1',single.star.type)
             single_sim.addNewMember('m1',single.mass)

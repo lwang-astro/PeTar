@@ -516,6 +516,13 @@ class Binary(SimpleParticle):
         pot = (m_b2*pot_b1 + m_b1*pot_b2)/self.mass
         self.addNewMember('pot',pot)
 
+    def calcPotExt(self):
+        """ Calculate external potential of c.m., pot_ext, and add it as a member
+        """
+        pot_ext = (self.p1.mass*self.p1.pot_ext + self.p2.mass*self.p2.pot_ext)/self.mass
+        self.addNewMember('pot_ext',pot_ext)
+
+
     def generateBinaryID(self):
         """ Use CantorPairing to map two components id to one binary id
             Add new member bid 

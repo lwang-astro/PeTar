@@ -6,6 +6,7 @@ from .lagrangian import *
 from .escaper import *
 from .bse import *
 from .functions import *
+from .external import *
 import time
 import os
 
@@ -148,28 +149,34 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         find_pair_time = read_time
         get_density_time = read_time
         center_and_r2_time = read_time
-    
+
+    # calculate central external potential and subtract that from particle pot_ext
+    pot_ext = 0
+    if (external_mode != 'none'):
+        pot_ext = calcCenterPotExt(particle, rc)
+        single.pot -= pot_ext
+        single.pot_ext -= pot_ext
+        binary.p1.pot -= pot_ext
+        binary.p2.pot -= pot_ext
+        binary.p1.pot_ext -= pot_ext
+        binary.p2.pot_ext -= pot_ext
 
     if ('r_escape' in kwargs.keys()):
         rcut = kwargs['r_escape']
+        es_cut = 0
 
         if (rcut == 'tidal'):
             if (external_mode!='none'): 
                 tidal = result['tidal']
-                rcut, es_cut = tidal.calcTidalSphere(header.time, particle.mass, particle.r2, particle.pot_ext, rc, core.pos[-1], G);
-                single = esc_single.findEscaper(header.time, single, rcut, es_cut)
-                binary = esc_binary.findEscaper(header.time, binary, rcut, es_cut)
+                r_gal = np.sqrt(np.sum(core.pos[-1]*core.pos[-1]));
+                rcut = tidal.calcTidalSphere(header.time, particle.mass, particle.r2, pot_ext, r_gal, G);
             else:
                 raise ValueError('Escape radius is set to tidal radius but the external mode is off')
-        else:
-            if ('e_escape' in kwargs.keys()): 
-                es_cut = kwargs['e_escape']
-                single = esc_single.findEscaper(header.time, single, rcut, es_cut)
-                binary = esc_binary.findEscaper(header.time, binary, rcut, es_cut)
-            else:
-                single = esc_single.findEscaper(header.time, single, rcut)
-                binary = esc_binary.findEscaper(header.time, binary, rcut)
-                #print('a',single.size,binary.size,esc_single.size,esc_binary.size)
+        if ('e_escape' in kwargs.keys()): 
+            es_cut = kwargs['e_escape']
+
+        single = esc_single.findEscaper(header.time, single, rcut, es_cut)
+        binary = esc_binary.findEscaper(header.time, binary, rcut, es_cut)
     
     #print('Lagrangian radius')
     lagr.calcOneSnapshot(header.time, single, binary, rc, average_mode)
