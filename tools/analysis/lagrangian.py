@@ -478,11 +478,20 @@ class LagrangianMultiple(DictNpArrayMix):
         keyword arguments:
             mass_fraction: 1D numpy.ndarray (np.array([0.1, 0.3, 0.5, 0.7, 0.9]))
                 An array to indicate the mass fractions to calculate lagrangian radii.
+            calc_energy: bool (False)
+                If true, add kinetic, potential energies and virial ratio calculation
+            external_mode: string (none)
+                PeTar external mode (set in configure): galpy, none 
+                If it is not none, epot_ext will be added if calc_energy=True
             add_star_type: list of string ([])
                 An array containing the star type names to calculate additional Lagrangian properties for specific star types.
         """
         m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
+        calc_energy=False
+        if ('calc_energy' in kwargs.keys()): calc_energy=kwargs['calc_energy']
+        external_mode='none'
+        if ('external_mode' in kwargs.keys()): external_mode=kwargs['external_mode']
 
         keys=[['time',np.float64], ['single',Lagrangian], ['binary', Lagrangian], ['all', Lagrangian]]
         add_star_type=[]
@@ -493,6 +502,8 @@ class LagrangianMultiple(DictNpArrayMix):
 
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
         self.initargs['mass_fraction'] = m_frac
+        self.initargs['calc_energy'] = calc_energy
+        self.initargs['external_mode'] = external_mode
         self.initargs['add_star_type'] = add_star_type
 
         #DictNpArrayMix.__init__(self, [['time',np.float64]], _dat, _offset, _append, **kwargs)
