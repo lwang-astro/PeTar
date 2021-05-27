@@ -1,6 +1,7 @@
 # BSE data interface
 
 from .base import *
+from .functions import *
 
 BSE_STAR_TYPE_INDEX={'LMS':0, 'MS':1, 'HG':2, 'GB':3, 'CHeB':4, 
                      'FAGB':5, 'SAGB':6, 'HeMS':7, 'HeHG':8, 'HeGB':9, 
