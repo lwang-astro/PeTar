@@ -263,7 +263,7 @@ int main(int argc, char** argv)
 #endif
     hard_manager.h4_manager.step.eta_4th = eta;
     hard_manager.h4_manager.step.eta_2nd = 0.01*eta;
-    hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, rout);
+    hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, rout, 1.0);
     hard_manager.ar_manager.energy_error_relative_max = 1e-8;
     hard_manager.ar_manager.step_count_max = 1e6;
     // set symplectic order

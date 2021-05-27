@@ -3242,7 +3242,7 @@ public:
 #endif
         hard_manager.h4_manager.step.eta_4th = input_parameters.eta.value;
         hard_manager.h4_manager.step.eta_2nd = 0.01*input_parameters.eta.value;
-        hard_manager.h4_manager.step.calcAcc0OffsetSq(mass_average, r_out);
+        hard_manager.h4_manager.step.calcAcc0OffsetSq(mass_average, r_out, input_parameters.gravitational_constant.value);
         hard_manager.ar_manager.energy_error_relative_max = input_parameters.e_err_ar.value;
         hard_manager.ar_manager.step_count_max = input_parameters.step_limit_ar.value;
         hard_manager.ar_manager.step.initialSymplecticCofficients(-6);
