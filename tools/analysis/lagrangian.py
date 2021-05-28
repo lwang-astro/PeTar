@@ -113,6 +113,54 @@ class Core(DictNpArrayMix):
         """
         self.time = np.append(self.time, time)
 
+    def toSkyCoord(self, **kwargs):
+        """ generate astropy.coordinates.SkyCoord data in galactocentric frame
+
+        Parameters
+        -----------------
+        kwargs: dict()
+            pos_unit: astropy.units (units.pc)
+                 position unit of the particle data
+            vel_unit: astropy.units (units.pc/units.Myr)
+                 velocity unit of the particle data
+            galcen_distance: floating with length units (8.0*units.kpc [Galpy])
+                 galactic central distance of the Sun
+            z_sun: floating with length units (15.0*units.pc [Galpy])
+                 z direction distance of the Sun
+            galcen_v_sun: astropy.coordinates.CartesianDifferential ([10.0, 235.0, 7.0]*units.km/units.s [Galpy])
+                 velocity of the Sun
+
+        Return
+        ----------------
+        core_g: astropy.coordinates.SkyCoord
+            core c.m. data using SkyCoord
+        """
+        import astropy 
+        from astropy.coordinates import SkyCoord  # High-level coordinates
+        from astropy.coordinates import ICRS, Galactic, Galactocentric, FK4, FK5  # Low-level frames
+        from astropy.coordinates import Angle, Latitude, Longitude  # Angles
+        from astropy.coordinates import CartesianDifferential
+        import astropy.units as u
+
+        pos_unit = u.pc
+        if ('pos_unit' in kwargs.keys()): pos_unit = kwargs['pos_unit']
+        vel_unit = u.pc/u.Myr
+        if ('vel_unit' in kwargs.keys()): vel_unit = kwargs['vel_unit']
+
+        parameters={'galcen_distance':8.0*u.kpc, 'z_sun':15.*u.pc, 'galcen_v_sun':CartesianDifferential([10.0,235.,7.]*u.km/u.s)}
+        for key in parameters.keys():
+            if key in kwargs.keys():
+                parameter[key] = kwargs[key]
+
+        core_g = SkyCoord(x=self.pos[:,0]*pos_unit, 
+                          y=self.pos[:,1]*pos_unit, 
+                          z=self.pos[:,2]*pos_unit, 
+                          v_x=self.vel[:,0]*vel_unit,
+                          v_y=self.vel[:,1]*vel_unit,
+                          v_z=self.vel[:,2]*vel_unit,
+                          frame='galactocentric', representation_type='cartesian', **parameters)
+        return core_g
+
 class LagrangianVelocity(DictNpArrayMix):
     """ Lagrangian velocity component
         Each velocity member is a 2D numpy.ndarray, the row contain the values corresponding to each Langragian radius and the core radius (last value).

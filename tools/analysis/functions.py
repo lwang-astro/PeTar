@@ -129,3 +129,72 @@ def convergentPointCheck(data, velocity):
     
     return dmu_parallel, dmu_perpendicular, psi
 
+def coordinateCorrection(data, snap_center, obs_center, **kwargs):
+    """ Correct c.m. coordinate based on the difference between snapshot center and observational center in the galactocentric frame
+    First the snap and obs centers are transferred to the galactocentric frame
+    The difference of coordinates in the sphercial representational type are calculated and added to particle data as the correction
+    
+    Parameters:
+    -----------
+    data: astropy.coordinates.SkyCoord
+         particle data
+    snap_center: astropy.coordinates.SkyCoord (one particle)
+         snapshot center coordinate
+    obs_center:  astropy.coordinates.SkyCoord (one particle)
+         observational center coordinate
+
+    keyword arguments:
+       galcen_distance: floating with length units (8.0*units.kpc [Galpy])
+            galactic central distance of the Sun
+       z_sun: floating with length units (15.0*units.pc [Galpy])
+            z direction distance of the Sun
+       galcen_v_sun: astropy.coordinates.CartesianDifferential ([10.0, 235.0, 7.0]*units.km/units.s [Galpy])
+            velocity of the Sun    
+
+    Return:
+    ----------
+    data_c: astropy.coordinates.SkyCoord
+       corrected particle data
+    """
+    import astropy
+    from astropy.coordinates import SkyCoord  # High-level coordinates
+    from astropy.coordinates import ICRS, Galactic, Galactocentric, FK4, FK5  # Low-level frames
+    from astropy.coordinates import Angle, Latitude, Longitude  # Angles
+    from astropy.coordinates import CartesianDifferential
+    import astropy.units as u
+
+    pos_unit = u.pc
+    if ('pos_unit' in kwargs.keys()): pos_unit = kwargs['pos_unit']
+    vel_unit = u.pc/u.Myr
+    if ('vel_unit' in kwargs.keys()): vel_unit = kwargs['vel_unit']
+
+    parameters={'galcen_distance':8.0*u.kpc, 'z_sun':15.*u.pc, 'galcen_v_sun':CartesianDifferential([10.0,235.,7.]*u.km/u.s)}    
+    for key in parameters.keys():
+        if key in kwargs.keys():
+            parameter[key] = kwargs[key]
+
+    obs_cg = obs_center.transform_to(Galactocentric(**parameters))
+    obs_cg.representation_type = 'spherical'
+
+    snap_cg = snap_center.transform_to(Galactocentric(**parameters))
+    snap_cg.representation_type = 'spherical'
+    
+    dlon = obs_cg.lon - snap_cg.lon
+    dlat = obs_cg.lat - snap_cg.lat
+    ddis = obs_cg.distance - snap_cg.distance
+    dpm_lon = obs_cg.pm_lon - snap_cg.pm_lon
+    dpm_lat = obs_cg.pm_lat - snap_cg.pm_lat
+    drv  = obs_cg.radial_velocity - snap_cg.radial_velocity
+    
+    data_g = data.transform_to(Galactocentric(**parameters))
+    data_g.representation_type = 'spherical'
+    
+    data_c = SkyCoord(lon = data_g.lon + dlon,
+                      lat = data_g.lat + dlat,
+                      distance = data_g.distance + ddis,
+                      pm_lon = data_g.pm_lon + dpm_lon,
+                      pm_lat = data_g.pm_lat + dpm_lat,
+                      radial_velocity = data_g.radial_velocity + drv,
+                      frame='galactocentric', representation_type='spherical', **parameters)
+    
+    return data_c

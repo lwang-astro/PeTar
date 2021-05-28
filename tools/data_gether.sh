@@ -1,6 +1,8 @@
 #!/bin/bash
 
 suffixes='esc group sse bse mosse mobse'
+unset rmi
+unset onlylist
 
 until [[ `echo x$1` == 'x' ]]
 do
@@ -13,10 +15,12 @@ do
 	    echo '  -f: output filename prefix (default: data filename prefix)';
 	    echo '  -n: MPI processes number (default: auto detect)';
 	    echo '  -i: before remove existing gethered files, ask first (default: no ask)';
+	    echo '  -l: generate snapshot date file list only';
 	    exit;;
 	-f) shift; fout=$1; shift;;
 	-n) shift; nmpi=$1; shift;;
 	-i) rmi=1; shift;;
+	-l) onlylist=1; shift;;
 	*) fname=$1;shift;;
     esac
 done
@@ -31,6 +35,8 @@ echo 'data filename prefix: '$fout
 
 flen=`expr ${#fname} + 2`
 ls|egrep '^'$fname'.[0-9]+$' |sort -n -k 1.${flen} >$fout.snap.lst
+
+[ ! -z $onlylist ] && exit
 
 for s in $suffixes
 do
