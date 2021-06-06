@@ -128,7 +128,7 @@ int main(int argc, char *argv[]){
             break;
         case 'b':
             b_to_a_flag = true;
-            if(print_flag) std::cout<<"ASCII to binary\n";
+            if(print_flag) std::cout<<"BINARY to ASCII\n";
             opt_used ++;
             break;
         case 'r':
@@ -230,7 +230,20 @@ int main(int argc, char *argv[]){
                 file_header.vel_offset = status.pcm.vel;
 #endif
             }
-            else data.readParticleBinary(filename.c_str(), file_header);
+            else {
+                FILE* fin;
+                if( (fin = fopen(filename.c_str(),"r")) == NULL) {
+                    std::cerr<<"Error: Cannot open file "<<filename<<"!\n";
+                    abort();
+                }
+                file_header.readBinary(fin);
+                if (!write_ascii_header_flag) {
+                    data.setNumberOfParticleLocal(file_header.n_body);
+                    for (int i=0; i<file_header.n_body; i++) 
+                        data[i].readBinary(fin);
+                }
+                //data.readParticleBinary(filename.c_str(), file_header);
+            }
             if (write_ascii_header_flag) {
                 FILE* fout;
                 std::string fname_header = filename+".H";
