@@ -850,18 +850,18 @@ extern "C" {
         return 0;
     }
 
-    // set gravitational constant
-    int set_gravitational_constant(double G) {
-        ptr->input_parameters.unit_set.value=-1;
-        ptr->input_parameters.gravitational_constant.value = G;
-        return 0;
-    }
-
-    // get gravitational constant
-    int get_gravitational_constant(double* G) {
-        *G = ptr->input_parameters.gravitational_constant.value;
-        return 0;
-    }
+    //// set gravitational constant
+    //int set_gravitational_constant(double G) {
+    //    ptr->input_parameters.unit_set.value=-1;
+    //    ptr->input_parameters.gravitational_constant.value = G;
+    //    return 0;
+    //}
+    // 
+    //// get gravitational constant
+    //int get_gravitational_constant(double* G) {
+    //    *G = ptr->input_parameters.gravitational_constant.value;
+    //    return 0;
+    //}
 
     int get_kinetic_energy(double * kinetic_energy) {
         // update particle array first if necessary

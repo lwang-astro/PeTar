@@ -69,6 +69,18 @@ print(gravity.get_potential_at_point(0.0|nbody_system.length, *particles[1].posi
 print("evolve to time = 1.0")
 gravity.evolve_model(1.0|nbody_system.time)
 
+print("Test parameter change, update changeover and rbin")
+gravity.parameters.r_out = 0.4|nbody_system.length
+gravity.parameters.r_bin = 0|nbody_system.length
+gravity.parameters.r_search_min = 0|nbody_system.length
+gravity.parameters.dt_soft = 0|nbody_system.time
+print(gravity.parameters)
+
+print("evolve to time = 2.0")
+gravity.evolve_model(2.0|nbody_system.time)
+
+print(gravity.parameters)
+
 #gravity.particles[1].mass = 1.0|nbody_system.mass
 #gravity.evolve_model(3.0|nbody_system.time)
 
