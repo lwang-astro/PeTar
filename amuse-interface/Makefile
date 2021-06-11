@@ -97,6 +97,9 @@ __init__.py:
 $(FILELIST): |src/PeTar
 	ln -sf src/PeTar/amuse-interface/$@
 
+src/PeTar/src/get_version.hpp: src/PeTar/src/get_version.hpp.in |src/PeTar
+	sed 's/@VERSION@/'`cat src/PeTar/VERSION`'_'`cat src/SDAR/VERSION`'/g' src/PeTar/src/get_version.hpp.in >src/PeTar/src/get_version.hpp
+
 test_interface: $(OBJS) test_interface.o
 	$(MPICXX) $(CXXFLAGS) $(OBJS) test_interface.o -o $@
 
@@ -109,5 +112,5 @@ worker_code.h: interface.py
 petar_worker: worker_code.cc worker_code.h $(CODELIB) $(OBJS) interface.h |src/PeTar src/SDAR src/FDPS
 	$(MPICXX) $(CXXFLAGS) $(SC_FLAGS) $(AM_CFLAGS) $(LDFLAGS) $< $(OBJS) $(CODELIB) -o $@ $(SC_MPI_CLIBS) $(LIBS) $(AM_LIBS)
 
-.cc.o: $<
+interface.o: interface.cc src/PeTar/src/get_version.hpp 
 	$(MPICXX) $(CXXFLAGS) $(SC_FLAGS) -c -o $@ $< 
