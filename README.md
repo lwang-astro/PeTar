@@ -32,7 +32,7 @@ The Doxygen documentation for developers is under preparation.
     - [Input data files](#input-data-files)
     - [Restart](#restart)
     - [Options](#options)
-    - [Data format update](#data-format-update)
+    - [Data format update for old versions](#data-format-update-for-old-versions)
     - [Reference](#reference)
     - [Help information](#help-information)
     - [Output](#output)
@@ -52,7 +52,9 @@ The Doxygen documentation for developers is under preparation.
          - [Find tree time step](#find-tree-time-step)
          - [Parallel data process](#parallel-data-process)
          - [Movie generator](#movie-generator)
+         - [Gether output files from different MPI ranks](#gether-output-files-from-different-mpi-ranks)
          - [Remove data after a given time](#remove-data-after-a-given-time)
+         - [Data format transfer](#data-format-transfer)
          - [Input parameter file format update](#input-parameter-file-format-update)
          - [BSE based steller evolution tool](#bse-based-steller-evolution-tool)
          - [Galpy tool](#galpy-tool)
@@ -69,11 +71,12 @@ The Doxygen documentation for developers is under preparation.
          - [Reading Lagrangian data](#reading-lagrangian-data)
          - [Use Python help to obtain tool manuals](#use-python-help-to-obtain-tool-manuals)
 - [Method](#method)
+    - [Algorithm of integration](#algorithm-of-integration)
     - [Parallelization methods](#parallelization-methods)
 - [AMUSE API](#amuse-api)
 
-## Install:
-### Dependence:
+## Install
+### Dependence
 _FDPS_: https://github.com/FDPS/FDPS
 
 _SDAR_: https://github.com/lwang-astro/SDAR
@@ -91,13 +94,13 @@ If the source codes of these libraries are put in the same directory where the _
 ./configure --with-[code name in lower case]-prefix=[code path]
 ```
 
-### Environment:
+### Environment
 To successfully compile the code, the C++ compiler (e.g. GNU gcc/g++, Intel icc/icpc, LLVM clang/clang++) needs the support of the C++11 standard. To use SSE/BSE package, a Fortran (77) compiler, GNU gfortran, is needed and should be possile to provide API to the c++ code, i.e., the libgfortran is required. Currently Intel ifort is not supported yet. The MPI compiler (e.g. mpic++) is required to use MPI. NVIDIA GPU and CUDA compiler is required to use GPU acceleration. The SIMD support is tested for the GNU, Intel and LLVM compilers. It is not tested for others, thus these three kinds of compilers are suggested to use. 
 The Fugaku ARM A64FX architecture is also supported. 
 
 To use _Galpy_ and the analysis tools, the _Python3_ should be available. _Galpy_ also requires the _GSL_ library being installed and can be detected in the load library path.
 
-### Make:
+### Make
 Once _FPDS_ and _SDAR_ are available, in the root directoy, use 
 ```
 ./configure
@@ -110,7 +113,7 @@ The options for configure can be found by
 ```
 ./configure -h
 ```
-#### A few useful options:
+#### A few useful options
 1. Install path
     ```
     ./configure --prefix=[Install path]
@@ -293,7 +296,7 @@ For a deep understanding and a better configuration, users may need to read the 
 
 When stellar evolution packages (e.g., BSE, MOBSE) and external potential (e.g., Galpy) are used, the corresponding options are also shown in `petar -h`.
 
-### Data format update
+### Data format update for old versions
 The data formats of snapshots, input parameter files and a part of output files have been updated in the past.
 If users want to use new version of code to read the old version data, the data transfer is possible.
 
@@ -635,7 +638,7 @@ If this tool is mistakely used, the files can be recovered.
 If the tool is used again, it will check the backup data files.
 Thus a new time criterion larger than the previous one can be to include more data in the new files.
 
-#### Data format transfer (BINARY - ASCII)
+#### Data format transfer
 The _petar_ can read and write snapshot data in either BINARY or ASCII format.
 The BINARY format is compressed (the file size is less than one half of the ASCII one) and much faster to read and write for both _petar_ and data analysis tool, but cannot be directly read by text editor.
 It is suggested to use the BINARY format if the simulation generate a large amount of data and users want to use analysis tools to access the data.
