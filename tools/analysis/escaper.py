@@ -20,6 +20,10 @@ class SingleEscaper(Particle):
                 When read PeTar data, do not change this
             interrupt_mode: string (none)
                 PeTar interrupt mode: base, bse, mobse, none
+                This option indicates whether columns of stellar evolution exist
+            external_mode: string (none)
+               PeTar external mode (set in configure): galpy, none 
+               This option indicates whether the column of externa potential exist
         """
 
         
