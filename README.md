@@ -23,7 +23,17 @@ The Doxygen documentation for developers is under preparation.
     - [Dependence](#dependence)
     - [Environment](#environment)
     - [Make](#make)
-        - [A few useful options](#a-few-useful-options)
+        - [A few useful options of configure](#a-few-useful-options-of-configure)
+            - [Install path](#install-path)
+            - [Change MPI parallelization options](#change-mpi-parallelization-options)
+            - [Disable OpenMP parallelization](#disable-openmp-parallelization)
+            - [Use X86 with SIMD](#use-x86-with-simd)
+            - [Use Fugaku A64FX architecture](#use-fugaku-a64fx-architecture)
+            - [Use GPU (CUDA)](#use-gpu-cuda)
+            - [Debug mode](#debug-mode)
+            - [Use stellar evolution](#use-stellar-evolution)
+            - [Use Galpy external potential library](#use-galpy-external-potential-library)
+            - [Multiple options](#multiple-options)
 - [Use](#use)
     - [petar commander](#petar-commander)
     - [CPU threads](#cpu-threads)
@@ -113,89 +123,6 @@ The options for configure can be found by
 ```
 ./configure -h
 ```
-#### A few useful options
-1. Install path
-    ```
-    ./configure --prefix=[Install path]
-    ```
-   If the code is already installed before and the executable file (petar.\*\*) exists in the $PATH enviroment, the configure automatically use the same directory for installing.
-   
-2. Change MPI parallelization options
-   ```
-   ./configure --with-mpi=[auto/yes/no]
-   ```
-   - auto (default): automatical detection MPI, if exists, use MPI compiler, otherwise use non-MPI compiler
-   - yes: use MPI c++ compiler
-   - no: non-MPI c++ compiler
-   
-3. Disable OpenMP parallelization
-    ```
-    ./configure --disable-openmp
-    ```
-    By default OpenMP is used.
-    
-4. Use X86 with SIMD
-    ```
-    ./configure --with-simd=[auto/avx/avx2/avx512dq]
-    ```
-    - auto (default): automatical detection based on local CPU architecture 
-    - avx: use AVX for tree force calculation and tree neighbor counting
-    - avx2: use AVX2
-    - avx512dq: use AVX512F and AVX512DQ
-    
-    This option switch on the SIMD support for force calculation, the _auto_ case check whether the compiler (GNU or Intel) support the SIMD instructions and choose the newest one. Notice that the supported options of the compiler and the running CPU are different. Please check your CPU instruction whether the compiled option is supported or not. If the CPU can support more than the compiler, it is suggested to change or update the compiler to get better performance.
-
-5. Use Fugaku A64FX architecture
-   ```
-   ./configure --with-arch=fugaku
-   ```
-
-   The tree force and neighbor search functions using Fugaku A64FX instruction set are supported now. 
-   Notice that in Fugaku supercomputer, the configure only work on the running nodes. 
-   Users should launch an interactive job to configure and compile the code.
-    
-6. Use GPU (CUDA)
-    ```
-    ./configure --enable-cuda
-    ```
-    By default GPU is not used. To switch on it, make sure the NVIDIA CUDA is installed and consistent with the c++ compiler.
-    
-7. Debug mode
-    ```
-    ./configure --with-debug=[assert/g/no]
-    ```
-    - assert: switch on all assertion check
-    - g: switch on compiler option '-g -O0 -fbounds-check' in order to support debugger such as gdb
-    - no: no debugging, optimized performance (default)   
-   
-8. Use stellar evolution
-    ```
-    ./configure --with-interrupt=[bse/mobse]
-    ```
-    Currently there are two options of stellar evolution packages based on SSE/BSE (Hurley et al. 2000, MNRAS, 315, 543; 2002, MNRAS, 329, 897):
-    - bse: the updated SSE/BSE version from Banerjee et al. 2020, A&A, 639, A41.
-    - mobse: the MOBSE from Giacobbo et al. 2018, MNRAS, 474, 2959.
-    
-    When this option is switched on, the standalone tool _petar.(mo)bse_ will also be compiled and installed.
-    This is a c++ based tool which call the SSE/BSE/MOBSE functions to evolve single and binary stars to the given age and metallicity. OpenMP parallelization is used to speed up the calculation if a large group of stars and binaries are provided.
-
-9. Use _Galpy_ external potential library
-    ```
-    ./configure --with-external=galpy
-    ```
-    The _Galpy_ library is a _Python_ and _c_ based external potential library, which provides a plenty choices of potentials. 
-    It is also flexible to combine multiple potentials together (require to use _Galpy_ _Python_ interface to generate the instance, see their document in details).
-    
-    When this option is switched on, the standalone tool _petar.galpy_ and _petar.galpy.help_ will also be compiled and installed.
-    - _petar.galpy_ is a simple tool to call _Galpy_ c interface to evaluate the acceleration and potentials for a list of particles with a given potential model.
-    - _petar.galpy.help_ is a tool (python script) to help users to generate the input options for potential models. When users use _Galpy_ _Python_ interface to design a specific potential, this tool also provides a function to convert a _Galpy_ potential instance to an option or a configure file used by _PeTar_.
-
-Multiple options should be combined together, for example:
-```
-./configure --prefix=/opt/petar --enable-cuda
-```
-will install the executable files in /opt/petar (this directory requires root permission) and switch on GPU support.
-
 After configure, use 
 ```
 make
@@ -212,6 +139,91 @@ Users should always check this first to understand how to properly use the tool.
 The generated data files from a simulation can be analyzed by using the _Python3_ based data analysis module.
 The _Python3_ module is installed in `[Install path]/include/petar`.
 Please add `[Install path]/include` to the _Python_ include path (the environment variable, `$PYTHONPATH`) in order to import the code.
+
+#### A few useful options of configure
+##### Install path
+```
+./configure --prefix=[Install path]
+```
+If the code is already installed before and the executable file (petar.\*\*) exists in the $PATH enviroment, the configure automatically use the same directory for installing.
+   
+##### Change MPI parallelization options
+```
+./configure --with-mpi=[auto/yes/no]
+```
+- auto (default): automatical detection MPI, if exists, use MPI compiler, otherwise use non-MPI compiler
+- yes: use MPI c++ compiler
+- no: non-MPI c++ compiler
+   
+##### Disable OpenMP parallelization
+```
+./configure --disable-openmp
+```
+By default OpenMP is used.
+    
+##### Use X86 with SIMD
+```
+./configure --with-simd=[auto/avx/avx2/avx512dq]
+```
+- auto (default): automatical detection based on local CPU architecture 
+- avx: use AVX for tree force calculation and tree neighbor counting
+- avx2: use AVX2
+- avx512dq: use AVX512F and AVX512DQ
+    
+This option switch on the SIMD support for force calculation, the _auto_ case check whether the compiler (GNU or Intel) support the SIMD instructions and choose the newest one. Notice that the supported options of the compiler and the running CPU are different. Please check your CPU instruction whether the compiled option is supported or not. If the CPU can support more than the compiler, it is suggested to change or update the compiler to get better performance.
+
+##### Use Fugaku A64FX architecture
+```
+./configure --with-arch=fugaku
+```
+
+The tree force and neighbor search functions using Fugaku A64FX instruction set are supported now. 
+Notice that in Fugaku supercomputer, the configure only work on the running nodes. 
+Users should launch an interactive job to configure and compile the code.
+    
+##### Use GPU (CUDA)
+```
+./configure --enable-cuda
+```
+By default GPU is not used. To switch on it, make sure the NVIDIA CUDA is installed and consistent with the c++ compiler.
+    
+##### Debug mode
+```
+./configure --with-debug=[assert/g/no]
+```
+- assert: switch on all assertion check
+- g: switch on compiler option '-g -O0 -fbounds-check' in order to support debugger such as gdb
+- no: no debugging, optimized performance (default)   
+   
+##### Use stellar evolution
+```
+./configure --with-interrupt=[bse/mobse]
+```
+Currently there are two options of stellar evolution packages based on SSE/BSE (Hurley et al. 2000, MNRAS, 315, 543; 2002, MNRAS, 329, 897):
+- bse: the updated SSE/BSE version from Banerjee et al. 2020, A&A, 639, A41.
+- mobse: the MOBSE from Giacobbo et al. 2018, MNRAS, 474, 2959.
+
+When this option is switched on, the standalone tool _petar.(mo)bse_ will also be compiled and installed.
+This is a c++ based tool which call the SSE/BSE/MOBSE functions to evolve single and binary stars to the given age and metallicity. OpenMP parallelization is used to speed up the calculation if a large group of stars and binaries are provided.
+
+##### Use _Galpy_ external potential library
+```
+./configure --with-external=galpy
+```
+The _Galpy_ library is a _Python_ and _c_ based external potential library, which provides a plenty choices of potentials. 
+It is also flexible to combine multiple potentials together (require to use _Galpy_ _Python_ interface to generate the instance, see their document in details).
+
+When this option is switched on, the standalone tool _petar.galpy_ and _petar.galpy.help_ will also be compiled and installed.
+- _petar.galpy_ is a simple tool to call _Galpy_ c interface to evaluate the acceleration and potentials for a list of particles with a given potential model.
+- _petar.galpy.help_ is a tool (python script) to help users to generate the input options for potential models. When users use _Galpy_ _Python_ interface to design a specific potential, this tool also provides a function to convert a _Galpy_ potential instance to an option or a configure file used by _PeTar_.
+
+##### Multiple options
+Multiple options should be combined together, for example:
+```
+./configure --prefix=/opt/petar --enable-cuda
+```
+will install the executable files in /opt/petar (this directory requires root permission) and switch on GPU support.
+
 
 ## Use:
 
@@ -516,6 +528,7 @@ See the details by using `petar.init -h`.
 The _petar.data.process_ can be used to process snapshot data to detect binaries, triples and quadruples (binary-binary type), and calculate Langragian, core radii, averaged mass and velocity dispersion.
 Notice that the tool calculate the core (density) center and use it to obtain Langrangian radii.
 The single and binary data are stored for each snapshot with additional suffix ".single" and ".binary".
+The triples and quadruples are optional and they are not used in the calculation of Lagrangian properties. 
 The data of Lagrangian, core and escapers are generated in separate files.
 The multiple CPU cores are used to process the data since the KDTree neighbor search for calculating density and detect binaries is very slow.
 The basic way to use:
@@ -544,38 +557,39 @@ This is because only one word exists per line in the snap.lst file, and the word
 Here is the table to show the files generated by _petar.data.process_ and the corresponding python modules (class) to read them.
 The the default filename prefix 'data' is assumed.
 
-| Filename            | Content                                                              | Reading in Python        |
+| Filename            | Content                                                              | The Python analysis classes for reading data files  |
 | :------------------ | :------------------------------------------------------------------  | :------------------------|
-| data.[\*].single     | snapshots for single stars                                           | petar.Particle           |
-| data.[\*].binary     | snapshots for binaries                                               | petar.Binary             |
-| \*data.[\*].triple    | snapshots for triples (if option `-M` is used)                       | petar.Binary             |
-| \*data.[\*].quadruple | snapshots for binary-binary quadruples (if option `-M` is used)      | petar.Binary             |
-| data.lagr           | Lagrangian and core properties for all objects, single and binaries  | petar.LagrangianMultiple |
-| data.core           | core position, velocity and radius                                   | petar.Core               |
-| data.esc_single     | Single escapers                                                      | petar.SingleEscaper      |
-| data.esc_binary     | Binary escapers                                                      | petar.BinaryEscaper      |
-| \*data.tidal         | Tidal radius data (if option `--r-escape tidal` is used)             | petar.Tidal              |
+| data.[\*].single     | snapshots for single stars                                           | petar.Particle(interrupt_mode=[\*], external_mode=[\*])| 
+| data.[\*].binary     | snapshots for binaries                                               | petar.Binary(member_particle_type=petar.Particle, simple_mode=[\*], G=[\*], interrupt_mode=[\*], external_mode=[\*]) |
+| \*data.[\*].triple    | snapshots for triples (if option `-M` is used)                       | petar.Binary(member_particle_type_one=[petar.Particle, petar.Particle], member_particle_type_two=petar.Particle, simple_mode=[\*], G=[\*], interrupt_mode=[\*], external_mode=[\*])            |
+| \*data.[\*].quadruple | snapshots for binary-binary quadruples (if option `-M` is used)      | petar.Binary(member_particle_type=[petar.Particle, petar.Particle],  simple_mode=[\*], G=[\*], interrupt_mode=[\*], external_mode=[\*])             |
+| data.lagr           | Lagrangian and core properties for all objects, single and binaries  | petar.LagrangianMultiple(mass_fraction=[\*], calc_energy=[\*], external_mode=[\*], add_star_type=[\*]) |
+| data.core           | core position, velocity and radius                                   | petar.Core()               |
+| data.esc_single     | Single escapers                                                      | petar.SingleEscaper(interrupt_mode=[\*], external_mode=[\*])   |
+| data.esc_binary     | Binary escapers                                                      | petar.BinaryEscaper(member_particle_type=petar.Particle, simple_mode=[\*], G=[\*], interrupt_mode=[\*], external_mode=[\*])      |
+| \*data.tidal         | Tidal radius data (if option `--r-escape tidal` is used)             | petar.Tidal()              |
 
-The snapshots (single, binary ...) generated by _petar.data.process_ are also shifted to the rest frame where the density center is the coordinate origins.
-Notice that all escapers deteced in _petar.data.process_ are not removed in these snapshots.
-But the escapers during the simulations are not inside because they are already removed in the original snapshots (data.[\*]).
+PS: the arguments [\*] for the keywords in the python class initialization depend on the configure options for compiling (e.g., `interrupt_mode`, `external_mode`) and the options used in _petar.data.process_. These keywords arguments are optional. They are only needed to provide when the default values are not used.
+See help of the Python analysis classes and `petar.data.process -h` for details.
 
-How to use the Python analysis modules to read data are discussed in [Data analysis in _Python3_](#data-analysis-in-python3).
-The single and binary snapshots can be read by _Particle_ and _Binary_ modules.
-The Lagrangian and core data can be read by _LagrangianMultiple_ and _Core_ modules.
-The escaper data (single and binary) can be read by _SingleEscaper_ and _BinaryEscaper_.
-By the way, the _petar_ code can also remove escapers and stored the data of escapers by using the energy and distance criterion (see help of _petar_).
-
-When the snapshot files are in BINARY format, the option `-s binary` can be used to read the snapshot correctly.
-Notice that the generated data from _petar.data.process_ are all in ASCII format.
-
-Users should be careful to set the correct options of gravitational constant (`-G`), interrupt mode (`-i`) and external mode (`-t`) in the analysis.
+How to use the Python analysis classes to read data are discussed in [Data analysis in _Python3_](#data-analysis-in-python3).
+Users should be careful to set the correct options of gravitational constant (`-G`), interrupt mode (`-i`) and external mode (`-t`) in the Python analysis class initialization.
 This is important to correctly read the snapshots and calculate the Kepler orbital parameters of binaries.
-When users apply the astronomical unit set (`-u 1` in the _petar_ commander) in simulations, `-G 0.00449830997959438` should be used in the data analysis.
-Or, if the BSE based package is used, the interrupt mode option `-i (mo)bse` can also set the correct value of G.
 
-This tool can also be used to detect triples and quadruples (binary-binary) and save them in snapshot files. 
-See `petar.data.process -h` for details.
+When users apply the astronomical unit set (`-u 1` in the _petar_ commander) in simulations, `-G 0.00449830997959438` should be used for _petar.data.process_.
+Or, if the _BSE_ based package is used, the interrupt mode option `-i (mo)bse` can also set the correct value of G.
+
+The snapshots (single, binary ...) generated by _petar.data.process_ are shifted to the rest frame where the density center is the coordinate origins.
+
+When the snapshot files are in BINARY format, the option `-s binary` can be used for _petar.data.process_ to read the snapshot correctly.
+Notice that the generated data from _petar.data.process_ are all in the ASCII format.
+
+Notice that the _petar_ code can also remove escapers and stored the data of escapers by using the energy and distance criterion (in files [data filenam prefix].esc.[MPI rank], see [Output files](#output-files)).
+All escapers during the simulations are not stored in the originial snapshot files.
+The _petar_ code only has a simple constant escape radial criterion.
+Instead, the post-process by _petar.data.process_ can calculate the tidal radius and use it to detect escapers.
+These detected escapers will be stored in the post-generated escape files: data.esc_single and data.esc_binary. 
+Be careful that these escapers are not removed from the post-generated snapshot files: data.[index].single and data.[index].binary.
 
 
 #### Movie generator
