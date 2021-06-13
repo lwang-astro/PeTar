@@ -18,6 +18,60 @@ Please carefully read it first before asking questions to developers.
 More detail of the algorithms are described in Wang et al. (2020; arXiv: https://arxiv.org/abs/2006.16560).
 The Doxygen documentation for developers is under preparation.
 
+## Content:
+- [Install](#install)
+    - [Dependence](#dependence)
+    - [Environment](#environment)
+    - [Make](#make)
+        - [A few useful options](#a-few-useful-options)
+- [Use](#use)
+    - [petar commander](#petar-commander)
+    - [CPU threads](#cpu-threads)
+    - [MPI processors](#mpi-processors)
+    - [GPU devices](#gpu-devices)
+    - [Input data files](#input-data-files)
+    - [Restart](#restart)
+    - [Options](#options)
+    - [Data format update](#data-format-update)
+    - [Reference](#reference)
+    - [Help information](#help-information)
+    - [Output](#output)
+        - [Printed information](#printed-information)
+            - [Warning and errors](#warning-and-errors)
+                - [Hard energy significant](#hard-energy-significant)
+                - [Large step warning](#large-step-warning)
+                - [Errors](#errors)
+         - [Output files](#output-files)
+         - [Units](#units)
+             - [PeTar units](#petar-units)
+             - [Stellar evolution units](#stellar-evolution-units)
+             - [External potential units](#external-potential-units)
+             - [Output file units](#output-file-units)
+    - [Useful tools](#useful-tools)
+         - [Initial input data file](#initial-input-data-file)
+         - [Find tree time step](#find-tree-time-step)
+         - [Parallel data process](#parallel-data-process)
+         - [Movie generator](#movie-generator)
+         - [Remove data after a given time](#remove-data-after-a-given-time)
+         - [Input parameter file format update](#input-parameter-file-format-update)
+         - [BSE based steller evolution tool](#bse-based-steller-evolution-tool)
+         - [Galpy tool](#galpy-tool)
+    - [Data analysis in _Python3_](#data-analysis-in-python3)
+         - [Reading particle snapshots](#reading-particle-snapshots)
+         - [Check reading consistence](#check-reading-consistence)
+         - [Get particle information](#get-particle-information)
+         - [Make data selection](#make-data-selection)
+         - [Using Matplotlib](#using-matplotlib)
+         - [Save data](#save-data)
+         - [Merge two data](#merge-two-data)
+         - [Reading binary snapshots](#reading-binary-snapshots)
+         - [Reading triple and quadruple snapshots](#reading-triple-and-quadruple-snapshots)
+         - [Reading Lagrangian data](#reading-lagrangian-data)
+         - [Use Python help to obtain tool manuals](#use-python-help-to-obtain-tool-manuals)
+- [Method](#method)
+    - [Parallelization methods](#parallelization-methods)
+- [AMUSE API](#amuse-api)
+
 ## Install:
 ### Dependence:
 _FDPS_: https://github.com/FDPS/FDPS
@@ -239,7 +293,7 @@ For a deep understanding and a better configuration, users may need to read the 
 
 When stellar evolution packages (e.g., BSE, MOBSE) and external potential (e.g., Galpy) are used, the corresponding options are also shown in `petar -h`.
 
-#### data format update
+### Data format update
 The data formats of snapshots, input parameter files and a part of output files have been updated in the past.
 If users want to use new version of code to read the old version data, the data transfer is possible.
 
@@ -272,7 +326,7 @@ When new versions of _PeTar_ release, the help information always has the corres
 ### Output
 #### Printed information
 When _petar_ is running, there are a few information printed in the front:
-- The _FDPS_ logo and _PETAR_ information are printed, where the copyright, and references for citing are shown.
+- The _FDPS_ logo and _PETAR_ information are printed, where the copyright, versions and references for citing are shown. The version of PeTar is the commit numbers of PeTar and SDAR on GitHub.
 - The input parameters are listed if they are modified when the corresponding options of _petar_ are used.
 - If stellar evolution package (updated SSE/BSE or MOBSE) is used, the common block and global parameters are printed.
 - The name of dumped files for the input parameters are shown, in default, they are input.par, input.par.hard, input.par.(mo)bse (if (MO)BSE is used)
@@ -300,33 +354,107 @@ The content of the status has a style like:
 - System total mass, center position and velocity
 - Other information if conditions are triggered. 
 
+##### Warning and errors
+
+In a simulation, there may be warnings and errors appearing in the printing log. 
+Here lists the frequent warnings and errors.
+
+###### Hard energy significant
+
+For one particle cluster with short-range interaction (Hermite+SDAR), the relative energy error after one tree time step exceeds the limitation defined by the option `--energy-err-hard` (the default value is 0.0001). 
+Then, a warning message with the title "Hard energy significant" appears and a corresponding file "hard_large_energy.\*" is dumped.
+
+In most of cases, this happens when a triple or a quadruple system exists in the cluster.
+There two possibilities that cause the large error: 
+- The inner binaries of these systems may be very tight with a large slowdown factor. Since slowdown Hamiltonian is not the same as claasical Hamiltonian. The physical energy is not necessary conserved during the integration because the slowdown methods only ensure that the secular motion is correct. 
+- The integration step of SDAR method may not be sufficient small for the multiple system, while reducing step sizes also signficantly increase the computing time.
+Either case is difficult to solve if users don't want a significant reduction of computing performance. 
+But if users care about the specific particles inside this cluster, they can check whether the orbit of integration is acceptable by using the debuging tool _petar.hard.debug_ to read the dumped hard_large_energy.\* file.
+The high energy error is usually generated by a small change of semi-major axis of the most tight binary in the system. 
+However, such a small error does not significantly affect the global dynamical evolution of the whole system if it the error only happens once.
+
+###### Large step warning
+
+Sometimes the performance of the code significantly drops with a warning of large steps appearing.
+Then, a file "dump_large_step.\*" is dumped.
+In this case, there are probably a stable multiple system in the particle cluster.
+The AR method is used to integrate the multiple system, but the step count is very large (exceeding the step limit, which can also be set in the input option) so that the performance significantly drops.
+This situation cannot be avoided sometimes. 
+When the stellar evolution is switched on, it can help in some cases when the inner binaries are tight enough to merge. 
+There is no better solution to solve the issue.
+If multiple CPU cores are used, users can restart the simulations with less CPU cores. 
+Sometimes after restarting, the same stable system may not form so that the problem can be avoided.
+If it still forms, the parallel computing is killed so it is not necessary to use multiple CPUs. 
+Users can use less CPU resources to pass this phase until the system is disrrupted, and then, restart with the original number of CPU cores.
+
+###### Errors
+When errors appear in the Hermite-SDAR integration, the error message appears and the simulation is halted.
+In this case, a file "hard_dump.\*" is dumped.
+This usually indicates that a bug exist in the code.
+Users can report this issue by contacting the developer via GitHub or email.
+In the content, users need to describe the version of PeTar, the configure options, the initial conditions of the simulations and attach the "hard_dump.\*", the input parameter files (starting with "input.par.\*".
+
+Users can also check the details by using the debug tool _petar.hard.debug_ together with the GDB tool, if users prefer to understand the problems themselves. The knowledge of the source codes of SDAR is required to understand the messages from the debug tool.
+
 #### Output files
 There are a few output files:
-- [data filename prefix].[index]: the snapshot files, the format is the same as the input data file. In the help information of _petar_ commander, users can find the definitions of the columns and header
-- [data filename prefix].esc.[MPI rank]: the escaped particle information, first lines show column definition
-- [data filename prefix].group.[MPI rank]: the information of new and end of groups (binary, triple ...), since the items in each row can be different because of different numbers of members in groups, there is no universal column headers. It is suggested to use petar.data.gether first to separate groups with different numbers of members into different files. Then use the python tool _petar.Group_ to read the new files.
-- [data filename prefix].[s/b]se.[MPI rank]: if BSE based code is switched on, the files record the single and binary stellar evolution events, such as type changes, Supernovae, binary evolution phase changes. Each line contain the definition of values, thus can be directly read.
+- [data filename prefix].[index]: the snapshot files, the format is the same as the input data file. In the help information of _petar_ commander, users can find the definitions of the columns and header.
+- [data filename prefix].esc.[MPI rank]: the escaped particle information, first lines show the column definition.
+- [data filename prefix].group.[MPI rank]: the information of new and end of groups (binary, triple ...), since the items in each row can be different because of different numbers of members in groups, there is no universal column headers.
+- [data filename prefix].[mo][s|b]se.[MPI rank]: if BSE based code is switched on, the files record the single and binary stellar evolution events, such as type changes, Supernovae, binary evolution phase changes. Each line contain one event. 
 
 Before access these files, it is suggested to run _petar.data.gether_ tool first to gether the separated files with different MPI ranks to one file for convenience.
-This tool also separate the few-body groups with different number of members in xx.group files to individual files with suffix ".n[number of members in groups]".
+For ".group" files, this tool also separate the few-body groups with different number of members to individual files with suffix ".n[number of members in groups]".
+For ".[mo][s|b]se" files, this tool separate the type changes, supernova kicks and dynamical mergers into separate files (".type_change, .sn_kick and .dynamic_merge").
+After this process, the Python tools (See [Data analysis in _Python3_](#data-analysis-in-python3)) can be used to read the new data files.
+To check the details of the generated files and cooresponding reading method, see [Gether output files from different MPI ranks](#gether-output-files-from-different-mpi-ranks).
 
 The raw snapshots files do not include the information for binaries or multiple systems. To identify them and obtain the Lagrangian and core properties,
 _petar.data.process_ tool can be used (see [Parallel data process](#parallel-data-process)).
 
-    
-##### Debug dump files
-During a long-term simulation, a large number of files of "hard_large_energy.xx", "dump_large_step.xx" and "hard_dump.xx" may be generated.
-In the main output, the corresponding warning messages are also printed.
-This files record the clusters of stars initial conditions for the hard integration (Hermite+SDAR) of one tree step.
-- If the integration error exceeds the limit set in the input option (see ```petar -h```), the dump file "hard_large_energy.xx" appears.
-- If the AR step count is so large (exceeding the step limit, which can also be set in the input option) that the performance significantly drops, the dump file "dump_large_step.xx" appears.
-- If an error appears so that the code may behaviour abnormaly later on, "hard_dump.xx" appears and the code terminates.
+#### Units
 
-In the first two cases, the simulation continues. The users can ignore them if the results of simulations are acceptable. But if something is not correct, this files can help to finger out the issues, by using the debug tool _petar.hard.debug_.
+There are 1-3 sets of units in _petar_ depending on the used packages:
 
-In the third case, the simulation is terminated in order to avoid unpredictable behaviours. The "hard_dump.xx" usually indicates that a bug may exist. It is suggested to report the issues to the developers by attaching "input.par.hard", "input.par.(mo)bse" and "hard_dump.xx" files.
-Users can also check the details by using the debug tool _petar.hard.debug_ together with the GDB tool, if users prefer to understand the problems themselves. The knowledge of the source codes of SDAR is required to understand the messages from the debug tool.
-  
+##### Petar units
+
+The PeTar without additional stellar evolution and external potential packages follows the unit of the input files. There is no unit conversion inside the PeTar part. Only the gravitational constant can be modified to be consistent with the units from the input data file (See [Options](#options)). Thus, the input data must have consistent unit set: the velocity unit must be consistent with the length unit. For example, the length unit is pc, the velocity unit must be pc/[time unit]. It cannot be km/[time unit] because an additional unit conversion from km to pc is always needed in the integration. This only brings complexities and bugs in the code without any obvious benefit. Thus, petar only allows to change gravitationa constant to keep a self-consisten unit system.
+
+Since no unit conversion exists, the output log, snapshot data (petar part), escaper fiels and group files follow the unit set used in the input data with the corresponding gravitational constant.
+For example, if the input data has the unit (Myr, pc, pc/myr), the time and energy in the output log also use the same unit set. The potential energy also includes the gravitational constant.
+
+##### Stellar evolution units
+
+The stellar evolution package (e.g., _bse_) is an additional code. It has a different unit system.
+Thus, between the PeTar part and the stellar evolution pacakge, there is an unit conversion.
+The conversion scaling factors can be manually defined by the _petar_ options `--bse-rscale` ... (see `petar -h` for details).
+It is recommended to use the unit set for input data (Msun, pc, pc/Myr) so that the _petar_ option `-u 1` can be used and the petar will calculate the conversion factor automatically.
+The stellar evolution part in the snapshot files and the output files " [data filename prefix].[s/b]se.[MPI rank]" follow the same unit system as that of _bse(mobse)_. 
+
+##### external potential units
+
+The external potential package (_galpy_) is also an additional code. There is another unit conversion between the PeTar part and it.
+The conversion factors can also be manually defined. For _galpy_, the corresponding options are `--galpy-rscale` ... (see `petar -h` for details).
+It is also recommended to use the unit set for input data (Msun, pc, pc/Myr) so that the conversion factor is automatically calculated.
+There is no additional output files from _galpy_ code.
+
+##### Output file units
+
+Here is the table to show the corresponding units for the output files (The data filename prefix is "data" as an example).
+| Filename              | Content                                                     | Unit set                                                           |
+| :-------------------- | :---------------------------------------------------------  | :------------------------------------------------------------      |
+| _petar_ output log          | printed information from _petar_                            | PeTar unit                                                         |
+| data.[index]                | snapshots of particle data (particle class)                 | PeTar unit + Stellar evolution unit (s_* part shown in `petar -h`) |
+| data.esc                    | escapers (time of escape + particle class)                  | Time: PeTar unit; particle: particle class                         |
+| data.group.[MPI rank]       | multiple system formation and disruption record in SDAR     | Binary parameters: PeTar unit;  Particle members: particle class   |
+| data.[mo][s\|b]se.[MPI rank] | stellar evolution event records from _bse/mobse_         | Stellar evolution unit |
+
+Here the units for members in the particle class can be found by using `petar -h`. 
+The members with the prefix "s_" come from stellar evolution parts, the corresponding units are also shown in the help information.
+The other members follow the units of input data file (PeTar unit).
+If users are unclear about the units of the output files. They can also check the help information from the python analysis tool for reading the corresponding files. 
+
+
 ### Useful tools
 There are a few useful tools helping users to generate initial input data, find a proper tree time step to start the simulations and data analysis.
 Each of the tools are stored in the user defined install_path/bin.
@@ -461,10 +589,13 @@ This tool use either _imageio_ or _matplotlib.animation_ (_Python_ modules) to g
 
 Similar to _petar.data.process_, users should also set correct options of gravitational constant (`-G`), interrupt mode (`-i`) and external mode (`-t`).
 
-#### gether output files from different MPI ranks
-The _petar.data.gether_ is used to gether output files from different MPI ranks to one file (e.g. xx.group.[MPI rank]).
-For group files, it also generate individual files with suffix ".n[number of members in groups]'.
-In addition, the tool generates a file, "[output prefix].snap.lst" , that contains the list of all snapshot files sorted by time. This can be used as the input for _petar.data.process_ and _petar.movie_.
+#### Gether output files from different MPI ranks
+
+When the MPI is used, each MPI processor generate individual data files.
+Thus, some output filenames contains the suffix, [MPI rank]. 
+The _petar.data.gether_ is used to gether these output files from different MPI ranks to one file.
+In addition, it also helps to split some files into individual file so that the python tools can be used to read the data (see [Output files](#output-files)).
+The tool also generates a file, "[output prefix].snap.lst" , that contains the list of all snapshot files sorted by time. This can be used as the input for _petar.data.process_ and _petar.movie_.
 The basic usage is
 ```
 petar.data.gether [options] [data filename prefix]
@@ -475,7 +606,25 @@ When _SSE_/_BSE_ is used and the code version is before Sep 10, 2020, the data w
 The corresponding data are dr, t_peri and sd_factor.
 This tool will automatically fill the missing columns with zero (from Column 6 to 8)
 
-#### remove data after a given time
+Here is the table of files that the tool will generate and the corresponding Python anlysis classes to read (see [Data analysis in _Python3_](#data-analysis-in-python3))
+| Original files        | Output files  | Content             | Python classes initialization for reading |
+| :--------------       | :------------ | :---------          | :-------------------------------------   |
+| data.group.[MPI rank] | data.group    | all groups          | None                                     |
+|                       | data.group.n2 | binary, hyperbolic  | petar.GroupInfo(N=2)                     |
+|                       | data.group.n3 | triples             | petar.GroupInfo(N=3)                     |
+|                       | ...           | multiple systems... | ...                                                          |
+| data.esc.[MPI_rank]           | data.esc      | escapers            | petar.SingleEscaper(interrupt_mode=[\*], external_mode=[\*]) |
+| data.[mo][s\|b]se.[MPI rank]  | data.[mo][s\|b]se | single and binary stellar evolution records | None |
+|                               | data.[mo]sse.type_change | single stellar evolution type change events | petar.SSETypeChange() |
+|                               | data.[mo]sse.sn_kick     | supernova natal kick of single star         | petar.SSESNKick() |
+|                               | data.[mo]bse.type_change | binary tellar evolution type change events | petar.BSETypeChange() |
+|                               | data.[mo]bse.sn_kick     | supernova natal kick in binaries           | petar.BSESNKick() |
+|                               | data.[mo]bse.dynamic_merge  | dynamical driven (hyperbolic) mergers   | petar.BSEDynamicMerge(less_output=[\*]) |
+
+PS: [\*] is the argument that depends on the configure options that used for compiling.
+
+
+#### Remove data after a given time
 The _petar.data.clear_ is used to remove data after a given time for all output files except the snapshots.
 The basic usage is 
 ```
@@ -486,7 +635,7 @@ If this tool is mistakely used, the files can be recovered.
 If the tool is used again, it will check the backup data files.
 Thus a new time criterion larger than the previous one can be to include more data in the new files.
 
-#### data format transfer (BINARY - ASCII)
+#### Data format transfer (BINARY - ASCII)
 The _petar_ can read and write snapshot data in either BINARY or ASCII format.
 The BINARY format is compressed (the file size is less than one half of the ASCII one) and much faster to read and write for both _petar_ and data analysis tool, but cannot be directly read by text editor.
 It is suggested to use the BINARY format if the simulation generate a large amount of data and users want to use analysis tools to access the data.
@@ -820,7 +969,7 @@ If this argument is missing, the data in lagr can be wrong.
 Users should be careful to always check whether the _petar.data.process_ options and _LagrangainMultiple_ keyword arguments are consistent.
 A useful way to check the consistence is to count the column numbers in data file and reading as described in [Check reading consistence](#check-reading-consistence)
 
-#### Use Python help to obtain tool manuals.
+#### Use Python help to obtain tool manuals
 
 This example show how to read and use some of the petar Python classes, the way to use other classes is very similar, only the class member is different.
 As described above, the information of class member can be checked by the help function, e.g.
