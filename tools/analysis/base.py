@@ -353,7 +353,8 @@ class DictNpArrayMix:
             keyword arguments for numpy.loadtxt
         """
         dat_int = np.loadtxt(fname, ndmin=2, **kwargs)
-        self.readArray(dat_int, **kwargs)
+        if (dat_int.size>0):
+            self.readArray(dat_int, **kwargs)
 
     def collectDtype(self):
         """ Collect dtype from keys iteratively for reading BINARY format

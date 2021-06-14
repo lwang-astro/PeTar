@@ -339,3 +339,39 @@ class BSEStatus(DictNpArrayMix):
         
         #self.printSize()
 
+class SSEStarParameterOut(DictNpArrayMix):
+    """ SSE star parameter output class from bse_interface.h
+    Keys: (class members)
+         type0 (1D): original type before evolution, see help(petar.SSEType)
+         menv (1D): mass of convective envelope (Msun)
+         renv (1D): radius of convective envelope (Rsun)
+         tm  (1D): Main sequence lifetime (Myr)
+         vkick (2D,4): kick velocity for NS/BH formation, vx, vy, vz, |v|
+         dm (1D): mass loss (Msun)
+    """
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+        """
+        keys = [['type0', np.int64], ['menv', np.float64], ['renv', np.float64], ['tm', np.float64], ['vkick', (np.float64, 4)], ['dm', np.float64]]
+        DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
+
+class BSEISO(DictNpArrayMix):
+    """ Binary stellar evolution tool petar.(mo)bse output
+    Keys: (class members)
+        m1_init (1D): initial mass of component 1 (Msun)
+        m2_init (1D): initial mass of component 2 (Msun)
+        period_init (1D): initial period (days)
+        ecc_init (1D): initial eccentricity
+        period_final (1D): final period (days)
+        ecc_final (1D): final eccentricity 
+        star1 (SSEStarParameter): SSE star parameter of component 1
+        out1 (SSEStarParameterOut): SSE star parameter output of component 1
+        star2 (SSEStarParameter): SSE star parameter of component 2
+        out2 (SSEStarParameterOut): SSE star parameter output of component 2
+    """
+    
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+        """
+        keys = [['m1_init',np.float64],['m2_init',np.float64],['period_init',np.float64],['ecc_init',np.float64],['period_final',np.float64],['ecc_final',np.float64],['star1',SSEStarParameter],['out1',SSEStarParameterOut],['star2',SSEStarParameter],['out2',SSEStarParameterOut]]
+        DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
