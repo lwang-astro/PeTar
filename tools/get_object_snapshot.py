@@ -13,6 +13,7 @@ if __name__ == '__main__':
     mode='type'
     snapshot_format='ascii'
     interrupt_mode='bse'
+    external_mode='none'
     write_option='w'
 
     def usage():
@@ -70,7 +71,7 @@ if __name__ == '__main__':
         print("                  bid: select binaries based on binary id (CantorPairing); ")
         print("                  bidfile: select binaries by reading a file of binary id list")
         print("  -i(--interrupt-mode): the interruption mode used in petar, choices: bse, mobse (bse)")
-        print("  -t(--external-mode): external mode used in petar, choices: galpy, no (no)")
+        print("  -t(--external-mode): external mode used in petar, choices: galpy, none (none)")
         print("  -s(--snapshot-format): snapshot data format: binary, ascii; only for reading original snapshots (ascii)")
         print("  -B(--full-binary): this indicates that the snapshot contains full binary information (when petar.data.process -B is used to generated the binary snapshot)")
         print("  -a(--append): appending data to existing data files")
@@ -97,7 +98,7 @@ if __name__ == '__main__':
             elif opt in ('-i','--interrupt-mode'):
                 interrupt_mode = arg
             elif opt in ('-t','--external-mode'):
-                kwargs['external_mode'] = arg
+                external_mode = arg
             elif opt in ('-s','--snapshot-format'):
                 snapshot_format = arg
                 kwargs['snapshot_format'] = arg
@@ -149,6 +150,7 @@ if __name__ == '__main__':
 
     kwargs['filename_prefix'] = filename_prefix
     kwargs['interrupt_mode'] = interrupt_mode
+    kwargs['external_mode'] = external_mode
 
     for key, item in kwargs.items(): print(key,':',item)
 
@@ -178,8 +180,8 @@ if __name__ == '__main__':
     with open(filename_out, write_option) as f:
         for path in path_list:
             print('process ',path)
-            header_temp = petar.PeTarDataHeader(path, **kwargs)
-            time = header_temp.time
+            header = petar.PeTarDataHeader(path, **kwargs)
+            time = header.time
             sel = np.array([])
             read_flag=False
             if (snap_type=='binary'):
@@ -188,6 +190,13 @@ if __name__ == '__main__':
                 data_temp=petar.Binary(p1_temp, p2_temp, **kwargs)
                 if os.path.getsize(path+'.binary')>0:
                     data_temp.loadtxt(path+'.binary')
+                    if (external_mode!='none'): 
+                        data_temp.pos += header.pos_offset
+                        data_temp.vel += header.vel_offset
+                        data_temp.p1.pos += header.pos_offset
+                        data_temp.p2.pos += header.pos_offset
+                        data_temp.p1.vel += header.vel_offset
+                        data_temp.p2.vel += header.vel_offset
                     if (mode=='type'):
                         sel1 = select_type(data_temp.p1, sse_type)
                         sel2 = select_type(data_temp.p2, sse_type2)
@@ -211,6 +220,9 @@ if __name__ == '__main__':
                 if (snap_type=='origin'):
                     if (snapshot_format=='ascii'): data_temp.loadtxt(path, skiprows=1)
                     else: data_temp.fromfile(path, offset=petar.HEADER_OFFSET)
+                    if (external_mode!='none'): 
+                        data_temp.pos += header.pos_offset
+                        data_temp.vel += header.vel_offset
                     read_flag=True
                 else:
                     if os.path.getsize(path+'.single')>0:
