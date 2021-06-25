@@ -1161,11 +1161,11 @@ public:
     }
 
     //! print binary event one in column
-    void printBinaryEventColumnOne(std::ostream& _fout, const BinaryEvent& _bin_event, const int k, const int _width=20) {
+    void printBinaryEventColumnOne(std::ostream& _fout, const BinaryEvent& _bin_event, const int k, const int _width=20, const bool print_type_name=true) {
         int type = _bin_event.getType(k);
         assert(type>=0&&type<14);
-        _fout<<std::setw(16)<<binary_type[type]
-             <<std::setw(_width)<<type;
+        if (print_type_name) _fout<<std::setw(16)<<binary_type[type];
+        _fout<<std::setw(_width)<<type;
         if (k==0) _bin_event.printColumn(_fout, _bin_event.getEventIndexInit(), _width);
         else _bin_event.printColumn(_fout, k-1, _width);
         _bin_event.printColumn(_fout, k, _width);

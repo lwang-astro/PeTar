@@ -7,6 +7,9 @@
 #include "bse_interface.h"
 #include "../src/io.hpp"
 
+const int WRITE_WIDTH=23;
+const int WRITE_PRECISION=14;
+
 struct BinaryBase{
     double m1,m2,semi,period,ecc,period0,ecc0;
     int kw1,kw2;
@@ -67,7 +70,7 @@ int main(int argc, char** argv){
                  <<"    -b [S]: a file of binary table: First line: number of binary (unit:IN); After: m1, m2, type1, type2, period, ecc, time per line\n"
                  <<"    -m [S]: a file of hyperbolic orbit table for checking merger: First line: number of orbit (unit:IN); After: m1, m2, type1, type2, semi, ecc, time\n"
                  <<"    -w [I]: print column width ("<<width<<")\n"
-                 <<"    -o [S]: a file to output data every step\n"
+                 <<"    -o [S]: the prefix of data file that save the stellar evolution data every step, if not given, this file is not generated\n"
                  <<"    -h    : help\n";
     };
 
@@ -331,20 +334,33 @@ int main(int argc, char** argv){
         _fout<<std::endl;
     };
 
+    std::ofstream fout_sse_type, fout_sse_sn, fout_bse_type, fout_bse_sn;
+    bool output_flag=false;
+    if (fprint_name!="") {
+#ifdef BSE
+        std::string sse_suffix=".sse";
+        std::string bse_suffix=".bse";
+#elif MOBSE
+        std::string sse_suffix=".mosse";
+        std::string bse_suffix=".mobse";
+#endif
+        if (star.size()>0) {
+            fout_sse_type.open((fprint_name+sse_suffix+std::string(".type_change")).c_str(), std::ofstream::out);
+            fout_sse_sn.open((fprint_name+sse_suffix+std::string(".sn_kick")).c_str(), std::ofstream::out);
+        }
+        if (bin.size()>0) {
+            fout_bse_type.open((fprint_name+bse_suffix+std::string(".type_change")).c_str(), std::ofstream::out);
+            fout_bse_sn.open((fprint_name+bse_suffix+std::string(".sn_kick")).c_str(), std::ofstream::out);
+        }
+        output_flag = true;
+    }
+
     // first check whether binary exist
     if (bin.size()>0) {
         int nbin = bin.size();
 #pragma omp parallel for schedule(dynamic)
         for (int i=0; i<nbin; i++) {
             // output file
-            std::ofstream fout;
-            bool print_flag=false;
-            if (fprint_name!="") {
-                std::string fi = fprint_name+std::string(".b.")+std::to_string(i);
-                fout.open(fi.c_str(),std::ofstream::out);
-                printBinaryTitle(fout);
-                print_flag = true;
-            }
 
             bool kick_print_flag[2]={false,false};
             // evolve
@@ -367,24 +383,65 @@ int main(int argc, char** argv){
                 const double PI = 4.0*atan(1.0);
                 double pc_to_rsun = 44334448.006896;
                 bin[i].semi = std::pow(period_myr*period_myr*G*mtot/(4*PI*PI),1.0/3.0)*pc_to_rsun;
+
+                StarParameter p1_star_bk = bin[i].star[0];
+                StarParameter p2_star_bk = bin[1].star[1];
                 
                 // evolve function
-                int error_flag=bse_manager.evolveBinary(bin[i].star[0],bin[i].star[1],bin[i].out[0],bin[i].out[1],bin[i].semi,bin[i].period,bin[i].ecc,bin[i].bse_event, bin_type_init, dt);
+                int event_flag=bse_manager.evolveBinary(bin[i].star[0],bin[i].star[1],bin[i].out[0],bin[i].out[1],bin[i].semi,bin[i].period,bin[i].ecc,bin[i].bse_event, bin_type_init, dt);
+                // error
+                if (event_flag<0) {
+                    std::cerr<<"Error! ";
+                    std::cerr<<" BID="<<i+1<<" ";
+                    std::cerr<<" semi[R*]: "
+                             <<bin[i].semi
+                             <<" ecc: "<<bin[i].ecc
+                             <<" period[days]: "<<bin[i].period;
+                    std::cerr<<" Init: Star1: ";
+                    p1_star_bk.print(std::cerr);
+                    std::cerr<<" Star2: ";
+                    p2_star_bk.print(std::cerr);
+                    std::cerr<<" final: Star1: ";
+                    bin[i].star[0].print(std::cerr);
+                    bin[i].out[0].print(std::cerr);
+                    std::cerr<<" Star2: ";
+                    bin[i].star[1].print(std::cerr);
+                    bin[i].out[1].print(std::cerr);
+                    std::cerr<<std::endl;
+                    abort();
+                }
+
                 int nmax = bin[i].bse_event.getEventNMax();
+                int bin_type_init = bin[i].bse_event.getType(bin[i].bse_event.getEventIndexInit());
                 for (int k=0; k<nmax; k++) {
                     int binary_type = bin[i].bse_event.getType(k);
                     if (binary_type>0) {
-                        bin_type_last = binary_type;
+                        if (output_flag) {
+                            bool first_event = (k==0);
+                            if ((first_event&&bin_type_init!=binary_type)||!first_event) {
+                                if (!(bin_type_init==11&&(binary_type==3||binary_type==11))) {// avoid repeating printing Start Roche and BSS
 #pragma omp critical
-                        {
-                            std::cout<<" ID="<<i<<" index="<<k<<" "<<" dt="<<dt;
+                                    {
+                                        bse_manager.printBinaryEventColumnOne(fout_bse_type, bin[i].bse_event, k, WRITE_WIDTH, false);
+                                        fout_bse_type<<std::setw(WRITE_WIDTH)<<2*i+1
+                                                     <<std::setw(WRITE_WIDTH)<<2*i+2
+                                                     <<std::setw(WRITE_WIDTH)<<0
+                                                     <<std::setw(WRITE_WIDTH)<<0
+                                                     <<std::endl;
+                                    }
+                                }
+                            }
+                        }
+                        // print data
+                        if (nbin==1) {
+                            std::cout<<" BID="<<i+1<<" index="<<k<<" "<<" dt="<<dt;
                             bse_manager.printBinaryEventOne(std::cout, bin[i].bse_event, k);
                             std::cout<<std::endl;
                         }
+                        bin_type_last = binary_type;
                     }
                     else if (binary_type<0) break;
                 }
-                bin_type_init = bin_type_last;
 
                 for (int k=0; k<2; k++) {
                     double dv[4];
@@ -392,32 +449,24 @@ int main(int argc, char** argv){
                     if (dv[3]>0&&!kick_print_flag[k]) {
 #pragma omp critical 
                         {
-                            std::cout<<"SN kick, i="<<i<<" vkick[IN]="<<dv[3]<<" ";
+                            fout_bse_sn<<std::setw(WRITE_WIDTH)<<2*i+1
+                                       <<std::setw(WRITE_WIDTH)<<2*i+2
+                                       <<std::setw(WRITE_WIDTH)<<k+1
+                                       <<std::setw(WRITE_WIDTH)<<dv[3]*bse_manager.vscale;
+                            bin[i].star[k].printColumn(fout_bse_sn, WRITE_WIDTH);
+                            fout_bse_sn<<std::endl;
+                        }
+                        if (nbin==1) {
+                            std::cout<<"SN kick, BID="<<i+1<<" Member="<<k+1<<" vkick[IN]="<<dv[3]<<" ";
                             bin[i].star[k].print(std::cout);
                             std::cout<<std::endl;
                         }
                         kick_print_flag[k]=true;
                     }
                 }
-                if (error_flag<0) {
-#pragma omp critical 
-                    {
-                        std::cerr<<"Error: i="<<i<<" mass0[IN]="<<bin[i].m1<<" "<<bin[i].m2<<" period[IN]="<<bin[i].period<<" ecc[IN]="<<bin[i].ecc
-                                 <<std::endl;
-                        std::cerr<<"Star 1:";
-                        bin[i].star[0].print(std::cerr);
-                        std::cerr<<"\nStar 2:";
-                        bin[i].star[1].print(std::cerr);
-                        std::cerr<<std::endl;
-                        std::cerr<<std::endl;
-                    }
-                }
                 double dt_miss = bse_manager.getDTMiss(bin[i].out[0]);
-
-                if (print_flag) printBinary(fout,bin[i]);
                 if (dt_miss!=0.0&&bin[i].star[0].kw>=15&&bin[i].star[1].kw>=15) break;
             }
-            fout.close();
         }
 
         printBinaryTitle(std::cout);
@@ -429,49 +478,62 @@ int main(int argc, char** argv){
 
 #pragma omp parallel for schedule(dynamic)
         for (size_t i=0; i<star.size(); i++) {
-            // output file
-            std::ofstream fout;
-            bool print_flag=false;
-            if (fprint_name!="") {
-                std::string fi = fprint_name+std::string(".s.")+std::to_string(i);
-                fout.open(fi.c_str(),std::ofstream::out);
-                printSingleTitle(fout);
-                print_flag = true;
-            }
-
             //int error_flag = bse_manager.evolveStar(star[i],output[i],time);
             bool kick_print_flag=false;
             double tend = time*bse_manager.tscale;
             while (bse_manager.getTime(star[i])<tend) {
                 double dt = std::max(bse_manager.getTimeStepStar(star[i]),dtmin);
                 dt = std::min(tend-bse_manager.getTime(star[i]), dt);
-                int error_flag=bse_manager.evolveStar(star[i],output[i],dt);
+                StarParameter star_bk = star[i];
+                int event_flag=bse_manager.evolveStar(star[i],output[i],dt);
+
+                // error 
+                if (event_flag<0) {
+                    std::cerr<<"SSE Error: ID= "<<i+1<<" mass0[IN]="<<mass0[i]<<" ";
+                    star[i].print(std::cerr);
+                    output[i].print(std::cerr);
+                    std::cerr<<std::endl;
+                    abort();
+                }
+
                 double dv[4];
                 dv[3] = bse_manager.getVelocityChange(dv, output[i]);
-                if (dv[3]>0&&!kick_print_flag) {
+
+                if (output_flag) {
+                    if (event_flag==1) {
 #pragma omp critical 
-                    {
-                        std::cout<<"SN kick, i="<<i<<" vkick[IN]="<<dv[3]<<" ";
-                        star[i].print(std::cout);
-                        std::cout<<std::endl;
+                        {
+                            fout_sse_type<<std::setw(WRITE_WIDTH)<<i+1;
+                            star_bk.printColumn(fout_sse_type, WRITE_WIDTH);
+                            star[i].printColumn(fout_sse_type, WRITE_WIDTH);
+                            fout_sse_type<<std::endl;
+                        }
                     }
-                    kick_print_flag=true;
-                }
-                if (error_flag<0) {
+                    else if(event_flag==2 && !kick_print_flag) {
+                        if (dv[3]>0&&!kick_print_flag) {
 #pragma omp critical 
-                    {
-                        std::cerr<<"Error: i="<<i<<" mass0[IN]="<<mass0[i]<<" ";
-                        star[i].print(std::cerr);
-                        std::cerr<<std::endl;
+                            {
+                                fout_sse_sn<<std::setw(WRITE_WIDTH)<<i+1
+                                           <<std::setw(WRITE_WIDTH)<<dv[3]*bse_manager.vscale;
+                                star[i].printColumn(fout_sse_sn, WRITE_WIDTH);
+                                fout_sse_sn<<std::endl;
+                            }
+
+                            if (star.size()==1) {
+                                std::cout<<"SN kick, i="<<i<<" vkick[IN]="<<dv[3]<<" ";
+                                star[i].print(std::cout);
+                                std::cout<<std::endl;
+                            }
+                            kick_print_flag=true;
+                        }
                     }
                 }
                 double dt_miss = bse_manager.getDTMiss(output[i]);
-                if (print_flag) printSingle(fout, mass0[i], star[i], output[i]);
+                if (star.size()==1) printSingle(std::cout, mass0[i], star[i], output[i]);
                 if (dt_miss!=0.0&&star[i].kw>=15) break;
             }
-            fout.close();
         }
-
+        
         printSingleTitle(std::cout);
         for (size_t i=0; i<star.size(); i++) {
             printSingle(std::cout, mass0[i], star[i], output[i]);
@@ -490,6 +552,13 @@ int main(int argc, char** argv){
 
             printBinary(std::cout,hyb[i]);
         }
+    }
+
+    if (output_flag) {
+        fout_sse_type.close();
+        fout_sse_sn.close();
+        fout_bse_type.close();
+        fout_bse_sn.close();
     }
 
     return 0;
