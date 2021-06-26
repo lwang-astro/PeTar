@@ -18,6 +18,10 @@ Please carefully read it first before asking questions to developers.
 More detail of the algorithms are described in Wang et al. (2020; arXiv: https://arxiv.org/abs/2006.16560).
 The Doxygen documentation for developers is under preparation.
 
+The main body of PeTar is written in c++ language. The external modules can have different programme languages.
+The data analysis tool is written in Python3. Users need the basic knowledge of Python to access the simulation data.
+Especially, it is recommended to learn how to use the Python modules `numpy`, `dict` and `matplotlib`, which cover the most functions to read, process and plot data. 
+
 ## Content:
 - [Install](#install)
     - [Dependence](#dependence)
@@ -75,6 +79,7 @@ The Doxygen documentation for developers is under preparation.
          - [Make data selection](#make-data-selection)
          - [Using Matplotlib](#using-matplotlib)
          - [Save data](#save-data)
+         - [The reference frame and coordinate system transformation](#the-reference-frame-and-coordinate-system-transformation)
          - [Merge two data](#merge-two-data)
          - [Reading binary snapshots](#reading-binary-snapshots)
          - [Reading triple and quadruple snapshots](#reading-triple-and-quadruple-snapshots)
@@ -412,17 +417,40 @@ In the content, users need to describe the version of PeTar, the configure optio
 Users can also check the details by using the debug tool _petar.hard.debug_ together with the GDB tool, if users prefer to understand the problems themselves. The knowledge of the source codes of SDAR is required to understand the messages from the debug tool.
 
 #### Output files
-There are a few output files:
-- [data filename prefix].[index]: the snapshot files, the format is the same as the input data file. In the help information of _petar_ commander, users can find the definitions of the columns and header.
-- [data filename prefix].esc.[MPI rank]: the escaped particle information, first lines show the column definition.
-- [data filename prefix].group.[MPI rank]: the information of new and end of groups (binary, triple ...), since the items in each row can be different because of different numbers of members in groups, there is no universal column headers.
-- [data filename prefix].[mo][s|b]se.[MPI rank]: if BSE based code is switched on, the files record the single and binary stellar evolution events, such as type changes, Supernovae, binary evolution phase changes. Each line contain one event. 
+Except the printed information from _petar_ commander, there are a few output files as shown in the following table:
 
+| File name            | Content                                                                                                                    |
+| :-------------       | ------------------------------------------------------------------------------------------------------------------------   |
+| data.[index]         | Snapshot files for each output time. The format is the same as the input data file.                                        |
+|                      | Users can find the definitions of the first line (header) and columns by using `petar -h`.                                 |
+|                      | [index] is the output order, counting from 0 (initial snapshot). It is not the time unless the output interval is (`-o`) 1 |
+| data.esc.[MPI rank]  | The escaped particle, the columns are the same as snapshot files except for an additional column of escaped time at first  |
+| data.group.[MPI rank]| The information of new and end of mutiple systems (binary, triple ...) that are detected in the SDAR integration method.   |
+|                      | The definition of the multiple system depends on the distance criterion of _petar_ option `--r-bin`.                       |
+
+When stellar evolution options, such as bse and mobse are used (--with-interrupt during configure), there are additional files: 
+
+| File name            | Content                                                                                                                    |
+| :-------------       | ------------------------------------------------------------------------------------------------------------------------   |
+| data.[mo]sse.[MPI rank] | The single stellar evolution records, such as type changes and supernovae. Notice that if a star evolve very fast (less than the dynamical integration time step), the internal type changes may not be recorded|
+| data.[mo]bse.[MPI rank] | The binary stellar evolution records. All binary type changes are recorded, but if 'Warning: BSE event storage overflow!' appears in the simulation, the binary type change is too frequent so that these changes for the corresponding binary is not recored|
+
+Here 'data' is the default prefix of output files, users can change it by _petar_ option `-f`. For example, by using `-f output`, the output files will be 'output.[index]', 'output.esc.[MPI rank]' ...
+
+[MPI rank] indicates which MPI processor outputs the data. Thus, the number of each data files with this suffix is the same as the MPI processors used in the simulation.
+For example, when two MPI processors are used, the escape data files will be 'data.esc.0', 'data.esc.1'.
 Before access these files, it is suggested to run _petar.data.gether_ tool first to gether the separated files with different MPI ranks to one file for convenience.
-For ".group" files, this tool also separate the few-body groups with different number of members to individual files with suffix ".n[number of members in groups]".
-For ".[mo][s|b]se" files, this tool separate the type changes, supernova kicks and dynamical mergers into separate files (".type_change, .sn_kick and .dynamic_merge").
-After this process, the Python tools (See [Data analysis in _Python3_](#data-analysis-in-python3)) can be used to read the new data files.
-To check the details of the generated files and cooresponding reading method, see [Gether output files from different MPI ranks](#gether-output-files-from-different-mpi-ranks).
+
+_petar.data.gether_ not only gether the files from different MPI processors, but also generate new files that can be accessed by _petar_ Python data anaylsis tool  (See [Data analysis in _Python3_](#data-analysis-in-python3)) .
+- For ".group" files, _petar.data.gether_ separates the few-body groups with different number of members to individual files with suffix ".n[number of members in groups]".
+- For ".[mo][s|b]se" files, this tool separates the type changes, supernova kicks and dynamical mergers into separate files (".type_change, .sn_kick and .dynamic_merge").
+To check the details of the generated files from _petar.data.gether_ and cooresponding reading method in Python, see [Gether output files from different MPI ranks](#gether-output-files-from-different-mpi-ranks).
+
+Since each file contains a large number of columns, it is recommended to use the Python data analysis tool to access them. 
+The data analysis tool is very convenient to pick up the specific parameter (column) and process the data (selection, calculation and plotting), similar to the `dict` and `numpy` in Python.
+It also helps to avoid reading wrong columns. 
+Thus, the defnition of columns are not listed in the manual and are also not in the header of files.
+Please refer to the help information of the corresponding analysis tool for each file.
 
 The raw snapshots files do not include the information for binaries or multiple systems. To identify them and obtain the Lagrangian and core properties,
 _petar.data.process_ tool can be used (see [Parallel data process](#parallel-data-process)).
@@ -456,19 +484,20 @@ There is no additional output files from _galpy_ code.
 ##### Output file units
 
 Here is the table to show the corresponding units for the output files (The data filename prefix is "data" as an example).
-| Filename              | Content                                                     | Unit set                                                           |
-| :-------------------- | :---------------------------------------------------------  | :------------------------------------------------------------      |
+| Filename                    | Content                                                     | Unit set                                                           |
+| :-------------------------- | :---------------------------------------------------------  | :------------------------------------------------------------      |
 | _petar_ output log          | printed information from _petar_                            | PeTar unit                                                         |
-| data.[index]                | snapshots of particle data (particle class)                 | PeTar unit + Stellar evolution unit (s_* part shown in `petar -h`) |
-| data.esc                    | escapers (time of escape + particle class)                  | Time: PeTar unit; particle: particle class                         |
-| data.group.[MPI rank]       | multiple system formation and disruption record in SDAR     | Binary parameters: PeTar unit;  Particle members: particle class   |
-| data.[mo][s\|b]se.[MPI rank] | stellar evolution event records from _bse/mobse_         | Stellar evolution unit |
+| data.[index]                | snapshots                                                   | Particle class: PeTar unit + Stellar evolution unit (see `petar -h`) |
+| data.esc.[MPI rank]         | escapers                                                    | Time: PeTar unit; particle: particle class                         |
+| data.group.[MPI rank]       | multiple systems                                            | Binary parameters: PeTar unit;  Particle members: particle class   |
+| data.[mo][s\|b]se.[MPI rank]| stellar evolution events                                    | Stellar evolution unit                                             |
 
-Here the units for members in the particle class can be found by using `petar -h`. 
-The members with the prefix "s_" come from stellar evolution parts, the corresponding units are also shown in the help information.
+Here 'particle class' indicates data structure of one particle (c++ class) in PeTar. 
+Depending on the stellar evolution mode, one particle has the mixed data from PeTar part and stellar evolution part.
+These two parts are not in the same unit system.
+The units for stellar evolution parameters with the prefix "s_" in the particle class can be found by using `petar -h`. 
 The other members follow the units of input data file (PeTar unit).
-If users are unclear about the units of the output files. They can also check the help information from the python analysis tool for reading the corresponding files. 
-
+If users are unclear about the units of the output files. They can also check the help information from the python analysis tool (`help(petar.Particle)`) for reading the corresponding files. 
 
 ### Useful tools
 There are a few useful tools helping users to generate initial input data, find a proper tree time step to start the simulations and data analysis.
@@ -563,10 +592,11 @@ The the default filename prefix 'data' is assumed.
 | data.[\*].binary     | snapshots for binaries                                               | petar.Binary(member_particle_type=petar.Particle, simple_mode=[\*], G=[\*], interrupt_mode=[\*], external_mode=[\*]) |
 | \*data.[\*].triple    | snapshots for triples (if option `-M` is used)                       | petar.Binary(member_particle_type_one=[petar.Particle, petar.Particle], member_particle_type_two=petar.Particle, simple_mode=[\*], G=[\*], interrupt_mode=[\*], external_mode=[\*])            |
 | \*data.[\*].quadruple | snapshots for binary-binary quadruples (if option `-M` is used)      | petar.Binary(member_particle_type=[petar.Particle, petar.Particle],  simple_mode=[\*], G=[\*], interrupt_mode=[\*], external_mode=[\*])             |
-| data.lagr           | Lagrangian and core properties for all objects, single and binaries  | petar.LagrangianMultiple(mass_fraction=[\*], calc_energy=[\*], external_mode=[\*], add_star_type=[\*]) |
+| data.lagr           | Lagrangian and core properties for all objects, single, binaries and user defined stellar types (`add_star_type`)  | petar.LagrangianMultiple(mass_fraction=[\*], calc_energy=[\*], external_mode=[\*], add_star_type=[\*]) |
 | data.core           | core position, velocity and radius                                   | petar.Core()               |
 | data.esc_single     | Single escapers                                                      | petar.SingleEscaper(interrupt_mode=[\*], external_mode=[\*])   |
 | data.esc_binary     | Binary escapers                                                      | petar.BinaryEscaper(member_particle_type=petar.Particle, simple_mode=[\*], G=[\*], interrupt_mode=[\*], external_mode=[\*])      |
+| \*data.bse_status   |  The evolution of number counts, maximum and averaged masses of different stellar types | petar.BSEStatus() | 
 | \*data.tidal         | Tidal radius data (if option `--r-escape tidal` is used)             | petar.Tidal()              |
 
 PS: the arguments [\*] for the keywords in the python class initialization depend on the configure options for compiling (e.g., `interrupt_mode`, `external_mode`) and the options used in _petar.data.process_. These keywords arguments are optional. They are only needed to provide when the default values are not used.
@@ -580,6 +610,7 @@ When users apply the astronomical unit set (`-u 1` in the _petar_ commander) in 
 Or, if the _BSE_ based package is used, the interrupt mode option `-i (mo)bse` can also set the correct value of G.
 
 The snapshots (single, binary ...) generated by _petar.data.process_ are shifted to the rest frame where the density center is the coordinate origins.
+By adding the core position and velocity from 'data.core' at the corresponding time, the positions and velocities in the initial frame or Galactocentric frame (when _galpy_ is used) can be recovered.
 
 When the snapshot files are in BINARY format, the option `-s binary` can be used for _petar.data.process_ to read the snapshot correctly.
 Notice that the generated data from _petar.data.process_ are all in the ASCII format.
@@ -591,6 +622,17 @@ Instead, the post-process by _petar.data.process_ can calculate the tidal radius
 These detected escapers will be stored in the post-generated escape files: data.esc_single and data.esc_binary. 
 Be careful that these escapers are not removed from the post-generated snapshot files: data.[index].single and data.[index].binary.
 
+For the Lagrangian properties, 'data.lagr' include the radius, average mass, number of objects, different components of velocity and dispersions within different Lagrangian radii. 
+The mass fraction of Lagrangian radii is 0.1, 0.3, 0.5, 0.7, 0.9 in default.
+The property of core radius is added at the last.
+There is an option in _petar.data.process_ to define an arbitrary set of mass function.
+When stellar evolution (e.g. BSE/MOBSE) is used, an additional option `--add-star-type` can be used to calculate the Lagrangian properties for specific type of stars.
+See `petar.data.process -h` for details.
+When `--add-star-type` is used, the reading function should has the consistent keyword arguments.
+The example to read 'data.lagr' is shown in [Reading Lagrangian data](#reading-lagrangian-data).
+
+When `--calc-energy` is used, the potential energy, external potential energy and virial ratio for each Lagrangian radii are calculated.
+But be careful when the external potential is used, the virial radio may not be properly estimated when the stellar system has no well defined center (disrrupted phase).
 
 #### Movie generator
 The _petar.movie_ is a covenient tool to generate a movie from the snapshot files.
@@ -773,28 +815,52 @@ After the class instance is created, users can always use `[class instance].keys
 
 Here is the list of all classes.
 - For reading outputs of _petar_ (need to use _petar.data.gether_ to generate data files first):
-    - _Particle_: the basic particle data (snapshot files, [data filename prefix].[index]).
-    - _Status_: the global parameter of the system such as energy and number of particles ([data filename prefix].status).
-    - _Profile_: the wall-clock time of different parts of the code ([data filename prefix].prof.rank.[rank index]).
-    - _GroupInfo_: the formation and disruption of few-body groups log ([data filename prefix].group.n[number of members]).
-- For outputs when BSE based package is switched on (need to use _petar.data.gether_ to generate data files first):
-    - _SSETypeChange_: the log of type change of single stars ([data filename prefix].sse.type_change)
-    - _SSESNKick_: the log of SNe kick events of single stars ([data filename prefix].sse.sn_kick)
-    - _BSETypeChange_: the log of type change of binary stars ([data filename prefix].bse.type_change)
-    - _BSESNKick_: the log of SNe kick events of binary stars ([data filename prefix].bse.sn_kick)
-- For data generated by using the _petar.data.process_:
-    - _SingleEscaper_: single star escapers, this can read both the escapers generated by _petar.data.process_ and the output from _petar_ ([data filename prefix].esc(\_single)).
-    - _BinaryEscaper_: binary star escapers ([data filename prefix].esc\_binary).
-    - _LagrangianMultiple_: properties related to Lagrangian and core radii: radii, number, averaged mass, velocity dispersion, rotational velocity in x-y plane ([data filename prefix].lagr).
-    - _Core_: data of core radius, center position and velocity of the system ([data filename prefix].core). 
-    - _Binary_: the basic binary data, store two member particles and the Kepler orbital information. Can be generated by using _findPair_ function.
-    - _BSEStatus_: the evolution of number counts, maximum and averaged masses of different stellar types ([data filename prefix].bse_status).
 
-There are also several useful functions.
-- _join_: join two same type instances of modules. For example, _join_(particle1, particle2) will generate a new _Particle_ instance that contain both two data. Each member is numpy.append(particle1.member, particle2.member).
-- _findPair_: detect binaries of one particle list by using _scipy.cKDTree_.
-- _findMultiple_: detect triples and quadruples (binary-binary) from single and binary data (generated from _findPair_).
-- _parallelDataProcessList_: use mutliple CPU cores to process a list of snapshot files and generate single and binary snapshots, Lagrangian data, core data and escaper data. For large _N_, the data process is quite slow, thus using multiple CPU processors can speed up the process. This is the main function used in _petar.data.process_.
+| Class name     | Description                                  | Keyword arguments (options shown in [])        |           Corresponding file                                |
+| :------------  | :---------------------------------           | :----------------------------------------      | :---------------------------------------------------------- |
+| petar.PeTarDataHeader| The header (first line) of snapshot data | external potential option: `external_mode=['galpy', 'none']` |         data.[index]                        |
+|                |                                              | Data format: `snapshot_format=['binary', 'ascii']`  |                                                         | 
+| petar.Particle | The basic (single) particle data             | stellar evolution option: `interrupt_mode=['bse', 'mobse', 'none']` | (single) snapshot files, data.[index], data.[index].single  |
+|                |                                              | external potential option: `external_mode=['galpy', 'none']`    |                                        |
+| petar.Status   | The global parameter (energy, N ...)         |                                                | data.status                                                 |
+| petar.Profile  | The performance of different part of codes   | Whether GPU is used: `use_gpu=[True, False]`   | data.prof.rank.[MPI rank]                                   |
+| petar.GroupInfo| Mutliple systems (binary, triple ...)        | Number of members: `N=[2, 3, ...]`             | data.group.n[number of members]                             |
+
+- For outputs from _petar (need to use _petar.data.gether_ first) and _petar.(mo)bse_, when the BSE based stellar evolution mode is switched on:
+
+| Class name          | Description                                  |   Corresponding file      |
+| :------------       | :---------------------------------           | :------------------------ |
+| petar.SSETypeChange | Type change records of single stars          | data.(mo)sse.type_change  |
+| petar.SSESNKick     | Supernove kick events of single stars        | data.(mo)sse.sn_kick      |
+| petar.BSETypeChange | Type change records of binary stars          | data.(mo)bse.type_change  |
+| petar.BSESNKick     | Supernove kick events of binary stars        | data.(mo)bse.sn_kick      |
+
+- For data generated by using the _petar.data.process_ (see [Parallel data process](#parallel-data-process) for keyword argument description):
+
+| Class name         | Description            | Keyword arguments                              |           Corresponding file                                         |
+| :------------      | :----------------------| :----------------------------------------      | :----------------------------------------------------------          |
+| petar.SingleEscaper| Single star escapers   | same as petar.Particle                         | data.esc (from _petar_), data.esc_single (from _petar.data.process_) |
+| petar.BinaryEscaper| Binary star escapers   | same as petar.Binary                           | data.esc_binary                                                      |
+| petar.LagrangianMultiple| Lagrangian and core properties | mass_fraction, calc_energy, external_mode, add_star_type   | data.lagr                                   | 
+| petar.Core         | Data of core radius, center position and velocity of the system  |      | data.core                                                            |
+| petar.Binary       | Binary and multiple system data | member_particle_type(\_one|\_two), interrupt_mode, external_mode, simple_mode, G | data.[index].binary, data.[index].triple, data.[index].quadruple       |
+| petar.BSEStatus    | The evolution of number counts, maximum and averaged masses of different stellar types || data.bse_status                                      |
+
+There are also several useful functions, see `help(Function name)` in Python to check the manual for the arguments in detail.
+| Function name      | Description                                                      |
+| :---------------   | :--------------------------------------------------------------- |
+| petar.join         | Join two data with the same type. For example, `petar.join(particle1, particle2)` will generate a new `petar.Particle` instance that include `particle1` and `particle2`|
+| petar.findPair     | Detect binaries of from a particle snapshot by using _scipy.cKDTree_. This is the function used to detect binaries in _petar.data.process_ |
+| petar.findMultiple | Detect triples and quadruples (binary-binary) from single and binary data. It is also used in _petar.data.process_                         |
+| petar.parallelDataProcessList| Use mutliple CPU cores to process a list of snapshot files and generate single and binary snapshots, Lagrangian data, core data and escaper data. For large _N_, the data process is quite slow, thus using multiple CPU processors can speed up the process. This is the main function used in _petar.data.process_|
+| petar.vecDot       | Dot production of two 2D array |
+| petar.vecRot       | Rotate a 3D vector array by using Euler angles (using _scipy.spatial.transform.Rotation_) |
+| petar.cantorPairing| generate new ID from two IDs, used to obtain the unique binary ID from IDs of two components |
+| petar.calcTrh      | Calculate one-component half-mass relaxation time using Spitzer (1987) formula |
+| petar.calcTcr      | Calculate half-mass crossing time |
+| petar.convergentPointCheck | Calculate proper motions in the frame of convergent point based on the given velocity and calculate the residuals (van Leeuwen F., 2009; Jerabkova T. et al. 2021) |
+| petar.coordinateCorrection | Correct c.m. coordinate based on the difference between snapshot center and observational center in the galactocentric frame |
+
 
 More useful tools will be implemented in the future. The tools/analysis/parallel_data_process.py is a good example to learn how to use the analysis tool.
 
@@ -902,6 +968,44 @@ particle_new = petar.Particle(interrupt_mode='bse')
 particle_new.addNewMember('r2',np.array([]))
 particle_new.loadtxt([file path of saved data])
 ```
+
+#### The reference frame and coordinate system transformation
+
+The `petar.Particle` and `petar.Core` have the member function to transform the data type to _astropy.coordinate.SkyCoord_.
+The _SkyCoord_ is a powerful Python module that can easily transform the reference frame and the coordinate system of particle data.
+For example, when the _galpy_ is used, the simulation of _petar_ use the Galactocentric frame with the Cartesian coordinate system.
+When no stellar evolution is used, the input unit is astronomical unit (Msun, pc, pc/Myr) and the output format is ASCII,
+the script to transform one snapshot (no stellar evolution and output format is ASCII):
+```
+import petar
+import astropy.units as units
+
+# read snapshot data from petar
+particle=petar.Particle(external_mode='galpy')
+particle.loadtxt([snapshot path],skiprows=1)
+
+# read c.m. offset in the Galactocentric frame
+header=petar.PeTarDataHeader([snapshot path], external_mode='galpy')
+
+# Get SkyCoord data type in the Galactocentric frame
+particle_new = particle.toSkyCoord(pos_offset=header.pos_offset, vel_offset=header.vel_offset)
+```
+This script will generate a new data `particle_new` with the type of `astropy.coordinate.SkyCoord`.
+Notice thats the solar position (`galcen_distance=8.0*units.kpc, z_sun=15.*units.pc`) and velocity (`galcen_v_sun=CartesianDifferential([10.0,235.,7.]*u.km/u.s)`) are assumed in _galpy_. 
+These are different from the default values of `SkyCoord`. 
+In the function `toSkyCoord`, the values are consistent with the assumption of _galpy_.
+
+Then, it is convenient to plot the data (RA, DEC) in the ICRS frame by using Matplotlib:
+```
+import matplotlib.pyplot as plt
+fig, axes=plt.subplots(1,1)
+ra = particle_new.icrs.ra
+dec = particle_new.icrs.dec
+axes.plot(ra,dec,'.')
+axes.set_xlabel('RA')
+axes.set_ylabel('Dec')
+```
+
 
 #### Merge two data
 
