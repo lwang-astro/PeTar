@@ -427,6 +427,8 @@ Except the printed information from _petar_ commander, there are a few output fi
 | data.esc.[MPI rank]  | The escaped particle, the columns are the same as snapshot files except for an additional column of escaped time at first  |
 | data.group.[MPI rank]| The information of new and end of mutiple systems (binary, triple ...) that are detected in the SDAR integration method.   |
 |                      | The definition of the multiple system depends on the distance criterion of _petar_ option `--r-bin`.                       |
+| data.status          | The global parameters, e.g., energies, angular momentum, number of particles, system center position and velocity          |
+| data.prof.rank.[MPI rank]| The performance measurement for different parts of the code during the simulation                                      |
 
 When stellar evolution options, such as bse and mobse are used (--with-interrupt during configure), there are additional files: 
 
@@ -491,6 +493,8 @@ Here is the table to show the corresponding units for the output files (The data
 | data.esc.[MPI rank]         | escapers                                                    | Time: PeTar unit; particle: particle class                         |
 | data.group.[MPI rank]       | multiple systems                                            | Binary parameters: PeTar unit;  Particle members: particle class   |
 | data.[mo][s\|b]se.[MPI rank]| stellar evolution events                                    | Stellar evolution unit                                             |
+| data.status                 | global parameters                                           | PeTar unit                                                         |
+| data.prof.rank.[MPI rank]   | performance profiling                                       | Time: second (per tree time step)                                  |
 
 Here 'particle class' indicates data structure of one particle (c++ class) in PeTar. 
 Depending on the stellar evolution mode, one particle has the mixed data from PeTar part and stellar evolution part.
@@ -748,6 +752,16 @@ petar.(mo)bse [options] -b [binary data file]
 where the binary data file contain 4 values (mass1, mass2, period, eccentricity) per line.
 Notice that the first line has only one value which is the number of binaries.
 The units of mass and period depend on the option '--mscale' and '--tscale'. In defaulted case, the units set are Msun and Myr. For example, when the tscale are not 1.0, the period in Myr is calculated by the input period value x tscale. 
+
+##### Output files
+If there is only one star or one binary, the printed information from the commander line show its evolution history of the type changes and supernove events.
+If more than one stars or binaries exist, only the final status are printed.
+Additional files that record the evolution history of all stars or binaries are generated if the option `-o` is used.
+The argument of this option define the filename prefix.
+For example, when `-o output` is used, if single stars exist, 'output.sse.type_change' and 'output.sse.sn_kick' are generated;
+if binaries exist, 'output.bse.type_change' and 'output.bse.sn_kick' are generated.
+The method to read these files are the same as that for the output files from _petar_ (see [Data analysis in _Python3_](#data-analysis-in-python3) and [Gether output files from different MPI ranks](#gether-output-files-from-different-mpi-ranks)).
+
 
 #### Galpy tool
 The _petar.galpy_ and _petar.galpy.help_ will be generated when --with-external=galpy is used during the configuration.
