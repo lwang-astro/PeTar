@@ -924,17 +924,20 @@ This `offset` is equivalent to `skiprows=1` in the _loadtxt_ function.
 
 To use the Python analysis tool to read the data, users must be careful to ensure the keyword arguments in the initialization function are consistent with the options used in simulations (_petar_) and data analysis tool (_petar.data.process_).
 This is very important to avoid wrong data reading.
-For example, if the bse (interrupt_mode=bse) is used in _petar_, additional columns of stellar evolution parameters are stored in snapshot files.
-If in reading function misses `interrupt_mode='bse'`:
+For example, if the bse is used during the configure (`--with-interrupt=bse`), additional columns of stellar evolution parameters are stored in snapshot files.
+If the initialization of `petar.Particle` misses the keyword argument `interrupt_mode='bse'` as:
 ```
-particle=petar.Particle(interrupt_mode='bse')
+particle=petar.Particle()
 particle.loadtxt('data.0',skiprows=1)
 ```
 The `particle` will not have the correct data.
-To make sure that the data files and reading functions are consistent, users can check the column numbers in data files and reanding instance.
-For example, use `sed -n '2 p' data.0|wc -w` to obtain the column number in data.0, and then, in Python, use `particle.ncols` to check the column number in the `particle` instance.
-These two column numbers should be the same if the keyword arguments of `petar.Particle` are correct.
-The same method can be used to check other data reading, such as Lagrangian data.
+In this case, a warning message will appear:
+```
+UserWarning: The reading data shape[1] or the number of columns (34) mismatches the number of columns defined in the class instance (20)! Make sure whether this is intended and whether you properly choose the correct keyword arguments for the class instance initialziation
+```
+Here the snapshot file 'data.0' has 34 columns (except the first line) that includes the stellar evolution parameters, but `particle` has only 20 columns (ncols=20).
+Such a mismatch can cause a wrong assignment of the data columns and the class members.
+Thus, whenever it appears, users need to review whether they have forgotten or incorrectly set the keyword arguments for the initialization. 
 
 #### Get particle information 
 

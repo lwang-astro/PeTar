@@ -1,5 +1,6 @@
 # base class 
 import numpy as np
+import warnings
 
 class DictNpArrayMix:
     """ The basic class of data structure
@@ -127,7 +128,7 @@ class DictNpArrayMix:
         else:
             raise ValueError('Initial fail, date type should be ',type(self),' or np.ndarray, given ',type(_dat))
 
-    def readArray(self, _dat, _offset=int(0),**kwargs):
+    def readArray(self, _dat, _offset=int(0), ncol_check=True, **kwargs):
         """ Read class member data from a 2D numpy.ndarray
         Parameters
         ----------
@@ -136,15 +137,20 @@ class DictNpArrayMix:
             For exmaple: if keys are [['mass',1],['pos',3]], the member mass = _dat[:,_offset] and pos = _dat[:,_offset+1:_offset+3]
         _offset: int (0)
             Reading column offset of _dat if it is 2D np.ndarray
+        ncol_check: bool (True)
+            If True, check whether self.ncols (the number of columns in class) - _offset == _dat.shape[1] (the number of columns). If not equal, output warning
         kwaygs: dict ()
             keyword arguments
         """
+        if (self.ncols + _offset != _dat.shape[1]) & (ncol_check):
+            warnings.warn('The reading data shape[1] or the number of columns (%d) mismatches the number of columns defined in the class instance (%d)! Make sure whether this is intended and whether you properly choose the correct keyword arguments for the class instance initialziation' % (_dat.shape[1], self.ncols+_offset))
+
         icol = _offset
         self.size = int(0)
         for key, parameter in self.keys:
             if (type(parameter) == type):
                 if (issubclass(parameter, DictNpArrayMix)):
-                    self.__dict__[key].readArray(_dat, icol, **kwargs)
+                    self.__dict__[key].readArray(_dat, icol, False, **kwargs)
                     icol += self.__dict__[key].ncols
                     self.size += self.__dict__[key].size*self.__dict__[key].ncols
                 else:
@@ -159,7 +165,7 @@ class DictNpArrayMix:
                     self.size += self.__dict__[key].size
                 elif (type(parameter[0]) == type) & (type(parameter[1])==dict):
                     if(issubclass(parameter[0], DictNpArrayMix)):
-                        self.__dict__[key].readArray(_dat, icol, **kwargs,**parameter[1])
+                        self.__dict__[key].readArray(_dat, icol, False **{**kwargs,**parameter[1]})
                         icol += self.__dict__[key].ncols
                         self.size += self.__dict__[key].size*self.__dict__[key].ncols
                     else:
