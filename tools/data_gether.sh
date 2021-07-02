@@ -1,8 +1,9 @@
 #!/bin/bash
 
-suffixes='esc group sse bse mosse mobse'
+suffixes='esc sse bse mosse mobse'
 unset rmi
 unset onlylist
+unset groupflag
 
 until [[ `echo x$1` == 'x' ]]
 do
@@ -16,11 +17,13 @@ do
 	    echo '  -n: MPI processes number (default: auto detect)';
 	    echo '  -i: before remove existing gethered files, ask first (default: no ask)';
 	    echo '  -l: generate snapshot date file list only';
+	    echo '  -g: gether group files; a slow process';
 	    exit;;
 	-f) shift; fout=$1; shift;;
 	-n) shift; nmpi=$1; shift;;
 	-i) rmi=1; shift;;
 	-l) onlylist=1; shift;;
+	-g) groupflag=1; suffixes=$suffixes' group'; shift;;
 	*) fname=$1;shift;;
     esac
 done
@@ -67,17 +70,6 @@ do
     fi
 done
 
-if [ -e $fout.group ]; then
-    nmax=`awk '{print $2'} $fout.group|sort |tail -1`
-    if [[ x$nmax != x ]]; then
-	for ((i=2;i<=$nmax;i=i+1))
-	do
-	    echo 'get n_member= '$i' in '$fout.group' to '$fout.group.n$i
-	    awk -v n=$i '{if ($2==n) print $LINE}' $fout.group >$fout.group.n$i
-	done	    
-    fi
-fi
-
 sse_opt='.sse .mosse'
 for s in $sse_opt
 do
@@ -100,3 +92,16 @@ do
 	egrep -v '^(Dynamic_merge|SN_kick)' $fout$s |awk '{for (i=2;i<=NF;i++) printf("%s ", $i); printf("\n")}' >$fout$s.type_change
     fi
 done
+
+[ -z $groupflag ] && exit
+
+if [ -e $fout.group ]; then
+    nmax=`awk '{print $2'} $fout.group|sort |tail -1`
+    if [[ x$nmax != x ]]; then
+	for ((i=2;i<=$nmax;i=i+1))
+	do
+	    echo 'get n_member= '$i' in '$fout.group' to '$fout.group.n$i
+	    awk -v n=$i '{if ($2==n) print $LINE}' $fout.group >$fout.group.n$i
+	done	    
+    fi
+fi
