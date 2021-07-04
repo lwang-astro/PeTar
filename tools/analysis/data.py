@@ -45,10 +45,8 @@ class PeTarDataHeader():
         self.fid = int(0)
         self.n = int(0)
         self.time = 0.0
-        if ('external_mode' in kwargs.keys()):
-            if (kwargs['external_mode']!='none'):
-                self.pos_offset=[0.0,0.0,0.0]
-                self.vel_offset=[0.0,0.0,0.0]
+        self.pos_offset=[0.0,0.0,0.0]
+        self.vel_offset=[0.0,0.0,0.0]
         
         if (_filename!=None): self.read(_filename,**kwargs)
 
@@ -115,6 +113,55 @@ class PeTarDataHeader():
                 self.time = fp['time'][0]
         else: 
             raise ValueError('Snapshot format unknown, should be binary or ascii, given', snapshot_format)
+
+    def toSkyCoord(self, **kwargs):
+        """ generate astropy.coordinates.SkyCoord data in galactocentric frame
+
+        Parameters
+        -----------------
+        kwargs: dict()
+            pos_unit: astropy.units (units.pc)
+                 position unit of the particle data
+            vel_unit: astropy.units (units.pc/units.Myr)
+                 velocity unit of the particle data
+            galcen_distance: floating with length units (8.0*units.kpc [Galpy])
+                 galactic central distance of the Sun
+            z_sun: floating with length units (15.0*units.pc [Galpy])
+                 z direction distance of the Sun
+            galcen_v_sun: astropy.coordinates.CartesianDifferential ([10.0, 235.0, 7.0]*units.km/units.s [Galpy])
+                 velocity of the Sun
+
+        Return
+        ----------------
+        core_g: astropy.coordinates.SkyCoord
+            core c.m. data using SkyCoord
+        """
+        import astropy 
+        from astropy.coordinates import SkyCoord  # High-level coordinates
+        from astropy.coordinates import ICRS, Galactic, Galactocentric, FK4, FK5  # Low-level frames
+        from astropy.coordinates import Angle, Latitude, Longitude  # Angles
+        from astropy.coordinates import CartesianDifferential
+        import astropy.units as u
+
+        pos_unit = u.pc
+        if ('pos_unit' in kwargs.keys()): pos_unit = kwargs['pos_unit']
+        vel_unit = u.pc/u.Myr
+        if ('vel_unit' in kwargs.keys()): vel_unit = kwargs['vel_unit']
+
+        parameters={'galcen_distance':8.0*u.kpc, 'z_sun':15.*u.pc, 'galcen_v_sun':CartesianDifferential([10.0,235.,7.]*u.km/u.s)}
+        for key in parameters.keys():
+            if key in kwargs.keys():
+                parameter[key] = kwargs[key]
+
+        sky = SkyCoord(x=self.pos_offset[0]*pos_unit, 
+                       y=self.pos_offset[1]*pos_unit, 
+                       z=self.pos_offset[2]*pos_unit, 
+                       v_x=self.vel_offset[0]*vel_unit,
+                       v_y=self.vel_offset[1]*vel_unit,
+                       v_z=self.vel_offset[2]*vel_unit,
+                       frame='galactocentric', representation_type='cartesian', **parameters)
+        return sky
+    
 
 class SimpleParticle(DictNpArrayMix):
     """ Simple particle class with only mass, postion, velocity

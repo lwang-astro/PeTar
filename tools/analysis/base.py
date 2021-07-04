@@ -165,7 +165,7 @@ class DictNpArrayMix:
                     self.size += self.__dict__[key].size
                 elif (type(parameter[0]) == type) & (type(parameter[1])==dict):
                     if(issubclass(parameter[0], DictNpArrayMix)):
-                        self.__dict__[key].readArray(_dat, icol, False **{**kwargs,**parameter[1]})
+                        self.__dict__[key].readArray(_dat, icol, False, **{**kwargs,**parameter[1]})
                         icol += self.__dict__[key].ncols
                         self.size += self.__dict__[key].size*self.__dict__[key].ncols
                     else:
