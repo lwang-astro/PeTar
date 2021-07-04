@@ -108,8 +108,8 @@ class PlotXY:
             axe.set_xlabel(r'lon[$\degree$]')
             axe.set_ylabel(r'lat[$\degree$]')
         elif plot_mode == 'pmlon-lat':
-            axe.set_xlabel(r'$\mu_{lon}$[$\degree$]')
-            axe.set_ylabel(r'$\mu_{lat}$[$\degree$]')
+            axe.set_xlabel(r'$\mu_{lon}$[mas/yr]')
+            axe.set_ylabel(r'$\mu_{lat}$[mas/yr]')
         else:
             raise ValueError('Plot mode %s is not supported, check petar.movie -h for the options of -m' % plot_mode)
 
@@ -463,13 +463,6 @@ class PlotLagr:
 
 class Data:
     def __init__(self, **kwargs):
-        self.xcol = -1
-        self.ycol = -1
-        self.zcol = -1
-        self.vxcol = -1
-        self.vycol = -1
-        self.vzcol = -1
-        self.mcol = -1
         self.skiprows = 0
         self.generate_binary=2
         self.interrupt_mode = 'bse'
@@ -835,13 +828,6 @@ if __name__ == '__main__':
         print("  --rlagr-min   [F]: minimum radius in Lagrangian plot: ", plagr.rlagr_min)
         print("  --rlagr-max   [F]: maximum radius in Lagrangian plot: same as movie box length")
         print("  --rlagr-scale [S]: scaling of Lagrangian radii in the plot (y-axis): ",plagr.rlagr_scale)
-        print("  --xcol        [I]: column index for x-axis: Unset")
-        print("  --ycol        [I]: column index for y-axis: Unset")
-        print("  --zcol        [I]: column index for z-axis: Unset")
-        print("  --vxcol       [I]: column index for vx-axis: Unset")
-        print("  --vycol       [I]: column index for vy-axis: Unset")
-        print("  --vzcol       [I]: column index for vz-axis: Unset")
-        print("  --mcol        [I]: column index for mass, if not set and not PeTar output, assume equal mass: Unset")
         print("  --unit-length [S]: set label of length unit for x, y, z and semi: no print")
         print("  --unit-time   [S]: set label of time unit: no print")
         print("  --unit-vel    [S]: set label of velocity unit: no print")
@@ -862,8 +848,7 @@ if __name__ == '__main__':
         print("  --marker-scale  [F]: amplify the size of markers in x-y plot: 1.0")
         print("  --suppress-images: do not plot snapshot images (png files) and use matplotlib.animation instead of imageio, this cannot use multi-processing, much slower")
         print("  --format      [S]: video format, require imageio installed, for some formats (e.g. avi, mp4) may require ffmpeg and imageio-ffmpeg installed: ", plot_format)
-        print("PS:: When xcol, ycol, skiprows are not provided, the snapshot files are assumed to be the output of PeTar")
-        print("     Each panel of plots can be added mutliple times (the order is recored)")
+        print("PS:: Each panel of plots can be added mutliple times (the order is recored)")
 
     try:
         shortargs = 'm:s:f:R:z:o:G:l:L:i:t:p:sHbh'
@@ -871,7 +856,6 @@ if __name__ == '__main__':
                     'semi-min=','semi-max=','ecc-min=','ecc-max=',
                     'rlagr-min=','rlagr-max=','rlagr-scale=',
                     'time-min=','time-max=','x-min=','x-max=','y-min=','y-max=',
-                    'xcol=','ycol=','zcol=','vxcol=','vycol=','vzcol=','mcol=',
                     'unit-length=','unit-time=','unit-vel=',
                     'skiprows=','generate-binary=',
                     'plot-ncols=','plot-xsize=','plot-ysize=',
@@ -976,20 +960,6 @@ if __name__ == '__main__':
                 kwargs['cm_boxsize'] = float(arg)
             elif opt in ('--core-file'):
                 core_file = arg
-            elif opt in ('--xcol'):
-                kwargs['xcol'] = int(arg)
-            elif opt in ('--ycol'):
-                kwargs['ycol'] = int(arg)
-            elif opt in ('--zcol'):
-                kwargs['zcol'] = int(arg)
-            elif opt in ('--vxcol'):
-                kwargs['vxcol'] = int(arg)
-            elif opt in ('--vycol'):
-                kwargs['vycol'] = int(arg)
-            elif opt in ('--vzcol'):
-                kwargs['vzcol'] = int(arg)
-            elif opt in ('--mcol'):
-                kwargs['mcol'] = int(arg)
             elif opt in ('--unit-length'):
                 kwargs['unit_length'] = arg
             elif opt in ('--unit-time'):
