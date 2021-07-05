@@ -7,10 +7,7 @@
 #include "hard_ptcl.hpp"
 #include "Hermite/hermite_particle.h"
 #include "ar_perturber.hpp"
-#if defined(BSE) || defined (MOBSE)
-#ifndef BSE_BASE
-#define BSE_BASE
-#endif
+#ifdef BSE_BASE
 #include "bse_interface.h"
 #endif
 

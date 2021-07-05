@@ -1003,9 +1003,16 @@ public:
         for (int i=0; i<offset; i++) fout<<" ";
         fout<<"BSE: Hurley J. R., Tout C. A., Pols O. R., 2002, MNRAS, 329, 897\n";
 #ifdef BSE
+#ifdef BSEBBF
         for (int i=0; i<offset; i++) fout<<" ";
         fout<<"Updated BSE: Banerjee S., Belczynski K., Fryer C. L., Berczik P., Hurley J. R., Spurzem R., Wang L., 2020, A&A, 639, A41"
             <<std::endl;
+#elif BSEEMP
+        for (int i=0; i<offset; i++) fout<<" ";
+        fout<<"BSEEMP: Tanikawa A., Yoshida T., Kinugawa T., Takahashi K., Umeda H., 2020, MNRAS, 495, 4170\n";
+        for (int i=0; i<offset; i++) fout<<" ";
+        fout<<"        Tanikawa A., Susa H., Yoshida T., Trani A.~A., Kinugawa T., 2021, ApJ, 910, 30\n";
+#endif
 #elif MOBSE
         for (int i=0; i<offset; i++) fout<<" ";
         fout<<"MOBSE: Giacobbo N., Mapelli M. & Spera M., 2018, MNRAS, 474, 2959\n";
@@ -1014,6 +1021,46 @@ public:
 #endif
     }
     
+    static std::string getSSEOutputFilenameSuffix() {
+#ifdef BSEBBF
+        return std::string(".sse");
+#elif BSEEMP
+        return std::string(".sseEmp");
+#elif MOBSE
+        return std::string(".mosse");
+#endif
+    }
+
+    static std::string getBSEOutputFilenameSuffix() {
+#ifdef BSEBBF
+        return std::string(".bse");
+#elif BSEEMP
+        return std::string(".bseEmp");
+#elif MOBSE
+        return std::string(".mobse");
+#endif
+    }
+
+    static std::string getSSEName() {
+#ifdef BSEBBF
+        return std::string("SSE");
+#elif BSEEMP
+        return std::string("SSEEMP");
+#elif MOBSE
+        return std::string("MOSSE");
+#endif
+    }
+
+    static std::string getBSEName() {
+#ifdef BSEBBF
+        return std::string("BSE");
+#elif BSEEMP
+        return std::string("BSEEMP");
+#elif MOBSE
+        return std::string("MOBSE");
+#endif
+    }
+
     bool isMassTransfer(const int _binary_type) {
         return (_binary_type>=3&&_binary_type<=9);
     }

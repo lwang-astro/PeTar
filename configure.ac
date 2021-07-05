@@ -305,7 +305,7 @@ AC_ARG_WITH([interrupt],
 	    [AS_HELP_STRING([--with-interrupt],
 	                    [Interruption detection mode: Default: off])],
             [PROG_NAME=$PROG_NAME'.'$with_interrupt
-	     AS_IF([[test x"$with_interrupt" == xbse] || [test x"$with_interrupt" == xmobse]],
+	     AS_IF([[test x"$with_interrupt" == xbse] || [test x"$with_interrupt" == xmobse] || [test x"$with_interrupt" == xbseEmp]],
 	           [FCFLAGS_BK=$FCFLAGS
 		    AC_PROG_FC([gfortran ifort])
                     FCFLAGS=$FCFLAGS_BK

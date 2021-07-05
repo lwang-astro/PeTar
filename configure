@@ -4683,7 +4683,7 @@ fi
 # Check whether --with-interrupt was given.
 if test "${with_interrupt+set}" = set; then :
   withval=$with_interrupt; PROG_NAME=$PROG_NAME'.'$with_interrupt
-	     if test x"$with_interrupt" == xbse || test x"$with_interrupt" == xmobse; then :
+	     if test x"$with_interrupt" == xbse || test x"$with_interrupt" == xmobse || test x"$with_interrupt" == xbseEmp; then :
   FCFLAGS_BK=$FCFLAGS
 		    ac_ext=${ac_fc_srcext-f}
 ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'

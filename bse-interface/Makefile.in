@@ -5,11 +5,15 @@ BSE_LIB=libbse.a
 ifeq ($(se_mode),bse)
 BSE_TEST=petar.bse
 BSE_PATH=bse
-CXXFLAGS = -D BSE
+CXXFLAGS = -D BSE -D BSEBBF -D BSE_BASE
 else ifeq ($(se_mode),mobse)
 BSE_TEST=petar.mobse
 BSE_PATH=mobse
-CXXFLAGS = -D MOBSE
+CXXFLAGS = -D MOBSE -D BSE_BASE
+else ifeq ($(se_mode),bseEmp)
+BSE_TEST=petar.bseEmp
+BSE_PATH=bseEmp
+CXXFLAGS = -D BSE -D BSEEMP -D BSE_BASE
 endif
 
 
@@ -29,8 +33,15 @@ VPATH=$(BSE_PATH)
 
 SRC:= $(shell find $(BSE_PATH) -type f  \( -iname '*.f' ! -iname '.*' ! -iname '[sb]se.f' ! -iname 'mo[sb]se.f' ! -iname 'popbin.f' \) )
 OBJ:= $(SRC:.f=.o)
+ifeq ($(se_mode),bseEmp)
+SRC:= $(shell find $(BSE_PATH)  \( -iname '*.f' ! -iname '.*' ! -iname '[sb]se.f' ! -iname 'mo[sb]se.f' ! -iname 'popbin.f' \) )
+OBJ:= $(SRC:.f=.o)
+SRCCXX:= $(shell find $(BSE_PATH) -maxdepth 1 \( -iname '*.cpp' \) )
+OBJCXX:= $(SRCCXX:.cpp=.o)
+endif
 
-$(BSE_LIB): $(OBJ)
+
+$(BSE_LIB): $(OBJ) $(OBJCXX)
 	ar rcs $@ $^
 
 $(BSE_TEST): bse_test.cxx $(BSE_LIB) bse_interface.h

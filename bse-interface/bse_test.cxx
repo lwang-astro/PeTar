@@ -48,15 +48,13 @@ int main(int argc, char** argv){
     bool read_mass_flag = false;
 
     auto printHelp= [&]() {
-#ifdef BSE
-        std::cout<<"The tool to evolve single stars or binaries using SSE/BSE\n"
-                 <<"Usage: petar.bse [options] [initial mass of stars, can be multiple values]\n";
-#elif MOBSE
-        std::cout<<"\nThe tool used to evolve single stars or binaries is based on:\n";
-        BSEManager::printLogo(std::cerr);
-        std::cout<<"Usage: petar.mobse [options] [initial mass of stars, can be multiple values]\n";
+        std::cout<<"The tool to evolve single stars or binaries using "<<BSEManager::getBSEName()<<std::endl;
+#ifdef MOBSE
+        BSEManager::printLogo(std::cout);
 #endif
-        std::cout<<"       If no initial mass or no single/binary/hyprbolic table (-s, -b or -m) is provided, N single stars (-n) with equal mass interal in Log scale will be evolved\n"
+        BSEManager::printReference(std::cout);
+        std::cout<<"Usage: petar"<<BSEManager::getBSEOutputFilenameSuffix()<<" [options] [initial mass of stars, can be multiple values]\n"
+                 <<"       If no initial mass or no single/binary/hyprbolic table (-s, -b or -m) is provided, N single stars (-n) with equal mass interal in Log scale will be evolved\n"
                  <<"       When single table is provided, times and types can be set individually\n"
                  <<"       The default unit set is: Msun, Myr. If input data have different units [IN], please modify the scaling fators\n"
                  <<"Options:\n"

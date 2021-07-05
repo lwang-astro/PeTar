@@ -1,11 +1,7 @@
 #pragma once
-#if defined(BSE) || defined(MOBSE)
-#ifndef BSE_BASE
-#define BSE_BASE
-#endif
+#ifdef BSE_BASE
 #include "bse_interface.h"
 #endif
-
 #ifdef NAN_CHECK_DEBUG
 #ifndef NAN_CHECK
 #define NAN_CHECK(val) assert((val) == (val));
@@ -35,7 +31,7 @@ public:
     PS::F64 time_record; 
     PS::F64 time_interrupt;
 #ifdef BSE_BASE
-    StarParameter star; // SSE/BSE/MOBSE stellar parameters
+    StarParameter star; // SSE/BSE based package stellar parameters
 #endif
 #endif
 

@@ -70,7 +70,7 @@ Especially, it is recommended to learn how to use the Python modules `numpy`, `d
          - [Remove data after a given time](#remove-data-after-a-given-time)
          - [Data format transfer](#data-format-transfer)
          - [Input parameter file format update](#input-parameter-file-format-update)
-         - [BSE based steller evolution tool](#bse-based-steller-evolution-tool)
+         - [SSE and BSE based steller evolution tool](#sse-and-bse-based-steller-evolution-tool)
          - [Galpy tool](#galpy-tool)
     - [Data analysis in _Python3_](#data-analysis-in-python3)
          - [Reading particle snapshots](#reading-particle-snapshots)
@@ -202,14 +202,17 @@ By default GPU is not used. To switch on it, make sure the NVIDIA CUDA is instal
    
 ##### Use stellar evolution
 ```
-./configure --with-interrupt=[bse/mobse]
+./configure --with-interrupt=[bse/mobse/bseEmp]
 ```
-Currently there are two options of stellar evolution packages based on SSE/BSE (Hurley et al. 2000, MNRAS, 315, 543; 2002, MNRAS, 329, 897):
+Currently there are three options of stellar evolution packages based on SSE/BSE (Hurley et al. 2000, MNRAS, 315, 543; 2002, MNRAS, 329, 897):
 - bse: the updated SSE/BSE version from Banerjee et al. 2020, A&A, 639, A41.
-- mobse: the MOBSE from Giacobbo et al. 2018, MNRAS, 474, 2959.
+- mobse: the MOSSE/MOBSE from Giacobbo et al. 2018, MNRAS, 474, 2959.
+- bseEmp: the udpated SSE/BSE version from Tanikawa et al. 2020, MNRAS, 495, 4170.
+Notice that here all SSE/BSE package names (here after [bse_name]) only contain 'bse', but the SSE package is also included.
 
-When this option is switched on, the standalone tool _petar.(mo)bse_ will also be compiled and installed.
-This is a c++ based tool which call the SSE/BSE/MOBSE functions to evolve single and binary stars to the given age and metallicity. OpenMP parallelization is used to speed up the calculation if a large group of stars and binaries are provided.
+When this option is switched on, the standalone tool _petar.[bse_name] will also be compiled and installed.
+This is a c++ based tool which call the stellar evolution functions to evolve single and binary stars to the given age and metallicity. OpenMP parallelization is used to speed up the calculation if a large group of stars and binaries are provided.
+
 
 ##### Use _Galpy_ external potential library
 ```
@@ -311,7 +314,7 @@ Notice that `-s` and `-r` significantly affect the accuracy and performance of t
 Users should be careful for these two options. The _petar.find.dt_ tool can help users to find the optimized values for star clusters.
 For a deep understanding and a better configuration, users may need to read the reference paper.
 
-When stellar evolution packages (e.g., BSE, MOBSE) and external potential (e.g., Galpy) are used, the corresponding options are also shown in `petar -h`.
+When stellar evolution packages (e.g., BSE) and external potential (e.g., Galpy) are used, the corresponding options are also shown in `petar -h`.
 
 ### Data format update for old versions
 The data formats of snapshots, input parameter files and a part of output files have been updated in the past.
@@ -348,11 +351,11 @@ When new versions of _PeTar_ release, the help information always has the corres
 When _petar_ is running, there are a few information printed in the front:
 - The _FDPS_ logo and _PETAR_ information are printed, where the copyright, versions and references for citing are shown. The version of PeTar is the commit numbers of PeTar and SDAR on GitHub.
 - The input parameters are listed if they are modified when the corresponding options of _petar_ are used.
-- If stellar evolution package (updated SSE/BSE or MOBSE) is used, the common block and global parameters are printed.
-- The name of dumped files for the input parameters are shown, in default, they are input.par, input.par.hard, input.par.(mo)bse (if (MO)BSE is used)
+- If the SSE/BSE based stellar evolution package is used, the common block and global parameters are printed.
+- The name of dumped files for the input parameters are shown, in default, they are input.par, input.par.hard, input.par.[bse_name] (if [BSE_NAME] is used)
     - input.par: input parameters of petar, can be used to restart the simulation from a snapshot.
     - input.par.hard: input paremeters of hard (short-range interaction part; Hermite + SDAR), can be used for _petar.hard.debug_ to test the dumped hard cluster.
-    - input.par.(mo)bse: the (MO)BSE parameters, if (MO)BSE is used, this is the necessary file to restart the simulation and also for _petar.hard.debug_.
+    - input.par.[bse_name]: the SSE/BSE based package parameters, if a SSE/BSE based package is used, this is the necessary file to restart the simulation and also for _petar.hard.debug_.
 
 Then after the line "Finish parameter initialization",
 The status of the simulation is updated every output time interval (the option -o).
@@ -430,12 +433,12 @@ Except the printed information from _petar_ commander, there are a few output fi
 | data.status          | The global parameters, e.g., energies, angular momentum, number of particles, system center position and velocity          |
 | data.prof.rank.[MPI rank]| The performance measurement for different parts of the code during the simulation                                      |
 
-When stellar evolution options, such as bse and mobse are used (--with-interrupt during configure), there are additional files: 
+When the SSE/BSE stellar evolution options (--with-interrupt during configure) are used, there are additional files: 
 
 | File name            | Content                                                                                                                    |
 | :-------------       | ------------------------------------------------------------------------------------------------------------------------   |
-| data.[mo]sse.[MPI rank] | The single stellar evolution records, such as type changes and supernovae. Notice that if a star evolve very fast (less than the dynamical integration time step), the internal type changes may not be recorded|
-| data.[mo]bse.[MPI rank] | The binary stellar evolution records. All binary type changes are recorded, but if 'Warning: BSE event storage overflow!' appears in the simulation, the binary type change is too frequent so that these changes for the corresponding binary is not recored|
+| data.[sse_name].[MPI rank] | The single stellar evolution records, such as type changes and supernovae. Notice that if a star evolve very fast (less than the dynamical integration time step), the internal type changes may not be recorded|
+| data.[bse_name].[MPI rank] | The binary stellar evolution records. All binary type changes are recorded, but if 'Warning: BSE event storage overflow!' appears in the simulation, the binary type change is too frequent so that these changes for the corresponding binary is not recored|
 
 Here 'data' is the default prefix of output files, users can change it by _petar_ option `-f`. For example, by using `-f output`, the output files will be 'output.[index]', 'output.esc.[MPI rank]' ...
 
@@ -445,7 +448,7 @@ Before access these files, it is suggested to run _petar.data.gether_ tool first
 
 _petar.data.gether_ not only gether the files from different MPI processors, but also generate new files that can be accessed by _petar_ Python data anaylsis tool  (See [Data analysis in _Python3_](#data-analysis-in-python3)) .
 - For ".group" files, _petar.data.gether_ separates the few-body groups with different number of members to individual files with suffix ".n[number of members in groups]".
-- For ".[mo][s|b]se" files, this tool separates the type changes, supernova kicks and dynamical mergers into separate files (".type_change, .sn_kick and .dynamic_merge").
+- For ".[sse_name]" and ".[bse_name]" files, this tool separates the type changes, supernova kicks and dynamical mergers into separate files (".type_change, .sn_kick and .dynamic_merge").
 To check the details of the generated files from _petar.data.gether_ and cooresponding reading method in Python, see [Gether output files from different MPI ranks](#gether-output-files-from-different-mpi-ranks).
 
 Since each file contains a large number of columns, it is recommended to use the Python data analysis tool to access them. 
@@ -474,7 +477,7 @@ The stellar evolution package (e.g., _bse_) is an additional code. It has a diff
 Thus, between the PeTar part and the stellar evolution pacakge, there is an unit conversion.
 The conversion scaling factors can be manually defined by the _petar_ options `--bse-rscale` ... (see `petar -h` for details).
 It is recommended to use the unit set for input data (Msun, pc, pc/Myr) so that the _petar_ option `-u 1` can be used and the petar will calculate the conversion factor automatically.
-The stellar evolution part in the snapshot files and the output files " [data filename prefix].[s/b]se.[MPI rank]" follow the same unit system as that of _bse(mobse)_. 
+The stellar evolution part in the snapshot files and the output files " [data filename prefix].[s/b]se.[MPI rank]" follow the same unit system as that of _[bse_name]_. 
 
 ##### external potential units
 
@@ -492,7 +495,8 @@ Here is the table to show the corresponding units for the output files (The data
 | data.[index]                | snapshots                                                   | Particle class: PeTar unit + Stellar evolution unit (see `petar -h`) |
 | data.esc.[MPI rank]         | escapers                                                    | Time: PeTar unit; particle: particle class                         |
 | data.group.[MPI rank]       | multiple systems                                            | Binary parameters: PeTar unit;  Particle members: particle class   |
-| data.[mo][s\|b]se.[MPI rank]| stellar evolution events                                    | Stellar evolution unit                                             |
+| data.[bse_name].[MPI rank]  | binary stellar evolution events                             | Stellar evolution unit                                             |
+| data.[sse_name].[MPI rank]  | single stellar evolution events                             | Stellar evolution unit                                             |
 | data.status                 | global parameters                                           | PeTar unit                                                         |
 | data.prof.rank.[MPI rank]   | performance profiling                                       | Time: second (per tree time step)                                  |
 
@@ -523,7 +527,7 @@ petar.init [options] [particle data filename]
 The particle data file should contain 7 columns: mass, position[3], velocity[3] and one particle per row.
 All Binaries come first and the two components should be next to each other. Besides, when binaries exist, the option '-b [binary number]' should be added to the _petar_ commander. This is important to obtain a correct initial velocity dispersion, tree time step and changeover radii. 
 
-Notice when stellar evolution is switched on, the corresponding options "-s (mo)bse" should be used together to generate the correct initial files. In this case, the astronomical unit set (Solar mass [Msun], parsec [PC] and Million year [Myr]) are suggested to use for the initial data. Notice the velocity unit should be PC/Myr. Then the corresponding mass scaling factor is 1.0 between units of PeTar and BSE based code. Besides, the option "-u 1" should be added to the _petar_ commander in order to use this astronomical unit set.
+Notice when stellar evolution is switched on, the corresponding options "-s [bse_name]" should be used together to generate the correct initial files. In this case, the astronomical unit set (Solar mass [Msun], parsec [PC] and Million year [Myr]) are suggested to use for the initial data. Notice the velocity unit should be PC/Myr. Then the corresponding mass scaling factor is 1.0 between units of PeTar and SSE/BSE based code. Besides, the option "-u 1" should be added to the _petar_ commander in order to use this astronomical unit set.
 
 Similarly, when external mode (potential) is switched on, the option '-t' should be used to generate correct number of columns.
 
@@ -611,7 +615,7 @@ Users should be careful to set the correct options of gravitational constant (`-
 This is important to correctly read the snapshots and calculate the Kepler orbital parameters of binaries.
 
 When users apply the astronomical unit set (`-u 1` in the _petar_ commander) in simulations, `-G 0.00449830997959438` should be used for _petar.data.process_.
-Or, if the _BSE_ based package is used, the interrupt mode option `-i (mo)bse` can also set the correct value of G.
+Or, if the _BSE_ based package is used, the interrupt mode option `-i [bse_name]` can also set the correct value of G.
 
 The snapshots (single, binary ...) generated by _petar.data.process_ are shifted to the rest frame where the density center is the coordinate origins.
 By adding the core position and velocity from 'data.core' at the corresponding time, the positions and velocities in the initial frame or Galactocentric frame (when _galpy_ is used) can be recovered.
@@ -630,7 +634,7 @@ For the Lagrangian properties, 'data.lagr' include the radius, average mass, num
 The mass fraction of Lagrangian radii is 0.1, 0.3, 0.5, 0.7, 0.9 in default.
 The property of core radius is added at the last.
 There is an option in _petar.data.process_ to define an arbitrary set of mass function.
-When stellar evolution (e.g. BSE/MOBSE) is used, an additional option `--add-star-type` can be used to calculate the Lagrangian properties for specific type of stars.
+When the SSE/BSE based stellar evolution package is used, an additional option `--add-star-type` can be used to calculate the Lagrangian properties for specific type of stars.
 See `petar.data.process -h` for details.
 When `--add-star-type` is used, the reading function should has the consistent keyword arguments.
 The example to read 'data.lagr' is shown in [Reading Lagrangian data](#reading-lagrangian-data).
@@ -670,19 +674,20 @@ The corresponding data are dr, t_peri and sd_factor.
 This tool will automatically fill the missing columns with zero (from Column 6 to 8)
 
 Here is the table of files that the tool will generate and the corresponding Python anlysis classes to read (see [Data analysis in _Python3_](#data-analysis-in-python3))
-| Original files        | Output files  | Content             | Python classes initialization for reading |
-| :--------------       | :------------ | :---------          | :-------------------------------------   |
-| data.group.[MPI rank] | data.group    | all groups          | None                                     |
-|                       | data.group.n2 | binary, hyperbolic  | petar.GroupInfo(N=2)                     |
-|                       | data.group.n3 | triples             | petar.GroupInfo(N=3)                     |
-|                       | ...           | multiple systems... | ...                                                          |
-| data.esc.[MPI_rank]           | data.esc      | escapers            | petar.SingleEscaper(interrupt_mode=[\*], external_mode=[\*]) |
-| data.[mo][s\|b]se.[MPI rank]  | data.[mo][s\|b]se | single and binary stellar evolution records | None |
-|                               | data.[mo]sse.type_change | single stellar evolution type change events | petar.SSETypeChange() |
-|                               | data.[mo]sse.sn_kick     | supernova natal kick of single star         | petar.SSESNKick() |
-|                               | data.[mo]bse.type_change | binary tellar evolution type change events | petar.BSETypeChange() |
-|                               | data.[mo]bse.sn_kick     | supernova natal kick in binaries           | petar.BSESNKick() |
-|                               | data.[mo]bse.dynamic_merge  | dynamical driven (hyperbolic) mergers   | petar.BSEDynamicMerge(less_output=[\*]) |
+| Original files                | Output files                  | Content                                     | Python classes initialization for reading |
+| :--------------               | :------------                 | :---------                                  | :-------------------------------------    |
+| data.group.[MPI rank]         | data.group                    | all groups                                  | None                                      |
+|                               | data.group.n2                 | binary, hyperbolic                          | petar.GroupInfo(N=2)                      |
+|                               | data.group.n3                 | triples                                     | petar.GroupInfo(N=3)                      |
+|                               | ...                           | multiple systems...                         | ...                                       |
+| data.esc.[MPI_rank]           | data.esc                      | escapers                                    | petar.SingleEscaper(interrupt_mode=[\*], external_mode=[\*]) |
+| data.[sse_name].[MPI rank]    | data.[sse_name]               | full single stellar evolution records       | None                                      |
+|                               | data.[sse_name].type_change   | single stellar evolution type change events | petar.SSETypeChange()                     |
+|                               | data.[sse_name].sn_kick       | supernova natal kick of single star         | petar.SSESNKick()                         |
+| data.[bse_name].[MPI rank]    | data.[bse_name]               | full binary stellar evolution records       | None                                      |
+|                               | data.[bse_name].type_change   | binary tellar evolution type change events  | petar.BSETypeChange()                     |
+|                               | data.[bse_name].sn_kick       | supernova natal kick in binaries            | petar.BSESNKick()                         |
+|                               | data.[bse_name].dynamic_merge | dynamical driven (hyperbolic) mergers       | petar.BSEDynamicMerge(less_output=[\*])   |
 
 PS: [\*] is the argument that depends on the configure options that used for compiling.
 
@@ -735,19 +740,19 @@ Users can directly modify the values of arguments in the file.
 Besides, it is not necessary to list all options there.
 Thus, if new options are implemented in the future version, there is no need to update the file again (unless existing option names change).
 
-#### BSE based steller evolution tool
-The _petar.(mo)bse_ will be generated when --with-interrupt=bse is used during the configuration.
+#### SSE and BSE based steller evolution tool
+The _petar.[bse_name]_ will be generated when --with-interrupt=bse is used during the configuration.
 This is the standalone tool to evolve stars and binaries to a given time.
 All global parameters needed can be set in options.
 The basic way to evolve a group of stars:
 ```
-petar.(mo)bse [options] mass1, mass2 ...
+petar.[bse_name] [options] mass1, mass2 ...
 ```
 If no mass is provided, the tool can evolve a group of stars with equal logarithmic mass interval.
 
 The basic way to evolve a group of binaries:
 ```
-petar.(mo)bse [options] -b [binary data file]
+petar.[bse_name] [options] -b [binary data file]
 ```
 where the binary data file contain 4 values (mass1, mass2, period, eccentricity) per line.
 Notice that the first line has only one value which is the number of binaries.
@@ -834,20 +839,20 @@ Here is the list of all classes.
 | :------------  | :---------------------------------           | :----------------------------------------      | :---------------------------------------------------------- |
 | petar.PeTarDataHeader| The header (first line) of snapshot data | external potential option: `external_mode=['galpy', 'none']` |         data.[index]                        |
 |                |                                              | Data format: `snapshot_format=['binary', 'ascii']`  |                                                         | 
-| petar.Particle | The basic (single) particle data             | stellar evolution option: `interrupt_mode=['bse', 'mobse', 'none']` | (single) snapshot files, data.[index], data.[index].single  |
+| petar.Particle | The basic (single) particle data             | stellar evolution option: `interrupt_mode=['bse', 'mobse', 'bseEmp', 'none']` | (single) snapshot files, data.[index], data.[index].single  |
 |                |                                              | external potential option: `external_mode=['galpy', 'none']`    |                                        |
 | petar.Status   | The global parameter (energy, N ...)         |                                                | data.status                                                 |
 | petar.Profile  | The performance of different part of codes   | Whether GPU is used: `use_gpu=[True, False]`   | data.prof.rank.[MPI rank]                                   |
 | petar.GroupInfo| Mutliple systems (binary, triple ...)        | Number of members: `N=[2, 3, ...]`             | data.group.n[number of members]                             |
 
-- For outputs from _petar (need to use _petar.data.gether_ first) and _petar.(mo)bse_, when the BSE based stellar evolution mode is switched on:
+- For outputs from _petar (need to use _petar.data.gether_ first) and _petar.[bse_name]_, when the SSE/BSE based stellar evolution mode is switched on:
 
 | Class name          | Description                                  |   Corresponding file      |
 | :------------       | :---------------------------------           | :------------------------ |
-| petar.SSETypeChange | Type change records of single stars          | data.(mo)sse.type_change  |
-| petar.SSESNKick     | Supernove kick events of single stars        | data.(mo)sse.sn_kick      |
-| petar.BSETypeChange | Type change records of binary stars          | data.(mo)bse.type_change  |
-| petar.BSESNKick     | Supernove kick events of binary stars        | data.(mo)bse.sn_kick      |
+| petar.SSETypeChange | Type change records of single stars          | data.[sse_name].type_change  |
+| petar.SSESNKick     | Supernove kick events of single stars        | data.[sse_name].sn_kick      |
+| petar.BSETypeChange | Type change records of binary stars          | data.[bse_name].type_change  |
+| petar.BSESNKick     | Supernove kick events of binary stars        | data.[bse_name].sn_kick      |
 
 - For data generated by using the _petar.data.process_ (see [Parallel data process](#parallel-data-process) for keyword argument description):
 
@@ -1090,7 +1095,7 @@ mrh = lagr.all.m[:,2]
 ```
 
 The _petar.data.process_ has an option to include arbitrary set of mass function.
-When stellar evolution (e.g. BSE/MOBSE) is used, an additional option `--add-star-type` can be used to calculate the Lagrangian properties for specific type of stars.
+When the SSE/BSE based stellar evolution package is used, an additional option `--add-star-type` can be used to calculate the Lagrangian properties for specific type of stars.
 See `petar.data.process -h` for details.
 When `--add-star-type` is used, the reading data should has the consistent keyword arguments
 For example,

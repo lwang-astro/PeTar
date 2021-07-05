@@ -622,13 +622,8 @@ public:
     IOParamsPeTar input_parameters;
 #ifdef BSE_BASE
     IOParamsBSE bse_parameters;
-#ifdef BSE
-    std::string fbse_par_suffix=".bse";
-    std::string fsse_par_suffix=".sse";
-#elif MOBSE
-    std::string fbse_par_suffix=".mobse";
-    std::string fsse_par_suffix=".mosse";
-#endif // BSE/MOBSE
+    std::string fbse_par_suffix = BSEManager::getBSEOutputFilenameSuffix();
+    std::string fsse_par_suffix = BSEManager::getSSEOutputFilenameSuffix();
 #endif // BSE_BASE
 #ifdef GALPY
     IOParamsGalpy galpy_parameters;
@@ -2384,10 +2379,8 @@ public:
 
 #ifdef STELLAR_EVOLUTION
         fout<<"Use stellar evolution method: ";
-#ifdef BSE
-        fout<<"BSE\n";
-#elif MOBSE
-        fout<<"MOBSE\n";
+#ifdef BSE_BASE
+        fout<<BSEManager::getBSEName()<<std::endl;
 #else
         fout<<"Base\n";
 #endif

@@ -52,10 +52,13 @@ ifneq ($(se_mode),off)
 MT_FLAGS += -D STELLAR_EVOLUTION
 BSE_FLAG=off
 ifeq ($(se_mode),mobse)
-MT_FLAGS += -D MOBSE
+MT_FLAGS += -D MOBSE -D BSE_BASE
 BSE_FLAG=on
 else  ifeq ($(se_mode),bse)
-MT_FLAGS += -D BSE
+MT_FLAGS += -D BSE -D BSE_BASE -D BSEBBF
+BSE_FLAG=on
+else ifeq ($(se_mode),bseEmp)
+MT_FLAGS += -D BSE -D BSEEMP -D BSE_BASE
 BSE_FLAG=on
 endif
 ifeq ($(BSE_FLAG),on)
