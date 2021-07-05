@@ -742,7 +742,7 @@ Besides, it is not necessary to list all options there.
 Thus, if new options are implemented in the future version, there is no need to update the file again (unless existing option names change).
 
 #### SSE and BSE based steller evolution tool
-The _petar.[bse_name]_ will be generated when --with-interrupt=bse is used during the configuration.
+The _petar.[bse_name]_ will be generated when the SSE/BSE based stellar evolution package (--with-interrupt=[bse_name]) is used during the configuration.
 This is the standalone tool to evolve stars and binaries to a given time.
 All global parameters needed can be set in options.
 The basic way to evolve a group of stars:
@@ -764,8 +764,8 @@ If there is only one star or one binary, the printed information from the comman
 If more than one stars or binaries exist, only the final status are printed.
 Additional files that record the evolution history of all stars or binaries are generated if the option `-o` is used.
 The argument of this option define the filename prefix.
-For example, when `-o output` is used, if single stars exist, 'output.sse.type_change' and 'output.sse.sn_kick' are generated;
-if binaries exist, 'output.bse.type_change' and 'output.bse.sn_kick' are generated.
+For example, when `-o output` is used, if single stars exist, 'output.[sse_name].type_change' and 'output.[sse_name].sn_kick' are generated;
+if binaries exist, 'output.[bse_name].type_change' and 'output.[bse_name].sn_kick' are generated.
 The method to read these files are the same as that for the output files from _petar_ (see [Data analysis in _Python3_](#data-analysis-in-python3) and [Gether output files from different MPI ranks](#gether-output-files-from-different-mpi-ranks)).
 
 
