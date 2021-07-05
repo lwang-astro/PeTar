@@ -208,6 +208,7 @@ Currently there are three options of stellar evolution packages based on SSE/BSE
 - bse: the updated SSE/BSE version from Banerjee et al. 2020, A&A, 639, A41.
 - mobse: the MOSSE/MOBSE from Giacobbo et al. 2018, MNRAS, 474, 2959.
 - bseEmp: the udpated SSE/BSE version from Tanikawa et al. 2020, MNRAS, 495, 4170.
+
 Notice that here all SSE/BSE package names (here after [bse_name]) only contain 'bse', but the SSE package is also included.
 
 When this option is switched on, the standalone tool _petar.[bse_name] will also be compiled and installed.
@@ -352,7 +353,7 @@ When _petar_ is running, there are a few information printed in the front:
 - The _FDPS_ logo and _PETAR_ information are printed, where the copyright, versions and references for citing are shown. The version of PeTar is the commit numbers of PeTar and SDAR on GitHub.
 - The input parameters are listed if they are modified when the corresponding options of _petar_ are used.
 - If the SSE/BSE based stellar evolution package is used, the common block and global parameters are printed.
-- The name of dumped files for the input parameters are shown, in default, they are input.par, input.par.hard, input.par.[bse_name] (if [BSE_NAME] is used)
+- The name of dumped files for the input parameters are shown, in default, they are input.par, input.par.hard, input.par.[bse_name] (if a SSE/BSE based package is used)
     - input.par: input parameters of petar, can be used to restart the simulation from a snapshot.
     - input.par.hard: input paremeters of hard (short-range interaction part; Hermite + SDAR), can be used for _petar.hard.debug_ to test the dumped hard cluster.
     - input.par.[bse_name]: the SSE/BSE based package parameters, if a SSE/BSE based package is used, this is the necessary file to restart the simulation and also for _petar.hard.debug_.
