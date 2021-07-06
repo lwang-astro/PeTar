@@ -41,7 +41,7 @@ if __name__ == '__main__':
         print("  -i(--interrupt-mode): the interruption mode used in petar, choices: no, base, bse, mobse (no)")
         print("  -t(--external-mode): external mode used in petar, choices: galpy, no (no)")
         print("  -s(--snapshot-format): snapshot data format: binary, ascii (ascii)")
-        print("  -e(--calc-energy): enable to calculate potential energy and virial ratio of different lagrangian radii")
+        print("  -e(--calc-energy): enable to calculate potential energy and virial ratio -(2*ekin/epot) of different lagrangian radii")
         print("  -n(--n-cpu): number of CPU threads for parallel processing (all threads)")
         print("     --add-star-type: calculate Lagrangian radii and properties for specific types of stars.")
         print("          This argument contain a list of type names, separated by ',' (no space)")
