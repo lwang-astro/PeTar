@@ -228,7 +228,7 @@
       WRITE(*,*)'     TIME      M1       M2   K1 K2        SEP    ECC',
      &          '  R1/ROL1 R2/ROL2  TYPE'
  52   j = j + 1
-      if(bpp(j,1).lt.0.0) goto 60
+      if(bpp(j,10).lt.0.0) goto 60
       kstar(1) = INT(bpp(j,4))
       kstar(2) = INT(bpp(j,5))
       kw = INT(bpp(j,10))

@@ -345,10 +345,14 @@ int main(int argc, char** argv){
         if (star.size()>0) {
             fout_sse_type.open((fprint_name+sse_suffix+std::string(".type_change")).c_str(), std::ofstream::out);
             fout_sse_sn.open((fprint_name+sse_suffix+std::string(".sn_kick")).c_str(), std::ofstream::out);
+            fout_sse_type<<std::setprecision(WRITE_PRECISION);
+            fout_sse_sn<<std::setprecision(WRITE_PRECISION);
         }
         if (bin.size()>0) {
             fout_bse_type.open((fprint_name+bse_suffix+std::string(".type_change")).c_str(), std::ofstream::out);
             fout_bse_sn.open((fprint_name+bse_suffix+std::string(".sn_kick")).c_str(), std::ofstream::out);
+            fout_bse_type<<std::setprecision(WRITE_PRECISION);
+            fout_bse_sn<<std::setprecision(WRITE_PRECISION);
         }
         output_flag = true;
     }
@@ -365,7 +369,6 @@ int main(int argc, char** argv){
             double tend = time*bse_manager.tscale;
             bin[i].period0 = bin[i].period;
             bin[i].ecc0 = bin[i].ecc;
-            int bin_type_init=0;
             int bin_type_last=1;
             while (bse_manager.getTime(bin[i].star[0])<tend) {
                 // time step
@@ -386,7 +389,7 @@ int main(int argc, char** argv){
                 StarParameter p2_star_bk = bin[1].star[1];
                 
                 // evolve function
-                int event_flag=bse_manager.evolveBinary(bin[i].star[0],bin[i].star[1],bin[i].out[0],bin[i].out[1],bin[i].semi,bin[i].period,bin[i].ecc,bin[i].bse_event, bin_type_init, dt);
+                int event_flag=bse_manager.evolveBinary(bin[i].star[0],bin[i].star[1],bin[i].out[0],bin[i].out[1],bin[i].semi,bin[i].period,bin[i].ecc,bin[i].bse_event, bin_type_last, dt);
                 // error
                 if (event_flag<0) {
                     std::cerr<<"Error! ";
@@ -414,10 +417,10 @@ int main(int argc, char** argv){
                 for (int k=0; k<nmax; k++) {
                     int binary_type = bin[i].bse_event.getType(k);
                     if (binary_type>0) {
-                        if (output_flag) {
-                            bool first_event = (k==0);
-                            if ((first_event&&bin_type_init!=binary_type)||!first_event) {
-                                if (!(bin_type_init==11&&(binary_type==3||binary_type==11))) {// avoid repeating printing Start Roche and BSS
+                        bool first_event = (k==0);
+                        if ((first_event&&bin_type_init!=binary_type)||!first_event) {
+                            if (!(bin_type_init==11&&(binary_type==3||binary_type==11))) {// avoid repeating printing Start Roche and BSS
+                                if (output_flag) {
 #pragma omp critical
                                     {
                                         bse_manager.printBinaryEventColumnOne(fout_bse_type, bin[i].bse_event, k, WRITE_WIDTH, false);
@@ -429,12 +432,12 @@ int main(int argc, char** argv){
                                     }
                                 }
                             }
-                        }
-                        // print data
-                        if (nbin==1) {
-                            std::cout<<" BID="<<i+1<<" index="<<k<<" "<<" dt="<<dt;
-                            bse_manager.printBinaryEventOne(std::cout, bin[i].bse_event, k);
-                            std::cout<<std::endl;
+                            // print data
+                            if (nbin==1) {
+                                //std::cout<<" BID="<<i+1<<" index="<<k<<" "<<" dt="<<dt;
+                                bse_manager.printBinaryEventOne(std::cout, bin[i].bse_event, k);
+                                std::cout<<" dt="<<dt<<std::endl;
+                            }
                         }
                         bin_type_last = binary_type;
                     }
@@ -518,7 +521,7 @@ int main(int argc, char** argv){
                             }
 
                             if (star.size()==1) {
-                                std::cout<<"SN kick, i="<<i<<" vkick[IN]="<<dv[3]<<" ";
+                                std::cout<<"SN kick, vkick[IN]="<<dv[3]<<" ";
                                 star[i].print(std::cout);
                                 std::cout<<std::endl;
                             }

@@ -1201,9 +1201,10 @@ public:
     void printBinaryEventOne(std::ostream& _fout, const BinaryEvent& _bin_event, const int k) {
         int type = _bin_event.getType(k);
         assert(type>=0&&type<14);
-        _fout<<std::setw(16)<<binary_type[type];
+        _fout<<std::setw(16)<<binary_type[type]<<" Init:  ";
         if (k==0) _bin_event.print(_fout, _bin_event.getEventIndexInit());
         else _bin_event.print(_fout, k-1);
+        _fout<<"\n"<<std::setw(16)<<" "<<" Final: ";
         _bin_event.print(_fout, k);
     }
 
