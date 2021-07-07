@@ -178,7 +178,7 @@
       REAL*8 m1ce,m2ce,mch,tmsnew,dm22,mew
       PARAMETER(mch=1.44d0)
       REAL*8 yeardy,aursun
-      PARAMETER(yeardy=365.24d0,aursun=214.95d0)
+      PARAMETER(yeardy=365.25d0,aursun=2.1493370240907944d2)
       REAL*8 acc1,tiny
       PARAMETER(acc1=3.920659d+08,tiny=1.0d-14)
       REAL*8 ecc,ecc1,tc,tcirc,ttid,ecc2,omecc2,sqome2,sqome3,sqome5

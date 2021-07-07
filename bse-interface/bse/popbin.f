@@ -20,7 +20,8 @@
       real*8 rad(2),lum(2),ospin(2)
       real*8 massc(2),radc(2),menv(2),renv(2)
       real*8 sep0,tb0,tb,ecc0,ecc,aursun,yeardy,yearsc,tol
-      PARAMETER(aursun=214.95d0,yeardy=365.25d0,yearsc=3.1557d+07)
+      PARAMETER(aursun=2.1493370240907944d2)
+      PARAMETER(yeardy=365.25d0,yearsc=3.1557d+07)
       PARAMETER(tol=1.d-07)
       real*8 t1,t2,mx,mx2,tbx,eccx
 *

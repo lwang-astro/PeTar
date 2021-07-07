@@ -46,6 +46,7 @@ int main(int argc, char** argv){
     std::string fsin_name;
     std::string fhyb_name;
     bool read_mass_flag = false;
+    bool always_output_flag = false;
 
     auto printHelp= [&]() {
         std::cout<<"The tool to evolve single stars or binaries using "<<BSEManager::getBSEName()<<std::endl;
@@ -63,12 +64,13 @@ int main(int argc, char** argv){
                  <<"    -t [D]: finish time ("<<time<<") [IN]\n"
                  <<"        --mmin [D]: mimimum mass ("<<m_min<<") [M*]\n"
                  <<"        --mmax [D]: maximum mass ("<<m_max<<") [M*]\n"
-                 <<"    -d [D]: minimum time step ("<<dtmin<<")[IN]\n"
+                 <<"    -d [D]: minimum time step to call SSE/BSE evolution functions ("<<dtmin<<")[IN]\n"
                  <<"    -s [S]: a file of single table: First line: number of single (unit:IN); After: mass, type, time per line\n"
                  <<"    -b [S]: a file of binary table: First line: number of binary (unit:IN); After: m1, m2, type1, type2, period, ecc, time per line\n"
                  <<"    -m [S]: a file of hyperbolic orbit table for checking merger: First line: number of orbit (unit:IN); After: m1, m2, type1, type2, semi, ecc, time\n"
                  <<"    -w [I]: print column width ("<<width<<")\n"
-                 <<"    -o [S]: the prefix of data file that save the stellar evolution data every step, if not given, this file is not generated\n"
+                 <<"    -o    : print evolution data every time when bse function is called (maximum time step by -d); if this option is not used, only output data when binary type changes\n"
+                 <<"    -f [S]: the prefix of data file that save the stellar evolution data every step, if not given, this file is not generated\n"
                  <<"    -h    : help\n";
     };
 
@@ -87,7 +89,7 @@ int main(int argc, char** argv){
     optind=0;
     int option_index;
     bool help_flag=false;
-    while ((arg_label = getopt_long(argc, argv, "-n:i:m:t:w:d:s:b:o:h", long_options, &option_index)) != -1)
+    while ((arg_label = getopt_long(argc, argv, "-n:i:m:t:w:d:s:b:of:h", long_options, &option_index)) != -1)
         switch (arg_label) {
         case 0:
             switch (long_flag) {
@@ -149,6 +151,11 @@ int main(int argc, char** argv){
             opt_used+=2;
             break;
         case 'o':
+            always_output_flag = true;
+            std::cout<<"Always output data every call of bse function"<<fprint_name<<std::endl;
+            opt_used++;
+            break;
+        case 'f':
             fprint_name = optarg;
             std::cout<<"Output data file "<<fprint_name<<std::endl;
             opt_used+=2;
@@ -318,17 +325,23 @@ int main(int argc, char** argv){
         _fout<<std::endl;
     };
 
-    auto printSingleTitle=[&](std::ostream & _fout) {
+    auto printSingleColumnTitle=[&](std::ostream & _fout) {
         _fout<<std::setw(width)<<"Mass_init[Msun]";
         StarParameter::printColumnTitle(_fout, width);
         StarParameterOut::printColumnTitle(_fout, width);
         _fout<<std::endl;
     };
 
-    auto printSingle=[&](std::ostream & _fout, double& _mass0, StarParameter& _star, StarParameterOut& _out) {
+    auto printSingleColumn=[&](std::ostream & _fout, double& _mass0, StarParameter& _star, StarParameterOut& _out) {
         _fout<<std::setw(width)<<_mass0*bse_manager.mscale;
         _star.printColumn(_fout, width);
         _out.printColumn(_fout, width);
+        _fout<<std::endl;
+    };
+
+    auto printSingle=[&](std::ostream & _fout, StarParameter& _star, StarParameterOut& _out) {
+        _star.print(_fout);
+        _out.print(_fout);
         _fout<<std::endl;
     };
 
@@ -418,7 +431,8 @@ int main(int argc, char** argv){
                     int binary_type = bin[i].bse_event.getType(k);
                     if (binary_type>0) {
                         bool first_event = (k==0);
-                        if ((first_event&&bin_type_init!=binary_type)||!first_event) {
+                        bool check_print = (first_event&&bin_type_init!=binary_type) || !first_event;
+                        if (check_print||always_output_flag) {
                             if (!(bin_type_init==11&&(binary_type==3||binary_type==11))) {// avoid repeating printing Start Roche and BSS
                                 if (output_flag) {
 #pragma omp critical
@@ -433,7 +447,7 @@ int main(int argc, char** argv){
                                 }
                             }
                             // print data
-                            if (nbin==1) {
+                            if (nbin==1 && check_print) {
                                 //std::cout<<" BID="<<i+1<<" index="<<k<<" "<<" dt="<<dt;
                                 bse_manager.printBinaryEventOne(std::cout, bin[i].bse_event, k);
                                 std::cout<<" dt="<<dt<<std::endl;
@@ -441,7 +455,15 @@ int main(int argc, char** argv){
                         }
                         bin_type_last = binary_type;
                     }
-                    else if (binary_type<0) break;
+                    else if (binary_type<0) {
+                        if (always_output_flag) {
+                            if (k==0) bin[i].bse_event.print(std::cout,bin[i].bse_event.getEventIndexInit());
+                            else bin[i].bse_event.print(std::cout,k-1);
+                            std::cout<<std::endl;
+                        }
+                        break;
+                    }
+                
                 }
 
                 for (int k=0; k<2; k++) {
@@ -500,8 +522,8 @@ int main(int argc, char** argv){
                 double dv[4];
                 dv[3] = bse_manager.getVelocityChange(dv, output[i]);
 
-                if (output_flag) {
-                    if (event_flag==1) {
+                if (event_flag>0||always_output_flag) {
+                    if (output_flag) {
 #pragma omp critical 
                         {
                             fout_sse_type<<std::setw(WRITE_WIDTH)<<i+1;
@@ -510,34 +532,34 @@ int main(int argc, char** argv){
                             fout_sse_type<<std::endl;
                         }
                     }
-                    else if(event_flag==2 && !kick_print_flag) {
-                        if (dv[3]>0&&!kick_print_flag) {
+                    if (star.size()==1) printSingle(std::cout,  star[i], output[i]);
+                }
+                if(event_flag==2 && !kick_print_flag) {
+                    if (dv[3]>0&&!kick_print_flag) {
 #pragma omp critical 
-                            {
-                                fout_sse_sn<<std::setw(WRITE_WIDTH)<<i+1
-                                           <<std::setw(WRITE_WIDTH)<<dv[3]*bse_manager.vscale;
-                                star[i].printColumn(fout_sse_sn, WRITE_WIDTH);
-                                fout_sse_sn<<std::endl;
-                            }
-
-                            if (star.size()==1) {
-                                std::cout<<"SN kick, vkick[IN]="<<dv[3]<<" ";
-                                star[i].print(std::cout);
-                                std::cout<<std::endl;
-                            }
-                            kick_print_flag=true;
+                        {
+                            fout_sse_sn<<std::setw(WRITE_WIDTH)<<i+1
+                                       <<std::setw(WRITE_WIDTH)<<dv[3]*bse_manager.vscale;
+                            star[i].printColumn(fout_sse_sn, WRITE_WIDTH);
+                            fout_sse_sn<<std::endl;
                         }
+
+                        if (star.size()==1) {
+                            std::cout<<"SN kick, vkick[IN]="<<dv[3]<<" ";
+                            star[i].print(std::cout);
+                            std::cout<<std::endl;
+                        }
+                        kick_print_flag=true;
                     }
                 }
                 double dt_miss = bse_manager.getDTMiss(output[i]);
-                if (star.size()==1) printSingle(std::cout, mass0[i], star[i], output[i]);
                 if (dt_miss!=0.0&&star[i].kw>=15) break;
             }
         }
         
-        printSingleTitle(std::cout);
+        printSingleColumnTitle(std::cout);
         for (size_t i=0; i<star.size(); i++) {
-            printSingle(std::cout, mass0[i], star[i], output[i]);
+            printSingleColumn(std::cout, mass0[i], star[i], output[i]);
         }
     }
 
