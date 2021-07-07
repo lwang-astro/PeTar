@@ -1101,17 +1101,19 @@
       radx(j1) = MAX(radc(j1),rol(j1))
       radx(j2) = rad(j2)
 *
-      jp = MIN(jpmax,jp + 1)
-      bpp(jp,1) = tphys
-      bpp(jp,2) = mass(1)
-      bpp(jp,3) = mass(2)
-      bpp(jp,4) = float(kstar(1))
-      bpp(jp,5) = float(kstar(2))
-      bpp(jp,6) = sep
-      bpp(jp,7) = ecc
-      bpp(jp,8) = rad(1)/rol(1)
-      bpp(jp,9) = rad(2)/rol(2)
-      bpp(jp,10) = 3.0
+      if (.not.bss) then
+         jp = MIN(jpmax,jp + 1)
+         bpp(jp,1) = tphys
+         bpp(jp,2) = mass(1)
+         bpp(jp,3) = mass(2)
+         bpp(jp,4) = float(kstar(1))
+         bpp(jp,5) = float(kstar(2))
+         bpp(jp,6) = sep
+         bpp(jp,7) = ecc
+         bpp(jp,8) = rad(1)/rol(1)
+         bpp(jp,9) = rad(2)/rol(2)
+         bpp(jp,10) = 3.0
+      endif
 *      btype = 3
 *
       if(tphys.ge.tprint) then

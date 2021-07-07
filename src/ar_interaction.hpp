@@ -1009,16 +1009,15 @@ public:
                             bool first_event = (i==0);
                             if (stellar_evolution_write_flag) {
                                 if ((first_event&&binary_type_init!=binary_type)||!first_event) {
-                                    if (!(binary_type_init==11&&(binary_type==3||binary_type==11))) {// avoid repeating printing Start Roche and BSS
+                                    //if (!(binary_type_init==11&&(binary_type==3||binary_type==11))) {// avoid repeating printing Start Roche and BSS
 #pragma omp critical
-                                        {
-                                            bse_manager.printBinaryEventColumnOne(fout_bse, bin_event, i, WRITE_WIDTH);
-                                            fout_bse<<std::setw(WRITE_WIDTH)<<p1->id
-                                                    <<std::setw(WRITE_WIDTH)<<p2->id
-                                                    <<std::setw(WRITE_WIDTH)<<drdv*bse_manager.rscale*bse_manager.vscale
-                                                    <<std::setw(WRITE_WIDTH)<<_bin.r*bse_manager.rscale;
-                                            fout_bse<<std::endl;
-                                        }
+                                    {
+                                        bse_manager.printBinaryEventColumnOne(fout_bse, bin_event, i, WRITE_WIDTH);
+                                        fout_bse<<std::setw(WRITE_WIDTH)<<p1->id
+                                                <<std::setw(WRITE_WIDTH)<<p2->id
+                                                <<std::setw(WRITE_WIDTH)<<drdv*bse_manager.rscale*bse_manager.vscale
+                                                <<std::setw(WRITE_WIDTH)<<_bin.r*bse_manager.rscale;
+                                        fout_bse<<std::endl;
                                     }
                                 }
                             }

@@ -427,27 +427,26 @@ int main(int argc, char** argv){
 
                 int nmax = bin[i].bse_event.getEventNMax();
                 int bin_type_init = bin[i].bse_event.getType(bin[i].bse_event.getEventIndexInit());
+                bin_type_last = bin_type_init;
                 for (int k=0; k<nmax; k++) {
                     int binary_type = bin[i].bse_event.getType(k);
                     if (binary_type>0) {
                         bool first_event = (k==0);
-                        bool check_print = (first_event&&bin_type_init!=binary_type) || !first_event;
-                        if (check_print||always_output_flag) {
-                            if (!(bin_type_init==11&&(binary_type==3||binary_type==11))) {// avoid repeating printing Start Roche and BSS
-                                if (output_flag) {
+                        if ( (first_event&&bin_type_init!=binary_type) || !first_event || always_output_flag) {
+                            //if (!(bin_type_last==11&&binary_type==3)) {// avoid repeating printing Start Roche and BSS
+                            if (output_flag) {
 #pragma omp critical
-                                    {
-                                        bse_manager.printBinaryEventColumnOne(fout_bse_type, bin[i].bse_event, k, WRITE_WIDTH, false);
-                                        fout_bse_type<<std::setw(WRITE_WIDTH)<<2*i+1
-                                                     <<std::setw(WRITE_WIDTH)<<2*i+2
-                                                     <<std::setw(WRITE_WIDTH)<<0
-                                                     <<std::setw(WRITE_WIDTH)<<0
-                                                     <<std::endl;
-                                    }
+                                {
+                                    bse_manager.printBinaryEventColumnOne(fout_bse_type, bin[i].bse_event, k, WRITE_WIDTH, false);
+                                    fout_bse_type<<std::setw(WRITE_WIDTH)<<2*i+1
+                                                 <<std::setw(WRITE_WIDTH)<<2*i+2
+                                                 <<std::setw(WRITE_WIDTH)<<0
+                                                 <<std::setw(WRITE_WIDTH)<<0
+                                                 <<std::endl;
                                 }
                             }
                             // print data
-                            if (nbin==1 && check_print) {
+                            if (nbin==1) {
                                 //std::cout<<" BID="<<i+1<<" index="<<k<<" "<<" dt="<<dt;
                                 bse_manager.printBinaryEventOne(std::cout, bin[i].bse_event, k);
                                 std::cout<<" dt="<<dt<<std::endl;

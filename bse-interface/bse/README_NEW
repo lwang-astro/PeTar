@@ -16,6 +16,7 @@ Modification Log for PeTar (Long Wang)
 6. trdot.f is added as an extended version of deltat.f (import from NBODY6++) to calculate the next evolv time for a star
 7. trflow.f is added to calculate the next evolve time for Roche overflow binary (import from NBODY6++)
 8. The yeardy, aursun in evolv2.f, trflow.f, popbin.f is updated to be consistent with the G value used in PeTar
+9. When blue straggler flag (bss) is triggered, do not record start_roche event in evolv2.f to avoid huge output data
 
 ------------------------------------------------------------
 The new standalone SSE/BSE as of 25 December 2018
