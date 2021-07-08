@@ -382,7 +382,7 @@ int main(int argc, char** argv){
             double tend = time*bse_manager.tscale;
             bin[i].period0 = bin[i].period;
             bin[i].ecc0 = bin[i].ecc;
-            int bin_type_last=1;
+            int bin_type_last=0;
             while (bse_manager.getTime(bin[i].star[0])<tend) {
                 // time step
                 //double dt1 = bse_manager.getTimeStep(bin[i].star[0]);
