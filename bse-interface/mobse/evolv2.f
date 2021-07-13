@@ -339,6 +339,13 @@ c      COMMON /BINARY/ bcm,bpp
             q(k) = mass(k)/mass(3-k)
             rol(k) = rl(q(k))*sep
          endif
+*     Tanikawa fix for the artificial expansion of binary semi when evolv2 is called in the middel of Roche event
+         if (rm.gt.rol(k)) then
+            radx(k) = Max(rc, rol(k))
+            jspin(k) = ospin(k)*(k2*radx(k)*radx(k)*(mass(k)-mc)
+     &           +k3*rc*rc*mc)
+         endif
+***   end fix
          rol0(k) = rol(k)
          dmr(k) = 0.d0
          dmt(k) = 0.d0

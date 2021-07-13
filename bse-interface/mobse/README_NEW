@@ -17,6 +17,12 @@ Modification Log for PeTar (Long Wang)
 7. trflow.f is added to calculate the next evolve time for Roche overflow binary (import from NBODY6++)
 8. The yeardy, aursun in evolv2.f, trflow.f, popbin.f is updated to be consistent with the G value used in PeTar
 9. When blue straggler flag (bss) is triggered, do not record start_roche event in evolv2.f to avoid huge output data
+10. seperation to trigger GW effect is changed in evolv2.f (now it is 'sep.gt.0')
+
+Bug fix:
+1. DANGER2 is printed sometimes if the stellar type is 13 (Tanikawa)
+2. Fix a bug in hrdiag.f that wrong mc is used in hrdiag.f for secondary star
+3. Fix a bug that radx and jspin is incorrect when evolv2 is called in the middle of Roche event (Tanikawa)
 
 ------------------------------------------------------------
 The new standalone MOBSE available at https://mobse-webpage.netlify.app/
