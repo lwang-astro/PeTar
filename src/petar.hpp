@@ -150,21 +150,21 @@ public:
 
     IOParamsPeTar(): input_par_store(), 
                      ratio_r_cut      (input_par_store, 0.1,  "r-ratio", "r_in / r_out"),
-                     theta            (input_par_store, 0.3,  "T",  "Openning angle theta"),
-                     n_leaf_limit     (input_par_store, 20,   "number-leaf-limit", "Tree leaf number limit", "optimized value shoudl be slightly >=11+N_bin_sample (20)"),
+                     theta            (input_par_store, 0.3,  "T",  "Particle-tree openning angle theta"),
+                     n_leaf_limit     (input_par_store, 20,   "number-leaf-limit", "Particle-tree leaf number limit", "optimized value shoudl be slightly >=11+N_bin_sample (20)"),
 #ifdef USE__AVX512
-                     n_group_limit    (input_par_store, 1024, "number-group-limit", "Tree group number limit", "optimized for x86-AVX512 (1024)"),    
+                     n_group_limit    (input_par_store, 1024, "number-group-limit", "Particle-tree group number limit", "optimized for x86-AVX512 (1024)"),    
 #else
-                     n_group_limit    (input_par_store, 512,  "number-group-limit", "Tree group number limit", "optimized for x86-AVX2 (512)"),
+                     n_group_limit    (input_par_store, 512,  "number-group-limit", "Particle-tree group number limit", "optimized for x86-AVX2 (512)"),
 #endif
-                     n_interrupt_limit(input_par_store, 128,  "number-interrupt-limit", "Interrupt binary number limit"),
+                     n_interrupt_limit(input_par_store, 128,  "number-interrupt-limit", "Interrupted hard integrator limit"),
                      n_smp_ave        (input_par_store, 100,  "number-sample-average", "Average target number of sample particles per process"),
 #ifdef ORBIT_SAMPLING
                      n_split          (input_par_store, 4,    "number-split", "Number of binary sample points for tree perturbation force"),
 #endif
-                     n_bin            (input_par_store, 0,    "b", "Number of binaries used for initialization (assuming the binaries ID=1,2*n_bin)"),
+                     n_bin            (input_par_store, 0,    "b", "Number of primordial binaries for initialization (assuming the binaries ID=1,2*n_bin)"),
                      n_step_per_orbit (input_par_store, 8,    "number-step-tt", "Number of steps per slow-down binary orbits (binary period/tree timestep) for isolated binaries; also the maximum criterion for switching on tidal tensor method"),
-                     time_end         (input_par_store, 10.0, "t", "Finishing time"),
+                     time_end         (input_par_store, 10.0, "t", "Finishing time of simulation"),
                      eta              (input_par_store, 0.1,  "hermite-eta", "Hermite time step coefficient eta"),
                      gravitational_constant(input_par_store, 1.0, "G", "Gravitational constant"),
                      unit_set         (input_par_store, 0,    "u", "Input data unit, 0: unknown, referring to G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr"),
@@ -186,9 +186,9 @@ public:
                      step_limit_ar(input_par_store, 1000000, "step-limit-ar", "Maximum step allown for ARC sym integrator"),
                      eps          (input_par_store, 0.0,  "soft-eps", "Softerning eps"),
                      r_out        (input_par_store, 0.0,  "r", "Changeover function outer boundary radius, if value is zero, use 0.1 GM/[N^(1/3) sigma_3D^2]"),
-                     r_bin        (input_par_store, 0.0,  "r-bin", "Tidal tensor box size and binary radius criterion, if value is zero, use 0.8*r_in"),
+                     r_bin        (input_par_store, 0.0,  "r-bin", "Tidal tensor box size and the radial criterion for detecting multiple systems (binaries, triples...), if value is zero, use 0.8*r_in"),
 //                     r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out"),
-                     r_search_min (input_par_store, 0.0,  "r-search-min", "Minimum search radius  value","auto"),
+                     r_search_min (input_par_store, 0.0,  "r-search-min", "Minimum neighbor search radius for hard clusters","auto"),
                      r_escape     (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Escape radius criterion, 0: no escaper removement; <0: remove particles when r>-r_escape; >0: remove particle when r>r_escape and energy>0"),
                      sd_factor    (input_par_store, 1e-4, "slowdown-factor", "Slowdown perturbation criterion"),
                      data_format  (input_par_store, 1,    "i", "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),

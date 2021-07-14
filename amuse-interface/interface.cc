@@ -96,6 +96,7 @@ extern "C" {
 #ifdef INTERFACE_DEBUG_PRINT
         if(ptr->my_rank==0) std::cout<<"PETAR: recommit_parameters start\n";
 #endif
+        ptr->input_parameters.n_glb.value = ptr->stat.n_real_glb;
         ptr->initialParameters();
         ptr->initial_step_flag = false;
 

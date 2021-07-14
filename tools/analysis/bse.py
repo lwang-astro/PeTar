@@ -11,6 +11,17 @@ BSE_STAR_TYPE_NAME={0:'LMS', 1:'MS', 2:'HG', 3:'GB', 4:'CHeB',
                     5:'FAGB', 6:'SAGB', 7:'HeMS', 8:'HeHG', 9:'HeGB', 
                     10:'HeWD', 11:'COWD', 12:'ONWD', 13:'NS', 14:'BH', 15:'SN'}
 
+BSE_BINARY_TYPE_INDEX={'Unset':0, 'Initial':1, 'Type_change':2, 'Start_Roche':3, 
+                       'End_Roche':4, 'Contact':5, 'Start_Symbiotic':6,
+                       'End_Symbiotic':7, 'Common_envelope':8, 'Giant':9,
+                       'Coalescence':10, 'Blue_straggler':11, 'No_remain':12, 'Disrupt':13}
+
+BSE_BINARY_TYPE_INDEX={0:'Unset', 1:'Initial', 2:'Type_change', 3:'Start_Roche', 
+                       4:'End_Roche', 5:'Contact', 6:'Start_Symbiotic',
+                       7:'End_Symbiotic', 8:'Common_envelope', 9:'Giant',
+                       10:'Coalescence', 11:'Blue_straggler', 12:'No_remain', 13:'Disrupt'}
+
+
 class SSEStarParameter(DictNpArrayMix):
     """ SSE star parameter class from bse_interface.h
     Keys: (class members)
