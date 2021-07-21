@@ -1,6 +1,6 @@
 #!/bin/bash
 
-suffixes='esc sse bse mosse mobse'
+suffixes='esc sse bse mosse mobse sseEmp bseEmp'
 unset rmi
 unset onlylist
 unset groupflag
@@ -70,7 +70,7 @@ do
     fi
 done
 
-sse_opt='.sse .mosse'
+sse_opt='.sse .mosse .sseEmp'
 for s in $sse_opt
 do
     if [ -e $fout$s ]; then
@@ -80,7 +80,7 @@ do
     fi
 done
 
-bse_opt='.bse .mobse'
+bse_opt='.bse .mobse .bseEmp'
 for s in $bse_opt
 do
     if [ -e $fout$s ]; then

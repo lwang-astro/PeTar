@@ -1,7 +1,7 @@
 #!/bin/bash
 
-suffixes=(esc group sse mosse bse mobse status prof.rank)
-tindices=(1 3 21 21 13 13 1 2)
+suffixes=(esc group sse mosse sseEmp bse mobse bseEmp status prof.rank)
+tindices=(1 3 21 21 21 13 13 13 1 2)
 nsuffixes=8
 # sn single 12 binary 14
 unset tcrit
