@@ -703,7 +703,10 @@ extern "C" {
             mpi_collect_stopping_conditions();
 #endif      
         }
-
+#ifdef PROFILE
+        ptr->printProfile();
+        ptr->clearProfile();
+#endif        
         ptr->reconstructIdAdrMap();
 #ifdef INTERFACE_DEBUG_PRINT
         if(ptr->my_rank==0) std::cout<<"PETAR: evolve models end\n";

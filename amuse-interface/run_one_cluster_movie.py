@@ -24,6 +24,7 @@ from amuse.io import write_set_to_file
 from amuse.rfi.core import is_mpd_running
 from amuse.ic.plummer import new_plummer_model
 from amuse.ic.salpeter import new_salpeter_mass_distribution
+from amuse.ext.orbital_elements import new_binary_from_orbital_elements
 
 plt.style.use('dark_background')
 
@@ -54,10 +55,21 @@ def generate_cluster(number_of_stars, mass_of_cluster, radius_of_cluster):
     print("generate plummer model, N=",number_of_stars)
     particles = new_plummer_model(number_of_stars, convert_nbody)
 
+
     print("setting masses of the stars")
     particles.radius = 0.0 | units.RSun
     particles.mass = imf
 
+    # replace first two particles to a binary
+    binaries = new_binary_from_orbital_elements(imf[0], imf[1], 10 | units.au, G=1 | units.au**3/units.MSun/units.yr**2)
+
+    cm = particles[0].copy()
+    particles[0].position = cm.position + binaries.position[0]
+    particles[0].velocity = cm.velocity + binaries.velocity[0]
+    particles[1].position = cm.position + binaries.position[1]
+    particles[1].velocity = cm.velocity + binaries.velocity[1]
+
+    #print(particles[0:2].position.value_in(units.au))
     #particles.mass[0] = 40.0 |units.MSun
     #particles.mass[1] = 50.0 |units.MSun
     
@@ -66,8 +78,8 @@ def generate_cluster(number_of_stars, mass_of_cluster, radius_of_cluster):
 
 def evolve_cluster(particles, convert_nbody, end_time=40 | units.Myr, dt=0.25 | units.Myr, R=1.0, plot_HRdiagram=True, framescale=20.0):
 
-    #gravity = petar(convert_nbody,redirection='none')
-    gravity = petar(convert_nbody)
+    gravity = petar(convert_nbody,redirection='none')
+    #gravity = petar(convert_nbody)
     
     stellar_evolution = SSE()
 
