@@ -70,6 +70,12 @@ fi
 
 echo 'commander: '$prefix' '$pbin' '$opts
 
+if ! command -v $pbin &> /dev/null
+then
+    echo "Error, "$pbin" could not be found!"
+    exit
+fi
+
 if [ -z $dt_base ]; then
     $prefix $pbin -w 0 $opts -i $sfmt -t 0.0 $fname &>check.perf.test.log
     dt_base=`egrep dt_soft check.perf.test.log |awk '{OFMT="%.14g"; print $3/4}'`
@@ -90,6 +96,7 @@ echo 'time start: '$tzero
 dt=$dt_base
 dt_min=$dt
 check_flag=true
+success_flag=false
 tcum=10000 # sec
 while [[ $check_flag == true ]]
 do
@@ -109,6 +116,7 @@ do
 	check_flag=`echo $tperf |awk -v pre=$tperf_pre '{if ($1<pre) print "true"; else print "false"}'`
 	[[ $check_flag == true ]] && dt_min=$dt
 	tperf_pre=$tperf
+	success_flag=true
     else
 	check_flag=false
     fi
@@ -118,5 +126,11 @@ done
 
 #index_min=`echo $tperf_collect|awk '{tmin=1e10; imin=0; for (i=1;i<=NF;i++) {if (tmin>$i) {tmin=$i; imin=i}}; print imin}'`
 #ds_min=`echo $dt_list|awk -v imin=$index_min '{print $imin}'`
-echo 'Best performance choice: tree step: '$dt_min
-echo ${prefix}' '$pbin' '$opts' -s '$dt_min' '$fname
+if [[ $success_flag == true ]];then
+    echo 'Best performance choice: tree step: '$dt_min
+    echo ${prefix}' '$pbin' '$opts' -s '$dt_min' '$fname
+else
+    echo 'Fail to check the performance, make sure the options are correct'
+    echo 'See check.perf.test.log and check.perf.'$dt'.log for details from the output of petar'
+fi
+
