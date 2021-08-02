@@ -9,9 +9,9 @@ int main(int argc, char *argv[]){
     assert(std::isnan(NAN));
 #endif
 
-    PeTar petar;
+    PeTar::initialFDPS(argc,argv);
 
-    petar.initialFDPS(argc,argv);
+    PeTar petar;
     
     PS::S32 iread = petar.readParameters(argc,argv);
     if (iread<0) return 0;
@@ -55,6 +55,8 @@ int main(int argc, char *argv[]){
 #ifdef GPERF_PROFILE
     ProfilerStop();
 #endif
+
+    PeTar::finalizeFDPS();
 
     return 0;
 

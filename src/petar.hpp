@@ -659,6 +659,9 @@ public:
     PS::F64 domain_decompose_weight;
     PS::DomainInfo dinfo;
     PS::F64ort * pos_domain;
+#ifdef FDPS_V7
+    PS::CommInfo comm_info; // MPI communicator
+#endif
 
     // tree time step manager
     KickDriftStep dt_manager;
@@ -691,16 +694,18 @@ public:
     // search cluster
     SearchCluster search_cluster;
 
-    // MPI 
-    PS::S32 my_rank;
-    PS::S32 n_proc;
-
     // safety check flag
-    bool initial_fdps_flag;
     bool read_parameters_flag;
     bool read_data_flag;
     bool initial_parameters_flag;
     bool initial_step_flag;
+
+    // MPI 
+    PS::S32 my_rank;
+    PS::S32 n_proc;
+
+    // FPDS flag
+    static bool initial_fdps_flag;
 
     //! initialization
     PeTar(): 
@@ -731,7 +736,10 @@ public:
         n_interrupt_glb(0),
         mass_modify_list(), remove_list(), remove_id_record(),
         search_cluster(),
-        initial_fdps_flag(false), read_parameters_flag(false), read_data_flag(false), initial_parameters_flag(false), initial_step_flag(false) {
+        read_parameters_flag(false), read_data_flag(false), initial_parameters_flag(false), initial_step_flag(false) {
+        assert(initial_fdps_flag);
+        my_rank = PS::Comm::getRank();
+        n_proc = PS::Comm::getNumberOfProc();
         // set print format
         std::cout<<std::setprecision(PRINT_PRECISION);
         std::cerr<<std::setprecision(PRINT_PRECISION);
@@ -2314,12 +2322,57 @@ public:
     }
 
     //! initial FDPS (print LOGO) and MPI
-    void initialFDPS(int argc, char *argv[]) {
-        PS::Initialize(argc, argv);
-        my_rank = PS::Comm::getRank();
-        n_proc = PS::Comm::getNumberOfProc();
-        initial_fdps_flag = true;
+    static void initialFDPS(int argc, char *argv[]) {
+        if (!initial_fdps_flag) {
+            PS::Initialize(argc, argv);
+            initial_fdps_flag = true;
+        }
     }
+
+    //! finalize FDPS (close MPI) 
+    static void finalizeFDPS() {
+        if (initial_fdps_flag) {
+            PS::Finalize();
+            initial_fdps_flag = false;
+        }
+    }
+
+#ifdef FDPS_V7
+    // create a MPI communicator
+    /*! create a MPI communicator with selected rank list
+      Notice this cannot be done during the integration, only once at the initialization
+      @param[in] n: number of ranks
+      @param[in] rank: rank list
+     */
+    void createCommunicator(const int n, const int rank[]) {
+        assert(initial_fdps_flag);
+        assert(!initial_parameters_flag);
+        comm_info.create(n,rank);
+        system_soft.setCommInfo(comm_info);
+        dinfo.setCommInfo(comm_info);
+        tree_nb.setCommInfo(comm_info);
+        tree_soft.setCommInfo(comm_info);
+        my_rank = comm_info.getRank();
+        n_proc = comm_info.getNumberOfProc();
+    }
+
+    // set a MPI communicator
+    /*! set a MPI communicator from input
+      Notice this cannot be done during the integration, only once at the initialization
+      @param[in] _comm_info: FDPS CommInfo class
+     */
+    void setCommunicator(const PS::CommInfo &_comm_info) {
+        assert(initial_fdps_flag);
+        assert(!initial_parameters_flag);
+        comm_info = _comm_info;
+        system_soft.setCommInfo(comm_info);
+        dinfo.setCommInfo(comm_info);
+        tree_nb.setCommInfo(comm_info);
+        tree_soft.setCommInfo(comm_info);
+        my_rank = comm_info.getRank();
+        n_proc = comm_info.getNumberOfProc();
+    }
+#endif
 
     //! print terminal Logo
     void printLogo(std::ostream & fout) const {
@@ -3793,7 +3846,7 @@ public:
             pos_domain=NULL;
         }
 
-        if (initial_fdps_flag) PS::Finalize();
+        //if (initial_fdps_flag) PS::Finalize();
         remove_list.resizeNoInitialize(0);
         n_interrupt_glb = 0;
         initial_fdps_flag = false;
@@ -3806,3 +3859,4 @@ public:
     ~PeTar() { clear();}
 };
 
+bool PeTar::initial_fdps_flag = false;

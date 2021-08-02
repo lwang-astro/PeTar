@@ -24,11 +24,13 @@ void SetRankComm(const PS::F64ort pos_domain[], Ttree &tree,
     PS::F64ort pos_my_domain = tree.getOuterBoundaryOfLocalTree();
     PS::F64ort pos_my_domain_in = tree.getInnerBoundaryOfLocalTree();
     PS::F64ort * pos_domain_out = new PS::F64ort[n_proc];
-    MPI_Allgather(&pos_my_domain, 1, PS::GetDataType<PS::F64ort>(),
-                  pos_domain_out, 1, PS::GetDataType<PS::F64ort>(), MPI_COMM_WORLD);
+    PS::Comm::allGather(&pos_my_domain, 1, pos_domain_out);
+    //MPI_Allgather(&pos_my_domain, 1, PS::GetDataType<PS::F64ort>(),
+    //              pos_domain_out, 1, PS::GetDataType<PS::F64ort>(), MPI_COMM_WORLD);
     PS::F64ort * pos_domain_in = new PS::F64ort[n_proc];
-    MPI_Allgather(&pos_my_domain_in, 1, PS::GetDataType<PS::F64ort>(),
-                  pos_domain_in,  1, PS::GetDataType<PS::F64ort>(), MPI_COMM_WORLD);
+    PS::Comm::allGather(&pos_my_domain_in, 1, pos_domain_in);
+    //MPI_Allgather(&pos_my_domain_in, 1, PS::GetDataType<PS::F64ort>(),
+    //              pos_domain_in,  1, PS::GetDataType<PS::F64ort>(), MPI_COMM_WORLD);
 //    const PS::F64 r_crit_sq = (EPJSoft::r_search * EPJSoft::r_search + eps_sq)*SAFTY_FACTOR_FOR_SEARCH_SQ*1.01;
 //    pos_domain[my_rank].getOuterBoundaryOfLocalTree
     rank_neighbor.clearSize();

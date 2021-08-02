@@ -23,6 +23,7 @@ extern "C" {
     // common
 
     int initialize_code() {
+        PeTar::initial_fdps_flag = true;
         ptr = new PeTar;
 
         int argc = 0;
@@ -33,8 +34,8 @@ extern "C" {
         //No second MPI init
         //ptr->initialFDPS(argc,argv);
         //ptr->initial_fdps_flag = true;
-        ptr->my_rank= PS::Comm::getRank();
-        ptr->n_proc = PS::Comm::getNumberOfProc();
+        //ptr->my_rank= PS::Comm::getRank();
+        //ptr->n_proc = PS::Comm::getNumberOfProc();
 
 #ifdef INTERFACE_DEBUG_PRINT
         if(ptr->my_rank==0) std::cout<<"PETAR: Initialize_code start\n";
