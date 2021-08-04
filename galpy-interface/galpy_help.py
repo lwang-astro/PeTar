@@ -211,6 +211,11 @@ if __name__ == '__main__':
                 else:
                     print(pot_instance.__doc__)
                     print(pot_instance.__init__.__doc__)
+
+                # additional comments
+                if (pot_name == 'KeplerPotential'):
+                    print("Notice that the Kepler potential is generated from the PowerSphericalPotential (type index: 7) with alpha = 3")
+                    print("Thus, the second argument (alpha) must be 3 ")
         else:
             print(pot_name," is not found in supported Galpy potential list. Available potentials are:")
             listPot()
