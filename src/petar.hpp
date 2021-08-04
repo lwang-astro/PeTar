@@ -2056,45 +2056,45 @@ public:
 
             std::cout<<"**** Wallclock time per step (local): [Min/Max]\n";
             //std::cout<<std::setw(PRINT_WIDTH)<<"Rank";
-            profile.dumpName(std::cout,PRINT_WIDTH);
+            profile.dumpName(std::cout);
             std::cout<<std::endl;
 
             //std::cout<<std::setw(PRINT_WIDTH)<<my_rank;
-            profile_min.dump(std::cout,PRINT_WIDTH,dn_loop);
+            profile_min.dump(std::cout,dn_loop);
             std::cout<<std::endl;
-            profile.dump(std::cout,PRINT_WIDTH,dn_loop);
+            profile.dump(std::cout,dn_loop);
             std::cout<<std::endl;
 
             std::cout<<"**** FDPS tree soft force time profile (local):\n";
-            tree_soft_profile.dumpName(std::cout,PRINT_WIDTH);
+            tree_soft_profile.dumpName(std::cout);
             std::cout<<std::endl;
-            tree_soft_profile.dump(std::cout,PRINT_WIDTH,dn_loop);
+            tree_soft_profile.dump(std::cout,dn_loop);
             std::cout<<std::endl;
 
             std::cout<<"**** Tree neighbor time profile (local):\n";
-            tree_nb_profile.dumpName(std::cout,PRINT_WIDTH);
+            tree_nb_profile.dumpName(std::cout);
             std::cout<<std::endl;
-            tree_nb_profile.dump(std::cout,PRINT_WIDTH,dn_loop);
+            tree_nb_profile.dump(std::cout,dn_loop);
             std::cout<<std::endl;
 
 #if defined(USE_GPU) && defined(GPU_PROFILE)
             std::cout<<"**** GPU time profile (local):\n";
-            gpu_profile.dumpName(std::cout,PRINT_WIDTH);
-            gpu_counter.dumpName(std::cout,PRINT_WIDTH);
+            gpu_profile.dumpName(std::cout);
+            gpu_counter.dumpName(std::cout);
             std::cout<<std::endl;
-            gpu_profile.dump(std::cout,PRINT_WIDTH,dn_loop);
-            gpu_counter.dump(std::cout,PRINT_WIDTH,dn_loop);
+            gpu_profile.dump(std::cout,dn_loop);
+            gpu_counter.dump(std::cout,dn_loop);
             std::cout<<std::endl;
 #endif
 
             std::cout<<"**** Number per step (global):\n";
-            n_count_sum.dumpName(std::cout,PRINT_WIDTH);
+            n_count_sum.dumpName(std::cout);
             std::cout<<std::endl;
-            n_count_sum.dump(std::cout,PRINT_WIDTH,dn_loop);
+            n_count_sum.dump(std::cout,dn_loop);
             std::cout<<std::endl;
                 
             std::cout<<"**** Number of members in clusters (global):\n";
-            n_count_sum.printHist(std::cout,PRINT_WIDTH,dn_loop);
+            n_count_sum.printHist(std::cout,dn_loop);
         }
 
         if(input_parameters.write_style.value>0) {

@@ -5,6 +5,8 @@
 //#include<fstream>
 #include<map>
 
+#define PROFILE_PRINT_WIDTH 13
+
 /*
 template<class Tdinfo, class Tsystem, class Ttree>
 class Profile{
@@ -195,11 +197,11 @@ struct Tprofile{
         fout<<name<<": "<<time/divider<<" "<<tbar/divider<<std::endl;
     }
 
-    void dump(std::ostream & fout, const PS::S32 width=20, const PS::S32 divider=1) const {
+    void dump(std::ostream & fout, const PS::S32 divider=1, const PS::S32 width=PROFILE_PRINT_WIDTH) const {
         fout<<std::setw(width)<<time/divider;
     }
 
-    void dumpBarrier(std::ostream & fout, const PS::S32 width=20, const PS::S32 divider=1) const{
+    void dumpBarrier(std::ostream & fout, const PS::S32 divider=1, const PS::S32 width=PROFILE_PRINT_WIDTH) const{
         fout<<std::setw(width)<<tbar/divider;
     }
 
@@ -211,11 +213,11 @@ struct Tprofile{
         return PS::Comm::getMinValue(time-tbar);
     }
 
-    void dumpName(std::ostream & fout, const PS::S32 width=20) const {
+    void dumpName(std::ostream & fout, const PS::S32 width=PROFILE_PRINT_WIDTH) const {
         fout<<std::setw(width)<<name;
     }
 
-    void dumpBarrierName(std::ostream & fout, const PS::S32 width=20) const {
+    void dumpBarrierName(std::ostream & fout, const PS::S32 width=PROFILE_PRINT_WIDTH) const {
         std::string sname("Bar_");
         sname += name;
         fout<<std::setw(width)<<sname;
@@ -253,11 +255,11 @@ struct NumCounter{
         fout<<name<<": "<<((divider==1)?n:(PS::F64)n/divider)<<std::endl;
     }
 
-    void dump(std::ostream & fout, const PS::S32 width=20, const PS::S32 divider=1) const {
+    void dump(std::ostream & fout, const PS::S32 divider=1, const PS::S32 width=PROFILE_PRINT_WIDTH) const {
         fout<<std::setw(width)<<((divider==1)?n:(PS::F64)n/divider);
     }
 
-    void dumpName(std::ostream & fout, const PS::S32 width=20) const {
+    void dumpName(std::ostream & fout, const PS::S32 width=PROFILE_PRINT_WIDTH) const {
         fout<<std::setw(width)<<name;
     }
 };
@@ -269,46 +271,42 @@ public:
         return *this;
     }
 
-    void dumpName(std::ostream & fout, const PS::S32 width=10) const {
-        fout<<std::setw(width)<<"collect_sam_ptcl"
-            <<std::setw(width)<<"decompose_domain"
-            <<std::setw(width)<<"exchange_ptcl"
-            <<std::setw(width)<<"make_local_tree"
-            <<std::setw(width)<<"make_global_tree"
-            <<std::setw(width)<<"calc_force"
-            <<std::setw(width)<<"calc_mom_loc_tree"
-            <<std::setw(width)<<"calc_mom_gb_tree"
-            <<std::setw(width)<<"make_LET_1st"
-            <<std::setw(width)<<"make_LET_2nd"
-            <<std::setw(width)<<"exchange_LET_1st"
-            <<std::setw(width)<<"exchange_LET_2nd";
-//        fout<<std::setw(width)<<"col_s_p"
-//            <<std::setw(width)<<"deco-dom"
-//            <<std::setw(width)<<"ex_p"
-//            <<std::setw(width)<<"mk_loc_tr"
-//            <<std::setw(width)<<"mk_gb_tr"
-//            <<std::setw(width)<<"Force"
-//            <<std::setw(width)<<"M_loc_tr"
-//            <<std::setw(width)<<"M_gb_tr"
-//            <<std::setw(width)<<"mk_LET_1"
-//            <<std::setw(width)<<"mk_LET_2"
-//            <<std::setw(width)<<"ex_LET_1"
-//            <<std::setw(width)<<"ex_LET_2";
+    void dumpName(std::ostream & fout, const PS::S32 width=PROFILE_PRINT_WIDTH) const {
+        fout<<std::setw(width)<<"Sample_ptcl"
+            <<std::setw(width)<<"Domain_deco"
+            <<std::setw(width)<<"Ex_ptcl    "
+            <<std::setw(width)<<"Set_ptcl_L "
+            <<std::setw(width)<<"Set_ptcl_G "
+            <<std::setw(width)<<"Make_L_tree"
+            <<std::setw(width)<<"Make_L_tree"
+            <<std::setw(width)<<"SetRootCell"
+            <<std::setw(width)<<"Calc_force "
+            <<std::setw(width)<<"Calc_mom_LT"
+            <<std::setw(width)<<"Calc_mom_GT"
+            <<std::setw(width)<<"Make_LET_1 "
+            <<std::setw(width)<<"Make_LET_2 "
+            <<std::setw(width)<<"Ex_LET_1   "
+            <<std::setw(width)<<"Ex_LET_2   "
+            <<std::setw(width)<<"Write_back ";
     }
     
-    void dump(std::ostream & fout, const PS::S32 width=10, const PS::S64 n_loop=1){
-        fout<<std::setw(width)<<collect_sample_particle/n_loop 
-            <<std::setw(width)<<decompose_domain       /n_loop 
-            <<std::setw(width)<<exchange_particle      /n_loop 
-            <<std::setw(width)<<make_local_tree        /n_loop 
-            <<std::setw(width)<<make_global_tree       /n_loop 
-            <<std::setw(width)<<calc_force             /n_loop 
-            <<std::setw(width)<<calc_moment_local_tree /n_loop 
-            <<std::setw(width)<<calc_moment_global_tree/n_loop 
-            <<std::setw(width)<<make_LET_1st           /n_loop 
-            <<std::setw(width)<<make_LET_2nd           /n_loop 
-            <<std::setw(width)<<exchange_LET_1st       /n_loop 
-            <<std::setw(width)<<exchange_LET_2nd       /n_loop; 
+    void dump(std::ostream & fout, const PS::S64 n_loop=1, const PS::S32 width=PROFILE_PRINT_WIDTH){
+        fout<<std::setw(width)<<collect_sample_particle /n_loop 
+            <<std::setw(width)<<decompose_domain        /n_loop 
+            <<std::setw(width)<<exchange_particle       /n_loop 
+            <<std::setw(width)<<set_particle_local_tree /n_loop 
+            <<std::setw(width)<<set_particle_global_tree/n_loop 
+            <<std::setw(width)<<make_local_tree         /n_loop 
+            <<std::setw(width)<<make_global_tree        /n_loop 
+            <<std::setw(width)<<set_root_cell           /n_loop 
+            <<std::setw(width)<<calc_force              /n_loop 
+            <<std::setw(width)<<calc_moment_local_tree  /n_loop 
+            <<std::setw(width)<<calc_moment_global_tree /n_loop 
+            <<std::setw(width)<<make_LET_1st            /n_loop 
+            <<std::setw(width)<<make_LET_2nd            /n_loop 
+            <<std::setw(width)<<exchange_LET_1st        /n_loop 
+            <<std::setw(width)<<exchange_LET_2nd        /n_loop
+            <<std::setw(width)<<write_back              /n_loop; 
     }
 };
 
@@ -332,22 +330,22 @@ public:
     Tprofile other;
     const PS::S32 n_profile;
     
-    SysProfile(): total         (Tprofile("Total          ")),
-                  hard_single   (Tprofile("Hard_single    ")),
-                  hard_isolated (Tprofile("Hard_isolated  ")),
-                  hard_connected(Tprofile("Hard_connected ")),
-                  hard_interrupt(Tprofile("Hard_interrupt*")),
-                  tree_nb       (Tprofile("Tree_neighbor  ")),
-                  tree_soft     (Tprofile("Tree_force     ")),
-                  force_correct (Tprofile("Force_correct  ")),
-                  kick          (Tprofile("Kick           ")),
-                  search_cluster(Tprofile("Search_cluster ")),
-                  create_group  (Tprofile("Create_group   ")),
-                  domain        (Tprofile("Domain_decomp  ")),
-                  exchange      (Tprofile("Exchange_ptcl  ")),
-                  output        (Tprofile("Output         ")),
-                  status        (Tprofile("Status         ")),
-                  other         (Tprofile("Other          ")),
+    SysProfile(): total         (Tprofile("Total      ")),
+                  hard_single   (Tprofile("PP_single  ")),
+                  hard_isolated (Tprofile("PP_cluster ")),
+                  hard_connected(Tprofile("PP_cross   ")),
+                  hard_interrupt(Tprofile("PP_intrpt* ")),
+                  tree_nb       (Tprofile("Tree_NB    ")),
+                  tree_soft     (Tprofile("Tree_Force ")),
+                  force_correct (Tprofile("Force_corr ")),
+                  kick          (Tprofile("Kick       ")),
+                  search_cluster(Tprofile("FindCluster")),
+                  create_group  (Tprofile("CreateGroup")),
+                  domain        (Tprofile("Domain_deco")),
+                  exchange      (Tprofile("Ex_Ptcl    ")),
+                  output        (Tprofile("Output     ")),
+                  status        (Tprofile("Status     ")),
+                  other         (Tprofile("Other      ")),
                   n_profile(16) {}
 
 	void print(std::ostream & fout, const PS::F64 time_sys, const PS::S64 n_loop=1){
@@ -360,28 +358,28 @@ public:
     }
 
     
-    void dump(std::ostream & fout, const PS::S32 width=20, const PS::S64 n_loop=1) const {
+    void dump(std::ostream & fout, const PS::S64 n_loop=1, const PS::S32 width=PROFILE_PRINT_WIDTH) const {
         for(PS::S32 i=0; i<n_profile; i++) {
             Tprofile* iptr = (Tprofile*)this+i;
-            iptr->dump(fout, width, n_loop);
+            iptr->dump(fout, n_loop, width);
         }
     }
 
-    void dumpName(std::ostream & fout, const PS::S32 width=20) const {
+    void dumpName(std::ostream & fout, const PS::S32 width=PROFILE_PRINT_WIDTH) const {
         for(PS::S32 i=0; i<n_profile; i++) {
             Tprofile* iptr = (Tprofile*)this+i;
             iptr->dumpName(fout, width);
         }
     }
 
-    void dumpBarrier(std::ostream & fout, const PS::S32 width=20, const PS::S64 n_loop=1) const {
+    void dumpBarrier(std::ostream & fout, const PS::S64 n_loop=1, const PS::S32 width=PROFILE_PRINT_WIDTH) const {
         for(PS::S32 i=0; i<n_profile; i++) {
             Tprofile* iptr = (Tprofile*)this+i;
-            iptr->dumpBarrier(fout, width, n_loop);
+            iptr->dumpBarrier(fout, n_loop, width);
         }
     }
 
-    void dumpBarrierName(std::ostream & fout, const PS::S32 width=20) const {
+    void dumpBarrierName(std::ostream & fout, const PS::S32 width=PROFILE_PRINT_WIDTH) const {
         for(PS::S32 i=0; i<n_profile; i++) {
             Tprofile* iptr = (Tprofile*)this+i;
             iptr->dumpBarrierName(fout, width);
@@ -437,20 +435,20 @@ public:
     const PS::S32 n_counter;
     std::map<PS::S32,PS::S32> n_cluster; ///<Histogram of number of particles in clusters
 
-    SysCounts(): hard_single      (NumCounter("Hard_single   ")),
-                 hard_isolated    (NumCounter("Hard_isolated ")),
-                 hard_connected   (NumCounter("Hard_connected")),
-                 hard_interrupt   (NumCounter("Hard_interrupt")),
-                 cluster_isolated (NumCounter("Cluster_isolated ")),
-                 cluster_connected(NumCounter("Cluster_connected")),
+    SysCounts(): hard_single      (NumCounter("PP_single  ")),
+                 hard_isolated    (NumCounter("PP_cluster ")),
+                 hard_connected   (NumCounter("PP_cross   ")),
+                 hard_interrupt   (NumCounter("PP_intrpt* ")),
+                 cluster_isolated (NumCounter("Cluster    ")),
+                 cluster_connected(NumCounter("Cross      ")),
                  ARC_substep_sum  (NumCounter("AR_step_sum")),
-                 ARC_tsyn_step_sum(NumCounter("AR_tsyn_step_sum")),
-                 ARC_n_groups     (NumCounter("AR_group_number")),
-                 ARC_n_groups_iso (NumCounter("Iso_group_number")),
-                 H4_step_sum      (NumCounter("Hermite_step_sum")),
-                 n_neighbor_zero  (NumCounter("Hermite_no_NB")),
-                 ep_ep_interact   (NumCounter("Ep-Ep_interaction")),
-                 ep_sp_interact   (NumCounter("Ep-Sp_interaction")),
+                 ARC_tsyn_step_sum(NumCounter("AR_tsyn_sum")),
+                 ARC_n_groups     (NumCounter("AR_group_N ")),
+                 ARC_n_groups_iso (NumCounter("Iso_group_N")),
+                 H4_step_sum      (NumCounter("H4_step_sum")),
+                 n_neighbor_zero  (NumCounter("H4_no_NB   ")),
+                 ep_ep_interact   (NumCounter("Ep-Ep_sum  ")),
+                 ep_sp_interact   (NumCounter("Ep-Sp_sum  ")),
                  //ARC_step_group   (NumCounter("ARC step per group")),
                  n_counter(14) {}
 
@@ -486,46 +484,46 @@ public:
         }
     }
 
-    void printHist(std::ostream & fout, const PS::S32 width=20, const PS::S64 n_loop=1) const {
+    void printHist(std::ostream & fout, const PS::S64 n_loop=1, const PS::S32 width=PROFILE_PRINT_WIDTH) const {
         for(auto i=n_cluster.begin(); i!=n_cluster.end(); ++i) fout<<std::setw(width)<<i->first;
         fout<<std::endl;
         for(auto i=n_cluster.begin(); i!=n_cluster.end(); ++i) fout<<std::setw(width)<<i->second/((n_loop==1)?1:(PS::F64)n_loop);
         fout<<std::endl;
     }
 
-    //void dump(std::ofstream & fout, const PS::S32 width=20, const PS::S64 n_loop=1){
+    //void dump(std::ofstream & fout, const PS::S32 width=PROFILE_PRINT_WIDTH, const PS::S64 n_loop=1){
     //    for(PS::S32 i=0; i<n_counter; i++) {
     //        NumCounter* iptr = (NumCounter*)this+i;
     //        iptr->dump(fout, width, n_loop);
     //    }
     //}
 
-    //void dumpHist(std::ofstream & fout, const PS::S32 width=20, const PS::S64 n_loop=1){
+    //void dumpHist(std::ofstream & fout, const PS::S32 width=PROFILE_PRINT_WIDTH, const PS::S64 n_loop=1){
     //    for(auto i=n_cluster.begin(); i!=n_cluster.end(); ++i)
     //        fout<<std::setw(width)<<i->first<<std::setw(width)<<i->second/((n_loop==1)?1:(PS::F64)n_loop);
     //}
     // 
-    //void dumpName(std::ofstream & fout, const PS::S32 width=20) {
+    //void dumpName(std::ofstream & fout, const PS::S32 width=PROFILE_PRINT_WIDTH) {
     //    for(PS::S32 i=0; i<n_counter; i++) {
     //        NumCounter* iptr = (NumCounter*)this+i;
     //        iptr->dumpName(fout, width);
     //    }
     //}
     
-    void dump(std::ostream & fout, const PS::S32 width=20, const PS::S64 n_loop=1) const{
+    void dump(std::ostream & fout, const PS::S64 n_loop=1, const PS::S32 width=PROFILE_PRINT_WIDTH) const{
         for(PS::S32 i=0; i<n_counter; i++) {
             NumCounter* iptr = (NumCounter*)this+i;
-            iptr->dump(fout, width, n_loop);
+            iptr->dump(fout, n_loop, width);
         }
     }
 
 
-    void dumpHist(std::ostream & fout, const PS::S32 width=20, const PS::S64 n_loop=1) const{
+    void dumpHist(std::ostream & fout, const PS::S64 n_loop=1, const PS::S32 width=PROFILE_PRINT_WIDTH) const{
         for(auto i=n_cluster.begin(); i!=n_cluster.end(); ++i)
             fout<<std::setw(width)<<i->first<<std::setw(width)<<i->second/((n_loop==1)?1:(PS::F64)n_loop);
     }
 
-    void dumpName(std::ostream & fout, const PS::S32 width=20) const{
+    void dumpName(std::ostream & fout, const PS::S32 width=PROFILE_PRINT_WIDTH) const{
         for(PS::S32 i=0; i<n_counter; i++) {
             NumCounter* iptr = (NumCounter*)this+i;
             iptr->dumpName(fout, width);

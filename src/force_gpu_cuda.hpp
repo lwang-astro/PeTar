@@ -29,14 +29,14 @@ public:
         }
     }
 
-    void dump(std::ostream & fout, const PS::S32 width=20, const PS::S64 n_loop=1) const {
+    void dump(std::ostream & fout, const PS::S64 n_loop=1, const PS::S32 width=PROFILE_PRINT_WIDTH) const {
         for(PS::S32 i=0; i<n_profile; i++) {
             Tprofile* iptr = (Tprofile*)this+i;
             iptr->dump(fout, width, n_loop);
         }
     }
 
-    void dumpName(std::ostream & fout, const PS::S32 width=20) {
+    void dumpName(std::ostream & fout, const PS::S32 width=PROFILE_PRINT_WIDTH) {
         for(PS::S32 i=0; i<n_profile; i++) {
             Tprofile* iptr = (Tprofile*)this+i;
             iptr->dumpName(fout, width);
@@ -69,13 +69,13 @@ public:
         n_call (NumCounter("n_call ")),
         n_counter(5) {}
 
-    void dump(std::ostream & fout, const PS::S32 width=20, const PS::S64 n_loop=1) const{
+    void dump(std::ostream & fout, const PS::S64 n_loop=1, const PS::S32 width=PROFILE_PRINT_WIDTH) const{
         for(PS::S32 i=0; i<n_counter; i++) {
             NumCounter* iptr = (NumCounter*)this+i;
             iptr->dump(fout, width, n_loop);
         }
     }
-    void dumpName(std::ostream & fout, const PS::S32 width=20) const{
+    void dumpName(std::ostream & fout, const PS::S32 width=PROFILE_PRINT_WIDTH) const{
         for(PS::S32 i=0; i<n_counter; i++) {
             NumCounter* iptr = (NumCounter*)this+i;
             iptr->dumpName(fout, width);
