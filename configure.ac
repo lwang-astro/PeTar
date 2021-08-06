@@ -315,7 +315,8 @@ AC_ARG_WITH([interrupt],
             [PROG_NAME=$PROG_NAME'.'$with_interrupt
 	     AS_IF([[test x"$with_interrupt" == xbse] || [test x"$with_interrupt" == xmobse] || [test x"$with_interrupt" == xbseEmp]],
 	           [FCFLAGS_BK=$FCFLAGS
-		    AC_PROG_FC([gfortran ifort])
+                    use_fortran=yes
+                    AC_PROG_FC([gfortran ifort])
                     FCFLAGS=$FCFLAGS_BK
 		    AS_IF([test x"$with_debug" == xg],
                           [AX_CHECK_COMPILE_FLAG([-g],
@@ -339,6 +340,7 @@ AC_ARG_WITH([external],
             [PROG_NAME=$PROG_NAME'.'$with_external
 	     AS_IF([test x"$with_external" == xgalpy],
 	           [AC_PROG_CC([fcc gcc icc cc])
+                    use_c=yes
 		    AS_IF([test x"$with_debug" == xg],
                           [AX_CHECK_COMPILE_FLAG([-g],
                                                  [COPTFLAGS=$COPTFLAGS" -g"])
@@ -478,8 +480,12 @@ AC_MSG_NOTICE([     orbit mode:        $with_orbit])
 AC_MSG_NOTICE([     Using quad:        $use_quad])
 AC_MSG_NOTICE([--Compilers:])
 AC_MSG_NOTICE([     C++ compiler:      $CXX])
+AS_IF([test "x$use_c" == xyes],
+      [AC_MSG_NOTICE([     C compiler:        $CC])])
+AS_IF([test "x$use_fortran" == xyes],
+      [AC_MSG_NOTICE([     Fortran compiler:  $FC])])
 AS_IF([test "x$use_cuda" != xno],
-      [AC_MSG_NOTICE([     CUDA compiler:        $NVCC])
+      [AC_MSG_NOTICE([     CUDA compiler:     $NVCC])
        AC_MSG_NOTICE([     CUDA version:      $CUDA_VERSION])])
 AC_MSG_NOTICE([--Targets:])
 AC_MSG_NOTICE([     Program name:      $PROG_NAME])

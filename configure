@@ -4720,7 +4720,8 @@ if test "${with_interrupt+set}" = set; then :
   withval=$with_interrupt; PROG_NAME=$PROG_NAME'.'$with_interrupt
 	     if test x"$with_interrupt" == xbse || test x"$with_interrupt" == xmobse || test x"$with_interrupt" == xbseEmp; then :
   FCFLAGS_BK=$FCFLAGS
-		    ac_ext=${ac_fc_srcext-f}
+                    use_fortran=yes
+                    ac_ext=${ac_fc_srcext-f}
 ac_compile='$FC -c $FCFLAGS $ac_fcflags_srcext conftest.$ac_ext >&5'
 ac_link='$FC -o conftest$ac_exeext $FCFLAGS $LDFLAGS $ac_fcflags_srcext conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_fc_compiler_gnu
@@ -5504,6 +5505,7 @@ ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 
+                    use_c=yes
 		    if test x"$with_debug" == xg; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -g" >&5
 $as_echo_n "checking whether C++ compiler accepts -g... " >&6; }
@@ -6768,9 +6770,17 @@ $as_echo "$as_me:      Using quad:        $use_quad" >&6;}
 $as_echo "$as_me: --Compilers:" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      C++ compiler:      $CXX" >&5
 $as_echo "$as_me:      C++ compiler:      $CXX" >&6;}
+if test "x$use_c" == xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}:      C compiler:        $CC" >&5
+$as_echo "$as_me:      C compiler:        $CC" >&6;}
+fi
+if test "x$use_fortran" == xyes; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}:      Fortran compiler:  $FC" >&5
+$as_echo "$as_me:      Fortran compiler:  $FC" >&6;}
+fi
 if test "x$use_cuda" != xno; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}:      CUDA compiler:        $NVCC" >&5
-$as_echo "$as_me:      CUDA compiler:        $NVCC" >&6;}
+  { $as_echo "$as_me:${as_lineno-$LINENO}:      CUDA compiler:     $NVCC" >&5
+$as_echo "$as_me:      CUDA compiler:     $NVCC" >&6;}
        { $as_echo "$as_me:${as_lineno-$LINENO}:      CUDA version:      $CUDA_VERSION" >&5
 $as_echo "$as_me:      CUDA version:      $CUDA_VERSION" >&6;}
 fi
