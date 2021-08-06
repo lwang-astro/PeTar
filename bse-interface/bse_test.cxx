@@ -348,13 +348,8 @@ int main(int argc, char** argv){
     std::ofstream fout_sse_type, fout_sse_sn, fout_bse_type, fout_bse_sn;
     bool output_flag=false;
     if (fprint_name!="") {
-#ifdef BSE
-        std::string sse_suffix=".sse";
-        std::string bse_suffix=".bse";
-#elif MOBSE
-        std::string sse_suffix=".mosse";
-        std::string bse_suffix=".mobse";
-#endif
+        std::string sse_suffix=BSEManager::getSSEOutputFilenameSuffix();
+        std::string bse_suffix=BSEManager::getBSEOutputFilenameSuffix();
         if (star.size()>0) {
             fout_sse_type.open((fprint_name+sse_suffix+std::string(".type_change")).c_str(), std::ofstream::out);
             fout_sse_sn.open((fprint_name+sse_suffix+std::string(".sn_kick")).c_str(), std::ofstream::out);

@@ -163,10 +163,8 @@ int main(int argc, char *argv[]){
                 std::cout<<"       filelist: "<<fname_list<<std::endl;
                 std::cout<<"Stellar evolution method: ";
 #ifdef STELLAR_EVOLUTION
-#ifdef BSE
-                std::cout<<"BSE\n";
-#elif MOBSE
-                std::cout<<"MOBSE\n";
+#ifdef BSE_BASE
+                std::cout<<BSEManager::getBSEName()<<std::endl;
 #else
                 std::cout<<"Base\n";
 #endif

@@ -3849,7 +3849,7 @@ public:
         //if (initial_fdps_flag) PS::Finalize();
         remove_list.resizeNoInitialize(0);
         n_interrupt_glb = 0;
-        initial_fdps_flag = false;
+        //initial_fdps_flag = false;
         read_parameters_flag = false;
         read_data_flag = false;
         initial_parameters_flag = false;

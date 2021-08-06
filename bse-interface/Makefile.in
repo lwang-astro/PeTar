@@ -5,7 +5,7 @@ BSE_LIB=libbse.a
 ifeq ($(se_mode),bse)
 BSE_TEST=petar.bse
 BSE_PATH=bse
-CXXFLAGS = -D BSE -D BSEBBF -D BSE_BASE
+CXXFLAGS = -D BSEBBF -D BSE_BASE
 else ifeq ($(se_mode),mobse)
 BSE_TEST=petar.mobse
 BSE_PATH=mobse
@@ -13,7 +13,7 @@ CXXFLAGS = -D MOBSE -D BSE_BASE
 else ifeq ($(se_mode),bseEmp)
 BSE_TEST=petar.bseEmp
 BSE_PATH=bseEmp
-CXXFLAGS = -D BSE -D BSEEMP -D BSE_BASE
+CXXFLAGS = -D BSEEMP -D BSE_BASE
 endif
 
 

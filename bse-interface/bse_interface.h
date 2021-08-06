@@ -7,7 +7,7 @@
 #include <getopt.h>
 #include "../src/io.hpp"
 
-#ifdef BSE
+#if (defined BSEBBF) || (defined BSEEMP)
 extern "C" {
     extern struct{
         double neta;  ///> the Reimers mass-loss coefficent (neta*4x10^-13; 0.5 normally).
@@ -524,7 +524,7 @@ public:
     IOParams<double> eddfac;
     IOParams<double> gamma;
     //IOParams<double> mxns;
-#ifdef BSE
+#if (defined BSEBBF) || (defined BSEEMP)
     IOParams<double> sigma;
 #elif MOBSE
     IOParams<double> sigma1;
@@ -536,7 +536,7 @@ public:
     IOParams<long long int> wdflag;
     IOParams<long long int> bhflag;
     IOParams<long long int> nsflag;
-#ifdef BSE
+#if (defined BSEBBF) || (defined BSEEMP)
     IOParams<long long int> psflag;
     IOParams<long long int> kmech;
     IOParams<long long int> ecflag;
@@ -555,7 +555,7 @@ public:
 
     bool print_flag;
 
-#ifdef BSE
+#if (defined BSEBBF) || (defined BSEEMP)
     IOParamsBSE(): input_par_store(),
                    neta  (input_par_store, 0.5, "bse-neta",  "Reimers mass-loss coefficent [neta*4x10^-13]"),
                    bwind (input_par_store, 0.0, "bse-bwind", "Binary enhanced mass loss parameter; inactive for single"),
@@ -649,7 +649,7 @@ public:
             {epsnov.key, required_argument, &sse_flag, 27},
             {eddfac.key, required_argument, &sse_flag, 28},
             {gamma.key,  required_argument, &sse_flag, 29},
-#ifdef BSE
+#if (defined BSEBBF) || (defined BSEEMP)
             {sigma.key,  required_argument, &sse_flag, 4},
 #elif MOBSE
             {sigma1.key, required_argument, &sse_flag, 4},
@@ -661,7 +661,7 @@ public:
             {wdflag.key, required_argument, &sse_flag, 8},
             {bhflag.key, required_argument, &sse_flag, 9}, 
             {nsflag.key, required_argument, &sse_flag, 10}, 
-#ifdef BSE
+#if (defined BSEBBF) || (defined BSEEMP)
             {psflag.key, required_argument, &sse_flag, 11},
             {kmech.key,  required_argument, &sse_flag, 12},
             {ecflag.key, required_argument, &sse_flag, 13},
@@ -709,7 +709,7 @@ public:
                 //    mxns.value = atof(optarg);
                 //    if(print_flag) mxns.print(std::cout);
                 //    break;
-#ifdef BSE
+#if (defined BSEBBF) || (defined BSEEMP)
                 case 4:
                     sigma.value = atof(optarg);
                     if(print_flag) sigma.print(std::cout);
@@ -752,7 +752,7 @@ public:
                     if(print_flag) nsflag.print(std::cout);
                     opt_used+=2;
                     break;
-#ifdef BSE
+#if (defined BSEBBF) || (defined BSEEMP)
                 case 11:
                     psflag.value = atof(optarg);
                     if(print_flag) psflag.print(std::cout);
@@ -867,10 +867,12 @@ public:
             case 'p':
                 fname_par = optarg;
                 if(print_flag) {
-#ifdef BSE
+#ifdef BSEBBF
                     std::string fbse_par = fname_par+".bse"; 
 #elif MOBSE
                     std::string fbse_par = fname_par+".mobse"; 
+#elif BSEEMP
+                    std::string fbse_par = fname_par+".bseEmp"; 
 #endif
                     FILE* fpar_in;
                     if( (fpar_in = fopen(fbse_par.c_str(),"r")) == NULL) {
@@ -888,10 +890,12 @@ public:
                 break;
             case 'h':
                 if(print_flag){
-#ifdef BSE
+#ifdef BSEBBF
                     std::cout<<"SSE/BSE options:"<<std::endl;
 #elif MOBSE
                     std::cout<<"MOBSE options:"<<std::endl;
+#elif BSEEMP
+                    std::cout<<"BSEEMP options:"<<std::endl;
 #endif
                     input_par_store.printHelp(std::cout, 2, 10, 23);
                 }
@@ -903,10 +907,12 @@ public:
                 break;
             }
 
-#ifdef BSE
+#ifdef BSEBBF
         if(print_flag) std::cout<<"----- Finish reading input options of SSE/BSE -----\n";
 #elif MOBSE
         if(print_flag) std::cout<<"----- Finish reading input options of MOBSE -----\n";
+#elif BSEEMP
+        if(print_flag) std::cout<<"----- Finish reading input options of BSEEMP -----\n";
 #endif
 
         return opt_used;
@@ -1002,7 +1008,6 @@ public:
         fout<<"SSE: Hurley J. R., Pols O. R., Tout C. A., 2000, MNRAS, 315, 543\n";
         for (int i=0; i<offset; i++) fout<<" ";
         fout<<"BSE: Hurley J. R., Tout C. A., Pols O. R., 2002, MNRAS, 329, 897\n";
-#ifdef BSE
 #ifdef BSEBBF
         for (int i=0; i<offset; i++) fout<<" ";
         fout<<"Updated BSE: Banerjee S., Belczynski K., Fryer C. L., Berczik P., Hurley J. R., Spurzem R., Wang L., 2020, A&A, 639, A41"
@@ -1012,7 +1017,6 @@ public:
         fout<<"BSEEMP: Tanikawa A., Yoshida T., Kinugawa T., Takahashi K., Umeda H., 2020, MNRAS, 495, 4170\n";
         for (int i=0; i<offset; i++) fout<<" ";
         fout<<"        Tanikawa A., Susa H., Yoshida T., Trani A.~A., Kinugawa T., 2021, ApJ, 910, 30\n";
-#endif
 #elif MOBSE
         for (int i=0; i<offset; i++) fout<<" ";
         fout<<"MOBSE: Giacobbo N., Mapelli M. & Spera M., 2018, MNRAS, 474, 2959\n";
@@ -1088,14 +1092,14 @@ public:
         value2_.alpha  = _input.alpha.value;
         value2_.lambda = _input.lambda.value;
 
-#ifdef BSE        
+#if (defined BSEBBF) || (defined BSEEMP)        
         value4_.sigma  = _input.sigma.value;
 #elif MOBSE
         value4_.sigma1  = _input.sigma1.value;
         value4_.sigma2  = _input.sigma2.value;
 #endif
         value4_.mxns  = 1.8;
-#ifdef BSE        
+#if (defined BSEBBF) || (defined BSEEMP)        
         if (_input.nsflag.value>0) value4_.mxns = 2.5;
 #elif MOBSE
         if (_input.nsflag.value>0) value4_.mxns = 3.0;
@@ -1114,7 +1118,7 @@ public:
         //flags_.ifflag = _input.ifflag.value;
         flags_.wdflag = _input.wdflag.value;
         flags_.nsflag = _input.nsflag.value;
-#ifdef BSE
+#if (defined BSEBBF) || (defined BSEEMP)
         flags2_.psflag = _input.psflag.value;
         flags2_.kmech  = _input.kmech.value;
         flags2_.ecflag = _input.ecflag.value;

@@ -28,7 +28,7 @@ int main(int argc, char **argv){
   PS::S32 step_arc_limit = 100000;
   std::string filename="hard_dump";
   std::string fhardpar="input.par.hard";
-#ifdef BSE
+#if (defined BSEBBF) || (defined BSEEMP)
   int idum=0;
   std::string fbsepar = "input.par.bse";
   std::string fbserandpar = "bse.rand.par";
@@ -166,7 +166,7 @@ int main(int argc, char **argv){
           hard_manager.ar_manager.interaction.stellar_evolution_write_flag = false;
   }
 #ifdef BSE_BASE
-#ifdef BSE
+#if (defined BSEBBF) || (defined BSEEMP)
   std::string bse_name="BSE";
   std::string fsse_suffix=".sse";
   std::string fbse_suffix=".bse";
@@ -174,7 +174,7 @@ int main(int argc, char **argv){
   std::string bse_name="MOBSE";
   std::string fsse_suffix=".mosse";
   std::string fbse_suffix=".mobse";
-#endif // BSE/MOBSE
+#endif // MOBSE
   IOParamsBSE bse_io;
   std::cerr<<bse_name<<" parameter file:"<<fbsepar<<std::endl;
   if( (fpar_in = fopen(fbsepar.c_str(),"r")) == NULL) {
