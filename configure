@@ -623,6 +623,8 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+use_fdps_comm
+FDPS_VERSION
 VERSION
 CXXNOMPI
 PROG_NAME
@@ -4621,6 +4623,39 @@ See \`config.log' for more details" "$LINENO" 5; }
 fi
 
 
+as_ac_File=`$as_echo "ac_cv_file_"$fdps_prefix/src/ps_defs.hpp"" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for \"$fdps_prefix/src/ps_defs.hpp\"" >&5
+$as_echo_n "checking for \"$fdps_prefix/src/ps_defs.hpp\"... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r ""$fdps_prefix/src/ps_defs.hpp""; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+  FDPS_VERSION=`egrep 'Version' $fdps_prefix/src/ps_defs.hpp | sed 's:.*Version\ \(\S\+\).*:\1:'`
+else
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "can't find FDPS ps_defs.hpp, please check the completeness of the FDPS library
+See \`config.log' for more details" "$LINENO" 5; }
+fi
+
+
+if test ${FDPS_VERSION%%.*} -ge 7 ; then :
+  use_fdps_comm=yes
+else
+  use_fdps_comm=no
+fi
+
 # SDAR
 
 # Check whether --with-sdar-prefix was given.
@@ -6682,12 +6717,16 @@ VERSION=$petar_version'_'$sdar_version
 
 
 
+
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: ----------------------Configure Summary--------------------" >&5
 $as_echo "$as_me: ----------------------Configure Summary--------------------" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: --Features:" >&5
 $as_echo "$as_me: --Features:" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      Version:           $VERSION" >&5
 $as_echo "$as_me:      Version:           $VERSION" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:      FDPS Version:      $FDPS_VERSION" >&5
+$as_echo "$as_me:      FDPS Version:      $FDPS_VERSION" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      Using MPI:         $use_mpi" >&5
 $as_echo "$as_me:      Using MPI:         $use_mpi" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      Using GPU:         $use_cuda" >&5

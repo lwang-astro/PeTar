@@ -6,6 +6,7 @@ use_gpu_cuda=@use_cuda@
 use_omp = @use_omp@
 use_gperf=@use_gperf@
 use_quad = @use_quad@
+use_fdps_comm=@use_fdps_comm@
 debug_mode=@with_debug@
 step_mode=@with_step_mode@
 se_mode=@with_interrupt@
@@ -17,6 +18,11 @@ CXXFLAGS=@CXXFLAGS@
 
 TARGET=build/@PROG_NAME@ build/petar.hard.debug build/petar.format.transfer
 all: $(TARGET)
+
+
+ifeq ($(use_fdps_comm),yes)
+FDPSFLAGS = -D FDPS_COMM
+endif
 
 #MT_FLAGS += -D HARD_CM_KICK
 ifeq ($(use_quad),yes)
@@ -140,7 +146,7 @@ DEBFLAGS += -D HARD_DUMP
 
 #-------------------------------------
 ifeq ($(use_mpi),yes) 
-FDPSFLAGS = -DPARTICLE_SIMULATOR_MPI_PARALLEL
+FDPSFLAGS += -DPARTICLE_SIMULATOR_MPI_PARALLEL
 FDPSFLAGS += -DMPICH_IGNORE_CXX_SEEKC
 endif # mpi
 

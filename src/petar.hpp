@@ -659,7 +659,7 @@ public:
     PS::F64 domain_decompose_weight;
     PS::DomainInfo dinfo;
     PS::F64ort * pos_domain;
-#ifdef FDPS_V7
+#ifdef FDPS_COMM
     PS::CommInfo comm_info; // MPI communicator
 #endif
 
@@ -2337,7 +2337,7 @@ public:
         }
     }
 
-#ifdef FDPS_V7
+#ifdef FDPS_COMM
     // create a MPI communicator
     /*! create a MPI communicator with selected rank list
       Notice this cannot be done during the integration, only once at the initialization

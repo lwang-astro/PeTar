@@ -275,6 +275,14 @@ AC_CHECK_FILE(["$fdps_prefix/src/particle_simulator.hpp"],
 	      [INCLUDE=$INCLUDE" -I$fdps_prefix/src"],
 	      [AC_MSG_FAILURE([can't find FDPS library, please provide correct PREFIX by using --with-fdps-prefix])])
 
+AC_CHECK_FILE(["$fdps_prefix/src/ps_defs.hpp"],
+	      [FDPS_VERSION=`egrep 'Version' $fdps_prefix/src/ps_defs.hpp | sed 's:.*Version\ \(\S\+\).*:\1:'`],
+	      [AC_MSG_FAILURE([can't find FDPS ps_defs.hpp, please check the completeness of the FDPS library])])
+
+AS_IF([test ${FDPS_VERSION%%.*} -ge 7 ],
+      [use_fdps_comm=yes],
+      [use_fdps_comm=no])
+
 # SDAR
 AC_ARG_WITH([sdar-prefix], 
             [AS_HELP_STRING([--with-sdar-prefix],
@@ -443,10 +451,13 @@ AC_SUBST([PROG_NAME])
 AC_SUBST([CXX])
 AC_SUBST([CXXNOMPI])
 AC_SUBST([VERSION])
+AC_SUBST([FDPS_VERSION])
+AC_SUBST([use_fdps_comm])
 
 AC_MSG_NOTICE([----------------------Configure Summary--------------------])
 AC_MSG_NOTICE([--Features:])
 AC_MSG_NOTICE([     Version:           $VERSION])
+AC_MSG_NOTICE([     FDPS Version:      $FDPS_VERSION])
 AC_MSG_NOTICE([     Using MPI:         $use_mpi])
 AC_MSG_NOTICE([     Using GPU:         $use_cuda])
 AC_MSG_NOTICE([     Using arch:        $with_arch])
