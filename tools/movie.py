@@ -768,8 +768,11 @@ if __name__ == '__main__':
     data = Data()
     
     def usage():
-        print("A tool for processing a list of snapshot data to detect binaries, calculate Langragian radii and properties, get the density center and core radius")
-        print("Usage: petar.motion.movie [options] data_list_filename")
+        print("A tool to generate a movie for the evolution of positions, velocities, HR diagram, ")
+        print("binary semi-major axis-eccentricity and Lagrangian radii by reading the snapshots.")
+        print("Different plots can be combined together based on the provided options.")
+        print("Multiple simulations can also be compared if the numbers and times of snapshots are the same.")
+        print("Usage: petar.movie [options] data_list_filename")
         print("data_list_filename: A list of snapshot data path, each line for one snapshot")
         print("option: default values are shown at last")
         print("  -h(--help): help")
