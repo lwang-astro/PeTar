@@ -772,9 +772,10 @@ public:
         
 #ifdef PROFILE
         tree_nb_profile += tree_nb.getTimeProfile();
-        profile.tree_nb.barrier();
-        PS::Comm::barrier();
+        //profile.tree_nb.barrier();
+        //PS::Comm::barrier();
         profile.tree_nb.end();
+        profile.tree_nb.tbar = profile.tree_nb.time - tree_nb_profile.getTotalTime();
 #endif
     }
 
@@ -939,9 +940,10 @@ public:
         tree_soft_profile += tree_soft.getTimeProfile();
         domain_decompose_weight = tree_soft_profile.calc_force;
 
-        profile.tree_soft.barrier();
-        PS::Comm::barrier();
+        //profile.tree_soft.barrier();
+        //PS::Comm::barrier();
         profile.tree_soft.end();
+        profile.tree_soft.tbar = profile.tree_soft.time - tree_soft_profile.getTotalTime();
 #endif
     }
 

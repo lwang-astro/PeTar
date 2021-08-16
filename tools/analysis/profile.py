@@ -8,8 +8,11 @@ class FDPSProfile(DictNpArrayMix):
         collect_sam_ptcl (1D): collect sample
         decompose_domain (1D): decompose domains
         exchange_ptcl (1D): exchange particles
+        *set_particle_local_tree (1D): set particle in local tree
+        *set_particle_global_tree (1D): set particle in local tree
         make_local_tree (1D): make local tree
         make_global_tree (1D): make global tree
+        *set_root_cell (1D): set root cell
         calc_force (1D): calculate force
         calc_mom_loc_tree: calculate superparticle momentum in local tree
         calc_mom_gb_tree: calcualte superparticle momentum in global tree
@@ -17,9 +20,25 @@ class FDPSProfile(DictNpArrayMix):
         make_LET_2nd: make local essential tree 2nd
         exchange_LET_1st: exchange local essential tree 1st
         exchange_LET_2nd: exchange local essential tree 2nd
+        *write_back (1D): write back
+
+
+    PS: the prefix '*" indicates that these items do not exist for the old PeTar version before 984
+        Using the keyword argument 'FDPS_version=old' in the initialization for the old version.
     """
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
-        keys = [["collect_sam_ptcl",np.float64], ["decompose_domain",np.float64], ["exchange_ptcl",np.float64], ["make_local_tree",np.float64], ["make_global_tree",np.float64], ["calc_force",np.float64], ["calc_mom_loc_tree",np.float64], ["calc_mom_gb_tree",np.float64], ["make_LET_1st",np.float64], ["make_LET_2nd",np.float64], ["exchange_LET_1st",np.float64], ["exchange_LET_2nd",np.float64]]
+        keys = [["collect_sam_ptcl",np.float64], ["decompose_domain",np.float64], ["exchange_ptcl",np.float64], 
+                ["set_particle_local_tree",np.float64],["set_particle_global_tree",np.float64],
+                ["make_local_tree",np.float64], ["make_global_tree",np.float64], ["set_root_cell",np.float64],
+                ["calc_force",np.float64], ["calc_mom_loc_tree",np.float64], ["calc_mom_gb_tree",np.float64],
+                ["make_LET_1st",np.float64], ["make_LET_2nd",np.float64], ["exchange_LET_1st",np.float64], ["exchange_LET_2nd",np.float64],
+                ["write_back",np.float64]]
+        if ('FPDS_version' in kwargs.keys()): 
+            if (kwargs['FDPS_version']=='old'):
+                keys = [["collect_sam_ptcl",np.float64], ["decompose_domain",np.float64], ["exchange_ptcl",np.float64], 
+                        ["make_local_tree",np.float64], ["make_global_tree",np.float64], 
+                        ["calc_force",np.float64], ["calc_mom_loc_tree",np.float64], ["calc_mom_gb_tree",np.float64], 
+                        ["make_LET_1st",np.float64], ["make_LET_2nd",np.float64], ["exchange_LET_1st",np.float64], ["exchange_LET_2nd",np.float64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
 class PeTarProfile(DictNpArrayMix):
