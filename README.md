@@ -372,8 +372,8 @@ The content of the status has a style like:
     - Modify: total modified energy (due to e.g. stellar evolution)
     - Modify_group: modified energy from SDAR groups
     - Modify_single: modified energy from singles
-    - Error_hard: energy error in short-range interaction (hard part)
-    - Error_hard_cum: cumulative energy error in hard part
+    - Error_PP: energy error in short-range particle-particle (PP) interaction 
+    - Error_PP_cum: cumulative energy error in PP part
 - Angular momentum: error at current step, cumulative error, components in x, y, z directions and value
 - System total mass, center position and velocity
 - Other information if conditions are triggered. 
