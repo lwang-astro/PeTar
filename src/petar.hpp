@@ -2103,15 +2103,15 @@ public:
             fprofile<<std::setw(WRITE_WIDTH)<<stat.time
                     <<std::setw(WRITE_WIDTH)<<dn_loop
                     <<std::setw(WRITE_WIDTH)<<stat.n_real_loc;
-            profile.dump(fprofile, WRITE_WIDTH, dn_loop);
-            profile.dumpBarrier(fprofile, WRITE_WIDTH, dn_loop);
-            tree_soft_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
-            tree_nb_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
+            profile.dump(fprofile, dn_loop, WRITE_WIDTH);
+            profile.dumpBarrier(fprofile, dn_loop, WRITE_WIDTH);
+            tree_soft_profile.dump(fprofile, dn_loop, WRITE_WIDTH);
+            tree_nb_profile.dump(fprofile, dn_loop, WRITE_WIDTH);
 #if defined(USE_GPU) && defined(GPU_PROFILE)
-            gpu_profile.dump(fprofile, WRITE_WIDTH, dn_loop);
-            gpu_counter.dump(fprofile, WRITE_WIDTH, dn_loop);
+            gpu_profile.dump(fprofile, dn_loop, WRITE_WIDTH);
+            gpu_counter.dump(fprofile, dn_loop, WRITE_WIDTH);
 #endif
-            n_count.dump(fprofile, WRITE_WIDTH, dn_loop);
+            n_count.dump(fprofile, dn_loop, WRITE_WIDTH);
             fprofile<<std::endl;
         }
     }
@@ -2578,7 +2578,6 @@ public:
             else  {
                 fprofile.open(fproname.c_str(),std::ofstream::out);
 
-                fprofile<<std::setprecision(WRITE_PRECISION);
                 fprofile<<std::setw(WRITE_WIDTH)<<"my_rank"
                         <<std::setw(WRITE_WIDTH)<<"Time"
                         <<std::setw(WRITE_WIDTH)<<"N_steps"
@@ -2594,6 +2593,7 @@ public:
                 n_count.dumpName(fprofile, WRITE_WIDTH);
                 fprofile<<std::endl;
             }
+            fprofile<<std::setprecision(WRITE_PRECISION);
         }
 #endif    
 
