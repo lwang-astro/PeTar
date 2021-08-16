@@ -49,7 +49,7 @@ public:
     /*! print titles and values in one lines
       @param[out] _fout: std::ostream output object
     */
-    void print(std::ostream & _fout=std::cout, const PS::S32 _width=20) {
+    void print(std::ostream & _fout=std::cout, const PS::S32 _width=16) {
         _fout<<"Energy:  "
              <<std::setw(_width)<<"Error/Total"
              <<std::setw(_width)<<"Error"
@@ -61,8 +61,8 @@ public:
              <<std::setw(_width)<<"Modify"
              <<std::setw(_width)<<"Modify_group"
              <<std::setw(_width)<<"Modify_single"
-             <<std::setw(_width)<<"Error_hard"
-             <<std::setw(_width)<<"Error_hard_cum"
+             <<std::setw(_width)<<"Error_PP"
+             <<std::setw(_width)<<"Error_PP_cum"
 #endif
              <<std::endl;
         _fout<<"Physic:  "
@@ -106,9 +106,9 @@ public:
     //! print titles of class members using column style
     /*! print titles of class members in one line for column style
       @param[out] _fout: std::ostream output object
-      @param[in] _width: print width (defaulted 20)
+      @param[in] _width: print width (defaulted 16)
     */
-    void printColumnTitle(std::ofstream & _fout, const PS::S32 _width=20) const {
+    void printColumnTitle(std::ofstream & _fout, const PS::S32 _width=16) const {
         _fout<<std::setw(_width)<<"Error"
              <<std::setw(_width)<<"Error_cum"
              <<std::setw(_width)<<"Ekin"
@@ -140,9 +140,9 @@ public:
     //! print data of class members using column style
     /*! print data of class members in one line for column style. Notice no newline is printed at the end
       @param[out] _fout: std::ostream output object
-      @param[in] _width: print width (defaulted 20)
+      @param[in] _width: print width (defaulted 16)
     */
-    void printColumn(std::ofstream & _fout, const PS::S32 _width=20) const {
+    void printColumn(std::ofstream & _fout, const PS::S32 _width=16) const {
         _fout<<std::setw(_width)<<getEnergyError() - error_cum_pre
              <<std::setw(_width)<<getEnergyError()
              <<std::setw(_width)<<ekin

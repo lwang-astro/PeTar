@@ -7,8 +7,8 @@
 #include <string>
 #include <map>
 
-#define PRINT_WIDTH 18
-#define PRINT_PRECISION 14
+#define PRINT_WIDTH 15
+#define PRINT_PRECISION 7
 
 // print format parameters
 struct IOParamsPrintHelp{

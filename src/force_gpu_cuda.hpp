@@ -32,7 +32,7 @@ public:
     void dump(std::ostream & fout, const PS::S64 n_loop=1, const PS::S32 width=PROFILE_PRINT_WIDTH) const {
         for(PS::S32 i=0; i<n_profile; i++) {
             Tprofile* iptr = (Tprofile*)this+i;
-            iptr->dump(fout, width, n_loop);
+            iptr->dump(fout, n_loop, width);
         }
     }
 
@@ -72,7 +72,7 @@ public:
     void dump(std::ostream & fout, const PS::S64 n_loop=1, const PS::S32 width=PROFILE_PRINT_WIDTH) const{
         for(PS::S32 i=0; i<n_counter; i++) {
             NumCounter* iptr = (NumCounter*)this+i;
-            iptr->dump(fout, width, n_loop);
+            iptr->dump(fout, n_loop, width);
         }
     }
     void dumpName(std::ostream & fout, const PS::S32 width=PROFILE_PRINT_WIDTH) const{

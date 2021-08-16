@@ -740,9 +740,6 @@ public:
         assert(initial_fdps_flag);
         my_rank = PS::Comm::getRank();
         n_proc = PS::Comm::getNumberOfProc();
-        // set print format
-        std::cout<<std::setprecision(PRINT_PRECISION);
-        std::cerr<<std::setprecision(PRINT_PRECISION);
      }
 
 
@@ -1848,6 +1845,7 @@ public:
 #endif
         bool print_flag = input_parameters.print_flag;
         int write_style = input_parameters.write_style.value;
+        std::cout<<std::setprecision(PRINT_PRECISION);
 
         // print status
         if(print_flag) {
@@ -2712,6 +2710,7 @@ public:
         PS::S64 n_loc = system_soft.getNumberOfParticleLocal();
 
         if(input_parameters.print_flag) {
+            std::cout<<std::setprecision(WRITE_PRECISION);
             std::cout<<"----- Reading file: "<<data_filename<<" -----"<<std::endl
                      <<"Number of particles = "<<n_glb<<std::endl
                      <<"Time = "<<file_header.time<<std::endl;
@@ -2998,6 +2997,7 @@ public:
 
         bool print_flag = input_parameters.print_flag;
         int write_style = input_parameters.write_style.value;
+        std::cout<<std::setprecision(WRITE_PRECISION);
 
         // units
         if (input_parameters.unit_set.value==1) {
@@ -3187,6 +3187,7 @@ public:
         escaper.check_energy_flag = (input_parameters.r_escape.value>=0);
 
         if(print_flag) {
+        // set print format
             std::cout<<"----- Parameter list: -----\n";
             std::cout<<" mass_average = "<<mass_average   <<std::endl
                      <<" r_in         = "<<r_in           <<std::endl
