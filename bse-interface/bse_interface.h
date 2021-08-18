@@ -1170,6 +1170,12 @@ public:
         return _star.r/rscale;
     }
 
+    //! get stellar radius in NB unit
+    double getStellarRadius(StarParameter& _star) {
+        return _star.r/rscale;
+    }
+    
+
     //! get evolved Time in NB unit
     double getTime(StarParameter& _star) {
         return _star.tphys/tscale;
