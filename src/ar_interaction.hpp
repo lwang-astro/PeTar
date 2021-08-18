@@ -765,6 +765,10 @@ public:
             auto* p1 = _bin.getLeftMember();
             auto* p2 = _bin.getRightMember();
 
+            COMM::Vector3<Float> pos_red(p2->pos[0] - p1->pos[0], p2->pos[1] - p1->pos[1], p2->pos[2] - p1->pos[2]);
+            COMM::Vector3<Float> vel_red(p2->vel[0] - p1->vel[0], p2->vel[1] - p1->vel[1], p2->vel[2] - p1->vel[2]);
+            Float drdv = pos_red * vel_red;
+
 #ifdef BSE_BASE
             auto postProcess =[&](StarParameterOut* out, Float* pos_cm, Float*vel_cm, Float& semi, Float& ecc, int binary_type_final) {
                 // if status not set, set to change
@@ -959,9 +963,7 @@ public:
                     Float mtot = p1->mass+p2->mass;
                     Float period = _bin.period;
                     //Float period_bk = period;
-                    COMM::Vector3<Float> pos_red(p2->pos[0] - p1->pos[0], p2->pos[1] - p1->pos[1], p2->pos[2] - p1->pos[2]);
-                    COMM::Vector3<Float> vel_red(p2->vel[0] - p1->vel[0], p2->vel[1] - p1->vel[1], p2->vel[2] - p1->vel[2]);
-                    Float drdv = pos_red * vel_red;
+
                     // backup c.m. information 
                     Float pos_cm[3], vel_cm[3];
                     for (int k=0; k<3; k++) {
@@ -1049,8 +1051,34 @@ public:
             }
 #endif // BSE_BASE
 
-            // dynamical merger check
+            // dynamical merger and tide check
             if (_bin_interrupt.status!=AR::InterruptStatus::merge&&_bin_interrupt.status!=AR::InterruptStatus::destroy) {
+
+                // tide energy loss for hyperbolic orbit
+                if (_bin.semi<0) {
+                    ASSERT(_bin.ecc>1.0);
+                    if (drdv<0) { // when two star approach each other; reset tide status
+                        if (p1->getBinaryInterruptState() == BinaryInterruptState::tide) {
+                            p1->setBinaryInterruptState(BinaryInterruptState::none);
+                        }
+                        if (p2->getBinaryInterruptState() == BinaryInterruptState::tide) {
+                            p2->setBinaryInterruptState(BinaryInterruptState::none);
+                        }
+                    }
+                    else { // modify orbit based on energy loss
+                        if (p1->getBinaryInterruptState() == BinaryInterruptState::none ||
+                            p2->getBinaryInterruptState() == BinaryInterruptState::none ||
+                            p1->getBinaryPairID()!=p2->id || p2->getBinaryPairID()!=p1->id) {
+                            
+                            p1->setBinaryPairID(p2->id);
+                            p2->setBinaryPairID(p1->id);
+                            p1->setBinaryInterruptState(BinaryInterruptState::tide);
+                            p2->setBinaryInterruptState(BinaryInterruptState::tide);
+                        }
+                    }
+                }
+            
+
 
                 auto merge = [&](const Float& dr, const Float& t_peri, const Float& sd_factor) {
                     _bin_interrupt.adr = &_bin;
