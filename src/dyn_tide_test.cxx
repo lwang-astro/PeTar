@@ -97,8 +97,8 @@ int main(int argc, char** argv){
 
     Float G = 0.00449830997959438;
     Float poly_type = 1.5;
-    int width = WRITE_WIDTH;
-    int precision = WRITE_PRECISION;
+    int width = 14;
+    int precision = 7;
 
     auto printHelp= [&]() {
         std::cout<<"The tool to test dynamical tide effect on hyperbolic orbit"<<std::endl;
@@ -106,7 +106,12 @@ int main(int argc, char** argv){
                  <<"       [orbital data file]: A file contain a list of binaries\n"
                  <<"       First line contains one value: number of orbits\n"
                  <<"       Following lines contain one orbit per line:\n";
-        COMM::BinaryTree<Particle,COMM::Binary>::printColumnTitle(std::cout, 12);
+        std::cout<<std::setw(width)<<"m1"
+                 <<std::setw(width)<<"m2"
+                 <<std::setw(width)<<"semi"
+                 <<std::setw(width)<<"ecc"
+                 <<std::setw(width)<<"rad1"
+                 <<std::setw(width)<<"rad2";
         std::cout<<"\nOptions: \n"
                  <<"    -G [F]: gravitational constant ("<<G<<")\n"
                  <<"    -t [F]: polynomial types (1.5 or 3.0) ("<<poly_type<<")\n"
@@ -156,6 +161,7 @@ int main(int argc, char** argv){
             break;
         case 'h':
             printHelp();
+            return 0;
             break;
         case '?':
             opt_used +=2;
@@ -195,14 +201,33 @@ int main(int argc, char** argv){
    dyn_tide.gravitational_constant = G;
    dyn_tide.poly_type = poly_type;
 
+   std::cout<<std::setw(width)<<"m1"
+            <<std::setw(width)<<"m2"
+            <<std::setw(width)<<"semi"
+            <<std::setw(width)<<"ecc"
+            <<std::setw(width)<<"rad1"
+            <<std::setw(width)<<"rad2"
+            <<std::setw(width)<<"semi_new"
+            <<std::setw(width)<<"ecc_new"
+            <<std::endl;
+
    for(int i=0; i<num; i++) {
-       bin.readAscii(fs);
+       //bin.readAscii(fs);
        Float rad1,rad2;
-       fs>>rad1>>rad2;
-       bin.calcParticles(G);
+       fs>>bin.m1>>bin.m2>>bin.semi>>bin.ecc>>rad1>>rad2;
+       //bin.calcParticles(G);
        
+       //bin.printColumn(std::cout);
+       std::cout<<std::setw(width)<<bin.m1
+                <<std::setw(width)<<bin.m2
+                <<std::setw(width)<<bin.semi
+                <<std::setw(width)<<bin.ecc
+                <<std::setw(width)<<rad1
+                <<std::setw(width)<<rad2;
        dyn_tide.evolveOrbit(bin, rad1, rad2);
-       
+       std::cout<<std::setw(width)<<bin.semi
+                <<std::setw(width)<<bin.ecc
+                <<std::endl;
    }   
 
    return 0;

@@ -22,7 +22,7 @@ public:
 
     //! evolve hyperbolic orbit based on dynamical tide
     /*!
-      @param[in,out] _bin: binary data
+      @param[in,out] _bin: binary data, semi and ecc are updated
       @param[in] rad1: stellar radius of p1 (should be in the same unit of semi)
       @param[in] rad2: stellar radius of p2
      */
@@ -32,27 +32,23 @@ public:
         ASSERT(_bin.semi<0);
         ASSERT(_bin.ecc>1);
 
-        auto* p1 = _bin.getLeftMember();
-        auto* p2 = _bin.getRightMember();
-        ASSERT(p1->mass>0);
-        ASSERT(p2->mass>0);
+        ASSERT(_bin.m1>0);
+        ASSERT(_bin.m2>0);
 
-        COMM::Vector3<Float> dr(p2->pos[0] - p1->pos[0], p2->pos[1] - p1->pos[1], p2->pos[2] - p1->pos[2]);
-        COMM::Vector3<Float> dv(p2->vel[0] - p1->vel[0], p2->vel[1] - p1->vel[1], p2->vel[2] - p1->vel[2]);
-        
 		Float peri = _bin.semi * (1.0 - _bin.ecc);
+        ASSERT(peri>rad1+rad2);
         
         //Float rad1 = _bse_manager.getStellarRadius(p1->star);
         //Float rad2 = _bse_manager.getStellarRadius(p2->star);
-        Float mtot = p1->mass + p2->mass;
+        Float mtot = _bin.m1 + _bin.m2;
 
 		// Press & Taukolsky 1977
 		Float p_over_r1 = peri / rad1;
 		Float p_over_r2 = peri / rad2;
 		Float r1_over_peri = 1.0 / p_over_r1;
 		Float r2_over_peri = 1.0 / p_over_r2;
-		Float eta1 = sqrt(p1->mass / mtot * p_over_r1 * p_over_r1 * p_over_r1);
-		Float eta2 = sqrt(p2->mass / mtot * p_over_r2 * p_over_r2 * p_over_r2);
+		Float eta1 = sqrt(_bin.m1 / mtot * p_over_r1 * p_over_r1 * p_over_r1);
+		Float eta2 = sqrt(_bin.m2 / mtot * p_over_r2 * p_over_r2 * p_over_r2);
 
 		// Mardling & Aarseth 2001
 		Float mard = 0.5 * fabs(eta1 - 2.);
@@ -67,27 +63,32 @@ public:
 
 		// TIDE ON 1
 		if ((neweta1 > 0) & (neweta1 < 10)) {
-			Etid += calcEtidPolynomicalFit(p2->mass, r1_over_peri, peri, neweta1, poly_type);
+			Etid += calcEtidPolynomicalFit(_bin.m2, r1_over_peri, peri, neweta1, poly_type);
 		}
 
 		// TIDE ON 2
 		if ((neweta2 > 0) & (neweta2 < 10)) {
-			Etid += calcEtidPolynomicalFit(p1->mass, r2_over_peri, peri, neweta2, poly_type);
+			Etid += calcEtidPolynomicalFit(_bin.m1, r2_over_peri, peri, neweta2, poly_type);
 		}
 
+        // assuming angular momentum conserved, the semi-latus rectum is also conserved
+        Float pold = _bin.semi *(1.0 - _bin.ecc*_bin.ecc);
+
         // update binary orbit
-        // Keep peri-center distance the same, update semi and then ecc
-        Float GM12 = gravitational_constant * p1->mass * p2->mass;
+        // update semi
+        Float GM12 = gravitational_constant * _bin.m1 * _bin.m2;
         Float Ebin = - GM12 / (2.0 * _bin.semi);
         Float Ebin_new = Ebin - Etid;
         _bin.semi = - GM12 / (2.0 * Ebin_new);
-        _bin.ecc  = 1.0 - peri/_bin.semi;
+
+        // use semi-latus rectum  to update ecc
+        _bin.ecc = sqrt(1.0 - pold/_bin.semi);
         ASSERT(_bin.ecc>=0.0);
-        _bin.calcParticles(gravitational_constant);
-        p1->pos += _bin.pos;
-        p2->pos += _bin.pos;
-        p1->vel += _bin.vel;
-        p2->vel += _bin.vel;
+        //_bin.calcParticles(gravitational_constant);
+        //p1->pos += _bin.pos;
+        //p2->pos += _bin.pos;
+        //p1->vel += _bin.vel;
+        //p2->vel += _bin.vel;
     }
 
     //! Tidal energy based on Polynomical fits from Portegies Zwart et al. 1993
@@ -125,7 +126,7 @@ public:
         }
 	
         // Tidal energy
-        Float etid = r_peri * r_peri * r_peri * r_peri * r_peri * mpert * mpert / peri;
+        Float etid = gravitational_constant * r_peri * r_peri * r_peri * r_peri * r_peri * mpert * mpert / peri;
         // Now computing Teta
         if (eta < 1) { // most likely a disruptive encounter
             etid *= pow(fA, 10);
