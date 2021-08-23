@@ -95,8 +95,8 @@ public:
 
 int main(int argc, char** argv){
 
-    Float G = 0.00449830997959438;
-    Float poly_type = 1.5;
+    Float G = 0.00449830997959438; // Msun pc Myr
+    Float c = 0.306594845e6; // pc/Myr
     int width = 14;
     int precision = 7;
 
@@ -111,10 +111,13 @@ int main(int argc, char** argv){
                  <<std::setw(width)<<"semi"
                  <<std::setw(width)<<"ecc"
                  <<std::setw(width)<<"rad1"
-                 <<std::setw(width)<<"rad2";
-        std::cout<<"\nOptions: \n"
+                 <<std::setw(width)<<"rad2"
+                 <<std::setw(width)<<"type"
+                 <<std::endl
+                 <<"      Here type=0: GW energy loss; =1.5 or 3.0: polynomial types\n"
+                 <<"Options: \n"
                  <<"    -G [F]: gravitational constant ("<<G<<")\n"
-                 <<"    -t [F]: polynomial types (1.5 or 3.0) ("<<poly_type<<")\n"
+                 <<"    -c [F]: speed of light ("<<c<<")\n"
                  <<"    -w [I]: print column width ("<<width<<")\n"
                  <<"    -p [I]: print precision ("<<precision<<")\n"
                  <<"    -h    : help\n";
@@ -131,7 +134,7 @@ int main(int argc, char** argv){
     int opt_used = 0;
     optind=0;
     int option_index;
-    while ((arg_label = getopt_long(argc, argv, "w:p:t:G:h", long_options, &option_index)) != -1)
+    while ((arg_label = getopt_long(argc, argv, "w:p:G:c:h", long_options, &option_index)) != -1)
         switch (arg_label) {
         case 0:
             switch (long_flag) {
@@ -154,9 +157,9 @@ int main(int argc, char** argv){
             std::cout<<"gravitational constant: "<<G<<std::endl;
             opt_used+=2;
             break;
-        case 't':
-            poly_type = atof(optarg);
-            std::cout<<"polynomial type: "<<poly_type<<std::endl;
+        case 'c':
+            c = atof(optarg);
+            std::cout<<"speed of light: "<<c<<std::endl;
             opt_used+=2;
             break;
         case 'h':
@@ -199,7 +202,7 @@ int main(int argc, char** argv){
    
    DynamicTide dyn_tide;
    dyn_tide.gravitational_constant = G;
-   dyn_tide.poly_type = poly_type;
+   dyn_tide.speed_of_light = c;
 
    std::cout<<std::setw(width)<<"m1"
             <<std::setw(width)<<"m2"
@@ -209,12 +212,13 @@ int main(int argc, char** argv){
             <<std::setw(width)<<"rad2"
             <<std::setw(width)<<"semi_new"
             <<std::setw(width)<<"ecc_new"
+            <<std::setw(width)<<"type"
             <<std::endl;
 
    for(int i=0; i<num; i++) {
        //bin.readAscii(fs);
-       Float rad1,rad2;
-       fs>>bin.m1>>bin.m2>>bin.semi>>bin.ecc>>rad1>>rad2;
+       Float rad1,rad2,type;
+       fs>>bin.m1>>bin.m2>>bin.semi>>bin.ecc>>rad1>>rad2>>type;
        //bin.calcParticles(G);
        
        //bin.printColumn(std::cout);
@@ -224,9 +228,11 @@ int main(int argc, char** argv){
                 <<std::setw(width)<<bin.ecc
                 <<std::setw(width)<<rad1
                 <<std::setw(width)<<rad2;
-       dyn_tide.evolveOrbit(bin, rad1, rad2);
+       if (type==0) dyn_tide.evolveOrbitGW(bin);
+       else dyn_tide.evolveOrbitPoly(bin, rad1, rad2, type);
        std::cout<<std::setw(width)<<bin.semi
                 <<std::setw(width)<<bin.ecc
+                <<std::setw(width)<<type
                 <<std::endl;
    }   
 

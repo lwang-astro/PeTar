@@ -243,7 +243,7 @@ build/petar.simd.test: simd_test.cxx $(OBJS) |build
 build/petar.tt.test: tidal_tensor_test.cxx |build
 	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $< -o $@  $(CXXLIBS)
 
-build/petar.dyn.tide.test: dyn_tide_test.cxx |build
+build/petar.dyn.tide.test: dyn_tide_test.cxx dyn_tide_eqs.hpp |build
 	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $< -o $@  $(CXXLIBS)
 
 build/petar.io.test: io_test.cxx |build

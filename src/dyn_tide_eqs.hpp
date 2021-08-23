@@ -3,37 +3,76 @@
 #include "Common/Float.h"
 #include "Common/binary_tree.h"
 
-//! Dynamic Tide based on implementation from Alessandro Alberto Trani
+//! Dynamic Tide 
 class DynamicTide{
 public:
     Float gravitational_constant;
-    Float poly_type;
+    Float speed_of_light;
 
-    DynamicTide(): gravitational_constant(-1) {}
+    DynamicTide(): gravitational_constant(-1), speed_of_light(-1) {}
 
     //! check whether parameters values are correct
     /*! \return true: all correct
      */
     bool checkParams() {
         ASSERT(gravitational_constant>0.0);
-        ASSERT(poly_type==1.5 || poly_type==3.0);
+        ASSERT(speed_of_light>0.0);
         return true;
     }        
 
-    //! evolve hyperbolic orbit based on dynamical tide
+    //! evolve hyperbolic orbit based on GW effect
+    /*!
+      @param[in] _bin: binary data, semi and ecc are updated
+     */
+    template <class TBinary>
+    void evolveOrbitGW(TBinary& _bin) {
+        Float e = _bin.ecc;
+        Float mtot = _bin.m1+_bin.m2;
+        Float m12 = _bin.m1*_bin.m2;
+        Float peri = _bin.semi * (1 - _bin.ecc);
+        Float e2 = e*e;
+        Float c = speed_of_light;
+        Float c2 = c*c;
+        Float c5 = c2*c2*c;
+        Float ge = (24.0*acos(-1/e) * (1+73.0/24.0*e2 + 37.0/96.0*e2*e2) 
+                    + sqrt(e2-1)*(301.0/6.0+673.0/12.0*e2)) / pow(1+e, 3.5);
+        Float G_over_r = gravitational_constant/peri;
+        Float G_over_r3 = G_over_r * G_over_r * G_over_r;
+        Float G_over_r7 = G_over_r3 * G_over_r3 * G_over_r;
+        Float Etid = 8.0 * sqrt(G_over_r7 * mtot) * m12*m12 * ge /(15.0*c5);
+
+        // assuming angular momentum conserved, the semi-latus rectum is also conserved
+        Float pold = _bin.semi *(1.0 - _bin.ecc*_bin.ecc);
+
+        // update binary orbit
+        // update semi
+        Float GM12 = gravitational_constant * m12;
+        Float Ebin = - GM12 / (2.0 * _bin.semi);
+        Float Ebin_new = Ebin - Etid;
+        _bin.semi = - GM12 / (2.0 * Ebin_new);
+
+        // use semi-latus rectum  to update ecc
+        _bin.ecc = sqrt(1.0 - pold/_bin.semi);
+        ASSERT(_bin.ecc>=0.0);
+        
+    }
+
+    //! evolve hyperbolic orbit based on dynamical tide implementation from Alessandro Alberto Trani
     /*!
       @param[in,out] _bin: binary data, semi and ecc are updated
       @param[in] rad1: stellar radius of p1 (should be in the same unit of semi)
       @param[in] rad2: stellar radius of p2
+      @param[in] poly_type: polynomial type
      */
     template <class TBinary>
-    void evolveOrbit(TBinary& _bin, const Float& rad1, const Float& rad2) {
+    void evolveOrbitPoly(TBinary& _bin, const Float& rad1, const Float& rad2, const Float& poly_type) {
         ASSERT(_bin.getMemberN()==2);
         ASSERT(_bin.semi<0);
         ASSERT(_bin.ecc>1);
 
         ASSERT(_bin.m1>0);
         ASSERT(_bin.m2>0);
+        ASSERT(poly_type==1.5||poly_type==3.0);
 
 		Float peri = _bin.semi * (1.0 - _bin.ecc);
         ASSERT(peri>rad1+rad2);
