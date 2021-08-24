@@ -203,10 +203,10 @@ public:
 
         // Now computing T(eta)
         if (_eta < 1) { // most likely a disruptive encounter
-            etid *= pow(fA, 10);
+            etid *= pow(10, fA);
         } else if (_eta < 10) {
             Float let = log10(_eta);
-            etid *= pow(fA + let * (fB + let * (fC + let * (fD + let * (fE + let * fF)))), 10);
+            etid *= pow(10, fA + let * (fB + let * (fC + let * (fD + let * (fE + let * fF)))));
         }
 
         return etid;
