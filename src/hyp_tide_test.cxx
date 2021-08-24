@@ -6,7 +6,7 @@
 #define ASSERT assert
 
 #include <particle_simulator.hpp>
-#include "dyn_tide_eqs.hpp"
+#include "hyperbolic_tide.hpp"
 #include "../src/io.hpp"
 
 //! A sample particle class
@@ -101,8 +101,8 @@ int main(int argc, char** argv){
     int precision = 7;
 
     auto printHelp= [&]() {
-        std::cout<<"The tool to test dynamical tide effect on hyperbolic orbit"<<std::endl;
-        std::cout<<"Usage: petar.dyn.tide.test [options] [orbital data file]\n"
+        std::cout<<"The tool to test hyperbolic tide effect"<<std::endl;
+        std::cout<<"Usage: petar.hyp.tide.test [options] [orbital data file]\n"
                  <<"       [orbital data file]: A file contain a list of binaries\n"
                  <<"       First line contains one value: number of orbits\n"
                  <<"       Following lines contain one orbit per line:\n";
@@ -114,7 +114,7 @@ int main(int argc, char** argv){
                  <<std::setw(width)<<"rad2"
                  <<std::setw(width)<<"type"
                  <<std::endl
-                 <<"      Here type=0: GW energy loss; =1.5 or 3.0: polynomial types\n"
+                 <<"      Here type = 0: GW energy loss; = 1.5 or 3.0: polynomial types for dynamical tides\n"
                  <<"Options: \n"
                  <<"    -G [F]: gravitational constant ("<<G<<")\n"
                  <<"    -c [F]: speed of light ("<<c<<")\n"
@@ -200,9 +200,9 @@ int main(int argc, char** argv){
    COMM::BinaryTree<Particle,COMM::Binary> bin;
    bin.setMembers(&p[0],&p[1],1,2);
    
-   DynamicTide dyn_tide;
-   dyn_tide.gravitational_constant = G;
-   dyn_tide.speed_of_light = c;
+   HyperbolicTide hyp_tide;
+   hyp_tide.gravitational_constant = G;
+   hyp_tide.speed_of_light = c;
 
    std::cout<<std::setw(width)<<"m1"
             <<std::setw(width)<<"m2"
@@ -210,14 +210,15 @@ int main(int argc, char** argv){
             <<std::setw(width)<<"ecc"
             <<std::setw(width)<<"rad1"
             <<std::setw(width)<<"rad2"
+            <<std::setw(width)<<"type"
             <<std::setw(width)<<"semi_new"
             <<std::setw(width)<<"ecc_new"
-            <<std::setw(width)<<"type"
+            <<std::setw(width)<<"Etid"
             <<std::endl;
 
    for(int i=0; i<num; i++) {
        //bin.readAscii(fs);
-       Float rad1,rad2,type;
+       Float rad1,rad2,type,etid=0;
        fs>>bin.m1>>bin.m2>>bin.semi>>bin.ecc>>rad1>>rad2>>type;
        //bin.calcParticles(G);
        
@@ -227,12 +228,13 @@ int main(int argc, char** argv){
                 <<std::setw(width)<<bin.semi
                 <<std::setw(width)<<bin.ecc
                 <<std::setw(width)<<rad1
-                <<std::setw(width)<<rad2;
-       if (type==0) dyn_tide.evolveOrbitGW(bin);
-       else dyn_tide.evolveOrbitPoly(bin, rad1, rad2, type);
+                <<std::setw(width)<<rad2
+                <<std::setw(width)<<type;
+       if (type==0) etid = hyp_tide.evolveOrbitGW(bin);
+       else etid = hyp_tide.evolveOrbitPoly(bin, rad1, rad2, type);
        std::cout<<std::setw(width)<<bin.semi
                 <<std::setw(width)<<bin.ecc
-                <<std::setw(width)<<type
+                <<std::setw(width)<<etid
                 <<std::endl;
    }   
 

@@ -3,13 +3,15 @@
 #include "Common/Float.h"
 #include "Common/binary_tree.h"
 
-//! Dynamic Tide 
-class DynamicTide{
+//! HyperbolicTide 
+/*! calculate orbital change due to dynamical tide or gravitational wave radiation for hyperbolic encounters
+ */
+class HyperbolicTide{
 public:
-    Float gravitational_constant;
-    Float speed_of_light;
+    Float gravitational_constant;  
+    Float speed_of_light;  // should have the same unit set as that of G
 
-    DynamicTide(): gravitational_constant(-1), speed_of_light(-1) {}
+    HyperbolicTide(): gravitational_constant(-1), speed_of_light(-1) {}
 
     //! check whether parameters values are correct
     /*! \return true: all correct
@@ -20,33 +22,60 @@ public:
         return true;
     }        
 
-    //! evolve hyperbolic orbit based on GW effect
-    /*!
-      @param[in] _bin: binary data, semi and ecc are updated
+    //! Enhancement factor g(e) from Turner 1977, ApJ, 216, 610
+    /*! @param[in] _e: eccentricity (>1)
      */
-    template <class TBinary>
-    void evolveOrbitGW(TBinary& _bin) {
-        Float e = _bin.ecc;
-        Float mtot = _bin.m1+_bin.m2;
-        Float m12 = _bin.m1*_bin.m2;
-        Float peri = _bin.semi * (1 - _bin.ecc);
-        Float e2 = e*e;
+    inline Float calcEnhancementFactor(const Float& _e) const {
+        ASSERT(_e>1.0);
+        Float e2 = _e*_e;
+        Float ge = ( 24.0*acos(-1/_e) * (1 + 73.0/24.0*e2 + 37.0/96.0*e2*e2) + sqrt(e2 - 1) * (301.0/6.0 + 673.0/12.0*e2) ) / pow(1+_e, 3.5);
+        return ge;
+    }
+
+    //!  Energy loss after one encounter due to GW radiation
+    /*!
+      @param[in] m1: mass 1
+      @param[in] m2: mass 2
+      @param[in] semi: semi-major axis (negative)
+      @param[in] ecc: eccentricity (>1)
+     */
+    inline Float calcEnergyLossGW(const Float& _m1, const Float& _m2, const Float& _semi, const Float& _ecc) const {
+        ASSERT(_m1>0);
+        ASSERT(_m2>0);
+        ASSERT(_semi<0);
+        ASSERT(_ecc>1.0);
+
         Float c = speed_of_light;
         Float c2 = c*c;
         Float c5 = c2*c2*c;
-        Float ge = (24.0*acos(-1/e) * (1+73.0/24.0*e2 + 37.0/96.0*e2*e2) 
-                    + sqrt(e2-1)*(301.0/6.0+673.0/12.0*e2)) / pow(1+e, 3.5);
+
+        Float ge = calcEnhancementFactor(_ecc);
+        Float mtot = _m1 + _m2;
+        Float m12  = _m1 * _m2;
+        Float peri = _semi * (1 - _ecc);
         Float G_over_r = gravitational_constant/peri;
         Float G_over_r3 = G_over_r * G_over_r * G_over_r;
         Float G_over_r7 = G_over_r3 * G_over_r3 * G_over_r;
-        Float Etid = 8.0 * sqrt(G_over_r7 * mtot) * m12*m12 * ge /(15.0*c5);
+        Float Etid = 8.0 * sqrt(G_over_r7 * mtot) * m12*m12 * ge / (15.0 * c5);
+
+        return Etid;
+    }
+
+    //! evolve hyperbolic orbit based on GW effect
+    /*!
+      @param[in] _bin: binary data, semi and ecc are updated
+      \return Etid: energy loss
+     */
+    template <class TBinary>
+    Float evolveOrbitGW(TBinary& _bin) {
+        Float Etid = calcEnergyLossGW(_bin.m1, _bin.m2, _bin.semi, _bin.ecc);
 
         // assuming angular momentum conserved, the semi-latus rectum is also conserved
         Float pold = _bin.semi *(1.0 - _bin.ecc*_bin.ecc);
 
         // update binary orbit
         // update semi
-        Float GM12 = gravitational_constant * m12;
+        Float GM12 = gravitational_constant * _bin.m1 * _bin.m2;
         Float Ebin = - GM12 / (2.0 * _bin.semi);
         Float Ebin_new = Ebin - Etid;
         _bin.semi = - GM12 / (2.0 * Ebin_new);
@@ -55,6 +84,7 @@ public:
         _bin.ecc = sqrt(1.0 - pold/_bin.semi);
         ASSERT(_bin.ecc>=0.0);
         
+        return Etid;
     }
 
     //! evolve hyperbolic orbit based on dynamical tide implementation from Alessandro Alberto Trani
@@ -63,9 +93,11 @@ public:
       @param[in] rad1: stellar radius of p1 (should be in the same unit of semi)
       @param[in] rad2: stellar radius of p2
       @param[in] poly_type: polynomial type
+
+      \return Etid: energy loss
      */
     template <class TBinary>
-    void evolveOrbitPoly(TBinary& _bin, const Float& rad1, const Float& rad2, const Float& poly_type) {
+    Float evolveOrbitPoly(TBinary& _bin, const Float& rad1, const Float& rad2, const Float& poly_type) {
         ASSERT(_bin.getMemberN()==2);
         ASSERT(_bin.semi<0);
         ASSERT(_bin.ecc>1);
@@ -128,49 +160,52 @@ public:
         //p2->pos += _bin.pos;
         //p1->vel += _bin.vel;
         //p2->vel += _bin.vel;
+
+        return Etid;
     }
 
     //! Tidal energy based on Polynomical fits from Portegies Zwart et al. 1993
     /*!
-      @param[in] mpert: perturber mass
-      @param[in] r_peri: stellar radius over peri-center distance
-      @param[in] peri: peri-center distance
-      @param[in] eta: parameter (Press & Teutoslky 1977)
-      @param[in] poly_type: Polynomical type (1.5 or 3.0)
+      @param[in] _mpert: perturber mass
+      @param[in] _rad_over_peri: stellar radius over peri-center distance
+      @param[in] _peri: peri-center distance
+      @param[in] _eta: parameter (Press & Teutoslky 1977)
+      @param[in] _poly_type: Polynomical type (1.5 or 3.0)
      */
-    Float calcEtidPolynomicalFit(const Float& mpert, const Float& r_peri, const Float& peri, const Float& eta, const Float& poly_type) {
-
+    Float calcEtidPolynomicalFit(const Float& _mpert, const Float& _rad_over_peri, const Float& _peri, const Float& _eta, const Float& _poly_type) {
         // Tidal fits from Portegies Zwart et al. 1993
-        const Float fA_n15 = -0.397;
-        const Float fB_n15 = 1.678;
-        const Float fC_n15 = 1.277;
-        const Float fD_n15 = -12.42;
-        const Float fE_n15 = 9.446;
-        const Float fF_n15 = -5.550;
-
-        const Float fA_n3 = -1.124;
-        const Float fB_n3 = 0.877;
-        const Float fC_n3 = -13.37;
-        const Float fD_n3 = 21.55;
-        const Float fE_n3 = -16.8;
-        const Float fF_n3 = 4.124;
-
-        Float fA, fB, fC, fD, fE, fF;
-        if (poly_type == 3) {
-            fA = fA_n3, fB = fB_n3, fC = fC_n3, fD = fD_n3, fE = fE_n3, fF = fF_n3;
-        } else if (poly_type == 1.5) {
-            fA = fA_n15, fB = fB_n15, fC = fC_n15, fD = fD_n15, fE = fE_n15, fF = fF_n15;
-        } else {
-            return 0.0;
+        Float fA=0, fB=0, fC=0, fD=0, fE=0, fF=0;
+        if (_poly_type == 1.5) {
+            fA = -0.397;
+            fB = 1.678;
+            fC = 1.277;
+            fD = -12.42;
+            fE = 9.446;
+            fF = -5.550;
+        }
+        else if (_poly_type == 3.0) {
+            fA = -1.124;
+            fB = 0.877;
+            fC = -13.37;
+            fD = 21.55;
+            fE = -16.8;
+            fF = 4.124;
+        } 
+        else {
+            std::cerr<<"Error, polynomical types should be 1.5, 3.0, given "<<_poly_type<<std::endl;
+            abort();
         }
 	
         // Tidal energy
-        Float etid = gravitational_constant * r_peri * r_peri * r_peri * r_peri * r_peri * mpert * mpert / peri;
-        // Now computing Teta
-        if (eta < 1) { // most likely a disruptive encounter
+        Float r_over_p2 =  _rad_over_peri * _rad_over_peri;
+        Float r_over_p5 = r_over_p2 * r_over_p2 * _rad_over_peri;
+        Float etid = gravitational_constant * r_over_p5 * _mpert * _mpert / _peri;
+
+        // Now computing T(eta)
+        if (_eta < 1) { // most likely a disruptive encounter
             etid *= pow(fA, 10);
-        } else if (eta < 10) {
-            Float let = log10(eta);
+        } else if (_eta < 10) {
+            Float let = log10(_eta);
             etid *= pow(fA + let * (fB + let * (fC + let * (fD + let * (fE + let * fF)))), 10);
         }
 
