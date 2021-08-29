@@ -22,69 +22,66 @@ public:
         return true;
     }        
 
-    //! Enhancement factor g(e) from Turner 1977, ApJ, 216, 610
-    /*! @param[in] _e: eccentricity (>1)
-     */
-    inline Float calcEnhancementFactor(const Float& _e) const {
-        ASSERT(_e>1.0);
-        Float e2 = _e*_e;
-        Float ge = ( 24.0*acos(-1/_e) * (1 + 73.0/24.0*e2 + 37.0/96.0*e2*e2) + sqrt(e2 - 1) * (301.0/6.0 + 673.0/12.0*e2) ) / pow(1+_e, 3.5);
-        return ge;
-    }
-
-    //!  Energy loss after one encounter due to GW radiation
-    /*!
-      @param[in] m1: mass 1
-      @param[in] m2: mass 2
-      @param[in] semi: semi-major axis (negative)
-      @param[in] ecc: eccentricity (>1)
-     */
-    inline Float calcEnergyLossGW(const Float& _m1, const Float& _m2, const Float& _semi, const Float& _ecc) const {
-        ASSERT(_m1>0);
-        ASSERT(_m2>0);
-        ASSERT(_semi<0);
-        ASSERT(_ecc>1.0);
-
-        Float c = speed_of_light;
-        Float c2 = c*c;
-        Float c5 = c2*c2*c;
-
-        Float ge = calcEnhancementFactor(_ecc);
-        Float mtot = _m1 + _m2;
-        Float m12  = _m1 * _m2;
-        Float peri = _semi * (1 - _ecc);
-        Float G_over_r = gravitational_constant/peri;
-        Float G_over_r3 = G_over_r * G_over_r * G_over_r;
-        Float G_over_r7 = G_over_r3 * G_over_r3 * G_over_r;
-        Float Etid = 8.0 * sqrt(G_over_r7 * mtot) * m12*m12 * ge / (15.0 * c5);
-
-        return Etid;
-    }
-
     //! evolve hyperbolic orbit based on GW effect
     /*!
       @param[in] _bin: binary data, semi and ecc are updated
       \return Etid: energy loss
      */
     template <class TBinary>
-    Float evolveOrbitGW(TBinary& _bin) {
-        Float Etid = calcEnergyLossGW(_bin.m1, _bin.m2, _bin.semi, _bin.ecc);
+    void evolveOrbitGW(TBinary& _bin, Float& _Etid, Float& _Ltid) {
 
-        // assuming angular momentum conserved, the semi-latus rectum is also conserved
-        Float pold = _bin.semi *(1.0 - _bin.ecc*_bin.ecc);
+        // calculate energy loss (Hansen 1972, PRD, 5, 1021; correction from Turner 1977, ApJ, 216, 610)
+
+        Float e = _bin.ecc;
+        Float a = _bin.semi;
+        Float m1 = _bin.m1;
+        Float m2 = _bin.m2;
+
+        ASSERT(e>1.0);
+        ASSERT(m1>0);
+        ASSERT(m2>0);
+        ASSERT(a<0);
+
+        Float c = speed_of_light;
+        Float c2 = c*c;
+        Float c5 = c2*c2*c;
+
+        Float e2 = e*e;
+        Float theta0 = acos(1/e);
+        Float ge = (COMM::PI - theta0) * (96.0 + 292*e2 + 37*e2*e2) + sqrt(e2 - 1)/3.0 * (602.0 + 673*e2);
+
+        Float mtot = m1 + m2;
+        Float m12  = m1 * m2;
+        Float m12sq = m12*m12;
+        Float p = a * (1 - e2);
+        Float G_over_r = gravitational_constant/p;
+        Float G_over_r3 = G_over_r * G_over_r * G_over_r;
+        Float G_over_r7 = G_over_r3 * G_over_r3 * G_over_r;
+        Float Etid = 2.0 * sqrt(G_over_r7 * mtot) * m12sq * ge / (15.0 * c5);
+
+        // calculate the angular momentum loss (Hansen 1972)
+        ge = (COMM::PI - theta0) * (8.0 + 7*e2) + sqrt(e2 - 1) * (13 + 2*e2);
+        Float Ltid = 8.0 * G_over_r3 * p * m12sq * ge / (15.0 * c5);
+
 
         // update binary orbit
         // update semi
-        Float GM12 = gravitational_constant * _bin.m1 * _bin.m2;
-        Float Ebin = - GM12 / (2.0 * _bin.semi);
+        Float GM12 = gravitational_constant * m12;
+        Float Ebin = - GM12 / (2.0 * a);
         Float Ebin_new = Ebin - Etid;
         _bin.semi = - GM12 / (2.0 * Ebin_new);
 
-        // use semi-latus rectum  to update ecc
-        _bin.ecc = sqrt(1.0 - pold/_bin.semi);
+
+        // update ecc
+        Float mfac = GM12 * m12 / mtot;
+        Float Lbin = sqrt(mfac * p);
+        Float Lbin_new = Lbin - Ltid;
+        ASSERT(Lbin_new>=0);
+        _bin.ecc = sqrt(1.0 - Lbin_new*Lbin_new / (mfac*_bin.semi));
         ASSERT(_bin.ecc>=0.0);
         
-        return Etid;
+        _Etid = Etid;
+        _Ltid = Ltid;
     }
 
     //! evolve hyperbolic orbit based on dynamical tide implementation from Alessandro Alberto Trani

@@ -211,14 +211,17 @@ int main(int argc, char** argv){
             <<std::setw(width)<<"rad1"
             <<std::setw(width)<<"rad2"
             <<std::setw(width)<<"type"
+            <<std::setw(width)<<"Ebin"
+            <<std::setw(width)<<"Lbin"
             <<std::setw(width)<<"semi_new"
             <<std::setw(width)<<"ecc_new"
             <<std::setw(width)<<"Etid"
+            <<std::setw(width)<<"Ltid"
             <<std::endl;
 
    for(int i=0; i<num; i++) {
        //bin.readAscii(fs);
-       Float rad1,rad2,type,etid=0;
+       Float rad1,rad2,type,Etid=0,Ltid=0;
        fs>>bin.m1>>bin.m2>>bin.semi>>bin.ecc>>rad1>>rad2>>type;
        //bin.calcParticles(G);
        
@@ -229,12 +232,15 @@ int main(int argc, char** argv){
                 <<std::setw(width)<<bin.ecc
                 <<std::setw(width)<<rad1
                 <<std::setw(width)<<rad2
-                <<std::setw(width)<<type;
-       if (type==0) etid = hyp_tide.evolveOrbitGW(bin);
-       else etid = hyp_tide.evolveOrbitPoly(bin, rad1, rad2, type);
+                <<std::setw(width)<<type
+                <<std::setw(width)<<-G*bin.m1*bin.m2/(2*bin.semi)
+                <<std::setw(width)<<sqrt(G*bin.m1*bin.m2*bin.m1*bin.m2/(bin.m1+bin.m2)*bin.semi*(1-bin.ecc*bin.ecc));
+       if (type==0) hyp_tide.evolveOrbitGW(bin, Etid, Ltid);
+       else Etid = hyp_tide.evolveOrbitPoly(bin, rad1, rad2, type);
        std::cout<<std::setw(width)<<bin.semi
                 <<std::setw(width)<<bin.ecc
-                <<std::setw(width)<<etid
+                <<std::setw(width)<<Etid
+                <<std::setw(width)<<Ltid
                 <<std::endl;
    }   
 
