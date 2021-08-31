@@ -6,7 +6,7 @@
 #define ASSERT assert
 
 #include <particle_simulator.hpp>
-#include "hyperbolic_tide.hpp"
+#include "two_body_tide.hpp"
 #include "../src/io.hpp"
 
 //! A sample particle class
@@ -200,9 +200,9 @@ int main(int argc, char** argv){
    COMM::BinaryTree<Particle,COMM::Binary> bin;
    bin.setMembers(&p[0],&p[1],1,2);
    
-   HyperbolicTide hyp_tide;
-   hyp_tide.gravitational_constant = G;
-   hyp_tide.speed_of_light = c;
+   TwoBodyTide tide;
+   tide.gravitational_constant = G;
+   tide.speed_of_light = c;
 
    std::cout<<std::setw(width)<<"m1"
             <<std::setw(width)<<"m2"
@@ -235,8 +235,8 @@ int main(int argc, char** argv){
                 <<std::setw(width)<<type
                 <<std::setw(width)<<-G*bin.m1*bin.m2/(2*bin.semi)
                 <<std::setw(width)<<sqrt(G*bin.m1*bin.m2*bin.m1*bin.m2/(bin.m1+bin.m2)*bin.semi*(1-bin.ecc*bin.ecc));
-       if (type==0) hyp_tide.evolveOrbitGW(bin, Etid, Ltid);
-       else Etid = hyp_tide.evolveOrbitPoly(bin, rad1, rad2, type);
+       if (type==0) tide.evolveOrbitHyperbolicGW(bin, Etid, Ltid);
+       else Etid = tide.evolveOrbitDynamicalTide(bin, rad1, rad2, type);
        std::cout<<std::setw(width)<<bin.semi
                 <<std::setw(width)<<bin.ecc
                 <<std::setw(width)<<Etid

@@ -1174,7 +1174,14 @@ public:
     double getStellarRadius(StarParameter& _star) {
         return _star.r/rscale;
     }
-    
+
+    //! get speed of light in NB unit
+    /*! IAU 2009: c = 299 792 458 m/s
+     */
+    double getSpeedOfLight() const {
+        const double c = 2.99792458e5;
+        return c/vscale;
+    }
 
     //! get evolved Time in NB unit
     double getTime(StarParameter& _star) {

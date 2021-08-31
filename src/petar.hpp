@@ -3307,8 +3307,10 @@ public:
         if (write_style) hard_manager.ar_manager.interaction.stellar_evolution_write_flag = true;
         else hard_manager.ar_manager.interaction.stellar_evolution_write_flag = false;
 #ifdef BSE_BASE
-        if (input_parameters.stellar_evolution_option.value==1) 
+        if (input_parameters.stellar_evolution_option.value==1) {
             hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters, print_flag);
+            hard_manager.ar_manager.interaction.tide.speed_of_light = hard_manager.ar_manager.interaction.bse_manager.getSpeedOfLight();
+        }
 #endif
 #endif
 #ifdef ADJUST_GROUP_PRINT

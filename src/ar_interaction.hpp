@@ -7,6 +7,7 @@
 #include "hard_ptcl.hpp"
 #include "Hermite/hermite_particle.h"
 #include "ar_perturber.hpp"
+#include "two_body_tide.hpp"
 #ifdef BSE_BASE
 #include "bse_interface.h"
 #endif
@@ -22,6 +23,7 @@ public:
     bool stellar_evolution_write_flag;
 #ifdef BSE_BASE
     BSEManager bse_manager;
+    TwoBodyTide tide;
     std::ofstream fout_sse; ///> log file for SSE event
     std::ofstream fout_bse; ///> log file for BSE event
 
@@ -1054,32 +1056,6 @@ public:
             // dynamical merger and tide check
             if (_bin_interrupt.status!=AR::InterruptStatus::merge&&_bin_interrupt.status!=AR::InterruptStatus::destroy) {
 
-                // tide energy loss for hyperbolic orbit
-                if (_bin.semi<0) {
-                    ASSERT(_bin.ecc>1.0);
-                    if (drdv<0) { // when two star approach each other; reset tide status
-                        if (p1->getBinaryInterruptState() == BinaryInterruptState::tide) {
-                            p1->setBinaryInterruptState(BinaryInterruptState::none);
-                        }
-                        if (p2->getBinaryInterruptState() == BinaryInterruptState::tide) {
-                            p2->setBinaryInterruptState(BinaryInterruptState::none);
-                        }
-                    }
-                    else { // modify orbit based on energy loss
-                        if (p1->getBinaryInterruptState() == BinaryInterruptState::none ||
-                            p2->getBinaryInterruptState() == BinaryInterruptState::none ||
-                            p1->getBinaryPairID()!=p2->id || p2->getBinaryPairID()!=p1->id) {
-                            
-                            p1->setBinaryPairID(p2->id);
-                            p2->setBinaryPairID(p1->id);
-                            p1->setBinaryInterruptState(BinaryInterruptState::tide);
-                            p2->setBinaryInterruptState(BinaryInterruptState::tide);
-                        }
-                    }
-                }
-            
-
-
                 auto merge = [&](const Float& dr, const Float& t_peri, const Float& sd_factor) {
                     _bin_interrupt.adr = &_bin;
                 
@@ -1227,6 +1203,91 @@ public:
                     }
 #endif
                 }
+
+
+#ifdef BSE_BASE
+                // tide energy loss 
+                if (p1->mass>0 && p2->mass>0) {
+                    if (drdv<0) { // when two star approach each other; reset tide status
+                        if (p1->getBinaryInterruptState() == BinaryInterruptState::tide) {
+                            p1->setBinaryInterruptState(BinaryInterruptState::none);
+                        }
+                        if (p2->getBinaryInterruptState() == BinaryInterruptState::tide) {
+                            p2->setBinaryInterruptState(BinaryInterruptState::none);
+                        }
+                    }
+                    else { // modify orbit based on energy loss
+                        int binary_type_p1 = static_cast<int>(p1->getBinaryInterruptState());
+                        int binary_type_p2 = static_cast<int>(p2->getBinaryInterruptState());
+                        long long int pair_id1 = p1->getBinaryPairID();
+                        long long int pair_id2 = p2->getBinaryPairID();
+                        bool tide_flag = !(bse_manager.isMassTransfer(binary_type_p1) 
+                                           || bse_manager.isMerger(binary_type_p1) 
+                                           || bse_manager.isDisrupt(binary_type_p1)) 
+                            || (binary_type_p1 != binary_type_p2) 
+                            || pair_id1 != p2->id 
+                            || pair_id2 != p1->id;
+
+                        Float poly_type1=0, poly_type2=0;
+                        Float Etid=0, Ltid=0;
+                        Float semi = _bin.semi;
+                        Float ecc  = _bin.ecc;
+                        if (tide_flag) {
+                            Float rad1 = bse_manager.getStellarRadius(p1->star);
+                            Float rad2 = bse_manager.getStellarRadius(p2->star);
+                            if (p1->star.kw>=10&&p1->star.kw<15&&p2->star.kw>=10&&p2->star.kw<15) {
+                                if (_bin.semi<0) {
+                                    tide.evolveOrbitHyperbolicGW(_bin, Etid, Ltid);
+                                }
+                                else tide_flag = false;
+                            }
+                            else {
+                                poly_type1 = (p1->star.kw<=2) ? 3.0 : 1.5;
+                                poly_type2 = (p2->star.kw<=2) ? 3.0 : 1.5;
+                                Etid = tide.evolveOrbitDynamicalTide(_bin, rad1, rad2, poly_type1, poly_type2);
+                                tide_flag = (Etid>0);
+                            }
+                        }
+
+                        if (tide_flag) {
+                            _bin.calcParticles(gravitational_constant);
+                            p1->pos += _bin.pos;
+                            p2->pos += _bin.pos;
+                            p1->vel += _bin.vel;
+                            p2->vel += _bin.vel;
+
+                            p1->setBinaryPairID(p2->id);
+                            p2->setBinaryPairID(p1->id);
+                            p1->setBinaryInterruptState(BinaryInterruptState::tide);
+                            p2->setBinaryInterruptState(BinaryInterruptState::tide);
+                            
+                            modify_return = 2;
+
+#pragma omp critical
+                            {
+                                fout_bse<<"Tide "
+                                        <<std::setw(WRITE_WIDTH)<<p1->id
+                                        <<std::setw(WRITE_WIDTH)<<p2->id
+                                        <<std::setw(WRITE_WIDTH)<<pair_id1
+                                        <<std::setw(WRITE_WIDTH)<<pair_id2
+                                        <<std::setw(WRITE_WIDTH)<<binary_type_p1
+                                        <<std::setw(WRITE_WIDTH)<<binary_type_p2
+                                        <<std::setw(WRITE_WIDTH)<<poly_type1
+                                        <<std::setw(WRITE_WIDTH)<<poly_type2
+                                        <<std::setw(WRITE_WIDTH)<<drdv
+                                        <<std::setw(WRITE_WIDTH)<<semi //old
+                                        <<std::setw(WRITE_WIDTH)<<ecc  //old
+                                        <<std::setw(WRITE_WIDTH)<<Etid
+                                        <<std::setw(WRITE_WIDTH)<<Ltid;
+                                _bin.Binary::printColumn(fout_bse, WRITE_WIDTH);
+                                p1->star.printColumn(fout_bse, WRITE_WIDTH);
+                                p2->star.printColumn(fout_bse, WRITE_WIDTH);
+                            }
+
+                         }
+                    }
+                }
+#endif // BSE_BASE
             }
         }
 #endif

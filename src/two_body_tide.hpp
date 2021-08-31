@@ -3,15 +3,15 @@
 #include "Common/Float.h"
 #include "Common/binary_tree.h"
 
-//! HyperbolicTide 
+//! Two Body Tide effct
 /*! calculate orbital change due to dynamical tide or gravitational wave radiation for hyperbolic encounters
  */
-class HyperbolicTide{
+class TwoBodyTide{
 public:
     Float gravitational_constant;  
     Float speed_of_light;  // should have the same unit set as that of G
 
-    HyperbolicTide(): gravitational_constant(-1), speed_of_light(-1) {}
+    TwoBodyTide(): gravitational_constant(-1), speed_of_light(-1) {}
 
     //! check whether parameters values are correct
     /*! \return true: all correct
@@ -28,7 +28,7 @@ public:
       \return Etid: energy loss
      */
     template <class TBinary>
-    void evolveOrbitGW(TBinary& _bin, Float& _Etid, Float& _Ltid) {
+    void evolveOrbitHyperbolicGW(TBinary& _bin, Float& _Etid, Float& _Ltid) {
 
         // calculate energy loss (Hansen 1972, PRD, 5, 1021; correction from Turner 1977, ApJ, 216, 610)
 
@@ -84,24 +84,26 @@ public:
         _Ltid = Ltid;
     }
 
-    //! evolve hyperbolic orbit based on dynamical tide implementation from Alessandro Alberto Trani
+    //! evolve two-body orbit based on dynamical tide implementation from Alessandro Alberto Trani
     /*!
       @param[in,out] _bin: binary data, semi and ecc are updated
       @param[in] rad1: stellar radius of p1 (should be in the same unit of semi)
       @param[in] rad2: stellar radius of p2
-      @param[in] poly_type: polynomial type
+      @param[in] poly_type1: polynomial type for p1
+      @param[in] poly_type2: polynomial type for p2
 
       \return Etid: energy loss
      */
     template <class TBinary>
-    Float evolveOrbitPoly(TBinary& _bin, const Float& rad1, const Float& rad2, const Float& poly_type) {
+    Float evolveOrbitDynamicalTide(TBinary& _bin, const Float& rad1, const Float& rad2, const Float& poly_type1, const Float& poly_type2) {
         ASSERT(_bin.getMemberN()==2);
-        ASSERT(_bin.semi<0);
-        ASSERT(_bin.ecc>1);
+        //ASSERT(_bin.semi<0);
+        //ASSERT(_bin.ecc>1);
 
         ASSERT(_bin.m1>0);
         ASSERT(_bin.m2>0);
-        ASSERT(poly_type==1.5||poly_type==3.0);
+        ASSERT(poly_type1==1.5||poly_type1==3.0);
+        ASSERT(poly_type2==1.5||poly_type2==3.0);
 
 		Float peri = _bin.semi * (1.0 - _bin.ecc);
         ASSERT(peri>rad1+rad2);
@@ -130,13 +132,13 @@ public:
 		Float Etid = 0;
 
 		// TIDE ON 1
-		if ((neweta1 > 0) & (neweta1 < 10)) {
-			Etid += calcEtidPolynomicalFit(_bin.m2, r1_over_peri, peri, neweta1, poly_type);
+		if ((eta1 > 0) & (eta1 < 10)) {
+			Etid += calcEtidPolynomicalFit(_bin.m2, r1_over_peri, peri, neweta1, poly_type1);
 		}
 
 		// TIDE ON 2
-		if ((neweta2 > 0) & (neweta2 < 10)) {
-			Etid += calcEtidPolynomicalFit(_bin.m1, r2_over_peri, peri, neweta2, poly_type);
+		if ((eta2 > 0) & (eta2 < 10)) {
+			Etid += calcEtidPolynomicalFit(_bin.m1, r2_over_peri, peri, neweta2, poly_type2);
 		}
 
         // assuming angular momentum conserved, the semi-latus rectum is also conserved

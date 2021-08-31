@@ -52,6 +52,9 @@ public:
 #endif
         h4_manager.interaction.gravitational_constant = _g;
         ar_manager.interaction.gravitational_constant = _g;
+#ifdef BSE_BASE
+        ar_manager.interaction.tide.gravitational_constant = _g;
+#endif
     }
 
     //! set time step range
