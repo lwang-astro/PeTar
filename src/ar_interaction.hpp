@@ -1246,6 +1246,13 @@ public:
                                 poly_type2 = (p2->star.kw<=2) ? 3.0 : 1.5;
                                 Etid = tide.evolveOrbitDynamicalTide(_bin, rad1, rad2, poly_type1, poly_type2);
                                 tide_flag = (Etid>0);
+                                // for slowdown case, repeating tide effect based on slowdown factor
+                                Float sd_factor_ext = _bin.slowdown.getSlowDownFactor() - 1.5;
+                                if (tide_flag && sd_factor_ext>0) {
+                                    for (Float k=0; k<sd_factor_ext; k=k+1.0) {
+                                        Etid += tide.evolveOrbitDynamicalTide(_bin, rad1, rad2, poly_type1, poly_type2);
+                                    }
+                                }
                             }
                         }
 
