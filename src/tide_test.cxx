@@ -112,7 +112,8 @@ int main(int argc, char** argv){
                  <<std::setw(width)<<"ecc"
                  <<std::setw(width)<<"rad1"
                  <<std::setw(width)<<"rad2"
-                 <<std::setw(width)<<"type"
+                 <<std::setw(width)<<"type1"
+                 <<std::setw(width)<<"type2"
                  <<std::endl
                  <<"      Here type = 0: GW energy loss; = 1.5 or 3.0: polynomial types for dynamical tides\n"
                  <<"Options: \n"
@@ -210,7 +211,8 @@ int main(int argc, char** argv){
             <<std::setw(width)<<"ecc"
             <<std::setw(width)<<"rad1"
             <<std::setw(width)<<"rad2"
-            <<std::setw(width)<<"type"
+            <<std::setw(width)<<"type1"
+            <<std::setw(width)<<"type2"
             <<std::setw(width)<<"Ebin"
             <<std::setw(width)<<"Lbin"
             <<std::setw(width)<<"semi_new"
@@ -221,8 +223,8 @@ int main(int argc, char** argv){
 
    for(int i=0; i<num; i++) {
        //bin.readAscii(fs);
-       Float rad1,rad2,type,Etid=0,Ltid=0;
-       fs>>bin.m1>>bin.m2>>bin.semi>>bin.ecc>>rad1>>rad2>>type;
+       Float rad1,rad2,type1,type2,Etid=0,Ltid=0;
+       fs>>bin.m1>>bin.m2>>bin.semi>>bin.ecc>>rad1>>rad2>>type1>>type2;
        //bin.calcParticles(G);
        
        //bin.printColumn(std::cout);
@@ -232,7 +234,8 @@ int main(int argc, char** argv){
                 <<std::setw(width)<<bin.ecc
                 <<std::setw(width)<<rad1
                 <<std::setw(width)<<rad2
-                <<std::setw(width)<<type
+                <<std::setw(width)<<type1
+                <<std::setw(width)<<type2
                 <<std::setw(width)<<-G*bin.m1*bin.m2/(2*bin.semi)
                 <<std::setw(width)<<sqrt(G*bin.m1*bin.m2*bin.m1*bin.m2/(bin.m1+bin.m2)*bin.semi*(1-bin.ecc*bin.ecc));
        if (type==0) tide.evolveOrbitHyperbolicGW(bin, Etid, Ltid);

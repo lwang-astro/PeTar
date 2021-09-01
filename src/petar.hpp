@@ -195,8 +195,8 @@ public:
                      write_style  (input_par_store, 1,    "w", "File Writing style: 0, no output; 1. write snapshots, status and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile"),
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
-                     stellar_evolution_option  (input_par_store, 1, "stellar-evolution", "modify single star: 0: turn off; 1: modify mass and velocity using SSE every Hermite step, log files with names of [data filename prefix].[sse/bse].[MPI rank] are generated if -w >0"),
-                     interrupt_detection_option(input_par_store, 1, "detect-interrupt", "modify orbits of binaries: 0: no modifications (also no stellar evolution); 1: modify the binary orbits using BSE (if '--stellar-evolution 1' is set) and merger checker in AR integrator"),
+                     stellar_evolution_option  (input_par_store, 1, "stellar-evolution", "stellar evolution of stars in Hermite+SDAR: 0: off; >=1: using SSE/BSE based codes; ==2: switch on dynamical tide and hyperbolic gravitational wave radiation"),
+                     interrupt_detection_option(input_par_store, 1, "detect-interrupt", "stellar evolution of binaries in SDAR: 0: off; 1: using BSE based code (if '--stellar-evolution != 0)"),
 #else
                      stellar_evolution_option  (input_par_store, 0, "stellar-evolution", "modify mass of particles: 0: turn off; 1: check every Hermite steps"),
                      interrupt_detection_option(input_par_store, 0, "detect-interrupt", "modify orbits of AR groups and check interruption: 0: turn off; 1: modify the binary orbits based on detetion criterion; 2. modify and also interrupt the hard drift"),
@@ -3307,7 +3307,7 @@ public:
         if (write_style) hard_manager.ar_manager.interaction.stellar_evolution_write_flag = true;
         else hard_manager.ar_manager.interaction.stellar_evolution_write_flag = false;
 #ifdef BSE_BASE
-        if (input_parameters.stellar_evolution_option.value==1) {
+        if (input_parameters.stellar_evolution_option.value>0) {
             hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters, print_flag);
             hard_manager.ar_manager.interaction.tide.speed_of_light = hard_manager.ar_manager.interaction.bse_manager.getSpeedOfLight();
         }

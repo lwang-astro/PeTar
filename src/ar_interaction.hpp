@@ -42,7 +42,7 @@ public:
         ASSERT(eps_sq>=0.0);
         ASSERT(gravitational_constant>0.0);
 #ifdef BSE_BASE
-        ASSERT(stellar_evolution_option!=1||(stellar_evolution_option==1&&bse_manager.checkParams()));
+        ASSERT(stellar_evolution_option==0 || (stellar_evolution_option==1 && bse_manager.checkParams()) || (stellar_evolution_option==2 && bse_manager.checkParams() && tide.checkParams()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_sse.is_open()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_bse.is_open()));
 #endif
@@ -636,7 +636,7 @@ public:
         //}
 #ifdef BSE_BASE
         // SSE/BSE stellar evolution 
-        if (_p.time_interrupt<=_time_end&&stellar_evolution_option==1) {
+        if (_p.time_interrupt<=_time_end&&stellar_evolution_option>0) {
             ASSERT(bse_manager.checkParams());
 
             int modify_flag = 1;
@@ -741,7 +741,7 @@ public:
                 }
 #ifdef BSE_BASE
                 // if member is star, evolve single star using SSE
-                else if (stellar_evolution_option==1) {
+                else if (stellar_evolution_option>0) {
                     ASSERT(bse_manager.checkParams());
                     modify_branch[k] = modifyOneParticle(*_bin.getMember(k), _bin.getMember(k)->time_record, _bin_interrupt.time_now);
                     modify_return = std::max(modify_return, modify_branch[k]);
@@ -916,7 +916,7 @@ public:
             };
 
             bool check_flag = false;
-            if (stellar_evolution_option==1) {
+            if (stellar_evolution_option>0) {
                 int binary_type_p1 = static_cast<int>(p1->getBinaryInterruptState());
                 int binary_type_p2 = static_cast<int>(p2->getBinaryInterruptState());
                 int binary_type_init = 0;
@@ -1082,7 +1082,7 @@ public:
                     // backup original data for print
 
                     // first evolve two components to the current time
-                    if (stellar_evolution_option==1) {
+                    if (stellar_evolution_option>0) {
                         if (p1->time_record<_bin_interrupt.time_now) {
                             p1->time_interrupt = p1->time_record; // force SSE evolution
                             modifyOneParticle(*p1, p1->time_record, _bin_interrupt.time_now);
@@ -1207,7 +1207,7 @@ public:
 
 #ifdef BSE_BASE
                 // tide energy loss 
-                if (p1->mass>0 && p2->mass>0) {
+                if (stellar_evolution_option==2 && p1->mass>0 && p2->mass>0) {
                     if (drdv<0) { // when two star approach each other; reset tide status
                         if (p1->getBinaryInterruptState() == BinaryInterruptState::tide) {
                             p1->setBinaryInterruptState(BinaryInterruptState::none);

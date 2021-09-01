@@ -188,6 +188,8 @@ int main(int argc, char **argv){
 
   std::cerr<<"Check "<<bse_name<<" rand parameter file: "<<fbserandpar<<std::endl;
   hard_manager.ar_manager.interaction.bse_manager.readRandConstant(fbserandpar.c_str());
+  hard_manager.ar_manager.interaction.tide.gravitational_constant = hard_manager.ar_manager.interaction.gravitational_constant;
+  hard_manager.ar_manager.interaction.tide.speed_of_light = hard_manager.ar_manager.interaction.bse_manager.getSpeedOfLight();
 
   if (hard_manager.ar_manager.interaction.stellar_evolution_write_flag) {
       hard_manager.ar_manager.interaction.fout_sse.open((filename+fsse_suffix).c_str(), std::ofstream::out);
