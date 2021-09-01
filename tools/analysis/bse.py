@@ -411,13 +411,16 @@ class Tide(DictNpArrayMix):
         
     """
     
-    keys=[['id1', np.int64], ['id2', np.int64], ['pair_id1', np.int64], ['pair_id2', np.int64], 
-          ['bin_type1', np.int64], ['bin_type2', np.int64], ['poly_type1', np.float64], ['poly_type2', np.float64], 
-          ['drdv', np.float64], ['semi0', np.floa64], ['ecc0', np.floa64], 
-          ['etid', np.float64], ['ltid', np.float64], 
-          ['bin', BinaryTreeSDAR]]
-    
-    DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **{**kwargs, 'member_particle_type':SSEStarParameter})
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+        """
+        keys=[['id1', np.int64], ['id2', np.int64], ['pair_id1', np.int64], ['pair_id2', np.int64], 
+              ['bin_type1', np.int64], ['bin_type2', np.int64], ['poly_type1', np.float64], ['poly_type2', np.float64], 
+              ['drdv', np.float64], ['semi0', np.float64], ['ecc0', np.float64], 
+              ['etid', np.float64], ['ltid', np.float64], 
+              ['bin', BinaryTreeSDAR]]
+        
+        DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **{**kwargs, 'member_particle_type':SSEStarParameter})
     
     def generateBinaryID(self):
         """ Use CantorPairing to map two components id to one binary id
