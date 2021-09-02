@@ -1250,7 +1250,9 @@ public:
                                 Float sd_factor_ext = _bin.slowdown.getSlowDownFactor() - 1.5;
                                 if (tide_flag && sd_factor_ext>0) {
                                     for (Float k=0; k<sd_factor_ext; k=k+1.0) {
-                                        Etid += tide.evolveOrbitDynamicalTide(_bin, rad1, rad2, poly_type1, poly_type2);
+                                        Float etid_k = tide.evolveOrbitDynamicalTide(_bin, rad1, rad2, poly_type1, poly_type2);
+                                        if (etid_k==0) break;
+                                        Etid += etid_k;
                                     }
                                 }
                             }

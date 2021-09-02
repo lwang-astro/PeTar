@@ -105,6 +105,8 @@ public:
         ASSERT(poly_type1==1.5||poly_type1==3.0);
         ASSERT(poly_type2==1.5||poly_type2==3.0);
 
+        if (_bin.ecc<0.1) return 0.0; // no tide effect when ecc is low
+
 		Float peri = _bin.semi * (1.0 - _bin.ecc);
         ASSERT(peri>rad1+rad2);
         
@@ -132,12 +134,12 @@ public:
 		Float Etid = 0;
 
 		// TIDE ON 1
-		if ((eta1 > 0) & (eta1 < 10)) {
+		if ((eta1 > 0) & (eta1 < 10) & (neweta1 > 0) & (neweta1 < 10)) {
 			Etid += calcEtidPolynomicalFit(_bin.m2, r1_over_peri, peri, neweta1, poly_type1);
 		}
 
 		// TIDE ON 2
-		if ((eta2 > 0) & (eta2 < 10)) {
+		if ((eta2 > 0) & (eta2 < 10) & (neweta2 > 0) & (neweta2 < 10)) {
 			Etid += calcEtidPolynomicalFit(_bin.m1, r2_over_peri, peri, neweta2, poly_type2);
 		}
 
