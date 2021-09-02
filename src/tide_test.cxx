@@ -238,8 +238,8 @@ int main(int argc, char** argv){
                 <<std::setw(width)<<type2
                 <<std::setw(width)<<-G*bin.m1*bin.m2/(2*bin.semi)
                 <<std::setw(width)<<sqrt(G*bin.m1*bin.m2*bin.m1*bin.m2/(bin.m1+bin.m2)*bin.semi*(1-bin.ecc*bin.ecc));
-       if (type==0) tide.evolveOrbitHyperbolicGW(bin, Etid, Ltid);
-       else Etid = tide.evolveOrbitDynamicalTide(bin, rad1, rad2, type);
+       if (type1==0&&type2==0) tide.evolveOrbitHyperbolicGW(bin, Etid, Ltid);
+       else Etid = tide.evolveOrbitDynamicalTide(bin, rad1, rad2, type1, type2);
        std::cout<<std::setw(width)<<bin.semi
                 <<std::setw(width)<<bin.ecc
                 <<std::setw(width)<<Etid
