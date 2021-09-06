@@ -84,12 +84,13 @@ bse_opt='.bse .mobse .bseEmp'
 for s in $bse_opt
 do
     if [ -e $fout$s ]; then
-	echo 'get '$s' type_change, sn_kick, dynamic_merge'
+	echo 'get '$s' type_change, sn_kick, dynamic_merge, tide'
 	egrep '^Dynamic_merge' $fout$s |sed 's/Dynamic_merge://g' >$fout$s.dynamic_merge.tmp
 	awk '{if (NF==45) {for (i=1; i<=5; i++) printf("%s ", $i); printf("0 0 0 "); for (i=6; i<=NF; i++) printf("%s ", $i); printf("\n");} else print $LINE}' $fout$s.dynamic_merge.tmp > $fout$s.dynamic_merge
 	rm -f $fout$s.dynamic_merge.tmp
 	egrep '^SN_kick' $fout$s |sed 's/SN_kick//g' >$fout$s.sn_kick
-	egrep -v '^(Dynamic_merge|SN_kick)' $fout$s |awk '{for (i=2;i<=NF;i++) printf("%s ", $i); printf("\n")}' >$fout$s.type_change
+	egrep '^Tide' $fout$s |sed 's/Tide//g' >$fout$s.tide
+	egrep -v '^(Dynamic_merge|SN_kick|Tide)' $fout$s |awk '{for (i=2;i<=NF;i++) printf("%s ", $i); printf("\n")}' >$fout$s.type_change
     fi
 done
 

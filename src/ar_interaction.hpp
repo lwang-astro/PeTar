@@ -1070,12 +1070,12 @@ public:
                     //p2->printColumn(std::cerr);
                     //std::cerr<<std::endl;
 
-                    // new particle data
-                    Float mcm = p1->mass + p2->mass;
-                    for (int k=0; k<3; k++) {
-                        p1->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
-                        p1->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
-                    }
+                    //// new particle data
+                    //Float mcm = p1->mass + p2->mass;
+                    //for (int k=0; k<3; k++) {
+                    //    p1->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
+                    //    p1->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
+                    //}
 #ifdef BSE_BASE
                     //Float m1_bk = p1->mass;
                     //Float m2_bk = p2->mass;
@@ -1221,27 +1221,36 @@ public:
                         int binary_type_p2 = static_cast<int>(p2->getBinaryInterruptState());
                         long long int pair_id1 = p1->getBinaryPairID();
                         long long int pair_id2 = p2->getBinaryPairID();
-                        bool tide_flag = !(bse_manager.isMassTransfer(binary_type_p1) 
-                                           || bse_manager.isMerger(binary_type_p1) 
-                                           || bse_manager.isDisrupt(binary_type_p1)) 
-                            || (binary_type_p1 != binary_type_p2) 
-                            || pair_id1 != p2->id 
-                            || pair_id2 != p1->id;
+                        bool tide_flag = true;
+                        if ((binary_type_p1 != binary_type_p2) || (pair_id1 != p2->id) || (pair_id2 != p1->id)) tide_flag = false;
+                        else if (bse_manager.isMassTransfer(binary_type_p1) 
+                                 || bse_manager.isMerger(binary_type_p1) 
+                                 || bse_manager.isDisrupt(binary_type_p1)
+                                 || binary_type_p1 == 14)
+                            tide_flag = false;
 
-                        Float poly_type1=0, poly_type2=0;
-                        Float Etid=0, Ltid=0;
-                        Float semi = _bin.semi;
-                        Float ecc  = _bin.ecc;
                         if (tide_flag) {
+                            Float poly_type1=0, poly_type2=0;
+                            Float Etid=0, Ltid=0;
+                            Float semi = _bin.semi;
+                            Float ecc  = _bin.ecc;
                             Float rad1 = bse_manager.getStellarRadius(p1->star);
                             Float rad2 = bse_manager.getStellarRadius(p2->star);
                             if (p1->star.kw>=10&&p1->star.kw<15&&p2->star.kw>=10&&p2->star.kw<15) {
                                 if (_bin.semi<0) {
-                                    tide.evolveOrbitHyperbolicGW(_bin, Etid, Ltid);
+                                    bool merge_flag = tide.evolveOrbitHyperbolicGW(_bin, Etid, Ltid);
+                                    if (merge_flag) {
+                                        Float dr[3] = {p1->pos[0] - p2->pos[0], 
+                                                       p1->pos[1] - p2->pos[1], 
+                                                       p1->pos[2] - p2->pos[2]};
+                                        Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+                                        merge(std::sqrt(dr2), 0.0, 1.0);
+                                        tide_flag = false;
+                                    }
                                 }
                                 else tide_flag = false;
                             }
-                            else {
+                            else if (std::min(p1->star.kw, p2->star.kw)<13) {
                                 poly_type1 = (p1->star.kw<=2) ? 3.0 : 1.5;
                                 poly_type2 = (p2->star.kw<=2) ? 3.0 : 1.5;
                                 Etid = tide.evolveOrbitDynamicalTide(_bin, rad1, rad2, poly_type1, poly_type2);
@@ -1256,43 +1265,44 @@ public:
                                     }
                                 }
                             }
-                        }
 
-                        if (tide_flag) {
-                            _bin.calcParticles(gravitational_constant);
-                            p1->pos += _bin.pos;
-                            p2->pos += _bin.pos;
-                            p1->vel += _bin.vel;
-                            p2->vel += _bin.vel;
+                            if (tide_flag) {
+                                _bin.calcParticles(gravitational_constant);
+                                p1->pos += _bin.pos;
+                                p2->pos += _bin.pos;
+                                p1->vel += _bin.vel;
+                                p2->vel += _bin.vel;
 
-                            p1->setBinaryPairID(p2->id);
-                            p2->setBinaryPairID(p1->id);
-                            p1->setBinaryInterruptState(BinaryInterruptState::tide);
-                            p2->setBinaryInterruptState(BinaryInterruptState::tide);
+                                p1->setBinaryPairID(p2->id);
+                                p2->setBinaryPairID(p1->id);
+                                p1->setBinaryInterruptState(BinaryInterruptState::tide);
+                                p2->setBinaryInterruptState(BinaryInterruptState::tide);
                             
-                            modify_return = 2;
+                                modify_return = 2;
 
 #pragma omp critical
-                            {
-                                fout_bse<<"Tide "
-                                        <<std::setw(WRITE_WIDTH)<<p1->id
-                                        <<std::setw(WRITE_WIDTH)<<p2->id
-                                        <<std::setw(WRITE_WIDTH)<<pair_id1
-                                        <<std::setw(WRITE_WIDTH)<<pair_id2
-                                        <<std::setw(WRITE_WIDTH)<<binary_type_p1
-                                        <<std::setw(WRITE_WIDTH)<<binary_type_p2
-                                        <<std::setw(WRITE_WIDTH)<<poly_type1
-                                        <<std::setw(WRITE_WIDTH)<<poly_type2
-                                        <<std::setw(WRITE_WIDTH)<<drdv
-                                        <<std::setw(WRITE_WIDTH)<<semi //old
-                                        <<std::setw(WRITE_WIDTH)<<ecc  //old
-                                        <<std::setw(WRITE_WIDTH)<<Etid
-                                        <<std::setw(WRITE_WIDTH)<<Ltid;
-                                _bin.Binary::printColumn(fout_bse, WRITE_WIDTH);
-                                p1->star.printColumn(fout_bse, WRITE_WIDTH);
-                                p2->star.printColumn(fout_bse, WRITE_WIDTH);
-                            }
+                                {
+                                    fout_bse<<"Tide "
+                                            <<std::setw(WRITE_WIDTH)<<p1->id
+                                            <<std::setw(WRITE_WIDTH)<<p2->id
+                                            <<std::setw(WRITE_WIDTH)<<pair_id1
+                                            <<std::setw(WRITE_WIDTH)<<pair_id2
+                                            <<std::setw(WRITE_WIDTH)<<binary_type_p1
+                                            <<std::setw(WRITE_WIDTH)<<binary_type_p2
+                                            <<std::setw(WRITE_WIDTH)<<poly_type1
+                                            <<std::setw(WRITE_WIDTH)<<poly_type2
+                                            <<std::setw(WRITE_WIDTH)<<drdv
+                                            <<std::setw(WRITE_WIDTH)<<semi //old
+                                            <<std::setw(WRITE_WIDTH)<<ecc  //old
+                                            <<std::setw(WRITE_WIDTH)<<Etid
+                                            <<std::setw(WRITE_WIDTH)<<Ltid;
+                                    _bin.BinarySlowDown::printColumn(fout_bse, WRITE_WIDTH);
+                                    p1->star.printColumn(fout_bse, WRITE_WIDTH);
+                                    p2->star.printColumn(fout_bse, WRITE_WIDTH);
+                                    fout_bse<<std::endl;
+                                }
 
+                            }
                          }
                     }
                 }

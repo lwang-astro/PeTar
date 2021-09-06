@@ -25,11 +25,10 @@ public:
     //! evolve hyperbolic orbit based on GW effect
     /*!
       @param[in] _bin: binary data, semi and ecc are updated
-      \return Etid: energy loss
+      \return Etid: merge flag
      */
     template <class TBinary>
-    void evolveOrbitHyperbolicGW(TBinary& _bin, Float& _Etid, Float& _Ltid) {
-
+    bool evolveOrbitHyperbolicGW(TBinary& _bin, Float& _Etid, Float& _Ltid) {
         // calculate energy loss (Hansen 1972, PRD, 5, 1021; correction from Turner 1977, ApJ, 216, 610)
 
         Float e = _bin.ecc;
@@ -69,19 +68,24 @@ public:
         Float GM12 = gravitational_constant * m12;
         Float Ebin = - GM12 / (2.0 * a);
         Float Ebin_new = Ebin - Etid;
-        _bin.semi = - GM12 / (2.0 * Ebin_new);
-
+        Float semi_new = - GM12 / (2.0 * Ebin_new);
 
         // update ecc
         Float mfac = GM12 * m12 / mtot;
         Float Lbin = sqrt(mfac * p);
         Float Lbin_new = Lbin - Ltid;
-        ASSERT(Lbin_new>=0);
-        _bin.ecc = sqrt(1.0 - Lbin_new*Lbin_new / (mfac*_bin.semi));
-        ASSERT(_bin.ecc>=0.0);
-        
+        Float ecc2_new = 1.0 - Lbin_new*Lbin_new / (mfac*_bin.semi);
+
         _Etid = Etid;
         _Ltid = Ltid;
+
+        ASSERT(Lbin_new>=0);
+        if (ecc2_new < 0) return true;
+
+        _bin.semi = semi_new;
+        _bin.ecc = sqrt(ecc2_new);
+
+        return false;
     }
 
     //! evolve two-body orbit based on dynamical tide implementation from Alessandro Alberto Trani
