@@ -1,5 +1,6 @@
 # Tide data interface
 from .base import *
+from .functions import *
 from .bse import SSEStarParameter
 from .group import BinaryTreeSDAR
 
@@ -42,6 +43,6 @@ class Tide(DictNpArrayMix):
         """ Use CantorPairing to map two components id to one binary id
             Add new member bid 
         """
-        bid = cantorPairing(self.p1.id, self.p2.id)
+        bid = cantorPairing(self.id1, self.id2)
         self.addNewMember('bid',bid)
 
