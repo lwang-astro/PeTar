@@ -1229,6 +1229,7 @@ public:
                                  || binary_type_p1 == 14)
                             tide_flag = false;
 
+                        bool change_flag=false;
                         if (tide_flag) {
                             Float poly_type1=0, poly_type2=0;
                             Float Etid=0, Ltid=0;
@@ -1245,19 +1246,18 @@ public:
                                                        p1->pos[2] - p2->pos[2]};
                                         Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
                                         merge(std::sqrt(dr2), 0.0, 1.0);
-                                        tide_flag = false;
                                     }
+                                    else change_flag = true;
                                 }
-                                else tide_flag = false;
                             }
                             else if (std::min(p1->star.kw, p2->star.kw)<13) {
                                 poly_type1 = (p1->star.kw<=2) ? 3.0 : 1.5;
                                 poly_type2 = (p2->star.kw<=2) ? 3.0 : 1.5;
                                 Etid = tide.evolveOrbitDynamicalTide(_bin, rad1, rad2, poly_type1, poly_type2);
-                                tide_flag = (Etid>0);
+                                change_flag = (Etid>0);
                                 // for slowdown case, repeating tide effect based on slowdown factor
                                 Float sd_factor_ext = _bin.slowdown.getSlowDownFactor() - 1.5;
-                                if (tide_flag && sd_factor_ext>0) {
+                                if (change_flag && sd_factor_ext>0) {
                                     for (Float k=0; k<sd_factor_ext; k=k+1.0) {
                                         Float etid_k = tide.evolveOrbitDynamicalTide(_bin, rad1, rad2, poly_type1, poly_type2);
                                         if (etid_k==0) break;
@@ -1266,7 +1266,13 @@ public:
                                 }
                             }
 
-                            if (tide_flag) {
+                            if (change_flag) {
+
+                                _bin_interrupt.adr = &_bin;
+
+                                // if status not set, set to change
+                                if (_bin_interrupt.status == AR::InterruptStatus::none) 
+                                    _bin_interrupt.status = AR::InterruptStatus::change;
                                 _bin.calcParticles(gravitational_constant);
                                 p1->pos += _bin.pos;
                                 p2->pos += _bin.pos;
@@ -1283,6 +1289,7 @@ public:
 #pragma omp critical
                                 {
                                     fout_bse<<"Tide "
+                                            <<std::setw(WRITE_WIDTH)<<_bin_interrupt.time_now
                                             <<std::setw(WRITE_WIDTH)<<p1->id
                                             <<std::setw(WRITE_WIDTH)<<p2->id
                                             <<std::setw(WRITE_WIDTH)<<pair_id1

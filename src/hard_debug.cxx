@@ -28,14 +28,14 @@ int main(int argc, char **argv){
   PS::S32 step_arc_limit = 100000;
   std::string filename="hard_dump";
   std::string fhardpar="input.par.hard";
-#if (defined BSEBBF) || (defined BSEEMP)
+#ifdef BSE_BASE
   int idum=0;
-  std::string fbsepar = "input.par.bse";
+  std::string bse_name = BSEManager::getBSEName();
+  std::string fsse_suffix = BSEManager::getSSEOutputFilenameSuffix();
+  std::string fbse_suffix = BSEManager::getBSEOutputFilenameSuffix();
+
+  std::string fbsepar = "input.par" + fbse_suffix;
   std::string fbserandpar = "bse.rand.par";
-#elif MOBSE
-  int idum=0;
-  std::string fbsepar = "input.par.mobse";
-  std::string fbserandpar = "mobse.rand.par";
 #endif
 #ifdef STELLAR_EVOLUTION
   int stellar_evolution_option = -1;
@@ -166,15 +166,6 @@ int main(int argc, char **argv){
           hard_manager.ar_manager.interaction.stellar_evolution_write_flag = false;
   }
 #ifdef BSE_BASE
-#if (defined BSEBBF) || (defined BSEEMP)
-  std::string bse_name="BSE";
-  std::string fsse_suffix=".sse";
-  std::string fbse_suffix=".bse";
-#elif MOBSE
-  std::string bse_name="MOBSE";
-  std::string fsse_suffix=".mosse";
-  std::string fbse_suffix=".mobse";
-#endif // MOBSE
   IOParamsBSE bse_io;
   std::cerr<<bse_name<<" parameter file:"<<fbsepar<<std::endl;
   if( (fpar_in = fopen(fbsepar.c_str(),"r")) == NULL) {
@@ -197,7 +188,7 @@ int main(int argc, char **argv){
       hard_manager.ar_manager.interaction.fout_sse<<std::setprecision(WRITE_PRECISION);
       hard_manager.ar_manager.interaction.fout_bse<<std::setprecision(WRITE_PRECISION);      
   }
-#endif // BSE|MOBSE
+#endif // BSE_BASE
 #endif //STELLAR_EVOLUTION
 
 #ifdef ADJUST_GROUP_PRINT

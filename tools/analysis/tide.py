@@ -6,6 +6,7 @@ from .group import BinaryTreeSDAR
 class Tide(DictNpArrayMix):
     """ Tide event record
     Keys: (class members)
+        time (1D): current time
         id1 (1D): particle id of component 1
         id2 (1D): particle id of component 2
         pair_id1 (1D): recorded pair id of component 1 (to indicate whether this is a new two-body system)
@@ -29,7 +30,7 @@ class Tide(DictNpArrayMix):
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        keys=[['id1', np.int64], ['id2', np.int64], ['pair_id1', np.int64], ['pair_id2', np.int64], 
+        keys=[['time', np.float64], ['id1', np.int64], ['id2', np.int64], ['pair_id1', np.int64], ['pair_id2', np.int64], 
               ['bin_type1', np.int64], ['bin_type2', np.int64], ['poly_type1', np.float64], ['poly_type2', np.float64], 
               ['drdv', np.float64], ['semi0', np.float64], ['ecc0', np.float64], 
               ['etid', np.float64], ['ltid', np.float64], 
