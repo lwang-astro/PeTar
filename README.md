@@ -211,9 +211,16 @@ Currently there are three options of stellar evolution packages based on SSE/BSE
 
 Notice that here all SSE/BSE package names (here after [bse_name]) only contain 'bse', but the SSE package is also included.
 
-When this option is switched on, the standalone tool _petar.[bse_name] will also be compiled and installed.
+When this option is switched on, the standalone tool _petar.[bse_name]_ will also be compiled and installed.
 This is a c++ based tool which call the stellar evolution functions to evolve single and binary stars to the given age and metallicity. OpenMP parallelization is used to speed up the calculation if a large group of stars and binaries are provided.
 
+Currently, to use the extreme metal poor evolution track of bseEmp, users should create a soft link in the running directory to 'bse-interface/bseEmp/emptrack/ffbonn'.
+Otherwises, the simulation will crash with a file IO error.
+
+When SSE/BSE packages are used, users can control whether to switch on stellar evolution during the simulation by using _petar_ option `--stellar-evolution` and '--detect-interrupt' for single and binary evolution, respectively.
+When `--stellar-evolution 2` is used, the dynamical tide for binary stars and hyperbolic gravitational wave energy/angular momentum loss for compact binaries are switched on.
+But currently the dynamical tide is still an experimental function, it is not confirmed that the result is always physical. 
+In default (`--stellar-evolution 1`), dynamical tide is not switched on.
 
 ##### Use _Galpy_ external potential library
 ```

@@ -1137,10 +1137,20 @@ public:
 
         // Set parameters which depend on the metallicity 
         z = _input.z.value;
+#ifdef BSEEMP
+        if (_print_flag&&(z>0.03))
+            std::cerr<<"BSE warning! metallicity Z is not in (0.0, 0.03); given value:"<<z<<std::endl;
+#else
         if (_print_flag&&(z<0.0001||z>0.03))
             std::cerr<<"BSE warning! metallicity Z is not in (0.0001, 0.03); given value:"<<z<<std::endl;
+#endif
         zcnsts_(&z, zpars);
         value3_.idum = (_input.idum.value>0)? -_input.idum.value: _input.idum.value;
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+        // add off set to random seed to avoid repeating random numbers
+        value3_.idum += PS::Comm::getRank();
+#endif
 
         // collision matrix
         instar_();
