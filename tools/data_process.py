@@ -42,6 +42,8 @@ if __name__ == '__main__':
         print("  -t(--external-mode): external mode used in petar, choices: galpy, no (no)")
         print("  -s(--snapshot-format): snapshot data format: binary, ascii (ascii)")
         print("  -e(--calc-energy): enable to calculate potential energy and virial ratio -(2*ekin/epot) of different lagrangian radii")
+        print("  -c(--calc-multi-rc): enable to calculate individual core radius for each group chosen for Lagrangian properties (e.g., single, binary and star type);")
+        print("                       the centers are also recalculated for individual groups; very expensive")
         print("  -n(--n-cpu): number of CPU threads for parallel processing (all threads)")
         print("     --add-star-type: calculate Lagrangian radii and properties for specific types of stars.")
         print("          This argument contain a list of type names, separated by ',' (no space)")
@@ -93,8 +95,8 @@ if __name__ == '__main__':
         print("                2) when data are written in BINARY format, '-s binary' should be used.")
         print("                3) '--add-star-type' only works when the interrupt mode is 'bse' or 'mobse'.")
     try:
-        shortargs = 'p:m:G:b:MBAea:rt:i:s:n:h'
-        longargs = ['mass-fraction=','multiple','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','calc-energy','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','snapshot-format=','add-star-type=','n-cpu=','help']
+        shortargs = 'p:m:G:b:MBAea:rt:i:s:cn:h'
+        longargs = ['mass-fraction=','multiple','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','calc-energy','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','snapshot-format=','add-star-type=','calc-multi-rc','n-cpu=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -130,6 +132,8 @@ if __name__ == '__main__':
                 kwargs['snapshot_format'] = arg
             elif opt in ('-r','--read-data'):
                 read_flag = True
+            elif opt in ('-c','--calc-multi-rc'):
+                kwargs['calc_multi_rc']=True
             elif opt in ('--r-escape'):
                 if (arg=='tidal'): 
                     kwargs['r_escape'] = arg

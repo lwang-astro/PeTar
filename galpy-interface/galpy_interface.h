@@ -407,6 +407,10 @@ public:
             if (my_rank==0) {
 #endif
                 fconf.open(_input.config_filename.value.c_str(), std::ifstream::in);
+                if (!fconf.is_open()) {
+                    std::cerr<<"Error: Galpy configure file "<<_input.config_filename.value.c_str()<<" cannot be open!"<<std::endl;
+                    abort();
+                }
                 fconf>>update_time;
                 if(fconf.eof()) fconf.close();
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
@@ -456,9 +460,9 @@ public:
                         pot_args_offset.resize(0);
                         pot_args.resize(0);
 
+                        pot_type_offset.push_back(0);
+                        pot_args_offset.push_back(0);
                         if (nset>0) {
-                            pot_type_offset.push_back(0);
-                            pot_args_offset.push_back(0);
                             for (int k=0; k<nset; k++) {
                                 int n_pot_k=-1;
                                 fconf>>n_pot_k;

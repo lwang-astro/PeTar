@@ -1,5 +1,6 @@
 import collections
 import numpy as np
+from scipy import spatial as sp
 from .base import *
 from .data import *
 from .bse import *
@@ -224,6 +225,8 @@ class Lagrangian(DictNpArrayMix):
             external_mode: string (none)
                 PeTar external mode (set in configure): galpy, none 
                 If it is not none, epot_ext will be added if calc_energy=True
+            calc_multi_rc: bool (False)
+                If true, calculate core radius using KDTree and correct the central position
         """
         m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
@@ -231,6 +234,8 @@ class Lagrangian(DictNpArrayMix):
         if ('calc_energy' in kwargs.keys()): calc_energy=kwargs['calc_energy']
         external_mode='none'
         if ('external_mode' in kwargs.keys()): external_mode=kwargs['external_mode']
+        calc_multi_rc=False
+        if ('calc_multi_rc' in kwargs.keys()): calc_multi_rc=kwargs['calc_multi_rc']
         
         n_frac = m_frac.size + 1
         keys = [['r', (np.float64, n_frac)],['m', (np.float64, n_frac)],['n', (np.int64, n_frac)], ['vel', LagrangianVelocity], ['sigma', LagrangianVelocity]]
@@ -242,6 +247,7 @@ class Lagrangian(DictNpArrayMix):
         self.initargs['mass_fraction'] = m_frac
         self.initargs['calc_energy'] = calc_energy
         self.initargs['external_mode'] = external_mode
+        self.initargs['calc_multi_rc'] = calc_multi_rc
 
         #keys = [['r', (np.float64, n_frac)],['m', (np.float64, n_frac)],['n', (np.float64, n_frac)]] # radius, mass, number
         #DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -336,7 +342,21 @@ class Lagrangian(DictNpArrayMix):
         mass_fraction = self.initargs['mass_fraction']
         calc_energy = self.initargs['calc_energy']
         external_mode = self.initargs['external_mode']
+        calc_multi_rc = self.initargs['calc_multi_rc']
         n_frac = mass_fraction.size+1
+
+        rc = _rc
+        if calc_multi_rc:
+            if (_particle.size>6):
+                core = Core()
+                kdtree = sp.cKDTree(_particle.pos)
+                cm_pos, cm_vel = core.calcDensityAndCenter(_particle, kdtree)
+                _particle.correctCenter(cm_pos, cm_vel)
+                _particle.calcR2()
+                rc = core.calcCoreRadius(_particle)
+            else:
+                rc = 0
+                
 
         def find_mass_index(_mass_cum,mass_fraction):
             mass_bins=np.append(0,mass_fraction*_mass_cum[-1])
@@ -369,10 +389,10 @@ class Lagrangian(DictNpArrayMix):
             rlagr = r[rindex]
             if(len(self.r.shape)!=2):
                 raise ValueError('r shape is wrong',self.r.shape)
-            self.r = np.append(self.r, [np.append(rlagr,_rc)], axis=0)
+            self.r = np.append(self.r, [np.append(rlagr,rc)], axis=0)
             nlagr = rindex+1
             if (shell_mode): nlagr[1:] -= nlagr[:-1]
-            nc = (_particle.r2<(_rc*_rc)).sum()
+            nc = (_particle.r2<(rc*rc)).sum()
             self.n = np.append(self.n, [np.append(nlagr,nc)], axis=0)
             mlagr = mcum[rindex]
             if (shell_mode): mlagr[1:] -= mlagr[:-1]
@@ -531,6 +551,8 @@ class LagrangianMultiple(DictNpArrayMix):
             external_mode: string (none)
                 PeTar external mode (set in configure): galpy, none 
                 If it is not none, epot_ext will be added if calc_energy=True
+            calc_multi_rc: bool (False)
+                If true, calculate core radius using KDTree and correct the central position
             add_star_type: list of string ([])
                 An array containing the star type names to calculate additional Lagrangian properties for specific star types.
         """
@@ -540,6 +562,8 @@ class LagrangianMultiple(DictNpArrayMix):
         if ('calc_energy' in kwargs.keys()): calc_energy=kwargs['calc_energy']
         external_mode='none'
         if ('external_mode' in kwargs.keys()): external_mode=kwargs['external_mode']
+        calc_multi_rc=False
+        if ('calc_multi_rc' in kwargs.keys()): calc_multi_rc=kwargs['calc_multi_rc']
 
         keys=[['time',np.float64], ['single',Lagrangian], ['binary', Lagrangian], ['all', Lagrangian]]
         add_star_type=[]
@@ -552,6 +576,7 @@ class LagrangianMultiple(DictNpArrayMix):
         self.initargs['mass_fraction'] = m_frac
         self.initargs['calc_energy'] = calc_energy
         self.initargs['external_mode'] = external_mode
+        self.initargs['calc_multi_rc'] = calc_multi_rc
         self.initargs['add_star_type'] = add_star_type
 
         #DictNpArrayMix.__init__(self, [['time',np.float64]], _dat, _offset, _append, **kwargs)
@@ -578,8 +603,6 @@ class LagrangianMultiple(DictNpArrayMix):
             single partilces (center is corrected and r2 exist)
         binary: Binary
             binaries (center is corrected and r2 exist)
-        mass_fraction: 1D numpy.ndarray
-            Lagragian radii corresponding mass fractions
         rc: float
             Core radius
         mode: string
