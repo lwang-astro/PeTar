@@ -22,6 +22,13 @@ The main body of PeTar is written in c++ language. The external modules can have
 The data analysis tool is written in Python3. Users need the basic knowledge of Python to access the simulation data.
 Especially, it is recommended to learn how to use the Python modules `numpy`, `dict` and `matplotlib`, which cover the most functions to read, process and plot data. 
 
+## About the version
+The master branch of PeTar is frequently updated. In order to avoid using the unstable version, users can check the version printed by running `petar -h`.
+The version format has three types:
+- Develop mode: [PeTar commit count]_[SDAR commit count]. In develop mode, the code can be used and should work properly for most conditions, some features are not fully tested. If users found an unphysical result, please report to the developers.
+- Test mode: test_[PeTar commit count]_[SDAR commit count]. In test mode, the code is not confirmed to work properly, please don't use it for production.
+- Release mode: r[PeTar release number]_r[SDAR release number]. In release mode, the code is a stable version. It is recommended to use. The release version is updated with a low frequency. Right now the first release is under preparing. 
+
 ## Content:
 - [Install](#install)
     - [Dependence](#dependence)

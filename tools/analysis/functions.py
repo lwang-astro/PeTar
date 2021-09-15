@@ -178,19 +178,34 @@ def coordinateCorrection(data, snap_center, obs_center, **kwargs):
 
     snap_cg = snap_center.transform_to(Galactocentric(**parameters))
     snap_cg.representation_type = 'spherical'
+
+    data_g = data.transform_to(Galactocentric(**parameters))
+    data_g.representation_type = 'spherical'
     
     dlon = obs_cg.lon - snap_cg.lon
     dlat = obs_cg.lat - snap_cg.lat
+    lon_new = data_g.lon + dlon
+    lat_new = data_g.lat + dlat
+
+    sel = lat_new > 90*u.deg
+    lat_new[sel] = 180*u.deg - lat_new[sel]
+    lon_new[sel] = 180*u.deg + lon_new[sel]
+    
+    sel = lat_new < -90*u.deg
+    lat_new[sel] = -180*u.deg - lat_new[sel]
+    lon_new[sel] = 180*u.deg + lon_new[sel]
+
+    sel = (lon_new > 360*u.deg) | (lon_new < -360*u.deg)
+    lon_new[sel] = lon_new[sel] - (lon_new[sel].to(u.deg).value/360.0).astype(int)*360*u.deg
+
     ddis = obs_cg.distance - snap_cg.distance
     dpm_lon = obs_cg.pm_lon - snap_cg.pm_lon
     dpm_lat = obs_cg.pm_lat - snap_cg.pm_lat
     drv  = obs_cg.radial_velocity - snap_cg.radial_velocity
     
-    data_g = data.transform_to(Galactocentric(**parameters))
-    data_g.representation_type = 'spherical'
     
-    data_c = SkyCoord(lon = data_g.lon + dlon,
-                      lat = data_g.lat + dlat,
+    data_c = SkyCoord(lon = lon_new,
+                      lat = lat_new,
                       distance = data_g.distance + ddis,
                       pm_lon = data_g.pm_lon + dpm_lon,
                       pm_lat = data_g.pm_lat + dpm_lat,
