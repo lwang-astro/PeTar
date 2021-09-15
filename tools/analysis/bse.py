@@ -386,3 +386,112 @@ class BSEISO(DictNpArrayMix):
         keys = [['m1_init',np.float64],['m2_init',np.float64],['period_init',np.float64],['ecc_init',np.float64],['period_final',np.float64],['ecc_final',np.float64],['star1',SSEStarParameter],['out1',SSEStarParameterOut],['star2',SSEStarParameter],['out2',SSEStarParameterOut]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
+class BSEMerge(DictNpArrayMix):
+    """ BSE binary mergers 
+    Keys: (class members)
+        time  (1D): current physical time (Myr)
+        id1   (1D): particle id of component 1
+        id2   (1D): particle id of component 2
+        semi  (1D): semi-major axis (Rsun)
+        ecc   (1D): eccentricity
+        type1 (1D): stellar type of component 1 before merge
+        type2 (1D): stellar type of component 2 before merge
+        m1    (1D): mass component 1 (Msun) before merge
+        m2    (1D): mass component 2 (Msun) before merge
+        typef (1D): stellar type of merger
+        mf    (1D): merger mass (Msun)
+    """
+
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation using key list, see help(DictNpArrayMix.__init__)
+        """
+        keys=[['time',np.float64],['id1',np.int64],['id2',np.int64],['semi',np.float64],['ecc',np.float64],
+              ['kw1',np.int64],['kw2',np.int64],
+              ['m1',np.float64],['m2',np.float64],['kwf',np.int64],['mf',np.float64]]
+        DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
+
+    def combine(self, type_change, dyn_merge):
+        """ Find mergers from type_change and combine them with those from dynamical merge
+        
+        Parameters:
+        -----------
+        type_change: BSETypeChange data
+        dyn_merge: BSEDynamicMerge data
+        """
+        #type_change.generateBinaryID()
+        sel = (type_change.final.m1==0) | (type_change.final.m2==0)
+        se_merge = type_change[sel]
+
+        #dyn_merge.generateBinaryID()
+        merge = self.__dict__
+        merge['time']=np.concatenate((se_merge.final.time,dyn_merge.final.p1.time))
+        tsort=merge['time'].argsort()
+        merge['time']=merge['time'][tsort]
+        #merge['bid']=np.concatenate((se_merge.bid, dyn_merge.bid))[tsort]
+        merge['id1']=np.concatenate((se_merge.id1,dyn_merge.id1))[tsort]
+        merge['id2']=np.concatenate((se_merge.id2,dyn_merge.id2))[tsort]
+        merge['semi']=np.concatenate((se_merge.init.semi,dyn_merge.semi))[tsort]
+        merge['ecc']=np.concatenate((se_merge.init.ecc,dyn_merge.ecc))[tsort]
+        merge['kw1']=np.concatenate((se_merge.init.type1,dyn_merge.init.p1.type))[tsort]
+        merge['kw2']=np.concatenate((se_merge.init.type2,dyn_merge.init.p2.type))[tsort]
+        merge['m1']=np.concatenate((se_merge.init.m1,dyn_merge.init.p1.mass))[tsort]
+        merge['m2']=np.concatenate((se_merge.init.m2,dyn_merge.init.p2.mass))[tsort]
+        merge['kwf']=np.concatenate((se_merge.final.type1,dyn_merge.final.p1.type))[tsort]
+        merge['mf']=np.concatenate((np.maximum(se_merge.final.m1,se_merge.final.m2),np.maximum(dyn_merge.final.p1.mass,dyn_merge.final.p2.mass)))[tsort]
+        self.size=merge['time'].size
+
+    def printTableTitle(self):
+        """ Print table title for the merger information
+        """
+        print("%12s %8s %8s %12s %12s %8s %8s %12s %12s %8s %12s" %('Time[Myr]','id1','id2','semi[R*]','ecc','kw1(i)','kw2(i)','m1[M*](i)','m2[M*](i)','kw(f)','m[M*](f)'))
+
+    def printTable(self):
+        """ Print merger information in a formated table
+        """
+        if (self.size>0):
+            table=self.getherDataToArray()
+            for line in table:
+                print("%12.7f %8d %8d %10.7g %10.7g %8d %8d %12.7f %12.7f %8d %12.7f" % tuple(line))   
+
+def find_merge_tree(merger_list, merger_root):
+    """ Find the merger tree for a given merger
+    Parameters:
+    -----------
+    merger_list: BSEMerge data
+    merger_root: the target merger to find tree
+    Return:
+    ------------
+    merger_tree: numpy.ndarray(3D)
+        The merger tree table for plotting, each row is one tree branch 
+        The row contains 4 pair of data pointing from the leaf to the root:
+           1. The position in the tree branch. The value of the leaf is based on that of the root +- 0.5^{level+1}, where the level refers to the root.
+           2. indice counting from the left to the right of all leaves and roots
+           3. times of components (leaves) and mergers (roots)
+           4. masses of components (leaves) and mergers (roots)
+    """
+    def find_merge_tree_iter(merger_list, merger_root, merger_tree, binary_tree_base, binary_tree_interval, indebinary_tree_base):
+        """
+        
+        """
+        idlst=[merger_root.id1, merger_root.id2]
+        btlst=[-binary_tree_interval,binary_tree_interval]
+        mlst=[merger_root.m1, merger_root.m2]
+        ctotlst=[indebinary_tree_base,1]
+        for k in range(len(idlst)):
+            if (k>0): 
+                ctotlst[k] += ctotlst[k-1]
+            idk = idlst[k]
+            sel = ((merger_list.id1 == idk) | (merger_list.id2 == idk)) & (merger_list.time <= merger_root.time) & (merger_list.mf < merger_root.mf)
+            sdat = merger_list[sel]
+            if (sdat.size>0):
+                c_left, c_right = find_merge_tree_iter(merger_list, sdat[-1], merger_tree, binary_tree_base+btlst[k], binary_tree_interval/2, ctotlst[k])  
+                ctotlst[k] += c_right - ctotlst[k]
+                merger_tree.append([[binary_tree_base+btlst[k], binary_tree_base], [c_left+1, ctotlst[0]+1], [sdat.time[-1], merger_root.time],[sdat.mf[-1], merger_root.mf]])
+            else:
+                ctotlst[k] += 1
+                merger_tree.append([[binary_tree_base+btlst[k], binary_tree_base], [ctotlst[k], ctotlst[0]+1], [0, merger_root.time], [mlst[k], merger_root.mf]])
+        return ctotlst[0], ctotlst[1]
+    merger_tree=[]
+    find_merge_tree_iter(merger_list, merger_root, merger_tree, 0.5, 0.25, 0)
+
+    return np.array(merger_tree)
