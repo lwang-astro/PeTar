@@ -11,3 +11,4 @@ from .group import *
 from .bse import *
 from .external import *
 from .tide import *
+from .hard import *
