@@ -33,7 +33,7 @@ class FDPSProfile(DictNpArrayMix):
                 ["calc_force",np.float64], ["calc_mom_loc_tree",np.float64], ["calc_mom_gb_tree",np.float64],
                 ["make_LET_1st",np.float64], ["make_LET_2nd",np.float64], ["exchange_LET_1st",np.float64], ["exchange_LET_2nd",np.float64],
                 ["write_back",np.float64]]
-        if ('FPDS_version' in kwargs.keys()): 
+        if ('FDPS_version' in kwargs.keys()): 
             if (kwargs['FDPS_version']=='old'):
                 keys = [["collect_sam_ptcl",np.float64], ["decompose_domain",np.float64], ["exchange_ptcl",np.float64], 
                         ["make_local_tree",np.float64], ["make_global_tree",np.float64], 
@@ -133,6 +133,8 @@ class Profile(DictNpArrayMix):
         keyword arguments:
             use_gpu: bool (True)
                 whether cuda is used 
+            FDPS_version: string ('new')
+                when 'old' is set, use the old data format before the version 984
         """
         use_gpu=True
         if ('use_gpu' in kwargs.keys()): use_gpu=kwargs['use_gpu']
