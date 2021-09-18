@@ -76,13 +76,15 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
             else:
                 particle.fromfile(file_path, offset=HEADER_OFFSET)
         else: raise ValueError('Snapshot format unknown, should be binary or ascii, given', snapshot_format)
-        read_time = time.time()
+        read_time = time.time() - start_time
+        start_time = time.time()
 
         # find binary
         #print('Find pair')
         kdtree,single,binary=findPair(particle,G,r_bin,True,simple_binary)
 
-        find_pair_time = time.time()
+        find_pair_time = time.time() - start_time
+        start_time = time.time()
     
         # get cm, density
         #print('Get density')
@@ -93,7 +95,8 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
             core.pos[-1] += header.pos_offset
             core.vel[-1] += header.vel_offset
         #print('cm pos:',cm_pos,' vel:',cm_vel)
-        get_density_time = time.time()
+        get_density_time = time.time() - start_time
+        start_time = time.time()
 
         #print('Correct center')
         particle.correctCenter(cm_pos, cm_vel)
@@ -113,7 +116,8 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         cm_vel=np.array([0,0,0]) # avoid kinetic energy jump 
         single.correctCenter(cm_pos, cm_vel)
         binary.correctCenter(cm_pos, cm_vel)
-        center_and_r2_time = time.time()
+        center_and_r2_time = time.time() - start_time
+        start_time = time.time()
         
         if (find_multiple): 
             single_t, binary_t, triple_t, quadruple_t = findMultiple(single,binary,G,r_bin,simple_binary)
@@ -125,6 +129,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
             single.savetxt(file_path+'.single')
             binary.savetxt(file_path+'.binary')
 
+        save_data_time = time.time() - start_time
 
     else:
         start_time = time.time()
@@ -144,12 +149,14 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         # read from core data
         rc = core.rc[core.time==header.time]
 
-        read_time = time.time()
+        read_time = time.time() - start_time
 
-        find_pair_time = read_time
-        get_density_time = read_time
-        center_and_r2_time = read_time
+        find_pair_time = 0
+        get_density_time = 0
+        center_and_r2_time = 0
+        save_data_time = 0
 
+    start_time = time.time()
     # calculate central external potential and subtract that from particle pot_ext
     pot_ext = 0
     if (external_mode != 'none'):
@@ -160,6 +167,8 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         binary.p2.pot -= pot_ext
         binary.p1.pot_ext -= pot_ext
         binary.p2.pot_ext -= pot_ext
+    calc_pot_time = time.time() - start_time
+    start_time = time.time()
 
     if ('r_escape' in kwargs.keys()):
         rcut = kwargs['r_escape']
@@ -177,28 +186,39 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
 
         single = esc_single.findEscaper(header.time, single, rcut, es_cut)
         binary = esc_binary.findEscaper(header.time, binary, rcut, es_cut)
-    
+        get_escaper_time = time.time() - start_time
+        start_time = time.time()
+
+
     #print('Lagrangian radius')
     lagr.calcOneSnapshot(header.time, single, binary, rc, average_mode)
+
+    lagr_time = time.time() - start_time
+    start_time = time.time()
 
     if (not 'r_escape' in kwargs.keys()):
         rhindex=np.where(m_frac==0.5)[0]
         rcut = calcRCutIsolate(lagr.all.r[-1,rhindex])
         esc_single.findEscaper(header.time, single, rcut)
         esc_binary.findEscaper(header.time, binary, rcut)
-    lagr_time = time.time()
 
-    time_profile['read'] += read_time-start_time
-    time_profile['find_pair'] += find_pair_time-read_time
-    time_profile['density'] += get_density_time-find_pair_time
-    time_profile['center_core'] += center_and_r2_time-get_density_time
-    time_profile['lagr'] += lagr_time-center_and_r2_time
+        get_escaper_time = time.time() - start_time
+        start_time = time.time()
 
     if ('bse_status' in result.keys()):
         bse = result['bse_status']
         bse.findEvents(header.time,single,binary)
-        bse_time = time.time()
-        time_profile['bse'] += bse_time - lagr_time
+        bse_time = time.time() - start_time
+
+    time_profile['read'] += read_time
+    time_profile['find_pair'] += find_pair_time
+    time_profile['density'] += get_density_time
+    time_profile['center_core'] += center_and_r2_time
+    time_profile['save_data'] += save_data_time
+    time_profile['calc_pot'] += calc_pot_time
+    time_profile['lagr'] += lagr_time
+    time_profile['escaper'] += get_density_time
+    time_profile['bse'] += bse_time
 
 #    return time_profile
 
@@ -228,11 +248,8 @@ def dataProcessList(file_list, read_flag, **kwargs):
     result['tidal']=Tidal(**kwargs)
 
     time_profile=dict()
-    time_profile['read'] = 0.0
-    time_profile['find_pair'] = 0.0
-    time_profile['density'] = 0.0   
-    time_profile['center_core'] = 0.0   
-    time_profile['lagr'] = 0.0
+    for key in ['read','find_pair','density','center_core','save_data','calc_pot','lagr','escaper','bse']:
+        time_profile[key] = 0.0
 
     if (read_flag):
         core_filename=kwargs['filename_prefix']+'.core'
@@ -245,7 +262,6 @@ def dataProcessList(file_list, read_flag, **kwargs):
         interrupt_mode=kwargs['interrupt_mode']
         if ('bse' in interrupt_mode):
             result['bse_status'] = BSEStatus()
-            time_profile['bse'] = 0.0
 
     for path in file_list:
         #print(' data:',path)
