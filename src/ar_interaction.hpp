@@ -656,7 +656,7 @@ public:
                 output.print(std::cerr);
                 std::cerr<<std::endl;
                 DATADUMP("dump_sse_error");
-                //abort();
+                abort();
             }
 
             // if expected time not reach, record actually evolved time
@@ -1001,6 +1001,7 @@ public:
                         std::cerr<<std::endl;
                         DATADUMP("dump_bse_error");
                         bse_manager.dumpRandConstant("bse.rand.par");
+                        abort();
                     }
                 
                     // check binary type and print event information
