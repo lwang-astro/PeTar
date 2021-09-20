@@ -78,7 +78,10 @@ void followAGBPhase(F64 * aj,
 	F64 rpower = rBAGB + tau3 * (rBlue - rBAGB);
 	*lum = pow(10., lpower);
 	*r   = pow(10., rpower);
-	*rg  = getRadiusRedPhase(mt, lum);
+// Tanikawa fixes this bug 21/09/20
+//      *rg  = getRadiusRedPhase(mt, lum);
+	*rg  = pow(10., getRadiusRedPhase(mt, lum));
+//
     } else {
 	F64 tau   = (*aj - tBlue) / (tFin - tBlue);
 	F64 lBlue = getLuminosityEndTimeOfBluePhase(mass);

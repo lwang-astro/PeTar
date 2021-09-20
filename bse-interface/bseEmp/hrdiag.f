@@ -1203,17 +1203,41 @@
          am = MAX(0.d0,0.4d0-0.22d0*LOG10(mc))
          rx = rx*(1.d0+am*(tau-tau**6))
          CALL star(kw,mass,mt,tm,tn,tscls,lums,GB,zpars)
-         rc = rx
+* Tanikawa's prescription 21/09/20
+!         rc = rx
+         if(askInUseOrNot()) then
+            rc = 0.2239d0 * MC**0.62d0
+            rx = rc
+         else
+            rc = rx
+         endif
+
+*
       elseif(kw.eq.5)then
          kwp = 9
          if(tn.gt.tbagb) tau = 3.d0*(aj-tbagb)/(tn-tbagb)
          CALL star(kwp,mc,mc,tm,tn,tscls,lums,GB,zpars)
-         lx = lmcgbf(mcx,GB)
+* Tanikawa's prescription 21/09/20
+!         lx = lmcgbf(mcx,GB)
+         if(askInUseOrNot()) then
+            lx = lum
+         else
+            lx = lmcgbf(mcx,GB)
+         endif
+*
          if(tau.lt.1.d0) lx = lums(2)*(lx/lums(2))**tau
          rx = rzhef(mc)
          rx = MIN(rhehgf(mc,lx,rx,lums(2)),rhegbf(lx))
          CALL star(kw,mass,mt,tm,tn,tscls,lums,GB,zpars)
-         rc = rx
+* Tanikawa's prescription 21/09/20
+!         rc = rx
+         if(askInUseOrNot()) then
+            rc = 0.2239d0*MC**0.62d0
+            rx = rc
+         else
+            rc = rx
+         endif
+*
       elseif(kw.le.9)then
          if(wdflag.eq.0)then
             lx = 635.d0*mc*zpars(14)/((aco*0.1d0)**1.4d0)

@@ -656,6 +656,8 @@ public:
                 output.print(std::cerr);
                 std::cerr<<std::endl;
                 DATADUMP("dump_sse_error");
+                std::cout<<std::flush;
+                std::cerr<<std::flush;
                 abort();
             }
 
@@ -1001,6 +1003,8 @@ public:
                         std::cerr<<std::endl;
                         DATADUMP("dump_bse_error");
                         bse_manager.dumpRandConstant("bse.rand.par");
+                        std::cout<<std::flush;
+                        std::cerr<<std::flush;
                         abort();
                     }
                 

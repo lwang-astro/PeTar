@@ -1278,7 +1278,7 @@ public:
         _out.dtmiss = tphysf - _star.tphys;
 
         if (_star.kw<0) {
-            _star.kw = -_star.kw;
+            //_star.kw = -_star.kw;
             return -1; // error 
         }
         else if (_out.vkick[3]>0) return 2; // kick

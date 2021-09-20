@@ -186,8 +186,9 @@ c-------------------------------------------------------------c
                it = it + 1
                if(it.eq.20.and.kw.eq.4) goto 30
                if(it.gt.30)then
-                  WRITE(*,*)' DANGER1! ',it,kw,mass,dr,rm0
-                  WRITE(*,*)' STOP: EVOLV1 FATAL ERROR '
+                  WRITE(6,*)' DANGER1! ',it,kw,mass,dr,rm0
+                  WRITE(6,*)' STOP: EVOLV1 FATAL ERROR '
+                  call flush(6)
                   kw = -kw 
                   RETURN
 *                  CALL exit(0)
@@ -354,8 +355,9 @@ c-------------------------------------------------------------c
 * Bug fix, do not iterate if the star is compact object, thanks to Ataru Takikawa
          if(kw.ge.13) goto 50
          if(it.gt.30)then
-            WRITE(*,*)' DANGER2! ',it,kw,mass,dr,rm0
-            WRITE(*,*)' STOP: EVOLV1 FATAL ERROR '
+            WRITE(6,*)' DANGER2! ',it,kw,mass,dr,rm0
+            WRITE(6,*)' STOP: EVOLV1 FATAL ERROR '
+            call flush(6)
             kw = -kw 
             RETURN
 *            CALL exit(0)
