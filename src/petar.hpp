@@ -3414,6 +3414,11 @@ public:
         if (stat.n_real_glb==1) {
             Ptcl::group_data_mode = GroupDataMode::artificial;
 
+            if (stat.n_real_loc==1) system_soft[0].clearForce();
+
+            /// force from external potential
+            externalForce();
+
             // initial status and energy
             updateStatus(true);
 
@@ -3525,12 +3530,15 @@ public:
 #ifdef PROFILE
                 profile.total.start();
 #endif
+                
+                // reset total potential
+                p.clearForce();
 
                 /// force from external potential and kick
                 externalForce();
 
 #ifdef RECORD_CM_IN_HEADER
-                stat.calcAndShiftCenterOfMass(&system_soft[0], stat.n_real_loc);
+                stat.calcAndShiftCenterOfMass(&p, stat.n_real_loc);
 #endif
 
                 bool interrupt_flag = false;  // for interrupt integration when time reach end
@@ -3565,7 +3573,7 @@ public:
                 }
                 
                 //kick 
-                p.pos += p.vel * dt_kick;
+                p.vel += p.acc * dt_kick;
                 time_kick += dt_kick;
 
                 // output information
@@ -3601,14 +3609,14 @@ public:
                 // second kick if output exists 
                 if(output_flag) {
                     dt_kick = dt_manager.getDtStartContinue();
-                    p.pos += p.vel * dt_kick;
+                    p.vel += p.acc * dt_kick;
                     time_kick += dt_kick;
                 }
 
                 // get drift step
                 dt_drift = dt_manager.getDtDriftContinue();
 
-                p.vel += p.acc * dt_drift;
+                p.pos += p.vel * dt_drift;
                 stat.time += dt_drift;
 
 #ifdef STELLAR_EVOLUTION

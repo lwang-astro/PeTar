@@ -255,7 +255,17 @@ public:
 #endif
              <<std::setw(_width)<<n_ngb;
     }
-    
+
+    //! clear force
+    void clearForce() {
+        acc = 0.0;
+        pot_tot = 0.0;
+        pot_soft = 0.0;
+#ifdef EXTERNAL_POT_IN_PTCL
+        pot_ext = 0.0;
+#endif        
+        n_ngb = 0;
+    }
 };
 
 class EPISoft{
