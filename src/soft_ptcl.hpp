@@ -236,6 +236,25 @@ public:
              <<std::setw(_width)<<n_ngb;
     }
 
+    //! print data of class members with pos and vel offset using column style
+    /*! print data of class members in one line for column style. Notice no newline is printed at the end
+      @param[in] _pcm: particle data with position and velocity offset that are added when print data
+      @param[out] _fout: std::ostream output object
+      @param[in] _width: print width (defaulted 20)
+     */
+    template <class Tpcm>
+    void printColumnWithOffset(Tpcm& _pcm, std::ostream & _fout, const int _width=20){
+        Ptcl::printColumnWithOffset(_pcm, _fout, _width);
+        _fout<<std::setw(_width)<<acc.x
+             <<std::setw(_width)<<acc.y
+             <<std::setw(_width)<<acc.z
+             <<std::setw(_width)<<pot_tot
+             <<std::setw(_width)<<pot_soft
+#ifdef EXTERNAL_POT_IN_PTCL
+             <<std::setw(_width)<<pot_ext
+#endif
+             <<std::setw(_width)<<n_ngb;
+    }
     
 };
 

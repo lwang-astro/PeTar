@@ -1886,7 +1886,13 @@ public:
         else if(write_style==2&&my_rank==0) {
             // write snapshot with one line
             stat.printColumn(fstatus, WRITE_WIDTH);
-            for (int i=0; i<stat.n_real_loc; i++) system_soft[i].printColumn(fstatus, WRITE_WIDTH);
+            for (int i=0; i<stat.n_real_loc; i++) {
+#ifdef RECORD_CM_IN_HEADER
+                system_soft[i].printColumnWithOffset(stat.pcm, fstatus, WRITE_WIDTH);
+#else
+                system_soft[i].printColumn(fstatus, WRITE_WIDTH);
+#endif
+            }
             fstatus<<std::endl;
         }
         // write status only
@@ -3411,6 +3417,9 @@ public:
             // initial status and energy
             updateStatus(true);
 
+            PS::F64 dt_tree = input_parameters.dt_soft.value;
+            dt_manager.setStep(dt_tree);
+
             // output initial data
             file_header.nfile--; // avoid repeating files
             output();
@@ -3498,25 +3507,109 @@ public:
     PS::S32 integrateOneToTime(const PS::F64 _time_break=0.0) {
         // ensure it is initialized
         assert(initial_step_flag);
-
         assert(stat.n_real_glb==1);
 
         // check time break
         PS::F64 time_break = _time_break==0.0? input_parameters.time_end.value: std::min(_time_break,input_parameters.time_end.value);
         if (stat.time>=time_break) return 0;
 
-        PS::F64 dt = std::min(input_parameters.dt_soft.value, time_break-stat.time);
+        //PS::F64 dt = std::min(input_parameters.dt_soft.value, time_break-stat.time);
         PS::F64 dt_output = input_parameters.dt_snap.value;
-        bool start_flag=true;
-        while (stat.time < time_break) {
+        //bool start_flag=true;
+
+        if (stat.n_real_loc==1) { 
+            assert(system_soft.getNumberOfParticleLocal()==1);
+            auto& p = system_soft[0];
+
+            while (stat.time <= time_break) {
 #ifdef PROFILE
-            profile.total.start();
-            profile.hard_single.start();
+                profile.total.start();
 #endif
-            if (stat.n_real_loc==1) { 
-                assert(system_soft.getNumberOfParticleLocal()==1);
-                auto& p = system_soft[0];
-                p.pos += p.vel * dt;
+
+                /// force from external potential and kick
+                externalForce();
+
+#ifdef RECORD_CM_IN_HEADER
+                stat.calcAndShiftCenterOfMass(&system_soft[0], stat.n_real_loc);
+#endif
+
+                bool interrupt_flag = false;  // for interrupt integration when time reach end
+                bool output_flag = false;    // for output snapshot and information
+
+                PS::F64 dt_kick, dt_drift;
+                // for initial the system
+                if (dt_manager.isNextStart()) {
+
+                    // set step to the begining step
+                    dt_kick = dt_manager.getDtStartContinue();
+                }
+                else {
+                    // increase loop counter
+                    n_loop++;
+
+                    // for next kick-drift pair
+                    dt_manager.nextContinue();
+                    
+                    if (dt_manager.isNextEndPossible()) {
+
+                        // output step, get last kick step
+                        output_flag = (fmod(stat.time, dt_output) == 0.0);
+
+                        // check interruption
+                        interrupt_flag = (stat.time>=time_break);
+
+                        if (output_flag||interrupt_flag) dt_kick = dt_manager.getDtEndContinue();
+                        else dt_kick = dt_manager.getDtKickContinue();
+                    }
+                    else dt_kick = dt_manager.getDtKickContinue();
+                }
+                
+                //kick 
+                p.pos += p.vel * dt_kick;
+                time_kick += dt_kick;
+
+                // output information
+                if(output_flag) {
+
+                    updateStatus(false);
+                    output();
+#ifdef PROFILE
+                    // profile
+                    profile.total.barrier();
+                    PS::Comm::barrier();
+                    profile.total.end();
+
+                    printProfile();
+                    clearProfile();
+
+                    PS::Comm::barrier();
+                    profile.total.start();
+#endif
+                }
+
+                // interrupt
+                if(interrupt_flag) {
+                    assert(checkTimeConsistence());
+#ifdef PROFILE
+                    profile.total.barrier();
+                    PS::Comm::barrier();
+                    profile.total.end();
+#endif
+                    return 0;
+                }
+
+                // second kick if output exists 
+                if(output_flag) {
+                    dt_kick = dt_manager.getDtStartContinue();
+                    p.pos += p.vel * dt_kick;
+                    time_kick += dt_kick;
+                }
+
+                // get drift step
+                dt_drift = dt_manager.getDtDriftContinue();
+
+                p.vel += p.acc * dt_drift;
+                stat.time += dt_drift;
 
 #ifdef STELLAR_EVOLUTION
                 PS::F64 mbk = p.mass;
@@ -3536,41 +3629,21 @@ public:
                 //p.time_record    -= dt;
                 //p.time_interrupt -= dt;
 #endif
-            }
-
-            stat.time += dt;
-            time_kick = stat.time;
-
 #ifdef PROFILE
-            profile.hard_single.barrier();
-            PS::Comm::barrier();
-            profile.hard_single.end();
-#endif
-            // output 
-            if (!start_flag&&fmod(stat.time, dt_output) == 0.0) {
-                updateStatus(false);
-                output();
-#ifdef PROFILE
-                // profile
                 profile.total.barrier();
                 PS::Comm::barrier();
                 profile.total.end();
 
-                printProfile();
-                clearProfile();
-
-                PS::Comm::barrier();
-                profile.total.start();
+                calcProfile();
 #endif
             }
-#ifdef PROFILE
-            profile.total.barrier();
-            PS::Comm::barrier();
-            profile.total.end();
-
-            calcProfile();
-#endif
-            start_flag = false;
+        }
+        else {
+            PS::F64 dt_tree = dt_manager.getStep();
+            while (stat.time  < time_break) {
+                stat.time += dt_tree;
+                time_kick = stat.time;
+            }
         }
 
         return 0;

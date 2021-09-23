@@ -290,6 +290,33 @@ public:
 #endif
 #endif
     }
+
+    //! print data of class members with pos and vel offset using column style
+    /*! print data of class members in one line for column style. Notice no newline is printed at the end
+      @param[in] _pcm: particle data with position and velocity offset that are added when print data
+      @param[out] _fout: std::ostream output object
+      @param[in] _width: print width (defaulted 20)
+     */
+        template <class Tpcm>
+        void printColumnWithOffset(Tpcm& _pcm, std::ostream & _fout, const int _width=20) const{
+        _fout<<std::setw(_width)<<mass
+             <<std::setw(_width)<<pos.x + _pcm.pos.x
+             <<std::setw(_width)<<pos.y + _pcm.pos.y
+             <<std::setw(_width)<<pos.z + _pcm.pos.z
+             <<std::setw(_width)<<vel.x + _pcm.vel.x
+             <<std::setw(_width)<<vel.y + _pcm.vel.y
+             <<std::setw(_width)<<vel.z + _pcm.vel.z
+             <<std::setw(_width)<<binary_state;
+#ifdef STELLAR_EVOLUTION
+        _fout<<std::setw(_width)<<radius
+             <<std::setw(_width)<<dm
+             <<std::setw(_width)<<time_record
+             <<std::setw(_width)<<time_interrupt;
+#ifdef BSE_BASE
+        star.printColumn(_fout, _width);
+#endif
+#endif
+    }
     
 
     //! Copy from another ParticleBase 

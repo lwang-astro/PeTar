@@ -143,8 +143,10 @@ public:
             pcm.pos  = pos_cm;
             pcm.vel  = vel_cm;
 #endif
-            pcm.pos /= pcm.mass;
-            pcm.vel /= pcm.mass;
+            if (pcm.mass>0) {
+                pcm.pos /= pcm.mass;
+                pcm.vel /= pcm.mass;
+            }
         }
         else if (_mode==2) { // no mass weighted center
 //#pragma omp declare reduction(+:PS::F64vec:omp_out += omp_in) initializer (omp_priv=PS::F64vec(0.0))
@@ -173,8 +175,10 @@ public:
             pcm.vel  = vel_cm;
             PS::S64 n_glb = _n;
 #endif
-            pcm.pos /= PS::F64(n_glb);
-            pcm.vel /= PS::F64(n_glb);
+            if (n_glb>0) {
+                pcm.pos /= PS::F64(n_glb);
+                pcm.vel /= PS::F64(n_glb);
+            }
         }
         else if (_mode==3) { // soft potential
             PS::F64 pot_tot = 0.0;
@@ -207,8 +211,10 @@ public:
             pcm.vel  = vel_cm;
             PS::F64 pot_tot_glb = pot_tot;
 #endif
-            pcm.pos /= pot_tot_glb;
-            pcm.vel /= pot_tot_glb;
+            if (pot_tot_glb!=0) {
+                pcm.pos /= pot_tot_glb;
+                pcm.vel /= pot_tot_glb;
+            }
         }
     }
 

@@ -121,6 +121,21 @@ public:
         changeover.printColumn(_fout, _width);
     }
 
+    //! print data of class members with pos and vel offset using column style
+    /*! print data of class members in one line for column style. Notice no newline is printed at the end
+      @param[in] _pcm: particle data with position and velocity offset that are added when print data
+      @param[out] _fout: std::ostream output object
+      @param[in] _width: print width (defaulted 20)
+     */
+    template <class Tpcm>
+    void printColumnWithOffset(Tpcm& _pcm, std::ostream & _fout, const int _width=20){
+        ParticleBase::printColumnWithOffset(_pcm, _fout, _width);
+        _fout<<std::setw(_width)<<r_search
+             <<std::setw(_width)<<id;
+        group_data.artificial.printColumn(_fout, _width);
+        changeover.printColumn(_fout, _width);
+    }
+
     //! write class data with ASCII format
     /*! @param[in] _fout: file IO for write
      */
