@@ -1031,8 +1031,8 @@ public:
 
 #ifdef GALPY
         // external force and potential
-        // update the types and arguments if reading from the configure file
-        galpy_manager.updateTypesAndArgsFromFile(stat.time, input_parameters.print_flag);
+        // update the types and arguments 
+        galpy_manager.updateTypesAndArgs(stat.time, input_parameters.print_flag);
 
         PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
 #pragma omp parallel for

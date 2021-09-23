@@ -321,15 +321,71 @@ public:
 
         // add pre-defined type-argu groups
         std::string type_args = _input.type_args.value;
+        // Update types and arguments from type-args string
+        bool initial_flag = addTypesAndArgsFromString(type_args, true, _print_flag);
+
         if (_input.pre_define_type.value=="MWPotential2014") {
-            if (type_args=="__NONE__") type_args="15:0.0299946,1.8,0.2375|5:0.7574802,0.375,0.035|9:4.85223053,2.0";
-            else type_args += "|15:0.0299946,1.8,0.2375|5:0.7574802,0.375,0.035|9:4.85223053,2.0";
+            int npot = 3;
+            int pot_type[3] = {15,5,9};
+            double pot_args[8] = {0.0299946, 1.8, 0.2375,  
+                                  0.7574802, 0.375, 0.035, 
+                                  4.85223053, 2.0};
+
+            if (_print_flag) {
+                std::cout<<"Galpy MWPotential2014 combination list:\n"
+                         <<"Type index: 15 args: 0.0299946, 1.8, 0.2375\n"
+                         <<"Type index: 5 args: 0.7574802, 0.375, 0.035\n"
+                         <<"Type index: 9 args: 4.85223053, 2.0\n";
+            }
+
+            // generate galpy potential argument 
+            potential_sets.push_back(PotentialSet());
+            auto& pset = potential_sets.back();
+            pset.setOrigin(0);
+            pset.generatePotentialArgs(npot, pot_type, pot_args);
+
+            initial_flag = true;
         }
-        if (type_args!="__NONE__"&&_input.config_filename.value!="__NONE__")  {
+
+        if (initial_flag && _input.config_filename.value!="__NONE__")  {
             std::cerr<<"Galpy Error: both --galpy-type-arg|--galpy-set and --galpy-conf-file are used, please choose one of them."<<std::endl;
             abort();
         }
-        if (type_args!="__NONE__") {
+
+        // add type arguments from configure file if exist
+        if (_input.config_filename.value!="__NONE__") {
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+            int my_rank = PS::Comm::getRank();
+            if (my_rank==0) {
+#endif
+                fconf.open(_input.config_filename.value.c_str(), std::ifstream::in);
+                if (!fconf.is_open()) {
+                    std::cerr<<"Error: Galpy configure file "<<_input.config_filename.value.c_str()<<" cannot be open!"<<std::endl;
+                    abort();
+                }
+                fconf>>update_time;
+                if(fconf.eof()) fconf.close();
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+            }
+            PS::Comm::broadcast(&update_time, 1, 0);
+#endif
+        }
+
+        if(_print_flag) std::cout<<"----- Finish initialize Galpy potential -----\n";
+
+    }
+
+
+    //! Update types and arguments from type-args string
+    /*! 
+      @param[in] _type_args: potential type and argment strings 
+      @param[in] _reset_flag: if true, reset potential set, otherwise add to current existing set
+      @param[in] _print_flag: if true, print the read types and arguments.
+
+      \return initial flag: if potential is updated, return true; else return false
+     */
+    bool addTypesAndArgsFromString(const std::string& _type_args, const bool _reset_flag, const bool _print_flag) {
+        if (_type_args!="__NONE__") {
 
             std::vector<std::string> type_args_pair;
             std::vector<int> pot_type;
@@ -337,15 +393,15 @@ public:
 
             // split type-arg groups
             std::size_t istart = 0;
-            std::size_t inext = type_args.find_first_of("|");
+            std::size_t inext = _type_args.find_first_of("|");
             while (inext!=std::string::npos) {
-                type_args_pair.push_back(type_args.substr(istart,inext-istart));
+                type_args_pair.push_back(_type_args.substr(istart,inext-istart));
                 istart = inext+1;
-                inext = type_args.find_first_of("|",istart);
+                inext = _type_args.find_first_of("|",istart);
             }
-            if (istart!=type_args.size()) type_args_pair.push_back(type_args.substr(istart));
+            if (istart!=_type_args.size()) type_args_pair.push_back(_type_args.substr(istart));
 
-            if (_print_flag) std::cout<<"Potential combination list:\n";
+            if (_print_flag) std::cout<<"Galpy Potential combination list:\n";
             // loop group
             for (std::size_t i=0; i<type_args_pair.size(); i++) {
                 // get types
@@ -393,34 +449,26 @@ public:
             }
             int npot = pot_type.size();
 
+            if (_reset_flag) freePotentialArgs();
             // generate galpy potential argument 
             potential_sets.push_back(PotentialSet());
             auto& pset = potential_sets.back();
             pset.setOrigin(0);
             pset.generatePotentialArgs(npot, pot_type.data(), pot_args.data());
+
+            return true;
         }
+        return false;
+    }
 
-        // add type arguments from configure file if exist
-        if (_input.config_filename.value!="__NONE__") {
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-            int my_rank = PS::Comm::getRank();
-            if (my_rank==0) {
-#endif
-                fconf.open(_input.config_filename.value.c_str(), std::ifstream::in);
-                if (!fconf.is_open()) {
-                    std::cerr<<"Error: Galpy configure file "<<_input.config_filename.value.c_str()<<" cannot be open!"<<std::endl;
-                    abort();
-                }
-                fconf>>update_time;
-                if(fconf.eof()) fconf.close();
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-            }
-            PS::Comm::broadcast(&update_time, 1, 0);
-#endif
-        }
-
-        if(_print_flag) std::cout<<"----- Finish initialize Galpy potential -----\n";
-
+    //! Update types and arguments based on time
+    /*!
+      @param[in] _system_time: the time of globular particley system in PeTar. The time is transferred based on the time scaling factor
+      @param[in] _print_flag: if true, print the read types and arguments.
+     */
+    void updateTypesAndArgs(const double& _system_time, const bool _print_flag) {
+        
+        updateTypesAndArgsFromFile(_system_time, _print_flag);
     }
 
     //! Update types and arguments from configure file if update_time <= particle system time
