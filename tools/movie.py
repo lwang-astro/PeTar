@@ -738,7 +738,7 @@ def createImage(_path_list, model_list, frame_xsize, frame_ysize, ncol, plot_ite
 
             for i in range(len(model_list)):
                 mi = model_list[i][0]
-                prefix = model_list[i][1]+'.' if model_list[i] != '' else ''
+                prefix = model_list[i][1]+'.' if model_list[i][1] != '' else ''
                 plotOne(mi+'/'+prefix+file_path, axe[i], plots[i], core[i], lagr[i], **kwargs)
             print('processing ',file_path)
             fig.savefig(file_path+'.png',bbox_inches = "tight")
@@ -1025,6 +1025,17 @@ if __name__ == '__main__':
     path_list = file_list.splitlines()
     fl.close()
 
+    core=dict()
+    read_core=False
+    if ('cm_mode' in kwargs.keys()):
+        if (kwargs['cm_mode']=='core'): read_core=True
+    else: read_core=False
+    if ('generate_binary' in kwargs.keys()): 
+        if (kwargs['generate_binary']==2): read_core=True
+    else: read_core=False
+
+    lagr=dict()
+
     model_list= [['.','','']]
     if (model_path!=''):
         fl = open(model_path,'r')
@@ -1032,25 +1043,21 @@ if __name__ == '__main__':
         model_list = [lines[i].split() for i in range(len(lines))]
         fl.close()
 
-    core=dict()
-    read_core=False
-    if ('cm_mode' in kwargs.keys()):
-        if (kwargs['cm_mode']=='core'): read_core=True
-    else: read_core=True
-    if ('generate_binary' in kwargs.keys()): 
-        if (kwargs['generate_binary']==2): read_core=True
-    else: read_core=True
+        for i in range(len(model_list)):
+            core[i] = petar.Core()
+            if (read_core):
+                core[i].loadtxt(model_list[i][0]+'/'+model_list[i][1]+'.core')
 
-    for i in range(len(model_list)):
-        core[i] = petar.Core()
+            lagr[i] = petar.LagrangianMultiple(**kwargs)
+            if (read_lagr_data):
+                lagr[i].loadtxt(model_list[i][0]+'/'+model_list[i][1]+'.lagr')
+    else:
+        core[0] = petar.Core()
         if (read_core):
-            core[i].loadtxt(model_list[i][0]+'/'+model_list[i][1]+'.core')
-
-    lagr=dict()
-    for i in range(len(model_list)):
-        lagr[i] = petar.LagrangianMultiple(**kwargs)
+            core[0].loadtxt(core_file)
+        lagr[0] = petar.LagrangianMultiple(**kwargs)
         if (read_lagr_data):
-            lagr[i].loadtxt(model_list[i][0]+'/'+model_list[i][1]+'.lagr')
+            lagr[i].loadtxt(lagr_file)
 
     if (len(plot_item)==0): plot_item=['x-y']
 
@@ -1112,7 +1119,7 @@ if __name__ == '__main__':
             ptcls=[]
             for i in range(len(model_list)):
                 mi = model_list[i][0]
-                prefix = model_list[i][1]+'.' if model_list[i] != '' else ''
+                prefix = model_list[i][1]+'.' if model_list[i][1] != '' else ''
                 pi=plotOne(mi+'/'+prefix+file_path, axe[i], plots[i], core[i], lagr[i], **kwargs)
                 ptcls=ptcls+pi
      
