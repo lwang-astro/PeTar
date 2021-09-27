@@ -292,6 +292,42 @@ struct PotentialSet{
     }
 };
 
+//! FRW cosmological model for calculating scale factor (redshift)
+class FRWModel{
+public:
+    double a; //scale factor
+    double H0; // Hubble constant
+    double omega_energy; // normalized dark energy density
+    double omega_radiation; // normalized radiation density
+    double omega_matter; // normalized matter density
+    
+    //! calculate da/dt
+    /*!
+      @param[in] _a: scale factor
+      \return da/dt
+     */
+    double calcAdot(const double _a) {
+        return H0*sqrt(1+omega_matter*(1/_a-1) + omega_radiation*(1/_a*_a-1) + omega_energy*(_a*_a-1));
+    }
+
+    //! update scale factor by time step _dt (first order Euler method)
+    /*! Iterate 10 times to get high accuracy for small a
+      @param[in] _dt: time step
+      @param[in] _revert_flag: if true, set dt = -dt to integrate backwards
+     */
+    void updateA(const double _dt, const bool _revert_flag=false) {
+        double adot = calcAdot(a);
+        double a_tmp = a + adot*_dt;
+        
+        for (int k=0; k<10; k++) {
+            double adot_new = calcAdot(a_tmp);
+            a_tmp = a + 0.5*(adot_new+adot)*_dt;
+        }
+        a = a_tmp;
+    }
+
+};
+
 //! A class to manager the API to Galpy
 class GalpyManager{
 public:
@@ -303,6 +339,9 @@ public:
     double fscale;
     double pscale;
     std::ifstream fconf;
+    FRWModel frw;
+    std::string set_name;
+    std::vector<double> set_par;
 
     GalpyManager(): potential_sets(), update_time(0.0), rscale(1.0), tscale(1.0), vscale(1.0), fscale(1.0), pscale(1.0), fconf() {}
 
@@ -324,7 +363,15 @@ public:
         // Update types and arguments from type-args string
         bool initial_flag = addTypesAndArgsFromString(type_args, true, _print_flag);
 
-        if (_input.pre_define_type.value=="MWPotential2014") {
+        set_name = _input.pre_define_type.value;
+        std::string set_par_str;
+        std::size_t ipar = set_name.find_first_of(":");
+        if (ipar!=std::string::npos) {
+            set_par_str = set_name.substr(ipar);
+            set_name = set_name.substr(0, ipar);
+        }
+
+        if (set_name=="MWPotential2014") {
             int npot = 3;
             int pot_type[3] = {15,5,9};
             double pot_args[8] = {0.0299946, 1.8, 0.2375,  
@@ -346,6 +393,44 @@ public:
 
             initial_flag = true;
         }
+
+        if (set_name=="MWPotentialEvolve") {
+            int icount = 0;
+            int istart = 0;
+            int inext = set_par_str.find_first_of(",");
+            while (inext!=std::string::npos) {
+                set_par.push_back(std::stod(set_par_str.substr(istart, inext - istart)));
+                istart = inext + 1;
+                inext = set_par_str.find_first_of(",",istart);
+                icount++;
+            }
+            if (icount!=5) {
+                std::cerr<<"Galpy Error: MWPotentialEvolve require 5 parameters, given only "<<icount<<"!"<<std::endl;
+                abort();
+            }
+            
+            frw.a = set_par[0];
+            frw.H0 = set_par[1];
+            frw.omega_energy = set_par[2];
+            frw.omega_radiation = set_par[3];
+            frw.omega_matter = set_par[4];
+
+            double z = 1/frw.a-1;
+            // halo
+            double c = 13.1/(z+1);
+            double M_halo = 4.85223053*std::exp(-2*0.34*z);
+            double c_factor = 1.0/(std::log(1+c) - c/(1+c));
+            // 
+            double rc = 0.5;
+
+            int npot = 3;
+            int pot_type[3] = {15,5,9};
+            double pot_args[8] = {0.0299946, 1.8, 0.2375,  
+                                  0.7574802, 0.375, 0.035, 
+                                  M_halo*c_factor, 2.0};
+
+            initial_flag = true;
+        }        
 
         if (initial_flag && _input.config_filename.value!="__NONE__")  {
             std::cerr<<"Galpy Error: both --galpy-type-arg|--galpy-set and --galpy-conf-file are used, please choose one of them."<<std::endl;
