@@ -295,19 +295,44 @@ struct PotentialSet{
 //! FRW cosmological model for calculating scale factor (redshift)
 class FRWModel{
 public:
+    double time; // current time
     double a; //scale factor
-    double H0; // Hubble constant
+    double H0; // Hubble constant (km s^-1 Mpc^-1)
     double omega_energy; // normalized dark energy density
     double omega_radiation; // normalized radiation density
     double omega_matter; // normalized matter density
+
+    inline double getMatterDensity(const double _a) const {
+        return omega_matter/_a;
+    }
+
+    inline double getMatterDensityZero() const {
+        return omega_matter;
+    }
+
+    inline double getRadiationDensity(const double _a) const {
+        return omega_radiation/(_a*_a);
+    }
+
+    inline double getEnergyDensity(const double _a) const {
+        return omega_energy*(_a*_a);
+    }
+
+    inline double getCurvatureDensity() const {
+        return 1 - omega_energy - omega_radiation - omega_matter;
+    }
+
+    inline double getDensity(const double _a) const {
+        return getMatterDensity(_a) + getRadiationDensity(_a) + getEnergyDensity(_a) + getCurvatureDensity();
+    }
     
     //! calculate da/dt
     /*!
       @param[in] _a: scale factor
       \return da/dt
      */
-    double calcAdot(const double _a) {
-        return H0*sqrt(1+omega_matter*(1/_a-1) + omega_radiation*(1/_a*_a-1) + omega_energy*(_a*_a-1));
+    inline double calcAdot(const double _a) const {
+        return H0*sqrt(getDensity(_a));
     }
 
     //! update scale factor by time step _dt (first order Euler method)
@@ -324,6 +349,12 @@ public:
             a_tmp = a + 0.5*(adot_new+adot)*_dt;
         }
         a = a_tmp;
+        time += _dt;
+    }
+
+    //! get Hubble constant
+    double getH() const {
+        return calcAdot(a)/a;
     }
 
 };
@@ -348,9 +379,10 @@ public:
     //! initialization function
     /*!
       @param[in] _input: input parameters 
+      @param[in] _time: current system time
       @param[in] _print_flag: if true, printing information to std::cout
      */
-    void initial(const IOParamsGalpy& _input, const bool _print_flag=false) {
+    void initial(const IOParamsGalpy& _input, const double _time, const bool _print_flag=false) {
         // unit scale
         rscale = _input.rscale.value;
         vscale = _input.vscale.value;
@@ -367,7 +399,7 @@ public:
         std::string set_par_str;
         std::size_t ipar = set_name.find_first_of(":");
         if (ipar!=std::string::npos) {
-            set_par_str = set_name.substr(ipar);
+            set_par_str = set_name.substr(ipar+1);
             set_name = set_name.substr(0, ipar);
         }
 
@@ -396,38 +428,32 @@ public:
 
         if (set_name=="MWPotentialEvolve") {
             int icount = 0;
-            int istart = 0;
-            int inext = set_par_str.find_first_of(",");
+            std::size_t istart = 0;
+            std::size_t inext = set_par_str.find_first_of(",");
             while (inext!=std::string::npos) {
                 set_par.push_back(std::stod(set_par_str.substr(istart, inext - istart)));
                 istart = inext + 1;
                 inext = set_par_str.find_first_of(",",istart);
                 icount++;
             }
+            if (istart!=set_par_str.size()) {
+                icount++;
+                set_par.push_back(std::stod(set_par_str.substr(istart)));
+            }
+
             if (icount!=5) {
                 std::cerr<<"Galpy Error: MWPotentialEvolve require 5 parameters, given only "<<icount<<"!"<<std::endl;
                 abort();
             }
             
+            frw.time = _time*tscale;
             frw.a = set_par[0];
             frw.H0 = set_par[1];
             frw.omega_energy = set_par[2];
             frw.omega_radiation = set_par[3];
             frw.omega_matter = set_par[4];
 
-            double z = 1/frw.a-1;
-            // halo
-            double c = 13.1/(z+1);
-            double M_halo = 4.85223053*std::exp(-2*0.34*z);
-            double c_factor = 1.0/(std::log(1+c) - c/(1+c));
-            // 
-            double rc = 0.5;
-
-            int npot = 3;
-            int pot_type[3] = {15,5,9};
-            double pot_args[8] = {0.0299946, 1.8, 0.2375,  
-                                  0.7574802, 0.375, 0.035, 
-                                  M_halo*c_factor, 2.0};
+            updateMWPotentialEvolve(0, _print_flag);
 
             initial_flag = true;
         }        
@@ -553,8 +579,81 @@ public:
      */
     void updateTypesAndArgs(const double& _system_time, const bool _print_flag) {
         
+        if (set_name=="MWPotentialEvolve") updateMWPotentialEvolve(_system_time, _print_flag);
+
         updateTypesAndArgsFromFile(_system_time, _print_flag);
     }
+
+    //! Update MWpotential evolve (Gomez et al. 2010)
+    /*!
+      @param[in] _system_time: the time of globular particley system in PeTar. The time is transferred based on the time scaling factor
+      @param[in] _print_flag: if true, print the read types and arguments.
+     */
+    void updateMWPotentialEvolve(const double& _system_time, const bool _print_flag) {
+        double time_scaled= _system_time*tscale;
+
+        double dt = time_scaled-frw.time;
+        frw.updateA(dt);
+
+        double kms_pcmyr=1.022712165045695; // pc = 30856775814913673 m, yr = 365.25 days
+        double G_astro = 0.0044983099795944; 
+        double GMscale = pscale*rscale;
+        const double pi = 3.141592653589793;
+
+        double Ht = frw.getH()*kms_pcmyr*1e-6/tscale; // Galpy unit
+        double z = 1/frw.a-1; // redshift
+        double mass_density_m1 = frw.getMatterDensity(frw.a)/frw.getDensity(frw.a) - 1;
+        double mass_density_m1_z0 = frw.getMatterDensityZero() - 1;
+        double delta = 18*pi*pi + 82*mass_density_m1 - 39*mass_density_m1*mass_density_m1;
+        double delta0 = 18*pi*pi + 82*mass_density_m1_z0 - 39*mass_density_m1_z0*mass_density_m1_z0;
+        double rho_c0 = 3*frw.H0*frw.H0/(8*pi);
+        double rho_c = 3*Ht*Ht/(8*pi); // no G
+
+        // halo, update Mvir, Rvir, c (Wechsler 2002, Zhao 2003)
+        double mass_factor = std::exp(-2*0.34*z);  
+        double c0 = 15.3; 
+        double c = c0/(z+1); // concentration r_vir/r_s
+        double c0_factor = 1.0/(std::log(1+c0) - c0/(1+c0));
+        double c_factor = 1.0/(std::log(1+c) - c/(1+c));
+        double GM_halo = 8e11*G_astro/GMscale*mass_factor*c_factor;
+        double rvir = std::pow(3*GM_halo/(4*pi*delta*rho_c),1.0/3.0);
+        double rs_halo = rvir/c; 
+
+        // disk & budge, update mass and radial scale factors (Bullock & Johnston 2005)
+        double rvir_factor = std::pow(mass_factor*c_factor*delta0*rho_c0/(c0_factor*delta*rho_c), 1.0/3.0);
+        double GM_disk = 0.7574802019371595*mass_factor;
+        double ra_disk = 0.375*rvir_factor;
+        double rb_disk = 0.035*rvir_factor;
+
+        double GM_bulge = 0.029994597188218317*mass_factor;
+        double alpha_bulge = 1.8;
+        double rcut_bulge = 0.2375*rvir_factor;
+
+        int npot = 3;
+        int pot_type[3] = {15,5,9};
+        double pot_args[8] = {GM_bulge, alpha_bulge, rcut_bulge,
+                              GM_disk, ra_disk, rb_disk,
+                              GM_halo, rs_halo};
+
+        if (_print_flag) {
+            std::cout<<"Galpy time: "<<time_scaled
+                     <<" dt: "<<dt
+                     <<" FRW a: "<<frw.a
+                     <<" NFW Halo: R_vir: "<<rvir<<std::endl
+                     <<"Update evolving MWPotential2014:\n"
+                     <<"  Type index: 15 args: "<<GM_bulge<<" "<<alpha_bulge<<" "<<rcut_bulge<<std::endl
+                     <<"  Type index: 5  args: "<<GM_disk<<" "<<ra_disk<<" "<<rb_disk<<std::endl
+                     <<"  Type index: 9  args: "<<GM_halo<<" "<<rs_halo<<std::endl;
+        }
+
+        freePotentialArgs();
+        potential_sets.push_back(PotentialSet());
+        auto& pset = potential_sets.back();
+        pset.setOrigin(0);
+        pset.generatePotentialArgs(npot, pot_type, pot_args);
+        
+    }
+
 
     //! Update types and arguments from configure file if update_time <= particle system time
     /*! 

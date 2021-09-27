@@ -131,7 +131,7 @@ int main(int argc, char** argv){
 
     GalpyManager galpy_manager;
     if (unit_astro_flag) galpy_io.setStdUnit();
-    galpy_manager.initial(galpy_io,true);
+    galpy_manager.initial(galpy_io,0,true);
 
     // position offset
     double pos_offset[3]; 

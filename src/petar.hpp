@@ -3275,7 +3275,7 @@ public:
         }
 
 #ifdef GALPY
-        galpy_manager.initial(galpy_parameters, print_flag);
+        galpy_manager.initial(galpy_parameters, stat.time, print_flag);
 #endif
     
         // set system hard paramters
@@ -3617,12 +3617,11 @@ public:
                 dt_drift = dt_manager.getDtDriftContinue();
 
                 p.pos += p.vel * dt_drift;
-                stat.time += dt_drift;
 
 #ifdef STELLAR_EVOLUTION
                 PS::F64 mbk = p.mass;
                 PS::F64vec vbk = p.vel; //back up velocity in case of change
-                int modify_flag = hard_manager.ar_manager.interaction.modifyOneParticle(p, stat.time, stat.time + dt);
+                int modify_flag = hard_manager.ar_manager.interaction.modifyOneParticle(p, stat.time, stat.time + dt_drift);
                 if (modify_flag) {
                     auto& v = p.vel;
                     PS::F64 de_kin = 0.5*(p.mass*(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]) - mbk*(vbk[0]*vbk[0]+vbk[1]*vbk[1]+vbk[2]*vbk[2]));
@@ -3637,6 +3636,8 @@ public:
                 //p.time_record    -= dt;
                 //p.time_interrupt -= dt;
 #endif
+                stat.time += dt_drift;
+
 #ifdef PROFILE
                 profile.total.barrier();
                 PS::Comm::barrier();
