@@ -306,10 +306,6 @@ public:
         return omega_matter/_a;
     }
 
-    inline double getMatterDensityZero() const {
-        return omega_matter;
-    }
-
     inline double getRadiationDensity(const double _a) const {
         return omega_radiation/(_a*_a);
     }
@@ -446,9 +442,10 @@ public:
                 abort();
             }
             
+            double kms_pcmyr=1.022712165045695; // pc = 30856775814913673 m, yr = 365.25 days
             frw.time = _time*tscale;
             frw.a = set_par[0];
-            frw.H0 = set_par[1];
+            frw.H0 = set_par[1]*kms_pcmyr*1e-6/tscale;
             frw.omega_energy = set_par[2];
             frw.omega_radiation = set_par[3];
             frw.omega_matter = set_par[4];
@@ -595,19 +592,19 @@ public:
         double dt = time_scaled-frw.time;
         frw.updateA(dt);
 
-        double kms_pcmyr=1.022712165045695; // pc = 30856775814913673 m, yr = 365.25 days
         double G_astro = 0.0044983099795944; 
         double GMscale = pscale*rscale;
         const double pi = 3.141592653589793;
 
-        double Ht = frw.getH()*kms_pcmyr*1e-6/tscale; // Galpy unit
+        double Ht = frw.getH(); // Myr^-1
+        double H0 = frw.H0; // Myr^-1
         double z = 1/frw.a-1; // redshift
         double mass_density_m1 = frw.getMatterDensity(frw.a)/frw.getDensity(frw.a) - 1;
-        double mass_density_m1_z0 = frw.getMatterDensityZero() - 1;
+        double mass_density_m1_z0 = frw.getMatterDensity(1.0) - 1;
         double delta = 18*pi*pi + 82*mass_density_m1 - 39*mass_density_m1*mass_density_m1;
         double delta0 = 18*pi*pi + 82*mass_density_m1_z0 - 39*mass_density_m1_z0*mass_density_m1_z0;
-        double rho_c0 = 3*frw.H0*frw.H0/(8*pi);
-        double rho_c = 3*Ht*Ht/(8*pi); // no G
+        double rho_c0 = 3*H0*H0/(8*pi); // No G
+        double rho_c = 3*Ht*Ht/(8*pi);
 
         // halo, update Mvir, Rvir, c (Wechsler 2002, Zhao 2003)
         double mass_factor = std::exp(-2*0.34*z);  
@@ -615,9 +612,9 @@ public:
         double c = c0/(z+1); // concentration r_vir/r_s
         double c0_factor = 1.0/(std::log(1+c0) - c0/(1+c0));
         double c_factor = 1.0/(std::log(1+c) - c/(1+c));
-        double GM_halo = 8e11*G_astro/GMscale*mass_factor*c_factor;
+        double GM_halo = 8e11*G_astro*GMscale*mass_factor*c_factor;
         double rvir = std::pow(3*GM_halo/(4*pi*delta*rho_c),1.0/3.0);
-        double rs_halo = rvir/c; 
+        double rs_halo = rvir/c;
 
         // disk & budge, update mass and radial scale factors (Bullock & Johnston 2005)
         double rvir_factor = std::pow(mass_factor*c_factor*delta0*rho_c0/(c0_factor*delta*rho_c), 1.0/3.0);
