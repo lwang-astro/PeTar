@@ -6,6 +6,9 @@ extern "C" {
     bool askAllBlueOrNot(F64 * mt);
     bool askInUseOrNot();
     bool askInScopeOfApplication(F64 * mass);
+    void setLowerLimitOfMass();
+    F64 getLowerLimitOfMass();
+    F64 getUpperLimitOfMass();
     F64 getMetallicity();
     F64 getWindMetallicity();
     bool askBlueOrRed(F64 * aj,
@@ -93,6 +96,15 @@ extern "C" {
 				     F64 * tau1,
 				     F64 * tau2,
 				     F64 * taumin);
+    F64 getK2strOfBluePhase(F64 * mt,
+			    F64 * mc,
+			    F64 * rzams,
+			    F64 * rtms,
+			    F64 * rad,
+			    F64 * k2e);
+
+    F64 getConvectiveCoreRadiusOfBluePhase(F64 * mt);
+
 #if defined(__cplusplus)
 }
 #endif

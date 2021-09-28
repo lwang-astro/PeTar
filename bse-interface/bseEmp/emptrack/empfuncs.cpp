@@ -14,6 +14,7 @@ typedef long long S64;
 
 namespace ExtremeMetalPoors {
     F64 LowerLimitOfMassInScopeOfApplication = 8.;
+    F64 UpperLimitOfMassInScopeOfApplication = 1e5;
 
     const  S64 NumberOfCoefficientForTime       = 4;
     //const  S64 NumberOfCoefficientForLuminosity = 6;
@@ -84,6 +85,11 @@ namespace ExtremeMetalPoors {
     static F64 msbradsMassive[NumberOfCoefficientForMSRadiusMassive];
     static F64 mscradsMassive[NumberOfCoefficientForMSRadiusMassive];
     static F64 msdradsMassive[NumberOfCoefficientForMSRadiusMassive];
+
+    bool UseK2strOrNot = false;
+    const  S64 NumberOfCoefficientForK2str = 2;
+    static F64 ak2str[NumberOfCoefficientForK2str];
+    static F64 bk2str[NumberOfCoefficientForK2str];
 
     inline F64 calcTauOne(F64 tau) {
 	return std::min(1., tau);
@@ -342,7 +348,13 @@ namespace ExtremeMetalPoors {
 	F64 mscradsMassivetmp2[NumberOfCoefficientForMSRadiusMassive];
 	F64 msdradsMassivetmp2[NumberOfCoefficientForMSRadiusMassive];
 	
+#ifdef GENEVAMODEL
+	char idir[1024] = "ffgeneva";
+	fprintf(stderr, " Use Geneva interpolation\n");
+#else
 	char idir[1024] = "ffbonn";
+	fprintf(stderr, " Use Bonn interpolation\n");
+#endif
 	char ifile[1024];
 	sprintf(ifile, "./%s/metal1e-1.dat", idir);
 	FILE * fp;
@@ -495,7 +507,30 @@ namespace ExtremeMetalPoors {
 	    ccoreMassive[i] = interpolateCoefficient(zeta, ccoreMassivetmp1[i], ccoreMassivetmp2[i]);
 	    dcoreMassive[i] = interpolateCoefficient(zeta, dcoreMassivetmp1[i], dcoreMassivetmp2[i]);
 	}
-	
+#ifdef K2_YOSHIDA
+	char afile[1024];
+	sprintf(afile, "./%s/additional1e-1.dat", idir);
+	fp = fopen(afile, "r");
+	if(fp != NULL) {
+	    F64 ak2strtmp1[NumberOfCoefficientForK2str], bk2strtmp1[NumberOfCoefficientForK2str];
+	    F64 ak2strtmp2[NumberOfCoefficientForK2str], bk2strtmp2[NumberOfCoefficientForK2str];
+	    fscanf(fp, "%lf%lf", &ak2strtmp1[0], &bk2strtmp1[0]);
+	    fscanf(fp, "%lf%lf", &ak2strtmp1[1], &bk2strtmp1[1]);
+	    fclose(fp);
+	    sprintf(afile, "./%s/additional1e-2.dat", idir);
+	    fp = fopen(afile, "r");
+	    assert(fp);
+	    fscanf(fp, "%lf%lf", &ak2strtmp2[0], &bk2strtmp2[0]);
+	    fscanf(fp, "%lf%lf", &ak2strtmp2[1], &bk2strtmp2[1]);
+	    fclose(fp);
+	    for(S64 i = 0; i < NumberOfCoefficientForK2str; i++) {
+		ak2str[i] = interpolateCoefficient(zeta, ak2strtmp1[i], ak2strtmp2[i]);
+		bk2str[i] = interpolateCoefficient(zeta, bk2strtmp1[i], bk2strtmp2[i]);
+	    }
+	    fprintf(stderr, " Use additional file\n");
+	    UseK2strOrNot = true;
+	}
+#endif
     }
 
     void checkTimeSequence(F64 mass) {
@@ -670,6 +705,20 @@ bool askInScopeOfApplication(F64 * mass) {
 	inScope = true;
     }
     return inScope;
+}
+
+void setLowerLimitOfMass(F64 * mass) {
+    using namespace EMP;
+    LowerLimitOfMassInScopeOfApplication = *mass;
+    return;
+}
+
+F64 getLowerLimitOfMass() {
+    return EMP::LowerLimitOfMassInScopeOfApplication;
+}
+
+F64 getUpperLimitOfMass() {
+    return EMP::UpperLimitOfMassInScopeOfApplication;
 }
 
 F64 getMetallicity() {
@@ -934,26 +983,37 @@ void setMetallicity(F64 * _zeta) {
 #ifdef GENEVAMODEL
     char idir[1024] = "ffgeneva";
     fprintf(stderr, " Use Geneva model log(Z/Zsun) = %.1f\n", zeta);
+    CriticalMassMassive = 1e9;
+    UpperLimitOfMassInScopeOfApplication = 1e3;
 #else
     char idir[1024] = "ffbonn";
     fprintf(stderr, " Use Bonn model log(Z/Zsun) = %.1f\n", zeta);
 #endif
-    char ifile[1024];
+    char ifile[1024], afile[1024];
     if(zeta == -8.) {
 	sprintf(ifile, "./%s/metal1e-8.dat", idir);
+	sprintf(afile, "./%s/additional1e-8.dat", idir);
     } else if(zeta == -6.) {
 	sprintf(ifile, "./%s/metal1e-6.dat", idir);
+	sprintf(afile, "./%s/additional1e-6.dat", idir);
 	CriticalMassMassive = 1e9;
+	UpperLimitOfMassInScopeOfApplication = 1e3;
     } else if(zeta == -5.) {
 	sprintf(ifile, "./%s/metal1e-5.dat", idir);
+	sprintf(afile, "./%s/additional1e-5.dat", idir);
 	CriticalMassMassive = 1e9;
+	UpperLimitOfMassInScopeOfApplication = 1e3;
     } else if(zeta == -4.) {
 	sprintf(ifile, "./%s/metal1e-4.dat", idir);
+	sprintf(afile, "./%s/additional1e-4.dat", idir);
 	CriticalMassMassive = 1e9;
+	UpperLimitOfMassInScopeOfApplication = 1e3;
     } else if(zeta == -2.) {
 	sprintf(ifile, "./%s/metal1e-2.dat", idir);
+	sprintf(afile, "./%s/additional1e-2.dat", idir);
     } else if(zeta == -1.) {
 	sprintf(ifile, "./%s/metal1e-1.dat", idir);
+	sprintf(afile, "./%s/additional1e-1.dat", idir);
 	LowerLimitOfMassInScopeOfApplication = 16.;
     } else {
 #if 0
@@ -963,6 +1023,10 @@ void setMetallicity(F64 * _zeta) {
 	if(-2 < zeta && zeta < -1) {
 	    EMP::setMetallicityInterpolation(zeta);
 	    LowerLimitOfMassInScopeOfApplication = 16.;
+#ifdef GENEVAMODEL
+	    CriticalMassMassive = 1e9;
+	    UpperLimitOfMassInScopeOfApplication = 1e3;
+#endif
 	    return;
 	} else {
 	    fprintf(stderr, "Error: Not yet implemented Z/Zsun = %+e\n", zeta);
@@ -1016,6 +1080,16 @@ void setMetallicity(F64 * _zeta) {
     }
 #endif
     fclose(fp);
+#ifdef K2_YOSHIDA
+    fp = fopen(afile, "r");
+    if(fp != NULL) {
+	fscanf(fp, "%lf%lf", &ak2str[0], &bk2str[0]);
+	fscanf(fp, "%lf%lf", &ak2str[1], &bk2str[1]);
+	fclose(fp);
+	fprintf(stderr, " Use additional file\n");
+	UseK2strOrNot = true;
+    }
+#endif
 }
 
 F64 getRatioOfTMSTimeToHeITime(F64 * mass) {
@@ -1035,6 +1109,7 @@ F64 getHeITime(F64 * mass) {
     F64 tFin = getTimeAndTimeInterval(*mass, 3);
     if(tHeI > tFin) {
 	fprintf(stderr, "Error: tHeI is larger than tFin.\n");
+	fprintf(stderr, "Error: mass= %e tHeI= %e tFin= %e\n", *mass, tHeI, tFin);
 	exit(0);
     }
     return tHeI;
@@ -1358,6 +1433,10 @@ F64 getLuminosityMSPhaseIntermediate(F64 * mass,
     }
     F64 logl1  = log10(lzams * pow(10., xx));
     F64 loglx  = (logl2 - logl1) * (*mass - mcrit1) / (mcrit2 - mcrit1) + logl1;
+    /////// keep continuity from type 1 to type 4 (21/09/26)
+    F64 logly  = getLuminosityMSPhaseMassive(mass, tau);
+    loglx = (1. - (*tau)) * loglx + (*tau) * logly;
+    ///////
     return loglx;
 }
 
@@ -1396,7 +1475,38 @@ F64 getRadiusMSPhaseIntermediate(F64 * mass,
     }
     F64 logr1  = log10(rzams * pow(10., xx));
     F64 logrx  = (logr2 - logr1) * (*mass - mcrit1) / (mcrit2 - mcrit1) + logr1;
+    /////// keep continuity from type 1 to type 4 (21/09/26)
+    F64 logry  = getRadiusMSPhaseMassive(mass, tau);
+    logrx = (1. - (*tau)) * logrx + (*tau) * logry;
+    ///////
     return logrx;
+}
+
+F64 getK2strOfBluePhase(F64 * mt,
+			F64 * mc,
+			F64 * rzams,
+			F64 * rtms,
+			F64 * rad,
+			F64 * k2e) {
+    using namespace EMP;
+    if(UseK2strOrNot && *mt >= LowerLimitOfMassInScopeOfApplication) {
+	F64 lmass  = log10(*mt);
+	F64 power1 = ak2str[0] + bk2str[0] * lmass;
+	if(*mc == 0.) {
+	    *k2e = 0.1 * pow((*rad / *rzams), power1);
+	} else {
+	    F64 k2etms = 0.1 * pow((*rtms / *rzams), power1);
+	    F64 power2 = ak2str[1] + bk2str[1] * lmass;
+	    *k2e = k2etms * pow((*rad / *rtms), power2);
+	}
+    }
+    return *k2e;
+}
+
+F64 getConvectiveCoreRadiusOfBluePhase(F64 * mt) {
+    using namespace EMP;
+    F64 rconv = pow(10., 0.05 * (zeta - 1.)) * pow((*mt / 10.), 0.8);
+    return rconv;
 }
 
 #ifdef TESTMODE

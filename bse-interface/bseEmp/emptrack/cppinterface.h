@@ -18,7 +18,28 @@
       real(c_double) mass
       logical(c_bool) askInScopeOfApplication
       end function
+
+      subroutine setLowerLimitOfMass(mass)
+     &     bind(c, name='setLowerLimitOfMass')
+      import
+      implicit none
+	  real(c_double) mass
+      end subroutine
       
+      function getLowerLimitOfMass() 
+     &     bind(c, name='getLowerLimitOfMass')
+      import
+      implicit none
+      real(c_double) getLowerLimitOfMass
+      end function
+
+      function getUpperLimitOfMass() 
+     &     bind(c, name='getUpperLimitOfMass')
+      import
+      implicit none
+      real(c_double) getUpperLimitOfMass
+      end function
+
       function getMetallicity() bind(c, name='getMetallicity')
       import
       implicit none
@@ -426,6 +447,27 @@
       real(c_double) tau2
       real(c_double) taumin
       real(c_double) getRadiusMSPhaseIntermediate
+      end function
+
+      function getK2strOfBluePhase(mt,mc,rzams,rtms,rad,k2e)
+     & bind(c, name='getK2strOfBluePhase')
+      import
+      implicit none
+      real(c_double) mt
+      real(c_double) mc
+      real(c_double) rzams
+      real(c_double) rtms
+      real(c_double) rad
+      real(c_double) k2e
+      real(c_double) getK2strOfBluePhase
+      end function
+
+      function getConvectiveCoreRadiusOfBluePhase(mt)
+     & bind(c, name='getConvectiveCoreRadiusOfBluePhase')
+      import
+      implicit none
+      real(c_double) mt
+      real(c_double) getConvectiveCoreRadiusOfBluePhase
       end function
 
       end interface
