@@ -298,6 +298,7 @@ public:
     double time; // current time (Myr)
     double a; //scale factor
     double H0; // Hubble constant (km s^-1 Mpc^-1)
+    double H0_myr; // scaled Hubble constant (Myr^-1)
     double omega_energy; // normalized dark energy density
     double omega_radiation; // normalized radiation density
     double omega_matter; // normalized matter density
@@ -322,14 +323,19 @@ public:
     inline double getDensity(const double _a) const {
         return getMatterDensity(_a) + getRadiationDensity(_a) + getEnergyDensity(_a) + getCurvatureDensity();
     }
-    
+
+    inline void calcH0Myr() {
+        double kms_pcmyr=1.022712165045695; // pc = 30856775814913673 m, yr = 365.25 days
+        H0_myr = H0*kms_pcmyr*1e-6;
+    }
+
     //! calculate da/dt
     /*!
       @param[in] _a: scale factor
       \return da/dt
      */
     inline double calcAdot(const double _a) const {
-        return H0*sqrt(getDensity(_a));
+        return H0_myr*sqrt(getDensity(_a));
     }
 
     //! update scale factor by time step _dt (first order Euler method)
@@ -390,14 +396,14 @@ public:
     //! initial potential parameter from a file
     /*!
       @param [in] _filename: the file contain parameters: 
-                 FRWModel: a, H0[km/s/Mpc], Omega_energy, Omega_radiation, Omega_matter
+                 FRWModel: Time[Myr], a, H0[km/s/Mpc], Omega_energy, Omega_radiation, Omega_matter, dt_scale
                  NFWHalo: M_vir[Msun], c, ac
                  Disk: M[Msun], Ra[pc], Rb[pc]
                  Bulge: M[Msun], alpha, rcut[pc]
       @param [in] _time: current physical time [Myr]
      */
     void initialFromFile(const std::string& _filename, const double& _time) {
-        const int npar=15;
+        const int npar=16;
         double pars[npar];
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         int my_rank = PS::Comm::getRank();
@@ -412,7 +418,7 @@ public:
             for (int i=0; i<npar; i++) {
                 fconf>>pars[i];
                 if (fconf.eof()) {
-                    std::cerr<<"Error: MWPotentialEvolve require "<<npar<<" parameters, only "<<i+1<<" given!"<<std::endl;
+                    std::cerr<<"Error: MWPotentialEvolve require "<<npar<<" parameters, only "<<i<<" given!"<<std::endl;
                     abort();
                 }
             }
@@ -422,24 +428,53 @@ public:
         PS::Comm::broadcast(pars, npar, 0);
 #endif
 
-        double kms_pcmyr=1.022712165045695; // pc = 30856775814913673 m, yr = 365.25 days
-        frw.time = _time;
-        frw.a = pars[0];
-        frw.H0 = pars[1]*kms_pcmyr*1e-6;
-        frw.omega_energy = pars[2];
-        frw.omega_radiation = pars[3];
-        frw.omega_matter = pars[4];
-        frw.dt_scale = pars[5];
+        frw.time = pars[0];
+        if (frw.time!=_time) {
+            std::cerr<<"Error: the time recorded in the MWpotential parameter file, "<<frw.time<<", is not equal to the current system time, "<<_time<<"!"<<std::endl;
+            abort();
+        }
+        frw.a = pars[1];
+        frw.H0 = pars[2];
+        frw.calcH0Myr();
+        frw.omega_energy = pars[3];
+        frw.omega_radiation = pars[4];
+        frw.omega_matter = pars[5];
+        frw.dt_scale = pars[6];
 
-        init.m_vir_halo = pars[6];
-        init.c_halo = pars[7];
-        init.ac_halo = pars[8];
-        init.m_disk = pars[9];
-        init.ra_disk = pars[10];
-        init.rb_disk = pars[11];
-        init.m_bulge = pars[12];
-        init.alpha_bulge = pars[13];
-        init.rcut_bulge = pars[14];
+        init.m_vir_halo = pars[7];
+        init.c_halo = pars[8];
+        init.ac_halo = pars[9];
+        init.m_disk = pars[10];
+        init.ra_disk = pars[11];
+        init.rb_disk = pars[12];
+        init.m_bulge = pars[13];
+        init.alpha_bulge = pars[14];
+        init.rcut_bulge = pars[15];
+    }
+
+    //! write data for restart
+    /*! 
+      @param[out] _fout: std::ostream output object
+      @param[in] _width: print width (defaulted 20)
+    */
+    void writeData(std::ofstream & _fout) {
+        _fout<<frw.time<<" "
+             <<frw.a<<" "
+             <<frw.H0<<" "
+             <<frw.omega_energy<<" "
+             <<frw.omega_radiation<<" "
+             <<frw.omega_matter<<" "
+             <<frw.dt_scale<<" "
+             <<init.m_vir_halo<<" "
+             <<init.c_halo<<" "
+             <<init.ac_halo<<" "
+             <<init.m_disk<<" "
+             <<init.ra_disk<<" "
+             <<init.rb_disk<<" "
+             <<init.m_bulge<<" "
+             <<init.alpha_bulge<<" "
+             <<init.rcut_bulge
+             <<std::endl;
     }
 
     //! calculate MW potential based on the input time
@@ -455,7 +490,7 @@ public:
 
         double z = 1/frw.a-1; // redshift
         double Ht = frw.getH(); // Myr^-1
-        double H0 = frw.H0; // Myr^-1
+        double H0 = frw.H0_myr; // Myr^-1
         double mass_density_m1 = frw.getMatterDensity(frw.a)/frw.getDensity(frw.a) - 1;
         double mass_density_m1_z0 = frw.getMatterDensity(1.0) - 1;
         double delta = 18*pi*pi + 82*mass_density_m1 - 39*mass_density_m1*mass_density_m1;
@@ -503,6 +538,7 @@ public:
     double gmscale;
     std::ifstream fconf;
     std::string set_name;
+    std::string set_par;
     MWPotentialEvolve mw_evolve;
 
     GalpyManager(): potential_sets(), update_time(0.0), rscale(1.0), tscale(1.0), vscale(1.0), fscale(1.0), pscale(1.0), gmscale(1.0), fconf() {}
@@ -528,10 +564,9 @@ public:
         bool initial_flag = addTypesAndArgsFromString(type_args, true, _print_flag);
 
         set_name = _input.pre_define_type.value;
-        std::string set_par_str;
         std::size_t ipar = set_name.find_first_of(":");
         if (ipar!=std::string::npos) {
-            set_par_str = set_name.substr(ipar+1);
+            set_par = set_name.substr(ipar+1);
             set_name = set_name.substr(0, ipar);
         }
 
@@ -580,7 +615,7 @@ public:
             }
             */
             
-            mw_evolve.initialFromFile(set_par_str, _time);
+            mw_evolve.initialFromFile(set_par, _time);
 
             updateMWPotentialEvolve(0, _print_flag);
 
@@ -701,16 +736,29 @@ public:
         return false;
     }
 
-    //! Update types and arguments based on time
+    //! Update Potential types and arguments based on time
     /*!
       @param[in] _system_time: the time of globular particley system in PeTar. The time is transferred based on the time scaling factor
       @param[in] _print_flag: if true, print the read types and arguments.
      */
-    void updateTypesAndArgs(const double& _system_time, const bool _print_flag) {
+    void updatePotential(const double& _system_time, const bool _print_flag) {
         
         if (set_name=="MWPotentialEvolve") updateMWPotentialEvolve(_system_time, _print_flag);
 
         updateTypesAndArgsFromFile(_system_time, _print_flag);
+    }
+
+    //! write potential parameters for restart
+    /*! Precision is set to 14
+      @param[in] _fout std:ofstream to write data
+      @param[in] _time current time
+     */
+    void writePotentialPars(std::ofstream & _fout, const double& _system_time) {
+        _fout<<std::setprecision(14);
+        if (set_name=="MWPotentialEvolve") {
+            assert(mw_evolve.frw.time==_system_time);
+            mw_evolve.writeData(_fout);
+        }
     }
 
     //! Update MWpotential evolve (Gomez et al. 2010)
@@ -730,7 +778,8 @@ public:
                               mwpot.gm_halo*gmscale, mwpot.rs_halo*rscale};
         
         if (_print_flag) {
-            std::cout<<"Galpy time[Myr]: "<<_system_time
+            std::cout<<std::setprecision(14)
+                     <<"Galpy time[Myr]: "<<_system_time
                      <<" FRW a: "<<mw_evolve.frw.a
                      <<" NFW Halo: M_vir[Msun]: "<<mwpot.m_vir_halo<<" R_vir[pc]: "<<mwpot.r_vir_halo<<std::endl
                      <<"Update evolving MWPotential2014:\n"

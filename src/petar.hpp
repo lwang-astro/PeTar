@@ -1032,7 +1032,7 @@ public:
 #ifdef GALPY
         // external force and potential
         // update the types and arguments 
-        galpy_manager.updateTypesAndArgs(stat.time, input_parameters.print_flag);
+        galpy_manager.updatePotential(stat.time, input_parameters.print_flag);
 
         PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
 #pragma omp parallel for
@@ -1900,6 +1900,22 @@ public:
             stat.printColumn(fstatus, WRITE_WIDTH);
             fstatus<<std::endl;
         }
+
+
+#ifdef GALPY
+        // for External potential
+        if (write_style>0&&my_rank==0) {
+            std::ofstream fext;
+            std::string fname = galpy_manager.set_par;
+            fext.open(fname, std::ifstream::out);
+            if (!fext.is_open()) {
+                std::cerr<<"Error: Galpy potential parameter file to write, "<<fname<<", cannot be open!"<<std::endl;
+                abort();
+            }
+            galpy_manager.writePotentialPars(fext, stat.time);
+            fext.close();
+        }
+#endif
 
         // save current error
         stat.energy.saveEnergyError();
