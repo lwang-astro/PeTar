@@ -38,6 +38,7 @@ class PlotXY:
         self.nlayer_point = 10
         self.alpha_amplifier = 2.5
         self.marker_scale = 1.0
+        self.mass_power = 1.0
         self.ptcls=[]
 
     def init(self, axe, **kwargs):
@@ -353,7 +354,7 @@ class PlotXY:
 
         mass = data.data.mass
         for i in range(self.nlayer):
-            sizes = mass*self.sizescale[i]*self.framescale*self.marker_scale
+            sizes = (mass**self.mass_power)*self.sizescale[i]*self.framescale*self.marker_scale
             #sizes = (np.log10(luminosity)-np.log10(lum_min)+1)
             #sizes = luminosity
             self.ptcls[i].set_offsets(np.array([x,y]).transpose())
@@ -861,6 +862,7 @@ if __name__ == '__main__':
         print("  --n-layer-point [I]: number of layers of points for particles in the x-y plot: 10")
         print("  --layer-alpha   [F]: transparency factor of layers in the x-y plot: 2.5")
         print("  --marker-scale  [F]: amplify the size of markers in x-y plot: 1.0")
+        print("  --mass-power    [F]: the power index of mass to obtain sizes of markers: 1.0")
         print("  --suppress-images: do not plot snapshot images (png files) and use matplotlib.animation instead of imageio, this cannot use multi-processing, much slower")
         print("  --format      [S]: video format, require imageio installed, for some formats (e.g. avi, mp4) may require ffmpeg and imageio-ffmpeg installed: ", plot_format)
         print("PS:: Each panel of plots can be added mutliple times (the order is recored)")
@@ -875,7 +877,7 @@ if __name__ == '__main__':
                     'skiprows=','generate-binary=',
                     'plot-ncols=','plot-xsize=','plot-ysize=',
                     'suppress-images','format=','cm-mode=','core-file=','calc-energy',
-                    'n-layer-cross=','n-layer-point=','layer-alpha=','marker-scale=',
+                    'n-layer-cross=','n-layer-point=','layer-alpha=','marker-scale=','mass-power=',
                     'cm-boxsize=','compare-in-column']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
@@ -1001,6 +1003,8 @@ if __name__ == '__main__':
                 kwargs['alpha_amplifier'] = float(arg)
             elif opt in ('--marker-scale'):
                 kwargs['marker_scale'] = float(arg)
+            elif opt in ('--mass-power'):
+                kwargs['mass_power'] = float(arg)
             elif opt in ('--suppress-images'):
                 plot_images = False
             elif opt in ('--format'):
