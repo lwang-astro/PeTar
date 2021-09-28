@@ -295,7 +295,7 @@ struct PotentialSet{
 //! FRW cosmological model for calculating scale factor (redshift)
 class FRWModel{
 public:
-    double time; // current time
+    double time; // current time (Myr)
     double a; //scale factor
     double H0; // Hubble constant (km s^-1 Mpc^-1)
     double omega_energy; // normalized dark energy density
@@ -348,11 +348,144 @@ public:
         time += _dt;
     }
 
-    //! get Hubble constant
+    //! get Hubble constant at current a
     double getH() const {
         return calcAdot(a)/a;
     }
 
+};
+
+//! data for MWPotential evolve
+/*! The potential set refers to MWPotential2014 in Galpy
+ */
+class MWPotentialEvolve{
+public:
+    FRWModel frw;
+    struct {
+        double m_vir_halo;
+        double c_halo; // concentration
+        double ac_halo; // formation epoch of halo (Wechsler 2002, Zhao 2003)
+        double m_disk;
+        double ra_disk;
+        double rb_disk;
+        double m_bulge;
+        double alpha_bulge;
+        double rcut_bulge;
+    } init;
+    struct {
+        double m_vir_halo;
+        double r_vir_halo;
+        double rho_c_halo;
+        double gm_halo;
+        double rs_halo;
+        double gm_disk;
+        double ra_disk;
+        double rb_disk;
+        double gm_bulge;
+        double alpha_bulge;
+        double rcut_bulge;
+    } now;
+
+    //! initial potential parameter from a file
+    /*!
+      @param [in] _filename: the file contain parameters: 
+                 FRWModel: a, H0[km/s/Mpc], Omega_energy, Omega_radiation, Omega_matter
+                 NFWHalo: M_vir[Msun], c, ac
+                 Disk: M[Msun], Ra[pc], Rb[pc]
+                 Bulge: M[Msun], alpha, rcut[pc]
+      @param [in] _time: current physical time [Myr]
+     */
+    void initialFromFile(const std::string& _filename, const double& _time) {
+        const int npar=14;
+        double pars[npar];
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+        int my_rank = PS::Comm::getRank();
+        if (my_rank==0) {
+#endif
+            std::ifstream fconf;
+            fconf.open(_filename.c_str(), std::ifstream::in);
+            if (!fconf.is_open()) {
+                std::cerr<<"Error: MWPotentialEvolve configure file "<<_filename.c_str()<<" cannot be open!"<<std::endl;
+                abort();
+            }
+            for (int i=0; i<npar; i++) {
+                fconf>>pars[i];
+                if (fconf.eof()) {
+                    std::cerr<<"Error: MWPotentialEvolve require "<<npar<<" parameters, only "<<i+1<<" given!"<<std::endl;
+                    abort();
+                }
+            }
+            fconf.close();
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+        }
+        PS::Comm::broadcast(pars, npar, 0);
+#endif
+
+        double kms_pcmyr=1.022712165045695; // pc = 30856775814913673 m, yr = 365.25 days
+        frw.time = _time;
+        frw.a = pars[0];
+        frw.H0 = pars[1]*kms_pcmyr*1e-6;
+        frw.omega_energy = pars[2];
+        frw.omega_radiation = pars[3];
+        frw.omega_matter = pars[4];
+
+        init.m_vir_halo = pars[5];
+        init.c_halo = pars[6];
+        init.ac_halo = pars[7];
+        init.m_disk = pars[8];
+        init.ra_disk = pars[9];
+        init.rb_disk = pars[10];
+        init.m_bulge = pars[11];
+        init.alpha_bulge = pars[12];
+        init.rcut_bulge = pars[13];
+    }
+
+    //! calculate MW potential based on the input time
+    /*! @param[in] _time: physical time [Myr]
+     */
+    void calcMWPotentialParameters(const double& _time) {
+
+        double dt = _time-frw.time;
+        frw.updateA(dt);
+
+        const double G_astro = 0.0044983099795944;  // Msun, pc, Myr
+        const double pi = 3.141592653589793;
+
+        double z = 1/frw.a-1; // redshift
+        double Ht = frw.getH(); // Myr^-1
+        double H0 = frw.H0; // Myr^-1
+        double mass_density_m1 = frw.getMatterDensity(frw.a)/frw.getDensity(frw.a) - 1;
+        double mass_density_m1_z0 = frw.getMatterDensity(1.0) - 1;
+        double delta = 18*pi*pi + 82*mass_density_m1 - 39*mass_density_m1*mass_density_m1;
+        double delta0 = 18*pi*pi + 82*mass_density_m1_z0 - 39*mass_density_m1_z0*mass_density_m1_z0;
+        now.rho_c_halo = 3*Ht*Ht/(8*pi*G_astro); // astro unit
+        double rho_c_halo0 = 3*H0*H0/(8*pi*G_astro); // astro unit
+
+        // halo, update Mvir, Rvir, c (Wechsler 2002, Zhao 2003) in astro unit
+        double mass_z_factor = std::exp(-2*init.ac_halo*z);  
+        now.m_vir_halo = init.m_vir_halo*mass_z_factor; // Msun
+
+        now.r_vir_halo = std::pow(3*now.m_vir_halo/(4*pi*delta*now.rho_c_halo),1.0/3.0);
+        double rvir_z_factor = std::pow(mass_z_factor*delta0*rho_c_halo0/(delta*now.rho_c_halo), 1.0/3.0);
+
+        // Galpy parameter for halo in Galpy unit
+        double c0 = init.c_halo;  // present-day concentration r_vir/r_s
+        double c = c0/(z+1); // concentration at reshift z
+        double c_factor = 1.0/(std::log(1+c) - c/(1+c));
+
+        now.gm_halo = G_astro*now.m_vir_halo*c_factor;
+        now.rs_halo = now.r_vir_halo/c;
+
+        // disk & budge, update mass and radial scale factors (Bullock & Johnston 2005)
+        now.gm_disk = G_astro*init.m_disk*mass_z_factor;
+        now.ra_disk = init.ra_disk*rvir_z_factor;
+        now.rb_disk = init.rb_disk*rvir_z_factor;
+
+        now.gm_bulge = G_astro*init.m_bulge*mass_z_factor;
+        now.alpha_bulge = init.alpha_bulge;
+        now.rcut_bulge = init.rcut_bulge*rvir_z_factor;
+
+    }
 };
 
 //! A class to manager the API to Galpy
@@ -365,12 +498,12 @@ public:
     double vscale;
     double fscale;
     double pscale;
+    double gmscale;
     std::ifstream fconf;
-    FRWModel frw;
     std::string set_name;
-    std::vector<double> set_par;
+    MWPotentialEvolve mw_evolve;
 
-    GalpyManager(): potential_sets(), update_time(0.0), rscale(1.0), tscale(1.0), vscale(1.0), fscale(1.0), pscale(1.0), fconf() {}
+    GalpyManager(): potential_sets(), update_time(0.0), rscale(1.0), tscale(1.0), vscale(1.0), fscale(1.0), pscale(1.0), gmscale(1.0), fconf() {}
 
     //! initialization function
     /*!
@@ -385,6 +518,7 @@ public:
         tscale = _input.tscale.value;
         fscale = _input.fscale.value;
         pscale = _input.pscale.value;
+        gmscale = pscale*rscale;
 
         // add pre-defined type-argu groups
         std::string type_args = _input.type_args.value;
@@ -423,6 +557,7 @@ public:
         }
 
         if (set_name=="MWPotentialEvolve") {
+            /*
             int icount = 0;
             std::size_t istart = 0;
             std::size_t inext = set_par_str.find_first_of(",");
@@ -441,14 +576,9 @@ public:
                 std::cerr<<"Galpy Error: MWPotentialEvolve require 5 parameters, given only "<<icount<<"!"<<std::endl;
                 abort();
             }
+            */
             
-            double kms_pcmyr=1.022712165045695; // pc = 30856775814913673 m, yr = 365.25 days
-            frw.time = _time*tscale;
-            frw.a = set_par[0];
-            frw.H0 = set_par[1]*kms_pcmyr*1e-6/tscale;
-            frw.omega_energy = set_par[2];
-            frw.omega_radiation = set_par[3];
-            frw.omega_matter = set_par[4];
+            mw_evolve.initialFromFile(set_par_str, _time);
 
             updateMWPotentialEvolve(0, _print_flag);
 
@@ -582,65 +712,29 @@ public:
     }
 
     //! Update MWpotential evolve (Gomez et al. 2010)
-    /*!
+    /*! Assume time unit is Myr!
       @param[in] _system_time: the time of globular particley system in PeTar. The time is transferred based on the time scaling factor
       @param[in] _print_flag: if true, print the read types and arguments.
      */
     void updateMWPotentialEvolve(const double& _system_time, const bool _print_flag) {
-        double time_scaled= _system_time*tscale;
 
-        double dt = time_scaled-frw.time;
-        frw.updateA(dt);
-
-        double G_astro = 0.0044983099795944; 
-        double GMscale = pscale*rscale;
-        const double pi = 3.141592653589793;
-
-        double Ht = frw.getH(); // Myr^-1
-        double H0 = frw.H0; // Myr^-1
-        double z = 1/frw.a-1; // redshift
-        double mass_density_m1 = frw.getMatterDensity(frw.a)/frw.getDensity(frw.a) - 1;
-        double mass_density_m1_z0 = frw.getMatterDensity(1.0) - 1;
-        double delta = 18*pi*pi + 82*mass_density_m1 - 39*mass_density_m1*mass_density_m1;
-        double delta0 = 18*pi*pi + 82*mass_density_m1_z0 - 39*mass_density_m1_z0*mass_density_m1_z0;
-        double rho_c0 = 3*H0*H0/(8*pi); // No G
-        double rho_c = 3*Ht*Ht/(8*pi);
-
-        // halo, update Mvir, Rvir, c (Wechsler 2002, Zhao 2003)
-        double mass_factor = std::exp(-2*0.34*z);  
-        double c0 = 15.3; 
-        double c = c0/(z+1); // concentration r_vir/r_s
-        double c0_factor = 1.0/(std::log(1+c0) - c0/(1+c0));
-        double c_factor = 1.0/(std::log(1+c) - c/(1+c));
-        double GM_halo = 8e11*G_astro*GMscale*mass_factor*c_factor;
-        double rvir = std::pow(3*GM_halo/(4*pi*delta*rho_c),1.0/3.0);
-        double rs_halo = rvir/c;
-
-        // disk & budge, update mass and radial scale factors (Bullock & Johnston 2005)
-        double rvir_factor = std::pow(mass_factor*c_factor*delta0*rho_c0/(c0_factor*delta*rho_c), 1.0/3.0);
-        double GM_disk = 0.7574802019371595*mass_factor;
-        double ra_disk = 0.375*rvir_factor;
-        double rb_disk = 0.035*rvir_factor;
-
-        double GM_bulge = 0.029994597188218317*mass_factor;
-        double alpha_bulge = 1.8;
-        double rcut_bulge = 0.2375*rvir_factor;
+        mw_evolve.calcMWPotentialParameters(_system_time);
 
         int npot = 3;
         int pot_type[3] = {15,5,9};
-        double pot_args[8] = {GM_bulge, alpha_bulge, rcut_bulge,
-                              GM_disk, ra_disk, rb_disk,
-                              GM_halo, rs_halo};
-
+        auto& mwpot = mw_evolve.now;
+        double pot_args[8] = {mwpot.gm_bulge*gmscale, mwpot.alpha_bulge, mwpot.rcut_bulge*rscale,
+                              mwpot.gm_disk*gmscale, mwpot.ra_disk*rscale, mwpot.rb_disk*rscale,
+                              mwpot.gm_halo*gmscale, mwpot.rs_halo*rscale};
+        
         if (_print_flag) {
-            std::cout<<"Galpy time: "<<time_scaled
-                     <<" dt: "<<dt
-                     <<" FRW a: "<<frw.a
-                     <<" NFW Halo: R_vir: "<<rvir<<std::endl
+            std::cout<<"Galpy time[Myr]: "<<_system_time
+                     <<" FRW a: "<<mw_evolve.frw.a
+                     <<" NFW Halo: M_vir[Msun]: "<<mwpot.m_vir_halo<<" R_vir[pc]: "<<mwpot.r_vir_halo<<std::endl
                      <<"Update evolving MWPotential2014:\n"
-                     <<"  Type index: 15 args: "<<GM_bulge<<" "<<alpha_bulge<<" "<<rcut_bulge<<std::endl
-                     <<"  Type index: 5  args: "<<GM_disk<<" "<<ra_disk<<" "<<rb_disk<<std::endl
-                     <<"  Type index: 9  args: "<<GM_halo<<" "<<rs_halo<<std::endl;
+                     <<"  Type index: 15 args: "<<pot_args[0]<<" "<<pot_args[1]<<" "<<pot_args[2]<<std::endl
+                     <<"  Type index: 5  args: "<<pot_args[3]<<" "<<pot_args[4]<<" "<<pot_args[5]<<std::endl
+                     <<"  Type index: 9  args: "<<pot_args[6]<<" "<<pot_args[7]<<std::endl;
         }
 
         freePotentialArgs();
