@@ -301,6 +301,7 @@ public:
     double omega_energy; // normalized dark energy density
     double omega_radiation; // normalized radiation density
     double omega_matter; // normalized matter density
+    double dt_scale; // if -1, evolve a backwards with -dt, if 1, evolve forwards with dt, but time integration is not multiplied by dt_scale
 
     inline double getMatterDensity(const double _a) const {
         return omega_matter/_a;
@@ -338,11 +339,11 @@ public:
      */
     void updateA(const double _dt, const bool _revert_flag=false) {
         double adot = calcAdot(a);
-        double a_tmp = a + adot*_dt;
+        double a_tmp = a + adot*dt_scale*_dt;
         
         for (int k=0; k<10; k++) {
             double adot_new = calcAdot(a_tmp);
-            a_tmp = a + 0.5*(adot_new+adot)*_dt;
+            a_tmp = a + 0.5*(adot_new+adot)*dt_scale*_dt;
         }
         a = a_tmp;
         time += _dt;
@@ -396,7 +397,7 @@ public:
       @param [in] _time: current physical time [Myr]
      */
     void initialFromFile(const std::string& _filename, const double& _time) {
-        const int npar=14;
+        const int npar=15;
         double pars[npar];
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         int my_rank = PS::Comm::getRank();
@@ -428,16 +429,17 @@ public:
         frw.omega_energy = pars[2];
         frw.omega_radiation = pars[3];
         frw.omega_matter = pars[4];
+        frw.dt_scale = pars[5];
 
-        init.m_vir_halo = pars[5];
-        init.c_halo = pars[6];
-        init.ac_halo = pars[7];
-        init.m_disk = pars[8];
-        init.ra_disk = pars[9];
-        init.rb_disk = pars[10];
-        init.m_bulge = pars[11];
-        init.alpha_bulge = pars[12];
-        init.rcut_bulge = pars[13];
+        init.m_vir_halo = pars[6];
+        init.c_halo = pars[7];
+        init.ac_halo = pars[8];
+        init.m_disk = pars[9];
+        init.ra_disk = pars[10];
+        init.rb_disk = pars[11];
+        init.m_bulge = pars[12];
+        init.alpha_bulge = pars[13];
+        init.rcut_bulge = pars[14];
     }
 
     //! calculate MW potential based on the input time
