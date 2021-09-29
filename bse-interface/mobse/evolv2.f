@@ -247,8 +247,38 @@ c      COMMON /BINARY/ bcm,bpp
       ngtv = -1.d0
       ngtv2 = -2.d0
       twopi = 2.d0*ACOS(-1.d0)
+
 *
-* Initialize the parameters.
+*     MM added following lines on 2021/09/26
+*     to zero masses and other dangerous quantities if stellar type is 15
+*
+      if(kstar(1).eq.15)then
+         mass0(1)=zero
+         mass(1)=zero
+         rad(1)=1.0d-10
+         lumin(1)=1.0e-10
+         massc(1)=zero
+         radc(1)=1.0d-10
+         menv(1)=zero
+         renv(1)=1.0d-10
+         ospin(1)=zero
+      endif
+      if(kstar(2).eq.15)then
+         mass0(2)=zero
+         mass(2)=zero
+         rad(2)=1.0d-10
+         lumin(2)=1.0e-10
+         massc(2)=zero
+         radc(2)=1.0d-10
+         menv(2)=zero
+         renv(2)=1.0d-10
+         ospin(2)=zero
+      endif
+
+
+         
+*     
+*     Initialize the parameters.
 *
       kmin = 1
       kmax = 2
@@ -773,6 +803,7 @@ c         endif
 * if PISN occurs 
          if(kw.eq.15)then
             kstar(k)= kw
+            mass(k)= zero
             sgl = .true.
             goto 135
          endif
@@ -1381,9 +1412,11 @@ c            helper(2) = j2
          jp = MIN(jpmax,jp + 1)
          bpp(jp,1) = tphys
          bpp(jp,2) = mass(1)
-*         if(kstar(1).eq.15) bpp(jp,2) = mass0(1)
+*     if(kstar(1).eq.15) bpp(jp,2) = mass0(1)
+         if(kstar(1).eq.15) bpp(jp,2) = zero
          bpp(jp,3) = mass(2)
-*         if(kstar(2).eq.15) bpp(jp,3) = mass0(2)
+*     if(kstar(2).eq.15) bpp(jp,3) = mass0(2)
+         if(kstar(2).eq.15) bpp(jp,3) = zero
          bpp(jp,4) = float(kstar(1))
          bpp(jp,5) = float(kstar(2))
          bpp(jp,6) = sep
@@ -2088,6 +2121,7 @@ c         endif
 * if PISN occurs 
          if(kw.eq.15)then
             kstar(k) = kw
+            mass(k) = zero
             sgl = .true.
             goto 135
          endif
@@ -2343,9 +2377,9 @@ c            helper(2) = j2
          jp = MIN(jpmax,jp + 1)
          bpp(jp,1) = tphys
          bpp(jp,2) = mass(1)
-         if(kstar(1).eq.15) bpp(jp,2) = mass0(1)
+         if(kstar(1).eq.15) bpp(jp,2) = zero
          bpp(jp,3) = mass(2)
-         if(kstar(2).eq.15) bpp(jp,3) = mass0(2)
+         if(kstar(2).eq.15) bpp(jp,3) = zero
          bpp(jp,4) = float(kstar(1))
          bpp(jp,5) = float(kstar(2))
          bpp(jp,6) = sep
@@ -2393,9 +2427,11 @@ c            helper(2) = j2
             jp = MIN(jpmax,jp + 1)
             bpp(jp,1) = tphys
             bpp(jp,2) = mass(1)
-*            if(kstar(1).eq.15) bpp(jp,2) = mass0(1)
+*     if(kstar(1).eq.15) bpp(jp,2) = mass0(1)
+            if(kstar(1).eq.15) bpp(jp,2) = zero
             bpp(jp,3) = mass(2)
-*            if(kstar(2).eq.15) bpp(jp,3) = mass0(2)
+*     if(kstar(2).eq.15) bpp(jp,3) = mass0(2)
+            if(kstar(2).eq.15) bpp(jp,3) = zero
             bpp(jp,4) = float(kstar(1))
             bpp(jp,5) = float(kstar(2))
             bpp(jp,6) = zero
@@ -2448,13 +2484,13 @@ c            helper(2) = j2
          jp = MIN(jpmax,jp + 1)
          bpp(jp,1) = tphys
          bpp(jp,2) = mass(1)
-*         if(kstar(1).eq.15.and.bpp(jp-1,4).lt.15.0)then
-*            bpp(jp,2) = mass0(1)
-*         endif
+         if(kstar(1).eq.15.and.bpp(jp-1,4).lt.15.0)then
+            bpp(jp,2) = zero
+         endif
          bpp(jp,3) = mass(2)
-*         if(kstar(2).eq.15.and.bpp(jp-1,5).lt.15.0)then
-*            bpp(jp,3) = mass0(2)
-*         endif
+         if(kstar(2).eq.15.and.bpp(jp-1,5).lt.15.0)then
+            bpp(jp,3) = zero
+         endif
          bpp(jp,4) = float(kstar(1))
          bpp(jp,5) = float(kstar(2))
          bpp(jp,6) = zero
@@ -2470,6 +2506,14 @@ c            helper(2) = j2
 * Cases of accretion induced supernova or single star supernova.
 * No remnant is left in either case.
 *
+            bpp(jp,1) = tphys
+            bpp(jp,2) = zero
+            bpp(jp,3) = zero
+            bpp(jp,4) = float(kstar(1))
+            bpp(jp,5) = float(kstar(2))
+            bpp(jp,6) = zero
+            bpp(jp,7) = zero
+            bpp(jp,8) = zero
             bpp(jp,9) = ngtv2
 *            bpp(jp,10) = 11.0
             bpp(jp,10) = 13.0
@@ -2584,6 +2628,33 @@ c      bpp(jp+1,1) = -1.0
 *	
 c 150  continue
 *
+*
+      
+*     MM added following lines on 2021/09/27
+*     to zero masses and other dangerous quantities if stellar type is 15
+      if(kstar(1).eq.15)then
+         mass0(1)=zero
+         mass(1)=zero
+         rad(1)=1.0d-10
+         lumin(1)=1.0e-10
+         massc(1)=zero
+         radc(1)=1.0d-10
+         menv(1)=zero
+         renv(1)=1.0d-10
+         ospin(1)=zero
+      endif
+      if(kstar(2).eq.15)then
+         mass0(2)=zero
+         mass(2)=zero
+         rad(2)=1.0d-10
+         lumin(2)=1.0e-10
+         massc(2)=zero
+         radc(2)=1.0d-10
+         menv(2)=zero
+         renv(2)=1.0d-10
+         ospin(2)=zero
+      endif
+      
       RETURN
       END
 ***

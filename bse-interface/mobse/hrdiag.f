@@ -646,7 +646,13 @@ c            mcx = mcgbtf(aj,GB(8),GB,tscls(7),tscls(8),tscls(9))
 *
                   if(mrem.eq.0.0d0)then
                      kw = 15
-*
+*     MM added following 4 lines 2021/09/22
+                     aj = 0.d0
+                     mt = 0.d0
+                     lum = 1.0d-10
+                     r = 1.0d-10
+                     mc = 0.d0
+*     
 * We apply Timmes et al. 1996 for the neutrino-mass-loss, dmln, to both 
 * NS and BH if dmln < 0.5Msun, else dm = 0.5Msun
 *
@@ -659,6 +665,12 @@ c            mcx = mcgbtf(aj,GB(8),GB,tscls(7),tscls(8),tscls(9))
 * to prevent the formation of strange NS 
                         if(directcollapse.eq.1)then
                            kw = 15
+*     MM added following 4 lines 2021/09/22
+                           aj = 0.d0
+                           mt = 0.d0
+                           lum = 1.0d-10
+                           r = 1.0d-10
+                           mc = 0.d0
                         else
 * Zero-age Neutron star
                            kw = 13
@@ -860,6 +872,13 @@ c            mcx = mcgbtf(aj,GB(8),GB,tscls(7),tscls(8),tscls(9))
 *
                      if(mrem.eq.0.0d0)then
                         kw = 15
+*     MM added following 4 lines 2021/09/22
+                        aj = 0.d0
+                        mt = 0.d0
+                        lum = 1.0d-10
+                        r = 1.0d-10
+                        mc = 0.d0
+                        
 *
 * We apply Timmes et al. 1996 for the neutrino-mass-loss, dmln, to both 
 * NS and BH if dmln < 0.5Msun, else dm = 0.5Msun
@@ -873,6 +892,13 @@ c            mcx = mcgbtf(aj,GB(8),GB,tscls(7),tscls(8),tscls(9))
 * to prevent the formation of strange NS 
                            if(directcollapse.eq.1)then
                               kw = 15
+*     MM added following 4 lines 2021/09/22
+                              aj = 0.d0
+                              mt = 0.d0
+                              lum = 1.0d-10
+                              r = 1.0d-10
+                              mc = 0.d0
+                              
                            else
 * Zero-age Neutron star
                               kw = 13
@@ -1104,6 +1130,16 @@ c      if(mt.gt.150.0d0)then
 c        mt = mt0
 c      endif
 *
+      if(kw.eq.15)then
+         kw = 15
+*     MM added following 4 lines 2021/09/22
+         aj = 0.d0
+         mt = 0.d0
+         lum = 1.0d-10
+         r = 1.0d-10
+         mc = 0.d0
+      endif
+
       return
       end
 ***
