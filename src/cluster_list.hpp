@@ -860,7 +860,7 @@ public:
         id_cluster_send_.resizeNoInitialize(n_cluster_disp_send_.back());
         id_cluster_recv_.resizeNoInitialize(n_cluster_disp_recv_.back());
 
-#ifndef FPDS_V7
+#ifndef FDPS_COMM
         const PS::S32 n_proc_tot = PS::Comm::getNumberOfProc();
         static PS::ReallocatableArray<MPI_Request> req_send;
         static PS::ReallocatableArray<MPI_Request> req_recv;
