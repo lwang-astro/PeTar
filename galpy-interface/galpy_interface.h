@@ -538,10 +538,10 @@ public:
     double gmscale;
     std::ifstream fconf;
     std::string set_name;
-    std::string set_par;
+    std::string set_parfile;
     MWPotentialEvolve mw_evolve;
 
-    GalpyManager(): potential_sets(), update_time(0.0), rscale(1.0), tscale(1.0), vscale(1.0), fscale(1.0), pscale(1.0), gmscale(1.0), fconf() {}
+    GalpyManager(): potential_sets(), update_time(0.0), rscale(1.0), tscale(1.0), vscale(1.0), fscale(1.0), pscale(1.0), gmscale(1.0), fconf(), set_name(), set_parfile(), mw_evolve() {}
 
     //! initialization function
     /*!
@@ -566,7 +566,7 @@ public:
         set_name = _input.pre_define_type.value;
         std::size_t ipar = set_name.find_first_of(":");
         if (ipar!=std::string::npos) {
-            set_par = set_name.substr(ipar+1);
+            set_parfile = set_name.substr(ipar+1);
             set_name = set_name.substr(0, ipar);
         }
 
@@ -615,7 +615,7 @@ public:
             }
             */
             
-            mw_evolve.initialFromFile(set_par, _time);
+            mw_evolve.initialFromFile(set_parfile, _time);
 
             updateMWPotentialEvolve(0, _print_flag);
 

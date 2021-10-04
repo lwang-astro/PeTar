@@ -2585,6 +2585,7 @@ esac
 $as_echo "$host_os" >&6; }
 
 CXXFLAGS_BK=$CXXFLAGS
+CFLAGS_BK=$CFLAGS
 
 ac_ext=cpp
 ac_cpp='$CXXCPP $CPPFLAGS'
@@ -2594,6 +2595,7 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 
 
 CXXFLAGS=$CXXFLAGS_BK
+CFLAGS=$CFLAGS_BK
 
 for ac_prog in gawk mawk nawk awk
 do
@@ -6685,6 +6687,9 @@ See \`config.log' for more details" "$LINENO" 5; }
 fi
 
 VERSION=$petar_version'_'$sdar_version
+
+
+
 
 
 

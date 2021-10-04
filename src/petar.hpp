@@ -1905,15 +1905,17 @@ public:
 #ifdef GALPY
         // for External potential
         if (write_style>0&&my_rank==0) {
-            std::ofstream fext;
-            std::string fname = galpy_manager.set_par;
-            fext.open(fname, std::ifstream::out);
-            if (!fext.is_open()) {
-                std::cerr<<"Error: Galpy potential parameter file to write, "<<fname<<", cannot be open!"<<std::endl;
-                abort();
+            std::string fname = galpy_manager.set_parfile;
+            if (fname!="") {
+                std::ofstream fext;
+                fext.open(fname, std::ifstream::out);
+                if (!fext.is_open()) {
+                    std::cerr<<"Error: Galpy potential parameter file to write, "<<fname<<", cannot be open!"<<std::endl;
+                    abort();
+                }
+                galpy_manager.writePotentialPars(fext, stat.time);
+                fext.close();
             }
-            galpy_manager.writePotentialPars(fext, stat.time);
-            fext.close();
         }
 #endif
 
