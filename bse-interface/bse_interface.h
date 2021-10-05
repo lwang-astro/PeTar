@@ -7,8 +7,54 @@
 #include <getopt.h>
 #include "../src/io.hpp"
 
+/*!
+  This file provides the interface classes to connect the BSE-based code to PeTar.
+
+  Data structure:
+       StarParameter: the basic stellar parameter for one star
+       StarparameterOut: the stellar parameter output from calling evolv1 or evolv2
+       BinaryEvent: the records of binary type changes inside evolv2 (bpp array)
+  Initialization:
+       IOParamsBSE: the class storing all initial parameters needed for BSE-based code. 
+                    it also provides the function to initialize from commander options and show help information
+  Main Interface:
+       BSEManager: the main class contains the interface to call single and binary evolution function (evolv1/evolv2)
+           Evolution of stars and binaries:
+               evolveStar: evolve one single star by a given time step
+               evolveBinary: evolve one binary by a given time step
+           Next time step for calling BSE:
+               getTimeStepStar: next time step estimation for a single star
+               getTimeStepBinary: next time step estimation for a binary
+               isCallBSENeeded: check whether it is necessary to call evolvebinary for a binary even the next time step is not yet reached.
+
+   How it works in PeTar:
+       The bse interface functions are used in src/ar_interaction.hpp. 
+       The class ARInteraction has two functions to use BSE:
+           modifyOneParticle:  Evolve a single star to a given time using evolveStar; and determine the next time step to call BSE using getTimeStepStar.
+                               If stellar type changes or supernova occurs, save information in the file [data filename prefix].[SSE name]
+                               If the mass of star becomes zero, set remove flag. The particle is removed in the later on integration.
+                               This function is used in Hermite integrator for single stars and also in SDAR integrator for single companion in a multiple system (e.g. the outer star in a triple) every time step.
+                               If the given time is less than the next time estimated from the previous call of modifyOneParticle, the star is not evolved.
+
+           modifyAndInterruptIter: Evolve a multiple system to a given time using evolveStar and evolveBinary; and determine the next time steps for each single or binary separately.
+                               The function check each sub component of a multiple system, 
+                               For the type of the component:
+                                   single star: call evolveStar
+                                   binary: call evolveBinary
+                                   multiple system (n>2): call modfyAndInterruptIter iteratively.
+                               If any single/binary type changes or supernova occurs, save information in the file [data filename prefix].[SSE/BSE name]. 
+                               This function is used in SDAR integration every time step.
+                               For each single star, if the given time is less than the next time estimated from the previous call, it is not evolved.
+                               For each binary, if the given time is less than the next time estimated before, and the isCallBSENeeded return false, the binary is not evolved.
+*/
+
 #if (defined BSEBBF) || (defined BSEEMP)
 extern "C" {
+    // The COMMON variables in BSE-base codes should be declared here 
+    // Then, PeTar can read and modify these variables 
+    // A struct in C corresponds to a COMMON block in Fortran. 
+    // The suffix '_' is added to the name of COMMON block in C.
+
     extern struct{
         double neta;  ///> the Reimers mass-loss coefficent (neta*4x10^-13; 0.5 normally).
         double bwind; ///> the binary enhanced mass loss parameter (inactive for single).
@@ -64,6 +110,9 @@ extern "C" {
         int iy;
         int ir[32];
     } rand3_;
+
+
+    // The Fortran function name + '_' is the C version. All arguments should be in pointer type.
 
     //! function for initial metallicity parameters
     void zcnsts_(double* z, double* zpars);
@@ -197,6 +246,10 @@ extern "C" {
 #endif
 
 //! SSE/BSE based code star parameter for saving
+/*! The necessary stellar parameters used in BSE are collected into one class StarParameter.
+    PeTar does not save stellar parameters in history, and only record the present values.
+    Thus the member list must be complete for calling evolv1 and evolv2 without knowing previous values.
+ */
 struct StarParameter{
     long long int kw;       ///> stellar type
     double m0;    ///> Initial stellar mass in solar units
@@ -331,6 +384,8 @@ struct StarParameter{
 };
 
 //! SSE/BSE based code star parameter for output
+/*! The evaluated parameters of a star from BSE-based code
+ */
 struct StarParameterOut{
     long long int kw0;       ///> original type before evolution
     double dtmiss; ///> required evolution time - actually evolved time
@@ -429,10 +484,13 @@ static double EstimateGRTimescale(StarParameter& _star1, StarParameter& _star2, 
 
 
 //! BSE based code event recorder class
+/*! The binary evolution parameters record in the bpp array of evolv2
+ */
 class BinaryEvent{
 public:
     double record[10][9];
 
+    //! set up the initial parameter of binary event based on the present status of a binary
     void recordInitial(const StarParameter& _p1, const StarParameter& _p2, const double _semi, const double _ecc, const int _type) {
         const int init_index = getEventIndexInit();
         record[0][init_index] = std::min(_p1.tphys, _p2.tphys);
@@ -450,15 +508,18 @@ public:
         record[8][init_index] = _p2.r/(rl2*_semi);
         record[9][init_index] = _type;
     }
-    
+
+    //! Maximum event number that can be recored in one call of evolv2
     int getEventNMax() const {
         return 8;
     }
     
+    //! The index of initial event in record array (last one)
     int getEventIndexInit() const {
         return 8;
     }
 
+    //! Get the binary type
     int getType(const int index) const {
         return int(record[9][index]);
     }
@@ -509,6 +570,9 @@ public:
 };
 
 //! IO parameters manager for BSE based code 
+/*! For initializing the COMMON block variables from the commander option.
+  The description of each parameter is also provided.
+ */
 class IOParamsBSE{
 public:
     IOParamsContainer input_par_store;
@@ -920,6 +984,9 @@ public:
 };
 
 //! SSE/BSE interface manager
+/*! The class provides the interface to call single and binary stellar evolution (evolveStar and evolveBinary);
+  and also the time step estimators (getTimeStepStar, getTimeStepBinary).
+ */
 class BSEManager{
 public:
     double z, zpars[20]; ///> metallicity parameters
@@ -1581,6 +1648,7 @@ public:
 
     //! a simple check to determine whether call BSE is necessary by given a reference of time step
     /*!
+      For the given time step, if the general relativity effect is important or Roche overflow may happen, return True
       When calling BSE is necessary within the given time step, return true.
       If KW type <10, check whether peri-center distance < 100*stellar radii (sum); 
       If KW type >10, check GR effect timescale.
