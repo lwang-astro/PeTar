@@ -296,6 +296,7 @@ struct PotentialSet{
 class FRWModel{
 public:
     double time; // current time (Myr)
+    double dt_max; // maximum time step to integrate a (Myr)
     double a; //scale factor
     double H0; // Hubble constant (km s^-1 Mpc^-1)
     double H0_myr; // scaled Hubble constant (Myr^-1)
@@ -341,9 +342,8 @@ public:
     //! update scale factor by time step _dt (first order Euler method)
     /*! Iterate 10 times to get high accuracy for small a
       @param[in] _dt: time step
-      @param[in] _revert_flag: if true, set dt = -dt to integrate backwards
      */
-    void updateA(const double _dt, const bool _revert_flag=false) {
+    void updateA(const double _dt) {
         double adot = calcAdot(a);
         double a_tmp = a + adot*dt_scale*_dt;
         
@@ -353,6 +353,29 @@ public:
         }
         a = a_tmp;
         time += _dt;
+    }
+
+    //! update scale factor with maximum time step dt_max (first order Euler method)
+    /*! Iterate 10 times to get high accuracy for small a
+      @param[in] _dt: time step
+     */
+    void updateAwithDtmin(const double _dt) {
+        assert(_dt>=0);
+        assert(dt_max>0);
+
+        if (_dt==0) return;
+
+        double dt = _dt;
+        int nstep = 1;
+        if (dt>dt_max) {
+            dt = dt_max;
+            nstep = int(_dt/dt_max);
+        }
+        for (int i=0; i<nstep; i++) updateA(dt);
+        if (dt*nstep<_dt) {
+            dt = _dt - dt*nstep;
+            updateA(dt);
+        }
     }
 
     //! get Hubble constant at current a
@@ -403,7 +426,7 @@ public:
       @param [in] _time: current physical time [Myr]
      */
     void initialFromFile(const std::string& _filename, const double& _time) {
-        const int npar=16;
+        const int npar=17;
         double pars[npar];
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         int my_rank = PS::Comm::getRank();
@@ -440,16 +463,17 @@ public:
         frw.omega_radiation = pars[4];
         frw.omega_matter = pars[5];
         frw.dt_scale = pars[6];
+        frw.dt_max = pars[7];
 
-        init.m_vir_halo = pars[7];
-        init.c_halo = pars[8];
-        init.ac_halo = pars[9];
-        init.m_disk = pars[10];
-        init.ra_disk = pars[11];
-        init.rb_disk = pars[12];
-        init.m_bulge = pars[13];
-        init.alpha_bulge = pars[14];
-        init.rcut_bulge = pars[15];
+        init.m_vir_halo = pars[8];
+        init.c_halo = pars[9];
+        init.ac_halo = pars[10];
+        init.m_disk = pars[11];
+        init.ra_disk = pars[12];
+        init.rb_disk = pars[13];
+        init.m_bulge = pars[14];
+        init.alpha_bulge = pars[15];
+        init.rcut_bulge = pars[16];
     }
 
     //! write data for restart
@@ -465,6 +489,7 @@ public:
              <<frw.omega_radiation<<" "
              <<frw.omega_matter<<" "
              <<frw.dt_scale<<" "
+             <<frw.dt_max<<" "
              <<init.m_vir_halo<<" "
              <<init.c_halo<<" "
              <<init.ac_halo<<" "
@@ -483,7 +508,7 @@ public:
     void calcMWPotentialParameters(const double& _time) {
 
         double dt = _time-frw.time;
-        frw.updateA(dt);
+        frw.updateAwithDtmin(dt);
 
         const double G_astro = 0.0044983099795944;  // Msun, pc, Myr
         const double pi = 3.141592653589793;

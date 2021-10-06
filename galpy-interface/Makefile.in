@@ -1,4 +1,4 @@
-TARGET: libgalpy.a petar.galpy petar.galpy.help
+TARGET: libgalpy.a petar.galpy petar.galpy.help petar.galpy.pot.movie
 
 CXX=@CXX@
 CC=@CC@
@@ -22,9 +22,12 @@ petar.galpy: galpy_test.cxx libgalpy.a galpy_interface.h
 petar.galpy.help: galpy_help.py
 	ln -sf galpy_help.py petar.galpy.help
 
+petar.galpy.pot.movie: galpy_pot_movie.py
+	ln -sf galpy_pot_movie.py petar.galpy.pot.movie
+
 install:
 	install -d @prefix@/bin/
-	install -m 755 petar.galpy petar.galpy.help @prefix@/bin/
+	install -m 755 petar.galpy petar.galpy.help petar.galpy.pot.movie @prefix@/bin/
 
 clean: 
 	rm -f $(OBJ) petar.galpy libgalpy.a petar.galpy.help
