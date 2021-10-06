@@ -3908,6 +3908,9 @@ public:
 
             drift(dt_drift);
 
+            // update stat time 
+            stat.time = system_hard_one_cluster.getTimeOrigin();
+
 #ifdef PROFILE
             // calculate profile
             profile.total.barrier();
