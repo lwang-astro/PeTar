@@ -2403,6 +2403,14 @@
 * Cases of accretion induced supernova or single star supernova.
 * No remnant is left in either case.
 *
+            bpp(jp,1) = tphys
+            bpp(jp,2) = zero
+            bpp(jp,3) = zero
+            bpp(jp,4) = float(kstar(1))
+            bpp(jp,5) = float(kstar(2))
+            bpp(jp,6) = zero
+            bpp(jp,7) = zero
+            bpp(jp,8) = zero
             bpp(jp,9) = ngtv2
 *            bpp(jp,10) = 11.0
             bpp(jp,10) = 13.0
