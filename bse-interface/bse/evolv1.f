@@ -60,9 +60,12 @@ c-------------------------------------------------------------c
       REAL*8 pts1,pts2,pts3
       COMMON /POINTS/ pts1,pts2,pts3
       real*8 FBFAC,FBTOT,MCO
+      real*8 zero
       integer ECS
 *     for kick, arguments must be variables
       real*8 m2,ecc,sep,jorb
+
+      zero = 0.d0
       m2 = 0.d0
       ecc= 0.d0
       sep= -1.d0
@@ -85,6 +88,21 @@ c-------------------------------------------------------------c
       k2 = 0.15d0
       rflag = 0
 *
+*     MM added following lines 2021/09/27
+*     to zero masses and other dangerous quantities if stellar type is 15
+*
+
+      if(kw.eq.15)then
+         mass=zero
+         mt=zero
+         r=1.0d-10
+         lum=1.0e-10
+         mc=zero
+         rc=1.0d-10
+         menv=zero
+         renv=1.0d-10
+      endif
+
 * Setup variables which control the output (if it is required).
 *
 *      ip = 0
@@ -377,6 +395,21 @@ c-------------------------------------------------------------c
 *
  90   continue
 *
+*     MM added following lines 2021/09/27
+*     to zero masses and other dangerous quantities of stars 15
+*
+
+      if(kw.eq.15)then
+         mass=zero
+         mt=zero
+         r=1.0d-10
+         lum=1.0e-10
+         mc=zero
+         rc=1.0d-10
+         menv=zero
+         renv=1.0d-10
+      endif
+
       if (j.eq.nv) then
          write(*,*) 'SSE Warning, too many iteration loop >',nv,
      &        ' time_now=',tphys,' time_end=',tphysf,' mass=',mt,

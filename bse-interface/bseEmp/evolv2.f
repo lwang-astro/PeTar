@@ -231,6 +231,32 @@
       ngtv2 = -2.d0
       twopi = 2.d0*ACOS(-1.d0)
 *
+*     MM added following lines on 2021/09/26
+*     to zero masses and other dangerous quantities if stellar type is 15
+*
+      if(kstar(1).eq.15)then
+         mass0(1)=zero
+         mass(1)=zero
+         rad(1)=1.0d-10
+         lumin(1)=1.0e-10
+         massc(1)=zero
+         radc(1)=1.0d-10
+         menv(1)=zero
+         renv(1)=1.0d-10
+         ospin(1)=zero
+      endif
+      if(kstar(2).eq.15)then
+         mass0(2)=zero
+         mass(2)=zero
+         rad(2)=1.0d-10
+         lumin(2)=1.0e-10
+         massc(2)=zero
+         radc(2)=1.0d-10
+         menv(2)=zero
+         renv(2)=1.0d-10
+         ospin(2)=zero
+      endif
+
 * Initialize the parameters.
 *
       kmin = 1
@@ -752,6 +778,13 @@
          CALL hrdiag(m0,age,mt,tm,tn,tscls,lums,GB,zpars,
      &        rm,lum,kw,mc,rc,me,re,k2,fbfac,fbtot,mco,ecs)
 *
+         if(kw.eq.15)then
+            kstar(k)= kw
+            mass(k)= zero
+            sgl = .true.
+            goto 135
+         endif
+
          if(kw.ne.15)then
             ospin(k) = jspin(k)/(k2*(mt-mc)*rm*rm+k3*mc*rc*rc)
          endif
@@ -2039,6 +2072,13 @@
          CALL hrdiag(m0,age,mt,tm,tn,tscls,lums,GB,zpars,
      &        rm,lum,kw,mc,rc,me,re,k2,fbfac,fbtot,mco,ecs)
 *
+         if(kw.eq.15)then
+            kstar(k) = kw
+            mass(k) = zero
+            sgl = .true.
+            goto 135
+         endif
+
 * Check for a supernova and correct the semi-major axis if so.
 *
          if(kw.ne.kstar(k).and.kstar(k).le.12.and.
@@ -2281,9 +2321,9 @@
          jp = MIN(jpmax,jp + 1)
          bpp(jp,1) = tphys
          bpp(jp,2) = mass(1)
-         if(kstar(1).eq.15) bpp(jp,2) = mass0(1)
+         if(kstar(1).eq.15) bpp(jp,2) = zero
          bpp(jp,3) = mass(2)
-         if(kstar(2).eq.15) bpp(jp,3) = mass0(2)
+         if(kstar(2).eq.15) bpp(jp,3) = zero
          bpp(jp,4) = float(kstar(1))
          bpp(jp,5) = float(kstar(2))
          bpp(jp,6) = sep
@@ -2332,8 +2372,10 @@
             bpp(jp,1) = tphys
             bpp(jp,2) = mass(1)
 *            if(kstar(1).eq.15) bpp(jp,2) = mass0(1)
+            if(kstar(1).eq.15) bpp(jp,2) = zero
             bpp(jp,3) = mass(2)
 *            if(kstar(2).eq.15) bpp(jp,3) = mass0(2)
+            if(kstar(2).eq.15) bpp(jp,3) = zero
             bpp(jp,4) = float(kstar(1))
             bpp(jp,5) = float(kstar(2))
             bpp(jp,6) = zero
@@ -2386,13 +2428,13 @@
          jp = MIN(jpmax,jp + 1)
          bpp(jp,1) = tphys
          bpp(jp,2) = mass(1)
-*         if(kstar(1).eq.15.and.bpp(jp-1,4).lt.15.0)then
-*            bpp(jp,2) = mass0(1)
-*         endif
+         if(kstar(1).eq.15.and.bpp(jp-1,4).lt.15.0)then
+            bpp(jp,2) = zero
+         endif
          bpp(jp,3) = mass(2)
-*         if(kstar(2).eq.15.and.bpp(jp-1,5).lt.15.0)then
-*            bpp(jp,3) = mass0(2)
-*         endif
+         if(kstar(2).eq.15.and.bpp(jp-1,5).lt.15.0)then
+            bpp(jp,3) = zero
+         endif
          bpp(jp,4) = float(kstar(1))
          bpp(jp,5) = float(kstar(2))
          bpp(jp,6) = zero
@@ -2493,6 +2535,31 @@
 *         if(ecc.ge.0.d0.and.ecc.le.1.d0) ecc = -1.d0
 *         tb = -1.d0
 *      endif
+
+*     MM added following lines on 2021/09/27
+*     to zero masses and other dangerous quantities if stellar type is 15
+      if(kstar(1).eq.15)then
+         mass0(1)=zero
+         mass(1)=zero
+         rad(1)=1.0d-10
+         lumin(1)=1.0e-10
+         massc(1)=zero
+         radc(1)=1.0d-10
+         menv(1)=zero
+         renv(1)=1.0d-10
+         ospin(1)=zero
+      endif
+      if(kstar(2).eq.15)then
+         mass0(2)=zero
+         mass(2)=zero
+         rad(2)=1.0d-10
+         lumin(2)=1.0e-10
+         massc(2)=zero
+         radc(2)=1.0d-10
+         menv(2)=zero
+         renv(2)=1.0d-10
+         ospin(2)=zero
+      endif
 
 **     use backup hyperbolic orbit eccentricity
       if(ecc_bk.ge.1.0) ecc = ecc_bk
