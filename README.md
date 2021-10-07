@@ -613,7 +613,7 @@ The the default filename prefix 'data' is assumed.
 | :------------------ | :------------------------------------------------------------------  | :------------------------|
 | data.[\*].single     | snapshots for single stars                                           | petar.Particle(interrupt_mode=[\*], external_mode=[\*])| 
 | data.[\*].binary     | snapshots for binaries                                               | petar.Binary(member_particle_type=petar.Particle, simple_mode=[\*], G=[\*], interrupt_mode=[\*], external_mode=[\*]) |
-| \*data.[\*].triple    | snapshots for triples (if option `-M` is used)                       | petar.Binary(member_particle_type_one=[petar.Particle, petar.Particle], member_particle_type_two=petar.Particle, simple_mode=[\*], G=[\*], interrupt_mode=[\*], external_mode=[\*])            |
+| \*data.[\*].triple    | snapshots for triples (if option `-M` is used)                       | petar.Binary(member_particle_type_one=petar.Particle, member_particle_type_two=[petar.Particle, petar.Particle],  simple_mode=[\*], G=[\*], interrupt_mode=[\*], external_mode=[\*])            |
 | \*data.[\*].quadruple | snapshots for binary-binary quadruples (if option `-M` is used)      | petar.Binary(member_particle_type=[petar.Particle, petar.Particle],  simple_mode=[\*], G=[\*], interrupt_mode=[\*], external_mode=[\*])             |
 | data.lagr           | Lagrangian and core properties for all objects, single, binaries and user defined stellar types (`add_star_type`)  | petar.LagrangianMultiple(mass_fraction=[\*], calc_energy=[\*], external_mode=[\*], add_star_type=[\*]) |
 | data.core           | core position, velocity and radius                                   | petar.Core()               |
