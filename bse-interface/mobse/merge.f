@@ -7,7 +7,7 @@
 *     Hyperbolic merger
 *
 
-      INTEGER kstar(2),I1,I2,k
+      INTEGER kstar(2),I1,I2,k, krol(2)
       REAL*8  mass0(2),mass(2),rad(2),massc(2),radc(2),age(2)
       REAL*8  semi,peri,ecc
       REAL*8  TSCLS(20),LUMS(10),GB(10),zpars(20),TM,TN
@@ -20,6 +20,10 @@
       EXTERNAL RL
       LOGICAL coel
 
+      do k=1,2
+         krol(k)=k
+      end do
+      
       I1 = 1
       I2 = 2
 *       Determine indices for primary & secondary star (donor & accretor).
@@ -34,6 +38,8 @@
       IF (RAD(I1)/RL1.LT.RAD(I2)/RL2) THEN
           I1 = 2
           I2 = 1
+          krol(1) = I1
+          krol(2) = I2
           RL1 = RL2
       END IF
 
@@ -58,7 +64,7 @@
      &        vkick(4*(i1-1)+1),vkick(4*(i2-1)+1),coel)
          
       ELSE
-         CALL MIX(mass0,mass,age,kstar,zpars)
+         CALL MIX(mass0,mass,age,kstar,zpars,krol)
       END IF
 
       RETURN
