@@ -843,6 +843,8 @@ if __name__ == '__main__':
         print("  --rlagr-min   [F]: minimum radius in Lagrangian plot: ", plagr.rlagr_min)
         print("  --rlagr-max   [F]: maximum radius in Lagrangian plot: ", plagr.rlagr_max)
         print("  --rlagr-scale [S]: scaling of Lagrangian radii in the plot (y-axis): ",plagr.rlagr_scale)
+        print("  --lagr-energy    : option calc_energy for reading lagr data")
+        print("  --lagr-type   [S]: option add_star_type for reading lagr data")
         print("  --unit-length [S]: set label of length unit for x, y, z and semi: no print")
         print("  --unit-time   [S]: set label of time unit: no print")
         print("  --unit-vel    [S]: set label of velocity unit: no print")
@@ -872,6 +874,7 @@ if __name__ == '__main__':
         longargs = ['help','n-cpu=','lum-min=','lum-max=','temp-min=','temp-max=',
                     'semi-min=','semi-max=','ecc-min=','ecc-max=',
                     'rlagr-min=','rlagr-max=','rlagr-scale=',
+                    'lagr-energy','lagr-type=',
                     'time-min=','time-max=','x-min=','x-max=','y-min=','y-max=',
                     'unit-length=','unit-time=','unit-vel=',
                     'skiprows=','generate-binary=',
@@ -971,6 +974,10 @@ if __name__ == '__main__':
                 kwargs['time_max'] = float(arg)
             elif opt in ('--rlagr-scale'):
                 kwargs['rlagr_scale'] = arg
+            elif opt in ('--lagr-energy'):
+                kwargs['calc_energy'] = True
+            elif opt in ('--lagr-type'):
+                kwargs['add_star_type'] = [x for x in arg.split(',')]
             elif opt in ('--cm-mode'):
                 kwargs['cm_mode']= arg
             elif opt in ('--cm-boxsize'):
