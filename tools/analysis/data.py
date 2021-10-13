@@ -363,6 +363,63 @@ class Particle(SimpleParticle):
         etot = self.ekin + self.mass*self.pot
         self.addNewMember('etot',etot)
 
+class ParticleGroup(DictNpArrayMix):
+    """ A group of particles
+    Keys: (class members)
+        n (1D): number of particles, when keyword argument N_column_exist=False, this member does not exist
+        p[x] (particle_type[kwargs]): particle data, [x] indicate the indice, counting from 0
+    """
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+        Parameters
+        ----------
+        keyword arguments:
+            member_type: type (SimpleParticle)
+                Member particle type
+            N_particle: int (0)
+                Number of particles (ignore the value in the column N)
+                If data path is provided in the initialization; the column N exists and this argument is not provided, 
+                the first value in column N is used to determine N_particle
+            N_column_exist: bool (True)
+                if True, the class member n exists, otherwise not.
+        """
+
+        N_column_exist = True
+        if 'N_column_exist' in kwargs.keys():
+            N_column_exist = kwargs['N_column_exist']
+
+        n = 0
+        if (N_column_exist):
+            keys = [['n', np.int64]]
+            DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
+            if (type(_dat)!=type(None)) & (self.size>0): n = self.n[0]  
+        else:
+            self.keys = []
+            self.ncols = 0
+
+        if 'N_particle' in kwargs.keys(): n = kwargs['N_particle']
+
+        member_type = SimpleParticle
+        if ('member_type' in kwargs.keys()): member_type = kwargs['member_type']
+
+        if (n>0):
+            keys_p = [['p'+str(i), member_type] for i in range(n)]
+            DictNpArrayMix.__init__(self, keys_p, _dat, _offset+self.ncols, True, **kwargs)
+        elif (not N_column_exist):
+            self.ncols = 0
+            self.size = 0
+
+    def get(self, index):
+        """ Get particle by using index
+        Parameters
+        ----------
+        index: int
+            particle index
+        """
+
+        key = 'p'+str(index)
+        return self.__dict__[key]
+
 def calculateParticleCMDict(pcm, _p1, _p2):
     """ Calculate the center-of-the-mass of two particle sets
     

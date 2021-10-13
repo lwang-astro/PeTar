@@ -98,8 +98,11 @@ class Status(DictNpArrayMix):
                 ["CM_mass",np.float64],["CM_pos",(np.float64,3)],["CM_vel",(np.float64,3)]]
 
         n = 0
-        if 'N_particle' in kwargs.keys(): n = kwargs['N_particle']
-        if (n>0): keys += [["particles", SoftParticleGroup]]
+        if 'N_particle' in kwargs.keys(): 
+            n = kwargs['N_particle']
+            kwargs['N_column_exist'] = False
+            kwargs['member_type'] = Particle
+        if (n>0): keys += [["particles", ParticleGroup]]
             
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
