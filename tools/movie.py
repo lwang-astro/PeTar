@@ -845,6 +845,7 @@ if __name__ == '__main__':
         print("  --rlagr-scale [S]: scaling of Lagrangian radii in the plot (y-axis): ",plagr.rlagr_scale)
         print("  --lagr-energy    : option calc_energy for reading lagr data")
         print("  --lagr-type   [S]: option add_star_type for reading lagr data")
+        print("  --lagr-mfrac  [S]: option for mass fraction for reading lagr data")
         print("  --unit-length [S]: set label of length unit for x, y, z and semi: no print")
         print("  --unit-time   [S]: set label of time unit: no print")
         print("  --unit-vel    [S]: set label of velocity unit: no print")
@@ -874,7 +875,7 @@ if __name__ == '__main__':
         longargs = ['help','n-cpu=','lum-min=','lum-max=','temp-min=','temp-max=',
                     'semi-min=','semi-max=','ecc-min=','ecc-max=',
                     'rlagr-min=','rlagr-max=','rlagr-scale=',
-                    'lagr-energy','lagr-type=',
+                    'lagr-energy','lagr-type=','lagr-mfrac=',
                     'time-min=','time-max=','x-min=','x-max=','y-min=','y-max=',
                     'unit-length=','unit-time=','unit-vel=',
                     'skiprows=','generate-binary=',
@@ -978,6 +979,8 @@ if __name__ == '__main__':
                 kwargs['calc_energy'] = True
             elif opt in ('--lagr-type'):
                 kwargs['add_star_type'] = [x for x in arg.split(',')]
+            elif opt in ('--lagr-mfrac'):
+                kwargs['mass_fraction'] = np.array([float(x) for x in arg.split(',')])
             elif opt in ('--cm-mode'):
                 kwargs['cm_mode']= arg
             elif opt in ('--cm-boxsize'):
@@ -1068,7 +1071,7 @@ if __name__ == '__main__':
             core[0].loadtxt(core_file)
         lagr[0] = petar.LagrangianMultiple(**kwargs)
         if (read_lagr_data):
-            lagr[i].loadtxt(lagr_file)
+            lagr[0].loadtxt(lagr_file)
 
     if (len(plot_item)==0): plot_item=['x-y']
 
