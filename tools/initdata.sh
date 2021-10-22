@@ -58,7 +58,7 @@ echo 'Transfer "'$fname'" to PeTar input data file "'$fout'"'
 echo 'Skip rows: '$igline
 echo 'Add stellar evolution columns: '$seflag
 
-n=`wc -l $fname|cut -d' ' -f1`
+n=`wc -l $fname|awk '{print $1}'`
 n=`expr $n - $igline`
 
 cm_array=''
