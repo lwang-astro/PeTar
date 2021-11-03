@@ -283,7 +283,7 @@ public:
                 adr_first_ptcl[i] = i*ap_manager.getArtificialParticleN();
                 auto* pi = &(_ptcl_artificial[adr_first_ptcl[i]]);
 #ifdef HARD_DEBUG
-                assert(ap_manager.getMemberN(pi)==_n_member_in_group[i]);
+                ASSERT(ap_manager.getMemberN(pi)==_n_member_in_group[i]);
 #endif
                 // pre-process for c.m. particle
                 auto* pcm = ap_manager.getCMParticles(pi);
@@ -298,14 +298,14 @@ public:
 #ifdef HARD_DEBUG
             if(_n_group>0) {
                 if(n_group_offset[_n_group]<_n_ptcl)
-                    assert(ptcl_origin[n_group_offset[_n_group]].group_data.artificial.isSingle());
+                    ASSERT(ptcl_origin[n_group_offset[_n_group]].group_data.artificial.isSingle());
                 if (_ptcl_artificial!=NULL) assert(ptcl_origin[n_group_offset[_n_group]-1].group_data.artificial.isMember());
-                else assert(ptcl_origin[n_group_offset[_n_group]-1].group_data.artificial.isSingle());
+                else ASSERT(ptcl_origin[n_group_offset[_n_group]-1].group_data.artificial.isSingle());
             }
 #endif
         }
 #ifdef HARD_DEBUG
-        else if(_n_group>0) assert(_n_ptcl==2); // right now only support isolated binary case without artificial particles
+        else if(_n_group>0) ASSERT(_n_ptcl==2); // right now only support isolated binary case without artificial particles
 #endif
 
         // single particle start index in ptcl_origin
@@ -313,14 +313,14 @@ public:
         // number of single particles
         PS::S32 n_single_init = _n_ptcl - i_single_start;
 #ifdef HARD_DEBUG
-        assert(n_single_init>=0);
+        ASSERT(n_single_init>=0);
 #endif
 
 #ifdef HARD_DEBUG
         // check member consistence
         for(int i=0; i<i_single_start; i++) {
-            assert(ptcl_origin[i].group_data.artificial.isMember());
-            assert(ptcl_origin[i].mass>0);
+            ASSERT(ptcl_origin[i].group_data.artificial.isMember());
+            ASSERT(ptcl_origin[i].mass>0);
         }
 #endif
 
@@ -842,6 +842,8 @@ public:
             pcm.pos += pcm.vel * _time_end;
 
             // update rsearch
+            ASSERT(!std::isinf(pcm.vel[0]));
+            ASSERT(!std::isnan(pcm.vel[0]));
             pcm.Ptcl::calcRSearch(_time_end);
             // copyback
 
@@ -977,6 +979,8 @@ public:
                 pcm.vel += h4_pcm.vel;
 
                 //pcm.calcRSearch(h4_manager.interaction.G*(h4_pcm.mass-pcm.mass), abs(pcm.pot), h4_pcm.vel, _dt);
+                ASSERT(!std::isinf(pcm.vel[0]));
+                ASSERT(!std::isnan(pcm.vel[0]));
                 pcm.Ptcl::calcRSearch(_time_end);
                 const PS::S32 n_member = h4_int.groups[k].particles.getSize();
                 //const PS::S32 id_first = h4_int.groups[k].particles.getMemberOriginAddress(0)->id;
@@ -1310,6 +1314,8 @@ private:
         _bin.changeover.setR(_bin.mass*_par.mean_mass_inv, _par.rin, _par.rout);
 
         // calculate rsearch
+        assert(!std::isinf(_bin.vel[0]));
+        assert(!std::isnan(_bin.vel[0]));
         _bin.Ptcl::calcRSearch(_par.dt_tree);
         
         return _bin.id;
@@ -2050,6 +2056,8 @@ public:
             PS::F64 mbk = pi.mass;
 
             PS::F64vec vbk = pi.vel; //back up velocity in case of change
+            assert(!std::isinf(vbk.x));
+            assert(!std::isnan(vbk.x));
             int modify_flag = manager->ar_manager.interaction.modifyOneParticle(pi, time_origin_, time_origin_ + _dt);
             if (modify_flag) {
                 auto& v = pi.vel;
@@ -2078,6 +2086,8 @@ public:
                 assert(pcm.vel.z==0.0);
             }
 #endif
+            assert(!std::isinf(pi.vel.x));
+            assert(!std::isnan(pi.vel.x));
             pi.Ptcl::calcRSearch(_dt);
             /*
               DriveKeplerRestricted(mass_sun_, 
@@ -2379,6 +2389,8 @@ public:
                 auto& pij_cm = pi[j].group_data.cm;
                 pij_cm.mass = pij_cm.vel.x = pij_cm.vel.y = pij_cm.vel.z = 0.0;
 #endif
+                ASSERT(!std::isinf(pi[j].vel[0]));
+                ASSERT(!std::isnan(pi[j].vel[0]));
                 pi[j].calcRSearch(dt);
             }
 #endif

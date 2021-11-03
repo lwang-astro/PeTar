@@ -1046,6 +1046,10 @@ public:
             PS::F64vec pos_center=pi.pos - stat.pcm.pos;
             galpy_manager.calcAccPot(acc, pot, stat.time, &pi.pos[0], &pos_center[0]);
 #endif
+            assert(!std::isinf(acc[0]));
+            assert(!std::isnan(acc[0]));
+            assert(!std::isinf(pot));
+            assert(!std::isnan(pot));
             pi.acc[0] += acc[0]; 
             pi.acc[1] += acc[1]; 
             pi.acc[2] += acc[2]; 
