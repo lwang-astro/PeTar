@@ -1860,11 +1860,6 @@ public:
         }
         // write status, output to separate snapshots
         if(write_style==1) {
-            // status output
-            if(my_rank==0) {
-                stat.printColumn(fstatus, WRITE_WIDTH);
-                fstatus<<std::endl;
-            }
 
             // data output
             file_header.n_body = stat.n_real_glb;
@@ -1885,6 +1880,17 @@ public:
             else if(input_parameters.data_format.value==0||input_parameters.data_format.value==2)
                 system_soft.writeParticleBinary(fname.c_str(), file_header);
             system_soft.setNumberOfParticleLocal(stat.n_all_loc);
+
+            if(my_rank==0) {
+                // status output
+                stat.printColumn(fstatus, WRITE_WIDTH);
+                fstatus<<std::endl;
+
+#ifdef GALPY
+                // for External potential
+                galpy_manager.writePotentialPars(fname+".galpy", stat.time);
+#endif
+            }
         }
         // write all information in to fstatus
         else if(write_style==2&&my_rank==0) {
@@ -1904,24 +1910,6 @@ public:
             stat.printColumn(fstatus, WRITE_WIDTH);
             fstatus<<std::endl;
         }
-
-
-#ifdef GALPY
-        // for External potential
-        if (write_style>0&&my_rank==0) {
-            std::string fname = galpy_manager.set_parfile;
-            if (fname!="") {
-                std::ofstream fext;
-                fext.open(fname, std::ifstream::out);
-                if (!fext.is_open()) {
-                    std::cerr<<"Error: Galpy potential parameter file to write, "<<fname<<", cannot be open!"<<std::endl;
-                    abort();
-                }
-                galpy_manager.writePotentialPars(fext, stat.time);
-                fext.close();
-            }
-        }
-#endif
 
         // save current error
         stat.energy.saveEnergyError();
@@ -3297,7 +3285,8 @@ public:
         }
 
 #ifdef GALPY
-        galpy_manager.initial(galpy_parameters, stat.time, print_flag);
+        std::string galpy_conf_filename = input_parameters.fname_inp.value+".galpy";
+        galpy_manager.initial(galpy_parameters, stat.time, galpy_conf_filename, restart_flag, print_flag);
 #endif
     
         // set system hard paramters

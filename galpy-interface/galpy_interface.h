@@ -172,6 +172,9 @@ public:
                              <<"                 1st: N_types Mode x y z vx vy vz\n"
                              <<"                 2nd: type1 type2 ...\n"
                              <<"                 3rd: arg1-1 arg1-2 ... arg2-1 ...\n"
+                             <<"                 4th: N_change change_index1, 2, 3...\n"
+                             <<"                 *5th: change_mode1, 2, 3...\n"
+                             <<"                 *6th: change_rate1, 2, 3...\n"
                              <<"             The definitions of each items:\n"
                              <<"                 N_types: number of potential types\n"
                              <<"                       If there is no argument, the 3rd line is still necessary (empty line).\n"
@@ -181,18 +184,26 @@ public:
                              <<"                 x,y,z,vx,vy,vz: the position and velocity of the potential center [Galpy unit] in the reference frame defined in the Mode.\n"
                              <<"             2nd and 3rd lines are types and arguments of each potential, similar to those in --galpy-type-arg.\n"
                              <<"             The number of items in the 2nd line must be the same as Number_of_types.\n"
-                             <<"\n"
-                             <<"             For example, to add the MWPotential2014 fixed at the galactic center and a Plummer potential following the motion of the particle system,\n"
+                             <<"             4-6th lines are options for time-dependent arguments\n"
+                             <<"                 N_change: number of time-dependent arguments, if 0, 5-6th lines are not needed\n"
+                             <<"                 change_index: the index of argument to change during simulation\n"
+                             <<"                 change_mode: 1: change the argument linearly; 2: change the argument exponentially\n"
+                             <<"                 change_rate: linear case: change value per Galpy time unit; exponential case: coefficient 'a' in front of the time (exp^{a*t})\n"
+                             <<"             For example, to add the MWPotential2014 fixed at the galactic center and a Plummer potential following the motion of the particle system and reduce the Plummer mass linearly\n"
                              <<"             and then, remove the Plummer potential after 1.0 Galpy time unit, the configure file looks like:\n"
                              <<"                 0.0 2                           #[Update_time N_sets]\n"
                              <<"                 3 0 0.0 0.0 0.0 0.0 0.0 0.0     #[N_types, Mode, x, y, z, vx, vy, vz]\n"
                              <<"                 15 5 9                          #[type1, type2, type3 (MWPotential2014)]\n"
                              <<"                 0.029994597188218 1.8 0.2375 0.75748020193716 0.375 0.035 4.852230533528 2.0 #[arg1-1, arg1-2, ...]\n"
+                             <<"                 0                               #[N_change (no change)]\n"
                              <<"                 1 1 0.0 0.0 0.0 0.0 0.0 0.0     #[N_types, Mode, x, y, z, vx, vy, vz]\n"
                              <<"                 17                              #[type1 (Plummer)]\n"
                              <<"                 1.11072675e-8 0.000125          #[arg1-1, arg1-2]\n"
+                             <<"                 1 0                             #[N_change, change_index1 (mass)]\n"
+                             <<"                   1                             #[change_mode1 (linear change)]\n"
+                             <<"                   -1e-9                         #[change_rate1 (reduce 1e-9 per Galpy time unit)]\n"
                              <<"                 1.0 1                           #[Update_time N_sets]\n"
-                             <<"                 3 G 0.0 0.0 0.0 0.0 0.0 0.0     #[N_types, Mode, x, y, z, vx, vy, vz]\n"
+                             <<"                 3 0 0.0 0.0 0.0 0.0 0.0 0.0     #[N_types, Mode, x, y, z, vx, vy, vz]\n"
                              <<"                 15 5 9                          #[type1, type2, type3 (MWPotential2014)]\n"
                              <<"                 0.029994597188218 1.8 0.2375 0.75748020193716 0.375 0.035 4.852230533528 2.0 #[arg1-1, arg1-2, ...]\n"
                              <<"             Here the G*M and distance scaling factors are 2.4692087520131e-09 [galpy GM unit] / [pc^3/Myr^2] and 0.000125 [8 kpc] / [pc], respectively;\n"
@@ -478,28 +489,35 @@ public:
 
     //! write data for restart
     /*! 
-      @param[out] _fout: std::ostream output object
-      @param[in] _width: print width (defaulted 20)
+      @param[in] _filename: file to save data
     */
-    void writeData(std::ofstream & _fout) {
-        _fout<<frw.time<<" "
-             <<frw.a<<" "
-             <<frw.H0<<" "
-             <<frw.omega_energy<<" "
-             <<frw.omega_radiation<<" "
-             <<frw.omega_matter<<" "
-             <<frw.dt_scale<<" "
-             <<frw.dt_max<<" "
-             <<init.m_vir_halo<<" "
-             <<init.c_halo<<" "
-             <<init.ac_halo<<" "
-             <<init.m_disk<<" "
-             <<init.ra_disk<<" "
-             <<init.rb_disk<<" "
-             <<init.m_bulge<<" "
-             <<init.alpha_bulge<<" "
-             <<init.rcut_bulge
-             <<std::endl;
+    void writeData(const std::string& _filename) {
+        std::ofstream fout;
+        fout.open(_filename.c_str(), std::ifstream::out);
+        if (!fout.is_open()) {
+            std::cerr<<"Error: Galpy potential parameter file to write, "<<_filename<<", cannot be open!"<<std::endl;
+            abort();
+        }
+        fout<<std::setprecision(14)
+            <<frw.time<<" "
+            <<frw.a<<" "
+            <<frw.H0<<" "
+            <<frw.omega_energy<<" "
+            <<frw.omega_radiation<<" "
+            <<frw.omega_matter<<" "
+            <<frw.dt_scale<<" "
+            <<frw.dt_max<<" "
+            <<init.m_vir_halo<<" "
+            <<init.c_halo<<" "
+            <<init.ac_halo<<" "
+            <<init.m_disk<<" "
+            <<init.ra_disk<<" "
+            <<init.rb_disk<<" "
+            <<init.m_bulge<<" "
+            <<init.alpha_bulge<<" "
+            <<init.rcut_bulge
+            <<std::endl;
+        fout.close();
     }
 
     //! calculate MW potential based on the input time
@@ -553,6 +571,17 @@ public:
 //! A class to manager the API to Galpy
 class GalpyManager{
 public:
+    std::vector<int> mode;
+    std::vector<double> origin;
+    std::vector<int> pot_type_offset;
+    std::vector<int> pot_type;
+    std::vector<int> pot_args_offset;
+    std::vector<double> pot_args;
+    double time;   // current time (galpy unit)
+    std::vector<int> change_index;  // argument index to evolve
+    std::vector<int> change_index_offset; // offset to distinguish different sets
+    std::vector<int> change_mode; // argument change mode (1: linear; 2: exponential)
+    std::vector<double> change_rate;    // argument change rate (per galpy time unit)
     std::vector<PotentialSet> potential_sets;
     double update_time;
     double rscale;
@@ -572,9 +601,11 @@ public:
     /*!
       @param[in] _input: input parameters 
       @param[in] _time: current system time
+      @param[in] _conf_name: galpy configure file name for restart
+      @param[in] _restart_flag: if true, read the configure file for restart
       @param[in] _print_flag: if true, printing information to std::cout
      */
-    void initial(const IOParamsGalpy& _input, const double _time, const bool _print_flag=false) {
+    void initial(const IOParamsGalpy& _input, const double _time, const std::string _conf_name, const bool _restart_flag, const bool _print_flag=false) {
         // unit scale
         rscale = _input.rscale.value;
         vscale = _input.vscale.value;
@@ -594,6 +625,9 @@ public:
             set_parfile = set_name.substr(ipar+1);
             set_name = set_name.substr(0, ipar);
         }
+
+        // if restart, read the configure file from _conf_name instead of _input.pre_define_type.
+        if (_restart_flag) set_parfile = _conf_name;
 
         if (set_name=="MWPotential2014") {
             int npot = 3;
@@ -642,18 +676,19 @@ public:
             
             mw_evolve.initialFromFile(set_parfile, _time);
 
-            updateMWPotentialEvolve(0, _print_flag);
+            updateMWPotentialEvolve(_time, _print_flag);
 
             initial_flag = true;
         }        
 
-        if (initial_flag && _input.config_filename.value!="__NONE__")  {
-            std::cerr<<"Galpy Error: both --galpy-type-arg|--galpy-set and --galpy-conf-file are used, please choose one of them."<<std::endl;
-            abort();
-        }
-
         // add type arguments from configure file if exist
         if (_input.config_filename.value!="__NONE__") {
+            if (initial_flag) {
+                std::cerr<<"Galpy Error: both --galpy-type-arg|--galpy-set and --galpy-conf-file are used, please choose one of them."<<std::endl;
+                abort();
+            }
+            set_name="configure";
+
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
             int my_rank = PS::Comm::getRank();
             if (my_rank==0) {
@@ -669,6 +704,8 @@ public:
             }
             PS::Comm::broadcast(&update_time, 1, 0);
 #endif
+            // if restart, read configure file at the current time
+            if (_restart_flag) readRestartConfigureFile(set_parfile, _print_flag);
         }
 
         if(_print_flag) std::cout<<"----- Finish initialize Galpy potential -----\n";
@@ -769,20 +806,22 @@ public:
     void updatePotential(const double& _system_time, const bool _print_flag) {
         
         if (set_name=="MWPotentialEvolve") updateMWPotentialEvolve(_system_time, _print_flag);
-
-        updateTypesAndArgsFromFile(_system_time, _print_flag);
+        else if (set_name=="configure") updateTypesAndArgsFromFile(_system_time, _print_flag);
     }
 
     //! write potential parameters for restart
     /*! Precision is set to 14
-      @param[in] _fout std:ofstream to write data
+      @param[out] _filename: file to save data
       @param[in] _time current time
      */
-    void writePotentialPars(std::ofstream & _fout, const double& _system_time) {
-        _fout<<std::setprecision(14);
+    void writePotentialPars(const std::string& _filename, const double& _system_time) {
         if (set_name=="MWPotentialEvolve") {
             assert(mw_evolve.frw.time==_system_time);
-            mw_evolve.writeData(_fout);
+            mw_evolve.writeData(_filename);
+        }
+        else if (set_name=="configure") {
+            assert(time==_system_time*tscale);
+            writeCurrentData(_filename);
         }
     }
 
@@ -830,12 +869,6 @@ public:
     void updateTypesAndArgsFromFile(const double& _system_time, const bool _print_flag) {
         double time_scaled= _system_time*tscale;
         int nset=-1;
-        std::vector<int> mode;
-        std::vector<double> origin;
-        std::vector<int> pot_type_offset;
-        std::vector<int> pot_type;
-        std::vector<int> pot_args_offset;
-        std::vector<double> pot_args;
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         int my_rank = PS::Comm::getRank();
         if (my_rank==0) {
@@ -858,9 +891,14 @@ public:
                         pot_type.resize(0);
                         pot_args_offset.resize(0);
                         pot_args.resize(0);
+                        change_index.resize(0);
+                        change_index_offset.resize(0);
+                        change_mode.resize(0);
+                        change_rate.resize(0);
 
                         pot_type_offset.push_back(0);
                         pot_args_offset.push_back(0);
+                        change_index_offset.push_back(0);
                         if (nset>0) {
                             for (int k=0; k<nset; k++) {
                                 int n_pot_k=-1;
@@ -908,6 +946,38 @@ public:
                                     pot_args.push_back(arg_i);
                                 }
                                 pot_args_offset.push_back(pot_args.size());
+
+                                // time-dependent arguments
+                                int n_change;
+                                fconf>>n_change;
+                                if (n_change<0) {
+                                    std::cerr<<"Galpy reading configure file Error: number of indice of evolved potential arguments should be >=0, given "<<n_change<<std::endl;
+                                    abort();
+                                }
+                                for (int i=0; i<n_change; i++) {
+                                    int index;
+                                    fconf>>index;
+                                    if (index<0) {
+                                        std::cerr<<"Galpy reading configure file Error: change argument index must be >=0 & <"<<pot_args.size()<<", given "<<index<<std::endl;
+                                        abort();
+                                    }
+                                    change_index.push_back(index);
+                                }
+                                change_index_offset.push_back(change_index.size());
+                                for (int i=0; i<n_change; i++) {
+                                    int mode;
+                                    fconf>>mode;
+                                    if (!(mode==1||mode==2)) {
+                                        std::cerr<<"Galpy reading configure file Error: change mode must be 1 or 2, given "<<mode<<std::endl;
+                                        abort();
+                                    }
+                                    change_mode.push_back(mode);
+                                }
+                                for (int i=0; i<n_change; i++) {
+                                    double arg;
+                                    fconf>>arg;
+                                    change_rate.push_back(arg);
+                                }
                             }
                         }
 
@@ -922,22 +992,6 @@ public:
                         }
                     };
 
-                    if (_print_flag) {
-                        std::cout<<"Galpy time: "<<time_scaled;
-                        if (fconf.is_open()) std::cout<<" Next update time: "<<update_time;
-                        else std::cout<<" Next update time: End_of_simulation";
-                        std::cout<<std::endl;
-                        for (int k=0; k<nset; k++) {
-                            std::cout<<"Set "<<k+1<<" Mode: "<<mode[k]
-                                     <<" Pos: "<<origin[6*k]<<" "<<origin[6*k+1]<<" "<<origin[6*k+2]
-                                     <<" Vel: "<<origin[6*k+3]<<" "<<origin[6*k+4]<<" "<<origin[6*k+5]
-                                     <<" Type index: ";
-                            for (int i=pot_type_offset[k]; i<pot_type_offset[k+1]; i++) std::cout<<pot_type[i]<<" ";
-                            std::cout<<" Arguments: ";
-                            for (int i=pot_args_offset[k]; i<pot_args_offset[k+1]; i++) std::cout<<pot_args[i]<<" ";
-                            std::cout<<std::endl;
-                        }
-                    }
                 }
             }
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
@@ -975,8 +1029,57 @@ public:
             }
             PS::Comm::broadcast(pot_type.data(), pot_type.size(), 0);
             if (pot_args.size()>0) PS::Comm::broadcast(pot_args.data(), pot_args.size(), 0);
+
+            int n_change = change_index.size();
+            PS::Comm::broadcast(&n_change, 1, 0);
+            if (my_rank==0) {
+                assert((int)change_index.size()==n_change);
+                assert((int)change_index_offset.size()==nset+1);
+                assert((int)change_mode.size()==n_change);
+                assert((int)change_rate.size()==n_change);
+            }
+            else {
+                change_index.resize(n_change);
+                change_index_offset.resize(nset+1);
+                change_mode.resize(n_change);
+                change_rate.resize(n_change);
+            }
+            PS::Comm::broadcast(change_index_offset.data(), change_index_offset.size(), 0);
+            if (n_change>0) {
+                PS::Comm::broadcast(change_index.data(), change_index.size(), 0);
+                PS::Comm::broadcast(change_mode.data(), change_mode.size(), 0);
+                PS::Comm::broadcast(change_rate.data(), change_rate.size(), 0);
+            }
 #endif
-            // generate galpy potential argument 
+            if (_print_flag) {
+                std::cout<<"Galpy time: "<<time_scaled;
+                if (fconf.is_open()) std::cout<<" Next update time: "<<update_time;
+                else std::cout<<" Next update time: End_of_simulation"; // this will be printed for rank!=0 always
+                std::cout<<std::endl;
+                for (int k=0; k<nset; k++) {
+                    std::cout<<"Set "<<k+1<<" Mode: "<<mode[k]
+                             <<" Pos: "<<origin[6*k]<<" "<<origin[6*k+1]<<" "<<origin[6*k+2]
+                             <<" Vel: "<<origin[6*k+3]<<" "<<origin[6*k+4]<<" "<<origin[6*k+5]
+                             <<"\nType index: ";
+                    for (int i=pot_type_offset[k]; i<pot_type_offset[k+1]; i++) std::cout<<pot_type[i]<<" ";
+                    std::cout<<" Arguments: ";
+                    for (int i=pot_args_offset[k]; i<pot_args_offset[k+1]; i++) std::cout<<pot_args[i]<<" ";
+                    std::cout<<"\nChange [index mode rate]:";
+                    for (int i=change_index_offset[k]; i<change_index_offset[k+1]; i++) {
+                        std::cout<<"["<<change_index[i]
+                                 <<" "<<change_mode[i]
+                                 <<" "<<change_rate[i]<<"] ";
+                    }
+                    std::cout<<std::endl;
+                }
+            }
+        }
+
+        // update time-dependent argument
+        bool change_flag =  calcNewParameters(time_scaled, _print_flag);
+        
+        // generate galpy potential argument 
+        if (change_flag||(nset>=0)) {
             freePotentialArgs();
             for (int k=0; k<nset; k++) {
                 potential_sets.push_back(PotentialSet());
@@ -1046,6 +1149,240 @@ public:
         else {
             acc[0] = acc[1] = acc[2] = pot = 0.0;
         }
+    }
+
+    //! write data for restart
+    /*! 
+      @param[in] _filename: file to save data
+    */
+    void writeCurrentData(const std::string& _filename) {
+        std::ofstream fout;
+        fout.open(_filename.c_str(), std::ifstream::out);
+        if (!fout.is_open()) {
+            std::cerr<<"Error: Galpy potential parameter file to write, "<<_filename<<", cannot be open!"<<std::endl;
+            abort();
+        }
+        fout<<std::setprecision(14);
+
+        std::size_t n_set = mode.size();
+        std::size_t n_origin = origin.size();
+        std::size_t n_pot = pot_type.size();
+        std::size_t n_pot_offset = pot_type_offset.size();
+        std::size_t n_arg = pot_args.size();
+        std::size_t n_arg_offset = pot_args_offset.size();
+        std::size_t n_change = change_index.size();
+        std::size_t n_change_offset = change_index_offset.size();
+        fout<<time<<" "
+            <<n_set<<" ";
+        for (std::size_t i=0; i<n_set; i++) {
+            fout<<mode[i]<<" ";
+        }
+        fout<<std::endl<<n_origin<<" ";
+        for (std::size_t i=0; i<n_origin; i++) {
+            fout<<origin[i]<<" ";
+        }
+        fout<<std::endl<<n_pot_offset<<" ";
+        for (std::size_t i=0; i<n_pot_offset; i++) {
+            fout<<pot_type_offset[i]<<" ";
+        }
+        fout<<std::endl<<n_pot<<" ";
+        for (std::size_t i=0; i<n_pot; i++) {
+            fout<<pot_type[i]<<" ";
+        }
+        fout<<std::endl<<n_arg_offset<<" ";
+        for (std::size_t i=0; i<n_arg_offset; i++) {
+            fout<<pot_args_offset[i]<<" ";
+        }
+        fout<<std::endl<<n_arg<<" ";
+        for (std::size_t i=0; i<n_arg; i++) {
+            fout<<pot_args[i]<<" ";
+        }
+        fout<<std::endl<<n_change<<" ";
+        for (std::size_t i=0; i<n_change; i++) {
+            fout<<change_index[i]<<" ";
+        }
+        fout<<std::endl<<n_change_offset<<" ";
+        for (std::size_t i=0; i<n_change_offset; i++) {
+            fout<<change_index_offset[i]<<" ";
+        }
+        for (std::size_t i=0; i<n_change; i++) {
+            fout<<change_mode[i]<<" ";
+        }
+        for (std::size_t i=0; i<n_change; i++) {
+            fout<<change_rate[i]<<" ";
+        }
+        fout<<std::endl;
+
+        fout.close();
+    }
+
+    //! read configure data for restart
+    /*
+      @param[in] _filename: file to save data
+      @param[in] _print_flag: if true, print reading parameters
+    */
+    void readRestartConfigureFile(const std::string& _filename, const bool _print_flag) {
+
+        std::size_t n_set, n_origin, n_pot, n_pot_offset, n_arg, n_arg_offset, n_change, n_change_offset;
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+        int my_rank = PS::Comm::getRank();
+
+        if (my_rank==0) {
+#endif
+            std::ifstream fin;
+            fin.open(_filename.c_str(), std::ifstream::in);
+            if (!fin.is_open()) {
+                std::cerr<<"Error: Galpy configure file for restart "<<_filename.c_str()<<" cannot be open!"<<std::endl;
+                abort();
+            }
+
+            fin>>time>>n_set;
+            mode.resize(n_set);
+            for (std::size_t i=0; i<n_set; i++) {
+                fin>>mode[i];
+            }
+            fin>>n_origin;
+            origin.resize(n_origin);
+            assert(6*n_set==n_origin);
+            for (std::size_t i=0; i<n_origin; i++) {
+                fin>>origin[i];
+            }
+            fin>>n_pot_offset;
+            assert(n_pot_offset==n_set+1);
+            pot_type_offset.resize(n_pot_offset);
+            for (std::size_t i=0; i<n_pot_offset; i++) {
+                fin>>pot_type_offset[i];
+            }
+            fin>>n_pot;
+            pot_type.resize(n_pot);
+            for (std::size_t i=0; i<n_pot; i++) {
+                fin>>pot_type[i];
+            }
+            fin>>n_arg_offset;
+            pot_args_offset.resize(n_arg_offset);
+            assert(n_arg_offset==n_set+1);
+            for (std::size_t i=0; i<n_arg_offset; i++) {
+                fin>>pot_args_offset[i];
+            }
+            fin>>n_arg;
+            pot_args.resize(n_arg);
+            for (std::size_t i=0; i<n_arg; i++) {
+                fin>>pot_args[i];
+            }
+            fin>>n_change;
+            change_index.resize(n_change);
+            for (std::size_t i=0; i<n_change; i++) {
+                fin>>change_index[i];
+            }
+            fin>>n_change_offset;
+            change_index_offset.resize(n_change_offset);
+            assert(n_change_offset==n_set+1);
+            for (std::size_t i=0; i<n_change_offset; i++) {
+                fin>>change_index_offset[i];
+            }
+            change_mode.resize(n_change);
+            for (std::size_t i=0; i<n_change; i++) {
+                fin>>change_mode[i];
+            }
+            change_rate.resize(n_change);
+            for (std::size_t i=0; i<n_change; i++) {
+                fin>>change_rate[i];
+            }
+            fin.close();
+
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+        }
+
+        PS::Comm::broadcast(&time, 1, 0);
+        PS::Comm::broadcast(&n_set, 1, 0);
+        PS::Comm::broadcast(&n_origin, 1, 0);
+        PS::Comm::broadcast(&n_pot, 1, 0);
+        PS::Comm::broadcast(&n_pot_offset, 1, 0);
+        PS::Comm::broadcast(&n_arg, 1, 0);
+        PS::Comm::broadcast(&n_arg_offset, 1, 0);
+        PS::Comm::broadcast(&n_change, 1, 0);
+        PS::Comm::broadcast(&n_change_offset, 1, 0);
+        
+        if (my_rank!=0) {
+            mode.resize(n_set);
+            origin.resize(n_origin);
+            pot_type.resize(n_pot);
+            pot_type_offset.resize(n_pot_offset);
+            pot_args.resize(n_arg);
+            pot_args_offset.resize(n_arg_offset);
+            change_index.resize(n_change);
+            change_index_offset.resize(n_change_offset);
+            change_mode.resize(n_change);
+            change_rate.resize(n_change);
+        }
+        
+        PS::Comm::broadcast(mode.data(), mode.size(), 0);
+        PS::Comm::broadcast(origin.data(), origin.size(), 0);
+        PS::Comm::broadcast(pot_type.data(), pot_type.size(), 0);
+        PS::Comm::broadcast(pot_type_offset.data(), pot_type_offset.size(), 0);
+        PS::Comm::broadcast(pot_args.data(), pot_args.size(), 0);
+        PS::Comm::broadcast(pot_args_offset.data(), pot_args_offset.size(), 0);
+        PS::Comm::broadcast(change_index.data(), change_index.size(), 0);
+        PS::Comm::broadcast(change_index_offset.data(), change_index_offset.size(), 0);
+        PS::Comm::broadcast(change_mode.data(), change_mode.size(), 0);
+        PS::Comm::broadcast(change_rate.data(), change_rate.size(), 0);
+#endif
+
+        if (_print_flag) {
+            std::cout<<"Galpy Potential restart parameters: \n"
+                     <<"time: "<<time<<std::endl;
+            std::size_t n_set = mode.size();
+            for (std::size_t k=0; k<n_set; k++) {
+                std::cout<<"Set "<<k+1<<" Mode: "<<mode[k]
+                         <<" Pos: "<<origin[6*k]<<" "<<origin[6*k+1]<<" "<<origin[6*k+2]
+                         <<" Vel: "<<origin[6*k+3]<<" "<<origin[6*k+4]<<" "<<origin[6*k+5]
+                         <<"\nType index: ";
+                for (int i=pot_type_offset[k]; i<pot_type_offset[k+1]; i++) std::cout<<pot_type[i]<<" ";
+                std::cout<<" Arguments: ";
+                for (int i=pot_args_offset[k]; i<pot_args_offset[k+1]; i++) std::cout<<pot_args[i]<<" ";
+                std::cout<<"\nChange [index mode rate]:";
+                for (int i=change_index_offset[k]; i<change_index_offset[k+1]; i++) {
+                    std::cout<<"["<<change_index[i]
+                             <<" "<<change_mode[i]
+                             <<" "<<change_rate[i]<<"] ";
+                }
+                std::cout<<std::endl;
+            }
+        }
+    }
+
+    //! calculate new parameters based on given time
+    /*! @param[in] _time: new time (Galpy Unit)
+      @param[in] _print_flag: if true, print updated argument
+      \return if changed, return true
+    */
+    bool calcNewParameters(const double& _time, const bool _print_flag) {
+        if (change_index.size()>0) {
+            double dt = _time - time;
+            if (dt>0) {
+                if (_print_flag) std::cout<<"Galpy update argument, time [Galpy unit]: "<<_time<<" dt: "<<dt<<std::endl;
+                std::size_t n_set = change_index_offset.size()-1;
+                for (std::size_t i=0; i<n_set; i++) {
+                    for (int k=change_index_offset[i]; k<change_index_offset[i+1]; k++) {
+                        int index = change_index[k]+pot_args_offset[i];
+                        if (change_mode[k]==1) {
+                            pot_args[index] += change_rate[k]*dt;
+                            if (_print_flag) std::cout<<"Set "<<i+1<<" Index: "<<change_index[k]<<" "<<" new_argument(linear): "<<pot_args[index];
+                        }
+                        else if(change_mode[k]==2) {
+                            pot_args[index] *= std::exp(change_rate[k]*dt);
+                            if (_print_flag) std::cout<<"Set "<<i+1<<" Index: "<<change_index[k]<<" "<<" new_argument(exp): "<<pot_args[index];
+                        }
+                    }
+                }
+                time = _time;
+                return true;
+            }
+        }
+        time = _time;
+        return false;
     }
 
     void freePotentialArgs() {

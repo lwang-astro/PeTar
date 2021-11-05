@@ -151,7 +151,7 @@ int main(int argc, char** argv){
             abort();
         }
         std::ofstream fxy,fxz;
-        galpy_manager.initial(galpy_io, time ,true);
+        galpy_manager.initial(galpy_io, time, std::string(), false, true);
         time_out = time;
 
         for (int i=0; i<=n_step; i++) {
@@ -213,7 +213,7 @@ int main(int argc, char** argv){
 
         assert(n>0);
 
-        galpy_manager.initial(galpy_io, time ,true);
+        galpy_manager.initial(galpy_io, time, std::string(), false, true);
 
         Particle particles[n];
 
