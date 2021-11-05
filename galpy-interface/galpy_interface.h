@@ -1375,6 +1375,7 @@ public:
                             pot_args[index] *= std::exp(change_rate[k]*dt);
                             if (_print_flag) std::cout<<"Set "<<i+1<<" Index: "<<change_index[k]<<" "<<" new_argument(exp): "<<pot_args[index];
                         }
+                        std::cout<<std::endl;
                     }
                 }
                 time = _time;
