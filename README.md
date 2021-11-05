@@ -1082,7 +1082,7 @@ To read the triple snapshots:
 binary = petar.Binary(member_particle_type_one=petar.Particle, member_particle_type_two=[petar.Particle, petar.Particle])
 binary.loadtxt([triple data file path])
 ```
-where `petar.Binary` is used as a binary tree, where the first component is a binary and the second is a single.
+where `petar.Binary` is used as a binary tree, where the first component is the outer single and the second is the inner binary
 
 Similarly, the binary-binary quadurple data can be read as:
 ```
