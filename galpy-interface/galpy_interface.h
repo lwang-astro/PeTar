@@ -1081,6 +1081,7 @@ public:
         // generate galpy potential argument 
         if (change_flag||(nset>=0)) {
             freePotentialArgs();
+            nset=mode.size(); // in case nset is not defined after change_flag
             for (int k=0; k<nset; k++) {
                 potential_sets.push_back(PotentialSet());
                 auto& pset = potential_sets.back();
