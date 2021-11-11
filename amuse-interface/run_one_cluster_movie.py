@@ -78,7 +78,7 @@ def generate_cluster(number_of_stars, mass_of_cluster, radius_of_cluster):
 
 def evolve_cluster(particles, convert_nbody, end_time=40 | units.Myr, dt=0.25 | units.Myr, R=1.0, plot_HRdiagram=True, framescale=20.0):
 
-    gravity = petar(convert_nbody,redirection='none')
+    gravity = petar(convert_nbody, redirection="none")
     #gravity = petar(convert_nbody)
     
     stellar_evolution = SSE()
@@ -355,6 +355,6 @@ if __name__ == '__main__':
 
     anime = evolve_cluster(particles, convert_nbody, t_end| units.Myr, dt |units.Myr, R, plot_HRdiagram, framescale)
 
-    write_set_to_file(particles, output_file+".hdf5", "amuse", append_to_file=False)    
+    write_set_to_file(particles, output_file+".hdf5", "amuse", append_to_file=False, overwrite_file=True)
 
     anime.save(output_file+'.mp4', fps=30, extra_args=['-vcodec', 'libx264'])    
