@@ -190,6 +190,7 @@ class PlotXY:
         ycm = 0
         plot_mode = self.plot_mode
         core_correct = (self.cm_mode=='core') & (data.generate_binary != 2)
+        origin_mode = (self.cm_mode=='none')
         if plot_mode == 'x-y':
             x = data.data.pos[:,0]
             y = data.data.pos[:,1]
@@ -202,6 +203,9 @@ class PlotXY:
                 y += ycm - yc
                 xcm = xc
                 ycm = yc
+            elif (origin_mode):
+                x += xcm
+                y += ycm
             xcm_text.set_text(r'$x_{cm}=%f$' % xcm)
             ycm_text.set_text(r'$y_{cm}=%f$' % ycm)
         if plot_mode == 'x-z':
@@ -216,6 +220,9 @@ class PlotXY:
                 y += ycm - yc
                 xcm = xc
                 ycm = yc
+            elif (origin_mode):
+                x += xcm
+                y += ycm
             xcm_text.set_text(r'$x_{cm}=%f$' % xcm)
             ycm_text.set_text(r'$z_{cm}=%f$' % ycm)
         if plot_mode == 'y-z':
@@ -230,6 +237,9 @@ class PlotXY:
                 y += ycm - yc
                 xcm = xc
                 ycm = yc
+            elif (origin_mode):
+                x += xcm
+                y += ycm
             xcm_text.set_text(r'$y_{cm}=%f$' % xcm)
             ycm_text.set_text(r'$z_{cm}=%f$' % ycm)
         if plot_mode == 'rxy-z':
@@ -247,6 +257,9 @@ class PlotXY:
                 y = data.data.pos[:,2] + ycm - yc
                 xcm = np.sqrt(rxc*rxc+ryc*ryc)
                 ycm = yc
+            elif (origin_mode):
+                x = np.sqrt((rx + rxcm)**2 + (ry + rycm)**2)
+                y = data.data.pos[:,2] + ycm
             else:
                 x = np.sqrt(rx*rx+ry*ry)
                 y = data.data.pos[:,2]
@@ -264,6 +277,9 @@ class PlotXY:
                 y += ycm - yc
                 xcm = xc
                 ycm = yc
+            elif (origin_mode):
+                x += xcm
+                y += ycm
             xcm_text.set_text(r'$v_{x,cm}=%f$' % xcm)
             ycm_text.set_text(r'$v_{y,cm}=%f$' % ycm)
         if plot_mode == 'vx-z':
@@ -278,6 +294,9 @@ class PlotXY:
                 y += ycm - yc
                 xcm = xc
                 ycm = yc
+            elif (origin_mode):
+                x += xcm
+                y += ycm
             xcm_text.set_text(r'$v_{x,cm}=%f$' % xcm)
             ycm_text.set_text(r'$v_{z,cm}=%f$' % ycm)
         if plot_mode == 'vy-z':
@@ -292,6 +311,9 @@ class PlotXY:
                 y += ycm - yc
                 xcm = xc
                 ycm = yc
+            elif (origin_mode):
+                x += xcm
+                y += ycm
             xcm_text.set_text(r'$v_{y,cm}=%f$' % xcm)
             ycm_text.set_text(r'$v_{z,cm}=%f$' % ycm)
         if plot_mode == 'vrxy-z':
@@ -309,6 +331,9 @@ class PlotXY:
                 y = data.data.pos[:,2] + ycm - yc
                 xcm = np.sqrt(vxc*vxc+vyc*vyc)
                 ycm = yc
+            elif (origin_mode):
+                x = np.sqrt((vx + vxcm)**2 + (vy + vycm)**2)
+                y = data.data.pos[:,2] + ycm
             else:
                 x = np.sqrt(vx*vx+vy*vy)
                 y = data.data.vel[:,2]

@@ -1623,7 +1623,10 @@ public:
     
     //! check time consistence
     bool checkTimeConsistence() {
-        assert(abs(time_kick-stat.time)<1e-13);
+        if (abs(time_kick-stat.time)>1e-13) {
+            std::cerr<<"Error: kick time ("<<time_kick<<") and system time ("<<stat.time<<") are inconsistent!"<<std::endl;
+            abort();
+        }
         time_kick = stat.time; // escape the problem of round-off error
         if (stat.n_real_glb>1) {
             assert(stat.time == system_hard_one_cluster.getTimeOrigin());
@@ -3548,7 +3551,7 @@ public:
             assert(system_soft.getNumberOfParticleLocal()==1);
             auto& p = system_soft[0];
 
-            while (stat.time <= time_break) {
+            while (true) {
 #ifdef PROFILE
                 profile.total.start();
 #endif
@@ -3706,7 +3709,7 @@ public:
         PS::F64 dt_tree = dt_manager.getStep();
 
         /// Main loop
-        while(stat.time <= time_break) {
+        while(true) {
 #ifdef PROFILE
             profile.total.start();
 #endif
