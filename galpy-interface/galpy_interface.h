@@ -705,7 +705,11 @@ public:
             PS::Comm::broadcast(&update_time, 1, 0);
 #endif
             // if restart, read configure file at the current time
-            if (_restart_flag) readRestartConfigureFile(set_parfile, _print_flag);
+            if (_restart_flag) {
+                // first escape past time to avoid overwritting restart configure file
+                updateTypesAndArgsFromFile(_time, false);
+                readRestartConfigureFile(set_parfile, _print_flag);
+            }
         }
 
         if(_print_flag) std::cout<<"----- Finish initialize Galpy potential -----\n";
