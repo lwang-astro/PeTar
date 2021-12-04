@@ -1032,7 +1032,7 @@ public:
 #ifdef GALPY
         // external force and potential
         // update the types and arguments 
-        galpy_manager.updatePotential(stat.time, input_parameters.print_flag);
+        galpy_manager.updatePotential(stat.time, false);
 
         PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
 #pragma omp parallel for
