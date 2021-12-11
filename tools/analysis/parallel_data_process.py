@@ -178,7 +178,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
                 pos_c = core.pos[tsel]
                 r_gal = np.sqrt(np.sum(pos_c*pos_c))
                 M_galaxy = 0
-                if (m_ext!=None):
+                if (type(m_ext)==np.ndarray):
                     tsel = (m_ext[:,0] == header.time)
                     M_galaxy= m_ext[tsel,1]
                 else:
