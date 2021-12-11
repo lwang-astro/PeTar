@@ -38,6 +38,8 @@ if __name__ == '__main__':
         print("  -r(--read-data): read existing single, binary and core data to avoid expensive KDTree construction, no argument, disabled in default")
         print("     --r-escape: if the value is 'tidal', calculate the tidal radius (only work when external-mode is on); otherwise it is a constant escape distance criterion. If not given, it is 20*half-mass radius")
         print("     --e-escape: potential criterion for escapers: etot > mass * e-escape (0.0)")
+        print("     --m-ext: the filename of a table of masses of external potential for each time, used for calculation of tidal radius (not given)")
+        print("              the file contains two columns: time, mass")
         print("  -i(--interrupt-mode): the interruption mode used in petar, choices: no, base, bse, mobse (no)")
         print("  -t(--external-mode): external mode used in petar, choices: galpy, no (no)")
         print("  -s(--snapshot-format): snapshot data format: binary, ascii (ascii)")
@@ -96,7 +98,7 @@ if __name__ == '__main__':
         print("                3) '--add-star-type' only works when the interrupt mode is 'bse' or 'mobse'.")
     try:
         shortargs = 'p:m:G:b:MBAea:rt:i:s:cn:h'
-        longargs = ['mass-fraction=','multiple','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','calc-energy','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','snapshot-format=','add-star-type=','calc-multi-rc','n-cpu=','help']
+        longargs = ['mass-fraction=','multiple','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','calc-energy','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','snapshot-format=','m-ext=','add-star-type=','calc-multi-rc','n-cpu=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -141,6 +143,8 @@ if __name__ == '__main__':
                 else: kwargs['r_escape'] = float(arg)
             elif opt in ('--e-escape'):
                 kwargs['e_escape'] = float(arg)
+            elif opt in ('--m-ext'):
+                kwargs['read_m_ext'] = arg
             elif opt in ('--add-star-type'):
                 kwargs['add_star_type'] = [x for x in arg.split(',')]
             else:

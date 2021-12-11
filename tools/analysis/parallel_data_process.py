@@ -50,6 +50,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
     simple_binary=True
     external_mode='none'
     find_multiple=False
+    m_ext=None
 
     if ('G' in kwargs.keys()): G=kwargs['G']
     if ('r_max_binary' in kwargs.keys()): r_bin=kwargs['r_max_binary']
@@ -58,6 +59,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
     if ('snapshot_format' in kwargs.keys()): snapshot_format=kwargs['snapshot_format']
     if ('external_mode' in kwargs.keys()): external_mode=kwargs['external_mode']
     if ('find_multiple' in kwargs.keys()): find_multiple=kwargs['find_multiple']
+    if ('m_ext' in result.keys()): m_ext=result['m_ext']
 
     header = PeTarDataHeader(file_path, **kwargs)
     
@@ -172,8 +174,16 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         if (rcut == 'tidal'):
             if (external_mode!='none'): 
                 tidal = result['tidal']
-                r_gal = np.sqrt(np.sum(core.pos[-1]*core.pos[-1]));
-                rcut = tidal.calcTidalSphere(header.time, particle.mass, particle.r2, pot_ext, r_gal, G);
+                tsel = (core.time == header.time)
+                pos_c = core.pos[tsel]
+                r_gal = np.sqrt(np.sum(pos_c*pos_c))
+                M_galaxy = 0
+                if (m_ext!=None):
+                    tsel = (m_ext[:,0] == header.time)
+                    M_galaxy= m_ext[tsel,1]
+                else:
+                    M_galaxy = estimateGalaxyMass(pot_ext, r_gal, G)
+                rcut = tidal.calcTidalSphere(header.time, particle.mass, particle.r2, M_galaxy, r_gal, G);
             else:
                 raise ValueError('Escape radius is set to tidal radius but the external mode is off')
         if ('e_escape' in kwargs.keys()): 
@@ -247,6 +257,10 @@ def dataProcessList(file_list, read_flag, **kwargs):
         interrupt_mode=kwargs['interrupt_mode']
         if ('bse' in interrupt_mode):
             result['bse_status'] = BSEStatus()
+
+    if ('read_m_ext' in kwargs.keys()):
+        read_m_ext=kwargs['read_m_ext'] # filename of m_ext, (time, m)
+        result['m_ext'] = np.loadtxt(read_m_ext)
 
     for path in file_list:
         #print(' data:',path)

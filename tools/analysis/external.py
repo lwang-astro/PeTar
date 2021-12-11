@@ -68,7 +68,7 @@ class Tidal(DictNpArrayMix):
         keys = [['time', np.float64], ['rtid', np.float64], ['pot', np.float64], ['mass', np.float64], ['n', np.int64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
     
-    def calcTidalSphere(self, time, mass, r2, pot_ext, r_gal, G):
+    def calcTidalSphere(self, time, mass, r2, M_galaxy, r_gal, G):
         """ calculate tidal radius assuming R_tid = M_system/ (3*M_galaxy)^(1/3) * R_galaxy; 
         and potential of the central position by averaging the pot_ext inside core radius
 
@@ -80,8 +80,8 @@ class Tidal(DictNpArrayMix):
             masses of particles
         r2: 1D numpy.ndarray
             the distance square to the center of the system
-        pot_ext: float
-            the external potential of the center of the particle system
+        M_galaxy: float
+            mass of the galaxy
         r_gal: float
             the distance between the center of the particle system to the galactic center
         G: float
@@ -96,7 +96,7 @@ class Tidal(DictNpArrayMix):
 
         mtot = mass.sum()
     
-        M_galaxy = estimateGalaxyMass(pot_ext, r_gal, G)
+        #M_galaxy = estimateGalaxyMass(pot_ext, r_gal, G)
         r_tid = (mtot/(3*M_galaxy))**(1.0/3.0)*r_gal
         rt2 = r_tid*r_tid
         r_tid_old=r_tid*1.2
