@@ -183,7 +183,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
                     M_galaxy= m_ext[tsel,1]
                 else:
                     M_galaxy = estimateGalaxyMass(pot_ext, r_gal, G)
-                rcut = tidal.calcTidalSphere(header.time, particle.mass, particle.r2, M_galaxy, r_gal, G);
+                rcut = tidal.calcTidalSphere(header.time, particle.mass, particle.r2, M_galaxy, pot_ext, r_gal, G);
             else:
                 raise ValueError('Escape radius is set to tidal radius but the external mode is off')
         if ('e_escape' in kwargs.keys()): 
