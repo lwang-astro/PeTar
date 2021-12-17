@@ -457,6 +457,41 @@ public:
     }
 
 #if (defined AR_SLOWDOWN_ARRAY) || (defined AR_SLOWDOWN_TREE)
+
+    //! calculate slowdown timescale
+    void calcSlowDownTimeScale(Float& _t_min_sq, const Float dv[3], const Float dr[3], const Float& r, const Float& gm) {
+
+        Float r2 = r*r;
+        Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
+        Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
+
+        Float semi = 1.0/(2.0/r - v2/gm);
+        //hyperbolic, directly use velocity v
+        if (semi<0) 
+            _t_min_sq = std::min(_t_min_sq, r2/v2);
+        else {
+            Float ra_fact = (1 - r/semi); 
+            Float e2 = drdv*drdv/(gm*semi) + ra_fact*ra_fact; // ecc^2
+            Float r_vrmax = semi*(1-e2);
+            if (r<r_vrmax) {
+                // avoid decrese of vr once the orbit pass, calculate vr max at cos(E)=e (r==semi*(1-e^2))
+                // vr_max = sqrt(er*(drdv^2*er + r*vcr2^2))/(G(m1+m2)r)
+                //        = e*sqrt[G(m1+m2)/(a*(1-e^2)]
+                Float vrmax_sq = e2*gm/r_vrmax;
+                //Float rv2 = r*v2;
+                //Float er = 2*gm - rv2;
+                //Float vcr2 = gm - rv2;
+                //Float vrmax_sq = er*(drdv*drdv*er + r*vcr2*vcr2)/(gm*gm*r2);
+                _t_min_sq = std::min(_t_min_sq, semi*semi/vrmax_sq);
+            }
+            else {
+                // r/vr
+                Float rovr = r2/abs(drdv);
+                _t_min_sq = std::min(_t_min_sq, rovr*rovr);
+            }
+        }
+    }
+
     //! calculate slowdown perturbation and timescale from particle j to particle i
     /*! 
       @param[out] _pert_out: perturbation from particle j
@@ -477,33 +512,10 @@ public:
                        pj.vel[1] - pi.vel[1],
                        pj.vel[2] - pi.vel[2]};
 
-        Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
-        Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
-
         // identify whether hyperbolic or closed orbit
         Float gm = gravitational_constant*(pi.mass+pj.mass);
-        Float semi = 1.0/(2.0/r - v2/gm);
 
-        //hyperbolic, directly use velocity v
-        if (semi<0) 
-            _t_min_sq = std::min(_t_min_sq, r2/v2);
-        else {
-            if (r<semi) {
-                // avoid decrese of vr once the orbit pass, calculate vr max at E=pi/2 (r==semi)
-                // vr_max = sqrt(er*(drdv^2*er + r*vcr2^2))/(G(m1+m2)r)
-                Float rv2 = r*v2;
-                Float er = 2*gm - rv2;
-                Float vcr2 = gm - rv2;
-                Float vrmax_sq = er*(drdv*drdv*er + r*vcr2*vcr2)/(gm*gm*r2);
-                _t_min_sq = std::min(_t_min_sq, semi*semi/vrmax_sq);
-            }
-            else {
-                // r/vr
-                Float rovr = r2/abs(drdv);
-                _t_min_sq = std::min(_t_min_sq, rovr*rovr);
-            }
-        }
-
+        calcSlowDownTimeScale(_t_min_sq, dv, dr, r, gm);
         // force dependent method
         // min sqrt(r^3/(G m))
         //Float gmor3 = (mp+mcm)*r*r2/(sdt->G*mp*mcm);
@@ -581,32 +593,10 @@ public:
                                vp[1] - vcm[1],
                                vp[2] - vcm[2]};
 
-                Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
-                Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
-
                 // identify whether hyperbolic or closed orbit
                 Float gm = gravitational_constant*(mcm+mj);
-                Float semi = 1.0/(2.0/r - v2/gm);
 
-                //hyperbolic, directly use velocity v
-                if (semi<0) 
-                    _t_min_sq = std::min(_t_min_sq, r2/v2);
-                else {
-                    if (r<semi) {
-                        // avoid decrese of vr once the orbit pass, calculate vr max at E=pi/2 (r==semi)
-                        // vr_max = sqrt(er*(drdv^2*er + r*vcr2^2))/(G(m1+m2)r)
-                        Float rv2 = r*v2;
-                        Float er = 2*gm - rv2;
-                        Float vcr2 = gm - rv2;
-                        Float vrmax_sq = er*(drdv*drdv*er + r*vcr2*vcr2)/(gm*gm*r2);
-                        _t_min_sq = std::min(_t_min_sq, semi*semi/vrmax_sq);
-                    }
-                    else {
-                        // r/vr
-                        Float rovr = r2/abs(drdv);
-                        _t_min_sq = std::min(_t_min_sq, rovr*rovr);
-                    }
-                }
+                calcSlowDownTimeScale(_t_min_sq, dv, dr, r, gm);
 #endif
             }
         }
