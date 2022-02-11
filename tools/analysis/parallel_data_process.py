@@ -188,6 +188,11 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
                 raise ValueError('Escape radius is set to tidal radius but the external mode is off')
         if ('e_escape' in kwargs.keys()): 
             es_cut = kwargs['e_escape']
+            if (es_cut == 'bound_noext'):
+                es_cut = 0
+                single.pot -= single.pot_ext
+                binary.p1.pot -= binary.p1.pot_ext
+                binary.p2.pot -= binary.p2.pot_ext
 
         single = esc_single.findEscaper(header.time, single, rcut, es_cut)
         binary = esc_binary.findEscaper(header.time, binary, rcut, es_cut)
