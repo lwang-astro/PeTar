@@ -17,6 +17,8 @@ This readme provide a complete and short documentation to describe how to instal
 Please carefully read it first before asking questions to developers.
 More detail of the algorithms are described in Wang et al. (2020; arXiv: https://arxiv.org/abs/2006.16560).
 The Doxygen documentation for developers is under preparation.
+In the test folder, there are two sample scripts (sample.sh and sample_galpy.sh) showing how to generate initial condition from mcluster, start the simulation and process the data to generate single, binary snapshots, core information and lagrangian radii. 
+sample.sh includes binaries and stellar evolution (bse), sample_galpy.sh add Milky Way potential using galpy based on sample.sh.
 
 The main body of PeTar is written in c++ language. The external modules can have different programme languages.
 The data analysis tool is written in Python3. Users need the basic knowledge of Python to access the simulation data.
