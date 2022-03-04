@@ -55,7 +55,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
     if ('G' in kwargs.keys()): G=kwargs['G']
     if ('r_max_binary' in kwargs.keys()): r_bin=kwargs['r_max_binary']
     if ('average_mode' in kwargs.keys()): average_mode=kwargs['average_mode']
-    if ('simple_binary' in kwargs.keys()): simple_binary=kwargs['simple_binary']
+    if ('simple_mode' in kwargs.keys()): simple_binary=kwargs['simple_mode']
     if ('snapshot_format' in kwargs.keys()): snapshot_format=kwargs['snapshot_format']
     if ('external_mode' in kwargs.keys()): external_mode=kwargs['external_mode']
     if ('find_multiple' in kwargs.keys()): find_multiple=kwargs['find_multiple']

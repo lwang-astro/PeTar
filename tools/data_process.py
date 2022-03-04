@@ -118,7 +118,7 @@ if __name__ == '__main__':
             elif opt in ('-b','--r-max-binary'):
                 kwargs['r_max_binary'] = float(arg)
             elif opt in ('-B','--full-binary'):
-                kwargs['simple_binary'] = False
+                kwargs['simple_mode'] = False
             elif opt in ('-a','--average-mode'):
                 kwargs['average_mode'] = arg
             elif opt in ('-A','--append'):
