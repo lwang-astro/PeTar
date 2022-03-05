@@ -143,7 +143,7 @@ if __name__ == '__main__':
                     ftid_file_flag = True
                 else: kwargs['r_escape'] = float(arg)
             elif opt in ('--e-escape'):
-                kwargs['e_escape'] = float(arg)
+                kwargs['e_escape'] = arg
             elif opt in ('--m-ext'):
                 kwargs['read_m_ext'] = arg
             elif opt in ('--add-star-type'):

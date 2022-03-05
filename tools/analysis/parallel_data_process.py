@@ -115,7 +115,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         core.size+=1
 
         n_frac=m_frac.size+1
-        cm_vel=np.array([0,0,0]) # avoid kinetic energy jump 
+        #cm_vel=np.array([0,0,0]) # avoid kinetic energy jump 
         single.correctCenter(cm_pos, cm_vel)
         binary.correctCenter(cm_pos, cm_vel)
         time_profile['center_core'] += time.time() - start_time
@@ -186,6 +186,8 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
                 rcut = tidal.calcTidalSphere(header.time, particle.mass, particle.r2, M_galaxy, pot_ext, r_gal, G);
             else:
                 raise ValueError('Escape radius is set to tidal radius but the external mode is off')
+        else:
+            rcut = float(rcut)
         if ('e_escape' in kwargs.keys()): 
             es_cut = kwargs['e_escape']
             if (es_cut == 'bound_noext'):
@@ -193,6 +195,8 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
                 single.pot -= single.pot_ext
                 binary.p1.pot -= binary.p1.pot_ext
                 binary.p2.pot -= binary.p2.pot_ext
+            else:
+                es_cut = float(es_cut)
 
         single = esc_single.findEscaper(header.time, single, rcut, es_cut)
         binary = esc_binary.findEscaper(header.time, binary, rcut, es_cut)
