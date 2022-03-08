@@ -101,11 +101,17 @@ The version format has three types:
 
 ## Install
 ### Dependence
-_FDPS_: https://github.com/FDPS/FDPS
+_FDPS_: https://github.com/FDPS/FDPS (please use v6.0 or v7.0; v7.1 may not work)
 
 _SDAR_: https://github.com/lwang-astro/SDAR
 
-These two libraries are necessary to compile _PeTar_. 
+These two libraries are necessary to compile _petar_. 
+Notice that the newest version of _FDPS_ (v7.1) has an issue that might cause a crash of _petar_ with an assertion error of NaN check.
+After git clone of _FDPS_, please checkout the old release v7.0 by 
+```
+git checkout v7.0
+```
+in the _FDPS_ directory.
 
 If users want to use external potential, the _Galpy_ interface is available. Users need to install _Galpy_ either by 
 ```
@@ -261,19 +267,23 @@ where `[mpiexec -n N_mpi]` indicates the number of MPI processors (`N_mpi`); `OM
 
 ### CPU threads
 
-To avoid segmetantional fault in simulations in the case of large number of particles, make sure to set the `OMP_STACKSIZE` large enough, for example, 128M is a good choice. 
+To avoid segmetantional fault in simulations in the case of large number of particles, 
+make sure to set the `OMP_STACKSIZE` large enough, for example, 128M is a good choice. 
+In addition, make sure that the maximum stack size is unlimited by executing the commander `ulimit -s`.
+It should return 'unlimited'. If not, execute `ulimit -s unlimited` before using petar.
 
 To have a better performance, `N_threads` should not be too large (generally <=8).
 
-A convenient way to set `OMP_NUM_THREADS` and `OMP_STACKSIZE`:
+A convenient way to set `OMP_NUM_THREADS`, `OMP_STACKSIZE` and `ulimit -s`:
 Add the lines
 ```
 export OMP_STACKSIZE=128M
 export OMP_NUM_THREADS=N_threads
+ulimit -s unlimited
 ```
 in the shell configure/initial file (e.g. .bashrc for _bash_).
-Then, next time when a shell is open or `source ~/.bashrc`, these two enviroment variables are automatically set, and thus, `OMP_STACKSIZE=128M OMP_NUM_THREADS=N_threads` can be removed from the _petar_ commmander line.
-
+Then, next time when a shell is open or `source ~/.bashrc`, the two environment variables are automatically set and the maximum stack size is set to unlimited.
+Thus, `OMP_STACKSIZE=128M OMP_NUM_THREADS=N_threads` can be removed from the _petar_ commmander line.
 
 ### MPI processors
 In a multi-nodes cumputing cluster, the way to set `N_threads` and `N_mpi` can be different, please refer to the documentation of the computing cluster.
