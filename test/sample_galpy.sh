@@ -14,7 +14,7 @@ petar.init -c 8000,0,0,0,220,0 -t -s bse -v kms2pcmyr -f input test.dat.10
 # the OpenMP number needs to be adjusted based on number of CPU cores
 # the Galactic potential MWPotential2014 from galpy is used. 
 # the metallicity of stars is Z=0.02
-OMP_NUM_THREADS=8 OMP_NUM_STACKSIZE=128M petar -u 1 -b 500 --galpy-set MWPotential2014 --bse-metallicity 0.02 -t 100.0 -o 5.0 input &>output
+OMP_NUM_THREADS=8 OMP_STACKSIZE=128M petar -u 1 -b 500 --galpy-set MWPotential2014 --bse-metallicity 0.02 -t 100.0 -o 5.0 input &>output
 
 # after mode finished, gether the output data and do post-data process to detect binaries, obtain Lagrangian and core radii and corresponding properties.
 # to obtain the estimation of tidal radius, using '--r-escape tidal'
