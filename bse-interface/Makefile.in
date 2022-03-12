@@ -25,6 +25,7 @@ CXX=@CXX@
 #FFLAGS = -O2 -Wall -finit-real=nan 
 CXXFLAGS += @CXXFLAGS@ @OPTFLAGS@ @OPENMP_CXXFLAGS@
 FFLAGS += @FCFLAGS@
+FCLIBS = @FCLIBS@
 #FFLIBS += @FLIBS@
 #FFLAGS= -g -O0 -Wall -finit-real=nan -fbounds-check
 #CXXFLAGS= -g -O2 -Wall -std=c++11 -fbounds-check
@@ -45,7 +46,7 @@ $(BSE_LIB): $(OBJ) $(OBJCXX)
 	ar rcs $@ $^
 
 $(BSE_TEST): bse_test.cxx $(BSE_LIB) bse_interface.h
-	$(CXX) $(CXXFLAGS) $< -o $@ -L./ -lbse -lgfortran 
+	$(CXX) $(CXXFLAGS) $< -o $@ -L./ -lbse $(FCLIBS)
 
 petar.get.init.binary: get_init_binary_bse.sh
 	ln -sf $< $@
