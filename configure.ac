@@ -98,10 +98,10 @@ AX_CHECK_COMPILE_FLAG([-Wall],
                       [OPTFLAGS=$OPTFLAGS" -Wall"
                        DEBFLAGS=$DEBFLAGS" -Wall"])
 
-AX_CHECK_COMPILE_FLAG([-std=c++11],
-                      [OPTFLAGS=$OPTFLAGS" -std=c++11"
-                       DEBFLAGS=$DEBFLAGS" -std=c++11"
-		       CUDAFLAGS=$CUDAFLAGS" -std=c++11"],
+AX_CHECK_COMPILE_FLAG([-std=c++17],
+                      [OPTFLAGS=$OPTFLAGS" -std=c++17"
+                       DEBFLAGS=$DEBFLAGS" -std=c++17"
+		       CUDAFLAGS=$CUDAFLAGS" -std=c++17"],
                       [AC_MSG_FAILURE([c++11 support is required for the compiler])])
 
 # OpenMP
@@ -311,14 +311,21 @@ AC_ARG_WITH([step-mode],
 	    [with_step_mode=kdk])
 
 # interruption options
+FCFLAGS_BK=$FCFLAGS
 AC_ARG_WITH([interrupt],
 	    [AS_HELP_STRING([--with-interrupt],
 	                    [Interruption detection mode: Default: off])],
             [PROG_NAME=$PROG_NAME'.'$with_interrupt
 	     AS_IF([[test x"$with_interrupt" == xbse] || [test x"$with_interrupt" == xmobse] || [test x"$with_interrupt" == xbseEmp]],
-	           [FCFLAGS_BK=$FCFLAGS
-                    use_fortran=yes
-                    AC_PROG_FC([gfortran ifort])
+	           [use_fortran=yes
+		    AC_LANG([Fortran])
+                    #AC_PROG_FC([gfortran ifort flang])
+		    AS_IF([test x"$FC" == xgfortran],
+		          [FCLIBS=$FCLIBS' -lgfortran'],[])
+		    AS_IF([test x"$FC" == xflang],
+		          [#AX_CHECK_COMPILE_FLAG([-static-flang-libs],
+                          #                       [FCFLAGS=$FCFLAGS" -static-flang-libs"])
+		          FCLIBS=$FCLIBS' -lflang'],[])
                     FCFLAGS=$FCFLAGS_BK
 		    AS_IF([test x"$with_debug" == xg],
                           [AX_CHECK_COMPILE_FLAG([-g],
@@ -341,7 +348,8 @@ AC_ARG_WITH([external],
 	                    [External potential: Default: off])],
             [PROG_NAME=$PROG_NAME'.'$with_external
 	     AS_IF([test x"$with_external" == xgalpy],
-	           [AC_PROG_CC([fcc gcc icc cc])
+	           [AC_LANG([C])
+		    #AC_PROG_CC([fcc gcc icc cc])
                     use_c=yes
 		    AS_IF([test x"$with_debug" == xg],
                           [AX_CHECK_COMPILE_FLAG([-g],
@@ -460,6 +468,8 @@ AC_SUBST([CXXNOMPI])
 AC_SUBST([VERSION])
 AC_SUBST([FDPS_VERSION])
 AC_SUBST([use_fdps_comm])
+AC_SUBST([FCLIBS])
+AC_SUBST([FLIBS])
 
 AC_MSG_NOTICE([----------------------Configure Summary--------------------])
 AC_MSG_NOTICE([--Features:])
