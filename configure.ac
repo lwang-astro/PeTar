@@ -219,7 +219,9 @@ AS_IF([test "x$use_cuda" != xno],
                      [CUDAFLAGS=$CUDAFLAGS" -I $cuda_prefix/samples/common/inc"],
                      [AC_CHECK_FILE(["$cuda_sdk_prefix/common/inc/helper_cuda.h"],
                                     [CUDAFLAGS=$CUDAFLAGS" -I $cuda_sdk_prefix/common/inc"],
-                                    [AC_MSG_FAILURE([can't find CUDA sample inc file helper_cuda.h, please provide correct cuda SDK prefix by using --with-cuda-sdk-prefix])])])
+                                    [AC_CHECK_FILE(["$cuda_sdk_prefix/Common/helper_cuda.h"],
+                                                   [CUDAFLAGS=$CUDAFLAGS" -I $cuda_sdk_prefix/Common"],
+                                                   [ AC_MSG_FAILURE([can't find CUDA sample inc file helper_cuda.h, please provide correct cuda SDK prefix by using --with-cuda-sdk-prefix])])])])
 
        AC_CHECK_LIB([cudart],
                     [main], 
