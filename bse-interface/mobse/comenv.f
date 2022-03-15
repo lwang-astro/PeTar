@@ -16,6 +16,9 @@
 *     Date :  15th May 2017 (SNexplosion)
 *     Date :  19th February 2021 (Hyperbolic orbits)
 *
+*     Last bug fixed: M. Mapelli
+*     Date : 14th March 2022
+*      
       IMPLICIT NONE
 *
       INTEGER KW1,KW2,KW
@@ -356,8 +359,11 @@ c      endif
             CALL gntage(MC1,M1,KW,ZPARS,M01,AJ1)
             CALL star(KW,M01,M1,TM1,TN,TSCLS1,LUMS,GB,ZPARS)
          ENDIF
+*     MM: last bug fixed on 2022/03/14: please check your version
          CALL hrdiag(M01,AJ1,M1,TM1,TN,TSCLS1,LUMS,GB,ZPARS,
-     &               R1,L1,KW,MC1,RC1,MENV,RENV,K21)
+     &        R1,L1,KW,MC1,RC1,MENV,RENV,K21,
+     &        FFB,ECS,MFIN)
+*     MM: end last bug fixed on 2022/03/14: please check your version
          JSPIN1 = OORB*(K21*R1*R1*(M1-MC1)+K3*RC1*RC1*MC1)
          KW1 = KW
          ECC = 0.D0
