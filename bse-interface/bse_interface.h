@@ -674,7 +674,7 @@ public:
                    //ifflag(input_par_store, 2,   "if > 0 uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
                    wdflag(input_par_store, 1,       "mobse-wdflag", "if >0, uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
                    bhflag(input_par_store, 3,       "mobse-bhflag", "BH kick option: 0: no kick; 1: same as NS; 2: scaled by fallback; 3: Giacobbo&Mapelli (2020)"),
-                   nsflag(input_par_store, 3,       "mobse-nsflag", "NS/BH foramtion options: 0: original SSE; 2: Belczynski (2008); 2: Fryer (2012) rapid SN; 2: Fryer (2012) delayed SN; 4: Belczynski (2008); 5: no SN explosion"),
+                   nsflag(input_par_store, 3,       "mobse-nsflag", "NS/BH formation options: 0: original SSE; 1: Belczynski (2008); 2: Fryer (2012) rapid SN; 3: Fryer (2012) delayed SN; 4: Belczynski (2008); 5: no SN explosion"),
                    piflag(input_par_store, 1,       "mobse-piflag", "PPSN condition (Spera et al. 2015)"),
                    //psflag(input_par_store, 1,  "PPSN condition (Belczynski 2016): 0: no PPSN; 1: strong; (Leung 2019): 2: moderate; 3: weak"),
                    //kmech (input_par_store, 1,  "Kick mechanism: 1: standard momentum-conserving; 2: convection-asymmetry-driven; 3: collapse-asymmerty-driven; 4: neutrino driven"),
