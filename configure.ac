@@ -98,11 +98,17 @@ AX_CHECK_COMPILE_FLAG([-Wall],
                       [OPTFLAGS=$OPTFLAGS" -Wall"
                        DEBFLAGS=$DEBFLAGS" -Wall"])
 
-AX_CHECK_COMPILE_FLAG([-std=c++17],
-                      [OPTFLAGS=$OPTFLAGS" -std=c++17"
-                       DEBFLAGS=$DEBFLAGS" -std=c++17"
-		       CUDAFLAGS=$CUDAFLAGS" -std=c++17"],
-                      [AC_MSG_FAILURE([c++11 support is required for the compiler])])
+AC_ARG_WITH([cpp-std],
+	    [AS_HELP_STRING([--with-cpp-std],
+                            [version of c++ standard (11, 17). Default: 17])],
+            [],
+	    [with_cpp_std=17])
+
+AX_CHECK_COMPILE_FLAG([-std=c++$with_cpp_std],
+                      [OPTFLAGS=$OPTFLAGS" -std=c++"$with_cpp_std
+                       DEBFLAGS=$DEBFLAGS" -std=c++"$with_cpp_std
+		       CUDAFLAGS=$CUDAFLAGS" -std=c++"$with_cpp_std],
+                      [AC_MSG_FAILURE([c++$with_cpp_std support is required for the compiler])])
 
 # OpenMP
 AC_ARG_ENABLE([openmp],
