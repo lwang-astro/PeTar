@@ -422,6 +422,10 @@ class PlotSemiEcc:
         self.semi_max = 0.1
         self.ecc_min = 0.0
         self.ecc_max = 1.0
+        self.mass_power = 1.0
+        self.marker_scale = 1.0
+        self.cm_mode = 'core'
+        self.r_max = 2.0
         self.ptcls = []
 
     def init(self, axe, **kwargs):
@@ -439,10 +443,36 @@ class PlotSemiEcc:
         axe.set_ylabel('ecc')
         return self.ptcls
 
-    def plot(self, semi, ecc, types):
-        colors = cm.rainbow(types/13.0)
-        self.ptcls[0].set_offsets(np.array([semi, ecc]).transpose())
+    def plot(self, data):
+        #colors = cm.rainbow(types/13.0)
+        sizes = data.data.mass**self.mass_power*self.marker_scale
+        core_correct = (self.cm_mode=='core') & (data.generate_binary != 2)
+        origin_mode = (self.cm_mode=='none')
+        xcm = data.header.pos_offset[0]
+        ycm = data.header.pos_offset[1]
+        zcm = data.header.pos_offset[2]
+        x = data.data.pos[:,0]
+        y = data.data.pos[:,1]
+        z = data.data.pos[:,2]
+        if (core_correct):
+            xc = data.core.pos[0,0]
+            yc = data.core.pos[0,1]
+            zc = data.core.pos[0,2]
+            x += xcm - xc
+            y += ycm - yc
+            z += zcm - xc
+            xcm = xc
+            ycm = yc
+            zcm = zc
+        elif (origin_mode):
+            x += xcm
+            y += ycm
+            z += zcm
+        r = np.sqrt(x*x+y*y+z*z)
+        colors = cm.hot(r/self.r_max)
+        self.ptcls[0].set_offsets(np.array([data.semi, data.ecc]).transpose())
         self.ptcls[0].set_color(colors)
+        self.ptcls[0].set_sizes(sizes)
         return self.ptcls
 
 class PlotLagr:
@@ -670,7 +700,7 @@ def plotOne(file_path, axe, plots, core, lagr, **kwargs):
                 ptcls = ptcls + plots['plot'][iaxe].plot(data.lum, data.temp, data.type)
 
         if pi[0] == 'plot_semi_ecc':
-            ptcls = ptcls + plots['plot'][iaxe].plot(data.semi, data.ecc, data.state)
+            ptcls = ptcls + plots['plot'][iaxe].plot(data)
 
         if pi[0] == 'plot_lagr':
             ptcls = ptcls + plots['plot'][iaxe].plot(lagr, data['t'])
@@ -862,6 +892,8 @@ if __name__ == '__main__':
         print("  -R [F]: x- and y-axis length of -m; suppressed when --x-min/max, --y-min/max are used: ",pxy.boxsize)
         print("  -H    : add one panel of HR-diagram")
         print("  -b    : add one panel of semi-ecc diagram for binaries")
+        print("          colors indicate the distance of binaries to the center, normalized by --r-max")
+        print("          sizes indicate the mass based on scaling option --markser-scale and --mass-power")
         print("  -L [S]: add one panel of Lagrangian radii evolution, argument is filename of lagrangian data", lagr_file)
         print("          Here the filename is not used in the comparison mode")
         print("  -G [F]: gravitational constant for calculating binary orbit: ",data.G)
@@ -905,6 +937,7 @@ if __name__ == '__main__':
         print("  --pot-max     [F]: maximum potential: ",data.pot_max)
         print("  --etot-min    [F]: minimum total energy: ",data.etot_min)
         print("  --etot-max    [F]: maximum total energy: ",data.etot_max)
+        print("  --r-max       [F]: maximum distance for color scaling in semi-ecc plot",pse.r_max)
         print("  --rlagr-min   [F]: minimum radius in Lagrangian plot: ", plagr.rlagr_min)
         print("  --rlagr-max   [F]: maximum radius in Lagrangian plot: ", plagr.rlagr_max)
         print("  --rlagr-scale [S]: scaling of Lagrangian radii in the plot (y-axis): ",plagr.rlagr_scale)
@@ -940,7 +973,7 @@ if __name__ == '__main__':
         longargs = ['help','n-cpu=','lum-min=','lum-max=','temp-min=','temp-max=',
                     'semi-min=','semi-max=','ecc-min=','ecc-max=',
                     'ekin-min=','ekin-max=','pot-min=','pot-max=','etot-min=','etot-max=',
-                    'rlagr-min=','rlagr-max=','rlagr-scale=',
+                    'rlagr-min=','rlagr-max=','rlagr-scale=','r-max=',
                     'lagr-energy','lagr-type=','lagr-mfrac=',
                     'time-min=','time-max=','x-min=','x-max=','y-min=','y-max=',
                     'unit-length=','unit-vel=','format-time=',
@@ -1045,6 +1078,8 @@ if __name__ == '__main__':
                 kwargs['etot_min'] = float(arg)
             elif opt in ('--etot-max'):
                 kwargs['etot_max'] = float(arg)
+            elif opt in ('--r-max'):
+                kwargs['r_max'] = float(arg)
             elif opt in ('--rlagr-min'):
                 kwargs['rlagr_min'] = float(arg)
             elif opt in ('--rlagr-max'):
