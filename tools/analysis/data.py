@@ -179,13 +179,19 @@ class SimpleParticle(DictNpArrayMix):
     def calcR2(self):
         """ calculate distance square, r2, and add/update it as a class member
         """
-        r2 = vecDot(self.pos,self.pos)
+        if (self.size>0):
+            r2 = vecDot(self.pos,self.pos)
+        else:
+            r2 = np.array([])
         self.addNewMember('r2',r2)
 
     def calcEkin(self):
         """ calculate kinetic energy, ekin, and add/update it as a class member
         """
-        ekin = 0.5*vecDot(self.vel,self.vel)*self.mass
+        if (self.size>0):
+            ekin = 0.5*vecDot(self.vel,self.vel)*self.mass
+        else:
+            ekin = np.array([])
         self.addNewMember('ekin',ekin)
 
     def correctCenter(self, cm_pos, cm_vel):
@@ -572,22 +578,39 @@ class Binary(SimpleParticle):
         else:
             raise ValueError('Initial fail, date type should be Particle (2), Binary (1) or no argument (0)')
 
-    def calcEkin(self):
+    def calcEkin(self, member_also=False):
         """ Calculate c.m. kinetic energy, ekin, and add it as a member
         """
-        ekin = 0.5*vecDot(self.vel,self.vel)*self.mass
+        if (self.size>0):
+            ekin = 0.5*vecDot(self.vel,self.vel)*self.mass
+        else:
+            ekin = np.array([])
         self.addNewMember('ekin',ekin)
+        if (member_also):
+            ncols = self.p1.ncols + self.p2.ncols
+            self.p1.calcEkin()
+            self.p2.calcEkin()
+            self.ncols += self.p1.ncols + self.p2.ncols - ncols
+            
 
-    def calcEtot(self):
+    def calcEtot(self, member_also=False):
         """ Calculate c.m. total energy (binary energy is excluded) , etot, and add it as a member
         """
         etot = self.ekin + self.mass*self.pot
         self.addNewMember('etot',etot)
+        if (member_also):
+            ncols = self.p1.ncols + self.p2.ncols
+            self.p1.calcEtot()
+            self.p2.calcEtot()
+            self.ncols += self.p1.ncols + self.p2.ncols - ncols
 
     def calcR2(self, member_also=False):
         """ Calculate c.m. distance square, r2, and add it as a member
         """
-        r2 = vecDot(self.pos,self.pos)
+        if (self.size>0):
+            r2 = vecDot(self.pos,self.pos)
+        else:
+            r2 = np.array([])
         self.addNewMember('r2',r2)
         if (member_also):
             ncols = self.p1.ncols + self.p2.ncols
