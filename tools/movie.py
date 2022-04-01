@@ -445,15 +445,15 @@ class PlotSemiEcc:
 
     def plot(self, data):
         #colors = cm.rainbow(types/13.0)
-        sizes = data.data.mass**self.mass_power*self.marker_scale
+        sizes = data.binary.mass**self.mass_power*self.marker_scale
         core_correct = (self.cm_mode=='core') & (data.generate_binary != 2)
         origin_mode = (self.cm_mode=='none')
         xcm = data.header.pos_offset[0]
         ycm = data.header.pos_offset[1]
         zcm = data.header.pos_offset[2]
-        x = data.data.pos[:,0]
-        y = data.data.pos[:,1]
-        z = data.data.pos[:,2]
+        x = data.binary.pos[:,0]
+        y = data.binary.pos[:,1]
+        z = data.binary.pos[:,2]
         if (core_correct):
             xc = data.core.pos[0,0]
             yc = data.core.pos[0,1]
@@ -470,7 +470,7 @@ class PlotSemiEcc:
             z += zcm
         r = np.sqrt(x*x+y*y+z*z)
         colors = cm.hot(r/self.r_max)
-        self.ptcls[0].set_offsets(np.array([data.semi, data.ecc]).transpose())
+        self.ptcls[0].set_offsets(np.array([data.binary.semi, data.binary.ecc]).transpose())
         self.ptcls[0].set_color(colors)
         self.ptcls[0].set_sizes(sizes)
         return self.ptcls
@@ -594,9 +594,7 @@ class Data:
                     data['skycm'] = data['core'].toSkyCoord()[0]
                     #print(data['core'].pos,data['core'].vel,data['skycm'].icrs)
 
-                data['semi'] = binary.semi
-                data['ecc'] = binary.ecc
-                data['state'] = binary.p1.binary_state
+                data['binary'] = binary
                 if ('bse' in self.interrupt_mode):
                     data['lum'] = np.concatenate((single.star.lum, binary.p1.star.lum, binary.p2.star.lum))
                     data['rad'] = np.concatenate((single.star.rad, binary.p1.star.rad, binary.p2.star.rad))
@@ -622,9 +620,7 @@ class Data:
                         data['skycm'] = header.toSkyCoord()
                         
                 kdtree,single,binary = petar.findPair(particles, self.G, self.semi_max*2.0, True)
-                data['semi'] = binary.semi
-                data['ecc'] = binary.ecc
-                data['state'] = binary.p1.binary_state
+                data['binary'] = binary
                 if ('bse' in self.interrupt_mode):
                     data['lum'] = particles.star.lum
                     data['rad'] = particles.star.rad
