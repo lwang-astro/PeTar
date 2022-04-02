@@ -725,6 +725,7 @@ ac_user_opts='
 enable_option_checking
 with_mpi
 with_debug
+with_cpp_std
 enable_openmp
 with_arch
 with_simd
@@ -1397,6 +1398,7 @@ Optional Packages:
   --with-debug            Switch on debugging mode (g: enable debugger
                           support; assert: enable assertion; no: none).
                           Default: no
+  --with-cpp-std          version of c++ standard (11, 17). Default: 17
   --with-arch             compile with architecture type (x86, fugaku).
                           Default: x86
   --with-simd             compile with x86 architecture support (avx, avx2,
@@ -3690,14 +3692,24 @@ else
 fi
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -std=c++17" >&5
-$as_echo_n "checking whether C++ compiler accepts -std=c++17... " >&6; }
-if ${ax_cv_check_cxxflags___std_cpp17+:} false; then :
+
+# Check whether --with-cpp-std was given.
+if test "${with_cpp_std+set}" = set; then :
+  withval=$with_cpp_std;
+else
+  with_cpp_std=17
+fi
+
+
+as_CACHEVAR=`$as_echo "ax_cv_check_cxxflags__-std=c++$with_cpp_std" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether C++ compiler accepts -std=c++$with_cpp_std" >&5
+$as_echo_n "checking whether C++ compiler accepts -std=c++$with_cpp_std... " >&6; }
+if eval \${$as_CACHEVAR+:} false; then :
   $as_echo_n "(cached) " >&6
 else
 
   ax_check_save_flags=$CXXFLAGS
-  CXXFLAGS="$CXXFLAGS  -std=c++17"
+  CXXFLAGS="$CXXFLAGS  -std=c++$with_cpp_std"
   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -3710,23 +3722,24 @@ main ()
 }
 _ACEOF
 if ac_fn_cxx_try_compile "$LINENO"; then :
-  ax_cv_check_cxxflags___std_cpp17=yes
+  eval "$as_CACHEVAR=yes"
 else
-  ax_cv_check_cxxflags___std_cpp17=no
+  eval "$as_CACHEVAR=no"
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
   CXXFLAGS=$ax_check_save_flags
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_cxxflags___std_cpp17" >&5
-$as_echo "$ax_cv_check_cxxflags___std_cpp17" >&6; }
-if test x"$ax_cv_check_cxxflags___std_cpp17" = xyes; then :
-  OPTFLAGS=$OPTFLAGS" -std=c++17"
-                       DEBFLAGS=$DEBFLAGS" -std=c++17"
-		       CUDAFLAGS=$CUDAFLAGS" -std=c++17"
+eval ac_res=\$$as_CACHEVAR
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if test x"`eval 'as_val=${'$as_CACHEVAR'};$as_echo "$as_val"'`" = xyes; then :
+  OPTFLAGS=$OPTFLAGS" -std=c++"$with_cpp_std
+                       DEBFLAGS=$DEBFLAGS" -std=c++"$with_cpp_std
+		       CUDAFLAGS=$CUDAFLAGS" -std=c++"$with_cpp_std
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "c++11 support is required for the compiler
+as_fn_error $? "c++$with_cpp_std support is required for the compiler
 See \`config.log' for more details" "$LINENO" 5; }
 fi
 
