@@ -82,6 +82,48 @@ def calcTcr(M, rh, G):
     """
     return rh**1.5/np.sqrt(G*M)
 
+def calcGWMyr(m1, m2, semi, ecc):
+    """ Calculate GW merge timescale in Myr using Peters (1964) formula
+    If ecc >1.0, return np.NaN
+
+    Parameters
+    ----------
+    m1: 1D numpy.ndarray or float
+        mass 1 (Msun)
+    m2: 1D numpy.ndarray or float
+        mass 1 (Msun)
+    semi: 1D numpy.ndarray or float
+        semi-major axies (pc)
+    ecc: 1D numpy.ndarray or float
+        eccentricity
+    """    
+ 
+    pc_to_au = 206264.81
+
+    # Merging time in myr for one, hyperbolic orbit returns nan
+    def time_gw_myr_one(_m1_msun, _m2_msun, _semi_au, _ecc):
+     
+        G=4*np.pi**2 # gravitational constant in Msun, AU, year
+        c=173*365.25 # speed of light
+        beta = (64.0/5.0)*G**3*_m1_msun*_m2_msun*(_m1_msun+_m2_msun)/c**5
+        
+        if (_ecc==0.0):
+            return _semi_au**4/(4*beta)*1e-6
+        elif (_ecc>=1.0):
+            return np.NaN
+        else:
+            c0 = _semi_au/(_ecc**(12.0/19.0)/(1-_ecc**2)*(1+(121.0/304.0)*_ecc**2)**(870.0/2299.0))
+            def e_fun(ecc_):
+                return ecc_**(29.0/19.0)*(1+(121.0/304.0)*ecc_**2)**(1181.0/2299.0)/(1-ecc_**2)**1.5
+            eint=integrate.quad(e_fun,0,_ecc)
+            return (12.0/19.0)*c0**4/beta*(eint[0])*1e-6
+
+    semi_au = semi*pc_to_au
+    if (type(m1) == np.ndarray | type(m1) == list):
+        return np.array(list(map(time_gw_myr_one,m1,m2,semi_au,ecc)))
+    else: 
+        return time_gw_yr(m1, m2, semi_au, ecc)
+
 def convergentPointCheck(data, velocity):
     """ calculate proper motions in the frame of convergent point based on the given velocity and calculate the residuals 
         The method is described in e.g., van Leeuwen F., 2009, A\&A, 497, 209. doi:10.1051/0004-6361/200811382; 
@@ -213,3 +255,4 @@ def coordinateCorrection(data, snap_center, obs_center, **kwargs):
                       frame='galactocentric', representation_type='spherical', **parameters)
     
     return data_c
+
