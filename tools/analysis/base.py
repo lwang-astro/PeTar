@@ -312,6 +312,33 @@ class DictNpArrayMix:
                 icol += ncols
         return dat_out
 
+    def printTable(self, column_format):
+        """
+        print Table with defined column list and formats
+
+        Parameters
+        column_format: a list of column label (class member name) and format, enclosed by tuple, for sub-member, use . to access
+                       For exmaple: [(key1,'%s'), (key2,'%12.7f'), (key3.subkey1,'%d'), (key3.subkey2,'%e')]
+        """
+        if self.size==0: return
+        table=[]
+        fmt_list=''
+        for key, fmt in column_format:
+            keylst = key.split('.')
+            dat_key=self
+            for ikey in keylst:
+                if '[' in ikey:
+                    key_name, index = ikey.split('[')
+                    index = int(index.split(']')[0])
+                    dat_key = dat_key[key_name][:,index]
+                else:
+                    dat_key = dat_key[ikey]
+            table.append(dat_key)
+            fmt_list += fmt
+        table=np.transpose(np.array(table))
+        for line in table:
+            print(fmt_list % tuple(line))
+
     def append(self, *_dat):
         """ Map the numpy.append function to each member
         Append the numpy.ndarray of each member in a group of input data to the corresponding member in self

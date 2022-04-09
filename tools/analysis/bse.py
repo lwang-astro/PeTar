@@ -73,7 +73,7 @@ class SSEType(DictNpArrayMix):
     Keys: (class members), the corresponding stellar type index used in SSE is shown in [] at the end
         LMS (1D): deeply or fully convective low mass MS star [0]
         MS  (1D): Main Sequence star [1]
-        HG  (1D): Hertzsprung Gap [2]
+prin       HG  (1D): Hertzsprung Gap [2]
         GB  (1D): First Giant Branch [3]
         CHeB (1D): Core Helium Burning [4]
         FAGB (1D): First Asymptotic Giant Branch [5]
@@ -443,15 +443,18 @@ class BSEMerge(DictNpArrayMix):
     def printTableTitle(self):
         """ Print table title for the merger information
         """
-        print("%12s %8s %8s %12s %12s %8s %8s %12s %12s %8s %12s" %('Time[Myr]','id1','id2','semi[R*]','ecc','kw1(i)','kw2(i)','m1[M*](i)','m2[M*](i)','kw(f)','m[M*](f)'))
+        print("%12s %8s %8s %10s %10s %8s %8s %12s %12s %8s %12s" %('Time[Myr]','id1','id2','semi[R*]','ecc','kw1(i)','kw2(i)','m1[M*](i)','m2[M*](i)','kw(f)','m[M*](f)'))
 
     def printTable(self):
         """ Print merger information in a formated table
         """
-        if (self.size>0):
-            table=self.getherDataToArray()
-            for line in table:
-                print("%12.7f %8d %8d %10.7g %10.7g %8d %8d %12.7f %12.7f %8d %12.7f" % tuple(line))   
+        col_fmt = [('time','%12.7f '),
+                   ('id1','%8d '), ('id2','%8d '),
+                   ('semi','%10.7g '), ('ecc','%10.7g '),
+                   ('kw1','%8d '), ('kw2','%8d '),
+                   ('m1','%12.7f '), ('m2','%12.7f '),
+                   ('kwf','%8d '), ('mf','%12.7f')]
+        DictNpArrayMix.printTable(self, col_fmt)
 
 def find_merge_tree(merger_list, merger_root):
     """ Find the merger tree for a given merger
