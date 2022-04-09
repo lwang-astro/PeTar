@@ -14,7 +14,11 @@ extern "C" {
 
     static PeTar* ptr=NULL;
     static double time_start = 0.0;
+#ifdef USE_SIMD
     static CalcForcePPSimd<ParticleBase,FPSoft> fcalc; // Force calculator
+#else
+    static CalcForcePPNoSimd<ParticleBase,FPSoft> fcalc;
+#endif
     static int n_particle_in_interrupt_connected_cluster_glb; // 
 
     // flags
