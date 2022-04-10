@@ -436,8 +436,21 @@ class BSEMerge(DictNpArrayMix):
         merge['kw2']=np.concatenate((se_merge.init.type2,dyn_merge.init.p2.type))[tsort]
         merge['m1']=np.concatenate((se_merge.init.m1,dyn_merge.init.p1.mass))[tsort]
         merge['m2']=np.concatenate((se_merge.init.m2,dyn_merge.init.p2.mass))[tsort]
-        merge['kwf']=np.concatenate((se_merge.final.type1,dyn_merge.final.p1.type))[tsort]
-        merge['mf']=np.concatenate((np.maximum(se_merge.final.m1,se_merge.final.m2),np.maximum(dyn_merge.final.p1.mass,dyn_merge.final.p2.mass)))[tsort]
+
+        se_kwf = se_merge.final.type1
+        se_mf = se_merge.final.m1
+        se_mf2_sel = (se_merge.final.m1 == 0)
+        se_kwf[se_mf2_sel] = se_merge.final.type2[se_mf2_sel]
+        se_mf[se_mf2_sel] = se_merge.final.m2[se_mf2_sel]
+
+        dyn_kwf = dyn_merge.final.p1.type
+        dyn_mf = dyn_merge.final.p1.mass
+        dyn_mf2_sel = (dyn_merge.final.p1.mass == 0)
+        dyn_kwf[dyn_mf2_sel] = dyn_merge.final.p2.type[dyn_mf2_sel]
+        dyn_mf[dyn_mf2_sel] = dyn_merge.final.p2.mass[dyn_mf2_sel]
+
+        merge['kwf']=np.concatenate((se_kwf, dyn_kwf))[tsort]
+        merge['mf']=np.concatenate((se_mf, dyn_mf))[tsort]
         self.size=merge['time'].size
 
     def printTableTitle(self):
