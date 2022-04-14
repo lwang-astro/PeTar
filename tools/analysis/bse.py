@@ -73,7 +73,7 @@ class SSEType(DictNpArrayMix):
     Keys: (class members), the corresponding stellar type index used in SSE is shown in [] at the end
         LMS (1D): deeply or fully convective low mass MS star [0]
         MS  (1D): Main Sequence star [1]
-prin       HG  (1D): Hertzsprung Gap [2]
+        HG  (1D): Hertzsprung Gap [2]
         GB  (1D): First Giant Branch [3]
         CHeB (1D): Core Helium Burning [4]
         FAGB (1D): First Asymptotic Giant Branch [5]
@@ -410,8 +410,62 @@ class BSEMerge(DictNpArrayMix):
               ['m1',np.float64],['m2',np.float64],['kwf',np.int64],['mf',np.float64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
+
+    def getMergeFromTypeChange(self,type_change):
+        """
+        Find mergers from binary type change data, and find the first initial data and mix it with the final data as the final merger
+        """
+        
+        def calc_ubid(_type_change):
+            """
+            Calculate unique id including bid and final time
+            """
+            return cantorPairing(_type_change.bid, (np.log(_type_change.final.time)*1e6).astype(int))
+        
+        # find mergers
+        type_change.generateBinaryID()
+        sel_merge = ((type_change.final.m1==0) & (type_change.init.m1>0))| ((type_change.final.m2==0) & (type_change.init.m2>0))
+        merge_final = type_change[sel_merge]
+        bid_merge = merge_final.bid
+        
+        # if no merger
+        if (bid_merge.size==0): return merge_final
+        
+        # get ubid and sort merger by ubid
+        ubid_merge = calc_ubid(merge_final)
+        sindex = ubid_merge.argsort()
+        merge_final = merge_final[sindex]
+        ubid_merge = ubid_merge[sindex]
+        
+        # get merger progenitor history
+        sel_history=np.in1d(type_change.bid, bid_merge)
+        merge_history = type_change[sel_history]
+        ubid_history = calc_ubid(merge_history)
+        
+        # find merger history with same ubid to obtain the first initial status
+        temp, index = np.unique(ubid_history, return_index=True)
+        ubid_history_unique = ubid_history[index]
+        sel_merge_init = np.in1d(ubid_history_unique, ubid_merge)
+        ubid_merge_init = ubid_history_unique[sel_merge_init]
+        merge_init = merge_history[index][sel_merge_init]
+        # sort merge init with ubid
+        sindex = ubid_merge_init.argsort()
+        merge_init = merge_init[sindex]
+        ubid_merge_init = ubid_merge_init[sindex]
+        
+        # validate whether the ubid of init and final data match
+        match_check = (ubid_merge-ubid_merge_init).sum()
+        if (match_check>0):
+            raise ValueError('Find merger initial status fails, ubid unmatch, the sum value is %d, should be zero!' % match_check)
+        
+        # get merge init status as init and final status as final
+        merge_mix = merge_init
+        merge_mix.final = merge_final.final
+        return merge_mix
+
     def combine(self, type_change, dyn_merge):
         """ Find mergers from type_change and combine them with those from dynamical merge
+        bid will be generated
         
         Parameters:
         -----------
@@ -419,15 +473,16 @@ class BSEMerge(DictNpArrayMix):
         dyn_merge: BSEDynamicMerge data
         """
         #type_change.generateBinaryID()
-        sel = (type_change.final.m1==0) | (type_change.final.m2==0)
-        se_merge = type_change[sel]
+        #sel = (type_change.final.m1==0) | (type_change.final.m2==0)
+        #se_merge = type_change[sel]
+        se_merge = self.getMergeFromTypeChange(type_change)
 
-        #dyn_merge.generateBinaryID()
+        dyn_merge.generateBinaryID()
         merge = self.__dict__
         merge['time']=np.concatenate((se_merge.final.time,dyn_merge.final.p1.time))
         tsort=merge['time'].argsort()
         merge['time']=merge['time'][tsort]
-        #merge['bid']=np.concatenate((se_merge.bid, dyn_merge.bid))[tsort]
+        merge['bid']=np.concatenate((se_merge.bid, dyn_merge.bid))[tsort]
         merge['id1']=np.concatenate((se_merge.id1,dyn_merge.id1))[tsort]
         merge['id2']=np.concatenate((se_merge.id2,dyn_merge.id2))[tsort]
         merge['semi']=np.concatenate((se_merge.init.semi,dyn_merge.semi))[tsort]
@@ -454,20 +509,31 @@ class BSEMerge(DictNpArrayMix):
         self.size=merge['time'].size
 
     def printTableTitle(self):
-        """ Print table title for the merger information
+        """ Print table title for the merger information (default column_format for printTable)
         """
         print("%12s %8s %8s %10s %10s %8s %8s %12s %12s %8s %12s" %('Time[Myr]','id1','id2','semi[R*]','ecc','kw1(i)','kw2(i)','m1[M*](i)','m2[M*](i)','kw(f)','m[M*](f)'))
-
-    def printTable(self):
+     
+    def printTable(self, 
+                   column_format = [('time','%12.7f '), 
+                                    ('id1','%8d '), ('id2','%8d '), 
+                                    ('semi','%10.7g '), ('ecc','%10.7g '),
+                                    ('kw1','%8d '), ('kw2','%8d '),
+                                    ('m1','%12.7f '), ('m2','%12.7f '),
+                                    ('kwf','%8d '), ('mf','%12.7f')]):
         """ Print merger information in a formated table
+
+        Parameters:
+        ----------
+        column_format: a list of column label (class member name) and format, enclosed by tuple, for sub-member, use . to access
+                       For exmaple: [(key1,'%s'), (key2,'%12.7f'), (key3.subkey1,'%d'), (key3.subkey2,'%e')]
+                       Default: [('time','%12.7f '), 
+                                 ('id1','%8d '), ('id2','%8d '), 
+                                 ('semi','%10.7g '), ('ecc','%10.7g '),
+                                 ('kw1','%8d '), ('kw2','%8d '),
+                                 ('m1','%12.7f '), ('m2','%12.7f '),
+                                 ('kwf','%8d '), ('mf','%12.7f')]
         """
-        col_fmt = [('time','%12.7f '),
-                   ('id1','%8d '), ('id2','%8d '),
-                   ('semi','%10.7g '), ('ecc','%10.7g '),
-                   ('kw1','%8d '), ('kw2','%8d '),
-                   ('m1','%12.7f '), ('m2','%12.7f '),
-                   ('kwf','%8d '), ('mf','%12.7f')]
-        DictNpArrayMix.printTable(self, col_fmt)
+        DictNpArrayMix.printTable(self, column_format)
 
 def find_merge_tree(merger_list, merger_root):
     """ Find the merger tree for a given merger
