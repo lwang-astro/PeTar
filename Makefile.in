@@ -89,7 +89,12 @@ MT_FLAGS += -D EXTERNAL_POT_IN_PTCL
 MT_FLAGS += -D RECORD_CM_IN_HEADER
 endif
 ifeq ($(ext_mode),galpy)
-MT_FLAGS += -D GALPY
+GALPY_VERSION=@GALPY_VERSION@
+VERSION_MAX=$(shell printf '%s\n%s\n' "$(GALPY_VERSION)" "1.7.1" | sort --version-sort |tail -1)
+ifeq ($(VERSION_MAX), 1.7.1)
+GALPY_OPT= -D GALPY_VERSION_1_7_1
+endif
+MT_FLAGS += -D GALPY $(GALPY_OPT)
 GALPYLIBS = -L ./galpy-interface -lgalpy @GSL_LIBS@
 CXXLIBS += $(GALPYLIBS)
 GALPYLIBFILES=galpy-interface/libgalpy.a galpy-interface/galpy_interface.h
