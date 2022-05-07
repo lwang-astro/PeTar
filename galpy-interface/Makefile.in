@@ -6,9 +6,15 @@ CC=@CC@
 GALPY_PATH=@GALPY_PATH@
 GALPY_INCLUDE_PATH= $(shell find $(GALPY_PATH) -type d )
 GALPY_INCLUDE = $(addprefix -I, $(GALPY_INCLUDE_PATH))
+GALPY_VERSION=@GALPY_VERSION@
 
-CXXFLAGS += @CXXFLAGS@ @OPTFLAGS@
-CFLAGS += @CFLAGS@ @COPTFLAGS@ @GSL_CFLAGS@ $(GALPY_INCLUDE)
+VERSION_MAX=$(shell printf '%s\n%s\n' "$(GALPY_VERSION)" "1.7.1" | sort --version-sort |tail -1)
+ifeq ($(VERSION_MAX), 1.7.1)
+GALPY_OPT= -D GALPY_VERSION_1_7_1
+endif
+
+CXXFLAGS += @CXXFLAGS@ @OPTFLAGS@ $(GALPY_OPT)
+CFLAGS += @CFLAGS@ @COPTFLAGS@ @GSL_CFLAGS@ $(GALPY_INCLUDE) $(GALPY_OPT)
 
 SRC:= $(shell find $(GALPY_PATH) -type f \( -iname '*.c' \) )
 OBJ:= $(SRC:.c=.o)
