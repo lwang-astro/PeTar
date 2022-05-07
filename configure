@@ -623,6 +623,7 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+GALPY_VERSION
 FLIBS
 FCLIBS
 use_fdps_comm
@@ -6022,6 +6023,32 @@ as_fn_error $? "can't find Galpy library, please provide correct PREFIX by using
 See \`config.log' for more details" "$LINENO" 5; }
 fi
 
+                    as_ac_File=`$as_echo "ac_cv_file_"$galpy_prefix/__init__.py"" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for \"$galpy_prefix/__init__.py\"" >&5
+$as_echo_n "checking for \"$galpy_prefix/__init__.py\"... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r ""$galpy_prefix/__init__.py""; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+  GALPY_VERSION=`cut -d'"' -f2 $galpy_prefix/__init__.py`
+else
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "can't find Galpy __init__.py, which contains the version number
+See \`config.log' for more details" "$LINENO" 5; }
+fi
+
                     # Extract the first word of "gsl-config", so it can be a program name with args.
 set dummy gsl-config; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
@@ -6993,6 +7020,7 @@ VERSION=$petar_version'_'$sdar_version
 
 
 
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: ----------------------Configure Summary--------------------" >&5
 $as_echo "$as_me: ----------------------Configure Summary--------------------" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: --Features:" >&5
@@ -7032,6 +7060,10 @@ $as_echo "$as_me:      Step mode:         $with_step_mode" >&6;}
 $as_echo "$as_me:      interrupt mode:    $with_interrupt" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      external mode:     $with_external" >&5
 $as_echo "$as_me:      external mode:     $with_external" >&6;}
+if test x"$with_external" == xgalpy; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}:      Galpy version:     $GALPY_VERSION" >&5
+$as_echo "$as_me:      Galpy version:     $GALPY_VERSION" >&6;}
+fi
 { $as_echo "$as_me:${as_lineno-$LINENO}:      tidal tensor mode: $with_tidal_tensor" >&5
 $as_echo "$as_me:      tidal tensor mode: $with_tidal_tensor" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      orbit mode:        $with_orbit" >&5

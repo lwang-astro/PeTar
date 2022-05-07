@@ -275,7 +275,11 @@ struct PotentialSet{
         assert(_npot>0);
         npot = _npot;
         arguments = new struct potentialArg[npot]; 
+#ifdef GALPY_VERSION_1_7_1
         parse_leapFuncArgs_Full(npot, arguments, &_type, &_arg);
+#else
+        parse_leapFuncArgs_Full(npot, arguments, &_type, &_arg, NULL);
+#endif
     }
 
     void clear() {
