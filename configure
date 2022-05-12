@@ -631,7 +631,7 @@ FDPS_VERSION
 VERSION
 CXXNOMPI
 PROG_NAME
-INCLUDE
+PETAR_INCLUDE
 GALPY_PATH
 GPERFLIBS
 GPERFFLAGS
@@ -4700,7 +4700,7 @@ eval ac_res=\$$as_ac_File
 	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
 $as_echo "$ac_res" >&6; }
 if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
-  INCLUDE=$INCLUDE" -I$fdps_prefix/src"
+  PETAR_INCLUDE=$PETAR_INCLUDE" -I$fdps_prefix/src"
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
@@ -4770,7 +4770,7 @@ eval ac_res=\$$as_ac_File
 	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
 $as_echo "$ac_res" >&6; }
 if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
-  INCLUDE=$INCLUDE" -I$sdar_prefix/src"
+  PETAR_INCLUDE=$PETAR_INCLUDE" -I$sdar_prefix/src"
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}

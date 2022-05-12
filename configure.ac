@@ -282,7 +282,7 @@ AC_ARG_WITH([fdps-prefix],
 	    [fdps_prefix="../FDPS"])
 
 AC_CHECK_FILE(["$fdps_prefix/src/particle_simulator.hpp"],
-	      [INCLUDE=$INCLUDE" -I$fdps_prefix/src"],
+	      [PETAR_INCLUDE=$PETAR_INCLUDE" -I$fdps_prefix/src"],
 	      [AC_MSG_FAILURE([can't find FDPS library, please provide correct PREFIX by using --with-fdps-prefix])])
 
 AC_CHECK_FILE(["$fdps_prefix/src/ps_defs.hpp"],
@@ -301,7 +301,7 @@ AC_ARG_WITH([sdar-prefix],
 	    [sdar_prefix="../SDAR"])
 
 AC_CHECK_FILE(["$sdar_prefix/src/Hermite/hermite_integrator.h"],
-	      [INCLUDE=$INCLUDE" -I$sdar_prefix/src"],
+	      [PETAR_INCLUDE=$PETAR_INCLUDE" -I$sdar_prefix/src"],
 	      [AC_MSG_FAILURE([can't find SDAR library, please provide correct PREFIX by using --with-sdar-prefix])])
 
 # GALPY
@@ -472,7 +472,7 @@ AC_SUBST([GPERFLIBS])
 AC_SUBST([GALPY_PATH])
 AC_SUBST([GSL_CFLAGS])
 AC_SUBST([GSL_LIBS])
-AC_SUBST([INCLUDE])
+AC_SUBST([PETAR_INCLUDE])
 AC_SUBST([PROG_NAME])
 AC_SUBST([CXX])
 AC_SUBST([CXXNOMPI])

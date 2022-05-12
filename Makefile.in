@@ -72,7 +72,7 @@ BSELIBFILES= bse-interface/libbse.a bse-interface/bse_interface.h
 BSELIBS = -L ./bse-interface -lbse -lgfortran
 CXXLIBS += $(BSELIBS)
 LIBFILES+= $(BSELIBFILES)
-INCLUDE += -I ./bse-interface
+PETAR_INCLUDE += -I ./bse-interface
 SE_INSTALL:
 	$(MAKE) -C bse-interface install
 SE_CLEAN:
@@ -102,7 +102,7 @@ LIBFILES+= $(GALPYLIBFILES)
 GALPY_PATH=@GALPY_PATH@
 GALPY_INCLUDE_PATH= $(shell find $(GALPY_PATH) -type d )
 GALPY_INCLUDE = $(addprefix -I, $(GALPY_INCLUDE_PATH))
-INCLUDE += -I ./galpy-interface $(GALPY_INCLUDE) @GSL_CFLAGS@
+PETAR_INCLUDE += -I ./galpy-interface $(GALPY_INCLUDE) @GSL_CFLAGS@
 galpy-interface/libgalpy.a: galpy-interface
 	$(MAKE) -C galpy-interface
 EXT_INSTALL:
@@ -210,7 +210,7 @@ CXX=@CXX@
 #CXXNOMPI=@CXXNOMPI@
 
 VPATH=./src ./build
-INCLUDE += -I./src @INCLUDE@
+PETAR_INCLUDE += -I./src @PETAR_INCLUDE@
 
 SRC = main.cc ${shell ls ./src/*.hpp} 
 
@@ -218,7 +218,7 @@ build:
 	[ -d build ] || mkdir build
 
 build/@PROG_NAME@:  $(SRC) $(OBJS) $(LIBFILES) |build
-	$(CXX) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(OBJS) $(CXXLIBS)
+	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(FDPSFLAGS) $(MT_FLAGS) $(DEBFLAGS) -o $@ $< $(OBJS) $(CXXLIBS)
 
 SIMD_DEBFLAGS += -DRSQRT_NR_EPJ_X2
 SIMD_DEBFLAGS += -DAVX_PRELOAD
@@ -234,28 +234,28 @@ HARD_MT_FLAGS += -D AR_TTL -D AR_SLOWDOWN_TREE -D AR_SLOWDOWN_TIMESCALE -D HARD_
 HARD_SRC= io.hpp ptcl.hpp particle_base.hpp hard_assert.hpp cluster_list.hpp hard.hpp hard_ptcl.hpp hermite_interaction.hpp hermite_information.hpp hermite_perturber.hpp ar_interaction.hpp ar_perturber.hpp search_group_candidate.hpp artificial_particles.hpp stability.hpp soft_ptcl.hpp static_variables.hpp tidal_tensor.hpp orbit_sampling.hpp pseudoparticle_multipole.hpp
 
 build/petar.format.transfer: format_transfer.cxx |build
-	$(CXX) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(MT_FLAGS) -o $@ $< $(CXXLIBS)
+	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(MT_FLAGS) -o $@ $< $(CXXLIBS)
 
 build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(BSELIBFILES) |build
-	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(BSELIBS)
+	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(BSELIBS)
 
 build/petar.hard.test: hard_test.cxx $(HARD_SRC) |build
-	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
 
 build/petar.simd.test: simd_test.cxx $(OBJS) |build
-	$(CXX) $(INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(CUDAFLAGS) $(MT_FLAGS) $^ -o $@  $(CXXLIBS)
+	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(CUDAFLAGS) $(MT_FLAGS) $^ -o $@  $(CXXLIBS)
 
 build/petar.tt.test: tidal_tensor_test.cxx |build
-	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $< -o $@  $(CXXLIBS)
+	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $< -o $@  $(CXXLIBS)
 
 build/petar.tide.test: tide_test.cxx two_body_tide.hpp |build
-	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $< -o $@  $(CXXLIBS)
+	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $< -o $@  $(CXXLIBS)
 
 build/petar.io.test: io_test.cxx |build
-	$(CXX) $(INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS)  $< -o $@  $(CXXLIBS)
+	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS)  $< -o $@  $(CXXLIBS)
 
 build/force_gpu_cuda.o: force_gpu_cuda.cu |build
-	$(NVCC) $(INCLUDE) -c $< -o $@ 
+	$(NVCC) $(PETAR_INCLUDE) -c $< -o $@ 
 
 install: $(TARGET) SE_INSTALL EXT_INSTALL
 	install -d @prefix@/bin/
