@@ -35,10 +35,12 @@ The version format has three types:
 - [Install](#install)
     - [Dependence](#dependence)
     - [Environment](#environment)
+        - [For supercomputer](#for-supercomputer)
     - [Make](#make)
         - [A few useful options of configure](#a-few-useful-options-of-configure)
             - [Install path](#install-path)
             - [Change MPI parallelization options](#change-mpi-parallelization-options)
+            - [Manually choose compilers](#manually-choose-compilers)
             - [Disable OpenMP parallelization](#disable-openmp-parallelization)
             - [Use X86 with SIMD](#use-x86-with-simd)
             - [Use Fugaku A64FX architecture](#use-fugaku-a64fx-architecture)
@@ -55,21 +57,28 @@ The version format has three types:
     - [Input data files](#input-data-files)
     - [Restart](#restart)
     - [Options](#options)
-    - [Data format update for old versions](#data-format-update-for-old-versions)
-    - [Reference](#reference)
-    - [Help information](#help-information)
+    - [Performance optimization](#performance-optimization)
+        - [Tree time step](#tree-time-step)
+        - [Outer changeover radius](#outer-changeover-radius)
+        - [Neighbor searching radius](#neighbor-searching-radius)
+        - [Multiple group radius](#multiple-group-radius)
+        - [Adjust tree time step and radii](#adjust-tree-time-step-and-radii)
     - [Output](#output)
         - [Printed information](#printed-information)
-            - [Warning and errors](#warning-and-errors)
-                - [Hard energy significant](#hard-energy-significant)
-                - [Large step warning](#large-step-warning)
-                - [Errors](#errors)
-         - [Output files](#output-files)
-         - [Units](#units)
+        - [Output files](#output-files)
+        - [Units](#units)
              - [PeTar units](#petar-units)
              - [Stellar evolution units](#stellar-evolution-units)
              - [External potential units](#external-potential-units)
              - [Output file units](#output-file-units)
+     - [Warning and errors](#warning-and-errors)
+         - [Hard energy significant](#hard-energy-significant)
+         - [Large step warning](#large-step-warning)
+         - [Hard dump with errors](#hard-dump-with-errors)
+         - [Crash with assertion](#crash-with-assertion)
+    - [Data format update for old versions](#data-format-update-for-old-versions)
+    - [Reference](#reference)
+    - [Help information](#help-information)
     - [Useful tools](#useful-tools)
          - [Initial input data file](#initial-input-data-file)
          - [Find tree time step](#find-tree-time-step)
@@ -128,7 +137,15 @@ If the source codes of these libraries are put in the same directory where the _
 To successfully compile the code, the C++ compiler (e.g. GNU gcc/g++, Intel icc/icpc, LLVM clang/clang++) needs the support of the C++11 standard. To use SSE/BSE package, a Fortran (77) compiler, GNU gfortran, is needed and should be possile to provide API to the c++ code, i.e., the libgfortran is required. Currently Intel ifort is not supported yet. The MPI compiler (e.g. mpic++) is required to use MPI. NVIDIA GPU and CUDA compiler is required to use GPU acceleration. The SIMD support is tested for the GNU, Intel and LLVM compilers. It is not tested for others, thus these three kinds of compilers are suggested to use. 
 The Fugaku ARM A64FX architecture is also supported. 
 
+All compilers should be searchable in the `$PATH` environment. For example, to use OpenMPI C++ compiler, `mpic++` should be available.
+This can be checked by typing `mpic++ --version` in the terminal, it should print the version of current MPI C++ compiler. 
+If the result suggests that the commander is not found, then users should properly install OpenMPI first. 
+
 To use _Galpy_ and the analysis tools, the _Python3_ should be available. _Galpy_ also requires the _GSL_ library being installed and can be detected in the load library path.
+
+#### For supercomputer
+Genenarlly, the supercomputer provides multiple choices of compilers, including different versions of Intel and GNU compilers.
+Before install _PeTar_, users should first check the detail how to correctly setup the compilers by reading the manual or ask the administrators of the supercomputer.
 
 ### Make
 Once _FPDS_ and _SDAR_ are available, in the root directoy, use 
@@ -165,7 +182,7 @@ Please add `[Install path]/include` to the _Python_ include path (the environmen
 ```
 ./configure --prefix=[Install path]
 ```
-If the code is already installed before and the executable file (petar.\*\*) exists in the $PATH enviroment, the configure automatically use the same directory for installing.
+If the code is already installed before and the executable file (petar.\*\*) exists in the `$PATH` enviroment, the configure automatically use the same directory for installing.
    
 ##### Change MPI parallelization options
 ```
@@ -175,6 +192,16 @@ If the code is already installed before and the executable file (petar.\*\*) exi
 - yes: use MPI c++ compiler
 - no: non-MPI c++ compiler
    
+##### Manually choose compilers 
+Configure will detect the C++, C and Fortran compiler in the default `$PATH` environment. If users want to manually choose these compilers, the CXX, CC and FC can be modified, respectively. For example, when users want to use Intel C++ and C compilers with Intel MPI:
+```
+CXX=mpiicpc CC=mpiicc ./configure
+```
+where `mpiicpc` is Intel C++ MPI compiler and `mpiicc` is Intel C MPI compiler. If these compilers are not in the `$PATH` environment, the full path is needed, such as:
+```
+CXX=[Full path of mpiicpc] CC=[Full path of mpiicc] ./configure
+```
+
 ##### Disable OpenMP parallelization
 ```
 ./configure --disable-openmp
@@ -343,51 +370,103 @@ For a deep understanding and a better configuration, users may need to read the 
 
 When stellar evolution packages (e.g., BSE) and external potential (e.g., Galpy) are used, the corresponding options are also shown in `petar -h`.
 
-### Data format update for old versions
-The data formats of snapshots, input parameter files and a part of output files have been updated in the past.
-If users want to use new version of code to read the old version data, the data transfer is possible.
+### Performance optimization
 
-For snapshot data in ASCII format, after [the version on Aug 8, 2020](https://github.com/lwang-astro/PeTar/commit/0592d70875626071e1bd7aa13dbab30165a98309#diff-25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26), the output format of group_data.artificial changes from 64bit floating to 64bit integer in order to keep the full information.
-The BINARY format is not affected.
-In order to read the old snapshot data, it is needed to transfer the data first by 
+The performance of _PeTar_ is sensitive to a few important parameters and also depends on the initial condition of particle (stellar) systems. 
+To achieve the best performance for a given input model, users need to adjust the following parameters carefully:
+
+#### Tree time step 
+ - _petar_ option `-s`
+
+The tree time step is a fixed time step to calculate the long-range (particle-tree) force. 
+The long-range force calculation is one of the most expensive computing with O(N log N). Thus, a smaller time step indicate a more expensive computing per physical time unit. 
+However, users cannot increase tree time step too much, see the following discussion about the changeover and neighbor searching radii.
+
+#### Outer changeover radius 
+ - _petar_ option `-r`
+ 
+The changeover region is the overlap shell between the long-range and short-range interaction. 
+Below the inner region, the short-range interactions are calculated by using 4th order Hermite with individual time steps and SDAR method. 
+Above the outer region, the long-range interactions are calculated by the 2nd or 4th-order LeapFrog with particle-tree method. In between, both short- and long-range interactions are calculated. 
+The inner and outer radii are mass weighted (`m^(1/3)`) for each particle. The default ratio is 0.1 (_petar_ option `--r-ratio`).
+
+Changeover radii and tree time steps should be consistent to ensure a physical result of simulation (See _PeTar_ paper for detail). A simple way to understand this is to check a circular kepler orbit of two particles with the semi-major axis within the changeover region. Inside the changeover region, the forces between the two particles are splitted to the short-range and the long-range forces. The short-range forces are evaluated every Hermite time step while the long-range forces are calculated every tree time step.
+The Hermite time step is smaller than the tree time step. 
+Thus, the long-range forces are given as velocity kicks to two particles after a few Hermite time step.
+If the tree time step is too large, such as only a few steps per Kepler orbit, the time resolution of long-range forces or velocity kicks is too low that the orbit integration is not accurate (non Kepler orbit). Thus, once the changeover ragion is determined, the tree time step should be small enough to ensure at least a few tens of sampling points to calculate the long-range forces (kicks) along the Kepler orbit. 
+
+Without specifying `-s` and `-r`, _petar_ autodetermines the tree time step and the changeover radii assuming the input model is a sphercial symmetric star cluster with a King or a Plummer like density profile. 
+Thus, for a more complex input model without A spherical structure, these parameters may need to be determined manually, following the self-consistent rule (tree time step - changeover radius relation) as described in the above Kepler orbit case. 
+
+#### Neighbor searching radius 
+ - _petar_ option `--r-search-min`
+
+The changeover region determines the boundary between the short- and the long-range interactions. In _PeTar_, we define another neighbor searching radius for each particle to detect neighbor candicates that are expected to be inside changeover region during the next tree time step. 
+The minimum searching radius is slightly larger than the outer changeover radius, while the used searching radius also depends on the velocity of the particle. If the particle has a high velocity, it can travel a large distance during one tree time step, thus its searching radius should be also large. 
+
+The neighbor searching radius is one important parameter that significantly affects the performance. For the parallal computing of short-range integration, _petar_ first use neighbor searching radius to gather nearby particles into individual clusters. For each cluster, only one CPU core is assigned for the short-range (Hermite+SDAR) integration during the next tree time step. The clustering algorithm ensures that for each member in the cluster, all its neighbors are also inside the cluster. Thus, if the neighbor radii are too large, one huge cluster can form where most of particles in the system are inside. Then, only one CPU core is used to integrate this cluster while all other cores are waiting. This serious load balance issue wastes computing power and can significantly reduce the performance. Thus, for each particle system, the neighbor searching radius cannot be too large.
+
+When the changeover radius (`-r`) is determined, _petar_ automatically calculate the neighbor searching radius. If users want to manually determine the neighbor searching radius, the following options are be set:
+ - `--r-search-min`: set the minimum neighbor searching radius reference, the final radius is also mass weighted, similar to the changeover radius.
+ - `--search-peri-factor`: set the maximum peri-center criterion assuming two neighbors have a Kepler orbit
+ - `--search-vel-factor`: the coefficient to determine the velocity dependent addition to neighbor radius (base neighbor radius + cofficient * velocity * tree time step)
+
+#### Multiple group radius 
+ - _petar_ option `--r-bin`
+
+The third important radius that influences the performance is the radius to determine a multiple group where the SDAR method is assigned for.
+In a dense stellar system, a multiple group, such as a binary, a triple and a quadruple, can frequently appear. It has much shorter orbital periods of inner members compared to those of single stars orbiting in the host particle system.
+The SDAR method is the most important algorithm in _petar_ to ensure the accuracy and the efficiency to integrate their orbits.
+The binary stellar evolution is also treated inside the SDAR method. 
+The criterion to select group members is the group radius (`--r-bin`). This is autodetermined based on the changeover inner radius.
+If the radius is too large, the SDAR method can be very expensive because too many members are selected in a multiple group.
+Meanwhile, if the radius is too small, some binaries are not integrated accurately since the Hermite integrator has a systematically long-term drift of energy and angular momentum for the periodic motion.
+
+#### Adjust tree time step and radii 
+
+For starting a new simulation, the autodetermined tree time step and the three radii may not be the best choice.
+Users can use the tool `petar.find.dt` (see [Find tree time step](#find-tree-time-step)) to select the best tree time step.
+This tool only works with the autodetermination of tree time step and changeover radii of _petar_ (see [Outer changeover radius](#outer-changeover-radius)).
+
+
+When the structure of the particle system signficiantly evolve after a long time, users may want to redetermine the tree time step and the three radii discussed above to improve the performance. If users want to only change the tree time step and let _petar_ to autodetermine the radii, the following options are required to restart the simulation:
 ```
-petar.format.transfer -g [other options] [snapshot path list filename]
+[OMP**] [mpiexec**] petar -p input.par -s [new tree time step] -r 0 --r-search-min 0 --r-bin 0 [other options] [snapshot filename for restart]
 ```
-The new data with BINARY format are created, using the same tool with option `-b`, users can transfer the BINARY format back to the new ASCII format.
+Where `-r 0 --r-search-min 0 --r-bin 0` are used to reset all three radii and switch on the autodetermination based on the new tree time step.
+Users can also use `petar.find.dt` to select the best restart tree time step (see [Find tree time step](#find-tree-time-step)).
 
-The formats of input parameter files generated during simulations (including files from _SSE_/_BSE_ and _Galpy_) update on Oct 18, 2020.
-Use [`petar.update.par`](#input-parameter-file-format-update) to update the input files in order to restart the simulations with the newer versions of _PeTar_.
-After the update, the reading and modification of input parameter files become much easier.
-
-### Reference
-Remember to cite the necessary references when you publish the results using _PeTar_. The references are shown in the help function of _petar_ and the begining of the output after a simulation starts.
-When a feature imported from an external library is switched on, e.g. (_SSE_/_BSE_, _Galpy_), the corresponding references are automatically added in the output.
-
-### Help information
-
-All options are listed in the help information. This can be checked by using the commander
-```
-petar -h
-```
-The description of the input particle data file is also shown in the help information. 
-Before using _PeTar_ and its tools, it is suggested to read the help information first to avoid mistakes.
-When new versions of _PeTar_ release, the help information always has the corresponding update.
 
 ### Output
 #### Printed information
+
 When _petar_ is running, there are a few information printed in the front:
 - The _FDPS_ logo and _PETAR_ information are printed, where the copyright, versions and references for citing are shown. The version of PeTar is the commit numbers of PeTar and SDAR on GitHub.
+- The switched on features (selected during configure), such as stellar evolution packages, external packages, GPU usage.
 - The input parameters are listed if they are modified when the corresponding options of _petar_ are used.
+- The Unit scaling for _petar_, stellar evolution packages (e.g. _bse_) and external packages (e.g. _galpy_).
+- A short parameter list for tree time step and a few radii that influences the performance.
+- If the Galpy is used, the galpy potential setup may be printed.
 - If the SSE/BSE based stellar evolution package is used, the common block and global parameters are printed.
 - The name of dumped files for the input parameters are shown, in default, they are input.par, input.par.hard, input.par.[bse_name] (if a SSE/BSE based package is used)
     - input.par: input parameters of petar, can be used to restart the simulation from a snapshot.
     - input.par.hard: input paremeters of hard (short-range interaction part; Hermite + SDAR), can be used for _petar.hard.debug_ to test the dumped hard cluster.
     - input.par.[bse_name]: the SSE/BSE based package parameters, if a SSE/BSE based package is used, this is the necessary file to restart the simulation and also for _petar.hard.debug_.
+    - input.par.galpy: the Galpy parameter, this is used for restart the simulation.
 
 Then after the line "Finish parameter initialization",
 The status of the simulation is updated every output time interval (the option -o).
-The content of the status has a style like:
+The content of the status has a style like (One example for the output information at time 1 is shown together):
 - Time, number of real particles, all particles (including artificial particles), removed particles and escaped particles; in local (first MPI process) and in global (all MPI process)
+    - N_real(loc): number of physical particles (stars) in the local MPI processor (rank 0)
+    - N_real(glb): number of physical particles (stars) in all MPI processors
+    - N_all(loc): number of all particles including physical and artifical ones in the local MPI processor
+    - N_all(glb): number of all particles in all MPI processors
+    - N_remove(glb): number of removed particles (e.g. zero-mass particles due to mergers and escpaers) 
+    - N_escape(glb): number of escaped particles (outside escape criterion)
+```
+Time: 1  N_real(loc): 1378  N_real(glb): 1378  N_all(loc): 1378  N_all(glb): 1378  N_remove(glb): 0  N_escape(glb): 0
+```
 - Energy check: two rows are printed. First shows the physical energy; Second shows the slow-down energy (see reference printed in _petar_ commander).
     - Error/Total: relative error of current step
     - Error: absolute error of current step
@@ -400,51 +479,93 @@ The content of the status has a style like:
     - Modify_single: modified energy from singles
     - Error_PP: energy error in short-range particle-particle (PP) interaction 
     - Error_PP_cum: cumulative energy error in PP part
+```
+Energy:       Error/Total           Error       Error_cum           Total         Kinetic       Potential          Modify    Modify_group   Modify_single        Error_PP    Error_PP_cum
+Physic:      1.883442e-05       -644.6969       -644.6969   -3.422972e+07    1.846359e+07   -5.269331e+07        1841.216               0     0.008989855    -8.67599e-06    -8.67599e-06
+Slowdown:    1.883442e-05       -644.6969       -644.6969   -3.422972e+07    1.846359e+07   -5.269331e+07        1841.216               0     0.008989855    -8.67599e-06    -8.67599e-06
+```
 - Angular momentum: error at current step, cumulative error, components in x, y, z directions and value
+```
+Angular Momemtum:  |L|err: 187484.2  |L|err_cum: 187484.2  L: -1.17383e+07   -1.20975e+07    -1.267862e+09  |L|: 1.267974e+09
+```
 - System total mass, center position and velocity
-- Other information if conditions are triggered. 
+```
+C.M.: mass: 736.5417 pos: 5127.807   -5729.159    7.270318 vel: -165.7037   -150.611    3.006304
+```
+- Performance information:
+    - Tree step number per output interval
+    ```
+    Tree step number: 512
+    ```
+    - Wallclock computing time for each part of the code, two lines are printed indicate the minimum and the maximum times among all MPI processors
+        - Total: total computing time per tree time step
+        - PP_single: time to integrate single particles without neighbors
+        - PP_cluster: time to integrate (short-range) particle clusters using Hermite+SDAR method inside one MPI processor
+        - PP_cross: time to integrate (short-range particle clusters using Hermite+SDAR method crossing mutliple MPI processors
+        - PP_intrpt*: time used during the interruption of integration (only used in special mode)
+        - Tree_NB: time to searching neighbors using particle-tree method
+        - Tree_Force: time to calculate long-range force using particle-tree method
+        - Force_corr: time to correct long-range force due to the usage of changeover functions
+        - Kick: time to kick velocity of particles from the long-range forces
+        - FindCluster: time to create particle clusters for short-range interactions
+        - CreateGroup: time to find mutliple groups in each clusters
+        - Domain_deco: time of domain decomposition for global particle tree
+        - Ex_Ptcl: time to exchange particles between different domains
+        - Output: time to output data and print information
+        - Status: time to calculate global status (e.g., energy) of the system
+        - Other: time cost in other parts that are not included in above components.
+    ```
+    **** Wallclock time per step (local): [Min/Max]
+  Total        PP_single    PP_cluster   PP_cross     PP_intrpt*   Tree_NB      Tree_Force   Force_corr   Kick         FindCluster  CreateGroup  Domain_deco  Ex_Ptcl      Output     Status       Other
+     0.009742    0.0006008   0.00016328   2.8949e-06            0   0.00069683     0.004435   2.6859e-05   3.3679e-05    8.365e-05   0.00011302   2.0602e-06   4.7604e-05   5.4633e-05   1.8945e-08    0.0034471
+    0.0097421   0.00060092   0.00016398   3.0875e-06            0   0.00070318    0.0044427   2.7012e-05   3.3787e-05   8.3776e-05   0.00011312   2.1375e-06   4.7723e-05   5.4636e-05   1.9141e-08    0.0034481
+    ```
+    - FDPS tree force calculation profile (see FDPS document for detail)
+    ```
+    **** FDPS tree soft force time profile (local):
+  Sample_ptcl  Domain_deco  Ex_ptcl      Set_ptcl_LT  Set_ptcl_GT  Make_LT      Make_GT      SetRootCell  Calc_force   Calc_mom_LT  Calc_mom_GT  Make_LET_1   Make_LET_2   Ex_LET_1     Ex_LET_2     Write_back
+            0            0            0   5.2026e-05   1.7637e-06   0.00021123   7.0745e-05   8.7232e-06    0.0022072   4.4457e-05    0.0018011   1.3547e-05            0    4.401e-06            0   2.0096e-05
+    ```
+    - FDPS tree neighbor searching profile 
+    ```
+    **** Tree neighbor time profile (local):
+  Sample_ptcl  Domain_deco  Ex_ptcl      Set_ptcl_LT  Set_ptcl_GT  Make_LT      Make_GT      SetRootCell  Calc_force   Calc_mom_LT  Calc_mom_GT  Make_LET_1   Make_LET_2   Ex_LET_1     Ex_LET_2     Write_back
+            0            0            0   3.6579e-05   1.6174e-06   0.00021966   7.2012e-05   7.7332e-06   0.00025779    3.126e-05    2.935e-05   2.6922e-05            0   1.4563e-06            0   1.2669e-05
+    ```
+    - Number counts per tree time step
+        - PP_single: number of single particles
+        - PP_cluster: number of particles in clusters within one MPI processor
+        - PP_cross: number of particles in clusters crossing mutliple MPI processors
+        - PP_intrpt*: number of particles suffering interruption of integration
+        - Cluster: umber of clusters within one MPI processor
+        - Cross: number of clusters crossing multiple MPI processors
+        - AR_step_sum: number of SDAR integration steps
+        - AR_tsyn_sum: number of SDAR integration for time sychronization
+        - AR_group_N: number of multiple groups
+        - Iso_group_N: number of isolated multiple groups (a cluster containing only one group)
+        - H4_step_sum: number of Hermite integration time steps
+        - H4_no_NB: number of Hermite integration for particles without neighbors
+        - Ep-Ep_sum: number of i and j particle interaction during a particle-tree force calculation
+        - Ep-Sp_sum: number of i particle and j superparticle interaction during a particle-tree force calculation
+    ```
+    **** Number per step (global):
+  PP_single    PP_cluster   PP_cross     PP_intrpt*   Cluster      Cross        AR_step_sum  AR_tsyn_sum  AR_group_N   Iso_group_N  H4_step_sum  H4_no_NB     Ep-Ep_sum    Ep-Sp_sum
+       1345.6       32.436            0            0       14.744            0       7.0586       4.0996            0            0       329.74            0   1.6972e+06        34134
+    ```
+    - Histogram of number of members in clusters. The first line show the number of members and the second line show the histogram counts
+    ```
+    **** Number of members in clusters (global):
+            1            2            3            4            5            6
+       1345.6        13.24      0.68164      0.31055      0.40234      0.10938
+    ```
 
-##### Warning and errors
+The performance information is very useful to check whether the simulation has a proper setup of tree time step and radii parameters. 
+For a reasonable performance, the Tree_Force wallclock time should dominate the total time. If many multiple groups, such as primordial binaries, exist, the PP_cluster can be also time-consuming. But if it is too large (dominate most of the total time), users should consider to radius the changeover, neighbor searching and group radii (see [Performance optimization](#performance-optimization)).
 
-In a simulation, there may be warnings and errors appearing in the printing log. 
-Here lists the frequent warnings and errors.
-
-###### Hard energy significant
-
-For one particle cluster with short-range interaction (Hermite+SDAR), the relative energy error after one tree time step exceeds the limitation defined by the option `--energy-err-hard` (the default value is 0.0001). 
-Then, a warning message with the title "Hard energy significant" appears and a corresponding file "hard_large_energy.\*" is dumped.
-
-In most of cases, this happens when a triple or a quadruple system exists in the cluster.
-There two possibilities that cause the large error: 
-- The inner binaries of these systems may be very tight with a large slowdown factor. Since slowdown Hamiltonian is not the same as claasical Hamiltonian. The physical energy is not necessary conserved during the integration because the slowdown methods only ensure that the secular motion is correct. 
-- The integration step of SDAR method may not be sufficient small for the multiple system, while reducing step sizes also signficantly increase the computing time.
-Either case is difficult to solve if users don't want a significant reduction of computing performance. 
-But if users care about the specific particles inside this cluster, they can check whether the orbit of integration is acceptable by using the debuging tool _petar.hard.debug_ to read the dumped hard_large_energy.\* file.
-The high energy error is usually generated by a small change of semi-major axis of the most tight binary in the system. 
-However, such a small error does not significantly affect the global dynamical evolution of the whole system if it the error only happens once.
-
-###### Large step warning
-
-Sometimes the performance of the code significantly drops with a warning of large steps appearing.
-Then, a file "dump_large_step.\*" is dumped.
-In this case, there are probably a stable multiple system in the particle cluster.
-The AR method is used to integrate the multiple system, but the step count is very large (exceeding the step limit, which can also be set in the input option) so that the performance significantly drops.
-This situation cannot be avoided sometimes. 
-When the stellar evolution is switched on, it can help in some cases when the inner binaries are tight enough to merge. 
-There is no better solution to solve the issue.
-If multiple CPU cores are used, users can restart the simulations with less CPU cores. 
-Sometimes after restarting, the same stable system may not form so that the problem can be avoided.
-If it still forms, the parallel computing is killed so it is not necessary to use multiple CPUs. 
-Users can use less CPU resources to pass this phase until the system is disrrupted, and then, restart with the original number of CPU cores.
-
-###### Errors
-When errors appear in the Hermite-SDAR integration, the error message appears and the simulation is halted.
-In this case, a file "hard_dump.\*" is dumped.
-This usually indicates that a bug exist in the code.
-Users can report this issue by contacting the developer via GitHub or email.
-In the content, users need to describe the version of PeTar, the configure options, the initial conditions of the simulations and attach the "hard_dump.\*", the input parameter files (starting with "input.par.\*".
-
-Users can also check the details by using the debug tool _petar.hard.debug_ together with the GDB tool, if users prefer to understand the problems themselves. The knowledge of the source codes of SDAR is required to understand the messages from the debug tool.
+The histogram of number of members in clusters is also useful to identify whether the neighbor searching radius is too large. 
+For a low density system, the maximum number of members should be within 20, like the above example (6).
+For a high density system or a system with high-velocity particles, the maximum number may be large.
+But if it is within a few hundreds and the PP_cluster wallclock time is not significantly large, it is also fine.
 
 #### Output files
 Except the printed information from _petar_ commander, there are a few output files as shown in the following table:
@@ -466,6 +587,12 @@ When the SSE/BSE stellar evolution options (--with-interrupt during configure) a
 | :-------------       | ------------------------------------------------------------------------------------------------------------------------   |
 | data.[sse_name].[MPI rank] | The single stellar evolution records, such as type changes and supernovae. Notice that if a star evolve very fast (less than the dynamical integration time step), the internal type changes may not be recorded|
 | data.[bse_name].[MPI rank] | The binary stellar evolution records. All binary type changes are recorded, but if 'Warning: BSE event storage overflow!' appears in the simulation, the binary type change is too frequent so that these changes for the corresponding binary is not recored|
+
+When the Galpy is used (--with-external=galpy), for each snapshot file, the galpy parameter file may also be generated in some conditions:
+| File name           | Content                                                                                                                     |
+| :-------------      | ------------------------------------------------------------------------------------------------------------------------    |  
+| data.[index].galpy  | the galpy parameter file for each snapshot, may need to be used for restart                                                 |
+
 
 Here 'data' is the default prefix of output files, users can change it by _petar_ option `-f`. For example, by using `-f output`, the output files will be 'output.[index]', 'output.esc.[MPI rank]' ...
 
@@ -511,7 +638,7 @@ The stellar evolution part in the snapshot files and the output files " [data fi
 The external potential package (_galpy_) is also an additional code. There is another unit conversion between the PeTar part and it.
 The conversion factors can also be manually defined. For _galpy_, the corresponding options are `--galpy-rscale` ... (see `petar -h` for details).
 It is also recommended to use the unit set for input data (Msun, pc, pc/Myr) so that the conversion factor is automatically calculated.
-There is no additional output files from _galpy_ code.
+In default unit of Galpy refers to the solar motion, where the length unit is the distance of Sun to the Galactic center, and the velocity unit is the solar velocity in the Galactic frame.
 
 ##### Output file units
 
@@ -533,6 +660,98 @@ These two parts are not in the same unit system.
 The units for stellar evolution parameters with the prefix "s_" in the particle class can be found by using `petar -h`. 
 The other members follow the units of input data file (PeTar unit).
 If users are unclear about the units of the output files. They can also check the help information from the python analysis tool (`help(petar.Particle)`) for reading the corresponding files. 
+
+### Warning and errors
+
+In a simulation, there may be warnings and errors appearing in the printing log. 
+Here lists the frequent warnings and errors.
+
+#### Hard energy significant
+
+For one particle cluster with short-range interaction (Hermite+SDAR), the relative energy error after one tree time step exceeds the limitation defined by the option `--energy-err-hard` (the default value is 0.0001). 
+Then, a warning message with the title "Hard energy significant" appears and a corresponding file "hard_large_energy.\*" is dumped.
+
+In most of cases, this happens when a triple or a quadruple system exists in the cluster.
+There two possibilities that cause the large error: 
+- The inner binaries of these systems may be very tight with a large slowdown factor. Since slowdown Hamiltonian is not the same as claasical Hamiltonian. The physical energy is not necessary conserved during the integration because the slowdown methods only ensure that the secular motion is correct. 
+- The integration step of SDAR method may not be sufficient small for the multiple system, while reducing step sizes also signficantly increase the computing time.
+Either case is difficult to solve if users don't want a significant reduction of computing performance. 
+But if users care about the specific particles inside this cluster, they can check whether the orbit of integration is acceptable by using the debuging tool _petar.hard.debug_ to read the dumped hard_large_energy.\* file.
+The high energy error is usually generated by a small change of semi-major axis of the most tight binary in the system. 
+However, such a small error does not significantly affect the global dynamical evolution of the whole system if it the error only happens once.
+
+#### Large step warning
+
+Sometimes the performance of the code significantly drops with a warning of large steps appearing.
+Then, a file "dump_large_step.\*" is dumped.
+In this case, there are probably a stable multiple system in the particle cluster.
+The AR method is used to integrate the multiple system, but the step count is very large (exceeding the step limit, which can also be set in the input option) so that the performance significantly drops.
+This situation cannot be avoided sometimes. 
+When the stellar evolution is switched on, it can help in some cases when the inner binaries are tight enough to merge. 
+There is no better solution to solve the issue.
+If multiple CPU cores are used, users can restart the simulations with less CPU cores. 
+Sometimes after restarting, the same stable system may not form so that the problem can be avoided.
+If it still forms, the parallel computing is killed so it is not necessary to use multiple CPUs. 
+Users can use less CPU resources to pass this phase until the system is disrrupted, and then, restart with the original number of CPU cores.
+
+#### Hard dump with errors
+When errors appear in the Hermite-SDAR integration, the error message appears and the simulation is halted.
+In this case, a file "hard_dump.\*" is dumped.
+This usually indicates that a bug exist in the code.
+Users can report this issue by contacting the developer via GitHub or email.
+In the content, users need to describe the version of PeTar, the configure options, the initial conditions of the simulations and attach the "hard_dump.\*", the input parameter files (starting with "input.par.\*".
+
+Users can also check the details by using the debug tool _petar.hard.debug_ together with the GDB tool, if users prefer to understand the problems themselves. The knowledge of the source codes of SDAR is required to understand the messages from the debug tool.
+
+#### crash with assertion
+
+Sometimes, the code may crash with an assertion information.
+One frequent assertion error is `n_jp<=pg.NJMAX`, e.g.
+```
+CalcForceEpEpWithLinearCutoffSimd::operator()(const EPISoft*, ParticleSimulator::S32, const EPJSoft*, ParticleSimulator::S32, ForceSoft*): Assertion `n_jp<=pg.NJMAX' failed.
+```
+This error happens when the particle system has a extremely density contrast, or the density center is not near the coordinate origin (zero) point or a particle is extremely far away from the system.
+The most distant particles in the system deterine the outmost boxsize when the particle-tree is constructed.
+If the maximum boxsize is too large, the minimum tree cell size is also large that too many particles may exist in one cell that exists the limitation of particle-tree algorithm. Thus, an assertion `n_jp<=pg.NJMAX` appears.
+The tree cell near the coordinate origin point has the highest resolution, thus if the density center is far from the origin point, this assertion also can happen. 
+Therefore, the solution is to remove very distant particles or choose the coordinate origin point properly.  
+
+The second frequent assertion error is `!std::isnan(vbk.x)`, e.g.
+```
+SystemHard::driveForOneClusterOMP(ParticleSimulator::F64): Assertion `!std::isnan(vbk.x)' failed.
+```
+This error happens when FDPS version 7.1 is used. It seems a bug or an inconsistent interface exists in FPDS that can easily cause such an assertion for _petar_.
+The solution is to use the FDPS version 7.0.
+
+### Data format update for old versions
+The data formats of snapshots, input parameter files and a part of output files have been updated in the past.
+If users want to use new version of code to read the old version data, the data transfer is possible.
+
+For snapshot data in ASCII format, after [the version on Aug 8, 2020](https://github.com/lwang-astro/PeTar/commit/0592d70875626071e1bd7aa13dbab30165a98309#diff-25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26), the output format of group_data.artificial changes from 64bit floating to 64bit integer in order to keep the full information.
+The BINARY format is not affected.
+In order to read the old snapshot data, it is needed to transfer the data first by 
+```
+petar.format.transfer -g [other options] [snapshot path list filename]
+```
+The new data with BINARY format are created, using the same tool with option `-b`, users can transfer the BINARY format back to the new ASCII format.
+
+The formats of input parameter files generated during simulations (including files from _SSE_/_BSE_ and _Galpy_) update on Oct 18, 2020.
+Use [`petar.update.par`](#input-parameter-file-format-update) to update the input files in order to restart the simulations with the newer versions of _PeTar_.
+After the update, the reading and modification of input parameter files become much easier.
+
+### Reference
+Remember to cite the necessary references when you publish the results using _PeTar_. The references are shown in the help function of _petar_ and the begining of the output after a simulation starts.
+When a feature imported from an external library is switched on, e.g. (_SSE_/_BSE_, _Galpy_), the corresponding references are automatically added in the output.
+
+### Help information
+
+All options are listed in the help information. This can be checked by using the commander
+```
+petar -h
+```
+The description of the input particle data file is also shown in the help information. 
+Before using _PeTar_ and its tools, it is suggested to read the help information first to avoid mistakes.
+When new versions of _PeTar_ release, the help information always has the corresponding update.
 
 ### Useful tools
 There are a few useful tools helping users to generate initial input data, find a proper tree time step to start the simulations and data analysis.
@@ -584,9 +803,13 @@ use 2 MPI processes, 4 OpenMP threads per MPI, 100 primordial binaries and unit 
 
 Notice that _petar_ only accepts a tree time step of 0.5^[integer number]. 
 Thus in the test, if the user specify the minimum step size by `-s [value]` (outside `-a`), the step size will be regularized if it does not satisfy this requirement.  
-
 Be careful that some _petar_ options, such as `-o` and `-s`, cannot be used inside `-a` of _petar.init_. 
-See the details by using `petar.init -h`.
+See the details by using `petar.find.dt -h`.
+
+For restarting a simulation, users many want to find the new tree time step and determine other parameters (radii) automatically, this can be done by
+```
+petar.find.dt -m 2 -o 4 -a "-p input.par -r 0 --r-search-min 0 --r-bin 0" [restart snapshot filename]
+```
 
 #### Parallel data process
 The _petar.data.process_ can be used to process snapshot data to detect binaries, triples and quadruples (binary-binary type), and calculate Langragian, core radii, averaged mass and velocity dispersion.
@@ -618,6 +841,12 @@ Here '-n' indicates that the values to sort are floating-point number.
 In this example, '1.6' represents the 6th chararcters in the first word is the starting position to recognize the numbers for sorting.
 This is because only one word exists per line in the snap.lst file, and the word 'data.\*\*' has 5 characters before the number (index of the snapshot). 
 
+Users should be careful to set the correct options of gravitational constant (`-G`), interrupt mode (`-i`) and external mode (`-t`) for _petar.data.process_ (see `petar.data.process -h`).
+This is important to correctly read the snapshots and calculate the Kepler orbital parameters of binaries.
+When users apply the astronomical unit set (`-u 1` in the _petar_ commander) in simulations, `-G 0.00449830997959438` should be used for _petar.data.process_.
+Or, if the _BSE_ based package is used, the interrupt mode option `-i [bse_name]` can also set the correct value of G.
+When the external mode such as _galpy_ is used, the external mode option `-t galpy` is needed.
+
 Here is the table to show the files generated by _petar.data.process_ and the corresponding python modules (class) to read them.
 The the default filename prefix 'data' is assumed.
 
@@ -638,11 +867,6 @@ PS: the arguments [\*] for the keywords in the python class initialization depen
 See help of the Python analysis classes and `petar.data.process -h` for details.
 
 How to use the Python analysis classes to read data are discussed in [Data analysis in _Python3_](#data-analysis-in-python3).
-Users should be careful to set the correct options of gravitational constant (`-G`), interrupt mode (`-i`) and external mode (`-t`) for _petar.data.process_ (see `petar.data.process -h`).
-This is important to correctly read the snapshots and calculate the Kepler orbital parameters of binaries.
-When users apply the astronomical unit set (`-u 1` in the _petar_ commander) in simulations, `-G 0.00449830997959438` should be used for _petar.data.process_.
-Or, if the _BSE_ based package is used, the interrupt mode option `-i [bse_name]` can also set the correct value of G.
-When the external mode such as _galpy_ is used, the external mode option `-t galpy` is needed.
 
 The snapshots (single, binary ...) generated by _petar.data.process_ are shifted to the rest frame where the density center is the coordinate origins.
 By adding the core position and velocity from 'data.core' at the corresponding time, the positions and velocities in the initial frame or Galactocentric frame (when _galpy_ is used) can be recovered.
