@@ -1162,6 +1162,19 @@ public:
 
     //! write data for restart
     /*! 
+      Write data sctructure:
+      Time N_set Mode[:]  # set mode 
+          After first line, the format is (size, array)
+      Origin:             # 6*N_set: pos, vel of origin
+      Pot_type_offset     # number of pots per set 
+      Pot_type            # pot type list
+      Pot_args_offset     # number of arguments per pot
+      Pot_args            # pot argument list
+      Change_index        # changing argument index counting zero point in each pot
+      Change_index_offset # number of changing argument per pot
+      Change_mode         # changing argument mode (linear:1, expo:2)
+      Change_rate         # changing rate of arguments
+
       @param[in] _filename: file to save data
     */
     void writeCurrentData(const std::string& _filename) {
