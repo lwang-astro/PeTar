@@ -1163,17 +1163,18 @@ public:
     //! write data for restart
     /*! 
       Write data sctructure:
-      Time N_set Mode[:]  # set mode 
-          After first line, the format is (size, array)
+      Time N_set Mode[:]  # N_set: set mode
+          After first line, the format is (size, array), except last line where only Change_index_offset size is printed at first
       Origin:             # 6*N_set: pos, vel of origin
-      Pot_type_offset     # number of pots per set 
-      Pot_type            # pot type list
-      Pot_args_offset     # number of arguments per pot
-      Pot_args            # pot argument list
-      Change_index        # changing argument index counting zero point in each pot
-      Change_index_offset # number of changing argument per pot
-      Change_mode         # changing argument mode (linear:1, expo:2)
-      Change_rate         # changing rate of arguments
+      Pot_type_offset     # N_set+1: number of pots per set 
+      Pot_type            # N_pot: pot type list
+      Pot_args_offset     # N_set+1: number of arguments per set
+      Pot_args            # N_pot_arg pot argument list
+      Change_index        # N_change: changing argument index counting zero point in each pot
+      Change_index_offset + Change_mode + Change_rate
+                          # N_set+1: number of changing argument per set  
+                          # (N_change) changing argument mode (linear:1, expo:2) 
+                          # (N_change) changing rate of arguments
 
       @param[in] _filename: file to save data
     */
