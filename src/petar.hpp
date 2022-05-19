@@ -1034,6 +1034,9 @@ public:
         // update the types and arguments 
         galpy_manager.updatePotential(stat.time, false);
 
+        galpy_manager.resetPotAcc();
+        galpy_manager.calcMovePotAccFromPot(&stat.pcm.pos[0]);
+
         PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
 #pragma omp parallel for
         for (int i=0; i<n_loc_all; i++) {
@@ -1041,10 +1044,10 @@ public:
             double acc[3], pot;
 #ifdef RECORD_CM_IN_HEADER
             PS::F64vec pos_correct=pi.pos + stat.pcm.pos;
-            galpy_manager.calcAccPot(acc, pot, stat.time, &pos_correct[0], &pi.pos[0]);
+            galpy_manager.calcAccPot(acc, pot, stat.time, pi.mass, &pos_correct[0], &pi.pos[0]);
 #else
             PS::F64vec pos_center=pi.pos - stat.pcm.pos;
-            galpy_manager.calcAccPot(acc, pot, stat.time, &pi.pos[0], &pos_center[0]);
+            galpy_manager.calcAccPot(acc, pot, stat.time, pi.mass, &pi.pos[0], &pos_center[0]);
 #endif
             assert(!std::isinf(acc[0]));
             assert(!std::isnan(acc[0]));
@@ -1077,7 +1080,8 @@ public:
         PS::F64 pot;
         // evaluate center of mass acceleration
         PS::F64vec pos_zero=PS::F64vec(0.0);
-        galpy_manager.calcAccPot(&acc[0], pot, stat.time, &stat.pcm.pos[0], &pos_zero[0]);
+        // set zero mass to avoid duplicate anti force to potential set
+        galpy_manager.calcAccPot(&acc[0], pot, stat.time, 0, &stat.pcm.pos[0], &pos_zero[0]);
         dv = acc*_dt;
 #endif        
 
@@ -1350,6 +1354,10 @@ public:
         search_cluster.SendSinglePtcl(system_soft, system_hard_connected.getPtcl());
 #endif
 
+#ifdef GALPY
+        galpy_manager.kickMovePot(_dt_kick);
+#endif
+
 #ifdef RECORD_CM_IN_HEADER
         // correct Ptcl:vel_cm
         correctPtclVelCM(_dt_kick);
@@ -1411,6 +1419,7 @@ public:
         //system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft, search_cluster.getAdrSysOneCluster());
         system_hard_one_cluster.writeBackPtclForOneClusterOMP(system_soft, mass_modify_list);
         ////// integrater one cluster
+
 #ifdef PROFILE
         profile.hard_single.barrier();
         PS::Comm::barrier();
@@ -1488,6 +1497,10 @@ public:
 #endif
         // drift cm
         stat.pcm.pos += stat.pcm.vel*_dt_drift;
+
+#ifdef GALPY
+        galpy_manager.driftMovePot(_dt_drift);
+#endif
         
         if (n_interrupt_glb==0) Ptcl::group_data_mode = GroupDataMode::cm;
         
