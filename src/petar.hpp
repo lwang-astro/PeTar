@@ -1875,7 +1875,7 @@ public:
             stat.print(std::cout);
         }
 #ifdef GALPY
-        //galpy_manager.printData(std::cout);
+        galpy_manager.printData(std::cout);
 #endif
         // write status, output to separate snapshots
         if(write_style==1) {

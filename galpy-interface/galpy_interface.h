@@ -671,6 +671,7 @@ public:
         for (int k=0; k<nset; k++) {
             auto& pot_set_par = potential_set_pars[k];
             fout<<"Potential set "<<k+1<<" Mode: "<<pot_set_par.mode
+                <<" GM: "<<pot_set_par.gm
                 <<" Pos: "<<pot_set_par.pos[0]<<" "<<pot_set_par.pos[1]<<" "<<pot_set_par.pos[2]
                 <<" Vel: "<<pot_set_par.vel[0]<<" "<<pot_set_par.vel[1]<<" "<<pot_set_par.vel[2]
                 <<"\nPotential type indice: ";
@@ -1314,11 +1315,17 @@ public:
                             abort();
                         }
 
-                        fconf>>update_time_next;
+                        std::string label;
+                        fconf>>label;
                         if(fconf.eof()) {
                             fconf.close();
                             break;
                         }
+                        if(label!="Time") {
+                            std::cerr<<"Galpy config: reading label error, should be Time given "<<label<<std::endl;
+                            abort();
+                        }
+                        fconf>>update_time_next;
                         if (update_time_next>time_scaled) {
                             update_time = update_time_next;
                             break;
@@ -1338,12 +1345,10 @@ public:
         if (change_flag||(nset>=0)) {
             freePotentialArgs();
             nset=potential_set_pars.size(); // in case nset is not defined after change_flag
+            potential_sets.resize(nset);
             for (int k=0; k<nset; k++) {
-                potential_sets.push_back(PotentialSet());
-                auto& pset = potential_sets.back();
-                pset.generatePotentialArgs(pot_type_offset[k+1]-pot_type_offset[k], &(pot_type[pot_type_offset[k]]), &(pot_args[pot_args_offset[k]]));
+                potential_sets[k].generatePotentialArgs(pot_type_offset[k+1]-pot_type_offset[k], &(pot_type[pot_type_offset[k]]), &(pot_args[pot_args_offset[k]]));
             }
-            assert(potential_sets.size()==potential_set_pars.size());
             if (_print_flag) printData(std::cout);
         }
     }
