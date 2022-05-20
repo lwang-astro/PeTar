@@ -1032,7 +1032,7 @@ public:
 #ifdef GALPY
         // external force and potential
         // update the types and arguments 
-        galpy_manager.updatePotential(stat.time, false);
+        galpy_manager.updatePotential(stat.time, true);
 
         galpy_manager.resetPotAcc();
         galpy_manager.calcMovePotAccFromPot(stat.time, &stat.pcm.pos[0]);
@@ -1874,6 +1874,9 @@ public:
             std::cout<<std::endl;
             stat.print(std::cout);
         }
+#ifdef GALPY
+        //galpy_manager.printData(std::cout);
+#endif
         // write status, output to separate snapshots
         if(write_style==1) {
 

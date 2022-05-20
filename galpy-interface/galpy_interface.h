@@ -836,8 +836,9 @@ public:
                     std::cerr<<"Error: Galpy configure file "<<_input.config_filename.value.c_str()<<" cannot be open!"<<std::endl;
                     abort();
                 }
-                fconf>>update_time;
+                labelCheck(fconf, "Time");
                 if(fconf.eof()) fconf.close();
+                fconf>>update_time;
                 // initial offset
                 pot_type_offset.push_back(0);
                 pot_args_offset.push_back(0);
@@ -952,7 +953,7 @@ public:
      */
     void updatePotential(const double& _system_time, const bool _print_flag) {
         
-        if (set_name=="MWPotentialEvolve") updateMWPotentialEvolve(_system_time, _print_flag);
+        if (set_name=="MWPotentialEvolve") updateMWPotentialEvolve(_system_time, false);
         else if (set_name=="configure") updateTypesAndArgsFromFile(_system_time, _print_flag);
     }
 
@@ -1025,9 +1026,10 @@ public:
                     double update_time_next;
 
                     while(true) {
+                        labelCheck(fconf, "Task");
                         std::string task;
                         fconf>>task;
-                        int n_set_old = potential_set_pars.size();
+                        eofCheck(fconf, "task");                                             int n_set_old = potential_set_pars.size();
                         if (task=="add") {
                             labelCheck(fconf, "Nset");
                             fconf>>nset;
@@ -1140,8 +1142,8 @@ public:
                                         eofCheck(fconf, "changing rate");
                                         change_args[offset+i].rate = rate_i;
                                     }
-                                    change_args_offset.push_back(change_args.size());
                                 }
+                                change_args_offset.push_back(change_args.size());
                             }
                             nset += n_set_old;
                         }
@@ -1329,10 +1331,8 @@ public:
         broadcastDataMPI();
 #endif        
         
-        if (_print_flag) printData(std::cout);
-
         // update time-dependent argument
-        bool change_flag =  calcNewParameters(time_scaled, _print_flag);
+        bool change_flag =  calcNewParameters(time_scaled, false);
         
         // generate galpy potential argument 
         if (change_flag||(nset>=0)) {
@@ -1344,6 +1344,7 @@ public:
                 pset.generatePotentialArgs(pot_type_offset[k+1]-pot_type_offset[k], &(pot_type[pot_type_offset[k]]), &(pot_args[pot_args_offset[k]]));
             }
             assert(potential_sets.size()==potential_set_pars.size());
+            if (_print_flag) printData(std::cout);
         }
     }
 
