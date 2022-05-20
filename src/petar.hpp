@@ -1035,7 +1035,7 @@ public:
         galpy_manager.updatePotential(stat.time, false);
 
         galpy_manager.resetPotAcc();
-        galpy_manager.calcMovePotAccFromPot(&stat.pcm.pos[0]);
+        galpy_manager.calcMovePotAccFromPot(stat.time, &stat.pcm.pos[0]);
 
         PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
 #pragma omp parallel for
@@ -1044,10 +1044,10 @@ public:
             double acc[3], pot;
 #ifdef RECORD_CM_IN_HEADER
             PS::F64vec pos_correct=pi.pos + stat.pcm.pos;
-            galpy_manager.calcAccPot(acc, pot, stat.time, pi.mass, &pos_correct[0], &pi.pos[0]);
+            galpy_manager.calcAccPot(acc, pot, stat.time, input_parameters.gravitational_constant.value*pi.mass, &pos_correct[0], &pi.pos[0]);
 #else
             PS::F64vec pos_center=pi.pos - stat.pcm.pos;
-            galpy_manager.calcAccPot(acc, pot, stat.time, pi.mass, &pi.pos[0], &pos_center[0]);
+            galpy_manager.calcAccPot(acc, pot, stat.time, input_parameters.gravitational_constant.value*pi.mass, &pi.pos[0], &pos_center[0]);
 #endif
             assert(!std::isinf(acc[0]));
             assert(!std::isnan(acc[0]));

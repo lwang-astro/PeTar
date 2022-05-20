@@ -13,7 +13,7 @@ def getPotInstance(pot_name):
 
     """
     pot_module = None
-    pot_instance=None
+    pot_instance = None
     if (pot_name in dir(galpy.potential)) & ('Potential' in pot_name):
         pot_module = galpy.potential.__getattribute__(pot_name)
         if (type(pot_module) == list): 
@@ -158,16 +158,14 @@ if __name__ == '__main__':
     from galpy.potential.Potential import _check_c
 
     def usage():
-        print("A too to show the description of Galpy potential, help to set the parameters of --type-arg in petar commander")
+        print("A too to show the description of the galpy options for PeTar and supported Galpy potential")
         print("Usage: petar.galpy.help [potential name]")
-        print("       This will show the help of the given potential and also the type index for --type-arg option.")
-        print("       Without a potential name, all supported potential names in Galpy will be listed.")
-        print("       For a potential requiring a long argument list, the type and arguments are not printed, use '-l' to show that.")
-        print("       it is suggested to use a configure file to read arguments.")
+        print("       Without potential name, a description to setup --galpy-type-arg and --galpy-conf-file is shown,")
+        print("       including the list of supported potentials.")
+        print("       With a potential name, the description of the potential is shown.")
         print("Options: ")
-        print("    -d         : call Python help function to show the document of a give potential")
-        print("                 This option only works when a potential name is provided.")
-        print("    -o [string]: Output the type-arg to a configure file; the argument of this option is the filename")
+        print("    -o [string]: output the default type-arg of the given potential to a configure file;")
+        print("                 the argument of this option is the filename")
         print("    -h (--help): help")
 
     try:
@@ -177,9 +175,7 @@ if __name__ == '__main__':
 
         kwargs=dict()
         for opt,arg in opts:
-            if opt in ('-d'):
-                print_help_flag=True
-            elif opt in ('-o'):
+            if opt in ('-o'):
                 config_filename=arg
             elif opt in ('-h','--help'):
                 usage()
@@ -196,26 +192,25 @@ if __name__ == '__main__':
         pot_module, pot_instance = getPotInstance(pot_name)
         if (pot_instance!=None):
             printPotTitle()
-            type_arg, n_pot, pot_type, pot_arg=printPotTypeArg(pot_name, pot_module, pot_instance, 0)
+            type_arg, n_pot, pot_type, pot_arg=printPotTypeArg(pot_name, pot_module, pot_instance, 0, True)
             printSpliter()
             if (config_filename!=""): 
                 print("Save type arguments of %s to file %s." % (pot_name,config_filename))
                 savePotTypeArg(config_filename, n_pot, pot_type, pot_arg)
             printSpliter()                                                     
-            if (print_help_flag):
-                print("Class definition of %s from Galpy:" % pot_name)
-                if (type(pot_instance)==list):
-                    for pot_sub in pot_instance:
-                        print(pot_sub.__doc__)
-                        print(pot_sub.__init__.__doc__)
-                else:
-                    print(pot_instance.__doc__)
-                    print(pot_instance.__init__.__doc__)
+            print("Class definition of %s from Galpy:" % pot_name)
+            if (type(pot_instance)==list):
+                for pot_sub in pot_instance:
+                    print(pot_sub.__doc__)
+                    print(pot_sub.__init__.__doc__)
+            else:
+                print(pot_instance.__doc__)
+                print(pot_instance.__init__.__doc__)
 
-                # additional comments
-                if (pot_name == 'KeplerPotential'):
-                    print("Notice that the Kepler potential is generated from the PowerSphericalPotential (type index: 7) with alpha = 3")
-                    print("Thus, the second argument (alpha) must be 3 ")
+            # additional comments
+            if (pot_name == 'KeplerPotential'):
+                print("Notice that the Kepler potential is generated from the PowerSphericalPotential (type index: 7) with alpha = 3")
+                print("Thus, the second argument (alpha) must be 3 ")
         else:
             print(pot_name," is not found in supported Galpy potential list. Available potentials are:")
             listPot()
@@ -265,7 +260,7 @@ if __name__ == '__main__':
         print("           Each of the following set content contains a few lines of parameters: ")
         print("               Set [index]")
         print("               Ntype [number] Mode [index]")
-        print("               Pos [x y z] Vel [vx vy vz]")
+        print("               GM [mass] Pos [x y z] Vel [vx vy vz]")
         print("               Type [type1 type2 ...]")
         print("               Arg [arg1-1 arg1-2 ... arg2-1 ...]")
         print("               Nchange [number] Index [Arg_index1, Arg_index2, Arg_index3...]")
@@ -278,6 +273,7 @@ if __name__ == '__main__':
         print("                     0: The galactic frame")
         print("                     1: The particle-system frame; also follow the motion of its center")
         print("                     2: The galactic frame, but move based on the forces from other potentials and from the particle system")
+        print("               GM: gravitational constant * mass of potential, used to obtain acceleration from particle-system")
         print("               Pos, Vel: the initial position and velocity of the potential center [Galpy unit] in the reference frame depended on the Mode.")
         print("               Type, Arg: types and arguments of each potential, similar to those in --galpy-type-arg.")
         print("                          The number of values in Type line must be Ntype.")
@@ -295,19 +291,19 @@ if __name__ == '__main__':
         print("                 Nset 2                               #[2 potential sets]")
         print("                 Set 0                                #[Set 0 (MWPotential2014)]")
         print("                 Ntype 3 Mode 0                       #[3 potential types for MilkyWay; Mode 0 (galactic frame)]")
-        print("                 Pos 0.0 0.0 0.0 Vel 0.0 0.0 0.0      #[x, y, z, vx, vy, vz (galactic frame)]")
+        print("                 GM 0.0 Pos 0.0 0.0 0.0 Vel 0.0 0.0 0.0 #[GM, x, y, z, vx, vy, vz (galactic frame)]")
         print("                 Type 15 5 9                          #[3 type indices (MWPotential2014)]")
         print("                 Arg 0.029994597188218 1.8 0.2375 0.75748020193716 0.375 0.035 4.852230533528 2.0 #[All arguments for MWPotential2014]")
         print("                 Nchange 0                            #[No changing arguments)]")
         print("                 Set 1                                #[Set 1 (Plummer)")
         print("                 Ntype 1 Mode 1                       #[1 type; Mode 1 (particle-system frame)")
-        print("                 Pos 0.0 0.0 0.0 Vel 0.0 0.0 0.0      #[x, y, z, vx, vy, vz (particle-system frame)]")
+        print("                 GM 1.11072675e-8 Pos 0.0 0.0 0.0 Vel 0.0 0.0 0.0  #[GM, x, y, z, vx, vy, vz (particle-system frame)]")
         print("                 Type 17                              #[Type index for Plummer]")
         print("                 Arg 1.11072675e-8 0.000125           #[Two arguments for Plummer (1000 Msun, 1 pc)")
         print("                 Nchange 1 Index 0                    #[1 Changing argument, changing index is mass of Plummer]")
         print("                 ChangeMode 1                         #[Linearly change]")
         print("                 ChangeRate -1e-9                     #[Reduce 1e-9 (Galpy mass unit) per Galpy time unit)]")
-        print("           Here the G*M and distance scaling factors are 2.4692087520131e-09 [galpy GM unit] / [pc^3/Myr^2] and 0.000125 [8 kpc] / [pc], respectively;")
+        print("           Here the GM and distance scaling factors are 2.4692087520131e-09 [galpy GM unit] / [pc^3/Myr^2] and 0.000125 [8 kpc] / [pc], respectively;")
         print("           Notice that the comments after the symbol # here are for reference, don't write them in the configure file.")
         print("       For task 'update':")
         print("           The format is the same as task 'add'.")
@@ -323,7 +319,7 @@ if __name__ == '__main__':
         print("               Nset 1 Index 1      #[only need to change set 1 (Plummer)]")
         print("               Set 1")
         print("               Ntype 1 Mode 1")
-        print("               Pos 0.0 0.0 0.0 Vel 0.0 0.0 0.0")
+        print("               GM 1.1072675e-9 Pos 0.0 0.0 0.0 Vel 0.0 0.0 0.0")
         print("               Type 17")
         print("               Arg 1.1072675e-9  0.000125")
         print("               Nchange 0           #[Stop changing mass]")

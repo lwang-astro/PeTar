@@ -175,7 +175,7 @@ int main(int argc, char** argv){
                         pjk.pos[2] = 0;
                         pjk.vel[0] = pjk.vel[1] = pjk.vel[2] = 0;
 
-                        galpy_manager.calcAccPot(pjk.acc, pjk.pot, time, pjk.pos, pjk.pos); 
+                        galpy_manager.calcAccPot(pjk.acc, pjk.pot, time, 0, pjk.pos, pjk.pos); 
                         pjk.printColumn(fxy);
                         fxy<<std::endl;
                     }
@@ -188,7 +188,7 @@ int main(int argc, char** argv){
                         pjk.pos[2] = zmin + (zmax-zmin)/(nz-1)*k;
                         pjk.vel[0] = pjk.vel[1] = pjk.vel[2] = 0;
 
-                        galpy_manager.calcAccPot(pjk.acc, pjk.pot, time, pjk.pos, pjk.pos); 
+                        galpy_manager.calcAccPot(pjk.acc, pjk.pot, time, 0, pjk.pos, pjk.pos); 
                         pjk.printColumn(fxz);
                         fxz<<std::endl;
                     }
@@ -225,7 +225,7 @@ int main(int argc, char** argv){
             double pos[3] = {particles[i].pos[0] + pos_offset[0],
                              particles[i].pos[1] + pos_offset[1],
                              particles[i].pos[2] + pos_offset[2]};
-            galpy_manager.calcAccPot(particles[i].acc, particles[i].pot, time, pos, &particles[i].pos[0]);
+            galpy_manager.calcAccPot(particles[i].acc, particles[i].pot, time, 0, pos, &particles[i].pos[0]);
 
             particles[i].printColumn(std::cout);
             std::cout<<std::endl;
