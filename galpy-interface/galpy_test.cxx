@@ -77,7 +77,7 @@ int main(int argc, char** argv){
     optind=0;
     int option_index;
     bool help_flag=false;
-    bool unit_astro_flag = false;
+    //bool unit_astro_flag = false;
     bool measure_flag = false;
 
     while ((arg_label = getopt_long(argc, argv, "-muh", long_options, &option_index)) != -1)
@@ -93,11 +93,11 @@ int main(int argc, char** argv){
             std::cout<<"Create mesh points to measure the potential evolution in x-y and x-z planes\n";
             opt_used ++;
             break;
-        case 'u':
-            unit_astro_flag = true;
-            std::cout<<"Use the astronomical unit set (Myr, pc, Msun)\n";
-            opt_used ++;
-            break;
+        //case 'u':
+        //    unit_astro_flag = true;
+        //    std::cout<<"Use the astronomical unit set (Myr, pc, Msun)\n";
+        //    opt_used ++;
+        //    break;
         case 'h':
             std::cout<<"The tool to calculate acceleration and potential for a given particle list \n"
                      <<"Usage: petar.galpy [options] [data file]\n"
@@ -109,7 +109,7 @@ int main(int argc, char** argv){
                      <<"Options:\n"
                      <<"    -m    : instead of reading particle list, generate a mesh of points in the x-y plane and x-z plane to create the acceleration and potential map.\n"
                      <<"            Time-dependent potential is also supported.\n"
-                     <<"    -u    : input data use astronomical unit set (Myr, pc, Msun) and set unit scaling factor for Galpy automatically.\n"
+                //<<"    -u    : input data use astronomical unit set (Myr, pc, Msun) and set unit scaling factor for Galpy automatically.\n"
                      <<"    -h    : help\n";
             help_flag=true;
             break;
@@ -139,7 +139,7 @@ int main(int argc, char** argv){
     }
 
     GalpyManager galpy_manager;
-    if (unit_astro_flag) galpy_io.setStdUnit();
+    //if (unit_astro_flag) galpy_io.setStdUnit();
 
     if (measure_flag) {
         double time, time_out, dt, dt_out, xmin, xmax, ymin, ymax, zmin, zmax;

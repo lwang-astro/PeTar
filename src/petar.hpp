@@ -3057,9 +3057,9 @@ public:
 #endif
 
             }
-#ifdef GALPY
-            galpy_parameters.setStdUnit(print_flag);
-#endif
+//#ifdef GALPY
+//            galpy_parameters.setStdUnit(print_flag);
+//#endif
 
         }
 
@@ -3604,6 +3604,9 @@ public:
                 
                 //kick 
                 p.vel += p.acc * dt_kick;
+#ifdef GALPY
+                galpy_manager.kickMovePot(dt_kick);
+#endif
                 time_kick += dt_kick;
 
                 // output information
@@ -3640,6 +3643,9 @@ public:
                 if(output_flag) {
                     dt_kick = dt_manager.getDtStartContinue();
                     p.vel += p.acc * dt_kick;
+#ifdef GALPY
+                    galpy_manager.kickMovePot(dt_kick);
+#endif
                     time_kick += dt_kick;
                 }
 
@@ -3647,6 +3653,9 @@ public:
                 dt_drift = dt_manager.getDtDriftContinue();
 
                 p.pos += p.vel * dt_drift;
+#ifdef GALPY
+                galpy_manager.driftMovePot(dt_drift);
+#endif
 
 #ifdef STELLAR_EVOLUTION
                 PS::F64 mbk = p.mass;
