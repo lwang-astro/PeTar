@@ -198,8 +198,8 @@ public:
                      stellar_evolution_option  (input_par_store, 1, "stellar-evolution", "stellar evolution of stars in Hermite+SDAR: 0: off; >=1: using SSE/BSE based codes; ==2: switch on dynamical tide and hyperbolic gravitational wave radiation"),
                      interrupt_detection_option(input_par_store, 1, "detect-interrupt", "stellar evolution of binaries in SDAR: 0: off; 1: using BSE based code (if '--stellar-evolution != 0)"),
 #else
-                     stellar_evolution_option  (input_par_store, 0, "stellar-evolution", "modify mass of particles: 0: turn off; 1: check every Hermite steps"),
-                     interrupt_detection_option(input_par_store, 0, "detect-interrupt", "modify orbits of AR groups and check interruption: 0: turn off; 1: modify the binary orbits based on detetion criterion; 2. modify and also interrupt the hard drift"),
+                     stellar_evolution_option  (input_par_store, 0, "stellar-evolution", "not implemented"),
+                     interrupt_detection_option(input_par_store, 0, "detect-interrupt", "interrupt integration of SDAR: 0: turn off; 1: merge two particles if their surfaces overlap; 2. merge two particles and also interrupt the hard integration"),
 #endif
 #else
                      interrupt_detection_option(input_par_store, 0, "detect-interrupt", "modify orbits of AR groups based on the interruption function: 0: turn off; 1: modify inside AR integration and accumulate energy change; 2. modify and also interrupt the hard drift"),
@@ -2231,7 +2231,6 @@ public:
                 stat.energy.de_sd_change_cum -= eloss;
                 pi.mass = 0.0;
             }
-            //remove_id_record.push_back(system_soft[remove_list[i]].id);
         }
         remove_list.resizeNoInitialize(0);
 
@@ -2268,6 +2267,7 @@ public:
             for (PS::S32 k=0; k<remove_list_thx[i].size(); k++) {
                 PS::S32 index=remove_list_thx[i][k];
                 remove_list.push_back(index);
+                remove_id_record.push_back(system_soft[index].id);
                 if (system_soft[index].mass>0) {
                     if (input_parameters.write_style.value>0) {
                         fesc<<std::setw(WRITE_WIDTH)<<stat.time;
@@ -2324,6 +2324,11 @@ public:
     //! get removed particle ID list local
     PS::S64* getRemovedIDListLocal() const {
         return remove_id_record.getPointer();
+    }
+
+    //! clear removed particle ID list
+    void clearRemovedIDList() {
+        remove_id_record.resizeNoInitialize(0);
     }
 
     //! exchange particles

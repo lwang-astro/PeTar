@@ -1054,23 +1054,6 @@ public:
                 auto merge = [&](const Float& dr, const Float& t_peri, const Float& sd_factor) {
                     _bin_interrupt.adr = &_bin;
                 
-                    // print data
-                    //std::cerr<<"Binary Merge: time: "<<_bin_interrupt.time_now<<std::endl;
-                    //_bin.Binary::printColumnTitle(std::cerr);
-                    //PtclHard::printColumnTitle(std::cerr);
-                    //PtclHard::printColumnTitle(std::cerr);
-                    //std::cerr<<std::endl;
-                    //_bin.Binary::printColumn(std::cerr);
-                    //p1->printColumn(std::cerr);
-                    //p2->printColumn(std::cerr);
-                    //std::cerr<<std::endl;
-
-                    //// new particle data
-                    //Float mcm = p1->mass + p2->mass;
-                    //for (int k=0; k<3; k++) {
-                    //    p1->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
-                    //    p1->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
-                    //}
 #ifdef BSE_BASE
                     //Float m1_bk = p1->mass;
                     //Float m2_bk = p2->mass;
@@ -1132,7 +1115,47 @@ public:
                             }
                         }
                     }
-#endif //BSE_BASE
+#else //not BSE_BASE
+                    // print data
+                    std::cerr<<"Binary Merge: time: "<<_bin_interrupt.time_now<<std::endl;
+                    _bin.Binary::printColumnTitle(std::cerr);
+                    //PtclHard::printColumnTitle(std::cerr);
+                    //PtclHard::printColumnTitle(std::cerr);
+                    std::cerr<<std::endl;
+                    _bin.Binary::printColumn(std::cerr);
+                    //p1->printColumn(std::cerr);
+                    //p2->printColumn(std::cerr);
+                    std::cerr<<std::endl;
+
+                    // set return flag >0
+                    modify_return = 2;
+
+                    p1->time_record = _bin_interrupt.time_now;
+                    p2->time_record = _bin_interrupt.time_now;
+            
+                    // new particle data
+                    Float mcm = p1->mass + p2->mass;
+                    for (int k=0; k<3; k++) {
+                        p1->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
+                        p1->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
+                    }
+                    p1->dm += p2->mass;
+                    p2->dm -= p2->mass;
+
+                    p1->mass = mcm;
+                    p2->mass = 0.0;
+
+                    p2->radius = 0.0;
+
+                    if (_bin_interrupt.status == AR::InterruptStatus::none) 
+                        _bin_interrupt.status = AR::InterruptStatus::merge;
+
+                    // reset collision state since binary orbit changes
+                    p1->setBinaryInterruptState(BinaryInterruptState::none);
+                    p2->setBinaryInterruptState(BinaryInterruptState::none);
+
+                    p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+#endif
                     //p1->setBinaryPairID(0);
                     //p2->setBinaryPairID(0);
                 };
@@ -1175,8 +1198,9 @@ public:
                                 p2->setBinaryPairID(p1->id);
                                 p1->setBinaryInterruptState(BinaryInterruptState::collision);
                                 p2->setBinaryInterruptState(BinaryInterruptState::collision);
-                                p1->time_interrupt = std::min(p1->time_interrupt, _bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri));
-                                //p2->time_interrupt = std::min(p1->time_interrupt, p2->time_interrupt); // ensure bse can still be called to evolve stars
+                                p1->time_interrupt = _bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri);
+                                p2->time_interrupt = p1->time_interrupt;
+                                    
                             }
                         }
                     }
