@@ -99,21 +99,43 @@ class SSEType(DictNpArrayMix):
 class BSEBinaryEvent(DictNpArrayMix):
     """ BSE binary event data from PeTar
     Keys: (class members)
-        time (1D): evolved time (Myr)
-        m1   (1D): mass component 1 (Msun)
-        m2   (1D): mass component 2 (Msun)
-        type1 (1D): stellar type of component 1
-        type2 (1D): stellar type of component 2
-        semi (1D): semi-major axis (Rsun)
-        ecc  (1D): eccentricity
-        rad1 (1D): stellar radius of component 1 (Roche radius 1)
-        rad2 (1D): stellar radius of component 2 (Roche radius 2)
-        binary_type (1D): BSE binary type
+        Base:
+            time (1D): evolved time (Myr)
+            m1   (1D): mass component 1 (Msun)
+            m2   (1D): mass component 2 (Msun)
+            type1 (1D): stellar type of component 1
+            type2 (1D): stellar type of component 2
+            semi (1D): semi-major axis (Rsun)
+            ecc  (1D): eccentricity
+            radro1 (1D): stellar radius of component 1 (Roche radius 1)
+            radro2 (1D): stellar radius of component 2 (Roche radius 2)
+            binary_type (1D): BSE binary type
+        Add:
+            lum1 (1D): bolometric luminosity of component 1 (Lsun) 
+            lum2 (1D): bolometric luminosity of component 2 (Lsun) 
+            rad1 (1D): stellar radius of component 1 (Rsun)
+            rad2 (1D): stellar radius of component 2 (Rsun)
+            mcore1 (1D): core mass of component 1 (Msun)
+            mcore2 (1D): core mass of component 2 (Msun)
+            rcore1 (1D): core radius of component 1 (Rsun)
+            rcore2 (1D): core radius of component 2 (Rsun)
+            spin1  (1D): stellar rotation of component 1 
+            spin2  (1D): stellar rotation of component 2 
+
+        if keyword argument "base_output" == False (default)
+           class members: Base + Add
+        else 
+           class members: Base
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        keys = [['time',np.float64],['m1',np.float64],['m2',np.float64],['type1',np.float64],['type2',np.float64],['semi',np.float64],['ecc',np.float64],['rad1',np.float64],['rad2',np.float64],['binary_type',np.float64]]
+        keys_base = [['time',np.float64],['m1',np.float64],['m2',np.float64],['type1',np.float64],['type2',np.float64],['semi',np.float64],['ecc',np.float64],['radro1',np.float64],['radro2',np.float64],['binary_type',np.float64]]
+        keys_add = [['lum1', np.float64],['lum2', np.float64],['rad1', np.float64],['rad2', np.float64],['mcore1',np.float64],['mcore2',np.float64],['rcore1',np.float64],['rcore2',np.float64],['spin1',np.float64],['spin2',np.float64]]
+        keys = keys_base + keys_add
+        if ('base_output' in kwargs.keys()):
+            if kwargs['base_output']:
+                keys = keys_base
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
 class BSETypeChange(DictNpArrayMix):
