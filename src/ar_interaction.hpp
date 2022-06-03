@@ -1139,6 +1139,9 @@ public:
                                 p1->star.printColumn(fout_bse, WRITE_WIDTH);
                                 p2->star.printColumn(fout_bse, WRITE_WIDTH);
                                 fout_bse<<std::endl;
+
+                                DATADUMP("dump_merger");
+                                
                             }
                         }
                     }

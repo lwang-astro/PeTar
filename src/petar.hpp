@@ -2693,7 +2693,7 @@ public:
 #ifdef HARD_DUMP
         // initial hard_dump 
         const PS::S32 num_thread = PS::Comm::getNumberOfThread();
-        hard_dump.initial(num_thread);
+        hard_dump.initial(num_thread, my_rank);
 #endif
 
         // particle system
