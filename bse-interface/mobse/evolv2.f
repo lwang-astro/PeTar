@@ -2484,13 +2484,17 @@ c            helper(2) = j2
          jp = MIN(jpmax,jp + 1)
          bpp(jp,1) = tphys
          bpp(jp,2) = mass(1)
+*        SR mod 23/03/2022 
+*         if(kstar(1).eq.15.and.bpp(jp-1,4).lt.15.0)then
          if(kstar(1).eq.15)then
             bpp(jp,2) = zero
          endif
          bpp(jp,3) = mass(2)
+*         if(kstar(2).eq.15.and.bpp(jp-1,5).lt.15.0)then
          if(kstar(2).eq.15)then
             bpp(jp,3) = zero
          endif
+*        SR mod 23/03/2022 
          bpp(jp,4) = float(kstar(1))
          bpp(jp,5) = float(kstar(2))
          bpp(jp,6) = zero
