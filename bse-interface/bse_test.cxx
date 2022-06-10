@@ -47,6 +47,8 @@ int main(int argc, char** argv){
     std::string fhyb_name;
     bool read_mass_flag = false;
     bool always_output_flag = false;
+    std::string bse_prefix = BSEManager::getBSEOutputFilenameSuffix();
+    std::string sse_prefix = BSEManager::getSSEOutputFilenameSuffix();
 
     auto printHelp= [&]() {
         std::cout<<"The tool to evolve single stars or binaries using "<<BSEManager::getBSEName()<<std::endl;
@@ -54,11 +56,14 @@ int main(int argc, char** argv){
         BSEManager::printLogo(std::cout);
 #endif
         BSEManager::printReference(std::cout);
-        std::cout<<"Usage: petar"<<BSEManager::getBSEOutputFilenameSuffix()<<" [options] [initial mass of stars, can be multiple values]\n"
-                 <<"       If no initial mass or no single/binary/hyprbolic table (-s12, -b or -m) is provided, N single stars (-n) with equal mass interal in Log scale will be evolved\n"
-                 <<"       When single table is provided, times and types can be set individually\n"
-                 <<"       If a binary is disrupted due to supernove kick, they are treated as two single stars for later-on evolution\n"
-                 <<"       The default unit set is: Msun, Myr. If input data have different units [IN], please modify the scaling fators\n"
+        std::cout<<"Usage: petar"<<bse_prefix<<" [options] [initial mass of stars, can be multiple values]\n"
+                 <<"       * If no initial mass or no single/binary/hyperbolic table (-s, -b or -m) is provided,\n"
+                 <<"         N single stars (-n) with equal mass interal in Log scale will be evolved.\n"
+                 <<"       * When a single/binary/hyperbolic table is provided (-s, -b or -m), times and types of stars can be set individually.\n"
+                 <<"       * When only one star or binary is provided, the single and binary types change are printed;\n"
+                 <<"         if -o is used, data of every step is printed.\n"
+                 <<"       * The default unit set is: Msun, Myr. If the input data have different units (referred as [IN]),\n"
+                 <<"         please modify the scaling fators.\n"
                  <<"Options:\n"
                  <<"    -n [I]: number of stars when evolve an IMF ("<<n<<")\n"
                  <<"    -i [D]: start time ("<<time0<<") [IN]\n"
@@ -70,8 +75,11 @@ int main(int argc, char** argv){
                  <<"    -b [S]: a file of binary table: First line: number of binary (unit:IN); After: m1, m2, type1, type2, period, ecc, time per line\n"
                  <<"    -m [S]: a file of hyperbolic orbit table for checking merger: First line: number of orbit (unit:IN); After: m1, m2, type1, type2, semi, ecc, time\n"
                  <<"    -w [I]: print column width ("<<width<<")\n"
-                 <<"    -o    : print evolution data every time when bse function is called (maximum time step by -d); if this option is not used, only output data when binary type changes\n"
-                 <<"    -f [S]: the prefix of data file that save the stellar evolution data every step, if not given, this file is not generated\n"
+                 <<"    -o    : print evolution data every time when stellar evolution function is called (maximum time step by -d)\n"
+                 <<"            * If this option is not used, only output data when single or binary types change.\n"
+                 <<"    -f [S]: the prefix of data file that save the stellar evolution data, if not given, this file is not generated\n"
+                 <<"            * The files [prefix].["<<sse_prefix<<"/"<<bse_prefix<<"].type_change store single or binary types change; if -o is used, save data every step\n"
+                 <<"            * The files [prefix].["<<sse_prefix<<"/"<<bse_prefix<<"].sn_kick store supernovae kick events\n"
                  <<"    -h    : help\n";
     };
 
@@ -153,7 +161,7 @@ int main(int argc, char** argv){
             break;
         case 'o':
             always_output_flag = true;
-            std::cout<<"Always output data every call of bse function"<<fprint_name<<std::endl;
+            std::cout<<"Always output data every call of bse function"<<std::endl;
             opt_used++;
             break;
         case 'f':

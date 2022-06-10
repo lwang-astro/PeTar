@@ -98,6 +98,7 @@ def calcGWMyr(m1, m2, semi, ecc):
         eccentricity
     """    
  
+    from scipy import integrate
     pc_to_au = 206264.81
 
     # Merging time in myr for one, hyperbolic orbit returns nan
@@ -122,7 +123,7 @@ def calcGWMyr(m1, m2, semi, ecc):
     if (type(m1) == np.ndarray | type(m1) == list):
         return np.array(list(map(time_gw_myr_one,m1,m2,semi_au,ecc)))
     else: 
-        return time_gw_yr(m1, m2, semi_au, ecc)
+        return time_gw_myr_one(m1, m2, semi_au, ecc)
 
 def convergentPointCheck(data, velocity):
     """ calculate proper motions in the frame of convergent point based on the given velocity and calculate the residuals 
