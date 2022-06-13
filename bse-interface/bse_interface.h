@@ -488,27 +488,41 @@ static double EstimateGRTimescale(StarParameter& _star1, StarParameter& _star2, 
  */
 class BinaryEvent{
 public:
-    double record[10][9];
+    double record[20][9];
 
     //! set up the initial parameter of binary event based on the present status of a binary
-    void recordInitial(const StarParameter& _p1, const StarParameter& _p2, const double _semi, const double _ecc, const int _type) {
-        const int init_index = getEventIndexInit();
-        record[0][init_index] = std::min(_p1.tphys, _p2.tphys);
-        record[1][init_index] = _p1.mt;
-        record[2][init_index] = _p2.mt;
-        record[3][init_index] = _p1.kw;
-        record[4][init_index] = _p2.kw;
-        record[5][init_index] = _semi;
-        record[6][init_index] = _ecc;
+    void recordEvent(const StarParameter& _p1, const StarParameter& _p2, const double _semi, const double _ecc, const int _type, const int _index) {
+        record[0][_index] = std::min(_p1.tphys, _p2.tphys);
+        record[1][_index] = _p1.mt;
+        record[2][_index] = _p2.mt;
+        record[3][_index] = _p1.kw;
+        record[4][_index] = _p2.kw;
+        record[5][_index] = _semi;
+        record[6][_index] = _ecc;
         double q = _p1.mt/_p2.mt;
         double rl1 = EstimateRocheRadiusOverSemi(q);
         q = 1.0/q;
         double rl2 = EstimateRocheRadiusOverSemi(q);
-        record[7][init_index] = _p1.r/(rl1*_semi);
-        record[8][init_index] = _p2.r/(rl2*_semi);
-        record[9][init_index] = _type;
+        record[7][_index] = _p1.r/(rl1*_semi);
+        record[8][_index] = _p2.r/(rl2*_semi);
+        record[9][_index] = _type;
+        record[10][_index] = _p1.lum;
+        record[11][_index] = _p2.lum;
+        record[12][_index] = _p1.r;
+        record[13][_index] = _p2.r;
+        record[14][_index] = _p1.mc;
+        record[15][_index] = _p2.mc;
+        record[16][_index] = _p1.rc;
+        record[17][_index] = _p2.rc;
+        record[18][_index] = _p1.ospin;
+        record[19][_index] = _p2.ospin;
     }
 
+    //! set binary type to -1 for the given event index to indicate the end of record
+    void setEventIndexEnd(const int index) {
+        record[9][index] = -1;
+    }
+    
     //! Maximum event number that can be recored in one call of evolv2
     int getEventNMax() const {
         return 8;
@@ -534,7 +548,17 @@ public:
             <<" semi[R*]= "<<record[5][index]
             <<" ecc= "<<record[6][index]
             <<" rad1[Ro]= "<<record[7][index]
-            <<" rad2[Ro]= "<<record[8][index];
+            <<" rad2[Ro]= "<<record[8][index]
+            <<" lum1[L*]= "<<record[10][index]
+            <<" lum2[L*]= "<<record[11][index]
+            <<" rad1[R*]= "<<record[12][index]
+            <<" rad2[R*]= "<<record[13][index]
+            <<" mc1[M*]= "<<record[14][index]
+            <<" mc2[M*]= "<<record[15][index]
+            <<" rc1[R*]= "<<record[16][index]
+            <<" rc2[R*]= "<<record[17][index]
+            <<" ospin1= "<<record[18][index]
+            <<" ospin2= "<<record[19][index];
     }
 
     //! print titles of class members using column style
@@ -552,7 +576,18 @@ public:
              <<std::setw(_width)<<"ecc"
              <<std::setw(_width)<<"rad1[Ro]"
              <<std::setw(_width)<<"rad2[Ro]"
-             <<std::setw(_width)<<"btype";
+             <<std::setw(_width)<<"btype"
+             <<std::setw(_width)<<"lum1[L*]"
+             <<std::setw(_width)<<"lum2[L*]"
+             <<std::setw(_width)<<"rad1[R*]"
+             <<std::setw(_width)<<"rad2[R*]"
+             <<std::setw(_width)<<"mc1[M*]"
+             <<std::setw(_width)<<"mc2[M*]"
+             <<std::setw(_width)<<"rc1[R*]"
+             <<std::setw(_width)<<"rc2[R*]"
+             <<std::setw(_width)<<"ospin1"
+             <<std::setw(_width)<<"ospin2";
+
     }
 
     //! print data of class members using column style
@@ -566,6 +601,7 @@ public:
         for (int i=3; i<5; i++) _fout<<std::setw(_width)<<int(record[i][_index]);
         for (int i=5; i<9; i++) _fout<<std::setw(_width)<<record[i][_index];
         _fout<<std::setw(_width)<<int(record[9][_index]);
+        for (int i=10; i<20; i++) _fout<<std::setw(_width)<<record[i][_index];
     }
 };
 
@@ -1327,11 +1363,13 @@ public:
     /*!
       @param[in,out] _star: star parameter
       @param[out] _out: output parameter from evolv1
-      @param[in] _dt_nb: physical time step to evolve [In unit]
+      @param[in] _dt: time step to evolve
+      @param[in] _unit_in_myr: if true, _dt is in Myr; else, _dt*tscale is used (default false)
       \return event flag: -1: error, 0: normal, 1: type change, 2: velocity kick
      */
-    int evolveStar(StarParameter& _star, StarParameterOut& _out, const double _dt_nb) {
-        double tphysf = _dt_nb*tscale + _star.tphys;
+    int evolveStar(StarParameter& _star, StarParameterOut& _out, const double _dt, bool _unit_in_myr=false) {
+        double tphysf = _dt*tscale + _star.tphys;
+        if (_unit_in_myr) tphysf = _dt + _star.tphys;
         double dtp=tphysf*100.0+1000.0;
         _out.dm = _star.mt;
         _out.kw0 = _star.kw;
@@ -1380,19 +1418,49 @@ public:
         _out2.dm = _star2.mt;
 
         // backup initial state
-        _bse_event.recordInitial(_star1, _star2, semi_rsun, _ecc, _binary_init_type);
+        _bse_event.recordEvent(_star1, _star2, semi_rsun, _ecc, _binary_init_type, _bse_event.getEventIndexInit());
 
-        if (_star1.tphys<tphys) event_flag = evolveStar(_star1, _out1, tphys);
+        if (_star1.kw==15 || _star2.kw==15) {
+            if (_star1.kw==15 && _star2.kw==15) {
+                _star1.tphys = tphysf;
+                _star2.tphys = tphysf;
+                return 0;
+            }
+            if (_star1.kw==15) {
+                double dt = tphysf - _star2.tphys;
+                event_flag = evolveStar(_star2, _out2, dt, true);
+                _star1.tphys = tphysf;
+            }
+            if (_star2.kw==15) {
+                double dt = tphysf - _star1.tphys;
+                event_flag = evolveStar(_star1, _out1, dt, true);
+                _star2.tphys = tphysf;
+            }
+            if (event_flag<0) return event_flag;
+            int event_index = 0;
+            if (event_flag>0) _bse_event.recordEvent(_star1, _star2, semi_rsun, _ecc, 2, event_index++);
+            _bse_event.setEventIndexEnd(event_index);
+            return 0;
+        }
+
+        if (_star1.tphys<tphys) {
+            double dt = tphys - _star1.tphys;
+            event_flag = evolveStar(_star1, _out1, dt, true);
+        }
         if (event_flag<0) return event_flag;
-        if (_star2.tphys<tphys) event_flag = evolveStar(_star2, _out2, tphys);
+        if (_star2.tphys<tphys) {
+            double dt = tphys - _star2.tphys;
+            event_flag = evolveStar(_star2, _out2, dt, true);
+        }
         if (event_flag<0) return event_flag;
-        
+
         int kw[2];
         double m0[2],mt[2],r[2],lum[2],mc[2],rc[2],menv[2],renv[2],ospin[2],epoch[2],tm[2],vkick[8];
         for (int k =0; k<4; k++) {
             vkick[k]  = _out1.vkick[k];
             vkick[k+4]= _out2.vkick[k];
         }
+
 
         kw[0] = _star1.kw;
         m0[0] = _star1.m0;
@@ -1411,7 +1479,7 @@ public:
         rc[1] = _star2.rc;
         ospin[1] = _star2.ospin;
         epoch[1] = _star2.epoch;
-        
+
         evolv2_(kw, m0, mt, r, lum, mc, rc, menv, renv, ospin, epoch, tm, &tphys, &tphysf, &dtp, &z, zpars, &period_days, &_ecc, _bse_event.record[0], vkick);
         _period = period_days/year_to_day/tscale;
 

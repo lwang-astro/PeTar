@@ -47,6 +47,8 @@ int main(int argc, char** argv){
     std::string fhyb_name;
     bool read_mass_flag = false;
     bool always_output_flag = false;
+    std::string bse_prefix = BSEManager::getBSEOutputFilenameSuffix();
+    std::string sse_prefix = BSEManager::getSSEOutputFilenameSuffix();
 
     auto printHelp= [&]() {
         std::cout<<"The tool to evolve single stars or binaries using "<<BSEManager::getBSEName()<<std::endl;
@@ -54,10 +56,14 @@ int main(int argc, char** argv){
         BSEManager::printLogo(std::cout);
 #endif
         BSEManager::printReference(std::cout);
-        std::cout<<"Usage: petar"<<BSEManager::getBSEOutputFilenameSuffix()<<" [options] [initial mass of stars, can be multiple values]\n"
-                 <<"       If no initial mass or no single/binary/hyprbolic table (-s, -b or -m) is provided, N single stars (-n) with equal mass interal in Log scale will be evolved\n"
-                 <<"       When single table is provided, times and types can be set individually\n"
-                 <<"       The default unit set is: Msun, Myr. If input data have different units [IN], please modify the scaling fators\n"
+        std::cout<<"Usage: petar"<<bse_prefix<<" [options] [initial mass of stars, can be multiple values]\n"
+                 <<"       * If no initial mass or no single/binary/hyperbolic table (-s, -b or -m) is provided,\n"
+                 <<"         N single stars (-n) with equal mass interal in Log scale will be evolved.\n"
+                 <<"       * When a single/binary/hyperbolic table is provided (-s, -b or -m), times and types of stars can be set individually.\n"
+                 <<"       * When only one star or binary is provided, the single and binary types change are printed;\n"
+                 <<"         if -o is used, data of every step is printed.\n"
+                 <<"       * The default unit set is: Msun, Myr. If the input data have different units (referred as [IN]),\n"
+                 <<"         please modify the scaling fators.\n"
                  <<"Options:\n"
                  <<"    -n [I]: number of stars when evolve an IMF ("<<n<<")\n"
                  <<"    -i [D]: start time ("<<time0<<") [IN]\n"
@@ -69,8 +75,11 @@ int main(int argc, char** argv){
                  <<"    -b [S]: a file of binary table: First line: number of binary (unit:IN); After: m1, m2, type1, type2, period, ecc, time per line\n"
                  <<"    -m [S]: a file of hyperbolic orbit table for checking merger: First line: number of orbit (unit:IN); After: m1, m2, type1, type2, semi, ecc, time\n"
                  <<"    -w [I]: print column width ("<<width<<")\n"
-                 <<"    -o    : print evolution data every time when bse function is called (maximum time step by -d); if this option is not used, only output data when binary type changes\n"
-                 <<"    -f [S]: the prefix of data file that save the stellar evolution data every step, if not given, this file is not generated\n"
+                 <<"    -o    : print evolution data every time when stellar evolution function is called (maximum time step by -d)\n"
+                 <<"            * If this option is not used, only output data when single or binary types change.\n"
+                 <<"    -f [S]: the prefix of data file that save the stellar evolution data, if not given, this file is not generated\n"
+                 <<"            * The files [prefix].["<<sse_prefix<<"/"<<bse_prefix<<"].type_change store single or binary types change; if -o is used, save data every step\n"
+                 <<"            * The files [prefix].["<<sse_prefix<<"/"<<bse_prefix<<"].sn_kick store supernovae kick events\n"
                  <<"    -h    : help\n";
     };
 
@@ -152,7 +161,7 @@ int main(int argc, char** argv){
             break;
         case 'o':
             always_output_flag = true;
-            std::cout<<"Always output data every call of bse function"<<fprint_name<<std::endl;
+            std::cout<<"Always output data every call of bse function"<<std::endl;
             opt_used++;
             break;
         case 'f':
@@ -345,28 +354,22 @@ int main(int argc, char** argv){
         _fout<<std::endl;
     };
 
-    std::ofstream fout_sse_type, fout_sse_sn, fout_bse_type, fout_bse_sn;
     bool output_flag=false;
-    if (fprint_name!="") {
-        std::string sse_suffix=BSEManager::getSSEOutputFilenameSuffix();
-        std::string bse_suffix=BSEManager::getBSEOutputFilenameSuffix();
-        if (star.size()>0) {
-            fout_sse_type.open((fprint_name+sse_suffix+std::string(".type_change")).c_str(), std::ofstream::out);
-            fout_sse_sn.open((fprint_name+sse_suffix+std::string(".sn_kick")).c_str(), std::ofstream::out);
-            fout_sse_type<<std::setprecision(WRITE_PRECISION);
-            fout_sse_sn<<std::setprecision(WRITE_PRECISION);
-        }
-        if (bin.size()>0) {
+    if (fprint_name!="") output_flag = true;
+
+    // first check whether binary exist
+    if (bin.size()>0) {
+
+        // open output file
+        std::ofstream fout_bse_type, fout_bse_sn;
+        if (output_flag) {
+            std::string bse_suffix=BSEManager::getBSEOutputFilenameSuffix();
             fout_bse_type.open((fprint_name+bse_suffix+std::string(".type_change")).c_str(), std::ofstream::out);
             fout_bse_sn.open((fprint_name+bse_suffix+std::string(".sn_kick")).c_str(), std::ofstream::out);
             fout_bse_type<<std::setprecision(WRITE_PRECISION);
             fout_bse_sn<<std::setprecision(WRITE_PRECISION);
         }
-        output_flag = true;
-    }
 
-    // first check whether binary exist
-    if (bin.size()>0) {
         int nbin = bin.size();
 #pragma omp parallel for schedule(dynamic)
         for (int i=0; i<nbin; i++) {
@@ -398,6 +401,8 @@ int main(int argc, char** argv){
                 
                 // evolve function
                 int event_flag=bse_manager.evolveBinary(bin[i].star[0],bin[i].star[1],bin[i].out[0],bin[i].out[1],bin[i].semi,bin[i].period,bin[i].ecc,bin[i].bse_event, bin_type_last, dt);
+                    
+
                 // error
                 if (event_flag<0) {
                     std::cerr<<"Error! ";
@@ -482,15 +487,47 @@ int main(int argc, char** argv){
                     }
                 }
                 double dt_miss = bse_manager.getDTMiss(bin[i].out[0]);
+
                 if (dt_miss!=0.0&&bin[i].star[0].kw>=15&&bin[i].star[1].kw>=15) break;
+                
+                //if (bin[i].star[0].kw>=15) {
+                //    star.push_back(bin[i].star[1]);
+                //    break;
+                //}
+                //if (bin[i].star[1].kw>=15) {
+                //    star.push_back(bin[i].star[0]);
+                //    break;
+                //}
+                // 
+                //if (bse_manager.isDisrupt(bin_type_last)) {
+                //    star.push_back(bin[i].star[0]);
+                //    star.push_back(bin[i].star[1]);
+                //    break;
+                //}
             }
         }
 
         printBinaryTitle(std::cout);
         for (int i=0; i<nbin; i++) printBinary(std::cout, bin[i]);
+
+        if (output_flag) {
+            fout_bse_type.close();
+            fout_bse_sn.close();
+        }
     }
 
     if (star.size()>0) {
+
+        // output file open
+        std::ofstream fout_sse_type, fout_sse_sn;
+        if (output_flag) {
+            std::string sse_suffix=BSEManager::getSSEOutputFilenameSuffix();
+            fout_sse_type.open((fprint_name+sse_suffix+std::string(".type_change")).c_str(), std::ofstream::out);
+            fout_sse_sn.open((fprint_name+sse_suffix+std::string(".sn_kick")).c_str(), std::ofstream::out);
+            fout_sse_type<<std::setprecision(WRITE_PRECISION);
+            fout_sse_sn<<std::setprecision(WRITE_PRECISION);
+        }
+
         StarParameterOut output[star.size()];
 
 #pragma omp parallel for schedule(dynamic)
@@ -555,6 +592,11 @@ int main(int argc, char** argv){
         for (size_t i=0; i<star.size(); i++) {
             printSingleColumn(std::cout, mass0[i], star[i], output[i]);
         }
+
+        if (output_flag) {
+            fout_sse_type.close();
+            fout_sse_sn.close();
+        }
     }
 
     if (hyb.size()>0) {
@@ -569,13 +611,6 @@ int main(int argc, char** argv){
 
             printBinary(std::cout,hyb[i]);
         }
-    }
-
-    if (output_flag) {
-        fout_sse_type.close();
-        fout_sse_sn.close();
-        fout_bse_type.close();
-        fout_bse_sn.close();
     }
 
     return 0;

@@ -188,17 +188,25 @@ class PlotXY:
         y = []
         xcm = 0
         ycm = 0
+        xc = 0
+        yc = 0
         plot_mode = self.plot_mode
-        core_correct = (self.cm_mode=='core') & (data.generate_binary != 2)
+        core_correct = (self.cm_mode=='core') & (data.generate_binary != 2) 
+        cm_is_core = (data.generate_binary == 2)
+        read_core = cm_is_core | core_correct
         origin_mode = (self.cm_mode=='none')
         if plot_mode == 'x-y':
             x = data.data.pos[:,0]
             y = data.data.pos[:,1]
             xcm = data.header.pos_offset[0]
             ycm = data.header.pos_offset[1]
-            if (core_correct):
+            if (read_core):
                 xc = data.core.pos[0,0]
                 yc = data.core.pos[0,1]
+            if (cm_is_core):
+                xcm = xc
+                ycm = yc
+            if (core_correct):
                 x += xcm - xc
                 y += ycm - yc
                 xcm = xc
@@ -213,9 +221,14 @@ class PlotXY:
             y = data.data.pos[:,2]
             xcm = data.header.pos_offset[0]
             ycm = data.header.pos_offset[2]
-            if (core_correct):
+            if (read_core):
                 xc = data.core.pos[0,0]
                 yc = data.core.pos[0,2]
+            if (cm_is_core):
+                xcm = xc
+                ycm = yc
+                print(xcm,ycm)
+            if (core_correct):
                 x += xcm - xc
                 y += ycm - yc
                 xcm = xc
@@ -230,9 +243,13 @@ class PlotXY:
             y = data.data.pos[:,2]
             xcm = data.header.pos_offset[1]
             ycm = data.header.pos_offset[2]
-            if (core_correct):
+            if (read_core):
                 xc = data.core.pos[0,1]
                 yc = data.core.pos[0,2]
+            if (cm_is_core):
+                xcm = xc
+                ycm = yc
+            if (core_correct):
                 x += xcm - xc
                 y += ycm - yc
                 xcm = xc
@@ -249,10 +266,16 @@ class PlotXY:
             rycm = data.header.pos_offset[1]
             xcm = np.sqrt(rxcm*rxcm+rycm*rycm)
             ycm = data.header.pos_offset[2]
-            if (core_correct):
+            if (read_core):
                 rxc = data.core.pos[0,0]
                 ryc = data.core.pos[0,1]
                 yc = data.core.pos[0,2]
+            if (cm_is_core):
+                rxcm = rxc
+                rycm = ryc
+                xcm = np.sqrt(rxc*rxc+ryc*ryc)
+                ycm = yc
+            if (core_correct):
                 x = np.sqrt((rx + rxcm - rxc)**2 + (ry + rycm - ryc)**2)
                 y = data.data.pos[:,2] + ycm - yc
                 xcm = np.sqrt(rxc*rxc+ryc*ryc)
@@ -270,9 +293,13 @@ class PlotXY:
             y = data.data.vel[:,1]
             xcm = data.header.vel_offset[0]
             ycm = data.header.vel_offset[1]
-            if (core_correct):
+            if (read_core):
                 xc = data.core.vel[0,0]
                 yc = data.core.vel[0,1]
+            if (cm_is_core):
+                xcm = xc
+                ycm = yc
+            if (core_correct):
                 x += xcm - xc
                 y += ycm - yc
                 xcm = xc
@@ -287,9 +314,13 @@ class PlotXY:
             y = data.data.vel[:,2]
             xcm = data.header.vel_offset[0]
             ycm = data.header.vel_offset[2]
-            if (core_correct):
+            if (read_core):
                 xc = data.core.vel[0,0]
                 yc = data.core.vel[0,2]
+            if (cm_is_core):
+                xcm = xc
+                ycm = yc
+            if (core_correct):
                 x += xcm - xc
                 y += ycm - yc
                 xcm = xc
@@ -304,9 +335,13 @@ class PlotXY:
             y = data.data.vel[:,2]
             xcm = data.header.vel_offset[1]
             ycm = data.header.vel_offset[2]
-            if (core_correct):
+            if (read_core):
                 xc = data.core.vel[0,1]
                 yc = data.core.vel[0,2]
+            if (cm_is_core):
+                xcm = xc
+                ycm = yc
+            if (core_correct):
                 x += xcm - xc
                 y += ycm - yc
                 xcm = xc
@@ -323,10 +358,16 @@ class PlotXY:
             vycm = data.header.vel_offset[1]
             xcm = np.sqrt(vxcm*vxcm+vycm*vycm)
             ycm = data.header.vel_offset[2]
-            if (core_correct):
+            if (read_core):
                 vxc = data.core.vel[0,0]
                 vyc = data.core.vel[0,1]
                 yc = data.core.vel[0,2]
+            if (cm_is_core):
+                vxcm = vxc
+                vycm = vyc
+                xcm = np.sqrt(vxc*vxc+vyc*vyc)
+                ycm = yc
+            if (core_correct):
                 x = np.sqrt((vx + vxcm - vxc)**2 + (vy + vycm - vyc)**2)
                 y = data.data.pos[:,2] + ycm - yc
                 xcm = np.sqrt(vxc*vxc+vyc*vyc)
@@ -644,7 +685,7 @@ class Data:
             data['data'] = particles
             if (self.get_skycoord):
                 data['sky'] = particles.toSkyCoord(pos_offset=header.pos_offset, vel_offset=header.vel_offset)
-                if (self.cm_mode == 'core'):
+                if (self.cm_mode == 'core') | (data.generate_binary == 2):
                     data['skycm'] = data['core'].toSkyCoord()[0]
                 else:
                     data['skycm'] = header.toSkyCoord()
@@ -1154,10 +1195,9 @@ if __name__ == '__main__':
     read_core=False
     if ('cm_mode' in kwargs.keys()):
         if (kwargs['cm_mode']=='core'): read_core=True
-    else: read_core=False
-    if ('generate_binary' in kwargs.keys()): 
-        if (kwargs['generate_binary']==2): read_core=True
-    else: read_core=False
+    if (not 'generate_binary' in kwargs.keys()): 
+        read_core = True
+    elif (kwargs['generate_binary']==2): read_core=True
 
     lagr=dict()
 

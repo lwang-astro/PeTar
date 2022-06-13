@@ -52,6 +52,17 @@
 !         z = 0.0001
          z = 0.0001220703125
       endif
+* Tanikawa added 10.06.22 FROM
+      if((0.00019.lt.z .and. z.lt.0.0021)) then
+         if((0.00019 .lt. z .and. z .lt. 0.00021)
+     &        .or. (0.0019 .lt. z .and. z .lt. 0.0021)) then
+            zeta = nint(log10(z/0.02))
+         else
+            zeta = log10(z/0.02)
+         endif
+         call setMetallicity(zeta)
+      endif
+* Tanikawa added 10.06.22 TO
 *
       lzs = log10(z/0.02d0)
       dlzs = 1.d0/(z*log(10.d0))

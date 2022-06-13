@@ -277,14 +277,16 @@ class DictNpArrayMix:
                 if(new_key_flag): self.keys.append([key,(type(member[:,0]),dimension)])
             else:
                 if(new_key_flag): self.keys.append([key,type(member)])
+            if (self.size != member.size/dimension):
+                raise ValueError('New member has different size: ',member.size/dimension, ' host size: ',self.size)
         elif (issubclass(type(member), DictNpArrayMix)):
             dimension = member.ncols
-            if(new_key_flag): self.keys.append([key,type(member)])
+            if (new_key_flag): self.keys.append([key,type(member)])
+            if (self.size != member.size):
+                raise ValueError('New member has different size: ',member.size, ' host size: ',self.size)
         else:
             raise ValueError('New member type should be np.ndarray or DictNpArrayMix, but given ',type(member))
         self.ncols += dimension
-        if (self.size != int(member.size/dimension)):
-            raise ValueError('New member has different size: ',member.size/dimension, ' host size: ',self.size)
             
     def getherDataToArray(self):
         """ gether all data to a 2D numpy.ndarray and return it

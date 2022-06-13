@@ -21,8 +21,12 @@ if __name__ == '__main__':
         print("   The tool scan snapshots in the list and select all singles or binaries with the provided type,")
         print("   then save the data into a new file.")
         print("   An additional column, time, will be added in the new file, which is obtain from the header of snapshots.")
+        print("   If -m bid or -m bidfile are used, one more column, bid, will also be added (in front of time).")
         print("   Before reading the output file (loadtxt) by using Python module petar.Particle or petar.Binary, ")
         print("   make sure to use addNewMember('time', np.array([]).astype(float)) first.")
+        print("   For -m bid or -m bidfile, two times of addNewMember are needed:")
+        print("        addNewMember('bid', np.array([]).astype(int))")
+        print("        addNewMember('time', np.array([]).astype(float))")
         print("   Output file has the name style of [prefix].[object_typename].[origin|single|binary]")
         print("        [prefix] is defined in the option -p;")
         print("        [object_typename] is defined by SSE star type shown below;")
@@ -280,11 +284,19 @@ if __name__ == '__main__':
                 read_flag=False
                 if (snap_type=='origin'):
                     if (snapshot_format=='ascii'): data_temp.loadtxt(path, skiprows=1)
-                    else: data_temp.fromfile(path, offset=petar.HEADER_OFFSET)
+                    else: 
+                        if (external_mode!='none'): 
+                            data_temp.fromfile(path, offset=petar.HEADER_OFFSET_WITH_CM)
+                        else:
+                            data_temp.fromfile(path, offset=petar.HEADER_OFFSET)
                     read_flag=True
-                elif os.path.getsize(path+'.single')>0:
-                    data_temp.loadtxt(path+'.single')
-                    read_flag=True
+                else:
+                    if os.path.getsize(path+'.single')>0:
+                        data_temp.loadtxt(path+'.single')
+                        read_flag=True
+                if (external_mode!='none') & (read_flag): 
+                    data_temp.pos += header.pos_offset
+                    data_temp.vel += header.vel_offset
                 if (read_flag):
                     if (mode=='custom'):
                         data_sel = selfun.petar_data_select_function(header, data_temp)
