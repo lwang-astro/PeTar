@@ -1,5 +1,4 @@
 #pragma once
-
 #ifdef P3T_64BIT
 #define CALC_EP_64bit
 #define CALC_SP_64bit
@@ -110,6 +109,7 @@ public:
     IOParams<PS::S64> id_offset;
     IOParams<PS::F64> dt_soft;
     IOParams<PS::F64> dt_snap;
+    IOParams<PS::F64> nstep_dt_soft_kepler;
     IOParams<PS::F64> search_vel_factor;
     IOParams<PS::F64> search_peri_factor;
     IOParams<PS::F64> dt_limit_hard_factor;
@@ -170,8 +170,9 @@ public:
                      unit_set         (input_par_store, 0,    "u", "Input data unit, 0: unknown, referring to G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr"),
                      n_glb            (input_par_store, 100000, "n", "Total number of particles, only used for a test using the internal equal-mass Plummer model generator (assuming G=1 and the input data filename is __Plummer)"),
                      id_offset        (input_par_store, -1,   "id-offset", "Starting id for artificial particles, total number of real particles must be always smaller than this","n_glb+1"),
-                     dt_soft          (input_par_store, 0.0,  "s", "Tree timestep, if value is zero, use 0.1*r_out/sigma_1D"),
+                     dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft), if the value is zero (default) and --nstep-dt-soft-kepler is not used, dt_soft = 0.1*r_out/sigma_1D"),
                      dt_snap          (input_par_store, 1.0,  "o", "Output time interval of particle dataset snapshot"),
+                     nstep_dt_soft_kepler (input_par_store, 0.0, "nstep-dt-soft-kepler", "Determine tree timestep by P(r_in)/nstep, where P(r_in) is the binary period with the semi-major axis of r_in, nstep is the argument of this option (e.g., 32.0)", "not used"),
                      search_vel_factor(input_par_store, 3.0,  "search-vel-factor", "Neighbor searching coefficient for velocity check (v*dt)"),
                      search_peri_factor  (input_par_store, 1.5, "search-peri-factor", "Neighbor searching coefficient for peri-center check"),
                      dt_limit_hard_factor(input_par_store, 4.0, "dt-max-factor", "Limit of tree time step/hard time step"),
@@ -185,7 +186,7 @@ public:
 #endif
                      step_limit_ar(input_par_store, 1000000, "step-limit-ar", "Maximum step allown for ARC sym integrator"),
                      eps          (input_par_store, 0.0,  "soft-eps", "Softerning eps"),
-                     r_out        (input_par_store, 0.0,  "r", "Changeover function outer boundary radius, if value is zero, use 0.1 GM/[N^(1/3) sigma_3D^2]"),
+                     r_out        (input_par_store, 0.0,  "r", "Changeover function outer boundary radius (r_out), if value is zero and -s is not used, use 0.1 GM/[N^(1/3) sigma_3D^2]; if -s is given, calculated r_out from dt_soft"),
                      r_bin        (input_par_store, 0.0,  "r-bin", "Tidal tensor box size and the radial criterion for detecting multiple systems (binaries, triples...), if value is zero, use 0.8*r_in"),
 //                     r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out"),
                      r_search_min (input_par_store, 0.0,  "r-search-min", "Minimum neighbor search radius for hard clusters","auto"),
@@ -257,6 +258,7 @@ public:
 #ifdef ADJUST_GROUP_PRINT
             {adjust_group_write_option.key,   required_argument, &petar_flag, 24},
 #endif            
+            {nstep_dt_soft_kepler.key,  required_argument, &petar_flag, 25},
             {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
         };
@@ -421,6 +423,11 @@ public:
                     opt_used += 2;
                     break;
 #endif
+                case 25:
+                    nstep_dt_soft_kepler.value = atof(optarg);
+                    if(print_flag) nstep_dt_soft_kepler.print(std::cout);
+                    opt_used += 2;
+                    break;
                 default:
                     break;
                 }
@@ -544,7 +551,8 @@ public:
                     std::cout<<"        --disable-print-info:  "<<"Do not print information"<<std::endl;
                     std::cout<<"        --disable-write-info:  "<<"Do not write information"<<std::endl;
                     std::cout<<"  -h(--help):               print help"<<std::endl;
-                    std::cout<<"*** PS: r_in : transit function inner boundary radius\n"
+                    std::cout<<"*** PS: dt_soft: tree time step\n"
+                             <<"        r_in : transit function inner boundary radius\n"
                              <<"        r_out: transit function outer boundary radius\n"
                              <<"        sigma: half-mass radius velocity dispersion\n"
                              <<"        n_bin: number of primordial binaries\n"
@@ -3072,6 +3080,7 @@ public:
         PS::S64& n_bin         =  input_parameters.n_bin.value;
         //PS::F64& theta         =  input_parameters.theta.value;
         PS::F64& G             =  input_parameters.gravitational_constant.value;
+        PS::F64& nstep_dt_soft_kepler = input_parameters.nstep_dt_soft_kepler.value;
 
         // local particle number
         const PS::S64 n_loc = system_soft.getNumberOfParticleLocal();
@@ -3138,11 +3147,12 @@ public:
             n_vel_loc_count++;
         }
     
-        for (PS::S64 i=single_start_index; i<n_loc; i++){
-            PS::F64vec dv = system_soft[i].vel - vel_cm_glb;
-            vel_sq_loc += dv * dv;
-            n_vel_loc_count++;
-        }
+        if (single_start_index <n_loc-1) 
+            for (PS::S64 i=single_start_index; i<n_loc; i++){
+                PS::F64vec dv = system_soft[i].vel - vel_cm_glb;
+                vel_sq_loc += dv * dv;
+                n_vel_loc_count++;
+            }
 
         const PS::S64    n_vel_glb_count= PS::Comm::getSum(n_vel_loc_count);
         const PS::S64    n_glb          = PS::Comm::getSum(n_loc);
@@ -3173,19 +3183,31 @@ public:
 
         // if tree time step is not defined, calculate tree time step by r_out and velocity dispersion
         if (dt_soft==0.0) {
-            if (vel_disp>0) dt_soft = regularTimeStep(0.1*r_out / vel_disp);
-            else if (n_glb==1) {
+            if (n_glb==1) {
                 if (print_flag) std::cout<<"In one particle case, tree time step is finishing - starting time\n";
                 dt_soft = input_parameters.time_end.value - stat.time;
+            }
+            else {
+                // 1/nstep of a binary period with semi-major axis = r_int.
+                if (nstep_dt_soft_kepler>0)  
+                    dt_soft = regularTimeStep(COMM::Binary::semiToPeriod(r_in, mass_average, G)/nstep_dt_soft_kepler);
+                else 
+                    dt_soft = regularTimeStep(0.1*r_out / vel_disp);
             }
         }
         else {
             dt_soft = regularTimeStep(dt_soft);
             // if r_out is not defined, adjust r_out to minimum based on tree step
             if (!r_out_flag) {
-                if (vel_disp>0&&n_glb>1) {
-                    r_out = 10.0*dt_soft*vel_disp;
-                    r_in = r_out * ratio_r_cut;
+                if (n_glb>1) {
+                    if (nstep_dt_soft_kepler>0) {
+                            r_in = COMM::Binary::periodToSemi(dt_soft*nstep_dt_soft_kepler, mass_average, G);
+                            r_out = r_in / ratio_r_cut;
+                    }
+                    else {
+                        r_out = 10.0*dt_soft*vel_disp;
+                        r_in = r_out * ratio_r_cut;
+                    }
                 }
                 else {
                     r_out = 1e-16;
