@@ -494,7 +494,19 @@ class DictNpArrayMix:
                 print(key,member.shape)
             elif (issubclass(type(member), DictNpArrayMix)):
                 member.printSize()
-                
+
+    def resize(self, N):
+        """ resize N elements recursively using numpy.resize
+        """
+        for key_type in self.keys:
+            key = key_type[0]
+            member = self.__dict__[key]
+            if (type(member)==np.ndarray):
+                shape = (N,)+member.shape[1:]
+                self.__dict__[key] = np.resize(member, shape)
+            elif (issubclass(type(member), DictNpArrayMix)):
+                self.__dict__[key].resize(N)
+        self.size = int(N)
                 
         
 def join(*_dat):
