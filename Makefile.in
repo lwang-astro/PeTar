@@ -73,6 +73,7 @@ BSELIBS = -L ./bse-interface -lbse -lgfortran
 CXXLIBS += $(BSELIBS)
 LIBFILES+= $(BSELIBFILES)
 PETAR_INCLUDE += -I ./bse-interface
+CUDA_INCLUDE += -I ./bse-interface
 SE_INSTALL:
 	$(MAKE) -C bse-interface install
 SE_CLEAN:
@@ -211,7 +212,7 @@ CXX=@CXX@
 
 VPATH=./src ./build
 PETAR_INCLUDE += -I./src @PETAR_INCLUDE@
-CUDA_INCLUDE = -I./src @PETAR_INCLUDE@
+CUDA_INCLUDE += -I./src @PETAR_INCLUDE@
 
 SRC = main.cc ${shell ls ./src/*.hpp} 
 
