@@ -815,12 +815,15 @@ public:
                 p2->radius = bse_manager.getMergerRadius(p2->star);
 
 
+                bool mass_zero_flag = false;
+
                 // if both mass becomes zero, set destroy state
                 if (p1->mass==0.0&&p2->mass==0.0) {
                     p1->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
                     p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
                     _bin_interrupt.status = AR::InterruptStatus::destroy;
                     modify_return = 3;
+                    mass_zero_flag = true;
                 }
                 else {
                     // if mass become zero, set to unused for removing and merger status
@@ -835,6 +838,7 @@ public:
                             p2->vel[k] = vel_cm[k];
                         }
                         modifyOneParticle(*p2, p2->time_record, _bin_interrupt.time_now);
+                        mass_zero_flag = true;
                     }
 
                     if (p2->mass==0.0) {
@@ -848,6 +852,7 @@ public:
                             p1->vel[k] = vel_cm[k];
                         }
                         modifyOneParticle(*p1, p1->time_record, _bin_interrupt.time_now);
+                        mass_zero_flag = true;
                     }
 
                     // case when SN kick appears
@@ -872,7 +877,7 @@ public:
                         }
                     }
 
-                    if (!kick_flag&&_bin_interrupt.status != AR::InterruptStatus::merge) {
+                    if (!kick_flag && !mass_zero_flag) {
                         // case for elliptic case
                         if (ecc>=0.0&&ecc<=1.0) {
                             // obtain full orbital parameters
@@ -915,6 +920,10 @@ public:
                         }
                     }
                 }
+                if (mass_zero_flag) {
+                    DATADUMP("dump_merger");
+                }
+
             };
 
             bool check_flag = false;
