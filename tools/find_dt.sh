@@ -78,7 +78,7 @@ fi
 
 if [ -z $dt_base ]; then
     $prefix $pbin -w 0 $opts -i $sfmt -t 0.0 $fname &>check.perf.test.log
-    dt_base=`egrep dt_soft check.perf.test.log |awk '{OFMT="%.14g"; print $3/4}'`
+    dt_base=`egrep '^ dt_soft' check.perf.test.log |awk '{OFMT="%.14g"; print $3/4}'`
     echo 'Auto determine dt_base: '$dt_base
     #rm -f check.perf.test.log
 else
