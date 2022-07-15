@@ -106,6 +106,7 @@ do
 	echo 'process '$f
 	if [ -e $f.bk ]; then
 	    if [ -z $rmi ]; then
+		echo 'Start to remove previous backup file, if you do not want this, please quit petar.data.clear (ctrl c) immediately!'
 		rm -i $f.bk
 		mv $f $f.bk
 		echo 'backup '$f' to '$f.bk
