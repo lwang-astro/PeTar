@@ -304,11 +304,6 @@ class Particle(SimpleParticle):
               pot_soft (1D): long-range interaction potential
               *pot_ext  (1D): external potential (only exist when keyword argument 'external_mode' is not 'none')
               n_nb:    (1D): number of neighbors (short-interaction)
-        hermite: dt   (1D): hermite time step size
-                 time (1D): current time of particle
-                 acc  (2D,3): acceleration 
-                 jerk (2D,3): first derivates of acceleration
-                 pot  (1D): potential
 
         ends: the end part of keys depends on kwargs['particle_type']:
              hermite:   ptcl + hermite

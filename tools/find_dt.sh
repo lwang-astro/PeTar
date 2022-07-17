@@ -78,7 +78,7 @@ fi
 
 if [ -z $dt_base ]; then
     $prefix $pbin -w 0 $opts -i $sfmt -t 0.0 $fname &>check.perf.test.log
-    dt_base=`egrep dt_soft check.perf.test.log |awk '{OFMT="%.14g"; print $3/4}'`
+    dt_base=`egrep '^ dt_soft' check.perf.test.log |awk '{OFMT="%.14g"; print $3/4}'`
     echo 'Auto determine dt_base: '$dt_base
     #rm -f check.perf.test.log
 else
@@ -106,7 +106,7 @@ do
     ${prefix} timeout $tcum $pbin $opts -w 0 -i $sfmt -t $tend  -s $dt -o $dt $fname &>check.perf.$dt.log
     egrep 'Wallclock' -A 3 check.perf.$dt.log |sed -n '/^\ *[0-9]/ p'|awk '{if (NR>1 && NR%2==0) print $1,$2+$3+$4+$8,$7+$9,$6+$10+$11,$12+$13}' >check.perf.$dt.tperf
     if [[ `wc -l check.perf.$dt.tperf|awk '{print $1}'` -ge 6 ]]; then 
-	dt_reg=`egrep dt_soft check.perf.$dt.log|awk '{OFMT="%.14g"; print $3}'`
+	dt_reg=`egrep '^\ +dt_soft' check.perf.$dt.log|awk '{OFMT="%.14g"; print $3}'`
 	tperf=(`awk -v dt=$dt_reg 'BEGIN{t=1e10; ns=1.0/dt; th=0; ts=0; tc=0; td=0;} {if (t>$1) {t=$1; th=$2; ts=$3; tc=$4; td=$5;}} END{print t*ns,th*ns,ts*ns,tc*ns,td*ns,ns}' check.perf.$dt.tperf`)
 	de=`grep 'Slowdown:' check.perf.$dt.log|awk '{print $2}'`
 	echo 'check tree step: '$dt_reg', wallclock time for one time unit: '${tperf[0]}'  hard: '${tperf[1]}'  soft: '${tperf[2]}'   clustering: '${tperf[3]}'   domain: '${tperf[4]}'   step number: '${tperf[5]}

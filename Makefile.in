@@ -73,6 +73,7 @@ BSELIBS = -L ./bse-interface -lbse -lgfortran
 CXXLIBS += $(BSELIBS)
 LIBFILES+= $(BSELIBFILES)
 PETAR_INCLUDE += -I ./bse-interface
+CUDA_INCLUDE += -I ./bse-interface
 SE_INSTALL:
 	$(MAKE) -C bse-interface install
 SE_CLEAN:
@@ -211,6 +212,7 @@ CXX=@CXX@
 
 VPATH=./src ./build
 PETAR_INCLUDE += -I./src @PETAR_INCLUDE@
+CUDA_INCLUDE += -I./src @PETAR_INCLUDE@
 
 SRC = main.cc ${shell ls ./src/*.hpp} 
 
@@ -255,7 +257,7 @@ build/petar.io.test: io_test.cxx |build
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS)  $< -o $@  $(CXXLIBS)
 
 build/force_gpu_cuda.o: force_gpu_cuda.cu |build
-	$(NVCC) $(PETAR_INCLUDE) -c $< -o $@ 
+	$(NVCC) $(CUDA_INCLUDE) -c $< -o $@ 
 
 install: $(TARGET) SE_INSTALL EXT_INSTALL
 	install -d @prefix@/bin/

@@ -208,8 +208,8 @@ class BSEDynamicMerge(DictNpArrayMix):
         *dr (1D): separation at merger time (Rsun)
         *t_peri (1D): if merger is binary, this is the left time to peri-center, else it is 0.0 (days)
         *sd (1D): slowdown factor for the binary
-        init (SSEStarParameter): initial status of star
-        final (SSEStarParameter): final status of star after stellar evolution
+        init (SSEStarParameterPair): initial status of star
+        final (SSEStarParameterPair): final status of star after stellar evolution
 
     kwargs['less_output'] (bool)
         True: 
