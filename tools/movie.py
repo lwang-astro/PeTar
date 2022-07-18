@@ -75,44 +75,35 @@ class PlotXY:
             unit_vel = '['+kwargs['unit_vel']+']'
 
         plot_mode = self.plot_mode
-        if plot_mode == 'x-y':
-            axe.set_xlabel('x'+unit_length)
-            axe.set_ylabel('y'+unit_length)
-        elif plot_mode == 'x-z':
-            axe.set_xlabel('x'+unit_length)
-            axe.set_ylabel('z'+unit_length)
-        elif plot_mode == 'y-z':
-            axe.set_xlabel('y'+unit_length)
-            axe.set_ylabel('z'+unit_length)
-        elif plot_mode == 'rxy-z':
-            axe.set_xlabel(r'$r_{xy}$'+unit_length)
-            axe.set_ylabel('z'+unit_length)
-        elif plot_mode == 'vx-y':
-            axe.set_xlabel(r'$v_x$'+unit_vel)
-            axe.set_ylabel(r'$v_y$'+unit_vel)
-        elif plot_mode == 'vx-z':
-            axe.set_xlabel(r'$v_x$'+unit_vel)
-            axe.set_ylabel(r'$v_z$'+unit_vel)
-        elif plot_mode == 'vy-z':
-            axe.set_xlabel(r'$v_y$'+unit_vel)
-            axe.set_ylabel(r'$v_z$'+unit_vel)
-        elif plot_mode == 'vrxy-z':
-            axe.set_xlabel(r'$v_{rxy}$'+unit_vel)
-            axe.set_ylabel(r'$v_z$'+unit_vel)
-        elif plot_mode == 'ra-dec':
-            axe.set_xlabel(r'RA[$\degree$]')
-            axe.set_ylabel(r'DEC[$\degree$]')
-        elif plot_mode == 'pmra-dec':
-            axe.set_xlabel(r'$\mu_{ra,cosdec}$[mas/yr]')
-            axe.set_ylabel(r'$\mu_{dec}$[mas/yr]')
-        elif plot_mode == 'lon-lat':
-            axe.set_xlabel(r'lon[$\degree$]')
-            axe.set_ylabel(r'lat[$\degree$]')
-        elif plot_mode == 'pmlon-lat':
-            axe.set_xlabel(r'$\mu_{lon}$[mas/yr]')
-            axe.set_ylabel(r'$\mu_{lat}$[mas/yr]')
-        else:
-            raise ValueError('Plot mode %s is not supported, check petar.movie -h for the options of -m' % plot_mode)
+        axes_name = plot_mode.split('-')
+        if (len(axes_name)!=2):
+            raise ValueError('Plot mode %s is not supported, the format should be [x-axis name]-[y-axis name], check petar.movie -h for the options of -m' % plot_mode)
+        labels=[None,None]
+        for i in range(2):
+            name = axes_name[i]
+            if name in ['x','y','z','r']:
+                labels[i] = r'%s %s' % (name, unit_length)
+            elif name == 'rxy':
+                labels[i] = r'$r_{xy}$ %s' % unit_length
+            elif name in ['vx','vy','vz','vxy','vr','v']:
+                labels[i] = r'$v_{%s}$ %s' % (name[1:], unit_vel)
+            elif name == 'ra': 
+                labels[i] = r'RA [$\degree$]'
+            elif name == 'dec': 
+                labels[i] = r'Dec [$\degree$]'
+            elif name == 'pmracosdec':
+                labels[i] = r'$\mu_{RA,cosDec}$ [mas/yr]'
+            elif name == 'pmdec':
+                labels[i] = r'$\mu_{Dec}$ [mas/yr]'
+            elif name in ['lon','lat']:
+                labels[i] = r'%s [$\degree$]' % name
+            elif name in ['pmlon','pmlat']:
+                labels[i] = r'$\mu_{%s}$ [mas/yr]' % name[2:]
+            else:
+                raise ValueError('Plot mode axis name %s is not supported, check petar.movie -h for the options of -m' % name)
+        axe.set_xlabel(labels[0])
+        axe.set_ylabel(labels[1])
+        self.xy_labels=labels
 
         for i in range(self.nlayer_cross):
             pt =axe.scatter([],[],marker='+',alpha=alphascale[i],edgecolors='none')
@@ -184,239 +175,231 @@ class PlotXY:
 
     def plot(self, data, xcm_text, ycm_text):
 
-        x = []
-        y = []
-        xcm = 0
-        ycm = 0
-        xc = 0
-        yc = 0
         plot_mode = self.plot_mode
         core_correct = (self.cm_mode=='core') & (data.generate_binary != 2) 
         cm_is_core = (data.generate_binary == 2)
         read_core = cm_is_core | core_correct
         origin_mode = (self.cm_mode=='none')
-        if plot_mode == 'x-y':
-            x = data.data.pos[:,0]
-            y = data.data.pos[:,1]
-            xcm = data.header.pos_offset[0]
-            ycm = data.header.pos_offset[1]
-            if (read_core):
-                xc = data.core.pos[0,0]
-                yc = data.core.pos[0,1]
-            if (cm_is_core):
-                xcm = xc
-                ycm = yc
-            if (core_correct):
-                x += xcm - xc
-                y += ycm - yc
-                xcm = xc
-                ycm = yc
-            elif (origin_mode):
-                x += xcm
-                y += ycm
-            xcm_text.set_text(r'$x_{cm}=%f$' % xcm)
-            ycm_text.set_text(r'$y_{cm}=%f$' % ycm)
-        if plot_mode == 'x-z':
-            x = data.data.pos[:,0]
-            y = data.data.pos[:,2]
-            xcm = data.header.pos_offset[0]
-            ycm = data.header.pos_offset[2]
-            if (read_core):
-                xc = data.core.pos[0,0]
-                yc = data.core.pos[0,2]
-            if (cm_is_core):
-                xcm = xc
-                ycm = yc
-                print(xcm,ycm)
-            if (core_correct):
-                x += xcm - xc
-                y += ycm - yc
-                xcm = xc
-                ycm = yc
-            elif (origin_mode):
-                x += xcm
-                y += ycm
-            xcm_text.set_text(r'$x_{cm}=%f$' % xcm)
-            ycm_text.set_text(r'$z_{cm}=%f$' % ycm)
-        if plot_mode == 'y-z':
-            x = data.data.pos[:,1]
-            y = data.data.pos[:,2]
-            xcm = data.header.pos_offset[1]
-            ycm = data.header.pos_offset[2]
-            if (read_core):
-                xc = data.core.pos[0,1]
-                yc = data.core.pos[0,2]
-            if (cm_is_core):
-                xcm = xc
-                ycm = yc
-            if (core_correct):
-                x += xcm - xc
-                y += ycm - yc
-                xcm = xc
-                ycm = yc
-            elif (origin_mode):
-                x += xcm
-                y += ycm
-            xcm_text.set_text(r'$y_{cm}=%f$' % xcm)
-            ycm_text.set_text(r'$z_{cm}=%f$' % ycm)
-        if plot_mode == 'rxy-z':
-            rx = data.data.pos[:,0]
-            ry = data.data.pos[:,1]
-            rxcm = data.header.pos_offset[0]
-            rycm = data.header.pos_offset[1]
-            xcm = np.sqrt(rxcm*rxcm+rycm*rycm)
-            ycm = data.header.pos_offset[2]
-            if (read_core):
-                rxc = data.core.pos[0,0]
-                ryc = data.core.pos[0,1]
-                yc = data.core.pos[0,2]
-            if (cm_is_core):
-                rxcm = rxc
-                rycm = ryc
-                xcm = np.sqrt(rxc*rxc+ryc*ryc)
-                ycm = yc
-            if (core_correct):
-                x = np.sqrt((rx + rxcm - rxc)**2 + (ry + rycm - ryc)**2)
-                y = data.data.pos[:,2] + ycm - yc
-                xcm = np.sqrt(rxc*rxc+ryc*ryc)
-                ycm = yc
-            elif (origin_mode):
-                x = np.sqrt((rx + rxcm)**2 + (ry + rycm)**2)
-                y = data.data.pos[:,2] + ycm
+        axes_name = plot_mode.split('-')
+        if (len(axes_name)!=2):
+            raise ValueError('Plot mode %s is not supported, the format should be [x-axis name]-[y-axis name], check petar.movie -h for the options of -m' % plot_mode)
+        labels=[None,None]
+        cm_text=[None,None]
+        xy = [[],[]]
+        xycm = [0,0]
+        xyz_index={'x':0,'y':1,'z':2}
+        for i in range(2):
+            name = axes_name[i]
+            if name in ['x','y','z','vx','vy','vz']:
+                v_flag = (name[0]=='v')
+                if v_flag:
+                    xy[i] = data.data.vel[:,xyz_index[name[1]]]
+                    xycm[i] = data.header.vel_offset[xyz_index[name[1]]]
+                else:
+                    xy[i] = data.data.pos[:,xyz_index[name]]
+                    xycm[i] = data.header.pos_offset[xyz_index[name]]
+                xyc = 0
+                if (read_core):
+                    if v_flag:
+                        xyc = data.core.vel[0,xyz_index[name[1]]]
+                    else:
+                        xyc = data.core.pos[0,xyz_index[name]]
+                if (cm_is_core):
+                    xycm[i] = xyc
+                if (core_correct):
+                    xy[i] += xycm[i] - xyc
+                    xycm[i] = xyc
+                elif (origin_mode):
+                    xy[i] += xycm[i]
+                if v_flag: 
+                    cm_text[i] = r'$v_{%s,cm}=$' % name[1:]
+                else:
+                    cm_text[i] = r'$%s_{cm}=$' % name
+            elif name in ['rxy','vxy']:
+                v_flag = (name[0]=='v')
+                if v_flag:
+                    rx = data.data.vel[:,0]
+                    ry = data.data.vel[:,1]
+                    rxcm = data.header.vel_offset[0]
+                    rycm = data.header.vel_offset[1]
+                else:
+                    rx = data.data.pos[:,0]
+                    ry = data.data.pos[:,1]
+                    rxcm = data.header.pos_offset[0]
+                    rycm = data.header.pos_offset[1]
+                rxycm = np.sqrt(rxcm*rxcm + rycm*rycm)
+                rxc = 0
+                ryc = 0
+                if (read_core):
+                    if v_flag:
+                        rxc = data.core.vel[0,0]
+                        ryc = data.core.vel[0,1]
+                    else:
+                        rxc = data.core.pos[0,0]
+                        ryc = data.core.pos[0,1]
+                if (cm_is_core):
+                    rxcm = rxc
+                    rycm = ryc
+                    xycm[i] = np.sqrt(rxc*rxc + ryc*ryc)
+                if (core_correct):
+                    xy[i] = np.sqrt((rx + rxcm - rxc)**2 + (ry + rycm - ryc)**2)
+                    xycm[i] = np.sqrt(rxc*rxc + ryc*ryc)
+                elif (origin_mode):
+                    xy[i] = np.sqrt((rx + rxcm)**2 + (ry + rycm)**2)
+                else:
+                    xy[i] = np.sqrt(rx*rx + ry*ry)
+                if v_flag:
+                    cm_text[i] = r'$v_{xy,cm}=$'
+                else:
+                    cm_text[i] = r'$r_{xy,cm}=$'
+            elif name in ['r','v']:
+                v_flag = (name=='v')
+                if v_flag: 
+                    rx = data.data.vel[:,0]
+                    ry = data.data.vel[:,1]
+                    rz = data.data.vel[:,2]
+                    rxcm = data.header.vel_offset[0]
+                    rycm = data.header.vel_offset[1]
+                    rzcm = data.header.vel_offset[2]
+                else:
+                    rx = data.data.pos[:,0]
+                    ry = data.data.pos[:,1]
+                    rz = data.data.pos[:,2]
+                    rxcm = data.header.pos_offset[0]
+                    rycm = data.header.pos_offset[1]
+                    rzcm = data.header.pos_offset[2]
+                rxycm = np.sqrt(rxcm*rxcm + rycm*rycm + rzcm*rzcm)
+                rxc = 0
+                ryc = 0
+                rzc = 0
+                if (read_core):
+                    if v_flag:
+                        rxc = data.core.vel[0,0]
+                        ryc = data.core.vel[0,1]
+                        rzc = data.core.vel[0,2]
+                    else:
+                        rxc = data.core.pos[0,0]
+                        ryc = data.core.pos[0,1]
+                        rzc = data.core.pos[0,2]
+                if (cm_is_core):
+                    rxcm = rxc
+                    rycm = ryc
+                    rzcm = rzc 
+                    xycm[i] = np.sqrt(rxc*rxc + ryc*ryc + rzc*rzc)
+                if (core_correct):
+                    xy[i] = np.sqrt((rx + rxcm - rxc)**2 + (ry + rycm - ryc)**2 + (rz + rzcm - rzc)**2)
+                    xycm[i] = np.sqrt(rxc*rxc + ryc*ryc + rzc*rzc)
+                elif (origin_mode):
+                    xy[i] = np.sqrt((rx + rxcm)**2 + (ry + rycm)**2 + (rz + rzcm)**2)
+                else:
+                    xy[i] = np.sqrt(rx*rx + ry*ry + rz*rz)
+                if v_flag:
+                    cm_text[i] = r'$v_{xy,cm}=$' 
+                else:
+                    cm_text[i] = r'$r_{xy,cm}=$' 
+            elif name == 'vr':
+                vx = data.data.vel[:,0]
+                vy = data.data.vel[:,1]
+                vz = data.data.vel[:,2]
+                vxcm = data.header.vel_offset[0]
+                vycm = data.header.vel_offset[1]
+                vzcm = data.header.vel_offset[2]
+                rx = data.data.pos[:,0]
+                ry = data.data.pos[:,1]
+                rz = data.data.pos[:,2]
+                rxcm = data.header.pos_offset[0]
+                rycm = data.header.pos_offset[1]
+                rzcm = data.header.pos_offset[2]
+                rxc = 0
+                ryc = 0
+                rzc = 0
+                if (read_core):
+                    vxc = data.core.vel[0,0]
+                    vyc = data.core.vel[0,1]
+                    vzc = data.core.vel[0,2]
+                    rxc = data.core.pos[0,0]
+                    ryc = data.core.pos[0,1]
+                    rzc = data.core.pos[0,2]
+                if (cm_is_core):
+                    rxcm = rxc
+                    rycm = ryc
+                    rzcm = rzc 
+                    vxcm = vxc
+                    vycm = vyc
+                    vzcm = vzc 
+                    rcm = np.sqrt(rxcm*rxcm + rycm*rycm + rzcm*rzcm)                
+                    drdvcm = rxcm*vxcm + rycm*vycm + rzcm*vzcm
+                    xycm[i] = drdvcm/rcm
+                if (core_correct):
+                    rx += rxcm - rxc
+                    ry += rycm - ryc
+                    rz += rzcm - rzc
+                    vx += vxcm - vxc
+                    vy += vycm - vyc
+                    vz += vzcm - vzc
+                    rcm = np.sqrt(rxc*rxc + ryc*ryc + rzc*rzc)                
+                    drdvcm = rxc*vxc + ryc*vyc + rzc*vzc
+                    xycm[i] = drdvcm/rcm
+                elif (origin_mode):
+                    rx += rxcm
+                    ry += rycm
+                    rz += rzcm
+                    vx += vxcm
+                    vy += vycm
+                    vz += vzcm
+                r = np.sqrt(rx*rx + ry*ry + rz*rz)
+                drdv = rx*vx + ry*vy + rz*vz
+                xy[i] = drdv/r
+                cm_text[i] = r'$v_{r}=$'
+            elif name == 'ra':
+                xycm[i] = data.skycm.icrs.ra.value
+                xy[i] = data.sky.icrs.ra.value - xycm[i]
+                cm_text[i] = r'$RA_{cm}=$'
+            elif name == 'dec':
+                xycm[i] = data.skycm.icrs.dec.value
+                xy[i] = data.sky.icrs.dec.value - xycm[i]
+                cm_text[i] = r'$Dec_{cm}=$'
+            elif name == 'pmracosdec':
+                xycm[i] = data.skycm.icrs.pm_ra_cosdec.value
+                xy[i] = data.sky.icrs.pm_ra_cosdec.value - xycm[i]
+                cm_text[i] = r'$\mu_{RA,cosdec,cm}=$'
+            elif name == 'pmdec':
+                xycm[i] = data.skycm.icrs.pm_dec.value
+                xy[i] = data.sky.icrs.pm_dec.value - xycm[i]
+                cm_text[i] = r'$\mu_{Dec,cm}=$'
+            elif name == 'lon':
+                data.skycm.representation_type = 'spherical'
+                xycm[i] = data.skycm.lon.value
+                data.sky.representation_type = 'spherical'
+                xy[i] = data.sky.lon.value - xycm[i]
+                cm_text[i] = r'$lon_{cm}=$'
+            elif name == 'lat':
+                data.skycm.representation_type = 'spherical'
+                xycm[i] = data.skycm.lat.value
+                data.sky.representation_type = 'spherical'
+                xy[i] = data.sky.lat.value - xycm[i]
+                cm_text[i] = r'$lat_{cm}=$'
+            elif name == 'pmlon':
+                data.skycm.representation_type = 'spherical'
+                xycm[i] = data.skycm.pm_lon.value
+                data.sky.representation_type = 'spherical'
+                xy[i] = data.sky.pm_lon.value - xycm[i]
+                cm_text[i] = r'$\mu_{lon,cm}=$'
+            elif name == 'pmlat':
+                data.skycm.representation_type = 'spherical'
+                xycm[i] = data.skycm.pm_lat.value
+                data.sky.representation_type = 'spherical'
+                xy[i] = data.sky.pm_lat.value - xycm[i]
+                cm_text[i] = r'$\mu_{lat,cm}=$'
             else:
-                x = np.sqrt(rx*rx+ry*ry)
-                y = data.data.pos[:,2]
-            xcm_text.set_text(r'$r_{xy,cm}=%f$' % xcm)
-            ycm_text.set_text(r'$z_{cm}=%f$' % ycm)
-        if plot_mode == 'vx-y':
-            x = data.data.vel[:,0]
-            y = data.data.vel[:,1]
-            xcm = data.header.vel_offset[0]
-            ycm = data.header.vel_offset[1]
-            if (read_core):
-                xc = data.core.vel[0,0]
-                yc = data.core.vel[0,1]
-            if (cm_is_core):
-                xcm = xc
-                ycm = yc
-            if (core_correct):
-                x += xcm - xc
-                y += ycm - yc
-                xcm = xc
-                ycm = yc
-            elif (origin_mode):
-                x += xcm
-                y += ycm
-            xcm_text.set_text(r'$v_{x,cm}=%f$' % xcm)
-            ycm_text.set_text(r'$v_{y,cm}=%f$' % ycm)
-        if plot_mode == 'vx-z':
-            x = data.data.vel[:,0]
-            y = data.data.vel[:,2]
-            xcm = data.header.vel_offset[0]
-            ycm = data.header.vel_offset[2]
-            if (read_core):
-                xc = data.core.vel[0,0]
-                yc = data.core.vel[0,2]
-            if (cm_is_core):
-                xcm = xc
-                ycm = yc
-            if (core_correct):
-                x += xcm - xc
-                y += ycm - yc
-                xcm = xc
-                ycm = yc
-            elif (origin_mode):
-                x += xcm
-                y += ycm
-            xcm_text.set_text(r'$v_{x,cm}=%f$' % xcm)
-            ycm_text.set_text(r'$v_{z,cm}=%f$' % ycm)
-        if plot_mode == 'vy-z':
-            x = data.data.vel[:,1]
-            y = data.data.vel[:,2]
-            xcm = data.header.vel_offset[1]
-            ycm = data.header.vel_offset[2]
-            if (read_core):
-                xc = data.core.vel[0,1]
-                yc = data.core.vel[0,2]
-            if (cm_is_core):
-                xcm = xc
-                ycm = yc
-            if (core_correct):
-                x += xcm - xc
-                y += ycm - yc
-                xcm = xc
-                ycm = yc
-            elif (origin_mode):
-                x += xcm
-                y += ycm
-            xcm_text.set_text(r'$v_{y,cm}=%f$' % xcm)
-            ycm_text.set_text(r'$v_{z,cm}=%f$' % ycm)
-        if plot_mode == 'vrxy-z':
-            vx = data.data.vel[:,0]
-            vy = data.data.vel[:,1]
-            vxcm = data.header.vel_offset[0]
-            vycm = data.header.vel_offset[1]
-            xcm = np.sqrt(vxcm*vxcm+vycm*vycm)
-            ycm = data.header.vel_offset[2]
-            if (read_core):
-                vxc = data.core.vel[0,0]
-                vyc = data.core.vel[0,1]
-                yc = data.core.vel[0,2]
-            if (cm_is_core):
-                vxcm = vxc
-                vycm = vyc
-                xcm = np.sqrt(vxc*vxc+vyc*vyc)
-                ycm = yc
-            if (core_correct):
-                x = np.sqrt((vx + vxcm - vxc)**2 + (vy + vycm - vyc)**2)
-                y = data.data.pos[:,2] + ycm - yc
-                xcm = np.sqrt(vxc*vxc+vyc*vyc)
-                ycm = yc
-            elif (origin_mode):
-                x = np.sqrt((vx + vxcm)**2 + (vy + vycm)**2)
-                y = data.data.pos[:,2] + ycm
-            else:
-                x = np.sqrt(vx*vx+vy*vy)
-                y = data.data.vel[:,2]
-            xcm_text.set_text(r'$v_{rxy,cm}=%f$' % xcm)
-            ycm_text.set_text(r'$v_{z,cm}=%f$' % ycm)
-        if plot_mode == 'ra-dec':
-            xcm = data.skycm.icrs.ra.value
-            ycm = data.skycm.icrs.dec.value
-            x = data.sky.icrs.ra.value - xcm
-            y = data.sky.icrs.dec.value - ycm
-            xcm_text.set_text(r'$RA_{cm}=%f$' % xcm)
-            ycm_text.set_text(r'$DEC_{cm}=%f$' % ycm)
-        if plot_mode == 'pmra-dec':
-            xcm = data.skycm.icrs.pm_ra_cosdec.value
-            ycm = data.skycm.icrs.pm_dec.value
-            x = data.sky.icrs.pm_ra_cosdec.value - xcm
-            y = data.sky.icrs.pm_dec.value - ycm
-            xcm_text.set_text(r'$\mu_{RACD,cm}=%f$' % xcm)
-            ycm_text.set_text(r'$\mu_{DEC,cm}=%f$' % ycm)
-        if plot_mode == 'lon-lat':
-            data.skycm.representation_type = 'spherical'
-            xcm = data.skycm.lon.value
-            ycm = data.skycm.lat.value
-            data.sky.representation_type = 'spherical'
-            x = data.sky.lon.value - xcm
-            y = data.sky.lat.value - ycm
-            xcm_text.set_text(r'$lon_{cm}=%f$' % xcm)
-            ycm_text.set_text(r'$lat_{cm}=%f$' % ycm)
-        if plot_mode == 'pmlon-lat':
-            data.skycm.representation_type = 'spherical'
-            xcm = data.skycm.pm_lon.value
-            ycm = data.skycm.pm_lat.value
-            data.sky.representation_type = 'spherical'
-            x = data.sky.pm_lon.value - xcm
-            y = data.sky.pm_lat.value - ycm
-            xcm_text.set_text(r'$\mu_{lon,cm}=%f$' % xcm)
-            ycm_text.set_text(r'$\mu_{lat,cm}=%f$' % ycm)
-                
+                raise ValueError('Plot mode axis name %s is not supported, check petar.movie -h for the options of -m' % name)
+        
         # not for cm_mode=core
-        dxcm, dycm = self.correctCM(x, y)
-        xcm += dxcm
-        ycm += dycm
+        dxcm, dycm = self.correctCM(xy[0], xy[1])
+        xycm[0] += dxcm
+        xycm[1] += dycm
+        xcm_text.set_text(cm_text[0]+('%f' % xycm[0]))
+        ycm_text.set_text(cm_text[1]+('%f' % xycm[1]))
 
         mass = data.data.mass
         colors=data.getColor()
@@ -424,7 +407,8 @@ class PlotXY:
             sizes = (mass**self.mass_power)*self.sizescale[i]*self.framescale*self.marker_scale
             #sizes = (np.log10(luminosity)-np.log10(lum_min)+1)
             #sizes = luminosity
-            self.ptcls[i].set_offsets(np.array([x,y]).transpose())
+            #print(self.plot_mode,xy[0].shape,xy[1].shape)
+            self.ptcls[i].set_offsets(np.array([xy[0],xy[1]]).transpose())
             self.ptcls[i].set_sizes(sizes)
             self.ptcls[i].set_color(colors)
         return self.ptcls
@@ -910,22 +894,28 @@ if __name__ == '__main__':
         print("  -h(--help): help")
         print("  -f [F]: output frame FPS: ",fps)
         print("  -m [S]: add one panel for ploting distribution of individual particles: ",pxy.plot_mode)
-        print("          x-y: plot x-y")
-        print("          x-z: plot x-z")
-        print("          y-z: plot y-z")
-        print("          rxy-z: plot sqrt(x*x+y*y)-z")
-        print("          vx-y: plot vx-vy")
-        print("          vx-z: plot vx-vz")
-        print("          vy-z: plot vy-vz")
-        print("          vrxy-z: plot sqrt(vx*vx+vy*vy)-vz")
-        print("          ra-dec: plot RA-DEC in the ICRS frame")
-        print("          pmra-dec: plot proper motion RA*cos(DEC)-DEC in the ICRS frame")
-        print("          lon-lat: plot Longtitude-Latitude in the Galactocentric frame")
-        print("          pmlon-lat: plot proper motion Longtitude-Latitude in the Galactocentric frame")
-        print("          PS: for ra, dec, lon, lat and proper motion, the snapshot data must use the astronomical units (pc, pc/Myr)")
-        print("              The mode can be combined by ','. For exmaple, 'x-y,y-z' provide two plots: x-y and y-z")
-        print("              In this case, -R or --x-min/max, --y-min/max should also set the range for each plot,")
-        print("              such as -R 10,10, --x-min -10,-10")
+        print("          The data types of x- and y-axes are combined by '-'.")
+        print("          For exmaple, -m x-y and -m vx-vy plot particle positions x vs. y and velocities v_x vs. v_y, respectively")
+        print("          The support data type names: ")
+        print("              x, y, z: position x, y and z")
+        print("              vx, vy, vz: velocity v_x, v_y and v_z")
+        print("              rxy: projected distance at x-y plane, sqrt(x*x+y*y)")
+        print("              vxy: projected velocity at x-y plane, sqrt(vx*vx+vy*vy)")
+        print("              r: distance to the center, sqrt(x*x+y*y+z*z)")
+        print("              v: velocity value, sqrt(vx*vx+vy*vy+vz*vz)")
+        print("              vr: radial velocity referring to the center, (x*vx+y*vy+z*vz)/r")
+        print("              ra: RA in the ICRS frame")
+        print("              dec: Dec in the ICRS frame")
+        print("              pmracosdec: proper motion of RA*cos(Dec) in the ICRS frame")
+        print("              pmdec: proper motion of Dec in the ICRS frame")
+        print("              lon: Longtitude in the Galactocentric frame")
+        print("              lat: Latitude in the Galactocentric frame")
+        print("              pmlon: proper motion of Longtitude in the Galactocentric frame")
+        print("              pmlat: proper motion of Latitude in the Galactocentric frame")
+        print("          For ra, dec, lon, lat and proper motion, the snapshot data must use the astronomical units (pc, pc/Myr)")
+        print("          The mode can be combined by ','. For exmaple, '-m x-y,y-z' provide two plots: x-y and y-z")
+        print("          In this case, -R or --x-min/max, --y-min/max should also set the range for each plot,")
+        print("          such as -R 10,10, --x-min -10,-10")
         print("  -R [F]: x- and y-axis length of -m; suppressed when --x-min/max, --y-min/max are used: ",pxy.boxsize)
         print("  -H    : add one panel of HR-diagram")
         print("  -b    : add one panel of semi-ecc diagram for binaries")
@@ -1022,7 +1012,7 @@ if __name__ == '__main__':
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
-        sky_modes=['ra-dec','pmra-dec','lon-lat','pmlon-lat']
+        sky_modes=['ra','dec','pmracosdec','pmdec','lon','lat','pmlon','pmlat']
 
         for opt,arg in opts:
             if opt in ('-h','--help'):
@@ -1034,7 +1024,8 @@ if __name__ == '__main__':
                 plot_mode_str = arg
                 for i in plot_mode_str.split(','):
                     plot_item.append(['main', i])
-                    if i in sky_modes:
+                    xname,yname = i.split('-')
+                    if (xname in sky_modes) | (yname in sky_modes):
                         kwargs['get_skycoord'] = True
             elif opt in ('-R'):
                 boxsize_str = arg
