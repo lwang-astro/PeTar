@@ -193,10 +193,10 @@ class PlotXY:
             if name in ['x','y','z','vx','vy','vz']:
                 v_flag = (name[0]=='v')
                 if v_flag:
-                    xy[i] = data.data.vel[:,xyz_index[name[1]]]
+                    x = data.data.vel[:,xyz_index[name[1]]]
                     xycm[i] = data.header.vel_offset[xyz_index[name[1]]]
                 else:
-                    xy[i] = data.data.pos[:,xyz_index[name]]
+                    x = data.data.pos[:,xyz_index[name]]
                     xycm[i] = data.header.pos_offset[xyz_index[name]]
                 xyc = 0
                 if (read_core):
@@ -207,10 +207,12 @@ class PlotXY:
                 if (cm_is_core):
                     xycm[i] = xyc
                 if (core_correct):
-                    xy[i] += xycm[i] - xyc
+                    xy[i] = x + xycm[i] - xyc
                     xycm[i] = xyc
                 elif (origin_mode):
-                    xy[i] += xycm[i]
+                    xy[i] = x + xycm[i]
+                else:
+                    xy[i] = x
                 if v_flag: 
                     cm_text[i] = r'$v_{%s,cm}=$' % name[1:]
                 else:
@@ -268,7 +270,7 @@ class PlotXY:
                     rxcm = data.header.pos_offset[0]
                     rycm = data.header.pos_offset[1]
                     rzcm = data.header.pos_offset[2]
-                rxycm = np.sqrt(rxcm*rxcm + rycm*rycm + rzcm*rzcm)
+                xycm[i] = np.sqrt(rxcm*rxcm + rycm*rycm + rzcm*rzcm)
                 rxc = 0
                 ryc = 0
                 rzc = 0
@@ -294,9 +296,9 @@ class PlotXY:
                 else:
                     xy[i] = np.sqrt(rx*rx + ry*ry + rz*rz)
                 if v_flag:
-                    cm_text[i] = r'$v_{xy,cm}=$' 
+                    cm_text[i] = r'$v_{cm}=$' 
                 else:
-                    cm_text[i] = r'$r_{xy,cm}=$' 
+                    cm_text[i] = r'$r_{cm}=$' 
             elif name == 'vr':
                 vx = data.data.vel[:,0]
                 vy = data.data.vel[:,1]
@@ -313,6 +315,12 @@ class PlotXY:
                 rxc = 0
                 ryc = 0
                 rzc = 0
+                vxc = 0
+                vyc = 0
+                vzc = 0
+                rcm = np.sqrt(rxcm*rxcm + rycm*rycm + rzcm*rzcm)                
+                drdvcm = rxcm*vxcm + rycm*vycm + rzcm*vzcm
+                xycm[i] = drdvcm/rcm
                 if (read_core):
                     vxc = data.core.vel[0,0]
                     vyc = data.core.vel[0,1]
@@ -331,25 +339,32 @@ class PlotXY:
                     drdvcm = rxcm*vxcm + rycm*vycm + rzcm*vzcm
                     xycm[i] = drdvcm/rcm
                 if (core_correct):
-                    rx += rxcm - rxc
-                    ry += rycm - ryc
-                    rz += rzcm - rzc
-                    vx += vxcm - vxc
-                    vy += vycm - vyc
-                    vz += vzcm - vzc
+                    rxf = rx + rxcm - rxc
+                    ryf = ry + rycm - ryc
+                    rzf = rz + rzcm - rzc
+                    vxf = vx + vxcm - vxc
+                    vyf = vy + vycm - vyc
+                    vzf = vz + vzcm - vzc
                     rcm = np.sqrt(rxc*rxc + ryc*ryc + rzc*rzc)                
                     drdvcm = rxc*vxc + ryc*vyc + rzc*vzc
                     xycm[i] = drdvcm/rcm
+                    r = np.sqrt(rxf*rxf + ryf*ryf + rzf*rzf)
+                    drdv = rxf*vxf + ryf*vyf + rzf*vzf
+                    xy[i] = drdv/r
                 elif (origin_mode):
-                    rx += rxcm
-                    ry += rycm
-                    rz += rzcm
-                    vx += vxcm
-                    vy += vycm
-                    vz += vzcm
-                r = np.sqrt(rx*rx + ry*ry + rz*rz)
-                drdv = rx*vx + ry*vy + rz*vz
-                xy[i] = drdv/r
+                    rxf = rx + rxcm
+                    ryf = ry + rycm
+                    rzf = rz + rzcm
+                    vxf = vx + vxcm
+                    vyf = vy + vycm
+                    vzf = vz + vzcm
+                    r = np.sqrt(rxf*rxf + ryf*ryf + rzf*rzf)
+                    drdv = rxf*vxf + ryf*vyf + rzf*vzf
+                    xy[i] = drdv/r
+                else:
+                    r = np.sqrt(rx*rx + ry*ry + rz*rz)
+                    drdv = rx*vx + ry*vy + rz*vz
+                    xy[i] = drdv/r
                 cm_text[i] = r'$v_{r}=$'
             elif name == 'ra':
                 xycm[i] = data.skycm.icrs.ra.value
