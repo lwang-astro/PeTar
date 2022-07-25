@@ -165,9 +165,10 @@ class HardDumpList{
 public:
     int size;
     int mpi_rank;
+    int dump_number;
     HardDump* hard_dump;
 
-    HardDumpList(): size(0), mpi_rank(0), hard_dump(NULL) {}
+    HardDumpList(): size(0), mpi_rank(0), dump_number(0), hard_dump(NULL) {}
 
     void initial(const int _nthread, const int _rank=0) {
         size = _nthread;
@@ -192,7 +193,7 @@ public:
         std::string fname_prefix = filename + point + std::to_string(mpi_rank) + point;
         for (int i=0; i<size; i++) {
             std::time_t tnow = std::time(nullptr);
-            std::string fname = fname_prefix + std::to_string(i) + point + std::to_string(tnow);
+            std::string fname = fname_prefix + std::to_string(i) + point + std::to_string(dump_number++) + point + std::to_string(tnow);
             if (hard_dump[i].backup_flag) {
                 hard_dump[i].dumpOneCluster(fname.c_str());
                 std::cerr<<"Dump file: "<<fname.c_str()<<std::endl;
@@ -205,7 +206,7 @@ public:
         std::string point(".");
         std::time_t tnow = std::time(nullptr);
         //std::tm *local_time = localtime(&tnow);
-        std::string fname = filename + point + std::to_string(mpi_rank) + point + std::to_string(ith) + point + std::to_string(tnow);
+        std::string fname = filename + point + std::to_string(mpi_rank) + point + std::to_string(ith) + point + std::to_string(dump_number++) + point + std::to_string(tnow);
         if (hard_dump[ith].backup_flag) {
             hard_dump[ith].dumpOneCluster(fname.c_str());
             std::cerr<<"Thread: "<<ith<<" Dump file: "<<fname.c_str()<<std::endl;
