@@ -6041,7 +6041,7 @@ eval ac_res=\$$as_ac_File
 	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
 $as_echo "$ac_res" >&6; }
 if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
-  GALPY_VERSION=`cut -d'"' -f2 $galpy_prefix/__init__.py`
+  GALPY_VERSION=`head -1 $galpy_prefix/__init__.py|cut -d'"' -f2 `
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}

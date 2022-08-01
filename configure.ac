@@ -381,7 +381,7 @@ AC_ARG_WITH([external],
                                   [GALPY_PATH=$galpy_prefix],
                                   [AC_MSG_FAILURE([can't find Galpy library, please provide correct PREFIX by using --with-galpy-prefix])])
                     AC_CHECK_FILE(["$galpy_prefix/__init__.py"],
-		                  [GALPY_VERSION=`cut -d'"' -f2 $galpy_prefix/__init__.py`],
+		                  [GALPY_VERSION=`head -1 $galpy_prefix/__init__.py|cut -d'"' -f2 `],
 				  [AC_MSG_FAILURE([can't find Galpy __init__.py, which contains the version number])])
                     AC_CHECK_PROG([GSL_CFLAGS],[gsl-config],[`gsl-config --cflags`],[])
                     AC_CHECK_PROG([GSL_LIBS],[gsl-config],[`gsl-config --libs`],[none])
