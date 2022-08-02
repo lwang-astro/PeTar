@@ -202,6 +202,12 @@ where `mpiicpc` is Intel C++ MPI compiler and `mpiicc` is Intel C MPI compiler. 
 CXX=[Full path of mpiicpc] CC=[Full path of mpiicc] ./configure
 ```
 
+For Mac OS users, clang, clang++ and flang compilers can be used instead of GNU compilers.
+For example, with BSE and Galpy and no MPI:
+```
+CXX=clang++ CC=clang FC=flang ./configure --with-interrupt=bse --with-external=galpy
+```
+
 ##### Disable OpenMP parallelization
 ```
 ./configure --disable-openmp

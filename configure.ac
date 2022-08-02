@@ -333,7 +333,7 @@ AC_ARG_WITH([interrupt],
 		    AS_IF([test x"$FC" == xflang],
 		          [#AX_CHECK_COMPILE_FLAG([-static-flang-libs],
                           #                       [FCFLAGS=$FCFLAGS" -static-flang-libs"])
-		          FCLIBS=$FCLIBS' -lflang'],[])
+		          FCLIBS=$FCLIBS' -lflang -lpgmath'],[])
                     FCFLAGS=$FCFLAGS_BK
 		    AS_IF([test x"$with_debug" == xg],
                           [AX_CHECK_COMPILE_FLAG([-g],

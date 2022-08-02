@@ -68,8 +68,9 @@ MT_FLAGS += -D BSEEMP -D BSE_BASE
 BSE_FLAG=on
 endif
 ifeq ($(BSE_FLAG),on)
+FCLIBS = @FCLIBS@
 BSELIBFILES= bse-interface/libbse.a bse-interface/bse_interface.h
-BSELIBS = -L ./bse-interface -lbse -lgfortran
+BSELIBS = -L ./bse-interface -lbse $(FCLIBS)
 CXXLIBS += $(BSELIBS)
 LIBFILES+= $(BSELIBFILES)
 PETAR_INCLUDE += -I ./bse-interface

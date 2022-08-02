@@ -5030,7 +5030,7 @@ fi
 		    if test x"$FC" == xflang; then :
   #AX_CHECK_COMPILE_FLAG([-static-flang-libs],
                           #                       [FCFLAGS=$FCFLAGS" -static-flang-libs"])
-		          FCLIBS=$FCLIBS' -lflang'
+		          FCLIBS=$FCLIBS' -lflang -lpgmath'
 fi
                     FCFLAGS=$FCFLAGS_BK
 		    if test x"$with_debug" == xg; then :
