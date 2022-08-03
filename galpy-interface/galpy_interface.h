@@ -1605,6 +1605,7 @@ public:
             pot = 0;
             acc[0] = acc[1] = acc[2] = 0.0;
 
+
             for (int k=0; k<nset; k++) {
                 int mode_k = pot_set_pars[k].mode;
                 assert(mode_k>=0||mode_k<=2);
@@ -1623,7 +1624,11 @@ public:
                 auto& pot_args = pot_sets[k].arguments;
                 double acc_rxy = calcRforce(rxy, dz, phi, t, npot, pot_args);
                 double acc_z   = calczforce(rxy, dz, phi, t, npot, pot_args);
+#ifdef GALPY_VERSION_1_7_9
                 double acc_phi = calcPhiforce(rxy, dz, phi, t, npot, pot_args);
+#else
+                double acc_phi = calcphitorque(rxy, dz, phi, t, npot, pot_args);
+#endif
                 double pot_i = evaluatePotentials(rxy, dz, npot, pot_args);
                 double gm_pot = pot_set_pars[k].gm;
                 if (rxy>0.0) {
