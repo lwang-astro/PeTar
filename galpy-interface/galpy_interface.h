@@ -1570,7 +1570,11 @@ public:
                     int npot = pot_sets[j].npot;
                     double acc_rxy = calcRforce(rxy, dz, phi, t, npot, pot_args);
                     double acc_z   = calczforce(rxy, dz, phi, t, npot, pot_args);
+#ifdef GALPY_VERSION_1_7_9
                     double acc_phi = calcPhiforce(rxy, dz, phi, t, npot, pot_args);
+#else
+                    double acc_phi = calcphitorque(rxy, dz, phi, t, npot, pot_args);
+#endif
                     if (rxy>0.0) {
                         acc_pot[0] += (cosphi*acc_rxy - sinphi*acc_phi/rxy);
                         acc_pot[1] += (sinphi*acc_rxy + cosphi*acc_phi/rxy);
