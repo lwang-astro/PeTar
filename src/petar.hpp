@@ -3337,7 +3337,7 @@ public:
     
         // set system hard paramters
         hard_manager.setDtRange(input_parameters.dt_soft.value/input_parameters.dt_limit_hard_factor.value, input_parameters.dt_min_hermite_index.value);
-        hard_manager.setEpsSq(input_parameters.eps.value);
+        hard_manager.setEpsSq(input_parameters.eps.value*input_parameters.eps.value);
         hard_manager.setGravitationalConstant(input_parameters.gravitational_constant.value);
         hard_manager.r_in_base = r_in;
         hard_manager.r_out_base = r_out;
