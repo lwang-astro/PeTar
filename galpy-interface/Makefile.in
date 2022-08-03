@@ -11,6 +11,8 @@ GALPY_VERSION=@GALPY_VERSION@
 VERSION_MAX=$(shell printf '%s\n%s\n' "$(GALPY_VERSION)" "1.7.1" | sort --version-sort |tail -1)
 ifeq ($(VERSION_MAX), 1.7.1)
 GALPY_OPT= -D GALPY_VERSION_1_7_1
+else ifeq ($(VERSION_MAX), 1.7.9)
+GALPY_OPT= -D GALPY_VERSION_1_7_9
 endif
 
 CXXFLAGS += @CXXFLAGS@ @OPTFLAGS@ $(GALPY_OPT)

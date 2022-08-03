@@ -1032,7 +1032,11 @@ public:
                 auto& potential_args = potential_sets[k].arguments;
                 double acc_rxy = calcRforce(rxy[i], z[i], phi[i], t, npot, potential_args);
                 double acc_z   = calczforce(rxy[i], z[i], phi[i], t, npot, potential_args);
+#ifdef GALPY_VERSION_1_7_9
                 double acc_phi = calcPhiforce(rxy[i], z[i], phi[i], t, npot, potential_args);
+#else
+                double acc_phi = calcphitorque(rxy[i], z[i], phi[i], t, npot, potential_args);
+#endif
                 pot += evaluatePotentials(rxy[i], z[i], npot, potential_args);
                 if (rxy[i]>0.0) {
                     acc[0] += (cosphi[i]*acc_rxy - sinphi[i]*acc_phi/rxy[i]);
