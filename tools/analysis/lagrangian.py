@@ -74,10 +74,10 @@ class Core(DictNpArrayMix):
         cm_vel: c.m. velocity, numpy.ndarray with shape (*,3)
         """
         # 6 nearest neighbors
-        nb_r_list6, nb_index_list6 = kdtree.query(particle.pos,k=6)
-        nb_mass_tot6=np.sum(particle[nb_index_list6].mass,axis=1) + particle.mass
+        nb_r_list6, nb_index_list6 = kdtree.query(particle.pos,k=7)
+        nb_mass_tot6=np.sum(particle.mass[nb_index_list6[:,:-1]],axis=1)
         
-        nb_inv_r6 = 1/nb_r_list6[:,5]
+        nb_inv_r6 = 1/nb_r_list6[:,-1]
         rho = nb_mass_tot6*(nb_inv_r6*nb_inv_r6*nb_inv_r6)
         particle.addNewMember('density',rho)
         rho_tot = rho.sum()
