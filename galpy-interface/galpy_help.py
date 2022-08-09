@@ -104,7 +104,8 @@ def printPotTypeArg(pot_name, pot_module, pot_instance, print_front_offset=0, pr
         print(" "*(print_front_offset+4), name_format.format("Combination: "),type_arg)
         return type_arg, npot, pot_type, pot_arg
     elif (pot_instance != None):
-        npot, pot_type, pot_args= _parse_pot(pot_instance)
+        pot_data = _parse_pot(pot_instance)
+        npot, pot_type, pot_args = pot_data[:3]
 
         if (pot_type.size>0):
             pot_args_str=''
