@@ -314,17 +314,22 @@ class DictNpArrayMix:
                 icol += ncols
         return dat_out
 
-    def printTable(self, column_format):
+    def printTable(self, column_format, print_title=True):
         """
         print Table with defined column list and formats
 
         Parameters
         column_format: a list of column label (class member name) and format, enclosed by tuple, for sub-member, use . to access
                        For exmaple: [(key1,'%s'), (key2,'%12.7f'), (key3.subkey1,'%d'), (key3.subkey2,'%e')]
+        print_title: print title of keys (default: True)
         """
+        import re
+
         if self.size==0: return
+        title=[]
         table=[]
         fmt_list=''
+        fmt_title=''
         for key, fmt in column_format:
             keylst = key.split('.')
             dat_key=self
@@ -335,9 +340,16 @@ class DictNpArrayMix:
                     dat_key = dat_key[key_name][:,index]
                 else:
                     dat_key = dat_key[ikey]
+            title.append(key)
+            if '.' in fmt:
+                fmt_title += re.sub('\.[0-9]*[a-zA-Z]','s',fmt)
+            else:
+                fmt_title += re.sub('[a-zA-Z]','s',fmt)
             table.append(dat_key)
             fmt_list += fmt
         table=np.transpose(np.array(table))
+        if (print_title):
+            print(fmt_title % tuple(title))
         for line in table:
             print(fmt_list % tuple(line))
 
