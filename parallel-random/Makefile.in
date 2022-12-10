@@ -1,0 +1,38 @@
+TARGET:	librand.a test_randf test_randc
+
+FC=@FC@
+CXX=@CXX@
+use_mpi =@use_mpi@
+use_omp = @use_omp@
+
+CXXFLAGS += @CXXFLAGS@ @OPTFLAGS@ 
+FCFLAGS += @FCFLAGS@
+FCLIBS = @FCLIBS@
+
+ifeq ($(use_mpi),yes) 
+MPIFLAGS = -DPARTICLE_SIMULATOR_MPI_PARALLEL
+endif # mpi
+
+ifeq ($(use_omp),yes)
+CXXFLAGS += @OPENMP_CXXFLAGS@
+FCFLAGS += @OPENMP_CXXFLAGS@
+CXXFLAGS += -D PARTICLE_SIMULATOR_THREAD_PARALLEL
+endif # omp
+
+randc.o: rand.cxx rand.hpp 
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+randf.o: rand.f
+	$(FC) $(FCFLAGS) -c $< -o $@
+
+librand.a: randc.o randf.o
+	ar rcs $@ $^
+
+test_randf: test_rand.f librand.a
+	$(FC) $(FCFLAGS) $< -o $@ -L./ -lrand -lstdc++ 
+
+test_randc: test_rand.cxx librand.a 
+	$(CXX) $(CXXFLAGS) $(MPIFLAGS) $< -o $@ -L./ -lrand $(FCLIBS)
+
+clean:
+	rm -f *.o *.so *.gch *.a

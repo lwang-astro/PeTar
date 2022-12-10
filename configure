@@ -7127,6 +7127,8 @@ ac_config_files="$ac_config_files bse-interface/Makefile"
 
 ac_config_files="$ac_config_files galpy-interface/Makefile"
 
+ac_config_files="$ac_config_files parallel-random/Makefile"
+
 ac_config_files="$ac_config_files src/get_version.hpp"
 
 
@@ -7839,6 +7841,7 @@ do
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "bse-interface/Makefile") CONFIG_FILES="$CONFIG_FILES bse-interface/Makefile" ;;
     "galpy-interface/Makefile") CONFIG_FILES="$CONFIG_FILES galpy-interface/Makefile" ;;
+    "parallel-random/Makefile") CONFIG_FILES="$CONFIG_FILES parallel-random/Makefile" ;;
     "src/get_version.hpp") CONFIG_FILES="$CONFIG_FILES src/get_version.hpp" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
