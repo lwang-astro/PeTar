@@ -1,5 +1,5 @@
 #include <iostream>
-#include "rand.hpp"
+#include"rand_manager.hpp"
 
 extern "C" {
     uint64_t rand_uint64_();
@@ -10,6 +10,8 @@ extern "C" {
 }
 
 int main (int argc, char** argv) {
+
+    RandomManager rand_manager;
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
     MPI_Init(&argc, &argv);
@@ -66,7 +68,7 @@ int main (int argc, char** argv) {
         fprintf(stderr,"Error: Cannot open file rand_seeds.\n");
         abort();
     }
-    write_rand_seeds(fp);
+    rand_manager.writeRandSeeds(fp);
     fclose(fp);
 
     // test random int
@@ -102,7 +104,7 @@ int main (int argc, char** argv) {
         fprintf(stderr,"Error: Cannot open file rand_seeds.\n");
         abort();
     }
-    read_rand_seeds(fp);
+    rand_manager.readRandSeeds(fp);
     fclose(fp);
 
     // test random int after reading previous seeds, show return the same rand seeds and samples

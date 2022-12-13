@@ -66,9 +66,9 @@ extern "C" {
         double lambda; ///>the binding energy factor for common envelope evolution (0.5).
     } value2_;
 
-    extern struct{
-        int idum; ///> the random number seed used in the kick routine. 
-    } value3_;
+    //extern struct{
+    //    int idum; ///> the random number seed used in the kick routine. 
+    //} value3_;
 
     extern struct{
         double sigma; ///> the dispersion in the Maxwellian for the SN kick speed
@@ -105,11 +105,11 @@ extern "C" {
         double pts3;  ///> time step of HG, HeMS (0.02)
     } points_;
 
-    extern struct{
-        int idum2;
-        int iy;
-        int ir[32];
-    } rand3_;
+    //extern struct{
+    //    int idum2;
+    //    int iy;
+    //    int ir[32];
+    //} rand3_;
 
 
     // The Fortran function name + '_' is the C version. All arguments should be in pointer type.
@@ -161,9 +161,9 @@ extern "C" {
         double lambda; ///>the binding energy factor for common envelope evolution (0.1).
     } value2_;
 
-    extern struct{
-        int idum; ///> the random number seed used in the kick routine. 
-    } value3_;
+    //extern struct{
+    //    int idum; ///> the random number seed used in the kick routine. 
+    //} value3_;
 
     extern struct{
         double sigma1; ///> the dispersion in the Maxwellian for the CCSN kick speed
@@ -202,11 +202,11 @@ extern "C" {
         double pts3;  ///> time step of HG, HeMS (0.02)
     } points_;
 
-    extern struct{
-        int idum2;
-        int iy;
-        int ir[32];
-    } rand3_;
+    //extern struct{
+    //    int idum2;
+    //    int iy;
+    //    int ir[32];
+    //} rand3_;
 
     //! function for initial metallicity parameters
     void zcnsts_(double* z, double* zpars);
@@ -646,7 +646,6 @@ public:
     IOParams<double> pts1;
     IOParams<double> pts2;
     IOParams<double> pts3;
-    IOParams<long long int> idum;
     IOParams<double> tscale;
     IOParams<double> rscale;
     IOParams<double> mscale;
@@ -682,7 +681,6 @@ public:
                    pts1  (input_par_store, 0.05,  "bse-pts1",   "time step of MS"),
                    pts2  (input_par_store, 0.01,  "bse-pts2",   "time step of GB, CHeB, AGB, HeGB"),
                    pts3  (input_par_store, 0.02,  "bse-pts3",   "time step of HG, HeMS"),
-                   idum  (input_par_store, 1234,  "bse-idum",   "random number seed used by the kick routine"),
                    tscale(input_par_store, 1.0,   "bse-tscale", "Time scale factor from input data unit (IN) to Myr (time[Myr]=time[IN]*tscale)"),
                    rscale(input_par_store, 1.0,   "bse-rscale", "Radius scale factor from input data unit (IN) to Rsun (r[Rsun]=r[IN]*rscale)"),
                    mscale(input_par_store, 1.0,   "bse-mscale", "Mass scale factor from input data unit (IN) to Msun (m[Msun]=m[IN]*mscale)"),
@@ -718,7 +716,6 @@ public:
                    pts1  (input_par_store, 0.05,    "mobse-pts1",   "time step of MS"),
                    pts2  (input_par_store, 0.01,    "mobse-pts2",   "time step of GB, CHeB, AGB, HeGB"),
                    pts3  (input_par_store, 0.02,    "mobse-pts3",   "time step of HG, HeMS"),
-                   idum  (input_par_store, 1234,    "mobse-idum",   "random number seed used by the kick routine"),
                    tscale(input_par_store, 1.0,     "mobse-tscale", "Time scale factor from input data unit (IN) to Myr (time[Myr]=time[IN]*tscale)"),
                    rscale(input_par_store, 1.0,     "mobse-rscale", "Radius scale factor from input data unit (IN) to Rsun (r[Rsun]=r[IN]*rscale)"),
                    mscale(input_par_store, 1.0,     "mobse-msclae", "Mass scale factor from input data unit (IN) to Msun (m[Msun]=m[IN]*mscale)"),
@@ -771,7 +768,6 @@ public:
             {pts1.key,   required_argument, &sse_flag, 14},
             {pts2.key,   required_argument, &sse_flag, 15},       
             {pts3.key,   required_argument, &sse_flag, 16},
-            {idum.key,   required_argument, &sse_flag, 17}, 
             {tscale.key, required_argument, &sse_flag, 18},
             {rscale.key, required_argument, &sse_flag, 19},
             {mscale.key, required_argument, &sse_flag, 20},
@@ -888,11 +884,6 @@ public:
                 case 16:
                     pts3.value = atof(optarg);
                     if(print_flag) pts3.print(std::cout);
-                    opt_used+=2;
-                    break;
-                case 17:
-                    idum.value = atof(optarg);
-                    if(print_flag) idum.print(std::cout);
                     opt_used+=2;
                     break;
                 case 18:
@@ -1062,36 +1053,6 @@ public:
         return true;
     }
 
-    //! dump rand constant to file
-    void dumpRandConstant(const char* _fname) {
-        FILE* fin;
-        if( (fin = fopen(_fname,"w")) == NULL) {
-            fprintf(stderr,"Error: Cannot open file %s.\n", _fname);
-            abort();
-        }
-        fprintf(fin, "%d %d %d ", value3_.idum, rand3_.idum2, rand3_.iy);
-        for (int i=0; i<32; i++) fprintf(fin, "%d ", rand3_.ir[i]);
-        fprintf(fin, "\n");
-        fclose(fin);
-    }
-
-    //! read BSE rand constant from file
-    void readRandConstant(const char* _fname) {
-        FILE* fin;
-        if( (fin = fopen(_fname,"r")) == NULL) {
-            std::cerr<<_fname<<" not found.\n";
-        }
-        else {
-            int rcount = fscanf(fin, "%d %d %d ", &value3_.idum, &rand3_.idum2, &rand3_.iy);
-            for (int i=0; i<32; i++) rcount += fscanf(fin, "%d ", &rand3_.ir[i]);
-            if(rcount<35) {
-                std::cerr<<"Error: Data reading fails! requiring data number is 35, only obtain "<<rcount<<".\n";
-                abort();
-            }
-            fclose(fin);
-        }
-    }
-
 #ifdef MOBSE
     //! print terminal Logo
     static void printLogo(std::ostream & fout) {
@@ -1248,12 +1209,12 @@ public:
             std::cerr<<"BSE warning! metallicity Z is not in (0.0001, 0.03); given value:"<<z<<std::endl;
 #endif
         zcnsts_(&z, zpars);
-        value3_.idum = (_input.idum.value>0)? -_input.idum.value: _input.idum.value;
-
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-        // add off set to random seed to avoid repeating random numbers
-        value3_.idum += PS::Comm::getRank();
-#endif
+//        value3_.idum = (_input.idum.value>0)? -_input.idum.value: _input.idum.value;
+// 
+//#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+//        // add off set to random seed to avoid repeating random numbers
+//        value3_.idum += PS::Comm::getRank();
+//#endif
 
         // collision matrix
         instar_();

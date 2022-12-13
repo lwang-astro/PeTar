@@ -5,6 +5,9 @@
 #include "hard_ptcl.hpp"
 #include "Hermite/hermite_particle.h"
 #include "soft_ptcl.hpp"
+#ifdef BSE_BASE
+#include "../parallel-random/rand_interface.hpp"
+#endif
 
 // Hard debug dump for one cluster
 class HardDump{
@@ -18,9 +21,10 @@ public:
     PS::ReallocatableArray<PS::S32> n_member_in_group;
     PS::ReallocatableArray<FPSoft> ptcl_arti_bk;
     PS::ReallocatableArray<PtclH4> ptcl_bk;
+    RandomManager rand_manager;
     bool backup_flag;
 
-    HardDump(): time_offset(0), time_end(0), n_ptcl(0), n_arti(0), n_group(0), n_member_in_group(), ptcl_arti_bk(), ptcl_bk(), backup_flag(false) {}
+    HardDump(): time_offset(0), time_end(0), n_ptcl(0), n_arti(0), n_group(0), n_member_in_group(), ptcl_arti_bk(), ptcl_bk(), rand_manager(), backup_flag(false) {}
 
     //! backup one hard cluster data 
     /*!
@@ -85,6 +89,10 @@ public:
         fwrite(n_member_in_group.getPointer(), sizeof(PS::S32), n_group, fp);
         for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].writeBinary(fp);
         fclose(fp);
+#ifdef BSE_BASE
+        // rand seed
+        rand_manager.writeRandSeedLocalBinary(fp);
+#endif
         backup_flag = false;
     }
 
@@ -155,6 +163,10 @@ public:
             ptcl_arti_bk.resizeNoInitialize(n_arti);
             for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].readBinary(fp);
         }
+#ifdef BSE_BASE
+        // read rand seed
+        rand_manager.readRandSeedLocalBinary(fp);
+#endif
         fclose(fp);
     }
 

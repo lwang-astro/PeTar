@@ -84,6 +84,9 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #ifdef GALPY
 #include"galpy_interface.h"
 #endif
+#ifdef BSE_BASE
+#include"rand_interface.hpp"
+#endif
 
 //! IO parameters for Petar
 class IOParamsPeTar{
@@ -632,6 +635,7 @@ public:
     IOParamsBSE bse_parameters;
     std::string fbse_par_suffix = BSEManager::getBSEOutputFilenameSuffix();
     std::string fsse_par_suffix = BSEManager::getSSEOutputFilenameSuffix();
+    IOParamsRand rand_parameters;
 #endif // BSE_BASE
 #ifdef GALPY
     IOParamsGalpy galpy_parameters;
@@ -678,6 +682,11 @@ public:
     TreeNB tree_nb;
     TreeForce tree_soft;
 
+    // random manager
+#ifdef BSE_BASE
+    RandomManager rand_manager;
+#endif
+
 #ifdef GALPY
     GalpyManager galpy_manager;
 #endif
@@ -720,6 +729,7 @@ public:
         input_parameters(),
 #ifdef BSE_BASE
         bse_parameters(),
+        rand_parameters(),
 #endif
 #ifdef GALPY
         galpy_parameters(),
@@ -734,6 +744,9 @@ public:
         n_loop(0), domain_decompose_weight(1.0), dinfo(), pos_domain(NULL), 
         dt_manager(),
         tree_nb(), tree_soft(), 
+#ifdef BSE_BASE
+        rand_manager(),
+#endif
 #ifdef GALPY
         galpy_manager(),
 #endif
@@ -1917,6 +1930,10 @@ public:
                 // for External potential
                 galpy_manager.writePotentialPars(fname+".galpy", stat.time);
 #endif
+#ifdef BSE_BASE
+                std::string fname_seed = fname+".randseeds";
+                rand_manager.writeRandSeeds(fname_seed.c_str());
+#endif
             }
         }
         // write all information in to fstatus
@@ -1940,6 +1957,7 @@ public:
 
         // save current error
         stat.energy.saveEnergyError();
+
 
 #ifdef PROFILE
         profile.output.barrier();
@@ -2593,6 +2611,9 @@ public:
         if (my_rank==0) bse_parameters.print_flag=true;
         else bse_parameters.print_flag=false;
         bse_parameters.read(argc,argv);
+        if (my_rank==0) rand_parameters.print_flag=true;
+        else rand_parameters.print_flag=false;
+        rand_parameters.read(argc,argv);
 #endif
 #ifdef GALPY
         if (my_rank==0) galpy_parameters.print_flag=true;
@@ -3374,6 +3395,7 @@ public:
             hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters, print_flag);
             hard_manager.ar_manager.interaction.tide.speed_of_light = hard_manager.ar_manager.interaction.bse_manager.getSpeedOfLight();
         }
+        rand_manager.initialAll(rand_parameters);
 #endif
 #endif
 #ifdef ADJUST_GROUP_PRINT

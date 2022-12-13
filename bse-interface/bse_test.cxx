@@ -6,6 +6,7 @@
 #include <string>
 #include "bse_interface.h"
 #include "../src/io.hpp"
+#include "../parallel-random/rand_interface.hpp"
 
 const int WRITE_WIDTH=23;
 const int WRITE_PRECISION=14;
@@ -84,6 +85,7 @@ int main(int argc, char** argv){
     };
 
     IOParamsBSE bse_io;
+    IOParamsRand rand_io;
     opterr = 0;
 
     // reset optind
@@ -182,11 +184,16 @@ int main(int argc, char** argv){
 
     bse_io.print_flag = true;
     bse_io.read(argc,argv);
+    rand_io.print_flag = true;
+    rand_io.read(argc,argv);
 
     if (help_flag) return 0;
 
     BSEManager bse_manager;
-    bse_manager.initial(bse_io,true);
+    RandomManager rand_manager;
+    bse_manager.initial(bse_io, true);
+    rand_manager.initialAll(rand_io);
+    rand_manager.printSeeds(std::cout);
     assert(bse_manager.checkParams());
 
     // argc is 1 no input is given

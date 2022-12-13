@@ -13,6 +13,10 @@
 #include "soft_ptcl.hpp"
 #include "static_variables.hpp"
 
+#ifdef BSE_BASE
+#include "../parallel-random/rand_interface.hpp"
+#endif
+
 int main(int argc, char **argv){
   int arg_label;
   int mode=0; // 0: integrate to time; 1: times stability
@@ -29,13 +33,12 @@ int main(int argc, char **argv){
   std::string filename="hard_dump";
   std::string fhardpar="input.par.hard";
 #ifdef BSE_BASE
-  int idum=0;
+  uint64_t seed = 0;
   std::string bse_name = BSEManager::getBSEName();
   std::string fsse_suffix = BSEManager::getSSEOutputFilenameSuffix();
   std::string fbse_suffix = BSEManager::getBSEOutputFilenameSuffix();
 
   std::string fbsepar = "input.par" + fbse_suffix;
-  std::string fbserandpar = "bse.rand.par";
 #endif
 #ifdef STELLAR_EVOLUTION
   int stellar_evolution_option = -1;
@@ -44,7 +47,7 @@ int main(int argc, char **argv){
   bool soft_pert_flag=true;
 #endif
 
-  while ((arg_label = getopt(argc, argv, "k:E:A:a:D:d:e:s:c:m:b:B:p:I:v:i:Sh")) != -1)
+  while ((arg_label = getopt(argc, argv, "k:E:A:a:D:d:e:s:c:m:b:p:I:v:i:Sh")) != -1)
     switch (arg_label) {
     case 'k':
         slowdown_factor = atof(optarg);
@@ -93,13 +96,10 @@ int main(int argc, char **argv){
 #endif
 #ifdef BSE_BASE
     case 'i':
-        idum = atoi(optarg);
+        seed = atoi(optarg);
         break;
     case 'b':
         fbsepar = optarg;
-        break;
-    case 'B':
-        fbserandpar = optarg;
         break;
     case 'v':
         par_version = atoi(optarg);
@@ -126,7 +126,6 @@ int main(int argc, char **argv){
 #endif
 #ifdef BSE_BASE
                  <<"    -i [int]      random seed to generate kick velocity\n"
-                 <<"    -B [string]:  read bse random parameter dump file with filename: "<<fbserandpar<<"\n"
                  <<"    -b [string]:  bse parameter file name: "<<fbsepar<<std::endl
 #endif
 #ifdef SOFT_PERT
@@ -174,11 +173,7 @@ int main(int argc, char **argv){
   }
   bse_io.input_par_store.readAscii(fpar_in);
   fclose(fpar_in);
-  if (idum!=0) bse_io.idum.value = idum;
   hard_manager.ar_manager.interaction.bse_manager.initial(bse_io);
-
-  std::cerr<<"Check "<<bse_name<<" rand parameter file: "<<fbserandpar<<std::endl;
-  hard_manager.ar_manager.interaction.bse_manager.readRandConstant(fbserandpar.c_str());
   hard_manager.ar_manager.interaction.tide.gravitational_constant = hard_manager.ar_manager.interaction.gravitational_constant;
   hard_manager.ar_manager.interaction.tide.speed_of_light = hard_manager.ar_manager.interaction.bse_manager.getSpeedOfLight();
 
@@ -251,6 +246,10 @@ int main(int argc, char **argv){
   HardDump hard_dump;
   hard_dump.readOneCluster(filename.c_str());
   std::cerr<<"Time end: "<<hard_dump.time_end<<std::endl;
+#ifdef BSE_BASE
+  RandomManager rand_manager;
+  if (seed!=0) rand_manager.initialAll(seed);
+#endif
 
 #ifdef SOFT_PERT
   if (!soft_pert_flag) {

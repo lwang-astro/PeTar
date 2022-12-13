@@ -70,11 +70,11 @@ endif
 ifeq ($(BSE_FLAG),on)
 FCLIBS = @FCLIBS@
 BSELIBFILES= bse-interface/libbse.a bse-interface/bse_interface.h
-BSELIBS = -L ./bse-interface -lbse $(FCLIBS)
+BSELIBS = -L ./bse-interface -L ./parallel-random -lbse -lrand $(FCLIBS)
 CXXLIBS += $(BSELIBS)
 LIBFILES+= $(BSELIBFILES)
-PETAR_INCLUDE += -I ./bse-interface
-CUDA_INCLUDE += -I ./bse-interface
+PETAR_INCLUDE += -I ./bse-interface -I ./parallel-random
+CUDA_INCLUDE += -I ./bse-interface -I ./parallel-random
 SE_INSTALL:
 	$(MAKE) -C bse-interface install
 SE_CLEAN:

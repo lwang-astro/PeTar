@@ -1,13 +1,15 @@
 ***
       SUBROUTINE kick(kw,m1,m1n,m2,ecc,sep,jorb,v,fbfac,fbtot,mco,ecs)
+*      use iso_c_binding
+      use omp_lib
       implicit none
 *
       integer kw,k
-      INTEGER idum
-      COMMON /VALUE3/ idum
-      INTEGER idum2,iy,ir(32)
-      COMMON /RAND3/ idum2,iy,ir
-      integer bhflag
+*      INTEGER idum
+*      COMMON /VALUE3/ idum
+*      INTEGER idum2,iy,ir(32)
+*      COMMON /RAND3/ idum2,iy,ir
+      integer bhflag,ip
       real*8 m1,m2,m1n,ecc,sep,jorb,ecc2,mxns
       real*8 pi,twopi,gmrkm,yearsc,rsunkm
       parameter(yearsc=3.1557d+07,rsunkm=6.96d+05)
@@ -22,9 +24,12 @@
       INTEGER psflag,kmech,ecflag
       real*8 sigma
       real*8 DISP0,ECSIG,WDSIG1,WDSIG2,WDKMAX
+*      include '../../parallel-random/rand.h'
       COMMON /VALUE4/ sigma,mxns,bhflag
-      real ran3,xx
-      external ran3
+*      real ran3,xx
+*      external ran3
+      real*8 rand_f64
+      external rand_f64
       COMMON /FLAGS2/ psflag,kmech,ecflag
 *
 *       Choose the kick settings.
@@ -82,8 +87,7 @@
 *
 * Find the initial separation by randomly choosing a mean anomaly.
       if(sep.gt.0.d0.and.ecc.ge.0.d0)then
-         xx = RAN3(idum)
-         mm = xx*twopi
+         mm = twopi*rand_f64()
          em = mm
  2       dif = em - ecc*SIN(em) - mm
          if(ABS(dif/mm).le.1.0d-04) goto 3
@@ -121,8 +125,8 @@
       ENDIF
 * Use Henon's method for pairwise components (Douglas Heggie 22/5/97).
       do 20 k = 1,2
-         u1 = RAN3(idum)
-         u2 = RAN3(idum)
+         u1 = rand_f64()
+         u2 = rand_f64()
 * Generate two velocities from polar coordinates S & THETA.
          s = DISP0*SQRT(-2.d0*LOG(1.d0 - u1))
          theta = twopi*u2
