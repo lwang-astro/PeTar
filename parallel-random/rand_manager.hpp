@@ -99,46 +99,30 @@ public:
 
     //! read seed of local thread
     void readRandSeedLocal(FILE* fp) {
-#ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
-#pragma omp parallel 
-        {
-            int rcount = 0;
-            rcount += fscanf(fp, "%" PRIu64 " ", &RAND_SEED[0]);
-            rcount += fscanf(fp, "%" PRIu64 " ", &RAND_SEED[1]);
-            if(rcount<2) {
-                std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
-                abort();
-            }
-        }
-#else
         int rcount = 0;
-        rcount += fscanf(fp, "%" PRIu64 " ", &RAND_SEED[0]);
-        rcount += fscanf(fp, "%" PRIu64 " ", &RAND_SEED[1]);
+        uint64_t rand_seed_local[2];
+        rcount += fscanf(fp, "%" PRIu64 " ", &rand_seed_local[0]);
+        rcount += fscanf(fp, "%" PRIu64 " ", &rand_seed_local[1]);
         if(rcount<2) {
             std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
             abort();
         }
-#endif
+        
+        RAND_SEED[0] = rand_seed_local[0];
+        RAND_SEED[1] = rand_seed_local[1];
     }
 
     //! read seed of local thread
     void readRandSeedLocalBinary(FILE* fp) {
-#ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
-#pragma omp parallel 
-        {
-            int rcount = fread(RAND_SEED, sizeof(uint64_t), 2, fp);
-            if(rcount<2) {
-                std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
-                abort();
-            }
-        }
-#else
-        int rcount = fread(RAND_SEED, sizeof(uint64_t), 2, fp);
+        uint64_t rand_seed_local[2];
+        int rcount = fread(rand_seed_local, sizeof(uint64_t), 2, fp);
         if(rcount<2) {
             std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
             abort();
         }
-#endif
+
+        RAND_SEED[0] = rand_seed_local[0];
+        RAND_SEED[1] = rand_seed_local[1];
     }
 
     //! write random seeds from all threads and MPI processors

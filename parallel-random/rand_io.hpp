@@ -12,9 +12,9 @@ public:
     bool print_flag;
 
     IOParamsRand(): input_par_store(),
-                   seed  (input_par_store, 1234,  "rand-seed",   "initial random number seed, only used once"),
-                   seedfile(input_par_store, "__NONE__","rand-seedfile","filename for random seeds of all threads and MPI processors"),
-                   print_flag(false) {}
+                    seed  (input_par_store, 1234,  "rand-seed",   "Random number seed (positive integer), suppressed when --rand-seedfile is provided"),
+                    seedfile(input_par_store, "__NONE__","rand-seedfile","Name for a file contain random seeds of all threads and MPI processors", "not used"),
+                    print_flag(false) {}
 
     //! reading parameters from GNU option API
     /*!
@@ -76,8 +76,12 @@ public:
                 break;
             case 'h':
                 if(print_flag){
-                    std::cout<<"Random generator options:"<<std::endl;
+                    std::cout<<"Parallel random generator options:"<<std::endl;
                     input_par_store.printHelp(std::cout, 2, 10, 23);
+                    std::cout<<"*** PS: if --rand-seed is used, the single integer seed is used to generate \n"
+                             <<"        multiple seeds for each pair of OpenMP thread and MPI processor. \n"
+                             <<"        For restart the simulation, the randseeds file can be used to restore all seeds"
+                             <<std::endl;
                 }
                 return -1;
             case '?':

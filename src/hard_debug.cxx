@@ -249,6 +249,7 @@ int main(int argc, char **argv){
 #ifdef BSE_BASE
   RandomManager rand_manager;
   if (seed!=0) rand_manager.initialAll(seed);
+  rand_manager.printSeeds(std::cerr);
 #endif
 
 #ifdef SOFT_PERT

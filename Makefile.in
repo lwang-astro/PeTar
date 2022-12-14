@@ -19,6 +19,8 @@ CXXFLAGS=@CXXFLAGS@
 TARGET=build/@PROG_NAME@ build/petar.hard.debug build/petar.format.transfer
 all: $(TARGET)
 
+SRC = main.cc ${shell ls ./src/*.hpp} 
+HARD_SRC= io.hpp ptcl.hpp particle_base.hpp hard_assert.hpp cluster_list.hpp hard.hpp hard_ptcl.hpp hermite_interaction.hpp hermite_information.hpp hermite_perturber.hpp ar_interaction.hpp ar_perturber.hpp search_group_candidate.hpp artificial_particles.hpp stability.hpp soft_ptcl.hpp static_variables.hpp tidal_tensor.hpp orbit_sampling.hpp pseudoparticle_multipole.hpp
 
 ifeq ($(use_fdps_comm),yes)
 FDPSFLAGS = -D FDPS_COMM
@@ -69,16 +71,21 @@ BSE_FLAG=on
 endif
 ifeq ($(BSE_FLAG),on)
 FCLIBS = @FCLIBS@
-BSELIBFILES= bse-interface/libbse.a bse-interface/bse_interface.h
+BSELIBFILES= parallel-random/librand.a bse-interface/libbse.a bse-interface/bse_interface.h 
 BSELIBS = -L ./bse-interface -L ./parallel-random -lbse -lrand $(FCLIBS)
 CXXLIBS += $(BSELIBS)
 LIBFILES+= $(BSELIBFILES)
 PETAR_INCLUDE += -I ./bse-interface -I ./parallel-random
 CUDA_INCLUDE += -I ./bse-interface -I ./parallel-random
+SRC += ${shell ls ./parallel-random/*.hpp} ${shell ls ./bse-interface/*.h}
+HARD_SRC += ${shell ls ./parallel-random/*.hpp} ${shell ls ./bse-interface/*.h}
 SE_INSTALL:
 	$(MAKE) -C bse-interface install
 SE_CLEAN:
+	$(MAKE) -C parallel-random clean
 	$(MAKE) -C bse-interface clean
+parallel-random/librand.a: parallel-random
+	$(MAKE) -C parallel-random librand.a
 bse-interface/libbse.a: bse-interface
 	$(MAKE) -C bse-interface 
 endif
@@ -90,6 +97,7 @@ ifneq ($(ext_mode),off)
 MT_FLAGS += -D EXTERNAL_POT_IN_PTCL
 MT_FLAGS += -D RECORD_CM_IN_HEADER
 endif
+
 ifeq ($(ext_mode),galpy)
 GALPY_VERSION=@GALPY_VERSION@
 VERSION_MAX=$(shell printf '%s\n%s\n' "$(GALPY_VERSION)" "1.7.1" | sort --version-sort |tail -1)
@@ -99,8 +107,10 @@ else
 VERSION_MAX=$(shell printf '%s\n%s\n' "$(GALPY_VERSION)" "1.7.9" | sort --version-sort |tail -1)
 ifeq ($(VERSION_MAX), 1.7.9)
 GALPY_OPT= -D GALPY_VERSION_1_7_9
-endif
-endif
+endif # 1.7.9
+endif # 1.7.1
+
+SRC += ${shell ls ./galpy-interface/*.h}
 MT_FLAGS += -D GALPY $(GALPY_OPT)
 GALPYLIBS = -L ./galpy-interface -lgalpy @GSL_LIBS@
 CXXLIBS += $(GALPYLIBS)
@@ -116,7 +126,7 @@ EXT_INSTALL:
 	$(MAKE) -C galpy-interface install
 EXT_CLEAN:
 	$(MAKE) -C galpy-interface clean
-endif
+endif # galpy
 
 ifeq ($(step_mode),kdkdk)
 MT_FLAGS += -D KDKDK_2ND
@@ -216,11 +226,9 @@ CXXFLAGS += -D PROFILE
 CXX=@CXX@
 #CXXNOMPI=@CXXNOMPI@
 
-VPATH=./src ./build
+VPATH=./src ./build ./bse-interface ./parallel-random ./galpy-interface
 PETAR_INCLUDE += -I./src @PETAR_INCLUDE@
 CUDA_INCLUDE += -I./src @PETAR_INCLUDE@
-
-SRC = main.cc ${shell ls ./src/*.hpp} 
 
 build:
 	[ -d build ] || mkdir build
@@ -238,8 +246,6 @@ SIMD_DEBFLAGS += -DAVX_PRELOAD
 DEBUG_OPT_FLAGS = @DEBFLAGS@ -D SANITY_CHECK_REALLOCATABLE_ARRAY
 HARD_DEBFLAGS+= -D AR_DEBUG -D AR_DEBUG_DUMP -D AR_DEBUG_PRINT -D AR_WARN -D HARD_DEBUG -D HARD_DEBUG_PRINT -D ADJUST_GROUP_DEBUG -D HERMITE_DEBUG -D AR_COLLECT_DS_MODIFY_INFO -D STABLE_CHECK_DEBUG_PRINT -D ARTIFICIAL_PARTICLE_DEBUG -D ARTIFICIAL_PARTICLE_DEBUG_PRINT
 HARD_MT_FLAGS += -D AR_TTL -D AR_SLOWDOWN_TREE -D AR_SLOWDOWN_TIMESCALE -D HARD_CHECK_ENERGY 
-
-HARD_SRC= io.hpp ptcl.hpp particle_base.hpp hard_assert.hpp cluster_list.hpp hard.hpp hard_ptcl.hpp hermite_interaction.hpp hermite_information.hpp hermite_perturber.hpp ar_interaction.hpp ar_perturber.hpp search_group_candidate.hpp artificial_particles.hpp stability.hpp soft_ptcl.hpp static_variables.hpp tidal_tensor.hpp orbit_sampling.hpp pseudoparticle_multipole.hpp
 
 build/petar.format.transfer: format_transfer.cxx |build
 	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(MT_FLAGS) -o $@ $< $(CXXLIBS)

@@ -54,12 +54,18 @@ SRCCXX:= $(shell find $(BSE_PATH) -maxdepth 1 \( -iname '*.cpp' \) )
 OBJCXX:= $(SRCCXX:.cpp=.o)
 endif
 
+RAND_PATH=../parallel-random
+RAND_LIB=$(RAND_PATH)/librand.a
+RAND_INCLUDE:= $(shell find $(RAND_PATH) -type f \( -iname '*.hpp' \) )
 
-$(BSE_LIB): $(OBJ) $(OBJCXX)
+$(BSE_LIB): $(OBJ) $(OBJCXX) $(RAND_LIB)
 	ar rcs $@ $^
 
-$(BSE_TEST): bse_test.cxx $(BSE_LIB) bse_interface.h
+$(BSE_TEST): bse_test.cxx $(BSE_LIB) bse_interface.h $(RAND_INCLUDE)
 	$(CXX) $(CXXFLAGS) $< -o $@ -L./ -L../parallel-random -lbse -lrand $(FCLIBS)
+
+../parallel-random/librand.a: ../parallel-random
+	$(MAKE) -C ../parallel-random librand.a
 
 petar.get.init.binary: get_init_binary_bse.sh
 	ln -sf $< $@

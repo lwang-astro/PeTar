@@ -90,8 +90,15 @@ public:
         for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].writeBinary(fp);
         fclose(fp);
 #ifdef BSE_BASE
+        std::string fname_rand = std::string(_fname) + ".randseed";
+        fp = std::fopen(fname_rand.c_str(),"w");
+        if (fp==NULL) {
+            std::cerr<<"Error: filename "<<_fname<<" cannot be open!\n";
+            abort();
+        }
         // rand seed
-        rand_manager.writeRandSeedLocalBinary(fp);
+        rand_manager.writeRandSeedLocal(fp);
+        fclose(fp);
 #endif
         backup_flag = false;
     }
@@ -163,11 +170,19 @@ public:
             ptcl_arti_bk.resizeNoInitialize(n_arti);
             for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].readBinary(fp);
         }
-#ifdef BSE_BASE
-        // read rand seed
-        rand_manager.readRandSeedLocalBinary(fp);
-#endif
         fclose(fp);
+#ifdef BSE_BASE
+        std::string fname_rand = std::string(_fname) + ".randseed";
+        fp = std::fopen(fname_rand.c_str(),"r");
+        if (fp==NULL) {
+            std::cerr<<"Random seed file not found. Use input seed instead\n";
+        }
+        else {
+            // read rand seed
+            rand_manager.readRandSeedLocal(fp);
+            fclose(fp);
+        }
+#endif
     }
 
 };
