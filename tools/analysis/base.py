@@ -239,6 +239,99 @@ class DictNpArrayMix:
                 key = key_type[0]
                 self.__dict__[key][k] = data[key]
 
+    def copy(self):
+        """ copy current class instance to a new one, similar to copy of numpy.ndarray
+        Return: new class instance with copied values
+        """
+        self_type = type(self)
+        new_dat = self_type(**self.initargs)
+        for key, item in self.__dict__.items():
+            if (hasattr(item, 'copy')):
+                new_dat.__dict__[key] = self.__dict__[key].copy()
+            else:
+                new_dat.__dict__[key] = self.__dict__[key]
+        return new_dat
+
+    def operate(self, other, operator):
+        """ apply operator to self and the other
+        Parameters
+        -----------
+        other: a same class instance, an array or a value to be operated
+        operator: numpy operator
+
+        Return: 
+        -----------
+        new class instance with operated values
+        """
+        self_type = type(self)
+        new_dat = self_type(**self.initargs)
+        if (type(other) == self_type):
+            if (not self.size == other.size):
+                raise ValueError('Added two instances have different sizes: ',self.size,' and ', other.size)
+            if (not self.ncols == other.ncols):
+                raise ValueError('Added two instances have different ncols: ',self.ncols,' and ', other.ncols)
+            for key, item in self.__dict__.items():
+                if (type(item) == np.ndarray) | (issubclass(type(item), DictNpArrayMix)):
+                    new_dat.__dict__[key] = operator(self.__dict__[key], other.__dict__[key])
+                else:
+                    if (hasattr(item, 'copy')):
+                        new_dat.__dict__[key] = self.__dict__[key].copy()
+                    else:
+                        new_dat.__dict__[key] = self.__dict__[key]
+        else:
+            for key, item in self.__dict__.items():
+                if (type(item) == np.ndarray) | (issubclass(type(item), DictNpArrayMix)):
+                    new_dat.__dict__[key] = operator(self.__dict__[key], other)
+                else:
+                    if (hasattr(item, 'copy')):
+                        new_dat.__dict__[key] = self.__dict__[key].copy()
+                    else:
+                        new_dat.__dict__[key] = self.__dict__[key]
+        return new_dat
+
+    def __add__(self, other):
+        """
+        Use operate function to add self and the other
+        """
+        return self.operate(other, np.add)
+
+    def __sub__(self, other):
+        """
+        Use operate function to add self and the other
+        """
+        return self.operate(other, np.subtract)
+
+    def __mul__(self, other):
+        """
+        Use operate function to multiply self and the other
+        """
+        return self.operate(other, np.multiply)
+
+    def __truediv__(self, other):
+        """
+        Use operate function to add self and the other
+        """
+        return self.operate(other, np.true_divide)
+
+    def __pow__(self, other):
+        """
+        Use operate function to multiply self and the other
+        """
+        return self.operate(other, np.power)
+
+    def __mod__(self, other):
+        """
+        Use operate function to mod self and the other
+        """
+        return self.operate(other, np.mod)
+
+    def __modf__(self, other):
+        """
+        Use operate function to modf self and the other
+        """
+        return self.operate(other, np.modf)
+    
+
 #    def keys(self):
 #        return self.__dict__.keys()
 
