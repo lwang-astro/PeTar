@@ -388,6 +388,7 @@ int main(int argc, char** argv){
             bin[i].period0 = bin[i].period;
             bin[i].ecc0 = bin[i].ecc;
             int bin_type_last=0;
+            bool initial_flag = true;
             while (bse_manager.getTime(bin[i].star[0])<tend) {
                 // time step
                 //double dt1 = bse_manager.getTimeStep(bin[i].star[0]);
@@ -396,6 +397,10 @@ int main(int argc, char** argv){
                 double dt = bse_manager.getTimeStepBinary(bin[i].star[0],bin[i].star[1],bin[i].semi,bin[i].ecc,bin_type_last);
                 dt = std::max(dt,dtmin);
                 dt = std::min(tend-bse_manager.getTime(bin[i].star[0]), dt);
+                if (initial_flag) {
+                    dt = 0;
+                    initial_flag = false;
+                }
                 double mtot = bin[i].star[0].mt + bin[i].star[1].mt;
                 double period_myr = bin[i].period*bse_manager.tscale;
                 double G= 0.00449830997959438;
@@ -542,10 +547,15 @@ int main(int argc, char** argv){
             //int error_flag = bse_manager.evolveStar(star[i],output[i],time);
             bool kick_print_flag=false;
             double tend = time*bse_manager.tscale;
+            bool initial_flag = true;
             while (bse_manager.getTime(star[i])<tend) {
                 double dt = std::max(bse_manager.getTimeStepStar(star[i]),dtmin);
                 dt = std::min(tend-bse_manager.getTime(star[i]), dt);
                 StarParameter star_bk = star[i];
+                if (initial_flag) {
+                    dt = 0;
+                    initial_flag = false;
+                }
                 int event_flag=bse_manager.evolveStar(star[i],output[i],dt);
 
                 // error 
@@ -611,8 +621,8 @@ int main(int argc, char** argv){
         printBinaryTitle(std::cout);
 #pragma omp parallel for schedule(dynamic)
         for (int i=0; i<nhyb; i++) {
-            bse_manager.evolveStar(hyb[i].star[0],hyb[i].out[0],1e-8);
-            bse_manager.evolveStar(hyb[i].star[1],hyb[i].out[1],1e-8);
+            bse_manager.evolveStar(hyb[i].star[0],hyb[i].out[0],0);
+            bse_manager.evolveStar(hyb[i].star[1],hyb[i].out[1],0);
 
             bse_manager.merge(hyb[i].star[0],hyb[i].star[1],hyb[i].out[0],hyb[i].out[1],hyb[i].semi,hyb[i].ecc);
 
