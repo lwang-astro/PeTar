@@ -394,6 +394,14 @@ AC_ARG_WITH([external],
                                         [AC_MSG_FAILURE([can't find GSL library, please install it first, e.g. in Ubuntu 20.04, use sudo apt-get install libgsl-dev])],[-lgslcblas])
                            GSL_LIBS='-lgsl -lgslcblas'])])],
 	    [with_external=off])
+
+# external force of hard part
+AC_ARG_WITH([external-hard],
+	    [AS_HELP_STRING([--with-external-hard],
+	                    [External force for hard (short-range) integration: gasdrag: Default: none])],
+            [with_external_hard=$withval
+	     PROG_NAME=$PROG_NAME'.'$with_external_hard],
+	    [with_external_hard=none])
             
 
 # tidal tensor 3rd order mode
@@ -454,6 +462,7 @@ AC_SUBST([with_debug])
 AC_SUBST([with_step_mode])
 AC_SUBST([with_interrupt])
 AC_SUBST([with_external])
+AC_SUBST([with_external_hard])
 AC_SUBST([with_tidal_tensor])
 AC_SUBST([with_orbit])
 AC_SUBST([OPTFLAGS])
@@ -504,6 +513,7 @@ AC_MSG_NOTICE([     interrupt mode:    $with_interrupt])
 AC_MSG_NOTICE([     external mode:     $with_external])
 AS_IF([test x"$with_external" == xgalpy],
       [AC_MSG_NOTICE([     Galpy version:     $GALPY_VERSION])])
+AC_MSG_NOTICE([     external hard mode:$with_external_hard])
 AC_MSG_NOTICE([     tidal tensor mode: $with_tidal_tensor])
 AC_MSG_NOTICE([     orbit mode:        $with_orbit])
 AC_MSG_NOTICE([     Using quad:        $use_quad])

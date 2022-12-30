@@ -2049,8 +2049,30 @@ public:
 #pragma omp parallel for
         for(PS::S32 i=0; i<n; i++){
             auto& pi = ptcl_hard_[i];
-            PS::F64vec dr = pi.vel * _dt;
-            pi.pos += dr;
+
+#ifdef EXTERNAL_HARD
+            auto& ext_force = manager->h4_manager.interaction.ext_force;
+            if (ext_force.is_used) {
+                H4::ForceH4 fi;
+                PS::F64 ti = 0;
+                assert(_dt>=0);
+                while(ti<_dt) { // Symplectic Euler method
+                    PS::F64 dt = ext_force.calcAccJerkExternal(fi, pi);
+                    dt = std::min(dt, _dt-ti);
+                    ti += dt;
+                    pi.vel[0] += fi.acc0[0]*dt;
+                    pi.vel[1] += fi.acc0[1]*dt;
+                    pi.vel[2] += fi.acc0[2]*dt;
+                    pi.pos += pi.vel*dt;
+                }
+            }
+            else {
+#endif
+                PS::F64vec dr = pi.vel * _dt;
+                pi.pos += dr;
+#ifdef EXTERNAL_HARD
+            }
+#endif
 
 #ifdef STELLAR_EVOLUTION
             PS::F64 mbk = pi.mass;

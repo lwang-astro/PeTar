@@ -2,15 +2,23 @@
 
 #include "Common/Float.h"
 #include "changeover.hpp"
+#include "external_force.hpp"
 
 //! hermite interaction class 
 class HermiteInteraction{
 public:
     Float eps_sq; // softening parameter
     Float gravitational_constant;      // gravitational constant
+#ifdef EXTERNAL_HARD
+    ExternalHardForce ext_force; // external force
+#endif
 
     // constructor
-    HermiteInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)) {}
+    HermiteInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0))
+#ifdef EXTERNAL_HARD
+                        , ext_force() 
+#endif
+    {}
 
     //! check whether parameters values are correct
     /*! \return true: all correct
@@ -18,6 +26,9 @@ public:
     bool checkParams() {
         ASSERT(eps_sq>=0.0);
         ASSERT(gravitational_constant>0.0);
+#ifdef EXTERNAL_HARD
+        ASSERT(ext_force.checkParams());
+#endif
         return true;
     }        
     
@@ -25,6 +36,9 @@ public:
     void print(std::ostream & _fout) const{
         _fout<<"eps_sq: "<<eps_sq<<std::endl
              <<"G     : "<<gravitational_constant<<std::endl;
+#ifdef EXTERNAL_HARD
+        ext_force.print(_fout);
+#endif
     }    
 
     //! calculate separation square between i and j particles
@@ -422,6 +436,28 @@ public:
 
         return dr2;
     }
+
+#ifdef EXTERNAL_HARD
+    //! calculate acceleration and jerk of one particle from perturber 
+    template<class Tpi, class Tpcm, class Tpert> 
+    inline void calcAccJerkPerturber(H4::ForceH4& _fi,
+                                     const Tpi& _pi,
+                                     const Tpcm& _pcm,
+                                     const Tpert& _perturber) {
+        if (ext_force.is_used) {
+            
+            Tpi p = _pi;
+            p.pos[0] += _pcm.pos[0];
+            p.pos[1] += _pcm.pos[1];
+            p.pos[2] += _pcm.pos[2];
+            p.vel[0] += _pcm.vel[0];
+            p.vel[1] += _pcm.vel[1];
+            p.vel[2] += _pcm.vel[2];
+
+            ext_force.calcAccJerkExternal(_fi, p);
+        }
+    }
+#endif
 
     //! calculate pair potential energy
     template<class Tpi, class Tpj>
