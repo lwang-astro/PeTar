@@ -640,6 +640,9 @@ public:
 #ifdef GALPY
     IOParamsGalpy galpy_parameters;
 #endif
+#ifdef EXTERNAL_HARD
+    IOParamsExternalHard external_hard_parameters;
+#endif
 
 #ifdef PROFILE
     PS::S32 dn_loop;
@@ -733,6 +736,9 @@ public:
 #endif
 #ifdef GALPY
         galpy_parameters(),
+#endif
+#ifdef EXTERNAL_HARD
+        external_hard_parameters(),
 #endif
 #ifdef PROFILE
         // profile
@@ -2620,6 +2626,11 @@ public:
         else galpy_parameters.print_flag=false;
         galpy_parameters.read(argc,argv);
 #endif
+#ifdef EXTERNAL_HARD
+        if (my_rank==0) external_hard_parameters.print_flag=true;
+        else external_hard_parameters.print_flag=false;
+        external_hard_parameters.read(argc,argv);
+#endif
 
         // help case, return directly
         if (read_flag==-1) {
@@ -3404,6 +3415,10 @@ public:
             hard_manager.h4_manager.adjust_group_write_flag=true;
         else 
             hard_manager.h4_manager.adjust_group_write_flag=false;
+#endif
+
+#ifdef EXTERNAL_HARD
+        hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, print_flag);
 #endif        
 
         // check consistence of paramters
@@ -3470,6 +3485,18 @@ public:
                 abort();
             }
             galpy_parameters.input_par_store.writeAscii(fpar_out);
+            fclose(fpar_out);
+#endif
+
+#ifdef EXTERNAL_HARD
+            // save galpy parameters
+            std::string fexthard_par = input_parameters.fname_par.value + ".exthard";
+            if (print_flag) std::cout<<"Save external_hard_parameters to file "<<fexthard_par<<std::endl;
+            if( (fpar_out = fopen(fexthard_par.c_str(),"w")) == NULL) {
+                fprintf(stderr,"Error: Cannot open file %s.\n", fexthard_par.c_str());
+                abort();
+            }
+            external_hard_parameters.input_par_store.writeAscii(fpar_out);
             fclose(fpar_out);
 #endif
         }
@@ -3615,6 +3642,15 @@ public:
 
                 /// force from external potential and kick
                 externalForce();
+
+#ifdef EXTERNAL_HARD
+                /// force from external hard
+                H4::ForceH4 f;
+                hard_manager.h4_manager.interaction.ext_force.calcAccJerkExternal(f, p);
+                p.acc[0] += f.acc0[0];
+                p.acc[1] += f.acc0[1];
+                p.acc[2] += f.acc0[2];
+#endif
 
 #ifdef RECORD_CM_IN_HEADER
                 stat.calcAndShiftCenterOfMass(&p, stat.n_real_loc);

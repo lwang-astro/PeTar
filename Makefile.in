@@ -11,6 +11,7 @@ debug_mode=@with_debug@
 step_mode=@with_step_mode@
 se_mode=@with_interrupt@
 ext_mode=@with_external@
+ext_hard_mode=@with_external_hard@
 tt_mode=@with_tidal_tensor@
 orb_mode=@with_orbit@
 
@@ -127,6 +128,10 @@ EXT_INSTALL:
 EXT_CLEAN:
 	$(MAKE) -C galpy-interface clean
 endif # galpy
+
+ifeq ($(ext_hard_mode), gasdrag)
+MT_FLAGS += -D EXTERNAL_HARD -D HERMITE_PERT_FORCE
+endif
 
 ifeq ($(step_mode),kdkdk)
 MT_FLAGS += -D KDKDK_2ND
