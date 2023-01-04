@@ -21,10 +21,16 @@ public:
     PS::ReallocatableArray<PS::S32> n_member_in_group;
     PS::ReallocatableArray<FPSoft> ptcl_arti_bk;
     PS::ReallocatableArray<PtclH4> ptcl_bk;
+#ifdef BSE_BASE
     RandomManager rand_manager;
+#endif
     bool backup_flag;
 
-    HardDump(): time_offset(0), time_end(0), n_ptcl(0), n_arti(0), n_group(0), n_member_in_group(), ptcl_arti_bk(), ptcl_bk(), rand_manager(), backup_flag(false) {}
+    HardDump(): time_offset(0), time_end(0), n_ptcl(0), n_arti(0), n_group(0), n_member_in_group(), ptcl_arti_bk(), ptcl_bk(), 
+#ifdef BSE_BASE
+                rand_manager(), 
+#endif
+                backup_flag(false) {}
 
     //! backup one hard cluster data 
     /*!
