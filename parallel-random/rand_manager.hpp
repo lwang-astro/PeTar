@@ -4,6 +4,7 @@
 #include "rand.hpp"
 #include <cstdio>
 #include <string>
+#include <vector>
 
 //! random generator manager              
 class RandomManager{
@@ -33,12 +34,15 @@ public:
     }
 
     // initial all seeds directly
-    void initialAll(uint64_t seed) {
+    void initialFromSeed(uint64_t seed) {
         srand_parallel(&seed);
     }
 
     //! print all seeds 
-    void printSeeds(std::ostream & fout) const{
+    void printRandSeeds(std::ostream & fout) const{
+
+        std::vector<uint64_t> rand_seeds;
+        int nseeds = getherRandSeeds(rand_seeds);
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         int rank, n_proc;
@@ -50,22 +54,14 @@ public:
         int n_proc = 1;
 #endif    
 
-        if (rank==0) fout<<"Random seeds of all threads and processors:\n";
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-        MPI_Barrier(MPI_COMM_WORLD);
-#endif
-        for (int i=0; i<n_proc; i++) {
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-            MPI_Barrier(MPI_COMM_WORLD);
-#endif
-            if (rank==i) {
-#pragma omp parallel 
-                {
-#pragma omp critical
-                    {
-                        int i_omp = omp_get_thread_num();
-                        fout<<"Rank["<<rank<<"]-Thread["<<i_omp<<"]: "<<RAND_SEED[0]<<" "<<RAND_SEED[1]<<std::endl;
-                    }
+        if (rank==0) {
+            fout<<"----- Random seeds of all threads and processors: -----\n";
+            int n_omp = nseeds/(2*n_proc);
+            for (int i=0; i<n_proc; i++) {
+                for (int k=0; k<n_omp; k++) {
+                    fout<<"Rank["<<i<<"]-Thread["<<k<<"]: "
+                        <<rand_seeds[2*i*n_omp+k]<<" "
+                        <<rand_seeds[2*i*n_omp+k+1]<<std::endl;
                 }
             }
         }
@@ -125,10 +121,14 @@ public:
         RAND_SEED[1] = rand_seed_local[1];
     }
 
-    //! write random seeds from all threads and MPI processors
-    void writeRandSeeds(FILE* fp) {
-        
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+    //! gether all random seeds to one array in rank0
+    /*!
+      @param[out] rand_seeds(std::vector): array to save all random seeds (for MPI, only rank 0 get data)
+      \return total number of seeds
+     */
+    int getherRandSeeds(std::vector<uint64_t>& rand_seeds) const {
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
         int n_proc;
         // get number of MPI processors (ranks) in MPI_COMM_WORLD
         MPI_Comm_size(MPI_COMM_WORLD, &n_proc);
@@ -166,12 +166,34 @@ public:
 #else
         for (int i=0; i<2*n_omp; i++) 
             rand_seed_all[i] = rand_seed_local[i];
-#endif    
-    
+#endif  
+        
+        for (int i=0; i<nseeds; i++) 
+            rand_seeds.push_back(rand_seed_all[i]);
+
+        return nseeds;
+    }
+
+    //! write random seeds from all threads and MPI processors
+    void writeRandSeeds(FILE* fp) {
+        
+        std::vector<uint64_t> rand_seeds;
+        int nseeds = getherRandSeeds(rand_seeds);
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+        int n_proc;
+        // get number of MPI processors (ranks) in MPI_COMM_WORLD
+        MPI_Comm_size(MPI_COMM_WORLD, &n_proc);
+        int rank;
+        // get current MPI processor id (rank) in MPI_COMM_WORLD
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#else
+        int rank=0;
+        int n_proc = 1;
+#endif
         // save all seeds
         if (rank==0) {
             for (int i=0; i<nseeds; i++) {
-                fprintf(fp, "%" PRIu64 " ", rand_seed_all[i]);
+                fprintf(fp, "%" PRIu64 " ", rand_seeds[i]);
             }
         }
     }

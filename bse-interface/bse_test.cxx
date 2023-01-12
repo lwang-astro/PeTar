@@ -193,7 +193,7 @@ int main(int argc, char** argv){
     RandomManager rand_manager;
     bse_manager.initial(bse_io, true);
     rand_manager.initialAll(rand_io);
-    rand_manager.printSeeds(std::cout);
+    rand_manager.printRandSeeds(std::cout);
     assert(bse_manager.checkParams());
 
     // argc is 1 no input is given

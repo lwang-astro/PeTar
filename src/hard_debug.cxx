@@ -248,8 +248,8 @@ int main(int argc, char **argv){
   std::cerr<<"Time end: "<<hard_dump.time_end<<std::endl;
 #ifdef BSE_BASE
   RandomManager rand_manager;
-  if (seed!=0) rand_manager.initialAll(seed);
-  rand_manager.printSeeds(std::cerr);
+  if (seed!=0) rand_manager.initialFromSeed(seed);
+  rand_manager.printRandSeeds(std::cerr);
 #endif
 
 #ifdef SOFT_PERT

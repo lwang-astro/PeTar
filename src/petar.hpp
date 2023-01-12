@@ -1936,11 +1936,11 @@ public:
                 // for External potential
                 galpy_manager.writePotentialPars(fname+".galpy", stat.time);
 #endif
-#ifdef BSE_BASE
-                std::string fname_seed = fname+".randseeds";
-                rand_manager.writeRandSeeds(fname_seed.c_str());
-#endif
             }
+#ifdef BSE_BASE
+            std::string fname_seed = fname+".randseeds";
+            rand_manager.writeRandSeeds(fname_seed.c_str());
+#endif
         }
         // write all information in to fstatus
         else if(write_style==2&&my_rank==0) {
@@ -3360,6 +3360,12 @@ public:
             stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);
 #endif
             //Ptcl::vel_cm = stat.pcm.vel;
+
+#ifdef BSE_BASE
+            // set randseeds filename to read later
+            std::string &data_filename = input_parameters.fname_inp.value;
+            rand_parameters.seedfile.value = data_filename + ".randseeds";
+#endif
         }
 
 #ifdef GALPY
@@ -3407,6 +3413,7 @@ public:
             hard_manager.ar_manager.interaction.tide.speed_of_light = hard_manager.ar_manager.interaction.bse_manager.getSpeedOfLight();
         }
         rand_manager.initialAll(rand_parameters);
+        rand_manager.printRandSeeds(std::cout);
 #endif
 #endif
 #ifdef ADJUST_GROUP_PRINT
@@ -3473,6 +3480,16 @@ public:
                 abort();
             }
             bse_parameters.input_par_store.writeAscii(fpar_out);
+            fclose(fpar_out);
+
+            // save random parameters
+            std::string frand_par = input_parameters.fname_par.value + ".rand";
+            if (print_flag) std::cout<<"Save rand_parameters to file "<<frand_par<<std::endl;
+            if( (fpar_out = fopen(frand_par.c_str(),"w")) == NULL) {
+                fprintf(stderr,"Error: Cannot open file %s.\n", frand_par.c_str());
+                abort();
+            }
+            rand_parameters.input_par_store.writeAscii(fpar_out);
             fclose(fpar_out);
 #endif
 
