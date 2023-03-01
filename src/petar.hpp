@@ -3667,11 +3667,13 @@ public:
 
 #ifdef EXTERNAL_HARD
                 /// force from external hard
-                H4::ForceH4 f;
-                hard_manager.h4_manager.interaction.ext_force.calcAccJerkExternal(f, p);
-                p.acc[0] += f.acc0[0];
-                p.acc[1] += f.acc0[1];
-                p.acc[2] += f.acc0[2];
+                if (hard_manager.h4_manager.interaction.ext_force.is_used) {
+                    H4::ForceH4 f;
+                    hard_manager.h4_manager.interaction.ext_force.calcAccJerkExternal(f, p);
+                    p.acc[0] += f.acc0[0];
+                    p.acc[1] += f.acc0[1];
+                    p.acc[2] += f.acc0[2];
+                }
 #endif
 
 #ifdef RECORD_CM_IN_HEADER
