@@ -18,15 +18,17 @@ public:
     IOParamsContainer input_par_store;
     IOParams<long long int> mode; // option to switch perturbation
     IOParams<double> gas_density; 
+    IOParams<double> decay_time;
     IOParams<double> sound_speed; 
     IOParams<double> coulomb_log; 
 
     bool print_flag;
     IOParamsExternalHard(): input_par_store(),
-                            mode  (input_par_store, 0, "external-hard-mode", "external hard mode: 0, not used; 1, gas dynamical friction (Ostriker 1999, Rozner et al. 2022)"),
-                            gas_density  (input_par_store, 1.0, "external-hard-gas-density",  "gas density in units of PeTar input"),
-                            sound_speed  (input_par_store, 1.0, "external-hard-sound-speed",  "sound speed in units of PeTar input"),
-                            coulomb_log  (input_par_store, 3.1, "external-hard-coulomb-log",  "coulomb logarithm"),
+                            mode  (input_par_store, 0,          "ext-hard-mode", "external hard mode: 0, not used; 1, gas dynamical friction (Ostriker 1999, Rozner et al. 2022)"),
+                            gas_density  (input_par_store, 1.0, "ext-gas-density",  "gas density in units of PeTar input"),
+                            decay_time   (input_par_store, 0.0, "ext-decay-time",  "gas density decay time scale in units of PeTar input"),
+                            sound_speed  (input_par_store, 1.0, "ext-sound-speed",  "sound speed in units of PeTar input"),
+                            coulomb_log  (input_par_store, 3.1, "ext-coulomb-log",  "coulomb logarithm"),
                             print_flag(false) {}
 
     //! reading parameters from GNU option API
@@ -41,8 +43,9 @@ public:
         const struct option long_options[] = {
             {mode.key,    required_argument, &ext_flag, 0},  
             {gas_density.key, required_argument, &ext_flag, 1},  
-            {sound_speed.key, required_argument, &ext_flag, 2},  
-            {coulomb_log.key, required_argument, &ext_flag, 3},  
+            {decay_time.key,  required_argument, &ext_flag, 2},  
+            {sound_speed.key, required_argument, &ext_flag, 3},  
+            {coulomb_log.key, required_argument, &ext_flag, 4},  
             {"help",      no_argument,       0, 'h'},
             {0,0,0,0}
         };
@@ -67,11 +70,16 @@ public:
                     opt_used+=2;
                     break;            
                 case 2:
+                    decay_time.value = atof(optarg);
+                    if(print_flag) decay_time.print(std::cout);
+                    opt_used+=2;
+                    break;            
+                case 3:
                     sound_speed.value = atof(optarg);
                     if(print_flag) sound_speed.print(std::cout);
                     opt_used+=2;
                     break;            
-                case 3:
+                case 4:
                     coulomb_log.value = atof(optarg);
                     if(print_flag) coulomb_log.print(std::cout);
                     opt_used+=2;
@@ -122,17 +130,28 @@ class ExternalHardForce{
 public:
     bool is_used; // indicator whether external force is used
     Float gas_density; 
+    Float gas_density_init; 
+    Float decay_time;
     Float sound_speed; 
     Float coulomb_log;
+    Float time;
 
-    ExternalHardForce(): is_used(false), gas_density(1.0), sound_speed(1.0), coulomb_log(3.1) {}
+    ExternalHardForce(): is_used(false), gas_density(1.0), gas_density_init(1.0), decay_time(0.0), sound_speed(1.0), coulomb_log(3.1), time(0.0) {}
 
     //! initial parameters for perturbation
-    void initial(const IOParamsExternalHard& _input, const bool _print_flag=false) {
+    void initial(const IOParamsExternalHard& _input, const Float _time, const bool _print_flag=false) {
         is_used = bool(_input.mode.value);
-        gas_density = _input.gas_density.value;
+        gas_density_init = _input.gas_density.value;
+        decay_time  = _input.decay_time.value;
         sound_speed = _input.sound_speed.value;
         coulomb_log = _input.coulomb_log.value;
+        updateTime(_time);
+    }
+
+    //! update time and gas density
+    void updateTime(const Float _time) {
+        time = _time;
+        gas_density = gas_density_init * exp(-time/decay_time);
     }
 
     //! External force for one particle in hard part
