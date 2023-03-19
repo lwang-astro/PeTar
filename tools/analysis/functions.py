@@ -257,3 +257,30 @@ def coordinateCorrection(data, snap_center, obs_center, **kwargs):
     
     return data_c
 
+def semiToPeriod(m1, m2, semi, G):
+    """
+    Convert semi-major axis of a binary to period
+
+    Parameters:
+    -----------
+    m1: mass 1
+    m2: mass 2
+    semi: semi-major axis
+    G: gravitational constant 
+       (2 pi)^2:  semi: AU, period: yr
+       petar.G_MSUN_PC_MYR: semi: pc, period: Myr
+    """
+    return np.pi*2*np.sqrt(semi*semi*semi/(G*(m1+m2)))
+
+def periodToSemi(m1, m2, period, G):
+    """
+    Convert period of a binary to semi-major axis
+
+    Parameters:
+    -----------
+    m1: mass 1
+    m2: mass 2
+    period: period
+    G: gravitational constant 
+    """
+    return (period*period*G*(m1+m2)/(4*np.pi**2))**(1.0/3.0)

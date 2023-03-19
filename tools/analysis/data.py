@@ -788,6 +788,24 @@ class Binary(SimpleParticle):
             binary_tree[1] = type(self.p2)
         return binary_tree
 
+    def generateBSEInput(self, fpath, time=0.0):
+        """
+        Generate input for petar.bse
+        line: m1, m2, type1, type2, period, ecc, time
+        
+        Parameters:
+        ------------
+        fpath: file path to save the input data
+        time: time of the snapshot (0.0)
+        """
+        period = periodToSemi(self.p1.mass, self.p2.mass, self.semi, self.initargs['G'])
+        out_data = np.transpose((self.p1.mass, self.p2.mass, self.p1.star.type, self.p2.star.type, period, self.ecc, np.ones(self.size)*time))
+        f = open(fpath, 'w')
+        f.write('%d\n' % self.size)
+        np.savetxt(f, out_data, fmt='%.24g %.24g %d %d %.24g %.24g %.24g')
+        f.close()
+
+        
 def findPair(_dat, _G, _rmax, use_kdtree=False, simple_binary=True):
     """  Find binaries in a particle data set
     The scipy.spatial.cKDTree is used to find pairs
