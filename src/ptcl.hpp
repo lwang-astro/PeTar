@@ -240,7 +240,8 @@ public:
     //! Get neighbor distance criterion 
     PS::F64 getRNeighbor() const {
 #ifdef HARD_DEBUG
-        assert(r_search>changeover.getRout());
+        // If a binary's velocity is zero. its r_search can be the same as r_out, because r_out can be > r_search_min, then calcRSearch return r_out.
+        assert(r_search>=changeover.getRout());
 #endif 
         return r_search;
     }
