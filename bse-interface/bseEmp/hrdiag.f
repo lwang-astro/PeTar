@@ -248,7 +248,7 @@
      &                 tau1,tau2,taumin)
                endif
 *
-               ry = ragbf(mt,lum,zpars(2))
+               ry = 10**(getRadiusRedPhase(mt,lum)) ! ry = ragbf(mt,lum,zpars(2))
                r  = MIN(r,ry)
             endif
 *
@@ -329,8 +329,8 @@
                r = rtms*(rx/rtms)**tau
 * Tanikawa's prescription
                if(askInUseOrNot()
-     &              .and. askInScopeOfApplication(mt)) then
-                  ry = ragbf(mt,lum,zpars(2))
+     &              .and. askInScopeOfApplication(mass)) then !     &              .and. askInScopeOfApplication(mt)) then
+                  ry = 10**(getRadiusRedPhase(mt,lum)) ! ry = ragbf(mt,lum,zpars(2))
                   r  = MIN(r,ry)
                endif
 *
@@ -426,13 +426,15 @@
             rmin = rminf(mass)
 * Tanikawa's prescription
 !            rg = rgbf(mt,lums(4))
-            if(askInUseOrNot() .and. askInScopeOfApplication(mt)) then
-               rg = ragbf(mt,lums(4),zpars(2))
+            if(askInUseOrNot() .and. askInScopeOfApplication(mass)) then !            if(askInUseOrNot() .and. askInScopeOfApplication(mt)) then
+               rg = 10**(getRadiusRedPhase(mt,lums(4))) ! rg = ragbf(mt,lums(4),zpars(2))
+               rx = 10**(getRadiusRedPhase(mt,lums(4))) 
             else
                rg = rgbf(mt,lums(4))
+               rx = ragbf(mt,lums(4),zpars(2))
             endif
 *
-            rx = ragbf(mt,lums(4),zpars(2))
+!            rx = ragbf(mt,lums(4),zpars(2))
             rmin = MIN(rmin, rx)
             if(mass.le.mlp) then
                texp = log(mass/mlp)/log(zpars(3)/mlp)
@@ -452,7 +454,7 @@
 * Tanikawa's prescription
             if(askInUseOrNot() .and. askInScopeOfApplication(mass)) then
                tloop = getEndTimeOfBluePhase(mass)
-               if(askAllBlueOrNot(mt)) then
+               if(askAllBlueOrNot(mass)) then !if(askAllBlueOrNot(mt)) then
                   tloop = tbagb
                endif
                tau2  = (tloop - tscls(2)) / tscls(3)
@@ -464,9 +466,14 @@
 * Tanikawa's prescription
 !               ry = ragbf(mt,ly,zpars(2))
                if(askInUseOrNot()
-     &              .and. askInScopeOfApplication(mt)) then
-                  ry = 10**(getRadiusEndTimeOfBlueCHeBPhase(mt,
+     &              .and. askInScopeOfApplication(mass)) then !     &              .and. askInScopeOfApplication(mt)) then
+                  ry = 10**(getRadiusEndTimeOfBlueCHeBPhase(mass, !                  ry = 10**(getRadiusEndTimeOfBlueCHeBPhase(mt,
      &                 mt, ly))
+                  If(.not. askBlueOrRed(tbagb,mass)) then
+                     !ry = sqrt(ry*ragbf(mt,ly,zpars(2))) ! keep continuity from type 4 to type 5 (21/09/25)
+                     ry = 10**((1.-tau)*log10(ry)
+     &                    +tau*getRadiusRedPhase(mt,ly)) !+tau*log10(ragbf(mt,ly,zpars(2)))) ! keep continuity from type 4 to type 5 (21/09/25)
+                  endif
                else
                   ry = ragbf(mt,ly,zpars(2))
                endif
@@ -482,18 +489,24 @@
                r = rmin*exp(abs(tau2)**3)
 * Tanikawa's prescription
                if(askInUseOrNot()
-     &              .and. askInScopeOfApplication(mt)) then
-                  ry = ragbf(mt,lum,zpars(2))
+     &              .and. askInScopeOfApplication(mass)) then !     &              .and. askInScopeOfApplication(mt)) then
+                  ry = 10**(getRadiusRedPhase(mt,lum)) ! ry = ragbf(mt,lum,zpars(2))
                   r  = MIN(r,ry)
                endif
                if(askInUseOrNot()
-     &              .and. askInScopeOfApplication(mt)) then
-                  ry = ragbf(mt,lums(7),zpars(2))
+     &              .and. askInScopeOfApplication(mass)) then !     &              .and. askInScopeOfApplication(mt)) then
+                  !ry = ragbf(mt,lums(7),zpars(2))
+                  ry = 10**(getRadiusRedPhase(mt,lums(7))) ! ry = ragbf(mt, lums(7),zpars(2)) ! keep continuity of ragbf between the original and mine (21/09/25)
                end if
 *
                rg = rg + tau*(ry - rg)
             else
-               r = ragbf(mt,lum,zpars(2))
+               if(askInUseOrNot()
+     &              .and. askInScopeOfApplication(mass)) then
+                  r = 10**(getRadiusRedPhase(mt,lum)) ! keep continuity of ragbf between the original and mine (21/09/25)
+               else
+                  r = ragbf(mt,lum,zpars(2))
+               endif
                rg = r
             end if
          else
@@ -553,10 +566,10 @@
 * is caught by the C core mass and they grow together.
 *
 * Tanikawa's prescription
-         if(askInUseOrNot() .and. askInScopeOfApplication(mt)) then
+         if(askInUseOrNot() .and. askInScopeOfApplication(mass)) then !         if(askInUseOrNot() .and. askInScopeOfApplication(mt)) then
             call followAGBPhase(aj, mass, mt, lum,
      &           r, rg, mcbagb, mc, mcx, mcmax)
-            ry = ragbf(mt,lum,zpars(2))
+            ry = 10**(getRadiusRedPhase(mt,lum)) ! ry = ragbf(mt,lum,zpars(2))
             r  = MIN(r,ry)
             if(mt.le.mc)then
                mcx = mcmax
@@ -872,6 +885,7 @@
             am = MAX(0.d0,0.4d0-0.22d0*LOG10(mt))
             r = rx*(1.d0+am*(tau-tau**6))
             rg = rx
+*
 * Star has no core mass and hence no memory of its past
 * which is why we subject mass and mt to mass loss for
 * this phase.

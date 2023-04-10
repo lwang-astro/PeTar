@@ -86,34 +86,12 @@
 *
 * We fit a Helium core mass at the base of the AGB.
 *
-         m0 = mbagbf(mc)
-* A. Tanikawa adds here 21/09/24
+* Tanikawa's BH model (safe merger)
+!         m0 = mbagbf(mc)
          if(askInUseOrNot() .and. askInScopeOfApplication(m0)) then
-            mmax = getUpperLimitOfMass()
-            mmin = getLowerLimitOfMass()*0.5
-            fmid = getHeCoreMassBAGBTime(mmax) - mc
-            f    = getHeCoreMassBAGBTime(mmin) - mc
-            if(fmid*f.ge.0.d0)then
-               write(0,*)'Fatal error 1 in gntage.f.',
-     &              'Please contact A. Tankawa.',
-     &              'kw,mc,mt,aj=',kw,mc,mt,aj
-               stop
-            endif
-            m0 = mmin
-            dm = mmax-m0
-            do 200, j = 1,jmax*2
-               dm = 0.5d0*dm
-               mmid = m0 + dm
-               fmid = getHeCoreMassBAGBTime(mmid) - mc
-               if(fmid.lt.0.d0) m0 = mmid
-               if(ABS(dm).lt.macc.or.ABS(fmid).lt.1.d-3) exit
-               if(j.eq.jmax*2)then
-                  write(0,*)'Fatal error 2 in gntage.f.',
-     &                 'Please contact A. Tankawa.',
-     &                 'kw,mc,mt,aj=',kw,mc,mt,aj
-                  stop
-               endif
- 200        continue
+            m0 = getTMSMassFromHeCoreMassBAGBTime(mc)
+         else
+            m0 = mbagbf(mc)
          endif
 *
          if(m0.lt.tiny)then
@@ -155,38 +133,11 @@
             m0 = mmin
             goto 20
          endif
-* A. Tanikawa adds here 21/09/24
-         if(askInUseOrNot() .and. askInScopeOfApplication(mmax)) then
-            mmax = getUpperLimitOfMass()
-            mmin = getLowerLimitOfMass()*0.5
-            fmid = (1-aj)*getHeCoreMassHeITime(mmax) +
-     &           aj*getHeCoreMassBAGBTime(mmax) - mc
-            f    = (1-aj)*getHeCoreMassHeITime(mmin) + 
-     &           aj*getHeCoreMassBAGBTime(mmin) - mc
-            if(fmid*f.ge.0.d0)then
-               write(0,*)'Fatal error 1 in gntage.f.',
-     &              'Please contact A. Tankawa.',
-     &              'kw,mc,mt,aj=',kw,mc,mt,aj
-               !stop
-               kw = 3
-               goto 90
-            endif
-            m0 = mmin
-            dm = mmax-m0
-            do 100, j = 1,jmax*2
-               dm = 0.5d0*dm
-               mmid = m0 + dm
-               fmid = (1-aj)*getHeCoreMassHeITime(mmid) +
-     &              aj*getHeCoreMassBAGBTime(mmid) - mc
-               if(fmid.lt.0.d0) m0 = mmid
-               if(ABS(dm).lt.macc.or.ABS(fmid).lt.1.d-3) goto 20
-               if(j.eq.jmax*2)then
-                  write(0,*)'Fatal error 2 in gntage.f.',
-     &                 'Please contact A. Tankawa.',
-     &                 'kw,mc,mt,aj=',kw,mc,mt,aj
-                  stop
-               endif
- 100        continue
+* Tanikawa's BH model (safe merger)
+         if(askInUseOrNot() .and. askInScopeOfApplication(m0)) then
+            mmax = getTMSMassFromHeCoreMassHeITime(mc)
+            mmin = getTMSMassFromHeCoreMassBAGBTime(mc)
+            m0   = (mmax*mmin)**0.5
             goto 20
          endif
 *
