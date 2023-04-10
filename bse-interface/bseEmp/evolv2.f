@@ -203,8 +203,8 @@
 *     kick information 
       INTEGER ikick,jp,jpmax
 * Tanikawa's BH model
-!      PARAMETER(jpmax=8)
-      PARAMETER(jpmax=80)
+      PARAMETER(jpmax=8)
+!      PARAMETER(jpmax=80)
 *
 
       LOGICAL coel,com,prec,inttry,change,snova,sgl,bsymb,esymb,bss
@@ -213,8 +213,8 @@
       REAL*8 rl,mlwind,vrotf,corerd
       EXTERNAL rl,mlwind,vrotf,corerd
 * Tanikawa's BH model
-!      REAL*8 bpp(9,10)
-      REAL*8 bpp(81,10)
+      REAL*8 bpp(9,10)
+!      REAL*8 bpp(81,10)
       integer preventCe
       parameter(preventCe=0) ! 0:Oritinal CE criteria, 1:Olejek21-likes
       logical newradornot

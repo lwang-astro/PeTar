@@ -875,7 +875,8 @@ public:
 
         if (set_name=="MWPotential2014") {
                 
-            auto& pot_set_par_k = pot_set_pars.emplace_back();
+            pot_set_pars.emplace_back();
+            auto& pot_set_par_k = pot_set_pars.back();
             pot_set_par_k.setOrigin(0);
 
             pot_type.insert(pot_type.end(), {15,5,9});
@@ -984,8 +985,9 @@ public:
      */
     bool addPotentialFromString(const std::string& _type_args, const bool _reset_flag, const bool _print_flag) {
         if (_type_args!="__NONE__") {
-
-            auto& pot_set_par_k = pot_set_pars.emplace_back();
+            
+            pot_set_pars.emplace_back();
+            auto& pot_set_par_k = pot_set_pars.back();
             pot_set_par_k.setOrigin(0);
 
             std::vector<std::string> type_args_pair;
@@ -1071,7 +1073,8 @@ public:
                             mwpot.gm_halo*gmscale, mwpot.rs_halo*rscale};
 
         if (_initial_flag) {
-            auto& pot_set_par_k = pot_set_pars.emplace_back();
+            pot_set_pars.emplace_back();
+            auto& pot_set_par_k = pot_set_pars.back();
             pot_set_par_k.setOrigin(0);
 
             pot_type.insert(pot_type.end(), {15,5,9});

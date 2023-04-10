@@ -489,8 +489,8 @@ static double EstimateGRTimescale(StarParameter& _star1, StarParameter& _star2, 
 class BinaryEvent{
 public:
     // Tanikawa's BH model
-    //double record[20][9];
-    double record[20][81];
+    double record[20][9];
+    //double record[20][81];
     //
 
     //! set up the initial parameter of binary event based on the present status of a binary
