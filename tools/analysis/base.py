@@ -367,14 +367,22 @@ class DictNpArrayMix:
         if (type(member)==np.ndarray):
             if len(member.shape)>1:
                 dimension = member.shape[1]
-                if(new_key_flag): self.keys.append([key,(type(member[:,0]),dimension)])
+                if (new_key_flag): 
+                    if (member.shape[0]==0):
+                        self.keys.append([key, (type(member.sum()), dimension)])
+                    else:
+                        self.keys.append([key, (type(member[0,0]), dimension)])
             else:
-                if(new_key_flag): self.keys.append([key,type(member)])
+                if (new_key_flag): 
+                    if (member.shape[0]==0):
+                        self.keys.append([key, type(member.sum())])
+                    else:
+                        self.keys.append([key, type(member[0])])
             if (self.size != member.size/dimension):
                 raise ValueError('New member has different size: ',member.size/dimension, ' host size: ',self.size)
         elif (issubclass(type(member), DictNpArrayMix)):
             dimension = member.ncols
-            if (new_key_flag): self.keys.append([key,type(member)])
+            if (new_key_flag): self.keys.append([key,(type(member), member.initargs)])
             if (self.size != member.size):
                 raise ValueError('New member has different size: ',member.size, ' host size: ',self.size)
         else:
@@ -497,7 +505,7 @@ class DictNpArrayMix:
         kwargs: dict
             keyword arguments for numpy.savetxt
         """
-        dat_out= self.getherDataToArray()
+        dat_out= self.getherDataToArray(False)
         np.savetxt(fname, dat_out, **kwargs)
 
     def loadtxt(self, fname, **kwargs):

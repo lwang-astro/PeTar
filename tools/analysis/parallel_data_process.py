@@ -36,7 +36,8 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
             mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
                                Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
             interrupt_mode: PeTar interrupt mode: base, bse, mobse, none. If not provided, type is none 
-            snapshot_format: snapshot format: ascii or binary (ascii)
+            snapshot_format: input snapshot format: ascii or binary (ascii)
+            output_format: output data format: ascii, binary, npy (ascii)
     """
     lagr = result['lagr']
     esc_single  = result['esc_single']
@@ -45,6 +46,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
     m_frac = lagr.initargs['mass_fraction']
     G=1.0
     snapshot_format='ascii'
+    output_format='ascii'
     r_bin=0.1
     average_mode='sphere'
     simple_binary=True
@@ -57,6 +59,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
     if ('average_mode' in kwargs.keys()): average_mode=kwargs['average_mode']
     if ('simple_mode' in kwargs.keys()): simple_binary=kwargs['simple_mode']
     if ('snapshot_format' in kwargs.keys()): snapshot_format=kwargs['snapshot_format']
+    if ('output_format' in kwargs.keys()): output_format=kwargs['output_format']
     if ('external_mode' in kwargs.keys()): external_mode=kwargs['external_mode']
     if ('find_multiple' in kwargs.keys()): find_multiple=kwargs['find_multiple']
     if ('m_ext' in result.keys()): m_ext=result['m_ext']
@@ -123,13 +126,36 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         
         if (find_multiple): 
             single_t, binary_t, triple_t, quadruple_t = findMultiple(single,binary,G,r_bin,simple_binary)
-            single_t.savetxt(file_path+'.single')
-            binary_t.savetxt(file_path+'.binary')
-            triple_t.savetxt(file_path+'.triple')
-            quadruple_t.savetxt(file_path+'.quadruple')
+            if (output_format=='ascii'):
+                single_t.savetxt(file_path+'.single')
+                binary_t.savetxt(file_path+'.binary')
+                triple_t.savetxt(file_path+'.triple')
+                quadruple_t.savetxt(file_path+'.quadruple')
+            elif (output_format=='binary'):
+                single_t.tofile(file_path+'.single')
+                binary_t.tofile(file_path+'.binary')
+                triple_t.tofile(file_path+'.triple')
+                quadruple_t.tofile(file_path+'.quadruple')
+            elif (output_format=='npy'):
+                single_t.save(file_path+'.single')
+                binary_t.save(file_path+'.binary')
+                triple_t.save(file_path+'.triple')
+                quadruple_t.save(file_path+'.quadruple')
+            else:
+                raise ValueError('Output format %s is not supported, should be ascii, binary or npy' % output_format)
         else:
-            single.savetxt(file_path+'.single')
-            binary.savetxt(file_path+'.binary')
+            if (output_format=='ascii'):
+                single.savetxt(file_path+'.single')
+                binary.savetxt(file_path+'.binary')
+            elif (output_format=='binary'):
+                single.tofile(file_path+'.single')
+                binary.tofile(file_path+'.binary')
+            elif (output_format=='npy'):
+                single.save(file_path+'.single')
+                binary.save(file_path+'.binary')
+            else:
+                raise ValueError('Output format %s is not supported, should be ascii, binary or npy' % output_format)
+                
 
         time_profile['save_data'] += time.time() - start_time
 
