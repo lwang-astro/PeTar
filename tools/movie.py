@@ -611,11 +611,25 @@ class Data:
                 p2 = petar.Particle(interrupt_mode=self.interrupt_mode, external_mode=self.external_mode)
                 binary = petar.Binary(p1,p2, G=self.G)
                 if os.path.getsize(file_path+'.single')>0:
-                    single.loadtxt(file_path+'.single')
+                    if (self.snapshot_format=='ascii'):
+                        single.loadtxt(file_path+'.single')
+                    elif (self.snapshot_format=='binary'):
+                        single.fromfile(file_path+'.single')
+                    elif (self.snapshot_format=='npy'):
+                        single.load(file_path+'.single.npy')
+                    else:
+                        raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % snapshot_format)
                 single.calcEkin()
                 single.calcEtot()
                 if os.path.getsize(file_path+'.binary')>0:
-                    binary.loadtxt(file_path+'.binary')
+                    if (self.snapshot_format=='ascii'):
+                        binary.loadtxt(file_path+'.binary')
+                    elif (self.snapshot_format=='binary'):
+                        binary.fromfile(file_path+'.binary')
+                    elif (self.snapshot_format=='npy'):
+                        binary.load(file_path+'.binary.npy')
+                    else:
+                        raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % snapshot_format)
                 binary.calcEkin(True)
                 binary.calcPot()
                 binary.calcEtot(True)
@@ -941,7 +955,11 @@ if __name__ == '__main__':
         print("  -G [F]: gravitational constant for calculating binary orbit: ",data.G)
         print("  -o [S]: output movie filename: ",output_file)
         print("  -p    : Use previous generated png images to speed up the movie generation")
-        print("  -s [S]: snapshot format: binary or ascii: ", data.snapshot_format)
+        print("  -s [S]: snapshot format: ascii, binary or npy : ", data.snapshot_format)
+        print("              ascii:  all snapshots are in ascii format")
+        print("              binary: all snapshots are in binary format")
+        print("              npy: snapshots from petar (data.*) are in binary format;")
+        print("                   snapshots from petar.data.process (data.*.[single/binary]) are in npy format")
         print("  -l [S]: the filename of a list of pathes to different models, this will switch on the comparison mode.")
         print("          Each line contains three values: directory path of model, prefix of filename of snapshots, name of model.")
         print("          When data is reading, the path and the prefix will be added in front of the filenames. ")

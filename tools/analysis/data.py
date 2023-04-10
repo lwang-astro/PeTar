@@ -98,7 +98,7 @@ class PeTarDataHeader():
                 self.n = int(n_glb)
                 self.time = float(t)
 
-        elif (snapshot_format=='binary'):
+        else:
             if (offset_flag):
                 fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',np.float64),('x',np.float64),('y',np.float64),('z',np.float64),('vx',np.float64),('vy',np.float64),('vz',np.float64)]),count=1)
                 self.file_id = fp['file_id'][0]
@@ -111,8 +111,6 @@ class PeTarDataHeader():
                 self.file_id = fp['file_id'][0]
                 self.n_glb = fp['n_glb'][0]
                 self.time = fp['time'][0]
-        else: 
-            raise ValueError('Snapshot format unknown, should be binary or ascii, given', snapshot_format)
 
     def toSkyCoord(self, **kwargs):
         """ generate astropy.coordinates.SkyCoord data in galactocentric frame
