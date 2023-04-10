@@ -381,31 +381,50 @@ class DictNpArrayMix:
             raise ValueError('New member type should be np.ndarray or DictNpArrayMix, but given ',type(member))
         self.ncols += dimension
             
-    def getherDataToArray(self):
+    def getherDataToArray(self, origin_format=True):
         """ gether all data to a 2D numpy.ndarray and return it
         An inverse function to readArray
+        
+        Parameters:
+        --------------
+        origin_format: if true, gether data to array with dtype from collectDtype function;
+                       else gether data to float array (default: True)
         """
-        dat_out=np.zeros([self.size,self.ncols])
-        icol = int(0)
-        for key_type in self.keys:
-            key = key_type[0]
-            member = self.__dict__[key]
-            if (type(member)==np.ndarray):
-                if len(member.shape)>1:
-                    dimension= member.shape[1]
-                    if (dat_out.shape[0]!=member.shape[0]):
-                        raise ValueError('Member ',key,' size,dimension ',member.shape,' is not consistent with data output size',dat_out.shape[0])
-                    for k in range(dimension):
-                        dat_out[:,icol] = member[:,k]
+        if (origin_format):
+            dt = self.collectDtype()
+            dat_out = np.zeros((self.size,), dtype=dt)
+            for key_type in self.keys:
+                key = key_type[0]
+                member = self.__dict__[key]
+                if (type(member)==np.ndarray):
+                    dat_out[key] = member
+                elif (issubclass(type(member), DictNpArrayMix)):
+                    sub_dat = member.getherDataToArray(origin_format)
+                    for sub_key in sub_dat.dtype.names:
+                        dat_out[key+'.'+sub_key] = sub_dat[sub_key]
+            return dat_out
+        else:
+            dat_out=np.zeros([self.size,self.ncols])
+            icol = int(0)
+            for key_type in self.keys:
+                key = key_type[0]
+                member = self.__dict__[key]
+                if (type(member)==np.ndarray):
+                    if len(member.shape)>1:
+                        dimension= member.shape[1]
+                        if (dat_out.shape[0]!=member.shape[0]):
+                            raise ValueError('Member ',key,' size,dimension ',member.shape,' is not consistent with data output size',dat_out.shape[0])
+                        for k in range(dimension):
+                            dat_out[:,icol] = member[:,k]
+                            icol += 1
+                    else:
+                        dat_out[:,icol] = member
                         icol += 1
-                else:
-                    dat_out[:,icol] = member
-                    icol += 1
-            elif (issubclass(type(member), DictNpArrayMix)):
-                ncols = member.ncols
-                dat_out[:,icol:icol+ncols] = member.getherDataToArray()
-                icol += ncols
-        return dat_out
+                elif (issubclass(type(member), DictNpArrayMix)):
+                    ncols = member.ncols
+                    dat_out[:,icol:icol+ncols] = member.getherDataToArray(origin_format)
+                    icol += ncols
+            return dat_out
 
     def printTable(self, column_format, print_title=True):
         """
@@ -573,7 +592,7 @@ class DictNpArrayMix:
             raise ValueError('Column number inconsistence, self ncols ',self.ncols,' key ncols ', icol)
 
     def fromfile(self, fname, **kwargs):
-        """ Load clas member data from a file using BINARY format
+        """ Load class member data from a file using BINARY format
         Use numpy.fromfile to read data, the dtype is defined by keys (members)
         Notice if the first line is header, offset counts in byte should be used
 
@@ -588,6 +607,48 @@ class DictNpArrayMix:
         dat_int = np.fromfile(fname, dtype=dt, **kwargs)
         self.readArrayWithName(dat_int, '', **kwargs)
 
+    def tofile(self, fname, **kwargs):
+        """ Write class member data to a file using numpy.save
+        Use numpy.save to write data, the dtype is defined by keys (members)
+
+        Parameters
+        ----------
+        fname: string
+            name of the input file
+        kwargs: dict
+            keyword arguments for numpy.save, notice dtype is already defined, do not provide that
+        """
+        dat_out= self.getherDataToArray()
+        dat_out.tofile(fname, **kwargs)
+
+    def load(self, fname, **kwargs):
+        """ Load class member data from a file
+        Use numpy.load to read data and then use readArrayWithName
+
+        Parameters
+        ----------
+        fname: string
+            name of the input file
+        kwargs: dict
+            keyword arguments for numpy.loadtxt
+        """
+        dat_int = np.load(fname, **kwargs)
+        self.readArrayWithName(dat_int, '')
+
+    def save(self, fname, **kwargs):
+        """ Write class member data to a file using numpy.save
+        Use numpy.save to write data, the dtype is defined by keys (members)
+
+        Parameters
+        ----------
+        fname: string
+            name of the input file
+        kwargs: dict
+            keyword arguments for numpy.save, notice dtype is already defined, do not provide that
+        """
+        dat_out = self.getherDataToArray()
+        np.save(fname, dat_out, **kwargs)
+   
     def printSize(self):
         """ print size of each member
         Print the shape of each members, used for testing whether the members have consistent size
