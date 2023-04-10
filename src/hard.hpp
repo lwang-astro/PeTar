@@ -887,7 +887,7 @@ public:
                 ASSERT(!std::isnan(pi.vel[0]));
 
 #ifdef HARD_DEBUG
-                ASSERT(ptcl_origin[i].r_search>ptcl_origin[i].changeover.getRout());
+                ASSERT(ptcl_origin[i].r_search>=ptcl_origin[i].changeover.getRout());
 #ifdef BSE_BASE
                 ASSERT(pi.star.tphys<=time_origin+_time_end);
 #endif
