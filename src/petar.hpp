@@ -3673,6 +3673,10 @@ public:
 #ifdef GALPY
                     galpy_manager.kickMovePot(dt_kick);
 #endif
+#ifdef RECORD_CM_IN_HEADER
+                    // correct Ptcl:vel_cm
+                    correctPtclVelCM(dt_kick);
+#endif
                     time_kick += dt_kick;
                 }
 
@@ -3680,6 +3684,10 @@ public:
                 dt_drift = dt_manager.getDtDriftContinue();
 
                 p.pos += p.vel * dt_drift;
+
+                // drift cm
+                stat.pcm.pos += stat.pcm.vel*dt_drift;
+
 #ifdef GALPY
                 galpy_manager.driftMovePot(dt_drift);
 #endif
