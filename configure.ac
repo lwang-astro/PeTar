@@ -200,11 +200,11 @@ AC_ARG_WITH([cuda-prefix],
             [],
 	    [cuda_prefix="/usr/local/cuda"])
 
-AC_ARG_WITH([cuda-sdk-prefix], 
-            [AS_HELP_STRING([--with-cuda-sdk-prefix],
-	                    [Prefix of your CUDA samples (SDK) installation])],
-            [cuda_sdk_prefix=$withval],
-	    [cuda_sdk_prefix="/usr/local/cuda/samples"])
+#AC_ARG_WITH([cuda-sdk-prefix], 
+#            [AS_HELP_STRING([--with-cuda-sdk-prefix],
+# 	                    [Prefix of your CUDA samples (SDK) installation])],
+#            [cuda_sdk_prefix=$withval],
+# 	    [cuda_sdk_prefix="/usr/local/cuda/samples"])
 
 AS_IF([test "x$use_cuda" != xno],
       [AC_CHECK_PROG([NVCC], [nvcc], [nvcc], [none])
@@ -221,13 +221,13 @@ AS_IF([test "x$use_cuda" != xno],
        CUDA_VERSION=`$NVCC --version|awk -F ',' 'END{print $(NF-1)}'|awk '{print $2}'`
        AC_MSG_RESULT([$CUDA_VERSION])
 
-       AC_CHECK_FILE(["$cuda_prefix/samples/common/inc/helper_cuda.h"],
-                     [CUDAFLAGS=$CUDAFLAGS" -I $cuda_prefix/samples/common/inc"],
-                     [AC_CHECK_FILE(["$cuda_sdk_prefix/common/inc/helper_cuda.h"],
-                                    [CUDAFLAGS=$CUDAFLAGS" -I $cuda_sdk_prefix/common/inc"],
-                                    [AC_CHECK_FILE(["$cuda_sdk_prefix/Common/helper_cuda.h"],
-                                                   [CUDAFLAGS=$CUDAFLAGS" -I $cuda_sdk_prefix/Common"],
-                                                   [ AC_MSG_FAILURE([can't find CUDA sample inc file helper_cuda.h, please provide correct cuda SDK prefix by using --with-cuda-sdk-prefix])])])])
+#       AC_CHECK_FILE(["$cuda_prefix/samples/common/inc/helper_cuda.h"],
+#                     [CUDAFLAGS=$CUDAFLAGS" -I $cuda_prefix/samples/common/inc"],
+#                     [AC_CHECK_FILE(["$cuda_sdk_prefix/common/inc/helper_cuda.h"],
+#                                    [CUDAFLAGS=$CUDAFLAGS" -I $cuda_sdk_prefix/common/inc"],
+#                                    [AC_CHECK_FILE(["$cuda_sdk_prefix/Common/helper_cuda.h"],
+#                                                   [CUDAFLAGS=$CUDAFLAGS" -I $cuda_sdk_prefix/Common"],
+#                                                   [ AC_MSG_FAILURE([can't find CUDA sample inc file helper_cuda.h, please provide correct cuda SDK prefix by using --with-cuda-sdk-prefix])])])])
 
        AC_CHECK_LIB([cudart],
                     [main], 
