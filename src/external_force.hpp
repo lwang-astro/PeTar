@@ -157,6 +157,7 @@ public:
     //! External force for one particle in hard part
     /*!
       Gas dynamical friction
+      Due to the acceleration dependence, this function must be used at the end of acceleration calculation
       (Ostriker 1999, https://ui.adsabs.harvard.edu/abs/1999ApJ...513..252O, 
       Rozner 2022, https://arxiv.org/abs/2212.00807)
 
@@ -186,20 +187,31 @@ public:
         const Float PI = 4.0*atan(1.0);
         Float G2 = ForceSoft::grav_const*ForceSoft::grav_const;
         Float mach = v/sound_speed;
-        Float Ifunc = coulomb_log;
-        Float dIfunc = 0;
-        if (mach<1) {
+        Float Ifunc, dIfunc;
+        if (mach<0.9) {
             Float mach2 = mach*mach;
             Ifunc = 0.5*std::log((1.0+mach)/(1.0-mach)) - mach;
             dIfunc = mach2/(1-mach2);
-            if (Ifunc>coulomb_log) {
-                Ifunc = coulomb_log;
-                dIfunc = 0;
-            }
         }
+        else if (mach>=0.9 && mach<1.1) {
+            // 2nd order derivative Hermite interpolation
+            Float mach2 = mach*mach;
+            Float mach3 = mach2*mach;
+            Float mach4 = mach2*mach2;
+            Float mach5 = mach4*mach;
+            Ifunc = 8670.66512394438*mach5 - 43353.850000357*mach4 + 86337.1029009788*mach3 - 85594.6848365398*mach2 + 42251.2454762294*mach - 8309.08207013687;
+            dIfunc = 43353.3256197219*mach4 - 173415.400001428*mach3 + 259011.308702936*mach2 - 171189.36967308*mach + 42251.2454762294;
+        }
+        else if (mach>=1.1) {
+            Float mach2 = mach*mach;
+            Ifunc = 0.5*std::log(1-1/mach2) + coulomb_log;
+            dIfunc = 1/(mach2*mach - mach);
+        }
+
         Float c1 = -4*PI*G2*mass*gas_density/v3*Ifunc;
 
         auto& acc0 = _force.acc0;
+        //Float acc0[3] = {c1*vel[0], c1*vel[1], c1*vel[2]};
         acc0[0] += c1*vel[0];
         acc0[1] += c1*vel[1];
         acc0[2] += c1*vel[2];
@@ -208,7 +220,11 @@ public:
         // d(1/v^3)/dt = -3/v^5 v dot a
         Float c2 = -3*c1/v2*vdota;
         // d(v/ds)/dt  = v dot a / (v*ds) 
-        Float c3 = -c1*dIfunc*vdota/(Ifunc*v*sound_speed);
+        Float c3 = -c1*dIfunc*vdota/(v*sound_speed);
+        
+        //_force.acc0[0] += acc0[0];
+        //_force.acc0[1] += acc0[1];
+        //_force.acc0[2] += acc0[2];
 
         _force.acc1[0] += (c2+c3)*vel[0] + c1*acc0[0];
         _force.acc1[1] += (c2+c3)*vel[1] + c1*acc0[1];
