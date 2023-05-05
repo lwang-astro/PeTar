@@ -165,8 +165,6 @@ public:
     PS::F64 time_origin;  ///> origin physical time
     PtclH4* ptcl_origin;  ///> original particle array
 
-    AR::InterruptBinary<PtclHard> interrupt_binary; ///> interrupt binary address
-
 #ifdef HARD_DEBUG_PRINT
     PS::ReallocatableArray<PS::S32> n_group_sub_init; ///> initial sub group number in each groups 
     PS::S32 n_group_sub_tot_init; ///> total sub groups in all groups initially
@@ -192,7 +190,6 @@ public:
 
     //! initializer
     HardIntegrator(): h4_int(), sym_int(), manager(NULL), tidal_tensor(), time_origin(-1.0), ptcl_origin(NULL), 
-                      interrupt_binary(), 
 #ifdef HARD_DEBUG_PRINT
                       n_group_sub_init(), n_group_sub_tot_init(0),
 #endif
@@ -572,9 +569,8 @@ public:
     //! Integrate system to time
     /*!
       @param [in] _time_end: time to integrate
-      \return interrupt binary address, if no return NULL
      */
-    AR::InterruptBinary<PtclHard>& integrateToTime(const PS::F64 _time_end) {
+    void integrateToTime(const PS::F64 _time_end) {
         ASSERT(checkParams());
 
 #ifdef HARD_DUMP
@@ -583,7 +579,7 @@ public:
 #endif
         // integration
         if (use_sym_int) {
-            interrupt_binary = sym_int.integrateToTime(_time_end);
+            sym_interrupt_binary = sym_int.integrateToTime(_time_end);
 #ifdef ADJUST_GROUP_PRINT
             if (manager->h4_manager.adjust_group_write_flag) {
                 // print new group information
@@ -591,7 +587,6 @@ public:
             }
 #endif
 
-            if (manager->ar_manager.interrupt_detection_option==1) interrupt_binary.clear();
 #ifdef PROFILE
 #ifdef HARD_DUMP
             if (sym_int.profile.step_count>manager->ar_manager.step_count_max&&!dump_flag) {
@@ -609,32 +604,7 @@ public:
             // integration loop
             while (h4_int.getTimeInt()<_time_end) {
                 // integrate groups
-                interrupt_binary = h4_int.integrateGroupsOneStep();
-                if (interrupt_binary.status!=AR::InterruptStatus::none) {
-                    if (manager->ar_manager.interrupt_detection_option==1) {
-                        // correct potential difference due to the changeover function
-                        /*
-                        auto& pi=interrupt_binary.particle_bk[0];
-                        auto& pj=interrupt_binary.particle_bk[1];
-                        PtclHard ptmpi(pi), ptmpj(pj);
-                        PS::F64 r_in_max = std::max(ptmpi.changeover.getRin(),ptmpj.changeover.getRin());
-                        ptmpi.pos=PS::F64vec(r_in_max,0.0,0.0);
-                        ptmpj.pos=PS::F64vec(0.0,0.0,0.0);
-                        H4::ForceH4 fi;
-                        Float dpot = manager->h4_manager.interaction.calcEnergyPotSingleSingle(ptmpi,ptmpj);
-                        Float epotij=0.0;
-                        AR::Force f1,f2;
-                        manager->ar_manager.interaction.calcInnerAccPotAndGTKickInvTwo(f1,f2,epotij,ptmpi,ptmpj);
-                        dpot -= epotij;
-                        energy.de_sd += dpot;
-                        energy.de += dpot;
-                        */
-                        //for (int k=0; k<2; k++) correctSoftPotMassChangeOneParticle(*interrupt_binary.adr->getMember(k));
-                        interrupt_binary.clear();
-                    }
-                    // when binary is interrupted, break integration loop
-                    else break;
-                }
+                h4_int.integrateGroupsOneStep();
 
 #ifdef HARD_COUNT_NO_NEIGHBOR
                 checkNeighborExist();
@@ -786,7 +756,6 @@ public:
             }
 
         }
-        return interrupt_binary;
     }
 
 #ifdef HARD_COUNT_NO_NEIGHBOR
@@ -1137,27 +1106,6 @@ public:
 
     }
 
-    //! print interrupt binary information
-    /*!
-      @param[out] _fout: std::ostream output object
-    */
-    void printInterruptBinaryInfo(std::ostream & _fout) const{
-        _fout<<"Interrupt condition triggered! Time: ";
-        if (use_sym_int) _fout<<"(AR) ";
-        else _fout<<"(Hermite) ";
-        _fout<<interrupt_binary.time_now<<std::endl;
-        interrupt_binary.adr->printColumnTitle(_fout);
-        _fout<<std::endl;
-        interrupt_binary.adr->printColumn(_fout);
-        _fout<<std::endl;
-        PtclHard::printColumnTitle(_fout);
-        _fout<<std::endl;
-        for (int j=0; j<2; j++) {
-            interrupt_binary.adr->getMember(j)->printColumn(_fout);
-            _fout<<std::endl;
-        }
-    }
-
     //! clear function
     void clear() {
         sym_int.clear();
@@ -1203,12 +1151,6 @@ private:
     PS::ReallocatableArray<PS::S32> i_cluster_changeover_update_;     // cluster index that has member need changeover update
     PS::S32 n_group_member_remote_; // number of members in groups but in remote nodes
 
-    HardIntegrator* hard_int_; ///> hard integrator array
-    PS::S32 n_hard_int_max_; ///> array size of hard_int
-    PS::S32 n_hard_int_use_; ///> number of used hard integrator
-    PS::ReallocatableArray<HardIntegrator*> interrupt_list_; ///> interrupt integrator list
-    PS::F64 interrupt_dt_; ///> time end record for interrupt clusters;
-
     struct OPLessIDCluster{
         template<class T> bool operator() (const T & left, const T & right) const {
             return left.id_cluster < right.id_cluster;
@@ -1238,8 +1180,6 @@ public:
     bool checkParams() {
         ASSERT(manager!=NULL);
         ASSERT(manager->checkParams());
-        ASSERT(hard_int_!=NULL);
-        ASSERT(n_hard_int_max_>0);
         return true;
     }
 
@@ -1809,10 +1749,6 @@ public:
 
     SystemHard(){
         manager = NULL;
-        hard_int_ = NULL;
-        n_hard_int_max_ = 0;
-        n_hard_int_use_ = 0;
-
 #ifdef PROFILE
         ARC_substep_sum = 0;
         ARC_tsyn_step_sum =0;
@@ -1827,24 +1763,6 @@ public:
         energy.clear();
 #endif
         //        PS::S32 n_threads = PS::Comm::getNumberOfThread();
-    }
-
-    //! allocate memorgy for HardIntegrator
-    /*! For record interrupt clusters. A array of HardIntegrator is allocated
-      @param[in] _n_hard_int: number of HardIntegrator
-     */
-    void allocateHardIntegrator(const PS::S32 _n_hard_int) {
-        assert(_n_hard_int>0);
-        assert(n_hard_int_use_==0);
-        if (hard_int_!=NULL) delete [] hard_int_;
-        const PS::S32 num_thread = PS::Comm::getNumberOfThread();
-        n_hard_int_max_ = _n_hard_int + num_thread;
-        hard_int_ = new HardIntegrator[n_hard_int_max_];
-        n_hard_int_use_ = 0;
-    }
-
-    ~SystemHard() {
-        if (hard_int_!=NULL) delete [] hard_int_;
     }
 
 
@@ -1930,12 +1848,8 @@ public:
         return n_ptcl_in_cluster_.size();
     }
 
-    PS::S32 getNumberOfInterruptClusters() const {
+    PS::S32 getNumberOfInterruptBinaries() const {
         return interrupt_list_.size();
-    }
-
-    HardIntegrator* getInterruptHardIntegrator(const std::size_t i) {
-        return interrupt_list_[i];
     }
 
     PS::S32* getClusterNumberOfMemberList(const std::size_t i=0) const{
@@ -2287,12 +2201,9 @@ public:
       If interrupt integration exist, record in the interrupt_list_;
        @param[in] _dt: integration ending time (initial time is fixed to 0)
        @param[in] _ptcl_soft: global particle array which contains the artificial particles for constructing tidal tensors.
-       \return interrupt cluster number
      */
     template<class Tpsoft>
-    int driveForMultiClusterOMP(const PS::F64 dt, Tpsoft* _ptcl_soft){
-        assert(n_hard_int_use_==0);
-
+    void driveForMultiClusterOMP(const PS::F64 dt, Tpsoft* _ptcl_soft){
         const PS::S32 n_cluster = n_ptcl_in_cluster_.size();
         //PS::ReallocatableArray<PtclH4> extra_ptcl[num_thread];
         //// For test
@@ -2304,15 +2215,8 @@ public:
         //}
         //std::sort(n_sort_list.getPointer(),n_sort_list.getPointer()+n_cluster,[](const std::pair<PS::S32,PS::S32> &a, const std::pair<PS::S32,PS::S32> &b){return a.first<b.first;});
         const PS::S32 num_thread = PS::Comm::getNumberOfThread();
-        assert(n_hard_int_max_>num_thread);
-
 #ifndef ONLY_SOFT
-        HardIntegrator* hard_int_thread[num_thread];
-        // set new hard_int front pointer 
-        HardIntegrator* hard_int_front_ptr = &hard_int_[num_thread];
-        for (PS::S32 i=0; i<num_thread; i++) {
-            hard_int_thread[i] = &hard_int_[i];
-        }
+        HardIntegrator hard_int_thread[num_thread];
 #endif
 
 #ifdef OMP_PROFILE        
@@ -2364,33 +2268,25 @@ public:
 #endif
 
             // if interrupt exist, escape initial
-            hard_int_thread[ith]->initial(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, manager, time_origin_);
+            hard_int_thread[ith].initial(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, manager, time_origin_);
 
-            auto& interrupt_binary = hard_int_thread[ith]->integrateToTime(dt);
+            hard_int_thread[ith].integrateToTime(dt);
 
-            if (interrupt_binary.status!=AR::InterruptStatus::none) {
-                #pragma omp atomic capture
-                hard_int_thread[ith] = hard_int_front_ptr++;
-
-                assert(hard_int_thread[ith]!=&hard_int_[n_hard_int_max_]);
-            }
-            else {
-                hard_int_thread[ith]->driftClusterCMRecordGroupCMDataAndWriteBack(dt);
+            hard_int_thread[ith].driftClusterCMRecordGroupCMDataAndWriteBack(dt);
 
 #ifdef PROFILE
-                ARC_substep_sum    += hard_int_thread[ith]->ARC_substep_sum;
-                ARC_tsyn_step_sum  += hard_int_thread[ith]->ARC_tsyn_step_sum;
-                H4_step_sum        += hard_int_thread[ith]->H4_step_sum;
+            ARC_substep_sum    += hard_int_thread[ith].ARC_substep_sum;
+            ARC_tsyn_step_sum  += hard_int_thread[ith].ARC_tsyn_step_sum;
+            H4_step_sum        += hard_int_thread[ith].H4_step_sum;
 #endif
 #ifdef HARD_COUNT_NO_NEIGHBOR
-                n_neighbor_zero    += hard_int_thread[ith]->n_neighbor_zero;
+            n_neighbor_zero    += hard_int_thread[ith].n_neighbor_zero;
 #endif
 #ifdef HARD_CHECK_ENERGY
-                energy += hard_int_thread[ith]->energy;
+            energy += hard_int_thread[ith].energy;
 #endif
                 
-                hard_int_thread[ith]->clear();
-            }
+            hard_int_thread[ith].clear();
 
 #ifdef OMP_PROFILE
             time_thread[ith] += PS::GetWtime();
@@ -2419,78 +2315,9 @@ public:
 
         }
 
-        // regist interrupted hard integrator
-        assert(interrupt_list_.size()==0);
-        for (auto iptr = hard_int_; iptr<hard_int_front_ptr; iptr++) 
-            if (iptr->is_initialized) {
-                assert(iptr->interrupt_binary.status!=AR::InterruptStatus::none);
-#ifdef HARD_INTERRUPT_PRINT
-                iptr->printInterruptBinaryInfo(std::cerr);
-#endif
-                interrupt_list_.push_back(iptr);
-            }
-
 
         // advance time_origin if all clusters finished
-        PS::S32 n_interrupt = interrupt_list_.size();
-        if (n_interrupt==0) time_origin_ += dt;
-        else interrupt_dt_ = dt;
-
-        return n_interrupt;
-    }
-
-    //! Finish interrupt integration
-    /*! Finish interrupted integrations, if new interruption appear, record in the interrupt_list and this function need to be called again after modification of interrupt clusters
-      If no new interrupt cluster appear, update time_origin_ with drift time.
-      @param [in] 
-     */
-    PS::S32 finishIntegrateInterruptClustersOMP() {
-        PS::S32 n_interrupt = interrupt_list_.size();
-#pragma omp parallel for schedule(dynamic)
-        for (PS::S32 i=0; i<n_interrupt; i++) {
-            auto hard_int_ptr = interrupt_list_[i];
-            auto& interrupt_binary = hard_int_ptr->integrateToTime(interrupt_dt_);
-
-            if (interrupt_binary.status==AR::InterruptStatus::none) {
-                hard_int_ptr->driftClusterCMRecordGroupCMDataAndWriteBack(interrupt_dt_);
-
-#ifdef PROFILE
-                ARC_substep_sum    += hard_int_ptr->ARC_substep_sum;
-                ARC_tsyn_step_sum  += hard_int_ptr->ARC_tsyn_step_sum;
-                H4_step_sum        += hard_int_ptr->H4_step_sum;
-#endif
-#ifdef HARD_CHECK_ENERGY
-                energy += hard_int_ptr->energy;
-#endif
-                
-                hard_int_ptr->clear();
-            }
-        }
-        
-        // record new interrupt list
-        PS::S32 i_front = 0;
-        PS::S32 i_end = n_interrupt;
-        while (i_front<i_end) {
-            auto hard_int_front_ptr = interrupt_list_[i_front];
-            if (hard_int_front_ptr->interrupt_binary.status!=AR::InterruptStatus::none) {
-                assert(hard_int_front_ptr->is_initialized);
-#ifdef HARD_INTERRUPT_PRINT
-                hard_int_front_ptr->printInterruptBinaryInfo(std::cerr);
-#endif
-                i_front++;
-            }
-            else {
-                interrupt_list_[i_front] = interrupt_list_[--i_end];
-                interrupt_list_.decreaseSize(1);
-            }
-        }
-
-        n_interrupt =  interrupt_list_.size();
-
-        // advance time_origin if all clusters finished
-        if (n_interrupt==0) time_origin_ += interrupt_dt_;
-
-        return n_interrupt;
+        time_origin_ += dt;
     }
 
     struct GroupIndexInfo{

@@ -284,13 +284,8 @@ int main(int argc, char **argv){
       HardIntegrator hard_int;
       hard_int.initial(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, hard_dump.n_member_in_group.getPointer(), &hard_manager, hard_dump.time_offset);
 
-      auto& interrupt_binary = hard_int.integrateToTime(hard_dump.time_end);
-      if (interrupt_binary.status!=AR::InterruptStatus::none) {
-          hard_int.printInterruptBinaryInfo(std::cerr);
-      }
-      else {
-          hard_int.driftClusterCMRecordGroupCMDataAndWriteBack(hard_dump.time_end);
-      }
+      hard_int.integrateToTime(hard_dump.time_end);
+      hard_int.driftClusterCMRecordGroupCMDataAndWriteBack(hard_dump.time_end);
 
   }
   // test stability

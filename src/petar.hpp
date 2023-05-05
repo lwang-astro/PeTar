@@ -201,10 +201,15 @@ public:
 #ifdef BSE_BASE
                      stellar_evolution_option  (input_par_store, 1, "stellar-evolution", "stellar evolution of stars in Hermite+SDAR: 0: off; >=1: using SSE/BSE based codes; ==2: switch on dynamical tide and hyperbolic gravitational wave radiation"),
                      interrupt_detection_option(input_par_store, 1, "detect-interrupt", "stellar evolution of binaries in SDAR: 0: off; 1: using BSE based code (if '--stellar-evolution != 0)"),
-#else
+#else // NO BSE_BASE
                      stellar_evolution_option  (input_par_store, 0, "stellar-evolution", "not implemented"),
+#ifdef APPLY_MERGER
                      interrupt_detection_option(input_par_store, 0, "detect-interrupt", "interrupt integration of SDAR: 0: turn off; 1: merge two particles if their surfaces overlap; 2. merge two particles and also interrupt the hard integration"),
-#endif
+#else
+                     interrupt_detection_option(input_par_store, 0, "detect-interrupt", "interrupt integration of SDAR: 0: turn off; 1: detect two particles' surfaces overlapping; 2.  detect two particles' surface overlaping and also interrupt the hard integration"),
+#endif // APPLY MERGER
+
+#endif // BSE_BASE
 #else
                      interrupt_detection_option(input_par_store, 0, "detect-interrupt", "modify orbits of AR groups based on the interruption function: 0: turn off; 1: modify inside AR integration and accumulate energy change; 2. modify and also interrupt the hard drift"),
 #endif
@@ -1432,9 +1437,9 @@ public:
     }
 
     //! hard drift
-    /*! \return interrupted cluster total number in all MPI processors
+    /*! 
      */
-    PS::S32 drift(const PS::F64 _dt_drift) {
+    void drift(const PS::F64 _dt_drift) {
         ////// set time
         //system_hard_one_cluster.setTimeOrigin(stat.time);
         //system_hard_isolated.setTimeOrigin(stat.time);
@@ -1468,23 +1473,11 @@ public:
         // integrate multi cluster A
         system_hard_isolated.driveForMultiClusterOMP(_dt_drift, &(system_soft[0]));
         //system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_,remove_list);
-        PS::S32 n_interrupt_isolated = system_hard_isolated.getNumberOfInterruptClusters();
-        if(n_interrupt_isolated==0) system_hard_isolated.writeBackPtclForMultiCluster(system_soft, mass_modify_list);
+        system_hard_isolated.writeBackPtclForMultiCluster(system_soft, mass_modify_list);
         // integrate multi cluster A
 
 #ifdef PROFILE
-        n_count.hard_interrupt += n_interrupt_isolated;
         profile.hard_isolated.barrier();
-#endif
-
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-        n_interrupt_glb = PS::Comm::getSum(n_interrupt_isolated);
-#else 
-        n_interrupt_glb = n_interrupt_isolated;
-#endif
-
-#ifdef PROFILE
-        n_count_sum.hard_interrupt += n_interrupt_glb;
         profile.hard_isolated.end();
 #endif
         /////////////
@@ -1498,29 +1491,11 @@ public:
         system_hard_connected.energy.resetEnergyCorrection();
         // integrate multi cluster B
         system_hard_connected.driveForMultiClusterOMP(_dt_drift, &(system_soft[0]));
-        PS::S32 n_interrupt_connected = system_hard_connected.getNumberOfInterruptClusters();
+        
+        search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), mass_modify_list);
+        system_hard_connected.updateTimeWriteBack();
 
-#ifdef PROFILE
-        n_count.hard_interrupt += n_interrupt_connected;
-        profile.hard_connected.barrier();
-#endif
-
-        PS::S32 n_interrupt_connected_glb = PS::Comm::getSum(n_interrupt_connected);
-
-#ifdef PROFILE
-        n_count_sum.hard_interrupt += n_interrupt_connected_glb;
-        profile.hard_connected.end();
-        profile.hard_connected.start();
-#endif
-
-
-        if (n_interrupt_connected_glb==0) {
-            search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), mass_modify_list);
-            system_hard_connected.updateTimeWriteBack();
-        }
         // integrate multi cluster B
-
-        n_interrupt_glb += n_interrupt_connected_glb;
 #ifdef PROFILE
         profile.hard_connected.barrier();
         PS::Comm::barrier();
@@ -1534,101 +1509,7 @@ public:
         galpy_manager.driftMovePot(_dt_drift);
 #endif
         
-        if (n_interrupt_glb==0) Ptcl::group_data_mode = GroupDataMode::cm;
-        
-        return n_interrupt_glb;
-    }
-
-    //! finish interrupted drift
-    /*! \return new interrupt number
-     */
-    PS::S32 finishInterruptDrift() {
-#ifdef PROFILE
-        profile.hard_interrupt.start();
-        profile.hard_isolated.start();
-#endif
-
-        // finish interrupt clusters first
-        // isolated clusters
-        PS::S32 n_interrupt_isolated = 0;
-        if (system_hard_isolated.getNumberOfInterruptClusters()>0) {
-            system_hard_isolated.finishIntegrateInterruptClustersOMP();
-            n_interrupt_isolated = system_hard_isolated.getNumberOfInterruptClusters();
-            if(n_interrupt_isolated==0) system_hard_isolated.writeBackPtclForMultiCluster(system_soft, mass_modify_list);
-        }
-
-#ifdef PROFILE
-        n_count.hard_interrupt += n_interrupt_isolated;
-        profile.hard_isolated.barrier();
-#endif
-
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-        n_interrupt_glb = PS::Comm::getSum(n_interrupt_isolated);
-#else
-        n_interrupt_glb = n_interrupt_isolated;
-#endif
-
-#ifdef PROFILE
-        n_count_sum.hard_interrupt += n_interrupt_glb;
-        profile.hard_isolated.end();
-#endif
-
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-#ifdef PROFILE
-        profile.hard_connected.start();
-#endif
-
-        // connected clusters
-        PS::S32 n_interrupt_connected = 0;
-        if (system_hard_connected.getNumberOfInterruptClusters()>0) {
-            system_hard_connected.finishIntegrateInterruptClustersOMP();
-            n_interrupt_connected = system_hard_connected.getNumberOfInterruptClusters();
-        }
-
-#ifdef PROFILE
-        n_count.hard_interrupt += n_interrupt_connected;
-        profile.hard_connected.barrier();
-#endif
-
-        PS::S32 n_interrupt_connected_glb = PS::Comm::getSum(n_interrupt_connected);
-
-#ifdef PROFILE
-        n_count_sum.hard_interrupt += n_interrupt_connected_glb;
-        profile.hard_connected.end();
-        profile.hard_connected.start();
-#endif
-
-        if (n_interrupt_connected_glb==0) {
-            PS::ReallocatableArray<PS::S32> mass_modify_list;
-            search_cluster.writeAndSendBackPtcl(system_soft, system_hard_connected.getPtcl(), mass_modify_list);
-            system_hard_connected.updateTimeWriteBack();
-        }
-
-        n_interrupt_glb += n_interrupt_connected_glb;
-
-#ifdef PROFILE
-        profile.hard_connected.barrier();
-        PS::Comm::barrier();
-        profile.hard_connected.end();
-#endif
-#endif
-
-#ifdef HARD_INTERRUPT_PRINT
-        if (n_interrupt_glb>0)  {
-            std::cerr<<"Interrupt detected, number: "<<n_interrupt_glb<<std::endl;
-        }
-#endif
-
-#ifdef PROFILE
-        profile.hard_interrupt.barrier();
-        PS::Comm::barrier();
-        profile.hard_interrupt.end();
-#endif
-
-        if (n_interrupt_glb==0) Ptcl::group_data_mode = GroupDataMode::cm;
-
-        // if interrupt cluster still exist, return the number immediately without new integration.
-        return n_interrupt_glb;
+        Ptcl::group_data_mode = GroupDataMode::cm;
     }
 
 
@@ -3827,11 +3708,6 @@ public:
         // for one particle case
         if (stat.n_real_glb==1) return integrateOneToTime(_time_break);
 
-        // finish interrupted integrations
-        if (n_interrupt_glb>0) finishInterruptDrift();
-        // if interrupt still exist, do not continue
-        if (n_interrupt_glb>0) return n_interrupt_glb;
-
         // check time break
         PS::F64 time_break = _time_break==0.0? input_parameters.time_end.value: std::min(_time_break,input_parameters.time_end.value);
         if (stat.time>=time_break) return 0;
@@ -4058,14 +3934,6 @@ public:
             calcProfile();
 #endif
             
-            // when interrupt exist, quit the loop
-            if (n_interrupt_glb>0) {
-#ifdef HARD_INTERRUPT_PRINT
-                std::cerr<<"Interrupt detected, number: "<<n_interrupt_glb<<std::endl;
-#endif
-                return n_interrupt_glb;
-            }
-
         }
 
         return 0;
