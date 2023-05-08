@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -1670,6 +1671,39 @@ public:
         else {
             acc[0] = acc[1] = acc[2] = pot = 0.0;
         }
+    }
+
+    //! calculate density for given potential set
+    /*!
+      @param[in] _iset: potential set index
+      @param[in] _time: time in input unit
+      @param[in] pos_g: position of particles in the galactic frame [input unit]
+      @param[in] pos_l: position of particles in the particle system frame [input unit]
+     */
+    double calcSetDensity(const int _iset, const double _time, double* pos_g, const double* pos_l) {
+        assert(pot_sets.size()==pot_set_pars.size());
+        assert(_iset<int(pot_sets.size()));
+        double t = _time*tscale;
+
+        // galactic frame and rest frame of particle system
+        double x[2] = {pos_g[0]*rscale, pos_l[0]*rscale};
+        double y[2] = {pos_g[1]*rscale, pos_l[1]*rscale};
+        double z[2] = {pos_g[2]*rscale, pos_l[2]*rscale};
+        
+        int mode_k = pot_set_pars[_iset].mode;
+        assert(mode_k>=0||mode_k<=2);
+        int npot = pot_sets[_iset].npot;
+        double* pos_k = pot_set_pars[_iset].pos;
+        int i = (mode_k & 1); // get first bit to select frame (0: galactic; 1: rest)        
+        // frame is consistent 
+        double dx = x[i]-pos_k[0];
+        double dy = y[i]-pos_k[1];
+        double dz = z[i]-pos_k[2];
+        double rxy= std::sqrt(dx*dx+dy*dy);
+        double phi= std::acos(dx/rxy);
+
+        auto& pot_args = pot_sets[_iset].arguments;
+        return calcDensity(rxy, dz, phi, t, npot, pot_args);
     }
 
     //! write data for restart

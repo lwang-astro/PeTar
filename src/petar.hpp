@@ -1092,8 +1092,10 @@ public:
 #endif //GALPY
 
 #ifdef EXTERNAL_HARD
+#ifndef GALPY
         // update time and gas density
         hard_manager.h4_manager.interaction.ext_force.updateTime(stat.time);
+#endif
 #endif
         
 #ifdef PROFILE
@@ -3430,7 +3432,11 @@ public:
 #endif
 
 #ifdef EXTERNAL_HARD
+#ifdef GALPY
+        hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, galpy_manager, stat, print_flag);
+#else
         hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, stat.time, print_flag);
+#endif
 #endif        
 
         // check consistence of paramters

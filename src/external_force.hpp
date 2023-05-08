@@ -8,6 +8,10 @@
 #include "io.hpp"
 #include "Common/Float.h"
 #include "static_variables.hpp"
+#ifdef GALPY
+#include "galpy_interface.h"
+#include "status.hpp"
+#endif
 
 //! IO parameters manager for external perturbation in hard integration
 /*! For initializing the COMMON block variables from the commander option.
@@ -17,18 +21,26 @@ class IOParamsExternalHard{
 public:
     IOParamsContainer input_par_store;
     IOParams<long long int> mode; // option to switch perturbation
-    IOParams<double> gas_density; 
-    IOParams<double> decay_time;
     IOParams<double> sound_speed; 
     IOParams<double> coulomb_log; 
+#ifdef GALPY
+    IOParams<long long int> galpy_gaspot_index;
+#else
+    IOParams<double> gas_density; 
+    IOParams<double> decay_time;
+#endif
 
     bool print_flag;
     IOParamsExternalHard(): input_par_store(),
                             mode  (input_par_store, 0,          "ext-hard-mode", "external hard mode: 0, not used; 1, gas dynamical friction (Ostriker 1999, Rozner et al. 2022)"),
-                            gas_density  (input_par_store, 1.0, "ext-gas-density",  "gas density in units of PeTar input"),
-                            decay_time   (input_par_store, 0.0, "ext-decay-time",  "gas density decay time scale in units of PeTar input"),
                             sound_speed  (input_par_store, 1.0, "ext-sound-speed",  "sound speed in units of PeTar input"),
                             coulomb_log  (input_par_store, 3.1, "ext-coulomb-log",  "coulomb logarithm"),
+#ifdef GALPY
+                            galpy_gaspot_index(input_par_store, -1, "ext-gaspot-index",  "galpy potential set index for gas component, used for obtaining gas density", "None"),
+#else
+                            gas_density  (input_par_store, 1.0, "ext-gas-density",  "gas density in units of PeTar input"),
+                            decay_time   (input_par_store, 0.0, "ext-decay-time",  "gas density decay time scale in units of PeTar input"),
+#endif
                             print_flag(false) {}
 
     //! reading parameters from GNU option API
@@ -42,8 +54,12 @@ public:
         static int ext_flag=-1;
         const struct option long_options[] = {
             {mode.key,    required_argument, &ext_flag, 0},  
+#ifdef GALPY
+            {galpy_gaspot_index.key, required_argument, &ext_flag, 1},  
+#else
             {gas_density.key, required_argument, &ext_flag, 1},  
             {decay_time.key,  required_argument, &ext_flag, 2},  
+#endif
             {sound_speed.key, required_argument, &ext_flag, 3},  
             {coulomb_log.key, required_argument, &ext_flag, 4},  
             {"help",      no_argument,       0, 'h'},
@@ -64,6 +80,13 @@ public:
                     if(print_flag) mode.print(std::cout);
                     opt_used+=2;
                     break;            
+#ifdef GALPY
+                case 1:
+                    galpy_gaspot_index.value = atoi(optarg);
+                    if(print_flag) galpy_gaspot_index.print(std::cout);
+                    opt_used+=2;
+                    break;            
+#else
                 case 1:
                     gas_density.value = atof(optarg);
                     if(print_flag) gas_density.print(std::cout);
@@ -74,6 +97,7 @@ public:
                     if(print_flag) decay_time.print(std::cout);
                     opt_used+=2;
                     break;            
+#endif
                 case 3:
                     sound_speed.value = atof(optarg);
                     if(print_flag) sound_speed.print(std::cout);
@@ -129,15 +153,45 @@ public:
 class ExternalHardForce{
 public:
     bool is_used; // indicator whether external force is used
+#ifdef GALPY
+    int galpy_gaspot_index; 
+    GalpyManager* galpy_manager;
+    Status* status;
+#else
     Float gas_density; 
     Float gas_density_init; 
     Float decay_time;
+    Float time;
+#endif
     Float sound_speed; 
     Float coulomb_log;
-    Float time;
 
-    ExternalHardForce(): is_used(false), gas_density(1.0), gas_density_init(1.0), decay_time(0.0), sound_speed(1.0), coulomb_log(3.1), time(0.0) {}
+    ExternalHardForce(): is_used(false), 
+#ifdef GALPY
+                         galpy_gaspot_index(-1), galpy_manager(NULL), status(NULL),
+#else
+                         gas_density(1.0), gas_density_init(1.0), decay_time(0.0), time(0.0),
+#endif
+                         sound_speed(1.0), coulomb_log(3.1){}
 
+#ifdef GALPY
+    //! initial parameters for perturbation
+    /*!
+      @param[in] _input: input parameter
+      @param[in] _galpy_manager: galpy manager pointer
+      @param[in] _status: system status for information of time and pcm position and velocity offsets used for converting to galactic frame
+      @param[in] _print_flag: printing flag
+     */
+    void initial(const IOParamsExternalHard& _input, GalpyManager& _galpy_manager, Status& _status, const bool _print_flag=false) {
+        is_used = bool(_input.mode.value);
+        galpy_gaspot_index = _input.galpy_gaspot_index.value;
+        galpy_manager = &_galpy_manager;
+        status = &_status;
+        sound_speed = _input.sound_speed.value;
+        coulomb_log = _input.coulomb_log.value;
+    }
+
+#else
     //! initial parameters for perturbation
     void initial(const IOParamsExternalHard& _input, const Float _time, const bool _print_flag=false) {
         is_used = bool(_input.mode.value);
@@ -153,6 +207,8 @@ public:
         time = _time;
         gas_density = gas_density_init * exp(-time/decay_time);
     }
+#endif
+
 
     //! External force for one particle in hard part
     /*!
@@ -202,12 +258,19 @@ public:
             Ifunc = 8670.66512394438*mach5 - 43353.850000357*mach4 + 86337.1029009788*mach3 - 85594.6848365398*mach2 + 42251.2454762294*mach - 8309.08207013687;
             dIfunc = 43353.3256197219*mach4 - 173415.400001428*mach3 + 259011.308702936*mach2 - 171189.36967308*mach + 42251.2454762294;
         }
-        else if (mach>=1.1) {
+        else{
             Float mach2 = mach*mach;
             Ifunc = 0.5*std::log(1-1/mach2) + coulomb_log;
             dIfunc = 1/(mach2*mach - mach);
         }
 
+#ifdef GALPY
+        auto& pos = _particle.pos;
+        Float pos_g[3] = {pos[0] + status->pcm.pos[0], 
+                          pos[1] + status->pcm.pos[1], 
+                          pos[2] + status->pcm.pos[2]};
+        Float gas_density = galpy_manager->calcSetDensity(galpy_gaspot_index, status->time, pos_g, &pos[0]);
+#endif       
         Float c1 = -4*PI*G2*mass*gas_density/v3*Ifunc;
 
         auto& acc0 = _force.acc0;
