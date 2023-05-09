@@ -1703,7 +1703,13 @@ public:
         double phi= std::acos(dx/rxy);
 
         auto& pot_args = pot_sets[_iset].arguments;
-        return calcDensity(rxy, dz, phi, t, npot, pot_args);
+        double density = calcDensity(rxy, dz, phi, t, npot, pot_args);
+        return density;
+    }
+
+    //! get number of set
+    int getNSet() const {
+        return pot_set_pars.size();
     }
 
     //! write data for restart

@@ -10,6 +10,7 @@ struct Particle{
     double vel[3];
     double acc[3];
     double pot;
+    double den;
 
     void readAscii(FILE* fp) {
         int rcount=fscanf(fp, "%lf %lf %lf %lf %lf %lf %lf",
@@ -36,7 +37,8 @@ struct Particle{
              <<std::setw(_width)<<"acc.x"
              <<std::setw(_width)<<"acc.y"
              <<std::setw(_width)<<"acc.z"
-             <<std::setw(_width)<<"pot";
+             <<std::setw(_width)<<"pot"
+             <<std::setw(_width)<<"den";
     }
 
 
@@ -56,7 +58,8 @@ struct Particle{
              <<std::setw(_width)<<acc[0]
              <<std::setw(_width)<<acc[1]
              <<std::setw(_width)<<acc[2]
-             <<std::setw(_width)<<pot;
+             <<std::setw(_width)<<pot
+             <<std::setw(_width)<<den;
     }
 };
 
@@ -99,7 +102,7 @@ int main(int argc, char** argv){
         //    opt_used ++;
         //    break;
         case 'h':
-            std::cout<<"The tool to calculate acceleration and potential for a given particle list \n"
+            std::cout<<"The tool to calculate acceleration, potential and mass density for a given particle list \n"
                      <<"Usage: petar.galpy [options] [data file]\n"
                      <<"       data file format: if -m, file contains the mesh parameters\n"
                      <<"                             one line: time, dt_evolve, n_step_evolve, dt_output, x_min, x_max, n_x, y_min, y_max, n_y, z_min, z_max, n_z\n"
@@ -107,7 +110,7 @@ int main(int argc, char** argv){
                      <<"                             first line: number of particles, time, cm pos offset (3), cm vel offset (30)\n"
                      <<"                             following lines: mass, pos(3), vel(3)\n"
                      <<"Options:\n"
-                     <<"    -m    : instead of reading particle list, generate a mesh of points in the x-y plane and x-z plane to create the acceleration and potential map.\n"
+                     <<"    -m    : instead of reading particle list, generate a mesh of points in the x-y plane and x-z plane to create the acceleration, potential and density map.\n"
                      <<"            Time-dependent potential is also supported.\n"
                 //<<"    -u    : input data use astronomical unit set (Myr, pc, Msun) and set unit scaling factor for Galpy automatically.\n"
                      <<"    -h    : help\n";
@@ -153,6 +156,7 @@ int main(int argc, char** argv){
         std::ofstream fxy,fxz;
         galpy_manager.initial(galpy_io, time, std::string(), false, true);
         time_out = time;
+        int nset = galpy_manager.getNSet();
 
         for (int i=0; i<=n_step; i++) {
             bool out_flag = (time>=time_out);
@@ -176,6 +180,9 @@ int main(int argc, char** argv){
                         pjk.vel[0] = pjk.vel[1] = pjk.vel[2] = 0;
 
                         galpy_manager.calcAccPot(pjk.acc, pjk.pot, time, 0, pjk.pos, pjk.pos); 
+                        pjk.den = 0.0;
+                        for (int k=0; k<nset; k++) {
+                            pjk.den += galpy_manager.calcSetDensity(k, time, pjk.pos, pjk.pos);}
                         pjk.printColumn(fxy);
                         fxy<<std::endl;
                     }
@@ -188,7 +195,10 @@ int main(int argc, char** argv){
                         pjk.pos[2] = zmin + (zmax-zmin)/(nz-1)*k;
                         pjk.vel[0] = pjk.vel[1] = pjk.vel[2] = 0;
 
-                        galpy_manager.calcAccPot(pjk.acc, pjk.pot, time, 0, pjk.pos, pjk.pos); 
+                        galpy_manager.calcAccPot(pjk.acc, pjk.pot, time, 0, pjk.pos, pjk.pos);  
+                        pjk.den = 0.0;
+                        for (int k=0; k<nset; k++) {
+                            pjk.den += galpy_manager.calcSetDensity(k, time, pjk.pos, pjk.pos);}
                         pjk.printColumn(fxz);
                         fxz<<std::endl;
                     }
@@ -214,6 +224,7 @@ int main(int argc, char** argv){
         assert(n>0);
 
         galpy_manager.initial(galpy_io, time, std::string(), false, true);
+        int nset = galpy_manager.getNSet();
 
         Particle particles[n];
 
@@ -221,13 +232,16 @@ int main(int argc, char** argv){
         std::cout<<std::endl;
 
         for (int i=0; i<n; i++) {
-            particles[i].readAscii(fp);
-            double pos[3] = {particles[i].pos[0] + pos_offset[0],
-                             particles[i].pos[1] + pos_offset[1],
-                             particles[i].pos[2] + pos_offset[2]};
-            galpy_manager.calcAccPot(particles[i].acc, particles[i].pot, time, 0, pos, &particles[i].pos[0]);
-
-            particles[i].printColumn(std::cout);
+            auto& pi = particles[i];
+            pi.readAscii(fp);
+            double pos[3] = {pi.pos[0] + pos_offset[0],
+                             pi.pos[1] + pos_offset[1],
+                             pi.pos[2] + pos_offset[2]};
+            galpy_manager.calcAccPot(pi.acc, pi.pot, time, 0, pos, &pi.pos[0]);
+            pi.den = 0.0;
+            for (int k=0; k<nset; k++) {
+                pi.den += galpy_manager.calcSetDensity(k, time, pi.pos, pi.pos);}
+            pi.printColumn(std::cout);
             std::cout<<std::endl;
         }
     }    
