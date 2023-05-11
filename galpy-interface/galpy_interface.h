@@ -9,6 +9,7 @@
 #include <cmath>
 #include <algorithm>
 #include "../src/io.hpp"
+#include "../src/astro_units.hpp"
 
 #include <integrateFullOrbit.h>
 
@@ -155,7 +156,7 @@ public:
 
     //! set Bovy unit scale factor (solar distance and velocityr referring to the Galactic center) converge from astronomical unit set (Myr, Msun, pc)
     void setBovyUnit(const bool print_flag=true) {
-        double kms_pcmyr=1.022712165045695; // pc = 30856775814913673 m, yr = 365.25 days
+        double kms_pcmyr = KMS_TO_PCMYR; 
         double vbase=220.0;
         double rbase=8.0;
         double vb_pcmyr = vbase*kms_pcmyr;
@@ -501,7 +502,7 @@ public:
         double dt = _time-frw.time;
         frw.updateAwithDtmin(dt);
 
-        const double G_astro = 0.0044983099795944;  // Msun, pc, Myr
+        const double G_astro = G_ASTRO;  // Msun, pc, Myr
         const double pi = 3.141592653589793;
 
         double z = 1/frw.a-1; // redshift

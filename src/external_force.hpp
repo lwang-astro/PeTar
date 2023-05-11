@@ -25,6 +25,7 @@ public:
     IOParams<double> coulomb_log; 
 #ifdef GALPY
     IOParams<long long int> galpy_gaspot_index;
+    IOParams<long long int> scale_density;
 #else
     IOParams<double> gas_density; 
     IOParams<double> decay_time;
@@ -37,6 +38,7 @@ public:
                             coulomb_log  (input_par_store, 3.1, "ext-coulomb-log",  "coulomb logarithm"),
 #ifdef GALPY
                             galpy_gaspot_index(input_par_store, -1, "ext-gaspot-index",  "galpy potential set index for gas component, used for obtaining gas density", "None"),
+                            scale_density(input_par_store, 1/G_ASTRO, "ext-scale-density", "scale factor for galpy potential density","1/G"),
 #else
                             gas_density  (input_par_store, 1.0, "ext-gas-density",  "gas density in units of PeTar input"),
                             decay_time   (input_par_store, 0.0, "ext-decay-time",  "gas density decay time scale in units of PeTar input"),
@@ -56,6 +58,7 @@ public:
             {mode.key,    required_argument, &ext_flag, 0},  
 #ifdef GALPY
             {galpy_gaspot_index.key, required_argument, &ext_flag, 1},  
+            {scale_density.key, required_argument, &ext_flag, 2},  
 #else
             {gas_density.key, required_argument, &ext_flag, 1},  
             {decay_time.key,  required_argument, &ext_flag, 2},  
@@ -84,6 +87,11 @@ public:
                 case 1:
                     galpy_gaspot_index.value = atoi(optarg);
                     if(print_flag) galpy_gaspot_index.print(std::cout);
+                    opt_used+=2;
+                    break;            
+                case 2:
+                    scale_density.value = atof(optarg);
+                    if(print_flag) scale_density.print(std::cout);
                     opt_used+=2;
                     break;            
 #else
@@ -157,6 +165,7 @@ public:
     int galpy_gaspot_index; 
     GalpyManager* galpy_manager;
     Status* status;
+    Float scale_density;
 #else
     Float gas_density; 
     Float gas_density_init; 
@@ -168,7 +177,7 @@ public:
 
     ExternalHardForce(): is_used(false), 
 #ifdef GALPY
-                         galpy_gaspot_index(-1), galpy_manager(NULL), status(NULL),
+                         galpy_gaspot_index(-1), galpy_manager(NULL), status(NULL), scale_density(1.0),
 #else
                          gas_density(1.0), gas_density_init(1.0), decay_time(0.0), time(0.0),
 #endif
@@ -187,6 +196,7 @@ public:
         galpy_gaspot_index = _input.galpy_gaspot_index.value;
         galpy_manager = &_galpy_manager;
         status = &_status;
+        scale_density = _input.scale_density.value;
         sound_speed = _input.sound_speed.value;
         coulomb_log = _input.coulomb_log.value;
     }
@@ -224,7 +234,9 @@ public:
     */
     template<class Tf, class Tp> 
     Float calcAccJerkExternal(Tf& _force, const Tp& _particle){
-        
+        if (!is_used) 
+            return NUMERIC_FLOAT_MAX;
+
         auto& mass = _particle.mass;
         auto& vel = _particle.vel;
         Float v2 = vel[0]*vel[0] + vel[1]*vel[1] + vel[2]*vel[2];
@@ -269,7 +281,7 @@ public:
         Float pos_g[3] = {pos[0] + status->pcm.pos[0], 
                           pos[1] + status->pcm.pos[1], 
                           pos[2] + status->pcm.pos[2]};
-        Float gas_density = galpy_manager->calcSetDensity(galpy_gaspot_index, status->time, pos_g, &pos[0]);
+        Float gas_density = scale_density*galpy_manager->calcSetDensity(galpy_gaspot_index, status->time, pos_g, &pos[0]);
 #endif       
         Float c1 = -4*PI*G2*mass*gas_density/v3*Ifunc;
 

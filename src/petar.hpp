@@ -62,6 +62,7 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #include"hard_assert.hpp"
 #include"soft_ptcl.hpp"
 #include"soft_force.hpp"
+#include"astro_units.hpp"
 #ifdef USE_GPU
 #include"force_gpu_cuda.hpp"
 #endif
@@ -3090,12 +3091,12 @@ public:
 
         // units
         if (input_parameters.unit_set.value==1) {
-            input_parameters.gravitational_constant.value = 0.00449830997959438; // pc^3/(Msun*Myr^2)
+            input_parameters.gravitational_constant.value = G_ASTRO;
 #ifdef BSE_BASE
             bse_parameters.tscale.value = 1.0; // Myr
-            bse_parameters.rscale.value = 44353565.919218; // pc -> rsun
+            bse_parameters.rscale.value = PC_TO_RSUN;
             bse_parameters.mscale.value = 1.0; // Msun
-            bse_parameters.vscale.value = 0.977813107686401; // pc/Myr -> km/s
+            bse_parameters.vscale.value = PCMYR_TO_KMS;
 #endif
             if(print_flag) {
                 std::cout<<"----- Unit set 1: Msun, pc, Myr -----\n"

@@ -111,6 +111,9 @@ int main(int argc, char** argv){
                      <<"                             following lines: mass, pos(3), vel(3)\n"
                      <<"Options:\n"
                      <<"    -m    : instead of reading particle list, generate a mesh of points in the x-y plane and x-z plane to create the acceleration, potential and density map.\n"
+                     <<"            output filenames are xy[time] and xz[time]\n"
+                     <<"            header line:  time nx ny\n"
+                     <<"            each line: mass x y z vx vy vz ax ay az pot den\n"
                      <<"            Time-dependent potential is also supported.\n"
                 //<<"    -u    : input data use astronomical unit set (Myr, pc, Msun) and set unit scaling factor for Galpy automatically.\n"
                      <<"    -h    : help\n";
