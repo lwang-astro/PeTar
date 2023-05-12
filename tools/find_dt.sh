@@ -25,7 +25,7 @@ do
 	    echo '  -p: petar commander name (default: petar)';
 	    echo '  -s: base tree step size (default: auto)';
 #	    echo '  -b: binary number (default: 0)';
-	    echo '  -m: number of MPI processors (default: 1)';
+	    echo '  -m: number of MPI processors (default: 0, disable mpi)';
 	    echo '  -o: number of OpenMP processors (default: auto)';
 	    echo '  -i: format of snapshot: 0: BINARY; 1: ASCII (default: 1)';
 #	    echo '  -u: petar unit set (default: 0)';
@@ -61,7 +61,7 @@ fi
 #[ -z $opts ] || opts=''
 [ -z $pbin ] && pbin=petar
 [ -z $nomp ] || prefix='env OMP_NUM_THREADS='$nomp
-[ -z $nmpi ] || prefix=$prefix' mpiexec -n '$nmpi
+[ -n "$nmpi" ] && [ "$nmpi" -ne 0 ] && prefix=$prefix' mpiexec -n '$nmpi
 [ -z $sfmt ] && sfmt=1
 #[ -z $bnum ] || opts=$opts' -b '$bnum
 [ -z $prefix_flag ] || prefix=$run
