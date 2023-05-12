@@ -25,7 +25,7 @@ do
 	    echo '  -p: petar commander name (default: petar)';
 	    echo '  -s: base tree step size (default: auto)';
 #	    echo '  -b: binary number (default: 0)';
-	    echo '  -m: number of MPI processors (default: 1)';
+	    echo '  -m: number of MPI processors (default: 1 processor or without MPI)';
 	    echo '  -o: number of OpenMP processors (default: auto)';
 	    echo '  -i: format of snapshot: 0: BINARY; 1: ASCII (default: 1)';
 #	    echo '  -u: petar unit set (default: 0)';
