@@ -451,7 +451,7 @@ class BSEMerge(DictNpArrayMix):
             Calculate unique id by adding bid and final time to a value of by using numpy.float128
             """
             #return cantorPairing(_type_change.bid, (np.log(_type_change.final.time)*1e6).astype(int))
-            return np.float128(type_change.bid)+np.float128(type_change.final.time)
+            return np.float128(_type_change.bid) + np.float128(_type_change.final.time)
         
         # find mergers
         type_change.generateBinaryID()
