@@ -56,30 +56,30 @@ echo 'data filename prefix: '$fname
 echo 'time criterion: '$tcrit
 
 # check consistence for the number of columns
-ncol=`egrep -m 1 'SN_kick' $fname.*sse*.[0-9]|wc -w`
+ncol=`egrep -m 1 'SN_kick' $fname.*sse*.0|wc -w`
 if [[ $ncol != $ncol_sse_sn_kick ]] && [[ $ncol != 0 ]]; then
     echo 'Error! column number not matches for SSE SN kick, should be '$ncol_sse_sn_kick', the file has '$ncol'.'
     exit
 fi
-ncol=`egrep -v -m 1 'SN_kick' $fname.*sse*.[0-9]|wc -w`
+ncol=`egrep -v -m 1 'SN_kick' $fname.*sse*.0|wc -w`
 if [[ $ncol -ne $ncol_sse_type_change ]] && [[ $ncol -ne 0 ]]; then
     echo 'Error! column number not matches for SSE Type Change, should be '$ncol_sse_type_change', the file has '$ncol
     exit
 fi
 
-ncol=`egrep -m 1 'Dynamic_merge' $fname.*bse*.[0-9]|wc -w`
+ncol=`egrep -m 1 'Dynamic_merge' $fname.*bse*.0|wc -w`
 if [[ $ncol -ne $ncol_bse_dyn_merge ]] && [[ $ncol -ne 0 ]]; then
     echo 'Error! column number not matches for BSE dynamical merger, should be '$ncol_bse_dyn_merge', the file has '$ncol
     exit
 fi
 
-ncol=`egrep -m 1 'SN_kick' $fname.*bse*.[0-9]|wc -w`
+ncol=`egrep -m 1 'SN_kick' $fname.*bse*.0|wc -w`
 if [[ $ncol -ne $ncol_bse_sn_kick ]] && [[ $ncol -ne 0 ]]; then
     echo 'Error! column number not matches for BSE SN kick, should be '$ncol_bse_sn_kick', the file has '$ncol
     exit
 fi
 
-ncol=`egrep -v -m 1 '(SN_kick|Dynamic_merge)' $fname.*bse*.[0-9]|wc -w`
+ncol=`egrep -v -m 1 '(SN_kick|Dynamic_merge)' $fname.*bse*.0|wc -w`
 if [[ $ncol -ne $ncol_bse_type_change ]] && [[ $ncol -ne 0 ]]; then
     echo 'Error! column number not matches for BSE Type Change, should be '$ncol_bse_type_change', the file has '$ncol
     exit
