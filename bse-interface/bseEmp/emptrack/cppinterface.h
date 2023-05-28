@@ -1,8 +1,10 @@
       interface 
-      subroutine setMetallicity(zeta) bind(c, name='setMetallicity')
+      subroutine setMetallicity(zeta,trackmode) 
+     &     bind(c, name='setMetallicity')
       import
       implicit none
       real(c_double) zeta
+      integer(c_int) trackmode
       end subroutine
 
       function askInUseOrNot() bind(c, name='askInUseOrNot')

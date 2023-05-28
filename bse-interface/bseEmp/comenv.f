@@ -42,7 +42,8 @@
       EXTERNAL CELAMF,RL,RZAMSF
 * Tanikawa's BH model (prevent HGCE)
       logical nohgce
-      common /bseemp/ nohgce
+      integer krol(2)
+      common /bseemp/ nohgce, krol
       logical coreenvornot
 *
 *

@@ -25,6 +25,7 @@ namespace ExtremeMetalPoors {
     const  S64 NumberOfCoefficientForMSRadius     = 4;
     const  S64 NumberOfCoefficientForAGBRadius    = 2;
     static bool InUse = false;
+    static S32 trackMode = 2;
     static F64 zeta   = -100;
     static F64 zbse   = -1.;
 
@@ -254,7 +255,7 @@ namespace ExtremeMetalPoors {
 	return ((val1 - val2) * (zeta - (-2.)) + val2);
     }
 
-    void setMetallicityInterpolation(F64 zeta) {
+    void setMetallicityInterpolation(F64 zeta, S32 trackMode) {
 	F64 atimetmp1[NumberOfCoefficientForTime];
 	F64 btimetmp1[NumberOfCoefficientForTime];
 	F64 ctimetmp1[NumberOfCoefficientForTime];
@@ -349,14 +350,18 @@ namespace ExtremeMetalPoors {
 	F64 mscradsMassivetmp2[NumberOfCoefficientForMSRadiusMassive];
 	F64 msdradsMassivetmp2[NumberOfCoefficientForMSRadiusMassive];
 
-#define GENEVAMODEL
-#ifdef GENEVAMODEL
-	char idir[1024] = "ffgeneva";
-	fprintf(stderr, " Use Geneva interpolation\n");
-#else
-	char idir[1024] = "ffbonn";
-	fprintf(stderr, " Use Bonn interpolation\n");
-#endif
+    char idir[1024];
+    if (trackMode==1) {
+        sprintf(idir, "ffbonn");
+        fprintf(stderr, " Use Bonn interpolation\n");
+    }
+    else if (trackMode==2) {
+        sprintf(idir, "ffgeneva");
+        fprintf(stderr, " Use Geneva interpolation\n");
+    }
+    else {
+        fprintf(stderr, " Error, trackmode not support\n");
+    }
 	char ifile[1024];
 	sprintf(ifile, "./%s/metal1e-1.dat", idir);
 	FILE * fp;
@@ -1069,7 +1074,7 @@ bool askCommonEnvelopeOrNot3(S32 * kw,
     return cce;
 }
 
-void setMetallicity(F64 * _zeta) {
+void setMetallicity(F64 * _zeta, S32 * _mode) {
     using namespace EMP;
     assert(sizeof(F32) == 4);
     assert(sizeof(F64) == 8);
@@ -1080,62 +1085,67 @@ void setMetallicity(F64 * _zeta) {
     }
     InUse = true;
     zeta  = *_zeta;
-#ifdef MARIGOMODEL
-    char ifile[1024];
-    sprintf(ifile, "./ffmarigo/metal1e0.dat");
-    fprintf(stderr, " Use Marigo model\n");    
-#else
-#ifdef GENEVAMODEL
-    char idir[1024] = "ffgeneva";
-    fprintf(stderr, " Use Geneva model log(Z/Zsun) = %.1f\n", zeta);
-#else
-    char idir[1024] = "ffbonn";
-    fprintf(stderr, " Use Bonn model log(Z/Zsun) = %.1f\n", zeta);
-#endif
+    trackMode = *_mode;
+
     char ifile[1024], afile[1024];
-    if(zeta == -8.) {
-	sprintf(ifile, "./%s/metal1e-8.dat", idir);
-	sprintf(afile, "./%s/additional1e-8.dat", idir);
-    } else if(zeta == -6.) {
-	sprintf(ifile, "./%s/metal1e-6.dat", idir);
-	sprintf(afile, "./%s/additional1e-6.dat", idir);
-	CriticalMassMassive = 1e9;
-	UpperLimitOfMassInScopeOfApplication = 1e3;
-    } else if(zeta == -5.) {
-	sprintf(ifile, "./%s/metal1e-5.dat", idir);
-	sprintf(afile, "./%s/additional1e-5.dat", idir);
-	CriticalMassMassive = 1e9;
-	UpperLimitOfMassInScopeOfApplication = 1e3;
-    } else if(zeta == -4.) {
-	sprintf(ifile, "./%s/metal1e-4.dat", idir);
-	sprintf(afile, "./%s/additional1e-4.dat", idir);
-	CriticalMassMassive = 1e9;
-	UpperLimitOfMassInScopeOfApplication = 1e3;
-    } else if(zeta == -2.) {
-	sprintf(ifile, "./%s/metal1e-2.dat", idir);
-	sprintf(afile, "./%s/additional1e-2.dat", idir);
-    } else if(zeta == -1.) {
-	sprintf(ifile, "./%s/metal1e-1.dat", idir);
-	sprintf(afile, "./%s/additional1e-1.dat", idir);
-	LowerLimitOfMassInScopeOfApplication = 16.;
-    } else {
-#if 0
-	fprintf(stderr, "Error: Not yet implemented Z/Zsun = %+e\n", zeta);
-	exit(0);
-#else
-	// A. Tanikawa changes here 22/10/01
-	//if(-2 < zeta && zeta < -1) {
-	if(-2.4 < zeta && zeta < -1) {
-	    EMP::setMetallicityInterpolation(zeta);
-	    LowerLimitOfMassInScopeOfApplication = 16.;
-	    return;
-	} else {
-	    fprintf(stderr, "Error: Not yet implemented Z/Zsun = %+e\n", zeta);
-	    exit(0);
-	}
-#endif
+    if (trackMode==3) {
+        sprintf(ifile, "./ffmarigo/metal1e0.dat");
+        fprintf(stderr, " Use Marigo model\n");    
     }
+    else {
+        char idir[1024];
+        if (trackMode==1) {
+            sprintf(idir, "ffbonn");
+            fprintf(stderr, " Use Bonn model log(Z/Zsun) = %.1f\n", zeta);
+        }
+        else if (trackMode==2) {
+            sprintf(idir, "ffgeneva");
+            fprintf(stderr, " Use Geneva model log(Z/Zsun) = %.1f\n", zeta);
+        }
+
+        if(zeta == -8.) {
+            sprintf(ifile, "./%s/metal1e-8.dat", idir);
+            sprintf(afile, "./%s/additional1e-8.dat", idir);
+        } else if(zeta == -6.) {
+            sprintf(ifile, "./%s/metal1e-6.dat", idir);
+            sprintf(afile, "./%s/additional1e-6.dat", idir);
+            CriticalMassMassive = 1e9;
+            UpperLimitOfMassInScopeOfApplication = 1e3;
+        } else if(zeta == -5.) {
+            sprintf(ifile, "./%s/metal1e-5.dat", idir);
+            sprintf(afile, "./%s/additional1e-5.dat", idir);
+            CriticalMassMassive = 1e9;
+            UpperLimitOfMassInScopeOfApplication = 1e3;
+        } else if(zeta == -4.) {
+            sprintf(ifile, "./%s/metal1e-4.dat", idir);
+            sprintf(afile, "./%s/additional1e-4.dat", idir);
+            CriticalMassMassive = 1e9;
+            UpperLimitOfMassInScopeOfApplication = 1e3;
+        } else if(zeta == -2.) {
+            sprintf(ifile, "./%s/metal1e-2.dat", idir);
+            sprintf(afile, "./%s/additional1e-2.dat", idir);
+        } else if(zeta == -1.) {
+            sprintf(ifile, "./%s/metal1e-1.dat", idir);
+            sprintf(afile, "./%s/additional1e-1.dat", idir);
+            LowerLimitOfMassInScopeOfApplication = 16.;
+        } else {
+#if 0
+            fprintf(stderr, "Error: Not yet implemented Z/Zsun = %+e\n", zeta);
+            exit(0);
+#else
+            // A. Tanikawa changes here 22/10/01
+            //if(-2 < zeta && zeta < -1) {
+            if(-2.4 < zeta && zeta < -1) {
+                EMP::setMetallicityInterpolation(zeta, trackMode);
+                LowerLimitOfMassInScopeOfApplication = 16.;
+                return;
+            } else {
+                fprintf(stderr, "Error: Not yet implemented Z/Zsun = %+e\n", zeta);
+                exit(0);
+            }
 #endif
+        }
+    }
     FILE * fp = fopen(ifile, "r");
     assert(fp);
     fscanf(fp, "%lf", &UpperLimitOfMassHG);
