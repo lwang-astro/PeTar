@@ -1076,7 +1076,9 @@ public:
 
     bool checkParams() {
         assert(z>0.0);
+#ifdef BSEEMP
         assert(trackmode>0);
+#endif
         assert(tscale>0.0);
         assert(rscale>0.0);
         assert(mscale>0.0);
