@@ -348,7 +348,12 @@ class DictNpArrayMix:
             new member name
         member: numpy.ndarray | DictNpArrayNix
             data binding to the member, should be the same size as existing members in the class
+
+        Return
+        ---------
+        Number of new columns, if the given member name already exists, return 0
         """
+        ncols_old = self.ncols
         new_key_flag=False
         if (key in self.__dict__.keys()):
             member_old = self.__dict__[key]
@@ -388,6 +393,8 @@ class DictNpArrayMix:
         else:
             raise ValueError('New member type should be np.ndarray or DictNpArrayMix, but given ',type(member))
         self.ncols += dimension
+
+        return self.ncols - ncols_old
             
     def getherDataToArray(self, origin_format=True):
         """ gether all data to a 2D numpy.ndarray and return it

@@ -263,9 +263,7 @@ class Lagrangian(DictNpArrayMix):
         """ Calculate Spitzer one-component half-mass relaxation time
             Trh = 0.138 N^0.5 Rh^1.5 /( G^0.5 m^0.5 ln(gamma N))
             Then add the result as a new member 'trh'.
-
             Notice mass fraction must contain 0.5 to use this function
-            m use the average mass within half-mass radius
 
         Parameters
         ----------
@@ -275,6 +273,8 @@ class Lagrangian(DictNpArrayMix):
            The coefficient for Coulomb logarithm
         mode: string (sphere)
             sphere: calculate averaged properties from center to Lagrangian radii
+                   m use the average mass within half-mass radius
+                   N use the number of objects within half-mass radius
             shell: calculate properties between two neighbor Lagrangian radii
 
         """
@@ -282,10 +282,10 @@ class Lagrangian(DictNpArrayMix):
         if (mode=='shell'): 
             n=self.n[:,0:(rhindex+1)].sum(axis=1)
             m=(self.m[:,0:(rhindex+1)]*self.n[:,0:(rhindex+1)]).sum(axis=1)/n
-            trh=calcTrh(2*n, self.r[:,rhindex], m, G, gamma)
+            trh=calcTrh(n, self.r[:,rhindex], m, G, gamma)
             self.addNewMember('trh',trh)
         else:
-            trh=calcTrh(2*self.n[:,rhindex], self.r[:,rhindex], self.m[:,rhindex], G, gamma)
+            trh=calcTrh(self.n[:,rhindex], self.r[:,rhindex], self.m[:,rhindex], G, gamma)
             self.addNewMember('trh',trh)
 
     def calcTcr(self, G, mode='sphere'):
@@ -591,6 +591,85 @@ class LagrangianMultiple(DictNpArrayMix):
         #self.keys.append(['all',Lagrangian])
         #self.size = self.all.size
 
+    def calcTrh(self, G, gamma=0.02, mode='sphere'):
+        """ Calculate Spitzer one-component half-mass relaxation time
+            the branch "all" is used, where binaries are treated as unresolved single objests.
+            Trh = 0.138 N^0.5 Rh^1.5 /( G^0.5 m^0.5 ln(gamma N))
+            Then add the result as a new member in the branch all: 'all.trh'
+
+            Notice mass fraction must contain 0.5 to use this function
+
+        Parameters
+        ----------
+        G: float
+           Gravitational constant
+        gamma: float (0.02 # Giersz M., Heggie D. C., 1996, MNRAS, 279, 1037)
+           The coefficient for Coulomb logarithm
+        mode: string (sphere)
+            sphere: calculate averaged properties from center to Lagrangian radii
+                   m use the average mass within half-mass radius
+                   N use the number of objects within half-mass radius
+            shell: calculate properties between two neighbor Lagrangian radii
+
+        """
+        ncols_old = self.all.ncols
+        self.all.calcTrh(G, gamma, mode)
+        self.ncols += self.all.ncols - ncols_old
+        
+    def calcTcr(self, G, mode='sphere'):
+        """ Calculate half-mass crossing time
+            Tcr = Rh^1.5/sqrt(G M)
+            Then add the result as a new member in the branch all: 'all.tcr'
+
+            Notice mass fraction must contain 0.5 to use this function
+
+        Parameters
+        ----------
+        G: float
+           Gravitational constant
+        mode: string (sphere)
+            sphere: calculate averaged properties from center to Lagrangian radii
+            shell: calculate properties between two neighbor Lagrangian radii
+
+        """
+        ncols_old = self.all.ncols
+        self.all.calcTcr(G,mode)
+        self.ncols += self.all.ncols - ncols_old
+
+    def calcPsi(self, rindex=2, star_type1='noBH__in__all', star_type2='BH__in__all'):
+        """ Calculate psi factor for coverting one-component relaxation time (trh1) to two-component one (trh2): trh2 = trh1/psi
+            Used when two mass components exists, such as black holes and light objects. 
+            Add the result as a new member in the branch all: 'all.psi'
+
+            See the theoretical description in Wang, 2020, MNRAS, 491, 2413 (https://ui.adsabs.harvard.edu/abs/2020MNRAS.491.2413W/abstract)
+            
+            s1 = <n_1>*<m_1>^2/|sigma_1|
+            s2 = <n_2>*<m_2>^2/|sigma_2|
+            s = <n_all>*<m_all>^2/|sigma_all|
+            psi = (s1+s2)/s
+
+        Parameters
+        ----------
+        rindex: int (2)
+            the index of mass fraction to select data of n, m and sigma
+            default is index for half-mass (50%), assuming the mass fraction used in petar.data.process to calculate lagrangian radii is also the defaulted case 
+        star_type1: string ('noBH__in__all')
+            name of first component, need to pick up names from 'single, binary' or names defined by 'add_star_type' used in petar.data.process
+            default is all non BH components.
+        star_type2: string ('BH__in__all')
+            name of second component, default is all black holes 
+        """
+
+        lagr1=self[star_type1]
+        lagr2=self[star_type2]
+        lagra=self.all
+        s1 = lagr1.n[:,rindex]*lagr1.m[:,rindex]**2/lagr1.sigma.abs[:,rindex]
+        s2 = lagr2.n[:,rindex]*lagr2.m[:,rindex]**2/lagr2.sigma.abs[:,rindex]
+        s  = lagra.n[:,rindex]*lagra.m[:,rindex]**2/lagra.sigma.abs[:,rindex]
+        psi = (s1+s2)/s
+        psi[np.isnan(psi)] = 1
+        ncols_diff = self.all.addNewMember('psi',psi)
+        self.ncols += ncols_diff
 
     def calcOneSnapshot(self, time, single, binary, rc, mode):
         """ Calculate Lagrangian radii and related properties for one snapshot

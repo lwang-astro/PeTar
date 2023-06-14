@@ -63,7 +63,12 @@ def calcTrh(N, rh, m, G, gamma=0.02):
 
     return: half-mass relaxation time
     """
-    return 0.138*N**0.5*rh**1.5/(m**0.5*np.log(gamma*N)*G**0.5)
+    trh = 0.138*N**0.5*rh**1.5/(m**0.5*np.log(gamma*N)*G**0.5)
+    if type(N) == np.ndarray:
+        trh[N==0] = 0
+    elif N==0:
+        trh = 0
+    return trh
 
 def calcTcr(M, rh, G): 
     """ Calculate half-mass crossing time
@@ -80,7 +85,13 @@ def calcTcr(M, rh, G):
 
     return: half-mass crossing time
     """
-    return rh**1.5/np.sqrt(G*M)
+    tcr = rh**1.5/np.sqrt(G*M)
+    if type(M) == np.ndarray:
+        tcr[M==0] = 0
+    elif M==0:
+        tcr = 0
+    return tcr
+
 
 def calcGWMyr(m1, m2, semi, ecc):
     """ Calculate GW merge timescale in Myr using Peters (1964) formula
