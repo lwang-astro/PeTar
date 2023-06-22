@@ -14,6 +14,7 @@ class DictNpArrayMix:
         keys: list of class member name and the corresponding types or numpy.ndarray shape
             Class members list description. Defined by inherited types
             For exmaple: keys=[['mass',numpy.float64],['pos',(numpy.float64,3)],['sub1',typename],['sub2',(typename,kwargs)]], will provide class members: mass (1D numpy.ndarray), pos ( 2D numpy.ndarray with a shape of (*,3)), sub1 (a class instance with the type of typename) and sub2 (a type based on DictNpArrayMix with additional keyword arguments, kwargs)
+            some names are reserved and cannot be used, including 'host', 'initargs', 'keys', 'ncols', 'size'
         _dat: numpy.ndarray | type(self) | None
             If it is 2D numpy.ndarray type data, read data as readArray function
             If it is the same class type, copy the data 
@@ -26,15 +27,24 @@ class DictNpArrayMix:
             keyword arguments, defined by inherited types
         """
         self.initargs = kwargs.copy()
+        if (not 'host' in self.__dict__.keys()):
+            self.host = None
+        if (not 'size' in self.__dict__.keys()):
+            self.size = int(0)
+        if (not 'ncols' in self.__dict__.keys()):
+            self.ncols = int(0)
 
         if (_append): self.keys = self.keys + keys
         else: self.keys = keys.copy()
         if (issubclass(type(_dat), DictNpArrayMix)):
             icol = int(0)
             for key, parameter in keys:
+                if key in self.__dict__.keys():
+                    raise ValueError('The member name "%s" is reserved for specific purpose, please modify the name' % key)
                 if (type(parameter) == type):
                     if (issubclass(parameter, DictNpArrayMix)):
                         self.__dict__[key] = parameter(_dat.__dict__[key], **kwargs)
+                        self.__dict__[key].setHost(self)
                         icol += self.__dict__[key].ncols
                     else:
                         self.__dict__[key] = _dat.__dict__[key].copy()
@@ -47,6 +57,7 @@ class DictNpArrayMix:
                     elif (type(parameter[0]) == type) & (type(parameter[1])==dict):
                         if(issubclass(parameter[0], DictNpArrayMix)):
                             self.__dict__[key] = parameter[0](_dat.__dict__[key], **{**kwargs, **parameter[1]})
+                            self.__dict__[key].setHost(self)
                             icol += self.__dict__[key].ncols
                         else:
                             self.__dict__[key] = _dat.__dict__[key].copy()
@@ -62,9 +73,12 @@ class DictNpArrayMix:
             icol = _offset
             self.size = int(0)
             for key, parameter in keys:
+                if key in self.__dict__.keys():
+                    raise ValueError('The member name "%s" is reserved for specific purpose, please modify the name' % key)
                 if (type(parameter) == type):
                     if (issubclass(parameter, DictNpArrayMix)):
                         self.__dict__[key] = parameter(_dat, icol, False, **kwargs)
+                        self.__dict__[key].setHost(self)
                         icol += self.__dict__[key].ncols
                         self.size += self.__dict__[key].size*self.__dict__[key].ncols
                     else:
@@ -80,6 +94,7 @@ class DictNpArrayMix:
                     elif (type(parameter[0]) == type) & (type(parameter[1])==dict):
                         if(issubclass(parameter[0], DictNpArrayMix)):
                             self.__dict__[key] = parameter[0](_dat, icol, False, **{**kwargs, **parameter[1]})
+                            self.__dict__[key].setHost(self)
                             icol += self.__dict__[key].ncols
                             self.size += self.__dict__[key].size*self.__dict__[key].ncols
                         else:
@@ -102,6 +117,7 @@ class DictNpArrayMix:
                 if (type(parameter) == type):
                     if (issubclass(parameter, DictNpArrayMix)):
                         self.__dict__[key] = parameter(**kwargs)
+                        self.__dict__[key].setHost(self)
                         icol += self.__dict__[key].ncols
                     else:
                         self.__dict__[key] = np.empty(0).astype(parameter)
@@ -114,6 +130,7 @@ class DictNpArrayMix:
                     elif (type(parameter[0]) == type) & (type(parameter[1])==dict):
                         if(issubclass(parameter[0], DictNpArrayMix)):
                             self.__dict__[key] = parameter[0](**{**kwargs, **parameter[1]})
+                            self.__dict__[key].setHost(self)
                             icol += self.__dict__[key].ncols
                         else:
                             self.__dict__[key] = np.empty(0).astype(parameter[0])
@@ -246,8 +263,11 @@ class DictNpArrayMix:
         self_type = type(self)
         new_dat = self_type(**self.initargs)
         for key, item in self.__dict__.items():
+            if (key=='host'): continue
             if (hasattr(item, 'copy')):
                 new_dat.__dict__[key] = self.__dict__[key].copy()
+                if (issubclass(type(item), DictNpArrayMix)):
+                    new_dat.__dict__[key].setHost(new_dat)
             else:
                 new_dat.__dict__[key] = self.__dict__[key]
         return new_dat
@@ -271,8 +291,11 @@ class DictNpArrayMix:
             if (not self.ncols == other.ncols):
                 raise ValueError('Added two instances have different ncols: ',self.ncols,' and ', other.ncols)
             for key, item in self.__dict__.items():
+                if (key=='host'): continue
                 if (type(item) == np.ndarray) | (issubclass(type(item), DictNpArrayMix)):
                     new_dat.__dict__[key] = operator(self.__dict__[key], other.__dict__[key])
+                    if (issubclass(type(item), DictNpArrayMix)):
+                        new_dat.__dict__[key].setHost(new_dat)
                 else:
                     if (hasattr(item, 'copy')):
                         new_dat.__dict__[key] = self.__dict__[key].copy()
@@ -280,8 +303,11 @@ class DictNpArrayMix:
                         new_dat.__dict__[key] = self.__dict__[key]
         else:
             for key, item in self.__dict__.items():
+                if (key=='host'): continue
                 if (type(item) == np.ndarray) | (issubclass(type(item), DictNpArrayMix)):
                     new_dat.__dict__[key] = operator(self.__dict__[key], other)
+                    if (issubclass(type(item), DictNpArrayMix)):
+                        new_dat.__dict__[key].setHost(new_dat)
                 else:
                     if (hasattr(item, 'copy')):
                         new_dat.__dict__[key] = self.__dict__[key].copy()
@@ -353,48 +379,69 @@ class DictNpArrayMix:
         ---------
         Number of new columns, if the given member name already exists, return 0
         """
-        ncols_old = self.ncols
-        new_key_flag=False
-        if (key in self.__dict__.keys()):
-            member_old = self.__dict__[key]
-            dimension  = int(1)
-            if (type(member_old)==np.ndarray):
-                if len(member_old.shape)>1:
-                    dimension = member_old.shape[1]
-            elif (issubclass(type(member_old), DictNpArrayMix)):
-                dimension = member_old.ncols
-            self.ncols -= dimension
-            member_old = member
-        else:
-            self.__dict__[key] = member
-            new_key_flag=True
+        new_key_flag = True
+        key_index = int(-1)
+        diff_ncols = int(0)
+        for i in range(len(self.keys)):
+            if (self.keys[i][0] == key):
+                new_key_flag = False
+                key_index = i
+                member_old = self.__dict__[key]
+                dimension  = int(1)
+                if (type(member_old)==np.ndarray):
+                    if len(member_old.shape)>1:
+                        dimension = member_old.shape[1]
+                elif (issubclass(type(member_old), DictNpArrayMix)):
+                    dimension = member_old.ncols
+                self.ncols -= dimension
+                diff_ncols -= dimension
+        if (new_key_flag) & (key in self.__dict__.keys()):
+            raise ValueError('The member name "%s" is reserved for specific purpose, please modify the name' % key)
+
+        self.__dict__[key] = member
         dimension = int(1)
         if (type(member)==np.ndarray):
             if len(member.shape)>1:
                 dimension = member.shape[1]
-                if (new_key_flag): 
-                    if (member.shape[0]==0):
+                if (member.shape[0]==0):
+                    if (new_key_flag): 
                         self.keys.append([key, (type(member.sum()), dimension)])
                     else:
+                        self.keys[key_index][1] = (type(member.sum()), dimension)
+                else:
+                    if (new_key_flag): 
                         self.keys.append([key, (type(member[0,0]), dimension)])
+                    else:
+                        self.keys[key_index][1] = (type(member[0,0]), dimension)
             else:
-                if (new_key_flag): 
-                    if (member.shape[0]==0):
+                if (member.shape[0]==0):
+                    if (new_key_flag): 
                         self.keys.append([key, type(member.sum())])
                     else:
+                        self.keys[key_index][1] = type(member.sum())
+                else:
+                    if (new_key_flag): 
                         self.keys.append([key, type(member[0])])
+                    else:
+                        self.keys[key_index][1] = type(member[0])
             if (self.size != member.size/dimension):
                 raise ValueError('New member has different size: ',member.size/dimension, ' host size: ',self.size)
         elif (issubclass(type(member), DictNpArrayMix)):
+            self.__dict__[key].setHost(self)
             dimension = member.ncols
-            if (new_key_flag): self.keys.append([key,(type(member), member.initargs)])
+            if (new_key_flag): 
+                self.keys.append([key,(type(member), member.initargs)])
+            else:
+                self.keys[key_index][1] = (type(member), member.initargs)
             if (self.size != member.size):
                 raise ValueError('New member has different size: ',member.size, ' host size: ',self.size)
         else:
             raise ValueError('New member type should be np.ndarray or DictNpArrayMix, but given ',type(member))
         self.ncols += dimension
+        diff_ncols += dimension
+        self.updateHostNcols(diff_ncols)
 
-        return self.ncols - ncols_old
+        return diff_ncols
             
     def getherDataToArray(self, origin_format=True):
         """ gether all data to a 2D numpy.ndarray and return it
@@ -493,6 +540,7 @@ class DictNpArrayMix:
         #        raise ValueError('Initial fail, date type not consistent, type [0] is ',type(self),' given ',type(idat))
         data_with_self = [self]+list(_dat)
         for key, item in self.__dict__.items():
+            if (key=='host'): continue
             if (type(item) == np.ndarray):
                 if (len(item.shape)!=len(_dat[0][key].shape)):
                     raise ValueError('Appending data member ',key,' has shape',_dat[0][key].shape,' but self data has shape',item.shape)
@@ -688,7 +736,20 @@ class DictNpArrayMix:
             elif (issubclass(type(member), DictNpArrayMix)):
                 self.__dict__[key].resize(N)
         self.size = int(N)
-                
+
+    def setHost(self, _host):
+        if (issubclass(type(_host), DictNpArrayMix)):
+            self.host = _host
+        else:
+            raise ValueError('host type must be petar.DictNpArrayMix, given type: ', type(_host))
+    
+    def updateHostNcols(self, _diff_ncols):
+        if (self.host!=None):
+            if (issubclass(type(self.host), DictNpArrayMix)):
+                self.host.ncols += _diff_ncols
+                self.host.updateHostNcols(_diff_ncols)
+            else:
+                raise ValueError('host type is not petar.DictNpArrayMix: ', type(self.host))
         
 def join(*_dat):
     """ Join multiple data to one
@@ -707,10 +768,12 @@ def join(*_dat):
             raise ValueError('Initial fail, date type not consistent, type [0] is ',type0,' given ',type(idat))
     new_dat = type0(**_dat[0].initargs)
     for key, item in _dat[0].__dict__.items():
+        if (key=='host'): continue
         if (type(item) == np.ndarray):
             new_dat.__dict__[key] = np.concatenate(tuple(map(lambda x:x.__dict__[key], _dat)))
         elif(issubclass(type(item), DictNpArrayMix)):
             new_dat.__dict__[key] = join(*tuple(map(lambda x:x.__dict__[key], _dat)))
+            new_dat.__dict__[key].setHost(new_dat)
         else:
             new_dat.__dict__[key] = _dat[0].__dict__[key]
     new_dat.size = np.sum(tuple(map(lambda x:x.size, _dat)))

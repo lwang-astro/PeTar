@@ -533,7 +533,7 @@ class PlotLagr:
             self.ptcls.append(pt)
         for mi in range(len(mfrac)):
             mlabel=mfrac[mi]
-            pt, = axe.plot([],[], '*', markersize=8, markeredgecolor='none', label=mlabel)
+            pt, = axe.plot([],[], '*', markersize=8, markeredgewidth=0, markeredgecolor='none', label=mlabel)
             self.ptcls.append(pt)
         axe.set_yscale(self.rlagr_scale)
         axe.set_xlim(self.time_min, self.time_max)
@@ -618,7 +618,7 @@ class Data:
                     elif (self.snapshot_format=='npy'):
                         single.load(file_path+'.single.npy')
                     else:
-                        raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % snapshot_format)
+                        raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % self.snapshot_format)
                 single.calcEkin()
                 single.calcEtot()
                 if os.path.getsize(file_path+'.binary')>0:
@@ -629,7 +629,7 @@ class Data:
                     elif (self.snapshot_format=='npy'):
                         binary.load(file_path+'.binary.npy')
                     else:
-                        raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % snapshot_format)
+                        raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % self.snapshot_format)
                 binary.calcEkin(True)
                 binary.calcPot()
                 binary.calcEtot(True)
@@ -1029,7 +1029,7 @@ if __name__ == '__main__':
         print("PS:: Each panel of plots can be added mutliple times (the order is recored)")
 
     try:
-        shortargs = 'm:s:f:R:z:o:c:G:l:L:i:t:p:sHbh'
+        shortargs = 'm:s:f:R:z:o:c:G:l:L:i:t:psHbh'
         longargs = ['help','n-cpu=','lum-min=','lum-max=','temp-min=','temp-max=',
                     'semi-min=','semi-max=','ecc-min=','ecc-max=',
                     'ekin-min=','ekin-max=','pot-min=','pot-max=','etot-min=','etot-max=',

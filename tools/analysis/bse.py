@@ -395,8 +395,23 @@ class SSEStarParameterOut(DictNpArrayMix):
         keys = [['type0', np.int64], ['menv', np.float64], ['renv', np.float64], ['tm', np.float64], ['vkick', (np.float64, 4)], ['dm', np.float64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
+class SSEISO(DictNpArrayMix):
+    """ Binary stellar evolution tool petar.(mo)bse output for single stars
+    Keys: (class members)
+        mass_init (1D): initial mass at zero age
+        star (SSEStarParameter): SSE star parameter 
+        out (SSEStarParameterOut): SSE star parameter output 
+    """
+    
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+        """
+        keys = [['mass_init',np.float64],['star',SSEStarParameter],['out',SSEStarParameterOut]]
+        DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
+    
+
 class BSEISO(DictNpArrayMix):
-    """ Binary stellar evolution tool petar.(mo)bse output
+    """ Binary stellar evolution tool petar.(mo)bse output for binaries
     Keys: (class members)
         m1_init (1D): initial mass of component 1 (Msun)
         m2_init (1D): initial mass of component 2 (Msun)
