@@ -580,11 +580,8 @@ class Binary(SimpleParticle):
             ekin = np.array([])
         self.addNewMember('ekin',ekin)
         if (member_also):
-            ncols = self.p1.ncols + self.p2.ncols
             self.p1.calcEkin()
             self.p2.calcEkin()
-            self.ncols += self.p1.ncols + self.p2.ncols - ncols
-            
 
     def calcEtot(self, member_also=False):
         """ Calculate c.m. total energy (binary energy is excluded) , etot, and add it as a member
@@ -592,10 +589,8 @@ class Binary(SimpleParticle):
         etot = self.ekin + self.mass*self.pot
         self.addNewMember('etot',etot)
         if (member_also):
-            ncols = self.p1.ncols + self.p2.ncols
             self.p1.calcEtot()
             self.p2.calcEtot()
-            self.ncols += self.p1.ncols + self.p2.ncols - ncols
 
     def calcR2(self, member_also=False):
         """ Calculate c.m. distance square, r2, and add it as a member
@@ -606,11 +601,8 @@ class Binary(SimpleParticle):
             r2 = np.array([])
         self.addNewMember('r2',r2)
         if (member_also):
-            ncols = self.p1.ncols + self.p2.ncols
             self.p1.calcR2()
             self.p2.calcR2()
-            ncols = self.p1.ncols + self.p2.ncols - ncols
-            self.ncols += ncols
 
     def calcEbin(self):
         """ Calculate binding energy, ebin, and add it as a member 
