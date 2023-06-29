@@ -16,6 +16,7 @@ if __name__ == '__main__':
     n_cpu=0
     write_option='w'
     snapshot_format='ascii'
+    esc_snapshot_format='ascii'
     output_format='ascii'
 
     def usage():
@@ -140,6 +141,11 @@ if __name__ == '__main__':
             elif opt in ('-s','--snapshot-format'):
                 kwargs['snapshot_format'] = arg
                 snapshot_format = arg
+                if (not 'esc_snapshot_format' in kwargs.keys()):
+                    esc_snapshot_format = arg
+            elif opt in ('--esc-snapshot-format'):
+                kwargs['esc_snapshot_format'] = arg
+                esc_snapshot_format = arg
             elif opt in ('-o','--output-format'):
                 kwargs['output_format'] = arg
                 output_format = arg
@@ -208,11 +214,11 @@ if __name__ == '__main__':
                 else:
                     data_read=petar.BinaryEscaper(**kwargs)
                 if os.path.getsize(key_filename)>0:
-                    if (snapshot_format=='ascii'):
+                    if (esc_snapshot_format=='ascii'):
                         data_read.loadtxt(key_filename)
-                    elif (snapshot_format=='binary'):
+                    elif (esc_snapshot_format=='binary'):
                         data_read.fromfile(key_filename)
-                    elif (snapshot_format=='npy'):
+                    elif (esc_snapshot_format=='npy'):
                         data_read.load(key_filename)
                     else:
                         raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % snapshot_format)                                            
