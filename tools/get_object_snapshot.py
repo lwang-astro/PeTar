@@ -248,8 +248,9 @@ if __name__ == '__main__':
     snap_kwargs['interrupt_mode'] = interrupt_mode
     snap_kwargs['external_mode'] = external_mode
     snap_kwargs['snapshot_format'] = snapshot_format
-    snap_kwargs['simple_binary'] = simple_binary
+    snap_kwargs['simple_mode'] = simple_binary
 
+    for key, item in snap_kwargs.items(): print(key,':',item)
     for key, item in kwargs.items(): print(key,':',item)
 
     fl = open(filename,'r')
