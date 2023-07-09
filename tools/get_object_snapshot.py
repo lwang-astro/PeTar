@@ -15,6 +15,7 @@ if __name__ == '__main__':
     output_format='ascii'
     interrupt_mode='bse'
     external_mode='none'
+    simple_binary=True
     write_option='w'
     core_file='data.core'
     cm_mode='core'
@@ -155,7 +156,7 @@ if __name__ == '__main__':
             elif opt in ('-m', '--mode'):
                 mode = arg
             elif opt in ('-B','--full-binary'):
-                kwargs['simple_binary'] = False
+                simple_binary = False
             elif opt in ('-a','--append'):
                 write_option='a'
             elif opt in ('-i','--interrupt-mode'):
@@ -247,7 +248,9 @@ if __name__ == '__main__':
     snap_kwargs['interrupt_mode'] = interrupt_mode
     snap_kwargs['external_mode'] = external_mode
     snap_kwargs['snapshot_format'] = snapshot_format
+    snap_kwargs['simple_mode'] = simple_binary
 
+    for key, item in snap_kwargs.items(): print(key,':',item)
     for key, item in kwargs.items(): print(key,':',item)
 
     fl = open(filename,'r')
