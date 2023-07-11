@@ -1041,7 +1041,7 @@ if __name__ == '__main__':
                     'plot-ncols=','plot-xsize=','plot-ysize=',
                     'suppress-images','format=','cm-mode=','core-file=',
                     'n-layer-cross=','n-layer-point=','layer-alpha=','marker-scale=','mass-power=',
-                    'cm-boxsize=','compare-in-column','dpi=']
+                    'cm-boxsize=','compare-in-column','dpi=','interrupt-mode=','external-mode=']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -1081,9 +1081,9 @@ if __name__ == '__main__':
                 plot_item.append(['plot_lagr'])
                 lagr_file = arg
                 read_lagr_data=True
-            elif opt in ('-i'):
+            elif opt in ('-i', '--interrupt-mode'):
                 kwargs['interrupt_mode'] = arg
-            elif opt in ('-t'):
+            elif opt in ('-t', '--external-mode'):
                 kwargs['external_mode'] = arg
             elif opt in ('-s'):
                 kwargs['snapshot_format'] = arg
