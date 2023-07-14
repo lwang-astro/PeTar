@@ -1248,7 +1248,7 @@ if __name__ == '__main__':
         if (read_lagr_data):
             lagr[0].loadtxt(lagr_file)
 
-    if (len(plot_item)==0): plot_item=['x-y']
+    if (len(plot_item)==0): plot_item=[['main','x-y']]
 
     if (plot_images):
         if (n_cpu==int(0)):

@@ -545,7 +545,11 @@ class Binary(SimpleParticle):
                 self.particleToBinary(_p1, _p2, G)
                 self.ncols= int(27)
             self.p1 = _p1
+            self.p1.setHost(self)
             self.p2 = _p2
+            self.p2.setHost(self)
+            if (not 'host' in self.__dict__.keys()):
+                self.host = None
             self.size = _p1.size
             self.ncols += self.p1.ncols + self.p2.ncols
             self.initargs = kwargs.copy()
