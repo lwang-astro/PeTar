@@ -670,7 +670,7 @@ public:
             _p.radius = bse_manager.getMergerRadius(_p.star);
 
             // type change
-            if (stellar_evolution_write_flag&&event_flag==1) {
+            if (stellar_evolution_write_flag&&event_flag>=1) {
 #pragma omp critical
                 {
                     fout_sse<<"Type_change ";

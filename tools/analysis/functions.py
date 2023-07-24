@@ -92,6 +92,24 @@ def calcTcr(M, rh, G):
         tcr = 0
     return tcr
 
+def calcRocheLobeRadius(mass_ratio, semi):
+    """ Calcuate Roche lobe radius based on mass ratio and semi-major axes of a circular orbit
+    
+    Parameters
+    ----------
+    mass_ratio: 1D numpy.ndarray or float
+        m_1/m_2 of the primary star 1
+    semi: 1D numpy.ndarray or float
+        semi-major axes of the circular orbit
+
+    return: Roche lobe radius of the primary star 1, in the unit of input semi
+    """
+
+    p = mass_ratio**(1.0/3.0)
+    p2 = p*p
+    radius = 0.49*p2/(0.6*p2 + np.log(1.0+p))*semi
+
+    return radius
 
 def calcGWMyr(m1, m2, semi, ecc):
     """ Calculate GW merge timescale in Myr using Peters (1964) formula
