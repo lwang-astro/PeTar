@@ -21,15 +21,19 @@ public:
 #ifdef STELLAR_EVOLUTION
     int stellar_evolution_option;
     bool stellar_evolution_write_flag;
+    Float time_interrupt_max;
 #ifdef BSE_BASE
     BSEManager bse_manager;
     TwoBodyTide tide;
     std::ofstream fout_sse; ///> log file for SSE event
     std::ofstream fout_bse; ///> log file for BSE event
 
-    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), stellar_evolution_option(1), stellar_evolution_write_flag(true), bse_manager(), fout_sse(), fout_bse() {}
+    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), 
+                     stellar_evolution_option(1), stellar_evolution_write_flag(true), time_interrupt_max(NUMERIC_FLOAT_MAX), 
+                     bse_manager(), fout_sse(), fout_bse() {}
 #else
-    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), stellar_evolution_option(0), stellar_evolution_write_flag(true) {}
+    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), 
+                     stellar_evolution_option(0), stellar_evolution_write_flag(true), time_interrupt_max(NUMERIC_FLOAT_MAX){}
 #endif
 #else
     ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)) {}
@@ -41,10 +45,13 @@ public:
     bool checkParams() {
         ASSERT(eps_sq>=0.0);
         ASSERT(gravitational_constant>0.0);
+#ifdef STELLAR_EVOLUTION
+        ASSERT(time_interrupt_max>=0.0);
 #ifdef BSE_BASE
         ASSERT(stellar_evolution_option==0 || (stellar_evolution_option==1 && bse_manager.checkParams()) || (stellar_evolution_option==2 && bse_manager.checkParams() && tide.checkParams()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_sse.is_open()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_bse.is_open()));
+#endif
 #endif
         return true;
     }        
@@ -656,7 +663,7 @@ public:
             _p.time_record += dt-dt_miss;
 
             // estimate next time to check 
-            _p.time_interrupt = _p.time_record + bse_manager.getTimeStepStar(_p.star);
+            _p.time_interrupt = std::min(_p.time_record + bse_manager.getTimeStepStar(_p.star), time_interrupt_max);
 
             // record mass change (if loss, negative)
             double dm = bse_manager.getMassLoss(output);
@@ -776,7 +783,7 @@ public:
                 p2->time_record = _bin_interrupt.time_now - bse_manager.getDTMiss(out[1]);
 
                 // estimate next time to check 
-                p1->time_interrupt = p1->time_record + bse_manager.getTimeStepBinary(p1->star, p2->star, semi, ecc, binary_type_final);
+                p1->time_interrupt = std::min(p1->time_record + bse_manager.getTimeStepBinary(p1->star, p2->star, semi, ecc, binary_type_final), time_interrupt_max);
                 p2->time_interrupt = p1->time_interrupt;
 
                 // reset collision state since binary orbit changes
@@ -1210,7 +1217,7 @@ public:
                                 p2->setBinaryPairID(p1->id);
                                 p1->setBinaryInterruptState(BinaryInterruptState::collision);
                                 p2->setBinaryInterruptState(BinaryInterruptState::collision);
-                                p1->time_interrupt = _bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri);
+                                p1->time_interrupt = std::min(_bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri), time_interrupt_max);
                                 p2->time_interrupt = p1->time_interrupt;
                                     
                             }
