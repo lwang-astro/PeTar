@@ -550,8 +550,7 @@ class DictNpArrayMix:
 
         Parameters
         ----------
-        fname: string
-            name of the output file
+        fname: string of filename or file handler
         kwargs: dict
             keyword arguments for numpy.savetxt
         """
@@ -564,8 +563,7 @@ class DictNpArrayMix:
 
         Parameters
         ----------
-        fname: string
-            name of the input file
+        fname: string of filename or file handler
         kwargs: dict
             keyword arguments for numpy.loadtxt
         """
@@ -656,8 +654,7 @@ class DictNpArrayMix:
 
         Parameters
         ----------
-        fname: string
-            name of the input file
+        fname: string of filename or file handler
         kwargs: dict
             keyword arguments for numpy.fromfile, notice dtype is already defined, do not provide that
         """
@@ -671,8 +668,7 @@ class DictNpArrayMix:
 
         Parameters
         ----------
-        fname: string
-            name of the input file
+        fname: string of filename or file handler
         kwargs: dict
             keyword arguments for numpy.save, notice dtype is already defined, do not provide that
         """
@@ -685,8 +681,7 @@ class DictNpArrayMix:
 
         Parameters
         ----------
-        fname: string
-            name of the input file
+        fname: string of filename or file handler
         kwargs: dict
             keyword arguments for numpy.loadtxt
         """
@@ -699,8 +694,7 @@ class DictNpArrayMix:
 
         Parameters
         ----------
-        fname: string
-            name of the input file
+        fname: string of filename or file handler
         kwargs: dict
             keyword arguments for numpy.save, notice dtype is already defined, do not provide that
         """

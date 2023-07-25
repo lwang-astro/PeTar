@@ -13,7 +13,7 @@ HEADER_OFFSET_WITH_CM=72 # header offset with center-of-the-mass data in bytes f
 class PeTarDataHeader():
     """ Petar snapshot data header
     members:
-        fid: int 
+        file_id: int 
            file id
         n: int 
            number of particles
@@ -42,11 +42,12 @@ class PeTarDataHeader():
                 PeTar external mode (set in configure): galpy, none 
                 If not none, this option indicates the pos_offset and vel_offset exists 
         """
-        self.fid = int(0)
+        self.file_id = int(0)
         self.n = int(0)
         self.time = 0.0
         self.pos_offset=[0.0,0.0,0.0]
         self.vel_offset=[0.0,0.0,0.0]
+        self.offset_flag=False
         
         if (_filename!=None): self.read(_filename,**kwargs)
 
@@ -67,22 +68,21 @@ class PeTarDataHeader():
         """
         snapshot_format='ascii'
         if ('snapshot_format' in kwargs.keys()): snapshot_format=kwargs['snapshot_format']
-        offset_flag=False
         if ('external_mode' in kwargs.keys()):
-            if (kwargs['external_mode']!='none'): offset_flag=True
+            if (kwargs['external_mode']!='none'): self.offset_flag=True
 
         if (snapshot_format=='ascii'):
             fp = open(_filename, 'r')
             header=fp.readline()
             header_items=header.split()
-            if (offset_flag):
+            if (self.offset_flag):
                 if (len(header_items)!=9):
                     raise ValueError('Snapshot header item number mismatch! Need 9 (file_id, N, time, xcm, ycm, zcm, vxcm, vycm, vzcm), got %d. Make sure the external_mode keyword set correctly.' % len(header_items))
 
                 file_id, n_glb, t, x, y, z, vx, vy, vz = header_items
                 fp.close()
 
-                self.fid = int(file_id)
+                self.file_id = int(file_id)
                 self.n = int(n_glb)
                 self.time = float(t)
                 self.pos_offset = [float(x),float(y),float(z)]
@@ -94,23 +94,79 @@ class PeTarDataHeader():
                 file_id, n_glb, t = header_items
                 fp.close()
 
-                self.fid = int(file_id)
+                self.file_id = int(file_id)
                 self.n = int(n_glb)
                 self.time = float(t)
 
         else:
-            if (offset_flag):
+            if (self.offset_flag):
                 fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',np.float64),('x',np.float64),('y',np.float64),('z',np.float64),('vx',np.float64),('vy',np.float64),('vz',np.float64)]),count=1)
                 self.file_id = fp['file_id'][0]
-                self.n_glb = fp['n_glb'][0]
+                self.n = fp['n_glb'][0]
                 self.time = fp['time'][0]
                 self.pos_offset = [fp['x'][0], fp['y'][0], fp['z'][0]]
                 self.vel_offset = [fp['vx'][0], fp['vy'][0], fp['vz'][0]]
             else:
                 fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',np.float64)]),count=1)
                 self.file_id = fp['file_id'][0]
-                self.n_glb = fp['n_glb'][0]
+                self.n = fp['n_glb'][0]
                 self.time = fp['time'][0]
+
+    def savetxt(self, fname, **kwargs):
+        """ Save class member data to a file
+        Use the getherDataToArray and then numpy.savetxt
+
+        Parameters
+        ----------
+        fname: string of filename or file handler
+        kwargs: dict
+            keyword arguments for numpy.savetxt
+        """
+        offset_flag=False
+        close_flag = False
+        if (type(fname)==str):
+            f = open(fname, 'w')
+            close_flag = True
+        elif (hasattr(fname, 'write')):
+            f = fname
+        if (self.offset_flag):
+            f.write("%d %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n" % 
+                    (self.file_id, self.n, self.time, 
+                     *self.pos_offset, *self.vel_offset))
+        else:
+            f.write("%d %d %.20g\n" % (self.file_id, self.n, self.time))
+
+        if close_flag:
+            f.close()
+
+    def tofile(self, fname):
+        """ Write class member data to a file using numpy.save
+        Use numpy.save to write data, the dtype is defined by keys (members)
+
+        Parameters
+        ----------
+        fname: string of filename or file header
+        kwargs: dict
+            keyword arguments for numpy.save, notice dtype is already defined, do not provide that
+        """
+
+        close_flag = False
+        if (type(fname)==str):
+            f = open(fname, 'wb')
+            close_flag = True
+        elif (hasattr(fname, 'write')):
+            f = fname
+
+        import struct
+        if (self.offset_flag):
+            header_buffer = struct.pack('qqddddddd', self.file_id, self.n, self.time, *self.pos_offset, *self.vel_offset)
+        else:
+            header_buffer = struct.pack('qqd', self.file_id, self.n, self.time)
+        f.write(header_buffer)
+
+        if close_flag:
+            f.close()
+        
 
     def toSkyCoord(self, **kwargs):
         """ generate astropy.coordinates.SkyCoord data in galactocentric frame
