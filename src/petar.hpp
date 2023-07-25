@@ -4050,7 +4050,13 @@ public:
             // >8. Hard integration 
             // get drift step
             dt_drift = dt_manager.getDtDriftContinue();
-
+            
+#ifdef STELLAR_EVOLUTION
+#ifdef BSE_BASE
+            hard_manager.ar_manager.interaction.time_interrupt_max = stat.time + dt_drift;
+#endif
+#endif            
+            
             drift(dt_drift);
 
             // update stat time 
