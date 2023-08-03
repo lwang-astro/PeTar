@@ -34,24 +34,33 @@ class SDARProfile(DictNpArrayMix):
         """
         keys=[["n_step_sum", np.int64], ["n_step_tsyn_sum", np.int64], ["n_step", np.int64], ["n_step_tsyn", np.int64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
-    
 
 class SDARData(DictNpArrayMix):
     """ SDAR integrator print column data, used in original SDAR sample code
     Keys: (class members)
         time (1D): current evolved time (counting from zero)
-        energy_err (1D): physical energy error
+        de (1D): physical energy error
         etot_ref (1D): initial total energy
         ekin (1D): kinetic energy
         epot (1D): potential energy
         gt_drift (1D): time tranformation for drift step
         H (1D): extened phase space Hamiltonian
-        energy_interrupt (1D): energy change due to interruption
-        H_interrupt (1D): H change due to interruption
+        de_interrupt (1D): energy change due to interruption
+        dH_interrupt (1D): H change due to interruption
         ds (1D): integration step
         time_offset (1D): time offset to obtain the actual time (time_offset + time)
         r_break_crit (1D): distance criterion to break group (used in Hermite)
         profile (SDARProfile): SDAR profile
+        if (keyword argument 'slowdown' == True):
+            de_sd (1D): slowdown energy error
+            etot_sd (1D): slowdown energy
+            ekin_sd (1D): slowdown kinetic energy
+            epot_sd (1D): slowdown potential energy
+            de_sd_change (1D): slowdown energy change
+            dH_sd_change (1D): slowdown H change
+            de_sd_interrupt (1D): slowdown energy change due to interruption
+            dH_sd_interrupt (1D): slowdown H change due to interruption
+            sd (SlowDownGroup): slowdown data
         particles (ParticleGroup): particle group
 
     """
@@ -65,48 +74,120 @@ class SDARData(DictNpArrayMix):
                 Member particle type
             N_particle: int (0)
                 Number of particles, determined from file if not provided
+            slowdown: bool (False)
+                if True, add slowdown keys
+            N_sd: int (0)
+                Number of slowdown pair, used when slowdown='on'
         """
         if (not 'member_type' in kwargs.keys()):
             kwargs['member_type'] = SDARParticle
-        keys=[['time', np.float64], ['energy_err', np.float64], ["etot_ref",np.float64],["ekin",np.float64],["epot",np.float64], ['gt_drift', np.float64], ['H', np.float64], ['energy_interrupt', np.float64], ['H_interrupt', np.float64], ['ds', np.float64], ['time_offset', np.float64], ['r_break_crit', np.float64], ['profile', SDARProfile], ['particles', ParticleGroup]]
+        keys=[['time', np.float64], ['de', np.float64], ["etot_ref",np.float64],["ekin",np.float64],["epot",np.float64], ['gt_drift', np.float64], ['H', np.float64], ['de_interrupt', np.float64], ['dH_interrupt', np.float64], ['ds', np.float64], ['time_offset', np.float64], ['r_break_crit', np.float64], ['profile', SDARProfile]]
+        if ('slowdown' in kwargs.keys()):
+            if (kwargs['slowdown']):
+                keys = keys + [['de_sd', np.float64], ["etot_sd",np.float64],["ekin_sd",np.float64],["epot_sd",np.float64], ['de_sd_change', np.float64], ['dH_sd_change', np.float64], ['de_sd_interrupt', np.float64], ['dH_sd_interrupt', np.float64], ['sd', (SlowDownGroup, {'with_indices':True})]]
+        keys = keys + [['particles', ParticleGroup]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
+
+class SDARBinary(DictNpArrayMix):
+    """ SDAR binary parameter
+    keys: (class members)
+        semi (1D): semi-major axis
+        ecc (1D): eccentricity
+        incline (1D): inclination angle
+        rot_horizon (1D): frame rotational angle in x-y plane (longitude of ascending node)
+        rot_self (1D): frame rotational angle in orbital plane (argument of periapsis)
+        t_peri (1D) : time to peri-center
+        period (1D): period
+        ecca (1D): eccentric anomaly (-pi, pi)
+        m1   (1D): component 1 mass
+        m2   (1D): component 2 mass
+        rrel (1D): relative distance
+        am   (2D,3): specific angular momemtum x, y, z
+        stab (1D): stability factor 
+    """
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+        """
+        
+        keys = [['semi',np.float64],['ecc', np.float64],['incline',np.float64],['rot_horizon',np.float64],['rot_self',np.float64],['t_peri',np.float64],['period',np.float64],['ecca',np.float64],['m1',np.float64],['m2',np.float64],['rrel',np.float64],['am',(np.float64,3)],['stab',np.float64]]
+        DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
+
+class SDARInterruptBinary(DictNpArrayMix):
+    """ SDAR interrupt binary parameter
+    keys: (class members)
+        time_now (1D): current time
+        time_end (1D): targeted integration ending time
+        status (1D): binary interruption types
+        cm (particle_type): binary c.m. parameter
+        bin (SDARBinary): binary orbital parameter
+        p1 (particle_type): binary component 1
+        p2 (particle_type): binary component 2
+    """
+
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+        ----------
+        keyword arguments:
+            particle_type: type (SDARParticle)
+                particle data type
+        """
+
+        if (not 'particle_type' in kwargs.keys()):
+            kwargs['particle_type'] = SDARParticle
+        particle_type = kwargs['particle_type']
+        
+        keys = [['time_now',np.float64],['time_end', np.float64],['status',np.int64],['cm',particle_type],['bin', SDARBinary],['p1',particle_type],['p2',particle_type]]
+        DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
+    
 
 class HermiteEnergy(DictNpArrayMix):
     """ Hermite integrator energy data
     keys: (class members)
-        error (1D): energy error 
+        de (1D): energy error 
         etot_ref (1D): initial total energy
         ekin (1D): kinetic energy
         epot (1D): potential energy
         epert (1D): perturbation energy
-        dE_cum (1D): cumulative energy change
-        dE_interrupt (1D): interrupt energy change (binary stellar evolution)
-        dE_modify (1D): modify energy change (stellar evolution)
+        de_change (1D): cumulative energy change
+        de_interrupt (1D): interrupt energy change (binary stellar evolution)
+        de_modify (1D): modify energy change (stellar evolution)
     """
 
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        keys = [["error",np.float64],["etot_ref",np.float64],["ekin",np.float64],["epot",np.float64],["epert",np.float64],["dE_cum",np.float64],["dE_interrupt",np.float64],["dE_modify",np.float64]]
+        keys = [["de",np.float64],["etot_ref",np.float64],["ekin",np.float64],["epot",np.float64],["epert",np.float64],["de_change",np.float64],["de_interrupt",np.float64],["de_modify",np.float64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
     
 class SlowDown(DictNpArrayMix):
     """ SDAR slowdown data
     Keys: (class members)
+        if keyword argument 'with_indices' == True:
+            i1 (1D): index of binary component 1
+            i2 (1D): index of binary component 2
         sd (1D): slowdown factor 
         sd_org (1D): slowdown original factor without limit
         sd_max (1D): maximum slowdown factor
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+        Parameters
+        ----------
+        keyword arguments:
+            with_indices: bool (False)
+                if true, first two keys (columns) are index1 and index2 of slowdown binary components
         """
-        keys = [["sd", np.float64], ["sd_org", np.float64], ["sd_max", np.float64]]
+        keys = []
+        if ('with_indices' in kwargs.keys()):
+            if kwargs['with_indices']:
+                keys = [['i1',np.int64],['i2',np.int64]]
+        keys = keys + [["sd", np.float64], ["sd_org", np.float64], ["sd_max", np.float64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
-
 
 class SlowDownGroup(DictNpArrayMix):
     """ Slowdown data group
     Keys: (class members)
+        n (1D): number of slowdown pairs
         sd[x] (SlowDown): slowdown data, [x] indicate the indice, counting from 0
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
@@ -114,8 +195,10 @@ class SlowDownGroup(DictNpArrayMix):
         Parameters
         ----------
         keyword arguments:
-            N_sd int (0)
+            N_sd: int (0)
                 Number of SlowDown pairs
+            with_indices: bool (False)
+                if true, first two keys in sd[x] are index1 and index2 of slowdown binary components
         """
         keys=[['n', np.int64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
@@ -144,18 +227,42 @@ class HermiteProfile(DictNpArrayMix):
         keys=[["h4_step_single", np.int64], ["h4_step_group", np.int64], ["ar_step", np.int64], ["ar_step_tsyn", np.int64], ["break_group", np.int64], ["new_group", np.int64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
+class HermiteParticle(SDARParticle):
+    """ Hermite Particle
+    keys: (class members)
+        mass (1D): mass
+        pos (2D,3): postion x, y, z
+        vel (2D,3): velocity vx, vy, vz
+        radius (1D): stellar radius for interruption check
+        id (1D): id
+        dt (1D): time step
+        time (1D): current time
+        acc (2D,3): acceleration x, y, z
+        jerk (2D,3): acceleration derivative x, y, z
+        pot (1D): potential
+    """
+
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+        """
+
+        SDARParticle.__init__(self, _dat, _offset, _append, **kwargs)
+        keys_hermite_add = [['dt',np.float64],['time',np.float64],['acc',(np.float64,3)],['jerk',(np.float64,3)],['pot',np.float64]]
+        #keys = [['dm', np.float64],['time_check', np.int64],['binary_state',np.int64]]
+        DictNpArrayMix.__init__(self, keys_hermite_add, _dat, _offset+self.ncols, True, **kwargs)
 
 
-class HardData(DictNpArrayMix):
+class HermiteData(DictNpArrayMix):
     """ Hermite+SDAR integrator print column data, used in petar.hard.debug
     Keys: (class members)
         time (1D): current evolved time (counting from zero)
         energy_phy (HermiteEnergy): physical energy data
         energy_sd (HermiteEnergy): slowdown energy data
         sd (SlowDownGroup): slowdown data
-        time_org (1D): original physical time
+        if (keyword data_type == 'hard'):
+            time_org (1D): original physical time
         profile (HermiteProfile): hermite profile
-        particles (ParticleGroup): particle group
+        particles (ParticleGroup): particle group, if data_type=='hard', member_type is 'Particle'; if data_type=='hermite', member_type is 'HermiteParticle'.
     """
 
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
@@ -168,9 +275,26 @@ class HardData(DictNpArrayMix):
                 Number of members of one group
             N_sd: int (0)
                 Number of slowdown pairs
+            data_type: str (hard) 
+                hard: one more column 'time_org', 
+                      particle group has member_type 'Particle'
+                hermite: hermite sample particle type
         """
-        kwargs['member_type']=Particle
-        kwargs['particle_type']='hard'
-        keys=[['time', np.float64], ['energy_phy', HermiteEnergy], ['energy_sd', HermiteEnergy], ['sd', SlowDownGroup], ['time_org', np.float64], ['profile', HermiteProfile], ['particles', ParticleGroup]]
+
+        keys_add = []
+        if (not 'data_type' in kwargs.keys()):
+            kwargs['data_type'] = 'hard'
+
+        if (kwargs['data_type'] == 'hard'):
+            kwargs['member_type'] = Particle
+            kwargs['particle_type'] = 'hard'
+            keys_add = [['time_org', np.float64]]
+        elif (kwargs['data_type'] == 'hermite'):
+            kwargs['member_type'] = HermiteParticle
+        else:
+            raise ValueError('data_type is not supported, should be hard or hermite, given ',kwargs['data_type'])
+
+        keys=[['time', np.float64], ['energy_phy', HermiteEnergy], ['energy_sd', HermiteEnergy], ['sd', SlowDownGroup]]
+        keys = keys + keys_add + [['profile', HermiteProfile], ['particles', ParticleGroup]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
     
