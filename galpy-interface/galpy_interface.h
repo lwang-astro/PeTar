@@ -1432,6 +1432,7 @@ public:
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         }
         broadcastDataMPI();
+        PS::Comm::broadcast(&nset, 1, 0);
 #endif        
         return (nset>=0);
     }
