@@ -11,6 +11,7 @@
 #ifdef BSE_BASE
 #include "bse_interface.h"
 #endif
+#include "external_force.hpp"
 
 //! AR interaction clas
 class ARInteraction{
@@ -18,6 +19,9 @@ public:
     typedef H4::ParticleH4<PtclHard> H4Ptcl;
     Float eps_sq; ///> softening parameter
     Float gravitational_constant;
+#ifdef EXTERNAL_HARD
+    ExternalHardForce *ext_force; // external hard to calculate perturbation
+#endif
 #ifdef STELLAR_EVOLUTION
     int stellar_evolution_option;
     bool stellar_evolution_write_flag;
@@ -350,6 +354,24 @@ public:
 
                 }
 
+#ifdef EXTERNAL_HARD
+                if (ext_force->is_used) {
+            
+                    auto pgi = pi; 
+                    auto gcm = _perturber.global_cm;
+
+                    pgi.pos[0] += xcm[0] + gcm->pos[0];
+                    pgi.pos[1] += xcm[1] + gcm->pos[1];
+                    pgi.pos[2] += xcm[2] + gcm->pos[2];
+                    // Here pi.vel has half kick step delay
+                    pgi.vel[0] += pi.vel[0] + _particle_cm.vel[0] + dt*(_particle_cm.acc0[0] + 0.5*dt*_particle_cm.acc1[0]) + gcm->vel[0];
+                    pgi.vel[1] += pi.vel[1] + _particle_cm.vel[1] + dt*(_particle_cm.acc0[1] + 0.5*dt*_particle_cm.acc1[1]) + gcm->vel[1];
+                    pgi.vel[2] += pi.vel[2] + _particle_cm.vel[2] + dt*(_particle_cm.acc0[2] + 0.5*dt*_particle_cm.acc1[2]) + gcm->vel[2];
+
+                    ext_force->calcAccExternal(acc_pert, pgi);
+                }
+#endif
+
                 acc_pert_cm[0] += pi.mass *acc_pert[0];
                 acc_pert_cm[1] += pi.mass *acc_pert[1];
                 acc_pert_cm[2] += pi.mass *acc_pert[2];
@@ -390,13 +412,77 @@ public:
 
         }
         else {
+
+            for(int i=0; i<_n_particle; i++) {
+                Float* acc_pert = _force[i].acc_pert;
+                Float& pot_pert = _force[i].pot_pert;
+                const auto& pi = _particles[i];
+                acc_pert[0] = acc_pert[1] = acc_pert[2] = pot_pert = Float(0.0);
+            }
+
+#ifdef EXTERNAL_HARD
+            if (ext_force->is_used) {
+            
+                Float dt = _time - _particle_cm.time;
+                Float xcm[3],vcm[3];
+                //ASSERT(dt>=0.0);
+                xcm[0] = _particle_cm.pos[0] + dt*(_particle_cm.vel[0] + 0.5*dt*(_particle_cm.acc0[0] + inv3*dt*_particle_cm.acc1[0]));
+                xcm[1] = _particle_cm.pos[1] + dt*(_particle_cm.vel[1] + 0.5*dt*(_particle_cm.acc0[1] + inv3*dt*_particle_cm.acc1[1]));
+                xcm[2] = _particle_cm.pos[2] + dt*(_particle_cm.vel[2] + 0.5*dt*(_particle_cm.acc0[2] + inv3*dt*_particle_cm.acc1[2]));
+                vcm[0] = _particle_cm.vel[0] + dt*(_particle_cm.acc0[0] + 0.5*dt*_particle_cm.acc1[0]);
+                vcm[1] = _particle_cm.vel[1] + dt*(_particle_cm.acc0[1] + 0.5*dt*_particle_cm.acc1[1]);
+                vcm[2] = _particle_cm.vel[2] + dt*(_particle_cm.acc0[2] + 0.5*dt*_particle_cm.acc1[2]);
+
+                Float acc_pert_cm[3]={0.0, 0.0, 0.0};
+                Float mcm = 0.0;
+                for (int i=0; i<_n_particle; i++) {
+                    
+                    const auto& pi = _particles[i];
+                    auto pgi = pi; 
+                    auto gcm = _perturber.global_cm;
+
+                    pgi.pos[0] += xcm[0] + gcm->pos[0];
+                    pgi.pos[1] += xcm[1] + gcm->pos[1];
+                    pgi.pos[2] += xcm[2] + gcm->pos[2];
+                    // Here pi.vel has half kick step delay
+                    pgi.vel[0] += vcm[0] + gcm->vel[0];
+                    pgi.vel[1] += vcm[1] + gcm->vel[1];
+                    pgi.vel[2] += vcm[2] + gcm->vel[2];
+
+                    Float* acc_pert = _force[i].acc_pert;
+                    ext_force->calcAccExternal(acc_pert, pgi);
+
+                    acc_pert_cm[0] += pi.mass *acc_pert[0];
+                    acc_pert_cm[1] += pi.mass *acc_pert[1];
+                    acc_pert_cm[2] += pi.mass *acc_pert[2];
+
+                    mcm += pi.mass;
+                }
+                acc_pert_cm[0] /= mcm;
+                acc_pert_cm[1] /= mcm;
+                acc_pert_cm[2] /= mcm;
+
+                // remove cm. perturbation
+                for (int i=0; i<_n_particle; i++) {
+                    Float* acc_pert = _force[i].acc_pert;
+                    Float& pot_pert = _force[i].pot_pert;
+                    const auto& pi = _particles[i];
+                    acc_pert[0] -= acc_pert_cm[0]; 
+                    acc_pert[1] -= acc_pert_cm[1];        
+                    acc_pert[2] -= acc_pert_cm[2]; 
+                
+                    pot_pert -= acc_pert[0]*pi.pos[0] + acc_pert[1]*pi.pos[1] + acc_pert[2]*pi.pos[2];
+                }
+            }
+#endif
+
 #ifdef SOFT_PERT
             if(_perturber.soft_pert!=NULL) {
                 for(int i=0; i<_n_particle; i++) {
                     Float* acc_pert = _force[i].acc_pert;
                     Float& pot_pert = _force[i].pot_pert;
                     const auto& pi = _particles[i];
-                    acc_pert[0] = acc_pert[1] = acc_pert[2] = pot_pert = Float(0.0);
+                    //acc_pert[0] = acc_pert[1] = acc_pert[2] = pot_pert = Float(0.0);
                     // avoid too large perturbation force if system is disruptted
                     if (pi.pos*pi.pos<pi.changeover.getRout()*pi.changeover.getRout()) {
                         _perturber.soft_pert->eval(acc_pert, pi.pos);

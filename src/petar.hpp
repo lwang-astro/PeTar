@@ -3438,6 +3438,7 @@ public:
 #else
         hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, stat.time, print_flag);
 #endif
+        hard_manager.ar_manager.interaction.ext_force = &hard_manager.h4_manager.interaction.ext_force;
 #endif        
 
         // check consistence of paramters

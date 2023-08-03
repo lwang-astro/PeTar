@@ -219,6 +219,66 @@ public:
     }
 #endif
 
+    //! External force for one particle in hard part
+    /*!
+      Gas dynamical friction
+      Due to the acceleration dependence, this function must be used at the end of acceleration calculation
+      (Ostriker 1999, https://ui.adsabs.harvard.edu/abs/1999ApJ...513..252O, 
+      Rozner 2022, https://arxiv.org/abs/2212.00807)
+
+      @param[out] _acc: acceleration
+      @param[in] _particle: particle data
+      
+      Return: the next integration time step (default: maximum floating point number)
+    */
+    template<class Tp> 
+    Float calcAccExternal(Float* _acc, const Tp& _particle){
+        if (!is_used) 
+            return NUMERIC_FLOAT_MAX;
+
+        auto& mass = _particle.mass;
+        auto& vel = _particle.vel;
+        Float v2 = vel[0]*vel[0] + vel[1]*vel[1] + vel[2]*vel[2];
+        Float v = std::sqrt(v2);
+        Float v3 = v2*v;
+
+        const Float PI = 4.0*atan(1.0);
+        const Float G2 = ForceSoft::grav_const*ForceSoft::grav_const;
+        Float mach = v/sound_speed;
+        Float Ifunc;
+        if (mach<0.9) {
+            Float mach2 = mach*mach;
+            Ifunc = 0.5*std::log((1.0+mach)/(1.0-mach)) - mach;
+        }
+        else if (mach>=0.9 && mach<1.1) {
+            // 2nd order derivative Hermite interpolation
+            Float mach2 = mach*mach;
+            Float mach3 = mach2*mach;
+            Float mach4 = mach2*mach2;
+            Float mach5 = mach4*mach;
+            Ifunc = 8670.66512394438*mach5 - 43353.850000357*mach4 + 86337.1029009788*mach3 - 85594.6848365398*mach2 + 42251.2454762294*mach - 8309.08207013687;
+        }
+        else{
+            Float mach2 = mach*mach;
+            Ifunc = 0.5*std::log(1-1/mach2) + coulomb_log;
+        }
+
+#ifdef GALPY
+        auto& pos = _particle.pos;
+        Float pos_g[3] = {pos[0] + status->pcm.pos[0], 
+                          pos[1] + status->pcm.pos[1], 
+                          pos[2] + status->pcm.pos[2]};
+        Float gas_density = scale_density*galpy_manager->calcSetDensity(galpy_gaspot_index, status->time, pos_g, &pos[0]);
+#endif       
+        Float c1 = -4*PI*G2*mass*gas_density/v3*Ifunc;
+
+        _acc[0] += c1*vel[0];
+        _acc[1] += c1*vel[1];
+        _acc[2] += c1*vel[2];
+
+        return NUMERIC_FLOAT_MAX;
+    }
+
 
     //! External force for one particle in hard part
     /*!

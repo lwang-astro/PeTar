@@ -369,8 +369,14 @@ public:
                 sym_int.perturber.soft_pert->group_id = n_members;
             }
 #endif
+
             // calculate soft_pert_min
             sym_int.perturber.calcSoftPertMin(sym_int.info.getBinaryTreeRoot(), ar_manager.interaction.gravitational_constant);
+
+#ifdef EXTERNAL_HARD
+            // hard external perturbation
+            sym_int.perturber.global_cm = &sym_int.particles.cm;
+#endif
             
             // initialization 
             sym_int.initialIntegration(0.0);
@@ -475,6 +481,11 @@ public:
                     // calculate soft_pert_min
                     groupi.perturber.calcSoftPertMin(groupi.info.getBinaryTreeRoot(), ar_manager.interaction.gravitational_constant);
 
+#ifdef EXTERNAL_HARD
+                    // hard external perturbation
+                    groupi.perturber.global_cm = &h4_int.particles.cm;
+#endif
+
                     // calculate c.m. changeover
                     auto& pcm = groupi.particles.cm;
                     PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
@@ -518,6 +529,11 @@ public:
                 PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
                 ASSERT(m_fac>0.0);
                 pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
+
+#ifdef EXTERNAL_HARD
+                // hard external perturbation
+                groupi.perturber.global_cm = &h4_int.particles.cm;
+#endif
 
 /*  It is not consistent to use tidal tensor for different group
 #ifdef SOFT_PERT                
