@@ -669,7 +669,11 @@ public:
                     PS::F64 m_fac = pcm.mass*Ptcl::mean_mass_inv;
                     ASSERT(m_fac>0.0);
                     pcm.changeover.setR(m_fac, manager->r_in_base, manager->r_out_base);
-                    
+
+#ifdef EXTERNAL_HARD
+                    // hard external perturbation
+                    groupi.perturber.global_cm = &h4_int.particles.cm;
+#endif
 
 #ifdef SOFT_PERT                
                     // find corresponding tidal tensor if exist

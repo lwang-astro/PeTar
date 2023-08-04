@@ -465,7 +465,9 @@ class PlotSemiEcc:
         self.mass_power = 1.0
         self.marker_scale = 1.0
         self.cm_mode = 'core'
-        self.r_max = 2.0
+        self.bin_color = 'white'
+        self.bin_rmax = 2.0
+        self.bin_rmin = 1e-5
         self.ptcls = []
 
     def init(self, axe, **kwargs):
@@ -509,9 +511,14 @@ class PlotSemiEcc:
             y += ycm
             z += zcm
         r = np.sqrt(x*x+y*y+z*z)
-        colors = cm.hot(r/self.r_max)
         self.ptcls[0].set_offsets(np.array([data.binary.semi, data.binary.ecc]).transpose())
-        self.ptcls[0].set_color(colors)
+        if (self.bin_color == 'white'):
+            self.ptcls[0].set_color('white')
+        elif (self.bin_color == 'distance'):
+            colors = cm.hot_r(np.log(r/self.bin_rmin)/np.log(self.bin_rmax/self.bin_rmin))
+            self.ptcls[0].set_color(colors)
+        else:
+            raise ValueError("Color mode %s is not supported for semi-ecc plot " % (self.bin_color))
         self.ptcls[0].set_sizes(sizes)
         return self.ptcls
 
@@ -948,7 +955,6 @@ if __name__ == '__main__':
         print("  -R [F]: x- and y-axis length of -m; suppressed when --x-min/max, --y-min/max are used: ",pxy.boxsize)
         print("  -H    : add one panel of HR-diagram")
         print("  -b    : add one panel of semi-ecc diagram for binaries")
-        print("          colors indicate the distance of binaries to the center, normalized by --r-max")
         print("          sizes indicate the mass based on scaling option --markser-scale and --mass-power")
         print("  -L [S]: add one panel of Lagrangian radii evolution, argument is filename of lagrangian data", lagr_file)
         print("          Here the filename is not used in the comparison mode")
@@ -967,7 +973,7 @@ if __name__ == '__main__':
         print("          The number of snapshots should also be the same for all models.")
         print("  -i  [S]: interrupt mode used in petar: no, base, bse, mobse: ",data.interrupt_mode)
         print("  -t  [S]: external mode used in petar: no, galpy: ",data.external_mode)
-        print("  -c  [S]: color type for particles: loglum, logtemp, ekin, pot, etot, white: ",data.color_mode)
+        print("  -c  [S]: color type for particles plot of -m option: loglum, logtemp, ekin, pot, etot, white: ",data.color_mode)
         print("              loglum: log(luminosity)")
         print("              logtemp: log(temperature)")
         print("              ekin: kinetic energy")
@@ -989,6 +995,12 @@ if __name__ == '__main__':
         print("  --semi-max    [F]: minimum semi-major axis: ",pse.semi_max)
         print("  --ecc-min     [F]: minimum eccentricity: ",pse.ecc_min)
         print("  --ecc-max     [F]: maximum eccentricity: ",pse.ecc_max)
+        print("  --bin-rmax    [F]: maximum distance for color scaling in semi-ecc plot: ",pse.bin_rmax)
+        print("  --bin-rmin    [F]: minimum distance for color scaling in semi-ecc plot: ",pse.bin_rmin)
+        print("  --bin-color   [I]: color mode for binary (semi-ecc) plot: ",pse.bin_color)
+        print("                         distance: scale with the log(distance) of binaries to the center, normalized by --bin-rmin and --bin-rmax")
+        print("                                   color map 'hot_r' is used, redder color represent binaries more distant to the center")
+        print("                         white: pure white")
         print("  --time-min    [F]: minimum time in evolution plot (x-axis): auto determine from Lagrangian data")
         print("  --time-max    [F]: maximum time in evolution plot (x-axis)): auto determine from Lagrangian data")
         print("  --ekin-min    [F]: minimum kinetic energy: ",data.ekin_min)
@@ -997,7 +1009,6 @@ if __name__ == '__main__':
         print("  --pot-max     [F]: maximum potential: ",data.pot_max)
         print("  --etot-min    [F]: minimum total energy: ",data.etot_min)
         print("  --etot-max    [F]: maximum total energy: ",data.etot_max)
-        print("  --r-max       [F]: maximum distance for color scaling in semi-ecc plot",pse.r_max)
         print("  --rlagr-min   [F]: minimum radius in Lagrangian plot: ", plagr.rlagr_min)
         print("  --rlagr-max   [F]: maximum radius in Lagrangian plot: ", plagr.rlagr_max)
         print("  --rlagr-scale [S]: scaling of Lagrangian radii in the plot (y-axis): ",plagr.rlagr_scale)
@@ -1031,9 +1042,9 @@ if __name__ == '__main__':
     try:
         shortargs = 'm:s:f:R:z:o:c:G:l:L:i:t:psHbh'
         longargs = ['help','n-cpu=','lum-min=','lum-max=','temp-min=','temp-max=',
-                    'semi-min=','semi-max=','ecc-min=','ecc-max=',
+                    'semi-min=','semi-max=','ecc-min=','ecc-max=','bin-rmax=','bin-rmin=','bin-color=',
                     'ekin-min=','ekin-max=','pot-min=','pot-max=','etot-min=','etot-max=',
-                    'rlagr-min=','rlagr-max=','rlagr-scale=','r-max=',
+                    'rlagr-min=','rlagr-max=','rlagr-scale=',
                     'lagr-energy','lagr-type=','lagr-mfrac=',
                     'time-min=','time-max=','x-min=','x-max=','y-min=','y-max=',
                     'unit-length=','unit-vel=','format-time=',
@@ -1127,6 +1138,12 @@ if __name__ == '__main__':
                 kwargs['ecc_min'] = float(arg)
             elif opt in ('--ecc-max'):
                 kwargs['ecc_max'] = float(arg)
+            elif opt in ('--bin-rmax'):
+                kwargs['bin_rmax'] = float(arg)
+            elif opt in ('--bin-rmin'):
+                kwargs['bin_rmin'] = float(arg)
+            elif opt in ('--bin-color'):
+                kwargs['bin_color'] = arg
             elif opt in ('--ekin-min'):
                 kwargs['ekin_min'] = float(arg)
             elif opt in ('--ekin-max'):
@@ -1139,8 +1156,6 @@ if __name__ == '__main__':
                 kwargs['etot_min'] = float(arg)
             elif opt in ('--etot-max'):
                 kwargs['etot_max'] = float(arg)
-            elif opt in ('--r-max'):
-                kwargs['r_max'] = float(arg)
             elif opt in ('--rlagr-min'):
                 kwargs['rlagr_min'] = float(arg)
             elif opt in ('--rlagr-max'):
