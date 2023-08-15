@@ -247,7 +247,6 @@ public:
         Float mach = v/sound_speed;
         Float Ifunc;
         if (mach<0.9) {
-            Float mach2 = mach*mach;
             Ifunc = 0.5*std::log((1.0+mach)/(1.0-mach)) - mach;
         }
         else if (mach>=0.9 && mach<1.1) {

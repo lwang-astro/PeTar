@@ -416,7 +416,6 @@ public:
             for(int i=0; i<_n_particle; i++) {
                 Float* acc_pert = _force[i].acc_pert;
                 Float& pot_pert = _force[i].pot_pert;
-                const auto& pi = _particles[i];
                 acc_pert[0] = acc_pert[1] = acc_pert[2] = pot_pert = Float(0.0);
             }
 
