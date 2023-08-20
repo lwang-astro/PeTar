@@ -96,17 +96,40 @@ if __name__ == '__main__':
         print("              NS:   Neutron Star [13]")
         print("              BH:   Black Hole [14]")
         print("              SN:   Massless Supernova [15]")
-        print("          All these styles can be combined, e.g. '--add-star-type NS_BH,MS,NS_BH__in__MS,noBH'")
-        print("          When this option is used, to read the generated lagrangian data by using petar.LagrangianMultiple in Python3,")
-        print("          the consistent keyword argument 'add_star_type' should be used.")
-        print("          For example, when '--add-star-type BH,MS' is used, the initialization of petar.LagrangianMultiple should be:")
-        print("          lagr = petar.LagrangianMultiple(add_star_type=['BH','MS']) .")
+        print("          - All these styles can be combined, e.g. '--add-star-type NS_BH,MS,NS_BH__in__MS,noBH'.")
+        print("          - The style '[type 1]__in__[type 2]' require the Lagrangian properties of both type 1 and type 2")
+        print("            and thus, these two should be also added seperately in --add-star-type.")
+        print("            For example, to obtain 'MS__in__BH', 'MS' and 'BH' are required, the corresponding --add-star-type is 'NS,BH,MS__in__BH'.")
+        print("          - When this option is used, to read the generated lagrangian data by using petar.LagrangianMultiple in Python3,")
+        print("            the consistent keyword argument 'add_star_type' should be used.")
+        print("            For example, when '--add-star-type BH,MS' is used, the initialization of petar.LagrangianMultiple should be:")
+        print("            lagr = petar.LagrangianMultiple(add_star_type=['BH','MS']) .")
+        print("     --add-mass-range: calculate Lagrangian radii and properties for specific mass ranges of stars.")
+        print("          This argument contain a list of mass ranges, separated by ',' (no space)")
+        print("          For each given mass range, an additional group of data are added in the Lagrangian data file [prefix].lagr.")
+        print("          There are two styles of mass ranges:")
+        print("            (1) [minimum mass]_[maximum mass]: the minimum mass and the maximum mass to select stars.")
+        print("                For example, if '0.08_1' is given, Lagrangian properties are calculated by selecting stars with masses from 0.08 to 1.0.")
+        print("                A new class member 'mass_0.08_1' is added. ")
+        print("                The minimum mass must > 0 to ensure the result is correct.")
+        print("            (2) [mass range 1]__in__[mass range 2]: the mass range 1 and mass range 2 have the format of style (1): [minimum mass]_[maxmimum mass]")
+        print("                This type calculates the Lagrangian properties by using the mass range 1 within the Lagrangian radii of the mass range 2.")
+        print("                The Lagrangian radii of mass range 1 are not calculated. ")
+        print("                For example, if '1_150__in__0.08_1' is given, 'mass_1_150__in__mass_0.08_1' is added, where Lagrangian properties with masses ")
+        print("                between 1 and 150 are calculated within the shell or sphere of Lagrangian radii of stars with masses between 0.08 and 1.0.")
+        print("          - All these styles can be combined, similar to '--add-star-type'.")
+        print("          - To use [mass range 1]__in__[mass range 2], lagrangian data of both mass ranges 1 and 2 should be available first.")
+        print("            and thus, they should be also added to '--add-mass-range'.")
+        print("          - When this option is used, to read the generated lagrangian data by using petar.LagrangianMultiple in Python3,")
+        print("            the consistent keyword argument 'add_mass_range' should be used.")
+        print("          - For example, when '--add-mass-range 0.08_1,1_150,0.08_1__in__1_150' is used, the initialization of petar.LagrangianMultiple should be:")
+        print("            lagr = petar.LagrangianMultiple(add_mass_range=['0.08_1','1_150','0.08_1__in__1_150']) .")
         print("Important note: 1) users should be careful to set the consistent '-i' or -'G' options in order to correctly calculate the Kepler orbital parameters of binaries.")
         print("                2) when data are written in BINARY format, '-s binary' should be used.")
         print("                3) '--add-star-type' only works when the interrupt mode is 'bse' or 'mobse'.")
     try:
         shortargs = 'p:m:G:b:MBAea:rt:i:s:o:cn:h'
-        longargs = ['mass-fraction=','multiple','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','calc-energy','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','snapshot-format=','output-format=','m-ext=','add-star-type=','calc-multi-rc','n-cpu=','help']
+        longargs = ['mass-fraction=','multiple','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','calc-energy','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','snapshot-format=','output-format=','m-ext=','add-star-type=','add-mass-range=','calc-multi-rc','n-cpu=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -164,6 +187,8 @@ if __name__ == '__main__':
                 kwargs['read_m_ext'] = arg
             elif opt in ('--add-star-type'):
                 kwargs['add_star_type'] = [x for x in arg.split(',')]
+            elif opt in ('--add-mass-range'):
+                kwargs['add_mass_range'] = [x for x in arg.split(',')]
             else:
                 assert False, "unhandeld option"
 
