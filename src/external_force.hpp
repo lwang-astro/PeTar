@@ -33,7 +33,7 @@ public:
 
     bool print_flag;
     IOParamsExternalHard(): input_par_store(),
-                            mode  (input_par_store, 0,          "ext-hard-mode", "external hard mode: 0, not used; 1, gas dynamical friction (Ostriker 1999, Rozner et al. 2022)"),
+                            mode  (input_par_store, 0,          "ext-hard-mode", "external hard mode: 0, not used; 1, gas dynamical friction (Ostriker 1999, Rozner et al. 2022); 2, gas dynamical friction only in radial direction"),
                             sound_speed  (input_par_store, 1.0, "ext-sound-speed",  "sound speed in units of PeTar input"),
                             coulomb_log  (input_par_store, 3.1, "ext-coulomb-log",  "coulomb logarithm"),
 #ifdef GALPY
@@ -160,7 +160,7 @@ public:
 
 class ExternalHardForce{
 public:
-    bool is_used; // indicator whether external force is used
+    int mode; 
 #ifdef GALPY
     int galpy_gaspot_index; 
     GalpyManager* galpy_manager;
@@ -175,7 +175,7 @@ public:
     Float sound_speed; 
     Float coulomb_log;
 
-    ExternalHardForce(): is_used(false), 
+    ExternalHardForce(): mode(0),
 #ifdef GALPY
                          galpy_gaspot_index(-1), galpy_manager(NULL), status(NULL), scale_density(1.0),
 #else
@@ -192,7 +192,7 @@ public:
       @param[in] _print_flag: printing flag
      */
     void initial(const IOParamsExternalHard& _input, GalpyManager& _galpy_manager, Status& _status, const bool _print_flag=false) {
-        is_used = bool(_input.mode.value);
+        mode = _input.mode.value;
         galpy_gaspot_index = _input.galpy_gaspot_index.value;
         galpy_manager = &_galpy_manager;
         status = &_status;
@@ -204,7 +204,7 @@ public:
 #else
     //! initial parameters for perturbation
     void initial(const IOParamsExternalHard& _input, const Float _time, const bool _print_flag=false) {
-        is_used = bool(_input.mode.value);
+        mode = _input.mode.value;
         gas_density_init = _input.gas_density.value;
         decay_time  = _input.decay_time.value;
         sound_speed = _input.sound_speed.value;
@@ -233,7 +233,7 @@ public:
     */
     template<class Tp> 
     Float calcAccExternal(Float* _acc, const Tp& _particle){
-        if (!is_used) 
+        if (mode==0) 
             return NUMERIC_FLOAT_MAX;
 
         auto& mass = _particle.mass;
@@ -268,12 +268,24 @@ public:
                           pos[1] + status->pcm.pos[1], 
                           pos[2] + status->pcm.pos[2]};
         Float gas_density = scale_density*galpy_manager->calcSetDensity(galpy_gaspot_index, status->time, pos_g, &pos[0]);
+#else
+        auto& pos_g = _particle.pos;
 #endif       
         Float c1 = -4*PI*G2*mass*gas_density/v3*Ifunc;
 
-        _acc[0] += c1*vel[0];
-        _acc[1] += c1*vel[1];
-        _acc[2] += c1*vel[2];
+        if (mode==1) {
+            // GDF force
+            _acc[0] += c1*vel[0];
+            _acc[1] += c1*vel[1];
+            _acc[2] += c1*vel[2];
+        }
+        else if (mode==2) {
+            // GDF force only in radial direction
+            Float r_g = std::sqrt(pos_g[0]*pos_g[0] + pos_g[1]*pos_g[1] + pos_g[2]*pos_g[2]);
+            _acc[0] += c1*vel[0]*pos_g[0]/r_g;
+            _acc[1] += c1*vel[1]*pos_g[1]/r_g;
+            _acc[2] += c1*vel[2]*pos_g[2]/r_g;
+        }
 
         return NUMERIC_FLOAT_MAX;
     }
@@ -293,7 +305,7 @@ public:
     */
     template<class Tf, class Tp> 
     Float calcAccJerkExternal(Tf& _force, const Tp& _particle){
-        if (!is_used) 
+        if (mode==0) 
             return NUMERIC_FLOAT_MAX;
 
         auto& mass = _particle.mass;
@@ -341,14 +353,28 @@ public:
                           pos[1] + status->pcm.pos[1], 
                           pos[2] + status->pcm.pos[2]};
         Float gas_density = scale_density*galpy_manager->calcSetDensity(galpy_gaspot_index, status->time, pos_g, &pos[0]);
+#else
+        auto& pos_g = _particle.pos;
 #endif       
+        Float r_g;
         Float c1 = -4*PI*G2*mass*gas_density/v3*Ifunc;
 
         auto& acc0 = _force.acc0;
         //Float acc0[3] = {c1*vel[0], c1*vel[1], c1*vel[2]};
-        acc0[0] += c1*vel[0];
-        acc0[1] += c1*vel[1];
-        acc0[2] += c1*vel[2];
+
+        if (mode==1) {
+            // GDF force
+            acc0[0] += c1*vel[0];
+            acc0[1] += c1*vel[1];
+            acc0[2] += c1*vel[2];
+        }
+        else{
+            // GDF force only in radial direction
+            r_g = std::sqrt(pos_g[0]*pos_g[0] + pos_g[1]*pos_g[1] + pos_g[2]*pos_g[2]);
+            acc0[0] += c1*vel[0]*pos_g[0]/r_g;
+            acc0[1] += c1*vel[1]*pos_g[1]/r_g;
+            acc0[2] += c1*vel[2]*pos_g[2]/r_g;
+        }    
 
         Float vdota = vel[0]*acc0[0] + vel[1]*acc0[1] + vel[2]*acc0[2];
         // d(1/v^3)/dt = -3/v^5 v dot a
@@ -360,9 +386,18 @@ public:
         //_force.acc0[1] += acc0[1];
         //_force.acc0[2] += acc0[2];
 
-        _force.acc1[0] += (c2+c3)*vel[0] + c1*acc0[0];
-        _force.acc1[1] += (c2+c3)*vel[1] + c1*acc0[1];
-        _force.acc1[2] += (c2+c3)*vel[2] + c1*acc0[2];
+        if (mode==1) {
+            // GDF force derivative
+            _force.acc1[0] += (c2+c3)*vel[0] + c1*acc0[0];
+            _force.acc1[1] += (c2+c3)*vel[1] + c1*acc0[1];
+            _force.acc1[2] += (c2+c3)*vel[2] + c1*acc0[2];
+        }
+        else if (mode==2) {
+            // GDF force derivative only in radial direction, assuming pos_g is constant. For time-dependent pos_g, additional term of time derivative of pos_g should be added.
+            _force.acc1[0] += ((c2+c3)*vel[0] + c1*acc0[0])*pos_g[0]/r_g;
+            _force.acc1[1] += ((c2+c3)*vel[1] + c1*acc0[1])*pos_g[1]/r_g;
+            _force.acc1[2] += ((c2+c3)*vel[2] + c1*acc0[2])*pos_g[2]/r_g;
+        }
 
         return NUMERIC_FLOAT_MAX;
     }
@@ -371,6 +406,7 @@ public:
     /*! \return true: all correct
      */
     bool checkParams() {
+        ASSERT(mode>=0 && mode<=2);
         return true;
     }    
 

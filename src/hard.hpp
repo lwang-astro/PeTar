@@ -2072,7 +2072,7 @@ public:
 
 #ifdef EXTERNAL_HARD
             auto& ext_force = manager->h4_manager.interaction.ext_force;
-            if (ext_force.is_used) {
+            if (ext_force.mode>0) {
                 H4::ForceH4 fi;
                 PS::F64 ti = 0;
                 assert(_dt>=0);

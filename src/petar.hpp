@@ -3675,7 +3675,7 @@ public:
 
 #ifdef EXTERNAL_HARD
                 /// force from external hard
-                if (hard_manager.h4_manager.interaction.ext_force.is_used) {
+                if (hard_manager.h4_manager.interaction.ext_force.mode>0) {
                     H4::ForceH4 f;
                     hard_manager.h4_manager.interaction.ext_force.calcAccJerkExternal(f, p);
                     p.acc[0] += f.acc0[0];
