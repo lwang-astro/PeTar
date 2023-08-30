@@ -432,7 +432,7 @@ class Lagrangian(DictNpArrayMix):
             ng_sig = (vrotd<0.0)
             vrot[ng_sig] = -vrot[ng_sig]
             
-            n_offset = np.append(np.zeros(1),nlagr).astype(int)
+            n_offset = np.append(np.zeros(1), rindex+1).astype(int)
             vlst = [vx, vy, vz, vr, vt[0], vt[1], vt[2], vrot]
             vave = [None]*len(vlst)
             for k in range(len(vlst)):
