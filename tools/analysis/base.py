@@ -272,6 +272,38 @@ class DictNpArrayMix:
                 new_dat.__dict__[key] = self.__dict__[key]
         return new_dat
 
+    def repeat(self, repeats):
+        """ repeat all class member elements by given repeat times, similar to numpy.repeat
+        Return: new class instance with repeated elements
+
+        Parameters:
+        -----------
+        repeats: int or numpy.ndarray(int)
+           - If an integer is given all elements are repeated with given times
+           - If an array is given, the array element is the repeating times of each element, respectively.
+             The array size must be the same as the class size.
+        """
+        self_type = type(self)
+        new_dat = self_type(**self.initargs)
+        size_checker = None
+        for key, item in self.__dict__.items():
+            if (key=='host'): continue
+            if (type(item) == np.ndarray):
+                new_dat.__dict__[key] = np.repeat(self.__dict__[key], repeats)
+            elif (issubclass(type(item), DictNpArrayMix)):
+                new_dat.__dict__[key] = np.repeat(self.__dict__[key], repeats)
+                    new_dat.__dict__[key].setHost(new_dat)
+                if (size_checker == None): size_checker = new_dat.size
+                elif (size_checker != new_dat.size):
+                    raise ValueError('New class member size ',new_dat.size,' is not consistent with the first new member size ',size_checker)
+            else:
+                new_dat.__dict__[key] = self.__dict__[key]
+        new_dat.size = size_checker
+
+        return new_dat
+
+
+
     def operate(self, other, operator):
         """ apply operator to self and the other
         Parameters
