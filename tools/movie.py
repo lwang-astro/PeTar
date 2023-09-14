@@ -28,6 +28,8 @@ class PlotXY:
         self.plot_mode = 'x-y'
         self.boxsize = 2
         self.cm_mode = 'core'
+        self.lum_min = 1e-5
+        self.lum_max = 1e6
         self.x_min = -2
         self.x_max = 2
         self.y_min = -2
@@ -39,6 +41,7 @@ class PlotXY:
         self.alpha_amplifier = 2.5
         self.marker_scale = 1.0
         self.mass_power = 1.0
+        self.size_mode = 'mass'
         self.ptcls=[]
 
     def init(self, axe, **kwargs):
@@ -106,10 +109,10 @@ class PlotXY:
         self.xy_labels=labels
 
         for i in range(self.nlayer_cross):
-            pt =axe.scatter([],[],marker='+',alpha=alphascale[i],edgecolors='none')
+            pt =axe.scatter([],[],marker='+',alpha=alphascale[i])
             self.ptcls.append(pt)
         for i in range(self.nlayer_point):
-            pt =axe.scatter([],[],alpha=alphascale[i],edgecolors='none')
+            pt =axe.scatter([],[],alpha=alphascale[i],linewidth=0)
             self.ptcls.append(pt)
         return self.ptcls
 
@@ -417,10 +420,13 @@ class PlotXY:
         ycm_text.set_text(cm_text[1]+('%f' % xycm[1]))
 
         mass = data.data.mass
+        lum = data.lum
         colors=data.getColor()
         for i in range(self.nlayer):
-            sizes = (mass**self.mass_power)*self.sizescale[i]*self.framescale*self.marker_scale
-            #sizes = (np.log10(luminosity)-np.log10(lum_min)+1)
+            if (self.size_mode == 'loglum'):
+                sizes = (np.log10(lum)-np.log10(self.lum_min))
+            else:
+                sizes = (mass**self.mass_power)*self.sizescale[i]*self.framescale*self.marker_scale
             #sizes = luminosity
             #print(self.plot_mode,xy[0].shape,xy[1].shape)
             self.ptcls[i].set_offsets(np.array([xy[0],xy[1]]).transpose())
@@ -589,8 +595,8 @@ class Data:
         self.color_mode = 'white'
         self.galev_filter = ['Johnson', 'SDSS', 'HST', 'CSST', 'Gaia']
         self.galev_mode = 'abs_mag'
-        self.galev_color = ['HST.F435W','HST.F555W','HST.F814W']
-        self.galev_mag_range = np.array([30,-3,30,-3,30,-3])
+        self.galev_color = ['HST.F555W','HST.F814W']
+        self.galev_mag_range = np.array([0,2])
 
         for key in self.__dict__.keys():
             if (key in kwargs.keys()): self.__dict__[key] = kwargs[key]
@@ -715,8 +721,8 @@ class Data:
                 for key in self.galev_color:
                     mag_list.append(np.concatenate((single.galev[key], binary.p1.galev[key], binary.p2.galev[key])))
                     mag_cm_list.append(np.concatenate((single.galev[key], binary.galev[key])))
-                data['galev_mag'] = np.transpose(mag_list)
-                data['galev_mag_cm'] = np.transpose(mag_cm_list)
+                data['galev_mag'] = np.array(mag_list)
+                data['galev_mag_cm'] = np.array(mag_cm_list)
         else:
             particles=petar.Particle(interrupt_mode=self.interrupt_mode, external_mode=self.external_mode)
             if (self.snapshot_format=='ascii'): 
@@ -754,7 +760,7 @@ class Data:
                 mag_list = []
                 for key in self.galev_color:
                     mag_list.append(np.concatenate((single.galev[key], binary.p1.galev[key], binary.p2.galev[key])))
-                data['galev_mag'] = np.transpose(mag_list)
+                data['galev_mag'] = np.array(mag_list)
 
             if (self.generate_binary>0):
                 kdtree,single,binary = petar.findPair(particles, self.G, self.semi_max*2.0, True)
@@ -777,7 +783,7 @@ class Data:
                     mag_cm_list = []
                     for key in self.galev_color:
                         mag_cm_list.append(np.concatenate((single.galev[key], bmag[key])))
-                    data['galev_mag_cm'] = np.transpose(mag_cm_list)
+                    data['galev_mag_cm'] = np.array(mag_cm_list)
             
 
     def getColor(self):
@@ -795,13 +801,15 @@ class Data:
         elif (self.color_mode=='etot'):
             colors=cm.hot((self.etot - self.etot_min)/(self.etot_max-self.etot_min))
         elif (self.color_mode=='galev'):
-            mag_min = self.galev_mag_range[::2]
-            mag_max = self.galev_mag_range[1::2]
+            mag_min = self.galev_mag_range[0]
+            mag_max = self.galev_mag_range[1]
 
-            colors= (self.galev_mag - mag_min[None,:])/(mag_max-mag_min)[None,:]
+            #colors= (self.galev_mag[0] - mag_min[None,:])/(mag_max-mag_min)[None,:]
+            dmag = (self.galev_mag[0] - self.galev_mag[1] - mag_min)/(mag_max-mag_min)
+            dmag[dmag<0] = 0
+            dmag[dmag>1] = 1
+            colors=cm.rainbow(dmag)
             #print(colors.max(axis=0),colors.min(axis=0))
-            colors[colors<0] = 0
-            colors[colors>1] = 1
         return colors
 
 
@@ -1051,7 +1059,7 @@ if __name__ == '__main__':
         print("              ekin: kinetic energy")
         print("              pot: potential")
         print("              etot: total energy")
-        print("              galev: use galev photometry for RGB merging, need to read [prefix].galev.mag files; also need to properly set galev related options")
+        print("              galev: use galev photometry color, need to read [prefix].galev.mag files; also need to properly set galev related options")
         print("              white: pure white color")
         print("  --compare-in-column: in comparison mode, models are compared in columns instead of rows.")
         print("  --generate-binary [I]: 0: no binary, 1: detect binary by using KDtree (slow), 2: read single and binary data generated by petar.data.process: ", data.generate_binary)
@@ -1107,10 +1115,13 @@ if __name__ == '__main__':
         print("  --layer-alpha   [F]: transparency factor of layers in the x-y plot: 2.5")
         print("  --marker-scale  [F]: amplify the size of markers in x-y plot: 1.0")
         print("  --mass-power    [F]: the power index of mass to obtain sizes of markers: 1.0")
+        print("  --size-mode    [S]: point size mode: ", pxy.size_mode)
+        print("                      mass: scale with mass with --mass-power")
+        print("                      loglum: scale with loglum")
         print("  --galev-filter [S]: filter list, seperate by comma:", ','.join(data.galev_filter))
         print("  --galev-mode   [S]: galev mode of values with choices: abs_mag, app_mag, abs_flux, abs_flux", data.galev_mode)
-        print("  --galev-color  [S]: three filters for mapping R,G,B colors:", ','.join(data.galev_color))
-        print("  --galev-mag-range[S]: magnitude range (min,max) for R, G, B colors, respectively; separated by comma, need 6 values:", ','.join([str(x) for x in data.galev_mag_range]))
+        print("  --galev-color  [S]: two filters for mapping rainbow colors:", ','.join(data.galev_color))
+        print("  --galev-mag-range[S]: magnitude range (min,max) to normalize colores:", ','.join([str(x) for x in data.galev_mag_range]))
         print("  --suppress-images: do not plot snapshot images (png files) and use matplotlib.animation instead of imageio, this cannot use multi-processing, much slower")
         print("  --format        [S]: video format, require imageio installed, for some formats (e.g. avi, mp4) may require ffmpeg and imageio-ffmpeg installed: ", plot_format)
         print("  --dpi           [F]: dpi of image: ", dpi)
@@ -1128,7 +1139,7 @@ if __name__ == '__main__':
                     'skiprows=','generate-binary=',
                     'plot-ncols=','plot-xsize=','plot-ysize=',
                     'suppress-images','format=','cm-mode=','core-file=',
-                    'n-layer-cross=','n-layer-point=','layer-alpha=','marker-scale=','mass-power=',
+                    'n-layer-cross=','n-layer-point=','layer-alpha=','marker-scale=','mass-power=','size-mode=',
                     'galev-filter=','galev-mode=','galev-color=','galev-mag-range=',
                     'cm-boxsize=','compare-in-column','dpi=']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
@@ -1282,6 +1293,8 @@ if __name__ == '__main__':
                 kwargs['marker_scale'] = float(arg)
             elif opt in ('--mass-power'):
                 kwargs['mass_power'] = float(arg)
+            elif opt in ('--size-mode'):
+                kwargs['size_mode'] = arg
             elif opt in ('--galev-filter'):
                 kwargs['galev_filter'] =  [x for x in arg.split(',')]
             elif opt in ('--galev-color'):
