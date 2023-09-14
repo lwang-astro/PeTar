@@ -590,7 +590,7 @@ class Data:
         self.galev_filter = ['Johnson', 'SDSS', 'HST', 'CSST', 'Gaia']
         self.galev_mode = 'abs_mag'
         self.galev_color = ['HST.F435W','HST.F555W','HST.F814W']
-        self.galev_mag_range = [20,-2,20,-2,20,-2]
+        self.galev_mag_range = np.array([30,-3,30,-3,30,-3])
 
         for key in self.__dict__.keys():
             if (key in kwargs.keys()): self.__dict__[key] = kwargs[key]
@@ -630,7 +630,7 @@ class Data:
                 else:
                     raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % self.snapshot_format)
                 if (self.color_mode == 'galev'):
-                    mag = galev.GalevMag(filter = self.galev_filter, mode = self.galev_mode)
+                    mag = petar.GalevMag(filter = self.galev_filter, mode = self.galev_mode)
                     fpath = file_path+'.single.galev.mag'
                     if os.path.exists(fpath):
                         if (self.snapshot_format=='ascii'):
@@ -656,7 +656,7 @@ class Data:
                 else:
                     raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % self.snapshot_format)
                 if (self.color_mode == 'galev'):
-                    mag = galev.GalevMag(filter = self.galev_filter, mode = self.galev_mode)
+                    mag = petar.GalevMag(filter = self.galev_filter, mode = self.galev_mode)
                     fpath = file_path+'.binary.galev.mag'
                     if os.path.exists(fpath):
                         if (self.snapshot_format=='ascii'):
@@ -715,70 +715,69 @@ class Data:
                 for key in self.galev_color:
                     mag_list.append(np.concatenate((single.galev[key], binary.p1.galev[key], binary.p2.galev[key])))
                     mag_cm_list.append(np.concatenate((single.galev[key], binary.galev[key])))
-                    
                 data['galev_mag'] = np.transpose(mag_list)
                 data['galev_mag_cm'] = np.transpose(mag_cm_list)
-            else:
-                particles=petar.Particle(interrupt_mode=self.interrupt_mode, external_mode=self.external_mode)
-                if (self.snapshot_format=='ascii'): 
-                    particles.loadtxt(file_path, skiprows=1)
-                else: 
-                    particles.fromfile(file_path, offset=header_offset)
-                if (self.color_mode == 'galev'):
-                    mag = galev.GalevMag(filter = self.galev_filter, mode = self.galev_mode)
-                    fpath = file_path+'.galev.mag'
-                    if os.path.exists(fpath):
-                        if (self.snapshot_format=='ascii'):
-                            mag.loadtxt(fpath)
-                        elif (self.snapshot_format=='binary'):
-                            mag.fromfile(fpath)
-                        elif (self.snapshot_format=='npy'):
-                            mag.load(fpath)
-                        else:
-                            raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % self.snapshot_format)
-                    particles.addNewMember('galev',mag)
-                data['data'] = particles
-                if (self.get_skycoord):
-                    data['sky'] = particles.toSkyCoord(pos_offset=header.pos_offset, vel_offset=header.vel_offset)
-                    if (self.cm_mode == 'core'):
-                        data['skycm'] = data['core'].toSkyCoord()[0]
+        else:
+            particles=petar.Particle(interrupt_mode=self.interrupt_mode, external_mode=self.external_mode)
+            if (self.snapshot_format=='ascii'): 
+                particles.loadtxt(file_path, skiprows=1)
+            else: 
+                particles.fromfile(file_path, offset=header_offset)
+            if (self.color_mode == 'galev'):
+                mag = petar.GalevMag(filter = self.galev_filter, mode = self.galev_mode)
+                fpath = file_path+'.galev.mag'
+                if os.path.exists(fpath):
+                    if (self.snapshot_format=='ascii'):
+                        mag.loadtxt(fpath)
+                    elif (self.snapshot_format=='binary'):
+                        mag.fromfile(fpath)
+                    elif (self.snapshot_format=='npy'):
+                        mag.load(fpath)
                     else:
-                        data['skycm'] = header.toSkyCoord()
-                
+                        raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % self.snapshot_format)
+                particles.addNewMember('galev',mag)
+            data['data'] = particles
+            if (self.get_skycoord):
+                data['sky'] = particles.toSkyCoord(pos_offset=header.pos_offset, vel_offset=header.vel_offset)
+                if (self.cm_mode == 'core'):
+                    data['skycm'] = data['core'].toSkyCoord()[0]
+                else:
+                    data['skycm'] = header.toSkyCoord()
+            
+            if ('bse' in self.interrupt_mode):
+                data['lum'] = particles.star.lum
+                data['rad'] = particles.star.rad
+                data['type']= particles.star.type
+                data['temp']= 5778*(data['lum']/(data['rad']*data['rad']))**0.25
+
+            if (self.color_mode == 'galev'):
+                mag_list = []
+                for key in self.galev_color:
+                    mag_list.append(np.concatenate((single.galev[key], binary.p1.galev[key], binary.p2.galev[key])))
+                data['galev_mag'] = np.transpose(mag_list)
+
+            if (self.generate_binary>0):
+                kdtree,single,binary = petar.findPair(particles, self.G, self.semi_max*2.0, True)
+                data['binary'] = binary
                 if ('bse' in self.interrupt_mode):
-                    data['lum'] = particles.star.lum
-                    data['rad'] = particles.star.rad
-                    data['type']= particles.star.type
-                    data['temp']= 5778*(data['lum']/(data['rad']*data['rad']))**0.25
-
+                    data['lum_cm'] = np.append(single.star.lum, binary.p1.star.lum+binary.p2.star.lum)
+                    temp_single = 5778*(single.star.lum/(single.star.rad*single.star.rad))**0.25
+                    temp_b1 = 5778*(binary.p1.star.lum/(binary.p1.star.rad*binary.p1.star.rad))**0.25
+                    temp_b2 = 5778*(binary.p2.star.lum/(binary.p2.star.rad*binary.p2.star.rad))**0.25
+                    temp_binary = (temp_b1*binary.p1.star.lum+temp_b2*binary.p2.star.lum)/(binary.p1.star.lum+binary.p2.star.lum)
+                    data['temp_cm']= np.append(temp_single,temp_binary)
+                    data['type_cm']= np.append(single.star.type,np.max([binary.p1.star.type,binary.p2.star.type],axis=0))
+                    
                 if (self.color_mode == 'galev'):
-                    mag_list = []
+                    binary.p1.galev.convertToFlux()
+                    binary.p2.galev.convertToFlux()
+                    bmag = binary.p1.galev + binary.p2.galev
+                    binary.p1.galev.convertToMag()
+                    binary.p2.galev.convertToMag()
+                    mag_cm_list = []
                     for key in self.galev_color:
-                        mag_list.append(np.concatenate((single.galev[key], binary.p1.galev[key], binary.p2.galev[key])))
-                    data['galev_mag'] = np.transpose(mag_list)
-
-                if (self.generate_binary>0):
-                    kdtree,single,binary = petar.findPair(particles, self.G, self.semi_max*2.0, True)
-                    data['binary'] = binary
-                    if ('bse' in self.interrupt_mode):
-                        data['lum_cm'] = np.append(single.star.lum, binary.p1.star.lum+binary.p2.star.lum)
-                        temp_single = 5778*(single.star.lum/(single.star.rad*single.star.rad))**0.25
-                        temp_b1 = 5778*(binary.p1.star.lum/(binary.p1.star.rad*binary.p1.star.rad))**0.25
-                        temp_b2 = 5778*(binary.p2.star.lum/(binary.p2.star.rad*binary.p2.star.rad))**0.25
-                        temp_binary = (temp_b1*binary.p1.star.lum+temp_b2*binary.p2.star.lum)/(binary.p1.star.lum+binary.p2.star.lum)
-                        data['temp_cm']= np.append(temp_single,temp_binary)
-                        data['type_cm']= np.append(single.star.type,np.max([binary.p1.star.type,binary.p2.star.type],axis=0))
-                        
-                    if (self.color_mode == 'galev'):
-                        binary.p1.galev.convertToFlux()
-                        binary.p2.galev.convertToFlux()
-                        bmag = binary.p1.galev + binary.p2.galev
-                        binary.p1.galev.convertToMag()
-                        binary.p2.galev.convertToMag()
-                        mag_cm_list = []
-                        for key in self.galev_color:
-                            mag_cm_list.append(np.concatenate((single.galev[key], bmag[key])))
-                        data['galev_mag_cm'] = np.transpose(mag_cm_list)
+                        mag_cm_list.append(np.concatenate((single.galev[key], bmag[key])))
+                    data['galev_mag_cm'] = np.transpose(mag_cm_list)
             
 
     def getColor(self):
@@ -798,7 +797,11 @@ class Data:
         elif (self.color_mode=='galev'):
             mag_min = self.galev_mag_range[::2]
             mag_max = self.galev_mag_range[1::2]
-            colors= (data['galev_mag'] - mag_min[None,:])/(mag_max-mag_min)[None,:]
+
+            colors= (self.galev_mag - mag_min[None,:])/(mag_max-mag_min)[None,:]
+            #print(colors.max(axis=0),colors.min(axis=0))
+            colors[colors<0] = 0
+            colors[colors>1] = 1
         return colors
 
 
@@ -1104,10 +1107,10 @@ if __name__ == '__main__':
         print("  --layer-alpha   [F]: transparency factor of layers in the x-y plot: 2.5")
         print("  --marker-scale  [F]: amplify the size of markers in x-y plot: 1.0")
         print("  --mass-power    [F]: the power index of mass to obtain sizes of markers: 1.0")
-        print("  --galev-filter [S]: filter list, seperate by comma: ", *data.galev_filter)
+        print("  --galev-filter [S]: filter list, seperate by comma:", ','.join(data.galev_filter))
         print("  --galev-mode   [S]: galev mode of values with choices: abs_mag, app_mag, abs_flux, abs_flux", data.galev_mode)
-        print("  --galev-color  [S]: three filters for mapping R,G,B colors: ", *data.galev_color)
-        print("  --galev-mag-range[S]: magnitude range (min,max) for R, G, B colors, respectively; separated by comma, need 6 values: ", *data.galev_mag_range)
+        print("  --galev-color  [S]: three filters for mapping R,G,B colors:", ','.join(data.galev_color))
+        print("  --galev-mag-range[S]: magnitude range (min,max) for R, G, B colors, respectively; separated by comma, need 6 values:", ','.join([str(x) for x in data.galev_mag_range]))
         print("  --suppress-images: do not plot snapshot images (png files) and use matplotlib.animation instead of imageio, this cannot use multi-processing, much slower")
         print("  --format        [S]: video format, require imageio installed, for some formats (e.g. avi, mp4) may require ffmpeg and imageio-ffmpeg installed: ", plot_format)
         print("  --dpi           [F]: dpi of image: ", dpi)
@@ -1126,7 +1129,7 @@ if __name__ == '__main__':
                     'plot-ncols=','plot-xsize=','plot-ysize=',
                     'suppress-images','format=','cm-mode=','core-file=',
                     'n-layer-cross=','n-layer-point=','layer-alpha=','marker-scale=','mass-power=',
-                    'galev-fitler=','galev-color=','galev-mag-range',
+                    'galev-filter=','galev-mode=','galev-color=','galev-mag-range=',
                     'cm-boxsize=','compare-in-column','dpi=']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
