@@ -210,7 +210,11 @@ class DictNpArrayMix:
             The same type of arguments for numpy.ndarray.__getitem__
         """
         if (type(k)==str):
-            return self.__dict__[k]
+            sub_keys = k.split('.',maxsplit=1)
+            if (len(sub_keys) == 2):
+                return self.__dict__[sub_keys[0]][sub_key[1]]
+            else:
+                return self.__dict__[k]
         else:
             cls_type = type(self)
             new_dat = cls_type(**self.initargs)

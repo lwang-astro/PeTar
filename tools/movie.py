@@ -587,6 +587,10 @@ class Data:
         self.etot_max = 100
         self.get_skycoord=False
         self.color_mode = 'white'
+        self.galev_filter = ['Johnson', 'SDSS', 'HST', 'CSST', 'Gaia']
+        self.galev_mode = 'abs_mag'
+        self.galev_color = ['HST.F435W','HST.F555W','HST.F814W']
+        self.galev_mag_range = [20,-2,20,-2,20,-2]
 
         for key in self.__dict__.keys():
             if (key in kwargs.keys()): self.__dict__[key] = kwargs[key]
@@ -611,67 +615,128 @@ class Data:
             tsel=(core.time==data['t'])
             data['core']=core[tsel]
 
-        if (self.generate_binary>0):
-            if (self.generate_binary==2):
-                single = petar.Particle(interrupt_mode=self.interrupt_mode, external_mode=self.external_mode)
-                p1 = petar.Particle(interrupt_mode=self.interrupt_mode, external_mode=self.external_mode)
-                p2 = petar.Particle(interrupt_mode=self.interrupt_mode, external_mode=self.external_mode)
-                binary = petar.Binary(p1,p2, G=self.G)
-                if os.path.getsize(file_path+'.single')>0:
-                    if (self.snapshot_format=='ascii'):
-                        single.loadtxt(file_path+'.single')
-                    elif (self.snapshot_format=='binary'):
-                        single.fromfile(file_path+'.single')
-                    elif (self.snapshot_format=='npy'):
-                        single.load(file_path+'.single.npy')
+        if (self.generate_binary == 2):
+            single = petar.Particle(interrupt_mode=self.interrupt_mode, external_mode=self.external_mode)
+            p1 = petar.Particle(interrupt_mode=self.interrupt_mode, external_mode=self.external_mode)
+            p2 = petar.Particle(interrupt_mode=self.interrupt_mode, external_mode=self.external_mode)
+            binary = petar.Binary(p1,p2, G=self.G)
+            if os.path.getsize(file_path+'.single')>0:
+                if (self.snapshot_format=='ascii'):
+                    single.loadtxt(file_path+'.single')
+                elif (self.snapshot_format=='binary'):
+                    single.fromfile(file_path+'.single')
+                elif (self.snapshot_format=='npy'):
+                    single.load(file_path+'.single.npy')
+                else:
+                    raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % self.snapshot_format)
+                if (self.color_mode == 'galev'):
+                    mag = galev.GalevMag(filter = self.galev_filter, mode = self.galev_mode)
+                    fpath = file_path+'.single.galev.mag'
+                    if os.path.exists(fpath):
+                        if (self.snapshot_format=='ascii'):
+                            mag.loadtxt(fpath)
+                        elif (self.snapshot_format=='binary'):
+                            mag.fromfile(fpath)
+                        elif (self.snapshot_format=='npy'):
+                            mag.load(fpath)
+                        else:
+                            raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % self.snapshot_format)      
+                        single.addNewMember('galev',mag)
                     else:
-                        raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % self.snapshot_format)
-                single.calcEkin()
-                single.calcEtot()
-                if os.path.getsize(file_path+'.binary')>0:
-                    if (self.snapshot_format=='ascii'):
-                        binary.loadtxt(file_path+'.binary')
-                    elif (self.snapshot_format=='binary'):
-                        binary.fromfile(file_path+'.binary')
-                    elif (self.snapshot_format=='npy'):
-                        binary.load(file_path+'.binary.npy')
+                        raise ValueError('Galev data %s is not found.' % fpath)
+            single.calcEkin()
+            single.calcEtot()
+            if os.path.getsize(file_path+'.binary')>0:
+                if (self.snapshot_format=='ascii'):
+                    binary.loadtxt(file_path+'.binary')
+                elif (self.snapshot_format=='binary'):
+                    binary.fromfile(file_path+'.binary')
+                elif (self.snapshot_format=='npy'):
+                    binary.load(file_path+'.binary.npy')
+                else:
+                    raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % self.snapshot_format)
+                if (self.color_mode == 'galev'):
+                    mag = galev.GalevMag(filter = self.galev_filter, mode = self.galev_mode)
+                    fpath = file_path+'.binary.galev.mag'
+                    if os.path.exists(fpath):
+                        if (self.snapshot_format=='ascii'):
+                            mag.loadtxt(fpath)
+                        elif (self.snapshot_format=='binary'):
+                            mag.fromfile(fpath)
+                        elif (self.snapshot_format=='npy'):
+                            mag.load(fpath)
+                        else:
+                            raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % self.snapshot_format)
+                        mag1 = mag[:binary.size]
+                        mag2 = mag[binary.size:]
+                        binary.p1.addNewMember('galev',mag1)
+                        binary.p2.addNewMember('galev',mag2)
+                        # get binary flux
+                        mag.convertToFlux()
+                        bmag = mag[:binary.size] + mag[binary.size:]
+                        bmag.convertToMag()
+                        binary.addNewMember('galev',bmag)
                     else:
-                        raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % self.snapshot_format)
-                binary.calcEkin(True)
-                binary.calcPot()
-                binary.calcEtot(True)
+                        raise ValueError('Galev data %s is not found.' % fpath)
+            binary.calcEkin(True)
+            binary.calcPot()
+            binary.calcEtot(True)
 
-                single_sim = petar.SimpleParticle(single)
-                p1_sim = petar.SimpleParticle(binary.p1)
-                p2_sim = petar.SimpleParticle(binary.p2)
-                all_sim = petar.join(single_sim, p1_sim, p2_sim)
-                data['data'] = all_sim
-                data['ekin'] = np.concatenate((single.ekin, binary.p1.ekin, binary.p2.ekin))
-                data['pot'] = np.concatenate((single.pot, binary.p1.pot, binary.p2.pot))
-                data['etot'] = np.concatenate((single.etot, binary.p1.etot, binary.p2.etot))
+            single_sim = petar.SimpleParticle(single)
+            p1_sim = petar.SimpleParticle(binary.p1)
+            p2_sim = petar.SimpleParticle(binary.p2)
+            all_sim = petar.join(single_sim, p1_sim, p2_sim)
+            data['data'] = all_sim
+            data['ekin'] = np.concatenate((single.ekin, binary.p1.ekin, binary.p2.ekin))
+            data['pot'] = np.concatenate((single.pot, binary.p1.pot, binary.p2.pot))
+            data['etot'] = np.concatenate((single.etot, binary.p1.etot, binary.p2.etot))
 
-                if (self.get_skycoord):
-                    data['sky'] = all_sim.toSkyCoord(pos_offset=data['core'].pos[0], vel_offset=data['core'].vel[0])
-                    data['skycm'] = data['core'].toSkyCoord()[0]
-                    #print(data['core'].pos,data['core'].vel,data['skycm'].icrs)
+            if (self.get_skycoord):
+                data['sky'] = all_sim.toSkyCoord(pos_offset=data['core'].pos[0], vel_offset=data['core'].vel[0])
+                data['skycm'] = data['core'].toSkyCoord()[0]
+                #print(data['core'].pos,data['core'].vel,data['skycm'].icrs)
 
-                data['binary'] = binary
-                if ('bse' in self.interrupt_mode):
-                    data['lum'] = np.concatenate((single.star.lum, binary.p1.star.lum, binary.p2.star.lum))
-                    data['rad'] = np.concatenate((single.star.rad, binary.p1.star.rad, binary.p2.star.rad))
-                    data['type']= np.concatenate((single.star.type,binary.p1.star.type,binary.p2.star.type))
-                    temp_single = 5778*(single.star.lum/(single.star.rad*single.star.rad))**0.25
-                    temp_b1 = 5778*(binary.p1.star.lum/(binary.p1.star.rad*binary.p1.star.rad))**0.25
-                    temp_b2 = 5778*(binary.p2.star.lum/(binary.p2.star.rad*binary.p2.star.rad))**0.25
-                    temp_binary = (temp_b1*binary.p1.star.lum+temp_b2*binary.p2.star.lum)/(binary.p1.star.lum+binary.p2.star.lum)
-                    data['temp']= np.concatenate((temp_single, temp_b1, temp_b2))
-                    data['lum_cm'] = np.append(single.star.lum, binary.p1.star.lum+binary.p2.star.lum)
-                    data['temp_cm']= np.append(temp_single,temp_binary)
-                    data['type_cm']= np.append(single.star.type,np.max([binary.p1.star.type,binary.p2.star.type],axis=0))
+            data['binary'] = binary
+            if ('bse' in self.interrupt_mode):
+                data['lum'] = np.concatenate((single.star.lum, binary.p1.star.lum, binary.p2.star.lum))
+                data['rad'] = np.concatenate((single.star.rad, binary.p1.star.rad, binary.p2.star.rad))
+                data['type']= np.concatenate((single.star.type,binary.p1.star.type,binary.p2.star.type))
+                temp_single = 5778*(single.star.lum/(single.star.rad*single.star.rad))**0.25
+                temp_b1 = 5778*(binary.p1.star.lum/(binary.p1.star.rad*binary.p1.star.rad))**0.25
+                temp_b2 = 5778*(binary.p2.star.lum/(binary.p2.star.rad*binary.p2.star.rad))**0.25
+                temp_binary = (temp_b1*binary.p1.star.lum+temp_b2*binary.p2.star.lum)/(binary.p1.star.lum+binary.p2.star.lum)
+                data['temp']= np.concatenate((temp_single, temp_b1, temp_b2))
+                data['lum_cm'] = np.append(single.star.lum, binary.p1.star.lum+binary.p2.star.lum)
+                data['temp_cm']= np.append(temp_single,temp_binary)
+                data['type_cm']= np.append(single.star.type,np.max([binary.p1.star.type,binary.p2.star.type],axis=0))
+            if (self.color_mode == 'galev'):
+                mag_list = []
+                mag_cm_list = []
+                for key in self.galev_color:
+                    mag_list.append(np.concatenate((single.galev[key], binary.p1.galev[key], binary.p2.galev[key])))
+                    mag_cm_list.append(np.concatenate((single.galev[key], binary.galev[key])))
+                    
+                data['galev_mag'] = np.transpose(mag_list)
+                data['galev_mag_cm'] = np.transpose(mag_cm_list)
             else:
                 particles=petar.Particle(interrupt_mode=self.interrupt_mode, external_mode=self.external_mode)
-                if (self.snapshot_format=='ascii'): particles.loadtxt(file_path, skiprows=1)
-                else: particles.fromfile(file_path, offset=header_offset)
+                if (self.snapshot_format=='ascii'): 
+                    particles.loadtxt(file_path, skiprows=1)
+                else: 
+                    particles.fromfile(file_path, offset=header_offset)
+                if (self.color_mode == 'galev'):
+                    mag = galev.GalevMag(filter = self.galev_filter, mode = self.galev_mode)
+                    fpath = file_path+'.galev.mag'
+                    if os.path.exists(fpath):
+                        if (self.snapshot_format=='ascii'):
+                            mag.loadtxt(fpath)
+                        elif (self.snapshot_format=='binary'):
+                            mag.fromfile(fpath)
+                        elif (self.snapshot_format=='npy'):
+                            mag.load(fpath)
+                        else:
+                            raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % self.snapshot_format)
+                    particles.addNewMember('galev',mag)
                 data['data'] = particles
                 if (self.get_skycoord):
                     data['sky'] = particles.toSkyCoord(pos_offset=header.pos_offset, vel_offset=header.vel_offset)
@@ -679,42 +744,42 @@ class Data:
                         data['skycm'] = data['core'].toSkyCoord()[0]
                     else:
                         data['skycm'] = header.toSkyCoord()
-                        
-                kdtree,single,binary = petar.findPair(particles, self.G, self.semi_max*2.0, True)
-                data['binary'] = binary
+                
                 if ('bse' in self.interrupt_mode):
                     data['lum'] = particles.star.lum
                     data['rad'] = particles.star.rad
                     data['type']= particles.star.type
-                    data['lum_cm'] = np.append(single.star.lum, binary.p1.star.lum+binary.p2.star.lum)
                     data['temp']= 5778*(data['lum']/(data['rad']*data['rad']))**0.25
-                    temp_single = 5778*(single.star.lum/(single.star.rad*single.star.rad))**0.25
-                    temp_b1 = 5778*(binary.p1.star.lum/(binary.p1.star.rad*binary.p1.star.rad))**0.25
-                    temp_b2 = 5778*(binary.p2.star.lum/(binary.p2.star.rad*binary.p2.star.rad))**0.25
-                    temp_binary = (temp_b1*binary.p1.star.lum+temp_b2*binary.p2.star.lum)/(binary.p1.star.lum+binary.p2.star.lum)
-                    #temp_binary = temp_b1
-                    #sel = (binary.p1.star.lum<binary.p2.star.lum)
-                    #temp_binary[sel] = temp_b2[sel]
-                    #print(temp_single.size,temp_binary.size,data['lum_cm'].size)
-                    data['temp_cm']= np.append(temp_single,temp_binary)
-                    data['type_cm']= np.append(single.star.type,np.max([binary.p1.star.type,binary.p2.star.type],axis=0))
-        else:
-            particles=petar.Particle(interrupt_mode=self.interrupt_mode, external_mode=self.external_mode)
-            if (self.snapshot_format=='ascii'): particles.loadtxt(file_path, skiprows=1)
-            else: particles.fromfile(file_path, offset=header_offset)
-            data['data'] = particles
-            if (self.get_skycoord):
-                data['sky'] = particles.toSkyCoord(pos_offset=header.pos_offset, vel_offset=header.vel_offset)
-                if (self.cm_mode == 'core') | (data.generate_binary == 2):
-                    data['skycm'] = data['core'].toSkyCoord()[0]
-                else:
-                    data['skycm'] = header.toSkyCoord()
 
-            if ('bse' in self.interrupt_mode):
-                data['lum'] = particles.star.lum
-                data['rad'] = particles.star.rad
-                data['type']= particles.star.type
-                data['temp']= 5778*(data['lum']/(data['rad']*data['rad']))**0.25
+                if (self.color_mode == 'galev'):
+                    mag_list = []
+                    for key in self.galev_color:
+                        mag_list.append(np.concatenate((single.galev[key], binary.p1.galev[key], binary.p2.galev[key])))
+                    data['galev_mag'] = np.transpose(mag_list)
+
+                if (self.generate_binary>0):
+                    kdtree,single,binary = petar.findPair(particles, self.G, self.semi_max*2.0, True)
+                    data['binary'] = binary
+                    if ('bse' in self.interrupt_mode):
+                        data['lum_cm'] = np.append(single.star.lum, binary.p1.star.lum+binary.p2.star.lum)
+                        temp_single = 5778*(single.star.lum/(single.star.rad*single.star.rad))**0.25
+                        temp_b1 = 5778*(binary.p1.star.lum/(binary.p1.star.rad*binary.p1.star.rad))**0.25
+                        temp_b2 = 5778*(binary.p2.star.lum/(binary.p2.star.rad*binary.p2.star.rad))**0.25
+                        temp_binary = (temp_b1*binary.p1.star.lum+temp_b2*binary.p2.star.lum)/(binary.p1.star.lum+binary.p2.star.lum)
+                        data['temp_cm']= np.append(temp_single,temp_binary)
+                        data['type_cm']= np.append(single.star.type,np.max([binary.p1.star.type,binary.p2.star.type],axis=0))
+                        
+                    if (self.color_mode == 'galev'):
+                        binary.p1.galev.convertToFlux()
+                        binary.p2.galev.convertToFlux()
+                        bmag = binary.p1.galev + binary.p2.galev
+                        binary.p1.galev.convertToMag()
+                        binary.p2.galev.convertToMag()
+                        mag_cm_list = []
+                        for key in self.galev_color:
+                            mag_cm_list.append(np.concatenate((single.galev[key], bmag[key])))
+                        data['galev_mag_cm'] = np.transpose(mag_cm_list)
+            
 
     def getColor(self):
         colors='w'
@@ -730,6 +795,10 @@ class Data:
             colors=cm.hot((self.pot - self.pot_min)/(self.pot_max-self.pot_min))
         elif (self.color_mode=='etot'):
             colors=cm.hot((self.etot - self.etot_min)/(self.etot_max-self.etot_min))
+        elif (self.color_mode=='galev'):
+            mag_min = self.galev_mag_range[::2]
+            mag_max = self.galev_mag_range[1::2]
+            colors= (data['galev_mag'] - mag_min[None,:])/(mag_max-mag_min)[None,:]
         return colors
 
 
@@ -973,12 +1042,13 @@ if __name__ == '__main__':
         print("          The number of snapshots should also be the same for all models.")
         print("  -i  [S]: interrupt mode used in petar: no, base, bse, mobse: ",data.interrupt_mode)
         print("  -t  [S]: external mode used in petar: no, galpy: ",data.external_mode)
-        print("  -c  [S]: color type for particles plot of -m option: loglum, logtemp, ekin, pot, etot, white: ",data.color_mode)
+        print("  -c  [S]: color type for particles plot of -m option: loglum, logtemp, ekin, pot, etot, galev, white: ",data.color_mode)
         print("              loglum: log(luminosity)")
         print("              logtemp: log(temperature)")
         print("              ekin: kinetic energy")
         print("              pot: potential")
         print("              etot: total energy")
+        print("              galev: use galev photometry for RGB merging, need to read [prefix].galev.mag files; also need to properly set galev related options")
         print("              white: pure white color")
         print("  --compare-in-column: in comparison mode, models are compared in columns instead of rows.")
         print("  --generate-binary [I]: 0: no binary, 1: detect binary by using KDtree (slow), 2: read single and binary data generated by petar.data.process: ", data.generate_binary)
@@ -1034,6 +1104,10 @@ if __name__ == '__main__':
         print("  --layer-alpha   [F]: transparency factor of layers in the x-y plot: 2.5")
         print("  --marker-scale  [F]: amplify the size of markers in x-y plot: 1.0")
         print("  --mass-power    [F]: the power index of mass to obtain sizes of markers: 1.0")
+        print("  --galev-filter [S]: filter list, seperate by comma: ", *data.galev_filter)
+        print("  --galev-mode   [S]: galev mode of values with choices: abs_mag, app_mag, abs_flux, abs_flux", data.galev_mode)
+        print("  --galev-color  [S]: three filters for mapping R,G,B colors: ", *data.galev_color)
+        print("  --galev-mag-range[S]: magnitude range (min,max) for R, G, B colors, respectively; separated by comma, need 6 values: ", *data.galev_mag_range)
         print("  --suppress-images: do not plot snapshot images (png files) and use matplotlib.animation instead of imageio, this cannot use multi-processing, much slower")
         print("  --format        [S]: video format, require imageio installed, for some formats (e.g. avi, mp4) may require ffmpeg and imageio-ffmpeg installed: ", plot_format)
         print("  --dpi           [F]: dpi of image: ", dpi)
@@ -1052,6 +1126,7 @@ if __name__ == '__main__':
                     'plot-ncols=','plot-xsize=','plot-ysize=',
                     'suppress-images','format=','cm-mode=','core-file=',
                     'n-layer-cross=','n-layer-point=','layer-alpha=','marker-scale=','mass-power=',
+                    'galev-fitler=','galev-color=','galev-mag-range',
                     'cm-boxsize=','compare-in-column','dpi=']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
@@ -1204,6 +1279,14 @@ if __name__ == '__main__':
                 kwargs['marker_scale'] = float(arg)
             elif opt in ('--mass-power'):
                 kwargs['mass_power'] = float(arg)
+            elif opt in ('--galev-filter'):
+                kwargs['galev_filter'] =  [x for x in arg.split(',')]
+            elif opt in ('--galev-color'):
+                kwargs['galev_color'] = [x for x in arg.split(',')]
+            elif opt in ('--galev-mode'):
+                kwargs['galev_mode'] = arg
+            elif opt in ('--galev-mag-range'):
+                kwargs['galev_mag_range'] = np.array([float(x) for x in arg.split(',')])
             elif opt in ('--suppress-images'):
                 plot_images = False
             elif opt in ('--format'):
