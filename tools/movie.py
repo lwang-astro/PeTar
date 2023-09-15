@@ -445,7 +445,7 @@ class PlotHR:
     def init(self, axe, **kwargs):
         for key in self.__dict__.keys():
             if (key in kwargs.keys()): self.__dict__[key] = kwargs[key]
-        self.ptcls.append(axe.scatter([],[],marker='.',edgecolors='none'))
+        self.ptcls.append(axe.scatter([],[],marker='.',linewidth=0))
         axe.set_xlim(self.temp_max,self.temp_min);
         axe.set_ylim(self.lum_min,self.lum_max);
         axe.set_yscale('log');
@@ -479,7 +479,7 @@ class PlotSemiEcc:
     def init(self, axe, **kwargs):
         for key in self.__dict__.keys():
             if (key in kwargs.keys()): self.__dict__[key] = kwargs[key]
-        self.ptcls.append(axe.scatter([],[],marker='.',edgecolors='none'))
+        self.ptcls.append(axe.scatter([],[],marker='.',linewidth=0))
         axe.set_xscale('log')
         axe.set_xlim(self.semi_min,self.semi_max)
         axe.set_ylim(self.ecc_min,self.ecc_max)
@@ -806,8 +806,6 @@ class Data:
 
             #colors= (self.galev_mag[0] - mag_min[None,:])/(mag_max-mag_min)[None,:]
             dmag = (self.galev_mag[0] - self.galev_mag[1] - mag_min)/(mag_max-mag_min)
-            dmag[dmag<0] = 0
-            dmag[dmag>1] = 1
             colors=cm.rainbow(dmag)
             #print(colors.max(axis=0),colors.min(axis=0))
         return colors
