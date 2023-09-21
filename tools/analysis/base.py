@@ -292,7 +292,7 @@ class DictNpArrayMix:
                 new_dat.__dict__[key] = np.repeat(self.__dict__[key], repeats)
             elif (issubclass(type(item), DictNpArrayMix)):
                 new_dat.__dict__[key] = np.repeat(self.__dict__[key], repeats)
-                    new_dat.__dict__[key].setHost(new_dat)
+                new_dat.__dict__[key].setHost(new_dat)
                 if (size_checker == None): size_checker = new_dat.size
                 elif (size_checker != new_dat.size):
                     raise ValueError('New class member size ',new_dat.size,' is not consistent with the first new member size ',size_checker)
