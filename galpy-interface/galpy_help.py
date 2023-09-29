@@ -144,6 +144,88 @@ def listPot():
         if (pot_instance!=None):
             printPotTypeArg(pot_name, pot_module, pot_instance)
 
+
+
+POT_LIST_INFO = dict()
+
+POT_LIST_INFO['PowerSphericalPotential'] = {'type':7,
+                                            'name':'power-law density model',
+                                            'math':'rho(r) = (3-a) GM /(4 pi rg^(3-a)) r^(-a); M: mass in rg',
+                                            'pot0':'r=0',
+                                            'args':{'amp': ['(3-a) GM /(4 pi rg^(3-a))', 'G*m/r^(3-a)'], 
+                                                    'a': ['inner power', '1']}}
+
+POT_LIST_INFO['PowerSphericalPotentialwCutoff'] = {'type':15,
+                                                   'name':'power-law density model with cutoff radius',
+                                                   'math':'rho(r) = (3-a) GM /(4 pi rg^(3-a)) r^(-a) e^(-r^2/rc^2); M: mass in rg',
+                                                   'pot0':'r=0',
+                                                   'args':{'amp': ['(3-a) GM /(4 pi rg^(3-a))', 'G*m/r^(3-a)'], 
+                                                           'a': ['inner power', '1'],
+                                                           'rc': ['cut-off radius','r']}}
+
+    
+POT_LIST_INFO['MiyamotoNagaiPotential'] = {'type':5,
+                                           'name':'Miyamoto-Nagai potential',
+                                           'math':'Phi(R,z) = - GM /sqrt(R^2+(a + sqrt(z^2+b^2))^2)',
+                                           'pot0':'R,Z = infinity',
+                                           'args':{'amp':['G M','G*m'],
+                                                   'a': ['scale length','r'],
+                                                   'b': ['scale length','r']}}
+
+POT_LIST_INFO['NFWPotential'] = {'type':9,
+                                 'name':'NFW potential',
+                                 'math':'rho(r) = GM /(4 pi a^3) /((r/a)*(1+r/a)^2)',
+                                 'pot0':'r = infinity',
+                                 'args':{'amp':['G M','G*m'],
+                                         'a':['scale length','r']}}
+
+POT_LIST_INFO['HomogeneousSpherePotential'] = {'type':35,
+                                               'name':'homogeneous sphere potential',
+                                               'math':'Phi(r) = -2/3 pi G rho0 (r^2-3 rs^2) [r<rs]; -4/3 pi G rho0 rs^3/r [r>rs]',
+                                               'pot0':'r = infinity',
+                                               'args':{'amp':['2/3 pi G rho0', 'G*m/r^3'],
+                                                       'r2': ['rs^2', 'r^2'],
+                                                       'r3': ['rs^3', 'r^3']}}
+
+POT_LIST_INFO['PlummerPotential'] = {'type':17,
+                                     'name':'Plummer potential',
+                                     'math':'Potential: GM / sqrt(r^2 + b^2)',
+                                     'pot0': 'r=infinity',
+                                     'args':{'amp':['GM','G*m'],
+                                             'b':['scale length','r']}}
+    
+def printCPot(pot_name):
+    """
+    Print descriptions of potential for c interface.
+    The c arguments of potential can be different from Python one
+
+    Parameters:
+    -----------
+    pot_name: string 
+        Print the potential description for given potential name
+    """
+    pot_data = POT_LIST_INFO[pot_name]
+    print('{:31}'.format('Name:'),'%s' % pot_data['name'])
+    print('{:31}'.format('Type index:'),'%d ' % pot_data['type'])
+    print('{:31}'.format('Math:'), '%s' % pot_data['math'])
+    print('{:31}'.format('Potential zero position:'), '%s' % pot_data['pot0'])
+    print('Arguments: description [units]:')
+    for arg, description in pot_data['args'].items():
+        print(' '*31, '%s: %s [%s]' % (arg, *description))
+
+def listCPot():
+    print('For each potential: 1st line: name [type index]: math')
+    print('                    from 2nd line: argument: descriptoin [unit]')
+    print('                    Units symbols: G: gravity constant; m: mass; r: length; t: time')
+    printSpliter()
+    name_format='{:30}'
+    for pot_name in POT_LIST_INFO.keys():
+        pot_data = POT_LIST_INFO[pot_name]
+        print(name_format.format(pot_name),'[%2d]:' % pot_data['type'], pot_data['math'])
+        for arg, description in pot_data['args'].items():
+            print(' '*36,'%s: %s [%s]' % (arg, *description))
+    printSpliter()
+
 if __name__ == '__main__':
 
     print_help_flag=False
@@ -198,8 +280,14 @@ if __name__ == '__main__':
             if (config_filename!=""): 
                 print("Save type arguments of %s to file %s." % (pot_name,config_filename))
                 savePotTypeArg(config_filename, n_pot, pot_type, pot_arg)
-            printSpliter()                                                     
-            print("Class definition of %s from Galpy:" % pot_name)
+                printSpliter()
+
+            if pot_name in POT_LIST_INFO.keys():
+                print("C interface description:")
+                printCPot(pot_name)
+                printSpliter()
+
+            print("Python interface description:")
             if (type(pot_instance)==list):
                 for pot_sub in pot_instance:
                     print(pot_sub.__doc__)
@@ -365,7 +453,14 @@ if __name__ == '__main__':
         print("               Time 6.0 Task remove")
         print("               Nset 1 Index 1")
         print("Users can use --galpy-set, --galpy-type-arg and --galpy-conf-file together.")
-        print("Here are the supported list of Potentials and their default type indices and arguments:")
-        print("PS: The listed arguments are in Bovy units. ")
-        print("    Be careful that the first argument of many potentials is G*M.")
+        print("Here list a part of potentials with short descriptions for c interface.")
+        listCPot()
+        print("Here list all potentials type and sample of arguments for Python interface.")
+        print("Some important tips for reading the Python interface description:")
+        print("    1) The argument values are in Bovy units. ")
+        print("    2) The first argument of many potentials (amp) is G*M.")
+        print("    3) The Python and c interfaces may have different arguments.")
+        print("       Unfortunately there is no official manual for c interface yet.")
+        print("       Please check the original c source codes for the potential with no description for c interface.")
+        print("       The potential source codes are in [Galpy install path]/potential/potential_c_ext/.")
         listPot()
