@@ -3156,7 +3156,7 @@ public:
             n_vel_loc_count++;
         }
     
-        if (single_start_index <n_loc-1) 
+        if (single_start_index <n_loc) 
             for (PS::S64 i=single_start_index; i<n_loc; i++){
                 PS::F64vec dv = system_soft[i].vel - vel_cm_glb;
                 vel_sq_loc += dv * dv;
