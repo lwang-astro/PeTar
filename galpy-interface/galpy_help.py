@@ -150,49 +150,67 @@ POT_LIST_INFO = dict()
 
 POT_LIST_INFO['PowerSphericalPotential'] = {'type':7,
                                             'name':'power-law density model',
-                                            'math':'rho(r) = (3-a) GM /(4 pi rg^(3-a)) r^(-a); M: mass in rg',
+                                            'math':['rho(r) = (3-a) GM /(4 pi rg^(3-a)) r^(-a); M: mass in rg'],
                                             'pot0':'r=0',
-                                            'args':{'amp': ['(3-a) GM /(4 pi rg^(3-a))', 'G*m/r^(3-a)'], 
-                                                    'a': ['inner power', '1']}}
+                                            'args':[['amp','(3-a) GM /(4 pi rg^(3-a))', 'G*m/r^(3-a)'], 
+                                                    ['a', 'inner power', '1']]}
 
 POT_LIST_INFO['PowerSphericalPotentialwCutoff'] = {'type':15,
                                                    'name':'power-law density model with cutoff radius',
-                                                   'math':'rho(r) = (3-a) GM /(4 pi rg^(3-a)) r^(-a) e^(-r^2/rc^2); M: mass in rg',
+                                                   'math':['rho(r) = (3-a) GM /(4 pi rg^(3-a)) r^(-a) e^(-r^2/rc^2); M: mass in rg'],
                                                    'pot0':'r=0',
-                                                   'args':{'amp': ['(3-a) GM /(4 pi rg^(3-a))', 'G*m/r^(3-a)'], 
-                                                           'a': ['inner power', '1'],
-                                                           'rc': ['cut-off radius','r']}}
+                                                   'args':[['amp', '(3-a) GM /(4 pi rg^(3-a))', 'G*m/r^(3-a)'], 
+                                                           ['a', 'inner power', '1'],
+                                                           ['rc', 'cut-off radius','r']]}
 
     
 POT_LIST_INFO['MiyamotoNagaiPotential'] = {'type':5,
                                            'name':'Miyamoto-Nagai potential',
-                                           'math':'Phi(R,z) = - GM /sqrt(R^2+(a + sqrt(z^2+b^2))^2)',
+                                           'math':['Phi(R,z) = - GM /sqrt(R^2+(a + sqrt(z^2+b^2))^2)'],
                                            'pot0':'R,Z = infinity',
-                                           'args':{'amp':['G M','G*m'],
-                                                   'a': ['scale length','r'],
-                                                   'b': ['scale length','r']}}
+                                           'args':[['amp','G M','G*m'],
+                                                   ['a','scale length','r'],
+                                                   ['b','scale length','r']]}
 
 POT_LIST_INFO['NFWPotential'] = {'type':9,
                                  'name':'NFW potential',
-                                 'math':'rho(r) = GM /(4 pi a^3) /((r/a)*(1+r/a)^2)',
+                                 'math':['rho(r) = GM /(4 pi a^3) /((r/a)*(1+r/a)^2)'],
                                  'pot0':'r = infinity',
-                                 'args':{'amp':['G M','G*m'],
-                                         'a':['scale length','r']}}
+                                 'args':[['amp','G M','G*m'],
+                                         ['a','scale length','r']]}
 
 POT_LIST_INFO['HomogeneousSpherePotential'] = {'type':35,
                                                'name':'homogeneous sphere potential',
-                                               'math':'Phi(r) = -2/3 pi G rho0 (r^2-3 rs^2) [r<rs]; -4/3 pi G rho0 rs^3/r [r>rs]',
+                                               'math':['Phi(r) = -2/3 pi G rho0 (r^2-3 rs^2) [r<rs]; -4/3 pi G rho0 rs^3/r [r>rs]'],
                                                'pot0':'r = infinity',
-                                               'args':{'amp':['2/3 pi G rho0', 'G*m/r^3'],
-                                                       'r2': ['rs^2', 'r^2'],
-                                                       'r3': ['rs^3', 'r^3']}}
+                                               'args':[['amp','2/3 pi G rho0', 'G*m/r^3'],
+                                                       ['r2', 'rs^2', 'r^2'],
+                                                       ['r3', 'rs^3', 'r^3']]}
 
 POT_LIST_INFO['PlummerPotential'] = {'type':17,
                                      'name':'Plummer potential',
-                                     'math':'Potential: GM / sqrt(r^2 + b^2)',
-                                     'pot0': 'r=infinity',
-                                     'args':{'amp':['GM','G*m'],
-                                             'b':['scale length','r']}}
+                                     'math':['Phi(r) = GM / sqrt(r^2 + b^2)'],
+                                     'pot0':'r = infinity',
+                                     'args':[['amp','GM','G*m'],
+                                             ['b','scale length','r']]}
+
+POT_LIST_INFO['DehnenBarPotential'] = {'type':1,
+                                       'name':'Dehnen bar potential',
+                                       'math':['Phi(R,z,phi) = Ab(t) cos (2(phi - Wb t)) (R/r)^2 { -(Rb/r)^3 (r>Rb)' ,
+                                               '                                                   (r/Rb)^3-2 (r<=Rb)',
+                                               'Ab(t) = {0 (t/Tb <tf)',
+                                               '         Af(3/16 xi^5 - 5/8 xi^3 + 15/16 xi + 1/2) (tf< t/Tb <tf+Ts)',
+                                               '         Af (t/Tb >tf+Ts)',
+                                               'xi = 2 (t/Tb - tf)/Ts - 1',
+                                               'Tb = 2 pi/Wb'],
+                                       'pot0':'r = infinity',
+                                       'args':[['Af','bar strength', '(r/t)^2'],
+                                               ['tf','bar formation time', 't'],
+                                               ['Ts','bar steady time', 't'],
+                                               ['Rb','bar max radius', 'r'],
+                                               ['Wb','bar rotation speed','rad/t'],
+                                               ['phi','bar initial angle','rad']]}
+
     
 def printCPot(pot_name):
     """
@@ -207,11 +225,14 @@ def printCPot(pot_name):
     pot_data = POT_LIST_INFO[pot_name]
     print('{:31}'.format('Name:'),'%s' % pot_data['name'])
     print('{:31}'.format('Type index:'),'%d ' % pot_data['type'])
-    print('{:31}'.format('Math:'), '%s' % pot_data['math'])
+    print('{:31}'.format('Math:'), pot_data['math'][0])
+    if (len(pot_data['math'])>1):
+        for item in pot_data['math'][1:]:
+            print(' '*31, item)
     print('{:31}'.format('Potential zero position:'), '%s' % pot_data['pot0'])
     print('Arguments: description [units]:')
-    for arg, description in pot_data['args'].items():
-        print(' '*31, '%s: %s [%s]' % (arg, *description))
+    for arg in pot_data['args']:
+        print(' '*31, '%s: %s [%s]' % tuple(arg))
 
 def listCPot():
     print('For each potential: 1st line: name [type index]: math')
@@ -221,9 +242,14 @@ def listCPot():
     name_format='{:30}'
     for pot_name in POT_LIST_INFO.keys():
         pot_data = POT_LIST_INFO[pot_name]
-        print(name_format.format(pot_name),'[%2d]:' % pot_data['type'], pot_data['math'])
-        for arg, description in pot_data['args'].items():
-            print(' '*36,'%s: %s [%s]' % (arg, *description))
+        print(name_format.format(pot_name),'[%2d]: %s' % (pot_data['type'], pot_data['math'][0]))
+        if (len(pot_data['math'])>1):
+            for item in pot_data['math'][1:]:
+                print(' '*36, item)
+        print(' '*30, 'args: %s: %s [%s]' % tuple(pot_data['args'][0]))
+        if (len(pot_data['args'])>1):
+            for item in pot_data['args'][1:]:
+                print(' '*36,'%s: %s [%s]' % tuple(item))
     printSpliter()
 
 if __name__ == '__main__':

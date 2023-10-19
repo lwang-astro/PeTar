@@ -365,7 +365,7 @@ Here a few useful options are listed.
 -  -s: the tree time step, should be the integer power of 0.5. When this is set, the changeover radius is automatically determined (see paper for reference), unless `-r` is used manually.
 -  -r: set the outer boundary of changeover radii. When this is set, tree time step is automatically determined.
 -  -a: data appending option. If `-a 1` is used (default), the new data will be appended to existing files after restart, otherwise files are rewritten. Be careful when you want to restart the simulations with this option.
--  -b: the initial binary fraction number. This is important to correctly calculate the velocity dispersion, which is used to automatically determine tree time step and changeover radii. So it must be correctly set when primordial binaries exist. Besides, all primordial binaries should appear first in the input data file (two neighbor lines per pair).
+-  -b: the initial binary number. This is important to correctly calculate the velocity dispersion, which is used to automatically determine tree time step and changeover radii. So it must be correctly set when primordial binaries exist. Besides, all primordial binaries should appear first in the input data file (two neighbor lines per pair).
 -  -w: output style. Users can control the whether to output snapshot data. If `-w 2` is used, all particle data will be printed in one line together with a status information of the system per output time. This can be convenient for data analysis when N is small. 
 -  -i: the format of snapshot data. This can be used to determine whether read or write snapshot data in BINARY or ASCII format.
 -  -G: gravitational constant. 
