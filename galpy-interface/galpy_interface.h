@@ -1639,7 +1639,7 @@ public:
 #else
                 double acc_phi = calcphitorque(rxy, dz, phi, t, npot, pot_args);
 #endif
-#                double pot_i = evaluatePotentials(rxy, dz, phi, t, npot, pot_args);
+//                double pot_i = evaluatePotentials(rxy, dz, phi, t, npot, pot_args);
                 double pot_i = evaluatePotentials(rxy, dz, npot, pot_args);
                 double gm_pot = pot_set_pars[k].gm;
                 if (rxy>0.0) {
