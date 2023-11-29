@@ -614,7 +614,7 @@ To check the details of the generated files from _petar.data.gether_ and cooresp
 Since each file contains a large number of columns, it is recommended to use the Python data analysis tool to access them. 
 The data analysis tool is very convenient to pick up the specific parameter (column) and process the data (selection, calculation and plotting), similar to the `dict` and `numpy` in Python.
 It also helps to avoid reading wrong columns. 
-Thus, the defnition of columns are not listed in the manual and are also not in the header of files.
+Thus, the definition of columns are not listed in the manual and are also not in the header of files.
 Please refer to the help information of the corresponding analysis tool for each file.
 
 The raw snapshots files do not include the information for binaries or multiple systems. To identify them and obtain the Lagrangian and core properties,
