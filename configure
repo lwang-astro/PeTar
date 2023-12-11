@@ -7746,8 +7746,8 @@ printf "%s\n" "$as_me:      Install path:      $prefix" >&6;}
 printf "%s\n" "$as_me: -----------------------------------------------------------" >&6;}
        { printf "%s\n" "$as_me:${as_lineno-$LINENO}:   After install, please" >&5
 printf "%s\n" "$as_me:   After install, please" >&6;}
-       { printf "%s\n" "$as_me:${as_lineno-$LINENO}:       add $prefix/include into your PTHYON include path" >&5
-printf "%s\n" "$as_me:       add $prefix/include into your PTHYON include path" >&6;}
+       { printf "%s\n" "$as_me:${as_lineno-$LINENO}:       add $prefix/include into your PYTHON include path" >&5
+printf "%s\n" "$as_me:       add $prefix/include into your PYTHON include path" >&6;}
        { printf "%s\n" "$as_me:${as_lineno-$LINENO}:       add $prefix/bin into your PATH" >&5
 printf "%s\n" "$as_me:       add $prefix/bin into your PATH" >&6;}
 else $as_nop
