@@ -13,8 +13,15 @@ public:
     typedef H4::Neighbor<PtclHard> NB;
     TidalTensor* soft_pert;  ///> soft perturbation 
     Float soft_pert_min; ///> minimum soft perturbation
+#ifdef EXTERNAL_HARD
+    PtclHard* global_cm; // c.m. of the hard cluster in the global frame
+#endif
 
-    ARPerturber(): NB(), soft_pert(NULL), soft_pert_min(Float(0.0)) {}
+    ARPerturber(): NB(), soft_pert(NULL), soft_pert_min(Float(0.0)) 
+#ifdef EXTERNAL_HARD
+                 , global_cm(NULL)
+#endif
+    {}
 
     //! clear function
     void clear() {
@@ -29,6 +36,9 @@ public:
     //! check parameters status
     bool checkParams() {
         ASSERT(NB::checkParams());
+#ifdef EXTERNAL_HARD
+        ASSERT(global_cm!=NULL);
+#endif
         //ASSERT(soft_pert_min>=0.0);
         //ASSERT(soft_pert!=NULL);
         return true;

@@ -5,6 +5,9 @@
 #include "hard_ptcl.hpp"
 #include "Hermite/hermite_particle.h"
 #include "soft_ptcl.hpp"
+#ifdef BSE_BASE
+#include "../parallel-random/rand_interface.hpp"
+#endif
 
 // Hard debug dump for one cluster
 class HardDump{
@@ -18,9 +21,16 @@ public:
     PS::ReallocatableArray<PS::S32> n_member_in_group;
     PS::ReallocatableArray<FPSoft> ptcl_arti_bk;
     PS::ReallocatableArray<PtclH4> ptcl_bk;
+#ifdef BSE_BASE
+    RandomManager rand_manager;
+#endif
     bool backup_flag;
 
-    HardDump(): time_offset(0), time_end(0), n_ptcl(0), n_arti(0), n_group(0), n_member_in_group(), ptcl_arti_bk(), ptcl_bk(), backup_flag(false) {}
+    HardDump(): time_offset(0), time_end(0), n_ptcl(0), n_arti(0), n_group(0), n_member_in_group(), ptcl_arti_bk(), ptcl_bk(), 
+#ifdef BSE_BASE
+                rand_manager(), 
+#endif
+                backup_flag(false) {}
 
     //! backup one hard cluster data 
     /*!
@@ -85,6 +95,17 @@ public:
         fwrite(n_member_in_group.getPointer(), sizeof(PS::S32), n_group, fp);
         for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].writeBinary(fp);
         fclose(fp);
+#ifdef BSE_BASE
+        std::string fname_rand = std::string(_fname) + ".randseed";
+        fp = std::fopen(fname_rand.c_str(),"w");
+        if (fp==NULL) {
+            std::cerr<<"Error: filename "<<_fname<<" cannot be open!\n";
+            abort();
+        }
+        // rand seed
+        rand_manager.writeRandSeedLocal(fp);
+        fclose(fp);
+#endif
         backup_flag = false;
     }
 
@@ -156,6 +177,18 @@ public:
             for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].readBinary(fp);
         }
         fclose(fp);
+#ifdef BSE_BASE
+        std::string fname_rand = std::string(_fname) + ".randseed";
+        fp = std::fopen(fname_rand.c_str(),"r");
+        if (fp==NULL) {
+            std::cerr<<"Random seed file not found. Use input seed instead\n";
+        }
+        else {
+            // read rand seed
+            rand_manager.readRandSeedLocal(fp);
+            fclose(fp);
+        }
+#endif
     }
 
 };

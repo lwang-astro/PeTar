@@ -63,7 +63,12 @@ def calcTrh(N, rh, m, G, gamma=0.02):
 
     return: half-mass relaxation time
     """
-    return 0.138*N**0.5*rh**1.5/(m**0.5*np.log(gamma*N)*G**0.5)
+    trh = 0.138*N**0.5*rh**1.5/(m**0.5*np.log(gamma*N)*G**0.5)
+    if type(N) == np.ndarray:
+        trh[N==0] = 0
+    elif N==0:
+        trh = 0
+    return trh
 
 def calcTcr(M, rh, G): 
     """ Calculate half-mass crossing time
@@ -80,7 +85,31 @@ def calcTcr(M, rh, G):
 
     return: half-mass crossing time
     """
-    return rh**1.5/np.sqrt(G*M)
+    tcr = rh**1.5/np.sqrt(G*M)
+    if type(M) == np.ndarray:
+        tcr[M==0] = 0
+    elif M==0:
+        tcr = 0
+    return tcr
+
+def calcRocheLobeRadius(mass_ratio, semi):
+    """ Calcuate Roche lobe radius based on mass ratio and semi-major axes of a circular orbit
+    
+    Parameters
+    ----------
+    mass_ratio: 1D numpy.ndarray or float
+        m_1/m_2 of the primary star 1
+    semi: 1D numpy.ndarray or float
+        semi-major axes of the circular orbit
+
+    return: Roche lobe radius of the primary star 1, in the unit of input semi
+    """
+
+    p = mass_ratio**(1.0/3.0)
+    p2 = p*p
+    radius = 0.49*p2/(0.6*p2 + np.log(1.0+p))*semi
+
+    return radius
 
 def calcGWMyr(m1, m2, semi, ecc):
     """ Calculate GW merge timescale in Myr using Peters (1964) formula
@@ -120,7 +149,7 @@ def calcGWMyr(m1, m2, semi, ecc):
             return (12.0/19.0)*c0**4/beta*(eint[0])*1e-6
 
     semi_au = semi*pc_to_au
-    if (type(m1) == np.ndarray | type(m1) == list):
+    if (type(m1) == np.ndarray) | (type(m1) == list):
         return np.array(list(map(time_gw_myr_one,m1,m2,semi_au,ecc)))
     else: 
         return time_gw_myr_one(m1, m2, semi_au, ecc)
@@ -257,3 +286,30 @@ def coordinateCorrection(data, snap_center, obs_center, **kwargs):
     
     return data_c
 
+def semiToPeriod(m1, m2, semi, G):
+    """
+    Convert semi-major axis of a binary to period
+
+    Parameters:
+    -----------
+    m1: mass 1
+    m2: mass 2
+    semi: semi-major axis
+    G: gravitational constant 
+       (2 pi)^2:  semi: AU, period: yr
+       petar.G_MSUN_PC_MYR: semi: pc, period: Myr
+    """
+    return np.pi*2*np.sqrt(semi*semi*semi/(G*(m1+m2)))
+
+def periodToSemi(m1, m2, period, G):
+    """
+    Convert period of a binary to semi-major axis
+
+    Parameters:
+    -----------
+    m1: mass 1
+    m2: mass 2
+    period: period
+    G: gravitational constant 
+    """
+    return (period*period*G*(m1+m2)/(4*np.pi**2))**(1.0/3.0)

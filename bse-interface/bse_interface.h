@@ -66,9 +66,9 @@ extern "C" {
         double lambda; ///>the binding energy factor for common envelope evolution (0.5).
     } value2_;
 
-    extern struct{
-        int idum; ///> the random number seed used in the kick routine. 
-    } value3_;
+    //extern struct{
+    //    int idum; ///> the random number seed used in the kick routine. 
+    //} value3_;
 
     extern struct{
         double sigma; ///> the dispersion in the Maxwellian for the SN kick speed
@@ -105,11 +105,11 @@ extern "C" {
         double pts3;  ///> time step of HG, HeMS (0.02)
     } points_;
 
-    extern struct{
-        int idum2;
-        int iy;
-        int ir[32];
-    } rand3_;
+    //extern struct{
+    //    int idum2;
+    //    int iy;
+    //    int ir[32];
+    //} rand3_;
 
 
     // The Fortran function name + '_' is the C version. All arguments should be in pointer type.
@@ -165,9 +165,9 @@ extern "C" {
         double lambda; ///>the binding energy factor for common envelope evolution (0.1).
     } value2_;
 
-    extern struct{
-        int idum; ///> the random number seed used in the kick routine. 
-    } value3_;
+    //extern struct{
+    //    int idum; ///> the random number seed used in the kick routine. 
+    //} value3_;
 
     extern struct{
         double sigma1; ///> the dispersion in the Maxwellian for the CCSN kick speed
@@ -206,11 +206,11 @@ extern "C" {
         double pts3;  ///> time step of HG, HeMS (0.02)
     } points_;
 
-    extern struct{
-        int idum2;
-        int iy;
-        int ir[32];
-    } rand3_;
+    //extern struct{
+    //    int idum2;
+    //    int iy;
+    //    int ir[32];
+    //} rand3_;
 
     //! function for initial metallicity parameters
     void zcnsts_(double* z, double* zpars);
@@ -376,7 +376,7 @@ struct StarParameter{
         counter++;
         _fout<<std::setw(_offset)<<" "<<counter<<". s_rcore: stellar core radius [Rsun]\n";        
         counter++;
-        _fout<<std::setw(_offset)<<" "<<counter<<". s_spin: stellar rotation\n";        
+        _fout<<std::setw(_offset)<<" "<<counter<<". s_spin: stellar rotation [rad/year]\n";        
         counter++;
         _fout<<std::setw(_offset)<<" "<<counter<<". s_epoch: time offset at each evolution stage [Myr]\n";
         counter++;
@@ -656,7 +656,6 @@ public:
 #ifdef BSEEMP
     IOParams<long long int> trackmode;
 #endif
-    IOParams<long long int> idum;
     IOParams<double> tscale;
     IOParams<double> rscale;
     IOParams<double> mscale;
@@ -695,7 +694,6 @@ public:
 #ifdef BSEEMP
                    trackmode(input_par_store, 2,  "bse-trackmode",  "star evolution option, need to make a soft link to the data directory in bse-interface/bseEmp/emptrack/: 1: L model (larger overshoot; directory name: ffbonn); 2: M model (smaller overshoot; directory name: ffgeneva); See details in Appendix A of Tanikawa et al. (2022, ApJ, 926, 83)"),
 #endif
-                   idum  (input_par_store, 1234,  "bse-idum",   "random number seed used by the kick routine"),
                    tscale(input_par_store, 1.0,   "bse-tscale", "Time scale factor from input data unit (IN) to Myr (time[Myr]=time[IN]*tscale)"),
                    rscale(input_par_store, 1.0,   "bse-rscale", "Radius scale factor from input data unit (IN) to Rsun (r[Rsun]=r[IN]*rscale)"),
                    mscale(input_par_store, 1.0,   "bse-mscale", "Mass scale factor from input data unit (IN) to Msun (m[Msun]=m[IN]*mscale)"),
@@ -731,7 +729,6 @@ public:
                    pts1  (input_par_store, 0.05,    "mobse-pts1",   "time step of MS"),
                    pts2  (input_par_store, 0.01,    "mobse-pts2",   "time step of GB, CHeB, AGB, HeGB"),
                    pts3  (input_par_store, 0.02,    "mobse-pts3",   "time step of HG, HeMS"),
-                   idum  (input_par_store, 1234,    "mobse-idum",   "random number seed used by the kick routine"),
                    tscale(input_par_store, 1.0,     "mobse-tscale", "Time scale factor from input data unit (IN) to Myr (time[Myr]=time[IN]*tscale)"),
                    rscale(input_par_store, 1.0,     "mobse-rscale", "Radius scale factor from input data unit (IN) to Rsun (r[Rsun]=r[IN]*rscale)"),
                    mscale(input_par_store, 1.0,     "mobse-msclae", "Mass scale factor from input data unit (IN) to Msun (m[Msun]=m[IN]*mscale)"),
@@ -787,7 +784,6 @@ public:
 #ifdef BSEEMP
             {trackmode.key,   required_argument, &sse_flag, 30},
 #endif
-            {idum.key,   required_argument, &sse_flag, 17}, 
             {tscale.key, required_argument, &sse_flag, 18},
             {rscale.key, required_argument, &sse_flag, 19},
             {mscale.key, required_argument, &sse_flag, 20},
@@ -904,11 +900,6 @@ public:
                 case 16:
                     pts3.value = atof(optarg);
                     if(print_flag) pts3.print(std::cout);
-                    opt_used+=2;
-                    break;
-                case 17:
-                    idum.value = atof(optarg);
-                    if(print_flag) idum.print(std::cout);
                     opt_used+=2;
                     break;
                 case 18:
@@ -1095,36 +1086,6 @@ public:
         return true;
     }
 
-    //! dump rand constant to file
-    void dumpRandConstant(const char* _fname) {
-        FILE* fin;
-        if( (fin = fopen(_fname,"w")) == NULL) {
-            fprintf(stderr,"Error: Cannot open file %s.\n", _fname);
-            abort();
-        }
-        fprintf(fin, "%d %d %d ", value3_.idum, rand3_.idum2, rand3_.iy);
-        for (int i=0; i<32; i++) fprintf(fin, "%d ", rand3_.ir[i]);
-        fprintf(fin, "\n");
-        fclose(fin);
-    }
-
-    //! read BSE rand constant from file
-    void readRandConstant(const char* _fname) {
-        FILE* fin;
-        if( (fin = fopen(_fname,"r")) == NULL) {
-            std::cerr<<_fname<<" not found.\n";
-        }
-        else {
-            int rcount = fscanf(fin, "%d %d %d ", &value3_.idum, &rand3_.idum2, &rand3_.iy);
-            for (int i=0; i<32; i++) rcount += fscanf(fin, "%d ", &rand3_.ir[i]);
-            if(rcount<35) {
-                std::cerr<<"Error: Data reading fails! requiring data number is 35, only obtain "<<rcount<<".\n";
-                abort();
-            }
-            fclose(fin);
-        }
-    }
-
 #ifdef MOBSE
     //! print terminal Logo
     static void printLogo(std::ostream & fout) {
@@ -1282,12 +1243,11 @@ public:
         if (_print_flag&&(z<0.0001||z>0.03))
             std::cerr<<"BSE warning! metallicity Z is not in (0.0001, 0.03); given value:"<<z<<std::endl;
         zcnsts_(&z, zpars);
-#endif
-        value3_.idum = (_input.idum.value>0)? -_input.idum.value: _input.idum.value;
-
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-        // add off set to random seed to avoid repeating random numbers
-        value3_.idum += PS::Comm::getRank();
+//        value3_.idum = (_input.idum.value>0)? -_input.idum.value: _input.idum.value;
+// 
+//#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+//        // add off set to random seed to avoid repeating random numbers
+//        value3_.idum += PS::Comm::getRank();
 #endif
 
         // collision matrix

@@ -148,6 +148,12 @@ class BSETypeChange(DictNpArrayMix):
         id2 (1D): particle id of component 2
         drdv (1D): two component relative position dot relative velocity (Rsun*km/s)
         dr (1D): relative distance (Rsun)
+
+    keyword arguments:
+    ----------------------
+    base_output (bool): False
+          False: init and final have full output (see help of petar.BSEBinaryEvent)
+          True:  init and final have old output 
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
@@ -211,13 +217,15 @@ class BSEDynamicMerge(DictNpArrayMix):
         init (SSEStarParameterPair): initial status of star
         final (SSEStarParameterPair): final status of star after stellar evolution
 
-    kwargs['less_output'] (bool)
+    keyword arguments:
+    ------------------
+    less_output (bool): False
         True: 
            class member (key) with the prefix '*" shown above are excluded.
            This option is for the old version of PeTar before Sep 10, 2020. 
            Notice after the version of Oct 18, 2020, it is not need to use this option anymore.
            The petar.data.gether automatically fills the three columns by zero (this means dr, t_peri and sd are not correct).
-        False: (default)
+        False:
            all members exists 
         
     """

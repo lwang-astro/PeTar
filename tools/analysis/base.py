@@ -210,7 +210,11 @@ class DictNpArrayMix:
             The same type of arguments for numpy.ndarray.__getitem__
         """
         if (type(k)==str):
-            return self.__dict__[k]
+            sub_keys = k.split('.',maxsplit=1)
+            if (len(sub_keys) == 2):
+                return self.__dict__[sub_keys[0]][sub_keys[1]]
+            else:
+                return self.__dict__[k]
         else:
             cls_type = type(self)
             new_dat = cls_type(**self.initargs)
@@ -406,8 +410,11 @@ class DictNpArrayMix:
             new member name
         member: numpy.ndarray | DictNpArrayNix
             data binding to the member, should be the same size as existing members in the class
-        """
 
+        Return
+        ---------
+        Number of new columns, if the given member name already exists, return 0
+        """
         new_key_flag = True
         key_index = int(-1)
         diff_ncols = int(0)
@@ -469,6 +476,8 @@ class DictNpArrayMix:
         self.ncols += dimension
         diff_ncols += dimension
         self.updateHostNcols(diff_ncols)
+
+        return diff_ncols
             
     def getherDataToArray(self, origin_format=True):
         """ gether all data to a 2D numpy.ndarray and return it

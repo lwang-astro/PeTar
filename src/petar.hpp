@@ -62,6 +62,7 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #include"hard_assert.hpp"
 #include"soft_ptcl.hpp"
 #include"soft_force.hpp"
+#include"astro_units.hpp"
 #ifdef USE_GPU
 #include"force_gpu_cuda.hpp"
 #endif
@@ -84,8 +85,13 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #ifdef GALPY
 #include"galpy_interface.h"
 #endif
+
 #ifdef DISK_POT
 #include "disk_potential.hpp"
+#endif
+
+#ifdef BSE_BASE
+#include"rand_interface.hpp"
 #endif
 
 //! IO parameters for Petar
@@ -635,12 +641,16 @@ public:
     IOParamsBSE bse_parameters;
     std::string fbse_par_suffix = BSEManager::getBSEOutputFilenameSuffix();
     std::string fsse_par_suffix = BSEManager::getSSEOutputFilenameSuffix();
+    IOParamsRand rand_parameters;
 #endif // BSE_BASE
 #ifdef GALPY
     IOParamsGalpy galpy_parameters;
 #endif
 #ifdef DISK_POT
     IOParamsDisk disk_parameters;
+#endif
+#ifdef EXTERNAL_HARD
+    IOParamsExternalHard external_hard_parameters;
 #endif
 
 #ifdef PROFILE
@@ -683,6 +693,11 @@ public:
     // tree
     TreeNB tree_nb;
     TreeForce tree_soft;
+
+    // random manager
+#ifdef BSE_BASE
+    RandomManager rand_manager;
+#endif
 
 #ifdef GALPY
     GalpyManager galpy_manager;
@@ -729,12 +744,17 @@ public:
         input_parameters(),
 #ifdef BSE_BASE
         bse_parameters(),
+        rand_parameters(),
 #endif
 #ifdef GALPY
         galpy_parameters(),
 #endif
 #ifdef DISK_POT
         disk_parameters(),
+#endif
+
+#ifdef EXTERNAL_HARD
+        external_hard_parameters(),
 #endif
 
 #ifdef PROFILE
@@ -747,6 +767,9 @@ public:
         n_loop(0), domain_decompose_weight(1.0), dinfo(), pos_domain(NULL), 
         dt_manager(),
         tree_nb(), tree_soft(), 
+#ifdef BSE_BASE
+        rand_manager(),
+#endif
 #ifdef GALPY
         galpy_manager(),
 #endif
@@ -1133,6 +1156,13 @@ public:
 #endif
         }
 #endif //GALPY
+
+#ifdef EXTERNAL_HARD
+#ifndef GALPY
+        // update time and gas density
+        hard_manager.h4_manager.interaction.ext_force.updateTime(stat.time);
+#endif
+#endif
         
 #ifdef PROFILE
         profile.other.barrier();
@@ -1980,6 +2010,10 @@ public:
                 galpy_manager.writePotentialPars(fname+".galpy", stat.time);
 #endif
             }
+#ifdef BSE_BASE
+            std::string fname_seed = fname+".randseeds";
+            rand_manager.writeRandSeeds(fname_seed.c_str());
+#endif
         }
         // write all information in to fstatus
         else if(write_style==2&&my_rank==0) {
@@ -2002,6 +2036,7 @@ public:
 
         // save current error
         stat.energy.saveEnergyError();
+
 
 #ifdef PROFILE
         profile.output.barrier();
@@ -2655,11 +2690,19 @@ public:
         if (my_rank==0) bse_parameters.print_flag=true;
         else bse_parameters.print_flag=false;
         bse_parameters.read(argc,argv);
+        if (my_rank==0) rand_parameters.print_flag=true;
+        else rand_parameters.print_flag=false;
+        rand_parameters.read(argc,argv);
 #endif
 #ifdef GALPY
         if (my_rank==0) galpy_parameters.print_flag=true;
         else galpy_parameters.print_flag=false;
         galpy_parameters.read(argc,argv);
+#endif
+#ifdef EXTERNAL_HARD
+        if (my_rank==0) external_hard_parameters.print_flag=true;
+        else external_hard_parameters.print_flag=false;
+        external_hard_parameters.read(argc,argv);
 #endif
 
 #ifdef DISK_POT
@@ -3119,12 +3162,12 @@ public:
 
         // units
         if (input_parameters.unit_set.value==1) {
-            input_parameters.gravitational_constant.value = 0.00449830997959438; // pc^3/(Msun*Myr^2)
+            input_parameters.gravitational_constant.value = G_ASTRO;
 #ifdef BSE_BASE
             bse_parameters.tscale.value = 1.0; // Myr
-            bse_parameters.rscale.value = 44353565.919218; // pc -> rsun
+            bse_parameters.rscale.value = PC_TO_RSUN;
             bse_parameters.mscale.value = 1.0; // Msun
-            bse_parameters.vscale.value = 0.977813107686401; // pc/Myr -> km/s
+            bse_parameters.vscale.value = PCMYR_TO_KMS;
 #endif
             if(print_flag) {
                 std::cout<<"----- Unit set 1: Msun, pc, Myr -----\n"
@@ -3400,6 +3443,12 @@ public:
             stat.calcCenterOfMass(&system_soft[0], stat.n_real_loc);
 #endif
             //Ptcl::vel_cm = stat.pcm.vel;
+
+#ifdef BSE_BASE
+            // set randseeds filename to read later
+            std::string &data_filename = input_parameters.fname_inp.value;
+            rand_parameters.seedfile.value = data_filename + ".randseeds";
+#endif
         }
 
 #ifdef GALPY
@@ -3450,6 +3499,8 @@ public:
             hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters, print_flag);
             hard_manager.ar_manager.interaction.tide.speed_of_light = hard_manager.ar_manager.interaction.bse_manager.getSpeedOfLight();
         }
+        rand_manager.initialAll(rand_parameters);
+        rand_manager.printRandSeeds(std::cout);
 #endif
 #endif
 #ifdef ADJUST_GROUP_PRINT
@@ -3458,6 +3509,15 @@ public:
             hard_manager.h4_manager.adjust_group_write_flag=true;
         else 
             hard_manager.h4_manager.adjust_group_write_flag=false;
+#endif
+
+#ifdef EXTERNAL_HARD
+#ifdef GALPY
+        hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, galpy_manager, stat, print_flag);
+#else
+        hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, stat.time, print_flag);
+#endif
+        hard_manager.ar_manager.interaction.ext_force = &hard_manager.h4_manager.interaction.ext_force;
 #endif        
 
         // check consistence of paramters
@@ -3513,6 +3573,16 @@ public:
             }
             bse_parameters.input_par_store.writeAscii(fpar_out);
             fclose(fpar_out);
+
+            // save random parameters
+            std::string frand_par = input_parameters.fname_par.value + ".rand";
+            if (print_flag) std::cout<<"Save rand_parameters to file "<<frand_par<<std::endl;
+            if( (fpar_out = fopen(frand_par.c_str(),"w")) == NULL) {
+                fprintf(stderr,"Error: Cannot open file %s.\n", frand_par.c_str());
+                abort();
+            }
+            rand_parameters.input_par_store.writeAscii(fpar_out);
+            fclose(fpar_out);
 #endif
 
 #ifdef GALPY
@@ -3527,6 +3597,7 @@ public:
             fclose(fpar_out);
 #endif
 
+
 #ifdef DISK_POT
             // save galpy parameters
             std::string fdisk_par = input_parameters.fname_par.value + ".disk";
@@ -3536,6 +3607,17 @@ public:
                 abort();
             }
             disk_parameters.input_par_store.writeAscii(fpar_out);
+#endif
+#ifdef EXTERNAL_HARD
+            // save galpy parameters
+            std::string fexthard_par = input_parameters.fname_par.value + ".exthard";
+            if (print_flag) std::cout<<"Save external_hard_parameters to file "<<fexthard_par<<std::endl;
+            if( (fpar_out = fopen(fexthard_par.c_str(),"w")) == NULL) {
+                fprintf(stderr,"Error: Cannot open file %s.\n", fexthard_par.c_str());
+                abort();
+            }
+            external_hard_parameters.input_par_store.writeAscii(fpar_out);
+#endif
             fclose(fpar_out);
 #endif
         }
@@ -3681,6 +3763,17 @@ public:
 
                 /// force from external potential and kick
                 externalForce();
+
+#ifdef EXTERNAL_HARD
+                /// force from external hard
+                if (hard_manager.h4_manager.interaction.ext_force.mode>0) {
+                    H4::ForceH4 f;
+                    hard_manager.h4_manager.interaction.ext_force.calcAccJerkExternal(f, p);
+                    p.acc[0] += f.acc0[0];
+                    p.acc[1] += f.acc0[1];
+                    p.acc[2] += f.acc0[2];
+                }
+#endif
 
 #ifdef RECORD_CM_IN_HEADER
                 stat.calcAndShiftCenterOfMass(&p, stat.n_real_loc);
