@@ -329,7 +329,7 @@ c-------------------------------------------------------------c
          if(kw.ne.kwold) kwold = kw
          CALL deltat(kw,aj,tm,tn,tscls,dtm,dtr)
 * Tanikawa's prescription
-         if(askInUseOrNot() .and. askInScopeOfApplication(mt)) then
+         if(askInUseOrNot() .and. askInScopeOfApplication(mass)) then !         if(askInUseOrNot() .and. askInScopeOfApplication(mt)) then
             call calcTimestepAGBPhase(kw,aj,mass,tn,pts3,dtm,dtr)
          endif
 *

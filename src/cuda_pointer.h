@@ -2,8 +2,9 @@
 #include <assert.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include <helper_cuda.h>
-#define CUDA_SAFE_CALL checkCudaErrors
+//#include <helper_cuda.h>
+//#define CUDA_SAFE_CALL checkCudaErrors
+#define CUDA_SAFE_CALL(val) val
 
 template <typename T>
 struct cudaPointer{

@@ -199,6 +199,42 @@ struct CalcForceEpSpQuadNoSimd{
     }
 };
 
+template<class Tpi, class Tpj>
+struct CalcForcePPNoSimd {
+    void operator () (const Tpi * ep_i,
+                      const PS::S32 n_ip,
+                      const Tpj * ep_j,
+                      const PS::S32 n_jp,
+                      ForceSoft * force){
+      //const PS::F64 eps2 = EPISoft::eps * EPISoft::eps;
+        const PS::F64 eps2 = 0;
+        const PS::F64 G = ForceSoft::grav_const;
+        for(PS::S32 i=0; i<n_ip; i++){
+            PS::F64vec xi = ep_i[i].pos;
+            PS::F64vec ai = 0.0;
+            PS::F64 poti = 0.0;
+            for(PS::S32 j=0; j<n_jp; j++){
+                PS::F64vec rij = xi - ep_j[j].pos;
+                PS::F64 r3_inv = rij * rij + eps2;
+                PS::F64 r_inv = 1.0/sqrt(r3_inv);
+                r3_inv = r_inv * r_inv;
+                r_inv *= ep_j[j].mass;
+                r3_inv *= r_inv;
+                ai -= r3_inv * rij;
+                poti -= r_inv;
+            }
+            force[i].acc += G*ai;
+            force[i].pot += G*poti;
+#ifdef NAN_CHECK_DEBUG
+            assert(!std::isnan(ai[0]));
+            assert(!std::isnan(ai[1]));
+            assert(!std::isnan(ai[2]));
+            assert(!std::isnan(poti));
+#endif
+        }
+    }
+};
+
 #ifdef USE_SIMD
 struct SearchNeighborEpEpSimd{
     void operator () (const EPISoft * ep_i,

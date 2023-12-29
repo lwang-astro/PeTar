@@ -646,7 +646,7 @@ c            mcx = mcgbtf(aj,GB(8),GB,tscls(7),tscls(8),tscls(9))
 *
                   if(mrem.eq.0.0d0)then
                      kw = 15
-*     MM added following 4 lines 2021/09/22
+*     MMapelli added following 4 lines 2021/09/22
                      aj = 0.d0
                      mt = 0.d0
                      lum = 1.0d-10
@@ -665,7 +665,7 @@ c            mcx = mcgbtf(aj,GB(8),GB,tscls(7),tscls(8),tscls(9))
 * to prevent the formation of strange NS 
                         if(directcollapse.eq.1)then
                            kw = 15
-*     MM added following 4 lines 2021/09/22
+*     MMapelli added following 4 lines 2021/09/22
                            aj = 0.d0
                            mt = 0.d0
                            lum = 1.0d-10
@@ -872,7 +872,7 @@ c            mcx = mcgbtf(aj,GB(8),GB,tscls(7),tscls(8),tscls(9))
 *
                      if(mrem.eq.0.0d0)then
                         kw = 15
-*     MM added following 4 lines 2021/09/22
+*     MMapelli added following 4 lines 2021/09/22
                         aj = 0.d0
                         mt = 0.d0
                         lum = 1.0d-10
@@ -892,7 +892,7 @@ c            mcx = mcgbtf(aj,GB(8),GB,tscls(7),tscls(8),tscls(9))
 * to prevent the formation of strange NS 
                            if(directcollapse.eq.1)then
                               kw = 15
-*     MM added following 4 lines 2021/09/22
+*     MMapelli added following 4 lines 2021/09/22
                               aj = 0.d0
                               mt = 0.d0
                               lum = 1.0d-10
@@ -1028,12 +1028,17 @@ c            mcx = mcgbtf(aj,GB(8),GB,tscls(7),tscls(8),tscls(9))
             elseif(wdflag.ge.1)then
                lx = 300.d0*mc*zpars(14)/((ahe*0.1d0)**1.18d0)
             endif
+* MMapelli changed on 2022/02/11            
+***   
+** Upgrade from Philip D.Hall & Christopher A. Tout 2014
+*            rc = rcore_RGB(mc)
+** we need rx later when will compute the radius
+*            rx = rc
 ***
-* Upgrade from Philip D.Hall & Christopher A. Tout 2014
-            rc = rcore_RGB(mc)
-* we need rx later when will compute the radius
-            rx = rc
-***
+            rx = 0.0115d0*SQRT(MAX(1.48204d-06,
+     &           (mch/mc)**(2.d0/3.d0)-(mc/mch)**(2.d0/3.d0)))
+            rc = 5.d0*rx            
+* end MMapelli changed on 2022/02/11            
          endif
       elseif(kw.eq.4)then
          tau = (aj - tscls(2))/tscls(3)
@@ -1056,21 +1061,23 @@ c            mcx = mcgbtf(aj,GB(8),GB,tscls(7),tscls(8),tscls(9))
          rx = MIN(rhehgf(mc,lx,rx,lums(2)),rhegbf(lx))
          CALL star(kw,mass,mt,tm,tn,tscls,lums,GB,zpars)
          rc = rx
-***
-* Upgrade from Philip D.Hall & Christopher A. Tout 2014.
-* The old version does not take into account type 6 separately
-      elseif(kw.eq.6)then
-         if(wdflag.eq.0)then
-            lx = 635.d0*mc*zpars(14)/((aco*0.1d0)**1.4d0)
-         elseif(wdflag.ge.1)then
-            lx = 300.d0*mc*zpars(14)/((aco*0.1d0)**1.18d0)
-         endif
-* the critical new line
-         rc = rcore_TPAGB(mc)
-* we need rx later when will compute the radius 
-         rx = 0.0115d0*SQRT(MAX(1.48204d-06,
-     &        (mch/mc)**(2.d0/3.d0) - (mc/mch)**(2.d0/3.d0)))
+* MMapelli changed on 2022/02/11            
+***   
+** Upgrade from Philip D.Hall & Christopher A. Tout 2014.
+** The old version does not take into account type 6 separately
+*      elseif(kw.eq.6)then
+*         if(wdflag.eq.0)then
+*            lx = 635.d0*mc*zpars(14)/((aco*0.1d0)**1.4d0)
+*         elseif(wdflag.ge.1)then
+*            lx = 300.d0*mc*zpars(14)/((aco*0.1d0)**1.18d0)
+*         endif
+** the critical new line
+*         rc = rcore_TPAGB(mc)
+** we need rx later when will compute the radius 
+*         rx = 0.0115d0*SQRT(MAX(1.48204d-06,
+*     &        (mch/mc)**(2.d0/3.d0) - (mc/mch)**(2.d0/3.d0)))
 *
+* end MMapelli changed on 2022/02/11            
       elseif(kw.le.9)then
          if(wdflag.eq.0)then
             lx = 635.d0*mc*zpars(14)/((aco*0.1d0)**1.4d0)
@@ -1078,18 +1085,24 @@ c            mcx = mcgbtf(aj,GB(8),GB,tscls(7),tscls(8),tscls(9))
             lx = 300.d0*mc*zpars(14)/((aco*0.1d0)**1.18d0)
          endif
 *
-* Upgrade from Philip D.Hall & Christopher A. Tout 2014
-* The old version does not make dinstinction between type 8 and 9
-         if(kw.eq.8)then
-            rc = (0.00123d0 + 0.0806d0*mc - 0.00331d0*mc**2.d0)/(1.d0 +
-     &        0.467d0*mc - 0.0303d0*mc**2.d0)
-         elseif(kw.eq.9)then
-            rx = 0.0115d0*SQRT(MAX(1.48204d-06,
-     &        (mch/mc)**(2.d0/3.d0) - (mc/mch)**(2.d0/3.d0)))
-            rc = (2.7d0 - 1.129d0*mc)*rx
-         endif
+*  MMapelli changed on 2022/02/11
+*     
+** Upgrade from Philip D.Hall & Christopher A. Tout 2014
+** The old version does not make dinstinction between type 8 and 9
+*        if(kw.eq.8)then
+*            rc = (0.00123d0 + 0.0806d0*mc - 0.00331d0*mc**2.d0)/(1.d0 +
+*     &        0.467d0*mc - 0.0303d0*mc**2.d0)
+*         elseif(kw.eq.9)then
+*            rx = 0.0115d0*SQRT(MAX(1.48204d-06,
+*     &        (mch/mc)**(2.d0/3.d0) - (mc/mch)**(2.d0/3.d0)))
+*            rc = (2.7d0 - 1.129d0*mc)*rx
+*         endif
 *
 ***
+         rx = 0.0115d0*SQRT(MAX(1.48204d-06,
+     &        (mch/mc)**(2.d0/3.d0) - (mc/mch)**(2.d0/3.d0)))
+         rc = 5.d0*rx
+* end MMapelli changed on 2022/02/11            
       else
          rc = r
          menv = 1.0d-10
@@ -1110,7 +1123,13 @@ c            mcx = mcgbtf(aj,GB(8),GB,tscls(7),tscls(8),tscls(9))
             else
                xx = rpertf(mt,mew,r,rx)
             endif
-            r = rx*(r/rx)**xx
+* MMapelli added this check on 2022/02/11            
+            if(rx.gt.0.d0)then
+               r = rx*(r/rx)**xx
+            else
+               write(*,*)'rx negative, something bad going on'
+            endif
+*end MMapelli check on 2022/02/11
          endif
          rc = MIN(rc,r)
       endif
@@ -1132,7 +1151,7 @@ c      endif
 *
       if(kw.eq.15)then
          kw = 15
-*     MM added following 4 lines 2021/09/22
+*     MMapelli added following 4 lines 2021/09/22
          aj = 0.d0
          mt = 0.d0
          lum = 1.0d-10

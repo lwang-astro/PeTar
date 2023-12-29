@@ -1,8 +1,10 @@
       interface 
-      subroutine setMetallicity(zeta) bind(c, name='setMetallicity')
+      subroutine setMetallicity(zeta,trackmode) 
+     &     bind(c, name='setMetallicity')
       import
       implicit none
       real(c_double) zeta
+      integer(c_int) trackmode
       end subroutine
 
       function askInUseOrNot() bind(c, name='askInUseOrNot')
@@ -52,6 +54,13 @@
       real(c_double) getWindMetallicity
       end function
 
+      function getCriticalMassMassive() 
+     &     bind(c, name='getCriticalMassMassive')
+      import
+      implicit none
+      real(c_double) getCriticalMassMassive
+      end function
+
       function askAllBlueOrNot(mt) bind(c, name='askAllBlueOrNot')
       import
       implicit none
@@ -76,6 +85,16 @@
       logical(c_bool) askBlueOrRed2
       end function
       
+      function askBlueOrRed3(lumpersun,radpersun,mt)
+     &     bind(c, name='askBlueOrRed3')
+      import
+      implicit none
+      real(c_double) lumpersun
+      real(c_double) radpersun
+      real(c_double) mt
+      logical(c_bool) askBlueOrRed3
+      end function
+      
       function askRadiativeOrNot(kw,aj,mass)
      & bind(c, name='askRadiativeOrNot')
       import
@@ -96,6 +115,17 @@
       logical(c_bool) askRadiativeOrNot2
       end function
 
+      function askRadiativeOrNot3(kw,lumpersun,radpersun,mt)
+     & bind(c, name='askRadiativeOrNot3')
+      import
+      implicit none
+      integer(c_int) kw
+      real(c_double) lumpersun
+      real(c_double) radpersun
+      real(c_double) mt
+      logical(c_bool) askRadiativeOrNot3
+      end function
+
       function getCriticalMassRatio(kw,aj,mass,massc) 
      & bind(c, name='getCriticalMassRatio')
       import
@@ -107,7 +137,8 @@
       real(c_double) getCriticalMassRatio
       end function
 
-      function getCriticalMassRatio2(kw,lumpersun,radpersun,mass,massc) 
+      function getCriticalMassRatio2(kw,lumpersun,radpersun,mass,massc,
+     &     preventCe) 
      & bind(c, name='getCriticalMassRatio2')
       import
       implicit none
@@ -116,7 +147,22 @@
       real(c_double) radpersun
       real(c_double) mass
       real(c_double) massc
+      integer(c_int) preventCe
       real(c_double) getCriticalMassRatio2
+      end function
+
+      function getCriticalMassRatio3(kw,lumpersun,radpersun,mass,massc,
+     &     preventCe) 
+     & bind(c, name='getCriticalMassRatio3')
+      import
+      implicit none
+      integer(c_int) kw
+      real(c_double) lumpersun
+      real(c_double) radpersun
+      real(c_double) mass
+      real(c_double) massc
+      integer(c_int) preventCe
+      real(c_double) getCriticalMassRatio3
       end function
 
       function askCommonEnvelopeOrNot(kw,aj,mass,q,qc,radx,radc) 
@@ -147,6 +193,22 @@
       real(c_double) radx
       real(c_double) radc
       logical(c_bool) askCommonEnvelopeOrNot2
+      end function
+      
+      function askCommonEnvelopeOrNot3(kw,lumpersun,radpersun,
+     &     mass,q,qc,radx,radc) 
+     &     bind(c, name='askCommonEnvelopeOrNot3')
+      import
+      implicit none
+      integer(c_int) kw
+      real(c_double) lumpersun
+      real(c_double) radpersun
+      real(c_double) mass
+      real(c_double) q
+      real(c_double) qc
+      real(c_double) radx
+      real(c_double) radc
+      logical(c_bool) askCommonEnvelopeOrNot3
       end function
       
       function getRatioOfTMSTimeToHeITime(mass)
@@ -349,6 +411,22 @@
       real(c_double) getCOCoreMassEndTime
       end function
 
+      function getTMSMassFromHeCoreMassHeITime(mc)
+     &     bind(c, name='getTMSMassFromHeCoreMassHeITime')
+      import
+      implicit none
+      real(c_double) mc
+      real(c_double) getTMSMassFromHeCoreMassHeITime
+      end function
+
+      function getTMSMassFromHeCoreMassBAGBTime(mc)
+     &     bind(c, name='getTMSMassFromHeCoreMassBAGBTime')
+      import
+      implicit none
+      real(c_double) mc
+      real(c_double) getTMSMassFromHeCoreMassBAGBTime
+      end function
+
       subroutine followAGBPhase(aj, mass, mt, lum, 
      &     r, rg, mcbagb, mc, mcx, mcmax)
      &     bind(c, name='followAGBPhase')
@@ -468,6 +546,20 @@
       implicit none
       real(c_double) mt
       real(c_double) getConvectiveCoreRadiusOfBluePhase
+      end function
+
+      subroutine setMetallicityInZUsingInBSE(zbse)
+     & bind(c, name='setMetallicityInZUsingInBSE')
+      import
+      implicit none
+      real(c_double) zbse
+      end subroutine
+
+      function getMetallicityInZUsingInBSE()
+     & bind(c, name='getMetallicityInZUsingInBSE')
+      import
+      implicit none
+      real(c_double) getMetallicityInZUsingInBSE
       end function
 
       end interface

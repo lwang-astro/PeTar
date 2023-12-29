@@ -60,26 +60,26 @@ void followAGBPhase(F64 * aj,
     } else {
 	*mcx = *mcmax;
     }
-
     F64 tBAGB = getHeITime(mass) + getTimeIntervalOfCHeBPhase(mass);
     F64 tBlue = getEndTimeOfBluePhase(mass);
     F64 tFin  = getEndTime(mass);
-    if(askBlueOrRed(aj, mass) || askAllBlueOrNot(mt)) {
+
+    if(askBlueOrRed(aj, mass) || askAllBlueOrNot(mass)) {//    if(askBlueOrRed(aj, mass) || askAllBlueOrNot(mt)) { // (21/09/25)
 	F64 dt    = (tBlue - tBAGB != 0.) ? (*aj - tBAGB) : 0.;
 	F64 tau   = dt / (tBlue - tBAGB + TinyValue);
 	F64 tau3  = tau * tau * tau;
 	F64 lBAGB = getLuminosityBAGBTime(mass);
-	F64 rBAGB = getRadiusEndTimeOfBlueCHeBPhase(mt, mt, &lBAGB);
+	F64 rBAGB = getRadiusEndTimeOfBlueCHeBPhase(mass, mt, &lBAGB);//F64 rBAGB = getRadiusEndTimeOfBlueCHeBPhase(mt, mt, &lBAGB); //  (21/09/25)
 	F64 lBlue = getLuminosityEndTimeOfBluePhase(mass);
 	F64 ltemp = pow(10., lBlue);
-	F64 rBlue = (getEndTimeOfBluePhase(mt) == getEndTime(mt)) ?
-	    getRadiusEndTime(mt) : getRadiusRedPhase(mt, &ltemp);
+	F64 rBlue = (getEndTimeOfBluePhase(mass) == getEndTime(mass)) ? //F64 rBlue = (getEndTimeOfBluePhase(mt) == getEndTime(mt)) ? //  (21/09/25)
+	    getRadiusEndTime(mass) : getRadiusRedPhase(mt, &ltemp); //getRadiusEndTime(mt) : getRadiusRedPhase(mt, &ltemp); //  (21/09/25)
 	F64 lpower = lBAGB + tau3 * (lBlue - lBAGB);
 	F64 rpower = rBAGB + tau3 * (rBlue - rBAGB);
 	*lum = pow(10., lpower);
 	*r   = pow(10., rpower);
-// Tanikawa fixes this bug 21/09/20
-//      *rg  = getRadiusRedPhase(mt, lum);
+// A. Tanikawa fixes this bug 21/08/03
+//	*rg  = getRadiusRedPhase(mt, lum);
 	*rg  = pow(10., getRadiusRedPhase(mt, lum));
 //
     } else {

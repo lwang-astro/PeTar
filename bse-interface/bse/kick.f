@@ -7,8 +7,8 @@
       COMMON /VALUE3/ idum
       INTEGER idum2,iy,ir(32)
       COMMON /RAND3/ idum2,iy,ir
-      integer bhflag,mxns
-      real*8 m1,m2,m1n,ecc,sep,jorb,ecc2
+      integer bhflag
+      real*8 m1,m2,m1n,ecc,sep,jorb,ecc2,mxns
       real*8 pi,twopi,gmrkm,yearsc,rsunkm
       parameter(yearsc=3.1557d+07,rsunkm=6.96d+05)
       real*8 mm,em,dif,der,del,r

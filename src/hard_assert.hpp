@@ -18,6 +18,9 @@ public:
     PS::ReallocatableArray<PS::S32> n_member_in_group;
     PS::ReallocatableArray<FPSoft> ptcl_arti_bk;
     PS::ReallocatableArray<PtclH4> ptcl_bk;
+    bool backup_flag;
+
+    HardDump(): time_offset(0), time_end(0), n_ptcl(0), n_arti(0), n_group(0), n_member_in_group(), ptcl_arti_bk(), ptcl_bk(), backup_flag(false) {}
 
     //! backup one hard cluster data 
     /*!
@@ -51,6 +54,7 @@ public:
         }
         else n_arti = 0;
         n_group = _n_group;
+        backup_flag = true;
     }                
 
     //! Dumping one cluster data for debuging
@@ -81,6 +85,7 @@ public:
         fwrite(n_member_in_group.getPointer(), sizeof(PS::S32), n_group, fp);
         for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].writeBinary(fp);
         fclose(fp);
+        backup_flag = false;
     }
 
     //! reading one cluster data for debuging
@@ -159,20 +164,20 @@ public:
 class HardDumpList{
 public:
     int size;
+    int mpi_rank;
     int dump_number;
     HardDump* hard_dump;
 
-    HardDumpList(): size(0), dump_number(0), hard_dump(NULL) {}
+    HardDumpList(): size(0), mpi_rank(0), dump_number(0), hard_dump(NULL) {}
 
-    void initial(const int _n) {
-        size = _n;
-        dump_number = 0;
-        hard_dump = new HardDump[_n];
+    void initial(const int _nthread, const int _rank=0) {
+        size = _nthread;
+        mpi_rank = _rank;
+        hard_dump = new HardDump[_nthread];
     }
 
     void clear() {
         size = 0;
-        dump_number = 0;
         if (hard_dump!=NULL) {
             delete[] hard_dump;
             hard_dump=NULL;
@@ -184,18 +189,28 @@ public:
     }
 
     void dumpAll(const char *filename) {
+        std::string point(".");
+        std::string fname_prefix = filename + point + std::to_string(mpi_rank) + point;
         for (int i=0; i<size; i++) {
-            std::string fname = filename + std::string(".") + std::to_string(dump_number++);
-            hard_dump[i].dumpOneCluster(fname.c_str());
-            std::cerr<<"Dump file: "<<fname.c_str()<<std::endl;
+            std::time_t tnow = std::time(nullptr);
+            std::string fname = fname_prefix + std::to_string(i) + point + std::to_string(dump_number++) + point + std::to_string(tnow);
+            if (hard_dump[i].backup_flag) {
+                hard_dump[i].dumpOneCluster(fname.c_str());
+                std::cerr<<"Dump file: "<<fname.c_str()<<std::endl;
+            }
         }
     }
 
     void dumpThread(const char *filename){
         const PS::S32 ith = PS::Comm::getThreadNum();
-        std::string fname = filename + std::string(".") + std::to_string(dump_number++);
-        hard_dump[ith].dumpOneCluster(fname.c_str());
-        std::cerr<<"Thread: "<<ith<<" Dump file: "<<fname.c_str()<<std::endl;
+        std::string point(".");
+        std::time_t tnow = std::time(nullptr);
+        //std::tm *local_time = localtime(&tnow);
+        std::string fname = filename + point + std::to_string(mpi_rank) + point + std::to_string(ith) + point + std::to_string(dump_number++) + point + std::to_string(tnow);
+        if (hard_dump[ith].backup_flag) {
+            hard_dump[ith].dumpOneCluster(fname.c_str());
+            std::cerr<<"Thread: "<<ith<<" Dump file: "<<fname.c_str()<<std::endl;
+        }
     }
 
     HardDump& operator [] (const int i) {

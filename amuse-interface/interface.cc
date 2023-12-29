@@ -14,7 +14,11 @@ extern "C" {
 
     static PeTar* ptr=NULL;
     static double time_start = 0.0;
+#ifdef USE_SIMD
     static CalcForcePPSimd<ParticleBase,FPSoft> fcalc; // Force calculator
+#else
+    static CalcForcePPNoSimd<ParticleBase,FPSoft> fcalc;
+#endif
     static int n_particle_in_interrupt_connected_cluster_glb; // 
 
     // flags
@@ -704,10 +708,10 @@ extern "C" {
             mpi_collect_stopping_conditions();
 #endif      
         }
-#ifdef PROFILE
-        ptr->printProfile();
-        ptr->clearProfile();
-#endif        
+//#ifdef PROFILE
+        //ptr->printProfile();
+        //ptr->clearProfile();
+//#endif        
         ptr->reconstructIdAdrMap();
 #ifdef INTERFACE_DEBUG_PRINT
         if(ptr->my_rank==0) std::cout<<"PETAR: evolve models end\n";
@@ -895,6 +899,9 @@ extern "C" {
     }
 
     int set_begin_time(double time) {
+#ifdef INTERFACE_DEBUG_PRINT
+        if(ptr->my_rank==0) std::cout<<"PETAR: set begin time from "<<ptr->stat.time<<" to "<<time<<std::endl;
+#endif 
         time_start = time;
         ptr->stat.time = time_start;
         return 0;

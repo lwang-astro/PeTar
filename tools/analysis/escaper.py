@@ -69,8 +69,7 @@ class SingleEscaper(Particle):
         sindex=self.time.argsort()
         data_sort=self[sindex]
         unid, index= np.unique(data_sort.id, return_index=True)
-        newdata=data_sort[index]
-        self.__init__(newdata,**self.initargs)
+        self = data_sort[index]
 
 class BinaryEscaper(Binary):
     """ Binary escaper information
@@ -140,8 +139,7 @@ class BinaryEscaper(Binary):
         Use the first component id to check duplicate. 
         """
         unid, index= np.unique(self.p1.id, return_index=True)
-        newdata=self[index]
-        self.__init__(newdata,**self.initargs)
+        self = self[index]
 
 #def joinEscaper(*esc_list):
 #    single_type = type(esc_list[0].single)

@@ -115,7 +115,11 @@ extern "C" {
     // The Fortran function name + '_' is the C version. All arguments should be in pointer type.
 
     //! function for initial metallicity parameters
+#ifdef BSEEMP
+    void zcnsts_(double* z, double* zpars, int* trackmode);
+#else
     void zcnsts_(double* z, double* zpars);
+#endif
 
     //!function for collison matrix
     void instar_();
@@ -488,27 +492,44 @@ static double EstimateGRTimescale(StarParameter& _star1, StarParameter& _star2, 
  */
 class BinaryEvent{
 public:
-    double record[10][9];
+    // Tanikawa's BH model
+    double record[20][9];
+    //double record[20][81];
+    //
 
     //! set up the initial parameter of binary event based on the present status of a binary
-    void recordInitial(const StarParameter& _p1, const StarParameter& _p2, const double _semi, const double _ecc, const int _type) {
-        const int init_index = getEventIndexInit();
-        record[0][init_index] = std::min(_p1.tphys, _p2.tphys);
-        record[1][init_index] = _p1.mt;
-        record[2][init_index] = _p2.mt;
-        record[3][init_index] = _p1.kw;
-        record[4][init_index] = _p2.kw;
-        record[5][init_index] = _semi;
-        record[6][init_index] = _ecc;
+    void recordEvent(const StarParameter& _p1, const StarParameter& _p2, const double _semi, const double _ecc, const int _type, const int _index) {
+        record[0][_index] = std::min(_p1.tphys, _p2.tphys);
+        record[1][_index] = _p1.mt;
+        record[2][_index] = _p2.mt;
+        record[3][_index] = _p1.kw;
+        record[4][_index] = _p2.kw;
+        record[5][_index] = _semi;
+        record[6][_index] = _ecc;
         double q = _p1.mt/_p2.mt;
         double rl1 = EstimateRocheRadiusOverSemi(q);
         q = 1.0/q;
         double rl2 = EstimateRocheRadiusOverSemi(q);
-        record[7][init_index] = _p1.r/(rl1*_semi);
-        record[8][init_index] = _p2.r/(rl2*_semi);
-        record[9][init_index] = _type;
+        record[7][_index] = _p1.r/(rl1*_semi);
+        record[8][_index] = _p2.r/(rl2*_semi);
+        record[9][_index] = _type;
+        record[10][_index] = _p1.lum;
+        record[11][_index] = _p2.lum;
+        record[12][_index] = _p1.r;
+        record[13][_index] = _p2.r;
+        record[14][_index] = _p1.mc;
+        record[15][_index] = _p2.mc;
+        record[16][_index] = _p1.rc;
+        record[17][_index] = _p2.rc;
+        record[18][_index] = _p1.ospin;
+        record[19][_index] = _p2.ospin;
     }
 
+    //! set binary type to -1 for the given event index to indicate the end of record
+    void setEventIndexEnd(const int index) {
+        record[9][index] = -1;
+    }
+    
     //! Maximum event number that can be recored in one call of evolv2
     int getEventNMax() const {
         return 8;
@@ -534,7 +555,17 @@ public:
             <<" semi[R*]= "<<record[5][index]
             <<" ecc= "<<record[6][index]
             <<" rad1[Ro]= "<<record[7][index]
-            <<" rad2[Ro]= "<<record[8][index];
+            <<" rad2[Ro]= "<<record[8][index]
+            <<" lum1[L*]= "<<record[10][index]
+            <<" lum2[L*]= "<<record[11][index]
+            <<" rad1[R*]= "<<record[12][index]
+            <<" rad2[R*]= "<<record[13][index]
+            <<" mc1[M*]= "<<record[14][index]
+            <<" mc2[M*]= "<<record[15][index]
+            <<" rc1[R*]= "<<record[16][index]
+            <<" rc2[R*]= "<<record[17][index]
+            <<" ospin1= "<<record[18][index]
+            <<" ospin2= "<<record[19][index];
     }
 
     //! print titles of class members using column style
@@ -552,7 +583,18 @@ public:
              <<std::setw(_width)<<"ecc"
              <<std::setw(_width)<<"rad1[Ro]"
              <<std::setw(_width)<<"rad2[Ro]"
-             <<std::setw(_width)<<"btype";
+             <<std::setw(_width)<<"btype"
+             <<std::setw(_width)<<"lum1[L*]"
+             <<std::setw(_width)<<"lum2[L*]"
+             <<std::setw(_width)<<"rad1[R*]"
+             <<std::setw(_width)<<"rad2[R*]"
+             <<std::setw(_width)<<"mc1[M*]"
+             <<std::setw(_width)<<"mc2[M*]"
+             <<std::setw(_width)<<"rc1[R*]"
+             <<std::setw(_width)<<"rc2[R*]"
+             <<std::setw(_width)<<"ospin1"
+             <<std::setw(_width)<<"ospin2";
+
     }
 
     //! print data of class members using column style
@@ -566,6 +608,7 @@ public:
         for (int i=3; i<5; i++) _fout<<std::setw(_width)<<int(record[i][_index]);
         for (int i=5; i<9; i++) _fout<<std::setw(_width)<<record[i][_index];
         _fout<<std::setw(_width)<<int(record[9][_index]);
+        for (int i=10; i<20; i++) _fout<<std::setw(_width)<<record[i][_index];
     }
 };
 
@@ -610,6 +653,9 @@ public:
     IOParams<double> pts1;
     IOParams<double> pts2;
     IOParams<double> pts3;
+#ifdef BSEEMP
+    IOParams<long long int> trackmode;
+#endif
     IOParams<long long int> idum;
     IOParams<double> tscale;
     IOParams<double> rscale;
@@ -646,6 +692,9 @@ public:
                    pts1  (input_par_store, 0.05,  "bse-pts1",   "time step of MS"),
                    pts2  (input_par_store, 0.01,  "bse-pts2",   "time step of GB, CHeB, AGB, HeGB"),
                    pts3  (input_par_store, 0.02,  "bse-pts3",   "time step of HG, HeMS"),
+#ifdef BSEEMP
+                   trackmode(input_par_store, 2,  "bse-trackmode",  "star evolution option, need to make a soft link to the data directory in bse-interface/bseEmp/emptrack/: 1: L model (larger overshoot; directory name: ffbonn); 2: M model (smaller overshoot; directory name: ffgeneva); See details in Appendix A of Tanikawa et al. (2022, ApJ, 926, 83)"),
+#endif
                    idum  (input_par_store, 1234,  "bse-idum",   "random number seed used by the kick routine"),
                    tscale(input_par_store, 1.0,   "bse-tscale", "Time scale factor from input data unit (IN) to Myr (time[Myr]=time[IN]*tscale)"),
                    rscale(input_par_store, 1.0,   "bse-rscale", "Radius scale factor from input data unit (IN) to Rsun (r[Rsun]=r[IN]*rscale)"),
@@ -674,7 +723,7 @@ public:
                    //ifflag(input_par_store, 2,   "if > 0 uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
                    wdflag(input_par_store, 1,       "mobse-wdflag", "if >0, uses WD IFMR of HPE, 1995, MNRAS, 272, 800"),
                    bhflag(input_par_store, 3,       "mobse-bhflag", "BH kick option: 0: no kick; 1: same as NS; 2: scaled by fallback; 3: Giacobbo&Mapelli (2020)"),
-                   nsflag(input_par_store, 3,       "mobse-nsflag", "NS/BH foramtion options: 0: original SSE; 2: Belczynski (2008); 2: Fryer (2012) rapid SN; 2: Fryer (2012) delayed SN; 4: Belczynski (2008); 5: no SN explosion"),
+                   nsflag(input_par_store, 3,       "mobse-nsflag", "NS/BH formation options: 0: original SSE; 1: Belczynski (2008); 2: Fryer (2012) rapid SN; 3: Fryer (2012) delayed SN; 4: Belczynski (2008); 5: no SN explosion"),
                    piflag(input_par_store, 1,       "mobse-piflag", "PPSN condition (Spera et al. 2015)"),
                    //psflag(input_par_store, 1,  "PPSN condition (Belczynski 2016): 0: no PPSN; 1: strong; (Leung 2019): 2: moderate; 3: weak"),
                    //kmech (input_par_store, 1,  "Kick mechanism: 1: standard momentum-conserving; 2: convection-asymmetry-driven; 3: collapse-asymmerty-driven; 4: neutrino driven"),
@@ -735,6 +784,9 @@ public:
             {pts1.key,   required_argument, &sse_flag, 14},
             {pts2.key,   required_argument, &sse_flag, 15},       
             {pts3.key,   required_argument, &sse_flag, 16},
+#ifdef BSEEMP
+            {trackmode.key,   required_argument, &sse_flag, 30},
+#endif
             {idum.key,   required_argument, &sse_flag, 17}, 
             {tscale.key, required_argument, &sse_flag, 18},
             {rscale.key, required_argument, &sse_flag, 19},
@@ -919,6 +971,13 @@ public:
                     if(print_flag) gamma.print(std::cout);
                     opt_used+=2;
                     break;
+#ifdef BSEEMP
+                case 30:
+                    trackmode.value = atoi(optarg);
+                    if(print_flag) trackmode.print(std::cout);
+                    opt_used+=2;
+                    break;
+#endif
                 default:
                     break;
                 }
@@ -990,6 +1049,9 @@ public:
 class BSEManager{
 public:
     double z, zpars[20]; ///> metallicity parameters
+#ifdef BSEEMP
+    int trackmode; ///> EMP track mode
+#endif
     double tscale; ///> time scaling factor from NB to Myr (t[Myr]=t[NB]*tscale)
     double rscale; ///> radius scaling factor from NB to Rsun
     double mscale; ///> mass scaling factor from NB to Msun
@@ -998,7 +1060,11 @@ public:
     const char* single_type[16]; ///> name of single type from SSE
     const char* binary_type[14]; ///> name of binary type return from BSE evolv2, notice if it is -1, it indicate the end of record
 
-    BSEManager(): z(0.0), zpars{0}, tscale(0.0), rscale(0.0), mscale(0.0), vscale(0.0), year_to_day(3.6525e8),
+    BSEManager(): z(0.0), zpars{0}, 
+#ifdef BSEEMP
+                  trackmode(0),
+#endif
+                  tscale(0.0), rscale(0.0), mscale(0.0), vscale(0.0), year_to_day(3.6525e8),
                   single_type{"LMS", "MS", "HG", "GB", "CHeB", "FAGB", "SAGB", "HeMS", "HeHG", "HeGB", "HeWD", "COWD", "ONWD", "NS", "BH", "SN"},
                   binary_type{"Unset",               //0
                               "Initial",             //1
@@ -1019,6 +1085,9 @@ public:
 
     bool checkParams() {
         assert(z>0.0);
+#ifdef BSEEMP
+        assert(trackmode>0);
+#endif
         assert(tscale>0.0);
         assert(rscale>0.0);
         assert(mscale>0.0);
@@ -1207,11 +1276,13 @@ public:
 #ifdef BSEEMP
         if (_print_flag&&(z>0.03))
             std::cerr<<"BSE warning! metallicity Z is not in (0.0, 0.03); given value:"<<z<<std::endl;
+        trackmode = _input.trackmode.value;
+        zcnsts_(&z, zpars, &trackmode);
 #else
         if (_print_flag&&(z<0.0001||z>0.03))
             std::cerr<<"BSE warning! metallicity Z is not in (0.0001, 0.03); given value:"<<z<<std::endl;
-#endif
         zcnsts_(&z, zpars);
+#endif
         value3_.idum = (_input.idum.value>0)? -_input.idum.value: _input.idum.value;
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
@@ -1227,6 +1298,9 @@ public:
             std::cout<<"z: "<<z<<" zpars: ";
             for (int i=0;i<20;i++) std::cout<<zpars[i]<<" ";
             std::cout<<std::endl;
+#ifdef BSEEMP
+            std::cout<<"EMPTrack: "<<trackmode<<std::endl;
+#endif
         }
 
     }
@@ -1327,11 +1401,13 @@ public:
     /*!
       @param[in,out] _star: star parameter
       @param[out] _out: output parameter from evolv1
-      @param[in] _dt_nb: physical time step to evolve [In unit]
+      @param[in] _dt: time step to evolve
+      @param[in] _unit_in_myr: if true, _dt is in Myr; else, _dt*tscale is used (default false)
       \return event flag: -1: error, 0: normal, 1: type change, 2: velocity kick
      */
-    int evolveStar(StarParameter& _star, StarParameterOut& _out, const double _dt_nb) {
-        double tphysf = _dt_nb*tscale + _star.tphys;
+    int evolveStar(StarParameter& _star, StarParameterOut& _out, const double _dt, bool _unit_in_myr=false) {
+        double tphysf = _dt*tscale + _star.tphys;
+        if (_unit_in_myr) tphysf = _dt + _star.tphys;
         double dtp=tphysf*100.0+1000.0;
         _out.dm = _star.mt;
         _out.kw0 = _star.kw;
@@ -1380,19 +1456,49 @@ public:
         _out2.dm = _star2.mt;
 
         // backup initial state
-        _bse_event.recordInitial(_star1, _star2, semi_rsun, _ecc, _binary_init_type);
+        _bse_event.recordEvent(_star1, _star2, semi_rsun, _ecc, _binary_init_type, _bse_event.getEventIndexInit());
 
-        if (_star1.tphys<tphys) event_flag = evolveStar(_star1, _out1, tphys);
+        if (_star1.kw==15 || _star2.kw==15) {
+            if (_star1.kw==15 && _star2.kw==15) {
+                _star1.tphys = tphysf;
+                _star2.tphys = tphysf;
+                return 0;
+            }
+            if (_star1.kw==15) {
+                double dt = tphysf - _star2.tphys;
+                event_flag = evolveStar(_star2, _out2, dt, true);
+                _star1.tphys = tphysf;
+            }
+            if (_star2.kw==15) {
+                double dt = tphysf - _star1.tphys;
+                event_flag = evolveStar(_star1, _out1, dt, true);
+                _star2.tphys = tphysf;
+            }
+            if (event_flag<0) return event_flag;
+            int event_index = 0;
+            if (event_flag>0) _bse_event.recordEvent(_star1, _star2, semi_rsun, _ecc, 2, event_index++);
+            _bse_event.setEventIndexEnd(event_index);
+            return 0;
+        }
+
+        if (_star1.tphys<tphys) {
+            double dt = tphys - _star1.tphys;
+            event_flag = evolveStar(_star1, _out1, dt, true);
+        }
         if (event_flag<0) return event_flag;
-        if (_star2.tphys<tphys) event_flag = evolveStar(_star2, _out2, tphys);
+        if (_star2.tphys<tphys) {
+            double dt = tphys - _star2.tphys;
+            event_flag = evolveStar(_star2, _out2, dt, true);
+        }
         if (event_flag<0) return event_flag;
-        
+
         int kw[2];
         double m0[2],mt[2],r[2],lum[2],mc[2],rc[2],menv[2],renv[2],ospin[2],epoch[2],tm[2],vkick[8];
         for (int k =0; k<4; k++) {
             vkick[k]  = _out1.vkick[k];
             vkick[k+4]= _out2.vkick[k];
         }
+
 
         kw[0] = _star1.kw;
         m0[0] = _star1.m0;
@@ -1411,7 +1517,7 @@ public:
         rc[1] = _star2.rc;
         ospin[1] = _star2.ospin;
         epoch[1] = _star2.epoch;
-        
+
         evolv2_(kw, m0, mt, r, lum, mc, rc, menv, renv, ospin, epoch, tm, &tphys, &tphysf, &dtp, &z, zpars, &period_days, &_ecc, _bse_event.record[0], vkick);
         _period = period_days/year_to_day/tscale;
 

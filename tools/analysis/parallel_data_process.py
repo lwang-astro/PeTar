@@ -36,7 +36,8 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
             mass_fraction: an 1D numpy.ndarray to indicate the mass fractions to calculate lagrangian radii.
                                Default is np.array([0.1, 0.3, 0.5, 0.7, 0.9])
             interrupt_mode: PeTar interrupt mode: base, bse, mobse, none. If not provided, type is none 
-            snapshot_format: snapshot format: ascii or binary (ascii)
+            snapshot_format: input snapshot format: ascii or binary (ascii)
+            output_format: output data format: ascii, binary, npy (ascii)
     """
     lagr = result['lagr']
     esc_single  = result['esc_single']
@@ -45,19 +46,23 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
     m_frac = lagr.initargs['mass_fraction']
     G=1.0
     snapshot_format='ascii'
+    output_format='ascii'
     r_bin=0.1
     average_mode='sphere'
     simple_binary=True
     external_mode='none'
     find_multiple=False
+    m_ext=None
 
     if ('G' in kwargs.keys()): G=kwargs['G']
     if ('r_max_binary' in kwargs.keys()): r_bin=kwargs['r_max_binary']
     if ('average_mode' in kwargs.keys()): average_mode=kwargs['average_mode']
-    if ('simple_binary' in kwargs.keys()): simple_binary=kwargs['simple_binary']
+    if ('simple_mode' in kwargs.keys()): simple_binary=kwargs['simple_mode']
     if ('snapshot_format' in kwargs.keys()): snapshot_format=kwargs['snapshot_format']
+    if ('output_format' in kwargs.keys()): output_format=kwargs['output_format']
     if ('external_mode' in kwargs.keys()): external_mode=kwargs['external_mode']
     if ('find_multiple' in kwargs.keys()): find_multiple=kwargs['find_multiple']
+    if ('m_ext' in result.keys()): m_ext=result['m_ext']
 
     header = PeTarDataHeader(file_path, **kwargs)
     
@@ -113,7 +118,7 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         core.size+=1
 
         n_frac=m_frac.size+1
-        cm_vel=np.array([0,0,0]) # avoid kinetic energy jump 
+        #cm_vel=np.array([0,0,0]) # avoid kinetic energy jump 
         single.correctCenter(cm_pos, cm_vel)
         binary.correctCenter(cm_pos, cm_vel)
         time_profile['center_core'] += time.time() - start_time
@@ -121,13 +126,36 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         
         if (find_multiple): 
             single_t, binary_t, triple_t, quadruple_t = findMultiple(single,binary,G,r_bin,simple_binary)
-            single_t.savetxt(file_path+'.single')
-            binary_t.savetxt(file_path+'.binary')
-            triple_t.savetxt(file_path+'.triple')
-            quadruple_t.savetxt(file_path+'.quadruple')
+            if (output_format=='ascii'):
+                single_t.savetxt(file_path+'.single')
+                binary_t.savetxt(file_path+'.binary')
+                triple_t.savetxt(file_path+'.triple')
+                quadruple_t.savetxt(file_path+'.quadruple')
+            elif (output_format=='binary'):
+                single_t.tofile(file_path+'.single')
+                binary_t.tofile(file_path+'.binary')
+                triple_t.tofile(file_path+'.triple')
+                quadruple_t.tofile(file_path+'.quadruple')
+            elif (output_format=='npy'):
+                single_t.save(file_path+'.single')
+                binary_t.save(file_path+'.binary')
+                triple_t.save(file_path+'.triple')
+                quadruple_t.save(file_path+'.quadruple')
+            else:
+                raise ValueError('Output format %s is not supported, should be ascii, binary or npy' % output_format)
         else:
-            single.savetxt(file_path+'.single')
-            binary.savetxt(file_path+'.binary')
+            if (output_format=='ascii'):
+                single.savetxt(file_path+'.single')
+                binary.savetxt(file_path+'.binary')
+            elif (output_format=='binary'):
+                single.tofile(file_path+'.single')
+                binary.tofile(file_path+'.binary')
+            elif (output_format=='npy'):
+                single.save(file_path+'.single')
+                binary.save(file_path+'.binary')
+            else:
+                raise ValueError('Output format %s is not supported, should be ascii, binary or npy' % output_format)
+                
 
         time_profile['save_data'] += time.time() - start_time
 
@@ -172,12 +200,29 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         if (rcut == 'tidal'):
             if (external_mode!='none'): 
                 tidal = result['tidal']
-                r_gal = np.sqrt(np.sum(core.pos[-1]*core.pos[-1]));
-                rcut = tidal.calcTidalSphere(header.time, particle.mass, particle.r2, pot_ext, r_gal, G);
+                tsel = (core.time == header.time)
+                pos_c = core.pos[tsel]
+                r_gal = np.sqrt(np.sum(pos_c*pos_c))
+                M_galaxy = 0
+                if (type(m_ext)==np.ndarray):
+                    tsel = (m_ext[:,0] == header.time)
+                    M_galaxy= m_ext[tsel,1]
+                else:
+                    M_galaxy = estimateGalaxyMass(pot_ext, r_gal, G)
+                rcut = tidal.calcTidalSphere(header.time, particle.mass, particle.r2, M_galaxy, pot_ext, r_gal, G);
             else:
                 raise ValueError('Escape radius is set to tidal radius but the external mode is off')
+        else:
+            rcut = float(rcut)
         if ('e_escape' in kwargs.keys()): 
             es_cut = kwargs['e_escape']
+            if (es_cut == 'bound_noext'):
+                es_cut = 0
+                single.pot -= single.pot_ext
+                binary.p1.pot -= binary.p1.pot_ext
+                binary.p2.pot -= binary.p2.pot_ext
+            else:
+                es_cut = float(es_cut)
 
         single = esc_single.findEscaper(header.time, single, rcut, es_cut)
         binary = esc_binary.findEscaper(header.time, binary, rcut, es_cut)
@@ -247,6 +292,10 @@ def dataProcessList(file_list, read_flag, **kwargs):
         interrupt_mode=kwargs['interrupt_mode']
         if ('bse' in interrupt_mode):
             result['bse_status'] = BSEStatus()
+
+    if ('read_m_ext' in kwargs.keys()):
+        read_m_ext=kwargs['read_m_ext'] # filename of m_ext, (time, m)
+        result['m_ext'] = np.loadtxt(read_m_ext)
 
     for path in file_list:
         #print(' data:',path)

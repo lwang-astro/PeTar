@@ -10,7 +10,9 @@ INCLUDE  += -I src/PeTar/src -I src/SDAR/src -I src/FDPS/src
 
 MPIFLAGS +=  -DPARTICLE_SIMULATOR_MPI_PARALLEL -DMPICH_IGNORE_CXX_SEEKC
 
-CXXFLAGS = ${INCLUDE} -fPIC -O2 -Wall -std=c++11  -fopenmp
+CXXFLAGS = ${INCLUDE} -fPIC -Wall -std=c++11  -fopenmp
+CXXFLAGS += -O2 
+#CXXFLAGS += -g -O0
 
 # arch
 CXXFLAGS += -march=core-avx2
@@ -100,8 +102,8 @@ $(FILELIST): |src/PeTar
 src/PeTar/src/get_version.hpp: src/PeTar/src/get_version.hpp.in |src/PeTar
 	sed 's/@VERSION@/'`cat src/PeTar/VERSION`'_'`cat src/SDAR/VERSION`'/g' src/PeTar/src/get_version.hpp.in >src/PeTar/src/get_version.hpp
 
-test_interface: $(OBJS) test_interface.o
-	$(MPICXX) $(CXXFLAGS) $(OBJS) test_interface.o -o $@
+test_interface: $(OBJS) test_interface.cc
+	$(MPICXX) $(CXXFLAGS) $(SC_FLAGS) $^ -o $@ $(SC_MPI_CLIBS) $(LIBS) $(AM_LIBS)
 
 worker_code.cc: interface.py
 	$(CODE_GENERATOR) --type=c interface.py petarInterface -o $@

@@ -14,7 +14,10 @@ int main(int argc, char *argv[]){
     PeTar petar;
     
     PS::S32 iread = petar.readParameters(argc,argv);
-    if (iread<0) return 0;
+    if (iread<0) {
+        PeTar::finalizeFDPS();
+        return 0;
+    }
 
     auto& inp = petar.input_parameters;
 

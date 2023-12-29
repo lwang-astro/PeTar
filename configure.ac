@@ -98,11 +98,17 @@ AX_CHECK_COMPILE_FLAG([-Wall],
                       [OPTFLAGS=$OPTFLAGS" -Wall"
                        DEBFLAGS=$DEBFLAGS" -Wall"])
 
-AX_CHECK_COMPILE_FLAG([-std=c++11],
-                      [OPTFLAGS=$OPTFLAGS" -std=c++11"
-                       DEBFLAGS=$DEBFLAGS" -std=c++11"
-		       CUDAFLAGS=$CUDAFLAGS" -std=c++11"],
-                      [AC_MSG_FAILURE([c++11 support is required for the compiler])])
+AC_ARG_WITH([cpp-std],
+	    [AS_HELP_STRING([--with-cpp-std],
+                            [version of c++ standard (11, 17). Default: 17])],
+            [],
+	    [with_cpp_std=17])
+
+AX_CHECK_COMPILE_FLAG([-std=c++$with_cpp_std],
+                      [OPTFLAGS=$OPTFLAGS" -std=c++"$with_cpp_std
+                       DEBFLAGS=$DEBFLAGS" -std=c++"$with_cpp_std
+		       CUDAFLAGS=$CUDAFLAGS" -std=c++"$with_cpp_std],
+                      [AC_MSG_FAILURE([c++$with_cpp_std support is required for the compiler])])
 
 # OpenMP
 AC_ARG_ENABLE([openmp],
@@ -194,11 +200,11 @@ AC_ARG_WITH([cuda-prefix],
             [],
 	    [cuda_prefix="/usr/local/cuda"])
 
-AC_ARG_WITH([cuda-sdk-prefix], 
-            [AS_HELP_STRING([--with-cuda-sdk-prefix],
-	                    [Prefix of your CUDA samples (SDK) installation])],
-            [cuda_sdk_prefix=$withval],
-	    [cuda_sdk_prefix="/usr/local/cuda/samples"])
+#AC_ARG_WITH([cuda-sdk-prefix], 
+#            [AS_HELP_STRING([--with-cuda-sdk-prefix],
+# 	                    [Prefix of your CUDA samples (SDK) installation])],
+#            [cuda_sdk_prefix=$withval],
+# 	    [cuda_sdk_prefix="/usr/local/cuda/samples"])
 
 AS_IF([test "x$use_cuda" != xno],
       [AC_CHECK_PROG([NVCC], [nvcc], [nvcc], [none])
@@ -215,11 +221,13 @@ AS_IF([test "x$use_cuda" != xno],
        CUDA_VERSION=`$NVCC --version|awk -F ',' 'END{print $(NF-1)}'|awk '{print $2}'`
        AC_MSG_RESULT([$CUDA_VERSION])
 
-       AC_CHECK_FILE(["$cuda_prefix/samples/common/inc/helper_cuda.h"],
-                     [CUDAFLAGS=$CUDAFLAGS" -I $cuda_prefix/samples/common/inc"],
-                     [AC_CHECK_FILE(["$cuda_sdk_prefix/common/inc/helper_cuda.h"],
-                                    [CUDAFLAGS=$CUDAFLAGS" -I $cuda_sdk_prefix/common/inc"],
-                                    [AC_MSG_FAILURE([can't find CUDA sample inc file helper_cuda.h, please provide correct cuda SDK prefix by using --with-cuda-sdk-prefix])])])
+#       AC_CHECK_FILE(["$cuda_prefix/samples/common/inc/helper_cuda.h"],
+#                     [CUDAFLAGS=$CUDAFLAGS" -I $cuda_prefix/samples/common/inc"],
+#                     [AC_CHECK_FILE(["$cuda_sdk_prefix/common/inc/helper_cuda.h"],
+#                                    [CUDAFLAGS=$CUDAFLAGS" -I $cuda_sdk_prefix/common/inc"],
+#                                    [AC_CHECK_FILE(["$cuda_sdk_prefix/Common/helper_cuda.h"],
+#                                                   [CUDAFLAGS=$CUDAFLAGS" -I $cuda_sdk_prefix/Common"],
+#                                                   [ AC_MSG_FAILURE([can't find CUDA sample inc file helper_cuda.h, please provide correct cuda SDK prefix by using --with-cuda-sdk-prefix])])])])
 
        AC_CHECK_LIB([cudart],
                     [main], 
@@ -274,7 +282,7 @@ AC_ARG_WITH([fdps-prefix],
 	    [fdps_prefix="../FDPS"])
 
 AC_CHECK_FILE(["$fdps_prefix/src/particle_simulator.hpp"],
-	      [INCLUDE=$INCLUDE" -I$fdps_prefix/src"],
+	      [PETAR_INCLUDE=$PETAR_INCLUDE" -I$fdps_prefix/src"],
 	      [AC_MSG_FAILURE([can't find FDPS library, please provide correct PREFIX by using --with-fdps-prefix])])
 
 AC_CHECK_FILE(["$fdps_prefix/src/ps_defs.hpp"],
@@ -293,7 +301,7 @@ AC_ARG_WITH([sdar-prefix],
 	    [sdar_prefix="../SDAR"])
 
 AC_CHECK_FILE(["$sdar_prefix/src/Hermite/hermite_integrator.h"],
-	      [INCLUDE=$INCLUDE" -I$sdar_prefix/src"],
+	      [PETAR_INCLUDE=$PETAR_INCLUDE" -I$sdar_prefix/src"],
 	      [AC_MSG_FAILURE([can't find SDAR library, please provide correct PREFIX by using --with-sdar-prefix])])
 
 # GALPY
@@ -311,14 +319,21 @@ AC_ARG_WITH([step-mode],
 	    [with_step_mode=kdk])
 
 # interruption options
+FCFLAGS_BK=$FCFLAGS
 AC_ARG_WITH([interrupt],
 	    [AS_HELP_STRING([--with-interrupt],
 	                    [Interruption detection mode: Default: off])],
             [PROG_NAME=$PROG_NAME'.'$with_interrupt
 	     AS_IF([[test x"$with_interrupt" == xbse] || [test x"$with_interrupt" == xmobse] || [test x"$with_interrupt" == xbseEmp]],
-	           [FCFLAGS_BK=$FCFLAGS
-                    use_fortran=yes
-                    AC_PROG_FC([gfortran ifort])
+	           [use_fortran=yes
+		    AC_LANG([Fortran])
+                    #AC_PROG_FC([gfortran ifort flang])
+		    AS_IF([test x"$FC" == xgfortran],
+		          [FCLIBS=$FCLIBS' -lgfortran'],[])
+		    AS_IF([test x"$FC" == xflang],
+		          [#AX_CHECK_COMPILE_FLAG([-static-flang-libs],
+                          #                       [FCFLAGS=$FCFLAGS" -static-flang-libs"])
+		          FCLIBS=$FCLIBS' -lflang -lpgmath'],[])
                     FCFLAGS=$FCFLAGS_BK
 		    AS_IF([test x"$with_debug" == xg],
                           [AX_CHECK_COMPILE_FLAG([-g],
@@ -341,7 +356,8 @@ AC_ARG_WITH([external],
 	                    [External potential: Default: off])],
             [PROG_NAME=$PROG_NAME'.'$with_external
 	     AS_IF([test x"$with_external" == xgalpy],
-	           [AC_PROG_CC([fcc gcc icc cc])
+	           [AC_LANG([C])
+		    #AC_PROG_CC([fcc gcc icc cc])
                     use_c=yes
 		    AS_IF([test x"$with_debug" == xg],
                           [AX_CHECK_COMPILE_FLAG([-g],
@@ -364,6 +380,9 @@ AC_ARG_WITH([external],
                     AC_CHECK_FILE(["$galpy_prefix/potential/potential_c_ext/galpy_potentials.h"],
                                   [GALPY_PATH=$galpy_prefix],
                                   [AC_MSG_FAILURE([can't find Galpy library, please provide correct PREFIX by using --with-galpy-prefix])])
+                    AC_CHECK_FILE(["$galpy_prefix/__init__.py"],
+		                  [GALPY_VERSION=`head -1 $galpy_prefix/__init__.py|cut -d'"' -f2 `],
+				  [AC_MSG_FAILURE([can't find Galpy __init__.py, which contains the version number])])
                     AC_CHECK_PROG([GSL_CFLAGS],[gsl-config],[`gsl-config --cflags`],[])
                     AC_CHECK_PROG([GSL_LIBS],[gsl-config],[`gsl-config --libs`],[none])
 		    AS_IF([test x"$GSL_LIBS" == xnone],
@@ -453,13 +472,16 @@ AC_SUBST([GPERFLIBS])
 AC_SUBST([GALPY_PATH])
 AC_SUBST([GSL_CFLAGS])
 AC_SUBST([GSL_LIBS])
-AC_SUBST([INCLUDE])
+AC_SUBST([PETAR_INCLUDE])
 AC_SUBST([PROG_NAME])
 AC_SUBST([CXX])
 AC_SUBST([CXXNOMPI])
 AC_SUBST([VERSION])
 AC_SUBST([FDPS_VERSION])
 AC_SUBST([use_fdps_comm])
+AC_SUBST([FCLIBS])
+AC_SUBST([FLIBS])
+AC_SUBST([GALPY_VERSION])
 
 AC_MSG_NOTICE([----------------------Configure Summary--------------------])
 AC_MSG_NOTICE([--Features:])
@@ -480,6 +502,8 @@ AC_MSG_NOTICE([     Debug mode:        $with_debug])
 AC_MSG_NOTICE([     Step mode:         $with_step_mode])
 AC_MSG_NOTICE([     interrupt mode:    $with_interrupt])
 AC_MSG_NOTICE([     external mode:     $with_external])
+AS_IF([test x"$with_external" == xgalpy],
+      [AC_MSG_NOTICE([     Galpy version:     $GALPY_VERSION])])
 AC_MSG_NOTICE([     tidal tensor mode: $with_tidal_tensor])
 AC_MSG_NOTICE([     orbit mode:        $with_orbit])
 AC_MSG_NOTICE([     Using quad:        $use_quad])

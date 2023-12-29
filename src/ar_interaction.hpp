@@ -21,15 +21,19 @@ public:
 #ifdef STELLAR_EVOLUTION
     int stellar_evolution_option;
     bool stellar_evolution_write_flag;
+    Float time_interrupt_max;
 #ifdef BSE_BASE
     BSEManager bse_manager;
     TwoBodyTide tide;
     std::ofstream fout_sse; ///> log file for SSE event
     std::ofstream fout_bse; ///> log file for BSE event
 
-    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), stellar_evolution_option(1), stellar_evolution_write_flag(true), bse_manager(), fout_sse(), fout_bse() {}
+    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), 
+                     stellar_evolution_option(1), stellar_evolution_write_flag(true), time_interrupt_max(NUMERIC_FLOAT_MAX), 
+                     bse_manager(), fout_sse(), fout_bse() {}
 #else
-    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), stellar_evolution_option(0), stellar_evolution_write_flag(true) {}
+    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), 
+                     stellar_evolution_option(0), stellar_evolution_write_flag(true), time_interrupt_max(NUMERIC_FLOAT_MAX){}
 #endif
 #else
     ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)) {}
@@ -41,10 +45,13 @@ public:
     bool checkParams() {
         ASSERT(eps_sq>=0.0);
         ASSERT(gravitational_constant>0.0);
+#ifdef STELLAR_EVOLUTION
+        ASSERT(time_interrupt_max>=0.0);
 #ifdef BSE_BASE
         ASSERT(stellar_evolution_option==0 || (stellar_evolution_option==1 && bse_manager.checkParams()) || (stellar_evolution_option==2 && bse_manager.checkParams() && tide.checkParams()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_sse.is_open()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_bse.is_open()));
+#endif
 #endif
         return true;
     }        
@@ -457,6 +464,41 @@ public:
     }
 
 #if (defined AR_SLOWDOWN_ARRAY) || (defined AR_SLOWDOWN_TREE)
+
+    //! calculate slowdown timescale
+    void calcSlowDownTimeScale(Float& _t_min_sq, const Float dv[3], const Float dr[3], const Float& r, const Float& gm) {
+
+        Float r2 = r*r;
+        Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
+        Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
+
+        Float semi = 1.0/(2.0/r - v2/gm);
+        //hyperbolic, directly use velocity v
+        if (semi<0) 
+            _t_min_sq = std::min(_t_min_sq, r2/v2);
+        else {
+            Float ra_fact = (1 - r/semi); 
+            Float e2 = drdv*drdv/(gm*semi) + ra_fact*ra_fact; // ecc^2
+            Float r_vrmax = semi*(1-e2);
+            if (r<r_vrmax) {
+                // avoid decrese of vr once the orbit pass, calculate vr max at cos(E)=e (r==semi*(1-e^2))
+                // vr_max = sqrt(er*(drdv^2*er + r*vcr2^2))/(G(m1+m2)r)
+                //        = e*sqrt[G(m1+m2)/(a*(1-e^2)]
+                Float vrmax_sq = e2*gm/r_vrmax;
+                //Float rv2 = r*v2;
+                //Float er = 2*gm - rv2;
+                //Float vcr2 = gm - rv2;
+                //Float vrmax_sq = er*(drdv*drdv*er + r*vcr2*vcr2)/(gm*gm*r2);
+                _t_min_sq = std::min(_t_min_sq, semi*semi/vrmax_sq);
+            }
+            else {
+                // r/vr
+                Float rovr = r2/abs(drdv);
+                _t_min_sq = std::min(_t_min_sq, rovr*rovr);
+            }
+        }
+    }
+
     //! calculate slowdown perturbation and timescale from particle j to particle i
     /*! 
       @param[out] _pert_out: perturbation from particle j
@@ -477,33 +519,10 @@ public:
                        pj.vel[1] - pi.vel[1],
                        pj.vel[2] - pi.vel[2]};
 
-        Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
-        Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
-
         // identify whether hyperbolic or closed orbit
         Float gm = gravitational_constant*(pi.mass+pj.mass);
-        Float semi = 1.0/(2.0/r - v2/gm);
 
-        //hyperbolic, directly use velocity v
-        if (semi<0) 
-            _t_min_sq = std::min(_t_min_sq, r2/v2);
-        else {
-            if (r<semi) {
-                // avoid decrese of vr once the orbit pass, calculate vr max at E=pi/2 (r==semi)
-                // vr_max = sqrt(er*(drdv^2*er + r*vcr2^2))/(G(m1+m2)r)
-                Float rv2 = r*v2;
-                Float er = 2*gm - rv2;
-                Float vcr2 = gm - rv2;
-                Float vrmax_sq = er*(drdv*drdv*er + r*vcr2*vcr2)/(gm*gm*r2);
-                _t_min_sq = std::min(_t_min_sq, semi*semi/vrmax_sq);
-            }
-            else {
-                // r/vr
-                Float rovr = r2/abs(drdv);
-                _t_min_sq = std::min(_t_min_sq, rovr*rovr);
-            }
-        }
-
+        calcSlowDownTimeScale(_t_min_sq, dv, dr, r, gm);
         // force dependent method
         // min sqrt(r^3/(G m))
         //Float gmor3 = (mp+mcm)*r*r2/(sdt->G*mp*mcm);
@@ -581,32 +600,10 @@ public:
                                vp[1] - vcm[1],
                                vp[2] - vcm[2]};
 
-                Float v2 = dv[0]*dv[0] + dv[1]*dv[1] + dv[2]*dv[2];
-                Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
-
                 // identify whether hyperbolic or closed orbit
                 Float gm = gravitational_constant*(mcm+mj);
-                Float semi = 1.0/(2.0/r - v2/gm);
 
-                //hyperbolic, directly use velocity v
-                if (semi<0) 
-                    _t_min_sq = std::min(_t_min_sq, r2/v2);
-                else {
-                    if (r<semi) {
-                        // avoid decrese of vr once the orbit pass, calculate vr max at E=pi/2 (r==semi)
-                        // vr_max = sqrt(er*(drdv^2*er + r*vcr2^2))/(G(m1+m2)r)
-                        Float rv2 = r*v2;
-                        Float er = 2*gm - rv2;
-                        Float vcr2 = gm - rv2;
-                        Float vrmax_sq = er*(drdv*drdv*er + r*vcr2*vcr2)/(gm*gm*r2);
-                        _t_min_sq = std::min(_t_min_sq, semi*semi/vrmax_sq);
-                    }
-                    else {
-                        // r/vr
-                        Float rovr = r2/abs(drdv);
-                        _t_min_sq = std::min(_t_min_sq, rovr*rovr);
-                    }
-                }
+                calcSlowDownTimeScale(_t_min_sq, dv, dr, r, gm);
 #endif
             }
         }
@@ -666,7 +663,7 @@ public:
             _p.time_record += dt-dt_miss;
 
             // estimate next time to check 
-            _p.time_interrupt = _p.time_record + bse_manager.getTimeStepStar(_p.star);
+            _p.time_interrupt = std::min(_p.time_record + bse_manager.getTimeStepStar(_p.star), time_interrupt_max);
 
             // record mass change (if loss, negative)
             double dm = bse_manager.getMassLoss(output);
@@ -680,7 +677,7 @@ public:
             _p.radius = bse_manager.getMergerRadius(_p.star);
 
             // type change
-            if (stellar_evolution_write_flag&&event_flag==1) {
+            if (stellar_evolution_write_flag&&event_flag>=1) {
 #pragma omp critical
                 {
                     fout_sse<<"Type_change ";
@@ -786,7 +783,7 @@ public:
                 p2->time_record = _bin_interrupt.time_now - bse_manager.getDTMiss(out[1]);
 
                 // estimate next time to check 
-                p1->time_interrupt = p1->time_record + bse_manager.getTimeStepBinary(p1->star, p2->star, semi, ecc, binary_type_final);
+                p1->time_interrupt = std::min(p1->time_record + bse_manager.getTimeStepBinary(p1->star, p2->star, semi, ecc, binary_type_final), time_interrupt_max);
                 p2->time_interrupt = p1->time_interrupt;
 
                 // reset collision state since binary orbit changes
@@ -815,12 +812,15 @@ public:
                 p2->radius = bse_manager.getMergerRadius(p2->star);
 
 
+                bool mass_zero_flag = false;
+
                 // if both mass becomes zero, set destroy state
                 if (p1->mass==0.0&&p2->mass==0.0) {
                     p1->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
                     p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
                     _bin_interrupt.status = AR::InterruptStatus::destroy;
                     modify_return = 3;
+                    mass_zero_flag = true;
                 }
                 else {
                     // if mass become zero, set to unused for removing and merger status
@@ -835,6 +835,7 @@ public:
                             p2->vel[k] = vel_cm[k];
                         }
                         modifyOneParticle(*p2, p2->time_record, _bin_interrupt.time_now);
+                        mass_zero_flag = true;
                     }
 
                     if (p2->mass==0.0) {
@@ -848,6 +849,7 @@ public:
                             p1->vel[k] = vel_cm[k];
                         }
                         modifyOneParticle(*p1, p1->time_record, _bin_interrupt.time_now);
+                        mass_zero_flag = true;
                     }
 
                     // case when SN kick appears
@@ -872,7 +874,7 @@ public:
                         }
                     }
 
-                    if (!kick_flag&&_bin_interrupt.status != AR::InterruptStatus::merge) {
+                    if (!kick_flag && !mass_zero_flag) {
                         // case for elliptic case
                         if (ecc>=0.0&&ecc<=1.0) {
                             // obtain full orbital parameters
@@ -915,6 +917,10 @@ public:
                         }
                     }
                 }
+                if (mass_zero_flag) {
+                    DATADUMP("dump_merger");
+                }
+
             };
 
             bool check_flag = false;
@@ -1064,23 +1070,6 @@ public:
                 auto merge = [&](const Float& dr, const Float& t_peri, const Float& sd_factor) {
                     _bin_interrupt.adr = &_bin;
                 
-                    // print data
-                    //std::cerr<<"Binary Merge: time: "<<_bin_interrupt.time_now<<std::endl;
-                    //_bin.Binary::printColumnTitle(std::cerr);
-                    //PtclHard::printColumnTitle(std::cerr);
-                    //PtclHard::printColumnTitle(std::cerr);
-                    //std::cerr<<std::endl;
-                    //_bin.Binary::printColumn(std::cerr);
-                    //p1->printColumn(std::cerr);
-                    //p2->printColumn(std::cerr);
-                    //std::cerr<<std::endl;
-
-                    //// new particle data
-                    //Float mcm = p1->mass + p2->mass;
-                    //for (int k=0; k<3; k++) {
-                    //    p1->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
-                    //    p1->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
-                    //}
 #ifdef BSE_BASE
                     //Float m1_bk = p1->mass;
                     //Float m2_bk = p2->mass;
@@ -1139,10 +1128,53 @@ public:
                                 p1->star.printColumn(fout_bse, WRITE_WIDTH);
                                 p2->star.printColumn(fout_bse, WRITE_WIDTH);
                                 fout_bse<<std::endl;
+
+                                DATADUMP("dump_merger");
+                                
                             }
                         }
                     }
-#endif //BSE_BASE
+#else //not BSE_BASE
+                    // print data
+                    std::cerr<<"Binary Merge: time: "<<_bin_interrupt.time_now<<std::endl;
+                    _bin.Binary::printColumnTitle(std::cerr);
+                    //PtclHard::printColumnTitle(std::cerr);
+                    //PtclHard::printColumnTitle(std::cerr);
+                    std::cerr<<std::endl;
+                    _bin.Binary::printColumn(std::cerr);
+                    //p1->printColumn(std::cerr);
+                    //p2->printColumn(std::cerr);
+                    std::cerr<<std::endl;
+
+                    // set return flag >0
+                    modify_return = 2;
+
+                    p1->time_record = _bin_interrupt.time_now;
+                    p2->time_record = _bin_interrupt.time_now;
+            
+                    // new particle data
+                    Float mcm = p1->mass + p2->mass;
+                    for (int k=0; k<3; k++) {
+                        p1->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
+                        p1->vel[k] = (p1->mass*p1->vel[k] + p2->mass*p2->vel[k])/mcm;
+                    }
+                    p1->dm += p2->mass;
+                    p2->dm -= p2->mass;
+
+                    p1->mass = mcm;
+                    p2->mass = 0.0;
+
+                    p2->radius = 0.0;
+
+                    if (_bin_interrupt.status == AR::InterruptStatus::none) 
+                        _bin_interrupt.status = AR::InterruptStatus::merge;
+
+                    // reset collision state since binary orbit changes
+                    p1->setBinaryInterruptState(BinaryInterruptState::none);
+                    p2->setBinaryInterruptState(BinaryInterruptState::none);
+
+                    p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+#endif
                     //p1->setBinaryPairID(0);
                     //p2->setBinaryPairID(0);
                 };
@@ -1185,8 +1217,9 @@ public:
                                 p2->setBinaryPairID(p1->id);
                                 p1->setBinaryInterruptState(BinaryInterruptState::collision);
                                 p2->setBinaryInterruptState(BinaryInterruptState::collision);
-                                p1->time_interrupt = std::min(p1->time_interrupt, _bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri));
-                                //p2->time_interrupt = std::min(p1->time_interrupt, p2->time_interrupt); // ensure bse can still be called to evolve stars
+                                p1->time_interrupt = std::min(_bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri), time_interrupt_max);
+                                p2->time_interrupt = p1->time_interrupt;
+                                    
                             }
                         }
                     }

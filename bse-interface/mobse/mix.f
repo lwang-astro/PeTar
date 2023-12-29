@@ -27,8 +27,26 @@
 * First compute ICASE and then define I1 to be the most evolved star. 
 * It is necessary because of the new collisional matrix is not symmetric
 *
-      ICASE = KTYPE(KROL(1),KROL(2))
-*
+
+* fix krol SR 28/07/2022 
+
+      IF(KROL(1).EQ.1.AND.KROL(2).EQ.2)THEN
+          I1 = 1
+          I2 = 2
+      ELSE
+          I1 = 2
+          I2 = 1
+
+      END IF
+
+      K1 = KS(I1)
+      K2 = KS(I2)
+     
+      ICASE = KTYPE(K1,K2)
+
+      WRITE(*,*) 'PRINT ICASEdamix', ICASE
+* fix krol SR 28/07/2022*
+
 ***
 *       Define global indices with body #I1 being most evolved.
       IF(KS(1).GE.KS(2))THEN

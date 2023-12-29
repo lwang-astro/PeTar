@@ -99,21 +99,43 @@ class SSEType(DictNpArrayMix):
 class BSEBinaryEvent(DictNpArrayMix):
     """ BSE binary event data from PeTar
     Keys: (class members)
-        time (1D): evolved time (Myr)
-        m1   (1D): mass component 1 (Msun)
-        m2   (1D): mass component 2 (Msun)
-        type1 (1D): stellar type of component 1
-        type2 (1D): stellar type of component 2
-        semi (1D): semi-major axis (Rsun)
-        ecc  (1D): eccentricity
-        rad1 (1D): stellar radius of component 1 (Roche radius 1)
-        rad2 (1D): stellar radius of component 2 (Roche radius 2)
-        binary_type (1D): BSE binary type
+        Base:
+            time (1D): evolved time (Myr)
+            m1   (1D): mass component 1 (Msun)
+            m2   (1D): mass component 2 (Msun)
+            type1 (1D): stellar type of component 1
+            type2 (1D): stellar type of component 2
+            semi (1D): semi-major axis (Rsun)
+            ecc  (1D): eccentricity
+            radro1 (1D): stellar radius of component 1 (Roche radius 1)
+            radro2 (1D): stellar radius of component 2 (Roche radius 2)
+            binary_type (1D): BSE binary type
+        Add:
+            lum1 (1D): bolometric luminosity of component 1 (Lsun) 
+            lum2 (1D): bolometric luminosity of component 2 (Lsun) 
+            rad1 (1D): stellar radius of component 1 (Rsun)
+            rad2 (1D): stellar radius of component 2 (Rsun)
+            mcore1 (1D): core mass of component 1 (Msun)
+            mcore2 (1D): core mass of component 2 (Msun)
+            rcore1 (1D): core radius of component 1 (Rsun)
+            rcore2 (1D): core radius of component 2 (Rsun)
+            spin1  (1D): stellar rotation of component 1 
+            spin2  (1D): stellar rotation of component 2 
+
+        if keyword argument "base_output" == False (default)
+           class members: Base + Add
+        else 
+           class members: Base
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        keys = [['time',np.float64],['m1',np.float64],['m2',np.float64],['type1',np.float64],['type2',np.float64],['semi',np.float64],['ecc',np.float64],['rad1',np.float64],['rad2',np.float64],['binary_type',np.float64]]
+        keys_base = [['time',np.float64],['m1',np.float64],['m2',np.float64],['type1',np.float64],['type2',np.float64],['semi',np.float64],['ecc',np.float64],['radro1',np.float64],['radro2',np.float64],['binary_type',np.float64]]
+        keys_add = [['lum1', np.float64],['lum2', np.float64],['rad1', np.float64],['rad2', np.float64],['mcore1',np.float64],['mcore2',np.float64],['rcore1',np.float64],['rcore2',np.float64],['spin1',np.float64],['spin2',np.float64]]
+        keys = keys_base + keys_add
+        if ('base_output' in kwargs.keys()):
+            if kwargs['base_output']:
+                keys = keys_base
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
 class BSETypeChange(DictNpArrayMix):
@@ -186,8 +208,8 @@ class BSEDynamicMerge(DictNpArrayMix):
         *dr (1D): separation at merger time (Rsun)
         *t_peri (1D): if merger is binary, this is the left time to peri-center, else it is 0.0 (days)
         *sd (1D): slowdown factor for the binary
-        init (SSEStarParameter): initial status of star
-        final (SSEStarParameter): final status of star after stellar evolution
+        init (SSEStarParameterPair): initial status of star
+        final (SSEStarParameterPair): final status of star after stellar evolution
 
     kwargs['less_output'] (bool)
         True: 
@@ -365,8 +387,23 @@ class SSEStarParameterOut(DictNpArrayMix):
         keys = [['type0', np.int64], ['menv', np.float64], ['renv', np.float64], ['tm', np.float64], ['vkick', (np.float64, 4)], ['dm', np.float64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
+class SSEISO(DictNpArrayMix):
+    """ Binary stellar evolution tool petar.(mo)bse output for single stars
+    Keys: (class members)
+        mass_init (1D): initial mass at zero age
+        star (SSEStarParameter): SSE star parameter 
+        out (SSEStarParameterOut): SSE star parameter output 
+    """
+    
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+        """
+        keys = [['mass_init',np.float64],['star',SSEStarParameter],['out',SSEStarParameterOut]]
+        DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
+    
+
 class BSEISO(DictNpArrayMix):
-    """ Binary stellar evolution tool petar.(mo)bse output
+    """ Binary stellar evolution tool petar.(mo)bse output for binaries
     Keys: (class members)
         m1_init (1D): initial mass of component 1 (Msun)
         m2_init (1D): initial mass of component 2 (Msun)
@@ -410,8 +447,63 @@ class BSEMerge(DictNpArrayMix):
               ['m1',np.float64],['m2',np.float64],['kwf',np.int64],['mf',np.float64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
+
+    def getMergeFromTypeChange(self,type_change):
+        """
+        Find mergers from binary type change data, and find the first initial data and mix it with the final data as the final merger
+        """
+        
+        def calc_ubid(_type_change):
+            """
+            Calculate unique id by adding bid and final time to a value of by using numpy.float128
+            """
+            #return cantorPairing(_type_change.bid, (np.log(_type_change.final.time)*1e6).astype(int))
+            return np.float128(_type_change.bid) + np.float128(_type_change.final.time)
+        
+        # find mergers
+        type_change.generateBinaryID()
+        sel_merge = ((type_change.final.m1==0) & (type_change.init.m1>0))| ((type_change.final.m2==0) & (type_change.init.m2>0))
+        merge_final = type_change[sel_merge]
+        bid_merge = merge_final.bid
+        
+        # if no merger
+        if (bid_merge.size==0): return merge_final
+        
+        # get ubid and sort merger by ubid
+        ubid_merge = calc_ubid(merge_final)
+        sindex = ubid_merge.argsort()
+        merge_final = merge_final[sindex]
+        ubid_merge = ubid_merge[sindex]
+        
+        # get merger progenitor history
+        sel_history=np.in1d(type_change.bid, bid_merge)
+        merge_history = type_change[sel_history]
+        ubid_history = calc_ubid(merge_history)
+        
+        # find merger history with same ubid to obtain the first initial status
+        temp, index = np.unique(ubid_history, return_index=True)
+        ubid_history_unique = ubid_history[index]
+        sel_merge_init = np.in1d(ubid_history_unique, ubid_merge)
+        ubid_merge_init = ubid_history_unique[sel_merge_init]
+        merge_init = merge_history[index][sel_merge_init]
+        # sort merge init with ubid
+        sindex = ubid_merge_init.argsort()
+        merge_init = merge_init[sindex]
+        ubid_merge_init = ubid_merge_init[sindex]
+        
+        # validate whether the ubid of init and final data match
+        match_check = (ubid_merge-ubid_merge_init).sum()
+        if (match_check>0):
+            raise ValueError('Find merger initial status fails, ubid unmatch, the sum value is %d, should be zero!' % match_check)
+        
+        # get merge init status as init and final status as final
+        merge_mix = merge_init
+        merge_mix.final = merge_final.final
+        return merge_mix
+
     def combine(self, type_change, dyn_merge):
         """ Find mergers from type_change and combine them with those from dynamical merge
+        bid will be generated
         
         Parameters:
         -----------
@@ -419,15 +511,16 @@ class BSEMerge(DictNpArrayMix):
         dyn_merge: BSEDynamicMerge data
         """
         #type_change.generateBinaryID()
-        sel = (type_change.final.m1==0) | (type_change.final.m2==0)
-        se_merge = type_change[sel]
+        #sel = (type_change.final.m1==0) | (type_change.final.m2==0)
+        #se_merge = type_change[sel]
+        se_merge = self.getMergeFromTypeChange(type_change)
 
-        #dyn_merge.generateBinaryID()
+        dyn_merge.generateBinaryID()
         merge = self.__dict__
         merge['time']=np.concatenate((se_merge.final.time,dyn_merge.final.p1.time))
         tsort=merge['time'].argsort()
         merge['time']=merge['time'][tsort]
-        #merge['bid']=np.concatenate((se_merge.bid, dyn_merge.bid))[tsort]
+        merge['bid']=np.concatenate((se_merge.bid, dyn_merge.bid))[tsort]
         merge['id1']=np.concatenate((se_merge.id1,dyn_merge.id1))[tsort]
         merge['id2']=np.concatenate((se_merge.id2,dyn_merge.id2))[tsort]
         merge['semi']=np.concatenate((se_merge.init.semi,dyn_merge.semi))[tsort]
@@ -436,22 +529,49 @@ class BSEMerge(DictNpArrayMix):
         merge['kw2']=np.concatenate((se_merge.init.type2,dyn_merge.init.p2.type))[tsort]
         merge['m1']=np.concatenate((se_merge.init.m1,dyn_merge.init.p1.mass))[tsort]
         merge['m2']=np.concatenate((se_merge.init.m2,dyn_merge.init.p2.mass))[tsort]
-        merge['kwf']=np.concatenate((se_merge.final.type1,dyn_merge.final.p1.type))[tsort]
-        merge['mf']=np.concatenate((np.maximum(se_merge.final.m1,se_merge.final.m2),np.maximum(dyn_merge.final.p1.mass,dyn_merge.final.p2.mass)))[tsort]
+
+        se_kwf = se_merge.final.type1
+        se_mf = se_merge.final.m1
+        se_mf2_sel = (se_merge.final.m1 == 0)
+        se_kwf[se_mf2_sel] = se_merge.final.type2[se_mf2_sel]
+        se_mf[se_mf2_sel] = se_merge.final.m2[se_mf2_sel]
+
+        dyn_kwf = dyn_merge.final.p1.type
+        dyn_mf = dyn_merge.final.p1.mass
+        dyn_mf2_sel = (dyn_merge.final.p1.mass == 0)
+        dyn_kwf[dyn_mf2_sel] = dyn_merge.final.p2.type[dyn_mf2_sel]
+        dyn_mf[dyn_mf2_sel] = dyn_merge.final.p2.mass[dyn_mf2_sel]
+
+        merge['kwf']=np.concatenate((se_kwf, dyn_kwf))[tsort]
+        merge['mf']=np.concatenate((se_mf, dyn_mf))[tsort]
         self.size=merge['time'].size
 
     def printTableTitle(self):
-        """ Print table title for the merger information
+        """ Print table title for the merger information (default column_format for printTable)
         """
-        print("%12s %8s %8s %12s %12s %8s %8s %12s %12s %8s %12s" %('Time[Myr]','id1','id2','semi[R*]','ecc','kw1(i)','kw2(i)','m1[M*](i)','m2[M*](i)','kw(f)','m[M*](f)'))
-
-    def printTable(self):
+        print("%12s %8s %8s %10s %10s %8s %8s %12s %12s %8s %12s" %('Time[Myr]','id1','id2','semi[R*]','ecc','kw1(i)','kw2(i)','m1[M*](i)','m2[M*](i)','kw(f)','m[M*](f)'))
+     
+    def printTable(self, 
+                   column_format = [('time','%12.7f '), 
+                                    ('id1','%8d '), ('id2','%8d '), 
+                                    ('semi','%10.7g '), ('ecc','%10.7g '),
+                                    ('kw1','%8d '), ('kw2','%8d '),
+                                    ('m1','%12.7f '), ('m2','%12.7f '),
+                                    ('kwf','%8d '), ('mf','%12.7f')]):
         """ Print merger information in a formated table
+
+        Parameters:
+        ----------
+        column_format: a list of column label (class member name) and format, enclosed by tuple, for sub-member, use . to access
+                       For exmaple: [(key1,'%s'), (key2,'%12.7f'), (key3.subkey1,'%d'), (key3.subkey2,'%e')]
+                       Default: [('time','%12.7f '), 
+                                 ('id1','%8d '), ('id2','%8d '), 
+                                 ('semi','%10.7g '), ('ecc','%10.7g '),
+                                 ('kw1','%8d '), ('kw2','%8d '),
+                                 ('m1','%12.7f '), ('m2','%12.7f '),
+                                 ('kwf','%8d '), ('mf','%12.7f')]
         """
-        if (self.size>0):
-            table=self.getherDataToArray()
-            for line in table:
-                print("%12.7f %8d %8d %10.7g %10.7g %8d %8d %12.7f %12.7f %8d %12.7f" % tuple(line))   
+        DictNpArrayMix.printTable(self, column_format)
 
 def find_merge_tree(merger_list, merger_root):
     """ Find the merger tree for a given merger
