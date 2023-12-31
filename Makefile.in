@@ -130,7 +130,7 @@ EXT_CLEAN:
 endif # galpy
 
 ifeq ($(ext_hard_mode), gasdrag)
-MT_FLAGS += -D EXTERNAL_HARD -D HERMITE_PERT_FORCE
+MT_FLAGS += -D EXTERNAL_HARD -D HERMITE_PERT_FORCE -D GAS_DRAG
 endif
 
 ifeq ($(step_mode),kdkdk)

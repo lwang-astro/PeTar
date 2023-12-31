@@ -1093,9 +1093,11 @@ public:
 #endif //GALPY
 
 #ifdef EXTERNAL_HARD
+#ifdef GAS_DRAG
 #ifndef GALPY
         // update time and gas density
-        hard_manager.h4_manager.interaction.ext_force.updateTime(stat.time);
+        hard_manager.h4_manager.interaction.ext_force.gas_drag.updateTime(stat.time);
+#endif
 #endif
 #endif
         
@@ -3433,10 +3435,14 @@ public:
 #endif
 
 #ifdef EXTERNAL_HARD
+        hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, print_flag);
+#ifdef GAS_DRAG
 #ifdef GALPY
-        hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, galpy_manager, stat, print_flag);
+        hard_manager.h4_manager.interaction.ext_force.gas_drag.setGalpyManager(galpy_manager);
+        hard_manager.h4_manager.interaction.ext_force.gas_drag.setStatus(stat);
 #else
-        hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, stat.time, print_flag);
+        hard_manager.h4_manager.interaction.ext_force.gas_drag.updateTime(stat.time);
+#endif
 #endif
         hard_manager.ar_manager.interaction.ext_force = &hard_manager.h4_manager.interaction.ext_force;
 #endif        
@@ -3526,7 +3532,7 @@ public:
                 fprintf(stderr,"Error: Cannot open file %s.\n", fexthard_par.c_str());
                 abort();
             }
-            external_hard_parameters.input_par_store.writeAscii(fpar_out);
+            external_hard_parameters.writeParameters(fpar_out);
             fclose(fpar_out);
 #endif
         }
