@@ -7,15 +7,16 @@
   Version number : 1.0
   Last redaction : 2011.V.6. 11:00
 
-  Modified by Long Wang (2024)
+  Modified interface for PeTar by Long Wang (2024) 
 */
 
 class PostNewtonian{
 public:
     Float speed_of_light;
+    Float gravitational_constant;
     bool used_pn_orders[6]; // used_pn_orders in bool array:[PN1, PN2, PN2.5, PN3, PN3.5, SPIN]
     
-    PostNewtonian(): speed_of_light(1.0), used_pn_orders{true,true,true,true,true,false} {}
+    PostNewtonian(): speed_of_light(1.0), gravitational_constant(1.0), used_pn_orders{true,true,true,true,true,false} {}
     
     //! PN acceleration and adot between two particles
     /*!
@@ -317,8 +318,8 @@ public:
         // gether acceleration of all terms, including Newtonian acc
         for (int j=0; j<6; j++) {
             for (int k=0; k<3; k++) {
-                acc1[k] += a_pn1[j][k];
-                acc2[k] += a_pn2[j][k];
+                acc1[k] += gravitational_constant*a_pn1[j][k];
+                acc2[k] += gravitational_constant*a_pn2[j][k];
             }
         }
 
@@ -571,10 +572,19 @@ public:
             //    p1.star.spin[k] = SPIN[k][0];
             //    p2.star.spin[k] = SPIN[k][1];
             //}
+
+            for (int j=0; j<6; j++) {
+                for (int k=0; k<3; k++) {
+                    adot1[k] += gravitational_constant*adot_pn1[j][k];
+                    adot2[k] += gravitational_constant*adot_pn2[j][k];
+                }
+            }
     
         }
         // Check RS_DIST conditions !!!
         Float RS_DIST = 4.0*(2.0*m1/c_2 + 2.0*m2/c_2);
+
+        return NUMERIC_FLOAT_MAX;
 
     }
 /***************************************************************************/
