@@ -56,6 +56,8 @@ public:
         Float adot_pn1[6][3]={0};
         Float adot_pn2[6][3]={0};
 
+        Float SPIN[3][2];
+
         bool used_spin = used_pn_orders[5];
         if (used_spin) {
             for(k=0;k<3;k++) {
@@ -70,13 +72,6 @@ public:
 
         const Float PI = 4.0*atan(1.0);
         const Float PI2 = PI*PI;
-
-        double RS_DIST;
-
-        double A3D, A3_5D, B3D, B3_5D, ADK6, BDK6, ADK7, BDK7;
-
-        double SPIN[3][2];
-        double SS1aux[3],SS2aux[3],SU[3],SV[3],XAD[3],XSD[3];
 
         // Speed of light "c" and its powers
         Float c_1 = speed_of_light;
@@ -237,7 +232,7 @@ public:
 
         // Spin accelerations
         // PN accelerations
-        if (used_pn_orders[5]) {
+        if (used_spin) {
             Float DM = m1 - m2;
 
             Float S1[3], S2[3], KSS[3], KSSIG[3], XS[3], XA[3];
@@ -496,11 +491,12 @@ public:
 
                     SPIN[k][0] = m1*(M*KSS[k]-m2*KSSIG[k])/M/M/m1/m1*c_1 ;       
                     SPIN[k][1] = m2*(M*KSS[k]+m1*KSSIG[k])/M/M/m2/m2*c_1;
-                    XAD[k] = 0.5/(M*M*m1*m2)*(-SU[k]*M*DM-SV[k]*(m1*m1+m2*m2));
-                    XSD[k] = 0.5/(M*M*m1*m2)*(SU[k]*M*M+SV[k]*(m1*m1-m2*m2));
+                    //XAD[k] = 0.5/(M*M*m1*m2)*(-SU[k]*M*DM-SV[k]*(m1*m1+m2*m2));
+                    //XSD[k] = 0.5/(M*M*m1*m2)*(SU[k]*M*M+SV[k]*(m1*m1-m2*m2));
 
                 }
 
+                /*
                 //NDOTCS crossproduct of NDOT and KSS = NDOT[k]XKSS[j]
                 Float NDOTCS[3], NCSU[3], NDOTCSIG[3], NCSV[3], ACS[3], VCSU[3], ACSIG[3], VCSV[3];
                 NDOTCS[0] =   NDOT[1]*KSS[2] - NDOT[2]*KSS[1];  
@@ -553,9 +549,11 @@ public:
                     C2D[k] = -4.0*RP/r*C2[k]-MOR*MOR*MOR*3.0*eta/r*(NDOT[k]* (XS2-XA2-5.0*NXS*NXS+5.0*NXA*NXA)+N[k]*(2.0*(XS[0]*XSD[0]+ XS[1]*XSD[1]+XS[2]*XSD[2]-XA[0]*XAD[0]-XA[1]*XAD[1]- XA[2]*XAD[2])-10.0*NXS*NXSDOT+10.0*NXA*NXADOT)+2.0*(XSD[k]* NXS+XS[k]*NXSDOT-XAD[k]*NXA-XA[k]*NXADOT));
                     C2_5D[k] = -3.0*RP/r*C2_5[k]+(NDOT[k]*(SDNCV*(-30.0*eta* NDV*NDV+24.0*eta*V1_V22-MOR*(38.0+25.0*eta))+DM/M*SIGDNCV* (-15.0*eta*NDV*NDV+12.0*eta*V1_V22-MOR*(18.0+14.5*eta)))+ N[k]*(SNVDOT*(-30.0*eta*NDV*NDV+24.0*eta*V1_V22-MOR* (38.0+25.0*eta))+SDNCV*(-60.0*eta*NDV*NVDOT+48.0*eta*VA+ MOR*RP/r*(38.0+25.0*eta))+DM/M*SIGNVDOT*(-15.0*eta*NDV* NDV+12.0*eta*V1_V22-MOR*(18.0+14.5*eta))+DM/M*SIGDNCV* (-30.0*eta*NDV*NVDOT+24.0*eta*VA+MOR*RP/r*(18.0+14.5*eta)))+ (NVDOT*v[k]+NDV*AT[k])*(SDNCV*(-9.0+9.0*eta)+DM/M*SIGDNCV* (-3.0+6.0*eta))+NDV*v[k]*(SNVDOT*(-9.0+9.0*eta)+DM/M* SIGNVDOT*(-3.0+6.0*eta))+(NDOTCV[k]+NCA[k])*(NDV*VDS*(-3.0+ 3.0*eta)-8.0*MOR*eta*NDS-DM/M*(4.0*MOR*eta*NDSIG+3.0*NDV*VDSIG) )+NCV[k]*((NVDOT*VDS+NDV*VSDOT)*(-3.0+3.0*eta)-8.0*eta*MOR* (NSDOT-RP/r*NDS)-DM/M*(4.0*eta*MOR*(NSIGDOT-RP/r*NDSIG)+ 3.0*(NVDOT*VDSIG+NDV*VSIGDOT)))+(NVDOT*NCS[k]+NDV* (NDOTCS[k]+NCSU[k]))*(-22.5*eta*NDV*NDV+21.0*eta*V1_V22- MOR*(25.0+15.0*eta))+NDV*NCS[k]*(-45.0*eta*NDV*NVDOT+42.0*eta* VA+MOR*RP/r*(25.0+15.0*eta))+DM/M*(NVDOT*NCSIG[k]+NDV* (NDOTCSIG[k]+NCSV[k]))*(-15.0*eta*NDV*NDV+12.0*eta*V1_V22- MOR*(9.0+8.5*eta))+DM/M*NDV*NCSIG[k]*(-30.0*eta*NDV*NVDOT+ 24.0*eta*VA+MOR*RP/r*(9.0+8.5*eta))+(ACS[k]+VCSU[k])* (16.5*eta*NDV*NDV+MOR*(21.0+9.0*eta)-14.0*eta*V1_V22)+ VCS[k]*(33.0*eta*NDV*NVDOT-MOR*RP/r*(21.0+9.0*eta)- 28.0*eta*VA)+DM/M*(ACSIG[k]+VCSV[k])*(9.0*eta*NDV*NDV- 7.0*eta*V1_V22+MOR*(9.0+4.5*eta))+DM/M*VCSIG[k]*(18.0* eta*NDV*NVDOT-14.0*eta*VA-MOR*RP/r*(9.0+4.5*eta)))/ (r3);
                 }
-                
+                */
             } /* if(Van_Spin==1) */
 
+
+            /*
             Float ADK = ADK2+ADK4+ADK5+ADK6+ADK7;
             Float BDK = BDK2+BDK4+BDK5+BDK6+BDK7;
 
@@ -566,12 +564,7 @@ public:
             for (int k=0; k<3; k++) {
                 AD[k] = -2.0*MOR*RP*(KSAK*N[k]+KSBK*v[k])/r2 + MOR*(ADK*N[k]+BDK*v[k])/r + MOR*(KSAK*(v[k]-N[k]*RP)/r+KSBK*AT[k])/r + C1_5D[k]/c_2 + C2D[k]/c_4 +C2_5D[k]/c_4;
             }
-
-            // new values of the BH's spins, returned back to the main program... 
-            //for (int k=0; k<3; k++) {
-            //    p1.star.spin[k] = SPIN[k][0];
-            //    p2.star.spin[k] = SPIN[k][1];
-            //}
+            */
 
             for (int j=0; j<6; j++) {
                 for (int k=0; k<3; k++) {
@@ -581,8 +574,21 @@ public:
             }
     
         }
+
+        // new values of the spins, returned back to the main program... 
+        if (used_spin) {
+            if (spin1==NULL) || (spin2==NULL) {
+                std::cerr<<"Error: spin array is NULL, cannot save spin data!\n";
+                abort();
+            }
+            for(k=0;k<3;k++) {
+                spin1[k] = SPIN[k][0];
+                spin2[k] = SPIN[k][1];
+            }
+        }
+
         // Check RS_DIST conditions !!!
-        Float RS_DIST = 4.0*(2.0*m1/c_2 + 2.0*m2/c_2);
+        //Float RS_DIST = 4.0*(2.0*m1/c_2 + 2.0*m2/c_2);
 
         return NUMERIC_FLOAT_MAX;
 
