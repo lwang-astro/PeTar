@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include "Common/Float.h"
 /***************************************************************************/
 /*
   Coded by       : Peter Berczik (on the base of Gabor Kupi original PN code)
@@ -60,14 +61,14 @@ public:
 
         bool used_spin = used_pn_orders[5];
         if (used_spin) {
-            for(k=0;k<3;k++) {
+            for(int k=0;k<3;k++) {
                 //SPIN[k][0] = p1.star.spin[k];
                 //SPIN[k][1] = p2.star.spin[k];
                 SPIN[k][0] = SPIN[k][1] = 0.0; // Currently 3D Spin is not implemented in particle
             }
         }
         else {
-            for(k=0;k<3;k++) SPIN[k][0] = SPIN[k][1] = 0.0;
+            for(int k=0;k<3;k++) SPIN[k][0] = SPIN[k][1] = 0.0;
         }
 
         const Float PI = 4.0*atan(1.0);
@@ -232,10 +233,11 @@ public:
 
         // Spin accelerations
         // PN accelerations
+        Float S1[3], S2[3], KSS[3], KSSIG[3], VDS, VDSIG, NDS, NDSIG, NDV;
         if (used_spin) {
             Float DM = m1 - m2;
 
-            Float S1[3], S2[3], KSS[3], KSSIG[3], XS[3], XA[3];
+            Float XS[3], XA[3];
             for(int k=0;k<3;k++) {
                 S1[k] = SPIN[k][0]*m1*m1/c_1;			// fizikai spin 
                 S2[k] = SPIN[k][1]*m2*m2/c_1;
@@ -279,7 +281,7 @@ public:
 
             Float SIGDNCV = KSSIG[0]*NCV[0]+KSSIG[1]*NCV[1]+KSSIG[2]*NCV[2];
 
-            Float NDV = N[0]*v[0] + N[1]*v[1] + N[2]*v[2];
+            NDV = N[0]*v[0] + N[1]*v[1] + N[2]*v[2];
 
             Float XS2 = XS[0]*XS[0]+XS[1]*XS[1]+XS[2]*XS[2];
             Float XA2 = XA[0]*XA[0]+XA[1]*XA[1]+XA[2]*XA[2];
@@ -287,14 +289,15 @@ public:
             Float NXA = N[0]*XA[0]+N[1]*XA[1]+N[2]*XA[2];
             Float NXS = N[0]*XS[0]+N[1]*XS[1]+N[2]*XS[2];
 
-            Float VDS = v[0]*KSS[0]+v[1]*KSS[1]+v[2]*KSS[2];
-            Float VDSIG = v[0]*KSSIG[0]+v[1]*KSSIG[1]+v[2]*KSSIG[2];
+            VDS = v[0]*KSS[0]+v[1]*KSS[1]+v[2]*KSS[2];
+            VDSIG = v[0]*KSSIG[0]+v[1]*KSSIG[1]+v[2]*KSSIG[2];
 
-            Float NDS = N[0]*KSS[0]+N[1]*KSS[1]+N[2]*KSS[2];
-            Float NDSIG = N[0]*KSSIG[0]+N[1]*KSSIG[1]+N[2]*KSSIG[2];
+            NDS = N[0]*KSS[0]+N[1]*KSS[1]+N[2]*KSS[2];
+            NDSIG = N[0]*KSSIG[0]+N[1]*KSSIG[1]+N[2]*KSSIG[2];
 
             Float C1_5[3],C2[3], C2_5[3];
             Float C1_5D[3],C2D[3], C2_5D[3];
+
             for(int k=0; k<3; k++) {
                 C1_5[k] = (N[k]*(12.0*SDNCV+6.0*DM*SIGDNCV/M)+9.0*NDV*NCS[k]+3.0*DM*NDV*NCSIG[k]/M -7.0*VCS[k]-3.0*DM*VCSIG[k]/M)/r3;
                 C2[k] = -MOR*MOR*MOR/r*3.0*eta*(N[k]*(XS2-XA2-5.0*NXS*NXS+5.0*NXA*NXA)+2.0*(XS[k]*NXS-XA[k]*NXA));
@@ -337,7 +340,7 @@ public:
 
             // Newton ~1/c^0
             Float NDOT[3];
-            for(k=0;k<3;k++) {
+            for(int k=0;k<3;k++) {
                 NDOT[k] = (v[k]-N[k]*RP)/r;
                 adot_pn1[0][k] = -m2*(v[k]/r3 - 3.0*RP*x[k]/r2/r2);
                 adot_pn2[0][k] =  m1*(v[k]/r3 - 3.0*RP*x[k]/r2/r2);
@@ -382,8 +385,8 @@ public:
                 
                 for (int k=0; k<3; k++) {
                     Float CDK4 = ADK4*N[k]+BDK4*v[k];
-                    adot_pn1[2][k] =  (-2.0*MOR*RP*CK4/r2 + MOR*CKD4/r + MOR*(AK4*(v[k]-N[k]*RP)/r+BK4*A[k])/r)*m2/M;
-                    adot_pn2[2][k] = -(-2.0*MOR*RP*CK4/r2 + MOR*CKD4/r + MOR*(AK4*(v[k]-N[k]*RP)/r+BK4*A[k])/r)*m1/M;
+                    adot_pn1[2][k] =  (-2.0*MOR*RP*CK4/r2 + MOR*CDK4/r + MOR*(AK4*(v[k]-N[k]*RP)/r+BK4*A[k])/r)*m2/M;
+                    adot_pn2[2][k] = -(-2.0*MOR*RP*CK4/r2 + MOR*CDK4/r + MOR*(AK4*(v[k]-N[k]*RP)/r+BK4*A[k])/r)*m1/M;
                 }
             }
 
@@ -397,8 +400,8 @@ public:
 
                 for (int k=0; k<3; k++) {
                     Float CDK5 = ADK5*N[k]+BDK5*v[k];
-                    adot_pn1[3][k] =  (-2.0*MOR*RP*CK5/r2 + MOR*CKD5/r + MOR*(AK5*(v[k]-N[k]*RP)/r+BK5*A[k])/r)*m2/M;
-                    adot_pn2[3][k] = -(-2.0*MOR*RP*CK5/r2 + MOR*CKD5/r + MOR*(AK5*(v[k]-N[k]*RP)/r+BK5*A[k])/r)*m1/M;
+                    adot_pn1[3][k] =  (-2.0*MOR*RP*CK5/r2 + MOR*CDK5/r + MOR*(AK5*(v[k]-N[k]*RP)/r+BK5*A[k])/r)*m2/M;
+                    adot_pn2[3][k] = -(-2.0*MOR*RP*CK5/r2 + MOR*CDK5/r + MOR*(AK5*(v[k]-N[k]*RP)/r+BK5*A[k])/r)*m1/M;
                 }
             }
 
@@ -433,150 +436,136 @@ public:
                 }
             }
 
-            // Spin
-            if (used_pn_orders[5]) {
-                Float L[3];
-                //L crossproduct of x[k] and relative v = x[k]Xv[j]
-                L[0] = x[1]*v[2] - x[2]*v[1];  
-                L[1] = x[2]*v[0] - x[0]*v[2];  
-                L[2] = x[0]*v[1] - x[1]*v[0];  
-
-                Float LABS = std::sqrt(L[0]*L[0]+L[1]*L[1]+L[2]*L[2]);
-
-                Float LU[3];
-                LU[0] = L[0]/LABS;
-                LU[1] = L[1]/LABS;
-                LU[2] = L[2]/LABS;
-
-                Float S1DLU = S1[0]*LU[0]+S1[1]*LU[1]+S1[2]*LU[2];
-                Float S2DLU = S2[0]*LU[0]+S2[1]*LU[1]+S2[2]*LU[2];
-
-                Float SU1[3], SV1[3], SS1[3], SS2[3], SU2[3], SV2[3]; 
-                for (int k=0; k<3; k++) {
-                    SU1[k] = MOR*eta*(N[k]*(-4.0*VDS-2.0*DM/M*VDSIG)+ v[k]*(3.0*NDS+DM/M*NDSIG)+NDV*(2.0*KSS[k]+DM/M*KSSIG[k])) /r;
-                    SV1[k] = MOR*(N[k]*(VDSIG*(-2.0+4.0*eta)-2.0*DM/M*VDS)+ v[k]*(NDSIG*(1.0-eta)+DM/M*NDS)+NDV*(KSSIG[k]*(1.0- 2.0*eta)+ DM/M*KSS[k]))/r;
-
-                    SS1[k] = 0.5*(L[k]*(4.0+3.0*(m2/m1))+ (S2[k]-3.0*S2DLU*LU[k]))/r3;
-                    SS2[k] = 0.5*(L[k]*(4.0+3.0*(m1/m2))+ (S1[k]-3.0*S1DLU*LU[k]))/r3;
-
-                    SU2[k] = MOR*eta/r*(N[k]*(VDS*(-2.0*V1_V22+3.0*NDV*NDV- 6.0*eta*NDV*NDV+7.0*MOR-8.0*eta*MOR)-14.0*MOR*NDS*NDV+ DM/M*VDSIG*eta*(-3.0*NDV*NDV-4.0*MOR)+DM/M*MOR*NDSIG*NDV* (2.0-eta/2.))+v[k]*(NDS*(2.0*V1_V22-4.0*eta*V1_V22-3.0*NDV* NDV+7.5*eta*NDV*NDV+4.0*MOR-6.0*eta*MOR)+VDS*NDV*(2.0- 6.0*eta)+ DM/M*NDSIG*(-1.5*eta*V1_V22+3.0*eta*NDV*NDV-MOR-3.5*eta* MOR)-3.0*DM/M*VDSIG*NDV*eta)+KSS[k]*NDV*(V1_V22-2.0*eta* V1_V22-1.5*NDV*NDV+3.0*eta*NDV*NDV-MOR+2.0*eta*MOR)+ DM/M*KSSIG[k]*NDV*(-eta*V1_V22+1.5*eta*NDV*NDV+ (eta-1.)*MOR));
-                    SV2[k] = MOR/r*(N[k]*(VDSIG*eta*(-2.0*V1_V22+6.0*eta*NDV* NDV+(3.0+8.0*eta)*MOR)+MOR*NDSIG*NDV*(2.0-22.5*eta+2.0* eta*eta)+ DM/M*VDS*eta*(-3.0*NDV*NDV-4.0*MOR)+DM/M*MOR*NDS*NDV*(2.0- 0.5*eta))+v[k]*(NDSIG*(0.5*eta*V1_V22+2.0*eta*eta*V1_V22- 4.5*eta*eta*NDV*NDV+(4.5*eta-1.0+8.0*eta*eta)*MOR)+VDSIG*NDV* eta*(6.0*eta-1.)-3.0*DM/M*VDS*NDV*eta+DM/M*NDS*(-1.5* eta*V1_V22+ 3.0*eta*NDV*NDV-(1.0+3.5*eta)*MOR))+KSSIG[k]*NDV*(2.0*eta*eta* V1_V22-3.0*eta*eta*NDV*NDV+(-1.0+4.0*eta-2.0*eta*eta)*MOR)+ DM/M*KSS[k]*NDV*(-eta*V1_V22+1.5*eta*NDV*NDV+(-1.0+eta)* MOR));
-                }
-
-                //SS1 crossproduct of SS1 and S1 = SS1[k]XS1[j]
-                Float SS1aux[3],SS2aux[3],SU[3],SV[3],XAD[3],XSD[3];
-                SS1aux[0] =   SS1[1]*S1[2] - SS1[2]*S1[1];  
-                SS1aux[1] =   SS1[2]*S1[0] - SS1[0]*S1[2];  
-                SS1aux[2] =   SS1[0]*S1[1] - SS1[1]*S1[0];  
-
-                SS1[0] = SS1aux[0];  
-                SS1[1] = SS1aux[1];  
-                SS1[2] = SS1aux[2];  
-
-                //SS2 crossproduct of SS2 and S2 = SS2[k]XS2[j]
-                SS2aux[0] =   SS2[1]*S2[2] - SS2[2]*S2[1];  
-                SS2aux[1] =   SS2[2]*S2[0] - SS2[0]*S2[2];  
-                SS2aux[2] =   SS2[0]*S2[1] - SS2[1]*S2[0];  
-
-                SS2[0] = SS2aux[0];  
-                SS2[1] = SS2aux[1];  
-                SS2[2] = SS2aux[2];  
-
-                for(int k=0; k<3; k++) {
-                    SU[k] = SU1[k]/c_2 + SU2[k]/c_4 + (SS1[k] + SS2[k])/c_2;
-                    SV[k] = SV1[k]/c_2 + SV2[k]/c_4+M*(SS2[k]/m2-SS1[k]/ m1)/c_2;
-
-                    KSS[k] = KSS[k] + SU[k]*dt_bh;						// integrate for dt_bh timestep 
-                    KSSIG[k] = KSSIG[k] + SV[k]*dt_bh;
-
-                    SPIN[k][0] = m1*(M*KSS[k]-m2*KSSIG[k])/M/M/m1/m1*c_1 ;       
-                    SPIN[k][1] = m2*(M*KSS[k]+m1*KSSIG[k])/M/M/m2/m2*c_1;
-                    //XAD[k] = 0.5/(M*M*m1*m2)*(-SU[k]*M*DM-SV[k]*(m1*m1+m2*m2));
-                    //XSD[k] = 0.5/(M*M*m1*m2)*(SU[k]*M*M+SV[k]*(m1*m1-m2*m2));
-
-                }
-
-                /*
-                //NDOTCS crossproduct of NDOT and KSS = NDOT[k]XKSS[j]
-                Float NDOTCS[3], NCSU[3], NDOTCSIG[3], NCSV[3], ACS[3], VCSU[3], ACSIG[3], VCSV[3];
-                NDOTCS[0] =   NDOT[1]*KSS[2] - NDOT[2]*KSS[1];  
-                NDOTCS[1] =   NDOT[2]*KSS[0] - NDOT[0]*KSS[2];  
-                NDOTCS[2] =   NDOT[0]*KSS[1] - NDOT[1]*KSS[0];  
-                //NCSU crossproduct of N and SU = N[k]XSU[j]
-                NCSU[0] =   N[1]*SU[2] - N[2]*SU[1];  
-                NCSU[1] =   N[2]*SU[0] - N[0]*SU[2];  
-                NCSU[2] =   N[0]*SU[1] - N[1]*SU[0];  
-                //NDOTCSIG crossproduct of NDOT and KSSIG = NDOT[k]XKSSIG[j]
-                NDOTCSIG[0] =   NDOT[1]*KSSIG[2] - NDOT[2]*KSSIG[1];  
-                NDOTCSIG[1] =   NDOT[2]*KSSIG[0] - NDOT[0]*KSSIG[2];  
-                NDOTCSIG[2] =   NDOT[0]*KSSIG[1] - NDOT[1]*KSSIG[0];  
-                //NCSV crossproduct of N and SV = N[k]XSV[j]
-                NCSV[0] =   N[1]*SV[2] - N[2]*SV[1];  
-                NCSV[1] =   N[2]*SV[0] - N[0]*SV[2];  
-                NCSV[2] =   N[0]*SV[1] - N[1]*SV[0];  
-                //ACS crossproduct of AT and KSS = AT[k]XKSS[j]
-                ACS[0] =   AT[1]*KSS[2] - AT[2]*KSS[1];  
-                ACS[1] =   AT[2]*KSS[0] - AT[0]*KSS[2];  
-                ACS[2] =   AT[0]*KSS[1] - AT[1]*KSS[0];  
-                //VCSU crossproduct of relative v and SU = v[k]XSU[j]
-                VCSU[0] =   v[1]*SU[2] - v[2]*SU[1];  
-                VCSU[1] =   v[2]*SU[0] - v[0]*SU[2];  
-                VCSU[2] =   v[0]*SU[1] - v[1]*SU[0];  
-                //ACSIG crossproduct of AT and KSSIG = AT[k]XKSSIG[j]
-                ACSIG[0] =   AT[1]*KSSIG[2] - AT[2]*KSSIG[1];  
-                ACSIG[1] =   AT[2]*KSSIG[0] - AT[0]*KSSIG[2];  
-                ACSIG[2] =   AT[0]*KSSIG[1] - AT[1]*KSSIG[0];  
-                //VCSV crossproduct of relative v and SV = v[k]XSV[j]
-                VCSV[0] =   v[1]*SV[2] - v[2]*SV[1];  
-                VCSV[1] =   v[2]*SV[0] - v[0]*SV[2];  
-                VCSV[2] =   v[0]*SV[1] - v[1]*SV[0];  
-
-                Float SNVDOT = SU[0]*NCV[0]+SU[1]*NCV[1]+SU[2]*NCV[2]+ KSS[0]*NDOTCV[0]+KSS[1]*NDOTCV[1]+KSS[2]*NDOTCV[2]+ KSS[0]*NCA[0]+KSS[1]*NCA[1]+KSS[2]*NCA[2];
-
-                Float SIGNVDOT = SV[0]*NCV[0]+SV[1]*NCV[1]+SV[2]*NCV[2]+ KSSIG[0]*NDOTCV[0]+KSSIG[1]*NDOTCV[1]+KSSIG[2]*NDOTCV[2]+ KSSIG[0]*NCA[0]+KSSIG[1]*NCA[1]+KSSIG[2]*NCA[2];
-                
-                Float NSDOT = NDOT[0]*KSS[0]+NDOT[1]*KSS[1]+NDOT[2]*KSS[2]+ N[0]*SU[0]+N[1]*SU[1]+N[2]*SU[2];
-                Float NSIGDOT = NDOT[0]*KSSIG[0]+NDOT[1]*KSSIG[1]+NDOT[2]*KSSIG[2]+ N[0]*SV[0]+N[1]*SV[1]+N[2]*SV[2];
-                Float VSDOT = AT[0]*KSS[0]+AT[1]*KSS[1]+AT[2]*KSS[2]+ v[0]*SU[0]+v[1]*SU[1]+v[2]*SU[2];
-                Float VSIGDOT = AT[0]*KSSIG[0]+AT[1]*KSSIG[1]+AT[2]*KSSIG[2]+ v[0]*SV[0]+v[1]*SV[1]+v[2]*SV[2];
-
-                Float NXSDOT = NDOT[0]*XS[0]+NDOT[1]*XS[1]+NDOT[2]*XS[2]+ N[0]*XSD[0]+N[1]*XSD[1]+N[2]*XSD[2];
-                Float NXADOT = NDOT[0]*XA[0]+NDOT[1]*XA[1]+NDOT[2]*XA[2]+ N[0]*XAD[0]+N[1]*XAD[1]+N[2]*XAD[2];
-
-                Float C1_5D[3], C2D[3], C2_5D[3];
-                for(int k=0; k<3; k++) { 
-                    C1_5D[k] = -3.0*RP/r*C1_5[k]+(NDOT[k]*(12.0*SDNCV+6.0*DM/M* SIGDNCV)+N[k]*(12.0*SNVDOT+6.0*DM/M*SIGNVDOT)+9.0*NVDOT* NCS[k]+9.0*NDV*(NDOTCS[k]+NCSU[k])+3.0*DM/M*(NVDOT*NCSIG[k]+ NDV*(NDOTCSIG[k]+NCSV[k]))-7.0*(ACS[k]+VCSU[k])-3.0*DM/M* (ACSIG[k]+VCSV[k]))/(r3);
-                    C2D[k] = -4.0*RP/r*C2[k]-MOR*MOR*MOR*3.0*eta/r*(NDOT[k]* (XS2-XA2-5.0*NXS*NXS+5.0*NXA*NXA)+N[k]*(2.0*(XS[0]*XSD[0]+ XS[1]*XSD[1]+XS[2]*XSD[2]-XA[0]*XAD[0]-XA[1]*XAD[1]- XA[2]*XAD[2])-10.0*NXS*NXSDOT+10.0*NXA*NXADOT)+2.0*(XSD[k]* NXS+XS[k]*NXSDOT-XAD[k]*NXA-XA[k]*NXADOT));
-                    C2_5D[k] = -3.0*RP/r*C2_5[k]+(NDOT[k]*(SDNCV*(-30.0*eta* NDV*NDV+24.0*eta*V1_V22-MOR*(38.0+25.0*eta))+DM/M*SIGDNCV* (-15.0*eta*NDV*NDV+12.0*eta*V1_V22-MOR*(18.0+14.5*eta)))+ N[k]*(SNVDOT*(-30.0*eta*NDV*NDV+24.0*eta*V1_V22-MOR* (38.0+25.0*eta))+SDNCV*(-60.0*eta*NDV*NVDOT+48.0*eta*VA+ MOR*RP/r*(38.0+25.0*eta))+DM/M*SIGNVDOT*(-15.0*eta*NDV* NDV+12.0*eta*V1_V22-MOR*(18.0+14.5*eta))+DM/M*SIGDNCV* (-30.0*eta*NDV*NVDOT+24.0*eta*VA+MOR*RP/r*(18.0+14.5*eta)))+ (NVDOT*v[k]+NDV*AT[k])*(SDNCV*(-9.0+9.0*eta)+DM/M*SIGDNCV* (-3.0+6.0*eta))+NDV*v[k]*(SNVDOT*(-9.0+9.0*eta)+DM/M* SIGNVDOT*(-3.0+6.0*eta))+(NDOTCV[k]+NCA[k])*(NDV*VDS*(-3.0+ 3.0*eta)-8.0*MOR*eta*NDS-DM/M*(4.0*MOR*eta*NDSIG+3.0*NDV*VDSIG) )+NCV[k]*((NVDOT*VDS+NDV*VSDOT)*(-3.0+3.0*eta)-8.0*eta*MOR* (NSDOT-RP/r*NDS)-DM/M*(4.0*eta*MOR*(NSIGDOT-RP/r*NDSIG)+ 3.0*(NVDOT*VDSIG+NDV*VSIGDOT)))+(NVDOT*NCS[k]+NDV* (NDOTCS[k]+NCSU[k]))*(-22.5*eta*NDV*NDV+21.0*eta*V1_V22- MOR*(25.0+15.0*eta))+NDV*NCS[k]*(-45.0*eta*NDV*NVDOT+42.0*eta* VA+MOR*RP/r*(25.0+15.0*eta))+DM/M*(NVDOT*NCSIG[k]+NDV* (NDOTCSIG[k]+NCSV[k]))*(-15.0*eta*NDV*NDV+12.0*eta*V1_V22- MOR*(9.0+8.5*eta))+DM/M*NDV*NCSIG[k]*(-30.0*eta*NDV*NVDOT+ 24.0*eta*VA+MOR*RP/r*(9.0+8.5*eta))+(ACS[k]+VCSU[k])* (16.5*eta*NDV*NDV+MOR*(21.0+9.0*eta)-14.0*eta*V1_V22)+ VCS[k]*(33.0*eta*NDV*NVDOT-MOR*RP/r*(21.0+9.0*eta)- 28.0*eta*VA)+DM/M*(ACSIG[k]+VCSV[k])*(9.0*eta*NDV*NDV- 7.0*eta*V1_V22+MOR*(9.0+4.5*eta))+DM/M*VCSIG[k]*(18.0* eta*NDV*NVDOT-14.0*eta*VA-MOR*RP/r*(9.0+4.5*eta)))/ (r3);
-                }
-                */
-            } /* if(Van_Spin==1) */
-
-
-            /*
-            Float ADK = ADK2+ADK4+ADK5+ADK6+ADK7;
-            Float BDK = BDK2+BDK4+BDK5+BDK6+BDK7;
-
-            Float KSAK = AK2+AK4+AK5+AK6+AK7;
-            Float KSBK = BK2+BK4+BK5+BK6+BK7;
-
-            Float AD[3] = {0.0};
-            for (int k=0; k<3; k++) {
-                AD[k] = -2.0*MOR*RP*(KSAK*N[k]+KSBK*v[k])/r2 + MOR*(ADK*N[k]+BDK*v[k])/r + MOR*(KSAK*(v[k]-N[k]*RP)/r+KSBK*AT[k])/r + C1_5D[k]/c_2 + C2D[k]/c_4 +C2_5D[k]/c_4;
-            }
-            */
-
             for (int j=0; j<6; j++) {
                 for (int k=0; k<3; k++) {
                     adot1[k] += gravitational_constant*adot_pn1[j][k];
                     adot2[k] += gravitational_constant*adot_pn2[j][k];
                 }
             }
-    
         }
 
-        // new values of the spins, returned back to the main program... 
+        // Spin
         if (used_spin) {
+            Float L[3];
+            //L crossproduct of x[k] and relative v = x[k]Xv[j]
+            L[0] = x[1]*v[2] - x[2]*v[1];  
+            L[1] = x[2]*v[0] - x[0]*v[2];  
+            L[2] = x[0]*v[1] - x[1]*v[0];  
+
+            Float LABS = std::sqrt(L[0]*L[0]+L[1]*L[1]+L[2]*L[2]);
+
+            Float LU[3];
+            LU[0] = L[0]/LABS;
+            LU[1] = L[1]/LABS;
+            LU[2] = L[2]/LABS;
+
+            Float S1DLU = S1[0]*LU[0]+S1[1]*LU[1]+S1[2]*LU[2];
+            Float S2DLU = S2[0]*LU[0]+S2[1]*LU[1]+S2[2]*LU[2];
+
+            Float SU1[3], SV1[3], SS1[3], SS2[3], SU2[3], SV2[3]; 
+
+            Float DM = m1 - m2;
+
+            for (int k=0; k<3; k++) {
+                SU1[k] = MOR*eta*(N[k]*(-4.0*VDS-2.0*DM/M*VDSIG)+ v[k]*(3.0*NDS+DM/M*NDSIG)+NDV*(2.0*KSS[k]+DM/M*KSSIG[k])) /r;
+                SV1[k] = MOR*(N[k]*(VDSIG*(-2.0+4.0*eta)-2.0*DM/M*VDS)+ v[k]*(NDSIG*(1.0-eta)+DM/M*NDS)+NDV*(KSSIG[k]*(1.0- 2.0*eta)+ DM/M*KSS[k]))/r;
+
+                SS1[k] = 0.5*(L[k]*(4.0+3.0*(m2/m1))+ (S2[k]-3.0*S2DLU*LU[k]))/r3;
+                SS2[k] = 0.5*(L[k]*(4.0+3.0*(m1/m2))+ (S1[k]-3.0*S1DLU*LU[k]))/r3;
+
+                SU2[k] = MOR*eta/r*(N[k]*(VDS*(-2.0*V1_V22+3.0*NDV*NDV- 6.0*eta*NDV*NDV+7.0*MOR-8.0*eta*MOR)-14.0*MOR*NDS*NDV+ DM/M*VDSIG*eta*(-3.0*NDV*NDV-4.0*MOR)+DM/M*MOR*NDSIG*NDV* (2.0-eta/2.))+v[k]*(NDS*(2.0*V1_V22-4.0*eta*V1_V22-3.0*NDV* NDV+7.5*eta*NDV*NDV+4.0*MOR-6.0*eta*MOR)+VDS*NDV*(2.0- 6.0*eta)+ DM/M*NDSIG*(-1.5*eta*V1_V22+3.0*eta*NDV*NDV-MOR-3.5*eta* MOR)-3.0*DM/M*VDSIG*NDV*eta)+KSS[k]*NDV*(V1_V22-2.0*eta* V1_V22-1.5*NDV*NDV+3.0*eta*NDV*NDV-MOR+2.0*eta*MOR)+ DM/M*KSSIG[k]*NDV*(-eta*V1_V22+1.5*eta*NDV*NDV+ (eta-1.)*MOR));
+                SV2[k] = MOR/r*(N[k]*(VDSIG*eta*(-2.0*V1_V22+6.0*eta*NDV* NDV+(3.0+8.0*eta)*MOR)+MOR*NDSIG*NDV*(2.0-22.5*eta+2.0* eta*eta)+ DM/M*VDS*eta*(-3.0*NDV*NDV-4.0*MOR)+DM/M*MOR*NDS*NDV*(2.0- 0.5*eta))+v[k]*(NDSIG*(0.5*eta*V1_V22+2.0*eta*eta*V1_V22- 4.5*eta*eta*NDV*NDV+(4.5*eta-1.0+8.0*eta*eta)*MOR)+VDSIG*NDV* eta*(6.0*eta-1.)-3.0*DM/M*VDS*NDV*eta+DM/M*NDS*(-1.5* eta*V1_V22+ 3.0*eta*NDV*NDV-(1.0+3.5*eta)*MOR))+KSSIG[k]*NDV*(2.0*eta*eta* V1_V22-3.0*eta*eta*NDV*NDV+(-1.0+4.0*eta-2.0*eta*eta)*MOR)+ DM/M*KSS[k]*NDV*(-eta*V1_V22+1.5*eta*NDV*NDV+(-1.0+eta)* MOR));
+            }
+
+            //SS1 crossproduct of SS1 and S1 = SS1[k]XS1[j]
+            Float SS1aux[3],SS2aux[3],SU[3],SV[3],XAD[3],XSD[3];
+            SS1aux[0] =   SS1[1]*S1[2] - SS1[2]*S1[1];  
+            SS1aux[1] =   SS1[2]*S1[0] - SS1[0]*S1[2];  
+            SS1aux[2] =   SS1[0]*S1[1] - SS1[1]*S1[0];  
+
+            SS1[0] = SS1aux[0];  
+            SS1[1] = SS1aux[1];  
+            SS1[2] = SS1aux[2];  
+
+            //SS2 crossproduct of SS2 and S2 = SS2[k]XS2[j]
+            SS2aux[0] =   SS2[1]*S2[2] - SS2[2]*S2[1];  
+            SS2aux[1] =   SS2[2]*S2[0] - SS2[0]*S2[2];  
+            SS2aux[2] =   SS2[0]*S2[1] - SS2[1]*S2[0];  
+
+            SS2[0] = SS2aux[0];  
+            SS2[1] = SS2aux[1];  
+            SS2[2] = SS2aux[2];  
+
+            for(int k=0; k<3; k++) {
+                SU[k] = SU1[k]/c_2 + SU2[k]/c_4 + (SS1[k] + SS2[k])/c_2;
+                SV[k] = SV1[k]/c_2 + SV2[k]/c_4+M*(SS2[k]/m2-SS1[k]/ m1)/c_2;
+
+                KSS[k] = KSS[k] + SU[k]*dt_bh;						// integrate for dt_bh timestep 
+                KSSIG[k] = KSSIG[k] + SV[k]*dt_bh;
+
+                SPIN[k][0] = m1*(M*KSS[k]-m2*KSSIG[k])/M/M/m1/m1*c_1 ;       
+                SPIN[k][1] = m2*(M*KSS[k]+m1*KSSIG[k])/M/M/m2/m2*c_1;
+                //XAD[k] = 0.5/(M*M*m1*m2)*(-SU[k]*M*DM-SV[k]*(m1*m1+m2*m2));
+                //XSD[k] = 0.5/(M*M*m1*m2)*(SU[k]*M*M+SV[k]*(m1*m1-m2*m2));
+
+            }
+
+            /*
+            //NDOTCS crossproduct of NDOT and KSS = NDOT[k]XKSS[j]
+            Float NDOTCS[3], NCSU[3], NDOTCSIG[3], NCSV[3], ACS[3], VCSU[3], ACSIG[3], VCSV[3];
+            NDOTCS[0] =   NDOT[1]*KSS[2] - NDOT[2]*KSS[1];  
+            NDOTCS[1] =   NDOT[2]*KSS[0] - NDOT[0]*KSS[2];  
+            NDOTCS[2] =   NDOT[0]*KSS[1] - NDOT[1]*KSS[0];  
+            //NCSU crossproduct of N and SU = N[k]XSU[j]
+            NCSU[0] =   N[1]*SU[2] - N[2]*SU[1];  
+            NCSU[1] =   N[2]*SU[0] - N[0]*SU[2];  
+            NCSU[2] =   N[0]*SU[1] - N[1]*SU[0];  
+            //NDOTCSIG crossproduct of NDOT and KSSIG = NDOT[k]XKSSIG[j]
+            NDOTCSIG[0] =   NDOT[1]*KSSIG[2] - NDOT[2]*KSSIG[1];  
+            NDOTCSIG[1] =   NDOT[2]*KSSIG[0] - NDOT[0]*KSSIG[2];  
+            NDOTCSIG[2] =   NDOT[0]*KSSIG[1] - NDOT[1]*KSSIG[0];  
+            //NCSV crossproduct of N and SV = N[k]XSV[j]
+            NCSV[0] =   N[1]*SV[2] - N[2]*SV[1];  
+            NCSV[1] =   N[2]*SV[0] - N[0]*SV[2];  
+            NCSV[2] =   N[0]*SV[1] - N[1]*SV[0];  
+            //ACS crossproduct of AT and KSS = AT[k]XKSS[j]
+            ACS[0] =   AT[1]*KSS[2] - AT[2]*KSS[1];  
+            ACS[1] =   AT[2]*KSS[0] - AT[0]*KSS[2];  
+            ACS[2] =   AT[0]*KSS[1] - AT[1]*KSS[0];  
+            //VCSU crossproduct of relative v and SU = v[k]XSU[j]
+            VCSU[0] =   v[1]*SU[2] - v[2]*SU[1];  
+            VCSU[1] =   v[2]*SU[0] - v[0]*SU[2];  
+            VCSU[2] =   v[0]*SU[1] - v[1]*SU[0];  
+            //ACSIG crossproduct of AT and KSSIG = AT[k]XKSSIG[j]
+            ACSIG[0] =   AT[1]*KSSIG[2] - AT[2]*KSSIG[1];  
+            ACSIG[1] =   AT[2]*KSSIG[0] - AT[0]*KSSIG[2];  
+            ACSIG[2] =   AT[0]*KSSIG[1] - AT[1]*KSSIG[0];  
+            //VCSV crossproduct of relative v and SV = v[k]XSV[j]
+            VCSV[0] =   v[1]*SV[2] - v[2]*SV[1];  
+            VCSV[1] =   v[2]*SV[0] - v[0]*SV[2];  
+            VCSV[2] =   v[0]*SV[1] - v[1]*SV[0];  
+
+            Float SNVDOT = SU[0]*NCV[0]+SU[1]*NCV[1]+SU[2]*NCV[2]+ KSS[0]*NDOTCV[0]+KSS[1]*NDOTCV[1]+KSS[2]*NDOTCV[2]+ KSS[0]*NCA[0]+KSS[1]*NCA[1]+KSS[2]*NCA[2];
+
+            Float SIGNVDOT = SV[0]*NCV[0]+SV[1]*NCV[1]+SV[2]*NCV[2]+ KSSIG[0]*NDOTCV[0]+KSSIG[1]*NDOTCV[1]+KSSIG[2]*NDOTCV[2]+ KSSIG[0]*NCA[0]+KSSIG[1]*NCA[1]+KSSIG[2]*NCA[2];
+                
+            Float NSDOT = NDOT[0]*KSS[0]+NDOT[1]*KSS[1]+NDOT[2]*KSS[2]+ N[0]*SU[0]+N[1]*SU[1]+N[2]*SU[2];
+            Float NSIGDOT = NDOT[0]*KSSIG[0]+NDOT[1]*KSSIG[1]+NDOT[2]*KSSIG[2]+ N[0]*SV[0]+N[1]*SV[1]+N[2]*SV[2];
+            Float VSDOT = AT[0]*KSS[0]+AT[1]*KSS[1]+AT[2]*KSS[2]+ v[0]*SU[0]+v[1]*SU[1]+v[2]*SU[2];
+            Float VSIGDOT = AT[0]*KSSIG[0]+AT[1]*KSSIG[1]+AT[2]*KSSIG[2]+ v[0]*SV[0]+v[1]*SV[1]+v[2]*SV[2];
+
+            Float NXSDOT = NDOT[0]*XS[0]+NDOT[1]*XS[1]+NDOT[2]*XS[2]+ N[0]*XSD[0]+N[1]*XSD[1]+N[2]*XSD[2];
+            Float NXADOT = NDOT[0]*XA[0]+NDOT[1]*XA[1]+NDOT[2]*XA[2]+ N[0]*XAD[0]+N[1]*XAD[1]+N[2]*XAD[2];
+
+            Float C1_5D[3], C2D[3], C2_5D[3];
+            for(int k=0; k<3; k++) { 
+            C1_5D[k] = -3.0*RP/r*C1_5[k]+(NDOT[k]*(12.0*SDNCV+6.0*DM/M* SIGDNCV)+N[k]*(12.0*SNVDOT+6.0*DM/M*SIGNVDOT)+9.0*NVDOT* NCS[k]+9.0*NDV*(NDOTCS[k]+NCSU[k])+3.0*DM/M*(NVDOT*NCSIG[k]+ NDV*(NDOTCSIG[k]+NCSV[k]))-7.0*(ACS[k]+VCSU[k])-3.0*DM/M* (ACSIG[k]+VCSV[k]))/(r3);
+            C2D[k] = -4.0*RP/r*C2[k]-MOR*MOR*MOR*3.0*eta/r*(NDOT[k]* (XS2-XA2-5.0*NXS*NXS+5.0*NXA*NXA)+N[k]*(2.0*(XS[0]*XSD[0]+ XS[1]*XSD[1]+XS[2]*XSD[2]-XA[0]*XAD[0]-XA[1]*XAD[1]- XA[2]*XAD[2])-10.0*NXS*NXSDOT+10.0*NXA*NXADOT)+2.0*(XSD[k]* NXS+XS[k]*NXSDOT-XAD[k]*NXA-XA[k]*NXADOT));
+            C2_5D[k] = -3.0*RP/r*C2_5[k]+(NDOT[k]*(SDNCV*(-30.0*eta* NDV*NDV+24.0*eta*V1_V22-MOR*(38.0+25.0*eta))+DM/M*SIGDNCV* (-15.0*eta*NDV*NDV+12.0*eta*V1_V22-MOR*(18.0+14.5*eta)))+ N[k]*(SNVDOT*(-30.0*eta*NDV*NDV+24.0*eta*V1_V22-MOR* (38.0+25.0*eta))+SDNCV*(-60.0*eta*NDV*NVDOT+48.0*eta*VA+ MOR*RP/r*(38.0+25.0*eta))+DM/M*SIGNVDOT*(-15.0*eta*NDV* NDV+12.0*eta*V1_V22-MOR*(18.0+14.5*eta))+DM/M*SIGDNCV* (-30.0*eta*NDV*NVDOT+24.0*eta*VA+MOR*RP/r*(18.0+14.5*eta)))+ (NVDOT*v[k]+NDV*AT[k])*(SDNCV*(-9.0+9.0*eta)+DM/M*SIGDNCV* (-3.0+6.0*eta))+NDV*v[k]*(SNVDOT*(-9.0+9.0*eta)+DM/M* SIGNVDOT*(-3.0+6.0*eta))+(NDOTCV[k]+NCA[k])*(NDV*VDS*(-3.0+ 3.0*eta)-8.0*MOR*eta*NDS-DM/M*(4.0*MOR*eta*NDSIG+3.0*NDV*VDSIG) )+NCV[k]*((NVDOT*VDS+NDV*VSDOT)*(-3.0+3.0*eta)-8.0*eta*MOR* (NSDOT-RP/r*NDS)-DM/M*(4.0*eta*MOR*(NSIGDOT-RP/r*NDSIG)+ 3.0*(NVDOT*VDSIG+NDV*VSIGDOT)))+(NVDOT*NCS[k]+NDV* (NDOTCS[k]+NCSU[k]))*(-22.5*eta*NDV*NDV+21.0*eta*V1_V22- MOR*(25.0+15.0*eta))+NDV*NCS[k]*(-45.0*eta*NDV*NVDOT+42.0*eta* VA+MOR*RP/r*(25.0+15.0*eta))+DM/M*(NVDOT*NCSIG[k]+NDV* (NDOTCSIG[k]+NCSV[k]))*(-15.0*eta*NDV*NDV+12.0*eta*V1_V22- MOR*(9.0+8.5*eta))+DM/M*NDV*NCSIG[k]*(-30.0*eta*NDV*NVDOT+ 24.0*eta*VA+MOR*RP/r*(9.0+8.5*eta))+(ACS[k]+VCSU[k])* (16.5*eta*NDV*NDV+MOR*(21.0+9.0*eta)-14.0*eta*V1_V22)+ VCS[k]*(33.0*eta*NDV*NVDOT-MOR*RP/r*(21.0+9.0*eta)- 28.0*eta*VA)+DM/M*(ACSIG[k]+VCSV[k])*(9.0*eta*NDV*NDV- 7.0*eta*V1_V22+MOR*(9.0+4.5*eta))+DM/M*VCSIG[k]*(18.0* eta*NDV*NVDOT-14.0*eta*VA-MOR*RP/r*(9.0+4.5*eta)))/ (r3);
+            }
+            */
+
+            // new values of the spins, returned back to the main program... 
             if (spin1==NULL) || (spin2==NULL) {
                 std::cerr<<"Error: spin array is NULL, cannot save spin data!\n";
                 abort();
@@ -585,7 +574,21 @@ public:
                 spin1[k] = SPIN[k][0];
                 spin2[k] = SPIN[k][1];
             }
-        }
+        } // spin
+
+        /*
+          Float ADK = ADK2+ADK4+ADK5+ADK6+ADK7;
+          Float BDK = BDK2+BDK4+BDK5+BDK6+BDK7;
+
+          Float KSAK = AK2+AK4+AK5+AK6+AK7;
+          Float KSBK = BK2+BK4+BK5+BK6+BK7;
+
+          Float AD[3] = {0.0};
+          for (int k=0; k<3; k++) {
+          AD[k] = -2.0*MOR*RP*(KSAK*N[k]+KSBK*v[k])/r2 + MOR*(ADK*N[k]+BDK*v[k])/r + MOR*(KSAK*(v[k]-N[k]*RP)/r+KSBK*AT[k])/r + C1_5D[k]/c_2 + C2D[k]/c_4 +C2_5D[k]/c_4;
+          }
+        */
+
 
         // Check RS_DIST conditions !!!
         //Float RS_DIST = 4.0*(2.0*m1/c_2 + 2.0*m2/c_2);
