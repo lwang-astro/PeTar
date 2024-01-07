@@ -12,6 +12,7 @@ step_mode=@with_step_mode@
 se_mode=@with_interrupt@
 ext_mode=@with_external@
 ext_hard_mode=@with_external_hard@
+pn_mode=@with_pn@
 tt_mode=@with_tidal_tensor@
 orb_mode=@with_orbit@
 
@@ -131,6 +132,10 @@ endif # galpy
 
 ifeq ($(ext_hard_mode), gasdrag)
 MT_FLAGS += -D EXTERNAL_HARD -D HERMITE_PERT_FORCE -D GAS_DRAG
+endif
+
+ifeq ($(pn_mode), hermite)
+MT_FLAGS += -D HERMITE_PN
 endif
 
 ifeq ($(step_mode),kdkdk)

@@ -15,27 +15,92 @@ class PostNewtonian{
 public:
     Float speed_of_light;
     Float gravitational_constant;
-    bool used_pn_orders[6]; // used_pn_orders in bool array:[PN1, PN2, PN2.5, PN3, PN3.5, SPIN]
+    Float precession_criterion; // precession angle to determine which order of PN should be on
     
-    PostNewtonian(): speed_of_light(1.0), gravitational_constant(1.0), used_pn_orders{true,true,true,true,true,false} {}
+    PostNewtonian(): speed_of_light(1.0), gravitational_constant(1.0), precession_criterion(1.0) {}
     
+    //! check whether parameters values are correct
+    /*! \return true: all correct
+     */
+    bool checkParams() {
+        ASSERT(speed_of_light>0.0);
+        ASSERT(gravitational_constant>0.0);
+        return true;
+    }
+
+    //! print parameters
+    void print(std::ostream & _fout) const{
+        _fout<<"speed_of_light: "<<speed_of_light<<std::endl
+             <<"G: "<<gravitational_constant<<std::endl
+             <<"precession_criterion: "<<precession_criterion<<std::endl;
+    }
+
+    //! determine which PN terms should be switched on based on an estimator due to Einstein drift
+    /*!
+      @param[out] used_pn_orders: determine which PN orders are calculated: set in a bool array: [PN1, PN2, PN2.5, PN3, PN3.5, SPIN]
+      @param[in] r: distance between two particles
+      @param[in] m: total mass of two particles
+      
+      return: if use PN: true
+    */
+    bool setUsedPNOrders(bool used_pn_orders[6], Float r, Float m) {
+        const Float c = speed_of_light;
+        Float c2 = c*c;
+        Float theta = 4*gravitational_constant*m/(r*c2); // precession angle 
+        bool used_pn = false;
+        // PN1
+        if (theta > precession_criterion) {
+            used_pn_orders[0] = true;
+            used_pn = true;
+        }
+        else used_pn_orders[0] = false;
+        // PN2
+        Float t2 = theta*theta;
+        if (t2 > precession_criterion) used_pn_orders[1] = true;
+        else used_pn_orders[1] = false;
+        // PN2.5
+        Float t5 = t2*t2*theta;
+        Float tc2 = precession_criterion*precession_criterion;
+        if (t5 > tc2) used_pn_orders[2] = true;
+        else used_pn_orders[2] = false;
+        // PN3 
+        Float t3 = t2*theta;
+        if (t3 >precession_criterion) used_pn_orders[3] = true;
+        else used_pn_orders[3] = false;
+        // PN3.5
+        Float t7 = t3*t3*theta;
+        if (t7 > tc2) used_pn_orders[4] = true;
+        else used_pn_orders[4] = false;
+        // Spin
+        used_pn_orders[5] = false; // No spin support yet
+
+        return used_pn;
+    }
+
     //! PN acceleration and adot between two particles
     /*!
-      @param[out] acc1: add PN acceleration to p1 acc without reseting to zero
-      @param[out] acc2: add PN acceleration to p2 acc without reseting to zero
-      @param[out] adot1: add PN jerk to p1 jerk without reseting to zero
-      @param[out] adot2: add PN jerk to p2 jerk without reseting to zero
-      @param[out] spin1: updated spin of p1
-      @param[out] spin2: updated spin of p2
+      @param[out] a_pn1[6][3]: (3D) Newton and PN acceleration of p1, each PN term are separately saved in array: [Newton, PN1, PN2, PN2.5, PN3, PN3.5]
+      @param[out] a_pn2[6][3]: Newton and PN acceleration of p2 for each PN order 
+      @param[out] adot_pn1[6][3]: Newton and PN jerk of p1 for each PN order
+      @param[out] adot_pn2[6][3]: Newton PN jerk of p2 for each PN order
+      @param[out] dspin1[3]: spin change rate of p1
+      @param[out] dspin2[3]: spin change rate of p2
       @param[in] p1: particle receiving PN force
       @param[in] p2: particle giving PN force
-      
-      Return: the next integration time step (default: maximum floating point number)
+      @param[in] used_pn_orders: determine which PN orders are calculated: set in a bool array: [PN1, PN2, PN2.5, PN3, PN3.5, SPIN]
+      @param[in] calc_adot: if true, calculated jerk, (default: true)
+
+      Return: Maximum PN orders indices [-1: not used; 0: PN1; 1: PN2; 2: PN2.5; 3: PN3; 4: PN3.5; 5: Spin]
     */
     template<class Tp> 
-    Float calcAccJerkPN(Float acc1[], Float acc2[], Float adot1[], Float adot2[],
-                        Float spin1[], Float spin2[],
-                        const Tp& p1, const Tp& p2, const bool calc_adot = true) {
+    int calcAccJerkPN(Float a_pn1[][3], Float a_pn2[][3], 
+                      Float adot_pn1[][3], Float adot_pn2[][3],
+                      Float dspin1[], Float dspin2[],
+                      const Tp& p1, const Tp& p2, 
+                      bool used_pn_orders[6], const bool calc_adot = true) {
+
+        // used_order maximum
+        int used_order_max = -1;
 
         // interface to particle
         Float m1 = p1.mass;
@@ -45,6 +110,8 @@ public:
         const auto& v1 = p1.vel;
         const auto& v2 = p2.vel;
 
+        const Float& G = gravitational_constant;
+
         // Final acc and adot for each order of PN
         /*a_pn1   [0 - PN0; 1 - PN1; 2 - PN2; 3 - PN2.5, 4 - PN3, 5 - PN3.5] [3]	for p1
           adot_pn1[0 - PN0; 1 - PN1; 2 - PN2; 3 - PN2.5, 4 - PN3, 5 - PN3.5] [3]	for p1
@@ -52,19 +119,15 @@ public:
           a_pn2   [0 - PN0; 1 - PN1; 2 - PN2; 3 - PN2.5, 4 - PN3, 5 - PN3.5] [3]	for p2
           adot_pn2[0 - PN0; 1 - PN1; 2 - PN2; 3 - PN2.5, 4 - PN3, 5 - PN3.5] [3]	for p2
         */
-        Float a_pn1[6][3]={0};
-        Float a_pn2[6][3]={0};
-        Float adot_pn1[6][3]={0};
-        Float adot_pn2[6][3]={0};
-
         Float SPIN[3][2];
 
         bool used_spin = used_pn_orders[5];
         if (used_spin) {
             for(int k=0;k<3;k++) {
-                //SPIN[k][0] = p1.star.spin[k];
-                //SPIN[k][1] = p2.star.spin[k];
-                SPIN[k][0] = SPIN[k][1] = 0.0; // Currently 3D Spin is not implemented in particle
+                // Currently 3D Spin is not implemented in particle
+                //SPIN[k][0] = p1.spin[k];
+                //SPIN[k][1] = p2.spin[k];
+                SPIN[k][0] = SPIN[k][1] = 0.0; 
             }
         }
         else {
@@ -100,7 +163,7 @@ public:
 
         Float MOR    = M/r;
         Float V1_V22 = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
-        Float VWHOLE = std::sqrt(V1_V22);
+        //Float VWHOLE = std::sqrt(V1_V22);
         Float RP     = (x[0]*v[0] + x[1]*v[1] + x[2]*v[2])/r;
 
         // Newton accelerations ~1/c^0
@@ -108,14 +171,13 @@ public:
         for (int k=0; k<3; k++) {
             N[k] = x[k]/r;
 
-            a_pn1[0][k] = -m2*x[k]/r3;
-            a_pn2[0][k] =  m1*x[k]/r3;
+            a_pn1[0][k] = -G*m2*x[k]/r3;
+            a_pn2[0][k] =  G*m1*x[k]/r3;
         }
 
         Float A[3] = {0.0};
         Float AK2 = 0.0;
         Float BK2 = 0.0;
-        Float CK2 = 0.0;
         // PN1 ~1/c^2
         if(used_pn_orders[0]) {
             Float A1 = 2.0*(2.0+eta)*MOR-(1.0+3.0*eta)*V1_V22 +1.5*eta*RP*RP;
@@ -125,18 +187,18 @@ public:
             BK2 = B1/c_2;
 
             for (int k=0; k<3; k++) {
-                CK2 = AK2*N[k] + BK2*v[k];
-                a_pn1[1][k] =  CK2/r2*m2;
-                a_pn2[1][k] = -CK2/r2*m1;
+                Float CK2 = AK2*N[k] + BK2*v[k];
+                a_pn1[1][k] =  G*CK2/r2*m2;
+                a_pn2[1][k] = -G*CK2/r2*m1;
                 
                 A[k] += MOR*CK2/r;
             }
+            used_order_max = 0;
         }
 
         // PN2 ~1/c^4
         Float AK4 = 0.0;
         Float BK4 = 0.0;
-        Float CK4 = 0.0;
         if(used_pn_orders[1]) {
             Float A2 = -0.75*(12.0+29.0*eta)*MOR*MOR-eta*(3.0-4.0*eta)*V1_V22*V1_V22-1.875*eta*(1.0-3.0*eta)*RP*RP*RP*RP+0.5*eta*(13.0-4.0*eta)*MOR*V1_V22+(2.0+25.0*eta+2.0*eta*eta)*MOR*RP*RP+1.5*eta*(3.0-4.0*eta)*V1_V22*RP*RP;
             Float B2 = -0.5*RP*((4.0+41.0*eta+8.0*eta*eta)*MOR-eta*(15.0+4.0*eta)*V1_V22+3.0*eta*(3.0+2.0*eta)*RP*RP);
@@ -145,18 +207,18 @@ public:
             BK4 = B2/c_4;
 
             for (int k=0; k<3; k++) {
-                CK4 = AK4*N[k] + BK4*v[k];
-                a_pn1[2][k] =  CK4/r2*m2;
-                a_pn2[2][k] = -CK4/r2*m1;
+                Float CK4 = AK4*N[k] + BK4*v[k];
+                a_pn1[2][k] =  G*CK4/r2*m2;
+                a_pn2[2][k] = -G*CK4/r2*m1;
 
                 A[k] += MOR*CK4/r;
             }
+            used_order_max = 1;
         }
 
         // PN2.5 ~1/c^5
         Float AK5 = 0.0;
         Float BK5 = 0.0;
-        Float CK5 = 0.0;
         if (used_pn_orders[2]) {
             Float A2_5 = 1.6*eta*MOR*RP*(17.0*MOR/3.0+3.0*V1_V22);
             Float B2_5 = -1.6*eta*MOR*(3.0*MOR+V1_V22);
@@ -165,18 +227,18 @@ public:
             BK5 = B2_5/c_5;
 
             for (int k=0; k<3; k++) {
-                CK5 = AK5*N[k] + BK5*v[k];
-                a_pn1[3][k] =  CK5/r2*m2;
-                a_pn2[3][k] = -CK5/r2*m1;
+                Float CK5 = AK5*N[k] + BK5*v[k];
+                a_pn1[3][k] =  G*CK5/r2*m2;
+                a_pn2[3][k] = -G*CK5/r2*m1;
 
                 A[k] += MOR*CK5/r;
             }
+            used_order_max = 2;
         }
 
         // PN3 ~1/c^6
         Float AK6 = 0.0;
         Float BK6 = 0.0;
-        Float CK6 = 0.0;
         if(used_pn_orders[3]) {
             Float A3 = MOR*MOR*MOR*(16.0+(1399.0/12.0-41.0*PI2/16.0)*eta+
                                     71.0*eta*eta/2.0)+eta*(20827.0/840.0+123.0*PI2/64.0-eta*eta)
@@ -201,19 +263,18 @@ public:
             BK6 = B3/c_6;
             
             for (int k=0; k<3; k++) {
-                CK6 = AK6*N[k] + BK6*v[k];
-                a_pn1[4][k] =  CK6/r2*m2;
-                a_pn2[4][k] = -CK6/r2*m1;
+                Float CK6 = AK6*N[k] + BK6*v[k];
+                a_pn1[4][k] =  G*CK6/r2*m2;
+                a_pn2[4][k] = -G*CK6/r2*m1;
 
                 A[k] += MOR*CK6/r;
             }
-            
+            used_order_max = 3;
         }
 
 		// PN3.5 ~1/c^7
         Float AK7 = 0.0;
         Float BK7 = 0.0;
-        Float CK7 = 0.0;
         if(used_pn_orders[4]) {
             Float A3_5 = MOR*eta*(V1_V22*V1_V22*(-366.0/35.0-12.0*eta)+V1_V22*RP*RP*(114.0+12.0*eta)-112.0*RP*RP*RP*RP+MOR*(V1_V22*(-692.0/35.0+724.0*eta/15.0)+RP*RP*(-294.0/5.0-376.0*eta/5.0)+MOR*(-3956.0/35.0-184.0*eta/5.0)));
             Float B3_5 = 8.0*eta*MOR*((1325.0+546.0*eta)*MOR*MOR/42.0+(313.0+42.0*eta)*V1_V22*V1_V22/28.0+75.0*RP*RP*RP*RP-(205.0+777.0*eta)*MOR*V1_V22/42.0+(205.0+424.0*eta)*MOR*RP*RP/12.0-3.0*(113.0+2.0*eta)*V1_V22*RP*RP/4.0)/5.0;
@@ -223,12 +284,13 @@ public:
             BK7 = B3_5/c_7;
             
             for (int k=0; k<3; k++) {
-                CK7 = AK7*N[k] + BK7*v[k];
-                a_pn1[5][k] =  CK7/r2*m2;
-                a_pn2[5][k] = -CK7/r2*m1;
+                Float CK7 = AK7*N[k] + BK7*v[k];
+                a_pn1[5][k] =  G*CK7/r2*m2;
+                a_pn2[5][k] = -G*CK7/r2*m1;
 
                 A[k] += MOR*CK7/r;
             }
+            used_order_max = 4;
         }
 
         // Spin accelerations
@@ -296,7 +358,7 @@ public:
             NDSIG = N[0]*KSSIG[0]+N[1]*KSSIG[1]+N[2]*KSSIG[2];
 
             Float C1_5[3],C2[3], C2_5[3];
-            Float C1_5D[3],C2D[3], C2_5D[3];
+            //Float C1_5D[3],C2D[3], C2_5D[3];
 
             for(int k=0; k<3; k++) {
                 C1_5[k] = (N[k]*(12.0*SDNCV+6.0*DM*SIGDNCV/M)+9.0*NDV*NCS[k]+3.0*DM*NDV*NCSIG[k]/M -7.0*VCS[k]-3.0*DM*VCSIG[k]/M)/r3;
@@ -310,16 +372,8 @@ public:
                 A[k] += C1_5[k]/c_2 + C2[k]/c_4 + C2_5[k]/c_4;
             } 
 
-
+            used_order_max = 5;
         } /* if Spin is used*/   
-
-        // gether acceleration of all terms, including Newtonian acc
-        for (int j=0; j<6; j++) {
-            for (int k=0; k<3; k++) {
-                acc1[k] += gravitational_constant*a_pn1[j][k];
-                acc2[k] += gravitational_constant*a_pn2[j][k];
-            }
-        }
 
         if (calc_adot) {
             // PN jerks
@@ -339,13 +393,14 @@ public:
             Float VA = AT[0]*v[0] + AT[1]*v[1] + AT[2]*v[2];
 
             // Newton ~1/c^0
-            Float NDOT[3];
+            //Float NDOT[3];
             for(int k=0;k<3;k++) {
-                NDOT[k] = (v[k]-N[k]*RP)/r;
-                adot_pn1[0][k] = -m2*(v[k]/r3 - 3.0*RP*x[k]/r2/r2);
-                adot_pn2[0][k] =  m1*(v[k]/r3 - 3.0*RP*x[k]/r2/r2);
+                //NDOT[k] = (v[k]-N[k]*RP)/r;
+                adot_pn1[0][k] = -G*m2*(v[k]/r3 - 3.0*RP*x[k]/r2/r2);
+                adot_pn2[0][k] =  G*m1*(v[k]/r3 - 3.0*RP*x[k]/r2/r2);
             }
 
+            /*
             Float NVDOT = NDOT[0]*v[0]+NDOT[1]*v[1]+NDOT[2]*v[2]+N[0]*AT[0]+N[1]*AT[1]+N[2]*AT[2];
 
             //NDOTCV crossproduct of NDOT[k] and relative v = NDOT[k]Xv[j]
@@ -360,6 +415,8 @@ public:
             NCA[1] = N[2]*AT[0] - N[0]*AT[2];  
             NCA[2] = N[0]*AT[1] - N[1]*AT[0];  
 
+            */
+
             // PN1 ~1/c^2
             if(used_pn_orders[0]) {
                 Float A1D = -2.0*(2.0+eta)*MOR*RP/r - 2.0*(1.0+3.0*eta)*VA + 3.0*eta*RP*RPP;
@@ -369,9 +426,10 @@ public:
                 Float BDK2 = B1D/c_2;
 
                 for (int k=0; k<3; k++) {
+                    Float CK2 = AK2*N[k] + BK2*v[k];
                     Float CDK2 = ADK2*N[k]+BDK2*v[k];
-                    adot_pn1[1][k] =  (-2.0*MOR*RP*CK2/r2 + MOR*CDK2/r + MOR*(AK2*(v[k]-N[k]*RP)/r+BK2*A[k])/r)*m2/M;
-                    adot_pn2[1][k] = -(-2.0*MOR*RP*CK2/r2 + MOR*CDK2/r + MOR*(AK2*(v[k]-N[k]*RP)/r+BK2*A[k])/r)*m1/M;
+                    adot_pn1[1][k] =  G*(-2.0*MOR*RP*CK2/r2 + MOR*CDK2/r + MOR*(AK2*(v[k]-N[k]*RP)/r+BK2*A[k])/r)*m2/M;
+                    adot_pn2[1][k] = -G*(-2.0*MOR*RP*CK2/r2 + MOR*CDK2/r + MOR*(AK2*(v[k]-N[k]*RP)/r+BK2*A[k])/r)*m1/M;
                 }
             }
 
@@ -384,9 +442,10 @@ public:
                 Float BDK4 = B2D/c_4;
                 
                 for (int k=0; k<3; k++) {
+                    Float CK4 = AK4*N[k] + BK4*v[k];
                     Float CDK4 = ADK4*N[k]+BDK4*v[k];
-                    adot_pn1[2][k] =  (-2.0*MOR*RP*CK4/r2 + MOR*CDK4/r + MOR*(AK4*(v[k]-N[k]*RP)/r+BK4*A[k])/r)*m2/M;
-                    adot_pn2[2][k] = -(-2.0*MOR*RP*CK4/r2 + MOR*CDK4/r + MOR*(AK4*(v[k]-N[k]*RP)/r+BK4*A[k])/r)*m1/M;
+                    adot_pn1[2][k] =  G*(-2.0*MOR*RP*CK4/r2 + MOR*CDK4/r + MOR*(AK4*(v[k]-N[k]*RP)/r+BK4*A[k])/r)*m2/M;
+                    adot_pn2[2][k] = -G*(-2.0*MOR*RP*CK4/r2 + MOR*CDK4/r + MOR*(AK4*(v[k]-N[k]*RP)/r+BK4*A[k])/r)*m1/M;
                 }
             }
 
@@ -399,9 +458,10 @@ public:
                 Float BDK5 = B2_5D/c_5;
 
                 for (int k=0; k<3; k++) {
+                    Float CK5 = AK5*N[k] + BK5*v[k];
                     Float CDK5 = ADK5*N[k]+BDK5*v[k];
-                    adot_pn1[3][k] =  (-2.0*MOR*RP*CK5/r2 + MOR*CDK5/r + MOR*(AK5*(v[k]-N[k]*RP)/r+BK5*A[k])/r)*m2/M;
-                    adot_pn2[3][k] = -(-2.0*MOR*RP*CK5/r2 + MOR*CDK5/r + MOR*(AK5*(v[k]-N[k]*RP)/r+BK5*A[k])/r)*m1/M;
+                    adot_pn1[3][k] =  G*(-2.0*MOR*RP*CK5/r2 + MOR*CDK5/r + MOR*(AK5*(v[k]-N[k]*RP)/r+BK5*A[k])/r)*m2/M;
+                    adot_pn2[3][k] = -G*(-2.0*MOR*RP*CK5/r2 + MOR*CDK5/r + MOR*(AK5*(v[k]-N[k]*RP)/r+BK5*A[k])/r)*m1/M;
                 }
             }
 
@@ -414,9 +474,10 @@ public:
                 Float BDK6 = B3D/c_6;
                 
                 for (int k=0; k<3; k++) {
+                    Float CK6 = AK6*N[k] + BK6*v[k];
                     Float CDK6= ADK6*N[k]+BDK6*v[k];
-                    adot_pn1[4][k] =  (-2.0*MOR*RP*CK6/r2 + MOR*CDK6/r + MOR*(AK6*(v[k]-N[k]*RP)/r+BK6*A[k])/r)*m2/M;
-                    adot_pn2[4][k] = -(-2.0*MOR*RP*CK6/r2 + MOR*CDK6/r + MOR*(AK6*(v[k]-N[k]*RP)/r+BK6*A[k])/r)*m1/M;
+                    adot_pn1[4][k] =  G*(-2.0*MOR*RP*CK6/r2 + MOR*CDK6/r + MOR*(AK6*(v[k]-N[k]*RP)/r+BK6*A[k])/r)*m2/M;
+                    adot_pn2[4][k] = -G*(-2.0*MOR*RP*CK6/r2 + MOR*CDK6/r + MOR*(AK6*(v[k]-N[k]*RP)/r+BK6*A[k])/r)*m1/M;
                 }
 
             }
@@ -430,18 +491,13 @@ public:
                 Float BDK7 = B3_5D/c_7;
                     
                 for (int k=0; k<3; k++) {
+                    Float CK7 = AK7*N[k] + BK7*v[k];
                     Float CDK7 = ADK7*N[k]+BDK7*v[k];
-                    adot_pn1[5][k] =  (-2.0*MOR*RP*CK7/r2 + MOR*CDK7/r + MOR*(AK7*(v[k]-N[k]*RP)/r+BK7*A[k])/r)*m2/M;
-                    adot_pn2[5][k] = -(-2.0*MOR*RP*CK7/r2 + MOR*CDK7/r + MOR*(AK7*(v[k]-N[k]*RP)/r+BK7*A[k])/r)*m1/M;                    
+                    adot_pn1[5][k] =  G*(-2.0*MOR*RP*CK7/r2 + MOR*CDK7/r + MOR*(AK7*(v[k]-N[k]*RP)/r+BK7*A[k])/r)*m2/M;
+                    adot_pn2[5][k] = -G*(-2.0*MOR*RP*CK7/r2 + MOR*CDK7/r + MOR*(AK7*(v[k]-N[k]*RP)/r+BK7*A[k])/r)*m1/M;                    
                 }
             }
 
-            for (int j=0; j<6; j++) {
-                for (int k=0; k<3; k++) {
-                    adot1[k] += gravitational_constant*adot_pn1[j][k];
-                    adot2[k] += gravitational_constant*adot_pn2[j][k];
-                }
-            }
         }
 
         // Spin
@@ -478,7 +534,7 @@ public:
             }
 
             //SS1 crossproduct of SS1 and S1 = SS1[k]XS1[j]
-            Float SS1aux[3],SS2aux[3],SU[3],SV[3],XAD[3],XSD[3];
+            Float SS1aux[3],SS2aux[3],SU[3],SV[3];
             SS1aux[0] =   SS1[1]*S1[2] - SS1[2]*S1[1];  
             SS1aux[1] =   SS1[2]*S1[0] - SS1[0]*S1[2];  
             SS1aux[2] =   SS1[0]*S1[1] - SS1[1]*S1[0];  
@@ -496,15 +552,25 @@ public:
             SS2[1] = SS2aux[1];  
             SS2[2] = SS2aux[2];  
 
+            // new values of the spins, returned back to the main program... 
+            if ((dspin1==NULL) || (dspin2==NULL)) {
+                std::cerr<<"Error: spin array is NULL, cannot save spin data!\n";
+                abort();
+            }
+
             for(int k=0; k<3; k++) {
                 SU[k] = SU1[k]/c_2 + SU2[k]/c_4 + (SS1[k] + SS2[k])/c_2;
                 SV[k] = SV1[k]/c_2 + SV2[k]/c_4+M*(SS2[k]/m2-SS1[k]/ m1)/c_2;
 
-                KSS[k] = KSS[k] + SU[k]*dt_bh;						// integrate for dt_bh timestep 
-                KSSIG[k] = KSSIG[k] + SV[k]*dt_bh;
+                //KSS[k] = KSS[k] + SU[k]*dt_bh;						// integrate for dt_bh timestep 
+                //KSSIG[k] = KSSIG[k] + SV[k]*dt_bh;
 
-                SPIN[k][0] = m1*(M*KSS[k]-m2*KSSIG[k])/M/M/m1/m1*c_1 ;       
-                SPIN[k][1] = m2*(M*KSS[k]+m1*KSSIG[k])/M/M/m2/m2*c_1;
+                //dspin1[k] = m1*(M*KSS[k]-m2*KSSIG[k])/M/M/m1/m1*c_1 ;       
+                //dspin2[k] = m2*(M*KSS[k]+m1*KSSIG[k])/M/M/m2/m2*c_1;
+                
+                Float mmc = c_1/(M*M);
+                dspin1[k] = mmc*(M*SU[k]-m2*SV[k])/m1;
+                dspin2[k] = mmc*(M*SU[k]+m1*SV[k])/m2;
                 //XAD[k] = 0.5/(M*M*m1*m2)*(-SU[k]*M*DM-SV[k]*(m1*m1+m2*m2));
                 //XSD[k] = 0.5/(M*M*m1*m2)*(SU[k]*M*M+SV[k]*(m1*m1-m2*m2));
 
@@ -565,15 +631,6 @@ public:
             }
             */
 
-            // new values of the spins, returned back to the main program... 
-            if (spin1==NULL) || (spin2==NULL) {
-                std::cerr<<"Error: spin array is NULL, cannot save spin data!\n";
-                abort();
-            }
-            for(k=0;k<3;k++) {
-                spin1[k] = SPIN[k][0];
-                spin2[k] = SPIN[k][1];
-            }
         } // spin
 
         /*
@@ -593,9 +650,47 @@ public:
         // Check RS_DIST conditions !!!
         //Float RS_DIST = 4.0*(2.0*m1/c_2 + 2.0*m2/c_2);
 
-        return NUMERIC_FLOAT_MAX;
+        return used_order_max;
 
     }
-/***************************************************************************/
+
+    //! Sum different orders of PN acc and jerk to acc and adot
+    /*!
+      @param[out] acc[3]: acceleration, to be added (not reset to zero)
+      @param[out] adot[3]: jerk, to be added (not reset to zero)
+      @param[in] a_pn1[6][3]: (3D) Newton and PN acceleration of p1, each PN term are separately saved in array: [Newton, PN1, PN2, PN2.5, PN3, PN3.5]
+      @param[in] a_pn2[6][3]: Newton and PN acceleration of p2 for each PN order 
+      @param[in] adot_pn1[6][3]: Newton and PN jerk of p1 for each PN order
+      @param[in] adot_pn2[6][3]: Newton PN jerk of p2 for each PN order
+     */
+    void sumAccJerkPN(Float acc[3], Float adot[3],
+                      Float a_pn1[][3], Float a_pn2[][3], 
+                      Float adot_pn1[][3], Float adot_pn2[][3]) {
+        for (int i=0; i<6; i++) {
+            for (int k=0; k<3; k++) {
+                acc[k] += a_pn1[i][k];
+                adot[k] += adot_pn1[i][k];
+            }
+        }
+    }
+
+    //! write class data to file with binary format
+    /*! @param[in] _fp: FILE type file for output
+     */
+    void writeBinary(FILE *_fp) const {
+        fwrite(this, sizeof(*this),1,_fp);
+    }
+
+    //! read class data to file with binary format
+    /*! @param[in] _fp: FILE type file for reading
+     */
+    void readBinary(FILE *_fin) {
+        size_t rcount = fread(this, sizeof(*this), 1, _fin);
+        if (rcount<1) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
+            abort();
+        }
+    }    
+
 };
 

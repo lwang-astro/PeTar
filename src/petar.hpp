@@ -142,6 +142,10 @@ public:
 #ifdef ADJUST_GROUP_PRINT
     IOParams<PS::S64> adjust_group_write_option;
 #endif
+#ifdef HERMITE_PN
+    IOParams<PS::F64> speed_of_light;
+    IOParams<PS::F64> precession_criterion;
+#endif
     IOParams<PS::S64> append_switcher;
     IOParams<std::string> fname_snp;
     IOParams<std::string> fname_par;
@@ -212,6 +216,10 @@ public:
 #ifdef ADJUST_GROUP_PRINT
                      adjust_group_write_option(input_par_store, 1, "write-group-info", "print new and end of groups: 0: no print; 1: print to file [data filename prefix].group.[MPI rank] if -w >0"),
 #endif
+#ifdef HERMITE_PN
+                     speed_of_light(input_par_store, 1, "speed-of-light", "speed of light value for Post Newtonian, if -u 1 is used, auto determined"),
+                     precession_criterion(input_par_store, 1, "pn-crit", "Precession criterion to switch on PN terms, in unit of radian"),
+#endif
                      append_switcher(input_par_store, 1, "a", "data output style, 0: create new output files and overwrite existing ones except snapshots; 1: append new data to existing files"),
                      fname_snp(input_par_store, "data", "f", "The prefix of filenames for output data: [prefix].**"),
                      fname_par(input_par_store, "input.par", "p", "Input parameter file (this option should be used first before any other options)"),
@@ -262,6 +270,10 @@ public:
 #ifdef ADJUST_GROUP_PRINT
             {adjust_group_write_option.key,   required_argument, &petar_flag, 24},
 #endif            
+#ifdef HERMITE_PN
+            {speed_of_light.key,       required_argument, &petar_flag, 26},
+            {precession_criterion.key, required_argument, &petar_flag, 27},
+#endif
             {nstep_dt_soft_kepler.key,  required_argument, &petar_flag, 25},
             {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
@@ -432,6 +444,18 @@ public:
                     if(print_flag) nstep_dt_soft_kepler.print(std::cout);
                     opt_used += 2;
                     break;
+#ifdef HERMITE_PN
+                case 26:
+                    speed_of_light.value = atof(optarg);
+                    if(print_flag) speed_of_light.print(std::cout);
+                    opt_used += 2;
+                    break;
+                case 27:
+                    precession_criterion.value = atof(optarg);
+                    if(print_flag) precession_criterion.print(std::cout);
+                    opt_used += 2;
+                    break;
+#endif
                 default:
                     break;
                 }
@@ -3100,6 +3124,9 @@ public:
             bse_parameters.mscale.value = 1.0; // Msun
             bse_parameters.vscale.value = PCMYR_TO_KMS;
 #endif
+#ifdef HERMITE_PN
+            input_parameters.speed_of_light.value = SPEED_OF_LIGHT;
+#endif
             if(print_flag) {
                 std::cout<<"----- Unit set 1: Msun, pc, Myr -----\n"
                          <<"gravitational_constant = "<<input_parameters.gravitational_constant.value<<" pc^3/(Msun*Myr^2)\n";
@@ -3109,6 +3136,10 @@ public:
                          <<" mscale = "<<bse_parameters.mscale.value<<"  Msun / Msun\n"
                          <<" rscale = "<<bse_parameters.rscale.value<<"  Rsun / pc\n"
                          <<" vscale = "<<bse_parameters.vscale.value<<"  [km/s] / [pc/Myr]\n";
+#endif
+#ifdef HERMITE_PN
+                std::cout<<"----- Unit for Post Newtonian -----\n"
+                         <<" speed of light = "<<input_parameters.speed_of_light.value<<" pc/Myr\n";
 #endif
 
             }
@@ -3447,6 +3478,11 @@ public:
         hard_manager.ar_manager.interaction.ext_force = &hard_manager.h4_manager.interaction.ext_force;
 #endif        
 
+#ifdef HERMITE_PN
+        hard_manager.h4_manager.interaction.pn.speed_of_light = input_parameters.speed_of_light.value;
+        hard_manager.h4_manager.interaction.pn.precession_criterion = input_parameters.precession_criterion.value;
+        hard_manager.h4_manager.interaction.pn.gravitational_constant = input_parameters.gravitational_constant.value;
+#endif
         // check consistence of paramters
         input_parameters.checkParams();
         hard_manager.checkParams();

@@ -6,6 +6,7 @@
 #include <string>
 #include <getopt.h>
 #include "../src/io.hpp"
+#include "../src/astro_units.hpp"
 
 /*!
   This file provides the interface classes to connect the BSE-based code to PeTar.
@@ -1290,7 +1291,7 @@ public:
     /*! IAU 2009: c = 299 792 458 m/s
      */
     double getSpeedOfLight() const {
-        const double c = 2.99792458e5;
+        const double c = SPEED_OF_LIGHT*PCMYR_TO_KMS;
         return c/vscale;
     }
 
