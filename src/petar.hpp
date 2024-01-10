@@ -217,8 +217,8 @@ public:
                      adjust_group_write_option(input_par_store, 1, "write-group-info", "print new and end of groups: 0: no print; 1: print to file [data filename prefix].group.[MPI rank] if -w >0"),
 #endif
 #ifdef HERMITE_PN
-                     speed_of_light(input_par_store, 1, "speed-of-light", "speed of light value for Post Newtonian, if -u 1 is used, auto determined"),
-                     precession_criterion(input_par_store, 1, "pn-crit", "Precession criterion to switch on PN terms, in unit of radian"),
+                     speed_of_light(input_par_store, 1, "pn-c", "speed of light value for Post Newtonian, if -u 1 is used, auto determined"),
+                     precession_criterion(input_par_store, 1, "pn-p", "Precession criterion to switch on PN terms, in unit of radian"),
 #endif
                      append_switcher(input_par_store, 1, "a", "data output style, 0: create new output files and overwrite existing ones except snapshots; 1: append new data to existing files"),
                      fname_snp(input_par_store, "data", "f", "The prefix of filenames for output data: [prefix].**"),
