@@ -3,6 +3,9 @@
 #include "Common/Float.h"
 #include "changeover.hpp"
 #include "external_force.hpp"
+#ifdef HERMITE_PN
+#include "pn.hpp"    
+#endif
 
 //! hermite interaction class 
 class HermiteInteraction{
@@ -12,11 +15,17 @@ public:
 #ifdef EXTERNAL_HARD
     ExternalHardForce ext_force; // external force
 #endif
+#ifdef HERMITE_PN
+    PostNewtonian pn; // PN force
+#endif
 
     // constructor
     HermiteInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0))
 #ifdef EXTERNAL_HARD
                         , ext_force() 
+#endif
+#ifdef HERMITE_PN
+                        , pn()
 #endif
     {}
 
@@ -29,6 +38,9 @@ public:
 #ifdef EXTERNAL_HARD
         ASSERT(ext_force.checkParams());
 #endif
+#ifdef HERMITE_PN
+        ASSERT(pn.checkParams());
+#endif
         return true;
     }        
     
@@ -38,6 +50,9 @@ public:
              <<"G     : "<<gravitational_constant<<std::endl;
 #ifdef EXTERNAL_HARD
         ext_force.print(_fout);
+#endif
+#ifdef HERMITE_PN
+        pn.print(_fout);
 #endif
     }    
 
@@ -79,32 +94,59 @@ public:
         const Float drdv = dr[0]*dv[0] + dr[1]*dv[1] + dr[2]*dv[2];
         const Float r = sqrt(dr2_eps);
         ASSERT(r>0.0);
-        const Float rinv = 1.0/r;
-        const Float drdot = drdv*rinv;
-        const Float kp = ChangeOver::calcPotWTwo(_pi.changeover,_pj.changeover, r);
-        const Float k = ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, r);
-        const Float kdot = ChangeOver::calcAcc1WTwo(_pi.changeover, _pj.changeover, r, drdot);
+#ifdef HERMITE_PN
+        bool used_pn_orders[6] = {false, false, false, false, false, false};
+        if (pn.setUsedPNOrders(used_pn_orders, r, _pi.mass+_pj.mass)) {
+         
+            if (r > _pi.changeover.getRin() || r > _pj.changeover.getRin()) {
+                std::cerr<<"Warning: GR is switched on, but changeover radius is less than GR influence radius. This will cause inconsistent force calculation! particle distance = "
+                         <<r<<"; two changeover inner radii = "
+                         <<_pi.changeover.getRin()<<" "<<_pj.changeover.getRin()
+                         <<std::endl;
+            }
+
+            Float a1[6][3], a2[6][3], ad1[6][3], ad2[6][3];
+            pn.calcAccJerkPN(a1, a2, ad1, ad2, NULL, NULL, _pi, _pj, used_pn_orders);
+            pn.sumAccJerkPN(&_fi.acc0[0], &_fi.acc1[0], a1, a2, ad1, ad2);
+
+            const Float rinv = 1.0/r;
+            const Float gmor = gravitational_constant*_pj.mass*rinv;
+            _fi.pot += gmor;
+
+        }
+        else {
+#endif
+            const Float rinv = 1.0/r;
+            const Float drdot = drdv*rinv;
+            const Float kp = ChangeOver::calcPotWTwo(_pi.changeover,_pj.changeover, r);
+            const Float k = ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, r);
+            const Float kdot = ChangeOver::calcAcc1WTwo(_pi.changeover, _pj.changeover, r, drdot);
           
-        const Float rinv2 = rinv*rinv;
+            const Float rinv2 = rinv*rinv;
 
-        const Float gmor = gravitational_constant*_pj.mass*rinv;
-        const Float gmor3 = gmor*rinv2; 
-        const Float gmor3k = gmor3*k;
-        const Float gmor3kd = gmor3*kdot;
-        const Float acc0[3] = {gmor3k*dr[0], gmor3k*dr[1], gmor3k*dr[2]};
-        const Float acc1[3] = {gmor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + gmor3kd*dr[0],
-                               gmor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + gmor3kd*dr[1],
-                               gmor3k*dv[2] - 3.0*drdv*rinv2*acc0[2] + gmor3kd*dr[2]};
-        _fi.acc0[0] += acc0[0];
-        _fi.acc0[1] += acc0[1];
-        _fi.acc0[2] += acc0[2];
+            const Float gmor = gravitational_constant*_pj.mass*rinv;
+            const Float gmor3 = gmor*rinv2; 
+            const Float gmor3k = gmor3*k;
+            const Float gmor3kd = gmor3*kdot;
+            const Float acc0[3] = {gmor3k*dr[0], gmor3k*dr[1], gmor3k*dr[2]};
+            const Float acc1[3] = {gmor3k*dv[0] - 3.0*drdv*rinv2*acc0[0] + gmor3kd*dr[0],
+                                   gmor3k*dv[1] - 3.0*drdv*rinv2*acc0[1] + gmor3kd*dr[1],
+                                   gmor3k*dv[2] - 3.0*drdv*rinv2*acc0[2] + gmor3kd*dr[2]};
 
-        _fi.acc1[0] += acc1[0];
-        _fi.acc1[1] += acc1[1];
-        _fi.acc1[2] += acc1[2];
 
-        _fi.pot += - gmor*kp;
+            _fi.acc0[0] += acc0[0];
+            _fi.acc0[1] += acc0[1];
+            _fi.acc0[2] += acc0[2];
 
+            _fi.acc1[0] += acc1[0];
+            _fi.acc1[1] += acc1[1];
+            _fi.acc1[2] += acc1[2];
+
+            _fi.pot += - gmor*kp;
+
+#ifdef HERMITE_PN
+        }
+#endif
         return dr2;
     }
 

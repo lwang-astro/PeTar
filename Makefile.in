@@ -12,6 +12,7 @@ step_mode=@with_step_mode@
 se_mode=@with_interrupt@
 ext_mode=@with_external@
 ext_hard_mode=@with_external_hard@
+pn_mode=@with_pn@
 tt_mode=@with_tidal_tensor@
 orb_mode=@with_orbit@
 
@@ -130,7 +131,11 @@ EXT_CLEAN:
 endif # galpy
 
 ifeq ($(ext_hard_mode), gasdrag)
-MT_FLAGS += -D EXTERNAL_HARD -D HERMITE_PERT_FORCE
+MT_FLAGS += -D EXTERNAL_HARD -D HERMITE_PERT_FORCE -D GAS_DRAG
+endif
+
+ifeq ($(pn_mode), hermite)
+MT_FLAGS += -D HERMITE_PN
 endif
 
 ifeq ($(ext_mode),disk)
@@ -270,6 +275,9 @@ build/petar.simd.test: simd_test.cxx $(OBJS) |build
 
 build/petar.tt.test: tidal_tensor_test.cxx |build
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $< -o $@  $(CXXLIBS)
+
+build/petar.pn.test: pn_test.cxx |build
+	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $< -o $@  $(CXXLIBS)
 
 build/petar.tide.test: tide_test.cxx two_body_tide.hpp |build
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $< -o $@  $(CXXLIBS)
