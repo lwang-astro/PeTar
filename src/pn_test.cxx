@@ -53,6 +53,13 @@ int main(int argc, char **argv){
     p2.spin[1] = 0.5;
     p2.spin[2] = -0.2;
 
+    p1.spin[0] = 0.0;
+    p1.spin[1] = 0.0;
+    p1.spin[2] = 0.0;
+    p2.spin[0] = 0.0;
+    p2.spin[1] = 0.0;
+    p2.spin[2] = 0.0;
+
     p1.printColumnTitle(std::cout);
     p2.printColumnTitle(std::cout);
     std::cout<<std::endl;
@@ -63,7 +70,8 @@ int main(int argc, char **argv){
 
     PostNewtonian pn;
     pn.speed_of_light = 2.99792458e5*KMS_TO_PCMYR;
-    pn.gravitational_constant = 1;
+    pn.gravitational_constant = G;
+    pn.precession_criterion = 1e-9;
 
     Float a1[6][3], a2[6][3], ad1[6][3], ad2[6][3], s1[3]={0.0}, s2[3]={0.0};
     bool used_pn_orders[6];
@@ -86,8 +94,19 @@ int main(int argc, char **argv){
         s1r[i] = p1.spin[i];
         s2r[i] = p2.spin[i];
     }
-    calc_force_pn_BH(p1.mass, &p1.pos[0], &p1.vel[0], s1r,
-                     p2.mass, &p2.pos[0], &p2.vel[0], s2r,
+
+    // unit scale, let G = 1
+    Float vscale = std::sqrt(G);
+    Float tscale = 1/std::sqrt(G);
+    Float fscale = vscale/tscale;
+    Float jscale = vscale/tscale/tscale;
+    Float Gfactor[6] = {1, G, G*G, G*G*std::sqrt(G), G*G*G, G*G*G*std::sqrt(G)};
+
+    Float vs1[3] = {p1.vel[0]/vscale, p1.vel[1]/vscale, p1.vel[2]/vscale};
+    Float vs2[3] = {p2.vel[0]/vscale, p2.vel[1]/vscale, p2.vel[2]/vscale};
+    
+    calc_force_pn_BH(p1.mass, &p1.pos[0], vs1, s1r,
+                     p2.mass, &p2.pos[0], vs2, s2r,
                      pn.speed_of_light, usedOrNot, 1, a1r, ad1r, a2r, ad2r);
 
     int width = 15;
@@ -110,6 +129,20 @@ int main(int argc, char **argv){
         std::cout<<std::setw(width)<<a2[i][0]
                  <<std::setw(width)<<a2[i][1]
                  <<std::setw(width)<<a2[i][2];
+        std::cout<<std::endl;
+
+        for (int k=0; k<3; k++) {
+            a1r[i][k] *= Gfactor[i]*fscale;
+            a2r[i][k] *= Gfactor[i]*fscale;
+        }
+
+        std::cout<<std::setw(width)<<"Ref";
+        std::cout<<std::setw(width)<<a1r[i][0]
+                 <<std::setw(width)<<a1r[i][1]
+                 <<std::setw(width)<<a1r[i][2];
+        std::cout<<std::setw(width)<<a2r[i][0]
+                 <<std::setw(width)<<a2r[i][1]
+                 <<std::setw(width)<<a2r[i][2];
         std::cout<<std::endl;
 
         Float da[6];
@@ -157,6 +190,20 @@ int main(int argc, char **argv){
         std::cout<<std::setw(width)<<ad2[i][0]
                  <<std::setw(width)<<ad2[i][1]
                  <<std::setw(width)<<ad2[i][2];
+        std::cout<<std::endl;
+
+        for (int k=0; k<3; k++) {
+            ad1r[i][k] *= Gfactor[i]*jscale;
+            ad2r[i][k] *= Gfactor[i]*jscale;
+        }
+
+        std::cout<<std::setw(width)<<"Res";
+        std::cout<<std::setw(width)<<ad1r[i][0]
+                 <<std::setw(width)<<ad1r[i][1]
+                 <<std::setw(width)<<ad1r[i][2];
+        std::cout<<std::setw(width)<<ad2r[i][0]
+                 <<std::setw(width)<<ad2r[i][1]
+                 <<std::setw(width)<<ad2r[i][2];
         std::cout<<std::endl;
 
         Float da[6];

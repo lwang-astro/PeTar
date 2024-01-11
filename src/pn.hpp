@@ -125,9 +125,9 @@ public:
         if (used_spin) {
             for(int k=0;k<3;k++) {
                 // Currently 3D Spin is not implemented in particle
-                //SPIN[k][0] = p1.spin[k];
-                //SPIN[k][1] = p2.spin[k];
-                SPIN[k][0] = SPIN[k][1] = 0.0; 
+                SPIN[k][0] = p1.spin[k];
+                SPIN[k][1] = p2.spin[k];
+                //SPIN[k][0] = SPIN[k][1] = 0.0; 
             }
         }
         else {
@@ -161,10 +161,10 @@ public:
         Float r  = std::sqrt(r2);
         Float r3 = r2*r;
 
-        Float MOR    = M/r;
-        Float V1_V22 = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
-        //Float VWHOLE = std::sqrt(V1_V22);
-        Float RP     = (x[0]*v[0] + x[1]*v[1] + x[2]*v[2])/r;
+        Float GMOR = G*M/r;
+        Float dv2 = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
+        //Float VWHOLE = std::sqrt(dv2);
+        Float drdv_r     = (x[0]*v[0] + x[1]*v[1] + x[2]*v[2])/r;
 
         // Newton accelerations ~1/c^0
         Float N[3];
@@ -180,8 +180,8 @@ public:
         Float BK2 = 0.0;
         // PN1 ~1/c^2
         if(used_pn_orders[0]) {
-            Float A1 = 2.0*(2.0+eta)*MOR-(1.0+3.0*eta)*V1_V22 +1.5*eta*RP*RP;
-            Float B1 = 2.0*(2.0-eta)*RP;
+            Float A1 = 2.0*(2.0+eta)*GMOR-(1.0+3.0*eta)*dv2 +1.5*eta*drdv_r*drdv_r;
+            Float B1 = 2.0*(2.0-eta)*drdv_r;
 
             AK2 = A1/c_2;
             BK2 = B1/c_2;
@@ -191,7 +191,7 @@ public:
                 a_pn1[1][k] =  G*CK2/r2*m2;
                 a_pn2[1][k] = -G*CK2/r2*m1;
                 
-                A[k] += MOR*CK2/r;
+                A[k] += GMOR*CK2/r;
             }
             used_order_max = 0;
         }
@@ -200,8 +200,8 @@ public:
         Float AK4 = 0.0;
         Float BK4 = 0.0;
         if(used_pn_orders[1]) {
-            Float A2 = -0.75*(12.0+29.0*eta)*MOR*MOR-eta*(3.0-4.0*eta)*V1_V22*V1_V22-1.875*eta*(1.0-3.0*eta)*RP*RP*RP*RP+0.5*eta*(13.0-4.0*eta)*MOR*V1_V22+(2.0+25.0*eta+2.0*eta*eta)*MOR*RP*RP+1.5*eta*(3.0-4.0*eta)*V1_V22*RP*RP;
-            Float B2 = -0.5*RP*((4.0+41.0*eta+8.0*eta*eta)*MOR-eta*(15.0+4.0*eta)*V1_V22+3.0*eta*(3.0+2.0*eta)*RP*RP);
+            Float A2 = -0.75*(12.0+29.0*eta)*GMOR*GMOR-eta*(3.0-4.0*eta)*dv2*dv2-1.875*eta*(1.0-3.0*eta)*drdv_r*drdv_r*drdv_r*drdv_r+0.5*eta*(13.0-4.0*eta)*GMOR*dv2+(2.0+25.0*eta+2.0*eta*eta)*GMOR*drdv_r*drdv_r+1.5*eta*(3.0-4.0*eta)*dv2*drdv_r*drdv_r;
+            Float B2 = -0.5*drdv_r*((4.0+41.0*eta+8.0*eta*eta)*GMOR-eta*(15.0+4.0*eta)*dv2+3.0*eta*(3.0+2.0*eta)*drdv_r*drdv_r);
 
             AK4 = A2/c_4;
             BK4 = B2/c_4;
@@ -211,7 +211,7 @@ public:
                 a_pn1[2][k] =  G*CK4/r2*m2;
                 a_pn2[2][k] = -G*CK4/r2*m1;
 
-                A[k] += MOR*CK4/r;
+                A[k] += GMOR*CK4/r;
             }
             used_order_max = 1;
         }
@@ -220,8 +220,8 @@ public:
         Float AK5 = 0.0;
         Float BK5 = 0.0;
         if (used_pn_orders[2]) {
-            Float A2_5 = 1.6*eta*MOR*RP*(17.0*MOR/3.0+3.0*V1_V22);
-            Float B2_5 = -1.6*eta*MOR*(3.0*MOR+V1_V22);
+            Float A2_5 = 1.6*eta*GMOR*drdv_r*(17.0*GMOR/3.0+3.0*dv2);
+            Float B2_5 = -1.6*eta*GMOR*(3.0*GMOR+dv2);
 
             AK5 = A2_5/c_5;
             BK5 = B2_5/c_5;
@@ -231,7 +231,7 @@ public:
                 a_pn1[3][k] =  G*CK5/r2*m2;
                 a_pn2[3][k] = -G*CK5/r2*m1;
 
-                A[k] += MOR*CK5/r;
+                A[k] += GMOR*CK5/r;
             }
             used_order_max = 2;
         }
@@ -240,24 +240,24 @@ public:
         Float AK6 = 0.0;
         Float BK6 = 0.0;
         if(used_pn_orders[3]) {
-            Float A3 = MOR*MOR*MOR*(16.0+(1399.0/12.0-41.0*PI2/16.0)*eta+
+            Float A3 = GMOR*GMOR*GMOR*(16.0+(1399.0/12.0-41.0*PI2/16.0)*eta+
                                     71.0*eta*eta/2.0)+eta*(20827.0/840.0+123.0*PI2/64.0-eta*eta)
-                *MOR*MOR*V1_V22-(1.0+(22717.0/168.0+615.0*PI2/64.0)*eta+
-                                 11.0*eta*eta/8.0-7.0*eta*eta*eta)*MOR*MOR*RP*RP-
-                0.25*eta*(11.0-49.0*eta+52.0*eta*eta)*V1_V22*V1_V22*V1_V22+
-                35.0*eta*(1.0-5.0*eta+5.0*eta*eta)*RP*RP*RP*RP*RP*RP/16.0-
-                0.25*eta*(75.0+32.0*eta-40.0*eta*eta)*MOR*V1_V22*V1_V22-
-                0.5*eta*(158.0-69.0*eta-60.0*eta*eta)*MOR*RP*RP*RP*RP+
-                eta*(121.0-16.0*eta-20.0*eta*eta)*MOR*V1_V22*RP*RP+
-                3.0*eta*(20.0-79.0*eta+60.0*eta*eta)*V1_V22*V1_V22*RP*RP/8.0-
-                15.0*eta*(4.0-18.0*eta+17.0*eta*eta)*V1_V22*RP*RP*RP*RP/8.0;
+                *GMOR*GMOR*dv2-(1.0+(22717.0/168.0+615.0*PI2/64.0)*eta+
+                                 11.0*eta*eta/8.0-7.0*eta*eta*eta)*GMOR*GMOR*drdv_r*drdv_r-
+                0.25*eta*(11.0-49.0*eta+52.0*eta*eta)*dv2*dv2*dv2+
+                35.0*eta*(1.0-5.0*eta+5.0*eta*eta)*drdv_r*drdv_r*drdv_r*drdv_r*drdv_r*drdv_r/16.0-
+                0.25*eta*(75.0+32.0*eta-40.0*eta*eta)*GMOR*dv2*dv2-
+                0.5*eta*(158.0-69.0*eta-60.0*eta*eta)*GMOR*drdv_r*drdv_r*drdv_r*drdv_r+
+                eta*(121.0-16.0*eta-20.0*eta*eta)*GMOR*dv2*drdv_r*drdv_r+
+                3.0*eta*(20.0-79.0*eta+60.0*eta*eta)*dv2*dv2*drdv_r*drdv_r/8.0-
+                15.0*eta*(4.0-18.0*eta+17.0*eta*eta)*dv2*drdv_r*drdv_r*drdv_r*drdv_r/8.0;
 
-            Float B3 = RP*((4.0+(5849.0/840.0+123.0*PI2/32.0)*eta-25.0*eta*eta-
-                            8.0*eta*eta*eta)*MOR*MOR+eta*(65.0-152.0*eta-48.0*eta*eta)*
-                           V1_V22*V1_V22/8.0+15.0*eta*(3.0-8.0*eta-2.0*eta*eta)*RP*RP*RP*RP/8.0+
-                           eta*(15.0+27.0*eta+10.0*eta*eta)*MOR*V1_V22-eta*(329.0+177.0*eta+
-                                                                            108.0*eta*eta)*MOR*RP*RP/6.0-
-                           3.0*eta*(16.0-37.0*eta-16.0*eta*eta)*V1_V22*RP*RP/4.0);
+            Float B3 = drdv_r*((4.0+(5849.0/840.0+123.0*PI2/32.0)*eta-25.0*eta*eta-
+                            8.0*eta*eta*eta)*GMOR*GMOR+eta*(65.0-152.0*eta-48.0*eta*eta)*
+                           dv2*dv2/8.0+15.0*eta*(3.0-8.0*eta-2.0*eta*eta)*drdv_r*drdv_r*drdv_r*drdv_r/8.0+
+                           eta*(15.0+27.0*eta+10.0*eta*eta)*GMOR*dv2-eta*(329.0+177.0*eta+
+                                                                            108.0*eta*eta)*GMOR*drdv_r*drdv_r/6.0-
+                           3.0*eta*(16.0-37.0*eta-16.0*eta*eta)*dv2*drdv_r*drdv_r/4.0);
 
             AK6 = A3/c_6;
             BK6 = B3/c_6;
@@ -267,7 +267,7 @@ public:
                 a_pn1[4][k] =  G*CK6/r2*m2;
                 a_pn2[4][k] = -G*CK6/r2*m1;
 
-                A[k] += MOR*CK6/r;
+                A[k] += GMOR*CK6/r;
             }
             used_order_max = 3;
         }
@@ -276,8 +276,8 @@ public:
         Float AK7 = 0.0;
         Float BK7 = 0.0;
         if(used_pn_orders[4]) {
-            Float A3_5 = MOR*eta*(V1_V22*V1_V22*(-366.0/35.0-12.0*eta)+V1_V22*RP*RP*(114.0+12.0*eta)-112.0*RP*RP*RP*RP+MOR*(V1_V22*(-692.0/35.0+724.0*eta/15.0)+RP*RP*(-294.0/5.0-376.0*eta/5.0)+MOR*(-3956.0/35.0-184.0*eta/5.0)));
-            Float B3_5 = 8.0*eta*MOR*((1325.0+546.0*eta)*MOR*MOR/42.0+(313.0+42.0*eta)*V1_V22*V1_V22/28.0+75.0*RP*RP*RP*RP-(205.0+777.0*eta)*MOR*V1_V22/42.0+(205.0+424.0*eta)*MOR*RP*RP/12.0-3.0*(113.0+2.0*eta)*V1_V22*RP*RP/4.0)/5.0;
+            Float A3_5 = GMOR*eta*(dv2*dv2*(-366.0/35.0-12.0*eta)+dv2*drdv_r*drdv_r*(114.0+12.0*eta)-112.0*drdv_r*drdv_r*drdv_r*drdv_r+GMOR*(dv2*(-692.0/35.0+724.0*eta/15.0)+drdv_r*drdv_r*(-294.0/5.0-376.0*eta/5.0)+GMOR*(-3956.0/35.0-184.0*eta/5.0)));
+            Float B3_5 = 8.0*eta*GMOR*((1325.0+546.0*eta)*GMOR*GMOR/42.0+(313.0+42.0*eta)*dv2*dv2/28.0+75.0*drdv_r*drdv_r*drdv_r*drdv_r-(205.0+777.0*eta)*GMOR*dv2/42.0+(205.0+424.0*eta)*GMOR*drdv_r*drdv_r/12.0-3.0*(113.0+2.0*eta)*dv2*drdv_r*drdv_r/4.0)/5.0;
 
 
             AK7 = A3_5/c_7;
@@ -288,7 +288,7 @@ public:
                 a_pn1[5][k] =  G*CK7/r2*m2;
                 a_pn2[5][k] = -G*CK7/r2*m1;
 
-                A[k] += MOR*CK7/r;
+                A[k] += GMOR*CK7/r;
             }
             used_order_max = 4;
         }
@@ -301,8 +301,8 @@ public:
 
             Float XS[3], XA[3];
             for(int k=0;k<3;k++) {
-                S1[k] = SPIN[k][0]*m1*m1/c_1;			// fizikai spin 
-                S2[k] = SPIN[k][1]*m2*m2/c_1;
+                S1[k] = SPIN[k][0]*G*G*m1*m1/c_1;			// fizikai spin 
+                S2[k] = SPIN[k][1]*G*G*m2*m2/c_1;
                 KSS[k] = S1[k]+S2[k];
                 KSSIG[k] = M*(S2[k]/m2-S1[k]/m1);
                 XS[k]  = 0.5*(SPIN[k][0]+SPIN[k][1]);
@@ -362,12 +362,8 @@ public:
 
             for(int k=0; k<3; k++) {
                 C1_5[k] = (N[k]*(12.0*SDNCV+6.0*DM*SIGDNCV/M)+9.0*NDV*NCS[k]+3.0*DM*NDV*NCSIG[k]/M -7.0*VCS[k]-3.0*DM*VCSIG[k]/M)/r3;
-                C2[k] = -MOR*MOR*MOR/r*3.0*eta*(N[k]*(XS2-XA2-5.0*NXS*NXS+5.0*NXA*NXA)+2.0*(XS[k]*NXS-XA[k]*NXA));
-                C2_5[k] = (N[k]*(SDNCV*(-30.0*eta*NDV*NDV+24.0*eta*V1_V22-MOR*(38.0+25.0*eta))+DM/M*SIGDNCV*(-15.0*eta*NDV*NDV+12.0*eta*V1_V22
-                                                                                                             -MOR*(18.0+14.5*eta)))+NDV*v[k]*(SDNCV*(-9.0+9.0*eta)+DM/M* SIGDNCV*(-3.0+6.0*eta))+NCV[k]*(NDV*VDS*(-3.0+3.0*eta)
-                                                                                                                                                                                                         -8.0*MOR*eta*NDS-DM/M*(4.0*MOR*eta*NDSIG+3.0*NDV*VDSIG))+NDV*NCS[k]*(-22.5*eta*NDV*NDV+21.0*eta*V1_V22-MOR*(25.0+15.0*eta))
-                           +DM/M*NDV*NCSIG[k]*(-15.0*eta*NDV*NDV+12.0*eta*V1_V22-MOR*(9.0+8.5*eta))+VCS[k]*(16.5*eta*NDV*NDV+MOR*(21.0+9.0*eta)
-                                                                                                            -14.0*eta*V1_V22)+DM/M*VCSIG[k]*(9.0*eta*NDV*NDV-7.0*eta*V1_V22+MOR*(9.0+4.5*eta)))/r3;
+                C2[k] = -GMOR*GMOR*GMOR/r*3.0*eta*(N[k]*(XS2-XA2-5.0*NXS*NXS+5.0*NXA*NXA)+2.0*(XS[k]*NXS-XA[k]*NXA));
+                C2_5[k] = (N[k]*(SDNCV*(-30.0*eta*NDV*NDV+24.0*eta*dv2-GMOR*(38.0+25.0*eta))+DM/M*SIGDNCV*(-15.0*eta*NDV*NDV+12.0*eta*dv2-GMOR*(18.0+14.5*eta)))+NDV*v[k]*(SDNCV*(-9.0+9.0*eta)+DM/M* SIGDNCV*(-3.0+6.0*eta))+NCV[k]*(NDV*VDS*(-3.0+3.0*eta)-8.0*GMOR*eta*NDS-DM/M*(4.0*GMOR*eta*NDSIG+3.0*NDV*VDSIG))+NDV*NCS[k]*(-22.5*eta*NDV*NDV+21.0*eta*dv2-GMOR*(25.0+15.0*eta)) +DM/M*NDV*NCSIG[k]*(-15.0*eta*NDV*NDV+12.0*eta*dv2-GMOR*(9.0+8.5*eta))+VCS[k]*(16.5*eta*NDV*NDV+GMOR*(21.0+9.0*eta)-14.0*eta*dv2)+DM/M*VCSIG[k]*(9.0*eta*NDV*NDV-7.0*eta*dv2+GMOR*(9.0+4.5*eta)))/r3;
 
                 A[k] += C1_5[k]/c_2 + C2[k]/c_4 + C2_5[k]/c_4;
             } 
@@ -379,9 +375,9 @@ public:
             // PN jerks
 
             Float AT[3];
-            AT[0] = A[0] - MOR*N[0]/r;		
-            AT[1] = A[1] - MOR*N[1]/r;
-            AT[2] = A[2] - MOR*N[2]/r;
+            AT[0] = A[0] - GMOR*N[0]/r;		
+            AT[1] = A[1] - GMOR*N[1]/r;
+            AT[2] = A[2] - GMOR*N[2]/r;
 
             /*
               AT[0] = A[0];
@@ -389,15 +385,15 @@ public:
               AT[2] = A[2];
             */
 
-            Float RPP = V1_V22/r + AT[0]*N[0]+AT[1]*N[1] + AT[2]*N[2] - RP*RP/r;
+            Float V2R = dv2/r + AT[0]*N[0] + AT[1]*N[1] + AT[2]*N[2] - drdv_r*drdv_r/r;
             Float VA = AT[0]*v[0] + AT[1]*v[1] + AT[2]*v[2];
 
             // Newton ~1/c^0
             //Float NDOT[3];
             for(int k=0;k<3;k++) {
-                //NDOT[k] = (v[k]-N[k]*RP)/r;
-                adot_pn1[0][k] = -G*m2*(v[k]/r3 - 3.0*RP*x[k]/r2/r2);
-                adot_pn2[0][k] =  G*m1*(v[k]/r3 - 3.0*RP*x[k]/r2/r2);
+                //NDOT[k] = (v[k]-N[k]*drdv_r)/r;
+                adot_pn1[0][k] = -G*m2*(v[k]/r3 - 3.0*drdv_r*x[k]/r2/r2);
+                adot_pn2[0][k] =  G*m1*(v[k]/r3 - 3.0*drdv_r*x[k]/r2/r2);
             }
 
             /*
@@ -419,8 +415,8 @@ public:
 
             // PN1 ~1/c^2
             if(used_pn_orders[0]) {
-                Float A1D = -2.0*(2.0+eta)*MOR*RP/r - 2.0*(1.0+3.0*eta)*VA + 3.0*eta*RP*RPP;
-                Float B1D =  2.0*(2.0-eta)*RPP;
+                Float A1D = -2.0*(2.0+eta)*GMOR*drdv_r/r - 2.0*(1.0+3.0*eta)*VA + 3.0*eta*drdv_r*V2R;
+                Float B1D =  2.0*(2.0-eta)*V2R;
 
                 Float ADK2 = A1D/c_2;
                 Float BDK2 = B1D/c_2;
@@ -428,15 +424,15 @@ public:
                 for (int k=0; k<3; k++) {
                     Float CK2 = AK2*N[k] + BK2*v[k];
                     Float CDK2 = ADK2*N[k]+BDK2*v[k];
-                    adot_pn1[1][k] =  G*(-2.0*MOR*RP*CK2/r2 + MOR*CDK2/r + MOR*(AK2*(v[k]-N[k]*RP)/r+BK2*A[k])/r)*m2/M;
-                    adot_pn2[1][k] = -G*(-2.0*MOR*RP*CK2/r2 + MOR*CDK2/r + MOR*(AK2*(v[k]-N[k]*RP)/r+BK2*A[k])/r)*m1/M;
+                    adot_pn1[1][k] =  (-2.0*GMOR*drdv_r*CK2/r2 + GMOR*CDK2/r + GMOR*(AK2*(v[k]-N[k]*drdv_r)/r+BK2*A[k])/r)*m2/M;
+                    adot_pn2[1][k] = -(-2.0*GMOR*drdv_r*CK2/r2 + GMOR*CDK2/r + GMOR*(AK2*(v[k]-N[k]*drdv_r)/r+BK2*A[k])/r)*m1/M;
                 }
             }
 
             // PN2 ~1/c^4
             if(used_pn_orders[1]) {
-                Float A2D =  1.5*(12.0+29.0*eta)*MOR*MOR*RP/r -eta*(3.0-4.0*eta)*4.0*V1_V22*VA - 7.5*eta*(1.0-3.0*eta)*RPP -0.5*eta*(13.0-4.0*eta)*MOR*RP*V1_V22/r+eta*(13.0-4.0*eta)*MOR*VA -(2.0+25.0*eta+2.0*eta*eta)*MOR*RP*RP*RP/r+2.0*(2.0+25.0*eta+2.0*eta*eta)*MOR*RP*RPP + 3.0*eta*(3.0-4.0*eta)*VA*RP*RP + 3.0*eta*(3.0-4.0*eta)*V1_V22*RP*RPP;
-                Float B2D = -0.5*RPP*((4.0+41.0*eta+8.0*eta*eta)*MOR - eta*(15.0+4.0*eta)*V1_V22+3.0*eta*(3.0+2.0*eta)*RP*RP) - 0.5*RP*(-(4.0+41.0*eta+8.0*eta*eta)*MOR*RP/r - 2.0*eta*(15.0+4.0*eta)*VA + 6.0*eta*(3.0+2.0*eta)*RP*RPP);
+                Float A2D =  1.5*(12.0+29.0*eta)*GMOR*GMOR*drdv_r/r -eta*(3.0-4.0*eta)*4.0*dv2*VA - 7.5*eta*(1.0-3.0*eta)*V2R -0.5*eta*(13.0-4.0*eta)*GMOR*drdv_r*dv2/r+eta*(13.0-4.0*eta)*GMOR*VA -(2.0+25.0*eta+2.0*eta*eta)*GMOR*drdv_r*drdv_r*drdv_r/r+2.0*(2.0+25.0*eta+2.0*eta*eta)*GMOR*drdv_r*V2R + 3.0*eta*(3.0-4.0*eta)*VA*drdv_r*drdv_r + 3.0*eta*(3.0-4.0*eta)*dv2*drdv_r*V2R;
+                Float B2D = -0.5*V2R*((4.0+41.0*eta+8.0*eta*eta)*GMOR - eta*(15.0+4.0*eta)*dv2+3.0*eta*(3.0+2.0*eta)*drdv_r*drdv_r) - 0.5*drdv_r*(-(4.0+41.0*eta+8.0*eta*eta)*GMOR*drdv_r/r - 2.0*eta*(15.0+4.0*eta)*VA + 6.0*eta*(3.0+2.0*eta)*drdv_r*V2R);
 
                 Float ADK4 = A2D/c_4;
                 Float BDK4 = B2D/c_4;
@@ -444,15 +440,15 @@ public:
                 for (int k=0; k<3; k++) {
                     Float CK4 = AK4*N[k] + BK4*v[k];
                     Float CDK4 = ADK4*N[k]+BDK4*v[k];
-                    adot_pn1[2][k] =  G*(-2.0*MOR*RP*CK4/r2 + MOR*CDK4/r + MOR*(AK4*(v[k]-N[k]*RP)/r+BK4*A[k])/r)*m2/M;
-                    adot_pn2[2][k] = -G*(-2.0*MOR*RP*CK4/r2 + MOR*CDK4/r + MOR*(AK4*(v[k]-N[k]*RP)/r+BK4*A[k])/r)*m1/M;
+                    adot_pn1[2][k] =  G*(-2.0*GMOR*drdv_r*CK4/r2 + GMOR*CDK4/r + GMOR*(AK4*(v[k]-N[k]*drdv_r)/r+BK4*A[k])/r)*m2/M;
+                    adot_pn2[2][k] = -G*(-2.0*GMOR*drdv_r*CK4/r2 + GMOR*CDK4/r + GMOR*(AK4*(v[k]-N[k]*drdv_r)/r+BK4*A[k])/r)*m1/M;
                 }
             }
 
             // PN2.5 ~1/c^5
             if (used_pn_orders[2]) {
-                Float A2_5D = -1.6*eta*MOR*RP*RP*(17.0/3.0*MOR+3.0*V1_V22)/r +1.6*eta*MOR*RPP*(17.0/3.0*MOR+3.0*V1_V22)+1.6*eta*MOR*RP*(-17.0*MOR*RP/3.0/r+6.0*VA);
-                Float B2_5D = 1.6*eta*MOR*RP*(3.0*MOR+V1_V22)/r - 1.6*eta*MOR*(-3.0*MOR*RP/r+2.0*VA);
+                Float A2_5D = -1.6*eta*GMOR*drdv_r*drdv_r*(17.0/3.0*GMOR+3.0*dv2)/r +1.6*eta*GMOR*V2R*(17.0/3.0*GMOR+3.0*dv2)+1.6*eta*GMOR*drdv_r*(-17.0*GMOR*drdv_r/3.0/r+6.0*VA);
+                Float B2_5D = 1.6*eta*GMOR*drdv_r*(3.0*GMOR+dv2)/r - 1.6*eta*GMOR*(-3.0*GMOR*drdv_r/r+2.0*VA);
 
                 Float ADK5 = A2_5D/c_5;
                 Float BDK5 = B2_5D/c_5;
@@ -460,15 +456,15 @@ public:
                 for (int k=0; k<3; k++) {
                     Float CK5 = AK5*N[k] + BK5*v[k];
                     Float CDK5 = ADK5*N[k]+BDK5*v[k];
-                    adot_pn1[3][k] =  G*(-2.0*MOR*RP*CK5/r2 + MOR*CDK5/r + MOR*(AK5*(v[k]-N[k]*RP)/r+BK5*A[k])/r)*m2/M;
-                    adot_pn2[3][k] = -G*(-2.0*MOR*RP*CK5/r2 + MOR*CDK5/r + MOR*(AK5*(v[k]-N[k]*RP)/r+BK5*A[k])/r)*m1/M;
+                    adot_pn1[3][k] =  G*(-2.0*GMOR*drdv_r*CK5/r2 + GMOR*CDK5/r + GMOR*(AK5*(v[k]-N[k]*drdv_r)/r+BK5*A[k])/r)*m2/M;
+                    adot_pn2[3][k] = -G*(-2.0*GMOR*drdv_r*CK5/r2 + GMOR*CDK5/r + GMOR*(AK5*(v[k]-N[k]*drdv_r)/r+BK5*A[k])/r)*m1/M;
                 }
             }
 
             // PN3 ~1/c^6
             if (used_pn_orders[3]) {
-                Float A3D =  6.0*eta*RP*RP*RP*RP*RP*RPP*(35.0-175.0*eta+175.0*eta*eta)/16.0 + eta*(4.0*RP*RP*RP*RPP*V1_V22 + 2.0*RP*RP*RP*RP*VA)*(-15.0+135.0*eta/2.0-255.0*eta*eta/4.0)/2.0 + eta*(2.0*RP*RPP*V1_V22*V1_V22+4.0*RP*RP*V1_V22*VA)/2.0*(15.0-237.0*eta/2.0+45.0*eta*eta) + 6.0*V1_V22*V1_V22*VA*eta*(-11.0/4.0-49.0*eta/4.0-13.0*eta*eta) + MOR*(4.0*RP*RP*RP*RPP*eta*(-79.0+69.0/2.0*eta+30.0*eta*eta) + eta*(2.0*RP*RPP*V1_V22+2.0*RP*RP*VA)*(121.0-16.0*eta-20.0*eta*eta)+4.0*V1_V22*VA*eta*(-75.0/4.0-8.0*eta+10.0*eta*eta)) - MOR*RP*((-79.0+69.0*eta/2.0+30.0*eta*eta)*RP*RP*RP*RP*eta+eta*RP*RP*V1_V22*(121.0-16.0*eta-20.0*eta*eta)+eta*V1_V22*V1_V22*(-75.0/4.0-8.0*eta+10.0*eta*eta))/r - 2.0*MOR*MOR*RP*(RP*RP*((-1.0-615.0*PI2*eta/64.0)-22717.0*eta/168.0-11.0*eta*eta/8.0+7.0*eta*eta*eta)+eta*V1_V22*((20827.0/840.0+123.0*PI2/64.0)-eta*eta))/r + MOR*MOR*(2.0*RP*RPP*((-1.0-615*PI2*eta/64.0)-22717.0*eta/168.0-11.0*eta*eta/8.0+7*eta*eta*eta)+2.0*eta*VA*((20827.0/840.0 +123.0*PI2/64.0)-eta*eta)) - 3.0*MOR*MOR*MOR*RP*(16.0+(1399.0/12.0-41.0*PI2/16.0)*eta+71.0*eta*eta/2.0)/r;
-                Float B3D = 75.0*RP*RP*RP*RP*RPP*eta*(3.0/8.0-eta-.25*eta*eta)+eta*(3.0*RP*RP*RPP*V1_V22+2.0*RP*RP*RP*VA)*(-12.0+111.0*eta/4.0+12.0*eta*eta)+eta*(RPP*V1_V22*V1_V22+4.0*RP*V1_V22*VA)*(65.0/8.0-19.0*eta-6.0*eta*eta)-MOR*RP*(RP*RP*RP*eta*(-329.0/6.0-59.0*eta/2.0-18.0*eta*eta)+RP*V1_V22*eta*(15.0+27.0*eta+10.0*eta*eta))/r+MOR*(3.0*RP*RP*RPP*eta*(-329.0/6.0-59.0*eta/2.0-18.0*eta*eta)+eta*(RPP*V1_V22+2.0*RP*VA)*(15.0+27.0*eta+10.0*eta*eta))-2.0*MOR*MOR*RP*(RP*((4.0+123.0*PI2*eta/32.0)+5849.0*eta/840.0-25.0*eta*eta-8.0*eta*eta*eta))/r+MOR*MOR*(RPP*((4.0+123.0*PI2*eta/32.0)+5849.0/840.0*eta-25.0*eta*eta-8.0*eta*eta*eta));
+                Float A3D =  6.0*eta*drdv_r*drdv_r*drdv_r*drdv_r*drdv_r*V2R*(35.0-175.0*eta+175.0*eta*eta)/16.0 + eta*(4.0*drdv_r*drdv_r*drdv_r*V2R*dv2 + 2.0*drdv_r*drdv_r*drdv_r*drdv_r*VA)*(-15.0+135.0*eta/2.0-255.0*eta*eta/4.0)/2.0 + eta*(2.0*drdv_r*V2R*dv2*dv2+4.0*drdv_r*drdv_r*dv2*VA)/2.0*(15.0-237.0*eta/2.0+45.0*eta*eta) + 6.0*dv2*dv2*VA*eta*(-11.0/4.0-49.0*eta/4.0-13.0*eta*eta) + GMOR*(4.0*drdv_r*drdv_r*drdv_r*V2R*eta*(-79.0+69.0/2.0*eta+30.0*eta*eta) + eta*(2.0*drdv_r*V2R*dv2+2.0*drdv_r*drdv_r*VA)*(121.0-16.0*eta-20.0*eta*eta)+4.0*dv2*VA*eta*(-75.0/4.0-8.0*eta+10.0*eta*eta)) - GMOR*drdv_r*((-79.0+69.0*eta/2.0+30.0*eta*eta)*drdv_r*drdv_r*drdv_r*drdv_r*eta+eta*drdv_r*drdv_r*dv2*(121.0-16.0*eta-20.0*eta*eta)+eta*dv2*dv2*(-75.0/4.0-8.0*eta+10.0*eta*eta))/r - 2.0*GMOR*GMOR*drdv_r*(drdv_r*drdv_r*((-1.0-615.0*PI2*eta/64.0)-22717.0*eta/168.0-11.0*eta*eta/8.0+7.0*eta*eta*eta)+eta*dv2*((20827.0/840.0+123.0*PI2/64.0)-eta*eta))/r + GMOR*GMOR*(2.0*drdv_r*V2R*((-1.0-615*PI2*eta/64.0)-22717.0*eta/168.0-11.0*eta*eta/8.0+7*eta*eta*eta)+2.0*eta*VA*((20827.0/840.0 +123.0*PI2/64.0)-eta*eta)) - 3.0*GMOR*GMOR*GMOR*drdv_r*(16.0+(1399.0/12.0-41.0*PI2/16.0)*eta+71.0*eta*eta/2.0)/r;
+                Float B3D = 75.0*drdv_r*drdv_r*drdv_r*drdv_r*V2R*eta*(3.0/8.0-eta-.25*eta*eta)+eta*(3.0*drdv_r*drdv_r*V2R*dv2+2.0*drdv_r*drdv_r*drdv_r*VA)*(-12.0+111.0*eta/4.0+12.0*eta*eta)+eta*(V2R*dv2*dv2+4.0*drdv_r*dv2*VA)*(65.0/8.0-19.0*eta-6.0*eta*eta)-GMOR*drdv_r*(drdv_r*drdv_r*drdv_r*eta*(-329.0/6.0-59.0*eta/2.0-18.0*eta*eta)+drdv_r*dv2*eta*(15.0+27.0*eta+10.0*eta*eta))/r+GMOR*(3.0*drdv_r*drdv_r*V2R*eta*(-329.0/6.0-59.0*eta/2.0-18.0*eta*eta)+eta*(V2R*dv2+2.0*drdv_r*VA)*(15.0+27.0*eta+10.0*eta*eta))-2.0*GMOR*GMOR*drdv_r*(drdv_r*((4.0+123.0*PI2*eta/32.0)+5849.0*eta/840.0-25.0*eta*eta-8.0*eta*eta*eta))/r+GMOR*GMOR*(V2R*((4.0+123.0*PI2*eta/32.0)+5849.0/840.0*eta-25.0*eta*eta-8.0*eta*eta*eta));
 
                 Float ADK6 = A3D/c_6;
                 Float BDK6 = B3D/c_6;
@@ -476,16 +472,16 @@ public:
                 for (int k=0; k<3; k++) {
                     Float CK6 = AK6*N[k] + BK6*v[k];
                     Float CDK6= ADK6*N[k]+BDK6*v[k];
-                    adot_pn1[4][k] =  G*(-2.0*MOR*RP*CK6/r2 + MOR*CDK6/r + MOR*(AK6*(v[k]-N[k]*RP)/r+BK6*A[k])/r)*m2/M;
-                    adot_pn2[4][k] = -G*(-2.0*MOR*RP*CK6/r2 + MOR*CDK6/r + MOR*(AK6*(v[k]-N[k]*RP)/r+BK6*A[k])/r)*m1/M;
+                    adot_pn1[4][k] =  G*(-2.0*GMOR*drdv_r*CK6/r2 + GMOR*CDK6/r + GMOR*(AK6*(v[k]-N[k]*drdv_r)/r+BK6*A[k])/r)*m2/M;
+                    adot_pn2[4][k] = -G*(-2.0*GMOR*drdv_r*CK6/r2 + GMOR*CDK6/r + GMOR*(AK6*(v[k]-N[k]*drdv_r)/r+BK6*A[k])/r)*m1/M;
                 }
 
             }
 
             // PN3.5 ~1/c^7
             if (used_pn_orders[4]) {
-                Float A3_5D = MOR*eta*(-RP*(V1_V22*V1_V22*(-366.0/35.0-12.0*eta)+V1_V22*RP*RP*(114.0+12.0*eta)+RP*RP*RP*RP*(-112.0))/r+4.0*V1_V22*VA*(-366.0/35.0-12.0*eta)+2.0*(VA*RP*RP+RP*RPP*V1_V22)*(114.0+12.0*eta)+4.0*RP*RP*RP*RPP*(-112.0)+MOR*(2.0*VA*(-692.0/35.0+724.0*eta/15.0)+2.0*RP*RPP*(-294.0/5.0-376.0*eta/5.0)-2.0*RP*(V1_V22*(-692.0/35.0+724.0*eta/15.0)+RP*RP*(-294.0/5.0-376.0*eta/5.0))/r-3.0*MOR*RP*(-3956.0/35.0-184.0*eta/5.0)/r));
-                Float B3_5D = MOR*eta*(4.0*V1_V22*VA*(626.0/35.0+12.0*eta/5.0)+2.0*(VA*RP*RP+V1_V22*RP*RPP)*(-678.0/5.0-12.0*eta/5.0)+4.0*RP*RP*RP*RPP*120.0-RP*(V1_V22*V1_V22*(626.0/35.0+12.0*eta/5.0)+V1_V22*RP*RP*(-678.0/5.0-12.0*eta/5.0)+120.0*RP*RP*RP*RP)/r+MOR*(2.0*VA*(-164.0/21.0-148.0*eta/5.0)+2*RP*RPP*(82.0/3.0+848.0*eta/15.0)-2.0*RP*(V1_V22*(-164.0/21-148.0*eta/5.0)+RP*RP*(82.0/3.0+848.0*eta/15.0))/r-3.0*MOR*RP*(1060.0/21.0+104.0*eta/5.0)/r));
+                Float A3_5D = GMOR*eta*(-drdv_r*(dv2*dv2*(-366.0/35.0-12.0*eta)+dv2*drdv_r*drdv_r*(114.0+12.0*eta)+drdv_r*drdv_r*drdv_r*drdv_r*(-112.0))/r+4.0*dv2*VA*(-366.0/35.0-12.0*eta)+2.0*(VA*drdv_r*drdv_r+drdv_r*V2R*dv2)*(114.0+12.0*eta)+4.0*drdv_r*drdv_r*drdv_r*V2R*(-112.0)+GMOR*(2.0*VA*(-692.0/35.0+724.0*eta/15.0)+2.0*drdv_r*V2R*(-294.0/5.0-376.0*eta/5.0)-2.0*drdv_r*(dv2*(-692.0/35.0+724.0*eta/15.0)+drdv_r*drdv_r*(-294.0/5.0-376.0*eta/5.0))/r-3.0*GMOR*drdv_r*(-3956.0/35.0-184.0*eta/5.0)/r));
+                Float B3_5D = GMOR*eta*(4.0*dv2*VA*(626.0/35.0+12.0*eta/5.0)+2.0*(VA*drdv_r*drdv_r+dv2*drdv_r*V2R)*(-678.0/5.0-12.0*eta/5.0)+4.0*drdv_r*drdv_r*drdv_r*V2R*120.0-drdv_r*(dv2*dv2*(626.0/35.0+12.0*eta/5.0)+dv2*drdv_r*drdv_r*(-678.0/5.0-12.0*eta/5.0)+120.0*drdv_r*drdv_r*drdv_r*drdv_r)/r+GMOR*(2.0*VA*(-164.0/21.0-148.0*eta/5.0)+2*drdv_r*V2R*(82.0/3.0+848.0*eta/15.0)-2.0*drdv_r*(dv2*(-164.0/21-148.0*eta/5.0)+drdv_r*drdv_r*(82.0/3.0+848.0*eta/15.0))/r-3.0*GMOR*drdv_r*(1060.0/21.0+104.0*eta/5.0)/r));
 
                 Float ADK7 = A3_5D/c_7;
                 Float BDK7 = B3_5D/c_7;
@@ -493,8 +489,8 @@ public:
                 for (int k=0; k<3; k++) {
                     Float CK7 = AK7*N[k] + BK7*v[k];
                     Float CDK7 = ADK7*N[k]+BDK7*v[k];
-                    adot_pn1[5][k] =  G*(-2.0*MOR*RP*CK7/r2 + MOR*CDK7/r + MOR*(AK7*(v[k]-N[k]*RP)/r+BK7*A[k])/r)*m2/M;
-                    adot_pn2[5][k] = -G*(-2.0*MOR*RP*CK7/r2 + MOR*CDK7/r + MOR*(AK7*(v[k]-N[k]*RP)/r+BK7*A[k])/r)*m1/M;                    
+                    adot_pn1[5][k] =  G*(-2.0*GMOR*drdv_r*CK7/r2 + GMOR*CDK7/r + GMOR*(AK7*(v[k]-N[k]*drdv_r)/r+BK7*A[k])/r)*m2/M;
+                    adot_pn2[5][k] = -G*(-2.0*GMOR*drdv_r*CK7/r2 + GMOR*CDK7/r + GMOR*(AK7*(v[k]-N[k]*drdv_r)/r+BK7*A[k])/r)*m1/M;                    
                 }
             }
 
@@ -523,14 +519,14 @@ public:
             Float DM = m1 - m2;
 
             for (int k=0; k<3; k++) {
-                SU1[k] = MOR*eta*(N[k]*(-4.0*VDS-2.0*DM/M*VDSIG)+ v[k]*(3.0*NDS+DM/M*NDSIG)+NDV*(2.0*KSS[k]+DM/M*KSSIG[k])) /r;
-                SV1[k] = MOR*(N[k]*(VDSIG*(-2.0+4.0*eta)-2.0*DM/M*VDS)+ v[k]*(NDSIG*(1.0-eta)+DM/M*NDS)+NDV*(KSSIG[k]*(1.0- 2.0*eta)+ DM/M*KSS[k]))/r;
+                SU1[k] = GMOR*eta*(N[k]*(-4.0*VDS-2.0*DM/M*VDSIG)+ v[k]*(3.0*NDS+DM/M*NDSIG)+NDV*(2.0*KSS[k]+DM/M*KSSIG[k])) /r;
+                SV1[k] = GMOR*(N[k]*(VDSIG*(-2.0+4.0*eta)-2.0*DM/M*VDS)+ v[k]*(NDSIG*(1.0-eta)+DM/M*NDS)+NDV*(KSSIG[k]*(1.0- 2.0*eta)+ DM/M*KSS[k]))/r;
 
                 SS1[k] = 0.5*(L[k]*(4.0+3.0*(m2/m1))+ (S2[k]-3.0*S2DLU*LU[k]))/r3;
                 SS2[k] = 0.5*(L[k]*(4.0+3.0*(m1/m2))+ (S1[k]-3.0*S1DLU*LU[k]))/r3;
 
-                SU2[k] = MOR*eta/r*(N[k]*(VDS*(-2.0*V1_V22+3.0*NDV*NDV- 6.0*eta*NDV*NDV+7.0*MOR-8.0*eta*MOR)-14.0*MOR*NDS*NDV+ DM/M*VDSIG*eta*(-3.0*NDV*NDV-4.0*MOR)+DM/M*MOR*NDSIG*NDV* (2.0-eta/2.))+v[k]*(NDS*(2.0*V1_V22-4.0*eta*V1_V22-3.0*NDV* NDV+7.5*eta*NDV*NDV+4.0*MOR-6.0*eta*MOR)+VDS*NDV*(2.0- 6.0*eta)+ DM/M*NDSIG*(-1.5*eta*V1_V22+3.0*eta*NDV*NDV-MOR-3.5*eta* MOR)-3.0*DM/M*VDSIG*NDV*eta)+KSS[k]*NDV*(V1_V22-2.0*eta* V1_V22-1.5*NDV*NDV+3.0*eta*NDV*NDV-MOR+2.0*eta*MOR)+ DM/M*KSSIG[k]*NDV*(-eta*V1_V22+1.5*eta*NDV*NDV+ (eta-1.)*MOR));
-                SV2[k] = MOR/r*(N[k]*(VDSIG*eta*(-2.0*V1_V22+6.0*eta*NDV* NDV+(3.0+8.0*eta)*MOR)+MOR*NDSIG*NDV*(2.0-22.5*eta+2.0* eta*eta)+ DM/M*VDS*eta*(-3.0*NDV*NDV-4.0*MOR)+DM/M*MOR*NDS*NDV*(2.0- 0.5*eta))+v[k]*(NDSIG*(0.5*eta*V1_V22+2.0*eta*eta*V1_V22- 4.5*eta*eta*NDV*NDV+(4.5*eta-1.0+8.0*eta*eta)*MOR)+VDSIG*NDV* eta*(6.0*eta-1.)-3.0*DM/M*VDS*NDV*eta+DM/M*NDS*(-1.5* eta*V1_V22+ 3.0*eta*NDV*NDV-(1.0+3.5*eta)*MOR))+KSSIG[k]*NDV*(2.0*eta*eta* V1_V22-3.0*eta*eta*NDV*NDV+(-1.0+4.0*eta-2.0*eta*eta)*MOR)+ DM/M*KSS[k]*NDV*(-eta*V1_V22+1.5*eta*NDV*NDV+(-1.0+eta)* MOR));
+                SU2[k] = GMOR*eta/r*(N[k]*(VDS*(-2.0*dv2+3.0*NDV*NDV- 6.0*eta*NDV*NDV+7.0*GMOR-8.0*eta*GMOR)-14.0*GMOR*NDS*NDV+ DM/M*VDSIG*eta*(-3.0*NDV*NDV-4.0*GMOR)+DM/M*GMOR*NDSIG*NDV* (2.0-eta/2.))+v[k]*(NDS*(2.0*dv2-4.0*eta*dv2-3.0*NDV* NDV+7.5*eta*NDV*NDV+4.0*GMOR-6.0*eta*GMOR)+VDS*NDV*(2.0- 6.0*eta)+ DM/M*NDSIG*(-1.5*eta*dv2+3.0*eta*NDV*NDV-GMOR-3.5*eta* GMOR)-3.0*DM/M*VDSIG*NDV*eta)+KSS[k]*NDV*(dv2-2.0*eta* dv2-1.5*NDV*NDV+3.0*eta*NDV*NDV-GMOR+2.0*eta*GMOR)+ DM/M*KSSIG[k]*NDV*(-eta*dv2+1.5*eta*NDV*NDV+ (eta-1.)*GMOR));
+                SV2[k] = GMOR/r*(N[k]*(VDSIG*eta*(-2.0*dv2+6.0*eta*NDV* NDV+(3.0+8.0*eta)*GMOR)+GMOR*NDSIG*NDV*(2.0-22.5*eta+2.0* eta*eta)+ DM/M*VDS*eta*(-3.0*NDV*NDV-4.0*GMOR)+DM/M*GMOR*NDS*NDV*(2.0- 0.5*eta))+v[k]*(NDSIG*(0.5*eta*dv2+2.0*eta*eta*dv2- 4.5*eta*eta*NDV*NDV+(4.5*eta-1.0+8.0*eta*eta)*GMOR)+VDSIG*NDV* eta*(6.0*eta-1.)-3.0*DM/M*VDS*NDV*eta+DM/M*NDS*(-1.5* eta*dv2+ 3.0*eta*NDV*NDV-(1.0+3.5*eta)*GMOR))+KSSIG[k]*NDV*(2.0*eta*eta* dv2-3.0*eta*eta*NDV*NDV+(-1.0+4.0*eta-2.0*eta*eta)*GMOR)+ DM/M*KSS[k]*NDV*(-eta*dv2+1.5*eta*NDV*NDV+(-1.0+eta)* GMOR));
             }
 
             //SS1 crossproduct of SS1 and S1 = SS1[k]XS1[j]
@@ -568,7 +564,7 @@ public:
                 //dspin1[k] = m1*(M*KSS[k]-m2*KSSIG[k])/M/M/m1/m1*c_1 ;       
                 //dspin2[k] = m2*(M*KSS[k]+m1*KSSIG[k])/M/M/m2/m2*c_1;
                 
-                Float mmc = c_1/(M*M);
+                Float mmc = c_1/(G*G*M*M);
                 dspin1[k] = mmc*(M*SU[k]-m2*SV[k])/m1;
                 dspin2[k] = mmc*(M*SU[k]+m1*SV[k])/m2;
                 //XAD[k] = 0.5/(M*M*m1*m2)*(-SU[k]*M*DM-SV[k]*(m1*m1+m2*m2));
@@ -625,9 +621,9 @@ public:
 
             Float C1_5D[3], C2D[3], C2_5D[3];
             for(int k=0; k<3; k++) { 
-            C1_5D[k] = -3.0*RP/r*C1_5[k]+(NDOT[k]*(12.0*SDNCV+6.0*DM/M* SIGDNCV)+N[k]*(12.0*SNVDOT+6.0*DM/M*SIGNVDOT)+9.0*NVDOT* NCS[k]+9.0*NDV*(NDOTCS[k]+NCSU[k])+3.0*DM/M*(NVDOT*NCSIG[k]+ NDV*(NDOTCSIG[k]+NCSV[k]))-7.0*(ACS[k]+VCSU[k])-3.0*DM/M* (ACSIG[k]+VCSV[k]))/(r3);
-            C2D[k] = -4.0*RP/r*C2[k]-MOR*MOR*MOR*3.0*eta/r*(NDOT[k]* (XS2-XA2-5.0*NXS*NXS+5.0*NXA*NXA)+N[k]*(2.0*(XS[0]*XSD[0]+ XS[1]*XSD[1]+XS[2]*XSD[2]-XA[0]*XAD[0]-XA[1]*XAD[1]- XA[2]*XAD[2])-10.0*NXS*NXSDOT+10.0*NXA*NXADOT)+2.0*(XSD[k]* NXS+XS[k]*NXSDOT-XAD[k]*NXA-XA[k]*NXADOT));
-            C2_5D[k] = -3.0*RP/r*C2_5[k]+(NDOT[k]*(SDNCV*(-30.0*eta* NDV*NDV+24.0*eta*V1_V22-MOR*(38.0+25.0*eta))+DM/M*SIGDNCV* (-15.0*eta*NDV*NDV+12.0*eta*V1_V22-MOR*(18.0+14.5*eta)))+ N[k]*(SNVDOT*(-30.0*eta*NDV*NDV+24.0*eta*V1_V22-MOR* (38.0+25.0*eta))+SDNCV*(-60.0*eta*NDV*NVDOT+48.0*eta*VA+ MOR*RP/r*(38.0+25.0*eta))+DM/M*SIGNVDOT*(-15.0*eta*NDV* NDV+12.0*eta*V1_V22-MOR*(18.0+14.5*eta))+DM/M*SIGDNCV* (-30.0*eta*NDV*NVDOT+24.0*eta*VA+MOR*RP/r*(18.0+14.5*eta)))+ (NVDOT*v[k]+NDV*AT[k])*(SDNCV*(-9.0+9.0*eta)+DM/M*SIGDNCV* (-3.0+6.0*eta))+NDV*v[k]*(SNVDOT*(-9.0+9.0*eta)+DM/M* SIGNVDOT*(-3.0+6.0*eta))+(NDOTCV[k]+NCA[k])*(NDV*VDS*(-3.0+ 3.0*eta)-8.0*MOR*eta*NDS-DM/M*(4.0*MOR*eta*NDSIG+3.0*NDV*VDSIG) )+NCV[k]*((NVDOT*VDS+NDV*VSDOT)*(-3.0+3.0*eta)-8.0*eta*MOR* (NSDOT-RP/r*NDS)-DM/M*(4.0*eta*MOR*(NSIGDOT-RP/r*NDSIG)+ 3.0*(NVDOT*VDSIG+NDV*VSIGDOT)))+(NVDOT*NCS[k]+NDV* (NDOTCS[k]+NCSU[k]))*(-22.5*eta*NDV*NDV+21.0*eta*V1_V22- MOR*(25.0+15.0*eta))+NDV*NCS[k]*(-45.0*eta*NDV*NVDOT+42.0*eta* VA+MOR*RP/r*(25.0+15.0*eta))+DM/M*(NVDOT*NCSIG[k]+NDV* (NDOTCSIG[k]+NCSV[k]))*(-15.0*eta*NDV*NDV+12.0*eta*V1_V22- MOR*(9.0+8.5*eta))+DM/M*NDV*NCSIG[k]*(-30.0*eta*NDV*NVDOT+ 24.0*eta*VA+MOR*RP/r*(9.0+8.5*eta))+(ACS[k]+VCSU[k])* (16.5*eta*NDV*NDV+MOR*(21.0+9.0*eta)-14.0*eta*V1_V22)+ VCS[k]*(33.0*eta*NDV*NVDOT-MOR*RP/r*(21.0+9.0*eta)- 28.0*eta*VA)+DM/M*(ACSIG[k]+VCSV[k])*(9.0*eta*NDV*NDV- 7.0*eta*V1_V22+MOR*(9.0+4.5*eta))+DM/M*VCSIG[k]*(18.0* eta*NDV*NVDOT-14.0*eta*VA-MOR*RP/r*(9.0+4.5*eta)))/ (r3);
+            C1_5D[k] = -3.0*drdv_r/r*C1_5[k]+(NDOT[k]*(12.0*SDNCV+6.0*DM/M* SIGDNCV)+N[k]*(12.0*SNVDOT+6.0*DM/M*SIGNVDOT)+9.0*NVDOT* NCS[k]+9.0*NDV*(NDOTCS[k]+NCSU[k])+3.0*DM/M*(NVDOT*NCSIG[k]+ NDV*(NDOTCSIG[k]+NCSV[k]))-7.0*(ACS[k]+VCSU[k])-3.0*DM/M* (ACSIG[k]+VCSV[k]))/(r3);
+            C2D[k] = -4.0*drdv_r/r*C2[k]-GMOR*GMOR*GMOR*3.0*eta/r*(NDOT[k]* (XS2-XA2-5.0*NXS*NXS+5.0*NXA*NXA)+N[k]*(2.0*(XS[0]*XSD[0]+ XS[1]*XSD[1]+XS[2]*XSD[2]-XA[0]*XAD[0]-XA[1]*XAD[1]- XA[2]*XAD[2])-10.0*NXS*NXSDOT+10.0*NXA*NXADOT)+2.0*(XSD[k]* NXS+XS[k]*NXSDOT-XAD[k]*NXA-XA[k]*NXADOT));
+            C2_5D[k] = -3.0*drdv_r/r*C2_5[k]+(NDOT[k]*(SDNCV*(-30.0*eta* NDV*NDV+24.0*eta*dv2-GMOR*(38.0+25.0*eta))+DM/M*SIGDNCV* (-15.0*eta*NDV*NDV+12.0*eta*dv2-GMOR*(18.0+14.5*eta)))+ N[k]*(SNVDOT*(-30.0*eta*NDV*NDV+24.0*eta*dv2-GMOR* (38.0+25.0*eta))+SDNCV*(-60.0*eta*NDV*NVDOT+48.0*eta*VA+ GMOR*drdv_r/r*(38.0+25.0*eta))+DM/M*SIGNVDOT*(-15.0*eta*NDV* NDV+12.0*eta*dv2-GMOR*(18.0+14.5*eta))+DM/M*SIGDNCV* (-30.0*eta*NDV*NVDOT+24.0*eta*VA+GMOR*drdv_r/r*(18.0+14.5*eta)))+ (NVDOT*v[k]+NDV*AT[k])*(SDNCV*(-9.0+9.0*eta)+DM/M*SIGDNCV* (-3.0+6.0*eta))+NDV*v[k]*(SNVDOT*(-9.0+9.0*eta)+DM/M* SIGNVDOT*(-3.0+6.0*eta))+(NDOTCV[k]+NCA[k])*(NDV*VDS*(-3.0+ 3.0*eta)-8.0*GMOR*eta*NDS-DM/M*(4.0*GMOR*eta*NDSIG+3.0*NDV*VDSIG) )+NCV[k]*((NVDOT*VDS+NDV*VSDOT)*(-3.0+3.0*eta)-8.0*eta*GMOR* (NSDOT-drdv_r/r*NDS)-DM/M*(4.0*eta*GMOR*(NSIGDOT-drdv_r/r*NDSIG)+ 3.0*(NVDOT*VDSIG+NDV*VSIGDOT)))+(NVDOT*NCS[k]+NDV* (NDOTCS[k]+NCSU[k]))*(-22.5*eta*NDV*NDV+21.0*eta*dv2- GMOR*(25.0+15.0*eta))+NDV*NCS[k]*(-45.0*eta*NDV*NVDOT+42.0*eta* VA+GMOR*drdv_r/r*(25.0+15.0*eta))+DM/M*(NVDOT*NCSIG[k]+NDV* (NDOTCSIG[k]+NCSV[k]))*(-15.0*eta*NDV*NDV+12.0*eta*dv2- GMOR*(9.0+8.5*eta))+DM/M*NDV*NCSIG[k]*(-30.0*eta*NDV*NVDOT+ 24.0*eta*VA+GMOR*drdv_r/r*(9.0+8.5*eta))+(ACS[k]+VCSU[k])* (16.5*eta*NDV*NDV+GMOR*(21.0+9.0*eta)-14.0*eta*dv2)+ VCS[k]*(33.0*eta*NDV*NVDOT-GMOR*drdv_r/r*(21.0+9.0*eta)- 28.0*eta*VA)+DM/M*(ACSIG[k]+VCSV[k])*(9.0*eta*NDV*NDV- 7.0*eta*dv2+GMOR*(9.0+4.5*eta))+DM/M*VCSIG[k]*(18.0* eta*NDV*NVDOT-14.0*eta*VA-GMOR*drdv_r/r*(9.0+4.5*eta)))/ (r3);
             }
             */
 
@@ -642,7 +638,7 @@ public:
 
           Float AD[3] = {0.0};
           for (int k=0; k<3; k++) {
-          AD[k] = -2.0*MOR*RP*(KSAK*N[k]+KSBK*v[k])/r2 + MOR*(ADK*N[k]+BDK*v[k])/r + MOR*(KSAK*(v[k]-N[k]*RP)/r+KSBK*AT[k])/r + C1_5D[k]/c_2 + C2D[k]/c_4 +C2_5D[k]/c_4;
+          AD[k] = -2.0*GMOR*drdv_r*(KSAK*N[k]+KSBK*v[k])/r2 + GMOR*(ADK*N[k]+BDK*v[k])/r + GMOR*(KSAK*(v[k]-N[k]*drdv_r)/r+KSBK*AT[k])/r + C1_5D[k]/c_2 + C2D[k]/c_4 +C2_5D[k]/c_4;
           }
         */
 
