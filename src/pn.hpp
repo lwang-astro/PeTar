@@ -425,7 +425,8 @@ public:
                     Float CK2 = AK2*N[k] + BK2*v[k];
                     Float CDK2 = ADK2*N[k]+BDK2*v[k];
                     adot_pn1[1][k] =  (-2.0*GMOR*drdv_r*CK2/r2 + GMOR*CDK2/r + GMOR*(AK2*(v[k]-N[k]*drdv_r)/r+BK2*A[k])/r)*m2/M;
-                    adot_pn2[1][k] = -(-2.0*GMOR*drdv_r*CK2/r2 + GMOR*CDK2/r + GMOR*(AK2*(v[k]-N[k]*drdv_r)/r+BK2*A[k])/r)*m1/M;
+                    //adot_pn2[1][k] = -(-2.0*GMOR*drdv_r*CK2/r2 + GMOR*CDK2/r + GMOR*(AK2*(v[k]-N[k]*drdv_r)/r+BK2*A[k])/r)*m1/M;
+                    adot_pn2[1][k] =  -adot_pn1[1][k]*m1/m2;
                 }
             }
 

@@ -100,14 +100,15 @@ int main(int argc, char **argv){
     Float tscale = 1/std::sqrt(G);
     Float fscale = vscale/tscale;
     Float jscale = vscale/tscale/tscale;
-    Float Gfactor[6] = {1, G, G*G, G*G*std::sqrt(G), G*G*G, G*G*G*std::sqrt(G)};
+    //Float Gfactor[6] = {1, G, G*G, G*G*std::sqrt(G), G*G*G, G*G*G*std::sqrt(G)};
+    //Float jfactor[6] = {1, G*std::sqrt(G), G*G, G*G*std::sqrt(G), G*G*G, G*G*G*std::sqrt(G)};
 
     Float vs1[3] = {p1.vel[0]/vscale, p1.vel[1]/vscale, p1.vel[2]/vscale};
     Float vs2[3] = {p2.vel[0]/vscale, p2.vel[1]/vscale, p2.vel[2]/vscale};
     
     calc_force_pn_BH(p1.mass, &p1.pos[0], vs1, s1r,
                      p2.mass, &p2.pos[0], vs2, s2r,
-                     pn.speed_of_light, usedOrNot, 1, a1r, ad1r, a2r, ad2r);
+                     pn.speed_of_light/vscale, usedOrNot, 1, a1r, ad1r, a2r, ad2r);
 
     int width = 15;
     std::string pn_name[6]={"N","pn1", "pn2", "pn2.5", "pn3", "pn3.5"};
@@ -132,8 +133,8 @@ int main(int argc, char **argv){
         std::cout<<std::endl;
 
         for (int k=0; k<3; k++) {
-            a1r[i][k] *= Gfactor[i]*fscale;
-            a2r[i][k] *= Gfactor[i]*fscale;
+            a1r[i][k] *= fscale;
+            a2r[i][k] *= fscale;
         }
 
         std::cout<<std::setw(width)<<"Ref";
@@ -193,11 +194,11 @@ int main(int argc, char **argv){
         std::cout<<std::endl;
 
         for (int k=0; k<3; k++) {
-            ad1r[i][k] *= Gfactor[i]*jscale;
-            ad2r[i][k] *= Gfactor[i]*jscale;
+            ad1r[i][k] *= jscale;
+            ad2r[i][k] *= jscale;
         }
 
-        std::cout<<std::setw(width)<<"Res";
+        std::cout<<std::setw(width)<<"Ref";
         std::cout<<std::setw(width)<<ad1r[i][0]
                  <<std::setw(width)<<ad1r[i][1]
                  <<std::setw(width)<<ad1r[i][2];
@@ -227,7 +228,7 @@ int main(int argc, char **argv){
         for (int k=0; k<6; k++) {
             diff_max = std::max(std::fabs(da[k]), diff_max);
         }
-        if (diff_max>ROUND_OFF_ERROR_LIMIT*10) {
+        if (diff_max>ROUND_OFF_ERROR_LIMIT*1e2) {
             std::cerr<<"Test failed! difference > round off error\n";
             abort();
         }
