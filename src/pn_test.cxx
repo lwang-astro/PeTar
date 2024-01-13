@@ -46,12 +46,12 @@ int main(int argc, char **argv){
 
     const Float G = G_ASTRO;
     bin.calcParticles(p1, p2, G);
-    p1.spin[0] = 0.5;
-    p1.spin[1] = 0.3;
-    p1.spin[2] = 0.2;
-    p2.spin[0] = 0.3;
-    p2.spin[1] = 0.5;
-    p2.spin[2] = -0.2;
+    //p1.spin[0] = 0.5;
+    //p1.spin[1] = 0.3;
+    //p1.spin[2] = 0.2;
+    //p2.spin[0] = 0.3;
+    //p2.spin[1] = 0.5;
+    //p2.spin[2] = -0.2;
 
     p1.spin[0] = 0.0;
     p1.spin[1] = 0.0;
@@ -60,16 +60,18 @@ int main(int argc, char **argv){
     p2.spin[1] = 0.0;
     p2.spin[2] = 0.0;
 
-    p1.printColumnTitle(std::cout);
-    p2.printColumnTitle(std::cout);
-    std::cout<<std::endl;
-    p1.printColumn(std::cout);
-    p2.printColumn(std::cout);
+    int width = 24;
+    std::cout<<std::setprecision(15);
 
+    p1.printColumnTitle(std::cout, width);
+    std::cout<<std::endl;
+    p1.printColumn(std::cout, width);
+    std::cout<<std::endl;
+    p2.printColumn(std::cout, width);
     std::cout<<std::endl;
 
     PostNewtonian pn;
-    pn.speed_of_light = 2.99792458e5*KMS_TO_PCMYR;
+    pn.speed_of_light = SPEED_OF_LIGHT;
     pn.gravitational_constant = G;
     pn.precession_criterion = 1e-9;
 
@@ -87,6 +89,20 @@ int main(int argc, char **argv){
              <<"  PN3.5 "<<used_pn_orders[4]
              <<"  Spin "<<used_pn_orders[5]<<std::endl;
     pn.calcAccJerkPN(a1, a2, ad1, ad2, s1, s2, p1, p2, used_pn_orders);
+
+    Float acc1[3]={0.0}, adot1[3]={0.0}, acc2[3]={0.0}, adot2[3]={0.0};
+    pn.sumAccJerkPN(acc1, adot1, a1, ad1);
+    pn.sumAccJerkPN(acc2, adot2, a2, ad2);
+    std::cout<<"Acc1: ";
+    for (int i=0; i<3; i++) {
+        std::cout<<std::setw(width)<<acc1[i];
+    }
+    std::cout<<"\nAcc2: ";
+    for (int i=0; i<3; i++) {
+        std::cout<<std::setw(width)<<acc2[i];
+    }
+    std::cout<<std::endl;
+    
 
     int usedOrNot[6] = {1,1,1,1,1,1};
     Float a1r[6][3], a2r[6][3], ad1r[6][3], ad2r[6][3], s1r[3], s2r[3];
@@ -110,7 +126,6 @@ int main(int argc, char **argv){
                      p2.mass, &p2.pos[0], vs2, s2r,
                      pn.speed_of_light/vscale, usedOrNot, 1, a1r, ad1r, a2r, ad2r);
 
-    int width = 15;
     std::string pn_name[6]={"N","pn1", "pn2", "pn2.5", "pn3", "pn3.5"};
 
     for (int i=0; i<5; i++) {
@@ -174,7 +189,7 @@ int main(int argc, char **argv){
 
     }
 
-    for (int i=0; i<5; i++) {
+    for (int i=0; i<6; i++) {
         std::cout<<std::setw(width)<<"";
         std::cout<<std::setw(width)<<"ad1_"+pn_name[i]+".x"
                  <<std::setw(width)<<"ad1_"+pn_name[i]+".y"

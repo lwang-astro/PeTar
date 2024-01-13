@@ -655,18 +655,14 @@ public:
     /*!
       @param[out] acc[3]: acceleration, to be added (not reset to zero)
       @param[out] adot[3]: jerk, to be added (not reset to zero)
-      @param[in] a_pn1[6][3]: (3D) Newton and PN acceleration of p1, each PN term are separately saved in array: [Newton, PN1, PN2, PN2.5, PN3, PN3.5]
-      @param[in] a_pn2[6][3]: Newton and PN acceleration of p2 for each PN order 
-      @param[in] adot_pn1[6][3]: Newton and PN jerk of p1 for each PN order
-      @param[in] adot_pn2[6][3]: Newton PN jerk of p2 for each PN order
+      @param[in] a_pn[6][3]: (3D) Newton and PN acceleration of particle, each PN term are separately saved in array: [Newton, PN1, PN2, PN2.5, PN3, PN3.5]
+      @param[in] adot_pn[6][3]: Newton and PN jerk of particle for each PN order
      */
-    void sumAccJerkPN(Float acc[3], Float adot[3],
-                      Float a_pn1[][3], Float a_pn2[][3], 
-                      Float adot_pn1[][3], Float adot_pn2[][3]) {
+    void sumAccJerkPN(Float acc[3], Float adot[3], Float a_pn[][3], Float adot_pn[][3]) {
         for (int i=0; i<6; i++) {
             for (int k=0; k<3; k++) {
-                acc[k] += a_pn1[i][k];
-                adot[k] += adot_pn1[i][k];
+                acc[k] += a_pn[i][k];
+                adot[k] += adot_pn[i][k];
             }
         }
     }
