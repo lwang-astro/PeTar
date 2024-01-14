@@ -60,8 +60,8 @@ int main(int argc, char **argv){
     p2.spin[1] = 0.0;
     p2.spin[2] = 0.0;
 
-    int width = 24;
-    std::cout<<std::setprecision(15);
+    int width = 16;
+    std::cout<<std::setprecision(9);
 
     p1.printColumnTitle(std::cout, width);
     std::cout<<std::endl;
