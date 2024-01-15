@@ -19,7 +19,7 @@ public:
     Float gravitational_constant;
     Float precession_criterion; // precession angle to determine which order of PN should be on
     
-    PostNewtonian(): speed_of_light(1.0), gravitational_constant(1.0), precession_criterion(1.0) {}
+    PostNewtonian(): speed_of_light(1.0), gravitational_constant(1.0), precession_criterion(1.0e-8) {}
     
     //! check whether parameters values are correct
     /*! \return true: all correct
@@ -39,6 +39,7 @@ public:
 
     //! determine which PN terms should be switched on based on an estimator due to Einstein drift
     /*!
+      If satisfy, switch on PN1, 2, 2.5, others are not yet tested.
       @param[out] used_pn_orders: determine which PN orders are calculated: set in a bool array: [PN1, PN2, PN2.5, PN3, PN3.5, SPIN]
       @param[in] r: distance between two particles
       @param[in] m: total mass of two particles
@@ -53,28 +54,16 @@ public:
         // PN1
         if (theta > precession_criterion) {
             used_pn_orders[0] = true;
+            used_pn_orders[1] = true;
+            used_pn_orders[2] = true;
+            used_pn_orders[3] = false;
+            used_pn_orders[4] = false;
+            used_pn_orders[5] = false;
             used_pn = true;
         }
-        else used_pn_orders[0] = false;
-        // PN2
-        Float t2 = theta*theta;
-        if (t2 > precession_criterion) used_pn_orders[1] = true;
-        else used_pn_orders[1] = false;
-        // PN2.5
-        Float t5 = t2*t2*theta;
-        Float tc2 = precession_criterion*precession_criterion;
-        if (t5 > tc2) used_pn_orders[2] = true;
-        else used_pn_orders[2] = false;
-        // PN3 
-        Float t3 = t2*theta;
-        if (t3 >precession_criterion) used_pn_orders[3] = true;
-        else used_pn_orders[3] = false;
-        // PN3.5
-        Float t7 = t3*t3*theta;
-        if (t7 > tc2) used_pn_orders[4] = true;
-        else used_pn_orders[4] = false;
-        // Spin
-        used_pn_orders[5] = false; // No spin support yet
+        else {
+            for (int i=0; i<6; i++) used_pn_orders[i] = false;
+        }
 
         return used_pn;
     }
@@ -127,9 +116,9 @@ public:
         if (used_spin) {
             for(int k=0;k<3;k++) {
                 // Currently 3D Spin is not implemented in particle
-                SPIN[k][0] = p1.spin[k];
-                SPIN[k][1] = p2.spin[k];
-                //SPIN[k][0] = SPIN[k][1] = 0.0; 
+                //SPIN[k][0] = p1.spin[k];
+                //SPIN[k][1] = p2.spin[k];
+                SPIN[k][0] = SPIN[k][1] = 0.0; 
             }
         }
         else {

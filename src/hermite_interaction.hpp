@@ -107,7 +107,7 @@ public:
 
             Float a1[6][3], a2[6][3], ad1[6][3], ad2[6][3];
             pn.calcAccJerkPN(a1, a2, ad1, ad2, NULL, NULL, _pi, _pj, used_pn_orders);
-            pn.sumAccJerkPN(&_fi.acc0[0], &_fi.acc1[0], a1, a2, ad1, ad2);
+            pn.sumAccJerkPN(&_fi.acc0[0], &_fi.acc1[0], a1, ad1);
 
             const Float rinv = 1.0/r;
             const Float gmor = gravitational_constant*_pj.mass*rinv;
