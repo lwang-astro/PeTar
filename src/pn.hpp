@@ -76,31 +76,29 @@ public:
       @param[out] adot_pn2[6][3]: Newton PN jerk of p2 for each PN order
       @param[out] dspin1[3]: spin change rate of p1
       @param[out] dspin2[3]: spin change rate of p2
-      @param[in] p1: particle receiving PN force
-      @param[in] p2: particle giving PN force
+      @param[in] m1: particle 1 mass
+      @param[in] m2: particle 2 mass
+      @param[in] dr: particle 2 position - particle 1 position
+      @param[in] dv: particle 2 velocity - particle 1 velocity
+      @param[in] spin1: particle 1 spin (normalized)
+      @param[in] spin1: particle 2 spin (normalized)
       @param[in] used_pn_orders: determine which PN orders are calculated: set in a bool array: [PN1, PN2, PN2.5, PN3, PN3.5, SPIN]
       @param[in] calc_adot: if true, calculated jerk, (default: true)
 
       Return: Maximum PN orders indices [-1: not used; 0: PN1; 1: PN2; 2: PN2.5; 3: PN3; 4: PN3.5; 5: Spin]
     */
-    template<class Tp> 
     int calcAccJerkPN(Float a_pn1[][3], Float a_pn2[][3], 
                       Float adot_pn1[][3], Float adot_pn2[][3],
                       Float dspin1[], Float dspin2[],
-                      const Tp& p1, const Tp& p2, 
+                      const Float m1, const Float m2,
+                      const Float dr[], const Float dv[],
+                      const Float spin1[], const Float spin2[],
                       bool used_pn_orders[6], const bool calc_adot = true) {
 
         // used_order maximum
         int used_order_max = -1;
 
         // interface to particle
-        Float m1 = p1.mass;
-        Float m2 = p2.mass;
-        const auto& x1 = p1.pos;
-        const auto& x2 = p2.pos;
-        const auto& v1 = p1.vel;
-        const auto& v2 = p2.vel;
-
         const Float& G = gravitational_constant;
 
         // Final acc and adot for each order of PN
@@ -116,9 +114,9 @@ public:
         if (used_spin) {
             for(int k=0;k<3;k++) {
                 // Currently 3D Spin is not implemented in particle
-                //SPIN[k][0] = p1.spin[k];
-                //SPIN[k][1] = p2.spin[k];
-                SPIN[k][0] = SPIN[k][1] = 0.0; 
+                SPIN[k][0] = spin1[k];
+                SPIN[k][1] = spin2[k];
+                // SPIN[k][0] = SPIN[k][1] = 0.0; 
             }
         }
         else {
@@ -144,8 +142,8 @@ public:
         // relative position and velocity
         Float x[3], v[3]; 
         for (int k=0; k<3; k++) {
-            x[k] = x1[k] - x2[k];
-            v[k] = v1[k] - v2[k];
+            x[k] = -dr[k];
+            v[k] = -dv[k];
         }
 
         Float r2 = x[0]*x[0] + x[1]*x[1] + x[2]*x[2];
@@ -186,6 +184,10 @@ public:
             }
             used_order_max = 0;
         }
+        else {
+            for (int k=0; k<3; k++) a_pn1[1][k] = 0.0;
+            for (int k=0; k<3; k++) a_pn2[1][k] = 0.0;
+        }
 
         // PN2 ~1/c^4
         Float AK4 = 0.0;
@@ -206,6 +208,10 @@ public:
             }
             used_order_max = 1;
         }
+        else {
+            for (int k=0; k<3; k++) a_pn1[2][k] = 0.0;
+            for (int k=0; k<3; k++) a_pn2[2][k] = 0.0;
+        }
 
         // PN2.5 ~1/c^5
         Float AK5 = 0.0;
@@ -225,6 +231,10 @@ public:
                 A[k] += GMOR*CK5/r;
             }
             used_order_max = 2;
+        }
+        else {
+            for (int k=0; k<3; k++) a_pn1[3][k] = 0.0;
+            for (int k=0; k<3; k++) a_pn2[3][k] = 0.0;
         }
 
         // PN3 ~1/c^6
@@ -262,6 +272,10 @@ public:
             }
             used_order_max = 3;
         }
+        else {
+            for (int k=0; k<3; k++) a_pn1[4][k] = 0.0;
+            for (int k=0; k<3; k++) a_pn2[4][k] = 0.0;
+        }
 
 		// PN3.5 ~1/c^7
         Float AK7 = 0.0;
@@ -283,6 +297,10 @@ public:
             }
             used_order_max = 4;
         }
+        else {
+            for (int k=0; k<3; k++) a_pn1[5][k] = 0.0;
+            for (int k=0; k<3; k++) a_pn2[5][k] = 0.0;
+        }
 
         // Spin accelerations
         // PN accelerations
@@ -292,7 +310,7 @@ public:
 
             Float XS[3], XA[3];
             for(int k=0;k<3;k++) {
-                S1[k] = SPIN[k][0]*G*G*m1*m1/c_1;			// fizikai spin 
+                S1[k] = SPIN[k][0]*G*G*m1*m1/c_1;			// physical spin
                 S2[k] = SPIN[k][1]*G*G*m2*m2/c_1;
                 KSS[k] = S1[k]+S2[k];
                 KSSIG[k] = M*(S2[k]/m2-S1[k]/m1);
@@ -420,6 +438,10 @@ public:
                     adot_pn2[1][k] =  -adot_pn1[1][k]*m1/m2;
                 }
             }
+            else {
+                for (int k=0; k<3; k++) adot_pn1[1][k] = 0.0;
+                for (int k=0; k<3; k++) adot_pn2[1][k] = 0.0;
+            }
 
             // PN2 ~1/c^4
             if(used_pn_orders[1]) {
@@ -437,6 +459,10 @@ public:
                     adot_pn2[2][k] = -adot_pn1[2][k]*m1/m2;
                 }
             }
+            else {
+                for (int k=0; k<3; k++) adot_pn1[2][k] = 0.0;
+                for (int k=0; k<3; k++) adot_pn2[2][k] = 0.0;
+            }
 
             // PN2.5 ~1/c^5
             if (used_pn_orders[2]) {
@@ -453,6 +479,10 @@ public:
                     //adot_pn2[3][k] = -(-2.0*GMOR*rdot*CK5/r2 + GMOR*CDK5/r + GMOR*(AK5*(v[k]-N[k]*rdot)/r+BK5*AT[k])/r)*m1/M;
                     adot_pn2[3][k] = -adot_pn1[3][k]*m1/m2;
                 }
+            }
+            else {
+                for (int k=0; k<3; k++) adot_pn1[3][k] = 0.0;
+                for (int k=0; k<3; k++) adot_pn2[3][k] = 0.0;
             }
 
             // PN3 ~1/c^6
@@ -472,6 +502,10 @@ public:
                 }
 
             }
+            else {
+                for (int k=0; k<3; k++) adot_pn1[4][k] = 0.0;
+                for (int k=0; k<3; k++) adot_pn2[4][k] = 0.0;
+            }
 
             // PN3.5 ~1/c^7
             if (used_pn_orders[4]) {
@@ -489,6 +523,10 @@ public:
                     adot_pn2[5][k] = -adot_pn1[5][k]*m1/m2;
 
                 }
+            }
+            else {
+                for (int k=0; k<3; k++) adot_pn1[5][k] = 0.0;
+                for (int k=0; k<3; k++) adot_pn2[5][k] = 0.0;
             }
 
         }
@@ -625,6 +663,11 @@ public:
             */
 
         } // spin
+        else if ((dspin1!=NULL) || (dspin2!=NULL)) {
+            for(int k=0; k<3; k++) {
+                dspin1[k] = dspin2[k] = 0.0;
+            }
+        }
 
         /*
           Float ADK = ADK2+ADK4+ADK5+ADK6+ADK7;

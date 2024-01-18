@@ -46,8 +46,12 @@ int main(int argc, char **argv){
 #ifdef SOFT_PERT
   bool soft_pert_flag=true;
 #endif
+#ifdef HERMITE_PN
+  PS::F64 pn_p = -1;
+#endif
 
-  while ((arg_label = getopt(argc, argv, "k:E:A:a:D:d:e:s:c:m:b:p:I:v:i:Sh")) != -1)
+
+  while ((arg_label = getopt(argc, argv, "k:E:A:a:D:d:e:s:c:m:b:p:I:v:i:P:Sh")) != -1)
     switch (arg_label) {
     case 'k':
         slowdown_factor = atof(optarg);
@@ -105,6 +109,11 @@ int main(int argc, char **argv){
         par_version = atoi(optarg);
         break;
 #endif
+#ifdef HERMITE_PN
+    case 'P':
+        pn_p = atof(optarg);
+        break;
+#endif
     case 'h':
         std::cout<<"petar.hard.debug [options] [hard_manager (defaulted: input.par.hard)] [cluster_data] (defaulted: hard_dump)\n"
                  <<"options:\n"
@@ -122,7 +131,7 @@ int main(int argc, char **argv){
                  <<"    -m [int]:     running mode: 0: evolve system to time_end; 1: stability check: "<<mode<<std::endl
                  <<"    -p [string]:  hard parameter file name: "<<fhardpar<<std::endl
 #ifdef STELLAR_EVOLUTION
-                 <<"    -I [int]:     Stellar evolution option: \n"
+                 <<"    -I [int]:     Stellar evolution option \n"
 #endif
 #ifdef BSE_BASE
                  <<"    -i [int]      random seed to generate kick velocity\n"
@@ -130,6 +139,9 @@ int main(int argc, char **argv){
 #endif
 #ifdef SOFT_PERT
                  <<"    -S:           Suppress soft perturbation (tidal tensor)\n"
+#endif
+#ifdef HERMITE_PN
+                 <<"    -P [double]:  Precession criterion to switch on PN terms, in unit of radian \n"
 #endif
                  <<"    -v [int]:     version of hard parameters: 0: default, 1: mssing ds_scale in ar_manager: 0\n"
                  <<"    -h:           help\n";
@@ -239,6 +251,13 @@ int main(int argc, char **argv){
       std::cerr<<"New AR relative energy error maximum: "<<e_err_ar<<std::endl;
       hard_manager.ar_manager.energy_error_relative_max = e_err_ar;
   }
+
+#ifdef HERMITE_PN
+  if(pn_p>0) {
+      std::cerr<<"New post-newtonian precession criterion: "<<pn_p<<std::endl;
+      hard_manager.h4_manager.interaction.pn.precession_criterion = pn_p;
+  }
+#endif
 
   hard_manager.checkParams();
   hard_manager.print(std::cerr);

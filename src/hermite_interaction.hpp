@@ -105,13 +105,13 @@ public:
                          <<std::endl;
             }
 
-            Float a1[6][3], a2[6][3], ad1[6][3], ad2[6][3];
-            pn.calcAccJerkPN(a1, a2, ad1, ad2, NULL, NULL, _pi, _pj, used_pn_orders);
-            pn.sumAccJerkPN(&_fi.acc0[0], &_fi.acc1[0], a1, ad1);
+            Float ai[6][3], aj[6][3], adi[6][3], adj[6][3];
+            pn.calcAccJerkPN(ai, aj, adi, adj, NULL, NULL, _pi.mass, _pj.mass, dr, dv, NULL, NULL, used_pn_orders);
+            pn.sumAccJerkPN(&_fi.acc0[0], &_fi.acc1[0], ai, adi);
 
             const Float rinv = 1.0/r;
             const Float gmor = gravitational_constant*_pj.mass*rinv;
-            _fi.pot += gmor;
+            _fi.pot += -gmor;
 
         }
         else {
