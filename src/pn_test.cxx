@@ -76,11 +76,10 @@ int main(int argc, char **argv){
     pn.precession_criterion = 1e-9;
 
     Float a1[6][3], a2[6][3], ad1[6][3], ad2[6][3], s1[3]={0.0}, s2[3]={0.0};
-    bool used_pn_orders[6];
+    bool used_pn_orders[6] = {true, true, true, true, true, true};
 
     bin.calcOrbit(p1,p2, G);
-    pn.setUsedPNOrders(used_pn_orders, bin.r, bin.m1+bin.m2);
-    used_pn_orders[5] = true;
+    //pn.setUsedPNOrders(used_pn_orders, bin.r, bin.m1+bin.m2);
     std::cout<<"Used orders: "
              <<"  PN1 "<<used_pn_orders[0]
              <<"  PN2 "<<used_pn_orders[1]
@@ -88,7 +87,13 @@ int main(int argc, char **argv){
              <<"  PN3 "<<used_pn_orders[3]
              <<"  PN3.5 "<<used_pn_orders[4]
              <<"  Spin "<<used_pn_orders[5]<<std::endl;
-    pn.calcAccJerkPN(a1, a2, ad1, ad2, s1, s2, p1, p2, used_pn_orders);
+    Float dr[3] = {p2.pos[0] - p1.pos[0],
+                   p2.pos[1] - p1.pos[1],
+                   p2.pos[2] - p1.pos[2]};
+    Float dv[3] = {p2.vel[0] - p1.vel[0],
+                   p2.vel[1] - p1.vel[1],
+                   p2.vel[2] - p1.vel[2]};
+    pn.calcAccJerkPN(a1, a2, ad1, ad2, s1, s2, p1.mass, p2.mass, dr, dv, p1.spin, p2.spin, used_pn_orders);
 
     Float acc1[3]={0.0}, adot1[3]={0.0}, acc2[3]={0.0}, adot2[3]={0.0};
     pn.sumAccJerkPN(acc1, adot1, a1, ad1);
