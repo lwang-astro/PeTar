@@ -3649,6 +3649,7 @@ public:
                 abort();
             }
             disk_parameters.input_par_store.writeAscii(fpar_out);
+            fclose(fpar_out);
 #endif
 #ifdef EXTERNAL_HARD
             // save galpy parameters
