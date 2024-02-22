@@ -588,7 +588,7 @@ public:
         assert(dt_limit_hard_factor.value > 0.0);
         assert(dt_min_hermite_index.value > 0);
         assert(e_err_ar.value > 0.0);
-        assert(eps.value>=0.0);
+        assert(eps.value>=0.0 && eps.value<=ratio_r_cut.value); // avoid incorrect self-potential correction after tree force, when eps>r_out, self-potential is G m /r_eps instead of G m/r_cut;
         assert(sd_factor.value>0.0);
         assert(ratio_r_cut.value>0.0);
         assert(ratio_r_cut.value<1.0);
