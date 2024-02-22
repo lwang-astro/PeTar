@@ -515,6 +515,27 @@ class DictNpArrayMix:
                     icol += ncols
             return dat_out
 
+    def getColumnInfo(self):
+        """
+        Get column position (counting from 0), key member name and data type of the reading data file.
+        Output a list, each element is a tuple of the three parameters.
+        All sub class members are resolved.
+        """
+        position = 0
+        dt = self.collectDtype()
+        column_info = []
+        for key, par in dt:
+            column_info.append((position, key, par))
+            if type(par) == tuple:
+                if (type(par[0]) == type) & (type(par[1]) == int):
+                    position += par[1]
+                else:
+                    position += 1
+            else:
+                position += 1
+        return column_info
+
+
     def printTable(self, column_format, print_title=True):
         """
         print Table with defined column list and formats

@@ -120,7 +120,7 @@ def calcGWMyr(m1, m2, semi, ecc):
             return (12.0/19.0)*c0**4/beta*(eint[0])*1e-6
 
     semi_au = semi*pc_to_au
-    if (type(m1) == np.ndarray | type(m1) == list):
+    if (type(m1) == np.ndarray) | (type(m1) == list):
         return np.array(list(map(time_gw_myr_one,m1,m2,semi_au,ecc)))
     else: 
         return time_gw_myr_one(m1, m2, semi_au, ecc)
