@@ -75,6 +75,7 @@ The version format has three types:
          - [Hard energy significant](#hard-energy-significant)
          - [Large step warning](#large-step-warning)
          - [Hard dump with errors](#hard-dump-with-errors)
+         - [Hard debug tool](#hard-debug-tool)
          - [Crash with assertion](#crash-with-assertion)
     - [Data format update for old versions](#data-format-update-for-old-versions)
     - [Reference](#reference)
@@ -708,6 +709,40 @@ Users can report this issue by contacting the developer via GitHub or email.
 In the content, users need to describe the version of PeTar, the configure options, the initial conditions of the simulations and attach the "hard_dump.\*", the input parameter files (starting with "input.par.\*".
 
 Users can also check the details by using the debug tool _petar.hard.debug_ together with the GDB tool, if users prefer to understand the problems themselves. The knowledge of the source codes of SDAR is required to understand the messages from the debug tool.
+
+#### Hard debug tool
+The three warnings above will generate the dump files that can be read by _petar.hard.debug_ tool. This tool can redo the simulation for one tree time step for the isolated hard sub-cluster where the warning comes. This can help to find how this warning comes out.
+
+The basic usage is
+```
+petar.hard.debug [dump file name] >debug.log 
+```
+In this way, _petar.hard.debug_ tool will print the snapshots of particle data per line in the main output (debug.log) and additional information in the printed message.
+
+To read the debug.log, you can use the python analysis tool `petar.HardData`. Here is the sample script to read the debug.log, converting the first two particles to a binary and plot the evolution of semi-major axis:
+```
+# read petar.hard.debug log, N_particle is total particle number in the sub-cluster (n_ptcl), N_sd is group number (n_group), get this from petar.hard.debug printing message 
+# please provide correct option arguments for interrupt_mode and external_mode in order to correctly read the debug.log
+hard = petar.HardData(member_type=petar.Particle, particle_type='hard', interrupt_mode='bse', external_mode='galpy', N_particle=4, N_sd=2)
+hard.loadtxt(path+'debug.log',skiprows=1)
+
+# get column indices and names
+hard.getColumnInfo()
+
+# convert first two particles to binary
+b = petar.Binary(hard.particles.p0, hard.particles.p1, G=petar.G_MSUN_PC_MYR)
+
+# plot time-semi
+import matplotlib.pyplot as plt
+%matplotlib inline
+fig, axes = plt.subplots()
+axes.plot(hard.time, b.semi)
+```
+
+The printing message first show the input parameters for simulation, and then show the number of particle (n_ptcl) and number of groups (n_group). 
+The following messages include the information about the group (binary, triple, ...) formation, exchange and disruption.
+The interruption event is shown if stellar evolution is used.
+These information can help to understand how energy error grows large, why large step exists and where the error occurs.
 
 #### crash with assertion
 
