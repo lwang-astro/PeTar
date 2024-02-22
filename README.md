@@ -365,7 +365,7 @@ Here a few useful options are listed.
 -  -s: the tree time step, should be the integer power of 0.5. When this is set, the changeover radius is automatically determined (see paper for reference), unless `-r` is used manually.
 -  -r: set the outer boundary of changeover radii. When this is set, tree time step is automatically determined.
 -  -a: data appending option. If `-a 1` is used (default), the new data will be appended to existing files after restart, otherwise files are rewritten. Be careful when you want to restart the simulations with this option.
--  -b: the initial binary fraction number. This is important to correctly calculate the velocity dispersion, which is used to automatically determine tree time step and changeover radii. So it must be correctly set when primordial binaries exist. Besides, all primordial binaries should appear first in the input data file (two neighbor lines per pair).
+-  -b: the initial binary number. This is important to correctly calculate the velocity dispersion, which is used to automatically determine tree time step and changeover radii. So it must be correctly set when primordial binaries exist. Besides, all primordial binaries should appear first in the input data file (two neighbor lines per pair).
 -  -w: output style. Users can control the whether to output snapshot data. If `-w 2` is used, all particle data will be printed in one line together with a status information of the system per output time. This can be convenient for data analysis when N is small. 
 -  -i: the format of snapshot data. This can be used to determine whether read or write snapshot data in BINARY or ASCII format.
 -  -G: gravitational constant. 
@@ -614,7 +614,7 @@ To check the details of the generated files from _petar.data.gether_ and cooresp
 Since each file contains a large number of columns, it is recommended to use the Python data analysis tool to access them. 
 The data analysis tool is very convenient to pick up the specific parameter (column) and process the data (selection, calculation and plotting), similar to the `dict` and `numpy` in Python.
 It also helps to avoid reading wrong columns. 
-Thus, the defnition of columns are not listed in the manual and are also not in the header of files.
+Thus, the definition of columns are not listed in the manual and are also not in the header of files.
 Please refer to the help information of the corresponding analysis tool for each file.
 
 The raw snapshots files do not include the information for binaries or multiple systems. To identify them and obtain the Lagrangian and core properties,

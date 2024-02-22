@@ -1569,7 +1569,8 @@ public:
                         dz = pos_k[2]-pos_j[2];
                     }
                     double rxy= std::sqrt(dx*dx+dy*dy);
-                    double phi= std::acos(dx/rxy);
+                    //double phi= std::acos(dx/rxy);
+                    double phi= std::atan2(dy, dx);
                     double sinphi = dy/rxy;
                     double cosphi = dx/rxy;
                     auto& pot_args = pot_sets[j].arguments;
@@ -1628,7 +1629,7 @@ public:
                 double dy = y[i]-pos_k[1];
                 double dz = z[i]-pos_k[2];
                 double rxy= std::sqrt(dx*dx+dy*dy);
-                double phi= std::acos(dx/rxy);
+                double phi= std::atan2(dy, dx);
                 double sinphi = dy/rxy;
                 double cosphi = dx/rxy;
 
@@ -1640,6 +1641,7 @@ public:
 #else
                 double acc_phi = calcphitorque(rxy, dz, phi, t, npot, pot_args);
 #endif
+//                double pot_i = evaluatePotentials(rxy, dz, phi, t, npot, pot_args);
                 double pot_i = evaluatePotentials(rxy, dz, npot, pot_args);
                 double gm_pot = pot_set_pars[k].gm;
                 if (rxy>0.0) {
