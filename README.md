@@ -7,29 +7,58 @@
     ╚═╝     ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝
 ```
 
-PeTar is a N-body code designed to model collisional stellar systems, where multiplicity (binaries, triples ...) and close encounters are important for dynamical evolution. 
-It combines three integration methods:
-- The Barnes-Hut tree (Barnes & Hut 1986) is used to calculate long-range forces between particles, which are integrated with a second-order symplectic leap-frog integrator.
-- The fourth-order Hermite integrator with block time steps (e.g., Aarseth 2003) is applied to integrate the orbits of stars and the centers-of-mass of multiple systems with short-range forces.
-- The slow-down algorithmic regularization method (SDAR; Wang, Nitadori & Makino 2020) is used to integrate the multiple systems, such as hyperbolic encounters, binaries and hierarchical few-body systems.
+PeTar is an N-body code specifically designed for modeling collisional stellar systems, where factors such as multiplicity (binaries, triples, etc.) and close encounters play a crucial role in dynamical evolution. PeTar offers several key advantages:
 
-This readme provide a complete and short documentation to describe how to install and use the code. 
-Please carefully read it first before asking questions to developers.
-More detail of the algorithms are described in Wang et al. (2020; arXiv: https://arxiv.org/abs/2006.16560).
-The Doxygen documentation for developers is under preparation.
-In the test folder, there are two sample scripts (sample.sh and sample_galpy.sh) showing how to generate initial condition from mcluster, start the simulation and process the data to generate single, binary snapshots, core information and lagrangian radii. 
-sample.sh includes binaries and stellar evolution (bse), sample_galpy.sh add Milky Way potential using galpy based on sample.sh.
+- **Precise gravitational force modeling**: PeTar does not employ any softening of gravitational force, enabling accurate tracking of the orbital evolution of binaries, triples, and close encounters.
 
-The main body of PeTar is written in c++ language. The external modules can have different programme languages.
-The data analysis tool is written in Python3. Users need the basic knowledge of Python to access the simulation data.
-Especially, it is recommended to learn how to use the Python modules `numpy`, `dict` and `matplotlib`, which cover the most functions to read, process and plot data. 
+- **Incorporation of single and binary stellar evolution**: Within the N-body simulation, PeTar dynamically evolves the masses, radii, and stellar types of individual stars. It also tracks significant events like supernovae, mass transfer, common envelope interactions, and binary mergers caused by stellar coalescence/collision and gravitational wave emission.
+
+- **Galactic potential inclusion**: PeTar allows for the simulation of tidal effects on stellar systems by incorporating the galactic potential.
+
+- **Parallel computing capabilities**: PeTar leverages multi-CPU processors/threads and GPU acceleration to accelerate simulations. This enables handling of over $10^7$ particles with a $100\%$ binary fraction.
+
+- **Interoperability with other codes**: PeTar can function as a module within other codes, facilitating the simulation of complex stellar environments. This includes compatibility with frameworks like AMUSE and SPH-based hydrodynamical code Asura-bridge.
+
+The core N-body algorithm of PeTar encompasses three distinct methods, each tailored to the separation distance between individual pairs of particles (stars):
+
+- **Barnes-Hut tree method**: This technique, introduced by Barnes and Hut in 1986, is utilized for computing long-range forces between particles. These forces are then integrated using a second-order symplectic leap-frog integrator.
+
+- **Fourth-order Hermite integrator with block time steps**: PeTar employs this integrator, inspired by Aarseth's work in 2003, to precisely integrate the orbits of stars and the centers-of-mass of multiple systems. It is particularly effective for handling short-range forces.
+
+- **Slow-down algorithmic regularization method (SDAR)**: PeTar leverages the SDAR method, developed by Wang, Nitadori, and Makino in 2020, to integrate the dynamics of short-distance multiple systems. This is especially useful for scenarios involving hyperbolic encounters, binaries, and hierarchical few-body systems.
+
+The core implementation of PeTar is predominantly in the C++ programming language. However, external modules within PeTar can be written in various programming languages.
+The data analysis tool accompanying PeTar is developed in Python 3. Users are required to have a fundamental understanding of Python to effectively interact with the simulation data.
+In particular, users are encouraged to familiarize themselves with key Python modules such as `numpy`, `dict`, and `matplotlib`. These modules encompass a wide range of functions essential for tasks like data reading, processing, and visualization.
+
+This README document serves as a concise yet comprehensive guide detailing the installation and utilization of the code. It is strongly recommended that users thoroughly review this documentation before reaching out to the developers with any queries.
+
+For a deeper understanding of the algorithms employed, additional details can be found in the work by Wang et al. (2020; available on arXiv: https://arxiv.org/abs/2006.16560).
+A Doxygen documentation tailored for developers is currently in the process of being prepared.
+
+For a quick start, once the installation process is finished, users can explore two sample scripts in the test folder: [sample.sh](https://github.com/lwang-astro/PeTar/blob/master/test/sample.sh) and [sample_galpy.sh](https://github.com/lwang-astro/PeTar/blob/master/test/sample_galpy.sh). These scripts offer practical demonstrations of the entire process of simulating a star cluster using the PeTar code. This includes generating initial conditions from `mcluster`, initiating simulations, and processing data to create single and binary snapshots, core information, and Lagrangian radii.
+
+The sample.sh script incorporates binaries and stellar evolution (bse), while sample_galpy.sh enhances the simulation by integrating the Milky Way potential using galpy, building upon the functionalities of sample.sh.
 
 ## About the version
-The master branch of PeTar is frequently updated. In order to avoid using the unstable version, users can check the version printed by running `petar -h`.
-The version format has three types:
-- Develop mode: [PeTar commit count]_[SDAR commit count]. In develop mode, the code can be used and should work properly for most conditions, some features are not fully tested. If users found an unphysical result, please report to the developers.
-- Test mode: test_[PeTar commit count]_[SDAR commit count]. In test mode, the code is not confirmed to work properly, please don't use it for production.
-- Release mode: r[PeTar release number]_r[SDAR release number]. In release mode, the code is a stable version. It is recommended to use. The release version is updated with a low frequency. Right now the first release is under preparing. 
+
+PeTar code is maintained across multiple branches, and for users seeking stability, it is advisable to obtain the released version. The master branch undergoes regular updates to introduce new features and address bugs. Users can opt for this version if they find the new features beneficial.
+
+Other branches may not function correctly, and users are advised against interacting with them unless they have consulted the developer and comprehended the implementations and existing issues.
+
+Users can retrieve the code version by running `petar -h` or using `petar` to start a simulation. The code version will be presented in the format `[petar version][suffix]_[SDAR version]`, where:
+- `[petar version]` represents the commit count of the PeTar code.
+- `[SDAR version]` indicates the commit count of the SDAR code.
+- `[suffix]` signifies the development mode. If absent, it denotes the master version. If `[suffix]` is `e` or another term, it indicates an experimental or specialized version.
+
+The major modes are as follows:
+
+- **Release mode (r)**: This mode signifies a stable version recommended for general use. Release versions are infrequently updated, with the initial release currently being prepared.
+- **Master mode**: This mode is suitable for most conditions and is expected to function correctly. Users can use it for production runs.
+- **Develop mode (e)**: In this mode, the code should operate correctly but may contain bugs that lead to unexpected results. It is advisable to consult developers before use.
+- **Test mode (test)**: This mode is unverified for proper functioning and should not be employed for production purposes.
+
+The subsequent sections provide detailed explanations of the installation process and usage instructions. The final sections offer a brief overview of the methods employed in the code and introduce the AMUSE API.
 
 ## Content:
 - [Install](#install)
