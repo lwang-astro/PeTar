@@ -25,7 +25,7 @@ The core N-body algorithm of PeTar encompasses three distinct methods, each tail
 
 - **Fourth-order Hermite integrator with block time steps**: PeTar employs this integrator, inspired by Aarseth's work in 2003, to precisely integrate the orbits of stars and the centers-of-mass of multiple systems. It is particularly effective for handling short-range forces.
 
-- **Slow-down algorithmic regularization method (SDAR)**: PeTar leverages the SDAR method, developed by Wang, Nitadori, and Makino in 2020, to integrate the dynamics of short-distance multiple systems. This is especially useful for scenarios involving hyperbolic encounters, binaries, and hierarchical few-body systems.
+- **Slow-down algorithmic regularization method (SDAR)**: PeTar leverages the SDAR method, developed by Wang, Nitadori, and Makino in 2020, to integrate the dynamics of close-distance multiple systems. This is especially useful for scenarios involving hyperbolic encounters, binaries, and hierarchical few-body systems.
 
 The core implementation of PeTar is predominantly in the C++ programming language. However, external modules within PeTar can be written in various programming languages.
 The data analysis tool accompanying PeTar is developed in Python 3. Users are required to have a fundamental understanding of Python to effectively interact with the simulation data.
@@ -138,29 +138,45 @@ The subsequent sections provide detailed explanations of the installation proces
     - [Parallelization methods](#parallelization-methods)
 - [AMUSE API](#amuse-api)
 
-## Install
+## Installation
+
+This section describes how to install PeTar, including the required libraries and codes, the computer environment, and the installation options.
+
 ### Dependence
-_FDPS_: https://github.com/FDPS/FDPS (please use v6.0 or v7.0; v7.1 may not work)
 
-_SDAR_: https://github.com/lwang-astro/SDAR
+PeTar is built upon the FDPS and the SDAR codes. FDPS offers the particle-tree & particle-particle method and MPI and OpenMP parallelization. SDAR is an N-body code library that incorporates the slow-down algorithmic regularization and Hermite integrator for simulating the motion of particle clusters with short-range and close-distance interactions.
 
-These two libraries are necessary to compile _petar_. 
-Notice that the newest version of _FDPS_ (v7.1) has an issue that might cause a crash of _petar_ with an assertion error of NaN check.
-After git clone of _FDPS_, please checkout the old release v7.0 by 
+Please download the two codes from the following GitHub links:
+
+- _FDPS_: https://github.com/FDPS/FDPS (please use v6.0 or v7.0; v7.1 may not work)
+
+- _SDAR_: https://github.com/lwang-astro/SDAR
+
+The latest version of FDPS (v7.1) has a known issue that could lead to a crash of PeTar with an assertion error related to NaN check. After cloning FDPS from Git, in the FDPS directory, switch to the previous release v7.0 using the command:
 ```
 git checkout v7.0
 ```
-in the _FDPS_ directory.
 
-If users want to use external potential, the _Galpy_ interface is available. Users need to install _Galpy_ either by 
+To incorporate external galactic potentials in simulations, users can use the _Galpy_ code through an interface integrated into PeTar. To use Galpy, users should install it either by executing 
 ```
-pip3 install galpy
+pip3 install --user galpy
 ```
-Or download the source code from https://github.com/jobovy/galpy.
+In this scenario, PeTar can automatically detect Galpy.
+If `pip3` is unavailable, users can mamually download the source code from https://github.com/jobovy/galpy and specify the code path in the configure command (refer to the following guide).
 
-If the source codes of these libraries are put in the same directory where the _PeTar_ directory exist, the configure script (see Section [make](#make)) can detect them automatically. Otherwise users need to provide the pathes of them by adding configure options
+#### Dependent code path
+
+If the source codes of these dependent libraries are located in the same directory as the _PeTar_ directory, the configure script (see Section [make](#make)) can automatically detect them. Otherwise, users will need to specify their pathes by adding configure options:
 ```
-./configure --with-[code name in lower case]-prefix=[code path]
+./configure --with-[code name in lower case]-prefix=[code path] ...
+```
+
+For example, if the PeTar, FDPS and SDAR codes are placed in the directory with pathes: `/home/username/code/PeTar`, `/home/username/code/FDPS` and `/home/username/code/SDAR`
+the automatic detection will function.
+
+In a different scenario, such as when Galpy is used but not installed via `pip3` and the Galpy source code is located in `/home/username/python/Galpy`, users will have to specify its path using:
+```
+./configure --with-galpy-prefix=/home/username/python/Galpy ...
 ```
 
 ### Environment
