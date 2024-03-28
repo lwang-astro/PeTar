@@ -67,21 +67,20 @@ The subsequent sections provide detailed explanations of the installation proces
         - [Code path](#code-path)
     - [Environment requirements](#environment-requirements)
         - [For supercomputer](#for-supercomputer)
-    - [Compiling the code](#compiling-the-code)
-        - [Useful Configuration Options](#useful-configuration-options)
-            - [Installation Path](#installation-path)
-            - [Modifying MPI Parallelization Options](#modifying-mpi-parallelization-options)
-            - [Manual Compiler Selection](#manual-compiler-selection)
-            - [Disabling OpenMP parallelization](#disabling-openmp-parallelization)
-            - [Use X86 with SIMD](#use-x86-with-simd)
-            - [Use Fugaku A64FX architecture](#use-fugaku-a64fx-architecture)
-            - [Use GPU (CUDA)](#use-gpu-cuda)
-            - [Debug mode](#debug-mode)
-            - [Use stellar evolution](#use-stellar-evolution)
-            - [Use Galpy external potential library](#use-galpy-external-potential-library)
-            - [Multiple options](#multiple-options)
-        - [Make](#make)
-- [Use](#use)
+    - [Configuration](#configuration)
+        - [Installation Path](#installation-path)
+        - [Modifying MPI Parallelization Options](#modifying-mpi-parallelization-options)
+        - [Manual Compiler Selection](#manual-compiler-selection)
+        - [Disabling OpenMP parallelization](#disabling-openmp-parallelization)
+        - [Selecting CPU Architecture](#selecting-cpu-architecture)
+        - [Selecting SIMD Instructions](#selecting-simd-instructions)
+        - [Enabling GPU Acceleration](#enabling-gpu-acceleration)
+        - [Debug mode](#debug-mode)
+        - [Utilizing Stellar Evolution](#utilizing-stellar-evolution)
+        - [Using External Potential](#using-external-potential)
+        - [Multiple options](#multiple-options)
+     - [Compilation and Installation](#compilation-and-installation)
+- [Usage](#usage)
     - [petar commander](#petar-commander)
     - [CPU threads](#cpu-threads)
     - [MPI processors](#mpi-processors)
@@ -200,15 +199,13 @@ All compilers should be accessible in the `$PATH` environment. For instance, to 
 
 Generally, the supercomputer offers various compiler options, such as different versions of Intel and GNU compilers. Before installing PeTar, users should ensure they correctly set up the compilers by reviewing the manual or consulting the supercomputer administrators.
 
-### Compiling the code
+### Configuration
 
 Once the required libraries such as FPDS and SDAR are accessible, go to the _PeTar_ directory and run the following command:
 ```
 [environment variables] ./configure [options]
 ```
 This command will examine the local environment, automatically identify the compilers and features, with `[environment variables]` and `[options]` representing additional options to manage the features. Upon completion of the configuration process, a summary log will be displayed. It is important to review this log carefully to correctly choose the environment variables and options, including the paths for dependent libraries and compilers.
-
-### Useful Configuration Options
 
 To view the available environment variables and options for configure, use the following command:
 ```
@@ -217,7 +214,7 @@ To view the available environment variables and options for configure, use the f
 
 A few useful environment variables and options are presented as follows:
 
-##### Installation Path
+#### Installation Path
 
 To specify a custom installation path, use the following command:
 ```
@@ -229,9 +226,9 @@ The default installation path set by the configure script is `/user/local`, whic
 ./configure --prefix=/home/username/tools
 ```
 
-If the code has been previously installed and the executable file (`petar`) is already in the `$PATH` environment, configure will automatically use the same directory for installation.
-   
-##### Modifying MPI Parallelization Options
+If PeTar has been previously installed and the executable file (`petar`) is already in the `$PATH` environment, configure will automatically use the same directory for installation.
+  
+#### Modifying MPI Parallelization Options
 
 To enable or disable MPI parallelization, use the following command:
 ```
@@ -243,7 +240,7 @@ where `[choices]` can be `auto`, `yes`, or `no`:
 - yes: use the MPI C++ compiler.
 - no: use a non-MPI C++ compiler.
 
-##### Manual Compiler Selection
+#### Manual Compiler Selection
 
 By default, configure will detect the C++, C, and Fortran compilers in the `$PATH` environment. If users prefer to manually specify these compilers, they can modify the environment variables `CXX`, `CC`, and `FC` accordingly. For instance, if users wish to use Intel C++ and C compilers with Intel MPI, they can use the following command:
 ```
@@ -260,108 +257,146 @@ For Mac OS users, clang, clang++, and flang compilers can be used instead of GNU
 CXX=clang++ CC=clang FC=flang ./configure
 ```
 
-##### Disabling OpenMP Parallelization
+#### Disabling OpenMP Parallelization
 
-By default, the code enables multi-threaded OpenMP parallelization. To disable OpenMP, use the following command:
+By default, PeTar enables multi-threaded OpenMP parallelization. To disable OpenMP, use the following command:
 ```
 ./configure --disable-openmp
 ```
 
-##### Use X86 with SIMD
-```
-./configure --with-simd=[auto/avx/avx2/avx512dq]
-```
-- auto (default): automatical detection based on local CPU architecture 
-- avx: use AVX for tree force calculation and tree neighbor counting
-- avx2: use AVX2
-- avx512dq: use AVX512F and AVX512DQ
-    
-This option switch on the SIMD support for force calculation, the _auto_ case check whether the compiler (GNU or Intel) support the SIMD instructions and choose the newest one. Notice that the supported options of the compiler and the running CPU are different. Please check your CPU instruction whether the compiled option is supported or not. If the CPU can support more than the compiler, it is suggested to change or update the compiler to get better performance.
+#### Selecting CPU Architecture
 
-##### Use Fugaku A64FX architecture
+PeTar can utilize SIMD-like instructions to optimize the performance of tree force calculation and tree neighbor counting. The currently supported CPU architectures for enabling this feature are Intel/AMD x86 and Fugaku ARM A64FX. Users can specify the architecture using the following command:
+
 ```
-./configure --with-arch=fugaku
+./configure --with-arch=[choices]
 ```
 
-The tree force and neighbor search functions using Fugaku A64FX instruction set are supported now. 
-Notice that in Fugaku supercomputer, the configure only work on the running nodes. 
-Users should launch an interactive job to configure and compile the code.
-    
-##### Use GPU (CUDA)
+where `[choices]` include `x86` and `fugaku`:
+
+- x86 (default): Intel and AMD CPU architecture, commonly used.
+- fugaku: Fugaku supercomputer CPU architecture, supporting A64FX instructions.
+
+Please note that on the Fugaku supercomputer, the configuration only applies to the active nodes. Users are advised to initiate an interactive job to configure and compile the code.
+
+#### Selecting SIMD Instructions
+
+PeTar supports multiple SIMD versions to enhance the performance of tree force calculation and tree neighbor counting. Users can choose the SIMD version using the following command:
+
+```
+./configure --with-simd=[choices]
+```
+
+where `[choices]` can be `auto`, `avx`, `avx2`, or `avx512`, with the latter offering the highest speed:
+
+- auto (default): automatically detects based on the local CPU architecture
+- avx: uses core-avx-i (theoretical speedup of 4x for single precision, 2x for double precision)
+- avx2: uses core-avx2 (8x for single, 4x for double)
+- avx512: uses skylake-avx512 (AVX512F and AVX512DQ) (16x for single, 8x for double)
+
+Please note that the supported SIMD options of the compiler and the running CPU may differ. Make sure to use the SIMD version supported by the running CPU.
+
+In the case of a supercomputer, the host and computing nodes might feature distinct CPU architectures. The configure script detects the SIMD version based on the local CPU. It is advisable to verify whether the CPU instructions on the computing node support a superior SIMD choice and opt for that during compilation.
+
+#### Enabling GPU Acceleration
+
+PeTar supports the utilization of GPUs based on the CUDA language to accelerate tree force calculations as an alternative speed-up method to SIMD acceleration. To enable this feature, use the following command:
+
 ```
 ./configure --enable-cuda
 ```
-By default GPU is not used. To switch on it, make sure the NVIDIA CUDA is installed and consistent with the c++ compiler.
-    
-##### Debug mode
+
+By default, the GPU is not utilized. To enable it, ensure that NVIDIA CUDA is installed and compatible with the C++ compiler.
+
+#### Debug Mode
+
+If the code crashes or a bug is present, users can enable the debugging mode as follows:
+
 ```
-./configure --with-debug=[assert/g/no]
+./configure --with-debug=[choices]
 ```
-- assert: switch on all assertion check
-- g: switch on compiler option '-g -O0 -fbounds-check' in order to support debugger such as gdb
-- no: no debugging, optimized performance (default)   
-   
-##### Use stellar evolution
+
+where `[choices]` can be `assert`, `g`, or `no`:
+
+- assert: enables all assertion checks to detect unexpected behaviors
+- g: activates compiler options '-g -O0 -fbounds-check' to support debuggers like gdb
+- no: disables debugging for optimized performance (default)
+
+#### Utilizing Stellar Evolution
+
+Users can enable stellar evolution for stars and binaries using the following command:
+
 ```
-./configure --with-interrupt=[bse/mobse/bseEmp]
+./configure --with-interrupt=[choices]
 ```
-Currently there are three options of stellar evolution packages based on SSE/BSE (Hurley et al. 2000, MNRAS, 315, 543; 2002, MNRAS, 329, 897):
+
+where `[choices]` include `bse`, `mobse`, and `bseEmp`.
+In this option name, 'interrupt' refers to the N-body integration being interrupted by external effects on particles.
+
+There are currently three options for stellar evolution packages based on SSE/BSE (Hurley et al. 2000, MNRAS, 315, 543; 2002, MNRAS, 329, 897):
+
 - bse: the updated SSE/BSE version from Banerjee et al. 2020, A&A, 639, A41.
 - mobse: the MOSSE/MOBSE from Giacobbo et al. 2018, MNRAS, 474, 2959.
-- bseEmp: the udpated SSE/BSE version from Tanikawa et al. 2020, MNRAS, 495, 4170.
+- bseEmp: the updated SSE/BSE version from Tanikawa et al. 2020, MNRAS, 495, 4170.
 
-Notice that here all SSE/BSE package names (here after [bse_name]) only contain 'bse', but the SSE package is also included.
+It is important to mention that while all SSE/BSE package names only contain 'bse', the SSE package is also encompassed within them. From now on, the SSE/BSE based package will be denoted in a universal form as '[bse_name]'.
 
-When this option is switched on, the standalone tool _petar.[bse_name]_ will also be compiled and installed.
-This is a c++ based tool which call the stellar evolution functions to evolve single and binary stars to the given age and metallicity. OpenMP parallelization is used to speed up the calculation if a large group of stars and binaries are provided.
+Enabling this option will also compile and install the standalone tool _petar.[bse_name]_. This C++ based tool calls stellar evolution functions to evolve single and binary stars to a specified age and metallicity. OpenMP parallelization is utilized to accelerate calculations when handling a large group of stars and binaries.
 
-Currently, to use the extreme metal poor evolution track of bseEmp, users should create a soft link in the running directory to 'bse-interface/bseEmp/emptrack/ffbonn'.
-Otherwises, the simulation will crash with a file IO error.
+To use the extreme metal-poor evolution track of bseEmp, users must create a symbolic link in the working directory to either the _ffbonn_ or _ffgeneva_ directory located in 'PeTar/bse-interface/bseEmp/emptrack/', depending on the selected stellar evolution track mode during the execution of PeTar. Failure to do this will lead to a file I/O error, causing the simulation to crash.
 
-When SSE/BSE packages are used, users can control whether to switch on stellar evolution during the simulation by using _petar_ option `--stellar-evolution` and '--detect-interrupt' for single and binary evolution, respectively.
-When `--stellar-evolution 2` is used, the dynamical tide for binary stars and hyperbolic gravitational wave energy/angular momentum loss for compact binaries are switched on.
-But currently the dynamical tide is still an experimental function, it is not confirmed that the result is always physical. 
-In default (`--stellar-evolution 1`), dynamical tide is not switched on.
+When utilizing SSE/BSE packages, users can control whether to activate stellar evolution during the simulation using the _petar_ option `--stellar-evolution` and `--detect-interrupt` for single and binary evolution, respectively. When `--stellar-evolution 2` is specified, dynamical tide for binary stars and hyperbolic gravitational wave energy/angular momentum loss for compact binaries are enabled. It's worth noting that the dynamical tide is still an experimental feature, and its results may not always be physically accurate. By default (`--stellar-evolution 1`), dynamical tide remains inactive.
 
-##### Use _Galpy_ external potential library
+#### Using External Potential
+
+Users can incorporate external potential and force into particles by utilizing the following command:
+
 ```
-./configure --with-external=galpy
+./configure --with-external=[choices]
 ```
-The _Galpy_ library is a _Python_ and _c_ based external potential library, which provides a plenty choices of potentials. 
-It is also flexible to combine multiple potentials together (require to use _Galpy_ _Python_ interface to generate the instance, see their document in details).
 
-When this option is switched on, the standalone tool _petar.galpy_ and _petar.galpy.help_ will also be compiled and installed.
-- _petar.galpy_ is a simple tool to call _Galpy_ c interface to evaluate the acceleration and potentials for a list of particles with a given potential model.
-- _petar.galpy.help_ is a tool (python script) to help users to generate the input options for potential models. When users use _Galpy_ _Python_ interface to design a specific potential, this tool also provides a function to convert a _Galpy_ potential instance to an option or a configure file used by _PeTar_.
+Currently, `[choices]` offers only one option: `galpy`. Additional options will be introduced in future versions.
 
-##### Multiple options
-Multiple options should be combined together, for example:
+The Galpy library is an external potential library based on Python and C, offering a wide range of potential choices. It allows for the flexible combination of multiple potentials (requiring the use of the Galpy Python interface to instantiate, as detailed in their documentation).
+
+Enabling this option will also compile and install the standalone tools `petar.galpy` and `petar.galpy.help`:
+- `petar.galpy` is a straightforward tool that utilizes the Galpy C interface to compute acceleration and potentials for a particle list using a specified potential model.
+- `petar.galpy.help` is a Python script tool designed to assist users in generating input options for potential models. When designing a specific potential using the Galpy Python interface, this tool also offers a function to convert a Galpy potential instance into an option or a configuration file used by PeTar.
+
+#### Combining Multiple Options
+
+When combining multiple options, they should be used together, as shown in the example below:
 ```
 ./configure --prefix=/opt/petar --enable-cuda
 ```
-will install the executable files in /opt/petar (this directory requires root permission) and switch on GPU support.
+This command will install the executable files in /opt/petar (this directory requires root permission) and activate GPU support.
 
-#### Make
+### Compilation and Installation
 
-After configure, use 
+After configuring, execute the following commands:
 ```
 make
 make install
 ```
 to compile and install the code.
 
-The excutable files, _petar_ and _petar.[tool name]_, will be installed in [Install path]/bin.
-1. _petar_ is the main routine to perform N-body simulations. It is actually a soft link to _petar.\*\*_, where the suffix represents the feature of the code based on the configure.
-2. _petar.[tool name]_ are a group of tools for debugging, datafile initialization, performance optimization and data analysis. The details can be checked in the section [Useful tools](#useful-tools).
-For all tools, the commander `[tool name] -h` show all options with descriptions.
-Users should always check this first to understand how to properly use the tool.
+The executable files, `petar` and `petar.[tool name]`, will be installed in _[Install path]/bin_.
+1. `petar` serves as the primary routine for conducting N-body simulations. It is essentially a symbolic link to `petar.**`, with the suffix reflecting the code's features based on the configuration.
+2. `petar.[tool name]` comprises a set of tools for debugging, initializing data files, optimizing performance, and analyzing data. Detailed information can be found in the section [Useful tools](#useful-tools). For each tool, running `petar.[tool name] -h` will display all available options along with descriptions. Users are advised to refer to this first to ensure correct tool usage.
 
-The generated data files from a simulation can be analyzed by using the _Python3_ based data analysis module. 
-The _Python3_ module is installed in `[Install path]/include/petar`.
-Please add `[Install path]/include` to the _Python_ include path (the environment variable, `$PYTHONPATH`) in order to import the code.
+If _[Install path]/bin_ is added to the environment variable `$PATH`, the executable files can be directly accessed from any directory in the Linux system using the following command:
+```
+export PATH=$PATH:[Install path]/bin
+```
 
+Analysis of simulation-generated data files can be performed using the Python3-based data analysis module located in _[Install path]/include/petar_. To import the code, include `[Install path]/include` in the Python include path (the environment variable `$PYTHONPATH`) with the following command:
+```
+export PYTHONPATH=$PYTHONPATH:[Install path]/include
+```
 
-## Use:
+These environment variable configuration commands need to be executed each time a new terminal is opened. To automate the loading of these variables, it is advisable to add these commands to the .bashrc file in the case of a bash Linux system.
+
+## Usage:
 
 ### petar commander
 After installation, if the `[Install path]/bin` is in the envirnoment variable, `$PATH`, the standard way to use the code is
