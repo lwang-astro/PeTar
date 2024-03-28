@@ -61,16 +61,18 @@ The major modes are as follows:
 The subsequent sections provide detailed explanations of the installation process and usage instructions. The final sections offer a brief overview of the methods employed in the code and introduce the AMUSE API.
 
 ## Content:
-- [Install](#install)
+- [Installation](#installation)
     - [Dependence](#dependence)
-    - [Environment](#environment)
+        - [Galpy](#galpy)
+        - [Code path](#code-path)
+    - [Environment requirements](#environment-requirements)
         - [For supercomputer](#for-supercomputer)
-    - [Make](#make)
-        - [A few useful options of configure](#a-few-useful-options-of-configure)
-            - [Install path](#install-path)
-            - [Change MPI parallelization options](#change-mpi-parallelization-options)
-            - [Manually choose compilers](#manually-choose-compilers)
-            - [Disable OpenMP parallelization](#disable-openmp-parallelization)
+    - [Compiling the code](#compiling-the-code)
+        - [Useful Configuration Options](#useful-configuration-options)
+            - [Installation Path](#installation-path)
+            - [Modifying MPI Parallelization Options](#modifying-mpi-parallelization-options)
+            - [Manual Compiler Selection](#manual-compiler-selection)
+            - [Disabling OpenMP parallelization](#disabling-openmp-parallelization)
             - [Use X86 with SIMD](#use-x86-with-simd)
             - [Use Fugaku A64FX architecture](#use-fugaku-a64fx-architecture)
             - [Use GPU (CUDA)](#use-gpu-cuda)
@@ -78,6 +80,7 @@ The subsequent sections provide detailed explanations of the installation proces
             - [Use stellar evolution](#use-stellar-evolution)
             - [Use Galpy external potential library](#use-galpy-external-potential-library)
             - [Multiple options](#multiple-options)
+        - [Make](#make)
 - [Use](#use)
     - [petar commander](#petar-commander)
     - [CPU threads](#cpu-threads)
@@ -157,6 +160,8 @@ The latest version of FDPS (v7.1) has a known issue that could lead to a crash o
 git checkout v7.0
 ```
 
+#### Galpy
+
 To incorporate external galactic potentials in simulations, users can use the _Galpy_ code through an interface integrated into PeTar. To use Galpy, users should install it either by executing 
 ```
 pip3 install --user galpy
@@ -164,9 +169,9 @@ pip3 install --user galpy
 In this scenario, PeTar can automatically detect Galpy.
 If `pip3` is unavailable, users can mamually download the source code from https://github.com/jobovy/galpy and specify the code path in the configure command (refer to the following guide).
 
-#### Dependent code path
+#### Code path
 
-If the source codes of these dependent libraries are located in the same directory as the _PeTar_ directory, the configure script (see Section [make](#make)) can automatically detect them. Otherwise, users will need to specify their pathes by adding configure options:
+If the source codes of these dependent libraries are located in the same directory as the _PeTar_ directory, the configure script (see Section [Compiling the code](#compiling-the-code)) can automatically detect them. Otherwise, users will need to specify their pathes by adding configure options:
 ```
 ./configure --with-[code name in lower case]-prefix=[code path] ...
 ```
@@ -179,87 +184,89 @@ In a different scenario, such as when Galpy is used but not installed via `pip3`
 ./configure --with-galpy-prefix=/home/username/python/Galpy ...
 ```
 
-### Environment
-To successfully compile the code, the C++ compiler (e.g. GNU gcc/g++, Intel icc/icpc, LLVM clang/clang++) needs the support of the C++11 standard. To use SSE/BSE package, a Fortran (77) compiler, GNU gfortran, is needed and should be possile to provide API to the c++ code, i.e., the libgfortran is required. Currently Intel ifort is not supported yet. The MPI compiler (e.g. mpic++) is required to use MPI. NVIDIA GPU and CUDA compiler is required to use GPU acceleration. The SIMD support is tested for the GNU, Intel and LLVM compilers. It is not tested for others, thus these three kinds of compilers are suggested to use. 
-The Fugaku ARM A64FX architecture is also supported. 
+### Environment Requirements
 
-All compilers should be searchable in the `$PATH` environment. For example, to use OpenMPI C++ compiler, `mpic++` should be available.
-This can be checked by typing `mpic++ --version` in the terminal, it should print the version of current MPI C++ compiler. 
-If the result suggests that the commander is not found, then users should properly install OpenMPI first. 
+To compile the code successfully, the C++ compiler (e.g., GNU gcc/g++, Intel icc/icpc, LLVM clang/clang++) must support at least the C++11 standard.
 
-To use _Galpy_ and the analysis tools, the _Python3_ should be available. _Galpy_ also requires the _GSL_ library being installed and can be detected in the load library path.
+Using MPI necessitates the MPI compiler (e.g., mpic++). NVIDIA GPU and CUDA compiler are essential for GPU acceleration. SIMD support has been tested for GNU, Intel, and LLVM compilers. Since it hasn't been tested for others, it's recommended to use these three compiler types. The Fugaku ARM A64FX architecture is also compatible.
+
+To use the SSE/BSE stellar evolution package, a Fortran (77) compiler, GNU gfortran, is required. It should be capable of providing an API to the C++ code, i.e., libgfortran is necessary. Intel ifort is currently not supported.
+
+To use Galpy and the analysis tools, Python3 must be installed. Galpy also mandates the GSL library to be installed and detectable in the load library path.
+
+All compilers should be accessible in the `$PATH` environment. For instance, to employ the OpenMPI C++ compiler, `mpic++` needs to be available. This can be verified by entering `mpic++ --version` in the terminal, which should display the version of the current MPI C++ compiler. If the output indicates that the command is not found, users should install OpenMPI correctly.
 
 #### For supercomputer
-Genenarlly, the supercomputer provides multiple choices of compilers, including different versions of Intel and GNU compilers.
-Before install _PeTar_, users should first check the detail how to correctly setup the compilers by reading the manual or ask the administrators of the supercomputer.
 
-### Make
-Once _FPDS_ and _SDAR_ are available, in the root directoy, use 
-```
-./configure
-```
-to check the local enviroment and automatically detect the compilers and features.
-Once it finished, a summary log will be printed. 
-Please read it to correctly set up the enviroment variables (the pathes for executable files and Python libraries).
+Generally, the supercomputer offers various compiler options, such as different versions of Intel and GNU compilers. Before installing PeTar, users should ensure they correctly set up the compilers by reviewing the manual or consulting the supercomputer administrators.
 
-The options for configure can be found by 
+### Compiling the code
+
+Once the required libraries such as FPDS and SDAR are accessible, go to the _PeTar_ directory and run the following command:
+```
+[environment variables] ./configure [options]
+```
+This command will examine the local environment, automatically identify the compilers and features, with `[environment variables]` and `[options]` representing additional options to manage the features. Upon completion of the configuration process, a summary log will be displayed. It is important to review this log carefully to correctly choose the environment variables and options, including the paths for dependent libraries and compilers.
+
+### Useful Configuration Options
+
+To view the available environment variables and options for configure, use the following command:
 ```
 ./configure -h
 ```
-After configure, use 
-```
-make
-make install
-```
-to compile and install the code.
 
-The excutable files, _petar_ and _petar.[tool name]_, will be installed in [Install path]/bin.
-1. _petar_ is the main routine to perform N-body simulations. It is actually a soft link to _petar.\*\*_, where the suffix represents the feature of the code based on the configure.
-2. _petar.[tool name]_ are a group of tools for debugging, datafile initialization, performance optimization and data analysis. The details can be checked in the section [Useful tools](#useful-tools).
-For all tools, the commander `[tool name] -h` show all options with descriptions.
-Users should always check this first to understand how to properly use the tool.
+A few useful environment variables and options are presented as follows:
 
-The generated data files from a simulation can be analyzed by using the _Python3_ based data analysis module.
-The _Python3_ module is installed in `[Install path]/include/petar`.
-Please add `[Install path]/include` to the _Python_ include path (the environment variable, `$PYTHONPATH`) in order to import the code.
+##### Installation Path
 
-#### A few useful options of configure
-##### Install path
+To specify a custom installation path, use the following command:
 ```
-./configure --prefix=[Install path]
+./configure --prefix=[Installation path]
 ```
-If the code is already installed before and the executable file (petar.\*\*) exists in the `$PATH` enviroment, the configure automatically use the same directory for installing.
+
+The default installation path set by the configure script is `/user/local`, which requires administrator permission to access. It is not recommended to install PeTar there unless all users on the machine need to use the PeTar code. To install the code in a different location, users can add the `--prefix` option. For example, to install the code in `/home/username/tools`, users can include the option in the configure command:
+```
+./configure --prefix=/home/username/tools
+```
+
+If the code has been previously installed and the executable file (`petar`) is already in the `$PATH` environment, configure will automatically use the same directory for installation.
    
-##### Change MPI parallelization options
+##### Modifying MPI Parallelization Options
+
+To enable or disable MPI parallelization, use the following command:
 ```
-./configure --with-mpi=[auto/yes/no]
+./configure --with-mpi=[choices] 
 ```
-- auto (default): automatical detection MPI, if exists, use MPI compiler, otherwise use non-MPI compiler
-- yes: use MPI c++ compiler
-- no: non-MPI c++ compiler
-   
-##### Manually choose compilers 
-Configure will detect the C++, C and Fortran compiler in the default `$PATH` environment. If users want to manually choose these compilers, the CXX, CC and FC can be modified, respectively. For example, when users want to use Intel C++ and C compilers with Intel MPI:
+where `[choices]` can be `auto`, `yes`, or `no`:
+
+- auto (default): Automatically detect MPI. If MPI is available, the MPI compiler will be used; otherwise, a non-MPI compiler will be used.
+- yes: use the MPI C++ compiler.
+- no: use a non-MPI C++ compiler.
+
+##### Manual Compiler Selection
+
+By default, configure will detect the C++, C, and Fortran compilers in the `$PATH` environment. If users prefer to manually specify these compilers, they can modify the environment variables `CXX`, `CC`, and `FC` accordingly. For instance, if users wish to use Intel C++ and C compilers with Intel MPI, they can use the following command:
 ```
 CXX=mpiicpc CC=mpiicc ./configure
 ```
-where `mpiicpc` is Intel C++ MPI compiler and `mpiicc` is Intel C MPI compiler. If these compilers are not in the `$PATH` environment, the full path is needed, such as:
+Here, `mpiicpc` represents the Intel C++ MPI compiler, and `mpiicc` denotes the Intel C MPI compiler. If these compilers are not in the `$PATH` environment, users must provide the full path, as illustrated below:
 ```
-CXX=[Full path of mpiicpc] CC=[Full path of mpiicc] ./configure
+CXX=/home/username/tool/bin/mpiicpc CC=/home/username/tool/bin/mpiicc ./configure
+```
+In this example, the Intel MPI compilers are installed in `/home/username/tool/bin/`.
+
+For Mac OS users, clang, clang++, and flang compilers can be used instead of GNU compilers, as illustrated below:
+```
+CXX=clang++ CC=clang FC=flang ./configure
 ```
 
-For Mac OS users, clang, clang++ and flang compilers can be used instead of GNU compilers.
-For example, with BSE and Galpy and no MPI:
-```
-CXX=clang++ CC=clang FC=flang ./configure --with-interrupt=bse --with-external=galpy
-```
+##### Disabling OpenMP Parallelization
 
-##### Disable OpenMP parallelization
+By default, the code enables multi-threaded OpenMP parallelization. To disable OpenMP, use the following command:
 ```
 ./configure --disable-openmp
 ```
-By default OpenMP is used.
-    
+
 ##### Use X86 with SIMD
 ```
 ./configure --with-simd=[auto/avx/avx2/avx512dq]
@@ -333,6 +340,25 @@ Multiple options should be combined together, for example:
 ./configure --prefix=/opt/petar --enable-cuda
 ```
 will install the executable files in /opt/petar (this directory requires root permission) and switch on GPU support.
+
+#### Make
+
+After configure, use 
+```
+make
+make install
+```
+to compile and install the code.
+
+The excutable files, _petar_ and _petar.[tool name]_, will be installed in [Install path]/bin.
+1. _petar_ is the main routine to perform N-body simulations. It is actually a soft link to _petar.\*\*_, where the suffix represents the feature of the code based on the configure.
+2. _petar.[tool name]_ are a group of tools for debugging, datafile initialization, performance optimization and data analysis. The details can be checked in the section [Useful tools](#useful-tools).
+For all tools, the commander `[tool name] -h` show all options with descriptions.
+Users should always check this first to understand how to properly use the tool.
+
+The generated data files from a simulation can be analyzed by using the _Python3_ based data analysis module. 
+The _Python3_ module is installed in `[Install path]/include/petar`.
+Please add `[Install path]/include` to the _Python_ include path (the environment variable, `$PYTHONPATH`) in order to import the code.
 
 
 ## Use:
