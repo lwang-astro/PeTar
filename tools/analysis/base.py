@@ -355,7 +355,7 @@ class DictNpArrayMix:
 
     def __sub__(self, other):
         """
-        Use operate function to add self and the other
+        Use operate function to subtract self and the other
         """
         return self.operate(other, np.subtract)
 
@@ -367,13 +367,13 @@ class DictNpArrayMix:
 
     def __truediv__(self, other):
         """
-        Use operate function to add self and the other
+        Use operate function to truediv self and the other
         """
         return self.operate(other, np.true_divide)
 
     def __pow__(self, other):
         """
-        Use operate function to multiply self and the other
+        Use operate function to get the other power of self
         """
         return self.operate(other, np.power)
 
