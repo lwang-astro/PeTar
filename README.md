@@ -157,14 +157,14 @@ Please download the two codes from the following GitHub links:
 - _SDAR_: https://github.com/lwang-astro/SDAR
 
 The latest version of FDPS (v7.1) has a known issue that could lead to a crash of PeTar with an assertion error related to NaN check. After cloning FDPS from Git, in the FDPS directory, switch to the previous release v7.0 using the command:
-```
+```shell
 git checkout v7.0
 ```
 
 ### Galpy
 
 To incorporate external galactic potentials in simulations, users can use the _Galpy_ code through an interface integrated into PeTar. To use Galpy, users should install it either by executing 
-```
+```shell
 pip3 install --user galpy
 ```
 In this scenario, PeTar can automatically detect _Galpy_.
@@ -173,15 +173,15 @@ If `pip3` is unavailable, users can mamually download the source code from https
 ### Code path
 
 If the source codes of these dependent libraries are located in the same directory as the _PeTar_ directory, the configure script (see Section [Compiling the code](#compiling-the-code)) can automatically detect them. Otherwise, users will need to specify their pathes by adding configure options:
-```
-./configure --with-[code name in lower case]-prefix=[code path] ...
+```shell
+./configure --with-[code_name_in_lower_case]-prefix=[code path] ...
 ```
 
 For example, if the _PeTar_, _FDPS_ and _SDAR_ codes are placed in the directory with pathes: `/home/username/code/PeTar`, `/home/username/code/FDPS` and `/home/username/code/SDAR`
 the automatic detection will function.
 
 In a different scenario, such as when Galpy is used but not installed via `pip3` and the _Galpy_ source code is located in `/home/username/python/Galpy`, users will have to specify its path using:
-```
+```shell
 ./configure --with-galpy-prefix=/home/username/python/Galpy ...
 ```
 
@@ -204,13 +204,13 @@ Generally, the supercomputer offers various compiler options, such as different 
 ## Configuration
 
 Once the required libraries such as FPDS and SDAR are accessible, go to the _PeTar_ directory and run the following command:
-```
+```shell
 [environment variables] ./configure [options]
 ```
 This command will examine the local environment, automatically identify the compilers and features, with `[environment variables]` and `[options]` representing additional options to manage the features. Upon completion of the configuration process, a summary log will be displayed. It is important to review this log carefully to correctly choose the environment variables and options, including the paths for dependent libraries and compilers.
 
 To view the available environment variables and options for configure, use the following command:
-```
+```shell
 ./configure -h
 ```
 
@@ -219,12 +219,12 @@ A few useful environment variables and options are presented as follows:
 ### Installation Path
 
 To specify a custom installation path, use the following command:
-```
+```shell
 ./configure --prefix=[Installation path]
 ```
 
 The default installation path set by the configure script is `/user/local`, which requires administrator permission to access. It is not recommended to install PeTar there unless all users on the machine need to use the PeTar code. To install the code in a different location, users can add the `--prefix` option. For example, to install the code in `/home/username/tools`, users can include the option in the configure command:
-```
+```shell
 ./configure --prefix=/home/username/tools
 ```
 
@@ -233,7 +233,7 @@ If PeTar has been previously installed and the executable file (`petar`) is alre
 ### Modifying MPI Parallelization Options
 
 To enable or disable MPI parallelization, use the following command:
-```
+```shell
 ./configure --with-mpi=[choices] 
 ```
 where `[choices]` can be `auto`, `yes`, or `no`:
@@ -245,24 +245,24 @@ where `[choices]` can be `auto`, `yes`, or `no`:
 ### Manual Compiler Selection
 
 By default, configure will detect the C++, C, and Fortran compilers in the `$PATH` environment. If users prefer to manually specify these compilers, they can modify the environment variables `CXX`, `CC`, and `FC` accordingly. For instance, if users wish to use Intel C++ and C compilers with Intel MPI, they can use the following command:
-```
+```shell
 CXX=mpiicpc CC=mpiicc ./configure
 ```
 Here, `mpiicpc` represents the Intel C++ MPI compiler, and `mpiicc` denotes the Intel C MPI compiler. If these compilers are not in the `$PATH` environment, users must provide the full path, as illustrated below:
-```
+```shell
 CXX=/home/username/tool/bin/mpiicpc CC=/home/username/tool/bin/mpiicc ./configure
 ```
 In this example, the Intel MPI compilers are installed in `/home/username/tool/bin/`.
 
 For Mac OS users, clang, clang++, and flang compilers can be used instead of GNU compilers, as illustrated below:
-```
+```shell
 CXX=clang++ CC=clang FC=flang ./configure
 ```
 
 ### Disabling OpenMP Parallelization
 
 By default, PeTar enables multi-threaded OpenMP parallelization. To disable OpenMP, use the following command:
-```
+```shell
 ./configure --disable-openmp
 ```
 
@@ -270,7 +270,7 @@ By default, PeTar enables multi-threaded OpenMP parallelization. To disable Open
 
 PeTar can utilize SIMD-like instructions to optimize the performance of tree force calculation and tree neighbor counting. The currently supported CPU architectures for enabling this feature are Intel/AMD x86 and Fugaku ARM A64FX. Users can specify the architecture using the following command:
 
-```
+```shell
 ./configure --with-arch=[choices]
 ```
 
@@ -285,7 +285,7 @@ Please note that on the Fugaku supercomputer, the configuration only applies to 
 
 PeTar supports multiple SIMD versions to enhance the performance of tree force calculation and tree neighbor counting. Users can choose the SIMD version using the following command:
 
-```
+```shell
 ./configure --with-simd=[choices]
 ```
 
@@ -304,7 +304,7 @@ In the case of a supercomputer, the host and computing nodes might feature disti
 
 PeTar supports the utilization of GPUs based on the CUDA language to accelerate tree force calculations as an alternative speed-up method to SIMD acceleration. To enable this feature, use the following command:
 
-```
+```shell
 ./configure --enable-cuda
 ```
 
@@ -314,7 +314,7 @@ By default, the GPU is not utilized. To enable it, ensure that NVIDIA CUDA is in
 
 If the code crashes or a bug is present, users can enable the debugging mode as follows:
 
-```
+```shell
 ./configure --with-debug=[choices]
 ```
 
@@ -328,7 +328,7 @@ where `[choices]` can be `assert`, `g`, or `no`:
 
 Users can enable stellar evolution for stars and binaries using the following command:
 
-```
+```shell
 ./configure --with-interrupt=[choices]
 ```
 
@@ -353,7 +353,7 @@ When utilizing SSE/BSE packages, users can control whether to activate stellar e
 
 Users can incorporate external potential and force into particles by utilizing the following command:
 
-```
+```shell
 ./configure --with-external=[choices]
 ```
 
@@ -368,7 +368,7 @@ Enabling this option will also compile and install the standalone tools `petar.g
 ### Combining Multiple Options
 
 When combining multiple options, they should be used together, as shown in the example below:
-```
+```shell
 ./configure --prefix=/opt/petar --enable-cuda
 ```
 This command will install the executable files in /opt/petar (this directory requires root permission) and activate GPU support.
@@ -376,7 +376,7 @@ This command will install the executable files in /opt/petar (this directory req
 ## Compilation and Installation
 
 After configuring, execute the following commands:
-```
+```shell
 make
 make install
 ```
@@ -387,12 +387,12 @@ The executable files, `petar` and `petar.[tool name]`, will be installed in _[In
 2. `petar.[tool name]` comprises a set of tools for debugging, initializing data files, optimizing performance, and analyzing data. Detailed information can be found in the section [Useful tools](#useful-tools). For each tool, running `petar.[tool name] -h` will display all available options along with descriptions. Users are advised to refer to this first to ensure correct tool usage.
 
 If _[Install path]/bin_ is added to the environment variable `$PATH`, the executable files can be directly accessed from any directory in the Linux system using the following command:
-```
+```shell
 export PATH=$PATH:[Install path]/bin
 ```
 
 Analysis of simulation-generated data files can be performed using the Python3-based data analysis module located in _[Install path]/include/petar_. To import the code, include `[Install path]/include` in the Python include path (the environment variable `$PYTHONPATH`) with the following command:
-```
+```shell
 export PYTHONPATH=$PYTHONPATH:[Install path]/include
 ```
 
@@ -415,7 +415,7 @@ Subsequently, users can utilize the `petar.init` tool (refer to [Initial Input D
 The process of starting an $N$-body simulation using the `petar` command depends on whether MPI and OpenMP support are compiled.
 
 In the straightforward scenario, the standard procedure for commencing an $N$-body simulation is as follows:
-```
+```shell
 petar [options] [snapshot filename]
 ```
 Here, `[snapshot filename]` represents the filename of a snapshot of the particle system at a specific time, and `[options]` are utilized to regulate the behaviors of the simulations (refer to [Options](#options)).
@@ -425,7 +425,7 @@ For a new simulation, the snapshot file stores the initial conditions of a parti
 ## Using OpenMP
 
 When OpenMP is employed, to prevent segmentation faults in simulations with a large number of particles, users need to set the environment variable `OMP_STACKSIZE` to a sufficiently large value. For instance:
-```
+```shell
 export OMP_STACKSIZE=128M
 ```
 
@@ -434,12 +434,12 @@ Furthermore, ensure that the maximum stack size is unlimited by executing the co
 The default number of threads is the maximum number supported by the host machine. Users can specify the number of threads (`N_threads`) by setting the environment variable `OMP_NUM_THREADS`. To enhance performance, `N_threads` should generally be kept at or below 8.
 
 These environment variables can be utilized when executing `petar`, as shown in the following example:
-```
+```shell
 OMP_STACKSIZE=128M OMP_NUM_THREADS=8 petar [options] [snapshot filename]
 ```
 
 A convenient approach is to set `OMP_NUM_THREADS`, `OMP_STACKSIZE`, and `ulimit -s` in the initial script file of the terminal, such as the .bashrc file for a Bash system:
-```
+```shell
 export OMP_STACKSIZE=128M
 export OMP_NUM_THREADS=N_threads
 ulimit -s unlimited
@@ -451,13 +451,13 @@ When utilizing OpenMP, it is important to note that the simulation may not be re
 ## Using MPI
 
 When MPI is utilized, an MPI launcher is required to utilize multiple MPI processors. The standard approach is as follows:
-```
+```shell
 mpiexec -n [N_mpi] petar [options] [snapshot filename]
 ```
 Here, `[N_mpi]` denotes the number of MPI processors.
 
 For optimal performance, OpenMP and MPI can be used together. In the example below, 4 MPI processors and 8 threads per processor are employed:
-```
+```shell
 OMP_STACKSIZE=128M OMP_NUM_THREADS=8 mpiexec -n 4 petar [options] [snapshot filename]
 ```
 It is important to ensure that `N_mpi x N_threads` is less than the total available CPU threads in the computing facility.
@@ -470,7 +470,7 @@ When GPU support is enabled, each MPI processor will initiate one GPU job. Moder
 Therefore, it is acceptable for `N_mpi` to exceed the number of GPUs available. However, if `N_mpi` is too large, the GPU memory may become insufficient, leading to a Cuda Memory allocation error. In such cases, utilizing more OpenMP threads and fewer MPI processors is a preferable approach.
 
 In scenarios where multiple GPUs are present, each MPI processor will utilize a different GPU based on the processor and GPU IDs. If users wish to exclusively utilize a specific GPU, they can employ the environment variable `CUDA_VISIBLE_DEVICES=[GPU index]`. For instance:
-```
+```shell
 CUDA_VISIBLE_DEVICES=1 petar [options] [particle data filename]
 ```
 This command will utilize the second GPU in the system (indexing starts from 0). The `CUDA_VISIBLE_DEVICES` environment variable can also be configured in the initial script file of the terminal.
@@ -478,7 +478,7 @@ This command will utilize the second GPU in the system (indexing starts from 0).
 ## Resuming a Simulation
 
 Any snapshot of particle data generated during a simulation can be utilized to resume the simulation at a specific time. To resume the simulation with the same parameter configuration as before, use the following command:
-```
+```shell
 petar -p input.par [options] [snapshot filename]
 ```
 Here, _input.par_ stores the previous parameter choices used in a simulation, automatically generated from the prior simulation. Users can modify _input.par_ directly to adjust parameters before resuming, or specify new parameters in `[options]` within the aforementioned `petar` command.
@@ -564,8 +564,8 @@ The third pivotal radius influencing performance is the radius used to identify 
 When initiating a new simulation, the automatically determined tree time step and radii may not always be the optimal choice for users. To select the most suitable tree time step, users can utilize the `petar.find.dt` tool (refer to [Find tree time step](#find-tree-time-step)). This tool is compatible only with PeTar's autodetermined tree time step and changeover radii (refer to [Outer Changeover Radius](#outer-changeover-radius)).
 
 In cases where the structure of the particle system undergoes significant evolution over an extended period, users may wish to adjust the tree time step and radii mentioned earlier to enhance performance. If users prefer to modify only the tree time step while allowing `petar` to determine the radii automatically, the options in the following example are necessary to restart the simulation:
-```
-petar -p input.par -s [new tree time step] -r 0 --r-search-min 0 --r-bin 0 [other options] [snapshot filename for restart]
+```shell
+petar -p input.par -s [new tree_time_step] -r 0 --r-search-min 0 --r-bin 0 [other options] [snapshot filename for restart]
 ```
 Here, `-r 0 --r-search-min 0 --r-bin 0` are employed to reset all three radii and activate autodetermination based on the new tree time step. Users can also employ `petar.find.dt` to select the optimal restart tree time step (refer to [Find tree time step](#find-tree-time-step)).
 
@@ -830,13 +830,13 @@ For those inclined to investigate the issue independently, the debug tool `petar
 The aforementioned warnings and errors generate dump files that can be analyzed using the `petar.hard.debug` tool. This tool facilitates the re-execution of the simulation for one tree time step specifically for the isolated hard sub-cluster associated with the warning, aiding in pinpointing the source of the warning or error.
 
 The basic usage of the tool is as follows:
-```
+```shell
 petar.hard.debug [dump file name] > debug.log 
 ```
 By executing the command above, the `petar.hard.debug` tool will display snapshots of particle data per line in the primary output file (debug.log) along with additional information in the printed messages.
 
 To interpret the debug.log file, users can utilize the Python analysis tool `petar.HardData`. Below is a sample script that reads the debug.log file, converts the first two particles into a binary system, and plots the evolution of the semi-major axis:
-```
+```python
 # Read petar.hard.debug log, where N_particle represents the total particle number in the sub-cluster (n_ptcl) and N_sd denotes the group number (n_group). Obtain these values from the petar.hard.debug output message.
 # Ensure correct option arguments for interrupt_mode and external_mode to accurately interpret the debug.log file.
 hard = petar.HardData(member_type=petar.Particle, particle_type='hard', interrupt_mode='bse', external_mode='galpy', N_particle=4, N_sd=2)
@@ -878,7 +878,7 @@ This error is observed when FDPS version 7.1 is utilized. It appears that a bug 
 Over time, the data formats of snapshots, input parameter files, and certain output files have undergone revisions. Users seeking to utilize a newer version of the code to interpret data from older versions can facilitate data transfer.
 
 For snapshot data in ASCII format, a notable change occurred after [the version released on Aug 8, 2020](https://github.com/lwang-astro/PeTar/commit/0592d70875626071e1bd7aa13dbab30165a98309#diff-25a6634263c1b1f6fc4697a04e2b9904ea4b042a89af59dc93ec1f5d44848a26). Specifically, the output format of `group_data.artificial` transitioned from 64-bit floating point to 64-bit integer to preserve complete information. This alteration solely affects the ASCII format, while the BINARY format remains unchanged. To read older snapshot data, a data conversion step is necessary:
-```
+```shell
 petar.format.transfer -g [other options] [snapshot path list filename]
 ```
 This process generates new data in BINARY format. By employing the same tool with the `-b` option, users can convert the BINARY format back to the updated ASCII format.
@@ -888,7 +888,7 @@ The formats of input parameter files produced during simulations (including file
 ## Useful Tools
 
 Several handy tools are available to aid users in generating initial input data, determining an appropriate tree time step to commence simulations, and conducting data analysis. These tools are bundled with `petar` and follow a naming convention of `petar.[tool name]`. To access guidance on utilizing each tool, users can employ the following command:
-```
+```shell
 petar.[tool name] -h
 ```
 It is important to note that options with identical names may hold distinct meanings across various tools.
@@ -898,7 +898,7 @@ The subsequent sections provide detailed descriptions of each tool.
 ### Initial Input Data File
 
 PeTar features an internal Plummer model generator for an equal-mass system, utilizing the Henon Unit with a half-mass radius of 1.0. Should users prefer to employ their own initial particle data, the `petar.init` tool facilitates the conversion of their particle data into a `petar` input data file. The usage is as follows:
-```
+```shell
 petar.init [options] [particle data filename]
 ```
 The particle data file should consist of 7 columns: mass, position (3 coordinates), velocity (3 components), with each particle represented in a separate row. Binaries should be listed first, with the two components adjacent to each other. When binaries are present, the `-b [binary number]` option must be included in the `petar` command to ensure accurate initialization of velocity dispersion, tree time step, and changeover radii.
@@ -910,7 +910,7 @@ Similarly, when external mode (potential) is enabled, the `-t` option should be 
 ### Determining the Tree Time Step
 
 The performance of `petar` is highly dependent on the tree time step chosen. To assist in finding the optimal time step for achieving the best performance, `petar.find.dt` can be utilized. The usage is as follows:
-```
+```shell
 petar.find.dt [options] [petar data filename]
 ```
 The performance of `petar` relies on the initial particle data file in the petar input format. This tool conducts brief simulations with various tree time steps and presents the performance results sequentially. Users can then determine which time step yields the best performance.
@@ -918,11 +918,11 @@ The performance of `petar` relies on the initial particle data file in the petar
 It is important to note that if a time step that is too large is tested, the tool may not respond for an extended period, indicating a suboptimal choice of time step. In such cases, the tool will terminate the test and provide the best result from the previous trials.
 
 Several options are available in this tool to adjust the numbers of OpenMP threads and MPI processors, as well as the minimum tree time step to initiate the test. If other options are used in the `petar` command, such as `-b [binary number]`, `-u [unit set]`, or `-G [gravitational constant]`, these options should be included using the `-a` option with the content enclosed in double quotes:
-```
+```shell
 petar.find.dt [options] -a "[petar options]" [petar data filename]
 ```
 For example:
-```
+```shell
 petar.find.dt -m 2 -o 4 -a "-b 100 -u 1" input
 ```
 This command uses 2 MPI processes, 4 OpenMP threads per MPI process, 100 primordial binaries, and a unit set of 1 [Msun, pc, Myr] to determine the best time step.
@@ -930,7 +930,7 @@ This command uses 2 MPI processes, 4 OpenMP threads per MPI process, 100 primord
 It is worth noting that `petar` only accepts tree time steps that are integer powers of 0.5. Therefore, during testing, if the user specifies the minimum step size using `-s [value]` (outside `-a`), the step size will be adjusted to meet this requirement if necessary. Users should be cautious as some `petar` options, such as `-o` and `-s`, cannot be used within the `-a` option of `petar.init`. Further details can be obtained by using `petar.find.dt -h`.
 
 For users looking to restart a simulation and automatically determine the new tree time step along with other parameters (radii), the following command can be used:
-```
+```shell
 petar.find.dt -m 2 -o 4 -a "-p input.par -r 0 --r-search-min 0 --r-bin 0" [restart snapshot filename]
 ```
 
@@ -941,7 +941,7 @@ In MPI usage, each MPI processor generates individual data files with filenames 
 Moreover, `petar.data.gether` generates a file named `"[output prefix].snap.lst"` that includes a sorted list of all snapshot files based on their respective timestamps. This file serves as input for both `petar.data.process` and `petar.movie`.
 
 The basic usage of `petar.data.gether` is as follows:
-```
+```shell
 petar.data.gether [options] [data filename prefix]
 ```
 Here, `[data filename prefix]` represents the prefix of data files specified by the `petar` option `-f` (default is 'data').
@@ -981,15 +981,15 @@ When SSE/BSE is employed and the code version is before Sep 10, 2020, data with 
 The `petar.data.process` tool is utilized for analyzing snapshot data, identifying binaries, triples, and quadruples (specifically binary-binary types), and computing Lagrangian radii, core radii, averaged mass, and velocity dispersion. It is important to highlight that the tool calculates the core (density) center and uses it to determine Lagrangian radii. Single and binary data are saved for each snapshot with the additional suffix ".single" and ".binary", respectively. Triples and quadruples are optional and not used in the computation of Lagrangian properties. Data for Lagrangian, core, and escapers is generated in separate files. Multiple CPU cores are utilized for data processing due to the slow nature of the KDTree neighbor search required for density calculation and binary detection.
 
 The basic usage is as follows:
-```
+```shell
 petar.data.process [options] [snapshot path list filename]
 ```
 Users need to provide `[snapshot path list filename]` for a file containing a list of paths for the snapshot data files. This file can be generated using the `petar.data.gether` tool. Alternatively, users can manually create the file using commands like `ls` and `egrep` in Linux. For instance, if the snapshot filename prefix is 'data', the command would be:
-```
+```shell
 ls | egrep '^data.[0-9]+$'
 ```
 It is recommended to sort the paths in increasing order of evolution time. The `sort` tool can be used for this purpose, as shown in the example below:
-```
+```shell
 ls | egrep '^data.[0-9]+$' | sort -n -k 1.6 > snap.lst
 ```
 This command finds all data files in the current directory, sorts them based on the suffix (values after 'data.') in increasing order, and saves the list to the file 'snap.lst'. The `-n` flag specifies that the values to sort are floating-point numbers, and `-k` defines the starting position of the number for sorting.
@@ -1030,7 +1030,7 @@ When `--calc-energy` is used, potential energy, external potential energy, and v
 The `petar.movie` tool is a convenient utility for creating movies from snapshot files. It can generate movies showcasing the positions (x, y) of stars, the HR diagram if stellar evolution (SSE/BSE) is enabled, and the 2D distribution of semi-major axis and eccentricity of binaries. To generate a movie, a list of snapshot files is required.
 
 The basic usage of `petar.movie` is as follows:
-```
+```shell
 petar.movie [options] [snapshot path list filename]
 ```
 
@@ -1047,7 +1047,7 @@ The `petar.data.clear` tool serves the purpose of removing data recorded after a
 In scenarios where a simulation does not terminate normally, the last output snapshot lags behind other output files that record events, such as '\*.groups' and '\*.bse' files. Consequently, restarting the simulation from this snapshot may lead to the re-recording of the same event in these files.
 
 The basic syntax for utilizing this tool is as follows:
-```
+```shell
 petar.data.clear -t [time] [data filename prefix]
 ```
 Before data removal takes place, all output files undergo a backup process by renaming them with an additional '.bk' suffix. This ensures that, in the event of accidental tool usage, the original files can be restored from the backups.
@@ -1063,7 +1063,7 @@ Please be aware that the backup files only retain the data prior to the most rec
 Moreover, it is feasible to convert snapshot data between BINARY and ASCII formats using the `petar.format.transfer` and `petar.format.transfer.post` tools. 
 
 `petar.format.transfer` is used for snapshot files outputted from `petar`. The basic syntax for converting a list of snapshot files is as follows:
-```
+```shell
 petar.format.transfer [options] [snapshot path list filename]
 ```
 The snapshot path list contains paths to the snapshots that users wish to convert. By default, new files are generated with a '.B' or '.A' suffix. To overwrite files for space conservation, users can utilize the `-r` option. This tool can also update older versions of snapshots in ASCII format (prior to Aug 8, 2020) to newer versions using the `-g` option. It is important to note that in the older version, certain information stored in the group_data (group center-of-mass mass and velocities in 64-bit floating point) is lost. However, this loss is inconsequential as the data can be recalculated during data processing and does not impact restart operations.
@@ -1071,7 +1071,7 @@ The snapshot path list contains paths to the snapshots that users wish to conver
 It is essential to ensure that the versions of `petar.format.transfer` and `Petar` align in terms of interrupt mode and external mode configurations. In cases where snapshots are generated by different versions of `Petar`, `petar.format.transfer` may fail to read data or provide incorrect transferred data.
 
 `petar.format.transfer.post` is designed for snapshots generated by `petar.data.process`. The fundamental syntax is as follows:
-```
+```shell
 petar.format.transfer.post [options] [snapshot path list filename]
 ```
 The snapshot path list contains paths to the snapshots that users intend to convert. These snapshots include single, binary, triple, and quadruple snapshots generated from `petar.data.process`. Users have the flexibility to convert among three formats: ASCII, BINARY, and npy. The npy format corresponds to the Python Numpy data format. It is necessary for users to maintain consistent interrupt mode and external mode settings to ensure successful format conversion.
@@ -1079,7 +1079,7 @@ The snapshot path list contains paths to the snapshots that users intend to conv
 ### Update of Input Parameter File Format
 
 The formats of input parameter files generated during simulations, including files from SSE/BSE and Galpy, were revised on Oct 18, 2020. To utilize the new version of PeTar for restarting simulations using old versions of input parameter files, an update is required:
-```
+```shell
 petar.update.par [options] [input parameter filename]
 ```
 By employing options such as `-p`, `-b`, and `-t`, users can update input parameters from PeTar, SSE/BSE, and Galpy, respectively. Additional options cater to different features selected in the configuration.
@@ -1091,13 +1091,13 @@ Post-update, the new input parameter files are more user-friendly. They consist 
 The `petar.[bse_name]` tool is generated when utilizing the SSE/BSE based stellar evolution package (--with-interrupt=[bse_name]) during configuration, where `[bse_name]` can be 'bse', 'bseEmp' and 'mobse'. This tool functions as a standalone application for evolving stars and binaries up to a specified time. All essential global parameters can be configured through options.
 
 To evolve a group of stars using the tool:
-```
+```shell
 petar.[bse_name] [options] mass1, mass2 ...
 ```
 If individual masses are not provided, the tool can evolve a group of stars with equal logarithmic mass intervals.
 
 For evolving a group of binaries:
-```
+```shell
 petar.[bse_name] [options] -b [binary data file]
 ```
 In this scenario, the binary data file contains 4 values (mass1, mass2, period, eccentricity) per line. The first line specifically includes the number of binaries. The units of mass and period are contingent on the '--mscale' and '--tscale' options. By default, the units are set to Msun and Myr. For instance, if the tscale is not 1.0, the period in Myr is calculated as the input period value multiplied by tscale.
@@ -1117,7 +1117,7 @@ Reading these files follows the same method as for the output files from `petar`
 When the external potential package Galpy is compiled with `--with-external=galpy` during configuration, both `petar.galpy` and `petar.galpy.help` are compiled simultaneously.
 
 `petar.galpy` functions as a standalone tool for computing accelerations and potentials for a particle list using a specified potential model. The basic usage is:
-```
+```shell
 petar.galpy [options] [particle data filename]
 ```
 This tool can create mesh points to measure potential and aid in drawing potential contours for a given potential set.
@@ -1125,7 +1125,7 @@ This tool can create mesh points to measure potential and aid in drawing potenti
 In the `petar` command line interface for utilizing Galpy, three options are employed to configure potential models: `--galpy-set`, `--galpy-type-arg`, and `--galpy-conf-file`. The latter two options necessitate users to define potential indices and corresponding arguments. `petar.galpy.help` provides essential information to assist users in setting up these parameters.
 
 To begin, execute the following command:
-```
+```shell
 petar.galpy.help
 ```
 This tool will assist users in generating a configuration file and provide a list of potentials with mathematical formulas, indices, and arguments. These potentials have been tested and verified to function correctly within `petar`.
@@ -1135,7 +1135,7 @@ Moreover, `petar.galpy.help` offers a comprehensive list of potentials sourced f
 It is crucial to acknowledge that the official Galpy documentation is primarily designed for the Python interface, and certain descriptions may not align perfectly with the C interface. Users may need to consult the Galpy C interface source codes to ensure the proper setup of potential arguments.
 
 For detailed insights into a specific potential, users can utilize:
-```
+```shell
 petar.galpy.help [potential name]
 ```
 This command fetches the potential definition from the official Galpy documentation (note: not extensively tested). Additionally, the `-o` option enables the creation of a configuration file tailored to a specific potential. This file can then be read by the `petar` command line option: `--galpy-conf-file`.
@@ -1147,7 +1147,7 @@ It is essential to include the relevant references when publishing results obtai
 ## Help Information
 
 The help information provides a comprehensive list of all available options and can be accessed using the '-h' option for `petar` and its associated tools. For instance:
-```
+```shell
 petar -h
 petar.data.process -h
 ```
@@ -1159,7 +1159,7 @@ These commands offer detailed descriptions of the input particle data file forma
 PeTar features a Python module designed for data analysis purposes. This module facilitates the reading and analysis of output files generated by `petar` and its tools, identification of multiple systems, calculation of Lagrangian radii and core radii, analysis of system energy errors, and performance evaluation of different parts of the code.
 
 To utilize this module, start by importing it in a Python script, IPython, or Jupyter notebook:
-```
+```python
 import petar
 ```
 Ensure that after installing PeTar, the `include` directory of PeTar has been added to the `PYTHONPATH` environment variable to successfully import this module.
@@ -1181,7 +1181,7 @@ All classes have special members like `size`, `ncols`, `keys`, and `host`. These
 - `host`: when the class instance is a member of another class instance, such as `star` in `petar.Particle`, `host` references the parent class instance, otherwise it is `None`.
 
 To utilize these classes, users must create a class instance by executing:
-```
+```python
 [class instance] = petar.[class name]([keyword arguments])
 ```
 Here, `[class instance]` represents the name of a class instance, and `[class name]` represents the class name, e.g., `petar.Particle`. 
@@ -1464,7 +1464,7 @@ axes.set_ylabel('Dec')
 
 To combine two subsets of particle data, `particle_set1` and `particle_set2`, into one, you can use the following command:
 
-```
+```python
 particle_merge = petar.join(particle_set1, particle_set2)
 ```
 
@@ -1490,7 +1490,7 @@ Each class provides a set of useful functions for data management. Below is a ta
 
 In addition to these functions, PeTar classes also support basic mathematical operators such as addition and subtraction. For example, when dealing with two sets of particles, executing the following command will create a new class instance where each member is the sum of the corresponding members in `particle_one` and `particle_two`:
 
-```
+```python
 particle_add = particle_one + particle_two
 ``` 
 
@@ -1566,7 +1566,7 @@ To ensure accurate data retrieval, it is essential to maintain consistency betwe
 
 For instance, if users want to calculate Lagrangian properties for a subset of black holes and main sequence stars after running a simulation with SSE/BSE and Galpy enabled, the command would be:
 
-```
+```shell
 petar.data.process -i bse -t galpy --add-star-type BH,MS data.snap.lst
 ```
 
