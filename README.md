@@ -79,7 +79,7 @@ The subsequent sections provide detailed explanations of the installation proces
         - [Debug mode](#debug-mode)
         - [Utilizing Stellar Evolution](#utilizing-stellar-evolution)
         - [Using External Potential](#using-external-potential)
-        - [Multiple options](#multiple-options)
+        - [Combining Multiple options](#combining-multiple-options)
      - [Compilation and Installation](#compilation-and-installation)
 - [Usage](#usage)
     - [Preparing the initial condition](#preparing-the-initial-condition)
@@ -106,22 +106,22 @@ The subsequent sections provide detailed explanations of the installation proces
     - [Troubleshooting](#troubleshooting)
          - [Significant Hard energy](#significant-hard-energy)
          - [Large Step Warning](#large-step-warning)
-         - [Hard dump with errors](#hard-dump-with-errors)
-         - [Hard debug tool](#hard-debug-tool)
-         - [Crash with assertion](#crash-with-assertion)
-    - [Data format update for old versions](#data-format-update-for-old-versions)
-    - [Useful tools](#useful-tools)
-         - [Initial Input Data File with `petar.init`](#initial-input-data-file-with-petar-init)
-         - [Determining the Tree Time Step with `petar.find.it`](#find-tree-time-step-with-petar-find-dt)
-         - [Gathering Output Files with `petar.data.gether`](#gathering-output-files-with-petar-data-gether)
-         - [Parallel Data Processing with `petar.data.process`](#parallel-data-processing-with-petar-data.process)
-         - [Movie Generator with `petar.movie`](#movie-generator-with-petar-movie)
-         - [Data Removal with `petar.data.clear`](#remove-data-after-a-given-time)
-	     - [Data Format Conversion](#data-format-conversion)
-         - [Update of Input Parameter File Format](#input-parameter-file-format-update)
-         - [SSE and BSE based steller evolution tool](#sse-and-bse-based-steller-evolution-tool)
+         - [Hard Dump with Errors](#hard-dump-with-errors)
+         - [Hard Debug Tool](#hard-debug-tool)
+         - [Crash with Assertion](#crash-with-assertion)
+    - [Data Format Update for Older Versions](#data-format-update-for-older-versions)
+    - [Useful Tools](#useful-tools)
+         - [Initial Input Data File with `petar.init`](#initial-input-data-file)
+         - [Determining the Tree Time Step with `petar.find.it`](#determining-the-tree-time-step)
+         - [Gathering Output Files with `petar.data.gether`](#gathering-output-files)
+         - [Parallel Data Processing with `petar.data.process`](#parallel-data-processing)
+         - [Movie Generator with `petar.movie`](#movie-generator)
+         - [Data Removal after a specified time with `petar.data.clear`](#data-removal-after-a-specified-time)
+         - [Data Format Conversion](#data-format-conversion)
+         - [Update of Input Parameter File Format](#update-of-input-parameter-file-format)
+         - [Stellar Evolution Tool based on SSE and BSE](#stellar-evolution-tool-based-on-sse-and-bse)
          - [Galpy tool](#galpy-tool)
-    - [Reference](#reference)
+    - [References](#references)
     - [Help information](#help-information)
     - [Python Data Analysis Module](#python-data-analysis-module)
          - [Reading particle snapshots](#reading-particle-snapshots)
@@ -131,8 +131,8 @@ The subsequent sections provide detailed explanations of the installation proces
          - [Plotting Data](#plotting-data)
          - [Saving and Loading Data](#saving-and-loading-data)
          - [Reference Frame and Coordinate System Transformation](#reference-frame-and-coordinate-system-transformation)
-         - [Merging two data](#merging-two-data)
-		 - [Class Functions](#class-functions)
+         - [Merging Two Datasets](#merging-two-datasets)
+         - [Class Functions](#class-functions)
          - [Reading Binary Snapshots](#reading-binary-snapshots)
          - [Reading Triple and Quadruple Snapshots](#reading-triple-and-quadruple-snapshots)
          - [Reading Lagrangian Data](#reading-lagrangian-data)
@@ -895,7 +895,7 @@ It is important to note that options with identical names may hold distinct mean
 
 The subsequent sections provide detailed descriptions of each tool.
 
-### Initial Input Data File with `petar.init`
+### Initial Input Data File
 
 PeTar features an internal Plummer model generator for an equal-mass system, utilizing the Henon Unit with a half-mass radius of 1.0. Should users prefer to employ their own initial particle data, the `petar.init` tool facilitates the conversion of their particle data into a `petar` input data file. The usage is as follows:
 ```
@@ -907,7 +907,7 @@ If stellar evolution is activated, the corresponding options `-s [bse_name]` sho
 
 Similarly, when external mode (potential) is enabled, the `-t` option should be utilized to ensure the correct number of columns is generated.
 
-### Determining the Tree Time Step with `petar.find.dt`
+### Determining the Tree Time Step
 
 The performance of `petar` is highly dependent on the tree time step chosen. To assist in finding the optimal time step for achieving the best performance, `petar.find.dt` can be utilized. The usage is as follows:
 ```
@@ -934,7 +934,7 @@ For users looking to restart a simulation and automatically determine the new tr
 petar.find.dt -m 2 -o 4 -a "-p input.par -r 0 --r-search-min 0 --r-bin 0" [restart snapshot filename]
 ```
 
-### Gathering Output Files with `petar.data.gether`
+### Gathering Output Files
 
 In MPI usage, each MPI processor generates individual data files with filenames containing the suffix `[MPI rank]`. To consolidate these output files from different MPI ranks into a single file, the `petar.data.gether` tool is utilized. Additionally, this tool can split the stellar evolution event files and group files into individual components, enabling the use of Python tools for data analysis (refer to [Output files](#output-files)).
 
@@ -976,7 +976,7 @@ Note: 'data.group[.n\*]' files are not generated by default due to their large s
 
 When SSE/BSE is employed and the code version is before Sep 10, 2020, data with the suffix ".dynamic\_merge" contains three fewer columns compared to the new version. This tool automatically fills the missing columns with zeros from Column 6 to 8.
 
-### Parallel Data Processing with `petar.data.process`
+### Parallel Data Processing
 
 The `petar.data.process` tool is utilized for analyzing snapshot data, identifying binaries, triples, and quadruples (specifically binary-binary types), and computing Lagrangian radii, core radii, averaged mass, and velocity dispersion. It is important to highlight that the tool calculates the core (density) center and uses it to determine Lagrangian radii. Single and binary data are saved for each snapshot with the additional suffix ".single" and ".binary", respectively. Triples and quadruples are optional and not used in the computation of Lagrangian properties. Data for Lagrangian, core, and escapers is generated in separate files. Multiple CPU cores are utilized for data processing due to the slow nature of the KDTree neighbor search required for density calculation and binary detection.
 
@@ -1025,7 +1025,7 @@ For Lagrangian properties, 'data.lagr' includes radius, average mass, number of 
 
 When `--calc-energy` is used, potential energy, external potential energy, and virial ratio for each Lagrangian radii are calculated. However, when an external potential is used, the virial ratio may not be accurately estimated in disrupted phases.
 
-### Movie Generator with `petar.movie`
+### Movie Generator
 
 The `petar.movie` tool is a convenient utility for creating movies from snapshot files. It can generate movies showcasing the positions (x, y) of stars, the HR diagram if stellar evolution (SSE/BSE) is enabled, and the 2D distribution of semi-major axis and eccentricity of binaries. To generate a movie, a list of snapshot files is required.
 
@@ -1040,7 +1040,7 @@ This tool utilizes either the `imageio` or `matplotlib.animation` Python modules
 
 Similar to configuring `petar.data.process`, users should ensure to set the correct options for the gravitational constant (`-G`), interrupt mode (`-i`), and external mode (`-t`) when using `petar.movie`. This ensures accurate processing of the snapshot data and proper generation of the movie content.
 
-### Data Removal after a specified time with `petar.data.clear`
+### Data Removal after a specified time
 
 The `petar.data.clear` tool serves the purpose of removing data recorded after a specified time from all output files except the snapshots. This tool is particularly useful for preventing the repetition of events when restarting an abnormally interrupted simulation.
 
