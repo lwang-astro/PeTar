@@ -36,9 +36,12 @@ This README document serves as a concise yet comprehensive guide detailing the i
 For a deeper understanding of the algorithms employed, additional details can be found in the work by Wang et al. (2020; available on arXiv: https://arxiv.org/abs/2006.16560).
 A Doxygen documentation tailored for developers is currently in the process of being prepared.
 
-For a quick start, once the installation process is finished, users can explore two sample scripts in the test folder: [sample.sh](https://github.com/lwang-astro/PeTar/blob/master/test/sample.sh) and [sample_galpy.sh](https://github.com/lwang-astro/PeTar/blob/master/test/sample_galpy.sh). These scripts offer practical demonstrations of the entire process of simulating a star cluster using the PeTar code. This includes generating initial conditions from `mcluster`, initiating simulations, and processing data to create single and binary snapshots, core information, and Lagrangian radii.
+To enhance the English in the given text, you could say:
 
-The sample.sh script incorporates binaries and stellar evolution (bse), while sample_galpy.sh enhances the simulation by integrating the Milky Way potential using galpy, building upon the functionalities of sample.sh.
+After completing the installation process, users can quickly get started by exploring three sample scripts located in the test folder: [sample.sh](https://github.com/lwang-astro/PeTar/blob/master/test/sample.sh), [sample\_bse.sh](https://github.com/lwang-astro/PeTar/blob/master/test/sample_bse.sh), and [sample\_bse\_galpy.sh](https://github.com/lwang-astro/PeTar/blob/master/test/sample_bse_galpy.sh). These scripts provide practical demonstrations of simulating a star cluster using the PeTar code. They cover tasks such as generating initial conditions using `mcluster`, running simulations, and processing data to produce single and binary snapshots, core information, and Lagrangian radii. Here is a brief description of each script:
+- sample.sh: Simulates a star cluster for up to 100 Myr with 1000 stars initially, following the Kroupa (2001) IMF and including 95% primordial binaries (refer to the `mcluster` manual). This simulation uses only gravitational forces.
+- sample\_bse.sh: Similar to sample.sh but includes single and binary stellar evolution (SSE/BSE) with a metallicity of Z=0.02.
+- sample\_bse\_galpy.sh: Builds upon sample_bse.sh by incorporating the Milky Way potential from Galpy's MWPotential2014 (refer to Bovy 2015 for details).
 
 # About the version
 
@@ -1138,7 +1141,7 @@ For detailed insights into a specific potential, users can utilize:
 ```shell
 petar.galpy.help [potential name]
 ```
-This command fetches the potential definition from the official Galpy documentation (note: not extensively tested). Additionally, the `-o` option enables the creation of a configuration file tailored to a specific potential. This file can then be read by the `petar` command line option: `--galpy-conf-file`.
+This command fetches the potential definition from the official Galpy documentation (note: not extensively tested). Additionally, the `-o` option enables the creation of a configuration file template of a specific potential. After adjustment of this file, it can be read by the `petar` command line option: `--galpy-conf-file`.
 
 ## References
 
