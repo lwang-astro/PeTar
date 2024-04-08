@@ -38,10 +38,12 @@ A Doxygen documentation tailored for developers is currently in the process of b
 
 To enhance the English in the given text, you could say:
 
-After completing the installation process, users can quickly get started by exploring three sample scripts located in the test folder: [sample.sh](https://github.com/lwang-astro/PeTar/blob/master/test/sample.sh), [sample\_bse.sh](https://github.com/lwang-astro/PeTar/blob/master/test/sample_bse.sh), and [sample\_bse\_galpy.sh](https://github.com/lwang-astro/PeTar/blob/master/test/sample_bse_galpy.sh). These scripts provide practical demonstrations of simulating a star cluster using the PeTar code. They cover tasks such as generating initial conditions using `mcluster`, running simulations, and processing data to produce single and binary snapshots, core information, and Lagrangian radii. Here is a brief description of each script:
-- sample.sh: Simulates a star cluster for up to 100 Myr with 1000 stars initially, following the Kroupa (2001) IMF and including 95% primordial binaries (refer to the `mcluster` manual). This simulation uses only gravitational forces.
-- sample\_bse.sh: Similar to sample.sh but includes single and binary stellar evolution (SSE/BSE) with a metallicity of Z=0.02.
-- sample\_bse\_galpy.sh: Builds upon sample_bse.sh by incorporating the Milky Way potential from Galpy's MWPotential2014 (refer to Bovy 2015 for details).
+After completing the installation process, users can quickly get started by exploring three sample scripts located in the sample folder: [star\_cluster.sh](https://github.com/lwang-astro/PeTar/blob/master/sample/star_cluster.sh), [star\_cluster\_bse.sh](https://github.com/lwang-astro/PeTar/blob/master/sample/star_cluster_bse.sh), and [star\_cluster\_bse\_galpy.sh](https://github.com/lwang-astro/PeTar/blob/master/test/star_cluster_bse_galpy.sh). These scripts provide practical demonstrations of simulating a star cluster using the PeTar code. They cover tasks such as generating initial conditions using `mcluster`, running simulations, and processing data to produce single and binary snapshots, core information, and Lagrangian radii. Here is a brief description of each script:
+- star\_cluster.sh: Simulates a star cluster for up to 100 Myr with 1000 stars initially, following the Kroupa (2001) IMF and including 95% primordial binaries (refer to the `mcluster` manual). This simulation uses only gravitational forces.
+- star\_cluster\_bse.sh: Similar to sample.sh but includes single and binary stellar evolution (SSE/BSE) with a metallicity of Z=0.02.
+- star\_cluster\_bse\_galpy.sh: Builds upon sample_bse.sh by incorporating the Milky Way potential from Galpy's MWPotential2014 (refer to Bovy 2015 for details).
+
+Furthermore, users can access a Jupyter Notebook titled [data\_analysis.ipynb](https://github.com/lwang-astro/PeTar/blob/master/sample/data_analysis.ipynb), which provides examples of data analysis in Python. By running one of the sample scripts, users can subsequently refer to the demonstrations in this notebook to analyze the simulation results. The data analysis module in PeTar offers greater convenience compared to manually parsing the output files. It is advisable to leverage this module instead of crafting reading code from scratch.
 
 # About the version
 
@@ -139,6 +141,8 @@ The subsequent sections provide detailed explanations of the installation proces
          - [Reading Binary Snapshots](#reading-binary-snapshots)
          - [Reading Triple and Quadruple Snapshots](#reading-triple-and-quadruple-snapshots)
          - [Reading Lagrangian Data](#reading-lagrangian-data)
+         - [Reading Stellar Evolution Outputs](#reading-stellar-evolution-outputs)
+         - [Reading Group Information](#reading-group-information)
          - [Accessing Tool Manuals Using Python Help](#accessing-tool-manuals-using-python-help)
 - [Method](#method)
     - [Integration Algorithm Overview](#integration-algorithm-overview)
@@ -1519,84 +1523,6 @@ In addition to these functions, PeTar classes also support basic mathematical op
 particle_add = particle_one + particle_two
 ``` 
 
-### Reading Stellar Evolution Outputs
-
-When using SSE/BSE-based stellar evolution packages like updated BSE in a simulation with `petar` or isolated stellar evolution with `petar.bse`, files `data.bse.*` and `data.sse.*` are generated (assuming the default filename prefix 'data' is used). After executing `petar.data.gether data`, several new files are created with the suffixes "type\_change", "sn\_kick", and "dynamic\_merge", corresponding to stellar or binary type change, supernova kick and dynamically driven merger events.
-
-To read these files, users can utilize the following command:
-```python
-path='./'
-prefix='data'
-sse_type=petar.SSETypeChange()
-sse_type.loadtxt(path+prefix+'.sse.type_change')
-sse_kick=petar.SSESNKick()
-sse_kick.loadtxt(path+prefix+'.sse.sn_kick')
-bse_type=petar.BSETypeChange()
-bse_type.loadtxt(path+prefix+'.bse.type_change')
-bse_kick=petar.BSESNKick()
-bse_kick.loadtxt(path+prefix+'.bse.sn_kick')
-bse_dyn=petar.BSEDynamicMerge()
-bse_dyn.loadtxt(path+prefix+'.bse.dynamic_merge')
-```
-Here, `path` denotes the simulation directory path, and `prefix` represents the filename prefix, which defaults to 'data'.
-
-After reading these files, users can display the events in a table. For instance, to print binary stellar evolution events:
-```python
-bse_type.printTable([('type','%4d'),('init.time','%10g'),('init.type1','%11d'),('init.type2','%11d'),
-                     ('init.m1','%9f'),('init.m2','%9f'),('init.semi','%10g'),('init.ecc','%9f'),
-                     ('final.type1','%12d'),('final.type2','%12d'),('final.m1','%9f'),('final.m2','%9f'),
-                     ('final.semi','%11g'),('final.ecc','%10g')])
-```
-In this snippet, `printTable` is the function used to display selected columns in a table with specified printing formats.
-
-By employing `petar.BSEMerge`, users can compile potential merger events from `BSETypeChange` and `BSEDynamicMerge`:
-```python
-merger = petar.BSEMerge()
-merger.combine(bse_type, bse_dyn)
-merger.printTable()
-```
-It's important to note that the initial status from `BSEMerge` pertains to the first event record of the binary that undergoes a merger.  Furthermore, if a supernova completely removes the material of stars without leaving any remnants, it may be mistakenly identified as a "merger". Users should thoroughly examine the stellar evolution history to exclude such false merger events.
-
-### Reading Stellar Evolution Outputs
-
-When SSE/BSE based stellar evolution packages, such as updated BSE, is used in a simulation with `petar` or isolated stellar evolution with `petar.bse`. The `data.bse.*` and `data.sse.*` are generated (assuming users use the default filename prefix 'data'). After using `petar.data.gether data`, A few new files are generated with the suffix "type\_change", "sn\_kick" and "dynamic\_merge", corresponding to the stellar or binary type change events, supernovae kick events and dynamically driven merger events. 
-
-To read these files, users can the following command: 
-```python
-path='./'
-prefix='data'
-sse_type=petar.SSETypeChange()
-sse_type.loadtxt(path+prefix+'.sse.type_change')
-sse_kick=petar.SSESNKick()
-sse_kick.loadtxt(path+prefix+'.sse.sn_kick')
-bse_type=petar.BSETypeChange()
-bse_type.loadtxt(path+prefix+'.bse.type_change')
-bse_kick=petar.BSESNKick()
-bse_kick.loadtxt(path+prefix+'.bse.sn_kick')
-bse_dyn=petar.BSEDynamicMerge()
-bse_dyn.loadtxt(path+prefix+'.bse.dynamic_merge')
-```
-Here, `path` represents the simulation directory path, `prefix` represents the filename prefix. Here is the default case 'data'.
-
-After reading these files, user can print the events into a table. For example, to print the binary stellar evolution event:
-```python
-bse_type.printTable([('type','%4d'),('init.time','%10g'),('init.type1','%11d'),('init.type2','%11d'),
-                     ('init.m1','%9f'),('init.m2','%9f'),('init.semi','%10g'),('init.ecc','%9f'),
-                     ('final.type1','%12d'),('final.type2','%12d'),('final.m1','%9f'),('final.m2','%9f'),
-                     ('final.semi','%11g'),('final.ecc','%10g')])
-```
-Here, `printTable` is the function to print selected columns to a table with given printing formats.
-
-Using `petar.BSEMerge`, users can gather the potential merger events from `BSETypeChange` and `BSEDynamicMerge`:
-```python
-merger = petar.BSEMerge()
-merger.combine(bse_type, bse_dyn)
-merger.printTable()
-```
-Notice that the initial status from `BSEMerge` is the first event record of the binary that suffer merger. 
-In addition, if a supernova complete remove the material of stars with no remanent left. It may bemistreated as a "merger". Users need to check the stellar evolution history in detail to exclude these fake mergers. 
-
-
 ### Reading Binary Snapshots
 
 In the preceding sections, we demonstrated how to read and analyze snapshots generated by `petar`. Here is an additional example illustrating how to read binary snapshot files produced by the `petar.findPair` function or `petar.data.process`.
@@ -1684,6 +1610,74 @@ Inconsistencies in setting the `external_mode` and `add_star_type` arguments may
 
 Additionally, the `--add-mass-range` option in `petar.data.process` can compute Lagrangian properties for a subset of particles with specified mass ranges. For detailed information on `--add-star-type` and `--add-mass-range`, refer to `petar.data.process -h`.
 
+### Reading Stellar Evolution Outputs
+
+When using SSE/BSE-based stellar evolution packages like updated BSE in a simulation with `petar` or isolated stellar evolution with `petar.bse`, files `data.bse.*` and `data.sse.*` are generated (assuming the default filename prefix 'data' is used). After executing `petar.data.gether data`, several new files are created with the suffixes "type\_change", "sn\_kick", and "dynamic\_merge", corresponding to stellar or binary type change, supernova kick and dynamically driven merger events.
+
+To read these files, users can utilize the following command:
+```python
+path='./'
+prefix='data'
+sse_type=petar.SSETypeChange()
+sse_type.loadtxt(path+prefix+'.sse.type_change')
+sse_kick=petar.SSESNKick()
+sse_kick.loadtxt(path+prefix+'.sse.sn_kick')
+bse_type=petar.BSETypeChange()
+bse_type.loadtxt(path+prefix+'.bse.type_change')
+bse_kick=petar.BSESNKick()
+bse_kick.loadtxt(path+prefix+'.bse.sn_kick')
+bse_dyn=petar.BSEDynamicMerge()
+bse_dyn.loadtxt(path+prefix+'.bse.dynamic_merge')
+```
+Here, `path` denotes the simulation directory path, and `prefix` represents the filename prefix, which defaults to 'data'.
+
+After reading these files, users can display the events in a table. For instance, to print binary stellar evolution events:
+```python
+bse_type.printTable([('type','%4d'),('init.time','%10g'),('init.type1','%11d'),('init.type2','%11d'),
+                     ('init.m1','%9f'),('init.m2','%9f'),('init.semi','%10g'),('init.ecc','%9f'),
+                     ('final.type1','%12d'),('final.type2','%12d'),('final.m1','%9f'),('final.m2','%9f'),
+                     ('final.semi','%11g'),('final.ecc','%10g')])
+```
+In this snippet, `printTable` is the function used to display selected columns in a table with specified printing formats.
+
+By employing `petar.BSEMerge`, users can compile potential merger events from `BSETypeChange` and `BSEDynamicMerge`:
+```python
+merger = petar.BSEMerge()
+merger.combine(bse_type, bse_dyn)
+merger.printTable()
+```
+It's important to note that the initial status from `BSEMerge` pertains to the first event record of the binary that undergoes a merger.  Furthermore, if a supernova completely removes the material of stars without leaving any remnants, it may be mistakenly identified as a "merger". Users should thoroughly examine the stellar evolution history to exclude such false merger events.
+
+### Reading Group Information
+
+During a simulation, PeTar records information about the formation and dissolution of various systems, including hyperbolic encounters, binaries, triples, quadruples, and more, during SDAR integration. This information is saved into files named "data.group.[MPI rank]", where "data" serves as the default filename prefix. By utilizing `petar.data.gether -g [filename prefix]`, groups with different member counts are separated into individual files named "data.group.n1", "data.group.n2", and so on, with the number indicating the number of members in the multiple systems. The following example illustrates how to read the groups file and analyze the information:
+
+```python
+# Load two-body groups (binary, hyperbolic encounters)
+g2 = petar.GroupInfo(N=2)
+g2.loadtxt(path+'data.group.n2')
+
+# Load 3-body groups
+g3 = petar.GroupInfo(N=3)
+g3.loadtxt(path+'data.group.n3')
+
+# Load 4-body groups
+g4 = petar.GroupInfo(N=4)
+g4.loadtxt(path+'data.group.n4')
+```
+
+For $N>2$, such as `g3` and `g4` in the above example, they contain members named `bin0`, `bin1`, and so on, indicating pairs of objects assuming a Kepler orbit in a hierarchical order. For instance, `bin0` comprises two objects with the greatest separation in the multiple system, and these objects can be either individual particles or the center of mass of the inner systems.
+
+The following example presents a table illustrating the 3-body system, where 'bin0' represents the outer pair and 'bin1' denotes the inner pair. The center of mass of the inner pair is one of the members of the outer pair, with the ID of the center of mass particle being the lower of the two inner member IDs.
+
+```python
+g3.printTable([('bin0.m1','%10.4f'),('bin0.m2','%10.4f'),
+               ('bin0.p1.id','%11d'),('bin0.p2.id','%11d'),
+               ('bin0.semi','%10.4g'),('bin0.ecc','%10.4g'),
+               ('bin1.m1','%10.4f'),('bin1.m2','%10.4f'),
+               ('bin1.p1.id','%11d'),('bin1.p2.id','%11d'),
+               ('bin1.semi','%10.4g'),('bin1.ecc','%10.4g')])
+```
 
 ### Accessing Tool Manuals Using Python Help
 

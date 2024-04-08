@@ -22,7 +22,7 @@ class Core(DictNpArrayMix):
 
     def calcPotentialCenter(self, single, binary, G):
         """ Calculate potential center of the system and return the result
-        r_cm = \sum_i pot_i *r_i /\sum_i pot_i (only count pot_i <0)
+        r_cm = sum_i {pot_i *r_i} /sum_i pot_i (only count pot_i <0)
 
         Parameters
         ----------

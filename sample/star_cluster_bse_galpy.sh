@@ -18,7 +18,7 @@ petar.init -c 8000,0,0,0,220,0 -t -s bse -v kms2pcmyr -f input test.dat.10
 # Use '--galpy-set MWPotential2014' to switch on MilkyWay potential from Galpy model (see Bovy 2015 for details).
 # To switch on SSE/BSE stellar evolution package and Galpy potential package, the option '--with-interrupt=bse --with-external=galpy' is needed during configuration of petar.
 # By default, OpenMP utilizes all CPU threads. If you wish to use a specific number of threads, please add 'OMP_NUM_THREADS=[number of threads]'.
-OMP_NUM_THREADS=8 OMP_STACKSIZE=128M petar -u 1 -b 500 --galpy-set MWPotential2014 --bse-metallicity 0.02 -t 100.0 -o 5.0 input &>output
+OMP_STACKSIZE=128M petar -u 1 -b 500 --galpy-set MWPotential2014 --bse-metallicity 0.02 -t 100.0 -o 5.0 input &>output
 
 # after mode finished, gether the output data and do post-data process to detect binaries, obtain Lagrangian and core radii and corresponding properties.
 # to obtain the estimation of tidal radius, using '--r-escape tidal'

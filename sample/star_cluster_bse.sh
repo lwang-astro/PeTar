@@ -15,7 +15,7 @@ petar.init -s bse -v kms2pcmyr -f input test.dat.10
 # Use '--bse-metallicity 0.02' to set the metallicity of star as Z=0.02.
 # To switch on SSE/BSE stellar evolution package, the option '--with-interrupt=bse' is needed during configuration of petar.
 # By default, OpenMP utilizes all CPU threads. If you wish to use a specific number of threads, please add 'OMP_NUM_THREADS=[number of threads]'."
-OMP_NUM_THREADS=8 OMP_STACKSIZE=128M petar -u 1 -b 500 --bse-metallicity 0.02 -t 100.0 -o 5.0 input &>output
+OMP_STACKSIZE=128M petar -u 1 -b 500 --bse-metallicity 0.02 -t 100.0 -o 5.0 input &>output
 
 # after mode finished, gether the output data and do post-data process to detect binaries, obtain Lagrangian and core radii and corresponding properties.
 petar.data.gether data

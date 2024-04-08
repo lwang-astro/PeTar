@@ -1,6 +1,7 @@
 # base class 
 import numpy as np
 import warnings
+warnings.simplefilter('always')
 
 class DictNpArrayMix:
     """ The basic class of data structure
