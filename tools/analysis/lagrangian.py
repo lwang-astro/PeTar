@@ -91,7 +91,7 @@ class Core(DictNpArrayMix):
 
     def calcCoreRadius(self, particle):
         """ Calculate core radius, using Casertano & Hut (1985) method with the squares of densities, also used in Nbody5 and Nbody6 (Aarseth 2003):
-        rc = sqrt(\sum_i rho_i^2 r_i^2 / \sum_i rho_i^2)
+        rc = sqrt(sum_i rho_i^2 r_i^2 / sum_i rho_i^2)
 
         Parameters
         ----------

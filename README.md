@@ -580,14 +580,89 @@ Here, `-r 0 --r-search-min 0 --r-bin 0` are employed to reset all three radii an
 ### Printed Information
 
 When `petar` is running, several pieces of information are displayed at the beginning:
-- The _FDPS_ logo and _PETAR_ details are printed, showcasing copyright information, versions, and references for citation. 
-- Enabled features (selected during configuration), such as stellar evolution packages, external packages, and GPU utilization, are listed.
+- The FDPS logo and PeTar details are printed as follows, showcasing copyright information, versions, and references for citation. 
+```
+     //==================================\\
+     ||                                  ||
+     || ::::::: ::::::. ::::::. .::::::. ||
+     || ::      ::    : ::    : ::       ||
+     || ::::::  ::    : ::::::'  `:::::. ||
+     || ::      ::::::' ::      `......' ||
+     ||     Framework for Developing     ||
+     ||        Particle Simulator        ||
+     ||     Version 7.0 (2021/08)        ||
+     \\==================================//
+...
+```
+
+- Enabled features (selected during configuration), such as stellar evolution packages, external packages, and GPU utilization, are listed:
+```
+Use quadrupole moment in tree force calculation
+Use 3rd order tidal tensor method
+...
+```
+
 - Any modified input parameters are displayed when using corresponding `petar` options.
+```
+Input data unit, 0: unknown, referring to G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr:   1
+Number of primordial binaries for initialization (assuming the binaries ID=1,2*n_bin):   500
+...
+```
+
 - Unit scaling for PeTar, stellar evolution packages (e.g., SSE/BSE), and external packages (e.g., Galpy) is outlined.
+```
+----- Unit set 1: Msun, pc, Myr -----
+gravitational_constant = 0.0044983099795944 pc^3/(Msun*Myr^2)
+----- Unit conversion for BSE -----
+ tscale = 1  Myr / Myr
+ mscale = 1  Msun / Msun
+ rscale = 44353565.919218  Rsun / pc
+ vscale = 0.9778131076864  [km/s] / [pc/Myr]
+```
+
 - A brief parameter list for tree time step and key radii influencing performance is provided.
+```
+----- Parameter list: -----
+ mass_average = 0.52232350485643
+ r_in         = 0.0021228717795716
+ r_out        = 0.021228717795716
+ r_bin        = 0.0016982974236573
+ r_search_min = 0.024787679043148
+ vel_disp     = 0.60739605289507
+ dt_soft      = 0.001953125
+```
+	The definitions of these parameters are as follows:
+	- `mass_average`: average mass of all objects.
+	- `r_in`: changeover inner radius reference
+    - `r_out`: changeover outer radius reference
+	- `r_bin`: the criterion for selecting group members.
+    - `r_search_min`: the minimum neighbor searching radius reference
+	- `vel_disp`: velocity dispersion of the system
+    - `dt_soft`: tree time step
+
+	These parameters determine the performance of a simulation, see details in [Performance Optimization](#performance-optimization).
+
 - If Galpy is utilized, the Galpy potential setup information may be printed.
+```
+Galpy parameters, time: 0 Next update time: 0
+Potential set 1 Mode: 0 GM: 0 Pos: 0 0 0 Vel: 0 0 0 Acc: 0 0 0
+Potential type indice: 15 5 9
+Potential arguments: 251.63858935563 1.8 1900 306770418.38589 3000 280 1965095308.1922 16000
+```
 - In case the SSE/BSE-based stellar evolution package is employed, common block and global parameters are showcased.
-- Filenames for dumped input parameters are specified. By default, these include:
+```
+ ----- SSE/BSE common block parameter list: -----
+ value1: neta:  0.50000000000000000       bwind:   0.0000000000000000       hewind:   1.0000000000000000
+...
+```
+
+- Filenames for dumped input parameters are specified.
+```
+-----  Dump parameter files -----
+Save input parameters to file input.par
+...
+```
+	By default, these include:
     - `input.par`: Input parameters of `petar`, useful for restarting the simulation from a snapshot.
     - `input.par.hard`: Input parameters of the hard component (short-range interaction part; Hermite + SDAR), utilized for testing the dumped hard cluster with `_petar.hard.debug_`.
     - `input.par.[bse_name]`: Parameters for the SSE/BSE-based package, necessary for restarting the simulation and for `petar.hard.debug` if an SSE/BSE-based package is used.
@@ -940,7 +1015,7 @@ Similarly, when external mode (potential) is enabled, the `-t` option should be 
 
 The performance of `petar` is highly dependent on the tree time step chosen. To assist in finding the optimal time step for achieving the best performance, `petar.find.dt` can be utilized. The usage is as follows:
 ```shell
-petar.find.dt [options] [petar data filename]
+petar.find.dt [options] [petar snapshot filename]
 ```
 The performance of `petar` relies on the initial particle data file in the petar input format. This tool conducts brief simulations with various tree time steps and presents the performance results sequentially. Users can then determine which time step yields the best performance.
 
@@ -1054,6 +1129,20 @@ For Lagrangian properties, 'data.lagr' includes radius, average mass, number of 
 
 When `--calc-energy` is used, potential energy, external potential energy, and virial ratio for each Lagrangian radii are calculated. However, when an external potential is used, the virial ratio may not be accurately estimated in disrupted phases.
 
+### Gathering Specified Objects
+
+The `petar.get.object.snap` tool can gather specified objects from a list of snapshots into one file with a time series.
+Users can specify IDs, stellar types, mass ranges, and a custom-defined Python script to select objects.
+
+For example, if users want to obtain the trajectories of the object with ID=1 and 2, this tool can scan all given snapshots and save the data of this object into one file. The following script can be used:
+```shell
+petar.get.object.snap -m id 1_2 [snapshot path list filename]
+```
+Then, a new file "object.1_2" is generated for objects with ID=1 and 2.
+Using `petar.Particle` of the data analysis module, users can read this file and investigate how these two objects evolve during the simulation.
+
+Similar to configuring `petar.data.process`, users should ensure to set the correct options for interrupt mode (`-i`), external mode (`-t`) and snapshot file format (`-s`) when using `petar.get.object.snap`. This ensures to correctly reading the snapshots.
+
 ### Movie Generator
 
 The `petar.movie` tool is a convenient utility for creating movies from snapshot files. It can generate movies showcasing the positions (x, y) of stars, the HR diagram if stellar evolution (SSE/BSE) is enabled, and the 2D distribution of semi-major axis and eccentricity of binaries. To generate a movie, a list of snapshot files is required.
@@ -1067,7 +1156,7 @@ For plotting binary information, it is recommended to first utilize `petar.data.
 
 This tool utilizes either the `imageio` or `matplotlib.animation` Python modules to create movies. Installing `imageio` is advised for faster movie generation using multiple CPU cores, as `matplotlib.animation` can only utilize a single CPU core. Additionally, it is recommended to install the `ffmpeg` library to support various commonly used movie formats such as mp4 and avi. Please note that `ffmpeg` is a standalone library and not a Python module. Users should install it in the operating system (e.g., via the `apt` tool in Ubuntu).
 
-Similar to configuring `petar.data.process`, users should ensure to set the correct options for the gravitational constant (`-G`), interrupt mode (`-i`), and external mode (`-t`) when using `petar.movie`. This ensures accurate processing of the snapshot data and proper generation of the movie content.
+Similar to configuring `petar.data.process`, users should ensure to set the correct options for the gravitational constant (`-G`), interrupt mode (`-i`), external mode (`-t`) and snapshot file format (`-s`) when using `petar.movie`. This ensures to correctly reading the snapshots.
 
 ### Data Removal after a specified time
 

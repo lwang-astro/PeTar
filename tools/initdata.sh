@@ -3,36 +3,42 @@ until [[ `echo x$1` == 'x' ]]
 do
     case $1 in
 	-h) shift;
-	    echo 'PeTar initial data file generator, convert a data file to petar input'
-	    echo 'Usage: petar.init [options] [input data filename]';
-	    echo '   The first 7 columns in the data file should be mass, position[3], velocity[3]. Each line contain the data of one particle.';
-	    echo '   If N binary exists, they should locate at the first 2*N lines. Two components must be next to each others.'
-	    echo 'Options:';
-	    echo '  -f: output file (petar input data) name (default: intput file name + ".input")';
-	    echo '  -i: skip the first given number of rows in the input data file (default: 0)';
-	    echo '  -s: add stellar evolution columns:  base | bse | no (default: no)';
-	    echo '  -m: the mass scaling factor from the input data unit to [Msun]: mass[input unit]*m_scale=mass[Msun] (default: 1.0)';
-	    echo '      Notice that Msun is used for mass unit in BSE based stellar evolution';
-	    echo '  -r: the radius scaling factor from the input data unit to [pc] (default: 1.0)';
-	    echo '  -v: the velocity scaling factor from the input data unit to [pc/myr]  (default: 1.0)';
-	    echo '      If the string "kms2pcmyr" is given, convert velocity unit from [km/s] to [pc/myr]';
-	    echo '  -u: calculate the velocity scaling factor based on the mass and radius scaling, then convert the data unit to (Msun, pc, pc/myr). ';
-	    echo '      The input data should use the Henon unit (total mass=1, G=1)';
-	    echo '      The mass and radius scaling can be modified by -m and -r, respectively';
-	    echo '  -c: add position and velocity offsets to all particles [in Input unit], values are separated by "," (default: 0,0,0,0,0,0).';
-	    echo '      The units will be transferred based on the scaling options (-r,-v,-u).';
-	    echo '  -t: add an external potential column and the center-of-the-mass offsets in header.';
-	    echo '      This is required when the external potential (e.g. Galpy) is switched on (--with-external in configure)'
-	    echo '  -R: the initial stellar radius for "-s base" mode (default: 0.0)';
-	    echo 'PS: 1) When stellar evolution (e.g. BSE) is used, be careful for the scaling factor.';
+	    echo 'A tool to convert a particle data file to PeTar style, which can be used to start a simulation.'
+	    echo 'Usage: petar.init [options] [particle data filename]';
+	    echo '   particle data file: A file containing information of particles.';
+	    echo '      The file contains 7 columns, representing mass, 3D positions and 3D velocities, respectively.';
+	    echo '      Each line contains the data of one particle.';
+	    echo '      If there are N binaries, they should be located in the first 2*N lines with two components next to each other.'
+	    echo 'Options (default arguments shown in parentheses at the end):';
+	    echo '  -f [S] Specify the output file (PeTar input data) name (default: input file name + ".input")';
+	    echo '  -i [I] Skip the given number of rows in the input data file (default: 0)';
+	    echo '  -s [S] Add stellar evolution columns: base | bse | no (default: no)';
+	    echo '  -m [F] Set the mass scaling factor from the input data unit to [Msun]: mass[input unit]*m_scale=mass[Msun] (default: 1.0)';
+	    echo '      Note that Msun is used as the mass unit in BSE based stellar evolution.';
+	    echo '  -r [F] Set the radius scaling factor from the input data unit to [pc] (default: 1.0)';
+	    echo '  -v [F] Set the velocity scaling factor from the input data unit to [pc/myr]  (default: 1.0)';
+	    echo '          If "kms2pcmyr" is given, convert velocity unit from [km/s] to [pc/myr].';
+	    echo '  -u     Calculate the velocity scaling factor based on the mass and radius scaling, then convert the data unit to (Msun, pc, pc/myr).';
+	    echo '          The input data should use the Henon unit (total mass=1, G=1).';
+	    echo '          The mass and radius scaling can be modified using -m and -r, respectively.';
+	    echo '  -t     Add an external potential column and the position and velocity offsets to all particles in the header line.';
+	    echo '         This is required when the external potential (e.g., Galpy) is enabled (--with-external in configure).';
+	    echo '  -c [S] Set values of position and velocity offsets [in input unit], values are separated by "," (default: 0,0,0,0,0,0).';
+	    echo '         The units will be transformed based on the scaling options (-r, -v, -u).';
+	    echo '         This is required when the external potential (e.g., Galpy) is enabled and the option "-t" is used';
+	    echo '  -R [S] Set the initial stellar radius for "-s base" mode (default: 0.0)';
+	    echo 'Important notes:'
+	    echo '    1) When using stellar evolution (e.g., BSE), be cautious with the scaling factor.';
 	    echo '       It is recommended to use the unit set [Msun, pc, pc/myr] for the input data.';
-	    echo '       If velocities use the unit of km/s, use "-v kms2pcmyr" to convert the unit to pc/myr.';
-	    echo '    2) If the input data are in the Henon unit, given "-m" and "-r"; the option "-u" can calculate the correct velocity scaling factor.';
-	    echo '    3) A petar-style input file generated by this tool can also be used as a data file, in order to change scaling factors or stellar evolution columns.';
-	    echo '       In this case, "-i 1" should be used together to remove the header line. ';
-	    echo '       The data in the BINARY format cannot be read.';
-	    echo '    4) Be careful, this tool does not work for a petar snapshot from the middle of a simulation, where binary positions may already be changed (not locate at the begining).';
-	    echo '    5) If an external potential (e.g. Galpy) is used, the option "-c" defines the center-of-the-mass position and velocity in the galactic coordinate system.'
+	    echo '       If velocities are in km/s, use "-v kms2pcmyr" to convert the unit to pc/myr.';
+	    echo '    2) If the input data is in the Henon unit, specify "-m" and "-r"; the option "-u" can calculate the correct velocity scaling factor.';
+	    echo '    3) A PeTar-style input file generated by this tool can also be used as a data file to change scaling factors or stellar evolution columns.';
+	    echo '       In this case, use "-i 1" to remove the header line.';
+	    echo '       Data in BINARY format cannot be read.';
+	    echo '    4) Be aware that this tool does not work for a PeTar snapshot from the middle of a simulation where binary positions may have changed.';
+	    echo '    5) If an SSE/BSE-based stellar evolution package is compiled (e.g., --with-interrupt=bse), use the option "-s" to set the correct format of columns.';
+	    echo '    6) If an external potential (e.g., Galpy) is used, use the option "-t" to set the correct format of columns.';
+	    echo '       Additionally, use "-c" to set the position and velocity offsets of the cluster center in the galactic coordinate system.';
 	    exit;;
 	-f) shift; fout=$1; shift;;
 	-i) shift; igline=$1; shift;;
