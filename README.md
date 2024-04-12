@@ -120,6 +120,7 @@ The subsequent sections provide detailed explanations of the installation proces
          - [Determining the Tree Time Step with `petar.find.it`](#determining-the-tree-time-step)
          - [Gathering Output Files with `petar.data.gether`](#gathering-output-files)
          - [Parallel Data Processing with `petar.data.process`](#parallel-data-processing)
+         - [Gathering Specified Objects with `petar.get.object.snap`](#gathering-specified-objects)
          - [Movie Generator with `petar.movie`](#movie-generator)
          - [Data Removal after a specified time with `petar.data.clear`](#data-removal-after-a-specified-time)
          - [Data Format Conversion](#data-format-conversion)
@@ -1131,17 +1132,16 @@ When `--calc-energy` is used, potential energy, external potential energy, and v
 
 ### Gathering Specified Objects
 
-The `petar.get.object.snap` tool can gather specified objects from a list of snapshots into one file with a time series.
-Users can specify IDs, stellar types, mass ranges, and a custom-defined Python script to select objects.
+The `petar.get.object.snap` tool enables the collection of specified objects from a list of snapshots into a single file with a time series. Users can define IDs, stellar types, mass ranges, and a custom Python script to select objects.
 
-For example, if users want to obtain the trajectories of the object with ID=1 and 2, this tool can scan all given snapshots and save the data of this object into one file. The following script can be used:
+For instance, if users wish to extract the trajectories of objects with IDs 1 and 2, this tool can scan all provided snapshots and consolidate the data of these objects into a single file. The following script demonstrates this process:
 ```shell
 petar.get.object.snap -m id 1_2 [snapshot path list filename]
 ```
-Then, a new file "object.1_2" is generated for objects with ID=1 and 2.
-Using `petar.Particle` of the data analysis module, users can read this file and investigate how these two objects evolve during the simulation.
+Subsequently, a new file named "object.1_2" is created for objects with IDs 1 and 2. By utilizing `petar.Particle` from the data analysis module, users can access this file and analyze the evolution of these two objects throughout the simulation. For more information, refer to 
+ the help information of `petar.get.object.snap -h`.
 
-Similar to configuring `petar.data.process`, users should ensure to set the correct options for interrupt mode (`-i`), external mode (`-t`) and snapshot file format (`-s`) when using `petar.get.object.snap`. This ensures to correctly reading the snapshots.
+Similar to configuring `petar.data.process`, users should ensure the correct settings for interrupt mode (`-i`), external mode (`-t`), and snapshot file format (`-s`) are in place while using `petar.get.object.snap`. This guarantees the accurate interpretation of the snapshots.
 
 ### Movie Generator
 
