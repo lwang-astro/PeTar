@@ -1234,9 +1234,15 @@ public:
                                        p1->pos[1] - p2->pos[1], 
                                        p1->pos[2] - p2->pos[2]};
                         Float dr2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
-                        if (bse_manager.isTDE(p1->star, p2->star, dr2)) merge(std::sqrt(dr2), 0.0, 1.0, "HYPERBTDE: ");
-                        else if (bse_manager.isMerge(p1->star, p2->star, dr2)) merge(std::sqrt(dr2), 0.0, 1.0);
-                    }
+                        if (bse_manager.isTDE(p1->star, p2->star, dr2)) { 
+				merge(std::sqrt(dr2), 0.0, 1.0, "HYPERBTDE: ");
+				std::cout<<"HYPERBTDE found"<<std::endl;
+			}	
+			else if (bse_manager.isMerge(p1->star, p2->star, dr2)) { 
+				merge(std::sqrt(dr2), 0.0, 1.0);    
+				std::cout<<"MERGE found"<<std::endl;
+			}	
+		    }
 #endif
                 }
 

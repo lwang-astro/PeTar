@@ -1656,7 +1656,7 @@ public:
         
         double tidal_rad =  rstar * std::pow(mco/mstar,1./3.) ;
         
-        bool is_tde = _dr2 < = tidal_rad * tidal_rad ;
+        bool is_tde = _dr2 <= tidal_rad * tidal_rad ;
         
         return is_tde ;
         
