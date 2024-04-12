@@ -923,27 +923,26 @@ public:
 
             };
 
-            bool check_flag = false;
             if (stellar_evolution_option>0) {
                 int binary_type_p1 = static_cast<int>(p1->getBinaryInterruptState());
                 int binary_type_p2 = static_cast<int>(p2->getBinaryInterruptState());
                 int binary_type_init = 0;
                 if (binary_type_p1==binary_type_p2) binary_type_init = binary_type_p1;
 
-                // check whether need to update
+                // check whether need to update based on time step
                 double time_check = std::min(p1->time_interrupt, p2->time_interrupt);
-                Float dt = _bin_interrupt.time_now - std::max(p1->time_record,p2->time_record);
-                if (time_check<=_bin_interrupt.time_now&&dt>0) check_flag = true;
+                Float dt1 = _bin_interrupt.time_now - p1->time_record;
+                Float dt2 = _bin_interrupt.time_now - p2->time_record;
+                // if next time to check > time_now, do not evolve by setting dt = 0;
+                if (time_check<=_bin_interrupt.time_now) dt1 = dt2 = 0.0;
 
-                if (!check_flag) {
-                    // pre simple check whether calling BSE is needed
-                    Float t_record_min = std::min(p1->time_record,p2->time_record);
-                    
+                // check whether bse is needed
+                Float dr[3] = {p1->pos[0] - p2->pos[0], 
+                               p1->pos[1] - p2->pos[1], 
+                               p1->pos[2] - p2->pos[2]};
+                Float dr2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
 
-                    if (t_record_min<_bin_interrupt.time_now&&_bin.semi>0 && (!bse_manager.isMassTransfer(binary_type_init)) && (!bse_manager.isDisrupt(binary_type_init))) {
-                        check_flag=bse_manager.isCallBSENeeded(p1->star, p2->star, _bin.semi, _bin.ecc, dt);
-                    }
-                }
+                bool check_flag = bse_manager.isCallBSENeeded(p1->star, p2->star, dr2, _bin.semi, _bin.ecc, dt1, dt2, binary_type_init);
 
                 if (check_flag) {
                     ASSERT(bse_manager.checkParams());
@@ -1066,8 +1065,8 @@ public:
 
             // dynamical merger and tide check
             if (_bin_interrupt.status!=AR::InterruptStatus::merge&&_bin_interrupt.status!=AR::InterruptStatus::destroy) {
-
-                auto merge = [&](const Float& dr, const Float& t_peri, const Float& sd_factor) {
+                
+                auto merge = [&](const Float& dr, const Float& t_peri, const Float& sd_factor, std::string logmessage = "Dynamic_merge: " ) {
                     _bin_interrupt.adr = &_bin;
                 
 #ifdef BSE_BASE
@@ -1107,10 +1106,11 @@ public:
                         bse_manager.merge(p1->star, p2->star, out[0], out[1], semi, ecc);
 
                         postProcess(out, pos_cm, vel_cm, semi, ecc, 0);
+
                         if (stellar_evolution_write_flag&&(p1->mass==0.0||p2->mass==0.0)) {
 #pragma omp critical
                             {
-                                fout_bse<<"Dynamic_merge: "
+                                fout_bse<<logmessage
                                         <<std::setw(WRITE_WIDTH)<<p1->id
                                         <<std::setw(WRITE_WIDTH)<<p2->id
                                         <<std::setw(WRITE_WIDTH)<<_bin.period*bse_manager.tscale*bse_manager.year_to_day
@@ -1184,15 +1184,15 @@ public:
                     p2->getBinaryInterruptState()== BinaryInterruptState::collision &&
                     (p1->time_interrupt<_bin_interrupt.time_now && p2->time_interrupt<_bin_interrupt.time_now) &&
                     (p1->getBinaryPairID()==p2->id||p2->getBinaryPairID()==p1->id)) {
+
                     Float dr[3] = {p1->pos[0] - p2->pos[0], 
                                    p1->pos[1] - p2->pos[1], 
                                    p1->pos[2] - p2->pos[2]};
-                    Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+                    Float dr2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
                     merge(std::sqrt(dr2), 0.0, 1.0);
                 }
                 else {
                     // check merger
-                    Float radius = p1->radius + p2->radius;
 #ifndef BSE_BASE
                     // slowdown case
                     if (_bin.slowdown.getSlowDownFactor()>1.0) {
@@ -1206,10 +1206,6 @@ public:
                             Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi))); 
                             Float t_peri = mean_anomaly/mean_motion;
                             if (drdv<0 && t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
-                                Float dr[3] = {p1->pos[0] - p2->pos[0], 
-                                               p1->pos[1] - p2->pos[1], 
-                                               p1->pos[2] - p2->pos[2]};
-                                Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
                                 merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor());
                             }
                             else if (_bin.semi>0||(_bin.semi<0&&drdv<0)) {
@@ -1227,7 +1223,8 @@ public:
                         Float dr[3] = {p1->pos[0] - p2->pos[0], 
                                        p1->pos[1] - p2->pos[1], 
                                        p1->pos[2] - p2->pos[2]};
-                        Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+                        Float dr2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+                        Float radius = p1->radius + p2->radius;
                         if (dr2<radius*radius) merge(std::sqrt(dr2), 0.0, 1.0);
                     }
 #else
@@ -1236,8 +1233,9 @@ public:
                         Float dr[3] = {p1->pos[0] - p2->pos[0], 
                                        p1->pos[1] - p2->pos[1], 
                                        p1->pos[2] - p2->pos[2]};
-                        Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
-                        if (dr2<radius*radius) merge(std::sqrt(dr2), 0.0, 1.0);
+                        Float dr2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+                        if (bse_manager.isTDE(p1->star, p2->star, dr2)) merge(std::sqrt(dr2), 0.0, 1.0, "HYPERBTDE: ");
+                        else if (bse_manager.isMerge(p1->star, p2->star, dr2)) merge(std::sqrt(dr2), 0.0, 1.0);
                     }
 #endif
                 }

@@ -1594,6 +1594,77 @@ public:
         return is_fill;
     }
 
+        // SARA_i
+
+    
+    //! check merger condition
+    /* 
+      @param[in] _star1: star parameter of first
+      @param[in] _star2: star parameter of second
+      @param[in] _dr: distance between to star, [IN unit]
+      \return true: TDE/merge event candidate
+     */
+     
+    bool isMerge(StarParameter& _star1, StarParameter& _star2, double& _dr2) {
+
+        // merge condition
+        double rad = _star1.r + _star2.r;
+        bool is_merge = _dr2 < rad*rad;
+
+        return is_merge ;
+    }
+
+    //! check tidal disruption event (TDE) 
+    /* 
+      @param[in] _star1: star parameter of first
+      @param[in] _star2: star parameter of second
+      @param[in] _dr: distance between to star, [IN unit]
+      \return true: TDE/merge event candidate
+     */
+
+    bool isTDE(StarParameter& _star1, StarParameter& _star2, double& _dr2) {
+
+        // TDE condition
+        int type1 = _star1.kw;
+        int type2 = _star2.kw;
+        double mco, mstar, rstar ;
+
+
+        //if (((type1 ==13  or type1==14)  and  (type2 <= 12)) or   ( (type2 ==13  or type2==14)  and  (type1 <= 12)) {
+        if ((type1 ==13  or type1==14)  and  (type2 <= 12)) {
+        
+             mco = _star1.mt ;
+             mstar = _star2.mt ;
+             rstar = _star2.r ;
+        
+        }
+         else if ((type2 ==13  or type2==14)  and  (type1 <= 12)) {
+         
+             mco = _star2.mt ;
+             mstar = _star1.mt ;
+             rstar = _star1.r ;
+        
+        }
+         
+        else {
+        
+             return false ;
+        
+        }
+        
+        //condition TDE Rees1988
+        
+        double tidal_rad =  rstar * std::pow(mco/mstar,1./3.) ;
+        
+        bool is_tde = _dr2 < = tidal_rad * tidal_rad ;
+        
+        return is_tde ;
+        
+    }
+        
+        // SARA_f
+
+
 
     //! merge two star using mix function, star 2 will becomes zero mass
     /*!
@@ -1760,45 +1831,70 @@ public:
       If KW type >10, check GR effect timescale.
       @param[in] _star1: star parameter of first
       @param[in] _star2: star parameter of second
+      @param[in] _dr2: seperation square of two members [IN unit]
       @param[in] _semi: semi-major axis, [IN unit]
       @param[in] _ecc: eccentricity of binary, used for BSE
-      @param[in] _dt: the time step [In unit]
+      @param[in] _dt1: the time step of star 1 [In unit]
+      @param[in] _dt2: the time step of star 2 [In unit]
+      @param[in] _binary_type_init: initial binary type
       \return true: necessary
     */
-    bool isCallBSENeeded(StarParameter& _star1, StarParameter& _star2, double& _semi, double& _ecc, double& _dt) {
-        if (_star1.kw>=10&&_star1.kw<15&&_star2.kw>=10&&_star2.kw<15) {
+    bool isCallBSENeeded(StarParameter& _star1, StarParameter& _star2, double& _dr2, double& _semi, double& _ecc, double& _dt1, double& _dt2, int& _binary_type_init) {
+
+        bool call_flag = false;
+        // check time step and seperation criterion
+        if ((_dt1>0 || _dt2>0) && _semi>0)  call_flag = true;
+        
+        // check whether this binary is in mass transfer or is disrupted, if not, check Roche, GW and tidal disruption condition
+        if (!call_flag && !isMassTransfer(_binary_type_init) && !isDisrupt(_binary_type_init)) {
+
+            double dt = std::max(_dt1, _dt2)*tscale;
+
             // check GR effect
-            double semi_rsun = _semi*rscale;
-            double dt_gr = EstimateGRTimescale(_star1, _star2, semi_rsun, _ecc);
-            if (dt_gr<_dt*tscale) return true;
-        }
-        else {
-            // check Roche overflow
-            if (isRocheFill(_star1, _star2, _semi, _ecc)) {
-                int kw[2];
-                double m0[2],mt[2],r[2],mc[2],rc[2],age[2];
-                kw[0] = _star1.kw;
-                m0[0] = _star1.m0;
-                mt[0] = _star1.mt;
-                r[0]  = _star1.r;
-                mc[0] = _star1.mc;
-                rc[0] = _star1.rc;
-                age[0]= _star1.tphys-_star1.epoch;
-
-                kw[1] = _star2.kw;
-                m0[1] = _star2.m0;
-                mt[1] = _star2.mt;
-                r[1]  = _star2.r;
-                mc[1] = _star2.mc;
-                rc[1] = _star2.rc;
-                age[1]= _star2.tphys-_star2.epoch;
-
-                double dtr;
+            if (_star1.kw>=10&&_star1.kw<15&&_star2.kw>=10&&_star2.kw<15) {
                 double semi_rsun = _semi*rscale;
-                trflow_(kw,m0,mt,r,mc,rc,age,&dtr,&semi_rsun,&_ecc,zpars);
-                if (dtr<_dt*tscale) return true;
+                double dt_gr = EstimateGRTimescale(_star1, _star2, semi_rsun, _ecc);
+                if (dt_gr<dt) call_flag = true;
             }
+            // check Roche overflow
+            // SARA_i_1
+            else if (isRocheFill(_star1, _star2, _semi, _ecc)) {
+                    int kw[2];
+                    double m0[2],mt[2],r[2],mc[2],rc[2],age[2];
+                    kw[0] = _star1.kw;
+                    m0[0] = _star1.m0;
+                    mt[0] = _star1.mt;
+                    r[0]  = _star1.r;
+                    mc[0] = _star1.mc;
+                    rc[0] = _star1.rc;
+                    age[0]= _star1.tphys-_star1.epoch;
+
+                    kw[1] = _star2.kw;
+                    m0[1] = _star2.m0;
+                    mt[1] = _star2.mt;
+                    r[1]  = _star2.r;
+                    mc[1] = _star2.mc;
+                    rc[1] = _star2.rc;
+                    age[1]= _star2.tphys-_star2.epoch;
+
+                    double dtr;
+                    double semi_rsun = _semi*rscale;
+                    trflow_(kw,m0,mt,r,mc,rc,age,&dtr,&semi_rsun,&_ecc,zpars);
+                    if (dtr<dt) call_flag = true;
+                }
+                
+                // TDE condition
+            //else if (isTDEorMerge(_star1, _star2, _dr2) ) {
+                     //call_flag = true ;
+                     
+                // SARA_f_1
+            //}
         }
-        return false;
+
+        // check whether binary seperation is too wide, if yes, do not call bse
+        double peri = _semi*(1-_ecc);
+        if (_dr2 > 9.0*peri*peri) call_flag = false;
+
+        return call_flag;
     }
 };
