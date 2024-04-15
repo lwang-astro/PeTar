@@ -1,0 +1,191 @@
+\hypertarget{classBinaryEvent}{}\doxysection{Binary\+Event Class Reference}
+\label{classBinaryEvent}\index{BinaryEvent@{BinaryEvent}}
+
+
+B\+SE based code event recorder class.  
+
+
+
+
+{\ttfamily \#include $<$bse\+\_\+interface.\+h$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+void \mbox{\hyperlink{classBinaryEvent_abceee9b94161fd75851eaf003a49c011}{record\+Event}} (const \mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&\+\_\+p1, const \mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&\+\_\+p2, const double \+\_\+semi, const double \+\_\+ecc, const int \+\_\+type, const int \+\_\+index)
+\begin{DoxyCompactList}\small\item\em set up the initial parameter of binary event based on the present status of a binary \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classBinaryEvent_a1ee6a0a141093aa6f5662c4cf7659a6c}{set\+Event\+Index\+End}} (const int index)
+\begin{DoxyCompactList}\small\item\em set binary type to -\/1 for the given event index to indicate the end of record \end{DoxyCompactList}\item 
+int \mbox{\hyperlink{classBinaryEvent_acc7f552989aba11c043b6ef083313914}{get\+Event\+N\+Max}} () const
+\begin{DoxyCompactList}\small\item\em Maximum event number that can be recored in one call of evolv2. \end{DoxyCompactList}\item 
+int \mbox{\hyperlink{classBinaryEvent_ad82d36b90a69ce9fb2e65af39cb6cd41}{get\+Event\+Index\+Init}} () const
+\begin{DoxyCompactList}\small\item\em The index of initial event in record array (last one) \end{DoxyCompactList}\item 
+int \mbox{\hyperlink{classBinaryEvent_ac6e4d2e426a2441149eba68cb5c13348}{get\+Type}} (const int index) const
+\begin{DoxyCompactList}\small\item\em Get the binary type. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classBinaryEvent_a1c7cac78c8863e28cbdf4a6d903cc1e5}{print}} (std\+::ostream \&fout, const int index) const
+\begin{DoxyCompactList}\small\item\em for print in one line \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classBinaryEvent_a5bc4d8d9c723d443cb11045d86e3393f}{print\+Column}} (std\+::ostream \&\+\_\+fout, const int \+\_\+index, const int \+\_\+width=20) const
+\begin{DoxyCompactList}\small\item\em print data of class members using column style \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static void \mbox{\hyperlink{classBinaryEvent_ae41f0e5711a9b8b6e624062cd79a5b12}{print\+Column\+Title}} (std\+::ostream \&\+\_\+fout, const int \+\_\+width=20)
+\begin{DoxyCompactList}\small\item\em print titles of class members using column style \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+double \mbox{\hyperlink{classBinaryEvent_ababb72bfe0dd144bb2f7a007797a6fa7}{record}} \mbox{[}20\mbox{]}\mbox{[}9\mbox{]}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+B\+SE based code event recorder class. 
+
+The binary evolution parameters record in the bpp array of evolv2 
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classBinaryEvent_ad82d36b90a69ce9fb2e65af39cb6cd41}\label{classBinaryEvent_ad82d36b90a69ce9fb2e65af39cb6cd41}} 
+\index{BinaryEvent@{BinaryEvent}!getEventIndexInit@{getEventIndexInit}}
+\index{getEventIndexInit@{getEventIndexInit}!BinaryEvent@{BinaryEvent}}
+\doxysubsubsection{\texorpdfstring{getEventIndexInit()}{getEventIndexInit()}}
+{\footnotesize\ttfamily int Binary\+Event\+::get\+Event\+Index\+Init (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+The index of initial event in record array (last one) 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classBinaryEvent_ad82d36b90a69ce9fb2e65af39cb6cd41_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classBinaryEvent_acc7f552989aba11c043b6ef083313914}\label{classBinaryEvent_acc7f552989aba11c043b6ef083313914}} 
+\index{BinaryEvent@{BinaryEvent}!getEventNMax@{getEventNMax}}
+\index{getEventNMax@{getEventNMax}!BinaryEvent@{BinaryEvent}}
+\doxysubsubsection{\texorpdfstring{getEventNMax()}{getEventNMax()}}
+{\footnotesize\ttfamily int Binary\+Event\+::get\+Event\+N\+Max (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Maximum event number that can be recored in one call of evolv2. 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classBinaryEvent_acc7f552989aba11c043b6ef083313914_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classBinaryEvent_ac6e4d2e426a2441149eba68cb5c13348}\label{classBinaryEvent_ac6e4d2e426a2441149eba68cb5c13348}} 
+\index{BinaryEvent@{BinaryEvent}!getType@{getType}}
+\index{getType@{getType}!BinaryEvent@{BinaryEvent}}
+\doxysubsubsection{\texorpdfstring{getType()}{getType()}}
+{\footnotesize\ttfamily int Binary\+Event\+::get\+Type (\begin{DoxyParamCaption}\item[{const int}]{index }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Get the binary type. 
+
+\mbox{\Hypertarget{classBinaryEvent_a1c7cac78c8863e28cbdf4a6d903cc1e5}\label{classBinaryEvent_a1c7cac78c8863e28cbdf4a6d903cc1e5}} 
+\index{BinaryEvent@{BinaryEvent}!print@{print}}
+\index{print@{print}!BinaryEvent@{BinaryEvent}}
+\doxysubsubsection{\texorpdfstring{print()}{print()}}
+{\footnotesize\ttfamily void Binary\+Event\+::print (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{fout,  }\item[{const int}]{index }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+for print in one line 
+
+\mbox{\Hypertarget{classBinaryEvent_a5bc4d8d9c723d443cb11045d86e3393f}\label{classBinaryEvent_a5bc4d8d9c723d443cb11045d86e3393f}} 
+\index{BinaryEvent@{BinaryEvent}!printColumn@{printColumn}}
+\index{printColumn@{printColumn}!BinaryEvent@{BinaryEvent}}
+\doxysubsubsection{\texorpdfstring{printColumn()}{printColumn()}}
+{\footnotesize\ttfamily void Binary\+Event\+::print\+Column (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+index,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print data of class members using column style 
+
+print data of class members in one line for column style. Notice no newline is printed at the end 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+index} & event index to print \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classBinaryEvent_ae41f0e5711a9b8b6e624062cd79a5b12}\label{classBinaryEvent_ae41f0e5711a9b8b6e624062cd79a5b12}} 
+\index{BinaryEvent@{BinaryEvent}!printColumnTitle@{printColumnTitle}}
+\index{printColumnTitle@{printColumnTitle}!BinaryEvent@{BinaryEvent}}
+\doxysubsubsection{\texorpdfstring{printColumnTitle()}{printColumnTitle()}}
+{\footnotesize\ttfamily static void Binary\+Event\+::print\+Column\+Title (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+print titles of class members using column style 
+
+print titles of class members in one line for column style 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classBinaryEvent_abceee9b94161fd75851eaf003a49c011}\label{classBinaryEvent_abceee9b94161fd75851eaf003a49c011}} 
+\index{BinaryEvent@{BinaryEvent}!recordEvent@{recordEvent}}
+\index{recordEvent@{recordEvent}!BinaryEvent@{BinaryEvent}}
+\doxysubsubsection{\texorpdfstring{recordEvent()}{recordEvent()}}
+{\footnotesize\ttfamily void Binary\+Event\+::record\+Event (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&}]{\+\_\+p1,  }\item[{const \mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&}]{\+\_\+p2,  }\item[{const double}]{\+\_\+semi,  }\item[{const double}]{\+\_\+ecc,  }\item[{const int}]{\+\_\+type,  }\item[{const int}]{\+\_\+index }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set up the initial parameter of binary event based on the present status of a binary 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=321pt]{classBinaryEvent_abceee9b94161fd75851eaf003a49c011_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classBinaryEvent_abceee9b94161fd75851eaf003a49c011_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classBinaryEvent_a1ee6a0a141093aa6f5662c4cf7659a6c}\label{classBinaryEvent_a1ee6a0a141093aa6f5662c4cf7659a6c}} 
+\index{BinaryEvent@{BinaryEvent}!setEventIndexEnd@{setEventIndexEnd}}
+\index{setEventIndexEnd@{setEventIndexEnd}!BinaryEvent@{BinaryEvent}}
+\doxysubsubsection{\texorpdfstring{setEventIndexEnd()}{setEventIndexEnd()}}
+{\footnotesize\ttfamily void Binary\+Event\+::set\+Event\+Index\+End (\begin{DoxyParamCaption}\item[{const int}]{index }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set binary type to -\/1 for the given event index to indicate the end of record 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classBinaryEvent_a1ee6a0a141093aa6f5662c4cf7659a6c_icgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classBinaryEvent_ababb72bfe0dd144bb2f7a007797a6fa7}\label{classBinaryEvent_ababb72bfe0dd144bb2f7a007797a6fa7}} 
+\index{BinaryEvent@{BinaryEvent}!record@{record}}
+\index{record@{record}!BinaryEvent@{BinaryEvent}}
+\doxysubsubsection{\texorpdfstring{record}{record}}
+{\footnotesize\ttfamily double Binary\+Event\+::record\mbox{[}20\mbox{]}\mbox{[}9\mbox{]}}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{bse__interface_8h}{bse\+\_\+interface.\+h}}\end{DoxyCompactItemize}

@@ -1,0 +1,356 @@
+\hypertarget{namespacegalpy__pot__movie}{}\doxysection{galpy\+\_\+pot\+\_\+movie Namespace Reference}
+\label{namespacegalpy__pot__movie}\index{galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+def \mbox{\hyperlink{namespacegalpy__pot__movie_adedebc188b4de2a497744878176bb416}{create\+\_\+movie}} (filenames, \mbox{\hyperlink{namespacegalpy__pot__movie_ac9d04551291e813a9d47c7764df4ede7}{fps}}, \mbox{\hyperlink{namespacegalpy__pot__movie_a19bbbd68789f81332a9873bb36c78d7d}{output\+\_\+file}})
+\item 
+def \mbox{\hyperlink{namespacegalpy__pot__movie_aa885513bec3547189487315e470589f4}{create\+Image}} (index\+\_\+list, \mbox{\hyperlink{namespacegalpy__pot__movie_aa9d97f11fb9f2ff266a0a69075d40e37}{xyscale}}, \mbox{\hyperlink{namespacegalpy__pot__movie_a44e56aeca6e050ed6108bbbd763ed6a0}{plot\+\_\+format}}, \mbox{\hyperlink{namespacegalpy__pot__movie_af73225b6a66767b45090dfdd6f2405a8}{log\+\_\+flag}}, $\ast$$\ast$\mbox{\hyperlink{namespacegalpy__pot__movie_a1e2e5297c42b607c38b4daff75026976}{kwargs}})
+\item 
+def \mbox{\hyperlink{namespacegalpy__pot__movie_ae30ea99c6c9fd85c1f2bbd83b696641d}{usage}} ()
+\end{DoxyCompactItemize}
+\doxysubsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+int \mbox{\hyperlink{namespacegalpy__pot__movie_ac9d04551291e813a9d47c7764df4ede7}{fps}} = 30
+\item 
+string \mbox{\hyperlink{namespacegalpy__pot__movie_a19bbbd68789f81332a9873bb36c78d7d}{output\+\_\+file}} = \textquotesingle{}pot\+\_\+movie\textquotesingle{}
+\item 
+string \mbox{\hyperlink{namespacegalpy__pot__movie_a44e56aeca6e050ed6108bbbd763ed6a0}{plot\+\_\+format}} = \textquotesingle{}mp4\textquotesingle{}
+\item 
+int \mbox{\hyperlink{namespacegalpy__pot__movie_a7749cb90b0af241e106e7b7ee736130c}{n\+\_\+cpu}} = 0
+\item 
+bool \mbox{\hyperlink{namespacegalpy__pot__movie_af73225b6a66767b45090dfdd6f2405a8}{log\+\_\+flag}} = False
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a1e2e5297c42b607c38b4daff75026976}{kwargs}} = dict()
+\item 
+string \mbox{\hyperlink{namespacegalpy__pot__movie_acf3ad836a17ff38584c76816fa86d379}{shortargs}} = \textquotesingle{}f\+:o\+:h\textquotesingle{}
+\item 
+list \mbox{\hyperlink{namespacegalpy__pot__movie_ac109b34f4a2d3f4c290f7bc761088005}{longargs}} = \mbox{[}\textquotesingle{}help\textquotesingle{},\textquotesingle{}vmax=\textquotesingle{},\textquotesingle{}vmin=\textquotesingle{},\textquotesingle{}format=\textquotesingle{},\textquotesingle{}n-\/cpu=\textquotesingle{},\textquotesingle{}log\textquotesingle{}\mbox{]}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a65fbc73aa61ee6f9c8cd3a9af978e80c}{opts}}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a0972d20e0e14dfbb9d0668733c934057}{remainder}}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a869bee142eed9773bf7594f7cd0db566}{fpar}} = \mbox{\hyperlink{namespacegalpy__pot__movie_a0972d20e0e14dfbb9d0668733c934057}{remainder}}\mbox{[}0\mbox{]}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a3fa5f0e5f4c5cacdab86ebbc69420840}{fp}} = open(\mbox{\hyperlink{namespacegalpy__pot__movie_a869bee142eed9773bf7594f7cd0db566}{fpar}}, \textquotesingle{}r\textquotesingle{})
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_adae94988c3890575f6a9058e6e100636}{header}} = fp.\+readline()
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a21219a1abcdafab16fcf93dc23581db1}{t0}}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_af6d8a3f703079e7b353b7af8c136e946}{dt}}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_ae50af7118b493b53e207df8685051903}{nstep}} = int(nstep)
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a892cdf1ee55a65bb26d3e7b95755e0c6}{dt\+\_\+out}}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_abe5db73d3c3f045985edf6d19fedcbb0}{xmin}} = float(xmin)$\ast$1e-\/3
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_ad03211f44495267a852865b02e428a15}{xmax}} = float(xmax)$\ast$1e-\/3
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a1def2040ffdaaf5339f19e2a24c15d3e}{nx}}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_aa89728c4b9094d186fa7c4d38c4692e3}{ymin}} = float(ymin)$\ast$1e-\/3
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_ab4cb0e351c0c21a84429308086826eb1}{ymax}} = float(ymax)$\ast$1e-\/3
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a55ca965f84503434f7a5a3054f8fa975}{ny}}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a1467cc105a48654cc8d45f9f14630ddd}{zmin}} = float(zmin)$\ast$1e-\/3
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a3531f05550785100ebced7a9774ff35d}{zmax}} = float(zmax)$\ast$1e-\/3
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a517167afc4bd587d3e9899ae9ed4f65f}{nz}}
+\item 
+list \mbox{\hyperlink{namespacegalpy__pot__movie_aa9d97f11fb9f2ff266a0a69075d40e37}{xyscale}} = \mbox{[}\mbox{[}\mbox{\hyperlink{namespacegalpy__pot__movie_abe5db73d3c3f045985edf6d19fedcbb0}{xmin}},\mbox{\hyperlink{namespacegalpy__pot__movie_ad03211f44495267a852865b02e428a15}{xmax}},\mbox{\hyperlink{namespacegalpy__pot__movie_aa89728c4b9094d186fa7c4d38c4692e3}{ymin}},\mbox{\hyperlink{namespacegalpy__pot__movie_ab4cb0e351c0c21a84429308086826eb1}{ymax}}\mbox{]},\mbox{[}\mbox{\hyperlink{namespacegalpy__pot__movie_abe5db73d3c3f045985edf6d19fedcbb0}{xmin}},\mbox{\hyperlink{namespacegalpy__pot__movie_ad03211f44495267a852865b02e428a15}{xmax}},\mbox{\hyperlink{namespacegalpy__pot__movie_a1467cc105a48654cc8d45f9f14630ddd}{zmin}},\mbox{\hyperlink{namespacegalpy__pot__movie_a3531f05550785100ebced7a9774ff35d}{zmax}}\mbox{]}\mbox{]}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a3698425c3c80d31bacee4844e1ef56f8}{pot}} = np.\+loadtxt(\textquotesingle{}xy0\textquotesingle{}, unpack=True, usecols=(10),skiprows=1)
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_ac0b7f85d1533bbafe4e3963031612b04}{pot\+\_\+min}} = pot.\+min()
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_aff74fa346b8f3995e183490e504f1f22}{pot\+\_\+max}} = pot.\+max()
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_aaf033fd2b3874ef4766c8dabcbe44675}{pool}} = mp.\+Pool(\mbox{\hyperlink{namespacegalpy__pot__movie_a7749cb90b0af241e106e7b7ee736130c}{n\+\_\+cpu}})
+\item 
+int \mbox{\hyperlink{namespacegalpy__pot__movie_a9d55870bf82ce913e620c5fb7c8fcca8}{n\+\_\+files}} = int(\mbox{\hyperlink{namespacegalpy__pot__movie_ae50af7118b493b53e207df8685051903}{nstep}})+1
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a83d4041dc8081054295ad8488d66e9ae}{file\+\_\+list}} = range(\mbox{\hyperlink{namespacegalpy__pot__movie_ae50af7118b493b53e207df8685051903}{nstep}}+1)
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a7ebb8ed42d8cccce1a524a32210936cc}{n\+\_\+pieces}} = np.\+ones(\mbox{\hyperlink{namespacegalpy__pot__movie_a7749cb90b0af241e106e7b7ee736130c}{n\+\_\+cpu}})$\ast$int(\mbox{\hyperlink{namespacegalpy__pot__movie_a9d55870bf82ce913e620c5fb7c8fcca8}{n\+\_\+files}}/\mbox{\hyperlink{namespacegalpy__pot__movie_a7749cb90b0af241e106e7b7ee736130c}{n\+\_\+cpu}})
+\item 
+int \mbox{\hyperlink{namespacegalpy__pot__movie_a79bddf152aa638108fd255e44baa2fef}{n\+\_\+left}} = \mbox{\hyperlink{namespacegalpy__pot__movie_a9d55870bf82ce913e620c5fb7c8fcca8}{n\+\_\+files}}\%\mbox{\hyperlink{namespacegalpy__pot__movie_a7749cb90b0af241e106e7b7ee736130c}{n\+\_\+cpu}}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a19f316851041dbce41cdad0f40fd8375}{n\+\_\+offset}} = np.\+append(\mbox{[}0\mbox{]},n\+\_\+pieces.\+cumsum()).astype(int)
+\item 
+list \mbox{\hyperlink{namespacegalpy__pot__movie_aaeaa400d101480b5b2bc3bfb9998b6da}{file\+\_\+part}} = \mbox{[}\mbox{\hyperlink{namespacegalpy__pot__movie_a83d4041dc8081054295ad8488d66e9ae}{file\+\_\+list}}\mbox{[}\mbox{\hyperlink{namespacegalpy__pot__movie_a19f316851041dbce41cdad0f40fd8375}{n\+\_\+offset}}\mbox{[}i\mbox{]}\+:\mbox{\hyperlink{namespacegalpy__pot__movie_a19f316851041dbce41cdad0f40fd8375}{n\+\_\+offset}}\mbox{[}i+1\mbox{]}\mbox{]} for i in range(\mbox{\hyperlink{namespacegalpy__pot__movie_a7749cb90b0af241e106e7b7ee736130c}{n\+\_\+cpu}})\mbox{]}
+\item 
+list \mbox{\hyperlink{namespacegalpy__pot__movie_afdfc43e252dd06bd8cb5cabc02b8391c}{results}} = \mbox{[}None\mbox{]}$\ast$\mbox{\hyperlink{namespacegalpy__pot__movie_a7749cb90b0af241e106e7b7ee736130c}{n\+\_\+cpu}}
+\item 
+list \mbox{\hyperlink{namespacegalpy__pot__movie_ad746d73745395b1f751c80310c53e1b7}{png\+\_\+list}} = \mbox{[}\textquotesingle{}\mbox{\hyperlink{namespacegalpy__pot__movie_a3698425c3c80d31bacee4844e1ef56f8}{pot}}\textquotesingle{}+str(\mbox{\hyperlink{namespacegalpy__pot__movie_a83d4041dc8081054295ad8488d66e9ae}{file\+\_\+list}}\mbox{[}i\mbox{]})+\textquotesingle{}.png\textquotesingle{} for i in range(\mbox{\hyperlink{namespacegalpy__pot__movie_a9d55870bf82ce913e620c5fb7c8fcca8}{n\+\_\+files}})\mbox{]}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Function Documentation}
+\mbox{\Hypertarget{namespacegalpy__pot__movie_adedebc188b4de2a497744878176bb416}\label{namespacegalpy__pot__movie_adedebc188b4de2a497744878176bb416}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!create\_movie@{create\_movie}}
+\index{create\_movie@{create\_movie}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{create\_movie()}{create\_movie()}}
+{\footnotesize\ttfamily def galpy\+\_\+pot\+\_\+movie.\+create\+\_\+movie (\begin{DoxyParamCaption}\item[{}]{filenames,  }\item[{}]{fps,  }\item[{}]{output\+\_\+file }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_aa885513bec3547189487315e470589f4}\label{namespacegalpy__pot__movie_aa885513bec3547189487315e470589f4}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!createImage@{createImage}}
+\index{createImage@{createImage}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{createImage()}{createImage()}}
+{\footnotesize\ttfamily def galpy\+\_\+pot\+\_\+movie.\+create\+Image (\begin{DoxyParamCaption}\item[{}]{index\+\_\+list,  }\item[{}]{xyscale,  }\item[{}]{plot\+\_\+format,  }\item[{}]{log\+\_\+flag,  }\item[{$\ast$$\ast$}]{kwargs }\end{DoxyParamCaption})}
+
+\begin{DoxyVerb}index_list: file index list
+xyscale: plot x, y scale
+plot_format: plot format
+log_flag: if true, color is in logscale
+kwargs: vmin, vmax
+\end{DoxyVerb}
+ \mbox{\Hypertarget{namespacegalpy__pot__movie_ae30ea99c6c9fd85c1f2bbd83b696641d}\label{namespacegalpy__pot__movie_ae30ea99c6c9fd85c1f2bbd83b696641d}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!usage@{usage}}
+\index{usage@{usage}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{usage()}{usage()}}
+{\footnotesize\ttfamily def galpy\+\_\+pot\+\_\+movie.\+usage (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})}
+
+
+
+\doxysubsection{Variable Documentation}
+\mbox{\Hypertarget{namespacegalpy__pot__movie_af6d8a3f703079e7b353b7af8c136e946}\label{namespacegalpy__pot__movie_af6d8a3f703079e7b353b7af8c136e946}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!dt@{dt}}
+\index{dt@{dt}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{dt}{dt}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+dt}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a892cdf1ee55a65bb26d3e7b95755e0c6}\label{namespacegalpy__pot__movie_a892cdf1ee55a65bb26d3e7b95755e0c6}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!dt\_out@{dt\_out}}
+\index{dt\_out@{dt\_out}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{dt\_out}{dt\_out}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+dt\+\_\+out}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a83d4041dc8081054295ad8488d66e9ae}\label{namespacegalpy__pot__movie_a83d4041dc8081054295ad8488d66e9ae}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!file\_list@{file\_list}}
+\index{file\_list@{file\_list}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{file\_list}{file\_list}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+file\+\_\+list = range(\mbox{\hyperlink{namespacegalpy__pot__movie_ae50af7118b493b53e207df8685051903}{nstep}}+1)}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_aaeaa400d101480b5b2bc3bfb9998b6da}\label{namespacegalpy__pot__movie_aaeaa400d101480b5b2bc3bfb9998b6da}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!file\_part@{file\_part}}
+\index{file\_part@{file\_part}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{file\_part}{file\_part}}
+{\footnotesize\ttfamily list galpy\+\_\+pot\+\_\+movie.\+file\+\_\+part = \mbox{[}\mbox{\hyperlink{namespacegalpy__pot__movie_a83d4041dc8081054295ad8488d66e9ae}{file\+\_\+list}}\mbox{[}\mbox{\hyperlink{namespacegalpy__pot__movie_a19f316851041dbce41cdad0f40fd8375}{n\+\_\+offset}}\mbox{[}i\mbox{]}\+:\mbox{\hyperlink{namespacegalpy__pot__movie_a19f316851041dbce41cdad0f40fd8375}{n\+\_\+offset}}\mbox{[}i+1\mbox{]}\mbox{]} for i in range(\mbox{\hyperlink{namespacegalpy__pot__movie_a7749cb90b0af241e106e7b7ee736130c}{n\+\_\+cpu}})\mbox{]}}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a3fa5f0e5f4c5cacdab86ebbc69420840}\label{namespacegalpy__pot__movie_a3fa5f0e5f4c5cacdab86ebbc69420840}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!fp@{fp}}
+\index{fp@{fp}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{fp}{fp}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+fp = open(\mbox{\hyperlink{namespacegalpy__pot__movie_a869bee142eed9773bf7594f7cd0db566}{fpar}}, \textquotesingle{}r\textquotesingle{})}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a869bee142eed9773bf7594f7cd0db566}\label{namespacegalpy__pot__movie_a869bee142eed9773bf7594f7cd0db566}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!fpar@{fpar}}
+\index{fpar@{fpar}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{fpar}{fpar}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+fpar = \mbox{\hyperlink{namespacegalpy__pot__movie_a0972d20e0e14dfbb9d0668733c934057}{remainder}}\mbox{[}0\mbox{]}}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_ac9d04551291e813a9d47c7764df4ede7}\label{namespacegalpy__pot__movie_ac9d04551291e813a9d47c7764df4ede7}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!fps@{fps}}
+\index{fps@{fps}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{fps}{fps}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+fps = 30}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_adae94988c3890575f6a9058e6e100636}\label{namespacegalpy__pot__movie_adae94988c3890575f6a9058e6e100636}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!header@{header}}
+\index{header@{header}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{header}{header}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+header = fp.\+readline()}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a1e2e5297c42b607c38b4daff75026976}\label{namespacegalpy__pot__movie_a1e2e5297c42b607c38b4daff75026976}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!kwargs@{kwargs}}
+\index{kwargs@{kwargs}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{kwargs}{kwargs}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+kwargs = dict()}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_af73225b6a66767b45090dfdd6f2405a8}\label{namespacegalpy__pot__movie_af73225b6a66767b45090dfdd6f2405a8}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!log\_flag@{log\_flag}}
+\index{log\_flag@{log\_flag}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{log\_flag}{log\_flag}}
+{\footnotesize\ttfamily bool galpy\+\_\+pot\+\_\+movie.\+log\+\_\+flag = False}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_ac109b34f4a2d3f4c290f7bc761088005}\label{namespacegalpy__pot__movie_ac109b34f4a2d3f4c290f7bc761088005}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!longargs@{longargs}}
+\index{longargs@{longargs}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{longargs}{longargs}}
+{\footnotesize\ttfamily list galpy\+\_\+pot\+\_\+movie.\+longargs = \mbox{[}\textquotesingle{}help\textquotesingle{},\textquotesingle{}vmax=\textquotesingle{},\textquotesingle{}vmin=\textquotesingle{},\textquotesingle{}format=\textquotesingle{},\textquotesingle{}n-\/cpu=\textquotesingle{},\textquotesingle{}log\textquotesingle{}\mbox{]}}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a7749cb90b0af241e106e7b7ee736130c}\label{namespacegalpy__pot__movie_a7749cb90b0af241e106e7b7ee736130c}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!n\_cpu@{n\_cpu}}
+\index{n\_cpu@{n\_cpu}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{n\_cpu}{n\_cpu}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+n\+\_\+cpu = 0}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a9d55870bf82ce913e620c5fb7c8fcca8}\label{namespacegalpy__pot__movie_a9d55870bf82ce913e620c5fb7c8fcca8}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!n\_files@{n\_files}}
+\index{n\_files@{n\_files}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{n\_files}{n\_files}}
+{\footnotesize\ttfamily int galpy\+\_\+pot\+\_\+movie.\+n\+\_\+files = int(\mbox{\hyperlink{namespacegalpy__pot__movie_ae50af7118b493b53e207df8685051903}{nstep}})+1}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a79bddf152aa638108fd255e44baa2fef}\label{namespacegalpy__pot__movie_a79bddf152aa638108fd255e44baa2fef}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!n\_left@{n\_left}}
+\index{n\_left@{n\_left}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{n\_left}{n\_left}}
+{\footnotesize\ttfamily int galpy\+\_\+pot\+\_\+movie.\+n\+\_\+left = \mbox{\hyperlink{namespacegalpy__pot__movie_a9d55870bf82ce913e620c5fb7c8fcca8}{n\+\_\+files}}\%\mbox{\hyperlink{namespacegalpy__pot__movie_a7749cb90b0af241e106e7b7ee736130c}{n\+\_\+cpu}}}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a19f316851041dbce41cdad0f40fd8375}\label{namespacegalpy__pot__movie_a19f316851041dbce41cdad0f40fd8375}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!n\_offset@{n\_offset}}
+\index{n\_offset@{n\_offset}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{n\_offset}{n\_offset}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+n\+\_\+offset = np.\+append(\mbox{[}0\mbox{]},n\+\_\+pieces.\+cumsum()).astype(int)}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a7ebb8ed42d8cccce1a524a32210936cc}\label{namespacegalpy__pot__movie_a7ebb8ed42d8cccce1a524a32210936cc}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!n\_pieces@{n\_pieces}}
+\index{n\_pieces@{n\_pieces}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{n\_pieces}{n\_pieces}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+n\+\_\+pieces = np.\+ones(\mbox{\hyperlink{namespacegalpy__pot__movie_a7749cb90b0af241e106e7b7ee736130c}{n\+\_\+cpu}})$\ast$int(\mbox{\hyperlink{namespacegalpy__pot__movie_a9d55870bf82ce913e620c5fb7c8fcca8}{n\+\_\+files}}/\mbox{\hyperlink{namespacegalpy__pot__movie_a7749cb90b0af241e106e7b7ee736130c}{n\+\_\+cpu}})}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_ae50af7118b493b53e207df8685051903}\label{namespacegalpy__pot__movie_ae50af7118b493b53e207df8685051903}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!nstep@{nstep}}
+\index{nstep@{nstep}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{nstep}{nstep}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+nstep = int(nstep)}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a1def2040ffdaaf5339f19e2a24c15d3e}\label{namespacegalpy__pot__movie_a1def2040ffdaaf5339f19e2a24c15d3e}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!nx@{nx}}
+\index{nx@{nx}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{nx}{nx}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+nx}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a55ca965f84503434f7a5a3054f8fa975}\label{namespacegalpy__pot__movie_a55ca965f84503434f7a5a3054f8fa975}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!ny@{ny}}
+\index{ny@{ny}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{ny}{ny}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+ny}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a517167afc4bd587d3e9899ae9ed4f65f}\label{namespacegalpy__pot__movie_a517167afc4bd587d3e9899ae9ed4f65f}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!nz@{nz}}
+\index{nz@{nz}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{nz}{nz}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+nz}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a65fbc73aa61ee6f9c8cd3a9af978e80c}\label{namespacegalpy__pot__movie_a65fbc73aa61ee6f9c8cd3a9af978e80c}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!opts@{opts}}
+\index{opts@{opts}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{opts}{opts}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+opts}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a19bbbd68789f81332a9873bb36c78d7d}\label{namespacegalpy__pot__movie_a19bbbd68789f81332a9873bb36c78d7d}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!output\_file@{output\_file}}
+\index{output\_file@{output\_file}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{output\_file}{output\_file}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+output\+\_\+file = \textquotesingle{}pot\+\_\+movie\textquotesingle{}}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a44e56aeca6e050ed6108bbbd763ed6a0}\label{namespacegalpy__pot__movie_a44e56aeca6e050ed6108bbbd763ed6a0}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!plot\_format@{plot\_format}}
+\index{plot\_format@{plot\_format}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{plot\_format}{plot\_format}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+plot\+\_\+format = \textquotesingle{}mp4\textquotesingle{}}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_ad746d73745395b1f751c80310c53e1b7}\label{namespacegalpy__pot__movie_ad746d73745395b1f751c80310c53e1b7}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!png\_list@{png\_list}}
+\index{png\_list@{png\_list}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{png\_list}{png\_list}}
+{\footnotesize\ttfamily list galpy\+\_\+pot\+\_\+movie.\+png\+\_\+list = \mbox{[}\textquotesingle{}\mbox{\hyperlink{namespacegalpy__pot__movie_a3698425c3c80d31bacee4844e1ef56f8}{pot}}\textquotesingle{}+str(\mbox{\hyperlink{namespacegalpy__pot__movie_a83d4041dc8081054295ad8488d66e9ae}{file\+\_\+list}}\mbox{[}i\mbox{]})+\textquotesingle{}.png\textquotesingle{} for i in range(\mbox{\hyperlink{namespacegalpy__pot__movie_a9d55870bf82ce913e620c5fb7c8fcca8}{n\+\_\+files}})\mbox{]}}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_aaf033fd2b3874ef4766c8dabcbe44675}\label{namespacegalpy__pot__movie_aaf033fd2b3874ef4766c8dabcbe44675}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!pool@{pool}}
+\index{pool@{pool}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{pool}{pool}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+pool = mp.\+Pool(\mbox{\hyperlink{namespacegalpy__pot__movie_a7749cb90b0af241e106e7b7ee736130c}{n\+\_\+cpu}})}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a3698425c3c80d31bacee4844e1ef56f8}\label{namespacegalpy__pot__movie_a3698425c3c80d31bacee4844e1ef56f8}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!pot@{pot}}
+\index{pot@{pot}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{pot}{pot}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+pot = np.\+loadtxt(\textquotesingle{}xy0\textquotesingle{}, unpack=True, usecols=(10),skiprows=1)}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_aff74fa346b8f3995e183490e504f1f22}\label{namespacegalpy__pot__movie_aff74fa346b8f3995e183490e504f1f22}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!pot\_max@{pot\_max}}
+\index{pot\_max@{pot\_max}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{pot\_max}{pot\_max}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+pot\+\_\+max = pot.\+max()}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_ac0b7f85d1533bbafe4e3963031612b04}\label{namespacegalpy__pot__movie_ac0b7f85d1533bbafe4e3963031612b04}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!pot\_min@{pot\_min}}
+\index{pot\_min@{pot\_min}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{pot\_min}{pot\_min}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+pot\+\_\+min = pot.\+min()}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a0972d20e0e14dfbb9d0668733c934057}\label{namespacegalpy__pot__movie_a0972d20e0e14dfbb9d0668733c934057}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!remainder@{remainder}}
+\index{remainder@{remainder}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{remainder}{remainder}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+remainder}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_afdfc43e252dd06bd8cb5cabc02b8391c}\label{namespacegalpy__pot__movie_afdfc43e252dd06bd8cb5cabc02b8391c}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!results@{results}}
+\index{results@{results}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{results}{results}}
+{\footnotesize\ttfamily list galpy\+\_\+pot\+\_\+movie.\+results = \mbox{[}None\mbox{]}$\ast$\mbox{\hyperlink{namespacegalpy__pot__movie_a7749cb90b0af241e106e7b7ee736130c}{n\+\_\+cpu}}}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_acf3ad836a17ff38584c76816fa86d379}\label{namespacegalpy__pot__movie_acf3ad836a17ff38584c76816fa86d379}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!shortargs@{shortargs}}
+\index{shortargs@{shortargs}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{shortargs}{shortargs}}
+{\footnotesize\ttfamily string galpy\+\_\+pot\+\_\+movie.\+shortargs = \textquotesingle{}f\+:o\+:h\textquotesingle{}}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a21219a1abcdafab16fcf93dc23581db1}\label{namespacegalpy__pot__movie_a21219a1abcdafab16fcf93dc23581db1}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!t0@{t0}}
+\index{t0@{t0}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{t0}{t0}}
+{\footnotesize\ttfamily galpy\+\_\+pot\+\_\+movie.\+t0}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_ad03211f44495267a852865b02e428a15}\label{namespacegalpy__pot__movie_ad03211f44495267a852865b02e428a15}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!xmax@{xmax}}
+\index{xmax@{xmax}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{xmax}{xmax}}
+{\footnotesize\ttfamily int galpy\+\_\+pot\+\_\+movie.\+xmax = float(xmax)$\ast$1e-\/3}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_abe5db73d3c3f045985edf6d19fedcbb0}\label{namespacegalpy__pot__movie_abe5db73d3c3f045985edf6d19fedcbb0}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!xmin@{xmin}}
+\index{xmin@{xmin}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{xmin}{xmin}}
+{\footnotesize\ttfamily int galpy\+\_\+pot\+\_\+movie.\+xmin = float(xmin)$\ast$1e-\/3}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_aa9d97f11fb9f2ff266a0a69075d40e37}\label{namespacegalpy__pot__movie_aa9d97f11fb9f2ff266a0a69075d40e37}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!xyscale@{xyscale}}
+\index{xyscale@{xyscale}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{xyscale}{xyscale}}
+{\footnotesize\ttfamily list galpy\+\_\+pot\+\_\+movie.\+xyscale = \mbox{[}\mbox{[}\mbox{\hyperlink{namespacegalpy__pot__movie_abe5db73d3c3f045985edf6d19fedcbb0}{xmin}},\mbox{\hyperlink{namespacegalpy__pot__movie_ad03211f44495267a852865b02e428a15}{xmax}},\mbox{\hyperlink{namespacegalpy__pot__movie_aa89728c4b9094d186fa7c4d38c4692e3}{ymin}},\mbox{\hyperlink{namespacegalpy__pot__movie_ab4cb0e351c0c21a84429308086826eb1}{ymax}}\mbox{]},\mbox{[}\mbox{\hyperlink{namespacegalpy__pot__movie_abe5db73d3c3f045985edf6d19fedcbb0}{xmin}},\mbox{\hyperlink{namespacegalpy__pot__movie_ad03211f44495267a852865b02e428a15}{xmax}},\mbox{\hyperlink{namespacegalpy__pot__movie_a1467cc105a48654cc8d45f9f14630ddd}{zmin}},\mbox{\hyperlink{namespacegalpy__pot__movie_a3531f05550785100ebced7a9774ff35d}{zmax}}\mbox{]}\mbox{]}}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_ab4cb0e351c0c21a84429308086826eb1}\label{namespacegalpy__pot__movie_ab4cb0e351c0c21a84429308086826eb1}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!ymax@{ymax}}
+\index{ymax@{ymax}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{ymax}{ymax}}
+{\footnotesize\ttfamily int galpy\+\_\+pot\+\_\+movie.\+ymax = float(ymax)$\ast$1e-\/3}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_aa89728c4b9094d186fa7c4d38c4692e3}\label{namespacegalpy__pot__movie_aa89728c4b9094d186fa7c4d38c4692e3}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!ymin@{ymin}}
+\index{ymin@{ymin}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{ymin}{ymin}}
+{\footnotesize\ttfamily int galpy\+\_\+pot\+\_\+movie.\+ymin = float(ymin)$\ast$1e-\/3}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a3531f05550785100ebced7a9774ff35d}\label{namespacegalpy__pot__movie_a3531f05550785100ebced7a9774ff35d}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!zmax@{zmax}}
+\index{zmax@{zmax}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{zmax}{zmax}}
+{\footnotesize\ttfamily int galpy\+\_\+pot\+\_\+movie.\+zmax = float(zmax)$\ast$1e-\/3}
+
+\mbox{\Hypertarget{namespacegalpy__pot__movie_a1467cc105a48654cc8d45f9f14630ddd}\label{namespacegalpy__pot__movie_a1467cc105a48654cc8d45f9f14630ddd}} 
+\index{galpy\_pot\_movie@{galpy\_pot\_movie}!zmin@{zmin}}
+\index{zmin@{zmin}!galpy\_pot\_movie@{galpy\_pot\_movie}}
+\doxysubsubsection{\texorpdfstring{zmin}{zmin}}
+{\footnotesize\ttfamily int galpy\+\_\+pot\+\_\+movie.\+zmin = float(zmin)$\ast$1e-\/3}
+

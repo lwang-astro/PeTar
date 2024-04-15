@@ -1,0 +1,285 @@
+\hypertarget{classHardManager}{}\doxysection{Hard\+Manager Class Reference}
+\label{classHardManager}\index{HardManager@{HardManager}}
+
+
+Hard integrator parameter manager.  
+
+
+
+
+{\ttfamily \#include $<$hard.\+hpp$>$}
+
+
+
+Collaboration diagram for Hard\+Manager\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=256pt]{classHardManager__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classHardManager_ab59694fc3d9d9914ac14cef9cecb273f}{Hard\+Manager}} ()
+\begin{DoxyCompactList}\small\item\em constructor \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classHardManager_ad5806725afa5d1d09fc312531a699701}{set\+Eps\+Sq}} (const P\+S\+::\+F64 \+\_\+eps\+\_\+sq)
+\begin{DoxyCompactList}\small\item\em set softening \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classHardManager_a6911fcad253f3013f968eb2b14df5a26}{set\+Gravitational\+Constant}} (const P\+S\+::\+F64 \+\_\+g)
+\begin{DoxyCompactList}\small\item\em set gravitational constant \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classHardManager_a15998274cba2e1818e82ce08a2aaccb2}{set\+Dt\+Range}} (const P\+S\+::\+F64 \+\_\+dt\+\_\+max, const P\+S\+::\+S32 \+\_\+dt\+\_\+min\+\_\+index)
+\begin{DoxyCompactList}\small\item\em set time step range \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classHardManager_af7548086113d591778ce878a53dad036}{check\+Params}} ()
+\begin{DoxyCompactList}\small\item\em check paramters \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classHardManager_accedec239afc4e94f6120b9fb7704860}{write\+Binary}} (F\+I\+LE $\ast$\+\_\+fp)
+\begin{DoxyCompactList}\small\item\em write class data to file with binary format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classHardManager_aa779d00ba62155b0bb7da852ff411b56}{read\+Binary}} (F\+I\+LE $\ast$\+\_\+fin, int \+\_\+version=0)
+\begin{DoxyCompactList}\small\item\em read class data to file with binary format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classHardManager_a1e0a4e8578cd0abf2f28f68c9702f347}{print}} (std\+::ostream \&\+\_\+fout) const
+\begin{DoxyCompactList}\small\item\em print parameters \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classHardManager_a24a9393ae64ca5e77e8c71ec7d31fbd7}{energy\+\_\+error\+\_\+max}}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classHardManager_aab5d2cedde834ad6d3eba79a3e7006be}{eps\+\_\+sq}}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classHardManager_ad7a092adf9d04898efbcee49c2912784}{r\+\_\+in\+\_\+base}}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classHardManager_a1081bf754ceeb9a61acbd96a3250e682}{r\+\_\+out\+\_\+base}}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classHardManager_a51b15c2ff0aa0c7d18304d6c2926b89d}{n\+\_\+step\+\_\+per\+\_\+orbit}}
+\item 
+\mbox{\hyperlink{classArtificialParticleManager}{Artificial\+Particle\+Manager}} \mbox{\hyperlink{classHardManager_a19cf9561596c28882f52dad82dea4998}{ap\+\_\+manager}}
+\item 
+H4\+::\+Hermite\+Manager$<$ \mbox{\hyperlink{classHermiteInteraction}{Hermite\+Interaction}} $>$ \mbox{\hyperlink{classHardManager_ac977049b8e7365fb5899bc0a642d32d5}{h4\+\_\+manager}}
+\item 
+A\+R\+::\+Time\+Transformed\+Symplectic\+Manager$<$ \mbox{\hyperlink{classARInteraction}{A\+R\+Interaction}} $>$ \mbox{\hyperlink{classHardManager_a3c94480cd738cf3a103a712dc34d877f}{ar\+\_\+manager}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Hard integrator parameter manager. 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classHardManager_ab59694fc3d9d9914ac14cef9cecb273f}\label{classHardManager_ab59694fc3d9d9914ac14cef9cecb273f}} 
+\index{HardManager@{HardManager}!HardManager@{HardManager}}
+\index{HardManager@{HardManager}!HardManager@{HardManager}}
+\doxysubsubsection{\texorpdfstring{HardManager()}{HardManager()}}
+{\footnotesize\ttfamily Hard\+Manager\+::\+Hard\+Manager (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+constructor 
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classHardManager_af7548086113d591778ce878a53dad036}\label{classHardManager_af7548086113d591778ce878a53dad036}} 
+\index{HardManager@{HardManager}!checkParams@{checkParams}}
+\index{checkParams@{checkParams}!HardManager@{HardManager}}
+\doxysubsubsection{\texorpdfstring{checkParams()}{checkParams()}}
+{\footnotesize\ttfamily bool Hard\+Manager\+::check\+Params (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+check paramters 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classHardManager_af7548086113d591778ce878a53dad036_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classHardManager_af7548086113d591778ce878a53dad036_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classHardManager_a1e0a4e8578cd0abf2f28f68c9702f347}\label{classHardManager_a1e0a4e8578cd0abf2f28f68c9702f347}} 
+\index{HardManager@{HardManager}!print@{print}}
+\index{print@{print}!HardManager@{HardManager}}
+\doxysubsubsection{\texorpdfstring{print()}{print()}}
+{\footnotesize\ttfamily void Hard\+Manager\+::print (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print parameters 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classHardManager_a1e0a4e8578cd0abf2f28f68c9702f347_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=268pt]{classHardManager_a1e0a4e8578cd0abf2f28f68c9702f347_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classHardManager_aa779d00ba62155b0bb7da852ff411b56}\label{classHardManager_aa779d00ba62155b0bb7da852ff411b56}} 
+\index{HardManager@{HardManager}!readBinary@{readBinary}}
+\index{readBinary@{readBinary}!HardManager@{HardManager}}
+\doxysubsubsection{\texorpdfstring{readBinary()}{readBinary()}}
+{\footnotesize\ttfamily void Hard\+Manager\+::read\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fin,  }\item[{int}]{\+\_\+version = {\ttfamily 0} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read class data to file with binary format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fp} & F\+I\+LE type file for reading \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+version} & version of parameter file, default\+: 0 \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classHardManager_aa779d00ba62155b0bb7da852ff411b56_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=299pt]{classHardManager_aa779d00ba62155b0bb7da852ff411b56_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classHardManager_a15998274cba2e1818e82ce08a2aaccb2}\label{classHardManager_a15998274cba2e1818e82ce08a2aaccb2}} 
+\index{HardManager@{HardManager}!setDtRange@{setDtRange}}
+\index{setDtRange@{setDtRange}!HardManager@{HardManager}}
+\doxysubsubsection{\texorpdfstring{setDtRange()}{setDtRange()}}
+{\footnotesize\ttfamily void Hard\+Manager\+::set\+Dt\+Range (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{\+\_\+dt\+\_\+max,  }\item[{const P\+S\+::\+S32}]{\+\_\+dt\+\_\+min\+\_\+index }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set time step range 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=303pt]{classHardManager_a15998274cba2e1818e82ce08a2aaccb2_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classHardManager_ad5806725afa5d1d09fc312531a699701}\label{classHardManager_ad5806725afa5d1d09fc312531a699701}} 
+\index{HardManager@{HardManager}!setEpsSq@{setEpsSq}}
+\index{setEpsSq@{setEpsSq}!HardManager@{HardManager}}
+\doxysubsubsection{\texorpdfstring{setEpsSq()}{setEpsSq()}}
+{\footnotesize\ttfamily void Hard\+Manager\+::set\+Eps\+Sq (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{\+\_\+eps\+\_\+sq }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set softening 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=290pt]{classHardManager_ad5806725afa5d1d09fc312531a699701_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classHardManager_a6911fcad253f3013f968eb2b14df5a26}\label{classHardManager_a6911fcad253f3013f968eb2b14df5a26}} 
+\index{HardManager@{HardManager}!setGravitationalConstant@{setGravitationalConstant}}
+\index{setGravitationalConstant@{setGravitationalConstant}!HardManager@{HardManager}}
+\doxysubsubsection{\texorpdfstring{setGravitationalConstant()}{setGravitationalConstant()}}
+{\footnotesize\ttfamily void Hard\+Manager\+::set\+Gravitational\+Constant (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{\+\_\+g }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set gravitational constant 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=324pt]{classHardManager_a6911fcad253f3013f968eb2b14df5a26_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classHardManager_accedec239afc4e94f6120b9fb7704860}\label{classHardManager_accedec239afc4e94f6120b9fb7704860}} 
+\index{HardManager@{HardManager}!writeBinary@{writeBinary}}
+\index{writeBinary@{writeBinary}!HardManager@{HardManager}}
+\doxysubsubsection{\texorpdfstring{writeBinary()}{writeBinary()}}
+{\footnotesize\ttfamily void Hard\+Manager\+::write\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fp }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write class data to file with binary format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fp} & F\+I\+LE type file for output \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classHardManager_accedec239afc4e94f6120b9fb7704860_cgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classHardManager_a19cf9561596c28882f52dad82dea4998}\label{classHardManager_a19cf9561596c28882f52dad82dea4998}} 
+\index{HardManager@{HardManager}!ap\_manager@{ap\_manager}}
+\index{ap\_manager@{ap\_manager}!HardManager@{HardManager}}
+\doxysubsubsection{\texorpdfstring{ap\_manager}{ap\_manager}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classArtificialParticleManager}{Artificial\+Particle\+Manager}} Hard\+Manager\+::ap\+\_\+manager}
+
+\mbox{\Hypertarget{classHardManager_a3c94480cd738cf3a103a712dc34d877f}\label{classHardManager_a3c94480cd738cf3a103a712dc34d877f}} 
+\index{HardManager@{HardManager}!ar\_manager@{ar\_manager}}
+\index{ar\_manager@{ar\_manager}!HardManager@{HardManager}}
+\doxysubsubsection{\texorpdfstring{ar\_manager}{ar\_manager}}
+{\footnotesize\ttfamily A\+R\+::\+Time\+Transformed\+Symplectic\+Manager$<$\mbox{\hyperlink{classARInteraction}{A\+R\+Interaction}}$>$ Hard\+Manager\+::ar\+\_\+manager}
+
+\mbox{\Hypertarget{classHardManager_a24a9393ae64ca5e77e8c71ec7d31fbd7}\label{classHardManager_a24a9393ae64ca5e77e8c71ec7d31fbd7}} 
+\index{HardManager@{HardManager}!energy\_error\_max@{energy\_error\_max}}
+\index{energy\_error\_max@{energy\_error\_max}!HardManager@{HardManager}}
+\doxysubsubsection{\texorpdfstring{energy\_error\_max}{energy\_error\_max}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Hard\+Manager\+::energy\+\_\+error\+\_\+max}
+
+\mbox{\Hypertarget{classHardManager_aab5d2cedde834ad6d3eba79a3e7006be}\label{classHardManager_aab5d2cedde834ad6d3eba79a3e7006be}} 
+\index{HardManager@{HardManager}!eps\_sq@{eps\_sq}}
+\index{eps\_sq@{eps\_sq}!HardManager@{HardManager}}
+\doxysubsubsection{\texorpdfstring{eps\_sq}{eps\_sq}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Hard\+Manager\+::eps\+\_\+sq}
+
+\mbox{\Hypertarget{classHardManager_ac977049b8e7365fb5899bc0a642d32d5}\label{classHardManager_ac977049b8e7365fb5899bc0a642d32d5}} 
+\index{HardManager@{HardManager}!h4\_manager@{h4\_manager}}
+\index{h4\_manager@{h4\_manager}!HardManager@{HardManager}}
+\doxysubsubsection{\texorpdfstring{h4\_manager}{h4\_manager}}
+{\footnotesize\ttfamily H4\+::\+Hermite\+Manager$<$\mbox{\hyperlink{classHermiteInteraction}{Hermite\+Interaction}}$>$ Hard\+Manager\+::h4\+\_\+manager}
+
+\mbox{\Hypertarget{classHardManager_a51b15c2ff0aa0c7d18304d6c2926b89d}\label{classHardManager_a51b15c2ff0aa0c7d18304d6c2926b89d}} 
+\index{HardManager@{HardManager}!n\_step\_per\_orbit@{n\_step\_per\_orbit}}
+\index{n\_step\_per\_orbit@{n\_step\_per\_orbit}!HardManager@{HardManager}}
+\doxysubsubsection{\texorpdfstring{n\_step\_per\_orbit}{n\_step\_per\_orbit}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Hard\+Manager\+::n\+\_\+step\+\_\+per\+\_\+orbit}
+
+\mbox{\Hypertarget{classHardManager_ad7a092adf9d04898efbcee49c2912784}\label{classHardManager_ad7a092adf9d04898efbcee49c2912784}} 
+\index{HardManager@{HardManager}!r\_in\_base@{r\_in\_base}}
+\index{r\_in\_base@{r\_in\_base}!HardManager@{HardManager}}
+\doxysubsubsection{\texorpdfstring{r\_in\_base}{r\_in\_base}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Hard\+Manager\+::r\+\_\+in\+\_\+base}
+
+\mbox{\Hypertarget{classHardManager_a1081bf754ceeb9a61acbd96a3250e682}\label{classHardManager_a1081bf754ceeb9a61acbd96a3250e682}} 
+\index{HardManager@{HardManager}!r\_out\_base@{r\_out\_base}}
+\index{r\_out\_base@{r\_out\_base}!HardManager@{HardManager}}
+\doxysubsubsection{\texorpdfstring{r\_out\_base}{r\_out\_base}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Hard\+Manager\+::r\+\_\+out\+\_\+base}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{hard_8hpp}{hard.\+hpp}}\end{DoxyCompactItemize}

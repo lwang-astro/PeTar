@@ -1,0 +1,5 @@
+<map id="BSEManager::getTimeStepBinary" name="BSEManager::getTimeStepBinary">
+<area shape="rect" id="node1" title="call BSE evolv2 for a binary" alt="" coords="5,31,243,57"/>
+<area shape="rect" id="node2" href="$classBSEManager.html#a9acfef87a65d61fd52406121f3f3d35d" title="get next time step to check in Myr" alt="" coords="291,5,512,32"/>
+<area shape="rect" id="node3" href="$namespacePIKG.html#aab82f0106f14677daa09a64a269eaadf" title=" " alt="" coords="560,31,647,57"/>
+</map>

@@ -34,7 +34,7 @@ In particular, users are encouraged to familiarize themselves with key Python mo
 This README document serves as a concise yet comprehensive guide detailing the installation and utilization of the code. It is strongly recommended that users thoroughly review this documentation before reaching out to the developers with any queries.
 
 For a deeper understanding of the algorithms employed, additional details can be found in the work by Wang et al. (2020; available on arXiv: https://arxiv.org/abs/2006.16560).
-A Doxygen documentation tailored for developers is currently in the process of being prepared.
+For developers seeking to understand the code structure, please consult the [Doxygen documentation](https://lwang-astro.github.io/PeTar/docs/html/index.html).
 
 To enhance the English in the given text, you could say:
 

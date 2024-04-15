@@ -1,0 +1,322 @@
+\hypertarget{classFRWModel}{}\doxysection{F\+R\+W\+Model Class Reference}
+\label{classFRWModel}\index{FRWModel@{FRWModel}}
+
+
+F\+RW cosmological model for calculating scale factor (redshift)  
+
+
+
+
+{\ttfamily \#include $<$galpy\+\_\+interface.\+h$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+double \mbox{\hyperlink{classFRWModel_a4e998f4739ff1df966beca89c1e393ed}{get\+Matter\+Density}} (const double \+\_\+a) const
+\item 
+double \mbox{\hyperlink{classFRWModel_a80544a319035cb9fe253f2dee3d63d52}{get\+Radiation\+Density}} (const double \+\_\+a) const
+\item 
+double \mbox{\hyperlink{classFRWModel_a747610082f8b89bc7494512925f3d28a}{get\+Energy\+Density}} (const double \+\_\+a) const
+\item 
+double \mbox{\hyperlink{classFRWModel_ac639a14eba5f454ecd905f1e907c8ee4}{get\+Curvature\+Density}} () const
+\item 
+double \mbox{\hyperlink{classFRWModel_a361381626bcc60640134c25e6c7357bb}{get\+Density}} (const double \+\_\+a) const
+\item 
+void \mbox{\hyperlink{classFRWModel_aed682fc0d41e7c4263e2512c36cab14c}{calc\+H0\+Myr}} ()
+\item 
+double \mbox{\hyperlink{classFRWModel_abb7a4dcaa3256b6365ef1cc5e9f5dba4}{calc\+Adot}} (const double \+\_\+a) const
+\begin{DoxyCompactList}\small\item\em calculate da/dt \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classFRWModel_a348b0ad06e5e83855a039ab5179806bc}{updateA}} (const double \+\_\+dt)
+\begin{DoxyCompactList}\small\item\em update scale factor by time step \+\_\+dt (first order Euler method) \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classFRWModel_a904c7a9d484ab006a8bbbc3f557f6e45}{update\+Awith\+Dtmin}} (const double \+\_\+dt)
+\begin{DoxyCompactList}\small\item\em update scale factor with maximum time step dt\+\_\+max (first order Euler method) \end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classFRWModel_a262a19eeb8300f0a59c8555e052cbc27}{getH}} () const
+\begin{DoxyCompactList}\small\item\em get Hubble constant at current a \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+double \mbox{\hyperlink{classFRWModel_a4ad7b8203c54739af126607f0c987efc}{time}}
+\item 
+double \mbox{\hyperlink{classFRWModel_a9661e2af5caa70fa42e5a7bb37a1df48}{dt\+\_\+max}}
+\item 
+double \mbox{\hyperlink{classFRWModel_a23ac3ceb2463ce13eeb101654179f746}{a}}
+\item 
+double \mbox{\hyperlink{classFRWModel_a4c286e64b2020ebb3a5e4921af79e7d3}{H0}}
+\item 
+double \mbox{\hyperlink{classFRWModel_a274ccc0053de35e759f314a9c5b9e8ca}{H0\+\_\+myr}}
+\item 
+double \mbox{\hyperlink{classFRWModel_a6b44a07286ac021527bc2ab73b71abb4}{omega\+\_\+energy}}
+\item 
+double \mbox{\hyperlink{classFRWModel_aeff6f0844ba6b7c731086b23569480bc}{omega\+\_\+radiation}}
+\item 
+double \mbox{\hyperlink{classFRWModel_ad0aeadcca3d03e3eaa0a24fcf16c79b3}{omega\+\_\+matter}}
+\item 
+double \mbox{\hyperlink{classFRWModel_ac4f5f4794291e8b170de871da84a2a8a}{dt\+\_\+scale}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+F\+RW cosmological model for calculating scale factor (redshift) 
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classFRWModel_abb7a4dcaa3256b6365ef1cc5e9f5dba4}\label{classFRWModel_abb7a4dcaa3256b6365ef1cc5e9f5dba4}} 
+\index{FRWModel@{FRWModel}!calcAdot@{calcAdot}}
+\index{calcAdot@{calcAdot}!FRWModel@{FRWModel}}
+\doxysubsubsection{\texorpdfstring{calcAdot()}{calcAdot()}}
+{\footnotesize\ttfamily double F\+R\+W\+Model\+::calc\+Adot (\begin{DoxyParamCaption}\item[{const double}]{\+\_\+a }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate da/dt 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+a} & scale factor \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+da/dt 
+\end{DoxyReturn}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFRWModel_abb7a4dcaa3256b6365ef1cc5e9f5dba4_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFRWModel_abb7a4dcaa3256b6365ef1cc5e9f5dba4_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classFRWModel_aed682fc0d41e7c4263e2512c36cab14c}\label{classFRWModel_aed682fc0d41e7c4263e2512c36cab14c}} 
+\index{FRWModel@{FRWModel}!calcH0Myr@{calcH0Myr}}
+\index{calcH0Myr@{calcH0Myr}!FRWModel@{FRWModel}}
+\doxysubsubsection{\texorpdfstring{calcH0Myr()}{calcH0Myr()}}
+{\footnotesize\ttfamily void F\+R\+W\+Model\+::calc\+H0\+Myr (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFRWModel_aed682fc0d41e7c4263e2512c36cab14c_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classFRWModel_ac639a14eba5f454ecd905f1e907c8ee4}\label{classFRWModel_ac639a14eba5f454ecd905f1e907c8ee4}} 
+\index{FRWModel@{FRWModel}!getCurvatureDensity@{getCurvatureDensity}}
+\index{getCurvatureDensity@{getCurvatureDensity}!FRWModel@{FRWModel}}
+\doxysubsubsection{\texorpdfstring{getCurvatureDensity()}{getCurvatureDensity()}}
+{\footnotesize\ttfamily double F\+R\+W\+Model\+::get\+Curvature\+Density (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFRWModel_ac639a14eba5f454ecd905f1e907c8ee4_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classFRWModel_a361381626bcc60640134c25e6c7357bb}\label{classFRWModel_a361381626bcc60640134c25e6c7357bb}} 
+\index{FRWModel@{FRWModel}!getDensity@{getDensity}}
+\index{getDensity@{getDensity}!FRWModel@{FRWModel}}
+\doxysubsubsection{\texorpdfstring{getDensity()}{getDensity()}}
+{\footnotesize\ttfamily double F\+R\+W\+Model\+::get\+Density (\begin{DoxyParamCaption}\item[{const double}]{\+\_\+a }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFRWModel_a361381626bcc60640134c25e6c7357bb_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFRWModel_a361381626bcc60640134c25e6c7357bb_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classFRWModel_a747610082f8b89bc7494512925f3d28a}\label{classFRWModel_a747610082f8b89bc7494512925f3d28a}} 
+\index{FRWModel@{FRWModel}!getEnergyDensity@{getEnergyDensity}}
+\index{getEnergyDensity@{getEnergyDensity}!FRWModel@{FRWModel}}
+\doxysubsubsection{\texorpdfstring{getEnergyDensity()}{getEnergyDensity()}}
+{\footnotesize\ttfamily double F\+R\+W\+Model\+::get\+Energy\+Density (\begin{DoxyParamCaption}\item[{const double}]{\+\_\+a }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFRWModel_a747610082f8b89bc7494512925f3d28a_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classFRWModel_a262a19eeb8300f0a59c8555e052cbc27}\label{classFRWModel_a262a19eeb8300f0a59c8555e052cbc27}} 
+\index{FRWModel@{FRWModel}!getH@{getH}}
+\index{getH@{getH}!FRWModel@{FRWModel}}
+\doxysubsubsection{\texorpdfstring{getH()}{getH()}}
+{\footnotesize\ttfamily double F\+R\+W\+Model\+::getH (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get Hubble constant at current a 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFRWModel_a262a19eeb8300f0a59c8555e052cbc27_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFRWModel_a262a19eeb8300f0a59c8555e052cbc27_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classFRWModel_a4e998f4739ff1df966beca89c1e393ed}\label{classFRWModel_a4e998f4739ff1df966beca89c1e393ed}} 
+\index{FRWModel@{FRWModel}!getMatterDensity@{getMatterDensity}}
+\index{getMatterDensity@{getMatterDensity}!FRWModel@{FRWModel}}
+\doxysubsubsection{\texorpdfstring{getMatterDensity()}{getMatterDensity()}}
+{\footnotesize\ttfamily double F\+R\+W\+Model\+::get\+Matter\+Density (\begin{DoxyParamCaption}\item[{const double}]{\+\_\+a }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFRWModel_a4e998f4739ff1df966beca89c1e393ed_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classFRWModel_a80544a319035cb9fe253f2dee3d63d52}\label{classFRWModel_a80544a319035cb9fe253f2dee3d63d52}} 
+\index{FRWModel@{FRWModel}!getRadiationDensity@{getRadiationDensity}}
+\index{getRadiationDensity@{getRadiationDensity}!FRWModel@{FRWModel}}
+\doxysubsubsection{\texorpdfstring{getRadiationDensity()}{getRadiationDensity()}}
+{\footnotesize\ttfamily double F\+R\+W\+Model\+::get\+Radiation\+Density (\begin{DoxyParamCaption}\item[{const double}]{\+\_\+a }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFRWModel_a80544a319035cb9fe253f2dee3d63d52_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classFRWModel_a348b0ad06e5e83855a039ab5179806bc}\label{classFRWModel_a348b0ad06e5e83855a039ab5179806bc}} 
+\index{FRWModel@{FRWModel}!updateA@{updateA}}
+\index{updateA@{updateA}!FRWModel@{FRWModel}}
+\doxysubsubsection{\texorpdfstring{updateA()}{updateA()}}
+{\footnotesize\ttfamily void F\+R\+W\+Model\+::updateA (\begin{DoxyParamCaption}\item[{const double}]{\+\_\+dt }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+update scale factor by time step \+\_\+dt (first order Euler method) 
+
+Iterate 10 times to get high accuracy for small a 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+dt} & time step \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFRWModel_a348b0ad06e5e83855a039ab5179806bc_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFRWModel_a348b0ad06e5e83855a039ab5179806bc_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classFRWModel_a904c7a9d484ab006a8bbbc3f557f6e45}\label{classFRWModel_a904c7a9d484ab006a8bbbc3f557f6e45}} 
+\index{FRWModel@{FRWModel}!updateAwithDtmin@{updateAwithDtmin}}
+\index{updateAwithDtmin@{updateAwithDtmin}!FRWModel@{FRWModel}}
+\doxysubsubsection{\texorpdfstring{updateAwithDtmin()}{updateAwithDtmin()}}
+{\footnotesize\ttfamily void F\+R\+W\+Model\+::update\+Awith\+Dtmin (\begin{DoxyParamCaption}\item[{const double}]{\+\_\+dt }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+update scale factor with maximum time step dt\+\_\+max (first order Euler method) 
+
+Iterate 10 times to get high accuracy for small a 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+dt} & time step \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFRWModel_a904c7a9d484ab006a8bbbc3f557f6e45_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFRWModel_a904c7a9d484ab006a8bbbc3f557f6e45_icgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classFRWModel_a23ac3ceb2463ce13eeb101654179f746}\label{classFRWModel_a23ac3ceb2463ce13eeb101654179f746}} 
+\index{FRWModel@{FRWModel}!a@{a}}
+\index{a@{a}!FRWModel@{FRWModel}}
+\doxysubsubsection{\texorpdfstring{a}{a}}
+{\footnotesize\ttfamily double F\+R\+W\+Model\+::a}
+
+\mbox{\Hypertarget{classFRWModel_a9661e2af5caa70fa42e5a7bb37a1df48}\label{classFRWModel_a9661e2af5caa70fa42e5a7bb37a1df48}} 
+\index{FRWModel@{FRWModel}!dt\_max@{dt\_max}}
+\index{dt\_max@{dt\_max}!FRWModel@{FRWModel}}
+\doxysubsubsection{\texorpdfstring{dt\_max}{dt\_max}}
+{\footnotesize\ttfamily double F\+R\+W\+Model\+::dt\+\_\+max}
+
+\mbox{\Hypertarget{classFRWModel_ac4f5f4794291e8b170de871da84a2a8a}\label{classFRWModel_ac4f5f4794291e8b170de871da84a2a8a}} 
+\index{FRWModel@{FRWModel}!dt\_scale@{dt\_scale}}
+\index{dt\_scale@{dt\_scale}!FRWModel@{FRWModel}}
+\doxysubsubsection{\texorpdfstring{dt\_scale}{dt\_scale}}
+{\footnotesize\ttfamily double F\+R\+W\+Model\+::dt\+\_\+scale}
+
+\mbox{\Hypertarget{classFRWModel_a4c286e64b2020ebb3a5e4921af79e7d3}\label{classFRWModel_a4c286e64b2020ebb3a5e4921af79e7d3}} 
+\index{FRWModel@{FRWModel}!H0@{H0}}
+\index{H0@{H0}!FRWModel@{FRWModel}}
+\doxysubsubsection{\texorpdfstring{H0}{H0}}
+{\footnotesize\ttfamily double F\+R\+W\+Model\+::\+H0}
+
+\mbox{\Hypertarget{classFRWModel_a274ccc0053de35e759f314a9c5b9e8ca}\label{classFRWModel_a274ccc0053de35e759f314a9c5b9e8ca}} 
+\index{FRWModel@{FRWModel}!H0\_myr@{H0\_myr}}
+\index{H0\_myr@{H0\_myr}!FRWModel@{FRWModel}}
+\doxysubsubsection{\texorpdfstring{H0\_myr}{H0\_myr}}
+{\footnotesize\ttfamily double F\+R\+W\+Model\+::\+H0\+\_\+myr}
+
+\mbox{\Hypertarget{classFRWModel_a6b44a07286ac021527bc2ab73b71abb4}\label{classFRWModel_a6b44a07286ac021527bc2ab73b71abb4}} 
+\index{FRWModel@{FRWModel}!omega\_energy@{omega\_energy}}
+\index{omega\_energy@{omega\_energy}!FRWModel@{FRWModel}}
+\doxysubsubsection{\texorpdfstring{omega\_energy}{omega\_energy}}
+{\footnotesize\ttfamily double F\+R\+W\+Model\+::omega\+\_\+energy}
+
+\mbox{\Hypertarget{classFRWModel_ad0aeadcca3d03e3eaa0a24fcf16c79b3}\label{classFRWModel_ad0aeadcca3d03e3eaa0a24fcf16c79b3}} 
+\index{FRWModel@{FRWModel}!omega\_matter@{omega\_matter}}
+\index{omega\_matter@{omega\_matter}!FRWModel@{FRWModel}}
+\doxysubsubsection{\texorpdfstring{omega\_matter}{omega\_matter}}
+{\footnotesize\ttfamily double F\+R\+W\+Model\+::omega\+\_\+matter}
+
+\mbox{\Hypertarget{classFRWModel_aeff6f0844ba6b7c731086b23569480bc}\label{classFRWModel_aeff6f0844ba6b7c731086b23569480bc}} 
+\index{FRWModel@{FRWModel}!omega\_radiation@{omega\_radiation}}
+\index{omega\_radiation@{omega\_radiation}!FRWModel@{FRWModel}}
+\doxysubsubsection{\texorpdfstring{omega\_radiation}{omega\_radiation}}
+{\footnotesize\ttfamily double F\+R\+W\+Model\+::omega\+\_\+radiation}
+
+\mbox{\Hypertarget{classFRWModel_a4ad7b8203c54739af126607f0c987efc}\label{classFRWModel_a4ad7b8203c54739af126607f0c987efc}} 
+\index{FRWModel@{FRWModel}!time@{time}}
+\index{time@{time}!FRWModel@{FRWModel}}
+\doxysubsubsection{\texorpdfstring{time}{time}}
+{\footnotesize\ttfamily double F\+R\+W\+Model\+::time}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{galpy__interface_8h}{galpy\+\_\+interface.\+h}}\end{DoxyCompactItemize}

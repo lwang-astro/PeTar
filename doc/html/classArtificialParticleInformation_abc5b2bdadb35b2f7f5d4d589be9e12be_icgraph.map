@@ -1,0 +1,9 @@
+<map id="ArtificialParticleInformation::isMember" name="ArtificialParticleInformation::isMember">
+<area shape="rect" id="node1" title="return whether the particle type is member" alt="" coords="496,123,696,164"/>
+<area shape="rect" id="node2" href="$classArtificialParticleInformation.html#abafbbad3f31248b1742c34669ce8438e" title="get backup mass" alt="" coords="248,5,448,47"/>
+<area shape="rect" id="node3" href="$classPtcl.html#a8e246fe96ab6ffb61e00db516beff44b" title="get c.m. particle address" alt="" coords="250,71,446,98"/>
+<area shape="rect" id="node4" href="$classArtificialParticleInformation.html#a7cbeaf4da02bdc0888402a7836a89980" title="set backup mass" alt="" coords="248,123,448,164"/>
+<area shape="rect" id="node5" href="$classPtcl.html#a89616cec78415e73c6b7f7af16f8c72e" title="set status to c.m. particle address" alt="" coords="5,193,200,219"/>
+<area shape="rect" id="node6" href="$classArtificialParticleInformation.html#a5270d8aa4301b8236c1247592c8c9512" title="set status" alt="" coords="248,240,448,281"/>
+<area shape="rect" id="node7" href="$classPtclHard.html#a4d0d63ab5d6469bd8a547f354372be78" title=" " alt="" coords="6,247,199,274"/>
+</map>

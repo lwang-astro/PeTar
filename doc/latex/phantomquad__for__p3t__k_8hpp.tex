@@ -1,0 +1,197 @@
+\hypertarget{phantomquad__for__p3t__k_8hpp}{}\doxysection{phantomquad\+\_\+for\+\_\+p3t\+\_\+k.\+hpp File Reference}
+\label{phantomquad__for__p3t__k_8hpp}\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}
+{\ttfamily \#include $<$cassert$>$}\newline
+{\ttfamily \#include \char`\"{}v2r8.\+h\char`\"{}}\newline
+Include dependency graph for phantomquad\+\_\+for\+\_\+p3t\+\_\+k.\+hpp\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=204pt]{phantomquad__for__p3t__k_8hpp__incl}
+\end{center}
+\end{figure}
+\doxysubsection*{Classes}
+\begin{DoxyCompactItemize}
+\item 
+class \mbox{\hyperlink{classPhantomGrapeQuad}{Phantom\+Grape\+Quad}}
+\end{DoxyCompactItemize}
+\doxysubsection*{Enumerations}
+\begin{DoxyCompactItemize}
+\item 
+enum \{ \mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_adf764cbdea00d65edcd07bb9953ad2b7ae2066853f08044a9b4acc927e48741a3}{N\+I\+M\+AX}} = 2048, 
+\mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_adf764cbdea00d65edcd07bb9953ad2b7a8faaa83eafcea15a0bdc4687b15d360a}{N\+J\+M\+AX}} = 262144
+ \}
+\end{DoxyCompactItemize}
+\doxysubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+class \mbox{\hyperlink{classPhantomGrapeQuad}{Phantom\+Grape\+Quad}} \mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_a7dea9d4e439d6bb67f37937d3bf6e253}{\+\_\+\+\_\+attribute\+\_\+\+\_\+}} ((aligned(128)))
+\item 
+\mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_a63c96c2d8474f8e2a6d8bddd7342675c}{Phantom\+Grape\+Quad}} ()
+\item 
+void \mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_aca21a801b525bf254983df07a3cc3c6e}{set\+\_\+eps2}} (const double \+\_\+eps2)
+\item 
+void \mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_a673058ed3554c699ea8e67e641a38845}{set\+\_\+r\+\_\+crit2}} (const double \+\_\+r\+\_\+crit2)
+\item 
+void \mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_a15647e9abefa5c8ed9b1a61975e6d583}{set\+\_\+cutoff}} (const double \+\_\+r\+\_\+out, const double \+\_\+r\+\_\+in)
+\item 
+void \mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_ac016cfa4853236af9ff145ff6e3bc949}{set\+\_\+epj\+\_\+one}} (const int addr, const double x, const double y, const double z, const double m, const double r\+\_\+search)
+\item 
+{\footnotesize template$<$typename E\+P\+J\+\_\+t $>$ }\\void \mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_a92ed0f385569b067dd7d64582652f4ea}{set\+\_\+epj}} (const int nj, const E\+P\+J\+\_\+t epj\mbox{[}$\,$\mbox{]})
+\item 
+void \mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_ad9d32f695f396ce0d233f80365b3f41d}{set\+\_\+spj\+\_\+one}} (const int addr, const double x, const double y, const double z, const double m, const double qxx, const double qyy, const double qzz, const double qxy, const double qyz, const double qzx)
+\item 
+{\footnotesize template$<$typename S\+P\+J\+\_\+t $>$ }\\void \mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_a7f03bd2deb237ca1a088927bc11b21cf}{set\+\_\+spj}} (const int nj, const S\+P\+J\+\_\+t spj\mbox{[}$\,$\mbox{]})
+\item 
+void \mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_af81a37f2016b61afb30632a36e2b7a31}{set\+\_\+xi\+\_\+one}} (const int addr, const double x, const double y, const double z, const double r\+\_\+search)
+\item 
+{\footnotesize template$<$typename E\+P\+I\+\_\+t $>$ }\\void \mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_ae93c14c03f4fe1beeecb98407c9131e6}{set\+\_\+xi}} (const int ni, const E\+P\+I\+\_\+t spj\mbox{[}$\,$\mbox{]})
+\item 
+{\footnotesize template$<$typename real\+\_\+t $>$ }\\void \mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_a5ccaeaf0431f64222af150379706b0ef}{get\+\_\+accp\+\_\+one}} (const int addr, real\+\_\+t \&ax, real\+\_\+t \&ay, real\+\_\+t \&az, real\+\_\+t \&pot)
+\item 
+{\footnotesize template$<$typename real\+\_\+t $>$ }\\void \mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_a4417819724f5302adbc0b2e9193337ba}{get\+\_\+accp\+\_\+one}} (const int addr, real\+\_\+t \&ax, real\+\_\+t \&ay, real\+\_\+t \&az, real\+\_\+t \&pot, real\+\_\+t \&nngb)
+\item 
+{\footnotesize template$<$typename real\+\_\+t $>$ }\\void \mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_a08b1124d94251074bea8fa7a7fed98c1}{accum\+\_\+accp\+\_\+one}} (const int addr, real\+\_\+t \&ax, real\+\_\+t \&ay, real\+\_\+t \&az, real\+\_\+t \&pot)
+\item 
+{\footnotesize template$<$typename real\+\_\+t $>$ }\\void \mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_ad07c0874dcc66508fad11f3f666dd39b}{accum\+\_\+accp\+\_\+one}} (const int addr, real\+\_\+t \&ax, real\+\_\+t \&ay, real\+\_\+t \&az, real\+\_\+t \&pot, real\+\_\+t \&nngb)
+\item 
+void \mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_a87d71a41d7b77229822369cb589ece28}{run\+\_\+epj}} (const int ni, const int nj)
+\item 
+void \mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_a40f50d061c72e0f8d0d0061b642a1a7f}{run\+\_\+epj\+\_\+for\+\_\+p3t\+\_\+with\+\_\+linear\+\_\+cutoff}} (const int ni, const int nj)
+\item 
+void \mbox{\hyperlink{phantomquad__for__p3t__k_8hpp_a39df4690c14d04378f05ffbcbaa49f6f}{run\+\_\+spj}} (const int ni, const int nj)
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Enumeration Type Documentation}
+\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_adf764cbdea00d65edcd07bb9953ad2b7}\label{phantomquad__for__p3t__k_8hpp_adf764cbdea00d65edcd07bb9953ad2b7}} 
+\doxysubsubsection{\texorpdfstring{anonymous enum}{anonymous enum}}
+{\footnotesize\ttfamily anonymous enum}
+
+\begin{DoxyEnumFields}{Enumerator}
+\raisebox{\heightof{T}}[0pt][0pt]{\index{NIMAX@{NIMAX}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!NIMAX@{NIMAX}}}\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_adf764cbdea00d65edcd07bb9953ad2b7ae2066853f08044a9b4acc927e48741a3}\label{phantomquad__for__p3t__k_8hpp_adf764cbdea00d65edcd07bb9953ad2b7ae2066853f08044a9b4acc927e48741a3}} 
+N\+I\+M\+AX&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{NJMAX@{NJMAX}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!NJMAX@{NJMAX}}}\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_adf764cbdea00d65edcd07bb9953ad2b7a8faaa83eafcea15a0bdc4687b15d360a}\label{phantomquad__for__p3t__k_8hpp_adf764cbdea00d65edcd07bb9953ad2b7a8faaa83eafcea15a0bdc4687b15d360a}} 
+N\+J\+M\+AX&\\
+\hline
+
+\end{DoxyEnumFields}
+
+
+\doxysubsection{Function Documentation}
+\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_a7dea9d4e439d6bb67f37937d3bf6e253}\label{phantomquad__for__p3t__k_8hpp_a7dea9d4e439d6bb67f37937d3bf6e253}} 
+\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!\_\_attribute\_\_@{\_\_attribute\_\_}}
+\index{\_\_attribute\_\_@{\_\_attribute\_\_}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}
+\doxysubsubsection{\texorpdfstring{\_\_attribute\_\_()}{\_\_attribute\_\_()}}
+{\footnotesize\ttfamily class \mbox{\hyperlink{classPhantomGrapeQuad}{Phantom\+Grape\+Quad}} \+\_\+\+\_\+attribute\+\_\+\+\_\+ (\begin{DoxyParamCaption}\item[{(aligned(128))}]{ }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_a08b1124d94251074bea8fa7a7fed98c1}\label{phantomquad__for__p3t__k_8hpp_a08b1124d94251074bea8fa7a7fed98c1}} 
+\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!accum\_accp\_one@{accum\_accp\_one}}
+\index{accum\_accp\_one@{accum\_accp\_one}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}
+\doxysubsubsection{\texorpdfstring{accum\_accp\_one()}{accum\_accp\_one()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily template$<$typename real\+\_\+t $>$ \\
+void \+\_\+\+\_\+attribute\+\_\+\+\_\+\+::accum\+\_\+accp\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{real\+\_\+t \&}]{ax,  }\item[{real\+\_\+t \&}]{ay,  }\item[{real\+\_\+t \&}]{az,  }\item[{real\+\_\+t \&}]{pot }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_ad07c0874dcc66508fad11f3f666dd39b}\label{phantomquad__for__p3t__k_8hpp_ad07c0874dcc66508fad11f3f666dd39b}} 
+\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!accum\_accp\_one@{accum\_accp\_one}}
+\index{accum\_accp\_one@{accum\_accp\_one}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}
+\doxysubsubsection{\texorpdfstring{accum\_accp\_one()}{accum\_accp\_one()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily template$<$typename real\+\_\+t $>$ \\
+void \+\_\+\+\_\+attribute\+\_\+\+\_\+\+::accum\+\_\+accp\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{real\+\_\+t \&}]{ax,  }\item[{real\+\_\+t \&}]{ay,  }\item[{real\+\_\+t \&}]{az,  }\item[{real\+\_\+t \&}]{pot,  }\item[{real\+\_\+t \&}]{nngb }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_a5ccaeaf0431f64222af150379706b0ef}\label{phantomquad__for__p3t__k_8hpp_a5ccaeaf0431f64222af150379706b0ef}} 
+\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!get\_accp\_one@{get\_accp\_one}}
+\index{get\_accp\_one@{get\_accp\_one}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}
+\doxysubsubsection{\texorpdfstring{get\_accp\_one()}{get\_accp\_one()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily template$<$typename real\+\_\+t $>$ \\
+void \+\_\+\+\_\+attribute\+\_\+\+\_\+\+::get\+\_\+accp\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{real\+\_\+t \&}]{ax,  }\item[{real\+\_\+t \&}]{ay,  }\item[{real\+\_\+t \&}]{az,  }\item[{real\+\_\+t \&}]{pot }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_a4417819724f5302adbc0b2e9193337ba}\label{phantomquad__for__p3t__k_8hpp_a4417819724f5302adbc0b2e9193337ba}} 
+\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!get\_accp\_one@{get\_accp\_one}}
+\index{get\_accp\_one@{get\_accp\_one}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}
+\doxysubsubsection{\texorpdfstring{get\_accp\_one()}{get\_accp\_one()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily template$<$typename real\+\_\+t $>$ \\
+void \+\_\+\+\_\+attribute\+\_\+\+\_\+\+::get\+\_\+accp\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{real\+\_\+t \&}]{ax,  }\item[{real\+\_\+t \&}]{ay,  }\item[{real\+\_\+t \&}]{az,  }\item[{real\+\_\+t \&}]{pot,  }\item[{real\+\_\+t \&}]{nngb }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_a63c96c2d8474f8e2a6d8bddd7342675c}\label{phantomquad__for__p3t__k_8hpp_a63c96c2d8474f8e2a6d8bddd7342675c}} 
+\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}
+\doxysubsubsection{\texorpdfstring{PhantomGrapeQuad()}{PhantomGrapeQuad()}}
+{\footnotesize\ttfamily \+\_\+\+\_\+attribute\+\_\+\+\_\+\+::\+Phantom\+Grape\+Quad (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_a87d71a41d7b77229822369cb589ece28}\label{phantomquad__for__p3t__k_8hpp_a87d71a41d7b77229822369cb589ece28}} 
+\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!run\_epj@{run\_epj}}
+\index{run\_epj@{run\_epj}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}
+\doxysubsubsection{\texorpdfstring{run\_epj()}{run\_epj()}}
+{\footnotesize\ttfamily void \+\_\+\+\_\+attribute\+\_\+\+\_\+\+::run\+\_\+epj (\begin{DoxyParamCaption}\item[{const int}]{ni,  }\item[{const int}]{nj }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_a40f50d061c72e0f8d0d0061b642a1a7f}\label{phantomquad__for__p3t__k_8hpp_a40f50d061c72e0f8d0d0061b642a1a7f}} 
+\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!run\_epj\_for\_p3t\_with\_linear\_cutoff@{run\_epj\_for\_p3t\_with\_linear\_cutoff}}
+\index{run\_epj\_for\_p3t\_with\_linear\_cutoff@{run\_epj\_for\_p3t\_with\_linear\_cutoff}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}
+\doxysubsubsection{\texorpdfstring{run\_epj\_for\_p3t\_with\_linear\_cutoff()}{run\_epj\_for\_p3t\_with\_linear\_cutoff()}}
+{\footnotesize\ttfamily void \+\_\+\+\_\+attribute\+\_\+\+\_\+\+::run\+\_\+epj\+\_\+for\+\_\+p3t\+\_\+with\+\_\+linear\+\_\+cutoff (\begin{DoxyParamCaption}\item[{const int}]{ni,  }\item[{const int}]{nj }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_a39df4690c14d04378f05ffbcbaa49f6f}\label{phantomquad__for__p3t__k_8hpp_a39df4690c14d04378f05ffbcbaa49f6f}} 
+\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!run\_spj@{run\_spj}}
+\index{run\_spj@{run\_spj}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}
+\doxysubsubsection{\texorpdfstring{run\_spj()}{run\_spj()}}
+{\footnotesize\ttfamily void \+\_\+\+\_\+attribute\+\_\+\+\_\+\+::run\+\_\+spj (\begin{DoxyParamCaption}\item[{const int}]{ni,  }\item[{const int}]{nj }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_a15647e9abefa5c8ed9b1a61975e6d583}\label{phantomquad__for__p3t__k_8hpp_a15647e9abefa5c8ed9b1a61975e6d583}} 
+\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!set\_cutoff@{set\_cutoff}}
+\index{set\_cutoff@{set\_cutoff}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}
+\doxysubsubsection{\texorpdfstring{set\_cutoff()}{set\_cutoff()}}
+{\footnotesize\ttfamily void \+\_\+\+\_\+attribute\+\_\+\+\_\+\+::set\+\_\+cutoff (\begin{DoxyParamCaption}\item[{const double}]{\+\_\+r\+\_\+out,  }\item[{const double}]{\+\_\+r\+\_\+in }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_a92ed0f385569b067dd7d64582652f4ea}\label{phantomquad__for__p3t__k_8hpp_a92ed0f385569b067dd7d64582652f4ea}} 
+\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!set\_epj@{set\_epj}}
+\index{set\_epj@{set\_epj}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}
+\doxysubsubsection{\texorpdfstring{set\_epj()}{set\_epj()}}
+{\footnotesize\ttfamily template$<$typename E\+P\+J\+\_\+t $>$ \\
+void \+\_\+\+\_\+attribute\+\_\+\+\_\+\+::set\+\_\+epj (\begin{DoxyParamCaption}\item[{const int}]{nj,  }\item[{const E\+P\+J\+\_\+t}]{epj\mbox{[}$\,$\mbox{]} }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_ac016cfa4853236af9ff145ff6e3bc949}\label{phantomquad__for__p3t__k_8hpp_ac016cfa4853236af9ff145ff6e3bc949}} 
+\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!set\_epj\_one@{set\_epj\_one}}
+\index{set\_epj\_one@{set\_epj\_one}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}
+\doxysubsubsection{\texorpdfstring{set\_epj\_one()}{set\_epj\_one()}}
+{\footnotesize\ttfamily void \+\_\+\+\_\+attribute\+\_\+\+\_\+\+::set\+\_\+epj\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{const double}]{x,  }\item[{const double}]{y,  }\item[{const double}]{z,  }\item[{const double}]{m,  }\item[{const double}]{r\+\_\+search }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_aca21a801b525bf254983df07a3cc3c6e}\label{phantomquad__for__p3t__k_8hpp_aca21a801b525bf254983df07a3cc3c6e}} 
+\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!set\_eps2@{set\_eps2}}
+\index{set\_eps2@{set\_eps2}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}
+\doxysubsubsection{\texorpdfstring{set\_eps2()}{set\_eps2()}}
+{\footnotesize\ttfamily void \+\_\+\+\_\+attribute\+\_\+\+\_\+\+::set\+\_\+eps2 (\begin{DoxyParamCaption}\item[{const double}]{\+\_\+eps2 }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_a673058ed3554c699ea8e67e641a38845}\label{phantomquad__for__p3t__k_8hpp_a673058ed3554c699ea8e67e641a38845}} 
+\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!set\_r\_crit2@{set\_r\_crit2}}
+\index{set\_r\_crit2@{set\_r\_crit2}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}
+\doxysubsubsection{\texorpdfstring{set\_r\_crit2()}{set\_r\_crit2()}}
+{\footnotesize\ttfamily void \+\_\+\+\_\+attribute\+\_\+\+\_\+\+::set\+\_\+r\+\_\+crit2 (\begin{DoxyParamCaption}\item[{const double}]{\+\_\+r\+\_\+crit2 }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_a7f03bd2deb237ca1a088927bc11b21cf}\label{phantomquad__for__p3t__k_8hpp_a7f03bd2deb237ca1a088927bc11b21cf}} 
+\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!set\_spj@{set\_spj}}
+\index{set\_spj@{set\_spj}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}
+\doxysubsubsection{\texorpdfstring{set\_spj()}{set\_spj()}}
+{\footnotesize\ttfamily template$<$typename S\+P\+J\+\_\+t $>$ \\
+void \+\_\+\+\_\+attribute\+\_\+\+\_\+\+::set\+\_\+spj (\begin{DoxyParamCaption}\item[{const int}]{nj,  }\item[{const S\+P\+J\+\_\+t}]{spj\mbox{[}$\,$\mbox{]} }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_ad9d32f695f396ce0d233f80365b3f41d}\label{phantomquad__for__p3t__k_8hpp_ad9d32f695f396ce0d233f80365b3f41d}} 
+\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!set\_spj\_one@{set\_spj\_one}}
+\index{set\_spj\_one@{set\_spj\_one}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}
+\doxysubsubsection{\texorpdfstring{set\_spj\_one()}{set\_spj\_one()}}
+{\footnotesize\ttfamily void \+\_\+\+\_\+attribute\+\_\+\+\_\+\+::set\+\_\+spj\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{const double}]{x,  }\item[{const double}]{y,  }\item[{const double}]{z,  }\item[{const double}]{m,  }\item[{const double}]{qxx,  }\item[{const double}]{qyy,  }\item[{const double}]{qzz,  }\item[{const double}]{qxy,  }\item[{const double}]{qyz,  }\item[{const double}]{qzx }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_ae93c14c03f4fe1beeecb98407c9131e6}\label{phantomquad__for__p3t__k_8hpp_ae93c14c03f4fe1beeecb98407c9131e6}} 
+\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!set\_xi@{set\_xi}}
+\index{set\_xi@{set\_xi}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}
+\doxysubsubsection{\texorpdfstring{set\_xi()}{set\_xi()}}
+{\footnotesize\ttfamily template$<$typename E\+P\+I\+\_\+t $>$ \\
+void \+\_\+\+\_\+attribute\+\_\+\+\_\+\+::set\+\_\+xi (\begin{DoxyParamCaption}\item[{const int}]{ni,  }\item[{const E\+P\+I\+\_\+t}]{spj\mbox{[}$\,$\mbox{]} }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{phantomquad__for__p3t__k_8hpp_af81a37f2016b61afb30632a36e2b7a31}\label{phantomquad__for__p3t__k_8hpp_af81a37f2016b61afb30632a36e2b7a31}} 
+\index{phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}!set\_xi\_one@{set\_xi\_one}}
+\index{set\_xi\_one@{set\_xi\_one}!phantomquad\_for\_p3t\_k.hpp@{phantomquad\_for\_p3t\_k.hpp}}
+\doxysubsubsection{\texorpdfstring{set\_xi\_one()}{set\_xi\_one()}}
+{\footnotesize\ttfamily void \+\_\+\+\_\+attribute\+\_\+\+\_\+\+::set\+\_\+xi\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{const double}]{x,  }\item[{const double}]{y,  }\item[{const double}]{z,  }\item[{const double}]{r\+\_\+search }\end{DoxyParamCaption})}
+

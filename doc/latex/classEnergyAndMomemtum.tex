@@ -1,0 +1,356 @@
+\hypertarget{classEnergyAndMomemtum}{}\doxysection{Energy\+And\+Momemtum Class Reference}
+\label{classEnergyAndMomemtum}\index{EnergyAndMomemtum@{EnergyAndMomemtum}}
+
+
+class for collecting and calculating the energy and angular momemtum of the system  
+
+
+
+
+{\ttfamily \#include $<$energy.\+hpp$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classEnergyAndMomemtum_a942de8c093cb1b0feb038c49569271f2}{Energy\+And\+Momemtum}} ()
+\item 
+void \mbox{\hyperlink{classEnergyAndMomemtum_af3f3f5838916c54dbcbe983098f26d09}{clear}} ()
+\item 
+void \mbox{\hyperlink{classEnergyAndMomemtum_a8ce7725b12ac90b5f2f66a20a7b0fcdd}{print}} (std\+::ostream \&\+\_\+fout=std\+::cout, const P\+S\+::\+S32 \+\_\+width=16)
+\begin{DoxyCompactList}\small\item\em print title and values in one lines \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classEnergyAndMomemtum_a9baa9bfec05ebd9eb8b25260c207b79c}{print\+Column\+Title}} (std\+::ofstream \&\+\_\+fout, const P\+S\+::\+S32 \+\_\+width=16) const
+\begin{DoxyCompactList}\small\item\em print titles of class members using column style \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classEnergyAndMomemtum_a0cb4de153894618f11d0443a12e3f44c}{print\+Column}} (std\+::ofstream \&\+\_\+fout, const P\+S\+::\+S32 \+\_\+width=16) const
+\begin{DoxyCompactList}\small\item\em print data of class members using column style \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classEnergyAndMomemtum_a94cef79f7bd818e85880089a22e22c7a}{write\+Ascii}} (F\+I\+LE $\ast$\+\_\+fout)
+\item 
+void \mbox{\hyperlink{classEnergyAndMomemtum_a6215363a478f849e9132183ad7582238}{write\+Binary}} (F\+I\+LE $\ast$\+\_\+fout)
+\item 
+{\footnotesize template$<$class Tptcl $>$ }\\void \mbox{\hyperlink{classEnergyAndMomemtum_aeabb3c5236a13b3db49cb64a9148dbf7}{calc}} (const Tptcl $\ast$\+\_\+particles, const P\+S\+::\+S32 \+\_\+n\+\_\+particle, const bool \+\_\+init\+\_\+flag=false, const P\+S\+::\+F64vec $\ast$\+\_\+pos\+\_\+offset=N\+U\+LL, const P\+S\+::\+F64vec $\ast$\+\_\+vel\+\_\+offset=N\+U\+LL)
+\begin{DoxyCompactList}\small\item\em calculate the system kinetic and potential energy of particles \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tptcl $>$ }\\void \mbox{\hyperlink{classEnergyAndMomemtum_a7d89961d605d78e35a691a0d6b00c487}{calc}} (const Tptcl $\ast$\+\_\+particles, const P\+S\+::\+S32 $\ast$\+\_\+particle\+\_\+index, const P\+S\+::\+S32 \+\_\+n\+\_\+particle, const bool \+\_\+init\+\_\+flag=false)
+\begin{DoxyCompactList}\small\item\em calculate the system kinetic and potential energy of particles \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classEnergyAndMomemtum_ab05745baa09b2424652f395d3780ee57}{get\+Sum\+Multi\+Nodes}} (const bool \+\_\+init\+\_\+flag=false)
+\begin{DoxyCompactList}\small\item\em get summation of kinetic, potential energy and angular momemtum of all M\+PI processes \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classEnergyAndMomemtum_a1aed44f1fd6443ded7eb940b696c0beb}{save\+Energy\+Error}} ()
+\begin{DoxyCompactList}\small\item\em save current energy error \end{DoxyCompactList}\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classEnergyAndMomemtum_aaab3632eebd2889fdb6b8c4d93f5e1d7}{get\+Energy\+Error}} () const
+\begin{DoxyCompactList}\small\item\em get energy error \end{DoxyCompactList}\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classEnergyAndMomemtum_a80207187dafc5faeccbb0cc8a898f1f1}{get\+Momentum\+Error}} () const
+\begin{DoxyCompactList}\small\item\em get angular momemtum (value) error \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classEnergyAndMomemtum_ab458937eb3e5482729597d04b548c5c1}{error\+\_\+cum\+\_\+pre}}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classEnergyAndMomemtum_a8eda14e2b591d14c43672977cc4e57b8}{ekin}}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classEnergyAndMomemtum_a74c80ca54c9d50ef10556756fda83a1c}{epot}}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classEnergyAndMomemtum_a01d39d5cf22000b7af75f3d14217374f}{etot\+\_\+ref}}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classEnergyAndMomemtum_aaccff8faecfe463cca2ad191bc846c3f}{error\+\_\+\+Lt\+\_\+cum\+\_\+pre}}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classEnergyAndMomemtum_a2ae27cc5c4f337c8c1b45d97714554cb}{Lt}}
+\item 
+P\+S\+::\+F64vec \mbox{\hyperlink{classEnergyAndMomemtum_ae8ec3371e7138a738a7314beaccbcc12}{L}}
+\item 
+P\+S\+::\+F64vec \mbox{\hyperlink{classEnergyAndMomemtum_aeab90a52d510cec1825c835c437d56ff}{L\+\_\+ref}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+class for collecting and calculating the energy and angular momemtum of the system 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classEnergyAndMomemtum_a942de8c093cb1b0feb038c49569271f2}\label{classEnergyAndMomemtum_a942de8c093cb1b0feb038c49569271f2}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{EnergyAndMomemtum()}{EnergyAndMomemtum()}}
+{\footnotesize\ttfamily Energy\+And\+Momemtum\+::\+Energy\+And\+Momemtum (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classEnergyAndMomemtum_a942de8c093cb1b0feb038c49569271f2_cgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classEnergyAndMomemtum_a7d89961d605d78e35a691a0d6b00c487}\label{classEnergyAndMomemtum_a7d89961d605d78e35a691a0d6b00c487}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!calc@{calc}}
+\index{calc@{calc}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{calc()}{calc()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+void Energy\+And\+Momemtum\+::calc (\begin{DoxyParamCaption}\item[{const Tptcl $\ast$}]{\+\_\+particles,  }\item[{const P\+S\+::\+S32 $\ast$}]{\+\_\+particle\+\_\+index,  }\item[{const P\+S\+::\+S32}]{\+\_\+n\+\_\+particle,  }\item[{const bool}]{\+\_\+init\+\_\+flag = {\ttfamily false} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate the system kinetic and potential energy of particles 
+
+Using particle index array to select particles 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+particles} & particle array \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+particle\+\_\+index} & index array to select particles \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n\+\_\+particle} & number of particles \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+init\+\_\+flag} & if true, set etot, etot\+\_\+sd and L reference \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classEnergyAndMomemtum_aeabb3c5236a13b3db49cb64a9148dbf7}\label{classEnergyAndMomemtum_aeabb3c5236a13b3db49cb64a9148dbf7}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!calc@{calc}}
+\index{calc@{calc}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{calc()}{calc()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+void Energy\+And\+Momemtum\+::calc (\begin{DoxyParamCaption}\item[{const Tptcl $\ast$}]{\+\_\+particles,  }\item[{const P\+S\+::\+S32}]{\+\_\+n\+\_\+particle,  }\item[{const bool}]{\+\_\+init\+\_\+flag = {\ttfamily false},  }\item[{const P\+S\+::\+F64vec $\ast$}]{\+\_\+pos\+\_\+offset = {\ttfamily NULL},  }\item[{const P\+S\+::\+F64vec $\ast$}]{\+\_\+vel\+\_\+offset = {\ttfamily NULL} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate the system kinetic and potential energy of particles 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+particles} & particle array \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n\+\_\+particle} & number of particles \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+init\+\_\+flag} & if true, set etot, etot\+\_\+sd and L reference \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+vel\+\_\+offset} & velocity shift to calculate kinetic energy, if not given, assume it is zero \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classEnergyAndMomemtum_af3f3f5838916c54dbcbe983098f26d09}\label{classEnergyAndMomemtum_af3f3f5838916c54dbcbe983098f26d09}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!clear@{clear}}
+\index{clear@{clear}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{clear()}{clear()}}
+{\footnotesize\ttfamily void Energy\+And\+Momemtum\+::clear (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classEnergyAndMomemtum_af3f3f5838916c54dbcbe983098f26d09_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classEnergyAndMomemtum_aaab3632eebd2889fdb6b8c4d93f5e1d7}\label{classEnergyAndMomemtum_aaab3632eebd2889fdb6b8c4d93f5e1d7}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!getEnergyError@{getEnergyError}}
+\index{getEnergyError@{getEnergyError}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{getEnergyError()}{getEnergyError()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Energy\+And\+Momemtum\+::get\+Energy\+Error (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get energy error 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classEnergyAndMomemtum_aaab3632eebd2889fdb6b8c4d93f5e1d7_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classEnergyAndMomemtum_a80207187dafc5faeccbb0cc8a898f1f1}\label{classEnergyAndMomemtum_a80207187dafc5faeccbb0cc8a898f1f1}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!getMomentumError@{getMomentumError}}
+\index{getMomentumError@{getMomentumError}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{getMomentumError()}{getMomentumError()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Energy\+And\+Momemtum\+::get\+Momentum\+Error (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get angular momemtum (value) error 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classEnergyAndMomemtum_a80207187dafc5faeccbb0cc8a898f1f1_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classEnergyAndMomemtum_ab05745baa09b2424652f395d3780ee57}\label{classEnergyAndMomemtum_ab05745baa09b2424652f395d3780ee57}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!getSumMultiNodes@{getSumMultiNodes}}
+\index{getSumMultiNodes@{getSumMultiNodes}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{getSumMultiNodes()}{getSumMultiNodes()}}
+{\footnotesize\ttfamily void Energy\+And\+Momemtum\+::get\+Sum\+Multi\+Nodes (\begin{DoxyParamCaption}\item[{const bool}]{\+\_\+init\+\_\+flag = {\ttfamily false} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get summation of kinetic, potential energy and angular momemtum of all M\+PI processes 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+init\+\_\+flag} & if true, set etot, etot\+\_\+sd and L reference \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classEnergyAndMomemtum_a8ce7725b12ac90b5f2f66a20a7b0fcdd}\label{classEnergyAndMomemtum_a8ce7725b12ac90b5f2f66a20a7b0fcdd}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!print@{print}}
+\index{print@{print}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{print()}{print()}}
+{\footnotesize\ttfamily void Energy\+And\+Momemtum\+::print (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout = {\ttfamily std\+:\+:cout},  }\item[{const P\+S\+::\+S32}]{\+\_\+width = {\ttfamily 16} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print title and values in one lines 
+
+print titles and values in one lines 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classEnergyAndMomemtum_a8ce7725b12ac90b5f2f66a20a7b0fcdd_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=327pt]{classEnergyAndMomemtum_a8ce7725b12ac90b5f2f66a20a7b0fcdd_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classEnergyAndMomemtum_a0cb4de153894618f11d0443a12e3f44c}\label{classEnergyAndMomemtum_a0cb4de153894618f11d0443a12e3f44c}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!printColumn@{printColumn}}
+\index{printColumn@{printColumn}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{printColumn()}{printColumn()}}
+{\footnotesize\ttfamily void Energy\+And\+Momemtum\+::print\+Column (\begin{DoxyParamCaption}\item[{std\+::ofstream \&}]{\+\_\+fout,  }\item[{const P\+S\+::\+S32}]{\+\_\+width = {\ttfamily 16} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print data of class members using column style 
+
+print data of class members in one line for column style. Notice no newline is printed at the end 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 16) \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classEnergyAndMomemtum_a0cb4de153894618f11d0443a12e3f44c_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classEnergyAndMomemtum_a0cb4de153894618f11d0443a12e3f44c_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classEnergyAndMomemtum_a9baa9bfec05ebd9eb8b25260c207b79c}\label{classEnergyAndMomemtum_a9baa9bfec05ebd9eb8b25260c207b79c}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!printColumnTitle@{printColumnTitle}}
+\index{printColumnTitle@{printColumnTitle}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{printColumnTitle()}{printColumnTitle()}}
+{\footnotesize\ttfamily void Energy\+And\+Momemtum\+::print\+Column\+Title (\begin{DoxyParamCaption}\item[{std\+::ofstream \&}]{\+\_\+fout,  }\item[{const P\+S\+::\+S32}]{\+\_\+width = {\ttfamily 16} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print titles of class members using column style 
+
+print titles of class members in one line for column style 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 16) \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classEnergyAndMomemtum_a9baa9bfec05ebd9eb8b25260c207b79c_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classEnergyAndMomemtum_a1aed44f1fd6443ded7eb940b696c0beb}\label{classEnergyAndMomemtum_a1aed44f1fd6443ded7eb940b696c0beb}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!saveEnergyError@{saveEnergyError}}
+\index{saveEnergyError@{saveEnergyError}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{saveEnergyError()}{saveEnergyError()}}
+{\footnotesize\ttfamily void Energy\+And\+Momemtum\+::save\+Energy\+Error (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+save current energy error 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classEnergyAndMomemtum_a1aed44f1fd6443ded7eb940b696c0beb_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classEnergyAndMomemtum_a94cef79f7bd818e85880089a22e22c7a}\label{classEnergyAndMomemtum_a94cef79f7bd818e85880089a22e22c7a}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!writeAscii@{writeAscii}}
+\index{writeAscii@{writeAscii}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{writeAscii()}{writeAscii()}}
+{\footnotesize\ttfamily void Energy\+And\+Momemtum\+::write\+Ascii (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fout }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classEnergyAndMomemtum_a6215363a478f849e9132183ad7582238}\label{classEnergyAndMomemtum_a6215363a478f849e9132183ad7582238}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!writeBinary@{writeBinary}}
+\index{writeBinary@{writeBinary}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{writeBinary()}{writeBinary()}}
+{\footnotesize\ttfamily void Energy\+And\+Momemtum\+::write\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fout }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classEnergyAndMomemtum_a8eda14e2b591d14c43672977cc4e57b8}\label{classEnergyAndMomemtum_a8eda14e2b591d14c43672977cc4e57b8}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!ekin@{ekin}}
+\index{ekin@{ekin}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{ekin}{ekin}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Energy\+And\+Momemtum\+::ekin}
+
+\mbox{\Hypertarget{classEnergyAndMomemtum_a74c80ca54c9d50ef10556756fda83a1c}\label{classEnergyAndMomemtum_a74c80ca54c9d50ef10556756fda83a1c}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!epot@{epot}}
+\index{epot@{epot}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{epot}{epot}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Energy\+And\+Momemtum\+::epot}
+
+\mbox{\Hypertarget{classEnergyAndMomemtum_ab458937eb3e5482729597d04b548c5c1}\label{classEnergyAndMomemtum_ab458937eb3e5482729597d04b548c5c1}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!error\_cum\_pre@{error\_cum\_pre}}
+\index{error\_cum\_pre@{error\_cum\_pre}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{error\_cum\_pre}{error\_cum\_pre}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Energy\+And\+Momemtum\+::error\+\_\+cum\+\_\+pre}
+
+\mbox{\Hypertarget{classEnergyAndMomemtum_aaccff8faecfe463cca2ad191bc846c3f}\label{classEnergyAndMomemtum_aaccff8faecfe463cca2ad191bc846c3f}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!error\_Lt\_cum\_pre@{error\_Lt\_cum\_pre}}
+\index{error\_Lt\_cum\_pre@{error\_Lt\_cum\_pre}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{error\_Lt\_cum\_pre}{error\_Lt\_cum\_pre}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Energy\+And\+Momemtum\+::error\+\_\+\+Lt\+\_\+cum\+\_\+pre}
+
+\mbox{\Hypertarget{classEnergyAndMomemtum_a01d39d5cf22000b7af75f3d14217374f}\label{classEnergyAndMomemtum_a01d39d5cf22000b7af75f3d14217374f}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!etot\_ref@{etot\_ref}}
+\index{etot\_ref@{etot\_ref}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{etot\_ref}{etot\_ref}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Energy\+And\+Momemtum\+::etot\+\_\+ref}
+
+\mbox{\Hypertarget{classEnergyAndMomemtum_ae8ec3371e7138a738a7314beaccbcc12}\label{classEnergyAndMomemtum_ae8ec3371e7138a738a7314beaccbcc12}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!L@{L}}
+\index{L@{L}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{L}{L}}
+{\footnotesize\ttfamily P\+S\+::\+F64vec Energy\+And\+Momemtum\+::L}
+
+\mbox{\Hypertarget{classEnergyAndMomemtum_aeab90a52d510cec1825c835c437d56ff}\label{classEnergyAndMomemtum_aeab90a52d510cec1825c835c437d56ff}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!L\_ref@{L\_ref}}
+\index{L\_ref@{L\_ref}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{L\_ref}{L\_ref}}
+{\footnotesize\ttfamily P\+S\+::\+F64vec Energy\+And\+Momemtum\+::\+L\+\_\+ref}
+
+\mbox{\Hypertarget{classEnergyAndMomemtum_a2ae27cc5c4f337c8c1b45d97714554cb}\label{classEnergyAndMomemtum_a2ae27cc5c4f337c8c1b45d97714554cb}} 
+\index{EnergyAndMomemtum@{EnergyAndMomemtum}!Lt@{Lt}}
+\index{Lt@{Lt}!EnergyAndMomemtum@{EnergyAndMomemtum}}
+\doxysubsubsection{\texorpdfstring{Lt}{Lt}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Energy\+And\+Momemtum\+::\+Lt}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{energy_8hpp}{energy.\+hpp}}\end{DoxyCompactItemize}

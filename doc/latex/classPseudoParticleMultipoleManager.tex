@@ -1,0 +1,160 @@
+\hypertarget{classPseudoParticleMultipoleManager}{}\doxysection{Pseudo\+Particle\+Multipole\+Manager Class Reference}
+\label{classPseudoParticleMultipoleManager}\index{PseudoParticleMultipoleManager@{PseudoParticleMultipoleManager}}
+
+
+Pseudo\+Particle Multipole method for counter force from binaries.  
+
+
+
+
+{\ttfamily \#include $<$pseudoparticle\+\_\+multipole.\+hpp$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+bool \mbox{\hyperlink{classPseudoParticleMultipoleManager_ae68e816c46f10c7c2febed760dffd13d}{check\+Params}} ()
+\begin{DoxyCompactList}\small\item\em check paramters \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tptcl $>$ }\\void \mbox{\hyperlink{classPseudoParticleMultipoleManager_aa51c7c9cb1c2c1b2daa0d0c6bae8a66a}{create\+Sample\+Particles}} (Tptcl $\ast$\+\_\+ptcl\+\_\+artificial, C\+O\+M\+M\+::\+Binary\+Tree$<$ Tptcl, C\+O\+M\+M\+::\+Binary $>$ \&\+\_\+bin)
+\begin{DoxyCompactList}\small\item\em create pseudoparticle multipole particles \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classPseudoParticleMultipoleManager_a57d5f9476dfff732f03c9b7e15ae7234}{write\+Binary}} (F\+I\+LE $\ast$\+\_\+fp)
+\begin{DoxyCompactList}\small\item\em write class data to file with binary format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classPseudoParticleMultipoleManager_a7ac07cc17a8dd499b99439effe3692de}{read\+Binary}} (F\+I\+LE $\ast$\+\_\+fin)
+\begin{DoxyCompactList}\small\item\em read class data to file with binary format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classPseudoParticleMultipoleManager_a0c05a5c3204dfc67ee422143bce44f9f}{print}} (std\+::ostream \&\+\_\+fout) const
+\begin{DoxyCompactList}\small\item\em print parameters \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static P\+S\+::\+S32 \mbox{\hyperlink{classPseudoParticleMultipoleManager_a5621892410d256215a8e07ef5bc5c2be}{get\+ParticleN}} ()
+\begin{DoxyCompactList}\small\item\em get particle number \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Pseudo\+Particle Multipole method for counter force from binaries. 
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classPseudoParticleMultipoleManager_ae68e816c46f10c7c2febed760dffd13d}\label{classPseudoParticleMultipoleManager_ae68e816c46f10c7c2febed760dffd13d}} 
+\index{PseudoParticleMultipoleManager@{PseudoParticleMultipoleManager}!checkParams@{checkParams}}
+\index{checkParams@{checkParams}!PseudoParticleMultipoleManager@{PseudoParticleMultipoleManager}}
+\doxysubsubsection{\texorpdfstring{checkParams()}{checkParams()}}
+{\footnotesize\ttfamily bool Pseudo\+Particle\+Multipole\+Manager\+::check\+Params (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+check paramters 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPseudoParticleMultipoleManager_ae68e816c46f10c7c2febed760dffd13d_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPseudoParticleMultipoleManager_aa51c7c9cb1c2c1b2daa0d0c6bae8a66a}\label{classPseudoParticleMultipoleManager_aa51c7c9cb1c2c1b2daa0d0c6bae8a66a}} 
+\index{PseudoParticleMultipoleManager@{PseudoParticleMultipoleManager}!createSampleParticles@{createSampleParticles}}
+\index{createSampleParticles@{createSampleParticles}!PseudoParticleMultipoleManager@{PseudoParticleMultipoleManager}}
+\doxysubsubsection{\texorpdfstring{createSampleParticles()}{createSampleParticles()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+void Pseudo\+Particle\+Multipole\+Manager\+::create\+Sample\+Particles (\begin{DoxyParamCaption}\item[{Tptcl $\ast$}]{\+\_\+ptcl\+\_\+artificial,  }\item[{C\+O\+M\+M\+::\+Binary\+Tree$<$ Tptcl, C\+O\+M\+M\+::\+Binary $>$ \&}]{\+\_\+bin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+create pseudoparticle multipole particles 
+
+Create three particles that have the same quadrupole moment as orbit-\/averaged binaries. 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em $<$em$>$ptcl\+\_\+artificial} & particle array to store the sample particles, 2$\ast$n\+\_\+split will be used \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+bin} & binary orbit \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPseudoParticleMultipoleManager_aa51c7c9cb1c2c1b2daa0d0c6bae8a66a_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPseudoParticleMultipoleManager_a5621892410d256215a8e07ef5bc5c2be}\label{classPseudoParticleMultipoleManager_a5621892410d256215a8e07ef5bc5c2be}} 
+\index{PseudoParticleMultipoleManager@{PseudoParticleMultipoleManager}!getParticleN@{getParticleN}}
+\index{getParticleN@{getParticleN}!PseudoParticleMultipoleManager@{PseudoParticleMultipoleManager}}
+\doxysubsubsection{\texorpdfstring{getParticleN()}{getParticleN()}}
+{\footnotesize\ttfamily static P\+S\+::\+S32 Pseudo\+Particle\+Multipole\+Manager\+::get\+ParticleN (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+get particle number 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPseudoParticleMultipoleManager_a5621892410d256215a8e07ef5bc5c2be_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPseudoParticleMultipoleManager_a0c05a5c3204dfc67ee422143bce44f9f}\label{classPseudoParticleMultipoleManager_a0c05a5c3204dfc67ee422143bce44f9f}} 
+\index{PseudoParticleMultipoleManager@{PseudoParticleMultipoleManager}!print@{print}}
+\index{print@{print}!PseudoParticleMultipoleManager@{PseudoParticleMultipoleManager}}
+\doxysubsubsection{\texorpdfstring{print()}{print()}}
+{\footnotesize\ttfamily void Pseudo\+Particle\+Multipole\+Manager\+::print (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print parameters 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPseudoParticleMultipoleManager_a0c05a5c3204dfc67ee422143bce44f9f_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPseudoParticleMultipoleManager_a7ac07cc17a8dd499b99439effe3692de}\label{classPseudoParticleMultipoleManager_a7ac07cc17a8dd499b99439effe3692de}} 
+\index{PseudoParticleMultipoleManager@{PseudoParticleMultipoleManager}!readBinary@{readBinary}}
+\index{readBinary@{readBinary}!PseudoParticleMultipoleManager@{PseudoParticleMultipoleManager}}
+\doxysubsubsection{\texorpdfstring{readBinary()}{readBinary()}}
+{\footnotesize\ttfamily void Pseudo\+Particle\+Multipole\+Manager\+::read\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read class data to file with binary format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fp} & F\+I\+LE type file for reading \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPseudoParticleMultipoleManager_a7ac07cc17a8dd499b99439effe3692de_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPseudoParticleMultipoleManager_a57d5f9476dfff732f03c9b7e15ae7234}\label{classPseudoParticleMultipoleManager_a57d5f9476dfff732f03c9b7e15ae7234}} 
+\index{PseudoParticleMultipoleManager@{PseudoParticleMultipoleManager}!writeBinary@{writeBinary}}
+\index{writeBinary@{writeBinary}!PseudoParticleMultipoleManager@{PseudoParticleMultipoleManager}}
+\doxysubsubsection{\texorpdfstring{writeBinary()}{writeBinary()}}
+{\footnotesize\ttfamily void Pseudo\+Particle\+Multipole\+Manager\+::write\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fp }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write class data to file with binary format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fp} & F\+I\+LE type file for output \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPseudoParticleMultipoleManager_a57d5f9476dfff732f03c9b7e15ae7234_icgraph}
+\end{center}
+\end{figure}
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{pseudoparticle__multipole_8hpp}{pseudoparticle\+\_\+multipole.\+hpp}}\end{DoxyCompactItemize}

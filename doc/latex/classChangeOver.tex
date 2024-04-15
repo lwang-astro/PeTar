@@ -1,0 +1,625 @@
+\hypertarget{classChangeOver}{}\doxysection{Change\+Over Class Reference}
+\label{classChangeOver}\index{ChangeOver@{ChangeOver}}
+
+
+Changeover function class.  
+
+
+
+
+{\ttfamily \#include $<$changeover.\+hpp$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classChangeOver_ae7f8284e898cd30df62b17ef78905df2}{Change\+Over}} ()
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+scaling for changeover factor (for next step) \end{quote}
+\end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classChangeOver_a6004f7b193fccd2e3f877956b7156ab4}{check\+Params}} ()
+\begin{DoxyCompactList}\small\item\em check whether parameters values are correct \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tpars $>$ }\\\mbox{\hyperlink{classChangeOver_a9699bcff123e3c717af0fa87c1b6d8f4}{Change\+Over}} (const Tpars \&\+\_\+par)
+\begin{DoxyCompactList}\small\item\em constructor based on inherited class \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classChangeOver_ab8bbff987a930131dcbe86ce435f6087}{setR}} (const Float \&\+\_\+m\+\_\+fac, const Float \&\+\_\+r\+\_\+in, const Float \&\+\_\+r\+\_\+out)
+\begin{DoxyCompactList}\small\item\em set r\+\_\+in and r\+\_\+out for changeover function \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classChangeOver_ace94789ca4209f7dc6a895fbb3181c81}{setR}} (const Float \&\+\_\+r\+\_\+in, const Float \&\+\_\+r\+\_\+out)
+\begin{DoxyCompactList}\small\item\em set r\+\_\+in and r\+\_\+out for changeover function \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classChangeOver_ae376094ee332a91ba0e2c0956b772fd3}{update\+With\+R\+Scale}} ()
+\begin{DoxyCompactList}\small\item\em update radius based on r\+\_\+scale\+\_\+next, reset r\+\_\+scale\+\_\+next to 1 \end{DoxyCompactList}\item 
+const Float \& \mbox{\hyperlink{classChangeOver_aa6f9abe537f7cbb3359aa36964407bc5}{get\+Rin}} () const
+\begin{DoxyCompactList}\small\item\em get r\+\_\+in \end{DoxyCompactList}\item 
+const Float \& \mbox{\hyperlink{classChangeOver_ab1ee26d7f773d67568a55b8efabdbe79}{get\+Rout}} () const
+\begin{DoxyCompactList}\small\item\em get r\+\_\+out \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classChangeOver_a7cb94f25c0be6f295cc0214926799149}{print}} (std\+::ostream \&\+\_\+fout) const
+\item 
+void \mbox{\hyperlink{classChangeOver_a311e67bfac2687a70e3aba5c4d68a65a}{print\+Column}} (std\+::ostream \&\+\_\+fout, const int \+\_\+width=20)
+\begin{DoxyCompactList}\small\item\em print data of class members using column style \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classChangeOver_a6481968a8eaf66d2c65c34e612802d93}{write\+Binary}} (F\+I\+LE $\ast$\+\_\+fp) const
+\begin{DoxyCompactList}\small\item\em write class data to file with binary format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classChangeOver_a56998e927c0f7516b225c3690833a23f}{read\+Binary}} (F\+I\+LE $\ast$\+\_\+fin)
+\begin{DoxyCompactList}\small\item\em read class data to file with binary format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classChangeOver_a41bcc8db067257c5e1a0a7b3f9aa2707}{write\+Ascii}} (F\+I\+LE $\ast$\+\_\+fp) const
+\begin{DoxyCompactList}\small\item\em write class data to file with binary format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classChangeOver_a4ab816f7e59edaf68f7223b8ca5bcd7b}{read\+Ascii}} (F\+I\+LE $\ast$\+\_\+fin)
+\begin{DoxyCompactList}\small\item\em read class data to file with binary format \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tpars $>$ }\\void \mbox{\hyperlink{classChangeOver_a7f0aa4fb95286a568ef41808f2956ad9}{data\+Copy}} (const Tpars \&\+\_\+par)
+\begin{DoxyCompactList}\small\item\em copy data from inherited class object \end{DoxyCompactList}\item 
+Float \mbox{\hyperlink{classChangeOver_a23c019e8fc14c43826a4c85454e55780}{calc\+PotW}} (const Float \&\+\_\+dr) const
+\begin{DoxyCompactList}\small\item\em changeover function for potential \end{DoxyCompactList}\item 
+Float \mbox{\hyperlink{classChangeOver_af8884a741e47cb86fa1d33354bfc7537}{calc\+Acc0W}} (const Float \&\+\_\+dr) const
+\begin{DoxyCompactList}\small\item\em changeover function for force \end{DoxyCompactList}\item 
+Float \mbox{\hyperlink{classChangeOver_a2865beebed34f9de5d5fbbd6f73564d2}{calc\+Acc1W}} (const Float \&\+\_\+dr, const Float \&\+\_\+drdot) const
+\begin{DoxyCompactList}\small\item\em changeover function for force derivative \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static void \mbox{\hyperlink{classChangeOver_a99477187923811c0fdb3800199cbad48}{print\+Column\+Title}} (std\+::ostream \&\+\_\+fout, const int \+\_\+width=20)
+\begin{DoxyCompactList}\small\item\em print titles of class members using column style \end{DoxyCompactList}\item 
+static int \mbox{\hyperlink{classChangeOver_afc18f1457828a89cc303cbf025fffe42}{print\+Title\+With\+Meaning}} (std\+::ostream \&\+\_\+fout, const int \+\_\+counter=0, const int \+\_\+offset=0)
+\begin{DoxyCompactList}\small\item\em print column title with meaning (each line for one column) \end{DoxyCompactList}\item 
+static Float \mbox{\hyperlink{classChangeOver_a42703491c22c6f1925e28f4eb7508594}{calc\+Pot\+W\+Two}} (const \mbox{\hyperlink{classChangeOver}{Change\+Over}} \&\+\_\+ch1, const \mbox{\hyperlink{classChangeOver}{Change\+Over}} \&\+\_\+ch2, const Float \&\+\_\+dr)
+\begin{DoxyCompactList}\small\item\em calculate changeover function Pot by selecting maximum rout \end{DoxyCompactList}\item 
+static Float \mbox{\hyperlink{classChangeOver_aa4cee9c08ff3ae260bf33fb3d885ffca}{calc\+Acc0\+W\+Two}} (const \mbox{\hyperlink{classChangeOver}{Change\+Over}} \&\+\_\+ch1, const \mbox{\hyperlink{classChangeOver}{Change\+Over}} \&\+\_\+ch2, const Float \&\+\_\+dr)
+\begin{DoxyCompactList}\small\item\em calculate changeover function Acc0 by selecting maximum rout \end{DoxyCompactList}\item 
+static Float \mbox{\hyperlink{classChangeOver_a03517a56f818e5be3d1bba56cb78edff}{calc\+Acc1\+W\+Two}} (const \mbox{\hyperlink{classChangeOver}{Change\+Over}} \&\+\_\+ch1, const \mbox{\hyperlink{classChangeOver}{Change\+Over}} \&\+\_\+ch2, const Float \&\+\_\+dr, const Float \&\+\_\+drdot)
+\begin{DoxyCompactList}\small\item\em calculate changeover function Acc1 by selecting maximum rout \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+Float \mbox{\hyperlink{classChangeOver_a766364cae2273041da3afa40eded41f6}{r\+\_\+scale\+\_\+next}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+(1 + coff\+\_\+)/r\+\_\+out = 2/(r\+\_\+out+r\+\_\+in) \end{quote}
+\end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Changeover function class. 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classChangeOver_ae7f8284e898cd30df62b17ef78905df2}\label{classChangeOver_ae7f8284e898cd30df62b17ef78905df2}} 
+\index{ChangeOver@{ChangeOver}!ChangeOver@{ChangeOver}}
+\index{ChangeOver@{ChangeOver}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{ChangeOver()}{ChangeOver()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily Change\+Over\+::\+Change\+Over (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\begin{quote}
+scaling for changeover factor (for next step) \end{quote}
+
+
+\mbox{\Hypertarget{classChangeOver_a9699bcff123e3c717af0fa87c1b6d8f4}\label{classChangeOver_a9699bcff123e3c717af0fa87c1b6d8f4}} 
+\index{ChangeOver@{ChangeOver}!ChangeOver@{ChangeOver}}
+\index{ChangeOver@{ChangeOver}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{ChangeOver()}{ChangeOver()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily template$<$class Tpars $>$ \\
+Change\+Over\+::\+Change\+Over (\begin{DoxyParamCaption}\item[{const Tpars \&}]{\+\_\+par }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+constructor based on inherited class 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_a9699bcff123e3c717af0fa87c1b6d8f4_cgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classChangeOver_af8884a741e47cb86fa1d33354bfc7537}\label{classChangeOver_af8884a741e47cb86fa1d33354bfc7537}} 
+\index{ChangeOver@{ChangeOver}!calcAcc0W@{calcAcc0W}}
+\index{calcAcc0W@{calcAcc0W}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{calcAcc0W()}{calcAcc0W()}}
+{\footnotesize\ttfamily Float Change\+Over\+::calc\+Acc0W (\begin{DoxyParamCaption}\item[{const Float \&}]{\+\_\+dr }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+changeover function for force 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+dr} & particle separation ~\newline
+ $ x = \frac{dr - r_{in}{r_{out} - r_{in}} $ ~\newline
+ $ R_a = \frac{r_{in}}{r_{out} - r_{in}} $ ~\newline
+ $ W_0(x) = (x-1)^4 (1 + 4 x + 10 x^2 + 20 x^3 + \frac{35 x^4}{2 R_a + 1} $ \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+$ W_0(x) $ 
+\end{DoxyReturn}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_af8884a741e47cb86fa1d33354bfc7537_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classChangeOver_aa4cee9c08ff3ae260bf33fb3d885ffca}\label{classChangeOver_aa4cee9c08ff3ae260bf33fb3d885ffca}} 
+\index{ChangeOver@{ChangeOver}!calcAcc0WTwo@{calcAcc0WTwo}}
+\index{calcAcc0WTwo@{calcAcc0WTwo}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{calcAcc0WTwo()}{calcAcc0WTwo()}}
+{\footnotesize\ttfamily static Float Change\+Over\+::calc\+Acc0\+W\+Two (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classChangeOver}{Change\+Over}} \&}]{\+\_\+ch1,  }\item[{const \mbox{\hyperlink{classChangeOver}{Change\+Over}} \&}]{\+\_\+ch2,  }\item[{const Float \&}]{\+\_\+dr }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+calculate changeover function Acc0 by selecting maximum rout 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_aa4cee9c08ff3ae260bf33fb3d885ffca_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_aa4cee9c08ff3ae260bf33fb3d885ffca_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classChangeOver_a2865beebed34f9de5d5fbbd6f73564d2}\label{classChangeOver_a2865beebed34f9de5d5fbbd6f73564d2}} 
+\index{ChangeOver@{ChangeOver}!calcAcc1W@{calcAcc1W}}
+\index{calcAcc1W@{calcAcc1W}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{calcAcc1W()}{calcAcc1W()}}
+{\footnotesize\ttfamily Float Change\+Over\+::calc\+Acc1W (\begin{DoxyParamCaption}\item[{const Float \&}]{\+\_\+dr,  }\item[{const Float \&}]{\+\_\+drdot }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+changeover function for force derivative 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+dr} & particle separation \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+drdot} & time derivation of \+\_\+dr $ R_a = \frac{r_{in}}{r_{out} - r_{in}} $ ~\newline
+ $ x = \frac{dr - r_{in}{r_{out} - r_{in}} $ ~\newline
+ $ \frac{dx}{dt} = \frac{1}{r_{out} - r_{in}} \frac{dr}{dt} $ ~\newline
+ $ W_1(x) = \frac{280 x^3 (R_a + x)(x-1)^3}{2 R_a + 1} $ \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+$ W_1(x) dx/dt $ 
+\end{DoxyReturn}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_a2865beebed34f9de5d5fbbd6f73564d2_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classChangeOver_a03517a56f818e5be3d1bba56cb78edff}\label{classChangeOver_a03517a56f818e5be3d1bba56cb78edff}} 
+\index{ChangeOver@{ChangeOver}!calcAcc1WTwo@{calcAcc1WTwo}}
+\index{calcAcc1WTwo@{calcAcc1WTwo}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{calcAcc1WTwo()}{calcAcc1WTwo()}}
+{\footnotesize\ttfamily static Float Change\+Over\+::calc\+Acc1\+W\+Two (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classChangeOver}{Change\+Over}} \&}]{\+\_\+ch1,  }\item[{const \mbox{\hyperlink{classChangeOver}{Change\+Over}} \&}]{\+\_\+ch2,  }\item[{const Float \&}]{\+\_\+dr,  }\item[{const Float \&}]{\+\_\+drdot }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+calculate changeover function Acc1 by selecting maximum rout 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_a03517a56f818e5be3d1bba56cb78edff_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_a03517a56f818e5be3d1bba56cb78edff_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classChangeOver_a23c019e8fc14c43826a4c85454e55780}\label{classChangeOver_a23c019e8fc14c43826a4c85454e55780}} 
+\index{ChangeOver@{ChangeOver}!calcPotW@{calcPotW}}
+\index{calcPotW@{calcPotW}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{calcPotW()}{calcPotW()}}
+{\footnotesize\ttfamily Float Change\+Over\+::calc\+PotW (\begin{DoxyParamCaption}\item[{const Float \&}]{\+\_\+dr }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+changeover function for potential 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+dr} & particle separation $ x = \frac{dr - r_{in}{r_{out} - r_{in}} $ ~\newline
+ $ R_a = \frac{r_{in}}{r_{out} - r_{in}} $ ~\newline
+ $ W_pot(x) = \frac{x^5}{2 R_a + 1} (5 x^3 - 20 x^2 + 28 x - 14) $ \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+$ W_pot(x) $ 
+\end{DoxyReturn}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_a23c019e8fc14c43826a4c85454e55780_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classChangeOver_a42703491c22c6f1925e28f4eb7508594}\label{classChangeOver_a42703491c22c6f1925e28f4eb7508594}} 
+\index{ChangeOver@{ChangeOver}!calcPotWTwo@{calcPotWTwo}}
+\index{calcPotWTwo@{calcPotWTwo}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{calcPotWTwo()}{calcPotWTwo()}}
+{\footnotesize\ttfamily static Float Change\+Over\+::calc\+Pot\+W\+Two (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classChangeOver}{Change\+Over}} \&}]{\+\_\+ch1,  }\item[{const \mbox{\hyperlink{classChangeOver}{Change\+Over}} \&}]{\+\_\+ch2,  }\item[{const Float \&}]{\+\_\+dr }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+calculate changeover function Pot by selecting maximum rout 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_a42703491c22c6f1925e28f4eb7508594_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_a42703491c22c6f1925e28f4eb7508594_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classChangeOver_a6004f7b193fccd2e3f877956b7156ab4}\label{classChangeOver_a6004f7b193fccd2e3f877956b7156ab4}} 
+\index{ChangeOver@{ChangeOver}!checkParams@{checkParams}}
+\index{checkParams@{checkParams}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{checkParams()}{checkParams()}}
+{\footnotesize\ttfamily bool Change\+Over\+::check\+Params (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+check whether parameters values are correct 
+
+\begin{DoxyReturn}{Returns}
+true\+: all correct 
+\end{DoxyReturn}
+\mbox{\Hypertarget{classChangeOver_a7f0aa4fb95286a568ef41808f2956ad9}\label{classChangeOver_a7f0aa4fb95286a568ef41808f2956ad9}} 
+\index{ChangeOver@{ChangeOver}!dataCopy@{dataCopy}}
+\index{dataCopy@{dataCopy}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{dataCopy()}{dataCopy()}}
+{\footnotesize\ttfamily template$<$class Tpars $>$ \\
+void Change\+Over\+::data\+Copy (\begin{DoxyParamCaption}\item[{const Tpars \&}]{\+\_\+par }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+copy data from inherited class object 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+par} & object that contain data (should be inherited class) \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_a7f0aa4fb95286a568ef41808f2956ad9_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classChangeOver_aa6f9abe537f7cbb3359aa36964407bc5}\label{classChangeOver_aa6f9abe537f7cbb3359aa36964407bc5}} 
+\index{ChangeOver@{ChangeOver}!getRin@{getRin}}
+\index{getRin@{getRin}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{getRin()}{getRin()}}
+{\footnotesize\ttfamily const Float\& Change\+Over\+::get\+Rin (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get r\+\_\+in 
+
+\begin{DoxyReturn}{Returns}
+r\+\_\+in 
+\end{DoxyReturn}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_aa6f9abe537f7cbb3359aa36964407bc5_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classChangeOver_ab1ee26d7f773d67568a55b8efabdbe79}\label{classChangeOver_ab1ee26d7f773d67568a55b8efabdbe79}} 
+\index{ChangeOver@{ChangeOver}!getRout@{getRout}}
+\index{getRout@{getRout}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{getRout()}{getRout()}}
+{\footnotesize\ttfamily const Float\& Change\+Over\+::get\+Rout (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get r\+\_\+out 
+
+\begin{DoxyReturn}{Returns}
+r\+\_\+out 
+\end{DoxyReturn}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_ab1ee26d7f773d67568a55b8efabdbe79_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classChangeOver_a7cb94f25c0be6f295cc0214926799149}\label{classChangeOver_a7cb94f25c0be6f295cc0214926799149}} 
+\index{ChangeOver@{ChangeOver}!print@{print}}
+\index{print@{print}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{print()}{print()}}
+{\footnotesize\ttfamily void Change\+Over\+::print (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_a7cb94f25c0be6f295cc0214926799149_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classChangeOver_a311e67bfac2687a70e3aba5c4d68a65a}\label{classChangeOver_a311e67bfac2687a70e3aba5c4d68a65a}} 
+\index{ChangeOver@{ChangeOver}!printColumn@{printColumn}}
+\index{printColumn@{printColumn}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{printColumn()}{printColumn()}}
+{\footnotesize\ttfamily void Change\+Over\+::print\+Column (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print data of class members using column style 
+
+print data of class members in one line for column style. Notice no newline is printed at the end 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_a311e67bfac2687a70e3aba5c4d68a65a_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classChangeOver_a99477187923811c0fdb3800199cbad48}\label{classChangeOver_a99477187923811c0fdb3800199cbad48}} 
+\index{ChangeOver@{ChangeOver}!printColumnTitle@{printColumnTitle}}
+\index{printColumnTitle@{printColumnTitle}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{printColumnTitle()}{printColumnTitle()}}
+{\footnotesize\ttfamily static void Change\+Over\+::print\+Column\+Title (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+print titles of class members using column style 
+
+print titles of class members in one line for column style 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_a99477187923811c0fdb3800199cbad48_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classChangeOver_afc18f1457828a89cc303cbf025fffe42}\label{classChangeOver_afc18f1457828a89cc303cbf025fffe42}} 
+\index{ChangeOver@{ChangeOver}!printTitleWithMeaning@{printTitleWithMeaning}}
+\index{printTitleWithMeaning@{printTitleWithMeaning}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{printTitleWithMeaning()}{printTitleWithMeaning()}}
+{\footnotesize\ttfamily static int Change\+Over\+::print\+Title\+With\+Meaning (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+counter = {\ttfamily 0},  }\item[{const int}]{\+\_\+offset = {\ttfamily 0} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+print column title with meaning (each line for one column) 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+counter} & offset of the number counter for each line to indicate the column index (defaulted 0) \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+offset} & the printing whitespace offset for each line (defaulted 0) \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+\+: the total counter of columns 
+\end{DoxyReturn}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_afc18f1457828a89cc303cbf025fffe42_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classChangeOver_a4ab816f7e59edaf68f7223b8ca5bcd7b}\label{classChangeOver_a4ab816f7e59edaf68f7223b8ca5bcd7b}} 
+\index{ChangeOver@{ChangeOver}!readAscii@{readAscii}}
+\index{readAscii@{readAscii}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{readAscii()}{readAscii()}}
+{\footnotesize\ttfamily void Change\+Over\+::read\+Ascii (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read class data to file with binary format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fp} & F\+I\+LE type file for reading \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_a4ab816f7e59edaf68f7223b8ca5bcd7b_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_a4ab816f7e59edaf68f7223b8ca5bcd7b_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classChangeOver_a56998e927c0f7516b225c3690833a23f}\label{classChangeOver_a56998e927c0f7516b225c3690833a23f}} 
+\index{ChangeOver@{ChangeOver}!readBinary@{readBinary}}
+\index{readBinary@{readBinary}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{readBinary()}{readBinary()}}
+{\footnotesize\ttfamily void Change\+Over\+::read\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read class data to file with binary format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fp} & F\+I\+LE type file for reading \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_a56998e927c0f7516b225c3690833a23f_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_a56998e927c0f7516b225c3690833a23f_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classChangeOver_ab8bbff987a930131dcbe86ce435f6087}\label{classChangeOver_ab8bbff987a930131dcbe86ce435f6087}} 
+\index{ChangeOver@{ChangeOver}!setR@{setR}}
+\index{setR@{setR}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{setR()}{setR()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily void Change\+Over\+::setR (\begin{DoxyParamCaption}\item[{const Float \&}]{\+\_\+m\+\_\+fac,  }\item[{const Float \&}]{\+\_\+r\+\_\+in,  }\item[{const Float \&}]{\+\_\+r\+\_\+out }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set r\+\_\+in and r\+\_\+out for changeover function 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+m\+\_\+fac} & mass factor \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+r\+\_\+in} & changeover function inner boundary \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+r\+\_\+out} & changeover function outer boundary \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=288pt]{classChangeOver_ab8bbff987a930131dcbe86ce435f6087_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_ab8bbff987a930131dcbe86ce435f6087_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classChangeOver_ace94789ca4209f7dc6a895fbb3181c81}\label{classChangeOver_ace94789ca4209f7dc6a895fbb3181c81}} 
+\index{ChangeOver@{ChangeOver}!setR@{setR}}
+\index{setR@{setR}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{setR()}{setR()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily void Change\+Over\+::setR (\begin{DoxyParamCaption}\item[{const Float \&}]{\+\_\+r\+\_\+in,  }\item[{const Float \&}]{\+\_\+r\+\_\+out }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set r\+\_\+in and r\+\_\+out for changeover function 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+m\+\_\+fac} & mass factor \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+r\+\_\+in} & changeover function inner boundary \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+r\+\_\+out} & changeover function outer boundary \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classChangeOver_ae376094ee332a91ba0e2c0956b772fd3}\label{classChangeOver_ae376094ee332a91ba0e2c0956b772fd3}} 
+\index{ChangeOver@{ChangeOver}!updateWithRScale@{updateWithRScale}}
+\index{updateWithRScale@{updateWithRScale}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{updateWithRScale()}{updateWithRScale()}}
+{\footnotesize\ttfamily void Change\+Over\+::update\+With\+R\+Scale (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+update radius based on r\+\_\+scale\+\_\+next, reset r\+\_\+scale\+\_\+next to 1 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_ae376094ee332a91ba0e2c0956b772fd3_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classChangeOver_a41bcc8db067257c5e1a0a7b3f9aa2707}\label{classChangeOver_a41bcc8db067257c5e1a0a7b3f9aa2707}} 
+\index{ChangeOver@{ChangeOver}!writeAscii@{writeAscii}}
+\index{writeAscii@{writeAscii}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{writeAscii()}{writeAscii()}}
+{\footnotesize\ttfamily void Change\+Over\+::write\+Ascii (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fp }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write class data to file with binary format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fp} & F\+I\+LE type file for output \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_a41bcc8db067257c5e1a0a7b3f9aa2707_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classChangeOver_a6481968a8eaf66d2c65c34e612802d93}\label{classChangeOver_a6481968a8eaf66d2c65c34e612802d93}} 
+\index{ChangeOver@{ChangeOver}!writeBinary@{writeBinary}}
+\index{writeBinary@{writeBinary}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{writeBinary()}{writeBinary()}}
+{\footnotesize\ttfamily void Change\+Over\+::write\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fp }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write class data to file with binary format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fp} & F\+I\+LE type file for output \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classChangeOver_a6481968a8eaf66d2c65c34e612802d93_icgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classChangeOver_a766364cae2273041da3afa40eded41f6}\label{classChangeOver_a766364cae2273041da3afa40eded41f6}} 
+\index{ChangeOver@{ChangeOver}!r\_scale\_next@{r\_scale\_next}}
+\index{r\_scale\_next@{r\_scale\_next}!ChangeOver@{ChangeOver}}
+\doxysubsubsection{\texorpdfstring{r\_scale\_next}{r\_scale\_next}}
+{\footnotesize\ttfamily Float Change\+Over\+::r\+\_\+scale\+\_\+next}
+
+
+
+\begin{quote}
+(1 + coff\+\_\+)/r\+\_\+out = 2/(r\+\_\+out+r\+\_\+in) \end{quote}
+
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{changeover_8hpp}{changeover.\+hpp}}\end{DoxyCompactItemize}

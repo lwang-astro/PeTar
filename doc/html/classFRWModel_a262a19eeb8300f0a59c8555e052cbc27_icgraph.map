@@ -1,0 +1,8 @@
+<map id="FRWModel::getH" name="FRWModel::getH">
+<area shape="rect" id="node1" title="get Hubble constant at current a" alt="" coords="939,31,1069,57"/>
+<area shape="rect" id="node2" href="$classMWPotentialEvolve.html#a499debe349e3789cd6fbab95bc56dabb" title="calculate MW potential based on the input time" alt="" coords="685,23,891,65"/>
+<area shape="rect" id="node3" href="$classGalpyManager.html#a3cf2c36189aa2bd879faf8748e1ef871" title="Update MWpotential evolve (Gomez et al. 2010)" alt="" coords="384,23,637,65"/>
+<area shape="rect" id="node4" href="$classGalpyManager.html#ac6ce59845e4b863a3fce47c18e09631a" title="initialization function" alt="" coords="141,5,303,32"/>
+<area shape="rect" id="node6" href="$classGalpyManager.html#a2b9c41229c1b4a6d5c06e18017298357" title="Update Potential types and arguments based on time." alt="" coords="108,56,336,83"/>
+<area shape="rect" id="node5" href="$galpy__test_8cxx.html#a3c04138a5bfe5d72780bb7e82a18e627" title=" " alt="" coords="5,31,60,57"/>
+</map>

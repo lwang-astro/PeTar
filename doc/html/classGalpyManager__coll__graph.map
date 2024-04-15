@@ -1,0 +1,5 @@
+<map id="GalpyManager" name="GalpyManager">
+<area shape="rect" id="node1" title="A class to manager the API to Galpy." alt="" coords="21,184,139,211"/>
+<area shape="rect" id="node2" href="$classMWPotentialEvolve.html" title="data for MWPotential evolve" alt="" coords="5,95,155,121"/>
+<area shape="rect" id="node3" href="$classFRWModel.html" title="FRW cosmological model for calculating scale factor (redshift)" alt="" coords="34,5,126,32"/>
+</map>

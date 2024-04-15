@@ -1,0 +1,4 @@
+<map id="BinaryEvent::getEventNMax" name="BinaryEvent::getEventNMax">
+<area shape="rect" id="node1" title="Maximum event number that can be recored in one call of evolv2." alt="" coords="275,5,480,32"/>
+<area shape="rect" id="node2" href="$classBSEManager.html#a1f52d15f8a528adc79fc08ff6e265cda" title="print binary event" alt="" coords="5,5,227,32"/>
+</map>

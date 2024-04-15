@@ -1,0 +1,97 @@
+\hypertarget{galpy__pot__movie_8py}{}\doxysection{galpy\+\_\+pot\+\_\+movie.\+py File Reference}
+\label{galpy__pot__movie_8py}\index{galpy\_pot\_movie.py@{galpy\_pot\_movie.py}}
+\doxysubsection*{Namespaces}
+\begin{DoxyCompactItemize}
+\item 
+ \mbox{\hyperlink{namespacegalpy__pot__movie}{galpy\+\_\+pot\+\_\+movie}}
+\end{DoxyCompactItemize}
+\doxysubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+def \mbox{\hyperlink{namespacegalpy__pot__movie_adedebc188b4de2a497744878176bb416}{galpy\+\_\+pot\+\_\+movie.\+create\+\_\+movie}} (filenames, fps, output\+\_\+file)
+\item 
+def \mbox{\hyperlink{namespacegalpy__pot__movie_aa885513bec3547189487315e470589f4}{galpy\+\_\+pot\+\_\+movie.\+create\+Image}} (index\+\_\+list, xyscale, plot\+\_\+format, log\+\_\+flag, $\ast$$\ast$kwargs)
+\item 
+def \mbox{\hyperlink{namespacegalpy__pot__movie_ae30ea99c6c9fd85c1f2bbd83b696641d}{galpy\+\_\+pot\+\_\+movie.\+usage}} ()
+\end{DoxyCompactItemize}
+\doxysubsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+int \mbox{\hyperlink{namespacegalpy__pot__movie_ac9d04551291e813a9d47c7764df4ede7}{galpy\+\_\+pot\+\_\+movie.\+fps}} = 30
+\item 
+string \mbox{\hyperlink{namespacegalpy__pot__movie_a19bbbd68789f81332a9873bb36c78d7d}{galpy\+\_\+pot\+\_\+movie.\+output\+\_\+file}} = \textquotesingle{}pot\+\_\+movie\textquotesingle{}
+\item 
+string \mbox{\hyperlink{namespacegalpy__pot__movie_a44e56aeca6e050ed6108bbbd763ed6a0}{galpy\+\_\+pot\+\_\+movie.\+plot\+\_\+format}} = \textquotesingle{}mp4\textquotesingle{}
+\item 
+int \mbox{\hyperlink{namespacegalpy__pot__movie_a7749cb90b0af241e106e7b7ee736130c}{galpy\+\_\+pot\+\_\+movie.\+n\+\_\+cpu}} = 0
+\item 
+bool \mbox{\hyperlink{namespacegalpy__pot__movie_af73225b6a66767b45090dfdd6f2405a8}{galpy\+\_\+pot\+\_\+movie.\+log\+\_\+flag}} = False
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a1e2e5297c42b607c38b4daff75026976}{galpy\+\_\+pot\+\_\+movie.\+kwargs}} = dict()
+\item 
+string \mbox{\hyperlink{namespacegalpy__pot__movie_acf3ad836a17ff38584c76816fa86d379}{galpy\+\_\+pot\+\_\+movie.\+shortargs}} = \textquotesingle{}f\+:o\+:h\textquotesingle{}
+\item 
+list \mbox{\hyperlink{namespacegalpy__pot__movie_ac109b34f4a2d3f4c290f7bc761088005}{galpy\+\_\+pot\+\_\+movie.\+longargs}} = \mbox{[}\textquotesingle{}help\textquotesingle{},\textquotesingle{}vmax=\textquotesingle{},\textquotesingle{}vmin=\textquotesingle{},\textquotesingle{}format=\textquotesingle{},\textquotesingle{}n-\/cpu=\textquotesingle{},\textquotesingle{}log\textquotesingle{}\mbox{]}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a65fbc73aa61ee6f9c8cd3a9af978e80c}{galpy\+\_\+pot\+\_\+movie.\+opts}}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a0972d20e0e14dfbb9d0668733c934057}{galpy\+\_\+pot\+\_\+movie.\+remainder}}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a869bee142eed9773bf7594f7cd0db566}{galpy\+\_\+pot\+\_\+movie.\+fpar}} = remainder\mbox{[}0\mbox{]}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a3fa5f0e5f4c5cacdab86ebbc69420840}{galpy\+\_\+pot\+\_\+movie.\+fp}} = open(fpar, \textquotesingle{}r\textquotesingle{})
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_adae94988c3890575f6a9058e6e100636}{galpy\+\_\+pot\+\_\+movie.\+header}} = fp.\+readline()
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a21219a1abcdafab16fcf93dc23581db1}{galpy\+\_\+pot\+\_\+movie.\+t0}}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_af6d8a3f703079e7b353b7af8c136e946}{galpy\+\_\+pot\+\_\+movie.\+dt}}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_ae50af7118b493b53e207df8685051903}{galpy\+\_\+pot\+\_\+movie.\+nstep}} = int(nstep)
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a892cdf1ee55a65bb26d3e7b95755e0c6}{galpy\+\_\+pot\+\_\+movie.\+dt\+\_\+out}}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_abe5db73d3c3f045985edf6d19fedcbb0}{galpy\+\_\+pot\+\_\+movie.\+xmin}} = float(xmin)$\ast$1e-\/3
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_ad03211f44495267a852865b02e428a15}{galpy\+\_\+pot\+\_\+movie.\+xmax}} = float(xmax)$\ast$1e-\/3
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a1def2040ffdaaf5339f19e2a24c15d3e}{galpy\+\_\+pot\+\_\+movie.\+nx}}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_aa89728c4b9094d186fa7c4d38c4692e3}{galpy\+\_\+pot\+\_\+movie.\+ymin}} = float(ymin)$\ast$1e-\/3
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_ab4cb0e351c0c21a84429308086826eb1}{galpy\+\_\+pot\+\_\+movie.\+ymax}} = float(ymax)$\ast$1e-\/3
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a55ca965f84503434f7a5a3054f8fa975}{galpy\+\_\+pot\+\_\+movie.\+ny}}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a1467cc105a48654cc8d45f9f14630ddd}{galpy\+\_\+pot\+\_\+movie.\+zmin}} = float(zmin)$\ast$1e-\/3
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a3531f05550785100ebced7a9774ff35d}{galpy\+\_\+pot\+\_\+movie.\+zmax}} = float(zmax)$\ast$1e-\/3
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a517167afc4bd587d3e9899ae9ed4f65f}{galpy\+\_\+pot\+\_\+movie.\+nz}}
+\item 
+list \mbox{\hyperlink{namespacegalpy__pot__movie_aa9d97f11fb9f2ff266a0a69075d40e37}{galpy\+\_\+pot\+\_\+movie.\+xyscale}} = \mbox{[}\mbox{[}xmin,xmax,ymin,ymax\mbox{]},\mbox{[}xmin,xmax,zmin,zmax\mbox{]}\mbox{]}
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a3698425c3c80d31bacee4844e1ef56f8}{galpy\+\_\+pot\+\_\+movie.\+pot}} = np.\+loadtxt(\textquotesingle{}xy0\textquotesingle{}, unpack=True, usecols=(10),skiprows=1)
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_ac0b7f85d1533bbafe4e3963031612b04}{galpy\+\_\+pot\+\_\+movie.\+pot\+\_\+min}} = pot.\+min()
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_aff74fa346b8f3995e183490e504f1f22}{galpy\+\_\+pot\+\_\+movie.\+pot\+\_\+max}} = pot.\+max()
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_aaf033fd2b3874ef4766c8dabcbe44675}{galpy\+\_\+pot\+\_\+movie.\+pool}} = mp.\+Pool(n\+\_\+cpu)
+\item 
+int \mbox{\hyperlink{namespacegalpy__pot__movie_a9d55870bf82ce913e620c5fb7c8fcca8}{galpy\+\_\+pot\+\_\+movie.\+n\+\_\+files}} = int(nstep)+1
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a83d4041dc8081054295ad8488d66e9ae}{galpy\+\_\+pot\+\_\+movie.\+file\+\_\+list}} = range(nstep+1)
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a7ebb8ed42d8cccce1a524a32210936cc}{galpy\+\_\+pot\+\_\+movie.\+n\+\_\+pieces}} = np.\+ones(n\+\_\+cpu)$\ast$int(n\+\_\+files/n\+\_\+cpu)
+\item 
+int \mbox{\hyperlink{namespacegalpy__pot__movie_a79bddf152aa638108fd255e44baa2fef}{galpy\+\_\+pot\+\_\+movie.\+n\+\_\+left}} = n\+\_\+files\%n\+\_\+cpu
+\item 
+\mbox{\hyperlink{namespacegalpy__pot__movie_a19f316851041dbce41cdad0f40fd8375}{galpy\+\_\+pot\+\_\+movie.\+n\+\_\+offset}} = np.\+append(\mbox{[}0\mbox{]},n\+\_\+pieces.\+cumsum()).astype(int)
+\item 
+list \mbox{\hyperlink{namespacegalpy__pot__movie_aaeaa400d101480b5b2bc3bfb9998b6da}{galpy\+\_\+pot\+\_\+movie.\+file\+\_\+part}} = \mbox{[}file\+\_\+list\mbox{[}n\+\_\+offset\mbox{[}i\mbox{]}\+:n\+\_\+offset\mbox{[}i+1\mbox{]}\mbox{]} for i in range(n\+\_\+cpu)\mbox{]}
+\item 
+list \mbox{\hyperlink{namespacegalpy__pot__movie_afdfc43e252dd06bd8cb5cabc02b8391c}{galpy\+\_\+pot\+\_\+movie.\+results}} = \mbox{[}None\mbox{]}$\ast$n\+\_\+cpu
+\item 
+list \mbox{\hyperlink{namespacegalpy__pot__movie_ad746d73745395b1f751c80310c53e1b7}{galpy\+\_\+pot\+\_\+movie.\+png\+\_\+list}} = \mbox{[}\textquotesingle{}pot\textquotesingle{}+str(file\+\_\+list\mbox{[}i\mbox{]})+\textquotesingle{}.png\textquotesingle{} for i in range(n\+\_\+files)\mbox{]}
+\end{DoxyCompactItemize}

@@ -1,0 +1,372 @@
+\hypertarget{classFPSoft}{}\doxysection{F\+P\+Soft Class Reference}
+\label{classFPSoft}\index{FPSoft@{FPSoft}}
+
+
+{\ttfamily \#include $<$soft\+\_\+ptcl.\+hpp$>$}
+
+
+
+Inheritance diagram for F\+P\+Soft\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=194pt]{classFPSoft__inherit__graph}
+\end{center}
+\end{figure}
+
+
+Collaboration diagram for F\+P\+Soft\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFPSoft__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classFPSoft_aa5265c087d146a6b17d79aabf73a795c}{F\+P\+Soft}} ()
+\item 
+P\+S\+::\+F64vec \mbox{\hyperlink{classFPSoft_abfa16ea6ea76ee845c435b421831afba}{get\+Pos}} () const
+\begin{DoxyCompactList}\small\item\em Get position (required for A\+R\+C\+::chain) \end{DoxyCompactList}\item 
+P\+S\+::\+F64vec \mbox{\hyperlink{classFPSoft_a75e2b43fa97a8d7bd09fc68080673829}{get\+Vel}} () const
+\begin{DoxyCompactList}\small\item\em Get velocity (required for A\+R\+C\+::chain) \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tptcl $>$ }\\\mbox{\hyperlink{classFPSoft_a9420395d413ae6a911f1997943cc5ec7}{F\+P\+Soft}} (const Tptcl \&p, const P\+S\+::\+S32 rank\+\_\+, const P\+S\+::\+S32 adr\+\_\+)
+\item 
+void \mbox{\hyperlink{classFPSoft_a7eadd4b2b1b835ef88cacf7102652375}{copy\+From\+Force}} (const \mbox{\hyperlink{classForceSoft}{Force\+Soft}} \&force)
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classFPSoft_afb8293c3cdb96b7a0851a15e59037b26}{get\+R\+Search}} () const
+\item 
+void \mbox{\hyperlink{classFPSoft_a109884118b2ac644859d3736617b565b}{write\+Ascii}} (F\+I\+LE $\ast$fp) const
+\item 
+void \mbox{\hyperlink{classFPSoft_ab6fa608d3f64dd4d6c3b010e131c021e}{write\+Binary}} (F\+I\+LE $\ast$fp) const
+\item 
+void \mbox{\hyperlink{classFPSoft_a44ddce69cfafffbcd8327837cb0914d2}{read\+Ascii}} (F\+I\+LE $\ast$fp)
+\item 
+void \mbox{\hyperlink{classFPSoft_aaf462c3c8ba17980eb8381a568b92342}{read\+Binary}} (F\+I\+LE $\ast$fp)
+\item 
+void \mbox{\hyperlink{classFPSoft_a2125ae3505a6ee147649fa0fe85fdbb8}{print}} (std\+::ostream \&fout)
+\item 
+void \mbox{\hyperlink{classFPSoft_a392bb1a4cfb9611095863498bd6f6ff5}{print\+Column}} (std\+::ostream \&\+\_\+fout, const int \+\_\+width=20)
+\begin{DoxyCompactList}\small\item\em print data of class members using column style \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tpcm $>$ }\\void \mbox{\hyperlink{classFPSoft_a14150e7eefede550b3bc977271319cae}{print\+Column\+With\+Offset}} (Tpcm \&\+\_\+pcm, std\+::ostream \&\+\_\+fout, const int \+\_\+width=20)
+\begin{DoxyCompactList}\small\item\em print data of class members with pos and vel offset using column style \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classFPSoft_a9cb0fbf244495ae6d4d7513459ca17bd}{clear\+Force}} ()
+\begin{DoxyCompactList}\small\item\em clear force \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static void \mbox{\hyperlink{classFPSoft_a4cbe93e19bf733b7205c0830fb315781}{print\+Column\+Title}} (std\+::ostream \&\+\_\+fout, const int \+\_\+width=20)
+\begin{DoxyCompactList}\small\item\em print titles of class members using column style \end{DoxyCompactList}\item 
+static int \mbox{\hyperlink{classFPSoft_aca3236af1ccb822b51a0cb4acb2ab678}{print\+Title\+With\+Meaning}} (std\+::ostream \&\+\_\+fout, const int \+\_\+counter=0, const int \+\_\+offset=0)
+\begin{DoxyCompactList}\small\item\em print column title with meaning (each line for one column) \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+P\+S\+::\+F64vec \mbox{\hyperlink{classFPSoft_a234b9ee456887b70ff9f31c7cc960b50}{acc}}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classFPSoft_a68e7765addbb0746733c24c373c15075}{pot\+\_\+tot}}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classFPSoft_a99927872f2fbd2ba4e5026382493c64c}{pot\+\_\+soft}}
+\item 
+P\+S\+::\+S64 \mbox{\hyperlink{classFPSoft_aa85df755b02af8ef51a721d55fe464a3}{n\+\_\+ngb}}
+\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classFPSoft_a537de9fa9a64fc73d4d5018c9cd3d334}{rank\+\_\+org}}
+\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classFPSoft_ad052ed9ba9fa413f216cb2501f1cf669}{adr}}
+\end{DoxyCompactItemize}
+\doxysubsection*{Additional Inherited Members}
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classFPSoft_aa5265c087d146a6b17d79aabf73a795c}\label{classFPSoft_aa5265c087d146a6b17d79aabf73a795c}} 
+\index{FPSoft@{FPSoft}!FPSoft@{FPSoft}}
+\index{FPSoft@{FPSoft}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{FPSoft()}{FPSoft()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily F\+P\+Soft\+::\+F\+P\+Soft (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classFPSoft_a9420395d413ae6a911f1997943cc5ec7}\label{classFPSoft_a9420395d413ae6a911f1997943cc5ec7}} 
+\index{FPSoft@{FPSoft}!FPSoft@{FPSoft}}
+\index{FPSoft@{FPSoft}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{FPSoft()}{FPSoft()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+F\+P\+Soft\+::\+F\+P\+Soft (\begin{DoxyParamCaption}\item[{const Tptcl \&}]{p,  }\item[{const P\+S\+::\+S32}]{rank\+\_\+,  }\item[{const P\+S\+::\+S32}]{adr\+\_\+ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFPSoft_a9420395d413ae6a911f1997943cc5ec7_cgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classFPSoft_a9cb0fbf244495ae6d4d7513459ca17bd}\label{classFPSoft_a9cb0fbf244495ae6d4d7513459ca17bd}} 
+\index{FPSoft@{FPSoft}!clearForce@{clearForce}}
+\index{clearForce@{clearForce}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{clearForce()}{clearForce()}}
+{\footnotesize\ttfamily void F\+P\+Soft\+::clear\+Force (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+clear force 
+
+\mbox{\Hypertarget{classFPSoft_a7eadd4b2b1b835ef88cacf7102652375}\label{classFPSoft_a7eadd4b2b1b835ef88cacf7102652375}} 
+\index{FPSoft@{FPSoft}!copyFromForce@{copyFromForce}}
+\index{copyFromForce@{copyFromForce}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{copyFromForce()}{copyFromForce()}}
+{\footnotesize\ttfamily void F\+P\+Soft\+::copy\+From\+Force (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classForceSoft}{Force\+Soft}} \&}]{force }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classFPSoft_abfa16ea6ea76ee845c435b421831afba}\label{classFPSoft_abfa16ea6ea76ee845c435b421831afba}} 
+\index{FPSoft@{FPSoft}!getPos@{getPos}}
+\index{getPos@{getPos}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{getPos()}{getPos()}}
+{\footnotesize\ttfamily P\+S\+::\+F64vec F\+P\+Soft\+::get\+Pos (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Get position (required for A\+R\+C\+::chain) 
+
+\begin{DoxyReturn}{Returns}
+position vector (P\+S\+::\+F64\mbox{[}3\mbox{]}) 
+\end{DoxyReturn}
+\mbox{\Hypertarget{classFPSoft_afb8293c3cdb96b7a0851a15e59037b26}\label{classFPSoft_afb8293c3cdb96b7a0851a15e59037b26}} 
+\index{FPSoft@{FPSoft}!getRSearch@{getRSearch}}
+\index{getRSearch@{getRSearch}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{getRSearch()}{getRSearch()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 F\+P\+Soft\+::get\+R\+Search (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classFPSoft_a75e2b43fa97a8d7bd09fc68080673829}\label{classFPSoft_a75e2b43fa97a8d7bd09fc68080673829}} 
+\index{FPSoft@{FPSoft}!getVel@{getVel}}
+\index{getVel@{getVel}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{getVel()}{getVel()}}
+{\footnotesize\ttfamily P\+S\+::\+F64vec F\+P\+Soft\+::get\+Vel (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Get velocity (required for A\+R\+C\+::chain) 
+
+\begin{DoxyReturn}{Returns}
+velocity vector (P\+S\+::\+F64\mbox{[}3\mbox{]}) 
+\end{DoxyReturn}
+\mbox{\Hypertarget{classFPSoft_a2125ae3505a6ee147649fa0fe85fdbb8}\label{classFPSoft_a2125ae3505a6ee147649fa0fe85fdbb8}} 
+\index{FPSoft@{FPSoft}!print@{print}}
+\index{print@{print}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{print()}{print()}}
+{\footnotesize\ttfamily void F\+P\+Soft\+::print (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{fout }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFPSoft_a2125ae3505a6ee147649fa0fe85fdbb8_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classFPSoft_a392bb1a4cfb9611095863498bd6f6ff5}\label{classFPSoft_a392bb1a4cfb9611095863498bd6f6ff5}} 
+\index{FPSoft@{FPSoft}!printColumn@{printColumn}}
+\index{printColumn@{printColumn}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{printColumn()}{printColumn()}}
+{\footnotesize\ttfamily void F\+P\+Soft\+::print\+Column (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print data of class members using column style 
+
+print data of class members in one line for column style. Notice no newline is printed at the end 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFPSoft_a392bb1a4cfb9611095863498bd6f6ff5_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classFPSoft_a4cbe93e19bf733b7205c0830fb315781}\label{classFPSoft_a4cbe93e19bf733b7205c0830fb315781}} 
+\index{FPSoft@{FPSoft}!printColumnTitle@{printColumnTitle}}
+\index{printColumnTitle@{printColumnTitle}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{printColumnTitle()}{printColumnTitle()}}
+{\footnotesize\ttfamily static void F\+P\+Soft\+::print\+Column\+Title (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+print titles of class members using column style 
+
+print titles of class members in one line for column style 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFPSoft_a4cbe93e19bf733b7205c0830fb315781_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classFPSoft_a14150e7eefede550b3bc977271319cae}\label{classFPSoft_a14150e7eefede550b3bc977271319cae}} 
+\index{FPSoft@{FPSoft}!printColumnWithOffset@{printColumnWithOffset}}
+\index{printColumnWithOffset@{printColumnWithOffset}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{printColumnWithOffset()}{printColumnWithOffset()}}
+{\footnotesize\ttfamily template$<$class Tpcm $>$ \\
+void F\+P\+Soft\+::print\+Column\+With\+Offset (\begin{DoxyParamCaption}\item[{Tpcm \&}]{\+\_\+pcm,  }\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print data of class members with pos and vel offset using column style 
+
+print data of class members in one line for column style. Notice no newline is printed at the end 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+pcm} & particle data with position and velocity offset that are added when print data \\
+\hline
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFPSoft_a14150e7eefede550b3bc977271319cae_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classFPSoft_aca3236af1ccb822b51a0cb4acb2ab678}\label{classFPSoft_aca3236af1ccb822b51a0cb4acb2ab678}} 
+\index{FPSoft@{FPSoft}!printTitleWithMeaning@{printTitleWithMeaning}}
+\index{printTitleWithMeaning@{printTitleWithMeaning}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{printTitleWithMeaning()}{printTitleWithMeaning()}}
+{\footnotesize\ttfamily static int F\+P\+Soft\+::print\+Title\+With\+Meaning (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+counter = {\ttfamily 0},  }\item[{const int}]{\+\_\+offset = {\ttfamily 0} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+print column title with meaning (each line for one column) 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+counter} & offset of the number counter for each line to indicate the column index (defaulted 0) \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+offset} & the printing whitespace offset for each line (defaulted 0) \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+\+: the total counter of columns 
+\end{DoxyReturn}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFPSoft_aca3236af1ccb822b51a0cb4acb2ab678_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFPSoft_aca3236af1ccb822b51a0cb4acb2ab678_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classFPSoft_a44ddce69cfafffbcd8327837cb0914d2}\label{classFPSoft_a44ddce69cfafffbcd8327837cb0914d2}} 
+\index{FPSoft@{FPSoft}!readAscii@{readAscii}}
+\index{readAscii@{readAscii}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{readAscii()}{readAscii()}}
+{\footnotesize\ttfamily void F\+P\+Soft\+::read\+Ascii (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{fp }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFPSoft_a44ddce69cfafffbcd8327837cb0914d2_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classFPSoft_aaf462c3c8ba17980eb8381a568b92342}\label{classFPSoft_aaf462c3c8ba17980eb8381a568b92342}} 
+\index{FPSoft@{FPSoft}!readBinary@{readBinary}}
+\index{readBinary@{readBinary}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{readBinary()}{readBinary()}}
+{\footnotesize\ttfamily void F\+P\+Soft\+::read\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{fp }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFPSoft_aaf462c3c8ba17980eb8381a568b92342_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classFPSoft_a109884118b2ac644859d3736617b565b}\label{classFPSoft_a109884118b2ac644859d3736617b565b}} 
+\index{FPSoft@{FPSoft}!writeAscii@{writeAscii}}
+\index{writeAscii@{writeAscii}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{writeAscii()}{writeAscii()}}
+{\footnotesize\ttfamily void F\+P\+Soft\+::write\+Ascii (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{fp }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFPSoft_a109884118b2ac644859d3736617b565b_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classFPSoft_ab6fa608d3f64dd4d6c3b010e131c021e}\label{classFPSoft_ab6fa608d3f64dd4d6c3b010e131c021e}} 
+\index{FPSoft@{FPSoft}!writeBinary@{writeBinary}}
+\index{writeBinary@{writeBinary}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{writeBinary()}{writeBinary()}}
+{\footnotesize\ttfamily void F\+P\+Soft\+::write\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{fp }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classFPSoft_ab6fa608d3f64dd4d6c3b010e131c021e_cgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classFPSoft_a234b9ee456887b70ff9f31c7cc960b50}\label{classFPSoft_a234b9ee456887b70ff9f31c7cc960b50}} 
+\index{FPSoft@{FPSoft}!acc@{acc}}
+\index{acc@{acc}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{acc}{acc}}
+{\footnotesize\ttfamily P\+S\+::\+F64vec F\+P\+Soft\+::acc}
+
+\mbox{\Hypertarget{classFPSoft_ad052ed9ba9fa413f216cb2501f1cf669}\label{classFPSoft_ad052ed9ba9fa413f216cb2501f1cf669}} 
+\index{FPSoft@{FPSoft}!adr@{adr}}
+\index{adr@{adr}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{adr}{adr}}
+{\footnotesize\ttfamily P\+S\+::\+S32 F\+P\+Soft\+::adr}
+
+\mbox{\Hypertarget{classFPSoft_aa85df755b02af8ef51a721d55fe464a3}\label{classFPSoft_aa85df755b02af8ef51a721d55fe464a3}} 
+\index{FPSoft@{FPSoft}!n\_ngb@{n\_ngb}}
+\index{n\_ngb@{n\_ngb}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{n\_ngb}{n\_ngb}}
+{\footnotesize\ttfamily P\+S\+::\+S64 F\+P\+Soft\+::n\+\_\+ngb}
+
+\mbox{\Hypertarget{classFPSoft_a99927872f2fbd2ba4e5026382493c64c}\label{classFPSoft_a99927872f2fbd2ba4e5026382493c64c}} 
+\index{FPSoft@{FPSoft}!pot\_soft@{pot\_soft}}
+\index{pot\_soft@{pot\_soft}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{pot\_soft}{pot\_soft}}
+{\footnotesize\ttfamily P\+S\+::\+F64 F\+P\+Soft\+::pot\+\_\+soft}
+
+\mbox{\Hypertarget{classFPSoft_a68e7765addbb0746733c24c373c15075}\label{classFPSoft_a68e7765addbb0746733c24c373c15075}} 
+\index{FPSoft@{FPSoft}!pot\_tot@{pot\_tot}}
+\index{pot\_tot@{pot\_tot}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{pot\_tot}{pot\_tot}}
+{\footnotesize\ttfamily P\+S\+::\+F64 F\+P\+Soft\+::pot\+\_\+tot}
+
+\mbox{\Hypertarget{classFPSoft_a537de9fa9a64fc73d4d5018c9cd3d334}\label{classFPSoft_a537de9fa9a64fc73d4d5018c9cd3d334}} 
+\index{FPSoft@{FPSoft}!rank\_org@{rank\_org}}
+\index{rank\_org@{rank\_org}!FPSoft@{FPSoft}}
+\doxysubsubsection{\texorpdfstring{rank\_org}{rank\_org}}
+{\footnotesize\ttfamily P\+S\+::\+S32 F\+P\+Soft\+::rank\+\_\+org}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{soft__ptcl_8hpp}{soft\+\_\+ptcl.\+hpp}}\end{DoxyCompactItemize}

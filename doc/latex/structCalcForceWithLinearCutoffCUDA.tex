@@ -1,0 +1,90 @@
+\hypertarget{structCalcForceWithLinearCutoffCUDA}{}\doxysection{Calc\+Force\+With\+Linear\+Cutoff\+C\+U\+DA Struct Reference}
+\label{structCalcForceWithLinearCutoffCUDA}\index{CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}}
+
+
+{\ttfamily \#include $<$force\+\_\+gpu\+\_\+cuda.\+hpp$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{structCalcForceWithLinearCutoffCUDA_a66c7b35fafd0f18545f3e29e45e47036}{Calc\+Force\+With\+Linear\+Cutoff\+C\+U\+DA}} ()
+\item 
+\mbox{\hyperlink{structCalcForceWithLinearCutoffCUDA_abaa7f5bafe1d976584fcd89797ab21fd}{Calc\+Force\+With\+Linear\+Cutoff\+C\+U\+DA}} (P\+S\+::\+S32 \+\_\+rank, P\+S\+::\+F64 \+\_\+eps2, P\+S\+::\+F64 \+\_\+rcut2, P\+S\+::\+F64 \+\_\+G)
+\item 
+void \mbox{\hyperlink{structCalcForceWithLinearCutoffCUDA_a6f205d494df72fdecaa0919072b1a029}{initialize}} (P\+S\+::\+S32 \+\_\+rank, P\+S\+::\+F64 \+\_\+eps2, P\+S\+::\+F64 \+\_\+rcut2, P\+S\+::\+F64 \+\_\+G)
+\item 
+P\+S\+::\+S32 \mbox{\hyperlink{structCalcForceWithLinearCutoffCUDA_a87f439a8341d16b91764f0483d326a89}{operator()}} (const P\+S\+::\+S32 tag, const P\+S\+::\+S32 n\+\_\+walk, const \mbox{\hyperlink{classEPISoft}{E\+P\+I\+Soft}} $\ast$epi\mbox{[}$\,$\mbox{]}, const P\+S\+::\+S32 n\+\_\+epi\mbox{[}$\,$\mbox{]}, const \mbox{\hyperlink{classEPJSoft}{E\+P\+J\+Soft}} $\ast$epj\mbox{[}$\,$\mbox{]}, const P\+S\+::\+S32 n\+\_\+epj\mbox{[}$\,$\mbox{]}, const \mbox{\hyperlink{simd__test_8cxx_aaacf9eee49e4260d214d9be1f494a194}{S\+P\+J\+Soft}} $\ast$spj\mbox{[}$\,$\mbox{]}, const P\+S\+::\+S32 n\+\_\+spj\mbox{[}$\,$\mbox{]})
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+P\+S\+::\+S32 \mbox{\hyperlink{structCalcForceWithLinearCutoffCUDA_a534005d7cd4e0de5fa39def30df85be0}{my\+\_\+rank}}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{structCalcForceWithLinearCutoffCUDA_a6fe0d42fd8bc999d02a9173e8f9fa824}{eps2}}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{structCalcForceWithLinearCutoffCUDA_aa77b2d5759a9bceca79f46396ab0b0fc}{rcut2}}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{structCalcForceWithLinearCutoffCUDA_a78de7001494564b6527792383d9c0aee}{G}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{structCalcForceWithLinearCutoffCUDA_a66c7b35fafd0f18545f3e29e45e47036}\label{structCalcForceWithLinearCutoffCUDA_a66c7b35fafd0f18545f3e29e45e47036}} 
+\index{CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}!CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}}
+\index{CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}!CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}}
+\doxysubsubsection{\texorpdfstring{CalcForceWithLinearCutoffCUDA()}{CalcForceWithLinearCutoffCUDA()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily Calc\+Force\+With\+Linear\+Cutoff\+C\+U\+D\+A\+::\+Calc\+Force\+With\+Linear\+Cutoff\+C\+U\+DA (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{structCalcForceWithLinearCutoffCUDA_abaa7f5bafe1d976584fcd89797ab21fd}\label{structCalcForceWithLinearCutoffCUDA_abaa7f5bafe1d976584fcd89797ab21fd}} 
+\index{CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}!CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}}
+\index{CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}!CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}}
+\doxysubsubsection{\texorpdfstring{CalcForceWithLinearCutoffCUDA()}{CalcForceWithLinearCutoffCUDA()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily Calc\+Force\+With\+Linear\+Cutoff\+C\+U\+D\+A\+::\+Calc\+Force\+With\+Linear\+Cutoff\+C\+U\+DA (\begin{DoxyParamCaption}\item[{P\+S\+::\+S32}]{\+\_\+rank,  }\item[{P\+S\+::\+F64}]{\+\_\+eps2,  }\item[{P\+S\+::\+F64}]{\+\_\+rcut2,  }\item[{P\+S\+::\+F64}]{\+\_\+G }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{structCalcForceWithLinearCutoffCUDA_a6f205d494df72fdecaa0919072b1a029}\label{structCalcForceWithLinearCutoffCUDA_a6f205d494df72fdecaa0919072b1a029}} 
+\index{CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}!initialize@{initialize}}
+\index{initialize@{initialize}!CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}}
+\doxysubsubsection{\texorpdfstring{initialize()}{initialize()}}
+{\footnotesize\ttfamily void Calc\+Force\+With\+Linear\+Cutoff\+C\+U\+D\+A\+::initialize (\begin{DoxyParamCaption}\item[{P\+S\+::\+S32}]{\+\_\+rank,  }\item[{P\+S\+::\+F64}]{\+\_\+eps2,  }\item[{P\+S\+::\+F64}]{\+\_\+rcut2,  }\item[{P\+S\+::\+F64}]{\+\_\+G }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{structCalcForceWithLinearCutoffCUDA_a87f439a8341d16b91764f0483d326a89}\label{structCalcForceWithLinearCutoffCUDA_a87f439a8341d16b91764f0483d326a89}} 
+\index{CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}!operator()@{operator()}}
+\index{operator()@{operator()}!CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}}
+\doxysubsubsection{\texorpdfstring{operator()()}{operator()()}}
+{\footnotesize\ttfamily P\+S\+::\+S32 Calc\+Force\+With\+Linear\+Cutoff\+C\+U\+D\+A\+::operator() (\begin{DoxyParamCaption}\item[{const P\+S\+::\+S32}]{tag,  }\item[{const P\+S\+::\+S32}]{n\+\_\+walk,  }\item[{const \mbox{\hyperlink{classEPISoft}{E\+P\+I\+Soft}} $\ast$}]{epi\mbox{[}$\,$\mbox{]},  }\item[{const P\+S\+::\+S32}]{n\+\_\+epi\mbox{[}$\,$\mbox{]},  }\item[{const \mbox{\hyperlink{classEPJSoft}{E\+P\+J\+Soft}} $\ast$}]{epj\mbox{[}$\,$\mbox{]},  }\item[{const P\+S\+::\+S32}]{n\+\_\+epj\mbox{[}$\,$\mbox{]},  }\item[{const \mbox{\hyperlink{simd__test_8cxx_aaacf9eee49e4260d214d9be1f494a194}{S\+P\+J\+Soft}} $\ast$}]{spj\mbox{[}$\,$\mbox{]},  }\item[{const P\+S\+::\+S32}]{n\+\_\+spj\mbox{[}$\,$\mbox{]} }\end{DoxyParamCaption})}
+
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{structCalcForceWithLinearCutoffCUDA_a6fe0d42fd8bc999d02a9173e8f9fa824}\label{structCalcForceWithLinearCutoffCUDA_a6fe0d42fd8bc999d02a9173e8f9fa824}} 
+\index{CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}!eps2@{eps2}}
+\index{eps2@{eps2}!CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}}
+\doxysubsubsection{\texorpdfstring{eps2}{eps2}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Calc\+Force\+With\+Linear\+Cutoff\+C\+U\+D\+A\+::eps2}
+
+\mbox{\Hypertarget{structCalcForceWithLinearCutoffCUDA_a78de7001494564b6527792383d9c0aee}\label{structCalcForceWithLinearCutoffCUDA_a78de7001494564b6527792383d9c0aee}} 
+\index{CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}!G@{G}}
+\index{G@{G}!CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}}
+\doxysubsubsection{\texorpdfstring{G}{G}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Calc\+Force\+With\+Linear\+Cutoff\+C\+U\+D\+A\+::G}
+
+\mbox{\Hypertarget{structCalcForceWithLinearCutoffCUDA_a534005d7cd4e0de5fa39def30df85be0}\label{structCalcForceWithLinearCutoffCUDA_a534005d7cd4e0de5fa39def30df85be0}} 
+\index{CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}!my\_rank@{my\_rank}}
+\index{my\_rank@{my\_rank}!CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}}
+\doxysubsubsection{\texorpdfstring{my\_rank}{my\_rank}}
+{\footnotesize\ttfamily P\+S\+::\+S32 Calc\+Force\+With\+Linear\+Cutoff\+C\+U\+D\+A\+::my\+\_\+rank}
+
+\mbox{\Hypertarget{structCalcForceWithLinearCutoffCUDA_aa77b2d5759a9bceca79f46396ab0b0fc}\label{structCalcForceWithLinearCutoffCUDA_aa77b2d5759a9bceca79f46396ab0b0fc}} 
+\index{CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}!rcut2@{rcut2}}
+\index{rcut2@{rcut2}!CalcForceWithLinearCutoffCUDA@{CalcForceWithLinearCutoffCUDA}}
+\doxysubsubsection{\texorpdfstring{rcut2}{rcut2}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Calc\+Force\+With\+Linear\+Cutoff\+C\+U\+D\+A\+::rcut2}
+
+
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{force__gpu__cuda_8hpp}{force\+\_\+gpu\+\_\+cuda.\+hpp}}\end{DoxyCompactItemize}

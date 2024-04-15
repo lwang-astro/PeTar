@@ -1,0 +1,5 @@
+<map id="HardManager" name="HardManager">
+<area shape="rect" id="node1" title="Hard integrator parameter manager." alt="" coords="67,184,178,211"/>
+<area shape="rect" id="node2" href="$classArtificialParticleManager.html" title="class to organize artificial particles" alt="" coords="32,95,213,121"/>
+<area shape="rect" id="node3" href="$classPseudoParticleMultipoleManager.html" title="PseudoParticle Multipole method for counter force from binaries." alt="" coords="5,5,240,32"/>
+</map>

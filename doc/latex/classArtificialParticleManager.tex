@@ -1,0 +1,629 @@
+\hypertarget{classArtificialParticleManager}{}\doxysection{Artificial\+Particle\+Manager Class Reference}
+\label{classArtificialParticleManager}\index{ArtificialParticleManager@{ArtificialParticleManager}}
+
+
+class to organize artificial particles  
+
+
+
+
+{\ttfamily \#include $<$artificial\+\_\+particles.\+hpp$>$}
+
+
+
+Collaboration diagram for Artificial\+Particle\+Manager\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=256pt]{classArtificialParticleManager__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classArtificialParticleManager_abecafee5680487509102edabaeebac3b}{Artificial\+Particle\+Manager}} ()
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+orbit particle method \end{quote}
+\end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classArtificialParticleManager_ae62470120fa13e433cdf3f5433f452cb}{check\+Params}} ()
+\begin{DoxyCompactList}\small\item\em check paramters \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tptcl $>$ }\\void \mbox{\hyperlink{classArtificialParticleManager_af3f6cdb0c22cffa6a12cc47fa32f79fa}{create\+Artificial\+Particles}} (Tptcl $\ast$\+\_\+ptcl\+\_\+artificial, C\+O\+M\+M\+::\+Binary\+Tree$<$ Tptcl, C\+O\+M\+M\+::\+Binary $>$ \&\+\_\+bin, const P\+S\+::\+F64 $\ast$\+\_\+data\+\_\+to\+\_\+store, const P\+S\+::\+S32 \+\_\+n\+\_\+data)
+\begin{DoxyCompactList}\small\item\em create artificial particles \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tptcl $>$ }\\void \mbox{\hyperlink{classArtificialParticleManager_a849acb19588a63ec450f606fd1bead3d}{correct\+Orbital\+Particle\+Force}} (Tptcl $\ast$\+\_\+ptcl\+\_\+artificial)
+\begin{DoxyCompactList}\small\item\em correct orbit-\/samping/pseudo particles force \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tptcl $>$ }\\void \mbox{\hyperlink{classArtificialParticleManager_abce1a403342631a9f4042213a71b9867}{correct\+Artficial\+Particle\+Force}} (Tptcl $\ast$\+\_\+ptcl\+\_\+artificial)
+\begin{DoxyCompactList}\small\item\em correct artificial particles force for furture use \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tptcl $>$ }\\Tptcl $\ast$ \mbox{\hyperlink{classArtificialParticleManager_aed984927e871b5aec2948fdcb3ff44f9}{get\+Orbital\+Particles}} (Tptcl $\ast$\+\_\+ptcl\+\_\+list)
+\begin{DoxyCompactList}\small\item\em get oribit/pseudo particle list address from a artificial particle array \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tptcl $>$ }\\Tptcl $\ast$ \mbox{\hyperlink{classArtificialParticleManager_aa3f970cf4384ccd3c55e04993bd3d695}{get\+Tidal\+Tensor\+Particles}} (Tptcl $\ast$\+\_\+ptcl\+\_\+list)
+\begin{DoxyCompactList}\small\item\em get tidal tensor particle list address from a artificial particle array \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tptcl $>$ }\\Tptcl $\ast$ \mbox{\hyperlink{classArtificialParticleManager_ac3c6685d320c92bc37b697d6cd791db0}{get\+C\+M\+Particles}} (Tptcl $\ast$\+\_\+ptcl\+\_\+list)
+\begin{DoxyCompactList}\small\item\em get c.\+m. particle list address from a artificial particle array \end{DoxyCompactList}\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classArtificialParticleManager_aedba48d306b5ec3de4a1a22f73e1594a}{get\+Index\+Offset\+TT}} () const
+\begin{DoxyCompactList}\small\item\em tidal tensor particle index offset \end{DoxyCompactList}\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classArtificialParticleManager_a5aa161be171207ca5ad6cec9d9f678cf}{get\+Index\+Offset\+Orb}} () const
+\begin{DoxyCompactList}\small\item\em orbital/pseudo particle index offset \end{DoxyCompactList}\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classArtificialParticleManager_a38ed6b2904a13aa7928ce5a7d694abd0}{get\+Index\+Offset\+CM}} () const
+\begin{DoxyCompactList}\small\item\em CM particle index offset. \end{DoxyCompactList}\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classArtificialParticleManager_aef4de2cdc22768a36abee8243f0db707}{get\+Artificial\+ParticleN}} () const
+\begin{DoxyCompactList}\small\item\em get artificial particle total number \end{DoxyCompactList}\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classArtificialParticleManager_a8163b376c2cb3e1fd066059306904b40}{get\+Tidal\+Tensor\+ParticleN}} () const
+\begin{DoxyCompactList}\small\item\em get artificial particle total number \end{DoxyCompactList}\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classArtificialParticleManager_ae75013c8aba250c076e1c5f4450fdebf}{get\+Orbital\+ParticleN}} () const
+\begin{DoxyCompactList}\small\item\em get orbitial particle number \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tptcl $>$ }\\P\+S\+::\+S32 \mbox{\hyperlink{classArtificialParticleManager_afac55289a5ee5d9690da084a2eaee638}{get\+Left\+MemberN}} (const Tptcl $\ast$\+\_\+ptcl\+\_\+list) const
+\begin{DoxyCompactList}\small\item\em get left member number \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tptcl $>$ }\\P\+S\+::\+S32 \mbox{\hyperlink{classArtificialParticleManager_a19a8664675a9c697bf5331ee598f854f}{get\+MemberN}} (const Tptcl $\ast$\+\_\+ptcl\+\_\+list) const
+\begin{DoxyCompactList}\small\item\em get member number \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tptcl $>$ }\\P\+S\+::\+S32 \mbox{\hyperlink{classArtificialParticleManager_a5898499a2e4f953572c328e67b9e3ef1}{get\+Right\+MemberN}} (const Tptcl $\ast$\+\_\+ptcl\+\_\+list) const
+\begin{DoxyCompactList}\small\item\em get right member number \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tptcl $>$ }\\P\+S\+::\+S64 \mbox{\hyperlink{classArtificialParticleManager_ae34d1849537dc540ecef80423d9bfe98}{get\+C\+M\+ID}} (const Tptcl $\ast$\+\_\+ptcl\+\_\+list) const
+\begin{DoxyCompactList}\small\item\em get center of mass id \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tptcl $>$ }\\P\+S\+::\+F64 \mbox{\hyperlink{classArtificialParticleManager_af74196d17b989c1edf67ddaf0f156888}{get\+Stored\+Data}} (const Tptcl $\ast$\+\_\+ptcl\+\_\+list, const P\+S\+::\+S32 \+\_\+index, const bool \+\_\+is\+\_\+positive) const
+\begin{DoxyCompactList}\small\item\em get stored data \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classArtificialParticleManager_a698866484c3996742d3f2cc472d43976}{write\+Binary}} (F\+I\+LE $\ast$\+\_\+fp)
+\begin{DoxyCompactList}\small\item\em write class data to file with binary format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classArtificialParticleManager_a7c2b4630ce403c68e04dbb3c8317f3e6}{read\+Binary}} (F\+I\+LE $\ast$\+\_\+fin)
+\begin{DoxyCompactList}\small\item\em read class data to file with binary format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classArtificialParticleManager_a3c627fc3187a2b7fdcd5d562fb3eaf14}{print}} (std\+::ostream \&\+\_\+fout) const
+\begin{DoxyCompactList}\small\item\em print parameters \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classArtificialParticleManager_a1807b5880300cd2a40e74b5c570d71a2}{r\+\_\+tidal\+\_\+tensor}}
+\item 
+P\+S\+::\+S64 \mbox{\hyperlink{classArtificialParticleManager_ab892e537c506f6e0c29d0e7e86113e58}{id\+\_\+offset}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+tidal tensor maximum distance of particles \end{quote}
+\end{DoxyCompactList}\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classArtificialParticleManager_a6ee0cbf3ba864b252bd6e6ace94b583a}{gravitational\+\_\+constant}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+offset to generate ID for artificial particles \end{quote}
+\end{DoxyCompactList}\item 
+\mbox{\hyperlink{artificial__particles_8hpp_a31141e0e57217c63df90729d5e660b5b}{Orbit\+Manager}} \mbox{\hyperlink{classArtificialParticleManager_a652d6cdf139b4fef72816be7d7439de6}{orbit\+\_\+manager}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+gravitational constant \end{quote}
+\end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+class to organize artificial particles 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classArtificialParticleManager_abecafee5680487509102edabaeebac3b}\label{classArtificialParticleManager_abecafee5680487509102edabaeebac3b}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!ArtificialParticleManager@{ArtificialParticleManager}}
+\index{ArtificialParticleManager@{ArtificialParticleManager}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{ArtificialParticleManager()}{ArtificialParticleManager()}}
+{\footnotesize\ttfamily Artificial\+Particle\+Manager\+::\+Artificial\+Particle\+Manager (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\begin{quote}
+orbit particle method \end{quote}
+
+
+initializer, require set\+Particle\+SplitN later to initialize the size 
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classArtificialParticleManager_ae62470120fa13e433cdf3f5433f452cb}\label{classArtificialParticleManager_ae62470120fa13e433cdf3f5433f452cb}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!checkParams@{checkParams}}
+\index{checkParams@{checkParams}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{checkParams()}{checkParams()}}
+{\footnotesize\ttfamily bool Artificial\+Particle\+Manager\+::check\+Params (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+check paramters 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_ae62470120fa13e433cdf3f5433f452cb_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_ae62470120fa13e433cdf3f5433f452cb_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleManager_abce1a403342631a9f4042213a71b9867}\label{classArtificialParticleManager_abce1a403342631a9f4042213a71b9867}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!correctArtficialParticleForce@{correctArtficialParticleForce}}
+\index{correctArtficialParticleForce@{correctArtficialParticleForce}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{correctArtficialParticleForce()}{correctArtficialParticleForce()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+void Artificial\+Particle\+Manager\+::correct\+Artficial\+Particle\+Force (\begin{DoxyParamCaption}\item[{Tptcl $\ast$}]{\+\_\+ptcl\+\_\+artificial }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+correct artificial particles force for furture use 
+
+substract c.\+m. force (acc) from tidal tensor force (acc)~\newline
+replace c.\+m. force by the averaged force on orbital particles 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em \+\_\+ptcl\+\_\+artificial} & one group of artificial particles \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_abce1a403342631a9f4042213a71b9867_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_abce1a403342631a9f4042213a71b9867_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleManager_a849acb19588a63ec450f606fd1bead3d}\label{classArtificialParticleManager_a849acb19588a63ec450f606fd1bead3d}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!correctOrbitalParticleForce@{correctOrbitalParticleForce}}
+\index{correctOrbitalParticleForce@{correctOrbitalParticleForce}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{correctOrbitalParticleForce()}{correctOrbitalParticleForce()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+void Artificial\+Particle\+Manager\+::correct\+Orbital\+Particle\+Force (\begin{DoxyParamCaption}\item[{Tptcl $\ast$}]{\+\_\+ptcl\+\_\+artificial }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+correct orbit-\/samping/pseudo particles force 
+
+replace c.\+m. force by the averaged force on sample/pseudo particles 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em \+\_\+ptcl\+\_\+artificial} & one group of artificial particles \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_a849acb19588a63ec450f606fd1bead3d_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleManager_af3f6cdb0c22cffa6a12cc47fa32f79fa}\label{classArtificialParticleManager_af3f6cdb0c22cffa6a12cc47fa32f79fa}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!createArtificialParticles@{createArtificialParticles}}
+\index{createArtificialParticles@{createArtificialParticles}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{createArtificialParticles()}{createArtificialParticles()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+void Artificial\+Particle\+Manager\+::create\+Artificial\+Particles (\begin{DoxyParamCaption}\item[{Tptcl $\ast$}]{\+\_\+ptcl\+\_\+artificial,  }\item[{C\+O\+M\+M\+::\+Binary\+Tree$<$ Tptcl, C\+O\+M\+M\+::\+Binary $>$ \&}]{\+\_\+bin,  }\item[{const P\+S\+::\+F64 $\ast$}]{\+\_\+data\+\_\+to\+\_\+store,  }\item[{const P\+S\+::\+S32}]{\+\_\+n\+\_\+data }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+create artificial particles 
+
+First \mbox{\hyperlink{classTidalTensor_a668eb0fe71a2fe1bdad53572a74d2224}{Tidal\+Tensor\+::get\+Particle\+N()}} are tidal tensor particles; others-\/1 are orbitial sample particles; last is c.\+m. ~\newline
+ id\+: tt/orb\+: id\+\_\+offset + abs(member-\/$>$id)$\ast$(n\+\_\+artificial-\/1)/2 + index/2; cm\+: -\/ abs(\+\_\+bin.\+id)
+
+status\+: Tidal tensors/orbital 0\+: left member N 1\+: right member N others\+: index+1 (\+\_\+data\+\_\+to\+\_\+store$>$0.\+0)
+
+c.\+m.\+: n\+\_\+members
+
+mass\+\_\+backup\+: Tidial tensors/orbital\+: 0.\+0 (\+\_\+data\+\_\+to\+\_\+store $<$=0.\+0) c.\+m.\+: mass(cm)
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+ptcl\+\_\+new} & artificial particles that will be added \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+bin} & binary tree root \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+data\+\_\+to\+\_\+store} & array of data to be stored in the status of artificial particles \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n\+\_\+data} & number of data \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_af3f6cdb0c22cffa6a12cc47fa32f79fa_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleManager_aef4de2cdc22768a36abee8243f0db707}\label{classArtificialParticleManager_aef4de2cdc22768a36abee8243f0db707}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!getArtificialParticleN@{getArtificialParticleN}}
+\index{getArtificialParticleN@{getArtificialParticleN}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{getArtificialParticleN()}{getArtificialParticleN()}}
+{\footnotesize\ttfamily P\+S\+::\+S32 Artificial\+Particle\+Manager\+::get\+Artificial\+ParticleN (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get artificial particle total number 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_aef4de2cdc22768a36abee8243f0db707_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_aef4de2cdc22768a36abee8243f0db707_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleManager_ae34d1849537dc540ecef80423d9bfe98}\label{classArtificialParticleManager_ae34d1849537dc540ecef80423d9bfe98}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!getCMID@{getCMID}}
+\index{getCMID@{getCMID}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{getCMID()}{getCMID()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+P\+S\+::\+S64 Artificial\+Particle\+Manager\+::get\+C\+M\+ID (\begin{DoxyParamCaption}\item[{const Tptcl $\ast$}]{\+\_\+ptcl\+\_\+list }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get center of mass id 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_ae34d1849537dc540ecef80423d9bfe98_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleManager_ac3c6685d320c92bc37b697d6cd791db0}\label{classArtificialParticleManager_ac3c6685d320c92bc37b697d6cd791db0}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!getCMParticles@{getCMParticles}}
+\index{getCMParticles@{getCMParticles}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{getCMParticles()}{getCMParticles()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+Tptcl$\ast$ Artificial\+Particle\+Manager\+::get\+C\+M\+Particles (\begin{DoxyParamCaption}\item[{Tptcl $\ast$}]{\+\_\+ptcl\+\_\+list }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get c.\+m. particle list address from a artificial particle array 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_ac3c6685d320c92bc37b697d6cd791db0_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_ac3c6685d320c92bc37b697d6cd791db0_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleManager_a38ed6b2904a13aa7928ce5a7d694abd0}\label{classArtificialParticleManager_a38ed6b2904a13aa7928ce5a7d694abd0}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!getIndexOffsetCM@{getIndexOffsetCM}}
+\index{getIndexOffsetCM@{getIndexOffsetCM}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{getIndexOffsetCM()}{getIndexOffsetCM()}}
+{\footnotesize\ttfamily P\+S\+::\+S32 Artificial\+Particle\+Manager\+::get\+Index\+Offset\+CM (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+CM particle index offset. 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_a38ed6b2904a13aa7928ce5a7d694abd0_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_a38ed6b2904a13aa7928ce5a7d694abd0_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleManager_a5aa161be171207ca5ad6cec9d9f678cf}\label{classArtificialParticleManager_a5aa161be171207ca5ad6cec9d9f678cf}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!getIndexOffsetOrb@{getIndexOffsetOrb}}
+\index{getIndexOffsetOrb@{getIndexOffsetOrb}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{getIndexOffsetOrb()}{getIndexOffsetOrb()}}
+{\footnotesize\ttfamily P\+S\+::\+S32 Artificial\+Particle\+Manager\+::get\+Index\+Offset\+Orb (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+orbital/pseudo particle index offset 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_a5aa161be171207ca5ad6cec9d9f678cf_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_a5aa161be171207ca5ad6cec9d9f678cf_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleManager_aedba48d306b5ec3de4a1a22f73e1594a}\label{classArtificialParticleManager_aedba48d306b5ec3de4a1a22f73e1594a}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!getIndexOffsetTT@{getIndexOffsetTT}}
+\index{getIndexOffsetTT@{getIndexOffsetTT}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{getIndexOffsetTT()}{getIndexOffsetTT()}}
+{\footnotesize\ttfamily P\+S\+::\+S32 Artificial\+Particle\+Manager\+::get\+Index\+Offset\+TT (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+tidal tensor particle index offset 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_aedba48d306b5ec3de4a1a22f73e1594a_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleManager_afac55289a5ee5d9690da084a2eaee638}\label{classArtificialParticleManager_afac55289a5ee5d9690da084a2eaee638}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!getLeftMemberN@{getLeftMemberN}}
+\index{getLeftMemberN@{getLeftMemberN}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{getLeftMemberN()}{getLeftMemberN()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+P\+S\+::\+S32 Artificial\+Particle\+Manager\+::get\+Left\+MemberN (\begin{DoxyParamCaption}\item[{const Tptcl $\ast$}]{\+\_\+ptcl\+\_\+list }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get left member number 
+
+\mbox{\Hypertarget{classArtificialParticleManager_a19a8664675a9c697bf5331ee598f854f}\label{classArtificialParticleManager_a19a8664675a9c697bf5331ee598f854f}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!getMemberN@{getMemberN}}
+\index{getMemberN@{getMemberN}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{getMemberN()}{getMemberN()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+P\+S\+::\+S32 Artificial\+Particle\+Manager\+::get\+MemberN (\begin{DoxyParamCaption}\item[{const Tptcl $\ast$}]{\+\_\+ptcl\+\_\+list }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get member number 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_a19a8664675a9c697bf5331ee598f854f_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleManager_ae75013c8aba250c076e1c5f4450fdebf}\label{classArtificialParticleManager_ae75013c8aba250c076e1c5f4450fdebf}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!getOrbitalParticleN@{getOrbitalParticleN}}
+\index{getOrbitalParticleN@{getOrbitalParticleN}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{getOrbitalParticleN()}{getOrbitalParticleN()}}
+{\footnotesize\ttfamily P\+S\+::\+S32 Artificial\+Particle\+Manager\+::get\+Orbital\+ParticleN (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get orbitial particle number 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_ae75013c8aba250c076e1c5f4450fdebf_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_ae75013c8aba250c076e1c5f4450fdebf_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleManager_aed984927e871b5aec2948fdcb3ff44f9}\label{classArtificialParticleManager_aed984927e871b5aec2948fdcb3ff44f9}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!getOrbitalParticles@{getOrbitalParticles}}
+\index{getOrbitalParticles@{getOrbitalParticles}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{getOrbitalParticles()}{getOrbitalParticles()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+Tptcl$\ast$ Artificial\+Particle\+Manager\+::get\+Orbital\+Particles (\begin{DoxyParamCaption}\item[{Tptcl $\ast$}]{\+\_\+ptcl\+\_\+list }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get oribit/pseudo particle list address from a artificial particle array 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_aed984927e871b5aec2948fdcb3ff44f9_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_aed984927e871b5aec2948fdcb3ff44f9_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleManager_a5898499a2e4f953572c328e67b9e3ef1}\label{classArtificialParticleManager_a5898499a2e4f953572c328e67b9e3ef1}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!getRightMemberN@{getRightMemberN}}
+\index{getRightMemberN@{getRightMemberN}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{getRightMemberN()}{getRightMemberN()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+P\+S\+::\+S32 Artificial\+Particle\+Manager\+::get\+Right\+MemberN (\begin{DoxyParamCaption}\item[{const Tptcl $\ast$}]{\+\_\+ptcl\+\_\+list }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get right member number 
+
+\mbox{\Hypertarget{classArtificialParticleManager_af74196d17b989c1edf67ddaf0f156888}\label{classArtificialParticleManager_af74196d17b989c1edf67ddaf0f156888}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!getStoredData@{getStoredData}}
+\index{getStoredData@{getStoredData}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{getStoredData()}{getStoredData()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+P\+S\+::\+F64 Artificial\+Particle\+Manager\+::get\+Stored\+Data (\begin{DoxyParamCaption}\item[{const Tptcl $\ast$}]{\+\_\+ptcl\+\_\+list,  }\item[{const P\+S\+::\+S32}]{\+\_\+index,  }\item[{const bool}]{\+\_\+is\+\_\+positive }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get stored data 
+
+\mbox{\Hypertarget{classArtificialParticleManager_a8163b376c2cb3e1fd066059306904b40}\label{classArtificialParticleManager_a8163b376c2cb3e1fd066059306904b40}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!getTidalTensorParticleN@{getTidalTensorParticleN}}
+\index{getTidalTensorParticleN@{getTidalTensorParticleN}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{getTidalTensorParticleN()}{getTidalTensorParticleN()}}
+{\footnotesize\ttfamily P\+S\+::\+S32 Artificial\+Particle\+Manager\+::get\+Tidal\+Tensor\+ParticleN (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get artificial particle total number 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_a8163b376c2cb3e1fd066059306904b40_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleManager_aa3f970cf4384ccd3c55e04993bd3d695}\label{classArtificialParticleManager_aa3f970cf4384ccd3c55e04993bd3d695}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!getTidalTensorParticles@{getTidalTensorParticles}}
+\index{getTidalTensorParticles@{getTidalTensorParticles}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{getTidalTensorParticles()}{getTidalTensorParticles()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+Tptcl$\ast$ Artificial\+Particle\+Manager\+::get\+Tidal\+Tensor\+Particles (\begin{DoxyParamCaption}\item[{Tptcl $\ast$}]{\+\_\+ptcl\+\_\+list }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get tidal tensor particle list address from a artificial particle array 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_aa3f970cf4384ccd3c55e04993bd3d695_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_aa3f970cf4384ccd3c55e04993bd3d695_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleManager_a3c627fc3187a2b7fdcd5d562fb3eaf14}\label{classArtificialParticleManager_a3c627fc3187a2b7fdcd5d562fb3eaf14}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!print@{print}}
+\index{print@{print}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{print()}{print()}}
+{\footnotesize\ttfamily void Artificial\+Particle\+Manager\+::print (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print parameters 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_a3c627fc3187a2b7fdcd5d562fb3eaf14_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_a3c627fc3187a2b7fdcd5d562fb3eaf14_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleManager_a7c2b4630ce403c68e04dbb3c8317f3e6}\label{classArtificialParticleManager_a7c2b4630ce403c68e04dbb3c8317f3e6}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!readBinary@{readBinary}}
+\index{readBinary@{readBinary}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{readBinary()}{readBinary()}}
+{\footnotesize\ttfamily void Artificial\+Particle\+Manager\+::read\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read class data to file with binary format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fp} & F\+I\+LE type file for reading \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_a7c2b4630ce403c68e04dbb3c8317f3e6_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_a7c2b4630ce403c68e04dbb3c8317f3e6_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleManager_a698866484c3996742d3f2cc472d43976}\label{classArtificialParticleManager_a698866484c3996742d3f2cc472d43976}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!writeBinary@{writeBinary}}
+\index{writeBinary@{writeBinary}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{writeBinary()}{writeBinary()}}
+{\footnotesize\ttfamily void Artificial\+Particle\+Manager\+::write\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fp }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write class data to file with binary format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fp} & F\+I\+LE type file for output \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_a698866484c3996742d3f2cc472d43976_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleManager_a698866484c3996742d3f2cc472d43976_icgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classArtificialParticleManager_a6ee0cbf3ba864b252bd6e6ace94b583a}\label{classArtificialParticleManager_a6ee0cbf3ba864b252bd6e6ace94b583a}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!gravitational\_constant@{gravitational\_constant}}
+\index{gravitational\_constant@{gravitational\_constant}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{gravitational\_constant}{gravitational\_constant}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Artificial\+Particle\+Manager\+::gravitational\+\_\+constant}
+
+
+
+\begin{quote}
+offset to generate ID for artificial particles \end{quote}
+
+
+\mbox{\Hypertarget{classArtificialParticleManager_ab892e537c506f6e0c29d0e7e86113e58}\label{classArtificialParticleManager_ab892e537c506f6e0c29d0e7e86113e58}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!id\_offset@{id\_offset}}
+\index{id\_offset@{id\_offset}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{id\_offset}{id\_offset}}
+{\footnotesize\ttfamily P\+S\+::\+S64 Artificial\+Particle\+Manager\+::id\+\_\+offset}
+
+
+
+\begin{quote}
+tidal tensor maximum distance of particles \end{quote}
+
+
+\mbox{\Hypertarget{classArtificialParticleManager_a652d6cdf139b4fef72816be7d7439de6}\label{classArtificialParticleManager_a652d6cdf139b4fef72816be7d7439de6}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!orbit\_manager@{orbit\_manager}}
+\index{orbit\_manager@{orbit\_manager}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{orbit\_manager}{orbit\_manager}}
+{\footnotesize\ttfamily \mbox{\hyperlink{artificial__particles_8hpp_a31141e0e57217c63df90729d5e660b5b}{Orbit\+Manager}} Artificial\+Particle\+Manager\+::orbit\+\_\+manager}
+
+
+
+\begin{quote}
+gravitational constant \end{quote}
+
+
+\mbox{\Hypertarget{classArtificialParticleManager_a1807b5880300cd2a40e74b5c570d71a2}\label{classArtificialParticleManager_a1807b5880300cd2a40e74b5c570d71a2}} 
+\index{ArtificialParticleManager@{ArtificialParticleManager}!r\_tidal\_tensor@{r\_tidal\_tensor}}
+\index{r\_tidal\_tensor@{r\_tidal\_tensor}!ArtificialParticleManager@{ArtificialParticleManager}}
+\doxysubsubsection{\texorpdfstring{r\_tidal\_tensor}{r\_tidal\_tensor}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Artificial\+Particle\+Manager\+::r\+\_\+tidal\+\_\+tensor}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{artificial__particles_8hpp}{artificial\+\_\+particles.\+hpp}}\end{DoxyCompactItemize}
