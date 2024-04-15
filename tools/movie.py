@@ -1018,7 +1018,7 @@ if __name__ == '__main__':
         print("  --marker-scale  [F] Amplify the size of markers in x-y plot: 1.0")
         print("  --mass-power    [F] The power index of mass to obtain sizes of markers: 1.0")
         print("  --suppress-images   Do not plot snapshot images (PNG files) and use matplotlib.animation instead of imageio; this cannot use multiprocessing, much slower")
-        print("  --format        [S] Video format, requires imageio installed; for some formats (e.g., AVI, MP4) may require FFmpeg and imageio-FFmpeg installed: ", plot_format)
+        print("  --format-file   [S] Video format, requires imageio installed; for some formats (e.g., AVI, MP4) may require FFmpeg and imageio-FFmpeg installed: ", plot_format)
         print("  --dpi           [F] DPI of image: ", dpi)
         print("Important notes")
         print("  1) Ensure correct options are set for '-i', '-t', and '-G' to read snapshots accurately and calculate Kepler orbital parameters correctly.")
@@ -1038,7 +1038,7 @@ if __name__ == '__main__':
                     'unit-length=','unit-vel=','format-time=',
                     'skiprows=','generate-binary=',
                     'plot-ncols=','plot-xsize=','plot-ysize=',
-                    'suppress-images','format=','cm-mode=','core-file=',
+                    'suppress-images','format-file=','cm-mode=','core-file=',
                     'n-layer-cross=','n-layer-point=','layer-alpha=','marker-scale=','mass-power=',
                     'cm-boxsize=','compare-in-column','dpi=']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
@@ -1190,7 +1190,7 @@ if __name__ == '__main__':
                 kwargs['mass_power'] = float(arg)
             elif opt in ('--suppress-images'):
                 plot_images = False
-            elif opt in ('--format'):
+            elif opt in ('--format-file'):
                 plot_format = arg
             elif opt in ('--dpi'):
                 dpi = float(arg)

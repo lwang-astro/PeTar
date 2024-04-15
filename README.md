@@ -489,9 +489,12 @@ Any snapshot of particle data generated during a simulation can be utilized to r
 ```shell
 petar -p input.par [options] [snapshot filename]
 ```
-Here, _input.par_ stores the previous parameter choices used in a simulation, automatically generated from the prior simulation. Users can modify _input.par_ directly to adjust parameters before resuming, or specify new parameters in `[options]` within the aforementioned `petar` command.
+Here, _input.par_ stores the previous parameter choices used in a simulation, automatically generated from the prior simulation. 
 
-It is important to note that if users wish to introduce new options in addition to _input.par_, these options must be placed after "-p input.par"; otherwise, they will be overwritten by the parameters stored in _input.par_.
+It is possible to modify the options for resumed simulations in two ways. Users can either directly modify _input.par_ to adjust parameters before resuming or specify new parameters in `[options]` within the `petar` command mentioned earlier. It is crucial to place `[options]` after `-p input.par` to prevent them from being overwritten by the parameters stored in _input.par_. For instance, to update the end time of the simulation to 10 after resuming simulations from the snapshot file `data.5`, use the following command:
+```shell
+petar -p input.par -t 10 data.5 
+```
 
 By default, after resuming, the snapshot files with the same name will be replaced. However, for other output files, new data will be appended to the existing ones (e.g., filenames with suffixes like esc, group, etc.).
 
