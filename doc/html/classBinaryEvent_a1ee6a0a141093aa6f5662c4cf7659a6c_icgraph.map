@@ -1,0 +1,4 @@
+<map id="BinaryEvent::setEventIndexEnd" name="BinaryEvent::setEventIndexEnd">
+<area shape="rect" id="node1" title="set binary type to &#45;1 for the given event index to indicate the end of record" alt="" coords="252,5,479,32"/>
+<area shape="rect" id="node2" href="$classBSEManager.html#ada11ffd4ad9e05137395b74ba5b6d610" title="call evolv2 for a binary" alt="" coords="5,5,204,32"/>
+</map>

@@ -22,7 +22,7 @@ class Core(DictNpArrayMix):
 
     def calcPotentialCenter(self, single, binary, G):
         """ Calculate potential center of the system and return the result
-        r_cm = \sum_i pot_i *r_i /\sum_i pot_i (only count pot_i <0)
+        r_cm = sum_i {pot_i *r_i} /sum_i pot_i (only count pot_i <0)
 
         Parameters
         ----------
@@ -91,7 +91,7 @@ class Core(DictNpArrayMix):
 
     def calcCoreRadius(self, particle):
         """ Calculate core radius, using Casertano & Hut (1985) method with the squares of densities, also used in Nbody5 and Nbody6 (Aarseth 2003):
-        rc = sqrt(\sum_i rho_i^2 r_i^2 / \sum_i rho_i^2)
+        rc = sqrt(sum_i rho_i^2 r_i^2 / sum_i rho_i^2)
 
         Parameters
         ----------
@@ -263,9 +263,7 @@ class Lagrangian(DictNpArrayMix):
         """ Calculate Spitzer one-component half-mass relaxation time
             Trh = 0.138 N^0.5 Rh^1.5 /( G^0.5 m^0.5 ln(gamma N))
             Then add the result as a new member 'trh'.
-
             Notice mass fraction must contain 0.5 to use this function
-            m use the average mass within half-mass radius
 
         Parameters
         ----------
@@ -275,6 +273,8 @@ class Lagrangian(DictNpArrayMix):
            The coefficient for Coulomb logarithm
         mode: string (sphere)
             sphere: calculate averaged properties from center to Lagrangian radii
+                   m use the average mass within half-mass radius
+                   N use the number of objects within half-mass radius
             shell: calculate properties between two neighbor Lagrangian radii
 
         """
@@ -282,10 +282,10 @@ class Lagrangian(DictNpArrayMix):
         if (mode=='shell'): 
             n=self.n[:,0:(rhindex+1)].sum(axis=1)
             m=(self.m[:,0:(rhindex+1)]*self.n[:,0:(rhindex+1)]).sum(axis=1)/n
-            trh=calcTrh(2*n, self.r[:,rhindex], m, G, gamma)
+            trh=calcTrh(n, self.r[:,rhindex], m, G, gamma)
             self.addNewMember('trh',trh)
         else:
-            trh=calcTrh(2*self.n[:,rhindex], self.r[:,rhindex], self.m[:,rhindex], G, gamma)
+            trh=calcTrh(self.n[:,rhindex], self.r[:,rhindex], self.m[:,rhindex], G, gamma)
             self.addNewMember('trh',trh)
 
     def calcTcr(self, G, mode='sphere'):
@@ -432,7 +432,7 @@ class Lagrangian(DictNpArrayMix):
             ng_sig = (vrotd<0.0)
             vrot[ng_sig] = -vrot[ng_sig]
             
-            n_offset = np.append(np.zeros(1),nlagr).astype(int)
+            n_offset = np.append(np.zeros(1), rindex+1).astype(int)
             vlst = [vx, vy, vz, vr, vt[0], vt[1], vt[2], vrot]
             vave = [None]*len(vlst)
             for k in range(len(vlst)):
@@ -504,8 +504,11 @@ class LagrangianMultiple(DictNpArrayMix):
         all (Lagrangian): Lagrangian data for all data (binary is treated as c.m., count once)
         Additional members that depend on the keyword argument 'add_star_type':
             [add_star_type] (Lagrangian): Lagrangian data for specific type of stars, see the following content for details
+            [add_mass_range] (Lagrangian): Lagrangian data for specific mass ranges of stars, see the following content for details
 
-    Keyword argument 'add_star_type' (list of string):       
+    Keyword argument:
+    --------------
+    'add_star_type' (list of string):       
         In case when interrupt_mode='(mo)bse', a list of star types can be given,
         so that the Lagrangian properties for these specific types will be calculated.
         There are four styles of star types:
@@ -530,12 +533,25 @@ class LagrangianMultiple(DictNpArrayMix):
                In the case of 'BH__in__all', add_star_type must contain 'BH', i.e. add_star_type=['BH','BH__in__all', ...].
                In another example, 'BH__in__MS', add_star_type=['BH','MS','BH__in__MS',...].
 
+    'add_mass_range' (list of string): 
+         This argument contains a list of mass ranges to select stars for calculating the Lagrangian properties.
+         The format of mass range have two styles:
+             (1) [minimum mass]_[maximum mass]: the minimum mass and the maximum mass to select stars.
+                 For example, if '0.08_1' is given, Lagrangian properties are calculated by selecting stars with masses from 0.08 to 1.0.
+                 A new class member 'mass_0.08_1' is added. 
+                 The minimum mass must > 0 to ensure the result is correct.
+             (2) [mass range 1]__in__[mass range 2]: the mass range 1 and mass range 2 have the format of style (1): [minimum mass]_[maxmimum mass]
+                 This type calculates the Lagrangian properties by using the mass range 1 within the Lagrangian radii of the mass range 2.
+                 The Lagrangian radii of mass range 1 are not calculated. 
+                 For example, if '1_150__in__0.08_1' is given, 'mass_1_150__in__mass_0.08_1' is added, where Lagrangian properties with masses 
+                 between 1 and 150 are calculated within the shell or sphere of Lagrangian radii of stars with masses between 0.08 and 1.0.
+
     For binaries:
         One binary is counted once in class member 'binary', its c.m. data is used.
 
-        In case of [add_star_type], one binary is counted once using its c.m. position and velocity.
-        If two components are both this type of star, the total mass is used.
-        If one component is this type of star, its mass and c.m. position and velocity are used.
+        In case of [add_star_type] and [add_mass_range], one binary is counted once using its c.m. position and velocity.
+        If two components are both this type of star or within the mass range, the total mass is used.
+        If one component is this type of star or within the mass range, its mass and c.m. position and velocity are used.
 
     """
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
@@ -554,7 +570,9 @@ class LagrangianMultiple(DictNpArrayMix):
             calc_multi_rc: bool (False)
                 If true, calculate core radius using KDTree and correct the central position
             add_star_type: list of string ([])
-                An array containing the star type names to calculate additional Lagrangian properties for specific star types.
+                A list containing the star type names to calculate additional Lagrangian properties for specific star types.
+            add_mass_range: list of mass bins ([])
+                A list containing the mass bins for selecting stars to calculate additional Lagrangian properties, mass boundaries should >0
         """
         m_frac=np.array([0.1,0.3,0.5,0.7,0.9])
         if ('mass_fraction' in kwargs.keys()): m_frac=kwargs['mass_fraction'].copy()
@@ -571,6 +589,15 @@ class LagrangianMultiple(DictNpArrayMix):
             add_star_type=kwargs['add_star_type'].copy()
             for name in add_star_type:
                 keys += [[name, Lagrangian]]
+        add_mass_range=[]
+        if ('add_mass_range' in kwargs.keys()): 
+            add_mass_range=kwargs['add_mass_range'].copy()
+            for name in add_mass_range:
+                name_cross= name.split('__in__')
+                if (len(name_cross)>1):
+                    keys += [['mass_'+name_cross[0]+'__in__mass_'+name_cross[1], Lagrangian]]
+                else:
+                    keys += [['mass_'+name, Lagrangian]]
 
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
         self.initargs['mass_fraction'] = m_frac
@@ -578,6 +605,7 @@ class LagrangianMultiple(DictNpArrayMix):
         self.initargs['external_mode'] = external_mode
         self.initargs['calc_multi_rc'] = calc_multi_rc
         self.initargs['add_star_type'] = add_star_type
+        self.initargs['add_mass_range'] = add_mass_range
 
         #DictNpArrayMix.__init__(self, [['time',np.float64]], _dat, _offset, _append, **kwargs)
         #self.single = Lagrangian(_dat, _offset+self.ncols, False, **kwargs)
@@ -591,6 +619,85 @@ class LagrangianMultiple(DictNpArrayMix):
         #self.keys.append(['all',Lagrangian])
         #self.size = self.all.size
 
+    def calcTrh(self, G, gamma=0.02, mode='sphere'):
+        """ Calculate Spitzer one-component half-mass relaxation time
+            the branch "all" is used, where binaries are treated as unresolved single objests.
+            Trh = 0.138 N^0.5 Rh^1.5 /( G^0.5 m^0.5 ln(gamma N))
+            Then add the result as a new member in the branch all: 'all.trh'
+
+            Notice mass fraction must contain 0.5 to use this function
+
+        Parameters
+        ----------
+        G: float
+           Gravitational constant
+        gamma: float (0.02 # Giersz M., Heggie D. C., 1996, MNRAS, 279, 1037)
+           The coefficient for Coulomb logarithm
+        mode: string (sphere)
+            sphere: calculate averaged properties from center to Lagrangian radii
+                   m use the average mass within half-mass radius
+                   N use the number of objects within half-mass radius
+            shell: calculate properties between two neighbor Lagrangian radii
+
+        """
+        ncols_old = self.all.ncols
+        self.all.calcTrh(G, gamma, mode)
+        self.ncols += self.all.ncols - ncols_old
+        
+    def calcTcr(self, G, mode='sphere'):
+        """ Calculate half-mass crossing time
+            Tcr = Rh^1.5/sqrt(G M)
+            Then add the result as a new member in the branch all: 'all.tcr'
+
+            Notice mass fraction must contain 0.5 to use this function
+
+        Parameters
+        ----------
+        G: float
+           Gravitational constant
+        mode: string (sphere)
+            sphere: calculate averaged properties from center to Lagrangian radii
+            shell: calculate properties between two neighbor Lagrangian radii
+
+        """
+        ncols_old = self.all.ncols
+        self.all.calcTcr(G,mode)
+        self.ncols += self.all.ncols - ncols_old
+
+    def calcPsi(self, rindex=2, star_type1='noBH__in__all', star_type2='BH__in__all'):
+        """ Calculate psi factor for coverting one-component relaxation time (trh1) to two-component one (trh2): trh2 = trh1/psi
+            Used when two mass components exists, such as black holes and light objects. 
+            Add the result as a new member in the branch all: 'all.psi'
+
+            See the theoretical description in Wang, 2020, MNRAS, 491, 2413 (https://ui.adsabs.harvard.edu/abs/2020MNRAS.491.2413W/abstract)
+            
+            s1 = <n_1>*<m_1>^2/|sigma_1|
+            s2 = <n_2>*<m_2>^2/|sigma_2|
+            s = <n_all>*<m_all>^2/|sigma_all|
+            psi = (s1+s2)/s
+
+        Parameters
+        ----------
+        rindex: int (2)
+            the index of mass fraction to select data of n, m and sigma
+            default is index for half-mass (50%), assuming the mass fraction used in petar.data.process to calculate lagrangian radii is also the defaulted case 
+        star_type1: string ('noBH__in__all')
+            name of first component, need to pick up names from 'single, binary' or names defined by 'add_star_type' used in petar.data.process
+            default is all non BH components.
+        star_type2: string ('BH__in__all')
+            name of second component, default is all black holes 
+        """
+
+        lagr1=self[star_type1]
+        lagr2=self[star_type2]
+        lagra=self.all
+        s1 = lagr1.n[:,rindex]*lagr1.m[:,rindex]**2/lagr1.sigma.abs[:,rindex]
+        s2 = lagr2.n[:,rindex]*lagr2.m[:,rindex]**2/lagr2.sigma.abs[:,rindex]
+        s  = lagra.n[:,rindex]*lagra.m[:,rindex]**2/lagra.sigma.abs[:,rindex]
+        psi = (s1+s2)/s
+        psi[np.isnan(psi)] = 1
+        ncols_diff = self.all.addNewMember('psi',psi)
+        self.ncols += ncols_diff
 
     def calcOneSnapshot(self, time, single, binary, rc, mode):
         """ Calculate Lagrangian radii and related properties for one snapshot
@@ -622,7 +729,7 @@ class LagrangianMultiple(DictNpArrayMix):
         if (self.initargs['external_mode']!='none'):
             binary.calcPotExt()
             binary_sim.addNewMember('pot_ext',binary.pot_ext)
-        if len(self.initargs['add_star_type'])>0:
+        if (len(self.initargs['add_star_type'])>0):
             single_sim.addNewMember('type1',single.star.type)
             single_sim.addNewMember('m1',single.mass)
             single_sim.addNewMember('type2',single.star.type)
@@ -630,6 +737,11 @@ class LagrangianMultiple(DictNpArrayMix):
             binary_sim.addNewMember('type1',binary.p1.star.type)
             binary_sim.addNewMember('m1',binary.p1.mass)
             binary_sim.addNewMember('type2',binary.p2.star.type)
+            binary_sim.addNewMember('m2',binary.p2.mass)
+        elif (len(self.initargs['add_mass_range'])>0):
+            single_sim.addNewMember('m1',single.mass)
+            single_sim.addNewMember('m2',np.zeros(single.size))
+            binary_sim.addNewMember('m1',binary.p1.mass)
             binary_sim.addNewMember('m2',binary.p2.mass)
         all_sim = join(single_sim, binary_sim)
         n_single = single.size
@@ -656,7 +768,7 @@ class LagrangianMultiple(DictNpArrayMix):
             name_cross= name_org.split('__in__')
             if (len(name_cross)>1):
                 cross_list.append(name_cross)
-                obj_sort[name_cross[0]]=np.array([])
+                obj_sort[name_cross[0]] = None
             else:
                 name_list.append(name_cross[0])
 
@@ -678,6 +790,36 @@ class LagrangianMultiple(DictNpArrayMix):
                 all_sort.mass[sel1] += all_sort.m1[sel1]
                 all_sort.mass[sel2] += all_sort.m2[sel2]
             all_sel_sort = all_sort[sel]
+            rlagr[name]=self.__dict__[name].calcOneSnapshot(all_sel_sort, rc, mode)
+            # save particle list for cross check
+            if (name in obj_sort.keys()): obj_sort[name] = all_sel_sort
+            #self.__dict__[name+'_cross'].calcOneSnapshot(all_sel_sort, rc, mode, read_rlagr=rlagr)
+
+        name_list=[]
+        for name_org in self.initargs['add_mass_range']:
+            name_cross= name_org.split('__in__')
+            if (len(name_cross)>1):
+                for i in range(len(name_cross)):
+                    name_cross[i] = 'mass_'+name_cross[i]
+                cross_list.append(name_cross)
+                obj_sort[name_cross[0]] = None
+            else:
+                name_list.append('mass_' + name_cross[0])
+
+        for name in name_list:
+            label, mmin, mmax = name.split('_')
+            mmin = float(mmin)
+            mmax = float(mmax)
+            all_sort.mass = np.zeros(all_sort.size) # clear up mass, final mass is the sum of matched component masses
+            sel1 = (all_sort.m1 >= mmin) & (all_sort.m2 < mmax)
+            sel2 = (all_sort.m1 >= mmin) & (all_sort.m2 < mmax)
+            sel = (sel1 | sel2)            
+
+            all_sort.mass = np.zeros(all_sort.size) # clear up mass, final mass is the sum of matched component masses
+            all_sort.mass[sel1] += all_sort.m1[sel1]
+            all_sort.mass[sel2] += all_sort.m2[sel2]
+            all_sel_sort = all_sort[sel]
+
             rlagr[name]=self.__dict__[name].calcOneSnapshot(all_sel_sort, rc, mode)
             # save particle list for cross check
             if (name in obj_sort.keys()): obj_sort[name] = all_sel_sort

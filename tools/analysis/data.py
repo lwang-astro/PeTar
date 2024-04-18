@@ -13,7 +13,7 @@ HEADER_OFFSET_WITH_CM=72 # header offset with center-of-the-mass data in bytes f
 class PeTarDataHeader():
     """ Petar snapshot data header
     members:
-        fid: int 
+        file_id: int 
            file id
         n: int 
            number of particles
@@ -42,11 +42,12 @@ class PeTarDataHeader():
                 PeTar external mode (set in configure): galpy, none 
                 If not none, this option indicates the pos_offset and vel_offset exists 
         """
-        self.fid = int(0)
+        self.file_id = int(0)
         self.n = int(0)
         self.time = 0.0
         self.pos_offset=[0.0,0.0,0.0]
         self.vel_offset=[0.0,0.0,0.0]
+        self.offset_flag=False
         
         if (_filename!=None): self.read(_filename,**kwargs)
 
@@ -67,22 +68,21 @@ class PeTarDataHeader():
         """
         snapshot_format='ascii'
         if ('snapshot_format' in kwargs.keys()): snapshot_format=kwargs['snapshot_format']
-        offset_flag=False
         if ('external_mode' in kwargs.keys()):
-            if (kwargs['external_mode']!='none'): offset_flag=True
+            if (kwargs['external_mode']!='none'): self.offset_flag=True
 
         if (snapshot_format=='ascii'):
             fp = open(_filename, 'r')
             header=fp.readline()
             header_items=header.split()
-            if (offset_flag):
+            if (self.offset_flag):
                 if (len(header_items)!=9):
                     raise ValueError('Snapshot header item number mismatch! Need 9 (file_id, N, time, xcm, ycm, zcm, vxcm, vycm, vzcm), got %d. Make sure the external_mode keyword set correctly.' % len(header_items))
 
                 file_id, n_glb, t, x, y, z, vx, vy, vz = header_items
                 fp.close()
 
-                self.fid = int(file_id)
+                self.file_id = int(file_id)
                 self.n = int(n_glb)
                 self.time = float(t)
                 self.pos_offset = [float(x),float(y),float(z)]
@@ -94,23 +94,79 @@ class PeTarDataHeader():
                 file_id, n_glb, t = header_items
                 fp.close()
 
-                self.fid = int(file_id)
+                self.file_id = int(file_id)
                 self.n = int(n_glb)
                 self.time = float(t)
 
         else:
-            if (offset_flag):
+            if (self.offset_flag):
                 fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',np.float64),('x',np.float64),('y',np.float64),('z',np.float64),('vx',np.float64),('vy',np.float64),('vz',np.float64)]),count=1)
                 self.file_id = fp['file_id'][0]
-                self.n_glb = fp['n_glb'][0]
+                self.n = fp['n_glb'][0]
                 self.time = fp['time'][0]
                 self.pos_offset = [fp['x'][0], fp['y'][0], fp['z'][0]]
                 self.vel_offset = [fp['vx'][0], fp['vy'][0], fp['vz'][0]]
             else:
                 fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',np.float64)]),count=1)
                 self.file_id = fp['file_id'][0]
-                self.n_glb = fp['n_glb'][0]
+                self.n = fp['n_glb'][0]
                 self.time = fp['time'][0]
+
+    def savetxt(self, fname, **kwargs):
+        """ Save class member data to a file
+        Use the getherDataToArray and then numpy.savetxt
+
+        Parameters
+        ----------
+        fname: string of filename or file handler
+        kwargs: dict
+            keyword arguments for numpy.savetxt
+        """
+        offset_flag=False
+        close_flag = False
+        if (type(fname)==str):
+            f = open(fname, 'w')
+            close_flag = True
+        elif (hasattr(fname, 'write')):
+            f = fname
+        if (self.offset_flag):
+            f.write("%d %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n" % 
+                    (self.file_id, self.n, self.time, 
+                     *self.pos_offset, *self.vel_offset))
+        else:
+            f.write("%d %d %.20g\n" % (self.file_id, self.n, self.time))
+
+        if close_flag:
+            f.close()
+
+    def tofile(self, fname):
+        """ Write class member data to a file using numpy.save
+        Use numpy.save to write data, the dtype is defined by keys (members)
+
+        Parameters
+        ----------
+        fname: string of filename or file header
+        kwargs: dict
+            keyword arguments for numpy.save, notice dtype is already defined, do not provide that
+        """
+
+        close_flag = False
+        if (type(fname)==str):
+            f = open(fname, 'wb')
+            close_flag = True
+        elif (hasattr(fname, 'write')):
+            f = fname
+
+        import struct
+        if (self.offset_flag):
+            header_buffer = struct.pack('qqddddddd', self.file_id, self.n, self.time, *self.pos_offset, *self.vel_offset)
+        else:
+            header_buffer = struct.pack('qqd', self.file_id, self.n, self.time)
+        f.write(header_buffer)
+
+        if close_flag:
+            f.close()
+        
 
     def toSkyCoord(self, **kwargs):
         """ generate astropy.coordinates.SkyCoord data in galactocentric frame
@@ -256,7 +312,7 @@ class SimpleParticle(DictNpArrayMix):
         parameters={'galcen_distance':8.0*u.kpc, 'z_sun':15.*u.pc, 'galcen_v_sun':CartesianDifferential([10.0,235.,7.]*u.km/u.s)}
         for key in parameters.keys():
             if key in kwargs.keys():
-                parameter[key] = kwargs[key]
+                parameters[key] = kwargs[key]
 
         snap = SkyCoord(x=(self.pos[:,0]+cm_cor[0])*pos_unit, 
                         y=(self.pos[:,1]+cm_cor[1])*pos_unit, 
@@ -545,7 +601,11 @@ class Binary(SimpleParticle):
                 self.particleToBinary(_p1, _p2, G)
                 self.ncols= int(27)
             self.p1 = _p1
+            self.p1.setHost(self)
             self.p2 = _p2
+            self.p2.setHost(self)
+            if (not 'host' in self.__dict__.keys()):
+                self.host = None
             self.size = _p1.size
             self.ncols += self.p1.ncols + self.p2.ncols
             self.initargs = kwargs.copy()
@@ -580,11 +640,8 @@ class Binary(SimpleParticle):
             ekin = np.array([])
         self.addNewMember('ekin',ekin)
         if (member_also):
-            ncols = self.p1.ncols + self.p2.ncols
             self.p1.calcEkin()
             self.p2.calcEkin()
-            self.ncols += self.p1.ncols + self.p2.ncols - ncols
-            
 
     def calcEtot(self, member_also=False):
         """ Calculate c.m. total energy (binary energy is excluded) , etot, and add it as a member
@@ -592,10 +649,8 @@ class Binary(SimpleParticle):
         etot = self.ekin + self.mass*self.pot
         self.addNewMember('etot',etot)
         if (member_also):
-            ncols = self.p1.ncols + self.p2.ncols
             self.p1.calcEtot()
             self.p2.calcEtot()
-            self.ncols += self.p1.ncols + self.p2.ncols - ncols
 
     def calcR2(self, member_also=False):
         """ Calculate c.m. distance square, r2, and add it as a member
@@ -606,11 +661,8 @@ class Binary(SimpleParticle):
             r2 = np.array([])
         self.addNewMember('r2',r2)
         if (member_also):
-            ncols = self.p1.ncols + self.p2.ncols
             self.p1.calcR2()
             self.p2.calcR2()
-            ncols = self.p1.ncols + self.p2.ncols - ncols
-            self.ncols += ncols
 
     def calcEbin(self):
         """ Calculate binding energy, ebin, and add it as a member 

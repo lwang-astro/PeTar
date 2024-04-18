@@ -11,6 +11,7 @@
 #ifdef BSE_BASE
 #include "bse_interface.h"
 #endif
+#include "external_force.hpp"
 
 //! AR interaction clas
 class ARInteraction{
@@ -18,18 +19,25 @@ public:
     typedef H4::ParticleH4<PtclHard> H4Ptcl;
     Float eps_sq; ///> softening parameter
     Float gravitational_constant;
+#ifdef EXTERNAL_HARD
+    ExternalHardForce *ext_force; // external hard to calculate perturbation
+#endif
 #ifdef STELLAR_EVOLUTION
     int stellar_evolution_option;
     bool stellar_evolution_write_flag;
+    Float time_interrupt_max;
 #ifdef BSE_BASE
     BSEManager bse_manager;
     TwoBodyTide tide;
     std::ofstream fout_sse; ///> log file for SSE event
     std::ofstream fout_bse; ///> log file for BSE event
 
-    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), stellar_evolution_option(1), stellar_evolution_write_flag(true), bse_manager(), fout_sse(), fout_bse() {}
+    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), 
+                     stellar_evolution_option(1), stellar_evolution_write_flag(true), time_interrupt_max(NUMERIC_FLOAT_MAX), 
+                     bse_manager(), fout_sse(), fout_bse() {}
 #else
-    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), stellar_evolution_option(0), stellar_evolution_write_flag(true) {}
+    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), 
+                     stellar_evolution_option(0), stellar_evolution_write_flag(true), time_interrupt_max(NUMERIC_FLOAT_MAX){}
 #endif
 #else
     ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)) {}
@@ -41,10 +49,13 @@ public:
     bool checkParams() {
         ASSERT(eps_sq>=0.0);
         ASSERT(gravitational_constant>0.0);
+#ifdef STELLAR_EVOLUTION
+        ASSERT(time_interrupt_max>=0.0);
 #ifdef BSE_BASE
         ASSERT(stellar_evolution_option==0 || (stellar_evolution_option==1 && bse_manager.checkParams()) || (stellar_evolution_option==2 && bse_manager.checkParams() && tide.checkParams()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_sse.is_open()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_bse.is_open()));
+#endif
 #endif
         return true;
     }        
@@ -343,6 +354,24 @@ public:
 
                 }
 
+#ifdef EXTERNAL_HARD
+                if (ext_force->mode>0) {
+            
+                    auto pgi = pi; 
+                    auto gcm = _perturber.global_cm;
+
+                    pgi.pos[0] += xcm[0] + gcm->pos[0];
+                    pgi.pos[1] += xcm[1] + gcm->pos[1];
+                    pgi.pos[2] += xcm[2] + gcm->pos[2];
+                    // Here pi.vel has half kick step delay
+                    pgi.vel[0] += pi.vel[0] + _particle_cm.vel[0] + dt*(_particle_cm.acc0[0] + 0.5*dt*_particle_cm.acc1[0]) + gcm->vel[0];
+                    pgi.vel[1] += pi.vel[1] + _particle_cm.vel[1] + dt*(_particle_cm.acc0[1] + 0.5*dt*_particle_cm.acc1[1]) + gcm->vel[1];
+                    pgi.vel[2] += pi.vel[2] + _particle_cm.vel[2] + dt*(_particle_cm.acc0[2] + 0.5*dt*_particle_cm.acc1[2]) + gcm->vel[2];
+
+                    ext_force->calcAccExternal(acc_pert, pgi);
+                }
+#endif
+
                 acc_pert_cm[0] += pi.mass *acc_pert[0];
                 acc_pert_cm[1] += pi.mass *acc_pert[1];
                 acc_pert_cm[2] += pi.mass *acc_pert[2];
@@ -383,13 +412,76 @@ public:
 
         }
         else {
+
+            for(int i=0; i<_n_particle; i++) {
+                Float* acc_pert = _force[i].acc_pert;
+                Float& pot_pert = _force[i].pot_pert;
+                acc_pert[0] = acc_pert[1] = acc_pert[2] = pot_pert = Float(0.0);
+            }
+
+#ifdef EXTERNAL_HARD
+            if (ext_force->mode>0) {
+            
+                Float dt = _time - _particle_cm.time;
+                Float xcm[3],vcm[3];
+                //ASSERT(dt>=0.0);
+                xcm[0] = _particle_cm.pos[0] + dt*(_particle_cm.vel[0] + 0.5*dt*(_particle_cm.acc0[0] + inv3*dt*_particle_cm.acc1[0]));
+                xcm[1] = _particle_cm.pos[1] + dt*(_particle_cm.vel[1] + 0.5*dt*(_particle_cm.acc0[1] + inv3*dt*_particle_cm.acc1[1]));
+                xcm[2] = _particle_cm.pos[2] + dt*(_particle_cm.vel[2] + 0.5*dt*(_particle_cm.acc0[2] + inv3*dt*_particle_cm.acc1[2]));
+                vcm[0] = _particle_cm.vel[0] + dt*(_particle_cm.acc0[0] + 0.5*dt*_particle_cm.acc1[0]);
+                vcm[1] = _particle_cm.vel[1] + dt*(_particle_cm.acc0[1] + 0.5*dt*_particle_cm.acc1[1]);
+                vcm[2] = _particle_cm.vel[2] + dt*(_particle_cm.acc0[2] + 0.5*dt*_particle_cm.acc1[2]);
+
+                Float acc_pert_cm[3]={0.0, 0.0, 0.0};
+                Float mcm = 0.0;
+                for (int i=0; i<_n_particle; i++) {
+                    
+                    const auto& pi = _particles[i];
+                    auto pgi = pi; 
+                    auto gcm = _perturber.global_cm;
+
+                    pgi.pos[0] += xcm[0] + gcm->pos[0];
+                    pgi.pos[1] += xcm[1] + gcm->pos[1];
+                    pgi.pos[2] += xcm[2] + gcm->pos[2];
+                    // Here pi.vel has half kick step delay
+                    pgi.vel[0] += vcm[0] + gcm->vel[0];
+                    pgi.vel[1] += vcm[1] + gcm->vel[1];
+                    pgi.vel[2] += vcm[2] + gcm->vel[2];
+
+                    Float* acc_pert = _force[i].acc_pert;
+                    ext_force->calcAccExternal(acc_pert, pgi);
+
+                    acc_pert_cm[0] += pi.mass *acc_pert[0];
+                    acc_pert_cm[1] += pi.mass *acc_pert[1];
+                    acc_pert_cm[2] += pi.mass *acc_pert[2];
+
+                    mcm += pi.mass;
+                }
+                acc_pert_cm[0] /= mcm;
+                acc_pert_cm[1] /= mcm;
+                acc_pert_cm[2] /= mcm;
+
+                // remove cm. perturbation
+                for (int i=0; i<_n_particle; i++) {
+                    Float* acc_pert = _force[i].acc_pert;
+                    Float& pot_pert = _force[i].pot_pert;
+                    const auto& pi = _particles[i];
+                    acc_pert[0] -= acc_pert_cm[0]; 
+                    acc_pert[1] -= acc_pert_cm[1];        
+                    acc_pert[2] -= acc_pert_cm[2]; 
+                
+                    pot_pert -= acc_pert[0]*pi.pos[0] + acc_pert[1]*pi.pos[1] + acc_pert[2]*pi.pos[2];
+                }
+            }
+#endif
+
 #ifdef SOFT_PERT
             if(_perturber.soft_pert!=NULL) {
                 for(int i=0; i<_n_particle; i++) {
                     Float* acc_pert = _force[i].acc_pert;
                     Float& pot_pert = _force[i].pot_pert;
                     const auto& pi = _particles[i];
-                    acc_pert[0] = acc_pert[1] = acc_pert[2] = pot_pert = Float(0.0);
+                    //acc_pert[0] = acc_pert[1] = acc_pert[2] = pot_pert = Float(0.0);
                     // avoid too large perturbation force if system is disruptted
                     if (pi.pos*pi.pos<pi.changeover.getRout()*pi.changeover.getRout()) {
                         _perturber.soft_pert->eval(acc_pert, pi.pos);
@@ -656,7 +748,7 @@ public:
             _p.time_record += dt-dt_miss;
 
             // estimate next time to check 
-            _p.time_interrupt = _p.time_record + bse_manager.getTimeStepStar(_p.star);
+            _p.time_interrupt = std::min(_p.time_record + bse_manager.getTimeStepStar(_p.star), time_interrupt_max);
 
             // record mass change (if loss, negative)
             double dm = bse_manager.getMassLoss(output);
@@ -670,7 +762,7 @@ public:
             _p.radius = bse_manager.getMergerRadius(_p.star);
 
             // type change
-            if (stellar_evolution_write_flag&&event_flag==1) {
+            if (stellar_evolution_write_flag&&event_flag>=1) {
 #pragma omp critical
                 {
                     fout_sse<<"Type_change ";
@@ -776,7 +868,7 @@ public:
                 p2->time_record = _bin_interrupt.time_now - bse_manager.getDTMiss(out[1]);
 
                 // estimate next time to check 
-                p1->time_interrupt = p1->time_record + bse_manager.getTimeStepBinary(p1->star, p2->star, semi, ecc, binary_type_final);
+                p1->time_interrupt = std::min(p1->time_record + bse_manager.getTimeStepBinary(p1->star, p2->star, semi, ecc, binary_type_final), time_interrupt_max);
                 p2->time_interrupt = p1->time_interrupt;
 
                 // reset collision state since binary orbit changes
@@ -1222,7 +1314,7 @@ public:
                                 //p2->setBinaryPairID(p1->id);
                                 p1->setBinaryInterruptState(BinaryInterruptState::collision);
                                 p2->setBinaryInterruptState(BinaryInterruptState::collision);
-                                p1->time_interrupt = _bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri);
+                                p1->time_interrupt = std::min(_bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri), time_interrupt_max);
                                 p2->time_interrupt = p1->time_interrupt;
                                     
                             }

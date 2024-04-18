@@ -1,0 +1,257 @@
+\hypertarget{classParticle}{}\doxysection{Particle Struct Reference}
+\label{classParticle}\index{Particle@{Particle}}
+
+
+A sample particle class.  
+
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+void \mbox{\hyperlink{classParticle_aff03c4a236f690e6cdb0c583b41ca943}{write\+Binary}} (F\+I\+LE $\ast$\+\_\+fout) const
+\begin{DoxyCompactList}\small\item\em write class data to file with binary format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classParticle_adb8cf2c4476cf7e85a30ace893081cb2}{read\+Binary}} (F\+I\+LE $\ast$\+\_\+fin)
+\begin{DoxyCompactList}\small\item\em read class data to file with binary format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classParticle_acf0f8262e5d9c5684eed847521516c09}{write\+Ascii}} (std\+::ostream \&\+\_\+fout) const
+\begin{DoxyCompactList}\small\item\em write class data to file with A\+S\+C\+II format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classParticle_a72dcdc7ce44c0204a383471fef65556c}{read\+Ascii}} (std\+::istream \&\+\_\+fin)
+\begin{DoxyCompactList}\small\item\em read class data to file with A\+S\+C\+II format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classParticle_a6fe47ff9dfe25de4b2ef078e70f2b4ca}{print\+Column}} (std\+::ostream \&\+\_\+fout, const int \+\_\+width=20)
+\begin{DoxyCompactList}\small\item\em print data of class members using column style \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classParticle_a9fecb5c5afcdd35a489720b2a6bea622}{read\+Ascii}} (F\+I\+LE $\ast$fp)
+\item 
+void \mbox{\hyperlink{classParticle_a22c88dea8deba8c8b50f121a066662ea}{print\+Column}} (std\+::ostream \&\+\_\+fout, const int \+\_\+width=20) const
+\begin{DoxyCompactList}\small\item\em print data of class members using column style \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static void \mbox{\hyperlink{classParticle_af235cbdc57f084bbe34127e6c5821d8b}{print\+Column\+Title}} (std\+::ostream \&\+\_\+fout, const int \+\_\+width=20)
+\begin{DoxyCompactList}\small\item\em print titles of class members using column style \end{DoxyCompactList}\item 
+static void \mbox{\hyperlink{classParticle_af235cbdc57f084bbe34127e6c5821d8b}{print\+Column\+Title}} (std\+::ostream \&\+\_\+fout, const int \+\_\+width=20)
+\begin{DoxyCompactList}\small\item\em print titles of class members using column style \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+long long int \mbox{\hyperlink{classParticle_ac06a0b5fdc39d5125ae942108c4d2dee}{id}}
+\item 
+Float \mbox{\hyperlink{classParticle_af8f2b37f5441ba7b3c145805074961ad}{mass}}
+\item 
+P\+S\+::\+F64vec3 \mbox{\hyperlink{classParticle_ad75e3a112906ce3b0a64c1eab941770e}{pos}}
+\item 
+P\+S\+::\+F64vec3 \mbox{\hyperlink{classParticle_a040564339303acd307c6d4f59709c4f8}{vel}}
+\item 
+double \mbox{\hyperlink{classParticle_ae6d46dc24a6666d526f211151fecca5f}{mass}}
+\item 
+double \mbox{\hyperlink{classParticle_ae4eeff24a5bc5bab7cc8b3cda1377de4}{pos}} \mbox{[}3\mbox{]}
+\item 
+double \mbox{\hyperlink{classParticle_abfc86c36b415d17ee8ab7f1ba8ae5cd9}{vel}} \mbox{[}3\mbox{]}
+\item 
+double \mbox{\hyperlink{classParticle_ac575fbf68c83530ee242ba22fb38a264}{acc}} \mbox{[}3\mbox{]}
+\item 
+double \mbox{\hyperlink{classParticle_a235e3eb6c466429f43f4f4564e343724}{pot}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+A sample particle class. 
+
+A particle class should contain public members\+: Float mass, Float pos\mbox{[}3\mbox{]}, Float vel\mbox{[}3\mbox{]}, 
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classParticle_a6fe47ff9dfe25de4b2ef078e70f2b4ca}\label{classParticle_a6fe47ff9dfe25de4b2ef078e70f2b4ca}} 
+\index{Particle@{Particle}!printColumn@{printColumn}}
+\index{printColumn@{printColumn}!Particle@{Particle}}
+\doxysubsubsection{\texorpdfstring{printColumn()}{printColumn()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily void Particle\+::print\+Column (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print data of class members using column style 
+
+print data of class members in one line for column style. Notice no newline is printed at the end 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classParticle_a22c88dea8deba8c8b50f121a066662ea}\label{classParticle_a22c88dea8deba8c8b50f121a066662ea}} 
+\index{Particle@{Particle}!printColumn@{printColumn}}
+\index{printColumn@{printColumn}!Particle@{Particle}}
+\doxysubsubsection{\texorpdfstring{printColumn()}{printColumn()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily void Particle\+::print\+Column (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print data of class members using column style 
+
+print data of class members in one line for column style. Notice no newline is printed at the end 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classParticle_af235cbdc57f084bbe34127e6c5821d8b}\label{classParticle_af235cbdc57f084bbe34127e6c5821d8b}} 
+\index{Particle@{Particle}!printColumnTitle@{printColumnTitle}}
+\index{printColumnTitle@{printColumnTitle}!Particle@{Particle}}
+\doxysubsubsection{\texorpdfstring{printColumnTitle()}{printColumnTitle()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily static void Particle\+::print\+Column\+Title (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+print titles of class members using column style 
+
+print titles of class members in one line for column style 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classParticle_af235cbdc57f084bbe34127e6c5821d8b}\label{classParticle_af235cbdc57f084bbe34127e6c5821d8b}} 
+\index{Particle@{Particle}!printColumnTitle@{printColumnTitle}}
+\index{printColumnTitle@{printColumnTitle}!Particle@{Particle}}
+\doxysubsubsection{\texorpdfstring{printColumnTitle()}{printColumnTitle()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily static void Particle\+::print\+Column\+Title (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+print titles of class members using column style 
+
+print titles of class members in one line for column style 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classParticle_a9fecb5c5afcdd35a489720b2a6bea622}\label{classParticle_a9fecb5c5afcdd35a489720b2a6bea622}} 
+\index{Particle@{Particle}!readAscii@{readAscii}}
+\index{readAscii@{readAscii}!Particle@{Particle}}
+\doxysubsubsection{\texorpdfstring{readAscii()}{readAscii()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily void Particle\+::read\+Ascii (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{fp }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classParticle_a72dcdc7ce44c0204a383471fef65556c}\label{classParticle_a72dcdc7ce44c0204a383471fef65556c}} 
+\index{Particle@{Particle}!readAscii@{readAscii}}
+\index{readAscii@{readAscii}!Particle@{Particle}}
+\doxysubsubsection{\texorpdfstring{readAscii()}{readAscii()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily void Particle\+::read\+Ascii (\begin{DoxyParamCaption}\item[{std\+::istream \&}]{\+\_\+fin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read class data to file with A\+S\+C\+II format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fin} & std\+::istream file for input \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classParticle_adb8cf2c4476cf7e85a30ace893081cb2}\label{classParticle_adb8cf2c4476cf7e85a30ace893081cb2}} 
+\index{Particle@{Particle}!readBinary@{readBinary}}
+\index{readBinary@{readBinary}!Particle@{Particle}}
+\doxysubsubsection{\texorpdfstring{readBinary()}{readBinary()}}
+{\footnotesize\ttfamily void Particle\+::read\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read class data to file with binary format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fp} & F\+I\+LE type file for reading \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classParticle_acf0f8262e5d9c5684eed847521516c09}\label{classParticle_acf0f8262e5d9c5684eed847521516c09}} 
+\index{Particle@{Particle}!writeAscii@{writeAscii}}
+\index{writeAscii@{writeAscii}!Particle@{Particle}}
+\doxysubsubsection{\texorpdfstring{writeAscii()}{writeAscii()}}
+{\footnotesize\ttfamily void Particle\+::write\+Ascii (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write class data to file with A\+S\+C\+II format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fout} & std\+:osteram file for output \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classParticle_aff03c4a236f690e6cdb0c583b41ca943}\label{classParticle_aff03c4a236f690e6cdb0c583b41ca943}} 
+\index{Particle@{Particle}!writeBinary@{writeBinary}}
+\index{writeBinary@{writeBinary}!Particle@{Particle}}
+\doxysubsubsection{\texorpdfstring{writeBinary()}{writeBinary()}}
+{\footnotesize\ttfamily void Particle\+::write\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fout }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write class data to file with binary format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fp} & F\+I\+LE type file for output \\
+\hline
+\end{DoxyParams}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classParticle_ac575fbf68c83530ee242ba22fb38a264}\label{classParticle_ac575fbf68c83530ee242ba22fb38a264}} 
+\index{Particle@{Particle}!acc@{acc}}
+\index{acc@{acc}!Particle@{Particle}}
+\doxysubsubsection{\texorpdfstring{acc}{acc}}
+{\footnotesize\ttfamily double Particle\+::acc\mbox{[}3\mbox{]}}
+
+\mbox{\Hypertarget{classParticle_ac06a0b5fdc39d5125ae942108c4d2dee}\label{classParticle_ac06a0b5fdc39d5125ae942108c4d2dee}} 
+\index{Particle@{Particle}!id@{id}}
+\index{id@{id}!Particle@{Particle}}
+\doxysubsubsection{\texorpdfstring{id}{id}}
+{\footnotesize\ttfamily long long int Particle\+::id}
+
+\mbox{\Hypertarget{classParticle_ae6d46dc24a6666d526f211151fecca5f}\label{classParticle_ae6d46dc24a6666d526f211151fecca5f}} 
+\index{Particle@{Particle}!mass@{mass}}
+\index{mass@{mass}!Particle@{Particle}}
+\doxysubsubsection{\texorpdfstring{mass}{mass}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily double Particle\+::mass}
+
+\mbox{\Hypertarget{classParticle_af8f2b37f5441ba7b3c145805074961ad}\label{classParticle_af8f2b37f5441ba7b3c145805074961ad}} 
+\index{Particle@{Particle}!mass@{mass}}
+\index{mass@{mass}!Particle@{Particle}}
+\doxysubsubsection{\texorpdfstring{mass}{mass}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily Float Particle\+::mass}
+
+\mbox{\Hypertarget{classParticle_ae4eeff24a5bc5bab7cc8b3cda1377de4}\label{classParticle_ae4eeff24a5bc5bab7cc8b3cda1377de4}} 
+\index{Particle@{Particle}!pos@{pos}}
+\index{pos@{pos}!Particle@{Particle}}
+\doxysubsubsection{\texorpdfstring{pos}{pos}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily double Particle\+::pos\mbox{[}3\mbox{]}}
+
+\mbox{\Hypertarget{classParticle_ad75e3a112906ce3b0a64c1eab941770e}\label{classParticle_ad75e3a112906ce3b0a64c1eab941770e}} 
+\index{Particle@{Particle}!pos@{pos}}
+\index{pos@{pos}!Particle@{Particle}}
+\doxysubsubsection{\texorpdfstring{pos}{pos}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily P\+S\+::\+F64vec3 Particle\+::pos}
+
+\mbox{\Hypertarget{classParticle_a235e3eb6c466429f43f4f4564e343724}\label{classParticle_a235e3eb6c466429f43f4f4564e343724}} 
+\index{Particle@{Particle}!pot@{pot}}
+\index{pot@{pot}!Particle@{Particle}}
+\doxysubsubsection{\texorpdfstring{pot}{pot}}
+{\footnotesize\ttfamily double Particle\+::pot}
+
+\mbox{\Hypertarget{classParticle_abfc86c36b415d17ee8ab7f1ba8ae5cd9}\label{classParticle_abfc86c36b415d17ee8ab7f1ba8ae5cd9}} 
+\index{Particle@{Particle}!vel@{vel}}
+\index{vel@{vel}!Particle@{Particle}}
+\doxysubsubsection{\texorpdfstring{vel}{vel}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily double Particle\+::vel\mbox{[}3\mbox{]}}
+
+\mbox{\Hypertarget{classParticle_a040564339303acd307c6d4f59709c4f8}\label{classParticle_a040564339303acd307c6d4f59709c4f8}} 
+\index{Particle@{Particle}!vel@{vel}}
+\index{vel@{vel}!Particle@{Particle}}
+\doxysubsubsection{\texorpdfstring{vel}{vel}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily P\+S\+::\+F64vec3 Particle\+::vel}
+
+
+
+The documentation for this struct was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{tide__test_8cxx}{tide\+\_\+test.\+cxx}}\item 
+\mbox{\hyperlink{galpy__test_8cxx}{galpy\+\_\+test.\+cxx}}\end{DoxyCompactItemize}

@@ -1,0 +1,352 @@
+\hypertarget{classHardIntegrator}{}\doxysection{Hard\+Integrator Class Reference}
+\label{classHardIntegrator}\index{HardIntegrator@{HardIntegrator}}
+
+
+hard integrator  
+
+
+
+
+{\ttfamily \#include $<$hard.\+hpp$>$}
+
+
+
+Collaboration diagram for Hard\+Integrator\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=256pt]{classHardIntegrator__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classHardIntegrator_ad964f6459c5ae7f3d8268575f9ecb767}{Hard\+Integrator}} ()
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+indicator whether initialization is done \end{quote}
+\end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classHardIntegrator_a856c037070100180257d0e84809806d0}{check\+Params}} ()
+\begin{DoxyCompactList}\small\item\em check parameters \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tsoft $>$ }\\void \mbox{\hyperlink{classHardIntegrator_aa9af7a31e9981446c84ca58ca77e4630}{initial}} (\mbox{\hyperlink{hard_8hpp_a95cbf1c8a6b57f13cc3bcbdd8bfd7bc2}{Ptcl\+H4}} $\ast$\+\_\+ptcl, const P\+S\+::\+S32 \+\_\+n\+\_\+ptcl, Tsoft $\ast$\+\_\+ptcl\+\_\+artificial, const P\+S\+::\+S32 \+\_\+n\+\_\+group, const P\+S\+::\+S32 $\ast$\+\_\+n\+\_\+member\+\_\+in\+\_\+group, \mbox{\hyperlink{classHardManager}{Hard\+Manager}} $\ast$\+\_\+manager, const P\+S\+::\+F64 \+\_\+time\+\_\+origin)
+\begin{DoxyCompactList}\small\item\em initial integration \end{DoxyCompactList}\item 
+A\+R\+::\+Interrupt\+Binary$<$ \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} $>$ \& \mbox{\hyperlink{classHardIntegrator_aca164327390568c12105502096e3bdf0}{integrate\+To\+Time}} (const P\+S\+::\+F64 \+\_\+time\+\_\+end)
+\begin{DoxyCompactList}\small\item\em Integrate system to time. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classHardIntegrator_aa9bff3864c110f2bd2af54163e878757}{drift\+Cluster\+C\+M\+Record\+Group\+C\+M\+Data\+And\+Write\+Back}} (const P\+S\+::\+F64 \+\_\+time\+\_\+end)
+\begin{DoxyCompactList}\small\item\em drift c.\+m. particle of the cluster record group c.\+m. in group\+\_\+data and write back data to original particle array \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classHardIntegrator_a8e653811df1937f18bc66d6cc0c81750}{print\+Interrupt\+Binary\+Info}} (std\+::ostream \&\+\_\+fout) const
+\begin{DoxyCompactList}\small\item\em print interrupt binary information \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classHardIntegrator_a27ea0d8f0df5478287c8179bf246458a}{clear}} ()
+\begin{DoxyCompactList}\small\item\em clear function \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+H4\+::\+Hermite\+Integrator$<$ \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}}, \mbox{\hyperlink{hard_8hpp_a95cbf1c8a6b57f13cc3bcbdd8bfd7bc2}{Ptcl\+H4}}, \mbox{\hyperlink{classHermitePerturber}{Hermite\+Perturber}}, \mbox{\hyperlink{classARPerturber}{A\+R\+Perturber}}, \mbox{\hyperlink{classHermiteInteraction}{Hermite\+Interaction}}, \mbox{\hyperlink{classARInteraction}{A\+R\+Interaction}}, \mbox{\hyperlink{classHermiteInformation}{Hermite\+Information}} $>$ \mbox{\hyperlink{classHardIntegrator_af8155e1ed95849ae5e25b3a7e3e016e5}{h4\+\_\+int}}
+\item 
+A\+R\+::\+Time\+Transformed\+Symplectic\+Integrator$<$ \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}}, \mbox{\hyperlink{hard_8hpp_a95cbf1c8a6b57f13cc3bcbdd8bfd7bc2}{Ptcl\+H4}}, \mbox{\hyperlink{classARPerturber}{A\+R\+Perturber}}, \mbox{\hyperlink{classARInteraction}{A\+R\+Interaction}}, H4\+::\+A\+R\+Information$<$ \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} $>$ $>$ \mbox{\hyperlink{classHardIntegrator_a5320e53882643a9fceefc2bfb32094aa}{sym\+\_\+int}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+hermite integrator \end{quote}
+\end{DoxyCompactList}\item 
+\mbox{\hyperlink{classHardManager}{Hard\+Manager}} $\ast$ \mbox{\hyperlink{classHardIntegrator_acbee2d6cee75dcb7b44dda7cc61df925}{manager}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+AR integrator \end{quote}
+\end{DoxyCompactList}\item 
+P\+S\+::\+Reallocatable\+Array$<$ \mbox{\hyperlink{classTidalTensor}{Tidal\+Tensor}} $>$ \mbox{\hyperlink{classHardIntegrator_a69484ff0d81d863ca3e6b3977b25239b}{tidal\+\_\+tensor}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+hard manager \end{quote}
+\end{DoxyCompactList}\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classHardIntegrator_a750091c3afe4f922f7cb0ad71da0f8f0}{time\+\_\+origin}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+tidal tensor array \end{quote}
+\end{DoxyCompactList}\item 
+\mbox{\hyperlink{hard_8hpp_a95cbf1c8a6b57f13cc3bcbdd8bfd7bc2}{Ptcl\+H4}} $\ast$ \mbox{\hyperlink{classHardIntegrator_a4c690ec160be7b61baf50dd4b124f2fa}{ptcl\+\_\+origin}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+origin physical time \end{quote}
+\end{DoxyCompactList}\item 
+A\+R\+::\+Interrupt\+Binary$<$ \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} $>$ \mbox{\hyperlink{classHardIntegrator_a1ff416b5efbb97df0a45e8c2d839d0be}{interrupt\+\_\+binary}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+original particle array \end{quote}
+\end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classHardIntegrator_a2c93af520c63cfdde64081b0643445aa}{use\+\_\+sym\+\_\+int}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+interrupt binary address \end{quote}
+\end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classHardIntegrator_a9f4f420293a4653516a2243a06983e8c}{is\+\_\+initialized}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+use AR integrator flag \end{quote}
+\end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+hard integrator 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classHardIntegrator_ad964f6459c5ae7f3d8268575f9ecb767}\label{classHardIntegrator_ad964f6459c5ae7f3d8268575f9ecb767}} 
+\index{HardIntegrator@{HardIntegrator}!HardIntegrator@{HardIntegrator}}
+\index{HardIntegrator@{HardIntegrator}!HardIntegrator@{HardIntegrator}}
+\doxysubsubsection{\texorpdfstring{HardIntegrator()}{HardIntegrator()}}
+{\footnotesize\ttfamily Hard\+Integrator\+::\+Hard\+Integrator (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\begin{quote}
+indicator whether initialization is done \end{quote}
+
+
+initializer Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classHardIntegrator_ad964f6459c5ae7f3d8268575f9ecb767_cgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classHardIntegrator_a856c037070100180257d0e84809806d0}\label{classHardIntegrator_a856c037070100180257d0e84809806d0}} 
+\index{HardIntegrator@{HardIntegrator}!checkParams@{checkParams}}
+\index{checkParams@{checkParams}!HardIntegrator@{HardIntegrator}}
+\doxysubsubsection{\texorpdfstring{checkParams()}{checkParams()}}
+{\footnotesize\ttfamily bool Hard\+Integrator\+::check\+Params (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+check parameters 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classHardIntegrator_a856c037070100180257d0e84809806d0_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classHardIntegrator_a27ea0d8f0df5478287c8179bf246458a}\label{classHardIntegrator_a27ea0d8f0df5478287c8179bf246458a}} 
+\index{HardIntegrator@{HardIntegrator}!clear@{clear}}
+\index{clear@{clear}!HardIntegrator@{HardIntegrator}}
+\doxysubsubsection{\texorpdfstring{clear()}{clear()}}
+{\footnotesize\ttfamily void Hard\+Integrator\+::clear (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+clear function 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=337pt]{classHardIntegrator_a27ea0d8f0df5478287c8179bf246458a_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classHardIntegrator_aa9bff3864c110f2bd2af54163e878757}\label{classHardIntegrator_aa9bff3864c110f2bd2af54163e878757}} 
+\index{HardIntegrator@{HardIntegrator}!driftClusterCMRecordGroupCMDataAndWriteBack@{driftClusterCMRecordGroupCMDataAndWriteBack}}
+\index{driftClusterCMRecordGroupCMDataAndWriteBack@{driftClusterCMRecordGroupCMDataAndWriteBack}!HardIntegrator@{HardIntegrator}}
+\doxysubsubsection{\texorpdfstring{driftClusterCMRecordGroupCMDataAndWriteBack()}{driftClusterCMRecordGroupCMDataAndWriteBack()}}
+{\footnotesize\ttfamily void Hard\+Integrator\+::drift\+Cluster\+C\+M\+Record\+Group\+C\+M\+Data\+And\+Write\+Back (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{\+\_\+time\+\_\+end }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+drift c.\+m. particle of the cluster record group c.\+m. in group\+\_\+data and write back data to original particle array 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+time\+\_\+end} & integration ending time (initial time is fixed to 0) \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classHardIntegrator_aa9bff3864c110f2bd2af54163e878757_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classHardIntegrator_aa9af7a31e9981446c84ca58ca77e4630}\label{classHardIntegrator_aa9af7a31e9981446c84ca58ca77e4630}} 
+\index{HardIntegrator@{HardIntegrator}!initial@{initial}}
+\index{initial@{initial}!HardIntegrator@{HardIntegrator}}
+\doxysubsubsection{\texorpdfstring{initial()}{initial()}}
+{\footnotesize\ttfamily template$<$class Tsoft $>$ \\
+void Hard\+Integrator\+::initial (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{hard_8hpp_a95cbf1c8a6b57f13cc3bcbdd8bfd7bc2}{Ptcl\+H4}} $\ast$}]{\+\_\+ptcl,  }\item[{const P\+S\+::\+S32}]{\+\_\+n\+\_\+ptcl,  }\item[{Tsoft $\ast$}]{\+\_\+ptcl\+\_\+artificial,  }\item[{const P\+S\+::\+S32}]{\+\_\+n\+\_\+group,  }\item[{const P\+S\+::\+S32 $\ast$}]{\+\_\+n\+\_\+member\+\_\+in\+\_\+group,  }\item[{\mbox{\hyperlink{classHardManager}{Hard\+Manager}} $\ast$}]{\+\_\+manager,  }\item[{const P\+S\+::\+F64}]{\+\_\+time\+\_\+origin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+initial integration 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em \+\_\+ptcl} & particle array \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n\+\_\+ptcl} & particle number in cluster \\
+\hline
+\mbox{\texttt{ in,out}}  & {\em \+\_\+ptcl\+\_\+artificial} & artificial particle array, c.\+m. are kicked \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n\+\_\+group} & group number in cluster \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n\+\_\+member\+\_\+in\+\_\+group} & number of members in each group \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+manager} & hard manager \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+time\+\_\+origin} & initial physical time \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classHardIntegrator_aa9af7a31e9981446c84ca58ca77e4630_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classHardIntegrator_aca164327390568c12105502096e3bdf0}\label{classHardIntegrator_aca164327390568c12105502096e3bdf0}} 
+\index{HardIntegrator@{HardIntegrator}!integrateToTime@{integrateToTime}}
+\index{integrateToTime@{integrateToTime}!HardIntegrator@{HardIntegrator}}
+\doxysubsubsection{\texorpdfstring{integrateToTime()}{integrateToTime()}}
+{\footnotesize\ttfamily A\+R\+::\+Interrupt\+Binary$<$\mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}}$>$\& Hard\+Integrator\+::integrate\+To\+Time (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{\+\_\+time\+\_\+end }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Integrate system to time. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+time\+\_\+end} & time to integrate \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+interrupt binary address, if no return N\+U\+LL 
+\end{DoxyReturn}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classHardIntegrator_aca164327390568c12105502096e3bdf0_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classHardIntegrator_a8e653811df1937f18bc66d6cc0c81750}\label{classHardIntegrator_a8e653811df1937f18bc66d6cc0c81750}} 
+\index{HardIntegrator@{HardIntegrator}!printInterruptBinaryInfo@{printInterruptBinaryInfo}}
+\index{printInterruptBinaryInfo@{printInterruptBinaryInfo}!HardIntegrator@{HardIntegrator}}
+\doxysubsubsection{\texorpdfstring{printInterruptBinaryInfo()}{printInterruptBinaryInfo()}}
+{\footnotesize\ttfamily void Hard\+Integrator\+::print\+Interrupt\+Binary\+Info (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print interrupt binary information 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classHardIntegrator_a8e653811df1937f18bc66d6cc0c81750_cgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classHardIntegrator_af8155e1ed95849ae5e25b3a7e3e016e5}\label{classHardIntegrator_af8155e1ed95849ae5e25b3a7e3e016e5}} 
+\index{HardIntegrator@{HardIntegrator}!h4\_int@{h4\_int}}
+\index{h4\_int@{h4\_int}!HardIntegrator@{HardIntegrator}}
+\doxysubsubsection{\texorpdfstring{h4\_int}{h4\_int}}
+{\footnotesize\ttfamily H4\+::\+Hermite\+Integrator$<$\mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}}, \mbox{\hyperlink{hard_8hpp_a95cbf1c8a6b57f13cc3bcbdd8bfd7bc2}{Ptcl\+H4}}, \mbox{\hyperlink{classHermitePerturber}{Hermite\+Perturber}}, \mbox{\hyperlink{classARPerturber}{A\+R\+Perturber}}, \mbox{\hyperlink{classHermiteInteraction}{Hermite\+Interaction}}, \mbox{\hyperlink{classARInteraction}{A\+R\+Interaction}}, \mbox{\hyperlink{classHermiteInformation}{Hermite\+Information}}$>$ Hard\+Integrator\+::h4\+\_\+int}
+
+\mbox{\Hypertarget{classHardIntegrator_a1ff416b5efbb97df0a45e8c2d839d0be}\label{classHardIntegrator_a1ff416b5efbb97df0a45e8c2d839d0be}} 
+\index{HardIntegrator@{HardIntegrator}!interrupt\_binary@{interrupt\_binary}}
+\index{interrupt\_binary@{interrupt\_binary}!HardIntegrator@{HardIntegrator}}
+\doxysubsubsection{\texorpdfstring{interrupt\_binary}{interrupt\_binary}}
+{\footnotesize\ttfamily A\+R\+::\+Interrupt\+Binary$<$\mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}}$>$ Hard\+Integrator\+::interrupt\+\_\+binary}
+
+
+
+\begin{quote}
+original particle array \end{quote}
+
+
+\mbox{\Hypertarget{classHardIntegrator_a9f4f420293a4653516a2243a06983e8c}\label{classHardIntegrator_a9f4f420293a4653516a2243a06983e8c}} 
+\index{HardIntegrator@{HardIntegrator}!is\_initialized@{is\_initialized}}
+\index{is\_initialized@{is\_initialized}!HardIntegrator@{HardIntegrator}}
+\doxysubsubsection{\texorpdfstring{is\_initialized}{is\_initialized}}
+{\footnotesize\ttfamily bool Hard\+Integrator\+::is\+\_\+initialized}
+
+
+
+\begin{quote}
+use AR integrator flag \end{quote}
+
+
+\mbox{\Hypertarget{classHardIntegrator_acbee2d6cee75dcb7b44dda7cc61df925}\label{classHardIntegrator_acbee2d6cee75dcb7b44dda7cc61df925}} 
+\index{HardIntegrator@{HardIntegrator}!manager@{manager}}
+\index{manager@{manager}!HardIntegrator@{HardIntegrator}}
+\doxysubsubsection{\texorpdfstring{manager}{manager}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classHardManager}{Hard\+Manager}}$\ast$ Hard\+Integrator\+::manager}
+
+
+
+\begin{quote}
+AR integrator \end{quote}
+
+
+\mbox{\Hypertarget{classHardIntegrator_a4c690ec160be7b61baf50dd4b124f2fa}\label{classHardIntegrator_a4c690ec160be7b61baf50dd4b124f2fa}} 
+\index{HardIntegrator@{HardIntegrator}!ptcl\_origin@{ptcl\_origin}}
+\index{ptcl\_origin@{ptcl\_origin}!HardIntegrator@{HardIntegrator}}
+\doxysubsubsection{\texorpdfstring{ptcl\_origin}{ptcl\_origin}}
+{\footnotesize\ttfamily \mbox{\hyperlink{hard_8hpp_a95cbf1c8a6b57f13cc3bcbdd8bfd7bc2}{Ptcl\+H4}}$\ast$ Hard\+Integrator\+::ptcl\+\_\+origin}
+
+
+
+\begin{quote}
+origin physical time \end{quote}
+
+
+\mbox{\Hypertarget{classHardIntegrator_a5320e53882643a9fceefc2bfb32094aa}\label{classHardIntegrator_a5320e53882643a9fceefc2bfb32094aa}} 
+\index{HardIntegrator@{HardIntegrator}!sym\_int@{sym\_int}}
+\index{sym\_int@{sym\_int}!HardIntegrator@{HardIntegrator}}
+\doxysubsubsection{\texorpdfstring{sym\_int}{sym\_int}}
+{\footnotesize\ttfamily A\+R\+::\+Time\+Transformed\+Symplectic\+Integrator$<$\mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}}, \mbox{\hyperlink{hard_8hpp_a95cbf1c8a6b57f13cc3bcbdd8bfd7bc2}{Ptcl\+H4}}, \mbox{\hyperlink{classARPerturber}{A\+R\+Perturber}}, \mbox{\hyperlink{classARInteraction}{A\+R\+Interaction}}, H4\+::\+A\+R\+Information$<$\mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}}$>$ $>$ Hard\+Integrator\+::sym\+\_\+int}
+
+
+
+\begin{quote}
+hermite integrator \end{quote}
+
+
+\mbox{\Hypertarget{classHardIntegrator_a69484ff0d81d863ca3e6b3977b25239b}\label{classHardIntegrator_a69484ff0d81d863ca3e6b3977b25239b}} 
+\index{HardIntegrator@{HardIntegrator}!tidal\_tensor@{tidal\_tensor}}
+\index{tidal\_tensor@{tidal\_tensor}!HardIntegrator@{HardIntegrator}}
+\doxysubsubsection{\texorpdfstring{tidal\_tensor}{tidal\_tensor}}
+{\footnotesize\ttfamily P\+S\+::\+Reallocatable\+Array$<$\mbox{\hyperlink{classTidalTensor}{Tidal\+Tensor}}$>$ Hard\+Integrator\+::tidal\+\_\+tensor}
+
+
+
+\begin{quote}
+hard manager \end{quote}
+
+
+\mbox{\Hypertarget{classHardIntegrator_a750091c3afe4f922f7cb0ad71da0f8f0}\label{classHardIntegrator_a750091c3afe4f922f7cb0ad71da0f8f0}} 
+\index{HardIntegrator@{HardIntegrator}!time\_origin@{time\_origin}}
+\index{time\_origin@{time\_origin}!HardIntegrator@{HardIntegrator}}
+\doxysubsubsection{\texorpdfstring{time\_origin}{time\_origin}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Hard\+Integrator\+::time\+\_\+origin}
+
+
+
+\begin{quote}
+tidal tensor array \end{quote}
+
+
+\mbox{\Hypertarget{classHardIntegrator_a2c93af520c63cfdde64081b0643445aa}\label{classHardIntegrator_a2c93af520c63cfdde64081b0643445aa}} 
+\index{HardIntegrator@{HardIntegrator}!use\_sym\_int@{use\_sym\_int}}
+\index{use\_sym\_int@{use\_sym\_int}!HardIntegrator@{HardIntegrator}}
+\doxysubsubsection{\texorpdfstring{use\_sym\_int}{use\_sym\_int}}
+{\footnotesize\ttfamily bool Hard\+Integrator\+::use\+\_\+sym\+\_\+int}
+
+
+
+\begin{quote}
+interrupt binary address \end{quote}
+
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{hard_8hpp}{hard.\+hpp}}\end{DoxyCompactItemize}

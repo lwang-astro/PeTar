@@ -1,0 +1,344 @@
+\hypertarget{classPhantomGrapeQuad}{}\doxysection{Phantom\+Grape\+Quad Class Reference}
+\label{classPhantomGrapeQuad}\index{PhantomGrapeQuad@{PhantomGrapeQuad}}
+
+
+{\ttfamily \#include $<$phantomquad\+\_\+for\+\_\+p3t\+\_\+k.\+hpp$>$}
+
+\doxysubsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+enum \{ \mbox{\hyperlink{classPhantomGrapeQuad_a575a96b3649db45883d126bb3ddee9f1a8ecf94d5ff53108b51293bdce063b37d}{N\+I\+M\+AX}} = 2048, 
+\mbox{\hyperlink{classPhantomGrapeQuad_a575a96b3649db45883d126bb3ddee9f1ac27af9f0fda44506e6d29a6073fb1cfa}{N\+J\+M\+AX}} = 262144
+ \}
+\item 
+enum \{ \mbox{\hyperlink{classPhantomGrapeQuad_a575a96b3649db45883d126bb3ddee9f1a8ecf94d5ff53108b51293bdce063b37d}{N\+I\+M\+AX}} = 2048, 
+\mbox{\hyperlink{classPhantomGrapeQuad_a575a96b3649db45883d126bb3ddee9f1ac27af9f0fda44506e6d29a6073fb1cfa}{N\+J\+M\+AX}} = 262144
+ \}
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classPhantomGrapeQuad_a88473c2a65922d0b4fc5684269e815e5}{Phantom\+Grape\+Quad}} ()
+\item 
+void \mbox{\hyperlink{classPhantomGrapeQuad_a27280675f9fc272c3c4ece62e319097a}{set\+\_\+eps2}} (const double \+\_\+eps2)
+\item 
+void \mbox{\hyperlink{classPhantomGrapeQuad_a0a52434a193d7b3c7db20963a03762b6}{set\+\_\+r\+\_\+crit2}} (const double \+\_\+r\+\_\+crit2)
+\item 
+void \mbox{\hyperlink{classPhantomGrapeQuad_a7623464a19889be5b75a32bb02e8744b}{set\+\_\+cutoff}} (const double \+\_\+r\+\_\+out, const double \+\_\+r\+\_\+in)
+\item 
+void \mbox{\hyperlink{classPhantomGrapeQuad_a7b9aab0edd6d54f10816b09b81a57166}{set\+\_\+epj\+\_\+one}} (const int addr, const double x, const double y, const double z, const double m, const double r\+\_\+search)
+\item 
+{\footnotesize template$<$typename E\+P\+J\+\_\+t $>$ }\\void \mbox{\hyperlink{classPhantomGrapeQuad_a37b4068e0d3ce2de6783e3b4b00ae4be}{set\+\_\+epj}} (const int nj, const E\+P\+J\+\_\+t epj\mbox{[}$\,$\mbox{]})
+\item 
+void \mbox{\hyperlink{classPhantomGrapeQuad_a71827ad91adb544c807c6d9da5b656b8}{set\+\_\+spj\+\_\+one}} (const int addr, const double x, const double y, const double z, const double m, const double qxx, const double qyy, const double qzz, const double qxy, const double qyz, const double qzx)
+\item 
+{\footnotesize template$<$typename S\+P\+J\+\_\+t $>$ }\\void \mbox{\hyperlink{classPhantomGrapeQuad_a990fb670fa631cd60579abd2f9698592}{set\+\_\+spj}} (const int nj, const S\+P\+J\+\_\+t spj\mbox{[}$\,$\mbox{]})
+\item 
+void \mbox{\hyperlink{classPhantomGrapeQuad_a166448ffe16034085c6ec5fac45b599d}{set\+\_\+xi\+\_\+one}} (const int addr, const double x, const double y, const double z, const double r\+\_\+search)
+\item 
+{\footnotesize template$<$typename E\+P\+I\+\_\+t $>$ }\\void \mbox{\hyperlink{classPhantomGrapeQuad_af692dd584d3240820f613b756899dd6c}{set\+\_\+xi}} (const int ni, const E\+P\+I\+\_\+t spj\mbox{[}$\,$\mbox{]})
+\item 
+{\footnotesize template$<$typename real\+\_\+t $>$ }\\void \mbox{\hyperlink{classPhantomGrapeQuad_abe360e7a15d8925fbe353ee0de4800f6}{get\+\_\+accp\+\_\+one}} (const int addr, real\+\_\+t \&ax, real\+\_\+t \&ay, real\+\_\+t \&az, real\+\_\+t \&pot)
+\item 
+{\footnotesize template$<$typename real\+\_\+t $>$ }\\void \mbox{\hyperlink{classPhantomGrapeQuad_ad3bada74be2fd462ad6bc7436a1a2aff}{get\+\_\+accp\+\_\+one}} (const int addr, real\+\_\+t \&ax, real\+\_\+t \&ay, real\+\_\+t \&az, real\+\_\+t \&pot, real\+\_\+t \&nngb)
+\item 
+{\footnotesize template$<$typename real\+\_\+t $>$ }\\void \mbox{\hyperlink{classPhantomGrapeQuad_a41fb5578294c3ec07e10835246f53fbd}{accum\+\_\+accp\+\_\+one}} (const int addr, real\+\_\+t \&ax, real\+\_\+t \&ay, real\+\_\+t \&az, real\+\_\+t \&pot)
+\item 
+{\footnotesize template$<$typename real\+\_\+t $>$ }\\void \mbox{\hyperlink{classPhantomGrapeQuad_af36b8097b2442d3e4c4635cf765b8ef7}{accum\+\_\+accp\+\_\+one}} (const int addr, real\+\_\+t \&ax, real\+\_\+t \&ay, real\+\_\+t \&az, real\+\_\+t \&pot, real\+\_\+t \&nngb)
+\item 
+void \mbox{\hyperlink{classPhantomGrapeQuad_a68b135fe28235143061518be2cafbfee}{run\+\_\+epj}} (const int ni, const int nj)
+\item 
+void \mbox{\hyperlink{classPhantomGrapeQuad_abec53e8037f39f3f628a9cb3c96672aa}{run\+\_\+epj\+\_\+for\+\_\+p3t\+\_\+with\+\_\+linear\+\_\+cutoff}} (const int ni, const int nj)
+\item 
+void \mbox{\hyperlink{classPhantomGrapeQuad_a7a6ef2e89e218a5b2cbaa5e4e84acfeb}{run\+\_\+spj}} (const int ni, const int nj)
+\item 
+\mbox{\hyperlink{classPhantomGrapeQuad_a88473c2a65922d0b4fc5684269e815e5}{Phantom\+Grape\+Quad}} ()
+\item 
+void \mbox{\hyperlink{classPhantomGrapeQuad_a27280675f9fc272c3c4ece62e319097a}{set\+\_\+eps2}} (const double \+\_\+eps2)
+\item 
+void \mbox{\hyperlink{classPhantomGrapeQuad_a0a52434a193d7b3c7db20963a03762b6}{set\+\_\+r\+\_\+crit2}} (const double \+\_\+r\+\_\+crit2)
+\item 
+void \mbox{\hyperlink{classPhantomGrapeQuad_a7b9aab0edd6d54f10816b09b81a57166}{set\+\_\+epj\+\_\+one}} (const int addr, const double x, const double y, const double z, const double m, const double r\+\_\+search)
+\item 
+void \mbox{\hyperlink{classPhantomGrapeQuad_a71827ad91adb544c807c6d9da5b656b8}{set\+\_\+spj\+\_\+one}} (const int addr, const double x, const double y, const double z, const double m, const double qxx, const double qyy, const double qzz, const double qxy, const double qyz, const double qzx)
+\item 
+void \mbox{\hyperlink{classPhantomGrapeQuad_a166448ffe16034085c6ec5fac45b599d}{set\+\_\+xi\+\_\+one}} (const int addr, const double x, const double y, const double z, const double r\+\_\+search)
+\item 
+{\footnotesize template$<$typename real\+\_\+t $>$ }\\void \mbox{\hyperlink{classPhantomGrapeQuad_a41fb5578294c3ec07e10835246f53fbd}{accum\+\_\+accp\+\_\+one}} (const int addr, real\+\_\+t \&ax, real\+\_\+t \&ay, real\+\_\+t \&az, real\+\_\+t \&pot)
+\item 
+{\footnotesize template$<$typename real\+\_\+t $>$ }\\void \mbox{\hyperlink{classPhantomGrapeQuad_af36b8097b2442d3e4c4635cf765b8ef7}{accum\+\_\+accp\+\_\+one}} (const int addr, real\+\_\+t \&ax, real\+\_\+t \&ay, real\+\_\+t \&az, real\+\_\+t \&pot, real\+\_\+t \&nngb)
+\item 
+{\footnotesize template$<$typename real\+\_\+t $>$ }\\void \mbox{\hyperlink{classPhantomGrapeQuad_a931b5e5791c12bd4d375431f22d5fdf4}{accum\+\_\+accp\+\_\+one}} (const int addr, real\+\_\+t \&nngb)
+\item 
+{\footnotesize template$<$typename real\+\_\+t $>$ }\\void \mbox{\hyperlink{classPhantomGrapeQuad_ad3bada74be2fd462ad6bc7436a1a2aff}{get\+\_\+accp\+\_\+one}} (const int addr, real\+\_\+t \&ax, real\+\_\+t \&ay, real\+\_\+t \&az, real\+\_\+t \&pot, real\+\_\+t \&nngb)
+\item 
+void \mbox{\hyperlink{classPhantomGrapeQuad_abec53e8037f39f3f628a9cb3c96672aa}{run\+\_\+epj\+\_\+for\+\_\+p3t\+\_\+with\+\_\+linear\+\_\+cutoff}} (const int ni, const int nj)
+\item 
+void \mbox{\hyperlink{classPhantomGrapeQuad_a87eb4e4e9af2d8c086e567361ee06a98}{run\+\_\+epj\+\_\+for\+\_\+neighbor\+\_\+count}} (const int ni, const int nj)
+\item 
+void \mbox{\hyperlink{classPhantomGrapeQuad_a68b135fe28235143061518be2cafbfee}{run\+\_\+epj}} (const int ni, const int nj)
+\item 
+void \mbox{\hyperlink{classPhantomGrapeQuad_a7a6ef2e89e218a5b2cbaa5e4e84acfeb}{run\+\_\+spj}} (const int ni, const int nj)
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+enum Phantom\+Grape\+Quad\+:: \{ ... \}  \mbox{\hyperlink{classPhantomGrapeQuad_aad35281ff10595e6adc34348bb7a294a}{\+\_\+\+\_\+attribute\+\_\+\+\_\+}}
+\item 
+enum Phantom\+Grape\+Quad\+:: \{ ... \}  \mbox{\hyperlink{classPhantomGrapeQuad_ac8f4fc716db57551abbd90f55998723d}{\+\_\+\+\_\+attribute\+\_\+\+\_\+}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Member Enumeration Documentation}
+\mbox{\Hypertarget{classPhantomGrapeQuad_ab68ee1e32e06145a56c7e114539d6e04}\label{classPhantomGrapeQuad_ab68ee1e32e06145a56c7e114539d6e04}} 
+\doxysubsubsection{\texorpdfstring{anonymous enum}{anonymous enum}}
+{\footnotesize\ttfamily anonymous enum}
+
+\begin{DoxyEnumFields}{Enumerator}
+\raisebox{\heightof{T}}[0pt][0pt]{\index{NIMAX@{NIMAX}!PhantomGrapeQuad@{PhantomGrapeQuad}}\index{PhantomGrapeQuad@{PhantomGrapeQuad}!NIMAX@{NIMAX}}}\mbox{\Hypertarget{classPhantomGrapeQuad_a575a96b3649db45883d126bb3ddee9f1a8ecf94d5ff53108b51293bdce063b37d}\label{classPhantomGrapeQuad_a575a96b3649db45883d126bb3ddee9f1a8ecf94d5ff53108b51293bdce063b37d}} 
+N\+I\+M\+AX&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{NJMAX@{NJMAX}!PhantomGrapeQuad@{PhantomGrapeQuad}}\index{PhantomGrapeQuad@{PhantomGrapeQuad}!NJMAX@{NJMAX}}}\mbox{\Hypertarget{classPhantomGrapeQuad_a575a96b3649db45883d126bb3ddee9f1ac27af9f0fda44506e6d29a6073fb1cfa}\label{classPhantomGrapeQuad_a575a96b3649db45883d126bb3ddee9f1ac27af9f0fda44506e6d29a6073fb1cfa}} 
+N\+J\+M\+AX&\\
+\hline
+
+\end{DoxyEnumFields}
+\mbox{\Hypertarget{classPhantomGrapeQuad_a575a96b3649db45883d126bb3ddee9f1}\label{classPhantomGrapeQuad_a575a96b3649db45883d126bb3ddee9f1}} 
+\doxysubsubsection{\texorpdfstring{anonymous enum}{anonymous enum}}
+{\footnotesize\ttfamily anonymous enum}
+
+\begin{DoxyEnumFields}{Enumerator}
+\raisebox{\heightof{T}}[0pt][0pt]{\index{NIMAX@{NIMAX}!PhantomGrapeQuad@{PhantomGrapeQuad}}\index{PhantomGrapeQuad@{PhantomGrapeQuad}!NIMAX@{NIMAX}}}\mbox{\Hypertarget{classPhantomGrapeQuad_a575a96b3649db45883d126bb3ddee9f1a8ecf94d5ff53108b51293bdce063b37d}\label{classPhantomGrapeQuad_a575a96b3649db45883d126bb3ddee9f1a8ecf94d5ff53108b51293bdce063b37d}} 
+N\+I\+M\+AX&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{NJMAX@{NJMAX}!PhantomGrapeQuad@{PhantomGrapeQuad}}\index{PhantomGrapeQuad@{PhantomGrapeQuad}!NJMAX@{NJMAX}}}\mbox{\Hypertarget{classPhantomGrapeQuad_a575a96b3649db45883d126bb3ddee9f1ac27af9f0fda44506e6d29a6073fb1cfa}\label{classPhantomGrapeQuad_a575a96b3649db45883d126bb3ddee9f1ac27af9f0fda44506e6d29a6073fb1cfa}} 
+N\+J\+M\+AX&\\
+\hline
+
+\end{DoxyEnumFields}
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classPhantomGrapeQuad_a88473c2a65922d0b4fc5684269e815e5}\label{classPhantomGrapeQuad_a88473c2a65922d0b4fc5684269e815e5}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{PhantomGrapeQuad()}{PhantomGrapeQuad()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily Phantom\+Grape\+Quad\+::\+Phantom\+Grape\+Quad (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a88473c2a65922d0b4fc5684269e815e5}\label{classPhantomGrapeQuad_a88473c2a65922d0b4fc5684269e815e5}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{PhantomGrapeQuad()}{PhantomGrapeQuad()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily Phantom\+Grape\+Quad\+::\+Phantom\+Grape\+Quad (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classPhantomGrapeQuad_a41fb5578294c3ec07e10835246f53fbd}\label{classPhantomGrapeQuad_a41fb5578294c3ec07e10835246f53fbd}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!accum\_accp\_one@{accum\_accp\_one}}
+\index{accum\_accp\_one@{accum\_accp\_one}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{accum\_accp\_one()}{accum\_accp\_one()}\hspace{0.1cm}{\footnotesize\ttfamily [1/5]}}
+{\footnotesize\ttfamily template$<$typename real\+\_\+t $>$ \\
+void Phantom\+Grape\+Quad\+::accum\+\_\+accp\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{real\+\_\+t \&}]{ax,  }\item[{real\+\_\+t \&}]{ay,  }\item[{real\+\_\+t \&}]{az,  }\item[{real\+\_\+t \&}]{pot }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a41fb5578294c3ec07e10835246f53fbd}\label{classPhantomGrapeQuad_a41fb5578294c3ec07e10835246f53fbd}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!accum\_accp\_one@{accum\_accp\_one}}
+\index{accum\_accp\_one@{accum\_accp\_one}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{accum\_accp\_one()}{accum\_accp\_one()}\hspace{0.1cm}{\footnotesize\ttfamily [2/5]}}
+{\footnotesize\ttfamily template$<$typename real\+\_\+t $>$ \\
+void Phantom\+Grape\+Quad\+::accum\+\_\+accp\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{real\+\_\+t \&}]{ax,  }\item[{real\+\_\+t \&}]{ay,  }\item[{real\+\_\+t \&}]{az,  }\item[{real\+\_\+t \&}]{pot }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_af36b8097b2442d3e4c4635cf765b8ef7}\label{classPhantomGrapeQuad_af36b8097b2442d3e4c4635cf765b8ef7}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!accum\_accp\_one@{accum\_accp\_one}}
+\index{accum\_accp\_one@{accum\_accp\_one}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{accum\_accp\_one()}{accum\_accp\_one()}\hspace{0.1cm}{\footnotesize\ttfamily [3/5]}}
+{\footnotesize\ttfamily template$<$typename real\+\_\+t $>$ \\
+void Phantom\+Grape\+Quad\+::accum\+\_\+accp\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{real\+\_\+t \&}]{ax,  }\item[{real\+\_\+t \&}]{ay,  }\item[{real\+\_\+t \&}]{az,  }\item[{real\+\_\+t \&}]{pot,  }\item[{real\+\_\+t \&}]{nngb }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_af36b8097b2442d3e4c4635cf765b8ef7}\label{classPhantomGrapeQuad_af36b8097b2442d3e4c4635cf765b8ef7}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!accum\_accp\_one@{accum\_accp\_one}}
+\index{accum\_accp\_one@{accum\_accp\_one}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{accum\_accp\_one()}{accum\_accp\_one()}\hspace{0.1cm}{\footnotesize\ttfamily [4/5]}}
+{\footnotesize\ttfamily template$<$typename real\+\_\+t $>$ \\
+void Phantom\+Grape\+Quad\+::accum\+\_\+accp\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{real\+\_\+t \&}]{ax,  }\item[{real\+\_\+t \&}]{ay,  }\item[{real\+\_\+t \&}]{az,  }\item[{real\+\_\+t \&}]{pot,  }\item[{real\+\_\+t \&}]{nngb }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a931b5e5791c12bd4d375431f22d5fdf4}\label{classPhantomGrapeQuad_a931b5e5791c12bd4d375431f22d5fdf4}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!accum\_accp\_one@{accum\_accp\_one}}
+\index{accum\_accp\_one@{accum\_accp\_one}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{accum\_accp\_one()}{accum\_accp\_one()}\hspace{0.1cm}{\footnotesize\ttfamily [5/5]}}
+{\footnotesize\ttfamily template$<$typename real\+\_\+t $>$ \\
+void Phantom\+Grape\+Quad\+::accum\+\_\+accp\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{real\+\_\+t \&}]{nngb }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_abe360e7a15d8925fbe353ee0de4800f6}\label{classPhantomGrapeQuad_abe360e7a15d8925fbe353ee0de4800f6}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!get\_accp\_one@{get\_accp\_one}}
+\index{get\_accp\_one@{get\_accp\_one}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{get\_accp\_one()}{get\_accp\_one()}\hspace{0.1cm}{\footnotesize\ttfamily [1/3]}}
+{\footnotesize\ttfamily template$<$typename real\+\_\+t $>$ \\
+void Phantom\+Grape\+Quad\+::get\+\_\+accp\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{real\+\_\+t \&}]{ax,  }\item[{real\+\_\+t \&}]{ay,  }\item[{real\+\_\+t \&}]{az,  }\item[{real\+\_\+t \&}]{pot }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_ad3bada74be2fd462ad6bc7436a1a2aff}\label{classPhantomGrapeQuad_ad3bada74be2fd462ad6bc7436a1a2aff}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!get\_accp\_one@{get\_accp\_one}}
+\index{get\_accp\_one@{get\_accp\_one}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{get\_accp\_one()}{get\_accp\_one()}\hspace{0.1cm}{\footnotesize\ttfamily [2/3]}}
+{\footnotesize\ttfamily template$<$typename real\+\_\+t $>$ \\
+void Phantom\+Grape\+Quad\+::get\+\_\+accp\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{real\+\_\+t \&}]{ax,  }\item[{real\+\_\+t \&}]{ay,  }\item[{real\+\_\+t \&}]{az,  }\item[{real\+\_\+t \&}]{pot,  }\item[{real\+\_\+t \&}]{nngb }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_ad3bada74be2fd462ad6bc7436a1a2aff}\label{classPhantomGrapeQuad_ad3bada74be2fd462ad6bc7436a1a2aff}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!get\_accp\_one@{get\_accp\_one}}
+\index{get\_accp\_one@{get\_accp\_one}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{get\_accp\_one()}{get\_accp\_one()}\hspace{0.1cm}{\footnotesize\ttfamily [3/3]}}
+{\footnotesize\ttfamily template$<$typename real\+\_\+t $>$ \\
+void Phantom\+Grape\+Quad\+::get\+\_\+accp\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{real\+\_\+t \&}]{ax,  }\item[{real\+\_\+t \&}]{ay,  }\item[{real\+\_\+t \&}]{az,  }\item[{real\+\_\+t \&}]{pot,  }\item[{real\+\_\+t \&}]{nngb }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a68b135fe28235143061518be2cafbfee}\label{classPhantomGrapeQuad_a68b135fe28235143061518be2cafbfee}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!run\_epj@{run\_epj}}
+\index{run\_epj@{run\_epj}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{run\_epj()}{run\_epj()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily void Phantom\+Grape\+Quad\+::run\+\_\+epj (\begin{DoxyParamCaption}\item[{const int}]{ni,  }\item[{const int}]{nj }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a68b135fe28235143061518be2cafbfee}\label{classPhantomGrapeQuad_a68b135fe28235143061518be2cafbfee}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!run\_epj@{run\_epj}}
+\index{run\_epj@{run\_epj}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{run\_epj()}{run\_epj()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily void Phantom\+Grape\+Quad\+::run\+\_\+epj (\begin{DoxyParamCaption}\item[{const int}]{ni,  }\item[{const int}]{nj }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a87eb4e4e9af2d8c086e567361ee06a98}\label{classPhantomGrapeQuad_a87eb4e4e9af2d8c086e567361ee06a98}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!run\_epj\_for\_neighbor\_count@{run\_epj\_for\_neighbor\_count}}
+\index{run\_epj\_for\_neighbor\_count@{run\_epj\_for\_neighbor\_count}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{run\_epj\_for\_neighbor\_count()}{run\_epj\_for\_neighbor\_count()}}
+{\footnotesize\ttfamily void Phantom\+Grape\+Quad\+::run\+\_\+epj\+\_\+for\+\_\+neighbor\+\_\+count (\begin{DoxyParamCaption}\item[{const int}]{ni,  }\item[{const int}]{nj }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_abec53e8037f39f3f628a9cb3c96672aa}\label{classPhantomGrapeQuad_abec53e8037f39f3f628a9cb3c96672aa}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!run\_epj\_for\_p3t\_with\_linear\_cutoff@{run\_epj\_for\_p3t\_with\_linear\_cutoff}}
+\index{run\_epj\_for\_p3t\_with\_linear\_cutoff@{run\_epj\_for\_p3t\_with\_linear\_cutoff}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{run\_epj\_for\_p3t\_with\_linear\_cutoff()}{run\_epj\_for\_p3t\_with\_linear\_cutoff()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily void Phantom\+Grape\+Quad\+::run\+\_\+epj\+\_\+for\+\_\+p3t\+\_\+with\+\_\+linear\+\_\+cutoff (\begin{DoxyParamCaption}\item[{const int}]{ni,  }\item[{const int}]{nj }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_abec53e8037f39f3f628a9cb3c96672aa}\label{classPhantomGrapeQuad_abec53e8037f39f3f628a9cb3c96672aa}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!run\_epj\_for\_p3t\_with\_linear\_cutoff@{run\_epj\_for\_p3t\_with\_linear\_cutoff}}
+\index{run\_epj\_for\_p3t\_with\_linear\_cutoff@{run\_epj\_for\_p3t\_with\_linear\_cutoff}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{run\_epj\_for\_p3t\_with\_linear\_cutoff()}{run\_epj\_for\_p3t\_with\_linear\_cutoff()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily void Phantom\+Grape\+Quad\+::run\+\_\+epj\+\_\+for\+\_\+p3t\+\_\+with\+\_\+linear\+\_\+cutoff (\begin{DoxyParamCaption}\item[{const int}]{ni,  }\item[{const int}]{nj }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a7a6ef2e89e218a5b2cbaa5e4e84acfeb}\label{classPhantomGrapeQuad_a7a6ef2e89e218a5b2cbaa5e4e84acfeb}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!run\_spj@{run\_spj}}
+\index{run\_spj@{run\_spj}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{run\_spj()}{run\_spj()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily void Phantom\+Grape\+Quad\+::run\+\_\+spj (\begin{DoxyParamCaption}\item[{const int}]{ni,  }\item[{const int}]{nj }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a7a6ef2e89e218a5b2cbaa5e4e84acfeb}\label{classPhantomGrapeQuad_a7a6ef2e89e218a5b2cbaa5e4e84acfeb}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!run\_spj@{run\_spj}}
+\index{run\_spj@{run\_spj}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{run\_spj()}{run\_spj()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily void Phantom\+Grape\+Quad\+::run\+\_\+spj (\begin{DoxyParamCaption}\item[{const int}]{ni,  }\item[{const int}]{nj }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a7623464a19889be5b75a32bb02e8744b}\label{classPhantomGrapeQuad_a7623464a19889be5b75a32bb02e8744b}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!set\_cutoff@{set\_cutoff}}
+\index{set\_cutoff@{set\_cutoff}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{set\_cutoff()}{set\_cutoff()}}
+{\footnotesize\ttfamily void Phantom\+Grape\+Quad\+::set\+\_\+cutoff (\begin{DoxyParamCaption}\item[{const double}]{\+\_\+r\+\_\+out,  }\item[{const double}]{\+\_\+r\+\_\+in }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a37b4068e0d3ce2de6783e3b4b00ae4be}\label{classPhantomGrapeQuad_a37b4068e0d3ce2de6783e3b4b00ae4be}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!set\_epj@{set\_epj}}
+\index{set\_epj@{set\_epj}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{set\_epj()}{set\_epj()}}
+{\footnotesize\ttfamily template$<$typename E\+P\+J\+\_\+t $>$ \\
+void Phantom\+Grape\+Quad\+::set\+\_\+epj (\begin{DoxyParamCaption}\item[{const int}]{nj,  }\item[{const E\+P\+J\+\_\+t}]{epj\mbox{[}$\,$\mbox{]} }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a7b9aab0edd6d54f10816b09b81a57166}\label{classPhantomGrapeQuad_a7b9aab0edd6d54f10816b09b81a57166}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!set\_epj\_one@{set\_epj\_one}}
+\index{set\_epj\_one@{set\_epj\_one}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{set\_epj\_one()}{set\_epj\_one()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily void Phantom\+Grape\+Quad\+::set\+\_\+epj\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{const double}]{x,  }\item[{const double}]{y,  }\item[{const double}]{z,  }\item[{const double}]{m,  }\item[{const double}]{r\+\_\+search }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a7b9aab0edd6d54f10816b09b81a57166}\label{classPhantomGrapeQuad_a7b9aab0edd6d54f10816b09b81a57166}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!set\_epj\_one@{set\_epj\_one}}
+\index{set\_epj\_one@{set\_epj\_one}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{set\_epj\_one()}{set\_epj\_one()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily void Phantom\+Grape\+Quad\+::set\+\_\+epj\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{const double}]{x,  }\item[{const double}]{y,  }\item[{const double}]{z,  }\item[{const double}]{m,  }\item[{const double}]{r\+\_\+search }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a27280675f9fc272c3c4ece62e319097a}\label{classPhantomGrapeQuad_a27280675f9fc272c3c4ece62e319097a}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!set\_eps2@{set\_eps2}}
+\index{set\_eps2@{set\_eps2}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{set\_eps2()}{set\_eps2()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily void Phantom\+Grape\+Quad\+::set\+\_\+eps2 (\begin{DoxyParamCaption}\item[{const double}]{\+\_\+eps2 }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a27280675f9fc272c3c4ece62e319097a}\label{classPhantomGrapeQuad_a27280675f9fc272c3c4ece62e319097a}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!set\_eps2@{set\_eps2}}
+\index{set\_eps2@{set\_eps2}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{set\_eps2()}{set\_eps2()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily void Phantom\+Grape\+Quad\+::set\+\_\+eps2 (\begin{DoxyParamCaption}\item[{const double}]{\+\_\+eps2 }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a0a52434a193d7b3c7db20963a03762b6}\label{classPhantomGrapeQuad_a0a52434a193d7b3c7db20963a03762b6}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!set\_r\_crit2@{set\_r\_crit2}}
+\index{set\_r\_crit2@{set\_r\_crit2}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{set\_r\_crit2()}{set\_r\_crit2()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily void Phantom\+Grape\+Quad\+::set\+\_\+r\+\_\+crit2 (\begin{DoxyParamCaption}\item[{const double}]{\+\_\+r\+\_\+crit2 }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a0a52434a193d7b3c7db20963a03762b6}\label{classPhantomGrapeQuad_a0a52434a193d7b3c7db20963a03762b6}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!set\_r\_crit2@{set\_r\_crit2}}
+\index{set\_r\_crit2@{set\_r\_crit2}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{set\_r\_crit2()}{set\_r\_crit2()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily void Phantom\+Grape\+Quad\+::set\+\_\+r\+\_\+crit2 (\begin{DoxyParamCaption}\item[{const double}]{\+\_\+r\+\_\+crit2 }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a990fb670fa631cd60579abd2f9698592}\label{classPhantomGrapeQuad_a990fb670fa631cd60579abd2f9698592}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!set\_spj@{set\_spj}}
+\index{set\_spj@{set\_spj}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{set\_spj()}{set\_spj()}}
+{\footnotesize\ttfamily template$<$typename S\+P\+J\+\_\+t $>$ \\
+void Phantom\+Grape\+Quad\+::set\+\_\+spj (\begin{DoxyParamCaption}\item[{const int}]{nj,  }\item[{const S\+P\+J\+\_\+t}]{spj\mbox{[}$\,$\mbox{]} }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a71827ad91adb544c807c6d9da5b656b8}\label{classPhantomGrapeQuad_a71827ad91adb544c807c6d9da5b656b8}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!set\_spj\_one@{set\_spj\_one}}
+\index{set\_spj\_one@{set\_spj\_one}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{set\_spj\_one()}{set\_spj\_one()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily void Phantom\+Grape\+Quad\+::set\+\_\+spj\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{const double}]{x,  }\item[{const double}]{y,  }\item[{const double}]{z,  }\item[{const double}]{m,  }\item[{const double}]{qxx,  }\item[{const double}]{qyy,  }\item[{const double}]{qzz,  }\item[{const double}]{qxy,  }\item[{const double}]{qyz,  }\item[{const double}]{qzx }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a71827ad91adb544c807c6d9da5b656b8}\label{classPhantomGrapeQuad_a71827ad91adb544c807c6d9da5b656b8}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!set\_spj\_one@{set\_spj\_one}}
+\index{set\_spj\_one@{set\_spj\_one}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{set\_spj\_one()}{set\_spj\_one()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily void Phantom\+Grape\+Quad\+::set\+\_\+spj\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{const double}]{x,  }\item[{const double}]{y,  }\item[{const double}]{z,  }\item[{const double}]{m,  }\item[{const double}]{qxx,  }\item[{const double}]{qyy,  }\item[{const double}]{qzz,  }\item[{const double}]{qxy,  }\item[{const double}]{qyz,  }\item[{const double}]{qzx }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_af692dd584d3240820f613b756899dd6c}\label{classPhantomGrapeQuad_af692dd584d3240820f613b756899dd6c}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!set\_xi@{set\_xi}}
+\index{set\_xi@{set\_xi}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{set\_xi()}{set\_xi()}}
+{\footnotesize\ttfamily template$<$typename E\+P\+I\+\_\+t $>$ \\
+void Phantom\+Grape\+Quad\+::set\+\_\+xi (\begin{DoxyParamCaption}\item[{const int}]{ni,  }\item[{const E\+P\+I\+\_\+t}]{spj\mbox{[}$\,$\mbox{]} }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a166448ffe16034085c6ec5fac45b599d}\label{classPhantomGrapeQuad_a166448ffe16034085c6ec5fac45b599d}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!set\_xi\_one@{set\_xi\_one}}
+\index{set\_xi\_one@{set\_xi\_one}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{set\_xi\_one()}{set\_xi\_one()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily void Phantom\+Grape\+Quad\+::set\+\_\+xi\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{const double}]{x,  }\item[{const double}]{y,  }\item[{const double}]{z,  }\item[{const double}]{r\+\_\+search }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_a166448ffe16034085c6ec5fac45b599d}\label{classPhantomGrapeQuad_a166448ffe16034085c6ec5fac45b599d}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!set\_xi\_one@{set\_xi\_one}}
+\index{set\_xi\_one@{set\_xi\_one}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{set\_xi\_one()}{set\_xi\_one()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily void Phantom\+Grape\+Quad\+::set\+\_\+xi\+\_\+one (\begin{DoxyParamCaption}\item[{const int}]{addr,  }\item[{const double}]{x,  }\item[{const double}]{y,  }\item[{const double}]{z,  }\item[{const double}]{r\+\_\+search }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classPhantomGrapeQuad_aad35281ff10595e6adc34348bb7a294a}\label{classPhantomGrapeQuad_aad35281ff10595e6adc34348bb7a294a}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!\_\_attribute\_\_@{\_\_attribute\_\_}}
+\index{\_\_attribute\_\_@{\_\_attribute\_\_}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{\_\_attribute\_\_}{\_\_attribute\_\_}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily enum \{ ... \}  Phantom\+Grape\+Quad\+::\+\_\+\+\_\+attribute\+\_\+\+\_\+}
+
+\mbox{\Hypertarget{classPhantomGrapeQuad_ac8f4fc716db57551abbd90f55998723d}\label{classPhantomGrapeQuad_ac8f4fc716db57551abbd90f55998723d}} 
+\index{PhantomGrapeQuad@{PhantomGrapeQuad}!\_\_attribute\_\_@{\_\_attribute\_\_}}
+\index{\_\_attribute\_\_@{\_\_attribute\_\_}!PhantomGrapeQuad@{PhantomGrapeQuad}}
+\doxysubsubsection{\texorpdfstring{\_\_attribute\_\_}{\_\_attribute\_\_}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily enum \{ ... \}  Phantom\+Grape\+Quad\+::\+\_\+\+\_\+attribute\+\_\+\+\_\+}
+
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{phantomquad__for__p3t__k_8hpp}{phantomquad\+\_\+for\+\_\+p3t\+\_\+k.\+hpp}}\item 
+\mbox{\hyperlink{phantomquad__for__p3t__x86_8hpp}{phantomquad\+\_\+for\+\_\+p3t\+\_\+x86.\+hpp}}\end{DoxyCompactItemize}

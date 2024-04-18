@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -8,6 +9,7 @@
 #include <cmath>
 #include <algorithm>
 #include "../src/io.hpp"
+#include "../src/astro_units.hpp"
 
 #include <integrateFullOrbit.h>
 
@@ -154,7 +156,7 @@ public:
 
     //! set Bovy unit scale factor (solar distance and velocityr referring to the Galactic center) converge from astronomical unit set (Myr, Msun, pc)
     void setBovyUnit(const bool print_flag=true) {
-        double kms_pcmyr=1.022712165045695; // pc = 30856775814913673 m, yr = 365.25 days
+        double kms_pcmyr = KMS_TO_PCMYR; 
         double vbase=220.0;
         double rbase=8.0;
         double vb_pcmyr = vbase*kms_pcmyr;
@@ -500,7 +502,7 @@ public:
         double dt = _time-frw.time;
         frw.updateAwithDtmin(dt);
 
-        const double G_astro = 0.0044983099795944;  // Msun, pc, Myr
+        const double G_astro = G_ASTRO;  // Msun, pc, Myr
         const double pi = 3.141592653589793;
 
         double z = 1/frw.a-1; // redshift
@@ -1430,6 +1432,7 @@ public:
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         }
         broadcastDataMPI();
+        PS::Comm::broadcast(&nset, 1, 0);
 #endif        
         return (nset>=0);
     }
@@ -1566,7 +1569,8 @@ public:
                         dz = pos_k[2]-pos_j[2];
                     }
                     double rxy= std::sqrt(dx*dx+dy*dy);
-                    double phi= std::acos(dx/rxy);
+                    //double phi= std::acos(dx/rxy);
+                    double phi= std::atan2(dy, dx);
                     double sinphi = dy/rxy;
                     double cosphi = dx/rxy;
                     auto& pot_args = pot_sets[j].arguments;
@@ -1625,7 +1629,7 @@ public:
                 double dy = y[i]-pos_k[1];
                 double dz = z[i]-pos_k[2];
                 double rxy= std::sqrt(dx*dx+dy*dy);
-                double phi= std::acos(dx/rxy);
+                double phi= std::atan2(dy, dx);
                 double sinphi = dy/rxy;
                 double cosphi = dx/rxy;
 
@@ -1637,6 +1641,7 @@ public:
 #else
                 double acc_phi = calcphitorque(rxy, dz, phi, t, npot, pot_args);
 #endif
+//                double pot_i = evaluatePotentials(rxy, dz, phi, t, npot, pot_args);
                 double pot_i = evaluatePotentials(rxy, dz, npot, pot_args);
                 double gm_pot = pot_set_pars[k].gm;
                 if (rxy>0.0) {
@@ -1670,6 +1675,45 @@ public:
         else {
             acc[0] = acc[1] = acc[2] = pot = 0.0;
         }
+    }
+
+    //! calculate density for given potential set
+    /*!
+      @param[in] _iset: potential set index
+      @param[in] _time: time in input unit
+      @param[in] pos_g: position of particles in the galactic frame [input unit]
+      @param[in] pos_l: position of particles in the particle system frame [input unit]
+     */
+    double calcSetDensity(const int _iset, const double _time, double* pos_g, const double* pos_l) {
+        assert(pot_sets.size()==pot_set_pars.size());
+        assert(_iset<int(pot_sets.size()));
+        double t = _time*tscale;
+
+        // galactic frame and rest frame of particle system
+        double x[2] = {pos_g[0]*rscale, pos_l[0]*rscale};
+        double y[2] = {pos_g[1]*rscale, pos_l[1]*rscale};
+        double z[2] = {pos_g[2]*rscale, pos_l[2]*rscale};
+        
+        int mode_k = pot_set_pars[_iset].mode;
+        assert(mode_k>=0||mode_k<=2);
+        int npot = pot_sets[_iset].npot;
+        double* pos_k = pot_set_pars[_iset].pos;
+        int i = (mode_k & 1); // get first bit to select frame (0: galactic; 1: rest)        
+        // frame is consistent 
+        double dx = x[i]-pos_k[0];
+        double dy = y[i]-pos_k[1];
+        double dz = z[i]-pos_k[2];
+        double rxy= std::sqrt(dx*dx+dy*dy);
+        double phi= std::acos(dx/rxy);
+
+        auto& pot_args = pot_sets[_iset].arguments;
+        double density = calcDensity(rxy, dz, phi, t, npot, pot_args);
+        return density;
+    }
+
+    //! get number of set
+    int getNSet() const {
+        return pot_set_pars.size();
     }
 
     //! write data for restart

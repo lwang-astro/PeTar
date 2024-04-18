@@ -1,0 +1,6 @@
+<map id="ArtificialParticleManager::getCMParticles" name="ArtificialParticleManager::getCMParticles">
+<area shape="rect" id="node1" title="get c.m. particle list address from a artificial particle array" alt="" coords="516,39,697,80"/>
+<area shape="rect" id="node2" href="$classArtificialParticleManager.html#abce1a403342631a9f4042213a71b9867" title="correct artificial particles force for furture use" alt="" coords="260,5,468,47"/>
+<area shape="rect" id="node4" href="$classArtificialParticleManager.html#a849acb19588a63ec450f606fd1bead3d" title="correct orbit&#45;samping/pseudo particles force" alt="" coords="263,71,465,112"/>
+<area shape="rect" id="node3" href="$classSystemHard.html#aaae0c65a7caa9679827b980b9e9f3c89" title="Soft force correction due to different cut&#45;off function." alt="" coords="5,5,212,47"/>
+</map>

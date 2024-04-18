@@ -1,0 +1,23 @@
+var searchData=
+[
+  ['safty_5ffactor_5ffor_5fsearch_1830',['SAFTY_FACTOR_FOR_SEARCH',['../ptcl_8hpp.html#a7f6537547057c2860d1749b24d1b92ce',1,'ptcl.hpp']]],
+  ['sd_5ffactor_1831',['sd_factor',['../classIOParamsPeTar.html#a459dc4dad034e4045a1f90db02c6ccd1',1,'IOParamsPeTar']]],
+  ['search_5fcluster_1832',['search_cluster',['../classSysProfile.html#ae277e507e601a1c650631e8521891ee4',1,'SysProfile']]],
+  ['search_5ffactor_1833',['search_factor',['../classPtcl.html#a452aeb749947f5076dc1ec44ce8b3119',1,'Ptcl']]],
+  ['search_5fperi_5ffactor_1834',['search_peri_factor',['../classIOParamsPeTar.html#a507d84b4fa5c50014cc866316598bf7d',1,'IOParamsPeTar']]],
+  ['search_5fvel_5ffactor_1835',['search_vel_factor',['../classIOParamsPeTar.html#af54beb9c2532976d48b0ae7bf3c7551c',1,'IOParamsPeTar']]],
+  ['semi_1836',['semi',['../structBinaryBase.html#a1f14aae507818acb2000d536546ffa86',1,'BinaryBase']]],
+  ['set_5fname_1837',['set_name',['../classGalpyManager.html#a251e44bc3eaf99cc2ce681fceb08b433',1,'GalpyManager']]],
+  ['set_5fparfile_1838',['set_parfile',['../classGalpyManager.html#a13b30c8bea8a66d38c8ec181ec562ac5',1,'GalpyManager']]],
+  ['shortargs_1839',['shortargs',['../namespacegalpy__help.html#ac59a72ed108ae9c62960f06f1b99c320',1,'galpy_help.shortargs()'],['../namespacegalpy__pot__movie.html#acf3ad836a17ff38584c76816fa86d379',1,'galpy_pot_movie.shortargs()']]],
+  ['single_5ftype_1840',['single_type',['../classBSEManager.html#ab44a11dcf5021176dfde906eda5acd42',1,'BSEManager']]],
+  ['size_1841',['size',['../structcudaPointer.html#a29ff9caea3ff414bfa11a5284b9981ff',1,'cudaPointer::size()'],['../classHardDumpList.html#ad181cd55f0e72a7f836add7583561a6b',1,'HardDumpList::size()']]],
+  ['soft_5fpert_1842',['soft_pert',['../classARPerturber.html#a51bad2a0a866c10a5d92cd1bfbe06fe2',1,'ARPerturber']]],
+  ['soft_5fpert_5fmin_1843',['soft_pert_min',['../classARPerturber.html#a58579ef3df0b03c921b76776e5419be3',1,'ARPerturber']]],
+  ['speed_5fof_5flight_1844',['speed_of_light',['../classTwoBodyTide.html#a4cfd66cc25d28b427fa2249ebfaec4d9',1,'TwoBodyTide']]],
+  ['stable_5fbinary_5ftree_1845',['stable_binary_tree',['../classStability.html#a4635884af0129706c41b875ae6acae29',1,'Stability']]],
+  ['star_1846',['star',['../structBinaryBase.html#af37efe8659e2a752856f4b59be6f5c32',1,'BinaryBase']]],
+  ['status_1847',['status',['../classSysProfile.html#a080ab81ebdc56f733efb7d544b2ca80a',1,'SysProfile']]],
+  ['step_5flimit_5far_1848',['step_limit_ar',['../classIOParamsPeTar.html#a07e17a0071402ddd7f49d9aa54230580',1,'IOParamsPeTar']]],
+  ['sym_5fint_1849',['sym_int',['../classHardIntegrator.html#a5320e53882643a9fceefc2bfb32094aa',1,'HardIntegrator']]]
+];

@@ -1,0 +1,251 @@
+\hypertarget{classTidalTensor}{}\doxysection{Tidal\+Tensor Class Reference}
+\label{classTidalTensor}\index{TidalTensor@{TidalTensor}}
+
+
+Tidal tensor perterbation for AR.  
+
+
+
+
+{\ttfamily \#include $<$tidal\+\_\+tensor.\+hpp$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classTidalTensor_a139ef9d66a37124307c6535d0f21c1e8}{Tidal\+Tensor}} ()
+\item 
+void \mbox{\hyperlink{classTidalTensor_aaa03fd738e0089df9725cdd074f1b198}{dump}} (F\+I\+LE $\ast$fp)
+\item 
+void \mbox{\hyperlink{classTidalTensor_acd9def6bb034b0281cfaed9c5ab6e537}{read}} (F\+I\+LE $\ast$fp)
+\item 
+void \mbox{\hyperlink{classTidalTensor_a07b6bf0e64821148ae1283f0138dff8a}{clear}} ()
+\item 
+{\footnotesize template$<$class Tptcl $>$ }\\void \mbox{\hyperlink{classTidalTensor_ab3e7b2dbbf72d3286064f02a26f62e11}{fit}} (Tptcl $\ast$\+\_\+ptcl\+\_\+tt, Tptcl \&\+\_\+ptcl\+\_\+cm, const P\+S\+::\+F64 \+\_\+size)
+\begin{DoxyCompactList}\small\item\em tidal tensor fitting function, \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classTidalTensor_a2b0e73979bc641fb3b4c1c904beea0c5}{shift\+CM}} (const P\+S\+::\+F64vec \&\+\_\+pos)
+\begin{DoxyCompactList}\small\item\em Shift c.\+m. to new reference position. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classTidalTensor_a194bfad70fb815225b58607f9b886f1c}{eval}} (P\+S\+::\+F64 $\ast$acc, const P\+S\+::\+F64vec \&\mbox{\hyperlink{classTidalTensor_a8c6b481b4ad0604a424ff5debe273a90}{pos}}) const
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classTidalTensor_a23afb761ff67797d1c910700c1d08559}{eval\+Pot}} (const P\+S\+::\+F64vec \&\mbox{\hyperlink{classTidalTensor_a8c6b481b4ad0604a424ff5debe273a90}{pos}}) const
+\item 
+void \mbox{\hyperlink{classTidalTensor_a311c71338eee6bf19837a69906d3e060}{print}} (std\+::ostream \&\+\_\+fout, const int \+\_\+width) const
+\end{DoxyCompactItemize}
+\doxysubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+{\footnotesize template$<$class Tptcl $>$ }\\static void \mbox{\hyperlink{classTidalTensor_ae6295f7e7456826be8d88457f79ec43f}{create\+Tidal\+Tensor\+Measure\+Particles}} (Tptcl $\ast$\+\_\+ptcl\+\_\+tt, const Tptcl \&\+\_\+ptcl\+\_\+cm, const P\+S\+::\+F64 \+\_\+size)
+\begin{DoxyCompactList}\small\item\em create tidal tensor measurement particles \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tptcl $>$ }\\static void \mbox{\hyperlink{classTidalTensor_a7065543715fe3b7d8322b7a145057ff2}{subtract\+C\+M\+Force}} (Tptcl $\ast$\+\_\+ptcl\+\_\+tt, const Tptcl \&\+\_\+ptcl\+\_\+cm)
+\begin{DoxyCompactList}\small\item\em subtract c.\+m. force from measure points \end{DoxyCompactList}\item 
+static P\+S\+::\+S32 \mbox{\hyperlink{classTidalTensor_a668eb0fe71a2fe1bdad53572a74d2224}{get\+ParticleN}} ()
+\begin{DoxyCompactList}\small\item\em get particle number \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+P\+S\+::\+F64vec \mbox{\hyperlink{classTidalTensor_a8c6b481b4ad0604a424ff5debe273a90}{pos}}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classTidalTensor_a15eb2ab9753ac8a91f3b6a5643060dbe}{group\+\_\+id}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Tidal tensor perterbation for AR. 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classTidalTensor_a139ef9d66a37124307c6535d0f21c1e8}\label{classTidalTensor_a139ef9d66a37124307c6535d0f21c1e8}} 
+\index{TidalTensor@{TidalTensor}!TidalTensor@{TidalTensor}}
+\index{TidalTensor@{TidalTensor}!TidalTensor@{TidalTensor}}
+\doxysubsubsection{\texorpdfstring{TidalTensor()}{TidalTensor()}}
+{\footnotesize\ttfamily Tidal\+Tensor\+::\+Tidal\+Tensor (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classTidalTensor_a07b6bf0e64821148ae1283f0138dff8a}\label{classTidalTensor_a07b6bf0e64821148ae1283f0138dff8a}} 
+\index{TidalTensor@{TidalTensor}!clear@{clear}}
+\index{clear@{clear}!TidalTensor@{TidalTensor}}
+\doxysubsubsection{\texorpdfstring{clear()}{clear()}}
+{\footnotesize\ttfamily void Tidal\+Tensor\+::clear (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classTidalTensor_ae6295f7e7456826be8d88457f79ec43f}\label{classTidalTensor_ae6295f7e7456826be8d88457f79ec43f}} 
+\index{TidalTensor@{TidalTensor}!createTidalTensorMeasureParticles@{createTidalTensorMeasureParticles}}
+\index{createTidalTensorMeasureParticles@{createTidalTensorMeasureParticles}!TidalTensor@{TidalTensor}}
+\doxysubsubsection{\texorpdfstring{createTidalTensorMeasureParticles()}{createTidalTensorMeasureParticles()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+static void Tidal\+Tensor\+::create\+Tidal\+Tensor\+Measure\+Particles (\begin{DoxyParamCaption}\item[{Tptcl $\ast$}]{\+\_\+ptcl\+\_\+tt,  }\item[{const Tptcl \&}]{\+\_\+ptcl\+\_\+cm,  }\item[{const P\+S\+::\+F64}]{\+\_\+size }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+create tidal tensor measurement particles 
+
+2nd order\+: creat 4 zero-\/mass particles at the corners of regular tentrahedron with edge size of 0.\+16$\ast$\+\_\+size. the cente is c.\+m. particle 3rd order\+: creat 8 zero-\/mass particles at the corners of cube with edge size of 0.\+16$\ast$\+\_\+size. the cente is c.\+m. particle 
+\begin{DoxyItemize}
+\item Assume \+\_\+size is the maximum length,
+\end{DoxyItemize}Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classTidalTensor_ae6295f7e7456826be8d88457f79ec43f_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classTidalTensor_ae6295f7e7456826be8d88457f79ec43f_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classTidalTensor_aaa03fd738e0089df9725cdd074f1b198}\label{classTidalTensor_aaa03fd738e0089df9725cdd074f1b198}} 
+\index{TidalTensor@{TidalTensor}!dump@{dump}}
+\index{dump@{dump}!TidalTensor@{TidalTensor}}
+\doxysubsubsection{\texorpdfstring{dump()}{dump()}}
+{\footnotesize\ttfamily void Tidal\+Tensor\+::dump (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{fp }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classTidalTensor_a194bfad70fb815225b58607f9b886f1c}\label{classTidalTensor_a194bfad70fb815225b58607f9b886f1c}} 
+\index{TidalTensor@{TidalTensor}!eval@{eval}}
+\index{eval@{eval}!TidalTensor@{TidalTensor}}
+\doxysubsubsection{\texorpdfstring{eval()}{eval()}}
+{\footnotesize\ttfamily void Tidal\+Tensor\+::eval (\begin{DoxyParamCaption}\item[{P\+S\+::\+F64 $\ast$}]{acc,  }\item[{const P\+S\+::\+F64vec \&}]{pos }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classTidalTensor_a194bfad70fb815225b58607f9b886f1c_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classTidalTensor_a23afb761ff67797d1c910700c1d08559}\label{classTidalTensor_a23afb761ff67797d1c910700c1d08559}} 
+\index{TidalTensor@{TidalTensor}!evalPot@{evalPot}}
+\index{evalPot@{evalPot}!TidalTensor@{TidalTensor}}
+\doxysubsubsection{\texorpdfstring{evalPot()}{evalPot()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Tidal\+Tensor\+::eval\+Pot (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64vec \&}]{pos }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classTidalTensor_ab3e7b2dbbf72d3286064f02a26f62e11}\label{classTidalTensor_ab3e7b2dbbf72d3286064f02a26f62e11}} 
+\index{TidalTensor@{TidalTensor}!fit@{fit}}
+\index{fit@{fit}!TidalTensor@{TidalTensor}}
+\doxysubsubsection{\texorpdfstring{fit()}{fit()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+void Tidal\+Tensor\+::fit (\begin{DoxyParamCaption}\item[{Tptcl $\ast$}]{\+\_\+ptcl\+\_\+tt,  }\item[{Tptcl \&}]{\+\_\+ptcl\+\_\+cm,  }\item[{const P\+S\+::\+F64}]{\+\_\+size }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+tidal tensor fitting function, 
+
+Symmetry T2\+: xx xy xz 0 1 2 yx yy yz 3(1) 4 5 zx zy zz 6(2) 7(5) 8
+
+General T2\+: xx xy xz 0 1 2 yx yy yz 3 4 5 zx zy zz 6 7 8
+
+Symmetry T3\+: xxx xxy xxz 0 1 2 xyx xyy xyz 1 3 4 xzx xzy xzz 2 4 5
+
+yxx yxy yxz 1 3 4 yyx yyy yyz 3 6 7 ~\newline
+ yzx yzy yzz 4 7 8
+
+zxx zxy zxz 2 4 5 zyx zyy zyz 4 7 8 zzx zzy zzz 5 8 9
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+ptcl\+\_\+tt} & tidal tensor measure particles \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+ptcl\+\_\+cm} & tidal tensor measure particle c.\+m. \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+size} & particle box size \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=341pt]{classTidalTensor_ab3e7b2dbbf72d3286064f02a26f62e11_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classTidalTensor_a668eb0fe71a2fe1bdad53572a74d2224}\label{classTidalTensor_a668eb0fe71a2fe1bdad53572a74d2224}} 
+\index{TidalTensor@{TidalTensor}!getParticleN@{getParticleN}}
+\index{getParticleN@{getParticleN}!TidalTensor@{TidalTensor}}
+\doxysubsubsection{\texorpdfstring{getParticleN()}{getParticleN()}}
+{\footnotesize\ttfamily static P\+S\+::\+S32 Tidal\+Tensor\+::get\+ParticleN (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+get particle number 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classTidalTensor_a668eb0fe71a2fe1bdad53572a74d2224_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classTidalTensor_a311c71338eee6bf19837a69906d3e060}\label{classTidalTensor_a311c71338eee6bf19837a69906d3e060}} 
+\index{TidalTensor@{TidalTensor}!print@{print}}
+\index{print@{print}!TidalTensor@{TidalTensor}}
+\doxysubsubsection{\texorpdfstring{print()}{print()}}
+{\footnotesize\ttfamily void Tidal\+Tensor\+::print (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classTidalTensor_acd9def6bb034b0281cfaed9c5ab6e537}\label{classTidalTensor_acd9def6bb034b0281cfaed9c5ab6e537}} 
+\index{TidalTensor@{TidalTensor}!read@{read}}
+\index{read@{read}!TidalTensor@{TidalTensor}}
+\doxysubsubsection{\texorpdfstring{read()}{read()}}
+{\footnotesize\ttfamily void Tidal\+Tensor\+::read (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{fp }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classTidalTensor_a2b0e73979bc641fb3b4c1c904beea0c5}\label{classTidalTensor_a2b0e73979bc641fb3b4c1c904beea0c5}} 
+\index{TidalTensor@{TidalTensor}!shiftCM@{shiftCM}}
+\index{shiftCM@{shiftCM}!TidalTensor@{TidalTensor}}
+\doxysubsubsection{\texorpdfstring{shiftCM()}{shiftCM()}}
+{\footnotesize\ttfamily void Tidal\+Tensor\+::shift\+CM (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64vec \&}]{\+\_\+pos }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Shift c.\+m. to new reference position. 
+
+Only the 1st order tensor need a correction from 2nd order\hypertarget{classTidalTensor_autotoc_md0}{}\doxyparagraph{1st order\+:}\label{classTidalTensor_autotoc_md0}
+T2\+: xx xy xz 0 1 2 yx yy yz 3 4 5 zx zy zz 6 7 8\hypertarget{classTidalTensor_autotoc_md1}{}\doxyparagraph{2nd order\+:}\label{classTidalTensor_autotoc_md1}
+xxx xxy xxz 0 1 2 xyx xyy xyz 1 3 4 xzx xzy xzz 2 4 5
+
+yxx yxy yxz 1 3 4 yyx yyy yyz 3 6 7 ~\newline
+ yzx yzy yzz 4 7 8
+
+zxx zxy zxz 2 4 5 zyx zyy zyz 4 7 8 zzx zzy zzz 5 8 9
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+pos} & new c.\+m. position \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classTidalTensor_a7065543715fe3b7d8322b7a145057ff2}\label{classTidalTensor_a7065543715fe3b7d8322b7a145057ff2}} 
+\index{TidalTensor@{TidalTensor}!subtractCMForce@{subtractCMForce}}
+\index{subtractCMForce@{subtractCMForce}!TidalTensor@{TidalTensor}}
+\doxysubsubsection{\texorpdfstring{subtractCMForce()}{subtractCMForce()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+static void Tidal\+Tensor\+::subtract\+C\+M\+Force (\begin{DoxyParamCaption}\item[{Tptcl $\ast$}]{\+\_\+ptcl\+\_\+tt,  }\item[{const Tptcl \&}]{\+\_\+ptcl\+\_\+cm }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+subtract c.\+m. force from measure points 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classTidalTensor_a7065543715fe3b7d8322b7a145057ff2_icgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classTidalTensor_a15eb2ab9753ac8a91f3b6a5643060dbe}\label{classTidalTensor_a15eb2ab9753ac8a91f3b6a5643060dbe}} 
+\index{TidalTensor@{TidalTensor}!group\_id@{group\_id}}
+\index{group\_id@{group\_id}!TidalTensor@{TidalTensor}}
+\doxysubsubsection{\texorpdfstring{group\_id}{group\_id}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Tidal\+Tensor\+::group\+\_\+id}
+
+\mbox{\Hypertarget{classTidalTensor_a8c6b481b4ad0604a424ff5debe273a90}\label{classTidalTensor_a8c6b481b4ad0604a424ff5debe273a90}} 
+\index{TidalTensor@{TidalTensor}!pos@{pos}}
+\index{pos@{pos}!TidalTensor@{TidalTensor}}
+\doxysubsubsection{\texorpdfstring{pos}{pos}}
+{\footnotesize\ttfamily P\+S\+::\+F64vec Tidal\+Tensor\+::pos}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{tidal__tensor_8hpp}{tidal\+\_\+tensor.\+hpp}}\end{DoxyCompactItemize}

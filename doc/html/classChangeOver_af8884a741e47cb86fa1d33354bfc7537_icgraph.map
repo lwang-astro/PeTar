@@ -1,0 +1,6 @@
+<map id="ChangeOver::calcAcc0W" name="ChangeOver::calcAcc0W">
+<area shape="rect" id="node1" title="changeover function for force" alt="" coords="555,46,735,73"/>
+<area shape="rect" id="node2" href="$classChangeOver.html#aa4cee9c08ff3ae260bf33fb3d885ffca" title="calculate changeover function Acc0 by selecting maximum rout" alt="" coords="301,46,507,73"/>
+<area shape="rect" id="node3" href="$classHermiteInteraction.html#ad0c5b9678c1cb91f89d90d1f4a94a568" title="calculate acceleration and jerk of one pair single and resolved group" alt="" coords="5,5,253,47"/>
+<area shape="rect" id="node4" href="$classHermiteInteraction.html#a9d8f0c34f81481a7bc2cd61afb296a53" title="calculate acceleration and jerk of one pair single and resolved group" alt="" coords="15,71,243,112"/>
+</map>

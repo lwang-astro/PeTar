@@ -1,0 +1,185 @@
+\hypertarget{classTwoBodyTide}{}\doxysection{Two\+Body\+Tide Class Reference}
+\label{classTwoBodyTide}\index{TwoBodyTide@{TwoBodyTide}}
+
+
+Two Body Tide effct.  
+
+
+
+
+{\ttfamily \#include $<$two\+\_\+body\+\_\+tide.\+hpp$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classTwoBodyTide_a8eec5e1a1f04daced6e108bae228ddb9}{Two\+Body\+Tide}} ()
+\item 
+bool \mbox{\hyperlink{classTwoBodyTide_a7d1ab2124ed35d99bb84313064437d1c}{check\+Params}} ()
+\begin{DoxyCompactList}\small\item\em check whether parameters values are correct \end{DoxyCompactList}\item 
+{\footnotesize template$<$class T\+Binary $>$ }\\bool \mbox{\hyperlink{classTwoBodyTide_a0032b26788339d4b040430b9cb78ab7a}{evolve\+Orbit\+Hyperbolic\+GW}} (T\+Binary \&\+\_\+bin, Float \&\+\_\+\+Etid, Float \&\+\_\+\+Ltid)
+\begin{DoxyCompactList}\small\item\em evolve hyperbolic orbit based on GW effect \end{DoxyCompactList}\item 
+{\footnotesize template$<$class T\+Binary $>$ }\\Float \mbox{\hyperlink{classTwoBodyTide_a6ae9149abd098b3687ca1d2c2550600d}{evolve\+Orbit\+Dynamical\+Tide}} (T\+Binary \&\+\_\+bin, const Float \&rad1, const Float \&rad2, const Float \&poly\+\_\+type1, const Float \&poly\+\_\+type2)
+\begin{DoxyCompactList}\small\item\em evolve two-\/body orbit based on dynamical tide implementation from Alessandro Alberto Trani \end{DoxyCompactList}\item 
+Float \mbox{\hyperlink{classTwoBodyTide_a8694304ed5c6ef7b8166ae38da773216}{calc\+Etid\+Polynomical\+Fit}} (const Float \&\+\_\+mpert, const Float \&\+\_\+rad\+\_\+over\+\_\+peri, const Float \&\+\_\+peri, const Float \&\+\_\+eta, const Float \&\+\_\+poly\+\_\+type)
+\begin{DoxyCompactList}\small\item\em Tidal energy based on Polynomical fits from Portegies Zwart et al. 1993. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+Float \mbox{\hyperlink{classTwoBodyTide_a59ae3c3410552461d3d5261ef8ec37a0}{gravitational\+\_\+constant}}
+\item 
+Float \mbox{\hyperlink{classTwoBodyTide_a4cfd66cc25d28b427fa2249ebfaec4d9}{speed\+\_\+of\+\_\+light}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Two Body Tide effct. 
+
+calculate orbital change due to dynamical tide or gravitational wave radiation for hyperbolic encounters 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classTwoBodyTide_a8eec5e1a1f04daced6e108bae228ddb9}\label{classTwoBodyTide_a8eec5e1a1f04daced6e108bae228ddb9}} 
+\index{TwoBodyTide@{TwoBodyTide}!TwoBodyTide@{TwoBodyTide}}
+\index{TwoBodyTide@{TwoBodyTide}!TwoBodyTide@{TwoBodyTide}}
+\doxysubsubsection{\texorpdfstring{TwoBodyTide()}{TwoBodyTide()}}
+{\footnotesize\ttfamily Two\+Body\+Tide\+::\+Two\+Body\+Tide (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classTwoBodyTide_a8694304ed5c6ef7b8166ae38da773216}\label{classTwoBodyTide_a8694304ed5c6ef7b8166ae38da773216}} 
+\index{TwoBodyTide@{TwoBodyTide}!calcEtidPolynomicalFit@{calcEtidPolynomicalFit}}
+\index{calcEtidPolynomicalFit@{calcEtidPolynomicalFit}!TwoBodyTide@{TwoBodyTide}}
+\doxysubsubsection{\texorpdfstring{calcEtidPolynomicalFit()}{calcEtidPolynomicalFit()}}
+{\footnotesize\ttfamily Float Two\+Body\+Tide\+::calc\+Etid\+Polynomical\+Fit (\begin{DoxyParamCaption}\item[{const Float \&}]{\+\_\+mpert,  }\item[{const Float \&}]{\+\_\+rad\+\_\+over\+\_\+peri,  }\item[{const Float \&}]{\+\_\+peri,  }\item[{const Float \&}]{\+\_\+eta,  }\item[{const Float \&}]{\+\_\+poly\+\_\+type }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Tidal energy based on Polynomical fits from Portegies Zwart et al. 1993. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+mpert} & perturber mass \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+rad\+\_\+over\+\_\+peri} & stellar radius over peri-\/center distance \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+peri} & peri-\/center distance \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+eta} & parameter (Press \& Teutoslky 1977) \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+poly\+\_\+type} & Polynomical type (1.\+5 or 3.\+0) \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classTwoBodyTide_a8694304ed5c6ef7b8166ae38da773216_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classTwoBodyTide_a7d1ab2124ed35d99bb84313064437d1c}\label{classTwoBodyTide_a7d1ab2124ed35d99bb84313064437d1c}} 
+\index{TwoBodyTide@{TwoBodyTide}!checkParams@{checkParams}}
+\index{checkParams@{checkParams}!TwoBodyTide@{TwoBodyTide}}
+\doxysubsubsection{\texorpdfstring{checkParams()}{checkParams()}}
+{\footnotesize\ttfamily bool Two\+Body\+Tide\+::check\+Params (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+check whether parameters values are correct 
+
+\begin{DoxyReturn}{Returns}
+true\+: all correct 
+\end{DoxyReturn}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classTwoBodyTide_a7d1ab2124ed35d99bb84313064437d1c_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classTwoBodyTide_a6ae9149abd098b3687ca1d2c2550600d}\label{classTwoBodyTide_a6ae9149abd098b3687ca1d2c2550600d}} 
+\index{TwoBodyTide@{TwoBodyTide}!evolveOrbitDynamicalTide@{evolveOrbitDynamicalTide}}
+\index{evolveOrbitDynamicalTide@{evolveOrbitDynamicalTide}!TwoBodyTide@{TwoBodyTide}}
+\doxysubsubsection{\texorpdfstring{evolveOrbitDynamicalTide()}{evolveOrbitDynamicalTide()}}
+{\footnotesize\ttfamily template$<$class T\+Binary $>$ \\
+Float Two\+Body\+Tide\+::evolve\+Orbit\+Dynamical\+Tide (\begin{DoxyParamCaption}\item[{T\+Binary \&}]{\+\_\+bin,  }\item[{const Float \&}]{rad1,  }\item[{const Float \&}]{rad2,  }\item[{const Float \&}]{poly\+\_\+type1,  }\item[{const Float \&}]{poly\+\_\+type2 }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+evolve two-\/body orbit based on dynamical tide implementation from Alessandro Alberto Trani 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em \+\_\+bin} & binary data, semi and ecc are updated \\
+\hline
+\mbox{\texttt{ in}}  & {\em rad1} & stellar radius of p1 (should be in the same unit of semi) \\
+\hline
+\mbox{\texttt{ in}}  & {\em rad2} & stellar radius of p2 \\
+\hline
+\mbox{\texttt{ in}}  & {\em poly\+\_\+type1} & polynomial type for p1 \\
+\hline
+\mbox{\texttt{ in}}  & {\em poly\+\_\+type2} & polynomial type for p2\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Etid\+: energy loss 
+\end{DoxyReturn}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classTwoBodyTide_a6ae9149abd098b3687ca1d2c2550600d_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=301pt]{classTwoBodyTide_a6ae9149abd098b3687ca1d2c2550600d_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classTwoBodyTide_a0032b26788339d4b040430b9cb78ab7a}\label{classTwoBodyTide_a0032b26788339d4b040430b9cb78ab7a}} 
+\index{TwoBodyTide@{TwoBodyTide}!evolveOrbitHyperbolicGW@{evolveOrbitHyperbolicGW}}
+\index{evolveOrbitHyperbolicGW@{evolveOrbitHyperbolicGW}!TwoBodyTide@{TwoBodyTide}}
+\doxysubsubsection{\texorpdfstring{evolveOrbitHyperbolicGW()}{evolveOrbitHyperbolicGW()}}
+{\footnotesize\ttfamily template$<$class T\+Binary $>$ \\
+bool Two\+Body\+Tide\+::evolve\+Orbit\+Hyperbolic\+GW (\begin{DoxyParamCaption}\item[{T\+Binary \&}]{\+\_\+bin,  }\item[{Float \&}]{\+\_\+\+Etid,  }\item[{Float \&}]{\+\_\+\+Ltid }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+evolve hyperbolic orbit based on GW effect 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+bin} & binary data, semi and ecc are updated \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Etid\+: merge flag 
+\end{DoxyReturn}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=301pt]{classTwoBodyTide_a0032b26788339d4b040430b9cb78ab7a_icgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classTwoBodyTide_a59ae3c3410552461d3d5261ef8ec37a0}\label{classTwoBodyTide_a59ae3c3410552461d3d5261ef8ec37a0}} 
+\index{TwoBodyTide@{TwoBodyTide}!gravitational\_constant@{gravitational\_constant}}
+\index{gravitational\_constant@{gravitational\_constant}!TwoBodyTide@{TwoBodyTide}}
+\doxysubsubsection{\texorpdfstring{gravitational\_constant}{gravitational\_constant}}
+{\footnotesize\ttfamily Float Two\+Body\+Tide\+::gravitational\+\_\+constant}
+
+\mbox{\Hypertarget{classTwoBodyTide_a4cfd66cc25d28b427fa2249ebfaec4d9}\label{classTwoBodyTide_a4cfd66cc25d28b427fa2249ebfaec4d9}} 
+\index{TwoBodyTide@{TwoBodyTide}!speed\_of\_light@{speed\_of\_light}}
+\index{speed\_of\_light@{speed\_of\_light}!TwoBodyTide@{TwoBodyTide}}
+\doxysubsubsection{\texorpdfstring{speed\_of\_light}{speed\_of\_light}}
+{\footnotesize\ttfamily Float Two\+Body\+Tide\+::speed\+\_\+of\+\_\+light}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{two__body__tide_8hpp}{two\+\_\+body\+\_\+tide.\+hpp}}\end{DoxyCompactItemize}

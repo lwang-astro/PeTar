@@ -1,0 +1,10 @@
+<map id="SystemHard::findGroupsAndCreateArtificialParticlesOMP" name="SystemHard::findGroupsAndCreateArtificialParticlesOMP">
+<area shape="rect" id="node1" title="Find groups and create aritfical particles to sys." alt="" coords="5,123,211,165"/>
+<area shape="rect" id="node2" href="$classSystemHard.html#ab9aaaaa58ad48fe4fcfe36d2ce1c8619" title="generate artificial particles," alt="" coords="259,90,505,131"/>
+<area shape="rect" id="node8" href="$classSearchGroupCandidate.html#a141d7709adce9fc5384ccd137b925843" title=" " alt="" coords="297,155,467,197"/>
+<area shape="rect" id="node3" href="$classStability.html#aa14561ced4c6f52711990b4d4065e519" title="Check binary tree and collect closed systems subtree root." alt="" coords="573,5,752,32"/>
+<area shape="rect" id="node5" href="$classSearchGroupCandidate.html#aaf78ad50bf7c53a67bdc2e10b937fdac" title=" " alt="" coords="577,57,748,98"/>
+<area shape="rect" id="node6" href="$classSearchGroupCandidate.html#af2319845b77573bbee67d82c9ee2b415" title=" " alt="" coords="553,122,772,163"/>
+<area shape="rect" id="node7" href="$classSearchGroupCandidate.html#a24fa3d099f4cc0af771b1cc7272f093c" title=" " alt="" coords="577,187,748,229"/>
+<area shape="rect" id="node4" href="$classStability.html#af7837504b63ebe02eae8c808806014e4" title="Closed system check iteration function for BinaryTree." alt="" coords="820,5,1056,32"/>
+</map>

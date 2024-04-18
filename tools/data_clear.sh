@@ -19,15 +19,21 @@ until [[ `echo x$1` == 'x' ]]
 do
     case $1 in
 	-h) shift;
-	    echo 'Remove data after a given time criterion if users want to restart simulations at middle and overwrite the output files (file suffixes: '${suffixes[@]}')';
+	    echo 'A tool for clearing data after a specified time.';
+	    echo '   Remove data after a specified time criterion for output files with name suffixes: '${suffixes[@]};
+	    echo '   When users wish to restart a simulation from an outputted snapshot file, other output files may contain events that occurred after the time of this snapshot file.';
+	    echo '   This tool can help clear up these events before restarting.';
+	    echo '   Subsequently, when restarting the simulation, the same events will not be recorded twice.';
 	    echo 'Usage: petar.data.clear [options] [data filename prefix]';
-	    echo '       data filename prefix is defined by "petar -f", defaulted case is "data".'
-	    echo 'Options:';
-	    echo '  -t: time criterion (default: none)'
-	    echo '  -n: MPI processes number (default: auto detect)';
-	    echo '  -b: use previous backup files instead of replacing (default: replacing)';
-	    echo '  --less-dyn-merge: less output mode for [prefix].*bse*.dynmical_merge (three columns less, for the PeTar version before Sep 10, 2020)'
-	    echo '  --less-type-change: less output mode for [prefix].*bse*.type_change (20 columns less, for the PeTar version before Jun 2, 2022)'
+	    echo '       The data filename prefix is defined by "petar -f"; the default is "data".';
+	    echo 'Options (default arguments shown in parentheses at the end):';
+	    echo '  -t [F]: time criterion for clearing up data, must be provided (default: none)';
+	    echo '  -n [I]: number of MPI processes (default: auto)';
+	    echo '  -b    : use previous backup files instead of replacing (default: replacing)';
+	    echo '  --less-dyn-merge:   reduced output mode for [prefix].*bse*.dynmical_merge (three columns less)';
+	    echo '                      Only applicable for PeTar versions before Sep 10, 2020)';
+	    echo '  --less-type-change: reduced output mode for [prefix].*bse*.type_change (20 columns less)';
+	    echo '                      Only applicable for PeTar versions before Jun 2, 2022)';
 	    exit;;
 	-n) shift; nmpi=$1; shift;;
 	-t) shift; tcrit=$1; shift;;
@@ -56,30 +62,30 @@ echo 'data filename prefix: '$fname
 echo 'time criterion: '$tcrit
 
 # check consistence for the number of columns
-ncol=`egrep -m 1 'SN_kick' $fname.*sse*.[0-9]|wc -w`
+ncol=`egrep -m 1 'SN_kick' $fname.*sse*.0|wc -w`
 if [[ $ncol != $ncol_sse_sn_kick ]] && [[ $ncol != 0 ]]; then
     echo 'Error! column number not matches for SSE SN kick, should be '$ncol_sse_sn_kick', the file has '$ncol'.'
     exit
 fi
-ncol=`egrep -v -m 1 'SN_kick' $fname.*sse*.[0-9]|wc -w`
+ncol=`egrep -v -m 1 'SN_kick' $fname.*sse*.0|wc -w`
 if [[ $ncol -ne $ncol_sse_type_change ]] && [[ $ncol -ne 0 ]]; then
     echo 'Error! column number not matches for SSE Type Change, should be '$ncol_sse_type_change', the file has '$ncol
     exit
 fi
 
-ncol=`egrep -m 1 'Dynamic_merge' $fname.*bse*.[0-9]|wc -w`
+ncol=`egrep -m 1 'Dynamic_merge' $fname.*bse*.0|wc -w`
 if [[ $ncol -ne $ncol_bse_dyn_merge ]] && [[ $ncol -ne 0 ]]; then
     echo 'Error! column number not matches for BSE dynamical merger, should be '$ncol_bse_dyn_merge', the file has '$ncol
     exit
 fi
 
-ncol=`egrep -m 1 'SN_kick' $fname.*bse*.[0-9]|wc -w`
+ncol=`egrep -m 1 'SN_kick' $fname.*bse*.0|wc -w`
 if [[ $ncol -ne $ncol_bse_sn_kick ]] && [[ $ncol -ne 0 ]]; then
     echo 'Error! column number not matches for BSE SN kick, should be '$ncol_bse_sn_kick', the file has '$ncol
     exit
 fi
 
-ncol=`egrep -v -m 1 '(SN_kick|Dynamic_merge)' $fname.*bse*.[0-9]|wc -w`
+ncol=`egrep -v -m 1 '(SN_kick|Dynamic_merge)' $fname.*bse*.0|wc -w`
 if [[ $ncol -ne $ncol_bse_type_change ]] && [[ $ncol -ne 0 ]]; then
     echo 'Error! column number not matches for BSE Type Change, should be '$ncol_bse_type_change', the file has '$ncol
     exit

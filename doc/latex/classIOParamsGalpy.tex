@@ -1,0 +1,157 @@
+\hypertarget{classIOParamsGalpy}{}\doxysection{I\+O\+Params\+Galpy Class Reference}
+\label{classIOParamsGalpy}\index{IOParamsGalpy@{IOParamsGalpy}}
+
+
+IO parameters for Galpy manager.  
+
+
+
+
+{\ttfamily \#include $<$galpy\+\_\+interface.\+h$>$}
+
+
+
+Collaboration diagram for I\+O\+Params\+Galpy\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classIOParamsGalpy__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classIOParamsGalpy_a9183f2e1c26b6480684a561e3a170b5b}{I\+O\+Params\+Galpy}} ()
+\item 
+int \mbox{\hyperlink{classIOParamsGalpy_a7525714c40a2cc23a672b9f2498dcc3d}{read}} (int argc, char $\ast$argv\mbox{[}$\,$\mbox{]}, const int opt\+\_\+used\+\_\+pre=0)
+\begin{DoxyCompactList}\small\item\em reading parameters from G\+NU option A\+PI \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classIOParamsGalpy_a1942c7fd5832585b77186e543acc640d}{set\+Bovy\+Unit}} (const bool \mbox{\hyperlink{classIOParamsGalpy_a7466fadc59b145f79299db9a77b8e632}{print\+\_\+flag}}=true)
+\begin{DoxyCompactList}\small\item\em set Bovy unit scale factor (solar distance and velocityr referring to the Galactic center) converge from astronomical unit set (Myr, Msun, pc) \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classIOParamsContainer}{I\+O\+Params\+Container}} \mbox{\hyperlink{classIOParamsGalpy_afd0dfcfcdab7d35e492d8a76314b45cb}{input\+\_\+par\+\_\+store}}
+\item 
+\mbox{\hyperlink{structIOParams}{I\+O\+Params}}$<$ std\+::string $>$ \mbox{\hyperlink{classIOParamsGalpy_a9a91ee11637ca25e1529bd6d64cbc713}{type\+\_\+args}}
+\item 
+\mbox{\hyperlink{structIOParams}{I\+O\+Params}}$<$ std\+::string $>$ \mbox{\hyperlink{classIOParamsGalpy_a05d844f0513480aab99e32f1ae24c9a5}{pre\+\_\+define\+\_\+type}}
+\item 
+\mbox{\hyperlink{structIOParams}{I\+O\+Params}}$<$ std\+::string $>$ \mbox{\hyperlink{classIOParamsGalpy_ac3a86812131cd86a17dd06e04e0c743f}{config\+\_\+filename}}
+\item 
+\mbox{\hyperlink{structIOParams}{I\+O\+Params}}$<$ double $>$ \mbox{\hyperlink{classIOParamsGalpy_a395b8e04d50246d4455a00fd41c1d3c9}{rscale}}
+\item 
+\mbox{\hyperlink{structIOParams}{I\+O\+Params}}$<$ double $>$ \mbox{\hyperlink{classIOParamsGalpy_a38386e616009bd027d31459b2acb5df8}{vscale}}
+\item 
+bool \mbox{\hyperlink{classIOParamsGalpy_a7466fadc59b145f79299db9a77b8e632}{print\+\_\+flag}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+IO parameters for Galpy manager. 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classIOParamsGalpy_a9183f2e1c26b6480684a561e3a170b5b}\label{classIOParamsGalpy_a9183f2e1c26b6480684a561e3a170b5b}} 
+\index{IOParamsGalpy@{IOParamsGalpy}!IOParamsGalpy@{IOParamsGalpy}}
+\index{IOParamsGalpy@{IOParamsGalpy}!IOParamsGalpy@{IOParamsGalpy}}
+\doxysubsubsection{\texorpdfstring{IOParamsGalpy()}{IOParamsGalpy()}}
+{\footnotesize\ttfamily I\+O\+Params\+Galpy\+::\+I\+O\+Params\+Galpy (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classIOParamsGalpy_a7525714c40a2cc23a672b9f2498dcc3d}\label{classIOParamsGalpy_a7525714c40a2cc23a672b9f2498dcc3d}} 
+\index{IOParamsGalpy@{IOParamsGalpy}!read@{read}}
+\index{read@{read}!IOParamsGalpy@{IOParamsGalpy}}
+\doxysubsubsection{\texorpdfstring{read()}{read()}}
+{\footnotesize\ttfamily int I\+O\+Params\+Galpy\+::read (\begin{DoxyParamCaption}\item[{int}]{argc,  }\item[{char $\ast$}]{argv\mbox{[}$\,$\mbox{]},  }\item[{const int}]{opt\+\_\+used\+\_\+pre = {\ttfamily 0} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+reading parameters from G\+NU option A\+PI 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em argc} & number of options \\
+\hline
+\mbox{\texttt{ in}}  & {\em argv} & string of options \\
+\hline
+\mbox{\texttt{ in}}  & {\em opt\+\_\+used\+\_\+pre} & already used option number from previous reading, use to correctly count the remaining argument number \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+-\/1 if help is used; else the used number of argv 
+\end{DoxyReturn}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classIOParamsGalpy_a7525714c40a2cc23a672b9f2498dcc3d_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=276pt]{classIOParamsGalpy_a7525714c40a2cc23a672b9f2498dcc3d_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classIOParamsGalpy_a1942c7fd5832585b77186e543acc640d}\label{classIOParamsGalpy_a1942c7fd5832585b77186e543acc640d}} 
+\index{IOParamsGalpy@{IOParamsGalpy}!setBovyUnit@{setBovyUnit}}
+\index{setBovyUnit@{setBovyUnit}!IOParamsGalpy@{IOParamsGalpy}}
+\doxysubsubsection{\texorpdfstring{setBovyUnit()}{setBovyUnit()}}
+{\footnotesize\ttfamily void I\+O\+Params\+Galpy\+::set\+Bovy\+Unit (\begin{DoxyParamCaption}\item[{const bool}]{print\+\_\+flag = {\ttfamily true} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set Bovy unit scale factor (solar distance and velocityr referring to the Galactic center) converge from astronomical unit set (Myr, Msun, pc) 
+
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classIOParamsGalpy_ac3a86812131cd86a17dd06e04e0c743f}\label{classIOParamsGalpy_ac3a86812131cd86a17dd06e04e0c743f}} 
+\index{IOParamsGalpy@{IOParamsGalpy}!config\_filename@{config\_filename}}
+\index{config\_filename@{config\_filename}!IOParamsGalpy@{IOParamsGalpy}}
+\doxysubsubsection{\texorpdfstring{config\_filename}{config\_filename}}
+{\footnotesize\ttfamily \mbox{\hyperlink{structIOParams}{I\+O\+Params}}$<$std\+::string$>$ I\+O\+Params\+Galpy\+::config\+\_\+filename}
+
+\mbox{\Hypertarget{classIOParamsGalpy_afd0dfcfcdab7d35e492d8a76314b45cb}\label{classIOParamsGalpy_afd0dfcfcdab7d35e492d8a76314b45cb}} 
+\index{IOParamsGalpy@{IOParamsGalpy}!input\_par\_store@{input\_par\_store}}
+\index{input\_par\_store@{input\_par\_store}!IOParamsGalpy@{IOParamsGalpy}}
+\doxysubsubsection{\texorpdfstring{input\_par\_store}{input\_par\_store}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classIOParamsContainer}{I\+O\+Params\+Container}} I\+O\+Params\+Galpy\+::input\+\_\+par\+\_\+store}
+
+\mbox{\Hypertarget{classIOParamsGalpy_a05d844f0513480aab99e32f1ae24c9a5}\label{classIOParamsGalpy_a05d844f0513480aab99e32f1ae24c9a5}} 
+\index{IOParamsGalpy@{IOParamsGalpy}!pre\_define\_type@{pre\_define\_type}}
+\index{pre\_define\_type@{pre\_define\_type}!IOParamsGalpy@{IOParamsGalpy}}
+\doxysubsubsection{\texorpdfstring{pre\_define\_type}{pre\_define\_type}}
+{\footnotesize\ttfamily \mbox{\hyperlink{structIOParams}{I\+O\+Params}}$<$std\+::string$>$ I\+O\+Params\+Galpy\+::pre\+\_\+define\+\_\+type}
+
+\mbox{\Hypertarget{classIOParamsGalpy_a7466fadc59b145f79299db9a77b8e632}\label{classIOParamsGalpy_a7466fadc59b145f79299db9a77b8e632}} 
+\index{IOParamsGalpy@{IOParamsGalpy}!print\_flag@{print\_flag}}
+\index{print\_flag@{print\_flag}!IOParamsGalpy@{IOParamsGalpy}}
+\doxysubsubsection{\texorpdfstring{print\_flag}{print\_flag}}
+{\footnotesize\ttfamily bool I\+O\+Params\+Galpy\+::print\+\_\+flag}
+
+\mbox{\Hypertarget{classIOParamsGalpy_a395b8e04d50246d4455a00fd41c1d3c9}\label{classIOParamsGalpy_a395b8e04d50246d4455a00fd41c1d3c9}} 
+\index{IOParamsGalpy@{IOParamsGalpy}!rscale@{rscale}}
+\index{rscale@{rscale}!IOParamsGalpy@{IOParamsGalpy}}
+\doxysubsubsection{\texorpdfstring{rscale}{rscale}}
+{\footnotesize\ttfamily \mbox{\hyperlink{structIOParams}{I\+O\+Params}}$<$double$>$ I\+O\+Params\+Galpy\+::rscale}
+
+\mbox{\Hypertarget{classIOParamsGalpy_a9a91ee11637ca25e1529bd6d64cbc713}\label{classIOParamsGalpy_a9a91ee11637ca25e1529bd6d64cbc713}} 
+\index{IOParamsGalpy@{IOParamsGalpy}!type\_args@{type\_args}}
+\index{type\_args@{type\_args}!IOParamsGalpy@{IOParamsGalpy}}
+\doxysubsubsection{\texorpdfstring{type\_args}{type\_args}}
+{\footnotesize\ttfamily \mbox{\hyperlink{structIOParams}{I\+O\+Params}}$<$std\+::string$>$ I\+O\+Params\+Galpy\+::type\+\_\+args}
+
+\mbox{\Hypertarget{classIOParamsGalpy_a38386e616009bd027d31459b2acb5df8}\label{classIOParamsGalpy_a38386e616009bd027d31459b2acb5df8}} 
+\index{IOParamsGalpy@{IOParamsGalpy}!vscale@{vscale}}
+\index{vscale@{vscale}!IOParamsGalpy@{IOParamsGalpy}}
+\doxysubsubsection{\texorpdfstring{vscale}{vscale}}
+{\footnotesize\ttfamily \mbox{\hyperlink{structIOParams}{I\+O\+Params}}$<$double$>$ I\+O\+Params\+Galpy\+::vscale}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{galpy__interface_8h}{galpy\+\_\+interface.\+h}}\end{DoxyCompactItemize}

@@ -63,7 +63,12 @@ def calcTrh(N, rh, m, G, gamma=0.02):
 
     return: half-mass relaxation time
     """
-    return 0.138*N**0.5*rh**1.5/(m**0.5*np.log(gamma*N)*G**0.5)
+    trh = 0.138*N**0.5*rh**1.5/(m**0.5*np.log(gamma*N)*G**0.5)
+    if type(N) == np.ndarray:
+        trh[N==0] = 0
+    elif N==0:
+        trh = 0
+    return trh
 
 def calcTcr(M, rh, G): 
     """ Calculate half-mass crossing time
@@ -80,7 +85,31 @@ def calcTcr(M, rh, G):
 
     return: half-mass crossing time
     """
-    return rh**1.5/np.sqrt(G*M)
+    tcr = rh**1.5/np.sqrt(G*M)
+    if type(M) == np.ndarray:
+        tcr[M==0] = 0
+    elif M==0:
+        tcr = 0
+    return tcr
+
+def calcRocheLobeRadius(mass_ratio, semi):
+    """ Calcuate Roche lobe radius based on mass ratio and semi-major axes of a circular orbit
+    
+    Parameters
+    ----------
+    mass_ratio: 1D numpy.ndarray or float
+        m_1/m_2 of the primary star 1
+    semi: 1D numpy.ndarray or float
+        semi-major axes of the circular orbit
+
+    return: Roche lobe radius of the primary star 1, in the unit of input semi
+    """
+
+    p = mass_ratio**(1.0/3.0)
+    p2 = p*p
+    radius = 0.49*p2/(0.6*p2 + np.log(1.0+p))*semi
+
+    return radius
 
 def calcGWMyr(m1, m2, semi, ecc):
     """ Calculate GW merge timescale in Myr using Peters (1964) formula
@@ -127,8 +156,8 @@ def calcGWMyr(m1, m2, semi, ecc):
 
 def convergentPointCheck(data, velocity):
     """ calculate proper motions in the frame of convergent point based on the given velocity and calculate the residuals 
-        The method is described in e.g., van Leeuwen F., 2009, A\&A, 497, 209. doi:10.1051/0004-6361/200811382; 
-        and Jerabkova T., Boffin H.~M.~J., Beccari G., de Marchi G., de Bruijne J.~H.~J., Prusti T., 2021, A\&A, 647, A137. doi:10.1051/0004-6361/202039949
+        The method is described in e.g., van Leeuwen F., 2009, A&A, 497, 209. doi:10.1051/0004-6361/200811382; 
+        and Jerabkova T., Boffin H.~M.~J., Beccari G., de Marchi G., de Bruijne J.~H.~J., Prusti T., 2021, A&A, 647, A137. doi:10.1051/0004-6361/202039949
 
         The algorithm can be described as follows
        1. Assume that the stars have the given velocity and rotate it by RA (alpha) and DEC (delta) of stars. Thus this predicted velocity is in the same frame as the observation.

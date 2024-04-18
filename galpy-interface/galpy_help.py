@@ -43,7 +43,7 @@ def getPotInstance(pot_name):
     return pot_module, pot_instance
 
 def savePotTypeArg(config_filename, n_pot, pot_type, pot_arg):
-    """ save type argument of a potential
+    """ save type argument of a potential to a configure file
 
     Parameters
     ----------
@@ -57,13 +57,15 @@ def savePotTypeArg(config_filename, n_pot, pot_type, pot_arg):
         argument list
     """
     with open(config_filename,'w') as f:
-        f.write("0 %d\n" % n_pot)
+        f.write("# This template contains configuration settings for the specified potential type. Please adjust the values to suit your requirements. Note that the potential argument values are in Galpy Units; please replace them with the corresponding values in PeTar Units. Before using PeTar to read this configuration file, remember to remove this line.\n")
+        f.write("Time 0.0 Task add\nNset 1\n")
+        f.write("Set 0\nNtype %d Mode 0\nGM 0 Pos 0 0 0 Vel 0 0 0\nType" % n_pot)
         for item in pot_type:
-            f.write("%d " % item)
-        f.write("\n")
+            f.write(" %d" % item)
+        f.write("\nArg")
         for item in pot_arg:
-            f.write("%.14g " % item)
-        f.write("\n")
+            f.write(" %.14g" % item)
+        f.write("\nNchange 0\n")
 
 def printPotTypeArg(pot_name, pot_module, pot_instance, print_front_offset=0, print_long_list=False):
     """ print the petar --type-arg options for a given potential
@@ -144,6 +146,114 @@ def listPot():
         if (pot_instance!=None):
             printPotTypeArg(pot_name, pot_module, pot_instance)
 
+
+
+POT_LIST_INFO = dict()
+
+POT_LIST_INFO['PowerSphericalPotential'] = {'type':7,
+                                            'name':'power-law density model',
+                                            'math':['rho(r) = (3-a) GM /(4 pi rg^(3-a)) r^(-a); M: mass in rg'],
+                                            'pot0':'r=0',
+                                            'args':[['amp','(3-a) GM /(4 pi rg^(3-a))', 'G*m/r^(3-a)'], 
+                                                    ['a', 'inner power', '1']]}
+
+POT_LIST_INFO['PowerSphericalPotentialwCutoff'] = {'type':15,
+                                                   'name':'power-law density model with cutoff radius',
+                                                   'math':['rho(r) = (3-a) GM /(4 pi rg^(3-a)) r^(-a) e^(-r^2/rc^2); M: mass in rg'],
+                                                   'pot0':'r=0',
+                                                   'args':[['amp', '(3-a) GM /(4 pi rg^(3-a))', 'G*m/r^(3-a)'], 
+                                                           ['a', 'inner power', '1'],
+                                                           ['rc', 'cut-off radius','r']]}
+
+    
+POT_LIST_INFO['MiyamotoNagaiPotential'] = {'type':5,
+                                           'name':'Miyamoto-Nagai potential',
+                                           'math':['Phi(R,z) = - GM /sqrt(R^2+(a + sqrt(z^2+b^2))^2)'],
+                                           'pot0':'R,Z = infinity',
+                                           'args':[['amp','G M','G*m'],
+                                                   ['a','scale length','r'],
+                                                   ['b','scale length','r']]}
+
+POT_LIST_INFO['NFWPotential'] = {'type':9,
+                                 'name':'NFW potential',
+                                 'math':['rho(r) = GM /(4 pi a^3) /((r/a)*(1+r/a)^2)'],
+                                 'pot0':'r = infinity',
+                                 'args':[['amp','G M','G*m'],
+                                         ['a','scale length','r']]}
+
+POT_LIST_INFO['HomogeneousSpherePotential'] = {'type':35,
+                                               'name':'homogeneous sphere potential',
+                                               'math':['Phi(r) = -2/3 pi G rho0 (r^2-3 rs^2) [r<rs]; -4/3 pi G rho0 rs^3/r [r>rs]'],
+                                               'pot0':'r = infinity',
+                                               'args':[['amp','2/3 pi G rho0', 'G*m/r^3'],
+                                                       ['r2', 'rs^2', 'r^2'],
+                                                       ['r3', 'rs^3', 'r^3']]}
+
+POT_LIST_INFO['PlummerPotential'] = {'type':17,
+                                     'name':'Plummer potential',
+                                     'math':['Phi(r) = GM / sqrt(r^2 + b^2)'],
+                                     'pot0':'r = infinity',
+                                     'args':[['amp','GM','G*m'],
+                                             ['b','scale length','r']]}
+
+POT_LIST_INFO['DehnenBarPotential'] = {'type':1,
+                                       'name':'Dehnen bar potential',
+                                       'math':['Phi(R,z,phi) = Ab(t) cos (2(phi - Wb t)) (R/r)^2 { -(Rb/r)^3 (r>Rb)' ,
+                                               '                                                   (r/Rb)^3-2 (r<=Rb)',
+                                               'Ab(t) = {0 (t/Tb <tf)',
+                                               '         Af(3/16 xi^5 - 5/8 xi^3 + 15/16 xi + 1/2) (tf< t/Tb <tf+Ts)',
+                                               '         Af (t/Tb >tf+Ts)',
+                                               'xi = 2 (t/Tb - tf)/Ts - 1',
+                                               'Tb = 2 pi/Wb'],
+                                       'pot0':'r = infinity',
+                                       'args':[['Af','bar strength', '(r/t)^2'],
+                                               ['tf','bar formation time', 't'],
+                                               ['Ts','bar steady time', 't'],
+                                               ['Rb','bar max radius', 'r'],
+                                               ['Wb','bar rotation speed','rad/t'],
+                                               ['phi','bar initial angle','rad']]}
+
+    
+def printCPot(pot_name):
+    """
+    Print descriptions of potential for c interface.
+    The c arguments of potential can be different from Python one
+
+    Parameters:
+    -----------
+    pot_name: string 
+        Print the potential description for given potential name
+    """
+    pot_data = POT_LIST_INFO[pot_name]
+    print('{:31}'.format('Name:'),'%s' % pot_data['name'])
+    print('{:31}'.format('Type index:'),'%d ' % pot_data['type'])
+    print('{:31}'.format('Math:'), pot_data['math'][0])
+    if (len(pot_data['math'])>1):
+        for item in pot_data['math'][1:]:
+            print(' '*31, item)
+    print('{:31}'.format('Potential zero position:'), '%s' % pot_data['pot0'])
+    print('Arguments: description [units]:')
+    for arg in pot_data['args']:
+        print(' '*31, '%s: %s [%s]' % tuple(arg))
+
+def listCPot():
+    print('For each potential: 1st line: name [type index]: math')
+    print('                    from 2nd line: argument: descriptoin [unit]')
+    print('                    Units symbols: G: gravity constant; m: mass; r: length; t: time')
+    printSpliter()
+    name_format='{:30}'
+    for pot_name in POT_LIST_INFO.keys():
+        pot_data = POT_LIST_INFO[pot_name]
+        print(name_format.format(pot_name),'[%2d]: %s' % (pot_data['type'], pot_data['math'][0]))
+        if (len(pot_data['math'])>1):
+            for item in pot_data['math'][1:]:
+                print(' '*36, item)
+        print(' '*30, 'args: %s: %s [%s]' % tuple(pot_data['args'][0]))
+        if (len(pot_data['args'])>1):
+            for item in pot_data['args'][1:]:
+                print(' '*36,'%s: %s [%s]' % tuple(item))
+    printSpliter()
+
 if __name__ == '__main__':
 
     print_help_flag=False
@@ -198,8 +308,14 @@ if __name__ == '__main__':
             if (config_filename!=""): 
                 print("Save type arguments of %s to file %s." % (pot_name,config_filename))
                 savePotTypeArg(config_filename, n_pot, pot_type, pot_arg)
-            printSpliter()                                                     
-            print("Class definition of %s from Galpy:" % pot_name)
+                printSpliter()
+
+            if pot_name in POT_LIST_INFO.keys():
+                print("C interface description:")
+                printCPot(pot_name)
+                printSpliter()
+
+            print("Python interface description:")
             if (type(pot_instance)==list):
                 for pot_sub in pot_instance:
                     print(pot_sub.__doc__)
@@ -231,7 +347,7 @@ if __name__ == '__main__':
         print("           potential pscale    = 1.9753670016104e-05 [Bovy potential unit] / [pc^2/Myr^2]")
         print("           G*M scale           = 2.4692087520131e-09 [Bovy gravitational constant * mass unit] / [pc^3/Myr^2]")
         print("Potential types and arguments: Galpy c interface defines the type indices for supported potentials (listed at the end of this manual).")
-        print("       Each potential has mutliple number of arguments. To setup types and arguments, there are three ways: --galpy-set (pre-defined), --galpy-type-arg (simple potentials) and --galpy-conf-file (complex potentials)")
+        print("       Each potential has multiple number of arguments. To setup types and arguments, there are three ways: --galpy-set (pre-defined), --galpy-type-arg (simple potentials) and --galpy-conf-file (complex potentials)")
         print("--galpy-set: ")
         print("    Pre-defined potentials, right now only two choices:")
         print("    MWPotential2014 : Milkyway potential described in Galpy paper (Bovy 2015)")
@@ -259,8 +375,8 @@ if __name__ == '__main__':
         print("             ':' separates the type indices and the argument list;")
         print("             ',' separates the items of types or arguments in their lists.")
         print("       For example:")
-        print("          1) --galpy-type-arg 15:0.0299946,1.8,0.2375|5:0.7574802,0.375,0.035|9:4.85223053,2.0")
-        print("          2) --galpy-type-arg 15,5,9:0.0299946,1.8,0.2375,0.7574802,0.375,0.035,4.85223053,2.0")
+        print("          1) --galpy-type-arg 15:251.63858935563147,1.8,1900.0|5:306770418.38588977,3000.0,280.0|9:1965095308.192175,16000.0")
+        print("          2) --galpy-type-arg 15,5,9:251.63858935563147,1.8,1900.0,306770418.38588977,3000.0,280.0,1965095308.192175,16000.0")
         print("          both can generate the MWPotential2014 from Galpy (same to --galpy-set MWPotential2014)")
         print("       Users can use Galpy (_parse_pot function, see its online manual) to find and configure the types and arguments of potentials.")
         print("       The defaults values of types and arguments for supported potentials can be found at the end.")
@@ -365,5 +481,14 @@ if __name__ == '__main__':
         print("               Time 6.0 Task remove")
         print("               Nset 1 Index 1")
         print("Users can use --galpy-set, --galpy-type-arg and --galpy-conf-file together.")
-        print("Here are the supported list of Potentials and their default type indices and arguments:")
+        print("Here list a part of potentials with short descriptions for c interface.")
+        listCPot()
+        print("Here list all potentials type and sample of arguments for Python interface.")
+        print("Some important tips for reading the Python interface description:")
+        print("    1) The argument values are in Bovy units. ")
+        print("    2) The first argument of many potentials (amp) is G*M.")
+        print("    3) The Python and c interfaces may have different arguments.")
+        print("       Unfortunately there is no official manual for c interface yet.")
+        print("       Please check the original c source codes for the potential with no description for c interface.")
+        print("       The potential source codes are in [Galpy install path]/potential/potential_c_ext/.")
         listPot()

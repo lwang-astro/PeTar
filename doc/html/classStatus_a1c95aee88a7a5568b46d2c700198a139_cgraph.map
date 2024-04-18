@@ -1,0 +1,5 @@
+<map id="Status::calcAndShiftCenterOfMass" name="Status::calcAndShiftCenterOfMass">
+<area shape="rect" id="node1" title="calculate the center of system and shift particle systems to center frame" alt="" coords="5,27,200,69"/>
+<area shape="rect" id="node2" href="$classStatus.html#a95226a9e5aceeea5c44e89b8a3bccb0c" title="calculate the center of system" alt="" coords="248,5,437,32"/>
+<area shape="rect" id="node3" href="$structStatus_1_1ParticleCM.html#a4916cbce05134ef49629f43b49ecc7fe" title=" " alt="" coords="273,57,413,98"/>
+</map>

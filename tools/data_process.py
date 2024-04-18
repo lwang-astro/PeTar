@@ -15,65 +15,76 @@ if __name__ == '__main__':
     ftid_file_flag=False
     n_cpu=0
     write_option='w'
+    snapshot_format='ascii'
+    esc_snapshot_format='ascii'
+    output_format='ascii'
 
     def usage():
-        print("A tool for processing a list of snapshot data to detect binaries,")
-        print("   calculate the density center, the core radius, the Langragian radii (using the density center)")
-        print("   and the corresponding properties inside each radius: number of objects, average masses, mean velocities and velocity dispersions")
-        print("   binaries are counted as single objects using the c.m. properties")
-        print("Usage: petar.data.process [options] data_filename")
-        print("data_filename: A list of snapshot data path, each line for one snapshot")
-        print("option:")
-        print("  -h(--help): help")
-        print("  -p(--filename-prefix): prefix of output file names for: [prefix].[lagr|esc_[single|binary]|core] (data)")
-        print("  -m(--mass-fraction): Lagrangian radii mass fraction (0.1,0.3,0.5,0.7,0.9)")
-        print("  -G(--gravitational-constant): Gravitational constant (if interrupt-mode=(mo)bse: ",petar.G_MSUN_PC_MYR,"; else 1.0)")
-        print("  -b(--r-max-binary): maximum sepration for detecting binaries (0.1)")
-        print("  -B(--full-binary): calculate full binary orbital parameters (including orbital angle and phase) with time-consuming computing;")
-        print("                     without this option, only basic orbital parameters (semi-major axis and eccentricity) are calculated")
-        print("  -M(--multiple): detect multiple systems (binaries, triples and quadruples) and save to snapshot files [snapshot_filename].[single|binary|triple|quadruple];")
-        print("                  without this option, only singles and binaries are detected;")
-        print("                  when this option is used, -r cannot be used to restart data process")
-        print("  -a(--average-mode): Lagrangian properity average mode, choices: sphere: average from center to Lagragian radii; shell: average between two neighbor radii (sphere)")
-        print("  -A(--append): append new data to existing data files")
-        print("  -r(--read-data): read existing single, binary and core data to avoid expensive KDTree construction, no argument, disabled in default")
-        print("     --r-escape: distance criterion for escaper; if the value is 'tidal', calculate the tidal radius (only work when external-mode is on); otherwise it is a constant escape distance criterion. If not given, it is 20*half-mass radius")
-        print("     --e-escape: energy criterion for escaper; if the value is 'bound_noext', calculate bound energy without external potential and remove etot>0; otherwise etot > mass * e-escape (0.0)")
-        print("     --m-ext: the filename of a table of masses of external potential for each time, used for calculation of tidal radius (not given)")
-        print("              the file contains two columns: time, mass")
-        print("  -i(--interrupt-mode): the interruption mode used in petar, choices: no, base, bse, mobse (no)")
-        print("  -t(--external-mode): external mode used in petar, choices: galpy, no (no)")
-        print("  -s(--snapshot-format): input snapshot data format: binary, ascii (ascii)")
-        print("  -o(--output-format): output data format for single, binary and multiple snapshots: ascii, binary, npy (ascii)")
-        print("  -e(--calc-energy): enable to calculate potential energy and virial ratio -(2*ekin/epot) of different lagrangian radii")
-        print("  -c(--calc-multi-rc): enable to calculate individual core radius for each group chosen for Lagrangian properties (e.g., single, binary and star type);")
-        print("                       the centers are also recalculated for individual groups (time-consuming computing)")
-        print("  -n(--n-cpu): number of CPU threads for parallel processing (all threads)")
-        print("     --add-star-type: calculate Lagrangian radii and properties for specific types of stars.")
-        print("          This argument contain a list of type names, separated by ',' (no space)")
-        print("          For each given type name, an additional group of data are added in the Lagrangian data file [prefix].lagr.")
+        print("A tool for post-data processing of a list of snapshot files from petar.")
+        print("Functionality:")
+        print("   1) Generate new snapshots of singles, binaries, and optionally triples/quadruples for each snapshot file.")
+        print("   2) Calculate the density center, core radius, and Lagrangian properties based on the density center, including")
+        print("      radii and the corresponding properties inside each radius: number of objects, average masses, mean velocities, and velocity dispersions.")
+        print("      Binaries are treated as single objects using their center of the mass.")
+        print("   3) Identify single and binary escapers and save them into files.")
+        print("Usage: petar.data.process [options] [snapshot path list filename]")
+        print("   snapshot path list file: A list of snapshot data paths, each line for one snapshot.")
+        print("                            This file can be generated by petar.data.gether.")
+        print("Options (default arguments shown in parentheses at the end):")
+        print("  -h(--help)                Display help information.")
+        print("  -p(--filename-prefix) [S] Prefix of output file names as: [prefix].[lagr|esc_[single|binary]|core] (default: data).")
+        print("  -m(--mass-fraction)   [S] Lagrangian radii mass fraction, seperated by ',' without empty spaces (default: 0.1,0.3,0.5,0.7,0.9).")
+        print("  -G(--gravitational-constant) [F] Gravitational constant (if interrupt-mode=(mo)bse: "+str(petar.G_MSUN_PC_MYR)+"; else 1.0).")
+        print("  -b(--r-max-binary)    [F] Maximum separation for detecting binaries (default: 0.1).")
+        print("  -B(--full-binary)         Calculate detailed binary orbital parameters (including orbital angle and phase) with time-consuming computation;")
+        print("                            Without this option, only basic orbital parameters (semi-major axis and eccentricity) are calculated.")
+        print("  -M(--multiple)            Detect multiple systems (binaries, triples, and quadruples) and save to snapshot files [snapshot_filename].[single|binary|triple|quadruple];")
+        print("                            Without this option, only singles and binaries are detected.")
+        print("                            When this option is used, the option '-r' cannot be used to restart data processing.")
+        print("  -a(--average-mode)    [S] Lagrangian property average mode; choices: (default sphere).")
+        print("                                sphere: average from center to Lagrangian radii")
+        print("                                shell (average between two neighboring radii")
+        print("  -A(--append)              Append new data to existing data files.")
+        print("  -r(--read-data)           Read existing single, binary, and core data to avoid expensive KDTree construction; no argument, disabled by default.")
+        print("     --r-escape       [S|F] Distance criterion for escaper; if the value is 'tidal', calculate the tidal radius (only works when external-mode is on); otherwise, it is a constant escape distance criterion. If not given, it is 20 times the half-mass radius.")
+        print("     --e-escape       [S|F] Energy criterion for escaper; if the value is 'bound_noext', calculate bound energy without external potential and remove etot > 0; otherwise etot > mass * e-escape (default: 0.0).")
+        print("     --m-ext            [S] Read a table of masses of external potential for each time, used for the calculation of tidal radius (default: not used).")
+        print("                            The argument is the filename of the table. The file contains two columns: time, mass.")
+        print("  -i(--interrupt-mode)  [S] The interruption mode used in petar; choices: no, base, bse, mobse (default: no).")
+        print("  -t(--external-mode)   [S] External mode used in petar; choices: galpy, no (default: no).")
+        print("  -s(--snapshot-format) [S] Input snapshot data format: binary, ascii (default: ascii).")
+        print("                             Refer to the '-i' option of petar.")
+        print("     --esc-snapshot-format [S] Set escaper snapshot data format for reading: binary, ascii, npy (follows -s).")
+        print("                               These files (*.esc_single, *.esc_binary) are generated by the previous petar.data.process.")
+        print("                               This option is used when the option '--append' is switched on.")
+        print("  -o(--output-format)   [S] Output data format for single, binary, and multiple snapshots: ascii, binary, npy (default: ascii).")
+        print("  -e(--calc-energy)         Enable the calculation of potential energy and virial ratio -(2*ekin/epot) of different Lagrangian radii.")
+        print("  -c(--calc-multi-rc)       Enable the calculation of individual core radius for each group chosen for Lagrangian properties (e.g., single, binary, and star type);")
+        print("                            The centers are also recalculated for individual groups (time-consuming computation).")
+        print("  -n(--n-cpu)           [I] Number of CPU threads for parallel processing (default: all threads).")
+        print("     --add-star-type    [S] Calculate addtional Lagrangian properties for specific types of stars.")
+        print("          This argument contains a list of type names, separated by ',' without empty spaces.")
+        print("          For each given type name, an additional group of data is added in the Lagrangian data file [prefix].lagr.")
         print("          There are four styles of type names:")
-        print("            (1) a single SSE type name (see help(petar.SSEType))")
-        print("                For example, if 'BH' is given, one additional class member (type is class Lagrangian), BH, is added.")
-        print("                The Lagrangian radii are determined by only counting BHs, ")
-        print("                then the properties (average mass, velocity...) of BHs are calculated using these Lagrangian radii.")
-        print("            (2) a combination of different SSE types connected by '_'.")
-        print("                This will include mutliple SSE types in the calculation.")
-        print("                For example, if 'BH_NS_WD' is given, the additional class member, BH_NS_WD,")
-        print("                count BHs, NSs and WDs together to calculate the Lagrangian properties.")
+        print("            (1) a single SSE type name")
+        print("                Calculate Lagrangian properties for the specified single stellar type.")
+        print("                For example, if 'BH' is provided, the Lagrangian properties of black holes are calculated.")
+        print("            (2) a combination of different SSE types connected by '_'")
+        print("                Calculate Lagrangian properties for the specified multiple stellar types.")
+        print("                For example, if 'BH_NS_WD' is provided, the Lagrangian properties for black holes, neutron stars, and white dwarfs are calculated.")
         print("            (3) a single SSE type name with the prefix 'no'")
-        print("                This will exclude the given SSE type name in the calculation.")
-        print("                For exmaple, if 'noBH' is given, the additional class member, noBH, ")
-        print("                count all stars except BHs to calculate the Lagrangian properties.")
-        print("            (4) two types (can be any case of the style 1-3) are given by '[type 1]__in__[type 2]'")
-        print("                Then, the properties of type 1 stars within the spheres or shells of ")
-        print("                Lagragian radii of type 2 stars are calculated. The Lagrangian radii of type 1 are not calculated.")
-        print("                For example, if 'BH__in__all' is given, Lagrangian properties of BHs are calculated ")
-        print("                within the shell or sphere of Lagrangian radii of all stars (instead of Lagrangian radii of BHs).")
-        print("                Notice that the two type names (except 'all') should also be added separately in the list.")
-        print("                In the case of 'BH__in__all', add_star_type must contain 'BH', i.e. add_star_type=['BH','BH__in__all', ...].")
-        print("                In another example, 'BH__in__MS', add_star_type=['BH','MS','BH__in__MS',...].")
-        print("          The SSE star type names are shown below:")
+        print("                Calculate Lagrangian properties excluding the specified stellar type.")
+        print("                For example, if 'noBH' is provided, the Lagrangian properties excluding black holes are calculated.")
+        print("            (4) two types (can be any combination of styles 1-3) are given as '[type 1]__in__[type 2]'")
+        print("                Calculate Lagrangian properties excluding the radii of type 1 within the sphere or shell defined by the Lagrangian radii of type 2.")
+        print("                For example, if 'BH__in__all' is provided, Lagrangian properties of black holes are calculated within the shell or sphere defined by the Lagrangian radii of all stars.")
+        print("                Note that the two type names (excluding 'all') should also be added separately in the list.")
+        print("                For example, if 'BH__in__MS' is included, 'BH' and 'MS' should both be added together as: BH,MS,BH__in__MS.")
+        print("          - All these styles can be combined and calculated simultaneously, e.g., '--add-star-type NS_BH,MS,NS_BH__in__MS,noBH'.")
+        print("          - When this option is used, to read the [prefix].lagr file using petar.LagrangianMultiple, the consistent keyword argument 'add_star_type' should be used.")
+        print("            For example, if '--add-star-type BH,MS' is used in petar.data.process, petar.LagrangianMultiple should include the keyword argument 'add_star_type=['BH','MS']'.")
+        print("            The corresponding class member names are 'BH' and 'MS'.")
+        print("          - The SSE star type names are shown below:")
         print("              LMS: deeply or fully convective low mass MS star [0]")
         print("              MS:   Main Sequence star [1]")
         print("              HG:   Hertzsprung Gap [2]")
@@ -90,17 +101,33 @@ if __name__ == '__main__':
         print("              NS:   Neutron Star [13]")
         print("              BH:   Black Hole [14]")
         print("              SN:   Massless Supernova [15]")
-        print("          All these styles can be combined, e.g. '--add-star-type NS_BH,MS,NS_BH__in__MS,noBH'")
-        print("          When this option is used, to read the generated lagrangian data by using petar.LagrangianMultiple in Python3,")
-        print("          the consistent keyword argument 'add_star_type' should be used.")
-        print("          For example, when '--add-star-type BH,MS' is used, the initialization of petar.LagrangianMultiple should be:")
-        print("          lagr = petar.LagrangianMultiple(add_star_type=['BH','MS']) .")
-        print("Important note: 1) users should be careful to set the consistent '-i' or -'G' options in order to correctly calculate the Kepler orbital parameters of binaries.")
-        print("                2) when data are written in BINARY format, '-s binary' should be used.")
-        print("                3) '--add-star-type' only works when the interrupt mode is 'bse' or 'mobse'.")
+        print("     --add-mass-range   [S] Calculate addtional Lagrangian properties for specific mass ranges of objects.")
+        print("          This argument contains a list of mass ranges, separated by ',' without empty spaces.")
+        print("          For each given mass range, an additional group of data is added in the Lagrangian data file [prefix].lagr.")
+        print("          There are two styles of mass ranges:")
+        print("            (1) [minimum mass]_[maximum mass]")
+        print("                Calculate Lagrangian properties for the objects in a mass range.")
+        print("                For example, if '0.08_1' is given, Lagrangian properties are calculated by selecting objects with masses from 0.08 to 1.0.")
+        print("                Be aware that the minimum mass must be > 0.")
+        print("            (2) [mass range 1]__in__[mass range 2]")
+        print("                Calculate Lagrangian properties of the mass range 1 within the sphere or shell defined by the Lagrangian radii of mass range 2.")
+        print("                The [mass range 1] and [mass range 2] have the same syntax of the style (1).")
+        print("                For example, if '1_150__in__0.08_1' is given, Lagrangian properties with masses from 1 to 150 are calculated within the sphere or shell defined by the Lagrangian radii with masses from 0.08 to 1.0.")
+        print("                To use this style,  both [mass range 1] and [mass range 2] should be added simultaneously.")
+        print("          - All these styles can be combined, similar to '--add-star-type'.")
+        print("          - When this option is used, to read the [prefix].lagr file using petar.LagrangianMultiple, the consistent keyword argument 'add_mass_range' should be used.")
+        print("            For example, if '--add-mass-range 0.08_1,1_150,0.08_1__in__1_150' is used in petar.data.process, petar.LagrangianMultiple should include the keyword argument 'add_mass_range=['0.08_1','1_150','0.08_1__in__1_150'.")
+        print("            The corresponding class member names are 'mass_0.08_1', 'mass_1_150', and 'mass_0.08_1__in__1_150'.")
+        print("Important notes:")
+        print("  1) Ensure correct options are set for '-i', '-t', and '-G' to read snapshots accurately and calculate Kepler orbital parameters correctly.")
+        print("     When using the compiled SSE/BSE stellar evolution package, use '-i bse'. Note that even if SSE/BSE is compiled but switched off during petar usage, '-i bse' is still required.")
+        print("     Similarly, when the Galpy external potential support is compiled, use '-i galpy' regardless of whether external potential is set in petar options during simulation.")
+        print("     Make sure to set the correct value for '-G' based on the units used during petar usage.")
+        print("  2) If data is written in BINARY format during petar simulation, use '-s binary'.")
+        print("  3) '--add-star-type' functionality is only available when SSE/BSE is used.")
     try:
         shortargs = 'p:m:G:b:MBAea:rt:i:s:o:cn:h'
-        longargs = ['mass-fraction=','multiple','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','calc-energy','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','snapshot-format=','output-format=','m-ext=','add-star-type=','calc-multi-rc','n-cpu=','help']
+        longargs = ['mass-fraction=','multiple','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','calc-energy','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','snapshot-format=','output-format=','m-ext=','add-star-type=','add-mass-range=','calc-multi-rc','n-cpu=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -134,8 +161,15 @@ if __name__ == '__main__':
                 kwargs['external_mode'] = arg
             elif opt in ('-s','--snapshot-format'):
                 kwargs['snapshot_format'] = arg
+                snapshot_format = arg
+                if (not 'esc_snapshot_format' in kwargs.keys()):
+                    esc_snapshot_format = arg
+            elif opt in ('--esc-snapshot-format'):
+                kwargs['esc_snapshot_format'] = arg
+                esc_snapshot_format = arg
             elif opt in ('-o','--output-format'):
                 kwargs['output_format'] = arg
+                output_format = arg
             elif opt in ('-r','--read-data'):
                 read_flag = True
             elif opt in ('-c','--calc-multi-rc'):
@@ -151,6 +185,8 @@ if __name__ == '__main__':
                 kwargs['read_m_ext'] = arg
             elif opt in ('--add-star-type'):
                 kwargs['add_star_type'] = [x for x in arg.split(',')]
+            elif opt in ('--add-mass-range'):
+                kwargs['add_mass_range'] = [x for x in arg.split(',')]
             else:
                 assert False, "unhandeld option"
 
@@ -189,46 +225,41 @@ if __name__ == '__main__':
             with open(key_filename, write_option) as f:
                 result[key].savetxt(f)
                 print (key,"data is saved in file:",key_filename)
-     
 
-    if (write_option=='a'):
-        if 'esc_single' in result.keys():
-            key_filename  = filename_prefix + '.esc_single'
-            data_read=petar.SingleEscaper(**kwargs)
-            if os.path.getsize(key_filename)>0:
-                data_read.loadtxt(key_filename)
-                result_mix=petar.join(data_read,result['esc_single'])
-                result_mix.removeDuplicate()
+    for key in ['esc_single','esc_binary']:
+        if key in result.keys():
+            key_filename  = filename_prefix + '.' + key
+            result_mix = result[key]
+            if (write_option=='a'):
+                data_read = None
+                if (key == 'esc_single'):
+                    data_read=petar.SingleEscaper(**kwargs)
+                else:
+                    data_read=petar.BinaryEscaper(**kwargs)
+                if os.path.getsize(key_filename)>0:
+                    if (esc_snapshot_format=='ascii'):
+                        data_read.loadtxt(key_filename)
+                    elif (esc_snapshot_format=='binary'):
+                        data_read.fromfile(key_filename)
+                    elif (esc_snapshot_format=='npy'):
+                        data_read.load(key_filename)
+                    else:
+                        raise ValueError('Snapshot format %s unknown, should be ascii, binary or npy.' % snapshot_format)                                            
+                    result_mix = petar.join(data_read,result[key])
+                    result_mix.removeDuplicate()
+                
+            if (output_format=='ascii'):
                 with open(key_filename, 'w') as f:
                     result_mix.savetxt(f)
-                    print ("esc_single data is saved in file:",key_filename)
+            elif (output_format=='binary'):
+                with open(key_filename, 'wb') as f:
+                    result_mix.tofile(f)
+            elif (output_format=='npy'):
+                with open(key_filename, 'wb') as f:
+                    result_mix.save(f)
             else:
-                with open(key_filename, 'w') as f:
-                    result['esc_single'].savetxt(f)
-                    print ("esc_single data is saved in file:",key_filename)
-        if 'esc_binary' in result.keys():
-            key_filename  = filename_prefix + '.esc_binary'
-            data_read=petar.BinaryEscaper(**kwargs)
-            if os.path.getsize(key_filename)>0:
-                data_read.loadtxt(key_filename)
-                result_mix=petar.join(data_read,result['esc_binary'])
-                result_mix.removeDuplicate()
-                with open(key_filename, 'w') as f:
-                    result_mix.savetxt(f)
-                    print ("esc_binary data is saved in file:",key_filename)
-            else:
-                with open(key_filename, 'w') as f:
-                    result['esc_binary'].savetxt(f)
-                    print ("esc_binary data is saved in file:",key_filename)
-
-    else:
-        for key in ['esc_single','esc_binary']:
-            if key in result.keys():
-                key_filename  = filename_prefix + '.' + key
-                with open(key_filename, write_option) as f:
-                    result[key].savetxt(f)
-                    print (key,"data is saved in file:",key_filename)
-            
+                raise ValueError('Output format %s is unknown, should be ascii, binary or npy.' % output_format)
+            print ("%s data is saved in file: %s" % (key,key_filename))
 
     print ('CPU time profile:')
     for key, item in time_profile.items():

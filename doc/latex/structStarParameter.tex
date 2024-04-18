@@ -1,0 +1,368 @@
+\hypertarget{structStarParameter}{}\doxysection{Star\+Parameter Struct Reference}
+\label{structStarParameter}\index{StarParameter@{StarParameter}}
+
+
+S\+S\+E/\+B\+SE based code star parameter for saving.  
+
+
+
+
+{\ttfamily \#include $<$bse\+\_\+interface.\+h$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+void \mbox{\hyperlink{structStarParameter_ac07b75cb84771f59a679ebe14e134062}{initial}} (double \+\_\+mass, int \+\_\+kw=1, double \+\_\+ospin=0.\+0, double \+\_\+epoch=0.\+0)
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+Landmark luminosities \end{quote}
+\end{DoxyCompactList}\item 
+void \mbox{\hyperlink{structStarParameter_afe637f14df00c48c01c16afd574aec38}{write\+Ascii}} (F\+I\+LE $\ast$fp) const
+\begin{DoxyCompactList}\small\item\em write class data with A\+S\+C\+II format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{structStarParameter_a7828fee9bdc19be5ac3f4a6ec964d5fb}{read\+Ascii}} (F\+I\+LE $\ast$fp)
+\begin{DoxyCompactList}\small\item\em read class data with A\+S\+C\+II format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{structStarParameter_a6a6c1a6c2f12ef90a555f92ae0dd80f4}{print}} (std\+::ostream \&fout) const
+\begin{DoxyCompactList}\small\item\em for print in one line \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{structStarParameter_a139a2ca192579fe938f35764d2e633ac}{print\+Column}} (std\+::ostream \&\+\_\+fout, const int \+\_\+width=20) const
+\begin{DoxyCompactList}\small\item\em print data of class members using column style \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static void \mbox{\hyperlink{structStarParameter_aea025c8bebdf452c1dbccb99a18c770b}{print\+Column\+Title}} (std\+::ostream \&\+\_\+fout, const int \+\_\+width=20)
+\begin{DoxyCompactList}\small\item\em print titles of class members using column style \end{DoxyCompactList}\item 
+static int \mbox{\hyperlink{structStarParameter_acf720b7ca30d8db6a94ecbf7d548ae1c}{print\+Title\+With\+Meaning}} (std\+::ostream \&\+\_\+fout, const int \+\_\+counter=0, const int \+\_\+offset=0)
+\begin{DoxyCompactList}\small\item\em print column title with meaning (each line for one column) \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+long long int \mbox{\hyperlink{structStarParameter_a6408b030c420e6cd9f9b0b6187936b0c}{kw}}
+\item 
+double \mbox{\hyperlink{structStarParameter_a39b7379eeb23bf3655eef066d25b0778}{m0}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+stellar type \end{quote}
+\end{DoxyCompactList}\item 
+double \mbox{\hyperlink{structStarParameter_a3f9378d2692a6d6fa37a970826dadbce}{mt}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+Initial stellar mass in solar units \end{quote}
+\end{DoxyCompactList}\item 
+double \mbox{\hyperlink{structStarParameter_a81a2964cbcf0eb6c3374765fc75a75e4}{r}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+Current mass in solar units (used for R) \end{quote}
+\end{DoxyCompactList}\item 
+double \mbox{\hyperlink{structStarParameter_a45a5dd7dc9ddabf59cbef44fc9156f80}{mc}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+Stellar radius in solar units \end{quote}
+\end{DoxyCompactList}\item 
+double \mbox{\hyperlink{structStarParameter_a93cc6747cf9ded90b6f4af25a1ae7ce0}{rc}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+core mass in solar units \end{quote}
+\end{DoxyCompactList}\item 
+double \mbox{\hyperlink{structStarParameter_a4a49b59be964f81449d2640d3eb20445}{ospin}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+core radius in solar units (output) \end{quote}
+\end{DoxyCompactList}\item 
+double \mbox{\hyperlink{structStarParameter_a818fd553d6aa629b5db14ec92990bc38}{epoch}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+spin of star \end{quote}
+\end{DoxyCompactList}\item 
+double \mbox{\hyperlink{structStarParameter_a532fd4a8f7dab8fb443e3d63db3d001f}{tphys}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+starting time of one evolution phase, age = tphys -\/ epoch \end{quote}
+\end{DoxyCompactList}\item 
+double \mbox{\hyperlink{structStarParameter_a36334d413d206e06f3ee359eadffc51d}{lum}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+physical evolve time in Myr \end{quote}
+\end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+S\+S\+E/\+B\+SE based code star parameter for saving. 
+
+This file provides the interface classes to connect the B\+S\+E-\/based code to Pe\+Tar.
+
+Data structure\+: \mbox{\hyperlink{structStarParameter}{Star\+Parameter}}\+: the basic stellar parameter for one star Starparameter\+Out\+: the stellar parameter output from calling evolv1 or evolv2 \mbox{\hyperlink{classBinaryEvent}{Binary\+Event}}\+: the records of binary type changes inside evolv2 (bpp array) Initialization\+: \mbox{\hyperlink{classIOParamsBSE}{I\+O\+Params\+B\+SE}}\+: the class storing all initial parameters needed for B\+S\+E-\/based code. it also provides the function to initialize from commander options and show help information Main Interface\+: \mbox{\hyperlink{classBSEManager}{B\+S\+E\+Manager}}\+: the main class contains the interface to call single and binary evolution function (evolv1/evolv2) Evolution of stars and binaries\+: evolve\+Star\+: evolve one single star by a given time step evolve\+Binary\+: evolve one binary by a given time step Next time step for calling B\+SE\+: get\+Time\+Step\+Star\+: next time step estimation for a single star get\+Time\+Step\+Binary\+: next time step estimation for a binary is\+Call\+B\+S\+E\+Needed\+: check whether it is necessary to call evolvebinary for a binary even the next time step is not yet reached.
+
+How it works in Pe\+Tar\+: The bse interface functions are used in \mbox{\hyperlink{ar__interaction_8hpp}{src/ar\+\_\+interaction.\+hpp}}. The class \mbox{\hyperlink{classARInteraction}{A\+R\+Interaction}} has two functions to use B\+SE\+: modify\+One\+Particle\+: Evolve a single star to a given time using evolve\+Star; and determine the next time step to call B\+SE using get\+Time\+Step\+Star. If stellar type changes or supernova occurs, save information in the file \mbox{[}data filename prefix\mbox{]}.\mbox{[}S\+SE name\mbox{]} If the mass of star becomes zero, set remove flag. The particle is removed in the later on integration. This function is used in Hermite integrator for single stars and also in S\+D\+AR integrator for single companion in a multiple system (e.\+g. the outer star in a triple) every time step. If the given time is less than the next time estimated from the previous call of modify\+One\+Particle, the star is not evolved.
+
+modify\+And\+Interrupt\+Iter\+: Evolve a multiple system to a given time using evolve\+Star and evolve\+Binary; and determine the next time steps for each single or binary separately. The function check each sub component of a multiple system, For the type of the component\+: single star\+: call evolve\+Star binary\+: call evolve\+Binary multiple system (n$>$2)\+: call modfy\+And\+Interrupt\+Iter iteratively. If any single/binary type changes or supernova occurs, save information in the file \mbox{[}data filename prefix\mbox{]}.\mbox{[}S\+S\+E/\+B\+SE name\mbox{]}. This function is used in S\+D\+AR integration every time step. For each single star, if the given time is less than the next time estimated from the previous call, it is not evolved. For each binary, if the given time is less than the next time estimated before, and the is\+Call\+B\+S\+E\+Needed return false, the binary is not evolved.
+
+The necessary stellar parameters used in B\+SE are collected into one class \mbox{\hyperlink{structStarParameter}{Star\+Parameter}}. Pe\+Tar does not save stellar parameters in history, and only record the present values. Thus the member list must be complete for calling evolv1 and evolv2 without knowing previous values. 
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{structStarParameter_ac07b75cb84771f59a679ebe14e134062}\label{structStarParameter_ac07b75cb84771f59a679ebe14e134062}} 
+\index{StarParameter@{StarParameter}!initial@{initial}}
+\index{initial@{initial}!StarParameter@{StarParameter}}
+\doxysubsubsection{\texorpdfstring{initial()}{initial()}}
+{\footnotesize\ttfamily void Star\+Parameter\+::initial (\begin{DoxyParamCaption}\item[{double}]{\+\_\+mass,  }\item[{int}]{\+\_\+kw = {\ttfamily 1},  }\item[{double}]{\+\_\+ospin = {\ttfamily 0.0},  }\item[{double}]{\+\_\+epoch = {\ttfamily 0.0} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\begin{quote}
+Landmark luminosities \end{quote}
+
+
+initial zero age main sequence
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+mass} & initial mass \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+kw} & initial type (default\+: 1\+: MS) \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+ospin} & initial spin (default\+: 0.\+0) \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+epoch} & initial age for the given type (default\+: 0.\+0) \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{structStarParameter_ac07b75cb84771f59a679ebe14e134062_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{structStarParameter_a6a6c1a6c2f12ef90a555f92ae0dd80f4}\label{structStarParameter_a6a6c1a6c2f12ef90a555f92ae0dd80f4}} 
+\index{StarParameter@{StarParameter}!print@{print}}
+\index{print@{print}!StarParameter@{StarParameter}}
+\doxysubsubsection{\texorpdfstring{print()}{print()}}
+{\footnotesize\ttfamily void Star\+Parameter\+::print (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{fout }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+for print in one line 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{structStarParameter_a6a6c1a6c2f12ef90a555f92ae0dd80f4_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{structStarParameter_a139a2ca192579fe938f35764d2e633ac}\label{structStarParameter_a139a2ca192579fe938f35764d2e633ac}} 
+\index{StarParameter@{StarParameter}!printColumn@{printColumn}}
+\index{printColumn@{printColumn}!StarParameter@{StarParameter}}
+\doxysubsubsection{\texorpdfstring{printColumn()}{printColumn()}}
+{\footnotesize\ttfamily void Star\+Parameter\+::print\+Column (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print data of class members using column style 
+
+print data of class members in one line for column style. Notice no newline is printed at the end 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{structStarParameter_a139a2ca192579fe938f35764d2e633ac_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{structStarParameter_aea025c8bebdf452c1dbccb99a18c770b}\label{structStarParameter_aea025c8bebdf452c1dbccb99a18c770b}} 
+\index{StarParameter@{StarParameter}!printColumnTitle@{printColumnTitle}}
+\index{printColumnTitle@{printColumnTitle}!StarParameter@{StarParameter}}
+\doxysubsubsection{\texorpdfstring{printColumnTitle()}{printColumnTitle()}}
+{\footnotesize\ttfamily static void Star\+Parameter\+::print\+Column\+Title (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+print titles of class members using column style 
+
+print titles of class members in one line for column style 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{structStarParameter_aea025c8bebdf452c1dbccb99a18c770b_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{structStarParameter_acf720b7ca30d8db6a94ecbf7d548ae1c}\label{structStarParameter_acf720b7ca30d8db6a94ecbf7d548ae1c}} 
+\index{StarParameter@{StarParameter}!printTitleWithMeaning@{printTitleWithMeaning}}
+\index{printTitleWithMeaning@{printTitleWithMeaning}!StarParameter@{StarParameter}}
+\doxysubsubsection{\texorpdfstring{printTitleWithMeaning()}{printTitleWithMeaning()}}
+{\footnotesize\ttfamily static int Star\+Parameter\+::print\+Title\+With\+Meaning (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+counter = {\ttfamily 0},  }\item[{const int}]{\+\_\+offset = {\ttfamily 0} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+print column title with meaning (each line for one column) 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+counter} & offset of the number counter for each line to indicate the column index (defaulted 0) \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+offset} & the printing whitespace offset for each line (defaulted 0) \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+\+: the total counter of columns 
+\end{DoxyReturn}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{structStarParameter_acf720b7ca30d8db6a94ecbf7d548ae1c_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{structStarParameter_a7828fee9bdc19be5ac3f4a6ec964d5fb}\label{structStarParameter_a7828fee9bdc19be5ac3f4a6ec964d5fb}} 
+\index{StarParameter@{StarParameter}!readAscii@{readAscii}}
+\index{readAscii@{readAscii}!StarParameter@{StarParameter}}
+\doxysubsubsection{\texorpdfstring{readAscii()}{readAscii()}}
+{\footnotesize\ttfamily void Star\+Parameter\+::read\+Ascii (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{fp }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read class data with A\+S\+C\+II format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fin} & file IO for read \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{structStarParameter_afe637f14df00c48c01c16afd574aec38}\label{structStarParameter_afe637f14df00c48c01c16afd574aec38}} 
+\index{StarParameter@{StarParameter}!writeAscii@{writeAscii}}
+\index{writeAscii@{writeAscii}!StarParameter@{StarParameter}}
+\doxysubsubsection{\texorpdfstring{writeAscii()}{writeAscii()}}
+{\footnotesize\ttfamily void Star\+Parameter\+::write\+Ascii (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{fp }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write class data with A\+S\+C\+II format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fout} & file IO for write \\
+\hline
+\end{DoxyParams}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{structStarParameter_a818fd553d6aa629b5db14ec92990bc38}\label{structStarParameter_a818fd553d6aa629b5db14ec92990bc38}} 
+\index{StarParameter@{StarParameter}!epoch@{epoch}}
+\index{epoch@{epoch}!StarParameter@{StarParameter}}
+\doxysubsubsection{\texorpdfstring{epoch}{epoch}}
+{\footnotesize\ttfamily double Star\+Parameter\+::epoch}
+
+
+
+\begin{quote}
+spin of star \end{quote}
+
+
+\mbox{\Hypertarget{structStarParameter_a6408b030c420e6cd9f9b0b6187936b0c}\label{structStarParameter_a6408b030c420e6cd9f9b0b6187936b0c}} 
+\index{StarParameter@{StarParameter}!kw@{kw}}
+\index{kw@{kw}!StarParameter@{StarParameter}}
+\doxysubsubsection{\texorpdfstring{kw}{kw}}
+{\footnotesize\ttfamily long long int Star\+Parameter\+::kw}
+
+\mbox{\Hypertarget{structStarParameter_a36334d413d206e06f3ee359eadffc51d}\label{structStarParameter_a36334d413d206e06f3ee359eadffc51d}} 
+\index{StarParameter@{StarParameter}!lum@{lum}}
+\index{lum@{lum}!StarParameter@{StarParameter}}
+\doxysubsubsection{\texorpdfstring{lum}{lum}}
+{\footnotesize\ttfamily double Star\+Parameter\+::lum}
+
+
+
+\begin{quote}
+physical evolve time in Myr \end{quote}
+
+
+\mbox{\Hypertarget{structStarParameter_a39b7379eeb23bf3655eef066d25b0778}\label{structStarParameter_a39b7379eeb23bf3655eef066d25b0778}} 
+\index{StarParameter@{StarParameter}!m0@{m0}}
+\index{m0@{m0}!StarParameter@{StarParameter}}
+\doxysubsubsection{\texorpdfstring{m0}{m0}}
+{\footnotesize\ttfamily double Star\+Parameter\+::m0}
+
+
+
+\begin{quote}
+stellar type \end{quote}
+
+
+\mbox{\Hypertarget{structStarParameter_a45a5dd7dc9ddabf59cbef44fc9156f80}\label{structStarParameter_a45a5dd7dc9ddabf59cbef44fc9156f80}} 
+\index{StarParameter@{StarParameter}!mc@{mc}}
+\index{mc@{mc}!StarParameter@{StarParameter}}
+\doxysubsubsection{\texorpdfstring{mc}{mc}}
+{\footnotesize\ttfamily double Star\+Parameter\+::mc}
+
+
+
+\begin{quote}
+Stellar radius in solar units \end{quote}
+
+
+\mbox{\Hypertarget{structStarParameter_a3f9378d2692a6d6fa37a970826dadbce}\label{structStarParameter_a3f9378d2692a6d6fa37a970826dadbce}} 
+\index{StarParameter@{StarParameter}!mt@{mt}}
+\index{mt@{mt}!StarParameter@{StarParameter}}
+\doxysubsubsection{\texorpdfstring{mt}{mt}}
+{\footnotesize\ttfamily double Star\+Parameter\+::mt}
+
+
+
+\begin{quote}
+Initial stellar mass in solar units \end{quote}
+
+
+\mbox{\Hypertarget{structStarParameter_a4a49b59be964f81449d2640d3eb20445}\label{structStarParameter_a4a49b59be964f81449d2640d3eb20445}} 
+\index{StarParameter@{StarParameter}!ospin@{ospin}}
+\index{ospin@{ospin}!StarParameter@{StarParameter}}
+\doxysubsubsection{\texorpdfstring{ospin}{ospin}}
+{\footnotesize\ttfamily double Star\+Parameter\+::ospin}
+
+
+
+\begin{quote}
+core radius in solar units (output) \end{quote}
+
+
+\mbox{\Hypertarget{structStarParameter_a81a2964cbcf0eb6c3374765fc75a75e4}\label{structStarParameter_a81a2964cbcf0eb6c3374765fc75a75e4}} 
+\index{StarParameter@{StarParameter}!r@{r}}
+\index{r@{r}!StarParameter@{StarParameter}}
+\doxysubsubsection{\texorpdfstring{r}{r}}
+{\footnotesize\ttfamily double Star\+Parameter\+::r}
+
+
+
+\begin{quote}
+Current mass in solar units (used for R) \end{quote}
+
+
+\mbox{\Hypertarget{structStarParameter_a93cc6747cf9ded90b6f4af25a1ae7ce0}\label{structStarParameter_a93cc6747cf9ded90b6f4af25a1ae7ce0}} 
+\index{StarParameter@{StarParameter}!rc@{rc}}
+\index{rc@{rc}!StarParameter@{StarParameter}}
+\doxysubsubsection{\texorpdfstring{rc}{rc}}
+{\footnotesize\ttfamily double Star\+Parameter\+::rc}
+
+
+
+\begin{quote}
+core mass in solar units \end{quote}
+
+
+\mbox{\Hypertarget{structStarParameter_a532fd4a8f7dab8fb443e3d63db3d001f}\label{structStarParameter_a532fd4a8f7dab8fb443e3d63db3d001f}} 
+\index{StarParameter@{StarParameter}!tphys@{tphys}}
+\index{tphys@{tphys}!StarParameter@{StarParameter}}
+\doxysubsubsection{\texorpdfstring{tphys}{tphys}}
+{\footnotesize\ttfamily double Star\+Parameter\+::tphys}
+
+
+
+\begin{quote}
+starting time of one evolution phase, age = tphys -\/ epoch \end{quote}
+
+
+
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{bse__interface_8h}{bse\+\_\+interface.\+h}}\end{DoxyCompactItemize}

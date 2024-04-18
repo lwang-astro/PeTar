@@ -1,0 +1,9 @@
+<map id="BSEManager::evolveBinary" name="BSEManager::evolveBinary">
+<area shape="rect" id="node1" title="call evolv2 for a binary" alt="" coords="5,107,204,133"/>
+<area shape="rect" id="node2" href="$classBSEManager.html#af97aa6234723181b08aab193127e2028" title="call SSE evolv1 for single star" alt="" coords="274,5,457,32"/>
+<area shape="rect" id="node3" href="$classBinaryEvent.html#ad82d36b90a69ce9fb2e65af39cb6cd41" title="The index of initial event in record array (last one)" alt="" coords="253,56,477,83"/>
+<area shape="rect" id="node4" href="$namespacePIKG.html#aede68ae33404ee6199164897b8cbc9ad" title=" " alt="" coords="320,107,411,133"/>
+<area shape="rect" id="node5" href="$classBinaryEvent.html#abceee9b94161fd75851eaf003a49c011" title="set up the initial parameter of binary event based on the present status of a binary" alt="" coords="272,157,459,184"/>
+<area shape="rect" id="node7" href="$classBinaryEvent.html#a1ee6a0a141093aa6f5662c4cf7659a6c" title="set binary type to &#45;1 for the given event index to indicate the end of record" alt="" coords="252,208,479,235"/>
+<area shape="rect" id="node6" href="$namespacePIKG.html#aab82f0106f14677daa09a64a269eaadf" title=" " alt="" coords="527,157,613,184"/>
+</map>

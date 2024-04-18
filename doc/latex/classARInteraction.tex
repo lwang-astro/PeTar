@@ -1,0 +1,416 @@
+\hypertarget{classARInteraction}{}\doxysection{A\+R\+Interaction Class Reference}
+\label{classARInteraction}\index{ARInteraction@{ARInteraction}}
+
+
+AR interaction clas.  
+
+
+
+
+{\ttfamily \#include $<$ar\+\_\+interaction.\+hpp$>$}
+
+\doxysubsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+typedef H4\+::\+Particle\+H4$<$ \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} $>$ \mbox{\hyperlink{classARInteraction_acaae6d77e8475b0948047e419130ace9}{H4\+Ptcl}}
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classARInteraction_a3cf9d308cc67e4c1e5efc6c5a7d7dd7b}{A\+R\+Interaction}} ()
+\item 
+bool \mbox{\hyperlink{classARInteraction_a51561b7ee444be08ae46765aebe9e135}{check\+Params}} ()
+\begin{DoxyCompactList}\small\item\em (Necessary) check whether publicly initialized parameters are correctly set \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classARInteraction_a4210e6dc39838403516c23d51ff22e6b}{print}} (std\+::ostream \&\+\_\+fout) const
+\begin{DoxyCompactList}\small\item\em print parameters \end{DoxyCompactList}\item 
+Float \mbox{\hyperlink{classARInteraction_a7d177920969974abaf3fd2badf839d85}{calc\+Inner\+Acc\+Pot\+And\+G\+T\+Kick\+Inv\+Two}} (A\+R\+::\+Force \&\+\_\+f1, A\+R\+::\+Force \&\+\_\+f2, Float \&\+\_\+epot, const \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} \&\+\_\+p1, const \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} \&\+\_\+p2)
+\begin{DoxyCompactList}\small\item\em (Necessary) calculate inner member acceleration, potential and inverse time transformation function gradient and factor for kick (two-\/body case) \end{DoxyCompactList}\item 
+Float \mbox{\hyperlink{classARInteraction_ac7c6450c4cc7760bde8c475f9cd1aea8}{calc\+Inner\+Acc\+Pot\+And\+G\+T\+Kick\+Inv}} (A\+R\+::\+Force $\ast$\+\_\+force, Float \&\+\_\+epot, const \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} $\ast$\+\_\+particles, const int \+\_\+n\+\_\+particle)
+\begin{DoxyCompactList}\small\item\em calculate inner member acceleration, potential and inverse time transformation function gradient and factor for kick \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classARInteraction_aeb7e4c4758024ca22379caca13b8f9d8}{calc\+Acc\+Pert}} (A\+R\+::\+Force $\ast$\+\_\+force, const \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} $\ast$\+\_\+particles, const int \+\_\+n\+\_\+particle, const \mbox{\hyperlink{classARInteraction_acaae6d77e8475b0948047e419130ace9}{H4\+Ptcl}} \&\+\_\+particle\+\_\+cm, const \mbox{\hyperlink{classARPerturber}{A\+R\+Perturber}} \&\+\_\+perturber, const Float \+\_\+time)
+\begin{DoxyCompactList}\small\item\em (Necessary) calculate acceleration from perturber and the perturbation factor for slowdown calculation \end{DoxyCompactList}\item 
+Float \mbox{\hyperlink{classARInteraction_a7cd47f396982c4b4a985f5160311b29c}{calc\+Acc\+Pot\+And\+G\+T\+Kick\+Inv}} (A\+R\+::\+Force $\ast$\+\_\+force, Float \&\+\_\+epot, const \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} $\ast$\+\_\+particles, const int \+\_\+n\+\_\+particle, const \mbox{\hyperlink{classARInteraction_acaae6d77e8475b0948047e419130ace9}{H4\+Ptcl}} \&\+\_\+particle\+\_\+cm, const \mbox{\hyperlink{classARPerturber}{A\+R\+Perturber}} \&\+\_\+perturber, const Float \+\_\+time)
+\begin{DoxyCompactList}\small\item\em (Necessary) calculate acceleration from internal members and perturbers \end{DoxyCompactList}\item 
+Float \mbox{\hyperlink{classARInteraction_af00caf0d0b4da760b290d69f3833ba40}{calc\+Pert\+From\+Force}} (const Float $\ast$\+\_\+force, const Float \+\_\+mp, const Float \+\_\+mpert)
+\begin{DoxyCompactList}\small\item\em calculate perturbation from c.\+m. acceleration \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tparticle $>$ }\\int \mbox{\hyperlink{classARInteraction_a01115b0f522974cd9e5f0ecd3ef57663}{modify\+One\+Particle}} (Tparticle \&\+\_\+p, const Float \&\+\_\+time\+\_\+now, const Float \&\+\_\+time\+\_\+end)
+\begin{DoxyCompactList}\small\item\em (Necessary) modify one particle function \end{DoxyCompactList}\item 
+int \mbox{\hyperlink{classARInteraction_afb463755bad036a8fc3aef4986d5bd17}{modify\+And\+Interrupt\+Iter}} (A\+R\+::\+Interrupt\+Binary$<$ \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} $>$ \&\+\_\+bin\+\_\+interrupt, A\+R\+::\+Binary\+Tree$<$ \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} $>$ \&\+\_\+bin)
+\begin{DoxyCompactList}\small\item\em (Necessary) modify the orbits and interrupt check \end{DoxyCompactList}\item 
+Float \mbox{\hyperlink{classARInteraction_a75c65b6975c199418c32a6d8f1006199}{calc\+G\+T\+Drift\+Inv}} (Float \+\_\+ekin\+\_\+minus\+\_\+etot)
+\begin{DoxyCompactList}\small\item\em (Necessary) calcualte the inverse time transformation factor for drift \end{DoxyCompactList}\item 
+Float \mbox{\hyperlink{classARInteraction_a39d6cac3e556ce8a755944de36add577}{calcH}} (Float \+\_\+ekin\+\_\+minus\+\_\+etot, Float \+\_\+epot)
+\begin{DoxyCompactList}\small\item\em (Necessary) calculate the time transformed Hamiltonian \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classARInteraction_ab655a0b1f242542392d27f3f31b9bb59}{write\+Binary}} (F\+I\+LE $\ast$\+\_\+fp) const
+\begin{DoxyCompactList}\small\item\em write class data to file with binary format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classARInteraction_ac9892f1c9f92bdc7dccf4ef27ef44540}{read\+Binary}} (F\+I\+LE $\ast$\+\_\+fin)
+\begin{DoxyCompactList}\small\item\em read class data to file with binary format \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static Float \mbox{\hyperlink{classARInteraction_a4e42ffa6b37e1bca18ad1b33df7e893d}{calc\+Pert\+From\+Binary}} (const C\+O\+M\+M\+::\+Binary \&\+\_\+bin)
+\begin{DoxyCompactList}\small\item\em calculate perturbation from binary tree \end{DoxyCompactList}\item 
+static Float \mbox{\hyperlink{classARInteraction_ae19d7f0a1037cabe10775fb9b4c680b5}{calc\+Pert\+From\+MR}} (const Float \+\_\+r, const Float \+\_\+mp, const Float \+\_\+mpert)
+\begin{DoxyCompactList}\small\item\em calculate perturbation from distance to perturber and masses of particle and perturber \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+Float \mbox{\hyperlink{classARInteraction_a4492624ebd3de824362dfd5148e95297}{eps\+\_\+sq}}
+\item 
+Float \mbox{\hyperlink{classARInteraction_a2b6a85ec08384faf2018d480009ed78a}{gravitational\+\_\+constant}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+softening parameter \end{quote}
+\end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+AR interaction clas. 
+
+\doxysubsection{Member Typedef Documentation}
+\mbox{\Hypertarget{classARInteraction_acaae6d77e8475b0948047e419130ace9}\label{classARInteraction_acaae6d77e8475b0948047e419130ace9}} 
+\index{ARInteraction@{ARInteraction}!H4Ptcl@{H4Ptcl}}
+\index{H4Ptcl@{H4Ptcl}!ARInteraction@{ARInteraction}}
+\doxysubsubsection{\texorpdfstring{H4Ptcl}{H4Ptcl}}
+{\footnotesize\ttfamily typedef H4\+::\+Particle\+H4$<$\mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}}$>$ \mbox{\hyperlink{classARInteraction_acaae6d77e8475b0948047e419130ace9}{A\+R\+Interaction\+::\+H4\+Ptcl}}}
+
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classARInteraction_a3cf9d308cc67e4c1e5efc6c5a7d7dd7b}\label{classARInteraction_a3cf9d308cc67e4c1e5efc6c5a7d7dd7b}} 
+\index{ARInteraction@{ARInteraction}!ARInteraction@{ARInteraction}}
+\index{ARInteraction@{ARInteraction}!ARInteraction@{ARInteraction}}
+\doxysubsubsection{\texorpdfstring{ARInteraction()}{ARInteraction()}}
+{\footnotesize\ttfamily A\+R\+Interaction\+::\+A\+R\+Interaction (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classARInteraction_aeb7e4c4758024ca22379caca13b8f9d8}\label{classARInteraction_aeb7e4c4758024ca22379caca13b8f9d8}} 
+\index{ARInteraction@{ARInteraction}!calcAccPert@{calcAccPert}}
+\index{calcAccPert@{calcAccPert}!ARInteraction@{ARInteraction}}
+\doxysubsubsection{\texorpdfstring{calcAccPert()}{calcAccPert()}}
+{\footnotesize\ttfamily void A\+R\+Interaction\+::calc\+Acc\+Pert (\begin{DoxyParamCaption}\item[{A\+R\+::\+Force $\ast$}]{\+\_\+force,  }\item[{const \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} $\ast$}]{\+\_\+particles,  }\item[{const int}]{\+\_\+n\+\_\+particle,  }\item[{const \mbox{\hyperlink{classARInteraction_acaae6d77e8475b0948047e419130ace9}{H4\+Ptcl}} \&}]{\+\_\+particle\+\_\+cm,  }\item[{const \mbox{\hyperlink{classARPerturber}{A\+R\+Perturber}} \&}]{\+\_\+perturber,  }\item[{const Float}]{\+\_\+time }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+(Necessary) calculate acceleration from perturber and the perturbation factor for slowdown calculation 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+force} & force array to store the calculation results (in acc\+\_\+pert\mbox{[}3\mbox{]}, notice acc\+\_\+pert may need to reset zero to avoid accummulating old values) \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+particles} & member particle array \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n\+\_\+particle} & number of member particles \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+particle\+\_\+cm} & center-\/of-\/mass particle \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+perturber} & pertuber container \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+time} & current time \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classARInteraction_aeb7e4c4758024ca22379caca13b8f9d8_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classARInteraction_a7cd47f396982c4b4a985f5160311b29c}\label{classARInteraction_a7cd47f396982c4b4a985f5160311b29c}} 
+\index{ARInteraction@{ARInteraction}!calcAccPotAndGTKickInv@{calcAccPotAndGTKickInv}}
+\index{calcAccPotAndGTKickInv@{calcAccPotAndGTKickInv}!ARInteraction@{ARInteraction}}
+\doxysubsubsection{\texorpdfstring{calcAccPotAndGTKickInv()}{calcAccPotAndGTKickInv()}}
+{\footnotesize\ttfamily Float A\+R\+Interaction\+::calc\+Acc\+Pot\+And\+G\+T\+Kick\+Inv (\begin{DoxyParamCaption}\item[{A\+R\+::\+Force $\ast$}]{\+\_\+force,  }\item[{Float \&}]{\+\_\+epot,  }\item[{const \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} $\ast$}]{\+\_\+particles,  }\item[{const int}]{\+\_\+n\+\_\+particle,  }\item[{const \mbox{\hyperlink{classARInteraction_acaae6d77e8475b0948047e419130ace9}{H4\+Ptcl}} \&}]{\+\_\+particle\+\_\+cm,  }\item[{const \mbox{\hyperlink{classARPerturber}{A\+R\+Perturber}} \&}]{\+\_\+perturber,  }\item[{const Float}]{\+\_\+time }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+(Necessary) calculate acceleration from internal members and perturbers 
+
+The Force class acc\+\_\+pert should be updated 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+force} & force array to store the calculation results (in acc\+\_\+pert\mbox{[}3\mbox{]}, notice acc\+\_\+pert may need to reset zero to avoid accummulating old values) \\
+\hline
+\mbox{\texttt{ out}}  & {\em \+\_\+epot} & potential \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+particles} & member particle array \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n\+\_\+particle} & number of member particles \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+particle\+\_\+cm} & center-\/of-\/mass particle \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+perturber} & pertuber container \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+time} & current time \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+perturbation energy to calculate slowdown factor 
+\end{DoxyReturn}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classARInteraction_a7cd47f396982c4b4a985f5160311b29c_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classARInteraction_a75c65b6975c199418c32a6d8f1006199}\label{classARInteraction_a75c65b6975c199418c32a6d8f1006199}} 
+\index{ARInteraction@{ARInteraction}!calcGTDriftInv@{calcGTDriftInv}}
+\index{calcGTDriftInv@{calcGTDriftInv}!ARInteraction@{ARInteraction}}
+\doxysubsubsection{\texorpdfstring{calcGTDriftInv()}{calcGTDriftInv()}}
+{\footnotesize\ttfamily Float A\+R\+Interaction\+::calc\+G\+T\+Drift\+Inv (\begin{DoxyParamCaption}\item[{Float}]{\+\_\+ekin\+\_\+minus\+\_\+etot }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+(Necessary) calcualte the inverse time transformation factor for drift 
+
+The time transformation factor for drift only depends on (kinetic energy -\/ total energy) 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+ekin\+\_\+minus\+\_\+etot} & ekin -\/ etot \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classARInteraction_a39d6cac3e556ce8a755944de36add577}\label{classARInteraction_a39d6cac3e556ce8a755944de36add577}} 
+\index{ARInteraction@{ARInteraction}!calcH@{calcH}}
+\index{calcH@{calcH}!ARInteraction@{ARInteraction}}
+\doxysubsubsection{\texorpdfstring{calcH()}{calcH()}}
+{\footnotesize\ttfamily Float A\+R\+Interaction\+::calcH (\begin{DoxyParamCaption}\item[{Float}]{\+\_\+ekin\+\_\+minus\+\_\+etot,  }\item[{Float}]{\+\_\+epot }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+(Necessary) calculate the time transformed Hamiltonian 
+
+calculate the time transformed Hamiltonian 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+ekin\+\_\+minus\+\_\+etot} & ekin -\/ etot \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classARInteraction_ac7c6450c4cc7760bde8c475f9cd1aea8}\label{classARInteraction_ac7c6450c4cc7760bde8c475f9cd1aea8}} 
+\index{ARInteraction@{ARInteraction}!calcInnerAccPotAndGTKickInv@{calcInnerAccPotAndGTKickInv}}
+\index{calcInnerAccPotAndGTKickInv@{calcInnerAccPotAndGTKickInv}!ARInteraction@{ARInteraction}}
+\doxysubsubsection{\texorpdfstring{calcInnerAccPotAndGTKickInv()}{calcInnerAccPotAndGTKickInv()}}
+{\footnotesize\ttfamily Float A\+R\+Interaction\+::calc\+Inner\+Acc\+Pot\+And\+G\+T\+Kick\+Inv (\begin{DoxyParamCaption}\item[{A\+R\+::\+Force $\ast$}]{\+\_\+force,  }\item[{Float \&}]{\+\_\+epot,  }\item[{const \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} $\ast$}]{\+\_\+particles,  }\item[{const int}]{\+\_\+n\+\_\+particle }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate inner member acceleration, potential and inverse time transformation function gradient and factor for kick 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+force} & force array to store the calculation results (in acc\+\_\+in\mbox{[}3\mbox{]} for acceleration and gtgrad\mbox{[}3\mbox{]} for gradient, notice acc/gtgard may need to reset zero to avoid accummulating old values) \\
+\hline
+\mbox{\texttt{ out}}  & {\em \+\_\+epot} & total inner potential energy \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+particles} & member particle array \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n\+\_\+particle} & number of member particles \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+the inverse time transformation factor (gt\+\_\+kick\+\_\+inv) for kick step 
+\end{DoxyReturn}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classARInteraction_ac7c6450c4cc7760bde8c475f9cd1aea8_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classARInteraction_a7d177920969974abaf3fd2badf839d85}\label{classARInteraction_a7d177920969974abaf3fd2badf839d85}} 
+\index{ARInteraction@{ARInteraction}!calcInnerAccPotAndGTKickInvTwo@{calcInnerAccPotAndGTKickInvTwo}}
+\index{calcInnerAccPotAndGTKickInvTwo@{calcInnerAccPotAndGTKickInvTwo}!ARInteraction@{ARInteraction}}
+\doxysubsubsection{\texorpdfstring{calcInnerAccPotAndGTKickInvTwo()}{calcInnerAccPotAndGTKickInvTwo()}}
+{\footnotesize\ttfamily Float A\+R\+Interaction\+::calc\+Inner\+Acc\+Pot\+And\+G\+T\+Kick\+Inv\+Two (\begin{DoxyParamCaption}\item[{A\+R\+::\+Force \&}]{\+\_\+f1,  }\item[{A\+R\+::\+Force \&}]{\+\_\+f2,  }\item[{Float \&}]{\+\_\+epot,  }\item[{const \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} \&}]{\+\_\+p1,  }\item[{const \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} \&}]{\+\_\+p2 }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+(Necessary) calculate inner member acceleration, potential and inverse time transformation function gradient and factor for kick (two-\/body case) 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+f1} & force for particle 1 to store the calculation results (in acc\+\_\+in\mbox{[}3\mbox{]} for acceleration and gtgrad\mbox{[}3\mbox{]} for gradient, notice acc/gtgard are overwritten, not accummulating old values) \\
+\hline
+\mbox{\texttt{ out}}  & {\em \+\_\+f2} & force for particle 2 \\
+\hline
+\mbox{\texttt{ out}}  & {\em \+\_\+epot} & total inner potential energy \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+p1} & particle 1 \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+p2} & particle 2 \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+the inverse time transformation factor (gt\+\_\+kick\+\_\+inv) for kick step 
+\end{DoxyReturn}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classARInteraction_a7d177920969974abaf3fd2badf839d85_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classARInteraction_a4e42ffa6b37e1bca18ad1b33df7e893d}\label{classARInteraction_a4e42ffa6b37e1bca18ad1b33df7e893d}} 
+\index{ARInteraction@{ARInteraction}!calcPertFromBinary@{calcPertFromBinary}}
+\index{calcPertFromBinary@{calcPertFromBinary}!ARInteraction@{ARInteraction}}
+\doxysubsubsection{\texorpdfstring{calcPertFromBinary()}{calcPertFromBinary()}}
+{\footnotesize\ttfamily static Float A\+R\+Interaction\+::calc\+Pert\+From\+Binary (\begin{DoxyParamCaption}\item[{const C\+O\+M\+M\+::\+Binary \&}]{\+\_\+bin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+calculate perturbation from binary tree 
+
+\mbox{\Hypertarget{classARInteraction_af00caf0d0b4da760b290d69f3833ba40}\label{classARInteraction_af00caf0d0b4da760b290d69f3833ba40}} 
+\index{ARInteraction@{ARInteraction}!calcPertFromForce@{calcPertFromForce}}
+\index{calcPertFromForce@{calcPertFromForce}!ARInteraction@{ARInteraction}}
+\doxysubsubsection{\texorpdfstring{calcPertFromForce()}{calcPertFromForce()}}
+{\footnotesize\ttfamily Float A\+R\+Interaction\+::calc\+Pert\+From\+Force (\begin{DoxyParamCaption}\item[{const Float $\ast$}]{\+\_\+force,  }\item[{const Float}]{\+\_\+mp,  }\item[{const Float}]{\+\_\+mpert }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate perturbation from c.\+m. acceleration 
+
+\mbox{\Hypertarget{classARInteraction_ae19d7f0a1037cabe10775fb9b4c680b5}\label{classARInteraction_ae19d7f0a1037cabe10775fb9b4c680b5}} 
+\index{ARInteraction@{ARInteraction}!calcPertFromMR@{calcPertFromMR}}
+\index{calcPertFromMR@{calcPertFromMR}!ARInteraction@{ARInteraction}}
+\doxysubsubsection{\texorpdfstring{calcPertFromMR()}{calcPertFromMR()}}
+{\footnotesize\ttfamily static Float A\+R\+Interaction\+::calc\+Pert\+From\+MR (\begin{DoxyParamCaption}\item[{const Float}]{\+\_\+r,  }\item[{const Float}]{\+\_\+mp,  }\item[{const Float}]{\+\_\+mpert }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+calculate perturbation from distance to perturber and masses of particle and perturber 
+
+\mbox{\Hypertarget{classARInteraction_a51561b7ee444be08ae46765aebe9e135}\label{classARInteraction_a51561b7ee444be08ae46765aebe9e135}} 
+\index{ARInteraction@{ARInteraction}!checkParams@{checkParams}}
+\index{checkParams@{checkParams}!ARInteraction@{ARInteraction}}
+\doxysubsubsection{\texorpdfstring{checkParams()}{checkParams()}}
+{\footnotesize\ttfamily bool A\+R\+Interaction\+::check\+Params (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+(Necessary) check whether publicly initialized parameters are correctly set 
+
+\begin{DoxyReturn}{Returns}
+true\+: all parmeters are correct. In this case no parameters, return true; 
+\end{DoxyReturn}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classARInteraction_a51561b7ee444be08ae46765aebe9e135_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classARInteraction_afb463755bad036a8fc3aef4986d5bd17}\label{classARInteraction_afb463755bad036a8fc3aef4986d5bd17}} 
+\index{ARInteraction@{ARInteraction}!modifyAndInterruptIter@{modifyAndInterruptIter}}
+\index{modifyAndInterruptIter@{modifyAndInterruptIter}!ARInteraction@{ARInteraction}}
+\doxysubsubsection{\texorpdfstring{modifyAndInterruptIter()}{modifyAndInterruptIter()}}
+{\footnotesize\ttfamily int A\+R\+Interaction\+::modify\+And\+Interrupt\+Iter (\begin{DoxyParamCaption}\item[{A\+R\+::\+Interrupt\+Binary$<$ \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} $>$ \&}]{\+\_\+bin\+\_\+interrupt,  }\item[{A\+R\+::\+Binary\+Tree$<$ \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} $>$ \&}]{\+\_\+bin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+(Necessary) modify the orbits and interrupt check 
+
+check the inner left binary whether their separation is smaller than particle radius sum and become close, if true, set one component stauts to merger with cm mass and the other unused with zero mass. Return the binary tree address 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+bin\+\_\+interrupt} & interrupt binary information\+: adr\+: binary tree address; time\+\_\+now\+: current physical time; time\+\_\+end\+: integration finishing time; status\+: interrupt status\+: change, merge,none \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+bin} & binarytree to check iteratively \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+0\+: no modification; 2\+: modified; 3\+: destroyed 
+\end{DoxyReturn}
+\mbox{\Hypertarget{classARInteraction_a01115b0f522974cd9e5f0ecd3ef57663}\label{classARInteraction_a01115b0f522974cd9e5f0ecd3ef57663}} 
+\index{ARInteraction@{ARInteraction}!modifyOneParticle@{modifyOneParticle}}
+\index{modifyOneParticle@{modifyOneParticle}!ARInteraction@{ARInteraction}}
+\doxysubsubsection{\texorpdfstring{modifyOneParticle()}{modifyOneParticle()}}
+{\footnotesize\ttfamily template$<$class Tparticle $>$ \\
+int A\+R\+Interaction\+::modify\+One\+Particle (\begin{DoxyParamCaption}\item[{Tparticle \&}]{\+\_\+p,  }\item[{const Float \&}]{\+\_\+time\+\_\+now,  }\item[{const Float \&}]{\+\_\+time\+\_\+end }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+(Necessary) modify one particle function 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+p} & particle \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+time\+\_\+now} & current time (not physical time, NB unit) \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+time\+\_\+end} & required evolved time (not physical time, do not directly use, NB unit) \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+0\+: no modification; 1\+: modify mass; 2\+: modify mass and velocity; 3\+: mass become zero 
+\end{DoxyReturn}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classARInteraction_a01115b0f522974cd9e5f0ecd3ef57663_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classARInteraction_a4210e6dc39838403516c23d51ff22e6b}\label{classARInteraction_a4210e6dc39838403516c23d51ff22e6b}} 
+\index{ARInteraction@{ARInteraction}!print@{print}}
+\index{print@{print}!ARInteraction@{ARInteraction}}
+\doxysubsubsection{\texorpdfstring{print()}{print()}}
+{\footnotesize\ttfamily void A\+R\+Interaction\+::print (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print parameters 
+
+\mbox{\Hypertarget{classARInteraction_ac9892f1c9f92bdc7dccf4ef27ef44540}\label{classARInteraction_ac9892f1c9f92bdc7dccf4ef27ef44540}} 
+\index{ARInteraction@{ARInteraction}!readBinary@{readBinary}}
+\index{readBinary@{readBinary}!ARInteraction@{ARInteraction}}
+\doxysubsubsection{\texorpdfstring{readBinary()}{readBinary()}}
+{\footnotesize\ttfamily void A\+R\+Interaction\+::read\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read class data to file with binary format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fp} & F\+I\+LE type file for reading \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classARInteraction_ab655a0b1f242542392d27f3f31b9bb59}\label{classARInteraction_ab655a0b1f242542392d27f3f31b9bb59}} 
+\index{ARInteraction@{ARInteraction}!writeBinary@{writeBinary}}
+\index{writeBinary@{writeBinary}!ARInteraction@{ARInteraction}}
+\doxysubsubsection{\texorpdfstring{writeBinary()}{writeBinary()}}
+{\footnotesize\ttfamily void A\+R\+Interaction\+::write\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fp }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write class data to file with binary format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fp} & F\+I\+LE type file for output \\
+\hline
+\end{DoxyParams}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classARInteraction_a4492624ebd3de824362dfd5148e95297}\label{classARInteraction_a4492624ebd3de824362dfd5148e95297}} 
+\index{ARInteraction@{ARInteraction}!eps\_sq@{eps\_sq}}
+\index{eps\_sq@{eps\_sq}!ARInteraction@{ARInteraction}}
+\doxysubsubsection{\texorpdfstring{eps\_sq}{eps\_sq}}
+{\footnotesize\ttfamily Float A\+R\+Interaction\+::eps\+\_\+sq}
+
+\mbox{\Hypertarget{classARInteraction_a2b6a85ec08384faf2018d480009ed78a}\label{classARInteraction_a2b6a85ec08384faf2018d480009ed78a}} 
+\index{ARInteraction@{ARInteraction}!gravitational\_constant@{gravitational\_constant}}
+\index{gravitational\_constant@{gravitational\_constant}!ARInteraction@{ARInteraction}}
+\doxysubsubsection{\texorpdfstring{gravitational\_constant}{gravitational\_constant}}
+{\footnotesize\ttfamily Float A\+R\+Interaction\+::gravitational\+\_\+constant}
+
+
+
+\begin{quote}
+softening parameter \end{quote}
+
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{ar__interaction_8hpp}{ar\+\_\+interaction.\+hpp}}\end{DoxyCompactItemize}

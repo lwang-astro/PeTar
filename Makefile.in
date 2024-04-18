@@ -256,7 +256,7 @@ build/petar.format.transfer: format_transfer.cxx |build
 	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(MT_FLAGS) -o $@ $< $(CXXLIBS)
 
 build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(BSELIBFILES) |build
-	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(BSELIBS)
+	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D HARD_DEBUG_PRINT_TITLE -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
 
 build/petar.hard.test: hard_test.cxx $(HARD_SRC) |build
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
@@ -276,10 +276,7 @@ build/petar.io.test: io_test.cxx |build
 build/force_gpu_cuda.o: force_gpu_cuda.cu |build
 	$(NVCC) $(CUDA_INCLUDE) -c $< -o $@ 
 
-install: $(TARGET) SE_INSTALL EXT_INSTALL
-	install -d @prefix@/bin/
-	install -m 755 $(TARGET) @prefix@/bin/
-	ln -sf @prefix@/bin/@PROG_NAME@ @prefix@/bin/petar
+install_script_tool:
 	install -m 755 tools/initdata.sh @prefix@/bin/petar.init
 	install -m 755 tools/find_dt.sh @prefix@/bin/petar.find.dt
 	install -m 755 tools/update_par.sh @prefix@/bin/petar.update.par
@@ -289,9 +286,15 @@ install: $(TARGET) SE_INSTALL EXT_INSTALL
 	install -m 755 tools/data_gether.sh @prefix@/bin/petar.data.gether
 	install -m 755 tools/get_object_snapshot.py @prefix@/bin/petar.get.object.snap
 	install -m 755 tools/format_transfer.py @prefix@/bin/petar.format.transfer.post
+	install -m 755 tools/galev_process.py @prefix@/bin/petar.galev.process
 	install -d @prefix@/include/
 	install -d @prefix@/include/petar
 	install -m 644 tools/analysis/*.py @prefix@/include/petar/
+
+install: $(TARGET) SE_INSTALL EXT_INSTALL install_script_tool
+	install -d @prefix@/bin/
+	install -m 755 $(TARGET) @prefix@/bin/
+	ln -sf @prefix@/bin/@PROG_NAME@ @prefix@/bin/petar
 
 clean: SE_CLEAN EXT_CLEAN
 	rm -f $(TARGET) build/*.o 

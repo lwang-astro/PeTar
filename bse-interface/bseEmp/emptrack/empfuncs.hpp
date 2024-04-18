@@ -1,7 +1,7 @@
 #if defined(__cplusplus)
 extern "C" {
 #endif
-    void setMetallicity(F64 * _zeta);
+    void setMetallicity(F64 * _zeta, S32 *_mode);
 
     bool askAllBlueOrNot(F64 * mt);
     bool askInUseOrNot();

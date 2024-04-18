@@ -62,6 +62,7 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #include"hard_assert.hpp"
 #include"soft_ptcl.hpp"
 #include"soft_force.hpp"
+#include"astro_units.hpp"
 #ifdef USE_GPU
 #include"force_gpu_cuda.hpp"
 #endif
@@ -153,71 +154,69 @@ public:
 
     IOParamsPeTar(): input_par_store(), 
                      ratio_r_cut      (input_par_store, 0.1,  "r-ratio", "r_in / r_out"),
-                     theta            (input_par_store, 0.3,  "T",  "Particle-tree openning angle theta"),
-                     n_leaf_limit     (input_par_store, 20,   "number-leaf-limit", "Particle-tree leaf number limit", "optimized value shoudl be slightly >=11+N_bin_sample (20)"),
+                     theta            (input_par_store, 0.3,  "T",  "Particle-tree opening angle theta"),
+                     n_leaf_limit     (input_par_store, 20,   "number-leaf-limit", "Particle-tree leaf number limit", "Optimal value should be slightly >= 11 + N_bin_sample (20)"),
 #ifdef USE__AVX512
-                     n_group_limit    (input_par_store, 1024, "number-group-limit", "Particle-tree group number limit", "optimized for x86-AVX512 (1024)"),    
+                     n_group_limit    (input_par_store, 1024, "number-group-limit", "Particle-tree group number limit", "Optimized for x86-AVX512 (1024)"),    
 #else
-                     n_group_limit    (input_par_store, 512,  "number-group-limit", "Particle-tree group number limit", "optimized for x86-AVX2 (512)"),
+                     n_group_limit    (input_par_store, 512,  "number-group-limit", "Particle-tree group number limit", "Optimized for x86-AVX2 (512)"),
 #endif
                      n_interrupt_limit(input_par_store, 128,  "number-interrupt-limit", "Interrupted hard integrator limit"),
                      n_smp_ave        (input_par_store, 100,  "number-sample-average", "Average target number of sample particles per process"),
 #ifdef ORBIT_SAMPLING
                      n_split          (input_par_store, 4,    "number-split", "Number of binary sample points for tree perturbation force"),
 #endif
-                     n_bin            (input_par_store, 0,    "b", "Number of primordial binaries for initialization (assuming the binaries ID=1,2*n_bin)"),
-                     n_step_per_orbit (input_par_store, 8,    "number-step-tt", "Number of steps per slow-down binary orbits (binary period/tree timestep) for isolated binaries; also the maximum criterion for switching on tidal tensor method"),
-                     time_end         (input_par_store, 10.0, "t", "Finishing time of simulation"),
-                     eta              (input_par_store, 0.1,  "hermite-eta", "Hermite time step coefficient eta"),
+                     n_bin            (input_par_store, 0,    "b", "Number of primordial binaries for initialization (assuming the binaries' IDs are 1,2*n_bin)"),
+                     n_step_per_orbit (input_par_store, 8,    "number-step-tt", "Number of steps per slow-down binary orbits (binary period/tree timestep) for isolated binaries; also the maximum criterion for activating tidal tensor method"),
+                     time_end         (input_par_store, 10.0, "t", "End time of simulation"),
+                     eta              (input_par_store, 0.1,  "hermite-eta", "Hermite timestep coefficient eta"),
                      gravitational_constant(input_par_store, 1.0, "G", "Gravitational constant"),
                      unit_set         (input_par_store, 0,    "u", "Input data unit, 0: unknown, referring to G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr"),
-                     n_glb            (input_par_store, 100000, "n", "Total number of particles, only used for a test using the internal equal-mass Plummer model generator (assuming G=1 and the input data filename is __Plummer)"),
-                     id_offset        (input_par_store, -1,   "id-offset", "Starting id for artificial particles, total number of real particles must be always smaller than this","n_glb+1"),
-                     dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft), if the value is zero (default) and --nstep-dt-soft-kepler is not used, dt_soft = 0.1*r_out/sigma_1D"),
-                     dt_snap          (input_par_store, 1.0,  "o", "Output time interval of particle dataset snapshot"),
-                     nstep_dt_soft_kepler (input_par_store, 0.0, "nstep-dt-soft-kepler", "Determine tree timestep by P(r_in)/nstep, where P(r_in) is the binary period with the semi-major axis of r_in, nstep is the argument of this option (e.g., 32.0)", "not used"),
-                     search_vel_factor(input_par_store, 3.0,  "search-vel-factor", "Neighbor searching coefficient for velocity check (v*dt)"),
-                     search_peri_factor  (input_par_store, 1.5, "search-peri-factor", "Neighbor searching coefficient for peri-center check"),
-                     dt_limit_hard_factor(input_par_store, 4.0, "dt-max-factor", "Limit of tree time step/hard time step"),
-                     dt_min_hermite_index(input_par_store, 40,  "dt-min-hermite",  "Power index n for the smallest time step (0.5^n) allowed in Hermite integrator"),
-                     //dt_min_ar_index     (input_par_store, 64,  "dt-min-ar",  "Power index n for the smallest time step (0.5^n) allowed in ARC integrator, suppressed"),
-                     //dt_err_pert  (input_par_store, 1e-6, "dt-error-pert", "Time synchronization maximum (relative) error for perturbed ARC integrator, suppressed"),
-                     //dt_err_soft  (input_par_store, 1e-3, "dt-error-iso", "Time synchronization maximum (relative) error for no-perturber (only soft perturbation) ARC integrator, suppressed"),
-                     e_err_ar     (input_par_store, 1e-8, "energy-err-ar", "Maximum energy error allown for ARC integrator"),
+                     n_glb            (input_par_store, 100000, "n", "Total number of particles, used only for a test with the internal equal-mass Plummer model generator (assuming G=1 and the input data filename is __Plummer)"),
+                     id_offset        (input_par_store, -1,   "id-offset", "Starting ID for artificial particles, total number of real particles must always be smaller than this","n_glb+1"),
+                     dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft), if the value is zero (default) and --nstep-dt-soft-kepler is not used, then dt_soft = 0.1*r_out/sigma_1D"),
+                     dt_snap          (input_par_store, 1.0,  "o", "Output time interval for particle dataset snapshots"),
+                     nstep_dt_soft_kepler (input_par_store, 0.0, "nstep-dt-soft-kepler", "Determines the tree timestep by P(r_in)/nstep, where P(r_in) is the binary period with the semi-major axis of r_in, nstep is the argument of this option (e.g., 32.0)", "not used"),
+                     search_vel_factor(input_par_store, 3.0,  "search-vel-factor", "Neighbor search coefficient for velocity check (v*dt)"),
+                     search_peri_factor  (input_par_store, 1.5, "search-peri-factor", "Neighbor search coefficient for periapsis check"),
+                     dt_limit_hard_factor(input_par_store, 4.0, "dt-max-factor", "Limit of tree timestep/hard timestep"),
+                     dt_min_hermite_index(input_par_store, 40,  "dt-min-hermite",  "Power index n for the smallest timestep (0.5^n) allowed in the Hermite integrator"),
+                     //dt_min_ar_index     (input_par_store, 64,  "dt-min-ar",  "Power index n for the smallest timestep (0.5^n) allowed in the ARC integrator, suppressed"),
+                     //dt_err_pert  (input_par_store, 1e-6, "dt-error-pert", "Maximum time synchronization error (relative) for perturbed ARC integrator, suppressed"),
+                     //dt_err_soft  (input_par_store, 1e-3, "dt-error-iso", "Maximum time synchronization error (relative) for no-perturber (only soft perturbation) ARC integrator, suppressed"),
+                     e_err_ar     (input_par_store, 1e-8, "energy-err-ar", "Maximum energy error allowed for the ARC integrator"),
 #ifdef HARD_CHECK_ENERGY
-                     e_err_hard   (input_par_store, 1e-4, "energy-err-hard", "Maximum energy error allown for hard integrator"),
+                     e_err_hard   (input_par_store, 1e-4, "energy-err-hard", "Maximum energy error allowed for the hard integrator"),
 #endif
-                     step_limit_ar(input_par_store, 1000000, "step-limit-ar", "Maximum step allown for ARC sym integrator"),
-                     eps          (input_par_store, 0.0,  "soft-eps", "Softerning eps"),
-                     r_out        (input_par_store, 0.0,  "r", "Changeover function outer boundary radius (r_out), if value is zero and -s is not used, use 0.1 GM/[N^(1/3) sigma_3D^2]; if -s is given, calculated r_out from dt_soft"),
-                     r_bin        (input_par_store, 0.0,  "r-bin", "Tidal tensor box size and the radial criterion for detecting multiple systems (binaries, triples...), if value is zero, use 0.8*r_in"),
+                     step_limit_ar(input_par_store, 1000000, "step-limit-ar", "Maximum step allowed for the ARC sym integrator"),
+                     eps          (input_par_store, 0.0,  "soft-eps", "Softening epsilon"),
+                     r_out        (input_par_store, 0.0,  "r", "Outer boundary radius for the changeover function (r_out), if value is zero and -s is not used, use 0.1 GM/[N^(1/3) sigma_3D^2]; if -s is given, calculate r_out from dt_soft"),
+                     r_bin        (input_par_store, 0.0,  "r-bin", "Tidal tensor box size and the radial criterion for detecting multiple systems (binaries, triples, etc.), if value is zero, use 0.8*r_in"),
 //                     r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out"),
                      r_search_min (input_par_store, 0.0,  "r-search-min", "Minimum neighbor search radius for hard clusters","auto"),
-                     r_escape     (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Escape radius criterion, 0: no escaper removement; <0: remove particles when r>-r_escape; >0: remove particle when r>r_escape and energy>0"),
+                     r_escape     (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Escape radius criterion, 0: no escaper removal; <0: remove particles when r>-r_escape; >0: remove particles when r>r_escape and energy>0"),
                      sd_factor    (input_par_store, 1e-4, "slowdown-factor", "Slowdown perturbation criterion"),
                      data_format  (input_par_store, 1,    "i", "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),
-                     write_style  (input_par_store, 1,    "w", "File Writing style: 0, no output; 1. write snapshots, status and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile"),
+                     write_style  (input_par_store, 1,    "w", "File writing style: 0, no output; 1. write snapshots, status, and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile"),
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
-                     stellar_evolution_option  (input_par_store, 1, "stellar-evolution", "stellar evolution of stars in Hermite+SDAR: 0: off; >=1: using SSE/BSE based codes; ==2: switch on dynamical tide and hyperbolic gravitational wave radiation"),
-                     interrupt_detection_option(input_par_store, 1, "detect-interrupt", "stellar evolution of binaries in SDAR: 0: off; 1: using BSE based code (if '--stellar-evolution != 0)"),
+                     stellar_evolution_option  (input_par_store, 1, "stellar-evolution", "Stellar evolution of stars in Hermite+SDAR: 0: off; >=1: using SSE/BSE based codes; ==2: activate dynamical tide and hyperbolic gravitational wave radiation"),
+                     interrupt_detection_option(input_par_store, 1, "detect-interrupt", "Stellar evolution of binaries in SDAR: 0: off; 1: using BSE based code (if '--stellar-evolution != 0)"),
 #else // NO BSE_BASE
-                     stellar_evolution_option  (input_par_store, 0, "stellar-evolution", "not implemented"),
+                     stellar_evolution_option  (input_par_store, 0, "stellar-evolution", "Not implemented"),
 #ifdef APPLY_MERGER
                      interrupt_detection_option(input_par_store, 0, "detect-interrupt", "interrupt integration of SDAR: 0: turn off; 1: merge two particles if their surfaces overlap; 2. merge two particles and also interrupt the hard integration"),
-#else
-                     interrupt_detection_option(input_par_store, 0, "detect-interrupt", "interrupt integration of SDAR: 0: turn off; 1: detect two particles' surfaces overlapping; 2.  detect two particles' surface overlaping and also interrupt the hard integration"),
-#endif // APPLY MERGER
-
+#else // APPLY MERGER
+                     interrupt_detection_option(input_par_store, 0, "detect-interrupt", "Interrupt integration in SDAR: 0: turn off; 1: merge two particles if their surfaces overlap; 2. merge two particles and also interrupt the hard integration"),
 #endif // BSE_BASE
 #else
-                     interrupt_detection_option(input_par_store, 0, "detect-interrupt", "modify orbits of AR groups based on the interruption function: 0: turn off; 1: modify inside AR integration and accumulate energy change; 2. modify and also interrupt the hard drift"),
+                     interrupt_detection_option(input_par_store, 0, "detect-interrupt", "Modify orbits of AR groups based on the interruption function: 0: turn off; 1: modify inside AR integration and accumulate energy change; 2. modify and also interrupt the hard drift"),
 #endif
 #ifdef ADJUST_GROUP_PRINT
-                     adjust_group_write_option(input_par_store, 1, "write-group-info", "print new and end of groups: 0: no print; 1: print to file [data filename prefix].group.[MPI rank] if -w >0"),
+                     adjust_group_write_option(input_par_store, 1, "write-group-info", "Print new and end of groups: 0: no print; 1: print to file [data filename prefix].group.[MPI rank] if -w >0"),
 #endif
-                     append_switcher(input_par_store, 1, "a", "data output style, 0: create new output files and overwrite existing ones except snapshots; 1: append new data to existing files"),
-                     fname_snp(input_par_store, "data", "f", "The prefix of filenames for output data: [prefix].**"),
+                     append_switcher(input_par_store, 1, "a", "Data output style: 0 - create new output files and overwrite existing ones except snapshots; 1 - append new data to existing files"),
+                     fname_snp(input_par_store, "data", "f", "Prefix of filenames for output data: [prefix].**"),
                      fname_par(input_par_store, "input.par", "p", "Input parameter file (this option should be used first before any other options)"),
                      fname_inp(input_par_store, "__NONE__", "snap-filename", "Input data file", NULL, false),
                      print_flag(false), update_changeover_flag(false), update_rsearch_flag(false) {}
@@ -596,7 +595,7 @@ public:
         assert(dt_limit_hard_factor.value > 0.0);
         assert(dt_min_hermite_index.value > 0);
         assert(e_err_ar.value > 0.0);
-        assert(eps.value>=0.0);
+        assert(eps.value>=0.0 && eps.value<=ratio_r_cut.value); // avoid incorrect self-potential correction after tree force, when eps>r_out, self-potential is G m /r_eps instead of G m/r_cut;
         assert(sd_factor.value>0.0);
         assert(ratio_r_cut.value>0.0);
         assert(ratio_r_cut.value<1.0);
@@ -1097,8 +1096,10 @@ public:
 #endif //GALPY
 
 #ifdef EXTERNAL_HARD
+#ifndef GALPY
         // update time and gas density
         hard_manager.h4_manager.interaction.ext_force.updateTime(stat.time);
+#endif
 #endif
         
 #ifdef PROFILE
@@ -2969,12 +2970,12 @@ public:
 
         // units
         if (input_parameters.unit_set.value==1) {
-            input_parameters.gravitational_constant.value = 0.00449830997959438; // pc^3/(Msun*Myr^2)
+            input_parameters.gravitational_constant.value = G_ASTRO;
 #ifdef BSE_BASE
             bse_parameters.tscale.value = 1.0; // Myr
-            bse_parameters.rscale.value = 44353565.919218; // pc -> rsun
+            bse_parameters.rscale.value = PC_TO_RSUN;
             bse_parameters.mscale.value = 1.0; // Msun
-            bse_parameters.vscale.value = 0.977813107686401; // pc/Myr -> km/s
+            bse_parameters.vscale.value = PCMYR_TO_KMS;
 #endif
             if(print_flag) {
                 std::cout<<"----- Unit set 1: Msun, pc, Myr -----\n"
@@ -3074,7 +3075,7 @@ public:
             n_vel_loc_count++;
         }
     
-        if (single_start_index <n_loc-1) 
+        if (single_start_index <n_loc) 
             for (PS::S64 i=single_start_index; i<n_loc; i++){
                 PS::F64vec dv = system_soft[i].vel - vel_cm_glb;
                 vel_sq_loc += dv * dv;
@@ -3311,7 +3312,12 @@ public:
 #endif
 
 #ifdef EXTERNAL_HARD
+#ifdef GALPY
+        hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, galpy_manager, stat, print_flag);
+#else
         hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, stat.time, print_flag);
+#endif
+        hard_manager.ar_manager.interaction.ext_force = &hard_manager.h4_manager.interaction.ext_force;
 #endif        
 
         // check consistence of paramters
@@ -3548,7 +3554,7 @@ public:
 
 #ifdef EXTERNAL_HARD
                 /// force from external hard
-                if (hard_manager.h4_manager.interaction.ext_force.is_used) {
+                if (hard_manager.h4_manager.interaction.ext_force.mode>0) {
                     H4::ForceH4 f;
                     hard_manager.h4_manager.interaction.ext_force.calcAccJerkExternal(f, p);
                     p.acc[0] += f.acc0[0];
@@ -3919,7 +3925,13 @@ public:
             // >8. Hard integration 
             // get drift step
             dt_drift = dt_manager.getDtDriftContinue();
-
+            
+#ifdef STELLAR_EVOLUTION
+#ifdef BSE_BASE
+            hard_manager.ar_manager.interaction.time_interrupt_max = stat.time + dt_drift;
+#endif
+#endif            
+            
             drift(dt_drift);
 
             // update stat time 
