@@ -1,0 +1,6 @@
+<map id="main" name="main">
+<area shape="rect" id="node1" title=" " alt="" coords="5,46,60,73"/>
+<area shape="rect" id="node2" href="$classTwoBodyTide.html#a6ae9149abd098b3687ca1d2c2550600d" title="evolve two&#45;body orbit based on dynamical tide implementation from Alessandro Alberto Trani" alt="" coords="108,5,300,47"/>
+<area shape="rect" id="node4" href="$classTwoBodyTide.html#a0032b26788339d4b040430b9cb78ab7a" title="evolve hyperbolic orbit based on GW effect" alt="" coords="108,71,300,112"/>
+<area shape="rect" id="node3" href="$classTwoBodyTide.html#a8694304ed5c6ef7b8166ae38da773216" title="Tidal energy based on Polynomical fits from Portegies Zwart et al. 1993." alt="" coords="348,13,611,39"/>
+</map>

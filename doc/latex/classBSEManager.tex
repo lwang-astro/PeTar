@@ -1,0 +1,749 @@
+\hypertarget{classBSEManager}{}\doxysection{B\+S\+E\+Manager Class Reference}
+\label{classBSEManager}\index{BSEManager@{BSEManager}}
+
+
+S\+S\+E/\+B\+SE interface manager.  
+
+
+
+
+{\ttfamily \#include $<$bse\+\_\+interface.\+h$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classBSEManager_ae9d6290578eb1902be5598356fc88b3c}{B\+S\+E\+Manager}} ()
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+name of binary type return from B\+SE evolv2, notice if it is -\/1, it indicate the end of record \end{quote}
+\end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classBSEManager_a1cb5015f422a409df16a498cfc3adfa4}{check\+Params}} ()
+\item 
+void \mbox{\hyperlink{classBSEManager_ab3f496d45b056253d959b0a809e3f1c3}{dump\+Rand\+Constant}} (const char $\ast$\+\_\+fname)
+\begin{DoxyCompactList}\small\item\em dump rand constant to file \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classBSEManager_a13970c5c0ac3506f39f11429448d1655}{read\+Rand\+Constant}} (const char $\ast$\+\_\+fname)
+\begin{DoxyCompactList}\small\item\em read B\+SE rand constant from file \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classBSEManager_a395996155d2d2995d0c8b2009fe2c56a}{is\+Mass\+Transfer}} (const int \+\_\+binary\+\_\+type)
+\item 
+bool \mbox{\hyperlink{classBSEManager_a5e0852178e066e0249ec351b269af823}{is\+Merger}} (const int \+\_\+binary\+\_\+type)
+\begin{DoxyCompactList}\small\item\em notice kick priority is higher than others \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classBSEManager_a2a6155367c93a31f424e6fb20b96a442}{is\+Disrupt}} (const int \+\_\+binary\+\_\+type)
+\item 
+void \mbox{\hyperlink{classBSEManager_a1d3ff3d5932e45c961fe615fc0f095b6}{initial}} (const \mbox{\hyperlink{classIOParamsBSE}{I\+O\+Params\+B\+SE}} \&\+\_\+input, const bool \+\_\+print\+\_\+flag=false)
+\begin{DoxyCompactList}\small\item\em initial S\+S\+E/\+B\+SE based code global parameters \end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classBSEManager_a504560964d4ef29df4b525b040b8d232}{get\+Mass}} (\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&\+\_\+star)
+\begin{DoxyCompactList}\small\item\em get current mass in NB unit \end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classBSEManager_abd0cb52a6d53532019232f4c478ecb05}{get\+Mass\+Loss}} (\mbox{\hyperlink{structStarParameterOut}{Star\+Parameter\+Out}} \&\+\_\+out)
+\begin{DoxyCompactList}\small\item\em get mass loss in NB unit \end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classBSEManager_af201045fe2f972d083515d8a06908d0d}{get\+Merger\+Radius}} (\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&\+\_\+star)
+\begin{DoxyCompactList}\small\item\em get merger radius in NB unit \end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classBSEManager_a40f701e57f193d275dee8ebeed157e02}{get\+Stellar\+Radius}} (\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&\+\_\+star)
+\begin{DoxyCompactList}\small\item\em get stellar radius in NB unit \end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classBSEManager_a85a912625401990c5a8c929a1b62b32b}{get\+Speed\+Of\+Light}} () const
+\begin{DoxyCompactList}\small\item\em get speed of light in NB unit \end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classBSEManager_a5cdfdcb89311f9135a2f687e7ce3e56d}{get\+Time}} (\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&\+\_\+star)
+\begin{DoxyCompactList}\small\item\em get evolved Time in NB unit \end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classBSEManager_acb21cc1e3bbd3599a431f5a429a4b163}{get\+D\+T\+Miss}} (\mbox{\hyperlink{structStarParameterOut}{Star\+Parameter\+Out}} \&\+\_\+out)
+\begin{DoxyCompactList}\small\item\em get the difference of required finishing time and actually evolved time in NB unit \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classBSEManager_a4595fb93d6299755920b028be8c4f208}{print\+Type\+Change}} (std\+::ostream \&\+\_\+fout, \mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&\+\_\+star, \mbox{\hyperlink{structStarParameterOut}{Star\+Parameter\+Out}} \&\+\_\+out, const int \+\_\+width=4)
+\begin{DoxyCompactList}\small\item\em print type change \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classBSEManager_a1f52d15f8a528adc79fc08ff6e265cda}{print\+Binary\+Event}} (std\+::ostream \&\+\_\+fout, const \mbox{\hyperlink{classBinaryEvent}{Binary\+Event}} \&\+\_\+bin\+\_\+event)
+\begin{DoxyCompactList}\small\item\em print binary event \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classBSEManager_a36a5ec2e6ca567eb8c5f145711529832}{print\+Binary\+Event\+One}} (std\+::ostream \&\+\_\+fout, const \mbox{\hyperlink{classBinaryEvent}{Binary\+Event}} \&\+\_\+bin\+\_\+event, const int k)
+\begin{DoxyCompactList}\small\item\em print binary event one \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classBSEManager_ac90983ee40b37e883b7780e7418c254f}{print\+Binary\+Event\+Column\+One}} (std\+::ostream \&\+\_\+fout, const \mbox{\hyperlink{classBinaryEvent}{Binary\+Event}} \&\+\_\+bin\+\_\+event, const int k, const int \+\_\+width=20, const bool print\+\_\+type\+\_\+name=true)
+\begin{DoxyCompactList}\small\item\em print binary event one in column \end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classBSEManager_ae2edc7704f7463912e5ff269ef8a3e23}{get\+Velocity\+Change}} (double $\ast$dv, \mbox{\hyperlink{structStarParameterOut}{Star\+Parameter\+Out}} \&\+\_\+out)
+\begin{DoxyCompactList}\small\item\em get velocity change in NB unit \end{DoxyCompactList}\item 
+int \mbox{\hyperlink{classBSEManager_af97aa6234723181b08aab193127e2028}{evolve\+Star}} (\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&\+\_\+star, \mbox{\hyperlink{structStarParameterOut}{Star\+Parameter\+Out}} \&\+\_\+out, const double \+\_\+dt, bool \+\_\+unit\+\_\+in\+\_\+myr=false)
+\begin{DoxyCompactList}\small\item\em call S\+SE evolv1 for single star \end{DoxyCompactList}\item 
+int \mbox{\hyperlink{classBSEManager_ada11ffd4ad9e05137395b74ba5b6d610}{evolve\+Binary}} (\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&\+\_\+star1, \mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&\+\_\+star2, \mbox{\hyperlink{structStarParameterOut}{Star\+Parameter\+Out}} \&\+\_\+out1, \mbox{\hyperlink{structStarParameterOut}{Star\+Parameter\+Out}} \&\+\_\+out2, double \&\+\_\+semi, double \&\+\_\+period, double \&\+\_\+ecc, \mbox{\hyperlink{classBinaryEvent}{Binary\+Event}} \&\+\_\+bse\+\_\+event, const int \&\+\_\+binary\+\_\+init\+\_\+type, const double \+\_\+dt\+\_\+nb)
+\begin{DoxyCompactList}\small\item\em call evolv2 for a binary \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classBSEManager_aa77f12355f96f2f40db2498af37334e5}{is\+Roche\+Fill}} (\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&\+\_\+star1, \mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&\+\_\+star2, double \&\+\_\+semi, double \&\+\_\+ecc)
+\begin{DoxyCompactList}\small\item\em check Roche fill condition \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classBSEManager_ae099bfa6f59e1f5abcc0abd0e62ccd9a}{merge}} (\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&\+\_\+star1, \mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&\+\_\+star2, \mbox{\hyperlink{structStarParameterOut}{Star\+Parameter\+Out}} \&\+\_\+out1, \mbox{\hyperlink{structStarParameterOut}{Star\+Parameter\+Out}} \&\+\_\+out2, double \&\+\_\+semi, double \&\+\_\+ecc)
+\begin{DoxyCompactList}\small\item\em merge two star using mix function, star 2 will becomes zero mass \end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classBSEManager_a9acfef87a65d61fd52406121f3f3d35d}{get\+Time\+Step\+Star}} (\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&\+\_\+star)
+\begin{DoxyCompactList}\small\item\em get next time step to check in Myr \end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classBSEManager_af4d46cc4343c6f9a8175942cac4656de}{get\+Time\+Step\+Binary}} (\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&\+\_\+star1, \mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&\+\_\+star2, double \&\+\_\+semi, double \&\+\_\+ecc, int \&\+\_\+binary\+\_\+type)
+\begin{DoxyCompactList}\small\item\em call B\+SE evolv2 for a binary \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classBSEManager_a0eaa256083ff2671bc0a0b619a664561}{is\+Call\+B\+S\+E\+Needed}} (\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&\+\_\+star1, \mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&\+\_\+star2, double \&\+\_\+semi, double \&\+\_\+ecc, double \&\+\_\+dt)
+\begin{DoxyCompactList}\small\item\em a simple check to determine whether call B\+SE is necessary by given a reference of time step \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static void \mbox{\hyperlink{classBSEManager_af25ae410253f1e9118fefc98696e6ce3}{print\+Reference}} (std\+::ostream \&fout, const int offset=4)
+\begin{DoxyCompactList}\small\item\em print reference to cite \end{DoxyCompactList}\item 
+static std\+::string \mbox{\hyperlink{classBSEManager_a69d7169d4261241df2459d3ea3b96492}{get\+S\+S\+E\+Output\+Filename\+Suffix}} ()
+\item 
+static std\+::string \mbox{\hyperlink{classBSEManager_a52d9f47da0278671ab0aa05281801446}{get\+B\+S\+E\+Output\+Filename\+Suffix}} ()
+\item 
+static std\+::string \mbox{\hyperlink{classBSEManager_a9ff79f090269358d860fe0f5d633d192}{get\+S\+S\+E\+Name}} ()
+\item 
+static std\+::string \mbox{\hyperlink{classBSEManager_a569c067ad29e6fd5f665c7fd83e3386d}{get\+B\+S\+E\+Name}} ()
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+double \mbox{\hyperlink{classBSEManager_aaed884c05f4e2c74c0820c4631e89fe0}{z}}
+\item 
+double \mbox{\hyperlink{classBSEManager_aa6a9b0d4420ce597d552bc26dc374c88}{zpars}} \mbox{[}20\mbox{]}
+\item 
+double \mbox{\hyperlink{classBSEManager_a27617207a27d6899e872d65b162c092a}{tscale}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+metallicity parameters \end{quote}
+\end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classBSEManager_a91b2556cf446ee48cdbc148b4d9a1a6b}{rscale}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+time scaling factor from NB to Myr (t\mbox{[}Myr\mbox{]}=t\mbox{[}NB\mbox{]}$\ast$tscale) \end{quote}
+\end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classBSEManager_a6ba7864194fa438cee0df8deb03bef44}{mscale}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+radius scaling factor from NB to Rsun \end{quote}
+\end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classBSEManager_a00400ca34a3711d2a58b629a1f448f77}{vscale}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+mass scaling factor from NB to Msun \end{quote}
+\end{DoxyCompactList}\item 
+const double \mbox{\hyperlink{classBSEManager_a15144994aac4b3e3684ba179930b2b99}{year\+\_\+to\+\_\+day}}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+velocity scaling factor from NB to km/s \end{quote}
+\end{DoxyCompactList}\item 
+const char $\ast$ \mbox{\hyperlink{classBSEManager_ab44a11dcf5021176dfde906eda5acd42}{single\+\_\+type}} \mbox{[}16\mbox{]}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+year to day \end{quote}
+\end{DoxyCompactList}\item 
+const char $\ast$ \mbox{\hyperlink{classBSEManager_a1002fa125c8de0e37e1a13ec9bf171a3}{binary\+\_\+type}} \mbox{[}14\mbox{]}
+\begin{DoxyCompactList}\small\item\em \begin{quote}
+name of single type from S\+SE \end{quote}
+\end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+S\+S\+E/\+B\+SE interface manager. 
+
+The class provides the interface to call single and binary stellar evolution (evolve\+Star and evolve\+Binary); and also the time step estimators (get\+Time\+Step\+Star, get\+Time\+Step\+Binary). 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classBSEManager_ae9d6290578eb1902be5598356fc88b3c}\label{classBSEManager_ae9d6290578eb1902be5598356fc88b3c}} 
+\index{BSEManager@{BSEManager}!BSEManager@{BSEManager}}
+\index{BSEManager@{BSEManager}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{BSEManager()}{BSEManager()}}
+{\footnotesize\ttfamily B\+S\+E\+Manager\+::\+B\+S\+E\+Manager (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\begin{quote}
+name of binary type return from B\+SE evolv2, notice if it is -\/1, it indicate the end of record \end{quote}
+
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classBSEManager_a1cb5015f422a409df16a498cfc3adfa4}\label{classBSEManager_a1cb5015f422a409df16a498cfc3adfa4}} 
+\index{BSEManager@{BSEManager}!checkParams@{checkParams}}
+\index{checkParams@{checkParams}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{checkParams()}{checkParams()}}
+{\footnotesize\ttfamily bool B\+S\+E\+Manager\+::check\+Params (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classBSEManager_a1cb5015f422a409df16a498cfc3adfa4_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classBSEManager_ab3f496d45b056253d959b0a809e3f1c3}\label{classBSEManager_ab3f496d45b056253d959b0a809e3f1c3}} 
+\index{BSEManager@{BSEManager}!dumpRandConstant@{dumpRandConstant}}
+\index{dumpRandConstant@{dumpRandConstant}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{dumpRandConstant()}{dumpRandConstant()}}
+{\footnotesize\ttfamily void B\+S\+E\+Manager\+::dump\+Rand\+Constant (\begin{DoxyParamCaption}\item[{const char $\ast$}]{\+\_\+fname }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+dump rand constant to file 
+
+\mbox{\Hypertarget{classBSEManager_ada11ffd4ad9e05137395b74ba5b6d610}\label{classBSEManager_ada11ffd4ad9e05137395b74ba5b6d610}} 
+\index{BSEManager@{BSEManager}!evolveBinary@{evolveBinary}}
+\index{evolveBinary@{evolveBinary}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{evolveBinary()}{evolveBinary()}}
+{\footnotesize\ttfamily int B\+S\+E\+Manager\+::evolve\+Binary (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&}]{\+\_\+star1,  }\item[{\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&}]{\+\_\+star2,  }\item[{\mbox{\hyperlink{structStarParameterOut}{Star\+Parameter\+Out}} \&}]{\+\_\+out1,  }\item[{\mbox{\hyperlink{structStarParameterOut}{Star\+Parameter\+Out}} \&}]{\+\_\+out2,  }\item[{double \&}]{\+\_\+semi,  }\item[{double \&}]{\+\_\+period,  }\item[{double \&}]{\+\_\+ecc,  }\item[{\mbox{\hyperlink{classBinaryEvent}{Binary\+Event}} \&}]{\+\_\+bse\+\_\+event,  }\item[{const int \&}]{\+\_\+binary\+\_\+init\+\_\+type,  }\item[{const double}]{\+\_\+dt\+\_\+nb }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+call evolv2 for a binary 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em \+\_\+star1} & star parameter of first \\
+\hline
+\mbox{\texttt{ in,out}}  & {\em \+\_\+star2} & star parameter of second \\
+\hline
+\mbox{\texttt{ out}}  & {\em \+\_\+out1} & output parameter of first from evolv2 \\
+\hline
+\mbox{\texttt{ out}}  & {\em \+\_\+out2} & output parameter of second from evolv2 \\
+\hline
+\mbox{\texttt{ out}}  & {\em \+\_\+bse\+\_\+event} & binary event record (bpp array) \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+semi} & semi-\/major axis, only used to record initial semi \mbox{[}IN unit\mbox{]} \\
+\hline
+\mbox{\texttt{ in,out}}  & {\em \+\_\+period} & period of binary in NB unit \mbox{[}IN unit\mbox{]} \\
+\hline
+\mbox{\texttt{ in,out}}  & {\em \+\_\+ecc} & eccentricity of binary \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+binary\+\_\+init\+\_\+type} & initial type of binary \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+dt\+\_\+nb} & physical time step to evolve \mbox{[}In unit\mbox{]} \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+error flag\+: -\/1\+: error, 0\+: normal 
+\end{DoxyReturn}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classBSEManager_ada11ffd4ad9e05137395b74ba5b6d610_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classBSEManager_af97aa6234723181b08aab193127e2028}\label{classBSEManager_af97aa6234723181b08aab193127e2028}} 
+\index{BSEManager@{BSEManager}!evolveStar@{evolveStar}}
+\index{evolveStar@{evolveStar}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{evolveStar()}{evolveStar()}}
+{\footnotesize\ttfamily int B\+S\+E\+Manager\+::evolve\+Star (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&}]{\+\_\+star,  }\item[{\mbox{\hyperlink{structStarParameterOut}{Star\+Parameter\+Out}} \&}]{\+\_\+out,  }\item[{const double}]{\+\_\+dt,  }\item[{bool}]{\+\_\+unit\+\_\+in\+\_\+myr = {\ttfamily false} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+call S\+SE evolv1 for single star 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em \+\_\+star} & star parameter \\
+\hline
+\mbox{\texttt{ out}}  & {\em \+\_\+out} & output parameter from evolv1 \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+dt} & time step to evolve \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+unit\+\_\+in\+\_\+myr} & if true, \+\_\+dt is in Myr; else, \+\_\+dt$\ast$tscale is used (default false) \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+event flag\+: -\/1\+: error, 0\+: normal, 1\+: type change, 2\+: velocity kick 
+\end{DoxyReturn}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classBSEManager_af97aa6234723181b08aab193127e2028_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classBSEManager_a569c067ad29e6fd5f665c7fd83e3386d}\label{classBSEManager_a569c067ad29e6fd5f665c7fd83e3386d}} 
+\index{BSEManager@{BSEManager}!getBSEName@{getBSEName}}
+\index{getBSEName@{getBSEName}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{getBSEName()}{getBSEName()}}
+{\footnotesize\ttfamily static std\+::string B\+S\+E\+Manager\+::get\+B\+S\+E\+Name (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=305pt]{classBSEManager_a569c067ad29e6fd5f665c7fd83e3386d_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classBSEManager_a52d9f47da0278671ab0aa05281801446}\label{classBSEManager_a52d9f47da0278671ab0aa05281801446}} 
+\index{BSEManager@{BSEManager}!getBSEOutputFilenameSuffix@{getBSEOutputFilenameSuffix}}
+\index{getBSEOutputFilenameSuffix@{getBSEOutputFilenameSuffix}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{getBSEOutputFilenameSuffix()}{getBSEOutputFilenameSuffix()}}
+{\footnotesize\ttfamily static std\+::string B\+S\+E\+Manager\+::get\+B\+S\+E\+Output\+Filename\+Suffix (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=309pt]{classBSEManager_a52d9f47da0278671ab0aa05281801446_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classBSEManager_acb21cc1e3bbd3599a431f5a429a4b163}\label{classBSEManager_acb21cc1e3bbd3599a431f5a429a4b163}} 
+\index{BSEManager@{BSEManager}!getDTMiss@{getDTMiss}}
+\index{getDTMiss@{getDTMiss}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{getDTMiss()}{getDTMiss()}}
+{\footnotesize\ttfamily double B\+S\+E\+Manager\+::get\+D\+T\+Miss (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{structStarParameterOut}{Star\+Parameter\+Out}} \&}]{\+\_\+out }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get the difference of required finishing time and actually evolved time in NB unit 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classBSEManager_acb21cc1e3bbd3599a431f5a429a4b163_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classBSEManager_a504560964d4ef29df4b525b040b8d232}\label{classBSEManager_a504560964d4ef29df4b525b040b8d232}} 
+\index{BSEManager@{BSEManager}!getMass@{getMass}}
+\index{getMass@{getMass}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{getMass()}{getMass()}}
+{\footnotesize\ttfamily double B\+S\+E\+Manager\+::get\+Mass (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&}]{\+\_\+star }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get current mass in NB unit 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classBSEManager_a504560964d4ef29df4b525b040b8d232_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classBSEManager_abd0cb52a6d53532019232f4c478ecb05}\label{classBSEManager_abd0cb52a6d53532019232f4c478ecb05}} 
+\index{BSEManager@{BSEManager}!getMassLoss@{getMassLoss}}
+\index{getMassLoss@{getMassLoss}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{getMassLoss()}{getMassLoss()}}
+{\footnotesize\ttfamily double B\+S\+E\+Manager\+::get\+Mass\+Loss (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{structStarParameterOut}{Star\+Parameter\+Out}} \&}]{\+\_\+out }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get mass loss in NB unit 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classBSEManager_abd0cb52a6d53532019232f4c478ecb05_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classBSEManager_af201045fe2f972d083515d8a06908d0d}\label{classBSEManager_af201045fe2f972d083515d8a06908d0d}} 
+\index{BSEManager@{BSEManager}!getMergerRadius@{getMergerRadius}}
+\index{getMergerRadius@{getMergerRadius}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{getMergerRadius()}{getMergerRadius()}}
+{\footnotesize\ttfamily double B\+S\+E\+Manager\+::get\+Merger\+Radius (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&}]{\+\_\+star }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get merger radius in NB unit 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classBSEManager_af201045fe2f972d083515d8a06908d0d_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classBSEManager_a85a912625401990c5a8c929a1b62b32b}\label{classBSEManager_a85a912625401990c5a8c929a1b62b32b}} 
+\index{BSEManager@{BSEManager}!getSpeedOfLight@{getSpeedOfLight}}
+\index{getSpeedOfLight@{getSpeedOfLight}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{getSpeedOfLight()}{getSpeedOfLight()}}
+{\footnotesize\ttfamily double B\+S\+E\+Manager\+::get\+Speed\+Of\+Light (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get speed of light in NB unit 
+
+I\+AU 2009\+: c = 299 792 458 m/s \mbox{\Hypertarget{classBSEManager_a9ff79f090269358d860fe0f5d633d192}\label{classBSEManager_a9ff79f090269358d860fe0f5d633d192}} 
+\index{BSEManager@{BSEManager}!getSSEName@{getSSEName}}
+\index{getSSEName@{getSSEName}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{getSSEName()}{getSSEName()}}
+{\footnotesize\ttfamily static std\+::string B\+S\+E\+Manager\+::get\+S\+S\+E\+Name (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+\mbox{\Hypertarget{classBSEManager_a69d7169d4261241df2459d3ea3b96492}\label{classBSEManager_a69d7169d4261241df2459d3ea3b96492}} 
+\index{BSEManager@{BSEManager}!getSSEOutputFilenameSuffix@{getSSEOutputFilenameSuffix}}
+\index{getSSEOutputFilenameSuffix@{getSSEOutputFilenameSuffix}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{getSSEOutputFilenameSuffix()}{getSSEOutputFilenameSuffix()}}
+{\footnotesize\ttfamily static std\+::string B\+S\+E\+Manager\+::get\+S\+S\+E\+Output\+Filename\+Suffix (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=308pt]{classBSEManager_a69d7169d4261241df2459d3ea3b96492_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classBSEManager_a40f701e57f193d275dee8ebeed157e02}\label{classBSEManager_a40f701e57f193d275dee8ebeed157e02}} 
+\index{BSEManager@{BSEManager}!getStellarRadius@{getStellarRadius}}
+\index{getStellarRadius@{getStellarRadius}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{getStellarRadius()}{getStellarRadius()}}
+{\footnotesize\ttfamily double B\+S\+E\+Manager\+::get\+Stellar\+Radius (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&}]{\+\_\+star }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get stellar radius in NB unit 
+
+\mbox{\Hypertarget{classBSEManager_a5cdfdcb89311f9135a2f687e7ce3e56d}\label{classBSEManager_a5cdfdcb89311f9135a2f687e7ce3e56d}} 
+\index{BSEManager@{BSEManager}!getTime@{getTime}}
+\index{getTime@{getTime}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{getTime()}{getTime()}}
+{\footnotesize\ttfamily double B\+S\+E\+Manager\+::get\+Time (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&}]{\+\_\+star }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get evolved Time in NB unit 
+
+\mbox{\Hypertarget{classBSEManager_af4d46cc4343c6f9a8175942cac4656de}\label{classBSEManager_af4d46cc4343c6f9a8175942cac4656de}} 
+\index{BSEManager@{BSEManager}!getTimeStepBinary@{getTimeStepBinary}}
+\index{getTimeStepBinary@{getTimeStepBinary}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{getTimeStepBinary()}{getTimeStepBinary()}}
+{\footnotesize\ttfamily double B\+S\+E\+Manager\+::get\+Time\+Step\+Binary (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&}]{\+\_\+star1,  }\item[{\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&}]{\+\_\+star2,  }\item[{double \&}]{\+\_\+semi,  }\item[{double \&}]{\+\_\+ecc,  }\item[{int \&}]{\+\_\+binary\+\_\+type }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+call B\+SE evolv2 for a binary 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+star1} & star parameter of first \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+star2} & star parameter of second \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+semi} & semi-\/major axis, \mbox{[}IN unit\mbox{]} \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+ecc} & eccentricity of binary, used for B\+SE \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+binary\+\_\+type} & binary type \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+next time step in IN unit 
+\end{DoxyReturn}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classBSEManager_af4d46cc4343c6f9a8175942cac4656de_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classBSEManager_a9acfef87a65d61fd52406121f3f3d35d}\label{classBSEManager_a9acfef87a65d61fd52406121f3f3d35d}} 
+\index{BSEManager@{BSEManager}!getTimeStepStar@{getTimeStepStar}}
+\index{getTimeStepStar@{getTimeStepStar}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{getTimeStepStar()}{getTimeStepStar()}}
+{\footnotesize\ttfamily double B\+S\+E\+Manager\+::get\+Time\+Step\+Star (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&}]{\+\_\+star }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get next time step to check in Myr 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+star} & star parameter \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+next time step 
+\end{DoxyReturn}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=347pt]{classBSEManager_a9acfef87a65d61fd52406121f3f3d35d_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classBSEManager_a9acfef87a65d61fd52406121f3f3d35d_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classBSEManager_ae2edc7704f7463912e5ff269ef8a3e23}\label{classBSEManager_ae2edc7704f7463912e5ff269ef8a3e23}} 
+\index{BSEManager@{BSEManager}!getVelocityChange@{getVelocityChange}}
+\index{getVelocityChange@{getVelocityChange}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{getVelocityChange()}{getVelocityChange()}}
+{\footnotesize\ttfamily double B\+S\+E\+Manager\+::get\+Velocity\+Change (\begin{DoxyParamCaption}\item[{double $\ast$}]{dv,  }\item[{\mbox{\hyperlink{structStarParameterOut}{Star\+Parameter\+Out}} \&}]{\+\_\+out }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get velocity change in NB unit 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+dv} & 3-\/D array to record velocity change \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+value of velocity change 
+\end{DoxyReturn}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classBSEManager_ae2edc7704f7463912e5ff269ef8a3e23_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classBSEManager_a1d3ff3d5932e45c961fe615fc0f095b6}\label{classBSEManager_a1d3ff3d5932e45c961fe615fc0f095b6}} 
+\index{BSEManager@{BSEManager}!initial@{initial}}
+\index{initial@{initial}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{initial()}{initial()}}
+{\footnotesize\ttfamily void B\+S\+E\+Manager\+::initial (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classIOParamsBSE}{I\+O\+Params\+B\+SE}} \&}]{\+\_\+input,  }\item[{const bool}]{\+\_\+print\+\_\+flag = {\ttfamily false} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+initial S\+S\+E/\+B\+SE based code global parameters 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=269pt]{classBSEManager_a1d3ff3d5932e45c961fe615fc0f095b6_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classBSEManager_a0eaa256083ff2671bc0a0b619a664561}\label{classBSEManager_a0eaa256083ff2671bc0a0b619a664561}} 
+\index{BSEManager@{BSEManager}!isCallBSENeeded@{isCallBSENeeded}}
+\index{isCallBSENeeded@{isCallBSENeeded}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{isCallBSENeeded()}{isCallBSENeeded()}}
+{\footnotesize\ttfamily bool B\+S\+E\+Manager\+::is\+Call\+B\+S\+E\+Needed (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&}]{\+\_\+star1,  }\item[{\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&}]{\+\_\+star2,  }\item[{double \&}]{\+\_\+semi,  }\item[{double \&}]{\+\_\+ecc,  }\item[{double \&}]{\+\_\+dt }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+a simple check to determine whether call B\+SE is necessary by given a reference of time step 
+
+For the given time step, if the general relativity effect is important or Roche overflow may happen, return True When calling B\+SE is necessary within the given time step, return true. If KW type $<$10, check whether peri-\/center distance $<$ 100$\ast$stellar radii (sum); If KW type $>$10, check GR effect timescale. 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+star1} & star parameter of first \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+star2} & star parameter of second \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+semi} & semi-\/major axis, \mbox{[}IN unit\mbox{]} \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+ecc} & eccentricity of binary, used for B\+SE \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+dt} & the time step \mbox{[}In unit\mbox{]} \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+true\+: necessary 
+\end{DoxyReturn}
+\mbox{\Hypertarget{classBSEManager_a2a6155367c93a31f424e6fb20b96a442}\label{classBSEManager_a2a6155367c93a31f424e6fb20b96a442}} 
+\index{BSEManager@{BSEManager}!isDisrupt@{isDisrupt}}
+\index{isDisrupt@{isDisrupt}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{isDisrupt()}{isDisrupt()}}
+{\footnotesize\ttfamily bool B\+S\+E\+Manager\+::is\+Disrupt (\begin{DoxyParamCaption}\item[{const int}]{\+\_\+binary\+\_\+type }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classBSEManager_a395996155d2d2995d0c8b2009fe2c56a}\label{classBSEManager_a395996155d2d2995d0c8b2009fe2c56a}} 
+\index{BSEManager@{BSEManager}!isMassTransfer@{isMassTransfer}}
+\index{isMassTransfer@{isMassTransfer}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{isMassTransfer()}{isMassTransfer()}}
+{\footnotesize\ttfamily bool B\+S\+E\+Manager\+::is\+Mass\+Transfer (\begin{DoxyParamCaption}\item[{const int}]{\+\_\+binary\+\_\+type }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classBSEManager_a5e0852178e066e0249ec351b269af823}\label{classBSEManager_a5e0852178e066e0249ec351b269af823}} 
+\index{BSEManager@{BSEManager}!isMerger@{isMerger}}
+\index{isMerger@{isMerger}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{isMerger()}{isMerger()}}
+{\footnotesize\ttfamily bool B\+S\+E\+Manager\+::is\+Merger (\begin{DoxyParamCaption}\item[{const int}]{\+\_\+binary\+\_\+type }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+notice kick priority is higher than others 
+
+\mbox{\Hypertarget{classBSEManager_aa77f12355f96f2f40db2498af37334e5}\label{classBSEManager_aa77f12355f96f2f40db2498af37334e5}} 
+\index{BSEManager@{BSEManager}!isRocheFill@{isRocheFill}}
+\index{isRocheFill@{isRocheFill}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{isRocheFill()}{isRocheFill()}}
+{\footnotesize\ttfamily bool B\+S\+E\+Manager\+::is\+Roche\+Fill (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&}]{\+\_\+star1,  }\item[{\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&}]{\+\_\+star2,  }\item[{double \&}]{\+\_\+semi,  }\item[{double \&}]{\+\_\+ecc }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+check Roche fill condition 
+
+\mbox{\Hypertarget{classBSEManager_ae099bfa6f59e1f5abcc0abd0e62ccd9a}\label{classBSEManager_ae099bfa6f59e1f5abcc0abd0e62ccd9a}} 
+\index{BSEManager@{BSEManager}!merge@{merge}}
+\index{merge@{merge}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{merge()}{merge()}}
+{\footnotesize\ttfamily void B\+S\+E\+Manager\+::merge (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&}]{\+\_\+star1,  }\item[{\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&}]{\+\_\+star2,  }\item[{\mbox{\hyperlink{structStarParameterOut}{Star\+Parameter\+Out}} \&}]{\+\_\+out1,  }\item[{\mbox{\hyperlink{structStarParameterOut}{Star\+Parameter\+Out}} \&}]{\+\_\+out2,  }\item[{double \&}]{\+\_\+semi,  }\item[{double \&}]{\+\_\+ecc }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+merge two star using mix function, star 2 will becomes zero mass 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em \+\_\+star1} & star parameter of first \\
+\hline
+\mbox{\texttt{ in,out}}  & {\em \+\_\+star2} & star parameter of second \\
+\hline
+\mbox{\texttt{ out}}  & {\em \+\_\+out1} & output parameter of first from evolv2 \\
+\hline
+\mbox{\texttt{ out}}  & {\em \+\_\+out2} & output parameter of second from evolv2 \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+semi} & semi-\/major axis, only used to record initial semi \mbox{[}IN unit\mbox{]} \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+ecc} & eccentricity of hyperbolic orbit, used for B\+SE T\+O\+DO\+: we must to consider the donor! \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classBSEManager_a1f52d15f8a528adc79fc08ff6e265cda}\label{classBSEManager_a1f52d15f8a528adc79fc08ff6e265cda}} 
+\index{BSEManager@{BSEManager}!printBinaryEvent@{printBinaryEvent}}
+\index{printBinaryEvent@{printBinaryEvent}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{printBinaryEvent()}{printBinaryEvent()}}
+{\footnotesize\ttfamily void B\+S\+E\+Manager\+::print\+Binary\+Event (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const \mbox{\hyperlink{classBinaryEvent}{Binary\+Event}} \&}]{\+\_\+bin\+\_\+event }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print binary event 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classBSEManager_a1f52d15f8a528adc79fc08ff6e265cda_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classBSEManager_ac90983ee40b37e883b7780e7418c254f}\label{classBSEManager_ac90983ee40b37e883b7780e7418c254f}} 
+\index{BSEManager@{BSEManager}!printBinaryEventColumnOne@{printBinaryEventColumnOne}}
+\index{printBinaryEventColumnOne@{printBinaryEventColumnOne}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{printBinaryEventColumnOne()}{printBinaryEventColumnOne()}}
+{\footnotesize\ttfamily void B\+S\+E\+Manager\+::print\+Binary\+Event\+Column\+One (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const \mbox{\hyperlink{classBinaryEvent}{Binary\+Event}} \&}]{\+\_\+bin\+\_\+event,  }\item[{const int}]{k,  }\item[{const int}]{\+\_\+width = {\ttfamily 20},  }\item[{const bool}]{print\+\_\+type\+\_\+name = {\ttfamily true} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print binary event one in column 
+
+\mbox{\Hypertarget{classBSEManager_a36a5ec2e6ca567eb8c5f145711529832}\label{classBSEManager_a36a5ec2e6ca567eb8c5f145711529832}} 
+\index{BSEManager@{BSEManager}!printBinaryEventOne@{printBinaryEventOne}}
+\index{printBinaryEventOne@{printBinaryEventOne}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{printBinaryEventOne()}{printBinaryEventOne()}}
+{\footnotesize\ttfamily void B\+S\+E\+Manager\+::print\+Binary\+Event\+One (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const \mbox{\hyperlink{classBinaryEvent}{Binary\+Event}} \&}]{\+\_\+bin\+\_\+event,  }\item[{const int}]{k }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print binary event one 
+
+\mbox{\Hypertarget{classBSEManager_af25ae410253f1e9118fefc98696e6ce3}\label{classBSEManager_af25ae410253f1e9118fefc98696e6ce3}} 
+\index{BSEManager@{BSEManager}!printReference@{printReference}}
+\index{printReference@{printReference}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{printReference()}{printReference()}}
+{\footnotesize\ttfamily static void B\+S\+E\+Manager\+::print\+Reference (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{fout,  }\item[{const int}]{offset = {\ttfamily 4} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+print reference to cite 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=313pt]{classBSEManager_af25ae410253f1e9118fefc98696e6ce3_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classBSEManager_a4595fb93d6299755920b028be8c4f208}\label{classBSEManager_a4595fb93d6299755920b028be8c4f208}} 
+\index{BSEManager@{BSEManager}!printTypeChange@{printTypeChange}}
+\index{printTypeChange@{printTypeChange}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{printTypeChange()}{printTypeChange()}}
+{\footnotesize\ttfamily void B\+S\+E\+Manager\+::print\+Type\+Change (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{\mbox{\hyperlink{structStarParameter}{Star\+Parameter}} \&}]{\+\_\+star,  }\item[{\mbox{\hyperlink{structStarParameterOut}{Star\+Parameter\+Out}} \&}]{\+\_\+out,  }\item[{const int}]{\+\_\+width = {\ttfamily 4} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print type change 
+
+\mbox{\Hypertarget{classBSEManager_a13970c5c0ac3506f39f11429448d1655}\label{classBSEManager_a13970c5c0ac3506f39f11429448d1655}} 
+\index{BSEManager@{BSEManager}!readRandConstant@{readRandConstant}}
+\index{readRandConstant@{readRandConstant}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{readRandConstant()}{readRandConstant()}}
+{\footnotesize\ttfamily void B\+S\+E\+Manager\+::read\+Rand\+Constant (\begin{DoxyParamCaption}\item[{const char $\ast$}]{\+\_\+fname }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read B\+SE rand constant from file 
+
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classBSEManager_a1002fa125c8de0e37e1a13ec9bf171a3}\label{classBSEManager_a1002fa125c8de0e37e1a13ec9bf171a3}} 
+\index{BSEManager@{BSEManager}!binary\_type@{binary\_type}}
+\index{binary\_type@{binary\_type}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{binary\_type}{binary\_type}}
+{\footnotesize\ttfamily const char$\ast$ B\+S\+E\+Manager\+::binary\+\_\+type\mbox{[}14\mbox{]}}
+
+
+
+\begin{quote}
+name of single type from S\+SE \end{quote}
+
+
+\mbox{\Hypertarget{classBSEManager_a6ba7864194fa438cee0df8deb03bef44}\label{classBSEManager_a6ba7864194fa438cee0df8deb03bef44}} 
+\index{BSEManager@{BSEManager}!mscale@{mscale}}
+\index{mscale@{mscale}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{mscale}{mscale}}
+{\footnotesize\ttfamily double B\+S\+E\+Manager\+::mscale}
+
+
+
+\begin{quote}
+radius scaling factor from NB to Rsun \end{quote}
+
+
+\mbox{\Hypertarget{classBSEManager_a91b2556cf446ee48cdbc148b4d9a1a6b}\label{classBSEManager_a91b2556cf446ee48cdbc148b4d9a1a6b}} 
+\index{BSEManager@{BSEManager}!rscale@{rscale}}
+\index{rscale@{rscale}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{rscale}{rscale}}
+{\footnotesize\ttfamily double B\+S\+E\+Manager\+::rscale}
+
+
+
+\begin{quote}
+time scaling factor from NB to Myr (t\mbox{[}Myr\mbox{]}=t\mbox{[}NB\mbox{]}$\ast$tscale) \end{quote}
+
+
+\mbox{\Hypertarget{classBSEManager_ab44a11dcf5021176dfde906eda5acd42}\label{classBSEManager_ab44a11dcf5021176dfde906eda5acd42}} 
+\index{BSEManager@{BSEManager}!single\_type@{single\_type}}
+\index{single\_type@{single\_type}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{single\_type}{single\_type}}
+{\footnotesize\ttfamily const char$\ast$ B\+S\+E\+Manager\+::single\+\_\+type\mbox{[}16\mbox{]}}
+
+
+
+\begin{quote}
+year to day \end{quote}
+
+
+\mbox{\Hypertarget{classBSEManager_a27617207a27d6899e872d65b162c092a}\label{classBSEManager_a27617207a27d6899e872d65b162c092a}} 
+\index{BSEManager@{BSEManager}!tscale@{tscale}}
+\index{tscale@{tscale}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{tscale}{tscale}}
+{\footnotesize\ttfamily double B\+S\+E\+Manager\+::tscale}
+
+
+
+\begin{quote}
+metallicity parameters \end{quote}
+
+
+\mbox{\Hypertarget{classBSEManager_a00400ca34a3711d2a58b629a1f448f77}\label{classBSEManager_a00400ca34a3711d2a58b629a1f448f77}} 
+\index{BSEManager@{BSEManager}!vscale@{vscale}}
+\index{vscale@{vscale}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{vscale}{vscale}}
+{\footnotesize\ttfamily double B\+S\+E\+Manager\+::vscale}
+
+
+
+\begin{quote}
+mass scaling factor from NB to Msun \end{quote}
+
+
+\mbox{\Hypertarget{classBSEManager_a15144994aac4b3e3684ba179930b2b99}\label{classBSEManager_a15144994aac4b3e3684ba179930b2b99}} 
+\index{BSEManager@{BSEManager}!year\_to\_day@{year\_to\_day}}
+\index{year\_to\_day@{year\_to\_day}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{year\_to\_day}{year\_to\_day}}
+{\footnotesize\ttfamily const double B\+S\+E\+Manager\+::year\+\_\+to\+\_\+day}
+
+
+
+\begin{quote}
+velocity scaling factor from NB to km/s \end{quote}
+
+
+\mbox{\Hypertarget{classBSEManager_aaed884c05f4e2c74c0820c4631e89fe0}\label{classBSEManager_aaed884c05f4e2c74c0820c4631e89fe0}} 
+\index{BSEManager@{BSEManager}!z@{z}}
+\index{z@{z}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{z}{z}}
+{\footnotesize\ttfamily double B\+S\+E\+Manager\+::z}
+
+\mbox{\Hypertarget{classBSEManager_aa6a9b0d4420ce597d552bc26dc374c88}\label{classBSEManager_aa6a9b0d4420ce597d552bc26dc374c88}} 
+\index{BSEManager@{BSEManager}!zpars@{zpars}}
+\index{zpars@{zpars}!BSEManager@{BSEManager}}
+\doxysubsubsection{\texorpdfstring{zpars}{zpars}}
+{\footnotesize\ttfamily double B\+S\+E\+Manager\+::zpars\mbox{[}20\mbox{]}}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{bse__interface_8h}{bse\+\_\+interface.\+h}}\end{DoxyCompactItemize}

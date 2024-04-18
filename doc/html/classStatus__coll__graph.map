@@ -1,0 +1,5 @@
+<map id="Status" name="Status">
+<area shape="rect" id="node1" title="class for measure the status of the system" alt="" coords="133,95,196,121"/>
+<area shape="rect" id="node2" href="$structStatus_1_1ParticleCM.html" title=" " alt="" coords="5,5,145,32"/>
+<area shape="rect" id="node3" href="$classEnergyAndMomemtum.html" title="class for collecting and calculating the energy and angular momemtum of the system" alt="" coords="169,5,341,32"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="Stability::stable3body" name="Stability::stable3body">
+<area shape="rect" id="node1" title="Three&#45;body stability function." alt="" coords="692,31,855,57"/>
+<area shape="rect" id="node2" href="$classStability.html#af78b60bacc16c71e2c09f36cb4c39834" title="Three&#45;body (B&#45;S) stability check." alt="" coords="475,5,644,32"/>
+<area shape="rect" id="node5" href="$classStability.html#acb687089da1eb3788a3c320e32855381" title="Four&#45;body (B&#45;B) stability check." alt="" coords="475,56,644,83"/>
+<area shape="rect" id="node3" href="$classStability.html#a40355024253599fc1df4d7d1c719412a" title="Stability check iteraction function for BinaryTree." alt="" coords="228,31,427,57"/>
+<area shape="rect" id="node4" href="$classStability.html#a5a905e57057b65f66e778ef3b8070878" title="Check binary tree and collect stable subtree." alt="" coords="5,31,180,57"/>
+</map>

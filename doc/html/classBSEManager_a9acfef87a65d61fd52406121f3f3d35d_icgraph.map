@@ -1,0 +1,5 @@
+<map id="BSEManager::getTimeStepStar" name="BSEManager::getTimeStepStar">
+<area shape="rect" id="node1" title="get next time step to check in Myr" alt="" coords="291,35,512,61"/>
+<area shape="rect" id="node2" href="$classBSEManager.html#af4d46cc4343c6f9a8175942cac4656de" title="call BSE evolv2 for a binary" alt="" coords="5,5,243,32"/>
+<area shape="rect" id="node3" href="$classARInteraction.html#a01115b0f522974cd9e5f0ecd3ef57663" title="(Necessary) modify one particle function" alt="" coords="29,57,219,98"/>
+</map>

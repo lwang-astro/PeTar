@@ -1,0 +1,4 @@
+<map id="ArtificialParticleInformation::storeData" name="ArtificialParticleInformation::storeData">
+<area shape="rect" id="node1" title="store one data (only in artificial particles)" alt="" coords="5,5,205,47"/>
+<area shape="rect" id="node2" href="$classArtificialParticleInformation.html#ae87f07e0baa5ec2a19c6b73e191825bc" title="return whether the particle type is artificial" alt="" coords="253,5,453,47"/>
+</map>

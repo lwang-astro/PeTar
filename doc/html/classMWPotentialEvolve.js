@@ -1,0 +1,25 @@
+var classMWPotentialEvolve =
+[
+    [ "calcMWPotentialParameters", "classMWPotentialEvolve.html#a499debe349e3789cd6fbab95bc56dabb", null ],
+    [ "initialFromFile", "classMWPotentialEvolve.html#a45a7e51221c2de3937fcb72cd90fd11e", null ],
+    [ "readDataFromFile", "classMWPotentialEvolve.html#a61d78d2224231b9d052d48cdd2d38eaf", null ],
+    [ "writeDataToFile", "classMWPotentialEvolve.html#a92e616d63b989428e6424e0d0180de7c", null ],
+    [ "ac_halo", "classMWPotentialEvolve.html#a06882b124341988f3c0d9dc473864755", null ],
+    [ "alpha_bulge", "classMWPotentialEvolve.html#a7b838de9cd30ec4a8577dd0288619c96", null ],
+    [ "c_halo", "classMWPotentialEvolve.html#a288f772a110797a259b380fe6f193871", null ],
+    [ "frw", "classMWPotentialEvolve.html#ab12d579132641e66fa995ec0e25bf6ad", null ],
+    [ "gm_disk", "classMWPotentialEvolve.html#aeec36a599f33df13050485a81d2714f3", null ],
+    [ "gm_halo", "classMWPotentialEvolve.html#a1c00ebdf9675f7f32d3427161c7afa8d", null ],
+    [ "grho_bulge", "classMWPotentialEvolve.html#a2f837fbca88ad8eb1df5325f12926c11", null ],
+    [ "init", "classMWPotentialEvolve.html#a5c406e33431608da37fcd54b3d691995", null ],
+    [ "m_disk", "classMWPotentialEvolve.html#a53bb0027fa3c56b0057224d5a812e8b6", null ],
+    [ "m_vir_halo", "classMWPotentialEvolve.html#ac0edc3d6108e395caa1577f0b707e404", null ],
+    [ "now", "classMWPotentialEvolve.html#ae5644de290af1c1c3c9f7dd66a85373d", null ],
+    [ "r_vir_halo", "classMWPotentialEvolve.html#a40943161fcb025e7633e78145e94a8ab", null ],
+    [ "ra_disk", "classMWPotentialEvolve.html#a6a7ff92430a30fe693b3600967e77bc3", null ],
+    [ "rb_disk", "classMWPotentialEvolve.html#aec26e403ae40bb15c8374bf2d1fce712", null ],
+    [ "rcut_bulge", "classMWPotentialEvolve.html#a2294a6e2c93d5bf3359543a0cb74d0fb", null ],
+    [ "rho_bulge", "classMWPotentialEvolve.html#a703845f35324fdc51dd04e12a1103869", null ],
+    [ "rho_c_halo", "classMWPotentialEvolve.html#a8c48aed3b62e12e8d2c2f0c3b83f3ecc", null ],
+    [ "rs_halo", "classMWPotentialEvolve.html#a2a62324b191d80d5bb0f89d24a275a2f", null ]
+];

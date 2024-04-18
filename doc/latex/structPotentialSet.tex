@@ -1,0 +1,109 @@
+\hypertarget{structPotentialSet}{}\doxysection{Potential\+Set Struct Reference}
+\label{structPotentialSet}\index{PotentialSet@{PotentialSet}}
+
+
+set of Galpy potentials sharing the same position and velocity of the origin  
+
+
+
+
+{\ttfamily \#include $<$galpy\+\_\+interface.\+h$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{structPotentialSet_ad38eef44f08ca8a8709a607cf156f6af}{Potential\+Set}} ()
+\item 
+void \mbox{\hyperlink{structPotentialSet_a505ba6bec47bb211e3efed6d0ceeec43}{generate\+Potential\+Args}} (const int \+\_\+npot, int $\ast$\+\_\+type, double $\ast$\+\_\+arg)
+\begin{DoxyCompactList}\small\item\em generate Galpy potential arguments \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{structPotentialSet_ab5df10085ca7311029cb112acc07591d}{clear}} ()
+\item 
+\mbox{\hyperlink{structPotentialSet_ad6c62996c0f166b5b19c6108bf5ae69c}{$\sim$\+Potential\+Set}} ()
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+int \mbox{\hyperlink{structPotentialSet_a7f9399c7c869e6cc0b5d50d121a4fcf9}{npot}}
+\item 
+struct potential\+Arg $\ast$ \mbox{\hyperlink{structPotentialSet_aef723f031ca6b2b31137dade6031a184}{arguments}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+set of Galpy potentials sharing the same position and velocity of the origin 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{structPotentialSet_ad38eef44f08ca8a8709a607cf156f6af}\label{structPotentialSet_ad38eef44f08ca8a8709a607cf156f6af}} 
+\index{PotentialSet@{PotentialSet}!PotentialSet@{PotentialSet}}
+\index{PotentialSet@{PotentialSet}!PotentialSet@{PotentialSet}}
+\doxysubsubsection{\texorpdfstring{PotentialSet()}{PotentialSet()}}
+{\footnotesize\ttfamily Potential\+Set\+::\+Potential\+Set (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{structPotentialSet_ad6c62996c0f166b5b19c6108bf5ae69c}\label{structPotentialSet_ad6c62996c0f166b5b19c6108bf5ae69c}} 
+\index{PotentialSet@{PotentialSet}!````~PotentialSet@{$\sim$PotentialSet}}
+\index{````~PotentialSet@{$\sim$PotentialSet}!PotentialSet@{PotentialSet}}
+\doxysubsubsection{\texorpdfstring{$\sim$PotentialSet()}{~PotentialSet()}}
+{\footnotesize\ttfamily Potential\+Set\+::$\sim$\+Potential\+Set (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{structPotentialSet_ad6c62996c0f166b5b19c6108bf5ae69c_cgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{structPotentialSet_ab5df10085ca7311029cb112acc07591d}\label{structPotentialSet_ab5df10085ca7311029cb112acc07591d}} 
+\index{PotentialSet@{PotentialSet}!clear@{clear}}
+\index{clear@{clear}!PotentialSet@{PotentialSet}}
+\doxysubsubsection{\texorpdfstring{clear()}{clear()}}
+{\footnotesize\ttfamily void Potential\+Set\+::clear (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{structPotentialSet_ab5df10085ca7311029cb112acc07591d_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{structPotentialSet_a505ba6bec47bb211e3efed6d0ceeec43}\label{structPotentialSet_a505ba6bec47bb211e3efed6d0ceeec43}} 
+\index{PotentialSet@{PotentialSet}!generatePotentialArgs@{generatePotentialArgs}}
+\index{generatePotentialArgs@{generatePotentialArgs}!PotentialSet@{PotentialSet}}
+\doxysubsubsection{\texorpdfstring{generatePotentialArgs()}{generatePotentialArgs()}}
+{\footnotesize\ttfamily void Potential\+Set\+::generate\+Potential\+Args (\begin{DoxyParamCaption}\item[{const int}]{\+\_\+npot,  }\item[{int $\ast$}]{\+\_\+type,  }\item[{double $\ast$}]{\+\_\+arg }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+generate Galpy potential arguments 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+npot} & number of potential types \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+type} & the array of type indices \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+arg} & the array of arguments for each type \\
+\hline
+\end{DoxyParams}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{structPotentialSet_aef723f031ca6b2b31137dade6031a184}\label{structPotentialSet_aef723f031ca6b2b31137dade6031a184}} 
+\index{PotentialSet@{PotentialSet}!arguments@{arguments}}
+\index{arguments@{arguments}!PotentialSet@{PotentialSet}}
+\doxysubsubsection{\texorpdfstring{arguments}{arguments}}
+{\footnotesize\ttfamily struct potential\+Arg$\ast$ Potential\+Set\+::arguments}
+
+\mbox{\Hypertarget{structPotentialSet_a7f9399c7c869e6cc0b5d50d121a4fcf9}\label{structPotentialSet_a7f9399c7c869e6cc0b5d50d121a4fcf9}} 
+\index{PotentialSet@{PotentialSet}!npot@{npot}}
+\index{npot@{npot}!PotentialSet@{PotentialSet}}
+\doxysubsubsection{\texorpdfstring{npot}{npot}}
+{\footnotesize\ttfamily int Potential\+Set\+::npot}
+
+
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{galpy__interface_8h}{galpy\+\_\+interface.\+h}}\end{DoxyCompactItemize}

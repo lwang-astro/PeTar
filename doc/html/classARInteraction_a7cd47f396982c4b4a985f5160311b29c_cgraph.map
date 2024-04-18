@@ -1,0 +1,6 @@
+<map id="ARInteraction::calcAccPotAndGTKickInv" name="ARInteraction::calcAccPotAndGTKickInv">
+<area shape="rect" id="node1" title="(Necessary) calculate acceleration from internal members and perturbers" alt="" coords="5,57,193,98"/>
+<area shape="rect" id="node2" href="$classARInteraction.html#aeb7e4c4758024ca22379caca13b8f9d8" title="(Necessary) calculate acceleration from perturber and the perturbation factor for slowdown calculatio..." alt="" coords="241,5,435,32"/>
+<area shape="rect" id="node3" href="$classARInteraction.html#ac7c6450c4cc7760bde8c475f9cd1aea8" title="calculate inner member acceleration, potential and inverse time transformation function gradient and ..." alt="" coords="249,57,427,98"/>
+<area shape="rect" id="node4" href="$classARInteraction.html#a7d177920969974abaf3fd2badf839d85" title="(Necessary) calculate inner member acceleration, potential and inverse time transformation function g..." alt="" coords="247,122,429,163"/>
+</map>

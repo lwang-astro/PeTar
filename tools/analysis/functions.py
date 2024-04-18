@@ -156,8 +156,8 @@ def calcGWMyr(m1, m2, semi, ecc):
 
 def convergentPointCheck(data, velocity):
     """ calculate proper motions in the frame of convergent point based on the given velocity and calculate the residuals 
-        The method is described in e.g., van Leeuwen F., 2009, A\&A, 497, 209. doi:10.1051/0004-6361/200811382; 
-        and Jerabkova T., Boffin H.~M.~J., Beccari G., de Marchi G., de Bruijne J.~H.~J., Prusti T., 2021, A\&A, 647, A137. doi:10.1051/0004-6361/202039949
+        The method is described in e.g., van Leeuwen F., 2009, A&A, 497, 209. doi:10.1051/0004-6361/200811382; 
+        and Jerabkova T., Boffin H.~M.~J., Beccari G., de Marchi G., de Bruijne J.~H.~J., Prusti T., 2021, A&A, 647, A137. doi:10.1051/0004-6361/202039949
 
         The algorithm can be described as follows
        1. Assume that the stars have the given velocity and rotate it by RA (alpha) and DEC (delta) of stars. Thus this predicted velocity is in the same frame as the observation.

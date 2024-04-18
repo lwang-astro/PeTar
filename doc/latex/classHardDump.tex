@@ -1,0 +1,180 @@
+\hypertarget{classHardDump}{}\doxysection{Hard\+Dump Class Reference}
+\label{classHardDump}\index{HardDump@{HardDump}}
+
+
+{\ttfamily \#include $<$hard\+\_\+assert.\+hpp$>$}
+
+\doxysubsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+typedef H4\+::\+Particle\+H4$<$ \mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}} $>$ \mbox{\hyperlink{classHardDump_a7d823d976545799c048bd501e5ac5f75}{Ptcl\+H4}}
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classHardDump_ab79ba7a51046afdbec1d4460fdc3835c}{Hard\+Dump}} ()
+\item 
+void \mbox{\hyperlink{classHardDump_ae0c020344ac1757e072900c8fb7b435d}{backup}} (\mbox{\hyperlink{classHardDump_a7d823d976545799c048bd501e5ac5f75}{Ptcl\+H4}} $\ast$\+\_\+ptcl\+\_\+local, const P\+S\+::\+S32 \+\_\+n\+\_\+ptcl, \mbox{\hyperlink{classFPSoft}{F\+P\+Soft}} $\ast$\+\_\+ptcl\+\_\+artifical, const P\+S\+::\+S32 \+\_\+n\+\_\+group, const P\+S\+::\+S32 $\ast$\+\_\+n\+\_\+member\+\_\+in\+\_\+group, const P\+S\+::\+F64 \+\_\+time\+\_\+offset, const P\+S\+::\+F64 \+\_\+time\+\_\+end, const P\+S\+::\+S32 \+\_\+n\+\_\+artificial)
+\begin{DoxyCompactList}\small\item\em backup one hard cluster data \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classHardDump_a81563ee1e03e8f781e66b014b67ce325}{dump\+One\+Cluster}} (const char $\ast$\+\_\+fname)
+\begin{DoxyCompactList}\small\item\em Dumping one cluster data for debuging. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classHardDump_a8ebb7185ddb357a663667c003087d4e4}{read\+One\+Cluster}} (const char $\ast$\+\_\+fname)
+\begin{DoxyCompactList}\small\item\em reading one cluster data for debuging \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classHardDump_ad480a7d2f99e5cd89f4b438b5faebf7c}{time\+\_\+offset}}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classHardDump_a607d91cadcc0031da899c65091bfba4d}{time\+\_\+end}}
+\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classHardDump_add07020fb567a6328e334f6170948c1b}{n\+\_\+ptcl}}
+\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classHardDump_ae3c068979755db775a5eb687cfa3c238}{n\+\_\+arti}}
+\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classHardDump_a6c871f000cd779b2e02766c171918b35}{n\+\_\+group}}
+\item 
+P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \mbox{\hyperlink{classHardDump_a12085483c1f806b312226023e6e604aa}{n\+\_\+member\+\_\+in\+\_\+group}}
+\item 
+P\+S\+::\+Reallocatable\+Array$<$ \mbox{\hyperlink{classFPSoft}{F\+P\+Soft}} $>$ \mbox{\hyperlink{classHardDump_a70bd3b047d01ca055e500b76ff2a4c39}{ptcl\+\_\+arti\+\_\+bk}}
+\item 
+P\+S\+::\+Reallocatable\+Array$<$ \mbox{\hyperlink{classHardDump_a7d823d976545799c048bd501e5ac5f75}{Ptcl\+H4}} $>$ \mbox{\hyperlink{classHardDump_a442c2317f32a466c232683301f3fbe73}{ptcl\+\_\+bk}}
+\item 
+bool \mbox{\hyperlink{classHardDump_a45560bb45699eba62513caf95d589672}{backup\+\_\+flag}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Member Typedef Documentation}
+\mbox{\Hypertarget{classHardDump_a7d823d976545799c048bd501e5ac5f75}\label{classHardDump_a7d823d976545799c048bd501e5ac5f75}} 
+\index{HardDump@{HardDump}!PtclH4@{PtclH4}}
+\index{PtclH4@{PtclH4}!HardDump@{HardDump}}
+\doxysubsubsection{\texorpdfstring{PtclH4}{PtclH4}}
+{\footnotesize\ttfamily typedef H4\+::\+Particle\+H4$<$\mbox{\hyperlink{classPtclHard}{Ptcl\+Hard}}$>$ \mbox{\hyperlink{classHardDump_a7d823d976545799c048bd501e5ac5f75}{Hard\+Dump\+::\+Ptcl\+H4}}}
+
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classHardDump_ab79ba7a51046afdbec1d4460fdc3835c}\label{classHardDump_ab79ba7a51046afdbec1d4460fdc3835c}} 
+\index{HardDump@{HardDump}!HardDump@{HardDump}}
+\index{HardDump@{HardDump}!HardDump@{HardDump}}
+\doxysubsubsection{\texorpdfstring{HardDump()}{HardDump()}}
+{\footnotesize\ttfamily Hard\+Dump\+::\+Hard\+Dump (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classHardDump_ae0c020344ac1757e072900c8fb7b435d}\label{classHardDump_ae0c020344ac1757e072900c8fb7b435d}} 
+\index{HardDump@{HardDump}!backup@{backup}}
+\index{backup@{backup}!HardDump@{HardDump}}
+\doxysubsubsection{\texorpdfstring{backup()}{backup()}}
+{\footnotesize\ttfamily void Hard\+Dump\+::backup (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classHardDump_a7d823d976545799c048bd501e5ac5f75}{Ptcl\+H4}} $\ast$}]{\+\_\+ptcl\+\_\+local,  }\item[{const P\+S\+::\+S32}]{\+\_\+n\+\_\+ptcl,  }\item[{\mbox{\hyperlink{classFPSoft}{F\+P\+Soft}} $\ast$}]{\+\_\+ptcl\+\_\+artifical,  }\item[{const P\+S\+::\+S32}]{\+\_\+n\+\_\+group,  }\item[{const P\+S\+::\+S32 $\ast$}]{\+\_\+n\+\_\+member\+\_\+in\+\_\+group,  }\item[{const P\+S\+::\+F64}]{\+\_\+time\+\_\+offset,  }\item[{const P\+S\+::\+F64}]{\+\_\+time\+\_\+end,  }\item[{const P\+S\+::\+S32}]{\+\_\+n\+\_\+artificial }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+backup one hard cluster data 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+ptcl\+\_\+local} & hard particle backup \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n\+\_\+ptcl} & cluster member number \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+ptcl\+\_\+artifical} & artifical particle backup \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n\+\_\+group} & number of groups \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+time\+\_\+offset} & offset of time \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+time\+\_\+end} & time ending without offset \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n\+\_\+artificial} & artifical particle number \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classHardDump_a81563ee1e03e8f781e66b014b67ce325}\label{classHardDump_a81563ee1e03e8f781e66b014b67ce325}} 
+\index{HardDump@{HardDump}!dumpOneCluster@{dumpOneCluster}}
+\index{dumpOneCluster@{dumpOneCluster}!HardDump@{HardDump}}
+\doxysubsubsection{\texorpdfstring{dumpOneCluster()}{dumpOneCluster()}}
+{\footnotesize\ttfamily void Hard\+Dump\+::dump\+One\+Cluster (\begin{DoxyParamCaption}\item[{const char $\ast$}]{\+\_\+fname }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Dumping one cluster data for debuging. 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classHardDump_a81563ee1e03e8f781e66b014b67ce325_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classHardDump_a8ebb7185ddb357a663667c003087d4e4}\label{classHardDump_a8ebb7185ddb357a663667c003087d4e4}} 
+\index{HardDump@{HardDump}!readOneCluster@{readOneCluster}}
+\index{readOneCluster@{readOneCluster}!HardDump@{HardDump}}
+\doxysubsubsection{\texorpdfstring{readOneCluster()}{readOneCluster()}}
+{\footnotesize\ttfamily void Hard\+Dump\+::read\+One\+Cluster (\begin{DoxyParamCaption}\item[{const char $\ast$}]{\+\_\+fname }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+reading one cluster data for debuging 
+
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classHardDump_a45560bb45699eba62513caf95d589672}\label{classHardDump_a45560bb45699eba62513caf95d589672}} 
+\index{HardDump@{HardDump}!backup\_flag@{backup\_flag}}
+\index{backup\_flag@{backup\_flag}!HardDump@{HardDump}}
+\doxysubsubsection{\texorpdfstring{backup\_flag}{backup\_flag}}
+{\footnotesize\ttfamily bool Hard\+Dump\+::backup\+\_\+flag}
+
+\mbox{\Hypertarget{classHardDump_ae3c068979755db775a5eb687cfa3c238}\label{classHardDump_ae3c068979755db775a5eb687cfa3c238}} 
+\index{HardDump@{HardDump}!n\_arti@{n\_arti}}
+\index{n\_arti@{n\_arti}!HardDump@{HardDump}}
+\doxysubsubsection{\texorpdfstring{n\_arti}{n\_arti}}
+{\footnotesize\ttfamily P\+S\+::\+S32 Hard\+Dump\+::n\+\_\+arti}
+
+\mbox{\Hypertarget{classHardDump_a6c871f000cd779b2e02766c171918b35}\label{classHardDump_a6c871f000cd779b2e02766c171918b35}} 
+\index{HardDump@{HardDump}!n\_group@{n\_group}}
+\index{n\_group@{n\_group}!HardDump@{HardDump}}
+\doxysubsubsection{\texorpdfstring{n\_group}{n\_group}}
+{\footnotesize\ttfamily P\+S\+::\+S32 Hard\+Dump\+::n\+\_\+group}
+
+\mbox{\Hypertarget{classHardDump_a12085483c1f806b312226023e6e604aa}\label{classHardDump_a12085483c1f806b312226023e6e604aa}} 
+\index{HardDump@{HardDump}!n\_member\_in\_group@{n\_member\_in\_group}}
+\index{n\_member\_in\_group@{n\_member\_in\_group}!HardDump@{HardDump}}
+\doxysubsubsection{\texorpdfstring{n\_member\_in\_group}{n\_member\_in\_group}}
+{\footnotesize\ttfamily P\+S\+::\+Reallocatable\+Array$<$P\+S\+::\+S32$>$ Hard\+Dump\+::n\+\_\+member\+\_\+in\+\_\+group}
+
+\mbox{\Hypertarget{classHardDump_add07020fb567a6328e334f6170948c1b}\label{classHardDump_add07020fb567a6328e334f6170948c1b}} 
+\index{HardDump@{HardDump}!n\_ptcl@{n\_ptcl}}
+\index{n\_ptcl@{n\_ptcl}!HardDump@{HardDump}}
+\doxysubsubsection{\texorpdfstring{n\_ptcl}{n\_ptcl}}
+{\footnotesize\ttfamily P\+S\+::\+S32 Hard\+Dump\+::n\+\_\+ptcl}
+
+\mbox{\Hypertarget{classHardDump_a70bd3b047d01ca055e500b76ff2a4c39}\label{classHardDump_a70bd3b047d01ca055e500b76ff2a4c39}} 
+\index{HardDump@{HardDump}!ptcl\_arti\_bk@{ptcl\_arti\_bk}}
+\index{ptcl\_arti\_bk@{ptcl\_arti\_bk}!HardDump@{HardDump}}
+\doxysubsubsection{\texorpdfstring{ptcl\_arti\_bk}{ptcl\_arti\_bk}}
+{\footnotesize\ttfamily P\+S\+::\+Reallocatable\+Array$<$\mbox{\hyperlink{classFPSoft}{F\+P\+Soft}}$>$ Hard\+Dump\+::ptcl\+\_\+arti\+\_\+bk}
+
+\mbox{\Hypertarget{classHardDump_a442c2317f32a466c232683301f3fbe73}\label{classHardDump_a442c2317f32a466c232683301f3fbe73}} 
+\index{HardDump@{HardDump}!ptcl\_bk@{ptcl\_bk}}
+\index{ptcl\_bk@{ptcl\_bk}!HardDump@{HardDump}}
+\doxysubsubsection{\texorpdfstring{ptcl\_bk}{ptcl\_bk}}
+{\footnotesize\ttfamily P\+S\+::\+Reallocatable\+Array$<$\mbox{\hyperlink{classHardDump_a7d823d976545799c048bd501e5ac5f75}{Ptcl\+H4}}$>$ Hard\+Dump\+::ptcl\+\_\+bk}
+
+\mbox{\Hypertarget{classHardDump_a607d91cadcc0031da899c65091bfba4d}\label{classHardDump_a607d91cadcc0031da899c65091bfba4d}} 
+\index{HardDump@{HardDump}!time\_end@{time\_end}}
+\index{time\_end@{time\_end}!HardDump@{HardDump}}
+\doxysubsubsection{\texorpdfstring{time\_end}{time\_end}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Hard\+Dump\+::time\+\_\+end}
+
+\mbox{\Hypertarget{classHardDump_ad480a7d2f99e5cd89f4b438b5faebf7c}\label{classHardDump_ad480a7d2f99e5cd89f4b438b5faebf7c}} 
+\index{HardDump@{HardDump}!time\_offset@{time\_offset}}
+\index{time\_offset@{time\_offset}!HardDump@{HardDump}}
+\doxysubsubsection{\texorpdfstring{time\_offset}{time\_offset}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Hard\+Dump\+::time\+\_\+offset}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{hard__assert_8hpp}{hard\+\_\+assert.\+hpp}}\end{DoxyCompactItemize}

@@ -1,0 +1,13 @@
+<map id="FRWModel::getMatterDensity" name="FRWModel::getMatterDensity">
+<area shape="rect" id="node1" title=" " alt="" coords="1835,17,2049,44"/>
+<area shape="rect" id="node2" href="$classMWPotentialEvolve.html#a499debe349e3789cd6fbab95bc56dabb" title="calculate MW potential based on the input time" alt="" coords="685,61,891,102"/>
+<area shape="rect" id="node7" href="$classFRWModel.html#a361381626bcc60640134c25e6c7357bb" title=" " alt="" coords="1616,43,1787,69"/>
+<area shape="rect" id="node3" href="$classGalpyManager.html#a3cf2c36189aa2bd879faf8748e1ef871" title="Update MWpotential evolve (Gomez et al. 2010)" alt="" coords="384,61,637,102"/>
+<area shape="rect" id="node4" href="$classGalpyManager.html#ac6ce59845e4b863a3fce47c18e09631a" title="initialization function" alt="" coords="141,43,303,69"/>
+<area shape="rect" id="node6" href="$classGalpyManager.html#a2b9c41229c1b4a6d5c06e18017298357" title="Update Potential types and arguments based on time." alt="" coords="108,93,336,120"/>
+<area shape="rect" id="node5" href="$galpy__test_8cxx.html#a3c04138a5bfe5d72780bb7e82a18e627" title=" " alt="" coords="5,68,60,95"/>
+<area shape="rect" id="node8" href="$classFRWModel.html#abb7a4dcaa3256b6365ef1cc5e9f5dba4" title="calculate da/dt" alt="" coords="1412,93,1568,120"/>
+<area shape="rect" id="node9" href="$classFRWModel.html#a262a19eeb8300f0a59c8555e052cbc27" title="get Hubble constant at current a" alt="" coords="985,93,1115,120"/>
+<area shape="rect" id="node10" href="$classFRWModel.html#a348b0ad06e5e83855a039ab5179806bc" title="update scale factor by time step _dt (first order Euler method)" alt="" coords="1209,144,1364,171"/>
+<area shape="rect" id="node11" href="$classFRWModel.html#a904c7a9d484ab006a8bbbc3f557f6e45" title="update scale factor with maximum time step dt_max (first order Euler method)" alt="" coords="939,144,1161,171"/>
+</map>

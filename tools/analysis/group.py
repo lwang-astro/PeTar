@@ -93,6 +93,5 @@ class GroupInfo(DictNpArrayMix):
         key='bin'+str(i)
         if key in self.__dict__.keys():
             self[key].generateBinaryID()
-            self.ncols += 1
         else:
             raise ValueError('Error: failed to find ',key)

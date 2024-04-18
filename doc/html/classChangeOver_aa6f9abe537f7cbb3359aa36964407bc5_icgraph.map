@@ -1,0 +1,5 @@
+<map id="ChangeOver::getRin" name="ChangeOver::getRin">
+<area shape="rect" id="node1" title="get r_in" alt="" coords="243,31,395,57"/>
+<area shape="rect" id="node2" href="$classPtcl.html#a7731bfc5bd1525b781acafc2d088f3b7" title="Get group distance criterion." alt="" coords="39,5,161,32"/>
+<area shape="rect" id="node3" href="$classPtcl.html#a735f6de3f29073df24fcbc9a0874c46a" title="Get group candidate distance criterion." alt="" coords="5,56,195,83"/>
+</map>

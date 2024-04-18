@@ -1,0 +1,176 @@
+\hypertarget{classSearchCluster}{}\doxysection{Search\+Cluster Class Reference}
+\label{classSearchCluster}\index{SearchCluster@{SearchCluster}}
+
+
+{\ttfamily \#include $<$cluster\+\_\+list.\+hpp$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+void \mbox{\hyperlink{classSearchCluster_a80b0896173dc501cd2457c1636289206}{initialize}} ()
+\item 
+{\footnotesize template$<$class Tpsoft , class Tepj $>$ }\\P\+S\+::\+S32 \mbox{\hyperlink{classSearchCluster_a2db47a5989764aa313443addbb55d591}{check\+Neighbor\+With\+Velocity}} (P\+S\+::\+S32 $\ast$\+\_\+index, Tpsoft \&\+\_\+pi, Tepj $\ast$\+\_\+pb, const P\+S\+::\+S32 \+\_\+nb, const P\+S\+::\+F64 \+\_\+G, const P\+S\+::\+F64 \+\_\+radius\+\_\+factor)
+\begin{DoxyCompactList}\small\item\em identify whether the neighbor satisfy velocity criterion \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tsys , class Ttree , class Tepj $>$ }\\void \mbox{\hyperlink{classSearchCluster_a4eed744c2ec88e42a522c2aea48adb14}{search\+Neighbor\+O\+MP}} (Tsys \&sys, Ttree \&tree, const P\+S\+::\+F64ort pos\+\_\+domain\mbox{[}$\,$\mbox{]}, const P\+S\+::\+F64 \+\_\+G, const P\+S\+::\+F64 \+\_\+radius\+\_\+factor)
+\begin{DoxyCompactList}\small\item\em search neighbors and separate isolated and multiple clusters \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tsys $>$ }\\void \mbox{\hyperlink{classSearchCluster_a2a1a6cb23318e8cc3f7d1d8e7b248d4e}{check\+Ptcl\+Cluster}} (const Tsys \&sys)
+\item 
+void \mbox{\hyperlink{classSearchCluster_a41fc2645bb9d6f7feb188d6de0526df4}{search\+Cluster\+Local}} ()
+\item 
+{\footnotesize template$<$class Tsys $>$ }\\void \mbox{\hyperlink{classSearchCluster_a856fa23b1264ee0de2966af55e56b408}{check\+Mediator}} (const Tsys \&sys)
+\item 
+void \mbox{\hyperlink{classSearchCluster_a7f630465ce2f8ef5d5339c0383600f0e}{set\+Id\+Cluster\+Local}} ()
+\item 
+const P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \& \mbox{\hyperlink{classSearchCluster_af59d0bea5da0d1febd954774dc806e35}{get\+Adr\+Sys\+One\+Cluster}} ()
+\item 
+const P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \& \mbox{\hyperlink{classSearchCluster_a65a95688edf17ea40f798a6cf7055c5c}{get\+Adr\+Sys\+Connect\+Cluster\+Send}} ()
+\begin{DoxyCompactList}\small\item\em get the address list of ptcl need to send in connected clusters \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \mbox{\hyperlink{classSearchCluster_ae89195308010bf7c79d95e672ed4e793}{n\+\_\+ptcl\+\_\+in\+\_\+multi\+\_\+cluster\+\_\+isolated\+\_\+}}
+\item 
+P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \mbox{\hyperlink{classSearchCluster_a7f12603ea537fed8ad6664937be71b3a}{n\+\_\+ptcl\+\_\+in\+\_\+multi\+\_\+cluster\+\_\+isolated\+\_\+offset\+\_\+}}
+\item 
+P\+S\+::\+Reallocatable\+Array$<$ \mbox{\hyperlink{classMediator}{Mediator}} $>$ \mbox{\hyperlink{classSearchCluster_ab4db2590e66759a8cce93e2acd2892fd}{mediator\+\_\+sorted\+\_\+id\+\_\+cluster\+\_\+}}
+\item 
+P\+S\+::\+Reallocatable\+Array$<$ \mbox{\hyperlink{classPtclComm}{Ptcl\+Comm}} $>$ \mbox{\hyperlink{classSearchCluster_a7ec681af7a9dd3a5d464d9efc3c8e8f7}{ptcl\+\_\+recv\+\_\+}}
+\item 
+P\+S\+::\+Reallocatable\+Array$<$ P\+S\+::\+S32 $>$ \mbox{\hyperlink{classSearchCluster_aaa328193a00abba83aec52fa41066843}{adr\+\_\+sys\+\_\+multi\+\_\+cluster\+\_\+isolated\+\_\+}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classSearchCluster_a856fa23b1264ee0de2966af55e56b408}\label{classSearchCluster_a856fa23b1264ee0de2966af55e56b408}} 
+\index{SearchCluster@{SearchCluster}!checkMediator@{checkMediator}}
+\index{checkMediator@{checkMediator}!SearchCluster@{SearchCluster}}
+\doxysubsubsection{\texorpdfstring{checkMediator()}{checkMediator()}}
+{\footnotesize\ttfamily template$<$class Tsys $>$ \\
+void Search\+Cluster\+::check\+Mediator (\begin{DoxyParamCaption}\item[{const Tsys \&}]{sys }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSearchCluster_a2db47a5989764aa313443addbb55d591}\label{classSearchCluster_a2db47a5989764aa313443addbb55d591}} 
+\index{SearchCluster@{SearchCluster}!checkNeighborWithVelocity@{checkNeighborWithVelocity}}
+\index{checkNeighborWithVelocity@{checkNeighborWithVelocity}!SearchCluster@{SearchCluster}}
+\doxysubsubsection{\texorpdfstring{checkNeighborWithVelocity()}{checkNeighborWithVelocity()}}
+{\footnotesize\ttfamily template$<$class Tpsoft , class Tepj $>$ \\
+P\+S\+::\+S32 Search\+Cluster\+::check\+Neighbor\+With\+Velocity (\begin{DoxyParamCaption}\item[{P\+S\+::\+S32 $\ast$}]{\+\_\+index,  }\item[{Tpsoft \&}]{\+\_\+pi,  }\item[{Tepj $\ast$}]{\+\_\+pb,  }\item[{const P\+S\+::\+S32}]{\+\_\+nb,  }\item[{const P\+S\+::\+F64}]{\+\_\+G,  }\item[{const P\+S\+::\+F64}]{\+\_\+radius\+\_\+factor }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+identify whether the neighbor satisfy velocity criterion 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+index} & neighbor index pass check \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+pi} & particle i \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+pb} & neighbor particles (including self) \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+nb} & number of neighbors \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+G} & gravitational constant \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+radius\+\_\+factor} & radius\+\_\+factor to check neighbors (peri$\ast$radius\+\_\+factor) \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+new neighbor number 
+\end{DoxyReturn}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classSearchCluster_a2db47a5989764aa313443addbb55d591_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classSearchCluster_a2a1a6cb23318e8cc3f7d1d8e7b248d4e}\label{classSearchCluster_a2a1a6cb23318e8cc3f7d1d8e7b248d4e}} 
+\index{SearchCluster@{SearchCluster}!checkPtclCluster@{checkPtclCluster}}
+\index{checkPtclCluster@{checkPtclCluster}!SearchCluster@{SearchCluster}}
+\doxysubsubsection{\texorpdfstring{checkPtclCluster()}{checkPtclCluster()}}
+{\footnotesize\ttfamily template$<$class Tsys $>$ \\
+void Search\+Cluster\+::check\+Ptcl\+Cluster (\begin{DoxyParamCaption}\item[{const Tsys \&}]{sys }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSearchCluster_a65a95688edf17ea40f798a6cf7055c5c}\label{classSearchCluster_a65a95688edf17ea40f798a6cf7055c5c}} 
+\index{SearchCluster@{SearchCluster}!getAdrSysConnectClusterSend@{getAdrSysConnectClusterSend}}
+\index{getAdrSysConnectClusterSend@{getAdrSysConnectClusterSend}!SearchCluster@{SearchCluster}}
+\doxysubsubsection{\texorpdfstring{getAdrSysConnectClusterSend()}{getAdrSysConnectClusterSend()}}
+{\footnotesize\ttfamily const P\+S\+::\+Reallocatable\+Array$<$P\+S\+::\+S32$>$\& Search\+Cluster\+::get\+Adr\+Sys\+Connect\+Cluster\+Send (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get the address list of ptcl need to send in connected clusters 
+
+\mbox{\Hypertarget{classSearchCluster_af59d0bea5da0d1febd954774dc806e35}\label{classSearchCluster_af59d0bea5da0d1febd954774dc806e35}} 
+\index{SearchCluster@{SearchCluster}!getAdrSysOneCluster@{getAdrSysOneCluster}}
+\index{getAdrSysOneCluster@{getAdrSysOneCluster}!SearchCluster@{SearchCluster}}
+\doxysubsubsection{\texorpdfstring{getAdrSysOneCluster()}{getAdrSysOneCluster()}}
+{\footnotesize\ttfamily const P\+S\+::\+Reallocatable\+Array$<$P\+S\+::\+S32$>$\& Search\+Cluster\+::get\+Adr\+Sys\+One\+Cluster (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSearchCluster_a80b0896173dc501cd2457c1636289206}\label{classSearchCluster_a80b0896173dc501cd2457c1636289206}} 
+\index{SearchCluster@{SearchCluster}!initialize@{initialize}}
+\index{initialize@{initialize}!SearchCluster@{SearchCluster}}
+\doxysubsubsection{\texorpdfstring{initialize()}{initialize()}}
+{\footnotesize\ttfamily void Search\+Cluster\+::initialize (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSearchCluster_a41fc2645bb9d6f7feb188d6de0526df4}\label{classSearchCluster_a41fc2645bb9d6f7feb188d6de0526df4}} 
+\index{SearchCluster@{SearchCluster}!searchClusterLocal@{searchClusterLocal}}
+\index{searchClusterLocal@{searchClusterLocal}!SearchCluster@{SearchCluster}}
+\doxysubsubsection{\texorpdfstring{searchClusterLocal()}{searchClusterLocal()}}
+{\footnotesize\ttfamily void Search\+Cluster\+::search\+Cluster\+Local (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSearchCluster_a4eed744c2ec88e42a522c2aea48adb14}\label{classSearchCluster_a4eed744c2ec88e42a522c2aea48adb14}} 
+\index{SearchCluster@{SearchCluster}!searchNeighborOMP@{searchNeighborOMP}}
+\index{searchNeighborOMP@{searchNeighborOMP}!SearchCluster@{SearchCluster}}
+\doxysubsubsection{\texorpdfstring{searchNeighborOMP()}{searchNeighborOMP()}}
+{\footnotesize\ttfamily template$<$class Tsys , class Ttree , class Tepj $>$ \\
+void Search\+Cluster\+::search\+Neighbor\+O\+MP (\begin{DoxyParamCaption}\item[{Tsys \&}]{sys,  }\item[{Ttree \&}]{tree,  }\item[{const P\+S\+::\+F64ort}]{pos\+\_\+domain\mbox{[}$\,$\mbox{]},  }\item[{const P\+S\+::\+F64}]{\+\_\+G,  }\item[{const P\+S\+::\+F64}]{\+\_\+radius\+\_\+factor }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+search neighbors and separate isolated and multiple clusters 
+
+\mbox{\Hypertarget{classSearchCluster_a7f630465ce2f8ef5d5339c0383600f0e}\label{classSearchCluster_a7f630465ce2f8ef5d5339c0383600f0e}} 
+\index{SearchCluster@{SearchCluster}!setIdClusterLocal@{setIdClusterLocal}}
+\index{setIdClusterLocal@{setIdClusterLocal}!SearchCluster@{SearchCluster}}
+\doxysubsubsection{\texorpdfstring{setIdClusterLocal()}{setIdClusterLocal()}}
+{\footnotesize\ttfamily void Search\+Cluster\+::set\+Id\+Cluster\+Local (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classSearchCluster_aaa328193a00abba83aec52fa41066843}\label{classSearchCluster_aaa328193a00abba83aec52fa41066843}} 
+\index{SearchCluster@{SearchCluster}!adr\_sys\_multi\_cluster\_isolated\_@{adr\_sys\_multi\_cluster\_isolated\_}}
+\index{adr\_sys\_multi\_cluster\_isolated\_@{adr\_sys\_multi\_cluster\_isolated\_}!SearchCluster@{SearchCluster}}
+\doxysubsubsection{\texorpdfstring{adr\_sys\_multi\_cluster\_isolated\_}{adr\_sys\_multi\_cluster\_isolated\_}}
+{\footnotesize\ttfamily P\+S\+::\+Reallocatable\+Array$<$P\+S\+::\+S32$>$ Search\+Cluster\+::adr\+\_\+sys\+\_\+multi\+\_\+cluster\+\_\+isolated\+\_\+}
+
+\mbox{\Hypertarget{classSearchCluster_ab4db2590e66759a8cce93e2acd2892fd}\label{classSearchCluster_ab4db2590e66759a8cce93e2acd2892fd}} 
+\index{SearchCluster@{SearchCluster}!mediator\_sorted\_id\_cluster\_@{mediator\_sorted\_id\_cluster\_}}
+\index{mediator\_sorted\_id\_cluster\_@{mediator\_sorted\_id\_cluster\_}!SearchCluster@{SearchCluster}}
+\doxysubsubsection{\texorpdfstring{mediator\_sorted\_id\_cluster\_}{mediator\_sorted\_id\_cluster\_}}
+{\footnotesize\ttfamily P\+S\+::\+Reallocatable\+Array$<$\mbox{\hyperlink{classMediator}{Mediator}}$>$ Search\+Cluster\+::mediator\+\_\+sorted\+\_\+id\+\_\+cluster\+\_\+}
+
+\mbox{\Hypertarget{classSearchCluster_ae89195308010bf7c79d95e672ed4e793}\label{classSearchCluster_ae89195308010bf7c79d95e672ed4e793}} 
+\index{SearchCluster@{SearchCluster}!n\_ptcl\_in\_multi\_cluster\_isolated\_@{n\_ptcl\_in\_multi\_cluster\_isolated\_}}
+\index{n\_ptcl\_in\_multi\_cluster\_isolated\_@{n\_ptcl\_in\_multi\_cluster\_isolated\_}!SearchCluster@{SearchCluster}}
+\doxysubsubsection{\texorpdfstring{n\_ptcl\_in\_multi\_cluster\_isolated\_}{n\_ptcl\_in\_multi\_cluster\_isolated\_}}
+{\footnotesize\ttfamily P\+S\+::\+Reallocatable\+Array$<$P\+S\+::\+S32$>$ Search\+Cluster\+::n\+\_\+ptcl\+\_\+in\+\_\+multi\+\_\+cluster\+\_\+isolated\+\_\+}
+
+\mbox{\Hypertarget{classSearchCluster_a7f12603ea537fed8ad6664937be71b3a}\label{classSearchCluster_a7f12603ea537fed8ad6664937be71b3a}} 
+\index{SearchCluster@{SearchCluster}!n\_ptcl\_in\_multi\_cluster\_isolated\_offset\_@{n\_ptcl\_in\_multi\_cluster\_isolated\_offset\_}}
+\index{n\_ptcl\_in\_multi\_cluster\_isolated\_offset\_@{n\_ptcl\_in\_multi\_cluster\_isolated\_offset\_}!SearchCluster@{SearchCluster}}
+\doxysubsubsection{\texorpdfstring{n\_ptcl\_in\_multi\_cluster\_isolated\_offset\_}{n\_ptcl\_in\_multi\_cluster\_isolated\_offset\_}}
+{\footnotesize\ttfamily P\+S\+::\+Reallocatable\+Array$<$P\+S\+::\+S32$>$ Search\+Cluster\+::n\+\_\+ptcl\+\_\+in\+\_\+multi\+\_\+cluster\+\_\+isolated\+\_\+offset\+\_\+}
+
+\mbox{\Hypertarget{classSearchCluster_a7ec681af7a9dd3a5d464d9efc3c8e8f7}\label{classSearchCluster_a7ec681af7a9dd3a5d464d9efc3c8e8f7}} 
+\index{SearchCluster@{SearchCluster}!ptcl\_recv\_@{ptcl\_recv\_}}
+\index{ptcl\_recv\_@{ptcl\_recv\_}!SearchCluster@{SearchCluster}}
+\doxysubsubsection{\texorpdfstring{ptcl\_recv\_}{ptcl\_recv\_}}
+{\footnotesize\ttfamily P\+S\+::\+Reallocatable\+Array$<$\mbox{\hyperlink{classPtclComm}{Ptcl\+Comm}}$>$ Search\+Cluster\+::ptcl\+\_\+recv\+\_\+}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{cluster__list_8hpp}{cluster\+\_\+list.\+hpp}}\end{DoxyCompactItemize}

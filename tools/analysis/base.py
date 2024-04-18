@@ -1,6 +1,7 @@
 # base class 
 import numpy as np
 import warnings
+warnings.simplefilter('always')
 
 class DictNpArrayMix:
     """ The basic class of data structure
@@ -359,7 +360,7 @@ class DictNpArrayMix:
 
     def __sub__(self, other):
         """
-        Use operate function to add self and the other
+        Use operate function to subtract self and the other
         """
         return self.operate(other, np.subtract)
 
@@ -371,13 +372,13 @@ class DictNpArrayMix:
 
     def __truediv__(self, other):
         """
-        Use operate function to add self and the other
+        Use operate function to truediv self and the other
         """
         return self.operate(other, np.true_divide)
 
     def __pow__(self, other):
         """
-        Use operate function to multiply self and the other
+        Use operate function to get the other power of self
         """
         return self.operate(other, np.power)
 
@@ -523,6 +524,27 @@ class DictNpArrayMix:
                     dat_out[:,icol:icol+ncols] = member.getherDataToArray(origin_format)
                     icol += ncols
             return dat_out
+
+    def getColumnInfo(self):
+        """
+        Get column position (counting from 0), key member name and data type of the reading data file.
+        Output a list, each element is a tuple of the three parameters.
+        All sub class members are resolved.
+        """
+        position = 0
+        dt = self.collectDtype()
+        column_info = []
+        for key, par in dt:
+            column_info.append((position, key, par))
+            if type(par) == tuple:
+                if (type(par[0]) == type) & (type(par[1]) == int):
+                    position += par[1]
+                else:
+                    position += 1
+            else:
+                position += 1
+        return column_info
+
 
     def printTable(self, column_format, print_title=True):
         """
