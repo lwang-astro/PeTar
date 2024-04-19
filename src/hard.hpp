@@ -161,6 +161,8 @@ public:
     H4::HermiteIntegrator<PtclHard, PtclH4, HermitePerturber, ARPerturber, HermiteInteraction, ARInteraction, HermiteInformation> h4_int; ///> hermite integrator
     AR::TimeTransformedSymplecticIntegrator<PtclHard, PtclH4, ARPerturber, ARInteraction, H4::ARInformation<PtclHard>> sym_int; ///> AR integrator
     HardManager* manager; ///> hard manager
+
+    PS::ReallocatableArray<AR::InterruptBinary<PtclHard>> interrupt_list; // interrupt binary information list
     PS::ReallocatableArray<TidalTensor> tidal_tensor; ///> tidal tensor array
     PS::F64 time_origin;  ///> origin physical time
     PtclH4* ptcl_origin;  ///> original particle array
@@ -189,7 +191,7 @@ public:
 #endif
 
     //! initializer
-    HardIntegrator(): h4_int(), sym_int(), manager(NULL), tidal_tensor(), time_origin(-1.0), ptcl_origin(NULL), 
+    HardIntegrator(): h4_int(), sym_int(), manager(NULL), interrupt_list(), tidal_tensor(), time_origin(-1.0), ptcl_origin(NULL), 
 #ifdef HARD_DEBUG_PRINT
                       n_group_sub_init(), n_group_sub_tot_init(0),
 #endif
@@ -580,6 +582,9 @@ public:
             std::cout<<std::endl;
 #endif
         }
+        
+        interrupt_list.resizeNoInitialize(0); // interrupt binary information list
+
     }
 
     //! Integrate system to time
@@ -595,7 +600,18 @@ public:
 #endif
         // integration
         if (use_sym_int) {
-            sym_interrupt_binary = sym_int.integrateToTime(_time_end);
+            auto sym_interrupt_binary = sym_int.integrateToTime(_time_end);
+
+            if (ar_manager->interrupt_detection_option==2 && interrupt_binary.status!=AR::InterruptStatus::none) { 
+                auto bin = interrupt_binary.getBinaryTreeAddress();
+                if (!bin->isMemberTree(0) && !bin->isMemberTree(1)){
+                    // only recored binary interruption
+                    interrupt_binary_info_list_.addMember(interrupt_binary);
+                    auto& binfo = interrupt_binary_info_list_.getLastMember();
+                    binfo.backupBinaryTreeLocal();
+                }
+            }
+
 #ifdef ADJUST_GROUP_PRINT
             if (manager->h4_manager.adjust_group_write_flag) {
                 // print new group information
@@ -1169,6 +1185,7 @@ private:
     PS::ReallocatableArray<PS::S32> n_member_in_group_offset_;        // number of members in group index offest in each cluster (for n_meber_in_group_, notice in each cluster, the first offset is zero)
     PS::ReallocatableArray<PS::S32> adr_first_ptcl_arti_in_cluster_;  // address of the first artificial particle in each groups
     PS::ReallocatableArray<PS::S32> i_cluster_changeover_update_;     // cluster index that has member need changeover update
+    PS::ReallocatableArray<AR::InterruptBinary<PtclHard>> interrupt_list_; // interrupt binary information list
     PS::S32 n_group_member_remote_; // number of members in groups but in remote nodes
 
     struct OPLessIDCluster{
@@ -1850,6 +1867,8 @@ public:
 #endif
             n_ptcl_in_cluster_disp_[i+1] = n_ptcl_in_cluster_disp_[i] + n_ptcl_in_cluster_[i];
         }
+
+        interrupt_list_.resizeNoInitialize(0);
     }
 
 

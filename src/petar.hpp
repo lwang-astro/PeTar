@@ -204,14 +204,10 @@ public:
                      interrupt_detection_option(input_par_store, 1, "detect-interrupt", "Stellar evolution of binaries in SDAR: 0: off; 1: using BSE based code (if '--stellar-evolution != 0)"),
 #else // NO BSE_BASE
                      stellar_evolution_option  (input_par_store, 0, "stellar-evolution", "Not implemented"),
-#ifdef APPLY_MERGER
-                     interrupt_detection_option(input_par_store, 0, "detect-interrupt", "interrupt integration of SDAR: 0: turn off; 1: merge two particles if their surfaces overlap; 2. merge two particles and also interrupt the hard integration"),
-#else // APPLY MERGER
-                     interrupt_detection_option(input_par_store, 0, "detect-interrupt", "Interrupt integration in SDAR: 0: turn off; 1: merge two particles if their surfaces overlap; 2. merge two particles and also interrupt the hard integration"),
-#endif // BSE_BASE
-#else
-                     interrupt_detection_option(input_par_store, 0, "detect-interrupt", "Modify orbits of AR groups based on the interruption function: 0: turn off; 1: modify inside AR integration and accumulate energy change; 2. modify and also interrupt the hard drift"),
-#endif
+                     interrupt_detection_option(input_par_store, 0, "detect-interrupt", "Interrupt integration in SDAR: 0: turn off; 1: merge two particles if their surfaces overlap; 2. record two particle information if their surfaces overlap without merger"),
+#endif // END BSE_BASE
+#endif // END STELLAR_EVOLUTION
+
 #ifdef ADJUST_GROUP_PRINT
                      adjust_group_write_option(input_par_store, 1, "write-group-info", "Print new and end of groups: 0: no print; 1: print to file [data filename prefix].group.[MPI rank] if -w >0"),
 #endif
@@ -254,9 +250,9 @@ public:
             {step_limit_ar.key,        required_argument, &petar_flag, 15},   
             {"disable-print-info",     no_argument,       &petar_flag, 16},
             {n_interrupt_limit.key,    required_argument, &petar_flag, 17},
-            {interrupt_detection_option.key,  required_argument, &petar_flag, 18},
             {n_step_per_orbit.key,     required_argument, &petar_flag, 19},
 #ifdef STELLAR_EVOLUTION
+            {interrupt_detection_option.key,  required_argument, &petar_flag, 18},
             {stellar_evolution_option.key,    required_argument, &petar_flag, 20},
 #endif
             {r_escape.key,             required_argument, &petar_flag, 21},
@@ -3289,8 +3285,8 @@ public:
 #ifdef SLOWDOWN_MASSRATIO
         hard_manager.ar_manager.slowdown_mass_ref = mass_average;
 #endif
-        hard_manager.ar_manager.interrupt_detection_option = input_parameters.interrupt_detection_option.value;
 #ifdef STELLAR_EVOLUTION
+        hard_manager.ar_manager.ar_interaction.interrupt_detection_option = input_parameters.interrupt_detection_option.value;
         hard_manager.ar_manager.interaction.stellar_evolution_option = input_parameters.stellar_evolution_option.value;
         if (write_style) hard_manager.ar_manager.interaction.stellar_evolution_write_flag = true;
         else hard_manager.ar_manager.interaction.stellar_evolution_write_flag = false;
