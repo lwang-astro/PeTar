@@ -1,5 +1,5 @@
 #pragma once
-#ifdef USE_INTRINSIC_FOR_X86
+0;10;1c#ifdef USE_INTRINSIC_FOR_X86
 #include<immintrin.h>
 #endif
 
@@ -162,7 +162,7 @@ public:
     AR::TimeTransformedSymplecticIntegrator<PtclHard, PtclH4, ARPerturber, ARInteraction, H4::ARInformation<PtclHard>> sym_int; ///> AR integrator
     HardManager* manager; ///> hard manager
 
-    PS::ReallocatableArray<AR::InterruptBinary<PtclHard>> interrupt_list; // interrupt binary information list
+    AR::InterruptBinary<PtclHard>> sym_interrupt_binary; // interrupt binary information list
     PS::ReallocatableArray<TidalTensor> tidal_tensor; ///> tidal tensor array
     PS::F64 time_origin;  ///> origin physical time
     PtclH4* ptcl_origin;  ///> original particle array
@@ -600,17 +600,15 @@ public:
 #endif
         // integration
         if (use_sym_int) {
-            auto sym_interrupt_binary = sym_int.integrateToTime(_time_end);
+            sym_interrupt_binary = sym_int.integrateToTime(_time_end);
 
-            if (ar_manager->interrupt_detection_option==2 && interrupt_binary.status!=AR::InterruptStatus::none) { 
-                auto bin = interrupt_binary.getBinaryTreeAddress();
-                if (!bin->isMemberTree(0) && !bin->isMemberTree(1)){
-                    // only recored binary interruption
-                    interrupt_binary_info_list_.addMember(interrupt_binary);
-                    auto& binfo = interrupt_binary_info_list_.getLastMember();
-                    binfo.backupBinaryTreeLocal();
-                }
-            }
+#ifdef STELLAR_EVOLUTION
+#ifndef BSE_BASE
+            // backup binary information if record option is used
+            if (ar_manager->interaction.interrupt_detection_option == 2) 
+                sym_interrupt_binary.backupBinaryTreeLocal();
+#endif
+#endif
 
 #ifdef ADJUST_GROUP_PRINT
             if (manager->h4_manager.adjust_group_write_flag) {
@@ -1140,6 +1138,36 @@ public:
         }
 #endif
 
+    }
+
+    //! record interrupt binary information to a list
+    /*! 
+      @param[out] interrput_list: the list to store interrupted binaries
+     */
+    void recordInterruptBinaries(PS::ReallocatableArray<AR::InterruptBinary<PtclHard>> & interrupt_list) {
+        if (use_sym_int) {
+            if (sym_interrupt_binary.status!=AR::InterruptStatus::none) { 
+                auto bin = sym_interrupt_binary.getBinaryTreeAddress();
+                ASSERT(!bin->isMemberTree(0) && !bin->isMemberTree(1));
+                // only recored binary interruption
+                interrupt_list.addMember(interrupt_binary);
+                auto& binfo = interrupt_list.getLastMember();
+                binfo.backupBinaryTreeLocal();
+            }
+        }
+        else {
+            int n_interrupt = h4_int.getNInterrupt();
+            for (int i=0; i<n_interrupt; i++) {
+                auto& interrupt_info = h4_int.getInterruptInfo(i);
+                // only recored binary interruption
+                auto bin = interrupt_info.getBinaryTreeAddress();
+                ASSERT(!bin->isMemberTree(0) && !bin->isMemberTree(1));
+                    
+                interrupt_list.addMember(interrupt_info);
+                auto& binfo = interrupt_list.getLastMember();
+                binfo.backupBinaryTreeLocal();
+            }
+        }
     }
 
     //! clear function
@@ -2254,10 +2282,6 @@ public:
         //}
         //std::sort(n_sort_list.getPointer(),n_sort_list.getPointer()+n_cluster,[](const std::pair<PS::S32,PS::S32> &a, const std::pair<PS::S32,PS::S32> &b){return a.first<b.first;});
         const PS::S32 num_thread = PS::Comm::getNumberOfThread();
-#ifndef ONLY_SOFT
-        HardIntegrator hard_int_thread[num_thread];
-#endif
-
 #ifdef OMP_PROFILE        
         PS::F64 time_thread[num_thread];
         PS::S64 num_cluster[num_thread];
@@ -2266,6 +2290,9 @@ public:
           num_cluster[i] = 0;
         }
 #endif
+
+#ifndef ONLY_SOFT
+        HardIntegrator hard_int_thread[num_thread];
 
 #pragma omp parallel for schedule(dynamic)
         for(PS::S32 i=0; i<n_cluster; i++){
@@ -2277,7 +2304,6 @@ public:
             const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
             const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
 
-#ifndef ONLY_SOFT
             // Hermite + AR integration
             const PS::S32 n_group = n_group_in_cluster_[i];
             Tpsoft* ptcl_artificial_ptr=NULL;
@@ -2287,24 +2313,24 @@ public:
                 if (ptcl_arti_first_index>=0) ptcl_artificial_ptr = &(_ptcl_soft[ptcl_arti_first_index]);
 #ifdef PROFILE
                 else ARC_n_groups_iso += 1;
-#endif
+#endif // END PROFILE
                 n_member_in_group_ptr = &(n_member_in_group_[n_group_in_cluster_offset_[i]]);
             }
 #ifdef OMP_PROFILE
             num_cluster[ith] += n_ptcl;
-#endif
+#endif // END OMP_PROFILE
 #ifdef PROFILE
             ARC_n_groups  += n_group;
-#endif
+#endif // END PROFILE
 
 #ifdef HARD_DUMP
             assert(ith<hard_dump.size);
             hard_dump[ith].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, time_origin_, dt, manager->ap_manager.getArtificialParticleN());
-#endif
+#endif // END HARD_DUMP
 
 #ifdef HARD_DEBUG_PROFILE
             PS::F64 tstart = PS::GetWtime();
-#endif
+#endif 
 
             // if interrupt exist, escape initial
             hard_int_thread[ith].initial(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, manager, time_origin_);
@@ -2312,6 +2338,25 @@ public:
             hard_int_thread[ith].integrateToTime(dt);
 
             hard_int_thread[ith].driftClusterCMRecordGroupCMDataAndWriteBack(dt);
+
+
+#ifdef OMP_PROFILE
+            time_thread[ith] += PS::GetWtime();
+#endif
+        }
+
+        //No parallel part
+        for(PS::S32 i=0; i<num_thread; i++) {
+
+#ifdef OMP_PROFILE
+            time_thread[ith] -= PS::GetWtime();
+#endif        
+#ifdef STELLAR_EVOLUTION
+#ifndef BSE_BASE
+            if (ar_manager->interaction.interrupt_detection_option == 2) 
+                hard_int_thread[ith].recordInterruptBinaries(interrupt_list_);
+#endif
+#endif
 
 #ifdef PROFILE
             ARC_substep_sum    += hard_int_thread[ith].ARC_substep_sum;
@@ -2335,9 +2380,20 @@ public:
             PS::F64 tend = PS::GetWtime();
             std::cerr<<"HT: "<<i<<" "<<ith<<" "<<n_cluster<<" "<<n_ptcl<<" "<<tend-tstart<<std::endl;
 #endif
+        }
 
-#else
-            // Only soft drift
+#else // ONLY SOFT
+        // Only soft drift
+#pragma omp parallel for schedule(dynamic)
+        for(PS::S32 i=0; i<n_cluster; i++){
+            const PS::S32 ith = PS::Comm::getThreadNum();
+#ifdef OMP_PROFILE
+            time_thread[ith] -= PS::GetWtime();
+#endif
+            //const PS::S32 i   = n_sort_list[k].second;
+            const PS::S32 adr_head = n_ptcl_in_cluster_disp_[i];
+            const PS::S32 n_ptcl = n_ptcl_in_cluster_[i];
+
             auto* pi = ptcl_hard_.getPointer(adr_head);
             for (PS::S32 j=0; j<n_ptcl; j++) {
                 PS::F64vec dr = pi[j].vel * dt;
@@ -2351,7 +2407,6 @@ public:
                 pi[j].calcRSearch(dt);
             }
 #endif
-
         }
 
 

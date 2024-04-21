@@ -98,7 +98,7 @@ public:
     IOParams<PS::F64> theta;
     IOParams<PS::S64> n_leaf_limit;
     IOParams<PS::S64> n_group_limit;
-    IOParams<PS::S64> n_interrupt_limit;
+//    IOParams<PS::S64> n_interrupt_limit;
     IOParams<PS::S64> n_smp_ave;
 #ifdef ORBIT_SAMPLING
     IOParams<PS::S64> n_split;
@@ -137,8 +137,8 @@ public:
     IOParams<PS::S64> write_style;
 #ifdef STELLAR_EVOLUTION
     IOParams<PS::S64> stellar_evolution_option;
-#endif
     IOParams<PS::S64> interrupt_detection_option;
+#endif
 #ifdef ADJUST_GROUP_PRINT
     IOParams<PS::S64> adjust_group_write_option;
 #endif
@@ -161,7 +161,7 @@ public:
 #else
                      n_group_limit    (input_par_store, 512,  "number-group-limit", "Particle-tree group number limit", "Optimized for x86-AVX2 (512)"),
 #endif
-                     n_interrupt_limit(input_par_store, 128,  "number-interrupt-limit", "Interrupted hard integrator limit"),
+//                     n_interrupt_limit(input_par_store, 128,  "number-interrupt-limit", "Interrupted hard integrator limit"),
                      n_smp_ave        (input_par_store, 100,  "number-sample-average", "Average target number of sample particles per process"),
 #ifdef ORBIT_SAMPLING
                      n_split          (input_par_store, 4,    "number-split", "Number of binary sample points for tree perturbation force"),
@@ -249,11 +249,11 @@ public:
 #endif
             {step_limit_ar.key,        required_argument, &petar_flag, 15},   
             {"disable-print-info",     no_argument,       &petar_flag, 16},
-            {n_interrupt_limit.key,    required_argument, &petar_flag, 17},
-            {n_step_per_orbit.key,     required_argument, &petar_flag, 19},
+            {n_step_per_orbit.key,     required_argument, &petar_flag, 17},
 #ifdef STELLAR_EVOLUTION
-            {interrupt_detection_option.key,  required_argument, &petar_flag, 18},
-            {stellar_evolution_option.key,    required_argument, &petar_flag, 20},
+//            {n_interrupt_limit.key,    required_argument, &petar_flag, 18},
+            {stellar_evolution_option.key,    required_argument, &petar_flag, 19},
+            {interrupt_detection_option.key,  required_argument, &petar_flag, 20},
 #endif
             {r_escape.key,             required_argument, &petar_flag, 21},
             {r_search_min.key,         required_argument, &petar_flag, 22},
@@ -380,26 +380,26 @@ public:
                     opt_used ++;
                     break;
                 case 17:
-                    n_interrupt_limit.value = atoi(optarg);
-                    if(print_flag) n_interrupt_limit.print(std::cout);
-                    opt_used += 2;
-                    assert(n_interrupt_limit.value>0);
-                    break;
-                case 18:
-                    interrupt_detection_option.value = atoi(optarg);
-                    if(print_flag) interrupt_detection_option.print(std::cout);
-                    opt_used += 2;
-                    break;
-                case 19:
                     n_step_per_orbit.value = atof(optarg);
                     if(print_flag) n_step_per_orbit.print(std::cout);
                     opt_used += 2;
                     assert(n_step_per_orbit.value>=1.0);
                     break;
 #ifdef STELLAR_EVOLUTION
-                case 20:
+//                case 18:
+//                    n_interrupt_limit.value = atoi(optarg);
+//                    if(print_flag) n_interrupt_limit.print(std::cout);
+//                    opt_used += 2;
+//                    assert(n_interrupt_limit.value>0);
+//                    break;
+                case 19:
                     stellar_evolution_option.value = atoi(optarg);
                     if(print_flag) stellar_evolution_option.print(std::cout);
+                    opt_used += 2;
+                    break;
+                case 20:
+                    interrupt_detection_option.value = atoi(optarg);
+                    if(print_flag) interrupt_detection_option.print(std::cout);
                     opt_used += 2;
                     break;
 #endif
@@ -605,7 +605,7 @@ public:
         assert(n_bin.value>=0);
         assert(n_glb.value>0);
         assert(n_group_limit.value>0);
-        assert(n_interrupt_limit.value>0);
+//        assert(n_interrupt_limit.value>0);
         assert(n_leaf_limit.value>0);
         assert(n_smp_ave.value>0.0);
         assert(theta.value>=0.0);
@@ -3286,7 +3286,7 @@ public:
         hard_manager.ar_manager.slowdown_mass_ref = mass_average;
 #endif
 #ifdef STELLAR_EVOLUTION
-        hard_manager.ar_manager.ar_interaction.interrupt_detection_option = input_parameters.interrupt_detection_option.value;
+        hard_manager.ar_manager.interaction.interrupt_detection_option = input_parameters.interrupt_detection_option.value;
         hard_manager.ar_manager.interaction.stellar_evolution_option = input_parameters.stellar_evolution_option.value;
         if (write_style) hard_manager.ar_manager.interaction.stellar_evolution_write_flag = true;
         else hard_manager.ar_manager.interaction.stellar_evolution_write_flag = false;

@@ -838,14 +838,14 @@ public:
                     // if status not set, set to change
                     if (modify_branch[k]>0&&_bin_interrupt.status == AR::InterruptStatus::none) {
                         _bin_interrupt.status = AR::InterruptStatus::change;
-                        _bin_interrupt.adr = &_bin;
+                        _bin_interrupt.setBinaryTreeAddress(&_bin);
                     }
                 }
 #endif
             }
-            // ensure to record the root binary tree to include all changed members
-            if (modify_branch[0]>0&&modify_branch[1]>0 && interrupt_detection_option==1) {
-                _bin_interrupt.adr = &_bin;
+            // ensure to record the root binary tree to include all changed members, if only record binary information (interrupt_detection_option == 2), should not do this
+            if (modify_branch[0]>0&&modify_branch[1]>0 && interrupt_detection_option!=2) {
+                _bin_interrupt.setBinaryTreeAddress(&_bin);
             }
             if (_bin_interrupt.status == AR::InterruptStatus::destroy) {
                 // if both branch has destroyed, set destroy status, otherwise set merge status
@@ -1158,7 +1158,7 @@ public:
             if (_bin_interrupt.status!=AR::InterruptStatus::merge&&_bin_interrupt.status!=AR::InterruptStatus::destroy) {
 
                 auto merge = [&](const Float& dr, const Float& t_peri, const Float& sd_factor) {
-                    _bin_interrupt.adr = &_bin;
+                    _bin_interrupt.setBinaryTreeAddress(&_bin);
                 
 #ifdef BSE_BASE
                     //Float m1_bk = p1->mass;
@@ -1278,10 +1278,10 @@ public:
                     //p2->setBinaryPairID(0);
                 };
 
+#ifndef BSE_BASE
                 // delayed merger
-                if (interrupt_detection_option == 1 &&
-                    p1->getBinaryInterruptState()== BinaryInterruptState::collision && 
-                    p2->getBinaryInterruptState()== BinaryInterruptState::collision &&
+                if (p1->getBinaryInterruptState()== BinaryInterruptState::delaycollision && 
+                    p2->getBinaryInterruptState()== BinaryInterruptState::delaycollision &&
                     (p1->time_interrupt<_bin_interrupt.time_now && p2->time_interrupt<_bin_interrupt.time_now) &&
                     (p1->getBinaryPairID()==p2->id||p2->getBinaryPairID()==p1->id) &&
                     (_bin_interrupt.status != AR::InterruptStatus::merge)) {
@@ -1294,7 +1294,6 @@ public:
                 else if (p1->getBinaryInterruptState() != BinaryInterruptState::collision && p2->getBinaryInterruptState() != BinaryInterruptState::collision) {
                     // check merger
                     Float radius = p1->radius + p2->radius;
-#ifndef BSE_BASE
                     // slowdown case
                     if (_bin.slowdown.getSlowDownFactor()>1.0) {
                         ASSERT(_bin.semi>0.0);
@@ -1308,16 +1307,16 @@ public:
                             Float t_peri = mean_anomaly/mean_motion;
                             if (drdv<0 && t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
                                 Float dr[3] = {p1->pos[0] - p2->pos[0], 
-                                               p1->pos[1] - p2->pos[1], 
-                                               p1->pos[2] - p2->pos[2]};
+                                    p1->pos[1] - p2->pos[1], 
+                                    p1->pos[2] - p2->pos[2]};
                                 Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
                                 merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor());
                             }
                             else if (_bin.semi>0||(_bin.semi<0&&drdv<0)) {
                                 //p1->setBinaryPairID(p2->id);
                                 //p2->setBinaryPairID(p1->id);
-                                p1->setBinaryInterruptState(BinaryInterruptState::collision);
-                                p2->setBinaryInterruptState(BinaryInterruptState::collision);
+                                p1->setBinaryInterruptState(BinaryInterruptState::delaycollision);
+                                p2->setBinaryInterruptState(BinaryInterruptState::delaycollision);
                                 p1->time_interrupt = std::min(_bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri), time_interrupt_max);
                                 p2->time_interrupt = p1->time_interrupt;
                                     
@@ -1326,25 +1325,25 @@ public:
                     }
                     else { // no slowdown case, check separation directly
                         Float dr[3] = {p1->pos[0] - p2->pos[0], 
-                                       p1->pos[1] - p2->pos[1], 
-                                       p1->pos[2] - p2->pos[2]};
+                            p1->pos[1] - p2->pos[1], 
+                            p1->pos[2] - p2->pos[2]};
                         Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
                         if (dr2<radius*radius) merge(std::sqrt(dr2), 0.0, 1.0);
                     }
+                }
 #else // BSE_BASE 
-                    // in bse case, handle binary merger in bse, only check hyperbolic merger
-                    if (_bin.semi<0.0) {
-                        Float dr[3] = {p1->pos[0] - p2->pos[0], 
-                                       p1->pos[1] - p2->pos[1], 
-                                       p1->pos[2] - p2->pos[2]};
-                        Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
-                        if (dr2<radius*radius) merge(std::sqrt(dr2), 0.0, 1.0);
-                    }
-#endif
+                // in bse case, handle binary merger in bse, only check hyperbolic merger
+                if (_bin.semi<0.0) {
+                    // check merger
+                    Float radius = p1->radius + p2->radius;
                     
+                    Float dr[3] = {p1->pos[0] - p2->pos[0], 
+                        p1->pos[1] - p2->pos[1], 
+                        p1->pos[2] - p2->pos[2]};
+                    Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+                    if (dr2<radius*radius) merge(std::sqrt(dr2), 0.0, 1.0);
                 }
 
-#ifdef BSE_BASE
                 // tide energy loss 
                 if (stellar_evolution_option==2 && p1->mass>0 && p2->mass>0) {
                     if (drdv<0) { // when two star approach each other; reset tide status
@@ -1449,7 +1448,7 @@ public:
                                 }
 
                             }
-                         }
+                        }
                     }
                 }
 #endif // BSE_BASE
