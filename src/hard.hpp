@@ -1,5 +1,5 @@
 #pragma once
-0;10;1c#ifdef USE_INTRINSIC_FOR_X86
+#ifdef USE_INTRINSIC_FOR_X86
 #include<immintrin.h>
 #endif
 
@@ -162,7 +162,7 @@ public:
     AR::TimeTransformedSymplecticIntegrator<PtclHard, PtclH4, ARPerturber, ARInteraction, H4::ARInformation<PtclHard>> sym_int; ///> AR integrator
     HardManager* manager; ///> hard manager
 
-    AR::InterruptBinary<PtclHard>> sym_interrupt_binary; // interrupt binary information list
+    AR::InterruptBinary<PtclHard> sym_interrupt_binary; // interrupt binary information list
     PS::ReallocatableArray<TidalTensor> tidal_tensor; ///> tidal tensor array
     PS::F64 time_origin;  ///> origin physical time
     PtclH4* ptcl_origin;  ///> original particle array
@@ -191,7 +191,7 @@ public:
 #endif
 
     //! initializer
-    HardIntegrator(): h4_int(), sym_int(), manager(NULL), interrupt_list(), tidal_tensor(), time_origin(-1.0), ptcl_origin(NULL), 
+    HardIntegrator(): h4_int(), sym_int(), manager(NULL), tidal_tensor(), time_origin(-1.0), ptcl_origin(NULL), 
 #ifdef HARD_DEBUG_PRINT
                       n_group_sub_init(), n_group_sub_tot_init(0),
 #endif
@@ -583,8 +583,6 @@ public:
 #endif
         }
         
-        interrupt_list.resizeNoInitialize(0); // interrupt binary information list
-
     }
 
     //! Integrate system to time
@@ -605,7 +603,7 @@ public:
 #ifdef STELLAR_EVOLUTION
 #ifndef BSE_BASE
             // backup binary information if record option is used
-            if (ar_manager->interaction.interrupt_detection_option == 2) 
+            if (manager->ar_manager.interaction.interrupt_detection_option == 2) 
                 sym_interrupt_binary.backupBinaryTreeLocal();
 #endif
 #endif
@@ -1142,30 +1140,19 @@ public:
 
     //! record interrupt binary information to a list
     /*! 
-      @param[out] interrput_list: the list to store interrupted binaries
+        @param[out] interrput_list: the list to store interrupted binaries
      */
     void recordInterruptBinaries(PS::ReallocatableArray<AR::InterruptBinary<PtclHard>> & interrupt_list) {
         if (use_sym_int) {
             if (sym_interrupt_binary.status!=AR::InterruptStatus::none) { 
-                auto bin = sym_interrupt_binary.getBinaryTreeAddress();
-                ASSERT(!bin->isMemberTree(0) && !bin->isMemberTree(1));
-                // only recored binary interruption
-                interrupt_list.addMember(interrupt_binary);
-                auto& binfo = interrupt_list.getLastMember();
-                binfo.backupBinaryTreeLocal();
+                interrupt_list.push_back(sym_interrupt_binary);
             }
         }
         else {
             int n_interrupt = h4_int.getNInterrupt();
             for (int i=0; i<n_interrupt; i++) {
-                auto& interrupt_info = h4_int.getInterruptInfo(i);
-                // only recored binary interruption
-                auto bin = interrupt_info.getBinaryTreeAddress();
-                ASSERT(!bin->isMemberTree(0) && !bin->isMemberTree(1));
-                    
-                interrupt_list.addMember(interrupt_info);
-                auto& binfo = interrupt_list.getLastMember();
-                binfo.backupBinaryTreeLocal();
+                auto& interrupt_binary = h4_int.getInterruptInfo(i);
+                interrupt_list.push_back(interrupt_binary);
             }
         }
     }
@@ -1178,7 +1165,6 @@ public:
         tidal_tensor.resizeNoInitialize(0);
         time_origin = 0;
         ptcl_origin = NULL;
-        interrupt_binary.clear();
         is_initialized = false;
 
 #ifdef PROFILE
@@ -1427,7 +1413,7 @@ private:
         chj.setR(_pj.r_in, _pj.r_out);
         const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, chj, dr_eps);
 
-        // linear cutoff 
+        // linear cutoff
 #if  ((! defined P3T_64BIT) && (defined USE_SIMD)) || (defined USE_GPU)
         const PS::F32 r_out_32 = EPISoft::r_out;
         const PS::F32 r_out2 = r_out_32 * r_out_32;
@@ -1574,7 +1560,7 @@ private:
         const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, dr_eps);
         const PS::F64 kdot = - ChangeOver::calcAcc1WTwo(_pi.changeover, _pj.changeover, dr_eps, drdadrinv);
 
-        // linear cutoff 
+        // linear cutoff
 #if  ((! defined P3T_64BIT) && (defined USE_SIMD)) || (defined USE_GPU)
         const PS::F32 r_out_32 = EPISoft::r_out;
         const PS::F32 r_out2 = r_out_32 * r_out_32;
@@ -1708,12 +1694,12 @@ private:
      */
     template <class Tsys>
     void correctForceWithCutoffArtificialOneClusterImp(Tsys& _sys, 
-                                                      const PtclH4* _ptcl_local,
-                                                      const PS::S32 _adr_real_start,
-                                                      const PS::S32 _adr_real_end,
-                                                      const PS::S32 _n_group,
-                                                      const PS::S32* adr_first_ptcl_arti_in_cluster_,
-                                                      const bool _acorr_flag) {
+                                                       const PtclH4* _ptcl_local,
+                                                       const PS::S32 _adr_real_start,
+                                                       const PS::S32 _adr_real_end,
+                                                       const PS::S32 _n_group,
+                                                       const PS::S32* adr_first_ptcl_arti_in_cluster_,
+                                                       const bool _acorr_flag) {
 
         auto& ap_manager = manager->ap_manager;
         for (int j=0; j<_n_group; j++) {  // j: j_group
@@ -1842,8 +1828,8 @@ public:
     // for NON-ISOLATED CLUSTER
     template<class Tsys, class Tptcl, class Tmediator>
     void setPtclForConnectedCluster(const Tsys & sys,
-                                   const PS::ReallocatableArray<Tmediator> & med,
-                                   const PS::ReallocatableArray<Tptcl> & ptcl_recv){
+                                    const PS::ReallocatableArray<Tmediator> & med,
+                                    const PS::ReallocatableArray<Tptcl> & ptcl_recv){
         ptcl_hard_.clearSize();
         n_ptcl_in_cluster_.clearSize(); // clear befor break this function
         for(PS::S32 i=0; i<med.size(); i++){
@@ -1977,14 +1963,14 @@ public:
     //    Int_pars_.pot_off  = (1.0+Int_pars_.r_A)/_rout;
     //    Int_pars_.eps2  = _eps*_eps;
     //    Int_pars_.r_bin = _rbin;
-    //    /// Set chain pars (L.Wang)        
+    //    /// Set chain pars (L.Wang)
     //    dt_limit_hard_ = _dt_limit_hard;
     //    dt_min_hard_   = _dt_min_hard;
     //    eta_s_ = _eta*_eta;
     //    sdfactor_ = _sd_factor;
     //    v_max_ = _v_max;
     //    time_origin_ = _time_origin;
-//  //      gamma_ = std::pow(1.0/_gmin,0.33333);
+    //  //      gamma_ = std::pow(1.0/_gmin,0.33333);
     //    // r_search_single_ = _rsearch; 
     //    //r_bin_           = _rbin;
     //    // m_average_ = _m_avarage;
@@ -2186,7 +2172,7 @@ public:
         updateTimeWriteBack();
     }
 
-    //! write back hard particles to global system, check mass modification and update time of write back 
+    //! write back hard particles to global system, check mass modification and update time of write back
     /*! 
       @param[in,out] _sys: particle system
       @param[out] _mass_modify_list: address on _sys of particles where mass is modified
@@ -2286,8 +2272,8 @@ public:
         PS::F64 time_thread[num_thread];
         PS::S64 num_cluster[num_thread];
         for (PS::S32 i=0; i<num_thread; i++) {
-          time_thread[i] = 0;
-          num_cluster[i] = 0;
+            time_thread[i] = 0;
+            num_cluster[i] = 0;
         }
 #endif
 
@@ -2295,7 +2281,7 @@ public:
         HardIntegrator hard_int_thread[num_thread];
 
 #pragma omp parallel for schedule(dynamic)
-        for(PS::S32 i=0; i<n_cluster; i++){
+        for (PS::S32 i=0; i<n_cluster; i++) {
             const PS::S32 ith = PS::Comm::getThreadNum();
 #ifdef OMP_PROFILE
             time_thread[ith] -= PS::GetWtime();
@@ -2346,14 +2332,14 @@ public:
         }
 
         //No parallel part
-        for(PS::S32 i=0; i<num_thread; i++) {
+        for(PS::S32 ith=0; ith<num_thread; ith++) {
 
 #ifdef OMP_PROFILE
             time_thread[ith] -= PS::GetWtime();
 #endif        
 #ifdef STELLAR_EVOLUTION
 #ifndef BSE_BASE
-            if (ar_manager->interaction.interrupt_detection_option == 2) 
+            if (manager->ar_manager.interaction.interrupt_detection_option == 2) 
                 hard_int_thread[ith].recordInterruptBinaries(interrupt_list_);
 #endif
 #endif
@@ -2383,9 +2369,10 @@ public:
         }
 
 #else // ONLY SOFT
+
         // Only soft drift
 #pragma omp parallel for schedule(dynamic)
-        for(PS::S32 i=0; i<n_cluster; i++){
+        for (PS::S32 i=0; i<n_cluster; i++) {
             const PS::S32 ith = PS::Comm::getThreadNum();
 #ifdef OMP_PROFILE
             time_thread[ith] -= PS::GetWtime();
@@ -2406,9 +2393,8 @@ public:
                 ASSERT(!std::isnan(pi[j].vel[0]));
                 pi[j].calcRSearch(dt);
             }
-#endif
         }
-
+#endif
 
         // advance time_origin if all clusters finished
         time_origin_ += dt;
@@ -2525,7 +2511,7 @@ public:
                     // Set member particle type, backup mass, collect member particle index to group_ptcl_adr_list
                     //use _ptcl_in_cluster as the first particle address as reference to calculate the particle index.
                     struct { Tptcl* adr_ref; PS::S32* group_list; PS::S32 n; PS::S64 pcm_id; ChangeOver* changeover_cm; PS::F64 rsearch_cm; bool changeover_update_flag;}
-                    group_index_pars = { _ptcl_in_cluster,  &group_ptcl_adr_list[group_ptcl_adr_offset], 0, -1, &bin.changeover, bin.r_search, false};
+                        group_index_pars = { _ptcl_in_cluster,  &group_ptcl_adr_list[group_ptcl_adr_offset], 0, -1, &bin.changeover, bin.r_search, false};
                     bin.processLeafIter(group_index_pars, collectGroupMemberAdrAndSetMemberParametersIter);
                     if (group_index_pars.changeover_update_flag) changeover_update_flag = true;
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
@@ -2558,7 +2544,7 @@ public:
                 auto& binary_stable_i = *stable_checker.stable_binary_tree[i];
                 const PS::S32 n_members = binary_stable_i.getMemberN();
 
-                // Make sure the _ptcl_new will not make new array due to none enough capacity during the following loop, 
+                // Make sure the _ptcl_new will not make new array due to none enough capacity during the following loop
                 const int n_ptcl_artificial = _ptcl_artificial.size();
                 _ptcl_artificial.increaseSize(ap_manager.getArtificialParticleN());
                 Tptcl* ptcl_artificial_i = &_ptcl_artificial[n_ptcl_artificial];
@@ -2567,7 +2553,7 @@ public:
                 // set rsearch and changeover for members
                 //use _ptcl_in_cluster as the first particle address as reference to calculate the particle index.
                 struct { Tptcl* adr_ref; PS::S32* group_list; PS::S32 n; PS::S64 pcm_id; ChangeOver* changeover_cm; PS::F64 rsearch_cm; bool changeover_update_flag;}
-                group_index_pars = { _ptcl_in_cluster,  &group_ptcl_adr_list[group_ptcl_adr_offset], 0, n_ptcl_artificial, &binary_stable_i.changeover, binary_stable_i.r_search, false};
+                    group_index_pars = { _ptcl_in_cluster,  &group_ptcl_adr_list[group_ptcl_adr_offset], 0, n_ptcl_artificial, &binary_stable_i.changeover, binary_stable_i.r_search, false};
                 binary_stable_i.processLeafIter(group_index_pars, collectGroupMemberAdrAndSetMemberParametersIter);
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
                 assert(group_index_pars.n==n_members);
@@ -2607,7 +2593,7 @@ public:
                 Tptcl* ptcl_orbit=ap_manager.getOrbitalParticles(ptcl_artificial_i);
                 PS::S32 n_orbit = ap_manager.getOrbitalParticleN();
                 for (int j=0; j<n_orbit; j++) {
-                    // use member changeover, if new changeover is different, record the scale ratio 
+                    // use member changeover, if new changeover is different, record the scale ratio
                     Tptcl& pj = ptcl_orbit[j];
                     pj.changeover =  binary_stable_i.getMember(j%2)->changeover;
 
@@ -2779,7 +2765,7 @@ public:
                 PS::S32 n_member_offset = n_member_in_group_thread[i][k].n_member_offset;
                 n_member_in_group_[n_group_in_cluster_offset_[i_cluster]+j_group] =  n_members;
                 n_member_in_group_offset_[n_group_in_cluster_offset_[i_cluster]+j_group] =  n_member_offset;
-                // update system soft 
+                // update system soft
                 if (n_member_in_group_thread[i][k].isolated_case) {
                     for (PS::S32 j=0; j<n_members; j++) {
                         auto& p_loc = ptcl_hard_[n_ptcl_in_cluster_disp_[i_cluster]+n_member_offset+j];
@@ -2823,7 +2809,7 @@ public:
         const PS::S32 n_artificial_per_group = ap_manager.getArtificialParticleN();
 #pragma omp parallel for        
         for(PS::S32 i=0; i<num_thread; i++) {
-            // ptcl_artificial should be integer times of n_partificial_per_group 
+            // ptcl_artificial should be integer times of n_partificial_per_group
             assert(ptcl_artificial_thread[i].size()%n_artificial_per_group==0);
             // Add particle to ptcl sys
             for (PS::S32 j=0; j<ptcl_artificial_thread[i].size(); j++) {
@@ -2854,7 +2840,7 @@ public:
                 for (PS::S32 k=0; k<n_members; k++) {
                     PS::S32 kl = n_ptcl_in_cluster_disp_[i_cluster]+group_offset+k;
                     auto& p_loc = ptcl_hard_.getPointer()[kl];
-                    // save c.m. address 
+                    // save c.m. address
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
                     assert(group_offset == n_member_in_group_offset_[n_group_in_cluster_offset_[i_cluster]+j_group]);
                     assert(p_loc.getParticleCMAddress()==j+1);
@@ -2928,10 +2914,10 @@ public:
     }
 
 #ifdef CLUSTER_VELOCITY
-    //! clear particle group_data.cm to zero 
+    //! clear particle group_data.cm to zero
     /*! update both local and global 
        @param[in,out] _ptcl_soft: global particle
-    */
+     */
     template <class Tsoft>
     void resetParticleGroupData(Tsoft& _ptcl_soft) {
         Ptcl::group_data_mode = GroupDataMode::cm;
@@ -2996,9 +2982,9 @@ public:
                         }
                     }
                     else {
-                        // when no artificial particles, calculate c.m. 
+                        // when no artificial particles, calculate c.m.
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-                        // current case only isolated binary 
+                        // current case only isolated binary
                         assert(n_members == 2&&n_group==1);
 #endif
                         PS::F32 mass_cm=0.0;
@@ -3194,7 +3180,7 @@ public:
         }
     }
 
-    //! Correct force due to change over factor change 
+    //! Correct force due to change over factor change
     /*!
        @param[in,out] _sys: global particle system, acc is updated
        @param[in] _tree: tree for force, to get neighbor list
@@ -3304,7 +3290,7 @@ public:
        @param[in] _tree: tree for force
        @param[in] _adr_ptcl_artificial_start: start address of artificial particle in _sys
        @param[in] _ap_manager: artificial particle manager
-    */
+     */
     template <class Tsys, class Tpsoft, class Ttree, class Tepj>
     static void correctForceWithCutoffTreeNeighborOMP(Tsys& _sys,
                                                       Ttree& _tree,

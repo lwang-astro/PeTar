@@ -3324,12 +3324,10 @@ public:
         system_hard_one_cluster.manager = &hard_manager;
         system_hard_one_cluster.setTimeOrigin(stat.time);
 
-        system_hard_isolated.allocateHardIntegrator(input_parameters.n_interrupt_limit.value);
         system_hard_isolated.manager = &hard_manager;
         system_hard_isolated.setTimeOrigin(stat.time);
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
-        system_hard_connected.allocateHardIntegrator(input_parameters.n_interrupt_limit.value);
         system_hard_connected.manager = &hard_manager;
         system_hard_connected.setTimeOrigin(stat.time);
 #endif

@@ -859,7 +859,6 @@ public:
 
             COMM::Vector3<Float> pos_red(p2->pos[0] - p1->pos[0], p2->pos[1] - p1->pos[1], p2->pos[2] - p1->pos[2]);
             COMM::Vector3<Float> vel_red(p2->vel[0] - p1->vel[0], p2->vel[1] - p1->vel[1], p2->vel[2] - p1->vel[2]);
-            Float drdv = pos_red * vel_red;
 
 #ifdef BSE_BASE
             auto postProcess =[&](StarParameterOut* out, Float* pos_cm, Float*vel_cm, Float& semi, Float& ecc, int binary_type_final) {
@@ -1039,7 +1038,7 @@ public:
                 if (check_flag) {
                     ASSERT(bse_manager.checkParams());
                     // record address of modified binary
-                    _bin_interrupt.adr = &_bin;
+                    _bin_interrupt.setBinaryTreeAddress(&_bin);
 
                     // first evolve two components to the same starting time
                     if (p1->time_record!=p2->time_record) {
@@ -1406,7 +1405,8 @@ public:
 
                             if (change_flag) {
 
-                                _bin_interrupt.adr = &_bin;
+                                // record address of modified binary
+                                _bin_interrupt.setBinaryTreeAddress(&_bin);
 
                                 // if status not set, set to change
                                 if (_bin_interrupt.status == AR::InterruptStatus::none) 
