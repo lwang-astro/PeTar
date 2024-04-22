@@ -159,12 +159,12 @@ int main(int argc, char **argv){
   fclose(fpar_in);
 
 #ifdef STELLAR_EVOLUTION
+#ifdef BSE_BASE
   if (stellar_evolution_option>=0) {
       hard_manager.ar_manager.interaction.stellar_evolution_option = stellar_evolution_option;
       if (stellar_evolution_option==0) 
           hard_manager.ar_manager.interaction.stellar_evolution_write_flag = false;
   }
-#ifdef BSE_BASE
   IOParamsBSE bse_io;
   std::cerr<<bse_name<<" parameter file:"<<fbsepar<<std::endl;
   if( (fpar_in = fopen(fbsepar.c_str(),"r")) == NULL) {

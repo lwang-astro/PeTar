@@ -136,7 +136,9 @@ public:
     IOParams<PS::S64> data_format;
     IOParams<PS::S64> write_style;
 #ifdef STELLAR_EVOLUTION
+#ifdef BSE_BASE
     IOParams<PS::S64> stellar_evolution_option;
+#endif
     IOParams<PS::S64> interrupt_detection_option;
 #endif
 #ifdef ADJUST_GROUP_PRINT
@@ -203,7 +205,6 @@ public:
                      stellar_evolution_option  (input_par_store, 1, "stellar-evolution", "Stellar evolution of stars in Hermite+SDAR: 0: off; >=1: using SSE/BSE based codes; ==2: activate dynamical tide and hyperbolic gravitational wave radiation"),
                      interrupt_detection_option(input_par_store, 1, "detect-interrupt", "Stellar evolution of binaries in SDAR: 0: off; 1: using BSE based code (if '--stellar-evolution != 0)"),
 #else // NO BSE_BASE
-                     stellar_evolution_option  (input_par_store, 0, "stellar-evolution", "Not implemented"),
                      interrupt_detection_option(input_par_store, 0, "detect-interrupt", "Interrupt integration in SDAR: 0: turn off; 1: merge two particles if their surfaces overlap; 2. record two particle information if their surfaces overlap without merger"),
 #endif // END BSE_BASE
 #endif // END STELLAR_EVOLUTION
@@ -252,7 +253,9 @@ public:
             {n_step_per_orbit.key,     required_argument, &petar_flag, 17},
 #ifdef STELLAR_EVOLUTION
 //            {n_interrupt_limit.key,    required_argument, &petar_flag, 18},
+#ifdef BSE_BASE
             {stellar_evolution_option.key,    required_argument, &petar_flag, 19},
+#endif
             {interrupt_detection_option.key,  required_argument, &petar_flag, 20},
 #endif
             {r_escape.key,             required_argument, &petar_flag, 21},
@@ -392,11 +395,13 @@ public:
 //                    opt_used += 2;
 //                    assert(n_interrupt_limit.value>0);
 //                    break;
+#ifdef BSE_BASE
                 case 19:
                     stellar_evolution_option.value = atoi(optarg);
                     if(print_flag) stellar_evolution_option.print(std::cout);
                     opt_used += 2;
                     break;
+#endif
                 case 20:
                     interrupt_detection_option.value = atoi(optarg);
                     if(print_flag) interrupt_detection_option.print(std::cout);
@@ -2607,6 +2612,14 @@ public:
             }
             hard_manager.ar_manager.interaction.fout_sse<<std::setprecision(WRITE_PRECISION);
             hard_manager.ar_manager.interaction.fout_bse<<std::setprecision(WRITE_PRECISION);
+#else
+            // open interrupt file
+            std::string finterrupt_name = fname_snp + ".interrupt." + my_rank_str;
+            if(input_parameters.append_switcher.value==1) 
+                hard_manager.ar_manager.interaction.fout_interrupt.open(finterrupt_name.c_str(), std::ofstream::out|std::ofstream::app);
+            else 
+                hard_manager.ar_manager.interaction.fout_interrupt.open(finterrupt_name.c_str(), std::ofstream::out);
+            hard_manager.ar_manager.interaction.fout_interrupt<<std::setprecision(WRITE_PRECISION);
 #endif 
 
 #ifdef ADJUST_GROUP_PRINT
@@ -3287,10 +3300,10 @@ public:
 #endif
 #ifdef STELLAR_EVOLUTION
         hard_manager.ar_manager.interaction.interrupt_detection_option = input_parameters.interrupt_detection_option.value;
+#ifdef BSE_BASE
         hard_manager.ar_manager.interaction.stellar_evolution_option = input_parameters.stellar_evolution_option.value;
         if (write_style) hard_manager.ar_manager.interaction.stellar_evolution_write_flag = true;
         else hard_manager.ar_manager.interaction.stellar_evolution_write_flag = false;
-#ifdef BSE_BASE
         if (input_parameters.stellar_evolution_option.value>0) {
             hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters, print_flag);
             hard_manager.ar_manager.interaction.tide.speed_of_light = hard_manager.ar_manager.interaction.bse_manager.getSpeedOfLight();
@@ -3921,9 +3934,7 @@ public:
             dt_drift = dt_manager.getDtDriftContinue();
             
 #ifdef STELLAR_EVOLUTION
-#ifdef BSE_BASE
             hard_manager.ar_manager.interaction.time_interrupt_max = stat.time + dt_drift;
-#endif
 #endif            
             
             drift(dt_drift);
@@ -3953,10 +3964,15 @@ public:
         if (fprofile.is_open()) fprofile.close();
 #endif
 
+#ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
         auto& interaction = hard_manager.ar_manager.interaction;
         if (interaction.fout_sse.is_open()) interaction.fout_sse.close();
         if (interaction.fout_bse.is_open()) interaction.fout_bse.close();
+#else
+        auto& interaction = hard_manager.ar_manager.interaction;
+        if (interaction.fout_interrupt.is_open()) interaction.fout_interrupt.close();
+#endif
 #endif
 #ifdef ADJUST_GROUP_PRINT
         if (hard_manager.h4_manager.fgroup.is_open()) hard_manager.h4_manager.fgroup.close();

@@ -24,14 +24,16 @@ public:
     ExternalHardForce *ext_force; // external hard to calculate perturbation
 #endif
 #ifdef STELLAR_EVOLUTION
-    int stellar_evolution_option;
-    bool stellar_evolution_write_flag;
     Float time_interrupt_max;
 #ifdef BSE_BASE
+    int stellar_evolution_option;
+    bool stellar_evolution_write_flag;
     BSEManager bse_manager;
     TwoBodyTide tide;
     std::ofstream fout_sse; ///> log file for SSE event
     std::ofstream fout_bse; ///> log file for BSE event
+#else
+    std::ofstream fout_interrupt; ///> log file for interrupted binary
 #endif
 #endif
 
@@ -40,9 +42,11 @@ public:
                    , ext_force(NULL)
 #endif
 #ifdef STELLAR_EVOLUTION
-                   , stellar_evolution_option(0), stellar_evolution_write_flag(false), time_interrupt_max(NUMERIC_FLOAT_MAX) 
+                   , time_interrupt_max(NUMERIC_FLOAT_MAX) 
 #ifdef BSE_BASE
-                   , bse_manager(), fout_sse(), fout_bse()
+                   , stellar_evolution_option(0), stellar_evolution_write_flag(false), bse_manager(), tide(), fout_sse(), fout_bse()
+#else
+                   , fout_interrupt()  
 #endif
 #endif
     {}
@@ -60,6 +64,8 @@ public:
         ASSERT(stellar_evolution_option==0 || (stellar_evolution_option==1 && bse_manager.checkParams()) || (stellar_evolution_option==2 && bse_manager.checkParams() && tide.checkParams()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_sse.is_open()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_bse.is_open()));
+#else
+        ASSERT(interrupt_detection_option==0||(interrupt_detection_option>0&&fout_interrupt.is_open()));
 #endif
 #endif
         return true;
@@ -71,7 +77,9 @@ public:
              <<"G      : "<<gravitational_constant<<std::endl
              <<"Interrupt_opt: "<<interrupt_detection_option<<std::endl;
 #ifdef STELLAR_EVOLUTION
+#ifdef BSE_BASE
         _fout<<"SE_opt : "<<stellar_evolution_option<<std::endl;
+#endif
 #endif
     }    
 
@@ -1225,15 +1233,12 @@ public:
                     }
 #else //not BSE_BASE
                     // print data
-                    std::cerr<<"Binary Merge: time: "<<_bin_interrupt.time_now<<std::endl;
-                    _bin.Binary::printColumnTitle(std::cerr);
-                    //PtclHard::printColumnTitle(std::cerr);
-                    //PtclHard::printColumnTitle(std::cerr);
-                    std::cerr<<std::endl;
-                    _bin.Binary::printColumn(std::cerr);
-                    //p1->printColumn(std::cerr);
-                    //p2->printColumn(std::cerr);
-                    std::cerr<<std::endl;
+#pragma omp critical
+                    {
+                        fout_interrupt<<_bin_interrupt.time_now;
+                        _bin.printBinaryTreeIter(fout_interrupt, WRITE_WIDTH);
+                        fout_interrupt<<std::endl;
+                    }
 
                     // set return flag >0
                     modify_return = 2;
@@ -1304,11 +1309,12 @@ public:
                             Float mean_anomaly = _bin.calcMeanAnomaly(ecc_anomaly, _bin.ecc);
                             Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi))); 
                             Float t_peri = mean_anomaly/mean_motion;
-                            if (drdv<0 && t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
+                            if (t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
                                 Float dr[3] = {p1->pos[0] - p2->pos[0], 
                                     p1->pos[1] - p2->pos[1], 
                                     p1->pos[2] - p2->pos[2]};
                                 Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+                                _bin_interrupt.time_now += t_peri;
                                 merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor());
                             }
                             else if (_bin.semi>0||(_bin.semi<0&&drdv<0)) {
@@ -1484,8 +1490,11 @@ public:
         fwrite(&gravitational_constant, sizeof(Float),1,_fp);
         fwrite(&interrupt_detection_option, sizeof(int),1,_fp);
 #ifdef STELLAR_EVOLUTION
+        fwrite(&time_interrupt_max, sizeof(Float),1,_fp);
+#ifdef BSE_BASE
         fwrite(&stellar_evolution_option, sizeof(int),1,_fp);
         fwrite(&stellar_evolution_write_flag, sizeof(bool),1,_fp);
+#endif
 #endif
     }
 
@@ -1501,12 +1510,19 @@ public:
             abort();
         }
 #ifdef STELLAR_EVOLUTION
-        rcount += fread(&stellar_evolution_option, sizeof(int),1,_fin);
-        rcount += fread(&stellar_evolution_write_flag, sizeof(bool),1,_fin);
+        rcount += fread(&time_interrupt_max, sizeof(Float),1,_fin);
         if (rcount<4) {
             std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
             abort();
         }
+#ifdef BSE_BASE
+        rcount += fread(&stellar_evolution_option, sizeof(int),1,_fin);
+        rcount += fread(&stellar_evolution_write_flag, sizeof(bool),1,_fin);
+        if (rcount<6) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 6, only obtain "<<rcount<<".\n";
+            abort();
+        }
+#endif
 #endif
     }    
 };
