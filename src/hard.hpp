@@ -603,7 +603,8 @@ public:
 #ifdef STELLAR_EVOLUTION
 #ifndef BSE_BASE
             // backup binary information if record option is used
-            if (manager->ar_manager.interaction.interrupt_detection_option == 2) 
+            if (sym_interrupt_binary.status!=AR::InterruptStatus::none 
+                && manager->ar_manager.interaction.interrupt_detection_option == 2) 
                 sym_interrupt_binary.backupBinaryTreeLocal();
 #endif
 #endif
@@ -1145,14 +1146,20 @@ public:
     void recordInterruptBinaries(PS::ReallocatableArray<AR::InterruptBinary<PtclHard>> & interrupt_list) {
         if (use_sym_int) {
             if (sym_interrupt_binary.status!=AR::InterruptStatus::none) { 
-                interrupt_list.push_back(sym_interrupt_binary);
+#pragma omp critical
+                {
+                    interrupt_list.push_back(sym_interrupt_binary);
+                }
             }
         }
         else {
             int n_interrupt = h4_int.getNInterrupt();
             for (int i=0; i<n_interrupt; i++) {
                 auto& interrupt_binary = h4_int.getInterruptInfo(i);
-                interrupt_list.push_back(interrupt_binary);
+#pragma omp critical
+                {
+                    interrupt_list.push_back(interrupt_binary);
+                }
             }
         }
     }
@@ -2325,18 +2332,6 @@ public:
 
             hard_int_thread[ith].driftClusterCMRecordGroupCMDataAndWriteBack(dt);
 
-
-#ifdef OMP_PROFILE
-            time_thread[ith] += PS::GetWtime();
-#endif
-        }
-
-        //No parallel part
-        for(PS::S32 ith=0; ith<num_thread; ith++) {
-
-#ifdef OMP_PROFILE
-            time_thread[ith] -= PS::GetWtime();
-#endif        
 #ifdef STELLAR_EVOLUTION
 #ifndef BSE_BASE
             if (manager->ar_manager.interaction.interrupt_detection_option == 2) 
