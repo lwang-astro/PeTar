@@ -2288,6 +2288,15 @@ public:
         HardIntegrator hard_int_thread[num_thread];
 
 #pragma omp parallel for schedule(dynamic)
+#ifdef PROFILE
+#pragma omp reduction(+:ARC_n_groups,ARC_substep_sum,ARC_tsyn_step_sum,H4_step_sum)
+#endif
+#ifdef HARD_COUNT_NO_NEIGHBOR
+#pragma omp reduction(+:n_neighbor_zero)
+#endif
+#ifdef HARD_CHECK_ENERGY
+#pragma omp reduction(+:energy)
+#endif
         for (PS::S32 i=0; i<n_cluster; i++) {
             const PS::S32 ith = PS::Comm::getThreadNum();
 #ifdef OMP_PROFILE
