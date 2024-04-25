@@ -2287,16 +2287,22 @@ public:
 #ifndef ONLY_SOFT
         HardIntegrator hard_int_thread[num_thread];
 
-#pragma omp parallel for schedule(dynamic)
 #ifdef PROFILE
-#pragma omp reduction(+:ARC_n_groups,ARC_substep_sum,ARC_tsyn_step_sum,H4_step_sum)
+        PS::S64 ARC_n_groups_threads[num_thread], ARC_substep_sum_threads[num_thread];
+        PS::S64 ARC_tsyn_step_sum_threads[num_thread], H4_step_sum_threads[num_thread];
+        for (PS::S32 i=0; i<num_thread; i++) {
+            ARC_n_groups_threads[i] = 0;
+            ARC_substep_sum_threads[i] = 0;
+            ARC_tsyn_step_sum_threads[i] = 0;
+            H4_step_sum_threads[i] = 0;
+        }
 #endif
 #ifdef HARD_COUNT_NO_NEIGHBOR
-#pragma omp reduction(+:n_neighbor_zero)
+        PS::S64 n_neighbor_zero_threads[num_thread];
+        for (PS::S32 i=0; i<num_thread; i++) n_neighbor_zero_threads[i] = 0;
 #endif
-#ifdef HARD_CHECK_ENERGY
-#pragma omp reduction(+:energy)
-#endif
+
+#pragma omp parallel for schedule(dynamic) 
         for (PS::S32 i=0; i<n_cluster; i++) {
             const PS::S32 ith = PS::Comm::getThreadNum();
 #ifdef OMP_PROFILE
@@ -2322,7 +2328,7 @@ public:
             num_cluster[ith] += n_ptcl;
 #endif // END OMP_PROFILE
 #ifdef PROFILE
-            ARC_n_groups  += n_group;
+            ARC_n_groups_threads[ith] += n_group;
 #endif // END PROFILE
 
 #ifdef HARD_DUMP
@@ -2349,12 +2355,12 @@ public:
 #endif
 
 #ifdef PROFILE
-            ARC_substep_sum    += hard_int_thread[ith].ARC_substep_sum;
-            ARC_tsyn_step_sum  += hard_int_thread[ith].ARC_tsyn_step_sum;
-            H4_step_sum        += hard_int_thread[ith].H4_step_sum;
+            ARC_substep_sum_threads[ith]    += hard_int_thread[ith].ARC_substep_sum;
+            ARC_tsyn_step_sum_threads[ith]  += hard_int_thread[ith].ARC_tsyn_step_sum;
+            H4_step_sum_threads[ith]        += hard_int_thread[ith].H4_step_sum;
 #endif
 #ifdef HARD_COUNT_NO_NEIGHBOR
-            n_neighbor_zero    += hard_int_thread[ith].n_neighbor_zero;
+            n_neighbor_zero_threads[ith]    += hard_int_thread[ith].n_neighbor_zero;
 #endif
 #ifdef HARD_CHECK_ENERGY
             energy += hard_int_thread[ith].energy;
@@ -2371,6 +2377,18 @@ public:
             std::cerr<<"HT: "<<i<<" "<<ith<<" "<<n_cluster<<" "<<n_ptcl<<" "<<tend-tstart<<std::endl;
 #endif
         }
+
+#ifdef PROFILE
+        for (PS::S32 i=0; i<num_thread; i++) {
+            ARC_n_groups += ARC_n_groups_threads[i];
+            ARC_substep_sum += ARC_substep_sum_threads[i];
+            ARC_tsyn_step_sum += ARC_tsyn_step_sum_threads[i];
+            H4_step_sum += H4_step_sum_threads[i];
+        }
+#endif
+#ifdef HARD_COUNT_NO_NEIGHBOR
+        for (PS::S32 i=0; i<num_thread; i++) n_neighbor_zero += n_neighbor_zero_threads[i];
+#endif
 
 #else // ONLY SOFT
 
