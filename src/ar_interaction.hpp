@@ -865,10 +865,6 @@ public:
             auto* p1 = _bin.getLeftMember();
             auto* p2 = _bin.getRightMember();
 
-            COMM::Vector3<Float> pos_red(p2->pos[0] - p1->pos[0], p2->pos[1] - p1->pos[1], p2->pos[2] - p1->pos[2]);
-            COMM::Vector3<Float> vel_red(p2->vel[0] - p1->vel[0], p2->vel[1] - p1->vel[1], p2->vel[2] - p1->vel[2]);
-            Float drdv = pos_red * vel_red;
-
 #ifdef BSE_BASE
             auto postProcess =[&](StarParameterOut* out, Float* pos_cm, Float*vel_cm, Float& semi, Float& ecc, int binary_type_final) {
                 // if status not set, set to change
@@ -891,7 +887,7 @@ public:
                 if (p2->getBinaryInterruptState()== BinaryInterruptState::collision)
                     p2->setBinaryInterruptState(BinaryInterruptState::none);
 
-                // set binary status
+                // set binary status (this is done in new/end group in Hermite group info printing, should not be used here)
                 //p1->setBinaryPairID(p2->id);
                 //p2->setBinaryPairID(p1->id);
                 p1->setBinaryInterruptState(static_cast<BinaryInterruptState>(binary_type_final));
@@ -1024,6 +1020,10 @@ public:
 
             bool check_flag = false;
             if (stellar_evolution_option>0) {
+                COMM::Vector3<Float> pos_red(p2->pos[0] - p1->pos[0], p2->pos[1] - p1->pos[1], p2->pos[2] - p1->pos[2]);
+                COMM::Vector3<Float> vel_red(p2->vel[0] - p1->vel[0], p2->vel[1] - p1->vel[1], p2->vel[2] - p1->vel[2]);
+                Float drdv = pos_red * vel_red;
+
                 int binary_type_p1 = static_cast<int>(p1->getBinaryInterruptState());
                 int binary_type_p2 = static_cast<int>(p2->getBinaryInterruptState());
                 int binary_type_init = 0;
@@ -1319,8 +1319,9 @@ public:
                                 merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor());
                             }
                             else if (_bin.semi>0||(_bin.semi<0&&drdv<0)) {
-                                //p1->setBinaryPairID(p2->id);
-                                //p2->setBinaryPairID(p1->id);
+                                // ensure to set pair id for delayed collision
+                                p1->setBinaryPairID(p2->id);
+                                p2->setBinaryPairID(p1->id);
                                 p1->setBinaryInterruptState(BinaryInterruptState::delaycollision);
                                 p2->setBinaryInterruptState(BinaryInterruptState::delaycollision);
                                 p1->time_interrupt = std::min(_bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri), time_interrupt_max);
@@ -1424,8 +1425,8 @@ public:
                                 p1->vel += _bin.vel;
                                 p2->vel += _bin.vel;
 
-                                p1->setBinaryPairID(p2->id);
-                                p2->setBinaryPairID(p1->id);
+                                //p1->setBinaryPairID(p2->id);
+                                //p2->setBinaryPairID(p1->id);
                                 p1->setBinaryInterruptState(BinaryInterruptState::tide);
                                 p2->setBinaryInterruptState(BinaryInterruptState::tide);
                             
