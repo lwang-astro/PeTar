@@ -2598,6 +2598,7 @@ public:
             }
             fesc<<std::setprecision(WRITE_PRECISION);
 
+#ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
             // open SSE/BSE file
             std::string fsse_name = fname_snp + fsse_par_suffix + "." + my_rank_str;
@@ -2621,6 +2622,7 @@ public:
                 hard_manager.ar_manager.interaction.fout_interrupt.open(finterrupt_name.c_str(), std::ofstream::out);
             hard_manager.ar_manager.interaction.fout_interrupt<<std::setprecision(WRITE_PRECISION);
 #endif 
+#endif
 
 #ifdef ADJUST_GROUP_PRINT
             // open file for new/end group information

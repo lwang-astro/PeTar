@@ -111,7 +111,7 @@ def calcRocheLobeRadius(mass_ratio, semi):
 
     return radius
 
-def calcGWMyr(m1, m2, semi, ecc):
+def calcTGW(m1, m2, semi, ecc):
     """ Calculate GW merge timescale in Myr using Peters (1964) formula
     If ecc >1.0, return np.NaN
 
@@ -153,6 +153,32 @@ def calcGWMyr(m1, m2, semi, ecc):
         return np.array(list(map(time_gw_myr_one,m1,m2,semi_au,ecc)))
     else: 
         return time_gw_myr_one(m1, m2, semi_au, ecc)
+
+def calcTKL(m_in1, m_in2, m_out, period_in, period_out, ecc_out):
+    """ calculate Kozai-Lidov oscillation timescale (Antognini, 2015)
+
+    Parameters
+    ----------
+    m_in1: 1D numpy.ndarray or float
+           inner binary member 1 mass (any mass unit)
+    m_in2: 1D numpy.ndarray or float
+           inner binary member 2 mass (any mass unit)
+    m_out: 1D numpy.ndarray or float
+           outer member mass (any mass unit)
+    period_in: 1D numpy.ndarray or float
+           inner binary period (any time unit)
+    period_out: 1D number.ndarray or float
+           outer binary period (any time unit)
+    ecc_out: 1D numpy.ndarray or float
+           outer eccentricity
+
+    Return
+    ----------
+    KZ timescale in the unit of input period
+    """
+
+    return 8.0/15.0/np.pi*(m_in1 + m_in2 + m_out)/m_out * period_out**2/period_in * (1-ecc_out**2)**1.5
+
 
 def convergentPointCheck(data, velocity):
     """ calculate proper motions in the frame of convergent point based on the given velocity and calculate the residuals 

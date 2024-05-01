@@ -1365,7 +1365,8 @@ The module also includes several useful functions that can be explored using `he
 | cantorPairing| Generate a new ID from two IDs, useful for obtaining unique binary IDs|
 | calcTrh      | Calculate one-component half-mass relaxation time using Spitzer (1987) formula |
 | calcTcr      | Calculate half-mass crossing time |
-| calcGWMyr    | Calculate the merging timescale in Myr for gravitational waves using Peters (1964) formula |
+| calcTGW      | Calculate the merging timescale in Myr for gravitational waves using Peters (1964) formula |
+| calcTKL      | Calculate the Kozai-Lidov oscillation timescale (Antognini, 2015)|
 | convergentPointCheck | Calculate proper motions in the frame of the convergent point and determine residuals (van Leeuwen F., 2009; Jerabkova T. et al. 2021) |
 | petar.coordinateCorrection | Correct the c.m. coordinate based on the difference between the snapshot center and the observational center in the galactocentric frame |
 
