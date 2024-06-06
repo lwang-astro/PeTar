@@ -386,7 +386,7 @@ public:
                     n_step_per_orbit.value = atof(optarg);
                     if(print_flag) n_step_per_orbit.print(std::cout);
                     opt_used += 2;
-                    assert(n_step_per_orbit.value>=1.0);
+                    assert(n_step_per_orbit.value>=1.0 || n_step_per_orbit.value==0.0);
                     break;
 #ifdef STELLAR_EVOLUTION
 //                case 18:

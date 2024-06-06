@@ -584,8 +584,8 @@ Here, `-r 0 --r-search-min 0 --r-bin 0` are employed to reset all three radii an
 ### Printed Information
 
 When `petar` is running, several pieces of information are displayed at the beginning:
-- The FDPS logo and PeTar details are printed as follows, showcasing copyright information, versions, and references for citation. 
-```
+1. The FDPS logo and PeTar details are printed as follows, showcasing copyright information, versions, and references for citation. 
+    ```
      //==================================\\
      ||                                  ||
      || ::::::: ::::::. ::::::. .::::::. ||
@@ -596,85 +596,86 @@ When `petar` is running, several pieces of information are displayed at the begi
      ||        Particle Simulator        ||
      ||     Version 7.0 (2021/08)        ||
      \\==================================//
-...
-```
+    ...
+    ```
 
-- Enabled features (selected during configuration), such as stellar evolution packages, external packages, and GPU utilization, are listed:
-```
-Use quadrupole moment in tree force calculation
-Use 3rd order tidal tensor method
-...
-```
+2. Enabled features (selected during configuration), such as stellar evolution packages, external packages, and GPU utilization, are listed:
+    ```
+    Use quadrupole moment in tree force calculation
+    Use 3rd order tidal tensor method
+    ...
+    ```
 
-- Any modified input parameters are displayed when using corresponding `petar` options.
-```
-Input data unit, 0: unknown, referring to G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr:   1
-Number of primordial binaries for initialization (assuming the binaries ID=1,2*n_bin):   500
-...
-```
+3. Any modified input parameters are displayed when using corresponding `petar` options.
+    ```
+    Input data unit, 0: unknown, referring to G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr:   1
+    Number of primordial binaries for initialization (assuming the binaries ID=1,2*n_bin):   500
+    ...
+    ```
 
-- Unit scaling for PeTar, stellar evolution packages (e.g., SSE/BSE), and external packages (e.g., Galpy) is outlined.
-```
------ Unit set 1: Msun, pc, Myr -----
-gravitational_constant = 0.0044983099795944 pc^3/(Msun*Myr^2)
------ Unit conversion for BSE -----
- tscale = 1  Myr / Myr
- mscale = 1  Msun / Msun
- rscale = 44353565.919218  Rsun / pc
- vscale = 0.9778131076864  [km/s] / [pc/Myr]
-```
+4. Unit scaling for PeTar, stellar evolution packages (e.g., SSE/BSE), and external packages (e.g., Galpy) is outlined.
+    ```
+    ----- Unit set 1: Msun, pc, Myr -----
+    gravitational_constant = 0.0044983099795944 pc^3/(Msun*Myr^2)
+    ----- Unit conversion for BSE -----
+     tscale = 1  Myr / Myr
+     mscale = 1  Msun / Msun
+     rscale = 44353565.919218  Rsun / pc
+     vscale = 0.9778131076864  [km/s] / [pc/Myr]
+    ```
 
-- A brief parameter list for tree time step and key radii influencing performance is provided.
-```
------ Parameter list: -----
- mass_average = 0.52232350485643
- r_in         = 0.0021228717795716
- r_out        = 0.021228717795716
- r_bin        = 0.0016982974236573
- r_search_min = 0.024787679043148
- vel_disp     = 0.60739605289507
- dt_soft      = 0.001953125
-```
-	The definitions of these parameters are as follows:
-	- `mass_average`: average mass of all objects.
-	- `r_in`: changeover inner radius reference
-    - `r_out`: changeover outer radius reference
-	- `r_bin`: the criterion for selecting group members.
-    - `r_search_min`: the minimum neighbor searching radius reference
-	- `vel_disp`: velocity dispersion of the system
-    - `dt_soft`: tree time step
+5. A brief parameter list for tree time step and key radii influencing performance is provided.
+    ```
+    ----- Parameter list: -----
+     mass_average = 0.52232350485643
+     r_in         = 0.0021228717795716
+     r_out        = 0.021228717795716
+     r_bin        = 0.0016982974236573
+     r_search_min = 0.024787679043148
+     vel_disp     = 0.60739605289507
+     dt_soft      = 0.001953125
+   ```
 
-	These parameters determine the performance of a simulation, see details in [Performance Optimization](#performance-optimization).
+   The definitions of these parameters are as follows:
+    - `mass_average`: average mass of all objects.
+    - `r_in`: changeover inner radius reference.
+    - `r_out`: changeover outer radius reference.
+    - `r_bin`: the criterion for selecting group members.
+    - `r_search_min`: the minimum neighbor searching radius reference.
+    - `vel_disp`: velocity dispersion of the system.
+    - `dt_soft`: tree time step.
 
-- If Galpy is utilized, the Galpy potential setup information may be printed.
-```
-Galpy parameters, time: 0 Next update time: 0
-Potential set 1 Mode: 0 GM: 0 Pos: 0 0 0 Vel: 0 0 0 Acc: 0 0 0
-Potential type indice: 15 5 9
-Potential arguments: 251.63858935563 1.8 1900 306770418.38589 3000 280 1965095308.1922 16000
-```
-- In case the SSE/BSE-based stellar evolution package is employed, common block and global parameters are showcased.
-```
- ----- SSE/BSE common block parameter list: -----
- value1: neta:  0.50000000000000000       bwind:   0.0000000000000000       hewind:   1.0000000000000000
-...
-```
+    These parameters determine the performance of a simulation, see details in [Performance Optimization](#performance-optimization).
 
-- Filenames for dumped input parameters are specified.
-```
------  Dump parameter files -----
-Save input parameters to file input.par
-...
-```
-	By default, these include:
+6. If Galpy is utilized, the Galpy potential setup information may be printed.
+    ```
+    Galpy parameters, time: 0 Next update time: 0
+    Potential set 1 Mode: 0 GM: 0 Pos: 0 0 0 Vel: 0 0 0 Acc: 0 0 0
+    Potential type indice: 15 5 9
+    Potential arguments: 251.63858935563 1.8 1900 306770418.38589 3000 280 1965095308.1922 16000
+    ```
+7. In case the SSE/BSE-based stellar evolution package is employed, common block and global parameters are showcased.
+    ```
+     ----- SSE/BSE common block parameter list: -----
+     value1: neta:  0.50000000000000000       bwind:   0.0000000000000000       hewind:   1.0000000000000000
+    ...
+    ```
+
+8. Filenames for dumped input parameters are specified.
+    ```
+    -----  Dump parameter files -----
+    Save input parameters to file input.par
+    ...
+    ```
+    By default, these include:
     - `input.par`: Input parameters of `petar`, useful for restarting the simulation from a snapshot.
     - `input.par.hard`: Input parameters of the hard component (short-range interaction part; Hermite + SDAR), utilized for testing the dumped hard cluster with `_petar.hard.debug_`.
     - `input.par.[bse_name]`: Parameters for the SSE/BSE-based package, necessary for restarting the simulation and for `petar.hard.debug` if an SSE/BSE-based package is used.
     - `input.par.galpy`: Galpy parameters for simulation restart purposes.
 
-After the "Finish parameter initialization" line, the simulation status is updated at each output time interval (defined by the `-o` option). The status content follows a format similar to the example provided below:
+    After the "Finish parameter initialization" line, the simulation status is updated at each output time interval (defined by the `-o` option). The status content follows a format similar to the example provided below:
 
-- Time, number of real particles, all particles (including artificial particles), removed particles, and escaped particles; both locally (within the first MPI process) and globally (across all MPI processes):
+9. Time, number of real particles, all particles (including artificial particles), removed particles, and escaped particles; both locally (within the first MPI process) and globally (across all MPI processes):
     - N_real(loc): Number of physical particles (stars) in the local MPI processor (rank 0).
     - N_real(glb): Number of physical particles (stars) across all MPI processors.
     - N_all(loc): Number of all particles, including physical and artificial ones, in the local MPI processor.
@@ -682,12 +683,12 @@ After the "Finish parameter initialization" line, the simulation status is updat
     - N_remove(glb): Number of removed particles (e.g., zero-mass particles due to mergers and escapists).
     - N_escape(glb): Number of escaped particles (beyond the escape criterion).
 
-Example output information at time 1:
-```
-Time: 1  N_real(loc): 1378  N_real(glb): 1378  N_all(loc): 1378  N_all(glb): 1378  N_remove(glb): 0  N_escape(glb): 0
-```
+    Example output information at time 1:
+    ```
+    Time: 1  N_real(loc): 1378  N_real(glb): 1378  N_all(loc): 1378  N_all(glb): 1378  N_remove(glb): 0  N_escape(glb): 0
+    ```
 
-- Energy check: Two rows are printed. The first row displays physical energy, while the second row shows slow-down energy (referenced in the _petar_ commander).
+10. Energy check: Two rows are printed. The first row displays physical energy, while the second row shows slow-down energy (referenced in the _petar_ commander).
     - Error/Total: Relative error of the current step.
     - Error: Absolute error of the current step.
     - Error_cum: Cumulative absolute error.
@@ -700,25 +701,25 @@ Time: 1  N_real(loc): 1378  N_real(glb): 1378  N_all(loc): 1378  N_all(glb): 137
     - Error_PP: Energy error in short-range particle-particle (PP) interaction.
     - Error_PP_cum: Cumulative energy error in the PP part.
 
-```
-Energy:       Error/Total           Error       Error_cum           Total         Kinetic       Potential          Modify    Modify_group   Modify_single        Error_PP    Error_PP_cum
-Physic:      1.883442e-05       -644.6969       -644.6969   -3.422972e+07    1.846359e+07   -5.269331e+07        1841.216               0     0.008989855    -8.67599e-06    -8.67599e-06
-Slowdown:    1.883442e-05       -644.6969       -644.6969   -3.422972e+07    1.846359e+07   -5.269331e+07        1841.216               0     0.008989855    -8.67599e-06    -8.67599e-06
-```
+    ```
+    Energy:       Error/Total           Error       Error_cum           Total         Kinetic       Potential          Modify    Modify_group   Modify_single        Error_PP    Error_PP_cum
+    Physic:      1.883442e-05       -644.6969       -644.6969   -3.422972e+07    1.846359e+07   -5.269331e+07        1841.216               0     0.008989855    -8.67599e-06    -8.67599e-06
+    Slowdown:    1.883442e-05       -644.6969       -644.6969   -3.422972e+07    1.846359e+07   -5.269331e+07        1841.216               0     0.008989855    -8.67599e-06    -8.67599e-06
+    ```
 
-- Angular momentum: Error at the current step, cumulative error, components in x, y, z directions, and value.
+11. Angular momentum: Error at the current step, cumulative error, components in x, y, z directions, and value.
 
-```
-Angular Momentum:  |L|err: 187484.2  |L|err_cum: 187484.2  L: -1.17383e+07   -1.20975e+07    -1.267862e+09  |L|: 1.267974e+09
-```
+    ```
+    Angular Momentum:  |L|err: 187484.2  |L|err_cum: 187484.2  L: -1.17383e+07   -1.20975e+07    -1.267862e+09  |L|: 1.267974e+09
+    ```
 
-- System total mass, center position, and velocity.
+12. System total mass, center position, and velocity.
 
-```
-C.M.: mass: 736.5417 pos: 5127.807   -5729.159    7.270318 vel: -165.7037   -150.611    3.006304
-```
+    ```
+    C.M.: mass: 736.5417 pos: 5127.807   -5729.159    7.270318 vel: -165.7037   -150.611    3.006304
+    ```
 
-- Performance information:
+13. Performance information:
     - Number of tree steps per output interval.
     ```
     Tree step number: 512
@@ -742,20 +743,20 @@ C.M.: mass: 736.5417 pos: 5127.807   -5729.159    7.270318 vel: -165.7037   -150
         - Other: Time cost in other parts not included in the above components.
     ```
     **** Wallclock time per step (local): [Min/Max]
-  Total        PP_single    PP_cluster   PP_cross     PP_intrpt*   Tree_NB      Tree_Force   Force_corr   Kick         FindCluster  CreateGroup  Domain_deco  Ex_Ptcl      Output     Status       Other
+    Total        PP_single    PP_cluster   PP_cross     PP_intrpt*   Tree_NB      Tree_Force   Force_corr   Kick         FindCluster  CreateGroup  Domain_deco  Ex_Ptcl      Output     Status       Other
      0.009742    0.0006008   0.00016328   2.8949e-06            0   0.00069683     0.004435   2.6859e-05   3.3679e-05    8.365e-05   0.00011302   2.0602e-06   4.7604e-05   5.4633e-05   1.8945e-08    0.0034471
     0.0097421   0.00060092   0.00016398   3.0875e-06            0   0.00070318    0.0044427   2.7012e-05   3.3787e-05   8.3776e-05   0.00011312   2.1375e-06   4.7723e-05   5.4636e-05   1.9141e-08    0.0034481
     ```
     - FDPS tree force calculation profile (see FDPS document for detail)
     ```
     **** FDPS tree soft force time profile (local):
-  Sample_ptcl  Domain_deco  Ex_ptcl      Set_ptcl_LT  Set_ptcl_GT  Make_LT      Make_GT      SetRootCell  Calc_force   Calc_mom_LT  Calc_mom_GT  Make_LET_1   Make_LET_2   Ex_LET_1     Ex_LET_2     Write_back
+    Sample_ptcl  Domain_deco  Ex_ptcl      Set_ptcl_LT  Set_ptcl_GT  Make_LT      Make_GT      SetRootCell  Calc_force   Calc_mom_LT  Calc_mom_GT  Make_LET_1   Make_LET_2   Ex_LET_1     Ex_LET_2     Write_back
             0            0            0   5.2026e-05   1.7637e-06   0.00021123   7.0745e-05   8.7232e-06    0.0022072   4.4457e-05    0.0018011   1.3547e-05            0    4.401e-06            0   2.0096e-05
     ```
     - FDPS tree neighbor searching profile 
     ```
     **** Tree neighbor time profile (local):
-  Sample_ptcl  Domain_deco  Ex_ptcl      Set_ptcl_LT  Set_ptcl_GT  Make_LT      Make_GT      SetRootCell  Calc_force   Calc_mom_LT  Calc_mom_GT  Make_LET_1   Make_LET_2   Ex_LET_1     Ex_LET_2     Write_back
+    Sample_ptcl  Domain_deco  Ex_ptcl      Set_ptcl_LT  Set_ptcl_GT  Make_LT      Make_GT      SetRootCell  Calc_force   Calc_mom_LT  Calc_mom_GT  Make_LET_1   Make_LET_2   Ex_LET_1     Ex_LET_2     Write_back
             0            0            0   3.6579e-05   1.6174e-06   0.00021966   7.2012e-05   7.7332e-06   0.00025779    3.126e-05    2.935e-05   2.6922e-05            0   1.4563e-06            0   1.2669e-05
     ```
 	- Number counts per tree time step:
@@ -775,7 +776,7 @@ C.M.: mass: 736.5417 pos: 5127.807   -5729.159    7.270318 vel: -165.7037   -150
 	    - Ep-Sp_sum: Number of interactions between particle i and superparticle j during a particle-tree force calculation.
     ```
     **** Number per step (global):
-  PP_single    PP_cluster   PP_cross     PP_intrpt*   Cluster      Cross        AR_step_sum  AR_tsyn_sum  AR_group_N   Iso_group_N  H4_step_sum  H4_no_NB     Ep-Ep_sum    Ep-Sp_sum
+    PP_single    PP_cluster   PP_cross     PP_intrpt*   Cluster      Cross        AR_step_sum  AR_tsyn_sum  AR_group_N   Iso_group_N  H4_step_sum  H4_no_NB     Ep-Ep_sum    Ep-Sp_sum
        1345.6       32.436            0            0       14.744            0       7.0586       4.0996            0            0       329.74            0   1.6972e+06        34134
     ```
     - Histogram of the number of members in clusters. The first line shows the number of members, and the second line shows the histogram counts.
@@ -785,11 +786,11 @@ C.M.: mass: 736.5417 pos: 5127.807   -5729.159    7.270318 vel: -165.7037   -150
        1345.6        13.24      0.68164      0.31055      0.40234      0.10938
     ```
 
-The performance information is crucial for verifying whether the simulation has been set up with appropriate tree time steps and radii parameters.
+    The performance information is crucial for verifying whether the simulation has been set up with appropriate tree time steps and radii parameters.
 
-To ensure reasonable performance, the `Tree_Force` wallclock time should primarily contribute to the total time. If numerous multiple groups, such as primordial binaries, are present, `PP_cluster` may also consume time. However, if `PP_cluster`'s time consumption is excessive (dominating most of the total time), users should consider adjusting the changeover radius, neighbor searching radius, and group radii (refer to [Performance Optimization](#performance-optimization)).
+    To ensure reasonable performance, the `Tree_Force` wallclock time should primarily contribute to the total time. If numerous multiple groups, such as primordial binaries, are present, `PP_cluster` may also consume time. However, if `PP_cluster`'s time consumption is excessive (dominating most of the total time), users should consider adjusting the changeover radius, neighbor searching radius, and group radii (refer to [Performance Optimization](#performance-optimization)).
 
-The histogram depicting the number of members in clusters is valuable for determining whether the neighbor searching radius is too large. In a low-density system, the maximum number of members should typically be around 20, as seen in the example provided (6). In a high-density system or a system with high-velocity particles, the maximum number may be higher. Nonetheless, if it remains within a few hundred members and the PP_cluster wallclock time is not excessively large, the setup is acceptable.
+    The histogram depicting the number of members in clusters is valuable for determining whether the neighbor searching radius is too large. In a low-density system, the maximum number of members should typically be around 20, as seen in the example provided (6). In a high-density system or a system with high-velocity particles, the maximum number may be higher. Nonetheless, if it remains within a few hundred members and the PP_cluster wallclock time is not excessively large, the setup is acceptable.
 
 ### Output Files
 
