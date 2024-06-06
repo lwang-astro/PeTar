@@ -2549,6 +2549,26 @@ public:
             stable_checker.t_crit = manager->ar_manager.slowdown_timescale_max;
             stable_checker.findStableTree(binary_tree.back());
 
+            // if no TT mode
+            // Set member particle type, backup mass, collect member particle index to group_ptcl_adr_list
+            //use _ptcl_in_cluster as the first particle address as reference to calculate the particle index.
+            if (manager->n_step_per_orbit==0) {
+                auto& bin = *stable_checker.stable_binary_tree[i];
+                const PS::S32 n_members = bin.getMemberN();
+
+                struct { Tptcl* adr_ref; PS::S32* group_list; PS::S32 n; PS::S64 pcm_id; ChangeOver* changeover_cm; PS::F64 rsearch_cm; bool changeover_update_flag;}
+                    group_index_pars = { _ptcl_in_cluster,  &group_ptcl_adr_list[group_ptcl_adr_offset], 0, -1, &bin.changeover, bin.r_search, false};
+                bin.processLeafIter(group_index_pars, collectGroupMemberAdrAndSetMemberParametersIter);
+                if (group_index_pars.changeover_update_flag) changeover_update_flag = true;
+#ifdef ARTIFICIAL_PARTICLE_DEBUG
+                assert(group_index_pars.n==n_members);
+#endif                
+                _n_member_in_group.push_back(GroupIndexInfo(_i_cluster, _n_groups, n_members, group_ptcl_adr_offset, 1));
+                _n_groups++;
+                group_ptcl_adr_offset += n_members;
+                continue;
+            }
+            
             // in isolated binary case, if the slowdown period can be larger than tree step * N_step_per_orbit, it is fine without tidal tensor
             if (_n_ptcl==2&&stable_checker.stable_binary_tree.size()==1) {
                 auto& bin = *stable_checker.stable_binary_tree[i];
