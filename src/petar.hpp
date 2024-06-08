@@ -3236,8 +3236,8 @@ public:
         // calculate v_max based on r_search_max, tree time step and search_vel_factor
         //vel_max = (r_search_max - r_out) / dt_soft / search_vel_factor;
 
-        // regularize output time
-        dt_snap = regularTimeStep(dt_snap);
+        // regularize output time to be integer times of dt_soft
+        dt_snap = int(dt_snap/dt_soft)*dt_soft;
 
         EPISoft::eps   = input_parameters.eps.value;
         EPISoft::r_out = r_out;
@@ -3253,13 +3253,14 @@ public:
         if(print_flag) {
         // set print format
             std::cout<<"----- Parameter list: -----\n";
-            std::cout<<" mass_average = "<<mass_average   <<std::endl
-                     <<" r_in         = "<<r_in           <<std::endl
-                     <<" r_out        = "<<r_out          <<std::endl
-                     <<" r_bin        = "<<r_bin          <<std::endl
-                     <<" r_search_min = "<<r_search_min   <<std::endl
-                     <<" vel_disp     = "<<vel_disp       <<std::endl
-                     <<" dt_soft      = "<<dt_soft        <<std::endl;
+            std::cout<<" Average mass                      = "<<mass_average   <<std::endl
+                     <<" Mean inner changeover radius      = "<<r_in           <<std::endl
+                     <<" Mean outer changeover radius      = "<<r_out          <<std::endl
+                     <<" Mean SDAR group detection radius  = "<<r_bin          <<std::endl
+                     <<" Minimum neighbor searching radius = "<<r_search_min   <<std::endl
+                     <<" Velocity dispersion               = "<<vel_disp       <<std::endl
+                     <<" Tree time step                    = "<<dt_soft        <<std::endl
+                     <<" Output time step                  = "<<dt_snap        <<std::endl;
         }
 
         // check restart

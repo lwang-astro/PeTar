@@ -208,6 +208,7 @@ if __name__ == '__main__':
     fl = open(filename,'r')
     file_list = fl.read()
     path_list = file_list.splitlines()
+    fl.close()
 
     result=dict()
     time_profile=dict()
