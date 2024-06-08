@@ -627,23 +627,25 @@ When `petar` is running, several pieces of information are displayed at the begi
 5. A brief parameter list for tree time step and key radii influencing performance is provided.
     ```
     ----- Parameter list: -----
-     mass_average = 0.52232350485643
-     r_in         = 0.0021228717795716
-     r_out        = 0.021228717795716
-     r_bin        = 0.0016982974236573
-     r_search_min = 0.024787679043148
-     vel_disp     = 0.60739605289507
-     dt_soft      = 0.001953125
+      Average mass                      = 0.52232350485643
+      Mean inner changeover radius      = 0.0021228717795716
+      Mean outer changeover radius      = 0.021228717795716
+      Mean SDAR group detection radius  = 0.0016982974236573
+      Minimum neighbor searching radius = 0.024787679043148
+      Velocity dispersion               = 0.60739605289507
+      Tree time step                    = 0.001953125
+	  Output time step                  = 1
    ```
 
    The definitions of these parameters are as follows:
-    - `mass_average`: average mass of all objects.
-    - `r_in`: changeover inner radius reference.
-    - `r_out`: changeover outer radius reference.
-    - `r_bin`: the criterion for selecting group members.
-    - `r_search_min`: the minimum neighbor searching radius reference.
-    - `vel_disp`: velocity dispersion of the system.
-    - `dt_soft`: tree time step.
+    - `Average mass`: average mass of all objects.
+    - `Mean inner changeover radius`: mean inner changeover radius.
+    - `Mean outer changeover radius`: mean outer changeover radius.
+    - `Mean SDAR group detection radius`: the criterion for selecting SDAR group members.
+    - `Minimum neighbor searching radius`: the minimum neighbor searching radius reference.
+    - `Velocity dispersion`: velocity dispersion of the system.
+    - `Tree time step`: tree time step.
+	- `Output time step`: snapshot and status output time step.
 
     These parameters determine the performance of a simulation, see details in [Performance Optimization](#performance-optimization).
 
