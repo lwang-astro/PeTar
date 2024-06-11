@@ -2,8 +2,8 @@ from .base import *
 from .data import *
 from .functions import *
 
-class SDARParticle(SimpleParticle):
-    """ SDAR particle
+class IsolatedSDARParticle(SimpleParticle):
+    """ SDAR particle of isolated SDAR sample code
     keys: (class members)
         mass (1D): mass
         pos (2D,3): postion x, y, z
@@ -73,8 +73,8 @@ class SDARData(DictNpArrayMix):
             dH_sd_interrupt (1D): slowdown H change due to interruption
             sd (SlowDownGroup): slowdown data
         particles (ParticleGroup): particle group
-            if data_type=='hard', member_type is 'petar.Particle', particle_type is 'hard';
-            if data_type=='hermite', member_type is 'petar.SDARParticle'.
+            if data_type=='hard', member_type is 'petar.HardParticle'
+            if data_type=='sdar', member_type is 'petar.IsolatedSDARParticle'.
 
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
@@ -85,12 +85,11 @@ class SDARData(DictNpArrayMix):
         keyword arguments:
             data_type: str (hard) 
                 hard: PeTar hard particle type
-                      the member_type of the particle group is 'petar.Particle'
-                      the member particle_type of 'petar.Particle' is 'hard'
-                      the cm particle_type of 'petar.Particle' is 'hermite'
-                      add several information defined in Hermite neighbor, but not used in an isolated SDAR group
+                      The member_type of the particle group is 'petar.HardParticle';
+                      The cm_type of the particle group is 'petar.HermiteParticle';
+                      Add columns defined in Hermite neighbor, but not used in an isolated SDAR group
                 sdar: isolated SDAR sample particle type
-                      the member_type of the particle group is 'petar.SDARParticle'
+                      The member_type of the particle group is 'petar.IsolatedSDARParticle'
             N_particle: int (0)
                 Number of particles, determined from file if not provided
             slowdown: bool (False)
@@ -103,11 +102,12 @@ class SDARData(DictNpArrayMix):
             kwargs['data_type'] = 'hard'
 
         if (kwargs['data_type'] == 'hard'):
-            kwargs['member_type'] = Particle
-            kwargs['particle_type'] = 'hard'
+            kwargs['member_type'] = HardParticle
+            kwargs['cm_type'] = HermiteParticle
             key_add = [['r_min_index', np.int64], ['mass_min_index', np.int64], ['r_min_sq', np.float64], ['r_min_mass', np.float64], ['mass_min', np.float64], ['r_neighbor_crit_sq', np.float64], ['need_resolve_flag', bool], ['initial_step_flag', bool], ['n_neighbor_group', np.int64], ['n_neighbor_single', np.int64]]
         elif (kwargs['data_type'] == 'sdar'):
-            kwargs['member_type'] = SDARParticle
+            kwargs['member_type'] = IsolatedSDARParticle
+            kwargs['cm_type'] = IsolatedSDARParticle
         else:
             raise ValueError('data_type is not supported, should be hard or sdar, given ',kwargs['data_type'])
 
@@ -258,7 +258,7 @@ class HermiteProfile(DictNpArrayMix):
         keys=[["h4_step_single", np.int64], ["h4_step_group", np.int64], ["ar_step", np.int64], ["ar_step_tsyn", np.int64], ["break_group", np.int64], ["new_group", np.int64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
-class HermiteParticle(SDARParticle):
+class IsolatedHermiteParticle(IsolatedSDARParticle):
     """ Hermite Particle
     keys: (class members)
         mass (1D): mass
@@ -277,7 +277,7 @@ class HermiteParticle(SDARParticle):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
 
-        SDARParticle.__init__(self, _dat, _offset, _append, **kwargs)
+        IsolatedSDARParticle.__init__(self, _dat, _offset, _append, **kwargs)
         keys_hermite_add = [['dt',np.float64],['time',np.float64],['acc',(np.float64,3)],['jerk',(np.float64,3)],['pot',np.float64]]
         #keys = [['dm', np.float64],['time_check', np.int64],['binary_state',np.int64]]
         DictNpArrayMix.__init__(self, keys_hermite_add, _dat, _offset+self.ncols, True, **kwargs)
@@ -293,8 +293,10 @@ class HermiteData(DictNpArrayMix):
         sd (SlowDownGroup): slowdown data
         profile (HermiteProfile): hermite profile
         particles (ParticleGroup): particle group, 
-            if data_type=='hard', member_type is 'petar.Particle', particle_type is 'hard'
-            if data_type=='hermite', member_type is 'petar.HermiteParticle'.
+            if data_type=='hard', member_type is 'petar.HardParticle', 
+                                  cm_type is 'petar.HermiteParticle'
+            if data_type=='hermite', member_type is 'petar.IsolatedHermiteParticle'.
+                                     cm_type is 'petar.IsolatedHermiteParticle'
     """
 
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
@@ -319,10 +321,11 @@ class HermiteData(DictNpArrayMix):
             kwargs['data_type'] = 'hard'
 
         if (kwargs['data_type'] == 'hard'):
-            kwargs['member_type'] = Particle
-            kwargs['particle_type'] = 'hermite'
+            kwargs['member_type'] = HardParticle
+            kwargs['cm_type'] = HermiteParticle
         elif (kwargs['data_type'] == 'hermite'):
-            kwargs['member_type'] = HermiteParticle
+            kwargs['member_type'] = IsolatedHermiteParticle
+            kwargs['cm_type'] = IsolatedHermiteParticle
         else:
             raise ValueError('data_type is not supported, should be hard or hermite, given ',kwargs['data_type'])
 

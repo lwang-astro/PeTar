@@ -603,7 +603,7 @@ class Binary(SimpleParticle):
 
         The member_particle_type(|_one|_two) is given by keyword arguments:
            'member_particle_type' (for both members),'member_particle_type_one','member_particle_type_two'.
-        In default, it is petar.SimpleParticle.
+        In default, it is petar.Particle.
         If a type (e.g., petar.Particle) is given, the member is a single star.
         If a list with two members (e.g., [petar.Particle, petar.Particle]) is given, 
         the member is a binary with two single stars.
@@ -615,13 +615,13 @@ class Binary(SimpleParticle):
         """
         Parameters
         ----------
-        _p1: inherited SimpleParticle | 2D numpy.ndarray | Binary | None
-            If the type is inherited SimpleParticle, it is the first component of binary (_p2 should be the same type).
-            If the type is Binary, the class instance is initialized by copy the data of _p1.
-            If it is None, initialize class with empty data
-        _p2: inherited SimpleParticle | None
-            If the type is inherited SimpleParticle, it is the second component of binary 
-            If it is None, _p1 should be either 2D numpy.ndarray or Bina
+        _p1: particle data | 2D numpy.ndarray | petar.Binary | None
+            If _p1 is a particle type data or a petar.Binary type data, it is treated as the first component of binary
+            If _p1 is a petar.Binary type data and _p2 is None, the class instance is initialized by copy the data of _p1.
+            If _p1 is None, initialize class with empty data
+        _p2: particle data | None
+            If _p2 is a particle type data or a petar.Binary type data, it is treated as the second component of binary
+            If _p2 is None, _p1 should be petar.Binary data or None
         _offset: int (0)
             Reading column offset of _dat if it is 2D np.ndarray
         _append: bool (False)
@@ -632,16 +632,16 @@ class Binary(SimpleParticle):
                 If True, only calculate semi and ecc, save computing time significantly
             G: float (1.0)
                 Gravitational constant
-            member_particle_type: type or list (SimpleParticle)
+            member_particle_type: type or list (Particle)
                 Type of component particle (both)
-            member_particle_type_one: type or list (SimpleParticle)
+            member_particle_type_one: type or list (Particle)
                 Type of 1st component
-            member_particle_type_two: type or list (SimpleParticle)
+            member_particle_type_two: type or list (Particle)
                 Type of 2nd component 
         """
         G=1
         simple_mode=True
-        member_particle_type=SimpleParticle
+        member_particle_type=Particle
         member_particle_type_one=member_particle_type
         member_particle_type_two=member_particle_type
         
