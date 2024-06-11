@@ -101,6 +101,7 @@ class Status(DictNpArrayMix):
         if 'N_particle' in kwargs.keys(): 
             n = kwargs['N_particle']
             kwargs['N_column_exist'] = False
+            kwargs['cm_column_exist'] = False
             kwargs['member_type'] = Particle
         if (n>0): keys += [["particles", ParticleGroup]]
             

@@ -22,6 +22,28 @@
 
 typedef H4::ParticleH4<PtclHard> PtclH4;
 
+//! Structure of id ranges for hard dump recording
+struct RecordIDRange{
+    PS::S64 id_start_one;
+    PS::S64 id_end_one;
+    PS::S64 id_start_two;
+    PS::S64 id_end_two;
+
+    RecordIDRange(): id_start_one(0), id_end_one(0), 
+                     id_start_two(0), id_end_two(0) {}
+
+    // return total number of IDs for recording
+    PS::S64 getN() const {
+        return (id_end_two - id_start_two) + (id_end_one - id_start_one);
+    }
+
+    // check whether id is in the id range for recording
+    bool isIn(const PS::S64 check_id) {
+        return (check_id >= id_start_one && check_id < id_end_one) || (check_id >= id_start_two && check_id < id_end_two);
+    }
+    
+};
+
 //! Hard integrator parameter manager
 class HardManager{
 public:
@@ -33,6 +55,7 @@ public:
     ArtificialParticleManager ap_manager;
     H4::HermiteManager<HermiteInteraction> h4_manager;
     AR::TimeTransformedSymplecticManager<ARInteraction> ar_manager;
+    RecordIDRange record_id_range;
 
     //! constructor
     HardManager(): energy_error_max(-1.0), eps_sq(-1.0), r_in_base(-1.0), r_out_base(-1.0), n_step_per_orbit(-1.0), ap_manager(), h4_manager(), ar_manager() {}
@@ -90,9 +113,8 @@ public:
 
     //! read class data to file with binary format
     /*! @param[in] _fp: FILE type file for reading
-      @param[in] _version: version of parameter file, default: 0
      */
-    void readBinary(FILE *_fin, int _version=0) {
+    void readBinary(FILE *_fin) {
         size_t size = sizeof(*this) - sizeof(ap_manager) - sizeof(h4_manager) - sizeof(ar_manager);
         size_t rcount = fread(this, size, 1, _fin);
         if (rcount<1) {
@@ -101,7 +123,7 @@ public:
         }
         ap_manager.readBinary(_fin);
         h4_manager.readBinary(_fin);
-        ar_manager.readBinary(_fin, _version);
+        ar_manager.readBinary(_fin);
     }
 
     //! print parameters
@@ -159,7 +181,7 @@ struct HardEnergy{
 class HardIntegrator{
 public:
     H4::HermiteIntegrator<PtclHard, PtclH4, HermitePerturber, ARPerturber, HermiteInteraction, ARInteraction, HermiteInformation> h4_int; ///> hermite integrator
-    AR::TimeTransformedSymplecticIntegrator<PtclHard, PtclH4, ARPerturber, ARInteraction, H4::ARInformation<PtclHard>> sym_int; ///> AR integrator
+    AR::TimeTransformedSymplecticIntegrator<PtclHard, PtclH4, ARPerturber, ARInteraction, AR::Information<PtclHard, PtclH4>> sym_int; ///> AR integrator
     HardManager* manager; ///> hard manager
 
     AR::InterruptBinary<PtclHard> sym_interrupt_binary; // interrupt binary information list
@@ -170,6 +192,9 @@ public:
 #ifdef HARD_DEBUG_PRINT
     PS::ReallocatableArray<PS::S32> n_group_sub_init; ///> initial sub group number in each groups 
     PS::S32 n_group_sub_tot_init; ///> total sub groups in all groups initially
+    PS::S32 n_sd; ///> slowdown number for one group (SDAR) case
+    std::string output_filename_prefix; ///> output filename prefix 
+    std::ofstream fout_debug; ///> log file for printing 
 #endif
 
 #ifdef PROFILE
@@ -247,11 +272,14 @@ public:
         time_origin = _time_origin;
         ptcl_origin = _ptcl;
 
-        //for (int i=0; i<_n_ptcl; i++) {
-        //    if (ptcl_origin[i].id==301) {
-        //        DATADUMP((std::string("dump_301")+std::to_string(_time_origin)).c_str());
-        //    }
-        //}
+        // dump data if particle id is in record_id_range
+        if (manager->record_id_range.getN()>0) {
+            for (int i=0; i<_n_ptcl; i++) {
+                if (manager->record_id_range.isIn(ptcl_origin[i].id)) {
+                    DATADUMPAPP((std::string("object_")+std::to_string(ptcl_origin[i].id)).c_str());
+                }
+            }
+        }
 
 //#ifdef HARD_DEBUG
         if (_n_ptcl>400) {
@@ -347,7 +375,7 @@ public:
             //sym_int.perturber.r_crit_sq = h4_manager->r_neighbor_crit*h4_manager->r_neighbor_crit;
             for (PS::S32 i=0; i<n_members; i++) {
                 sym_int.particles.addMemberAndAddress(ptcl_origin[i]);
-                sym_int.info.particle_index.addMember(i);
+                //sym_int.info.particle_index.addMember(i);
                 sym_int.info.r_break_crit = std::max(sym_int.info.r_break_crit,ptcl_origin[i].getRGroup());
                 Float r_neighbor_crit = ptcl_origin[i].getRNeighbor();
                 sym_int.perturber.r_neighbor_crit_sq = std::max(sym_int.perturber.r_neighbor_crit_sq, r_neighbor_crit*r_neighbor_crit);                
@@ -408,6 +436,17 @@ public:
             }
 #endif
 
+#ifdef HARD_DEBUG_PRINT_TITLE
+            sym_int.printColumnTitle(std::cerr, WRITE_WIDTH, sym_int.info.binarytree.getSize());
+            std::cerr<<std::endl;
+#endif
+#ifdef HARD_DEBUG_PRINT
+            n_sd = sym_int.info.binarytree.getSize();
+            fout_debug.open(output_filename_prefix + "_sdar_" + std::to_string(n_members) + "_" + std::to_string(n_sd) + ".log", std::ofstream::out|std::ofstream::app);
+            fout_debug<<std::setprecision(WRITE_PRECISION);
+            sym_int.printColumn(fout_debug, WRITE_WIDTH, n_sd);
+            fout_debug<<std::endl;
+#endif
         }
         else { // use hermite
             use_sym_int = false;
@@ -567,19 +606,21 @@ public:
 
             h4_int.initialIntegration();
             h4_int.sortDtAndSelectActParticle();
-            h4_int.info.time_origin = h4_int.getTime();
 
 #ifdef HARD_CHECK_ENERGY
             h4_int.calcEnergySlowDown(true);
 #endif
 
 #ifdef HARD_DEBUG_PRINT_TITLE
-            h4_int.printColumnTitle(std::cout, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
-            std::cout<<std::endl;
+            h4_int.printColumnTitle(std::cerr, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
+            std::cerr<<std::endl;
 #endif
 #ifdef HARD_DEBUG_PRINT
-            h4_int.printColumn(std::cout, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
-            std::cout<<std::endl;
+            PS::S32 n_members = h4_int.particles.getSize();
+            fout_debug.open(output_filename_prefix + "_h4_" + std::to_string(n_members) + "_" + std::to_string(n_group_sub_tot_init) + ".log", std::ofstream::out|std::ofstream::app);
+            fout_debug<<std::setprecision(WRITE_PRECISION);
+            h4_int.printColumn(fout_debug, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
+            fout_debug<<std::endl;
 #endif
         }
         
@@ -624,7 +665,12 @@ public:
                 dump_flag=true;
             }
 #endif
-#endif                
+#endif
+
+#ifdef HARD_DEBUG_PRINT
+            sym_int.printColumn(fout_debug, WRITE_WIDTH, n_sd);
+            fout_debug<<std::endl;
+#endif
         }
         else {
 #ifdef SOFT_PERT
@@ -732,7 +778,6 @@ public:
                 h4_int.initialIntegration();
                 h4_int.modifySingleParticles();
                 h4_int.sortDtAndSelectActParticle();
-                h4_int.info.time_origin = h4_int.getTime();
 
 #ifdef PROFILE
 #ifdef HARD_DUMP
@@ -755,8 +800,8 @@ public:
                 if (fmod(h4_int.getTimeInt(), h4_manager.step.getDtMax()/HARD_DEBUG_PRINT_FEQ)==0.0) {
                     h4_int.calcEnergySlowDown(false);
 
-                    h4_int.printColumn(std::cout, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
-                    std::cout<<std::endl;
+                    h4_int.printColumn(fout_debug, WRITE_WIDTH, n_group_sub_init.getPointer(), n_group_sub_init.size(), n_group_sub_tot_init);
+                    fout_debug<<std::endl;
 
                     PS::F64 de_sd   = h4_int.getEnergyErrorSlowDown();
                     if (abs(de_sd/std::max(1.0,abs(h4_int.getEtotSlowDownRef()))) > manager->energy_error_max) {
@@ -1124,6 +1169,7 @@ public:
                  <<"  ARC_substep_sum: "<<ARC_substep_sum
                  <<"  ARC_tsyn_step_sum: "<<ARC_tsyn_step_sum
                  <<std::endl;
+        fout_debug.close();
 #endif        
         if (abs(energy.de_sd/std::max(1.0,abs(ekin_sd+epot_sd))) > manager->energy_error_max) {
             std::cerr<<"Hard energy significant !"

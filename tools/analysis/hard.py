@@ -47,6 +47,17 @@ class SDARData(DictNpArrayMix):
         H (1D): extened phase space Hamiltonian
         de_interrupt (1D): energy change due to interruption
         dH_interrupt (1D): H change due to interruption
+        if (keyword arguemnt 'data_type' == 'hard'): neighbor information defined in Hermite group (not used in isolated group case)
+            r_min_index (1D):    nearest neighbor index for each ptcl  
+            mass_min_index (1D): mimimum mass in neighbors         
+            r_min_sq (1D):       nearest neighbor distance square      
+            r_min_mass (1D):     nearest neighbor index for each ptcl 
+            mass_min (1D):       mimimum mass in neighbors             
+            r_neighbor_crit_sq (1D): neighbor radius criterion
+            need_resolve_flag (1D): indicate whether the members need to be resolved for outside 
+            initial_step_flag (1D): indicate whether the time step need to be initialized due to the change of neighbors
+            n_neighbor_group (1D): number of group neighbor
+            n_neighbor_single (1D): number of single neighbor
         ds (1D): integration step
         time_offset (1D): time offset to obtain the actual time (time_offset + time)
         r_break_crit (1D): distance criterion to break group (used in Hermite)
@@ -62,6 +73,8 @@ class SDARData(DictNpArrayMix):
             dH_sd_interrupt (1D): slowdown H change due to interruption
             sd (SlowDownGroup): slowdown data
         particles (ParticleGroup): particle group
+            if data_type=='hard', member_type is 'petar.Particle', particle_type is 'hard';
+            if data_type=='hermite', member_type is 'petar.SDARParticle'.
 
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
@@ -70,8 +83,14 @@ class SDARData(DictNpArrayMix):
         Parameters
         ----------
         keyword arguments:
-            member_type: type (SDARParticle)
-                Member particle type
+            data_type: str (hard) 
+                hard: PeTar hard particle type
+                      the member_type of the particle group is 'petar.Particle'
+                      the member particle_type of 'petar.Particle' is 'hard'
+                      the cm particle_type of 'petar.Particle' is 'hermite'
+                      add several information defined in Hermite neighbor, but not used in an isolated SDAR group
+                sdar: isolated SDAR sample particle type
+                      the member_type of the particle group is 'petar.SDARParticle'
             N_particle: int (0)
                 Number of particles, determined from file if not provided
             slowdown: bool (False)
@@ -79,9 +98,21 @@ class SDARData(DictNpArrayMix):
             N_sd: int (0)
                 Number of slowdown pair, used when slowdown='on'
         """
-        if (not 'member_type' in kwargs.keys()):
+        key_add = []
+        if (not 'data_type' in kwargs.keys()):
+            kwargs['data_type'] = 'hard'
+
+        if (kwargs['data_type'] == 'hard'):
+            kwargs['member_type'] = Particle
+            kwargs['particle_type'] = 'hard'
+            key_add = [['r_min_index', np.int64], ['mass_min_index', np.int64], ['r_min_sq', np.float64], ['r_min_mass', np.float64], ['mass_min', np.float64], ['r_neighbor_crit_sq', np.float64], ['need_resolve_flag', bool], ['initial_step_flag', bool], ['n_neighbor_group', np.int64], ['n_neighbor_single', np.int64]]
+        elif (kwargs['data_type'] == 'sdar'):
             kwargs['member_type'] = SDARParticle
-        keys=[['time', np.float64], ['de', np.float64], ["etot_ref",np.float64],["ekin",np.float64],["epot",np.float64], ['gt_drift', np.float64], ['H', np.float64], ['de_interrupt', np.float64], ['dH_interrupt', np.float64], ['ds', np.float64], ['time_offset', np.float64], ['r_break_crit', np.float64], ['profile', SDARProfile]]
+        else:
+            raise ValueError('data_type is not supported, should be hard or sdar, given ',kwargs['data_type'])
+
+        keys=[['time', np.float64], ['de', np.float64], ["etot_ref",np.float64],["ekin",np.float64],["epot",np.float64], ['gt_drift', np.float64], ['H', np.float64], ['de_interrupt', np.float64], ['dH_interrupt', np.float64]]
+        keys = keys + key_add + [['ds', np.float64], ['time_offset', np.float64], ['r_break_crit', np.float64], ['profile', SDARProfile]]
         if ('slowdown' in kwargs.keys()):
             if (kwargs['slowdown']):
                 keys = keys + [['de_sd', np.float64], ["etot_sd",np.float64],["ekin_sd",np.float64],["epot_sd",np.float64], ['de_sd_change', np.float64], ['dH_sd_change', np.float64], ['de_sd_interrupt', np.float64], ['dH_sd_interrupt', np.float64], ['sd', (SlowDownGroup, {'with_indices':True})]]
@@ -256,13 +287,14 @@ class HermiteData(DictNpArrayMix):
     """ Hermite+SDAR integrator print column data, used in petar.hard.debug
     Keys: (class members)
         time (1D): current evolved time (counting from zero)
+        time_offset (1D): time offset to calculate the global time (time+time_offset)
         energy_phy (HermiteEnergy): physical energy data
         energy_sd (HermiteEnergy): slowdown energy data
         sd (SlowDownGroup): slowdown data
-        if (keyword data_type == 'hard'):
-            time_org (1D): original physical time
         profile (HermiteProfile): hermite profile
-        particles (ParticleGroup): particle group, if data_type=='hard', member_type is 'Particle'; if data_type=='hermite', member_type is 'HermiteParticle'.
+        particles (ParticleGroup): particle group, 
+            if data_type=='hard', member_type is 'petar.Particle', particle_type is 'hard'
+            if data_type=='hermite', member_type is 'petar.HermiteParticle'.
     """
 
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
@@ -276,25 +308,25 @@ class HermiteData(DictNpArrayMix):
             N_sd: int (0)
                 Number of slowdown pairs
             data_type: str (hard) 
-                hard: one more column 'time_org', 
-                      particle group has member_type 'Particle'
-                hermite: hermite sample particle type
+                hard: PeTar hard particle type
+                      the member_type of the particle group is 'petar.Particle'
+                      the particle_type of 'petar.Particle' is 'hermite'
+                hermite: isolated Hermite sample particle type
+                      the member_type of the particle group is 'petar.HermiteParticle'
         """
 
-        keys_add = []
         if (not 'data_type' in kwargs.keys()):
             kwargs['data_type'] = 'hard'
 
         if (kwargs['data_type'] == 'hard'):
             kwargs['member_type'] = Particle
-            kwargs['particle_type'] = 'hard'
-            keys_add = [['time_org', np.float64]]
+            kwargs['particle_type'] = 'hermite'
         elif (kwargs['data_type'] == 'hermite'):
             kwargs['member_type'] = HermiteParticle
         else:
             raise ValueError('data_type is not supported, should be hard or hermite, given ',kwargs['data_type'])
 
-        keys=[['time', np.float64], ['energy_phy', HermiteEnergy], ['energy_sd', HermiteEnergy], ['sd', SlowDownGroup]]
-        keys = keys + keys_add + [['profile', HermiteProfile], ['particles', ParticleGroup]]
+        keys=[['time', np.float64], ['time_offset', np.float64], ['energy_phy', HermiteEnergy], ['energy_sd', HermiteEnergy], ['sd', SlowDownGroup]]
+        keys = keys + [['profile', HermiteProfile], ['particles', ParticleGroup]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
     

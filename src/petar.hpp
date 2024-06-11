@@ -145,6 +145,10 @@ public:
     IOParams<PS::S64> adjust_group_write_option;
 #endif
     IOParams<PS::S64> append_switcher;
+    IOParams<PS::S64> record_id_start_one;
+    IOParams<PS::S64> record_id_end_one;
+    IOParams<PS::S64> record_id_start_two;
+    IOParams<PS::S64> record_id_end_two;
     IOParams<std::string> fname_snp;
     IOParams<std::string> fname_par;
     IOParams<std::string> fname_inp;
@@ -213,6 +217,10 @@ public:
                      adjust_group_write_option(input_par_store, 1, "write-group-info", "Print new and end of groups: 0: no print; 1: print to file [data filename prefix].group.[MPI rank] if -w >0"),
 #endif
                      append_switcher(input_par_store, 1, "a", "Data output style: 0 - create new output files and overwrite existing ones except snapshots; 1 - append new data to existing files"),
+                     record_id_start_one(input_par_store, 0, "record-id-start-one", "Starting of the first id range for hard dump recording every tree step"),
+                     record_id_end_one(input_par_store, 0, "record-id-end-one", "Ending of the first id range for hard dump; notice that the ending id is not included in hard dump"),
+                     record_id_start_two(input_par_store, 0, "record-id-start-two", "Starting of the 2nd id range for hard dump recording every tree step"),
+                     record_id_end_two(input_par_store, 0, "record-id-end-two", "Ending of the 2nd id range for hard dump; notice that the ending id is not included in hard dump"),
                      fname_snp(input_par_store, "data", "f", "Prefix of filenames for output data: [prefix].**"),
                      fname_par(input_par_store, "input.par", "p", "Input parameter file (this option should be used first before any other options)"),
                      fname_inp(input_par_store, "__NONE__", "snap-filename", "Input data file", NULL, false),
@@ -265,6 +273,10 @@ public:
             {adjust_group_write_option.key,   required_argument, &petar_flag, 24},
 #endif            
             {nstep_dt_soft_kepler.key,  required_argument, &petar_flag, 25},
+            {record_id_start_one.key,  required_argument, &petar_flag, 26},
+            {record_id_end_one.key,    required_argument, &petar_flag, 27},
+            {record_id_start_two.key,  required_argument, &petar_flag, 28},
+            {record_id_end_two.key,    required_argument, &petar_flag, 29},
             {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
         };
@@ -434,6 +446,26 @@ public:
                 case 25:
                     nstep_dt_soft_kepler.value = atof(optarg);
                     if(print_flag) nstep_dt_soft_kepler.print(std::cout);
+                    opt_used += 2;
+                    break;
+                case 26:
+                    record_id_start_one.value = atoi(optarg);
+                    if(print_flag) record_id_start_one.print(std::cout);
+                    opt_used += 2;
+                    break;
+                case 27:
+                    record_id_end_one.value = atoi(optarg);
+                    if(print_flag) record_id_end_one.print(std::cout);
+                    opt_used += 2;
+                    break;
+                case 28:
+                    record_id_start_two.value = atoi(optarg);
+                    if(print_flag) record_id_start_two.print(std::cout);
+                    opt_used += 2;
+                    break;
+                case 29:
+                    record_id_end_two.value = atoi(optarg);
+                    if(print_flag) record_id_end_two.print(std::cout);
                     opt_used += 2;
                     break;
                 default:
@@ -3331,6 +3363,12 @@ public:
 #endif
         hard_manager.ar_manager.interaction.ext_force = &hard_manager.h4_manager.interaction.ext_force;
 #endif        
+
+        // record id range
+        hard_manager.record_id_range.id_start_one = input_parameters.record_id_start_one.value;
+        hard_manager.record_id_range.id_end_one = input_parameters.record_id_end_one.value;
+        hard_manager.record_id_range.id_start_two = input_parameters.record_id_start_two.value;
+        hard_manager.record_id_range.id_end_two = input_parameters.record_id_end_two.value;
 
         // check consistence of paramters
         input_parameters.checkParams();

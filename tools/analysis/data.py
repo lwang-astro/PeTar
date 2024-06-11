@@ -323,52 +323,21 @@ class SimpleParticle(DictNpArrayMix):
                         frame='galactocentric', representation_type='cartesian', **parameters)
         return snap
         
-
-class Particle(SimpleParticle):
-    """ Particle class 
-        The particle data of PeTar. Depending on the compile configuration of PeTar, 
-        The data structures (columns) of the particle snapshots are different.
-        Using the correct keyword arguments in the initialization to control the member definition (Keys)
-
+class BaseParticle(SimpleParticle):
+    """ Base particle type of PeTar
+        The members include simple particle information, binary status and stellar evolution data
+       
     keys: (class members)
-        The final keys are a combination of sub keys depending on keyword arguments (kwargs) of initial function
-
-        Sub key list:
-
-        std: [inherit SimpleParticle]
-        bstat: binary_state: binary interruption state 
-        se: radius:        (1D): radius for merger checker
+        Members inherited from SimpleParticle: mass (1D), pos (2D,3), vel (2D,3) 
+            see help(petar.SimpleParticle)
+        binary_state (1D): binary interruption state
+        if (keyword argument 'interrupt_mode' == 'base', 'bse', 'bseEmp', 'mobse'):
+            radius:        (1D): radius for merger checker
             dm:            (1D): mass loss
             time_record    (1D): last time of interruption check
             time_interrupt (1D): next interruption time
-        bse: star  (SSEStarParameter): BSE based stellar evolution parameters
-        ptcl: r_search (1D): searching radius
-              id       (1D): identification
-              mass_bk  (1D): artificial particle parameter 1 
-              status   (1D): artificial particle parameter 2
-              r_in     (1D): changeover function inner boundary
-              r_out    (1D): changeover function outer boundary
-        hermite: dt    (1D): time step
-                 time  (1D): current time
-                 acc   (2D,3): acceleration x, y, z
-                 jerk  (2D,3): acceleration derivative x, y, z
-                 pot   (1D): potential
-        soft: acc_soft (2D,3): long-range interaction acceleration (particle-tree) x, y, z
-              pot      (1D): total potential
-              pot_soft (1D): long-range interaction potential
-              *pot_ext  (1D): external potential (only exist when keyword argument 'external_mode' is not 'none')
-              n_nb:    (1D): number of neighbors (short-interaction)
-
-        ends: the end part of keys depends on kwargs['particle_type']:
-             hermite:   ptcl + hermite
-             hard:      ptcl
-             soft (default): ptcl + soft 
-
-        final: the final combination of keys depends on kwargs['interrupt_mode']:
-             base:      std + bstat + se + ends
-             bse:       std + bstat + se + bse + ends
-             none (default): std + bstat + ends
-
+        if (keyword argument 'interrupt_mode' == 'bse', 'bseEmp', 'mobse'):
+            star  (SSEStarParameter): BSE based stellar evolution parameters
     """
 
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
@@ -377,8 +346,103 @@ class Particle(SimpleParticle):
         Parameters
         ----------
         keyword arguments:
-            particle_type: string (soft)
-               basic particle type: hermite, hard, soft
+            interrupt_mode: string (none)
+               PeTar interrupt mode (set in configure): base, bse, mobse, none
+               This option indicates whether columns of stellar evolution exist
+        """
+
+        keys_bstat = [['binary_state',np.int64]]
+        keys_se  = [['radius',np.float64],['dm',np.float64],['time_record',np.float64],['time_interrupt',np.float64]]    
+        
+        keys = keys_bstat
+        if ('interrupt_mode' in kwargs.keys()):
+            if (kwargs['interrupt_mode']=='base'):
+                keys = keys_bstat+keys_se
+            elif ('bse' in kwargs['interrupt_mode']):
+                keys = keys_bstat+keys_se+[['star',SSEStarParameter]]
+            
+        SimpleParticle.__init__(self, _dat, _offset, _append, **kwargs)
+        DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
+
+class HardParticle(BaseParticle):
+    """ Hard particle type of PeTar
+        The member include BaseParticle and searching radius, id, artificial particle data and changeover radii
+        
+    keys: (class members)
+        Members inherited from BaseParticle: see help(petar.BaseParticle)
+             Please set the keyword argument 'interrupt_mode' to determine the members of stellar evolution data
+        r_search (1D): searching radius
+        id       (1D): identification
+        mass_bk  (1D): artificial particle parameter 1 
+        status   (1D): artificial particle parameter 2
+        r_in     (1D): changeover function inner boundary
+        r_out    (1D): changeover function outer boundary
+    """
+
+    def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+
+        keyword arguments:
+            interrupt_mode: string (none)
+               PeTar interrupt mode (set in configure): base, bse, mobse, none
+               This option indicates whether columns of stellar evolution exist
+        """
+        keys = [['r_search',np.float64], ['id',np.int64], ['mass_bk',np.int64], ['status',np.int64], ['r_in',np.float64], ['r_out',np.float64]]
+
+        BaseParticle.__init__(self, _dat, _offset, _append, **kwargs)
+        DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
+
+class HermiteParticle(HardParticle):
+    """ Hermite particle type of PeTar
+        The member include HardParticle and dt, time, acc, jerk and pot
+        
+    keys: (class members)
+        Members inherited from HardParticle: see help(petar.HardParticle)
+             Please set the keyword argument 'interrupt_mode' to determine the members of stellar evolution data
+        dt    (1D): time step
+        time  (1D): current time
+        acc   (2D,3): acceleration x, y, z
+        jerk  (2D,3): acceleration derivative x, y, z
+        pot   (1D): potential
+    """
+
+    def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+
+        keyword arguments:
+            interrupt_mode: string (none)
+               PeTar interrupt mode (set in configure): base, bse, mobse, none
+               This option indicates whether columns of stellar evolution exist
+        """
+
+        keys = [['dt',np.float64],['time',np.float64],['acc',(np.float64,3)],['jerk',(np.float64,3)],['pot',np.float64]]
+
+        HardParticle.__init__(self, _dat, _offset, _append, **kwargs)
+        DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
+
+class Particle(HardParticle):
+    """ (Soft) Particle type of PeTar, also used in snapshot
+        The particle data of PeTar. Depending on the compile configuration of PeTar, 
+        The data structures (columns) of the particle snapshots are different.
+        Using the correct keyword arguments in the initialization to control the member definition (Keys)
+
+    keys: (class members)
+        Members inherited from HardParticle: see help(petar.HardParticle)
+             Please set the keyword argument 'interrupt_mode' to determine the members of stellar evolution data
+        acc_soft (2D,3): long-range interaction acceleration (particle-tree) x, y, z
+        pot      (1D): total potential
+        pot_soft (1D): long-range interaction potential
+        if (keyword argument 'external_mode' != 'none'):
+             pot_ext  (1D): external potential (only exist when keyword argument 'external_mode' is not 'none')
+        n_nb:    (1D): number of neighbors (short-interaction)
+    """
+
+    def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+
+        Parameters
+        ----------
+        keyword arguments:
             interrupt_mode: string (none)
                PeTar interrupt mode (set in configure): base, bse, mobse, none
                This option indicates whether columns of stellar evolution exist
@@ -387,29 +451,12 @@ class Particle(SimpleParticle):
                This option indicates whether the column of externa potential exist
         """
 
-        keys_bstat = [['binary_state',np.int64]]
-        keys_se  = [['radius',np.float64],['dm',np.float64],['time_record',np.float64],['time_interrupt',np.float64]]
-        keys_ptcl_add = [['r_search',np.float64], ['id',np.int64], ['mass_bk',np.int64], ['status',np.int64], ['r_in',np.float64], ['r_out',np.float64]]
-        keys_hermite_add = [['dt',np.float64],['time',np.float64],['acc',(np.float64,3)],['jerk',(np.float64,3)],['pot',np.float64]]
-        keys_soft_add = [['acc_soft',(np.float64,3)], ['pot',np.float64], ['pot_soft',np.float64], ['n_nb',np.int64]]
+        keys = [['acc_soft',(np.float64,3)], ['pot',np.float64], ['pot_soft',np.float64], ['n_nb',np.int64]]
         if ('external_mode' in kwargs.keys()):
             if (kwargs['external_mode']!='none'):
-                keys_soft_add = [['acc_soft',(np.float64,3)], ['pot',np.float64], ['pot_soft',np.float64], ['pot_ext',np.float64], ['n_nb',np.int64]]
+                keys = [['acc_soft',(np.float64,3)], ['pot',np.float64], ['pot_soft',np.float64], ['pot_ext',np.float64], ['n_nb',np.int64]]
 
-        keys_end =  keys_ptcl_add + keys_soft_add
-        if ('particle_type' in kwargs.keys()):
-            if (kwargs['particle_type']=='hermite'):
-                keys_end = keys_ptcl_add + keys_hermite_add
-            elif (kwargs['particle_type']=='hard'):
-                keys_end = keys_ptcl_add
-        keys=keys_bstat+keys_end
-        if ('interrupt_mode' in kwargs.keys()):
-            if (kwargs['interrupt_mode']=='base'):
-                keys = keys_bstat+keys_se+keys_end
-            elif ('bse' in kwargs['interrupt_mode']):
-                keys = keys_bstat+keys_se+[['star',SSEStarParameter]]+keys_end
-            
-        SimpleParticle.__init__(self, _dat, _offset, _append, **kwargs)
+        HardParticle.__init__(self, _dat, _offset, _append, **kwargs)
         DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
 
     def calcEtot(self):
@@ -422,7 +469,8 @@ class ParticleGroup(DictNpArrayMix):
     """ A group of particles
     Keys: (class members)
         n (1D): number of particles, when keyword argument N_column_exist=False, this member does not exist
-        p[x] (particle_type[kwargs]): particle data, [x] indicate the indice, counting from 0
+        cm (cm_type): center-of-the-mass particle data 
+        p[x] (member_type): particle data, [x] indicate the indice, counting from 0
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
@@ -431,12 +479,16 @@ class ParticleGroup(DictNpArrayMix):
         keyword arguments:
             member_type: type (SimpleParticle)
                 Member particle type
+            cm_type: type (SimpleParticle)
+                Center-of-the-mass particle type
             N_particle: int (0)
                 Number of particles (ignore the value in the column N)
                 If data path is provided in the initialization; the column N exists and this argument is not provided, 
                 the first value in column N is used to determine N_particle
             N_column_exist: bool (True)
                 if True, the class member n exists, otherwise not.
+            cm_column_exist: bool (True)
+                if True, the center-of-the-mass particle data exist, otherwise not
         """
 
         N_column_exist = True
@@ -454,9 +506,20 @@ class ParticleGroup(DictNpArrayMix):
 
         if 'N_particle' in kwargs.keys(): n = kwargs['N_particle']
 
+        cm_column_exist = True
+        if 'cm_column_exist' in kwargs.keys():
+            cm_column_exist = kwargs['cm_column_exist']
+
+        cm_type = SimpleParticle
+        if ('cm_type' in kwargs.keys()): cm_type = kwargs['cm_type']
+
+        if (cm_column_exist):
+            keys_cm = [['cm', cm_type]]
+            DictNpArrayMix.__init__(self, keys_cm, _dat, _offset+self.ncols, True, **kwargs)
+
         member_type = SimpleParticle
         if ('member_type' in kwargs.keys()): member_type = kwargs['member_type']
-
+        
         if (n>0):
             keys_p = [['p'+str(i), member_type] for i in range(n)]
             DictNpArrayMix.__init__(self, keys_p, _dat, _offset+self.ncols, True, **kwargs)

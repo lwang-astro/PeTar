@@ -62,21 +62,18 @@ public:
             ptcl_arti_bk.resizeNoInitialize(n_arti);
             for (int i=0; i<n_arti; i++) ptcl_arti_bk[i] = _ptcl_artifical[i];
         }
-        else n_arti = 0;
+        else {
+            n_arti = 0;
+            ptcl_arti_bk.resizeNoInitialize(n_arti);
+        }
         n_group = _n_group;
         backup_flag = true;
     }                
 
-    //! Dumping one cluster data for debuging
-    /* 
-       @param[in] _fname: file name to write
+    //! write one cluster data with BINARY format
+    /*! @param[in] _fout: file IO for write
      */
-    void dumpOneCluster(const char* _fname) {
-        std::FILE* fp = std::fopen(_fname,"w");
-        if (fp==NULL) {
-            std::cerr<<"Error: filename "<<_fname<<" cannot be open!\n";
-            abort();
-        }
+    void writeOneClusterBinary(FILE* fp) const {
         fwrite(&time_offset, sizeof(PS::F64),1,fp);
         fwrite(&time_end, sizeof(PS::F64),1,fp);
         // hard particles
@@ -94,31 +91,36 @@ public:
         fwrite(&n_group, sizeof(PS::S32), 1, fp);
         fwrite(n_member_in_group.getPointer(), sizeof(PS::S32), n_group, fp);
         for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].writeBinary(fp);
-        fclose(fp);
-#ifdef BSE_BASE
-        std::string fname_rand = std::string(_fname) + ".randseed";
-        fp = std::fopen(fname_rand.c_str(),"w");
-        if (fp==NULL) {
-            std::cerr<<"Error: filename "<<_fname<<" cannot be open!\n";
-            abort();
-        }
-        // rand seed
-        rand_manager.writeRandSeedLocal(fp);
-        fclose(fp);
-#endif
-        backup_flag = false;
     }
 
-    //! reading one cluster data for debuging
+    //! Dumping one cluster data and random seed for a given file name
     /* 
-       @param[in]  _fname: file name to read
+       @param[in] _fname: file name to write
+       @param[in] _append_flag: if true, append data into existing file and do not seperate random seed to different file
+       @param[in] _dump_once_flag: if true, only dump once for the same data
      */
-    void readOneCluster(const char* _fname) {
-        std::FILE* fp = std::fopen(_fname,"r");
+    void dumpOneClusterAndSeed(const char* _fname, const bool _append_flag, const bool _dump_once_flag=true) {
+        std::FILE* fp;
+        if (_append_flag) 
+            fp = std::fopen(_fname,"a");
+        else
+            fp = std::fopen(_fname,"w");
         if (fp==NULL) {
             std::cerr<<"Error: filename "<<_fname<<" cannot be open!\n";
             abort();
         }
+        writeOneClusterBinary(fp);
+#ifdef BSE_BASE
+        rand_manager.writeRandSeedLocalBinary(fp);
+#endif
+        fclose(fp);
+        if (_dump_once_flag) backup_flag = false;
+    }
+
+    //! read one cluster data with BINARY format
+    /*! @param[in] _fin: file IO for read
+     */
+    void readOneClusterBinary(FILE* fp) {
         // read time
         size_t rcount = fread(&time_offset, sizeof(PS::F64),1,fp);
         rcount += fread(&time_end, sizeof(PS::F64),1,fp);
@@ -176,19 +178,23 @@ public:
             ptcl_arti_bk.resizeNoInitialize(n_arti);
             for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].readBinary(fp);
         }
-        fclose(fp);
-#ifdef BSE_BASE
-        std::string fname_rand = std::string(_fname) + ".randseed";
-        fp = std::fopen(fname_rand.c_str(),"r");
+    }
+
+    //! reading one cluster data and random seed for a given filename
+    /* 
+       @param[in]  _fname: file name to read
+     */
+    void loadOneClusterAndSeed(const char* _fname) {
+        std::FILE* fp = std::fopen(_fname,"r");
         if (fp==NULL) {
-            std::cerr<<"Random seed file not found. Use input seed instead\n";
+            std::cerr<<"Error: filename "<<_fname<<" cannot be open!\n";
+            abort();
         }
-        else {
-            // read rand seed
-            rand_manager.readRandSeedLocal(fp);
-            fclose(fp);
-        }
+        readOneClusterBinary(fp);
+#ifdef BSE_BASE
+        rand_manager.readRandSeedLocalBinary(fp);
 #endif
+        fclose(fp);
     }
 
 };
@@ -221,28 +227,37 @@ public:
         clear();
     }
 
-    void dumpAll(const char *filename) {
-        std::string point(".");
-        std::string fname_prefix = filename + point + std::to_string(mpi_rank) + point;
+    void dumpAll(const char *filename, 
+                 const bool long_suffix_flag=true, 
+                 const bool append_flag=false, 
+                 const bool dump_once_flag = true, 
+                 const bool print_flag=true) {
+        std::string point("_");
         for (int i=0; i<size; i++) {
-            std::time_t tnow = std::time(nullptr);
-            std::string fname = fname_prefix + std::to_string(i) + point + std::to_string(dump_number++) + point + std::to_string(tnow);
             if (hard_dump[i].backup_flag) {
-                hard_dump[i].dumpOneCluster(fname.c_str());
-                std::cerr<<"Dump file: "<<fname.c_str()<<std::endl;
+                std::time_t tnow = std::time(nullptr);
+                std::string fname = filename;
+                if (long_suffix_flag) fname = filename + point + std::to_string(hard_dump[i].time_offset) + point + std::to_string(mpi_rank) + point + std::to_string(i) + point + std::to_string(dump_number++) + point + std::to_string(tnow);
+                hard_dump[i].dumpOneClusterAndSeed(fname.c_str(), append_flag, dump_once_flag);
+                if (print_flag) std::cerr<<"Dump file: "<<fname.c_str()<<std::endl;
             }
         }
     }
 
-    void dumpThread(const char *filename){
+    void dumpThread(const char *filename, 
+                    const bool long_suffix_flag=true, 
+                    const bool append_flag=false, 
+                    const bool dump_once_flag = true, 
+                    const bool print_flag=true){
         const PS::S32 ith = PS::Comm::getThreadNum();
-        std::string point(".");
-        std::time_t tnow = std::time(nullptr);
-        //std::tm *local_time = localtime(&tnow);
-        std::string fname = filename + point + std::to_string(mpi_rank) + point + std::to_string(ith) + point + std::to_string(dump_number++) + point + std::to_string(tnow);
         if (hard_dump[ith].backup_flag) {
-            hard_dump[ith].dumpOneCluster(fname.c_str());
-            std::cerr<<"Thread: "<<ith<<" Dump file: "<<fname.c_str()<<std::endl;
+            std::string point("_");
+            std::time_t tnow = std::time(nullptr);
+            //std::tm *local_time = localtime(&tnow);
+            std::string fname = filename;
+            if (long_suffix_flag) fname = filename + point + std::to_string(hard_dump[ith].time_offset) + point + std::to_string(mpi_rank) + point + std::to_string(ith) + point + std::to_string(dump_number++) + point + std::to_string(tnow);
+            hard_dump[ith].dumpOneClusterAndSeed(fname.c_str(), append_flag, dump_once_flag);
+            if (print_flag) std::cerr<<"Thread: "<<ith<<" Dump file: "<<fname.c_str()<<std::endl;
         }
     }
 
@@ -256,8 +271,10 @@ static HardDumpList hard_dump;
 
 #ifdef HARD_DUMP
 #define DATADUMP(expr) hard_dump.dumpThread(expr)
+#define DATADUMPAPP(expr) hard_dump.dumpThread(expr, false, true, false, false)
 #else
 #define DATADUMP(expr) 
+#define DATADUMPAPP(expr) 
 #endif
 
 #ifdef HARD_DEBUG
