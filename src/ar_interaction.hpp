@@ -1245,30 +1245,20 @@ public:
 		
 			Float pericent = _bin.semi * (1-_bin.ecc);
 
-			std::cout<< " cond_semi  " <<p1->radius<<" p1radius  "<< p1->star.r<< "p1->star.r"<<p2->radius<<" p2radius "<< p2->star.r<< "p2->star.r"<<" p1mass  "<< p1->mass<< " p2mass " << p2->mass<<" p1kw " << p1->star.kw << " p2kw " << p2->star.kw<< "check" << _bin.semi << " semi "<< _bin.ecc << " ecc " <<std::endl;
+			std::cout<< " cond_semi  " <<p1->radius<<" p1radius  "<< p1->star.r<< " p1->star.r "<<p2->radius<<" p2radius "<< p2->star.r<< " p2->star.r "<<" p1mass "<< p1->mass<< " p2mass " << p2->mass<<" p1kw " << p1->star.kw << " p2kw " << p2->star.kw<< " check " << _bin.semi << " semi "<< _bin.ecc << " ecc " <<std::endl;
 
                         if (bse_manager.isTDE(p1->star, p2->star, dr2*bse_manager.rscale*bse_manager.rscale)) {
                                 merge(std::sqrt(dr2), 0.0, 1.0, "HYPERBTDE: ");
-                                std::cout<<"HYPERBTDE found"<<std::endl;
+                                std::cout<<" HYPERBTDE found "<<std::endl;
                     
 		                std::cout<< " faketde  " <<p1->radius<<" p1radius  "<< p1->star.r<< " p1->star.r "<<p2->radius<<" p2radius "<< p2->star.r<< " p2->star.r "<< dr2*bse_manager.rscale*bse_manager.rscale<< " dr2scaled "<<std::endl;
-    
-		
+    		
 			}
-                        //else if (bse_manager.isMerge(p1->star, p2->star, dr2)) { 
-
-                       //std::cout<< " bubu  " <<p1->radius<<" p1radius  "<< p1->star.r<< "p1->star.r"<<p2->radius<<" p2radius "<< p2->star.r<< "p2->star.r"<<std::endl;
-			//Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
-                        //Float radius = p1->radius + p2->radius;
-   
-   
-			
+    
 			else if (bse_manager.isTDE(p1->star, p2->star,  pericent*pericent*bse_manager.rscale*bse_manager.rscale)) {
 			       
 		 		std::cout<<"HYPERBTDEPERI found"<<std::endl;
-
 			}
-
 
 			else if (dr2<radius*radius){
                                 merge(std::sqrt(dr2), 0.0, 1.0);

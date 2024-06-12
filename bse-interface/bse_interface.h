@@ -1594,7 +1594,7 @@ public:
         return is_fill;
     }
 
-        // SARA_i
+    // SARA_i JUNE
 
     
     //! check merger condition
@@ -1625,26 +1625,22 @@ public:
     bool isTDE(StarParameter& _star1, StarParameter& _star2, double _dr2) {
 
      
-	// TDE condition
+	// TDE condition on COs
+	
         int type1 = _star1.kw;
         int type2 = _star2.kw;
         double mco, mstar, rstar ;
 
 
-        //if (((type1 ==13  or type1==14)  and  (type2 <= 12)) or   ( (type2 ==13  or type2==14)  and  (type1 <= 12)) {
-
-
-	//if ((type1 ==13  or type1==14)  and  (type2 <= 12)) {
-          if ((type1 >-2)) {
+        if ((type1 ==13  or type1==14)  and  (type2 <= 12))  {
+ 
              mco = _star1.mt ;
              mstar = _star2.mt ;
              rstar = _star2.r ;
         
         }
-         //else if ((type2 ==13  or type2==14)  and  (type1 <= 12)) {
-         //else if ((type2 ==13  or type2==14)  and  (type1 <= 12)) {
-
-	   else if ((type2 >-2)) {
+         
+	else if ((type2 ==13  or type2==14)  and  (type1 <= 12)) { 
 
              mco = _star2.mt ;
              mstar = _star1.mt ;
@@ -1665,12 +1661,7 @@ public:
         bool is_tde = _dr2 <=  tidal_rad * tidal_rad ;
 
 
-	//std::cout<< "tderut " << tidal_rad <<" " << tidal_rad * tidal_rad  <<" " << _dr2 << " " << mco << " " << mstar <<std::endl;  
-
-
-	std::cout<< " faketdebse " << _dr2 <<" dr2 " << tidal_rad * tidal_rad  <<" tidal2 " << " " << mco << " " << mstar <<" k1 "<< type1 << " k2 " << type2 <<std::endl;
-
-
+	std::cout<< " tde-bse " << _dr2 << " dr2 " << tidal_rad * tidal_rad  << " tidal2 " << " mco " << mco << " mstar " << mstar <<" k1 "<< type1 << " k2 " << type2 <<std::endl;
 
         return is_tde ;
         

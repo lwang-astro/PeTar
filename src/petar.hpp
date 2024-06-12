@@ -3376,6 +3376,24 @@ public:
         }
 #endif
 #endif
+
+/*
+ * mod Long Giuliano Sara 12 June
+*/
+
+if (!restart_flag) {
+#pragma omp parallel for
+            for (PS::S32 i=0; i<stat.n_real_loc; i++) {
+                auto& pi = system_soft[i];
+                hard_manager.ar_manager.interaction.modifyOneParticle(system_soft[i], stat.time, stat.time);
+            }
+        }
+
+/*
+ * mod Long Giuliano Sara 12 June
+*/
+
+
 #ifdef ADJUST_GROUP_PRINT
         // group information
         if (write_style&&input_parameters.adjust_group_write_option.value==1) 
