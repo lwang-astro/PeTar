@@ -1857,7 +1857,7 @@ public:
 
         bool call_flag = false;
         // check time step and seperation criterion
-        if ((_dt1>=0 || _dt2>=0))  call_flag = true;
+        if ((_dt1>0 or _dt2>0) and _semi>0)  call_flag = true;
         
         // check whether this binary is in mass transfer or is disrupted, if not, check Roche, GW and tidal disruption condition
         if (!call_flag && !isMassTransfer(_binary_type_init) && !isDisrupt(_binary_type_init)) {
