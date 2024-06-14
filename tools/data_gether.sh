@@ -89,9 +89,9 @@ do
 	awk '{if (NF==45) {for (i=1; i<=5; i++) printf("%s ", $i); printf("0 0 0 "); for (i=6; i<=NF; i++) printf("%s ", $i); printf("\n");} else print $LINE}' $fout$s.dynamic_merge.tmp > $fout$s.dynamic_merge
 	rm -f $fout$s.dynamic_merge.tmp
 	egrep '^SN_kick' $fout$s |sed 's/SN_kick//g' >$fout$s.sn_kick
-	egrep '^Hyperbolic_TDE' $fout$s |sed 's/Hyperbolic_TDE//g' >$fout$s.hyperbolic_tde
+	egrep '^HYPERBTDE' $fout$s |sed 's/HYPERBTDE//g' >$fout$s.hyperbolic_tde
 	egrep '^Tide' $fout$s |sed 's/Tide//g' >$fout$s.tide
-	egrep -v '^(Dynamic_merge|SN_kick|Tide|Hyperbolic_TDE)' $fout$s |awk '{for (i=2;i<=NF;i++) printf("%s ", $i); printf("\n")}' >$fout$s.type_change
+	egrep -v '^(Dynamic_merge|SN_kick|Tide|HYPERBTDE)' $fout$s |awk '{for (i=2;i<=NF;i++) printf("%s ", $i); printf("\n")}' >$fout$s.type_change
     fi
 done
 

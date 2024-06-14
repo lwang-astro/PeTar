@@ -1245,25 +1245,26 @@ public:
 		
 			Float pericent = _bin.semi * (1-_bin.ecc);
 
-			std::cout<< " cond_semi  " <<p1->radius<<" p1radius  "<< p1->star.r<< " p1->star.r "<<p2->radius<<" p2radius "<< p2->star.r<< " p2->star.r "<<" p1mass "<< p1->mass<< " p2mass " << p2->mass<<" p1kw " << p1->star.kw << " p2kw " << p2->star.kw<< " check " << _bin.semi << " semi "<< _bin.ecc << " ecc " <<std::endl;
+			//std::cout<< " cond_semi  " <<p1->radius<<" p1radius  "<< p1->star.r<< " p1->star.r "<<p2->radius<<" p2radius "<< p2->star.r<< " p2->star.r "<<" p1mass "<< p1->mass<< " p2mass " << p2->mass<<" p1kw " << p1->star.kw << " p2kw " << p2->star.kw<< " check " << _bin.semi << " semi "<< _bin.ecc << " ecc " <<std::endl;
 
                         if (bse_manager.isTDE(p1->star, p2->star, dr2*bse_manager.rscale*bse_manager.rscale)) {
                                 merge(std::sqrt(dr2), 0.0, 1.0, "Hyperbolic_TDE: ");
                                 std::cout<<" HYPERBTDE found "<<std::endl;
                     
-		                std::cout<< " faketde  " <<p1->radius<<" p1radius  "<< p1->star.r<< " p1->star.r "<<p2->radius<<" p2radius "<< p2->star.r<< " p2->star.r "<< dr2*bse_manager.rscale*bse_manager.rscale<< " dr2scaled "<<std::endl;
+		                //std::cout<< " faketde  " <<p1->radius<<" p1radius  "<< p1->star.r<< " p1->star.r "<<p2->radius<<" p2radius "<< p2->star.r<< " p2->star.r "<< dr2*bse_manager.rscale*bse_manager.rscale<< " dr2scaled "<<std::endl;
     		
 			}
     
-			else if (bse_manager.isTDE(p1->star, p2->star,  pericent*pericent*bse_manager.rscale*bse_manager.rscale)) {
+			//else if (bse_manager.isTDE(p1->star, p2->star,  pericent*pericent*bse_manager.rscale*bse_manager.rscale)) {
 			       
-		 		std::cout<<"HYPERBTDEPERI found"<<std::endl;
-			}
+		 		//std::cout<<"HYPERBTDEPERI found"<<std::endl;
+			//}
+			//
 
 			else if (dr2<radius*radius){
                                 merge(std::sqrt(dr2), 0.0, 1.0);
 
-                                std::cout<< " dr2 " <<dr2<<" p1r  "<<p1->star.r<<" p2r "<<p2->star.r<<" p1mt " << p1->star.mt<<" p2mt "<< p2->star.mt<<" p1kw " << p1->star.kw << " p2kw " << p2->star.kw<< " p1 rad "<<p1->radius<< " p2 rad " <<p2->radius <<" p1mass  "<< p1->mass<< " p2mass " << p2->mass <<std::endl;
+                                //std::cout<< " dr2 " <<dr2<<" p1r  "<<p1->star.r<<" p2r "<<p2->star.r<<" p1mt " << p1->star.mt<<" p2mt "<< p2->star.mt<<" p1kw " << p1->star.kw << " p2kw " << p2->star.kw<< " p1 rad "<<p1->radius<< " p2 rad " <<p2->radius <<" p1mass  "<< p1->mass<< " p2mass " << p2->mass <<std::endl;
                        
 		       	}
                      

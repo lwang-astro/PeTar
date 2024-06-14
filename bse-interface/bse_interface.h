@@ -1661,7 +1661,7 @@ public:
         bool is_tde = _dr2 <=  tidal_rad * tidal_rad ;
 
 
-	std::cout<< " tde-bse " << _dr2 << " dr2 " << tidal_rad * tidal_rad  << " tidal2 " << " mco " << mco << " mstar " << mstar <<" k1 "<< type1 << " k2 " << type2 <<std::endl;
+	//std::cout<< " tde-bse " << _dr2 << " dr2 " << tidal_rad * tidal_rad  << " tidal2 " << " mco " << mco << " mstar " << mstar <<" k1 "<< type1 << " k2 " << type2 <<std::endl;
 
         return is_tde ;
         
