@@ -1,0 +1,5 @@
+<map id="ArtificialParticleManager::getOrbitalParticleN" name="ArtificialParticleManager::getOrbitalParticleN">
+<area shape="rect" id="node1" title="get orbitial particle number" alt="" coords="256,39,437,80"/>
+<area shape="rect" id="node2" href="$classArtificialParticleManager.html#a849acb19588a63ec450f606fd1bead3d" title="correct orbit&#45;samping/pseudo particles force" alt="" coords="5,5,208,47"/>
+<area shape="rect" id="node3" href="$classArtificialParticleManager.html#af3f6cdb0c22cffa6a12cc47fa32f79fa" title="create artificial particles" alt="" coords="16,71,197,112"/>
+</map>

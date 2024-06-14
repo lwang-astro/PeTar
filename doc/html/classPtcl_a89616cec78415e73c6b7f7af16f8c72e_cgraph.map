@@ -1,0 +1,6 @@
+<map id="Ptcl::setParticleCMAddress" name="Ptcl::setParticleCMAddress">
+<area shape="rect" id="node1" title="set status to c.m. particle address" alt="" coords="5,42,200,69"/>
+<area shape="rect" id="node2" href="$classArtificialParticleInformation.html#abc5b2bdadb35b2f7f5d4d589be9e12be" title="return whether the particle type is member" alt="" coords="496,5,696,47"/>
+<area shape="rect" id="node3" href="$classArtificialParticleInformation.html#a5270d8aa4301b8236c1247592c8c9512" title="set status" alt="" coords="248,64,448,105"/>
+<area shape="rect" id="node4" href="$classArtificialParticleInformation.html#ae87f07e0baa5ec2a19c6b73e191825bc" title="return whether the particle type is artificial" alt="" coords="496,71,696,112"/>
+</map>

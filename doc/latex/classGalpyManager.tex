@@ -1,0 +1,701 @@
+\hypertarget{classGalpyManager}{}\doxysection{Galpy\+Manager Class Reference}
+\label{classGalpyManager}\index{GalpyManager@{GalpyManager}}
+
+
+A class to manager the A\+PI to Galpy.  
+
+
+
+
+{\ttfamily \#include $<$galpy\+\_\+interface.\+h$>$}
+
+
+
+Collaboration diagram for Galpy\+Manager\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=196pt]{classGalpyManager__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classGalpyManager_ae2744681ee872cd102142706394a3f55}{Galpy\+Manager}} ()
+\item 
+void \mbox{\hyperlink{classGalpyManager_a8aebb589a95e4f322c638ee740fbb9f3}{print\+Data}} (std\+::ostream \&fout)
+\begin{DoxyCompactList}\small\item\em print current potential data \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classGalpyManager_ac6ce59845e4b863a3fce47c18e09631a}{initial}} (const \mbox{\hyperlink{classIOParamsGalpy}{I\+O\+Params\+Galpy}} \&\+\_\+input, const double \+\_\+time, const std\+::string \+\_\+conf\+\_\+name, const bool \+\_\+restart\+\_\+flag, const bool \+\_\+print\+\_\+flag=false)
+\begin{DoxyCompactList}\small\item\em initialization function \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classGalpyManager_a7e35973fb12c11ca65ca0d0462c6c4dd}{update\+Potential\+Set}} ()
+\begin{DoxyCompactList}\small\item\em generate potentail args \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classGalpyManager_a0731140835f4392b060760a608e5e96d}{add\+Potential\+From\+String}} (const std\+::string \&\+\_\+type\+\_\+args, const bool \+\_\+reset\+\_\+flag, const bool \+\_\+print\+\_\+flag)
+\begin{DoxyCompactList}\small\item\em Update types and arguments from type-\/args string. \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classGalpyManager_a3cf2c36189aa2bd879faf8748e1ef871}{update\+M\+W\+Potential\+Evolve}} (const double \&\+\_\+system\+\_\+time, const bool \+\_\+print\+\_\+flag, const bool \+\_\+initial\+\_\+flag)
+\begin{DoxyCompactList}\small\item\em Update M\+Wpotential evolve (Gomez et al. 2010) \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classGalpyManager_a912e9c5fc587218525f51a8b71e55735}{update\+Potential\+From\+File}} (const double \&\+\_\+system\+\_\+time, const bool \+\_\+print\+\_\+flag)
+\begin{DoxyCompactList}\small\item\em Update types and arguments from configure file if update\+\_\+time $<$= particle system time. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classGalpyManager_a2b9c41229c1b4a6d5c06e18017298357}{update\+Potential}} (const double \&\+\_\+system\+\_\+time, const bool \+\_\+print\+\_\+flag)
+\begin{DoxyCompactList}\small\item\em Update Potential types and arguments based on time. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classGalpyManager_a84d80784f5da870ff86d61bf29eb98d1}{write\+Potential\+Pars}} (const std\+::string \&\+\_\+filename, const double \&\+\_\+system\+\_\+time)
+\begin{DoxyCompactList}\small\item\em write potential parameters for restart \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classGalpyManager_accd0a3c5a62b628e4a9e002f8ec10ad4}{reset\+Pot\+Acc}} ()
+\begin{DoxyCompactList}\small\item\em reset acceleraltion of potential \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classGalpyManager_acce39be5c07a685b73a888b4298fd0da}{kick\+Move\+Pot}} (const double dt)
+\begin{DoxyCompactList}\small\item\em kick velocity of moving potential (mode 2) \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classGalpyManager_a56875a530c45fac6439a6d6d4f671b3d}{drift\+Move\+Pot}} (const double dt)
+\begin{DoxyCompactList}\small\item\em drift position of moving potential (mode 2) \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classGalpyManager_a60bef4e78023b1dc281e6cb2cffd813e}{calc\+Move\+Pot\+Acc\+From\+Pot}} (const double \+\_\+time, const double $\ast$pos\+\_\+pcm)
+\begin{DoxyCompactList}\small\item\em calculate acceleration for moving potentials from other potentials \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classGalpyManager_ab6b486c9d6318238f363a6656ffc7824}{calc\+Acc\+Pot}} (double $\ast$acc, double \&pot, const double \+\_\+time, const double gm, const double $\ast$pos\+\_\+g, const double $\ast$pos\+\_\+l)
+\begin{DoxyCompactList}\small\item\em calculate acceleration and potential at give position \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classGalpyManager_aa1e9c6eb40673066e5a7ee87d5a2e641}{write\+Data\+To\+File}} (const std\+::string \&\+\_\+filename)
+\begin{DoxyCompactList}\small\item\em write data for restart \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classGalpyManager_a75135e141ff8b0e37237aa2bd540d84a}{read\+Data\+From\+File}} (const std\+::string \&\+\_\+filename, const bool \+\_\+print\+\_\+flag)
+\begin{DoxyCompactList}\small\item\em read configure data for restart \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classGalpyManager_a1b5f2eebb24a0690e4b168c79bada7b8}{evolve\+Changing\+Arguments}} (const double \&\+\_\+time, const bool \+\_\+print\+\_\+flag)
+\begin{DoxyCompactList}\small\item\em calculate new arguments for changing potentials \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classGalpyManager_a5bc0d4b2e49875e6706fb03c4a11e9a2}{free\+Potential\+Args}} ()
+\item 
+void \mbox{\hyperlink{classGalpyManager_a1b462774660dccb211b5845458c07eca}{clear}} ()
+\item 
+\mbox{\hyperlink{classGalpyManager_abb225b337233061de8ffff35e67a53dc}{$\sim$\+Galpy\+Manager}} ()
+\end{DoxyCompactItemize}
+\doxysubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static void \mbox{\hyperlink{classGalpyManager_a982ceeab737762887eec4a15035fc594}{print\+Reference}} (std\+::ostream \&fout, const int offset=4)
+\begin{DoxyCompactList}\small\item\em print reference to cite \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+std\+::vector$<$ int $>$ \mbox{\hyperlink{classGalpyManager_a7d919be67c48a3a511dd5c8d6d70547c}{pot\+\_\+type\+\_\+offset}}
+\item 
+std\+::vector$<$ int $>$ \mbox{\hyperlink{classGalpyManager_abcb9a7057b013d9e922e249d95acef5c}{pot\+\_\+type}}
+\item 
+std\+::vector$<$ int $>$ \mbox{\hyperlink{classGalpyManager_a6ed970dba7e92f37d8306f33cc9b979c}{pot\+\_\+args\+\_\+offset}}
+\item 
+std\+::vector$<$ double $>$ \mbox{\hyperlink{classGalpyManager_adaf966854f08d01f32948d56205d4d64}{pot\+\_\+args}}
+\item 
+double \mbox{\hyperlink{classGalpyManager_a93dbb25582316d2279fca8f40635fd5d}{time}}
+\item 
+std\+::vector$<$ \mbox{\hyperlink{structChangeArgument}{Change\+Argument}} $>$ \mbox{\hyperlink{classGalpyManager_a3e7b79940f2c525fd57407e9c7cd02fa}{change\+\_\+args}}
+\item 
+std\+::vector$<$ int $>$ \mbox{\hyperlink{classGalpyManager_a23c4eea8e55af4a49fe22b9564b1d5f6}{change\+\_\+args\+\_\+offset}}
+\item 
+std\+::vector$<$ \mbox{\hyperlink{structPotentialSetPar}{Potential\+Set\+Par}} $>$ \mbox{\hyperlink{classGalpyManager_ac850c53c0b2b205b1d06b910f336cb7a}{pot\+\_\+set\+\_\+pars}}
+\item 
+std\+::vector$<$ \mbox{\hyperlink{structPotentialSet}{Potential\+Set}} $>$ \mbox{\hyperlink{classGalpyManager_a19b099354f7018e7413a234bbc37b14e}{pot\+\_\+sets}}
+\item 
+double \mbox{\hyperlink{classGalpyManager_aca2f48de54b5f54ea585e6b21d6a12a9}{update\+\_\+time}}
+\item 
+double \mbox{\hyperlink{classGalpyManager_a81154de8cec300ccefb7ef9acba8e592}{rscale}}
+\item 
+double \mbox{\hyperlink{classGalpyManager_aa3dae1cb65b66097ce9f98bb17f4f518}{vscale}}
+\item 
+double \mbox{\hyperlink{classGalpyManager_afb09a3d7a8191c4faf86bb65e7bfb891}{tscale}}
+\item 
+double \mbox{\hyperlink{classGalpyManager_aaa6e343b822ffdcbfe3a8b6a95f2cfd5}{fscale}}
+\item 
+double \mbox{\hyperlink{classGalpyManager_a2d2e5788c1a26a1d5790ced0b4ffc8e0}{pscale}}
+\item 
+double \mbox{\hyperlink{classGalpyManager_ab62c12445528d34451bff6f6d24a54d0}{gmscale}}
+\item 
+std\+::ifstream \mbox{\hyperlink{classGalpyManager_a8277cbb6fe9d9f7c926f95ffbbe7e582}{fconf}}
+\item 
+std\+::string \mbox{\hyperlink{classGalpyManager_a251e44bc3eaf99cc2ce681fceb08b433}{set\+\_\+name}}
+\item 
+std\+::string \mbox{\hyperlink{classGalpyManager_a13b30c8bea8a66d38c8ec181ec562ac5}{set\+\_\+parfile}}
+\item 
+\mbox{\hyperlink{classMWPotentialEvolve}{M\+W\+Potential\+Evolve}} \mbox{\hyperlink{classGalpyManager_a88b404da59c1a5d91624bfcc24f3800b}{mw\+\_\+evolve}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+A class to manager the A\+PI to Galpy. 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classGalpyManager_ae2744681ee872cd102142706394a3f55}\label{classGalpyManager_ae2744681ee872cd102142706394a3f55}} 
+\index{GalpyManager@{GalpyManager}!GalpyManager@{GalpyManager}}
+\index{GalpyManager@{GalpyManager}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{GalpyManager()}{GalpyManager()}}
+{\footnotesize\ttfamily Galpy\+Manager\+::\+Galpy\+Manager (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classGalpyManager_abb225b337233061de8ffff35e67a53dc}\label{classGalpyManager_abb225b337233061de8ffff35e67a53dc}} 
+\index{GalpyManager@{GalpyManager}!````~GalpyManager@{$\sim$GalpyManager}}
+\index{````~GalpyManager@{$\sim$GalpyManager}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{$\sim$GalpyManager()}{~GalpyManager()}}
+{\footnotesize\ttfamily Galpy\+Manager\+::$\sim$\+Galpy\+Manager (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classGalpyManager_abb225b337233061de8ffff35e67a53dc_cgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classGalpyManager_a0731140835f4392b060760a608e5e96d}\label{classGalpyManager_a0731140835f4392b060760a608e5e96d}} 
+\index{GalpyManager@{GalpyManager}!addPotentialFromString@{addPotentialFromString}}
+\index{addPotentialFromString@{addPotentialFromString}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{addPotentialFromString()}{addPotentialFromString()}}
+{\footnotesize\ttfamily bool Galpy\+Manager\+::add\+Potential\+From\+String (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{\+\_\+type\+\_\+args,  }\item[{const bool}]{\+\_\+reset\+\_\+flag,  }\item[{const bool}]{\+\_\+print\+\_\+flag }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Update types and arguments from type-\/args string. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+type\+\_\+args} & potential type and argment strings \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+reset\+\_\+flag} & if true, reset potential set, otherwise add to current existing set \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+print\+\_\+flag} & if true, print the read types and arguments.\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+initial flag\+: if potential is updated, return true; else return false 
+\end{DoxyReturn}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classGalpyManager_a0731140835f4392b060760a608e5e96d_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classGalpyManager_ab6b486c9d6318238f363a6656ffc7824}\label{classGalpyManager_ab6b486c9d6318238f363a6656ffc7824}} 
+\index{GalpyManager@{GalpyManager}!calcAccPot@{calcAccPot}}
+\index{calcAccPot@{calcAccPot}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{calcAccPot()}{calcAccPot()}}
+{\footnotesize\ttfamily void Galpy\+Manager\+::calc\+Acc\+Pot (\begin{DoxyParamCaption}\item[{double $\ast$}]{acc,  }\item[{double \&}]{pot,  }\item[{const double}]{\+\_\+time,  }\item[{const double}]{gm,  }\item[{const double $\ast$}]{pos\+\_\+g,  }\item[{const double $\ast$}]{pos\+\_\+l }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate acceleration and potential at give position 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em acc} & \mbox{[}3\mbox{]} acceleration to return \\
+\hline
+\mbox{\texttt{ out}}  & {\em pot} & potential to return \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+time} & time in input unit \\
+\hline
+\mbox{\texttt{ in}}  & {\em gm} & G$\ast$mass of particles \mbox{[}input unit\mbox{]} \\
+\hline
+\mbox{\texttt{ in}}  & {\em pos\+\_\+g} & position of particles in the galactic frame \mbox{[}input unit\mbox{]} \\
+\hline
+\mbox{\texttt{ in}}  & {\em pos\+\_\+l} & position of particles in the particle system frame \mbox{[}input unit\mbox{]} \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classGalpyManager_a60bef4e78023b1dc281e6cb2cffd813e}\label{classGalpyManager_a60bef4e78023b1dc281e6cb2cffd813e}} 
+\index{GalpyManager@{GalpyManager}!calcMovePotAccFromPot@{calcMovePotAccFromPot}}
+\index{calcMovePotAccFromPot@{calcMovePotAccFromPot}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{calcMovePotAccFromPot()}{calcMovePotAccFromPot()}}
+{\footnotesize\ttfamily void Galpy\+Manager\+::calc\+Move\+Pot\+Acc\+From\+Pot (\begin{DoxyParamCaption}\item[{const double}]{\+\_\+time,  }\item[{const double $\ast$}]{pos\+\_\+pcm }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate acceleration for moving potentials from other potentials 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+time} & current time \mbox{[}input unit\mbox{]} of particle system \\
+\hline
+\mbox{\texttt{ in}}  & {\em pos\+\_\+pcm} & position of particle system in the galactic frame \mbox{[}input unit\mbox{]} for mode 1 potential \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classGalpyManager_a1b462774660dccb211b5845458c07eca}\label{classGalpyManager_a1b462774660dccb211b5845458c07eca}} 
+\index{GalpyManager@{GalpyManager}!clear@{clear}}
+\index{clear@{clear}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{clear()}{clear()}}
+{\footnotesize\ttfamily void Galpy\+Manager\+::clear (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classGalpyManager_a1b462774660dccb211b5845458c07eca_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classGalpyManager_a1b462774660dccb211b5845458c07eca_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classGalpyManager_a56875a530c45fac6439a6d6d4f671b3d}\label{classGalpyManager_a56875a530c45fac6439a6d6d4f671b3d}} 
+\index{GalpyManager@{GalpyManager}!driftMovePot@{driftMovePot}}
+\index{driftMovePot@{driftMovePot}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{driftMovePot()}{driftMovePot()}}
+{\footnotesize\ttfamily void Galpy\+Manager\+::drift\+Move\+Pot (\begin{DoxyParamCaption}\item[{const double}]{dt }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+drift position of moving potential (mode 2) 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em dt} & time step for kick \mbox{[}input unit\mbox{]} \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classGalpyManager_a1b5f2eebb24a0690e4b168c79bada7b8}\label{classGalpyManager_a1b5f2eebb24a0690e4b168c79bada7b8}} 
+\index{GalpyManager@{GalpyManager}!evolveChangingArguments@{evolveChangingArguments}}
+\index{evolveChangingArguments@{evolveChangingArguments}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{evolveChangingArguments()}{evolveChangingArguments()}}
+{\footnotesize\ttfamily bool Galpy\+Manager\+::evolve\+Changing\+Arguments (\begin{DoxyParamCaption}\item[{const double \&}]{\+\_\+time,  }\item[{const bool}]{\+\_\+print\+\_\+flag }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate new arguments for changing potentials 
+
+Change index counts from 0 inside the local potential set If change index is -\/1, change the gm of potential set instead. To find the correct potential argument, the pot\+\_\+args\+\_\+offset is needed.
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+time} & new time (Galpy Unit) \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+print\+\_\+flag} & if true, print updated argument \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+if changed, return true 
+\end{DoxyReturn}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classGalpyManager_a1b5f2eebb24a0690e4b168c79bada7b8_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classGalpyManager_a5bc0d4b2e49875e6706fb03c4a11e9a2}\label{classGalpyManager_a5bc0d4b2e49875e6706fb03c4a11e9a2}} 
+\index{GalpyManager@{GalpyManager}!freePotentialArgs@{freePotentialArgs}}
+\index{freePotentialArgs@{freePotentialArgs}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{freePotentialArgs()}{freePotentialArgs()}}
+{\footnotesize\ttfamily void Galpy\+Manager\+::free\+Potential\+Args (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classGalpyManager_a5bc0d4b2e49875e6706fb03c4a11e9a2_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classGalpyManager_a5bc0d4b2e49875e6706fb03c4a11e9a2_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classGalpyManager_ac6ce59845e4b863a3fce47c18e09631a}\label{classGalpyManager_ac6ce59845e4b863a3fce47c18e09631a}} 
+\index{GalpyManager@{GalpyManager}!initial@{initial}}
+\index{initial@{initial}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{initial()}{initial()}}
+{\footnotesize\ttfamily void Galpy\+Manager\+::initial (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classIOParamsGalpy}{I\+O\+Params\+Galpy}} \&}]{\+\_\+input,  }\item[{const double}]{\+\_\+time,  }\item[{const std\+::string}]{\+\_\+conf\+\_\+name,  }\item[{const bool}]{\+\_\+restart\+\_\+flag,  }\item[{const bool}]{\+\_\+print\+\_\+flag = {\ttfamily false} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+initialization function 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+input} & input parameters \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+time} & current system time \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+conf\+\_\+name} & galpy configure file name for restart \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+restart\+\_\+flag} & if true, read the configure file for restart \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+print\+\_\+flag} & if true, printing information to std\+::cout \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classGalpyManager_ac6ce59845e4b863a3fce47c18e09631a_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=279pt]{classGalpyManager_ac6ce59845e4b863a3fce47c18e09631a_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classGalpyManager_acce39be5c07a685b73a888b4298fd0da}\label{classGalpyManager_acce39be5c07a685b73a888b4298fd0da}} 
+\index{GalpyManager@{GalpyManager}!kickMovePot@{kickMovePot}}
+\index{kickMovePot@{kickMovePot}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{kickMovePot()}{kickMovePot()}}
+{\footnotesize\ttfamily void Galpy\+Manager\+::kick\+Move\+Pot (\begin{DoxyParamCaption}\item[{const double}]{dt }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+kick velocity of moving potential (mode 2) 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em dt} & time step for kick \mbox{[}input unit\mbox{]} \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classGalpyManager_a8aebb589a95e4f322c638ee740fbb9f3}\label{classGalpyManager_a8aebb589a95e4f322c638ee740fbb9f3}} 
+\index{GalpyManager@{GalpyManager}!printData@{printData}}
+\index{printData@{printData}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{printData()}{printData()}}
+{\footnotesize\ttfamily void Galpy\+Manager\+::print\+Data (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{fout }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print current potential data 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classGalpyManager_a8aebb589a95e4f322c638ee740fbb9f3_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classGalpyManager_a982ceeab737762887eec4a15035fc594}\label{classGalpyManager_a982ceeab737762887eec4a15035fc594}} 
+\index{GalpyManager@{GalpyManager}!printReference@{printReference}}
+\index{printReference@{printReference}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{printReference()}{printReference()}}
+{\footnotesize\ttfamily static void Galpy\+Manager\+::print\+Reference (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{fout,  }\item[{const int}]{offset = {\ttfamily 4} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+print reference to cite 
+
+\mbox{\Hypertarget{classGalpyManager_a75135e141ff8b0e37237aa2bd540d84a}\label{classGalpyManager_a75135e141ff8b0e37237aa2bd540d84a}} 
+\index{GalpyManager@{GalpyManager}!readDataFromFile@{readDataFromFile}}
+\index{readDataFromFile@{readDataFromFile}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{readDataFromFile()}{readDataFromFile()}}
+{\footnotesize\ttfamily void Galpy\+Manager\+::read\+Data\+From\+File (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{\+\_\+filename,  }\item[{const bool}]{\+\_\+print\+\_\+flag }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read configure data for restart 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classGalpyManager_a75135e141ff8b0e37237aa2bd540d84a_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classGalpyManager_a75135e141ff8b0e37237aa2bd540d84a_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classGalpyManager_accd0a3c5a62b628e4a9e002f8ec10ad4}\label{classGalpyManager_accd0a3c5a62b628e4a9e002f8ec10ad4}} 
+\index{GalpyManager@{GalpyManager}!resetPotAcc@{resetPotAcc}}
+\index{resetPotAcc@{resetPotAcc}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{resetPotAcc()}{resetPotAcc()}}
+{\footnotesize\ttfamily void Galpy\+Manager\+::reset\+Pot\+Acc (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+reset acceleraltion of potential 
+
+\mbox{\Hypertarget{classGalpyManager_a3cf2c36189aa2bd879faf8748e1ef871}\label{classGalpyManager_a3cf2c36189aa2bd879faf8748e1ef871}} 
+\index{GalpyManager@{GalpyManager}!updateMWPotentialEvolve@{updateMWPotentialEvolve}}
+\index{updateMWPotentialEvolve@{updateMWPotentialEvolve}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{updateMWPotentialEvolve()}{updateMWPotentialEvolve()}}
+{\footnotesize\ttfamily bool Galpy\+Manager\+::update\+M\+W\+Potential\+Evolve (\begin{DoxyParamCaption}\item[{const double \&}]{\+\_\+system\+\_\+time,  }\item[{const bool}]{\+\_\+print\+\_\+flag,  }\item[{const bool}]{\+\_\+initial\+\_\+flag }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Update M\+Wpotential evolve (Gomez et al. 2010) 
+
+Assume time unit is Myr! 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+system\+\_\+time} & the time of globular particley system in Pe\+Tar. The time is transferred based on the time scaling factor \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+print\+\_\+flag} & if true, print the read types and arguments. \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+initial\+\_\+flag} & if true, this is the first time, potential parameter array will be generated. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+true if potential is updated (always) else false 
+\end{DoxyReturn}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classGalpyManager_a3cf2c36189aa2bd879faf8748e1ef871_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classGalpyManager_a3cf2c36189aa2bd879faf8748e1ef871_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classGalpyManager_a2b9c41229c1b4a6d5c06e18017298357}\label{classGalpyManager_a2b9c41229c1b4a6d5c06e18017298357}} 
+\index{GalpyManager@{GalpyManager}!updatePotential@{updatePotential}}
+\index{updatePotential@{updatePotential}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{updatePotential()}{updatePotential()}}
+{\footnotesize\ttfamily void Galpy\+Manager\+::update\+Potential (\begin{DoxyParamCaption}\item[{const double \&}]{\+\_\+system\+\_\+time,  }\item[{const bool}]{\+\_\+print\+\_\+flag }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Update Potential types and arguments based on time. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+system\+\_\+time} & the time of globular particley system in Pe\+Tar. The time is transferred based on the time scaling factor \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+print\+\_\+flag} & if true, print the read types and arguments. \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classGalpyManager_a2b9c41229c1b4a6d5c06e18017298357_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=328pt]{classGalpyManager_a2b9c41229c1b4a6d5c06e18017298357_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classGalpyManager_a912e9c5fc587218525f51a8b71e55735}\label{classGalpyManager_a912e9c5fc587218525f51a8b71e55735}} 
+\index{GalpyManager@{GalpyManager}!updatePotentialFromFile@{updatePotentialFromFile}}
+\index{updatePotentialFromFile@{updatePotentialFromFile}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{updatePotentialFromFile()}{updatePotentialFromFile()}}
+{\footnotesize\ttfamily bool Galpy\+Manager\+::update\+Potential\+From\+File (\begin{DoxyParamCaption}\item[{const double \&}]{\+\_\+system\+\_\+time,  }\item[{const bool}]{\+\_\+print\+\_\+flag }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Update types and arguments from configure file if update\+\_\+time $<$= particle system time. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+system\+\_\+time} & the time of globular particley system in Pe\+Tar. The time is transferred based on the time scaling factor \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+print\+\_\+flag} & if true, print the read types and arguments.\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+true if potential is updated; else false 
+\end{DoxyReturn}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classGalpyManager_a912e9c5fc587218525f51a8b71e55735_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classGalpyManager_a7e35973fb12c11ca65ca0d0462c6c4dd}\label{classGalpyManager_a7e35973fb12c11ca65ca0d0462c6c4dd}} 
+\index{GalpyManager@{GalpyManager}!updatePotentialSet@{updatePotentialSet}}
+\index{updatePotentialSet@{updatePotentialSet}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{updatePotentialSet()}{updatePotentialSet()}}
+{\footnotesize\ttfamily void Galpy\+Manager\+::update\+Potential\+Set (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+generate potentail args 
+
+clear the old potentialset first Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classGalpyManager_a7e35973fb12c11ca65ca0d0462c6c4dd_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classGalpyManager_a7e35973fb12c11ca65ca0d0462c6c4dd_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classGalpyManager_aa1e9c6eb40673066e5a7ee87d5a2e641}\label{classGalpyManager_aa1e9c6eb40673066e5a7ee87d5a2e641}} 
+\index{GalpyManager@{GalpyManager}!writeDataToFile@{writeDataToFile}}
+\index{writeDataToFile@{writeDataToFile}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{writeDataToFile()}{writeDataToFile()}}
+{\footnotesize\ttfamily void Galpy\+Manager\+::write\+Data\+To\+File (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{\+\_\+filename }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write data for restart 
+
+Write data sctructure\+: Time N\+\_\+set Mode\mbox{[}\+:\mbox{]} \# N\+\_\+set\+: set mode After first line, the format is (size, array) pot\+\_\+set\+\_\+par\+: \# mode, gm, pos, vel per line pot\+\_\+type\+\_\+offset \# N\+\_\+set+1\+: number of pots per set pot\+\_\+type \# N\+\_\+pot\+: pot type list pot\+\_\+args\+\_\+offset \# N\+\_\+set+1\+: number of arguments per set pot\+\_\+args \# N\+\_\+pot\+\_\+arg pot argument list change\+\_\+args\+\_\+offset \# N\+\_\+set+1\+: number of changing arguments per set change\+\_\+args \# N\+\_\+change\+: changing arg index, mode, rate
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+filename} & file to save data \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classGalpyManager_aa1e9c6eb40673066e5a7ee87d5a2e641_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classGalpyManager_a84d80784f5da870ff86d61bf29eb98d1}\label{classGalpyManager_a84d80784f5da870ff86d61bf29eb98d1}} 
+\index{GalpyManager@{GalpyManager}!writePotentialPars@{writePotentialPars}}
+\index{writePotentialPars@{writePotentialPars}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{writePotentialPars()}{writePotentialPars()}}
+{\footnotesize\ttfamily void Galpy\+Manager\+::write\+Potential\+Pars (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{\+\_\+filename,  }\item[{const double \&}]{\+\_\+system\+\_\+time }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write potential parameters for restart 
+
+Precision is set to 14 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+filename} & file to save data \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+time} & current time \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classGalpyManager_a84d80784f5da870ff86d61bf29eb98d1_cgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classGalpyManager_a3e7b79940f2c525fd57407e9c7cd02fa}\label{classGalpyManager_a3e7b79940f2c525fd57407e9c7cd02fa}} 
+\index{GalpyManager@{GalpyManager}!change\_args@{change\_args}}
+\index{change\_args@{change\_args}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{change\_args}{change\_args}}
+{\footnotesize\ttfamily std\+::vector$<$\mbox{\hyperlink{structChangeArgument}{Change\+Argument}}$>$ Galpy\+Manager\+::change\+\_\+args}
+
+\mbox{\Hypertarget{classGalpyManager_a23c4eea8e55af4a49fe22b9564b1d5f6}\label{classGalpyManager_a23c4eea8e55af4a49fe22b9564b1d5f6}} 
+\index{GalpyManager@{GalpyManager}!change\_args\_offset@{change\_args\_offset}}
+\index{change\_args\_offset@{change\_args\_offset}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{change\_args\_offset}{change\_args\_offset}}
+{\footnotesize\ttfamily std\+::vector$<$int$>$ Galpy\+Manager\+::change\+\_\+args\+\_\+offset}
+
+\mbox{\Hypertarget{classGalpyManager_a8277cbb6fe9d9f7c926f95ffbbe7e582}\label{classGalpyManager_a8277cbb6fe9d9f7c926f95ffbbe7e582}} 
+\index{GalpyManager@{GalpyManager}!fconf@{fconf}}
+\index{fconf@{fconf}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{fconf}{fconf}}
+{\footnotesize\ttfamily std\+::ifstream Galpy\+Manager\+::fconf}
+
+\mbox{\Hypertarget{classGalpyManager_aaa6e343b822ffdcbfe3a8b6a95f2cfd5}\label{classGalpyManager_aaa6e343b822ffdcbfe3a8b6a95f2cfd5}} 
+\index{GalpyManager@{GalpyManager}!fscale@{fscale}}
+\index{fscale@{fscale}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{fscale}{fscale}}
+{\footnotesize\ttfamily double Galpy\+Manager\+::fscale}
+
+\mbox{\Hypertarget{classGalpyManager_ab62c12445528d34451bff6f6d24a54d0}\label{classGalpyManager_ab62c12445528d34451bff6f6d24a54d0}} 
+\index{GalpyManager@{GalpyManager}!gmscale@{gmscale}}
+\index{gmscale@{gmscale}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{gmscale}{gmscale}}
+{\footnotesize\ttfamily double Galpy\+Manager\+::gmscale}
+
+\mbox{\Hypertarget{classGalpyManager_a88b404da59c1a5d91624bfcc24f3800b}\label{classGalpyManager_a88b404da59c1a5d91624bfcc24f3800b}} 
+\index{GalpyManager@{GalpyManager}!mw\_evolve@{mw\_evolve}}
+\index{mw\_evolve@{mw\_evolve}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{mw\_evolve}{mw\_evolve}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classMWPotentialEvolve}{M\+W\+Potential\+Evolve}} Galpy\+Manager\+::mw\+\_\+evolve}
+
+\mbox{\Hypertarget{classGalpyManager_adaf966854f08d01f32948d56205d4d64}\label{classGalpyManager_adaf966854f08d01f32948d56205d4d64}} 
+\index{GalpyManager@{GalpyManager}!pot\_args@{pot\_args}}
+\index{pot\_args@{pot\_args}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{pot\_args}{pot\_args}}
+{\footnotesize\ttfamily std\+::vector$<$double$>$ Galpy\+Manager\+::pot\+\_\+args}
+
+\mbox{\Hypertarget{classGalpyManager_a6ed970dba7e92f37d8306f33cc9b979c}\label{classGalpyManager_a6ed970dba7e92f37d8306f33cc9b979c}} 
+\index{GalpyManager@{GalpyManager}!pot\_args\_offset@{pot\_args\_offset}}
+\index{pot\_args\_offset@{pot\_args\_offset}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{pot\_args\_offset}{pot\_args\_offset}}
+{\footnotesize\ttfamily std\+::vector$<$int$>$ Galpy\+Manager\+::pot\+\_\+args\+\_\+offset}
+
+\mbox{\Hypertarget{classGalpyManager_ac850c53c0b2b205b1d06b910f336cb7a}\label{classGalpyManager_ac850c53c0b2b205b1d06b910f336cb7a}} 
+\index{GalpyManager@{GalpyManager}!pot\_set\_pars@{pot\_set\_pars}}
+\index{pot\_set\_pars@{pot\_set\_pars}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{pot\_set\_pars}{pot\_set\_pars}}
+{\footnotesize\ttfamily std\+::vector$<$\mbox{\hyperlink{structPotentialSetPar}{Potential\+Set\+Par}}$>$ Galpy\+Manager\+::pot\+\_\+set\+\_\+pars}
+
+\mbox{\Hypertarget{classGalpyManager_a19b099354f7018e7413a234bbc37b14e}\label{classGalpyManager_a19b099354f7018e7413a234bbc37b14e}} 
+\index{GalpyManager@{GalpyManager}!pot\_sets@{pot\_sets}}
+\index{pot\_sets@{pot\_sets}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{pot\_sets}{pot\_sets}}
+{\footnotesize\ttfamily std\+::vector$<$\mbox{\hyperlink{structPotentialSet}{Potential\+Set}}$>$ Galpy\+Manager\+::pot\+\_\+sets}
+
+\mbox{\Hypertarget{classGalpyManager_abcb9a7057b013d9e922e249d95acef5c}\label{classGalpyManager_abcb9a7057b013d9e922e249d95acef5c}} 
+\index{GalpyManager@{GalpyManager}!pot\_type@{pot\_type}}
+\index{pot\_type@{pot\_type}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{pot\_type}{pot\_type}}
+{\footnotesize\ttfamily std\+::vector$<$int$>$ Galpy\+Manager\+::pot\+\_\+type}
+
+\mbox{\Hypertarget{classGalpyManager_a7d919be67c48a3a511dd5c8d6d70547c}\label{classGalpyManager_a7d919be67c48a3a511dd5c8d6d70547c}} 
+\index{GalpyManager@{GalpyManager}!pot\_type\_offset@{pot\_type\_offset}}
+\index{pot\_type\_offset@{pot\_type\_offset}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{pot\_type\_offset}{pot\_type\_offset}}
+{\footnotesize\ttfamily std\+::vector$<$int$>$ Galpy\+Manager\+::pot\+\_\+type\+\_\+offset}
+
+\mbox{\Hypertarget{classGalpyManager_a2d2e5788c1a26a1d5790ced0b4ffc8e0}\label{classGalpyManager_a2d2e5788c1a26a1d5790ced0b4ffc8e0}} 
+\index{GalpyManager@{GalpyManager}!pscale@{pscale}}
+\index{pscale@{pscale}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{pscale}{pscale}}
+{\footnotesize\ttfamily double Galpy\+Manager\+::pscale}
+
+\mbox{\Hypertarget{classGalpyManager_a81154de8cec300ccefb7ef9acba8e592}\label{classGalpyManager_a81154de8cec300ccefb7ef9acba8e592}} 
+\index{GalpyManager@{GalpyManager}!rscale@{rscale}}
+\index{rscale@{rscale}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{rscale}{rscale}}
+{\footnotesize\ttfamily double Galpy\+Manager\+::rscale}
+
+\mbox{\Hypertarget{classGalpyManager_a251e44bc3eaf99cc2ce681fceb08b433}\label{classGalpyManager_a251e44bc3eaf99cc2ce681fceb08b433}} 
+\index{GalpyManager@{GalpyManager}!set\_name@{set\_name}}
+\index{set\_name@{set\_name}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{set\_name}{set\_name}}
+{\footnotesize\ttfamily std\+::string Galpy\+Manager\+::set\+\_\+name}
+
+\mbox{\Hypertarget{classGalpyManager_a13b30c8bea8a66d38c8ec181ec562ac5}\label{classGalpyManager_a13b30c8bea8a66d38c8ec181ec562ac5}} 
+\index{GalpyManager@{GalpyManager}!set\_parfile@{set\_parfile}}
+\index{set\_parfile@{set\_parfile}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{set\_parfile}{set\_parfile}}
+{\footnotesize\ttfamily std\+::string Galpy\+Manager\+::set\+\_\+parfile}
+
+\mbox{\Hypertarget{classGalpyManager_a93dbb25582316d2279fca8f40635fd5d}\label{classGalpyManager_a93dbb25582316d2279fca8f40635fd5d}} 
+\index{GalpyManager@{GalpyManager}!time@{time}}
+\index{time@{time}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{time}{time}}
+{\footnotesize\ttfamily double Galpy\+Manager\+::time}
+
+\mbox{\Hypertarget{classGalpyManager_afb09a3d7a8191c4faf86bb65e7bfb891}\label{classGalpyManager_afb09a3d7a8191c4faf86bb65e7bfb891}} 
+\index{GalpyManager@{GalpyManager}!tscale@{tscale}}
+\index{tscale@{tscale}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{tscale}{tscale}}
+{\footnotesize\ttfamily double Galpy\+Manager\+::tscale}
+
+\mbox{\Hypertarget{classGalpyManager_aca2f48de54b5f54ea585e6b21d6a12a9}\label{classGalpyManager_aca2f48de54b5f54ea585e6b21d6a12a9}} 
+\index{GalpyManager@{GalpyManager}!update\_time@{update\_time}}
+\index{update\_time@{update\_time}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{update\_time}{update\_time}}
+{\footnotesize\ttfamily double Galpy\+Manager\+::update\+\_\+time}
+
+\mbox{\Hypertarget{classGalpyManager_aa3dae1cb65b66097ce9f98bb17f4f518}\label{classGalpyManager_aa3dae1cb65b66097ce9f98bb17f4f518}} 
+\index{GalpyManager@{GalpyManager}!vscale@{vscale}}
+\index{vscale@{vscale}!GalpyManager@{GalpyManager}}
+\doxysubsubsection{\texorpdfstring{vscale}{vscale}}
+{\footnotesize\ttfamily double Galpy\+Manager\+::vscale}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{galpy__interface_8h}{galpy\+\_\+interface.\+h}}\end{DoxyCompactItemize}

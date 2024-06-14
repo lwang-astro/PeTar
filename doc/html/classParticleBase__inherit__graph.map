@@ -1,0 +1,8 @@
+<map id="ParticleBase" name="ParticleBase">
+<area shape="rect" id="node1" title="Basic particle class." alt="" coords="130,5,233,32"/>
+<area shape="rect" id="node2" href="$classPtcl.html" title="Particle class." alt="" coords="158,80,205,107"/>
+<area shape="rect" id="node3" href="$classFPSoft.html" title=" " alt="" coords="50,155,113,181"/>
+<area shape="rect" id="node5" href="$classPtclComm.html" title=" " alt="" coords="137,155,226,181"/>
+<area shape="rect" id="node6" href="$classPtclHard.html" title=" " alt="" coords="251,155,328,181"/>
+<area shape="rect" id="node4" href="$classFPSoftWriteArtificial.html" title="redefine readAscii to read group data format, write in I64 format" alt="" coords="5,229,157,256"/>
+</map>

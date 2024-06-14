@@ -9,15 +9,19 @@ until [[ `echo x$1` == 'x' ]]
 do
     case $1 in
 	-h) shift;
-	    echo 'Gether separated output data due to multiple MPI processes (file suffixes: '$suffixes')';
-	    echo 'Usage: petar.data.gether [options] [data filename prefix]';
-	    echo '       data filename prefix is defined by "petar -f", defaulted case is "data".'
-	    echo 'Options:';
-	    echo '  -f: output filename prefix (default: data filename prefix)';
-	    echo '  -n: MPI processes number (default: auto detect)';
-	    echo '  -i: before remove existing gethered files, ask first (default: no ask)';
-	    echo '  -l: generate snapshot date file list only';
-	    echo '  -g: gether group files; a slow process';
+	    echo 'A tool for organizing output files.';
+	    echo 'Functionality:';
+	    echo '    1) Combine separated output data from multiple MPI processes with filename suffixes: '$suffixes' group';
+	    echo '    2) Split SSE/BSE output files into different files with suffixes "type_change", "sn_kick", and "dynamic_merge".';
+	    echo '    3) If the option "-g" is used, split group information files into different files based on the number of members with suffixes "n2", "n3", and so on.';
+	    echo 'Usage: petar.data.combine [options] [data filename prefix]';
+	    echo '       The data filename prefix is defined by "petar -f"; the default case is "data".';
+            echo 'Options (default arguments shown in parentheses at the end):';
+	    echo '  -f [S] Output filename prefix (default: [data filename prefix])';
+	    echo '  -n [I] Number of MPI processes (default: auto-detect)';
+	    echo '  -i     Ask before removing existing combined files (default: no ask)';
+	    echo '  -l     Only generate a list of snapshot data files';
+	    echo '  -g     Combine and split group files; a slow process';
 	    exit;;
 	-f) shift; fout=$1; shift;;
 	-n) shift; nmpi=$1; shift;;

@@ -1,0 +1,319 @@
+\hypertarget{classStatus}{}\doxysection{Status Class Reference}
+\label{classStatus}\index{Status@{Status}}
+
+
+class for measure the status of the system  
+
+
+
+
+{\ttfamily \#include $<$status.\+hpp$>$}
+
+
+
+Collaboration diagram for Status\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=332pt]{classStatus__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsection*{Classes}
+\begin{DoxyCompactItemize}
+\item 
+struct \mbox{\hyperlink{structStatus_1_1ParticleCM}{Particle\+CM}}
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classStatus_a944586fb328a3524805748c8f7b17f32}{Status}} ()
+\item 
+{\footnotesize template$<$class Tsoft $>$ }\\void \mbox{\hyperlink{classStatus_af69a1acb2ded8936c6aae258de77c589}{shift\+To\+Center\+Of\+Mass\+Frame}} (Tsoft $\ast$\+\_\+tsys, const P\+S\+::\+S64 \+\_\+n)
+\begin{DoxyCompactList}\small\item\em shift particle system center to c.\+m. frame \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tsoft $>$ }\\void \mbox{\hyperlink{classStatus_abcd62381de833a66c7d7b885a7647a1e}{shift\+To\+Origin\+Frame}} (Tsoft $\ast$\+\_\+tsys, const P\+S\+::\+S64 \+\_\+n)
+\begin{DoxyCompactList}\small\item\em shift particle system center back to original frame \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tsoft $>$ }\\void \mbox{\hyperlink{classStatus_a95226a9e5aceeea5c44e89b8a3bccb0c}{calc\+Center\+Of\+Mass}} (Tsoft $\ast$\+\_\+tsys, const P\+S\+::\+S64 \+\_\+n, int \+\_\+mode=3)
+\begin{DoxyCompactList}\small\item\em calculate the center of system \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tsoft $>$ }\\void \mbox{\hyperlink{classStatus_a1c95aee88a7a5568b46d2c700198a139}{calc\+And\+Shift\+Center\+Of\+Mass}} (Tsoft $\ast$\+\_\+tsys, const P\+S\+::\+S64 \+\_\+n, const int \+\_\+mode=3, const bool initial\+\_\+flag=false)
+\begin{DoxyCompactList}\small\item\em calculate the center of system and shift particle systems to center frame \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classStatus_a7f0176ce36b41f113ac9cd02b0f541b3}{print\+Column\+Title}} (std\+::ofstream \&\+\_\+fout, const P\+S\+::\+S32 \+\_\+width=20)
+\begin{DoxyCompactList}\small\item\em print titles of class members using column style \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classStatus_a86a02e9495c972470f963cec6d9e5523}{print\+Column}} (std\+::ofstream \&\+\_\+fout, const P\+S\+::\+S32 \+\_\+width=20)
+\begin{DoxyCompactList}\small\item\em print data of class members using column style \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classStatus_ae97a62d35d7fdb083be8d441fc3b2270}{print}} (std\+::ostream \&\+\_\+fout, const P\+S\+::\+S32 \+\_\+precision=7)
+\begin{DoxyCompactList}\small\item\em print title and values in one lines \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classStatus_a893a87b3a2602c3afa0821abda1dcd72}{time}}
+\item 
+P\+S\+::\+S64 \mbox{\hyperlink{classStatus_ab6be16aefc348d3d5c95e83bd7a4b64f}{n\+\_\+real\+\_\+loc}}
+\item 
+P\+S\+::\+S64 \mbox{\hyperlink{classStatus_acabdd20612801177ebc0acc3c3ddfb4d}{n\+\_\+real\+\_\+glb}}
+\item 
+P\+S\+::\+S64 \mbox{\hyperlink{classStatus_a16948b9f8395887fd619627b5df0c619}{n\+\_\+all\+\_\+loc}}
+\item 
+P\+S\+::\+S64 \mbox{\hyperlink{classStatus_a71f2908cd2284e23931a4d364252fca1}{n\+\_\+all\+\_\+glb}}
+\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classStatus_aa57f2f0496be3ea54c28dd16b41f20cd}{n\+\_\+remove\+\_\+glb}}
+\item 
+P\+S\+::\+S32 \mbox{\hyperlink{classStatus_a0e6b78a9428d64a9d46f08883e6f54f6}{n\+\_\+escape\+\_\+glb}}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classStatus_a521c745f73c03506eff13ea78035045d}{half\+\_\+mass\+\_\+radius}}
+\item 
+\mbox{\hyperlink{classEnergyAndMomemtum}{Energy\+And\+Momemtum}} \mbox{\hyperlink{classStatus_ac895ac689db4a88a5824c8ba679e71db}{energy}}
+\item 
+struct \mbox{\hyperlink{structStatus_1_1ParticleCM}{Status\+::\+Particle\+CM}} \mbox{\hyperlink{classStatus_ab914306bf82dce98487573a9d4bce1a9}{pcm}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+class for measure the status of the system 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classStatus_a944586fb328a3524805748c8f7b17f32}\label{classStatus_a944586fb328a3524805748c8f7b17f32}} 
+\index{Status@{Status}!Status@{Status}}
+\index{Status@{Status}!Status@{Status}}
+\doxysubsubsection{\texorpdfstring{Status()}{Status()}}
+{\footnotesize\ttfamily Status\+::\+Status (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classStatus_a1c95aee88a7a5568b46d2c700198a139}\label{classStatus_a1c95aee88a7a5568b46d2c700198a139}} 
+\index{Status@{Status}!calcAndShiftCenterOfMass@{calcAndShiftCenterOfMass}}
+\index{calcAndShiftCenterOfMass@{calcAndShiftCenterOfMass}!Status@{Status}}
+\doxysubsubsection{\texorpdfstring{calcAndShiftCenterOfMass()}{calcAndShiftCenterOfMass()}}
+{\footnotesize\ttfamily template$<$class Tsoft $>$ \\
+void Status\+::calc\+And\+Shift\+Center\+Of\+Mass (\begin{DoxyParamCaption}\item[{Tsoft $\ast$}]{\+\_\+tsys,  }\item[{const P\+S\+::\+S64}]{\+\_\+n,  }\item[{const int}]{\+\_\+mode = {\ttfamily 3},  }\item[{const bool}]{initial\+\_\+flag = {\ttfamily false} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate the center of system and shift particle systems to center frame 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+tsys} & particle system \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n} & number of particle \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+mode} & calculation mode, 1\+: center-\/of-\/the-\/mass; 2\+: number (no mass) weighted center; 3\+: soft potential weighted center \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classStatus_a1c95aee88a7a5568b46d2c700198a139_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=303pt]{classStatus_a1c95aee88a7a5568b46d2c700198a139_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classStatus_a95226a9e5aceeea5c44e89b8a3bccb0c}\label{classStatus_a95226a9e5aceeea5c44e89b8a3bccb0c}} 
+\index{Status@{Status}!calcCenterOfMass@{calcCenterOfMass}}
+\index{calcCenterOfMass@{calcCenterOfMass}!Status@{Status}}
+\doxysubsubsection{\texorpdfstring{calcCenterOfMass()}{calcCenterOfMass()}}
+{\footnotesize\ttfamily template$<$class Tsoft $>$ \\
+void Status\+::calc\+Center\+Of\+Mass (\begin{DoxyParamCaption}\item[{Tsoft $\ast$}]{\+\_\+tsys,  }\item[{const P\+S\+::\+S64}]{\+\_\+n,  }\item[{int}]{\+\_\+mode = {\ttfamily 3} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate the center of system 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+tsys} & particle system \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n} & number of particle \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+mode} & calculation mode, 1\+: center-\/of-\/the-\/mass; 2\+: number (no mass) weighted center; 3\+: soft potential weighted center \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classStatus_a95226a9e5aceeea5c44e89b8a3bccb0c_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classStatus_ae97a62d35d7fdb083be8d441fc3b2270}\label{classStatus_ae97a62d35d7fdb083be8d441fc3b2270}} 
+\index{Status@{Status}!print@{print}}
+\index{print@{print}!Status@{Status}}
+\doxysubsubsection{\texorpdfstring{print()}{print()}}
+{\footnotesize\ttfamily void Status\+::print (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const P\+S\+::\+S32}]{\+\_\+precision = {\ttfamily 7} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print title and values in one lines 
+
+print titles and values in one lines 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+precision} & floating data precision except time (15 digital) \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classStatus_ae97a62d35d7fdb083be8d441fc3b2270_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classStatus_a86a02e9495c972470f963cec6d9e5523}\label{classStatus_a86a02e9495c972470f963cec6d9e5523}} 
+\index{Status@{Status}!printColumn@{printColumn}}
+\index{printColumn@{printColumn}!Status@{Status}}
+\doxysubsubsection{\texorpdfstring{printColumn()}{printColumn()}}
+{\footnotesize\ttfamily void Status\+::print\+Column (\begin{DoxyParamCaption}\item[{std\+::ofstream \&}]{\+\_\+fout,  }\item[{const P\+S\+::\+S32}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print data of class members using column style 
+
+print data of class members in one line for column style. Notice no newline is printed at the end 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classStatus_a86a02e9495c972470f963cec6d9e5523_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classStatus_a7f0176ce36b41f113ac9cd02b0f541b3}\label{classStatus_a7f0176ce36b41f113ac9cd02b0f541b3}} 
+\index{Status@{Status}!printColumnTitle@{printColumnTitle}}
+\index{printColumnTitle@{printColumnTitle}!Status@{Status}}
+\doxysubsubsection{\texorpdfstring{printColumnTitle()}{printColumnTitle()}}
+{\footnotesize\ttfamily void Status\+::print\+Column\+Title (\begin{DoxyParamCaption}\item[{std\+::ofstream \&}]{\+\_\+fout,  }\item[{const P\+S\+::\+S32}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print titles of class members using column style 
+
+print titles of class members in one line for column style 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classStatus_a7f0176ce36b41f113ac9cd02b0f541b3_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classStatus_af69a1acb2ded8936c6aae258de77c589}\label{classStatus_af69a1acb2ded8936c6aae258de77c589}} 
+\index{Status@{Status}!shiftToCenterOfMassFrame@{shiftToCenterOfMassFrame}}
+\index{shiftToCenterOfMassFrame@{shiftToCenterOfMassFrame}!Status@{Status}}
+\doxysubsubsection{\texorpdfstring{shiftToCenterOfMassFrame()}{shiftToCenterOfMassFrame()}}
+{\footnotesize\ttfamily template$<$class Tsoft $>$ \\
+void Status\+::shift\+To\+Center\+Of\+Mass\+Frame (\begin{DoxyParamCaption}\item[{Tsoft $\ast$}]{\+\_\+tsys,  }\item[{const P\+S\+::\+S64}]{\+\_\+n }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+shift particle system center to c.\+m. frame 
+
+set is\+\_\+center\+\_\+shift\+\_\+flag to true 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em \+\_\+tsys} & particle system \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n} & number of particle \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classStatus_abcd62381de833a66c7d7b885a7647a1e}\label{classStatus_abcd62381de833a66c7d7b885a7647a1e}} 
+\index{Status@{Status}!shiftToOriginFrame@{shiftToOriginFrame}}
+\index{shiftToOriginFrame@{shiftToOriginFrame}!Status@{Status}}
+\doxysubsubsection{\texorpdfstring{shiftToOriginFrame()}{shiftToOriginFrame()}}
+{\footnotesize\ttfamily template$<$class Tsoft $>$ \\
+void Status\+::shift\+To\+Origin\+Frame (\begin{DoxyParamCaption}\item[{Tsoft $\ast$}]{\+\_\+tsys,  }\item[{const P\+S\+::\+S64}]{\+\_\+n }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+shift particle system center back to original frame 
+
+set is\+\_\+center\+\_\+shift\+\_\+flag to false 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in,out}}  & {\em \+\_\+tsys} & particle system \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+n} & number of particle \\
+\hline
+\end{DoxyParams}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classStatus_ac895ac689db4a88a5824c8ba679e71db}\label{classStatus_ac895ac689db4a88a5824c8ba679e71db}} 
+\index{Status@{Status}!energy@{energy}}
+\index{energy@{energy}!Status@{Status}}
+\doxysubsubsection{\texorpdfstring{energy}{energy}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classEnergyAndMomemtum}{Energy\+And\+Momemtum}} Status\+::energy}
+
+\mbox{\Hypertarget{classStatus_a521c745f73c03506eff13ea78035045d}\label{classStatus_a521c745f73c03506eff13ea78035045d}} 
+\index{Status@{Status}!half\_mass\_radius@{half\_mass\_radius}}
+\index{half\_mass\_radius@{half\_mass\_radius}!Status@{Status}}
+\doxysubsubsection{\texorpdfstring{half\_mass\_radius}{half\_mass\_radius}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Status\+::half\+\_\+mass\+\_\+radius}
+
+\mbox{\Hypertarget{classStatus_a71f2908cd2284e23931a4d364252fca1}\label{classStatus_a71f2908cd2284e23931a4d364252fca1}} 
+\index{Status@{Status}!n\_all\_glb@{n\_all\_glb}}
+\index{n\_all\_glb@{n\_all\_glb}!Status@{Status}}
+\doxysubsubsection{\texorpdfstring{n\_all\_glb}{n\_all\_glb}}
+{\footnotesize\ttfamily P\+S\+::\+S64 Status\+::n\+\_\+all\+\_\+glb}
+
+\mbox{\Hypertarget{classStatus_a16948b9f8395887fd619627b5df0c619}\label{classStatus_a16948b9f8395887fd619627b5df0c619}} 
+\index{Status@{Status}!n\_all\_loc@{n\_all\_loc}}
+\index{n\_all\_loc@{n\_all\_loc}!Status@{Status}}
+\doxysubsubsection{\texorpdfstring{n\_all\_loc}{n\_all\_loc}}
+{\footnotesize\ttfamily P\+S\+::\+S64 Status\+::n\+\_\+all\+\_\+loc}
+
+\mbox{\Hypertarget{classStatus_a0e6b78a9428d64a9d46f08883e6f54f6}\label{classStatus_a0e6b78a9428d64a9d46f08883e6f54f6}} 
+\index{Status@{Status}!n\_escape\_glb@{n\_escape\_glb}}
+\index{n\_escape\_glb@{n\_escape\_glb}!Status@{Status}}
+\doxysubsubsection{\texorpdfstring{n\_escape\_glb}{n\_escape\_glb}}
+{\footnotesize\ttfamily P\+S\+::\+S32 Status\+::n\+\_\+escape\+\_\+glb}
+
+\mbox{\Hypertarget{classStatus_acabdd20612801177ebc0acc3c3ddfb4d}\label{classStatus_acabdd20612801177ebc0acc3c3ddfb4d}} 
+\index{Status@{Status}!n\_real\_glb@{n\_real\_glb}}
+\index{n\_real\_glb@{n\_real\_glb}!Status@{Status}}
+\doxysubsubsection{\texorpdfstring{n\_real\_glb}{n\_real\_glb}}
+{\footnotesize\ttfamily P\+S\+::\+S64 Status\+::n\+\_\+real\+\_\+glb}
+
+\mbox{\Hypertarget{classStatus_ab6be16aefc348d3d5c95e83bd7a4b64f}\label{classStatus_ab6be16aefc348d3d5c95e83bd7a4b64f}} 
+\index{Status@{Status}!n\_real\_loc@{n\_real\_loc}}
+\index{n\_real\_loc@{n\_real\_loc}!Status@{Status}}
+\doxysubsubsection{\texorpdfstring{n\_real\_loc}{n\_real\_loc}}
+{\footnotesize\ttfamily P\+S\+::\+S64 Status\+::n\+\_\+real\+\_\+loc}
+
+\mbox{\Hypertarget{classStatus_aa57f2f0496be3ea54c28dd16b41f20cd}\label{classStatus_aa57f2f0496be3ea54c28dd16b41f20cd}} 
+\index{Status@{Status}!n\_remove\_glb@{n\_remove\_glb}}
+\index{n\_remove\_glb@{n\_remove\_glb}!Status@{Status}}
+\doxysubsubsection{\texorpdfstring{n\_remove\_glb}{n\_remove\_glb}}
+{\footnotesize\ttfamily P\+S\+::\+S32 Status\+::n\+\_\+remove\+\_\+glb}
+
+\mbox{\Hypertarget{classStatus_ab914306bf82dce98487573a9d4bce1a9}\label{classStatus_ab914306bf82dce98487573a9d4bce1a9}} 
+\index{Status@{Status}!pcm@{pcm}}
+\index{pcm@{pcm}!Status@{Status}}
+\doxysubsubsection{\texorpdfstring{pcm}{pcm}}
+{\footnotesize\ttfamily struct \mbox{\hyperlink{structStatus_1_1ParticleCM}{Status\+::\+Particle\+CM}} Status\+::pcm}
+
+\mbox{\Hypertarget{classStatus_a893a87b3a2602c3afa0821abda1dcd72}\label{classStatus_a893a87b3a2602c3afa0821abda1dcd72}} 
+\index{Status@{Status}!time@{time}}
+\index{time@{time}!Status@{Status}}
+\doxysubsubsection{\texorpdfstring{time}{time}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Status\+::time}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{status_8hpp}{status.\+hpp}}\end{DoxyCompactItemize}

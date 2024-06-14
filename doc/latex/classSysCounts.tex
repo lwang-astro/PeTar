@@ -1,0 +1,269 @@
+\hypertarget{classSysCounts}{}\doxysection{Sys\+Counts Class Reference}
+\label{classSysCounts}\index{SysCounts@{SysCounts}}
+
+
+{\ttfamily \#include $<$profile.\+hpp$>$}
+
+
+
+Collaboration diagram for Sys\+Counts\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=219pt]{classSysCounts__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classSysCounts_a51f72c89150b9392231ffa3f7c5eedb9}{Sys\+Counts}} ()
+\item 
+void \mbox{\hyperlink{classSysCounts_ad03923dd131a830d4bc1124947b77589}{cluster\+Count}} (const P\+S\+::\+S32 n, const P\+S\+::\+S32 ntimes=1)
+\item 
+void \mbox{\hyperlink{classSysCounts_ae736859dafde342d60a11464140a785b}{clear\+Cluster\+Count}} ()
+\item 
+void \mbox{\hyperlink{classSysCounts_a82e5d98b06ad5f01bdca7f90a7dd59c2}{gether\+Cluster\+Count}} (int $\ast$n, int $\ast$count, const long unsigned int size)
+\item 
+void \mbox{\hyperlink{classSysCounts_a7b81e27f866ffe67bb7328974ca8a9c4}{copy\+Cluster\+Count}} (\mbox{\hyperlink{classSysCounts}{Sys\+Counts}} \&n\+\_\+count)
+\item 
+void \mbox{\hyperlink{classSysCounts_a9cf5f8b421b99e3442dc2d40c6221052}{add\+Cluster\+Count}} (\mbox{\hyperlink{classSysCounts}{Sys\+Counts}} \&n\+\_\+count)
+\item 
+void \mbox{\hyperlink{classSysCounts_a56d420bdf5e85f515fa2d706adf1f6c0}{print\+Hist}} (std\+::ostream \&fout, const P\+S\+::\+S64 n\+\_\+loop=1, const P\+S\+::\+S32 width=\mbox{\hyperlink{profile_8hpp_aa41d1f7749c00f92a1d2647236863c83}{P\+R\+O\+F\+I\+L\+E\+\_\+\+P\+R\+I\+N\+T\+\_\+\+W\+I\+D\+TH}}) const
+\item 
+void \mbox{\hyperlink{classSysCounts_a73663955d851be11aac6b22831bcf03f}{dump}} (std\+::ostream \&fout, const P\+S\+::\+S64 n\+\_\+loop=1, const P\+S\+::\+S32 width=\mbox{\hyperlink{profile_8hpp_aa41d1f7749c00f92a1d2647236863c83}{P\+R\+O\+F\+I\+L\+E\+\_\+\+P\+R\+I\+N\+T\+\_\+\+W\+I\+D\+TH}}) const
+\item 
+void \mbox{\hyperlink{classSysCounts_ab2f6b9fc2a63ecaf2ae1fd4558c61363}{dump\+Hist}} (std\+::ostream \&fout, const P\+S\+::\+S64 n\+\_\+loop=1, const P\+S\+::\+S32 width=\mbox{\hyperlink{profile_8hpp_aa41d1f7749c00f92a1d2647236863c83}{P\+R\+O\+F\+I\+L\+E\+\_\+\+P\+R\+I\+N\+T\+\_\+\+W\+I\+D\+TH}}) const
+\item 
+void \mbox{\hyperlink{classSysCounts_a9d983bfda9790179f173da6f09af5d35}{dump\+Name}} (std\+::ostream \&fout, const P\+S\+::\+S32 width=\mbox{\hyperlink{profile_8hpp_aa41d1f7749c00f92a1d2647236863c83}{P\+R\+O\+F\+I\+L\+E\+\_\+\+P\+R\+I\+N\+T\+\_\+\+W\+I\+D\+TH}}) const
+\item 
+void \mbox{\hyperlink{classSysCounts_a8f9e6d193f0a554e2accd2d68b8b5c65}{clear}} ()
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{structNumCounter}{Num\+Counter}} \mbox{\hyperlink{classSysCounts_ad95a1ce759efcb258f8faf632cb8f5e2}{hard\+\_\+single}}
+\item 
+\mbox{\hyperlink{structNumCounter}{Num\+Counter}} \mbox{\hyperlink{classSysCounts_a12fd2d6d24adf423f07981ce005228a0}{hard\+\_\+isolated}}
+\item 
+\mbox{\hyperlink{structNumCounter}{Num\+Counter}} \mbox{\hyperlink{classSysCounts_a5954fd75177dbbf517c6fae9409a67b9}{hard\+\_\+connected}}
+\item 
+\mbox{\hyperlink{structNumCounter}{Num\+Counter}} \mbox{\hyperlink{classSysCounts_a4d5972bb104e6700b8b7a536fd26dbfc}{hard\+\_\+interrupt}}
+\item 
+\mbox{\hyperlink{structNumCounter}{Num\+Counter}} \mbox{\hyperlink{classSysCounts_a531348a4cbf7ec59b68bf58e521b1bef}{cluster\+\_\+isolated}}
+\item 
+\mbox{\hyperlink{structNumCounter}{Num\+Counter}} \mbox{\hyperlink{classSysCounts_ac3d58a6d8e0e757af3c1054ebe50a770}{cluster\+\_\+connected}}
+\item 
+\mbox{\hyperlink{structNumCounter}{Num\+Counter}} \mbox{\hyperlink{classSysCounts_a02aaf494a19a1017204c0e4b6336eaf4}{A\+R\+C\+\_\+substep\+\_\+sum}}
+\item 
+\mbox{\hyperlink{structNumCounter}{Num\+Counter}} \mbox{\hyperlink{classSysCounts_a198f671859c262e76600266a55a2c94d}{A\+R\+C\+\_\+tsyn\+\_\+step\+\_\+sum}}
+\item 
+\mbox{\hyperlink{structNumCounter}{Num\+Counter}} \mbox{\hyperlink{classSysCounts_a3e957552c42bd1e0aca5ce6c61eece2d}{A\+R\+C\+\_\+n\+\_\+groups}}
+\item 
+\mbox{\hyperlink{structNumCounter}{Num\+Counter}} \mbox{\hyperlink{classSysCounts_aacf09fcd49268cae7a3c264e9e0ddf14}{A\+R\+C\+\_\+n\+\_\+groups\+\_\+iso}}
+\item 
+\mbox{\hyperlink{structNumCounter}{Num\+Counter}} \mbox{\hyperlink{classSysCounts_a34b0e1f4a51d345a1860fb290378c7ed}{H4\+\_\+step\+\_\+sum}}
+\item 
+\mbox{\hyperlink{structNumCounter}{Num\+Counter}} \mbox{\hyperlink{classSysCounts_a7d89305dbd6bc59e3fbb81a3a7cce180}{n\+\_\+neighbor\+\_\+zero}}
+\item 
+\mbox{\hyperlink{structNumCounter}{Num\+Counter}} \mbox{\hyperlink{classSysCounts_ab1502b63dd0b38cfe55826932eb410b2}{ep\+\_\+ep\+\_\+interact}}
+\item 
+\mbox{\hyperlink{structNumCounter}{Num\+Counter}} \mbox{\hyperlink{classSysCounts_a9b18829f0e2260f853f82d4353a26140}{ep\+\_\+sp\+\_\+interact}}
+\item 
+const P\+S\+::\+S32 \mbox{\hyperlink{classSysCounts_a2912cadea001a2438111e25d7e6b333a}{n\+\_\+counter}}
+\item 
+std\+::map$<$ P\+S\+::\+S32, P\+S\+::\+S32 $>$ \mbox{\hyperlink{classSysCounts_a22d0dbe1a3576c71534fd4fc7ea7ae9f}{n\+\_\+cluster}}
+\begin{DoxyCompactList}\small\item\em Histogram of number of particles in clusters. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classSysCounts_a51f72c89150b9392231ffa3f7c5eedb9}\label{classSysCounts_a51f72c89150b9392231ffa3f7c5eedb9}} 
+\index{SysCounts@{SysCounts}!SysCounts@{SysCounts}}
+\index{SysCounts@{SysCounts}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{SysCounts()}{SysCounts()}}
+{\footnotesize\ttfamily Sys\+Counts\+::\+Sys\+Counts (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classSysCounts_a9cf5f8b421b99e3442dc2d40c6221052}\label{classSysCounts_a9cf5f8b421b99e3442dc2d40c6221052}} 
+\index{SysCounts@{SysCounts}!addClusterCount@{addClusterCount}}
+\index{addClusterCount@{addClusterCount}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{addClusterCount()}{addClusterCount()}}
+{\footnotesize\ttfamily void Sys\+Counts\+::add\+Cluster\+Count (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classSysCounts}{Sys\+Counts}} \&}]{n\+\_\+count }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSysCounts_a8f9e6d193f0a554e2accd2d68b8b5c65}\label{classSysCounts_a8f9e6d193f0a554e2accd2d68b8b5c65}} 
+\index{SysCounts@{SysCounts}!clear@{clear}}
+\index{clear@{clear}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{clear()}{clear()}}
+{\footnotesize\ttfamily void Sys\+Counts\+::clear (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSysCounts_ae736859dafde342d60a11464140a785b}\label{classSysCounts_ae736859dafde342d60a11464140a785b}} 
+\index{SysCounts@{SysCounts}!clearClusterCount@{clearClusterCount}}
+\index{clearClusterCount@{clearClusterCount}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{clearClusterCount()}{clearClusterCount()}}
+{\footnotesize\ttfamily void Sys\+Counts\+::clear\+Cluster\+Count (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSysCounts_ad03923dd131a830d4bc1124947b77589}\label{classSysCounts_ad03923dd131a830d4bc1124947b77589}} 
+\index{SysCounts@{SysCounts}!clusterCount@{clusterCount}}
+\index{clusterCount@{clusterCount}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{clusterCount()}{clusterCount()}}
+{\footnotesize\ttfamily void Sys\+Counts\+::cluster\+Count (\begin{DoxyParamCaption}\item[{const P\+S\+::\+S32}]{n,  }\item[{const P\+S\+::\+S32}]{ntimes = {\ttfamily 1} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSysCounts_a7b81e27f866ffe67bb7328974ca8a9c4}\label{classSysCounts_a7b81e27f866ffe67bb7328974ca8a9c4}} 
+\index{SysCounts@{SysCounts}!copyClusterCount@{copyClusterCount}}
+\index{copyClusterCount@{copyClusterCount}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{copyClusterCount()}{copyClusterCount()}}
+{\footnotesize\ttfamily void Sys\+Counts\+::copy\+Cluster\+Count (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classSysCounts}{Sys\+Counts}} \&}]{n\+\_\+count }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSysCounts_a73663955d851be11aac6b22831bcf03f}\label{classSysCounts_a73663955d851be11aac6b22831bcf03f}} 
+\index{SysCounts@{SysCounts}!dump@{dump}}
+\index{dump@{dump}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{dump()}{dump()}}
+{\footnotesize\ttfamily void Sys\+Counts\+::dump (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{fout,  }\item[{const P\+S\+::\+S64}]{n\+\_\+loop = {\ttfamily 1},  }\item[{const P\+S\+::\+S32}]{width = {\ttfamily \mbox{\hyperlink{profile_8hpp_aa41d1f7749c00f92a1d2647236863c83}{P\+R\+O\+F\+I\+L\+E\+\_\+\+P\+R\+I\+N\+T\+\_\+\+W\+I\+D\+TH}}} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=329pt]{classSysCounts_a73663955d851be11aac6b22831bcf03f_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classSysCounts_ab2f6b9fc2a63ecaf2ae1fd4558c61363}\label{classSysCounts_ab2f6b9fc2a63ecaf2ae1fd4558c61363}} 
+\index{SysCounts@{SysCounts}!dumpHist@{dumpHist}}
+\index{dumpHist@{dumpHist}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{dumpHist()}{dumpHist()}}
+{\footnotesize\ttfamily void Sys\+Counts\+::dump\+Hist (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{fout,  }\item[{const P\+S\+::\+S64}]{n\+\_\+loop = {\ttfamily 1},  }\item[{const P\+S\+::\+S32}]{width = {\ttfamily \mbox{\hyperlink{profile_8hpp_aa41d1f7749c00f92a1d2647236863c83}{P\+R\+O\+F\+I\+L\+E\+\_\+\+P\+R\+I\+N\+T\+\_\+\+W\+I\+D\+TH}}} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSysCounts_a9d983bfda9790179f173da6f09af5d35}\label{classSysCounts_a9d983bfda9790179f173da6f09af5d35}} 
+\index{SysCounts@{SysCounts}!dumpName@{dumpName}}
+\index{dumpName@{dumpName}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{dumpName()}{dumpName()}}
+{\footnotesize\ttfamily void Sys\+Counts\+::dump\+Name (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{fout,  }\item[{const P\+S\+::\+S32}]{width = {\ttfamily \mbox{\hyperlink{profile_8hpp_aa41d1f7749c00f92a1d2647236863c83}{P\+R\+O\+F\+I\+L\+E\+\_\+\+P\+R\+I\+N\+T\+\_\+\+W\+I\+D\+TH}}} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classSysCounts_a9d983bfda9790179f173da6f09af5d35_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classSysCounts_a82e5d98b06ad5f01bdca7f90a7dd59c2}\label{classSysCounts_a82e5d98b06ad5f01bdca7f90a7dd59c2}} 
+\index{SysCounts@{SysCounts}!getherClusterCount@{getherClusterCount}}
+\index{getherClusterCount@{getherClusterCount}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{getherClusterCount()}{getherClusterCount()}}
+{\footnotesize\ttfamily void Sys\+Counts\+::gether\+Cluster\+Count (\begin{DoxyParamCaption}\item[{int $\ast$}]{n,  }\item[{int $\ast$}]{count,  }\item[{const long unsigned int}]{size }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classSysCounts_a56d420bdf5e85f515fa2d706adf1f6c0}\label{classSysCounts_a56d420bdf5e85f515fa2d706adf1f6c0}} 
+\index{SysCounts@{SysCounts}!printHist@{printHist}}
+\index{printHist@{printHist}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{printHist()}{printHist()}}
+{\footnotesize\ttfamily void Sys\+Counts\+::print\+Hist (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{fout,  }\item[{const P\+S\+::\+S64}]{n\+\_\+loop = {\ttfamily 1},  }\item[{const P\+S\+::\+S32}]{width = {\ttfamily \mbox{\hyperlink{profile_8hpp_aa41d1f7749c00f92a1d2647236863c83}{P\+R\+O\+F\+I\+L\+E\+\_\+\+P\+R\+I\+N\+T\+\_\+\+W\+I\+D\+TH}}} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classSysCounts_a3e957552c42bd1e0aca5ce6c61eece2d}\label{classSysCounts_a3e957552c42bd1e0aca5ce6c61eece2d}} 
+\index{SysCounts@{SysCounts}!ARC\_n\_groups@{ARC\_n\_groups}}
+\index{ARC\_n\_groups@{ARC\_n\_groups}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{ARC\_n\_groups}{ARC\_n\_groups}}
+{\footnotesize\ttfamily \mbox{\hyperlink{structNumCounter}{Num\+Counter}} Sys\+Counts\+::\+A\+R\+C\+\_\+n\+\_\+groups}
+
+\mbox{\Hypertarget{classSysCounts_aacf09fcd49268cae7a3c264e9e0ddf14}\label{classSysCounts_aacf09fcd49268cae7a3c264e9e0ddf14}} 
+\index{SysCounts@{SysCounts}!ARC\_n\_groups\_iso@{ARC\_n\_groups\_iso}}
+\index{ARC\_n\_groups\_iso@{ARC\_n\_groups\_iso}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{ARC\_n\_groups\_iso}{ARC\_n\_groups\_iso}}
+{\footnotesize\ttfamily \mbox{\hyperlink{structNumCounter}{Num\+Counter}} Sys\+Counts\+::\+A\+R\+C\+\_\+n\+\_\+groups\+\_\+iso}
+
+\mbox{\Hypertarget{classSysCounts_a02aaf494a19a1017204c0e4b6336eaf4}\label{classSysCounts_a02aaf494a19a1017204c0e4b6336eaf4}} 
+\index{SysCounts@{SysCounts}!ARC\_substep\_sum@{ARC\_substep\_sum}}
+\index{ARC\_substep\_sum@{ARC\_substep\_sum}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{ARC\_substep\_sum}{ARC\_substep\_sum}}
+{\footnotesize\ttfamily \mbox{\hyperlink{structNumCounter}{Num\+Counter}} Sys\+Counts\+::\+A\+R\+C\+\_\+substep\+\_\+sum}
+
+\mbox{\Hypertarget{classSysCounts_a198f671859c262e76600266a55a2c94d}\label{classSysCounts_a198f671859c262e76600266a55a2c94d}} 
+\index{SysCounts@{SysCounts}!ARC\_tsyn\_step\_sum@{ARC\_tsyn\_step\_sum}}
+\index{ARC\_tsyn\_step\_sum@{ARC\_tsyn\_step\_sum}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{ARC\_tsyn\_step\_sum}{ARC\_tsyn\_step\_sum}}
+{\footnotesize\ttfamily \mbox{\hyperlink{structNumCounter}{Num\+Counter}} Sys\+Counts\+::\+A\+R\+C\+\_\+tsyn\+\_\+step\+\_\+sum}
+
+\mbox{\Hypertarget{classSysCounts_ac3d58a6d8e0e757af3c1054ebe50a770}\label{classSysCounts_ac3d58a6d8e0e757af3c1054ebe50a770}} 
+\index{SysCounts@{SysCounts}!cluster\_connected@{cluster\_connected}}
+\index{cluster\_connected@{cluster\_connected}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{cluster\_connected}{cluster\_connected}}
+{\footnotesize\ttfamily \mbox{\hyperlink{structNumCounter}{Num\+Counter}} Sys\+Counts\+::cluster\+\_\+connected}
+
+\mbox{\Hypertarget{classSysCounts_a531348a4cbf7ec59b68bf58e521b1bef}\label{classSysCounts_a531348a4cbf7ec59b68bf58e521b1bef}} 
+\index{SysCounts@{SysCounts}!cluster\_isolated@{cluster\_isolated}}
+\index{cluster\_isolated@{cluster\_isolated}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{cluster\_isolated}{cluster\_isolated}}
+{\footnotesize\ttfamily \mbox{\hyperlink{structNumCounter}{Num\+Counter}} Sys\+Counts\+::cluster\+\_\+isolated}
+
+\mbox{\Hypertarget{classSysCounts_ab1502b63dd0b38cfe55826932eb410b2}\label{classSysCounts_ab1502b63dd0b38cfe55826932eb410b2}} 
+\index{SysCounts@{SysCounts}!ep\_ep\_interact@{ep\_ep\_interact}}
+\index{ep\_ep\_interact@{ep\_ep\_interact}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{ep\_ep\_interact}{ep\_ep\_interact}}
+{\footnotesize\ttfamily \mbox{\hyperlink{structNumCounter}{Num\+Counter}} Sys\+Counts\+::ep\+\_\+ep\+\_\+interact}
+
+\mbox{\Hypertarget{classSysCounts_a9b18829f0e2260f853f82d4353a26140}\label{classSysCounts_a9b18829f0e2260f853f82d4353a26140}} 
+\index{SysCounts@{SysCounts}!ep\_sp\_interact@{ep\_sp\_interact}}
+\index{ep\_sp\_interact@{ep\_sp\_interact}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{ep\_sp\_interact}{ep\_sp\_interact}}
+{\footnotesize\ttfamily \mbox{\hyperlink{structNumCounter}{Num\+Counter}} Sys\+Counts\+::ep\+\_\+sp\+\_\+interact}
+
+\mbox{\Hypertarget{classSysCounts_a34b0e1f4a51d345a1860fb290378c7ed}\label{classSysCounts_a34b0e1f4a51d345a1860fb290378c7ed}} 
+\index{SysCounts@{SysCounts}!H4\_step\_sum@{H4\_step\_sum}}
+\index{H4\_step\_sum@{H4\_step\_sum}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{H4\_step\_sum}{H4\_step\_sum}}
+{\footnotesize\ttfamily \mbox{\hyperlink{structNumCounter}{Num\+Counter}} Sys\+Counts\+::\+H4\+\_\+step\+\_\+sum}
+
+\mbox{\Hypertarget{classSysCounts_a5954fd75177dbbf517c6fae9409a67b9}\label{classSysCounts_a5954fd75177dbbf517c6fae9409a67b9}} 
+\index{SysCounts@{SysCounts}!hard\_connected@{hard\_connected}}
+\index{hard\_connected@{hard\_connected}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{hard\_connected}{hard\_connected}}
+{\footnotesize\ttfamily \mbox{\hyperlink{structNumCounter}{Num\+Counter}} Sys\+Counts\+::hard\+\_\+connected}
+
+\mbox{\Hypertarget{classSysCounts_a4d5972bb104e6700b8b7a536fd26dbfc}\label{classSysCounts_a4d5972bb104e6700b8b7a536fd26dbfc}} 
+\index{SysCounts@{SysCounts}!hard\_interrupt@{hard\_interrupt}}
+\index{hard\_interrupt@{hard\_interrupt}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{hard\_interrupt}{hard\_interrupt}}
+{\footnotesize\ttfamily \mbox{\hyperlink{structNumCounter}{Num\+Counter}} Sys\+Counts\+::hard\+\_\+interrupt}
+
+\mbox{\Hypertarget{classSysCounts_a12fd2d6d24adf423f07981ce005228a0}\label{classSysCounts_a12fd2d6d24adf423f07981ce005228a0}} 
+\index{SysCounts@{SysCounts}!hard\_isolated@{hard\_isolated}}
+\index{hard\_isolated@{hard\_isolated}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{hard\_isolated}{hard\_isolated}}
+{\footnotesize\ttfamily \mbox{\hyperlink{structNumCounter}{Num\+Counter}} Sys\+Counts\+::hard\+\_\+isolated}
+
+\mbox{\Hypertarget{classSysCounts_ad95a1ce759efcb258f8faf632cb8f5e2}\label{classSysCounts_ad95a1ce759efcb258f8faf632cb8f5e2}} 
+\index{SysCounts@{SysCounts}!hard\_single@{hard\_single}}
+\index{hard\_single@{hard\_single}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{hard\_single}{hard\_single}}
+{\footnotesize\ttfamily \mbox{\hyperlink{structNumCounter}{Num\+Counter}} Sys\+Counts\+::hard\+\_\+single}
+
+\mbox{\Hypertarget{classSysCounts_a22d0dbe1a3576c71534fd4fc7ea7ae9f}\label{classSysCounts_a22d0dbe1a3576c71534fd4fc7ea7ae9f}} 
+\index{SysCounts@{SysCounts}!n\_cluster@{n\_cluster}}
+\index{n\_cluster@{n\_cluster}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{n\_cluster}{n\_cluster}}
+{\footnotesize\ttfamily std\+::map$<$P\+S\+::\+S32,P\+S\+::\+S32$>$ Sys\+Counts\+::n\+\_\+cluster}
+
+
+
+Histogram of number of particles in clusters. 
+
+\mbox{\Hypertarget{classSysCounts_a2912cadea001a2438111e25d7e6b333a}\label{classSysCounts_a2912cadea001a2438111e25d7e6b333a}} 
+\index{SysCounts@{SysCounts}!n\_counter@{n\_counter}}
+\index{n\_counter@{n\_counter}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{n\_counter}{n\_counter}}
+{\footnotesize\ttfamily const P\+S\+::\+S32 Sys\+Counts\+::n\+\_\+counter}
+
+\mbox{\Hypertarget{classSysCounts_a7d89305dbd6bc59e3fbb81a3a7cce180}\label{classSysCounts_a7d89305dbd6bc59e3fbb81a3a7cce180}} 
+\index{SysCounts@{SysCounts}!n\_neighbor\_zero@{n\_neighbor\_zero}}
+\index{n\_neighbor\_zero@{n\_neighbor\_zero}!SysCounts@{SysCounts}}
+\doxysubsubsection{\texorpdfstring{n\_neighbor\_zero}{n\_neighbor\_zero}}
+{\footnotesize\ttfamily \mbox{\hyperlink{structNumCounter}{Num\+Counter}} Sys\+Counts\+::n\+\_\+neighbor\+\_\+zero}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{profile_8hpp}{profile.\+hpp}}\end{DoxyCompactItemize}

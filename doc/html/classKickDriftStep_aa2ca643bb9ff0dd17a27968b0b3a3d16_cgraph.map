@@ -1,0 +1,4 @@
+<map id="KickDriftStep::getDtEndContinue" name="KickDriftStep::getDtEndContinue">
+<area shape="rect" id="node1" title="Get ending step size for continue case." alt="" coords="5,13,239,39"/>
+<area shape="rect" id="node2" href="$classKickDriftStep.html#a41d3e9e230a42bf0ddc5c419d7b70aaa" title="get whether next can be end" alt="" coords="287,5,468,47"/>
+</map>

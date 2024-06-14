@@ -1,0 +1,18 @@
+<map id="main" name="main">
+<area shape="rect" id="node1" title=" " alt="" coords="5,246,60,273"/>
+<area shape="rect" id="node2" href="$classHardManager.html#af7548086113d591778ce878a53dad036" title="check paramters" alt="" coords="108,42,312,69"/>
+<area shape="rect" id="node6" href="$classBSEManager.html#a569c067ad29e6fd5f665c7fd83e3386d" title=" " alt="" coords="111,93,309,119"/>
+<area shape="rect" id="node7" href="$classBSEManager.html#a52d9f47da0278671ab0aa05281801446" title=" " alt="" coords="109,144,311,185"/>
+<area shape="rect" id="node8" href="$classBSEManager.html#a69d7169d4261241df2459d3ea3b96492" title=" " alt="" coords="109,209,311,251"/>
+<area shape="rect" id="node9" href="$classHardManager.html#a1e0a4e8578cd0abf2f28f68c9702f347" title="print parameters" alt="" coords="136,275,284,302"/>
+<area shape="rect" id="node12" href="$classIOParamsContainer.html#a972926da32b4043d06456ab6d35d7752" title=" " alt="" coords="133,327,287,368"/>
+<area shape="rect" id="node13" href="$classHardManager.html#aa779d00ba62155b0bb7da852ff411b56" title="read class data to file with binary format" alt="" coords="115,393,305,419"/>
+<area shape="rect" id="node16" href="$classHardManager.html#a15998274cba2e1818e82ce08a2aaccb2" title="set time step range" alt="" coords="113,443,307,470"/>
+<area shape="rect" id="node3" href="$classArtificialParticleManager.html#ae62470120fa13e433cdf3f5433f452cb" title="check paramters" alt="" coords="360,35,541,76"/>
+<area shape="rect" id="node4" href="$classPseudoParticleMultipoleManager.html#ae68e816c46f10c7c2febed760dffd13d" title="check paramters" alt="" coords="589,5,824,47"/>
+<area shape="rect" id="node5" href="$classTidalTensor.html#a668eb0fe71a2fe1bdad53572a74d2224" title="get particle number" alt="" coords="615,71,798,98"/>
+<area shape="rect" id="node10" href="$classArtificialParticleManager.html#a3c627fc3187a2b7fdcd5d562fb3eaf14" title="print parameters" alt="" coords="360,268,541,309"/>
+<area shape="rect" id="node11" href="$classPseudoParticleMultipoleManager.html#a0c05a5c3204dfc67ee422143bce44f9f" title="print parameters" alt="" coords="589,268,824,309"/>
+<area shape="rect" id="node14" href="$classArtificialParticleManager.html#a7c2b4630ce403c68e04dbb3c8317f3e6" title="read class data to file with binary format" alt="" coords="360,385,541,427"/>
+<area shape="rect" id="node15" href="$classPseudoParticleMultipoleManager.html#a7ac07cc17a8dd499b99439effe3692de" title="read class data to file with binary format" alt="" coords="589,385,824,427"/>
+</map>

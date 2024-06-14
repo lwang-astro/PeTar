@@ -1,0 +1,4 @@
+<map id="KickDriftStep::isNextEndPossible" name="KickDriftStep::isNextEndPossible">
+<area shape="rect" id="node1" title="get whether next can be end" alt="" coords="287,5,468,47"/>
+<area shape="rect" id="node2" href="$classKickDriftStep.html#aa2ca643bb9ff0dd17a27968b0b3a3d16" title="Get ending step size for continue case." alt="" coords="5,13,239,39"/>
+</map>

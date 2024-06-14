@@ -1,0 +1,187 @@
+\hypertarget{classMatrix3}{}\doxysection{Matrix3$<$ T $>$ Class Template Reference}
+\label{classMatrix3}\index{Matrix3$<$ T $>$@{Matrix3$<$ T $>$}}
+
+
+{\ttfamily \#include $<$matrix3.\+hpp$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classMatrix3_afbc8b655540e4b5b04d8439b606303b0}{Matrix3}} ()
+\item 
+\mbox{\hyperlink{classMatrix3_a3d51c387154a474a72210036b7024c61}{Matrix3}} (const T c)
+\item 
+\mbox{\hyperlink{classMatrix3_af187291379d5558e76ca4d17f62c9381}{Matrix3}} (const \mbox{\hyperlink{classMatrix3}{Matrix3}} \&c)
+\item 
+\mbox{\hyperlink{classMatrix3_a5bfc77ba1fc4c4565ced6b60f2ce0c8e}{Matrix3}} (const T \+\_\+xx, const T \+\_\+xy, const T \+\_\+xz, const T \+\_\+yx, const T \+\_\+yy, const T \+\_\+yz, const T \+\_\+zx, const T \+\_\+zy, const T \+\_\+zz)
+\item 
+{\footnotesize template$<$typename U $>$ }\\\mbox{\hyperlink{classMatrix3_a664edfb00b474c262430899d544114e1}{operator Matrix3$<$ U $>$}} () const
+\item 
+void \mbox{\hyperlink{classMatrix3_a49667e95c1dfaca0ddc3885c5656a452}{rotation}} (const T I, const T O\+M\+E\+GA, const T omega)
+\item 
+{\footnotesize template$<$class Tvec $>$ }\\Tvec \mbox{\hyperlink{classMatrix3_a2ce57cff6131272f4ea74581c9a3ec0e}{operator$\ast$}} (const Tvec \&vec) const
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+T \mbox{\hyperlink{classMatrix3_a445beb346b907360ff75c260f6ea4df4}{xx}}
+\item 
+T \mbox{\hyperlink{classMatrix3_a9f8284aa8ae9d8a99cdd16f40f9a1a87}{xy}}
+\item 
+T \mbox{\hyperlink{classMatrix3_a0ddfa30bf74c1d3233248de286b44886}{xz}}
+\item 
+T \mbox{\hyperlink{classMatrix3_aa10731f98da69fc0155d054f8170d126}{yx}}
+\item 
+T \mbox{\hyperlink{classMatrix3_ae060918b1c204faa11c2a6fcfb590e9d}{yy}}
+\item 
+T \mbox{\hyperlink{classMatrix3_aa52c62f7f92a6c4ced0208967be06101}{yz}}
+\item 
+T \mbox{\hyperlink{classMatrix3_aa1eef69d2e8080cf3b97afcb8e961d4d}{zx}}
+\item 
+T \mbox{\hyperlink{classMatrix3_a79a57d22c19075762a890e946d23725c}{zy}}
+\item 
+T \mbox{\hyperlink{classMatrix3_a49c659ee19a575d72d6fba9f83b11fc5}{zz}}
+\end{DoxyCompactItemize}
+\doxysubsection*{Friends}
+\begin{DoxyCompactItemize}
+\item 
+std\+::ostream \& \mbox{\hyperlink{classMatrix3_a24249fe1339ed51ecdd1ee932e967929}{operator$<$$<$}} (std\+::ostream \&c, \mbox{\hyperlink{classMatrix3}{Matrix3}} \&mtmp)
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classMatrix3_afbc8b655540e4b5b04d8439b606303b0}\label{classMatrix3_afbc8b655540e4b5b04d8439b606303b0}} 
+\index{Matrix3$<$ T $>$@{Matrix3$<$ T $>$}!Matrix3@{Matrix3}}
+\index{Matrix3@{Matrix3}!Matrix3$<$ T $>$@{Matrix3$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{Matrix3()}{Matrix3()}\hspace{0.1cm}{\footnotesize\ttfamily [1/4]}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+\mbox{\hyperlink{classMatrix3}{Matrix3}}$<$ T $>$\+::\mbox{\hyperlink{classMatrix3}{Matrix3}} (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classMatrix3_a3d51c387154a474a72210036b7024c61}\label{classMatrix3_a3d51c387154a474a72210036b7024c61}} 
+\index{Matrix3$<$ T $>$@{Matrix3$<$ T $>$}!Matrix3@{Matrix3}}
+\index{Matrix3@{Matrix3}!Matrix3$<$ T $>$@{Matrix3$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{Matrix3()}{Matrix3()}\hspace{0.1cm}{\footnotesize\ttfamily [2/4]}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+\mbox{\hyperlink{classMatrix3}{Matrix3}}$<$ T $>$\+::\mbox{\hyperlink{classMatrix3}{Matrix3}} (\begin{DoxyParamCaption}\item[{const T}]{c }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classMatrix3_af187291379d5558e76ca4d17f62c9381}\label{classMatrix3_af187291379d5558e76ca4d17f62c9381}} 
+\index{Matrix3$<$ T $>$@{Matrix3$<$ T $>$}!Matrix3@{Matrix3}}
+\index{Matrix3@{Matrix3}!Matrix3$<$ T $>$@{Matrix3$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{Matrix3()}{Matrix3()}\hspace{0.1cm}{\footnotesize\ttfamily [3/4]}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+\mbox{\hyperlink{classMatrix3}{Matrix3}}$<$ T $>$\+::\mbox{\hyperlink{classMatrix3}{Matrix3}} (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classMatrix3}{Matrix3}}$<$ T $>$ \&}]{c }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classMatrix3_a5bfc77ba1fc4c4565ced6b60f2ce0c8e}\label{classMatrix3_a5bfc77ba1fc4c4565ced6b60f2ce0c8e}} 
+\index{Matrix3$<$ T $>$@{Matrix3$<$ T $>$}!Matrix3@{Matrix3}}
+\index{Matrix3@{Matrix3}!Matrix3$<$ T $>$@{Matrix3$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{Matrix3()}{Matrix3()}\hspace{0.1cm}{\footnotesize\ttfamily [4/4]}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+\mbox{\hyperlink{classMatrix3}{Matrix3}}$<$ T $>$\+::\mbox{\hyperlink{classMatrix3}{Matrix3}} (\begin{DoxyParamCaption}\item[{const T}]{\+\_\+xx,  }\item[{const T}]{\+\_\+xy,  }\item[{const T}]{\+\_\+xz,  }\item[{const T}]{\+\_\+yx,  }\item[{const T}]{\+\_\+yy,  }\item[{const T}]{\+\_\+yz,  }\item[{const T}]{\+\_\+zx,  }\item[{const T}]{\+\_\+zy,  }\item[{const T}]{\+\_\+zz }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classMatrix3_a664edfb00b474c262430899d544114e1}\label{classMatrix3_a664edfb00b474c262430899d544114e1}} 
+\index{Matrix3$<$ T $>$@{Matrix3$<$ T $>$}!operator Matrix3$<$ U $>$@{operator Matrix3$<$ U $>$}}
+\index{operator Matrix3$<$ U $>$@{operator Matrix3$<$ U $>$}!Matrix3$<$ T $>$@{Matrix3$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{operator Matrix3$<$ U $>$()}{operator Matrix3< U >()}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+template$<$typename U $>$ \\
+\mbox{\hyperlink{classMatrix3}{Matrix3}}$<$ T $>$\+::operator \mbox{\hyperlink{classMatrix3}{Matrix3}}$<$ U $>$ (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classMatrix3_a2ce57cff6131272f4ea74581c9a3ec0e}\label{classMatrix3_a2ce57cff6131272f4ea74581c9a3ec0e}} 
+\index{Matrix3$<$ T $>$@{Matrix3$<$ T $>$}!operator$\ast$@{operator$\ast$}}
+\index{operator$\ast$@{operator$\ast$}!Matrix3$<$ T $>$@{Matrix3$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{operator$\ast$()}{operator*()}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+template$<$class Tvec $>$ \\
+Tvec \mbox{\hyperlink{classMatrix3}{Matrix3}}$<$ T $>$\+::operator$\ast$ (\begin{DoxyParamCaption}\item[{const Tvec \&}]{vec }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classMatrix3_a49667e95c1dfaca0ddc3885c5656a452}\label{classMatrix3_a49667e95c1dfaca0ddc3885c5656a452}} 
+\index{Matrix3$<$ T $>$@{Matrix3$<$ T $>$}!rotation@{rotation}}
+\index{rotation@{rotation}!Matrix3$<$ T $>$@{Matrix3$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{rotation()}{rotation()}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+void \mbox{\hyperlink{classMatrix3}{Matrix3}}$<$ T $>$\+::rotation (\begin{DoxyParamCaption}\item[{const T}]{I,  }\item[{const T}]{O\+M\+E\+GA,  }\item[{const T}]{omega }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Friends And Related Function Documentation}
+\mbox{\Hypertarget{classMatrix3_a24249fe1339ed51ecdd1ee932e967929}\label{classMatrix3_a24249fe1339ed51ecdd1ee932e967929}} 
+\index{Matrix3$<$ T $>$@{Matrix3$<$ T $>$}!operator$<$$<$@{operator$<$$<$}}
+\index{operator$<$$<$@{operator$<$$<$}!Matrix3$<$ T $>$@{Matrix3$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{operator$<$$<$}{operator<<}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+std\+::ostream\& operator$<$$<$ (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{c,  }\item[{\mbox{\hyperlink{classMatrix3}{Matrix3}}$<$ T $>$ \&}]{mtmp }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [friend]}}
+
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classMatrix3_a445beb346b907360ff75c260f6ea4df4}\label{classMatrix3_a445beb346b907360ff75c260f6ea4df4}} 
+\index{Matrix3$<$ T $>$@{Matrix3$<$ T $>$}!xx@{xx}}
+\index{xx@{xx}!Matrix3$<$ T $>$@{Matrix3$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{xx}{xx}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+T \mbox{\hyperlink{classMatrix3}{Matrix3}}$<$ T $>$\+::xx}
+
+\mbox{\Hypertarget{classMatrix3_a9f8284aa8ae9d8a99cdd16f40f9a1a87}\label{classMatrix3_a9f8284aa8ae9d8a99cdd16f40f9a1a87}} 
+\index{Matrix3$<$ T $>$@{Matrix3$<$ T $>$}!xy@{xy}}
+\index{xy@{xy}!Matrix3$<$ T $>$@{Matrix3$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{xy}{xy}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+T \mbox{\hyperlink{classMatrix3}{Matrix3}}$<$ T $>$\+::xy}
+
+\mbox{\Hypertarget{classMatrix3_a0ddfa30bf74c1d3233248de286b44886}\label{classMatrix3_a0ddfa30bf74c1d3233248de286b44886}} 
+\index{Matrix3$<$ T $>$@{Matrix3$<$ T $>$}!xz@{xz}}
+\index{xz@{xz}!Matrix3$<$ T $>$@{Matrix3$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{xz}{xz}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+T \mbox{\hyperlink{classMatrix3}{Matrix3}}$<$ T $>$\+::xz}
+
+\mbox{\Hypertarget{classMatrix3_aa10731f98da69fc0155d054f8170d126}\label{classMatrix3_aa10731f98da69fc0155d054f8170d126}} 
+\index{Matrix3$<$ T $>$@{Matrix3$<$ T $>$}!yx@{yx}}
+\index{yx@{yx}!Matrix3$<$ T $>$@{Matrix3$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{yx}{yx}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+T \mbox{\hyperlink{classMatrix3}{Matrix3}}$<$ T $>$\+::yx}
+
+\mbox{\Hypertarget{classMatrix3_ae060918b1c204faa11c2a6fcfb590e9d}\label{classMatrix3_ae060918b1c204faa11c2a6fcfb590e9d}} 
+\index{Matrix3$<$ T $>$@{Matrix3$<$ T $>$}!yy@{yy}}
+\index{yy@{yy}!Matrix3$<$ T $>$@{Matrix3$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{yy}{yy}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+T \mbox{\hyperlink{classMatrix3}{Matrix3}}$<$ T $>$\+::yy}
+
+\mbox{\Hypertarget{classMatrix3_aa52c62f7f92a6c4ced0208967be06101}\label{classMatrix3_aa52c62f7f92a6c4ced0208967be06101}} 
+\index{Matrix3$<$ T $>$@{Matrix3$<$ T $>$}!yz@{yz}}
+\index{yz@{yz}!Matrix3$<$ T $>$@{Matrix3$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{yz}{yz}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+T \mbox{\hyperlink{classMatrix3}{Matrix3}}$<$ T $>$\+::yz}
+
+\mbox{\Hypertarget{classMatrix3_aa1eef69d2e8080cf3b97afcb8e961d4d}\label{classMatrix3_aa1eef69d2e8080cf3b97afcb8e961d4d}} 
+\index{Matrix3$<$ T $>$@{Matrix3$<$ T $>$}!zx@{zx}}
+\index{zx@{zx}!Matrix3$<$ T $>$@{Matrix3$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{zx}{zx}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+T \mbox{\hyperlink{classMatrix3}{Matrix3}}$<$ T $>$\+::zx}
+
+\mbox{\Hypertarget{classMatrix3_a79a57d22c19075762a890e946d23725c}\label{classMatrix3_a79a57d22c19075762a890e946d23725c}} 
+\index{Matrix3$<$ T $>$@{Matrix3$<$ T $>$}!zy@{zy}}
+\index{zy@{zy}!Matrix3$<$ T $>$@{Matrix3$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{zy}{zy}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+T \mbox{\hyperlink{classMatrix3}{Matrix3}}$<$ T $>$\+::zy}
+
+\mbox{\Hypertarget{classMatrix3_a49c659ee19a575d72d6fba9f83b11fc5}\label{classMatrix3_a49c659ee19a575d72d6fba9f83b11fc5}} 
+\index{Matrix3$<$ T $>$@{Matrix3$<$ T $>$}!zz@{zz}}
+\index{zz@{zz}!Matrix3$<$ T $>$@{Matrix3$<$ T $>$}}
+\doxysubsubsection{\texorpdfstring{zz}{zz}}
+{\footnotesize\ttfamily template$<$class T $>$ \\
+T \mbox{\hyperlink{classMatrix3}{Matrix3}}$<$ T $>$\+::zz}
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{matrix3_8hpp}{matrix3.\+hpp}}\end{DoxyCompactItemize}

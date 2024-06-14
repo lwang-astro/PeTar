@@ -1,0 +1,520 @@
+\hypertarget{classArtificialParticleInformation}{}\doxysection{Artificial\+Particle\+Information Class Reference}
+\label{classArtificialParticleInformation}\index{ArtificialParticleInformation@{ArtificialParticleInformation}}
+
+
+class to store necessary information for using artificial particles  
+
+
+
+
+{\ttfamily \#include $<$artificial\+\_\+particles.\+hpp$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classArtificialParticleInformation_a762afc179a0bef75b525c40e0ac4e1ae}{Artificial\+Particle\+Information}} ()
+\begin{DoxyCompactList}\small\item\em initializer \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classArtificialParticleInformation_a7e35031d5ce7ad47e0617b66a0b578cb}{set\+Particle\+Type\+To\+Member}} (const P\+S\+::\+F64 \+\_\+mass=P\+S\+::\+L\+A\+R\+G\+E\+\_\+\+F\+L\+O\+AT, const P\+S\+::\+F64 \+\_\+status=-\/P\+S\+::\+L\+A\+R\+G\+E\+\_\+\+F\+L\+O\+AT)
+\begin{DoxyCompactList}\small\item\em set particle type to member \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classArtificialParticleInformation_abc5b2bdadb35b2f7f5d4d589be9e12be}{is\+Member}} () const
+\begin{DoxyCompactList}\small\item\em return whether the particle type is member \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classArtificialParticleInformation_af16979f938fa1ea18b2271c845a4dd25}{set\+Particle\+Type\+To\+CM}} (const P\+S\+::\+F64 \+\_\+mass\+\_\+backup=P\+S\+::\+L\+A\+R\+G\+E\+\_\+\+F\+L\+O\+AT, const P\+S\+::\+F64 \+\_\+status=P\+S\+::\+L\+A\+R\+G\+E\+\_\+\+F\+L\+O\+AT)
+\begin{DoxyCompactList}\small\item\em set particle type to artificial \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classArtificialParticleInformation_a64ff666e23638f97c5cdcf694ac0bf46}{is\+CM}} () const
+\begin{DoxyCompactList}\small\item\em return whether the particle type is c.\+m. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classArtificialParticleInformation_a7cbeaf4da02bdc0888402a7836a89980}{set\+Mass\+Backup}} (const P\+S\+::\+F64 \+\_\+mass)
+\begin{DoxyCompactList}\small\item\em set backup mass \end{DoxyCompactList}\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classArtificialParticleInformation_abafbbad3f31248b1742c34669ce8438e}{get\+Mass\+Backup}} () const
+\begin{DoxyCompactList}\small\item\em get backup mass \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classArtificialParticleInformation_a33dd5a06236683149699c051d83f7b34}{set\+Particle\+Type\+To\+Single}} ()
+\begin{DoxyCompactList}\small\item\em set particle type to single \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classArtificialParticleInformation_a3faf9e51b72a11c1191e8844c0ad5a5e}{is\+Single}} () const
+\begin{DoxyCompactList}\small\item\em return whether the particle type is single \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classArtificialParticleInformation_af0df1851e98693fb418cd4655f352f66}{set\+Particle\+Type\+To\+Artificial}} (const P\+S\+::\+F64 \+\_\+status=P\+S\+::\+L\+A\+R\+G\+E\+\_\+\+F\+L\+O\+AT, const P\+S\+::\+F64 \+\_\+mass\+\_\+backup=0.\+0)
+\begin{DoxyCompactList}\small\item\em set particle type to artificial \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classArtificialParticleInformation_ae87f07e0baa5ec2a19c6b73e191825bc}{is\+Artificial}} () const
+\begin{DoxyCompactList}\small\item\em return whether the particle type is artificial \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classArtificialParticleInformation_aaf1294fdff785ba8b92e343a8c2366d6}{store\+Data}} (const P\+S\+::\+F64 \+\_\+data)
+\begin{DoxyCompactList}\small\item\em store one data (only in artificial particles) \end{DoxyCompactList}\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classArtificialParticleInformation_a995d580f346d45ca6e72bea2678ceb77}{get\+Data}} (const bool is\+\_\+positive) const
+\begin{DoxyCompactList}\small\item\em get stored data (only in artificial particles) \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classArtificialParticleInformation_a5270d8aa4301b8236c1247592c8c9512}{set\+Status}} (const P\+S\+::\+F64 \+\_\+status)
+\begin{DoxyCompactList}\small\item\em set status \end{DoxyCompactList}\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classArtificialParticleInformation_a982c2f0730dc8cb6e186bbd968c21fc5}{get\+Status}} () const
+\begin{DoxyCompactList}\small\item\em get status \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classArtificialParticleInformation_a798bffaf48620f72e73beecac4a30e0d}{is\+Unused}} () const
+\begin{DoxyCompactList}\small\item\em return whether the particle is unused \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classArtificialParticleInformation_aa8109f7559451c8698fd8b556be02c46}{set\+Particle\+Type\+To\+Unused}} ()
+\begin{DoxyCompactList}\small\item\em set particle type to unused \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classArtificialParticleInformation_aae6803a0a64539a263e8d6c8499c6969}{print\+Column}} (std\+::ostream \&\+\_\+fout, const int \+\_\+width=20)
+\begin{DoxyCompactList}\small\item\em print data of class members using column style \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classArtificialParticleInformation_a66cdd10308103afc4aa9f541525e8b78}{write\+Ascii}} (F\+I\+LE $\ast$\+\_\+fout) const
+\begin{DoxyCompactList}\small\item\em write class data with A\+S\+C\+II format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classArtificialParticleInformation_a6369d48d52f7486765fca0d0c8f6f88c}{write\+Binary}} (F\+I\+LE $\ast$\+\_\+fin) const
+\begin{DoxyCompactList}\small\item\em write class data with B\+I\+N\+A\+RY format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classArtificialParticleInformation_ab55e8cb9e7c06e8724bf280455f9207f}{read\+Ascii}} (F\+I\+LE $\ast$\+\_\+fin)
+\begin{DoxyCompactList}\small\item\em read class data with A\+S\+C\+II format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classArtificialParticleInformation_ad77539f16c39dc0fa305cf19a3ed096e}{read\+Binary}} (F\+I\+LE $\ast$\+\_\+fin)
+\begin{DoxyCompactList}\small\item\em read class data with B\+I\+N\+A\+RY format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classArtificialParticleInformation_aec5f6e1c055868a70cdb44584f0f6e9c}{print}} (std\+::ostream \&\+\_\+fout) const
+\begin{DoxyCompactList}\small\item\em print parameters \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static void \mbox{\hyperlink{classArtificialParticleInformation_ab80264bffa5c899f8a67a24a35a06b85}{print\+Column\+Title}} (std\+::ostream \&\+\_\+fout, const int \+\_\+width=20)
+\begin{DoxyCompactList}\small\item\em print titles of class members using column style \end{DoxyCompactList}\item 
+static int \mbox{\hyperlink{classArtificialParticleInformation_a5c43b0ff92a0c281930551c2adcf8ac6}{print\+Title\+With\+Meaning}} (std\+::ostream \&\+\_\+fout, const int \+\_\+counter=0, const int \+\_\+offset=0)
+\begin{DoxyCompactList}\small\item\em print column title with meaning (each line for one column) \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+class to store necessary information for using artificial particles 
+
+\begin{DoxyVerb}        single    c.m.             members          initial     artificial
+\end{DoxyVerb}
+ mass\+\_\+backup 0 mass (+) mass (+) -\/L\+A\+R\+GE default is 0.\+0 / data stored (-\//0) status 0 n\+\_\+members (+) c.\+m. adr (-\/) -\/L\+A\+R\+GE position in artificial particle array / data stored (+) 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classArtificialParticleInformation_a762afc179a0bef75b525c40e0ac4e1ae}\label{classArtificialParticleInformation_a762afc179a0bef75b525c40e0ac4e1ae}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{ArtificialParticleInformation()}{ArtificialParticleInformation()}}
+{\footnotesize\ttfamily Artificial\+Particle\+Information\+::\+Artificial\+Particle\+Information (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+initializer 
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classArtificialParticleInformation_a995d580f346d45ca6e72bea2678ceb77}\label{classArtificialParticleInformation_a995d580f346d45ca6e72bea2678ceb77}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!getData@{getData}}
+\index{getData@{getData}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{getData()}{getData()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Artificial\+Particle\+Information\+::get\+Data (\begin{DoxyParamCaption}\item[{const bool}]{is\+\_\+positive }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get stored data (only in artificial particles) 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em is\+\_\+positive} & indicate whether stored data is positive (true) or negative (false) \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleInformation_a995d580f346d45ca6e72bea2678ceb77_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleInformation_abafbbad3f31248b1742c34669ce8438e}\label{classArtificialParticleInformation_abafbbad3f31248b1742c34669ce8438e}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!getMassBackup@{getMassBackup}}
+\index{getMassBackup@{getMassBackup}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{getMassBackup()}{getMassBackup()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Artificial\+Particle\+Information\+::get\+Mass\+Backup (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get backup mass 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleInformation_abafbbad3f31248b1742c34669ce8438e_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleInformation_a982c2f0730dc8cb6e186bbd968c21fc5}\label{classArtificialParticleInformation_a982c2f0730dc8cb6e186bbd968c21fc5}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!getStatus@{getStatus}}
+\index{getStatus@{getStatus}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{getStatus()}{getStatus()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Artificial\+Particle\+Information\+::get\+Status (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get status 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleInformation_a982c2f0730dc8cb6e186bbd968c21fc5_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleInformation_ae87f07e0baa5ec2a19c6b73e191825bc}\label{classArtificialParticleInformation_ae87f07e0baa5ec2a19c6b73e191825bc}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!isArtificial@{isArtificial}}
+\index{isArtificial@{isArtificial}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{isArtificial()}{isArtificial()}}
+{\footnotesize\ttfamily bool Artificial\+Particle\+Information\+::is\+Artificial (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+return whether the particle type is artificial 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleInformation_ae87f07e0baa5ec2a19c6b73e191825bc_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleInformation_a64ff666e23638f97c5cdcf694ac0bf46}\label{classArtificialParticleInformation_a64ff666e23638f97c5cdcf694ac0bf46}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!isCM@{isCM}}
+\index{isCM@{isCM}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{isCM()}{isCM()}}
+{\footnotesize\ttfamily bool Artificial\+Particle\+Information\+::is\+CM (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+return whether the particle type is c.\+m. 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleInformation_a64ff666e23638f97c5cdcf694ac0bf46_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleInformation_abc5b2bdadb35b2f7f5d4d589be9e12be}\label{classArtificialParticleInformation_abc5b2bdadb35b2f7f5d4d589be9e12be}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!isMember@{isMember}}
+\index{isMember@{isMember}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{isMember()}{isMember()}}
+{\footnotesize\ttfamily bool Artificial\+Particle\+Information\+::is\+Member (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+return whether the particle type is member 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleInformation_abc5b2bdadb35b2f7f5d4d589be9e12be_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleInformation_a3faf9e51b72a11c1191e8844c0ad5a5e}\label{classArtificialParticleInformation_a3faf9e51b72a11c1191e8844c0ad5a5e}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!isSingle@{isSingle}}
+\index{isSingle@{isSingle}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{isSingle()}{isSingle()}}
+{\footnotesize\ttfamily bool Artificial\+Particle\+Information\+::is\+Single (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+return whether the particle type is single 
+
+\mbox{\Hypertarget{classArtificialParticleInformation_a798bffaf48620f72e73beecac4a30e0d}\label{classArtificialParticleInformation_a798bffaf48620f72e73beecac4a30e0d}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!isUnused@{isUnused}}
+\index{isUnused@{isUnused}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{isUnused()}{isUnused()}}
+{\footnotesize\ttfamily bool Artificial\+Particle\+Information\+::is\+Unused (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+return whether the particle is unused 
+
+\mbox{\Hypertarget{classArtificialParticleInformation_aec5f6e1c055868a70cdb44584f0f6e9c}\label{classArtificialParticleInformation_aec5f6e1c055868a70cdb44584f0f6e9c}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!print@{print}}
+\index{print@{print}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{print()}{print()}}
+{\footnotesize\ttfamily void Artificial\+Particle\+Information\+::print (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print parameters 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleInformation_aec5f6e1c055868a70cdb44584f0f6e9c_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleInformation_aae6803a0a64539a263e8d6c8499c6969}\label{classArtificialParticleInformation_aae6803a0a64539a263e8d6c8499c6969}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!printColumn@{printColumn}}
+\index{printColumn@{printColumn}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{printColumn()}{printColumn()}}
+{\footnotesize\ttfamily void Artificial\+Particle\+Information\+::print\+Column (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print data of class members using column style 
+
+print data of class members in one line for column style. Notice no newline is printed at the end 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleInformation_aae6803a0a64539a263e8d6c8499c6969_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleInformation_ab80264bffa5c899f8a67a24a35a06b85}\label{classArtificialParticleInformation_ab80264bffa5c899f8a67a24a35a06b85}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!printColumnTitle@{printColumnTitle}}
+\index{printColumnTitle@{printColumnTitle}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{printColumnTitle()}{printColumnTitle()}}
+{\footnotesize\ttfamily static void Artificial\+Particle\+Information\+::print\+Column\+Title (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+print titles of class members using column style 
+
+print titles of class members in one line for column style 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleInformation_ab80264bffa5c899f8a67a24a35a06b85_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleInformation_a5c43b0ff92a0c281930551c2adcf8ac6}\label{classArtificialParticleInformation_a5c43b0ff92a0c281930551c2adcf8ac6}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!printTitleWithMeaning@{printTitleWithMeaning}}
+\index{printTitleWithMeaning@{printTitleWithMeaning}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{printTitleWithMeaning()}{printTitleWithMeaning()}}
+{\footnotesize\ttfamily static int Artificial\+Particle\+Information\+::print\+Title\+With\+Meaning (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+counter = {\ttfamily 0},  }\item[{const int}]{\+\_\+offset = {\ttfamily 0} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+print column title with meaning (each line for one column) 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+counter} & offset of the number counter for each line to indicate the column index (defaulted 0) \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+offset} & the printing whitespace offset for each line (defaulted 0) \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+\+: the total counter of columns 
+\end{DoxyReturn}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleInformation_a5c43b0ff92a0c281930551c2adcf8ac6_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleInformation_ab55e8cb9e7c06e8724bf280455f9207f}\label{classArtificialParticleInformation_ab55e8cb9e7c06e8724bf280455f9207f}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!readAscii@{readAscii}}
+\index{readAscii@{readAscii}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{readAscii()}{readAscii()}}
+{\footnotesize\ttfamily void Artificial\+Particle\+Information\+::read\+Ascii (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read class data with A\+S\+C\+II format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fin} & file IO for read \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleInformation_ab55e8cb9e7c06e8724bf280455f9207f_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleInformation_ad77539f16c39dc0fa305cf19a3ed096e}\label{classArtificialParticleInformation_ad77539f16c39dc0fa305cf19a3ed096e}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!readBinary@{readBinary}}
+\index{readBinary@{readBinary}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{readBinary()}{readBinary()}}
+{\footnotesize\ttfamily void Artificial\+Particle\+Information\+::read\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read class data with B\+I\+N\+A\+RY format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fin} & file IO for read \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classArtificialParticleInformation_a7cbeaf4da02bdc0888402a7836a89980}\label{classArtificialParticleInformation_a7cbeaf4da02bdc0888402a7836a89980}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!setMassBackup@{setMassBackup}}
+\index{setMassBackup@{setMassBackup}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{setMassBackup()}{setMassBackup()}}
+{\footnotesize\ttfamily void Artificial\+Particle\+Information\+::set\+Mass\+Backup (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{\+\_\+mass }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set backup mass 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleInformation_a7cbeaf4da02bdc0888402a7836a89980_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleInformation_af0df1851e98693fb418cd4655f352f66}\label{classArtificialParticleInformation_af0df1851e98693fb418cd4655f352f66}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!setParticleTypeToArtificial@{setParticleTypeToArtificial}}
+\index{setParticleTypeToArtificial@{setParticleTypeToArtificial}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{setParticleTypeToArtificial()}{setParticleTypeToArtificial()}}
+{\footnotesize\ttfamily void Artificial\+Particle\+Information\+::set\+Particle\+Type\+To\+Artificial (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{\+\_\+status = {\ttfamily PS\+:\+:LARGE\+\_\+FLOAT},  }\item[{const P\+S\+::\+F64}]{\+\_\+mass\+\_\+backup = {\ttfamily 0.0} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set particle type to artificial 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+status} & status to save \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classArtificialParticleInformation_af16979f938fa1ea18b2271c845a4dd25}\label{classArtificialParticleInformation_af16979f938fa1ea18b2271c845a4dd25}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!setParticleTypeToCM@{setParticleTypeToCM}}
+\index{setParticleTypeToCM@{setParticleTypeToCM}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{setParticleTypeToCM()}{setParticleTypeToCM()}}
+{\footnotesize\ttfamily void Artificial\+Particle\+Information\+::set\+Particle\+Type\+To\+CM (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{\+\_\+mass\+\_\+backup = {\ttfamily PS\+:\+:LARGE\+\_\+FLOAT},  }\item[{const P\+S\+::\+F64}]{\+\_\+status = {\ttfamily PS\+:\+:LARGE\+\_\+FLOAT} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set particle type to artificial 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+status} & status to save \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classArtificialParticleInformation_a7e35031d5ce7ad47e0617b66a0b578cb}\label{classArtificialParticleInformation_a7e35031d5ce7ad47e0617b66a0b578cb}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!setParticleTypeToMember@{setParticleTypeToMember}}
+\index{setParticleTypeToMember@{setParticleTypeToMember}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{setParticleTypeToMember()}{setParticleTypeToMember()}}
+{\footnotesize\ttfamily void Artificial\+Particle\+Information\+::set\+Particle\+Type\+To\+Member (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{\+\_\+mass = {\ttfamily PS\+:\+:LARGE\+\_\+FLOAT},  }\item[{const P\+S\+::\+F64}]{\+\_\+status = {\ttfamily -\/PS\+:\+:LARGE\+\_\+FLOAT} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set particle type to member 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+mass} & mass to backup \\
+\hline
+\end{DoxyParams}
+\mbox{\Hypertarget{classArtificialParticleInformation_a33dd5a06236683149699c051d83f7b34}\label{classArtificialParticleInformation_a33dd5a06236683149699c051d83f7b34}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!setParticleTypeToSingle@{setParticleTypeToSingle}}
+\index{setParticleTypeToSingle@{setParticleTypeToSingle}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{setParticleTypeToSingle()}{setParticleTypeToSingle()}}
+{\footnotesize\ttfamily void Artificial\+Particle\+Information\+::set\+Particle\+Type\+To\+Single (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set particle type to single 
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=307pt]{classArtificialParticleInformation_a33dd5a06236683149699c051d83f7b34_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleInformation_aa8109f7559451c8698fd8b556be02c46}\label{classArtificialParticleInformation_aa8109f7559451c8698fd8b556be02c46}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!setParticleTypeToUnused@{setParticleTypeToUnused}}
+\index{setParticleTypeToUnused@{setParticleTypeToUnused}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{setParticleTypeToUnused()}{setParticleTypeToUnused()}}
+{\footnotesize\ttfamily void Artificial\+Particle\+Information\+::set\+Particle\+Type\+To\+Unused (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set particle type to unused 
+
+\mbox{\Hypertarget{classArtificialParticleInformation_a5270d8aa4301b8236c1247592c8c9512}\label{classArtificialParticleInformation_a5270d8aa4301b8236c1247592c8c9512}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!setStatus@{setStatus}}
+\index{setStatus@{setStatus}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{setStatus()}{setStatus()}}
+{\footnotesize\ttfamily void Artificial\+Particle\+Information\+::set\+Status (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{\+\_\+status }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set status 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleInformation_a5270d8aa4301b8236c1247592c8c9512_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleInformation_a5270d8aa4301b8236c1247592c8c9512_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleInformation_aaf1294fdff785ba8b92e343a8c2366d6}\label{classArtificialParticleInformation_aaf1294fdff785ba8b92e343a8c2366d6}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!storeData@{storeData}}
+\index{storeData@{storeData}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{storeData()}{storeData()}}
+{\footnotesize\ttfamily void Artificial\+Particle\+Information\+::store\+Data (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{\+\_\+data }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+store one data (only in artificial particles) 
+
+positive data stored in status, otherwise in mass\+\_\+backup; Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleInformation_aaf1294fdff785ba8b92e343a8c2366d6_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleInformation_a66cdd10308103afc4aa9f541525e8b78}\label{classArtificialParticleInformation_a66cdd10308103afc4aa9f541525e8b78}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!writeAscii@{writeAscii}}
+\index{writeAscii@{writeAscii}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{writeAscii()}{writeAscii()}}
+{\footnotesize\ttfamily void Artificial\+Particle\+Information\+::write\+Ascii (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fout }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write class data with A\+S\+C\+II format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fout} & file IO for write \\
+\hline
+\end{DoxyParams}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classArtificialParticleInformation_a66cdd10308103afc4aa9f541525e8b78_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classArtificialParticleInformation_a6369d48d52f7486765fca0d0c8f6f88c}\label{classArtificialParticleInformation_a6369d48d52f7486765fca0d0c8f6f88c}} 
+\index{ArtificialParticleInformation@{ArtificialParticleInformation}!writeBinary@{writeBinary}}
+\index{writeBinary@{writeBinary}!ArtificialParticleInformation@{ArtificialParticleInformation}}
+\doxysubsubsection{\texorpdfstring{writeBinary()}{writeBinary()}}
+{\footnotesize\ttfamily void Artificial\+Particle\+Information\+::write\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fin }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write class data with B\+I\+N\+A\+RY format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fout} & file IO for write \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{artificial__particles_8hpp}{artificial\+\_\+particles.\+hpp}}\end{DoxyCompactItemize}

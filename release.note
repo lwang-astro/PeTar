@@ -1,0 +1,33 @@
+**v1.0 Change Note**
+
+The v1.0 release of PeTar marks the first stable version of Petar. A comparison with v1.0-beta reveals the following updates:
+
+1. Enhanced the language of the README.md help documentation and included missing descriptions for all tools.
+2. Improved the language of help information for petar and all tools, and added Doxygen documentation for developers.
+3. Moved sample scripts for star cluster simulations to a new directory named "sample" and included a Jupyter Notebook, data_analysis.ipynb, as an example illustrating the data analysis module in Python.
+4. Implemented the BSEEMP stellar evolution code for extremely metal-poor stars.
+5. Introduced the petar.format.transfer.post tool.
+6. Updated the Galpy interface to support time-dependent potentials and fixed several related bugs.
+7. Adjusted Galpy default units to match PeTar units instead of the official Galpy Bovy unit.
+8. Updated class methods in Python data analysis to support mathematical operations, set hosts, and save and load files in BINARY and npy formats.
+9. Improved petar.data.process to enhance the calculation of tidal radius.
+10. Introduced support for calculating Lagrangian radii in mass ranges using the 'add_mass_range' option in petar.data.process and petar.LagrangianMultiple.
+11. Added support for custom functions in the petar.get.object.snap tool.
+12. Added petar.SSEISO to read printed output from petar.bse code.
+13. Eliminated the dependency on helper_cuda.h to support systems without CUDA SDK.
+14. Implemented a change to generate random seeds based on MPI ranks to prevent the problem of repeated random seeds across different MPI processors.
+15. Addressed bugs in MOBSE and Python tools. 
+
+Some existing issues include:
+1. In cases where a high-eccentric binary system transitions from a binary to a hyperbolic orbit temporarily due to significant perturbations at a large separation, the BSE code may incorrectly identify it as an immediate merger, even though the binary system does not actually merge. It is essential to establish a more precise criterion for invoking binary evolution codes in such scenarios.
+2. Several issues from the v1.0-beta version of MOBSE remain unresolved.
+
+**v1.0-beta**
+
+The v1.0-beta release of PeTar is now ready for use. Some existing issues include:
+
+1. Incomplete MOBSE interface where certain parameters (luminosity, radius, core mass, spin) for binary stellar evolution event records are not correctly recorded when `base_output = False` for the Python analysis class `petar.BSEBinaryEvent`. The corresponding data file is `data.mobse.**`.
+2. Potential bug when a member of a merger becomes type 15 in MOBSE and its mass is not set to zero, requiring further testing to ensure it does not occur.
+3. Incomplete galpy interface with confusing unit conversion and difficulties in handling it. The time-dependent potential following the cluster center is not accurately calculated in the current version. In the next release update, the default unit of Galpy will align with that of PeTar without additional unit conversion. Improved support for time-dependent potential with a better galpy configure file format will be implemented.
+4. Issue with the random generator for all BSE versions when parallelization is used, designed originally for a single processor. The problem arises from each MPI processor having the same seeds, leading to repeated random numbers and causing the issue of identical kick velocities after supernovae. In the next release update, the parallel C++ version of the random generator will replace the Fortran ran3 from BSE codes.
+

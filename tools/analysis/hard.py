@@ -170,7 +170,7 @@ class HardData(DictNpArrayMix):
                 Number of slowdown pairs
         """
         kwargs['member_type']=Particle
-        kwargs['particle_type']='hard'
+        kwargs['particle_type']='hermite'
         keys=[['time', np.float64], ['energy_phy', HermiteEnergy], ['energy_sd', HermiteEnergy], ['sd', SlowDownGroup], ['time_org', np.float64], ['profile', HermiteProfile], ['particles', ParticleGroup]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
     

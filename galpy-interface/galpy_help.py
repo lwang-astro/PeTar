@@ -43,7 +43,7 @@ def getPotInstance(pot_name):
     return pot_module, pot_instance
 
 def savePotTypeArg(config_filename, n_pot, pot_type, pot_arg):
-    """ save type argument of a potential
+    """ save type argument of a potential to a configure file
 
     Parameters
     ----------
@@ -57,13 +57,15 @@ def savePotTypeArg(config_filename, n_pot, pot_type, pot_arg):
         argument list
     """
     with open(config_filename,'w') as f:
-        f.write("0 %d\n" % n_pot)
+        f.write("# This template contains configuration settings for the specified potential type. Please adjust the values to suit your requirements. Note that the potential argument values are in Galpy Units; please replace them with the corresponding values in PeTar Units. Before using PeTar to read this configuration file, remember to remove this line.\n")
+        f.write("Time 0.0 Task add\nNset 1\n")
+        f.write("Set 0\nNtype %d Mode 0\nGM 0 Pos 0 0 0 Vel 0 0 0\nType" % n_pot)
         for item in pot_type:
-            f.write("%d " % item)
-        f.write("\n")
+            f.write(" %d" % item)
+        f.write("\nArg")
         for item in pot_arg:
-            f.write("%.14g " % item)
-        f.write("\n")
+            f.write(" %.14g" % item)
+        f.write("\nNchange 0\n")
 
 def printPotTypeArg(pot_name, pot_module, pot_instance, print_front_offset=0, print_long_list=False):
     """ print the petar --type-arg options for a given potential

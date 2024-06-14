@@ -1,0 +1,5 @@
+<map id="ArtificialParticleInformation::setMassBackup" name="ArtificialParticleInformation::setMassBackup">
+<area shape="rect" id="node1" title="set backup mass" alt="" coords="5,39,205,80"/>
+<area shape="rect" id="node2" href="$classArtificialParticleInformation.html#a64ff666e23638f97c5cdcf694ac0bf46" title="return whether the particle type is c.m." alt="" coords="253,5,453,47"/>
+<area shape="rect" id="node3" href="$classArtificialParticleInformation.html#abc5b2bdadb35b2f7f5d4d589be9e12be" title="return whether the particle type is member" alt="" coords="253,71,453,112"/>
+</map>

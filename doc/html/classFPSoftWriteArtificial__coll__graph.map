@@ -1,0 +1,9 @@
+<map id="FPSoftWriteArtificial" name="FPSoftWriteArtificial">
+<area shape="rect" id="node1" title="redefine readAscii to read group data format, write in I64 format" alt="" coords="107,336,259,363"/>
+<area shape="rect" id="node2" href="$classFPSoft.html" title=" " alt="" coords="152,260,215,287"/>
+<area shape="rect" id="node3" href="$classPtcl.html" title="Particle class." alt="" coords="160,184,207,211"/>
+<area shape="rect" id="node4" href="$classParticleBase.html" title="Basic particle class." alt="" coords="5,95,108,121"/>
+<area shape="rect" id="node5" href="$classChangeOver.html" title="Changeover function class." alt="" coords="132,95,235,121"/>
+<area shape="rect" id="node6" href="$unionGroupDataDeliver.html" title="group data delivery, used for two purpose" alt="" coords="259,95,398,121"/>
+<area shape="rect" id="node7" href="$classArtificialParticleInformation.html" title="class to store necessary information for using artificial particles" alt="" coords="229,5,429,32"/>
+</map>

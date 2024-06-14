@@ -1,0 +1,5 @@
+<map id="ARPerturber" name="ARPerturber">
+<area shape="rect" id="node1" title="Perturber class for AR integration." alt="" coords="135,95,235,121"/>
+<area shape="rect" id="node2" title=" " alt="" coords="5,5,197,32"/>
+<area shape="rect" id="node3" href="$classTidalTensor.html" title="Tidal tensor perterbation for AR." alt="" coords="221,5,317,32"/>
+</map>

@@ -1,0 +1,603 @@
+\hypertarget{classPtcl}{}\doxysection{Ptcl Class Reference}
+\label{classPtcl}\index{Ptcl@{Ptcl}}
+
+
+\mbox{\hyperlink{classParticle}{Particle}} class.  
+
+
+
+
+{\ttfamily \#include $<$ptcl.\+hpp$>$}
+
+
+
+Inheritance diagram for Ptcl\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=322pt]{classPtcl__inherit__graph}
+\end{center}
+\end{figure}
+
+
+Collaboration diagram for Ptcl\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPtcl__coll__graph}
+\end{center}
+\end{figure}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classPtcl_ae4768696ca95807741c506a3d36ad171}{Ptcl}} ()
+\item 
+{\footnotesize template$<$class Tptcl $>$ }\\\mbox{\hyperlink{classPtcl_a17c87ff6e69e4fb55ca6a273f6d50176}{Ptcl}} (const Tptcl \&\+\_\+p)
+\item 
+{\footnotesize template$<$class Tptcl $>$ }\\\mbox{\hyperlink{classPtcl_af78d6fdd49a9921f80ec9add309bed1e}{Ptcl}} (const Tptcl \&\+\_\+p, const P\+S\+::\+F64 \+\_\+r\+\_\+search, const P\+S\+::\+S64 \+\_\+id, const \mbox{\hyperlink{unionGroupDataDeliver}{Group\+Data\+Deliver}} \&\+\_\+group\+\_\+data, const \mbox{\hyperlink{classChangeOver}{Change\+Over}} \&\+\_\+co)
+\item 
+{\footnotesize template$<$class Tptcl $>$ }\\void \mbox{\hyperlink{classPtcl_adf7eb00fc3ebaebb137eae21493e3eb5}{Data\+Copy}} (const Tptcl \&\+\_\+p)
+\item 
+{\footnotesize template$<$class Tptcl $>$ }\\\mbox{\hyperlink{classPtcl}{Ptcl}} \& \mbox{\hyperlink{classPtcl_a8b5b6e2cd1c91027e7ec17291caf44a5}{operator=}} (const Tptcl \&\+\_\+p)
+\item 
+void \mbox{\hyperlink{classPtcl_af1253dfc7cd8025affd01d3ff4726f63}{print}} (std\+::ostream \&\+\_\+fout) const
+\item 
+void \mbox{\hyperlink{classPtcl_ad3edca90dcee7b42baee6d12cbd25e52}{print\+Column}} (std\+::ostream \&\+\_\+fout, const int \+\_\+width=20)
+\begin{DoxyCompactList}\small\item\em print data of class members using column style \end{DoxyCompactList}\item 
+{\footnotesize template$<$class Tpcm $>$ }\\void \mbox{\hyperlink{classPtcl_ac152a9401ef2c14532f37f909f15264d}{print\+Column\+With\+Offset}} (Tpcm \&\+\_\+pcm, std\+::ostream \&\+\_\+fout, const int \+\_\+width=20)
+\begin{DoxyCompactList}\small\item\em print data of class members with pos and vel offset using column style \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classPtcl_a74f32fef5cbf6901a3b9ebebab3c6fe3}{write\+Ascii}} (F\+I\+LE $\ast$\+\_\+fout) const
+\begin{DoxyCompactList}\small\item\em write class data with A\+S\+C\+II format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classPtcl_aaa9a81b92b0ace9629935cd5bc55974c}{write\+Binary}} (F\+I\+LE $\ast$\+\_\+fout) const
+\begin{DoxyCompactList}\small\item\em write class data with B\+I\+N\+A\+RY format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classPtcl_a8194ae1343c9b9dacad1e2253a69ea7d}{read\+Ascii}} (F\+I\+LE $\ast$\+\_\+fin)
+\begin{DoxyCompactList}\small\item\em read class data with A\+S\+C\+II format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classPtcl_a2fc333332020231cb337a68f79fdbcdc}{read\+Binary}} (F\+I\+LE $\ast$\+\_\+fin)
+\begin{DoxyCompactList}\small\item\em read class data with B\+I\+N\+A\+RY format \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classPtcl_a89616cec78415e73c6b7f7af16f8c72e}{set\+Particle\+C\+M\+Address}} (const P\+S\+::\+S64 \+\_\+adr)
+\begin{DoxyCompactList}\small\item\em set status to c.\+m. particle address \end{DoxyCompactList}\item 
+P\+S\+::\+S64 \mbox{\hyperlink{classPtcl_a8e246fe96ab6ffb61e00db516beff44b}{get\+Particle\+C\+M\+Address}} () const
+\begin{DoxyCompactList}\small\item\em get c.\+m. particle address \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classPtcl_a16be4c6cdfc9a71ff180a2fce6d8668d}{calc\+R\+Search}} (const P\+S\+::\+F64 \+\_\+dt\+\_\+tree)
+\begin{DoxyCompactList}\small\item\em calculate new rsearch \end{DoxyCompactList}\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classPtcl_a11bd36e0dd41d013f5bf90e6a74b8a69}{get\+R\+Neighbor}} () const
+\begin{DoxyCompactList}\small\item\em Get neighbor distance criterion. \end{DoxyCompactList}\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classPtcl_a735f6de3f29073df24fcbc9a0874c46a}{get\+R\+Group\+Candidate}} () const
+\begin{DoxyCompactList}\small\item\em Get group candidate distance criterion. \end{DoxyCompactList}\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classPtcl_a7731bfc5bd1525b781acafc2d088f3b7}{get\+R\+Group}} () const
+\begin{DoxyCompactList}\small\item\em Get group distance criterion. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static void \mbox{\hyperlink{classPtcl_a33959c85b7424220cdd94f3ed9aab0ad}{print\+Column\+Title}} (std\+::ostream \&\+\_\+fout, const int \+\_\+width=20)
+\begin{DoxyCompactList}\small\item\em print titles of class members using column style \end{DoxyCompactList}\item 
+static int \mbox{\hyperlink{classPtcl_acd6efea3772cb295b1064d53695eb276}{print\+Title\+With\+Meaning}} (std\+::ostream \&\+\_\+fout, const int \+\_\+counter=0, const int \+\_\+offset=0)
+\begin{DoxyCompactList}\small\item\em print column title with meaning (each line for one column) \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{classPtcl_a490f938b2d41c0a5def50990dac1f65c}{r\+\_\+search}}
+\item 
+P\+S\+::\+S64 \mbox{\hyperlink{classPtcl_a6a43cef83e56ad4b3d985ccead9ef716}{id}}
+\item 
+\mbox{\hyperlink{unionGroupDataDeliver}{Group\+Data\+Deliver}} \mbox{\hyperlink{classPtcl_ad716134f1408c3f34ce7900363e2d62c}{group\+\_\+data}}
+\item 
+\mbox{\hyperlink{classChangeOver}{Change\+Over}} \mbox{\hyperlink{classPtcl_a95511774767b9f27da8983aca8cabb9e}{changeover}}
+\end{DoxyCompactItemize}
+\doxysubsection*{Static Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+static P\+S\+::\+F64 \mbox{\hyperlink{classPtcl_a452aeb749947f5076dc1ec44ce8b3119}{search\+\_\+factor}} = 0.\+0
+\item 
+static P\+S\+::\+F64 \mbox{\hyperlink{classPtcl_ac748724105c87e84400c053085291e6b}{r\+\_\+search\+\_\+min}} = 0.\+0
+\item 
+static P\+S\+::\+F64 \mbox{\hyperlink{classPtcl_a774fbb60e8482e1f77637418409bd3dd}{r\+\_\+group\+\_\+crit\+\_\+ratio}} =0.\+0
+\item 
+static P\+S\+::\+F64 \mbox{\hyperlink{classPtcl_a71024cba537fba6124b23fa39b0b7dbf}{mean\+\_\+mass\+\_\+inv}} = 0.\+0
+\item 
+static \mbox{\hyperlink{ptcl_8hpp_ad4140470df0d058ffde0786386a5589d}{Group\+Data\+Mode}} \mbox{\hyperlink{classPtcl_a5c94025b3778a5a349e80d72e618018d}{group\+\_\+data\+\_\+mode}} = \mbox{\hyperlink{ptcl_8hpp_ad4140470df0d058ffde0786386a5589da334c4a4c42fdb79d7ebc3e73b517e6f8}{Group\+Data\+Mode\+::none}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\mbox{\hyperlink{classParticle}{Particle}} class. 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classPtcl_ae4768696ca95807741c506a3d36ad171}\label{classPtcl_ae4768696ca95807741c506a3d36ad171}} 
+\index{Ptcl@{Ptcl}!Ptcl@{Ptcl}}
+\index{Ptcl@{Ptcl}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{Ptcl()}{Ptcl()}\hspace{0.1cm}{\footnotesize\ttfamily [1/3]}}
+{\footnotesize\ttfamily Ptcl\+::\+Ptcl (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classPtcl_a17c87ff6e69e4fb55ca6a273f6d50176}\label{classPtcl_a17c87ff6e69e4fb55ca6a273f6d50176}} 
+\index{Ptcl@{Ptcl}!Ptcl@{Ptcl}}
+\index{Ptcl@{Ptcl}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{Ptcl()}{Ptcl()}\hspace{0.1cm}{\footnotesize\ttfamily [2/3]}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+Ptcl\+::\+Ptcl (\begin{DoxyParamCaption}\item[{const Tptcl \&}]{\+\_\+p }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPtcl_a17c87ff6e69e4fb55ca6a273f6d50176_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPtcl_af78d6fdd49a9921f80ec9add309bed1e}\label{classPtcl_af78d6fdd49a9921f80ec9add309bed1e}} 
+\index{Ptcl@{Ptcl}!Ptcl@{Ptcl}}
+\index{Ptcl@{Ptcl}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{Ptcl()}{Ptcl()}\hspace{0.1cm}{\footnotesize\ttfamily [3/3]}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+Ptcl\+::\+Ptcl (\begin{DoxyParamCaption}\item[{const Tptcl \&}]{\+\_\+p,  }\item[{const P\+S\+::\+F64}]{\+\_\+r\+\_\+search,  }\item[{const P\+S\+::\+S64}]{\+\_\+id,  }\item[{const \mbox{\hyperlink{unionGroupDataDeliver}{Group\+Data\+Deliver}} \&}]{\+\_\+group\+\_\+data,  }\item[{const \mbox{\hyperlink{classChangeOver}{Change\+Over}} \&}]{\+\_\+co }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classPtcl_a16be4c6cdfc9a71ff180a2fce6d8668d}\label{classPtcl_a16be4c6cdfc9a71ff180a2fce6d8668d}} 
+\index{Ptcl@{Ptcl}!calcRSearch@{calcRSearch}}
+\index{calcRSearch@{calcRSearch}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{calcRSearch()}{calcRSearch()}}
+{\footnotesize\ttfamily void Ptcl\+::calc\+R\+Search (\begin{DoxyParamCaption}\item[{const P\+S\+::\+F64}]{\+\_\+dt\+\_\+tree }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+calculate new rsearch 
+
+calculate r\+\_\+search based on velocity and tree step Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=337pt]{classPtcl_a16be4c6cdfc9a71ff180a2fce6d8668d_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPtcl_adf7eb00fc3ebaebb137eae21493e3eb5}\label{classPtcl_adf7eb00fc3ebaebb137eae21493e3eb5}} 
+\index{Ptcl@{Ptcl}!DataCopy@{DataCopy}}
+\index{DataCopy@{DataCopy}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{DataCopy()}{DataCopy()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+void Ptcl\+::\+Data\+Copy (\begin{DoxyParamCaption}\item[{const Tptcl \&}]{\+\_\+p }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=336pt]{classPtcl_adf7eb00fc3ebaebb137eae21493e3eb5_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=318pt]{classPtcl_adf7eb00fc3ebaebb137eae21493e3eb5_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPtcl_a8e246fe96ab6ffb61e00db516beff44b}\label{classPtcl_a8e246fe96ab6ffb61e00db516beff44b}} 
+\index{Ptcl@{Ptcl}!getParticleCMAddress@{getParticleCMAddress}}
+\index{getParticleCMAddress@{getParticleCMAddress}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{getParticleCMAddress()}{getParticleCMAddress()}}
+{\footnotesize\ttfamily P\+S\+::\+S64 Ptcl\+::get\+Particle\+C\+M\+Address (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+get c.\+m. particle address 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPtcl_a8e246fe96ab6ffb61e00db516beff44b_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPtcl_a7731bfc5bd1525b781acafc2d088f3b7}\label{classPtcl_a7731bfc5bd1525b781acafc2d088f3b7}} 
+\index{Ptcl@{Ptcl}!getRGroup@{getRGroup}}
+\index{getRGroup@{getRGroup}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{getRGroup()}{getRGroup()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Ptcl\+::get\+R\+Group (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Get group distance criterion. 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=322pt]{classPtcl_a7731bfc5bd1525b781acafc2d088f3b7_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPtcl_a735f6de3f29073df24fcbc9a0874c46a}\label{classPtcl_a735f6de3f29073df24fcbc9a0874c46a}} 
+\index{Ptcl@{Ptcl}!getRGroupCandidate@{getRGroupCandidate}}
+\index{getRGroupCandidate@{getRGroupCandidate}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{getRGroupCandidate()}{getRGroupCandidate()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Ptcl\+::get\+R\+Group\+Candidate (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Get group candidate distance criterion. 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPtcl_a735f6de3f29073df24fcbc9a0874c46a_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPtcl_a11bd36e0dd41d013f5bf90e6a74b8a69}\label{classPtcl_a11bd36e0dd41d013f5bf90e6a74b8a69}} 
+\index{Ptcl@{Ptcl}!getRNeighbor@{getRNeighbor}}
+\index{getRNeighbor@{getRNeighbor}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{getRNeighbor()}{getRNeighbor()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Ptcl\+::get\+R\+Neighbor (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Get neighbor distance criterion. 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=344pt]{classPtcl_a11bd36e0dd41d013f5bf90e6a74b8a69_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPtcl_a8b5b6e2cd1c91027e7ec17291caf44a5}\label{classPtcl_a8b5b6e2cd1c91027e7ec17291caf44a5}} 
+\index{Ptcl@{Ptcl}!operator=@{operator=}}
+\index{operator=@{operator=}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{operator=()}{operator=()}}
+{\footnotesize\ttfamily template$<$class Tptcl $>$ \\
+\mbox{\hyperlink{classPtcl}{Ptcl}}\& Ptcl\+::operator= (\begin{DoxyParamCaption}\item[{const Tptcl \&}]{\+\_\+p }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPtcl_a8b5b6e2cd1c91027e7ec17291caf44a5_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPtcl_af1253dfc7cd8025affd01d3ff4726f63}\label{classPtcl_af1253dfc7cd8025affd01d3ff4726f63}} 
+\index{Ptcl@{Ptcl}!print@{print}}
+\index{print@{print}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{print()}{print()}}
+{\footnotesize\ttfamily void Ptcl\+::print (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPtcl_af1253dfc7cd8025affd01d3ff4726f63_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=274pt]{classPtcl_af1253dfc7cd8025affd01d3ff4726f63_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPtcl_ad3edca90dcee7b42baee6d12cbd25e52}\label{classPtcl_ad3edca90dcee7b42baee6d12cbd25e52}} 
+\index{Ptcl@{Ptcl}!printColumn@{printColumn}}
+\index{printColumn@{printColumn}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{printColumn()}{printColumn()}}
+{\footnotesize\ttfamily void Ptcl\+::print\+Column (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print data of class members using column style 
+
+print data of class members in one line for column style. Notice no newline is printed at the end 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPtcl_ad3edca90dcee7b42baee6d12cbd25e52_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=330pt]{classPtcl_ad3edca90dcee7b42baee6d12cbd25e52_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPtcl_a33959c85b7424220cdd94f3ed9aab0ad}\label{classPtcl_a33959c85b7424220cdd94f3ed9aab0ad}} 
+\index{Ptcl@{Ptcl}!printColumnTitle@{printColumnTitle}}
+\index{printColumnTitle@{printColumnTitle}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{printColumnTitle()}{printColumnTitle()}}
+{\footnotesize\ttfamily static void Ptcl\+::print\+Column\+Title (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+print titles of class members using column style 
+
+print titles of class members in one line for column style 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPtcl_a33959c85b7424220cdd94f3ed9aab0ad_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPtcl_a33959c85b7424220cdd94f3ed9aab0ad_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPtcl_ac152a9401ef2c14532f37f909f15264d}\label{classPtcl_ac152a9401ef2c14532f37f909f15264d}} 
+\index{Ptcl@{Ptcl}!printColumnWithOffset@{printColumnWithOffset}}
+\index{printColumnWithOffset@{printColumnWithOffset}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{printColumnWithOffset()}{printColumnWithOffset()}}
+{\footnotesize\ttfamily template$<$class Tpcm $>$ \\
+void Ptcl\+::print\+Column\+With\+Offset (\begin{DoxyParamCaption}\item[{Tpcm \&}]{\+\_\+pcm,  }\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+width = {\ttfamily 20} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+print data of class members with pos and vel offset using column style 
+
+print data of class members in one line for column style. Notice no newline is printed at the end 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+pcm} & particle data with position and velocity offset that are added when print data \\
+\hline
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+width} & print width (defaulted 20) \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPtcl_ac152a9401ef2c14532f37f909f15264d_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPtcl_ac152a9401ef2c14532f37f909f15264d_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPtcl_acd6efea3772cb295b1064d53695eb276}\label{classPtcl_acd6efea3772cb295b1064d53695eb276}} 
+\index{Ptcl@{Ptcl}!printTitleWithMeaning@{printTitleWithMeaning}}
+\index{printTitleWithMeaning@{printTitleWithMeaning}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{printTitleWithMeaning()}{printTitleWithMeaning()}}
+{\footnotesize\ttfamily static int Ptcl\+::print\+Title\+With\+Meaning (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{\+\_\+fout,  }\item[{const int}]{\+\_\+counter = {\ttfamily 0},  }\item[{const int}]{\+\_\+offset = {\ttfamily 0} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}}
+
+
+
+print column title with meaning (each line for one column) 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ out}}  & {\em \+\_\+fout} & std\+::ostream output object \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+counter} & offset of the number counter for each line to indicate the column index (defaulted 0) \\
+\hline
+\mbox{\texttt{ in}}  & {\em \+\_\+offset} & the printing whitespace offset for each line (defaulted 0) \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+\+: the total counter of columns 
+\end{DoxyReturn}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPtcl_acd6efea3772cb295b1064d53695eb276_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPtcl_acd6efea3772cb295b1064d53695eb276_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPtcl_a8194ae1343c9b9dacad1e2253a69ea7d}\label{classPtcl_a8194ae1343c9b9dacad1e2253a69ea7d}} 
+\index{Ptcl@{Ptcl}!readAscii@{readAscii}}
+\index{readAscii@{readAscii}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{readAscii()}{readAscii()}}
+{\footnotesize\ttfamily void Ptcl\+::read\+Ascii (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read class data with A\+S\+C\+II format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fin} & file IO for read \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPtcl_a8194ae1343c9b9dacad1e2253a69ea7d_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=300pt]{classPtcl_a8194ae1343c9b9dacad1e2253a69ea7d_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPtcl_a2fc333332020231cb337a68f79fdbcdc}\label{classPtcl_a2fc333332020231cb337a68f79fdbcdc}} 
+\index{Ptcl@{Ptcl}!readBinary@{readBinary}}
+\index{readBinary@{readBinary}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{readBinary()}{readBinary()}}
+{\footnotesize\ttfamily void Ptcl\+::read\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fin }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+read class data with B\+I\+N\+A\+RY format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fin} & file IO for read \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPtcl_a2fc333332020231cb337a68f79fdbcdc_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=317pt]{classPtcl_a2fc333332020231cb337a68f79fdbcdc_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPtcl_a89616cec78415e73c6b7f7af16f8c72e}\label{classPtcl_a89616cec78415e73c6b7f7af16f8c72e}} 
+\index{Ptcl@{Ptcl}!setParticleCMAddress@{setParticleCMAddress}}
+\index{setParticleCMAddress@{setParticleCMAddress}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{setParticleCMAddress()}{setParticleCMAddress()}}
+{\footnotesize\ttfamily void Ptcl\+::set\+Particle\+C\+M\+Address (\begin{DoxyParamCaption}\item[{const P\+S\+::\+S64}]{\+\_\+adr }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+set status to c.\+m. particle address 
+
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPtcl_a89616cec78415e73c6b7f7af16f8c72e_cgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPtcl_a74f32fef5cbf6901a3b9ebebab3c6fe3}\label{classPtcl_a74f32fef5cbf6901a3b9ebebab3c6fe3}} 
+\index{Ptcl@{Ptcl}!writeAscii@{writeAscii}}
+\index{writeAscii@{writeAscii}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{writeAscii()}{writeAscii()}}
+{\footnotesize\ttfamily void Ptcl\+::write\+Ascii (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fout }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write class data with A\+S\+C\+II format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fout} & file IO for write \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPtcl_a74f32fef5cbf6901a3b9ebebab3c6fe3_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=306pt]{classPtcl_a74f32fef5cbf6901a3b9ebebab3c6fe3_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{classPtcl_aaa9a81b92b0ace9629935cd5bc55974c}\label{classPtcl_aaa9a81b92b0ace9629935cd5bc55974c}} 
+\index{Ptcl@{Ptcl}!writeBinary@{writeBinary}}
+\index{writeBinary@{writeBinary}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{writeBinary()}{writeBinary()}}
+{\footnotesize\ttfamily void Ptcl\+::write\+Binary (\begin{DoxyParamCaption}\item[{F\+I\+LE $\ast$}]{\+\_\+fout }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+write class data with B\+I\+N\+A\+RY format 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{ in}}  & {\em \+\_\+fout} & file IO for write \\
+\hline
+\end{DoxyParams}
+Here is the call graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{classPtcl_aaa9a81b92b0ace9629935cd5bc55974c_cgraph}
+\end{center}
+\end{figure}
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=323pt]{classPtcl_aaa9a81b92b0ace9629935cd5bc55974c_icgraph}
+\end{center}
+\end{figure}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classPtcl_a95511774767b9f27da8983aca8cabb9e}\label{classPtcl_a95511774767b9f27da8983aca8cabb9e}} 
+\index{Ptcl@{Ptcl}!changeover@{changeover}}
+\index{changeover@{changeover}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{changeover}{changeover}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classChangeOver}{Change\+Over}} Ptcl\+::changeover}
+
+\mbox{\Hypertarget{classPtcl_ad716134f1408c3f34ce7900363e2d62c}\label{classPtcl_ad716134f1408c3f34ce7900363e2d62c}} 
+\index{Ptcl@{Ptcl}!group\_data@{group\_data}}
+\index{group\_data@{group\_data}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{group\_data}{group\_data}}
+{\footnotesize\ttfamily \mbox{\hyperlink{unionGroupDataDeliver}{Group\+Data\+Deliver}} Ptcl\+::group\+\_\+data}
+
+\mbox{\Hypertarget{classPtcl_a5c94025b3778a5a349e80d72e618018d}\label{classPtcl_a5c94025b3778a5a349e80d72e618018d}} 
+\index{Ptcl@{Ptcl}!group\_data\_mode@{group\_data\_mode}}
+\index{group\_data\_mode@{group\_data\_mode}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{group\_data\_mode}{group\_data\_mode}}
+{\footnotesize\ttfamily \mbox{\hyperlink{ptcl_8hpp_ad4140470df0d058ffde0786386a5589d}{Group\+Data\+Mode}} Ptcl\+::group\+\_\+data\+\_\+mode = \mbox{\hyperlink{ptcl_8hpp_ad4140470df0d058ffde0786386a5589da334c4a4c42fdb79d7ebc3e73b517e6f8}{Group\+Data\+Mode\+::none}}\hspace{0.3cm}{\ttfamily [static]}}
+
+\mbox{\Hypertarget{classPtcl_a6a43cef83e56ad4b3d985ccead9ef716}\label{classPtcl_a6a43cef83e56ad4b3d985ccead9ef716}} 
+\index{Ptcl@{Ptcl}!id@{id}}
+\index{id@{id}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{id}{id}}
+{\footnotesize\ttfamily P\+S\+::\+S64 Ptcl\+::id}
+
+\mbox{\Hypertarget{classPtcl_a71024cba537fba6124b23fa39b0b7dbf}\label{classPtcl_a71024cba537fba6124b23fa39b0b7dbf}} 
+\index{Ptcl@{Ptcl}!mean\_mass\_inv@{mean\_mass\_inv}}
+\index{mean\_mass\_inv@{mean\_mass\_inv}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{mean\_mass\_inv}{mean\_mass\_inv}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Ptcl\+::mean\+\_\+mass\+\_\+inv = 0.\+0\hspace{0.3cm}{\ttfamily [static]}}
+
+\mbox{\Hypertarget{classPtcl_a774fbb60e8482e1f77637418409bd3dd}\label{classPtcl_a774fbb60e8482e1f77637418409bd3dd}} 
+\index{Ptcl@{Ptcl}!r\_group\_crit\_ratio@{r\_group\_crit\_ratio}}
+\index{r\_group\_crit\_ratio@{r\_group\_crit\_ratio}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{r\_group\_crit\_ratio}{r\_group\_crit\_ratio}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Ptcl\+::r\+\_\+group\+\_\+crit\+\_\+ratio =0.\+0\hspace{0.3cm}{\ttfamily [static]}}
+
+\mbox{\Hypertarget{classPtcl_a490f938b2d41c0a5def50990dac1f65c}\label{classPtcl_a490f938b2d41c0a5def50990dac1f65c}} 
+\index{Ptcl@{Ptcl}!r\_search@{r\_search}}
+\index{r\_search@{r\_search}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{r\_search}{r\_search}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Ptcl\+::r\+\_\+search}
+
+\mbox{\Hypertarget{classPtcl_ac748724105c87e84400c053085291e6b}\label{classPtcl_ac748724105c87e84400c053085291e6b}} 
+\index{Ptcl@{Ptcl}!r\_search\_min@{r\_search\_min}}
+\index{r\_search\_min@{r\_search\_min}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{r\_search\_min}{r\_search\_min}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Ptcl\+::r\+\_\+search\+\_\+min = 0.\+0\hspace{0.3cm}{\ttfamily [static]}}
+
+\mbox{\Hypertarget{classPtcl_a452aeb749947f5076dc1ec44ce8b3119}\label{classPtcl_a452aeb749947f5076dc1ec44ce8b3119}} 
+\index{Ptcl@{Ptcl}!search\_factor@{search\_factor}}
+\index{search\_factor@{search\_factor}!Ptcl@{Ptcl}}
+\doxysubsubsection{\texorpdfstring{search\_factor}{search\_factor}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Ptcl\+::search\+\_\+factor = 0.\+0\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{ptcl_8hpp}{ptcl.\+hpp}}\item 
+\mbox{\hyperlink{static__variables_8hpp}{static\+\_\+variables.\+hpp}}\end{DoxyCompactItemize}

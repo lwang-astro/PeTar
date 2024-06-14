@@ -1,0 +1,202 @@
+\hypertarget{structTprofile}{}\doxysection{Tprofile Struct Reference}
+\label{structTprofile}\index{Tprofile@{Tprofile}}
+
+
+{\ttfamily \#include $<$profile.\+hpp$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{structTprofile_a85b9e2de83aed25e400435a72d18c3c6}{Tprofile}} (const char $\ast$\+\_\+name)
+\item 
+void \mbox{\hyperlink{structTprofile_adf2963fc05a8ee2b066f919e8d3e4e68}{start}} ()
+\item 
+void \mbox{\hyperlink{structTprofile_aa4331b775dd43b6ca51644f94bd3e218}{barrier}} ()
+\item 
+void \mbox{\hyperlink{structTprofile_a2345fef9ec21dcb3b3ee72ad36348559}{end}} ()
+\item 
+void \mbox{\hyperlink{structTprofile_a2883dd47e49931542ee0b34dda0ed22f}{print}} (std\+::ostream \&fout, const P\+S\+::\+S32 divider=1)
+\item 
+void \mbox{\hyperlink{structTprofile_a275ce92acee21a765d5f1aef753ede97}{dump}} (std\+::ostream \&fout, const P\+S\+::\+S32 divider=1, const P\+S\+::\+S32 width=\mbox{\hyperlink{profile_8hpp_aa41d1f7749c00f92a1d2647236863c83}{P\+R\+O\+F\+I\+L\+E\+\_\+\+P\+R\+I\+N\+T\+\_\+\+W\+I\+D\+TH}}) const
+\item 
+void \mbox{\hyperlink{structTprofile_ae35467caf9588a6a89fca2273eafa068}{dump\+Barrier}} (std\+::ostream \&fout, const P\+S\+::\+S32 divider=1, const P\+S\+::\+S32 width=\mbox{\hyperlink{profile_8hpp_aa41d1f7749c00f92a1d2647236863c83}{P\+R\+O\+F\+I\+L\+E\+\_\+\+P\+R\+I\+N\+T\+\_\+\+W\+I\+D\+TH}}) const
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{structTprofile_a3dfb9d679f924275d7eb7d2815f1e80c}{get\+Max}} ()
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{structTprofile_a19d71e71d8d43201ea3ce27f1613ab1f}{get\+Min}} ()
+\item 
+void \mbox{\hyperlink{structTprofile_a5d5fddd6a670d74f1ce0838bcdcfd8ab}{dump\+Name}} (std\+::ostream \&fout, const P\+S\+::\+S32 width=\mbox{\hyperlink{profile_8hpp_aa41d1f7749c00f92a1d2647236863c83}{P\+R\+O\+F\+I\+L\+E\+\_\+\+P\+R\+I\+N\+T\+\_\+\+W\+I\+D\+TH}}) const
+\item 
+void \mbox{\hyperlink{structTprofile_a0cdd2e37867b4a4b87eb1d286f546526}{dump\+Barrier\+Name}} (std\+::ostream \&fout, const P\+S\+::\+S32 width=\mbox{\hyperlink{profile_8hpp_aa41d1f7749c00f92a1d2647236863c83}{P\+R\+O\+F\+I\+L\+E\+\_\+\+P\+R\+I\+N\+T\+\_\+\+W\+I\+D\+TH}}) const
+\item 
+void \mbox{\hyperlink{structTprofile_acb0d2c3f3955159af6b40c817a30d596}{reset}} ()
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{structTprofile_a08637a9e011800923ded7647915c5487}{time}}
+\item 
+P\+S\+::\+F64 \mbox{\hyperlink{structTprofile_ae076178b36b67a001dcb3519b729b5db}{tbar}}
+\item 
+const char $\ast$ \mbox{\hyperlink{structTprofile_ab29b2f3e4599fc507ceac568ec1c9312}{name}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{structTprofile_a85b9e2de83aed25e400435a72d18c3c6}\label{structTprofile_a85b9e2de83aed25e400435a72d18c3c6}} 
+\index{Tprofile@{Tprofile}!Tprofile@{Tprofile}}
+\index{Tprofile@{Tprofile}!Tprofile@{Tprofile}}
+\doxysubsubsection{\texorpdfstring{Tprofile()}{Tprofile()}}
+{\footnotesize\ttfamily Tprofile\+::\+Tprofile (\begin{DoxyParamCaption}\item[{const char $\ast$}]{\+\_\+name }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{structTprofile_aa4331b775dd43b6ca51644f94bd3e218}\label{structTprofile_aa4331b775dd43b6ca51644f94bd3e218}} 
+\index{Tprofile@{Tprofile}!barrier@{barrier}}
+\index{barrier@{barrier}!Tprofile@{Tprofile}}
+\doxysubsubsection{\texorpdfstring{barrier()}{barrier()}}
+{\footnotesize\ttfamily void Tprofile\+::barrier (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{structTprofile_a275ce92acee21a765d5f1aef753ede97}\label{structTprofile_a275ce92acee21a765d5f1aef753ede97}} 
+\index{Tprofile@{Tprofile}!dump@{dump}}
+\index{dump@{dump}!Tprofile@{Tprofile}}
+\doxysubsubsection{\texorpdfstring{dump()}{dump()}}
+{\footnotesize\ttfamily void Tprofile\+::dump (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{fout,  }\item[{const P\+S\+::\+S32}]{divider = {\ttfamily 1},  }\item[{const P\+S\+::\+S32}]{width = {\ttfamily \mbox{\hyperlink{profile_8hpp_aa41d1f7749c00f92a1d2647236863c83}{P\+R\+O\+F\+I\+L\+E\+\_\+\+P\+R\+I\+N\+T\+\_\+\+W\+I\+D\+TH}}} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=301pt]{structTprofile_a275ce92acee21a765d5f1aef753ede97_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{structTprofile_ae35467caf9588a6a89fca2273eafa068}\label{structTprofile_ae35467caf9588a6a89fca2273eafa068}} 
+\index{Tprofile@{Tprofile}!dumpBarrier@{dumpBarrier}}
+\index{dumpBarrier@{dumpBarrier}!Tprofile@{Tprofile}}
+\doxysubsubsection{\texorpdfstring{dumpBarrier()}{dumpBarrier()}}
+{\footnotesize\ttfamily void Tprofile\+::dump\+Barrier (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{fout,  }\item[{const P\+S\+::\+S32}]{divider = {\ttfamily 1},  }\item[{const P\+S\+::\+S32}]{width = {\ttfamily \mbox{\hyperlink{profile_8hpp_aa41d1f7749c00f92a1d2647236863c83}{P\+R\+O\+F\+I\+L\+E\+\_\+\+P\+R\+I\+N\+T\+\_\+\+W\+I\+D\+TH}}} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{structTprofile_ae35467caf9588a6a89fca2273eafa068_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{structTprofile_a0cdd2e37867b4a4b87eb1d286f546526}\label{structTprofile_a0cdd2e37867b4a4b87eb1d286f546526}} 
+\index{Tprofile@{Tprofile}!dumpBarrierName@{dumpBarrierName}}
+\index{dumpBarrierName@{dumpBarrierName}!Tprofile@{Tprofile}}
+\doxysubsubsection{\texorpdfstring{dumpBarrierName()}{dumpBarrierName()}}
+{\footnotesize\ttfamily void Tprofile\+::dump\+Barrier\+Name (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{fout,  }\item[{const P\+S\+::\+S32}]{width = {\ttfamily \mbox{\hyperlink{profile_8hpp_aa41d1f7749c00f92a1d2647236863c83}{P\+R\+O\+F\+I\+L\+E\+\_\+\+P\+R\+I\+N\+T\+\_\+\+W\+I\+D\+TH}}} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{structTprofile_a0cdd2e37867b4a4b87eb1d286f546526_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{structTprofile_a5d5fddd6a670d74f1ce0838bcdcfd8ab}\label{structTprofile_a5d5fddd6a670d74f1ce0838bcdcfd8ab}} 
+\index{Tprofile@{Tprofile}!dumpName@{dumpName}}
+\index{dumpName@{dumpName}!Tprofile@{Tprofile}}
+\doxysubsubsection{\texorpdfstring{dumpName()}{dumpName()}}
+{\footnotesize\ttfamily void Tprofile\+::dump\+Name (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{fout,  }\item[{const P\+S\+::\+S32}]{width = {\ttfamily \mbox{\hyperlink{profile_8hpp_aa41d1f7749c00f92a1d2647236863c83}{P\+R\+O\+F\+I\+L\+E\+\_\+\+P\+R\+I\+N\+T\+\_\+\+W\+I\+D\+TH}}} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=350pt]{structTprofile_a5d5fddd6a670d74f1ce0838bcdcfd8ab_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{structTprofile_a2345fef9ec21dcb3b3ee72ad36348559}\label{structTprofile_a2345fef9ec21dcb3b3ee72ad36348559}} 
+\index{Tprofile@{Tprofile}!end@{end}}
+\index{end@{end}!Tprofile@{Tprofile}}
+\doxysubsubsection{\texorpdfstring{end()}{end()}}
+{\footnotesize\ttfamily void Tprofile\+::end (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{structTprofile_a3dfb9d679f924275d7eb7d2815f1e80c}\label{structTprofile_a3dfb9d679f924275d7eb7d2815f1e80c}} 
+\index{Tprofile@{Tprofile}!getMax@{getMax}}
+\index{getMax@{getMax}!Tprofile@{Tprofile}}
+\doxysubsubsection{\texorpdfstring{getMax()}{getMax()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Tprofile\+::get\+Max (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=319pt]{structTprofile_a3dfb9d679f924275d7eb7d2815f1e80c_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{structTprofile_a19d71e71d8d43201ea3ce27f1613ab1f}\label{structTprofile_a19d71e71d8d43201ea3ce27f1613ab1f}} 
+\index{Tprofile@{Tprofile}!getMin@{getMin}}
+\index{getMin@{getMin}!Tprofile@{Tprofile}}
+\doxysubsubsection{\texorpdfstring{getMin()}{getMin()}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Tprofile\+::get\+Min (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=313pt]{structTprofile_a19d71e71d8d43201ea3ce27f1613ab1f_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{structTprofile_a2883dd47e49931542ee0b34dda0ed22f}\label{structTprofile_a2883dd47e49931542ee0b34dda0ed22f}} 
+\index{Tprofile@{Tprofile}!print@{print}}
+\index{print@{print}!Tprofile@{Tprofile}}
+\doxysubsubsection{\texorpdfstring{print()}{print()}}
+{\footnotesize\ttfamily void Tprofile\+::print (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{fout,  }\item[{const P\+S\+::\+S32}]{divider = {\ttfamily 1} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=291pt]{structTprofile_a2883dd47e49931542ee0b34dda0ed22f_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{structTprofile_acb0d2c3f3955159af6b40c817a30d596}\label{structTprofile_acb0d2c3f3955159af6b40c817a30d596}} 
+\index{Tprofile@{Tprofile}!reset@{reset}}
+\index{reset@{reset}!Tprofile@{Tprofile}}
+\doxysubsubsection{\texorpdfstring{reset()}{reset()}}
+{\footnotesize\ttfamily void Tprofile\+::reset (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Here is the caller graph for this function\+:\nopagebreak
+\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[width=295pt]{structTprofile_acb0d2c3f3955159af6b40c817a30d596_icgraph}
+\end{center}
+\end{figure}
+\mbox{\Hypertarget{structTprofile_adf2963fc05a8ee2b066f919e8d3e4e68}\label{structTprofile_adf2963fc05a8ee2b066f919e8d3e4e68}} 
+\index{Tprofile@{Tprofile}!start@{start}}
+\index{start@{start}!Tprofile@{Tprofile}}
+\doxysubsubsection{\texorpdfstring{start()}{start()}}
+{\footnotesize\ttfamily void Tprofile\+::start (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{structTprofile_ab29b2f3e4599fc507ceac568ec1c9312}\label{structTprofile_ab29b2f3e4599fc507ceac568ec1c9312}} 
+\index{Tprofile@{Tprofile}!name@{name}}
+\index{name@{name}!Tprofile@{Tprofile}}
+\doxysubsubsection{\texorpdfstring{name}{name}}
+{\footnotesize\ttfamily const char$\ast$ Tprofile\+::name}
+
+\mbox{\Hypertarget{structTprofile_ae076178b36b67a001dcb3519b729b5db}\label{structTprofile_ae076178b36b67a001dcb3519b729b5db}} 
+\index{Tprofile@{Tprofile}!tbar@{tbar}}
+\index{tbar@{tbar}!Tprofile@{Tprofile}}
+\doxysubsubsection{\texorpdfstring{tbar}{tbar}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Tprofile\+::tbar}
+
+\mbox{\Hypertarget{structTprofile_a08637a9e011800923ded7647915c5487}\label{structTprofile_a08637a9e011800923ded7647915c5487}} 
+\index{Tprofile@{Tprofile}!time@{time}}
+\index{time@{time}!Tprofile@{Tprofile}}
+\doxysubsubsection{\texorpdfstring{time}{time}}
+{\footnotesize\ttfamily P\+S\+::\+F64 Tprofile\+::time}
+
+
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{profile_8hpp}{profile.\+hpp}}\end{DoxyCompactItemize}

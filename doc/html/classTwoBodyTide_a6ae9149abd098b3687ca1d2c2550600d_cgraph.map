@@ -1,0 +1,4 @@
+<map id="TwoBodyTide::evolveOrbitDynamicalTide" name="TwoBodyTide::evolveOrbitDynamicalTide">
+<area shape="rect" id="node1" title="evolve two&#45;body orbit based on dynamical tide implementation from Alessandro Alberto Trani" alt="" coords="5,5,197,47"/>
+<area shape="rect" id="node2" href="$classTwoBodyTide.html#a8694304ed5c6ef7b8166ae38da773216" title="Tidal energy based on Polynomical fits from Portegies Zwart et al. 1993." alt="" coords="245,13,508,39"/>
+</map>
