@@ -1082,7 +1082,6 @@ if __name__ == '__main__':
         print("  --pot-max     [F]  Maximum potential: ", data.pot_max)
         print("  --etot-min    [F]  Minimum total energy: ", data.etot_min)
         print("  --etot-max    [F]  Maximum total energy: ", data.etot_max)
-        print("  --r-max       [F]  Maximum distance for color scaling in semi-ecc plot", pse.r_max)
         print("  --rlagr-min   [F]  Minimum radius in Lagrangian plot: ", plagr.rlagr_min)
         print("  --rlagr-max   [F]  Maximum radius in Lagrangian plot: ", plagr.rlagr_max)
         print("  --rlagr-scale [S]  Scaling of Lagrangian radii in the plot (y-axis): ", plagr.rlagr_scale)
