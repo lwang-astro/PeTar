@@ -492,40 +492,41 @@ class PlotSemiEcc:
         return self.ptcls
 
     def plot(self, data):
-        #colors = cm.rainbow(types/13.0)
-        sizes = data.binary.mass**self.mass_power*self.marker_scale
-        core_correct = (self.cm_mode=='core') & (data.generate_binary != 2)
-        origin_mode = (self.cm_mode=='none')
-        xcm = data.header.pos_offset[0]
-        ycm = data.header.pos_offset[1]
-        zcm = data.header.pos_offset[2]
-        x = data.binary.pos[:,0]
-        y = data.binary.pos[:,1]
-        z = data.binary.pos[:,2]
-        if (core_correct):
-            xc = data.core.pos[0,0]
-            yc = data.core.pos[0,1]
-            zc = data.core.pos[0,2]
-            x += xcm - xc
-            y += ycm - yc
-            z += zcm - xc
-            xcm = xc
-            ycm = yc
-            zcm = zc
-        elif (origin_mode):
-            x += xcm
-            y += ycm
-            z += zcm
-        r = np.sqrt(x*x+y*y+z*z)
-        self.ptcls[0].set_offsets(np.array([data.binary.semi, data.binary.ecc]).transpose())
-        if (self.bin_color == 'white'):
-            self.ptcls[0].set_color('white')
-        elif (self.bin_color == 'distance'):
-            colors = cm.hot_r(np.log(r/self.bin_rmin)/np.log(self.bin_rmax/self.bin_rmin))
-            self.ptcls[0].set_color(colors)
-        else:
-            raise ValueError("Color mode %s is not supported for semi-ecc plot " % (self.bin_color))
-        self.ptcls[0].set_sizes(sizes)
+        if data.binary.size>0: 
+            #colors = cm.rainbow(types/13.0)
+            sizes = data.binary.mass**self.mass_power*self.marker_scale
+            core_correct = (self.cm_mode=='core') & (data.generate_binary != 2)
+            origin_mode = (self.cm_mode=='none')
+            xcm = data.header.pos_offset[0]
+            ycm = data.header.pos_offset[1]
+            zcm = data.header.pos_offset[2]
+            x = data.binary.pos[:,0]
+            y = data.binary.pos[:,1]
+            z = data.binary.pos[:,2]
+            if (core_correct):
+                xc = data.core.pos[0,0]
+                yc = data.core.pos[0,1]
+                zc = data.core.pos[0,2]
+                x += xcm - xc
+                y += ycm - yc
+                z += zcm - xc
+                xcm = xc
+                ycm = yc
+                zcm = zc
+            elif (origin_mode):
+                x += xcm
+                y += ycm
+                z += zcm
+            r = np.sqrt(x*x+y*y+z*z)
+            self.ptcls[0].set_offsets(np.array([data.binary.semi, data.binary.ecc]).transpose())
+            if (self.bin_color == 'white'):
+                self.ptcls[0].set_color('white')
+            elif (self.bin_color == 'distance'):
+                colors = cm.hot_r(np.log(r/self.bin_rmin)/np.log(self.bin_rmax/self.bin_rmin))
+                self.ptcls[0].set_color(colors)
+            else:
+                raise ValueError("Color mode %s is not supported for semi-ecc plot " % (self.bin_color))
+            self.ptcls[0].set_sizes(sizes)
         return self.ptcls
 
 class PlotLagr:
