@@ -72,7 +72,7 @@ extern "C" {
 
     extern struct{
         double sigma; ///> the dispersion in the Maxwellian for the SN kick speed
-        double mxns;  ///> the maximum NS mass (1.8, nsflag=0; 2.5, nsflag>=1). 
+        double mxns;  ///> the maximum NS mass (1.8, nsflag=0; 3.0, nsflag>=1). 
         int bhflag;   ///> BH kick 
     } value4_;
 
@@ -1240,7 +1240,8 @@ public:
 #endif
         value4_.mxns  = 1.8;
 #if (defined BSEBBF) || (defined BSEEMP)        
-        if (_input.nsflag.value>0) value4_.mxns = 2.5;
+//mod SR mxns bse=mobse 
+        if (_input.nsflag.value>0) value4_.mxns = 3.0;
 #elif MOBSE
         if (_input.nsflag.value>0) value4_.mxns = 3.0;
 #endif
