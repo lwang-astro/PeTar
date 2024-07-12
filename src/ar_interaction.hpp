@@ -935,7 +935,7 @@ public:
                 Float dt1 = _bin_interrupt.time_now - p1->time_record;
                 Float dt2 = _bin_interrupt.time_now - p2->time_record;
                 // if next time to check > time_now, do not evolve by setting dt = 0;
-                if (time_check<=_bin_interrupt.time_now) dt1 = dt2 = 0.0;
+                if (time_check>_bin_interrupt.time_now) dt1 = dt2 = 0.0;
 
                 // check whether bse is needed
                 Float dr[3] = {p1->pos[0] - p2->pos[0], 
