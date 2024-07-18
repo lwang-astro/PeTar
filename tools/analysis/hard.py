@@ -296,7 +296,7 @@ class HermiteData(DictNpArrayMix):
             if data_type=='hard', member_type is 'petar.HardParticle', 
                                   cm_type is 'petar.HermiteParticle'
             if data_type=='hermite', member_type is 'petar.IsolatedHermiteParticle'.
-                                     cm_type is 'petar.IsolatedHermiteParticle'
+                                     cm_type is 'petar.IsolatedSDARParticle'
     """
 
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
@@ -325,7 +325,7 @@ class HermiteData(DictNpArrayMix):
             kwargs['cm_type'] = HermiteParticle
         elif (kwargs['data_type'] == 'hermite'):
             kwargs['member_type'] = IsolatedHermiteParticle
-            kwargs['cm_type'] = IsolatedHermiteParticle
+            kwargs['cm_type'] = IsolatedSDARParticle
         else:
             raise ValueError('data_type is not supported, should be hard or hermite, given ',kwargs['data_type'])
 

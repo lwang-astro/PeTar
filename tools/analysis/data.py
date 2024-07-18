@@ -36,6 +36,8 @@ class PeTarDataHeader():
             PeTar snapshot file name to read the header, if not provide, all members are initialized to zero (None)
         kwargs: dict
             Keyword arguments:
+            float_type: type (np.float64)
+                floating point data type
             snapshot_format: string (ascii)
                 Data format of snapshot files: binary or ascii
             external_mode: string (none)
@@ -60,6 +62,8 @@ class PeTarDataHeader():
             PeTar snapshot file name to read the header
         kwargs: dict
             Keyword arguments:
+            float_type: type (np.float64)
+                floating point data type
             snapshot_format: string (ascii)
                 Data format of snapshot files: binary or ascii
             external_mode: string (none)
@@ -70,6 +74,8 @@ class PeTarDataHeader():
         if ('snapshot_format' in kwargs.keys()): snapshot_format=kwargs['snapshot_format']
         if ('external_mode' in kwargs.keys()):
             if (kwargs['external_mode']!='none'): self.offset_flag=True
+        if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
+        else: float_type = np.float64
 
         if (snapshot_format=='ascii'):
             fp = open(_filename, 'r')
@@ -84,9 +90,9 @@ class PeTarDataHeader():
 
                 self.file_id = int(file_id)
                 self.n = int(n_glb)
-                self.time = float(t)
-                self.pos_offset = [float(x),float(y),float(z)]
-                self.vel_offset = [float(vx),float(vy),float(vz)]
+                self.time = self.float_type(t)
+                self.pos_offset = [self.float_type(x),self.float_type(y),self.float_type(z)]
+                self.vel_offset = [self.float_type(vx),self.float_type(vy),self.float_type(vz)]
             else:
                 if (len(header_items)!=3):
                     raise ValueError('Snapshot header item number mismatch! Need 3 (file_id, N, time), got %d. Make sure the external_mode keyword set correctly.' % len(header_items))
@@ -96,18 +102,18 @@ class PeTarDataHeader():
 
                 self.file_id = int(file_id)
                 self.n = int(n_glb)
-                self.time = float(t)
+                self.time = self.float_type(t)
 
         else:
             if (self.offset_flag):
-                fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',np.float64),('x',np.float64),('y',np.float64),('z',np.float64),('vx',np.float64),('vy',np.float64),('vz',np.float64)]),count=1)
+                fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',self.float_type),('x',self.float_type),('y',self.float_type),('z',self.float_type),('vx',self.float_type),('vy',self.float_type),('vz',self.float_type)]),count=1)
                 self.file_id = fp['file_id'][0]
                 self.n = fp['n_glb'][0]
                 self.time = fp['time'][0]
                 self.pos_offset = [fp['x'][0], fp['y'][0], fp['z'][0]]
                 self.vel_offset = [fp['vx'][0], fp['vy'][0], fp['vz'][0]]
             else:
-                fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',np.float64)]),count=1)
+                fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',self.float_type)]),count=1)
                 self.file_id = fp['file_id'][0]
                 self.n = fp['n_glb'][0]
                 self.time = fp['time'][0]
@@ -226,8 +232,16 @@ class SimpleParticle(DictNpArrayMix):
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
+
+        Parameters:
+        -----------
+        Keyword arguments:
+            float_type: type (np.float64)
+                floating point data type
         """
-        keys = [['mass', np.float64], ['pos', (np.float64, 3)], ['vel', (np.float64, 3)]]
+        if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
+        else: float_type = np.float64
+        keys = [['mass', float_type], ['pos', (float_type, 3)], ['vel', (float_type, 3)]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
     def calcR2(self):
@@ -349,10 +363,14 @@ class BaseParticle(SimpleParticle):
             interrupt_mode: string (none)
                PeTar interrupt mode (set in configure): base, bse, mobse, none
                This option indicates whether columns of stellar evolution exist
+            float_type: type (np.float64)
+                floating point data type
         """
+        if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
+        else: float_type = np.float64
 
         keys_bstat = [['binary_state',np.int64]]
-        keys_se  = [['radius',np.float64],['dm',np.float64],['time_record',np.float64],['time_interrupt',np.float64]]    
+        keys_se  = [['radius',float_type],['dm',float_type],['time_record',float_type],['time_interrupt',float_type]]    
         
         keys = keys_bstat
         if ('interrupt_mode' in kwargs.keys()):
@@ -386,8 +404,13 @@ class HardParticle(BaseParticle):
             interrupt_mode: string (none)
                PeTar interrupt mode (set in configure): base, bse, mobse, none
                This option indicates whether columns of stellar evolution exist
+            float_type: type (np.float64)
+                floating point data type
         """
-        keys = [['r_search',np.float64], ['id',np.int64], ['mass_bk',np.int64], ['status',np.int64], ['r_in',np.float64], ['r_out',np.float64]]
+        if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
+        else: float_type = np.float64
+
+        keys = [['r_search',float_type], ['id',np.int64], ['mass_bk',np.int64], ['status',np.int64], ['r_in',float_type], ['r_out',float_type]]
 
         BaseParticle.__init__(self, _dat, _offset, _append, **kwargs)
         DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
@@ -413,9 +436,13 @@ class HermiteParticle(HardParticle):
             interrupt_mode: string (none)
                PeTar interrupt mode (set in configure): base, bse, mobse, none
                This option indicates whether columns of stellar evolution exist
+            float_type: type (np.float64)
+                floating point data type
         """
+        if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
+        else: float_type = np.float64
 
-        keys = [['dt',np.float64],['time',np.float64],['acc',(np.float64,3)],['jerk',(np.float64,3)],['pot',np.float64]]
+        keys = [['dt',float_type],['time',float_type],['acc',(float_type,3)],['jerk',(float_type,3)],['pot',float_type]]
 
         HardParticle.__init__(self, _dat, _offset, _append, **kwargs)
         DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
@@ -449,12 +476,16 @@ class Particle(HardParticle):
             external_mode: string (none)
                PeTar external mode (set in configure): galpy, none 
                This option indicates whether the column of externa potential exist
+            float_type: type (np.float64)
+                floating point data type
         """
+        if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
+        else: float_type = np.float64
 
-        keys = [['acc_soft',(np.float64,3)], ['pot',np.float64], ['pot_soft',np.float64], ['n_nb',np.int64]]
+        keys = [['acc_soft',(float_type,3)], ['pot',float_type], ['pot_soft',float_type], ['n_nb',np.int64]]
         if ('external_mode' in kwargs.keys()):
             if (kwargs['external_mode']!='none'):
-                keys = [['acc_soft',(np.float64,3)], ['pot',np.float64], ['pot_soft',np.float64], ['pot_ext',np.float64], ['n_nb',np.int64]]
+                keys = [['acc_soft',(float_type,3)], ['pot',float_type], ['pot_soft',float_type], ['pot_ext',float_type], ['n_nb',np.int64]]
 
         HardParticle.__init__(self, _dat, _offset, _append, **kwargs)
         DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)
@@ -489,6 +520,8 @@ class ParticleGroup(DictNpArrayMix):
                 if True, the class member n exists, otherwise not.
             cm_column_exist: bool (True)
                 if True, the center-of-the-mass particle data exist, otherwise not
+            float_type: type (np.float64)
+                floating point data type
         """
 
         N_column_exist = True
@@ -638,7 +671,12 @@ class Binary(SimpleParticle):
                 Type of 1st component
             member_particle_type_two: type or list (Particle)
                 Type of 2nd component 
+            float_type: type (np.float64)
+                floating point data type
         """
+        if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
+        else: float_type = np.float64
+
         G=1
         simple_mode=True
         member_particle_type=Particle
@@ -656,11 +694,11 @@ class Binary(SimpleParticle):
 
         if (issubclass(type(_p1), SimpleParticle)) & (issubclass(type(_p2),SimpleParticle)):
             if (simple_mode): 
-                self.keys = [['mass',np.float64],['pos',(np.float64,3)],['vel',(np.float64,3)],['rrel',np.float64],['semi',np.float64],['ecc',np.float64],['p1',(type(_p1),_p1.initargs)], ['p2', (type(_p2),_p2.initargs)]]
+                self.keys = [['mass',float_type],['pos',(float_type,3)],['vel',(float_type,3)],['rrel',float_type],['semi',float_type],['ecc',float_type],['p1',(type(_p1),_p1.initargs)], ['p2', (type(_p2),_p2.initargs)]]
                 self.particleToSemiEcc(_p1, _p2, G)
                 self.ncols= int(10)
             else:
-                self.keys = [['mass',np.float64],['pos',(np.float64,3)],['vel',(np.float64,3)],['m1',np.float64],['m2',np.float64],['rrel',np.float64],['semi',np.float64],['am',(np.float64,3)],['L',(np.float64,3)],['eccvec',(np.float64,3)],['incline',np.float64],['rot_horizon',np.float64],['ecc',np.float64],['rot_self',np.float64],['ecca',np.float64],['period',np.float64],['t_peri',np.float64],['p1',(type(_p1),_p1.initargs)], ['p2', (type(_p2),_p2.initargs)]]
+                self.keys = [['mass',float_type],['pos',(float_type,3)],['vel',(float_type,3)],['m1',float_type],['m2',float_type],['rrel',float_type],['semi',float_type],['am',(float_type,3)],['L',(float_type,3)],['eccvec',(float_type,3)],['incline',float_type],['rot_horizon',float_type],['ecc',float_type],['rot_self',float_type],['ecca',float_type],['period',float_type],['t_peri',float_type],['p1',(type(_p1),_p1.initargs)], ['p2', (type(_p2),_p2.initargs)]]
                 self.particleToBinary(_p1, _p2, G)
                 self.ncols= int(27)
             self.p1 = _p1
@@ -683,11 +721,11 @@ class Binary(SimpleParticle):
             if (type(member_particle_type_two) == list):
                 type_two = (Binary, {'member_particle_type_one':member_particle_type_two[0],'member_particle_type_two':member_particle_type_two[1]})
             if (simple_mode):
-                keys = [['rrel',np.float64],['semi',np.float64],['ecc',np.float64],['p1',type_one], ['p2', type_two]]
+                keys = [['rrel',float_type],['semi',float_type],['ecc',float_type],['p1',type_one], ['p2', type_two]]
                 SimpleParticle.__init__(self, _p1, _offset, _append, **kwargs)
                 DictNpArrayMix.__init__(self, keys, _p1, _offset+self.ncols, True, **kwargs)
             else:
-                keys=[['m1',np.float64],['m2',np.float64],['rrel',np.float64],['semi',np.float64],['am',(np.float64,3)],['L',(np.float64,3)],['eccvec',(np.float64,3)],['incline',np.float64],['rot_horizon',np.float64],['ecc',np.float64],['rot_self',np.float64],['ecca',np.float64],['period',np.float64],['t_peri',np.float64],['p1', type_one],['p2', type_two]]
+                keys=[['m1',float_type],['m2',float_type],['rrel',float_type],['semi',float_type],['am',(float_type,3)],['L',(float_type,3)],['eccvec',(float_type,3)],['incline',float_type],['rot_horizon',float_type],['ecc',float_type],['rot_self',float_type],['ecca',float_type],['period',float_type],['t_peri',float_type],['p1', type_one],['p2', type_two]]
                 SimpleParticle.__init__(self, _p1, _offset, _append, **kwargs)
                 DictNpArrayMix.__init__(self, keys, _p1, _offset+self.ncols, True, **kwargs)
             self.initargs = kwargs.copy()
