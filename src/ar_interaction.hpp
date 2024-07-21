@@ -28,11 +28,11 @@ public:
     std::ofstream fout_sse; ///> log file for SSE event
     std::ofstream fout_bse; ///> log file for BSE event
 
-    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), 
-                     stellar_evolution_option(1), stellar_evolution_write_flag(true), time_interrupt_max(NUMERIC_FLOAT_MAX), 
+    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)),
+                     stellar_evolution_option(1), stellar_evolution_write_flag(true), time_interrupt_max(NUMERIC_FLOAT_MAX),
                      bse_manager(), fout_sse(), fout_bse() {}
 #else
-    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), 
+    ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)),
                      stellar_evolution_option(0), stellar_evolution_write_flag(true), time_interrupt_max(NUMERIC_FLOAT_MAX){}
 #endif
 #else
@@ -54,7 +54,7 @@ public:
 #endif
 #endif
         return true;
-    }        
+    }
 
     //! print parameters
     void print(std::ostream & _fout) const{
@@ -63,7 +63,7 @@ public:
 #ifdef STELLAR_EVOLUTION
         _fout<<"SE_opt : "<<stellar_evolution_option<<std::endl;
 #endif
-    }    
+    }
 
     //! (Necessary) calculate inner member acceleration, potential and inverse time transformation function gradient and factor for kick (two-body case)
     /*!
@@ -85,7 +85,7 @@ public:
         Float gm1 = gravitational_constant*mass1;
         Float gm2 = gravitational_constant*mass2;
         Float gm1m2 = gm1*mass2;
-        
+
         Float dr[3] = {pos2[0] -pos1[0],
                        pos2[1] -pos1[1],
                        pos2[2] -pos1[2]};
@@ -133,7 +133,7 @@ public:
         _f2.pot_in = -gm1or;
 
 
-#ifdef AR_TTL 
+#ifdef AR_TTL
         // trans formation function gradient
 #ifdef AR_CHANGEOVER
         Float gm1m2or3 = gm1m2*inv_r3*k;
@@ -178,7 +178,7 @@ public:
             Float* acci = _force[i].acc_in;
             acci[0] = acci[1] = acci[2] = Float(0.0);
 
-#ifdef AR_TTL 
+#ifdef AR_TTL
             Float* gtgradi = _force[i].gtgrad;
             gtgradi[0] = gtgradi[1] = gtgradi[2] = Float(0.0);
 #endif
@@ -189,7 +189,7 @@ public:
             for (int j=0; j<_n_particle; j++) {
                 if (i==j) continue;
                 const Float massj = _particles[j].mass;
-                const Float* posj = &_particles[j].pos.x; 
+                const Float* posj = &_particles[j].pos.x;
                 Float dr[3] = {posj[0] -posi[0],
                                posj[1] -posi[1],
                                posj[2] -posi[2]};
@@ -211,7 +211,7 @@ public:
                 acci[1] += gmor3 * dr[1];
                 acci[2] += gmor3 * dr[2];
 
-#ifdef AR_TTL                     
+#ifdef AR_TTL
                 Float gmimjor3 = massi*gmor3;
                 gtgradi[0] += gmimjor3 * dr[0];
                 gtgradi[1] += gmimjor3 * dr[1];
@@ -220,7 +220,7 @@ public:
 
                 poti -= gmor;
                 gtki += gmor;
-                    
+
             }
             _epot += poti * massi;
             gt_kick_inv += gtki * massi;
@@ -360,7 +360,7 @@ public:
 //#ifdef AR_DEBUG
 //            ASSERT(abs(mcm-_particle_cm.mass)<1e-10);
 //#endif
-                
+
             // get cm perturbation (exclude soft pert)
             acc_pert_cm[0] /= mcm;
             acc_pert_cm[1] /= mcm;
@@ -371,10 +371,10 @@ public:
                 Float* acc_pert = _force[i].acc_pert;
                 Float& pot_pert = _force[i].pot_pert;
                 const auto& pi = _particles[i];
-                acc_pert[0] -= acc_pert_cm[0]; 
-                acc_pert[1] -= acc_pert_cm[1];        
-                acc_pert[2] -= acc_pert_cm[2]; 
-                
+                acc_pert[0] -= acc_pert_cm[0];
+                acc_pert[1] -= acc_pert_cm[1];
+                acc_pert[2] -= acc_pert_cm[2];
+
                 pot_pert -= acc_pert[0]*pi.pos[0] + acc_pert[1]*pi.pos[1] + acc_pert[2]*pi.pos[2];
 
 #ifdef SOFT_PERT
@@ -407,11 +407,11 @@ public:
 #endif
         }
     }
-    
+
     //! (Necessary) calculate acceleration from internal members and perturbers
     /*! The Force class acc_pert should be updated
       @param[out] _force: force array to store the calculation results (in acc_pert[3], notice acc_pert may need to reset zero to avoid accummulating old values)
-      @param[out] _epot: potential 
+      @param[out] _epot: potential
       @param[in] _particles: member particle array
       @param[in] _n_particle: number of member particles
       @param[in] _particle_cm: center-of-mass particle
@@ -453,7 +453,7 @@ public:
 #endif
     }
 
-    //! calculate perturbation from distance to perturber and masses of particle and perturber 
+    //! calculate perturbation from distance to perturber and masses of particle and perturber
     static Float calcPertFromMR(const Float _r, const Float _mp, const Float _mpert) {
         Float r2 = _r*_r;
 #ifdef AR_SLOWDOWN_PERT_R4
@@ -474,10 +474,10 @@ public:
 
         Float semi = 1.0/(2.0/r - v2/gm);
         //hyperbolic, directly use velocity v
-        if (semi<0) 
+        if (semi<0)
             _t_min_sq = std::min(_t_min_sq, r2/v2);
         else {
-            Float ra_fact = (1 - r/semi); 
+            Float ra_fact = (1 - r/semi);
             Float e2 = drdv*drdv/(gm*semi) + ra_fact*ra_fact; // ecc^2
             Float r_vrmax = semi*(1-e2);
             if (r<r_vrmax) {
@@ -500,11 +500,11 @@ public:
     }
 
     //! calculate slowdown perturbation and timescale from particle j to particle i
-    /*! 
+    /*!
       @param[out] _pert_out: perturbation from particle j
       @param[out] _t_min_sq: timescale limit from particle j
       @param[in] _pi: particle i (cm of binary)
-      @param[in] _pj: particle j 
+      @param[in] _pj: particle j
      */
     void calcSlowDownPertOne(Float& _pert_out, Float& _t_min_sq, const PtclHard& pi, const PtclHard& pj) {
         Float dr[3] = {pj.pos[0] - pi.pos[0],
@@ -513,7 +513,7 @@ public:
         Float r2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
         Float r = sqrt(r2);
         _pert_out += calcPertFromMR(r, pi.mass, pj.mass);
-            
+
 #ifdef AR_SLOWDOWN_TIMESCALE
         Float dv[3] = {pj.vel[0] - pi.vel[0],
                        pj.vel[1] - pi.vel[1],
@@ -532,8 +532,8 @@ public:
 
     //! (Necessary) calculate slowdown perturbation and timescale
     /*!
-      @param[out] _pert_out: perturbation 
-      @param[out] _t_min_sq: timescale limit 
+      @param[out] _pert_out: perturbation
+      @param[out] _t_min_sq: timescale limit
       @param[in] _time: physical time for prediction
       @param[in] _particle_cm: center-of-mass particle
       @param[in] _perturber: pertuber container
@@ -558,7 +558,7 @@ public:
             auto& chi = _particle_cm.changeover;
 
 #ifdef AR_SLOWDOWN_TIMESCALE
-            // velocity dependent method 
+            // velocity dependent method
             Float vp[3], vcm[3];
 
             vcm[0] = _particle_cm.vel[0] + dt*(_particle_cm.acc0[0] + 0.5*dt*_particle_cm.acc1[0]);
@@ -591,7 +591,7 @@ public:
                 _pert_out += calcPertFromMR(r, mcm, k*mj);
 
 #ifdef AR_SLOWDOWN_TIMESCALE
-                // velocity dependent method 
+                // velocity dependent method
                 vp[0] = pertj->vel[0] + dt*(pertj->acc0[0] + 0.5*dt*pertj->acc1[0]);
                 vp[1] = pertj->vel[1] + dt*(pertj->acc0[1] + 0.5*dt*pertj->acc1[1]);
                 vp[2] = pertj->vel[2] + dt*(pertj->acc0[2] + 0.5*dt*pertj->acc1[2]);
@@ -632,7 +632,7 @@ public:
         //    return true;
         //}
 #ifdef BSE_BASE
-        // SSE/BSE stellar evolution 
+        // SSE/BSE stellar evolution
         if (_p.time_interrupt<=_time_end&&stellar_evolution_option>0) {
             ASSERT(bse_manager.checkParams());
 
@@ -646,7 +646,7 @@ public:
             StarParameter star_bk = _p.star;
             int event_flag = bse_manager.evolveStar(_p.star, output, dt);
 
-            // error 
+            // error
             if (event_flag<0) {
                 std::cerr<<"SSE Error: ID= "<<_p.id;
                 _p.star.print(std::cerr);
@@ -662,18 +662,18 @@ public:
             double dt_miss = bse_manager.getDTMiss(output);
             _p.time_record += dt-dt_miss;
 
-            // estimate next time to check 
+            // estimate next time to check
             _p.time_interrupt = std::min(_p.time_record + bse_manager.getTimeStepStar(_p.star), time_interrupt_max);
 
             // record mass change (if loss, negative)
             double dm = bse_manager.getMassLoss(output);
             _p.dm += dm;
             if (dm==0.0) modify_flag = 0;
-            
+
             // change mass in main data
             _p.mass = bse_manager.getMass(_p.star);
 
-            // set merger check radius 
+            // set merger check radius
             _p.radius = bse_manager.getMergerRadius(_p.star);
 
             // type change
@@ -722,8 +722,8 @@ public:
         return 0;
     }
 
-    //! (Necessary) modify the orbits and interrupt check 
-    /*! check the inner left binary whether their separation is smaller than particle radius sum and become close, if true, set one component stauts to merger with cm mass and the other unused with zero mass. Return the binary tree address 
+    //! (Necessary) modify the orbits and interrupt check
+    /*! check the inner left binary whether their separation is smaller than particle radius sum and become close, if true, set one component stauts to merger with cm mass and the other unused with zero mass. Return the binary tree address
       @param[in] _bin_interrupt: interrupt binary information: adr: binary tree address; time_now: current physical time; time_end: integration finishing time; status: interrupt status: change, merge,none
       @param[in] _bin: binarytree to check iteratively
       \return 0: no modification; 2: modified; 3: destroyed
@@ -773,21 +773,21 @@ public:
 #ifdef BSE_BASE
             auto postProcess =[&](StarParameterOut* out, Float* pos_cm, Float*vel_cm, Float& semi, Float& ecc, int binary_type_final) {
                 // if status not set, set to change
-                if (_bin_interrupt.status == AR::InterruptStatus::none) 
+                if (_bin_interrupt.status == AR::InterruptStatus::none)
                     _bin_interrupt.status = AR::InterruptStatus::change;
-                    
+
                 // set return flag >0
                 modify_return = 2;
 
                 p1->time_record = _bin_interrupt.time_now - bse_manager.getDTMiss(out[0]);
                 p2->time_record = _bin_interrupt.time_now - bse_manager.getDTMiss(out[1]);
 
-                // estimate next time to check 
+                // estimate next time to check
                 p1->time_interrupt = std::min(p1->time_record + bse_manager.getTimeStepBinary(p1->star, p2->star, semi, ecc, binary_type_final), time_interrupt_max);
                 p2->time_interrupt = p1->time_interrupt;
 
                 // reset collision state since binary orbit changes
-                if (p1->getBinaryInterruptState()== BinaryInterruptState::collision) 
+                if (p1->getBinaryInterruptState()== BinaryInterruptState::collision)
                     p1->setBinaryInterruptState(BinaryInterruptState::none);
                 if (p2->getBinaryInterruptState()== BinaryInterruptState::collision)
                     p2->setBinaryInterruptState(BinaryInterruptState::none);
@@ -802,7 +802,7 @@ public:
                 // dm is used to correct energy, thus must be correctly set, use += since it may change mass before merge
                 p1->dm += bse_manager.getMassLoss(out[0]);
                 p2->dm += bse_manager.getMassLoss(out[1]);
-                
+
                 // update masses
                 p1->mass = bse_manager.getMass(p1->star);
                 p2->mass = bse_manager.getMass(p2->star);
@@ -860,7 +860,7 @@ public:
                         dv[3] = bse_manager.getVelocityChange(dv,out[k]);
                         if (dv[3]>0) {
                             kick_flag=true;
-#pragma omp critical 
+#pragma omp critical
                             {
                                 fout_bse<<"SN_kick "
                                         <<std::setw(WRITE_WIDTH)<<p1->id
@@ -938,8 +938,8 @@ public:
                 if (time_check>_bin_interrupt.time_now) dt1 = dt2 = 0.0;
 
                 // check whether bse is needed
-                Float dr[3] = {p1->pos[0] - p2->pos[0], 
-                               p1->pos[1] - p2->pos[1], 
+                Float dr[3] = {p1->pos[0] - p2->pos[0],
+                               p1->pos[1] - p2->pos[1],
                                p1->pos[2] - p2->pos[2]};
                 Float dr2 = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
 
@@ -975,7 +975,7 @@ public:
                     Float period = _bin.period;
                     //Float period_bk = period;
 
-                    // backup c.m. information 
+                    // backup c.m. information
                     Float pos_cm[3], vel_cm[3];
                     for (int k=0; k<3; k++) {
                         pos_cm[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mtot;
@@ -1014,7 +1014,7 @@ public:
                         std::cerr<<std::flush;
                         abort();
                     }
-                
+
                     // check binary type and print event information
                     int binary_type_final=0;
                     int nmax = bin_event.getEventNMax();
@@ -1070,7 +1070,7 @@ public:
 
                 auto merge = [&](const Float& dr, const Float& t_peri, const Float& sd_factor, std::string logmessage = "Dynamic_merge: " ) {
                     _bin_interrupt.adr = &_bin;
-                
+
 #ifdef BSE_BASE
                     //Float m1_bk = p1->mass;
                     //Float m2_bk = p2->mass;
@@ -1114,7 +1114,7 @@ public:
                             {
                                 //fout_bse<<"Dynamic_merge: "
                                   fout_bse<<logmessage
-    
+
              			        <<std::setw(WRITE_WIDTH)<<p1->id
                                         <<std::setw(WRITE_WIDTH)<<p2->id
                                         <<std::setw(WRITE_WIDTH)<<_bin.period*bse_manager.tscale*bse_manager.year_to_day
@@ -1134,7 +1134,7 @@ public:
                                 fout_bse<<std::endl;
 
                                 DATADUMP("dump_merger");
-                                
+
                             }
                         }
                     }
@@ -1155,7 +1155,7 @@ public:
 
                     p1->time_record = _bin_interrupt.time_now;
                     p2->time_record = _bin_interrupt.time_now;
-            
+
                     // new particle data
                     Float mcm = p1->mass + p2->mass;
                     for (int k=0; k<3; k++) {
@@ -1170,7 +1170,7 @@ public:
 
                     p2->radius = 0.0;
 
-                    if (_bin_interrupt.status == AR::InterruptStatus::none) 
+                    if (_bin_interrupt.status == AR::InterruptStatus::none)
                         _bin_interrupt.status = AR::InterruptStatus::merge;
 
                     // reset collision state since binary orbit changes
@@ -1182,14 +1182,14 @@ public:
                     //p1->setBinaryPairID(0);
                     //p2->setBinaryPairID(0);
                 };
-                
+
                 // delayed merger
-                if (p1->getBinaryInterruptState()== BinaryInterruptState::collision && 
+                if (p1->getBinaryInterruptState()== BinaryInterruptState::collision &&
                     p2->getBinaryInterruptState()== BinaryInterruptState::collision &&
                     (p1->time_interrupt<_bin_interrupt.time_now && p2->time_interrupt<_bin_interrupt.time_now) &&
                     (p1->getBinaryPairID()==p2->id||p2->getBinaryPairID()==p1->id)) {
-                    Float dr[3] = {p1->pos[0] - p2->pos[0], 
-                                   p1->pos[1] - p2->pos[1], 
+                    Float dr[3] = {p1->pos[0] - p2->pos[0],
+                                   p1->pos[1] - p2->pos[1],
                                    p1->pos[2] - p2->pos[2]};
                     Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
                     merge(std::sqrt(dr2), 0.0, 1.0);
@@ -1207,11 +1207,11 @@ public:
                         if (peri<radius && p1->getBinaryPairID()!=p2->id&&p2->getBinaryPairID()!=p1->id) {
                             Float ecc_anomaly  = _bin.calcEccAnomaly(_bin.r);
                             Float mean_anomaly = _bin.calcMeanAnomaly(ecc_anomaly, _bin.ecc);
-                            Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi))); 
+                            Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi)));
                             Float t_peri = mean_anomaly/mean_motion;
                             if (drdv<0 && t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
-                                Float dr[3] = {p1->pos[0] - p2->pos[0], 
-                                               p1->pos[1] - p2->pos[1], 
+                                Float dr[3] = {p1->pos[0] - p2->pos[0],
+                                               p1->pos[1] - p2->pos[1],
                                                p1->pos[2] - p2->pos[2]};
                                 Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
                                 merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor());
@@ -1223,60 +1223,138 @@ public:
                                 p2->setBinaryInterruptState(BinaryInterruptState::collision);
                                 p1->time_interrupt = std::min(_bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri), time_interrupt_max);
                                 p2->time_interrupt = p1->time_interrupt;
-                                    
+
                             }
                         }
                     }
                     else { // no slowdown case, check separation directly
-                        Float dr[3] = {p1->pos[0] - p2->pos[0], 
-                                       p1->pos[1] - p2->pos[1], 
+                        Float dr[3] = {p1->pos[0] - p2->pos[0],
+                                       p1->pos[1] - p2->pos[1],
                                        p1->pos[2] - p2->pos[2]};
                         Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
                         if (dr2<radius*radius) merge(std::sqrt(dr2), 0.0, 1.0);
                     }
 #else
-                    //First case, hyperbolic orbit
-                    if (_bin.semi<0.0) {
-                        //Estimate pericentre 
-                        Float pericent = _bin.semi * (1-_bin.ecc);
-                        
+                    //This my revised implementation (GIU), we do not distinguish a priori about the
+                   //even type since the class _bin can handle both close and open orbit.
+                  //Notice that this class is defined in SDAR::binary_trww
+                  //One thing I don't uderstand is if we have to check for the slowdown as in the previous section
 
-                        Float dr[3] = {p1->pos[0] - p2->pos[0], 
-                                       p1->pos[1] - p2->pos[1], 
+                  //This is ok both for open and closed orbit, but are these properties set at this moment?
+                  //or we have to chck if we are in the slowdown and call _bin.particleToSemiEcc (as done in row 1205)?
+                  //Something to check with Long
+                  //At the moment I think we can use it as a general funciton, if we are not inside the slowdown
+                  //the slowdon factor will be any way 1
+                  //if (_bin.slowdown.getSlowDownFactor()>1.0) {
+                  if (true){
+                    Float drdv;
+                    _bin.particleToSemiEcc(_bin.semi, _bin.ecc, _bin.r, drdv, *_bin.getLeftMember(), *_bin.getRightMember(), gravitational_constant);
+                    Float  pericent = _bin.semi * (1-_bin.ecc);
+                    Float radius = p1->radius + p2->radius;
+                    /********* Hyperbolic ad binay TDE ****************/
+                    //First the TDE
+                    int type1 = p1->star.kw;
+                    int type2 = p2->star.kw;
+                    double rt{-10.};
+                    if ((type1 ==13  or type1==14)  and  (type2 <= 12))  {
+                        rt = p2->radius* std::pow(p1->star.mt /p2->star.mt ,1./3.) ;
+                    } else if ((type2 ==13  or type2==14)  and  (type1 <= 12)) {
+                        rt = p1->radius* std::pow(p2->star.mt /p1->star.mt ,1./3.) ;
+                    }
+                    //If rt>0 check for possiible tDE (ir rt>pericent), what we check:
+                    //rt>pericent, at certain point along the orbit the distance of the two objects is whitin the tidal radius
+                    if (rt>0   & rt>pericent){
+                        //Estimate distance at this point //Petar units
+                        Float dr[3] = {p1->pos[0] - p2->pos[0],
+                                       p1->pos[1] - p2->pos[1],
                                        p1->pos[2] - p2->pos[2]};
                         Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
-                        Float radius = p1->radius + p2->radius;
 
-			//std::cout<< " cond_semi  " <<p1->radius<<" p1radius  "<< p1->star.r<< " p1->star.r "<<p2->radius<<" p2radius "<< p2->star.r<< " p2->star.r "<<" p1mass "<< p1->mass<< " p2mass " << p2->mass<<" p1kw " << p1->star.kw << " p2kw " << p2->star.kw<< " check " << _bin.semi << " semi "<< _bin.ecc << " ecc " <<std::endl;
+                        //Now simplest check if the two stars are already within the tidal radius
+                        if (dr2<rt*rt){
+                            //Check if in hyperbolic or close orbit
+                            if (_bin.a<0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE: ");}
+                            else if (_bin.a>0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Binary_TDE: ");}
+                        }
+                        //Now instead check the orbit, but before check if the star is actually approcing the bh (drdv<0)
+                        if (drdv<0)
+                        {
+                            //Here we have three choice:
+                            //A: if this conditiond is satisfied always merge (but this can create situation in which
+                            //we create an instantenous TDE of very distant objects, very poor approximation)
+                            //merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE: ");
 
-                        if (bse_manager.isTDE(p1->star, p2->star, dr2*bse_manager.rscale*bse_manager.rscale)) {
-                                merge(std::sqrt(dr2), 0.0, 1.0, "Hyperbolic_TDE: ");
-                                std::cout<<" HYPERBTDE found "<<std::endl;
-                    
-		                //std::cout<< " faketde  " <<p1->radius<<" p1radius  "<< p1->star.r<< " p1->star.r "<<p2->radius<<" p2radius "<< p2->star.r<< " p2->star.r "<< dr2*bse_manager.rscale*bse_manager.rscale<< " dr2scaled "<<std::endl;
-    		
-			}
-    
-			//else if (bse_manager.isTDE(p1->star, p2->star,  pericent*pericent*bse_manager.rscale*bse_manager.rscale)) {
-			       
-		 		//std::cout<<"HYPERBTDEPERI found"<<std::endl;
-			//}
-			//
+                            //B: A simple improvement merge only if the current distance is withinn 3 times the rt distance
+                            //if (dr2<9*rt*rt){
+                            //merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE: ");
+                            //}
 
-			else if (dr2<radius*radius){
-                                merge(std::sqrt(dr2), 0.0, 1.0);
+                            //C: More realistic option, estimate the time needed to reach the pericentre and check
+                            //if this is within the current check timestep
+                            Float ecc_anomaly  = _bin.calcEccAnomaly(_bin.r);
+                            Float mean_anomaly = _bin.calcMeanAnomaly(ecc_anomaly, _bin.ecc);
+                            Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi)));
+                            Float t_peri = mean_anomaly/mean_motion;
+                            if (t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
+                                //Check if in hyperbolic or close orbit
+                                if (_bin.a<0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE: ");}
+                                else if (_bin.a>0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Binary_TDE: ");}
+                            }
 
-                                //std::cout<< " dr2 " <<dr2<<" p1r  "<<p1->star.r<<" p2r "<<p2->star.r<<" p1mt " << p1->star.mt<<" p2mt "<< p2->star.mt<<" p1kw " << p1->star.kw << " p2kw " << p2->star.kw<< " p1 rad "<<p1->radius<< " p2 rad " <<p2->radius <<" p1mass  "<< p1->mass<< " p2mass " << p2->mass <<std::endl;
-                       
-		       	}
-                     
-	
+                            //D: In the most realistic we shoud check the time needed to reach the position r=rt, not r=rp
+                        }
+                    }
+                    /********* Merger binary ****************/
+                    //No condition for TDE (rt<0 or rt<pericent), so no TDE, check for collisions at peri
+                    //Notice radius is the sum of the radius of the two stars, if it is larger than the
+                    //separation at pericentre we have a merger
+                    else if (radius>pericent){
+                            //Estimate distance at this point //Petar units
+                            Float dr[3] = {p1->pos[0] - p2->pos[0],
+                                           p1->pos[1] - p2->pos[1],
+                                           p1->pos[2] - p2->pos[2]};
+                            Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
+                            //Now simplest check if the two stars are already colliding
+                            if (dr2<radius*radius ){
+                                //Check if in hyperbolic or close orbit
+                                if (_bin.a<0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Dynamic_merge: ");}
+                                else if (_bin.a>0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Binary_merge: ");}
+                            }
+                            //Now instead check the orbit, but before check if the star is actually approcing the bh (drdv<0)
+                            if (drdv<0)
+                            {
+                                //Here we have three choice:
+                                //A: if this conditiond is satisfied always merge (but this can create situation in which
+                                //we create an instantenous TDE of very distant objects, very poor approximation)
+                                //merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE: ");
+
+                                //B: A simple improvement merge only if the current distance is withinn 3 times the rt distance
+                                //if (dr2<9*rt*rt){
+                                //merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE: ");
+                                //}
+
+                                //C: More realistic option, estimate the time needed to reach the pericentre and check
+                                //if this is within the current check timestep
+                                Float ecc_anomaly  = _bin.calcEccAnomaly(_bin.r);
+                                Float mean_anomaly = _bin.calcMeanAnomaly(ecc_anomaly, _bin.ecc);
+                                Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi)));
+                                Float t_peri = mean_anomaly/mean_motion;
+                                if (t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
+                                    //Check if in hyperbolic or close orbit
+                                    if (_bin.a<0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Dynamic_merge: ");}
+                                    else if (_bin.a>0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Binary_merge: ");}
+                                }
+
+                                //D: In the most realistic we shoud check the time needed to reach the position r=rt, not r=rp
+                            }
+                    }
+                  }
 		   }
 #endif
                 }
 
 #ifdef BSE_BASE
-                // tide energy loss 
+                // tide energy loss
                 if (stellar_evolution_option==2 && p1->mass>0 && p2->mass>0) {
                     if (drdv<0) { // when two star approach each other; reset tide status
                         if (p1->getBinaryInterruptState() == BinaryInterruptState::tide) {
@@ -1293,8 +1371,8 @@ public:
                         long long int pair_id2 = p2->getBinaryPairID();
                         bool tide_flag = true;
                         if ((binary_type_p1 != binary_type_p2) || (pair_id1 != p2->id) || (pair_id2 != p1->id)) tide_flag = false;
-                        else if (bse_manager.isMassTransfer(binary_type_p1) 
-                                 || bse_manager.isMerger(binary_type_p1) 
+                        else if (bse_manager.isMassTransfer(binary_type_p1)
+                                 || bse_manager.isMerger(binary_type_p1)
                                  || bse_manager.isDisrupt(binary_type_p1)
                                  || binary_type_p1 == 14)
                             tide_flag = false;
@@ -1311,8 +1389,8 @@ public:
                                 if (_bin.semi<0) {
                                     bool merge_flag = tide.evolveOrbitHyperbolicGW(_bin, Etid, Ltid);
                                     if (merge_flag) {
-                                        Float dr[3] = {p1->pos[0] - p2->pos[0], 
-                                                       p1->pos[1] - p2->pos[1], 
+                                        Float dr[3] = {p1->pos[0] - p2->pos[0],
+                                                       p1->pos[1] - p2->pos[1],
                                                        p1->pos[2] - p2->pos[2]};
                                         Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
                                         merge(std::sqrt(dr2), 0.0, 1.0);
@@ -1341,7 +1419,7 @@ public:
                                 _bin_interrupt.adr = &_bin;
 
                                 // if status not set, set to change
-                                if (_bin_interrupt.status == AR::InterruptStatus::none) 
+                                if (_bin_interrupt.status == AR::InterruptStatus::none)
                                     _bin_interrupt.status = AR::InterruptStatus::change;
                                 _bin.calcParticles(gravitational_constant);
                                 p1->pos += _bin.pos;
@@ -1353,7 +1431,7 @@ public:
                                 p2->setBinaryPairID(p1->id);
                                 p1->setBinaryInterruptState(BinaryInterruptState::tide);
                                 p2->setBinaryInterruptState(BinaryInterruptState::tide);
-                            
+
                                 modify_return = 2;
 
 #pragma omp critical
@@ -1406,7 +1484,7 @@ public:
     Float calcH(Float _ekin_minus_etot, Float _epot) {
         return log(_ekin_minus_etot) - log(-_epot);
     }
-#endif   
+#endif
 
     //! write class data to file with binary format
     /*! @param[in] _fp: FILE type file for output
@@ -1438,6 +1516,5 @@ public:
             abort();
         }
 #endif
-    }    
+    }
 };
-
