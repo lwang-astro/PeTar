@@ -1235,15 +1235,17 @@ public:
                         if (dr2<radius*radius) merge(std::sqrt(dr2), 0.0, 1.0);
                     }
 #else
-                    // in bse case, handle binary merger in bse, only check hyperbolic merger
+                    //First case, hyperbolic orbit
                     if (_bin.semi<0.0) {
+                        //Estimate pericentre 
+                        Float pericent = _bin.semi * (1-_bin.ecc);
+                        
+
                         Float dr[3] = {p1->pos[0] - p2->pos[0], 
                                        p1->pos[1] - p2->pos[1], 
                                        p1->pos[2] - p2->pos[2]};
                         Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
                         Float radius = p1->radius + p2->radius;
-		
-			Float pericent = _bin.semi * (1-_bin.ecc);
 
 			//std::cout<< " cond_semi  " <<p1->radius<<" p1radius  "<< p1->star.r<< " p1->star.r "<<p2->radius<<" p2radius "<< p2->star.r<< " p2->star.r "<<" p1mass "<< p1->mass<< " p2mass " << p2->mass<<" p1kw " << p1->star.kw << " p2kw " << p2->star.kw<< " check " << _bin.semi << " semi "<< _bin.ecc << " ecc " <<std::endl;
 
