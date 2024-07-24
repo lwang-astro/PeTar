@@ -1282,7 +1282,8 @@ public:
                             //Here we have three choice:
                             //A: if this conditiond is satisfied always merge (but this can create situation in which
                             //we create an instantenous TDE of very distant objects, very poor approximation)
-                            //merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE: ");
+                            if  (_bin.semi<0) merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE_A: ");
+			    else if (_bin.semi>0) merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Binary_TDE_A: ");
 
                             //B: A simple improvement merge only if the current distance is withinn 3 times the rt distance
                             //if (dr2<9*rt*rt){
@@ -1291,15 +1292,15 @@ public:
 
                             //C: More realistic option, estimate the time needed to reach the pericentre and check
                             //if this is within the current check timestep
-                            Float ecc_anomaly  = _bin.calcEccAnomaly(_bin.r);
-                            Float mean_anomaly = _bin.calcMeanAnomaly(ecc_anomaly, _bin.ecc);
-                            Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi)));
-                            Float t_peri = mean_anomaly/mean_motion;
-                            if (t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
+                            //Float ecc_anomaly  = _bin.calcEccAnomaly(_bin.r);
+                            //Float mean_anomaly = _bin.calcMeanAnomaly(ecc_anomaly, _bin.ecc);
+                            //Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi)));
+                            //Float t_peri = mean_anomaly/mean_motion;
+                            //if (t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
                                 //Check if in hyperbolic or close orbit
-                                if (_bin.semi<0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE: ");}
-                                else if (_bin.semi>0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Binary_TDE: ");}
-                            }
+                            //    if (_bin.semi<0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE: ");}
+                            //    else if (_bin.semi>0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Binary_TDE: ");}
+                           //}
 
                             //D: In the most realistic we shoud check the time needed to reach the position r=rt, not r=rp
                         }
@@ -1326,7 +1327,8 @@ public:
                                 //Here we have three choice:
                                 //A: if this conditiond is satisfied always merge (but this can create situation in which
                                 //we create an instantenous TDE of very distant objects, very poor approximation)
-                                merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE: ");
+                                if (_beni.semi<0) merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Dynamic_merge_A: ");
+				else if (_bin.semi>0) merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Binary_merge_A: ");
 
                                 //B: A simple improvement merge only if the current distance is withinn 3 times the rt distance
                                 //if (dr2<9*rt*rt){
