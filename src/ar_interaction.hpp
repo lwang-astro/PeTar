@@ -1327,7 +1327,7 @@ public:
                                 //Here we have three choice:
                                 //A: if this conditiond is satisfied always merge (but this can create situation in which
                                 //we create an instantenous TDE of very distant objects, very poor approximation)
-                                if (_beni.semi<0) merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Dynamic_merge_A: ");
+                                if (_bin.semi<0) merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Dynamic_merge_A: ");
 				else if (_bin.semi>0) merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Binary_merge_A: ");
 
                                 //B: A simple improvement merge only if the current distance is withinn 3 times the rt distance
