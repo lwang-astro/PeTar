@@ -1316,7 +1316,7 @@ public:
                                if (_bin.semi<0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE: ");}
                                else if (_bin.semi>0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Binary_TDE: ");}
                            }
-                           else if(_bin.slowdown.getSlowDownFactor()>1.0)){
+                           else if(_bin.slowdown.getSlowDownFactor()>1.0){
                                p1->setBinaryPairID(p2->id);
                                p2->setBinaryPairID(p1->id);
                                p1->setBinaryInterruptState(BinaryInterruptState::collision);
@@ -1376,7 +1376,7 @@ public:
                                     if (_bin.semi<0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Dynamic_merge: ");}
                                     else if (_bin.semi>0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Binary_merge: ");}
                                 }
-                                else if(_bin.slowdown.getSlowDownFactor()>1.0)){
+                                else if(_bin.slowdown.getSlowDownFactor()>1.0){
                                     p1->setBinaryPairID(p2->id);
                                     p2->setBinaryPairID(p1->id);
                                     p1->setBinaryInterruptState(BinaryInterruptState::collision);
