@@ -1282,8 +1282,8 @@ public:
                             //Here we have three choice:
                             //A: if this conditiond is satisfied always merge (but this can create situation in which
                             //we create an instantenous TDE of very distant objects, very poor approximation)
-                            if  (_bin.semi<0) merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE_A: ");
-			    else if (_bin.semi>0) merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Binary_TDE_A: ");
+                            //if  (_bin.semi<0) merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE_A: ");
+                            //else if (_bin.semi>0) merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Binary_TDE_A: ");
 
                             //B: A simple improvement merge only if the current distance is withinn 3 times the rt distance
                             //if (dr2<9*rt*rt){
@@ -1292,15 +1292,23 @@ public:
 
                             //C: More realistic option, estimate the time needed to reach the pericentre and check
                             //if this is within the current check timestep
-                            //Float ecc_anomaly  = _bin.calcEccAnomaly(_bin.r);
-                            //Float mean_anomaly = _bin.calcMeanAnomaly(ecc_anomaly, _bin.ecc);
-                            //Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi)));
-                            //Float t_peri = mean_anomaly/mean_motion;
-                            //if (t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
+                            Float ecc_anomaly  = _bin.calcEccAnomaly(_bin.r);
+                            Float mean_anomaly = _bin.calcMeanAnomaly(ecc_anomaly, _bin.ecc);
+                            Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi)));
+                            Float t_peri = mean_anomaly/mean_motion;
+                            if (t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
                                 //Check if in hyperbolic or close orbit
-                            //    if (_bin.semi<0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE: ");}
-                            //    else if (_bin.semi>0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Binary_TDE: ");}
-                           //}
+                               if (_bin.semi<0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE: ");}
+                               else if (_bin.semi>0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Binary_TDE: ");}
+                           }
+                           else if(_bin.slowdown.getSlowDownFactor()>1.0)){
+                               p1->setBinaryPairID(p2->id);
+                               p2->setBinaryPairID(p1->id);
+                               p1->setBinaryInterruptState(BinaryInterruptState::collision);
+                               p2->setBinaryInterruptState(BinaryInterruptState::collision);
+                               p1->time_interrupt = std::min(_bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri), time_interrupt_max);
+                               p2->time_interrupt = p1->time_interrupt;
+                           }
 
                             //D: In the most realistic we shoud check the time needed to reach the position r=rt, not r=rp
                         }
@@ -1327,8 +1335,8 @@ public:
                                 //Here we have three choice:
                                 //A: if this conditiond is satisfied always merge (but this can create situation in which
                                 //we create an instantenous TDE of very distant objects, very poor approximation)
-                                if (_bin.semi<0) merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Dynamic_merge_A: ");
-				else if (_bin.semi>0) merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Binary_merge_A: ");
+                                //if (_bin.semi<0) merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Dynamic_merge_A: ");
+                                //else if (_bin.semi>0) merge(std::sqrt(dr2), 0.0, _bin.slowdown.getSlowDownFactor(), "Binary_merge_A: ");
 
                                 //B: A simple improvement merge only if the current distance is withinn 3 times the rt distance
                                 //if (dr2<9*rt*rt){
@@ -1337,21 +1345,28 @@ public:
 
                                 //C: More realistic option, estimate the time needed to reach the pericentre and check
                                 //if this is within the current check timestep
-                                //Float ecc_anomaly  = _bin.calcEccAnomaly(_bin.r);
-                                //Float mean_anomaly = _bin.calcMeanAnomaly(ecc_anomaly, _bin.ecc);
-                                //Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi)));
-                                //Float t_peri = mean_anomaly/mean_motion;
-                                //if (t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
-                                    //Check if in hyperbolic or close orbit
-                                //    if (_bin.semi<0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Dynamic_merge: ");}
-                                //    else if (_bin.semi>0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Binary_merge: ");}
-                               //}
-
+                                Float ecc_anomaly  = _bin.calcEccAnomaly(_bin.r);
+                                Float mean_anomaly = _bin.calcMeanAnomaly(ecc_anomaly, _bin.ecc);
+                                Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi)));
+                                Float t_peri = mean_anomaly/mean_motion;
+                                if (t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
+                                //Check if in hyperbolic or close orbit
+                                    if (_bin.semi<0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Dynamic_merge: ");}
+                                    else if (_bin.semi>0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Binary_merge: ");}
+                                }
+                                else if(_bin.slowdown.getSlowDownFactor()>1.0)){
+                                    p1->setBinaryPairID(p2->id);
+                                    p2->setBinaryPairID(p1->id);
+                                    p1->setBinaryInterruptState(BinaryInterruptState::collision);
+                                    p2->setBinaryInterruptState(BinaryInterruptState::collision);
+                                    p1->time_interrupt = std::min(_bin_interrupt.time_now + drdv<0 ? t_peri : (_bin.period - t_peri), time_interrupt_max);
+                                    p2->time_interrupt = p1->time_interrupt;
+                                }
                                 //D: In the most realistic we shoud check the time needed to reach the position r=rt, not r=rp
                             }
                     }
                   }
-		   
+
 #endif
                 }
 
