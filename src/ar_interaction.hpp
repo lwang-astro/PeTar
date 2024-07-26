@@ -1252,9 +1252,9 @@ public:
                     Float  pericent = _bin.semi * (1-_bin.ecc);
                     Float radius = p1->radius + p2->radius;
 
-                    std::cout<<" COMM-Enntering: " << "\n semi: " << _bin.semi <<  "\n ecc: " << _bin.ecc
-                    << "\n pericent " <<  pericent << "\n rad1 " << p1->radius << "\n rad2 " << p2->radius << "\n drdv: " << drdv
-                   << "\n slowdown " << _bin.slowdown.getSlowDownFactor() << std::endl;
+                    //std::cout<<" COMM-Enntering: " << "\n semi: " << _bin.semi <<  "\n ecc: " << _bin.ecc
+                    //<< "\n pericent " <<  pericent << "\n rad1 " << p1->radius << "\n rad2 " << p2->radius << "\n drdv: " << drdv
+                   //<< "\n slowdown " << _bin.slowdown.getSlowDownFactor() << std::endl;
 
                     /********* Hyperbolic ad binay TDE ****************/
                     //First the TDE
@@ -1267,7 +1267,7 @@ public:
                         rt = p1->radius* std::pow(p2->star.mt /p1->star.mt ,1./3.) ;
                     }
 
-                    std::cout<<" COMM-rt: " << "\n rt: " << rt << std::endl;
+                    //std::cout<<" COMM-rt: " << "\n rt: " << rt << std::endl;
 
                     //If rt>0 check for possiible tDE (ir rt>pericent), what we check:
                     //rt>pericent, at certain point along the orbit the distance of the two objects is whitin the tidal radius
@@ -1278,12 +1278,12 @@ public:
                                        p1->pos[2] - p2->pos[2]};
                         Float dr2  = dr[0]*dr[0] + dr[1]*dr[1] + dr[2]*dr[2];
 
-                        std::cout<<" COMM-rt TDE: " << "\n dr2: " << dr2 << std::endl;
+                        //std::cout<<" COMM-rt TDE: " << "\n dr2: " << dr2 << std::endl;
 
                         //Now simplest check if the two stars are already within the tidal radius
                         if (dr2<rt*rt){
 
-                            std::cout<<" COMM-rt TDE: " << "\n merge now : " << std::endl;
+                            //std::cout<<" COMM-rt TDE: " << "\n merge now : " << std::endl;
                             //Check if in hyperbolic or close orbit
                             if (_bin.semi<0){merge(std::sqrt(dr2), 0 , _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE: ");}
                             else if (_bin.semi>0){merge(std::sqrt(dr2), 0,  _bin.slowdown.getSlowDownFactor(), "Binary_TDE: ");}
@@ -1310,7 +1310,7 @@ public:
                             Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi)));
                             Float t_peri = mean_anomaly/mean_motion;
 
-                            std::cout<<" COMM-rt che TDE: " << "\n tperi : " << t_peri << "\n time bin: " << _bin_interrupt.time_end-_bin_interrupt.time_now << std::endl;
+                            //std::cout<<" COMM-rt che TDE: " << "\n tperi : " << t_peri << "\n time bin: " << _bin_interrupt.time_end-_bin_interrupt.time_now << std::endl;
                             if (t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
                                 //Check if in hyperbolic or close orbit
                                if (_bin.semi<0){merge(std::sqrt(dr2), t_peri, _bin.slowdown.getSlowDownFactor(), "Hyperbolic_TDE: ");}
@@ -1342,7 +1342,7 @@ public:
 
                             //Now simplest check if the two stars are already colliding
                             if (dr2<radius*radius ){
-                                std::cout<<" COMM-rt merger: " << "\n merge now : " << std::endl;
+                                //std::cout<<" COMM-rt merger: " << "\n merge now : " << std::endl;
                                 //Check if in hyperbolic or close orbit
                                 if (_bin.semi<0){merge(std::sqrt(dr2), 0, _bin.slowdown.getSlowDownFactor(), "Dynamic_merge: ");}
                                 else if (_bin.semi>0){merge(std::sqrt(dr2), 0, _bin.slowdown.getSlowDownFactor(), "Binary_merge: ");}
@@ -1368,7 +1368,7 @@ public:
                                 Float mean_motion  = sqrt(gravitational_constant*_bin.mass/(fabs(_bin.semi*_bin.semi*_bin.semi)));
                                 Float t_peri = mean_anomaly/mean_motion;
 
-                                std::cout<<" COMM-merge: " << "\n tperi : " << t_peri << "\n time bin: " << _bin_interrupt.time_end-_bin_interrupt.time_now << std::endl;
+                                //std::cout<<" COMM-merge: " << "\n tperi : " << t_peri << "\n time bin: " << _bin_interrupt.time_end-_bin_interrupt.time_now << std::endl;
 
 
                                 if (t_peri<_bin_interrupt.time_end-_bin_interrupt.time_now) {
