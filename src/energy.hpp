@@ -1,7 +1,7 @@
 #pragma once
 
-//! class for collecting and calculating the energy and angular momemtum of the system
-class EnergyAndMomemtum{
+//! class for collecting and calculating the energy and angular momentum of the system
+class EnergyAndMomentum{
 public:
     PS::F64 error_cum_pre;  // previous cumulative error
     PS::F64 ekin;
@@ -25,11 +25,11 @@ public:
     PS::F64 error_hard_sd_cum;
 #endif
     PS::F64 error_Lt_cum_pre; // previous angular momentum error
-    PS::F64 Lt; // total angular momemtum
-    PS::F64vec L; // angular mommentum;
-    PS::F64vec L_ref; // total angular momemtum reference
+    PS::F64 Lt; // total angular momentum
+    PS::F64vec L; // angular momentum;
+    PS::F64vec L_ref; // total angular momentum reference
 
-    EnergyAndMomemtum() {
+    EnergyAndMomentum() {
         clear();
     }
 
@@ -95,7 +95,7 @@ public:
              <<std::setw(_width)<<error_hard_sd_cum
              <<std::endl;
 #endif
-        _fout<<"Angular Momemtum:"
+        _fout<<"Angular Momentum:"
              <<"  |L|err: "<<getMomentumError() - error_Lt_cum_pre
              <<"  |L|err_cum: "<<getMomentumError()
              <<"  L: "<<L
@@ -189,7 +189,7 @@ public:
 #endif
 
     void writeBinary(FILE* _fout) {
-        fwrite(&ekin, sizeof(EnergyAndMomemtum), 1, _fout);
+        fwrite(&ekin, sizeof(EnergyAndMomentum), 1, _fout);
     }
 
     //! calculate the system kinetic and potential energy of particles
@@ -279,7 +279,7 @@ public:
         }
     }
 
-    //! get summation of kinetic, potential energy and angular momemtum of all MPI processes
+    //! get summation of kinetic, potential energy and angular momentum of all MPI processes
     /*!
       @param[in] _init_flag: if true, set etot, etot_sd and L reference
      */
@@ -320,15 +320,15 @@ public:
     }
 #endif
 
-    //! get angular momemtum (value) error
+    //! get angular momentum (value) error
     PS::F64 getMomentumError() const {
         PS::F64vec dL= L- L_ref;
         return std::sqrt(dL*dL);
     }
 
     /*
-    EnergyAndMomemtum operator -(const EnergyAndMomemtum& eng){
-        EnergyAndMomemtum diff;
+    EnergyAndMomentum operator -(const EnergyAndMomentum& eng){
+        EnergyAndMomentum diff;
         diff.ekin = ekin - eng.ekin;
         diff.epot = epot - eng.epot;
         diff.etot = etot - eng.etot;
@@ -337,7 +337,7 @@ public:
         return diff;
     }
 
-    void relative(const EnergyAndMomemtum& ref) {
+    void relative(const EnergyAndMomentum& ref) {
         ekin /= ref.ekin;
         epot /= ref.epot;
         etot /= ref.etot;
