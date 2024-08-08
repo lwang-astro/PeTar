@@ -61,6 +61,8 @@ class SDARData(DictNpArrayMix):
         ds (1D): integration step
         time_offset (1D): time offset to obtain the actual time (time_offset + time)
         r_break_crit (1D): distance criterion to break group (used in Hermite)
+        if (keyword argument 'hybrid' == True):
+            hybrid_flag (1D): if 1, hybrid method is used, else, normal method
         profile (SDARProfile): SDAR profile
         if (keyword argument 'slowdown' == True):
             de_sd (1D): slowdown energy error
@@ -112,7 +114,11 @@ class SDARData(DictNpArrayMix):
             raise ValueError('data_type is not supported, should be hard or sdar, given ',kwargs['data_type'])
 
         keys=[['time', np.float64], ['de', np.float64], ["etot_ref",np.float64],["ekin",np.float64],["epot",np.float64], ['gt_drift', np.float64], ['H', np.float64], ['de_interrupt', np.float64], ['dH_interrupt', np.float64]]
-        keys = keys + key_add + [['ds', np.float64], ['time_offset', np.float64], ['r_break_crit', np.float64], ['profile', SDARProfile]]
+        keys = keys + key_add + [['ds', np.float64], ['time_offset', np.float64], ['r_break_crit', np.float64]]
+        if ('hybrid' in kwargs.keys()):
+            if (kwargs['hybrid']): 
+                keys = keys + [['hybrid_flag', np.int64]]
+        keys = keys + [['profile', SDARProfile]]
         if ('slowdown' in kwargs.keys()):
             if (kwargs['slowdown']):
                 keys = keys + [['de_sd', np.float64], ["etot_sd",np.float64],["ekin_sd",np.float64],["epot_sd",np.float64], ['de_sd_change', np.float64], ['dH_sd_change', np.float64], ['de_sd_interrupt', np.float64], ['dH_sd_interrupt', np.float64], ['sd', (SlowDownGroup, {'with_indices':True})]]
