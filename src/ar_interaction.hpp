@@ -1049,7 +1049,7 @@ public:
                             if (binary_type>0) event_flag = std::max(event_flag, 1); // type change
                             else if (bse_manager.isMassTransfer(binary_type)) event_flag = std::max(event_flag, 2); // orbit change
                             else if (bse_manager.isDisrupt(binary_type)) event_flag = std::max(event_flag, 3); // disrupt
-                            else if (bse_manager.isMerger(binary_type)) event_flag = std::max(event_flag, 4); // Merger
+                            else if (bse_manager.isMerger(binary_type) || bse_manager.isNoRemnant(binary_type)) event_flag = std::max(event_flag, 4); // Merger or no Remnant
                             binary_type_final = binary_type;
                         }
                         else if(binary_type<0) break;
@@ -1263,6 +1263,7 @@ public:
                         if ((binary_type_p1 != binary_type_p2) || (pair_id1 != p2->id) || (pair_id2 != p1->id)) tide_flag = false;
                         else if (bse_manager.isMassTransfer(binary_type_p1) 
                                  || bse_manager.isMerger(binary_type_p1) 
+                                 || bse_manager.isNoRemnant(binary_type_p1) 
                                  || bse_manager.isDisrupt(binary_type_p1)
                                  || binary_type_p1 == 14)
                             tide_flag = false;

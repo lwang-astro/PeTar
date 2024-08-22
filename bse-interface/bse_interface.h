@@ -1215,7 +1215,11 @@ public:
     //}
 
     bool isMerger(const int _binary_type) {
-        return (_binary_type>=10&&_binary_type<=12);
+        return (_binary_type>=10&&_binary_type<12);
+    }
+
+    bool isNoRemnant(const int _binary_type) {
+        return (_binary_type==12);
     }
 
     bool isDisrupt(const int _binary_type) {
