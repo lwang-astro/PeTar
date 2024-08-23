@@ -33,10 +33,11 @@ The v1.0-beta release of PeTar is now ready for use. Some existing issues includ
 
 **1241**
 
-Master version 1241:
+Updates: (version shown in ()):
 
-1. Fix the warning message of the file closing in `petar.data.process`.  
-2. Allow the output time step to be an integer multiple of the tree time step instead of restricted to 0.5^{integer}. 3. Update the output information of the parameter list in the main output of petar for better clarity:  
+1. (1238) Fix the warning message of the file closing in `petar.data.process`.  
+2. (1238) Allow the output time step to be an integer multiple of the tree time step instead of restricted to 0.5^{integer}. 
+3. (1239) Update the output information of the parameter list in the main output of petar for better clarity:  
    **Old Version:**  
    - mass_average =   
    - r_in         =   
@@ -55,5 +56,6 @@ Master version 1241:
    - Velocity dispersion               =   
    - Tree time step                    =   
    - Output time step                  =   
-4. Correct two incorrect binary type indices saved in the bpp array (*,10) of evolve2.f and in the binary type change file for BSE-based stellar evolution codes: (1) for a part of common envelope events, the binary type index 8 is incorrectly output as the END SYMB index 7 (evolve2.f:1410); (2) for a part of no remnant events, the type index 12 is incorrectly output as the DISRUPT index 13 (evolv2.f:2624). In addition, the isNoRemnant() function is implemented in bse_interface.h to identify no remnant events. In previous version, the no remnant is identified in isMerger() function.
-5. Fix the conflicts of names for the executable files in configure script. When no parallel method is used and only one of the interrupt or external modes is activated, the test program for the interrupt method (e.g., petar.bse) or the external method (e.g., petar.galpy) conflicted with the main petar program name. The petar program name will now have the suffix: `noparallel` added to avoid conflicts.
+4. (1241) Correct two incorrect binary type indices saved in the bpp array (*,10) of evolve2.f and in the binary type change file for BSE-based stellar evolution codes: (1) for a part of common envelope events, the binary type index 8 is incorrectly output as the END SYMB index 7 (evolve2.f:1410); (2) for a part of no remnant events, the type index 12 is incorrectly output as the DISRUPT index 13 (evolv2.f:2624). In addition, the isNoRemnant() function is implemented in bse_interface.h to identify no remnant events. In previous version, the no remnant is identified in isMerger() function.
+5. (1241) Fix the conflicts of names for the executable files in configure script. When no parallel method is used and only one of the interrupt or external modes is activated, the test program for the interrupt method (e.g., petar.bse) or the external method (e.g., petar.galpy) conflicted with the main petar program name. The petar program name will now have the suffix: `noparallel` added to avoid conflicts.
+6. (1242) For BSE based stellar evolution, call single stellar evolution for each star at time zero, and then, the data.0 snapshot will contain initial stellar evoution parameters. In the previous version, stellar evolution parameters of a star are initialized at the first time when SSE/BSE is called for this star.

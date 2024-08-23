@@ -3375,6 +3375,15 @@ public:
             hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters, print_flag);
             hard_manager.ar_manager.interaction.tide.speed_of_light = hard_manager.ar_manager.interaction.bse_manager.getSpeedOfLight();
         }
+
+        // initial stellar evolution for each star
+        if (!restart_flag) {
+#pragma omp parallel for
+            for (PS::S32 i=0; i<stat.n_real_loc; i++) {
+                auto& pi = system_soft[i];
+                hard_manager.ar_manager.interaction.modifyOneParticle(system_soft[i], stat.time, stat.time);
+            }
+        }
 #endif
 #endif
 #ifdef ADJUST_GROUP_PRINT
