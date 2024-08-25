@@ -3237,7 +3237,10 @@ public:
         //vel_max = (r_search_max - r_out) / dt_soft / search_vel_factor;
 
         // regularize output time to be integer times of dt_soft
-        dt_snap = int(dt_snap/dt_soft)*dt_soft;
+        if (dt_snap<dt_soft) 
+            dt_snap = dt_soft;
+        else
+            dt_snap = int(dt_snap/dt_soft)*dt_soft;
 
         EPISoft::eps   = input_parameters.eps.value;
         EPISoft::r_out = r_out;

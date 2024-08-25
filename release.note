@@ -36,7 +36,7 @@ The v1.0-beta release of PeTar is now ready for use. Some existing issues includ
 Updates: (version shown in ()):
 
 1. (1238) Fix the warning message of the file closing in `petar.data.process`.  
-2. (1238) Allow the output time step to be an integer multiple of the tree time step instead of restricted to 0.5^{integer}. 
+2. (1238,1243) Allow the output time step to be an integer multiple of the tree time step instead of restricted to 0.5^{integer}. Fix a bug in version 1243 that when tree time step >1, output time step becomes zero.
 3. (1239) Update the output information of the parameter list in the main output of petar for better clarity:  
    **Old Version:**  
    - mass_average =   
