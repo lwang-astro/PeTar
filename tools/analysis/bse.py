@@ -462,7 +462,8 @@ class BSEMerge(DictNpArrayMix):
         
         # find mergers
         type_change.generateBinaryID()
-        sel_merge = ((type_change.final.m1==0) & (type_change.init.m1>0))| ((type_change.final.m2==0) & (type_change.init.m2>0))
+        # select events where one component becomes massless type and the other has mass increase.
+        sel_merge = ((type_change.final.m1==0) & (type_change.init.m1>0) & (type_change.final.m2 > type_change.init.m2)) | ((type_change.final.m2==0) & (type_change.init.m2>0) & (type_change.final.m1 > type_change.init.m1))
         merge_final = type_change[sel_merge]
         bid_merge = merge_final.bid
         
