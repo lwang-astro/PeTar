@@ -2390,7 +2390,8 @@ c            helper(2) = j2
          rrl2 = MIN(rrl2,0.99d0)
          bpp(jp,8) = rrl1
          bpp(jp,9) = rrl2
-         bpp(jp,10) = 7.0
+*         bpp(jp,10) = 7.0
+         bpp(jp,10) = 8.0
 *         btype = 8
       endif
       epoch(1) = tphys - aj(1)
@@ -2521,9 +2522,9 @@ c            helper(2) = j2
             bpp(jp,7) = zero
             bpp(jp,8) = zero
             bpp(jp,9) = ngtv2
-*            bpp(jp,10) = 11.0
-            bpp(jp,10) = 13.0
-*            btype = 13
+*            bpp(jp,10) = 9.0
+            bpp(jp,10) = 12.0
+*            btype = 12
          else
             bpp(jp,6) = sep
             bpp(jp,7) = ecc

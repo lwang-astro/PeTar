@@ -422,6 +422,10 @@ AC_ARG_WITH([orbit],
 
 PROG_NAME=$PROG_NAME$PROG_SUFFIX
 
+# check whether name comflicts exist
+AS_IF([[test x"$PROG_NAME" == xpetar."$with_interrupt" ] || [test x"$PROG_NAME" == xpetar."$with_external"]],
+      [PROG_NAME=$PROG_NAME'.noparallel'])
+
 # others
 AC_PROG_LN_S
 AC_PROG_MAKE_SET

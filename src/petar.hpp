@@ -3199,7 +3199,10 @@ public:
         //vel_max = (r_search_max - r_out) / dt_soft / search_vel_factor;
 
         // regularize output time to be integer times of dt_soft
-        dt_snap = int(dt_snap/dt_soft)*dt_soft;
+        if (dt_snap<dt_soft) 
+            dt_snap = dt_soft;
+        else
+            dt_snap = int(dt_snap/dt_soft)*dt_soft;
 
         EPISoft::eps   = input_parameters.eps.value;
         EPISoft::r_out = r_out;
@@ -3345,6 +3348,17 @@ public:
         }
         rand_manager.initialAll(rand_parameters);
         rand_manager.printRandSeeds(std::cout);
+
+
+        // initial stellar evolution for each star
+        if (!restart_flag) {
+#pragma omp parallel for
+            for (PS::S32 i=0; i<stat.n_real_loc; i++) {
+                auto& pi = system_soft[i];
+                hard_manager.ar_manager.interaction.modifyOneParticle(system_soft[i], stat.time, stat.time);
+            }
+        }
+
 #endif
 #endif
 #ifdef ADJUST_GROUP_PRINT

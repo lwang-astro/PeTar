@@ -36,8 +36,6 @@ This README document serves as a concise yet comprehensive guide detailing the i
 For a deeper understanding of the algorithms employed, additional details can be found in the work by Wang et al. (2020; available on arXiv: https://arxiv.org/abs/2006.16560).
 For developers seeking to understand the code structure, please consult the [Doxygen documentation](https://lwang-astro.github.io/PeTar/doc/html/index.html).
 
-To enhance the English in the given text, you could say:
-
 After completing the installation process, users can quickly get started by exploring three sample scripts located in the sample folder: [star\_cluster.sh](https://github.com/lwang-astro/PeTar/blob/master/sample/star_cluster.sh), [star\_cluster\_bse.sh](https://github.com/lwang-astro/PeTar/blob/master/sample/star_cluster_bse.sh), and [star\_cluster\_bse\_galpy.sh](https://github.com/lwang-astro/PeTar/blob/master/test/star_cluster_bse_galpy.sh). These scripts provide practical demonstrations of simulating a star cluster using the PeTar code. They cover tasks such as generating initial conditions using `mcluster`, running simulations, and processing data to produce single and binary snapshots, core information, and Lagrangian radii. Here is a brief description of each script:
 - star\_cluster.sh: Simulates a star cluster for up to 100 Myr with 1000 stars initially, following the Kroupa (2001) IMF and including 95% primordial binaries (refer to the `mcluster` manual). This simulation uses only gravitational forces.
 - star\_cluster\_bse.sh: Similar to sample.sh but includes single and binary stellar evolution (SSE/BSE) with a metallicity of Z=0.02.
