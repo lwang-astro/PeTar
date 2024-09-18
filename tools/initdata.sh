@@ -13,6 +13,7 @@ do
 	    echo '  -f [S] Specify the output file (PeTar input data) name (default: input file name + ".input")';
 	    echo '  -i [I] Skip the given number of rows in the input data file (default: 0)';
 	    echo '  -s [S] Add stellar evolution columns: base | bse | no (default: no)';
+	    echo '  -T [I] The initial stellar type of each star when the BSE based stellar evolution is used (default: 1)';
 	    echo '  -m [F] Set the mass scaling factor from the input data unit to [Msun]: mass[input unit]*m_scale=mass[Msun] (default: 1.0)';
 	    echo '      Note that Msun is used as the mass unit in BSE based stellar evolution.';
 	    echo '  -r [F] Set the radius scaling factor from the input data unit to [pc] (default: 1.0)';
@@ -43,6 +44,7 @@ do
 	-f) shift; fout=$1; shift;;
 	-i) shift; igline=$1; shift;;
 	-s) shift; seflag=$1; shift;;
+	-T) shift; setype=$1; shift;;
 	-m) shift; mscale=$1; convert=1; shift;;
 	-r) shift; rscale=$1; convert=1; shift;;
 	-v) shift; vscale=$1; convert=1; shift;;
@@ -61,6 +63,7 @@ fi
 [ -z $fout ] && fout=$fname.input
 [ -z $igline ] && igline=0
 [ -z $seflag ] && seflag='no'
+[ -z $setype ] && setype=1
 [ -z $extflag ] && extflag='no'
 [ -z $rscale ] && rscale=1.0
 [ -z $mscale ] && mscale=1.0
@@ -141,9 +144,10 @@ if [[ $seflag != 'no' ]]; then
 	awk '{OFMT="%.15g"; print '"$base_col$se_col$soft_col"'}' $fout.scale__ >>$fout
     elif [[ "$seflag" == *"bse"* ]]; then
 	#       type, m0,  m,     rad, mc,  rc,  spin, epoch, time, lum
-	bse_col='1, $1*ms, $1*ms, 0.0, 0.0, 0.0, 0.0,  0.0,   0.0,  0.0,'
+	bse_col=$setype', $1*ms, $1*ms, 0.0, 0.0, 0.0, 0.0,  0.0,   0.0,  0.0,'
 
 	echo 'Interrupt mode: '$seflag
+	echo 'Initial stellar type: '$setype
 	echo 'mass scale from PeTar unit (PT) to Msun (m[Msun] = m[PT]*mscale): ' $mscale
 	awk -v ms=$mscale  '{OFMT="%.15g"; print '"$base_col$se_col$bse_col$soft_col"'}' $fout.scale__ >>$fout
     else

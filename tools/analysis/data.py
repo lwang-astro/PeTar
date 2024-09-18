@@ -90,9 +90,9 @@ class PeTarDataHeader():
 
                 self.file_id = int(file_id)
                 self.n = int(n_glb)
-                self.time = self.float_type(t)
-                self.pos_offset = [self.float_type(x),self.float_type(y),self.float_type(z)]
-                self.vel_offset = [self.float_type(vx),self.float_type(vy),self.float_type(vz)]
+                self.time = float_type(t)
+                self.pos_offset = [float_type(x),float_type(y),float_type(z)]
+                self.vel_offset = [float_type(vx),float_type(vy),float_type(vz)]
             else:
                 if (len(header_items)!=3):
                     raise ValueError('Snapshot header item number mismatch! Need 3 (file_id, N, time), got %d. Make sure the external_mode keyword set correctly.' % len(header_items))
@@ -102,18 +102,18 @@ class PeTarDataHeader():
 
                 self.file_id = int(file_id)
                 self.n = int(n_glb)
-                self.time = self.float_type(t)
+                self.time = float_type(t)
 
         else:
             if (self.offset_flag):
-                fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',self.float_type),('x',self.float_type),('y',self.float_type),('z',self.float_type),('vx',self.float_type),('vy',self.float_type),('vz',self.float_type)]),count=1)
+                fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',float_type),('x',float_type),('y',float_type),('z',float_type),('vx',float_type),('vy',float_type),('vz',float_type)]),count=1)
                 self.file_id = fp['file_id'][0]
                 self.n = fp['n_glb'][0]
                 self.time = fp['time'][0]
                 self.pos_offset = [fp['x'][0], fp['y'][0], fp['z'][0]]
                 self.vel_offset = [fp['vx'][0], fp['vy'][0], fp['vz'][0]]
             else:
-                fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',self.float_type)]),count=1)
+                fp = np.fromfile(_filename, dtype=np.dtype([('file_id',np.int64),('n_glb',np.int64),('time',float_type)]),count=1)
                 self.file_id = fp['file_id'][0]
                 self.n = fp['n_glb'][0]
                 self.time = fp['time'][0]
