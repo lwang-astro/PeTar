@@ -542,8 +542,8 @@ class DictNpArrayMix:
         print Table with defined column list and formats
 
         Parameters
-        column_format: a list of column label (class member name) and format, enclosed by tuple, for sub-member, use . to access
-                       For exmaple: [(key1,'%s'), (key2,'%12.7f'), (key3.subkey1,'%d'), (key3.subkey2,'%e')]
+        column_format: a list of column label (class member name), format and column title, enclosed by tuple, for sub-member, use . to access
+                       For exmaple: [(key1,'%s', title1), (key2,'%12.7f', title2), (key3.subkey1,'%d', title3), (key3.subkey2,'%e',title4)]
         print_title: print title of keys (default: True)
         """
         import re
@@ -553,7 +553,7 @@ class DictNpArrayMix:
         table=[]
         fmt_list=''
         fmt_title=''
-        for key, fmt in column_format:
+        for key, fmt, name in column_format:
             keylst = key.split('.')
             dat_key=self
             for ikey in keylst:
@@ -563,7 +563,7 @@ class DictNpArrayMix:
                     dat_key = dat_key[key_name][:,index]
                 else:
                     dat_key = dat_key[ikey]
-            title.append(key)
+            title.append(name)
             if '.' in fmt:
                 fmt_title += re.sub('\.[0-9]*[a-zA-Z]','s',fmt)
             else:

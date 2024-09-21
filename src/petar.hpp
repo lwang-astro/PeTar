@@ -3384,7 +3384,7 @@ public:
 #pragma omp parallel for
             for (PS::S32 i=0; i<stat.n_real_loc; i++) {
                 auto& pi = system_soft[i];
-                hard_manager.ar_manager.interaction.modifyOneParticle(system_soft[i], stat.time, stat.time);
+                hard_manager.ar_manager.interaction.modifyOneParticle(pi, stat.time, stat.time);
             }
         }
 #endif
