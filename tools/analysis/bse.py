@@ -55,6 +55,47 @@ class SSETypeChange(DictNpArrayMix):
         keys = [['id',np.int64],['init',SSEStarParameter],['final',SSEStarParameter]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
+    def printTable(self, column_format = 'final', print_title = True):
+        """ Print merger information in a formated table
+
+        Parameters:
+        ----------
+        column_format: a list of column label (class member name), format and column title, enclosed by tuple, for sub-member, use . to access
+                       For exmaple: [(key1,'%s',title1), (key2,'%12.7f',title2), (key3.subkey1,'%d',title3), (key3.subkey2,'%e',title4)]
+                       Some pre-defined choices (default: final):
+                       final: [('id', '%10d', 'id'),
+                               ('final.time','%12.4g','timef[Myr]'),('final.type','%4d','kf'),
+                               ('final.mass0','%10.3f','mass0[M*]'),('final.mass','%10.3f','mass[M*]'), 
+                               ('final.rad','%8.2g','r[R*]'),('final.lum','%8.2g','Lf[L*]'),
+                               ('final.mcore','%9.3f','mcf[M*]'),('final.rcore','%8.2g','rcf[R*]'),
+                               ('final.spin','%8.2g','spinf'),('final.epoch','%11.3g','epoch[Myr]')]
+                       init-final: [('id', '%10d', 'id'),
+                               ('init.time','%12.4g','timei[Myr]'),('init.type','%4d','ki'),
+                               ('init.mass','%11.4f','mi[M*]'),('init.mcore','%9.3f','mci[M*]'),
+                               ('final.time','%12.4g','timef[Myr]'),('final.type','%4d','kf'),
+                               ('final.mass','%11.4f','mf[M*]'),('final.mcore','%9.3f','mcf[M*]')]
+        print_title: print title of keys (default: True)
+        """
+        
+        if (column_format == 'final'):
+            column_format = [('id', '%10d', 'id'),
+                             ('final.time','%12.4g','timef[Myr]'),('final.type','%4d','kf'),
+                             ('final.mass0','%10.3f','mass0[M*]'),('final.mass','%10.3f','mass[M*]'), 
+                             ('final.rad','%8.2g','r[R*]'),('final.lum','%8.2g','Lf[L*]'),
+                             ('final.mcore','%9.3f','mcf[M*]'),('final.rcore','%8.2g','rcf[R*]'),
+                             ('final.spin','%8.2g','spinf'),('final.epoch','%11.3g','epoch[Myr]')]
+
+        elif (column_format =='init-final'):
+            column_format = [('id', '%10d', 'id'),
+                             ('init.time','%12.4g','timei[Myr]'),('init.type','%4d','ki'),
+                             ('init.mass','%11.4f','mi[M*]'),('init.mcore','%9.3f','mci[M*]'),
+                             ('final.time','%12.4g','timef[Myr]'),('final.type','%4d','kf'),
+                             ('final.mass','%11.4f','mf[M*]'),('final.mcore','%9.3f','mcf[M*]')]
+        elif (type(column_format) != list):
+            raise ValueError('Error, column_format should be "final","init-final" or list of manually defined column format; given ',column_format)
+
+        DictNpArrayMix.printTable(self, column_format, print_title)
+
 class SSESNKick(DictNpArrayMix):
     """ SSE SN kick output data from PeTar
     Keys: (class members)
@@ -167,6 +208,47 @@ class BSETypeChange(DictNpArrayMix):
         """
         bid = cantorPairing(self.id1, self.id2)
         self.addNewMember('bid',bid)
+
+    def printTable(self, column_format = 'final', print_title = True):
+        """ Print merger information in a formated table
+
+        Parameters:
+        ----------
+        column_format: a list of column label (class member name), format and column title, enclosed by tuple, for sub-member, use . to access
+                       For exmaple: [(key1,'%s',title1), (key2,'%12.7f',title2), (key3.subkey1,'%d',title3), (key3.subkey2,'%e',title4)]
+                       Some pre-defined choices (default: final):
+                       init-final: [('type', '%3d', 'kb'), ('init.type1','%4d','k1i'),('init.type2','%4d','k2i'),
+                                    ('init.time','%12.4g','timei[Myr]'),('init.m1','%11.4f','m1i[M*]'),('init.m2','%11.4f','m2i[M*]'),
+                                    ('init.semi','%12.4g','ai[R*]'),('init.ecc','%13.8f','ecci'),
+                                    ('final.type1','%4d','k1f'),('final.type2','%4d','k2f'), 
+                                    ('final.m1','%11.4f','m1f[M*]'),('final.m2','%11.4f','m2f[M*]'),('final.semi','%12.4g','af[R*]'),('final.ecc','%13.8f','eccf')]
+                       final: [('type', '%3d', 'kb'),('id1','%9d','id1'), ('id2','%9d','id2'),
+                              ('final.time','%12.4g','timef[Myr]'),('final.type1','%4d','k1f'),('final.type2','%4d','k2f'), 
+                              ('final.m1','%10.3f','m1f[M*]'),('final.m2','%10.3f','m2f[M*]'),
+                              ('final.semi','%8.2g','af[R*]'),('final.ecc','%12.7f','eccf'),
+                              ('final.rad1','%8.2g','r1[R*]'),('final.rad2','%8.2g','r2[R*]'),
+                              ('final.mcore1','%9.3f','mc1f[M*]'),('final.mcore2','%9.3f','mc2f[M*]'),
+                              ('final.spin1','%8.2g','spin1f'),('final.spin2','%8.2g','spin2f')]
+        print_title: print title of keys (default: True)
+        """
+        if (column_format == 'final'):
+            column_format = [('type', '%3d', 'kb'), ('id1','%9d','id1'), ('id2','%9d','id2'),
+                             ('final.time','%12.4g','timef[Myr]'), ('final.type1','%4d','k1f'),('final.type2','%4d','k2f'), 
+                             ('final.m1','%10.3f','m1f[M*]'),('final.m2','%10.3f','m2f[M*]'),('final.semi','%8.2g','af[R*]'),('final.ecc','%13.8f','eccf'),
+                             ('final.rad1','%8.2g','r1[R*]'),('final.rad2','%8.2g','r2[R*]'),#('final.lum1','%8.2g','L1f[L*]'),('final.lum2','%8.2g','L2f[L*]'),
+                             ('final.mcore1','%9.3f','mc1f[M*]'),('final.mcore2','%9.3f','mc2f[M*]'),#('final.rcore1','%9.2g','rc1f[R*]'),('final.rcore2','%9.2g','rc2f[R*]'),
+                             ('final.spin1','%8.2g','spin1f'),('final.spin2','%8.2g','spin2f')]
+
+        elif (column_format =='init-final'):
+            column_format = [('type', '%3d', 'kb'), ('id1','%8d','id1'), ('id2','%8d','id2'), 
+                             ('init.time','%12.4g','timei[Myr]'),('init.type1','%4d','k1i'),('init.type2','%4d','k2i'), 
+                             ('init.m1','%10.3f','m1i[M*]'),('init.m2','%10.3f','m2i[M*]'),('init.semi','%8.2g','ai[R*]'),('init.ecc','%13.8f','ecci'),
+                             ('final.type1','%4d','k1f'),('final.type2','%4d','k2f'), 
+                             ('final.m1','%10.3f','m1f[M*]'),('final.m2','%10.3f','m2f[M*]'),('final.semi','%8.2g','af[R*]'),('final.ecc','%13.8f','eccf')]
+        elif (type(column_format) != list):
+            raise ValueError('Error, column_format should be "final","init-final" or list of manually defined column format; given ',column_format)
+
+        DictNpArrayMix.printTable(self, column_format, print_title)
 
 class BSESNKick(DictNpArrayMix):
     """ BSE SN kick output data from PeTar
@@ -435,6 +517,7 @@ class BSEMerge(DictNpArrayMix):
     """ BSE binary mergers 
     Keys: (class members)
         time  (1D): current physical time (Myr)
+        bid   (1D): binary id obtained from CantorPairing of two component IDs.
         id1   (1D): particle id of component 1
         id2   (1D): particle id of component 2
         semi  (1D): semi-major axis (Rsun)
@@ -450,9 +533,9 @@ class BSEMerge(DictNpArrayMix):
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation using key list, see help(DictNpArrayMix.__init__)
         """
-        keys=[['time',np.float64],['id1',np.int64],['id2',np.int64],['semi',np.float64],['ecc',np.float64],
-              ['kw1',np.int64],['kw2',np.int64],
-              ['m1',np.float64],['m2',np.float64],['kwf',np.int64],['mf',np.float64]]
+        keys=[['time',np.float64],['bid', np.int64],['id1',np.int64],['id2',np.int64],['semi',np.float64],['ecc',np.float64],
+              ['type1',np.int64],['type2',np.int64],
+              ['m1',np.float64],['m2',np.float64],['typef',np.int64],['mf',np.float64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
 
@@ -534,8 +617,8 @@ class BSEMerge(DictNpArrayMix):
         merge['id2']=np.concatenate((se_merge.id2,dyn_merge.id2))[tsort]
         merge['semi']=np.concatenate((se_merge.init.semi,dyn_merge.semi))[tsort]
         merge['ecc']=np.concatenate((se_merge.init.ecc,dyn_merge.ecc))[tsort]
-        merge['kw1']=np.concatenate((se_merge.init.type1,dyn_merge.init.p1.type))[tsort]
-        merge['kw2']=np.concatenate((se_merge.init.type2,dyn_merge.init.p2.type))[tsort]
+        merge['type1']=np.concatenate((se_merge.init.type1,dyn_merge.init.p1.type))[tsort]
+        merge['type2']=np.concatenate((se_merge.init.type2,dyn_merge.init.p2.type))[tsort]
         merge['m1']=np.concatenate((se_merge.init.m1,dyn_merge.init.p1.mass))[tsort]
         merge['m2']=np.concatenate((se_merge.init.m2,dyn_merge.init.p2.mass))[tsort]
 
@@ -551,36 +634,34 @@ class BSEMerge(DictNpArrayMix):
         dyn_kwf[dyn_mf2_sel] = dyn_merge.final.p2.type[dyn_mf2_sel]
         dyn_mf[dyn_mf2_sel] = dyn_merge.final.p2.mass[dyn_mf2_sel]
 
-        merge['kwf']=np.concatenate((se_kwf, dyn_kwf))[tsort]
+        merge['typef']=np.concatenate((se_kwf, dyn_kwf))[tsort]
         merge['mf']=np.concatenate((se_mf, dyn_mf))[tsort]
         self.size=merge['time'].size
 
-    def printTableTitle(self):
-        """ Print table title for the merger information (default column_format for printTable)
-        """
-        print("%12s %8s %8s %10s %10s %8s %8s %12s %12s %8s %12s" %('Time[Myr]','id1','id2','semi[R*]','ecc','kw1(i)','kw2(i)','m1[M*](i)','m2[M*](i)','kw(f)','m[M*](f)'))
-     
     def printTable(self, 
-                   column_format = [('time','%12.7f '), 
-                                    ('id1','%8d '), ('id2','%8d '), 
-                                    ('semi','%10.7g '), ('ecc','%10.7g '),
-                                    ('kw1','%8d '), ('kw2','%8d '),
-                                    ('m1','%12.7f '), ('m2','%12.7f '),
-                                    ('kwf','%8d '), ('mf','%12.7f')]):
+                   column_format = [('time','%12.7f','time[Myr]'), ('bid','%14d','bid'),
+                                    ('id1','%8d','id1'), ('id2','%8d','id2'), 
+                                    ('semi','%10.7g','semi[R*]'), ('ecc','%15.10f','ecc'),
+                                    ('type1','%4d','k1i'), ('type2','%4d','k2i'),
+                                    ('m1','%12.4f','m1i[M*]'), ('m2','%12.4f','m2i[M*]'),
+                                    ('typef','%4d','kf'), ('mf','%12.7f','mf[M*]')],
+                   print_title = True):
         """ Print merger information in a formated table
 
         Parameters:
         ----------
-        column_format: a list of column label (class member name) and format, enclosed by tuple, for sub-member, use . to access
-                       For exmaple: [(key1,'%s'), (key2,'%12.7f'), (key3.subkey1,'%d'), (key3.subkey2,'%e')]
-                       Default: [('time','%12.7f '), 
-                                 ('id1','%8d '), ('id2','%8d '), 
-                                 ('semi','%10.7g '), ('ecc','%10.7g '),
-                                 ('kw1','%8d '), ('kw2','%8d '),
-                                 ('m1','%12.7f '), ('m2','%12.7f '),
-                                 ('kwf','%8d '), ('mf','%12.7f')]
+        column_format: a list of column label (class member name), format and column title, enclosed by tuple, for sub-member, use . to access
+                       For exmaple: [(key1,'%s',title1), (key2,'%12.7f',title2), (key3.subkey1,'%d',title3), (key3.subkey2,'%e',title4)]
+                       Default: [('time','%12.7f','time[Myr]'), ('bid','%14d','bid'),
+                                 ('id1','%8d','id1'), ('id2','%8d','id2'), 
+                                 ('semi','%10.7g','semi[R*]'), ('ecc','%15.10f','ecc'),
+                                 ('type1','%4d','k1i'), ('type2','%4d','k2i'),
+                                 ('m1','%12.4f','m1i[M*]'), ('m2','%12.4f','m2i[M*]'),
+                                 ('typef','%4d','kf'), ('mf','%12.7f','mf[M*]')]
+        print_title: print title of keys (default: True)
+
         """
-        DictNpArrayMix.printTable(self, column_format)
+        DictNpArrayMix.printTable(self, column_format, print_title)
 
 def find_merge_tree(merger_list, merger_root):
     """ Find the merger tree for a given merger

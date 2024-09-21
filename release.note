@@ -27,13 +27,12 @@
 
 1. When long-distant massive escapers exist and the stellar system has a very low density due to e.g. tidal disruption, the center position of global system based on the soft potential can suddenly jump to the escaper, which may generate large roundoff errors to binary orbits, that can cause artificial eccentricity jumps of binary systems. Need better way to determine the center of globaly system during simulation.
 2. In cases where a high-eccentric binary system transitions from a binary to a hyperbolic orbit temporarily due to significant perturbations at a large separation, the BSE code may incorrectly identify it as an immediate merger, even though the binary system does not actually merge. It is essential to establish a more precise criterion for invoking binary evolution codes in such scenarios.
-3. Several issues from the v1.0-beta version of MOBSE remain unresolved.
-4. Need better stability criterion
-5. Need to check criterion of TT method for binaries
-6. Need to check slowdown factor criterion
-7. Need better group information output
+3. Need better stability criterion
+4. Need to check criterion of TT method for binaries
+5. Need to check slowdown factor criterion
+6. Need better group information output
 
-**master 1244**
+**1245**
 
 Updates: (version shown in ()):
 
@@ -62,6 +61,18 @@ Updates: (version shown in ()):
 5. (1241) Fix the conflicts of names for the executable files in configure script. When no parallel method is used and only one of the interrupt or external modes is activated, the test program for the interrupt method (e.g., petar.bse) or the external method (e.g., petar.galpy) conflicted with the main petar program name. The petar program name will now have the suffix: `noparallel` added to avoid conflicts.
 6. (1242) For BSE based stellar evolution, call single stellar evolution for each star at time zero, and then, the data.0 snapshot will contain initial stellar evoution parameters. In the previous version, stellar evolution parameters of a star are initialized at the first time when SSE/BSE is called for this star.
 7. (1244) In the data analysis function petar.BSEMerge, the previous version's combine function included fake merger events of binaries where one component underwent a supernova and became massless. The new version, however, only detects events in which one component becomes massless while the other component gains mass.
+8. (1245) Add the missing binary event information (core mass, radius, core radius, luminosity, spin) into type_change files for MOBSE and BSEEMP. 
+9. (1245) Save semi-major axis and eccentricity for kw=15 instead of setting them to zero in type_change files. 
+10.(1245) Enhance the printTable function in the Python analysis tool to allow manual setting of column titles. Additionally, introduce pre-defined column_format options for petar.SSETypeChange, petar.BSETypeChange and petar.BSEMerge for user convenience.
+11.(1245) To maintain consistency with other Python data analysis classes, such as `petar.BSETypeChange`, the members `kw1`, `kw2`, and `kwf` defined in `petar.BSEMerge` have been renamed to `type1`, `type2`, and `typef`, respectively.
+
+Some existing issues include:
+1. When long-distant massive escapers exist and the stellar system has a very low density due to e.g. tidal disruption, the center position of global system based on the soft potential can suddenly jump to the escaper, which may generate large roundoff errors to binary orbits, that can cause artificial eccentricity jumps of binary systems. Need better way to determine the center of globaly system during simulation.
+2. In cases where a high-eccentric binary system transitions from a binary to a hyperbolic orbit temporarily due to significant perturbations at a large separation, the BSE code may incorrectly identify it as an immediate merger, even though the binary system does not actually merge. It is essential to establish a more precise criterion for invoking binary evolution codes in such scenarios.
+3. Need better stability criterion
+4. Need to check criterion of TT method for binaries
+5. Need to check slowdown factor criterion
+6. Need better group information output
 
 **v1.0 Change Note**
 

@@ -502,20 +502,24 @@ int main(int argc, char** argv){
 
                 if (dt_miss!=0.0&&bin[i].star[0].kw>=15&&bin[i].star[1].kw>=15) break;
                 
-                //if (bin[i].star[0].kw>=15) {
-                //    star.push_back(bin[i].star[1]);
-                //    break;
-                //}
-                //if (bin[i].star[1].kw>=15) {
-                //    star.push_back(bin[i].star[0]);
-                //    break;
-                //}
-                // 
-                //if (bse_manager.isDisrupt(bin_type_last)) {
-                //    star.push_back(bin[i].star[0]);
-                //    star.push_back(bin[i].star[1]);
-                //    break;
-                //}
+                if (bin[i].star[0].kw>=15) {
+                    mass0.push_back(bin[i].star[1].m0/bse_manager.mscale);
+                    star.push_back(bin[i].star[1]);
+                    break;
+                }
+                if (bin[i].star[1].kw>=15) {
+                    mass0.push_back(bin[i].star[0].m0/bse_manager.mscale);
+                    star.push_back(bin[i].star[0]);
+                    break;
+                }
+                 
+                if (bse_manager.isDisrupt(bin_type_last)) {
+                    mass0.push_back(bin[i].star[0].m0/bse_manager.mscale);
+                    star.push_back(bin[i].star[0]);
+                    mass0.push_back(bin[i].star[1].m0/bse_manager.mscale);
+                    star.push_back(bin[i].star[1]);
+                    break;
+                }
             }
         }
 
@@ -570,7 +574,7 @@ int main(int argc, char** argv){
                 double dv[4];
                 dv[3] = bse_manager.getVelocityChange(dv, output[i]);
 
-                if (event_flag>0||always_output_flag) {
+                if ((event_flag>0 && event_flag<2) || (event_flag==2 && !kick_print_flag) || always_output_flag) {
                     if (output_flag) {
 #pragma omp critical 
                         {

@@ -501,6 +501,16 @@ c                    bpp(jp,33) = 12.0
                     bpp(jp,10) = 6.0
                     bsymb = .true.
                 endif
+                bpp(jp,11) = lumin(1)
+                bpp(jp,12) = lumin(2)
+                bpp(jp,13) = rad(1)
+                bpp(jp,14) = rad(2)
+                bpp(jp,15) = massc(1)
+                bpp(jp,16) = massc(2)
+                bpp(jp,17) = radc(1)
+                bpp(jp,18) = radc(2)
+                bpp(jp,19) = ospin(1)
+                bpp(jp,20) = ospin(2)
             endif
          endif
 *
@@ -909,6 +919,16 @@ c         endif
 *            bpp(jp,10) = 14.0
             bpp(jp,10) = 11.0
 c            btype = 11
+            bpp(jp,11) = lumin(1)
+            bpp(jp,12) = lumin(2)
+            bpp(jp,13) = rad(1)
+            bpp(jp,14) = rad(2)
+            bpp(jp,15) = massc(1)
+            bpp(jp,16) = massc(2)
+            bpp(jp,17) = radc(1)
+            bpp(jp,18) = radc(2)
+            bpp(jp,19) = ospin(1)
+            bpp(jp,20) = ospin(2)
          endif
 *
  6    continue
@@ -950,6 +970,16 @@ c            btype = 11
          bpp(jp,9) = rad(2)/rol(2)
          bpp(jp,10) = 1.0
 c         btype = 1
+         bpp(jp,11) = lumin(1)
+         bpp(jp,12) = lumin(2)
+         bpp(jp,13) = rad(1)
+         bpp(jp,14) = rad(2)
+         bpp(jp,15) = massc(1)
+         bpp(jp,16) = massc(2)
+         bpp(jp,17) = radc(1)
+         bpp(jp,18) = radc(2)
+         bpp(jp,19) = ospin(1)
+         bpp(jp,20) = ospin(2)
          if(snova)then
             bpp(jp,10) = 2.0
 c            btype = 2
@@ -1139,6 +1169,16 @@ c      endif
          bpp(jp,9) = rad(2)/rol(2)
          bpp(jp,10) = 2.0
 c         btype = 2
+         bpp(jp,11) = lumin(1)
+         bpp(jp,12) = lumin(2)
+         bpp(jp,13) = rad(1)
+         bpp(jp,14) = rad(2)
+         bpp(jp,15) = massc(1)
+         bpp(jp,16) = massc(2)
+         bpp(jp,17) = radc(1)
+         bpp(jp,18) = radc(2)
+         bpp(jp,19) = ospin(1)
+         bpp(jp,20) = ospin(2)
       endif
 *
       iter = iter + 1
@@ -1181,6 +1221,16 @@ c         btype = 2
          bpp(jp,8) = rad(1)/rol(1)
          bpp(jp,9) = rad(2)/rol(2)
          bpp(jp,10) = 3.0
+         bpp(jp,11) = lumin(1)
+         bpp(jp,12) = lumin(2)
+         bpp(jp,13) = rad(1)
+         bpp(jp,14) = rad(2)
+         bpp(jp,15) = massc(1)
+         bpp(jp,16) = massc(2)
+         bpp(jp,17) = radc(1)
+         bpp(jp,18) = radc(2)
+         bpp(jp,19) = ospin(1)
+         bpp(jp,20) = ospin(2)
       endif
 c      btype = 3
 *
@@ -1415,10 +1465,10 @@ c            helper(2) = j2
          bpp(jp,1) = tphys
          bpp(jp,2) = mass(1)
 *     if(kstar(1).eq.15) bpp(jp,2) = mass0(1)
-         if(kstar(1).eq.15) bpp(jp,2) = zero
+*         if(kstar(1).eq.15) bpp(jp,2) = zero
          bpp(jp,3) = mass(2)
 *     if(kstar(2).eq.15) bpp(jp,3) = mass0(2)
-         if(kstar(2).eq.15) bpp(jp,3) = zero
+*         if(kstar(2).eq.15) bpp(jp,3) = zero
          bpp(jp,4) = float(kstar(1))
          bpp(jp,5) = float(kstar(2))
          bpp(jp,6) = sep
@@ -1428,6 +1478,38 @@ c            helper(2) = j2
 *         bpp(jp,10) = 7.0
          bpp(jp,10) = 8.0
 c          btype = 8
+         bpp(jp,11) = lumin(1)
+         bpp(jp,12) = lumin(2)
+         bpp(jp,13) = rad(1)
+         bpp(jp,14) = rad(2)
+         bpp(jp,15) = massc(1)
+         bpp(jp,16) = massc(2)
+ 3       bpp(jp,17) = radc(1)
+         bpp(jp,18) = radc(2)
+         bpp(jp,19) = ospin(1)
+         bpp(jp,20) = ospin(2)
+         if(kstar(1).eq.15) then
+            bpp(jp,2) = zero
+*            bpp(jp,6) = zero
+*            bpp(jp,7) = ngtv
+            bpp(jp,8) = zero
+            bpp(jp,11) = zero
+            bpp(jp,13) = zero
+            bpp(jp,15) = zero
+            bpp(jp,17) = zero
+            bpp(jp,19) = zero
+         endif
+         if(kstar(2).eq.15) then
+            bpp(jp,3) = zero
+*            bpp(jp,6) = zero
+*            bpp(jp,7) = ngtv
+            bpp(jp,9) = zero
+            bpp(jp,12) = zero
+            bpp(jp,14) = zero
+            bpp(jp,16) = zero
+            bpp(jp,18) = zero
+            bpp(jp,20) = zero
+         endif
 *
          epoch(j1) = tphys - aj(j1)
          if(coel)then
@@ -1698,6 +1780,16 @@ c            helper(2) = j2
                      bpp(jp,4) = float(kst)
                      bpp(jp,5) = float(kstar(j1))
                   endif
+                  bpp(jp,11) = lumin(1)
+                  bpp(jp,12) = lumin(2)
+                  bpp(jp,13) = rad(1)
+                  bpp(jp,14) = rad(2)
+                  bpp(jp,15) = massc(1)
+                  bpp(jp,16) = massc(2)
+                  bpp(jp,17) = radc(1)
+                  bpp(jp,18) = radc(2)
+                  bpp(jp,19) = ospin(1)
+                  bpp(jp,20) = ospin(2)
 *
                endif
             endif            
@@ -1757,6 +1849,16 @@ c            helper(2) = j2
                      bpp(jp,4) = float(kst)
                      bpp(jp,5) = float(kstar(j1))
                   endif
+                  bpp(jp,11) = lumin(1)
+                  bpp(jp,12) = lumin(2)
+                  bpp(jp,13) = rad(1)
+                  bpp(jp,14) = rad(2)
+                  bpp(jp,15) = massc(1)
+                  bpp(jp,16) = massc(2)
+                  bpp(jp,17) = radc(1)
+                  bpp(jp,18) = radc(2)
+                  bpp(jp,19) = ospin(1)
+                  bpp(jp,20) = ospin(2)
 *
                endif
 *
@@ -2202,6 +2304,16 @@ c         endif
 *            bpp(jp,10) = 14.0
             bpp(jp,10) = 11.0
 *            btype = 11
+            bpp(jp,11) = lumin(1)
+            bpp(jp,12) = lumin(2)
+            bpp(jp,13) = rad(1)
+            bpp(jp,14) = rad(2)
+            bpp(jp,15) = massc(1)
+            bpp(jp,16) = massc(2)
+            bpp(jp,17) = radc(1)
+            bpp(jp,18) = radc(2)
+            bpp(jp,19) = ospin(1)
+            bpp(jp,20) = ospin(2)
          endif
 *
  90   continue
@@ -2297,6 +2409,16 @@ c      endif
          bpp(jp,9) = rad(2)/rol(2)
          bpp(jp,10) = 2.0
 *         btype = 2
+         bpp(jp,11) = lumin(1)
+         bpp(jp,12) = lumin(2)
+         bpp(jp,13) = rad(1)
+         bpp(jp,14) = rad(2)
+         bpp(jp,15) = massc(1)
+         bpp(jp,16) = massc(2)
+         bpp(jp,17) = radc(1)
+         bpp(jp,18) = radc(2)
+         bpp(jp,19) = ospin(1)
+         bpp(jp,20) = ospin(2)
       endif
 *
 * Test whether the primary still fills its Roche lobe.
@@ -2321,6 +2443,16 @@ c      endif
          bpp(jp,9) = rad(2)/rol(2)
          bpp(jp,10) = 4.0
 *         btype = 4
+         bpp(jp,11) = lumin(1)
+         bpp(jp,12) = lumin(2)
+         bpp(jp,13) = rad(1)
+         bpp(jp,14) = rad(2)
+         bpp(jp,15) = massc(1)
+         bpp(jp,16) = massc(2)
+         bpp(jp,17) = radc(1)
+         bpp(jp,18) = radc(2)
+         bpp(jp,19) = ospin(1)
+         bpp(jp,20) = ospin(2)
          dtm = 0.d0
          goto 4
       endif
@@ -2350,6 +2482,16 @@ c      endif
       bpp(jp,9) = rrl2
       bpp(jp,10) = 5.0
 *      btype = 5
+      bpp(jp,11) = lumin(1)
+      bpp(jp,12) = lumin(2)
+      bpp(jp,13) = rad(1)
+      bpp(jp,14) = rad(2)
+      bpp(jp,15) = massc(1)
+      bpp(jp,16) = massc(2)
+      bpp(jp,17) = radc(1)
+      bpp(jp,18) = radc(2)
+      bpp(jp,19) = ospin(1)
+      bpp(jp,20) = ospin(2)
 *
 * HG donors behave like MS stars
 *
@@ -2379,9 +2521,9 @@ c            helper(2) = j2
          jp = MIN(jpmax,jp + 1)
          bpp(jp,1) = tphys
          bpp(jp,2) = mass(1)
-         if(kstar(1).eq.15) bpp(jp,2) = zero
+*         if(kstar(1).eq.15) bpp(jp,2) = zero
          bpp(jp,3) = mass(2)
-         if(kstar(2).eq.15) bpp(jp,3) = zero
+*         if(kstar(2).eq.15) bpp(jp,3) = zero
          bpp(jp,4) = float(kstar(1))
          bpp(jp,5) = float(kstar(2))
          bpp(jp,6) = sep
@@ -2393,6 +2535,38 @@ c            helper(2) = j2
 *         bpp(jp,10) = 7.0
          bpp(jp,10) = 8.0
 *         btype = 8
+         bpp(jp,11) = lumin(1)
+         bpp(jp,12) = lumin(2)
+         bpp(jp,13) = rad(1)
+         bpp(jp,14) = rad(2)
+         bpp(jp,15) = massc(1)
+         bpp(jp,16) = massc(2)
+         bpp(jp,17) = radc(1)
+         bpp(jp,18) = radc(2)
+         bpp(jp,19) = ospin(1)
+         bpp(jp,20) = ospin(2)
+         if(kstar(1).eq.15) then
+            bpp(jp,2) = zero
+*            bpp(jp,6) = zero
+*            bpp(jp,7) = ngtv
+            bpp(jp,8) = zero
+            bpp(jp,11) = zero
+            bpp(jp,13) = zero
+            bpp(jp,15) = zero
+            bpp(jp,17) = zero
+            bpp(jp,19) = zero
+         endif
+         if(kstar(2).eq.15) then
+            bpp(jp,3) = zero
+*            bpp(jp,6) = zero
+*            bpp(jp,7) = ngtv
+            bpp(jp,9) = zero
+            bpp(jp,12) = zero
+            bpp(jp,14) = zero
+            bpp(jp,16) = zero
+            bpp(jp,18) = zero
+            bpp(jp,20) = zero
+         endif
       endif
       epoch(1) = tphys - aj(1)
       epoch(2) = tphys - aj(2)
@@ -2431,16 +2605,26 @@ c            helper(2) = j2
             bpp(jp,1) = tphys
             bpp(jp,2) = mass(1)
 *     if(kstar(1).eq.15) bpp(jp,2) = mass0(1)
-            if(kstar(1).eq.15) bpp(jp,2) = zero
+*            if(kstar(1).eq.15) bpp(jp,2) = zero
             bpp(jp,3) = mass(2)
 *     if(kstar(2).eq.15) bpp(jp,3) = mass0(2)
-            if(kstar(2).eq.15) bpp(jp,3) = zero
+*            if(kstar(2).eq.15) bpp(jp,3) = zero
             bpp(jp,4) = float(kstar(1))
             bpp(jp,5) = float(kstar(2))
-            bpp(jp,6) = zero
-            bpp(jp,7) = zero
-            bpp(jp,8) = zero
-            bpp(jp,9) = ngtv
+            bpp(jp,6) = sep
+            bpp(jp,7) = ecc
+            bpp(jp,8) = rad(1)/rol(1)
+            bpp(jp,9) = rad(2)/rol(2)
+            bpp(jp,11) = lumin(1)
+            bpp(jp,12) = lumin(2)
+            bpp(jp,13) = rad(1)
+            bpp(jp,14) = rad(2)
+            bpp(jp,15) = massc(1)
+            bpp(jp,16) = massc(2)
+            bpp(jp,17) = radc(1)
+            bpp(jp,18) = radc(2)
+            bpp(jp,19) = ospin(1)
+            bpp(jp,20) = ospin(2)
             if(coel)then
 *               bpp(jp,10) = 6.0
                bpp(jp,10) = 10.0
@@ -2449,9 +2633,9 @@ c            helper(2) = j2
 *
 * Binary dissolved by a supernova or tides.
 *
-               bpp(jp,6) = sep
-               bpp(jp,7) = ecc
-               bpp(jp,9) = ngtv2
+*               bpp(jp,6) = sep
+*               bpp(jp,7) = ecc
+*               bpp(jp,9) = ngtv2
 *               bpp(jp,10) = 11.0
                bpp(jp,10) = 13.0
 *               btype = 13
@@ -2461,6 +2645,28 @@ c            helper(2) = j2
 *               btype = 12
 *               bpp(jp,10) = 9.0
                bpp(jp,10) = 12.0
+            endif
+            if(kstar(1).eq.15) then
+               bpp(jp,2) = zero
+*               bpp(jp,6) = zero
+*               bpp(jp,7) = ngtv
+               bpp(jp,8) = zero
+               bpp(jp,11) = zero
+               bpp(jp,13) = zero
+               bpp(jp,15) = zero
+               bpp(jp,17) = zero
+               bpp(jp,19) = zero
+            endif
+            if(kstar(2).eq.15) then
+               bpp(jp,3) = zero
+*               bpp(jp,6) = zero
+*               bpp(jp,7) = ngtv
+               bpp(jp,9) = zero
+               bpp(jp,12) = zero
+               bpp(jp,14) = zero
+               bpp(jp,16) = zero
+               bpp(jp,18) = zero
+               bpp(jp,20) = zero
             endif
          endif
          if(kstar(2).eq.15)then
@@ -2473,6 +2679,7 @@ c            helper(2) = j2
             dtmi(1) = tphysf
          endif
          ecc = -1.d0
+         tb = 0.d0
          sep = 0.d0
          dtm = 0.d0
          coel = .false.
@@ -2489,20 +2696,34 @@ c            helper(2) = j2
          bpp(jp,2) = mass(1)
 *        SR mod 23/03/2022 
 *         if(kstar(1).eq.15.and.bpp(jp-1,4).lt.15.0)then
-         if(kstar(1).eq.15)then
-            bpp(jp,2) = zero
-         endif
+*         if(kstar(1).eq.15)then
+*            bpp(jp,2) = zero
+*         endif
          bpp(jp,3) = mass(2)
 *         if(kstar(2).eq.15.and.bpp(jp-1,5).lt.15.0)then
-         if(kstar(2).eq.15)then
-            bpp(jp,3) = zero
-         endif
+*         if(kstar(2).eq.15)then
+*            bpp(jp,3) = zero
+*         endif
 *        SR mod 23/03/2022 
          bpp(jp,4) = float(kstar(1))
          bpp(jp,5) = float(kstar(2))
-         bpp(jp,6) = zero
-         bpp(jp,7) = zero
-         bpp(jp,8) = zero
+*         bpp(jp,6) = zero
+*         bpp(jp,7) = zero
+*         bpp(jp,8) = zero
+         bpp(jp,6) = sep
+         bpp(jp,7) = ecc
+         bpp(jp,8) = rad(1)/rol(1)
+         bpp(jp,9) = rad(2)/rol(2)
+         bpp(jp,11) = lumin(1)
+         bpp(jp,12) = lumin(2)
+         bpp(jp,13) = rad(1)
+         bpp(jp,14) = rad(2)
+         bpp(jp,15) = massc(1)
+         bpp(jp,16) = massc(2)
+         bpp(jp,17) = radc(1)
+         bpp(jp,18) = radc(2)
+         bpp(jp,19) = ospin(1)
+         bpp(jp,20) = ospin(2)
          if(coel)then
             bpp(jp,9) = ngtv
 *            bpp(jp,10) = 6.0
@@ -2518,19 +2739,41 @@ c            helper(2) = j2
             bpp(jp,3) = zero
             bpp(jp,4) = float(kstar(1))
             bpp(jp,5) = float(kstar(2))
-            bpp(jp,6) = zero
-            bpp(jp,7) = zero
+*            bpp(jp,6) = zero
+*            bpp(jp,7) = zero
             bpp(jp,8) = zero
             bpp(jp,9) = ngtv2
 *            bpp(jp,10) = 9.0
             bpp(jp,10) = 12.0
 *            btype = 12
          else
-            bpp(jp,6) = sep
-            bpp(jp,7) = ecc
-            bpp(jp,8) = rad(1)/rol(1)
-            bpp(jp,9) = rad(2)/rol(2)
+*            bpp(jp,6) = sep
+*            bpp(jp,7) = ecc
+*            bpp(jp,8) = rad(1)/rol(1)
+*            bpp(jp,9) = rad(2)/rol(2)
             bpp(jp,10) = -1.0
+         endif
+         if(kstar(1).eq.15)then
+            bpp(jp,2) = zero
+*            bpp(jp,6) = zero
+*            bpp(jp,7) = ngtv
+            bpp(jp,8) = zero
+            bpp(jp,11) = zero
+            bpp(jp,13) = zero
+            bpp(jp,15) = zero
+            bpp(jp,17) = zero
+            bpp(jp,19) = zero
+         endif
+         if(kstar(2).eq.15)then
+            bpp(jp,3) = zero
+*            bpp(jp,6) = zero
+*            bpp(jp,7) = ngtv
+            bpp(jp,9) = zero
+            bpp(jp,12) = zero
+            bpp(jp,14) = zero
+            bpp(jp,16) = zero
+            bpp(jp,18) = zero
+            bpp(jp,20) = zero
          endif
       endif
 *
