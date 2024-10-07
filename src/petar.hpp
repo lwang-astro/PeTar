@@ -3608,7 +3608,8 @@ public:
                 externalForce();
 
 #ifdef RECORD_CM_IN_HEADER
-                stat.calcAndShiftCenterOfMass(&p, stat.n_real_loc);
+                // For single particle, potential can be zero, thus use mode 2 instead
+                stat.calcAndShiftCenterOfMass(&p, stat.n_real_loc, 2);
 #endif
 
                 bool interrupt_flag = false;  // for interrupt integration when time reach end

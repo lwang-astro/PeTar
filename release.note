@@ -1,4 +1,4 @@
-**1245**
+**1246**
 
 Updates: (version shown in ()):
 
@@ -31,9 +31,10 @@ Updates: (version shown in ()):
 9. (1245) Save semi-major axis and eccentricity for kw=15 instead of setting them to zero in type_change files. 
 10.(1245) Enhance the printTable function in the Python analysis tool to allow manual setting of column titles. Additionally, introduce pre-defined column_format options for petar.SSETypeChange, petar.BSETypeChange and petar.BSEMerge for user convenience.
 11.(1245) To maintain consistency with other Python data analysis classes, such as `petar.BSETypeChange`, the members `kw1`, `kw2`, and `kwf` defined in `petar.BSEMerge` have been renamed to `type1`, `type2`, and `typef`, respectively.
+12.(1246) Update c.m. calculation method: use past 16 records of c.m. positions and velocities and obtain the median values as an average to update c.m. This can avoid significant jump of c.m. position and large roundoff errors when the density is too low, such as tidal streams. Also fix a problem when only one particle exist, the c.m. calculation may not be correct using the potential weighted method, now use no weight method instead.
 
 Some existing issues include:
-1. When long-distant massive escapers exist and the stellar system has a very low density due to e.g. tidal disruption, the center position of global system based on the soft potential can suddenly jump to the escaper, which may generate large roundoff errors to binary orbits, that can cause artificial eccentricity jumps of binary systems. Need better way to determine the center of globaly system during simulation.
+1. When long-distant massive escapers exist and the stellar system has a very low density due to e.g. tidal disruption, the center position of global system based on the soft potential can suddenly jump to the escaper, which may generate large roundoff errors to binary orbits, that can cause artificial eccentricity jumps of binary systems. Need better way to determine the center of globaly system during simulation (partially solved, better to use mpreal in future).
 2. In cases where a high-eccentric binary system transitions from a binary to a hyperbolic orbit temporarily due to significant perturbations at a large separation, the BSE code may incorrectly identify it as an immediate merger, even though the binary system does not actually merge. It is essential to establish a more precise criterion for invoking binary evolution codes in such scenarios.
 3. Need better stability criterion
 4. Need to check criterion of TT method for binaries
