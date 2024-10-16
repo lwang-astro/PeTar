@@ -1,4 +1,10 @@
 #pragma once
+
+#ifdef PETAR_USE_MPFRC
+#include <mpreal.h>
+using mpfr::mpreal;
+#endif
+
 #ifdef BSE_BASE
 #include "bse_interface.h"
 #endif
@@ -21,8 +27,13 @@ class ParticleBase{
 public:
     // necessary variables, should not be touched
     PS::F64 mass;
+#ifdef PETAR_USE_MPFRC
+    mpreal pos[3];
+    mpreal vel[3];
+#else
     PS::F64vec pos;
     PS::F64vec vel;
+#endif
     PS::S64 binary_state; // contain two parts, low bits (first BINARY_STATE_ID_SHIFT bits) is binary interrupt state and high bits are pair ID, pair ID is modified in new and end groups in Hermite integrator with flag of ADJUST_GROUP_PRINT
 #ifdef STELLAR_EVOLUTION
     // for stellar evolution
@@ -73,8 +84,19 @@ public:
 
     //! constructor 
     ParticleBase(const PS::F64 _mass, 
+#ifdef PETAR_USE_MPFRC
+                 const mpreal _pos[3], 
+                 const mpreal _vel[3]
+#else
                  const PS::F64vec & _pos, 
-                 const PS::F64vec & _vel): mass(_mass), pos(_pos), vel(_vel) {
+                 const PS::F64vec & _vel
+#endif                 
+                 ) {
+        mass = _mass;
+        for(int i=0; i<3; i++) {
+            pos[i] = _pos[i];
+            vel[i] = _vel[i];
+        }
         binary_state = 0;
 #ifdef STELLAR_EVOLUTION
         radius = 0.0;
@@ -87,40 +109,61 @@ public:
 #endif
     }
 
+    //! full constructor 
+    ParticleBase(const PS::F64 _mass, 
+#ifdef PETAR_USE_MPFRC
+                 const mpreal _pos[3], const mpreal _vel[3],
+#else    
+                 const PS::F64vec & _pos, const PS::F64vec & _vel, 
+#endif
+                 const PS::S64 _binary_state
 #ifdef STELLAR_EVOLUTION
+                 , const PS::F64 _radius, const PS::F64 _dm, 
+                 const PS::F64 _time_record, const PS::F64 _time_interrupt
 #ifdef BSE_BASE
-    //! constructor 
-    ParticleBase(const PS::F64 _mass, const PS::F64vec & _pos, const PS::F64vec & _vel, const PS::S64 _binary_state,
-                 const PS::F64 _radius, const PS::F64 _dm, 
-                 const PS::F64 _time_record, const PS::F64 _time_interrupt, const StarParameter& _star): 
-        mass(_mass), pos(_pos), vel(_vel), binary_state(_binary_state), radius(_radius), dm(_dm), 
-        time_record(_time_record), time_interrupt(_time_interrupt), star(_star) {}
-#else
-    //! constructor 
-    ParticleBase(const PS::F64 _mass, const PS::F64vec & _pos, const PS::F64vec & _vel, const PS::S64 _binary_state,
-                 const PS::F64 _radius, const PS::F64 _dm, 
-                 const PS::F64 _time_record, const PS::F64 _time_interrupt):
-        mass(_mass), pos(_pos), vel(_vel), binary_state(_binary_state), radius(_radius), dm(_dm), 
-        time_record(_time_record), time_interrupt(_time_interrupt) {}
+                 , const StarParameter& _star
 #endif
-#else
-    //! constructor 
-    ParticleBase(const PS::F64 _mass, const PS::F64vec & _pos, const PS::F64vec & _vel, const PS::S64 _binary_state):
-        mass(_mass), pos(_pos), vel(_vel), binary_state(_binary_state) {}
 #endif
+                 ) {
+        mass = _mass;
+        for(int i=0; i<3; i++) {
+            pos[i] = _pos[i];
+            vel[i] = _vel[i];
+        }
+        binary_state = _binary_state;
+#ifdef STELLAR_EVOLUTION        
+        radius = _radius;
+        dm = _dm;
+        time_record = _time_record;
+        time_interrupt = _time_interrupt;
+#ifdef BSE_BASE
+        star = _star;
+#endif
+#endif
+    }
 
-#ifdef STELLAR_EVOLUTION
     //! write class data with ASCII format
     /*! @param[in] _fout: file IO for write
      */
     void writeAscii(FILE* fp) const{
-        fprintf(fp, "%26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %lld %26.17e %26.17e %26.17e %26.17e ",
+        fprintf(fp, 
+#ifdef STELLAR_EVOLUTION        
+                "%26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %lld %26.17e %26.17e %26.17e %26.17e ",
+#else
+                "%26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %lld",
+#endif
                 this->mass, 
                 this->pos.x, this->pos.y, this->pos.z,  
                 this->vel.x, this->vel.y, this->vel.z,
-                this->binary_state, this->radius, this->dm, this->time_record, this->time_interrupt);
+                this->binary_state, 
+#ifdef STELLAR_EVOLUTION
+                this->radius, this->dm, this->time_record, this->time_interrupt
+#endif
+                );
+#ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
         star.writeAscii(fp);
+#endif
 #endif
     }
 
@@ -128,12 +171,21 @@ public:
     /*! @param[in] _fin: file IO for read
      */
     void readAscii(FILE* fp) {
-        PS::S64 rcount=fscanf(fp, "%lf %lf %lf %lf %lf %lf %lf %lld %lf %lf %lf %lf",
+        PS::S64 rcount=fscanf(fp, 
+#ifdef STELLAR_EVOLUTION        
+                             "%lf %lf %lf %lf %lf %lf %lf %lld %lf %lf %lf %lf",
+#else
+                             "%lf %lf %lf %lf %lf %lf %lf %lld",                  
+#endif                             
                               &this->mass, 
                               &this->pos.x, &this->pos.y, &this->pos.z,
                               &this->vel.x, &this->vel.y, &this->vel.z,
                               &this->binary_state,
-                              &this->radius, &this->dm, &this->time_record, &this->time_interrupt);
+#ifdef STELLAR_EVOLUTION                              
+                              &this->radius, &this->dm, &this->time_record, &this->time_interrupt
+#endif                              
+                              );
+#ifdef STELLAR_EVOLUTION
         if(rcount<12) {
             std::cerr<<"Error: Data reading fails! requiring data number is 12, only obtain "<<rcount<<".\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
@@ -142,35 +194,14 @@ public:
 #ifdef BSE_BASE
         star.readAscii(fp);
 #endif
-    }
 #else
-    //! write class data with ASCII format
-    /*! @param[in] _fout: file IO for write
-     */
-    void writeAscii(FILE* fp) const{
-        fprintf(fp, "%26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %lld",
-                this->mass, 
-                this->pos.x, this->pos.y, this->pos.z,  
-                this->vel.x, this->vel.y, this->vel.z,
-                this->binary_state);
-    }
-
-    //! read class data with ASCII format
-    /*! @param[in] _fin: file IO for read
-     */
-    void readAscii(FILE* fp) {
-        PS::S64 rcount=fscanf(fp, "%lf %lf %lf %lf %lf %lf %lf %lld",
-                              &this->mass, 
-                              &this->pos.x, &this->pos.y, &this->pos.z,
-                              &this->vel.x, &this->vel.y, &this->vel.z,
-                              &this->binary_state);
         if(rcount<8) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 7, only obtain "<<rcount<<".\n";
+            std::cerr<<"Error: Data reading fails! requiring data number is 8, only obtain "<<rcount<<".\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
-    }
 #endif
+    }
 
     //! write class data with BINARY format
     /*! @param[in] _fout: file IO for write
@@ -195,8 +226,8 @@ public:
     //! for print debugging
     void print(std::ostream & fout) const{
         fout<<" mass="<<mass
-            <<" pos="<<pos
-            <<" vel="<<vel
+            <<" pos="<<pos[0]<<" "<<pos[1]<<" "<<pos[2]
+            <<" vel="<<vel[0]<<" "<<vel[1]<<" "<<vel[2]
             <<" binary_state="<<binary_state;
 #ifdef STELLAR_EVOLUTION
         fout<<" radius="<<radius
@@ -273,12 +304,12 @@ public:
      */
     void printColumn(std::ostream & _fout, const int _width=20) const{
         _fout<<std::setw(_width)<<mass
-             <<std::setw(_width)<<pos.x
-             <<std::setw(_width)<<pos.y
-             <<std::setw(_width)<<pos.z
-             <<std::setw(_width)<<vel.x
-             <<std::setw(_width)<<vel.y
-             <<std::setw(_width)<<vel.z
+             <<std::setw(_width)<<pos[0]
+             <<std::setw(_width)<<pos[1]
+             <<std::setw(_width)<<pos[2]
+             <<std::setw(_width)<<vel[0]
+             <<std::setw(_width)<<vel[1]
+             <<std::setw(_width)<<vel[2]
              <<std::setw(_width)<<binary_state;
 #ifdef STELLAR_EVOLUTION
         _fout<<std::setw(_width)<<radius
@@ -300,12 +331,12 @@ public:
         template <class Tpcm>
         void printColumnWithOffset(Tpcm& _pcm, std::ostream & _fout, const int _width=20) const{
         _fout<<std::setw(_width)<<mass
-             <<std::setw(_width)<<pos.x + _pcm.pos.x
-             <<std::setw(_width)<<pos.y + _pcm.pos.y
-             <<std::setw(_width)<<pos.z + _pcm.pos.z
-             <<std::setw(_width)<<vel.x + _pcm.vel.x
-             <<std::setw(_width)<<vel.y + _pcm.vel.y
-             <<std::setw(_width)<<vel.z + _pcm.vel.z
+             <<std::setw(_width)<<pos[0] + _pcm.pos[0]
+             <<std::setw(_width)<<pos[1] + _pcm.pos[1]
+             <<std::setw(_width)<<pos[2] + _pcm.pos[2]
+             <<std::setw(_width)<<vel[0] + _pcm.vel[0]
+             <<std::setw(_width)<<vel[1] + _pcm.vel[1]
+             <<std::setw(_width)<<vel[2] + _pcm.vel[2]
              <<std::setw(_width)<<binary_state;
 #ifdef STELLAR_EVOLUTION
         _fout<<std::setw(_width)<<radius
@@ -326,8 +357,12 @@ public:
     template<class Tp>
     void DataCopy(const Tp & din) {
         mass = din.mass;
-        pos  = din.pos;
-        vel  = din.vel;
+        pos[0]  = din.pos[0];
+        pos[1]  = din.pos[1];
+        pos[2]  = din.pos[2];
+        vel[0]  = din.vel[0];
+        vel[1]  = din.vel[1];
+        vel[2]  = din.vel[2];
         binary_state  = din.binary_state;
 #ifdef STELLAR_EVOLUTION
         radius= din.radius;
@@ -351,14 +386,14 @@ public:
     /*! \return position vector (PS::F64[3])
      */
     PS::F64* getPos() {
-        return &pos.x;
+        return &pos[0];
     }
 
     //! Get velocity (required for \ref ARC::chain)
     /*! \return velocity vector (PS::F64[3])
      */
     PS::F64* getVel() {
-        return &vel.x;
+        return &vel[0];
     }
 
     //!Set position (required for \ref ARC::chain)
@@ -373,9 +408,9 @@ public:
         NAN_CHECK(y);
         NAN_CHECK(z);
 #endif    
-        pos.x = x;
-        pos.y = y;
-        pos.z = z;
+        pos[0] = x;
+        pos[1] = y;
+        pos[2] = z;
     }
 
     //!Set position (used in soft part)
@@ -394,9 +429,9 @@ public:
         NAN_CHECK(vz);
 #endif    
     
-        vel.x = vx;
-        vel.y = vy;
-        vel.z = vz;
+        vel[0] = vx;
+        vel[1] = vy;
+        vel[2] = vz;
     }
 
     //!Set velocity
