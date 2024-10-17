@@ -362,9 +362,9 @@ public:
             pcm.time_bk.push_back(time);
         }
 
-        std::cerr<<"Record size: "<<pcm.time_bk.size()<<"; time: "<<pcm.time_bk.back()
-        <<"; pos: "<<pcm.pos_bk[0].back()<<" "<<pcm.pos_bk[1].back()<<" "<<pcm.pos_bk[2].back()
-        <<std::endl;
+        //std::cerr<<"Record size: "<<pcm.time_bk.size()<<"; time: "<<pcm.time_bk.back()
+        //<<"; pos: "<<pcm.pos_bk[0].back()<<" "<<pcm.pos_bk[1].back()<<" "<<pcm.pos_bk[2].back()
+        //<<std::endl;
         
         // when recorded 16 times, calculate the median value and update pcm
         if (pcm.time_bk.size() == 16) {
