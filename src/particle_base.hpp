@@ -24,7 +24,7 @@ enum class BinaryInterruptState:int {none = 0, form = 1, exchange = 2, collision
 
 #ifdef PETAR_USE_MPFRC
 /// mpreal position structure
-struct mprealPos {
+struct mprealVec {
     mpreal x;
     mpreal y;
     mpreal z;
@@ -47,16 +47,21 @@ struct mprealPos {
         mpfr_inp_str(this->z.mpfr_ptr(), fp, 10, MPFR_RNDN);
     }
 };
-#endif
 
-struct F64Pos: public PS::F64vec {
+typedef mprealVec PosVec;
+typedef mpreal PosFloat;
+#else
+
+struct F64Vec: public PS::F64vec {
+    using PS::F64vec::operator=;
+
     //! write class data with ASCII format
     /*! @param[in] _fout: file IO for write
         */
     void writeAscii(FILE* fp) const{
         fprintf(fp, "%26.17e %26.17e %26.17e ", this->x, this->y, this->z);
     }    
-
+ 
     //! read class data with ASCII format
     /*! @param[in] _fin: file IO for read
         */
@@ -67,15 +72,33 @@ struct F64Pos: public PS::F64vec {
             abort();
         }
     }
+
+
+#ifdef PETAR_USE_MPFRC
+        //! convert mprealVec to F64Vec
+        /*! @param[in] mpvec: mprealVec object to be converted
+         */
+        F64Vec& operator=(const mprealVec& mpvec) {
+            this->x = mpvec.x.toDouble();
+            this->y = mpvec.y.toDouble();
+            this->z = mpvec.z.toDouble();
+            return *this;
+        }
+#endif
+ 
 };
 
+typedef F64Vec PosVec;
+typedef PS::F64 PosFloat;
+#endif
+
 /// Basic particle class
-template <class Tpos>
 class ParticleBase{
 public:
     // necessary variables, should not be touched
     PS::F64 mass;
-    Tpos pos;
+    PosVec pos;
+    PS::F64vec vel;
     PS::S64 binary_state; // contain two parts, low bits (first BINARY_STATE_ID_SHIFT bits) is binary interrupt state and high bits are pair ID, pair ID is modified in new and end groups in Hermite integrator with flag of ADJUST_GROUP_PRINT
 #ifdef STELLAR_EVOLUTION
     // for stellar evolution
@@ -125,7 +148,7 @@ public:
     ParticleBase(const Tp &p) { DataCopy(p);}
 
     //! constructor 
-    ParticleBase(const PS::F64 _mass, const Tpos& _pos, const PS::F64vec & _vel) {
+    ParticleBase(const PS::F64 _mass, const PosVec& _pos, const PS::F64vec & _vel) {
         mass = _mass;
         pos = _pos;
         vel = _vel;
@@ -142,7 +165,7 @@ public:
     }
 
     //! full constructor 
-    ParticleBase(const PS::F64 _mass, const Tpos & _pos, const PS::F64vec & _vel, const PS::S64 _binary_state
+    ParticleBase(const PS::F64 _mass, const PosVec& _pos, const PS::F64vec & _vel, const PS::S64 _binary_state
 #ifdef STELLAR_EVOLUTION
                  , const PS::F64 _radius, const PS::F64 _dm, 
                  const PS::F64 _time_record, const PS::F64 _time_interrupt
@@ -384,11 +407,11 @@ public:
     PS::F64 getMass() {
         return mass;
     }
-  
+
     //! Get position (required for \ref ARC::chain)
     /*! \return position vector (PS::F64[3])
      */
-    PS::F64* getPos() {
+    PosFloat* getPos() {
         return &pos[0];
     }
 
@@ -405,7 +428,7 @@ public:
       @param [in] y: particle position in y axis
       @param [in] z: particle position in z axis
     */
-    void setPos(const PS::F64 x, const PS::F64 y, const PS::F64 z) {
+    void setPos(const PosFloat& x, const PosFloat& y, const PosFloat& z) {
 #ifdef NAN_CHECK_DEBUG
         NAN_CHECK(x);
         NAN_CHECK(y);
@@ -417,7 +440,7 @@ public:
     } 
 
     //!Set position (used in soft part)
-    void setPos(const Tpos & _pos) {
+    void setPos(const PosVec & _pos) {
         pos = _pos;
     }
     

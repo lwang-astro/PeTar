@@ -2,6 +2,9 @@
 #ifdef GPERF_PROFILE
 #include <gperftools/profiler.h>
 #endif
+#ifdef PETAR_USE_MPFRC
+#include <mpreal.h>
+#endif
 
 int main(int argc, char *argv[]){
 
@@ -10,6 +13,10 @@ int main(int argc, char *argv[]){
 #endif
 
     PeTar::initialFDPS(argc,argv);
+
+#ifdef PETAR_USE_MPFRC
+    mpfr::mpreal::set_default_prec(128); // Set precision to 128 bits
+#endif
 
     PeTar petar;
     

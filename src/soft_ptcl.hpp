@@ -45,9 +45,9 @@ public:
     FPSoft() {}
 
     //! Get position (required for \ref ARC::chain)
-    /*! \return position vector (PS::F64[3])
+    /*! \return position vector 
      */
-    PS::F64vec getPos() const{
+    PosVec getPos() const {
         return pos;
     }
 
