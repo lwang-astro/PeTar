@@ -395,7 +395,7 @@ public:
             pcm.pos += pcm_bk.pos;
             pcm.vel += pcm_bk.vel;
 #ifdef SMOOTH_CM_USING_RECORES
-            std::cerr<<"Update: time: "<<time<<"; pcm: "<<pcm.pos<<std::endl;
+            //std::cerr<<"Update: time: "<<time<<"; pcm: "<<pcm.pos<<std::endl;
         }
         else {
             pcm.pos = pcm_bk.pos;
