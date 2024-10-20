@@ -7,6 +7,7 @@ use_omp = @use_omp@
 use_gperf=@use_gperf@
 use_quad = @use_quad@
 use_fdps_comm=@use_fdps_comm@
+use_mpfrc=@use_mpfrc@
 debug_mode=@with_debug@
 step_mode=@with_step_mode@
 se_mode=@with_interrupt@
@@ -25,6 +26,12 @@ HARD_SRC= io.hpp ptcl.hpp particle_base.hpp hard_assert.hpp cluster_list.hpp har
 
 ifeq ($(use_fdps_comm),yes)
 FDPSFLAGS = -D FDPS_COMM
+endif
+
+ifeq ($(use_mpfrc),yes)
+MT_FLAGS += -D PETAR_USE_MPFRC
+PETAR_INCLUDE += @MPFRCFLAGS@
+CXXLIBS += @MPFRCLIBS@
 endif
 
 #MT_FLAGS += -D HARD_CM_KICK
@@ -151,6 +158,7 @@ DEBFLAGS += -D CLUSTER_DEBUG
 DEBFLAGS += -D ARTIFICIAL_PARTICLE_DEBUG
 DEBFLAGS += -D HARD_DEBUG
 DEBFLAGS += -D NAN_CHECK_DEBUG
+DEBFLAGS += -D PETAR_USE_MPFRC_DEBUG
 
 #DEBFLAGS += -D AR_COLLECT_DS_MODIFY_INFO
 

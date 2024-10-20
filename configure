@@ -633,6 +633,8 @@ CXXNOMPI
 PROG_NAME
 PETAR_INCLUDE
 GALPY_PATH
+MPFRCLIBS
+MPFRCFLAGS
 GPERFLIBS
 GPERFFLAGS
 SIMDFLAGS
@@ -649,6 +651,7 @@ with_external
 with_interrupt
 with_step_mode
 with_debug
+use_mpfrc
 use_gperf
 use_omp
 use_cuda
@@ -746,6 +749,8 @@ with_external
 with_external_hard
 with_tidal_tensor
 with_orbit
+enable_mpfrc
+with_mpfrc_prefix
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1390,6 +1395,8 @@ Optional Features:
   --enable-cuda           enable CUDA (GPU) acceleration support for
                           long-distant tree force
   --enable-gperf          enable gperftools for profiling
+  --enable-mpfrc          enable MPFRC to use quadruple-precision floating
+                          points for position vectors
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1422,6 +1429,8 @@ Optional Packages:
   --with-orbit            Orbit particle method for counter force: os:
                           orbit-sampling; pm: pseudoparticle multipole.
                           Default: pm
+  --with-mpfrc-prefix     Prefix of your MPFRC++ installation. Default: search
+                          ../mpfrc++
 
 Some influential environment variables:
   MPICXX      MPI C++ compiler command
@@ -4460,7 +4469,6 @@ else
   use_cuda=no
 fi
 
-
 # gperftools
 # Check whether --enable-gperf was given.
 if test "${enable_gperf+set}" = set; then :
@@ -6190,6 +6198,136 @@ else
 fi
 
 
+# mpfrc
+# Check whether --enable-mpfrc was given.
+if test "${enable_mpfrc+set}" = set; then :
+  enableval=$enable_mpfrc; use_mpfrc=yes
+else
+  use_mpfrc=no
+fi
+
+
+
+# Check whether --with-mpfrc-prefix was given.
+if test "${with_mpfrc_prefix+set}" = set; then :
+  withval=$with_mpfrc_prefix; mpfrc_prefix=$withval
+else
+  mpfrc_prefix="../mpfrc++"
+fi
+
+
+as_ac_File=`$as_echo "ac_cv_file_"$mpfrc_prefix/mpreal.h"" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for \"$mpfrc_prefix/mpreal.h\"" >&5
+$as_echo_n "checking for \"$mpfrc_prefix/mpreal.h\"... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r ""$mpfrc_prefix/mpreal.h""; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+  MPFRCFLAGS=" -I$mpfrc_prefix"
+else
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "can't find MPFRC++ library, please provide correct PREFIX by using --with-mpfrc-prefix
+See \`config.log' for more details" "$LINENO" 5; }
+fi
+
+
+if test x"$use_mpfrc" != xno; then :
+  use_mpfrc=yes
+       PROG_NAME=$PROG_NAME'.mp'
+       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lmpfr" >&5
+$as_echo_n "checking for main in -lmpfr... " >&6; }
+if ${ac_cv_lib_mpfr_main+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lmpfr  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+int
+main ()
+{
+return main ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_mpfr_main=yes
+else
+  ac_cv_lib_mpfr_main=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_mpfr_main" >&5
+$as_echo "$ac_cv_lib_mpfr_main" >&6; }
+if test "x$ac_cv_lib_mpfr_main" = xyes; then :
+  MPFRCLIBS=$MPFRCLIBS' -lmpfr'
+else
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "can't find GNU mpfr library, please install it first, e.g. in Ubuntu, use sudo apt install libmpfr-dev
+See \`config.log' for more details" "$LINENO" 5; }
+fi
+
+       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lgmp" >&5
+$as_echo_n "checking for main in -lgmp... " >&6; }
+if ${ac_cv_lib_gmp_main+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lgmp  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+int
+main ()
+{
+return main ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_gmp_main=yes
+else
+  ac_cv_lib_gmp_main=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_gmp_main" >&5
+$as_echo "$ac_cv_lib_gmp_main" >&6; }
+if test "x$ac_cv_lib_gmp_main" = xyes; then :
+  MPFRCLIBS=$MPFRCLIBS' -lgmp'
+else
+  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error $? "can't find GNU gmp library, please install it first, e.g. in Ubuntu, use sudo apt install libgmp-dev
+See \`config.log' for more details" "$LINENO" 5; }
+fi
+
+else
+  use_mpfrc=no
+fi
+
 
 PROG_NAME=$PROG_NAME$PROG_SUFFIX
 
@@ -6974,6 +7112,9 @@ VERSION=$petar_version'_'$sdar_version
 
 
 
+
+
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: ----------------------Configure Summary--------------------" >&5
 $as_echo "$as_me: ----------------------Configure Summary--------------------" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: --Features:" >&5
@@ -7025,6 +7166,8 @@ $as_echo "$as_me:      tidal tensor mode: $with_tidal_tensor" >&6;}
 $as_echo "$as_me:      orbit mode:        $with_orbit" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      Using quad:        $use_quad" >&5
 $as_echo "$as_me:      Using quad:        $use_quad" >&6;}
+{ $as_echo "$as_me:${as_lineno-$LINENO}:      Using mpfrc++:     $use_mpfrc" >&5
+$as_echo "$as_me:      Using mpfrc++:     $use_mpfrc" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}: --Compilers:" >&5
 $as_echo "$as_me: --Compilers:" >&6;}
 { $as_echo "$as_me:${as_lineno-$LINENO}:      C++ compiler:      $CXX" >&5

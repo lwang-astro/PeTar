@@ -74,7 +74,9 @@ public:
                 // center_of_mass_correction 
                 pj->pos += _bin.pos;
                 pj->vel += _bin.vel;
-
+#ifdef PETAR_USE_MPFRC
+                pj->pos_mp = pj->pos;
+#endif
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
                 assert(mass_member[j]>0);
                 assert(pj->mass >0);

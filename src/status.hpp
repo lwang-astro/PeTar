@@ -84,6 +84,9 @@ public:
         if (!pcm.is_center_shift_flag) {
             for (int i=0; i<_n; i++) {
                 _tsys[i].pos -= pcm.pos;
+#ifdef PETAR_USE_MPFRC
+                _tsys[i].pos_mp -= pcm.pos;
+#endif                
                 _tsys[i].vel -= pcm.vel;
             }
         }
@@ -100,6 +103,9 @@ public:
         if (pcm.is_center_shift_flag) {
             for (int i=0; i<_n; i++) {
                 _tsys[i].pos += pcm.pos;
+#ifdef PETAR_USE_MPFRC
+                _tsys[i].pos_mp += pcm.pos;
+#endif
                 _tsys[i].vel += pcm.vel;
             }
         }
@@ -242,6 +248,9 @@ public:
         // correct particle 
         for (int i=0; i<_n; i++) {
             _tsys[i].pos -= pcm.pos;
+#ifdef PETAR_USE_MPFRC
+            _tsys[i].pos_mp -= pcm.pos;
+#endif            
             _tsys[i].vel -= pcm.vel;
         }
         pcm.pos += pcm_bk.pos;

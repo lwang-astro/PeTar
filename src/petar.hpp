@@ -1502,8 +1502,10 @@ public:
 #ifdef PROFILE
         profile.hard_isolated.start();
 #endif
+#ifdef HARD_CHECK_ENERGY
         // reset slowdown energy correction
         system_hard_isolated.energy.resetEnergyCorrection();
+#endif
         // integrate multi cluster A
         system_hard_isolated.driveForMultiClusterOMP(_dt_drift, &(system_soft[0]));
         //system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_,remove_list);
@@ -1633,6 +1635,7 @@ public:
         system_hard_connected.updateTimeWriteBack();
         mass_modify_list.resizeNoInitialize(0);
 #endif
+#endif    
 #ifdef PROFILE
         profile.search_cluster.barrier();
         PS::Comm::barrier();
@@ -1640,8 +1643,6 @@ public:
 #endif
     }
     
-#endif    
-
     //! correct force due to the change over update
     void correctForceChangeOverUpdate() {
 #ifdef PROFILE
@@ -2178,9 +2179,11 @@ public:
                 PS::F64 dkin = 0.5*pi.mass*(pi.vel*pi.vel);
                 PS::F64 eloss = dpot + dkin;
                 stat.energy.etot_ref -= eloss;
+#ifdef HARD_CHECK_ENERGY
                 stat.energy.de_change_cum -= eloss;
                 stat.energy.etot_sd_ref -= eloss;
                 stat.energy.de_sd_change_cum -= eloss;
+#endif
                 pi.mass = 0.0;
             }
         }
@@ -2203,9 +2206,11 @@ public:
                     PS::F64 dkin = 0.5*pi.mass*(pi.vel*pi.vel);
                     PS::F64 eloss = dpot + dkin;
                     stat.energy.etot_ref -= eloss;
+#ifdef HARD_CHECK_ENERGY
                     stat.energy.de_change_cum -= eloss;
                     stat.energy.etot_sd_ref -= eloss;
                     stat.energy.de_sd_change_cum -= eloss;
+#endif                    
                 }
                 // Registered removed particles have already done energy correction
                 else if (pi.mass==0.0&&pi.group_data.artificial.isUnused()) 
@@ -2902,6 +2907,9 @@ public:
         for(PS::S32 i=0; i<n_loc; i++){
             system_soft[i].mass = mass[i];
             system_soft[i].pos = pos[i];
+#ifdef PETAR_USE_MPFRC
+            system_soft[i].pos_mp = pos[i];
+#endif
             system_soft[i].vel = vel[i];
             system_soft[i].id = i_h + i + 1;
 #ifdef STELLAR_EVOLUTION
@@ -2976,6 +2984,9 @@ public:
         for(PS::S32 i=0; i<n_loc; i++){
             system_soft[i].mass = mass[i];
             system_soft[i].pos = pos[i];
+#ifdef PETAR_USE_MPFRC
+            system_soft[i].pos_mp = pos[i];
+#endif
             system_soft[i].vel = vel[i];
             system_soft[i].id = i_h + i + 1;
             system_soft[i].group_data.artificial.setParticleTypeToSingle();
@@ -3715,6 +3726,9 @@ public:
                 dt_drift = dt_manager.getDtDriftContinue();
 
                 p.pos += p.vel * dt_drift;
+#ifdef PETAR_USE_MPFRC
+                p.pos_mp += p.vel * dt_drift;
+#endif
 
                 // drift cm
                 stat.pcm.pos += stat.pcm.vel*dt_drift;
@@ -3994,6 +4008,19 @@ public:
             
             drift(dt_drift);
 
+#ifdef PETAR_USE_MPFRC_DBEUG
+            // check difference between pos and pos_mp
+            for (int i=0; i<system_soft.getNumberOfParticleLocal(); i++) {
+                auto& p = system_soft[i];
+                PS::F64vec dr = p.pos_mp - p.pos;
+                PS::F64 dr_max = std::max(std::max(std::abs(dr.x),std::abs(dr.y)),std::abs(dr.z));
+                if (dr_max>1e-14) {
+                    std::cout<<"Error: pos and pos_mp difference is too large: "<<dr_max<<std::endl;
+                    std::cout<<"pos = "<<p.pos<<"  pos_mp = "<<p.pos_mp<<std::endl;
+                    abort();
+                }
+            }
+#endif
             // update stat time 
             stat.time = system_hard_one_cluster.getTimeOrigin();
 

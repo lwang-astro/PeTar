@@ -66,6 +66,9 @@ public:
         _ptcl_tt[6].pos = PS::F64vec(-lscale,  0,        lscale) + _ptcl_cm.pos;
         _ptcl_tt[7].pos = PS::F64vec(0,       -lscale,   lscale) + _ptcl_cm.pos;
 
+#ifdef PETAR_USE_MPFRC
+        for (int i=0; i<8; i++) _ptcl_tt[i].pos_mp = _ptcl_tt[i].pos;
+#endif
 #else
         ///* Assume _size is the maximum length, 
         //   Then the edge length=_size
@@ -79,6 +82,9 @@ public:
         _ptcl_tt[2].pos = PS::F64vec(0,        lscale,   lscale*0.707106781186548) + _ptcl_cm.pos;
         _ptcl_tt[3].pos = PS::F64vec(0,       -lscale,   lscale*0.707106781186548) + _ptcl_cm.pos;
 
+#ifdef PETAR_USE_MPFRC
+        for (int i=0; i<4; i++) _ptcl_tt[i].pos_mp = _ptcl_tt[i].pos;
+#endif
 #endif
 
         for (int i=0; i<getParticleN(); i++) {

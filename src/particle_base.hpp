@@ -2,7 +2,7 @@
 
 #ifdef PETAR_USE_MPFRC
 #include <mpreal.h>
-using mpfr::mpreal;
+#define MPFR_PREC 128
 #endif
 
 #ifdef BSE_BASE
@@ -24,10 +24,17 @@ enum class BinaryInterruptState:int {none = 0, form = 1, exchange = 2, collision
 
 #ifdef PETAR_USE_MPFRC
 /// mpreal position structure
-struct mprealVec {
-    mpreal x;
-    mpreal y;
-    mpreal z;
+struct mprealVec: public PS::Vector3<mpfr::mpreal> {
+
+    //! default constructor
+    mprealVec(): PS::Vector3<mpfr::mpreal>(mpfr::mpreal(0, MPFR_PREC), mpfr::mpreal(0, MPFR_PREC), mpfr::mpreal(0, MPFR_PREC)) {}
+
+    //! constructor with x, y, z values
+    mprealVec(const mpfr::mpreal& _x, const mpfr::mpreal& _y, const mpfr::mpreal& _z): PS::Vector3<mpfr::mpreal>(_x, _y, _z) {}
+
+    //! template constructor
+    template <typename T>
+    mprealVec(const T& _x, const T& _y, const T& _z): PS::Vector3<mpfr::mpreal>(mpfr::mpreal(_x, MPFR_PREC), mpfr::mpreal(_y, MPFR_PREC), mpfr::mpreal(_z, MPFR_PREC)) {}
 
     //! write class data with ASCII format
     /*! @param[in] _fout: file IO for write
@@ -46,50 +53,27 @@ struct mprealVec {
         mpfr_inp_str(this->y.mpfr_ptr(), fp, 10, MPFR_RNDN);
         mpfr_inp_str(this->z.mpfr_ptr(), fp, 10, MPFR_RNDN);
     }
-};
 
-typedef mprealVec PosVec;
-typedef mpreal PosFloat;
-#else
-
-struct F64Vec: public PS::F64vec {
-    using PS::F64vec::operator=;
-
-    //! write class data with ASCII format
-    /*! @param[in] _fout: file IO for write
-        */
-    void writeAscii(FILE* fp) const{
-        fprintf(fp, "%26.17e %26.17e %26.17e ", this->x, this->y, this->z);
-    }    
- 
-    //! read class data with ASCII format
-    /*! @param[in] _fin: file IO for read
-        */
-    void readAscii(FILE* fp) {
-        PS::S64 rcount = fscanf(fp, "%lf %lf %lf ", &this->x, &this->y, &this->z);
-        if (rcount<3) {
-            std::cerr<<"Error: Position Data reading fails! requiring data number is 3, only obtain "<<rcount<<".\n";
-            abort();
-        }
+    //! assignment operator to convert PS::F64vec to mprealVec
+    mprealVec& operator=(const PS::F64vec& vec) {
+        this->x = mpfr::mpreal(vec.x);
+        this->y = mpfr::mpreal(vec.y);
+        this->z = mpfr::mpreal(vec.z);
+        return *this;
     }
 
-
-#ifdef PETAR_USE_MPFRC
-        //! convert mprealVec to F64Vec
-        /*! @param[in] mpvec: mprealVec object to be converted
-         */
-        F64Vec& operator=(const mprealVec& mpvec) {
-            this->x = mpvec.x.toDouble();
-            this->y = mpvec.y.toDouble();
-            this->z = mpvec.z.toDouble();
-            return *this;
-        }
-#endif
- 
+    //! convert mprealVec to PS::F64vec
+    /*! 
+     */
+    operator PS::F64vec() const {
+        PS::F64vec result;
+        result.x = x.toDouble();
+        result.y = y.toDouble();
+        result.z = z.toDouble();
+        return result;
+    }
 };
 
-typedef F64Vec PosVec;
-typedef PS::F64 PosFloat;
 #endif
 
 /// Basic particle class
@@ -97,7 +81,11 @@ class ParticleBase{
 public:
     // necessary variables, should not be touched
     PS::F64 mass;
-    PosVec pos;
+#ifdef PETAR_USE_MPFRC
+    // for high precision
+    mprealVec pos_mp;
+#endif
+    PS::F64vec pos;
     PS::F64vec vel;
     PS::S64 binary_state; // contain two parts, low bits (first BINARY_STATE_ID_SHIFT bits) is binary interrupt state and high bits are pair ID, pair ID is modified in new and end groups in Hermite integrator with flag of ADJUST_GROUP_PRINT
 #ifdef STELLAR_EVOLUTION
@@ -148,8 +136,11 @@ public:
     ParticleBase(const Tp &p) { DataCopy(p);}
 
     //! constructor 
-    ParticleBase(const PS::F64 _mass, const PosVec& _pos, const PS::F64vec & _vel) {
+    ParticleBase(const PS::F64 _mass, const PS::F64vec & _pos, const PS::F64vec & _vel) {
         mass = _mass;
+#ifdef PETAR_USE_MPFRC
+        pos_mp = _pos;
+#endif        
         pos = _pos;
         vel = _vel;
         binary_state = 0;
@@ -165,7 +156,7 @@ public:
     }
 
     //! full constructor 
-    ParticleBase(const PS::F64 _mass, const PosVec& _pos, const PS::F64vec & _vel, const PS::S64 _binary_state
+    ParticleBase(const PS::F64 _mass, const PS::F64vec& _pos, const PS::F64vec & _vel, const PS::S64 _binary_state
 #ifdef STELLAR_EVOLUTION
                  , const PS::F64 _radius, const PS::F64 _dm, 
                  const PS::F64 _time_record, const PS::F64 _time_interrupt
@@ -175,6 +166,9 @@ public:
 #endif
                  ) {
         mass = _mass;
+#ifdef PETAR_USE_MPFRC
+        pos_mp = _pos;
+#endif        
         pos = _pos;
         vel = _vel;
         binary_state = _binary_state;
@@ -194,7 +188,11 @@ public:
      */
     void writeAscii(FILE* fp) const{
         fprintf(fp, "%26.17e ", this->mass);
-        this->pos.writeAscii(fp);
+#ifdef PETAR_USE_MPFRC
+        pos_mp.writeAscii(fp);
+#else        
+        fprintf(fp, "%26.17e %26.17e %26.17e ", this->pos.x, this->pos.y, this->pos.z);
+#endif        
         fprintf(fp, "%26.17e %26.17e %26.17e %lld ", this->vel.x, this->vel.y, this->vel.z, this->binary_state);
 #ifdef STELLAR_EVOLUTION        
         fprintf(fp, "%26.17e %26.17e %26.17e %26.17e ", 
@@ -210,7 +208,13 @@ public:
      */
     void readAscii(FILE* fp) {
         PS::S64 rcount=fscanf(fp, "%lf ", &this->mass);
-        this->pos.readAscii(fp);
+#ifdef PETAR_USE_MPFRC
+        pos_mp.readAscii(fp);
+        pos = pos_mp;
+        rcount += 3;
+#else
+        rcount += fscanf(fp, "%lf %lf %lf ", &this->pos.x, &this->pos.y, &this->pos.z);
+#endif
         rcount += fscanf(fp, "%lf %lf %lf %lld ", &this->vel.x, &this->vel.y, &this->vel.z, &this->binary_state);
 #ifdef STELLAR_EVOLUTION        
         rcount += fscanf(fp, "%lf %lf %lf %lf ",
@@ -237,7 +241,13 @@ public:
     /*! @param[in] _fout: file IO for write
      */
     void writeBinary(FILE* fp) const{
+#ifdef PETAR_USE_MPFRC
+        fwrite(&(this->mass), sizeof(PS::F64), 1, fp);
+        fwrite(&(this->pos_mp), sizeof(mprealVec), 1, fp);
+        fwrite(&(this->vel), sizeof(ParticleBase)-sizeof(mprealVec)-sizeof(PS::F64)-sizeof(PS::F64vec), 1, fp);
+#else    
         fwrite(&(this->mass), sizeof(ParticleBase), 1, fp);
+#endif
     }
 
 
@@ -245,18 +255,34 @@ public:
     /*! @param[in] _fin: file IO for read
      */
     void readBinary(FILE* fp) {
+#ifdef PETAR_USE_MPFRC
+        size_t rcount=fread(&(this->mass), sizeof(PS::F64), 1, fp);
+        rcount += fread(&(this->pos_mp), sizeof(mprealVec), 1, fp);
+        pos = pos_mp;
+        rcount += fread(&(this->vel), sizeof(ParticleBase)-sizeof(mprealVec)-sizeof(PS::F64)-sizeof(PS::F64vec), 1, fp);
+        if(rcount<3) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 3, only obtain "<<rcount<<".\n";
+            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
+            abort();
+        }
+#else    
         size_t rcount=fread(&(this->mass), sizeof(ParticleBase), 1, fp);
         if(rcount<1) {
             std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
+#endif
     }
 
     //! for print debugging
     void print(std::ostream & fout) const{
         fout<<" mass="<<mass
+#ifdef PETAR_USE_MPFRC
+            <<" pos="<<pos_mp[0]<<" "<<pos_mp[1]<<" "<<pos_mp[2]
+#else
             <<" pos="<<pos[0]<<" "<<pos[1]<<" "<<pos[2]
+#endif
             <<" vel="<<vel
             <<" binary_state="<<binary_state;
 #ifdef STELLAR_EVOLUTION
@@ -334,9 +360,15 @@ public:
      */
     void printColumn(std::ostream & _fout, const int _width=20) const{
         _fout<<std::setw(_width)<<mass
+#ifdef PETAR_USE_MPFRC
+             <<std::setw(_width)<<pos_mp[0]
+             <<std::setw(_width)<<pos_mp[1]
+             <<std::setw(_width)<<pos_mp[2]
+#else        
              <<std::setw(_width)<<pos[0]
              <<std::setw(_width)<<pos[1]
              <<std::setw(_width)<<pos[2]
+#endif             
              <<std::setw(_width)<<vel.x
              <<std::setw(_width)<<vel.y
              <<std::setw(_width)<<vel.z
@@ -387,6 +419,9 @@ public:
     template<class Tp>
     void DataCopy(const Tp & din) {
         mass = din.mass;
+#ifdef PETAR_USE_MPFRC
+        pos_mp = din.pos_mp;
+#endif
         pos = din.pos;
         vel  = din.vel;
         binary_state  = din.binary_state;
@@ -409,17 +444,31 @@ public:
     }
 
     //! Get position (required for \ref ARC::chain)
-    /*! \return position vector (PS::F64[3])
+    /*! \return position vector 
      */
-    PosFloat* getPos() {
-        return &pos[0];
+    PS::F64vec& getPos() {
+        return pos;
     }
 
     //! Get velocity (required for \ref ARC::chain)
     /*! \return velocity vector (PS::F64[3])
      */
-    PS::F64* getVel() {
-        return &vel.x;
+    PS::F64vec& getVel() {
+        return vel;
+    }
+
+    //! Get position (required for \ref ARC::chain)
+    /*! \return position vector 
+     */
+    const PS::F64vec& getPos() const{
+        return pos;
+    }
+
+    //! Get velocity (required for \ref ARC::chain)
+    /*! \return velocity vector (PS::F64[3])
+     */
+    const PS::F64vec& getVel() const {
+        return vel;
     }
 
     //!Set position (required for \ref ARC::chain)
@@ -428,19 +477,33 @@ public:
       @param [in] y: particle position in y axis
       @param [in] z: particle position in z axis
     */
-    void setPos(const PosFloat& x, const PosFloat& y, const PosFloat& z) {
+    void setPos(const PS::F64& x, const PS::F64& y, const PS::F64& z) {
 #ifdef NAN_CHECK_DEBUG
         NAN_CHECK(x);
         NAN_CHECK(y);
         NAN_CHECK(z);
-#endif    
+#endif
+#ifdef PETAR_USE_MPFRC
+#ifdef PETAR_USE_MPFRC_DEBUG
+        std::cerr<<"Set pos with low precision data\n";
+#endif
+        pos_mp[0] = x;
+        pos_mp[1] = y;
+        pos_mp[2] = z;
+#endif
         pos[0] = x;
         pos[1] = y;
         pos[2] = z;
     } 
 
     //!Set position (used in soft part)
-    void setPos(const PosVec & _pos) {
+    void setPos(const PS::F64vec& _pos) {
+#ifdef PETAR_USE_MPFRC
+#ifdef PETAR_USE_MPFRC_DEBUG
+        std::cerr<<"Set pos with low precision data\n";
+#endif
+        pos_mp = _pos;
+#endif        
         pos = _pos;
     }
     
