@@ -1,6 +1,5 @@
 #pragma once
 #include <iostream>
-#include <random>
 #include <array>
 #include <vector>
 #include <tuple>
@@ -14,6 +13,7 @@
 #include "Hermite/hermite_particle.h"
 #include "ar_perturber.hpp"
 #include "two_body_tide.hpp"
+#include "parallel-random/rand.hpp"
 #ifdef BSE_BASE
 #include "bse_interface.h"
 #endif
@@ -826,14 +826,18 @@ public:
 #endif // STELLAR_EVOLUTION
         return 0;
     }
+
     // Function to generate a uniformly distributed point inside a sphere
-    std::array<Float, 3> uniformPointsInsideSphere() {
+    /*! @param[in] _radius: radius of the sphere
+        \return a point inside the sphere
+     */
+    std::array<Float, 3> uniformPointsInsideSphere(const Float& radius) {
         Float x, y, z;
         while (true) {
             // Generate a random point within the bounding cube
-            x = (static_cast<Float>(rand()) / RAND_MAX) * 1.6 - 0.8;
-            y = (static_cast<Float>(rand()) / RAND_MAX) * 1.6 - 0.8;
-            z = (static_cast<Float>(rand()) / RAND_MAX) * 1.6 - 0.8;
+            x = (-2*rand_f64() + 1)*radius;
+            y = (-2*rand_f64() + 1)*radius;
+            z = (-2*rand_f64() + 1)*radius;
 
             // Check if the point is inside the sphere
             if (std::sqrt(x * x + y * y + z * z) <= 0.8) {
@@ -843,7 +847,17 @@ public:
         }
     }
 
-    // vkivk
+    // Function to generate kick velocity of a GW merger with spins
+    /*! @param[out] vkick: kick velocity
+        @param[in] _Chi1: spin of the primary body
+        @param[in] _Chi2: spin of the secondary body
+        @param[in] L: orbital angular momentum
+        @param[in] dr: separation vector
+        @param[in] q: mass ratio
+        @param[in] c: speed of light
+        @param[in] maxkick: whether to calculate the maximum kick
+        @param[in] inverteraxisl: whether to invert the axis of L
+    */
     void calcBHKick(Float vkick[], 
         const Float _Chi1[], 
         const Float _Chi2[], 
@@ -945,8 +959,6 @@ public:
 
         std::tie(Chi1, Chi2) = calcAxisL(L, dr, Chi1, Chi2);
 
-
-
         // Normalization m1, m2, and eta;
         Float m1 = 1.0 / (1.0 + q);   // Primary mass
         Float m2 = q / (1.0 + q);     // Secondary mass
@@ -984,7 +996,7 @@ public:
         const Float VC = 1506.52; // km/s
         const Float C2 = 1140.0; // km/s
         const Float C3 = 2481.0; // km/s
-        const Float M_pi = 3.141592653589793;
+        const Float M_pi = COMM::PI;
         std::array<Float, 3> hatS1 = { std::sin(theta1), 0.0, std::cos(theta1) };
         std::array<Float, 3> hatS2 = { std::sin(theta2) * std::cos(deltaPhi), std::sin(theta2) * std::sin(deltaPhi), std::cos(theta2) };
 
@@ -1003,10 +1015,7 @@ public:
             bigTheta = 0.0;
         }
         else {
-            std::random_device rd;
-            std::mt19937 gen(rd());
-            std::uniform_real_distribution<> dis(0.0, 2.0 * M_pi);
-            bigTheta = dis(gen);
+            bigTheta = rand_f64() * 2.0 * M_pi;
         }
 
         Float vm = A * eta * eta * (1.0 + B * eta) * (1.0 - q) / (1.0 + q);
@@ -1016,23 +1025,15 @@ public:
 
         if (inverteraxisl) {
             std::array<Float, 3> vkick_L = { vm + vperp * std::cos(zeta), vperp * std::sin(zeta), vpar };
-            for (int i = 0; i < 3; i++)
-            {
-                std::cout << vkick_L[i] << std::endl;
-            }
-            std::array<Float, 3> vkick_new =  calcInverterAxisL(L,dr,vkick_L); 
-
-            for (int i = 0; i < 3; i++)
-            {
-                vkick[i] = vkick_new[i];
-            }
+            //for (int i = 0; i < 3; i++)
+            //   std::cout << vkick_L[i] << std::endl;
+            std::array<Float, 3> vkick_new =  calcInverterAxisL(L, dr, vkick_L); 
+            for (int i = 0; i < 3; i++) vkick[i] = vkick_new[i];
         }
         else {
-            std::array<Float, 3> vkick_new = { vm + vperp * std::cos(zeta), vperp * std::sin(zeta), vpar };
-            for (int i = 0; i < 3; i++)
-            {
-                vkick[i] = vkick_new[i];
-            }
+            vkick[0] = vm + vperp * std::cos(zeta);
+            vkick[1] = vperp * std::sin(zeta);
+            vkick[2] = vpar;
         }
     }
 
