@@ -82,10 +82,16 @@ public:
     template <class Tsoft>
     void shiftToCenterOfMassFrame(Tsoft* _tsys, const PS::S64 _n) {
         if (!pcm.is_center_shift_flag) {
-            for (int i=0; i<_n; i++) {
-                _tsys[i].pos -= pcm.pos;
 #ifdef PETAR_USE_MPFRC
-                _tsys[i].pos_mp -= pcm.pos;
+            mprealVec pos_mp;
+#endif            
+            for (int i=0; i<_n; i++) {
+#ifdef PETAR_USE_MPFRC
+                pos_mp.combine(_tsys[i].pos, _tsys[i].pos_high);
+                pos_mp -= pcm.pos;
+                pos_mp.split(_tsys[i].pos, _tsys[i].pos_high);
+#else
+                _tsys[i].pos -= pcm.pos;
 #endif                
                 _tsys[i].vel -= pcm.vel;
             }
@@ -101,10 +107,16 @@ public:
     template <class Tsoft>
     void shiftToOriginFrame(Tsoft* _tsys, const PS::S64 _n) {
         if (pcm.is_center_shift_flag) {
-            for (int i=0; i<_n; i++) {
-                _tsys[i].pos += pcm.pos;
 #ifdef PETAR_USE_MPFRC
-                _tsys[i].pos_mp += pcm.pos;
+            mprealVec pos_mp;
+#endif
+            for (int i=0; i<_n; i++) {
+#ifdef PETAR_USE_MPFRC
+                pos_mp.combine(_tsys[i].pos, _tsys[i].pos_high);
+                pos_mp += pcm.pos;
+                pos_mp.split(_tsys[i].pos, _tsys[i].pos_high);
+#else
+                _tsys[i].pos += pcm.pos;
 #endif
                 _tsys[i].vel += pcm.vel;
             }
@@ -246,11 +258,17 @@ public:
         calcCenterOfMass(_tsys, _n, _mode);
 
         // correct particle 
-        for (int i=0; i<_n; i++) {
-            _tsys[i].pos -= pcm.pos;
 #ifdef PETAR_USE_MPFRC
-            _tsys[i].pos_mp -= pcm.pos;
-#endif            
+        mprealVec pos_mp;
+#endif
+        for (int i=0; i<_n; i++) {
+#ifdef PETAR_USE_MPFRC
+            pos_mp.combine(_tsys[i].pos, _tsys[i].pos_high);
+            pos_mp -= pcm.pos;
+            pos_mp.split(_tsys[i].pos, _tsys[i].pos_high);
+#else
+            _tsys[i].pos -= pcm.pos;
+#endif                
             _tsys[i].vel -= pcm.vel;
         }
         pcm.pos += pcm_bk.pos;

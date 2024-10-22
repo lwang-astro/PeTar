@@ -330,9 +330,6 @@ public:
         if (getOrbitalParticleN()>0) pcm->mass = 0.0;
         else pcm->mass = _bin.mass;
         pcm->pos = _bin.pos;
-#ifdef PETAR_USE_MPFRC
-        pcm->pos_mp = _bin.pos;
-#endif        
         pcm->vel = _bin.vel;
         pcm->id  = - std::abs(_bin.id);
     }

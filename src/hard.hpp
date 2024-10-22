@@ -383,7 +383,6 @@ public:
             sym_int.reserveIntegratorMem();
 #ifdef PETAR_USE_MPFRC
             sym_int.particles.calcCenterOfMass();
-            sym_int.particles.shiftToCenterOfMassFrame();
             shiftToCenterOfMassFrameWithPosMP(sym_int.particles);
 #endif            
             sym_int.info.generateBinaryTree(sym_int.particles, ar_manager.interaction.gravitational_constant);
@@ -468,10 +467,10 @@ public:
             h4_int.step.eta_4th /= std::pow(mmax*Ptcl::mean_mass_inv, 0.25);
 
             h4_int.particles.calcCenterOfMass();
-            h4_int.particles.shiftToCenterOfMassFrame();
-
 #ifdef PETAR_USE_MPFRC
             shiftToCenterOfMassFrameWithPosMP(h4_int.particles);
+#else
+            h4_int.particles.shiftToCenterOfMassFrame();
 #endif            
             
             PS::S32 n_group_size_max = _n_ptcl+_n_group;
@@ -891,9 +890,13 @@ public:
     template <class Tpgroup>
     void shiftToCenterOfMassFrameWithPosMP(Tpgroup& particles) {
         mprealVec cm_pos = {particles.cm.pos.x, particles.cm.pos.y, particles.cm.pos.z};
+        mprealVec pi_pos;
         for (int k=0; k < particles.getSize(); k++) {
-            particles[k].pos = particles[k].pos_mp - cm_pos;
+            pi_pos.combine(particles[k].pos, particles[k].pos_high);
+            particles[k].pos = pi_pos - cm_pos;
+            particles[k].vel -= particles.cm.vel;
         }
+        particles.setIsOriginFrameFlag(false);
     }
 
     // shift to original frame with quadruple-precision position vecotor pos_mp
@@ -901,10 +904,14 @@ public:
     */
     template <class Tpgroup>
     void shiftToOriginFrameWithPosMP(Tpgroup& particles) {
+        mprealVec pi_pos;    
         for (int k=0; k < particles.getSize(); k++){
-            particles[k].pos_mp = particles[k].pos;    
-            particles[k].pos_mp += particles.cm.pos;
+            pi_pos = particles[k].pos;
+            pi_pos += particles.cm.pos;
+            pi_pos.split(particles[k].pos, particles[k].pos_high);
+            particles[k].vel += particles.cm.vel;
         }
+        particles.setIsOriginFrameFlag(true);
     }
 #endif
 
@@ -938,8 +945,9 @@ public:
 #endif
 #ifdef PETAR_USE_MPFRC
             shiftToOriginFrameWithPosMP(sym_int.particles);
-#endif
+#else
             sym_int.particles.shiftToOriginFrame();
+#endif
             sym_int.particles.template writeBackMemberAll<PtclH4>();
 
             PS::S32 n_members = sym_int.particles.getSize();
@@ -1014,8 +1022,9 @@ public:
 
 #ifdef PETAR_USE_MPFRC
             shiftToOriginFrameWithPosMP(h4_int.particles);
-#endif
+#else
             h4_int.particles.shiftToOriginFrame();
+#endif
 
 #ifdef  HARD_CHECK_ENERGY
             // update cm kinetic energy change
@@ -2122,18 +2131,25 @@ public:
                     pi.vel[0] += fi.acc0[0]*dt;
                     pi.vel[1] += fi.acc0[1]*dt;
                     pi.vel[2] += fi.acc0[2]*dt;
-                    pi.pos += pi.vel*dt;
+                    PS::F64vec dr = pi.vel * _dt;
 #ifdef PETAR_USE_MPFRC
-                    pi.pos_mp += dr;
+                    mprealVec pos_mp(pi.pos, pi.pos_high);
+                    pos_mp += dr;
+                    pos_mp.split(pi.pos, pi.pos_high);
+#else
+                    pi.pos += dr;
 #endif                
                 }
             }
             else {
 #endif
                 PS::F64vec dr = pi.vel * _dt;
-                pi.pos += dr;
 #ifdef PETAR_USE_MPFRC
-                pi.pos_mp += dr;
+                mprealVec pos_mp(pi.pos, pi.pos_high);
+                pos_mp += dr;
+                pos_mp.split(pi.pos, pi.pos_high);
+#else
+                pi.pos += dr;
 #endif                
 #ifdef EXTERNAL_HARD
             }
@@ -2497,9 +2513,12 @@ public:
             auto* pi = ptcl_hard_.getPointer(adr_head);
             for (PS::S32 j=0; j<n_ptcl; j++) {
                 PS::F64vec dr = pi[j].vel * dt;
-                pi[j].pos += dr;
 #ifdef PETAR_USE_MPFRC
-                pi[j].pos_mp += dr;
+                mprealVec pos_mp(pi[j].pos, pi[j].high);
+                pos_mp += dr;
+                pos_mp.split(pi[j].pos, pi[j].high);
+#else                
+                pi[j].pos += dr;
 #endif                
 #ifdef CLUSTER_VELOCITY
                 auto& pij_cm = pi[j].group_data.cm;
@@ -2699,9 +2718,9 @@ public:
                 // generate artificial particles
                 ap_manager.createArtificialParticles(ptcl_artificial_i, binary_stable_i, index_group, 2);
 #ifdef PETAR_USE_MPFRC_DEBUG
-                // check pos_mp initialization
+                // check pos_high initialization
                 for (int j=0; j<ap_manager.getArtificialParticleN(); j++) {
-                    assert(abs(ptcl_artificial_i[j].pos_mp[0] - ptcl_artificial_i[j].pos[0])<1e-10);
+                    assert(ptcl_artificial_i[j].pos_high[0]==0.0);
                 }
 #endif
                 // set rsearch and changeover for c.m. particle

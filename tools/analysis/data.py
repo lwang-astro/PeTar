@@ -228,6 +228,7 @@ class SimpleParticle(DictNpArrayMix):
     keys: (class members)
         mass (1D): mass
         pos (2D,3): postion x, y, z
+        *pos_high (2D,3): high-precision parts of position x, y, z, only exist when use_mpfrc is True
         vel (2D,3): velocity vx, vy, vz
     """
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
@@ -238,10 +239,18 @@ class SimpleParticle(DictNpArrayMix):
         Keyword arguments:
             float_type: type (np.float64)
                 floating point data type
+            use_mpfrc: bool (False)
+                if true, add three columns of pos_high indicating the high-precision parts of position
         """
         if ('float_type' in kwargs.keys()): float_type = kwargs['float_type']
         else: float_type = np.float64
-        keys = [['mass', float_type], ['pos', (float_type, 3)], ['vel', (float_type, 3)]]
+        keys = [['mass', float_type], ['pos', (float_type, 3)]]
+        if ('use_mpfrc' in kwargs.keys()): use_mpfrc = kwargs['use_mpfrc']
+        else: use_mpfrc = False
+        if (use_mpfrc):
+            keys += [['pos_high', (float_type, 3)]]
+        keys += [['vel', (float_type, 3)]]
+        
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
     def calcR2(self):
@@ -456,6 +465,7 @@ class Particle(HardParticle):
     keys: (class members)
         Members inherited from HardParticle: see help(petar.HardParticle)
              Please set the keyword argument 'interrupt_mode' to determine the members of stellar evolution data
+             Please set the keyword argument 'use_mpfrc' to determine whether high-precision parts of particle position are included
         acc_soft (2D,3): long-range interaction acceleration (particle-tree) x, y, z
         pot      (1D): total potential
         pot_soft (1D): long-range interaction potential
@@ -476,6 +486,8 @@ class Particle(HardParticle):
             external_mode: string (none)
                PeTar external mode (set in configure): galpy, none 
                This option indicates whether the column of externa potential exist
+            use_mpfrc: bool (False)
+               If true, add three columns of pos_high indicating the high-precision parts of position
             float_type: type (np.float64)
                 floating point data type
         """
@@ -824,7 +836,19 @@ class Binary(SimpleParticle):
         """
         calculateParticleCMDict(self.__dict__, _p1, _p2)
 
-        dr = (_p1.pos - _p2.pos)
+        if ('use_mpfrc' in _p1.initargs.keys()):
+            if (_p1.initargs['use_mpfrc']):
+                pos1_mp = np.zeros((_p1.size,3),dtype=np.float128)
+                pos1_mp += _p1.pos
+                pos1_mp += _p1.pos_high
+                pos2_mp = np.zeros((_p2.size,3),dtype=np.float128)
+                pos2_mp += _p2.pos
+                pos2_mp += _p2.pos_high
+                dr = (pos1_mp - pos2_mp)
+            else:
+                dr = (_p1.pos - _p2.pos)
+        else:
+            dr = (_p1.pos - _p2.pos)
         dv = (_p1.vel - _p2.vel)
         
         dr2  = (dr*dr).sum(axis=1)

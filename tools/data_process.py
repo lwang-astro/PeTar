@@ -52,6 +52,7 @@ if __name__ == '__main__':
         print("                            The argument is the filename of the table. The file contains two columns: time, mass.")
         print("  -i(--interrupt-mode)  [S] The interruption mode used in petar; choices: no, base, bse, mobse (default: no).")
         print("  -t(--external-mode)   [S] External mode used in petar; choices: galpy, no (default: no).")
+        print("  -P(--use_mpfrc)           Include three columns of high-precision parts of particle position x, y, z.")
         print("  -s(--snapshot-format) [S] Input snapshot data format: binary, ascii (default: ascii).")
         print("                             Refer to the '-i' option of petar.")
         print("     --esc-snapshot-format [S] Set escaper snapshot data format for reading: binary, ascii, npy (follows -s).")
@@ -126,8 +127,8 @@ if __name__ == '__main__':
         print("  2) If data is written in BINARY format during petar simulation, use '-s binary'.")
         print("  3) '--add-star-type' functionality is only available when SSE/BSE is used.")
     try:
-        shortargs = 'p:m:G:b:MBAea:rt:i:s:o:cn:h'
-        longargs = ['mass-fraction=','multiple','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','calc-energy','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','snapshot-format=','output-format=','m-ext=','add-star-type=','add-mass-range=','calc-multi-rc','n-cpu=','help']
+        shortargs = 'p:m:G:b:MBAea:rt:i:P:s:o:cn:h'
+        longargs = ['mass-fraction=','multiple','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','calc-energy','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','use-mpfrc','snapshot-format=','output-format=','m-ext=','add-star-type=','add-mass-range=','calc-multi-rc','n-cpu=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 
         kwargs=dict()
@@ -159,6 +160,8 @@ if __name__ == '__main__':
                 kwargs['interrupt_mode'] = arg
             elif opt in ('-t','--external-mode'):
                 kwargs['external_mode'] = arg
+            elif opt in ('-P','--use_mpfrc'):
+                kwargs['use_mpfrc'] = True
             elif opt in ('-s','--snapshot-format'):
                 kwargs['snapshot_format'] = arg
                 snapshot_format = arg

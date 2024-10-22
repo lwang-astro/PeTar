@@ -33,9 +33,6 @@ public:
         _bin.rotateToOriginalFrame(&(pi->pos.x));
         pi->pos += _bin.pos;
         pi->vel = _bin.vel;
-#ifdef PETAR_USE_MPFRC
-        pi->pos_mp = pi->pos;
-#endif        
         
         pi = &(_ptcl_artificial[1]);
         pi->mass = pmass;
@@ -43,9 +40,6 @@ public:
         _bin.rotateToOriginalFrame(&(pi->pos.x));
         pi->pos += _bin.pos;
         pi->vel = _bin.vel;
-#ifdef PETAR_USE_MPFRC
-        pi->pos_mp = pi->pos;
-#endif        
 
         pi = &(_ptcl_artificial[2]);
         pi->mass = pmass;
@@ -53,9 +47,6 @@ public:
         _bin.rotateToOriginalFrame(&(pi->pos.x));
         pi->pos += _bin.pos;
         pi->vel = _bin.vel;
-#ifdef PETAR_USE_MPFRC
-        pi->pos_mp = pi->pos;
-#endif        
 
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
         PS::F64vec dv = (_ptcl_artificial[0].pos + _ptcl_artificial[1].pos + _ptcl_artificial[2].pos)/3 - _bin.pos;

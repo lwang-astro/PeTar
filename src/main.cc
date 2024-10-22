@@ -15,7 +15,7 @@ int main(int argc, char *argv[]){
     PeTar::initialFDPS(argc,argv);
 
 #ifdef PETAR_USE_MPFRC
-    mpfr::mpreal::set_default_prec(128); // Set precision to 128 bits
+    mpfr::mpreal::set_default_prec(128);
 #endif
 
     PeTar petar;

@@ -2907,9 +2907,6 @@ public:
         for(PS::S32 i=0; i<n_loc; i++){
             system_soft[i].mass = mass[i];
             system_soft[i].pos = pos[i];
-#ifdef PETAR_USE_MPFRC
-            system_soft[i].pos_mp = pos[i];
-#endif
             system_soft[i].vel = vel[i];
             system_soft[i].id = i_h + i + 1;
 #ifdef STELLAR_EVOLUTION
@@ -2984,9 +2981,6 @@ public:
         for(PS::S32 i=0; i<n_loc; i++){
             system_soft[i].mass = mass[i];
             system_soft[i].pos = pos[i];
-#ifdef PETAR_USE_MPFRC
-            system_soft[i].pos_mp = pos[i];
-#endif
             system_soft[i].vel = vel[i];
             system_soft[i].id = i_h + i + 1;
             system_soft[i].group_data.artificial.setParticleTypeToSingle();
@@ -3725,11 +3719,13 @@ public:
                 // get drift step
                 dt_drift = dt_manager.getDtDriftContinue();
 
-                p.pos += p.vel * dt_drift;
 #ifdef PETAR_USE_MPFRC
-                p.pos_mp += p.vel * dt_drift;
+                mprealVec pos_mp(p.pos, p.pos_high);
+                pos_mp += p.vel * dt_drift;
+                pos_mp.split(p.pos, p.pos_high);
+#else
+                p.pos += p.vel * dt_drift;
 #endif
-
                 // drift cm
                 stat.pcm.pos += stat.pcm.vel*dt_drift;
 
@@ -4007,20 +4003,6 @@ public:
 #endif            
             
             drift(dt_drift);
-
-#ifdef PETAR_USE_MPFRC_DBEUG
-            // check difference between pos and pos_mp
-            for (int i=0; i<system_soft.getNumberOfParticleLocal(); i++) {
-                auto& p = system_soft[i];
-                PS::F64vec dr = p.pos_mp - p.pos;
-                PS::F64 dr_max = std::max(std::max(std::abs(dr.x),std::abs(dr.y)),std::abs(dr.z));
-                if (dr_max>1e-14) {
-                    std::cout<<"Error: pos and pos_mp difference is too large: "<<dr_max<<std::endl;
-                    std::cout<<"pos = "<<p.pos<<"  pos_mp = "<<p.pos_mp<<std::endl;
-                    abort();
-                }
-            }
-#endif
             // update stat time 
             stat.time = system_hard_one_cluster.getTimeOrigin();
 

@@ -90,6 +90,8 @@ class Status(DictNpArrayMix):
                 Interrupt mode, base, bse, none
             external_mode: string (none)
                 PeTar external mode (set in configure): galpy, none 
+            use_mpfrc: bool (False)
+                Include three columns of high-precsion parts of particle position x, y, z
             N_particle int (0)
                 Number of particles
         """

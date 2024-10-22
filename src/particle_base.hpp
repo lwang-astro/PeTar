@@ -27,14 +27,36 @@ enum class BinaryInterruptState:int {none = 0, form = 1, exchange = 2, collision
 struct mprealVec: public PS::Vector3<mpfr::mpreal> {
 
     //! default constructor
-    mprealVec(): PS::Vector3<mpfr::mpreal>(mpfr::mpreal(0, MPFR_PREC), mpfr::mpreal(0, MPFR_PREC), mpfr::mpreal(0, MPFR_PREC)) {}
-
-    //! constructor with x, y, z values
-    mprealVec(const mpfr::mpreal& _x, const mpfr::mpreal& _y, const mpfr::mpreal& _z): PS::Vector3<mpfr::mpreal>(_x, _y, _z) {}
+    mprealVec(): PS::Vector3<mpfr::mpreal>() {}
 
     //! template constructor
     template <typename T>
-    mprealVec(const T& _x, const T& _y, const T& _z): PS::Vector3<mpfr::mpreal>(mpfr::mpreal(_x, MPFR_PREC), mpfr::mpreal(_y, MPFR_PREC), mpfr::mpreal(_z, MPFR_PREC)) {}
+    mprealVec(const T& _x, const T& _y, const T& _z): PS::Vector3<mpfr::mpreal>(_x, _y, _z) {}
+
+    //! combine low and high precision parts into one mprealVec
+    void combine(const PS::F64vec& low, const PS::F64vec& high) {
+        this->x = low.x;
+        this->y = low.y;
+        this->z = low.z;
+        this->x += high.x;
+        this->y += high.y;
+        this->z += high.z;
+    }
+
+    //! constructor with low and high precision parts
+    mprealVec(const PS::F64vec& low, const PS::F64vec& high) {
+        combine(low, high);
+    }
+
+    //! split mprealVec into low and high precision parts
+    void split(PS::F64vec& low, PS::F64vec& high) const {
+        low.x = x.toDouble();
+        low.y = y.toDouble();
+        low.z = z.toDouble();
+        high.x = (x - low.x).toDouble();
+        high.y = (y - low.y).toDouble();
+        high.z = (z - low.z).toDouble();
+    }
 
     //! write class data with ASCII format
     /*! @param[in] _fout: file IO for write
@@ -56,9 +78,9 @@ struct mprealVec: public PS::Vector3<mpfr::mpreal> {
 
     //! assignment operator to convert PS::F64vec to mprealVec
     mprealVec& operator=(const PS::F64vec& vec) {
-        this->x = mpfr::mpreal(vec.x);
-        this->y = mpfr::mpreal(vec.y);
-        this->z = mpfr::mpreal(vec.z);
+        this->x = vec.x;
+        this->y = vec.y;
+        this->z = vec.z;
         return *this;
     }
 
@@ -81,11 +103,11 @@ class ParticleBase{
 public:
     // necessary variables, should not be touched
     PS::F64 mass;
-#ifdef PETAR_USE_MPFRC
-    // for high precision
-    mprealVec pos_mp;
-#endif
     PS::F64vec pos;
+#ifdef PETAR_USE_MPFRC
+    // for high precision part
+    PS::F64vec pos_high;
+#endif
     PS::F64vec vel;
     PS::S64 binary_state; // contain two parts, low bits (first BINARY_STATE_ID_SHIFT bits) is binary interrupt state and high bits are pair ID, pair ID is modified in new and end groups in Hermite integrator with flag of ADJUST_GROUP_PRINT
 #ifdef STELLAR_EVOLUTION
@@ -123,6 +145,9 @@ public:
 
     //! defaulted constructor 
     ParticleBase(): mass(0.0) { 
+#ifdef PETAR_USE_MPFRC        
+        pos_high = 0.0;
+#endif
         binary_state = 0;
 #ifdef STELLAR_EVOLUTION
         radius = 0.0;
@@ -138,10 +163,10 @@ public:
     //! constructor 
     ParticleBase(const PS::F64 _mass, const PS::F64vec & _pos, const PS::F64vec & _vel) {
         mass = _mass;
-#ifdef PETAR_USE_MPFRC
-        pos_mp = _pos;
-#endif        
         pos = _pos;
+#ifdef PETAR_USE_MPFRC        
+        pos_high = 0.0;
+#endif
         vel = _vel;
         binary_state = 0;
 #ifdef STELLAR_EVOLUTION
@@ -166,10 +191,10 @@ public:
 #endif
                  ) {
         mass = _mass;
-#ifdef PETAR_USE_MPFRC
-        pos_mp = _pos;
-#endif        
         pos = _pos;
+#ifdef PETAR_USE_MPFRC
+        pos_high = 0.0;
+#endif        
         vel = _vel;
         binary_state = _binary_state;
 #ifdef STELLAR_EVOLUTION        
@@ -187,12 +212,10 @@ public:
     /*! @param[in] _fout: file IO for write
      */
     void writeAscii(FILE* fp) const{
-        fprintf(fp, "%26.17e ", this->mass);
+        fprintf(fp, "%26.17e %26.17e %26.17e %26.17e ", this->mass, this->pos.x, this->pos.y, this->pos.z);
 #ifdef PETAR_USE_MPFRC
-        pos_mp.writeAscii(fp);
-#else        
-        fprintf(fp, "%26.17e %26.17e %26.17e ", this->pos.x, this->pos.y, this->pos.z);
-#endif        
+        fprintf(fp, "%26.17e %26.17e %26.17e ", this->pos_high.x, this->pos_high.y, this->pos_high.z);
+#endif
         fprintf(fp, "%26.17e %26.17e %26.17e %lld ", this->vel.x, this->vel.y, this->vel.z, this->binary_state);
 #ifdef STELLAR_EVOLUTION        
         fprintf(fp, "%26.17e %26.17e %26.17e %26.17e ", 
@@ -207,13 +230,13 @@ public:
     /*! @param[in] _fin: file IO for read
      */
     void readAscii(FILE* fp) {
-        PS::S64 rcount=fscanf(fp, "%lf ", &this->mass);
+        PS::S64 rcount=fscanf(fp, "%lf %lf %lf %lf ", &this->mass, &this->pos.x, &this->pos.y, &this->pos.z);
 #ifdef PETAR_USE_MPFRC
-        pos_mp.readAscii(fp);
-        pos = pos_mp;
-        rcount += 3;
-#else
-        rcount += fscanf(fp, "%lf %lf %lf ", &this->pos.x, &this->pos.y, &this->pos.z);
+        PS::S64 rcount_sub = fscanf(fp, "%lf %lf %lf ", &this->pos_high.x, &this->pos_high.y, &this->pos_high.z);
+        if(rcount_sub<3) {
+            std::cerr<<"Error: pso_high Data reading fails! requiring data number is 3, only obtain "<<rcount_sub<<".\n";
+            abort();
+        }
 #endif
         rcount += fscanf(fp, "%lf %lf %lf %lld ", &this->vel.x, &this->vel.y, &this->vel.z, &this->binary_state);
 #ifdef STELLAR_EVOLUTION        
@@ -241,13 +264,7 @@ public:
     /*! @param[in] _fout: file IO for write
      */
     void writeBinary(FILE* fp) const{
-#ifdef PETAR_USE_MPFRC
-        fwrite(&(this->mass), sizeof(PS::F64), 1, fp);
-        fwrite(&(this->pos_mp), sizeof(mprealVec), 1, fp);
-        fwrite(&(this->vel), sizeof(ParticleBase)-sizeof(mprealVec)-sizeof(PS::F64)-sizeof(PS::F64vec), 1, fp);
-#else    
         fwrite(&(this->mass), sizeof(ParticleBase), 1, fp);
-#endif
     }
 
 
@@ -255,34 +272,18 @@ public:
     /*! @param[in] _fin: file IO for read
      */
     void readBinary(FILE* fp) {
-#ifdef PETAR_USE_MPFRC
-        size_t rcount=fread(&(this->mass), sizeof(PS::F64), 1, fp);
-        rcount += fread(&(this->pos_mp), sizeof(mprealVec), 1, fp);
-        pos = pos_mp;
-        rcount += fread(&(this->vel), sizeof(ParticleBase)-sizeof(mprealVec)-sizeof(PS::F64)-sizeof(PS::F64vec), 1, fp);
-        if(rcount<3) {
-            std::cerr<<"Error: Data reading fails! requiring data number is 3, only obtain "<<rcount<<".\n";
-            std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
-            abort();
-        }
-#else    
         size_t rcount=fread(&(this->mass), sizeof(ParticleBase), 1, fp);
         if(rcount<1) {
             std::cerr<<"Error: Data reading fails! requiring data number is 1, only obtain "<<rcount<<".\n";
             std::cerr<<"Check your input data, whether the consistent features (interrupt mode and external mode) are used in configuring petar and the data generation\n";
             abort();
         }
-#endif
     }
 
     //! for print debugging
     void print(std::ostream & fout) const{
         fout<<" mass="<<mass
-#ifdef PETAR_USE_MPFRC
-            <<" pos="<<pos_mp[0]<<" "<<pos_mp[1]<<" "<<pos_mp[2]
-#else
-            <<" pos="<<pos[0]<<" "<<pos[1]<<" "<<pos[2]
-#endif
+            <<" pos="<<pos
             <<" vel="<<vel
             <<" binary_state="<<binary_state;
 #ifdef STELLAR_EVOLUTION
@@ -334,6 +335,10 @@ public:
         counter++;
         _fout<<std::setw(_offset)<<" "<<counter<<"-"<<counter+2<<". pos.[x/y/z]: 3D position of particle\n";
         counter+=3;
+#ifdef PETAR_USE_MPFRC
+        _fout<<std::setw(_offset)<<" "<<counter<<"-"<<counter+2<<". pos_high.[x/y/z]: high precision part of 3D position of particle\n";
+        counter+=3;
+#endif        
         _fout<<std::setw(_offset)<<" "<<counter<<"-"<<counter+2<<". vel.[x/y/z]: 3D velocity of particle\n";
         counter+=3;
         _fout<<std::setw(_offset)<<" "<<counter<<". bin_stat: binary status storing pair id and status [formatted] (0.0)\n";
@@ -360,15 +365,14 @@ public:
      */
     void printColumn(std::ostream & _fout, const int _width=20) const{
         _fout<<std::setw(_width)<<mass
+             <<std::setw(_width)<<pos.x
+             <<std::setw(_width)<<pos.y
+             <<std::setw(_width)<<pos.z
 #ifdef PETAR_USE_MPFRC
-             <<std::setw(_width)<<pos_mp[0]
-             <<std::setw(_width)<<pos_mp[1]
-             <<std::setw(_width)<<pos_mp[2]
-#else        
-             <<std::setw(_width)<<pos[0]
-             <<std::setw(_width)<<pos[1]
-             <<std::setw(_width)<<pos[2]
-#endif             
+             <<std::setw(_width)<<pos_high.x
+             <<std::setw(_width)<<pos_high.y
+             <<std::setw(_width)<<pos_high.z
+#endif
              <<std::setw(_width)<<vel.x
              <<std::setw(_width)<<vel.y
              <<std::setw(_width)<<vel.z
@@ -392,10 +396,23 @@ public:
      */
         template <class Tpcm>
         void printColumnWithOffset(Tpcm& _pcm, std::ostream & _fout, const int _width=20) const{
-        _fout<<std::setw(_width)<<mass
-             <<std::setw(_width)<<pos[0] + _pcm.pos[0]
+        _fout<<std::setw(_width)<<mass;
+#ifdef PETAR_USE_MPFRC
+        mprealVec pos_mp(pos, pos_high);
+        pos_mp += _pcm.pos;
+        PS::F64vec pos_l, pos_h;
+        pos_mp.split(pos_l, pos_h);
+        _fout<<std::setw(_width)<<pos_l.x
+             <<std::setw(_width)<<pos_l.y
+             <<std::setw(_width)<<pos_l.z
+             <<std::setw(_width)<<pos_h.x
+             <<std::setw(_width)<<pos_h.y
+             <<std::setw(_width)<<pos_h.z
+#else
+        _fout<<std::setw(_width)<<pos[0] + _pcm.pos[0]
              <<std::setw(_width)<<pos[1] + _pcm.pos[1]
              <<std::setw(_width)<<pos[2] + _pcm.pos[2]
+#endif
              <<std::setw(_width)<<vel[0] + _pcm.vel[0]
              <<std::setw(_width)<<vel[1] + _pcm.vel[1]
              <<std::setw(_width)<<vel[2] + _pcm.vel[2]
@@ -419,10 +436,10 @@ public:
     template<class Tp>
     void DataCopy(const Tp & din) {
         mass = din.mass;
-#ifdef PETAR_USE_MPFRC
-        pos_mp = din.pos_mp;
-#endif
         pos = din.pos;
+#ifdef PETAR_USE_MPFRC
+        pos_high = din.pos_high;
+#endif
         vel  = din.vel;
         binary_state  = din.binary_state;
 #ifdef STELLAR_EVOLUTION
@@ -483,28 +500,26 @@ public:
         NAN_CHECK(y);
         NAN_CHECK(z);
 #endif
+        pos[0] = x;
+        pos[1] = y;
+        pos[2] = z;
 #ifdef PETAR_USE_MPFRC
 #ifdef PETAR_USE_MPFRC_DEBUG
         std::cerr<<"Set pos with low precision data\n";
 #endif
-        pos_mp[0] = x;
-        pos_mp[1] = y;
-        pos_mp[2] = z;
+        pos_high = 0.0;
 #endif
-        pos[0] = x;
-        pos[1] = y;
-        pos[2] = z;
     } 
 
     //!Set position (used in soft part)
     void setPos(const PS::F64vec& _pos) {
+        pos = _pos;
 #ifdef PETAR_USE_MPFRC
 #ifdef PETAR_USE_MPFRC_DEBUG
         std::cerr<<"Set pos with low precision data\n";
 #endif
-        pos_mp = _pos;
+        pos_high = 0.0;
 #endif        
-        pos = _pos;
     }
     
     //!Set velocity (required for \ref ARC::chain)
