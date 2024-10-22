@@ -1,5 +1,6 @@
 // random generator for OpenMP and MPI parallelization
 #pragma once
+#include <cstddef>
 #include <stdint.h>
 #ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
 #include <omp.h>
