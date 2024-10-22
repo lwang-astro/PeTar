@@ -127,7 +127,7 @@ if __name__ == '__main__':
         print("  2) If data is written in BINARY format during petar simulation, use '-s binary'.")
         print("  3) '--add-star-type' functionality is only available when SSE/BSE is used.")
     try:
-        shortargs = 'p:m:G:b:MBAea:rt:i:P:s:o:cn:h'
+        shortargs = 'p:m:G:b:MBAea:rt:i:Ps:o:cn:h'
         longargs = ['mass-fraction=','multiple','gravitational-constant=','r-max-binary=','full-binary','average-mode=', 'filename-prefix=','read-data','calc-energy','r-escape=','append','e-escape=','external-mode=','interrupt-mode=','use-mpfrc','snapshot-format=','output-format=','m-ext=','add-star-type=','add-mass-range=','calc-multi-rc','n-cpu=','help']
         opts,remainder= getopt.getopt( sys.argv[1:], shortargs, longargs)
 

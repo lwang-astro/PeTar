@@ -351,7 +351,7 @@ class BaseParticle(SimpleParticle):
         The members include simple particle information, binary status and stellar evolution data
        
     keys: (class members)
-        Members inherited from SimpleParticle: mass (1D), pos (2D,3), vel (2D,3) 
+        Members inherited from SimpleParticle: mass (1D), pos (2D,3), *pos_high (2D,3) vel (2D,3) 
             see help(petar.SimpleParticle)
         binary_state (1D): binary interruption state
         if (keyword argument 'interrupt_mode' == 'base', 'bse', 'bseEmp', 'mobse'):
@@ -372,6 +372,8 @@ class BaseParticle(SimpleParticle):
             interrupt_mode: string (none)
                PeTar interrupt mode (set in configure): base, bse, mobse, none
                This option indicates whether columns of stellar evolution exist
+            use_mpfrc: bool (False)
+                if true, add three columns of pos_high indicating the high-precision parts of position
             float_type: type (np.float64)
                 floating point data type
         """
@@ -413,6 +415,8 @@ class HardParticle(BaseParticle):
             interrupt_mode: string (none)
                PeTar interrupt mode (set in configure): base, bse, mobse, none
                This option indicates whether columns of stellar evolution exist
+            use_mpfrc: bool (False)
+                if true, add three columns of pos_high indicating the high-precision parts of position
             float_type: type (np.float64)
                 floating point data type
         """
@@ -445,6 +449,8 @@ class HermiteParticle(HardParticle):
             interrupt_mode: string (none)
                PeTar interrupt mode (set in configure): base, bse, mobse, none
                This option indicates whether columns of stellar evolution exist
+            use_mpfrc: bool (False)
+                if true, add three columns of pos_high indicating the high-precision parts of position
             float_type: type (np.float64)
                 floating point data type
         """
@@ -677,6 +683,14 @@ class Binary(SimpleParticle):
                 If True, only calculate semi and ecc, save computing time significantly
             G: float (1.0)
                 Gravitational constant
+            interrupt_mode: string (none)
+               PeTar interrupt mode (set in configure): base, bse, mobse, none
+               This option indicates whether columns of stellar evolution exist
+            external_mode: string (none)
+               PeTar external mode (set in configure): galpy, none 
+               This option indicates whether the column of externa potential exist
+            use_mpfrc: bool (False)
+               If true, add three columns of pos_high indicating the high-precision parts of position
             member_particle_type: type or list (Particle)
                 Type of component particle (both)
             member_particle_type_one: type or list (Particle)
@@ -705,14 +719,24 @@ class Binary(SimpleParticle):
         if 'member_particle_type_two' in kwargs.keys(): member_particle_type_two=kwargs['member_particle_type_two']
 
         if (issubclass(type(_p1), SimpleParticle)) & (issubclass(type(_p2),SimpleParticle)):
+            self.initargs = kwargs.copy()
+            self.ncols = int(7)
+            self.keys = [['mass',float_type],['pos',(float_type,3)]]
+            if ('use_mpfrc' in _p1.initargs.keys()):
+                if (_p1.initargs['use_mpfrc']):
+                    self.keys += [['pos_high',(float_type,3)]]
+                    self.__dict__['pos_high'] = np.zeros((_p1.size,3),dtype=float_type)
+                    self.initargs['use_mpfrc'] = True
+                    self.ncols += 3
+            self.keys += [['vel',(float_type,3)]]
             if (simple_mode): 
-                self.keys = [['mass',float_type],['pos',(float_type,3)],['vel',(float_type,3)],['rrel',float_type],['semi',float_type],['ecc',float_type],['p1',(type(_p1),_p1.initargs)], ['p2', (type(_p2),_p2.initargs)]]
+                self.keys += [['rrel',float_type],['semi',float_type],['ecc',float_type],['p1',(type(_p1),_p1.initargs)], ['p2', (type(_p2),_p2.initargs)]]
                 self.particleToSemiEcc(_p1, _p2, G)
-                self.ncols= int(10)
+                self.ncols += 3
             else:
-                self.keys = [['mass',float_type],['pos',(float_type,3)],['vel',(float_type,3)],['m1',float_type],['m2',float_type],['rrel',float_type],['semi',float_type],['am',(float_type,3)],['L',(float_type,3)],['eccvec',(float_type,3)],['incline',float_type],['rot_horizon',float_type],['ecc',float_type],['rot_self',float_type],['ecca',float_type],['period',float_type],['t_peri',float_type],['p1',(type(_p1),_p1.initargs)], ['p2', (type(_p2),_p2.initargs)]]
+                self.keys += [['m1',float_type],['m2',float_type],['rrel',float_type],['semi',float_type],['am',(float_type,3)],['L',(float_type,3)],['eccvec',(float_type,3)],['incline',float_type],['rot_horizon',float_type],['ecc',float_type],['rot_self',float_type],['ecca',float_type],['period',float_type],['t_peri',float_type],['p1',(type(_p1),_p1.initargs)], ['p2', (type(_p2),_p2.initargs)]]
                 self.particleToBinary(_p1, _p2, G)
-                self.ncols= int(27)
+                self.ncols += 20
             self.p1 = _p1
             self.p1.setHost(self)
             self.p2 = _p2
@@ -721,7 +745,6 @@ class Binary(SimpleParticle):
                 self.host = None
             self.size = _p1.size
             self.ncols += self.p1.ncols + self.p2.ncols
-            self.initargs = kwargs.copy()
             binary_tree = self.createMemberParticleTypeTree()
             self.initargs['member_particle_type_one']=binary_tree[0]
             self.initargs['member_particle_type_two']=binary_tree[1]
