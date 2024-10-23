@@ -14,7 +14,7 @@ public:
     PS::S32 n_remove_glb; // number of removed particles in all MPI processes
     PS::S32 n_escape_glb; // number of escaped particles in all MPI processes
     PS::F64 half_mass_radius; // half mass radius of the system (not calculated)
-    EnergyAndMomemtum energy; // energy of the system
+    EnergyAndMomentum energy; // energy of the system
     struct ParticleCM{ // local structure for system center
         PS::F64 mass;
         PS::F64vec pos;
