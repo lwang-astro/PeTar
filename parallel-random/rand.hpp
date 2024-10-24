@@ -1,6 +1,5 @@
 // random generator for OpenMP and MPI parallelization
 #pragma once
-#include <cstddef>
 #include <stdint.h>
 #ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
 #include <omp.h>
@@ -72,7 +71,7 @@ void srand_jump(void) {
 
     uint64_t s0 = 0;
     uint64_t s1 = 0;
-    for(size_t i = 0; i < sizeof JUMP / sizeof *JUMP; i++)
+    for(std::size_t i = 0; i < sizeof JUMP / sizeof *JUMP; i++)
         for(int b = 0; b < 64; b++) {
             if (JUMP[i] & UINT64_C(1) << b) {
                 s0 ^= RAND_SEED[0];
@@ -95,7 +94,7 @@ void srand_long_jump(void) {
 
     uint64_t s0 = 0;
     uint64_t s1 = 0;
-    for(size_t i = 0; i < sizeof LONG_JUMP / sizeof *LONG_JUMP; i++)
+    for(std::size_t i = 0; i < sizeof LONG_JUMP / sizeof *LONG_JUMP; i++)
         for(int b = 0; b < 64; b++) {
             if (LONG_JUMP[i] & UINT64_C(1) << b) {
                 s0 ^= RAND_SEED[0];
