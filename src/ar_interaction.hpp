@@ -871,6 +871,9 @@ public:
         auto norm = [&](const std::array<Float, 3>& vec) {
             return std::sqrt(vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2]);
             };
+        auto normalize = [&](const std::array<Float,3>& vec){
+            return std::array<Float,3>{vec[0]/norm(vec),vec[1]/norm(vec),vec[2]/norm(vec)};
+            };
         auto dot = [&](const std::array<Float, 3>& a, const std::array<Float, 3>& b) {
             return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
             };
@@ -975,16 +978,6 @@ public:
         // Spins here are defined in a frame with L along z and S1 in xz
         std::array<Float, 3> hatL = { 0.0, 0.0, 1.0 };
 
-        std::array<Float, 3> S1_xy = Chi1;
-        S1_xy[2] = 0.0;
-        std::array<Float, 3> S2_xy = Chi2;
-        S2_xy[2] = 0.0;
-        Float s1_xy = norm(S1_xy);
-        Float s2_xy = norm(S2_xy);
-        Float theta1 = std::acos(dot(hatL, Chi1) / chi1);
-        Float theta2 = std::acos(dot(hatL, Chi2) / chi2);
-        Float deltaPhi = std::acos(dot(S1_xy, S2_xy) / (s1_xy * s2_xy));
-
 
         // Constants
         const Float A = 1.2e4; // km/s
@@ -996,9 +989,10 @@ public:
         const Float VC = 1506.52; // km/s
         const Float C2 = 1140.0; // km/s
         const Float C3 = 2481.0; // km/s
+
         const Float M_pi = COMM::PI;
-        std::array<Float, 3> hatS1 = { std::sin(theta1), 0.0, std::cos(theta1) };
-        std::array<Float, 3> hatS2 = { std::sin(theta2) * std::cos(deltaPhi), std::sin(theta2) * std::sin(deltaPhi), std::cos(theta2) };
+        std::array<Float, 3> hatS1 = normalize(Chi1);
+        std::array<Float, 3> hatS2 = normalize(Chi2);
 
         std::array<Float, 3> Delta = subtract(multiply(hatS2, q * chi2), multiply(hatS1, chi1));
         Delta = multiply(Delta, -1.0 / (1.0 + q));
