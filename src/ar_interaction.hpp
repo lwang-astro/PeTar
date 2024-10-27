@@ -1,8 +1,5 @@
 #pragma once
 #include <iostream>
-#include <array>
-#include <vector>
-#include <tuple>
 #include <cstdlib>
 #include <cmath>
 #include "Common/Float.h"
@@ -12,10 +9,10 @@
 #include "hard_ptcl.hpp"
 #include "Hermite/hermite_particle.h"
 #include "ar_perturber.hpp"
-#include "two_body_tide.hpp"
-#include "parallel-random/rand.hpp"
 #ifdef BSE_BASE
 #include "bse_interface.h"
+#include "two_body_tide.hpp"
+#include "gw_kick.hpp"
 #endif
 #include "external_force.hpp"
 
@@ -36,6 +33,7 @@ public:
     bool stellar_evolution_write_flag;
     BSEManager bse_manager;
     TwoBodyTide tide;
+    GWKick gw_kick;
     std::ofstream fout_sse; ///> log file for SSE event
     std::ofstream fout_bse; ///> log file for BSE event
 #else
@@ -67,7 +65,7 @@ public:
 #ifdef STELLAR_EVOLUTION
         ASSERT(time_interrupt_max>=0.0);
 #ifdef BSE_BASE
-        ASSERT(stellar_evolution_option==0 || (stellar_evolution_option==1 && bse_manager.checkParams()) || (stellar_evolution_option==2 && bse_manager.checkParams() && tide.checkParams()));
+        ASSERT(stellar_evolution_option==0 || (stellar_evolution_option==1 && bse_manager.checkParams()) || (stellar_evolution_option==2 && bse_manager.checkParams() && tide.checkParams() && GWkick.checkParams()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_sse.is_open()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_bse.is_open()));
 #else
@@ -827,210 +825,6 @@ public:
         return 0;
     }
 
-    // Function to generate a uniformly distributed point inside a sphere
-    /*! @param[in] _radius: radius of the sphere
-        \return a point inside the sphere
-     */
-    std::array<Float, 3> uniformPointsInsideSphere(const Float& radius) {
-        Float x, y, z;
-        while (true) {
-            // Generate a random point within the bounding cube
-            x = (-2*rand_f64() + 1)*radius;
-            y = (-2*rand_f64() + 1)*radius;
-            z = (-2*rand_f64() + 1)*radius;
-
-            // Check if the point is inside the sphere
-            if (std::sqrt(x * x + y * y + z * z) <= 0.8) {
-                std::array<Float, 3> result = {x,y,z};
-                return result;
-            }
-        }
-    }
-
-    // Function to generate kick velocity of a GW merger with spins
-    /*! @param[out] vkick: kick velocity
-        @param[in] _Chi1: spin of the primary body
-        @param[in] _Chi2: spin of the secondary body
-        @param[in] L: orbital angular momentum
-        @param[in] dr: separation vector
-        @param[in] q: mass ratio
-        @param[in] c: speed of light
-        @param[in] maxkick: whether to calculate the maximum kick
-        @param[in] inverteraxisl: whether to invert the axis of L
-    */
-    void calcBHKick(Float vkick[], 
-        const Float _Chi1[], 
-        const Float _Chi2[], 
-        const std::array<Float, 3>& L,
-        const std::array<Float, 3>& dr,
-        const Float& q, 
-        const Float& c, 
-        bool maxkick = true,
-        bool inverteraxisl = true ) {
-
-        auto norm = [&](const std::array<Float, 3>& vec) {
-            return std::sqrt(vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2]);
-            };
-        auto normalize = [&](const std::array<Float,3>& vec){
-            return std::array<Float,3>{vec[0]/norm(vec),vec[1]/norm(vec),vec[2]/norm(vec)};
-            };
-        auto dot = [&](const std::array<Float, 3>& a, const std::array<Float, 3>& b) {
-            return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-            };
-        auto mod = [&](const std::array<Float, 3>& a) {
-            return std::sqrt(dot(a, a));
-            };
-        auto dot_p = [&](const std::array<Float, 3>&a, const std::array<Float, 3>&b) {
-            return dot(a, b) / mod(b);
-            };
-        auto cross = [&](const std::array<Float, 3>& a, const std::array<Float, 3>& b) {
-            return std::array<Float,3>{ a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0] };
-            };
-        auto multiply = [&](const std::array<Float, 3>& vec, Float scalar) {
-            return std::array<Float, 3>{ vec[0] * scalar, vec[1] * scalar, vec[2] * scalar };
-            };
-        auto subtract = [&](const std::array<Float, 3>& a, const std::array<Float, 3>& b) {
-            return std::array<Float, 3>{ a[0] - b[0], a[1] - b[1], a[2] - b[2] };
-            };
-        auto add = [&](const std::array<Float, 3>& a, const std::array<Float, 3>& b) {
-            return std::array<Float, 3>{ a[0] + b[0], a[1] + b[1], a[2] + b[2] };
-            };
-        auto divide = [&](const std::array<Float, 3>& vec, Float scalar) {
-            return std::array<Float, 3>{ vec[0] / scalar, vec[1] / scalar, vec[2] / scalar };
-            };
-        auto matmul = [&](const std::array<std::array<Float, 3>, 3>& mat, const std::array<Float, 3>& vec) {
-            std::array<Float, 3> result = { 0.0, 0.0, 0.0 };
-            for (int i = 0; i < 3; ++i) {
-                for (int j = 0; j < 3; ++j) {
-                    result[i] += mat[i][j] * vec[j];
-                }
-            }
-            return result;
-        };
-
-
-        // Coordinate transformation
-        auto calcAxisL = [&](
-            const std::array<Float, 3>& L,
-            const std::array<Float, 3>& dr,
-            const std::array<Float, 3>& Chi1,
-            const std::array<Float, 3>& Chi2) {
-
-                Float drm = mod(dr);
-                Float Lm = mod(L);
-
-                // Define unit vectors
-                std::array<Float, 3> e1 = divide(dr, drm);
-                std::array<Float, 3> e3 = divide(L, Lm);
-                std::array<Float, 3> e2 = cross(e3, e1);
-
-                // Transformations
-                std::array<Float, 3> L_new = { dot_p(L, e1), dot_p(L, e2), dot_p(L, e3) };
-                L_new = divide(L_new, Lm);
-
-                std::array<Float, 3> Chi1_new = { dot_p(Chi1, e1), dot_p(Chi1, e2), dot_p(Chi1, e3) };
-                std::array<Float, 3> Chi2_new = { dot_p(Chi2, e1), dot_p(Chi2, e2), dot_p(Chi2, e3) };
-
-                return std::make_tuple(Chi1_new, Chi2_new);
-            };
-
-        auto calcInverterAxisL = [&](
-            const std::array<Float, 3>& L,
-            const std::array<Float, 3>& dr,
-            const std::array<Float, 3>& vkick) {
-
-                Float drm = mod(dr);
-                Float Lm = mod(L);
-
-                // Define unit vectors
-                std::array<Float, 3> e1 = divide(dr, drm);
-                std::array<Float, 3> e3 = divide(L, Lm);
-                std::array<Float, 3> e2 = cross(e3, e1);
-
-                // Construct matrix E
-                std::array<std::array<Float, 3>, 3> E = { e1, e2, e3 };
-
-                // Multiply matrix E by vector vkick
-                std::array<Float, 3> vkick_new = matmul(E, vkick);
-    
-                return vkick_new;
-            };
-
-
-        std::array<Float, 3> Chi1{ _Chi1[0], _Chi1[1],  _Chi1[2] };
-        std::array<Float, 3> Chi2{ _Chi2[0], _Chi2[1],  _Chi2[2] };
-
-        std::tie(Chi1, Chi2) = calcAxisL(L, dr, Chi1, Chi2);
-
-        // Normalization m1, m2, and eta;
-        Float m1 = 1.0 / (1.0 + q);   // Primary mass
-        Float m2 = q / (1.0 + q);     // Secondary mass
-        Float eta = q * pow(1.0 + q, -2);   // Symmetric mass ratio
-
-        // Turn vectors into scalars
-        Float chi1 = norm(Chi1);
-        Float chi2 = norm(Chi2);
-
-        // Generate s1 and s2 (scalars)
-        Float s1 = chi1 * m1 * m1; // Primary spin magnitude
-        Float s2 = chi2 * m2 * m2; // Secondary spin magnitude
-
-        // Spins here are defined in a frame with L along z and S1 in xz
-        std::array<Float, 3> hatL = { 0.0, 0.0, 1.0 };
-
-
-        // Constants
-        const Float A = 1.2e4; // km/s
-        const Float B = -0.93;
-        const Float H = 6.9e3; // km/s
-        const Float V11 = 3677.76; // km/s
-        const Float VA = 2481.21; // km/s
-        const Float VB = 1792.45; // km/s
-        const Float VC = 1506.52; // km/s
-        const Float C2 = 1140.0; // km/s
-        const Float C3 = 2481.0; // km/s
-
-        const Float M_pi = COMM::PI;
-        std::array<Float, 3> hatS1 = normalize(Chi1);
-        std::array<Float, 3> hatS2 = normalize(Chi2);
-
-        std::array<Float, 3> Delta = subtract(multiply(hatS2, q * chi2), multiply(hatS1, chi1));
-        Delta = multiply(Delta, -1.0 / (1.0 + q));
-        Float Delta_par = dot(Delta, hatL);
-        Float Delta_perp = norm(cross(Delta, hatL));
-        std::array<Float, 3> chit = add(multiply(hatS2, q * q * chi2), multiply(hatS1, chi1));
-        chit = multiply(chit, 1.0 / pow(1.0 + q, 2));
-        Float chit_par = dot(chit, hatL);
-        Float chit_perp = norm(cross(chit, hatL));
-        Float zeta = 145.0 * M_pi / 180.0; // convert degrees to radians
-
-        Float bigTheta;
-        if (maxkick) {
-            bigTheta = 0.0;
-        }
-        else {
-            bigTheta = rand_f64() * 2.0 * M_pi;
-        }
-
-        Float vm = A * eta * eta * (1.0 + B * eta) * (1.0 - q) / (1.0 + q);
-        Float vperp = H * eta * eta * Delta_par;
-        Float vpar = 16.0 * eta * eta * (Delta_perp * (V11 + 2.0 * VA * chit_par + 4.0 * VB * pow(chit_par, 2) + 8.0 * VC * pow(chit_par, 3)) + chit_perp * Delta_par * (2.0 * C2 + 4.0 * C3 * chit_par)) * std::cos(bigTheta);
-        
-
-        if (inverteraxisl) {
-            std::array<Float, 3> vkick_L = { vm + vperp * std::cos(zeta), vperp * std::sin(zeta), vpar };
-            //for (int i = 0; i < 3; i++)
-            //   std::cout << vkick_L[i] << std::endl;
-            std::array<Float, 3> vkick_new =  calcInverterAxisL(L, dr, vkick_L); 
-            for (int i = 0; i < 3; i++) vkick[i] = vkick_new[i];
-        }
-        else {
-            vkick[0] = vm + vperp * std::cos(zeta);
-            vkick[1] = vperp * std::sin(zeta);
-            vkick[2] = vpar;
-        }
-    }
-
     //! (Necessary) modify the orbits and interrupt check 
     /*! check the inner left binary whether their separation is smaller than particle radius sum and become close, if true, set one component stauts to merger with cm mass and the other unused with zero mass. Return the binary tree address 
       @param[in] _bin_interrupt: interrupt binary information: adr: binary tree address; time_now: current physical time; time_end: integration finishing time; status: interrupt status: change, merge,none
@@ -1178,7 +972,8 @@ public:
                             for (int k=0; k<3; k++) pk->vel[k] += dv[k];
                         }
                     }
-                    //GW merger
+
+                    //calculate kick velocity for GW merger
                     if (!kick_flag && mass_zero_flag && (p1->star.kw == 14 || p2->star.kw == 14)) {
                         // pos_red :dr
                         //_bin.am:L
@@ -1187,16 +982,24 @@ public:
                         std::array<Float, 3> L = {_bin.am.x, _bin.am.y, _bin.am.z};
                         std::array<Float,3> dr = {pos_red.x,pos_red.y,pos_red.z};
                         Float q = 0.8;
-                        Float c = 299792.458;
-                        std::array<Float, 3> Chi1 = uniformPointsInsideSphere();
-                        std::array<Float, 3> Chi2 = uniformPointsInsideSphere();
+                        std::array<Float, 3> Chi1 = gw_kick.uniformPointsInsideSphere();
+                        std::array<Float, 3> Chi2 = gw_kick.uniformPointsInsideSphere();
+                    
                         Float vkick[3];
+                        gw_kick.calcKickVel(vkick, Chi1.data(), Chi2.data(), L, dr, q);
 
-                        calcBHKick(vkick, Chi1.data(), Chi2.data(), L, dr, q, c);
-                        for (int i = 0;i<3;i++){
-                            std::cout<<vkick[i]<<std::endl;
+                        if (p1->mass>0.0) {
+                            for (int k=0; k<3; k++) {
+                                p1->vel[k] += vkick[k];
+                            }
+                        else {
+                            for (int k=0; k<3; k++) {
+                                p2->vel[k] += vkick[k];
+                            }
                         }
+                        kick_flag = true;           
                     }
+
                     if (!kick_flag && !mass_zero_flag) {
                         // case for elliptic case
                         if (ecc>=0.0&&ecc<=1.0) {
@@ -1343,6 +1146,7 @@ public:
                     int binary_type_final=0;
                     int nmax = bin_event.getEventNMax();
                     int binary_type_init = bin_event.getType(bin_event.getEventIndexInit());
+                    int merger_event_index = -1; // record binary event index for merger, if no merger, is -1
                     for (int i=0; i<nmax; i++) {
                         int binary_type = bin_event.getType(i);
                         if (binary_type>0) {
@@ -1372,13 +1176,65 @@ public:
 
                             //if (vkick[3]>0||vkick[7]>0) event_flag = 3; // kick
                             if (binary_type>0) event_flag = std::max(event_flag, 1); // type change
-                            else if (bse_manager.isMassTransfer(binary_type)) event_flag = std::max(event_flag, 2); // orbit change
+                            if (bse_manager.isMassTransfer(binary_type)) event_flag = std::max(event_flag, 2); // orbit change
                             else if (bse_manager.isDisrupt(binary_type)) event_flag = std::max(event_flag, 3); // disrupt
-                            else if (bse_manager.isMerger(binary_type) || bse_manager.isNoRemnant(binary_type)) event_flag = std::max(event_flag, 4); // Merger or no Remnant
+                            else if (bse_manager.isMerger(binary_type)) {
+                                event_flag = std::max(event_flag, 4); // Merger
+                                if (merger_event_index==-1) merger_event_index = i; // avoid save index twice
+                            }
+                            else if (bse_manager.isNoRemnant(binary_type)) event_flag = std::max(event_flag, 5); // no Remnant
                             binary_type_final = binary_type;
+
                         }
                         else if(binary_type<0) break;
                     }
+
+                    // check event_flag
+                    if (event_flag<=2) {
+                        Float m1 = bse_manager.getMass(p1->star);
+                        Float m2 = bse_manager.getMass(p2->star);
+                        ASSERT(m1>0&&m2>0); 
+                    }
+
+                    // check GW merger
+                    if (merger_event_index>=0) {
+                        Float m1 = bse_manager.getMass(p1->star);
+                        Float m2 = bse_manager.getMass(p2->star);
+                        ASSERT(m1==0.0 || m2==0.0);
+                        ASSERT(!(m1==0.0 && m2==0.0));
+
+                        int merger_index;
+                        if (m1==0.0) merger_index = 1;
+                        else merger_index = 0;
+
+                        int type1, type2;    
+                        Float q; // mass ratio
+                        std::array<Float,3> L = {_bin.am.x, _bin.am.y, _bin.am.z}; // angular momentum
+                        std::array<Float,3> dr = {pos_red.x,pos_red.y,pos_red.z};  // relative position
+                                                
+                        if (merger_event_index==0) {
+                            type1 = p1_star_bk.kw;
+                            type2 = p2_star_bk.kw;
+                            q = m1/m2;
+                            if (q>1) q = 1/q;
+                        }
+                        else {
+                            type1 = bin_event.getType1(merger_event_index-1);
+                            type2 = bin_event.getType2(merger_event_index-1);
+                            ASSERT(bin_event.getMass1(merger_event_index-1);
+                            Float_m1_pre = bin_event.getMass1(merger_event_index-1);
+                            Float_m2_pre = bin_event.getMass2(merger_event_index-1);
+                            ASSERT(Float_m1_pre>0 && Float_m2_pre>0);
+                            q = bin_event.getMassRatio(merger_event_index-1);
+                        }
+                        
+                        std::array<Float, 3> Chi1 = gw_kick.uniformPointsInsideSphere();
+                        std::array<Float, 3> Chi2 = gw_kick.uniformPointsInsideSphere();
+                    
+                        Float vkick[3];
+                        gw_kick.calcKickVel(vkick, Chi1.data(), Chi2.data(), L, dr, q);
+                    }
+
 
                     // update semi
                     mtot = bse_manager.getMass(p1->star) + bse_manager.getMass(p2->star);

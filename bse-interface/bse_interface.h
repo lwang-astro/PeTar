@@ -525,6 +525,98 @@ public:
         record[19][_index] = _p2.ospin;
     }
 
+    //! get mass of the first star
+    double getMass1(const int index) const {
+        return record[1][index];
+    }
+
+    //! get mass of the second star
+    double getMass2(const int index) const {
+        return record[2][index];
+    }
+
+    //! get mass ratio (0<=q<=1.0)
+    double getMassRatio(const int index) const {
+        double q = record[1][index]/record[2][index];
+        if (q>1) q = 1.0/q;
+        return q;
+    }
+
+    //! get semi-major axis
+    double getSemi(const int index) const {
+        return record[5][index];
+    }
+
+    //! get eccentricity
+    double getEcc(const int index) const {
+        return record[6][index];
+    }
+
+    //! get the event time
+    double getTime(const int index) const {
+        return record[0][index];
+    }
+
+    //! get stellar type of the first star
+    int getType1(const int index) const {
+        return int(record[3][index]);
+    }
+
+    //! get stellar type of the second star
+    int getType2(const int index) const {
+        return int(record[4][index]);
+    }
+
+    //! get stellar radius of the first star
+    double getRad1(const int index) const {
+        return record[12][index];
+    }
+
+    //! get stellar radius of the second star
+    double getRad2(const int index) const {
+        return record[13][index];
+    }
+
+    //! get stellar luminosity of the first star
+    double getLum1(const int index) const {
+        return record[10][index];
+    }
+
+    //! get stellar luminosity of the second star
+    double getLum2(const int index) const {
+        return record[11][index];
+    }
+
+    //! get stellar core mass of the first star
+    double getMCore1(const int index) const {
+        return record[14][index];
+    }
+
+    //! get stellar core mass of the second star
+    double getMCore2(const int index) const {
+        return record[15][index];
+    }
+
+    //! get stellar core radius of the first star
+    double getRCore1(const int index) const {
+        return record[16][index];
+    }
+
+    //! get stellar core radius of the second star
+    double getRCore2(const int index) const {
+        return record[17][index];
+    }
+
+    //! get stellar spin of the first star
+    double getSpin1(const int index) const {
+        return record[18][index];
+    }
+
+    //! get stellar spin of the second star
+    double getSpin2(const int index) const {
+        return record[19][index];
+    }        
+
     //! set binary type to -1 for the given event index to indicate the end of record
     void setEventIndexEnd(const int index) {
         record[9][index] = -1;
