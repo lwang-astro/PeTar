@@ -94,7 +94,8 @@ do
 	rm -f $fout$s.dynamic_merge.tmp
 	egrep '^SN_kick' $fout$s |sed 's/SN_kick//g' >$fout$s.sn_kick
 	egrep '^Tide' $fout$s |sed 's/Tide//g' >$fout$s.tide
-	egrep -v '^(Dynamic_merge|SN_kick|Tide)' $fout$s |awk '{for (i=2;i<=NF;i++) printf("%s ", $i); printf("\n")}' >$fout$s.type_change
+	egrep '^GW_kick' $fout$s |sed 's/GW_kick//g' >$fout$s.gw_kick
+	egrep -v '^(Dynamic_merge|SN_kick|Tide|GW_kick)' $fout$s |awk '{for (i=2;i<=NF;i++) printf("%s ", $i); printf("\n")}' >$fout$s.type_change
     fi
 done
 

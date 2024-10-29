@@ -663,6 +663,35 @@ class BSEMerge(DictNpArrayMix):
         """
         DictNpArrayMix.printTable(self, column_format, print_title)
 
+class GWKick(DictNpArrayMix):
+    """ Gravitational wave kick data
+    Keys: (class members)
+        id1 (1D): particle id of component 1
+        id2 (1D): particle id of component 2
+        kindex (1D): index of component which has final mass and GW kick
+        vkick (3D,3): kick velocity (km/s), vx, vy, vz
+        time (1D): time of the merger (Myr)
+        m1 (1D): particle mass of component 1 before merger
+        m2 (1D): particle mass of component 2 before merger
+        mf (1D): final mass after merger
+        semi (1D): semi-major axis before merger (Rsun)
+        ecc (1D): eccentricity before merger
+        chi1 (3D,3): dimensionless spin of particle 1
+        chi2 (3D,3): dimensionless spin of particle 2
+        am   (2D,3): specific angular momemtum x, y, z
+        dr   (2D,3): relative position vector from particle 1 to 2
+    """
+
+    def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
+        """ DictNpArrayMix type initialzation using key list, see help(DictNpArrayMix.__init__)
+        """
+        keys=[['id1', np.int64], ['id2', np.int64], ['kindex', np.int64], ['vkick', (np.float64, 3)], 
+              ['time', np.float64], ['m1', np.float64], ['m2', np.float64], ['mf', np.float64], 
+              ['semi', np.float64], ['ecc', np.float64], ['chi1', (np.float64, 3)], ['chi2', (np.float64, 3)], 
+              ['am', (np.float64, 3)], ['dr', (np.float64, 3)]]
+        DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
+
+
 def find_merge_tree(merger_list, merger_root):
     """ Find the merger tree for a given merger
     Parameters:

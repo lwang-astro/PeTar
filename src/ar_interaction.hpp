@@ -65,7 +65,7 @@ public:
 #ifdef STELLAR_EVOLUTION
         ASSERT(time_interrupt_max>=0.0);
 #ifdef BSE_BASE
-        ASSERT(stellar_evolution_option==0 || (stellar_evolution_option==1 && bse_manager.checkParams()) || (stellar_evolution_option==2 && bse_manager.checkParams() && tide.checkParams() && GWkick.checkParams()));
+        ASSERT(stellar_evolution_option==0 || (stellar_evolution_option==1 && bse_manager.checkParams()) || (stellar_evolution_option==2 && bse_manager.checkParams() && tide.checkParams() && gw_kick.checkParams()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_sse.is_open()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_bse.is_open()));
 #else
@@ -870,7 +870,7 @@ public:
             auto* p2 = _bin.getRightMember();
 
 #ifdef BSE_BASE
-            auto postProcess =[&](StarParameterOut* out, Float* pos_cm, Float*vel_cm, Float& semi, Float& ecc, int binary_type_final) {
+            auto postProcess =[&](StarParameterOut* out, Float* pos_cm, Float*vel_cm, Float& semi, Float& ecc, int binary_type_final=0, double vkick[][4]=NULL) {
                 // if status not set, set to change
                 if (_bin_interrupt.status == AR::InterruptStatus::none) 
                     _bin_interrupt.status = AR::InterruptStatus::change;
@@ -951,51 +951,16 @@ public:
                         mass_zero_flag = true;
                     }
 
-                    // case when SN kick appears
-                    bool kick_flag=false;
-                    for (int k=0; k<2; k++) {
-                        double dv[4];
-                        auto* pk = _bin.getMember(k);
-                        dv[3] = bse_manager.getVelocityChange(dv,out[k]);
-                        if (dv[3]>0) {
-                            kick_flag=true;
-#pragma omp critical 
-                            {
-                                fout_bse<<"SN_kick "
-                                        <<std::setw(WRITE_WIDTH)<<p1->id
-                                        <<std::setw(WRITE_WIDTH)<<p2->id
-                                        <<std::setw(WRITE_WIDTH)<<k+1
-                                        <<std::setw(WRITE_WIDTH)<<dv[3]*bse_manager.vscale;
-                                pk->star.printColumn(fout_bse, WRITE_WIDTH);
-                                fout_bse<<std::endl;
-                            }
-                            for (int k=0; k<3; k++) pk->vel[k] += dv[k];
-                        }
-                    }
-
-                    //calculate kick velocity for GW merger
-                    if (!kick_flag && mass_zero_flag && (p1->star.kw == 14 || p2->star.kw == 14)) {
-                        // pos_red :dr
-                        //_bin.am:L
-                        COMM::Vector3<Float> pos_red(p2->pos[0] - p1->pos[0], p2->pos[1] - p1->pos[1], p2->pos[2] - p1->pos[2]);
-                        COMM::Vector3<Float> vel_red(p2->vel[0] - p1->vel[0], p2->vel[1] - p1->vel[1], p2->vel[2] - p1->vel[2]);
-                        Float q = 0.8;
-                        std::array<Float, 3> Chi1 = gw_kick.uniformPointsInsideSphere();
-                        std::array<Float, 3> Chi2 = gw_kick.uniformPointsInsideSphere();
-                    
-                        Float vkick[3];
-                        gw_kick.calcKickVel(vkick, Chi1.data(), Chi2.data(), _bin.am, pos_red, q);
-
-                        if (p1->mass>0.0) {
-                            for (int k=0; k<3; k++) {
-                                p1->vel[k] += vkick[k];
-                            }
-                        else {
-                            for (int k=0; k<3; k++) {
-                                p2->vel[k] += vkick[k];
+                    // case when velocity kick appears
+                    bool kick_flag = false;
+                    if (vkick!=NULL) {
+                        for (int k=0; k<2; k++) {
+                            if (vkick[k][3]>0.0) {
+                                auto* pk = _bin.getMember(k);
+                                kick_flag = true;    
+                                for (int i=0; i<3; i++) pk->vel[i] += vkick[k][i];
                             }
                         }
-                        kick_flag = true;           
                     }
 
                     if (!kick_flag && !mass_zero_flag) {
@@ -1189,9 +1154,26 @@ public:
 
                     // check event_flag
                     if (event_flag<=2) {
-                        Float m1 = bse_manager.getMass(p1->star);
-                        Float m2 = bse_manager.getMass(p2->star);
-                        ASSERT(m1>0&&m2>0); 
+                        ASSERT(bse_manager.getMass(p1->star)>0 && bse_manager.getMass(p2->star)>0); 
+                    }
+
+                    // check SN event
+                    Float vkick[2][4];
+                    for (int k=0; k<2; k++) {
+                        auto* pk = _bin.getMember(k);
+                        vkick[k][3] = bse_manager.getVelocityChange(vkick[k], out[k]);    
+                        if (vkick[k][3]>0) {
+#pragma omp critical 
+                            {
+                                fout_bse<<"SN_kick "
+                                        <<std::setw(WRITE_WIDTH)<<p1->id
+                                        <<std::setw(WRITE_WIDTH)<<p2->id
+                                        <<std::setw(WRITE_WIDTH)<<k+1
+                                        <<std::setw(WRITE_WIDTH)<<vkick[k][3]*bse_manager.vscale;
+                                pk->star.printColumn(fout_bse, WRITE_WIDTH);
+                                fout_bse<<std::endl;
+                            }
+                        }
                     }
 
                     // check GW merger
@@ -1202,73 +1184,77 @@ public:
                         ASSERT(!(m1==0.0 && m2==0.0));
 
                         int type1, type2;    
-                        Float q; // mass ratio
+                        Float q, m1_pre, m2_pre, mf, semi_pre, ecc_pre; // mass ratio
                                                 
                         if (merger_event_index==0) {
                             type1 = p1_star_bk.kw;
                             type2 = p2_star_bk.kw;
-                            q = m1/m2;
+                            m1_pre = bse_manager.getMass(p1_star_bk);
+                            m2_pre = bse_manager.getMass(p2_star_bk);
+                            q = m1_pre/m2_pre;
                             if (q>1) q = 1/q;
+                            semi_pre = _bin.semi;
+                            ecc_pre = _bin.ecc;
                         }
                         else {
                             type1 = bin_event.getType1(merger_event_index-1);
                             type2 = bin_event.getType2(merger_event_index-1);
-                            ASSERT(bin_event.getMass1(merger_event_index-1);
-                            Float_m1_pre = bin_event.getMass1(merger_event_index-1);
-                            Float_m2_pre = bin_event.getMass2(merger_event_index-1);
-                            ASSERT(Float_m1_pre>0 && Float_m2_pre>0);
+                            m1_pre = bin_event.getMass1(merger_event_index-1);
+                            m2_pre = bin_event.getMass2(merger_event_index-1);
+                            ASSERT(m1_pre>0 && m2_pre>0);
                             q = bin_event.getMassRatio(merger_event_index-1);
+                            semi_pre = bin_event.getSemi(merger_event_index-1);
+                            ecc_pre = bin_event.getEcc(merger_event_index-1);
                         }
+                        Float tmerge = bin_event.getTime(merger_event_index);
+                        // GW with NS or BH binaries
+                        if (type1>=13 && type1<=14 && type2>=13 && type2<=14) {
                         
-                        std::array<Float, 3> Chi1 = gw_kick.uniformPointsInsideSphere();
-                        std::array<Float, 3> Chi2 = gw_kick.uniformPointsInsideSphere();
+                            std::array<Float, 3> chi1 = gw_kick.uniformPointsInsideSphere(0.8);
+                            std::array<Float, 3> chi2 = gw_kick.uniformPointsInsideSphere(0.8);
                     
-                        // save kick to output                    
-                        Float* vkick;
-                        auto* pk;
-                        if (m1==0.0) {
-                            vkick = out[0].vkick;
-                            pk = p1;
-                        }
-                        else {
-                            vkick = out[1].vkick;
-                            pk = p2;
-                        }
-                        gw_kick.calcKickVel(vkick, Chi1.data(), Chi2.data(), _bin.am, pos_red, q);
-#pragma omp critical 
-                        {
-                            fout_bse<<"GW_kick "
-                                    <<std::setw(WRITE_WIDTH)<<p1->id
-                                    <<std::setw(WRITE_WIDTH)<<p2->id
-                                    <<std::setw(WRITE_WIDTH)<<k+1
-                                    <<std::setw(WRITE_WIDTH)<<vkick[3]*gw_kick.vscale
-                                    <<std::setw(WRITE_WIDTH)<<Chi1[0]
-                                    <<std::setw(WRITE_WIDTH)<<Chi1[1]
-                                    <<std::setw(WRITE_WIDTH)<<Chi1[2]
-                                    <<std::setw(WRITE_WIDTH)<<Chi2[0]
-                                    <<std::setw(WRITE_WIDTH)<<Chi2[1]
-                                    <<std::setw(WRITE_WIDTH)<<Chi2[2]
-                            _bin.printBinaryTreeIter(fout_bse, WRITE_WIDTH);
-                            pk->star.printColumn(fout_bse, WRITE_WIDTH);
-                            fout_bse<<std::endl;
-                        }
-                    }
-
-                    // case when SN kick appears
-                    for (int k=0; k<2; k++) {
-                        auto* pk = _bin.getMember(k);
-                        double dv[4];
-                        dv[3] = bse_manager.getVelocityChange(dv,out[k]);    
-                        if (dv[3]>0) {
+                            // save kick to output                    
+                            int k;
+                            if (m1==0.0) {
+                                mf = m2;
+                                k = 1;    
+                            }
+                            else {
+                                mf = m1;
+                                k = 0;
+                            }
+                            Float vkick_gw[3];
+                            gw_kick.calcKickVel(vkick_gw, chi1.data(), chi2.data(), &(_bin.am.x), &(pos_red.x), q);
+                            for (int i=0; i<3; i++) vkick[k][i] += vkick_gw[i];
+                            vkick[k][3] = sqrt(vkick[k][0]*vkick[k][0] + vkick[k][1]*vkick[k][1] + vkick[k][2]*vkick[k][2]);
 #pragma omp critical 
                             {
-                                fout_bse<<"SN_kick "
+                                fout_bse<<"GW_kick "
                                         <<std::setw(WRITE_WIDTH)<<p1->id
                                         <<std::setw(WRITE_WIDTH)<<p2->id
                                         <<std::setw(WRITE_WIDTH)<<k+1
-                                        <<std::setw(WRITE_WIDTH)<<dv[3]*bse_manager.vscale;
-                                pk->star.printColumn(fout_bse, WRITE_WIDTH);
-                                fout_bse<<std::endl;
+                                        <<std::setw(WRITE_WIDTH)<<vkick_gw[0]*gw_kick.vscale
+                                        <<std::setw(WRITE_WIDTH)<<vkick_gw[1]*gw_kick.vscale
+                                        <<std::setw(WRITE_WIDTH)<<vkick_gw[2]*gw_kick.vscale
+                                        <<std::setw(WRITE_WIDTH)<<tmerge
+                                        <<std::setw(WRITE_WIDTH)<<m1_pre
+                                        <<std::setw(WRITE_WIDTH)<<m2_pre
+                                        <<std::setw(WRITE_WIDTH)<<mf
+                                        <<std::setw(WRITE_WIDTH)<<semi_pre
+                                        <<std::setw(WRITE_WIDTH)<<ecc_pre
+                                        <<std::setw(WRITE_WIDTH)<<chi1[0]
+                                        <<std::setw(WRITE_WIDTH)<<chi1[1]
+                                        <<std::setw(WRITE_WIDTH)<<chi1[2]
+                                        <<std::setw(WRITE_WIDTH)<<chi2[0]
+                                        <<std::setw(WRITE_WIDTH)<<chi2[1]
+                                        <<std::setw(WRITE_WIDTH)<<chi2[2]
+                                        <<std::setw(WRITE_WIDTH)<<_bin.am.x
+                                        <<std::setw(WRITE_WIDTH)<<_bin.am.y
+                                        <<std::setw(WRITE_WIDTH)<<_bin.am.z
+                                        <<std::setw(WRITE_WIDTH)<<pos_red.x
+                                        <<std::setw(WRITE_WIDTH)<<pos_red.y
+                                        <<std::setw(WRITE_WIDTH)<<pos_red.z
+                                        <<std::endl;
                             }
                         }
                     }
@@ -1278,7 +1264,7 @@ public:
                     semi = COMM::Binary::periodToSemi(period, mtot, gravitational_constant);
 
                     // change p1 and p2 due to output from stellar evolution
-                    postProcess(out, pos_cm, vel_cm, semi, ecc, binary_type_final);
+                    postProcess(out, pos_cm, vel_cm, semi, ecc, binary_type_final, vkick);
                 }
             }
 #endif // BSE_BASE
@@ -1325,7 +1311,7 @@ public:
                         Float ecc = _bin.ecc;
                         bse_manager.merge(p1->star, p2->star, out[0], out[1], semi, ecc);
 
-                        postProcess(out, pos_cm, vel_cm, semi, ecc, 0);
+                        postProcess(out, pos_cm, vel_cm, semi, ecc);
                         if (stellar_evolution_write_flag&&(p1->mass==0.0||p2->mass==0.0)) {
 #pragma omp critical
                             {

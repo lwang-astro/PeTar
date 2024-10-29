@@ -1,9 +1,10 @@
 #pragma once
 
-#include "Common/Float.h"
 #include <array>
 #include <tuple>
-#include "rand.hpp"
+#include "../parallel-random/rand.hpp"
+
+#define Float double
 
 //! Gravitational wave recoil kick calculater
 class GWKick{
@@ -11,13 +12,14 @@ public:
     Float speed_of_light;  ///> speed of light (km/s)
     Float vscale;          ///> velocity scale (km/s to pc/Myr)
 
-    GWKick(): speed_of_light(-1) vscale(-1) {}
+    GWKick(): speed_of_light(-1), vscale(-1) {}
 
     //! check whether parameters values are correct
     /*! \return true: all correct
      */
     bool checkParams() {
         ASSERT(speed_of_light>0.0);
+        ASSERT(vscale>0.0);
         return true;
     }        
 
@@ -42,7 +44,7 @@ public:
     }
 
     // Function to generate kick velocity of a GW merger with spins
-    /*! @param[out] vkick: kick velocity
+    /*! @param[out] vkick: kick velocity: [vx, vy, vz]
         @param[in] _Chi1: spin of the primary body
         @param[in] _Chi2: spin of the secondary body
         @param[in] _L: orbital angular momentum
@@ -62,7 +64,7 @@ public:
 
         const std::array<Float, 3> L = {_L[0], _L[1], _L[2]};
         const std::array<Float,3> dr = {_dr[0], _dr[1], _dr[2]};
-        const Float& c = speed_of_light;
+        //const Float& c = speed_of_light;
 
         auto norm = [&](const std::array<Float, 3>& vec) {
             return std::sqrt(vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2]);
@@ -183,7 +185,7 @@ public:
         const Float VC = 1506.52; // km/s
         const Float C2 = 1140.0; // km/s
         const Float C3 = 2481.0; // km/s
-        const Float M_pi = COMM::PI;
+        const Float M_pi = 3.14159265358979323846;
         std::array<Float, 3> hatS1 = normalize(Chi1);
         std::array<Float, 3> hatS2 = normalize(Chi2);
 
@@ -210,7 +212,8 @@ public:
         Float vpar = 16.0 * eta * eta * (Delta_perp * (V11 + 2.0 * VA * chit_par + 4.0 * VB * pow(chit_par, 2) + 8.0 * VC * pow(chit_par, 3)) + chit_perp * Delta_par * (2.0 * C2 + 4.0 * C3 * chit_par)) * std::cos(bigTheta);
         
         std::array<Float, 3> vkick_new;
-        if (inverteraxisl) {
+        if (inverteraxisl)
+         {
             std::array<Float, 3> vkick_L = { vm + vperp * std::cos(zeta), vperp * std::sin(zeta), vpar };
             //for (int i = 0; i < 3; i++)
             //   std::cout << vkick_L[i] << std::endl;
@@ -219,7 +222,6 @@ public:
         else {
             vkick_new = { vm + vperp * std::cos(zeta), vperp * std::sin(zeta), vpar };
         }
-        for (int i = 0; i < 3; i++) vkick[i] = vkick_new[i];
-        vkick[3] = norm(vkick);
+        for (int i = 0; i < 3; i++) vkick[i] = vkick_new[i]/vscale;
     }
 };

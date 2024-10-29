@@ -3345,6 +3345,8 @@ public:
         if (input_parameters.stellar_evolution_option.value>0) {
             hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters, print_flag);
             hard_manager.ar_manager.interaction.tide.speed_of_light = hard_manager.ar_manager.interaction.bse_manager.getSpeedOfLight();
+            hard_manager.ar_manager.interaction.gw_kick.vscale = bse_parameters.vscale.value;
+            hard_manager.ar_manager.interaction.gw_kick.speed_of_light = hard_manager.ar_manager.interaction.bse_manager.getSpeedOfLight()*bse_parameters.vscale.value;
         }
         rand_manager.initialAll(rand_parameters);
         rand_manager.printRandSeeds(std::cout);

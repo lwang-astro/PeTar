@@ -7,6 +7,8 @@
 #include "bse_interface.h"
 #include "../src/io.hpp"
 #include "../parallel-random/rand_interface.hpp"
+#define ASSERT assert
+#include "../src/gw_kick.hpp"
 
 const int WRITE_WIDTH=23;
 const int WRITE_PRECISION=14;
@@ -81,6 +83,7 @@ int main(int argc, char** argv){
                  <<"    -f [S]: the prefix of data file that save the stellar evolution data, if not given, this file is not generated\n"
                  <<"            * The files [prefix].["<<sse_prefix<<"/"<<bse_prefix<<"].type_change store single or binary types change; if -o is used, save data every step\n"
                  <<"            * The files [prefix].["<<sse_prefix<<"/"<<bse_prefix<<"].sn_kick store supernovae kick events\n"
+                 <<"            * The files [prefix].["<<bse_prefix<<"].gw_kick store gravitational wave kick events\n"
                  <<"    -h    : help\n";
     };
 
@@ -191,10 +194,14 @@ int main(int argc, char** argv){
 
     BSEManager bse_manager;
     RandomManager rand_manager;
+    GWKick gw_kick;
     bse_manager.initial(bse_io, true);
     rand_manager.initialAll(rand_io);
     rand_manager.printRandSeeds(std::cout);
+    gw_kick.vscale = bse_manager.vscale;
+    gw_kick.speed_of_light = bse_manager.getSpeedOfLight()*gw_kick.vscale;
     assert(bse_manager.checkParams());
+    assert(gw_kick.checkParams());
 
     // argc is 1 no input is given
     opt_used++;
@@ -368,13 +375,15 @@ int main(int argc, char** argv){
     if (bin.size()>0) {
 
         // open output file
-        std::ofstream fout_bse_type, fout_bse_sn;
+        std::ofstream fout_bse_type, fout_bse_sn, fout_gw_kick;
         if (output_flag) {
             std::string bse_suffix=BSEManager::getBSEOutputFilenameSuffix();
             fout_bse_type.open((fprint_name+bse_suffix+std::string(".type_change")).c_str(), std::ofstream::out);
             fout_bse_sn.open((fprint_name+bse_suffix+std::string(".sn_kick")).c_str(), std::ofstream::out);
+            fout_gw_kick.open((fprint_name+bse_suffix+std::string(".gw_kick")).c_str(), std::ofstream::out);
             fout_bse_type<<std::setprecision(WRITE_PRECISION);
             fout_bse_sn<<std::setprecision(WRITE_PRECISION);
+            fout_gw_kick<<std::setprecision(WRITE_PRECISION);
         }
 
         int nbin = bin.size();
@@ -409,7 +418,7 @@ int main(int argc, char** argv){
                 bin[i].semi = std::pow(period_myr*period_myr*G*mtot/(4*PI*PI),1.0/3.0)*pc_to_rsun;
 
                 StarParameter p1_star_bk = bin[i].star[0];
-                StarParameter p2_star_bk = bin[1].star[1];
+                StarParameter p2_star_bk = bin[i].star[1];
                 
                 // evolve function
                 int event_flag=bse_manager.evolveBinary(bin[i].star[0],bin[i].star[1],bin[i].out[0],bin[i].out[1],bin[i].semi,bin[i].period,bin[i].ecc,bin[i].bse_event, bin_type_last, dt);
@@ -440,6 +449,7 @@ int main(int argc, char** argv){
                 int nmax = bin[i].bse_event.getEventNMax();
                 int bin_type_init = bin[i].bse_event.getType(bin[i].bse_event.getEventIndexInit());
                 bin_type_last = bin_type_init;
+                int merger_event_index = -1; // record binary event index for merger, if no merger, is -1
                 for (int k=0; k<nmax; k++) {
                     int binary_type = bin[i].bse_event.getType(k);
                     if (binary_type>0) {
@@ -465,6 +475,9 @@ int main(int argc, char** argv){
                             }
                         }
                         bin_type_last = binary_type;
+                        if (bse_manager.isMerger(binary_type)) {
+                            if (merger_event_index==-1) merger_event_index = i; // avoid save index twice
+                        }
                     }
                     else if (binary_type<0) {
                         if (always_output_flag) {
@@ -474,9 +487,9 @@ int main(int argc, char** argv){
                         }
                         break;
                     }
-                
                 }
 
+                // check SN event
                 for (int k=0; k<2; k++) {
                     double dv[4];
                     dv[3] = bse_manager.getVelocityChange(dv,bin[i].out[k]);
@@ -498,6 +511,100 @@ int main(int argc, char** argv){
                         kick_print_flag[k]=true;
                     }
                 }
+                
+                // check GW merger
+                if (merger_event_index>=0) {
+                    Float m1 = bse_manager.getMass(bin[i].star[0]);
+                    Float m2 = bse_manager.getMass(bin[i].star[1]);
+                    ASSERT(m1==0.0 || m2==0.0);
+                    ASSERT(!(m1==0.0 && m2==0.0));
+    
+                    int type1, type2;    
+                    Float q, m1_pre, m2_pre, mf, semi_pre, ecc_pre; // mass ratio
+                    auto& bin_event = bin[i].bse_event;
+                        
+                    if (merger_event_index==0) {
+                        type1 = p1_star_bk.kw;
+                        type2 = p2_star_bk.kw;
+                        m1_pre = bse_manager.getMass(p1_star_bk);
+                        m2_pre = bse_manager.getMass(p2_star_bk);
+                        q = m1_pre/m2_pre;
+                        if (q>1) q = 1/q;
+                        semi_pre = bin[i].semi;
+                        ecc_pre = bin[i].ecc;
+                    }
+                    else {
+                        type1 = bin_event.getType1(merger_event_index-1);
+                        type2 = bin_event.getType2(merger_event_index-1);
+                        m1_pre = bin_event.getMass1(merger_event_index-1);
+                        m2_pre = bin_event.getMass2(merger_event_index-1);
+                        ASSERT(m1_pre>0 && m2_pre>0);
+                        q = bin_event.getMassRatio(merger_event_index-1);
+                        semi_pre = bin_event.getSemi(merger_event_index-1);
+                        ecc_pre = bin_event.getEcc(merger_event_index-1);    
+                    }
+                    Float tmerge = bin_event.getTime(merger_event_index);
+                    // GW with NS or BH binaries
+                    if (type1>=13 && type1<=14 && type2>=13 && type2<=14) {
+                        
+                        std::array<Float, 3> chi1 = gw_kick.uniformPointsInsideSphere(0.8);
+                        std::array<Float, 3> chi2 = gw_kick.uniformPointsInsideSphere(0.8);
+                        
+                        // save kick to output                    
+                        int kick_index;
+                        if (m1==0.0) {
+                            mf = m2;
+                            kick_index = 1;    
+                        }
+                        else {
+                            mf = m1;
+                            kick_index = 0;
+                        }
+                        Float L[3] = {0.0, 0.0, 1.0};
+                        Float dr[3] = {1.0, 0.0, 0.0};
+                        Float vkick[3];
+                        gw_kick.calcKickVel(vkick, chi1.data(), chi2.data(), L, dr, q);
+#pragma omp critical      
+                        {
+                            fout_gw_kick<<std::setw(WRITE_WIDTH)<<2*i+1
+                                        <<std::setw(WRITE_WIDTH)<<2*i+2
+                                        <<std::setw(WRITE_WIDTH)<<kick_index+1
+                                        <<std::setw(WRITE_WIDTH)<<vkick[0]*gw_kick.vscale
+                                        <<std::setw(WRITE_WIDTH)<<vkick[1]*gw_kick.vscale
+                                        <<std::setw(WRITE_WIDTH)<<vkick[2]*gw_kick.vscale
+                                        <<std::setw(WRITE_WIDTH)<<tmerge
+                                        <<std::setw(WRITE_WIDTH)<<m1_pre
+                                        <<std::setw(WRITE_WIDTH)<<m2_pre
+                                        <<std::setw(WRITE_WIDTH)<<mf
+                                        <<std::setw(WRITE_WIDTH)<<semi_pre
+                                        <<std::setw(WRITE_WIDTH)<<ecc_pre
+                                        <<std::setw(WRITE_WIDTH)<<chi1[0]
+                                        <<std::setw(WRITE_WIDTH)<<chi1[1]
+                                        <<std::setw(WRITE_WIDTH)<<chi1[2]
+                                        <<std::setw(WRITE_WIDTH)<<chi2[0]
+                                        <<std::setw(WRITE_WIDTH)<<chi2[1]
+                                        <<std::setw(WRITE_WIDTH)<<chi2[2]
+                                        <<std::setw(WRITE_WIDTH)<<L[0]
+                                        <<std::setw(WRITE_WIDTH)<<L[1]
+                                        <<std::setw(WRITE_WIDTH)<<L[2]
+                                        <<std::setw(WRITE_WIDTH)<<dr[0]
+                                        <<std::setw(WRITE_WIDTH)<<dr[1]
+                                        <<std::setw(WRITE_WIDTH)<<dr[2]
+                                        <<std::endl;
+                        }
+                        if (nbin==1) {
+                            std::cout<<"GW kick, time[Myr] = "<<tmerge<<" m1[M*] ="<<m1_pre<<" m2[M*] ="<<m2_pre
+                                    <<" chi1 ="<<chi1[0]<<" "<<chi1[1]<<" "<<chi1[2]
+                                    <<" chi2 ="<<chi2[0]<<" "<<chi2[1]<<" "<<chi2[2]
+                                    <<" vkick[km/s]="<<vkick[0]<<" "<<vkick[1]<<" "<<vkick[2]
+                                    <<std::endl;
+                        }   
+                    }   
+                }
+                else {
+                    assert(bse_manager.getMass(bin[i].star[0])>0 && bse_manager.getMass(bin[i].star[1])>0);     
+                }
+
                 double dt_miss = bse_manager.getDTMiss(bin[i].out[0]);
 
                 if (dt_miss!=0.0&&bin[i].star[0].kw>=15&&bin[i].star[1].kw>=15) break;
@@ -529,6 +636,7 @@ int main(int argc, char** argv){
         if (output_flag) {
             fout_bse_type.close();
             fout_bse_sn.close();
+            fout_gw_kick.close();
         }
     }
 
