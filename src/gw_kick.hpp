@@ -8,9 +8,10 @@
 //! Gravitational wave recoil kick calculater
 class GWKick{
 public:    
-    Float speed_of_light;  ///> speed of light
+    Float speed_of_light;  ///> speed of light (km/s)
+    Float vscale;          ///> velocity scale (km/s to pc/Myr)
 
-    GWKick(): speed_of_light(-1) {}
+    GWKick(): speed_of_light(-1) vscale(-1) {}
 
     //! check whether parameters values are correct
     /*! \return true: all correct
@@ -44,8 +45,8 @@ public:
     /*! @param[out] vkick: kick velocity
         @param[in] _Chi1: spin of the primary body
         @param[in] _Chi2: spin of the secondary body
-        @param[in] L: orbital angular momentum
-        @param[in] dr: separation vector
+        @param[in] _L: orbital angular momentum
+        @param[in] _dr: separation vector
         @param[in] q: mass ratio
         @param[in] maxkick: whether to calculate the maximum kick (false)
         @param[in] inverteraxisl: whether to invert the axis of L (true)
@@ -53,12 +54,14 @@ public:
     void calcKickVel(Float vkick[], 
         const Float _Chi1[], 
         const Float _Chi2[], 
-        const std::array<Float, 3>& L,
-        const std::array<Float, 3>& dr,
+        const Float _L[],
+        const Float _dr[],
         const Float& q, 
         bool maxkick = false,
         bool inverteraxisl = true ) {
 
+        const std::array<Float, 3> L = {_L[0], _L[1], _L[2]};
+        const std::array<Float,3> dr = {_dr[0], _dr[1], _dr[2]};
         const Float& c = speed_of_light;
 
         auto norm = [&](const std::array<Float, 3>& vec) {
@@ -206,18 +209,17 @@ public:
         Float vperp = H * eta * eta * Delta_par;
         Float vpar = 16.0 * eta * eta * (Delta_perp * (V11 + 2.0 * VA * chit_par + 4.0 * VB * pow(chit_par, 2) + 8.0 * VC * pow(chit_par, 3)) + chit_perp * Delta_par * (2.0 * C2 + 4.0 * C3 * chit_par)) * std::cos(bigTheta);
         
-
+        std::array<Float, 3> vkick_new;
         if (inverteraxisl) {
             std::array<Float, 3> vkick_L = { vm + vperp * std::cos(zeta), vperp * std::sin(zeta), vpar };
             //for (int i = 0; i < 3; i++)
             //   std::cout << vkick_L[i] << std::endl;
-            std::array<Float, 3> vkick_new =  calcInverterAxisL(L, dr, vkick_L); 
-            for (int i = 0; i < 3; i++) vkick[i] = vkick_new[i];
+            vkick_new =  calcInverterAxisL(L, dr, vkick_L); 
         }
         else {
-            vkick[0] = vm + vperp * std::cos(zeta);
-            vkick[1] = vperp * std::sin(zeta);
-            vkick[2] = vpar;
+            vkick_new = { vm + vperp * std::cos(zeta), vperp * std::sin(zeta), vpar };
         }
+        for (int i = 0; i < 3; i++) vkick[i] = vkick_new[i];
+        vkick[3] = norm(vkick);
     }
 };

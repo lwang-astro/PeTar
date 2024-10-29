@@ -979,14 +979,12 @@ public:
                         //_bin.am:L
                         COMM::Vector3<Float> pos_red(p2->pos[0] - p1->pos[0], p2->pos[1] - p1->pos[1], p2->pos[2] - p1->pos[2]);
                         COMM::Vector3<Float> vel_red(p2->vel[0] - p1->vel[0], p2->vel[1] - p1->vel[1], p2->vel[2] - p1->vel[2]);
-                        std::array<Float, 3> L = {_bin.am.x, _bin.am.y, _bin.am.z};
-                        std::array<Float,3> dr = {pos_red.x,pos_red.y,pos_red.z};
                         Float q = 0.8;
                         std::array<Float, 3> Chi1 = gw_kick.uniformPointsInsideSphere();
                         std::array<Float, 3> Chi2 = gw_kick.uniformPointsInsideSphere();
                     
                         Float vkick[3];
-                        gw_kick.calcKickVel(vkick, Chi1.data(), Chi2.data(), L, dr, q);
+                        gw_kick.calcKickVel(vkick, Chi1.data(), Chi2.data(), _bin.am, pos_red, q);
 
                         if (p1->mass>0.0) {
                             for (int k=0; k<3; k++) {
@@ -1203,14 +1201,8 @@ public:
                         ASSERT(m1==0.0 || m2==0.0);
                         ASSERT(!(m1==0.0 && m2==0.0));
 
-                        int merger_index;
-                        if (m1==0.0) merger_index = 1;
-                        else merger_index = 0;
-
                         int type1, type2;    
                         Float q; // mass ratio
-                        std::array<Float,3> L = {_bin.am.x, _bin.am.y, _bin.am.z}; // angular momentum
-                        std::array<Float,3> dr = {pos_red.x,pos_red.y,pos_red.z};  // relative position
                                                 
                         if (merger_event_index==0) {
                             type1 = p1_star_bk.kw;
@@ -1231,15 +1223,61 @@ public:
                         std::array<Float, 3> Chi1 = gw_kick.uniformPointsInsideSphere();
                         std::array<Float, 3> Chi2 = gw_kick.uniformPointsInsideSphere();
                     
-                        Float vkick[3];
-                        gw_kick.calcKickVel(vkick, Chi1.data(), Chi2.data(), L, dr, q);
+                        // save kick to output                    
+                        Float* vkick;
+                        auto* pk;
+                        if (m1==0.0) {
+                            vkick = out[0].vkick;
+                            pk = p1;
+                        }
+                        else {
+                            vkick = out[1].vkick;
+                            pk = p2;
+                        }
+                        gw_kick.calcKickVel(vkick, Chi1.data(), Chi2.data(), _bin.am, pos_red, q);
+#pragma omp critical 
+                        {
+                            fout_bse<<"GW_kick "
+                                    <<std::setw(WRITE_WIDTH)<<p1->id
+                                    <<std::setw(WRITE_WIDTH)<<p2->id
+                                    <<std::setw(WRITE_WIDTH)<<k+1
+                                    <<std::setw(WRITE_WIDTH)<<vkick[3]*gw_kick.vscale
+                                    <<std::setw(WRITE_WIDTH)<<Chi1[0]
+                                    <<std::setw(WRITE_WIDTH)<<Chi1[1]
+                                    <<std::setw(WRITE_WIDTH)<<Chi1[2]
+                                    <<std::setw(WRITE_WIDTH)<<Chi2[0]
+                                    <<std::setw(WRITE_WIDTH)<<Chi2[1]
+                                    <<std::setw(WRITE_WIDTH)<<Chi2[2]
+                            _bin.printBinaryTreeIter(fout_bse, WRITE_WIDTH);
+                            pk->star.printColumn(fout_bse, WRITE_WIDTH);
+                            fout_bse<<std::endl;
+                        }
                     }
 
+                    // case when SN kick appears
+                    for (int k=0; k<2; k++) {
+                        auto* pk = _bin.getMember(k);
+                        double dv[4];
+                        dv[3] = bse_manager.getVelocityChange(dv,out[k]);    
+                        if (dv[3]>0) {
+#pragma omp critical 
+                            {
+                                fout_bse<<"SN_kick "
+                                        <<std::setw(WRITE_WIDTH)<<p1->id
+                                        <<std::setw(WRITE_WIDTH)<<p2->id
+                                        <<std::setw(WRITE_WIDTH)<<k+1
+                                        <<std::setw(WRITE_WIDTH)<<dv[3]*bse_manager.vscale;
+                                pk->star.printColumn(fout_bse, WRITE_WIDTH);
+                                fout_bse<<std::endl;
+                            }
+                        }
+                    }
 
                     // update semi
                     mtot = bse_manager.getMass(p1->star) + bse_manager.getMass(p2->star);
                     semi = COMM::Binary::periodToSemi(period, mtot, gravitational_constant);
 
+                    // change p1 and p2 due to output from stellar evolution
                     postProcess(out, pos_cm, vel_cm, semi, ecc, binary_type_final);
                 }
             }
