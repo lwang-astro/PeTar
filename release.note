@@ -22,6 +22,7 @@
 20. Update the `petar.hard.debug` tool to support reading a dump file that contains a list of hard clusters.
 21. Remove the unused `time_org` in Hermite information.
 22. Add support for reading snapshot data in 128-bit floating-point format in the Python analysis tool.
+23. Add calculation of sound speed depending on pressure for gas drag mode.
 
 **Some existing issues include**
 
