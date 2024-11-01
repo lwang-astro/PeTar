@@ -2182,21 +2182,24 @@ public:
     //! Correct potential energy due to modificaiton of particle mass
     void correctSoftPotMassChange() {
         // correct soft potential energy due to mass change
+		PS::F64 depot_sum = 0;
 #pragma omp parallel for
         for (int k=0; k<mass_modify_list.size(); k++)  {
             PS::S32 i = mass_modify_list[k];
             auto& pi = system_soft[i];
             PS::F64 dpot = pi.dm*pi.pot_soft;
-            stat.energy.etot_ref += dpot;
-            stat.energy.de_change_cum += dpot;
-            stat.energy.etot_sd_ref += dpot;
-            stat.energy.de_sd_change_cum += dpot;
+			depot_sum += pi.dm*pi.pot_soft;
             pi.dm = 0.0;
             // ghost particle case, check in remove_particle instead
             //if(pi.mass==0.0&&pi.group_data.artificial.isUnused()) {
             //    remove_list.push_back(i);
             //}
         }
+		PS::F64 global_depot_sum = PS::Comm::getSum(depot_sum);
+		stat.energy.etot_ref += global_depot_sum;
+		stat.energy.de_change_cum += global_depot_sum;
+		stat.energy.etot_sd_ref += global_depot_sum;
+		stat.energy.de_sd_change_cum += global_depot_sum;
         mass_modify_list.resizeNoInitialize(0);
     }
 #endif
