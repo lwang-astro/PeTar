@@ -27,7 +27,7 @@ public:
     IOParams<double> polytropic_exponent; // gamma
 #ifdef GALPY
     IOParams<long long int> galpy_gaspot_index;
-    IOParams<long long int> scale_density;
+    IOParams<double> scale_density;
 #else
     IOParams<double> gas_density; 
     IOParams<double> decay_time;

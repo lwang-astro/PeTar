@@ -1593,7 +1593,7 @@ private:
 #ifdef KDKDK_4TH
     template <class Tpi>
     static void calcAcorrShortWithLinearCutoff(Tpi& _pi,
-                                               const Ptcl& _pj) {
+                                               const FPSoft& _pj) {
         const PS::F64 G = ForceSoft::grav_const;
         const PS::F64 eps_sq = EPISoft::eps * EPISoft::eps;
 

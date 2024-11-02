@@ -15,6 +15,9 @@ public:
     static PS::F64 grav_const; ///> gravitational constant
     void clear(){
         acc = 0.0;
+#ifdef KDKDK_4TH
+        acorr = 0.0;
+#endif        
         pot = 0.0;
         n_ngb = 0;
 #ifdef SAVE_NEIGHBOR_ID_IN_FORCE_KERNEL
@@ -259,6 +262,9 @@ public:
     //! clear force
     void clearForce() {
         acc = 0.0;
+#ifdef KDKDK_4TH
+        acorr = 0.0;
+#endif
         pot_tot = 0.0;
         pot_soft = 0.0;
 #ifdef EXTERNAL_POT_IN_PTCL

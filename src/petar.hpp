@@ -1105,14 +1105,16 @@ public:
 #pragma omp parallel for
         for (int i=0; i<n_loc_all; i++) {
             auto& pi = system_soft[i];
-            double acc[3], pot;
+            PS::F64vec acc;
+            PS::F64 pot;
 #ifdef RECORD_CM_IN_HEADER
-            PS::F64vec pos_correct=pi.pos + stat.pcm.pos;
-            galpy_manager.calcAccPot(acc, pot, stat.time, input_parameters.gravitational_constant.value*pi.mass, &pos_correct[0], &pi.pos[0]);
+            PS::F64vec pos_origin = pi.pos + stat.pcm.pos;
+            auto& pos_cluster = pi.pos;
 #else
-            PS::F64vec pos_center=pi.pos - stat.pcm.pos;
-            galpy_manager.calcAccPot(acc, pot, stat.time, input_parameters.gravitational_constant.value*pi.mass, &pi.pos[0], &pos_center[0]);
+            auto& pos_origin = pi.pos;
+            PS::F64vec pos_cluster = pi.pos - stat.pcm.pos;
 #endif
+            galpy_manager.calcAccPot(&acc.x, pot, stat.time, input_parameters.gravitational_constant.value*pi.mass, &pos_origin[0], &pos_cluster[0]);
             assert(!std::isinf(acc[0]));
             assert(!std::isnan(acc[0]));
             assert(!std::isinf(pot));
@@ -1141,6 +1143,68 @@ public:
         profile.other.end();
 #endif
     }
+
+#ifdef KDKDK_4TH
+    //! calculate external force gradient
+    void externalForceGradient() {
+#ifdef PROFILE
+        profile.other.start();
+#endif
+
+#ifdef GALPY
+        PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
+
+#pragma omp parallel for
+        for (int i=0; i<n_loc_all; i++) {
+            auto& pi = system_soft[i];
+            PS::F64 pot;
+#ifdef RECORD_CM_IN_HEADER
+            PS::F64vec pos_origin = pi.pos + stat.pcm.pos;
+            auto& pos_cluster = pi.pos;
+#else
+            auto& pos_origin = pi.pos;
+            PS::F64vec pos_cluster = pi.pos - stat.pcm.pos;
+#endif
+
+            PS::F64 dr = 1e-4;
+            PS::F64vec pos_origin_box[6], pos_cluster_box[6], acc_box[6];
+            PS::F64 acc2_box[6];
+            for (int k=0; k<6; k++) {
+                pos_origin_box[k] = pos_origin;
+                pos_cluster_box[k] = pos_cluster;
+                acc_box[k] = 0.0;
+            }
+            pos_origin_box[0][0] += dr;
+            pos_origin_box[1][0] -= dr;
+            pos_origin_box[2][1] += dr;
+            pos_origin_box[3][1] -= dr;
+            pos_origin_box[4][2] += dr;
+            pos_origin_box[5][2] -= dr;
+            pos_cluster_box[0][0] += dr;
+            pos_cluster_box[1][0] -= dr;
+            pos_cluster_box[2][1] += dr;
+            pos_cluster_box[3][1] -= dr;
+            pos_cluster_box[4][2] += dr;
+            pos_cluster_box[5][2] -= dr;
+
+            for (int k=0; k<6; k++) {
+                galpy_manager.calcAccPot(&(acc_box[k].x), pot, stat.time, input_parameters.gravitational_constant.value*pi.mass, &pos_origin_box[k][0], &pos_cluster_box[k][0]);
+                acc2_box[k] = acc_box[k]*acc_box[k];
+            }
+                
+            pi.acorr[0] += (acc2_box[0]-acc2_box[1])/(2*dr);
+            pi.acorr[1] += (acc2_box[2]-acc2_box[3])/(2*dr);
+            pi.acorr[2] += (acc2_box[4]-acc2_box[5])/(2*dr);
+        }
+#endif //GALPY
+
+#ifdef PROFILE
+        profile.other.barrier();
+        PS::Comm::barrier();
+        profile.other.end();
+#endif
+    }
+#endif // KDKDK_4TH 
 
     // correct c.m. vel due to external potential to avoid large rsearch 
     void correctPtclVelCM(const PS::F64& _dt) {
@@ -1184,34 +1248,20 @@ public:
     }
 
 #ifdef KDKDK_4TH
-    //! gradient kick for KDKDK_4TH method
-    void GradientKick() {
+    //! calculate gradient correction for KDKDK_4TH method
+    void treeSoftGradient() {
 #ifdef PROFILE
         profile.tree_soft.start();
-        tree_soft.clearNumberOfInteraction();
-        tree_soft.clearTimeProfile();
+        tree_nb.clearNumberOfInteraction();
+        tree_nb.clearTimeProfile();
 #endif
         // correction calculation
         //tree_soft.setParticaleLocalTree(system_soft, false);
         
-        tree_soft.calcForceAllAndWriteBack(CalcCorrectEpEpWithLinearCutoffNoSimd(),
-#ifdef USE_QUAD
-                                           CalcForceEpSpQuadNoSimd(),
-#else
-                                           CalcForceEpSpMonoNoSimd(),
-#endif
-                                           system_soft,
-                                           dinfo);
+        tree_nb.calcForceAllAndWriteBack(CalcCorrectEpEpWithLinearCutoffNoSimd(), system_soft, dinfo);
 
 #ifdef PROFILE
-        n_count.ep_ep_interact     += tree_soft.getNumberOfInteractionEPEPLocal();
-        n_count_sum.ep_ep_interact += tree_soft.getNumberOfInteractionEPEPGlobal();
-        n_count.ep_sp_interact     += tree_soft.getNumberOfInteractionEPSPLocal();
-        n_count_sum.ep_sp_interact += tree_soft.getNumberOfInteractionEPSPGlobal(); 
-
-        tree_soft_profile += tree_soft.getTimeProfile();
-        domain_decompose_weight += tree_soft_profile.calc_force;
-
+        tree_soft_profile += tree_nb.getTimeProfile();
         profile.tree_soft.barrier();
         PS::Comm::barrier();
         profile.tree_soft.end();
@@ -1223,7 +1273,7 @@ public:
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         // Connected clusters
-        system_hard_connected.correctForceWithCutoffTreeNeighborAndClusterOMP<SystemSoft, FPSoft, TreeForce, EPJSoft>(system_soft, tree_soft, search_cluster.getAdrSysConnectClusterSend(), true);
+        system_hard_connected.correctForceWithCutoffTreeNeighborAndClusterOMP<SystemSoft, FPSoft, TreeNB, EPJSoft>(system_soft, tree_nb, search_cluster.getAdrSysConnectClusterSend(), true);
 #endif
 
 #ifdef PROFILE
@@ -1231,23 +1281,6 @@ public:
         PS::Comm::barrier();
         profile.force_correct.end();
 #endif
-//        if (true) {
-
-
-// for debug
-//            FILE* fdump;
-//            if ( (fdump = fopen("acorr.dump","w")) == NULL) {
-//                fprintf(stderr,"Error: Cannot open file acorr.dump\n");
-//                abort();
-//            }
-//            for (int i=0; i<n_loc; i++) {
-//                fprintf(fdump, "%d %.12g %.12g %.12g %.12g %.12g %.12g\n", i, system_soft[i].acc[0], system_soft[i].acc[1], system_soft[i].acc[2], system_soft[i].acorr[0], system_soft[i].acorr[1], system_soft[i].acorr[2]);
-//            }
-//            fclose(fdump);
-//            abort();
-// debug
-//            }
-
     }
 #endif
 
@@ -1583,7 +1616,8 @@ public:
     
     //! check time consistence
     bool checkTimeConsistence() {
-        if (abs(time_kick-stat.time)>1e-13) {
+        PS::F64 dt_tree = dt_manager.getStep();    
+        if (abs(time_kick-stat.time)/dt_tree>1e-2) {
             std::cerr<<"Error: kick time ("<<time_kick<<") and system time ("<<stat.time<<") are inconsistent!"<<std::endl;
             abort();
         }
@@ -3607,27 +3641,6 @@ public:
 #ifdef PROFILE
                 profile.total.start();
 #endif
-                
-                // reset total potential
-                p.clearForce();
-
-                /// force from external potential and kick
-                externalForce();
-
-#ifdef EXTERNAL_HARD
-                /// force from external hard
-                if (hard_manager.h4_manager.interaction.ext_force.mode>0) {
-                    H4::ForceH4 f;
-                    hard_manager.h4_manager.interaction.ext_force.calcAccJerkExternal(f, p);
-                    p.acc[0] += f.acc0[0];
-                    p.acc[1] += f.acc0[1];
-                    p.acc[2] += f.acc0[2];
-                }
-#endif
-
-#ifdef RECORD_CM_IN_HEADER
-                stat.calcAndShiftCenterOfMass(&p, stat.n_real_loc);
-#endif
 
                 bool interrupt_flag = false;  // for interrupt integration when time reach end
                 bool output_flag = false;    // for output snapshot and information
@@ -3659,9 +3672,43 @@ public:
                     }
                     else dt_kick = dt_manager.getDtKickContinue();
                 }
+
+                // reset total potential
+                p.clearForce();
+
+                /// force from external potential and kick
+                externalForce();
+#ifdef KDKDK_4TH
+                bool calc_gradient = (dt_manager.getCountContinue() == 1);
+                if (calc_gradient) externalForceGradient();
+#endif
+
+#ifdef EXTERNAL_HARD
+                /// force from external hard
+                if (hard_manager.h4_manager.interaction.ext_force.mode>0) {
+                    H4::ForceH4 f;
+                    hard_manager.h4_manager.interaction.ext_force.calcAccJerkExternal(f, p);
+                    p.acc[0] += f.acc0[0];
+                    p.acc[1] += f.acc0[1];
+                    p.acc[2] += f.acc0[2];
+                }
+#endif
+
+#ifdef RECORD_CM_IN_HEADER
+                stat.calcAndShiftCenterOfMass(&p, stat.n_real_loc);
+#endif
+
                 
                 //kick 
+#ifdef KDKDK_4TH
+                if (calc_gradient) 
+                    p.vel += dt_kick*(p.acc + 9.0/192.0*dt_kick*dt_kick*p.acorr); 
+                else 
+                    p.vel += dt_kick*p.acc;
+#else
                 p.vel += p.acc * dt_kick;
+#endif
+
 #ifdef GALPY
                 galpy_manager.kickMovePot(dt_kick);
 #endif
@@ -3787,6 +3834,64 @@ public:
         while(true) {
 #ifdef PROFILE
             profile.total.start();
+            profile.other.start();
+#endif
+
+            bool interrupt_flag = false;  // for interrupt integration when time reach end
+            bool output_flag = false;    // for output snapshot and information
+            //bool dt_mod_flag = false;    // for check whether tree time step need update
+            bool changeover_flag = false; // for check whether changeover need update
+            bool is_start_flag = false; // for check whether the current step is the start step
+            PS::F64 dt_kick, dt_drift;
+
+            // for initial the system
+            if (dt_manager.isNextStart()) {
+                // set step to the begining step
+                dt_kick = dt_manager.getDtStartContinue();
+                is_start_flag = true;                
+            }
+            else {
+                // increase loop counter
+                n_loop++;
+
+                // for next kick-drift pair
+                dt_manager.nextContinue();
+
+                // update stat time 
+                stat.time = system_hard_one_cluster.getTimeOrigin();
+
+                // check whether output or changeover change are needed (only at the ending step)
+                if (dt_manager.isNextEndPossible()) {
+
+                    // adjust tree step
+                    //dt_mod_flag = adjustDtTreeReduce(dt_reduce_factor, dt_tree, dt_manager.getStep());
+                    //if(dt_mod_flag) dt_kick = dt_manager.getDtEndContinue();
+
+                    // output step, get last kick step
+                    output_flag = (fmod(stat.time, dt_output) == 0.0);
+
+                    // check changeover change
+                    changeover_flag = (system_hard_isolated.getNClusterChangeOverUpdate()>0);
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+                    PS::S32 n_changeover_modify_local  = system_hard_connected.getNClusterChangeOverUpdate() + system_hard_isolated.getNClusterChangeOverUpdate();
+                    PS::S32 n_changeover_modify_global = PS::Comm::getSum(n_changeover_modify_local);
+                    if (n_changeover_modify_global>0) changeover_flag = true;
+#endif
+
+                    // check interruption
+                    interrupt_flag = (stat.time>=time_break);
+
+                    // set next step to be last
+                    if (output_flag||changeover_flag||interrupt_flag) dt_kick = dt_manager.getDtEndContinue();
+                    else dt_kick = dt_manager.getDtKickContinue();
+                }
+                else dt_kick = dt_manager.getDtKickContinue();
+            }
+#ifdef PROFILE
+            profile.other.barrier();
+            PS::Comm::barrier();
+            profile.other.end();
 #endif
 
 #ifdef STELLAR_EVOLUTION
@@ -3832,74 +3937,19 @@ public:
             /// substract tidal tensor measure point force
             treeForceCorrectChangeover();
 
+            if (is_start_flag) {
+                // correct force due to the change over update for starting step
+                correctForceChangeOverUpdate();
+            }
 
 #ifdef KDKDK_4TH
+            bool calc_gradient = (dt_manager.getCountContinue() == 1);
             // only do correction at middle step
-            if (dt_manager.getCountContinue() == 1) GradientKick();
-#endif
-
-            bool interrupt_flag = false;  // for interrupt integration when time reach end
-            bool output_flag = false;    // for output snapshot and information
-            //bool dt_mod_flag = false;    // for check whether tree time step need update
-            bool changeover_flag = false; // for check whether changeover need update
-            PS::F64 dt_kick, dt_drift;
-
-            // for initial the system
-            if (dt_manager.isNextStart()) {
-
-                // update changeover if last time it is modified.
-                correctForceChangeOverUpdate();
-
-                // set step to the begining step
-                dt_kick = dt_manager.getDtStartContinue();
+            if (calc_gradient) {
+                treeSoftGradient();
+                externalForceGradient();
             }
-            else {
-#ifdef PROFILE
-                profile.other.start();
 #endif
-                // increase loop counter
-                n_loop++;
-
-                // for next kick-drift pair
-                dt_manager.nextContinue();
-
-                // update stat time 
-                stat.time = system_hard_one_cluster.getTimeOrigin();
-
-                // check whether output or changeover change are needed (only at the ending step)
-                if (dt_manager.isNextEndPossible()) {
-
-                    // adjust tree step
-                    //dt_mod_flag = adjustDtTreeReduce(dt_reduce_factor, dt_tree, dt_manager.getStep());
-                    //if(dt_mod_flag) dt_kick = dt_manager.getDtEndContinue();
-
-                    // output step, get last kick step
-                    output_flag = (fmod(stat.time, dt_output) == 0.0);
-
-                    // check changeover change
-                    changeover_flag = (system_hard_isolated.getNClusterChangeOverUpdate()>0);
-
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-                    PS::S32 n_changeover_modify_local  = system_hard_connected.getNClusterChangeOverUpdate() + system_hard_isolated.getNClusterChangeOverUpdate();
-                    PS::S32 n_changeover_modify_global = PS::Comm::getSum(n_changeover_modify_local);
-                    if (n_changeover_modify_global>0) changeover_flag = true;
-#endif
-
-                    // check interruption
-                    interrupt_flag = (stat.time>=time_break);
-
-                    // set next step to be last
-                    if (output_flag||changeover_flag||interrupt_flag) dt_kick = dt_manager.getDtEndContinue();
-                    else dt_kick = dt_manager.getDtKickContinue();
-                }
-                else dt_kick = dt_manager.getDtKickContinue();
-#ifdef PROFILE
-                profile.other.barrier();
-                PS::Comm::barrier();
-                profile.other.end();
-#endif
-            }
-
 
             // >6. kick 
             kick(dt_kick);
