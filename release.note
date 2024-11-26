@@ -1,4 +1,4 @@
-**1246**
+**1255**
 
 Updates: (version shown in ()):
 
@@ -33,6 +33,8 @@ Updates: (version shown in ()):
 11.(1245) To maintain consistency with other Python data analysis classes, such as `petar.BSETypeChange`, the members `kw1`, `kw2`, and `kwf` defined in `petar.BSEMerge` have been renamed to `type1`, `type2`, and `typef`, respectively.
 12.(1246) Update c.m. calculation method: use past 16 records of c.m. positions and velocities and obtain the median values as an average to update c.m. This can avoid significant jump of c.m. position and large roundoff errors when the density is too low, such as tidal streams. Also fix a problem when only one particle exist, the c.m. calculation may not be correct using the potential weighted method, now use no weight method instead.
 13.(1251) Partially fix the issue of correction for energy with stellar evolution (merged and modified from Tomomune Nishino).
+14.(1255) Add support to auto detect Galpy when Python virtual envirnoment is used.
+15.(1256) Add printing configure errors when Fortran compiler is not installed while BSE is switched on.
 
 Some existing issues include:
 1. When long-distant massive escapers exist and the stellar system has a very low density due to e.g. tidal disruption, the center position of global system based on the soft potential can suddenly jump to the escaper, which may generate large roundoff errors to binary orbits, that can cause artificial eccentricity jumps of binary systems. Need better way to determine the center of globaly system during simulation (partially solved, better to use mpreal in future).
