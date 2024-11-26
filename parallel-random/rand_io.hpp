@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <getopt.h>
+#include <chrono>
 #include "../src/io.hpp"
 
 //! IO parameters manager for random generator
@@ -12,7 +13,7 @@ public:
     bool print_flag;
 
     IOParamsRand(): input_par_store(),
-                    seed  (input_par_store, 1234,  "rand-seed",   "Random number seed (positive integer), suppressed when --rand-seedfile is provided"),
+                    seed  (input_par_store, 0,  "rand-seed",   "Random number seed (positive integer), suppressed when --rand-seedfile is provided", "current cpu time"),
                     seedfile(input_par_store, "__NONE__","rand-seedfile","Name for a file contain random seeds of all threads and MPI processors", "not used"),
                     print_flag(false) {}
 
@@ -91,6 +92,13 @@ public:
                 break;
             }
 
+        if (seed.value == 0) {
+            auto now = std::chrono::high_resolution_clock::now();
+            auto duration = now.time_since_epoch();
+            auto millis = std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
+            seed.value = static_cast<long long int>(millis);
+        }
+            
         if(print_flag) std::cout<<"----- Finish reading input options of Random generator -----\n";
         return opt_used;
     }    

@@ -1,6 +1,6 @@
 **experiment update referring to master**
 
-1. Include a parallel random number generator library and save the random seeds into a file for each snapshot with a filename suffix `.randseeds`.
+1. Include a parallel random number generator library and save the random seeds into a file for each snapshot with a filename suffix `.randseeds`. Use cpu time as the initial seed if not given manually.
 2. Add copy and mathematical operators for the data analysis classes (e.g., `petar.Particle`) in the Python analysis tool.
 3. Call the BSE evolve function at time zero in `petar.bse` to ensure spin initialization is not missed.
 4. Implement support for including external perturbation forces during hard integration, adding a `--with-external-hard` option in the configure script.
