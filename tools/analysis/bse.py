@@ -553,10 +553,21 @@ class BSEMerge(DictNpArrayMix):
         # if no merger
         if (bid_merge.size==0): return merge_final
         
-        # get ubid and sort merger by ubid
-        ubid_merge = calc_ubid(merge_final)
+        # get ubid
+        ubid_merge_all = calc_ubid(merge_final)
+        # validate whether the ubid of init and final data match
+        ubid_merge, indices, counts = np.unique(ubid_merge_all, return_counts=True, return_index=True)
+        if (ubid_merge.size != ubid_merge_all.size):
+            repeat_ubid = ubid_merge[counts>1]
+            for i in repeat_ubid:
+                sel = (ubid_merge_all == i)
+                print('Find repeat mergers, bid:', merge_final.bid[sel], ' time:', merge_final.final.time[sel])
+                merge_final[sel].printTable('init-final')
+            #raise ValueError(f'Find merger ubid_merge repeated id found!')
+
+        # sort merger by ubid        
         sindex = ubid_merge.argsort()
-        merge_final = merge_final[sindex]
+        merge_final = merge_final[indices][sindex]
         ubid_merge = ubid_merge[sindex]
         
         # get merger progenitor history
