@@ -674,45 +674,105 @@ class BSEMerge(DictNpArrayMix):
         """
         DictNpArrayMix.printTable(self, column_format, print_title)
 
-def find_merge_tree(merger_list, merger_root):
-    """ Find the merger tree for a given merger
-    Parameters:
-    -----------
-    merger_list: BSEMerge data
-    merger_root: the target merger to find tree
-    Return:
-    ------------
-    merger_tree: numpy.ndarray(3D)
-        The merger tree table for plotting, each row is one tree branch 
-        The row contains 4 pair of data pointing from the leaf to the root:
-           1. The position in the tree branch. The value of the leaf is based on that of the root +- 0.5^{level+1}, where the level refers to the root.
-           2. indice counting from the left to the right of all leaves and roots
-           3. times of components (leaves) and mergers (roots)
-           4. masses of components (leaves) and mergers (roots)
+class MergerTree():
     """
-    def find_merge_tree_iter(merger_list, merger_root, merger_tree, binary_tree_base, binary_tree_interval, indebinary_tree_base):
-        """
+    Merger Tree to store the information of hierarchical mergers
+
+    Class members:
+    ------------------
+    n (int): number of total mergers to produce the final (root) merger
+    data (petar.BSEMerge): the final (root) merger event parameter data
+    left (None or MergeTree): if None: no sub merger; else the sub-merger to generate the left component of the final merger
+    right (None or MergeTree): if None: no sub merger; else the sub-merger to generate the right component of the final merger
+    """
+    
+    def __init__(self):
+        self.n = 0
+        self.data = None
+        self.left = None
+        self.right = None
+
+    def __getitem__(self, k):
+        if k == 0:
+            return self.left
+        elif k == 1:
+            return self.right
+        else:
+            raise ValueError('Error: the input index to get MergerTree member should be either 0 (left) or 1 (right), given ',k)
+
+    def __setitem__(self, k, data):
+        if (type(data) != MergerTree) & (data != None):
+            raise ValueError('Error: the input data should be MergerTree type or None, given ',type(data))
+        if k == 0:
+            self.left = data
+        elif k == 1:
+            self.right = data
+        else:
+            raise ValueError('Error: the input index to get MergerTree member should be either 0 (left) or 1 (right), given ',k)
+
+    def build(self, merger_all, merger_target):
+        """ Construct the merger tree from all merger events and the final merger target
+        Parameters:
+        -----------
+        merger_all (petar.BSEMerge): all merger events
+        merger_target (petar.BSEMerge): the target merger to find tree (one event)
         
         """
-        idlst=[merger_root.id1, merger_root.id2]
-        btlst=[-binary_tree_interval,binary_tree_interval]
-        mlst=[merger_root.m1, merger_root.m2]
-        ctotlst=[indebinary_tree_base,1]
-        for k in range(len(idlst)):
-            if (k>0): 
-                ctotlst[k] += ctotlst[k-1]
-            idk = idlst[k]
-            sel = ((merger_list.id1 == idk) | (merger_list.id2 == idk)) & (merger_list.time <= merger_root.time) & (merger_list.mf < merger_root.mf)
-            sdat = merger_list[sel]
-            if (sdat.size>0):
-                c_left, c_right = find_merge_tree_iter(merger_list, sdat[-1], merger_tree, binary_tree_base+btlst[k], binary_tree_interval/2, ctotlst[k])  
-                ctotlst[k] += c_right - ctotlst[k]
-                merger_tree.append([[binary_tree_base+btlst[k], binary_tree_base], [c_left+1, ctotlst[0]+1], [sdat.time[-1], merger_root.time],[sdat.mf[-1], merger_root.mf]])
+        idlst=[merger_target.id1, merger_target.id2]
+        merger_branch = []
+        self.n = 1
+        self.data = merger_target
+        for k, idk in enumerate(idlst):
+            sel = ((merger_all.id1 == idk) | (merger_all.id2 == idk)) & (merger_all.time <= merger_target.time) & (merger_all.mf < merger_target.mf)
+            merger_sub = merger_all[sel]
+            if (merger_sub.size>0):
+                self[k] = MergerTree()
+                self[k].build(merger_all, merger_sub[-1])
+                self.n += self[k].n
             else:
-                ctotlst[k] += 1
-                merger_tree.append([[binary_tree_base+btlst[k], binary_tree_base], [ctotlst[k], ctotlst[0]+1], [0, merger_root.time], [mlst[k], merger_root.mf]])
-        return ctotlst[0], ctotlst[1]
-    merger_tree=[]
-    find_merge_tree_iter(merger_list, merger_root, merger_tree, 0.5, 0.25, 0)
+                self[k] = None
 
-    return np.array(merger_tree)
+    def printTree(self, prefix=''):
+        """
+        Print merger tree with mass, time and number of mergers to current mass
+        """
+        print(f'mf: {self.data.mf:.4g} t: {self.data.time:.12g} n:{self.n} semi:{self.data.semi:.14g} ecc:{self.data.ecc:.14g}')
+        prefix = prefix + '  |'
+        for branch in (self.left, self.right):
+            if branch:
+                print(prefix+'-',end='')
+                branch.printTree(prefix)
+
+    def plotTree(self, axes, y_type='mass'):
+        """
+        Plot the merger tree with mass or time
+        """    
+        def connect(merger_tree, connect_list, binary_tree_base, binary_tree_interval, indebinary_tree_base):
+            btlst=[-binary_tree_interval,binary_tree_interval]
+            mlst=[merger_tree.data.m1, merger_tree.data.m2]
+            ctotlst=[indebinary_tree_base,1]
+            for k in range(2):
+                if (k>0): 
+                    ctotlst[k] += ctotlst[k-1]
+                if (merger_tree[k]):
+                    c_left, c_right = connect(merger_tree[k], connect_list, binary_tree_base+btlst[k], binary_tree_interval/2, ctotlst[k])  
+                    ctotlst[k] += c_right - ctotlst[k]
+                    connect_list.append([[binary_tree_base+btlst[k], binary_tree_base], [c_left+1, ctotlst[0]+1], [merger_tree[k].data.time, merger_tree.data.time],[merger_tree[k].data.mf, merger_tree.data.mf]])
+                else:
+                    ctotlst[k] += 1
+                    connect_list.append([[binary_tree_base+btlst[k], binary_tree_base], [ctotlst[k], ctotlst[0]+1], [0, merger_tree.data.time], [mlst[k], merger_tree.data.mf]])
+            return ctotlst[0], ctotlst[1]
+        connect_list=[]
+        connect(self, connect_list, 0.5, 0.25, 0)
+        
+        if (y_type=='time'):
+            for dat in connect_list:
+                axes.plot(dat[1],dat[2],'o-',color='k')
+            axes.set_ylabel('Time')
+        elif (y_type=='mass'):
+            for dat in connect_list:
+                axes.plot(dat[1],dat[3],'o-',color='k')
+            axes.set_ylabel('mass')
+        else:
+            raise ValueError('y_type should be time or mass, given ',y_type)
+        axes.set_xlabel('index')

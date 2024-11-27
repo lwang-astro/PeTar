@@ -25,6 +25,7 @@
 23. Add calculation of sound speed depending on pressure for gas drag mode.
 24. Fix error implementation for KDKDK-4th mode, use tree_nb to calculate gradient correction for only EP particles (no SIMD yet); Add gradient correction for external force from galpy. 
 25. Fix wrong data type for scale_density in gas_drag mode
+26. Add MergerTree class in Python analysis tool
 
 **Some existing issues include**
 
