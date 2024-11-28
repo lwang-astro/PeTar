@@ -296,8 +296,8 @@ public:
         const Float C2 = 1140.0; // km/s
         const Float C3 = 2481.0; // km/s
         const Float M_pi = 3.14159265358979323846;
-        std::array<Float, 3> hatS1 = normalize(Chi1);
-        std::array<Float, 3> hatS2 = normalize(Chi2);
+        //std::array<Float, 3> hatS1 = normalize(Chi1);
+        //std::array<Float, 3> hatS2 = normalize(Chi2);
 
         std::array<Float, 3> Delta = calcDelta(Chi1, Chi2, L, dr,q);
         Float Delta_par = dot(Delta, hatL);
@@ -529,7 +529,7 @@ public:
         std::array<Float, 3> chikick = {chifin * std::sin(theta_z) * std::cos(theta_xy), chifin * std::sin(theta_z) * std::sin(theta_xy), chifin * std::cos(theta_z)};
         
         std::array<Float,3> chikick_new =  calcInverterAxisL(L, dr, chikick);
-        for (int i = 0; i < 3; i++) spin[i] = chikick[i];
+        for (int i = 0; i < 3; i++) spin[i] = chikick_new[i];
     }
 
 };

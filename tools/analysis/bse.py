@@ -674,10 +674,14 @@ class GWKick(DictNpArrayMix):
         m1 (1D): particle mass of component 1 before merger
         m2 (1D): particle mass of component 2 before merger
         mf (1D): final mass after merger
+        r1 (1D): particle radius of component 1 before merger
+        r2 (1D): particle radius of component 2 before merger
+        rf (1D): particle radius of merger
         semi (1D): semi-major axis before merger (Rsun)
         ecc (1D): eccentricity before merger
-        chi1 (3D,3): dimensionless spin of particle 1
-        chi2 (3D,3): dimensionless spin of particle 2
+        chi1 (2D,3): dimensionless spin of particle 1
+        chi2 (2D,3): dimensionless spin of particle 2
+        chif (2D,3): dimensionless spin of merger
         am   (2D,3): specific angular momemtum x, y, z
         dr   (2D,3): relative position vector from particle 1 to 2
     """
@@ -687,7 +691,8 @@ class GWKick(DictNpArrayMix):
         """
         keys=[['id1', np.int64], ['id2', np.int64], ['kindex', np.int64], ['vkick', (np.float64, 3)], 
               ['time', np.float64], ['m1', np.float64], ['m2', np.float64], ['mf', np.float64], 
-              ['semi', np.float64], ['ecc', np.float64], ['chi1', (np.float64, 3)], ['chi2', (np.float64, 3)], 
+              ['r1', np.float64], ['r2', np.float64], ['rf', np.float64],
+              ['semi', np.float64], ['ecc', np.float64], ['chi1', (np.float64, 3)], ['chi2', (np.float64, 3)], ['chif', (np.float64, 3)],
               ['am', (np.float64, 3)], ['dr', (np.float64, 3)]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 

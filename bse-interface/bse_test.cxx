@@ -199,7 +199,6 @@ int main(int argc, char** argv){
     rand_manager.initialAll(rand_io);
     rand_manager.printRandSeeds(std::cout);
     gw_kick.vscale = bse_manager.vscale;
-    gw_kick.speed_of_light = bse_manager.getSpeedOfLight()*gw_kick.vscale;
     assert(bse_manager.checkParams());
     assert(gw_kick.checkParams());
 
@@ -519,71 +518,105 @@ int main(int argc, char** argv){
                     ASSERT(m1==0.0 || m2==0.0);
                     ASSERT(!(m1==0.0 && m2==0.0));
     
-                    int type1, type2;    
-                    Float q, m1_pre, m2_pre, mf, semi_pre, ecc_pre; // mass ratio
                     auto& bin_event = bin[i].bse_event;
                         
+                    int type1, type2;    
                     if (merger_event_index==0) {
                         type1 = p1_star_bk.kw;
                         type2 = p2_star_bk.kw;
-                        m1_pre = bse_manager.getMass(p1_star_bk);
-                        m2_pre = bse_manager.getMass(p2_star_bk);
-                        q = m1_pre/m2_pre;
-                        if (q>1) q = 1/q;
-                        semi_pre = bin[i].semi;
-                        ecc_pre = bin[i].ecc;
                     }
                     else {
                         type1 = bin_event.getType1(merger_event_index-1);
                         type2 = bin_event.getType2(merger_event_index-1);
-                        m1_pre = bin_event.getMass1(merger_event_index-1);
-                        m2_pre = bin_event.getMass2(merger_event_index-1);
-                        ASSERT(m1_pre>0 && m2_pre>0);
-                        q = bin_event.getMassRatio(merger_event_index-1);
-                        semi_pre = bin_event.getSemi(merger_event_index-1);
-                        ecc_pre = bin_event.getEcc(merger_event_index-1);    
                     }
-                    Float tmerge = bin_event.getTime(merger_event_index);
+
                     // GW with NS or BH binaries
                     if (type1>=13 && type1<=14 && type2>=13 && type2<=14) {
+                        Float q, m1_pre, m2_pre, r1_pre, r2_pre, chi1_pre, chi2_pre, mf, rf, semi_pre, ecc_pre; 
+                        if (merger_event_index==0) {
+                            type1 = p1_star_bk.kw;
+                            type2 = p2_star_bk.kw;
+                            m1_pre = bse_manager.getMass(p1_star_bk);
+                            m2_pre = bse_manager.getMass(p2_star_bk);
+                            r1_pre = bse_manager.getStellarRadius(p1_star_bk);
+                            r2_pre = bse_manager.getStellarRadius(p2_star_bk);
+                            chi1_pre = bse_manager.getCompactChi(p1_star_bk);
+                            chi2_pre = bse_manager.getCompactChi(p2_star_bk);
+                            q = m1_pre/m2_pre;
+                            if (q>1) q = 1/q;
+                            semi_pre = bin[i].semi;
+                            ecc_pre = bin[i].ecc;
+                        }
+                        else {
+                            type1 = bin_event.getType1(merger_event_index-1);
+                            type2 = bin_event.getType2(merger_event_index-1);
+                            m1_pre = bin_event.getMass1(merger_event_index-1);
+                            m2_pre = bin_event.getMass2(merger_event_index-1);
+                            ASSERT(m1_pre>0 && m2_pre>0);
+                            r1_pre = bin_event.getRad1(merger_event_index-1);
+                            r2_pre = bin_event.getRad2(merger_event_index-1);
+                            chi1_pre = bin_event.getCompactChi1(merger_event_index-1);
+                            chi2_pre = bin_event.getCompactChi2(merger_event_index-1);
+                            q = bin_event.getMassRatio(merger_event_index-1);
+                            semi_pre = bin_event.getSemi(merger_event_index-1);
+                            ecc_pre = bin_event.getEcc(merger_event_index-1);    
+                        }
+                        Float tmerge = bin_event.getTime(merger_event_index);
                         
-                        std::array<Float, 3> chi1 = gw_kick.uniformPointsInsideSphere(0.8);
-                        std::array<Float, 3> chi2 = gw_kick.uniformPointsInsideSphere(0.8);
-                        
+                        std::array<Float, 3> chi1_vec = gw_kick.uniformPointsInsideSphere(chi1_pre);
+                        std::array<Float, 3> chi2_vec = gw_kick.uniformPointsInsideSphere(chi2_pre);
+
+                        // calculate kick properties                    
+                        Float L[3] = {0.0, 0.0, 1.0};
+                        Float dr[3] = {1.0, 0.0, 0.0};
+                        Float vkick_gw[3], mf_ratio, chif_vec[3];
+                        gw_kick.calcKickVel(vkick_gw, chi1_vec.data(), chi2_vec.data(), L, dr, q);
+                        gw_kick.calcFinalMass(mf_ratio, chi1_vec.data(), chi2_vec.data(), L, dr, q);
+                        gw_kick.calcFinalSpin(chif_vec, chi1_vec.data(), chi2_vec.data(), L, dr, q);
+                        Float chif = sqrt(chif_vec[0]*chif_vec[0] + chif_vec[1]*chif_vec[1] + chif_vec[2]*chif_vec[2]);
+
                         // save kick to output                    
                         int kick_index;
                         if (m1==0.0) {
-                            mf = m2;
+                            mf = m2 * mf_ratio;
+                            bse_manager.setMass(bin[i].star[1], mf);
+                            rf = bse_manager.getStellarRadius(bin[i].star[1]);
+                            bse_manager.setCompactChi(bin[i].star[1], chif);
                             kick_index = 1;    
                         }
                         else {
-                            mf = m1;
+                            mf = m1 * mf_ratio;
+                            bse_manager.setMass(bin[i].star[0], mf);
+                            rf = bse_manager.getStellarRadius(bin[i].star[0]);
+                            bse_manager.setCompactChi(bin[i].star[0], chif);
                             kick_index = 0;
                         }
-                        Float L[3] = {0.0, 0.0, 1.0};
-                        Float dr[3] = {1.0, 0.0, 0.0};
-                        Float vkick[3];
-                        gw_kick.calcKickVel(vkick, chi1.data(), chi2.data(), L, dr, q);
 #pragma omp critical      
                         {
                             fout_gw_kick<<std::setw(WRITE_WIDTH)<<2*i+1
                                         <<std::setw(WRITE_WIDTH)<<2*i+2
                                         <<std::setw(WRITE_WIDTH)<<kick_index+1
-                                        <<std::setw(WRITE_WIDTH)<<vkick[0]*gw_kick.vscale
-                                        <<std::setw(WRITE_WIDTH)<<vkick[1]*gw_kick.vscale
-                                        <<std::setw(WRITE_WIDTH)<<vkick[2]*gw_kick.vscale
+                                        <<std::setw(WRITE_WIDTH)<<vkick_gw[0]*gw_kick.vscale
+                                        <<std::setw(WRITE_WIDTH)<<vkick_gw[1]*gw_kick.vscale
+                                        <<std::setw(WRITE_WIDTH)<<vkick_gw[2]*gw_kick.vscale
                                         <<std::setw(WRITE_WIDTH)<<tmerge
                                         <<std::setw(WRITE_WIDTH)<<m1_pre
                                         <<std::setw(WRITE_WIDTH)<<m2_pre
                                         <<std::setw(WRITE_WIDTH)<<mf
+                                        <<std::setw(WRITE_WIDTH)<<r1_pre
+                                        <<std::setw(WRITE_WIDTH)<<r2_pre
+                                        <<std::setw(WRITE_WIDTH)<<rf
                                         <<std::setw(WRITE_WIDTH)<<semi_pre
                                         <<std::setw(WRITE_WIDTH)<<ecc_pre
-                                        <<std::setw(WRITE_WIDTH)<<chi1[0]
-                                        <<std::setw(WRITE_WIDTH)<<chi1[1]
-                                        <<std::setw(WRITE_WIDTH)<<chi1[2]
-                                        <<std::setw(WRITE_WIDTH)<<chi2[0]
-                                        <<std::setw(WRITE_WIDTH)<<chi2[1]
-                                        <<std::setw(WRITE_WIDTH)<<chi2[2]
+                                        <<std::setw(WRITE_WIDTH)<<chi1_vec[0]
+                                        <<std::setw(WRITE_WIDTH)<<chi1_vec[1]
+                                        <<std::setw(WRITE_WIDTH)<<chi1_vec[2]
+                                        <<std::setw(WRITE_WIDTH)<<chi2_vec[0]
+                                        <<std::setw(WRITE_WIDTH)<<chi2_vec[1]
+                                        <<std::setw(WRITE_WIDTH)<<chi2_vec[2]
+                                        <<std::setw(WRITE_WIDTH)<<chif_vec[0]
+                                        <<std::setw(WRITE_WIDTH)<<chif_vec[1]
+                                        <<std::setw(WRITE_WIDTH)<<chif_vec[2]
                                         <<std::setw(WRITE_WIDTH)<<L[0]
                                         <<std::setw(WRITE_WIDTH)<<L[1]
                                         <<std::setw(WRITE_WIDTH)<<L[2]
@@ -594,9 +627,9 @@ int main(int argc, char** argv){
                         }
                         if (nbin==1) {
                             std::cout<<"GW kick, time[Myr] = "<<tmerge<<" m1[M*] ="<<m1_pre<<" m2[M*] ="<<m2_pre
-                                    <<" chi1 ="<<chi1[0]<<" "<<chi1[1]<<" "<<chi1[2]
-                                    <<" chi2 ="<<chi2[0]<<" "<<chi2[1]<<" "<<chi2[2]
-                                    <<" vkick[km/s]="<<vkick[0]<<" "<<vkick[1]<<" "<<vkick[2]
+                                    <<" chi1 ="<<chi1_vec[0]<<" "<<chi1_vec[1]<<" "<<chi1_vec[2]
+                                    <<" chi2 ="<<chi2_vec[0]<<" "<<chi2_vec[1]<<" "<<chi2_vec[2]
+                                    <<" vkick[km/s]="<<vkick_gw[0]<<" "<<vkick_gw[1]<<" "<<vkick_gw[2]
                                     <<std::endl;
                         }   
                     }   

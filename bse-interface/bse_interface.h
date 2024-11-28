@@ -462,6 +462,20 @@ static double EstimateRocheRadiusOverSemi(double& _q) {
     return rad_semi;
 }
 
+//! convert ospin to dimensionless chi for compact objects (WD/NS/BH)
+double CompactOspinToChi(double _ospin, double _mc, double _rc) {
+    const double k3 = 0.21;
+    const double grav_over_cele = 30.12;
+    return _ospin * (k3*_rc*_rc) / (grav_over_cele*_mc);
+}
+
+//! convert dimensionless chi to ospin for compact objects (WD/NS/BH)
+double CompactChiToOspin(double _chi, double _mc, double _rc) {
+    const double k3 = 0.21;
+    const double grav_over_cele = 30.12;
+    return _chi * (grav_over_cele*_mc) / (k3*_rc*_rc);
+}
+
 //! a simple check to determine whether the GR effect is important
 /*!
   calculate the relative angular momentum change timescale dJ/J, suggested by Ataru Tanikawa
@@ -612,10 +626,26 @@ public:
         return record[18][index];
     }
 
+    //! get Chi (dimensionless spin) of the first compact objects (WD/NS/BH)
+    double getCompactChi1(const int index) const {
+        double rc = getRCore1(index);
+        double mc = getMCore1(index);
+        double ospin = getSpin1(index);    
+        return CompactOspinToChi(ospin, mc, rc);
+    }
+
     //! get stellar spin of the second star
     double getSpin2(const int index) const {
         return record[19][index];
     }        
+
+    //! get BH chi (dimensionless spin) of the second compact objects (WD/NS/BH)
+    double getCompactChi2(const int index) const {
+        double rc = getRCore2(index);
+        double mc = getMCore2(index);
+        double ospin = getSpin2(index);    
+        return CompactOspinToChi(ospin, mc, rc);
+    }
 
     //! set binary type to -1 for the given event index to indicate the end of record
     void setEventIndexEnd(const int index) {
@@ -1375,15 +1405,17 @@ public:
         _star.mt = _m*mscale;
     }    
 
-    //! get spin in NB unit
-    double getSpin(StarParameter& _star) {
-        return _star.ospin;
+    //! get Chi (dimensionless spin) from ospin
+    double getCompactChi(StarParameter& _star) {
+        assert(_star.kw>=10);    
+        return CompactOspinToChi(_star.ospin, _star.mc, _star.rc);
     }
 
-    //! set spin in NB unit
-    void setSpin(StarParameter& _star, const double _spin) {
-        _star.ospin = _spin;
-    }    
+    //! set Chi (dimensionless spin) and convert to ospin
+    void setCompactChi(StarParameter& _star, const double _chi) {
+        assert(_star.kw>=10);
+        _star.ospin = CompactChiToOspin(_chi, _star.mc, _star.rc);
+    }
     
     //! get mass loss in NB unit
     double getMassLoss(StarParameterOut& _out) {
