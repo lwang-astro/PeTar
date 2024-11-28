@@ -14,16 +14,14 @@
 //! Gravitational wave recoil kick calculater
 class GWKick{
 public:    
-    Float speed_of_light;  ///> speed of light (km/s)
     Float vscale;          ///> velocity scale (km/s to pc/Myr)
 
-    GWKick(): speed_of_light(-1), vscale(-1) {}
+    GWKick(): vscale(-1) {}
 
     //! check whether parameters values are correct
     /*! \return true: all correct
      */
     bool checkParams() {
-        ASSERT(speed_of_light>0.0);
         ASSERT(vscale>0.0);
         return true;
     }        
@@ -335,7 +333,7 @@ public:
         for (int i = 0; i < 3; i++) vkick[i] = vkick_new[i]/vscale;
     }
 
-    // Function to generate kick mass of a GW merger with spins
+    // Function to generate final mass of a GW merger with spins
     /*! @param[out] Mfin: final mass
         @param[in] _Chi1: spin of the primary body
         @param[in] _Chi2: spin of the secondary body
@@ -343,7 +341,7 @@ public:
         @param[in] _dr: separation vector
         @param[in] q: mass ratio
     */
-    void calcKickMass(Float& Mfin,
+    void calcFinalMass(Float& Mfin,
         const Float _Chi1[], 
         const Float _Chi2[], 
         const Float _L[],
@@ -370,19 +368,6 @@ public:
         Mfin = 1 - Erad;
     }
 
-    // Function to generate uniform random numbers
-    /*! @param[in] _min: minimum value
-        @param[in] _max: maximum value
-        \return a random number between min and max
-        */
-    Float random_uniform(Float min, Float max) {
-        static std::random_device rd;
-        static std::mt19937 gen(rd());
-        std::uniform_real_distribution<> dis(min, max);
-        return dis(gen);
-    }
-
-
     // Function to calculate the angles theta1, theta2, and theta12
     /*! @param[in] _Chi1: spin of the primary body
         @param[in] _Chi2: spin of the secondary body
@@ -391,7 +376,7 @@ public:
         @param[in] q: mass ratio
         \return the angles theta1, theta2, and theta12
     */
-    std::tuple<Float, Float, Float> calcangle( 
+    std::tuple<Float, Float, Float> calcAngle( 
         const std::array<Float, 3>& Chi1, 
         const std::array<Float, 3>& Chi2,
         const std::array<Float, 3>& L,
@@ -416,7 +401,7 @@ public:
         return {theta1, theta2, theta12};
     }
 
-    // Function to generate kick spin of a GW merger with spins
+    // Function to generate final spin of a GW merger with spins 
     /*! @param[out] spin: spin velocity
         @param[in] _Chi1: spin of the primary body
         @param[in] _Chi2: spin of the secondary body
@@ -426,7 +411,7 @@ public:
         @param[in] which: which model to use
         \return the kick spin of the GW merger
         */
-    void calcspin(Float spin[],
+    void calcFinalSpin(Float spin[],
         const Float _Chi1[], 
         const Float _Chi2[], 
         const Float _L[],
@@ -446,6 +431,7 @@ public:
         const std::array<Float, 3> hatL = {0, 0, 1};
 
         Float eta = q * std::pow(1.0 + q, -2);
+        const Float M_pi = 3.14159265358979323846;
 
         Float norms_chi1 = norm(Chi1_new);
         Float norms_chi2 = norm(Chi2_new);
@@ -474,7 +460,7 @@ public:
         }
         kfit[0][0] = std::pow(4.0, 2) * (0.68646 - sum - std::sqrt(3.0) / 2.0);
 
-        auto [theta1, theta2, theta12] = calcangle(Chi1, Chi1,L,dr);
+        auto [theta1, theta2, theta12] = calcAngle(Chi1, Chi1,L,dr);
 
         // Eq. 18
         if (which.find("corr") != std::string::npos) {
@@ -499,13 +485,13 @@ public:
         
         // Eq. 13
 
-        // 计算 etatoi
+        // calculate etatoi
         std::vector<Float> etatoi(n);
         for (size_t i = 0; i < n; ++i) {
             etatoi[i] = std::pow(eta, 1 + i);
         }
 
-        // 计算 innersum
+        // calculate innersum
         std::vector<Float> innersum(m, 0.0);
         for (size_t j = 0; j < m; ++j) {
             for (size_t i = 0; i < n; ++i) {
@@ -513,13 +499,13 @@ public:
             }
         }
 
-        // 计算 aefftoj
+        // calculate aefftoj
         std::vector<Float> aefftoj(m);
         for (size_t j = 0; j < m; ++j) {
             aefftoj[j] = std::pow(aeff, j);
         }
 
-        // 计算 sumell
+        // calculate sumell
         Float sumell = 0.0;
         for (size_t j = 0; j < m; ++j) {
             sumell += innersum[j] * aefftoj[j];
@@ -536,7 +522,7 @@ public:
         chifin = std::clamp(chifin, 0.0, 1.0);
 
         // Calculate direction of spin
-        Float theta_xy = random_uniform(0, 2 * M_PI);
+        Float theta_xy = rand_f64() * 2.0 * M_pi;
         std::array<Float, 3> J = {hatL[0] + Chi1_new[0] + Chi2_new[0], hatL[1] + Chi1_new[1] + Chi2_new[1], hatL[2] + Chi1_new[2] + Chi2_new[2]};
         Float theta_z = std::acos(dot(J, hatL) / (norm(J) * norm(hatL)));
 

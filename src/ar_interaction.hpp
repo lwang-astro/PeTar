@@ -1212,21 +1212,33 @@ public:
                         
                             std::array<Float, 3> chi1 = gw_kick.uniformPointsInsideSphere(0.8);
                             std::array<Float, 3> chi2 = gw_kick.uniformPointsInsideSphere(0.8);
-                    
-                            // save kick to output                    
+
+                            // calculate kick properties                    
+                            Float vkick_gw[3], mf_ratio, chif[4];
+                            gw_kick.calcKickVel(vkick_gw, chi1.data(), chi2.data(), &(_bin.am.x), &(pos_red.x), q);
+                            gw_kick.calcFinalMass(mf_ratio, chi1.data(), chi2.data(), &(_bin.am.x), &(pos_red.x), q);
+                            gw_kick.calcFinalSpin(chif, chi1.data(), chi2.data(), &(_bin.am.x), &(pos_red.x), q);
+
+                            for (int i=0; i<3; i++) vkick[k][i] += vkick_gw[i];
+                            vkick[k][3] = sqrt(vkick[k][0]*vkick[k][0] + vkick[k][1]*vkick[k][1] + vkick[k][2]*vkick[k][2]);
+                            chif[3] = sqrt(chif[0]*chif[0] + chif[1]*chif[1] + chif[2]*chif[2]);
+
                             int k;
                             if (m1==0.0) {
-                                mf = m2;
+                                mf = m2 * mf_ratio;
+                                bse_manager.setMass(p2->star, mf);
+                                bse_manager.setSpin(p2->star, chif[3]);
                                 k = 1;    
                             }
                             else {
-                                mf = m1;
+                                mf = m1 * mf_ratio;
+                                bse_manager.setMass(p1->star, mf);
+                                bse_maganer.setSpin(p1->star, chif[3]);
                                 k = 0;
                             }
-                            Float vkick_gw[3];
-                            gw_kick.calcKickVel(vkick_gw, chi1.data(), chi2.data(), &(_bin.am.x), &(pos_red.x), q);
-                            for (int i=0; i<3; i++) vkick[k][i] += vkick_gw[i];
-                            vkick[k][3] = sqrt(vkick[k][0]*vkick[k][0] + vkick[k][1]*vkick[k][1] + vkick[k][2]*vkick[k][2]);
+
+
+                            // save kick to output                    
 #pragma omp critical 
                             {
                                 fout_bse<<"GW_kick "
@@ -1248,6 +1260,9 @@ public:
                                         <<std::setw(WRITE_WIDTH)<<chi2[0]
                                         <<std::setw(WRITE_WIDTH)<<chi2[1]
                                         <<std::setw(WRITE_WIDTH)<<chi2[2]
+                                        <<std::setw(WCHAR_WIDTH)<<chif[0]
+                                        <<std::setw(WCHAR_WIDTH)<<chif[1]
+                                        <<std::setw(WCHAR_WIDTH)<<chif[2]
                                         <<std::setw(WRITE_WIDTH)<<_bin.am.x
                                         <<std::setw(WRITE_WIDTH)<<_bin.am.y
                                         <<std::setw(WRITE_WIDTH)<<_bin.am.z

@@ -1369,6 +1369,21 @@ public:
     double getMass(StarParameter& _star) {
         return _star.mt/mscale;
     }
+
+    //! set mass in NB unit
+    void setMass(StarParameter& _star, const double _m) {
+        _star.mt = _m*mscale;
+    }    
+
+    //! get spin in NB unit
+    double getSpin(StarParameter& _star) {
+        return _star.ospin;
+    }
+
+    //! set spin in NB unit
+    void setSpin(StarParameter& _star, const double _spin) {
+        _star.ospin = _spin;
+    }    
     
     //! get mass loss in NB unit
     double getMassLoss(StarParameterOut& _out) {
