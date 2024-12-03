@@ -313,8 +313,10 @@ int main(int argc, char **argv){
   int ncount = 0;
   
   while (true) {
+      int c = fgetc(fp);
+      if (c == EOF) break;
+      ungetc(c, fp);
       hard_dump.readOneClusterBinary(fp);
-      if (feof(fp)) break;
 
 #ifdef BSE_BASE
       hard_dump.rand_manager.readRandSeedLocalBinary(fp);
