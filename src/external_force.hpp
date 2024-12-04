@@ -23,9 +23,11 @@ public:
     IOParams<long long int> mode; // option to switch perturbation
     IOParams<double> sound_speed; 
     IOParams<double> coulomb_log; 
+    IOParams<double> polytropic_constant; // K
+    IOParams<double> polytropic_exponent; // gamma
 #ifdef GALPY
     IOParams<long long int> galpy_gaspot_index;
-    IOParams<long long int> scale_density;
+    IOParams<double> scale_density;
 #else
     IOParams<double> gas_density; 
     IOParams<double> decay_time;
@@ -34,8 +36,10 @@ public:
     bool print_flag;
     IOParamsExternalHard(): input_par_store(),
                             mode  (input_par_store, 0,          "ext-hard-mode", "external hard mode: 0, not used; 1, gas dynamical friction (Ostriker 1999, Rozner et al. 2022); 2, gas dynamical friction only in radial direction"),
-                            sound_speed  (input_par_store, 1.0, "ext-sound-speed",  "sound speed in units of PeTar input"),
+                            sound_speed  (input_par_store, 0.0, "ext-sound-speed",  "sound speed in units of PeTar input; if given 0, calculate by sqrt(P/rho), based on hydrostatic equilibrium"),
                             coulomb_log  (input_par_store, 3.1, "ext-coulomb-log",  "coulomb logarithm"),
+                            polytropic_constant (input_par_store, 1.0, "ext-K", "Polytropic constant in units of PeTar input; used to evaluate Pressure P = K rho^gamma"),
+                            polytropic_exponent (input_par_store, 4.0/3.0, "ext-gamma", "Polytropic exponent; used to evaluate Pressure P = K rho^gamma"),
 #ifdef GALPY
                             galpy_gaspot_index(input_par_store, -1, "ext-gaspot-index",  "galpy potential set index for gas component, used for obtaining gas density", "None"),
                             scale_density(input_par_store, 1/G_ASTRO, "ext-scale-density", "scale factor for galpy potential density","1/G"),
@@ -65,6 +69,8 @@ public:
 #endif
             {sound_speed.key, required_argument, &ext_flag, 3},  
             {coulomb_log.key, required_argument, &ext_flag, 4},  
+            {polytropic_constant.key, required_argument, &ext_flag, 5},
+            {polytropic_exponent.key, required_argument, &ext_flag, 6},
             {"help",      no_argument,       0, 'h'},
             {0,0,0,0}
         };
@@ -115,7 +121,17 @@ public:
                     coulomb_log.value = atof(optarg);
                     if(print_flag) coulomb_log.print(std::cout);
                     opt_used+=2;
-                    break;            
+                    break;
+                case 5:
+                    polytropic_constant.value = atof(optarg);
+                    if(print_flag) polytropic_constant.print(std::cout);
+                    opt_used+=2;
+                    break;
+                case 6:
+                    polytropic_exponent.value = atof(optarg);
+                    if(print_flag) polytropic_exponent.print(std::cout);
+                    opt_used+=2;
+                    break;
                 default:
                     break;
                 }
@@ -174,6 +190,9 @@ public:
 #endif
     Float sound_speed; 
     Float coulomb_log;
+    Float polytropic_constant;
+    Float polytropic_exponent;
+    bool calc_sound_speed;
 
     ExternalHardForce(): mode(0),
 #ifdef GALPY
@@ -181,7 +200,7 @@ public:
 #else
                          gas_density(1.0), gas_density_init(1.0), decay_time(0.0), time(0.0),
 #endif
-                         sound_speed(1.0), coulomb_log(3.1){}
+                         sound_speed(0.0), coulomb_log(3.1), polytropic_constant(1.0), polytropic_exponent(4.0/3.0), calc_sound_speed(true) {}
 
 #ifdef GALPY
     //! initial parameters for perturbation
@@ -199,6 +218,10 @@ public:
         scale_density = _input.scale_density.value;
         sound_speed = _input.sound_speed.value;
         coulomb_log = _input.coulomb_log.value;
+        polytropic_constant = _input.polytropic_constant.value;
+        polytropic_exponent = _input.polytropic_exponent.value;
+        if (sound_speed>0.0) calc_sound_speed = false;
+        else calc_sound_speed = true;
     }
 
 #else
@@ -209,6 +232,10 @@ public:
         decay_time  = _input.decay_time.value;
         sound_speed = _input.sound_speed.value;
         coulomb_log = _input.coulomb_log.value;
+        polytropic_constant = _input.polytropic_constant.value;
+        polytropic_exponent = _input.polytropic_exponent.value;
+        if (sound_speed>0.0) calc_sound_speed = false;
+        else calc_sound_speed = true;
         updateTime(_time);
     }
 
@@ -244,6 +271,19 @@ public:
 
         const Float PI = 4.0*atan(1.0);
         const Float G2 = ForceSoft::grav_const*ForceSoft::grav_const;
+
+#ifdef GALPY
+        auto& pos = _particle.pos;
+        Float pos_g[3] = {pos[0] + status->pcm.pos[0], 
+                          pos[1] + status->pcm.pos[1], 
+                          pos[2] + status->pcm.pos[2]};
+        Float gas_density = scale_density*galpy_manager->calcSetDensity(galpy_gaspot_index, status->time, pos_g, &pos[0]);
+#else
+        auto& pos_g = _particle.pos;
+#endif       
+        if (calc_sound_speed) 
+            sound_speed = std::sqrt(polytropic_constant*std::pow(gas_density, polytropic_exponent-1));
+
         Float mach = v/sound_speed;
         Float Ifunc;
         if (mach<0.9) {
@@ -262,15 +302,6 @@ public:
             Ifunc = 0.5*std::log(1-1/mach2) + coulomb_log;
         }
 
-#ifdef GALPY
-        auto& pos = _particle.pos;
-        Float pos_g[3] = {pos[0] + status->pcm.pos[0], 
-                          pos[1] + status->pcm.pos[1], 
-                          pos[2] + status->pcm.pos[2]};
-        Float gas_density = scale_density*galpy_manager->calcSetDensity(galpy_gaspot_index, status->time, pos_g, &pos[0]);
-#else
-        auto& pos_g = _particle.pos;
-#endif       
         Float c1 = -4*PI*G2*mass*gas_density/v3*Ifunc;
 
         if (mode==1) {
@@ -325,6 +356,20 @@ public:
         
         const Float PI = 4.0*atan(1.0);
         Float G2 = ForceSoft::grav_const*ForceSoft::grav_const;
+
+#ifdef GALPY
+        auto& pos = _particle.pos;
+        Float pos_g[3] = {pos[0] + status->pcm.pos[0], 
+                          pos[1] + status->pcm.pos[1], 
+                          pos[2] + status->pcm.pos[2]};
+        Float gas_density = scale_density*galpy_manager->calcSetDensity(galpy_gaspot_index, status->time, pos_g, &pos[0]);
+#else
+        auto& pos_g = _particle.pos;
+#endif
+
+        if (calc_sound_speed) 
+            sound_speed = std::sqrt(polytropic_constant*std::pow(gas_density, polytropic_exponent-1));
+
         Float mach = v/sound_speed;
         Float Ifunc, dIfunc;
         if (mach<0.9) {
@@ -347,15 +392,6 @@ public:
             dIfunc = 1/(mach2*mach - mach);
         }
 
-#ifdef GALPY
-        auto& pos = _particle.pos;
-        Float pos_g[3] = {pos[0] + status->pcm.pos[0], 
-                          pos[1] + status->pcm.pos[1], 
-                          pos[2] + status->pcm.pos[2]};
-        Float gas_density = scale_density*galpy_manager->calcSetDensity(galpy_gaspot_index, status->time, pos_g, &pos[0]);
-#else
-        auto& pos_g = _particle.pos;
-#endif       
         Float r_g;
         Float c1 = -4*PI*G2*mass*gas_density/v3*Ifunc;
 
@@ -374,7 +410,7 @@ public:
             acc0[0] += c1*vel[0]*pos_g[0]/r_g;
             acc0[1] += c1*vel[1]*pos_g[1]/r_g;
             acc0[2] += c1*vel[2]*pos_g[2]/r_g;
-        }    
+        }
 
         Float vdota = vel[0]*acc0[0] + vel[1]*acc0[1] + vel[2]*acc0[2];
         // d(1/v^3)/dt = -3/v^5 v dot a

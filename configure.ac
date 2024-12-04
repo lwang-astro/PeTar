@@ -307,7 +307,7 @@ AC_CHECK_FILE(["$sdar_prefix/src/Hermite/hermite_integrator.h"],
 # GALPY
 AC_ARG_WITH([galpy-prefix],
             [AS_HELP_STRING([--with-galpy-prefix],
-	                    [Prefix of your Galpy installation. Default: search $HOME/.local, ../galpy])],
+	                    [Prefix of your Galpy installation. Default: search $HOME/.local, ../galpy, $VIRTUAL_ENV])],
             [galpy_prefix=$withval],
 	    [galpy_prefix="__search__"])
 
@@ -334,6 +334,8 @@ AC_ARG_WITH([interrupt],
 		          [#AX_CHECK_COMPILE_FLAG([-static-flang-libs],
                           #                       [FCFLAGS=$FCFLAGS" -static-flang-libs"])
 		          FCLIBS=$FCLIBS' -lflang -lpgmath'],[])
+		    AS_IF([test x"$FC" == x],
+                          [AC_MSG_FAILURE([can't find Fortran compiler, please install it. For example, in Ubuntu, to install GNU Fortran compiler, use 'sudo apt install gfortran'])],[])
                     FCFLAGS=$FCFLAGS_BK
 		    AS_IF([test x"$with_debug" == xg],
                           [AX_CHECK_COMPILE_FLAG([-g],
@@ -374,7 +376,7 @@ AC_ARG_WITH([external],
                     AS_IF([test x"$galpy_prefix" == x__search__],
                           [AC_CHECK_PROG([FIND_CHECK], [find], [find])
 			   AS_IF([test x"$FIND_CHECK" == xfind],
-                                 [galpy_prefix=`find $HOME/.local -type d -name galpy|tail -1`
+                                 [galpy_prefix=`find $HOME/.local $VIRTUAL_ENV -type d -name galpy|tail -1`
                                   AS_IF([test x"$galpy_prefix" == x],
                                         [galpy_prefix=`pwd`'/'`find ../ -type d -name galpy|tail -1`])])])
                     AC_CHECK_FILE(["$galpy_prefix/potential/potential_c_ext/galpy_potentials.h"],
@@ -388,10 +390,10 @@ AC_ARG_WITH([external],
 		    AS_IF([test x"$GSL_LIBS" == xnone],
                           [AC_CHECK_LIB([gslcblas],[main],
                                         [],
-                                        [AC_MSG_FAILURE([can't find GSL library, please install it first, e.g. in Ubuntu 20.04, use sudo apt-get install libgsl-dev])])
+                                        [AC_MSG_FAILURE([can't find GSL library, please install it first, e.g. in Ubuntu 20.04, use sudo apt install libgsl-dev])])
                            AC_CHECK_LIB([gsl],[main],
                                         [],
-                                        [AC_MSG_FAILURE([can't find GSL library, please install it first, e.g. in Ubuntu 20.04, use sudo apt-get install libgsl-dev])],[-lgslcblas])
+                                        [AC_MSG_FAILURE([can't find GSL library, please install it first, e.g. in Ubuntu 20.04, use sudo apt install libgsl-dev])],[-lgslcblas])
                            GSL_LIBS='-lgsl -lgslcblas'])])],
 	    [with_external=off])
 

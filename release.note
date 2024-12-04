@@ -1,6 +1,6 @@
 **experiment update referring to master**
 
-1. Include a parallel random number generator library and save the random seeds into a file for each snapshot with a filename suffix `.randseeds`.
+1. Include a parallel random number generator library and save the random seeds into a file for each snapshot with a filename suffix `.randseeds`. Use cpu time as the initial seed if not given manually.
 2. Add copy and mathematical operators for the data analysis classes (e.g., `petar.Particle`) in the Python analysis tool.
 3. Call the BSE evolve function at time zero in `petar.bse` to ensure spin initialization is not missed.
 4. Implement support for including external perturbation forces during hard integration, adding a `--with-external-hard` option in the configure script.
@@ -22,6 +22,11 @@
 20. Update the `petar.hard.debug` tool to support reading a dump file that contains a list of hard clusters.
 21. Remove the unused `time_org` in Hermite information.
 22. Add support for reading snapshot data in 128-bit floating-point format in the Python analysis tool.
+23. Add calculation of sound speed depending on pressure for gas drag mode.
+24. Fix error implementation for KDKDK-4th mode, use tree_nb to calculate gradient correction for only EP particles (no SIMD yet); Add gradient correction for external force from galpy. 
+25. Fix wrong data type for scale_density in gas_drag mode
+26. Add MergerTree class in Python analysis tool
+27. Add GW kick for BBH mergers
 
 **Some existing issues include**
 
@@ -32,7 +37,7 @@
 5. Need to check slowdown factor criterion
 6. Need better group information output
 
-**1245**
+**1255**
 
 Updates: (version shown in ()):
 
@@ -65,9 +70,13 @@ Updates: (version shown in ()):
 9. (1245) Save semi-major axis and eccentricity for kw=15 instead of setting them to zero in type_change files. 
 10.(1245) Enhance the printTable function in the Python analysis tool to allow manual setting of column titles. Additionally, introduce pre-defined column_format options for petar.SSETypeChange, petar.BSETypeChange and petar.BSEMerge for user convenience.
 11.(1245) To maintain consistency with other Python data analysis classes, such as `petar.BSETypeChange`, the members `kw1`, `kw2`, and `kwf` defined in `petar.BSEMerge` have been renamed to `type1`, `type2`, and `typef`, respectively.
+12.(1246) Update c.m. calculation method: use past 16 records of c.m. positions and velocities and obtain the median values as an average to update c.m. This can avoid significant jump of c.m. position and large roundoff errors when the density is too low, such as tidal streams. Also fix a problem when only one particle exist, the c.m. calculation may not be correct using the potential weighted method, now use no weight method instead.
+13.(1251) Partially fix the issue of correction for energy with stellar evolution (merged and modified from Tomomune Nishino).
+14.(1255) Add support to auto detect Galpy when Python virtual envirnoment is used.
+15.(1255) Add printing configure errors when Fortran compiler is not installed while BSE is switched on.
 
 Some existing issues include:
-1. When long-distant massive escapers exist and the stellar system has a very low density due to e.g. tidal disruption, the center position of global system based on the soft potential can suddenly jump to the escaper, which may generate large roundoff errors to binary orbits, that can cause artificial eccentricity jumps of binary systems. Need better way to determine the center of globaly system during simulation.
+1. When long-distant massive escapers exist and the stellar system has a very low density due to e.g. tidal disruption, the center position of global system based on the soft potential can suddenly jump to the escaper, which may generate large roundoff errors to binary orbits, that can cause artificial eccentricity jumps of binary systems. Need better way to determine the center of globaly system during simulation (partially solved, better to use mpreal in future).
 2. In cases where a high-eccentric binary system transitions from a binary to a hyperbolic orbit temporarily due to significant perturbations at a large separation, the BSE code may incorrectly identify it as an immediate merger, even though the binary system does not actually merge. It is essential to establish a more precise criterion for invoking binary evolution codes in such scenarios.
 3. Need better stability criterion
 4. Need to check criterion of TT method for binaries
