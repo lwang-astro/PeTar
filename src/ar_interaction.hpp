@@ -1198,10 +1198,10 @@ public:
                         if (type1>=13 && type1<=14 && type2>=13 && type2<=14) {
                             Float q, m1_pre, m2_pre, r1_pre, r2_pre, chi1_pre, chi2_pre, mf, rf, semi_pre, ecc_pre;
                             if (merger_event_index==0) {
-                                m1_pre = bse_manager.getMass(p1_star_bk);
-                                m2_pre = bse_manager.getMass(p2_star_bk);
-                                r1_pre = bse_manager.getStellarRadius(p1_star_bk);
-                                r2_pre = bse_manager.getStellarRadius(p2_star_bk);
+                                m1_pre = bse_manager.getMass(p1_star_bk,false);
+                                m2_pre = bse_manager.getMass(p2_star_bk,false);
+                                r1_pre = bse_manager.getStellarRadius(p1_star_bk,false);
+                                r2_pre = bse_manager.getStellarRadius(p2_star_bk,false);
                                 chi1_pre = bse_manager.getCompactChi(p1_star_bk);
                                 chi2_pre = bse_manager.getCompactChi(p2_star_bk);
                                 q = m1_pre/m2_pre;
