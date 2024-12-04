@@ -1396,14 +1396,15 @@ public:
     }
 
     //! get current mass in NB unit
-    double getMass(StarParameter& _star) {
-        return _star.mt/mscale;
+    double getMass(StarParameter& _star,bool unit_convert=true) {
+        if (unit_convert) return _star.mt/mscale;
+        else return _star.mt;
     }
 
     //! set mass in NB unit
     void setMass(StarParameter& _star, const double _m) {
         _star.mt = _m*mscale;
-    }    
+    }   
 
     //! get Chi (dimensionless spin) from ospin
     double getCompactChi(StarParameter& _star) {
@@ -1418,37 +1419,43 @@ public:
     }
     
     //! get mass loss in NB unit
-    double getMassLoss(StarParameterOut& _out) {
-        return _out.dm/mscale;
+    double getMassLoss(StarParameterOut& _out,bool unit_convert=true) {
+        if(unit_convert) return _out.dm/mscale;
+        else return _out.dm;
     }
 
     //! get merger radius in NB unit
-    double getMergerRadius(StarParameter& _star) {
+    double getMergerRadius(StarParameter& _star,bool unit_convert=true) {
         // use stellar radius as merger radius
-        return _star.r/rscale;
+        if(unit_convert) return _star.r/rscale;
+        else return _star.r;
     }
 
     //! get stellar radius in NB unit
-    double getStellarRadius(StarParameter& _star) {
-        return _star.r/rscale;
+    double getStellarRadius(StarParameter& _star,bool unit_convert=true) {
+        if(unit_convert) return _star.r/rscale;
+        else return _star.r;
     }
 
     //! get speed of light in NB unit
     /*! IAU 2009: c = 299 792 458 m/s
      */
-    double getSpeedOfLight() const {
+    double getSpeedOfLight(bool unit_convert=false) const {
         const double c = 2.99792458e5;
-        return c/vscale;
+        if(unit_convert) return c/vscale;
+        else return c;
     }
 
     //! get evolved Time in NB unit
-    double getTime(StarParameter& _star) {
-        return _star.tphys/tscale;
+    double getTime(StarParameter& _star,bool unit_convert=true) {
+        if(unit_convert) return _star.tphys/tscale;
+        else return _star.tphys;
     }
 
     //! get the difference of required finishing time and actually evolved time in NB unit
-    double getDTMiss(StarParameterOut& _out) {
-        return _out.dtmiss/tscale;
+    double getDTMiss(StarParameterOut& _out,bool unit_convert=true) {
+        if(unit_convert) return _out.dtmiss/tscale;
+        else return _out.dtmiss;
     }
 
     //! print type change 
