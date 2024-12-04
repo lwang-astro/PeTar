@@ -319,7 +319,6 @@ int main(int argc, char **argv){
       hard_dump.readOneClusterBinary(fp);
 
 #ifdef BSE_BASE
-      hard_dump.rand_manager.readRandSeedLocalBinary(fp);
       if (seed!=0) hard_dump.rand_manager.initialFromSeed(seed);
 #endif
 

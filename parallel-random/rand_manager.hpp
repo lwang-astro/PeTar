@@ -67,6 +67,20 @@ public:
         }
     }
 
+    //! get seed of local thread
+    void getRandSeedLocal(uint64_t seeds[]) const {
+#ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
+#pragma omp parallel 
+        {
+            seeds[0] = RAND_SEED[0];
+            seeds[1] = RAND_SEED[1];
+        }
+#else
+        seeds[0] = RAND_SEED[0];
+        seeds[1] = RAND_SEED[1];
+#endif
+    }    
+
     //! write seed of local thread
     void writeRandSeedLocal(FILE* fp) {
 #ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
@@ -132,11 +146,7 @@ public:
         int n_proc;
         // get number of MPI processors (ranks) in MPI_COMM_WORLD
         MPI_Comm_size(MPI_COMM_WORLD, &n_proc);
-        int rank;
-        // get current MPI processor id (rank) in MPI_COMM_WORLD
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #else
-        int rank=0;
         int n_proc = 1;
 #endif
 
@@ -180,15 +190,11 @@ public:
         std::vector<uint64_t> rand_seeds;
         int nseeds = getherRandSeeds(rand_seeds);
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-        int n_proc;
-        // get number of MPI processors (ranks) in MPI_COMM_WORLD
-        MPI_Comm_size(MPI_COMM_WORLD, &n_proc);
         int rank;
         // get current MPI processor id (rank) in MPI_COMM_WORLD
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #else
         int rank=0;
-        int n_proc = 1;
 #endif
         // save all seeds
         if (rank==0) {

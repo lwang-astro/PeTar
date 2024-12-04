@@ -22,13 +22,14 @@ public:
     PS::ReallocatableArray<FPSoft> ptcl_arti_bk;
     PS::ReallocatableArray<PtclH4> ptcl_bk;
 #ifdef BSE_BASE
+    uint64_t rand_seed[2];
     RandomManager rand_manager;
 #endif
     bool backup_flag;
 
     HardDump(): time_offset(0), time_end(0), n_ptcl(0), n_arti(0), n_group(0), n_member_in_group(), ptcl_arti_bk(), ptcl_bk(), 
 #ifdef BSE_BASE
-                rand_manager(), 
+                rand_seed{0,0}, rand_manager(), 
 #endif
                 backup_flag(false) {}
 
@@ -67,6 +68,9 @@ public:
             ptcl_arti_bk.resizeNoInitialize(n_arti);
         }
         n_group = _n_group;
+#ifdef BSE_BASE
+        rand_manager.getRandSeedLocal(rand_seed);
+#endif        
         backup_flag = true;
     }                
 
@@ -91,6 +95,9 @@ public:
         fwrite(&n_group, sizeof(PS::S32), 1, fp);
         fwrite(n_member_in_group.getPointer(), sizeof(PS::S32), n_group, fp);
         for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].writeBinary(fp);
+#ifdef BSE_BASE
+        fwrite(rand_seed, sizeof(uint64_t), 2, fp);
+#endif
     }
 
     //! Dumping one cluster data and random seed for a given file name
@@ -110,9 +117,6 @@ public:
             abort();
         }
         writeOneClusterBinary(fp);
-#ifdef BSE_BASE
-        rand_manager.writeRandSeedLocalBinary(fp);
-#endif
         fclose(fp);
         if (_dump_once_flag) backup_flag = false;
     }
@@ -178,6 +182,10 @@ public:
             ptcl_arti_bk.resizeNoInitialize(n_arti);
             for (int i=0; i<n_arti; i++) ptcl_arti_bk[i].readBinary(fp);
         }
+
+#ifdef BSE_BASE
+        rand_manager.readRandSeedLocalBinary(fp);
+#endif
     }
 
     //! reading one cluster data and random seed for a given filename
@@ -191,9 +199,6 @@ public:
             abort();
         }
         readOneClusterBinary(fp);
-#ifdef BSE_BASE
-        rand_manager.readRandSeedLocalBinary(fp);
-#endif
         fclose(fp);
     }
 
