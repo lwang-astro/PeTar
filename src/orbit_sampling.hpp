@@ -74,7 +74,6 @@ public:
                 // center_of_mass_correction 
                 pj->pos += _bin.pos;
                 pj->vel += _bin.vel;
-
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
                 assert(mass_member[j]>0);
                 assert(pj->mass >0);

@@ -12,6 +12,7 @@ do
 	    echo 'Options (default arguments shown in parentheses at the end):';
 	    echo '  -f [S] Specify the output file (PeTar input data) name (default: input file name + ".input")';
 	    echo '  -i [I] Skip the given number of rows in the input data file (default: 0)';
+		echo '  -P     Add three columns of high-precison parts of position';
 	    echo '  -s [S] Add stellar evolution columns: base | bse | no (default: no)';
 	    echo '  -T [I] The initial stellar type of each star when the BSE based stellar evolution is used (default: 1)';
 	    echo '  -m [F] Set the mass scaling factor from the input data unit to [Msun]: mass[input unit]*m_scale=mass[Msun] (default: 1.0)';
@@ -43,6 +44,7 @@ do
 	    exit;;
 	-f) shift; fout=$1; shift;;
 	-i) shift; igline=$1; shift;;
+	-P) mpflag='yes'; shift;;
 	-s) shift; seflag=$1; shift;;
 	-T) shift; setype=$1; shift;;
 	-m) shift; mscale=$1; convert=1; shift;;
@@ -62,6 +64,7 @@ if [ ! -e $fname ] | [ -z $fname ] ; then
 fi
 [ -z $fout ] && fout=$fname.input
 [ -z $igline ] && igline=0
+[ -z $mpflag ] && mpflag='no'
 [ -z $seflag ] && seflag='no'
 [ -z $setype ] && setype=1
 [ -z $extflag ] && extflag='no'
@@ -117,6 +120,10 @@ fi
 
 #         m,  r,        v,        bdata
 base_col='$1, $2,$3,$4, $5,$6,$7, 0,' 
+if [[ $mpflag == 'yes' ]]; then
+	#         m,  r,        pos_high       v,        bdata
+	base_col='$1, $2,$3,$4, 0.0, 0.0, 0.0, $5,$6,$7, 0,' 
+fi
 #         rs, id,    mbk, stat, rin, rout, acc_s, pot_t, pot_s, 
 soft_col='0,  NR-ig, 0,   0,    0,   0,    0,0,0, 0,     0,'
 if [[ $extflag == 'yes' ]]; then

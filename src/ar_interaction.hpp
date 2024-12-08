@@ -95,10 +95,10 @@ public:
     inline Float calcInnerAccPotAndGTKickInvTwo(AR::Force& _f1, AR::Force& _f2, Float& _epot, const PtclHard& _p1, const PtclHard& _p2) {
         // acceleration
         const Float mass1 = _p1.mass;
-        const Float* pos1 = &_p1.pos.x;
+        const auto& pos1 = _p1.pos;
 
         const Float mass2 = _p2.mass;
-        const Float* pos2 = &_p2.pos.x;
+        const auto& pos2 = _p2.pos;
 
         Float gm1 = gravitational_constant*mass1;
         Float gm2 = gravitational_constant*mass2;
@@ -319,7 +319,7 @@ public:
             for (int i=0; i<_n_particle; i++) {
                 Float* acc_pert = _force[i].acc_pert;
                 Float& pot_pert = _force[i].pot_pert;
-                const auto& pi = _particles[i];
+                auto& pi = _particles[i];
                 auto& chi = pi.changeover;
                 acc_pert[0] = acc_pert[1] = acc_pert[2] = Float(0.0);
                 pot_pert = 0.0;

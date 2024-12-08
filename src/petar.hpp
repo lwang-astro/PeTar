@@ -1535,8 +1535,10 @@ public:
 #ifdef PROFILE
         profile.hard_isolated.start();
 #endif
+#ifdef HARD_CHECK_ENERGY
         // reset slowdown energy correction
         system_hard_isolated.energy.resetEnergyCorrection();
+#endif
         // integrate multi cluster A
         system_hard_isolated.driveForMultiClusterOMP(_dt_drift, &(system_soft[0]));
         //system_hard_isolated.writeBackPtclForMultiCluster(system_soft, search_cluster.adr_sys_multi_cluster_isolated_,remove_list);
@@ -1667,6 +1669,7 @@ public:
         system_hard_connected.updateTimeWriteBack();
         mass_modify_list.resizeNoInitialize(0);
 #endif
+#endif    
 #ifdef PROFILE
         profile.search_cluster.barrier();
         PS::Comm::barrier();
@@ -1674,8 +1677,6 @@ public:
 #endif
     }
     
-#endif    
-
     //! correct force due to the change over update
     void correctForceChangeOverUpdate() {
 #ifdef PROFILE
@@ -2218,9 +2219,11 @@ public:
                 PS::F64 dkin = 0.5*pi.mass*(pi.vel*pi.vel);
                 PS::F64 eloss = dpot + dkin;
                 stat.energy.etot_ref -= eloss;
+#ifdef HARD_CHECK_ENERGY
                 stat.energy.de_change_cum -= eloss;
                 stat.energy.etot_sd_ref -= eloss;
                 stat.energy.de_sd_change_cum -= eloss;
+#endif
                 pi.mass = 0.0;
             }
         }
@@ -2243,9 +2246,11 @@ public:
                     PS::F64 dkin = 0.5*pi.mass*(pi.vel*pi.vel);
                     PS::F64 eloss = dpot + dkin;
                     stat.energy.etot_ref -= eloss;
+#ifdef HARD_CHECK_ENERGY
                     stat.energy.de_change_cum -= eloss;
                     stat.energy.etot_sd_ref -= eloss;
                     stat.energy.de_sd_change_cum -= eloss;
+#endif                    
                 }
                 // Registered removed particles have already done energy correction
                 else if (pi.mass==0.0&&pi.group_data.artificial.isUnused()) 
@@ -3767,8 +3772,13 @@ public:
                 // get drift step
                 dt_drift = dt_manager.getDtDriftContinue();
 
+#ifdef PETAR_USE_MPFRC
+                mprealVec pos_mp(p.pos, p.pos_high);
+                pos_mp += p.vel * dt_drift;
+                pos_mp.split(p.pos, p.pos_high);
+#else
                 p.pos += p.vel * dt_drift;
-
+#endif
                 // drift cm
                 stat.pcm.pos += stat.pcm.vel*dt_drift;
 
@@ -4049,7 +4059,6 @@ public:
 #endif            
             
             drift(dt_drift);
-
             // update stat time 
             stat.time = system_hard_one_cluster.getTimeOrigin();
 

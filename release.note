@@ -26,10 +26,10 @@
 24. Fix error implementation for KDKDK-4th mode, use tree_nb to calculate gradient correction for only EP particles (no SIMD yet); Add gradient correction for external force from galpy. 
 25. Fix wrong data type for scale_density in gas_drag mode
 26. Add MergerTree class in Python analysis tool
+27. Add mpreal support to store high-precision parts of particle positions, this can avoid influence of round-off on the tight binaries when the c.m. of system has significant jump.
 
 **Some existing issues include**
 
-1. When long-distant massive escapers exist and the stellar system has a very low density due to e.g. tidal disruption, the center position of global system based on the soft potential can suddenly jump to the escaper, which may generate large roundoff errors to binary orbits, that can cause artificial eccentricity jumps of binary systems. Need better way to determine the center of globaly system during simulation.
 2. In cases where a high-eccentric binary system transitions from a binary to a hyperbolic orbit temporarily due to significant perturbations at a large separation, the BSE code may incorrectly identify it as an immediate merger, even though the binary system does not actually merge. It is essential to establish a more precise criterion for invoking binary evolution codes in such scenarios.
 3. Need better stability criterion
 4. Need to check criterion of TT method for binaries

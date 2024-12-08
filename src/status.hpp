@@ -107,8 +107,17 @@ public:
     template <class Tsoft>
     void shiftToCenterOfMassFrame(Tsoft* _tsys, const PS::S64 _n) {
         if (!pcm.is_center_shift_flag) {
+#ifdef PETAR_USE_MPFRC
+            mprealVec pos_mp;
+#endif            
             for (int i=0; i<_n; i++) {
+#ifdef PETAR_USE_MPFRC
+                pos_mp.combine(_tsys[i].pos, _tsys[i].pos_high);
+                pos_mp -= pcm.pos;
+                pos_mp.split(_tsys[i].pos, _tsys[i].pos_high);
+#else
                 _tsys[i].pos -= pcm.pos;
+#endif                
                 _tsys[i].vel -= pcm.vel;
             }
         }
@@ -123,8 +132,17 @@ public:
     template <class Tsoft>
     void shiftToOriginFrame(Tsoft* _tsys, const PS::S64 _n) {
         if (pcm.is_center_shift_flag) {
+#ifdef PETAR_USE_MPFRC
+            mprealVec pos_mp;
+#endif
             for (int i=0; i<_n; i++) {
+#ifdef PETAR_USE_MPFRC
+                pos_mp.combine(_tsys[i].pos, _tsys[i].pos_high);
+                pos_mp += pcm.pos;
+                pos_mp.split(_tsys[i].pos, _tsys[i].pos_high);
+#else
                 _tsys[i].pos += pcm.pos;
+#endif
                 _tsys[i].vel += pcm.vel;
             }
         }
@@ -388,8 +406,17 @@ public:
         if (_initial_flag || pcm.time_bk.size() ==0) {
 #endif
             // correct particle
+#ifdef PETAR_USE_MPFRC
+            mprealVec pos_mp;
+#endif
             for (int i=0; i<_n; i++) {
+#ifdef PETAR_USE_MPFRC
+                pos_mp.combine(_tsys[i].pos, _tsys[i].pos_high);
+                pos_mp -= pcm.pos;
+                pos_mp.split(_tsys[i].pos, _tsys[i].pos_high);
+#else
                 _tsys[i].pos -= pcm.pos;
+#endif                
                 _tsys[i].vel -= pcm.vel;
             }
             pcm.pos += pcm_bk.pos;

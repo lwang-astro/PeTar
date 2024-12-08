@@ -243,7 +243,6 @@ AS_IF([test "x$use_cuda" != xno],
                                    [AC_MSG_FAILURE([can't find CUDA library -lgomp, please provide correct cuda PREFIX by using --with-cuda-prefix])])])],
        [use_cuda=no])
 
-
 # gperftools
 AC_ARG_ENABLE([gperf],
               [AS_HELP_STRING([--enable-gperf],
@@ -421,6 +420,24 @@ AC_ARG_WITH([orbit],
             [PROG_NAME=$PROG_NAME'.'$with_orbit],
 	    [with_orbit=pm])
 
+# mpfrc
+AC_ARG_ENABLE([mpfrc],
+              [AS_HELP_STRING([--enable-mpfrc],
+                              [enable MPFRC to use quadruple-precision floating points for position vectors])],
+              [use_mpfrc=yes],
+              [use_mpfrc=no])
+
+AS_IF([test x"$use_mpfrc" == xyes],
+      [PROG_NAME=$PROG_NAME'.mp'
+       AC_CHECK_LIB([mpfr],
+                    [main],
+                    [MPFRCLIBS=$MPFRCLIBS' -lmpfr'],
+                    [AC_MSG_FAILURE([can't find GNU mpfr library, please install it first, e.g. in Ubuntu, use sudo apt install libmpfr-dev])])
+       AC_CHECK_LIB([gmp],
+                    [main],
+                    [MPFRCLIBS=$MPFRCLIBS' -lgmp'],
+                    [AC_MSG_FAILURE([can't find GNU gmp library, please install it first, e.g. in Ubuntu, use sudo apt install libgmp-dev])])],
+      [use_mpfrc=no])
 
 PROG_NAME=$PROG_NAME$PROG_SUFFIX
 
@@ -464,6 +481,7 @@ AC_SUBST([use_mpi])
 AC_SUBST([use_cuda])
 AC_SUBST([use_omp])
 AC_SUBST([use_gperf])
+AC_SUBST([use_mpfrc])
 AC_SUBST([with_debug])
 AC_SUBST([with_step_mode])
 AC_SUBST([with_interrupt])
@@ -484,6 +502,8 @@ AC_SUBST([CUDALIBS])
 AC_SUBST([SIMDFLAGS])
 AC_SUBST([GPERFFLAGS])
 AC_SUBST([GPERFLIBS])
+AC_SUBST([MPFRCFLAGS])
+AC_SUBST([MPFRCLIBS])
 AC_SUBST([GALPY_PATH])
 AC_SUBST([GSL_CFLAGS])
 AC_SUBST([GSL_LIBS])
@@ -523,6 +543,7 @@ AC_MSG_NOTICE([     external hard mode:$with_external_hard])
 AC_MSG_NOTICE([     tidal tensor mode: $with_tidal_tensor])
 AC_MSG_NOTICE([     orbit mode:        $with_orbit])
 AC_MSG_NOTICE([     Using quad:        $use_quad])
+AC_MSG_NOTICE([     Using mpfrc++:     $use_mpfrc])
 AC_MSG_NOTICE([--Compilers:])
 AC_MSG_NOTICE([     C++ compiler:      $CXX])
 AS_IF([test "x$use_c" == xyes],
