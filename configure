@@ -1417,16 +1417,17 @@ Optional Packages:
   --with-sdar-prefix      Prefix of your FDPS installation. Default: ../SDAR
   --with-galpy-prefix     Prefix of your Galpy installation. Default: search
                           $HOME/.local, ../galpy, $VIRTUAL_ENV
-  --with-step-mode        Tree step mode: K[0.5]-D[1.0]-K[0.5] (kdk),
-                          K[1/6]-D[1/2]-K[4/6]-D[1/2]-K[1/6] (kdkdk). Default:
-                          kdk
-  --with-interrupt        Interruption detection mode: Default: off
-  --with-external         External potential: Default: off
-  --with-external-hard    External force for hard (short-range) integration:
-                          gasdrag: Default: none
-  --with-tidal-tensor     Tidal tensor accuracy mode: 2nd/3rd: Default: 3rd
-  --with-orbit            Orbit particle method for counter force: os:
-                          orbit-sampling; pm: pseudoparticle multipole.
+  --with-step-mode        Tree step mode (kdk: K[0.5]-D[1.0]-K[0.5]; kdkdk:
+                          K[1/6]-D[1/2]-K[4/6]-D[1/2]-K[1/6]; kdkdk4:
+                          Chin-4th). Default: kdk
+  --with-interrupt        Interruption detection mode (merge, bse, mobse,
+                          bseEmp). Default: off
+  --with-external         External potential (galpy). Default: off
+  --with-external-hard    External force for hard (short-range) integration
+                          (gasdrag). Default: none
+  --with-tidal-tensor     Tidal tensor accuracy mode (2nd, 3rd). Default: 3rd
+  --with-orbit            Orbit particle method for counter force (os:
+                          orbit-sampling; pm: pseudoparticle multipole).
                           Default: pm
 
 Some influential environment variables:

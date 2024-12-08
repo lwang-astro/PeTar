@@ -313,7 +313,7 @@ AC_ARG_WITH([galpy-prefix],
 # Leap frog step method
 AC_ARG_WITH([step-mode],
 	    [AS_HELP_STRING([--with-step-mode],
-	                    [Tree step mode: K[0.5]-D[1.0]-K[0.5] (kdk), K[1/6]-D[1/2]-K[4/6]-D[1/2]-K[1/6] (kdkdk). Default: kdk])],
+	                    [Tree step mode (kdk: K[0.5]-D[1.0]-K[0.5]; kdkdk: K[1/6]-D[1/2]-K[4/6]-D[1/2]-K[1/6]; kdkdk4: Chin-4th). Default: kdk])],
             [PROG_NAME=$PROG_NAME'.'$with_step_mode],
 	    [with_step_mode=kdk])
 
@@ -321,7 +321,7 @@ AC_ARG_WITH([step-mode],
 FCFLAGS_BK=$FCFLAGS
 AC_ARG_WITH([interrupt],
 	    [AS_HELP_STRING([--with-interrupt],
-	                    [Interruption detection mode: Default: off])],
+	                    [Interruption detection mode (merge, bse, mobse, bseEmp). Default: off])],
             [PROG_NAME=$PROG_NAME'.'$with_interrupt
 	     AS_IF([[test x"$with_interrupt" == xbse] || [test x"$with_interrupt" == xmobse] || [test x"$with_interrupt" == xbseEmp]],
 	           [use_fortran=yes
@@ -354,7 +354,7 @@ AC_ARG_WITH([interrupt],
 # external potential
 AC_ARG_WITH([external],
 	    [AS_HELP_STRING([--with-external],
-	                    [External potential: Default: off])],
+	                    [External potential (galpy). Default: off])],
             [PROG_NAME=$PROG_NAME'.'$with_external
 	     AS_IF([test x"$with_external" == xgalpy],
 	           [AC_LANG([C])
@@ -399,7 +399,7 @@ AC_ARG_WITH([external],
 # external force of hard part
 AC_ARG_WITH([external-hard],
 	    [AS_HELP_STRING([--with-external-hard],
-	                    [External force for hard (short-range) integration: gasdrag: Default: none])],
+	                    [External force for hard (short-range) integration (gasdrag). Default: none])],
             [with_external_hard=$withval
 	     PROG_NAME=$PROG_NAME'.'$with_external_hard],
 	    [with_external_hard=none])
@@ -408,7 +408,7 @@ AC_ARG_WITH([external-hard],
 # tidal tensor 3rd order mode
 AC_ARG_WITH([tidal-tensor],
 	    [AS_HELP_STRING([--with-tidal-tensor],
-	                    [Tidal tensor accuracy mode: 2nd/3rd: Default: 3rd])],
+	                    [Tidal tensor accuracy mode (2nd, 3rd). Default: 3rd])],
             [with_tidal_tensor=$withval
 	     PROG_NAME=$PROG_NAME'.'tt$with_tidal_tensor],
 	    [with_tidal_tensor=3rd])
@@ -416,7 +416,7 @@ AC_ARG_WITH([tidal-tensor],
 # orbit particle methods
 AC_ARG_WITH([orbit],
 	    [AS_HELP_STRING([--with-orbit],
-	                    [Orbit particle method for counter force: os: orbit-sampling; pm: pseudoparticle multipole. Default: pm])],
+	                    [Orbit particle method for counter force (os: orbit-sampling; pm: pseudoparticle multipole). Default: pm])],
             [PROG_NAME=$PROG_NAME'.'$with_orbit],
 	    [with_orbit=pm])
 
