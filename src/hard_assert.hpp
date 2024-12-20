@@ -8,6 +8,11 @@
 #ifdef BSE_BASE
 #include "../parallel-random/rand_interface.hpp"
 #endif
+#ifdef EXTERNAL_HARD
+#ifdef GALPY
+#include "../galpy-interface/galpy_interface.h"
+#endif
+#endif
 
 // Hard debug dump for one cluster
 class HardDump{
@@ -15,6 +20,9 @@ public:
     typedef H4::ParticleH4<PtclHard> PtclH4;
     PS::F64 time_offset;
     PS::F64 time_end;
+    PS::F64 gcm_mass;
+    PS::F64vec gcm_pos;
+    PS::F64vec gcm_vel;
     PS::S32 n_ptcl;
     PS::S32 n_arti;
     PS::S32 n_group;
@@ -27,7 +35,7 @@ public:
 #endif
     bool backup_flag;
 
-    HardDump(): time_offset(0), time_end(0), n_ptcl(0), n_arti(0), n_group(0), n_member_in_group(), ptcl_arti_bk(), ptcl_bk(), 
+    HardDump(): time_offset(0), time_end(0), gcm_mass(0), gcm_pos(), gcm_vel(), n_ptcl(0), n_arti(0), n_group(0), n_member_in_group(), ptcl_arti_bk(), ptcl_bk(), 
 #ifdef BSE_BASE
                 rand_seed{0,0}, rand_manager(), 
 #endif
@@ -41,6 +49,9 @@ public:
        @param[in] _n_group: number of groups
        @param[in] _time_offset: offset of time
        @param[in] _time_end: time ending without offset
+       @param[in] _gcm_mass: mass of the system
+       @param[in] _gcm_pos: position of the system
+       @param[in] _gcm_vel: velocity of the system
        @param[in] _n_artificial: artifical particle number
      */
     void backup(PtclH4 * _ptcl_local,
@@ -50,11 +61,17 @@ public:
                 const PS::S32* _n_member_in_group,
                 const PS::F64 _time_offset,
                 const PS::F64 _time_end,
+                const PS::F64 _gcm_mass,
+                const PS::F64vec& _gcm_pos,
+                const PS::F64vec& _gcm_vel,
                 const PS::S32 _n_artificial) {
         ptcl_bk.resizeNoInitialize(_n_ptcl);
         for (int i=0; i<_n_ptcl; i++) ptcl_bk[i] = _ptcl_local[i];
         time_offset = _time_offset;
         time_end = _time_end;
+        gcm_mass = _gcm_mass;
+        gcm_pos = _gcm_pos;
+        gcm_vel = _gcm_vel;
         n_ptcl =_n_ptcl;
         n_member_in_group.resizeNoInitialize(_n_group);
         for (int i=0; i<_n_group; i++) n_member_in_group[i] = _n_member_in_group[i];
@@ -80,6 +97,9 @@ public:
     void writeOneClusterBinary(FILE* fp) const {
         fwrite(&time_offset, sizeof(PS::F64),1,fp);
         fwrite(&time_end, sizeof(PS::F64),1,fp);
+        fwrite(&gcm_mass, sizeof(PS::F64),1,fp);
+        fwrite(&gcm_pos, sizeof(PS::F64vec),1,fp);
+        fwrite(&gcm_vel, sizeof(PS::F64vec),1,fp);
         // hard particles
         fwrite(&n_ptcl, sizeof(PS::S32), 1, fp);
         for(int i=0; i<n_ptcl; i++) ptcl_bk[i].writeBinary(fp);
@@ -130,6 +150,14 @@ public:
         rcount += fread(&time_end, sizeof(PS::F64),1,fp);
         if (rcount<2) {
             std::cerr<<"Error: Data reading fails! requiring data number is 2, only obtain "<<rcount<<".\n";
+            abort();
+        }
+        // read gcm
+        rcount = fread(&gcm_mass, sizeof(PS::F64),1,fp);
+        rcount += fread(&gcm_pos, sizeof(PS::F64vec),1,fp);
+        rcount += fread(&gcm_vel, sizeof(PS::F64vec),1,fp);
+        if (rcount<3) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 4, only obtain "<<rcount<<".\n";
             abort();
         }
         // read hard particles
@@ -210,9 +238,20 @@ public:
     int size;
     int mpi_rank;
     int dump_number;
+#ifdef EXTERNAL_HARD
+#ifdef GALPY
+    GalpyManager* galpy_manager;
+#endif
+#endif
     HardDump* hard_dump;
 
-    HardDumpList(): size(0), mpi_rank(0), dump_number(0), hard_dump(NULL) {}
+    HardDumpList(): size(0), mpi_rank(0), dump_number(0), 
+#ifdef EXTERNAL_HARD
+#ifdef GALPY
+                    galpy_manager(NULL),
+#endif
+#endif
+                    hard_dump(NULL) {}
 
     void initial(const int _nthread, const int _rank=0) {
         size = _nthread;
@@ -244,6 +283,11 @@ public:
                 std::string fname = filename;
                 if (long_suffix_flag) fname = filename + point + std::to_string(hard_dump[i].time_offset) + point + std::to_string(mpi_rank) + point + std::to_string(i) + point + std::to_string(dump_number++) + point + std::to_string(tnow);
                 hard_dump[i].dumpOneClusterAndSeed(fname.c_str(), append_flag, dump_once_flag);
+#ifdef EXTERNAL_HARD
+#ifdef GALPY
+                galpy_manager->writePotentialPars((fname+".galpy").c_str(), hard_dump[i].time_offset, false);
+#endif
+#endif            
                 if (print_flag) std::cerr<<"Dump file: "<<fname.c_str()<<std::endl;
             }
         }
@@ -262,6 +306,11 @@ public:
             std::string fname = filename;
             if (long_suffix_flag) fname = filename + point + std::to_string(hard_dump[ith].time_offset) + point + std::to_string(mpi_rank) + point + std::to_string(ith) + point + std::to_string(dump_number++) + point + std::to_string(tnow);
             hard_dump[ith].dumpOneClusterAndSeed(fname.c_str(), append_flag, dump_once_flag);
+#ifdef EXTERNAL_HARD
+#ifdef GALPY
+            galpy_manager->writePotentialPars((fname+".galpy").c_str(), hard_dump[ith].time_offset, false);
+#endif
+#endif            
             if (print_flag) std::cerr<<"Thread: "<<ith<<" Dump file: "<<fname.c_str()<<std::endl;
         }
     }

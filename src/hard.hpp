@@ -19,6 +19,7 @@
 #include"search_group_candidate.hpp"
 #include"artificial_particles.hpp"
 #include"stability.hpp"
+#include"status.hpp"
 
 typedef H4::ParticleH4<PtclHard> PtclH4;
 
@@ -56,9 +57,10 @@ public:
     H4::HermiteManager<HermiteInteraction> h4_manager;
     AR::TimeTransformedSymplecticManager<ARInteraction> ar_manager;
     RecordIDRange record_id_range;
+    Status* status;
 
     //! constructor
-    HardManager(): energy_error_max(-1.0), eps_sq(-1.0), r_in_base(-1.0), r_out_base(-1.0), n_step_per_orbit(-1.0), ap_manager(), h4_manager(), ar_manager() {}
+    HardManager(): energy_error_max(-1.0), eps_sq(-1.0), r_in_base(-1.0), r_out_base(-1.0), n_step_per_orbit(-1.0), ap_manager(), h4_manager(), ar_manager(), status(NULL) {}
     
     //! set softening
     void setEpsSq(const PS::F64 _eps_sq) {
@@ -97,6 +99,7 @@ public:
         ASSERT(ap_manager.checkParams());
         ASSERT(h4_manager.checkParams());
         ASSERT(ar_manager.checkParams());
+        ASSERT(status!=NULL);
         return true;
     }
 
@@ -2440,7 +2443,8 @@ public:
 
 #ifdef HARD_DUMP
             assert(ith<hard_dump.size);
-            hard_dump[ith].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, time_origin_, dt, manager->ap_manager.getArtificialParticleN());
+            auto& pcm = manager->status->pcm; // global system c.m.
+            hard_dump[ith].backup(ptcl_hard_.getPointer(adr_head), n_ptcl, ptcl_artificial_ptr, n_group, n_member_in_group_ptr, time_origin_, dt, pcm.mass, pcm.pos, pcm.vel, manager->ap_manager.getArtificialParticleN());
 #endif // END HARD_DUMP
 
 #ifdef HARD_DEBUG_PROFILE

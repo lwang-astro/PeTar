@@ -1420,7 +1420,7 @@ Optional Packages:
   --with-step-mode        Tree step mode (kdk: K[0.5]-D[1.0]-K[0.5]; kdkdk:
                           K[1/6]-D[1/2]-K[4/6]-D[1/2]-K[1/6]; kdkdk4:
                           Chin-4th). Default: kdk
-  --with-interrupt        Interruption detection mode (merge, bse, mobse,
+  --with-interrupt        Interruption detection mode (base, bse, mobse,
                           bseEmp). Default: off
   --with-external         External potential (galpy). Default: off
   --with-external-hard    External force for hard (short-range) integration

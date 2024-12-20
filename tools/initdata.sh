@@ -12,23 +12,29 @@ do
 	    echo 'Options (default arguments shown in parentheses at the end):';
 	    echo '  -f [S] Specify the output file (PeTar input data) name (default: input file name + ".input")';
 	    echo '  -i [I] Skip the given number of rows in the input data file (default: 0)';
-		echo '  -P     Add three columns of high-precison parts of position';
-	    echo '  -s [S] Add stellar evolution columns: base | bse | no (default: no)';
-	    echo '  -T [I] The initial stellar type of each star when the BSE based stellar evolution is used (default: 1)';
 	    echo '  -m [F] Set the mass scaling factor from the input data unit to [Msun]: mass[input unit]*m_scale=mass[Msun] (default: 1.0)';
-	    echo '      Note that Msun is used as the mass unit in BSE based stellar evolution.';
+	    echo '         Note that Msun is used as the mass unit in BSE based stellar evolution.';
 	    echo '  -r [F] Set the radius scaling factor from the input data unit to [pc] (default: 1.0)';
 	    echo '  -v [F] Set the velocity scaling factor from the input data unit to [pc/myr]  (default: 1.0)';
 	    echo '          If "kms2pcmyr" is given, convert velocity unit from [km/s] to [pc/myr].';
 	    echo '  -u     Calculate the velocity scaling factor based on the mass and radius scaling, then convert the data unit to (Msun, pc, pc/myr).';
 	    echo '          The input data should use the Henon unit (total mass=1, G=1).';
 	    echo '          The mass and radius scaling can be modified using -m and -r, respectively.';
+	    echo '  -s [S] Add stellar evolution columns: base | bse | no (default: no)';
+	    echo '  -R [S] Set the initial stellar radius for "-s base" mode (default: 0.0)';
+	    echo '          If value is given, set the given radius for all stars.';
+	    echo '          If "$[column index]" is given, read the corresponding column as the stellar radii for individual stars.';
+	    echo '             For example, "$8" indicates the 8th column is the stellar radii.';
+	    echo '  -T [I] The initial stellar type of each star when the BSE based stellar evolution is used (default: 1)';
+	    echo '          If number between 0-14 is provided, set the given stellar type to all stars.';
+	    echo '          If "$[column index]" is given, read the corresponding column as the BSE type for individual stars.';
+	    echo '             For example, "$8" indicates the 8th column is the BSE types.';
 	    echo '  -t     Add an external potential column and the position and velocity offsets to all particles in the header line.';
 	    echo '         This is required when the external potential (e.g., Galpy) is enabled (--with-external in configure).';
 	    echo '  -c [S] Set values of position and velocity offsets [in input unit], values are separated by "," (default: 0,0,0,0,0,0).';
 	    echo '         The units will be transformed based on the scaling options (-r, -v, -u).';
 	    echo '         This is required when the external potential (e.g., Galpy) is enabled and the option "-t" is used';
-	    echo '  -R [S] Set the initial stellar radius for "-s base" mode (default: 0.0)';
+            echo '  -P     Add three columns of high-precison parts of position';
 	    echo 'Important notes:'
 	    echo '    1) When using stellar evolution (e.g., BSE), be cautious with the scaling factor.';
 	    echo '       It is recommended to use the unit set [Msun, pc, pc/myr] for the input data.';
@@ -146,8 +152,8 @@ if [[ $seflag != 'no' ]]; then
     se_col=$radius', 0,  0,        0,' 
 
     if [[ $seflag == 'base' ]]; then
-	echo "Interrupt mode: base'
-	echo 'Stellar radius (0): " $radius
+	echo "Interrupt mode: base"
+	echo "Stellar radius (0): " $radius
 	awk '{OFMT="%.15g"; print '"$base_col$se_col$soft_col"'}' $fout.scale__ >>$fout
     elif [[ "$seflag" == *"bse"* ]]; then
 	#       type, m0,  m,     rad, mc,  rc,  spin, epoch, time, lum

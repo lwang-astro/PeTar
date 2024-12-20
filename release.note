@@ -4,7 +4,7 @@
 2. Add copy and mathematical operators for the data analysis classes (e.g., `petar.Particle`) in the Python analysis tool.
 3. Call the BSE evolve function at time zero in `petar.bse` to ensure spin initialization is not missed.
 4. Implement support for including external perturbation forces during hard integration, adding a `--with-external-hard` option in the configure script.
-5. Introduce gas drag with GDF force for external perturbation; support using Galpy potential as the gas potential.
+5. Introduce gas drag with GDF force for external perturbation; support using Galpy potential as the gas potential; update petar.hard.debug to read external hard parameters and galpy parameters.
 6. Add a function named `generateBSEInput` for the `petar.Binary` class in the analysis tool to convert `petar.Binary` data into a binary input file for `petar.bse`.
 7. Include `semiToPeriod` and `periodToSemi` functions in the Python analysis tools.
 8. Fix a bug in the Python analysis function `calcGWMyr`.

@@ -2476,6 +2476,10 @@ public:
 #endif
 #endif
 
+#ifdef EXTERNAL_HARD
+        fout<<"Use external perturbation in hard: gasdrag\n";
+#endif
+
 #ifdef GALPY
         fout<<"Use external potential: Galpy\n";
 #endif 
@@ -2508,6 +2512,10 @@ public:
 
 #ifdef USE_FUGAKU
         fout<<"Use Fugaku\n";
+#endif
+
+#ifdef PETAR_USE_MPFRC
+        fout<<"Use MPFRC for particle positions\n";
 #endif
 
 #ifdef USE_GPU
@@ -3394,7 +3402,6 @@ public:
         rand_manager.initialAll(rand_parameters);
         rand_manager.printRandSeeds(std::cout);
 
-
         // initial stellar evolution for each star
         if (!restart_flag) {
 #pragma omp parallel for
@@ -3417,6 +3424,7 @@ public:
 #ifdef EXTERNAL_HARD
 #ifdef GALPY
         hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, galpy_manager, stat, print_flag);
+        hard_dump.galpy_manager = &galpy_manager;
 #else
         hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, stat.time, print_flag);
 #endif
@@ -3428,6 +3436,9 @@ public:
         hard_manager.record_id_range.id_end_one = input_parameters.record_id_end_one.value;
         hard_manager.record_id_range.id_start_two = input_parameters.record_id_start_two.value;
         hard_manager.record_id_range.id_end_two = input_parameters.record_id_end_two.value;
+
+        // link global status 
+        hard_manager.status = &stat;
 
         // check consistence of paramters
         input_parameters.checkParams();

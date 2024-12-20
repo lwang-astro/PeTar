@@ -12,6 +12,7 @@
 #include "hard.hpp"
 #include "soft_ptcl.hpp"
 #include "static_variables.hpp"
+#include "status.hpp"
 
 #ifdef BSE_BASE
 #include "../parallel-random/rand_interface.hpp"
@@ -35,16 +36,24 @@ int main(int argc, char **argv){
   PS::S32 iend = -1;
   std::string filename="hard_dump";
   std::string fhardpar="input.par.hard";
+#ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
+  int stellar_evolution_option = -1;
   uint64_t seed = 0;
   std::string bse_name = BSEManager::getBSEName();
   std::string fsse_suffix = BSEManager::getSSEOutputFilenameSuffix();
   std::string fbse_suffix = BSEManager::getBSEOutputFilenameSuffix();
 
   std::string fbsepar = "input.par" + fbse_suffix;
+#else
+  int interrupt_detection_option = -1;
 #endif
-#ifdef STELLAR_EVOLUTION
-  int stellar_evolution_option = -1;
+#endif
+#ifdef EXTERNAL_HARD
+  std::string fexthardpar = "input.par.exthard";
+#ifdef GALPY
+  std::string fgalpypar = "input.par.galpy";
+#endif
 #endif
 #ifdef SOFT_PERT
   bool soft_pert_flag=true;
@@ -66,10 +75,12 @@ int main(int argc, char **argv){
       {"hermite-eta-4th",   required_argument, &opt_flag, 7},
       {"hermite-eta-2nd",   required_argument, &opt_flag, 8},
 #ifdef STELLAR_EVOLUTION
-      {"stellar-evolution", required_argument, &opt_flag, 9},
-#endif
 #ifdef BSE_BASE
+      {"stellar-evolution", required_argument, &opt_flag, 9},
       {"rand-seed",         required_argument, &opt_flag, 10},
+#else
+      {"detect-interrupt", required_argument, &opt_flag, 9},
+#endif
 #endif
       {"tstart",            required_argument, &opt_flag, 11},
       {"tend",              required_argument, &opt_flag, 12},
@@ -79,7 +90,7 @@ int main(int argc, char **argv){
       {0,0,0,0}
   };
 
-  while ((copt = getopt_long(argc, argv, "m:n:b:p:h", long_options, &option_index)) != -1)
+  while ((copt = getopt_long(argc, argv, "m:n:b:e:g:p:Sh", long_options, &option_index)) != -1)
     switch (copt) {
     case 0:
         switch (opt_flag) {
@@ -113,14 +124,18 @@ int main(int argc, char **argv){
             eta_2nd = atof(optarg);
             break;
 #ifdef STELLAR_EVOLUTION
+#ifdef BSE_BASE
         case 9:
             stellar_evolution_option = atoi(optarg);
             break;
-#endif
-#ifdef BSE_BASE
         case 10:
             seed = atoi(optarg);
             break;
+#else
+        case 9:
+            interrupt_detection_option = atoi(optarg);
+            break;
+#endif
 #endif
         case 11:
             tstart = atof(optarg);
@@ -157,6 +172,16 @@ int main(int argc, char **argv){
         fbsepar = optarg;
         break;
 #endif
+#ifdef EXTERNAL_HARD
+    case 'e':
+        fexthardpar = optarg;
+        break;
+#ifdef GALPY
+    case 'g':
+        fgalpypar = optarg;
+        break;
+#endif
+#endif
     case 'h':
         std::cout<<"A tool to integrate a dumped cluster of neighbor particles using particle-particle method (Hermite/SDAR)\n"
                  <<"Usage: petar.hard.debug [options] [hard parameter filename (defaulted: input.par.hard)] [dumped data filename (defaulted: hard_dump)]\n"
@@ -168,6 +193,12 @@ int main(int argc, char **argv){
 #ifdef BSE_BASE
                  <<"    -b [string]:  bse parameter file name: "<<fbsepar<<std::endl
 #endif
+#ifdef EXTERNAL_HARD
+                 <<"    -e [string]:  external hard parameter file name: "<<fexthardpar<<std::endl
+#ifdef GALPY
+                 <<"    -g [string]:  galpy parameter file name: "<<fgalpypar<<std::endl
+#endif
+#endif                 
 #ifdef SOFT_PERT
                  <<"    -S:           suppress soft perturbation (tidal tensor)\n"
 #endif
@@ -185,11 +216,13 @@ int main(int argc, char **argv){
                  <<"        --hermite-dt-min-power [int]:  hard time step min power (should use together with -D)\n"
                  <<"        --hermite-eta-4th   [double]:  Eta 4th for hermite \n"
                  <<"        --hermite-eta-2nd   [double]:  Eta 2nd for hermite \n"
+#ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
                  <<"        --rand-seed         [int]:     random seed to generate kick velocity\n"
-#endif
-#ifdef STELLAR_EVOLUTION
                  <<"        --stellar-evolution [int]:     Stellar evolution option: \n"
+#else
+                 <<"        --detect-interrupt  [int]:     interrupt detection option: 0: no interrupt; 1: merge; 2: record binary status\n"
+#endif
 #endif
                  <<"        --slowdown-factor   [double]:  change slowdown factor reference\n"
                  <<"        --step-limit-ar     [int]:     AR step count limit\n"
@@ -243,8 +276,41 @@ int main(int argc, char **argv){
       hard_manager.ar_manager.interaction.fout_sse<<std::setprecision(WRITE_PRECISION);
       hard_manager.ar_manager.interaction.fout_bse<<std::setprecision(WRITE_PRECISION);      
   }
-#endif // BSE_BASE
+#else // BSE_BASE
+  if (interrupt_detection_option>=0) {
+      hard_manager.ar_manager.interaction.interrupt_detection_option = interrupt_detection_option;
+  }
+  if (hard_manager.ar_manager.interaction.interrupt_detection_option>0) {
+      hard_manager.ar_manager.interaction.fout_interrupt.open((filename+".interrupt").c_str(), std::ofstream::out);
+      hard_manager.ar_manager.interaction.fout_interrupt<<std::setprecision(WRITE_PRECISION);
+  }
+#endif 
 #endif //STELLAR_EVOLUTION
+
+#ifdef EXTERNAL_HARD
+  IOParamsExternalHard external_hard_parameters;
+  std::cerr<<"External hard parameter file:"<<fexthardpar<<std::endl;
+  if( (fpar_in = fopen(fexthardpar.c_str(),"r")) == NULL) {
+      fprintf(stderr,"Error: Cannot open file %s.\n", fexthardpar.c_str());
+      abort();
+  }
+  external_hard_parameters.input_par_store.readAscii(fpar_in);
+  fclose(fpar_in);
+
+#ifdef GALPY
+  IOParamsGalpy galpy_parameters;
+  std::cerr<<"Galpy parameter file:"<<fgalpypar<<std::endl;
+  if( (fpar_in = fopen(fgalpypar.c_str(),"r")) == NULL) {
+      fprintf(stderr,"Error: Cannot open file %s.\n", fgalpypar.c_str());
+      abort();
+  }
+  galpy_parameters.input_par_store.readAscii(fpar_in);
+  fclose(fpar_in);
+
+#endif
+  hard_manager.ar_manager.interaction.ext_force = &hard_manager.h4_manager.interaction.ext_force;
+#endif        
+
 
 #ifdef ADJUST_GROUP_PRINT
   if (hard_manager.h4_manager.adjust_group_write_flag) {
@@ -260,6 +326,9 @@ int main(int argc, char **argv){
       hard_manager.energy_error_max = e_err_hard;
   }
 #endif
+
+  Status stat;
+  hard_manager.status = &stat;
 
   // Set step limit for ARC sym
   if (step_arc_limit>0) {
@@ -334,6 +403,13 @@ int main(int argc, char **argv){
       hard_dump.rand_manager.printRandSeeds(std::cerr);
 #endif
 
+      stat.time = hard_dump.time_offset;
+      stat.pcm.mass = hard_dump.gcm_mass;
+      stat.pcm.pos = hard_dump.gcm_pos;
+      stat.pcm.vel = hard_dump.gcm_vel;
+
+      std::cerr<<"Global CM: mass="<<stat.pcm.mass<<" pos="<<stat.pcm.pos<<" vel="<<stat.pcm.vel<<std::endl;  
+
 #ifdef SOFT_PERT
       if (!soft_pert_flag) {
           std::cerr<<"Suppress soft perturbation\n";
@@ -363,6 +439,18 @@ int main(int argc, char **argv){
 
           // change ARC parameters
           //sys.driveForMultiClusterImpl(hard_dump.ptcl_bk.getPointer(), hard_dump.n_ptcl, hard_dump.ptcl_arti_bk.getPointer(), hard_dump.n_group, hard_dump.time_end, 0);
+
+
+#ifdef EXTERNAL_HARD
+#ifdef GALPY
+          GalpyManager galpy_manager;
+          std::string galpy_conf_filename = filename+".galpy";
+          galpy_manager.initial(galpy_parameters, stat.time, galpy_conf_filename, true, true, false);
+          hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, galpy_manager, stat, true);
+#else
+          hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, stat.time, true);
+#endif
+#endif
           HardIntegrator hard_int;
           hard_int.output_filename_prefix = filename;
           auto* ptcl_artificial_ptr =  hard_dump.ptcl_arti_bk.getPointer();
@@ -400,10 +488,12 @@ int main(int argc, char **argv){
   fclose(fp);
 
 #ifdef STELLAR_EVOLUTION
-#ifdef BSE_BASE
   auto& interaction = hard_manager.ar_manager.interaction;
+#ifdef BSE_BASE
   if (interaction.fout_sse.is_open()) interaction.fout_sse.close();
   if (interaction.fout_bse.is_open()) interaction.fout_bse.close();
+#else
+  if (interaction.fout_interrupt.is_open()) interaction.fout_interrupt.close();
 #endif
 #endif
   return 0;
