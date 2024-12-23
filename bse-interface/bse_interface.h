@@ -6,6 +6,7 @@
 #include <string>
 #include <getopt.h>
 #include "../src/io.hpp"
+#include "../src/gw_kick.hpp"
 
 /*!
   This file provides the interface classes to connect the BSE-based code to PeTar.
@@ -261,7 +262,7 @@ struct StarParameter{
     double r;     ///> Stellar radius in solar units
     double mc;    ///> core mass in solar units 
     double rc;    ///> core radius in solar units (output)
-    double ospin;  ///> spin of star
+    double ospin[3];  ///> spin of star
     double epoch;  ///> starting time of one evolution phase, age = tphys - epoch
     double tphys;  ///> physical evolve time in Myr
     double lum;    ///> Landmark luminosities 
@@ -273,14 +274,22 @@ struct StarParameter{
       @param[in] _ospin: initial spin (default: 0.0)
       @param[in] _epoch: initial age for the given type (default: 0.0)
      */
-    void initial(double _mass, int _kw=1, double _ospin=0.0, double _epoch=0.0) {
+    void initial(double _mass, int _kw=1, double* _ospin= nullptr, double _epoch=0.0) {
         kw = _kw;
         m0 = _mass;
         mt = _mass;
         r  = 0.0;
         mc = 0.0;
         rc = 0.0;
-        ospin = _ospin;
+    if (_ospin) {
+        ospin[0] = _ospin[0];
+        ospin[1] = _ospin[1];
+        ospin[2] = _ospin[2];
+    } else {
+        ospin[0] = 0.0;
+        ospin[1] = 0.0;
+        ospin[2] = 0.0;
+    }
         epoch = _epoch;
         tphys = _epoch;
     }
@@ -289,16 +298,16 @@ struct StarParameter{
     /*! @param[in] _fout: file IO for write
      */
     void writeAscii(FILE* fp) const{
-        fprintf(fp, "%lld %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e ",
-                this->kw, this->m0, this->mt, this->r, this->mc, this->rc, this->ospin, this->epoch, this->tphys, this->lum);
+        fprintf(fp, "%lld %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e %26.17e ",
+                this->kw, this->m0, this->mt, this->r, this->mc, this->rc, this->ospin[0], this->ospin[1], this->ospin[2], this->epoch, this->tphys, this->lum);
     }
 
     //! read class data with ASCII format
     /*! @param[in] _fin: file IO for read
      */
     void readAscii(FILE* fp) {
-        int rcount=fscanf(fp, "%lld %lf %lf %lf %lf %lf %lf %lf %lf %lf ",
-                          &this->kw, &this->m0, &this->mt, &this->r, &this->mc, &this->rc, &this->ospin, &this->epoch, &this->tphys, & this->lum);
+        int rcount=fscanf(fp, "%lld %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf ",
+                          &this->kw, &this->m0, &this->mt, &this->r, &this->mc, &this->rc, &this->ospin[0], &this->ospin[1], &this->ospin[2], &this->epoch, &this->tphys, & this->lum);
         if(rcount<10) {
             std::cerr<<"Error: Data reading fails! requiring data number is 10, only obtain "<<rcount<<".\n";
             abort();
@@ -313,7 +322,9 @@ struct StarParameter{
             <<" rad[R*]= "<<r
             <<" mc[M*]= "<<mc
             <<" rc[M*]= "<<rc
-            <<" spin= "<<ospin
+            <<" spin[0]= "<<ospin[0]
+            <<" spin[1]= "<<ospin[1]
+            <<" spin[2]= "<<ospin[2]
             <<" epoch= "<<epoch
             <<" t[myr]= "<<tphys
             <<" lum[L*]= "<<lum;
@@ -349,7 +360,9 @@ struct StarParameter{
              <<std::setw(_width)<<r
              <<std::setw(_width)<<mc
              <<std::setw(_width)<<rc
-             <<std::setw(_width)<<ospin
+             <<std::setw(_width)<<ospin[0]
+             <<std::setw(_width)<<ospin[1]
+             <<std::setw(_width)<<ospin[2]            
              <<std::setw(_width)<<epoch
              <<std::setw(_width)<<tphys
              <<std::setw(_width)<<lum;
@@ -463,18 +476,18 @@ static double EstimateRocheRadiusOverSemi(double& _q) {
 }
 
 //! convert ospin to dimensionless chi for compact objects (WD/NS/BH)
-double CompactOspinToChi(double _ospin, double _mc, double _rc) {
+std::array<double, 3> CompactOspinToChi(double _ospin[3], double _mc, double _rc) {
     const double k3 = 0.21;
     const double grav_over_cele = 30.12;
-    return _ospin * (k3*_rc*_rc) / (grav_over_cele*_mc);
+    return { _ospin[0] * (k3*_rc*_rc) / (grav_over_cele*_mc), _ospin[1] * (k3*_rc*_rc) / (grav_over_cele*_mc), _ospin[2] * (k3*_rc*_rc) / (grav_over_cele*_mc)};
 }
 
 //! convert dimensionless chi to ospin for compact objects (WD/NS/BH)
-double CompactChiToOspin(double _chi, double _mc, double _rc) {
+/*double CompactChiToOspin(double _chi, double _mc, double _rc) {
     const double k3 = 0.21;
     const double grav_over_cele = 30.12;
     return _chi * (grav_over_cele*_mc) / (k3*_rc*_rc);
-}
+}*/
 
 //! a simple check to determine whether the GR effect is important
 /*!
@@ -505,9 +518,9 @@ static double EstimateGRTimescale(StarParameter& _star1, StarParameter& _star2, 
 /*! The binary evolution parameters record in the bpp array of evolv2
  */
 class BinaryEvent{
-public:
+    public:
     // Tanikawa's BH model
-    double record[20][9];
+    double record[24][9];
     //double record[20][81];
     //
 
@@ -535,8 +548,12 @@ public:
         record[15][_index] = _p2.mc;
         record[16][_index] = _p1.rc;
         record[17][_index] = _p2.rc;
-        record[18][_index] = _p1.ospin;
-        record[19][_index] = _p2.ospin;
+        record[18][_index] = _p1.ospin[0];
+        record[19][_index] = _p2.ospin[0];
+        record[20][_index] = _p1.ospin[1];
+        record[21][_index] = _p2.ospin[1];
+        record[22][_index] = _p1.ospin[2];
+        record[23][_index] = _p2.ospin[2];
     }
 
     //! get mass of the first star
@@ -544,9 +561,19 @@ public:
         return record[1][index];
     }
 
+    //! set mass of the first star
+    void setMass1(const int index, double mass) {
+        record[1][index] = mass;
+    }
+
     //! get mass of the second star
     double getMass2(const int index) const {
         return record[2][index];
+    }
+
+    //! set mass of the second star
+    void setMass2(const int index, double mass) {
+        record[2][index] = mass;
     }
 
     //! get mass ratio (0<=q<=1.0)
@@ -627,11 +654,22 @@ public:
     }
 
     //! get Chi (dimensionless spin) of the first compact objects (WD/NS/BH)
-    double getCompactChi1(const int index) const {
-        double rc = getRCore1(index);
-        double mc = getMCore1(index);
-        double ospin = getSpin1(index);    
-        return CompactOspinToChi(ospin, mc, rc);
+    std::array<double,3> getCompactChi1(const int index) const {
+        double r = getRad1(index);
+        double mt = getMass1(index);
+        double ospin1 = getSpin1(index);
+        double ospin[3];
+        ospin[0] = ospin1;
+        ospin[1] = 0 ;
+        ospin[2] = 0 ;   
+        return CompactOspinToChi(ospin, mt, r);
+    }
+    
+    //! set Chi of the first star
+    void setSpin1(const int index, double spin[3]) {
+        record[18][index] = spin[0];
+        record[20][index] = spin[1];
+        record[22][index] = spin[2];
     }
 
     //! get stellar spin of the second star
@@ -640,11 +678,23 @@ public:
     }        
 
     //! get BH chi (dimensionless spin) of the second compact objects (WD/NS/BH)
-    double getCompactChi2(const int index) const {
-        double rc = getRCore2(index);
-        double mc = getMCore2(index);
-        double ospin = getSpin2(index);    
-        return CompactOspinToChi(ospin, mc, rc);
+    
+    std::array<double,3>  getCompactChi2(const int index) const {
+        double r = getRad2(index);
+        double mt = getMass2(index);
+        double ospin2 = getSpin2(index);    
+        double ospin[3];
+        ospin[0] = ospin2;
+        ospin[1] = 0 ;
+        ospin[2] = 0 ; 
+        return CompactOspinToChi(ospin, mt, r);
+    }
+    
+    //! set chi2 of the second star
+    void setSpin2(const int index, double spin[3]) {
+        record[19][index] = spin[0];
+        record[21][index] = spin[1];
+        record[23][index] = spin[2];
     }
 
     //! set binary type to -1 for the given event index to indicate the end of record
@@ -686,8 +736,12 @@ public:
             <<" mc2[M*]= "<<record[15][index]
             <<" rc1[R*]= "<<record[16][index]
             <<" rc2[R*]= "<<record[17][index]
-            <<" ospin1= "<<record[18][index]
-            <<" ospin2= "<<record[19][index];
+            <<" ospin1[0]= "<<record[18][index]
+            <<" ospin1[1]= "<<record[19][index]
+            <<" ospin1[2]= "<<record[20][index]
+            <<" ospin2[0]= "<<record[21][index]
+            <<" ospin2[1]= "<<record[22][index]
+            <<" ospin2[2]= "<<record[23][index];
     }
 
     //! print titles of class members using column style
@@ -714,8 +768,12 @@ public:
              <<std::setw(_width)<<"mc2[M*]"
              <<std::setw(_width)<<"rc1[R*]"
              <<std::setw(_width)<<"rc2[R*]"
-             <<std::setw(_width)<<"ospin1"
-             <<std::setw(_width)<<"ospin2";
+             <<std::setw(_width)<<"ospin1[0]"
+             <<std::setw(_width)<<"ospin1[1]"
+             <<std::setw(_width)<<"ospin1[2]"
+             <<std::setw(_width)<<"ospin2[0]"
+             <<std::setw(_width)<<"ospin2[1]"
+             <<std::setw(_width)<<"ospin2[2]";
 
     }
 
@@ -1407,17 +1465,17 @@ public:
     }   
 
     //! get Chi (dimensionless spin) from ospin
-    double getCompactChi(StarParameter& _star) {
+    std::array<double,3> getCompactChi(StarParameter& _star) {
         assert(_star.kw>=10);    
-        return CompactOspinToChi(_star.ospin, _star.mc, _star.rc);
+        return CompactOspinToChi(_star.ospin, _star.mt, _star.r);
     }
 
     //! set Chi (dimensionless spin) and convert to ospin
-    void setCompactChi(StarParameter& _star, const double _chi) {
+    /*void setCompactChi(StarParameter& _star, const double _chi) {
         assert(_star.kw>=10);
-        _star.ospin = CompactChiToOspin(_chi, _star.mc, _star.rc);
+        _star.ospin[0] = CompactChiToOspin(_chi, _star.mt, _star.r);
     }
-    
+    */
     //! get mass loss in NB unit
     double getMassLoss(StarParameterOut& _out,bool unit_convert=true) {
         if(unit_convert) return _out.dm/mscale;
@@ -1526,10 +1584,18 @@ public:
         _out.dm = _star.mt;
         _out.kw0 = _star.kw;
         int kw = _star.kw;
+        double chi[3] = {0.0, 0.0, 0.0};
+
+        if (kw == 14 ) {
+            for (int k=0; k<3; k++) chi[k] = _star.ospin[k];
+        }
         evolv1_(&kw, &_star.m0, &_star.mt, &_star.r, 
                 &_star.lum, &_star.mc, &_star.rc, &_out.menv, &_out.renv, 
-                &_star.ospin, &_star.epoch, 
+                &_star.ospin[0], &_star.epoch, 
                 &_out.tm, &_star.tphys, &tphysf, &dtp, &z, zpars, _out.vkick);
+        if (kw == 14 ) {
+            for (int k=0; k<3; k++) _star.ospin[k] = chi[k];
+        }
         _star.kw = kw;
         _out.dm = _star.mt - _out.dm;
         _out.dtmiss = tphysf - _star.tphys;
@@ -1558,7 +1624,7 @@ public:
       \return error flag: -1: error, 0: normal
      */
     int evolveBinary(StarParameter& _star1, StarParameter& _star2, StarParameterOut& _out1, StarParameterOut& _out2, 
-                     double& _semi, double& _period, double& _ecc, BinaryEvent& _bse_event, const int& _binary_init_type, const double _dt_nb) {
+                     double& _semi, double& _period, double& _ecc, double* _am, double* pos_red, BinaryEvent& _bse_event, const int& _binary_init_type, const double _dt_nb) {
         double tphys = std::max(_star1.tphys, _star2.tphys);
         double tphysf = _dt_nb*tscale + tphys;
         double dtp=tphysf*100.0+1000.0;
@@ -1607,7 +1673,7 @@ public:
         if (event_flag<0) return event_flag;
 
         int kw[2];
-        double m0[2],mt[2],r[2],lum[2],mc[2],rc[2],menv[2],renv[2],ospin[2],epoch[2],tm[2],vkick[8];
+        double m0[2],mt[2],r[2],lum[2],mc[2],rc[2],menv[2],renv[2],ospin[2],chi1[3],chi2[3],epoch[2],tm[2],vkick[8];
         for (int k =0; k<4; k++) {
             vkick[k]  = _out1.vkick[k];
             vkick[k+4]= _out2.vkick[k];
@@ -1620,7 +1686,10 @@ public:
         r[0]  = _star1.r;
         mc[0] = _star1.mc;
         rc[0] = _star1.rc;
-        ospin[0] = _star1.ospin;
+        chi1[0] = _star1.ospin[0];
+        chi1[1] = _star1.ospin[1];
+        chi1[2] = _star1.ospin[2];
+        ospin[0] = chi1[0];
         epoch[0] = _star1.epoch;
  
         kw[1] = _star2.kw;
@@ -1629,8 +1698,12 @@ public:
         r[1]  = _star2.r;
         mc[1] = _star2.mc;
         rc[1] = _star2.rc;
-        ospin[1] = _star2.ospin;
+        chi2[0] = _star2.ospin[0];
+        chi2[1] = _star2.ospin[1];
+        chi2[2] = _star2.ospin[2];
+        ospin[1] = chi2[0];
         epoch[1] = _star2.epoch;
+
 
         evolv2_(kw, m0, mt, r, lum, mc, rc, menv, renv, ospin, epoch, tm, &tphys, &tphysf, &dtp, &z, zpars, &period_days, &_ecc, _bse_event.record[0], vkick);
         _period = period_days/year_to_day/tscale;
@@ -1641,7 +1714,9 @@ public:
         _star1.r  = r[0];
         _star1.mc = mc[0];
         _star1.rc = rc[0];
-        _star1.ospin  = ospin[0];
+        _star1.ospin[0] = ospin[0];
+        _star1.ospin[1] = chi1[1];
+        _star1.ospin[2] = chi1[2];
         _star1.epoch  = epoch[0];
         _star1.tphys  = tphys;
         _star1.lum    = lum[0];
@@ -1652,7 +1727,9 @@ public:
         _star2.r  = r[1];
         _star2.mc = mc[1];
         _star2.rc = rc[1];
-        _star2.ospin  = ospin[1];
+        _star2.ospin[0]  = ospin[1];
+        _star2.ospin[1]  = chi2[1];
+        _star2.ospin[2]  = chi2[2];
         _star2.epoch  = epoch[1];
         _star2.tphys  = tphys;
         _star2.lum    = lum[1];
@@ -1672,11 +1749,104 @@ public:
         for (int k=0; k<4; k++) _out1.vkick[k]=vkick[k];
         for (int k=0; k<4; k++) _out2.vkick[k]=vkick[k+4];
 
+        int merger_event_index = -1; // record binary event index for merger, if no merger, is -1
+        int nmax = _bse_event.getEventNMax();
+        for (int i=0; i<nmax; i++){
+            int binary_type = _bse_event.getType(i);
+            if (isMerger(binary_type)) {
+                if (merger_event_index==-1) merger_event_index = i; // avoid save index twice
+            }
+        }
+        // check GW merger
+        double vkick_gw[3] ={0.0,0.0,0.0}, mf_ratio = 0, chif_vec[3]={0.0,0.0,0.0};
+        if (merger_event_index>=0) {
+         
+            int type1, type2;    
+                                    
+            if (merger_event_index==0) {
+                type1 = _star1.kw;
+                type2 = _star2.kw;
+            }
+            else {
+                type1 = _bse_event.getType1(merger_event_index-1);
+                type2 = _bse_event.getType2(merger_event_index-1);
+            }
+
+            // GW with NS or BH binaries
+            if (type1>=13 && type1<=14 && type2>=13 && type2<=14) {
+                double q, m1_pre, m2_pre;
+                std::array<double,3> chi1_pre, chi2_pre;    
+                if (merger_event_index==0) {
+                    m1_pre = getMass(_star1,false);
+                    m2_pre = getMass(_star2,false);
+                    chi1_pre[0] = chi1[0];
+                    chi1_pre[1] = chi1[1];
+                    chi1_pre[2] = chi1[2];
+                    chi2_pre[0] = chi2[0];
+                    chi2_pre[1] = chi2[1];
+                    chi2_pre[2] = chi2[2];
+                    q = m1_pre/m2_pre;
+                    if (q>1) {
+                        q = 1/q;
+                        chi1_pre.swap(chi2_pre);
+                        std::swap(m1_pre, m2_pre);
+                }
+                }
+                else {
+                    m1_pre = _bse_event.getMass1(merger_event_index-1);
+                    m2_pre = _bse_event.getMass2(merger_event_index-1);
+                    //ASSERT(m1_pre>0 && m2_pre>0);
+                    if (chi1[0] == 0 and chi1[1] == 0) chi1_pre = _bse_event.getCompactChi1(merger_event_index-1);
+                    else {
+                        chi1_pre[0] = chi1[0];
+                        chi1_pre[1] = chi1[1];
+                        chi1_pre[2] = chi1[2];
+                    }
+
+                    if (chi2[0] == 0 and chi2[1] == 0) chi2_pre = _bse_event.getCompactChi2(merger_event_index-1); 
+                    else {
+                        chi2_pre[0] = chi2[0];
+                        chi2_pre[1] = chi2[1];
+                        chi2_pre[2] = chi2[2];
+                    }
+                    q = _bse_event.getMassRatio(merger_event_index-1);
+  
+                }
+            
+                // calculate kick properties                    
+                GWKick gw_kick;
+                gw_kick.calcKickVel(vkick_gw, chi1_pre.data(), chi2_pre.data(), _am, pos_red, q);
+                gw_kick.calcFinalMass(mf_ratio, chi1_pre.data(), chi2_pre.data(), _am, pos_red, q);
+                gw_kick.calcFinalSpin(chif_vec, chi1_pre.data(), chi2_pre.data(), _am, pos_red, q);
+            }
+        }
+        if (kw[1] ==14 or kw[0] ==14) {
+            if ( mt[0] ==0.0) {
+                _star2.mt= mt[1]*mf_ratio;
+                _bse_event.setMass2(merger_event_index, _star2.mt);
+                for(int i=0; i<3; i++) _star2.ospin[i] = chif_vec[i];
+                _bse_event.setSpin2(merger_event_index,chif_vec);
+                for(int j=0; j<3; j++) _out2.vkick[j] += vkick_gw[j];
+                _out2.vkick[3] = sqrt(_out2.vkick[0]*_out2.vkick[0]+_out2.vkick[1]*_out2.vkick[1]+_out2.vkick[2]*_out2.vkick[2]);
+            }
+            else if ( mt[1] ==0.0) {
+                _star1.mt = mt[1]*mf_ratio;
+                _bse_event.setMass2(merger_event_index,_star1.mt);
+                for(int i=0; i<3; i++)_star1.ospin[i] = chif_vec[i];
+                _bse_event.setSpin2(merger_event_index,chif_vec);
+                for(int j=0; j<3; j++)_out2.vkick[j] += vkick_gw[j];
+                _out1.vkick[3] = sqrt(_out1.vkick[0]*_out1.vkick[0]+_out1.vkick[1]*_out1.vkick[1]+_out1.vkick[2]*_out1.vkick[2]);
+            }
+        }
+
+
         if (kw[0]<0||kw[1]<0||(_star1.mt<0&&_star1.kw==15)||(_star2.mt<0&&_star2.kw==15)) {
             kw[0] = abs(kw[0]);
             kw[1] = abs(kw[1]);
             return -1; // error case
         }
+
+
         //else if (vkick[3]>0||vkick[7]>0) return 3; // kick
         //else if (isDisrupt(_binary_type)) return 4; // disrupt without kick
         //else if (isMerger(_binary_type)) return 5; // Merger
@@ -1735,7 +1905,7 @@ public:
         r[0]  = _star1.r;
         mc[0] = _star1.mc;
         rc[0] = _star1.rc;
-        ospin[0] = _star1.ospin;
+        ospin[0] = _star1.ospin[0];
         age[0]= _star1.tphys-_star1.epoch;
 
         kw[1] = _star2.kw;
@@ -1744,7 +1914,7 @@ public:
         r[1]  = _star2.r;
         mc[1] = _star2.mc;
         rc[1] = _star2.rc;
-        ospin[1] = _star2.ospin;
+        ospin[1] = _star2.ospin[0];
         age[1]= _star2.tphys-_star2.epoch;
 
         _out1.dm = _star1.mt;
@@ -1762,7 +1932,7 @@ public:
         _star1.r  = r[0];
         _star1.mc = mc[0];
         _star1.rc = rc[0];
-        _star1.ospin  = ospin[0];
+        _star1.ospin[0]  = ospin[0];
         _star1.epoch = _star1.tphys - age[0];
 
         _star2.kw = kw[1];
@@ -1771,7 +1941,7 @@ public:
         _star2.r  = r[1];
         _star2.mc = mc[1];
         _star2.rc = rc[1];
-        _star2.ospin  = ospin[1];
+        _star2.ospin[0]  = ospin[1];
         _star2.epoch = _star2.tphys - age[1];
 
         _out1.menv = menv[0];
@@ -1788,7 +1958,6 @@ public:
 
         for (int k=0; k<4; k++) _out1.vkick[k]=vkick[k];
         for (int k=0; k<4; k++) _out2.vkick[k]=vkick[k+4];
-
     }
 
     //! get next time step to check in Myr

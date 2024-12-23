@@ -160,8 +160,8 @@ class BSEBinaryEvent(DictNpArrayMix):
             mcore2 (1D): core mass of component 2 (Msun)
             rcore1 (1D): core radius of component 1 (Rsun)
             rcore2 (1D): core radius of component 2 (Rsun)
-            spin1  (1D): stellar rotation of component 1 
-            spin2  (1D): stellar rotation of component 2 
+            spin1  (2D,3): stellar rotation of component 1 
+            spin2  (2D,3): stellar rotation of component 2 
 
         if keyword argument "base_output" == False (default)
            class members: Base + Add
@@ -172,7 +172,7 @@ class BSEBinaryEvent(DictNpArrayMix):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
         keys_base = [['time',np.float64],['m1',np.float64],['m2',np.float64],['type1',np.float64],['type2',np.float64],['semi',np.float64],['ecc',np.float64],['radro1',np.float64],['radro2',np.float64],['binary_type',np.float64]]
-        keys_add = [['lum1', np.float64],['lum2', np.float64],['rad1', np.float64],['rad2', np.float64],['mcore1',np.float64],['mcore2',np.float64],['rcore1',np.float64],['rcore2',np.float64],['spin1',np.float64],['spin2',np.float64]]
+        keys_add = [['lum1', np.float64],['lum2', np.float64],['rad1', np.float64],['rad2', np.float64],['mcore1',np.float64],['mcore2',np.float64],['rcore1',np.float64],['rcore2',np.float64],['spin1',(np.float64,3)],['spin2',(np.float64,3)]]
         keys = keys_base + keys_add
         if ('base_output' in kwargs.keys()):
             if kwargs['base_output']:

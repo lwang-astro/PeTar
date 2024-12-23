@@ -144,7 +144,7 @@ if [[ $seflag != 'no' ]]; then
 	awk '{OFMT="%.15g"; print '"$base_col$se_col$soft_col"'}' $fout.scale__ >>$fout
     elif [[ "$seflag" == *"bse"* ]]; then
 	#       type, m0,  m,     rad, mc,  rc,  spin, epoch, time, lum
-	bse_col=$setype', $1*ms, $1*ms, 0.0, 0.0, 0.0, 0.0,  0.0,   0.0,  0.0,'
+	bse_col=$setype', $1*ms, $1*ms, 0.0, 0.0, 0.0, 0.0,0.0,0.0,  0.0,   0.0,  0.0,'
 
 	echo 'Interrupt mode: '$seflag
 	echo 'Initial stellar type: '$setype

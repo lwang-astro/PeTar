@@ -1078,7 +1078,7 @@ public:
 
                     BinaryEvent bin_event;
                     // loop until the time_end reaches
-                    int event_flag = bse_manager.evolveBinary(p1->star, p2->star, out[0], out[1], semi, period, ecc, bin_event, binary_type_init, dt);
+                    int event_flag = bse_manager.evolveBinary(p1->star, p2->star, out[0], out[1], semi, period, ecc, &_bin.am.x, &pos_red.x, bin_event, binary_type_init, dt);
 
                     // error
                     if (event_flag<0) {
@@ -1176,120 +1176,7 @@ public:
                         }
                     }
 
-                    // check GW merger
-                    if (merger_event_index>=0) {
-                        Float m1 = bse_manager.getMass(p1->star);
-                        Float m2 = bse_manager.getMass(p2->star);
-                        ASSERT(m1==0.0 || m2==0.0);
-                        ASSERT(!(m1==0.0 && m2==0.0));
-
-                        int type1, type2;    
-                                                
-                        if (merger_event_index==0) {
-                            type1 = p1_star_bk.kw;
-                            type2 = p2_star_bk.kw;
-                        }
-                        else {
-                            type1 = bin_event.getType1(merger_event_index-1);
-                            type2 = bin_event.getType2(merger_event_index-1);
-                        }
-
-                        // GW with NS or BH binaries
-                        if (type1>=13 && type1<=14 && type2>=13 && type2<=14) {
-                            Float q, m1_pre, m2_pre, r1_pre, r2_pre, chi1_pre, chi2_pre, mf, rf, semi_pre, ecc_pre;
-                            if (merger_event_index==0) {
-                                m1_pre = bse_manager.getMass(p1_star_bk,false);
-                                m2_pre = bse_manager.getMass(p2_star_bk,false);
-                                r1_pre = bse_manager.getStellarRadius(p1_star_bk,false);
-                                r2_pre = bse_manager.getStellarRadius(p2_star_bk,false);
-                                chi1_pre = bse_manager.getCompactChi(p1_star_bk);
-                                chi2_pre = bse_manager.getCompactChi(p2_star_bk);
-                                q = m1_pre/m2_pre;
-                                if (q>1) q = 1/q;
-                                semi_pre = _bin.semi;
-                                ecc_pre = _bin.ecc;
-                            }
-                            else {
-                                m1_pre = bin_event.getMass1(merger_event_index-1);
-                                m2_pre = bin_event.getMass2(merger_event_index-1);
-                                ASSERT(m1_pre>0 && m2_pre>0);
-                                r1_pre = bin_event.getRad1(merger_event_index-1);
-                                r2_pre = bin_event.getRad2(merger_event_index-1);
-                                chi1_pre = bin_event.getCompactChi1(merger_event_index-1);
-                                chi2_pre = bin_event.getCompactChi2(merger_event_index-1);
-                                q = bin_event.getMassRatio(merger_event_index-1);
-                                semi_pre = bin_event.getSemi(merger_event_index-1);
-                                ecc_pre = bin_event.getEcc(merger_event_index-1);
-                            }
-                            Float tmerge = bin_event.getTime(merger_event_index);
-                        
-                            std::array<Float, 3> chi1_vec = gw_kick.uniformPointsInsideSphere(chi1_pre);
-                            std::array<Float, 3> chi2_vec = gw_kick.uniformPointsInsideSphere(chi2_pre);
-
-                            // calculate kick properties                    
-                            Float vkick_gw[3], mf_ratio, chif_vec[3];
-                            gw_kick.calcKickVel(vkick_gw, chi1_vec.data(), chi2_vec.data(), &(_bin.am.x), &(pos_red.x), q);
-                            gw_kick.calcFinalMass(mf_ratio, chi1_vec.data(), chi2_vec.data(), &(_bin.am.x), &(pos_red.x), q);
-                            gw_kick.calcFinalSpin(chif_vec, chi1_vec.data(), chi2_vec.data(), &(_bin.am.x), &(pos_red.x), q);
-                            Float chif = sqrt(chif_vec[0]*chif_vec[0] + chif_vec[1]*chif_vec[1] + chif_vec[2]*chif_vec[2]);
-
-                            int k;
-                            if (m1==0.0) {
-                                mf = m2 * mf_ratio;
-                                bse_manager.setMass(p2->star, mf);
-                                rf = bse_manager.getStellarRadius(p2->star);
-                                bse_manager.setCompactChi(p2->star, chif);
-                                k = 1;    
-                            }
-                            else {
-                                mf = m1 * mf_ratio;
-                                bse_manager.setMass(p1->star, mf);
-                                rf = bse_manager.getStellarRadius(p1->star);
-                                bse_manager.setCompactChi(p1->star, chif);
-                                k = 0;
-                            }
-
-                            for (int i=0; i<3; i++) vkick[k][i] += vkick_gw[i];
-                            vkick[k][3] = sqrt(vkick[k][0]*vkick[k][0] + vkick[k][1]*vkick[k][1] + vkick[k][2]*vkick[k][2]);
-
-                            // save kick to output                    
-#pragma omp critical 
-                            {
-                                fout_bse<<"GW_kick "
-                                        <<std::setw(WRITE_WIDTH)<<p1->id
-                                        <<std::setw(WRITE_WIDTH)<<p2->id
-                                        <<std::setw(WRITE_WIDTH)<<k+1
-                                        <<std::setw(WRITE_WIDTH)<<vkick_gw[0]*gw_kick.vscale
-                                        <<std::setw(WRITE_WIDTH)<<vkick_gw[1]*gw_kick.vscale
-                                        <<std::setw(WRITE_WIDTH)<<vkick_gw[2]*gw_kick.vscale
-                                        <<std::setw(WRITE_WIDTH)<<tmerge
-                                        <<std::setw(WRITE_WIDTH)<<m1_pre
-                                        <<std::setw(WRITE_WIDTH)<<m2_pre
-                                        <<std::setw(WRITE_WIDTH)<<mf
-                                        <<std::setw(WRITE_WIDTH)<<r1_pre
-                                        <<std::setw(WRITE_WIDTH)<<r2_pre
-                                        <<std::setw(WRITE_WIDTH)<<rf
-                                        <<std::setw(WRITE_WIDTH)<<semi_pre
-                                        <<std::setw(WRITE_WIDTH)<<ecc_pre
-                                        <<std::setw(WRITE_WIDTH)<<chi1_vec[0]
-                                        <<std::setw(WRITE_WIDTH)<<chi1_vec[1]
-                                        <<std::setw(WRITE_WIDTH)<<chi1_vec[2]
-                                        <<std::setw(WRITE_WIDTH)<<chi2_vec[0]
-                                        <<std::setw(WRITE_WIDTH)<<chi2_vec[1]
-                                        <<std::setw(WRITE_WIDTH)<<chi2_vec[2]
-                                        <<std::setw(WRITE_WIDTH)<<chif_vec[0]
-                                        <<std::setw(WRITE_WIDTH)<<chif_vec[1]
-                                        <<std::setw(WRITE_WIDTH)<<chif_vec[2]
-                                        <<std::setw(WRITE_WIDTH)<<_bin.am.x
-                                        <<std::setw(WRITE_WIDTH)<<_bin.am.y
-                                        <<std::setw(WRITE_WIDTH)<<_bin.am.z
-                                        <<std::setw(WRITE_WIDTH)<<pos_red.x
-                                        <<std::setw(WRITE_WIDTH)<<pos_red.y
-                                        <<std::setw(WRITE_WIDTH)<<pos_red.z
-                                        <<std::endl;
-                            }
-                        }
-                    }
+        
 
                     // update semi
                     mtot = bse_manager.getMass(p1->star) + bse_manager.getMass(p2->star);

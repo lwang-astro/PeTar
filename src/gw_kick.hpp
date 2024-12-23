@@ -9,7 +9,7 @@
 #include <algorithm>  
 #include "../parallel-random/rand.hpp"
 
-#define Float double
+typedef double Float;
 
 //! Gravitational wave recoil kick calculater
 class GWKick{
@@ -22,7 +22,7 @@ public:
     /*! \return true: all correct
      */
     bool checkParams() {
-        ASSERT(vscale>0.0);
+        assert(vscale>0.0);
         return true;
     }        
 
@@ -120,6 +120,21 @@ public:
             }
         }
         return result;
+    }
+
+    std::array<Float, 3> randomVectorWithMagnitude(const Float& magnitude) {
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        static std::uniform_real_distribution<Float> dist(0.0, 1.0);
+
+        Float theta = 2 * M_PI * dist(gen); // 随机角度在 0 到 2π 之间
+        Float phi = std::acos(2 * dist(gen) - 1); // 随机角度在 0 到 π 之间
+
+        Float x = magnitude * std::sin(phi) * std::cos(theta);
+        Float y = magnitude * std::sin(phi) * std::sin(theta);
+        Float z = magnitude * std::cos(phi);
+
+        return {x, y, z};
     }
     
     //Function about the GW kick
