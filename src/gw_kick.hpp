@@ -123,12 +123,9 @@ public:
     }
 
     std::array<Float, 3> randomVectorWithMagnitude(const Float& magnitude) {
-        static std::random_device rd;
-        static std::mt19937 gen(rd());
-        static std::uniform_real_distribution<Float> dist(0.0, 1.0);
 
-        Float theta = 2 * M_PI * dist(gen); // 随机角度在 0 到 2π 之间
-        Float phi = std::acos(2 * dist(gen) - 1); // 随机角度在 0 到 π 之间
+        Float theta = 2 * M_PI * rand_f64(); // 随机角度在 0 到 2π 之间
+        Float phi = std::acos(2 * rand_f64() - 1); // 随机角度在 0 到 π 之间
 
         Float x = magnitude * std::sin(phi) * std::cos(theta);
         Float y = magnitude * std::sin(phi) * std::sin(theta);
@@ -136,7 +133,7 @@ public:
 
         return {x, y, z};
     }
-    
+        
     //Function about the GW kick
     
     // Function to change the axis of the GW kick to the axis of petar

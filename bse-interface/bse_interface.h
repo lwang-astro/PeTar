@@ -308,7 +308,7 @@ struct StarParameter{
     void readAscii(FILE* fp) {
         int rcount=fscanf(fp, "%lld %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf ",
                           &this->kw, &this->m0, &this->mt, &this->r, &this->mc, &this->rc, &this->ospin[0], &this->ospin[1], &this->ospin[2], &this->epoch, &this->tphys, & this->lum);
-        if(rcount<10) {
+        if(rcount<12) {
             std::cerr<<"Error: Data reading fails! requiring data number is 10, only obtain "<<rcount<<".\n";
             abort();
         }
@@ -654,15 +654,12 @@ class BinaryEvent{
     }
 
     //! get Chi (dimensionless spin) of the first compact objects (WD/NS/BH)
-    std::array<double,3> getCompactChi1(const int index) const {
+    std::array<double,3> getCompactChi1Random(const int index) const {
+        GWKick gw_kick;
         double r = getRad1(index);
         double mt = getMass1(index);
-        double ospin1 = getSpin1(index);
-        double ospin[3];
-        ospin[0] = ospin1;
-        ospin[1] = 0 ;
-        ospin[2] = 0 ;   
-        return CompactOspinToChi(ospin, mt, r);
+        std::array<double, 3> ospin = gw_kick.randomVectorWithMagnitude(getSpin1(index));
+        return CompactOspinToChi(ospin.data(), mt, r);
     }
     
     //! set Chi of the first star
@@ -679,15 +676,12 @@ class BinaryEvent{
 
     //! get BH chi (dimensionless spin) of the second compact objects (WD/NS/BH)
     
-    std::array<double,3>  getCompactChi2(const int index) const {
+    std::array<double,3>  getCompactChi2Random(const int index) const {
+        GWKick gw_kick;
         double r = getRad2(index);
         double mt = getMass2(index);
-        double ospin2 = getSpin2(index);    
-        double ospin[3];
-        ospin[0] = ospin2;
-        ospin[1] = 0 ;
-        ospin[2] = 0 ; 
-        return CompactOspinToChi(ospin, mt, r);
+        std::array<double, 3> ospin = gw_kick.randomVectorWithMagnitude(getSpin2(index));
+        return CompactOspinToChi(ospin.data(), mt, r);
     }
     
     //! set chi2 of the second star
@@ -1465,7 +1459,7 @@ public:
     }   
 
     //! get Chi (dimensionless spin) from ospin
-    std::array<double,3> getCompactChi(StarParameter& _star) {
+    std::array<double, 3> getCompactChi(StarParameter& _star) {
         assert(_star.kw>=10);    
         return CompactOspinToChi(_star.ospin, _star.mt, _star.r);
     }
@@ -1593,7 +1587,7 @@ public:
                 &_star.lum, &_star.mc, &_star.rc, &_out.menv, &_out.renv, 
                 &_star.ospin[0], &_star.epoch, 
                 &_out.tm, &_star.tphys, &tphysf, &dtp, &z, zpars, _out.vkick);
-        if (kw == 14 ) {
+        if (_star.kw == 14 ) {
             for (int k=0; k<3; k++) _star.ospin[k] = chi[k];
         }
         _star.kw = kw;
@@ -1777,6 +1771,7 @@ public:
                 double q, m1_pre, m2_pre;
                 std::array<double,3> chi1_pre, chi2_pre;    
                 if (merger_event_index==0) {
+                    std::cout <<"merger_event_index==0"<<std::endl;
                     m1_pre = getMass(_star1,false);
                     m2_pre = getMass(_star2,false);
                     chi1_pre[0] = chi1[0];
@@ -1796,14 +1791,14 @@ public:
                     m1_pre = _bse_event.getMass1(merger_event_index-1);
                     m2_pre = _bse_event.getMass2(merger_event_index-1);
                     //ASSERT(m1_pre>0 && m2_pre>0);
-                    if (chi1[0] == 0 and chi1[1] == 0) chi1_pre = _bse_event.getCompactChi1(merger_event_index-1);
+                    if (chi1[2] == 0 && chi1[1] == 0) chi1_pre = _bse_event.getCompactChi1Random(merger_event_index-1);
                     else {
                         chi1_pre[0] = chi1[0];
                         chi1_pre[1] = chi1[1];
                         chi1_pre[2] = chi1[2];
                     }
 
-                    if (chi2[0] == 0 and chi2[1] == 0) chi2_pre = _bse_event.getCompactChi2(merger_event_index-1); 
+                    if (chi2[2] == 0 && chi2[1] == 0) chi2_pre = _bse_event.getCompactChi2Random(merger_event_index-1); 
                     else {
                         chi2_pre[0] = chi2[0];
                         chi2_pre[1] = chi2[1];
@@ -1830,11 +1825,11 @@ public:
                 _out2.vkick[3] = sqrt(_out2.vkick[0]*_out2.vkick[0]+_out2.vkick[1]*_out2.vkick[1]+_out2.vkick[2]*_out2.vkick[2]);
             }
             else if ( mt[1] ==0.0) {
-                _star1.mt = mt[1]*mf_ratio;
-                _bse_event.setMass2(merger_event_index,_star1.mt);
+                _star1.mt = mt[0]*mf_ratio;
+                _bse_event.setMass1(merger_event_index,_star1.mt);
                 for(int i=0; i<3; i++)_star1.ospin[i] = chif_vec[i];
-                _bse_event.setSpin2(merger_event_index,chif_vec);
-                for(int j=0; j<3; j++)_out2.vkick[j] += vkick_gw[j];
+                _bse_event.setSpin1(merger_event_index,chif_vec);
+                for(int j=0; j<3; j++)_out1.vkick[j] += vkick_gw[j];
                 _out1.vkick[3] = sqrt(_out1.vkick[0]*_out1.vkick[0]+_out1.vkick[1]*_out1.vkick[1]+_out1.vkick[2]*_out1.vkick[2]);
             }
         }
