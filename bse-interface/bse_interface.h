@@ -1785,7 +1785,7 @@ public:
                         q = 1/q;
                         chi1_pre.swap(chi2_pre);
                         std::swap(m1_pre, m2_pre);
-                }
+                    }   
                 }
                 else {
                     m1_pre = _bse_event.getMass1(merger_event_index-1);
@@ -1813,24 +1813,23 @@ public:
                 gw_kick.calcKickVel(vkick_gw, chi1_pre.data(), chi2_pre.data(), _am, pos_red, q);
                 gw_kick.calcFinalMass(mf_ratio, chi1_pre.data(), chi2_pre.data(), _am, pos_red, q);
                 gw_kick.calcFinalSpin(chif_vec, chi1_pre.data(), chi2_pre.data(), _am, pos_red, q);
-            }
-        }
-        if (kw[1] ==14 or kw[0] ==14) {
-            if ( mt[0] ==0.0) {
-                _star2.mt= mt[1]*mf_ratio;
-                _bse_event.setMass2(merger_event_index, _star2.mt);
-                for(int i=0; i<3; i++) _star2.ospin[i] = chif_vec[i];
-                _bse_event.setSpin2(merger_event_index,chif_vec);
-                for(int j=0; j<3; j++) _out2.vkick[j] += vkick_gw[j];
-                _out2.vkick[3] = sqrt(_out2.vkick[0]*_out2.vkick[0]+_out2.vkick[1]*_out2.vkick[1]+_out2.vkick[2]*_out2.vkick[2]);
-            }
-            else if ( mt[1] ==0.0) {
-                _star1.mt = mt[0]*mf_ratio;
-                _bse_event.setMass1(merger_event_index,_star1.mt);
-                for(int i=0; i<3; i++)_star1.ospin[i] = chif_vec[i];
-                _bse_event.setSpin1(merger_event_index,chif_vec);
-                for(int j=0; j<3; j++)_out1.vkick[j] += vkick_gw[j];
-                _out1.vkick[3] = sqrt(_out1.vkick[0]*_out1.vkick[0]+_out1.vkick[1]*_out1.vkick[1]+_out1.vkick[2]*_out1.vkick[2]);
+            
+                if ( mt[0] ==0.0) {
+                    _star2.mt= mt[1]*mf_ratio;
+                    _bse_event.setMass2(merger_event_index, _star2.mt);
+                    for(int i=0; i<3; i++) _star2.ospin[i] = chif_vec[i];
+                    _bse_event.setSpin2(merger_event_index,chif_vec);
+                    for(int j=0; j<3; j++) _out2.vkick[j] += vkick_gw[j];
+                    _out2.vkick[3] = sqrt(_out2.vkick[0]*_out2.vkick[0]+_out2.vkick[1]*_out2.vkick[1]+_out2.vkick[2]*_out2.vkick[2]);
+                }
+                else if ( mt[1] ==0.0) {
+                    _star1.mt = mt[0]*mf_ratio;
+                    _bse_event.setMass1(merger_event_index,_star1.mt);
+                    for(int i=0; i<3; i++)_star1.ospin[i] = chif_vec[i];
+                    _bse_event.setSpin1(merger_event_index,chif_vec);
+                    for(int j=0; j<3; j++)_out1.vkick[j] += vkick_gw[j];
+                    _out1.vkick[3] = sqrt(_out1.vkick[0]*_out1.vkick[0]+_out1.vkick[1]*_out1.vkick[1]+_out1.vkick[2]*_out1.vkick[2]);
+                }
             }
         }
 
