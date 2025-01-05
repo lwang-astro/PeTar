@@ -1109,7 +1109,6 @@ public:
                     int binary_type_final=0;
                     int nmax = bin_event.getEventNMax();
                     int binary_type_init = bin_event.getType(bin_event.getEventIndexInit());
-                    int merger_event_index = -1; // record binary event index for merger, if no merger, is -1
                     for (int i=0; i<nmax; i++) {
                         int binary_type = bin_event.getType(i);
                         if (binary_type>0) {
@@ -1143,7 +1142,7 @@ public:
                             else if (bse_manager.isDisrupt(binary_type)) event_flag = std::max(event_flag, 3); // disrupt
                             else if (bse_manager.isMerger(binary_type)) {
                                 event_flag = std::max(event_flag, 4); // Merger
-                                if (merger_event_index==-1) merger_event_index = i; // avoid save index twice
+                                if (bse_manager.isGWMerger(binary_type)) event_flag = std::max(event_flag, 6); // GW Merger
                             }
                             else if (bse_manager.isNoRemnant(binary_type)) event_flag = std::max(event_flag, 5); // no Remnant
                             binary_type_final = binary_type;
@@ -1165,8 +1164,9 @@ public:
                         if (vkick[k][3]>0) {
 #pragma omp critical 
                             {
-                                fout_bse<<"SN_kick "
-                                        <<std::setw(WRITE_WIDTH)<<p1->id
+                                if (event_flag==6) fout_bse<<"GW_kick ";
+                                else fout_bse<<"SN_kick ";
+                                fout_bse<<std::setw(WRITE_WIDTH)<<p1->id
                                         <<std::setw(WRITE_WIDTH)<<p2->id
                                         <<std::setw(WRITE_WIDTH)<<k+1
                                         <<std::setw(WRITE_WIDTH)<<vkick[k][3]*bse_manager.vscale;
@@ -1397,8 +1397,7 @@ public:
                         else if (bse_manager.isMassTransfer(binary_type_p1) 
                                  || bse_manager.isMerger(binary_type_p1) 
                                  || bse_manager.isNoRemnant(binary_type_p1) 
-                                 || bse_manager.isDisrupt(binary_type_p1)
-                                 || binary_type_p1 == 14)
+                                 || bse_manager.isDisrupt(binary_type_p1))
                             tide_flag = false;
 
                         bool change_flag=false;

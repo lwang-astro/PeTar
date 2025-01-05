@@ -12,7 +12,7 @@ do
 	    echo 'A tool for organizing output files.';
 	    echo 'Functionality:';
 	    echo '    1) Combine separated output data from multiple MPI processes with filename suffixes: '$suffixes' group';
-	    echo '    2) Split SSE/BSE output files into different files with suffixes "type_change", "sn_kick", and "dynamic_merge".';
+	    echo '    2) Split SSE/BSE output files into different files with suffixes "type_change", "sn_kick", "gw_kick" and "dynamic_merge".';
 	    echo '    3) If the option "-g" is used, split group information files into different files based on the number of members with suffixes "n2", "n3", and so on.';
 	    echo 'Usage: petar.data.combine [options] [data filename prefix]';
 	    echo '       The data filename prefix is defined by "petar -f"; the default case is "data".';
@@ -88,7 +88,7 @@ bse_opt='.bse .mobse .bseEmp'
 for s in $bse_opt
 do
     if [ -e $fout$s ]; then
-	echo 'get '$s' type_change, sn_kick, dynamic_merge, tide'
+	echo 'get '$s' type_change, sn_kick, gw_kick, dynamic_merge, tide'
 	egrep '^Dynamic_merge' $fout$s |sed 's/Dynamic_merge://g' >$fout$s.dynamic_merge.tmp
 	awk '{if (NF==45) {for (i=1; i<=5; i++) printf("%s ", $i); printf("0 0 0 "); for (i=6; i<=NF; i++) printf("%s ", $i); printf("\n");} else print $LINE}' $fout$s.dynamic_merge.tmp > $fout$s.dynamic_merge
 	rm -f $fout$s.dynamic_merge.tmp

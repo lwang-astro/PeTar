@@ -250,12 +250,12 @@ class BSETypeChange(DictNpArrayMix):
 
         DictNpArrayMix.printTable(self, column_format, print_title)
 
-class BSESNKick(DictNpArrayMix):
-    """ BSE SN kick output data from PeTar
+class BSEKick(DictNpArrayMix):
+    """ BSE SN/GW kick output data from PeTar
     Keys: (class members)
         id1 (1D): particle id of component 1
         id2 (1D): particle id of component 2
-        kindex (1D): index of component which has SN kick
+        kindex (1D): index of component which has SN/GW kick
         vkick (1D): kick velocity (km/s)
         star (SSEStarParameter): final status of kicked star after binary stellar evolution
     """

@@ -706,6 +706,11 @@ class BinaryEvent{
         return 8;
     }
 
+    //! Set the binary type
+    void setType(const int index, const int type) {
+        record[9][index] = type;
+    }
+
     //! Get the binary type
     int getType(const int index) const {
         return int(record[9][index]);
@@ -1227,7 +1232,7 @@ public:
     double vscale; ///> velocity scaling factor from NB to km/s
     const double year_to_day; ///> year to day 
     const char* single_type[16]; ///> name of single type from SSE
-    const char* binary_type[14]; ///> name of binary type return from BSE evolv2, notice if it is -1, it indicate the end of record
+    const char* binary_type[15]; ///> name of binary type return from BSE evolv2, notice if it is -1, it indicate the end of record
 
     BSEManager(): z(0.0), zpars{0}, 
 #ifdef BSEEMP
@@ -1248,7 +1253,8 @@ public:
                               "Coalescence",         //10
                               "Blue_straggler",      //11
                               "No_remain",           //12
-                              "Disrupt"              //13
+                              "Disrupt",             //13
+                              "GW_merger"            //14
                               } {}
     
 
@@ -1350,7 +1356,11 @@ public:
     //}
 
     bool isMerger(const int _binary_type) {
-        return (_binary_type==10);
+        return (_binary_type==10 || _binary_type==14);
+    }
+    
+    bool isGWMerger(const int _binary_type) {
+        return (_binary_type==14);
     }
 
     bool isNoRemnant(const int _binary_type) {
@@ -1534,7 +1544,7 @@ public:
     //! print binary event one
     void printBinaryEventOne(std::ostream& _fout, const BinaryEvent& _bin_event, const int k) {
         int type = _bin_event.getType(k);
-        assert(type>=0&&type<14);
+        assert(type>=0&&type<15);
         _fout<<std::setw(16)<<binary_type[type]<<" Init:  ";
         if (k==0) _bin_event.print(_fout, _bin_event.getEventIndexInit());
         else _bin_event.print(_fout, k-1);
@@ -1545,7 +1555,7 @@ public:
     //! print binary event one in column
     void printBinaryEventColumnOne(std::ostream& _fout, const BinaryEvent& _bin_event, const int k, const int _width=20, const bool print_type_name=true) {
         int type = _bin_event.getType(k);
-        assert(type>=0&&type<14);
+        assert(type>=0&&type<15);
         if (print_type_name) _fout<<std::setw(16)<<binary_type[type];
         _fout<<std::setw(_width)<<type;
         if (k==0) _bin_event.printColumn(_fout, _bin_event.getEventIndexInit(), _width);
@@ -1830,6 +1840,7 @@ public:
                     for(int j=0; j<3; j++)_out1.vkick[j] += vkick_gw[j];
                     _out1.vkick[3] = sqrt(_out1.vkick[0]*_out1.vkick[0]+_out1.vkick[1]*_out1.vkick[1]+_out1.vkick[2]*_out1.vkick[2]);
                 }
+                _bse_event.setType(merger_event_index, 14);
             }
         }
 
