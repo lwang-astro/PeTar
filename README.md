@@ -468,6 +468,11 @@ OMP_STACKSIZE=128M OMP_NUM_THREADS=8 mpiexec -n 4 petar [options] [snapshot file
 ```
 It is important to ensure that `N_mpi x N_threads` is less than the total available CPU threads in the computing facility.
 
+In certain environments, when both MPI and OpenMP are used, each MPI process may be bound to a single core. In such cases, if the number of threads is set to be more than 2, it will not function properly, and each MPI process will only use a maximum of 2 threads. To resolve this issue, the `--bind-to none` option can be used to disable core binding:
+```shell
+OMP_STACKSIZE=128M OMP_NUM_THREADS=8 mpiexec -n 4 --bind-to none petar [options] [snapshot filename]
+```
+
 Please note that on a supercomputer, the MPI launcher may not be named `mpiexec`, and the method for setting the number of OpenMP threads may vary. Refer to the documentation of the job system or consult with the administrator to determine the appropriate approach for using MPI and OpenMP in that specific environment.
 
 ## Using GPU
