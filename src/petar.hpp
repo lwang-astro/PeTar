@@ -88,6 +88,9 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #ifdef BSE_BASE
 #include"rand_interface.hpp"
 #endif
+#ifdef AGAMA
+#include "potential_factory.h"
+#endif
 
 //! IO parameters for Petar
 class IOParamsPeTar{
@@ -730,6 +733,9 @@ public:
 #ifdef GALPY
     GalpyManager galpy_manager;
 #endif
+#ifdef AGAMA
+    potential::PtrPotential agama_potential;
+#endif
 
     // hard integrator
     HardManager hard_manager;
@@ -1129,6 +1135,30 @@ public:
 #endif
         }
 #endif //GALPY
+
+#ifdef AGAMA
+        PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
+#pragma omp parallel for
+        for (int i=0; i<n_loc_all; i++) {
+            auto& pi = system_soft[i];
+            double pot;
+            coord::GradCar grad;
+#ifdef RECORD_CM_IN_HEADER
+            PS::F64vec pos_correct=pi.pos + stat.pcm.pos;
+            agama_potential->eval(coord::PosCar(pos_correct[0], pos_correct[1], pos_correct[2]), &pot, &grad, NULL, stat.time);
+#else
+            agama_potential->eval(coord::PosCar(pi.pos[0], pi.pos[1], pi.pos[2]), &pot, &grad, NULL, stat.time);
+#endif
+            pi.acc[0] -= grad.dx;
+            pi.acc[1] -= grad.dy;
+            pi.acc[2] -= grad.dz;
+            pi.pot_tot += pot;
+            pi.pot_soft += pot;
+#ifdef EXTERNAL_POT_IN_PTCL
+            pi.pot_ext = pot;
+#endif
+        }
+#endif  // AGAMA
 
 #ifdef EXTERNAL_HARD
 #ifndef GALPY
@@ -2483,6 +2513,9 @@ public:
 #ifdef GALPY
         fout<<"Use external potential: Galpy\n";
 #endif 
+#ifdef AGAMA
+        fout<<"Use external potential: Agama\n";
+#endif
 
 #ifdef KDKDK_2ND
         fout<<"Use 2nd-order KDKDK mode for tree step\n";
@@ -2603,6 +2636,12 @@ public:
         if (my_rank==0) external_hard_parameters.print_flag=true;
         else external_hard_parameters.print_flag=false;
         external_hard_parameters.read(argc,argv);
+#endif
+#ifdef AGAMA
+        agama_potential = potential::readPotential("agama_potential.ini",
+            units::ExternalUnits(
+                units::InternalUnits(units::Kpc, units::Kpc/units::kms),
+                units::Kpc, units::Kpc/units::kms, units::Msun*input_parameters.gravitational_constant.value));
 #endif
 
         // help case, return directly
