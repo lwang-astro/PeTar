@@ -206,8 +206,8 @@ int main(int argc, char **argv){
                  <<"long options (if no default values, use values from input.par.hard):\n"
                  <<"        --tstart            [double]:  if >0 only do integration when physical time >= tstart: "<<tstart<<std::endl
                  <<"        --tend              [double]:  if >0 only do integration when physical time < tend: "<<tend<<std::endl
-                 <<"        --istart            [int]:     if >0 only do integration when dump index >= istart: "<<istart<<std::endl
-                 <<"        --iend              [int]:     if >0 only do integration when dump index < iend: "<<iend<<std::endl
+                 <<"        --istart            [int]:     if >0 only do integration when dump index >= istart (counting from 1): "<<istart<<std::endl
+                 <<"        --iend              [int]:     if >0 only do integration when dump index < iend (counting from 1): "<<iend<<std::endl
 #ifdef HARD_CHECK_ENERGY
                  <<"        --energy-err-hard   [double]:  hard energy limit\n"
 #endif
@@ -397,6 +397,8 @@ int main(int argc, char **argv){
       if (n_crit>0 && hard_dump.n_ptcl != n_crit) continue;
       if (tstart>0 && hard_dump.time_offset < tstart) continue;
       if (tend>0 && hard_dump.time_offset >= tend) continue;
+      if (ncount < istart) continue;
+      if (iend>0 && ncount>iend) continue;
 
       std::cerr<<"Dump "<<ncount<<"\nTime: "<<hard_dump.time_offset<<std::endl;
 #ifdef BSE_BASE
