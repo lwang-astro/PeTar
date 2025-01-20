@@ -342,7 +342,9 @@ struct StarParameter{
              <<std::setw(_width)<<"s_rad[R*]"
              <<std::setw(_width)<<"s_mcore[M*]"
              <<std::setw(_width)<<"s_rcore[R*]"
-             <<std::setw(_width)<<"s_spin"
+             <<std::setw(_width)<<"s_spin[0]"
+             <<std::setw(_width)<<"s_spin[1]"
+             <<std::setw(_width)<<"s_spin[2]"
              <<std::setw(_width)<<"s_epoch[Myr]"
              <<std::setw(_width)<<"s_time[Myr]"
              <<std::setw(_width)<<"s_lum[L*]";
