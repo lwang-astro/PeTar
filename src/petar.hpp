@@ -674,6 +674,9 @@ public:
     std::string fsse_par_suffix = BSEManager::getSSEOutputFilenameSuffix();
     IOParamsRand rand_parameters;
 #endif // BSE_BASE
+#ifdef DISK_STAR_MERGER
+    IOParamsDiskStarMerger disk_star_merger_parameters;
+#endif
 #ifdef GALPY
     IOParamsGalpy galpy_parameters;
 #endif
@@ -770,6 +773,9 @@ public:
 #ifdef BSE_BASE
         bse_parameters(),
         rand_parameters(),
+#endif
+#ifdef DISK_STAR_MERGER
+        disk_star_merger_parameters(),
 #endif
 #ifdef GALPY
         galpy_parameters(),
@@ -2594,6 +2600,11 @@ public:
         else rand_parameters.print_flag=false;
         rand_parameters.read(argc,argv);
 #endif
+#ifdef DISK_STAR_MERGER
+        if (my_rank==0) disk_star_merger_parameters.print_flag=true;
+        else disk_star_merger_parameters.print_flag=false;
+        disk_star_merger_parameters.read(argc,argv);
+#endif
 #ifdef GALPY
         if (my_rank==0) galpy_parameters.print_flag=true;
         else galpy_parameters.print_flag=false;
@@ -3412,6 +3423,9 @@ public:
         }
 
 #endif
+#ifdef DISK_STAR_MERGER
+        hard_manager.ar_manager.interaction.disk_star_merger_manager.initial(disk_star_merger_parameters, print_flag);
+#endif        
 #endif
 #ifdef ADJUST_GROUP_PRINT
         // group information
@@ -3500,6 +3514,18 @@ public:
                 abort();
             }
             rand_parameters.input_par_store.writeAscii(fpar_out);
+            fclose(fpar_out);
+#endif
+
+#ifdef DISK_STAR_MERGER
+            // save disk_star_merger parameters
+            std::string fdisk_star_merger_par = input_parameters.fname_par.value + ".disk_star_merger";
+            if (print_flag) std::cout<<"Save disk_star_merger_parameters to file "<<fdisk_star_merger_par<<std::endl;
+            if( (fpar_out = fopen(fdisk_star_merger_par.c_str(),"w")) == NULL) {
+                fprintf(stderr,"Error: Cannot open file %s.\n", fdisk_star_merger_par.c_str());
+                abort();
+            }
+            disk_star_merger_parameters.input_par_store.writeAscii(fpar_out);
             fclose(fpar_out);
 #endif
 

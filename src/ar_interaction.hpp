@@ -11,6 +11,9 @@
 #ifdef BSE_BASE
 #include "bse_interface.h"
 #endif
+#ifdef DISK_STAR_MERGER
+#include "disk_star_merger.hpp"
+#endif
 #include "external_force.hpp"
 
 //! AR interaction clas
@@ -30,6 +33,9 @@ public:
     std::ofstream fout_sse; ///> log file for SSE event
     std::ofstream fout_bse; ///> log file for BSE event
 #else
+#ifdef DISK_STAR_MERGER
+    DiskStarMergerManager disk_star_merger_manager;
+#endif
     std::ofstream fout_interrupt; ///> log file for interrupted binary
 #endif
 #endif
@@ -43,6 +49,9 @@ public:
 #ifdef BSE_BASE
                    , stellar_evolution_option(0), stellar_evolution_write_flag(false), bse_manager(), tide(), fout_sse(), fout_bse()
 #else
+#ifdef DISK_STAR_MERGER
+                   , disk_star_merger_manager()
+#endif
                    , fout_interrupt()  
 #endif
 #endif
@@ -65,6 +74,9 @@ public:
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_sse.is_open()));
         ASSERT(!stellar_evolution_write_flag||(stellar_evolution_write_flag&&fout_bse.is_open()));
 #else
+#ifdef DISK_STAR_MERGER
+        ASSERT(disk_star_merger_manager.checkParams());
+#endif
         ASSERT(interrupt_detection_option==0||(interrupt_detection_option>0&&fout_interrupt.is_open()));
 #endif
 #endif
@@ -79,6 +91,9 @@ public:
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
         _fout<<"SE_opt : "<<stellar_evolution_option<<std::endl;
+#endif
+#ifdef DISK_STAR_MERGER
+        disk_star_merger_manager.print(_fout);
 #endif
 #endif
     }    
@@ -1252,11 +1267,11 @@ public:
                         p1->time_record = _bin_interrupt.time_now;
                         p2->time_record = _bin_interrupt.time_now;
 
-                        // reset collision state since binary orbit changes
-                        p1->setBinaryInterruptState(BinaryInterruptState::none);
-                        p2->setBinaryInterruptState(BinaryInterruptState::none);
-
-                        // new particle data
+#ifdef DISK_STAR_MERGER
+                        // use disk star merger
+                        disk_star_merger_manager.calcMergerProperties(p1, p2, _bin_interrupt.time_now);
+#else
+                        // merge two particles
                         Float mcm = p1->mass + p2->mass;
                         for (int k=0; k<3; k++) {
                             p1->pos[k] = (p1->mass*p1->pos[k] + p2->mass*p2->pos[k])/mcm;
@@ -1269,6 +1284,13 @@ public:
                         p2->mass = 0.0;
 
                         p2->radius = 0.0;
+                        p1->mass += p2->mass 
+
+#endif
+
+                        // reset collision state since binary orbit changes
+                        p1->setBinaryInterruptState(BinaryInterruptState::none);
+                        p2->setBinaryInterruptState(BinaryInterruptState::none);
 
                         p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
 

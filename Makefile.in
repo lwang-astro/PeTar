@@ -77,6 +77,8 @@ BSE_FLAG=on
 else ifeq ($(se_mode),bseEmp)
 MT_FLAGS += -D BSEEMP -D BSE_BASE
 BSE_FLAG=on
+else ifeq ($(se_mode),dsm)
+MT_FLAGS += -D DISK_STAR_MERGER
 endif
 ifeq ($(BSE_FLAG),on)
 FCLIBS = @FCLIBS@
