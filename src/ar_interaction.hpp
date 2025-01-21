@@ -23,9 +23,6 @@ public:
     Float eps_sq; ///> softening parameter
     Float gravitational_constant;
     int interrupt_detection_option;    // 0: no interruption; 1: merge when the pair distance is less than the sum of two members' radii; 2: record binary status instead of merger
-#ifdef EXTERNAL_HARD
-    ExternalHardForce *ext_force; // external hard to calculate perturbation
-#endif
 #ifdef STELLAR_EVOLUTION
     Float time_interrupt_max;
 #ifdef BSE_BASE
@@ -40,11 +37,11 @@ public:
     std::ofstream fout_interrupt; ///> log file for interrupted binary
 #endif
 #endif
+#ifdef EXTERNAL_HARD
+    ExternalHardForce *ext_force; // external hard to calculate perturbation
+#endif
 
     ARInteraction(): eps_sq(Float(-1.0)), gravitational_constant(Float(-1.0)), interrupt_detection_option(0)
-#ifdef EXTERNAL_HARD
-                   , ext_force(NULL)
-#endif
 #ifdef STELLAR_EVOLUTION
                    , time_interrupt_max(NUMERIC_FLOAT_MAX) 
 #ifdef BSE_BASE
@@ -52,6 +49,9 @@ public:
 #else
                    , fout_interrupt()  
 #endif
+#endif
+#ifdef EXTERNAL_HARD
+                   , ext_force(NULL)
 #endif
     {}
 
@@ -99,10 +99,10 @@ public:
     inline Float calcInnerAccPotAndGTKickInvTwo(AR::Force& _f1, AR::Force& _f2, Float& _epot, const PtclHard& _p1, const PtclHard& _p2) {
         // acceleration
         const Float mass1 = _p1.mass;
-        const Float* pos1 = &_p1.pos.x;
+        const auto& pos1 = _p1.pos;
 
         const Float mass2 = _p2.mass;
-        const Float* pos2 = &_p2.pos.x;
+        const auto& pos2 = _p2.pos;
 
         Float gm1 = gravitational_constant*mass1;
         Float gm2 = gravitational_constant*mass2;
@@ -323,7 +323,7 @@ public:
             for (int i=0; i<_n_particle; i++) {
                 Float* acc_pert = _force[i].acc_pert;
                 Float& pot_pert = _force[i].pot_pert;
-                const auto& pi = _particles[i];
+                auto& pi = _particles[i];
                 auto& chi = pi.changeover;
                 acc_pert[0] = acc_pert[1] = acc_pert[2] = Float(0.0);
                 pot_pert = 0.0;
@@ -1262,9 +1262,10 @@ public:
                     // print data
 #pragma omp critical
                     {
-                        fout_interrupt<<_bin_interrupt.time_now;
-                        _bin.printBinaryTreeIter(fout_interrupt, WRITE_WIDTH);
+                        _bin_interrupt.printColumn(fout_interrupt, WRITE_WIDTH, true);
                         fout_interrupt<<std::endl;
+
+                        DATADUMP("dump_interrupt"); 
                     }
 
                     // set return flag >0
@@ -1297,6 +1298,7 @@ public:
                         p2->radius = 0.0;
 
                         p2->group_data.artificial.setParticleTypeToUnused(); // necessary to identify particle to remove
+
                     }
                     // record particle information, only set status
                     else if (interrupt_detection_option == 2) {

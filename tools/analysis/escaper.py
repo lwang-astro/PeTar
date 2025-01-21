@@ -24,9 +24,9 @@ class SingleEscaper(Particle):
             external_mode: string (none)
                PeTar external mode (set in configure): galpy, none 
                This option indicates whether the column of externa potential exist
+            use_mpfrc: bool (False)
+                If true, add three columns of pos_high indicating the high-precision parts of position
         """
-
-        
         
         DictNpArrayMix.__init__(self, [['time',np.float64]], _dat, _offset, _append, **kwargs)
         Particle.__init__(self, _dat, _offset+self.ncols, True, **kwargs)
@@ -89,6 +89,11 @@ class BinaryEscaper(Binary):
                 Basic particle type: hermite, hard, soft
             interrupt_mode: string (none)
                 PeTar interrupt mode: base, bse, mobse, none
+            external_mode: string (none)
+               PeTar external mode (set in configure): galpy, none 
+               This option indicates whether the column of externa potential exist
+            use_mpfrc: bool (False)
+                If true, add three columns of pos_high indicating the high-precision parts of position
             simple_mode: bool (True)
                 If True, only calculate semi and ecc, save computing time significantly
             member_particle_type: type (Particle)

@@ -406,29 +406,40 @@ public:
                  Disk: M[Msun], Ra[pc], Rb[pc]
                  Bulge: M[Msun], alpha, rcut[pc]
       @param [in] _time: current physical time [Myr]
+      @param [in] _read_ascii: if true, read data in ascii format, else in binary format
      */
-    void readDataFromFile(const std::string& _filename, const double& _time) {
+    void readDataFromFile(const std::string& _filename, const double& _time, const bool _read_ascii=true) {
         const int npar=17;
         double pars[npar];
  #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-         int my_rank = PS::Comm::getRank();
-         if (my_rank==0) {
+        int my_rank = PS::Comm::getRank();
+        if (my_rank==0) {
  #endif
-             std::ifstream fconf;
-             fconf.open(_filename.c_str(), std::ifstream::in);
-             if (!fconf.is_open()) {
-                 std::cerr<<"Galpy MWPotentialEvolve config: configure file "<<_filename.c_str()<<" cannot be open!"<<std::endl;
-                 abort();
-             }
+            std::ifstream fconf;
+            if (!_read_ascii) {
+                fconf.open(_filename.c_str(), std::ios::in | std::ios::binary);
+                if (!fconf.is_open()) {
+                    std::cerr<<"Galpy MWPotentialEvolve config: configure file "<<_filename.c_str()<<" cannot be open!"<<std::endl;
+                    abort();
+                }
+                fconf.read(reinterpret_cast<char*>(pars), npar * sizeof(double));
+                fconf.close();
+            } else {
+                fconf.open(_filename.c_str(), std::ifstream::in);
+                if (!fconf.is_open()) {
+                    std::cerr<<"Galpy MWPotentialEvolve config: configure file "<<_filename.c_str()<<" cannot be open!"<<std::endl;
+                    abort();
+                }
 
-             for (int i=0; i<npar; i++) {
-                 fconf>>pars[i];
-                 if (fconf.eof()) {
-                     std::cerr<<"Galpy MWPotentialEvolve config: reading number of parameters is "<<npar<<" parameters, only "<<i<<" given!"<<std::endl;
-                     abort();
-                 }
-             }        
-             fconf.close();
+                for (int i=0; i<npar; i++) {
+                    fconf>>pars[i];
+                    if (fconf.eof()) {
+                        std::cerr<<"Galpy MWPotentialEvolve config: reading number of parameters is "<<npar<<" parameters, only "<<i<<" given!"<<std::endl;
+                        abort();
+                    }
+                }
+                fconf.close();
+            }
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
          }
          PS::Comm::broadcast(pars, npar, 0);
@@ -464,34 +475,61 @@ public:
     //! write data for restart
     /*! 
       @param[in] _filename: file to save data
+      @param[in] _write_ascii: if true, write data in ascii format, else in binary format
     */
-    void writeDataToFile(const std::string& _filename) {
+    void writeDataToFile(const std::string& _filename, const bool _write_ascii=true) {
         std::ofstream fout;
-        fout.open(_filename.c_str(), std::ifstream::out);
-        if (!fout.is_open()) {
-            std::cerr<<"Error: Galpy potential parameter file to write, "<<_filename<<", cannot be open!"<<std::endl;
-            abort();
+        if (!_write_ascii) {
+            fout.open(_filename.c_str(), std::ios::out | std::ios::binary);
+            if (!fout.is_open()) {
+                std::cerr<<"Error: Galpy potential parameter file to write, "<<_filename<<", cannot be open!"<<std::endl;
+                abort();
+            }
+            fout.write(reinterpret_cast<const char*>(&frw.time), sizeof(frw.time));
+            fout.write(reinterpret_cast<const char*>(&frw.a), sizeof(frw.a));
+            fout.write(reinterpret_cast<const char*>(&frw.H0), sizeof(frw.H0));
+            fout.write(reinterpret_cast<const char*>(&frw.omega_energy), sizeof(frw.omega_energy));
+            fout.write(reinterpret_cast<const char*>(&frw.omega_radiation), sizeof(frw.omega_radiation));
+            fout.write(reinterpret_cast<const char*>(&frw.omega_matter), sizeof(frw.omega_matter));
+            fout.write(reinterpret_cast<const char*>(&frw.dt_scale), sizeof(frw.dt_scale));
+            fout.write(reinterpret_cast<const char*>(&frw.dt_max), sizeof(frw.dt_max));
+            fout.write(reinterpret_cast<const char*>(&init.m_vir_halo), sizeof(init.m_vir_halo));
+            fout.write(reinterpret_cast<const char*>(&init.c_halo), sizeof(init.c_halo));
+            fout.write(reinterpret_cast<const char*>(&init.ac_halo), sizeof(init.ac_halo));
+            fout.write(reinterpret_cast<const char*>(&init.m_disk), sizeof(init.m_disk));
+            fout.write(reinterpret_cast<const char*>(&init.ra_disk), sizeof(init.ra_disk));
+            fout.write(reinterpret_cast<const char*>(&init.rb_disk), sizeof(init.rb_disk));
+            fout.write(reinterpret_cast<const char*>(&init.rho_bulge), sizeof(init.rho_bulge));
+            fout.write(reinterpret_cast<const char*>(&init.alpha_bulge), sizeof(init.alpha_bulge));
+            fout.write(reinterpret_cast<const char*>(&init.rcut_bulge), sizeof(init.rcut_bulge));
+            fout.close();
+        } else {
+            fout.open(_filename.c_str(), std::ifstream::out);
+            if (!fout.is_open()) {
+                std::cerr<<"Error: Galpy potential parameter file to write, "<<_filename<<", cannot be open!"<<std::endl;
+                abort();
+            }
+            fout<<std::setprecision(14)
+                <<frw.time<<" "
+                <<frw.a<<" "
+                <<frw.H0<<" "
+                <<frw.omega_energy<<" "
+                <<frw.omega_radiation<<" "
+                <<frw.omega_matter<<" "
+                <<frw.dt_scale<<" "
+                <<frw.dt_max<<" "
+                <<init.m_vir_halo<<" "
+                <<init.c_halo<<" "
+                <<init.ac_halo<<" "
+                <<init.m_disk<<" "
+                <<init.ra_disk<<" "
+                <<init.rb_disk<<" "
+                <<init.rho_bulge<<" "
+                <<init.alpha_bulge<<" "
+                <<init.rcut_bulge
+                <<std::endl;
+            fout.close();
         }
-        fout<<std::setprecision(14)
-            <<frw.time<<" "
-            <<frw.a<<" "
-            <<frw.H0<<" "
-            <<frw.omega_energy<<" "
-            <<frw.omega_radiation<<" "
-            <<frw.omega_matter<<" "
-            <<frw.dt_scale<<" "
-            <<frw.dt_max<<" "
-            <<init.m_vir_halo<<" "
-            <<init.c_halo<<" "
-            <<init.ac_halo<<" "
-            <<init.m_disk<<" "
-            <<init.ra_disk<<" "
-            <<init.rb_disk<<" "
-            <<init.rho_bulge<<" "
-            <<init.alpha_bulge<<" "
-            <<init.rcut_bulge
-            <<std::endl;
-        fout.close();
     }
 
     //! calculate MW potential based on the input time
@@ -850,8 +888,9 @@ public:
       @param[in] _conf_name: galpy configure file name for restart
       @param[in] _restart_flag: if true, read the configure file for restart
       @param[in] _print_flag: if true, printing information to std::cout
+      @param[in] _read_ascii: if true, read configure files for restarting in ascii format
      */
-    void initial(const IOParamsGalpy& _input, const double _time, const std::string _conf_name, const bool _restart_flag, const bool _print_flag=false) {
+    void initial(const IOParamsGalpy& _input, const double _time, const std::string _conf_name, const bool _restart_flag, const bool _print_flag=false, const bool _read_ascii=true) {
         // unit scale
         rscale = _input.rscale.value;
         vscale = _input.vscale.value;
@@ -915,7 +954,7 @@ public:
         if (set_name=="MWPotentialEvolve") {
             
             if (_restart_flag) 
-                mw_evolve.readDataFromFile(set_parfile, _time);
+                mw_evolve.readDataFromFile(set_parfile, _time, _read_ascii);
             else
                 mw_evolve.initialFromFile(set_parfile, _time);
             updateMWPotentialEvolve(_time, _print_flag, true);
@@ -951,7 +990,7 @@ public:
             if (_restart_flag) {
                 // first escape past time to avoid overwritting restart configure file
                 updatePotentialFromFile(_time, false);
-                readDataFromFile(set_parfile, _print_flag);
+                readDataFromFile(set_parfile, _print_flag, _read_ascii);
             }
         }
 
@@ -1471,16 +1510,17 @@ public:
     //! write potential parameters for restart
     /*! Precision is set to 14
       @param[out] _filename: file to save data
-      @param[in] _time current time
+      @param[in] _time: current time
+      @param[in] _write_ascii: write data in ascii format
      */
-    void writePotentialPars(const std::string& _filename, const double& _system_time) {
+    void writePotentialPars(const std::string& _filename, const double& _system_time, const bool _write_ascii=true) {
         if (set_name=="MWPotentialEvolve") {
             assert(mw_evolve.frw.time==_system_time);
-            mw_evolve.writeDataToFile(_filename);
+            mw_evolve.writeDataToFile(_filename, _write_ascii);
         }
         else if (set_name=="configure") {
             assert(time==_system_time*tscale);
-            writeDataToFile(_filename);
+            writeDataToFile(_filename, _write_ascii);
         }
     }
 
@@ -1730,15 +1770,9 @@ public:
       change_args         # N_change: changing arg index, mode, rate 
 
       @param[in] _filename: file to save data
+      @param[in] _write_ascii: write data in ascii format
     */
-    void writeDataToFile(const std::string& _filename) {
-        std::ofstream fout;
-        fout.open(_filename.c_str(), std::ifstream::out);
-        if (!fout.is_open()) {
-            std::cerr<<"Error: Galpy potential parameter file to write, "<<_filename<<", cannot be open!"<<std::endl;
-            abort();
-        }
-        fout<<std::setprecision(14);
+    void writeDataToFile(const std::string& _filename, const bool _write_ascii=true) {
 
         std::size_t n_set = pot_set_pars.size();
         std::size_t n_pot = pot_type.size();
@@ -1747,48 +1781,90 @@ public:
         std::size_t n_arg_offset = pot_args_offset.size();
         std::size_t n_change = change_args.size();
         std::size_t n_change_offset = change_args_offset.size();
-        fout<<time<<" "
-            <<n_set<<" "
-            <<std::endl;
-        for (std::size_t i=0; i<n_set; i++) {
-            pot_set_pars[i].writeData(fout);
-            fout<<std::endl;
-        }
-        fout<<std::endl<<n_pot_offset<<" ";
-        for (std::size_t i=0; i<n_pot_offset; i++) {
-            fout<<pot_type_offset[i]<<" ";
-        }
-        fout<<std::endl<<n_pot<<" ";
-        for (std::size_t i=0; i<n_pot; i++) {
-            fout<<pot_type[i]<<" ";
-        }
-        fout<<std::endl<<n_arg_offset<<" ";
-        for (std::size_t i=0; i<n_arg_offset; i++) {
-            fout<<pot_args_offset[i]<<" ";
-        }
-        fout<<std::endl<<n_arg<<" ";
-        for (std::size_t i=0; i<n_arg; i++) {
-            fout<<pot_args[i]<<" ";
-        }
-        fout<<std::endl<<n_change_offset<<" ";
-        for (std::size_t i=0; i<n_change_offset; i++) {
-            fout<<change_args_offset[i]<<" ";
-        }
-        fout<<std::endl<<n_change<<" ";
-        for (std::size_t i=0; i<n_change; i++) {
-            change_args[i].writeData(fout);
-        }
-        fout<<std::endl;
 
-        fout.close();
+        std::ofstream fout;
+
+        if (!_write_ascii) {
+            fout.open(_filename.c_str(), std::ios::out | std::ios::binary);
+            if (!fout.is_open()) {
+                std::cerr<<"Error: Galpy potential parameter file to write, "<<_filename<<", cannot be open!"<<std::endl;
+                abort();
+            }
+
+            fout.write(reinterpret_cast<const char*>(&time), sizeof(time));
+            fout.write(reinterpret_cast<const char*>(&n_set), sizeof(n_set));
+            for (std::size_t i=0; i<n_set; i++) {
+                fout.write(reinterpret_cast<const char*>(&pot_set_pars[i]), sizeof(PotentialSetPar));
+            }
+            fout.write(reinterpret_cast<const char*>(&n_pot_offset), sizeof(n_pot_offset));
+            fout.write(reinterpret_cast<const char*>(pot_type_offset.data()), n_pot_offset * sizeof(int));
+            fout.write(reinterpret_cast<const char*>(&n_pot), sizeof(n_pot));
+            fout.write(reinterpret_cast<const char*>(pot_type.data()), n_pot * sizeof(int));
+            fout.write(reinterpret_cast<const char*>(&n_arg_offset), sizeof(n_arg_offset));
+            fout.write(reinterpret_cast<const char*>(pot_args_offset.data()), n_arg_offset * sizeof(int));
+            fout.write(reinterpret_cast<const char*>(&n_arg), sizeof(n_arg));
+            fout.write(reinterpret_cast<const char*>(pot_args.data()), n_arg * sizeof(double));
+            fout.write(reinterpret_cast<const char*>(&n_change_offset), sizeof(n_change_offset));
+            fout.write(reinterpret_cast<const char*>(change_args_offset.data()), n_change_offset * sizeof(int));
+            fout.write(reinterpret_cast<const char*>(&n_change), sizeof(n_change));
+            for (std::size_t i=0; i<n_change; i++) {
+                fout.write(reinterpret_cast<const char*>(&change_args[i]), sizeof(ChangeArgument));
+            }
+            fout.close();
+            
+        }
+        else {
+            fout.open(_filename.c_str(), std::ifstream::out);
+            if (!fout.is_open()) {
+                std::cerr<<"Error: Galpy potential parameter file to write, "<<_filename<<", cannot be open!"<<std::endl;
+                abort();
+            }
+            fout<<std::setprecision(14);
+
+            fout<<time<<" "
+                <<n_set<<" "
+                <<std::endl;
+            for (std::size_t i=0; i<n_set; i++) {
+                pot_set_pars[i].writeData(fout);
+                fout<<std::endl;
+            }
+            fout<<std::endl<<n_pot_offset<<" ";
+            for (std::size_t i=0; i<n_pot_offset; i++) {
+                fout<<pot_type_offset[i]<<" ";
+            }
+            fout<<std::endl<<n_pot<<" ";
+            for (std::size_t i=0; i<n_pot; i++) {
+                fout<<pot_type[i]<<" ";
+            }
+            fout<<std::endl<<n_arg_offset<<" ";
+            for (std::size_t i=0; i<n_arg_offset; i++) {
+                fout<<pot_args_offset[i]<<" ";
+            }
+            fout<<std::endl<<n_arg<<" ";
+            for (std::size_t i=0; i<n_arg; i++) {
+                fout<<pot_args[i]<<" ";
+            }
+            fout<<std::endl<<n_change_offset<<" ";
+            for (std::size_t i=0; i<n_change_offset; i++) {
+                fout<<change_args_offset[i]<<" ";
+            }
+            fout<<std::endl<<n_change<<" ";
+            for (std::size_t i=0; i<n_change; i++) {
+                change_args[i].writeData(fout);
+            }
+            fout<<std::endl;
+            fout.close();
+        }
+
     }
 
     //! read configure data for restart
     /*
       @param[in] _filename: file to save data
       @param[in] _print_flag: if true, print reading parameters
+      @param[in] _read_ascii: read data in ascii format
     */
-    void readDataFromFile(const std::string& _filename, const bool _print_flag) {
+    void readDataFromFile(const std::string& _filename, const bool _print_flag, const bool _read_ascii=true) {
 
         std::size_t n_set, n_pot, n_pot_offset, n_arg, n_arg_offset, n_change, n_change_offset;
 
@@ -1798,69 +1874,128 @@ public:
         if (my_rank==0) {
 #endif
             std::ifstream fin;
-            fin.open(_filename.c_str(), std::ifstream::in);
-            if (!fin.is_open()) {
-                std::cerr<<"Error: Galpy configure file for restart "<<_filename.c_str()<<" cannot be open!"<<std::endl;
-                abort();
-            }
 
-            fin>>time>>n_set;
-            eofCheck(fin, "time and number of potential sets");
-            geZeroCheck(n_set, "number of potential sets");
-            pot_set_pars.resize(n_set);
-            for (std::size_t i=0; i<n_set; i++) {
-                pot_set_pars[i].readData(fin);
-                eofCheck(fin, "potential set parameter");
-            }
-            fin>>n_pot_offset;
-            assert(n_pot_offset==n_set+1);
-            pot_type_offset.resize(n_pot_offset);
-            for (std::size_t i=0; i<n_pot_offset; i++) {
-                fin>>pot_type_offset[i];
-            }
-            eofCheck(fin, "potential type array offset");
+            if (!_read_ascii) {
+                fin.open(_filename.c_str(), std::ios::in | std::ios::binary);
+                if (!fin.is_open()) {
+                    std::cerr<<"Error: Galpy configure file for restart "<<_filename.c_str()<<" cannot be open!"<<std::endl;
+                    abort();
+                }
 
-            fin>>n_pot;
-            geZeroCheck(n_pot, "number of potential types");
-            pot_type.resize(n_pot);
-            for (std::size_t i=0; i<n_pot; i++) {
-                fin>>pot_type[i];
-            }
-            eofCheck(fin, "potential type");
+                fin.read(reinterpret_cast<char*>(&time), sizeof(time));
+                fin.read(reinterpret_cast<char*>(&n_set), sizeof(n_set));
+                eofCheck(fin, "time and number of potential sets");
+                geZeroCheck(n_set, "number of potential sets");
+                pot_set_pars.resize(n_set);
+                for (std::size_t i=0; i<n_set; i++) {
+                    fin.read(reinterpret_cast<char*>(&pot_set_pars[i]), sizeof(PotentialSetPar));
+                    eofCheck(fin, "potential set parameter");
+                }
+                fin.read(reinterpret_cast<char*>(&n_pot_offset), sizeof(n_pot_offset));
+                assert(n_pot_offset==n_set+1);
+                pot_type_offset.resize(n_pot_offset);
+                fin.read(reinterpret_cast<char*>(pot_type_offset.data()), n_pot_offset * sizeof(int));
+                eofCheck(fin, "potential type array offset");
 
-            fin>>n_arg_offset;
-            pot_args_offset.resize(n_arg_offset);
-            assert(n_arg_offset==n_set+1);
-            for (std::size_t i=0; i<n_arg_offset; i++) {
-                fin>>pot_args_offset[i];
-            }
-            eofCheck(fin, "potential argument array offset");
+                fin.read(reinterpret_cast<char*>(&n_pot), sizeof(n_pot));
+                geZeroCheck(n_pot, "number of potential types");
+                pot_type.resize(n_pot);
+                fin.read(reinterpret_cast<char*>(pot_type.data()), n_pot * sizeof(int));
+                eofCheck(fin, "potential type");
 
-            fin>>n_arg;
-            geZeroCheck(n_arg, "number of potential arguments");
-            pot_args.resize(n_arg);
-            for (std::size_t i=0; i<n_arg; i++) {
-                fin>>pot_args[i];
-            }
-            eofCheck(fin, "potential arguments");
+                fin.read(reinterpret_cast<char*>(&n_arg_offset), sizeof(n_arg_offset));
+                pot_args_offset.resize(n_arg_offset);
+                assert(n_arg_offset==n_set+1);
+                fin.read(reinterpret_cast<char*>(pot_args_offset.data()), n_arg_offset * sizeof(int));
+                eofCheck(fin, "potential argument array offset");
 
-            fin>>n_change_offset;
-            change_args_offset.resize(n_change_offset);
-            assert(n_change_offset==n_set+1);
-            for (std::size_t i=0; i<n_change_offset; i++) {
-                fin>>change_args_offset[i];
-            }
-            eofCheck(fin, "changing argument offset");
+                fin.read(reinterpret_cast<char*>(&n_arg), sizeof(n_arg));
+                geZeroCheck(n_arg, "number of potential arguments");
+                pot_args.resize(n_arg);
+                fin.read(reinterpret_cast<char*>(pot_args.data()), n_arg * sizeof(double));
+                eofCheck(fin, "potential arguments");
 
-            fin>>n_change;
-            geZeroCheck(n_change, "number of changing arguments");
-            change_args.resize(n_change);
-            for (std::size_t i=0; i<n_change; i++) {
-                change_args[i].readData(fin);
-            }
-            eofCheck(fin, "changing arguments");
+                fin.read(reinterpret_cast<char*>(&n_change_offset), sizeof(n_change_offset));
+                change_args_offset.resize(n_change_offset);
+                assert(n_change_offset==n_set+1);
+                fin.read(reinterpret_cast<char*>(change_args_offset.data()), n_change_offset * sizeof(int));
+                eofCheck(fin, "changing argument offset");
 
-            fin.close();
+                fin.read(reinterpret_cast<char*>(&n_change), sizeof(n_change));
+                geZeroCheck(n_change, "number of changing arguments");
+                change_args.resize(n_change);
+                for (std::size_t i=0; i<n_change; i++) {
+                    fin.read(reinterpret_cast<char*>(&change_args[i]), sizeof(ChangeArgument));
+                }
+                eofCheck(fin, "changing arguments");
+
+                fin.close();
+            }
+            else {
+                fin.open(_filename.c_str(), std::ifstream::in);
+                if (!fin.is_open()) {
+                    std::cerr<<"Error: Galpy configure file for restart "<<_filename.c_str()<<" cannot be open!"<<std::endl;
+                    abort();
+                }
+
+                fin>>time>>n_set;
+                eofCheck(fin, "time and number of potential sets");
+                geZeroCheck(n_set, "number of potential sets");
+                pot_set_pars.resize(n_set);
+                for (std::size_t i=0; i<n_set; i++) {
+                    pot_set_pars[i].readData(fin);
+                    eofCheck(fin, "potential set parameter");
+                }
+                fin>>n_pot_offset;
+                assert(n_pot_offset==n_set+1);
+                pot_type_offset.resize(n_pot_offset);
+                for (std::size_t i=0; i<n_pot_offset; i++) {
+                    fin>>pot_type_offset[i];
+                }
+                eofCheck(fin, "potential type array offset");
+
+                fin>>n_pot;
+                geZeroCheck(n_pot, "number of potential types");
+                pot_type.resize(n_pot);
+                for (std::size_t i=0; i<n_pot; i++) {
+                    fin>>pot_type[i];
+                }
+                eofCheck(fin, "potential type");
+
+                fin>>n_arg_offset;
+                pot_args_offset.resize(n_arg_offset);
+                assert(n_arg_offset==n_set+1);
+                for (std::size_t i=0; i<n_arg_offset; i++) {
+                    fin>>pot_args_offset[i];
+                }
+                eofCheck(fin, "potential argument array offset");
+
+                fin>>n_arg;
+                geZeroCheck(n_arg, "number of potential arguments");
+                pot_args.resize(n_arg);
+                for (std::size_t i=0; i<n_arg; i++) {
+                    fin>>pot_args[i];
+                }
+                eofCheck(fin, "potential arguments");
+
+                fin>>n_change_offset;
+                change_args_offset.resize(n_change_offset);
+                assert(n_change_offset==n_set+1);
+                for (std::size_t i=0; i<n_change_offset; i++) {
+                    fin>>change_args_offset[i];
+                }
+                eofCheck(fin, "changing argument offset");
+
+                fin>>n_change;
+                geZeroCheck(n_change, "number of changing arguments");
+                change_args.resize(n_change);
+                for (std::size_t i=0; i<n_change; i++) {
+                    change_args[i].readData(fin);
+                }
+                eofCheck(fin, "changing arguments");
+
+                fin.close();
+            }
 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
         }

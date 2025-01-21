@@ -47,19 +47,6 @@ public:
 
     FPSoft() {}
 
-    //! Get position (required for \ref ARC::chain)
-    /*! \return position vector (PS::F64[3])
-     */
-    PS::F64vec getPos() const{
-        return pos;
-    }
-
-    //! Get velocity (required for \ref ARC::chain)
-    /*! \return velocity vector (PS::F64[3])
-     */
-    PS::F64vec getVel() const{
-        return vel;
-    }
     
     //template<class Tptcl>
     //FPSoft& operator = (const FPSoft& p) {

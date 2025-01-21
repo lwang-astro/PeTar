@@ -157,6 +157,7 @@ class SDARInterruptBinary(DictNpArrayMix):
         status (1D): binary interruption types
         cm (particle_type): binary c.m. parameter
         bin (SDARBinary): binary orbital parameter
+        sd (SlowDown): slowdown data
         p1 (particle_type): binary component 1
         p2 (particle_type): binary component 2
     """
@@ -173,7 +174,7 @@ class SDARInterruptBinary(DictNpArrayMix):
             kwargs['particle_type'] = SDARParticle
         particle_type = kwargs['particle_type']
         
-        keys = [['time_now',np.float64],['time_end', np.float64],['status',np.int64],['cm',particle_type],['bin', SDARBinary],['p1',particle_type],['p2',particle_type]]
+        keys = [['time_now',np.float64],['time_end', np.float64],['status',np.int64],['cm',particle_type],['bin', SDARBinary],['sd', SlowDown], ['p1',particle_type],['p2',particle_type]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
     
 
