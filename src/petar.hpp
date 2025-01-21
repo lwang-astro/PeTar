@@ -217,9 +217,9 @@ public:
 #ifdef ADJUST_GROUP_PRINT
                      adjust_group_write_option(input_par_store, 1, "write-group-info", "Print new and end of groups: 0: no print; 1: print to file [data filename prefix].group.[MPI rank] if -w >0"),
 #endif
-                     append_switcher(input_par_store, 1, "a", "Data output style: 0 - create new output files and overwrite existing ones except snapshots; 1 - append new data to existing files"),
+                     append_switcher(input_par_store, 1, "a", "Data output style: 0 - create new output files and overwrite existing ones except snapshots; 1 - append new data to existing files (always append for object dump files)"),
                      tidal_tensor_switcher(input_par_store, 1, "use-tidal-tensor", "Tidal tensor calculation for (counter-)perturbation (from)on binaries: 0 - off; 1 - on"),
-                     record_id_start_one(input_par_store, 0, "record-id-start-one", "Starting of the first id range for hard dump recording every tree step"),
+                     record_id_start_one(input_par_store, 0, "record-id-start-one", "Starting of the first id range for hard dump recording every tree step, save into files object_[id]"),
                      record_id_end_one(input_par_store, 0, "record-id-end-one", "Ending of the first id range for hard dump; notice that the ending id is not included in hard dump"),
                      record_id_start_two(input_par_store, 0, "record-id-start-two", "Starting of the 2nd id range for hard dump recording every tree step"),
                      record_id_end_two(input_par_store, 0, "record-id-end-two", "Ending of the 2nd id range for hard dump; notice that the ending id is not included in hard dump"),
