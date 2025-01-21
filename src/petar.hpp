@@ -145,6 +145,7 @@ public:
     IOParams<PS::S64> adjust_group_write_option;
 #endif
     IOParams<PS::S64> append_switcher;
+    IOParams<PS::S64> tidal_tensor_switcher;
     IOParams<PS::S64> record_id_start_one;
     IOParams<PS::S64> record_id_end_one;
     IOParams<PS::S64> record_id_start_two;
@@ -217,6 +218,7 @@ public:
                      adjust_group_write_option(input_par_store, 1, "write-group-info", "Print new and end of groups: 0: no print; 1: print to file [data filename prefix].group.[MPI rank] if -w >0"),
 #endif
                      append_switcher(input_par_store, 1, "a", "Data output style: 0 - create new output files and overwrite existing ones except snapshots; 1 - append new data to existing files"),
+                     tidal_tensor_switcher(input_par_store, 1, "use-tidal-tensor", "Tidal tensor calculation for (counter-)perturbation (from)on binaries: 0 - off; 1 - on"),
                      record_id_start_one(input_par_store, 0, "record-id-start-one", "Starting of the first id range for hard dump recording every tree step"),
                      record_id_end_one(input_par_store, 0, "record-id-end-one", "Ending of the first id range for hard dump; notice that the ending id is not included in hard dump"),
                      record_id_start_two(input_par_store, 0, "record-id-start-two", "Starting of the 2nd id range for hard dump recording every tree step"),
@@ -259,6 +261,7 @@ public:
             {step_limit_ar.key,        required_argument, &petar_flag, 15},   
             {"disable-print-info",     no_argument,       &petar_flag, 16},
             {n_step_per_orbit.key,     required_argument, &petar_flag, 17},
+            {tidal_tensor_switcher.key, required_argument, &petar_flag, 18},
 #ifdef STELLAR_EVOLUTION
 //            {n_interrupt_limit.key,    required_argument, &petar_flag, 18},
 #ifdef BSE_BASE
@@ -398,7 +401,12 @@ public:
                     n_step_per_orbit.value = atof(optarg);
                     if(print_flag) n_step_per_orbit.print(std::cout);
                     opt_used += 2;
-                    assert(n_step_per_orbit.value>=1.0 || n_step_per_orbit.value==0.0);
+                    assert(n_step_per_orbit.value>=1.0);
+                    break;
+                case 18:
+                    tidal_tensor_switcher.value = atoi(optarg);
+                    if(print_flag) tidal_tensor_switcher.print(std::cout);
+                    opt_used += 2;
                     break;
 #ifdef STELLAR_EVOLUTION
 //                case 18:
@@ -3371,6 +3379,7 @@ public:
 #else
         hard_manager.energy_error_max = PS::LARGE_FLOAT;
 #endif
+        hard_manager.tidal_tensor_switcher = bool(input_parameters.tidal_tensor_switcher.value);
         hard_manager.n_step_per_orbit = input_parameters.n_step_per_orbit.value;
         hard_manager.ap_manager.r_tidal_tensor = r_bin;
         hard_manager.ap_manager.id_offset = id_offset;

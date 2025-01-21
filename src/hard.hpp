@@ -53,6 +53,7 @@ public:
     PS::F64 r_in_base;
     PS::F64 r_out_base;
     PS::F64 n_step_per_orbit;
+    bool tidal_tensor_switcher;
     ArtificialParticleManager ap_manager;
     H4::HermiteManager<HermiteInteraction> h4_manager;
     AR::TimeTransformedSymplecticManager<ARInteraction> ar_manager;
@@ -60,7 +61,7 @@ public:
     Status* status;
 
     //! constructor
-    HardManager(): energy_error_max(-1.0), eps_sq(-1.0), r_in_base(-1.0), r_out_base(-1.0), n_step_per_orbit(-1.0), ap_manager(), h4_manager(), ar_manager(), status(NULL) {}
+    HardManager(): energy_error_max(-1.0), eps_sq(-1.0), r_in_base(-1.0), r_out_base(-1.0), n_step_per_orbit(-1.0), tidal_tensor_switcher(true), ap_manager(), h4_manager(), ar_manager(), status(NULL) {}
     
     //! set softening
     void setEpsSq(const PS::F64 _eps_sq) {
@@ -335,7 +336,8 @@ public:
 #endif
         }
 #ifdef HARD_DEBUG
-        else if(_n_group>0) ASSERT(_n_ptcl==2); // right now only support isolated binary case without artificial particles
+        // when tidal tensor method is used or not isolated binary, artificial particles should exist
+        else if(_n_group>0) ASSERT(!manager->tidal_tensor_switcher||_n_ptcl==2); 
 #endif
 
         // single particle start index in ptcl_origin
@@ -505,26 +507,28 @@ public:
                     auto& groupi = h4_int.groups[i];
 
 #ifdef SOFT_PERT
-                    auto* api = &(_ptcl_artificial[adr_first_ptcl[i]]);
-                    auto* apcm = ap_manager.getCMParticles(api);
-                    auto* aptt = ap_manager.getTidalTensorParticles(api);
+                    if (_ptcl_artificial!=NULL) {
+                        auto* api = &(_ptcl_artificial[adr_first_ptcl[i]]);
+                        auto* apcm = ap_manager.getCMParticles(api);
+                        auto* aptt = ap_manager.getTidalTensorParticles(api);
 
-                    // correct pos for t.t. cm
-                    apcm->pos -= h4_int.particles.cm.pos;
+                        // correct pos for t.t. cm
+                        apcm->pos -= h4_int.particles.cm.pos;
 
-                    // fit tidal tensor
-                    tidal_tensor[i].fit(aptt, *apcm, ap_manager.r_tidal_tensor);
+                        // fit tidal tensor
+                        tidal_tensor[i].fit(aptt, *apcm, ap_manager.r_tidal_tensor);
 
-                    // set tidal_tensor pointer
-                    groupi.perturber.soft_pert = &tidal_tensor[i];
+                        // set tidal_tensor pointer
+                        groupi.perturber.soft_pert = &tidal_tensor[i];
 
-                    // set group id of tidal tensor to the n_members
-                    groupi.perturber.soft_pert->group_id = groupi.particles.getSize();
+                        // set group id of tidal tensor to the n_members
+                        groupi.perturber.soft_pert->group_id = groupi.particles.getSize();
 
-                    // same tidal_tensor id to member particle group_data for identification later
-                    for (PS::S32 k=0; k<groupi.particles.getSize(); k++) {
-                        groupi.particles[k].setTidalTensorID(i+1);
-                        ptcl_origin[n_group_offset[i]+k].setTidalTensorID(i+1);
+                        // same tidal_tensor id to member particle group_data for identification later
+                        for (PS::S32 k=0; k<groupi.particles.getSize(); k++) {
+                            groupi.particles[k].setTidalTensorID(i+1);
+                            ptcl_origin[n_group_offset[i]+k].setTidalTensorID(i+1);
+                        }
                     }
 #endif
                     // calculate soft_pert_min
@@ -1809,7 +1813,8 @@ private:
         for (int j=0; j<_n_group; j++) {  // j: j_group
             PS::S32 j_start = adr_first_ptcl_arti_in_cluster_[j];
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-            if (j_start<0) assert(_n_group==1&&_adr_real_end-_adr_real_start==2);
+            // if tidal tensor is used, only one group with a binary can avoid using tidal tensor
+            if (j_start<0) assert(!manager->tidal_tensor_switcher||(_n_group==1&&_adr_real_end-_adr_real_start==2));
 #endif
             if (j_start<0) continue;
             auto* p_arti_j = &(_sys[j_start]);
@@ -2620,7 +2625,7 @@ public:
             // if no TT mode
             // Set member particle type, backup mass, collect member particle index to group_ptcl_adr_list
             //use _ptcl_in_cluster as the first particle address as reference to calculate the particle index.
-            if (manager->n_step_per_orbit==0) {
+            if (!manager->tidal_tensor_switcher) {
                 auto& bin = *stable_checker.stable_binary_tree[i];
                 const PS::S32 n_members = bin.getMemberN();
 
@@ -3323,7 +3328,7 @@ public:
                     // loop artificial particle orbital
                     PS::S32 k_start = adr_first_ptcl_arti[k];
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-                    if (k_start<0) assert(n_group==1&&adr_real_end-adr_real_start==2);
+                    if (k_start<0) assert(!manager->tidal_tensor_switcher||(n_group==1&&adr_real_end-adr_real_start==2));
 #endif
                     if (k_start<0) continue;
                     auto* porb_k = ap_manager.getOrbitalParticles(&(_sys[k_start]));
