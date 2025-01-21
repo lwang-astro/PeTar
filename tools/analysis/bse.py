@@ -30,7 +30,7 @@ class SSEStarParameter(DictNpArrayMix):
         rad   (1D): stellar radius (Rsun)
         mcore (1D): core mass (Msun)
         rcore (1D): core radius (Rsun)
-        spin  (1D): stellar rotation
+        spin  (2D,3): stellar rotation, if type is BH, it is dimensionless 3D spin (chi); otherwise it is 1D spin (rad/day） and only spin[0] is used.
         epoch (1D): time offset at each evolution stage (Myr)
         time  (1D): current physical time (Myr)
         lum   (1D): bolometric luminosity (Lsun)
@@ -38,7 +38,7 @@ class SSEStarParameter(DictNpArrayMix):
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
         """
-        keys = [['type',np.int64],['mass0',np.float64],['mass',np.float64],['rad',np.float64],['mcore',np.float64],['rcore',np.float64],['spin',np.float64],['epoch',np.float64],['time',np.float64],['lum',np.float64]]
+        keys = [['type',np.int64],['mass0',np.float64],['mass',np.float64],['rad',np.float64],['mcore',np.float64],['rcore',np.float64],['spin', (np.float64,3)],['epoch',np.float64],['time',np.float64],['lum',np.float64]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 
 
@@ -68,7 +68,7 @@ class SSETypeChange(DictNpArrayMix):
                                ('final.mass0','%10.3f','mass0[M*]'),('final.mass','%10.3f','mass[M*]'), 
                                ('final.rad','%8.2g','r[R*]'),('final.lum','%8.2g','Lf[L*]'),
                                ('final.mcore','%9.3f','mcf[M*]'),('final.rcore','%8.2g','rcf[R*]'),
-                               ('final.spin','%8.2g','spinf'),('final.epoch','%11.3g','epoch[Myr]')]
+                               ('final.spin[0]','%8.2g','spinf'),('final.epoch','%11.3g','epoch[Myr]')]
                        init-final: [('id', '%10d', 'id'),
                                ('init.time','%12.4g','timei[Myr]'),('init.type','%4d','ki'),
                                ('init.mass','%11.4f','mi[M*]'),('init.mcore','%9.3f','mci[M*]'),
@@ -83,7 +83,7 @@ class SSETypeChange(DictNpArrayMix):
                              ('final.mass0','%10.3f','mass0[M*]'),('final.mass','%10.3f','mass[M*]'), 
                              ('final.rad','%8.2g','r[R*]'),('final.lum','%8.2g','Lf[L*]'),
                              ('final.mcore','%9.3f','mcf[M*]'),('final.rcore','%8.2g','rcf[R*]'),
-                             ('final.spin','%8.2g','spinf'),('final.epoch','%11.3g','epoch[Myr]')]
+                             ('final.spin[0]','%8.2g','spinf'),('final.epoch','%11.3g','epoch[Myr]')]
 
         elif (column_format =='init-final'):
             column_format = [('id', '%10d', 'id'),
@@ -160,8 +160,8 @@ class BSEBinaryEvent(DictNpArrayMix):
             mcore2 (1D): core mass of component 2 (Msun)
             rcore1 (1D): core radius of component 1 (Rsun)
             rcore2 (1D): core radius of component 2 (Rsun)
-            spin1  (2D,3): stellar rotation of component 1 
-            spin2  (2D,3): stellar rotation of component 2 
+            spin1  (2D,3): stellar rotation of component 1, if type is BH, it is dimensionless 3D spin (chi); otherwise it is 1D spin (rad/day） and only spin[0] is used.
+            spin2  (2D,3): stellar rotation of component 2, if type is BH, it is dimensionless 3D spin (chi); otherwise it is 1D spin (rad/day） and only spin[0] is used. 
 
         if keyword argument "base_output" == False (default)
            class members: Base + Add
