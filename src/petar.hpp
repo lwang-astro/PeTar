@@ -145,6 +145,7 @@ public:
     IOParams<PS::S64> adjust_group_write_option;
 #endif
     IOParams<PS::S64> append_switcher;
+    IOParams<PS::S64> tidal_tensor_switcher;
     IOParams<PS::S64> record_id_start_one;
     IOParams<PS::S64> record_id_end_one;
     IOParams<PS::S64> record_id_start_two;
@@ -216,8 +217,9 @@ public:
 #ifdef ADJUST_GROUP_PRINT
                      adjust_group_write_option(input_par_store, 1, "write-group-info", "Print new and end of groups: 0: no print; 1: print to file [data filename prefix].group.[MPI rank] if -w >0"),
 #endif
-                     append_switcher(input_par_store, 1, "a", "Data output style: 0 - create new output files and overwrite existing ones except snapshots; 1 - append new data to existing files"),
-                     record_id_start_one(input_par_store, 0, "record-id-start-one", "Starting of the first id range for hard dump recording every tree step"),
+                     append_switcher(input_par_store, 1, "a", "Data output style: 0 - create new output files and overwrite existing ones except snapshots; 1 - append new data to existing files (always append for object dump files)"),
+                     tidal_tensor_switcher(input_par_store, 1, "use-tidal-tensor", "Tidal tensor calculation for (counter-)perturbation (from)on binaries: 0 - off; 1 - on"),
+                     record_id_start_one(input_par_store, 0, "record-id-start-one", "Starting of the first id range for hard dump recording every tree step, save into files object_[id]"),
                      record_id_end_one(input_par_store, 0, "record-id-end-one", "Ending of the first id range for hard dump; notice that the ending id is not included in hard dump"),
                      record_id_start_two(input_par_store, 0, "record-id-start-two", "Starting of the 2nd id range for hard dump recording every tree step"),
                      record_id_end_two(input_par_store, 0, "record-id-end-two", "Ending of the 2nd id range for hard dump; notice that the ending id is not included in hard dump"),
@@ -259,6 +261,7 @@ public:
             {step_limit_ar.key,        required_argument, &petar_flag, 15},   
             {"disable-print-info",     no_argument,       &petar_flag, 16},
             {n_step_per_orbit.key,     required_argument, &petar_flag, 17},
+            {tidal_tensor_switcher.key, required_argument, &petar_flag, 18},
 #ifdef STELLAR_EVOLUTION
 //            {n_interrupt_limit.key,    required_argument, &petar_flag, 18},
 #ifdef BSE_BASE
@@ -398,7 +401,12 @@ public:
                     n_step_per_orbit.value = atof(optarg);
                     if(print_flag) n_step_per_orbit.print(std::cout);
                     opt_used += 2;
-                    assert(n_step_per_orbit.value>=1.0 || n_step_per_orbit.value==0.0);
+                    assert(n_step_per_orbit.value>=1.0);
+                    break;
+                case 18:
+                    tidal_tensor_switcher.value = atoi(optarg);
+                    if(print_flag) tidal_tensor_switcher.print(std::cout);
+                    opt_used += 2;
                     break;
 #ifdef STELLAR_EVOLUTION
 //                case 18:
@@ -3371,6 +3379,7 @@ public:
 #else
         hard_manager.energy_error_max = PS::LARGE_FLOAT;
 #endif
+        hard_manager.tidal_tensor_switcher = bool(input_parameters.tidal_tensor_switcher.value);
         hard_manager.n_step_per_orbit = input_parameters.n_step_per_orbit.value;
         hard_manager.ap_manager.r_tidal_tensor = r_bin;
         hard_manager.ap_manager.id_offset = id_offset;
@@ -3862,64 +3871,6 @@ public:
         while(true) {
 #ifdef PROFILE
             profile.total.start();
-            profile.other.start();
-#endif
-
-            bool interrupt_flag = false;  // for interrupt integration when time reach end
-            bool output_flag = false;    // for output snapshot and information
-            //bool dt_mod_flag = false;    // for check whether tree time step need update
-            bool changeover_flag = false; // for check whether changeover need update
-            bool is_start_flag = false; // for check whether the current step is the start step
-            PS::F64 dt_kick, dt_drift;
-
-            // for initial the system
-            if (dt_manager.isNextStart()) {
-                // set step to the begining step
-                dt_kick = dt_manager.getDtStartContinue();
-                is_start_flag = true;                
-            }
-            else {
-                // increase loop counter
-                n_loop++;
-
-                // for next kick-drift pair
-                dt_manager.nextContinue();
-
-                // update stat time 
-                stat.time = system_hard_one_cluster.getTimeOrigin();
-
-                // check whether output or changeover change are needed (only at the ending step)
-                if (dt_manager.isNextEndPossible()) {
-
-                    // adjust tree step
-                    //dt_mod_flag = adjustDtTreeReduce(dt_reduce_factor, dt_tree, dt_manager.getStep());
-                    //if(dt_mod_flag) dt_kick = dt_manager.getDtEndContinue();
-
-                    // output step, get last kick step
-                    output_flag = (fmod(stat.time, dt_output) == 0.0);
-
-                    // check changeover change
-                    changeover_flag = (system_hard_isolated.getNClusterChangeOverUpdate()>0);
-
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-                    PS::S32 n_changeover_modify_local  = system_hard_connected.getNClusterChangeOverUpdate() + system_hard_isolated.getNClusterChangeOverUpdate();
-                    PS::S32 n_changeover_modify_global = PS::Comm::getSum(n_changeover_modify_local);
-                    if (n_changeover_modify_global>0) changeover_flag = true;
-#endif
-
-                    // check interruption
-                    interrupt_flag = (stat.time>=time_break);
-
-                    // set next step to be last
-                    if (output_flag||changeover_flag||interrupt_flag) dt_kick = dt_manager.getDtEndContinue();
-                    else dt_kick = dt_manager.getDtKickContinue();
-                }
-                else dt_kick = dt_manager.getDtKickContinue();
-            }
-#ifdef PROFILE
-            profile.other.barrier();
-            PS::Comm::barrier();
-            profile.other.end();
 #endif
 
 #ifdef STELLAR_EVOLUTION
@@ -3934,6 +3885,9 @@ public:
             // update center
             stat.calcAndShiftCenterOfMass(&system_soft[0], stat.n_real_loc);
 #endif
+
+            // update stat time
+            stat.time = system_hard_one_cluster.getTimeOrigin();
 
             // >9. Domain decomposition
             domainDecompose();
@@ -3965,9 +3919,58 @@ public:
             /// substract tidal tensor measure point force
             treeForceCorrectChangeover();
 
-            if (is_start_flag) {
+            bool interrupt_flag = false;  // for interrupt integration when time reach end
+            bool output_flag = false;    // for output snapshot and information
+            //bool dt_mod_flag = false;    // for check whether tree time step need update
+            bool changeover_flag = false; // for check whether changeover need update
+            bool need_half_step_flag = false; // for  check whether another half step is needed for continuing steps
+            PS::F64 dt_kick, dt_drift;
+
+            // for initial the system
+            if (dt_manager.isNextStart()) {
+                // set step to the begining step
+                dt_kick = dt_manager.getDtStartContinue();
                 // correct force due to the change over update for starting step
                 correctForceChangeOverUpdate();
+            }
+            else {
+                // increase loop counter
+                n_loop++;
+
+                // for next kick-drift pair
+                dt_manager.nextContinue();
+
+                // check changeover change
+                changeover_flag = (system_hard_isolated.getNClusterChangeOverUpdate()>0);
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+                PS::S32 n_changeover_modify_local  = system_hard_connected.getNClusterChangeOverUpdate() + system_hard_isolated.getNClusterChangeOverUpdate();
+                PS::S32 n_changeover_modify_global = PS::Comm::getSum(n_changeover_modify_local);
+                if (n_changeover_modify_global>0) changeover_flag = true;
+#endif
+
+                // check whether output or changeover change are needed (only at the ending step)
+                if (dt_manager.isNextEndPossible()) {
+
+                    // adjust tree step
+                    //dt_mod_flag = adjustDtTreeReduce(dt_reduce_factor, dt_tree, dt_manager.getStep());
+                    //if(dt_mod_flag) dt_kick = dt_manager.getDtEndContinue();
+
+                    // output step, get last kick step
+                    output_flag = (fmod(stat.time, dt_output) == 0.0);
+
+                    // check interruption
+                    interrupt_flag = (stat.time>=time_break);
+
+                    // set next step to be last
+                    if (output_flag||changeover_flag||interrupt_flag) dt_kick = dt_manager.getDtEndContinue();
+                    else dt_kick = dt_manager.getDtKickContinue();
+                }
+                else if (changeover_flag) {
+                    need_half_step_flag = true; // next should be half step in continuing steps
+                    dt_kick = dt_manager.getHalfDtKickContinue();
+                }
+                else dt_kick = dt_manager.getDtKickContinue();
             }
 
 #ifdef KDKDK_4TH
@@ -4053,12 +4056,24 @@ public:
                 //while(dt_reduce_factor<dt_reduce_factor_org) dt_reduce_factor *=2.0;
 
                 //update new tree step if reduce factor is changed
-                dt_kick = dt_manager.getDtStartContinue();
+                if (need_half_step_flag) dt_kick = dt_manager.getHalfDtKickContinue();
+                else dt_kick = dt_manager.getDtStartContinue();
 
-                correctForceChangeOverUpdate();
+                if (changeover_flag) {
+                    correctForceChangeOverUpdate();
 
+#ifdef KDKDK_4TH
+                    // do correction at middle step for second half kick when changeover is changed, still need test to see if it is correct.
+                    // also need to consider to avoid full gradient calculation by using correction function
+                    if (calc_gradient) {
+                        treeSoftGradient();
+                        externalForceGradient();
+                    }
+#endif
+                }
+
+                // second half kick
                 kick(dt_kick);
-
             }
 
 

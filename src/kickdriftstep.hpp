@@ -7,12 +7,13 @@ class KickDriftStep{
     int count_continue_;  // counts for continue case
     bool next_is_start_flag_;  // indicate next call should be getDtStartContinue
     bool next_is_kick_flag_;   // indicate next call should be getDtKickContinue
+    bool next_is_2nd_half_kick_flag_; // indicate next call should be 2nd getHalfDtKickContinue
     std::vector<KDPair> coff_one_step_; // cofficient table for one full step
     std::vector<KDPair> coff_continue_; // cofficient table for continuing step (mergin first and last step)
 
 public:
 
-    KickDriftStep(): ds_(0.0), mode_(0), count_one_step_(0), count_continue_(0), next_is_start_flag_(true), next_is_kick_flag_(true) {}
+    KickDriftStep(): ds_(0.0), mode_(0), count_one_step_(0), count_continue_(0), next_is_start_flag_(true), next_is_kick_flag_(true), next_is_2nd_half_kick_flag_(false) {}
 
     //! reset step count for one full step case
     void resetCountOneStep() {
@@ -130,6 +131,26 @@ public:
         }
         next_is_kick_flag_ = false;
         return coff_continue_[count_continue_][mode_];
+    }
+
+    //! Get half kick step size for continue case
+    PS::F64 getHalfDtKickContinue() {
+        if (next_is_start_flag_) {
+            std::cerr<<"Error: not yet call start step!\n";
+            abort();
+        }
+        if (next_is_2nd_half_kick_flag_) { // second half kick case
+            next_is_kick_flag_ = false;
+            next_is_2nd_half_kick_flag_ = false;
+        }
+        else if (next_is_kick_flag_) { // first half kick case
+            next_is_2nd_half_kick_flag_ = true; // set half kick flag to indicate next is second half
+        }
+        else{
+            std::cerr<<"Error: try get half kick after one full kick step!\n";
+            abort();
+        }
+        return 0.5*coff_continue_[count_continue_][mode_];
     }
 
     //! Get drift step size for continue case
