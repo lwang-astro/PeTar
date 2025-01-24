@@ -23,7 +23,7 @@
 21. Remove the unused `time_org` in Hermite information.
 22. Add support for reading snapshot data in 128-bit floating-point format in the Python analysis tool.
 23. Add calculation of sound speed depending on pressure for gas drag mode.
-24. Fix error implementation for KDKDK-4th mode, use tree_nb to calculate gradient correction for only EP particles (no SIMD yet); Add gradient correction for external force from galpy. 
+24. Fix error implementation for KDKDK-4th mode, use tree_nb to calculate gradient correction for only EP particles (no SIMD yet); Add gradient correction for external force from galpy; Still need to test whether changeover change for gradient correction is correctly implemented. Need to consider how to avoid double gredient calculation and simd/gpu version.
 25. Fix wrong data type for scale_density in gas_drag mode
 26. Add MergerTree class in Python analysis tool
 27. Add mpreal support to store high-precision parts of particle positions, this can avoid influence of round-off on the tight binaries when the c.m. of system has significant jump.
