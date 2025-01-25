@@ -521,7 +521,8 @@ public:
                         // set tidal_tensor pointer
                         groupi.perturber.soft_pert = &tidal_tensor[i];
 
-                        // set group id of tidal tensor to the n_members
+                        // set group id of tidal tensor to the n_members used to match tidal tensor and group members
+                        // (when the group is removed and added again, the n_members should be the same)
                         groupi.perturber.soft_pert->group_id = groupi.particles.getSize();
 
                         // same tidal_tensor id to member particle group_data for identification later
