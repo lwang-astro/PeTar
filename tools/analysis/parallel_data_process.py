@@ -66,10 +66,25 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
 
     header = PeTarDataHeader(file_path, **kwargs)
     
-    if (not read_flag):
-        start_time = time.time()
+    start_time = time.time()
+    detect_single_binary = True # whether to detect single and binary files
 
-        core = result['core']
+    # read from core data
+    core = result['core']
+    if (read_flag):
+        rc = core.rc[core.time==header.time]
+        single_file_available = (os.path.getsize(file_path+'.single')>0)
+        binary_file_available = (os.path.getsize(file_path+'.binary')>0)
+
+        # check whether the core data for given time is available
+        # if both core data and single/binary files available, set detect_single_binary to False
+        # when find_multiple is used, always set detect_single_binary True because the saved single/binary files miss triple/quadruple components
+        if (rc.size>0) & (single_file_available | binary_file_available):
+            detect_single_binary = False
+
+    # detect single/binary/multiple and calculate core data
+    if (detect_single_binary):
+
         #print('Loadfile')
         #snap=np.loadtxt(file_path, skiprows=1)
         #particle=Particle(snap, **kwargs)
@@ -162,7 +177,6 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
     else:
         start_time = time.time()
         
-        core = result['core_read']
 
         single = Particle(**kwargs)
         p1 = Particle(**kwargs)
@@ -170,12 +184,15 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         binary = Binary(p1,p2)
 
         if os.path.getsize(file_path+'.single')>0:
-            single.loadtxt(file_path+'.single')
+            if (output_format=='ascii'): single.loadtxt(file_path+'.single')   
+            elif (output_format=='binary'): single.fromfile(file_path+'.single')
+            elif (output_format=='npy'): single.load(file_path+'.single')
+            else: raise ValueError('Output format %s is not supported, should be ascii, binary or npy' % output_format)
         if os.path.getsize(file_path+'.binary')>0:
-            binary.loadtxt(file_path+'.binary')
-
-        # read from core data
-        rc = core.rc[core.time==header.time]
+            if (output_format=='ascii'): binary.loadtxt(file_path+'.binary')
+            elif (output_format=='binary'): binary.fromfile(file_path+'.binary')
+            elif (output_format=='npy'): binary.load(file_path+'.binary')
+            else: raise ValueError('Output format %s is not supported, should be ascii, binary or npy' % output_format)
 
         time_profile['read'] += time.time() - start_time
 
@@ -281,12 +298,16 @@ def dataProcessList(file_list, read_flag, **kwargs):
     for key in ['read','find_pair','density','center_core','save_data','calc_pot','lagr','escaper','bse']:
         time_profile[key] = 0.0
 
+    # when find_multiple is used, the saved single/binary files are not complete and miss triple/quadruple components, thus set read_flag to False
+    if ('find_multiple' in kwargs.keys()): 
+        find_multiple=kwargs['find_multiple']
+        if (find_multiple):
+            read_flag = False
+
+    result['core']=Core()
     if (read_flag):
         core_filename=kwargs['filename_prefix']+'.core'
-        result['core_read']=Core()
-        result['core_read'].loadtxt(core_filename)
-    else:
-        result['core'] = Core()
+        result['core'].loadtxt(core_filename)
 
     if ('interrupt_mode' in kwargs.keys()): 
         interrupt_mode=kwargs['interrupt_mode']
