@@ -64,23 +64,35 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
     if ('find_multiple' in kwargs.keys()): find_multiple=kwargs['find_multiple']
     if ('m_ext' in result.keys()): m_ext=result['m_ext']
 
-    header = PeTarDataHeader(file_path, **kwargs)
-    
     start_time = time.time()
+    header = PeTarDataHeader(file_path, **kwargs)
+    particle=Particle(**kwargs)
+    if (snapshot_format=='ascii'): particle.loadtxt(file_path, skiprows=1)
+    elif (snapshot_format=='binary'): 
+        if (external_mode!='none'):
+            particle.fromfile(file_path, offset=HEADER_OFFSET_WITH_CM)
+        else:
+            particle.fromfile(file_path, offset=HEADER_OFFSET)
+    else: raise ValueError('Snapshot format unknown, should be binary or ascii, given', snapshot_format)
+    time_profile['read'] += time.time() - start_time
+
     detect_single_binary = True # whether to detect single and binary files
 
     # read from core data
     core = result['core']
     if (read_flag):
-        rc = core.rc[core.time==header.time]
+        start_time = time.time()
+        core_read = result['core_read']    
+        tsel = (core_read.time==header.time)
         single_file_available = (os.path.getsize(file_path+'.single')>0)
         binary_file_available = (os.path.getsize(file_path+'.binary')>0)
 
         # check whether the core data for given time is available
         # if both core data and single/binary files available, set detect_single_binary to False
         # when find_multiple is used, always set detect_single_binary True because the saved single/binary files miss triple/quadruple components
-        if (rc.size>0) & (single_file_available | binary_file_available):
+        if (tsel.sum()>0) & (single_file_available | binary_file_available):
             detect_single_binary = False
+        time_profile['read'] += time.time() - start_time
 
     # detect single/binary/multiple and calculate core data
     if (detect_single_binary):
@@ -88,15 +100,6 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
         #print('Loadfile')
         #snap=np.loadtxt(file_path, skiprows=1)
         #particle=Particle(snap, **kwargs)
-        particle=Particle(**kwargs)
-        if (snapshot_format=='ascii'): particle.loadtxt(file_path, skiprows=1)
-        elif (snapshot_format=='binary'): 
-            if (external_mode!='none'):
-                particle.fromfile(file_path, offset=HEADER_OFFSET_WITH_CM)
-            else:
-                particle.fromfile(file_path, offset=HEADER_OFFSET)
-        else: raise ValueError('Snapshot format unknown, should be binary or ascii, given', snapshot_format)
-        time_profile['read'] += time.time() - start_time
         start_time = time.time()
 
         # find binary
@@ -176,12 +179,22 @@ def dataProcessOne(file_path, result, time_profile, read_flag, **kwargs):
 
     else:
         start_time = time.time()
-        
 
+        core.append(core_read[tsel])
+        rc = core_read.rc[tsel]
+        cm_pos = core_read.pos[tsel] - header.pos_offset
+        cm_vel = core_read.pos[tsel] - header.vel_offset
+
+        #print('Correct center')
+        particle.correctCenter(cm_pos, cm_vel)
+
+        # r2
+        particle.calcR2()
+        
         single = Particle(**kwargs)
         p1 = Particle(**kwargs)
         p2 = Particle(**kwargs)
-        binary = Binary(p1,p2)
+        binary = Binary(p1,p2,**kwargs)
 
         if os.path.getsize(file_path+'.single')>0:
             if (output_format=='ascii'): single.loadtxt(file_path+'.single')   
@@ -306,8 +319,9 @@ def dataProcessList(file_list, read_flag, **kwargs):
 
     result['core']=Core()
     if (read_flag):
+        result['core_read'] = Core()
         core_filename=kwargs['filename_prefix']+'.core'
-        result['core'].loadtxt(core_filename)
+        result['core_read'].loadtxt(core_filename)
 
     if ('interrupt_mode' in kwargs.keys()): 
         interrupt_mode=kwargs['interrupt_mode']
