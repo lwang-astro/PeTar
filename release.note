@@ -29,6 +29,7 @@
 27. Add mpreal support to store high-precision parts of particle positions, this can avoid influence of round-off on the tight binaries when the c.m. of system has significant jump.
 28. Improve printTable function in Python analysis tool to support output in LaTex and CSV format.
 29. Improve the -r option in petar.data.process, allow to continue the calculation when core/single/binary files are available.
+30. Fix a bug in `data.py`: During the initialization of `petar.Binary` with `p1` and `p2` both being empty, the `pos` and `vel` members are incorrectly shaped as `(0,)` instead of `(0, 3)`.
 
 **Some existing issues include**
 
