@@ -1720,7 +1720,17 @@ public:
         _star1.r  = r[0];
         _star1.mc = mc[0];
         _star1.rc = rc[0];
-        _star1.ospin[0] = ospin[0];
+        if (kw[0]==14) {
+            if (chi1[1]==0 && chi1[2]==0) {
+                _star1.ospin[0] = ospin[0];
+            }
+            else {
+                _star1.ospin[0] = chi1[0];
+            }
+        }
+        else {
+            _star1.ospin[0] = ospin[0];
+        }
         _star1.ospin[1] = chi1[1];
         _star1.ospin[2] = chi1[2];
         _star1.epoch  = epoch[0];
@@ -1733,7 +1743,18 @@ public:
         _star2.r  = r[1];
         _star2.mc = mc[1];
         _star2.rc = rc[1];
-        _star2.ospin[0]  = ospin[1];
+        if (kw[1]==14) {
+            if (chi2[1]==0 && chi2[2]==0) {
+                _star2.ospin[0] = ospin[1];
+            }
+            else {
+                _star2.ospin[0] = chi2[0];
+            }
+        }
+        else {
+            _star2.ospin[0] = ospin[1];
+        }
+ 
         _star2.ospin[1]  = chi2[1];
         _star2.ospin[2]  = chi2[2];
         _star2.epoch  = epoch[1];
