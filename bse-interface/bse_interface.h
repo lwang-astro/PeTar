@@ -789,7 +789,7 @@ class BinaryEvent{
         for (int i=3; i<5; i++) _fout<<std::setw(_width)<<int(record[i][_index]);
         for (int i=5; i<9; i++) _fout<<std::setw(_width)<<record[i][_index];
         _fout<<std::setw(_width)<<int(record[9][_index]);
-        for (int i=10; i<20; i++) _fout<<std::setw(_width)<<record[i][_index];
+        for (int i=10; i<24; i++) _fout<<std::setw(_width)<<record[i][_index];
     }
 };
 
