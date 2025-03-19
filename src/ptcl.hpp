@@ -42,6 +42,7 @@ public:
     static PS::F64 search_factor;
     static PS::F64 r_search_min;
     static PS::F64 r_group_crit_ratio;
+    static PS::F64 r_group_search_crit_ratio;
     static PS::F64 mean_mass_inv;
     //static PS::F64vec vel_cm;
     static GroupDataMode group_data_mode;
@@ -248,7 +249,7 @@ public:
 
     //! Get group candidate distance criterion
     PS::F64 getRGroupCandidate() const {
-        return changeover.getRin();
+        return changeover.getRin()*r_group_search_crit_ratio;
     }
 
     //! Get group distance criterion

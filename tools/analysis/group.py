@@ -30,10 +30,10 @@ class BinaryTreeSDAR(DictNpArrayMix):
         Parameters
         ----------
         keyword arguments:
-            member_particle_type: type (Particle)
+            member_particle_type: type (HardParticle)
                 Type of component particle 
         """
-        member_particle_type=Particle
+        member_particle_type=HardParticle
         if 'member_particle_type' in kwargs.keys(): member_particle_type=kwargs['member_particle_type']
 
         keys = [['semi',np.float64], ['ecc',np.float64], ['incline',np.float64],['rot_horizon',np.float64],['rot_self',np.float64],['t_peri',np.float64],['period',np.float64],['ecca',np.float64],['m1',np.float64],['m2',np.float64],['r',np.float64],['am',(np.float64,3)],['stab',np.float64],['sd',np.float64],['sd_org',np.float64],['sd_max',np.float64],['p1',member_particle_type],['p2',member_particle_type]]
@@ -62,15 +62,28 @@ class GroupInfo(DictNpArrayMix):
     def __init__(self, _dat=None, _offset=int(0), _append=False, **kwargs):
         """ DictNpArrayMix type initialzation, see help(DictNpArrayMix.__init__)
 
+        May receive the warning message: 
+        RuntimeWarning: invalid value encountered in cast self.__dict__[key] = _dat[:,icol].astype(parameter)
+        This is due to the artificial particle mode of mass_bk and status data, which are F64 instead of S64
+
         Parameters
         ----------
         keyword arguments:
-            particle_type: string (hard)
-                Particle type, do not change this!
+            member_particle_type: type (HardParticle)
+                Type of component particle, do not change this!
+            interrupt_mode: string (none)
+               PeTar interrupt mode (set in configure): base, bse, mobse, none
+               This option indicates whether columns of stellar evolution exist
+            external_mode: string (none)
+               PeTar external mode (set in configure): galpy, none 
+               This option indicates whether the column of externa potential exist
+            use_mpfrc: bool (False)
+               If true, add three columns of pos_high indicating the high-precision parts of position
+            float_type: type (np.float64)
+                floating point data type
             N: int (2)
                 Number of members of one group
         """
-        kwargs['particle_type']='hard'
         keys=[['type',np.int64],['n',np.int64],['time',np.float64],['pos',(np.float64,3)],['vel',(np.float64,3)]]
         DictNpArrayMix.__init__(self, keys, _dat, _offset, _append, **kwargs)
 

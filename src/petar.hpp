@@ -129,6 +129,7 @@ public:
     IOParams<PS::F64> eps;
     IOParams<PS::F64> r_out;
     IOParams<PS::F64> r_bin;
+    IOParams<PS::F64> r_search_bin;
 //    IOParams<PS::F64> r_search_max;
     IOParams<PS::F64> r_search_min;
     IOParams<PS::F64> r_escape;
@@ -198,7 +199,8 @@ public:
                      step_limit_ar(input_par_store, 1000000, "step-limit-ar", "Maximum step allowed for the ARC sym integrator"),
                      eps          (input_par_store, 0.0,  "soft-eps", "Softening epsilon"),
                      r_out        (input_par_store, 0.0,  "r", "Outer boundary radius for the changeover function (r_out), if value is zero and -s is not used, use 0.1 GM/[N^(1/3) sigma_3D^2]; if -s is given, calculate r_out from dt_soft"),
-                     r_bin        (input_par_store, 0.0,  "r-bin", "Tidal tensor box size and the radial criterion for detecting multiple systems (binaries, triples, etc.), if value is zero, use 0.8*r_in"),
+                     r_bin        (input_par_store, 0.0,  "r-bin", "Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.), if value is zero, use 0.8*r_in"),
+                     r_search_bin (input_par_store, 0.0,  "r-search-bin", "The radial criterion for detecting multiple group candidates, if value is zero, use 1.0*r_in"),
 //                     r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out"),
                      r_search_min (input_par_store, 0.0,  "r-search-min", "Minimum neighbor search radius for hard clusters","auto"),
                      r_escape     (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Escape radius criterion, 0: no escaper removal; <0: remove particles when r>-r_escape; >0: remove particles when r>r_escape and energy>0"),
@@ -252,7 +254,7 @@ public:
             {eps.key,                  required_argument, &petar_flag, 8},       
             {sd_factor.key,            required_argument, &petar_flag, 9},
             {ratio_r_cut.key,          required_argument, &petar_flag, 10},
-            {r_bin.key,                required_argument, &petar_flag, 11},       
+            {r_bin.key,                required_argument, &petar_flag, 11},
             {search_peri_factor.key,   required_argument, &petar_flag, 12}, 
             {eta.key,                  required_argument, &petar_flag, 13}, 
 #ifdef HARD_CHECK_ENERGY
@@ -280,6 +282,7 @@ public:
             {record_id_end_one.key,    required_argument, &petar_flag, 27},
             {record_id_start_two.key,  required_argument, &petar_flag, 28},
             {record_id_end_two.key,    required_argument, &petar_flag, 29},
+            {r_search_bin.key,         required_argument, &petar_flag, 30},
             {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
         };
@@ -476,6 +479,12 @@ public:
                     if(print_flag) record_id_end_two.print(std::cout);
                     opt_used += 2;
                     break;
+                case 30:
+                    r_search_bin.value = atof(optarg);
+                    if(print_flag) r_search_bin.print(std::cout);
+                    opt_used += 2;
+                    assert(r_search_bin.value>=0.0);
+                    break;
                 default:
                     break;
                 }
@@ -638,15 +647,17 @@ public:
         assert(e_err_ar.value > 0.0);
         assert(eps.value>=0.0 && eps.value<=ratio_r_cut.value); // avoid incorrect self-potential correction after tree force, when eps>r_out, self-potential is G m /r_eps instead of G m/r_cut;
         assert(sd_factor.value>0.0);
+        assert(r_out.value>=0.0);
         assert(ratio_r_cut.value>0.0);
         assert(ratio_r_cut.value<1.0);
         assert(r_bin.value>=0.0);
+        assert(r_search_bin.value>=r_bin.value);
+        assert(r_search_bin.value<=r_out.value*ratio_r_cut.value);
         assert(search_peri_factor.value>=1.0);
         assert(data_format.value>=0||data_format.value<=3);
         assert(time_end.value>=0.0);
         assert(dt_soft.value>=0.0);
         assert(dt_snap.value>0.0);
-        assert(r_out.value>=0.0);
         assert(n_bin.value>=0);
         assert(n_glb.value>0);
         assert(n_group_limit.value>0);
@@ -3103,6 +3114,7 @@ public:
         PS::F64 r_in, mass_average, vel_disp;// mass_max, vel_max;
         PS::F64& r_out = input_parameters.r_out.value;
         PS::F64& r_bin = input_parameters.r_bin.value;
+        PS::F64& r_search_bin = input_parameters.r_search_bin.value;
         PS::F64& r_search_min = input_parameters.r_search_min.value;
 //        PS::F64& r_search_max = input_parameters.r_search_max.value;
         PS::F64& dt_soft = input_parameters.dt_soft.value;
@@ -3251,6 +3263,7 @@ public:
 
         // if r_bin is not defined, set to theta * r_in
         if (r_bin==0.0) r_bin = 0.8*r_in;
+        if (r_search_bin==0.0) r_search_bin = r_in;
 
         // if r_search_min is not defined, calculate by search_vel_factor*velocity_dispersion*tree_time_step + r_out
         if (r_search_min==0.0) r_search_min = search_vel_factor*vel_disp*dt_soft + r_out;
@@ -3272,6 +3285,7 @@ public:
         Ptcl::r_search_min = r_search_min;
         Ptcl::mean_mass_inv = 1.0/mass_average;
         Ptcl::r_group_crit_ratio = r_bin/r_in;
+        Ptcl::r_group_search_crit_ratio = r_search_bin/r_in;
         //Ptcl::vel_cm = vel_cm_glb;
         escaper.r_escape_sq = input_parameters.r_escape.value*input_parameters.r_escape.value;
         escaper.check_energy_flag = (input_parameters.r_escape.value>=0);
@@ -3283,6 +3297,7 @@ public:
                      <<" Mean inner changeover radius      = "<<r_in           <<std::endl
                      <<" Mean outer changeover radius      = "<<r_out          <<std::endl
                      <<" Mean SDAR group detection radius  = "<<r_bin          <<std::endl
+                     <<" Mean SDAR group candidate radius  = "<<r_search_bin   <<std::endl
                      <<" Minimum neighbor searching radius = "<<r_search_min   <<std::endl
                      <<" Velocity dispersion               = "<<vel_disp       <<std::endl
                      <<" Tree time step                    = "<<dt_soft        <<std::endl
