@@ -20,6 +20,7 @@
 #include"artificial_particles.hpp"
 #include"stability.hpp"
 #include"status.hpp"
+#include"io.hpp"
 
 typedef H4::ParticleH4<PtclHard> PtclH4;
 
@@ -43,6 +44,317 @@ struct RecordIDRange{
         return (check_id >= id_start_one && check_id < id_end_one) || (check_id >= id_start_two && check_id < id_end_two);
     }
     
+};
+
+//! IO parameters for hard integrator
+class IOParamsHard{
+public:
+    // IO parameters
+    IOParamsContainer input_par_store;
+#ifdef HARD_CHECK_ENERGY
+    IOParams<PS::F64> e_err_hard;
+#endif
+    IOParams<PS::F64> gravitational_constant;
+    IOParams<PS::F64> eps;
+    IOParams<PS::F64> r_bin;
+    IOParams<PS::F64> r_search_bin;
+    IOParams<PS::S64> n_step_per_orbit;
+    IOParams<PS::S64> tidal_tensor_switcher;
+#ifdef ORBIT_SAMPLING
+    IOParams<PS::S64> n_split;
+#endif
+    IOParams<PS::S64> id_offset;
+    IOParams<PS::F64> eta;
+    IOParams<PS::F64> dt_max_hermite;
+    IOParams<PS::S64> dt_min_hermite_index;
+    IOParams<PS::F64> e_err_ar;
+    IOParams<PS::S64> step_limit_ar;
+    IOParams<PS::F64> sd_factor;
+#ifdef STELLAR_EVOLUTION
+    IOParams<PS::S64> interrupt_detection_option;
+#ifdef BSE_BASE
+    IOParams<PS::S64> stellar_evolution_option;
+#endif
+#endif
+#ifdef ADJUST_GROUP_PRINT
+    IOParams<PS::S64> adjust_group_write_option;
+#endif
+    IOParams<PS::S64> record_id_start_one;
+    IOParams<PS::S64> record_id_end_one;
+    IOParams<PS::S64> record_id_start_two;
+    IOParams<PS::S64> record_id_end_two;
+    IOParams<std::string> fname_par;
+
+    // flag
+    bool print_flag; 
+    bool update_changeover_flag;
+    bool update_rsearch_flag;
+
+    IOParamsHard(): input_par_store(), 
+#ifdef HARD_CHECK_ENERGY
+                    e_err_hard   (input_par_store, 1e-4, "energy-err-hard", "Maximum energy error allowed for the hard integrator"),
+#endif
+                    gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant"),
+                    eps              (input_par_store, 0.0,  "soft-eps", "Softening epsilon"),
+                    r_bin            (input_par_store, 0.0,  "r-bin", "Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.), if value is zero, use 0.8*r_in"),
+                    r_search_bin     (input_par_store, 0.0,  "r-search-bin", "The radial criterion for detecting multiple group candidates, if value is zero, use 1.0*r_in"),
+                    n_step_per_orbit (input_par_store, 8,    "tt-nstep", "Number of steps per slow-down binary orbits (binary period/tree timestep) for isolated binaries; also the maximum criterion for activating tidal tensor method"),
+                    tidal_tensor_switcher(input_par_store, 1,"tt-switch", "Tidal tensor calculation for (counter-)perturbation (from)on binaries: 0 - off; 1 - on"),
+#ifdef ORBIT_SAMPLING
+                    n_split          (input_par_store, 4,    "os-nsplit", "Number of binary sample points for tree perturbation force using orbit-sampling method"),
+#endif
+                    id_offset        (input_par_store, -1,   "id-offset", "Starting ID for artificial particles, total number of real particles must always be smaller than this","n_glb+1"),
+                    eta              (input_par_store, 0.1,  "hermite-eta", "Hermite timestep coefficient eta"),
+                    dt_max_hermite   (input_par_store, 0.0,  "hermite-dt-max", "Maximum hermite timestep"),
+                    dt_min_hermite_index(input_par_store, 40,"hermite-dt-min-index",  "Power index n for the smallest timestep (0.5^n) allowed in the Hermite integrator"),
+                    e_err_ar     (input_par_store, 1e-8,     "ar-max-error", "Maximum energy error allowed for the ARC integrator"),
+                    step_limit_ar(input_par_store, 1000000,  "ar-max-nstep", "Maximum step allowed for the ARC sym integrator"),
+                    sd_factor    (input_par_store, 1e-4,     "ar-slowdown-factor", "Slowdown perturbation criterion"),
+#ifdef STELLAR_EVOLUTION
+#ifdef BSE_BASE
+                    stellar_evolution_option  (input_par_store, 1, "stellar-evolution", "Stellar evolution of stars in Hermite+SDAR: 0: off; >=1: using SSE/BSE based codes; ==2: activate dynamical tide and hyperbolic gravitational wave radiation"),
+                    interrupt_detection_option(input_par_store, 1, "detect-interrupt", "Stellar evolution of binaries in SDAR: 0: off; 1: using BSE based code (if '--stellar-evolution != 0)"),
+#else // NO BSE_BASE
+                    interrupt_detection_option(input_par_store, 0, "detect-interrupt", "Interrupt integration in SDAR: 0: turn off; 1: merge two particles if their surfaces overlap; 2. record two particle information if their surfaces overlap without merger"),
+#endif // END BSE_BASE
+#endif // END STELLAR_EVOLUTION
+#ifdef ADJUST_GROUP_PRINT
+                    adjust_group_write_option(input_par_store, 1, "write-group-info", "Print new and end of groups: 0: no print; 1: print to file [data filename prefix].group.[MPI rank] if -w >0"),
+#endif
+                    record_id_start_one(input_par_store, 0, "record-id-start-one", "Starting of the first id range for hard dump recording every tree step, save into files object_[id]"),
+                    record_id_end_one  (input_par_store, 0, "record-id-end-one", "Ending of the first id range for hard dump; notice that the ending id is not included in hard dump"),
+                    record_id_start_two(input_par_store, 0, "record-id-start-two", "Starting of the 2nd id range for hard dump recording every tree step"),
+                    record_id_end_two  (input_par_store, 0, "record-id-end-two", "Ending of the 2nd id range for hard dump; notice that the ending id is not included in hard dump"),
+                    fname_par(input_par_store, "input.par.hard", "p", "Input parameter file for hard (this option should be used first before any other options)"),
+                    print_flag(false), update_changeover_flag(false), update_rsearch_flag(false) {}
+
+    //! reading parameters from GNU option API
+    /*!
+      @param[in] argc: number of options
+      @param[in] argv: string of options
+      @param[in] opt_used_pre: already used option number from previous reading, use to correctly count the remaining argument number
+      \return -1 if help is used; else the used number of argv
+     */
+    int read(int argc, char *argv[], const int opt_used_pre=0) {
+        static int hard_flag=-1;
+        static struct option long_options[] = {
+#ifdef HARD_CHECK_ENERGY
+            {e_err_hard.key,             required_argument, &hard_flag, 1},  
+#endif
+            {eps.key,                    required_argument, &hard_flag, 2},
+            {r_bin.key,                  required_argument, &hard_flag, 3},
+            {r_search_bin.key,           required_argument, &hard_flag, 4},
+            {n_step_per_orbit.key,       required_argument, &hard_flag, 5},
+            {tidal_tensor_switcher.key,  required_argument, &hard_flag, 6},
+#ifdef ORBIT_SAMPLING
+            {n_split.key,                required_argument, &hard_flag, 7},
+#endif
+            {id_offset.key,              required_argument, &hard_flag, 8},
+            {eta.key,                    required_argument, &hard_flag, 9},
+            {dt_max_hermite.key,         required_argument, &hard_flag, 10},
+            {dt_min_hermite_index.key,   required_argument, &hard_flag, 11},
+            {e_err_ar.key,               required_argument, &hard_flag, 12},
+            {step_limit_ar.key,          required_argument, &hard_flag, 13},
+            {sd_factor.key,              required_argument, &hard_flag, 14},
+#ifdef STELLAR_EVOLUTION
+#ifdef BSE_BASE
+            {stellar_evolution_option.key,    required_argument, &hard_flag, 15},
+#endif
+            {interrupt_detection_option.key,  required_argument, &hard_flag, 16},
+#endif
+#ifdef ADJUST_GROUP_PRINT
+            {adjust_group_write_option.key,   required_argument, &hard_flag, 17},
+#endif            
+            {record_id_start_one.key,  required_argument, &hard_flag, 18},
+            {record_id_end_one.key,    required_argument, &hard_flag, 19},
+            {record_id_start_two.key,  required_argument, &hard_flag, 20},
+            {record_id_end_two.key,    required_argument, &hard_flag, 21},
+            {"help",                  no_argument, 0, 'h'},        
+            {0,0,0,0}
+        };
+
+        int opt_used = opt_used_pre;
+        int copt;
+        int option_index;
+        optind = 0; // reset getopt
+        while ((copt = getopt_long(argc, argv, "-G:p:h", long_options, &option_index)) != -1) 
+            switch (copt) {
+                case 0:
+                switch (hard_flag) {
+#ifdef HARD_CHECK_ENERGY
+                    case 1: 
+                        e_err_hard.value = atof(optarg);
+                        if(print_flag) e_err_hard.print(std::cout);
+                        opt_used += 2;
+                        break;
+#endif
+                    case 2:
+                        eps.value = atof(optarg);
+                        if(print_flag) eps.print(std::cout);
+                        opt_used += 2;
+                        assert(eps.value>=0.0);
+                        break;
+                    case 3:
+                        r_bin.value = atof(optarg);
+                        if(print_flag) r_bin.print(std::cout);
+                        opt_used += 2;
+                        assert(r_bin.value>=0.0);
+                        break;
+                    case 4:
+                        r_search_bin.value = atof(optarg);
+                        if(print_flag) r_search_bin.print(std::cout);
+                        opt_used += 2;
+                        assert(r_search_bin.value>=0.0);
+                        break;
+                    case 5:
+                        n_step_per_orbit.value = atof(optarg);
+                        if(print_flag) n_step_per_orbit.print(std::cout);
+                        opt_used += 2;
+                        assert(n_step_per_orbit.value>=1.0);
+                        break;
+                    case 6:
+                        tidal_tensor_switcher.value = atoi(optarg);
+                        if(print_flag) tidal_tensor_switcher.print(std::cout);
+                        opt_used += 2;
+                        break;
+#ifdef ORBIT_SAMPLING
+                    case 7:
+                        n_split.value = atoi(optarg);
+                        if(print_flag) n_split.print(std::cout);
+                        opt_used += 2;
+                        assert(n_split.value>=0);
+                        break;
+#endif
+                    case 8:
+                        id_offset.value = atoi(optarg);
+                        if(print_flag) id_offset.print(std::cout);
+                        opt_used += 2;
+                        break;
+                    case 9:
+                        eta.value = atof(optarg);
+                        if(print_flag) eta.print(std::cout);
+                        opt_used += 2;
+                        assert(eta.value>0.0);
+                        break;
+                    case 10:
+                        dt_max_hermite.value = atof(optarg);
+                        if(print_flag) dt_max_hermite.print(std::cout);
+                        opt_used += 2;
+                        assert(dt_max_hermite.value > 0.0);
+                        break;
+                    case 11:
+                        dt_min_hermite_index.value = atoi(optarg);
+                        if(print_flag) dt_min_hermite_index.print(std::cout);
+                        opt_used += 2;
+                        assert(dt_min_hermite_index.value > 0);
+                        break;
+                    case 12:
+                        e_err_ar.value = atof(optarg);
+                        if(print_flag) e_err_ar.print(std::cout);
+                        opt_used += 2;
+                        assert(e_err_ar.value > 0.0);
+                        break;
+                    case 13:
+                        step_limit_ar.value = atoi(optarg);
+                        if(print_flag) step_limit_ar.print(std::cout);
+                        opt_used += 2;
+                        break;
+                    case 14:
+                        sd_factor.value = atof(optarg);
+                        if(print_flag) sd_factor.print(std::cout);
+                        opt_used += 2;
+                        assert(sd_factor.value>0.0);
+                        break;
+#ifdef STELLAR_EVOLUTION
+#ifdef BSE_BASE
+                    case 15:
+                        stellar_evolution_option.value = atoi(optarg);
+                        if(print_flag) stellar_evolution_option.print(std::cout);
+                        opt_used += 2;
+                        break;
+#endif
+                    case 16:
+                        interrupt_detection_option.value = atoi(optarg);
+                        if(print_flag) interrupt_detection_option.print(std::cout);
+                        opt_used += 2;
+                        break;
+#endif
+#ifdef ADJUST_GROUP_PRINT
+                    case 17:
+                        adjust_group_write_option.value = atoi(optarg);
+                        if(print_flag) adjust_group_write_option.print(std::cout);
+                        opt_used += 2;
+                        break;
+#endif
+                    case 18:
+                        record_id_start_one.value = atoi(optarg);
+                        if(print_flag) record_id_start_one.print(std::cout);
+                        opt_used += 2;
+                        break;
+                    case 19:
+                        record_id_end_one.value = atoi(optarg);
+                        if(print_flag) record_id_end_one.print(std::cout);
+                        opt_used += 2;
+                        break;
+                    case 20:
+                        record_id_start_two.value = atoi(optarg);
+                        if(print_flag) record_id_start_two.print(std::cout);
+                        opt_used += 2;
+                        break;
+                    case 21:
+                        record_id_end_two.value = atoi(optarg);
+                        if(print_flag) record_id_end_two.print(std::cout);
+                        opt_used += 2;
+                        break;
+                    default:
+                        break;
+                    }
+                    break;
+            case 'G':
+                gravitational_constant.value = atof(optarg);
+                if(print_flag) gravitational_constant.print(std::cout);
+                opt_used += 2;
+                assert(gravitational_constant.value>0.0);
+                break;
+            case 'p':
+                fname_par.value = optarg;
+                if(print_flag) {
+                    fname_par.print(std::cout);
+                    FILE* fpar_in;
+                    if( (fpar_in = fopen(fname_par.value.c_str(),"r")) == NULL) {
+                        fprintf(stderr,"Error: Cannot open file %s.\n", fname_par.value.c_str());
+                        abort();
+                    }
+                    input_par_store.readAscii(fpar_in);
+                    fclose(fpar_in);
+                }
+                opt_used += 2;
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+                input_par_store.mpi_broadcast();
+                PS::Comm::barrier();
+#endif
+                break;
+            case 'h':
+                if(print_flag){
+
+                    input_par_store.printHelp(std::cout, 2, 10, 23);
+                    std::cout<<"  -h(--help):               print help"<<std::endl;
+                    std::cout<<"        r_in : transit function inner boundary radius\n"
+                             <<"        r_out: transit function outer boundary radius\n"
+                }
+                return -1;
+            case '?':
+                opt_used +=2;
+                break;
+            default:
+                break;
+            }
+
+        // count used options
+        opt_used ++;
+        if(print_flag) std::cout<<"----- Finish reading input options of Hard -----\n";
+        return opt_used-1;
+    }
 };
 
 //! Hard integrator parameter manager
@@ -90,12 +402,113 @@ public:
         ar_manager.time_error_max = 0.25*ar_manager.time_step_min;
     }
 
+    //! initialize parameters
+    /*!
+        @param[in] _input: input parameters
+        @param[in] _mass_average: average mass of particles
+        @param[in] _r_out_base: outer changeover radius reference
+        @param[in] _r_in_base: inner changeover radius reference
+        @param[in] _stat: global status
+        @param[in] _write_style: write style
+        @param[in] _print_flag: print flag
+    */
+    void initial(const IOParamsHard& _input, 
+                 const PS::F64 _mass_average, 
+                 const PS::F64 _r_out_base,
+                 const PS::F64 _r_in_base, 
+                 Status& _stat,
+                 const int _write_style, 
+                 const bool _print_flag=false) {
+
+        // set system hard paramters
+#ifdef HARD_CHECK_ENERGY
+        energy_error_max = _input.e_err_hard.value;
+#else
+        energy_error_max = PS::LARGE_FLOAT;
+#endif
+
+        setGravitationalConstant(_input.gravitational_constant.value);
+        setEpsSq(_input.eps.value*_input.eps.value);
+
+        r_out_base = _r_out_base;
+        r_in_base = _r_in_base;
+        
+        // if r_bin is not defined, set to 0.8*r_in
+        if (_input.r_bin.value==0.0) Ptcl::r_group_crit_ratio = 0.8;
+        else Ptcl::r_group_crit_ratio = _input.r_bin.value/r_in_base;
+        
+        // if r_search_bin is not defined, set to r_in
+        if (_input.r_search_bin.value==0.0) Ptcl::r_group_search_crit_ratio = 1.0;
+        else Ptcl::r_group_search_crit_ratio = _input.r_search_bin.value/r_in_base;
+
+        n_step_per_orbit = _input.n_step_per_orbit.value;
+        tidal_tensor_switcher = bool(_input.tidal_tensor_switcher.value);
+        ap_manager.r_tidal_tensor = _input.r_bin.value;
+        ap_manager.id_offset = _input.id_offset.value;
+#ifdef ORBIT_SAMPLING
+        ap_manager.orbit_manager.setParticleSplitN(_input.n_split.value);
+#endif
+        h4_manager.step.eta_4th = _input.eta.value;
+        h4_manager.step.eta_2nd = 0.01*_input.eta.value;
+        h4_manager.step.calcAcc0OffsetSq(_mass_average, r_out_base, _input.gravitational_constant.value);
+        setDtRange(_input.dt_max_hermite.value, _input.dt_min_hermite_index.value);
+
+        ar_manager.step.initialSymplecticCofficients(-6);
+        ar_manager.slowdown_timescale_max = _input.dt_max_hermite.value*n_step_per_orbit;
+        ar_manager.slowdown_pert_ratio_ref = _input.sd_factor.value;
+        ar_manager.energy_error_relative_max = _input.e_err_ar.value;
+        ar_manager.step_count_max = _input.step_limit_ar.value;
+        //ar_manager.slowdown_timescale_max = dt_soft;
+#ifdef SLOWDOWN_MASSRATIO
+        ar_manager.slowdown_mass_ref = _mass_average;
+#endif
+#ifdef STELLAR_EVOLUTION
+        ar_manager.interaction.interrupt_detection_option = _input.interrupt_detection_option.value;
+#ifdef BSE_BASE
+        ar_manager.interaction.stellar_evolution_option = _input.stellar_evolution_option.value;
+        if (_write_style) ar_manager.interaction.stellar_evolution_write_flag = true;
+        else ar_manager.interaction.stellar_evolution_write_flag = false;
+        if (_input.stellar_evolution_option.value>0) {
+            ar_manager.interaction.bse_manager.initial(bse_parameters, print_flag);
+            ar_manager.interaction.tide.speed_of_light = ar_manager.interaction.bse_manager.getSpeedOfLight();
+        }
+
+#endif
+#endif        
+
+#ifdef ADJUST_GROUP_PRINT
+        // group information
+        if (_write_style && _input.adjust_group_write_option.value==1) 
+            h4_manager.adjust_group_write_flag=true;
+        else 
+            h4_manager.adjust_group_write_flag=false;
+#endif
+
+#ifdef EXTERNAL_HARD
+        ar_manager.interaction.ext_force = &h4_manager.interaction.ext_force;
+#endif
+
+        // record id range
+        record_id_range.id_start_one = _input.record_id_start_one.value;
+        record_id_range.id_end_one = _input.record_id_end_one.value;
+        record_id_range.id_start_two = _input.record_id_start_two.value;
+        record_id_range.id_end_two = _input.record_id_end_two.value;
+
+        // link global status 
+        status = &_stat;
+
+        checkParams();
+    }    
+
     //! check paramters
     bool checkParams() {
         ASSERT(energy_error_max>0.0);
+        ASSERT(eps_sq>=0.0 && eps_sq<=r_out_base*r_out_base); // avoid incorrect self-potential correction after tree force, when eps>r_out, self-potential is G m /r_eps instead of G m/r_cut;
         ASSERT(eps_sq>=0.0);
-        ASSERT(r_in_base>0.0);
         ASSERT(r_out_base>0.0);
+        ASSERT(r_in_base>0.0 && r_in_base < r_out_base);
+        ASSERT(Ptcl::r_group_search_crit_ratio>=0.0 && Ptcl::r_group_search_crit_ratio<=1.0);
+        ASSERT(Ptcl::r_group_crit_ratio>=0.0 && Ptcl::r_group_crit_ratio<=Ptcl::r_group_search_crit_ratio);
         ASSERT(n_step_per_orbit>0.0);
         ASSERT(ap_manager.checkParams());
         ASSERT(h4_manager.checkParams());
