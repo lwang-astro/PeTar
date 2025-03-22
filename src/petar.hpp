@@ -101,6 +101,7 @@ public:
     IOParams<PS::S64> n_bin;
     IOParams<PS::F64> time_end;
     IOParams<PS::S64> unit_set;
+    IOParams<PS::F64> gravitational_constant;
     IOParams<PS::S64> n_glb;
     IOParams<PS::F64> dt_soft;
     IOParams<PS::F64> r_out;
@@ -110,8 +111,8 @@ public:
     IOParams<PS::F64> search_peri_factor;
     IOParams<PS::F64> r_search_min;
     IOParams<PS::F64> r_escape;
-    IOParams<PS::S64> data_format;
     IOParams<PS::F64> dt_snap;
+    IOParams<PS::S64> data_format;
     IOParams<PS::S64> write_style;
     IOParams<PS::S64> append_switcher;
     IOParams<std::string> fname_snp;
@@ -132,25 +133,26 @@ public:
                      n_group_limit    (input_par_store, 512,  "number-group-limit", "Particle-tree group number limit", "Optimized for x86-AVX2 (512)"),
 #endif
                      n_smp_ave        (input_par_store, 100,  "number-sample-average", "Average target number of sample particles per process"),
-                     n_bin            (input_par_store, 0,    "b", "Number of primordial binaries for initialization (assuming the binaries' IDs are 1,2*n_bin)"),
+                     n_bin            (input_par_store, 0,    "b", "Number of primordial binaries (n_bin) for initialization (assuming the binaries' IDs are 1,2*n_bin)"),
                      time_end         (input_par_store, 10.0, "t", "End time of simulation"),
-                     unit_set         (input_par_store, 0,    "u", "Input data unit, 0: unknown, referring to G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr"),
-                     n_glb            (input_par_store, 100000, "n", "Total number of particles, used only for a test with the internal equal-mass Plummer model generator (assuming G=1 and the input data filename is __Plummer)"),
-                     dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft), if the value is zero (default) and --nstep-dt-soft-kepler is not used, then dt_soft = 0.1*r_out/sigma_1D"),
-                     r_out            (input_par_store, 0.0,  "r", "Outer boundary radius for the changeover function (r_out), if value is zero and -s is not used, use 0.1 GM/[N^(1/3) sigma_3D^2]; if -s is given, calculate r_out from dt_soft"),
-                     ratio_r_cut      (input_par_store, 0.1,  "r-ratio", "r_in / r_out"),
-                     nstep_dt_soft_kepler (input_par_store, 0.0, "nstep-dt-soft-kepler", "Determines the tree timestep by P(r_in)/nstep, where P(r_in) is the binary period with the semi-major axis of r_in, nstep is the argument of this option (e.g., 32.0)", "not used"),
-                     search_vel_factor(input_par_store, 3.0,  "search-vel-factor", "Neighbor search coefficient for velocity check (v*dt)"),
-                     search_peri_factor  (input_par_store, 1.5, "search-peri-factor", "Neighbor search coefficient for periapsis check"),
-                     r_search_min (input_par_store, 0.0,  "r-search-min", "Minimum neighbor search radius for hard clusters","auto"),
-                     r_escape     (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Escape radius criterion, 0: no escaper removal; <0: remove particles when r>-r_escape; >0: remove particles when r>r_escape and energy>0"),
+                     unit_set         (input_par_store, 0,    "u", "Input data unit; 0: based on the value of G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr, modify G to fit this unit set"),
+                     gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant, if -u 1, G = 0.00449830997959438 pc^3/(Msun*Myr^2)"),
+                     n_glb            (input_par_store, 100000, "n", "Total number of particles, used only when the input data filename is __Plummer"),
+                     dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft); = 0: without --nstep-dt-soft-kepler, dt_soft = 0.1*r_out/sigma_1D, where sigma_1D is 1D half-mass radius velocity dispersion; = 0: with '--nstep-dt-soft-kepler nstep', dt_soft = P(r_in)/nstep"),
+                     r_out            (input_par_store, 0.0,  "r", "Outer changeover radius (r_out); = 0: without -s, r_out = 0.1 GM/[N^(1/3) sigma_3D^2], where sigma_3D is 3D half-mass radius velocity dispersion; = 0: with '-s dt_soft', r_out = 10*dt_soft*sigma_1D"),
+                     ratio_r_cut      (input_par_store, 0.1,  "r-ratio", "Ratio between inner (r_in) and outer (r_out) changeover radii"),
+                     nstep_dt_soft_kepler(input_par_store, 0.0, "nstep-dt-soft-kepler", "Determines the dt_soft by P(r_in)/nstep; P(r_in) is the binary period with the semi-major axis of r_in; nstep is the argument of this option (e.g., 32.0)", "not used"),
+                     search_vel_factor (input_par_store, 3.0,  "search-vel-factor", "Neighbor search coefficient for velocity check (v*dt)"),
+                     search_peri_factor(input_par_store, 1.5, "search-peri-factor", "Neighbor search coefficient for periapsis check"),
+                     r_search_min     (input_par_store, 0.0,  "r-search-min", "Minimum neighbor search radius for hard clusters","auto"),
+                     r_escape         (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Object escape radius criterion; 0: no escaper removal; <0: remove objects when r>-r_escape; >0: remove objects when r>r_escape and energy>0"),
                      dt_snap          (input_par_store, 1.0,  "o", "Output time interval for particle dataset snapshots"),
-                     data_format  (input_par_store, 1,    "i", "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),
-                     write_style  (input_par_store, 1,    "w", "File writing style: 0, no output; 1. write snapshots, status, and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile"),
-                     append_switcher(input_par_store, 1, "a", "Data output style: 0 - create new output files and overwrite existing ones except snapshots; 1 - append new data to existing files (always append for object dump files)"),
-                     fname_snp(input_par_store, "data", "f", "Prefix of filenames for output data: [prefix].**"),
-                     fname_par(input_par_store, "input.par", "p", "Input parameter file (this option should be used first before any other options)"),
-                     fname_inp(input_par_store, "__NONE__", "snap-filename", "Input data file", NULL, false),
+                     data_format      (input_par_store, 1,    "i", "Data file reading and writing format; 0: read and write in BINARY; 1: read and write in ASCII; 2: read in ASCII, write in BINARY; 3: read in BINARY, write in ASCII"),
+                     write_style      (input_par_store, 1,    "w", "Data file writing style; 0: no output; 1: write all files separately; 2. write snapshots in status files in one line per step (no MPI support); 3. write files except snapshots"),
+                     append_switcher  (input_par_store, 1,    "a", "Data file output mode; 0: overwrite files except object dump files, include header lines; 1: append files except snapshots, no header line"),
+                     fname_snp        (input_par_store, "data", "f", "Prefix of filenames for output data: [prefix].**"),
+                     fname_par        (input_par_store, "input.par", "p", "Input parameter file (this option should be used first before any other options)"),
+                     fname_inp        (input_par_store, "__NONE__", "snap-filename", "Input data file", NULL, false),
                      print_flag(false), update_changeover_flag(false), update_rsearch_flag(false) {}
 
     
@@ -182,7 +184,7 @@ public:
         int copt;
         int option_index;
         optind = 0; // reset getopt
-        while ((copt = getopt_long(argc, argv, "-i:a:t:s:r:o:b:n:u:T:f:p:w:h", long_options, &option_index)) != -1) 
+        while ((copt = getopt_long(argc, argv, "-i:a:t:s:r:o:b:n:u:G:T:f:p:w:h", long_options, &option_index)) != -1) 
             switch (copt) {
             case 0:
                 switch (petar_flag) {
@@ -306,6 +308,12 @@ public:
                 opt_used += 2;
                 assert(unit_set.value>=0);
                 break;
+            case 'G':
+                gravitational_constant.value = atof(optarg);
+                if(print_flag) gravitational_constant.print(std::cout);
+                opt_used += 2;
+                assert(gravitational_constant.value>0.0);
+                break;
             case 'T':
                 theta.value = atof(optarg);
                 if(print_flag) theta.print(std::cout);
@@ -355,17 +363,13 @@ public:
 #endif
                              <<"            Following lines:\n";
                     FPSoft::printTitleWithMeaning(std::cout,0,13);
-                    std::cout<<"          PS: (*) show initialization values which should be used together with FILE_ID = 0"<<std::endl;
-                    std::cout<<"              [formatted] indicates that the value is only for save, cannot be directly read"<<std::endl;
-                    std::cout<<"Options:\n";
-                    input_par_store.printHelp(std::cout, 2, 10, 23);
-                    std::cout<<"        --disable-print-info:  "<<"Do not print information"<<std::endl;
+                    std::cout<<"** PS: (*) show initialization values which should be used together with FILE_ID = 0"<<std::endl;
+                    std::cout<<"       [formatted] indicates that the value is only for save, cannot be directly read"<<std::endl;
+                    std::cout<<"----- Main Options: -----\n";
+                    std::cout<<"  -h(--help):  print help"<<std::endl;
+                    input_par_store.printHelp(std::cout, true);
+                    std::cout<<"  --disable-print-info:        Do not print information"<<std::endl;
                     //std::cout<<"        --disable-write-info:  "<<"Do not write information"<<std::endl;
-                    std::cout<<"  -h(--help):               print help"<<std::endl;
-                    std::cout<<"*** PS: dt_soft: tree time step\n"
-                             <<"        sigma: half-mass radius velocity dispersion\n"
-                             <<"        n_bin: number of primordial binaries\n"
-                             <<"        <m>  : averaged mass"<<std::endl;
                 }
                 return -1;
             case '?':
@@ -383,7 +387,7 @@ public:
             if(print_flag) std::cout<<"Reading data file name: "<<fname_inp.value<<std::endl;
         }
 
-        if(print_flag) std::cout<<"----- Finish reading input options of PeTar -----\n";
+        if(print_flag) std::cout<<"----- Finish reading main options -----\n";
 
         return opt_used-1;
     }
@@ -874,7 +878,7 @@ public:
             auto& pos_origin = pi.pos;
             PS::F64vec pos_cluster = pi.pos - stat.pcm.pos;
 #endif
-            galpy_manager.calcAccPot(&acc.x, pot, stat.time, input_parameters.gravitational_constant.value*pi.mass, &pos_origin[0], &pos_cluster[0]);
+            galpy_manager.calcAccPot(&acc.x, pot, stat.time, hard_parameters.gravitational_constant.value*pi.mass, &pos_origin[0], &pos_cluster[0]);
             assert(!std::isinf(acc[0]));
             assert(!std::isnan(acc[0]));
             assert(!std::isinf(pot));
@@ -2348,24 +2352,24 @@ public:
         int read_flag = input_parameters.read(argc,argv);
         if (my_rank==0) hard_parameters.print_flag=true;
         else hard_parameters.print_flag=false;
-        hard_parameters.read(argc,argv);
+        hard_parameters.read(argc,argv,false);
 #ifdef BSE_BASE
         if (my_rank==0) bse_parameters.print_flag=true;
         else bse_parameters.print_flag=false;
-        bse_parameters.read(argc,argv);
+        bse_parameters.read(argc,argv,false);
         if (my_rank==0) rand_parameters.print_flag=true;
         else rand_parameters.print_flag=false;
-        rand_parameters.read(argc,argv);
+        rand_parameters.read(argc,argv,false);
 #endif
 #ifdef GALPY
         if (my_rank==0) galpy_parameters.print_flag=true;
         else galpy_parameters.print_flag=false;
-        galpy_parameters.read(argc,argv);
+        galpy_parameters.read(argc,argv,false);
 #endif
 #ifdef EXTERNAL_HARD
         if (my_rank==0) external_hard_parameters.print_flag=true;
         else external_hard_parameters.print_flag=false;
-        external_hard_parameters.read(argc,argv);
+        external_hard_parameters.read(argc,argv,false);
 #endif
 
         // help case, return directly
@@ -2448,33 +2452,37 @@ public:
 
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
-            // open SSE/BSE file
-            std::string fsse_name = fname_snp + fsse_par_suffix + "." + my_rank_str;
-            std::string fbse_name = fname_snp + fbse_par_suffix + "." + my_rank_str;
-            if(input_parameters.append_switcher.value==1) {
-                hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out|std::ofstream::app);
-                hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out|std::ofstream::app);
+            if (hard_parameters.stellar_evolution_option.value>0) {
+                // open SSE/BSE file
+                std::string fsse_name = fname_snp + fsse_par_suffix + "." + my_rank_str;
+                std::string fbse_name = fname_snp + fbse_par_suffix + "." + my_rank_str;
+                if(input_parameters.append_switcher.value==1) {
+                    hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out|std::ofstream::app);
+                    hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out|std::ofstream::app);
+                }
+                else {
+                    hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out);
+                    hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out);
+                }
+                hard_manager.ar_manager.interaction.fout_sse<<std::setprecision(WRITE_PRECISION);
+                hard_manager.ar_manager.interaction.fout_bse<<std::setprecision(WRITE_PRECISION);
             }
-            else {
-                hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out);
-                hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out);
-            }
-            hard_manager.ar_manager.interaction.fout_sse<<std::setprecision(WRITE_PRECISION);
-            hard_manager.ar_manager.interaction.fout_bse<<std::setprecision(WRITE_PRECISION);
 #else
-            // open interrupt file
-            std::string finterrupt_name = fname_snp + ".interrupt." + my_rank_str;
-            if(input_parameters.append_switcher.value==1) 
-                hard_manager.ar_manager.interaction.fout_interrupt.open(finterrupt_name.c_str(), std::ofstream::out|std::ofstream::app);
-            else 
-                hard_manager.ar_manager.interaction.fout_interrupt.open(finterrupt_name.c_str(), std::ofstream::out);
-            hard_manager.ar_manager.interaction.fout_interrupt<<std::setprecision(WRITE_PRECISION);
+            if (hard_parameters.interrupt_detection_option.value>0) {
+                // open interrupt file
+                std::string finterrupt_name = fname_snp + ".interrupt." + my_rank_str;
+                if(input_parameters.append_switcher.value==1) 
+                    hard_manager.ar_manager.interaction.fout_interrupt.open(finterrupt_name.c_str(), std::ofstream::out|std::ofstream::app);
+                else 
+                    hard_manager.ar_manager.interaction.fout_interrupt.open(finterrupt_name.c_str(), std::ofstream::out);
+                hard_manager.ar_manager.interaction.fout_interrupt<<std::setprecision(WRITE_PRECISION);
+            }
 #endif 
 #endif
 
 #ifdef ADJUST_GROUP_PRINT
             // open file for new/end group information
-            if (input_parameters.adjust_group_write_option.value==1) {
+            if (hard_parameters.adjust_group_write_option.value==1) {
                 std::string fgroup_name = fname_snp + ".group." + my_rank_str;
                 if(input_parameters.append_switcher.value==1) 
                     hard_manager.h4_manager.fgroup.open(fgroup_name.c_str(), std::ofstream::out|std::ofstream::app);
@@ -2829,6 +2837,7 @@ public:
 
         // units
         if (input_parameters.unit_set.value==1) {
+            input_parameters.gravitational_constant.value = G_ASTRO;
             hard_parameters.gravitational_constant.value = G_ASTRO;
 #ifdef BSE_BASE
             bse_parameters.tscale.value = 1.0; // Myr
@@ -2838,7 +2847,7 @@ public:
 #endif
             if(print_flag) {
                 std::cout<<"----- Unit set 1: Msun, pc, Myr -----\n"
-                         <<"gravitational_constant = "<<hard_parameters.gravitational_constant.value<<" pc^3/(Msun*Myr^2)\n";
+                         <<"gravitational_constant = "<<input_parameters.gravitational_constant.value<<" pc^3/(Msun*Myr^2)\n";
 #ifdef BSE_BASE
                 std::cout<<"----- Unit conversion for BSE ----- \n"
                          <<" tscale = "<<bse_parameters.tscale.value<<"  Myr / Myr\n"
@@ -2857,16 +2866,12 @@ public:
         // calculate system parameters
         PS::F64 r_in, mass_average, vel_disp;// mass_max, vel_max;
         PS::F64& r_out = input_parameters.r_out.value;
-        PS::F64& r_bin = input_parameters.r_bin.value;
-        PS::F64& r_search_bin = input_parameters.r_search_bin.value;
         PS::F64& r_search_min = input_parameters.r_search_min.value;
-//        PS::F64& r_search_max = input_parameters.r_search_max.value;
         PS::F64& dt_soft = input_parameters.dt_soft.value;
         PS::F64& dt_snap = input_parameters.dt_snap.value;
         PS::F64& search_vel_factor =  input_parameters.search_vel_factor.value;
         PS::F64& ratio_r_cut   =  input_parameters.ratio_r_cut.value;
         PS::S64& n_bin         =  input_parameters.n_bin.value;
-        //PS::F64& theta         =  input_parameters.theta.value;
         PS::F64& G             =  input_parameters.gravitational_constant.value;
         PS::F64& nstep_dt_soft_kepler = input_parameters.nstep_dt_soft_kepler.value;
 
@@ -3018,9 +3023,9 @@ public:
         else
             dt_snap = int(dt_snap/dt_soft)*dt_soft;
 
-        EPISoft::eps   = input_parameters.eps.value;
+        EPISoft::eps   = hard_parameters.eps.value;
         EPISoft::r_out = r_out;
-        ForceSoft::grav_const = input_parameters.gravitational_constant.value;
+        ForceSoft::grav_const = hard_parameters.gravitational_constant.value;
         Ptcl::search_factor = search_vel_factor;
         Ptcl::r_search_min = r_search_min;
         Ptcl::mean_mass_inv = 1.0/mass_average;
@@ -3034,8 +3039,6 @@ public:
             std::cout<<" Average mass                      = "<<mass_average   <<std::endl
                      <<" Mean inner changeover radius      = "<<r_in           <<std::endl
                      <<" Mean outer changeover radius      = "<<r_out          <<std::endl
-                     <<" Mean SDAR group detection radius  = "<<r_bin          <<std::endl
-                     <<" Mean SDAR group candidate radius  = "<<r_search_bin   <<std::endl
                      <<" Minimum neighbor searching radius = "<<r_search_min   <<std::endl
                      <<" Velocity dispersion               = "<<vel_disp       <<std::endl
                      <<" Tree time step                    = "<<dt_soft        <<std::endl
@@ -3050,7 +3053,7 @@ public:
         assert(stat.n_real_glb == input_parameters.n_glb.value);
         assert(stat.n_real_glb == system_soft.getNumberOfParticleGlobal());
 #endif
-        PS::S64& id_offset = input_parameters.id_offset.value;
+        PS::S64& id_offset = hard_parameters.id_offset.value;
         id_offset = id_offset==-1 ? stat.n_real_glb+1 : id_offset;
 
         // initial particles paramters
@@ -3121,10 +3124,10 @@ public:
         galpy_manager.initial(galpy_parameters, stat.time, galpy_conf_filename, restart_flag, print_flag);
 #endif
 
-        hard_manager.initial(hard_parameters, mass_average, stat, write_style, print_flag);
-
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
+        hard_manager.initial(hard_parameters, bse_parameters, mass_average, r_out, r_in, dt_soft, stat, write_style, print_flag);
+
         // initial random seeds
         rand_manager.initialAll(rand_parameters);
         rand_manager.printRandSeeds(std::cout);
@@ -3139,6 +3142,8 @@ public:
         }
 
 #endif
+#else
+        hard_manager.initial(hard_parameters, mass_average, r_out, r_in, dt_soft, stat, write_style, print_flag);
 #endif
 
 #ifdef EXTERNAL_HARD
@@ -3148,6 +3153,7 @@ public:
 #else
         hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, stat.time, print_flag);
 #endif
+        hard_manager.ar_manager.interaction.ext_force = &hard_manager.h4_manager.interaction.ext_force;
 #endif
 
         // check consistence of paramters
@@ -3182,7 +3188,17 @@ public:
 
             // save hard paramters 
             std::string fhard_par = input_parameters.fname_par.value + ".hard";
-            if (print_flag) std::cout<<"Save hard_manager parameters to file "<<fhard_par<<std::endl;
+            if (print_flag) std::cout<<"Save hard parameters to file "<<fhard_par<<std::endl;
+            if( (fpar_out = fopen(fhard_par.c_str(),"w")) == NULL) {
+                fprintf(stderr,"Error: Cannot open file %s.\n", fhard_par.c_str());
+                abort();
+            }
+            hard_parameters.input_par_store.writeAscii(fpar_out);
+            fclose(fpar_out);
+
+            // save hard manager parameters in binary format for petar.hard.debug            
+            fhard_par = input_parameters.fname_par.value + ".hard.dump";            
+            if (print_flag) std::cout<<"Save hard_manager parameters to file "<<fhard_par<<" in BINARY format"<<std::endl;
             if( (fpar_out = fopen(fhard_par.c_str(),"w")) == NULL) {
                 fprintf(stderr,"Error: Cannot open file %s.\n", fhard_par.c_str());
                 abort();

@@ -32,14 +32,15 @@ public:
     IOParams<double> gas_density; 
     IOParams<double> decay_time;
 #endif
-
+    IOParams<std::string> fname_par;
+    
     bool print_flag;
     IOParamsExternalHard(): input_par_store(),
-                            mode  (input_par_store, 0,          "ext-hard-mode", "external hard mode: 0, not used; 1, gas dynamical friction (Ostriker 1999, Rozner et al. 2022); 2, gas dynamical friction only in radial direction"),
-                            sound_speed  (input_par_store, 0.0, "ext-sound-speed",  "sound speed in units of PeTar input; if given 0, calculate by sqrt(P/rho), based on hydrostatic equilibrium"),
+                            mode  (input_par_store, 0,          "ext-hard-mode", "external force for hard integration; 0, not used; 1, gas dynamical friction (Ostriker 1999, Rozner et al. 2022); 2, gas dynamical friction only in radial direction"),
+                            sound_speed  (input_par_store, 0.0, "ext-sound-speed",  "sound speed in units of PeTar input, if given 0, calculate by sqrt(P/rho), based on hydrostatic equilibrium"),
                             coulomb_log  (input_par_store, 3.1, "ext-coulomb-log",  "coulomb logarithm"),
-                            polytropic_constant (input_par_store, 1.0, "ext-K", "Polytropic constant in units of PeTar input; used to evaluate Pressure P = K rho^gamma"),
-                            polytropic_exponent (input_par_store, 4.0/3.0, "ext-gamma", "Polytropic exponent; used to evaluate Pressure P = K rho^gamma"),
+                            polytropic_constant (input_par_store, 1.0, "ext-K", "Polytropic constant in units of PeTar input, used to evaluate Pressure P = K rho^gamma"),
+                            polytropic_exponent (input_par_store, 4.0/3.0, "ext-gamma", "Polytropic exponent, used to evaluate Pressure P = K rho^gamma"),
 #ifdef GALPY
                             galpy_gaspot_index(input_par_store, -1, "ext-gaspot-index",  "galpy potential set index for gas component, used for obtaining gas density", "None"),
                             scale_density(input_par_store, 1/G_ASTRO, "ext-scale-density", "scale factor for galpy potential density","1/G"),
@@ -47,16 +48,19 @@ public:
                             gas_density  (input_par_store, 1.0, "ext-gas-density",  "gas density in units of PeTar input"),
                             decay_time   (input_par_store, 0.0, "ext-decay-time",  "gas density decay time scale in units of PeTar input"),
 #endif
+                            fname_par    (input_par_store, "input.par", "p", "Input parameter file for external force (this option should be used first before any other options)",NULL,false),
+    
                             print_flag(false) {}
 
     //! reading parameters from GNU option API
     /*!
       @param[in] argc: number of options
       @param[in] argv: string of options
+      @param[in] print_format_info: if true, print the format information
       @param[in] opt_used_pre: already used option number from previous reading, use to correctly count the remaining argument number
       \return -1 if help is used; else the used number of argv
      */
-    int read(int argc, char *argv[], const int opt_used_pre=0) {
+    int read(int argc, char *argv[], const bool print_format_info=true, const int opt_used_pre=0) {
         static int ext_flag=-1;
         const struct option long_options[] = {
             {mode.key,    required_argument, &ext_flag, 0},  
@@ -78,7 +82,6 @@ public:
         int opt_used=opt_used_pre;
         int copt;
         int option_index;
-        std::string fname_par;
         optind = 0;
         while ((copt = getopt_long(argc, argv, "-z:p:h", long_options, &option_index)) != -1) 
             switch (copt) {
@@ -137,9 +140,9 @@ public:
                 }
                 break;
             case 'p':
-                fname_par = optarg;
+                fname_par.value = optarg;
                 if(print_flag) {
-                    std::string fgalpy_par = fname_par+".exthard"; 
+                    std::string fgalpy_par = fname_par.value+".exthard"; 
                     FILE* fpar_in;
                     if( (fpar_in = fopen(fgalpy_par.c_str(),"r")) == NULL) {
                         fprintf(stderr,"Error: Cannot open file %s.\n", fgalpy_par.c_str());
@@ -156,9 +159,8 @@ public:
                 break;
             case 'h':
                 if(print_flag){
-                    std::cout<<"External perturbation for hard integration, options:"<<std::endl;
-                    input_par_store.printHelp(std::cout, 2, 10, 23);
-                    std::cout<<std::endl;
+                    std::cout<<"----- External perturbation for hard integration options: -----"<<std::endl;
+                    input_par_store.printHelp(std::cout, print_format_info);
                 }
                 return -1;
             case '?':
