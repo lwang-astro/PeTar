@@ -33,6 +33,7 @@
 31. Introduced a new option in `petar` commander, `--r-search-bin`, to configure the SDAR group candidate searching radius independently, rather than defaulting it to the value of `r_in`. For scenarios with large changeover radii, using a smaller `--r-search-bin` in combination with `--r-bin` can enhance performance, improve accuracy, and prevent crashes caused by binary tree construction failures.
 32. Updated the data analysis Jupyter notebook example to demonstrate the use of a status file for recording snapshots.
 33. Implement IOParamHard to separate hard parameters input from the main input. Save hard parameters to input.par.hard and save hard manager parameters to input.par.hard.dump for petar.hard.debug
+34. Move static parameters for group radius and search group search radius to PtclHard class; move regular time step calculation function to kickdriftstep.hpp.
 
 **Some existing issues include**
 

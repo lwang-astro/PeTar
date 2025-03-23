@@ -105,7 +105,7 @@ public:
     IOParams<PS::S64> n_glb;
     IOParams<PS::F64> dt_soft;
     IOParams<PS::F64> r_out;
-    IOParams<PS::F64> ratio_r_cut;
+    IOParams<PS::F64> r_in_over_out;
     IOParams<PS::F64> nstep_dt_soft_kepler;
     IOParams<PS::F64> search_vel_factor;
     IOParams<PS::F64> search_peri_factor;
@@ -140,7 +140,7 @@ public:
                      n_glb            (input_par_store, 100000, "n", "Total number of particles, used only when the input data filename is __Plummer"),
                      dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft); = 0: without --nstep-dt-soft-kepler, dt_soft = 0.1*r_out/sigma_1D, where sigma_1D is 1D half-mass radius velocity dispersion; = 0: with '--nstep-dt-soft-kepler nstep', dt_soft = P(r_in)/nstep"),
                      r_out            (input_par_store, 0.0,  "r", "Outer changeover radius (r_out); = 0: without -s, r_out = 0.1 GM/[N^(1/3) sigma_3D^2], where sigma_3D is 3D half-mass radius velocity dispersion; = 0: with '-s dt_soft', r_out = 10*dt_soft*sigma_1D"),
-                     ratio_r_cut      (input_par_store, 0.1,  "r-ratio", "Ratio between inner (r_in) and outer (r_out) changeover radii"),
+                     r_in_over_out    (input_par_store, 0.1,  "r-ratio", "Ratio between inner (r_in) and outer (r_out) changeover radii"),
                      nstep_dt_soft_kepler(input_par_store, 0.0, "nstep-dt-soft-kepler", "Determines the dt_soft by P(r_in)/nstep; P(r_in) is the binary period with the semi-major axis of r_in; nstep is the argument of this option (e.g., 32.0)", "not used"),
                      search_vel_factor (input_par_store, 3.0,  "search-vel-factor", "Neighbor search coefficient for velocity check (v*dt)"),
                      search_peri_factor(input_par_store, 1.5, "search-peri-factor", "Neighbor search coefficient for periapsis check"),
@@ -169,7 +169,7 @@ public:
             {n_leaf_limit.key,         required_argument, &petar_flag, 1},
             {n_group_limit.key,        required_argument, &petar_flag, 2},
             {n_smp_ave.key,            required_argument, &petar_flag, 3},
-            {ratio_r_cut.key,          required_argument, &petar_flag, 4},
+            {r_in_over_out.key,        required_argument, &petar_flag, 4},
             {nstep_dt_soft_kepler.key, required_argument, &petar_flag, 5},
             {search_vel_factor.key,    required_argument, &petar_flag, 6},  
             {search_peri_factor.key,   required_argument, &petar_flag, 7}, 
@@ -207,12 +207,12 @@ public:
                     assert(n_smp_ave.value>0.0);
                     break;
                 case 4:
-                    ratio_r_cut.value = atof(optarg);
-                    if(print_flag) ratio_r_cut.print(std::cout);
+                    r_in_over_out.value = atof(optarg);
+                    if(print_flag) r_in_over_out.print(std::cout);
                     update_changeover_flag = true;
                     opt_used += 2;
-                    assert(ratio_r_cut.value>0.0);
-                    assert(ratio_r_cut.value<1.0);
+                    assert(r_in_over_out.value>0.0);
+                    assert(r_in_over_out.value<1.0);
                     break;
                 case 5:
                     nstep_dt_soft_kepler.value = atof(optarg);
@@ -569,19 +569,6 @@ public:
         my_rank = PS::Comm::getRank();
         n_proc = PS::Comm::getNumberOfProc();
      }
-
-
-    //! regular block time step
-    PS::F64 regularTimeStep(const PS::F64 _dt) {
-        // regularize dt_tree
-        PS::F64 dt = 1.0;
-        if (_dt<1) while (dt>_dt) dt *= 0.5;
-        else {
-            while (dt<=_dt) dt *= 2.0;
-            dt *= 0.5;
-        }
-        return dt;
-    }
 
     //! tree for neighbor searching.
     void treeNeighborSearch() {
@@ -2870,7 +2857,7 @@ public:
         PS::F64& dt_soft = input_parameters.dt_soft.value;
         PS::F64& dt_snap = input_parameters.dt_snap.value;
         PS::F64& search_vel_factor =  input_parameters.search_vel_factor.value;
-        PS::F64& ratio_r_cut   =  input_parameters.ratio_r_cut.value;
+        PS::F64& r_in_over_out =  input_parameters.r_in_over_out.value;
         PS::S64& n_bin         =  input_parameters.n_bin.value;
         PS::F64& G             =  input_parameters.gravitational_constant.value;
         PS::F64& nstep_dt_soft_kepler = input_parameters.nstep_dt_soft_kepler.value;
@@ -2958,18 +2945,18 @@ public:
         // flag to check whether r_ous is already defined
         bool r_out_flag = (r_out>0);
     
-        // if r_out is already defined, calculate r_in based on  ratio_r_cut
-        if (r_out_flag) r_in = r_out * ratio_r_cut;
-        // calculate r_out based on virial radius scaled with (N)^(1/3), calculate r_in by ratio_r_cut
+        // if r_out is already defined, calculate r_in based on  r_in_over_out
+        if (r_out_flag) r_in = r_out * r_in_over_out;
+        // calculate r_out based on virial radius scaled with (N)^(1/3), calculate r_in by r_in_over_out
         else {
             if (n_glb>1) {
                 r_out = std::min(0.1*G*mass_cm_glb/(std::pow(n_glb,1.0/3.0)) / (3*vel_disp*vel_disp), 3.0*(rmax_glb-rmin_glb));
-                r_in = r_out * ratio_r_cut;
+                r_in = r_out * r_in_over_out;
             }
             else {
                 // give two small values, no meaning at all
                 r_out = 1e-16;
-                r_in = r_out*ratio_r_cut;
+                r_in = r_out*r_in_over_out;
                 if (print_flag) std::cout<<"In one particle case, changeover radius is set to a small value\n";
             }
         }
@@ -2995,16 +2982,16 @@ public:
                 if (n_glb>1) {
                     if (nstep_dt_soft_kepler>0) {
                             r_in = COMM::Binary::periodToSemi(dt_soft*nstep_dt_soft_kepler, mass_average, G);
-                            r_out = r_in / ratio_r_cut;
+                            r_out = r_in / r_in_over_out;
                     }
                     else {
                         r_out = 10.0*dt_soft*vel_disp;
-                        r_in = r_out * ratio_r_cut;
+                        r_in = r_out * r_in_over_out;
                     }
                 }
                 else {
                     r_out = 1e-16;
-                    r_in = r_out*ratio_r_cut;
+                    r_in = r_out*r_in_over_out;
                     if (print_flag) std::cout<<"In one particle case, changeover radius is set to a small value\n";
                 }
             }

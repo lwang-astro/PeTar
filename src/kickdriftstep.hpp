@@ -1,3 +1,6 @@
+#pragma once
+
+//! Kick drift step controller class
 class KickDriftStep{
     typedef std::array<double,2> KDPair;
 
@@ -199,3 +202,15 @@ public:
         return count_continue_==0&&!next_is_start_flag_&&((mode_==0&&next_is_kick_flag_)||(mode_==1&&!next_is_kick_flag_));
     }
 };
+
+//! regular block time step
+PS::F64 regularTimeStep(const PS::F64 _dt) {
+    // regularize dt_tree
+    PS::F64 dt = 1.0;
+    if (_dt<1) while (dt>_dt) dt *= 0.5;
+    else {
+        while (dt<=_dt) dt *= 2.0;
+        dt *= 0.5;
+    }
+    return dt;
+}

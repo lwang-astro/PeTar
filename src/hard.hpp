@@ -56,8 +56,8 @@ public:
 #endif
     IOParams<PS::F64> gravitational_constant;
     IOParams<PS::F64> eps;
-    IOParams<PS::F64> r_bin;
-    IOParams<PS::F64> r_search_bin;
+    IOParams<PS::F64> r_group;
+    IOParams<PS::F64> r_search_group;
     IOParams<PS::S64> n_step_per_orbit;
     IOParams<PS::S64> tidal_tensor_switcher;
 #ifdef ORBIT_SAMPLING
@@ -95,10 +95,10 @@ public:
 #endif
                     gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant", NULL, false),
                     eps              (input_par_store, 0.0,  "soft-eps", "Softening epsilon"),
-                    r_bin            (input_par_store,-1.0,  "r-bin", "Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.)","0.8*r_in"),
-                    r_search_bin     (input_par_store,-1.0,  "r-search-bin", "The radial criterion for detecting multiple group candidates", "1.0*r_in"),
+                    r_group          (input_par_store,-1.0,  "r-group", "Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.)","0.8*r_in"),
+                    r_search_group   (input_par_store,-1.0,  "r-search-group", "The radial criterion for detecting multiple group candidates", "1.0*r_in"),
                     n_step_per_orbit (input_par_store, 8,    "tt-nstep", "Number of steps per slow-down binary orbits (period/dt_soft) for isolated binaries; also the maximum criterion for activating tidal tensor method"),
-                    tidal_tensor_switcher(input_par_store, 1,"tt-switch", "Tidal tensor calculation for (counter-)perturbation (from)on binaries: 0 - off; 1 - on"),
+                    tidal_tensor_switcher(input_par_store, 1,"tt-switch", "Tidal tensor calculation for (counter-)perturbation (from)on binaries: 0: off, 1: on"),
 #ifdef ORBIT_SAMPLING
                     n_split          (input_par_store, 4,    "os-nsplit", "Number of binary sample points for tree perturbation force using orbit-sampling method"),
 #endif
@@ -136,15 +136,15 @@ public:
       @param[in] opt_used_pre: already used option number from previous reading, use to correctly count the remaining argument number
       \return -1 if help is used; else the used number of argv
      */
-    int read(int argc, char *argv[], const bool print_format_info=true, const int opt_used_pre=0) {
+    int read(int argc, char *argv[], const bool print_format_info=true, const bool print_all_flag=false, const int opt_used_pre=0) {
         static int hard_flag=-1;
         static struct option long_options[] = {
 #ifdef HARD_CHECK_ENERGY
             {e_err_hard.key,             required_argument, &hard_flag, 1},  
 #endif
             {eps.key,                    required_argument, &hard_flag, 2},
-            {r_bin.key,                  required_argument, &hard_flag, 3},
-            {r_search_bin.key,           required_argument, &hard_flag, 4},
+            {r_group.key,                required_argument, &hard_flag, 3},
+            {r_search_group.key,         required_argument, &hard_flag, 4},
             {n_step_per_orbit.key,       required_argument, &hard_flag, 5},
             {tidal_tensor_switcher.key,  required_argument, &hard_flag, 6},
 #ifdef ORBIT_SAMPLING
@@ -197,16 +197,16 @@ public:
                         assert(eps.value>=0.0);
                         break;
                     case 3:
-                        r_bin.value = atof(optarg);
-                        if(print_flag) r_bin.print(std::cout);
+                        r_group.value = atof(optarg);
+                        if(print_flag) r_group.print(std::cout);
                         opt_used += 2;
-                        assert(r_bin.value>=0.0);
+                        assert(r_group.value>=0.0);
                         break;
                     case 4:
-                        r_search_bin.value = atof(optarg);
-                        if(print_flag) r_search_bin.print(std::cout);
+                        r_search_group.value = atof(optarg);
+                        if(print_flag) r_search_group.print(std::cout);
                         opt_used += 2;
-                        assert(r_search_bin.value>=0.0);
+                        assert(r_search_group.value>=0.0);
                         break;
                     case 5:
                         n_step_per_orbit.value = atof(optarg);
@@ -345,7 +345,7 @@ public:
             case 'h':
                 if(print_flag){
                     std::cout<<"----- Short-range (hard) integrator options: -----\n";    
-                    input_par_store.printHelp(std::cout, print_format_info);
+                    input_par_store.printHelp(std::cout, print_format_info, print_all_flag);
                 }
                 return -1;
             case '?':
@@ -446,23 +446,23 @@ public:
         r_out_base = _r_out_base;
         r_in_base = _r_in_base;
         
-        // if r_bin is not defined, set to 0.8*r_in
-        if (_input.r_bin.value==-1.0) {
-            Ptcl::r_group_crit_ratio = 0.8;
-            _input.r_bin.value = 0.8*r_in_base;
+        // if r_group is not defined, set to 0.8*r_in
+        if (_input.r_group.value==-1.0) {
+            PtclHard::r_group_over_in = 0.8;
+            _input.r_group.value = 0.8*r_in_base;
         }
-        else Ptcl::r_group_crit_ratio = _input.r_bin.value/r_in_base;
+        else PtclHard::r_group_over_in = _input.r_group.value/r_in_base;
         
-        // if r_search_bin is not defined, set to r_in
-        if (_input.r_search_bin.value==-1.0) {
-            Ptcl::r_group_search_crit_ratio = 1.0;
-            _input.r_search_bin.value = r_in_base;
+        // if r_search_group is not defined, set to r_in
+        if (_input.r_search_group.value==-1.0) {
+            PtclHard::r_search_group_over_in = 1.0;
+            _input.r_search_group.value = r_in_base;
         }
-        else Ptcl::r_group_search_crit_ratio = _input.r_search_bin.value/r_in_base;
+        else PtclHard::r_search_group_over_in = _input.r_search_group.value/r_in_base;
 
         n_step_per_orbit = _input.n_step_per_orbit.value;
         tidal_tensor_switcher = bool(_input.tidal_tensor_switcher.value);
-        ap_manager.r_tidal_tensor = _input.r_bin.value;
+        ap_manager.r_tidal_tensor = _input.r_group.value;
         ap_manager.id_offset = _input.id_offset.value;
 #ifdef ORBIT_SAMPLING
         ap_manager.orbit_manager.setParticleSplitN(_input.n_split.value);
@@ -522,8 +522,8 @@ public:
         ASSERT(eps_sq>=0.0);
         ASSERT(r_out_base>0.0);
         ASSERT(r_in_base>0.0 && r_in_base < r_out_base);
-        ASSERT(Ptcl::r_group_search_crit_ratio>=0.0 && Ptcl::r_group_search_crit_ratio<=1.0);
-        ASSERT(Ptcl::r_group_crit_ratio>=0.0 && Ptcl::r_group_crit_ratio<=Ptcl::r_group_search_crit_ratio);
+        ASSERT(PtclHard::r_search_group_over_in>=0.0 && PtclHard::r_search_group_over_in<=1.0);
+        ASSERT(PtclHard::r_group_over_in>=0.0 && PtclHard::r_group_over_in<=PtclHard::r_search_group_over_in);
         ASSERT(n_step_per_orbit>0.0);
         ASSERT(ap_manager.checkParams());
         ASSERT(h4_manager.checkParams());
@@ -2500,7 +2500,7 @@ public:
     //    Int_pars_.r_A      = (_rout-_rin)/(_rout+_rin);
     //    Int_pars_.pot_off  = (1.0+Int_pars_.r_A)/_rout;
     //    Int_pars_.eps2  = _eps*_eps;
-    //    Int_pars_.r_bin = _rbin;
+    //    Int_pars_.r_group = _rbin;
     //    /// Set chain pars (L.Wang)
     //    dt_limit_hard_ = _dt_limit_hard;
     //    dt_min_hard_   = _dt_min_hard;
@@ -2510,7 +2510,7 @@ public:
     //    time_origin_ = _time_origin;
     //  //      gamma_ = std::pow(1.0/_gmin,0.33333);
     //    // r_search_single_ = _rsearch; 
-    //    //r_bin_           = _rbin;
+    //    //r_group_           = _rbin;
     //    // m_average_ = _m_avarage;
     //    manager->n_split = _n_split;
     //    id_offset_ = _id_offset;
