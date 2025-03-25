@@ -254,23 +254,23 @@ AC_ARG_WITH([gperf-prefix],
             [AS_HELP_STRING([--with-gperf-prefix],
 	                    [Prefix of your gperftools installation])],
             [gperf_prefix=$withval],
-	    [gperf_prefix=/opt/gperftools])
+	    [gperf_prefix=$HOME])
 
 AS_IF([test x"$use_gperf" != xno],
       [use_gperf=yes
        AC_CHECK_LIB([profiler],
                     [main],
-		    [GPERFLIBS=' -lprofiler'],
-		    [AC_CHECK_FILE(["$gperf_prefix/lib/libprofiler.so"],
+		    [GPERFLIBS=' -ltcmalloc_and_profiler'],
+		    [AC_CHECK_FILE(["$gperf_prefix/lib/libtcmalloc_and_profiler.so"],
                                    [GPERFFLAGS=" -I$gperf_prefix/include"
-                                    GPERFLIBS=" -L$gperf_prefix/lib -lprofiler"],
-				   [AC_MSG_FAILURE([can't find gperftools library -lprofiler, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])
-       AC_CHECK_LIB([tcmalloc],
-                    [main],
-		    [GPERFLIBS=' -ltcmalloc'],
-		    [AC_CHECK_FILE(["$gperf_prefix/lib/libtcmalloc.so"],
-                                   [GPERFLIBS=$GPERFLIBS" -ltcmalloc"],
-				   [AC_MSG_FAILURE([can't find gperftools library -ltcmalloc, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])],
+                                    GPERFLIBS=" -L$gperf_prefix/lib -ltcmalloc_and_profiler"],
+				   [AC_MSG_FAILURE([can't find gperftools library -ltcmalloc_and_profiler, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])
+       #AC_CHECK_LIB([tcmalloc],
+       #             [main],
+       #	    [GPERFLIBS=' -ltcmalloc'],
+       #	    [AC_CHECK_FILE(["$gperf_prefix/lib/libtcmalloc.so"],
+       #                           [GPERFLIBS=$GPERFLIBS" -ltcmalloc"],
+       #			   [AC_MSG_FAILURE([can't find gperftools library -ltcmalloc, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])],
        [use_gperf=no])
 
 # FDPS
