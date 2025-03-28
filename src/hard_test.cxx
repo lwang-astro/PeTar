@@ -195,6 +195,10 @@ public:
 
 int main(int argc, char** argv)
 {
+#ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL    
+    omp_set_nested(1);
+#endif
+
     // IO parameters    
     IOParamsHardTest main_parameters;
     IOParamsHard hard_parameters;

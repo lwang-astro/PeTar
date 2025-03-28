@@ -270,7 +270,7 @@ build/petar.hard.debug: hard_debug.cxx $(HARD_SRC) $(BSELIBFILES) |build
 	$(CXX) $(PETAR_INCLUDE) $(DEBUG_OPT_FLAGS) $(CXXFLAGS) $(MT_FLAGS) $(HARD_DEBFLAGS) -D STABLE_CHECK_DEBUG -o $@ $< $(CXXLIBS)
 
 build/petar.hard.test: hard_test.cxx $(HARD_SRC) |build
-	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) $(HARD_DEBFLAGS) -o $@ $< $(CXXLIBS)
+	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(HARD_MT_FLAGS) -o $@ $< $(CXXLIBS)
 
 build/petar.simd.test: simd_test.cxx $(OBJS) |build
 	$(CXX) $(PETAR_INCLUDE) $(OPTFLAGS) $(CXXFLAGS) $(CUDAFLAGS) $(MT_FLAGS) $^ -o $@  $(CXXLIBS)
