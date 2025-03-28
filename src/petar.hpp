@@ -2114,9 +2114,6 @@ public:
         if (!initial_fdps_flag) {
             PS::Initialize(argc, argv);
             initial_fdps_flag = true;
-#ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
-            omp_set_nested(1);
-#endif            
         }
     }
 

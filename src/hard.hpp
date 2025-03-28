@@ -713,7 +713,7 @@ public:
             }
         }
 
-//#ifdef HARD_DEBUG
+#ifdef HARD_DEBUG
         if (_n_ptcl>400) {
             std::cerr<<"Large cluster, n_ptcl="<<_n_ptcl<<" n_group="<<_n_group<<std::endl;
             std::pair<PS::S32,PS::F64> r_search_max={-1,0.0};
@@ -727,7 +727,7 @@ public:
             ptcl_origin[r_search_max.first].print(std::cerr);
             std::cerr<<std::endl;
         }
-//#endif
+#endif
 
         // prepare initial groups with artificial particles
         PS::S32 adr_first_ptcl[_n_group+1];
@@ -2858,6 +2858,9 @@ public:
 
             // Hermite + AR integration
             const PS::S32 n_group = n_group_in_cluster_[i];
+            //#pragma omp critical                
+            //std::cout<<"N_threads: "<<omp_get_num_threads()<<"; n_group: "<<n_group<<std::endl;
+            
             Tpsoft* ptcl_artificial_ptr=NULL;
             PS::S32* n_member_in_group_ptr=NULL;
             if(n_group>0) {
@@ -2923,10 +2926,35 @@ public:
 #endif
         };
 
+        // separate large and small (n_group<3) cluster 
+        PS::S32 small_cluster_list[n_cluster];
+        PS::S32 large_cluster_list[n_cluster];
+        PS::S32 n_small_cluster = 0;
+        PS::S32 n_large_cluster = 0;
+
+        for (PS::S32 i=0; i<n_cluster; i++) {
+            const PS::S32 n_group = n_group_in_cluster_[i];
+            if (n_group<3) {
+                small_cluster_list[n_small_cluster] = i;
+                n_small_cluster++;
+            }
+            else {
+                large_cluster_list[n_large_cluster] = i;
+                n_large_cluster++;
+            }
+        }
+
         // integrate all clusters
 #pragma omp parallel for schedule(dynamic) 
-        for (PS::S32 i=0; i<n_cluster; i++) {
-            integrateOneCluster(i);    
+        for (PS::S32 k=0; k<n_small_cluster; k++) {
+            PS::S32 i = small_cluster_list[k];
+            integrateOneCluster(i);
+        }
+
+        // integrate all clusters
+        for (PS::S32 k=0; k<n_large_cluster; k++) {
+            PS::S32 i = large_cluster_list[k];
+            integrateOneCluster(i);
         }
 
 #ifdef PROFILE
