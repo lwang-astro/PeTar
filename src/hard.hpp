@@ -2846,8 +2846,8 @@ public:
         for (PS::S32 i=0; i<num_thread; i++) n_neighbor_zero_threads[i] = 0;
 #endif
 
-#pragma omp parallel for schedule(dynamic) 
-        for (PS::S32 i=0; i<n_cluster; i++) {
+        // integrate one cluster function
+        auto integrateOneCluster = [&](const PS::S32 i) {
             const PS::S32 ith = PS::Comm::getThreadNum();
 #ifdef OMP_PROFILE
             time_thread[ith] -= PS::GetWtime();
@@ -2921,6 +2921,12 @@ public:
             PS::F64 tend = PS::GetWtime();
             std::cerr<<"HT: "<<i<<" "<<ith<<" "<<n_cluster<<" "<<n_ptcl<<" "<<tend-tstart<<std::endl;
 #endif
+        };
+
+        // integrate all clusters
+#pragma omp parallel for schedule(dynamic) 
+        for (PS::S32 i=0; i<n_cluster; i++) {
+            integrateOneCluster(i);    
         }
 
 #ifdef PROFILE
