@@ -3111,9 +3111,16 @@ public:
         galpy_manager.initial(galpy_parameters, stat.time, galpy_conf_filename, restart_flag, print_flag);
 #endif
 
+        // initial tree step manager
+        dt_manager.setStep(input_parameters.dt_soft.value);
+        dt_manager.setKDKMode();
+
+        // notice the maximum step depending on step mode, KDKDK2 and KDKDK4 should be half step
+        PS::F64 dt_max_hermite = dt_manager.getDtDriftOneStep();
+
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
-        hard_manager.initial(hard_parameters, bse_parameters, mass_average, r_out, r_in, dt_soft, stat, write_style, print_flag);
+        hard_manager.initial(hard_parameters, bse_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
 
         // initial random seeds
         rand_manager.initialAll(rand_parameters);
@@ -3130,7 +3137,7 @@ public:
 
 #endif
 #else
-        hard_manager.initial(hard_parameters, mass_average, r_out, r_in, dt_soft, stat, write_style, print_flag);
+        hard_manager.initial(hard_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
 #endif
 
 #ifdef EXTERNAL_HARD
@@ -3240,9 +3247,6 @@ public:
 #endif
         }
 
-        // initial tree step manager
-        dt_manager.setKDKMode();
-
         if (print_flag) std::cout<<"-----  Finish parameter initialization -----"<<std::endl;
 
         initial_parameters_flag = true;
@@ -3267,9 +3271,6 @@ public:
             // initial status and energy
             updateStatus(true);
 
-            PS::F64 dt_tree = input_parameters.dt_soft.value;
-            dt_manager.setStep(dt_tree);
-
             // output initial data
             file_header.nfile--; // avoid repeating files
             output();
@@ -3288,9 +3289,6 @@ public:
         // exchange particles
         exchangeParticle();
 
-        PS::F64 dt_tree = input_parameters.dt_soft.value;
-        dt_manager.setStep(dt_tree);
-
         // >1. Tree for neighbor searching 
         /// get neighbor list to tree_nb
         treeNeighborSearch();
@@ -3302,7 +3300,7 @@ public:
 
         // >3. find group and create artificial particles
         /// find group and create artificial particles, using search_cluster, save to system_hard and system_soft (particle status/mass_bk updated)
-        createGroup(dt_tree);
+        createGroup(dt_manager.getStep());
 
         // >4 tree soft force
         /// calculate tree force with linear cutoff, save to system_soft.acc
