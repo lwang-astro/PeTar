@@ -297,8 +297,8 @@ public:
         assert(r_out_>r_in_);
 #endif
         Float x = (_dr - r_in_)*norm_;
-        Float k = 1.0; //- pot_off_*_dr;
-        if(x >= 1.0 ) k = pot_off_*_dr; //0.0;
+        Float k = coff_*(1.0 - 2*x);
+        if(x >= 1.0 ) k = 0.0;
         else if(x > 0.0) {
             Float x2 = x*x;
             Float x3 = x2*x;

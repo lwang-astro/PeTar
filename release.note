@@ -35,6 +35,7 @@
 33. Implement IOParamHard to separate hard parameters input from the main input. Save hard parameters to input.par.hard and save hard manager parameters to input.par.hard.dump for petar.hard.debug
 34. Move static parameters for group radius and search group search radius to PtclHard class; move regular time step calculation function to kickdriftstep.hpp.
 35. Update hard integration to allow OMP parallel for one large cluster with n_group>=2 (partically modified in SDAR update)
+36. Fix the error in the changeover potential calculation.
 
 **Some existing issues include**
 
