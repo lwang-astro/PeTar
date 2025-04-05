@@ -1854,9 +1854,9 @@ private:
       @param[in,out] _pi: particle for correction
       @param[in] _pj: j particle to calculate correction
      */
-    template <class Tpi>
+    template <class Tpi, class Tpj>
     static void calcAccPotShortWithLinearCutoff(Tpi& _pi,
-                                                const Ptcl& _pj) {
+                                                const Tpj& _pj) {
         const PS::F64 G = ForceSoft::grav_const;
         const PS::F64 eps_sq = EPISoft::eps * EPISoft::eps;
 
@@ -1924,93 +1924,14 @@ private:
 #endif
     }
 
-    //! correct force and potential for soft force with changeover function
-    /*!
-      @param[in,out] _pi: particle for correction
-      @param[in] _pj: j particle to calculate correction
-     */
-    template <class Tpi>
-    static void calcAccPotShortWithLinearCutoff(Tpi& _pi,
-                                                const EPJSoft& _pj) {
-        const PS::F64 G = ForceSoft::grav_const;
-        const PS::F64 eps_sq = EPISoft::eps * EPISoft::eps;
-
-        const PS::F64vec dr = _pi.pos - _pj.pos;
-        const PS::F64 dr2 = dr * dr;
-#ifdef HARD_DEBUG
-        assert(dr2>0.0);
-#endif
-        const PS::F64 dr2_eps = dr2 + eps_sq;
-        const PS::F64 drinv = 1.0/sqrt(dr2_eps);
-        PS::F64 gmor = G*_pj.mass * drinv;
-        const PS::F64 drinv2 = drinv * drinv;
-        const PS::F64 gmor3 = gmor * drinv2;
-        const PS::F64 dr_eps = drinv * dr2_eps;
-        ChangeOver chj;
-        chj.setR(_pj.r_in, _pj.r_out);
-        const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, chj, dr_eps);
-
-        // linear cutoff
-#if  ((! defined P3T_64BIT) && (defined USE_SIMD)) || (defined USE_GPU)
-        const PS::F32 r_out_32 = EPISoft::r_out;
-        const PS::F32 r_out2 = r_out_32 * r_out_32;
-        PS::F32vec ri_32 = PS::F32vec(_pi.pos.x, _pi.pos.y, _pi.pos.z);
-        PS::F32vec rj_32 = PS::F32vec(_pj.pos.x, _pj.pos.y, _pj.pos.z);
-        PS::F32vec dr_32 = ri_32 - rj_32;
-        PS::F32 dr2_eps_32 = dr_32*dr_32 + (PS::F32)eps_sq;
-        const PS::F32 dr2_max = (dr2_eps_32 > r_out2) ? dr2_eps_32 : r_out2;
-        const PS::F32 drinv_max = 1.0/sqrt(dr2_max);
-        const PS::F32 gmor_max = G*_pj.mass * drinv_max;
-        const PS::F32 drinv2_max = drinv_max*drinv_max;
-        const PS::F32 gmor3_max = gmor_max * drinv2_max;
-
-        // correct to changeover soft acceleration
-        _pi.acc -= gmor3*k*dr - gmor3_max*dr_32;
-#else
-        const PS::F64 r_out = EPISoft::r_out;
-        const PS::F64 r_out2 = r_out * r_out;
-        const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
-        const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
-        const PS::F64 gmor_max = G*_pj.mass * drinv_max;
-        const PS::F64 drinv2_max = drinv_max*drinv_max;
-        const PS::F64 gmor3_max = gmor_max * drinv2_max;
-
-        // correct to changeover soft acceleration
-        _pi.acc -= (gmor3*k - gmor3_max)*dr;
-#endif
-        auto& pj_artificial = _pj.group_data.artificial;
-        const PS::F64 kpot  = 1.0 - ChangeOver::calcPotWTwo(_pi.changeover, chj, dr_eps);
-        // single, remove linear cutoff, obtain changeover soft and total potential
-        if (pj_artificial.isSingle()) {
-            //_pi.pot_soft -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
-            _pi.pot_soft -= gmor*kpot  - gmor_max;
-            _pi.pot_tot -= (gmor - gmor_max);
-        }
-        // member, mass is zero, use backup mass
-        else if (pj_artificial.isMember()) {
-            gmor = G*pj_artificial.getMassBackup()*drinv;
-            //_pi.pot_soft -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
-            _pi.pot_soft -= gmor*kpot  - gmor_max;
-            _pi.pot_tot -= (gmor  - gmor_max);
-        }
-        // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
-        else {
-            _pi.pot_soft += gmor_max; 
-            _pi.pot_tot  += gmor_max; 
-        }
-#ifdef ONLY_SOFT
-        _pi.pot_tot = _pi.pot_soft;
-#endif
-    }
-
     //! correct force and potential for changeover function change
     /*!
       @param[in,out] _pi: particle for correction
       @param[in] _pj: j particle to calculate correction
      */
-    template <class Tpi>
+    template <class Tpi, class Tpj>
     static void calcAccChangeOverCorrection(Tpi& _pi,
-                                            const Ptcl& _pj) {
+                                            const Tpj& _pj) {
         const PS::F64 G = ForceSoft::grav_const;
         const PS::F64 eps_sq = EPISoft::eps * EPISoft::eps;
 
@@ -2039,55 +1960,19 @@ private:
         _pi.acc -= gmor3*(knew-kold)*dr;
     }
 
-    //! correct force and potential for changeover function change
-    /*!
-      @param[in,out] _pi: particle for correction
-      @param[in] _pj: j particle to calculate correction
-     */
-    template <class Tpi>
-    static void calcAccChangeOverCorrection(Tpi& _pi,
-                                            const EPJSoft& _pj) {
-        const PS::F64 G = ForceSoft::grav_const;
-        const PS::F64 eps_sq = EPISoft::eps * EPISoft::eps;
-
-        const PS::F64vec dr = _pi.pos - _pj.pos;
-        const PS::F64 dr2 = dr * dr;
-        const PS::F64 dr2_eps = dr2 + eps_sq;
-        const PS::F64 drinv = 1.0/sqrt(dr2_eps);
-        const PS::F64 gmor = G*_pj.mass * drinv;
-        const PS::F64 drinv2 = drinv * drinv;
-        const PS::F64 gmor3 = gmor * drinv2;
-        const PS::F64 dr_eps = drinv * dr2_eps;
-
-        ChangeOver chjold;
-        chjold.setR(_pj.r_in, _pj.r_out);
-        // old
-        const PS::F64 kold = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, chjold, dr_eps);
-
-        // new
-        ChangeOver chinew, chjnew;
-        chinew.setR(_pi.changeover.getRin()*_pi.changeover.r_scale_next, _pi.changeover.getRout()*_pi.changeover.r_scale_next);
-        chjnew.setR(_pj.r_in*_pj.r_scale_next, _pj.r_out*_pj.r_scale_next);
-        const PS::F64 knew = 1.0 - ChangeOver::calcAcc0WTwo(chinew, chjnew, dr_eps);
-
-        // correct to changeover soft acceleration
-        _pi.acc -= gmor3*(knew-kold)*dr;
-    }
-
 #ifdef KDKDK_4TH
-    template <class Tpi>
+    template <class Tpi, class Tpj>
     static void calcAcorrShortWithLinearCutoff(Tpi& _pi,
-                                               const FPSoft& _pj) {
+                                               const Tpj& _pj) {
         const PS::F64 G = ForceSoft::grav_const;
         const PS::F64 eps_sq = EPISoft::eps * EPISoft::eps;
 
         const PS::F64vec dr = _pi.pos - _pj.pos;
-        const PS::F64vec da = _pi.acc - _pi.acc;
+        const PS::F64vec da = _pi.acc - _pj.acc;
         const PS::F64 dr2 = dr * dr;
         const PS::F64 dr2_eps = dr2 + eps_sq;
         const PS::F64 drda = dr*da;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
-        const PS::F64 drdadrinv = drda*drinv;
         const PS::F64 gmor = G*_pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
         const PS::F64 gmor3 = gmor * drinv2;
@@ -2095,7 +1980,8 @@ private:
         const PS::F64 alpha = drda*drinv2;
 
         const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, dr_eps);
-        const PS::F64 kdot = - ChangeOver::calcAcc1WTwo(_pi.changeover, _pj.changeover, dr_eps, drdadrinv);
+        // drdot should not be included here (thus set to 1.0), since kdot is used for gradient not time derivative
+        const PS::F64 kdot = - ChangeOver::calcAcc1WTwo(_pi.changeover, _pj.changeover, dr_eps, 1.0); 
 
         // linear cutoff
 #if  ((! defined P3T_64BIT) && (defined USE_SIMD)) || (defined USE_GPU)
@@ -2128,46 +2014,7 @@ private:
         const PS::F64vec acorr_max = gmor3_max * (da - 3.0*alpha_max * dr);
 #endif
 
-        const PS::F64vec acorr_k = gmor3 * (k*da - (3.0*k*alpha - kdot) * dr);
-
-        _pi.acorr -= 2.0 * (acorr_k - acorr_max);
-        //acci + dt_kick * dt_kick * acorri /48; 
-    }
-
-    template <class Tpi>
-    static void calcAcorrShortWithLinearCutoff(Tpi& _pi,
-                                               const EPJSoft& _pj) {
-        const PS::F64 G = ForceSoft::grav_const;
-        const PS::F64 eps_sq = EPISoft::eps * EPISoft::eps;
-        const PS::F64 r_out = EPISoft::r_out;
-        const PS::F64 r_out2 = r_out * r_out;
-
-        const PS::F64vec dr = _pi.pos - _pj.pos;
-        const PS::F64vec da = _pi.acc - _pi.acc;
-        const PS::F64 dr2 = dr * dr;
-        const PS::F64 dr2_eps = dr2 + eps_sq;
-        const PS::F64 drda = dr*da;
-        const PS::F64 drinv = 1.0/sqrt(dr2_eps);
-        const PS::F64 drdadrinv = drda*drinv;
-        const PS::F64 gmor = G*_pj.mass * drinv;
-        const PS::F64 drinv2 = drinv * drinv;
-        const PS::F64 gmor3 = gmor * drinv2;
-        const PS::F64 dr_eps = drinv * dr2_eps;
-        ChangeOver chj;
-        chj.setR(_pj.r_in, _pj.r_out);
-        const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, chj, dr_eps);
-        const PS::F64 kdot = - ChangeOver::calcAcc1WTwo(_pi.changeover, chj, dr_eps, drdadrinv);
-
-        const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
-        const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
-        const PS::F64 gmor_max = G*_pj.mass * drinv_max;
-        const PS::F64 drinv2_max = drinv_max*drinv_max;
-        const PS::F64 gmor3_max = gmor_max * drinv2_max;
-
-        const PS::F64 alpha = drda*drinv2;
-        const PS::F64 alpha_max = drda * drinv2_max;
-        const PS::F64vec acorr_k = gmor3 * (k*da - (3.0*k*alpha - kdot) * dr);
-        const PS::F64vec acorr_max = gmor3_max * (da - 3.0*alpha_max * dr);
+        const PS::F64vec acorr_k = gmor3 * (k*da - (3.0*k - kdot*dr_eps)*alpha * dr);
 
         _pi.acorr -= 2.0 * (acorr_k - acorr_max);
         //acci + dt_kick * dt_kick * acorri /48; 
@@ -3885,7 +3732,7 @@ public:
                     for(PS::S32 k=0; k<n_ngb; k++){
                         if (ptcl_nb[k].id == _sys[adr].id) continue;
 
-                        if (ptcl_nb[k].r_scale_next!=1.0 || change_i) 
+                        if (ptcl_nb[k].changeover.r_scale_next!=1.0 || change_i) 
                             calcAccChangeOverCorrection(_sys[adr], ptcl_nb[k]);
                     }
                 }
@@ -3905,7 +3752,7 @@ public:
             for(PS::S32 k=0; k<n_ngb; k++){
                 if (ptcl_nb[k].id == _sys[adr].id) continue;
                 
-                if (ptcl_nb[k].r_scale_next!=1.0 || change_i) 
+                if (ptcl_nb[k].changeover.r_scale_next!=1.0 || change_i) 
                     calcAccChangeOverCorrection(_sys[adr], ptcl_nb[k]);
             }
             _sys[adr].changeover.updateWithRScale();

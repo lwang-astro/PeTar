@@ -2242,6 +2242,10 @@ public:
         fout<<"Use 4th-order KDKDK mode for tree step\n";
 #endif
 
+#ifdef ONLY_SOFT
+        fout<<"Only soft force\n";
+#endif
+
 #ifdef CLUSTER_VELOCITY
         fout<<"Use orbit-dependent neighbor criterion\n";
 #endif
