@@ -36,6 +36,7 @@
 34. Move static parameters for group radius and search group search radius to PtclHard class; move regular time step calculation function to kickdriftstep.hpp.
 35. Update hard integration to allow OMP parallel for one large cluster with n_group>=2 (partically modified in SDAR update)
 36. Fix the error in the changeover potential calculation.
+37. Update BSEEMP for computing spin values (implemented by Ataru Tanikawa).
 
 **Some existing issues include**
 
