@@ -2361,7 +2361,7 @@ public:
 #ifdef DISK_STAR_MERGER
         if (my_rank==0) disk_star_merger_parameters.print_flag=true;
         else disk_star_merger_parameters.print_flag=false;
-        disk_star_merger_parameters.read(argc,argv);
+        disk_star_merger_parameters.read(argc,argv,false);
 #endif
 #ifdef GALPY
         if (my_rank==0) galpy_parameters.print_flag=true;
@@ -3133,7 +3133,6 @@ public:
         // notice the maximum step depending on step mode, KDKDK2 and KDKDK4 should be half step
         PS::F64 dt_max_hermite = dt_manager.getDtDriftOneStep();
 
-#ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
         hard_manager.initial(hard_parameters, bse_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
 
@@ -3150,16 +3149,15 @@ public:
             }
         }
 
+#else
+        hard_manager.initial(hard_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
 #endif
 #ifdef DISK_STAR_MERGER
         hard_manager.ar_manager.interaction.disk_star_merger_manager.initial(disk_star_merger_parameters, print_flag);
 #endif        
-#else
-        hard_manager.initial(hard_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
-#endif
 #ifdef ADJUST_GROUP_PRINT
         // group information
-        if (write_style&&input_parameters.adjust_group_write_option.value==1) 
+        if (write_style&&hard_parameters.adjust_group_write_option.value==1) 
             hard_manager.h4_manager.adjust_group_write_flag=true;
         else 
             hard_manager.h4_manager.adjust_group_write_flag=false;
