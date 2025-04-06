@@ -37,7 +37,7 @@ int main(int argc, char **argv){
   PS::S32 istart = -1;
   PS::S32 iend = -1;
   std::string filename="hard_dump";
-  std::string fhardpar="input.par.hard";
+  std::string fhardpar="input.par.hard.dump";
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
   int stellar_evolution_option = -1;

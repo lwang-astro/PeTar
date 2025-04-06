@@ -310,10 +310,8 @@ public:
 #ifdef KDKDK_4TH
     PS::F64vec acc;
 #endif
-    PS::F64 r_in;
-    PS::F64 r_out;
+    ChangeOver changeover;
     PS::F64 r_search;
-    PS::F64 r_scale_next;
     GroupDataDeliver group_data;
     PS::S32 rank_org;
     PS::S32 adr_org;
@@ -328,9 +326,7 @@ public:
 #ifdef KDKDK_4TH
         acc = fp.acc;
 #endif
-        r_in = fp.changeover.getRin();
-        r_out = fp.changeover.getRout();
-        r_scale_next = fp.changeover.r_scale_next;
+        changeover = fp.changeover;
         r_search = fp.r_search;
         group_data = fp.group_data;
         rank_org = fp.rank_org;
@@ -361,9 +357,8 @@ public:
     void clear(){
         mass = 0.0;
         pos = vel = 0.0;
-        r_in = r_out = 0.0;
+        changeover.clear();
         r_search = 0.0;
-        r_scale_next = 1.0;
         id = rank_org = adr_org = -1;
     }
 };

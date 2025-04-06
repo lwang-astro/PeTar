@@ -221,6 +221,10 @@ private:
 
 public:
 
+    //! search and merge group candidates
+    /*! @param[in,out] _ptcl_in_cluster: particle data
+        @param[in] _n_ptcl: number of particles
+     */
     void searchAndMerge(Tptcl *_ptcl_in_cluster, const PS::S32 _n_ptcl) {
         PS::ReallocatableArray<PS::S32> part_list;      ///partner list
         PS::ReallocatableArray<PS::S32> part_list_disp;      ///partner list
@@ -230,6 +234,7 @@ public:
         mergeGroup(group_list_, group_list_disp_, group_list_n_, _n_ptcl, part_list.getPointer(), part_list_disp.getPointer(), part_list_n.getPointer());
     }
 
+    //! get number of groups
     PS::S32 getNumberOfGroups() const {
         return group_list_n_.size();
     }
