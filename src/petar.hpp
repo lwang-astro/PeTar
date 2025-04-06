@@ -3122,7 +3122,6 @@ public:
         // notice the maximum step depending on step mode, KDKDK2 and KDKDK4 should be half step
         PS::F64 dt_max_hermite = dt_manager.getDtDriftOneStep();
 
-#ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
         hard_manager.initial(hard_parameters, bse_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
 
@@ -3139,7 +3138,6 @@ public:
             }
         }
 
-#endif
 #else
         hard_manager.initial(hard_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
 #endif
