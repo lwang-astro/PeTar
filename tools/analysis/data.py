@@ -603,12 +603,12 @@ def calculateParticleCMDict(pcm, _p1, _p2):
     """
     if (issubclass(type(_p1), SimpleParticle)) & (issubclass(type(_p2),SimpleParticle)):
         pcm['mass'] = _p1.mass + _p2.mass
-        pcm['pos']  = np.array(list(map(lambda m1,x1,m2,x2:(m1*x1+m2*x2)/(m1+m2), _p1.mass, _p1.pos, _p2.mass, _p2.pos)))
-        pcm['vel']  = np.array(list(map(lambda m1,x1,m2,x2:(m1*x1+m2*x2)/(m1+m2), _p1.mass, _p1.vel, _p2.mass, _p2.vel)))
+        pcm['pos']  = (_p1.mass[:,None]*_p1.pos + _p2.mass[:,None]*_p2.pos)/pcm['mass'][:,None]
+        pcm['vel']  = (_p1.mass[:,None]*_p1.vel + _p2.mass[:,None]*_p2.vel)/pcm['mass'][:,None]
     elif (isinstance(_p1, collections.OrderedDict)) & (isinstance(_p2,collections.OrderedDict)) | (isinstance(_p1, dict)) & (isinstance(_p2, dict)):
         pcm['mass'] = _p1['mass'] + _p2['mass']
-        pcm['pos']  = np.array(list(map(lambda m1,x1,m2,x2:(m1*x1+m2*x2)/(m1+m2), _p1['mass'], _p1['pos'], _p2['mass'], _p2['pos'])))
-        pcm['vel']  = np.array(list(map(lambda m1,x1,m2,x2:(m1*x1+m2*x2)/(m1+m2), _p1['mass'], _p1['vel'], _p2['mass'], _p2['vel'])))
+        pcm['pos']  = (_p1['mass'][:,None]*_p1['pos'] + _p2['mass'][:,None]*_p2['pos'])/pcm['mass'][:,None]
+        pcm['vel']  = (_p1['mass'][:,None]*_p1['vel'] + _p2['mass'][:,None]*_p2['vel'])/pcm['mass'][:,None]
     else:
         raise ValueError('Initial fail, date type should be Particle or collections.OrderDict, given',type(_p1))
 

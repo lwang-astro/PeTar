@@ -575,7 +575,7 @@ class DictNpArrayMix:
                     dat_key = dat_key[ikey]
             title.append(name)
             if '.' in fmt:
-                fmt_title += re.sub('\.[0-9]*[a-zA-Z]','s',fmt)
+                fmt_title += re.sub('\\.[0-9]*[a-zA-Z]','s',fmt)
             else:
                 fmt_title += re.sub('[a-zA-Z]','s',fmt)
             table.append(dat_key)

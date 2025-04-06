@@ -8,18 +8,27 @@ class ChangeOver{
 private:
     Float r_in_;      ///> r_in
     Float r_out_;     ///> r_out
-    Float norm_;      ///> 1.0/(r_out-r_in)
-    Float coff_;      ///> (r_out-r_in)/(r_out+r_in)
-    Float pot_off_;   ///> (1 + coff_)/r_out = 2/(r_out+r_in)
-#ifdef INTEGRATED_CUTOFF_FUNCTION
-    Float q_;         ///> r_in/r_out
-#endif
+    //Float norm_;      ///> 1.0/(r_out-r_in)
+    //Float coff_;      ///> (r_out-r_in)/(r_out+r_in)
+    //Float pot_off_;   ///> (1 + coff_)/r_out = 2/(r_out+r_in)
+//#ifdef INTEGRATED_CUTOFF_FUNCTION
+//    Float q_;         ///> r_in/r_out
+//#endif
   
 public:
     Float r_scale_next;   ///> scaling for changeover factor (for next step)
 
-    ChangeOver(): r_in_(-1.0), r_out_(-1.0), norm_(0.0), coff_(0.0), pot_off_(0.0), r_scale_next(1.0) {}
+    ChangeOver(): r_in_(-1.0), r_out_(-1.0), r_scale_next(1.0) {}
 
+    //! clear function
+    /*! clear all data
+     */
+    void clear() {
+        r_in_     = -1.0;
+        r_out_    = -1.0;
+        r_scale_next = 1.0;
+    }
+    
     //! check whether parameters values are correct
     /*! \return true: all correct
      */
@@ -49,9 +58,9 @@ public:
 #endif
         r_in_     = m_fac3*_r_in;          
         r_out_    = m_fac3*_r_out;
-        norm_    = 1.0/(r_out_-r_in_);
-        coff_     = (r_out_-r_in_)/(r_out_+r_in_);
-        pot_off_  = (1.0+coff_)/r_out_;
+        //norm_    = 1.0/(r_out_-r_in_);
+        //coff_     = (r_out_-r_in_)/(r_out_+r_in_);
+        //pot_off_  = (1.0+coff_)/r_out_;
 #ifdef CHANGEOVER_DEBUG
         assert(r_in_>0.0);
         assert(r_out_>r_in_);
@@ -67,9 +76,9 @@ public:
     void setR(const Float& _r_in, const Float& _r_out) {
         r_in_     = _r_in;          
         r_out_    = _r_out;
-        norm_    = 1.0/(_r_out-_r_in);
-        coff_     = (_r_out-_r_in)/(_r_out+_r_in);
-        pot_off_  = (1.0+coff_)/_r_out;
+        //norm_    = 1.0/(_r_out-_r_in);
+        //coff_     = (_r_out-_r_in)/(_r_out+_r_in);
+        //pot_off_  = (1.0+coff_)/_r_out;
 #ifdef CHANGEOVER_DEBUG
         assert(_r_in>0.0);
         assert(_r_out>_r_in);
@@ -183,13 +192,13 @@ public:
     void dataCopy(const Tpars& _par) {
         r_in_   = _par.r_in_   ;
         r_out_  = _par.r_out_  ;
-        norm_   = _par.norm_   ;
-        coff_   = _par.coff_   ;
-        pot_off_= _par.pot_off_;
+        //norm_   = _par.norm_   ;
+        //coff_   = _par.coff_   ;
+        //pot_off_= _par.pot_off_;
         r_scale_next= _par.r_scale_next;
-#ifdef INTEGRATED_CUTOFF_FUNCTION
-        q_      = _par.q_;
-#endif        
+//#ifdef INTEGRATED_CUTOFF_FUNCTION
+//        q_      = _par.q_;
+//#endif        
     }
 
 
@@ -205,7 +214,7 @@ public:
         assert(r_out_>r_in_);
 #endif
         Float dr_rout = _dr/r_out_;
-        Float q = q_;
+        Float q = r_in_/r_out_;
         Float q2 = q*q;
         Float q3 = q2*q;
         Float q4 = q2*q2;
@@ -240,7 +249,7 @@ public:
         assert(r_in_>0.0);
         assert(r_out_>r_in_);
 #endif
-        Float x = (_dr - r_in_)*norm_;
+        Float x = (_dr - r_in_)/(r_out_-r_in_);
         x = (x < 1.0) ? x : 1.0;
         x = (x > 0.0) ? x : 0.0;
         Float x2 = x*x;
@@ -263,8 +272,9 @@ public:
         assert(r_in_>0.0);
         assert(r_out_>r_in_);
 #endif
-        Float x = (_dr - r_in_)*norm_;
-        Float xdot = norm_*_drdot;
+        Float norm = 1.0/(r_out_-r_in_);
+        Float x = (_dr - r_in_)*norm;
+        Float xdot = norm*_drdot;
         Float kdot = 0.0;
         if(x <= 0.0)
             kdot = 0.0;
@@ -296,14 +306,15 @@ public:
         assert(r_in_>0.0);
         assert(r_out_>r_in_);
 #endif
-        Float x = (_dr - r_in_)*norm_;
-        Float k = 1.0; //- pot_off_*_dr;
-        if(x >= 1.0 ) k = pot_off_*_dr; //0.0;
+        Float x = (_dr - r_in_)/(r_out_-r_in_);
+        Float coff = (r_out_-r_in_)/(r_out_+r_in_);
+        Float k = coff*(1.0 - 2*x);
+        if(x >= 1.0 ) k = 0.0;
         else if(x > 0.0) {
             Float x2 = x*x;
             Float x3 = x2*x;
             Float x5 = x2*x3;
-            k -= coff_*x5*(5.0*x3 - 20.0*x2 + 28.0*x - 14.0);
+            k -= coff*x5*(5.0*x3 - 20.0*x2 + 28.0*x - 14.0);
         }
         return k;
     }
@@ -320,7 +331,7 @@ public:
         assert(r_in_>0.0);
         assert(r_out_>r_in_);
 #endif
-        Float x = (_dr - r_in_)*norm_;
+        Float x = (_dr - r_in_)/(r_out_-r_in_);
         x = (x < 1.0) ? x : 1.0;
         x = (x > 0.0) ? x : 0.0;
         Float x_1 = x - 1;
@@ -329,7 +340,8 @@ public:
         Float x2 = x*x;
         Float x3 = x2*x;
         Float x4 = x2*x2;
-        Float k = x_4*(1.0 + 4.0*x + 10.0*x2 + 20.0*x3 + 35.0*coff_*x4);
+        Float coff = (r_out_-r_in_)/(r_out_+r_in_);
+        Float k = x_4*(1.0 + 4.0*x + 10.0*x2 + 20.0*x3 + 35.0*coff*x4);
         return k;
     }
 
@@ -348,14 +360,16 @@ public:
         assert(r_in_>0.0);
         assert(r_out_>r_in_);
 #endif
-        Float x = (_dr - r_in_)*norm_;
-        Float xdot = norm_*_drdot;
+        Float norm = 1.0/(r_out_-r_in_);
+        Float x = (_dr - r_in_)*norm;
+        Float xdot = norm*_drdot;
         Float kdot = 0.0;
         if(x > 0.0 && x < 1.0) {
             Float x3 = x*x*x;
             Float x_1 = x - 1;
             Float x_3 = x_1*x_1*x_1;
-            kdot = coff_*280.0*x3*(r_in_*norm_ + x)*x_3*xdot;
+            Float coff = (r_out_-r_in_)/(r_out_+r_in_);
+            kdot = coff*280.0*x3*(r_in_*norm + x)*x_3*xdot;
         }
         return kdot;
     }
