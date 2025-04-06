@@ -491,6 +491,7 @@ public:
         if (_input.stellar_evolution_option.value>0) {
             ar_manager.interaction.bse_manager.initial(_input_bse, _print_flag);
             ar_manager.interaction.tide.speed_of_light = ar_manager.interaction.bse_manager.getSpeedOfLight();
+            ar_manager.interaction.gw_kick.vscale = _input_bse.vscale.value;
         }
 #endif
 #endif        
