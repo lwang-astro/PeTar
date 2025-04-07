@@ -294,9 +294,9 @@ class DictNpArrayMix:
         for key, item in self.__dict__.items():
             if (key=='host'): continue
             if (type(item) == np.ndarray):
-                new_dat.__dict__[key] = np.repeat(self.__dict__[key], repeats)
+                new_dat.__dict__[key] = np.repeat(self.__dict__[key], repeats, axis=0)
             elif (issubclass(type(item), DictNpArrayMix)):
-                new_dat.__dict__[key] = np.repeat(self.__dict__[key], repeats)
+                new_dat.__dict__[key] = self.__dict__[key].repeat(repeats)
                 new_dat.__dict__[key].setHost(new_dat)
                 if (size_checker == None): size_checker = new_dat.size
                 elif (size_checker != new_dat.size):

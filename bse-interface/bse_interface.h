@@ -478,7 +478,7 @@ static double EstimateRocheRadiusOverSemi(double& _q) {
 }
 
 //! convert ospin to dimensionless chi for compact objects (WD/NS/BH)
-std::array<double, 3> CompactOspinToChi(double _ospin[3], double _mc, double _rc) {
+static std::array<double, 3> CompactOspinToChi(double _ospin[3], double _mc, double _rc) {
     const double k3 = 0.21;
     const double grav_over_cele = 30.12;
     return { _ospin[0] * (k3*_rc*_rc) / (grav_over_cele*_mc), _ospin[1] * (k3*_rc*_rc) / (grav_over_cele*_mc), _ospin[2] * (k3*_rc*_rc) / (grav_over_cele*_mc)};
