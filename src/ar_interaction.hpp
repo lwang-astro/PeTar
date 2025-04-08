@@ -830,8 +830,20 @@ public:
 
             return modify_flag;
         }
-
+        
 #endif // BSE_BASE
+#ifdef DISK_STAR_MERGER
+        if (disk_star_merger_manager.mass_change_rate!=0.0) {
+           if (_p.time_interrupt>_time_end && _p.getBinaryInterruptState() != BinaryInterruptState::delaycollision) {
+                // time_interrupt is used to determine when mass change stops, if not reach, call the mass change function;
+                disk_star_merger_manager.calcMassChange(&_p, _time_end);
+
+                // only mass change, modify_flag = 1            
+                return 1;            
+            }
+        }
+#endif
+
 #endif // STELLAR_EVOLUTION
         return 0;
     }
@@ -852,19 +864,25 @@ public:
                     modify_branch[k] = modifyAndInterruptIter(_bin_interrupt, *_bin.getMemberAsTree(k));
                     modify_return = std::max(modify_return, modify_branch[k]);
                 }
+                else {
+                    // if member is star, evolve single star 
+                    bool evolve_single_flag = false;
 #ifdef BSE_BASE
-                // if member is star, evolve single star using SSE
-                else if (stellar_evolution_option>0) {
-                    ASSERT(bse_manager.checkParams());
-                    modify_branch[k] = modifyOneParticle(*_bin.getMember(k), _bin.getMember(k)->time_record, _bin_interrupt.time_now);
-                    modify_return = std::max(modify_return, modify_branch[k]);
-                    // if status not set, set to change
-                    if (modify_branch[k]>0&&_bin_interrupt.status == AR::InterruptStatus::none) {
-                        _bin_interrupt.status = AR::InterruptStatus::change;
-                        _bin_interrupt.setBinaryTreeAddress(&_bin);
+                    evolve_single_flag = (stellar_evolution_option>0);
+#endif
+#ifdef DISK_STAR_MERGER
+                    evolve_single_flag = (disk_star_merger_manager.mass_change_rate!=0.0);
+#endif
+                    if (evolve_single_flag) {
+                        modify_branch[k] = modifyOneParticle(*_bin.getMember(k), _bin.getMember(k)->time_record, _bin_interrupt.time_now);
+                        modify_return = std::max(modify_return, modify_branch[k]);
+                        // if status not set, set to change
+                        if (modify_branch[k]>0&&_bin_interrupt.status == AR::InterruptStatus::none) {
+                            _bin_interrupt.status = AR::InterruptStatus::change;
+                            _bin_interrupt.setBinaryTreeAddress(&_bin);
+                        }
                     }
                 }
-#endif
             }
             // ensure to record the root binary tree to include all changed members, if only record binary information (interrupt_detection_option == 2), should not do this
             if (modify_branch[0]>0&&modify_branch[1]>0 && interrupt_detection_option!=2) {
@@ -877,6 +895,21 @@ public:
             }
         }
         else {
+
+#ifdef DISK_STAR_MERGER
+            if (disk_star_merger_manager.mass_change_rate!=0.0) {
+                for (int k=0; k<2; k++) {
+                    modify_branch[k] = modifyOneParticle(*_bin.getMember(k), _bin.getMember(k)->time_record, _bin_interrupt.time_now);
+                    modify_return = std::max(modify_return, modify_branch[k]);
+                    // if status not set, set to change
+                    if (modify_branch[k]>0&&_bin_interrupt.status == AR::InterruptStatus::none) {
+                        _bin_interrupt.status = AR::InterruptStatus::change;
+                        _bin_interrupt.setBinaryTreeAddress(&_bin);
+                    }
+                }
+            }
+#endif  
+
             auto* p1 = _bin.getLeftMember();
             auto* p2 = _bin.getRightMember();
 
