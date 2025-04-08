@@ -406,9 +406,9 @@ public:
         Float chi2_norm = norm(Chi2_new);
         Float hatL_norm = norm(hatL);
 
-        Float theta1 = std::acos(std::clamp(dot_chi1L / (chi1_norm * hatL_norm), -1.0, 1.0));
-        Float theta2 = std::acos(std::clamp(dot_chi2L / (chi2_norm * hatL_norm), -1.0, 1.0));
-        Float theta12 = std::acos(std::clamp(dot_chi12 / (chi2_norm * chi1_norm), -1.0, 1.0));
+        Float theta1 = std::acos(std::max(-1.0, std::min(1.0, dot_chi1L / (chi1_norm * hatL_norm))));
+        Float theta2 = std::acos(std::max(-1.0, std::min(1.0, dot_chi2L / (chi2_norm * hatL_norm))));
+        Float theta12 = std::acos(std::max(-1.0, std::min(1.0, dot_chi12 / (chi2_norm * chi1_norm))));
 
         return {theta1, theta2, theta12};
     }
@@ -467,12 +467,13 @@ public:
         size_t n = kfit.size();
         size_t m = kfit[0].size();
         Float sum = 0.0;
+        Float  theta1, theta2, theta12;
         for (size_t i = 1; i < n; ++i) {
             sum += kfit[i][0] / std::pow(4.0, 3 + (i - 1));
         }
         kfit[0][0] = std::pow(4.0, 2) * (0.68646 - sum - std::sqrt(3.0) / 2.0);
 
-        auto [theta1, theta2, theta12] = calcAngle(Chi1, Chi1,L,dr);
+        std::tie (theta1, theta2, theta12) = calcAngle(Chi1, Chi1,L,dr);
 
         // Eq. 18
         if (which.find("corr") != std::string::npos) {
@@ -531,7 +532,7 @@ public:
             2 * norms_chi1 * norms_chi2 * std::pow(q, 2) * std::cos(theta12) + 
             2 * (norms_chi1 * std::cos(theta1) + norms_chi2 * std::pow(q, 2) * std::cos(theta2)) * ell * q + 
             std::pow(ell * q, 2)));
-        chifin = std::clamp(chifin, 0.0, 1.0);
+        chifin = std::max(0.0,std::min(chifin, 1.0));
 
         // Calculate direction of spin
         Float theta_xy = rand_f64() * 2.0 * M_pi;
