@@ -119,16 +119,6 @@ GALPY_OPT= -D GALPY_VERSION_1_7_9
 endif # 1.7.9
 endif # 1.7.1
 
-ifeq ($(ext_mode),agama)
-MT_FLAGS += -D AGAMA
-# the following line is user-dependent
-AGAMA_PATH = ../Agama
-FLAGS1 := $(shell grep -e LINK_FLAGS_ALL $(AGAMA_PATH)/Makefile.local | sed 's/^.*= //g' | sed 's!extras/lib!$(AGAMA_PATH)/extras/lib!g')
-FLAGS2 := $(shell grep -e LINK_FLAGS_LIB_AND_EXE_STATIC $(AGAMA_PATH)/Makefile.local | sed 's/^.*= //g' | sed 's!extras/lib!$(AGAMA_PATH)/extras/lib!g')
-CXXLIBS += $(AGAMA_PATH)/agama.a $(FLAGS1) $(FLAGS2)
-PETAR_INCLUDE += -I$(AGAMA_PATH)/src
-endif
-
 SRC += ${shell ls ./galpy-interface/*.h}
 MT_FLAGS += -D GALPY $(GALPY_OPT)
 GALPYLIBS = -L ./galpy-interface -lgalpy @GSL_LIBS@
@@ -146,6 +136,16 @@ EXT_INSTALL:
 EXT_CLEAN:
 	$(MAKE) -C galpy-interface clean
 endif # galpy
+
+ifeq ($(ext_mode),agama)
+MT_FLAGS += -D AGAMA
+# the following line is user-dependent
+AGAMA_PATH = ../Agama
+FLAGS1 := $(shell grep -e LINK_FLAGS_ALL $(AGAMA_PATH)/Makefile.local | sed 's/^.*= //g' | sed 's!extras/lib!$(AGAMA_PATH)/extras/lib!g')
+FLAGS2 := $(shell grep -e LINK_FLAGS_LIB_AND_EXE_STATIC $(AGAMA_PATH)/Makefile.local | sed 's/^.*= //g' | sed 's!extras/lib!$(AGAMA_PATH)/extras/lib!g')
+CXXLIBS += $(AGAMA_PATH)/agama.a $(FLAGS1) $(FLAGS2)
+PETAR_INCLUDE += -I$(AGAMA_PATH)/src
+endif
 
 ifeq ($(ext_hard_mode), gasdrag)
 MT_FLAGS += -D EXTERNAL_HARD -D HERMITE_PERT_FORCE
