@@ -266,23 +266,33 @@ public:
             return NUMERIC_FLOAT_MAX;
 
         auto& mass = _particle.mass;
-        auto& vel = _particle.vel;
-        Float v2 = vel[0]*vel[0] + vel[1]*vel[1] + vel[2]*vel[2];
-        Float v = std::sqrt(v2);
-        Float v3 = v2*v;
 
         const Float PI = 4.0*atan(1.0);
         const Float G2 = ForceSoft::grav_const*ForceSoft::grav_const;
 
 #ifdef GALPY
         auto& pos = _particle.pos;
-        Float pos_g[3] = {pos[0] + status->pcm.pos[0], 
-                          pos[1] + status->pcm.pos[1], 
+        // in galactic frame, required by galpy and used to calculate radial direction
+        Float pos_g[3] = {pos[0] + status->pcm.pos[0],
+                          pos[1] + status->pcm.pos[1],
                           pos[2] + status->pcm.pos[2]};
+
+        // in gas potential center reference
+        auto& vel = _particle.vel;
+        Float pot_vel[3];
+        galpy_manager->getSetVel(galpy_gaspot_index, pot_vel);
+        Float vel_pot[3] = {vel[0] + status->pcm.vel[0] - pot_vel[0], 
+                            vel[1] + status->pcm.vel[1] - pot_vel[1], 
+                            vel[2] + status->pcm.vel[2] - pot_vel[2]};
         Float gas_density = scale_density*galpy_manager->calcSetDensity(galpy_gaspot_index, status->time, pos_g, &pos[0]);
 #else
         auto& pos_g = _particle.pos;
+        auto& vel_pot = _particle.vel;
 #endif       
+        Float v2 = vel_pot[0]*vel_pot[0] + vel_pot[1]*vel_pot[1] + vel_pot[2]*vel_pot[2];
+        Float v = std::sqrt(v2);
+        Float v3 = v2*v;
+
         if (calc_sound_speed) 
             sound_speed = std::sqrt(polytropic_constant*std::pow(gas_density, polytropic_exponent-1));
 
@@ -308,16 +318,16 @@ public:
 
         if (mode==1) {
             // GDF force
-            _acc[0] += c1*vel[0];
-            _acc[1] += c1*vel[1];
-            _acc[2] += c1*vel[2];
+            _acc[0] += c1*vel_pot[0];
+            _acc[1] += c1*vel_pot[1];
+            _acc[2] += c1*vel_pot[2];
         }
         else if (mode==2) {
             // GDF force only in radial direction
             Float r_g = std::sqrt(pos_g[0]*pos_g[0] + pos_g[1]*pos_g[1] + pos_g[2]*pos_g[2]);
-            _acc[0] += c1*vel[0]*pos_g[0]/r_g;
-            _acc[1] += c1*vel[1]*pos_g[1]/r_g;
-            _acc[2] += c1*vel[2]*pos_g[2]/r_g;
+            _acc[0] += c1*vel_pot[0]*pos_g[0]/r_g;
+            _acc[1] += c1*vel_pot[1]*pos_g[1]/r_g;
+            _acc[2] += c1*vel_pot[2]*pos_g[2]/r_g;
         }
 
         return NUMERIC_FLOAT_MAX;
@@ -342,11 +352,6 @@ public:
             return NUMERIC_FLOAT_MAX;
 
         auto& mass = _particle.mass;
-        auto& vel = _particle.vel;
-        Float v2 = vel[0]*vel[0] + vel[1]*vel[1] + vel[2]*vel[2];
-        Float v = std::sqrt(v2);
-        Float v3 = v2*v;
-
         //auto& pos = _particle.pos;
         //Float r2 = pos[0]*pos[0] + pos[1]*pos[1] + pos[2]*pos[2] + sound_speed;
         //Float c1 = alpha/std::pow(r2, 0.5*beta);
@@ -360,14 +365,27 @@ public:
         Float G2 = ForceSoft::grav_const*ForceSoft::grav_const;
 
 #ifdef GALPY
+        // in galactic frame, required by galpy and used to calculate radial direction
         auto& pos = _particle.pos;
         Float pos_g[3] = {pos[0] + status->pcm.pos[0], 
                           pos[1] + status->pcm.pos[1], 
                           pos[2] + status->pcm.pos[2]};
+
+        // in gas potential center reference
+        auto& vel = _particle.vel;
+        Float pot_vel[3];
+        galpy_manager->getSetVel(galpy_gaspot_index, pot_vel);
+        Float vel_pot[3] = {vel[0] + status->pcm.vel[0] - pot_vel[0], 
+                            vel[1] + status->pcm.vel[1] - pot_vel[1], 
+                            vel[2] + status->pcm.vel[2] - pot_vel[2]};
         Float gas_density = scale_density*galpy_manager->calcSetDensity(galpy_gaspot_index, status->time, pos_g, &pos[0]);
 #else
         auto& pos_g = _particle.pos;
+        auto& vel_pot = _particle.vel;
 #endif
+        Float v2 = vel_pot[0]*vel_pot[0] + vel_pot[1]*vel_pot[1] + vel_pot[2]*vel_pot[2];
+        Float v = std::sqrt(v2);
+        Float v3 = v2*v;
 
         if (calc_sound_speed) 
             sound_speed = std::sqrt(polytropic_constant*std::pow(gas_density, polytropic_exponent-1));
@@ -402,19 +420,19 @@ public:
 
         if (mode==1) {
             // GDF force
-            acc0[0] += c1*vel[0];
-            acc0[1] += c1*vel[1];
-            acc0[2] += c1*vel[2];
+            acc0[0] += c1*vel_pot[0];
+            acc0[1] += c1*vel_pot[1];
+            acc0[2] += c1*vel_pot[2];
         }
         else{
             // GDF force only in radial direction
             r_g = std::sqrt(pos_g[0]*pos_g[0] + pos_g[1]*pos_g[1] + pos_g[2]*pos_g[2]);
-            acc0[0] += c1*vel[0]*pos_g[0]/r_g;
-            acc0[1] += c1*vel[1]*pos_g[1]/r_g;
-            acc0[2] += c1*vel[2]*pos_g[2]/r_g;
+            acc0[0] += c1*vel_pot[0]*pos_g[0]/r_g;
+            acc0[1] += c1*vel_pot[1]*pos_g[1]/r_g;
+            acc0[2] += c1*vel_pot[2]*pos_g[2]/r_g;
         }
 
-        Float vdota = vel[0]*acc0[0] + vel[1]*acc0[1] + vel[2]*acc0[2];
+        Float vdota = vel_pot[0]*acc0[0] + vel_pot[1]*acc0[1] + vel_pot[2]*acc0[2];
         // d(1/v^3)/dt = -3/v^5 v dot a
         Float c2 = -3*c1/v2*vdota;
         // d(v/ds)/dt  = v dot a / (v*ds) 
@@ -426,15 +444,15 @@ public:
 
         if (mode==1) {
             // GDF force derivative
-            _force.acc1[0] += (c2+c3)*vel[0] + c1*acc0[0];
-            _force.acc1[1] += (c2+c3)*vel[1] + c1*acc0[1];
-            _force.acc1[2] += (c2+c3)*vel[2] + c1*acc0[2];
+            _force.acc1[0] += (c2+c3)*vel_pot[0] + c1*acc0[0];
+            _force.acc1[1] += (c2+c3)*vel_pot[1] + c1*acc0[1];
+            _force.acc1[2] += (c2+c3)*vel_pot[2] + c1*acc0[2];
         }
         else if (mode==2) {
             // GDF force derivative only in radial direction, assuming pos_g is constant. For time-dependent pos_g, additional term of time derivative of pos_g should be added.
-            _force.acc1[0] += ((c2+c3)*vel[0] + c1*acc0[0])*pos_g[0]/r_g;
-            _force.acc1[1] += ((c2+c3)*vel[1] + c1*acc0[1])*pos_g[1]/r_g;
-            _force.acc1[2] += ((c2+c3)*vel[2] + c1*acc0[2])*pos_g[2]/r_g;
+            _force.acc1[0] += ((c2+c3)*vel_pot[0] + c1*acc0[0])*pos_g[0]/r_g;
+            _force.acc1[1] += ((c2+c3)*vel_pot[1] + c1*acc0[1])*pos_g[1]/r_g;
+            _force.acc1[2] += ((c2+c3)*vel_pot[2] + c1*acc0[2])*pos_g[2]/r_g;
         }
 
         return NUMERIC_FLOAT_MAX;

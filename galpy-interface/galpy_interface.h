@@ -1756,6 +1756,22 @@ public:
         return pot_set_pars.size();
     }
 
+    //! get potential set center position
+    void getSetPos(int _iset, double* pos) const {
+        assert(_iset<int(pot_set_pars.size()));
+        pos[0] = pot_set_pars[_iset].pos[0];
+        pos[1] = pot_set_pars[_iset].pos[1];
+        pos[2] = pot_set_pars[_iset].pos[2];
+    }
+    
+    //! get potential set center velocity
+    void getSetVel(int _iset, double* vel) const {
+        assert(_iset<int(pot_set_pars.size()));
+        vel[0] = pot_set_pars[_iset].vel[0];
+        vel[1] = pot_set_pars[_iset].vel[1];
+        vel[2] = pot_set_pars[_iset].vel[2];
+    }
+
     //! write data for restart
     /*! 
       Write data sctructure:
