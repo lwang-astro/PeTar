@@ -427,9 +427,11 @@ public:
         else{
             // GDF force only in radial direction
             r_g = std::sqrt(pos_g[0]*pos_g[0] + pos_g[1]*pos_g[1] + pos_g[2]*pos_g[2]);
-            acc0[0] += c1*vel_pot[0]*pos_g[0]/r_g;
-            acc0[1] += c1*vel_pot[1]*pos_g[1]/r_g;
-            acc0[2] += c1*vel_pot[2]*pos_g[2]/r_g;
+            if (r_g>0) {
+                acc0[0] += c1*vel_pot[0]*pos_g[0]/r_g;
+                acc0[1] += c1*vel_pot[1]*pos_g[1]/r_g;
+                acc0[2] += c1*vel_pot[2]*pos_g[2]/r_g;
+            }
         }
 
         Float vdota = vel_pot[0]*acc0[0] + vel_pot[1]*acc0[1] + vel_pot[2]*acc0[2];
@@ -449,10 +451,12 @@ public:
             _force.acc1[2] += (c2+c3)*vel_pot[2] + c1*acc0[2];
         }
         else if (mode==2) {
-            // GDF force derivative only in radial direction, assuming pos_g is constant. For time-dependent pos_g, additional term of time derivative of pos_g should be added.
-            _force.acc1[0] += ((c2+c3)*vel_pot[0] + c1*acc0[0])*pos_g[0]/r_g;
-            _force.acc1[1] += ((c2+c3)*vel_pot[1] + c1*acc0[1])*pos_g[1]/r_g;
-            _force.acc1[2] += ((c2+c3)*vel_pot[2] + c1*acc0[2])*pos_g[2]/r_g;
+            if (r_g>0) {
+                // GDF force derivative only in radial direction, assuming pos_g is constant. For time-dependent pos_g, additional term of time derivative of pos_g should be added.
+                _force.acc1[0] += ((c2+c3)*vel_pot[0] + c1*acc0[0])*pos_g[0]/r_g;
+                _force.acc1[1] += ((c2+c3)*vel_pot[1] + c1*acc0[1])*pos_g[1]/r_g;
+                _force.acc1[2] += ((c2+c3)*vel_pot[2] + c1*acc0[2])*pos_g[2]/r_g;
+            }
         }
 
         return NUMERIC_FLOAT_MAX;
