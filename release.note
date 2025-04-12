@@ -37,6 +37,7 @@
 35. Update hard integration to allow OMP parallel for one large cluster with n_group>=2 (partically modified in SDAR update)
 36. Fix the error in the changeover potential calculation.
 37. Update BSEEMP for computing spin values (implemented by Ataru Tanikawa).
+38. Add phi and t arguments to galpy evaluatePotentials function argument lists. After this version, users should use modified galpy version from https://github.com/lwang-astro/galpy. In the official version, c++ interface do not support calculation of 3D potential values, and several potential types miss potentialEval functions, which causes segmentational fault when use them in PeTar.
 
 **Some existing issues include**
 
