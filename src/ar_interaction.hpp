@@ -397,7 +397,7 @@ public:
                     pgi.vel[1] += pi.vel[1] + _particle_cm.vel[1] + dt*(_particle_cm.acc0[1] + 0.5*dt*_particle_cm.acc1[1]) + gcm->vel[1];
                     pgi.vel[2] += pi.vel[2] + _particle_cm.vel[2] + dt*(_particle_cm.acc0[2] + 0.5*dt*_particle_cm.acc1[2]) + gcm->vel[2];
 
-                    ext_force->calcAccExternal(acc_pert, pgi);
+                    ext_force->calcAccJerkExternal(acc_pert, NULL, pgi, false);
                 }
 #endif
 
@@ -478,7 +478,7 @@ public:
                     pgi.vel[2] += vcm[2] + gcm->vel[2];
 
                     Float* acc_pert = _force[i].acc_pert;
-                    ext_force->calcAccExternal(acc_pert, pgi);
+                    ext_force->calcAccJerkExternal(acc_pert, NULL, pgi, false);
 
                     acc_pert_cm[0] += pi.mass *acc_pert[0];
                     acc_pert_cm[1] += pi.mass *acc_pert[1];

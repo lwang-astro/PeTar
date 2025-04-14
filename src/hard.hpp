@@ -2408,8 +2408,8 @@ public:
                 H4::ForceH4 fi;
                 PS::F64 ti = 0;
                 assert(_dt>=0);
-                while(ti<_dt) { // Symplectic Euler method
-                    PS::F64 dt = ext_force.calcAccJerkExternal(fi, pi);
+                while(ti<_dt) { 
+                    PS::F64 dt = ext_force.calcAccJerkExternal(fi.acc0, fi.acc1, pi, false);
                     dt = std::min(dt, _dt-ti);
                     ti += dt;
                     pi.vel[0] += fi.acc0[0]*dt;

@@ -454,7 +454,7 @@ public:
             p.vel[1] += _pcm.vel[1];
             p.vel[2] += _pcm.vel[2];
 
-            ext_force.calcAccJerkExternal(_fi, p);
+            ext_force.calcAccJerkExternal(_fi.acc0, _fi.acc1, p, true);
         }
     }
 #endif

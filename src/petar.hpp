@@ -892,6 +892,7 @@ public:
         // update time and gas density
         hard_manager.h4_manager.interaction.ext_force.updateTime(stat.time);
 #endif
+        hard_manager.h4_manager.interaction.ext_force.updateCenter(&system_soft[0], stat.n_real_loc);
 #endif
         
 #ifdef PROFILE
@@ -3453,11 +3454,7 @@ public:
 #ifdef EXTERNAL_HARD
                 /// force from external hard
                 if (hard_manager.h4_manager.interaction.ext_force.mode>0) {
-                    H4::ForceH4 f;
-                    hard_manager.h4_manager.interaction.ext_force.calcAccJerkExternal(f, p);
-                    p.acc[0] += f.acc0[0];
-                    p.acc[1] += f.acc0[1];
-                    p.acc[2] += f.acc0[2];
+                    hard_manager.h4_manager.interaction.ext_force.calcAccJerkExternal(&(p.acc[0]), NULL, p, false);
                 }
 #endif
 

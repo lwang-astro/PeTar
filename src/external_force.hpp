@@ -11,6 +11,7 @@
 #ifdef GALPY
 #include "galpy_interface.h"
 #include "status.hpp"
+#include "soft_ptcl.hpp"
 #endif
 
 //! IO parameters manager for external perturbation in hard integration
@@ -32,6 +33,7 @@ public:
     IOParams<double> gas_density; 
     IOParams<double> decay_time;
 #endif
+    IOParams<long long int> center_id; // id of the center object 
     IOParams<std::string> fname_par;
     
     bool print_flag;
@@ -48,6 +50,7 @@ public:
                             gas_density  (input_par_store, 1.0, "ext-gas-density",  "gas density in units of PeTar input"),
                             decay_time   (input_par_store, 0.0, "ext-decay-time",  "gas density decay time scale in units of PeTar input"),
 #endif
+                            center_id    (input_par_store, -1, "ext-center-id", "id of the central object, if given, the central object does not feel gas drag; and gas is assumed to rotating in kepler orbit around the center", "None"),
                             fname_par    (input_par_store, "input.par", "p", "Input parameter file for external force (this option should be used first before any other options)",NULL,false),
     
                             print_flag(false) {}
@@ -75,6 +78,7 @@ public:
             {coulomb_log.key, required_argument, &ext_flag, 4},  
             {polytropic_constant.key, required_argument, &ext_flag, 5},
             {polytropic_exponent.key, required_argument, &ext_flag, 6},
+            {center_id.key, required_argument, &ext_flag, 7},
             {"help",      no_argument,       0, 'h'},
             {0,0,0,0}
         };
@@ -133,6 +137,11 @@ public:
                 case 6:
                     polytropic_exponent.value = atof(optarg);
                     if(print_flag) polytropic_exponent.print(std::cout);
+                    opt_used+=2;
+                    break;
+                case 7:
+                    center_id.value = atoi(optarg);
+                    if(print_flag) center_id.print(std::cout);
                     opt_used+=2;
                     break;
                 default:
@@ -194,6 +203,7 @@ public:
     Float coulomb_log;
     Float polytropic_constant;
     Float polytropic_exponent;
+    FPSoft center;
     bool calc_sound_speed;
 
     ExternalHardForce(): mode(0),
@@ -202,7 +212,7 @@ public:
 #else
                          gas_density(1.0), gas_density_init(1.0), decay_time(0.0), time(0.0),
 #endif
-                         sound_speed(0.0), coulomb_log(3.1), polytropic_constant(1.0), polytropic_exponent(4.0/3.0), calc_sound_speed(true) {}
+                         sound_speed(0.0), coulomb_log(3.1), polytropic_constant(1.0), polytropic_exponent(4.0/3.0), center(), calc_sound_speed(true) {}
 
 #ifdef GALPY
     //! initial parameters for perturbation
@@ -212,7 +222,7 @@ public:
       @param[in] _status: system status for information of time and pcm position and velocity offsets used for converting to galactic frame
       @param[in] _print_flag: printing flag
      */
-    void initial(const IOParamsExternalHard& _input, GalpyManager& _galpy_manager, Status& _status, const bool _print_flag=false) {
+    void initial(const IOParamsExternalHard& _input, GalpyManager& _galpy_manager, Status& _status, bool _print_flag=false) {
         mode = _input.mode.value;
         galpy_gaspot_index = _input.galpy_gaspot_index.value;
         galpy_manager = &_galpy_manager;
@@ -222,6 +232,7 @@ public:
         coulomb_log = _input.coulomb_log.value;
         polytropic_constant = _input.polytropic_constant.value;
         polytropic_exponent = _input.polytropic_exponent.value;
+        center.id = _input.center_id.value;
         if (sound_speed>0.0) calc_sound_speed = false;
         else calc_sound_speed = true;
     }
@@ -236,6 +247,7 @@ public:
         coulomb_log = _input.coulomb_log.value;
         polytropic_constant = _input.polytropic_constant.value;
         polytropic_exponent = _input.polytropic_exponent.value;
+        center.id = _input.center_id.value;
         if (sound_speed>0.0) calc_sound_speed = false;
         else calc_sound_speed = true;
         updateTime(_time);
@@ -248,6 +260,36 @@ public:
     }
 #endif
 
+    //! Update center particle data
+    void updateCenter(const FPSoft* system_soft, const int n) {
+        if (center.id>0) {
+            bool find_center=false;    
+            for (int i=0; i<n; i++) {
+                if (system_soft[i].id==center.id) {
+                    center = system_soft[i];
+                    find_center = true;
+                    break;
+                }
+            }
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
+            int center_mpi_rank_local = find_center? PS::Comm::getRank()+1: 0;
+            int center_mpi_rank = PS::Comm::getSum(center_mpi_rank_local);
+            if (center_mpi_rank==0) {
+                std::cerr<<"Error: Cannot find center particle id="<<center.id<<".\n";
+                abort();
+            }
+            else {
+                PS::Comm::broadcast(&center, 1, center_mpi_rank-1);
+            }
+#else
+            if (!find_center) {
+                std::cerr<<"Error: Cannot find center particle id="<<center.id<<".\n";
+                abort();
+            }
+#endif       
+        }
+    }
+
     //! External force for one particle in hard part
     /*!
       Gas dynamical friction
@@ -255,140 +297,110 @@ public:
       (Ostriker 1999, https://ui.adsabs.harvard.edu/abs/1999ApJ...513..252O, 
       Rozner 2022, https://arxiv.org/abs/2212.00807)
 
-      @param[out] _acc: acceleration
+      @param[out] _acc0: acceleration 
+      @param[out] _acc1: jerk 
       @param[in] _particle: particle data
+      @param[in] _calc_acc1: if true, calculate jerk
       
       Return: the next integration time step (default: maximum floating point number)
     */
     template<class Tp> 
-    Float calcAccExternal(Float* _acc, const Tp& _particle){
+    Float calcAccJerkExternal(Float* _acc0, Float* _acc1, const Tp& _particle, const bool _calc_acc1) {
         if (mode==0) 
             return NUMERIC_FLOAT_MAX;
 
         auto& mass = _particle.mass;
-
-        const Float PI = 4.0*atan(1.0);
-        const Float G2 = ForceSoft::grav_const*ForceSoft::grav_const;
-
-#ifdef GALPY
         auto& pos = _particle.pos;
+        auto& vel = _particle.vel;
+        
+        const Float PI = 4.0*atan(1.0);
+        Float G = ForceSoft::grav_const;
+        Float G2 = G*G;
+        
+        Float pos_rel[3], vel_rel[3];
+#ifdef GALPY
+        // in galactic frame, required by galpy and used to calculate radial direction
+        if (center.id>0) {
+            // refer to center position and velocity
+            pos_rel[0] = pos[0] - center.pos[0];
+            pos_rel[1] = pos[1] - center.pos[1];
+            pos_rel[2] = pos[2] - center.pos[2];
+
+            vel_rel[0] = vel[0] - center.vel[0];
+            vel_rel[1] = vel[1] - center.vel[1];
+            vel_rel[2] = vel[2] - center.vel[2];
+        }
+        else {
+            // refer to gas potential center position and velocity
+            Float pot_pos[3];
+            galpy_manager->getSetPos(galpy_gaspot_index, pot_pos);
+            pos_rel[0] = pos[0] + status->pcm.pos[0] - pot_pos[0];
+            pos_rel[1] = pos[1] + status->pcm.pos[1] - pot_pos[1];
+            pos_rel[2] = pos[2] + status->pcm.pos[2] - pot_pos[2];
+            
+            // in gas potential center reference
+            Float pot_vel[3];
+            galpy_manager->getSetVel(galpy_gaspot_index, pot_vel);
+            vel_rel[0] = vel[0] + status->pcm.vel[0] - pot_vel[0];
+            vel_rel[2] = vel[1] + status->pcm.vel[1] - pot_vel[1], 
+            vel_rel[3] = vel[2] + status->pcm.vel[2] - pot_vel[2];
+        }
+
         // in galactic frame, required by galpy and used to calculate radial direction
         Float pos_g[3] = {pos[0] + status->pcm.pos[0],
                           pos[1] + status->pcm.pos[1],
                           pos[2] + status->pcm.pos[2]};
-
-        // in gas potential center reference
-        auto& vel = _particle.vel;
-        Float pot_vel[3];
-        galpy_manager->getSetVel(galpy_gaspot_index, pot_vel);
-        Float vel_pot[3] = {vel[0] + status->pcm.vel[0] - pot_vel[0], 
-                            vel[1] + status->pcm.vel[1] - pot_vel[1], 
-                            vel[2] + status->pcm.vel[2] - pot_vel[2]};
         Float gas_density = scale_density*galpy_manager->calcSetDensity(galpy_gaspot_index, status->time, pos_g, &pos[0]);
 #else
-        auto& pos_g = _particle.pos;
-        auto& vel_pot = _particle.vel;
-#endif       
-        Float v2 = vel_pot[0]*vel_pot[0] + vel_pot[1]*vel_pot[1] + vel_pot[2]*vel_pot[2];
-        Float v = std::sqrt(v2);
-        Float v3 = v2*v;
+        if (center.id>0) {
+            // refer to center position and velocity
+            pos_rel[0] = pos[0] - center.pos[0];
+            pos_rel[1] = pos[1] - center.pos[1];
+            pos_rel[2] = pos[2] - center.pos[2];
 
-        if (calc_sound_speed) 
-            sound_speed = std::sqrt(polytropic_constant*std::pow(gas_density, polytropic_exponent-1));
-
-        Float mach = v/sound_speed;
-        Float Ifunc;
-        if (mach<0.9) {
-            Ifunc = 0.5*std::log((1.0+mach)/(1.0-mach)) - mach;
+            vel_rel[0] = vel[0] - center.vel[0];
+            vel_rel[1] = vel[1] - center.vel[1];
+            vel_rel[2] = vel[2] - center.vel[2];
         }
-        else if (mach>=0.9 && mach<1.1) {
-            // 2nd order derivative Hermite interpolation
-            Float mach2 = mach*mach;
-            Float mach3 = mach2*mach;
-            Float mach4 = mach2*mach2;
-            Float mach5 = mach4*mach;
-            Ifunc = 8670.66512394438*mach5 - 43353.850000357*mach4 + 86337.1029009788*mach3 - 85594.6848365398*mach2 + 42251.2454762294*mach - 8309.08207013687;
+        else {
+            pos_rel[0] = _particle.pos[0];
+            pos_rel[1] = _particle.pos[1];
+            pos_rel[2] = _particle.pos[2];
+            vel_rel[0] = _particle.vel[0];
+            vel_rel[1] = _particle.vel[1];
+            vel_rel[2] = _particle.vel[2];
         }
-        else{
-            Float mach2 = mach*mach;
-            Ifunc = 0.5*std::log(1-1/mach2) + coulomb_log;
-        }
-
-        Float c1 = -4*PI*G2*mass*gas_density/v3*Ifunc;
-
-        if (mode==1) {
-            // GDF force
-            _acc[0] += c1*vel_pot[0];
-            _acc[1] += c1*vel_pot[1];
-            _acc[2] += c1*vel_pot[2];
-        }
-        else if (mode==2) {
-            // GDF force only in radial direction
-            Float r_g = std::sqrt(pos_g[0]*pos_g[0] + pos_g[1]*pos_g[1] + pos_g[2]*pos_g[2]);
-            _acc[0] += c1*vel_pot[0]*pos_g[0]/r_g;
-            _acc[1] += c1*vel_pot[1]*pos_g[1]/r_g;
-            _acc[2] += c1*vel_pot[2]*pos_g[2]/r_g;
-        }
-
-        return NUMERIC_FLOAT_MAX;
-    }
-
-
-    //! External force for one particle in hard part
-    /*!
-      Gas dynamical friction
-      Due to the acceleration dependence, this function must be used at the end of acceleration calculation
-      (Ostriker 1999, https://ui.adsabs.harvard.edu/abs/1999ApJ...513..252O, 
-      Rozner 2022, https://arxiv.org/abs/2212.00807)
-
-      @param[out] _force: acceleration and jerk
-      @param[in] _particle: particle data
-      
-      Return: the next integration time step (default: maximum floating point number)
-    */
-    template<class Tf, class Tp> 
-    Float calcAccJerkExternal(Tf& _force, const Tp& _particle){
-        if (mode==0) 
-            return NUMERIC_FLOAT_MAX;
-
-        auto& mass = _particle.mass;
-        //auto& pos = _particle.pos;
-        //Float r2 = pos[0]*pos[0] + pos[1]*pos[1] + pos[2]*pos[2] + sound_speed;
-        //Float c1 = alpha/std::pow(r2, 0.5*beta);
-
-        //Float c2 = beta*(pos[0]*vel[0]+pos[1]*vel[1]+pos[2]*vel[2])*c1/r2;
-        //_force.acc1[0] += c2*vel[0] - c1*_force.acc0[0];
-        //_force.acc1[1] += c2*vel[1] - c1*_force.acc0[1];
-        //_force.acc1[2] += c2*vel[2] - c1*_force.acc0[2];
-        
-        const Float PI = 4.0*atan(1.0);
-        Float G2 = ForceSoft::grav_const*ForceSoft::grav_const;
-
-#ifdef GALPY
-        // in galactic frame, required by galpy and used to calculate radial direction
-        auto& pos = _particle.pos;
-        Float pos_g[3] = {pos[0] + status->pcm.pos[0], 
-                          pos[1] + status->pcm.pos[1], 
-                          pos[2] + status->pcm.pos[2]};
-
-        // in gas potential center reference
-        auto& vel = _particle.vel;
-        Float pot_vel[3];
-        galpy_manager->getSetVel(galpy_gaspot_index, pot_vel);
-        Float vel_pot[3] = {vel[0] + status->pcm.vel[0] - pot_vel[0], 
-                            vel[1] + status->pcm.vel[1] - pot_vel[1], 
-                            vel[2] + status->pcm.vel[2] - pot_vel[2]};
-        Float gas_density = scale_density*galpy_manager->calcSetDensity(galpy_gaspot_index, status->time, pos_g, &pos[0]);
-#else
-        auto& pos_g = _particle.pos;
-        auto& vel_pot = _particle.vel;
 #endif
-        Float v2 = vel_pot[0]*vel_pot[0] + vel_pot[1]*vel_pot[1] + vel_pot[2]*vel_pot[2];
-        Float v = std::sqrt(v2);
-        Float v3 = v2*v;
+        
+        Float r_rel = std::sqrt(pos_rel[0]*pos_rel[0] + pos_rel[1]*pos_rel[1] + pos_rel[2]*pos_rel[2]);
+        
+        // subtract keplerian velocity orbiting around the center
+        if (center.id>0) {
+            // circular velocity
+            Float v_circle = std::sqrt(G*center.mass/r_rel);
+            // get angular momentum direction
+            Float r_cross_v[3] = {pos_rel[1]*vel_rel[2] - pos_rel[2]*vel_rel[1],
+                                  pos_rel[2]*vel_rel[0] - pos_rel[0]*vel_rel[2],
+                                  pos_rel[0]*vel_rel[1] - pos_rel[1]*vel_rel[0]};
+            // get tangent velocity direction
+            Float r_cross_v_cross_r[3] = {r_cross_v[1]*pos_rel[2] - r_cross_v[2]*pos_rel[1],
+                                          r_cross_v[2]*pos_rel[0] - r_cross_v[0]*pos_rel[2],
+                                          r_cross_v[0]*pos_rel[1] - r_cross_v[1]*pos_rel[0]};
+            // normalization factor
+            Float r2vsq = std::sqrt(r_cross_v_cross_r[0]*r_cross_v_cross_r[0] + r_cross_v_cross_r[1]*r_cross_v_cross_r[1] + r_cross_v_cross_r[2]*r_cross_v_cross_r[2]);
+            
+            // remove circular velocity
+            vel_rel[0] -= v_circle*r_cross_v_cross_r[0]/r2vsq;
+            vel_rel[1] -= v_circle*r_cross_v_cross_r[1]/r2vsq;
+            vel_rel[2] -= v_circle*r_cross_v_cross_r[2]/r2vsq;
+        }
 
         if (calc_sound_speed) 
             sound_speed = std::sqrt(polytropic_constant*std::pow(gas_density, polytropic_exponent-1));
+
+        Float v2 = vel_rel[0]*vel_rel[0] + vel_rel[1]*vel_rel[1] + vel_rel[2]*vel_rel[2];
+        Float v = std::sqrt(v2);
+        Float v3 = v2*v;
 
         Float mach = v/sound_speed;
         Float Ifunc, dIfunc;
@@ -412,50 +424,45 @@ public:
             dIfunc = 1/(mach2*mach - mach);
         }
 
-        Float r_g;
         Float c1 = -4*PI*G2*mass*gas_density/v3*Ifunc;
-
-        auto& acc0 = _force.acc0;
-        //Float acc0[3] = {c1*vel[0], c1*vel[1], c1*vel[2]};
 
         if (mode==1) {
             // GDF force
-            acc0[0] += c1*vel_pot[0];
-            acc0[1] += c1*vel_pot[1];
-            acc0[2] += c1*vel_pot[2];
+            _acc0[0] += c1*vel_rel[0];
+            _acc0[1] += c1*vel_rel[1];
+            _acc0[2] += c1*vel_rel[2];
         }
         else{
             // GDF force only in radial direction
-            r_g = std::sqrt(pos_g[0]*pos_g[0] + pos_g[1]*pos_g[1] + pos_g[2]*pos_g[2]);
-            if (r_g>0) {
-                acc0[0] += c1*vel_pot[0]*pos_g[0]/r_g;
-                acc0[1] += c1*vel_pot[1]*pos_g[1]/r_g;
-                acc0[2] += c1*vel_pot[2]*pos_g[2]/r_g;
+            if (r_rel>0) {
+                _acc0[0] += c1*vel_rel[0]*pos_rel[0]/r_rel;
+                _acc0[1] += c1*vel_rel[1]*pos_rel[1]/r_rel;
+                _acc0[2] += c1*vel_rel[2]*pos_rel[2]/r_rel;
             }
         }
 
-        Float vdota = vel_pot[0]*acc0[0] + vel_pot[1]*acc0[1] + vel_pot[2]*acc0[2];
-        // d(1/v^3)/dt = -3/v^5 v dot a
-        Float c2 = -3*c1/v2*vdota;
-        // d(v/ds)/dt  = v dot a / (v*ds) 
-        Float c3 = -c1*dIfunc*vdota/(v*sound_speed);
-        
-        //_force.acc0[0] += acc0[0];
-        //_force.acc0[1] += acc0[1];
-        //_force.acc0[2] += acc0[2];
+        if (_calc_acc1) {
+            ASSERT(_acc1!=NULL);
 
-        if (mode==1) {
-            // GDF force derivative
-            _force.acc1[0] += (c2+c3)*vel_pot[0] + c1*acc0[0];
-            _force.acc1[1] += (c2+c3)*vel_pot[1] + c1*acc0[1];
-            _force.acc1[2] += (c2+c3)*vel_pot[2] + c1*acc0[2];
-        }
-        else if (mode==2) {
-            if (r_g>0) {
-                // GDF force derivative only in radial direction, assuming pos_g is constant. For time-dependent pos_g, additional term of time derivative of pos_g should be added.
-                _force.acc1[0] += ((c2+c3)*vel_pot[0] + c1*acc0[0])*pos_g[0]/r_g;
-                _force.acc1[1] += ((c2+c3)*vel_pot[1] + c1*acc0[1])*pos_g[1]/r_g;
-                _force.acc1[2] += ((c2+c3)*vel_pot[2] + c1*acc0[2])*pos_g[2]/r_g;
+            Float vdota = vel_rel[0]*_acc0[0] + vel_rel[1]*_acc0[1] + vel_rel[2]*_acc0[2];
+            // d(1/v^3)/dt = -3/v^5 v dot a
+            Float c2 = -3*c1/v2*vdota;
+            // d(v/ds)/dt  = v dot a / (v*ds) 
+            Float c3 = -c1*dIfunc*vdota/(v*sound_speed);
+            
+            if (mode==1) {
+                // GDF force derivative
+                _acc1[0] += (c2+c3)*vel_rel[0] + c1*_acc0[0];
+                _acc1[1] += (c2+c3)*vel_rel[1] + c1*_acc0[1];
+                _acc1[2] += (c2+c3)*vel_rel[2] + c1*_acc0[2];
+            }
+            else if (mode==2) {
+                if (r_rel>0) {
+                    // GDF force derivative only in radial direction, assuming pos_rel is constant. For time-dependent pos_rel, additional term of time derivative of pos_rel should be added.
+                    _acc1[0] += ((c2+c3)*vel_rel[0] + c1*_acc0[0])*pos_rel[0]/r_rel;
+                    _acc1[1] += ((c2+c3)*vel_rel[1] + c1*_acc0[1])*pos_rel[1]/r_rel;
+                    _acc1[2] += ((c2+c3)*vel_rel[2] + c1*_acc0[2])*pos_rel[2]/r_rel;
+                }
             }
         }
 
