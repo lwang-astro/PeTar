@@ -3126,7 +3126,7 @@ public:
         hard_manager.initial(hard_parameters, bse_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
 
         // initial random seeds
-        rand_manager.initialAll(rand_parameters);
+        rand_manager.initialAll(rand_parameters, my_rank);
         rand_manager.printRandSeeds(std::cout);
 
         // initial stellar evolution for each star

@@ -400,7 +400,7 @@ int main(int argc, char **argv){
       hard_dump.readOneClusterBinary(fp);
 
 #ifdef BSE_BASE
-      if (seed!=0) hard_dump.rand_manager.initialFromSeed(seed);
+      if (seed!=0) hard_dump.rand_manager.initialFromSeed(seed, 0);
 #endif
 
       ncount++;

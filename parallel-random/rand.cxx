@@ -1,4 +1,11 @@
 #include "rand.hpp"
+#include <cstddef>
+
+#ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL 
+thread_local uint64_t RAND_SEED[2] = {0, 0}; // random seeds for one thread
+#else
+uint64_t RAND_SEED[2] = {0, 0}; // random seeds
+#endif
 
 /*  Written in 2016-2018 by David Blackman and Sebastiano Vigna (vigna@acm.org)
 
@@ -57,7 +64,7 @@ void srand_jump(void) {
 
     uint64_t s0 = 0;
     uint64_t s1 = 0;
-    for(int i = 0; i < sizeof JUMP / sizeof *JUMP; i++)
+    for(std::size_t i = 0; i < sizeof JUMP / sizeof *JUMP; i++)
         for(int b = 0; b < 64; b++) {
             if (JUMP[i] & UINT64_C(1) << b) {
                 s0 ^= RAND_SEED[0];
@@ -80,7 +87,7 @@ void srand_long_jump(void) {
 
     uint64_t s0 = 0;
     uint64_t s1 = 0;
-    for(int i = 0; i < sizeof LONG_JUMP / sizeof *LONG_JUMP; i++)
+    for(std::size_t i = 0; i < sizeof LONG_JUMP / sizeof *LONG_JUMP; i++)
         for(int b = 0; b < 64; b++) {
             if (LONG_JUMP[i] & UINT64_C(1) << b) {
                 s0 ^= RAND_SEED[0];
@@ -110,14 +117,7 @@ extern "C" {
     }
 
 // set random seed in parallel
-    void srand_parallel(uint64_t *iseed) {
-        // get current MPI processor id (rank) in MPI_COMM_WORLD
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-#else
-        int rank = 0;
-#endif
+    void srand_parallel(uint64_t *iseed, const int *rank) {
 
 #ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL
 #pragma omp parallel
@@ -128,7 +128,7 @@ extern "C" {
             int i_omp = omp_get_thread_num();
             int n_omp = omp_get_num_threads();
 
-            int n_loop = n_omp*rank + i_omp + 1;
+            int n_loop = n_omp * (*rank) + i_omp + 1;
             for (int i=0; i<n_loop; i++) 
                 srand_long_jump();
         }
@@ -136,7 +136,7 @@ extern "C" {
         RAND_SEED[0] = *iseed;
         RAND_SEED[1] = 0;
 
-        int n_loop = rank + 1;
+        int n_loop = *rank + 1;
         for (int i=0; i<n_loop; i++)
             srand_long_jump();
 #endif

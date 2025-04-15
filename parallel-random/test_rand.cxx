@@ -6,7 +6,7 @@ extern "C" {
 
     double rand_f64_();
 
-    void srand_parallel_(uint64_t* seed);
+    void srand_parallel_(uint64_t* seed, int *rank);
 }
 
 int main (int argc, char** argv) {
@@ -28,7 +28,7 @@ int main (int argc, char** argv) {
 
     // test fortran interface
     if (rank==0) std::cout<<"Test fortran random, generate seeds for each MPI and OMP, input seed: "<<seed<<"\n";
-    srand_parallel_(&seed);
+    srand_parallel_(&seed, &rank);
 
     if (rank==0) std::cout<<"Generate uint64 and double random samples from each pair of thread and rank, should be different from each other:\n";
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
@@ -57,7 +57,7 @@ int main (int argc, char** argv) {
 #endif
     // test cxx interface
     if (rank==0) std::cout<<"Test c++ random, generate seeds for each MPI and OMP, input seed: "<<seed<<"\n";
-    srand_parallel(&seed);
+    srand_parallel(&seed, &rank);
 
     // test read and write
 
