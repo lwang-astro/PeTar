@@ -9,6 +9,7 @@ unset fname
 unset prefix_flag
 unset opts
 unset sfmt
+unset tcum_flag
 
 until [[ `echo x$1` == 'x' ]]
 do
@@ -32,6 +33,7 @@ do
             echo '  -m [I] number of MPI processors used for "mpiexec -n " (default: MPI is not used)';
             echo '  -o [I] number of OpenMP processors (default: auto)';
             echo '  -i [I] format of snapshot: 0 for BINARY, 1 for ASCII (default: 1)';
+            echo '  -t [F] maximum executing time in sec for running petar test (default: determined by last executing time*3)';
             echo 'PS: 1) Since the test is only based on the first 6 steps, the suggested tree step may not be the best for a long-term simulation.';
             echo '       Sometimes, the best tree step may result in a large changeover in radii, causing the wallclock time for the hard part to increase after some steps.';
             echo '       In such cases, the next smallest choice of tree step (0.5*best one) may be better.';
@@ -48,6 +50,7 @@ do
 	-m) shift; nmpi=$1; shift;;
 	-o) shift; nomp=$1; shift;;
 	-i) shift; sfmt=$1; shift;;
+    -t) shift; tcum_flag=$1; shift;;
 	*) fname=$1;shift;;
     esac
 done
@@ -62,6 +65,7 @@ fi
 [ -z $nmpi ] || prefix=$prefix' mpiexec -n '$nmpi
 [ -z $sfmt ] && sfmt=1
 [ -z $prefix_flag ] || prefix=$run
+[ -z $tcum_flag ] && tcum_flag='auto' 
 
 echo 'commander: '$prefix' '$pbin' '$opts
 
@@ -92,7 +96,12 @@ dt=$dt_base
 dt_min=$dt
 check_flag=true
 success_flag=false
-tcum=10000 # sec
+if [[ $tcum_flag == 'auto' ]]; then
+    tcum=10000
+else
+    tcum=$tcum_flag
+fi
+
 while [[ $check_flag == true ]]
 do
     dt=`echo $dt|awk '{OFMT="%.14g"; print $1*2.0}'`
@@ -105,7 +114,7 @@ do
 	tperf=(`awk -v dt=$dt_reg 'BEGIN{t=1e10; ns=1.0/dt; th=0; ts=0; tc=0; td=0;} {if (t>$1) {t=$1; th=$2; ts=$3; tc=$4; td=$5;}} END{print t*ns,th*ns,ts*ns,tc*ns,td*ns,ns}' check.perf.$dt.tperf`)
 	de=`grep 'Slowdown:' check.perf.$dt.log|awk '{print $2}'`
 	echo 'check tree step: '$dt_reg', wallclock time for one time unit: '${tperf[0]}'  hard: '${tperf[1]}'  soft: '${tperf[2]}'   clustering: '${tperf[3]}'   domain: '${tperf[4]}'   step number: '${tperf[5]}
-	tcum=`awk 'BEGIN{t=0} {t=t+$1} END{if (t<1.0) {t=1.0}; print t*3}' check.perf.$dt.tperf`
+	[[ $tcum_flag == 'auto' ]] && tcum=`awk 'BEGIN{t=0} {t=t+$1} END{if (t<1.0) {t=1.0}; print t*3}' check.perf.$dt.tperf`
 	echo '  wallclock time first 6 steps: '`awk '{print $1}' check.perf.$dt.tperf`' next timeout check: '$tcum
 	echo '  Slowdown relative energy error: '$de
 	check_flag=`echo $tperf |awk -v pre=$tperf_pre '{if ($1<pre) print "true"; else print "false"}'`

@@ -23,6 +23,8 @@
       logical nohgce
       integer krol(2)
       common /bseemp/ nohgce,krol
+* Tanikawa's prescription for BH spin
+      real*8 aspin(2)
 *
 
 * Tanikawa's BH model (prevent HGCE)
@@ -62,15 +64,23 @@
      &           lums,GB,zpars)
             CALL hrdiag(mass0(k),age(k),mass(k),tm,tn,tscls,lums,
      &           GB,zpars,rad(k),lum,kstar(k),massc(k),radc(k),
-     &           menv(k),renv(k),k2,fbfac,fbtot,mco,ecs)
-            jspin(k) = ospin(k)*(k2*rad(k)*rad(k)*(mass(k)-massc(k))
-     &           +k3*radc(k)*radc(k)*massc(k))
+     &           menv(k),renv(k),k2,fbfac,fbtot,mco,ecs,
+     &           jspin(k),aspin(k))
+* Tanikawa's prescription for BH spin
+!            jspin(k) = ospin(k)*(k2*rad(k)*rad(k)*(mass(k)-massc(k))
+!     &           +k3*radc(k)*radc(k)*massc(k))
+            if(kstar(k).le.12.or.15.ge.kstar(k))then
+               jspin(k) = ospin(k)*(k2*rad(k)*rad(k)*(mass(k)-massc(k))
+     &              +k3*radc(k)*radc(k)*massc(k))
+            endif
+*
          END DO
 
          CALL comenv(mass0(i1),mass(i1),massc(i1),age(i1),jspin(i1),
      &        kstar(i1),mass0(i2),mass(i2),massc(i2),age(i2),
      &        jspin(i2),kstar(i2),zpars,ecc,semi,jorb,
-     &        vkick(4*(i1-1)+1),vkick(4*(i2-1)+1),coel)
+     &        vkick(4*(i1-1)+1),vkick(4*(i2-1)+1),coel,
+     &        aspin(i1),aspin(i2))
          
       ELSE
          CALL MIX(mass0,mass,age,kstar,zpars)

@@ -1,6 +1,7 @@
 ***
       SUBROUTINE hrdiag(mass,aj,mt,tm,tn,tscls,lums,GB,zpars,
-     &     r,lum,kw,mc,rc,menv,renv,k2,fbfac,fbtot,mco,ecs)
+     &     r,lum,kw,mc,rc,menv,renv,k2,fbfac,fbtot,mco,ecs,
+     &     jspin,aspin)
 *
 *
 *       H-R diagram for population I stars.
@@ -77,6 +78,14 @@
       include 'cppinterface.h'
       real*8 CriticalMassMassive
       parameter(CriticalMassMassive=160.)
+* Tanikawa's prescription for BH spin
+      real*8 jspinpermass
+      real*8 jspin,aspin,lspin
+      real*8 gravovercele
+      parameter (gravovercele=28.86)
+      real*8 aspinmax
+      parameter (aspinmax=0.998)
+      real*8 rstar0,rcore0,mstar0,mcore0,mstar1
 *
 
 *
@@ -670,6 +679,12 @@
                endif
                mass = mt
             else
+* Tanikawa's prescription for BH spin
+               rstar0 = r
+               rcore0 = rc
+               mstar0 = mt
+               mcore0 = mc
+*
                if((mcbagb.lt.1.6d0).or.
      &(psflag.gt.0.and.mcbagb.gt.65.d0.and.mcbagb.le.135.d0))then
 *
@@ -682,6 +697,9 @@
                   kw = 15
                   aj = 0.d0
                   mt = 0.d0
+* Tanikawa's prescription for BH spin
+                  mstar1 = mt
+*
                   lum = 1.0d-10
                   r = 1.0d-10
        elseif(psflag.eq.1.and.mcbagb.ge.45.d0.and.mcbagb.le.65.d0)then
@@ -690,6 +708,9 @@
 * psflag=1 strong PPSN condition
                         kw = 14
                         mt = 45.d0
+* Tanikawa's prescription for BH spin
+                        mstar1 = mt
+*
                         FBTOT = mt
                         MCO = mc
                         mt = 0.9d0*mt
@@ -703,6 +724,9 @@
      &                     mt = 51.2d0
                         if(mcbagb.ge.62.5d0)
      &                     mt = -14.3d0*mcbagb + 938.0d0
+* Tanikawa's prescription for BH spin
+                        mstar1 = mt
+*
                         FBTOT = mt
                         MCO = mc
                         mt = 0.9d0*mt
@@ -716,6 +740,9 @@
      &                     mt = 55.6d0
                         if(mcbagb.ge.62.5d0)
      &                     mt = -14.3d0*mcbagb + 938.1d0
+* Tanikawa's prescription for BH spin
+                        mstar1 = mt
+*
                         FBTOT = mt
                         MCO = mc
                         mt = 0.9d0*mt
@@ -821,6 +848,9 @@
                      mt = mcx + FBTOT
                      MCO = mc
                   endif
+* Tanikawa's prescription for BH spin
+                  mstar1 = mt
+*
                   if(nsflag.ge.2)then
 * Reduce the mass to the gravitational mass for the relevant cases. 
                      mcx = (-1.d0 + SQRT(1.d0 + 0.3d0*mt))/0.15d0
@@ -853,7 +883,16 @@
 * Check for an electron-capture collapse of an ONe core. 
             if(mcbagb.ge.1.6d0.and.mcbagb.le.2.25d0)then
                if(ecflag.gt.0.and.mcx.ge.1.372d0)then
+* Tanikawa's prescription for BH spin
+                  rstar0 = r
+                  rcore0 = rc
+                  mstar0 = mt
+                  mcore0 = mc
+*
                   mt = 1.26d0
+* Tanikawa's prescription for BH spin
+                  mstar1 = mt
+*
                   FBFAC = 0.0D0
                   FBTOT = 0.0D0
                   MCO = mc
@@ -863,6 +902,14 @@
                endif
             endif
          endif
+* Tanikawa's prescription for BH spin
+         if(kw.eq.13.or.kw.eq.14)then
+            lspin = jspinpermass(jspin,k2,rstar0,rcore0,
+     &           mstar0,mcore0,mstar1)
+            aspin = min(lspin/(mt*gravovercele),aspinmax)
+            jspin = aspin*gravovercele*mt**2
+         endif
+*
 *
       endif
 *
@@ -925,6 +972,12 @@
                   endif
                   mass = mt
                else
+* Tanikawa's prescription for BH spin
+                  rstar0 = r
+                  rcore0 = rc
+                  mstar0 = mt
+                  mcore0 = mc
+*
                   if((mass.lt.1.6d0).or.
      &(psflag.gt.0.and.mass.gt.65.d0.and.mass.le.135.d0))then
 *
@@ -937,6 +990,9 @@
                      kw = 15
                      aj = 0.d0
                      mt = 0.d0
+* Tanikawa's prescription for BH spin
+                     mstar1 = mt
+*
                      lum = 1.0d-10
                      r = 1.0d-10
                   elseif(psflag.eq.1.and.
@@ -946,6 +1002,9 @@
 * psflag=1 strong PPSN condition
                         kw = 14
                         mt = 45.d0
+* Tanikawa's prescription for BH spin
+                        mstar1 = mt
+*
                         FBTOT = mt
                         MCO = mc
                         mt = 0.9d0*mt
@@ -960,6 +1019,9 @@
      &                     mt = 51.2d0
                         if(mass.ge.62.5d0)
      &                     mt = -14.3d0*mass + 938.0d0
+* Tanikawa's prescription for BH spin
+                        mstar1 = mt
+*
                         FBTOT = mt
                         MCO = mc
                         mt = 0.9d0*mt
@@ -974,6 +1036,9 @@
      &                     mt = 55.6d0
                         if(mass.ge.62.5d0)
      &                     mt = -14.3d0*mass + 938.1d0
+* Tanikawa's prescription for BH spin
+                        mstar1 = mt
+*
                         FBTOT = mt
                         MCO = mc
                         mt = 0.9d0*mt
@@ -1070,6 +1135,9 @@
                         mt = mcx + FBTOT
                         MCO = mc
                      endif
+* Tanikawa's prescription for BH spin
+                     mstar1 = mt
+*
                      if(nsflag.ge.2)then
                         mcx = (-1.d0 + SQRT(1.d0 + 0.3d0*mt))/0.15d0
                         if(mcx.le.mxns)then
@@ -1097,6 +1165,14 @@
                endif
             endif
          endif
+* Tanikawa's prescription for BH spin
+         if(kw.eq.13.or.kw.eq.14)then
+            lspin = jspinpermass(jspin,k2,rstar0,rcore0,
+     &           mstar0,mcore0,mstar1)
+            aspin = min(lspin/(mt*gravovercele),aspinmax)
+            jspin = aspin*gravovercele*mt**2
+         endif
+*
       endif
 *
       if(kw.ge.10.and.kw.le.12)then
@@ -1110,9 +1186,22 @@
 * unless WD is ONe in which case we assume a NS 
 * of minimum mass is the remnant.
 *
+* Tanikawa's prescription for BH spin
+            rstar0 = r
+            rcore0 = rc
+            mstar0 = mt
+            mcore0 = mc
+*
             kw = 13
             aj = 0.d0
             mt = 1.26d0
+* Tanikawa's prescription for BH spin
+            mstar1 = mt
+            lspin = jspinpermass(jspin,k2,rstar0,rcore0,
+     &           mstar0,mcore0,mstar1)
+            aspin = min(lspin/(mt*gravovercele),aspinmax)
+            jspin = aspin*gravovercele*mt**2
+*
             ECS = 1
          elseif(mc.ge.(mch-0.06d0).and.kw.le.11)then
             kw = 15
@@ -1171,6 +1260,17 @@
 *
             kw = 14
             aj = 0.d0
+* Tanikawa's prescription for BH spin
+            rstar0 = r
+            rcore0 = rc
+            mstar0 = mt
+            mcore0 = mc
+            mstar1 = mt
+            lspin = jspinpermass(jspin,k2,rstar0,rcore0,
+     &           mstar0,mcore0,mstar1)
+            aspin = min(lspin/(mt*gravovercele),aspinmax)
+            jspin = aspin*gravovercele*mt**2
+*
          else
             lum = 0.02d0*(mt**0.67d0)/(MAX(aj,0.1d0))**2
             r = 1.4d-05
@@ -1304,3 +1404,22 @@
       return
       end
 ***
+      
+      real*8 function jspinpermass(jspin,k2,rt,rc,mt0,mc0,mt1)
+      implicit none
+      real*8 k3
+      parameter(k3=0.21d0)
+      real*8 power
+      parameter(power=1.666666666666667)
+      real*8 jspin,k2,rt,rc,mt0,mc0,mt1
+      real*8 ospin,i_e0,i_c0,j_e0,j_c0,j_e1,j_c1,m_e1,m_c1
+
+      i_e0  = k2*(mt0-mc0)*rt*rt
+      i_c0  = k3*mc0*rc*rc
+      ospin = jspin/(i_e0+i_c0)
+      j_e0  = i_e0*ospin
+      j_c0  = i_c0*ospin
+      j_e1  = j_e0*(max(mt1-mc0,0.)/(mt0-mc0))**power
+      j_c1  = j_c0*(min(mc0,mt1)/mc0)**power
+      jspinpermass = (j_e1+j_c1)/mt1
+      end

@@ -242,6 +242,8 @@
       real*8 kw1dd,kw2dd,ms1dd
       real*8 sigma,mxns
       COMMON /VALUE4/ sigma,mxns
+* Tanikawa's prescription for BH spin
+      real*8 aspin(2)
 *
 * Save the initial state.
 *
@@ -356,7 +358,8 @@
          rc = radc(k)
          CALL star(kstar(k),mass0(k),mass(k),tm,tn,tscls,lums,GB,zpars)
          CALL hrdiag(mass0(k),age,mass(k),tm,tn,tscls,lums,GB,zpars,
-     &        rm,lum,kstar(k),mc,rc,me,re,k2,fbfac,fbtot,mco,ecs)
+     &        rm,lum,kstar(k),mc,rc,me,re,k2,fbfac,fbtot,mco,ecs,
+     &        jspin(k),aspin(k))
          aj(k) = age
          epoch(k) = tphys - age
          rad(k) = rm
@@ -823,7 +826,8 @@
 *
          CALL star(kw,m0,mt,tm,tn,tscls,lums,GB,zpars)
          CALL hrdiag(m0,age,mt,tm,tn,tscls,lums,GB,zpars,
-     &        rm,lum,kw,mc,rc,me,re,k2,fbfac,fbtot,mco,ecs)
+     &        rm,lum,kw,mc,rc,me,re,k2,fbfac,fbtot,mco,ecs,
+     &        jspin(k),aspin(k))
 *
          if(kw.eq.15)then
             kstar(k)= kw
@@ -878,8 +882,11 @@
 *
          if(kstar(k).eq.13.or.kstar(k).eq.14)then
             if(tphys-epoch(k).lt.tiny)then
-               ospin(k) = 2.0d+08
-               jspin(k) = k3*rc*rc*mc*ospin(k)
+* Tanikawa's prescription for BH spin
+!               ospin(k) = 2.0d+08
+!               jspin(k) = k3*rc*rc*mc*ospin(k)
+               ospin(k) = jspin(k)/(k3*rc*rc*mc)
+*
             endif
          endif
 *
@@ -1488,7 +1495,8 @@
          CALL comenv(mass0(j1),mass(j1),massc(j1),aj(j1),jspin(j1),
      &               kstar(j1),mass0(j2),mass(j2),massc(j2),aj(j2),
      &               jspin(j2),kstar(j2),zpars,ecc,sep,jorb,
-     &               vkick(4*(j1-1)+1),vkick(4*(j2-1)+1),coel)
+     &               vkick(4*(j1-1)+1),vkick(4*(j2-1)+1),coel,
+     &        aspin(j1),aspin(j2))
 *
          jp = MIN(jpmax,jp + 1)
          bpp(jp,1) = tphys
@@ -2267,7 +2275,8 @@
          kw = kstar(k)
          CALL star(kw,m0,mt,tm,tn,tscls,lums,GB,zpars)
          CALL hrdiag(m0,age,mt,tm,tn,tscls,lums,GB,zpars,
-     &        rm,lum,kw,mc,rc,me,re,k2,fbfac,fbtot,mco,ecs)
+     &        rm,lum,kw,mc,rc,me,re,k2,fbfac,fbtot,mco,ecs,
+     &        jspin(k),aspin(k))
 *
          if(kw.eq.15)then
             kstar(k) = kw
@@ -2546,7 +2555,8 @@
          CALL comenv(mass0(j1),mass(j1),massc(j1),aj(j1),jspin(j1),
      &               kstar(j1),mass0(j2),mass(j2),massc(j2),aj(j2),
      &               jspin(j2),kstar(j2),zpars,ecc,sep,jorb,
-     &               vkick(4*(j1-1)+1),vkick(4*(j2-1)+1),coel)
+     &               vkick(4*(j1-1)+1),vkick(4*(j2-1)+1),coel,
+     &        aspin(j1),aspin(j2))
          com = .true.
 * Tanikawa's BH model (prevent HGCE)
 !      elseif(kstar(j2).ge.2.and.kstar(j2).le.9.and.kstar(j2).ne.7)then
@@ -2555,7 +2565,8 @@
          CALL comenv(mass0(j2),mass(j2),massc(j2),aj(j2),jspin(j2),
      &               kstar(j2),mass0(j1),mass(j1),massc(j1),aj(j1),
      &               jspin(j1),kstar(j1),zpars,ecc,sep,jorb,
-     &               vkick(4*(j2-1)+1),vkick(4*(j1-1)+1),coel)
+     &               vkick(4*(j2-1)+1),vkick(4*(j1-1)+1),coel,
+     &        aspin(j2),aspin(j1))
          com = .true.
       else
 * Tanikawa's BH model (prevent HGCE)
@@ -2820,7 +2831,6 @@
             bpp(jp,18) = zero
             bpp(jp,20) = zero
          endif
-
       endif
 *
       if(tphys.ge.tprint) then

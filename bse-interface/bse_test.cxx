@@ -192,7 +192,7 @@ int main(int argc, char** argv){
     BSEManager bse_manager;
     RandomManager rand_manager;
     bse_manager.initial(bse_io, true);
-    rand_manager.initialAll(rand_io);
+    rand_manager.initialAll(rand_io, 0);
     rand_manager.printRandSeeds(std::cout);
     assert(bse_manager.checkParams());
 
