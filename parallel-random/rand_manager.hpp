@@ -12,30 +12,30 @@ public:
 
     //! initial random seeds for all threads and processors
     template <class Tio>
-    void initialAll(const Tio& _input) {
+    void initialAll(const Tio& _input, const int rank) {
         if (_input.seedfile.value!="__NONE__")
             readRandSeeds(_input.seedfile.value.c_str());
         else {
             uint64_t seed_i64 = _input.seed.value;
-            srand_parallel(&seed_i64);
+            srand_parallel(&seed_i64, &rank);
         }
     }
 
     //! initial random seeds for local thread 
     template <class Tio>
-    void initialLocal(const Tio& _input) {
+    void initialLocal(const Tio& _input, const int rank) {
         if (_input.seedfile.value!="__NONE__")
             readRandSeedLocal(_input.seedfile.value.c_str());
         else {
             uint64_t seed_i64 = _input.seed.value;
             // use srand_parallel in case with local intialization
-            srand_parallel(&seed_i64);
+            srand_parallel(&seed_i64, &rank);
         }
     }
 
     // initial all seeds directly
-    void initialFromSeed(uint64_t seed) {
-        srand_parallel(&seed);
+    void initialFromSeed(uint64_t seed, int rank) {
+        srand_parallel(&seed, &rank);
     }
 
     //! print all seeds 

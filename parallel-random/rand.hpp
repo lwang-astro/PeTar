@@ -10,9 +10,9 @@
 #endif
 
 #ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL 
-static thread_local uint64_t RAND_SEED[2]; // random seeds for one thread
+extern thread_local uint64_t RAND_SEED[2]; // random seeds for one thread
 #else
-static uint64_t RAND_SEED[2]; // random seeds
+extern uint64_t RAND_SEED[2]; // random seeds
 #endif
 
 uint64_t rand_xoroshiro(void);
@@ -42,7 +42,7 @@ extern "C" {
     double rand_f64(void);
 
 // set random seed in parallel
-    void srand_parallel(uint64_t *iseed);
+    void srand_parallel(uint64_t *iseed, const int *rank);
 
 #if defined(__cplusplus)
 }

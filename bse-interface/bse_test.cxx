@@ -196,7 +196,7 @@ int main(int argc, char** argv){
     RandomManager rand_manager;
     GWKick gw_kick;
     bse_manager.initial(bse_io, true);
-    rand_manager.initialAll(rand_io);
+    rand_manager.initialAll(rand_io, 0);
     rand_manager.printRandSeeds(std::cout);
     gw_kick.vscale = bse_manager.vscale;
     assert(bse_manager.checkParams());

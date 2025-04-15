@@ -37,8 +37,8 @@
 35. Update hard integration to allow OMP parallel for one large cluster with n_group>=2 (partically modified in SDAR update)
 36. Fix the error in the changeover potential calculation.
 37. Update BSEEMP for computing spin values (implemented by Ataru Tanikawa).
-38. Add GW kick for BBH mergers, change spin parameter for SSE/BSE stellar evolution to 3D spin in data structure, update corresponding data analysis tools.
-
+38. Add phi and t arguments to galpy evaluatePotentials function argument lists. After this version, users should use modified galpy version from https://github.com/lwang-astro/galpy. In the official version, c++ interface do not support calculation of 3D potential values, and several potential types miss potentialEval functions, which causes segmentational fault when use them in PeTar.
+39. Add GW kick for BBH mergers, change spin parameter for SSE/BSE stellar evolution to 3D spin in data structure, update corresponding data analysis tools.
 **Some existing issues include**
 
 2. In cases where a high-eccentric binary system transitions from a binary to a hyperbolic orbit temporarily due to significant perturbations at a large separation, the BSE code may incorrectly identify it as an immediate merger, even though the binary system does not actually merge. It is essential to establish a more precise criterion for invoking binary evolution codes in such scenarios.

@@ -30,19 +30,20 @@
       return
       end
 
-      subroutine srand_parallel(seed) 
+      subroutine srand_parallel(seed, rank) 
       use iso_c_binding
       integer*8 seed
+      integer*4 rank
       
       interface 
-      subroutine srand_parallel_bind(seed) bind(c, 
+      subroutine srand_parallel_bind(seed, rank) bind(c, 
      &        name='srand_parallel')
       import 
-      implicit none
       integer(c_long_long) seed
+      integer(c_int) rank
       end subroutine
       end interface
 
-      call srand_parallel_bind(seed)
+      call srand_parallel_bind(seed, rank)
 
       end
