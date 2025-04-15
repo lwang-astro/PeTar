@@ -309,6 +309,10 @@ public:
         if (mode==0) 
             return NUMERIC_FLOAT_MAX;
 
+        // ignore center particle            
+        if (_particle.id == center.id) 
+            return NUMERIC_FLOAT_MAX;
+        
         auto& mass = _particle.mass;
         auto& pos = _particle.pos;
         auto& vel = _particle.vel;
@@ -317,33 +321,34 @@ public:
         Float G = ForceSoft::grav_const;
         Float G2 = G*G;
         
-        Float pos_rel[3], vel_rel[3];
+        Float pos_rel[3] = {pos[0], pos[1], pos[2]};
+        Float vel_rel[3] = {vel[0], vel[1], vel[2]};
 #ifdef GALPY
         // in galactic frame, required by galpy and used to calculate radial direction
         if (center.id>0) {
             // refer to center position and velocity
-            pos_rel[0] = pos[0] - center.pos[0];
-            pos_rel[1] = pos[1] - center.pos[1];
-            pos_rel[2] = pos[2] - center.pos[2];
+            pos_rel[0] -= center.pos[0];
+            pos_rel[1] -= center.pos[1];
+            pos_rel[2] -= center.pos[2];
 
-            vel_rel[0] = vel[0] - center.vel[0];
-            vel_rel[1] = vel[1] - center.vel[1];
-            vel_rel[2] = vel[2] - center.vel[2];
+            vel_rel[0] -= center.vel[0];
+            vel_rel[1] -= center.vel[1];
+            vel_rel[2] -= center.vel[2];
         }
         else {
             // refer to gas potential center position and velocity
             Float pot_pos[3];
             galpy_manager->getSetPos(galpy_gaspot_index, pot_pos);
-            pos_rel[0] = pos[0] + status->pcm.pos[0] - pot_pos[0];
-            pos_rel[1] = pos[1] + status->pcm.pos[1] - pot_pos[1];
-            pos_rel[2] = pos[2] + status->pcm.pos[2] - pot_pos[2];
+            pos_rel[0] += status->pcm.pos[0] - pot_pos[0];
+            pos_rel[1] += status->pcm.pos[1] - pot_pos[1];
+            pos_rel[2] += status->pcm.pos[2] - pot_pos[2];
             
             // in gas potential center reference
             Float pot_vel[3];
             galpy_manager->getSetVel(galpy_gaspot_index, pot_vel);
-            vel_rel[0] = vel[0] + status->pcm.vel[0] - pot_vel[0];
-            vel_rel[2] = vel[1] + status->pcm.vel[1] - pot_vel[1], 
-            vel_rel[3] = vel[2] + status->pcm.vel[2] - pot_vel[2];
+            vel_rel[0] += status->pcm.vel[0] - pot_vel[0];
+            vel_rel[2] += status->pcm.vel[1] - pot_vel[1], 
+            vel_rel[3] += status->pcm.vel[2] - pot_vel[2];
         }
 
         // in galactic frame, required by galpy and used to calculate radial direction
@@ -354,21 +359,13 @@ public:
 #else
         if (center.id>0) {
             // refer to center position and velocity
-            pos_rel[0] = pos[0] - center.pos[0];
-            pos_rel[1] = pos[1] - center.pos[1];
-            pos_rel[2] = pos[2] - center.pos[2];
+            pos_rel[0] -= center.pos[0];
+            pos_rel[1] -= center.pos[1];
+            pos_rel[2] -= center.pos[2];
 
-            vel_rel[0] = vel[0] - center.vel[0];
-            vel_rel[1] = vel[1] - center.vel[1];
-            vel_rel[2] = vel[2] - center.vel[2];
-        }
-        else {
-            pos_rel[0] = _particle.pos[0];
-            pos_rel[1] = _particle.pos[1];
-            pos_rel[2] = _particle.pos[2];
-            vel_rel[0] = _particle.vel[0];
-            vel_rel[1] = _particle.vel[1];
-            vel_rel[2] = _particle.vel[2];
+            vel_rel[0] -= center.vel[0];
+            vel_rel[1] -= center.vel[1];
+            vel_rel[2] -= center.vel[2];
         }
 #endif
         
