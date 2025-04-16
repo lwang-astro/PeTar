@@ -266,8 +266,10 @@ c-------------------------------------------------------------c
 * Force new NS or BH to have a one second period. 
 * 
             if(kw.eq.13.or.kw.eq.14)then
-               ospin = 2.0d+08
-               jspin = k3*rc*rc*mc*ospin
+* Tanikawa's prescription for BH spin
+!               ospin = 2.0d+08
+!               jspin = k3*rc*rc*mc*ospin
+               ospin = jspin/(k3*rc*rc*mc)
                CALL kick(kw,mass,mt,m2,ecc,sep,jorb,vkick,
      &              fbfac,fbtot,mco,ecs)
             endif
