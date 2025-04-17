@@ -432,9 +432,10 @@ public:
         else{
             // GDF force only in radial direction
             if (r_rel>0) {
-                _acc0[0] += c1*vel_rel[0]*pos_rel[0]/r_rel;
-                _acc0[1] += c1*vel_rel[1]*pos_rel[1]/r_rel;
-                _acc0[2] += c1*vel_rel[2]*pos_rel[2]/r_rel;
+                Float vel_r = (vel_rel[0]*pos_rel[0] + vel_rel[1]*pos_rel[1] + vel_rel[2]*pos_rel[2])/r_rel;
+                _acc0[0] += c1*vel_r*pos_rel[0]/r_rel;
+                _acc0[1] += c1*vel_r*pos_rel[1]/r_rel;
+                _acc0[2] += c1*vel_r*pos_rel[2]/r_rel;
             }
         }
 
@@ -456,9 +457,12 @@ public:
             else if (mode==2) {
                 if (r_rel>0) {
                     // GDF force derivative only in radial direction, assuming pos_rel is constant. For time-dependent pos_rel, additional term of time derivative of pos_rel should be added.
-                    _acc1[0] += ((c2+c3)*vel_rel[0] + c1*_acc0[0])*pos_rel[0]/r_rel;
-                    _acc1[1] += ((c2+c3)*vel_rel[1] + c1*_acc0[1])*pos_rel[1]/r_rel;
-                    _acc1[2] += ((c2+c3)*vel_rel[2] + c1*_acc0[2])*pos_rel[2]/r_rel;
+                    Float vel_r = (vel_rel[0]*pos_rel[0] + vel_rel[1]*pos_rel[1] + vel_rel[2]*pos_rel[2])/r_rel;
+                    Float a_r = (_acc1[0]*pos_rel[0] + _acc1[1]*pos_rel[1] + _acc1[2]*pos_rel[2])/r_rel;
+                    Float pos_fac = (a_r + (v2 - 2*vel_r*vel_r)/r_rel);
+                    _acc1[0] += ((c2+c3)*vel_r*pos_rel[0] + c1*(pos_fac*pos_rel[0] + vel_r*vel_rel[0]))/r_rel;
+                    _acc1[1] += ((c2+c3)*vel_r*pos_rel[1] + c1*(pos_fac*pos_rel[1] + vel_r*vel_rel[1]))/r_rel;
+                    _acc1[2] += ((c2+c3)*vel_r*pos_rel[2] + c1*(pos_fac*pos_rel[2] + vel_r*vel_rel[2]))/r_rel;
                 }
             }
         }
