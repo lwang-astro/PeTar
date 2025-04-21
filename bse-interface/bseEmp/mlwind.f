@@ -6,7 +6,7 @@
       implicit none
       integer kw,mdflag
       real*8 lum,r,mt,mc,rl,z
-      real*8 teff,teff1,dml,dms,dmt,p0,x,mew,vw,t40
+      real*8 teff,teff1,dml,dms,dmt,p0,p1,x,mew,vw,t40
       real*8 lum0,kap,flbv
       parameter(lum0=7.0d+04,kap=-0.5d0)
       parameter(flbv=1.5d0)
@@ -96,6 +96,16 @@
          x = 1.0d-5*r*SQRT(lum)
          if(lum.gt.6.0d+05.and.x.gt.1.d0)then
             dms = 1.0d-04*flbv
+* Vink+18 and Nakauchi+20 Michiko Fujii (2022/12/18)
+            if(teff.lt.7000.0)then
+                p1=-2.88d0+log10(mt/1000.0d0)-15.6d0*(log10(teff)-3.7d0)
+            else
+                p1 = -9.13d0 + 2.1d0*log10(mt) + 0.74d0*log10(z/0.02d0)
+            endif
+            dml = 10.0d0**p1
+            if(dml.gt.dms)then
+                dms = dml
+            endif
          else
 * Apply mass loss for hot, massive H-rich O/B stars following 
 * Vink et al. (2001, A&A, 369,574). 
