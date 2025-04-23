@@ -18,9 +18,9 @@ public:
     IOParams<double> merger_mass_loss_rate; //!< mass loss rate after merger
     IOParams<double> merger_radius_amplifier_rate; //!< radius amplifier rate
     IOParams<double> merger_time_delay; //!< time delay for merger to increase mass and change radius
-    IOParams<double> equalibrium_mass; //!< equilibrium mass
+    IOParams<double> target_mass; //!< equilibrium mass
     IOParams<double> initial_mass; //!< initial mass
-    IOParams<double> growth_time; //!< growth time to equalibrium mass    
+    IOParams<double> growth_time; //!< growth time to target mass    
 
     bool print_flag; //!< print flag
     //! Constructor
@@ -28,8 +28,8 @@ public:
                               merger_mass_loss_rate(input_par_store, 0.0, "merger-mass-loss-rate", "mass loss rate for merger"),
                               merger_radius_amplifier_rate(input_par_store, 1.0, "merger-radius-rate", "particle radius amplifier rate after merger"),
                               merger_time_delay(input_par_store, 0.0, "merger-time-delay", "time delay for merger to increase mass"),
-                              equalibrium_mass(input_par_store, 0.0, "equalibrium-mass", "mass for star approaching equilibrium"),
-                              initial_mass(input_par_store, 0.0, "initial-mass", "initial mass for star growth"),
+                              target_mass(input_par_store, 0.0, "target-mass", "mass for star approaching equilibrium"),
+                              initial_mass(input_par_store, 0.0, "init-mass", "initial mass for star growth"),
                               growth_time(input_par_store, 0.0, "growth-time", "time scale for mass growth"),
                               print_flag(false) {}
 
@@ -46,7 +46,7 @@ public:
             {merger_mass_loss_rate.key, required_argument, &merger_flag, 0},  
             {merger_radius_amplifier_rate.key, required_argument, &merger_flag, 1},  
             {merger_time_delay.key, required_argument, &merger_flag, 2},  
-            {equalibrium_mass.key, required_argument, &merger_flag, 3},
+            {target_mass.key, required_argument, &merger_flag, 3},
             {initial_mass.key, required_argument, &merger_flag, 4},
             {growth_time.key, required_argument, &merger_flag, 5},
             {"help",      no_argument,       0, 'h'},
@@ -77,8 +77,8 @@ public:
                     opt_used+=2;
                     break;
                 case 3:
-                    equalibrium_mass.value = atof(optarg);
-                    if(print_flag) equalibrium_mass.print(std::cout);
+                    target_mass.value = atof(optarg);
+                    if(print_flag) target_mass.print(std::cout);
                     opt_used+=2;
                     break;
                 case 4:
@@ -120,12 +120,12 @@ public:
     Float merger_mass_loss_rate; //!< mass loss rate
     Float merger_radius_amplifier_rate; //!< radius amplifier
     Float merger_time_delay; //!< time delay for merger to increase mass
-    Float equalibrium_mass; //!< equilibrium mass
+    Float target_mass; //!< equilibrium mass
     Float initial_mass; //!< initial mass
     Float growth_time; //!< growth timescale
     
     //! Constructor
-    DiskStarMergerManager(): merger_mass_loss_rate(0.0), merger_radius_amplifier_rate(1.0), merger_time_delay(0.0), equalibrium_mass(0.0), initial_mass(0.0) {}
+    DiskStarMergerManager(): merger_mass_loss_rate(0.0), merger_radius_amplifier_rate(1.0), merger_time_delay(0.0), target_mass(0.0), initial_mass(0.0) {}
 
     //! (Necessary) check whether publicly initialized parameters are correctly set
     /*! \return true: all parmeters are correct. In this case no parameters, return true;
@@ -134,7 +134,7 @@ public:
         assert(merger_mass_loss_rate>=0.0);
         assert(merger_radius_amplifier_rate>=0.0);
         assert(merger_time_delay>=0.0);
-        assert(equalibrium_mass>=0.0);
+        assert(target_mass>=0.0);
         assert(initial_mass>=0.0);
         assert(growth_time>=0.0);
         return true;
@@ -145,7 +145,7 @@ public:
         _fout<<"merger_mass_loss_rate : "<<merger_mass_loss_rate<<std::endl
              <<"merger_radius_amplifier_rate : "<<merger_radius_amplifier_rate<<std::endl
              <<"merger_time_delay : "<<merger_time_delay<<std::endl
-             <<"equalibrium_mass : "<<equalibrium_mass<<std::endl
+             <<"target_mass : "<<target_mass<<std::endl
              <<"initial_mass : "<<initial_mass<<std::endl
              <<"growth_time : "<<growth_time<<std::endl;
     }
@@ -159,7 +159,7 @@ public:
         merger_mass_loss_rate = _input.merger_mass_loss_rate.value;
         merger_radius_amplifier_rate = _input.merger_radius_amplifier_rate.value;
         merger_time_delay = _input.merger_time_delay.value;
-        equalibrium_mass = _input.equalibrium_mass.value;
+        target_mass = _input.target_mass.value;
         initial_mass = _input.initial_mass.value;
         growth_time = _input.growth_time.value;
     }
@@ -193,7 +193,7 @@ public:
     }
 
     //! calculate mass change
-    /*! Calculate mass change, for mass < equalibrium mass, increase mass; for mass > equilibrium mass, decrease mass
+    /*! Calculate mass change, for mass < target mass, increase mass; for mass > equilibrium mass, decrease mass
         Increase mass formula:  
         dM/dt = c M^2,   c = (Me-Mi)/(2 Me Mi tf),   M(t) = Mi/( 1 - (Me-Mi)/(Me tf) t)
         Mi: initial mass; 
@@ -208,10 +208,10 @@ public:
     int calcMassChange(TParticle* p, const Float& time) {
         if (p->star.type==2) {
             Float dt = time - p->star.growth_time_start;
-            if (dt>0 && p->mass < equalibrium_mass) {
-                Float new_mass = initial_mass/(1 - (equalibrium_mass-initial_mass)/(equalibrium_mass*growth_time)*dt);
-                if (new_mass>equalibrium_mass) {
-                    new_mass = equalibrium_mass;
+            if (dt>0 && p->mass < target_mass) {
+                Float new_mass = initial_mass/(1 - (target_mass-initial_mass)/(target_mass*growth_time)*dt);
+                if (new_mass>target_mass) {
+                    new_mass = target_mass;
                 }
                 p->dm += new_mass - p->mass;
                 p->mass = new_mass;
@@ -230,7 +230,7 @@ public:
     long long int type; //!< type of star; 0: black hole; 1: star no growth; 2: star with growth
     long long int merger_star_times; //!< times of merger with star
     long long int merger_bh_times; //!< times of merger with black hole
-    Float growth_time_start; //!< time delay for mass approach equalibrium
+    Float growth_time_start; //!< time delay for mass approach target
     Float last_merger_time; //!< last merger time
 
     //! Constructor
@@ -245,7 +245,7 @@ public:
     //! initial parameters for disk star merger
     /*!
       @param[in] _type: type of star; 0: black hole; 1: star no growth; 2: star with growth
-      @param[in] _growth_time_start: time delay for mass approach equalibrium
+      @param[in] _growth_time_start: time delay for mass approach target
      */
     void initial(const long long int _type, const Float& _growth_time_start=0.0) {
         type = _type;
@@ -316,7 +316,7 @@ public:
         _fout<<std::setw(_offset)<<" "<<++counter<<". type: type of star; 0: black hole; 1: star no growth; 2: star with growth\n";
         _fout<<std::setw(_offset)<<" "<<++counter<<". merger_star_times: times of merger with star\n";
         _fout<<std::setw(_offset)<<" "<<++counter<<". merger_bh_times: times of merger with black hole\n";
-        _fout<<std::setw(_offset)<<" "<<++counter<<". growth_time_start: time delay for mass approach equalibrium\n";
+        _fout<<std::setw(_offset)<<" "<<++counter<<". growth_time_start: time delay for mass approach target\n";
         _fout<<std::setw(_offset)<<" "<<++counter<<". last_merger_time: last merger time\n";
         return counter;
     }
