@@ -3,6 +3,7 @@ import collections
 from scipy import spatial as sp
 from .base import *
 from .bse import *
+from .dsm import *
 from .functions import *
 
 G_MSUN_PC_MYR=0.00449830997959438 # Msun, pc, myr
@@ -354,13 +355,15 @@ class BaseParticle(SimpleParticle):
         Members inherited from SimpleParticle: mass (1D), pos (2D,3), *pos_high (2D,3) vel (2D,3) 
             see help(petar.SimpleParticle)
         binary_state (1D): binary interruption state
-        if (keyword argument 'interrupt_mode' == 'base', 'bse', 'bseEmp', 'mobse'):
+        if (keyword argument 'interrupt_mode' == 'base', 'bse', 'bseEmp', 'mobse', 'dsm'):
             radius:        (1D): radius for merger checker
             dm:            (1D): mass loss
             time_record    (1D): last time of interruption check
             time_interrupt (1D): next interruption time
         if (keyword argument 'interrupt_mode' == 'bse', 'bseEmp', 'mobse'):
             star  (SSEStarParameter): BSE based stellar evolution parameters
+        if (keyword argument 'interrupt_mode' == 'dsm'):
+            star  (DSMStarParameter): Disk star merger parameters
     """
 
     def __init__ (self, _dat=None, _offset=int(0), _append=False, **kwargs):
@@ -370,7 +373,7 @@ class BaseParticle(SimpleParticle):
         ----------
         keyword arguments:
             interrupt_mode: string (none)
-               PeTar interrupt mode (set in configure): base, bse, mobse, none
+               PeTar interrupt mode (set in configure): base, bse, mobse, none, dsm
                This option indicates whether columns of stellar evolution exist
             use_mpfrc: bool (False)
                 if true, add three columns of pos_high indicating the high-precision parts of position
@@ -389,6 +392,8 @@ class BaseParticle(SimpleParticle):
                 keys = keys_bstat+keys_se
             elif ('bse' in kwargs['interrupt_mode']):
                 keys = keys_bstat+keys_se+[['star',SSEStarParameter]]
+            elif (kwargs['interrupt_mode']=='dsm'):
+                keys = keys_bstat+keys_se+[['star',DSMStarParameter]]
             
         SimpleParticle.__init__(self, _dat, _offset, _append, **kwargs)
         DictNpArrayMix.__init__(self, keys, _dat, _offset+self.ncols, True, **kwargs)

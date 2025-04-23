@@ -833,14 +833,10 @@ public:
         
 #endif // BSE_BASE
 #ifdef DISK_STAR_MERGER
-        if (disk_star_merger_manager.mass_change_rate!=0.0) {
-           if (_p.time_interrupt>_time_end && _p.getBinaryInterruptState() != BinaryInterruptState::delaycollision) {
-                // time_interrupt is used to determine when mass change stops, if not reach, call the mass change function;
-                disk_star_merger_manager.calcMassChange(&_p, _time_end);
-
-                // only mass change, modify_flag = 1            
-                return 1;            
-            }
+        if (_p.getBinaryInterruptState() != BinaryInterruptState::delaycollision) {
+            // call mass change function
+            int modify_flag = disk_star_merger_manager.calcMassChange(&_p, _time_end);
+            return modify_flag;
         }
 #endif
 
@@ -871,7 +867,7 @@ public:
                     evolve_single_flag = (stellar_evolution_option>0);
 #endif
 #ifdef DISK_STAR_MERGER
-                    evolve_single_flag = (disk_star_merger_manager.mass_change_rate!=0.0);
+                    evolve_single_flag = true;
 #endif
                     if (evolve_single_flag) {
                         modify_branch[k] = modifyOneParticle(*_bin.getMember(k), _bin.getMember(k)->time_record, _bin_interrupt.time_now);
@@ -897,15 +893,13 @@ public:
         else {
 
 #ifdef DISK_STAR_MERGER
-            if (disk_star_merger_manager.mass_change_rate!=0.0) {
-                for (int k=0; k<2; k++) {
-                    modify_branch[k] = modifyOneParticle(*_bin.getMember(k), _bin.getMember(k)->time_record, _bin_interrupt.time_now);
-                    modify_return = std::max(modify_return, modify_branch[k]);
-                    // if status not set, set to change
-                    if (modify_branch[k]>0&&_bin_interrupt.status == AR::InterruptStatus::none) {
-                        _bin_interrupt.status = AR::InterruptStatus::change;
-                        _bin_interrupt.setBinaryTreeAddress(&_bin);
-                    }
+            for (int k=0; k<2; k++) {
+                modify_branch[k] = modifyOneParticle(*_bin.getMember(k), _bin.getMember(k)->time_record, _bin_interrupt.time_now);
+                modify_return = std::max(modify_return, modify_branch[k]);
+                // if status not set, set to change
+                if (modify_branch[k]>0&&_bin_interrupt.status == AR::InterruptStatus::none) {
+                    _bin_interrupt.status = AR::InterruptStatus::change;
+                    _bin_interrupt.setBinaryTreeAddress(&_bin);
                 }
             }
 #endif  

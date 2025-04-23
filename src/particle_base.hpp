@@ -122,6 +122,7 @@ public:
 #if (defined BSE_BASE) || (defined DISK_STAR_MERGER)
     StarParameter star; // SSE/BSE based package / disk star merger stellar parameters
 #endif
+#endif
 
     //! save pair id in binary_state with shift bit size of BINARY_STATE_ID_SHIFT
     void setBinaryPairID(const PS::S64 _id) {

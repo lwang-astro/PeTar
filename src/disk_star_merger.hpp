@@ -5,6 +5,7 @@
 #include <string>
 #include <getopt.h>
 #include "io.hpp"
+#include <cassert>
 #include "Common/Float.h"
 
 //! IO parameters manager for external perturbation in hard integration
@@ -130,12 +131,12 @@ public:
     /*! \return true: all parmeters are correct. In this case no parameters, return true;
      */
     bool checkParams() {
-        ASSERT(merger_mass_loss_rate>=0.0);
-        ASSERT(merger_radius_amplifier_rate>=0.0);
-        ASSERT(merger_time_delay>=0.0);
-        ASSERT(equalibrium_mass>=0.0);
-        ASSERT(initial_mass>=0.0);
-        ASSERT(growth_time>=0.0);
+        assert(merger_mass_loss_rate>=0.0);
+        assert(merger_radius_amplifier_rate>=0.0);
+        assert(merger_time_delay>=0.0);
+        assert(equalibrium_mass>=0.0);
+        assert(initial_mass>=0.0);
+        assert(growth_time>=0.0);
         return true;
     }
 
@@ -200,24 +201,25 @@ public:
         tf: growth timescale;
         @param[in] p: particle
         @param[in] time: current time
-        @return new mass
+
+        \return 0: no change; 1: modified mass
         */
     template <class TParticle>
-    void calcMassChange(TParticle* p, const Float& time) {
-        Float new_mass = p->mass;
-        if (p->stat.type==2) {
-            Float dt = time - p->time_record;
-            if (dt>0) {
-                if (p->mass < equalibrium_mass) {
-                    new_mass = initial_mass/(1 - (equalibrium_mass-initial_mass)/(equalibrium_mass*growth_time)*dt);
-                    if (new_mass>equalibrium_mass) {
-                        new_mass = equalibrium_mass;
-                    }
+    int calcMassChange(TParticle* p, const Float& time) {
+        if (p->star.type==2) {
+            Float dt = time - p->star.growth_time_start;
+            if (dt>0 && p->mass < equalibrium_mass) {
+                Float new_mass = initial_mass/(1 - (equalibrium_mass-initial_mass)/(equalibrium_mass*growth_time)*dt);
+                if (new_mass>equalibrium_mass) {
+                    new_mass = equalibrium_mass;
                 }
+                p->dm += new_mass - p->mass;
+                p->mass = new_mass;
+
+                return 1;
             }
-            p->dm += new_mass - p->mass;
-            p->mass = new_mass;
         }
+        return 0;
     }
     
 };
@@ -225,9 +227,9 @@ public:
 //! class for disk star merger parameters of individual stars
 class StarParameter{
 public:
-    int type; //!< type of star; 0: black hole; 1: star no growth; 2: star with growth
-    int merger_star_times; //!< times of merger with star
-    int merger_bh_times; //!< times of merger with black hole
+    long long int type; //!< type of star; 0: black hole; 1: star no growth; 2: star with growth
+    long long int merger_star_times; //!< times of merger with star
+    long long int merger_bh_times; //!< times of merger with black hole
     Float growth_time_start; //!< time delay for mass approach equalibrium
     Float last_merger_time; //!< last merger time
 
@@ -245,7 +247,7 @@ public:
       @param[in] _type: type of star; 0: black hole; 1: star no growth; 2: star with growth
       @param[in] _growth_time_start: time delay for mass approach equalibrium
      */
-    void initial(const int _type, const Float& _growth_time_start=0.0) {
+    void initial(const long long int _type, const Float& _growth_time_start=0.0) {
         type = _type;
         merger_star_times = 0;
         merger_bh_times = 0;
@@ -253,6 +255,70 @@ public:
         last_merger_time = 0;
     }
 
-        
+    //! write class data with ASCII format
+    void writeAscii(FILE* fp) const{
+        fprintf(fp, "%lld %lld %lld %26.17e %26.17e\n", type, merger_star_times, merger_bh_times, growth_time_start, last_merger_time);
+    }
 
+    //! read class data with ASCII format
+    void readAscii(FILE* fp) {
+        int rcount=fscanf(fp, "%lld %lld %lld %lf %lf ", 
+                          &type, &merger_star_times, &merger_bh_times, &growth_time_start, &last_merger_time);
+        if(rcount<5) {
+            std::cerr<<"Error: Data reading fails! requiring data number is 5, only obtain "<<rcount<<".\n";
+            abort();
+        }
+    }
+
+    //! for print in one line
+    void print(std::ostream & fout) const{
+        fout<<" type= "<<type
+            <<" merger_star_times= "<<merger_star_times
+            <<" merger_bh_times= "<<merger_bh_times
+            <<" growth_time_start= "<<growth_time_start
+            <<" last_merger_time= "<<last_merger_time;
+    }
+
+    //! print titles of class members using column style
+    /*! print titles of class members in one line for column style
+      @param[out] _fout: std::ostream output object
+      @param[in] _width: print width (defaulted 20)
+     */
+    static void printColumnTitle(std::ostream & _fout, const int _width=20) {
+        _fout<<std::setw(_width)<<"type"
+             <<std::setw(_width)<<"merger_star_times"
+             <<std::setw(_width)<<"merger_bh_times"
+             <<std::setw(_width)<<"growth_time_start"
+             <<std::setw(_width)<<"last_merger_time";
+    }
+
+    //! print data of class members using column style
+    /*! print data of class members in one line for column style. Notice no newline is printed at the end
+      @param[out] _fout: std::ostream output object
+      @param[in] _width: print width (defaulted 20)
+     */
+    void printColumn(std::ostream & _fout, const int _width=20) const{
+        _fout<<std::setw(_width)<<type
+             <<std::setw(_width)<<merger_star_times
+             <<std::setw(_width)<<merger_bh_times
+             <<std::setw(_width)<<growth_time_start
+             <<std::setw(_width)<<last_merger_time;
+    }
+
+    //! print column title with meaning (each line for one column)
+    /*! @param[out] _fout: std::ostream output object
+      @param[in] _counter: offset of the number counter for each line to indicate the column index (defaulted 0)
+      @param[in] _offset: the printing whitespace offset for each line (defaulted 0)
+      \return: the total counter of columns
+     */
+    static int printTitleWithMeaning(std::ostream & _fout, const int _counter=0, const int _offset=0) {
+        int counter = _counter;
+        _fout<<std::setw(_offset)<<" "<<++counter<<". type: type of star; 0: black hole; 1: star no growth; 2: star with growth\n";
+        _fout<<std::setw(_offset)<<" "<<++counter<<". merger_star_times: times of merger with star\n";
+        _fout<<std::setw(_offset)<<" "<<++counter<<". merger_bh_times: times of merger with black hole\n";
+        _fout<<std::setw(_offset)<<" "<<++counter<<". growth_time_start: time delay for mass approach equalibrium\n";
+        _fout<<std::setw(_offset)<<" "<<++counter<<". last_merger_time: last merger time\n";
+        return counter;
+    }
+    
 };
