@@ -144,7 +144,7 @@ AGAMA_PATH = ../Agama
 FLAGS1 := $(shell grep -e LINK_FLAGS_ALL $(AGAMA_PATH)/Makefile.local | sed 's/^.*= //g' | sed 's!extras/lib!$(AGAMA_PATH)/extras/lib!g')
 FLAGS2 := $(shell grep -e LINK_FLAGS_LIB_AND_EXE_STATIC $(AGAMA_PATH)/Makefile.local | sed 's/^.*= //g' | sed 's!extras/lib!$(AGAMA_PATH)/extras/lib!g')
 CXXLIBS += $(AGAMA_PATH)/agama.a $(FLAGS1) $(FLAGS2)
-PETAR_INCLUDE += -I$(AGAMA_PATH)/src
+PETAR_INCLUDE += -I$(AGAMA_PATH)/src -I./agama-interface
 endif
 
 ifeq ($(ext_hard_mode), gasdrag)

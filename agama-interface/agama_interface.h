@@ -7,8 +7,9 @@
 #include <getopt.h>
 #include "../src/io.hpp"
 #include "../src/astro_units.hpp"
+#include "potential_factory.h"
 
-//! IO parameters for Galpy manager
+//! IO parameters for Agama manager
 class IOParamsAgama{
 public:
     IOParamsContainer input_par_store;
@@ -20,7 +21,7 @@ public:
 
     IOParamsAgama(): input_par_store(),
                      config_filename(input_par_store, "__NONE__", "agama-conf-file", "A configure file of agama potential"),
-                     //unit_set(input_par_store, "unscale", "galpy-units", "Units conversion set: 'unscale': no conversion; all scale factors are 1.0; 'bovy': radial unit: 8 kpc; velocity unit: 220 km/s"),
+                     //unit_set(input_par_store, "unscale", "agama-units", "Units conversion set: 'unscale': no conversion; all scale factors are 1.0; 'bovy': radial unit: 8 kpc; velocity unit: 220 km/s"),
                      rscale(input_par_store, 1.0, "agama-rscale", "Radius scale factor from unit of the input particle data (IN) to Agama distance unit (1.0)"),
                      //tscale(input_par_store, 1.0, "agama-tscale", "Time scale factor (rscale/vscale) from unit of the input particle data (IN) to Agama time (1.0)"),
                      vscale(input_par_store, 1.0, "agama-vscale", "Velocity scale factor from unit of the input particle data (IN) to Agama velocity unit (1.0)"),
@@ -94,10 +95,10 @@ public:
             case 'p':
                 fname_par = optarg;
                 if(print_flag) {
-                    std::string fgalpy_par = fname_par+".galpy"; 
+                    std::string fagama_par = fname_par+".agama"; 
                     FILE* fpar_in;
-                    if( (fpar_in = fopen(fgalpy_par.c_str(),"r")) == NULL) {
-                        fprintf(stderr,"Error: Cannot open file %s.\n", fgalpy_par.c_str());
+                    if( (fpar_in = fopen(fagama_par.c_str(),"r")) == NULL) {
+                        fprintf(stderr,"Error: Cannot open file %s.\n", fagama_par.c_str());
                         abort();
                     }
                     input_par_store.readAscii(fpar_in);
@@ -111,10 +112,9 @@ public:
                 break;
             case 'h':
                 if(print_flag){
-                    std::cout<<"Galpy options:"<<std::endl;
+                    std::cout<<"Agama options:"<<std::endl;
                     input_par_store.printHelp(std::cout, 2, 10, 23);
-                    std::cout<<"***PS: use petar.galpy.help to check how to setup --galpy-type-arg and --galpy-conf-file."
-                             <<std::endl;
+                    std::cout<<std::endl;
                 }
                 return -1;
             case '?':
@@ -124,10 +124,82 @@ public:
                 break;
             }
         
-        if(print_flag) std::cout<<"----- Finish reading input options of Galpy -----\n";
+        if(print_flag) std::cout<<"----- Finish reading input options of Agama -----\n";
 
         return opt_used;
     }
 
 };
 
+//! A class to manager the API to Agama
+class AgamaManager{
+public:
+    double rscale;
+    double vscale;
+    double tscale;
+    double fscale;
+    double pscale;
+    double gmscale;
+    std::string conf_fname;
+    potential::PtrPotential agama_potential;
+
+    AgamaManager(): rscale(1.0), 
+                    vscale(1.0), 
+                    tscale(1.0), 
+                    fscale(1.0), 
+                    pscale(1.0), 
+                    gmscale(1.0), 
+                    conf_fname("__NONE__"),
+                    agama_potential() {}
+
+    //! print reference to cite
+    static void printReference(std::ostream & fout, const int offset=4) {
+        for (int i=0; i<offset; i++) fout<<" ";
+            fout<<"Agama: Vasiliev E., 2019, MNRAS, 482, 1525"<<std::endl;
+    }    
+    //！
+
+    //! initialization function
+    /*!
+        @param[in] _input: input parameters
+        @param[in] _time: current system time
+        @param[in] _print_flag: if true, printing information to std::cout
+    */
+    void initial(const IOParamsAgama& _input, const double _time, const bool _print_flag=false) {
+        // unit scale
+        rscale = _input.rscale.value;
+        vscale = _input.vscale.value;
+        tscale = rscale/vscale;
+        fscale = vscale*vscale/rscale;
+        pscale = vscale*vscale;
+        gmscale = pscale*rscale; 
+        conf_fname = _input.config_filename.value;
+
+        agama_potential = potential::readPotential(conf_fname.c_str());
+        //    units::ExternalUnits(
+        //        units::InternalUnits(units::Kpc, units::Kpc/units::kms),
+        //        units::Kpc, units::Kpc/units::kms, units::Msun*input_parameters.gravitational_constant.value));
+    }
+
+    //! calculate acceleration and potential at give position
+    /*!
+      @param[out] acc: [3] acceleration to return
+      @param[out] pot: potential to return 
+      @param[in] _time: time in input unit
+      @param[in] gm: G*mass of particles [input unit]
+      @param[in] pos_g: position of particles in the galactic frame [input unit]
+      @param[in] pos_l: position of particles in the particle system frame [input unit]
+     */
+    void calcAccPot(double* acc, double& pot, const double _time, const double gm, const double* pos_g, const double* pos_l) {    
+        pot = 0;
+        acc[0] = acc[1] = acc[2] = 0.0;
+
+        coord::GradCar grad;
+        agama_potential->eval(coord::PosCar(pos_g[0]*rscale, pos_g[1]*rscale, pos_g[2]*rscale), &pot, &grad, NULL, _time*tscale);
+        acc[0] = -grad.dx/fscale;
+        acc[1] = -grad.dy/fscale;
+        acc[2] = -grad.dz/fscale;
+        pot /= pscale;
+    }
+
+};

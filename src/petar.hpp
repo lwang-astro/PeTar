@@ -89,7 +89,7 @@ int MPI_Irecv(void* buffer, int count, MPI_Datatype datatype, int dest, int tag,
 #include"rand_interface.hpp"
 #endif
 #ifdef AGAMA
-#include "potential_factory.h"
+#include "agama_interface.h"
 #endif
 
 //! IO parameters for Petar
@@ -680,6 +680,9 @@ public:
 #ifdef GALPY
     IOParamsGalpy galpy_parameters;
 #endif
+#ifdef AGAMA
+    IOParamsAgama agama_parameters;
+#endif
 #ifdef EXTERNAL_HARD
     IOParamsExternalHard external_hard_parameters;
 #endif
@@ -734,7 +737,7 @@ public:
     GalpyManager galpy_manager;
 #endif
 #ifdef AGAMA
-    potential::PtrPotential agama_potential;
+    AgamaManager agama_manager;
 #endif
 
     // hard integrator
@@ -780,6 +783,9 @@ public:
 #ifdef GALPY
         galpy_parameters(),
 #endif
+#ifdef AGAMA
+        agama_parameters(),
+#endif
 #ifdef EXTERNAL_HARD
         external_hard_parameters(),
 #endif
@@ -798,6 +804,9 @@ public:
 #endif
 #ifdef GALPY
         galpy_manager(),
+#endif
+#ifdef AGAMA
+        agama_manager(),
 #endif
         hard_manager(), system_hard_one_cluster(), system_hard_isolated(), 
 #ifdef PARTICLE_SIMULATOR_MPI_PARALLEL
@@ -1106,7 +1115,9 @@ public:
 
         galpy_manager.resetPotAcc();
         galpy_manager.calcMovePotAccFromPot(stat.time, &stat.pcm.pos[0]);
+#endif
 
+#if (defined GALPY || defined AGAMA)
         PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
 #pragma omp parallel for
         for (int i=0; i<n_loc_all; i++) {
@@ -1120,7 +1131,11 @@ public:
             auto& pos_origin = pi.pos;
             PS::F64vec pos_cluster = pi.pos - stat.pcm.pos;
 #endif
+#ifdef GALPY
             galpy_manager.calcAccPot(&acc.x, pot, stat.time, input_parameters.gravitational_constant.value*pi.mass, &pos_origin[0], &pos_cluster[0]);
+#elif AGAMA
+            agama_manager.calcAccPot(&acc.x, pot, stat.time, input_parameters.gravitational_constant.value*pi.mass, &pos_origin[0], &pos_cluster[0]);
+#endif
             assert(!std::isinf(acc[0]));
             assert(!std::isnan(acc[0]));
             assert(!std::isinf(pot));
@@ -1134,31 +1149,7 @@ public:
             pi.pot_ext = pot;
 #endif
         }
-#endif //GALPY
-
-#ifdef AGAMA
-        PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
-#pragma omp parallel for
-        for (int i=0; i<n_loc_all; i++) {
-            auto& pi = system_soft[i];
-            double pot;
-            coord::GradCar grad;
-#ifdef RECORD_CM_IN_HEADER
-            PS::F64vec pos_correct=pi.pos + stat.pcm.pos;
-            agama_potential->eval(coord::PosCar(pos_correct[0], pos_correct[1], pos_correct[2]), &pot, &grad, NULL, stat.time);
-#else
-            agama_potential->eval(coord::PosCar(pi.pos[0], pi.pos[1], pi.pos[2]), &pot, &grad, NULL, stat.time);
-#endif
-            pi.acc[0] -= grad.dx;
-            pi.acc[1] -= grad.dy;
-            pi.acc[2] -= grad.dz;
-            pi.pot_tot += pot;
-            pi.pot_soft += pot;
-#ifdef EXTERNAL_POT_IN_PTCL
-            pi.pot_ext = pot;
-#endif
-        }
-#endif  // AGAMA
+#endif //GALPY||AGAMA
 
 #ifdef EXTERNAL_HARD
 #ifndef GALPY
@@ -1181,7 +1172,7 @@ public:
         profile.other.start();
 #endif
 
-#ifdef GALPY
+#if (defined GALPY || defined AGAMA)
         PS::S64 n_loc_all = system_soft.getNumberOfParticleLocal();
 
 #pragma omp parallel for
@@ -1218,7 +1209,11 @@ public:
             pos_cluster_box[5][2] -= dr;
 
             for (int k=0; k<6; k++) {
+#ifdef GALPY            
                 galpy_manager.calcAccPot(&(acc_box[k].x), pot, stat.time, input_parameters.gravitational_constant.value*pi.mass, &pos_origin_box[k][0], &pos_cluster_box[k][0]);
+#elif AGAMA
+                agama_manager.calcAccPot(&(acc_box[k].x), pot, stat.time, input_parameters.gravitational_constant.value*pi.mass, &pos_origin_box[k][0], &pos_cluster_box[k][0]);
+#endif
                 acc2_box[k] = acc_box[k]*acc_box[k];
             }
                 
@@ -1240,13 +1235,17 @@ public:
     void correctPtclVelCM(const PS::F64& _dt) {
         PS::F64vec dv=PS::F64vec(0.0);
  
-#ifdef GALPY
+#if (defined GALPY || defined AGAMA)
         PS::F64vec acc;
         PS::F64 pot;
         // evaluate center of mass acceleration
         PS::F64vec pos_zero=PS::F64vec(0.0);
         // set zero mass to avoid duplicate anti force to potential set
+#ifdef GALPY
         galpy_manager.calcAccPot(&acc[0], pot, stat.time, 0, &stat.pcm.pos[0], &pos_zero[0]);
+#elif AGAMA
+        agama_manager.calcAccPot(&acc[0], pot, stat.time, 0, &stat.pcm.pos[0], &pos_zero[0]);
+#endif
         dv = acc*_dt;
 #endif        
 
@@ -2471,6 +2470,9 @@ public:
 #ifdef GALPY
         GalpyManager::printReference(fout);
 #endif
+#ifdef AGAMA
+        AgamaManager::printReference(fout);
+#endif
         fout<<" Copyright (C) 2017\n"
             <<"    Long Wang, Masaki Iwasawa, Keigo Nitadori, Junichiro Makino and many others\n";
         fout<<"====================================="
@@ -2638,10 +2640,9 @@ public:
         external_hard_parameters.read(argc,argv);
 #endif
 #ifdef AGAMA
-        agama_potential = potential::readPotential("agama_potential.ini",
-            units::ExternalUnits(
-                units::InternalUnits(units::Kpc, units::Kpc/units::kms),
-                units::Kpc, units::Kpc/units::kms, units::Msun*input_parameters.gravitational_constant.value));
+        if (my_rank==0) agama_parameters.print_flag=true;
+        else agama_parameters.print_flag=false;
+        agama_parameters.read(argc,argv);
 #endif
 
         // help case, return directly
@@ -3112,6 +3113,10 @@ public:
             bse_parameters.mscale.value = 1.0; // Msun
             bse_parameters.vscale.value = PCMYR_TO_KMS;
 #endif
+#ifdef AGAMA
+            agama_parameters.rscale.value = 0.001; // kpc
+            agama_parameters.vscale.value = PCMYR_TO_KMS;
+#endif
             if(print_flag) {
                 std::cout<<"----- Unit set 1: Msun, pc, Myr -----\n"
                          <<"gravitational_constant = "<<input_parameters.gravitational_constant.value<<" pc^3/(Msun*Myr^2)\n";
@@ -3121,6 +3126,11 @@ public:
                          <<" mscale = "<<bse_parameters.mscale.value<<"  Msun / Msun\n"
                          <<" rscale = "<<bse_parameters.rscale.value<<"  Rsun / pc\n"
                          <<" vscale = "<<bse_parameters.vscale.value<<"  [km/s] / [pc/Myr]\n";
+#endif
+#ifdef AGAMA
+                std::cout<<"----- Unit conversion for Agama ----- \n"
+                         <<" rscale = "<<agama_parameters.rscale.value<<"  kpc / pc\n"
+                         <<" vscale = "<<agama_parameters.vscale.value<<"  [km/s] / [pc/Myr]\n";
 #endif
 
             }
@@ -3398,6 +3408,10 @@ public:
         std::string galpy_conf_filename = input_parameters.fname_inp.value+".galpy";
         galpy_manager.initial(galpy_parameters, stat.time, galpy_conf_filename, restart_flag, print_flag);
 #endif
+
+#ifdef AGAMA
+        agama_manager.initial(agama_parameters, stat.time, print_flag);
+#endif
     
         // set system hard paramters
         hard_manager.setDtRange(input_parameters.dt_soft.value/input_parameters.dt_limit_hard_factor.value, input_parameters.dt_min_hermite_index.value);
@@ -3554,8 +3568,20 @@ public:
             fclose(fpar_out);
 #endif
 
+#ifdef AGAMA
+            // save agama parameters
+            std::string fagama_par = input_parameters.fname_par.value + ".agama";
+            if (print_flag) std::cout<<"Save agama_parameters to file "<<fagama_par<<std::endl;
+            if( (fpar_out = fopen(fagama_par.c_str(),"w")) == NULL) {
+                fprintf(stderr,"Error: Cannot open file %s.\n", fagama_par.c_str());
+                abort();
+            }
+            agama_parameters.input_par_store.writeAscii(fpar_out);
+            fclose(fpar_out);
+#endif
+
 #ifdef EXTERNAL_HARD
-            // save galpy parameters
+            // save exthard parameters
             std::string fexthard_par = input_parameters.fname_par.value + ".exthard";
             if (print_flag) std::cout<<"Save external_hard_parameters to file "<<fexthard_par<<std::endl;
             if( (fpar_out = fopen(fexthard_par.c_str(),"w")) == NULL) {
