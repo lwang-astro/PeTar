@@ -27,8 +27,9 @@ public:
     void clear() {
         NB::clear();
         if (soft_pert!=NULL) {
-            ASSERT(soft_pert->group_id>0.0);
-            soft_pert->group_id = -soft_pert->group_id;
+            // suppress the group_id check since it may cause seg fault if the data linked to soft_pert is already deleted
+            //ASSERT(soft_pert->group_id>0.0);
+            //soft_pert->group_id = -soft_pert->group_id;
             soft_pert = NULL;
         }
     }
@@ -44,6 +45,7 @@ public:
         return true;
     }
 
+    // Suppress this part of code since it is not used anymore
     //! find close tidal tensor and if (-) tensor group id is the same as input, initial tidal tensor c.m.
     /*! if the tidal tensor is already in used (group_id>=0), copy a new one after _n_tt
       @param[in,out] _tt: tensor array
@@ -53,7 +55,7 @@ public:
       @param[in] _gid: group id (not necessary integer)
       \return the tidal tensor index, if no match, return -1
      */
-    PS::S32 findCloseSoftPert(TidalTensor* _tt, int& _n_tt, const int _n_max, const H4::ParticleH4<PtclHard>& _cm, const PS::F64 _gid) {
+    /*PS::S32 findCloseSoftPert(TidalTensor* _tt, int& _n_tt, const int _n_max, const H4::ParticleH4<PtclHard>& _cm, const PS::F64 _gid) {
         ASSERT(_gid>0.0);
         const PS::F64vec& pos = _cm.pos;
         PS::F64 r_min2=PS::LARGE_FLOAT;
@@ -84,6 +86,7 @@ public:
         else 
             return -1;
     }
+    */
 
     //! calculate soft_pert_min for slowdown pert_out
     /*! \Delta F = G m_cm m_p (apo) / rp^3

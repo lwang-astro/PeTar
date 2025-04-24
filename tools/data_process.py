@@ -47,7 +47,7 @@ if __name__ == '__main__':
         print("  -A(--append)              Append new data to existing data files.")
         print("  -r(--read-data)           Read existing single, binary, and core data to avoid expensive KDTree construction; no argument, disabled by default.")
         print("     --r-escape       [S|F] Distance criterion for escaper; if the value is 'tidal', calculate the tidal radius (only works when external-mode is on); otherwise, it is a constant escape distance criterion. If not given, it is 20 times the half-mass radius.")
-        print("     --e-escape       [S|F] Energy criterion for escaper; if the value is 'bound_noext', calculate bound energy without external potential and remove etot > 0; otherwise etot > mass * e-escape (default: 0.0).")
+        print("     --e-escape       [S|F] Energy criterion for escaper when objects are outside distance criterion; only works when --r-escape is used; if the value is 'bound_noext', calculate bound energy without external potential and remove etot > 0; otherwise etot > mass * e-escape (default: 0.0).")
         print("     --m-ext            [S] Read a table of masses of external potential for each time, used for the calculation of tidal radius (default: not used).")
         print("                            The argument is the filename of the table. The file contains two columns: time, mass.")
         print("  -i(--interrupt-mode)  [S] The interruption mode used in petar; choices: no, base, bse, mobse (default: no).")

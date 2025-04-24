@@ -4,6 +4,8 @@
 #include <cstring>
 #include <iomanip>
 #include <fstream>
+#include <sstream>
+#include <vector>
 #include <string>
 #include <map>
 
@@ -42,39 +44,67 @@ template <class Type>
 struct IOParams{
     Type value;
     const char* key;
-    const char* name;
+    const char* description;
     const char* defaulted;
     bool print_help_flag;
 
     template <class TContainer>
-    IOParams(TContainer& _ioc, const Type& _value, const char* _key, const char* _name, const char* _defaulted=NULL, const bool _print_help_flag=true): value(_value), key(_key), name(_name), defaulted(_defaulted), print_help_flag(_print_help_flag)  {
+    IOParams(TContainer& _ioc, const Type& _value, const char* _key, const char* _description, const char* _defaulted=NULL, const bool _print_help_flag=true): value(_value), key(_key), description(_description), defaulted(_defaulted), print_help_flag(_print_help_flag)  {
         _ioc.store(_key, this);
     }
 
     void print(std::ostream& os) const{
-        os<<name<<":   "<<value<<std::endl;
+        os<<description<<":   "<<value<<std::endl;
     }
     
-    void printHelp(std::ostream& os, const IOParamsPrintHelp& _align) const {
-        if (print_help_flag) {
+    void printHelp(std::ostream& os, const IOParamsPrintHelp& _align, const bool print_short_flag, const bool always_print=false) const {
+        if (print_help_flag || always_print) {
             //key
-            if (strlen(key)==1) {
-                os<<std::setw(_align.offset_short_key)<<"-"<<key<<"  "; 
+            bool print_flag = false;
+            int multiline_width = 0;
+
+            if (strlen(key)==1 && print_short_flag) {
+                os<<std::setw(_align.offset_short_key)<<"-"<<key<<"  ";
+                //  <<std::setw(_align.width_key+_align.offset_long_key-_align.offset_short_key-1)<<" "; 
+                multiline_width = _align.offset_short_key+5;
+                print_flag = true;
             }
-            else {
+            else if (strlen(key)>1 && !print_short_flag) {
                 os<<std::setw(_align.offset_long_key)<<"--"
                   <<std::left<<std::setw(_align.width_key)<<key<<std::right;   
+                multiline_width = _align.offset_long_key+_align.width_key+5;
+                print_flag = true;
             }
-            os<<"["<<IOParamsPrintHelp::getValueTypeShortName(value)<<"] "  // type
-              <<*this<<std::endl;   // description
+
+            if (print_flag) {
+                // type
+                os<<"["<<IOParamsPrintHelp::getValueTypeShortName(value)<<"] ";
+
+                // description            
+                std::vector<std::string> tokens;
+                std::stringstream ss(description);
+                std::string token;
+
+                while (std::getline(ss, token, ';')) {
+                    tokens.push_back(token);
+                }
+
+                if (tokens.size()>1) {
+                    if (defaulted!=NULL) os<<tokens[0]<<": "<<defaulted<<std::endl;
+                    else os<<tokens[0]<<": "<<value<<std::endl;
+                    for (size_t i=1; i<tokens.size(); i++) 
+                        os<<std::setw(multiline_width)<<" "<<tokens[i]<<std::endl;
+                }
+                else os<<*this<<std::endl;
+            }
         }
     }
 };
 
 template <class Type>
 std::ostream& operator <<(std::ostream& os, const IOParams<Type>& par) {
-    if (par.defaulted!=NULL) os<<par.name<<": "<<par.defaulted;
-    else os<<par.name<<": "<<par.value;
+    if (par.defaulted!=NULL) os<<par.description<<": "<<par.defaulted;    
+    else os<<par.description<<": "<<par.value;
     return os;
 }
 
@@ -195,14 +225,21 @@ public:
         for(auto iter=d_str.begin(); iter!=d_str.end(); iter++) os<<iter->first<<": "<<iter->second->value<<std::endl;
     }
 
-    void printHelp(std::ostream& os, const int _offset_short_key=2, const int _offset_long_key=1, const int _width_key=23) const{
+    void printHelp(std::ostream& os, const bool print_format_info_flag=true, const bool print_all_flag=false, const int _offset_short_key=3, const int _offset_long_key=4, const int _width_key=23) const{
         IOParamsPrintHelp print_help(_offset_short_key, _offset_long_key, _width_key);
-        std::cout<<"          default values are shown after ':'\n"
-                 <<"          the char in [] indicates argument type: ";
-        print_help.printTypeShortNameDescription(std::cout);
-        for(auto iter=d_f64.begin(); iter!=d_f64.end(); iter++) iter->second->printHelp(os, print_help);
-        for(auto iter=d_i64.begin(); iter!=d_i64.end(); iter++) iter->second->printHelp(os, print_help);
-        for(auto iter=d_str.begin(); iter!=d_str.end(); iter++) iter->second->printHelp(os, print_help);
+        if (print_format_info_flag) {
+            os<<"** Default values are shown after ':'\n"
+              <<"** The char in [] indicates argument type: ";
+            print_help.printTypeShortNameDescription(os);
+        }
+        // short key
+        for(auto iter=d_f64.begin(); iter!=d_f64.end(); iter++) iter->second->printHelp(os, print_help, true, print_all_flag);
+        for(auto iter=d_i64.begin(); iter!=d_i64.end(); iter++) iter->second->printHelp(os, print_help, true, print_all_flag);
+        for(auto iter=d_str.begin(); iter!=d_str.end(); iter++) iter->second->printHelp(os, print_help, true, print_all_flag);
+        // long key
+        for(auto iter=d_f64.begin(); iter!=d_f64.end(); iter++) iter->second->printHelp(os, print_help, false, print_all_flag);
+        for(auto iter=d_i64.begin(); iter!=d_i64.end(); iter++) iter->second->printHelp(os, print_help, false, print_all_flag);
+        for(auto iter=d_str.begin(); iter!=d_str.end(); iter++) iter->second->printHelp(os, print_help, false, print_all_flag);
     }
 };
 

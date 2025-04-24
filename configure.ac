@@ -254,23 +254,23 @@ AC_ARG_WITH([gperf-prefix],
             [AS_HELP_STRING([--with-gperf-prefix],
 	                    [Prefix of your gperftools installation])],
             [gperf_prefix=$withval],
-	    [gperf_prefix=/opt/gperftools])
+	    [gperf_prefix=$HOME])
 
 AS_IF([test x"$use_gperf" != xno],
       [use_gperf=yes
        AC_CHECK_LIB([profiler],
                     [main],
-		    [GPERFLIBS=' -lprofiler'],
-		    [AC_CHECK_FILE(["$gperf_prefix/lib/libprofiler.so"],
+		    [GPERFLIBS=' -ltcmalloc_and_profiler'],
+		    [AC_CHECK_FILE(["$gperf_prefix/lib/libtcmalloc_and_profiler.so"],
                                    [GPERFFLAGS=" -I$gperf_prefix/include"
-                                    GPERFLIBS=" -L$gperf_prefix/lib -lprofiler"],
-				   [AC_MSG_FAILURE([can't find gperftools library -lprofiler, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])
-       AC_CHECK_LIB([tcmalloc],
-                    [main],
-		    [GPERFLIBS=' -ltcmalloc'],
-		    [AC_CHECK_FILE(["$gperf_prefix/lib/libtcmalloc.so"],
-                                   [GPERFLIBS=$GPERFLIBS" -ltcmalloc"],
-				   [AC_MSG_FAILURE([can't find gperftools library -ltcmalloc, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])],
+                                    GPERFLIBS=" -L$gperf_prefix/lib -ltcmalloc_and_profiler"],
+				   [AC_MSG_FAILURE([can't find gperftools library -ltcmalloc_and_profiler, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])
+       #AC_CHECK_LIB([tcmalloc],
+       #             [main],
+       #	    [GPERFLIBS=' -ltcmalloc'],
+       #	    [AC_CHECK_FILE(["$gperf_prefix/lib/libtcmalloc.so"],
+       #                           [GPERFLIBS=$GPERFLIBS" -ltcmalloc"],
+       #			   [AC_MSG_FAILURE([can't find gperftools library -ltcmalloc, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])],
        [use_gperf=no])
 
 # FDPS
@@ -306,7 +306,7 @@ AC_CHECK_FILE(["$sdar_prefix/src/Hermite/hermite_integrator.h"],
 # GALPY
 AC_ARG_WITH([galpy-prefix],
             [AS_HELP_STRING([--with-galpy-prefix],
-	                    [Prefix of your Galpy installation. Default: search $HOME/.local, ../galpy, $VIRTUAL_ENV])],
+	                    [Prefix of your Galpy installation. Default: search ../galpy, $HOME/.local, $VIRTUAL_ENV])],
             [galpy_prefix=$withval],
 	    [galpy_prefix="__search__"])
 
@@ -375,9 +375,9 @@ AC_ARG_WITH([external],
                     AS_IF([test x"$galpy_prefix" == x__search__],
                           [AC_CHECK_PROG([FIND_CHECK], [find], [find])
 			   AS_IF([test x"$FIND_CHECK" == xfind],
-                                 [galpy_prefix=`find $HOME/.local $VIRTUAL_ENV -type d -name galpy|tail -1`
+                                 [galpy_prefix=`pwd`'/'`find ../galpy -type d -name galpy|tail -1`
                                   AS_IF([test x"$galpy_prefix" == x],
-                                        [galpy_prefix=`pwd`'/'`find ../ -type d -name galpy|tail -1`])])])
+                                        [galpy_prefix=`find $HOME/.local $VIRTUAL_ENV -type d -name galpy|tail -1`])])])
                     AC_CHECK_FILE(["$galpy_prefix/potential/potential_c_ext/galpy_potentials.h"],
                                   [GALPY_PATH=$galpy_prefix],
                                   [AC_MSG_FAILURE([can't find Galpy library, please provide correct PREFIX by using --with-galpy-prefix])])

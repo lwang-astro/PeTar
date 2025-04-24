@@ -20,6 +20,7 @@
 #include"artificial_particles.hpp"
 #include"stability.hpp"
 #include"status.hpp"
+#include"io.hpp"
 
 typedef H4::ParticleH4<PtclHard> PtclH4;
 
@@ -45,6 +46,322 @@ struct RecordIDRange{
     
 };
 
+//! IO parameters for hard integrator
+class IOParamsHard{
+public:
+    // IO parameters
+    IOParamsContainer input_par_store;
+#ifdef HARD_CHECK_ENERGY
+    IOParams<PS::F64> e_err_hard;
+#endif
+    IOParams<PS::F64> gravitational_constant;
+    IOParams<PS::F64> eps;
+    IOParams<PS::F64> r_group;
+    IOParams<PS::F64> r_search_group;
+    IOParams<PS::S64> n_step_per_orbit;
+    IOParams<PS::S64> tidal_tensor_switcher;
+#ifdef ORBIT_SAMPLING
+    IOParams<PS::S64> n_split;
+#endif
+    IOParams<PS::S64> id_offset;
+    IOParams<PS::F64> eta;
+    IOParams<PS::F64> eta_init;
+    IOParams<PS::F64> dt_max_hermite;
+    IOParams<PS::S64> dt_min_hermite_index;
+    IOParams<PS::F64> e_err_ar;
+    IOParams<PS::S64> step_limit_ar;
+    IOParams<PS::F64> sd_factor;
+#ifdef STELLAR_EVOLUTION
+    IOParams<PS::S64> interrupt_detection_option;
+#ifdef BSE_BASE
+    IOParams<PS::S64> stellar_evolution_option;
+#endif
+#endif
+#ifdef ADJUST_GROUP_PRINT
+    IOParams<PS::S64> adjust_group_write_option;
+#endif
+    IOParams<PS::S64> record_id_start_one;
+    IOParams<PS::S64> record_id_end_one;
+    IOParams<PS::S64> record_id_start_two;
+    IOParams<PS::S64> record_id_end_two;
+    IOParams<std::string> fname_par;
+
+    // flag
+    bool print_flag; 
+    
+    IOParamsHard(): input_par_store(), 
+#ifdef HARD_CHECK_ENERGY
+                    e_err_hard   (input_par_store, 1e-4, "energy-err-hard", "Maximum energy error allowed for the hard integrator"),
+#endif
+                    gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant", NULL, false),
+                    eps              (input_par_store, 0.0,  "soft-eps", "Softening epsilon"),
+                    r_group          (input_par_store,-1.0,  "r-group", "Tidal tensor box size and the radial criterion for detecting multiple groups (binaries, triples, etc.)","0.8*r_in"),
+                    r_search_group   (input_par_store,-1.0,  "r-search-group", "The radial criterion for detecting multiple group candidates", "1.0*r_in"),
+                    n_step_per_orbit (input_par_store, 8,    "tt-nstep", "Number of steps per slow-down binary orbits (period/dt_soft) for isolated binaries; also the maximum criterion for activating tidal tensor method"),
+                    tidal_tensor_switcher(input_par_store, 1,"tt-switch", "Tidal tensor calculation for (counter-)perturbation (from)on binaries: 0: off, 1: on"),
+#ifdef ORBIT_SAMPLING
+                    n_split          (input_par_store, 4,    "os-nsplit", "Number of binary sample points for tree perturbation force using orbit-sampling method"),
+#endif
+                    id_offset        (input_par_store, -1,   "id-offset", "Starting ID for artificial particles, total number of real particles must always be smaller than this","n_glb+1"),
+                    eta              (input_par_store, 0.1,  "hermite-eta", "Hermite timestep coefficient eta"),
+                    eta_init         (input_par_store, 0.001,"hermite-eta-init", "Hermite timestep coefficient eta for initial step in 2nd order"),
+                    dt_max_hermite   (input_par_store, 0.0,  "hermite-dt-max", "Maximum hermite timestep", "dt_soft"),
+                    dt_min_hermite_index(input_par_store, 40,"hermite-dt-min-index",  "Power index n for the smallest timestep (0.5^n) allowed in the Hermite integrator"),
+                    e_err_ar     (input_par_store, 1e-8,     "ar-max-error", "Maximum energy error allowed for the SDAR integrator"),
+                    step_limit_ar(input_par_store, 1000000,  "ar-max-nstep", "Maximum step allowed for the SDAR sym integrator"),
+                    sd_factor    (input_par_store, 1e-4,     "ar-slowdown-factor", "Slowdown perturbation criterion"),
+#ifdef STELLAR_EVOLUTION
+#ifdef BSE_BASE
+                    interrupt_detection_option(input_par_store, 1, "detect-interrupt", "Stellar evolution of binaries in SDAR integration; 0: switch off; 1: using BSE based code (if '--stellar-evolution != 0)"),
+                    stellar_evolution_option  (input_par_store, 1, "stellar-evolution", "Stellar evolution of stars in Hermite and SDAR integration; 0: switch off; >=1: using SSE/BSE based codes; 2: activate dynamical tide and hyperbolic GW radiation"),
+#else // NO BSE_BASE
+                    interrupt_detection_option(input_par_store, 0, "detect-interrupt", "Interrupt integration for two objects if their surfaces overlap in SDAR integration; 0: switch off; 1: merge two objects; 2: record information without merger"),
+#endif // END BSE_BASE
+#endif // END STELLAR_EVOLUTION
+#ifdef ADJUST_GROUP_PRINT
+                    adjust_group_write_option(input_par_store, 1, "write-group-info", "Write information of new and end groups; 0: no output; 1: output to file with name of [data filename prefix].group.[MPI rank]"),
+#endif
+                    record_id_start_one(input_par_store, 0, "record-id-start-one", "Starting of the first id range for hard dump recording every tree step, save into files object_[id]"),
+                    record_id_end_one  (input_par_store, 0, "record-id-end-one", "Ending of the first id range for hard dump; notice that the ending id is not included in hard dump"),
+                    record_id_start_two(input_par_store, 0, "record-id-start-two", "Starting of the 2nd id range for hard dump recording every tree step"),
+                    record_id_end_two  (input_par_store, 0, "record-id-end-two", "Ending of the 2nd id range for hard dump; notice that the ending id is not included in hard dump"),
+                    fname_par          (input_par_store, "input.par", "p", "Input parameter file for hard (this option should be used first before any other options)",NULL,false),
+                    print_flag(false) {}
+
+    //! reading parameters from GNU option API
+    /*!
+      @param[in] argc: number of options
+      @param[in] argv: string of options
+      @param[in] print_format_info: print format information
+      @param[in] opt_used_pre: already used option number from previous reading, use to correctly count the remaining argument number
+      \return -1 if help is used; else the used number of argv
+     */
+    int read(int argc, char *argv[], const bool print_format_info=true, const bool print_all_flag=false, const int opt_used_pre=0) {
+        static int hard_flag=-1;
+        static struct option long_options[] = {
+#ifdef HARD_CHECK_ENERGY
+            {e_err_hard.key,             required_argument, &hard_flag, 1},  
+#endif
+            {eps.key,                    required_argument, &hard_flag, 2},
+            {r_group.key,                required_argument, &hard_flag, 3},
+            {r_search_group.key,         required_argument, &hard_flag, 4},
+            {n_step_per_orbit.key,       required_argument, &hard_flag, 5},
+            {tidal_tensor_switcher.key,  required_argument, &hard_flag, 6},
+#ifdef ORBIT_SAMPLING
+            {n_split.key,                required_argument, &hard_flag, 7},
+#endif
+            {id_offset.key,              required_argument, &hard_flag, 8},
+            {eta.key,                    required_argument, &hard_flag, 9},
+            {eta_init.key,               required_argument, &hard_flag, 10},
+            {dt_max_hermite.key,         required_argument, &hard_flag, 11},
+            {dt_min_hermite_index.key,   required_argument, &hard_flag, 12},
+            {e_err_ar.key,               required_argument, &hard_flag, 13},
+            {step_limit_ar.key,          required_argument, &hard_flag, 14},
+            {sd_factor.key,              required_argument, &hard_flag, 15},
+#ifdef STELLAR_EVOLUTION
+            {interrupt_detection_option.key,  required_argument, &hard_flag, 16},
+#ifdef BSE_BASE
+            {stellar_evolution_option.key,    required_argument, &hard_flag, 17},
+#endif
+#endif
+#ifdef ADJUST_GROUP_PRINT
+            {adjust_group_write_option.key,   required_argument, &hard_flag, 18},
+#endif            
+            {record_id_start_one.key,  required_argument, &hard_flag, 19},
+            {record_id_end_one.key,    required_argument, &hard_flag, 20},
+            {record_id_start_two.key,  required_argument, &hard_flag, 21},
+            {record_id_end_two.key,    required_argument, &hard_flag, 22},
+            {"help",                  no_argument, 0, 'h'},        
+            {0,0,0,0}
+        };
+
+        int opt_used = opt_used_pre;
+        int copt;
+        int option_index;
+        optind = 0; // reset getopt
+        while ((copt = getopt_long(argc, argv, "-G:p:h", long_options, &option_index)) != -1) 
+            switch (copt) {
+                case 0:
+                switch (hard_flag) {
+#ifdef HARD_CHECK_ENERGY
+                    case 1: 
+                        e_err_hard.value = atof(optarg);
+                        if(print_flag) e_err_hard.print(std::cout);
+                        opt_used += 2;
+                        break;
+#endif
+                    case 2:
+                        eps.value = atof(optarg);
+                        if(print_flag) eps.print(std::cout);
+                        opt_used += 2;
+                        assert(eps.value>=0.0);
+                        break;
+                    case 3:
+                        r_group.value = atof(optarg);
+                        if(print_flag) r_group.print(std::cout);
+                        opt_used += 2;
+                        assert(r_group.value>=0.0);
+                        break;
+                    case 4:
+                        r_search_group.value = atof(optarg);
+                        if(print_flag) r_search_group.print(std::cout);
+                        opt_used += 2;
+                        assert(r_search_group.value>=0.0);
+                        break;
+                    case 5:
+                        n_step_per_orbit.value = atof(optarg);
+                        if(print_flag) n_step_per_orbit.print(std::cout);
+                        opt_used += 2;
+                        assert(n_step_per_orbit.value>=1.0);
+                        break;
+                    case 6:
+                        tidal_tensor_switcher.value = atoi(optarg);
+                        if(print_flag) tidal_tensor_switcher.print(std::cout);
+                        opt_used += 2;
+                        break;
+#ifdef ORBIT_SAMPLING
+                    case 7:
+                        n_split.value = atoi(optarg);
+                        if(print_flag) n_split.print(std::cout);
+                        opt_used += 2;
+                        assert(n_split.value>=0);
+                        break;
+#endif
+                    case 8:
+                        id_offset.value = atoi(optarg);
+                        if(print_flag) id_offset.print(std::cout);
+                        opt_used += 2;
+                        break;
+                    case 9:
+                        eta.value = atof(optarg);
+                        if(print_flag) eta.print(std::cout);
+                        opt_used += 2;
+                        assert(eta.value>0.0);
+                        break;
+                    case 10:
+                        eta_init.value = atof(optarg);
+                        if(print_flag) eta_init.print(std::cout);
+                        opt_used += 2;
+                        assert(eta_init.value>0.0);
+                        break;
+                    case 11:
+                        dt_max_hermite.value = atof(optarg);
+                        if(print_flag) dt_max_hermite.print(std::cout);
+                        opt_used += 2;
+                        assert(dt_max_hermite.value > 0.0);
+                        break;
+                    case 12:
+                        dt_min_hermite_index.value = atoi(optarg);
+                        if(print_flag) dt_min_hermite_index.print(std::cout);
+                        opt_used += 2;
+                        assert(dt_min_hermite_index.value > 0);
+                        break;
+                    case 13:
+                        e_err_ar.value = atof(optarg);
+                        if(print_flag) e_err_ar.print(std::cout);
+                        opt_used += 2;
+                        assert(e_err_ar.value > 0.0);
+                        break;
+                    case 14:
+                        step_limit_ar.value = atoi(optarg);
+                        if(print_flag) step_limit_ar.print(std::cout);
+                        opt_used += 2;
+                        break;
+                    case 15:
+                        sd_factor.value = atof(optarg);
+                        if(print_flag) sd_factor.print(std::cout);
+                        opt_used += 2;
+                        assert(sd_factor.value>0.0);
+                        break;
+#ifdef STELLAR_EVOLUTION
+                    case 16:
+                        interrupt_detection_option.value = atoi(optarg);
+                        if(print_flag) interrupt_detection_option.print(std::cout);
+                        opt_used += 2;
+                        break;
+#ifdef BSE_BASE
+                    case 17:
+                        stellar_evolution_option.value = atoi(optarg);
+                        if(print_flag) stellar_evolution_option.print(std::cout);
+                        opt_used += 2;
+                        break;
+#endif
+#endif
+#ifdef ADJUST_GROUP_PRINT
+                    case 18:
+                        adjust_group_write_option.value = atoi(optarg);
+                        if(print_flag) adjust_group_write_option.print(std::cout);
+                        opt_used += 2;
+                        break;
+#endif
+                    case 19:
+                        record_id_start_one.value = atoi(optarg);
+                        if(print_flag) record_id_start_one.print(std::cout);
+                        opt_used += 2;
+                        break;
+                    case 20:
+                        record_id_end_one.value = atoi(optarg);
+                        if(print_flag) record_id_end_one.print(std::cout);
+                        opt_used += 2;
+                        break;
+                    case 21:
+                        record_id_start_two.value = atoi(optarg);
+                        if(print_flag) record_id_start_two.print(std::cout);
+                        opt_used += 2;
+                        break;
+                    case 22:
+                        record_id_end_two.value = atoi(optarg);
+                        if(print_flag) record_id_end_two.print(std::cout);
+                        opt_used += 2;
+                        break;
+                    default:
+                        break;
+                    }
+                    break;
+            case 'G':
+                gravitational_constant.value = atof(optarg);
+                if(print_flag) gravitational_constant.print(std::cout);
+                opt_used += 2;
+                assert(gravitational_constant.value>0.0);
+                break;
+            case 'p':
+                fname_par.value = optarg;
+                if(print_flag) {
+                    std::string fhard_par = fname_par.value+".hard";     
+                    FILE* fpar_in;
+                    if( (fpar_in = fopen(fhard_par.c_str(),"r")) == NULL) {
+                        fprintf(stderr,"Error: Cannot open file %s.\n", fhard_par.c_str());
+                        abort();
+                    }
+                    input_par_store.readAscii(fpar_in);
+                    fclose(fpar_in);
+                }
+                opt_used += 2;
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+                input_par_store.mpi_broadcast();
+                PS::Comm::barrier();
+#endif
+                break;
+            case 'h':
+                if(print_flag){
+                    std::cout<<"----- Short-range (hard) integrator options: -----\n";    
+                    input_par_store.printHelp(std::cout, print_format_info, print_all_flag);
+                }
+                return -1;
+            case '?':
+                opt_used +=2;
+                break;
+            default:
+                break;
+            }
+
+        // count used options
+        opt_used ++;
+        if(print_flag) std::cout<<"----- Finish reading hard options -----\n";
+        return opt_used-1;
+    }
+};
+
 //! Hard integrator parameter manager
 class HardManager{
 public:
@@ -53,6 +370,7 @@ public:
     PS::F64 r_in_base;
     PS::F64 r_out_base;
     PS::F64 n_step_per_orbit;
+    bool tidal_tensor_switcher;
     ArtificialParticleManager ap_manager;
     H4::HermiteManager<HermiteInteraction> h4_manager;
     AR::TimeTransformedSymplecticManager<ARInteraction> ar_manager;
@@ -60,7 +378,7 @@ public:
     Status* status;
 
     //! constructor
-    HardManager(): energy_error_max(-1.0), eps_sq(-1.0), r_in_base(-1.0), r_out_base(-1.0), n_step_per_orbit(-1.0), ap_manager(), h4_manager(), ar_manager(), status(NULL) {}
+    HardManager(): energy_error_max(-1.0), eps_sq(-1.0), r_in_base(-1.0), r_out_base(-1.0), n_step_per_orbit(-1.0), tidal_tensor_switcher(true), ap_manager(), h4_manager(), ar_manager(), status(NULL) {}
     
     //! set softening
     void setEpsSq(const PS::F64 _eps_sq) {
@@ -89,12 +407,123 @@ public:
         ar_manager.time_error_max = 0.25*ar_manager.time_step_min;
     }
 
+    //! initialize parameters
+    /*!
+        @param[in] _input: input parameters
+        @param[in] _input_bse: input parameters for BSE (if stellar evolution and bse is switched on)
+        @param[in] _mass_average: average mass of particles
+        @param[in] _r_out_base: outer changeover radius reference
+        @param[in] _r_in_base: inner changeover radius reference
+        @param[in] _dt_soft: softening time step
+        @param[in] _stat: global status
+        @param[in] _write_style: write style
+        @param[in] _print_flag: print flag
+    */
+    void initial(IOParamsHard& _input, 
+#ifdef STELLAR_EVOLUTION
+#ifdef BSE_BASE
+                 const IOParamsBSE& _input_bse,
+#endif
+#endif
+                 const PS::F64 _mass_average, 
+                 const PS::F64 _r_out_base,
+                 const PS::F64 _r_in_base, 
+                 const PS::F64 _dt_soft,
+                 Status& _stat,
+                 const int _write_style, 
+                 const bool _print_flag=false) {
+
+        // set system hard paramters
+#ifdef HARD_CHECK_ENERGY
+        energy_error_max = _input.e_err_hard.value;
+#else
+        energy_error_max = PS::LARGE_FLOAT;
+#endif
+
+        setGravitationalConstant(_input.gravitational_constant.value);
+        setEpsSq(_input.eps.value*_input.eps.value);
+
+        r_out_base = _r_out_base;
+        r_in_base = _r_in_base;
+        
+        // if r_group is not defined, set to 0.8*r_in
+        if (_input.r_group.value==-1.0) {
+            PtclHard::r_group_over_in = 0.8;
+            _input.r_group.value = 0.8*r_in_base;
+        }
+        else PtclHard::r_group_over_in = _input.r_group.value/r_in_base;
+        
+        // if r_search_group is not defined, set to r_in
+        if (_input.r_search_group.value==-1.0) {
+            PtclHard::r_search_group_over_in = 1.0;
+            _input.r_search_group.value = r_in_base;
+        }
+        else PtclHard::r_search_group_over_in = _input.r_search_group.value/r_in_base;
+
+        n_step_per_orbit = _input.n_step_per_orbit.value;
+        tidal_tensor_switcher = bool(_input.tidal_tensor_switcher.value);
+        ap_manager.r_tidal_tensor = _input.r_group.value;
+        ap_manager.id_offset = _input.id_offset.value;
+#ifdef ORBIT_SAMPLING
+        ap_manager.orbit_manager.setParticleSplitN(_input.n_split.value);
+#endif
+        h4_manager.step.eta_4th = _input.eta.value;
+        h4_manager.step.eta_2nd = _input.eta_init.value;
+        h4_manager.step.calcAcc0OffsetSq(_mass_average, r_out_base, _input.gravitational_constant.value);
+        if (_input.dt_max_hermite.value==0.0) _input.dt_max_hermite.value = _dt_soft;
+        setDtRange(_input.dt_max_hermite.value, _input.dt_min_hermite_index.value);
+
+        ar_manager.step.initialSymplecticCofficients(-6);
+        ar_manager.slowdown_timescale_max = _input.dt_max_hermite.value*n_step_per_orbit;
+        ar_manager.slowdown_pert_ratio_ref = _input.sd_factor.value;
+        ar_manager.energy_error_relative_max = _input.e_err_ar.value;
+        ar_manager.step_count_max = _input.step_limit_ar.value;
+        //ar_manager.slowdown_timescale_max = dt_soft;
+#ifdef SLOWDOWN_MASSRATIO
+        ar_manager.slowdown_mass_ref = _mass_average;
+#endif
+#ifdef STELLAR_EVOLUTION
+        ar_manager.interaction.interrupt_detection_option = _input.interrupt_detection_option.value;
+#ifdef BSE_BASE
+        ar_manager.interaction.stellar_evolution_option = _input.stellar_evolution_option.value;
+        if (_write_style) ar_manager.interaction.stellar_evolution_write_flag = true;
+        else ar_manager.interaction.stellar_evolution_write_flag = false;
+        if (_input.stellar_evolution_option.value>0) {
+            ar_manager.interaction.bse_manager.initial(_input_bse, _print_flag);
+            ar_manager.interaction.tide.speed_of_light = ar_manager.interaction.bse_manager.getSpeedOfLight();
+        }
+#endif
+#endif        
+
+#ifdef ADJUST_GROUP_PRINT
+        // group information
+        if (_write_style && _input.adjust_group_write_option.value==1) 
+            h4_manager.adjust_group_write_flag=true;
+        else 
+            h4_manager.adjust_group_write_flag=false;
+#endif
+
+        // record id range
+        record_id_range.id_start_one = _input.record_id_start_one.value;
+        record_id_range.id_end_one = _input.record_id_end_one.value;
+        record_id_range.id_start_two = _input.record_id_start_two.value;
+        record_id_range.id_end_two = _input.record_id_end_two.value;
+
+        // link global status 
+        status = &_stat;
+
+        checkParams();
+    }    
+
     //! check paramters
     bool checkParams() {
         ASSERT(energy_error_max>0.0);
+        ASSERT(eps_sq>=0.0 && eps_sq<=r_out_base*r_out_base); // avoid incorrect self-potential correction after tree force, when eps>r_out, self-potential is G m /r_eps instead of G m/r_cut;
         ASSERT(eps_sq>=0.0);
-        ASSERT(r_in_base>0.0);
         ASSERT(r_out_base>0.0);
+        ASSERT(r_in_base>0.0 && r_in_base < r_out_base);
+        ASSERT(PtclHard::r_search_group_over_in>=0.0 && PtclHard::r_search_group_over_in<=1.0);
+        ASSERT(PtclHard::r_group_over_in>=0.0 && PtclHard::r_group_over_in<=PtclHard::r_search_group_over_in);
         ASSERT(n_step_per_orbit>0.0);
         ASSERT(ap_manager.checkParams());
         ASSERT(h4_manager.checkParams());
@@ -284,7 +713,7 @@ public:
             }
         }
 
-//#ifdef HARD_DEBUG
+#ifdef HARD_DEBUG
         if (_n_ptcl>400) {
             std::cerr<<"Large cluster, n_ptcl="<<_n_ptcl<<" n_group="<<_n_group<<std::endl;
             std::pair<PS::S32,PS::F64> r_search_max={-1,0.0};
@@ -298,7 +727,7 @@ public:
             ptcl_origin[r_search_max.first].print(std::cerr);
             std::cerr<<std::endl;
         }
-//#endif
+#endif
 
         // prepare initial groups with artificial particles
         PS::S32 adr_first_ptcl[_n_group+1];
@@ -335,7 +764,8 @@ public:
 #endif
         }
 #ifdef HARD_DEBUG
-        else if(_n_group>0) ASSERT(_n_ptcl==2); // right now only support isolated binary case without artificial particles
+        // when tidal tensor method is used or not isolated binary, artificial particles should exist
+        else if(_n_group>0) ASSERT(!manager->tidal_tensor_switcher||_n_ptcl==2); 
 #endif
 
         // single particle start index in ptcl_origin
@@ -505,26 +935,29 @@ public:
                     auto& groupi = h4_int.groups[i];
 
 #ifdef SOFT_PERT
-                    auto* api = &(_ptcl_artificial[adr_first_ptcl[i]]);
-                    auto* apcm = ap_manager.getCMParticles(api);
-                    auto* aptt = ap_manager.getTidalTensorParticles(api);
+                    if (_ptcl_artificial!=NULL) {
+                        auto* api = &(_ptcl_artificial[adr_first_ptcl[i]]);
+                        auto* apcm = ap_manager.getCMParticles(api);
+                        auto* aptt = ap_manager.getTidalTensorParticles(api);
 
-                    // correct pos for t.t. cm
-                    apcm->pos -= h4_int.particles.cm.pos;
+                        // correct pos for t.t. cm
+                        apcm->pos -= h4_int.particles.cm.pos;
 
-                    // fit tidal tensor
-                    tidal_tensor[i].fit(aptt, *apcm, ap_manager.r_tidal_tensor);
+                        // fit tidal tensor
+                        tidal_tensor[i].fit(aptt, *apcm, ap_manager.r_tidal_tensor);
 
-                    // set tidal_tensor pointer
-                    groupi.perturber.soft_pert = &tidal_tensor[i];
+                        // set tidal_tensor pointer
+                        groupi.perturber.soft_pert = &tidal_tensor[i];
 
-                    // set group id of tidal tensor to the n_members
-                    groupi.perturber.soft_pert->group_id = groupi.particles.getSize();
+                        // set group id of tidal tensor to the n_members used to match tidal tensor and group members
+                        // (when the group is removed and added again, the n_members should be the same)
+                        groupi.perturber.soft_pert->group_id = groupi.particles.getSize();
 
-                    // same tidal_tensor id to member particle group_data for identification later
-                    for (PS::S32 k=0; k<groupi.particles.getSize(); k++) {
-                        groupi.particles[k].setTidalTensorID(i+1);
-                        ptcl_origin[n_group_offset[i]+k].setTidalTensorID(i+1);
+                        // same tidal_tensor id to member particle group_data for identification later
+                        for (PS::S32 k=0; k<groupi.particles.getSize(); k++) {
+                            groupi.particles[k].setTidalTensorID(i+1);
+                            ptcl_origin[n_group_offset[i]+k].setTidalTensorID(i+1);
+                        }
                     }
 #endif
                     // calculate soft_pert_min
@@ -1421,9 +1854,9 @@ private:
       @param[in,out] _pi: particle for correction
       @param[in] _pj: j particle to calculate correction
      */
-    template <class Tpi>
+    template <class Tpi, class Tpj>
     static void calcAccPotShortWithLinearCutoff(Tpi& _pi,
-                                                const Ptcl& _pj) {
+                                                const Tpj& _pj) {
         const PS::F64 G = ForceSoft::grav_const;
         const PS::F64 eps_sq = EPISoft::eps * EPISoft::eps;
 
@@ -1491,93 +1924,14 @@ private:
 #endif
     }
 
-    //! correct force and potential for soft force with changeover function
-    /*!
-      @param[in,out] _pi: particle for correction
-      @param[in] _pj: j particle to calculate correction
-     */
-    template <class Tpi>
-    static void calcAccPotShortWithLinearCutoff(Tpi& _pi,
-                                                const EPJSoft& _pj) {
-        const PS::F64 G = ForceSoft::grav_const;
-        const PS::F64 eps_sq = EPISoft::eps * EPISoft::eps;
-
-        const PS::F64vec dr = _pi.pos - _pj.pos;
-        const PS::F64 dr2 = dr * dr;
-#ifdef HARD_DEBUG
-        assert(dr2>0.0);
-#endif
-        const PS::F64 dr2_eps = dr2 + eps_sq;
-        const PS::F64 drinv = 1.0/sqrt(dr2_eps);
-        PS::F64 gmor = G*_pj.mass * drinv;
-        const PS::F64 drinv2 = drinv * drinv;
-        const PS::F64 gmor3 = gmor * drinv2;
-        const PS::F64 dr_eps = drinv * dr2_eps;
-        ChangeOver chj;
-        chj.setR(_pj.r_in, _pj.r_out);
-        const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, chj, dr_eps);
-
-        // linear cutoff
-#if  ((! defined P3T_64BIT) && (defined USE_SIMD)) || (defined USE_GPU)
-        const PS::F32 r_out_32 = EPISoft::r_out;
-        const PS::F32 r_out2 = r_out_32 * r_out_32;
-        PS::F32vec ri_32 = PS::F32vec(_pi.pos.x, _pi.pos.y, _pi.pos.z);
-        PS::F32vec rj_32 = PS::F32vec(_pj.pos.x, _pj.pos.y, _pj.pos.z);
-        PS::F32vec dr_32 = ri_32 - rj_32;
-        PS::F32 dr2_eps_32 = dr_32*dr_32 + (PS::F32)eps_sq;
-        const PS::F32 dr2_max = (dr2_eps_32 > r_out2) ? dr2_eps_32 : r_out2;
-        const PS::F32 drinv_max = 1.0/sqrt(dr2_max);
-        const PS::F32 gmor_max = G*_pj.mass * drinv_max;
-        const PS::F32 drinv2_max = drinv_max*drinv_max;
-        const PS::F32 gmor3_max = gmor_max * drinv2_max;
-
-        // correct to changeover soft acceleration
-        _pi.acc -= gmor3*k*dr - gmor3_max*dr_32;
-#else
-        const PS::F64 r_out = EPISoft::r_out;
-        const PS::F64 r_out2 = r_out * r_out;
-        const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
-        const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
-        const PS::F64 gmor_max = G*_pj.mass * drinv_max;
-        const PS::F64 drinv2_max = drinv_max*drinv_max;
-        const PS::F64 gmor3_max = gmor_max * drinv2_max;
-
-        // correct to changeover soft acceleration
-        _pi.acc -= (gmor3*k - gmor3_max)*dr;
-#endif
-        auto& pj_artificial = _pj.group_data.artificial;
-        const PS::F64 kpot  = 1.0 - ChangeOver::calcPotWTwo(_pi.changeover, chj, dr_eps);
-        // single, remove linear cutoff, obtain changeover soft and total potential
-        if (pj_artificial.isSingle()) {
-            //_pi.pot_soft -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
-            _pi.pot_soft -= gmor*kpot  - gmor_max;
-            _pi.pot_tot -= (gmor - gmor_max);
-        }
-        // member, mass is zero, use backup mass
-        else if (pj_artificial.isMember()) {
-            gmor = G*pj_artificial.getMassBackup()*drinv;
-            //_pi.pot_soft -= dr2_eps>r_out2? 0.0: (gmor*kpot  - gmor_max);   
-            _pi.pot_soft -= gmor*kpot  - gmor_max;
-            _pi.pot_tot -= (gmor  - gmor_max);
-        }
-        // (orbitial) artificial, should be excluded in potential calculation, since it is inside neighbor, gmor_max cancel it to 0.0
-        else {
-            _pi.pot_soft += gmor_max; 
-            _pi.pot_tot  += gmor_max; 
-        }
-#ifdef ONLY_SOFT
-        _pi.pot_tot = _pi.pot_soft;
-#endif
-    }
-
     //! correct force and potential for changeover function change
     /*!
       @param[in,out] _pi: particle for correction
       @param[in] _pj: j particle to calculate correction
      */
-    template <class Tpi>
+    template <class Tpi, class Tpj>
     static void calcAccChangeOverCorrection(Tpi& _pi,
-                                            const Ptcl& _pj) {
+                                            const Tpj& _pj) {
         const PS::F64 G = ForceSoft::grav_const;
         const PS::F64 eps_sq = EPISoft::eps * EPISoft::eps;
 
@@ -1606,55 +1960,19 @@ private:
         _pi.acc -= gmor3*(knew-kold)*dr;
     }
 
-    //! correct force and potential for changeover function change
-    /*!
-      @param[in,out] _pi: particle for correction
-      @param[in] _pj: j particle to calculate correction
-     */
-    template <class Tpi>
-    static void calcAccChangeOverCorrection(Tpi& _pi,
-                                            const EPJSoft& _pj) {
-        const PS::F64 G = ForceSoft::grav_const;
-        const PS::F64 eps_sq = EPISoft::eps * EPISoft::eps;
-
-        const PS::F64vec dr = _pi.pos - _pj.pos;
-        const PS::F64 dr2 = dr * dr;
-        const PS::F64 dr2_eps = dr2 + eps_sq;
-        const PS::F64 drinv = 1.0/sqrt(dr2_eps);
-        const PS::F64 gmor = G*_pj.mass * drinv;
-        const PS::F64 drinv2 = drinv * drinv;
-        const PS::F64 gmor3 = gmor * drinv2;
-        const PS::F64 dr_eps = drinv * dr2_eps;
-
-        ChangeOver chjold;
-        chjold.setR(_pj.r_in, _pj.r_out);
-        // old
-        const PS::F64 kold = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, chjold, dr_eps);
-
-        // new
-        ChangeOver chinew, chjnew;
-        chinew.setR(_pi.changeover.getRin()*_pi.changeover.r_scale_next, _pi.changeover.getRout()*_pi.changeover.r_scale_next);
-        chjnew.setR(_pj.r_in*_pj.r_scale_next, _pj.r_out*_pj.r_scale_next);
-        const PS::F64 knew = 1.0 - ChangeOver::calcAcc0WTwo(chinew, chjnew, dr_eps);
-
-        // correct to changeover soft acceleration
-        _pi.acc -= gmor3*(knew-kold)*dr;
-    }
-
 #ifdef KDKDK_4TH
-    template <class Tpi>
+    template <class Tpi, class Tpj>
     static void calcAcorrShortWithLinearCutoff(Tpi& _pi,
-                                               const FPSoft& _pj) {
+                                               const Tpj& _pj) {
         const PS::F64 G = ForceSoft::grav_const;
         const PS::F64 eps_sq = EPISoft::eps * EPISoft::eps;
 
         const PS::F64vec dr = _pi.pos - _pj.pos;
-        const PS::F64vec da = _pi.acc - _pi.acc;
+        const PS::F64vec da = _pi.acc - _pj.acc;
         const PS::F64 dr2 = dr * dr;
         const PS::F64 dr2_eps = dr2 + eps_sq;
         const PS::F64 drda = dr*da;
         const PS::F64 drinv = 1.0/sqrt(dr2_eps);
-        const PS::F64 drdadrinv = drda*drinv;
         const PS::F64 gmor = G*_pj.mass * drinv;
         const PS::F64 drinv2 = drinv * drinv;
         const PS::F64 gmor3 = gmor * drinv2;
@@ -1662,7 +1980,8 @@ private:
         const PS::F64 alpha = drda*drinv2;
 
         const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, _pj.changeover, dr_eps);
-        const PS::F64 kdot = - ChangeOver::calcAcc1WTwo(_pi.changeover, _pj.changeover, dr_eps, drdadrinv);
+        // drdot should not be included here (thus set to 1.0), since kdot is used for gradient not time derivative
+        const PS::F64 kdot = - ChangeOver::calcAcc1WTwo(_pi.changeover, _pj.changeover, dr_eps, 1.0); 
 
         // linear cutoff
 #if  ((! defined P3T_64BIT) && (defined USE_SIMD)) || (defined USE_GPU)
@@ -1695,46 +2014,7 @@ private:
         const PS::F64vec acorr_max = gmor3_max * (da - 3.0*alpha_max * dr);
 #endif
 
-        const PS::F64vec acorr_k = gmor3 * (k*da - (3.0*k*alpha - kdot) * dr);
-
-        _pi.acorr -= 2.0 * (acorr_k - acorr_max);
-        //acci + dt_kick * dt_kick * acorri /48; 
-    }
-
-    template <class Tpi>
-    static void calcAcorrShortWithLinearCutoff(Tpi& _pi,
-                                               const EPJSoft& _pj) {
-        const PS::F64 G = ForceSoft::grav_const;
-        const PS::F64 eps_sq = EPISoft::eps * EPISoft::eps;
-        const PS::F64 r_out = EPISoft::r_out;
-        const PS::F64 r_out2 = r_out * r_out;
-
-        const PS::F64vec dr = _pi.pos - _pj.pos;
-        const PS::F64vec da = _pi.acc - _pi.acc;
-        const PS::F64 dr2 = dr * dr;
-        const PS::F64 dr2_eps = dr2 + eps_sq;
-        const PS::F64 drda = dr*da;
-        const PS::F64 drinv = 1.0/sqrt(dr2_eps);
-        const PS::F64 drdadrinv = drda*drinv;
-        const PS::F64 gmor = G*_pj.mass * drinv;
-        const PS::F64 drinv2 = drinv * drinv;
-        const PS::F64 gmor3 = gmor * drinv2;
-        const PS::F64 dr_eps = drinv * dr2_eps;
-        ChangeOver chj;
-        chj.setR(_pj.r_in, _pj.r_out);
-        const PS::F64 k = 1.0 - ChangeOver::calcAcc0WTwo(_pi.changeover, chj, dr_eps);
-        const PS::F64 kdot = - ChangeOver::calcAcc1WTwo(_pi.changeover, chj, dr_eps, drdadrinv);
-
-        const PS::F64 dr2_max = (dr2_eps > r_out2) ? dr2_eps : r_out2;
-        const PS::F64 drinv_max = 1.0/sqrt(dr2_max);
-        const PS::F64 gmor_max = G*_pj.mass * drinv_max;
-        const PS::F64 drinv2_max = drinv_max*drinv_max;
-        const PS::F64 gmor3_max = gmor_max * drinv2_max;
-
-        const PS::F64 alpha = drda*drinv2;
-        const PS::F64 alpha_max = drda * drinv2_max;
-        const PS::F64vec acorr_k = gmor3 * (k*da - (3.0*k*alpha - kdot) * dr);
-        const PS::F64vec acorr_max = gmor3_max * (da - 3.0*alpha_max * dr);
+        const PS::F64vec acorr_k = gmor3 * (k*da - (3.0*k - kdot*dr_eps)*alpha * dr);
 
         _pi.acorr -= 2.0 * (acorr_k - acorr_max);
         //acci + dt_kick * dt_kick * acorri /48; 
@@ -1809,7 +2089,8 @@ private:
         for (int j=0; j<_n_group; j++) {  // j: j_group
             PS::S32 j_start = adr_first_ptcl_arti_in_cluster_[j];
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-            if (j_start<0) assert(_n_group==1&&_adr_real_end-_adr_real_start==2);
+            // if tidal tensor is used, only one group with a binary can avoid using tidal tensor
+            if (j_start<0) assert(!manager->tidal_tensor_switcher||(_n_group==1&&_adr_real_end-_adr_real_start==2));
 #endif
             if (j_start<0) continue;
             auto* p_arti_j = &(_sys[j_start]);
@@ -2066,7 +2347,7 @@ public:
     //    Int_pars_.r_A      = (_rout-_rin)/(_rout+_rin);
     //    Int_pars_.pot_off  = (1.0+Int_pars_.r_A)/_rout;
     //    Int_pars_.eps2  = _eps*_eps;
-    //    Int_pars_.r_bin = _rbin;
+    //    Int_pars_.r_group = _rbin;
     //    /// Set chain pars (L.Wang)
     //    dt_limit_hard_ = _dt_limit_hard;
     //    dt_min_hard_   = _dt_min_hard;
@@ -2076,7 +2357,7 @@ public:
     //    time_origin_ = _time_origin;
     //  //      gamma_ = std::pow(1.0/_gmin,0.33333);
     //    // r_search_single_ = _rsearch; 
-    //    //r_bin_           = _rbin;
+    //    //r_group_           = _rbin;
     //    // m_average_ = _m_avarage;
     //    manager->n_split = _n_split;
     //    id_offset_ = _id_offset;
@@ -2412,8 +2693,8 @@ public:
         for (PS::S32 i=0; i<num_thread; i++) n_neighbor_zero_threads[i] = 0;
 #endif
 
-#pragma omp parallel for schedule(dynamic) 
-        for (PS::S32 i=0; i<n_cluster; i++) {
+        // integrate one cluster function
+        auto integrateOneCluster = [&](const PS::S32 i) {
             const PS::S32 ith = PS::Comm::getThreadNum();
 #ifdef OMP_PROFILE
             time_thread[ith] -= PS::GetWtime();
@@ -2424,6 +2705,9 @@ public:
 
             // Hermite + AR integration
             const PS::S32 n_group = n_group_in_cluster_[i];
+            //#pragma omp critical                
+            //std::cout<<"N_threads: "<<omp_get_num_threads()<<"; n_group: "<<n_group<<std::endl;
+            
             Tpsoft* ptcl_artificial_ptr=NULL;
             PS::S32* n_member_in_group_ptr=NULL;
             if(n_group>0) {
@@ -2487,6 +2771,37 @@ public:
             PS::F64 tend = PS::GetWtime();
             std::cerr<<"HT: "<<i<<" "<<ith<<" "<<n_cluster<<" "<<n_ptcl<<" "<<tend-tstart<<std::endl;
 #endif
+        };
+
+        // separate large and small (n_group<3) cluster 
+        PS::S32 small_cluster_list[n_cluster];
+        PS::S32 large_cluster_list[n_cluster];
+        PS::S32 n_small_cluster = 0;
+        PS::S32 n_large_cluster = 0;
+
+        for (PS::S32 i=0; i<n_cluster; i++) {
+            const PS::S32 n_group = n_group_in_cluster_[i];
+            if (n_group<3) {
+                small_cluster_list[n_small_cluster] = i;
+                n_small_cluster++;
+            }
+            else {
+                large_cluster_list[n_large_cluster] = i;
+                n_large_cluster++;
+            }
+        }
+
+        // integrate all clusters
+#pragma omp parallel for schedule(dynamic) 
+        for (PS::S32 k=0; k<n_small_cluster; k++) {
+            PS::S32 i = small_cluster_list[k];
+            integrateOneCluster(i);
+        }
+
+        // integrate all clusters
+        for (PS::S32 k=0; k<n_large_cluster; k++) {
+            PS::S32 i = large_cluster_list[k];
+            integrateOneCluster(i);
         }
 
 #ifdef PROFILE
@@ -2620,7 +2935,7 @@ public:
             // if no TT mode
             // Set member particle type, backup mass, collect member particle index to group_ptcl_adr_list
             //use _ptcl_in_cluster as the first particle address as reference to calculate the particle index.
-            if (manager->n_step_per_orbit==0) {
+            if (!manager->tidal_tensor_switcher) {
                 auto& bin = *stable_checker.stable_binary_tree[i];
                 const PS::S32 n_members = bin.getMemberN();
 
@@ -3323,7 +3638,7 @@ public:
                     // loop artificial particle orbital
                     PS::S32 k_start = adr_first_ptcl_arti[k];
 #ifdef ARTIFICIAL_PARTICLE_DEBUG
-                    if (k_start<0) assert(n_group==1&&adr_real_end-adr_real_start==2);
+                    if (k_start<0) assert(!manager->tidal_tensor_switcher||(n_group==1&&adr_real_end-adr_real_start==2));
 #endif
                     if (k_start<0) continue;
                     auto* porb_k = ap_manager.getOrbitalParticles(&(_sys[k_start]));
@@ -3417,7 +3732,7 @@ public:
                     for(PS::S32 k=0; k<n_ngb; k++){
                         if (ptcl_nb[k].id == _sys[adr].id) continue;
 
-                        if (ptcl_nb[k].r_scale_next!=1.0 || change_i) 
+                        if (ptcl_nb[k].changeover.r_scale_next!=1.0 || change_i) 
                             calcAccChangeOverCorrection(_sys[adr], ptcl_nb[k]);
                     }
                 }
@@ -3437,7 +3752,7 @@ public:
             for(PS::S32 k=0; k<n_ngb; k++){
                 if (ptcl_nb[k].id == _sys[adr].id) continue;
                 
-                if (ptcl_nb[k].r_scale_next!=1.0 || change_i) 
+                if (ptcl_nb[k].changeover.r_scale_next!=1.0 || change_i) 
                     calcAccChangeOverCorrection(_sys[adr], ptcl_nb[k]);
             }
             _sys[adr].changeover.updateWithRScale();

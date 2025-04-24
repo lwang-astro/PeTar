@@ -399,7 +399,7 @@ public:
             PS::F64 semi,ecc, r,rv;
             COMM::Binary::particleToSemiEcc(semi, ecc, r, rv, pi, pj, _G);
             PS::F64 peri = semi*(1-ecc);
-            PS::F64 r_crit_j = _pb[j].r_out;
+            PS::F64 r_crit_j = _pb[j].changeover.getRout();
             PS::F64 r_crit_max = _radius_factor*std::max(r_crit_i, r_crit_j);
             
             if (peri < r_crit_max && !(rv<0 && r>r_crit_max) ) {

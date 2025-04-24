@@ -97,61 +97,27 @@ class IOParamsPeTar{
 public:
     // IO parameters
     IOParamsContainer input_par_store;
-    IOParams<PS::F64> ratio_r_cut;
     IOParams<PS::F64> theta;
     IOParams<PS::S64> n_leaf_limit;
     IOParams<PS::S64> n_group_limit;
-//    IOParams<PS::S64> n_interrupt_limit;
     IOParams<PS::S64> n_smp_ave;
-#ifdef ORBIT_SAMPLING
-    IOParams<PS::S64> n_split;
-#endif
     IOParams<PS::S64> n_bin;
-    IOParams<PS::S64> n_step_per_orbit;
     IOParams<PS::F64> time_end;
-    IOParams<PS::F64> eta;
-    IOParams<PS::F64> gravitational_constant;
     IOParams<PS::S64> unit_set;
+    IOParams<PS::F64> gravitational_constant;
     IOParams<PS::S64> n_glb;
-    IOParams<PS::S64> id_offset;
     IOParams<PS::F64> dt_soft;
-    IOParams<PS::F64> dt_snap;
+    IOParams<PS::F64> r_out;
+    IOParams<PS::F64> r_in_over_out;
     IOParams<PS::F64> nstep_dt_soft_kepler;
     IOParams<PS::F64> search_vel_factor;
     IOParams<PS::F64> search_peri_factor;
-    IOParams<PS::F64> dt_limit_hard_factor;
-    IOParams<PS::S64> dt_min_hermite_index;
-    //IOParams<PS::S64> dt_min_ar_index;
-    //IOParams<PS::F64> dt_err_pert;
-    //IOParams<PS::F64> dt_err_soft;
-    IOParams<PS::F64> e_err_ar;
-#ifdef HARD_CHECK_ENERGY
-    IOParams<PS::F64> e_err_hard;
-#endif
-    IOParams<PS::S64> step_limit_ar;
-    IOParams<PS::F64> eps;
-    IOParams<PS::F64> r_out;
-    IOParams<PS::F64> r_bin;
-//    IOParams<PS::F64> r_search_max;
     IOParams<PS::F64> r_search_min;
     IOParams<PS::F64> r_escape;
-    IOParams<PS::F64> sd_factor;
+    IOParams<PS::F64> dt_snap;
     IOParams<PS::S64> data_format;
     IOParams<PS::S64> write_style;
-#ifdef STELLAR_EVOLUTION
-#ifdef BSE_BASE
-    IOParams<PS::S64> stellar_evolution_option;
-#endif
-    IOParams<PS::S64> interrupt_detection_option;
-#endif
-#ifdef ADJUST_GROUP_PRINT
-    IOParams<PS::S64> adjust_group_write_option;
-#endif
     IOParams<PS::S64> append_switcher;
-    IOParams<PS::S64> record_id_start_one;
-    IOParams<PS::S64> record_id_end_one;
-    IOParams<PS::S64> record_id_start_two;
-    IOParams<PS::S64> record_id_end_two;
     IOParams<std::string> fname_snp;
     IOParams<std::string> fname_par;
     IOParams<std::string> fname_inp;
@@ -162,7 +128,6 @@ public:
     bool update_rsearch_flag;
 
     IOParamsPeTar(): input_par_store(), 
-                     ratio_r_cut      (input_par_store, 0.1,  "r-ratio", "r_in / r_out"),
                      theta            (input_par_store, 0.3,  "T",  "Particle-tree opening angle theta"),
                      n_leaf_limit     (input_par_store, 20,   "number-leaf-limit", "Particle-tree leaf number limit", "Optimal value should be slightly >= 11 + N_bin_sample (20)"),
 #ifdef USE__AVX512
@@ -170,63 +135,27 @@ public:
 #else
                      n_group_limit    (input_par_store, 512,  "number-group-limit", "Particle-tree group number limit", "Optimized for x86-AVX2 (512)"),
 #endif
-//                     n_interrupt_limit(input_par_store, 128,  "number-interrupt-limit", "Interrupted hard integrator limit"),
                      n_smp_ave        (input_par_store, 100,  "number-sample-average", "Average target number of sample particles per process"),
-#ifdef ORBIT_SAMPLING
-                     n_split          (input_par_store, 4,    "number-split", "Number of binary sample points for tree perturbation force"),
-#endif
-                     n_bin            (input_par_store, 0,    "b", "Number of primordial binaries for initialization (assuming the binaries' IDs are 1,2*n_bin)"),
-                     n_step_per_orbit (input_par_store, 8,    "number-step-tt", "Number of steps per slow-down binary orbits (binary period/tree timestep) for isolated binaries; also the maximum criterion for activating tidal tensor method"),
+                     n_bin            (input_par_store, 0,    "b", "Number of primordial binaries (n_bin) for initialization (assuming the binaries' IDs are 1,2*n_bin)"),
                      time_end         (input_par_store, 10.0, "t", "End time of simulation"),
-                     eta              (input_par_store, 0.1,  "hermite-eta", "Hermite timestep coefficient eta"),
-                     gravitational_constant(input_par_store, 1.0, "G", "Gravitational constant"),
-                     unit_set         (input_par_store, 0,    "u", "Input data unit, 0: unknown, referring to G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr"),
-                     n_glb            (input_par_store, 100000, "n", "Total number of particles, used only for a test with the internal equal-mass Plummer model generator (assuming G=1 and the input data filename is __Plummer)"),
-                     id_offset        (input_par_store, -1,   "id-offset", "Starting ID for artificial particles, total number of real particles must always be smaller than this","n_glb+1"),
-                     dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft), if the value is zero (default) and --nstep-dt-soft-kepler is not used, then dt_soft = 0.1*r_out/sigma_1D"),
+                     unit_set         (input_par_store, 0,    "u", "Input data unit; 0: based on the value of G; 1: mass:Msun, length:pc, time:Myr, velocity:pc/Myr, modify G to fit this unit set"),
+                     gravitational_constant (input_par_store, 1.0, "G", "Gravitational constant, if -u 1, G = 0.00449830997959438 pc^3/(Msun*Myr^2)"),
+                     n_glb            (input_par_store, 100000, "n", "Total number of particles, used only when the input data filename is __Plummer"),
+                     dt_soft          (input_par_store, 0.0,  "s", "Tree timestep (dt_soft); = 0: without --nstep-dt-soft-kepler, dt_soft = 0.1*r_out/sigma_1D, where sigma_1D is 1D half-mass radius velocity dispersion; = 0: with '--nstep-dt-soft-kepler nstep', dt_soft = P(r_in)/nstep"),
+                     r_out            (input_par_store, 0.0,  "r", "Outer changeover radius (r_out); = 0: without -s, r_out = 0.1 GM/[N^(1/3) sigma_3D^2], where sigma_3D is 3D half-mass radius velocity dispersion; = 0: with '-s dt_soft', r_out = 10*dt_soft*sigma_1D"),
+                     r_in_over_out    (input_par_store, 0.1,  "r-ratio", "Ratio between inner (r_in) and outer (r_out) changeover radii"),
+                     nstep_dt_soft_kepler(input_par_store, 0.0, "nstep-dt-soft-kepler", "Determines the dt_soft by P(r_in)/nstep; P(r_in) is the binary period with the semi-major axis of r_in; nstep is the argument of this option (e.g., 32.0)", "not used"),
+                     search_vel_factor (input_par_store, 3.0,  "search-vel-factor", "Neighbor search coefficient for velocity check (v*dt)"),
+                     search_peri_factor(input_par_store, 1.5, "search-peri-factor", "Neighbor search coefficient for periapsis check"),
+                     r_search_min     (input_par_store, 0.0,  "r-search-min", "Minimum neighbor search radius for hard clusters","auto"),
+                     r_escape         (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Object escape radius criterion; 0: no escaper removal; <0: remove objects when r>-r_escape; >0: remove objects when r>r_escape and energy>0"),
                      dt_snap          (input_par_store, 1.0,  "o", "Output time interval for particle dataset snapshots"),
-                     nstep_dt_soft_kepler (input_par_store, 0.0, "nstep-dt-soft-kepler", "Determines the tree timestep by P(r_in)/nstep, where P(r_in) is the binary period with the semi-major axis of r_in, nstep is the argument of this option (e.g., 32.0)", "not used"),
-                     search_vel_factor(input_par_store, 3.0,  "search-vel-factor", "Neighbor search coefficient for velocity check (v*dt)"),
-                     search_peri_factor  (input_par_store, 1.5, "search-peri-factor", "Neighbor search coefficient for periapsis check"),
-                     dt_limit_hard_factor(input_par_store, 4.0, "dt-max-factor", "Limit of tree timestep/hard timestep"),
-                     dt_min_hermite_index(input_par_store, 40,  "dt-min-hermite",  "Power index n for the smallest timestep (0.5^n) allowed in the Hermite integrator"),
-                     //dt_min_ar_index     (input_par_store, 64,  "dt-min-ar",  "Power index n for the smallest timestep (0.5^n) allowed in the ARC integrator, suppressed"),
-                     //dt_err_pert  (input_par_store, 1e-6, "dt-error-pert", "Maximum time synchronization error (relative) for perturbed ARC integrator, suppressed"),
-                     //dt_err_soft  (input_par_store, 1e-3, "dt-error-iso", "Maximum time synchronization error (relative) for no-perturber (only soft perturbation) ARC integrator, suppressed"),
-                     e_err_ar     (input_par_store, 1e-8, "energy-err-ar", "Maximum energy error allowed for the ARC integrator"),
-#ifdef HARD_CHECK_ENERGY
-                     e_err_hard   (input_par_store, 1e-4, "energy-err-hard", "Maximum energy error allowed for the hard integrator"),
-#endif
-                     step_limit_ar(input_par_store, 1000000, "step-limit-ar", "Maximum step allowed for the ARC sym integrator"),
-                     eps          (input_par_store, 0.0,  "soft-eps", "Softening epsilon"),
-                     r_out        (input_par_store, 0.0,  "r", "Outer boundary radius for the changeover function (r_out), if value is zero and -s is not used, use 0.1 GM/[N^(1/3) sigma_3D^2]; if -s is given, calculate r_out from dt_soft"),
-                     r_bin        (input_par_store, 0.0,  "r-bin", "Tidal tensor box size and the radial criterion for detecting multiple systems (binaries, triples, etc.), if value is zero, use 0.8*r_in"),
-//                     r_search_max (input_par_store, 0.0,  "Maximum search radius criterion", "5*r_out"),
-                     r_search_min (input_par_store, 0.0,  "r-search-min", "Minimum neighbor search radius for hard clusters","auto"),
-                     r_escape     (input_par_store, PS::LARGE_FLOAT,  "r-escape", "Escape radius criterion, 0: no escaper removal; <0: remove particles when r>-r_escape; >0: remove particles when r>r_escape and energy>0"),
-                     sd_factor    (input_par_store, 1e-4, "slowdown-factor", "Slowdown perturbation criterion"),
-                     data_format  (input_par_store, 1,    "i", "Data read(r)/write(w) format BINARY(B)/ASCII(A): r-B/w-A (3), r-A/w-B (2), rw-A (1), rw-B (0)"),
-                     write_style  (input_par_store, 1,    "w", "File writing style: 0, no output; 1. write snapshots, status, and profile separately; 2. write snapshot and status in one line per step (no MPI support); 3. write only status and profile"),
-#ifdef STELLAR_EVOLUTION
-#ifdef BSE_BASE
-                     stellar_evolution_option  (input_par_store, 1, "stellar-evolution", "Stellar evolution of stars in Hermite+SDAR: 0: off; >=1: using SSE/BSE based codes; ==2: activate dynamical tide and hyperbolic gravitational wave radiation"),
-                     interrupt_detection_option(input_par_store, 1, "detect-interrupt", "Stellar evolution of binaries in SDAR: 0: off; 1: using BSE based code (if '--stellar-evolution != 0)"),
-#else // NO BSE_BASE
-                     interrupt_detection_option(input_par_store, 0, "detect-interrupt", "Interrupt integration in SDAR: 0: turn off; 1: merge two particles if their surfaces overlap; 2. record two particle information if their surfaces overlap without merger"),
-#endif // END BSE_BASE
-#endif // END STELLAR_EVOLUTION
-
-#ifdef ADJUST_GROUP_PRINT
-                     adjust_group_write_option(input_par_store, 1, "write-group-info", "Print new and end of groups: 0: no print; 1: print to file [data filename prefix].group.[MPI rank] if -w >0"),
-#endif
-                     append_switcher(input_par_store, 1, "a", "Data output style: 0 - create new output files and overwrite existing ones except snapshots; 1 - append new data to existing files"),
-                     record_id_start_one(input_par_store, 0, "record-id-start-one", "Starting of the first id range for hard dump recording every tree step"),
-                     record_id_end_one(input_par_store, 0, "record-id-end-one", "Ending of the first id range for hard dump; notice that the ending id is not included in hard dump"),
-                     record_id_start_two(input_par_store, 0, "record-id-start-two", "Starting of the 2nd id range for hard dump recording every tree step"),
-                     record_id_end_two(input_par_store, 0, "record-id-end-two", "Ending of the 2nd id range for hard dump; notice that the ending id is not included in hard dump"),
-                     fname_snp(input_par_store, "data", "f", "Prefix of filenames for output data: [prefix].**"),
-                     fname_par(input_par_store, "input.par", "p", "Input parameter file (this option should be used first before any other options)"),
-                     fname_inp(input_par_store, "__NONE__", "snap-filename", "Input data file", NULL, false),
+                     data_format      (input_par_store, 1,    "i", "Data file reading and writing format; 0: read and write in BINARY; 1: read and write in ASCII; 2: read in ASCII, write in BINARY; 3: read in BINARY, write in ASCII"),
+                     write_style      (input_par_store, 1,    "w", "Data file writing style; 0: no output; 1: write all files separately; 2. write snapshots in status files in one line per step (no MPI support); 3. write files except snapshots"),
+                     append_switcher  (input_par_store, 1,    "a", "Data file output mode; 0: overwrite files except object dump files, include header lines; 1: append files except snapshots, no header line"),
+                     fname_snp        (input_par_store, "data", "f", "Prefix of filenames for output data: [prefix].**"),
+                     fname_par        (input_par_store, "input.par", "p", "Input parameter file (this option should be used first before any other options)"),
+                     fname_inp        (input_par_store, "__NONE__", "snap-filename", "Input data file", NULL, false),
                      print_flag(false), update_changeover_flag(false), update_rsearch_flag(false) {}
 
     
@@ -240,46 +169,16 @@ public:
     int read(int argc, char *argv[], const int opt_used_pre=0) {
         static int petar_flag=-1;
         static struct option long_options[] = {
-#ifdef ORBIT_SAMPLING
-            {n_split.key,              required_argument, &petar_flag, 0},        
-#endif
-            {search_vel_factor.key,    required_argument, &petar_flag, 1},  
-            {dt_limit_hard_factor.key, required_argument, &petar_flag, 2},  
-            {dt_min_hermite_index.key, required_argument, &petar_flag, 3}, 
-            {n_group_limit.key,        required_argument, &petar_flag, 4},
-            {n_leaf_limit.key,         required_argument, &petar_flag, 5},
-            {n_smp_ave.key,            required_argument, &petar_flag, 6},
-            {e_err_ar.key,             required_argument, &petar_flag, 7}, 
-            {eps.key,                  required_argument, &petar_flag, 8},       
-            {sd_factor.key,            required_argument, &petar_flag, 9},
-            {ratio_r_cut.key,          required_argument, &petar_flag, 10},
-            {r_bin.key,                required_argument, &petar_flag, 11},       
-            {search_peri_factor.key,   required_argument, &petar_flag, 12}, 
-            {eta.key,                  required_argument, &petar_flag, 13}, 
-#ifdef HARD_CHECK_ENERGY
-            {e_err_hard.key,           required_argument, &petar_flag, 14},  
-#endif
-            {step_limit_ar.key,        required_argument, &petar_flag, 15},   
-            {"disable-print-info",     no_argument,       &petar_flag, 16},
-            {n_step_per_orbit.key,     required_argument, &petar_flag, 17},
-#ifdef STELLAR_EVOLUTION
-//            {n_interrupt_limit.key,    required_argument, &petar_flag, 18},
-#ifdef BSE_BASE
-            {stellar_evolution_option.key,    required_argument, &petar_flag, 19},
-#endif
-            {interrupt_detection_option.key,  required_argument, &petar_flag, 20},
-#endif
-            {r_escape.key,             required_argument, &petar_flag, 21},
-            {r_search_min.key,         required_argument, &petar_flag, 22},
-            {id_offset.key,            required_argument, &petar_flag, 23},
-#ifdef ADJUST_GROUP_PRINT
-            {adjust_group_write_option.key,   required_argument, &petar_flag, 24},
-#endif            
-            {nstep_dt_soft_kepler.key,  required_argument, &petar_flag, 25},
-            {record_id_start_one.key,  required_argument, &petar_flag, 26},
-            {record_id_end_one.key,    required_argument, &petar_flag, 27},
-            {record_id_start_two.key,  required_argument, &petar_flag, 28},
-            {record_id_end_two.key,    required_argument, &petar_flag, 29},
+            {n_leaf_limit.key,         required_argument, &petar_flag, 1},
+            {n_group_limit.key,        required_argument, &petar_flag, 2},
+            {n_smp_ave.key,            required_argument, &petar_flag, 3},
+            {r_in_over_out.key,        required_argument, &petar_flag, 4},
+            {nstep_dt_soft_kepler.key, required_argument, &petar_flag, 5},
+            {search_vel_factor.key,    required_argument, &petar_flag, 6},  
+            {search_peri_factor.key,   required_argument, &petar_flag, 7}, 
+            {r_search_min.key,         required_argument, &petar_flag, 8},
+            {r_escape.key,             required_argument, &petar_flag, 9},
+            {"disable-print-info",     no_argument,       &petar_flag, 10},
             {"help",                  no_argument, 0, 'h'},        
             {0,0,0,0}
         };
@@ -288,188 +187,68 @@ public:
         int copt;
         int option_index;
         optind = 0; // reset getopt
-        while ((copt = getopt_long(argc, argv, "-i:a:t:s:o:r:b:n:G:u:T:f:p:w:h", long_options, &option_index)) != -1) 
+        while ((copt = getopt_long(argc, argv, "-i:a:t:s:r:o:b:n:u:G:T:f:p:w:h", long_options, &option_index)) != -1) 
             switch (copt) {
             case 0:
                 switch (petar_flag) {
-#ifdef ORBIT_SAMPLING
-                case 0:
-                    n_split.value = atoi(optarg);
-                    if(print_flag) n_split.print(std::cout);
-                    opt_used += 2;
-                    assert(n_split.value>=0);
-                    break;
-#endif
                 case 1:
+                    n_leaf_limit.value = atoi(optarg);
+                    if(print_flag) n_leaf_limit.print(std::cout);
+                    opt_used += 2;
+                    assert(n_leaf_limit.value>0);
+                    break;
+                case 2:
+                    n_group_limit.value = atoi(optarg);
+                    if(print_flag) n_group_limit.print(std::cout);
+                    opt_used += 2;
+                    assert(n_group_limit.value>0);
+                    break;
+                case 3:
+                    n_smp_ave.value = atoi(optarg);
+                    if(print_flag) n_smp_ave.print(std::cout);
+                    opt_used += 2;
+                    assert(n_smp_ave.value>0.0);
+                    break;
+                case 4:
+                    r_in_over_out.value = atof(optarg);
+                    if(print_flag) r_in_over_out.print(std::cout);
+                    update_changeover_flag = true;
+                    opt_used += 2;
+                    assert(r_in_over_out.value>0.0);
+                    assert(r_in_over_out.value<1.0);
+                    break;
+                case 5:
+                    nstep_dt_soft_kepler.value = atof(optarg);
+                    if(print_flag) nstep_dt_soft_kepler.print(std::cout);
+                    opt_used += 2;
+                    break;
+                case 6:
                     search_vel_factor.value = atof(optarg);
                     if(print_flag) search_vel_factor.print(std::cout);
                     opt_used += 2;
                     update_rsearch_flag = true;
                     assert(search_vel_factor.value>0.0);
                     break;
-                case 2:
-                    dt_limit_hard_factor.value = atof(optarg);
-                    if(print_flag) dt_limit_hard_factor.print(std::cout);
-                    opt_used += 2;
-                    assert(dt_limit_hard_factor.value > 0.0);
-                    break;
-                case 3:
-                    dt_min_hermite_index.value = atoi(optarg);
-                    if(print_flag) dt_min_hermite_index.print(std::cout);
-                    opt_used += 2;
-                    assert(dt_min_hermite_index.value > 0);
-                    break;
-                case 4:
-                    n_group_limit.value = atoi(optarg);
-                    if(print_flag) n_group_limit.print(std::cout);
-                    opt_used += 2;
-                    assert(n_group_limit.value>0);
-                    break;
-                case 5:
-                    n_leaf_limit.value = atoi(optarg);
-                    if(print_flag) n_leaf_limit.print(std::cout);
-                    opt_used += 2;
-                    assert(n_leaf_limit.value>0);
-                    break;
-                case 6:
-                    n_smp_ave.value = atoi(optarg);
-                    if(print_flag) n_smp_ave.print(std::cout);
-                    opt_used += 2;
-                    assert(n_smp_ave.value>0.0);
-                    break;
                 case 7:
-                    e_err_ar.value = atof(optarg);
-                    if(print_flag) e_err_ar.print(std::cout);
-                    opt_used += 2;
-                    assert(e_err_ar.value > 0.0);
-                    break;
-                case 8:
-                    eps.value = atof(optarg);
-                    if(print_flag) eps.print(std::cout);
-                    opt_used += 2;
-                    assert(eps.value>=0.0);
-                    break;
-                case 9:
-                    sd_factor.value = atof(optarg);
-                    if(print_flag) sd_factor.print(std::cout);
-                    opt_used += 2;
-                    assert(sd_factor.value>0.0);
-                    break;
-                case 10:
-                    ratio_r_cut.value = atof(optarg);
-                    if(print_flag) ratio_r_cut.print(std::cout);
-                    update_changeover_flag = true;
-                    opt_used += 2;
-                    assert(ratio_r_cut.value>0.0);
-                    assert(ratio_r_cut.value<1.0);
-                    break;
-                case 11:
-                    r_bin.value = atof(optarg);
-                    if(print_flag) r_bin.print(std::cout);
-                    opt_used += 2;
-                    assert(r_bin.value>=0.0);
-                    break;
-                case 12:
                     search_peri_factor.value = atof(optarg);
                     if(print_flag) search_peri_factor.print(std::cout);
                     opt_used += 2;
                     assert(search_peri_factor.value>=1.0);
                     break;
-                case 13:
-                    eta.value = atof(optarg);
-                    if(print_flag) eta.print(std::cout);
-                    opt_used += 2;
-                    assert(eta.value>0.0);
-                    break;
-#ifdef HARD_CHECK_ENERGY
-                case 14:
-                    e_err_hard.value = atof(optarg);
-                    if(print_flag) e_err_hard.print(std::cout);
-                    opt_used += 2;
-                    break;
-#endif
-                case 15:
-                    step_limit_ar.value = atoi(optarg);
-                    if(print_flag) step_limit_ar.print(std::cout);
-                    opt_used += 2;
-                    break;
-                case 16:
-                    print_flag = false;
-                    opt_used ++;
-                    break;
-                case 17:
-                    n_step_per_orbit.value = atof(optarg);
-                    if(print_flag) n_step_per_orbit.print(std::cout);
-                    opt_used += 2;
-                    assert(n_step_per_orbit.value>=1.0 || n_step_per_orbit.value==0.0);
-                    break;
-#ifdef STELLAR_EVOLUTION
-//                case 18:
-//                    n_interrupt_limit.value = atoi(optarg);
-//                    if(print_flag) n_interrupt_limit.print(std::cout);
-//                    opt_used += 2;
-//                    assert(n_interrupt_limit.value>0);
-//                    break;
-#ifdef BSE_BASE
-                case 19:
-                    stellar_evolution_option.value = atoi(optarg);
-                    if(print_flag) stellar_evolution_option.print(std::cout);
-                    opt_used += 2;
-                    break;
-#endif
-                case 20:
-                    interrupt_detection_option.value = atoi(optarg);
-                    if(print_flag) interrupt_detection_option.print(std::cout);
-                    opt_used += 2;
-                    break;
-#endif
-                case 21:
-                    r_escape.value = atof(optarg);
-                    if(print_flag) r_escape.print(std::cout);
-                    opt_used += 2;
-                    break;
-                case 22:
+                case 8:
                     r_search_min.value = atof(optarg);
                     if(print_flag) r_search_min.print(std::cout);
                     update_rsearch_flag = true;
                     opt_used += 2;
                     break;
-                case 23:
-                    id_offset.value = atoi(optarg);
-                    if(print_flag) id_offset.print(std::cout);
+                case 9:
+                    r_escape.value = atof(optarg);
+                    if(print_flag) r_escape.print(std::cout);
                     opt_used += 2;
                     break;
-#ifdef ADJUST_GROUP_PRINT
-                case 24:
-                    adjust_group_write_option.value = atoi(optarg);
-                    if(print_flag) adjust_group_write_option.print(std::cout);
-                    opt_used += 2;
-                    break;
-#endif
-                case 25:
-                    nstep_dt_soft_kepler.value = atof(optarg);
-                    if(print_flag) nstep_dt_soft_kepler.print(std::cout);
-                    opt_used += 2;
-                    break;
-                case 26:
-                    record_id_start_one.value = atoi(optarg);
-                    if(print_flag) record_id_start_one.print(std::cout);
-                    opt_used += 2;
-                    break;
-                case 27:
-                    record_id_end_one.value = atoi(optarg);
-                    if(print_flag) record_id_end_one.print(std::cout);
-                    opt_used += 2;
-                    break;
-                case 28:
-                    record_id_start_two.value = atoi(optarg);
-                    if(print_flag) record_id_start_two.print(std::cout);
-                    opt_used += 2;
-                    break;
-                case 29:
-                    record_id_end_two.value = atoi(optarg);
-                    if(print_flag) record_id_end_two.print(std::cout);
-                    opt_used += 2;
+                case 10:
+                    print_flag = false;
+                    opt_used ++;
                     break;
                 default:
                     break;
@@ -500,12 +279,6 @@ public:
                 opt_used += 2;
                 assert(dt_soft.value>=0.0);
                 break;
-            case 'o':
-                dt_snap.value = atof(optarg);
-                if(print_flag) dt_snap.print(std::cout);
-                opt_used += 2;
-                assert(dt_snap.value>0.0);
-                break;
             case 'r':
                 r_out.value = atof(optarg);
                 if(print_flag) r_out.print(std::cout);
@@ -513,6 +286,12 @@ public:
                 update_changeover_flag = true;
                 opt_used += 2;
                 assert(r_out.value>=0.0);
+                break;
+            case 'o':
+                dt_snap.value = atof(optarg);
+                if(print_flag) dt_snap.print(std::cout);
+                opt_used += 2;
+                assert(dt_snap.value>0.0);
                 break;
             case 'b':
                 n_bin.value = atoi(optarg);
@@ -526,17 +305,17 @@ public:
                 opt_used += 2;
                 assert(n_glb.value>0);
                 break;
-            case 'G':
-                gravitational_constant.value = atof(optarg);
-                if(print_flag) gravitational_constant.print(std::cout);
-                opt_used += 2;
-                assert(gravitational_constant.value>0.0);
-                break;
             case 'u':
                 unit_set.value = atoi(optarg);
                 if(print_flag) unit_set.print(std::cout);
                 opt_used += 2;
                 assert(unit_set.value>=0);
+                break;
+            case 'G':
+                gravitational_constant.value = atof(optarg);
+                if(print_flag) gravitational_constant.print(std::cout);
+                opt_used += 2;
+                assert(gravitational_constant.value>0.0);
                 break;
             case 'T':
                 theta.value = atof(optarg);
@@ -587,19 +366,13 @@ public:
 #endif
                              <<"            Following lines:\n";
                     FPSoft::printTitleWithMeaning(std::cout,0,13);
-                    std::cout<<"          PS: (*) show initialization values which should be used together with FILE_ID = 0"<<std::endl;
-                    std::cout<<"              [formatted] indicates that the value is only for save, cannot be directly read"<<std::endl;
-                    std::cout<<"Options:\n";
-                    input_par_store.printHelp(std::cout, 2, 10, 23);
-                    std::cout<<"        --disable-print-info:  "<<"Do not print information"<<std::endl;
-                    std::cout<<"        --disable-write-info:  "<<"Do not write information"<<std::endl;
-                    std::cout<<"  -h(--help):               print help"<<std::endl;
-                    std::cout<<"*** PS: dt_soft: tree time step\n"
-                             <<"        r_in : transit function inner boundary radius\n"
-                             <<"        r_out: transit function outer boundary radius\n"
-                             <<"        sigma: half-mass radius velocity dispersion\n"
-                             <<"        n_bin: number of primordial binaries\n"
-                             <<"        <m>  : averaged mass"<<std::endl;
+                    std::cout<<"** PS: (*) show initialization values which should be used together with FILE_ID = 0"<<std::endl;
+                    std::cout<<"       [formatted] indicates that the value is only for save, cannot be directly read"<<std::endl;
+                    std::cout<<"----- Main Options: -----\n";
+                    std::cout<<"  -h(--help):  print help"<<std::endl;
+                    input_par_store.printHelp(std::cout, true);
+                    std::cout<<"  --disable-print-info:        Do not print information"<<std::endl;
+                    //std::cout<<"        --disable-write-info:  "<<"Do not write information"<<std::endl;
                 }
                 return -1;
             case '?':
@@ -617,7 +390,7 @@ public:
             if(print_flag) std::cout<<"Reading data file name: "<<fname_inp.value<<std::endl;
         }
 
-        if(print_flag) std::cout<<"----- Finish reading input options of PeTar -----\n";
+        if(print_flag) std::cout<<"----- Finish reading main options -----\n";
 
         return opt_used-1;
     }
@@ -628,28 +401,17 @@ public:
         assert(n_split.value>=0);
 #endif
         assert(search_vel_factor.value>0.0);
-        assert(dt_limit_hard_factor.value > 0.0);
-        assert(dt_min_hermite_index.value > 0);
-        assert(e_err_ar.value > 0.0);
-        assert(eps.value>=0.0 && eps.value<=ratio_r_cut.value); // avoid incorrect self-potential correction after tree force, when eps>r_out, self-potential is G m /r_eps instead of G m/r_cut;
-        assert(sd_factor.value>0.0);
-        assert(ratio_r_cut.value>0.0);
-        assert(ratio_r_cut.value<1.0);
-        assert(r_bin.value>=0.0);
         assert(search_peri_factor.value>=1.0);
         assert(data_format.value>=0||data_format.value<=3);
         assert(time_end.value>=0.0);
         assert(dt_soft.value>=0.0);
         assert(dt_snap.value>0.0);
-        assert(r_out.value>=0.0);
         assert(n_bin.value>=0);
         assert(n_glb.value>0);
         assert(n_group_limit.value>0);
-//        assert(n_interrupt_limit.value>0);
         assert(n_leaf_limit.value>0);
         assert(n_smp_ave.value>0.0);
         assert(theta.value>=0.0);
-        assert(eta.value>0.0);
         return true;
     }
 
@@ -671,6 +433,7 @@ public:
 
     // IO
     IOParamsPeTar input_parameters;
+    IOParamsHard hard_parameters;
 #ifdef BSE_BASE
     IOParamsBSE bse_parameters;
     std::string fbse_par_suffix = BSEManager::getBSEOutputFilenameSuffix();
@@ -776,6 +539,7 @@ public:
     //! initialization
     PeTar(): 
         input_parameters(),
+        hard_parameters(),
 #ifdef BSE_BASE
         bse_parameters(),
         rand_parameters(),
@@ -820,19 +584,6 @@ public:
         my_rank = PS::Comm::getRank();
         n_proc = PS::Comm::getNumberOfProc();
      }
-
-
-    //! regular block time step
-    PS::F64 regularTimeStep(const PS::F64 _dt) {
-        // regularize dt_tree
-        PS::F64 dt = 1.0;
-        if (_dt<1) while (dt>_dt) dt *= 0.5;
-        else {
-            while (dt<=_dt) dt *= 2.0;
-            dt *= 0.5;
-        }
-        return dt;
-    }
 
     //! tree for neighbor searching.
     void treeNeighborSearch() {
@@ -1132,9 +883,9 @@ public:
             PS::F64vec pos_cluster = pi.pos - stat.pcm.pos;
 #endif
 #ifdef GALPY
-            galpy_manager.calcAccPot(&acc.x, pot, stat.time, input_parameters.gravitational_constant.value*pi.mass, &pos_origin[0], &pos_cluster[0]);
+            galpy_manager.calcAccPot(&acc.x, pot, stat.time, hard_parameters.gravitational_constant.value*pi.mass, &pos_origin[0], &pos_cluster[0]);
 #elif AGAMA
-            agama_manager.calcAccPot(&acc.x, pot, stat.time, input_parameters.gravitational_constant.value*pi.mass, &pos_origin[0], &pos_cluster[0]);
+            agama_manager.calcAccPot(&acc.x, pot, stat.time, hard_parameters.gravitational_constant.value*pi.mass, &pos_origin[0], &pos_cluster[0]);
 #endif
             assert(!std::isinf(acc[0]));
             assert(!std::isnan(acc[0]));
@@ -2526,6 +2277,10 @@ public:
         fout<<"Use 4th-order KDKDK mode for tree step\n";
 #endif
 
+#ifdef ONLY_SOFT
+        fout<<"Only soft force\n";
+#endif
+
 #ifdef CLUSTER_VELOCITY
         fout<<"Use orbit-dependent neighbor criterion\n";
 #endif
@@ -2621,23 +2376,26 @@ public:
         if (my_rank==0) input_parameters.print_flag=true;
         else input_parameters.print_flag=false;
         int read_flag = input_parameters.read(argc,argv);
+        if (my_rank==0) hard_parameters.print_flag=true;
+        else hard_parameters.print_flag=false;
+        hard_parameters.read(argc,argv,false);
 #ifdef BSE_BASE
         if (my_rank==0) bse_parameters.print_flag=true;
         else bse_parameters.print_flag=false;
-        bse_parameters.read(argc,argv);
+        bse_parameters.read(argc,argv,false);
         if (my_rank==0) rand_parameters.print_flag=true;
         else rand_parameters.print_flag=false;
-        rand_parameters.read(argc,argv);
+        rand_parameters.read(argc,argv,false);
 #endif
 #ifdef GALPY
         if (my_rank==0) galpy_parameters.print_flag=true;
         else galpy_parameters.print_flag=false;
-        galpy_parameters.read(argc,argv);
+        galpy_parameters.read(argc,argv,false);
 #endif
 #ifdef EXTERNAL_HARD
         if (my_rank==0) external_hard_parameters.print_flag=true;
         else external_hard_parameters.print_flag=false;
-        external_hard_parameters.read(argc,argv);
+        external_hard_parameters.read(argc,argv,false);
 #endif
 #ifdef AGAMA
         if (my_rank==0) agama_parameters.print_flag=true;
@@ -2725,33 +2483,37 @@ public:
 
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
-            // open SSE/BSE file
-            std::string fsse_name = fname_snp + fsse_par_suffix + "." + my_rank_str;
-            std::string fbse_name = fname_snp + fbse_par_suffix + "." + my_rank_str;
-            if(input_parameters.append_switcher.value==1) {
-                hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out|std::ofstream::app);
-                hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out|std::ofstream::app);
+            if (hard_parameters.stellar_evolution_option.value>0) {
+                // open SSE/BSE file
+                std::string fsse_name = fname_snp + fsse_par_suffix + "." + my_rank_str;
+                std::string fbse_name = fname_snp + fbse_par_suffix + "." + my_rank_str;
+                if(input_parameters.append_switcher.value==1) {
+                    hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out|std::ofstream::app);
+                    hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out|std::ofstream::app);
+                }
+                else {
+                    hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out);
+                    hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out);
+                }
+                hard_manager.ar_manager.interaction.fout_sse<<std::setprecision(WRITE_PRECISION);
+                hard_manager.ar_manager.interaction.fout_bse<<std::setprecision(WRITE_PRECISION);
             }
-            else {
-                hard_manager.ar_manager.interaction.fout_sse.open(fsse_name.c_str(), std::ofstream::out);
-                hard_manager.ar_manager.interaction.fout_bse.open(fbse_name.c_str(), std::ofstream::out);
-            }
-            hard_manager.ar_manager.interaction.fout_sse<<std::setprecision(WRITE_PRECISION);
-            hard_manager.ar_manager.interaction.fout_bse<<std::setprecision(WRITE_PRECISION);
 #else
-            // open interrupt file
-            std::string finterrupt_name = fname_snp + ".interrupt." + my_rank_str;
-            if(input_parameters.append_switcher.value==1) 
-                hard_manager.ar_manager.interaction.fout_interrupt.open(finterrupt_name.c_str(), std::ofstream::out|std::ofstream::app);
-            else 
-                hard_manager.ar_manager.interaction.fout_interrupt.open(finterrupt_name.c_str(), std::ofstream::out);
-            hard_manager.ar_manager.interaction.fout_interrupt<<std::setprecision(WRITE_PRECISION);
+            if (hard_parameters.interrupt_detection_option.value>0) {
+                // open interrupt file
+                std::string finterrupt_name = fname_snp + ".interrupt." + my_rank_str;
+                if(input_parameters.append_switcher.value==1) 
+                    hard_manager.ar_manager.interaction.fout_interrupt.open(finterrupt_name.c_str(), std::ofstream::out|std::ofstream::app);
+                else 
+                    hard_manager.ar_manager.interaction.fout_interrupt.open(finterrupt_name.c_str(), std::ofstream::out);
+                hard_manager.ar_manager.interaction.fout_interrupt<<std::setprecision(WRITE_PRECISION);
+            }
 #endif 
 #endif
 
 #ifdef ADJUST_GROUP_PRINT
             // open file for new/end group information
-            if (input_parameters.adjust_group_write_option.value==1) {
+            if (hard_parameters.adjust_group_write_option.value==1) {
                 std::string fgroup_name = fname_snp + ".group." + my_rank_str;
                 if(input_parameters.append_switcher.value==1) 
                     hard_manager.h4_manager.fgroup.open(fgroup_name.c_str(), std::ofstream::out|std::ofstream::app);
@@ -3107,6 +2869,7 @@ public:
         // units
         if (input_parameters.unit_set.value==1) {
             input_parameters.gravitational_constant.value = G_ASTRO;
+            hard_parameters.gravitational_constant.value = G_ASTRO;
 #ifdef BSE_BASE
             bse_parameters.tscale.value = 1.0; // Myr
             bse_parameters.rscale.value = PC_TO_RSUN;
@@ -3143,15 +2906,12 @@ public:
         // calculate system parameters
         PS::F64 r_in, mass_average, vel_disp;// mass_max, vel_max;
         PS::F64& r_out = input_parameters.r_out.value;
-        PS::F64& r_bin = input_parameters.r_bin.value;
         PS::F64& r_search_min = input_parameters.r_search_min.value;
-//        PS::F64& r_search_max = input_parameters.r_search_max.value;
         PS::F64& dt_soft = input_parameters.dt_soft.value;
         PS::F64& dt_snap = input_parameters.dt_snap.value;
         PS::F64& search_vel_factor =  input_parameters.search_vel_factor.value;
-        PS::F64& ratio_r_cut   =  input_parameters.ratio_r_cut.value;
+        PS::F64& r_in_over_out =  input_parameters.r_in_over_out.value;
         PS::S64& n_bin         =  input_parameters.n_bin.value;
-        //PS::F64& theta         =  input_parameters.theta.value;
         PS::F64& G             =  input_parameters.gravitational_constant.value;
         PS::F64& nstep_dt_soft_kepler = input_parameters.nstep_dt_soft_kepler.value;
 
@@ -3238,18 +2998,18 @@ public:
         // flag to check whether r_ous is already defined
         bool r_out_flag = (r_out>0);
     
-        // if r_out is already defined, calculate r_in based on ratio_r_cut
-        if (r_out_flag) r_in = r_out * ratio_r_cut;
-        // calculate r_out based on virial radius scaled with (N)^(1/3), calculate r_in by ratio_r_cut
+        // if r_out is already defined, calculate r_in based on  r_in_over_out
+        if (r_out_flag) r_in = r_out * r_in_over_out;
+        // calculate r_out based on virial radius scaled with (N)^(1/3), calculate r_in by r_in_over_out
         else {
             if (n_glb>1) {
                 r_out = std::min(0.1*G*mass_cm_glb/(std::pow(n_glb,1.0/3.0)) / (3*vel_disp*vel_disp), 3.0*(rmax_glb-rmin_glb));
-                r_in = r_out * ratio_r_cut;
+                r_in = r_out * r_in_over_out;
             }
             else {
                 // give two small values, no meaning at all
                 r_out = 1e-16;
-                r_in = r_out*ratio_r_cut;
+                r_in = r_out*r_in_over_out;
                 if (print_flag) std::cout<<"In one particle case, changeover radius is set to a small value\n";
             }
         }
@@ -3275,23 +3035,20 @@ public:
                 if (n_glb>1) {
                     if (nstep_dt_soft_kepler>0) {
                             r_in = COMM::Binary::periodToSemi(dt_soft*nstep_dt_soft_kepler, mass_average, G);
-                            r_out = r_in / ratio_r_cut;
+                            r_out = r_in / r_in_over_out;
                     }
                     else {
                         r_out = 10.0*dt_soft*vel_disp;
-                        r_in = r_out * ratio_r_cut;
+                        r_in = r_out * r_in_over_out;
                     }
                 }
                 else {
                     r_out = 1e-16;
-                    r_in = r_out*ratio_r_cut;
+                    r_in = r_out*r_in_over_out;
                     if (print_flag) std::cout<<"In one particle case, changeover radius is set to a small value\n";
                 }
             }
         }
-
-        // if r_bin is not defined, set to theta * r_in
-        if (r_bin==0.0) r_bin = 0.8*r_in;
 
         // if r_search_min is not defined, calculate by search_vel_factor*velocity_dispersion*tree_time_step + r_out
         if (r_search_min==0.0) r_search_min = search_vel_factor*vel_disp*dt_soft + r_out;
@@ -3306,13 +3063,12 @@ public:
         else
             dt_snap = int(dt_snap/dt_soft)*dt_soft;
 
-        EPISoft::eps   = input_parameters.eps.value;
+        EPISoft::eps   = hard_parameters.eps.value;
         EPISoft::r_out = r_out;
-        ForceSoft::grav_const = input_parameters.gravitational_constant.value;
+        ForceSoft::grav_const = hard_parameters.gravitational_constant.value;
         Ptcl::search_factor = search_vel_factor;
         Ptcl::r_search_min = r_search_min;
         Ptcl::mean_mass_inv = 1.0/mass_average;
-        Ptcl::r_group_crit_ratio = r_bin/r_in;
         //Ptcl::vel_cm = vel_cm_glb;
         escaper.r_escape_sq = input_parameters.r_escape.value*input_parameters.r_escape.value;
         escaper.check_energy_flag = (input_parameters.r_escape.value>=0);
@@ -3323,7 +3079,6 @@ public:
             std::cout<<" Average mass                      = "<<mass_average   <<std::endl
                      <<" Mean inner changeover radius      = "<<r_in           <<std::endl
                      <<" Mean outer changeover radius      = "<<r_out          <<std::endl
-                     <<" Mean SDAR group detection radius  = "<<r_bin          <<std::endl
                      <<" Minimum neighbor searching radius = "<<r_search_min   <<std::endl
                      <<" Velocity dispersion               = "<<vel_disp       <<std::endl
                      <<" Tree time step                    = "<<dt_soft        <<std::endl
@@ -3338,7 +3093,7 @@ public:
         assert(stat.n_real_glb == input_parameters.n_glb.value);
         assert(stat.n_real_glb == system_soft.getNumberOfParticleGlobal());
 #endif
-        PS::S64& id_offset = input_parameters.id_offset.value;
+        PS::S64& id_offset = hard_parameters.id_offset.value;
         id_offset = id_offset==-1 ? stat.n_real_glb+1 : id_offset;
 
         // initial particles paramters
@@ -3408,51 +3163,22 @@ public:
         std::string galpy_conf_filename = input_parameters.fname_inp.value+".galpy";
         galpy_manager.initial(galpy_parameters, stat.time, galpy_conf_filename, restart_flag, print_flag);
 #endif
-
 #ifdef AGAMA
         agama_manager.initial(agama_parameters, stat.time, print_flag);
 #endif
-    
-        // set system hard paramters
-        hard_manager.setDtRange(input_parameters.dt_soft.value/input_parameters.dt_limit_hard_factor.value, input_parameters.dt_min_hermite_index.value);
-        hard_manager.setEpsSq(input_parameters.eps.value*input_parameters.eps.value);
-        hard_manager.setGravitationalConstant(input_parameters.gravitational_constant.value);
-        hard_manager.r_in_base = r_in;
-        hard_manager.r_out_base = r_out;
-#ifdef HARD_CHECK_ENERGY
-        hard_manager.energy_error_max = input_parameters.e_err_hard.value;
-#else
-        hard_manager.energy_error_max = PS::LARGE_FLOAT;
-#endif
-        hard_manager.n_step_per_orbit = input_parameters.n_step_per_orbit.value;
-        hard_manager.ap_manager.r_tidal_tensor = r_bin;
-        hard_manager.ap_manager.id_offset = id_offset;
-#ifdef ORBIT_SAMPLING
-        hard_manager.ap_manager.orbit_manager.setParticleSplitN(input_parameters.n_split.value);
-#endif
-        hard_manager.h4_manager.step.eta_4th = input_parameters.eta.value;
-        hard_manager.h4_manager.step.eta_2nd = 0.01*input_parameters.eta.value;
-        hard_manager.h4_manager.step.calcAcc0OffsetSq(mass_average, r_out, input_parameters.gravitational_constant.value);
-        hard_manager.ar_manager.energy_error_relative_max = input_parameters.e_err_ar.value;
-        hard_manager.ar_manager.step_count_max = input_parameters.step_limit_ar.value;
-        hard_manager.ar_manager.step.initialSymplecticCofficients(-6);
-        hard_manager.ar_manager.slowdown_pert_ratio_ref = input_parameters.sd_factor.value;
-        hard_manager.ar_manager.slowdown_timescale_max = dt_soft*input_parameters.n_step_per_orbit.value;
-        //hard_manager.ar_manager.slowdown_timescale_max = dt_soft;
-#ifdef SLOWDOWN_MASSRATIO
-        hard_manager.ar_manager.slowdown_mass_ref = mass_average;
-#endif
-#ifdef STELLAR_EVOLUTION
-        hard_manager.ar_manager.interaction.interrupt_detection_option = input_parameters.interrupt_detection_option.value;
+
+        // initial tree step manager
+        dt_manager.setStep(input_parameters.dt_soft.value);
+        dt_manager.setKDKMode();
+
+        // notice the maximum step depending on step mode, KDKDK2 and KDKDK4 should be half step
+        PS::F64 dt_max_hermite = dt_manager.getDtDriftOneStep();
+
 #ifdef BSE_BASE
-        hard_manager.ar_manager.interaction.stellar_evolution_option = input_parameters.stellar_evolution_option.value;
-        if (write_style) hard_manager.ar_manager.interaction.stellar_evolution_write_flag = true;
-        else hard_manager.ar_manager.interaction.stellar_evolution_write_flag = false;
-        if (input_parameters.stellar_evolution_option.value>0) {
-            hard_manager.ar_manager.interaction.bse_manager.initial(bse_parameters, print_flag);
-            hard_manager.ar_manager.interaction.tide.speed_of_light = hard_manager.ar_manager.interaction.bse_manager.getSpeedOfLight();
-        }
-        rand_manager.initialAll(rand_parameters);
+        hard_manager.initial(hard_parameters, bse_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
+
+        // initial random seeds
+        rand_manager.initialAll(rand_parameters, my_rank);
         rand_manager.printRandSeeds(std::cout);
 
         // initial stellar evolution for each star
@@ -3464,14 +3190,8 @@ public:
             }
         }
 
-#endif
-#endif
-#ifdef ADJUST_GROUP_PRINT
-        // group information
-        if (write_style&&input_parameters.adjust_group_write_option.value==1) 
-            hard_manager.h4_manager.adjust_group_write_flag=true;
-        else 
-            hard_manager.h4_manager.adjust_group_write_flag=false;
+#else
+        hard_manager.initial(hard_parameters, mass_average, r_out, r_in, dt_max_hermite, stat, write_style, print_flag);
 #endif
 
 #ifdef EXTERNAL_HARD
@@ -3482,20 +3202,10 @@ public:
         hard_manager.h4_manager.interaction.ext_force.initial(external_hard_parameters, stat.time, print_flag);
 #endif
         hard_manager.ar_manager.interaction.ext_force = &hard_manager.h4_manager.interaction.ext_force;
-#endif        
-
-        // record id range
-        hard_manager.record_id_range.id_start_one = input_parameters.record_id_start_one.value;
-        hard_manager.record_id_range.id_end_one = input_parameters.record_id_end_one.value;
-        hard_manager.record_id_range.id_start_two = input_parameters.record_id_start_two.value;
-        hard_manager.record_id_range.id_end_two = input_parameters.record_id_end_two.value;
-
-        // link global status 
-        hard_manager.status = &stat;
+#endif
 
         // check consistence of paramters
         input_parameters.checkParams();
-        hard_manager.checkParams();
 
         // initial hard class and parameters
         system_hard_one_cluster.manager = &hard_manager;
@@ -3526,7 +3236,17 @@ public:
 
             // save hard paramters 
             std::string fhard_par = input_parameters.fname_par.value + ".hard";
-            if (print_flag) std::cout<<"Save hard_manager parameters to file "<<fhard_par<<std::endl;
+            if (print_flag) std::cout<<"Save hard parameters to file "<<fhard_par<<std::endl;
+            if( (fpar_out = fopen(fhard_par.c_str(),"w")) == NULL) {
+                fprintf(stderr,"Error: Cannot open file %s.\n", fhard_par.c_str());
+                abort();
+            }
+            hard_parameters.input_par_store.writeAscii(fpar_out);
+            fclose(fpar_out);
+
+            // save hard manager parameters in binary format for petar.hard.debug            
+            fhard_par = input_parameters.fname_par.value + ".hard.dump";            
+            if (print_flag) std::cout<<"Save hard_manager parameters to file "<<fhard_par<<" in BINARY format"<<std::endl;
             if( (fpar_out = fopen(fhard_par.c_str(),"w")) == NULL) {
                 fprintf(stderr,"Error: Cannot open file %s.\n", fhard_par.c_str());
                 abort();
@@ -3593,9 +3313,6 @@ public:
 #endif
         }
 
-        // initial tree step manager
-        dt_manager.setKDKMode();
-
         if (print_flag) std::cout<<"-----  Finish parameter initialization -----"<<std::endl;
 
         initial_parameters_flag = true;
@@ -3620,9 +3337,6 @@ public:
             // initial status and energy
             updateStatus(true);
 
-            PS::F64 dt_tree = input_parameters.dt_soft.value;
-            dt_manager.setStep(dt_tree);
-
             // output initial data
             file_header.nfile--; // avoid repeating files
             output();
@@ -3641,9 +3355,6 @@ public:
         // exchange particles
         exchangeParticle();
 
-        PS::F64 dt_tree = input_parameters.dt_soft.value;
-        dt_manager.setStep(dt_tree);
-
         // >1. Tree for neighbor searching 
         /// get neighbor list to tree_nb
         treeNeighborSearch();
@@ -3655,7 +3366,7 @@ public:
 
         // >3. find group and create artificial particles
         /// find group and create artificial particles, using search_cluster, save to system_hard and system_soft (particle status/mass_bk updated)
-        createGroup(dt_tree);
+        createGroup(dt_manager.getStep());
 
         // >4 tree soft force
         /// calculate tree force with linear cutoff, save to system_soft.acc
@@ -3926,64 +3637,6 @@ public:
         while(true) {
 #ifdef PROFILE
             profile.total.start();
-            profile.other.start();
-#endif
-
-            bool interrupt_flag = false;  // for interrupt integration when time reach end
-            bool output_flag = false;    // for output snapshot and information
-            //bool dt_mod_flag = false;    // for check whether tree time step need update
-            bool changeover_flag = false; // for check whether changeover need update
-            bool is_start_flag = false; // for check whether the current step is the start step
-            PS::F64 dt_kick, dt_drift;
-
-            // for initial the system
-            if (dt_manager.isNextStart()) {
-                // set step to the begining step
-                dt_kick = dt_manager.getDtStartContinue();
-                is_start_flag = true;                
-            }
-            else {
-                // increase loop counter
-                n_loop++;
-
-                // for next kick-drift pair
-                dt_manager.nextContinue();
-
-                // update stat time 
-                stat.time = system_hard_one_cluster.getTimeOrigin();
-
-                // check whether output or changeover change are needed (only at the ending step)
-                if (dt_manager.isNextEndPossible()) {
-
-                    // adjust tree step
-                    //dt_mod_flag = adjustDtTreeReduce(dt_reduce_factor, dt_tree, dt_manager.getStep());
-                    //if(dt_mod_flag) dt_kick = dt_manager.getDtEndContinue();
-
-                    // output step, get last kick step
-                    output_flag = (fmod(stat.time, dt_output) == 0.0);
-
-                    // check changeover change
-                    changeover_flag = (system_hard_isolated.getNClusterChangeOverUpdate()>0);
-
-#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
-                    PS::S32 n_changeover_modify_local  = system_hard_connected.getNClusterChangeOverUpdate() + system_hard_isolated.getNClusterChangeOverUpdate();
-                    PS::S32 n_changeover_modify_global = PS::Comm::getSum(n_changeover_modify_local);
-                    if (n_changeover_modify_global>0) changeover_flag = true;
-#endif
-
-                    // check interruption
-                    interrupt_flag = (stat.time>=time_break);
-
-                    // set next step to be last
-                    if (output_flag||changeover_flag||interrupt_flag) dt_kick = dt_manager.getDtEndContinue();
-                    else dt_kick = dt_manager.getDtKickContinue();
-                }
-                else dt_kick = dt_manager.getDtKickContinue();
-            }
-#ifdef PROFILE
-            profile.other.barrier();
-            PS::Comm::barrier();
-            profile.other.end();
 #endif
 
 #ifdef STELLAR_EVOLUTION
@@ -3998,6 +3651,9 @@ public:
             // update center
             stat.calcAndShiftCenterOfMass(&system_soft[0], stat.n_real_loc);
 #endif
+
+            // update stat time
+            stat.time = system_hard_one_cluster.getTimeOrigin();
 
             // >9. Domain decomposition
             domainDecompose();
@@ -4029,9 +3685,58 @@ public:
             /// substract tidal tensor measure point force
             treeForceCorrectChangeover();
 
-            if (is_start_flag) {
+            bool interrupt_flag = false;  // for interrupt integration when time reach end
+            bool output_flag = false;    // for output snapshot and information
+            //bool dt_mod_flag = false;    // for check whether tree time step need update
+            bool changeover_flag = false; // for check whether changeover need update
+            bool need_half_step_flag = false; // for  check whether another half step is needed for continuing steps
+            PS::F64 dt_kick, dt_drift;
+
+            // for initial the system
+            if (dt_manager.isNextStart()) {
+                // set step to the begining step
+                dt_kick = dt_manager.getDtStartContinue();
                 // correct force due to the change over update for starting step
                 correctForceChangeOverUpdate();
+            }
+            else {
+                // increase loop counter
+                n_loop++;
+
+                // for next kick-drift pair
+                dt_manager.nextContinue();
+
+                // check changeover change
+                changeover_flag = (system_hard_isolated.getNClusterChangeOverUpdate()>0);
+
+#ifdef PARTICLE_SIMULATOR_MPI_PARALLEL        
+                PS::S32 n_changeover_modify_local  = system_hard_connected.getNClusterChangeOverUpdate() + system_hard_isolated.getNClusterChangeOverUpdate();
+                PS::S32 n_changeover_modify_global = PS::Comm::getSum(n_changeover_modify_local);
+                if (n_changeover_modify_global>0) changeover_flag = true;
+#endif
+
+                // check whether output or changeover change are needed (only at the ending step)
+                if (dt_manager.isNextEndPossible()) {
+
+                    // adjust tree step
+                    //dt_mod_flag = adjustDtTreeReduce(dt_reduce_factor, dt_tree, dt_manager.getStep());
+                    //if(dt_mod_flag) dt_kick = dt_manager.getDtEndContinue();
+
+                    // output step, get last kick step
+                    output_flag = (fmod(stat.time, dt_output) == 0.0);
+
+                    // check interruption
+                    interrupt_flag = (stat.time>=time_break);
+
+                    // set next step to be last
+                    if (output_flag||changeover_flag||interrupt_flag) dt_kick = dt_manager.getDtEndContinue();
+                    else dt_kick = dt_manager.getDtKickContinue();
+                }
+                else if (changeover_flag) {
+                    need_half_step_flag = true; // next should be half step in continuing steps
+                    dt_kick = dt_manager.getHalfDtKickContinue();
+                }
+                else dt_kick = dt_manager.getDtKickContinue();
             }
 
 #ifdef KDKDK_4TH
@@ -4117,12 +3822,24 @@ public:
                 //while(dt_reduce_factor<dt_reduce_factor_org) dt_reduce_factor *=2.0;
 
                 //update new tree step if reduce factor is changed
-                dt_kick = dt_manager.getDtStartContinue();
+                if (need_half_step_flag) dt_kick = dt_manager.getHalfDtKickContinue();
+                else dt_kick = dt_manager.getDtStartContinue();
 
-                correctForceChangeOverUpdate();
+                if (changeover_flag) {
+                    correctForceChangeOverUpdate();
 
+#ifdef KDKDK_4TH
+                    // do correction at middle step for second half kick when changeover is changed, still need test to see if it is correct.
+                    // also need to consider to avoid full gradient calculation by using correction function
+                    if (calc_gradient) {
+                        treeSoftGradient();
+                        externalForceGradient();
+                    }
+#endif
+                }
+
+                // second half kick
                 kick(dt_kick);
-
             }
 
 

@@ -10,21 +10,25 @@ public:
     IOParamsContainer input_par_store;
     IOParams<long long int> seed;
     IOParams<std::string> seedfile;
+    IOParams<std::string> fname_par;
+
     bool print_flag;
 
     IOParamsRand(): input_par_store(),
-                    seed  (input_par_store, 0,  "rand-seed",   "Random number seed (positive integer), suppressed when --rand-seedfile is provided", "current cpu time"),
-                    seedfile(input_par_store, "__NONE__","rand-seedfile","Name for a file contain random seeds of all threads and MPI processors", "not used"),
+                    seed  (input_par_store, 0,  "rand-seed",   "Random number seed (positive integer); suppressed when --rand-seedfile is provided; if used, the single integer seed is used to generate multiple seeds for each pair of OpenMP thread and MPI processor", "current cpu time"),
+                    seedfile(input_par_store, "__NONE__","rand-seedfile","Name for a file contain random seeds of all threads and MPI processors; For restart the simulation, the randseeds file can be used to restore all seeds", "not used"),
+                    fname_par(input_par_store, "input.par", "p", "Input parameter file for random seed (this option should be used first before any other options)",NULL,false),
                     print_flag(false) {}
 
     //! reading parameters from GNU option API
     /*!
       @param[in] argc: number of options
       @param[in] argv: string of options
+      @param[in] print_format_info: if true, print the format information
       @param[in] opt_used_pre: already used option number from previous reading, use to correctly count the remaining argument number
       \return -1 if help is used; else the used number of argv
      */
-    int read(int argc, char *argv[], const int opt_used_pre=0) {
+    int read(int argc, char *argv[], const bool print_format_info=true, const int opt_used_pre=0) {
         static int rand_flag=-1;
         const struct option long_options[] = {
             {seed.key,   required_argument, &rand_flag, 1}, 
@@ -37,7 +41,6 @@ public:
         int opt_used=opt_used_pre;
         int copt;
         int option_index;
-        std::string fname_par;
         optind = 0;
         while ((copt = getopt_long(argc, argv, "-z:p:h", long_options, &option_index)) != -1) 
             switch (copt) {
@@ -58,9 +61,9 @@ public:
                 }
                 break;
             case 'p':
-                fname_par = optarg;
+                fname_par.value = optarg;
                 if(print_flag) {
-                    std::string frand_par = fname_par+".rand"; 
+                    std::string frand_par = fname_par.value+".rand"; 
                     FILE* fpar_in;
                     if( (fpar_in = fopen(frand_par.c_str(),"r")) == NULL) {
                         fprintf(stderr,"Error: Cannot open file %s.\n", frand_par.c_str());
@@ -77,12 +80,8 @@ public:
                 break;
             case 'h':
                 if(print_flag){
-                    std::cout<<"Parallel random generator options:"<<std::endl;
-                    input_par_store.printHelp(std::cout, 2, 10, 23);
-                    std::cout<<"*** PS: if --rand-seed is used, the single integer seed is used to generate \n"
-                             <<"        multiple seeds for each pair of OpenMP thread and MPI processor. \n"
-                             <<"        For restart the simulation, the randseeds file can be used to restore all seeds"
-                             <<std::endl;
+                    std::cout<<"----- Parallel random generator options: -----"<<std::endl;
+                    input_par_store.printHelp(std::cout, print_format_info);
                 }
                 return -1;
             case '?':

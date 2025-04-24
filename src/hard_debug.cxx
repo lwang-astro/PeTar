@@ -31,11 +31,13 @@ int main(int argc, char **argv){
   PS::F64 dt_max = -1;
   PS::F64 ds_scale = -1.0;
   PS::S32 step_arc_limit = 100000;
-  PS::S32 n_crit = 0;
+  PS::S32 n_crit_ptcl = 0;
+  PS::S32 n_crit_arti = 0;
+  PS::S32 n_crit_group = 0;
   PS::S32 istart = -1;
   PS::S32 iend = -1;
   std::string filename="hard_dump";
-  std::string fhardpar="input.par.hard";
+  std::string fhardpar="input.par.hard.dump";
 #ifdef STELLAR_EVOLUTION
 #ifdef BSE_BASE
   int stellar_evolution_option = -1;
@@ -86,6 +88,8 @@ int main(int argc, char **argv){
       {"tend",              required_argument, &opt_flag, 12},
       {"istart",            required_argument, &opt_flag, 13},
       {"iend",              required_argument, &opt_flag, 14},
+      {"n-crit-group",      required_argument, &opt_flag, 15},
+      {"n-crit-arti",       required_argument, &opt_flag, 16},
       {"help",        no_argument, 0, 'h'},        
       {0,0,0,0}
   };
@@ -149,6 +153,12 @@ int main(int argc, char **argv){
         case 14:
             iend = atoi(optarg);
             break;
+        case 15:
+            n_crit_group = atoi(optarg);
+            break;            
+        case 16:
+            n_crit_arti = atoi(optarg);
+            break;            
         default:
             break;
         }
@@ -157,7 +167,7 @@ int main(int argc, char **argv){
         mode = atoi(optarg);
         break;
     case 'n':
-        n_crit = atoi(optarg);
+        n_crit_ptcl = atoi(optarg);
         break;
     case 'p':
         fhardpar = optarg;
@@ -188,7 +198,7 @@ int main(int argc, char **argv){
                  <<"   dumped data file: Hard dump file from petar simulation\n"
                  <<"options (default values shown at the end):\n"
                  <<"    -m [int]:     running mode: 0: evolve system to time_end; 1: stability check: "<<mode<<std::endl
-                 <<"    -n [int]:     if >0, only do integration when particle number matches the given value: "<<n_crit<<std::endl
+                 <<"    -n [int]:     if >0, only do integration when particle number matches the given value: "<<n_crit_ptcl<<std::endl
                  <<"    -p [string]:  hard parameter file name: "<<fhardpar<<std::endl
 #ifdef BSE_BASE
                  <<"    -b [string]:  bse parameter file name: "<<fbsepar<<std::endl
@@ -204,10 +214,12 @@ int main(int argc, char **argv){
 #endif
                  <<"    -h (--help):  help"<<std::endl
                  <<"long options (if no default values, use values from input.par.hard):\n"
+                 <<"        --n-crit-group      [int]:     if >0 only do integration when group number matches the given value: "<<n_crit_group<<std::endl 
+                 <<"        --n-crit-arti       [int]:     if >0 only do integration when artificial particle number matches the given value: "<<n_crit_arti<<std::endl
                  <<"        --tstart            [double]:  if >0 only do integration when physical time >= tstart: "<<tstart<<std::endl
                  <<"        --tend              [double]:  if >0 only do integration when physical time < tend: "<<tend<<std::endl
-                 <<"        --istart            [int]:     if >0 only do integration when dump index >= istart: "<<istart<<std::endl
-                 <<"        --iend              [int]:     if >0 only do integration when dump index < iend: "<<iend<<std::endl
+                 <<"        --istart            [int]:     if >0 only do integration when dump index >= istart (counting from 1): "<<istart<<std::endl
+                 <<"        --iend              [int]:     if >0 only do integration when dump index < iend (counting from 1): "<<iend<<std::endl
 #ifdef HARD_CHECK_ENERGY
                  <<"        --energy-err-hard   [double]:  hard energy limit\n"
 #endif
@@ -388,15 +400,21 @@ int main(int argc, char **argv){
       hard_dump.readOneClusterBinary(fp);
 
 #ifdef BSE_BASE
-      if (seed!=0) hard_dump.rand_manager.initialFromSeed(seed);
+      if (seed!=0) hard_dump.rand_manager.initialFromSeed(seed, 0);
 #endif
 
       ncount++;
 
-      // skip if particle number not match n_crit when n_crit>0
-      if (n_crit>0 && hard_dump.n_ptcl != n_crit) continue;
+      // skip if particle/group/artificial particle number not match n_crit_**
+      if (n_crit_ptcl>0 && hard_dump.n_ptcl != n_crit_ptcl) continue;
+      if (n_crit_group>0 && hard_dump.n_group != n_crit_group) continue;
+      if (n_crit_arti>0 && hard_dump.n_arti != n_crit_arti) continue;
+      // skip if time is out of range
       if (tstart>0 && hard_dump.time_offset < tstart) continue;
       if (tend>0 && hard_dump.time_offset >= tend) continue;
+      // skip if dump index is out of range
+      if (ncount < istart) continue;
+      if (iend>0 && ncount>iend) continue;
 
       std::cerr<<"Dump "<<ncount<<"\nTime: "<<hard_dump.time_offset<<std::endl;
 #ifdef BSE_BASE

@@ -1416,7 +1416,7 @@ Optional Packages:
   --with-fdps-prefix      Prefix of your FDPS installation. Default: ../FDPS
   --with-sdar-prefix      Prefix of your FDPS installation. Default: ../SDAR
   --with-galpy-prefix     Prefix of your Galpy installation. Default: search
-                          $HOME/.local, ../galpy, $VIRTUAL_ENV
+                          ../galpy, $HOME/.local, $VIRTUAL_ENV
   --with-step-mode        Tree step mode (kdk: K[0.5]-D[1.0]-K[0.5]; kdkdk:
                           K[1/6]-D[1/2]-K[4/6]-D[1/2]-K[1/6]; kdkdk4:
                           Chin-4th). Default: kdk
@@ -4481,7 +4481,7 @@ fi
 if test "${with_gperf_prefix+set}" = set; then :
   withval=$with_gperf_prefix; gperf_prefix=$withval
 else
-  gperf_prefix=/opt/gperftools
+  gperf_prefix=$HOME
 fi
 
 
@@ -4518,17 +4518,17 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_profiler_main" >&5
 $as_echo "$ac_cv_lib_profiler_main" >&6; }
 if test "x$ac_cv_lib_profiler_main" = xyes; then :
-  GPERFLIBS=' -lprofiler'
+  GPERFLIBS=' -ltcmalloc_and_profiler'
 else
-  as_ac_File=`$as_echo "ac_cv_file_"$gperf_prefix/lib/libprofiler.so"" | $as_tr_sh`
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for \"$gperf_prefix/lib/libprofiler.so\"" >&5
-$as_echo_n "checking for \"$gperf_prefix/lib/libprofiler.so\"... " >&6; }
+  as_ac_File=`$as_echo "ac_cv_file_"$gperf_prefix/lib/libtcmalloc_and_profiler.so"" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for \"$gperf_prefix/lib/libtcmalloc_and_profiler.so\"" >&5
+$as_echo_n "checking for \"$gperf_prefix/lib/libtcmalloc_and_profiler.so\"... " >&6; }
 if eval \${$as_ac_File+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   test "$cross_compiling" = yes &&
   as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
-if test -r ""$gperf_prefix/lib/libprofiler.so""; then
+if test -r ""$gperf_prefix/lib/libtcmalloc_and_profiler.so""; then
   eval "$as_ac_File=yes"
 else
   eval "$as_ac_File=no"
@@ -4539,77 +4539,22 @@ eval ac_res=\$$as_ac_File
 $as_echo "$ac_res" >&6; }
 if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
   GPERFFLAGS=" -I$gperf_prefix/include"
-                                    GPERFLIBS=" -L$gperf_prefix/lib -lprofiler"
+                                    GPERFLIBS=" -L$gperf_prefix/lib -ltcmalloc_and_profiler"
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "can't find gperftools library -lprofiler, please provide correct gperftools PREFIX by using --with-gperf-prefix
+as_fn_error $? "can't find gperftools library -ltcmalloc_and_profiler, please provide correct gperftools PREFIX by using --with-gperf-prefix
 See \`config.log' for more details" "$LINENO" 5; }
 fi
 
 fi
 
-       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -ltcmalloc" >&5
-$as_echo_n "checking for main in -ltcmalloc... " >&6; }
-if ${ac_cv_lib_tcmalloc_main+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-ltcmalloc  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-int
-main ()
-{
-return main ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_cxx_try_link "$LINENO"; then :
-  ac_cv_lib_tcmalloc_main=yes
-else
-  ac_cv_lib_tcmalloc_main=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_tcmalloc_main" >&5
-$as_echo "$ac_cv_lib_tcmalloc_main" >&6; }
-if test "x$ac_cv_lib_tcmalloc_main" = xyes; then :
-  GPERFLIBS=' -ltcmalloc'
-else
-  as_ac_File=`$as_echo "ac_cv_file_"$gperf_prefix/lib/libtcmalloc.so"" | $as_tr_sh`
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for \"$gperf_prefix/lib/libtcmalloc.so\"" >&5
-$as_echo_n "checking for \"$gperf_prefix/lib/libtcmalloc.so\"... " >&6; }
-if eval \${$as_ac_File+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  test "$cross_compiling" = yes &&
-  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
-if test -r ""$gperf_prefix/lib/libtcmalloc.so""; then
-  eval "$as_ac_File=yes"
-else
-  eval "$as_ac_File=no"
-fi
-fi
-eval ac_res=\$$as_ac_File
-	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
-$as_echo "$ac_res" >&6; }
-if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
-  GPERFLIBS=$GPERFLIBS" -ltcmalloc"
-else
-  { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
-$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "can't find gperftools library -ltcmalloc, please provide correct gperftools PREFIX by using --with-gperf-prefix
-See \`config.log' for more details" "$LINENO" 5; }
-fi
-
-fi
-
+       #AC_CHECK_LIB([tcmalloc],
+       #             [main],
+       #	    [GPERFLIBS=' -ltcmalloc'],
+       #	    [AC_CHECK_FILE(["$gperf_prefix/lib/libtcmalloc.so"],
+       #                           [GPERFLIBS=$GPERFLIBS" -ltcmalloc"],
+       #			   [AC_MSG_FAILURE([can't find gperftools library -ltcmalloc, please provide correct gperftools PREFIX by using --with-gperf-prefix])])])
 else
   use_gperf=no
 fi
@@ -5939,9 +5884,9 @@ fi
 
 
 			   if test x"$FIND_CHECK" == xfind; then :
-  galpy_prefix=`find $HOME/.local $VIRTUAL_ENV -type d -name galpy|tail -1`
+  galpy_prefix=`pwd`'/'`find ../galpy -type d -name galpy|tail -1`
                                   if test x"$galpy_prefix" == x; then :
-  galpy_prefix=`pwd`'/'`find ../ -type d -name galpy|tail -1`
+  galpy_prefix=`find $HOME/.local $VIRTUAL_ENV -type d -name galpy|tail -1`
 fi
 fi
 fi

@@ -26,29 +26,32 @@ public:
     IOParams<double> vscale; 
     //IOParams<double> fscale; 
     //IOParams<double> pscale; 
+    IOParams<std::string> fname_par;
     
     bool print_flag;
 
     IOParamsGalpy(): input_par_store(),
-                     type_args (input_par_store, "__NONE__", "galpy-type-arg", "Add potential types and argumentsto the potential list in the center of the galactic reference frame"),
+                     type_args (input_par_store, "__NONE__", "galpy-type-arg", "Add potential types and arguments to the potential list in the center of the galactic reference frame; Use petar.galpy.help to check how to setup types and arguments."),
                      pre_define_type (input_par_store, "__NONE__", "galpy-set", "Add a pre-defined potential set to the potential list, options are: MWPotential2014"),
-                     config_filename(input_par_store, "__NONE__", "galpy-conf-file", "A configure file of the time- and space-dependent potentials"),
+                     config_filename(input_par_store, "__NONE__", "galpy-conf-file", "A configure file of the time- and space-dependent potentials; Use petar.galpy.help to check how to generate configure file."),
                      //unit_set(input_par_store, "unscale", "galpy-units", "Units conversion set: 'unscale': no conversion; all scale factors are 1.0; 'bovy': radial unit: 8 kpc; velocity unit: 220 km/s"),
                      rscale(input_par_store, 1.0, "galpy-rscale", "Radius scale factor from unit of the input particle data (IN) to Galpy distance unit (1.0)"),
                      //tscale(input_par_store, 1.0, "galpy-tscale", "Time scale factor (rscale/vscale) from unit of the input particle data (IN) to Galpy time (1.0)"),
                      vscale(input_par_store, 1.0, "galpy-vscale", "Velocity scale factor from unit of the input particle data (IN) to Galpy velocity unit (1.0)"),
                      //fscale(input_par_store, 1.0, "galpy-fscale", "Acceleration scale factor (vscale^2/rscale) from unit of the input particle data (IN) to Galpy acceleration unit (1.0)"),
                      //pscale(input_par_store, 1.0, "galpy-pscale", "Potential scale factor (vscale^2) from unit of the input particle data (IN) to Galpy potential unit (1.0)"),
+                     fname_par(input_par_store, "input.par", "p", "Input parameter file for Galpy (this option should be used first before any other options)",NULL,false),
                      print_flag(false) {}
 
     //! reading parameters from GNU option API
     /*!
       @param[in] argc: number of options
       @param[in] argv: string of options
+      @param[in] print_format_info: if true, print the format information
       @param[in] opt_used_pre: already used option number from previous reading, use to correctly count the remaining argument number
       \return -1 if help is used; else the used number of argv
      */
-    int read(int argc, char *argv[], const int opt_used_pre=0) {
+    int read(int argc, char *argv[], const bool print_format_info=true, const int opt_used_pre=0) {
         static int galpy_flag=-1;
         const struct option long_options[] = {
             {type_args.key,       required_argument, &galpy_flag, 0}, 
@@ -66,7 +69,6 @@ public:
         int opt_used=opt_used_pre;
         int copt;
         int option_index;
-        std::string fname_par;
         optind = 0;
         while ((copt = getopt_long(argc, argv, "-p:h", long_options, &option_index)) != -1) 
             switch (copt) {
@@ -117,9 +119,9 @@ public:
                 }
                 break;
             case 'p':
-                fname_par = optarg;
+                fname_par.value = optarg;
                 if(print_flag) {
-                    std::string fgalpy_par = fname_par+".galpy"; 
+                    std::string fgalpy_par = fname_par.value+".galpy"; 
                     FILE* fpar_in;
                     if( (fpar_in = fopen(fgalpy_par.c_str(),"r")) == NULL) {
                         fprintf(stderr,"Error: Cannot open file %s.\n", fgalpy_par.c_str());
@@ -136,10 +138,8 @@ public:
                 break;
             case 'h':
                 if(print_flag){
-                    std::cout<<"Galpy options:"<<std::endl;
-                    input_par_store.printHelp(std::cout, 2, 10, 23);
-                    std::cout<<"***PS: use petar.galpy.help to check how to setup --galpy-type-arg and --galpy-conf-file."
-                             <<std::endl;
+                    std::cout<<"----- Galpy options: -----"<<std::endl;
+                    input_par_store.printHelp(std::cout, print_format_info);
                 }
                 return -1;
             case '?':
@@ -1681,8 +1681,8 @@ public:
 #else
                 double acc_phi = calcphitorque(rxy, dz, phi, t, npot, pot_args);
 #endif
-//                double pot_i = evaluatePotentials(rxy, dz, phi, t, npot, pot_args);
-                double pot_i = evaluatePotentials(rxy, dz, npot, pot_args);
+                double pot_i = evaluatePotentials(rxy, dz, phi, t, npot, pot_args);
+//                double pot_i = evaluatePotentials(rxy, dz, npot, pot_args);
                 double gm_pot = pot_set_pars[k].gm;
                 if (rxy>0.0) {
                     assert(!std::isinf(acc_rxy));

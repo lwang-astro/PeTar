@@ -69,6 +69,8 @@ c-------------------------------------------------------------c
       real*8 m2,ecc,sep,jorb
 * Tanikawa's prescription
       include 'cppinterface.h'
+* Tanikawa's prescription for BH spin
+      real*8 aspin
 *
       zero = 0.d0
       m2 = 0.d0
@@ -189,7 +191,8 @@ c-------------------------------------------------------------c
 *
          kwold = kw
          CALL hrdiag(mass,aj,mt,tm,tn,tscls,lums,GB,zpars,
-     &        r,lum,kw,mc,rc,menv,renv,k2,fbfac,fbtot,mco,ecs)
+     &        r,lum,kw,mc,rc,menv,renv,k2,fbfac,fbtot,mco,ecs,
+     &        jspin,aspin)
 *
 * If mass loss has occurred and no type change then check that we
 * have indeed limited the radius change to 10%.
@@ -237,7 +240,8 @@ c-------------------------------------------------------------c
                mc = mc1
                CALL star(kw,mass,mt,tm,tn,tscls,lums,GB,zpars)
                CALL hrdiag(mass,aj,mt,tm,tn,tscls,lums,GB,zpars,
-     &              r,lum,kw,mc,rc,menv,renv,k2,fbfac,fbtot,mco,ecs)
+     &              r,lum,kw,mc,rc,menv,renv,k2,fbfac,fbtot,mco,ecs,
+     &              jspin,aspin)
                goto 20
             endif
  30         continue
@@ -262,8 +266,10 @@ c-------------------------------------------------------------c
 * Force new NS or BH to have a one second period. 
 * 
             if(kw.eq.13.or.kw.eq.14)then
-               ospin = 2.0d+08
-               jspin = k3*rc*rc*mc*ospin
+* Tanikawa's prescription for BH spin
+!               ospin = 2.0d+08
+!               jspin = k3*rc*rc*mc*ospin
+               ospin = jspin/(k3*rc*rc*mc)
                CALL kick(kw,mass,mt,m2,ecc,sep,jorb,vkick,
      &              fbfac,fbtot,mco,ecs)
             endif
@@ -345,7 +351,8 @@ c-------------------------------------------------------------c
             aj = MAX(aj,aj*(1.d0-eps)+dtr)
             mc1 = mc 
             CALL hrdiag(mass,aj,mt,tm,tn,tscls,lums,GB,zpars,
-     &           r1,lum1,kw,mc1,rc1,menv1,renv1,k21,fbfac,fbtot,mco,ecs)
+     &           r1,lum1,kw,mc1,rc1,menv1,renv1,k21,fbfac,fbtot,mco,ecs,
+     &           jspin,aspin)
             dr = r1 - rm0
             if(ABS(dr).gt.0.1d0*rm0)then
                dtm = dtr - ajhold*eps
@@ -365,7 +372,8 @@ c-------------------------------------------------------------c
  40      aj = ajhold + dtm
          mc1 = mc 
          CALL hrdiag(mass,aj,mt,tm,tn,tscls,lums,GB,zpars,
-     &        r1,lum1,kw,mc1,rc1,menv1,renv1,k21,fbfac,fbtot,mco,ecs)
+     &        r1,lum1,kw,mc1,rc1,menv1,renv1,k21,fbfac,fbtot,mco,ecs,
+     &        jspin,aspin)
          dr = r1 - rm0
          it = it + 1
          if(it.eq.20.and.kw.eq.4) goto 50

@@ -13,6 +13,8 @@
 #include "hard.hpp"
 #include "soft_ptcl.hpp"
 #include "static_variables.hpp"
+#include "kickdriftstep.hpp"
+#include "profile.hpp"
 
 #ifndef NAN_CHECK
 #define NAN_CHECK(val) assert((val) == (val));
@@ -23,49 +25,32 @@ public:
     // IO parameters
     IOParamsContainer input_par_store;
     IOParams<PS::F64> time;
-    IOParams<PS::F64> rin;
-    IOParams<PS::F64> rout;
-    IOParams<PS::F64> rsearch;
-    IOParams<PS::F64> rbin;
-    IOParams<PS::F64> dt_limit;
-    IOParams<PS::F64> eta;
-    IOParams<PS::F64> eps;
-    IOParams<PS::S64> n;
-#ifdef ORBIT_SAMPLING
-    IOParams<PS::S64> n_split;
-#endif
+    IOParams<PS::F64> r_in_over_out;
+    IOParams<PS::F64> r_out;
+    IOParams<PS::F64> r_search_min;
+    IOParams<PS::F64> dt_soft;
+    IOParams<PS::S64> write_style;
     IOParams<std::string> fname_inp;
+    IOParams<std::string> fname_snap;
 
     bool print_flag;
 
     IOParamsHardTest(): input_par_store(),
-                        time (input_par_store, 0.0, "t", "finishing time"),
-                        rin  (input_par_store, 0.0, "r-in", "changeover inner boundary"),
-                        rout (input_par_store, 0.0, "r-out","changeover outer boundary"),
-                        rsearch(input_par_store, 0.0, "r-search","search radius"),
-                        rbin (input_par_store, 0.0, "r-bin","group radius"),
-                        dt_limit(input_par_store, 0.0, "s", "maximum hermite time step"),
-                        eta  (input_par_store, 0.0, "eta", "eta for hermite time step"),
-                        eps  (input_par_store, 0.0, "eps", "softening length"),
-                        n    (input_par_store, 0, "n", "number of particles"),
-#ifdef ORBIT_SAMPLING
-                        n_split (input_par_store, 4,  "n-split", "Number of binary sample points for tree perturbation force"),
-#endif
-                        fname_inp(input_par_store, "__NONE__", "snap-filename", "Input data file", NULL, false), 
+                        time (input_par_store, 1.0, "t", "finishing time"),
+                        r_in_over_out (input_par_store, 0.1, "r-ratio", "ratio of changeover inner over outer radius"),
+                        r_out         (input_par_store, 0.1, "r",   "changeover outer boundary (r_out)"),
+                        r_search_min  (input_par_store, 0, "r-search-min","search radius, if 0, use 1.5*r_out"),
+                        dt_soft       (input_par_store, 0.125, "s", "soft time step (max hermite step), will be regularized to 2^-n"),
+                        write_style   (input_par_store, 2,   "w", "Data file writing style; 0: no output; 1: write snapshots separately; 2. write snapshots in one status file"),
+                        fname_inp     (input_par_store, "__NONE__", "snap-filename", "Input data file", NULL, false), 
+                        fname_snap    (input_par_store, "data", "f", "Prefix of filenames for output data: [prefix].**"),
                         print_flag(false) {}
     
     int read(int argc, char *argv[], const int opt_used_pre=0) {
         static int flag=-1;
         static struct option long_options[] = {
-            {rin.key,     required_argument, &flag, 1},
-            {rout.key,    required_argument, &flag, 2},
-            {rsearch.key, required_argument, &flag, 3},
-            {rbin.key,    required_argument, &flag, 4}, 
-            {eta.key,     required_argument, &flag, 6}, 
-            {eps.key,     required_argument, &flag, 7}, 
-#ifdef ORBIT_SAMPLING
-            {n_split.key, required_argument, &flag, 8}, 
-#endif
+            {r_in_over_out.key, required_argument, &flag, 1},
+            {r_search_min.key,  required_argument, &flag, 2},
             {"help",      no_argument, 0, 'h'},
             {0,0,0,0}
         };
@@ -74,47 +59,20 @@ public:
         int copt;
         int option_index;
         optind = 0; // reset getopt
-        while ((copt = getopt_long(argc, argv, "-t:s:n:h", long_options, &option_index)) != -1) 
+        while ((copt = getopt_long(argc, argv, "-t:r:s:w:f:h", long_options, &option_index)) != -1) 
             switch (copt) {
             case 0:
                 switch (flag) {
                 case 1:
-                    rin.value = atof(optarg);
-                    if(print_flag) rin.print(std::cout);
+                    r_in_over_out.value = atof(optarg);
+                    if(print_flag) r_in_over_out.print(std::cout);
                     opt_used += 2;
                     break;
                 case 2:
-                    rout.value = atof(optarg);
-                    if(print_flag) rout.print(std::cout);
+                    r_search_min.value = atof(optarg);
+                    if(print_flag) r_search_min.print(std::cout);
                     opt_used += 2;
                     break;
-                case 3:
-                    rsearch.value = atof(optarg);
-                    if(print_flag) rsearch.print(std::cout);
-                    opt_used += 2;
-                    break;
-                case 4:
-                    rbin.value = atof(optarg);
-                    if(print_flag) rbin.print(std::cout);
-                    opt_used += 2;
-                    break;
-                case 6:
-                    eta.value = atof(optarg);
-                    if(print_flag) eta.print(std::cout);
-                    opt_used += 2;
-                    break;
-                case 7:
-                    eps.value = atof(optarg);
-                    if(print_flag) eps.print(std::cout);
-                    opt_used += 2;
-                    break;
-#ifdef ORBIT_SAMPLING
-                case 8:
-                    n_split.value = atoi(optarg);
-                    if(print_flag) n_split.print(std::cout);
-                    opt_used += 2;
-                    break;
-#endif
                 default:
                     break;
                 }
@@ -124,24 +82,40 @@ public:
                 if(print_flag) time.print(std::cout);
                 opt_used += 2;
                 break;
-            case 's':
-                dt_limit.value = atof(optarg);
-                if(print_flag) dt_limit.print(std::cout);
+            case 'r':
+                r_out.value = atof(optarg);
+                if(print_flag) r_out.print(std::cout);
                 opt_used += 2;
                 break;
-            case 'n':
-                n.value = atoi(optarg);
-                if(print_flag) n.print(std::cout);
+            case 's':
+                dt_soft.value = atof(optarg);
+                if(print_flag) dt_soft.print(std::cout);
+                opt_used += 2;
+                break;
+            case 'w':
+                write_style.value = atoi(optarg);
+                if(print_flag) write_style.print(std::cout);
+                opt_used += 2;
+                break;
+            case 'f':
+                fname_snap.value = optarg;
+                if(print_flag) fname_snap.print(std::cout);
                 opt_used += 2;
                 break;
             case 'h':
                 if(print_flag) {
                     std::cout<<"The tool to test hard integrator\n"
                              <<"Usage: petar.hard.test [options] [data filename]\n"
-                             <<"       Data file content per line:\n";
-                    ParticleBase::printTitleWithMeaning(std::cout,0,13);
+                             <<"       filename: initial or restart data (snapshot) filename\n"
+                             <<"       Data file content:\n"
+                             <<"            First line: \n"
+                             <<"             1. File_ID: 0 for initialization, else for restarting\n"
+                             <<"             2. N_particle \n"
+                             <<"             3. Time\n"
+                             <<"            Following lines:\n";
+                    FPSoft::printTitleWithMeaning(std::cout,0,13);
                     std::cout<<"Options:\n";
-                    input_par_store.printHelp(std::cout, 2, 10, 23);
+                    input_par_store.printHelp(std::cout,true);
                 }
                 return -1;
             case '?':
@@ -165,164 +139,188 @@ public:
     //! check paramters
     bool checkParams() {
         assert(time.value>=0.0);
-        assert(rin.value>0.0);
-        assert(rout.value>rin.value);
-        assert(rsearch.value>rout.value);
-        assert(rbin.value>0.0&&rbin.value<rin.value);
-        assert(eta.value>0.0);
-        assert(eps.value>=0.0);
-        assert(dt_limit.value>0.0);
-        assert(n.value>0);
-#ifdef ORBIT_SAMPLING
-        assert(n_split.value>=0);
-#endif
+        assert(r_in_over_out.value>0.0 && r_in_over_out.value <1.0);
+        assert(r_out.value>0.0);
+        assert(r_search_min.value>=r_out.value);
+        assert(dt_soft.value>0.0);
         return true;
     }    
 };
 
+class HardTestProfile{
+public:
+    Tprofile total;
+    Tprofile findGroups;
+    Tprofile integration;
+    Tprofile output;
+    const PS::S32 n_profile;
 
-int main(int argc, char** argv)
-{
-    IOParamsHardTest io;
-    io.print_flag = true;
-    int opt_used = io.read(argc,argv);
-    if (opt_used==-1) return 0;
-    io.checkParams();
-    
-    // open data file
-    FILE* fin;
-    if ( (fin = fopen(io.fname_inp.value.c_str(),"r")) == NULL) {
-        fprintf(stderr,"Error: Cannot open input file %s.\n",io.fname_inp.value.c_str());
-        abort();
-    }
+    HardTestProfile(): total         (Tprofile("Total      ")),
+                       findGroups    (Tprofile("FindGroups ")),
+                       integration   (Tprofile("Integration")),
+                       output        (Tprofile("Output     ")),
+                       n_profile(4) {} 
 
-    PS::F64 &rsearch = io.rsearch.value;
-    PS::F64 &rin = io.rin.value;
-    PS::F64 &rout = io.rout.value;
-    PS::F64 &rbin = io.rbin.value;
-    PS::F64 &eta = io.eta.value;
-    PS::F64 &eps = io.eps.value;
-    PS::F64 &dt_limit = io.dt_limit.value;
-    PS::F64 &time = io.time.value;
-    PS::S64 &N = io.n.value;
-#ifdef ORBIT_SAMPLING
-    PS::S64 &n_split = io.n_split.value;
-#endif
-    
-    ParticleBase pin;
-    PS::ReallocatableArray<PS::S32> p_list;
-    PS::ReallocatableArray<PS::S32> n_cluster;
-    PS::ReallocatableArray<PS::S32> np;
-    p_list.resizeNoInitialize(N);
-    n_cluster.resizeNoInitialize(1);
-    n_cluster[0] = N;
-
-    PS::ParticleSystem<FPSoft> sys;
-
-    PS::F64 m_average =0;
-    for (int i=0; i<N; i++) {
-        pin.readAscii(fin);
-        ChangeOver co;
-        GroupDataDeliver gdata;
-        sys.addOneParticle(FPSoft(Ptcl(pin, rsearch, i+1, gdata, co), 0, i));
-        p_list[i]=i;
-        m_average = pin.mass;
-    }
-    m_average = pin.mass/N;
-    Ptcl::r_search_min = rsearch;
-    Ptcl::search_factor = 3;
-    Ptcl::r_group_crit_ratio = rbin/rin;
-    Ptcl::mean_mass_inv = 1.0/m_average;
-
-    for (int i=0; i<N; i++) {
-        sys[i].changeover.setR(sys[i].mass*Ptcl::mean_mass_inv, rin, rout);
-        sys[i].calcRSearch(dt_limit);
-    }
-
-    PS::F64 time_sys = 0.0;
-    PS::F64 dt_min_hard = 1.0;
-    for (PS::S32 i=0;i<40;i++) dt_min_hard *= 0.5;
-
-    // system hard paramters
-    HardManager hard_manager;
-    hard_manager.setDtRange(dt_limit, 40);
-    hard_manager.setEpsSq(eps);
-    hard_manager.setGravitationalConstant(1.0);
-    hard_manager.r_in_base = rin;
-    hard_manager.r_out_base = rout;
-#ifdef HARD_CHECK_ENERGY
-    hard_manager.energy_error_max = 1e-4;
-#else
-    hard_manager.energy_error_max = NUMERIC_FLOAT_MAX;
-#endif
-    hard_manager.n_step_per_orbit = 8;
-    hard_manager.ap_manager.r_tidal_tensor = rbin;
-    hard_manager.ap_manager.id_offset = N;
-#ifdef ORBIT_SAMPLING
-    hard_manager.ap_manager.orbit_manager.setParticleSplitN(input_parameters.n_split.value);
-#endif
-    hard_manager.h4_manager.step.eta_4th = eta;
-    hard_manager.h4_manager.step.eta_2nd = 0.01*eta;
-    hard_manager.h4_manager.step.calcAcc0OffsetSq(m_average, rout, 1.0);
-    hard_manager.ar_manager.energy_error_relative_max = 1e-8;
-    hard_manager.ar_manager.step_count_max = 1e6;
-    // set symplectic order
-    hard_manager.ar_manager.step.initialSymplecticCofficients(-6);
-    hard_manager.ar_manager.slowdown_pert_ratio_ref = 1e-4;
-    hard_manager.ar_manager.slowdown_timescale_max = dt_limit;
-#ifdef SLOWDOWN_MASSRATIO
-    hard_manager.ar_manager.slowdown_mass_ref = m_average;
-#endif
-    hard_manager.ar_manager.interrupt_detection_option = 0;
-  
-    // check consistence of paramters
-    hard_manager.checkParams();
-
-    fclose(fin);
-
-    SystemHard sys_hard;
-    sys_hard.manager = &hard_manager;
-    sys_hard.allocateHardIntegrator(1);
-    sys_hard.setPtclForIsolatedMultiClusterOMP(sys, p_list, n_cluster);
-
-    PS::S32 n_sys = sys.getNumberOfParticleLocal();
-    sys_hard.findGroupsAndCreateArtificialParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys, dt_limit);
-  
-    PS::ReallocatableArray<PS::S32> mass_modify_list;
-
-    // correct change over
-    auto& hard_ptcl = sys_hard.getPtcl();
-    int n =hard_ptcl.size();
-    for (int i=0; i<n; i++) hard_ptcl[i].changeover.updateWithRScale();
-
-    // recover mass
-    for(int i=0; i<n; i++) {
-        auto& pi_artificial = hard_ptcl[i].group_data.artificial;
-        if(pi_artificial.isMember()){
-            const PS::S64 cm_adr = hard_ptcl[i].getParticleCMAddress(); // notice status is negative 
-#ifdef HARD_DEBUG
-            assert(pi_artificial.getMassBackup()>0); 
-            assert(cm_adr>0);
-#endif
-            hard_ptcl[i].mass = pi_artificial.getMassBackup();
+	void print(std::ostream & fout, const PS::F64 time_sys, const PS::S64 n_loop=1){
+        fout<<"Time: "<<time_sys<<std::endl;
+        
+        for(PS::S32 i=0; i<n_profile; i++) {
+            Tprofile* iptr = (Tprofile*)this+i;
+            iptr->print(fout, n_loop);
         }
     }
 
-    std::cout<<std::setprecision(WRITE_PRECISION);
+    void dump(std::ostream & fout, const PS::S64 n_loop=1, const PS::S32 width=PROFILE_PRINT_WIDTH) const {
+        for(PS::S32 i=0; i<n_profile; i++) {
+            Tprofile* iptr = (Tprofile*)this+i;
+            iptr->dump(fout, n_loop, width);
+        }
+    }
 
+    void dumpName(std::ostream & fout, const PS::S32 width=PROFILE_PRINT_WIDTH) const {
+        for(PS::S32 i=0; i<n_profile; i++) {
+            Tprofile* iptr = (Tprofile*)this+i;
+            iptr->dumpName(fout, width);
+        }
+    }
+
+    void clear(){
+        for(PS::S32 i=0; i<n_profile; i++) {
+            Tprofile* iptr = (Tprofile*)this+i;
+            iptr->reset();
+        }
+    }
+
+} profile;
+
+int main(int argc, char** argv)
+{
+#ifdef PARTICLE_SIMULATOR_THREAD_PARALLEL    
+    omp_set_nested(1);
+#endif
+
+    // IO parameters    
+    IOParamsHardTest main_parameters;
+    IOParamsHard hard_parameters;
+    main_parameters.print_flag = true;
+    hard_parameters.print_flag = true;
+    int opt_used = main_parameters.read(argc,argv);
+    hard_parameters.read(argc,argv,false,true);
+
+    if (opt_used==-1) return 0;
+
+    // get parameters    
+    PS::F64 &r_search_min = main_parameters.r_search_min.value;
+    PS::F64 &r_in_over_out = main_parameters.r_in_over_out.value;
+    PS::F64 &r_out = main_parameters.r_out.value;
+    PS::F64 r_in = r_out*r_in_over_out;
+    PS::F64 &dt_soft = main_parameters.dt_soft.value;
+    PS::F64 &time = main_parameters.time.value;
+
+    if (r_search_min==0) r_search_min = 1.5*r_out;
+    dt_soft = regularTimeStep(dt_soft);
+
+    main_parameters.checkParams();
+    
+    // Particle system    
+    FileHeader file_header;
+    PS::ParticleSystem<FPSoft> sys;
+    
+    // reading data    
+    sys.readParticleAscii(main_parameters.fname_inp.value.c_str(), file_header);
+    PS::S32 N = sys.getNumberOfParticleLocal();
+    hard_parameters.id_offset.value = N+1;
+
+    // initial particle parameters    
+    PS::F64 m_average =0;
+    for (int i=0; i<N; i++) m_average += sys[i].mass;
+    m_average /= N;
+
+    Ptcl::mean_mass_inv = 1.0/m_average;
+    Ptcl::r_search_min = r_search_min;
+    Ptcl::search_factor = 3;
+
+    // initial changeover radii    
+    for (int i=0; i<N; i++) {
+        sys[i].changeover.setR(sys[i].mass*Ptcl::mean_mass_inv, r_in, r_out);
+        sys[i].calcRSearch(dt_soft);
+    }
+
+    // status
+    PS::F64 time_sys = 0.0;
+    Status stat;
+    stat.time = time_sys;
+    stat.n_real_loc = N;
+    stat.n_real_glb = N;
+    
+    // set r_group
+    // dt_max/2^20 as period
+    if (hard_parameters.r_group.value==-1) {
+        PS::F64 r_group = COMM::Binary::periodToSemi(dt_soft/1024, m_average, hard_parameters.gravitational_constant.value);
+        hard_parameters.r_group.value = r_group;
+        hard_parameters.r_search_group.value = r_group*1.5;
+    }
+
+    // system hard paramters
+    HardManager hard_manager;
+    hard_manager.initial(hard_parameters, m_average, r_out, r_in, dt_soft, stat, true);
+
+    // print parameters
+    std::cout<<"r_out="<<r_out<<std::endl
+             <<"r_in="<<r_in<<std::endl
+             <<"r_search_min="<<r_search_min<<std::endl  
+             <<"dt_soft="<<dt_soft<<std::endl
+             <<"r_group="<<hard_parameters.r_group.value<<std::endl
+             <<"r_search_group="<<hard_parameters.r_search_group.value<<std::endl
+             <<"hermite_dt_max="<<hard_manager.h4_manager.step.getDtMax()<<std::endl
+             <<"hermite_dt_min="<<hard_manager.h4_manager.step.getDtMin()<<std::endl;
+
+    // system hard    
+    SystemHard sys_hard;
+    sys_hard.manager = &hard_manager;
     sys_hard.setTimeOrigin(time_sys);
+
+    // initial system hard particles, only one cluster
+    PS::ReallocatableArray<PS::S32> p_list;
+    p_list.resizeNoInitialize(N);
+    for (int i=0; i<N; i++) p_list[i]=i;
+
+    PS::ReallocatableArray<PS::S32> n_cluster;
+    n_cluster.resizeNoInitialize(1);
+    n_cluster[0] = N;
+
+    sys_hard.setPtclForIsolatedMultiClusterOMP(sys, p_list, n_cluster);
+
+    auto& hard_ptcl = sys_hard.getPtcl();
+    int n_hard = hard_ptcl.size();
+
+    // output style    
+    //std::cout<<std::setprecision(WRITE_PRECISION);
+    PS::S32 write_style = main_parameters.write_style.value;
+
+    std::ofstream fstatus;
+    if (write_style==2) {
+        std::string fname = main_parameters.fname_snap.value + ".status";    
+        fstatus.open(fname.c_str(),std::ofstream::out);
+    }
+
+    // integration loop    
+    PS::ReallocatableArray<PS::S32> mass_modify_list;
     while(time_sys < time){
-        fprintf(stderr,"Time = %e\n", time_sys+dt_limit);
-        sys_hard.driveForMultiClusterOMP(dt_limit, &sys[0]);
-        sys_hard.writeBackPtclForMultiCluster(sys, mass_modify_list);
-        time_sys += dt_limit;
-        sys.setNumberOfParticleLocal(n_sys);
-        sys_hard.setTimeOrigin(time_sys);
-        sys_hard.ARC_substep_sum = 0;
-        sys_hard.findGroupsAndCreateArtificialParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys, dt_limit);
-        for (int i=0; i<n; i++) hard_ptcl[i].changeover.updateWithRScale();
+
+        // find groups
+        fprintf(stderr,"Time = %e\n", time_sys+dt_soft);
+        profile.total.start();
+
+        // update artificial particles
+        profile.findGroups.start();        
+        sys_hard.findGroupsAndCreateArtificialParticlesOMP<PS::ParticleSystem<FPSoft>, FPSoft>(sys, dt_soft);
+
+        // correct change over
+        for (int i=0; i<n_hard; i++) hard_ptcl[i].changeover.updateWithRScale();
+        
         // recover mass
-        for(int i=0; i<n; i++) {
+        for(int i=0; i<n_hard; i++) {
             auto& pi_artificial = hard_ptcl[i].group_data.artificial;
             if(pi_artificial.isMember()){
                 const PS::S64 cm_adr= hard_ptcl[i].getParticleCMAddress(); // notice status is negative 
@@ -333,8 +331,52 @@ int main(int argc, char** argv)
                 hard_ptcl[i].mass = pi_artificial.getMassBackup();
             }
         }
+        profile.findGroups.barrier();
+        profile.findGroups.end();
+
+        // integration
+        profile.integration.start();
+        sys_hard.driveForMultiClusterOMP(dt_soft, &sys[0]);
+        profile.integration.barrier();
+        profile.integration.end();
+
+        profile.output.start();        
+        sys_hard.writeBackPtclForMultiCluster(sys, mass_modify_list);
+
+        // reset number, remove artificial particles        
+        sys.setNumberOfParticleLocal(N);
+
+        // update time        
+        time_sys += dt_soft;
+        sys_hard.setTimeOrigin(time_sys);        
+        stat.time = time_sys;
+
+        // output
+        if (write_style==1) {
+            file_header.time = stat.time;
+            file_header.nfile++;
+            std::string fname = main_parameters.fname_snap.value + "." + std::to_string(file_header.nfile);    
+            sys.writeParticleAscii(fname.c_str(), file_header);
+        } 
+        else if (write_style==2) {
+            // write snapshot with one line
+            stat.printColumn(fstatus, WRITE_WIDTH);
+            for (int i=0; i<stat.n_real_loc; i++) sys[i].printColumn(fstatus, WRITE_WIDTH);
+            fstatus<<std::endl;
+        }    
+        profile.output.barrier();
+        profile.output.end();
+
+        profile.total.barrier();
+        profile.total.end();
+
+        profile.dumpName(std::cout);
+        std::cout<<std::endl;
+        profile.dump(std::cout, 1);
+        std::cout<<std::endl;
+
+        profile.clear();        
     } 
 
     return 0;
 }
-
