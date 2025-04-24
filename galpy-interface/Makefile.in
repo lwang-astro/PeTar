@@ -30,12 +30,9 @@ libgalpy.a: $(OBJ)
 petar.galpy.help: galpy_help.py
 	ln -sf galpy_help.py petar.galpy.help
 
-petar.galpy.pot.movie: galpy_pot_movie.py
-	ln -sf galpy_pot_movie.py petar.galpy.pot.movie
-
 install:
 	install -d @prefix@/bin/
-	install -m 755 petar.galpy.help petar.galpy.pot.movie @prefix@/bin/
+	install -m 755 petar.galpy.help @prefix@/bin/
 
 clean: 
 	rm -f $(OBJ) libgalpy.a petar.galpy.help
