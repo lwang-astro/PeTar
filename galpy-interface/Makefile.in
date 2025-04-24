@@ -1,4 +1,4 @@
-TARGET: libgalpy.a petar.galpy.help petar.galpy.pot.movie
+TARGET: libgalpy.a petar.galpy.help
 
 CXX=@CXX@
 CC=@CC@
