@@ -92,7 +92,7 @@ do
 	egrep '^Dynamic_merge' $fout$s |sed 's/Dynamic_merge://g' >$fout$s.dynamic_merge.tmp
 	awk '{if (NF==45) {for (i=1; i<=5; i++) printf("%s ", $i); printf("0 0 0 "); for (i=6; i<=NF; i++) printf("%s ", $i); printf("\n");} else print $LINE}' $fout$s.dynamic_merge.tmp > $fout$s.dynamic_merge
 	rm -f $fout$s.dynamic_merge.tmp
-	egrep '^Binary_merge' $fout$s |sed 's/Dynamic_merge://g' >$fout$s.binary_merge.tmp
+	egrep '^Binary_merge' $fout$s |sed 's/Binary_merge://g' >$fout$s.binary_merge.tmp
 	awk '{if (NF==45) {for (i=1; i<=5; i++) printf("%s ", $i); printf("0 0 0 "); for (i=6; i<=NF; i++) printf("%s ", $i); printf("\n");} else print $LINE}' $fout$s.binary_merge.tmp > $fout$s.binary_merge
 	rm -f $fout$s.binary_merge.tmp
 	egrep '^Hyperbolic_TDE' $fout$s |sed 's/Hyperbolic_TDE://g' >$fout$s.hyperbolic_tde.tmp
@@ -102,7 +102,7 @@ do
 	awk '{if (NF==45) {for (i=1; i<=5; i++) printf("%s ", $i); printf("0 0 0 "); for (i=6; i<=NF; i++) printf("%s ", $i); printf("\n");} else print $LINE}' $fout$s.binary_tde.tmp > $fout$s.binary_tde
 	rm -f $fout$s.binary_tde.tmp
 	egrep '^SN_kick' $fout$s |sed 's/SN_kick//g' >$fout$s.sn_kick
-	egrep '^HYPERBTDE' $fout$s |sed 's/HYPERBTDE//g' >$fout$s.hyperbolic_tde
+	egrep '^Hyperbolic_TDE' $fout$s |sed 's/Hyperbolic_TDE://g' >$fout$s.hyperbolic_tde
 	egrep '^Tide' $fout$s |sed 's/Tide//g' >$fout$s.tide
 	egrep -v '^(Dynamic_merge|Binary_merge|Hyperbolic_TDE|Binary_TDE|SN_kick|Tide)' $fout$s |awk '{for (i=2;i<=NF;i++) printf("%s ", $i); printf("\n")}' >$fout$s.type_change
     fi
