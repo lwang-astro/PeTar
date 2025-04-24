@@ -1605,6 +1605,10 @@ public:
         if (_star.kw == 14 ) {
             for (int k=0; k<3; k++) _star.ospin[k] = chi[k];
         }
+        if (_star.kw !=14 && kw==14) {
+            std::array<double, 3> chi_array = CompactOspinToChi(_star.ospin, _star.mt, _star.r);
+            for(int k=0;k<3;k++) _star.ospin[k] = chi_array[k];
+        }
         _star.kw = kw;
         _out.dm = _star.mt - _out.dm;
         _out.dtmiss = tphysf - _star.tphys;
