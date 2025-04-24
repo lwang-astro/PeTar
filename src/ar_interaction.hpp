@@ -11,7 +11,7 @@
 #ifdef BSE_BASE
 #include "bse_interface.h"
 #endif
-#include "external_force.hpp"
+#include "external_hard.hpp"
 
 //! AR interaction clas
 class ARInteraction{

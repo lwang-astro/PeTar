@@ -1,7 +1,11 @@
 #include <iostream>
 #include <fstream>
 #include <getopt.h>
+#ifdef GALPY
 #include "galpy_interface.h"
+#elif AGAMA
+#include "agama_interface.h"
+#endif
 #include "../src/io.hpp"
 
 struct Particle{
@@ -67,7 +71,11 @@ int main(int argc, char** argv){
     
     int arg_label;
 
-    IOParamsGalpy galpy_io;
+#ifdef GALPY    
+    IOParamsGalpy galpy_parameters;
+#elif AGAMA
+    IOParamsAgama agama_parameters;
+#endif
     opterr = 0;
 
     // reset optind
@@ -103,7 +111,7 @@ int main(int argc, char** argv){
         //    break;
         case 'h':
             std::cout<<"The tool to calculate acceleration, potential and mass density for a given particle list \n"
-                     <<"Usage: petar.galpy [options] [data file]\n"
+                     <<"Usage: petar.ext [options] [data file]\n"
                      <<"       data file format: if -m, file contains the mesh parameters\n"
                      <<"                             one line: time, dt_evolve, n_step_evolve, dt_output, x_min, x_max, n_x, y_min, y_max, n_y, z_min, z_max, n_z\n"
                      <<"                         else file contains a particle list\n"
@@ -115,7 +123,6 @@ int main(int argc, char** argv){
                      <<"            header line:  time nx ny\n"
                      <<"            each line: mass x y z vx vy vz ax ay az pot den\n"
                      <<"            Time-dependent potential is also supported.\n"
-                //<<"    -u    : input data use astronomical unit set (Myr, pc, Msun) and set unit scaling factor for Galpy automatically.\n"
                      <<"    -h    : help\n";
             help_flag=true;
             break;
@@ -125,9 +132,14 @@ int main(int argc, char** argv){
         default:
             break;
         }
-    
-    galpy_io.print_flag = true;
-    galpy_io.read(argc,argv);
+
+#ifdef GALPY        
+    galpy_parameters.print_flag = true;
+    galpy_parameters.read(argc,argv);
+#elif AGAMA
+    agama_parameters.print_flag = true;
+    agama_parameters.read(argc,argv);
+#endif
     
     if (help_flag) return 0;
 
@@ -144,8 +156,12 @@ int main(int argc, char** argv){
         abort();
     }
 
+#ifdef GALPY    
     GalpyManager galpy_manager;
-    //if (unit_astro_flag) galpy_io.setStdUnit();
+#elif AGAMA
+    AgamaManager agama_manager;
+#endif
+    //if (unit_astro_flag) input_parameters.setStdUnit();
 
     if (measure_flag) {
         double time, time_out, dt, dt_out, xmin, xmax, ymin, ymax, zmin, zmax;
@@ -157,13 +173,20 @@ int main(int argc, char** argv){
             abort();
         }
         std::ofstream fxy,fxz;
-        galpy_manager.initial(galpy_io, time, std::string(), false, true);
-        time_out = time;
+
+#ifdef GALPY        
+        galpy_manager.initial(galpy_parameters, time, std::string(), false, true);
         int nset = galpy_manager.getNSet();
+#elif AGAMA
+        agama_manager.initial(agama_parameters, time, true);
+#endif
+        time_out = time;
 
         for (int i=0; i<=n_step; i++) {
             bool out_flag = (time>=time_out);
+#ifdef GALPY            
             galpy_manager.updatePotential(time, out_flag);
+#endif
 
             if (out_flag) {
                 fxy.open(("xy"+std::to_string(i)).c_str(), std::ifstream::out);
@@ -182,10 +205,15 @@ int main(int argc, char** argv){
                         pjk.pos[2] = 0;
                         pjk.vel[0] = pjk.vel[1] = pjk.vel[2] = 0;
 
-                        galpy_manager.calcAccPot(pjk.acc, pjk.pot, time, 0, pjk.pos, pjk.pos); 
                         pjk.den = 0.0;
+#ifdef GALPY                        
+                        galpy_manager.calcAccPot(pjk.acc, pjk.pot, time, 0, pjk.pos, pjk.pos); 
                         for (int k=0; k<nset; k++) {
-                            pjk.den += galpy_manager.calcSetDensity(k, time, pjk.pos, pjk.pos);}
+                            pjk.den += galpy_manager.calcSetDensity(k, time, pjk.pos, pjk.pos);
+                        }
+#elif AGAMA
+                        agama_manager.calcAccPot(pjk.acc, pjk.pot, time, 0, pjk.pos, pjk.pos); 
+#endif
                         pjk.printColumn(fxy);
                         fxy<<std::endl;
                     }
@@ -198,10 +226,15 @@ int main(int argc, char** argv){
                         pjk.pos[2] = zmin + (zmax-zmin)/(nz-1)*k;
                         pjk.vel[0] = pjk.vel[1] = pjk.vel[2] = 0;
 
-                        galpy_manager.calcAccPot(pjk.acc, pjk.pot, time, 0, pjk.pos, pjk.pos);  
                         pjk.den = 0.0;
+#ifdef GALPY                        
+                        galpy_manager.calcAccPot(pjk.acc, pjk.pot, time, 0, pjk.pos, pjk.pos);  
                         for (int k=0; k<nset; k++) {
-                            pjk.den += galpy_manager.calcSetDensity(k, time, pjk.pos, pjk.pos);}
+                            pjk.den += galpy_manager.calcSetDensity(k, time, pjk.pos, pjk.pos);
+                        }
+#elif AGAMA
+                        agama_manager.calcAccPot(pjk.acc, pjk.pot, time, 0, pjk.pos, pjk.pos); 
+#endif
                         pjk.printColumn(fxz);
                         fxz<<std::endl;
                     }
@@ -226,8 +259,12 @@ int main(int argc, char** argv){
 
         assert(n>0);
 
-        galpy_manager.initial(galpy_io, time, std::string(), false, true);
+#ifdef GALPY        
+        galpy_manager.initial(galpy_parameters, time, std::string(), false, true);
         int nset = galpy_manager.getNSet();
+#elif AGAMA
+        agama_manager.initial(agama_parameters, time, true);
+#endif
 
         Particle particles[n];
 
@@ -240,10 +277,14 @@ int main(int argc, char** argv){
             double pos[3] = {pi.pos[0] + pos_offset[0],
                              pi.pos[1] + pos_offset[1],
                              pi.pos[2] + pos_offset[2]};
-            galpy_manager.calcAccPot(pi.acc, pi.pot, time, 0, pos, &pi.pos[0]);
             pi.den = 0.0;
+#ifdef GALPY
+            galpy_manager.calcAccPot(pi.acc, pi.pot, time, 0, pos, &pi.pos[0]);
             for (int k=0; k<nset; k++) {
                 pi.den += galpy_manager.calcSetDensity(k, time, pi.pos, pi.pos);}
+#elif AGAMA
+            agama_manager.calcAccPot(pi.acc, pi.pot, time, 0, pos, &pi.pos[0]);
+#endif
             pi.printColumn(std::cout);
             std::cout<<std::endl;
         }
